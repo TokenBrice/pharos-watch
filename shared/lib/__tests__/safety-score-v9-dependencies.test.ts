@@ -390,6 +390,78 @@ describe("buildV9DependencyEvaluationPlan", () => {
     });
   });
 
+  it.each(["C", "U"] as const)("inherits numeric %s provenance without replacing its evaluated loss", (cause) => {
+    for (const score of [25, 80]) {
+      const plan = buildV9DependencyEvaluationPlan({
+        activeAssetIds: ["child", "parent"],
+        assets: [asset("parent"), asset("child", [roleEdge("operator", "parent", "control-operator", 1)])],
+      });
+      const resolved = resolveV9DependencyInputs(plan, [{
+        assetId: "parent", score: 80, backingScore: 90, controlScore: score,
+        dimensionCauses: { control: cause }, causeGapIds: ["topology:missing"], limitedEvidenceCauses: [cause],
+      }]).find((input) => input.assetId === "child")!;
+      expect(resolved.roleInputs![0]).toMatchObject({ score, cause, boundedUnknown: true, unavailableDimensions: [] });
+      expect(projectV9RoleDependencyPillarLimits(resolved).control).toMatchObject({
+        limit: score, knownLossPoints: 100 - score, boundedUnknownLossPoints: 0,
+        unresolvedExposureShare: 1,
+        events: [expect.objectContaining({ inheritedScore: score, causeGapIds: ["topology:missing"] })],
+      });
+    }
+  });
+
+  it.each([
+    { knownWeight: 0.4, score: 0, unknownWeight: 0.5, knownLoss: 40, unknownLoss: 0, limit: 60 },
+    { knownWeight: 0.4, score: 50, unknownWeight: 0.8, knownLoss: 20, unknownLoss: 24, limit: 56 },
+  ])("charges max known/absent loss once per event: $limit", ({ knownWeight, score, unknownWeight, knownLoss, unknownLoss, limit }) => {
+    const plan = buildV9DependencyEvaluationPlan({
+      activeAssetIds: ["child", "known", "absent"],
+      assets: [asset("known"), asset("absent"), asset("child", [
+        roleEdge("known-edge", "known", "control-operator", knownWeight),
+        roleEdge("absent-edge", "absent", "control-operator", unknownWeight),
+      ])],
+    });
+    const resolved = resolveV9DependencyInputs(plan, [
+      { assetId: "known", score: 80, backingScore: 90, controlScore: score, dimensionCauses: { control: "D" } },
+      { assetId: "absent", score: null, backingScore: null, controlScore: null,
+        dimensionCauses: { control: "U" }, causeGapIds: ["absent:control"] },
+    ]).find((input) => input.assetId === "child")!;
+    resolved.roleInputs = resolved.roleInputs!.map((input) => ({
+      ...input, exposureKey: "same-slice", riskEventKey: "same-event",
+    }));
+    const projection = projectV9RoleDependencyPillarLimits(resolved).control;
+    expect(projection.limit).toBeCloseTo(limit);
+    expect(projection.knownLossPoints).toBeCloseTo(knownLoss);
+    expect(projection.boundedUnknownLossPoints).toBeCloseTo(unknownLoss);
+    expect(projection.unresolvedExposureShare).toBe(unknownWeight);
+    expect(projection.events).toHaveLength(1);
+    expect(projection.events[0]).toMatchObject({
+      inheritedScore: score, knownCause: "D", unavailableDimensions: ["control"],
+      evidenceObligations: [expect.objectContaining({ cause: "U", causeGapIds: ["absent:control"] })],
+    });
+  });
+
+  it("selects alternate same-slice events by actual max loss while retaining the unselected obligation", () => {
+    const plan = buildV9DependencyEvaluationPlan({
+      activeAssetIds: ["child", "known", "absent"],
+      assets: [asset("known"), asset("absent"), asset("child", [
+        roleEdge("known", "known", "control-operator", 0.8),
+        roleEdge("absent", "absent", "control-operator", 0.9),
+      ])],
+    });
+    const resolved = resolveV9DependencyInputs(plan, [
+      { assetId: "known", score: 80, backingScore: 90, controlScore: 0, dimensionCauses: { control: "D" } },
+      { assetId: "absent", score: null, backingScore: null, cause: "U", causeGapIds: ["absent:control"] },
+    ]).find((input) => input.assetId === "child")!;
+    resolved.roleInputs = resolved.roleInputs!.map((input) => ({ ...input, exposureKey: "same-slice" }));
+    expect(projectV9RoleDependencyPillarLimits(resolved).control).toMatchObject({
+      limit: 20, knownLossPoints: 80, boundedUnknownLossPoints: 0, unresolvedExposureShare: 0.9,
+      events: [expect.objectContaining({
+        upstreamAssetIds: ["known"], knownCause: "D",
+        evidenceObligations: [expect.objectContaining({ cause: "U", causeGapIds: ["absent:control"] })],
+      })],
+    });
+  });
+
   it("bounds C/U role exposure numerically on both sides of the material threshold", () => {
     const resolveUnknownExit = (weight: number) => {
       const plan = buildV9DependencyEvaluationPlan({

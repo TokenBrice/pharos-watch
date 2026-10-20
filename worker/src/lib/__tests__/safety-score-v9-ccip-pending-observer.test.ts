@@ -441,6 +441,42 @@ describe("authenticated CCIP pending quantities", () => {
     indexed = [word(1001)]; receiptLogs = [];
     expect(await observeCcipPending(input())).toEqual({ status: "rejected", reason: "indexer-send-unproved" });
   });
+  it.each(["1.6", "2.0.0"] as const)("routes mixed-destination %s receipts independently of log order", async version => {
+    const own = version === "1.6" ? send(1) : send20(1);
+    const foreign = version === "1.6" ? send(1, 90n, 100, version, "0x", 3n) : send20(1, 90n, 100, 30, 31, "0x", 3n);
+    foreign.transactionHash = own.transactionHash;
+    sent = [own]; indexed = [version === "1.6" ? word(1001) : own.topics[3]!];
+    const control = await observeCcipPending(input(source(version)));
+    expect(control).toMatchObject({ status: "accepted", amount: "10", proof: { lanes: [{ pendingCount: 1, lastSequence: "1", amount: "10" }] } });
+    for (const foreignFirst of [true, false]) {
+      receiptLogs = foreignFirst
+        ? [{ ...foreign, logIndex: "0x1" }, { ...own, logIndex: "0x2" }]
+        : [{ ...own, logIndex: "0x1" }, { ...foreign, logIndex: "0x2" }];
+      expect(await observeCcipPending(input(source(version)))).toEqual(control);
+    }
+  });
+  it.each(["1.6", "2.0.0"] as const)("rejects malformed matching-lane %s receipt evidence after routing", async version => {
+    const own = version === "1.6" ? send(1) : send20(1);
+    const foreign = version === "1.6" ? send(1, 90n, 100, version, "0x", 3n) : send20(1, 90n, 100, 30, 31, "0x", 3n);
+    foreign.transactionHash = own.transactionHash;
+    sent = [own]; indexed = [version === "1.6" ? word(1001) : own.topics[3]!];
+    for (const fault of ["data", "removed", "topics", "transaction", "block", "hash", "oversized"] as const) {
+      const malformed = { ...own, topics: [...own.topics] };
+      if (fault === "data") malformed.data = "0x";
+      if (fault === "removed") malformed.removed = true;
+      if (fault === "topics") malformed.topics.push(word(999));
+      if (fault === "transaction") malformed.transactionHash = word(999);
+      if (fault === "block") malformed.blockNumber = "0x65";
+      if (fault === "hash") malformed.blockHash = word(999);
+      if (fault === "oversized") malformed.data = `0x${"ab".repeat(65537)}`;
+      for (const foreignFirst of [true, false]) {
+        receiptLogs = foreignFirst ? [foreign, malformed] : [malformed, foreign];
+        const result = await observeCcipPending(input(source(version)));
+        expect(result.status).toBe("rejected");
+        expect(result).not.toHaveProperty("amount");
+      }
+    }
+  });
   it("rejects stale and future pins", async () => {
     const stale = input(); stale.clockSec = 100000;
     expect(await observeCcipPending(stale)).toMatchObject({ status: "rejected", reason: "pin-stale-or-future" });

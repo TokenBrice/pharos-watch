@@ -30,6 +30,101 @@ import {
 } from "../../test-helpers/v9-fixed-input";
 
 describe("Safety Score v9 exact base fact-set adapter — dependencies, roles and quarantine", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
+  it.each([28_799, 28_800, 28_801, 32_000])(
+    "binds live dependencies to their own fetch clock at age %s without quarantining the graph",
+    (alphaAgeSec) => {
+      const base = exactTwoAssetFixedInput({ mapAlphaCollateral: true, clockSec: 40_000 });
+      const {
+        schemaVersion: _schemaVersion, dexPayloadFingerprint: _dexPayloadFingerprint,
+        redemptionPayloadFingerprint: _redemptionPayloadFingerprint, registryFingerprint: _registryFingerprint,
+        inputMethodologyVersions: _inputMethodologyVersions, baseInputGenerationId: _baseInputGenerationId,
+        ...draft
+      } = base;
+      const fixed = createReportCardsFixedInput({
+        ...draft,
+        liveReserveMap: {
+          ...base.liveReserveMap,
+          beta: [{ name: "Cash", pct: 100, risk: "very-low", assetClass: "cash",
+            issuerOrObligor: "issuer:beta", riskFactors: ["custody", "counterparty"],
+            liquidityHorizon: "immediate", maturityDaysMax: 0 }],
+        },
+        liveReserveProvenanceMap: {
+          alpha: { source: "alpha-reserve-api", fetchedAt: 40_000 - alphaAgeSec },
+          beta: { source: "beta-reserve-api", fetchedAt: 39_900 },
+        },
+      });
+      const metaById = new Map<string, V9ExtensionRegistryMeta>(["alpha", "beta"].map((id) => [
+        id, { id, mechanismArchetype: "fiat-cash", launchDate: "1970-01-01" },
+      ]));
+      const profiled = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
+      expect(profiled.sources.liveReserves.observedAtSec).toBe(39_900);
+      const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, profiled);
+      const alpha = compiled.assets.find((asset) => asset.assetId === "alpha")!;
+      const beta = compiled.assets.find((asset) => asset.assetId === "beta")!;
+      const stale = alphaAgeSec > 28_800;
+      const alphaEvidence = alpha.evidence.find((ref) => ref.evidenceId === "alpha:effective-dependencies")!;
+      expect(alphaEvidence).toMatchObject({
+        sourceId: "alpha-reserve-api", observedAtSec: 40_000 - alphaAgeSec,
+        sourceGenerationId: profiled.sources.liveReserves.generationId,
+        freshness: { state: stale ? "stale" : "current", ageSec: alphaAgeSec, maxAgeSec: 28_800 },
+      });
+      expect(alphaEvidence.contentSha256).toMatch(/^[a-f0-9]{64}$/);
+      expect(alpha.dependencies).toMatchObject({
+        status: { observationState: stale ? "stale" : "known" },
+        diagnostics: { graphState: "valid" },
+        sourceGenerationId: profiled.sources.liveReserves.generationId,
+        edges: [{ upstreamAssetId: "beta", weight: 0.5, evidenceRefIds: ["alpha:effective-dependencies"] }],
+      });
+      expect(beta.dependencies.status.observationState).toBe("known");
+      expect(beta.evidence.find((ref) => ref.evidenceId === "beta:effective-dependencies")).toMatchObject({
+        sourceId: "beta-reserve-api", observedAtSec: 39_900,
+        sourceGenerationId: profiled.sources.liveReserves.generationId,
+        freshness: { state: "current", ageSec: 100, maxAgeSec: 28_800 },
+      });
+      if (stale) {
+        expect(alpha.gaps).toContainEqual(expect.objectContaining({
+          gapId: "alpha:gap:effective-dependencies", observationState: "stale",
+          reasonCode: "unreviewed-dependency-relationships", responsibility: "producer-failed",
+          causeScope: expect.objectContaining({ componentKey: "effective-dependencies" }),
+          causeProof: expect.objectContaining({
+            cause: "A", producerState: "stale-producer", rejectionCode: "reserve-fetch-stale",
+            sourceGenerationId: profiled.sources.liveReserves.generationId,
+          }),
+        }));
+      } else {
+        expect(alpha.dependencies.status.gapIds).toEqual([]);
+      }
+    },
+  );
+
+  it("retains live dependency identity without borrowing a sibling clock when asset provenance is absent", () => {
+    const base = exactTwoAssetFixedInput({ mapAlphaCollateral: true });
+    const {
+      schemaVersion: _schemaVersion, dexPayloadFingerprint: _dexPayloadFingerprint,
+      redemptionPayloadFingerprint: _redemptionPayloadFingerprint, registryFingerprint: _registryFingerprint,
+      inputMethodologyVersions: _inputMethodologyVersions, baseInputGenerationId: _baseInputGenerationId,
+      ...draft
+    } = base;
+    const fixed = createReportCardsFixedInput({
+      ...draft,
+      liveReserveProvenanceMap: { beta: { source: "beta-reserve-api", fetchedAt: 9_900 } },
+    });
+    const metaById = new Map<string, V9ExtensionRegistryMeta>(["alpha", "beta"].map((id) => [
+      id, { id, mechanismArchetype: "fiat-cash", launchDate: "1970-01-01" },
+    ]));
+    const profiled = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
+    const alpha = compileSafetyScoreV9FactSetFromFixedInput(fixed, profiled)
+      .assets.find((asset) => asset.assetId === "alpha")!;
+    expect(alpha.dependencies).toMatchObject({
+      status: { observationState: "missing", gapIds: ["alpha:gap:effective-dependencies"] },
+      edges: [{ upstreamAssetId: "beta", weight: 0.5, evidenceRefIds: [] }],
+    });
+    expect(alpha.evidence.some((ref) => ref.evidenceId === "alpha:effective-dependencies")).toBe(false);
+    expect(alpha.gaps).toContainEqual(expect.objectContaining({
+      gapId: "alpha:gap:effective-dependencies", reasonCode: "unreviewed-dependency-relationships",
+    }));
+  });
+
   it("carries reviewed mechanism redemption into the exit evidence responsibility path", () => {
     const fixed = exactFixedInput();
     const profiled = extension();
@@ -80,6 +175,11 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
         alpha: [extensionRoleEdge("beta", "exit-dependency")],
         beta: [extensionRoleEdge("gamma", "exit-dependency")],
       });
+      // This fixture tests capacity propagation, not unavailable settlement.
+      // Atomic execution still needs an independently bounded completion time.
+      for (const asset of profiled.assets) {
+        for (const review of asset.routeReviews) review.settlementSlaSec = 300;
+      }
       const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, profiled);
       const alphaEdge = compiled.assets.find((asset) => asset.assetId === "alpha")!.dependencies.edges[0]!;
       expect(alphaEdge).toMatchObject({
@@ -156,17 +256,16 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
 
   it("contains a sub-material exit/control SCC to its role pillars without a serial-cycle NR reason", () => {
     const fixed = exactThreeAssetFixedInput();
+    const profiled = roleExtension(fixed, {
+      alpha: [extensionRoleEdge("beta", "exit-dependency", 0.01)],
+      beta: [extensionRoleEdge("alpha", "control-operator", 0.01)],
+    });
+    // Keep the local route fully bounded so only the intended role SCC is unknown.
+    for (const asset of profiled.assets) {
+      for (const review of asset.routeReviews) review.settlementSlaSec = 300;
+    }
     const evaluated = evaluateV9FactSet(
-      compileSafetyScoreV9FactSetFromFixedInput(
-        fixed,
-        roleExtension(
-          fixed,
-          {
-            alpha: [extensionRoleEdge("beta", "exit-dependency", 0.01)],
-            beta: [extensionRoleEdge("alpha", "control-operator", 0.01)],
-          },
-        ),
-      ),
+      compileSafetyScoreV9FactSetFromFixedInput(fixed, profiled),
       V9_CANDIDATE_POLICY_V1,
     );
     expect(evaluated.dependencyPlan.cyclicComponents).toContainEqual(["alpha", "beta"]);

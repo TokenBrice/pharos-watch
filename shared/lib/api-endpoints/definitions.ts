@@ -566,7 +566,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     key: "report-cards-v9",
     path: API_PATHS.reportCardsV9(),
-    cacheKeyIgnoresQuery: true,
     cacheBypass: true,
     strictContract: true,
     probeGroup: "public",
@@ -840,7 +839,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
   adminAction({
     key: "remediate-blacklist-amount-gaps",
     path: API_PATHS.remediateBlacklistAmountGaps(),
-    routeDependencies: ["chainRpcs"],
   }, {
       label: "Remediate Blacklist Gaps",
       confirm: "Run targeted blacklist amount-gap remediation? Prefer dry-run first.",

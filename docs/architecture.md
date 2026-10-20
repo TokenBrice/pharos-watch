@@ -40,6 +40,8 @@ Digest producers/archive readers import map-only `shared/types/digest-safety-map
 
 The private source-only `shared/contracts/` workspace exports only `@pharos/contracts/api-meta`, `@pharos/contracts/api-keys` and `@pharos/contracts/request-source`: API metadata, keys and attribution, with no root/wildcard export. Use exact subpaths, never physical/`@shared/contracts` bypasses (`pharos/contracts-imports`). Package implementations import relatively except root-pinned Zod; they cannot import `shared/lib/`. Other domain schemas stay in `shared/types/`, without compatibility re-exports for moved contracts.
 
+Mint/burn flow producer DTOs derive from `shared/types/mint-burn.ts`; the Worker strengthens required live coverage/valuation fields without mirroring the wire shape or declaring private reason extensions.
+
 `shared/types/status/` separates status domains; `shared/types/status.ts` remains the frontend/Worker compatibility barrel, including lazy schema loaders. Domain modules import lower-level siblings, never the barrel; internal primitives stay private.
 
 Stablecoin base records and whole-domain research sidecars merge through `scripts/lib/stablecoin-catalog-sources.ts` before full schema validation; generated registries consume only the merged projection. [Stablecoin Data](./stablecoin-data.md#source-files) owns authoring and source layout.
@@ -276,34 +278,33 @@ Read an individual decision rather than the entire record collection: [ADR-1](#a
 #### ADR-28
 
 - **ADR-28 — R1: unavailable is not zero.** Missing, unreadable or unvalidated observations remain `null` or typed unavailable; producer/store/view boundaries must not invent values with optimistic defaults (`?? 0`, `?? 1`, `?? false`, defaulted bands, `=== true`). Reuse domain discriminants: supply's `*OrNull`/`admitSupplyBuckets`, DEWS's tagged unavailable zero, digest `CollectorResult`, Telegram `unavailableFields`. Views may show placeholders; published numbers, counts, ratios and scores may not.
-- [DEX](./dex-liquidity.md#pool-quality-formula) preserves null versus zero for measured-balance/organic TVL across schemas, snapshots and views; ratios cannot supply aggregation weights. [Status](./status-dashboard.md#overall-status) schema-admits coverage, retaining zero/false/nullable baselines; malformed telemetry is unavailable, never synthetic coverage.
+Domain applications: [R1 evidence boundaries](process/architecture-appendix.md#adr-28-applications).
 #### ADR-29
 
 - **ADR-29 — R2: a failed read never becomes a positive claim.** Missing/failed required evidence cannot imply healthy, in-sync, open, covered, zero or empty; successful bootstrap/empty is distinct. Fan-outs settle independently, retain failures and fail closed. Cron-history failure exposes `healthy: null`/`telemetryUnknownReason`; public-health errors remain logged typed outcomes. EVM optional probes tolerate only observed execution reverts, not transport/state/admission failure; admit byte/uint/Multicall semantics before endpoints. Owners: [status](./status-dashboard.md), [RPC](./worker-infrastructure.md#module-initialization).
-- [DEX readers](./dex-liquidity.md#data-quality-filters) retain nullable baseline totals/classes and named failures, never zero-fill; deploy null-tolerant status schemas/views before nullable producers.
-- [Tape](./tape-page.md#split-scan-determinism) carries usable warning baselines across corrupt observations; only valid producer-empty states clear them. Decoder reasons/bounded row evidence stay diagnostic.
-- [Cron health](./status-dashboard.md#cron-health-model) keeps failed history summaries null with named reasons and independent lease/progress/slot outcomes. Admit progress clocks before establishing liveness or hiding terminal errors; retain rolling-deploy rules.
+Domain applications: [R2 failed-read boundaries](process/architecture-appendix.md#adr-29-applications).
 #### ADR-30
 
 - **ADR-30 — Data-integrity R3: a published freshness verdict names its budget and its generation.** Publish the threshold and served generation together, never substituting a sibling, last-clean or publication clock. Cache health uses `healthyMaxRatio`/`healthyMaxAge` under [ADR-9](#adr-9); input degradation is separate and unreadable streaks remain null. Yield's validated sentinel atomically binds `generationId`/`publishedAt` to every applied publication, including degraded input; legacy/table/cron evidence has null identity but may retain a valid fallback timestamp. Safety retains its own clock and 86400-second budget. This is distinct from ADR-9's incident R3. Details: [status](./status-dashboard.md), [yield](./yield-intelligence.md#engineering-contract).
+Domain applications: [R3 source-clock boundaries](process/architecture-appendix.md#adr-30-applications).
 #### ADR-31
 
 - **ADR-31 — R4: non-`ok` implies a machine-readable reason; execution and input quality are separate.** `createCronResult` requires `metadata.reason`, projected by `resolveCronDegradedReason` into `cron_runs.degraded_reason`. Legacy reasonless degraded/error results warn and persist `unspecified-<status>`; other non-ok statuses retain their literal. Degraded means a required stage did not complete; publication needs separate evidence. Completed work with editorial/input findings returns ok plus `metadata.quality`. Compile/schema failures name asset and field. Details: [status](./status-dashboard.md).
 #### ADR-32
 
 - **ADR-32 — R5: one authority per cadence, threshold, and vocabulary.** Import schedules/budgets from `shared/lib/cron-jobs.ts` and `CRON_SCHEDULE_CADENCES`, availability from `STATUS_CACHE_RATIO_OVERRIDES`, labels/colors from `shared/lib/classification.ts`. Per-coin/chain maps must derive from registries or have registry-iterating completeness tests; “keep in sync” comments are not guards.
-- Domain contracts: [addition checklist](process/adding-a-stablecoin.md), [cron health](./status-dashboard.md#cron-health-model), [reserve review](process/live-reserves-appendix.md), [DDR polling](./depeg-resolver.md#data-plumbing), [redemption polling](./redemption-backstops.md#frontend-consumers), [URL grades](./screener-page.md#url-contract). [DEWS attention](./depeg-page.md#metric-ownership) compares `THREAT_BAND_ORDER.ALERT`, never copied scores, while retaining active/pending incidents.
+Domain applications: [R5 canonical policy projections](process/architecture-appendix.md#adr-32-applications).
 #### ADR-33
 
 - **ADR-33 — R6: provenance names what was read this run.** Route source, freshness kind, census scope and pagination completeness are run evidence, not feed labels. Redemption requires typed `routeObserved: true` before claiming onchain/protocol-api source. A capped/failed scan is incomplete; only an exhaustive census can veto independent staged pools. Local collection time is never upstream observation or certified state time. [ADR-8(c)](#adr-8) distinguishes native `local-read` from chart `upstream` supply clocks; [GLDT evidence](process/live-reserves-appendix.md#additional-adapter-evidence-boundaries) keeps unverified signatures diagnostic. Details: [reserves](./live-reserves.md), [DEX](./dex-liquidity.md).
-- Historical Tape methodology metadata names the persisted source version when available, otherwise its source-time registry epoch, not today's projector constant. Metadata repair preserves archive identity and never recomputes historical scores. [Tape pipeline](./tape-page.md#backing-pipeline) owns bounded correction.
+Domain applications: [R6 source identity and review clocks](process/architecture-appendix.md#adr-33-applications).
 #### ADR-34
 
 - **ADR-34 — R7: never publish display-capped or clamped values as statistics.** Headlines use authoritative aggregates, not pages or slices; disclose shown/total bounds (home depegs “Top 3 of N by deviation”; status counts full populations while listing 25 details). Without reproducible denominators use `reportedCollateralizationRatio`, not bounded `collateralizationRatio`. V9 structural shares normalize only floating tails within 0.0001 percentage point, with a clamp marker; other out-of-range values pass unclamped to asset-quarantine validation. Details: [reserves](./live-reserves.md), [report cards](./report-cards.md), [frontend rules](../src/AGENTS.md).
 #### ADR-35
 
 - **ADR-35 — R8: per-asset isolation inside an admitted publication.** Quarantine bad assets with named reasons; publish unaffected members only after global admission. Safety holds below ≥90% unaffected closure, on stale DEX or failed source/coverage floors, retaining the accepted generation. Admitted technical quarantines are `pipeline-gap` with null score/grade, not NR; dependents receive unavailable upstream results. Details: [report cards](./report-cards.md), [evaluation appendix](process/report-cards-appendix.md).
-- [Redemption](./redemption-backstops.md#cron-schedule) validates complete rows, persisted details and final dependency transforms before opening a run; invalid members become named failed placeholders and disclosures revalidate against that census. Global holds write no rows; post-manifest storage failure leaves an unreadable failed run. Supply repair/carry/quarantine remains solely [ADR-8(c)](#adr-8).
+Domain applications: [R8 redemption admission](process/architecture-appendix.md#adr-35-applications).
 
 #### ADR-36
 

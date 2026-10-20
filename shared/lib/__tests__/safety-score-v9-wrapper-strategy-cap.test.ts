@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveV9WrapperStrategyTier } from "../safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
-import type { V9InheritedStablecoinBacking } from "../safety-score-v9/backing-primitives";
 import type { V9ResolvedDependencyInputs } from "../safety-score-v9/dependencies";
 import type { V9AssetFactsV2 } from "../../types/safety-score-v9-facts";
 import {
@@ -43,25 +42,22 @@ function resolvedWithSerial(upstreamAssetIds: string[]): V9ResolvedDependencyInp
   };
 }
 const wrapperSerialEdge = [{ pathKind: "serial-dependency", dependencyType: "wrapper", upstreamAssetId: "usdc-circle" }];
-function inherited(tier: V9InheritedStablecoinBacking["tier"]): V9InheritedStablecoinBacking {
-  return { parentAssetId: "usdc-circle", parentBackingScore: 86, weight: 1, tier, failureDomains: [] };
-}
 
 
 describe("resolveV9WrapperStrategyTier — compiled form drives the current tier", () => {
   it("strategy-vault (third-party aggregator) → vault", () => {
     expect(
-      resolveV9WrapperStrategyTier(asset("strategy-vault", wrapperSerialEdge), resolvedWithSerial(["usdc-circle"]), undefined),
+      resolveV9WrapperStrategyTier(asset("strategy-vault", wrapperSerialEdge), resolvedWithSerial(["usdc-circle"])),
     ).toBe("vault");
   });
   it("savings-passthrough (native savings) → staked", () => {
     expect(
-      resolveV9WrapperStrategyTier(asset("savings-passthrough", wrapperSerialEdge), resolvedWithSerial(["usdc-circle"]), undefined),
+      resolveV9WrapperStrategyTier(asset("savings-passthrough", wrapperSerialEdge), resolvedWithSerial(["usdc-circle"])),
     ).toBe("staked");
   });
   it("risk-absorption (native staking layer) → staked", () => {
     expect(
-      resolveV9WrapperStrategyTier(asset("risk-absorption", wrapperSerialEdge), resolvedWithSerial(["usde-ethena"]), undefined),
+      resolveV9WrapperStrategyTier(asset("risk-absorption", wrapperSerialEdge), resolvedWithSerial(["usde-ethena"])),
     ).toBe("staked");
   });
   it("risk-absorption operated by a third party → vault", () => {
@@ -69,16 +65,15 @@ describe("resolveV9WrapperStrategyTier — compiled form drives the current tier
       resolveV9WrapperStrategyTier(
         asset("risk-absorption", wrapperSerialEdge, "strategy-vault"),
         resolvedWithSerial(["bold-liquity"]),
-        undefined,
       ),
     ).toBe("vault");
   });
-  it("no variantKind → falls back to the backing-inheritance tier (pure stays pure)", () => {
-    expect(resolveV9WrapperStrategyTier(asset(null), resolvedWithSerial([]), inherited("pure"))).toBe("pure");
-    expect(resolveV9WrapperStrategyTier(asset(null), resolvedWithSerial(["usdc-circle"]), inherited("wrapped"))).toBe("vault");
+  it("does not fabricate a wrapper tier from a serial parent alone", () => {
+    expect(resolveV9WrapperStrategyTier(asset(null), resolvedWithSerial([]))).toBeUndefined();
+    expect(resolveV9WrapperStrategyTier(asset(null), resolvedWithSerial(["usdc-circle"]))).toBeUndefined();
   });
   it("no variantKind, no inheritance, but a serial wrapper edge → conservative vault", () => {
-    expect(resolveV9WrapperStrategyTier(asset(null, wrapperSerialEdge), resolvedWithSerial(["usdc-circle"]), undefined)).toBe(
+    expect(resolveV9WrapperStrategyTier(asset(null, wrapperSerialEdge), resolvedWithSerial(["usdc-circle"]))).toBe(
       "vault",
     );
   });
@@ -87,19 +82,17 @@ describe("resolveV9WrapperStrategyTier — compiled form drives the current tier
       resolveV9WrapperStrategyTier(
         asset(null, [{ pathKind: "serial-dependency", dependencyType: "mechanism", upstreamAssetId: "share" }]),
         resolvedWithSerial(["share"]),
-        undefined,
       ),
     ).toBeUndefined();
     expect(
       resolveV9WrapperStrategyTier(
         asset(null, [{ pathKind: "collateral-exposure", dependencyType: "collateral", upstreamAssetId: "dai-makerdao" }]),
         { assetId: "mim", serial: [], basket: [], cycleBlocked: false },
-        undefined,
       ),
     ).toBeUndefined();
   });
   it("returns undefined with no serial parent", () => {
-    expect(resolveV9WrapperStrategyTier(asset(null), resolvedWithSerial([]), undefined)).toBeUndefined();
+    expect(resolveV9WrapperStrategyTier(asset(null), resolvedWithSerial([]))).toBeUndefined();
   });
 });
 

@@ -14,7 +14,7 @@ import {
   numbersAgree,
   SafetyScoreV9AccessPostureSchema,
   SafetyScoreV9CapSchema,
-  SafetyScoreV9EvidenceFreshnessSchema,
+  SafetyScoreV9EvidenceSummaryFreshnessSchema,
   SafetyScoreV9NrReasonSchema,
   SafetyScoreV9PillarSchema,
   SafetyScoreV9PublicReasonListSchema,
@@ -110,8 +110,10 @@ export {
 export {
   SafetyScoreV9AccessPostureSchema,
   SafetyScoreV9PillarSchema,
+  SafetyScoreV9FreshnessAssessmentSchema,
+  safetyScoreV9FreshnessVerdict,
 } from "./safety-score-v9-public-facts";
-export type { SafetyScoreV9Cap, SafetyScoreV9EvidenceFreshness, SafetyScoreV9NrReason, SafetyScoreV9PublicReason } from "./safety-score-v9-public-facts";
+export type { SafetyScoreV9Cap, SafetyScoreV9EvidenceFreshness, SafetyScoreV9FreshnessAssessment, SafetyScoreV9NrReason, SafetyScoreV9PublicReason } from "./safety-score-v9-public-facts";
 const SafetyScoreV9SerialDependencySchema = z
   .object({
     upstreamAssetId: z.string().min(1),
@@ -253,7 +255,7 @@ const SafetyScoreV9DependencySummarySchema = z
 export const SafetyScoreV9EvidenceSummarySchema = z
   .object({
     level: V9EvidenceLevelSchema,
-    freshness: SafetyScoreV9EvidenceFreshnessSchema,
+    freshness: SafetyScoreV9EvidenceSummaryFreshnessSchema,
     reasons: SafetyScoreV9PublicReasonListSchema,
   })
   .strict();
@@ -304,6 +306,25 @@ function refineCardBase(
   card: SafetyScoreV9CardBase,
   ctx: { addIssue: (issue: { code: "custom"; path?: PropertyKey[]; message: string }) => void },
 ): void {
+  const freshness = card.evidence.freshness;
+  const pillars = [card.pillars.backing, card.pillars.exit, card.pillars.control];
+  // Explicit schema-7 historical dispatch: either all four old bare verdicts,
+  // or a complete assessment set. Never manufacture clocks for retained bytes.
+  if (typeof freshness === "string") {
+    if (pillars.some((pillar) => typeof pillar.freshness !== "string")) {
+      ctx.addIssue({ code: "custom", path: ["evidence", "freshness"], message: "Historical freshness must retain bare verdicts throughout the card" });
+    }
+  } else {
+    if (pillars.some((pillar) => typeof pillar.freshness === "string")) {
+      ctx.addIssue({ code: "custom", path: ["pillars"], message: "Assessment freshness requires every constituent assessment" });
+    } else {
+      const verdicts = pillars.map((pillar) => typeof pillar.freshness === "string" ? pillar.freshness : pillar.freshness.verdict);
+      const expected = verdicts.includes("stale") ? "stale" : verdicts.every((verdict) => verdict === "current") ? "current" : "unknown";
+      if (freshness.verdict !== expected) {
+        ctx.addIssue({ code: "custom", path: ["evidence", "freshness", "verdict"], message: "Aggregate freshness must derive from every referenced pillar, with stale dominating unknown" });
+      }
+    }
+  }
   refineV9PublicGapReferences(card, ctx);
   refineV9RatingStatusFields(card, ctx);
   const excludedPillars = (["backing", "exit", "control"] as const).filter((pillar) => card.pillars[pillar].aggregationDisposition === "excluded-a-b").sort();
@@ -514,6 +535,14 @@ function refineResponse(
   ctx: { addIssue: (issue: { code: "custom"; path?: PropertyKey[]; message: string }) => void },
 ): void {
   refineV9PublicGapContext(response, ctx);
+  response.cards.forEach((card, index) => {
+    for (const pillar of ["backing", "exit", "control"] as const) {
+      const assessment = card.pillars[pillar].freshness;
+      if (typeof assessment !== "string" && assessment.assessedAtSec !== response.asOfSec) {
+        ctx.addIssue({ code: "custom", path: ["cards", index, "pillars", pillar, "freshness", "assessedAtSec"], message: "Pillar freshness must use the captured scoring clock" });
+      }
+    }
+  });
   if (response.publishedAtSec < response.asOfSec) {
     ctx.addIssue({ code: "custom", path: ["publishedAtSec"], message: "Publication cannot predate evidence" });
   }

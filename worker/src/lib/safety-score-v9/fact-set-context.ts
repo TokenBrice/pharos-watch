@@ -177,14 +177,21 @@ export function addEvidence(context: AssetBuildContext, evidence: V9EvidenceRefe
 }
 
 function capturedReserveFailure(context: AssetBuildContext, scope: V9EvidenceCauseScope, gap: V9FactGapV3) {
-  // A retained, classified live holding can lose currency through producer age.
-  // Bind that failure to this exact gap; report/research expiry is not a fetch failure.
+  // Retained live holdings and their dependency graph share fetch provenance.
+  // Bind failure to the exact gap; report/research expiry is not a fetch failure.
   const provenance = context.fixedInput.liveReserveProvenanceMap[context.asset.assetId];
   const source = context.extension.sources.liveReserves;
-  const retainedEvidence = gap.evidenceRefIds.includes(`${context.asset.assetId}:reserve:${scope.exposureId}`)
-    ? context.evidence.get(`${context.asset.assetId}:reserve:${scope.exposureId}`) : undefined;
-  if (scope.pillar === "backing" && scope.componentKey === "reserve-exposure" &&
-      gap.observationState === "stale" && scope.routeKey === null && scope.exposureId !== null &&
+  const liveDependencyScope = scope.componentKey === "effective-dependencies" &&
+    scope.exposureId === null && scope.factorKey === null &&
+    scope.requiredDatum === "effective-dependencies" && context.asset.dependencies?.dependencyFromLive === true;
+  const retainedEvidenceId = liveDependencyScope
+    ? `${context.asset.assetId}:effective-dependencies`
+    : `${context.asset.assetId}:reserve:${scope.exposureId}`;
+  const retainedEvidence = gap.evidenceRefIds.includes(retainedEvidenceId)
+    ? context.evidence.get(retainedEvidenceId) : undefined;
+  if (scope.pillar === "backing" &&
+      (liveDependencyScope || (scope.componentKey === "reserve-exposure" && scope.exposureId !== null)) &&
+      gap.observationState === "stale" && scope.routeKey === null &&
       (context.fixedInput.liveReserveMap[context.asset.assetId]?.length ?? 0) > 0 &&
       provenance && Number.isFinite(provenance.fetchedAt) && provenance.fetchedAt >= 0 &&
       provenance.fetchedAt <= context.fixedInput.clockSec &&

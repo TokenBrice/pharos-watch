@@ -23,7 +23,7 @@ import * as publicationCodec from "../../lib/safety-score-v9/publication-codec";
 
 const databases: DatabaseSync[] = [];
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); for (const sqlite of databases.splice(0)) sqlite.close(); });
-async function seed() {
+async function seed(assessments = false) {
   const sqlite = createLatestSchemaSqlite().sqlite;
   databases.push(sqlite);
   const db = createSqliteD1(sqlite);
@@ -34,6 +34,13 @@ async function seed() {
     makeReportCardsV9Card({ id: "usdt-tether", score: null, grade: "NR",
       nrReasons: [{ code: "unresolved-control-identity", message: "Control identity unresolved", field: null, origin: "asset" }] }),
   ] });
+  if (assessments) for (const card of publication.cards) {
+    for (const pillar of ["backing", "exit", "control"] as const) card.pillars[pillar].freshness = {
+      verdict: "unknown", assessedAtSec: publication.asOfSec, observedAtSec: null,
+      sourceGenerationId: null, maxAgeSec: null, reason: "pillar-clock-unavailable",
+    };
+    card.evidence.freshness = { verdict: "unknown", pillarRefs: ["backing", "exit", "control"] };
+  }
   await persistSafetyScoreV9Publication(db, currentInput(publication));
   return { sqlite, db, publication };
 }
@@ -44,6 +51,32 @@ function health(sqlite: DatabaseSync, value: V9PublicationHealth) {
 }
 
 describe("generation-bound compact Safety Scores", () => {
+  it("keeps old detail clients on bare verdicts and serves stored objects only with opt-in", async () => {
+    const { db, sqlite, publication } = await seed(true);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(publication.publishedAtSec * 1000);
+    const before = sqlite.prepare("SELECT * FROM safety_score_site_fragments ORDER BY representation_key, ordinal").all();
+    const url = detailUrl();
+    const legacyResponse = await handleReportCardsV9Detail(db, url);
+    const legacy = ReportCardsV9DetailResponseSchema.parse(await legacyResponse.json());
+    url.searchParams.set("freshness", "assessments");
+    const assessedResponse = await handleReportCardsV9Detail(db, url);
+    const assessed = ReportCardsV9DetailResponseSchema.parse(await assessedResponse.json());
+    expect(assessedResponse.headers.get("ETag")).not.toBe(legacyResponse.headers.get("ETag"));
+    const expected = structuredClone(assessed);
+    for (const card of expected.cards) {
+      expect(typeof card.evidence.freshness).toBe("object");
+      for (const pillar of ["backing", "exit", "control"] as const) {
+        expect(typeof card.pillars[pillar].freshness).toBe("object");
+        card.pillars[pillar].freshness = "unknown";
+      }
+      card.evidence.freshness = "unknown";
+    }
+    expect(legacy).toEqual(expected);
+    expect(JSON.stringify(await (await handleReportCardsV9Table(db)).json())).not.toContain('"freshness"');
+    expect(sqlite.prepare("SELECT * FROM safety_score_site_fragments ORDER BY representation_key, ordinal").all()).toEqual(before);
+  });
+
   it("matches admitted full cards across rated, NR, partial and pipeline-gap states", async () => {
     const { db } = await seed();
     const source = await loadActiveSafetyScoreSource(db);

@@ -21,6 +21,7 @@ import {
 } from "@shared/lib/safety-score-v9/policy";
 import * as methodologyPolicy from "@shared/lib/safety-score-v9/policy";
 import * as exitExecution from "@shared/lib/safety-score-v9/exit-execution";
+import reviewedExecutionModels from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import { rebuildFixed } from "./safety-score-v9-fact-set.test-support";
 import { withRedemptionBackstopConfig } from "./safety-score-v9-extension-routes.test-support";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
@@ -69,6 +70,31 @@ describe("route compiler policy reuse", () => {
     } finally {
       loadPolicy.mockRestore();
       validateReviews.mockRestore();
+    }
+  });
+});
+
+describe("reviewed execution-model gap expiry", () => {
+  it.each([
+    { offset: -1, expectedGap: true },
+    { offset: 0, expectedGap: true },
+    { offset: 1, expectedGap: false },
+  ])("enumerates missing certificates through the inclusive expiry (offset $offset)", ({ offset, expectedGap }) => {
+    const review = exitExecution.validateExitExecutionModelReviews(reviewedExecutionModels, V9_CANDIDATE_POLICY_V1)
+      .find((entry) => V9_CANDIDATE_POLICY_V1.policy.semantic.exit.executionModels[entry.modelId]!.admission === "enabled")!;
+    const assetId = review.identity.assetId;
+    const clockSec = Date.parse(review.expiresAt) / 1000 + offset;
+    const fixed = exactFixedInput({ assetId, clockSec });
+    const context = factBuilderContext(fixed, extension({ assetId, clockSec, registryFingerprint: fixed.registryFingerprint }));
+    const routes = buildRoutes(context, buildSupply(context));
+    const gapId = `${assetId}:gap:exit-execution:${exitExecution.exitExecutionReviewDigest(review)}`;
+    expect(routes.exitStatus.gapIds.includes(gapId)).toBe(expectedGap);
+    expect(context.gaps.has(gapId)).toBe(expectedGap);
+    if (expectedGap) {
+      expect(context.gaps.get(gapId)).toMatchObject({
+        reasonCode: "missing-runtime-route-evidence", observationState: "missing", responsibility: "unresearched",
+        causeProof: { cause: "U", reason: "not-yet-researched", evidenceRefIds: [] },
+      });
     }
   });
 });

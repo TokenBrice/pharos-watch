@@ -77,6 +77,12 @@ class CcipLogInvalidError extends Error {
     this.operands = { address: typeof row.address === "string" ? row.address.slice(0, 256) : null, topicCount: Array.isArray(row.topics) ? row.topics.length : null, topic0: Array.isArray(row.topics) && typeof row.topics[0] === "string" ? row.topics[0].slice(0, 256) : null, dataLength: typeof row.data === "string" ? row.data.length : null, blockNumber: typeof row.blockNumber === "string" ? row.blockNumber.slice(0, 80) : null, transactionHash: typeof row.transactionHash === "string" ? row.transactionHash.slice(0, 80) : null, logIndex: typeof row.logIndex === "string" ? row.logIndex.slice(0, 80) : null, removed: typeof row.removed === "boolean" ? row.removed : null };
   }
 }
+function matchesLane(log: { address: string; topics: readonly unknown[] }, lane: Lane, sent: boolean): boolean {
+  const topic = sent ? (lane.version === "2.0.0" ? SEND_20 : lane.version === "1.6" ? SEND_16 : SEND_15)
+    : (lane.version === "2.0.0" ? EXECUTION_20 : lane.version === "1.6" ? EXECUTION_16 : EXECUTION_15);
+  return log.address === (sent ? lane.onRampAddress : lane.offRampAddress) && log.topics[0] === topic &&
+    (lane.version === "1.5" || log.topics[1] === word(sent ? lane.destination.chainSelector : lane.source.chainSelector));
+}
 function decodeSend(log: Log, lane: Lane): { sequence: bigint; messageId: string; amount: bigint } {
   if (log.address !== lane.onRampAddress) fail("send-address-mismatch");
   let sequence: bigint, messageId: string, amount = 0n;
@@ -587,17 +593,11 @@ export async function observeCcipPending(input: {
           return !parsed.success || BigInt(parsed.data.number) !== BigInt(chunk[j]![0]) || parsed.data.hash !== chunk[j]![1];
         })) fail("event-anchor-mismatch");
       }
-      for (const { lane, cp, sent, topic } of scans) {
+      for (const { lane, cp, sent } of scans) {
         context = { ...context, laneId: lane.id, chainId: chain };
         const cursor = sent ? cp.sent : cp.executed, additions: Message[] = [];
-        const laneLogs = logs.filter(log => {
-          if (Number(BigInt(log.blockNumber)) < cursor.nextBlock ||
-            log.address !== (sent ? lane.onRampAddress : lane.offRampAddress) ||
-            log.topics[0] !== topic) return false;
-          // Shared ramps also emit other directed lanes. Only our exact selector
-          // is in this census; ABI/identity validation remains below.
-          return lane.version === "1.5" || log.topics[1] === word(sent ? lane.destination.chainSelector : lane.source.chainSelector);
-        });
+        // Shared ramps emit other directed lanes; route before ABI validation.
+        const laneLogs = logs.filter(log => Number(BigInt(log.blockNumber)) >= cursor.nextBlock && matchesLane(log, lane, sent));
         for (const log of laneLogs) {
           // Bound payloads only after exact directed-lane routing. A valid
           // foreign message on this shared ramp cannot poison our census.
@@ -648,9 +648,10 @@ export async function observeCcipPending(input: {
         if (!parsed.success || parsed.data.transactionHash !== tx) fail("indexer-send-unproved");
         const row = parsed.data, height = Number(BigInt(row.blockNumber));
         const found = row.logs.some(raw => {
-          if (!raw || typeof raw !== "object" || !("address" in raw) || typeof raw.address !== "string" || raw.address.toLowerCase() !== lane.onRampAddress) return false;
+          if (!raw || typeof raw !== "object" || !("address" in raw) || typeof raw.address !== "string" ||
+            !("topics" in raw) || !Array.isArray(raw.topics) ||
+            !matchesLane({ address: raw.address.toLowerCase(), topics: raw.topics }, lane, true)) return false;
           const log = asLog(raw);
-          if (log.topics[0] !== (lane.version === "2.0.0" ? SEND_20 : lane.version === "1.6" ? SEND_16 : SEND_15)) return false;
           const message = decodeSend(log, lane);
           return log.transactionHash === tx && log.blockNumber === row.blockNumber && log.blockHash === row.blockHash && message.messageId === discovered.messageId && message.amount > 0n;
         });

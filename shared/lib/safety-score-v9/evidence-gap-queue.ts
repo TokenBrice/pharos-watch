@@ -42,7 +42,8 @@ function statusesForAsset(asset: V9AssetFactsV3): V9FactStatusV2[] {
         if (value === null || typeof value !== "object" || !("status" in value)) return [];
         // The asset schema has already validated mechanism component facts.
         const fact = value as V9MechanismFactV1;
-        return [fact.status, ...(fact.scopedAssessments ?? []).map((fragment) => fragment.status)];
+        return [fact.status, ...(fact.scopedAssessments ?? []).map((fragment) => fragment.status),
+          ...(fact.constraints ?? []).map((constraint) => constraint.status)];
       })
     : [];
   return [

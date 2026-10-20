@@ -4,7 +4,7 @@ import { resolveV9PublicWitnessText, resolveV9PublicWitnessTexts } from "../../t
 import {
   SafetyScoreV9CurrentCardSchema,
   SafetyScoreV9CurrentResponseSchema,
-  type SafetyScoreV9EvidenceFreshness,
+  type SafetyScoreV9FreshnessAssessment,
   type SafetyScoreV9NrReason,
   type SafetyScoreV9PublicReason,
   type SafetyScoreV9CurrentResponse,
@@ -18,10 +18,10 @@ import type {
   V9ReasonCode,
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
-import type { V9EvidenceResponsibility, V1005ProcessDiagnostic, V1005AssetIssuanceFacts } from "../../types/safety-score-v9-facts";
+import type { V1005ProcessDiagnostic, V1005AssetIssuanceFacts } from "../../types/safety-score-v9-facts";
 import { projectV9CompactPartialEvidence } from "../../types/safety-score-v9-causes";
 import { projectExitExecutionCertificate } from "./exit-execution";
-import { V9EvidenceResponsibilitySchema } from "../../types/safety-score-v9-fact-primitives";
+import { V9_PUBLIC_EVIDENCE_RESPONSIBILITIES as RESPONSIBILITIES } from "../../types/safety-score-v9-vocabulary";
 import { countV9EvidenceObligations } from "../../types/safety-score-v9-public-evidence-facts";
 import { round4 } from "../math";
 import type { V9DependencyEconomicRole } from "../../types/dependency-types";
@@ -77,7 +77,7 @@ export interface V9PublicCardProjectionInput {
       observedAtSec: number | null;
     }>>;
   };
-  freshness?: Partial<Record<V9QualityPillar, SafetyScoreV9EvidenceFreshness>>;
+  freshness?: Partial<Record<V9QualityPillar, SafetyScoreV9FreshnessAssessment>>;
   evidenceReasons?: readonly V9PillarReason[];
   reasonCodes?: readonly V9ReasonCode[];
 }
@@ -117,7 +117,7 @@ export interface SafetyScoreV9TopDriver {
   value: number | null;
   /** Full public explanation when the driver is a cap or a withheld result. */
   reason: string | null;
-  evidenceFreshness: SafetyScoreV9EvidenceFreshness;
+  evidenceFreshness: SafetyScoreV9FreshnessAssessment["verdict"];
 }
 
 const PILLARS = ["backing", "exit", "control"] as const satisfies readonly V9QualityPillar[];
@@ -127,14 +127,6 @@ const EVIDENCE_RANK: Readonly<Record<V9EvidenceLevel, number>> = {
   limited: 2,
   insufficient: 3,
 };
-// Derived from the canonical enum, not restated. This list was hand-mirrored and
-// silently lost `published-evidence-expired` when that value was added: the
-// `satisfies` clause only checks assignability, so an omission never failed. The
-// published projection must enumerate every responsibility, so sort the enum
-// itself and keep exactly one source of truth.
-const RESPONSIBILITIES: readonly V9EvidenceResponsibility[] = [
-  ...V9EvidenceResponsibilitySchema.options,
-].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
 const EXIT_COMPONENTS = [
   ["access", "Access"],
   ["settlement", "Settlement"],
@@ -724,10 +716,15 @@ function overallEvidenceLevel(input: V9PublicCardProjectionInput): V9EvidenceLev
     .sort((left, right) => EVIDENCE_RANK[right] - EVIDENCE_RANK[left])[0]!;
 }
 
-function overallFreshness(input: V9PublicCardProjectionInput): SafetyScoreV9EvidenceFreshness {
-  const freshness = PILLARS.map((pillar) => input.freshness?.[pillar] ?? "unknown");
-  if (freshness.includes("stale")) return "stale";
-  return freshness.every((value) => value === "current") ? "current" : "unknown";
+function overallFreshness(pillars: V9UninternedPublicCard["pillars"]): V9UninternedPublicCard["evidence"]["freshness"] {
+  const verdicts = PILLARS.map((pillar) => {
+    const freshness = pillars[pillar].freshness;
+    return typeof freshness === "string" ? freshness : freshness.verdict;
+  });
+  return {
+    verdict: verdicts.includes("stale") ? "stale" : verdicts.every((verdict) => verdict === "current") ? "current" : "unknown",
+    pillarRefs: ["backing", "exit", "control"],
+  };
 }
 
 function projectPillars(input: V9PublicCardProjectionInput): V9UninternedPublicCard["pillars"] {
@@ -748,7 +745,14 @@ function projectPillars(input: V9PublicCardProjectionInput): V9UninternedPublicC
       ...pillarCauseFields(input, pillar),
       supportedComponentKeys: uniqueSorted(evaluation.supportedComponentKeys),
       evidenceLevel: evaluation.evidenceLevel,
-      freshness: input.freshness?.[pillar] ?? "unknown",
+      freshness: input.freshness?.[pillar] ?? {
+        verdict: "unknown" as const,
+        assessedAtSec: input.trace.asOfSec,
+        observedAtSec: null,
+        sourceGenerationId: null,
+        maxAgeSec: null,
+        reason: "pillar-clock-unavailable" as const,
+      },
       components: pillarComponents(input, pillar),
       reasons: canonicalPublicReasons(evaluation.reasons),
     };
@@ -1089,6 +1093,7 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
     binding: isRateable && cap.binding,
   }));
   const bindingCap = isRateable ? (caps.find((cap) => cap.binding) ?? null) : null;
+  const pillars = projectPillars(input);
   return internV9PublicCauseGaps({
     id: input.trace.assetId,
     supply: input.supply ?? { circulatingUsdAtEvaluation: null, asOfSec: null, generationId: null },
@@ -1104,7 +1109,7 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
     qualityScore: input.trace.weightedQuality,
     pegMultiplier: input.trace.pegMultiplier,
     pegAdjustedScore: input.trace.preCapScore,
-    pillars: projectPillars(input),
+    pillars,
     weakestPillar: input.trace.weakestPillar,
     caps,
     bindingCap,
@@ -1112,7 +1117,7 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
     reasonCodes: allPublicReasonCodes(input),
     evidence: {
       level: overallEvidenceLevel(input),
-      freshness: overallFreshness(input),
+      freshness: overallFreshness(pillars),
       reasons: canonicalPublicReasons(input.evidenceReasons ?? []),
     },
     accessPosture: {
@@ -1144,7 +1149,9 @@ export function projectSafetyScoreV9Card(input: V9PublicCardProjectionInput): { 
  */
 export function projectTopDriver(card: SafetyScoreV9CurrentCard): SafetyScoreV9TopDriver | null {
   if (card.witnessTexts !== undefined) card = resolveV9PublicWitnessTexts(card);
-  const evidenceFreshness = card.evidence.freshness;
+  const evidenceFreshness = typeof card.evidence.freshness === "string"
+    ? card.evidence.freshness
+    : card.evidence.freshness.verdict;
   if (card.score === null || card.grade === "NR") {
     const message = card.nrReasons[0]?.message ?? "Required evidence is withheld.";
     return {

@@ -3,6 +3,8 @@ import ceurComplianceSource from "@shared/data/stablecoins/domains/compliance/ce
 import cusdComplianceSource from "@shared/data/stablecoins/domains/compliance/cusd-celo.json";
 import gbpmComplianceSource from "@shared/data/stablecoins/domains/compliance/gbpm-mento.json";
 import jpymComplianceSource from "@shared/data/stablecoins/domains/compliance/jpym-mento.json";
+import xsgdComplianceSource from "@shared/data/stablecoins/domains/compliance/xsgd-straitsx.json";
+import xusdComplianceSource from "@shared/data/stablecoins/domains/compliance/xusd-straitsx.json";
 import type { ReserveSlice } from "@shared/types/reserves";
 import {
   buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
@@ -15,6 +17,16 @@ import {
 import { deriveSafetyScoreV9PegScore } from "../safety-score-v9/fact-set";
 import { hasPublishedReserveReconciliationEvidence } from "../safety-score-v9/extension";
 import { resolveV9MintControlGroupSeverity } from "@shared/lib/safety-score-v9/evaluate-set";
+import {
+  canonicalV9DependencyEdgeKey,
+  compileNativeV3FactSet,
+  coreFixture,
+  evaluateV9FactSet,
+  knownStatus,
+  SOURCE_FINGERPRINTS,
+  V9_CANDIDATE_POLICY_V1,
+  type V9AssetFactsV2,
+} from "@shared/lib/__tests__/safety-score-v9-facts.fixture-support";
 import { addReviewedStaticReserveEvidence } from "../safety-score-v9/extension-reserves";
 import {
   conservativeDateEndSec,
@@ -105,7 +117,7 @@ function usdgReserveRows(): ReserveSlice[] {
 }
 
 describe("Phase 1 D2 issuer identity adapter", () => {
-  it("matches the accepted V8 matrix normalization, inheritance, and slug fallback", () => {
+  it("preserves legal-name normalization, inheritance, and slug fallback", () => {
     const byId = new Map<string, V9ExtensionRegistryMeta>([
       [
         "usdp-paxos",
@@ -122,6 +134,23 @@ describe("Phase 1 D2 issuer identity adapter", () => {
     expect(resolveSafetyScoreV9AssetIssuerKey("usdp-paxos", byId)).toBe("paxos");
     expect(resolveSafetyScoreV9AssetIssuerKey("pyusd-paypal", byId)).toBe("paxos");
     expect(resolveSafetyScoreV9AssetIssuerKey("wrapper-family-slug", byId)).toBe("family-slug");
+  });
+
+  it("keeps ordinary same-prefix issuers distinct and legal-name punctuation equivalent", () => {
+    const byId = new Map<string, V9ExtensionRegistryMeta>([
+      ["alpha-finance", mintMeta("alpha-finance", {
+        genius: { issuerEntity: "Alpha Finance Ltd." } as V9ExtensionRegistryMeta["genius"],
+      })],
+      ["alpha-payments", mintMeta("alpha-payments", {
+        genius: { issuerEntity: "Alpha Payments LLC" } as V9ExtensionRegistryMeta["genius"],
+      })],
+      ["paxos-alternate", mintMeta("paxos-alternate", {
+        genius: { issuerEntity: "Paxos Trust Company N.A." } as V9ExtensionRegistryMeta["genius"],
+      })],
+    ]);
+    expect(resolveSafetyScoreV9AssetIssuerKey("alpha-finance", byId)).toBe("alpha finance");
+    expect(resolveSafetyScoreV9AssetIssuerKey("alpha-payments", byId)).toBe("alpha payments");
+    expect(resolveSafetyScoreV9AssetIssuerKey("paxos-alternate", byId)).toBe("paxos");
   });
 
   it("fails closed on missing records, cycles, and inheritance deeper than five hops", () => {
@@ -160,7 +189,7 @@ describe("Phase 1 D2 issuer identity adapter", () => {
       resolveSafetyScoreV9AssetIssuerKey(source.id, byId),
     );
 
-    expect(issuerKeys).toEqual(["mento", "mento", "mento", "mento"]);
+    expect(issuerKeys).toEqual(["mento protocol", "mento protocol", "mento protocol", "mento protocol"]);
     expect(resolveSafetyScoreV9AssetIssuerKey("ceur-celo", byId)).not.toBe("celo");
     const members = reviewedMentoAssets.map((source) => ({
       assetId: source.id,
@@ -169,18 +198,114 @@ describe("Phase 1 D2 issuer identity adapter", () => {
     }));
     expect(
       resolveV9MintControlGroupSeverity({
-        controllerIssuerKey: "mento",
+        controllerIssuerKey: "mento protocol",
         members,
       }),
     ).toBe("low");
   });
+
+  it.each(["mint-control", "upgrade-control"] as const)(
+    "retains exact issuer identity through shared %s group evaluation",
+    (kind) => {
+      for (const [betaIssuer, gammaIssuer, severity] of [
+        ["Alpha Finance Ltd.", "Alpha Payments LLC", "high"],
+        ["Paxos Trust Company, N.A.", "Paxos Trust Company N.A.", "low"],
+        ["MakerDAO / Sky Protocol governance", "Sky Protocol governance", "low"],
+        [xsgdComplianceSource.genius.issuerEntity, xusdComplianceSource.genius.issuerEntity, "low"],
+        [xsgdComplianceSource.genius.issuerEntity, "StraitsX Payment Services Pte. Ltd.", "high"],
+      ] as const) {
+        const input = coreFixture();
+        const byId = new Map<string, V9ExtensionRegistryMeta>([
+          ["beta", mintMeta("beta", { genius: { issuerEntity: betaIssuer } as V9ExtensionRegistryMeta["genius"] })],
+          ["gamma", mintMeta("gamma", { genius: { issuerEntity: gammaIssuer } as V9ExtensionRegistryMeta["genius"] })],
+        ]);
+        for (const row of input.assets.slice(1)) {
+          const asset = row as unknown as V9AssetFactsV2;
+          asset.assetIssuerKey = resolveSafetyScoreV9AssetIssuerKey(asset.assetId, byId);
+          asset.dependencies = {
+            status: knownStatus(),
+            sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
+            source: "manual",
+            baseSource: "manual",
+            dependencyFromLive: false,
+            mappedLiveReserveWeight: null,
+            fallbackReason: null,
+            edges: [{
+              edgeKey: canonicalV9DependencyEdgeKey("mechanism", "alpha"),
+              upstreamAssetId: "alpha",
+              dependencyType: "mechanism",
+              pathKind: "serial-dependency",
+              weight: 1,
+              economicRole: "serial-claim",
+              evidenceRefIds: ["evidence:base"],
+              failureDomains: [{ kind, key: "shared:issuer-controller" }],
+            }],
+            diagnostics: { graphState: "valid", issueCodes: [], sccMemberAssetIds: [] },
+          };
+        }
+        const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
+        for (const assetId of ["beta", "gamma"]) {
+          const signal = evaluated.assets.find((asset) => asset.assetId === assetId)!
+            .scoreInput.dependencyStructuralSignals.find((candidate) =>
+              candidate.failureDomainKeys.includes(`${kind}:shared:issuer-controller`),
+            );
+          expect(signal).toMatchObject({ severity });
+        }
+      }
+    },
+  );
+});
+
+describe("Phase 1 D2 reviewed StraitsX issuer-group alias", () => {
+  const reviewedSources = [xsgdComplianceSource, xusdComplianceSource];
+  const byId = new Map<string, V9ExtensionRegistryMeta>([
+    ...reviewedSources.map((source): [string, V9ExtensionRegistryMeta] => [
+      source.id,
+      mintMeta(source.id, { genius: source.genius as V9ExtensionRegistryMeta["genius"] }),
+    ]),
+    ["wrapped-xsgd", mintMeta("wrapped-xsgd", { variantOf: "xsgd-straitsx" })],
+    ["unlisted-straitsx", mintMeta("unlisted-straitsx", {
+      genius: { issuerEntity: "StraitsX Payment Services Pte. Ltd." } as V9ExtensionRegistryMeta["genius"],
+    })],
+  ]);
+
+  it("groups only the reviewed SGD/USD entities and inherited variants without merging legal names", () => {
+    expect(xsgdComplianceSource.genius.issuerEntity).not.toBe(xusdComplianceSource.genius.issuerEntity);
+    for (const assetId of ["xsgd-straitsx", "xusd-straitsx", "wrapped-xsgd"]) {
+      expect(resolveSafetyScoreV9AssetIssuerKey(assetId, byId)).toBe("straitsx");
+    }
+    expect(resolveSafetyScoreV9AssetIssuerKey("unlisted-straitsx", byId)).toBe("straitsx payment services");
+  });
+
+  it.each(["mint-control", "upgrade-control"] as const)(
+    "keeps reviewed shared %s diagnostic without admitting unlisted group entities",
+    (kind) => {
+      const members = ["xsgd-straitsx", "xusd-straitsx", "wrapped-xsgd"].map((assetId) => ({
+        assetId,
+        pathKey: `${kind}:shared:straitsx-controller`,
+        assetIssuerKey: resolveSafetyScoreV9AssetIssuerKey(assetId, byId),
+      }));
+      expect(resolveV9MintControlGroupSeverity({
+        controllerIssuerKey: "straitsx",
+        members,
+      })).toBe("low");
+      expect(resolveV9MintControlGroupSeverity({
+        controllerIssuerKey: "straitsx",
+        members: [...members, {
+          assetId: "unlisted-straitsx",
+          pathKey: `${kind}:shared:straitsx-controller`,
+          assetIssuerKey: resolveSafetyScoreV9AssetIssuerKey("unlisted-straitsx", byId),
+        }],
+      })).toBe("high");
+    },
+  );
 });
 
 describe("Phase 1 D2 curated issuer-identity alias (MakerDAO / Sky)", () => {
   // Sky is the rebranded MakerDAO, governed by the same PauseProxy. DAI declares
   // "MakerDAO / Sky Protocol governance"; USDS/sUSDS declare "Sky Protocol
-  // governance". Without the curated alias these normalize to different keys
-  // ("makerdao" vs "sky"), so the PauseProxy same-issuer group fails closed.
+  // governance". Without the curated alias these normalize to different full
+  // phrases, so the PauseProxy same-issuer group fails closed.
   const skyById = new Map<string, V9ExtensionRegistryMeta>([
     ["dai-makerdao", mintMeta("dai-makerdao", {
       genius: { issuerEntity: "MakerDAO / Sky Protocol governance" } as V9ExtensionRegistryMeta["genius"],
@@ -217,9 +342,8 @@ describe("Phase 1 D2 curated issuer-identity alias (MakerDAO / Sky)", () => {
   });
 
   it("does NOT merge an unrelated issuer that only shares a leading token", () => {
-    // "Sky Mavis" (Ronin/Axie) normalizes to first token "sky" but its full
-    // phrase is not the aliased "sky protocol governance"; exact-phrase matching
-    // keeps it distinct from the MakerDAO / Sky identity.
+    // "Sky Mavis" (Ronin/Axie) shares a leading token, but not the aliased
+    // "sky protocol governance" phrase, so it keeps its full distinct identity.
     const byId = new Map<string, V9ExtensionRegistryMeta>([
       ["skygold-mavis", mintMeta("skygold-mavis", {
         genius: { issuerEntity: "Sky Mavis" } as V9ExtensionRegistryMeta["genius"],
@@ -229,7 +353,7 @@ describe("Phase 1 D2 curated issuer-identity alias (MakerDAO / Sky)", () => {
       })],
     ]);
     const unrelated = resolveSafetyScoreV9AssetIssuerKey("skygold-mavis", byId);
-    expect(unrelated).toBe("sky");
+    expect(unrelated).toBe("sky mavis");
     expect(unrelated).not.toBe(resolveSafetyScoreV9AssetIssuerKey("usds-sky", byId));
 
     // A cross-issuer group therefore stays fail-closed (high).

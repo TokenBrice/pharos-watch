@@ -24,6 +24,11 @@ const V9MechanismFactV1Schema = z
     status: V9FactStatusV2Schema,
     quality: V9MechanismQualitySchema.nullable(),
     failureDomains: CanonicalFailureDomainsSchema,
+    constraints: z.array(z.object({
+      factKey: z.string().min(1),
+      quality: V9MechanismQualitySchema.nullable(),
+      status: V9FactStatusV2Schema,
+    }).strict()).min(1).optional(),
     scopedAssessments: z.array(z.object({
       scopeId: z.string().min(1),
       share: z.number().finite().positive().max(1),
@@ -33,6 +38,17 @@ const V9MechanismFactV1Schema = z
   })
   .strict()
   .superRefine((fact, ctx) => {
+    if (fact.constraints !== undefined) {
+      if (new Set(fact.constraints.map((row) => row.factKey)).size !== fact.constraints.length) {
+        ctx.addIssue({ code: "custom", path: ["constraints"], message: "Mechanism constraint scopes must be unique" });
+      }
+      for (const row of fact.constraints) {
+        if ((row.quality !== null) !== (row.status.observationState === "known") ||
+            (row.quality !== null && row.status.evidenceRefIds.length === 0)) {
+          ctx.addIssue({ code: "custom", path: ["constraints"], message: "Known mechanism constraints require quality and evidence" });
+        }
+      }
+    }
     if (fact.scopedAssessments != null) {
       const total = fact.scopedAssessments.reduce((sum, row) => sum + row.share, 0);
       if (Math.abs(total - 1) > 1e-9 || new Set(fact.scopedAssessments.map(row => row.scopeId)).size !== fact.scopedAssessments.length) {

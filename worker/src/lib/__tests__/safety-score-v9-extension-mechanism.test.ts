@@ -1001,6 +1001,64 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     });
   });
 
+  it.each((["failed", "weak", "strong"] as const).flatMap((quality) =>
+    (["issuer-undisclosed", "integration-missing", "method-unsupported"] as const).map((disposition) => ({ quality, disposition })),
+  ))("compiles $quality with $disposition without losing either profile constituent", ({ quality, disposition }) => {
+    const fixed = makeV9FixedInput();
+    const extension = makeV9Extension({ registryFingerprint: fixed.registryFingerprint });
+    const review = expandOverlayReview(MechanismReviewOverlaySchema.parse({
+      assetId: "alpha", archetype: "fiat-cash", reviewedAt: "2026-07-14",
+      sources: [{ label: "Issuer disclosures", url: "https://example.com/disclosures" }],
+      notes: "Independently retained supported constraint and unavailable insurance.",
+      metrics: {}, components: {},
+      profileReview: { profile: "allocated-commodity-claim", facts: {
+        holderTitle: { disposition: "supported", quality: "strong" },
+        physicalAllocation: { disposition: "supported", quality: "strong" },
+        custodianSegregation: { disposition: "supported", quality: "strong" },
+        bankruptcyRemoteness: { disposition: "supported", quality: "strong" },
+        custodyContinuity: { disposition: "supported", quality },
+        insurance: { disposition },
+        auditCadence: { disposition: "supported", quality: "strong" },
+        reserveReconciliation: { disposition: "supported", quality: "strong" },
+        physicalRedemption: { disposition: "supported", quality: "strong" },
+      } },
+    }));
+    if (review.archetype !== "fiat-cash") throw new Error("Expected fiat profile");
+    expect(review.custodyContinuity.constraints).toMatchObject([
+      { factKey: "custodyContinuity", quality, status: { observationState: "known" } },
+      { factKey: "insurance", quality: null },
+    ]);
+    extension.assets[0]!.mechanismRiskReview = review;
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    const asset = compiled.assets[0]!;
+    const compiledReview = asset.mechanismRiskReview.review;
+    if (compiledReview?.archetype !== "fiat-cash") throw new Error("Expected compiled fiat profile");
+    const component = compiledReview.custodyContinuity;
+    expect(component.status.observationState).not.toBe("known");
+    expect(component.constraints![0]).toMatchObject({ quality, status: { observationState: "known", gapIds: [] } });
+    expect(component.constraints![0]!.status.evidenceRefIds).not.toContain("extension-evidence:mechanism:custody-continuity:supported");
+    const gapId = "alpha:gap:mechanism-review:custodyContinuity:insurance";
+    expect(component.constraints![1]!.status.gapIds).toEqual([gapId]);
+    expect(asset.gaps.find((gap) => gap.gapId === gapId)?.causeScope).toMatchObject({
+      pillar: "backing", componentKey: "mechanism-review:custodyContinuity", factorKey: "insurance", requiredDatum: "insurance",
+    });
+    const evaluated = evaluateV9Backing({
+      ...backingAsset(asset.reserveExposures, asset.gaps, asset.reserveStatus), asOfSec: compiled.asOfSec,
+    }, compiledReview, V9_CANDIDATE_POLICY_V1);
+    const contribution = evaluated.contributions.find((row) => row.componentKey === "mechanism:custody-continuity")!;
+    expect(contribution.factors).toContainEqual(expect.objectContaining({
+      componentKey: "mechanism:custody-continuity:factor:custodyContinuity",
+      score: quality === "failed" ? 10 : quality === "weak" ? 35 : 95,
+      cause: quality === "failed" ? "D" : null,
+    }));
+    expect(contribution.factors).toContainEqual(expect.objectContaining({
+      componentKey: "mechanism:custody-continuity:factor:insurance", cause: "U", causeGapIds: [gapId],
+    }));
+    if (quality === "failed") expect(evaluated.structuralReasons).toContainEqual(expect.objectContaining({
+      pathKey: "mechanism:custody-continuity:factor:custodyContinuity", responsibility: "measured-adverse",
+    }));
+  });
+
   it("rejects an overlay that omits a required archetype metric", () => {
     const overlay = MechanismReviewOverlaySchema.parse({
       assetId: "metric-less-cdp",

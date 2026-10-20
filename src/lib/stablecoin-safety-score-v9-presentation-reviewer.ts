@@ -1,4 +1,5 @@
 import type { SafetyScoreV9CurrentCard } from "@shared/types";
+import { safetyScoreV9FreshnessVerdict } from "@shared/types/safety-score-v9-public";
 import {
   exitReasonFallback,
   pillarBreakdown,
@@ -54,11 +55,13 @@ export function buildStablecoinSafetyScoreV9Presentation(
   const hasIncompleteDexCoverage = card.scoreTrace.evidenceResponsibility.summaries.some(
     (summary) => summary.reasonCodes?.includes("incomplete-dex-route-coverage"),
   );
+  const evidenceFreshness = safetyScoreV9FreshnessVerdict(card.evidence.freshness);
   return {
     traceParts: buildSafetyScoreV9TraceParts(card),
     ...buildSafetyScoreV9Attribution(card),
     pillars: PILLARS.map(([key, label]) => {
       const pillar = card.pillars[key];
+      const freshness = safetyScoreV9FreshnessVerdict(pillar.freshness);
       // "Evidence: strong", not "Strong evidence": beside a D the latter reads
       // as praise for the pillar rather than a statement about its inputs.
       const evidenceLevel = `Evidence: ${humanizeSafetyScoreV9Value(pillar.evidenceLevel).toLowerCase()}${
@@ -66,9 +69,9 @@ export function buildStablecoinSafetyScoreV9Presentation(
       }`;
       const baseEvidenceSummary = pillar.aggregationDisposition === "excluded-a-b"
         ? "Excluded until evidence is curated · 0% weight"
-        : isUnknownSafetyScoreV9Value(pillar.freshness)
+        : isUnknownSafetyScoreV9Value(freshness)
         ? evidenceLevel
-        : `${evidenceLevel} · ${humanizeSafetyScoreV9Value(pillar.freshness).toLowerCase()}`;
+        : `${evidenceLevel} · ${humanizeSafetyScoreV9Value(freshness).toLowerCase()}`;
       const evidenceSummary = key === "exit" && hasIncompleteDexCoverage
         ? `${baseEvidenceSummary} · partial DEX coverage`
         : baseEvidenceSummary;
@@ -94,9 +97,9 @@ export function buildStablecoinSafetyScoreV9Presentation(
         isWeakest: card.weakestPillar?.pillar === key,
       };
     }),
-    evidenceSummary: isUnknownSafetyScoreV9Value(card.evidence.freshness)
+    evidenceSummary: isUnknownSafetyScoreV9Value(evidenceFreshness)
       ? `${humanizeSafetyScoreV9Value(card.evidence.level)} coverage`
-      : `${humanizeSafetyScoreV9Value(card.evidence.level)} coverage · ${humanizeSafetyScoreV9Value(card.evidence.freshness)}`,
+      : `${humanizeSafetyScoreV9Value(card.evidence.level)} coverage · ${humanizeSafetyScoreV9Value(evidenceFreshness)}`,
     evidenceReasons: uniqueSafetyScoreV9Messages(card.evidence.reasons.map((reason) => reason.message)),
     accessRows: buildSafetyScoreV9AccessRows(card),
     primaryReasons: uniqueSafetyScoreV9Messages([

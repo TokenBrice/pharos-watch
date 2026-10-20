@@ -4,6 +4,7 @@ import {
   SafetyScoreV9CurrentCardBaseSchema,
   SafetyScoreV9CurrentResponseSchema,
   SafetyScoreV9ResponseSchema,
+  SafetyScoreV9FreshnessAssessmentSchema,
   type SafetyScoreV9CurrentCard,
 } from "../safety-score-v9-public";
 import { SafetyScoreV9BreakdownsSchema } from "../safety-score-v9-public-breakdowns";
@@ -18,6 +19,68 @@ import { resolveCauseGapId } from "../safety-score-v9-public-cause-gaps";
 import { iterateEvidenceResponsibilityFacts } from "../safety-score-v9-public-evidence-facts";
 import { resolveV9EffectiveScoringWeight } from "../safety-score-v9-public-causes";
 import { makePublishedIssuanceSummary, makePublishedProcessDiagnostic } from "../../lib/__tests__/safety-score-v9-fixtures.test-support";
+
+describe("reproducible public freshness", () => {
+  const assessment = {
+    verdict: "current" as const, assessedAtSec: 20_000, observedAtSec: 5_600,
+    sourceGenerationId: "dex:captured", maxAgeSec: 14_400, reason: null,
+  };
+  it("reproduces the inclusive boundary and rejects future, missing or contradictory operands", () => {
+    expect(SafetyScoreV9FreshnessAssessmentSchema.safeParse(assessment).success).toBe(true);
+    expect(SafetyScoreV9FreshnessAssessmentSchema.safeParse({ ...assessment, observedAtSec: 5_599 }).success).toBe(false);
+    expect(SafetyScoreV9FreshnessAssessmentSchema.safeParse({ ...assessment, verdict: "stale", observedAtSec: 5_599 }).success).toBe(true);
+    for (const mutation of [{ observedAtSec: 20_001 }, { sourceGenerationId: null }, { maxAgeSec: null }, { reason: "source-unavailable" }]) {
+      expect(SafetyScoreV9FreshnessAssessmentSchema.safeParse({ ...assessment, ...mutation }).success).toBe(false);
+    }
+    expect(SafetyScoreV9FreshnessAssessmentSchema.safeParse({
+      ...assessment, verdict: "unknown", observedAtSec: 20_001, reason: "future-source-time",
+    }).success).toBe(true);
+    expect(SafetyScoreV9FreshnessAssessmentSchema.safeParse({ ...assessment, verdict: "unknown" }).success).toBe(false);
+  });
+
+  it("dispatches retained schema-7 bare verdicts losslessly without inventing historical clocks", () => {
+    const historical = currentResponse();
+    expect(SafetyScoreV9CurrentResponseSchema.parse(historical)).toEqual(historical);
+    expect(typeof historical.cards[0]!.pillars.exit.freshness).toBe("string");
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse({ ...historical, schemaVersion: 6 }).success).toBe(false);
+  });
+
+  it("requires a complete assessment set, exact scoring clock and derived aggregate references", () => {
+    const response = currentResponse();
+    const card = response.cards[0]!;
+    const unknown = {
+      verdict: "unknown" as const, assessedAtSec: response.asOfSec, observedAtSec: null,
+      sourceGenerationId: null, maxAgeSec: null, reason: "pillar-clock-unavailable" as const,
+    };
+    card.pillars.backing.freshness = { ...unknown };
+    card.pillars.control.freshness = { ...unknown };
+    card.pillars.exit.freshness = {
+      ...assessment, assessedAtSec: response.asOfSec, observedAtSec: response.asOfSec - 1,
+    };
+    card.evidence.freshness = { verdict: "unknown", pillarRefs: ["backing", "exit", "control"] };
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(true);
+    const optimistic = structuredClone(response);
+    optimistic.cards[0]!.evidence.freshness = { verdict: "current", pillarRefs: ["backing", "exit", "control"] };
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(optimistic).success).toBe(false);
+    const mixed = structuredClone(response);
+    mixed.cards[0]!.pillars.backing.freshness = "unknown";
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(mixed).success).toBe(false);
+    const wrongClock = structuredClone(response);
+    wrongClock.cards[0]!.pillars.control.freshness = { ...unknown, assessedAtSec: response.asOfSec + 1 };
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(wrongClock).success).toBe(false);
+    const stale = structuredClone(response);
+    stale.cards[0]!.pillars.exit.freshness = {
+      ...assessment, verdict: "stale", assessedAtSec: response.asOfSec,
+      observedAtSec: 0, maxAgeSec: 0,
+    };
+    stale.cards[0]!.evidence.freshness = { verdict: "stale", pillarRefs: ["backing", "exit", "control"] };
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(stale).success).toBe(true);
+    const wrongRefs = { ...response, cards: [{ ...card, evidence: {
+      ...card.evidence, freshness: { verdict: "unknown", pillarRefs: ["exit"] },
+    } }] };
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(wrongRefs).success).toBe(false);
+  });
+});
 
 describe("Compact public cause contracts", () => {
   it("validates distinct obligation summaries independently of the retained witness count", () => {

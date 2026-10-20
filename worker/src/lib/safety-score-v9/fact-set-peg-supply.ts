@@ -294,6 +294,7 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     !unresolvedReference &&
     pegScore !== null &&
     peg.currentDeviationBps === null &&
+    peg.currentPriceUnavailable !== true &&
     activeDepeg === false &&
     peg.eventCount === 0 &&
     peg.worstDeviationBps === null;
@@ -314,8 +315,11 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
   // holds adverse peg evidence, the null deviation is neither a feed failure
   // nor a quiet observation - it is unobservable, and the only thing Pharos has
   // measured about this peg is adverse. The deviation is still never coerced to
-  // zero: a clean record with no usable price stays on the quiet path, and the
-  // DEX quote is never admitted as a price source.
+  // zero, and the DEX quote is never admitted as a price source. The T1 admission
+  // correction supersedes only P4's clean-record clause: an explicit failed
+  // current-price result now takes the scoped A producer-failure path even with
+  // zero events. Quiet histories without that flag and adverse records retain
+  // their existing treatment.
   const priceUnavailableWithAdverseRecord =
     reference !== null &&
     !unresolvedReference &&

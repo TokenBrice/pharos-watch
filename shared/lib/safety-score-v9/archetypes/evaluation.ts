@@ -17,6 +17,7 @@ import {
   type V9ArchetypeBackingInput,
   type V9BackingAssetInput,
   type V9BackingContribution,
+  type V9BackingFactorContribution,
   type V9BackingEvaluationPolicy,
   type V9BackingResult,
   type V9EffectiveBackingContribution,
@@ -269,6 +270,55 @@ function evaluateV9ArchetypeBackingInternal(
   for (const component of applicableComponents.sort((left, right) => compareText(left.componentKey, right.componentKey))) {
     const pathKey = `mechanism:${component.componentKey}`;
     const serial = archetypePolicy.serialComponentKeys.includes(component.componentKey);
+    if (component.fact.constraints !== undefined) {
+      const factors = component.fact.constraints.map((constraint): V9BackingFactorContribution => {
+        const measured = constraint.status.observationState === "known" &&
+          constraint.status.applicability.state === "required" && constraint.status.evidenceRefIds.length > 0 &&
+          constraint.quality !== null;
+        const attribution = v9BackingStatusCause(constraint.status, gapIndex, !measured);
+        const adverse = measured && constraint.quality === "failed";
+        const score = attribution.cause === "A" || attribution.cause === "B" ? null
+          : measured ? backing.componentQuality[constraint.quality!] : backing.boundedUnknownQuality;
+        const factorPath = `${pathKey}:factor:${constraint.factKey}`;
+        if (!measured) {
+          unresolved.push(...gapReasons(gapIndex, constraint.status.gapIds, factorPath,
+            mode === "bounded-whole-review-absence" ? "missing-pillar-evidence" : "critical-unresolved",
+            (code, cause) => resolveV9ReasonTreatment(policy, code, cause).treatment));
+        }
+        const structuralSignal = archetypePolicy.structuralComponents[component.componentKey] ??
+          (serial ? backing.structural.nonSubstitutableFailureSignal : undefined);
+        if (adverse && structuralSignal !== undefined) {
+          structuralReasons.push(createV9BackingStructuralReason(policy, structuralSignal, {
+            responsibility: "measured-adverse", pathKey: factorPath, materialShare: null,
+            evidenceRefIds: uniqueSorted(constraint.status.evidenceRefIds),
+            failureDomains: canonicalDomains(component.fact.failureDomains),
+          }));
+        }
+        return {
+          componentKey: factorPath, score, normalizedWeight: 1, effectiveScoringWeight: score === null ? 0 : 1,
+          ...attribution, ...(adverse ? { cause: "D", scoringDisposition: "measured-adverse" } as const : {}),
+        };
+      });
+      const included = factors.filter((factor) => factor.score !== null);
+      const controlling = [...(included.length > 0 ? included : factors)].sort(
+        (left, right) => (left.score ?? 100) - (right.score ?? 100) ||
+          compareText(left.componentKey, right.componentKey),
+      )[0]!;
+      const score = controlling.score;
+      const weight = applicableComponentPolicyWeight > 0
+        ? archetypePolicy.componentWeights[component.componentKey] / applicableComponentPolicyWeight : 0;
+      if (score !== null) { mechanismWeightedScore += score * weight; includedMechanismWeight += weight; }
+      contributions.push({
+        componentKey: pathKey, source: "mechanism", score, normalizedWeight: weight,
+        effectiveScoringWeight: score === null ? 0 : weight, weightedScore: (score ?? 0) * weight,
+        observationState: component.fact.status.observationState, provenance: null,
+        evidenceRefIds: uniqueSorted(component.fact.constraints.flatMap((row) => row.status.evidenceRefIds)),
+        failureDomains: canonicalDomains(component.fact.failureDomains), upstreamAssetId: null,
+        cause: controlling.cause, scoringDisposition: controlling.scoringDisposition,
+        causeGapIds: uniqueSorted(factors.flatMap((factor) => factor.causeGapIds)), factors,
+      });
+      continue;
+    }
     if (component.fact.scopedAssessments != null && (component.componentKey !== "assurance-and-reconciliation" ||
       (input.archetype !== "fiat-cash" && input.archetype !== "commodity-claim"))) {
       throw new Error("Scoped financial assurance is not applicable to this component");

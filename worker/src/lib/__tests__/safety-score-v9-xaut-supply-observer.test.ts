@@ -1,6 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { encodeAbiParameters, parseAbiParameters } from "viem/utils";
+import { mockFetchStrict } from "@shared/test-utils/mock-fetch";
 import { uint256, addressWord, chainRpcs } from "./safety-score-v9-supply-observation.test-support";
-import type { EvmMulticall3Call, EvmRpcOptions } from "../evm-rpc";
+import { fetchEvmCodeAtBlock, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmStorageAtBlock, MULTICALL3_ADDRESS, type EvmMulticall3Call, type EvmRpcOptions } from "../evm-rpc";
 import {
   buildXautTransparencySource,
   XAUT0_ADAPTER_ADDRESS,
@@ -22,6 +24,8 @@ import {
 } from "../safety-score-v9/xaut-supply-observer";
 
 import { expectRecentPinRouting } from "../../test-helpers/recent-pin-routing";
+afterEach(() => vi.unstubAllGlobals());
+
 const BLOCK_NUMBER = 25_601_844;
 const BLOCK_TIME_SEC = 1_784_887_019;
 const BLOCK_HASH = `0x${"ab".repeat(32)}` as const;
@@ -61,6 +65,10 @@ interface OnchainSupplyOverrides {
   treasuryBalanceRaw?: bigint;
 }
 
+function requireStateHash(options?: EvmRpcOptions): void {
+  if (options?.stateBlockHash !== BLOCK_HASH) throw new Error("Unexpected XAUT state hash");
+}
+
 function observerDependencies(onchain: OnchainSupplyOverrides = {}) {
   const fetchEvmBlockHeader = vi.fn().mockResolvedValue({
     number: BLOCK_NUMBER,
@@ -69,9 +77,10 @@ function observerDependencies(onchain: OnchainSupplyOverrides = {}) {
   });
   const fetchEvmMulticall3Aggregate3AtBlock = vi.fn(async (
     chainId: string | undefined, calls: readonly EvmMulticall3Call[], block?: number | "latest",
-    _options?: EvmRpcOptions,
+    options?: EvmRpcOptions,
   ) => {
     if (chainId !== "ethereum" || block !== BLOCK_NUMBER) throw new Error("Unexpected XAUT block");
+    requireStateHash(options);
     const token = "0x68749665ff8d2d112fa859aa293f07a622782f38";
     const adapter = "0xb9c2321bb7d0db468f570d10a424d1cc8efd696c";
     const values: Record<string, `0x${string}`> = {
@@ -89,7 +98,8 @@ function observerDependencies(onchain: OnchainSupplyOverrides = {}) {
     });
   });
   const fetchEvmCodeAtBlock = vi.fn(
-    async (_chainId: string | undefined, address: string) => {
+    async (_chainId: string | undefined, address: string, _block?: number | "latest", options?: EvmRpcOptions) => {
+      requireStateHash(options);
       switch (address.toLowerCase()) {
         case XAUT_CANONICAL_TOKEN_ADDRESS:
           return "0x01";
@@ -105,10 +115,12 @@ function observerDependencies(onchain: OnchainSupplyOverrides = {}) {
     },
   );
   const fetchEvmStorageAtBlock = vi.fn(
-    async (_chainId: string | undefined, address: string) =>
-      address.toLowerCase() === XAUT_CANONICAL_TOKEN_ADDRESS
+    async (_chainId: string | undefined, address: string, _slot: string, _block?: number | "latest", options?: EvmRpcOptions) => {
+      requireStateHash(options);
+      return address.toLowerCase() === XAUT_CANONICAL_TOKEN_ADDRESS
         ? addressWord(XAUT_CANONICAL_IMPLEMENTATION_ADDRESS)
-        : addressWord(XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS),
+        : addressWord(XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS);
+    },
   );
   const sha256HexFromBytes = vi.fn((bytes: Uint8Array) => {
     switch (bytes[0]) {
@@ -230,13 +242,27 @@ describe("XAUT representation-group supply observer", () => {
       "ethereum",
       expect.any(Array),
       BLOCK_NUMBER,
-      expect.objectContaining({ chainRpcs: expect.any(Map) }),
+      expect.objectContaining({ chainRpcs: expect.any(Map), stateBlockHash: BLOCK_HASH }),
     );
     const options = vi.mocked(dependencies.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][3]!;
     expect(options.recentStatePin).toEqual({ chainId: "ethereum",
       header: { number: BLOCK_NUMBER, hash: BLOCK_HASH, timestamp: BLOCK_TIME_SEC },
       finalized: { number: BLOCK_NUMBER, hash: BLOCK_HASH, timestamp: BLOCK_TIME_SEC },
       observedAtSec: BLOCK_TIME_SEC + 100, maxAgeSec: XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC });
+    expect(dependencies.fetchEvmCodeAtBlock).toHaveBeenCalledTimes(4);
+    expect(dependencies.fetchEvmCodeAtBlock.mock.calls.map(([, address]) => address)).toEqual([
+      XAUT_CANONICAL_TOKEN_ADDRESS, XAUT0_ADAPTER_ADDRESS,
+      XAUT_CANONICAL_IMPLEMENTATION_ADDRESS, XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
+    ]);
+    for (const [, , block, options] of dependencies.fetchEvmCodeAtBlock.mock.calls) {
+      expect(block).toBe(BLOCK_NUMBER);
+      expect(options).toMatchObject({ stateBlockHash: BLOCK_HASH });
+    }
+    expect(dependencies.fetchEvmStorageAtBlock).toHaveBeenCalledTimes(2);
+    for (const [, , , block, options] of dependencies.fetchEvmStorageAtBlock.mock.calls) {
+      expect(block).toBe(BLOCK_NUMBER);
+      expect(options).toMatchObject({ stateBlockHash: BLOCK_HASH });
+    }
     await expectRecentPinRouting(options);
     expect(dependencies.fetchEvmBlockHeader).toHaveBeenNthCalledWith(
       1,
@@ -252,6 +278,55 @@ describe("XAUT representation-group supply observer", () => {
     expect(dependencies.sha256HexFromBytes).toHaveBeenCalledWith(
       new TextEncoder().encode(transparencyBody()),
     );
+  });
+
+  it.each([true, false])("keeps state on the admitted fork when EIP-1898 support is %s", async supportsHash => {
+    const selectors: unknown[] = [];
+    const codes: Record<string, `0x${string}`> = {
+      [XAUT_CANONICAL_TOKEN_ADDRESS]: "0x01", [XAUT0_ADAPTER_ADDRESS]: "0x02",
+      [XAUT_CANONICAL_IMPLEMENTATION_ADDRESS]: "0x03", [XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS]: "0x04",
+    };
+    const transport = mockFetchStrict([{ match: "https://ethereum.example", respond: async request => {
+      const rpc = await request.json() as { id: number; method: string; params: unknown[] };
+      const selector = rpc.params[rpc.method === "eth_getStorageAt" ? 2 : 1];
+      selectors.push(selector);
+      const pinned = typeof selector === "object" && selector !== null && "blockHash" in selector &&
+        selector.blockHash === BLOCK_HASH && "requireCanonical" in selector && selector.requireCanonical === true;
+      if (pinned && !supportsHash) return { body: { jsonrpc: "2.0", id: rpc.id, error: { code: -32602, message: "EIP-1898 unsupported" } } };
+      let result: `0x${string}`;
+      if (rpc.method === "eth_call") {
+        const call = rpc.params[0];
+        if (!call || typeof call !== "object" || !("to" in call) || call.to !== MULTICALL3_ADDRESS) throw new Error("Unexpected direct XAUT call");
+        // Numbered reads see a different fork despite unchanged header rechecks.
+        const values = [uint256(1_000_000_000n), uint256(6n), uint256(0n),
+          uint256(pinned ? 100_000_000n : 200_000_000n),
+          addressWord(XAUT_CANONICAL_TOKEN_ADDRESS), addressWord(XAUT0_LAYERZERO_ENDPOINT_ADDRESS)];
+        result = encodeAbiParameters(parseAbiParameters("(bool success,bytes returnData)[]"),
+          [values.map(returnData => ({ success: true, returnData }))]);
+      } else if (rpc.method === "eth_getCode" && typeof rpc.params[0] === "string" && codes[rpc.params[0]]) {
+        result = codes[rpc.params[0]]!;
+      } else if (rpc.method === "eth_getStorageAt") {
+        result = addressWord(rpc.params[0] === XAUT_CANONICAL_TOKEN_ADDRESS
+          ? XAUT_CANONICAL_IMPLEMENTATION_ADDRESS : XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS);
+      } else throw new Error(`Unexpected XAUT RPC method ${rpc.method}`);
+      return { body: { jsonrpc: "2.0", id: rpc.id, result } };
+    } }]);
+    const dependencies = observerDependencies();
+    dependencies.fetchTetherTransparencyText.mockResolvedValue(transparencyBody({ totalAuthorized: "1000", notIssued: "0" }));
+    const result = await observeXautRepresentationGroupSupplyAttributionAttempt({
+      aggregateSupplyUsd: 1000, registryFingerprint: "a".repeat(64),
+      scoringClockSec: BLOCK_TIME_SEC + 100, chainRpcs: chainRpcs(),
+    }, { ...dependencies, fetchEvmCodeAtBlock, fetchEvmStorageAtBlock, fetchEvmMulticall3Aggregate3AtBlock });
+    if (supportsHash) {
+      expect(result).toMatchObject({ status: "accepted", attribution: { representationGroup: { currentSupplyUsd: 100 } } });
+      expect(selectors).toHaveLength(7);
+    } else {
+      expect(result).toMatchObject({ status: "rejected", rejectionCode: "deployment-state-unavailable" });
+      expect(result).not.toHaveProperty("attribution");
+      expect(selectors.length).toBeGreaterThan(0);
+    }
+    for (const selector of selectors) expect(selector).toEqual({ blockHash: BLOCK_HASH, requireCanonical: true });
+    transport.assertAllRoutesUsed();
   });
 
   it.each([

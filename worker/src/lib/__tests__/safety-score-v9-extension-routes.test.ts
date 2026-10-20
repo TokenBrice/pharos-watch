@@ -26,6 +26,10 @@ import { buildRedemptionExitRouteObservation } from "../redemption-exit-route-ob
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
 import { dexRouteObservation, withRedemptionBackstopConfig } from "./safety-score-v9-extension-routes.test-support";
 import { makeExitRoute } from "@shared/lib/__tests__/safety-score-v9-exit.test-support";
+import { makeExecutionCertificate } from "@shared/lib/__tests__/safety-score-v9-exit-execution.test-support";
+import { exitExecutionInputGenerationId, exitExecutionReviewDigest, validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
+import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import executionReviews from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
 
 const NOW = Date.UTC(2026, 6, 13) / 1_000;
 const V9_FIXTURE_CLOCK = Date.UTC(2027, 0, 1) / 1_000;
@@ -195,6 +199,152 @@ function certifiedDexFixture() {
   route.executionCertificate = certificate;
   return { fixedInput, route, certificate };
 }
+
+describe("same-resource Exit alternatives", () => {
+  function compileAlternatives(observations: ExitRouteObservation[]) {
+    const fixed = makeV9FixedInput({
+      clockSec: NOW, aggregateCirculating: { peggedUSD: 2_000_000 },
+      chainSupplyByChain: { ethereum: {
+        current: 2_000_000, circulatingPrevDay: 2_000_000,
+        circulatingPrevWeek: 2_000_000, circulatingPrevMonth: 2_000_000,
+      } },
+      dexOverrides: { exitRouteObservations: observations },
+    });
+    const coverage = fixed.dexLiqMap.alpha!.exitRouteObservationCoverage!;
+    coverage.observationCount = observations.length;
+    coverage.scoreEligibleObservationCount = observations.filter((route) => route.scoreEligible).length;
+    const rebuilt = rebuildFixed(fixed);
+    const extension = makeV9Extension({ clockSec: NOW, registryFingerprint: rebuilt.registryFingerprint });
+    extension.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(rebuilt, "alpha");
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(rebuilt, extension).assets[0]!;
+    const routes = asset.exitRoutes.map((route) => ({ ...projectV9ExitEvaluationRoute(route), gaps: asset.gaps }));
+    const result = evaluateV9Exit({
+      circulatingUsd: asset.supply.circulatingUsd, portfolioStatus: "reviewed-complete",
+      routes, gaps: asset.gaps,
+    }, V9_CANDIDATE_POLICY_V1);
+    return { routes, result };
+  }
+
+  it.each(["stale", "diagnostic", "weaker"] as const)(
+    "keeps the current stronger singleton when a %s observation shares its pool",
+    (kind) => {
+      for (const reverseIds of [false, true]) {
+        const strong = dexRouteObservation(NOW, {
+          routeId: reverseIds ? "dex:a" : "dex:z", requestedNotionalUsd: 100_000,
+          executableUsd: 90_000, completionRatio: 0.9, executionCostBps: 10,
+          output: { kind: "fiat", currency: "USD" },
+        });
+        const other = { ...strong, routeId: reverseIds ? "dex:z" : "dex:a",
+          executableUsd: 10_000, completionRatio: 0.1,
+          ...(kind === "stale" ? { observedAt: NOW - 501, freshnessSeconds: 501 } : {}),
+          ...(kind === "diagnostic" ? { scoreEligible: false } : {}),
+        };
+        const singleton = compileAlternatives([strong]);
+        for (const observations of [[other, strong], [strong, other]]) {
+          const { routes, result } = compileAlternatives(observations);
+          expect(result).toMatchObject({
+            score: singleton.result.score, primaryRouteKey: singleton.result.primaryRouteKey,
+            diversificationRouteKey: null, diversificationBonus: 0,
+          });
+          expect(result.primaryRouteKey).not.toBeNull();
+          expect(result.routes.find((route) => route.routeKey === singleton.result.primaryRouteKey)!.included).toBe(true);
+          const capacity = resolveV9DistinctExitCapacity(routes, result.stressRequest!, V9_CANDIDATE_POLICY_V1);
+          expect(capacity.valuedExecutableUsd).toBe(90_000);
+          if (kind !== "weaker") expect(capacity.includedRouteKeys).toHaveLength(1);
+          else expect(capacity.includedRouteKeys).toHaveLength(2);
+        }
+      }
+    },
+  );
+
+  it.each(["neither", "dex", "redemption", "both"] as const)(
+    "preserves cross-lane alternatives without duplicate capacity (%s certified)",
+    (certifiedLane) => {
+      const review = validateExitExecutionModelReviews(executionReviews, V9_CANDIDATE_POLICY_V1)
+        .find((entry) => entry.identity.assetId === "susds-sky")!;
+      const clockSec = Math.ceil(Date.parse(review.reviewedAt) / 1000);
+      const model = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.executionModels[review.modelId]!;
+      const certificate = makeExecutionCertificate();
+      Object.assign(certificate, {
+        modelId: review.modelId, identity: review.identity, holder: review.holder,
+        reviewDigest: exitExecutionReviewDigest(review), observedAtSec: clockSec,
+        sourceMaxAgeSec: model.sourceMaxAgeSec, priceMaxAgeSec: model.priceMaxAgeSec,
+        resourceKeys: ["pool:ethereum:pool"],
+      });
+      certificate.source.timestamp = clockSec;
+      certificate.observationGenerationId = domainDigest("safety-score-v10.exit-execution-source.v1", certificate.source);
+      Object.assign(certificate.inputReference, {
+        assetKey: review.identity.assetId, deployment: review.identity.deployment,
+        decimals: review.producer.inputDecimals, observedAtSec: clockSec,
+      });
+      certificate.inputGenerationId = exitExecutionInputGenerationId(review.identity.assetId,
+        { requestedNotionalUsd: 100_000, maxCostBps: 200 }, certificate.inputReference);
+      certificate.gates = model.requiredGates.map((gateId) => ({
+        gateId, verdict: "passed", evidenceId: `observed:${gateId}`, observedAtSec: clockSec, reason: null,
+      }));
+      Object.assign(certificate.points[0]!, {
+        requestedRawInput: "100000000000000000000000", executedRawInput: "100000000000000000000000", fees: [],
+      });
+      Object.assign(certificate.points[0]!.outputs[0]!, {
+        assetKey: review.identity.outputAssetKeys[0], deployment: `${review.producer.chain}:${review.producer.outputToken}`,
+        decimals: review.producer.outputDecimals, observedAtSec: clockSec, rawUnits: "99900000000000000000000",
+      });
+      const observations = (["dex", "redemption"] as const).map((lane) => dexRouteObservation(clockSec, {
+        routeId: `${lane}:alternative`, routeFamily: lane === "dex" ? "dex-amm" : "protocol-redemption",
+        requestedNotionalUsd: 100_000, executableUsd: 100_000, completionRatio: 1,
+        executionCostBps: 10, output: { kind: "fiat", currency: "USD" },
+        ...(certifiedLane === lane || certifiedLane === "both" ? { executionCertificate: certificate } : {}),
+      }));
+      const row = makeSupplyFullRedemption({ stablecoinId: review.identity.assetId });
+      row.capacityProfile = { ...row.capacityProfile!, exitRouteObservations: [observations[1]!] };
+      const fixed = fixedInputStub(row, clockSec);
+      Object.assign(fixed.dexLiqMap, {
+        [row.stablecoinId]: singleObservationDexLiquidity(observations[0]!),
+      });
+      const reviews = buildSafetyScoreV9RouteReviews(fixed, row.stablecoinId);
+      expect(reviews).toHaveLength(2);
+      expect(reviews.every((route) => route.coverageClass !== "diagnostic")).toBe(true);
+      const routes = reviews.map((route) => {
+        const observation = observations.find((entry) => entry.routeId === route.routeId)!;
+        return makeExitRoute({
+          lane: route.lane, routeId: route.routeId, routeKey: `${route.lane}:${route.routeId}`,
+          routeFamily: observation.routeFamily,
+          evidenceKind: route.lane === "dex" ? "reserve-based-amm-simulation" : "onchain-contract-state",
+          coverageClass: route.coverageClass, physicalResourceKeys: route.physicalResourceKeys,
+          // Disjoint domains isolate the physical-resource guard.
+          failureDomains: [`domain:${route.lane}`],
+          ...(observation.executionCertificate ? {
+            executionModelId: certificate.modelId, executionCertificate: certificate,
+            capacityCurve: [{ requestedNotionalUsd: 100_000, maxCostBps: 200,
+              executableUsd: 100_000, completionRatio: 1, executionCostBps: 10 }],
+          } : {}),
+        });
+      });
+      const evaluate = (alternatives: typeof routes) => evaluateV9Exit({
+        circulatingUsd: 2_000_000, assetId: row.stablecoinId, clockSec, routes: alternatives,
+      }, V9_CANDIDATE_POLICY_V1);
+      const result = evaluate(routes);
+      expect(result.routes.every((route) => route.included)).toBe(true);
+      expect(result.score).toBe(Math.max(...routes.map((route) => evaluate([route]).score!)));
+      expect(result).toMatchObject({ diversificationRouteKey: null, diversificationBonus: 0 });
+      expect(evaluate([...routes].reverse())).toEqual(result);
+      expect(resolveV9DistinctExitCapacity(routes, result.stressRequest!, V9_CANDIDATE_POLICY_V1)
+        .valuedExecutableUsd).toBe(100_000);
+      if (certifiedLane === "dex") {
+        const legacy = routes.filter((route) => route.lane === "redemption");
+        for (const fault of ["expired", "diagnostic"] as const) {
+          certificate.observedAtSec = fault === "expired" ? clockSec - model.sourceMaxAgeSec - 1 : clockSec;
+          certificate.points[0]!.certification = fault === "diagnostic" ? "diagnostic" : "exact-lower-bound";
+          certificate.points[0]!.reason = fault === "diagnostic" ? "execution-unavailable" : null;
+          expect(evaluate(routes)).toMatchObject({
+            score: evaluate(legacy).score, primaryRouteKey: legacy[0]!.routeKey,
+            diversificationRouteKey: null, diversificationBonus: 0,
+          });
+        }
+      }
+    },
+  );
+});
 
 describe("certified execution route outputs", () => {
   it("values raw output quantities across decimals and weights the basket by expected USD, not token units", () => {

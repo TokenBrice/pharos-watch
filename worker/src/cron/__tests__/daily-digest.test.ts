@@ -348,6 +348,30 @@ describe("intelligence, prompt, and regime contracts", () => {
 });
 
 describe("market and risk collectors", () => {
+  it("projects freshness assessment verdicts into the stable digest summary contract", async () => {
+    const source = canonicalSafetySource([{ id: "usdt-tether", overallGrade: "A", overallScore: 88 }]);
+    const card = source.snapshot.cards[0]!;
+    const unknown = {
+      verdict: "unknown" as const, assessedAtSec: source.snapshot.asOfSec, observedAtSec: null,
+      sourceGenerationId: null, maxAgeSec: null, reason: "pillar-clock-unavailable" as const,
+    };
+    card.pillars.backing.freshness = { ...unknown };
+    card.pillars.control.freshness = { ...unknown };
+    card.pillars.exit.freshness = {
+      verdict: "current", assessedAtSec: source.snapshot.asOfSec, observedAtSec: source.snapshot.asOfSec,
+      sourceGenerationId: "dex:captured", maxAgeSec: 14_400, reason: null,
+    };
+    card.evidence.freshness = { verdict: "unknown", pillarRefs: ["backing", "exit", "control"] };
+    vi.mocked(loadActiveSafetyScoreSource).mockResolvedValueOnce(source);
+    const result = await collectSafetyScores(ctxFor([]), new Set(["USDT"]));
+    const safetyScores = result.value.safetyScores;
+    expect(safetyScores?.model).toBe("v9");
+    if (safetyScores?.model !== "v9") throw new Error("Expected canonical V9 safety scores");
+    expect(safetyScores.mentionedCoins[0]?.pillars).toMatchObject({
+      backing: { freshness: "unknown" }, exit: { freshness: "current" }, control: { freshness: "unknown" },
+    });
+  });
+
   it.each(["complete", "page-failure", "count-mismatch"] as const)(
     "drains indexed 500-row organic identity pages before stamping %s accounting",
     async (mode) => {

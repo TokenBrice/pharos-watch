@@ -1,4 +1,5 @@
 import { projectV9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
+import { safetyScoreV9FreshnessVerdict, type SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
@@ -33,17 +34,12 @@ function parseStressSignalsMap(signalsJson: string): Record<string, { value: num
 }
 
 function projectV9Pillar(
-  pillar: {
-    score: number | null;
-    evidenceLevel: string;
-    freshness: string;
-    reasons: readonly { code: string; message: string }[];
-  },
+  pillar: SafetyScoreV9CurrentCard["pillars"]["backing"],
 ) {
   return {
     score: pillar.score,
     evidenceLevel: pillar.evidenceLevel,
-    freshness: pillar.freshness,
+    freshness: safetyScoreV9FreshnessVerdict(pillar.freshness),
     reasons: pillar.reasons.map((reason) => ({ code: reason.code, message: reason.message })),
   };
 }

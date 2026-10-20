@@ -159,6 +159,29 @@ describe("Safety Score V9 peg-reference inheritance", () => {
     expect(fixed.pegDataById[PARENT_ID]!.worstDeviationBps).toBe(-189);
   });
 
+  it.each([true, undefined])("keeps explicit current-price failure separate from quiet zero-event history: %s", (currentPriceUnavailable) => {
+    const template = twoAssetInput();
+    const fixed = reseal(template, { pegDataById: {
+      ...template.pegDataById,
+      [PARENT_ID]: { ...template.pegDataById[PARENT_ID]!, priceSource: "coingecko",
+        currentPriceUnavailable, currentDeviationBps: null, activeDepeg: false,
+        eventCount: 0, lastEventAt: null, worstDeviationBps: null },
+    }, activeDepegPeakBpsById: {} });
+    const parent = compileSafetyScoreV9FactSetFromFixedInput(
+      fixed, buildSafetyScoreV9BaselineExtension(fixed, { metaById: metadata() }),
+    ).assets.find((asset) => asset.assetId === PARENT_ID)!;
+    if (currentPriceUnavailable) {
+      expect(parent.peg.status.observationState).not.toBe("known");
+      expect(parent.peg.currentDeviationBps).toBeNull();
+      expect(parent.gaps.find((gap) => gap.gapId === `${PARENT_ID}:gap:peg`)?.causeProof)
+        .toMatchObject({ cause: "A", producerState: "producer-failed", rejectionCode: "peg-current-price-unavailable" });
+    } else {
+      expect(parent.peg.status.observationState).toBe("known");
+      expect(parent.peg.currentDeviationBps).toBe(0);
+      expect(parent.gaps.some((gap) => gap.gapId === `${PARENT_ID}:gap:peg`)).toBe(false);
+    }
+  });
+
   it("binds stale observed peg evidence to its own producer budget", () => {
     const template = twoAssetInput();
     const fixed = reseal(template, {

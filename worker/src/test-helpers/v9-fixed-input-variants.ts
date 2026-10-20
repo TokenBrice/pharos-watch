@@ -125,6 +125,10 @@ export function makeV9TwoAssetFixedInput(
       ...alpha.chainCirculatingById,
       beta: structuredClone(alpha.chainCirculatingById.alpha),
     },
+    aggregateCirculatingById: {
+      ...alpha.aggregateCirculatingById,
+      beta: structuredClone(alpha.aggregateCirculatingById.alpha),
+    },
   });
 }
 
@@ -158,6 +162,10 @@ export function makeV9ThreeAssetFixedInput(gammaCompletionRatio = 0.8) {
       ...two.chainCirculatingById,
       gamma: structuredClone(two.chainCirculatingById.alpha),
     },
+    aggregateCirculatingById: {
+      ...two.aggregateCirculatingById,
+      gamma: structuredClone(two.aggregateCirculatingById.alpha),
+    },
   });
 }
 
@@ -189,6 +197,10 @@ export function makeV9CohortFixedInput(extraAssetIds: readonly string[]) {
     chainCirculatingById: {
       ...two.chainCirculatingById,
       ...perExtra(() => structuredClone(two.chainCirculatingById.beta)),
+    },
+    aggregateCirculatingById: {
+      ...two.aggregateCirculatingById,
+      ...perExtra(() => structuredClone(two.aggregateCirculatingById.beta)),
     },
   });
 }

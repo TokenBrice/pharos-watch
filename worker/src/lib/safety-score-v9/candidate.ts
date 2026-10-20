@@ -28,7 +28,7 @@ import type {
 } from "@shared/types/safety-score-v9-facts";
 import type {
   SafetyScoreV9CurrentResponse,
-  SafetyScoreV9EvidenceFreshness,
+  SafetyScoreV9FreshnessAssessment,
 } from "@shared/types/safety-score-v9-public";
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
 import { Sha256Schema } from "@shared/types/safety-schema-primitives";
@@ -492,10 +492,22 @@ function exitPillarFreshnessFromDexInput(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
   dexMaxAgeSec: number,
-): SafetyScoreV9EvidenceFreshness {
-  const updatedAt = fixedInput.dexLiqMap[assetId]?.updatedAt;
-  if (updatedAt === undefined) return "unknown";
-  return fixedInput.clockSec - updatedAt <= dexMaxAgeSec ? "current" : "stale";
+): SafetyScoreV9FreshnessAssessment {
+  const observedAtSec = fixedInput.dexLiqMap[assetId]?.updatedAt ?? null;
+  const sourceGenerationId = fixedInput.dexGenerationId ?? null;
+  const reason = observedAtSec === null ? "source-unavailable"
+    : observedAtSec > fixedInput.clockSec ? "future-source-time"
+    : sourceGenerationId === null ? "source-generation-unavailable"
+    : null;
+  return {
+    verdict: reason !== null ? "unknown"
+      : fixedInput.clockSec - observedAtSec! <= dexMaxAgeSec ? "current" : "stale",
+    assessedAtSec: fixedInput.clockSec,
+    observedAtSec,
+    sourceGenerationId,
+    maxAgeSec: dexMaxAgeSec,
+    reason,
+  };
 }
 
 const SHARED_BOOK_ID_BY_SCOPE: Readonly<Record<string, string>> = {

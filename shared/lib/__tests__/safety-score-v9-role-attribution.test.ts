@@ -6,9 +6,10 @@ import { evaluateV9FactSet } from "../safety-score-v9/evaluate-set";
 import type { V9DependencyEconomicRole } from "../safety-score-v9/dependencies";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { createV9EvidenceReference } from "../safety-score-v9/evidence";
+import { createV9FactGapV3 } from "../safety-score-v9/reasons";
 import { accessReview, compileNativeV3FactSet, coreFixture, knownStatus, noEconomicControlReview } from "./safety-score-v9-facts.fixture-support";
 
-function roleCohort(role: V9DependencyEconomicRole, nonBinding = false) {
+function roleCohort(role: V9DependencyEconomicRole, nonBinding = false, unknownTopology = false) {
   const { v9FactSetDigest: _digest, ...core } = CompiledV9FactSetV3Schema.parse(compileNativeV3FactSet(coreFixture()));
   const template = core.assets.find((asset) => asset.assetId === "alpha")!;
   const healthy = (assetId: string): V9AssetFactsV3 => {
@@ -57,6 +58,19 @@ function roleCohort(role: V9DependencyEconomicRole, nonBinding = false) {
   } else if (role === "control-operator") {
     mint(root);
     if (nonBinding) mint(child);
+    if (unknownTopology) {
+      const gap = createV9FactGapV3({
+        gapId: "root:oracle-topology", reasonCode: "missing-oracle-profile", ownerDomain: "control",
+        policyRuleId: "v9.control.oracle-review", observationState: "missing", responsibility: "unresearched",
+        path: { kind: "local-component", componentKey: "economic-control:oracle" },
+        message: "The operator has unreviewed oracle topology.",
+      });
+      root.gaps.push(gap);
+      const status = { ...knownStatus(), observationState: "missing" as const, evidenceRefIds: [], gapIds: [gap.gapId] };
+      root.economicControlReview.oracle = {
+        status, tier: "unknown", liquidationBranchesApplicable: false, branches: [], factorStatuses: { tier: status },
+      };
+    }
   } else {
     const evidenceId = "evidence:root:oracle";
     // The admitted known tier itself supplies the measured structural signal;
@@ -107,6 +121,24 @@ describe("binding measured-adverse role attribution", () => {
       }
     },
   );
+
+  it("retains numeric Control 25 and U topology through operator set evaluation", () => {
+    const result = roleCohort("control-operator", false, true);
+    const root = result.assets.find((asset) => asset.assetId === "root")!;
+    const child = result.assets.find((asset) => asset.assetId === "child")!;
+    expect(root.scoreInput.pillars.control.score).toBe(25);
+    expect(root.scoreInput.pillars.control.limitedEvidenceCauses).toContain("U");
+    expect(child.dependencyInputs.roleInputs![0]).toMatchObject({
+      score: 25, cause: "U", unavailableDimensions: [], boundedUnknown: true,
+    });
+    expect(child.dependencyInputs.rolePillarProjections!.control).toMatchObject({
+      limit: 25, knownLossPoints: 75, boundedUnknownLossPoints: 0,
+    });
+    expect(child.scoreInput.pillars.control.score).toBe(25);
+    expect(child.scoreInput.pillars.control.reasons).toContainEqual(expect.objectContaining({
+      cause: "U", causeGapIds: expect.arrayContaining(["root:oracle-topology"]),
+    }));
+  });
 
   it.each(["exit-dependency", "control-operator", "oracle-nav"] as const)(
     "does not attribute a non-binding measured %s role limit", (role) => {

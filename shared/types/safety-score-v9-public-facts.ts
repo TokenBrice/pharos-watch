@@ -35,9 +35,9 @@ if (cMinusThreshold === undefined) {
   throw new Error("Safety Score v9 grade thresholds must include C-");
 }
 export const C_MINUS_MIN_SCORE = cMinusThreshold.min;
-// Validation-only mirror of policy.semantic.formula.danger.adverseAttributionPegMultiplierFloor.
-// This remains validation-only; score calculation reads the canonical danger floor.
-export const DANGER_PEG_MULTIPLIER_FLOOR = 0.9;
+// Validation projects the policy authority without parsing a second policy envelope.
+export const DANGER_PEG_MULTIPLIER_FLOOR =
+  methodologyPolicy.semantic.formula.danger.adverseAttributionPegMultiplierFloor;
 // C/U treatment is numeric unless the registered reason is diagnostic; the
 // minimum-track-record exception remains a ceiling. Read the registry authority,
 // not the retired evidence-cap classification, without importing shared/lib.
@@ -104,8 +104,59 @@ export const SafetyScoreV9NrReasonSchema = z
   .strict();
 export type SafetyScoreV9NrReason = z.infer<typeof SafetyScoreV9NrReasonSchema>;
 
-export const SafetyScoreV9EvidenceFreshnessSchema = z.enum(["current", "stale", "unknown"]);
-export type SafetyScoreV9EvidenceFreshness = z.infer<typeof SafetyScoreV9EvidenceFreshnessSchema>;
+const SafetyScoreV9FreshnessVerdictSchema = z.enum(["current", "stale", "unknown"]);
+export const SafetyScoreV9FreshnessAssessmentSchema = z.object({
+  verdict: SafetyScoreV9FreshnessVerdictSchema,
+  assessedAtSec: z.number().int().nonnegative(),
+  observedAtSec: z.number().int().nonnegative().nullable(),
+  sourceGenerationId: z.string().min(1).nullable(),
+  maxAgeSec: z.number().int().nonnegative().nullable(),
+  reason: z.enum(["pillar-clock-unavailable", "source-unavailable", "source-generation-unavailable", "future-source-time"]).nullable(),
+}).strict().superRefine((assessment, ctx) => {
+  const { verdict, assessedAtSec, observedAtSec, sourceGenerationId, maxAgeSec, reason } = assessment;
+  if (verdict === "unknown") {
+    if (reason === null) ctx.addIssue({ code: "custom", path: ["reason"], message: "Unknown freshness requires a reason" });
+    if (reason === "pillar-clock-unavailable" && (observedAtSec !== null || sourceGenerationId !== null || maxAgeSec !== null) ||
+        reason === "source-unavailable" && (observedAtSec !== null || maxAgeSec === null) ||
+        reason === "source-generation-unavailable" && (sourceGenerationId !== null || observedAtSec === null || maxAgeSec === null) ||
+        reason === "future-source-time" && maxAgeSec === null) {
+      ctx.addIssue({ code: "custom", path: ["reason"], message: "Unknown freshness reason must match its unavailable operands" });
+    }
+    if (reason === "future-source-time" && (observedAtSec === null || observedAtSec <= assessedAtSec)) {
+      ctx.addIssue({ code: "custom", path: ["observedAtSec"], message: "Future-source diagnosis requires a future observation" });
+    }
+    if (observedAtSec !== null && observedAtSec > assessedAtSec && reason !== "future-source-time") {
+      ctx.addIssue({ code: "custom", path: ["reason"], message: "Future observations require their explicit diagnosis" });
+    }
+    return;
+  }
+  if (reason !== null || observedAtSec === null || sourceGenerationId === null || maxAgeSec === null ||
+      observedAtSec > assessedAtSec || (assessedAtSec - observedAtSec <= maxAgeSec) !== (verdict === "current")) {
+    ctx.addIssue({ code: "custom", message: "Freshness verdict must reproduce from its original clock, generation and inclusive age budget" });
+  }
+});
+export type SafetyScoreV9FreshnessAssessment = z.infer<typeof SafetyScoreV9FreshnessAssessmentSchema>;
+export type SafetyScoreV9EvidenceFreshness = SafetyScoreV9FreshnessAssessment["verdict"];
+
+/** Pre-assessment schema-7 publications retain their bare verdict, never invented operands. */
+export const SafetyScoreV9EvidenceFreshnessSchema = z.union([
+  SafetyScoreV9FreshnessAssessmentSchema,
+  SafetyScoreV9FreshnessVerdictSchema,
+]);
+export const SafetyScoreV9AggregateFreshnessSchema = z.object({
+  verdict: SafetyScoreV9FreshnessAssessmentSchema.shape.verdict,
+  pillarRefs: z.tuple([z.literal("backing"), z.literal("exit"), z.literal("control")]),
+}).strict();
+export const SafetyScoreV9EvidenceSummaryFreshnessSchema = z.union([
+  SafetyScoreV9AggregateFreshnessSchema,
+  SafetyScoreV9FreshnessVerdictSchema,
+]);
+
+export function safetyScoreV9FreshnessVerdict(
+  freshness: z.infer<typeof SafetyScoreV9EvidenceFreshnessSchema> | z.infer<typeof SafetyScoreV9EvidenceSummaryFreshnessSchema>,
+): SafetyScoreV9FreshnessAssessment["verdict"] {
+  return typeof freshness === "string" ? freshness : freshness.verdict;
+}
 
 export const SafetyScoreV9PillarSchema = z
   .object({

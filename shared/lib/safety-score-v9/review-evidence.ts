@@ -51,17 +51,15 @@ export class ReviewEvidenceBuilder {
       throw new Error("Review evidence requires exactly one reviewed date or timestamp");
     }
     const reviewSec = args.reviewedAtSec ?? parseBoundedDateSec(args.reviewedAt!, this.clockSec, `${this.assetId}:${args.sourceId}:reviewed`);
-    const observedAtSec = args.observedAtSec ?? (args.reviewedAtSec != null
-      ? args.reviewedAtSec
-      : parseBoundedDateSec(args.observedAt ?? args.reviewedAt!, this.clockSec, `${this.assetId}:${args.sourceId}:observed`));
-    if (args.reviewedAtSec != null || args.observedAtSec != null) {
-      for (const timestamp of [reviewSec, observedAtSec]) {
-        if (!Number.isSafeInteger(timestamp) || timestamp < 0 || timestamp > this.clockSec) {
-          throw new Error("Review evidence timestamp is invalid or later than the scoring clock");
-        }
+    const observedAtSec = args.observedAtSec ?? (args.observedAt != null
+      ? parseBoundedDateSec(args.observedAt, this.clockSec, `${this.assetId}:${args.sourceId}:observed`)
+      : reviewSec);
+    for (const timestamp of [reviewSec, observedAtSec]) {
+      if (!Number.isSafeInteger(timestamp) || timestamp < 0 || timestamp > this.clockSec) {
+        throw new Error("Review evidence timestamp is invalid or later than the scoring clock");
       }
-      if (observedAtSec > reviewSec) throw new Error("Evidence observation cannot postdate review");
     }
+    if (observedAtSec > reviewSec) throw new Error("Evidence observation cannot postdate review");
     const publishedAtSec = args.publishedAt
       ? parseBoundedDateSec(args.publishedAt, this.clockSec, `${this.assetId}:${args.sourceId}:published`)
       : null;

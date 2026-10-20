@@ -31,6 +31,8 @@ import { safeParseV9AssetFactsV3 } from "../safety-score-v9/compile";
 import { resolveV9EvidenceCause } from "../safety-score-v9/evidence";
 import type { V9EvidenceCauseScope, V9EvidenceGapClassification } from "../../types/safety-score-v9-causes";
 import type { CompiledV9FactSetV3, V9FactSetCoreV3, V9EconomicControlReviewV2 } from "../../types/safety-score-v9-facts";
+import { V9FactSetCoreV3Schema } from "../../types/safety-score-v9-facts";
+import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "../safety-score-v9/evidence";
 
 
 function currentCore(): V9FactSetCoreV3 {
@@ -38,7 +40,7 @@ function currentCore(): V9FactSetCoreV3 {
   const { v9FactSetDigest: _digest, ...core } = JSON.parse(stableJsonStringifyV1(compileNativeV3FactSet(coreFixture()))) as CompiledV9FactSetV3;
   return core;
 }
-function classifiedCore(cause: "B" | "C"): V9FactSetCoreV3 {
+function classifiedCore(cause: "B" | "C", reviewedAtSec = AS_OF_SEC): V9FactSetCoreV3 {
   const core = currentCore();
   const asset = core.assets[0]!;
   const exposure = asset.reserveExposures[0]!;
@@ -46,7 +48,7 @@ function classifiedCore(cause: "B" | "C"): V9FactSetCoreV3 {
     pillar: "backing", componentKey: "liquidity", factorKey: "liquidity", routeKey: null,
     exposureId: exposure.exposureKey, requiredDatum: "reserve liquidity horizon",
   };
-  const reviewedAt = new Date(AS_OF_SEC * 1_000).toISOString().replace(".000Z", "Z");
+  const reviewedAt = new Date(reviewedAtSec * 1_000).toISOString().replace(".000Z", "Z");
   const common = {
     id: "classification:liquidity", assetId: asset.assetId, scope, reviewedAt, reviewer: "fixture-reviewer",
     sources: [{ url: "https://issuer.example/reserves", observedAt: reviewedAt, datumAsOf: null,
@@ -90,6 +92,20 @@ describe("current cause admission", () => {
     const compiled = compileV9FactSetV3(classifiedCore(cause));
     const admitted = readCompiledV9FactSetForEvaluation(compiled).factSet.assets[0]!;
     expect(admitted.gaps.find((gap) => gap.gapId === "classified-liquidity")!.causeProof.cause).toBe(cause);
+  });
+
+  it.each(["B", "C"] as const)("uses the policy research-age authority in both %s producer and fact-envelope admission", (cause) => {
+    const budget = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec;
+    expect(V9_REVIEW_EVIDENCE_MAX_AGE_SEC).toBe(budget);
+    const core = classifiedCore(cause, AS_OF_SEC - budget);
+    expect(V9FactSetCoreV3Schema.safeParse(core).success).toBe(true);
+    expect(compileV9FactSetV3(core).assets[0]!.gaps.find((gap) => gap.gapId === "classified-liquidity")!.causeProof.cause).toBe(cause);
+    const expired = V9FactSetCoreV3Schema.safeParse({ ...core, asOfSec: AS_OF_SEC + 1, compiledAtSec: AS_OF_SEC + 1 });
+    expect(expired.success).toBe(false);
+    if (!expired.success) expect(expired.error.issues).toContainEqual(expect.objectContaining({
+      path: ["assets", 0, "gaps", core.assets[0]!.gaps.findIndex((gap) => gap.gapId === "classified-liquidity"), "causeProof"],
+      message: "Future or expired research cause",
+    }));
   });
 
   it.each(["B", "C"] as const)("rejects mutated authored %s assertion bytes even with an otherwise valid reference", (cause) => {

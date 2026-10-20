@@ -11,6 +11,34 @@ import {
 const BREAKDOWN_PILLARS = makeV9Pillars({ backing: 88, exit: 84, control: 86 });
 
 describe("stablecoin V9 safety presentation", () => {
+  it("renders assessment verdicts and still reads pre-assessment publication labels", () => {
+    const card = makeV9Card();
+    const historical = buildStablecoinSafetyScoreV9Presentation(card);
+    const unknown = {
+      verdict: "unknown" as const, assessedAtSec: 20_000, observedAtSec: null,
+      sourceGenerationId: null, maxAgeSec: null, reason: "pillar-clock-unavailable" as const,
+    };
+    card.pillars.backing.freshness = { ...unknown };
+    card.pillars.control.freshness = { ...unknown };
+    card.pillars.exit.freshness = {
+      verdict: "current", assessedAtSec: 20_000, observedAtSec: 19_000,
+      sourceGenerationId: "dex:g1", maxAgeSec: 14_400, reason: null,
+    };
+    card.evidence.freshness = { verdict: "unknown", pillarRefs: ["backing", "exit", "control"] };
+    const current = buildStablecoinSafetyScoreV9Presentation(card);
+    expect(current.pillars[1].evidenceSummary).toBe(historical.pillars[1].evidenceSummary);
+    expect(current.pillars[0].evidenceSummary).not.toContain("current");
+    expect(current.evidenceSummary).not.toContain("current");
+    card.pillars.exit.freshness = {
+      ...card.pillars.exit.freshness, verdict: "stale", observedAtSec: 1_000,
+    };
+    card.evidence.freshness = { verdict: "stale", pillarRefs: ["backing", "exit", "control"] };
+    const stale = buildStablecoinSafetyScoreV9Presentation(card);
+    expect(stale.pillars[1].evidenceSummary).toContain("stale");
+    expect(stale.evidenceSummary).toContain("Stale");
+    expect(stale.evidenceSummary).not.toContain("[object Object]");
+  });
+
   it("keeps excluded backing factors null and cause-labelled beside their surviving scored factors", () => {
     const card = makeV9Card({ localCauseGaps: ["transparency"], partialEvidence: {
       reasonCode: "partial-evidence-pipeline-gap", excludedPillars: [],
