@@ -319,6 +319,32 @@ describe.each(SURFACES)(
   },
 );
 
+describe("PegHealthCard median availability", () => {
+  it("renders an unavailable median without losing the observed empty cohort", () => {
+    const unavailableMedian = { ...pegEmpty, summary: { ...pegEmpty.summary, medianDeviationBps: null } };
+    usePegSummaryMock.mockReturnValue(queryFor("empty", unavailableMedian, unavailableMedian));
+    const view = render(<PegHealthCard />);
+
+    expect(screen.getByText("—").closest("p")?.textContent).toContain("At peg (per-coin threshold) · — median");
+    expect(screen.getByText("No coin-level deviation rows")).toBeTruthy();
+    expect(view.container.textContent).not.toContain("0 bps median");
+    expect(view.container.textContent).not.toContain("Updating");
+  });
+
+  it("retains a measured zero median for a live observation at parity", () => {
+    const atParity = {
+      coins: [{ id: "usdc-circle", activeDepeg: false, currentDeviationBps: 0 }],
+      summary: { activeDepegCount: 0, coinsAtPeg: 1, medianDeviationBps: 0, totalTracked: 1 },
+    };
+    usePegSummaryMock.mockReturnValue(queryFor("ready", atParity, atParity));
+    render(<PegHealthCard />);
+
+    expect(screen.getByText("0 bps").closest("p")?.textContent).toContain("At peg (per-coin threshold) · 0 bps median");
+    expect(screen.getByRole("img", { name: "Peg deviation distribution by band" })).toBeTruthy();
+    expect(screen.queryByText("No coin-level deviation rows")).toBeNull();
+  });
+});
+
 describe("RecentFreezesCard authoritative totals", () => {
   it("labels the row order and never rounds a sub-dollar freeze to $0", () => {
     const nowSec = Math.floor(UPDATED_AT / 1000);
@@ -430,6 +456,7 @@ describe("MintBurnCard activity and valuation", () => {
     ["inferred balanced events", { has24hActivity: undefined, mintCount24h: 1, burnCount24h: 1, mintVolume24hUsd: 100_000_000, burnVolume24hUsd: 100_000_000, netFlow24hUsd: 0 }, "Balanced 24h mint / burn activity"],
     ["nonzero flow", { has24hActivity: true, mintCount24h: 1, burnCount24h: 0, mintVolume24hUsd: 100_000_000, burnVolume24hUsd: 0, netFlow24hUsd: 100_000_000 }, "USDC"],
     ["unavailable valuation", { has24hActivity: true, mintCount24h: 1, burnCount24h: 1, netFlow24hUsd: null }, "Net flows unavailable"],
+    ["unknown scan activity", { has24hActivity: null, mintCount24h: 0, burnCount24h: 0, mintVolume24hUsd: 0, burnVolume24hUsd: 0, netFlow24hUsd: null }, "Net flows unavailable"],
   ] as const)("distinguishes %s", (_label, activity, expected) => {
     const data = {
       coins: [makeMintBurnFlowCoin({

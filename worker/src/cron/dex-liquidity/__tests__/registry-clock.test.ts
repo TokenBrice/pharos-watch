@@ -12,6 +12,9 @@ import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import type { LiquidityMetrics } from "../types";
 import { seedGeneration } from "../../measured-execution/__tests__/persistence.test-support";
 import { makeV3Target } from "../../measured-execution/__tests__/measured-execution.test-support";
+import { computeDexPrices } from "../dex-price-publisher";
+import { seedPublishedDexGeneration } from "./scoring-test-support";
+import { makePool } from "./scoring-test-builders";
 
 const SOURCE_CLOCK = 1_791_403_833;
 const READ_CLOCK = SOURCE_CLOCK + 100;
@@ -77,6 +80,62 @@ async function score(db: D1Database, metrics: Map<string, LiquidityMetrics>, reg
 }
 
 describe("registry read-consumption clock", () => {
+  it.each([
+    { oldPrice: 0.4, aggregateAge: 6 * 3600 },
+    { oldPrice: 0.1, aggregateAge: 60 },
+  ])("ages only actual aggregate contributors for old price $oldPrice", async ({ oldPrice, aggregateAge }) => {
+    const harness = seedPublishedDexGeneration({ nowSec: READ_CLOCK });
+    openDatabases.push(harness.sqlite);
+    const pools = [
+      makePool({ poolId: "base:old", project: "orca", price: oldPrice, priceObservedAt: READ_CLOCK - 6 * 3600 }),
+      makePool({ poolId: "base:fresh1", project: "curve", price: 1, priceObservedAt: READ_CLOCK - 60 }),
+      makePool({ poolId: "base:fresh2", project: "curve", price: 1, priceObservedAt: READ_CLOCK - 30 }),
+    ];
+    await computeDexPrices(harness.db, new Map([["usdc-circle", pools]]), READ_CLOCK,
+      undefined, undefined, undefined, harness.generationId, new Map([["usdc-circle", 1]]));
+    const row = harness.sqlite.prepare(
+      "SELECT price_sources_json FROM dex_prices WHERE stablecoin_id = 'usdc-circle'",
+    ).get() as { price_sources_json: string };
+    expect(JSON.parse(row.price_sources_json)).toEqual([
+      expect.objectContaining({ protocol: "curve", observedAt: READ_CLOCK - 60,
+        aggregateObservedAt: READ_CLOCK - aggregateAge }),
+    ]);
+  });
+
+  it("replays a retained six-hour quote through scoring-stage storage and fresh publication without renewing it", async () => {
+    const quoteClock = READ_CLOCK - 6 * 3600;
+    const { metrics, result } = await merge([
+      registryRow(2, { source: "dl", tvl_usd: 200_000, volume_24h: 25_000,
+        price_usd: null, refreshed_at: READ_CLOCK }),
+      registryRow(2, { tvl_usd: 100_000, volume_24h: 25_000, price_usd: 0.998,
+        refreshed_at: quoteClock }),
+    ]);
+    const harness = seedPublishedDexGeneration({ nowSec: READ_CLOCK });
+    openDatabases.push(harness.sqlite);
+    const source = sourceState();
+    source.priceObservations = result.priceObservations;
+    await persistDexLiquidityScoringStage(harness.db, {
+      sourceSlotStartedAt: SOURCE_CLOCK, syncStartSec: SOURCE_CLOCK,
+      sourceState: source, poolState: poolState(metrics, result.registryEvaluatedAtSec),
+    });
+    const loaded = await loadDexLiquidityScoringStage(harness.db, {
+      nowSec: READ_CLOCK, expectedSourceSlotStartedAt: SOURCE_CLOCK,
+    });
+    expect(loaded.sourceState.priceObservations.get("usdc-circle")?.[0]?.observedAt).toBe(quoteClock);
+    expect(loaded.poolState.metrics.get("usdc-circle")?.topPools[0]?.priceObservedAt).toBe(quoteClock);
+    const scored = await score(harness.db, loaded.poolState.metrics, loaded.poolState.registryEvaluatedAtSec);
+    await computeDexPrices(harness.db, scored.retainedPoolsByStablecoin, READ_CLOCK,
+      undefined, undefined, loaded.sourceState.priceObservations, harness.generationId,
+      new Map([["usdc-circle", 1]]));
+    const row = harness.sqlite.prepare(
+      "SELECT updated_at, price_sources_json FROM dex_prices WHERE stablecoin_id = 'usdc-circle'",
+    ).get() as { updated_at: number; price_sources_json: string };
+    expect(row.updated_at).toBe(READ_CLOCK);
+    expect(JSON.parse(row.price_sources_json)).toEqual([
+      expect.objectContaining({ observedAt: quoteClock, aggregateObservedAt: quoteClock, price: 0.998 }),
+    ]);
+  });
+
   it("screens the post-stage-start zero-trade outlier in the same generation without losing a healthy refresh", async () => {
     const { metrics, result } = await merge([
       registryRow(1),

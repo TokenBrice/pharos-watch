@@ -378,7 +378,10 @@ describe("computeDepegResolver", () => {
     expect(payload.rows).toEqual([]);
   });
 
-  it("preallocates a durable DDR run id and records degraded lock deferrals without freezing", async () => {
+  it.each([
+    [false, true, "stablecoins-cache-unsafe"],
+    [true, false, "depeg-pipeline-unhealthy"],
+  ] as const)("preallocates a DDR run and defers locks when cacheSafe=%s pipelineHealthy=%s", async (cacheSafe, pipelineHealthy, reason) => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW_SEC * 1000);
     const event = activeEvent();
@@ -393,8 +396,8 @@ describe("computeDepegResolver", () => {
       db,
       runAt: NOW_SEC,
       slot: "quarter-hour",
-      stablecoinsCacheSafe: false,
-      depegPipelineHealthy: true,
+      stablecoinsCacheSafe: cacheSafe,
+      depegPipelineHealthy: pipelineHealthy,
       storeContracts: stores,
     });
     const metadata = JSON.parse(result.metadata ?? "{}");
@@ -408,14 +411,14 @@ describe("computeDepegResolver", () => {
       expect.objectContaining({
         runId: metadata.ddrRunId,
         action: "deferred",
-        reason: "stablecoins-cache-unsafe",
+        reason,
       }),
     );
     expect(stores.sealPublicPrediction).not.toHaveBeenCalled();
     expect(stores.sealPublicNoCall).not.toHaveBeenCalled();
     const payload = readDdrSnapshotPayload(db);
     expect(payload._meta.degraded).toBe(true);
-    expect(payload._meta.degradedReason).toBe("stablecoins-cache-unsafe");
+    expect(payload._meta.degradedReason).toBe(reason);
     expect(payload._meta.computedAt).toBe(NOW_SEC);
     expect(payload._meta.expiresAt).toBe(NOW_SEC + 900);
     expect(payload.rows).toEqual([]);

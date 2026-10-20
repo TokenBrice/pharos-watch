@@ -8,6 +8,7 @@ import {
 } from "../../test-helpers/pending-depeg-fixtures";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { MAX_OPEN_DEPEG_EVENTS } from "../../lib/constants";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), passthroughNonResponse: true }));
 
@@ -102,7 +103,7 @@ describe("confirmPendingDepegs", () => {
   it("returns early when there are no pending rows", async () => {
     const { sqlite, db } = openFixture();
 
-    await expect(confirmPendingDepegs(db, [])).resolves.toEqual({ providerDiagnostics: [] });
+    await expect(confirmPendingDepegs(db, [])).resolves.toEqual({ status: "completed", providerDiagnostics: [] });
 
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM depeg_pending").get()).toEqual({ count: 0 });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM depeg_pending_outcomes").get()).toEqual({ count: 0 });
@@ -112,9 +113,11 @@ describe("confirmPendingDepegs", () => {
     const { sqlite, db } = openFixture();
     const pending = makePendingRow();
     insertPending(sqlite, pending);
-    for (let index = 0; index < 200; index++) insertOpenEvent(sqlite, `open-${index}`, `OPEN${index}`);
-
-    await confirmPendingDepegs(db, [makeAsset({ id: pending.stablecoin_id, symbol: pending.symbol, geckoId: undefined })]);
+    for (let index = 0; index < MAX_OPEN_DEPEG_EVENTS; index++) insertOpenEvent(sqlite, `open-${index}`, `OPEN${index}`);
+    const before = sqlite.prepare("SELECT total_changes() AS count").get();
+    await expect(confirmPendingDepegs(db, [makeAsset({ id: pending.stablecoin_id, symbol: pending.symbol, geckoId: undefined })]))
+      .resolves.toEqual({ status: "held", reason: "depeg-open-event-limit-reached", providerDiagnostics: [] });
+    expect(sqlite.prepare("SELECT total_changes() AS count").get()).toEqual(before);
 
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM depeg_pending").get()).toEqual({ count: 1 });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM depeg_pending_outcomes").get()).toEqual({ count: 0 });

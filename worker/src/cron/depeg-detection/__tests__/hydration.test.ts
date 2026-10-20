@@ -8,6 +8,7 @@ import { makeAsset } from "../../../test-helpers/__shared/fixtures";
 import { MAX_OPEN_DEPEG_EVENTS } from "../../../lib/constants";
 import { seedDexEvidence, seedOpenEvent } from "../../__tests__/detect-depegs.test-support";
 import { hydrateDepegDetection } from "../hydration";
+import { detectDepegEvents } from "../../detect-depegs";
 import { resolveDirectRecovery, resolvePeakUpdateCommand } from "../native-quote-policy";
 import { persistDepegCommands } from "../persistence";
 
@@ -82,6 +83,7 @@ describe("hydrateDepegDetection", () => {
       .toEqual({ peak_deviation_bps: native ? -400 : -363, peak_price: native ? 0.96 : 0.186 });
     const recovery = resolveDirectRecovery({
       existing, nativeSignal: deriveDepegSignal(0.999, 1), nativePegPrice: 0.999,
+      primarySignal: deriveDepegSignal(0.193, 0.193)!,
       primaryPrice: 0.193, recoveryThreshold: 50, primarySupportsRecovery: true,
       primaryRecoveryContradicted: false,
     });
@@ -103,6 +105,36 @@ describe("hydrateDepegDetection", () => {
     expect(saturated.nativePegQuotes.get("brz-transfero")?.price).toBe(0.98);
     expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = 'depeg-native-quote:1'").get()).toEqual({ updated_at: NOW - 120 });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cache WHERE key LIKE 'depeg-native-quote:%'").get()).toEqual({ count: 1 });
+  });
+
+  it("returns a named detector hold without mutating the saturated event book", async () => {
+    const { db, sqlite } = fixtures.open();
+    seedEvents(sqlite, MAX_OPEN_DEPEG_EVENTS);
+    quoteResponse();
+    const before = sqlite.prepare("SELECT * FROM depeg_events ORDER BY id").all();
+    const changes = sqlite.prepare("SELECT total_changes() AS count").get();
+    await expect(detectDepegEvents(db, [asset])).resolves.toEqual({
+      status: "held", reason: "depeg-open-event-limit-reached",
+    });
+    expect(sqlite.prepare("SELECT * FROM depeg_events ORDER BY id").all()).toEqual(before);
+    expect(sqlite.prepare("SELECT total_changes() AS count").get()).toEqual(changes);
+  });
+
+  it("returns a named hold when the book fills between hydration and orphan cleanup", async () => {
+    const { sqlite } = fixtures.open();
+    let seededChanges: unknown;
+    const db = createSqliteD1(sqlite, { onAll(sql) {
+      if (sql.includes("AS open_event")) {
+        seedEvents(sqlite, MAX_OPEN_DEPEG_EVENTS);
+        seededChanges = sqlite.prepare("SELECT total_changes() AS count").get();
+      }
+    } });
+    await expect(detectDepegEvents(db, [])).resolves.toEqual({
+      status: "held", reason: "depeg-open-event-limit-reached",
+    });
+    expect(sqlite.prepare("SELECT total_changes() AS count").get()).toEqual(seededChanges);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM depeg_events WHERE ended_at IS NULL").get())
+      .toEqual({ count: MAX_OPEN_DEPEG_EVENTS });
   });
 
   it("admits one fewer event than the cap and persists its quote", async () => {

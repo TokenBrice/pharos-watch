@@ -1,21 +1,16 @@
 import type { AlchemyLogEntry } from "../alchemy-logs";
 import { logWorkerEventArgs } from "../structured-log";
 
-export const EVM_SAFETY_MARGIN_BLOCKS = 75; // ceil(900s indexing safety / 12s block time)
 const DECODE_RETRY_LIMIT = 3;
 export const DECODE_QUARANTINE_REASON = "amount-decode-retry-exhausted" as const;
 
-/** Successful RPC reads do not prove exhaustive indexing beyond observed events. */
+/** Both quiet and eventful scans share the same already-finalized ceiling. */
 export function mintBurnSuccessfulScanFrontier(
   fromBlock: number,
   scanTo: number,
   chainHead: number,
-  maxBlockSeen: number,
-  safetyMarginBlocks = EVM_SAFETY_MARGIN_BLOCKS,
 ): number {
-  return maxBlockSeen > 0
-    ? maxBlockSeen
-    : Math.max(fromBlock - 1, Math.min(scanTo, chainHead - safetyMarginBlocks));
+  return Math.max(fromBlock - 1, Math.min(scanTo, chainHead));
 }
 
 export async function shouldQuarantineDecodeFailure(

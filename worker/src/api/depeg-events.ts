@@ -1,7 +1,6 @@
 import { DEPEG_PENDING_EXPIRY_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { logWorkerEventArgs } from "../lib/structured-log";
-import { type DepegRow } from "../lib/depeg-helpers";
 import { resolveOrReject, parseBooleanParam } from "../lib/api-params";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
 import { buildPaginatedEventResponse, parsePaginatedEventParams } from "../lib/api-pagination";
@@ -15,7 +14,11 @@ import {
 import { isMissingTableError } from "../lib/db";
 import {
   EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL,
-  loadActiveIncidentProjections,
+  decodeActiveIncidentProjections,
+  IncidentProjectionUnavailableError,
+  prepareActiveIncidentProjections,
+  type ActiveIncidentProjectionLoad,
+  type PublicDepegRow,
   rowToPublicDepegEvent,
 } from "../lib/depeg-event-projection";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -27,7 +30,7 @@ import {
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { WORKER_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
-import type { DepegPendingIncident } from "@shared/types/market";
+import type { DepegEvent, DepegPendingIncident } from "@shared/types/market";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { isTrustedDexPriceRow } from "../lib/depeg-trust-policy";
 import { prepareDepegEventsCountStatements } from "../lib/depeg-events-count-cache";
@@ -198,9 +201,10 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
     }
     const pagination = { defaultLimit: 100, minLimit: 1, maxLimit: 1000, maxOffset: 50_000 };
     const cursor = {
+      version: 2,
       columns: [
-        { column: "started_at", type: "number" as const, direction: "DESC" as const, getValue: (row: DepegRow) => row.started_at },
-        { column: "id", type: "number" as const, direction: "DESC" as const, getValue: (row: DepegRow) => row.id },
+        { column: "effective_started_at", type: "number" as const, direction: "DESC" as const, getValue: (row: PublicDepegRow) => row.effective_started_at },
+        { column: "id", type: "number" as const, direction: "DESC" as const, getValue: (row: PublicDepegRow) => row.id },
       ],
     };
     const parsedPagination = parsePaginatedEventParams(params, pagination, cursor);
@@ -224,24 +228,31 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
     if (active) {
       conditions.push("ended_at IS NULL");
     }
-    const activeIncidentProjectionLoad = await loadActiveIncidentProjections(db, stablecoinId);
-    if (!activeIncidentProjectionLoad.available) {
-      return jsonResponse({
-        error: "Canonical incident history unavailable",
-        reason: activeIncidentProjectionLoad.reason,
-      }, { status: 503, headers: { "Cache-Control": CACHE_PROFILES.noStore } });
-    }
+    let activeIncidentProjectionLoad: Extract<ActiveIncidentProjectionLoad, { available: true }>;
     conditions.push(EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL);
 
-    return buildPaginatedEventResponse<DepegRow, ReturnType<typeof rowToPublicDepegEvent>>(db, {
-      tableName: "depeg_events_with_provenance",
-      orderBy: "started_at DESC, id DESC",
+    try {
+    return await buildPaginatedEventResponse<PublicDepegRow, DepegEvent>(db, {
+      tableName: "depeg_events_public",
+      orderBy: "effective_started_at DESC, id DESC",
       queryComment: "pharos:depeg-events",
       conditions,
       filterBindings,
       countStatements: parsedPagination.includeTotal
         ? prepareDepegEventsCountStatements(db, stablecoinId, active)
         : undefined,
+      snapshot: {
+        statement: prepareActiveIncidentProjections(db, stablecoinId),
+        onResult: (result) => {
+          const projection = decodeActiveIncidentProjections(result);
+          if (!projection.available) throw new IncidentProjectionUnavailableError(projection.reason);
+          activeIncidentProjectionLoad = projection;
+        },
+        onError: (error) => {
+          logWorkerEventArgs("api", "error", "[depeg-events] Canonical incident snapshot read failed:", toErrorMessage(error));
+          throw new IncidentProjectionUnavailableError();
+        },
+      },
       mapRow: (row) => rowToPublicDepegEvent(row, activeIncidentProjectionLoad.projections),
       searchParams: params,
       pagination,
@@ -268,4 +279,11 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
         };
       },
     });
+    } catch (error) {
+      if (!(error instanceof IncidentProjectionUnavailableError)) throw error;
+      return jsonResponse({
+        error: "Canonical incident history unavailable",
+        reason: error.reason,
+      }, { status: 503, headers: { "Cache-Control": CACHE_PROFILES.noStore } });
+    }
   };

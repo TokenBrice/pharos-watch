@@ -152,9 +152,10 @@ const MintBurnCoinFlowSchema = z.object({
   symbol: z.string(),
   pressureShiftScore: SignedFlowIntensitySchema.nullable(),
   pressureShiftState: PressureShiftStateSchema,
-  /** Nullable for valuation gating: `null` means missing valuation leaves the direction unproven. */
+  /** `null` when missing valuation or scan evidence leaves the direction unproven. */
   netFlowDirection24h: NetFlowDirection24hSchema.nullable(),
-  has24hActivity: z.boolean(),
+  /** True: observed activity; false: proven quiet; null: activity is unknown. */
+  has24hActivity: z.boolean().nullable(),
   baselineDailyNetUsd: z.number().nullable(),
   baselineDailyAbsUsd: z.number().nullable(),
   baselineDataDays: z.number().nullable(),
@@ -166,9 +167,9 @@ const MintBurnCoinFlowSchema = z.object({
    */
   gaugeWeightUsd: z.number().finite().nonnegative().nullable().optional(),
   /**
-   * Signed nets are `null` when the matching window valuation is `partial` (a partial signed net is
-   * not a bound in either direction). An `unknown` window (legacy buckets aggregated before
-   * completeness was recorded) keeps its known-valuation net, labelled by `valuation`.
+   * Signed nets are `null` when scan-window evidence is unavailable or valuation is `partial`
+   * (a partial signed net is not a bound in either direction). An `unknown` valuation window
+   * keeps its known-valuation net only when scan evidence admits it, labelled by `valuation`.
    */
   netFlow24hUsd: z.number().finite().nullable(),
   /** Known-valuation subtotals: lower bounds unless the matching `valuation` side is `complete`. */

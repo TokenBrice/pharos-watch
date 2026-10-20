@@ -1,6 +1,8 @@
 import { vi } from "vitest";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import type * as AlchemyLogsModule from "../../lib/alchemy-logs";
+import type * as MintBurnRpcModule from "../../lib/mint-burn-pipeline/rpc";
+import type * as MintBurnMaterializationDebtModule from "../../lib/mint-burn-pipeline/materialization-debt";
 
 export const MINT_BURN_ZERO_TOPIC = "0x0000000000000000000000000000000000000000000000000000000000000000";
 export const MINT_BURN_TRANSFER_TOPIC =
@@ -25,6 +27,11 @@ vi.mock("../../lib/alchemy-logs", async (importOriginal) => ({
   ),
   fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })),
   resolveBlockTimestamps: vi.fn(async () => new Map()),
+}));
+
+vi.mock("../../lib/mint-burn-pipeline/rpc", async (importOriginal) => ({
+  ...(await importOriginal<typeof MintBurnRpcModule>()),
+  getMintBurnFinalizedHead: vi.fn(),
 }));
 
 vi.mock("../../lib/evm-logs", () => ({
@@ -53,6 +60,11 @@ vi.mock("../../lib/mint-burn-pipeline/roundtrip-sweep", () => ({
   sweepRecentRoundtrips: vi.fn(async () => ({ reclassified: 0, affectedHours: new Map(), saturated: false })),
 }));
 
+vi.mock("../../lib/mint-burn-pipeline/materialization-debt", async (importOriginal) => {
+  const orig = await importOriginal<typeof MintBurnMaterializationDebtModule>();
+  return { ...orig, drainMintBurnMaterializationDebt: vi.fn(async () => 0) };
+});
+
 import { batchExecute } from "../../lib/db";
 import {
   buildAlchemyUrl,
@@ -65,6 +77,8 @@ import { createBudget, decodeUint256AtSlotOrNull } from "../../lib/evm-logs";
 import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
 import { getNullPriceBacklog, healNullPrices } from "../../lib/mint-burn-pipeline/price-heal";
 import { sweepRecentRoundtrips } from "../../lib/mint-burn-pipeline/roundtrip-sweep";
+import { getMintBurnFinalizedHead } from "../../lib/mint-burn-pipeline/rpc";
+import { drainMintBurnMaterializationDebt } from "../../lib/mint-burn-pipeline/materialization-debt";
 
 async function recordMintBurnBatch(_db: D1Database, statements: D1PreparedStatement[]): Promise<number> {
   for (const statement of statements) {
@@ -83,6 +97,10 @@ export function resetMintBurnMocks(): void {
   vi.mocked(getAlchemyBlockNumber)
     .mockReset()
     .mockImplementation(async (url: string) => (url.includes("ethereum") ? 22_000_000 : 250_000_000));
+  vi.mocked(getMintBurnFinalizedHead).mockReset().mockImplementation(async (_chain, endpoints, budget, signal) => {
+    const number = await getAlchemyBlockNumber(endpoints[0]!.url, budget, signal);
+    return number == null ? null : { number, timestamp: 1_700_000_000, hash: `0x${"a".repeat(64)}` };
+  });
   vi.mocked(getAlchemyTransactionContextBatchMany).mockReset().mockImplementation(async (_url, txHashes: string[]) =>
     new Map(txHashes.map((txHash) => [txHash, {
       tx: { hash: txHash, to: "0xrouter", input: "0x96f4e9f9" },
@@ -101,6 +119,7 @@ export function resetMintBurnMocks(): void {
   vi.mocked(recalcAffectedHours).mockReset().mockResolvedValue(undefined);
   vi.mocked(getNullPriceBacklog).mockReset().mockResolvedValue({ recent: 0, historical: 0 });
   vi.mocked(healNullPrices).mockReset().mockResolvedValue({ healed: 0, affectedHours: new Map() });
+  vi.mocked(drainMintBurnMaterializationDebt).mockReset().mockResolvedValue(0);
   vi.mocked(sweepRecentRoundtrips)
     .mockReset()
     .mockResolvedValue({ reclassified: 0, affectedHours: new Map(), saturated: false });
@@ -122,6 +141,8 @@ export function makeMintBurnDb(options: MintBurnDbOptions = {}): D1Database {
   return mockD1([
     { match: "mint_burn_run_state", rows: runStateRow ? [runStateRow] : [], first: runStateRow },
     { match: "mint_burn_sync_state", rows: options.syncRows ?? [] },
+    { match: "pharos:mint-burn-scan-coverage:merge", rows: [] },
+    { match: "pharos:mint-burn-scan-coverage:compact", rows: [] },
     {
       match: "price_cache",
       rows: options.priceRows ?? [

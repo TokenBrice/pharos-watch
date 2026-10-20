@@ -15,7 +15,7 @@ import {
   buildOrphanCloseRepair,
   type OrphanDepegRow,
 } from "./depeg-detection/repair";
-import type { DepegPersistenceCommand } from "./depeg-detection/types";
+import type { DepegPersistenceCommand, DepegStageResult } from "./depeg-detection/types";
 
 // --- Depeg event detection ---
 
@@ -26,7 +26,7 @@ export async function detectDepegEvents(
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
   nativePegSession?: NativePegQuoteSession,
-): Promise<void> {
+): Promise<DepegStageResult> {
   throwIfAborted(signal);
   const hydrated = await hydrateDepegDetection(
     db,
@@ -36,7 +36,9 @@ export async function detectDepegEvents(
     coingeckoApiKey,
     nativePegSession,
   );
-  if (hydrated.openRowsLimitReached) return;
+  if (hydrated.openRowsLimitReached) {
+    return { status: "held", reason: "depeg-open-event-limit-reached" };
+  }
 
   const duplicateRepair = buildDuplicateOpenEventRepair(hydrated.openRows);
   if (duplicateRepair.commands.length > 0) {
@@ -115,7 +117,7 @@ export async function detectDepegEvents(
   const orphanRows = orphanResult.results ?? [];
   if (orphanRows.length >= MAX_OPEN_DEPEG_EVENTS) {
     logOpenDepegEventLimitReached("orphan-cleanup");
-    return;
+    return { status: "held", reason: "depeg-open-event-limit-reached" };
   }
 
   const orphanRepair = buildOrphanCloseRepair({
@@ -131,4 +133,5 @@ export async function detectDepegEvents(
     const operationCount = await persistDepegCommands(db, orphanRepair.commands);
     logWorkerEventArgs("handler", "info", `[depeg] Closed ${operationCount} orphaned depeg events`);
   }
+  return { status: "completed" };
 }

@@ -29,7 +29,8 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
   const logoMap = logos ?? {};
 
   const { topMovers, totalNet, hasUnavailableNet, hasActivity } = useMemo(() => {
-    const activeCoins = (data?.coins ?? []).filter(inferHas24hActivity);
+    // Unknown windows still participate: dropping them would turn unavailable totals into zero.
+    const activeCoins = (data?.coins ?? []).filter((coin) => inferHas24hActivity(coin) !== false);
     const nets = activeCoins.map((c) => ({ coin: c, net: resolveCoinNetFlow(c, "24h") }));
     // Only displayable nonzero nets rank as movers; an unavailable net is never ranked as 0.
     const movers: Mover[] = nets.flatMap(({ coin, net }) =>

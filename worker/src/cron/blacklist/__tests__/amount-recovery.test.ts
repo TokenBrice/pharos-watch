@@ -1,4 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { insertBlacklistRows } from "../persistence";
+import { makePendingBlacklistRow } from "./blacklist.test-support";
 
 vi.mock("../../../lib/blacklist/balance-providers", () => ({
   fetchEvmTokenBalance: vi.fn(),
@@ -23,8 +26,8 @@ import type { BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 const DEFAULT_BLACKLIST_AMOUNT_D1_TABLES: MockTableConfig[] = [
   { match: "blacklist-amount-repair-queue-enqueue", rows: [] },
   { match: "blacklist-amount-repair-queue-reconcile-resolved", rows: [] },
-  { match: "amount_attempt_count = COALESCE", rows: [] },
-  { match: "amount_native = ?, amount_usd_at_event", rows: [] },
+  { match: "amount_attempt_count = COALESCE", rows: [], runMeta: { changes: 1 } },
+  { match: "amount_native = ?, amount_usd_at_event", rows: [], runMeta: { changes: 1 } },
   { match: "blacklist-amount-repair-queue-finish", rows: [] },
 ];
 
@@ -103,7 +106,59 @@ function makeRunBudget(overrides: Partial<BlacklistRunBudget> = {}): BlacklistRu
   };
 }
 
+const sqliteFixtures = createLatestSchemaFixtureTracker();
+afterEach(() => sqliteFixtures.closeAll());
+
 describe("enrichRowBalances", () => {
+  it.each([
+    [10, "resolved"], [null, "resolved"], [10, "suppressed"], [null, "suppressed"],
+  ] as const)("rejects stale recovery %s after an operator %s generation", async (providerAmount, mutation) => {
+    const { db, sqlite } = sqliteFixtures.open();
+    await insertBlacklistRows(db, [makePendingBlacklistRow({
+      id: "raced", stablecoin: "USDC", chain_id: "ethereum",
+      config_key: null, contract_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    })]);
+    let resume!: (value: number | null) => void;
+    let selected!: () => void;
+    const providerStarted = new Promise<void>((resolve) => { selected = resolve; });
+    vi.mocked(fetchEvmTokenBalance).mockImplementationOnce(() => {
+      selected();
+      return new Promise<number | null>((resolve) => { resume = resolve; });
+    });
+    const pending = backfillAmounts(db, null, null, async <T>(fn: () => Promise<T>) => fn(), makeRunBudget());
+    await providerStarted;
+    if (mutation === "suppressed") {
+      sqlite.prepare("UPDATE blacklist_events SET suppression_reason = 'operator-suppressed' WHERE id = 'raced'").run();
+    } else {
+      sqlite.prepare(`UPDATE blacklist_events SET amount_native = 777, amount_usd_at_event = 777,
+        amount_status = 'resolved', provenance_source = 'operator-verified',
+        provenance_observed_at = 123, amount_attempt_count = 8 WHERE id = 'raced'`).run();
+    }
+    const operatorRow = sqlite.prepare("SELECT * FROM blacklist_events WHERE id = 'raced'").get();
+    const queueRow = sqlite.prepare("SELECT * FROM blacklist_amount_repair_queue WHERE event_id = 'raced'").get();
+    resume(providerAmount);
+    expect(await pending).toMatchObject({ attempted: 0, resolved: 0, retried: 0, unrecoverable: 0 });
+    expect(sqlite.prepare("SELECT * FROM blacklist_events WHERE id = 'raced'").get()).toEqual(operatorRow);
+    expect(sqlite.prepare("SELECT * FROM blacklist_amount_repair_queue WHERE event_id = 'raced'").get()).toEqual(queueRow);
+  });
+
+  it.each([false, true])("repairs an unchanged null or legacy-zero generation (legacy=%s)", async (legacy) => {
+    const { db, sqlite } = sqliteFixtures.open();
+    await insertBlacklistRows(db, [makePendingBlacklistRow({
+      id: "eligible", stablecoin: "USDC", chain_id: "ethereum", config_key: null,
+      contract_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      amount_native: legacy ? 0 : null, amount_source: legacy ? "derived" : "unavailable",
+      amount_status: legacy ? "resolved" : "recoverable_pending",
+    })]);
+    vi.mocked(fetchEvmTokenBalance).mockResolvedValue(25);
+    expect(await backfillAmounts(db, null, null, async <T>(fn: () => Promise<T>) => fn(), makeRunBudget()))
+      .toMatchObject({ attempted: 1, resolved: 1, retried: 0 });
+    expect(sqlite.prepare("SELECT amount_native, amount_status FROM blacklist_events WHERE id = 'eligible'").get())
+      .toEqual({ amount_native: 25, amount_status: "resolved" });
+    expect(sqlite.prepare("SELECT status, attempt_count FROM blacklist_amount_repair_queue WHERE event_id = 'eligible'").get())
+      .toEqual({ status: "resolved", attempt_count: 1 });
+  });
+
   beforeEach(() => {
     vi.mocked(fetchEvmTokenBalance).mockReset().mockResolvedValue(null);
   });
@@ -321,98 +376,39 @@ describe("enrichRowBalances", () => {
   });
 
   it("marks exhausted legacy derived-zero rows permanently unavailable when config cannot be resolved", async () => {
-    const db = mockD1([
-      {
-        match: "FROM blacklist_events",
-        rows: [{
-          id: "row-1",
-          chain_id: "ethereum",
-          event_type: "blacklist",
-          address: "0x1111111111111111111111111111111111111111",
-          block_number: 100,
-          stablecoin: "UNKNOWN",
-          tx_hash: "0xabc",
-          config_key: null,
-          contract_address: null,
-          amount_attempt_count: 2,
-          amount_last_attempted_at: null,
-          amount_last_error_class: null,
-          amount_last_provider: null,
-          amount_source: "derived",
-        }],
-      },
-    ]);
-
-    await backfillAmounts(
-      db,
-      null,
-      null,
-      async <T>(fn: () => Promise<T>) => fn(),
-      makeRunBudget({ subrequestBudget: { count: 0, limit: 10 } }),
-    );
-
-    const update = db.getHistory().find((entry) =>
-      entry.sql.includes("UPDATE blacklist_events")
-      && entry.sql.includes("amount_status = ?"),
-    );
-    expect(update?.binds).toEqual([
-      expect.any(Number),
-      "config_missing",
-      "none",
-      "permanently_unavailable",
-      "row-1",
-    ]);
+    const { db, sqlite } = sqliteFixtures.open();
+    await insertBlacklistRows(db, [makePendingBlacklistRow({
+      id: "missing-config", stablecoin: "USDC", chain_id: "ethereum",
+      config_key: "missing", contract_address: null, amount_native: 0,
+      amount_source: "derived", amount_status: "resolved", amount_attempt_count: 2,
+    })]);
+    const result = await backfillAmounts(db, null, null, async <T>(fn: () => Promise<T>) => fn(), makeRunBudget());
+    expect(result).toMatchObject({ attempted: 1, unrecoverable: 1, resolved: 0 });
+    expect(sqlite.prepare(`SELECT amount_native, amount_status, amount_attempt_count, amount_last_error_class
+      FROM blacklist_events WHERE id = 'missing-config'`).get()).toEqual({
+      amount_native: 0, amount_status: "permanently_unavailable", amount_attempt_count: 3,
+      amount_last_error_class: "ambiguous_config",
+    });
   });
 
   it("stops retrying exhausted legacy derived-zero rows after the final failed recovery attempt", async () => {
-    const db = mockD1([
-      {
-        match: "FROM blacklist_events",
-        rows: [{
-          id: "row-1",
-          chain_id: "ethereum",
-          event_type: "blacklist",
-          address: "0x1111111111111111111111111111111111111111",
-          block_number: 100,
-          stablecoin: "USDC",
-          tx_hash: "0xabc",
-          config_key: null,
-          contract_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-          amount_attempt_count: 2,
-          amount_last_attempted_at: null,
-          amount_last_error_class: null,
-          amount_last_provider: null,
-          amount_source: "derived",
-        }],
-      },
-    ]);
-
-    await backfillAmounts(
-      db,
-      null,
-      null,
-      async <T>(fn: () => Promise<T>) => fn(),
-      makeRunBudget({ subrequestBudget: { count: 0, limit: 10 } }),
-    );
-
-    const candidateQuery = db.getHistory().find((entry) =>
-      entry.sql.includes("blacklist-amount-recovery-evm-candidates"),
-    );
-    expect(candidateQuery?.sql).toContain("COALESCE(events.amount_attempt_count, 0) < ?");
-    expect(candidateQuery?.binds).toEqual([3, 100]);
-
-    const update = db.getHistory().find((entry) =>
-      entry.sql.includes("UPDATE blacklist_events")
-      && entry.sql.includes("amount_status = ?")
-      && !entry.sql.includes("amount = ?"),
-    );
-    expect(update?.binds).toEqual([
-      expect.any(Number),
-      "provider_null",
-      "chain_rpc",
-      "permanently_unavailable",
-      "row-1",
-    ]);
+    const { db, sqlite } = sqliteFixtures.open();
+    await insertBlacklistRows(db, [makePendingBlacklistRow({
+      id: "exhausted", stablecoin: "USDC", chain_id: "ethereum", config_key: null,
+      contract_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      amount_native: 0, amount_source: "derived", amount_status: "resolved", amount_attempt_count: 2,
+    })]);
+    expect(await backfillAmounts(db, null, null, async <T>(fn: () => Promise<T>) => fn(), makeRunBudget()))
+      .toMatchObject({ attempted: 1, unrecoverable: 1 });
+    expect(sqlite.prepare(`SELECT amount_native, amount_status, amount_attempt_count, amount_last_error_class
+      FROM blacklist_events WHERE id = 'exhausted'`).get()).toEqual({
+      amount_native: 0, amount_status: "permanently_unavailable", amount_attempt_count: 3,
+      amount_last_error_class: "provider_null",
+    });
+    expect(sqlite.prepare("SELECT status, attempt_count FROM blacklist_amount_repair_queue WHERE event_id = 'exhausted'").get())
+      .toEqual({ status: "unrecoverable", attempt_count: 1 });
+    expect(await backfillAmounts(db, null, null, async <T>(fn: () => Promise<T>) => fn(), makeRunBudget()))
+      .toMatchObject({ attempted: 0, unrecoverable: 0 });
   });
 
   it("selects destroy receipt amounts for the intended affected address", () => {

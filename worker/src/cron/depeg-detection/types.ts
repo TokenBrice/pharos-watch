@@ -11,6 +11,12 @@ import type {
 import type { NativePegQuote } from "../../lib/native-peg-quotes";
 import type { PendingDepegUpsertParams } from "../../lib/depeg-pending";
 
+export type DepegStageResult =
+  | { status: "completed" }
+  | { status: "held"; reason: "depeg-open-event-limit-reached" };
+
+export type DepegHoldReason = Extract<DepegStageResult, { status: "held" }>["reason"];
+
 export interface DexPoolChallenger {
   price: number;
   tvlUsd: number;

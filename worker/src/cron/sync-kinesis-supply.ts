@@ -1,3 +1,5 @@
+import { STATUS_ONCHAIN_FRESH_WINDOW_SEC } from "@shared/lib/status-thresholds";
+import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import { throwIfAborted } from "../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
 import {
@@ -40,6 +42,23 @@ interface KinesisCirculationData {
 }
 
 const INVALID_PAYLOAD_REASON = "invalid-upstream-payload";
+
+function kinesisObservedAt(payload: unknown, nowSec: number): number {
+  // Undated legacy objects/arrays retain local-fetch semantics. A declared clock
+  // must pass admission; records[].date is a last-change clock, not ledger freshness.
+  if (!payload || typeof payload !== "object" || !("history_latest_ledger_closed_at" in payload)) return Math.floor(nowSec);
+  const clock = payload.history_latest_ledger_closed_at;
+  const timestamp = typeof clock === "string"
+    && isValidIsoDateOnly(clock.slice(0, 10))
+    && (/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/.test(clock)
+      || /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d\.\d+(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/.test(clock))
+    ? Date.parse(clock) / 1000
+    : Number.NaN;
+  if (!Number.isFinite(timestamp) || timestamp <= 0) throw new Error("ledger-clock-malformed");
+  if (timestamp > nowSec) throw new Error("ledger-clock-future");
+  if (nowSec - timestamp > STATUS_ONCHAIN_FRESH_WINDOW_SEC) throw new Error("ledger-clock-stale");
+  return Math.floor(timestamp);
+}
 
 function isAsciiDigit(code: number): boolean {
   return code >= 48 && code <= 57;
@@ -139,6 +158,7 @@ export async function syncKinesisSupply(
   let failed = 0;
   let skipped = 0;
   let invalidPayloads = 0;
+  let invalidPayloadReason: string | undefined;
   let fetchFailures = 0;
   let persistenceFailures = 0;
   let outputPublishedAt: number | null = null;
@@ -155,6 +175,7 @@ export async function syncKinesisSupply(
     }
 
     let parsed: KinesisCirculationData;
+    let observedAt: number;
     try {
       const result = await fetchTextWithRetry(
         `${config.baseUrl}/coin_in_circulation`,
@@ -177,18 +198,22 @@ export async function syncKinesisSupply(
       if (!fetched) {
         throw new Error(INVALID_PAYLOAD_REASON);
       }
+      observedAt = kinesisObservedAt(payload, Date.now() / 1000);
       parsed = fetched;
     } catch (err) {
       if (signal.aborted) throw err instanceof Error ? err : new Error(String(err));
-      const invalidPayload = err instanceof Error && err.message === INVALID_PAYLOAD_REASON;
-      if (invalidPayload) invalidPayloads++;
-      else fetchFailures++;
+      const invalidPayload = err instanceof Error
+        && (err.message === INVALID_PAYLOAD_REASON || err.message.startsWith("ledger-clock-"));
+      if (invalidPayload) {
+        invalidPayloads++;
+        invalidPayloadReason ??= err.message;
+      } else fetchFailures++;
       await recordOutcomeSafe(db, config.circuitSource, false);
       failed++;
       chainResults.push({
         chain: config.chain,
         status: invalidPayload ? "invalid_payload" : "error",
-        reason: invalidPayload ? INVALID_PAYLOAD_REASON : "upstream-fetch-failed",
+        reason: invalidPayload ? err.message : "upstream-fetch-failed",
       });
       recordCronFailure("sync-kinesis-supply", err, {
         metadata: { chain: config.chain, stage: "fetch" },
@@ -207,7 +232,7 @@ export async function syncKinesisSupply(
             .prepare(
               "INSERT OR REPLACE INTO onchain_supply (stablecoin_id, chain, supply, updated_at) VALUES (?, ?, ?, ?)",
             )
-            .bind(config.stablecoinId, config.chain, parsed.circulation, nowSec)
+            .bind(config.stablecoinId, config.chain, parsed.circulation, observedAt)
             .run(),
         3,
         signal,
@@ -229,7 +254,7 @@ export async function syncKinesisSupply(
   }
 
   const reason = invalidPayloads > 0
-    ? INVALID_PAYLOAD_REASON
+    ? invalidPayloadReason
     : persistenceFailures > 0
       ? "d1-write-failed"
       : fetchFailures > 0

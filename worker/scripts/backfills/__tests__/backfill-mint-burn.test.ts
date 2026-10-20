@@ -4,6 +4,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../../src/test-helpers/__shared/auth";
 import { makeNoopD1 } from "../../../src/test-helpers/noop-d1";
 import type * as AlchemyLogsModule from "../../../src/lib/alchemy-logs";
+import type * as MintBurnRpcModule from "../../../src/lib/mint-burn-pipeline/rpc";
 
 stubCryptoForAuth();
 
@@ -14,6 +15,13 @@ vi.mock("../../../src/lib/alchemy-logs", async (importOriginal) => ({
   getAlchemyTransactionContextBatchMany: vi.fn(async () => new Map()),
   fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })),
   resolveBlockTimestamps: vi.fn(async () => new Map()),
+}));
+
+vi.mock("../../../src/lib/mint-burn-pipeline/rpc", async (importOriginal) => ({
+  ...(await importOriginal<typeof MintBurnRpcModule>()),
+  getMintBurnFinalizedHead: vi.fn(async () => ({
+    number: 22_000_000, timestamp: 1_700_000_000, hash: `0x${"a".repeat(64)}`,
+  })),
 }));
 
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";

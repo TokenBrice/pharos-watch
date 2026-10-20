@@ -88,6 +88,8 @@ interface DefiLlamaChartPoint {
   totalCirculatingUSD?: Record<string, number>;
 }
 
+type MarketCapChartPoint = [number, number | null];
+
 interface MarketCapObservation {
   value: number;
   observedAt: number;
@@ -207,7 +209,7 @@ function buildKnownDisplayChains(assetId: string, existing: string[] | undefined
 }
 
 function findNearestMarketCap(
-  points: [number, number][],
+  points: MarketCapChartPoint[],
   targetMs: number,
   maxDistanceMs: number,
 ): MarketCapObservation | null {
@@ -232,6 +234,17 @@ function findNearestMarketCap(
     value: bestValue,
     observedAt: Math.floor(bestTimestampMs / 1000),
   };
+}
+
+/** Current repair must use the latest dated observation, never walk back past zero or invalid supply. */
+function findLatestMarketCap(points: MarketCapChartPoint[], nowMs: number): MarketCapObservation | null {
+  let latest: MarketCapChartPoint | undefined;
+  for (const point of points) {
+    if (!latest || point[0] > latest[0]) latest = point;
+  }
+  if (!latest || Math.abs(latest[0] - nowMs) > MAX_CURRENT_POINT_AGE_MS) return null;
+  const value = toPositiveFiniteNumber(latest[1]);
+  return value == null ? null : { value, observedAt: Math.floor(latest[0] / 1000) };
 }
 
 function normalizeChartTimestampMs(value: unknown): number | null {
@@ -376,7 +389,7 @@ async function fetchRecentDefiLlamaMarketCaps(
   llamaId: string,
   pegKey: string,
   signal?: AbortSignal,
-): Promise<[number, number][]> {
+): Promise<MarketCapChartPoint[]> {
   const result = await fetchTextWithRetry(
     `${DEFILLAMA_BASE}/stablecoincharts/all?stablecoin=${encodeURIComponent(llamaId)}`,
     {
@@ -409,15 +422,16 @@ async function fetchRecentDefiLlamaMarketCaps(
       }
       const point = entry as DefiLlamaChartPoint;
       const timestampMs = normalizeChartTimestampMs(point.date);
-      const buckets = point.totalCirculatingUSD;
-      const marketCap = buckets && typeof buckets === "object" && !Array.isArray(buckets)
-        ? toPositiveFiniteNumber(buckets[pegKey])
-        : null;
-      if (timestampMs == null || marketCap == null) {
+      if (timestampMs == null) {
         malformedCount++;
         return [];
       }
-      return [[timestampMs, marketCap] as [number, number]];
+      const buckets = point.totalCirculatingUSD;
+      const marketCap = buckets && typeof buckets === "object" && !Array.isArray(buckets)
+        ? buckets[pegKey] === 0 ? 0 : toPositiveFiniteNumber(buckets[pegKey])
+        : null;
+      // Keep dated zero/invalid values as barriers to resurrecting an older positive current point.
+      return [[timestampMs, marketCap] as MarketCapChartPoint];
     });
     if (malformedCount > 0) {
       logWorkerEvent({
@@ -825,7 +839,9 @@ export async function reconcileTrackedSupplyGaps(
       continue;
     }
 
-    const currentFromHistory = findNearestMarketCap(marketCaps, nowMs, MAX_CURRENT_POINT_AGE_MS);
+    const currentFromHistory = candidate.kind === "zero-supply-collapse"
+      ? findLatestMarketCap(marketCaps, nowMs)
+      : findNearestMarketCap(marketCaps, nowMs, MAX_CURRENT_POINT_AGE_MS);
     const day = findNearestMarketCap(marketCaps, nowMs - (24 * 60 * 60 * 1000), MAX_LOOKBACK_POINT_DISTANCE_MS);
     const week = findNearestMarketCap(marketCaps, nowMs - (7 * 24 * 60 * 60 * 1000), MAX_LOOKBACK_POINT_DISTANCE_MS);
     const month = findNearestMarketCap(marketCaps, nowMs - (30 * 24 * 60 * 60 * 1000), MAX_LOOKBACK_POINT_DISTANCE_MS);

@@ -72,6 +72,28 @@ describe("FlowGaugeHero", () => {
     expect(beam?.textContent).not.toContain("0");
   });
 
+  it("preserves unknown activity and unavailable totals in the hero and run-line data surface", () => {
+    const { container } = render(
+      <FlowGaugeHero
+        gauge={gauge({ score: null, band: null })}
+        coins={[makeMintBurnFlowCoin({
+          has24hActivity: null,
+          netFlow24hUsd: null,
+          netFlowDirection24h: null,
+          pressureShiftScore: null,
+          pressureShiftState: "nr",
+          mintVolume24hUsd: 0,
+          burnVolume24hUsd: 0,
+        })]}
+        sync={null}
+      />,
+    );
+    expect(screen.getByRole("table").textContent).toContain("24h activity unknown");
+    expect(container.textContent).toContain("Summed signed net unavailable");
+    expect(container.textContent).not.toContain("No 24h mint or burn");
+    expect(container.querySelector('[data-reason-codes="gauge-score-null"]')).toBeTruthy();
+  });
+
   it("puts a sync warning in a status chip with its freshness reason", () => {
     const { container } = render(
       <FlowGaugeHero

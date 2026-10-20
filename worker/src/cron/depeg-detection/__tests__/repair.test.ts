@@ -6,6 +6,7 @@ import { rowToDepegEvent, type DepegRow } from "../../../lib/depeg-helpers";
 import { makeDepegRow } from "../../../test-helpers/__shared/fixtures";
 import { buildDuplicateOpenEventRepair, buildOrphanCloseRepair } from "../repair";
 import { persistDepegCommands } from "../persistence";
+import { seedOpenEvent } from "../../__tests__/detect-depegs.test-support";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 afterEach(() => sqliteFixtures.closeAll());
@@ -38,6 +39,34 @@ function makeOpenRow(overrides: Parameters<typeof makeDepegRow>[0] = {}): DepegR
 }
 
 describe("buildDuplicateOpenEventRepair", () => {
+  it.each(["first", "current", "link"] as const)("retains a duplicate referenced by an unsealed incident's %s reference", async (reference) => {
+    const { sqlite, db } = sqliteFixtures.open();
+    seedOpenEvent(sqlite, { id: 1, started_at: 100, peak_deviation_bps: -200 });
+    seedOpenEvent(sqlite, { id: 2, started_at: 200, peak_deviation_bps: -300 });
+    seedOpenEvent(sqlite, { id: 3, started_at: 300, peak_deviation_bps: -250 });
+    const key = "ddr2:00000000000000000000000000000001";
+    const first = reference === "first" ? 2 : 1;
+    const current = reference === "current" ? 2 : 1;
+    for (const id of new Set([current, ...(reference === "link" ? [2] : [])])) {
+      sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links
+        (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 300)`).run(key, id);
+    }
+    sqlite.prepare(`INSERT INTO depeg_resolver_incidents
+      (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
+       first_started_at, current_started_at, first_observed_peak_bucket_bps, source_fingerprint, created_at, updated_at)
+      VALUES (?, 'usdt-tether', 'USD', 'below', ?, ?, ?, ?, 200, ?, 300, 300)`)
+      .run(key, first, current, first === 2 ? 200 : 100, current === 2 ? 200 : 100, "a".repeat(64));
+    const rows = sqlite.prepare("SELECT * FROM depeg_events ORDER BY id").all() as unknown as DepegRow[];
+    await persistDepegCommands(db, buildDuplicateOpenEventRepair(rows).commands);
+    expect(sqlite.prepare("SELECT id FROM depeg_events ORDER BY id").all()).toEqual([{ id: 1 }, { id: 2 }]);
+    expect(sqlite.prepare("SELECT peak_deviation_bps FROM depeg_events WHERE id = 1").get())
+      .toEqual({ peak_deviation_bps: -300 });
+    expect(sqlite.prepare(`SELECT first_event_id, current_event_id FROM depeg_resolver_incidents
+      WHERE incident_key = ?`).get(key)).toEqual({ first_event_id: first, current_event_id: current });
+    expect(sqlite.prepare(`SELECT COUNT(*) AS dangling FROM depeg_resolver_incident_event_links l
+      LEFT JOIN depeg_events e ON e.id = l.event_id WHERE e.id IS NULL`).get()).toEqual({ dangling: 0 });
+  });
+
   it("unions duplicate trusted intervals without bridging gaps and preserves the earliest unresolved gap", async () => {
     const repaired = await repairPersistedRows([
       { ...makeOpenRow({ id: 3, started_at: 180 }), price_coverage_json: '{"intervals":[[650,650]]}', last_trusted_price_at: 650, price_coverage_gap_started_at: null },

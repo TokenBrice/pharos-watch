@@ -1,8 +1,8 @@
-import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
+import { drainMintBurnMaterializationDebt, rebuildMintBurnMaterializationHours } from "../../lib/mint-burn-pipeline/materialization-debt";
 import { getNullPriceBacklog, healNullPrices } from "../../lib/mint-burn-pipeline/price-heal";
 import { sweepRecentRoundtrips } from "../../lib/mint-burn-pipeline/roundtrip-sweep";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
-import type { MintBurnAffectedHour, SyncMintBurnStatus, MintBurnLane } from "../../lib/mint-burn-pipeline/types";
+import type { SyncMintBurnStatus, MintBurnLane } from "../../lib/mint-burn-pipeline/types";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import { withBudgetMetadata } from "../../lib/cron-progress";
 import {
@@ -74,12 +74,15 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     input.criticalContractsEnabled > 0 ? phase.criticalContractsSatisfied / input.criticalContractsEnabled : 1;
   const conservationFailures = phase.configBreakdown.filter((summary) => summary.conservationFailure).length;
   const conservationUnavailable = phase.configBreakdown.filter((summary) => summary.conservationStatus === "unavailable").length;
+  const finalityUnavailableChains = [...new Set(input.configs
+    .filter((config) => !input.chainHeads.has(config.chain.chainId))
+    .map((config) => config.chain.chainId))];
   // The extended lane is judged on full-pass completion inside the expected
   // window, never on a per-config attempt age: a rotated roster that drains
   // 39–44 of 129 configs per run is healthy while the pass is still inside the
   // window. `cycle-in-progress` (no completed pass yet) stays neutral.
   const coverageCycleStalled = input.coverageCycle?.status === "stalled";
-  const degradedSignal = conservationFailures > 0 || (
+  const degradedSignal = finalityUnavailableChains.length > 0 || conservationFailures > 0 || (
     input.lane === "extended"
       ? phase.apiErrors > 1 || coverageCycleStalled
       : criticalCoverageRatio < 1 || phase.apiErrors > 1);
@@ -100,6 +103,7 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     status === "ok"
     && (
       conservationFailures > 0
+      || finalityUnavailableChains.length > 0
       || coverageCycleStalled
       || input.attemptCoverage.persistenceFailed
       || input.runDrilldown.persistenceFailed
@@ -163,7 +167,7 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
       const healResult = await healNullPrices(input.db, nowSec);
       nullPricesHealed = healResult.healed;
       if (healResult.affectedHours.size > 0) {
-        await recalcAffectedHours(input.db, healResult.affectedHours as Map<string, MintBurnAffectedHour>, {
+        await rebuildMintBurnMaterializationHours(input.db, healResult.affectedHours, {
           signal: input.signal,
         });
       }
@@ -226,6 +230,22 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     }
   }
 
+  if (status !== "error") {
+    try {
+      await drainMintBurnMaterializationDebt(input.db, { signal: input.signal });
+    } catch (error) {
+      throwIfAborted(input.signal);
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "sync-mint-burn.materialization-debt-drain-failed",
+        job: "sync-mint-burn",
+        message: "Hourly materialization debt retained for the next run",
+        error,
+      });
+    }
+  }
+
   const compatibilityChainHead = input.chainHeads.get("ethereum")
     ?? Math.max(0, ...input.chainHeads.values());
   const skippedReasonCounts: Record<string, number> = {};
@@ -283,6 +303,7 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     ) ? Math.floor(Date.now() / 1000) : null,
     ...(status !== "ok" ? {
       reason: conservationFailures > 0 ? "mint-burn-conservation-failure"
+        : finalityUnavailableChains.length > 0 ? "finality-head-unavailable"
         : coverageCycleStalled ? "mint-burn-coverage-cycle-stalled"
         : runStatePersistenceFailed || input.attemptCoverage.persistenceFailed || input.runDrilldown.persistenceFailed
           ? "mint-burn-state-persistence-failed"
@@ -305,6 +326,7 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
       contractsDisabled: input.configsDisabled,
       contractsTotal: input.contractsTotal,
     },
+    finality: { tag: "finalized", unavailableChains: finalityUnavailableChains },
     configsDisabled: input.configsDisabled,
     contractsProcessed: phase.contractsProcessed,
     contractsSkipped: phase.contractsSkipped,

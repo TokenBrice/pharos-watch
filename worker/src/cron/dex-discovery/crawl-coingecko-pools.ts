@@ -304,6 +304,7 @@ export async function crawlCoinGeckoPoolsStage({
           context.addPriceObs({
             stablecoinId: context.stablecoinId,
             price: stagedPool.priceUsd,
+            observedAt: stagedPool.refreshedAt,
             tvl: parsed.tvlUsd,
             chain,
             protocol: parsed.dexId,

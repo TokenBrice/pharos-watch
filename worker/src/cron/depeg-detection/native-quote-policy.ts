@@ -53,15 +53,20 @@ export function resolvePeakUpdateCommand(params: {
   };
 }
 
+type DirectRecovery =
+  | { closeReason: "recovered-primary"; recoveryPrice: number }
+  | { closeReason: "recovered-native"; recoveryPrice: number | null };
+
 export function resolveDirectRecovery(params: {
   existing: DepegDetectionRow;
   nativeSignal: DepegSignal | null;
   nativePegPrice: number | null;
+  primarySignal: DepegSignal;
   primaryPrice: number;
   recoveryThreshold: number;
   primarySupportsRecovery: boolean;
   primaryRecoveryContradicted: boolean;
-}): Pick<Extract<DepegPersistenceCommand, { type: "close-event" }>, "recoveryPrice" | "closeReason"> | null {
+}): DirectRecovery | null {
   const nativeEvent = isNativePegEvent(params.existing);
   if (nativeEvent) {
     if (
@@ -73,11 +78,17 @@ export function resolveDirectRecovery(params: {
       closeReason: "recovered-native",
     };
   }
-  if (!params.primarySupportsRecovery || params.primaryRecoveryContradicted) return null;
-  return {
-    recoveryPrice: params.primaryPrice,
-    closeReason: "recovered-primary",
-  };
+  if (params.primaryRecoveryContradicted) return null;
+  if (params.primarySupportsRecovery && signalIsWithinThreshold(params.primarySignal, params.recoveryThreshold)) {
+    return {
+      recoveryPrice: params.primaryPrice,
+      closeReason: "recovered-primary",
+    };
+  }
+  if (params.nativePegPrice != null && signalIsWithinThreshold(params.nativeSignal, params.recoveryThreshold)) {
+    return { recoveryPrice: null, closeReason: "recovered-native" };
+  }
+  return null;
 }
 
 function emptyDecision(trackedCoinId: string): DepegAssetDecision {

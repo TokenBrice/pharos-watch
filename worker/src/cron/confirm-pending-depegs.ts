@@ -33,6 +33,7 @@ import {
 } from "./pending-depeg-confirmation";
 import { evaluatePromotionDecision } from "./pending-depeg-confirmation-decision";
 import { collectConfirmationEvidence } from "./pending-depeg-confirmation-evidence";
+import type { DepegStageResult } from "./depeg-detection/types";
 
 /**
  * Process pending depeg records that require secondary confirmation.
@@ -56,7 +57,7 @@ export async function confirmPendingDepegs(
   coingeckoApiKey?: string | null,
   binanceSession?: BinanceFetchSession,
   nativePegSession?: NativePegQuoteSession,
-): Promise<{ providerDiagnostics: PricingProviderAttemptDiagnostic[] }> {
+): Promise<DepegStageResult & { providerDiagnostics: PricingProviderAttemptDiagnostic[] }> {
   throwIfAborted(signal);
   const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
   const pending = await db
@@ -64,7 +65,7 @@ export async function confirmPendingDepegs(
     .all<PendingDepegRow>();
 
   const rows = pending.results ?? [];
-  if (rows.length === 0) return { providerDiagnostics };
+  if (rows.length === 0) return { status: "completed", providerDiagnostics };
 
   const now = Math.floor(Date.now() / 1000);
   const assetById = new Map(assets.map((a) => [a.id, a]));
@@ -103,7 +104,7 @@ export async function confirmPendingDepegs(
   const openEventRows = openEvents.results ?? [];
   if (openEventRows.length >= MAX_OPEN_DEPEG_EVENTS) {
     logOpenDepegEventLimitReached("confirmation");
-    return { providerDiagnostics };
+    return { status: "held", reason: "depeg-open-event-limit-reached", providerDiagnostics };
   }
   const openSet = new Set(openEventRows.map((r) => r.stablecoin_id));
 
@@ -193,5 +194,5 @@ export async function confirmPendingDepegs(
     logWorkerEventArgs("handler", "info", `[depeg-confirm] Executed ${executedMutationCount} pending depeg mutations`);
   }
 
-  return { providerDiagnostics };
+  return { status: "completed", providerDiagnostics };
 }

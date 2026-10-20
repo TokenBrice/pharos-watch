@@ -37,7 +37,7 @@ import {
 import { MethodologyHint } from "@/components/methodology-hint";
 import { OpsStatusChip } from "@/components/ops-status-chip";
 import { FlowSignedNetValue, FlowVolumeValue } from "@/components/flow-valuation-value";
-import { resolveCoinNetFlow, type MintBurnNetWindow } from "@shared/lib/mint-burn-coin-helpers";
+import { inferHas24hActivity, resolveCoinNetFlow, type MintBurnNetWindow } from "@shared/lib/mint-burn-coin-helpers";
 import { RUN_LINE_EXCLUSION_LABELS, resolveRunLineExclusionReason } from "@/lib/flow-run-line-model";
 import type { MintBurnSignedNetView } from "@shared/lib/mint-burn-valuation-display";
 import { stablecoinLabel } from "@/lib/stablecoin-label";
@@ -150,10 +150,11 @@ function FlowNetCell({
   );
 }
 
-/** Observed zero: both 24h sides fully valued and no mint or burn event. Unknown valuation is never "idle". */
+/** Hide only proven quiet windows; unknown scan activity is never idle. */
 function hasNoObserved24hActivity(coin: MintBurnCoinFlow): boolean {
   const window24h = resolveMintBurnValuation(coin.valuation?.window24h);
   return (
+    inferHas24hActivity(coin) === false &&
     coin.mintVolume24hUsd === 0 &&
     coin.burnVolume24hUsd === 0 &&
     window24h.mintCompleteness === "complete" &&

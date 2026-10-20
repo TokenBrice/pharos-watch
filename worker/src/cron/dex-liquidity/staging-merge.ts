@@ -618,6 +618,7 @@ export async function mergeStagedPools(
           exchangeName: stagedPool.protocol,
           volumeUsd: stagedPool.volume24h ?? 0,
           priceUsd: stagedPool.priceUsd ?? 0,
+          observedAt: stagedPool.refreshedAt,
         }], references);
         if (priceEvidence.length > 0) {
           const existing = stagedPriceObs.get(stagedPool.stablecoinId) ?? [];
@@ -782,6 +783,7 @@ export async function mergeStagedPools(
       const obs = stagedPriceObs.get(stagedPool.stablecoinId) ?? [];
       obs.push({
         price: stagedPool.priceUsd,
+        observedAt: view.price!.refreshedAt,
         tvl: adjustedTvl,
         chain: stagedPool.chain,
         protocol: dexId,
@@ -895,6 +897,7 @@ export async function mergeStagedPools(
         // inventory TVL above may be two weeks old: an aged row keeps its decayed
         // TVL but contributes no price.
         price: priceEligible ? stagedPool.priceUsd ?? 0 : 0,
+        priceObservedAt: priceEligible ? view.price!.refreshedAt : null,
         symbol: stagedPool.symbol,
         sourceFamily: "cg_onchain",
         ...(crossSourcePriceProvenance ?? {}),
@@ -926,6 +929,7 @@ export async function mergeStagedPools(
       maturityDays,
       poolType,
       price: priceEligible ? stagedPool.priceUsd ?? 0 : 0,
+      priceObservedAt: priceEligible ? view.price!.refreshedAt : null,
       symbol: stagedPool.symbol,
       sourceFamily: Object.prototype.hasOwnProperty.call(STAGED_SOURCE_FAMILY, stagedPool.source)
         ? STAGED_SOURCE_FAMILY[stagedPool.source]

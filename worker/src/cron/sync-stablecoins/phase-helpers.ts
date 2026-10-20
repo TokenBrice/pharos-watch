@@ -299,6 +299,15 @@ export async function fillMissingSupplyHistory(
   let fillCount = 0;
   for (const asset of assets) {
     throwIfAborted(signal);
+    // These producers own one coherent packet, including deliberately unavailable history.
+    // Provenance remains authoritative even if the source label is absent on a retained packet.
+    if (
+      asset.supplyGapFill != null
+      || asset.supplySource === "coingecko-gap-fill"
+      || asset.supplySource === "defillama-history-gap-fill"
+      || asset.supplySource === "onchain-total-supply"
+      || asset.supplySource === "onchain-circulating-supply"
+    ) continue;
     const historical = historyById.get(String(asset.id));
     if (!historical) continue;
 

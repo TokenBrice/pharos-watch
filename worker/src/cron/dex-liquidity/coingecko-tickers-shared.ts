@@ -17,6 +17,7 @@ export interface AggregatedExchangeTicker {
   name: string;
   volumeUsd: number;
   priceVolumeWeightedSum: number;
+  observedAt?: number | null;
 }
 
 export interface CgTickerExchangeSummary {
@@ -24,6 +25,8 @@ export interface CgTickerExchangeSummary {
   exchangeName: string;
   volumeUsd: number;
   priceUsd: number;
+  /** Registry refresh or conservative original ticker read time. */
+  observedAt?: number | null;
 }
 
 
@@ -51,16 +54,24 @@ export function filterValidCgTickers(tickers: CgTicker[]): CgTicker[] {
 
 export function aggregateCgTickersByExchange(
   tickers: CgTicker[],
+  readObservedAt?: number,
 ): Map<string, AggregatedExchangeTicker> {
   const byExchange = new Map<string, AggregatedExchangeTicker>();
 
   for (const ticker of tickers) {
     const exchangeId = ticker.market.identifier;
     const existing = byExchange.get(exchangeId);
+    const upstream = ticker.last_traded_at ? Date.parse(ticker.last_traded_at) / 1000 : NaN;
+    const observedAt = Number.isFinite(upstream) && upstream >= 0 ? Math.floor(upstream) : readObservedAt;
 
     if (existing) {
       existing.volumeUsd += ticker.converted_volume.usd;
       existing.priceVolumeWeightedSum += ticker.converted_last.usd * ticker.converted_volume.usd;
+      if (existing.observedAt != null && observedAt != null) {
+        existing.observedAt = Math.min(existing.observedAt, observedAt);
+      } else if (existing.observedAt !== undefined || observedAt !== undefined) {
+        existing.observedAt = null;
+      }
       continue;
     }
 
@@ -68,6 +79,7 @@ export function aggregateCgTickersByExchange(
       name: ticker.market.name,
       volumeUsd: ticker.converted_volume.usd,
       priceVolumeWeightedSum: ticker.converted_last.usd * ticker.converted_volume.usd,
+      ...(observedAt !== undefined ? { observedAt } : {}),
     });
   }
 
@@ -87,6 +99,7 @@ export function buildCgTickerExchangeSummaries(
       priceUsd: aggregate.volumeUsd > 0
         ? aggregate.priceVolumeWeightedSum / aggregate.volumeUsd
         : 0,
+      ...(aggregate.observedAt !== undefined ? { observedAt: aggregate.observedAt } : {}),
     });
   }
 
@@ -110,6 +123,7 @@ export function buildCgTickerPriceObservations(
 
     return [{
       price: summary.priceUsd,
+      observedAt: summary.observedAt ?? null,
       tvl: 0,
       observedVolumeUsd: summary.volumeUsd,
       chain: "orderbook",

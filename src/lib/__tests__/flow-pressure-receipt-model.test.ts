@@ -171,4 +171,27 @@ describe("buildFlowPressureReceiptModel", () => {
     expect(byId["mint-24h"]).toMatchObject({ valueUsd: 950, completeness: "complete", note: null });
     expect(byId["mint-7d"]).toMatchObject({ valueUsd: 15, completeness: "partial" });
   });
+
+  it("keeps unknown scan-window nets unavailable while retaining observed gross subtotals", () => {
+    const model = buildFlowPressureReceiptModel({
+      gauge: null,
+      coins: [makeCoin({
+        has24hActivity: null,
+        netFlow24hUsd: null,
+        netFlow7dUsd: null,
+        netFlow30dUsd: null,
+        netFlow90dUsd: null,
+        mintVolume24hUsd: 10,
+        burnVolume24hUsd: 5,
+        valuation: completeValuation(),
+      })],
+    });
+    expect(model.net24hUsd).toBeNull();
+    expect(model.net7dUsd).toBeNull();
+    expect(model.topMint).toBeNull();
+    expect(model.topBurn).toBeNull();
+    expect(model.mint24hUsd).toBe(10);
+    expect(model.burn24hUsd).toBe(5);
+    expect(model.rows.find((row) => row.id === "net-24h")?.bound).toBeNull();
+  });
 });

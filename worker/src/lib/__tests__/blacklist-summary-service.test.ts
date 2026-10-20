@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { BlacklistSummaryResponse } from "@shared/types/market";
 import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../blacklist-summary-service";
+import { loadBlacklistCurrentBalanceMap, upsertBlacklistCurrentBalance } from "../blacklist-current-balances";
+import { getBlacklistConfigsForSymbolAndChain } from "../blacklist-contracts";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 
@@ -10,6 +12,55 @@ afterEach(() => {
 });
 
 describe("blacklist summary freeze aggregates", () => {
+  it.each([
+    ["ethereum", 125], ["ethereum", 0], ["tron", 125], ["tron", 0],
+  ] as const)("retains last-success %s amount %s through a failed ledger refresh", async (chainId, amount) => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const [config] = getBlacklistConfigsForSymbolAndChain("USDT", chainId);
+    const now = 2_000_000_000;
+    const observedAt = now - 100_000;
+    const address = "0x1111111111111111111111111111111111111111";
+    sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, amount_usd_at_event, config_key, contract_address, explorer_tx_url, explorer_address_url)
+      VALUES ('active', 'USDT', ?, ?, 'blacklist', ?, 'tx-active', 1, ?, 999, ?, ?, '', '')`)
+      .run(chainId, config.chain.chainName, address, observedAt - 1, config.configKey, config.contractAddress);
+    const snapshot = {
+      stablecoin: "USDT" as const, chainId, address, configKey: config.configKey,
+      contractAddress: config.contractAddress, amountNative: amount, amountUsd: amount,
+      source: "current_balance", status: "resolved" as const, observedAt,
+      lastSuccessfulObservedAt: observedAt, attemptCount: 1, lastAttemptedAt: observedAt,
+      lastErrorClass: null, consecutiveFailures: 0,
+    };
+    await upsertBlacklistCurrentBalance(db, snapshot);
+    await upsertBlacklistCurrentBalance(db, {
+      ...snapshot, amountNative: null, amountUsd: null, status: "provider_failed",
+      observedAt: now, lastAttemptedAt: now, lastErrorClass: "provider_timeout",
+    });
+    await materializeBlacklistSummarySnapshot(db, now, now);
+    const summary = await (await handleBlacklistSummary(db)).json() as BlacklistSummaryResponse;
+    expect(summary.stats).toMatchObject({
+      activeFrozenTotal: amount, activeAmountGapCount: 0, activeAddressCount: 1,
+      trackedFrozenTotal: amount, trackedAmountGapCount: 0,
+    });
+    expect(summary.freezeLedgerMeta).toMatchObject({
+      providerFailedCount: 1, oldestObservedAt: observedAt, newestObservedAt: observedAt,
+      lastErrorClassDistribution: { provider_timeout: 1 }, freshnessDistribution: { stale: 1 },
+    });
+    expect([...await loadBlacklistCurrentBalanceMap(db)].map(([, row]) => row)).toMatchObject([{
+      amountNative: amount, amountUsd: amount, observedAt, lastSuccessfulObservedAt: observedAt,
+      status: "provider_failed", lastAttemptedAt: now, consecutiveFailures: 1,
+    }]);
+    sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, config_key, contract_address, explorer_tx_url, explorer_address_url)
+      VALUES ('released', 'USDT', ?, ?, 'unblacklist', ?, 'tx-release', 2, ?, ?, ?, '', '')`)
+      .run(chainId, config.chain.chainName, address, now - 1, config.configKey, config.contractAddress);
+    await materializeBlacklistSummarySnapshot(db, now + 1, now);
+    const released = await (await handleBlacklistSummary(db)).json() as BlacklistSummaryResponse;
+    expect(released.stats).toMatchObject({ activeAddressCount: 0, activeFrozenTotal: 0, trackedFrozenTotal: amount });
+  });
+
   it("serves observed events with missing coverage freshness even when cron history has fresh output", async () => {
     const { sqlite, db } = sqliteFixtures.open();
     const now = Math.floor(Date.now() / 1000);

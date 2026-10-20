@@ -10,7 +10,7 @@ import type { DexPriceObs, LiquidityMetrics } from "./types";
 import { dexPriceConfidenceForSourceFamily } from "./constants";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import { dexPriceEvidenceWeight } from "./coingecko-tickers-shared";
-import { aggregateProtocolSources, buildDexPriceObservationsFromRetainedPools, collapseDuplicateObservations } from "./scoring-helpers";
+import { aggregateProtocolSources, buildDexPriceObservationsFromRetainedPools, collapseDuplicateObservations, oldestPriceObservation } from "./scoring-helpers";
 import { DEX_LIQUIDITY_SCORING_BATCH_SIZE, assertCurrentDexScoringGeneration, flushScoringStatements, pruneExpiredDexPriceStages, type DexPriceStageRetentionResult } from "./dex-scoring-stage-store";
 
 const PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO = 2.5;
@@ -264,7 +264,12 @@ export async function computeDexPrices(
       const ratio = obs.price / primaryPrice;
       return ratio >= DISPLAY_PRICE_RATIO_MIN && ratio <= DISPLAY_PRICE_RATIO_MAX;
     });
+    // Keep the aggregate's actual median contributors separate from display-source filtering.
+    const aggregateObservedAt = oldestPriceObservation(medianInputObs);
     const protocolSources = aggregateProtocolSources(sanePriceObs);
+    if (aggregateObservedAt != null) {
+      for (const source of protocolSources) source.aggregateObservedAt = aggregateObservedAt;
+    }
 
     const meta = TRACKED_META_BY_ID.get(id);
     const symbol = meta?.symbol ?? id;

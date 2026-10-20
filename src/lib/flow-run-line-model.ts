@@ -8,6 +8,8 @@ import { PRESSURE_SHIFT_MIN_BASELINE_DAYS, resolvePublishedGaugeBand } from "@sh
 export type RunLineExclusionReason =
   /** Pressure withheld: the 24h window is not fully valued or the baseline is partial (counted in `gauge.partialValuationInputs`). */
   | "valuation-partial"
+  /** Missing scan evidence cannot establish activity or quiet. */
+  | "activity-unknown"
   /** No mint or burn event in the 24h window. */
   | "no-24h-activity"
   /** Active, but under the history or activity floor (7 days, $50K of 24h flow). */
@@ -18,6 +20,7 @@ export type RunLineExclusionReason =
 /** Plain-language labels for the exclusion codes (run-line table, per-coin table NR cells). */
 export const RUN_LINE_EXCLUSION_LABELS: Record<RunLineExclusionReason, string> = {
   "valuation-partial": "Withheld: partial valuation",
+  "activity-unknown": "24h activity unknown",
   "no-24h-activity": "No 24h mint or burn",
   "below-scoring-floor": "Under history or activity floor",
   "weight-unavailable": "Weight unavailable",
@@ -68,7 +71,9 @@ export interface RunLineModel {
  * history to score at all, so the stub count matches `partialValuationInputs`.
  */
 export function resolveRunLineExclusionReason(coin: MintBurnCoinFlow): RunLineExclusionReason {
-  if (!inferHas24hActivity(coin)) return "no-24h-activity";
+  const activity = inferHas24hActivity(coin);
+  if (activity === null) return "activity-unknown";
+  if (!activity) return "no-24h-activity";
   if (coin.baselineDataDays == null || coin.baselineDataDays < PRESSURE_SHIFT_MIN_BASELINE_DAYS) return "below-scoring-floor";
   const valuationAdmitsPressure =
     resolveMintBurnValuation(coin.valuation?.window24h).completeness === "complete" && coin.valuation?.baseline !== "partial";

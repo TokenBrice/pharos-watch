@@ -19,7 +19,10 @@ import {
 import { createBudget, createRateLimiter } from "../lib/evm-logs";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { recoverBlacklistAmountForRow } from "../lib/blacklist/amount-recovery";
-import { buildRecoveredBlacklistAmountPersistence } from "../lib/blacklist/amount-persistence";
+import {
+  buildBlacklistAmountAttemptUpdate, buildRecoveredBlacklistAmountPersistence,
+  type BlacklistAmountSelectedState,
+} from "../lib/blacklist/amount-persistence";
 import {
   blacklistRuntimeBudgetReached,
   blacklistSubrequestBudgetReached,
@@ -31,7 +34,7 @@ const VALID_STABLECOINS = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
 const RECOVERABLE_GAP_STATUSES = ["recoverable_pending", "provider_failed", "ambiguous"] as const;
 const RUNTIME_BUDGET_MS = 8 * 60_000;
 
-type GapRow = {
+type GapRow = BlacklistAmountSelectedState & {
   id: string;
   stablecoin: string;
   chain_id: string;
@@ -134,6 +137,7 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
     const conditions = [
       `amount_status IN (${RECOVERABLE_GAP_STATUSES.map(() => "?").join(", ")})`,
       "chain_id != 'tron'",
+      "suppression_reason IS NULL",
     ];
     const binds: Array<string | number> = [...RECOVERABLE_GAP_STATUSES];
     if (onlyMissingProvenance) {
@@ -155,7 +159,8 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
     const rows = await db
       .prepare(
         `SELECT id, stablecoin, chain_id, event_type, address, tx_hash, block_number, timestamp, amount_status,
-                amount_attempt_count, amount_last_attempted_at, contract_address, config_key
+                amount_attempt_count, amount_last_attempted_at, contract_address, config_key,
+                amount_native, amount_usd_at_event, amount_source, provenance_source, provenance_observed_at
          FROM blacklist_events
          WHERE ${conditions.join(" AND ")}
          ORDER BY timestamp ASC, id ASC
@@ -218,6 +223,8 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
       minimumConfigWindowMs: 0,
     } satisfies BlacklistRunBudget;
     const updates: D1PreparedStatement[] = [];
+    const outcomes: Array<"resolved" | "providerFailed" | "configMissing" | "configAmbiguous"> = [];
+    const zeroAmounts: boolean[] = [];
     const attemptAt = Math.floor(Date.now() / 1000);
     let resolved = 0;
     let resolvedZero = 0;
@@ -237,19 +244,15 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
       const candidate = candidates[index]!;
       if (candidate.kind !== "resolved") {
         const errorClass = candidate.kind === "ambiguous_config" ? "ambiguous_config" : "config_missing";
-        if (candidate.kind === "ambiguous_config") configAmbiguous++;
-        if (candidate.kind === "missing_config") configMissing++;
+        outcomes.push(candidate.kind === "ambiguous_config" ? "configAmbiguous" : "configMissing");
+        zeroAmounts.push(false);
         updates.push(
-          db
-            .prepare(
-              `UPDATE blacklist_events
-             SET amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
-                 amount_last_attempted_at = ?,
-                 amount_last_error_class = ?,
-                 amount_last_provider = ?
-             WHERE id = ?`,
-            )
-            .bind(attemptAt, errorClass, "none", candidate.row.id),
+          buildBlacklistAmountAttemptUpdate(db, {
+            eventId: candidate.row.id,
+            attemptedAt: attemptAt,
+            errorClass,
+            lastProvider: "none",
+          }, { selectedState: candidate.row }),
         );
         continue;
       }
@@ -264,31 +267,22 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
       });
 
       if (recovery.amount == null) {
-        providerFailed++;
+        outcomes.push("providerFailed");
+        zeroAmounts.push(false);
         updates.push(
-          db
-            .prepare(
-              `UPDATE blacklist_events
-             SET amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
-                 amount_last_attempted_at = ?,
-                 amount_last_error_class = ?,
-                 amount_last_provider = ?,
-                 amount_status = ?
-             WHERE id = ?`,
-            )
-            .bind(
-              attemptAt,
-              recovery.lastErrorClass ?? "provider_null",
-              recovery.lastProvider,
-              recovery.amountStatus,
-              row.id,
-            ),
+          buildBlacklistAmountAttemptUpdate(db, {
+            eventId: row.id,
+            attemptedAt: attemptAt,
+            errorClass: recovery.lastErrorClass ?? "provider_null",
+            lastProvider: recovery.lastProvider,
+            amountStatus: recovery.amountStatus,
+          }, { selectedState: row }),
         );
         continue;
       }
 
-      resolved++;
-      if (recovery.amount === 0) resolvedZero++;
+      outcomes.push("resolved");
+      zeroAmounts.push(recovery.amount === 0);
       updates.push(
         buildRecoveredBlacklistAmountPersistence(db, {
           eventId: row.id,
@@ -301,7 +295,7 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
           attemptedAt: attemptAt,
           lastErrorClass: recovery.lastErrorClass,
           lastProvider: recovery.lastProvider,
-        }).statement,
+        }, { selectedState: row }).statement,
       );
     }
 
@@ -313,9 +307,18 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
       // would therefore strand partial status/attempt mutations behind stale derived
       // caches, with no retry path to finish the job. Write-mode candidates are capped at
       // D1_BATCH_SIZE above so the whole set always fits one transaction.
-      await executeAtomicBatch(db, updates);
+      const results = await executeAtomicBatch(db, updates, { returnResults: true });
+      for (const [index, result] of results.entries()) {
+        if (Number(result.meta?.changes ?? 0) === 0) continue;
+        switch (outcomes[index]) {
+          case "resolved": resolved++; if (zeroAmounts[index]) resolvedZero++; break;
+          case "providerFailed": providerFailed++; break;
+          case "configMissing": configMissing++; break;
+          case "configAmbiguous": configAmbiguous++; break;
+        }
+      }
     }
-    const cacheInvalidation = updates.length > 0
+    const cacheInvalidation = resolved + providerFailed + configMissing + configAmbiguous > 0
       ? await invalidateBlacklistDerivedCaches(db)
       : { attempted: 0, deleted: 0, failed: 0 };
 

@@ -38,6 +38,8 @@ export interface DexApiPool {
   tokens: DexApiPoolToken[];
   /** Raw pool spot price: token[1] received per 1 token[0]. Used for price inversion logic. */
   price: number | null;
+  /** Original upstream quote clock, or the bounded live provider-read clock. */
+  priceObservedAt?: number | null;
   tvlUsd: number;
   /** Provider 24h USD volume; null when the source publishes none (pool-state-only sources). */
   volume24hUsd: number | null;

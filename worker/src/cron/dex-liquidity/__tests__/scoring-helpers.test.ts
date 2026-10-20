@@ -171,13 +171,29 @@ describe("aggregateProtocolSources", () => {
       expect.objectContaining({ protocol: "curve", sourceFamily: "dl", tvl: 1_000_000 }),
     ]);
   });
+
+  it("ages each family by its oldest admitted contributor, not excluded or sibling evidence", () => {
+    const aggregated = aggregateProtocolSources([
+      makeObs({ protocol: "curve", sourceFamily: "dl", observedAt: 1_000 }),
+      makeObs({ protocol: "curve", sourceFamily: "dl", observedAt: 2_000 }),
+      makeObs({ protocol: "curve", sourceFamily: "dl", observedAt: 1, tvl: 0 }),
+      makeObs({ protocol: "curve", sourceFamily: "gecko_terminal", observedAt: 3_000 }),
+    ]);
+    expect(aggregated).toEqual([
+      expect.objectContaining({ sourceFamily: "dl", observedAt: 1_000 }),
+      expect.objectContaining({ sourceFamily: "gecko_terminal", observedAt: 3_000 }),
+    ]);
+    expect(aggregateProtocolSources([
+      makeObs({ observedAt: 1_000 }), makeObs({ observedAt: undefined }),
+    ])[0]?.observedAt).toBeUndefined();
+  });
 });
 
 describe("collapseDuplicateObservations", () => {
   it("collapses two observations sharing the same pool key to one", () => {
     const obs = [
-      makeObs({ poolKey: "ethereum:0xabc", price: 0.999, tvl: 2_000_000 }),
-      makeObs({ poolKey: "ethereum:0xabc", price: 1.001, tvl: 1_000_000 }),
+      makeObs({ poolKey: "ethereum:0xabc", price: 0.999, tvl: 2_000_000, observedAt: 2_000 }),
+      makeObs({ poolKey: "ethereum:0xabc", price: 1.001, tvl: 1_000_000, observedAt: 1_000 }),
     ];
     const { collapsed, duplicateGroups, duplicateObservations } = collapseDuplicateObservations(obs);
     expect(collapsed).toHaveLength(1);
@@ -186,6 +202,7 @@ describe("collapseDuplicateObservations", () => {
     // Representative is the higher-TVL entry; price is median of [0.999, 1.001]
     expect(collapsed[0]!.price).toBeCloseTo(1.0, 5);
     expect(collapsed[0]!.tvl).toBe(2_000_000);
+    expect(collapsed[0]!.observedAt).toBe(1_000);
   });
 
   it("collapses two observations sharing derivedMatchKey (derived_unique) to one", () => {
@@ -322,6 +339,7 @@ describe("buildDexPriceObservationsFromRetainedPools", () => {
       source: "dl",
       priceSource: "cg_onchain",
       priceEvidenceTvlUsd: 100_000,
+      priceObservedAt: 1_000,
     });
     const sameSource = makePool({
       poolId: "ethereum:0xsame",
@@ -337,6 +355,7 @@ describe("buildDexPriceObservationsFromRetainedPools", () => {
     expect(result.get("test-dollar")).toEqual([
       expect.objectContaining({
         price: 0.998,
+        observedAt: 1_000,
         // Weighted at the price row's own $100K claim, not the dl row's $200K.
         tvl: 100_000,
         sourceFamily: "cg_onchain",

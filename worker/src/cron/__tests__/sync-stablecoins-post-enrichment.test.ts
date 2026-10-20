@@ -7,6 +7,8 @@ import {
   loadPriceCorroborationObservations,
   writePriceCorroborationObservations,
 } from "../sync-stablecoins/price-corroboration-observations";
+import * as detection from "../detect-depegs";
+import * as confirmation from "../confirm-pending-depegs";
 
 vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@shared/lib/stablecoins/registry")>();
@@ -37,7 +39,7 @@ vi.mock("../../lib/native-peg-implied-prices", async () => {
 
 import type { PeggedAsset } from "../sync-stablecoins/enrich-prices";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
-import { isAbortResult, runPostEnrichmentPricePipeline } from "../sync-stablecoins/post-enrichment";
+import { isAbortResult, runDepegPipeline, runPostEnrichmentPricePipeline } from "../sync-stablecoins/post-enrichment";
 import type { PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import { buildPriceValidationContext, type PriceValidationContext } from "../../lib/price-validation";
 
@@ -91,6 +93,25 @@ function nativePipelineInput(
     abortResult: () => ({ status: "error", metadata: "{}" }),
   };
 }
+
+describe("runDepegPipeline capacity holds", () => {
+  it.each(["detection", "confirmation"] as const)("propagates %s holds independently of thrown errors", async (stage) => {
+    const detect = vi.spyOn(detection, "detectDepegEvents").mockResolvedValue({ status: "completed" });
+    const confirm = vi.spyOn(confirmation, "confirmPendingDepegs").mockResolvedValue({ status: "completed", providerDiagnostics: [] });
+    const held = { status: "held", reason: "depeg-open-event-limit-reached" } as const;
+    if (stage === "detection") detect.mockResolvedValue(held);
+    else confirm.mockResolvedValue({ ...held, providerDiagnostics: [] });
+    try {
+      await expect(runDepegPipeline(mockD1(), [], undefined, undefined, undefined,
+        () => null, () => ({ status: "error" }), "", "")).resolves.toMatchObject({
+        depegHeldReason: "depeg-open-event-limit-reached", depegErrorCount: 0, depegErrors: [],
+      });
+    } finally {
+      detect.mockRestore();
+      confirm.mockRestore();
+    }
+  });
+});
 
 describe("runPostEnrichmentPricePipeline", () => {
   beforeEach(() => {

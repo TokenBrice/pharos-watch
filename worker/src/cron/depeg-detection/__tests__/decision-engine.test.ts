@@ -544,6 +544,32 @@ describe("decideDepegAsset", () => {
     ]);
   });
 
+  it.each(["pyth", "coingecko"])("closes a USD-domain row from native-only recovery without inventing a USD price (%s)", (priceSource) => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({
+        id: "brz-transfero", symbol: "BRZ", price: 0.18, pegType: "peggedREAL",
+        priceSource, priceUpdatedAt: 1_750_000_840,
+      }),
+      meta: brlMeta,
+      existing: makeExistingEvent({
+        quote_mode: "usd", direction: "below", peg_reference: 0.19,
+        recovery_first_seen_at: 1_750_000_000, recovery_last_seen_at: 1_750_000_000,
+      }),
+      pegRates: { peggedREAL: 0.19 },
+      pegRateSources: { peggedREAL: "fx" },
+      pegRateCounts: { peggedREAL: 3 },
+      nativePegQuote: {
+        stablecoinId: "brz-transfero", geckoId: "brz", pegCurrency: "BRL",
+        price: 1, updatedAt: 1_750_000_840,
+      },
+    });
+    expect(decision.commands).toEqual([{
+      type: "close-event", id: 7, endedAt: 1_750_000_900,
+      recoveryPrice: null, closeReason: "recovered-native",
+    }]);
+  });
+
   it("holds a native-peg event open when the native quote is missing", () => {
     const decision = decideDepegAsset({
       now: 1_750_000_900,

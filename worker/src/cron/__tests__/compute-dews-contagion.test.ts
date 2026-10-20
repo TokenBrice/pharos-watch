@@ -137,6 +137,10 @@ function makeDb(): D1Database {
   const stmt = (sql: string) => {
     let boundArgs: unknown[] = [];
     const all = async <T>() => {
+      if (sql.includes("pharos:dews:publication-generation-ids")
+        || sql.includes("pharos:dews:stress-latest-generation-ids")) {
+        return { results: fixtures.map((f) => ({ stablecoin_id: f.id })) as T[] };
+      }
       if (sql.includes("pharos:dews:stress-history-daily-ids")) {
         return { results: fixtures.map((f) => ({ stablecoin_id: f.id })) as T[] };
       }
@@ -182,12 +186,6 @@ function makeDb(): D1Database {
     };
 
     const first = async <T>() => {
-      if (sql.includes("pharos:dews:publication-generation-count")) {
-        return { cnt: fixtures.length } as T;
-      }
-      if (sql.includes("pharos:dews:stress-latest-generation-count")) {
-        return { cnt: fixtures.length } as T;
-      }
       if (sql.includes("stress_signal_history")) return null as T | null;
       if (sql.includes("stability_index_samples")) {
         return psiScore === null

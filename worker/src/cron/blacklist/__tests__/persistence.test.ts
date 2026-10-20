@@ -13,6 +13,10 @@ import { materializeBlacklistSummarySnapshot, handleBlacklistSummary } from "../
 import { loadBlacklistCurrentBalanceMap } from "../../../lib/blacklist-current-balances";
 import { reconcileBlacklistIdentities } from "../../../lib/blacklist/identity-reconciliation";
 import type { BlacklistSummaryResponse } from "@shared/types/market";
+import {
+  buildBlacklistAmountAttemptUpdate, buildRecoveredBlacklistAmountPersistence,
+  type BlacklistAmountSelectedState,
+} from "../../../lib/blacklist/amount-persistence";
 
 const fixtures = createLatestSchemaFixtureTracker();
 
@@ -23,6 +27,31 @@ afterEach(() => {
 
 
 describe("insertBlacklistRows", () => {
+  it.each([true, false])("fences provenance-only repairs against a newer operator generation (success=%s)", async (success) => {
+    const { db, sqlite } = fixtures.open();
+    const [config] = getBlacklistConfigsForSymbolAndChain("USDC", "ethereum");
+    await insertBlacklistRows(db, [makePendingBlacklistRow({
+      id: "provenance-race", amount_native: 50, amount_usd_at_event: 50,
+      amount_status: "provider_failed", config_key: config.configKey, contract_address: config.contractAddress,
+    })]);
+    const selectedState = sqlite.prepare("SELECT * FROM blacklist_events WHERE id = 'provenance-race'").get() as BlacklistAmountSelectedState;
+    const statement = success
+      ? buildRecoveredBlacklistAmountPersistence(db, {
+        eventId: "provenance-race", eventType: "blacklist", config,
+        amount: 99, amountUsd: 99, amountSource: "historical_balance", amountStatus: "resolved",
+        attemptedAt: 200, lastErrorClass: null, lastProvider: "chain_rpc",
+      }, { selectedState }).statement
+      : buildBlacklistAmountAttemptUpdate(db, {
+        eventId: "provenance-race", attemptedAt: 200, errorClass: "provider_null",
+        lastProvider: "chain_rpc", amountStatus: "provider_failed",
+      }, { selectedState });
+    sqlite.prepare(`UPDATE blacklist_events SET provenance_source = 'operator-verified',
+      provenance_observed_at = 150 WHERE id = 'provenance-race'`).run();
+    const before = sqlite.prepare("SELECT * FROM blacklist_events WHERE id = 'provenance-race'").get();
+    expect((await statement.run()).meta.changes).toBe(0);
+    expect(sqlite.prepare("SELECT * FROM blacklist_events WHERE id = 'provenance-race'").get()).toEqual(before);
+  });
+
   it("canonicalizes EVM log spellings and reconciles retained duplicates without inflating public counts", async () => {
     const { db, sqlite } = fixtures.open();
     const [config] = getBlacklistConfigsForSymbolAndChain("USDC", "ethereum");

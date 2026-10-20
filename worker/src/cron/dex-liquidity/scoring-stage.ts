@@ -519,6 +519,9 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
       }
       requireFiniteNumber(record.observation.price, "price observation price");
       requireFiniteNumber(record.observation.tvl, "price observation TVL");
+      if (record.observation.observedAt != null) {
+        assertTimestamp("price observation clock", record.observation.observedAt);
+      }
       const observations = decoder.priceObservations.get(record.stablecoinId);
       if (!observations) {
         throw new Error(
@@ -564,6 +567,9 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
       requireFiniteNumber(record.pool.tvlUsd, "pool TVL");
       requireFiniteNumberOrNull(record.pool.volumeUsd1d, "pool 24h volume");
       requirePoolVolumeReading(record.pool.volumeReading);
+      if (record.pool.priceObservedAt != null) {
+        assertTimestamp("pool price observation clock", record.pool.priceObservedAt);
+      }
       const metric = decoder.metrics.get(record.stablecoinId);
       if (!metric) {
         throw new Error(

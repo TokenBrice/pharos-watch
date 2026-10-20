@@ -83,10 +83,15 @@ function UnreportedStat() {
 }
 
 function describeMintingPressureUnavailable(
-  reason: LiteralMintingPressureUnavailableReason,
+  reason: LiteralMintingPressureUnavailableReason | "window-unavailable",
   window24h: ReturnType<typeof resolveMintBurnValuation>,
 ): { title: string; description: string } {
   switch (reason) {
+    case "window-unavailable":
+      return {
+        title: "Minting pressure not rated",
+        description: "Scan coverage of the 24h window is unknown, so no minting-pressure reading is published.",
+      };
     case "valuation-partial":
       return {
         title: "Minting pressure not rated",
@@ -146,12 +151,15 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   // with either side not fully valued (a balance of lower bounds is no bound,
   // v6.27), the quadrant takes the same empty-state treatment the flow-history
   // feed two modules below already uses, naming why.
-  const mintingPressure = getLiteralMintingPressureReading({
-    mintVolume24hUsd: coin.mintVolume24hUsd,
-    burnVolume24hUsd: coin.burnVolume24hUsd,
-    mintCompleteness: window24h.mintCompleteness,
-    burnCompleteness: window24h.burnCompleteness,
-  });
+  const mintingPressure = coin.has24hActivity === null
+    || (coin.netFlow24hUsd === null && window24h.completeness === "complete")
+    ? { score: null, unavailableReason: "window-unavailable" as const }
+    : getLiteralMintingPressureReading({
+        mintVolume24hUsd: coin.mintVolume24hUsd,
+        burnVolume24hUsd: coin.burnVolume24hUsd,
+        mintCompleteness: window24h.mintCompleteness,
+        burnCompleteness: window24h.burnCompleteness,
+      });
 
   // Figma coin template: quadrant layout with hairline-divided regions —
   // [Minting Pressure gauge | Net window grid] over [Pressure Shift | Avg

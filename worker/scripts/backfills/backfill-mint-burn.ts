@@ -1,4 +1,4 @@
-import { blockHashesForLogs, buildAlchemyUrl, getAlchemyBlockNumber, fetchAlchemyLogs, resolveBlockTimestamps } from "../../src/lib/alchemy-logs";
+import { blockHashesForLogs, buildAlchemyUrl, resolveBlockTimestamps } from "../../src/lib/alchemy-logs";
 import type { AlchemyLogEntry, AlchemyTopicFilter } from "../../src/lib/alchemy-logs";
 import { createBudget, budgetExhausted, decodeUint256AtSlotOrNull } from "../../src/lib/evm-logs";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig, type MintBurnEventDef } from "../../src/lib/mint-burn-contracts";
@@ -8,10 +8,10 @@ import { parseQueryParams } from "../../src/lib/api-params";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { assertActiveStablecoin } from "../../src/lib/frozen-guards";
 import { classifyBridgeBurnRows } from "../../src/lib/mint-burn-pipeline/classification";
-import { mintBurnAlchemyEndpoint } from "../../src/lib/mint-burn-pipeline/rpc";
+import { fetchMintBurnLogs, getMintBurnFinalizedHead, mintBurnAlchemyEndpoint } from "../../src/lib/mint-burn-pipeline/rpc";
 import { loadMintBurnPriceContextBatch } from "../../src/lib/mint-burn-pipeline/context";
 import { parseMintBurnLogs } from "../../src/lib/mint-burn-pipeline/parse";
-import { DECODE_QUARANTINE_REASON, EVM_SAFETY_MARGIN_BLOCKS, mintBurnSuccessfulScanFrontier, shouldQuarantineDecodeFailure } from "../../src/lib/mint-burn-pipeline/scan-policy";
+import { DECODE_QUARANTINE_REASON, mintBurnSuccessfulScanFrontier, shouldQuarantineDecodeFailure } from "../../src/lib/mint-burn-pipeline/scan-policy";
 import {
   persistMintBurnRows,
   recalcAffectedHours,
@@ -155,11 +155,11 @@ export async function handleBackfillMintBurn({
       if (!alchemyUrl) {
         return errorResponse(400, `Alchemy URL is not configured for chain ${chainId}`);
       }
-      const chainHead = await getAlchemyBlockNumber(alchemyUrl, budget);
-      if (chainHead == null) {
-        return errorResponse(502, `Failed to fetch chain head for ${chainId} backfill range`);
+      const finalized = await getMintBurnFinalizedHead(chainId, [mintBurnAlchemyEndpoint(alchemyUrl)], budget);
+      if (finalized == null) {
+        return errorResponse(502, `finality-head-unavailable: ${chainId}`);
       }
-      chainHeads.set(chainId, chainHead);
+      chainHeads.set(chainId, finalized.number);
     }
 
     const selectedConfig = await resolveBackfillConfig(db, chainHeads, configKeyParam);
@@ -249,7 +249,7 @@ export async function handleBackfillMintBurn({
           topics.push({ index: eventDef.filterTopic.index, value: eventDef.filterTopic.value });
         }
 
-        const fetched = await fetchAlchemyLogs(alchemyUrl, config.contractAddress, topics, cursor, scanTo, budget);
+        const fetched = await fetchMintBurnLogs([mintBurnAlchemyEndpoint(alchemyUrl)], config.contractAddress, topics, cursor, scanTo, budget);
         if (!fetched || !fetched.complete) {
           failedEventDefs.push(`${eventDef.signature}:${eventDef.direction}:fetch-failed`);
           continue;
@@ -340,11 +340,9 @@ export async function handleBackfillMintBurn({
       rowsReclassifiedUnique += persistResult.rowsUpdated;
 
       await recalcAffectedHours(db, affectedHours);
-      const maxBlockSeen = allParsedRows.reduce((max, row) => Math.max(max, row.block_number), 0);
-      const historicalRange = toBlockParam >= 0 && scanTo <= chainHead - EVM_SAFETY_MARGIN_BLOCKS;
       const advancedTo = chunkDecodeFailureBlock != null
         ? chunkDecodeFailureBlock - 1
-        : historicalRange ? scanTo : mintBurnSuccessfulScanFrontier(cursor, scanTo, chainHead, maxBlockSeen);
+        : mintBurnSuccessfulScanFrontier(cursor, scanTo, chainHead);
       if (advancedTo >= cursor) {
         await upsertMintBurnSyncState(db, configKey(config), advancedTo, "monotonic-max");
       }

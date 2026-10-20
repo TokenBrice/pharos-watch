@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockCircuitBreaker, mockCircuitOutcomeRecord } from "../../test-helpers/cron";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
@@ -11,6 +12,8 @@ vi.mock("../../lib/fetch-retry", () => ({
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { syncKinesisSupply, parseKinesisResponse } from "../sync-kinesis-supply";
+
+const fixtures = createLatestSchemaFixtureTracker();
 
 async function textResult(response: Response | null) {
   if (!response) return null;
@@ -28,10 +31,11 @@ function makeDb(runFn = vi.fn().mockResolvedValue({ meta: { changes: 1 } })) {
   };
 }
 
-function horizonResponse(circulation: number, mint: number, redemption: number, date = "2026-03-23T00:00:00Z") {
+function horizonResponse(circulation: number, mint: number, redemption: number, date = "2026-03-23T00:00:00Z", ledgerClock: unknown = new Date(Date.now()).toISOString()) {
   return new Response(
     JSON.stringify({
       history_latest_ledger: 42_691_026,
+      history_latest_ledger_closed_at: ledgerClock,
       records: [{ circulation: String(circulation), mint: String(mint), redemption: String(redemption), date }],
     }),
     { status: 200 },
@@ -106,6 +110,7 @@ describe("syncKinesisSupply", () => {
   });
 
   afterEach(() => {
+    fixtures.closeAll();
     vi.useRealTimers();
     vi.restoreAllMocks();
     vi.clearAllMocks();
@@ -156,6 +161,105 @@ describe("syncKinesisSupply", () => {
       expect(vi.mocked(recordOutcomeSafe).mock.calls.map((call) => call[2])).toEqual([false, false]);
     }
   });
+  it.each([0, 100])("admits fresh ledger evidence despite an old last-change record (supply %s)", async (supply) => {
+    vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
+    vi.mocked(fetchTextWithRetry).mockResolvedValue(await textResult(
+      horizonResponse(supply, 200, 100, "2020-01-01T00:00:00Z", new Date(1_799_999_880_000).toISOString()),
+    ));
+    const { db, sqlite } = fixtures.open();
+    const result = await syncKinesisSupply(db, new AbortController().signal);
+    expect(result.status).toBe("ok");
+    expect(result.itemCount).toBe(2);
+    expect(sqlite.prepare("SELECT stablecoin_id, supply, updated_at FROM onchain_supply ORDER BY stablecoin_id").all()).toEqual([
+      { stablecoin_id: "kag-kinesis", supply, updated_at: 1_799_999_880 },
+      { stablecoin_id: "kau-kinesis", supply, updated_at: 1_799_999_880 },
+    ]);
+  });
+
+  it.each<[string, unknown, string, number?]>([
+    ["stale", new Date((1_800_000_000 - 8 * 3600 - 1) * 1000).toISOString(), "ledger-clock-stale"],
+    ["future", new Date(1_800_000_001_000).toISOString(), "ledger-clock-future"],
+    ["malformed", "not-a-date", "ledger-clock-malformed"],
+    ["empty", "", "ledger-clock-malformed"],
+    ["null", null, "ledger-clock-malformed"],
+    ["numeric", 1_800_000_000, "ledger-clock-malformed"],
+    ["impossible February day", "2026-02-30T08:00:00Z", "ledger-clock-malformed", Date.parse("2026-03-02T08:01:00Z")],
+    ["non-leap February day", "2026-02-29T08:00:00Z", "ledger-clock-malformed", Date.parse("2026-03-01T08:01:00Z")],
+    ["impossible month day with offset", "2026-04-31T10:00:00.123456+02:00", "ledger-clock-malformed", Date.parse("2026-05-01T08:01:00Z")],
+    ["rollover midnight", "2026-03-01T24:00:00Z", "ledger-clock-malformed", Date.parse("2026-03-02T00:01:00Z")],
+    ["invalid minute", "2026-03-02T08:60:00Z", "ledger-clock-malformed", Date.parse("2026-03-02T09:01:00Z")],
+    ["invalid second", "2026-03-02T08:00:60Z", "ledger-clock-malformed", Date.parse("2026-03-02T08:01:00Z")],
+    ["invalid offset hour", "2026-03-02T08:00:00+24:00", "ledger-clock-malformed", Date.parse("2026-03-02T08:01:00Z")],
+    ["invalid offset minute", "2026-03-02T08:00:00+00:60", "ledger-clock-malformed", Date.parse("2026-03-02T08:01:00Z")],
+  ])("retains last accepted stock without renewing a %s declared ledger clock", async (_label, clock, reason, nowMs = 1_800_000_000_000) => {
+    vi.spyOn(Date, "now").mockReturnValue(nowMs);
+    vi.mocked(fetchTextWithRetry).mockResolvedValue(await textResult(
+      horizonResponse(100, 200, 100, "2027-01-15T08:00:00Z", clock),
+    ));
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec(`INSERT INTO onchain_supply VALUES
+      ('kau-kinesis', 'kinesis-kau', 9, 1799990000),
+      ('kag-kinesis', 'kinesis-kag', 8, 1799990000)`);
+    const prepareSpy = vi.spyOn(db, "prepare");
+    const result = await syncKinesisSupply(db, new AbortController().signal);
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
+    expect(prepareSpy).not.toHaveBeenCalled();
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason,
+      chains: [
+        { chain: "kinesis-kau", status: "invalid_payload", reason },
+        { chain: "kinesis-kag", status: "invalid_payload", reason },
+      ],
+    });
+    expect(sqlite.prepare("SELECT stablecoin_id, supply, updated_at FROM onchain_supply ORDER BY stablecoin_id").all()).toEqual([
+      { stablecoin_id: "kag-kinesis", supply: 8, updated_at: 1_799_990_000 },
+      { stablecoin_id: "kau-kinesis", supply: 9, updated_at: 1_799_990_000 },
+    ]);
+    expect(vi.mocked(recordOutcomeSafe).mock.calls.map((call) => call[2])).toEqual([false, false]);
+  });
+
+  it.each([
+    ["2024-02-29T08:00:00Z", "2024-02-29T08:01:00Z"],
+    ["2026-03-01T10:00:00.123456+02:00", "2026-03-01T08:01:00Z"],
+    ["2026-02-28T23:00:00.123-09:00", "2026-03-01T08:01:00Z"],
+  ])("admits valid calendar and offset ledger evidence %s", async (clock, now) => {
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse(now));
+    vi.mocked(fetchTextWithRetry).mockResolvedValue(await textResult(
+      horizonResponse(100, 200, 100, "2020-01-01T00:00:00Z", clock),
+    ));
+    const { db, sqlite } = fixtures.open();
+    const result = await syncKinesisSupply(db, new AbortController().signal);
+    expect(result.status).toBe("ok");
+    expect(result.itemCount).toBe(2);
+    expect(sqlite.prepare("SELECT supply, updated_at FROM onchain_supply ORDER BY stablecoin_id").all()).toEqual([
+      { supply: 100, updated_at: Math.floor(Date.parse(clock) / 1000) },
+      { supply: 100, updated_at: Math.floor(Date.parse(clock) / 1000) },
+    ]);
+  });
+
+  it("admits the inclusive ledger age boundary", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
+    vi.mocked(fetchTextWithRetry).mockResolvedValue(await textResult(
+      horizonResponse(100, 200, 100, "2020-01-01T00:00:00Z", new Date((1_800_000_000 - 8 * 3600) * 1000).toISOString()),
+    ));
+    const { db, sqlite } = fixtures.open();
+    expect((await syncKinesisSupply(db, new AbortController().signal)).status).toBe("ok");
+    expect(sqlite.prepare("SELECT supply, updated_at FROM onchain_supply WHERE stablecoin_id = 'kau-kinesis'").get())
+      .toEqual({ supply: 100, updated_at: 1_799_971_200 });
+  });
+
+  it.each(["object", "array", "envelope"])("retains explicit local-fetch compatibility for an undated legacy %s", async (shape) => {
+    vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
+    const record = { circulation: 0, mint: 0, redemption: 0 };
+    const body = JSON.stringify(shape === "array" ? [record] : shape === "envelope" ? { records: [record] } : record);
+    vi.mocked(fetchTextWithRetry).mockResolvedValue({ response: new Response(body), body });
+    const { db, sqlite } = fixtures.open();
+    expect((await syncKinesisSupply(db, new AbortController().signal)).status).toBe("ok");
+    expect(sqlite.prepare("SELECT supply, updated_at FROM onchain_supply WHERE stablecoin_id = 'kau-kinesis'").get())
+      .toEqual({ supply: 0, updated_at: 1_800_000_000 });
+  });
+
   it("syncs both chains on happy path", async () => {
     vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
     vi.mocked(fetchTextWithRetry).mockImplementation(async (url: string) => {

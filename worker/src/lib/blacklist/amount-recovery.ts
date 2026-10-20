@@ -9,7 +9,7 @@ import {
   getBlacklistEventByTopic,
   type ContractEventConfig,
 } from "../blacklist-contracts";
-import { batchExecute } from "../db";
+import { executeAtomicBatch } from "../db";
 import {
   type EtherscanLogEntry,
   type RateLimitedFetch,
@@ -27,7 +27,10 @@ import type { BlacklistRow } from "./shared";
 import { getChainRpc, hasRegistryRpc, type ChainRpcConfig } from "../chain-registry";
 import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "./run-budget";
 import { buildBlacklistAmountRepairQueueUpdate, refreshBlacklistAmountRepairQueue } from "./amount-repair-queue";
-import { buildBlacklistAmountAttemptUpdate, buildRecoveredBlacklistAmountPersistence } from "./amount-persistence";
+import {
+  buildBlacklistAmountAttemptUpdate, buildRecoveredBlacklistAmountPersistence,
+  type BlacklistAmountSelectedState,
+} from "./amount-persistence";
 
 // Conservative scheduled recovery cap: one D1 batch chunk and well below the
 // sync-blacklist 900-subrequest run budget observed in production.
@@ -471,19 +474,19 @@ export async function backfillAmounts(
   await refreshBlacklistAmountRepairQueue(db, Math.floor(Date.now() / 1000));
 
   const buildAttemptUpdate = (
-    eventId: string,
+    row: BlacklistAmountSelectedState & { id: string },
     attemptAtSec: number,
     errorClass: BlacklistRecoveryErrorClass | null,
     provider: BlacklistRecoveryProvider,
     status?: BlacklistAmountStatus,
   ): D1PreparedStatement =>
     buildBlacklistAmountAttemptUpdate(db, {
-      eventId,
+      eventId: row.id,
       attemptedAt: attemptAtSec,
       errorClass,
       lastProvider: provider,
       amountStatus: status,
-    });
+    }, { selectedState: row });
 
   const result = await db
     .prepare(
@@ -492,11 +495,14 @@ export async function backfillAmounts(
               events.stablecoin, events.tx_hash, events.config_key, events.contract_address,
               events.amount_attempt_count, events.amount_last_attempted_at,
               events.amount_last_error_class, events.amount_last_provider, events.amount_source,
+              events.amount_native, events.amount_usd_at_event, events.amount_status,
+              events.provenance_source, events.provenance_observed_at,
               COALESCE(queue.attempt_count, 0) AS queue_attempt_count
        FROM blacklist_events AS events
        LEFT JOIN blacklist_amount_repair_queue AS queue ON queue.event_id = events.id
        WHERE events.event_type IN ('blacklist', 'unblacklist', 'destroy')
          AND chain_id != 'tron'
+         AND events.suppression_reason IS NULL
          AND (
                events.amount_status IN ('recoverable_pending', 'provider_failed', 'ambiguous')
                OR (
@@ -533,6 +539,11 @@ export async function backfillAmounts(
       amount_last_error_class: string | null;
       amount_last_provider: string | null;
       amount_source: string;
+      amount_native: number | null;
+      amount_usd_at_event: number | null;
+      amount_status: string;
+      provenance_source: string | null;
+      provenance_observed_at: number | null;
       queue_attempt_count: number;
     }>();
 
@@ -541,6 +552,7 @@ export async function backfillAmounts(
   }
 
   const stmts: D1PreparedStatement[] = [];
+  const outcomes: Array<"resolved" | "retry" | "unrecoverable"> = [];
   let processedRepairRows = 0;
   let resolvedRepairRows = 0;
   let retriedRepairRows = 0;
@@ -556,7 +568,6 @@ export async function backfillAmounts(
     if (blacklistSubrequestBudgetReached(runBudget)) break;
 
     const attemptAt = Math.floor(Date.now() / 1000);
-    processedRepairRows++;
     const symbol = row.stablecoin as ContractEventConfig["stablecoin"];
     const config = row.config_key
       ? getBlacklistConfigByKey(row.config_key)
@@ -575,7 +586,7 @@ export async function backfillAmounts(
         (row.amount_attempt_count ?? 0) + 1 >= MAX_DERIVED_RECOVERY_ATTEMPTS;
       stmts.push(
         buildAttemptUpdate(
-          row.id,
+          row,
           attemptAt,
           row.contract_address == null && row.config_key == null ? "config_missing" : "ambiguous_config",
           "none",
@@ -589,13 +600,10 @@ export async function backfillAmounts(
           attemptedAt: attemptAt,
           priorAttempts: row.queue_attempt_count ?? 0,
           errorClass: row.contract_address == null && row.config_key == null ? "config_missing" : "ambiguous_config",
+          requireChangedEvent: true,
         }),
       );
-      if (derivedRetryExhausted) {
-        unrecoverableRepairRows++;
-      } else {
-        retriedRepairRows++;
-      }
+      outcomes.push(derivedRetryExhausted ? "unrecoverable" : "retry");
       continue;
     }
 
@@ -643,7 +651,7 @@ export async function backfillAmounts(
         attemptedAt: attemptAt,
         lastErrorClass,
         lastProvider,
-      });
+      }, { selectedState: row });
       const { targetStatus } = persistence;
       stmts.push(persistence.statement);
       stmts.push(
@@ -653,13 +661,10 @@ export async function backfillAmounts(
           attemptedAt: attemptAt,
           priorAttempts: row.queue_attempt_count ?? 0,
           errorClass: lastErrorClass,
+          requireChangedEvent: true,
         }),
       );
-      if (targetStatus === "permanently_unavailable") {
-        unrecoverableRepairRows++;
-      } else {
-        resolvedRepairRows++;
-      }
+      outcomes.push(targetStatus === "permanently_unavailable" ? "unrecoverable" : "resolved");
     } else {
       const wasLegacyDerived = row.amount_source === "derived";
       const derivedRetryExhausted =
@@ -670,7 +675,7 @@ export async function backfillAmounts(
       if (wasLegacyDerived) {
         stmts.push(
           buildAttemptUpdate(
-            row.id,
+            row,
             attemptAt,
             lastErrorClass,
             lastProvider,
@@ -678,7 +683,7 @@ export async function backfillAmounts(
           ),
         );
       } else {
-        stmts.push(buildAttemptUpdate(row.id, attemptAt, lastErrorClass, lastProvider, amountStatus));
+        stmts.push(buildAttemptUpdate(row, attemptAt, lastErrorClass, lastProvider, amountStatus));
       }
       stmts.push(
         buildBlacklistAmountRepairQueueUpdate(db, {
@@ -687,18 +692,28 @@ export async function backfillAmounts(
           attemptedAt: attemptAt,
           priorAttempts: row.queue_attempt_count ?? 0,
           errorClass: lastErrorClass,
+          requireChangedEvent: true,
         }),
       );
-      if (derivedRetryExhausted) {
-        unrecoverableRepairRows++;
-      } else {
-        retriedRepairRows++;
-      }
+      outcomes.push(derivedRetryExhausted ? "unrecoverable" : "retry");
     }
   }
 
+  // Keep each event CAS and its changes()-guarded queue transition together.
+  for (let offset = 0; offset < stmts.length; offset += BACKFILL_BATCH_SIZE) {
+    const results = await executeAtomicBatch(db, stmts.slice(offset, offset + BACKFILL_BATCH_SIZE), {
+      signal, returnResults: true,
+    });
+    for (let index = 0; index < results.length; index += 2) {
+      if (Number(results[index]?.meta?.changes ?? 0) === 0) continue;
+      processedRepairRows++;
+      const outcome = outcomes[(offset + index) / 2];
+      if (outcome === "resolved") resolvedRepairRows++;
+      else if (outcome === "unrecoverable") unrecoverableRepairRows++;
+      else retriedRepairRows++;
+    }
+  }
   if (stmts.length > 0) {
-    await batchExecute(db, stmts, { signal });
     logWorkerEventArgs("lib", "info", `[sync-blacklist] Backfilled amounts for ${processedRepairRows} events`);
   }
 

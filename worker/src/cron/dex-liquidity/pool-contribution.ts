@@ -104,6 +104,7 @@ export function addSecondaryPoolContribution(
     poolType: pool.poolType,
     source: pool.sourceFamily,
     ...(pool.price > 0 ? { price: pool.price } : {}),
+    ...(pool.price > 0 ? { priceObservedAt: pool.priceObservedAt ?? null } : {}),
     ...(pool.priceSourceFamily != null ? { priceSource: pool.priceSourceFamily } : {}),
     ...(pool.priceEvidenceTvlUsd != null ? { priceEvidenceTvlUsd: pool.priceEvidenceTvlUsd } : {}),
     extra: {

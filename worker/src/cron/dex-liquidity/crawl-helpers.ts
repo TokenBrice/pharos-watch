@@ -5,7 +5,6 @@ import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-covera
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { throwIfAborted } from "../../lib/abort";
-import { getDsPriceForSide, type DsPair, type DsTrackedTokenPrice } from "../../lib/dexscreener";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { PagedTokenPoolsResult } from "../../lib/paged-token-pools";
 import type { DexPriceObs, GtNewPool } from "./types";
@@ -98,16 +97,6 @@ export function shouldSkipFallbackCurvePool(chain: string, dexId: string): boole
   return dexId.startsWith("curve") && NATIVE_CURVE_API_CHAINS.has(chain);
 }
 
-export function getChainAwareDsTrackedTokenPriceUsd(
-  pair: DsPair,
-  trackedAddress: string,
-  chain: string,
-): DsTrackedTokenPrice {
-  const tracked = canonicalExitRouteScopedId(chain, trackedAddress);
-  const baseAddress = canonicalExitRouteScopedId(chain, pair.baseToken.address);
-  const quoteAddress = canonicalExitRouteScopedId(chain, pair.quoteToken.address);
-  return getDsPriceForSide(pair, tracked === baseAddress ? "base" : tracked === quoteAddress ? "quote" : null);
-}
 
 function resolveStablecoinSide(
   chain: string,
@@ -161,6 +150,8 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
     requestCount++;
 
     try {
+      // No upstream quote clock is exposed by these paged pool adapters.
+      const observedAt = Math.floor(Date.now() / 1000);
       const page = await config.fetchPools(token.address, token.sourceChain, config.signal);
       config.onRequestResult?.(token, page.complete ? "success" : "degraded", page);
       for (const rawPool of page.rows) {
@@ -199,7 +190,7 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
 
         if (hasUsablePrice && parsed.tvlUsd >= DEX_PRICE_OBSERVATION_MIN_TVL_USD) {
           const obs = config.priceObs.get(token.stablecoinId) ?? [];
-          obs.push({ price, tvl: parsed.tvlUsd, chain: token.ourChain, protocol: parsed.dexId });
+          obs.push({ price, observedAt, tvl: parsed.tvlUsd, chain: token.ourChain, protocol: parsed.dexId });
           config.priceObs.set(token.stablecoinId, obs);
         }
 
@@ -222,17 +213,17 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
         const maturityDays = toMaturityDays(parsed.createdAt, nowSec);
 
         const poolList = config.newPools.get(token.stablecoinId) ?? [];
-        poolList.push(
-          config.buildNewPool({
-            rawPool,
-            parsed,
-            stablecoinId: token.stablecoinId,
-            chain: token.ourChain,
-            price,
-            cappedTvlUsd,
-            maturityDays,
-          }),
-        );
+        const newPool = config.buildNewPool({
+          rawPool,
+          parsed,
+          stablecoinId: token.stablecoinId,
+          chain: token.ourChain,
+          price,
+          cappedTvlUsd,
+          maturityDays,
+        });
+        newPool.priceObservedAt = observedAt;
+        poolList.push(newPool);
         config.newPools.set(token.stablecoinId, poolList);
       }
     } catch (err) {

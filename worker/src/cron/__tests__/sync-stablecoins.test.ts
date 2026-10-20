@@ -66,8 +66,8 @@ vi.mock("../sync-stablecoins/enrich-prices", () => ({
   hasMissingPrice: vi.fn((asset: { price?: number | null }) => asset.price == null || typeof asset.price !== "number" || asset.price === 0),
   fetchPrimaryPrices: vi.fn(async () => ({ results: new Map(), stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 } })),
 }));
-vi.mock("../detect-depegs", () => ({ detectDepegEvents: vi.fn(async () => {}) }));
-vi.mock("../confirm-pending-depegs", () => ({ confirmPendingDepegs: vi.fn(async () => ({ providerDiagnostics: [] })) }));
+vi.mock("../detect-depegs", () => ({ detectDepegEvents: vi.fn(async () => ({ status: "completed" })) }));
+vi.mock("../confirm-pending-depegs", () => ({ confirmPendingDepegs: vi.fn(async () => ({ status: "completed", providerDiagnostics: [] })) }));
 vi.mock("../../lib/authoritative-price-sources", () => ({
   createAuthoritativeLivePriceOverrideStats: vi.fn((budgetMs = 30_000) => ({ budgetMs, candidateCount: 0, attemptedCount: 0, successCount: 0, failedCount: 0, emptyCount: 0, skippedCircuitOpen: 0, skippedBudget: 0, timedOut: false })),
   fetchAuthoritativeLivePriceOverrides: vi.fn(async () => new Map()),
@@ -123,8 +123,8 @@ describe("syncStablecoins", () => {
     vi.mocked(enrichMissingPrices).mockReset().mockResolvedValue({ totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, passCgLowVolume: 0, finalMissing: 0, failedPasses: [] });
     vi.mocked(fetchPrimaryPrices).mockReset().mockResolvedValue({ results: new Map(), stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 } });
     vi.mocked(fetchAuthoritativeLivePriceOverrides).mockReset().mockResolvedValue(new Map());
-    vi.mocked(detectDepegEvents).mockReset().mockResolvedValue(undefined);
-    vi.mocked(confirmPendingDepegs).mockReset().mockResolvedValue({ providerDiagnostics: [] });
+    vi.mocked(detectDepegEvents).mockReset().mockResolvedValue({ status: "completed" });
+    vi.mocked(confirmPendingDepegs).mockReset().mockResolvedValue({ status: "completed", providerDiagnostics: [] });
   });
 
   afterEach(() => {
@@ -231,6 +231,20 @@ describe("syncStablecoins", () => {
     const result = await syncStablecoins(makeSyncDb());
     expect(result).toMatchObject({ itemCount: 60, status: "degraded" });
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ depegPipelineSucceeded: false, depegErrorCount: 1 });
+  });
+
+  it.each(["detection", "confirmation"] as const)("degrades a published sync when %s holds at capacity", async (stage) => {
+    const hold = { status: "held", reason: "depeg-open-event-limit-reached" } as const;
+    if (stage === "detection") vi.mocked(detectDepegEvents).mockResolvedValueOnce(hold);
+    else vi.mocked(confirmPendingDepegs).mockResolvedValueOnce({ ...hold, providerDiagnostics: [] });
+    mockFetchWithRetry(defaultSyncRoutes(makeDlResponse(60)));
+    const result = await syncStablecoins(makeSyncDb());
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "depeg-open-event-limit-reached",
+      depegPipelineSucceeded: false,
+      capabilities: { depegPipeline: false },
+    });
   });
 
   it("holds the whole list only when post-enrichment quarantine drops the cohort below the floor", async () => {

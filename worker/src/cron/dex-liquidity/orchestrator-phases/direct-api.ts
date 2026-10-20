@@ -483,7 +483,17 @@ export async function runDirectApiFetchPhase(
       const circuitEvents: DirectApiCircuitEvent[] = [];
 
       try {
-        const execution = await executeDirectApiProvider(db, { name, circuitKey, fn }, signal);
+        const execution = await executeDirectApiProvider(db, {
+          name, circuitKey,
+          fn: async (providerSignal) => {
+            const observedAt = Math.floor(Date.now() / 1000);
+            const fetched = await fn(providerSignal);
+            for (const pool of fetched.pools) {
+              if (pool.priceObservedAt === undefined) pool.priceObservedAt = observedAt;
+            }
+            return fetched;
+          },
+        }, signal);
         const result = execution.value;
         const event = directApiCircuitEventFromOutcome(circuitKey, execution.circuitOutcome);
         if (event) circuitEvents.push(event);

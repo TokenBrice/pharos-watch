@@ -1,4 +1,5 @@
-import { batchExecute } from "../db";
+import { getCache, setCache } from "../db-cache";
+import { executeMintBurnMaintenanceMutations } from "./materialization-debt";
 import {
   hasMintBurnEventPriceEvidenceSince,
   loadMintBurnPriceContextBatch,
@@ -12,6 +13,25 @@ const HEAL_PRICE_SOURCE_BY_EVIDENCE = {
 } as const;
 
 const LOOKBACK_SEC = 48 * 3600; // 48 hours
+const SCAN_LIMIT = 500;
+const SCAN_CURSOR_KEY = "mint-burn-price-heal-cursor:v1";
+
+type PriceHealCursor = Pick<NullPriceEvent, "timestamp" | "id">;
+
+async function loadScanCursor(db: D1Database, cutoff: number): Promise<PriceHealCursor | null> {
+  const cached = await getCache(db, SCAN_CURSOR_KEY);
+  if (!cached) return null;
+  try {
+    const cursor: Partial<PriceHealCursor> | null = JSON.parse(cached.value);
+    return cursor != null
+      && typeof cursor.timestamp === "number" && Number.isSafeInteger(cursor.timestamp) && cursor.timestamp >= cutoff
+      && typeof cursor.id === "string" && cursor.id.length > 0
+      ? { timestamp: cursor.timestamp, id: cursor.id }
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 interface NullPriceEvent {
   id: string;
@@ -62,8 +82,9 @@ export async function getNullPriceBacklog(
  * replay-safe, plausible `price_cache` observation observed within ±24h of the
  * event), and update. Coins with no evidence that could value any event in the
  * lookback are skipped before the 500-row budget is applied, so their
- * permanently unpriceable rows cannot starve healable coins. Returns count of
- * healed events and affected hours for re-aggregation.
+ * permanently unpriceable rows cannot starve healable coins. A durable descending
+ * keyset advances past ineligible same-coin rows, wrapping only on exhaustion or
+ * cutoff expiry. Returns count of healed events and affected hours for re-aggregation.
  */
 export async function healNullPrices(
   db: D1Database,
@@ -88,15 +109,26 @@ export async function healNullPrices(
     return { healed: 0, affectedHours: new Map() };
   }
 
+  const cursor = await loadScanCursor(db, cutoff);
   const { results } = await db.prepare(
     `SELECT e.id, e.stablecoin_id, e.chain_id, e.amount, e.timestamp
      FROM mint_burn_events e
      WHERE e.amount_usd IS NULL AND e.timestamp >= ?
        AND e.stablecoin_id IN (SELECT value FROM json_each(?))
+       ${cursor ? "AND (e.timestamp, e.id) < (?, ?)" : ""}
      ORDER BY e.timestamp DESC, e.id DESC
-     LIMIT 500`,
-  ).bind(cutoff, JSON.stringify(healableCoins)).all<NullPriceEvent>();
+     LIMIT ?`,
+  ).bind(
+    cutoff,
+    JSON.stringify(healableCoins),
+    ...(cursor ? [cursor.timestamp, cursor.id] : []),
+    SCAN_LIMIT,
+  ).all<NullPriceEvent>();
   const nullEvents: NullPriceEvent[] = results ?? [];
+  const lastInspected = nullEvents[nullEvents.length - 1];
+  const nextCursor = JSON.stringify(nullEvents.length === SCAN_LIMIT
+    ? { timestamp: lastInspected.timestamp, id: lastInspected.id }
+    : null);
 
   const healable: Array<{ event: NullPriceEvent; resolution: HealPriceResolution }> = [];
   for (const event of nullEvents) {
@@ -112,11 +144,18 @@ export async function healNullPrices(
     });
   }
   if (healable.length === 0) {
+    await setCache(db, SCAN_CURSOR_KEY, nextCursor);
     return { healed: 0, affectedHours: new Map() };
   }
 
-  const updateStmts = healable.map(({ event, resolution }) => {
-    return db.prepare(
+  const mutations = healable.map(({ event, resolution }) => ({
+    enqueue: db.prepare(
+      `INSERT OR REPLACE INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts)
+       SELECT stablecoin_id, chain_id, (timestamp / 3600) * 3600
+       FROM mint_burn_events WHERE id = ? AND amount_usd IS NULL
+       RETURNING stablecoin_id, chain_id, hour_ts`,
+    ).bind(event.id),
+    update: db.prepare(
       `UPDATE mint_burn_events
        SET amount_usd = ?, price_used = ?, price_timestamp = ?, price_source = ?
        WHERE id = ? AND amount_usd IS NULL`,
@@ -126,22 +165,12 @@ export async function healNullPrices(
       resolution.priceTimestamp,
       resolution.priceSource,
       event.id,
-    );
-  });
+    ),
+  }));
 
-  const healed = await batchExecute(db, updateStmts);
-
-  // Collect affected hours for re-aggregation.
-  const affectedHours = new Map<string, MintBurnAffectedHour>();
-  for (const { event } of healable) {
-    const hourTs = Math.floor(event.timestamp / 3600) * 3600;
-    const key = `${event.stablecoin_id}-${event.chain_id}-${hourTs}`;
-    affectedHours.set(key, {
-      stablecoinId: event.stablecoin_id,
-      chainId: event.chain_id,
-      hourTs,
-    });
-  }
-
+  const { changed: healed, affectedHours } = await executeMintBurnMaintenanceMutations(db, mutations);
+  // Checkpoint only after successful inspection/writes; failures replay safely
+  // and any committed source mutation already carries durable materialization debt.
+  await setCache(db, SCAN_CURSOR_KEY, nextCursor);
   return { healed, affectedHours };
 }

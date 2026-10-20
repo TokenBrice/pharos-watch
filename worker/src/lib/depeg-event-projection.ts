@@ -29,6 +29,7 @@ interface ActiveIncidentProjectionRow {
   first_start_price: number | null;
   first_peg_reference: number | null;
   constituent_event_count: number | null;
+  references_valid: number;
 }
 
 interface ActiveIncidentProjection {
@@ -40,7 +41,8 @@ interface ActiveIncidentProjection {
 
 export type IncidentProjectionUnavailableReason =
   | "incident-projection-read-failed"
-  | "incident-projection-invalid";
+  | "incident-projection-invalid"
+  | "incident-projection-dangling-reference";
 
 export type ActiveIncidentProjectionLoad =
   | { available: true; projections: Map<number, ActiveIncidentProjection> }
@@ -56,6 +58,7 @@ export class IncidentProjectionUnavailableError extends Error {
 function normalizeActiveIncidentProjection(row: ActiveIncidentProjectionRow): [number, ActiveIncidentProjection] | null {
   if (
     !row || typeof row !== "object" ||
+    row.references_valid !== 1 ||
     typeof row.current_event_id !== "number" ||
     !Number.isSafeInteger(row.current_event_id) ||
     row.current_event_id <= 0 ||
@@ -84,30 +87,31 @@ function normalizeActiveIncidentProjection(row: ActiveIncidentProjectionRow): [n
   ];
 }
 
-export async function loadActiveIncidentProjections(
-  db: D1Database,
-  stablecoinId: string | null,
-): Promise<ActiveIncidentProjectionLoad> {
-  try {
-    const activeStablecoinFilter = stablecoinId ? " AND current_event.stablecoin_id = ?" : "";
+function activeIncidentProjectionSql(stablecoinId: string | null): string {
+    const activeStablecoinFilter = stablecoinId ? " AND incidents.stablecoin_id = ?" : "";
     const aliasStablecoinFilter = stablecoinId ? " AND alias_current_event.stablecoin_id = ?" : "";
-    const stmt = db.prepare(
-      `SELECT /* pharos:depeg-event-projection:active-incidents */
+    return `SELECT
           incidents.current_event_id,
           incidents.first_started_at,
           first_event.start_price AS first_start_price,
           first_event.peg_reference AS first_peg_reference,
-          COUNT(DISTINCT links.event_id) AS constituent_event_count
+          COUNT(DISTINCT links.event_id) AS constituent_event_count,
+          CASE WHEN first_event.id IS NOT NULL AND current_event.id IS NOT NULL
+            AND MAX(CASE WHEN links.event_id = incidents.first_event_id THEN 1 ELSE 0 END) = 1
+            AND MAX(CASE WHEN links.event_id = incidents.current_event_id THEN 1 ELSE 0 END) = 1
+            AND COUNT(linked_event.id) = COUNT(links.event_id)
+            THEN 1 ELSE 0 END AS references_valid
          FROM depeg_resolver_incidents incidents
-         JOIN depeg_events first_event
+         LEFT JOIN depeg_events first_event
            ON first_event.id = incidents.first_event_id
-         JOIN depeg_events current_event
+         LEFT JOIN depeg_events current_event
            ON current_event.id = incidents.current_event_id
          LEFT JOIN depeg_resolver_incident_event_links links
            ON links.incident_key = incidents.incident_key
-        WHERE incidents.incident_state = 'active'
-          AND incidents.current_event_id != incidents.first_event_id${activeStablecoinFilter}
-        GROUP BY incidents.current_event_id, incidents.first_started_at,
+         LEFT JOIN depeg_events linked_event
+           ON linked_event.id = links.event_id
+        WHERE incidents.incident_state = 'active'${activeStablecoinFilter}
+        GROUP BY incidents.incident_key, incidents.current_event_id, incidents.first_started_at,
                  first_event.start_price, first_event.peg_reference
        UNION ALL
        SELECT
@@ -115,7 +119,8 @@ export async function loadActiveIncidentProjections(
           canonical.first_started_at,
           first_event.start_price AS first_start_price,
           first_event.peg_reference AS first_peg_reference,
-          COUNT(DISTINCT links.event_id) AS constituent_event_count
+          COUNT(DISTINCT links.event_id) AS constituent_event_count,
+          1 AS references_valid
          FROM depeg_resolver_incidents alias
          JOIN depeg_resolver_incidents canonical
            ON canonical.incident_key = alias.superseded_by_incident_key
@@ -130,11 +135,27 @@ export async function loadActiveIncidentProjections(
           AND alias.current_event_id != canonical.current_event_id
           AND alias.current_event_id != canonical.first_event_id${aliasStablecoinFilter}
         GROUP BY alias.current_event_id, canonical.first_started_at,
-                 first_event.start_price, first_event.peg_reference`,
-    );
-    const result: { success?: boolean; results?: ActiveIncidentProjectionRow[] } = stablecoinId
-      ? await stmt.bind(stablecoinId, stablecoinId).all<ActiveIncidentProjectionRow>()
-      : await stmt.all<ActiveIncidentProjectionRow>();
+                 first_event.start_price, first_event.peg_reference`;
+}
+
+/** Raw fragment clocks remain intact; public pagination uses the projected onset. */
+export const PUBLIC_DEPEG_EVENTS_SQL = `(
+  SELECT events.*, COALESCE(projection.first_started_at, events.started_at) AS effective_started_at
+    FROM depeg_events_with_provenance events
+    LEFT JOIN (${activeIncidentProjectionSql(null)}) projection ON projection.current_event_id = events.id
+)`;
+
+export type PublicDepegRow = DepegRow & { effective_started_at: number };
+
+export function prepareActiveIncidentProjections(db: D1Database, stablecoinId: string | null): D1PreparedStatement {
+  const stmt = db.prepare(`SELECT /* pharos:depeg-event-projection:active-incidents */ *
+    FROM (${activeIncidentProjectionSql(stablecoinId)})`);
+  return stablecoinId ? stmt.bind(stablecoinId, stablecoinId) : stmt;
+}
+
+export function decodeActiveIncidentProjections(
+  result: { success?: boolean; results?: unknown[] },
+): ActiveIncidentProjectionLoad {
     if (result.success === false) {
       return { available: false, reason: "incident-projection-read-failed" };
     }
@@ -142,12 +163,28 @@ export async function loadActiveIncidentProjections(
       return { available: false, reason: "incident-projection-invalid" };
     }
     const projections = new Map<number, ActiveIncidentProjection>();
-    for (const row of result.results) {
+    for (const value of result.results) {
+      const row = value as ActiveIncidentProjectionRow;
       const normalized = normalizeActiveIncidentProjection(row);
-      if (!normalized) return { available: false, reason: "incident-projection-invalid" };
+      if (!normalized) return {
+        available: false,
+        reason: row?.references_valid === 0
+          ? "incident-projection-dangling-reference"
+          : "incident-projection-invalid",
+      };
       projections.set(normalized[0], normalized[1]);
     }
     return { projections, available: true };
+}
+
+export async function loadActiveIncidentProjections(
+  db: D1Database,
+  stablecoinId: string | null,
+): Promise<ActiveIncidentProjectionLoad> {
+  try {
+    return decodeActiveIncidentProjections(
+      await prepareActiveIncidentProjections(db, stablecoinId).all<ActiveIncidentProjectionRow>(),
+    );
   } catch (err) {
     const msg = toErrorMessage(err);
     if (!isMissingTableError(err)) {

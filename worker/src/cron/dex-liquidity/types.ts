@@ -173,6 +173,8 @@ export interface PoolEntry {
   source: LiquidityPoolSourceFamily;
   /** DEX-implied price of the tracked stablecoin in this pool (USD). */
   price?: number;
+  /** Original price-row observation clock; absent/null means unknown, never publication time. */
+  priceObservedAt?: number | null;
   /**
    * Family of the registry row that actually observed `price` when the
    * resolver attached a cross-source price (value row and price row come from
@@ -246,6 +248,8 @@ export type PoolMeasurementFlags = NonNullable<NonNullable<DexLiquidityPool["ext
 
 export interface DexPriceObs {
   price: number;
+  /** Original quote clock, preserved across retention and aggregation. */
+  observedAt?: number | null;
   tvl: number;
   /** Price-only exchange evidence: observed 24h USD flow, never liquidity. */
   observedVolumeUsd?: number;
@@ -306,6 +310,8 @@ export interface CurvePoolEntry {
   balanceDetails: { symbol: string; balancePct: number; isTracked: boolean }[];
   /** Normalized symbol → USD price for each coin in the pool (from Curve API). */
   tokenPrices: Record<string, number>;
+  /** Original API observation clock shared by the token prices. */
+  priceObservedAt?: number | null;
   /**
    * Exact per-coin execution inputs for plain (non-meta) stableswap pools:
    * address, decimals, token-unit balance, and the source USD price. Absent
@@ -369,6 +375,8 @@ export interface DataSources {
 }
 
 export interface CurveApiPayload {
+  /** Bounded local-read clock captured before this live API request. */
+  observedAt?: number;
   data?: { poolData?: CurvePool[] };
 }
 
@@ -418,6 +426,8 @@ export interface GtNewPool {
   maturityDays: number;
   /** The stablecoin's price in this pool */
   price: number;
+  /** Original price-row clock, independent of value/volume refresh clocks. */
+  priceObservedAt?: number | null;
   /** Pool symbol (e.g., "USDC / USDT") */
   symbol: string;
   /** Discovery/source-specific pool type used for quality weighting */
@@ -573,6 +583,7 @@ export interface CgTicker {
   market: { name: string; identifier: string };
   converted_last: { usd: number };
   converted_volume: { usd: number };
+  last_traded_at?: string | null;
   cost_to_move_down_usd?: number | null;
   cost_to_move_up_usd?: number | null;
   bid_ask_spread_percentage: number;

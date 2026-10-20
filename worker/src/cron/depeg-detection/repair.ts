@@ -93,6 +93,8 @@ export function buildDuplicateOpenEventRepair(openRows: DepegRow[]): DuplicateRe
           keeper.peak_deviation_bps = dupe.peak_deviation_bps;
           keeper.peak_price = dupe.peak_price;
         }
+        // Persistence retains duplicates referenced by canonical incidents/links;
+        // this detector repair never authorizes incident identity changes.
         commands.push({ type: "delete-event", id: dupe.id });
       }
       commands.push({

@@ -564,6 +564,17 @@ function evidenceWeightedMedian(observations: readonly DexPriceObs[]): number | 
   );
 }
 
+/** Unknown contributors keep the aggregate clock unknown; publication cannot renew a quote. */
+export function oldestPriceObservation(observations: readonly DexPriceObs[]): number | null {
+  let oldest = Infinity;
+  for (const observation of observations) {
+    if (typeof observation.observedAt !== "number" || !Number.isFinite(observation.observedAt) ||
+      observation.observedAt < 0) return null;
+    oldest = Math.min(oldest, observation.observedAt);
+  }
+  return oldest === Infinity ? null : oldest;
+}
+
 export function collapseDuplicateObservations(
   observations: DexPriceObs[],
 ): { collapsed: DexPriceObs[]; duplicateGroups: number; duplicateObservations: number } {
@@ -596,6 +607,7 @@ export function collapseDuplicateObservations(
       ...representative,
       price: median(group.map((observation) => observation.price)) ?? 0,
       tvl: Math.max(...group.map((observation) => observation.tvl)),
+      observedAt: oldestPriceObservation(group),
     });
   }
 
@@ -604,7 +616,7 @@ export function collapseDuplicateObservations(
 
 export function aggregateProtocolSources(
   observations: DexPriceObs[],
-): Array<{ protocol: string; chain: string; price: number; tvl: number; sourceFamily?: string }> {
+): Array<{ protocol: string; chain: string; price: number; tvl: number; observedAt?: number; aggregateObservedAt?: number; sourceFamily?: string }> {
   const byProtocolFamily = new Map<string, DexPriceObs[]>();
   for (const observation of observations) {
     if (dexPriceEvidenceWeight(observation) <= 0 ||
@@ -622,6 +634,7 @@ export function aggregateProtocolSources(
     const totalTvl = protocolObs.reduce((sum, observation) => sum + observation.tvl, 0);
     const price = evidenceWeightedMedian(protocolObs);
     if (price == null) return [];
+    const observedAt = oldestPriceObservation(protocolObs);
 
     const chains = [...new Set(protocolObs.map((observation) => observation.chain))];
     return [{
@@ -629,6 +642,7 @@ export function aggregateProtocolSources(
       chain: chains.length === 1 ? chains[0] : "multi",
       price,
       tvl: Math.round(totalTvl),
+      ...(observedAt != null ? { observedAt } : {}),
       ...(sourceFamily != null ? { sourceFamily } : {}),
     }];
   });
@@ -680,6 +694,7 @@ export function buildDexPriceObservationsFromRetainedPools(
         }
         pricedPools.push({
           price: pool.price,
+          observedAt: pool.priceObservedAt ?? null,
           // A cross-source price (value row and price row from different
           // registry observations) is weighted by the TVL the price-observing
           // row itself claims, never by the value row's larger TVL.

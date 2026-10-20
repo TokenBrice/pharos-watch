@@ -2,12 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { type MockD1Database } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
-  makeMintBurnDb as makeDb,
+  makeMintBurnDb,
   makeMintBurnMintLog as makeMintLog,
   resetMintBurnMocks,
   MINT_BURN_TRANSFER_TOPIC as TRANSFER_TOPIC,
   MINT_BURN_ZERO_TOPIC as ZERO_TOPIC,
   USDT_CONTRACT,
+  type MintBurnDbOptions,
 } from "./mint-burn.test-support";
 
 const CCIP_SEND_REQUESTED_TOPIC = "0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd";
@@ -118,6 +119,17 @@ import type * as DbModule from "../../lib/db";
 import type * as PersistenceModule from "../../lib/mint-burn-pipeline/persistence";
 
 const USDT_CONFIG_KEY = `ethereum-${USDT_CONTRACT}`;
+
+// Keep the default event fixtures inside one inclusive 50k request ending at finality.
+function makeDb(options: MintBurnDbOptions = {}) {
+  return makeMintBurnDb({
+    syncRows: [
+      { config_key: USDT_CONFIG_KEY, last_block: 21_950_000 },
+      { config_key: "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", last_block: 21_950_000 },
+    ],
+    ...options,
+  });
+}
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 
@@ -269,7 +281,7 @@ describe("syncMintBurn", () => {
     expect(toBlock - fromBlock + 1).toBe(50_000);
   });
 
-  it("keeps full-success event scans anchored to the newest returned event", async () => {
+  it("advances full-success event scans across the complete finalized range", async () => {
     const db = makeDb();
     const config = MINT_BURN_CONFIGS[0]!;
 
@@ -308,13 +320,12 @@ describe("syncMintBurn", () => {
       chainTimestampCache: new Map(),
       txContextCache: new Map(),
       affectedHours: new Map(),
-      safetyMarginBlocks: 10_000,
     });
 
     expect(result.summary.maxBlockSeen).toBe(21_910_000);
     expect(result.summary.advanceReason).toBe("full-success-events");
-    expect(result.summary.advancedTo).toBe(21_910_000);
-    expect(result.newLastBlock).toBe(21_910_000);
+    expect(result.summary.advancedTo).toBe(21_949_999);
+    expect(result.newLastBlock).toBe(21_949_999);
   });
 
   it("ignores provider logs outside the requested scan range before advancing", async () => {
@@ -356,11 +367,10 @@ describe("syncMintBurn", () => {
       chainTimestampCache: new Map(),
       txContextCache: new Map(),
       affectedHours: new Map(),
-      safetyMarginBlocks: 10_000,
     });
 
-    expect(result.summary.rowsRead).toBe(1);
-    expect(result.summary.rowsParsed).toBe(1);
+    expect(result.summary.rowsRead).toBe(0);
+    expect(result.summary.rowsParsed).toBe(0);
     expect(result.summary.rowsDropped).toBe(0);
     expect(result.summary.maxBlockSeen).toBe(0);
     expect(result.summary.advanceReason).toBe("full-success-empty");
@@ -407,7 +417,6 @@ describe("syncMintBurn", () => {
       chainTimestampCache: new Map(),
       txContextCache: new Map(),
       affectedHours: new Map(),
-      safetyMarginBlocks: 10_000,
     });
 
     expect(result.summary.rowsDropped).toBe(0);
@@ -463,7 +472,6 @@ describe("syncMintBurn", () => {
       chainTimestampCache: new Map(),
       txContextCache: new Map(),
       affectedHours: new Map(),
-      safetyMarginBlocks: 10_000,
     });
 
     expect(result.newLastBlock).toBe(21_960_000);
@@ -501,9 +509,9 @@ describe("syncMintBurn", () => {
 
     expect(retry.status).toBe("ok");
     expect(retryUsdt?.scanFrom).toBe(21_950_001);
-    // full-success-empty stops one safety margin (75 blocks) short of the chain head
-    expect(retryUsdt?.advancedTo).toBe(21_999_925);
-    expect(readFrontier()).toBe(21_999_925);
+    // The supplied chain head is finalized; no chain-agnostic block margin.
+    expect(retryUsdt?.advancedTo).toBe(22_000_000);
+    expect(readFrontier()).toBe(22_000_000);
   });
 
   it("holds a cursor after recalc failure, protects retained inputs, and rebuilds a complete bucket on duplicate replay", async () => {
@@ -614,7 +622,7 @@ describe("syncMintBurn", () => {
       .mockResolvedValueOnce({
         logs: [],
         complete: false,
-        scannedToBlock: 21_910_000,
+        scannedToBlock: 21_960_000,
         calls: 3,
         maxDepth: 1,
       })
@@ -633,8 +641,8 @@ describe("syncMintBurn", () => {
     const meta = JSON.parse(result.metadata);
     const usdt = (meta.configSamples as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
 
-    expect(usdt?.advancedTo).toBe(21_910_000);
-    expect(usdt?.coverageFrontier).toBe(21_910_000);
+    expect(usdt?.advancedTo).toBe(21_960_000);
+    expect(usdt?.coverageFrontier).toBe(21_960_000);
     expect(usdt?.advanceReason).toBe("partial-frontier");
   });
 
@@ -644,7 +652,7 @@ describe("syncMintBurn", () => {
     vi.mocked(fetchAlchemyLogs)
       .mockResolvedValueOnce({
         logs: [
-          makeMintLog({ blockNumber: 21_950_000, txHash: "0xmissing-ts", logIndex: 0 }),
+          makeMintLog({ blockNumber: 21_950_002, txHash: "0xmissing-ts", logIndex: 0 }),
           makeMintLog({ blockNumber: 22_000_000, txHash: "0xpresent-ts", logIndex: 1 }),
         ],
         complete: true,
@@ -662,26 +670,26 @@ describe("syncMintBurn", () => {
     const usdt = (meta.configSamples as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
 
     expect(usdt?.missingTimestampCount).toBe(1);
-    expect(usdt?.earliestMissingTimestampBlock).toBe(21_950_000);
-    expect(usdt?.advancedTo).toBe(21_949_999);
-    expect(usdt?.coverageFrontier).toBe(21_949_999);
+    expect(usdt?.earliestMissingTimestampBlock).toBe(21_950_002);
+    expect(usdt?.advancedTo).toBe(21_950_001);
+    expect(usdt?.coverageFrontier).toBe(21_950_001);
     expect(usdt?.advanceReason).toBe("partial-frontier");
   });
 
-  it("does not require timestamps for dust-only logs", async () => {
+  it("does not require individual log timestamps for dust-only logs", async () => {
     const db = makeDb();
 
     vi.mocked(decodeUint256AtSlotOrNull).mockReturnValue(1);
     vi.mocked(fetchAlchemyLogs)
       .mockResolvedValueOnce({
-        logs: [makeMintLog({ blockNumber: 21_950_000 })],
+        logs: [makeMintLog({ blockNumber: 21_950_001 })],
         complete: true,
         scannedToBlock: 22_000_000,
         calls: 1,
         maxDepth: 0,
       })
       .mockResolvedValueOnce({
-        logs: [makeBurnLog({ blockNumber: 21_950_001 })],
+        logs: [makeBurnLog({ blockNumber: 21_950_002 })],
         complete: true,
         scannedToBlock: 22_000_000,
         calls: 1,
@@ -692,11 +700,14 @@ describe("syncMintBurn", () => {
     const meta = JSON.parse(result.metadata);
     const usdt = (meta.configSamples as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
 
-    expect(resolveBlockTimestamps).not.toHaveBeenCalled();
+    // Durable scan proof now probes boundaries even for quiet/dust-only scans;
+    // missing headers must not turn dropped dust into missing event timestamps.
+    expect(resolveBlockTimestamps).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(resolveBlockTimestamps).mock.calls[0]?.[1]).toEqual([21_950_001, 22_000_000]);
     expect(usdt?.missingTimestampCount).toBe(0);
     expect(usdt?.rowsDropped).toBe(2);
     expect(usdt?.advanceReason).toBe("full-success-empty");
-    expect(usdt?.advancedTo).toBe(21_949_999);
+    expect(usdt?.advancedTo).toBe(22_000_000);
     expect(meta.retention).toMatchObject({
       error: null,
       eventRows: { error: null },
@@ -927,7 +938,7 @@ describe("syncMintBurn", () => {
     vi.mocked(fetchAlchemyLogs)
       .mockResolvedValueOnce({
         logs: Array.from({ length: 70 }, (_, index) =>
-          makeMintLog({ blockNumber: 21_949_999, txHash: `0xbridge-mint-${index}`, logIndex: index }),
+          makeMintLog({ blockNumber: 21_960_000, txHash: `0xbridge-mint-${index}`, logIndex: index }),
         ),
         complete: true,
         scannedToBlock: 22_000_000,
@@ -936,7 +947,7 @@ describe("syncMintBurn", () => {
       })
       .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
       .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
-    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[21_949_999, 1_718_650_752]]));
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[21_960_000, 1_718_650_752]]));
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);

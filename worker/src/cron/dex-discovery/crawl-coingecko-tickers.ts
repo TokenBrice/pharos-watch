@@ -59,6 +59,7 @@ export async function crawlCoinGeckoTickersStage({
   }
 
   try {
+    const readObservedAt = Math.floor(Date.now() / 1000);
     const url = cgUrl(`/coins/${geckoId}/tickers?include_exchange_logo=false`, cgApiKey);
     const result = await dependencies.fetchJsonWithRetry<{ tickers?: CgTicker[] }>(url, {
       headers: cgHeaders({ "User-Agent": USER_AGENT }, cgApiKey),
@@ -67,14 +68,14 @@ export async function crawlCoinGeckoTickersStage({
     if (result?.response.ok) {
       const data = result.body;
       const exchangeSummaries = buildCgTickerExchangeSummaries(
-        aggregateCgTickersByExchange(filterValidCgTickers(data.tickers ?? [])),
+        aggregateCgTickersByExchange(filterValidCgTickers(data.tickers ?? []), readObservedAt),
       );
 
       for (const summary of exchangeSummaries) {
         const poolId = `orderbook:${summary.exchangeId}:${context.stablecoinId}`.toLowerCase();
         if (context.hasKnownPool(poolId)) continue;
 
-        context.addPool(toStagedPool(context, {
+        const pool = toStagedPool(context, {
           poolId,
           source: "cg_tickers",
           chain: "orderbook",
@@ -95,7 +96,9 @@ export async function crawlCoinGeckoTickersStage({
           priceUsd: summary.priceUsd,
           lockedLiqPct: null,
           rawJson: null,
-        }));
+        });
+        pool.refreshedAt = summary.observedAt ?? readObservedAt;
+        context.addPool(pool);
       }
 
       for (const observation of buildCgTickerPriceObservations(
