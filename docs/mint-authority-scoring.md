@@ -96,6 +96,8 @@ An inherited claim is curated as a wrapper reserve slice naming the parent, not 
 
 For an inherited share wrapper, the deposit-backed accounting control can anchor the local mint component only when its reviewed row explicitly records `role: "wrapper"`, `directMintAbility: "none"`, and `canRaiseCap: false`, and the exact serial-claim edge exists. Omission of `canRaiseCap` is not proof of absence; separate upgrade and parameter authorities keep their own controls and uncertainty.
 
+Every non-bridge mint-logic upgrade path also competes for the mint component on its own reviewed economic semantics, including retained adverse paths under an incomplete aggregate review; an inherited/share-accounting label does not remove it, and existing deployment-local proportional pricing remains unchanged.
+
 ### A reviewer-scoped open question is limited evidence (`9.27`)
 
 `mintAuthority.review.scopedQuestions` binds a reviewer-investigated unresolved question to exactly one control (`chain:address` or label), its text, `reviewedAt`, reviewer and sources. For 90 days its gap is `scoped-control-question` with the 69 `control-scoped-gap` ceiling, rather than 55 `control-unverified`; expiry restores the hard ceiling. It remains in `DEPLOYMENT_CONTROLS` either way. Only the named control softens; whole-inventory softening requires fresh questions for every unresolved control. Legacy `unresolvedQuestions` semantics are unchanged. A deployment-local control with null share can cease binding only when a complete reconciled supply partition proves its measured share subthreshold (zero if no row exists). Missing/unreconciled partitions fail closed; global-claim controls never receive this materiality release.
@@ -148,6 +150,8 @@ The reconciliation vocabulary records what the reviewer established, not interch
 | `none` | The reviewer positively established that no reconciliation regime exists. |
 | `not-applicable` | The reviewer established that reconciliation cadence does not apply to this mechanism; it is not an unknown answer. |
 | `unknown` | The review did not establish whether a reconciliation regime exists. |
+
+For an applicable mint review, every explicit `mintAuthority.reconciliation` value is authoritative, including `unknown`; the extension cannot replace it with proof-of-reserves metadata. `proofOfReserves.cadence` or the presence of `latestReport` alone establishes neither a recurring supply-to-backing process nor its whole-liability scope and currency. Reserve-only feeds, balance/NAV dashboards, partial-scope reports and stale report series do not supply that process credit. Positive `continuous`/`periodic` facts require the sourced mint review to establish the complete native liability book against the complete backing and the current recurring process. Only an absent field retains the structural applicability fallback: an issuer backend stays `unknown`, while existing immutable/no-local-issuance and non-backend applicability conventions remain separate from positive reconciliation evidence.
 
 #### Availability-invariant mint fallback (`10.06`)
 

@@ -174,6 +174,16 @@ remain separate; a descriptor grants no quality or applicability credit.
   component uses its own admission/expiry gate and evidence reference; never
   replace the global date to renew untouched metrics, measurements or siblings.
   A component-only review does not extend an expired whole overlay's admission.
+- A current explicit component review governs its own evidence clock after the
+  report-scope and technical-observation gates have been applied. A separate older
+  `latestReport` remains diagnostic research history; it is not co-bound as a
+  required current source that can expire the newer component. This does not
+  renew the report or bypass scoped financial-assurance admission.
+- Future and same-day-unadmitted components retain no quality credit. Any already
+  registered historical evidence stays referenced through diagnostic gap history,
+  separately from current fact references and causal proof. Expiry retains stale
+  history and the ordinary bounded gap; none of these transitions may orphan an
+  evidence row or turn an asset-local admission gap into a global schema failure.
 - Date-only overlay claims become score-bearing only after the reviewed UTC day has elapsed.
   During that day the admission gap is method-owned; clocks before the review date receive
   neither the future overlay nor its disposition.

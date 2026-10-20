@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.25",
+  "releaseVersion": "10.26",
   "semantic": {
     "accessLookthrough": {
       "edgeKinds": ["reserve-position", "receipt", "bridge-representation"],
@@ -600,6 +600,15 @@
             ]
           },
           {
+            "chain": "ethereum", "address": "0x232128844e5af56fd4b3f8bf97e08ab477282ab5", "class": "yield-bearing-stable",
+            "reviewedAt": "2026-10-20",
+            "sources": [
+              { "label": "Flying Tulip canonical production address book binds chain 1 Stable Rewards Vault to this exact ssftUSD contract", "url": "https://flyingtulip.com/address-book/flying-tulip-address-book-prod.json" },
+              { "label": "Flying Tulip ssftUSD is the staked ftUSD receipt with rewards auto-compounded in ftUSD; strategy receipt fallback only, not a USDC identity alias or parity guarantee", "url": "https://docs.flyingtulip.com/product-suite/ft-usd/" },
+              { "label": "Exact Ethereum Stable Staked Flying Tulip USD token identity", "url": "https://eth.blockscout.com/api/v2/tokens/0x232128844e5af56fd4b3f8bf97e08ab477282ab5" }
+            ]
+          },
+          {
             "chain": "ethereum", "address": "0x238a700ed6165261cf8b2e544ba797bc11e466ba", "class": "structured-credit",
             "reviewedAt": "2026-10-14",
             "sources": [
@@ -681,6 +690,15 @@
             "chain": "ethereum", "address": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0", "class": "eth-lst",
             "reviewedAt": "2026-10-14",
             "sources": [{ "label": "KPK Prime wstETH collateral context; q85 authored ETH plus staking/receipt dependency proxy", "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md" }]
+          },
+          {
+            "chain": "ethereum", "address": "0x7f47c3e6b2c00fc4eb4d5ae50d0ab0ab6888eb4d", "class": "principal-token",
+            "reviewedAt": "2026-10-20",
+            "sources": [
+              { "label": "Exact verified PendlePrincipalToken VERSION 6 deployment and decoded constructor bind PT-USD3-17DEC2026, SY 0xea3bc608f32847b97965c5e1648bdfcd4c2c40d0 and expiry 1797465600; no underlying USD3 identity alias", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7f47c3e6b2c00fc4eb4d5ae50d0ab0ab6888eb4d" },
+              { "label": "Pendle principal-token mechanics and maturity redemption of accounting-asset value", "url": "https://docs.pendle.finance/pendle-v2/ProtocolMechanics/YieldTokenization/PT" },
+              { "label": "Wintermute Armitage Select exact PT-USD3-17DEC2026 USDC market 0xecabc12c73a97c766d0c6aeb4c15c635630d78158b2ac8370455a09efcc50837 at 86% LLTV", "url": "https://armitage.wintermute.com/docs/vaults/select" }
+            ]
           },
           {
             "chain": "ethereum", "address": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", "class": "yield-bearing-stable",
@@ -784,6 +802,14 @@
             "chain": "ethereum", "address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "class": "native-eth",
             "reviewedAt": "2026-10-14",
             "sources": [{ "label": "KPK Prime WETH collateral context; q95 authored native-asset price-risk proxy without separate collateral issuer, not risk-free", "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md" }]
+          },
+          {
+            "chain": "ethereum", "address": "0xc26a6fa2c37b38e549a4a1807543801db684f99c", "class": "structured-credit",
+            "reviewedAt": "2026-10-20",
+            "sources": [
+              { "label": "Pareto canonical Ethereum FalconX credit-vault address table binds exact LP token to facility 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d; distinct from Optimism facility", "url": "https://docs.pareto.credit/developers/addresses/product/credit-vaults" },
+              { "label": "Pareto credit-vault lending structure; USDC is settlement asset, not a USDC-equivalent collateral guarantee", "url": "https://docs.pareto.credit/product/credit-vaults" }
+            ]
           },
           {
             "chain": "ethereum", "address": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf", "class": "btc-wrapper",
@@ -934,6 +960,33 @@
             ]
           },
           {
+            "chain": "robinhood", "address": "0x117cc2133c37b721f49de2a7a74833232b3b4c0c", "class": "structured-credit",
+            "reviewedAt": "2026-10-20",
+            "sources": [
+              { "label": "Robinhood official asset registry binds SPY SPDR S&P 500 ETF Trust Robinhood Token to this exact chain 4663 deployment", "url": "https://api.robinhood.com/rhj/assets" },
+              { "label": "Current transferable Robinhood Chain Stock Tokens are RHJ-issued tokenised debt securities, not direct underlying equity ownership; structured-credit fallback only", "url": "https://docs.robinhood.com/chain/stock-tokens/" },
+              { "label": "Current RHJ product explains collateralized issuer obligation and independent-security-agent liquidation on insolvency, distinct from Classic nontransferable derivatives", "url": "https://robinhood.com/rhj/stocktokens/" }
+            ]
+          },
+          {
+            "chain": "robinhood", "address": "0x2e0847e8910a9732eb3fb1bb4b70a580adad4fe3", "class": "structured-credit",
+            "reviewedAt": "2026-10-20",
+            "sources": [
+              { "label": "Robinhood official asset registry binds GOOGL Alphabet Class A Robinhood Token to this exact chain 4663 deployment", "url": "https://api.robinhood.com/rhj/assets" },
+              { "label": "Current transferable Robinhood Chain Stock Tokens are RHJ-issued tokenised debt securities, not direct underlying equity ownership; structured-credit fallback only", "url": "https://docs.robinhood.com/chain/stock-tokens/" },
+              { "label": "Current RHJ product explains collateralized issuer obligation and independent-security-agent liquidation on insolvency, distinct from Classic nontransferable derivatives", "url": "https://robinhood.com/rhj/stocktokens/" }
+            ]
+          },
+          {
+            "chain": "robinhood", "address": "0x322f0929c4625ed5bad873c95208d54e1c003b2d", "class": "structured-credit",
+            "reviewedAt": "2026-10-20",
+            "sources": [
+              { "label": "Robinhood official asset registry binds TSLA Tesla Robinhood Token to this exact chain 4663 deployment", "url": "https://api.robinhood.com/rhj/assets" },
+              { "label": "Current transferable Robinhood Chain Stock Tokens are RHJ-issued tokenised debt securities, not direct underlying equity ownership; structured-credit fallback only", "url": "https://docs.robinhood.com/chain/stock-tokens/" },
+              { "label": "Current RHJ product explains collateralized issuer obligation and independent-security-agent liquidation on insolvency, distinct from Classic nontransferable derivatives", "url": "https://robinhood.com/rhj/stocktokens/" }
+            ]
+          },
+          {
             "chain": "robinhood", "address": "0x40858070814a57fdf33a613ae84fe0a8b4a874f7", "class": "yield-bearing-stable",
             "reviewedAt": "2026-10-14",
             "sources": [
@@ -944,12 +997,30 @@
             ]
           },
           {
+            "chain": "robinhood", "address": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea", "class": "structured-credit",
+            "reviewedAt": "2026-10-20",
+            "sources": [
+              { "label": "Robinhood official asset registry binds SPCX Space Exploration Technologies Corp. Class A Common Stock Robinhood Token to this exact chain 4663 deployment", "url": "https://api.robinhood.com/rhj/assets" },
+              { "label": "Current transferable Robinhood Chain Stock Tokens are RHJ-issued tokenised debt securities, not direct underlying equity ownership; structured-credit fallback only", "url": "https://docs.robinhood.com/chain/stock-tokens/" },
+              { "label": "Current RHJ product explains collateralized issuer obligation and independent-security-agent liquidation on insolvency, distinct from Classic nontransferable derivatives", "url": "https://robinhood.com/rhj/stocktokens/" }
+            ]
+          },
+          {
             "chain": "robinhood", "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", "class": "synthetic-dollar",
             "reviewedAt": "2026-10-14",
             "sources": [
               { "label": "Explorer exact Robinhood Ethena USDe identity; collateral address retained in reviewed block 79450688 market parameters; accepted Backing takes priority when eligible", "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34" },
               { "label": "Ethena USDe delta-hedged synthetic dollar; hedging/custody strategy fallback, not a parity guarantee", "url": "https://docs.ethena.fi/overview/ethena-overview" },
               { "label": "Exact reviewed USDG/USDe Morpho market identity, not a fresh allocation census", "url": "https://app.morpho.org/robinhood-chain/variable/0xc845da65a020ddca5f132efa8fea79676d8edfdea504226a4c01e7a9e34cddd6/usdg-usde" }
+            ]
+          },
+          {
+            "chain": "robinhood", "address": "0xaf3d76f1834a1d425780943c99ea8a608f8a93f9", "class": "structured-credit",
+            "reviewedAt": "2026-10-20",
+            "sources": [
+              { "label": "Robinhood official asset registry binds AAPL Apple Robinhood Token to this exact chain 4663 deployment", "url": "https://api.robinhood.com/rhj/assets" },
+              { "label": "Current transferable Robinhood Chain Stock Tokens are RHJ-issued tokenised debt securities, not direct underlying equity ownership; structured-credit fallback only", "url": "https://docs.robinhood.com/chain/stock-tokens/" },
+              { "label": "Current RHJ product explains collateralized issuer obligation and independent-security-agent liquidation on insolvency, distinct from Classic nontransferable derivatives", "url": "https://robinhood.com/rhj/stocktokens/" }
             ]
           },
           {

@@ -344,7 +344,7 @@ describe("methodology registry", () => {
   });
 
   it("retains the archive-free attribution release and aligns current Safety policy identity", () => {
-    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.25");
+    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.26");
     expect(SAFETY_SCORE_POLICY.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.23")!;
     expect(release).toMatchObject({
@@ -366,6 +366,24 @@ describe("methodology registry", () => {
     expect(release.impact.join(" ")).toContain("executionCertainty");
     expect(release.impact.join(" ")).toContain("no grade changes");
     expect(release.impact.join(" ")).toContain("no deployment or production acceptance is claimed");
+  });
+
+  it("records the local v10.26 evaluation-closure candidate without claiming activation", () => {
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.26")!;
+    expect(release).toMatchObject({
+      version: "10.26", date: "2026-10-21", effectiveAt: 1_792_627_200, reconstructed: false, commits: [],
+    });
+    expect(release.summary).toMatch(/local, unreleased/i);
+    const impact = release.impact.join(" ");
+    expect(impact).toMatch(/configured redemption channel/);
+    expect(impact).toMatch(/issuer-undisclosed payout/);
+    expect(impact).toMatch(/provider:<chain>:<contract>/);
+    expect(impact).toMatch(/curated mint reconciliation/);
+    expect(impact).toMatch(/25-asset issuer-backend cohort/);
+    expect(impact).toMatch(/OWNER DECISION \/ ISOLATABLE/);
+    expect(impact).toMatch(/eight source-reviewed exact Morpho/);
+    expect(impact).toMatch(/Current explicit mechanism-component reviews/);
+    expect(impact).toMatch(/no acceptance or deployment is asserted/i);
   });
 
 });
