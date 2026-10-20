@@ -347,6 +347,8 @@ Use the runtime's existing test project and harness. Source-only, class-token an
 
 Test normal success, primary source failure/timeout, stale or unavailable cache and decision boundaries. Use deterministic clocks and scripted transport outcomes; assert the reason, fallback/publication outcome and retained last-good state, not merely no throw or a defined return.
 
+Freshness fixtures that require a specific age band should supply explicit producer budgets instead of assuming an elapsed day exceeds the cadence-derived defaults. Numeric boundary fixtures must account for the actual unrounded unit conversion: a percentage converted to a ratio and back may land just below the original cutoff. Keep direct exact-cutoff cases in the classifier's owning suite and assert badge/gauge agreement on the converted raw value.
+
 ### Registry Guardrails
 
 - The [Operator CLI Contract](./scripts.md#operator-cli-contract) owns what `npm run check:cli-args-policy` verifies; `check:structural` enforces it for affected PR paths and nightly/manual validation, and it can also be run directly when CI/operator scripts change.

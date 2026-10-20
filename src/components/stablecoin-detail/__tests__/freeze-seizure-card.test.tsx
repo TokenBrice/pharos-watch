@@ -225,7 +225,7 @@ describe("FreezeSeizureModule", () => {
 });
 
 it.each([
-  { meta: { updatedAt: Math.floor(Date.now() / 1000) - 86_400, status: "fresh" }, state: "stale" },
+  { meta: { updatedAt: Math.floor(Date.now() / 1000) - 86_400, status: "fresh", freshBudgetSec: 60, degradedBudgetSec: 120 }, state: "stale" },
   { meta: { updatedAt: null, status: "unknown", ageSeconds: null }, state: "unavailable" },
   { meta: { updatedAt: Math.floor(Date.now() / 1000), status: "fresh", dependencies: { scanner: { status: "stale", reason: "scan-old" } } }, state: "degraded" },
 ] as { meta: ApiMeta; state: string }[])("qualifies observed zero freeze usage with its producer generation ($state)", ({ meta, state }) => {

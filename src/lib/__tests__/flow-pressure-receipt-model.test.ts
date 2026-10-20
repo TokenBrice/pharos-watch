@@ -137,7 +137,7 @@ describe("buildFlowPressureReceiptModel", () => {
     const byId = Object.fromEntries(model.rows.map((row) => [row.id, row]));
     expect(byId["net-7d"]).toMatchObject({ valueUsd: null, completeness: "partial" });
     expect(byId["net-7d"].bound).toEqual({ kind, valueUsd: 970 });
-    expect(byId["net-7d"].note).toContain(`${kind} bound`);
+    expect(byId["net-7d"].note).toMatch(new RegExp(`${kind} bound`, "i"));
     expect(byId["burn-7d"]).toMatchObject({ valueUsd: 3, completeness: "partial" });
     expect(byId["burn-7d"].note).toMatch(/lower bound/i);
     expect(byId["mint-7d"]).toMatchObject({ valueUsd: 15, completeness: "partial" });

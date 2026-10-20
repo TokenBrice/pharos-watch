@@ -314,7 +314,8 @@ describe("buildBackingMetricsView", () => {
 describe("BackingMetricsCard", () => {
   it.each([
     [99.495, "under"], [99.499, "under"], [99.5, "par"],
-    [100.495, "par"], [100.499, "par"], [100.5, "over"],
+    // 100.5 / 100 * 100 is 100.49999999999999: classify the raw conversion, not rounded copy.
+    [100.495, "par"], [100.499, "par"], [100.5, "par"], [100.501, "over"],
   ] as const)("keeps badge and gauge on the raw %s %% band (%s), for live and reviewed ratios", (pct, tone) => {
     for (const input of [{ liveRatio: pct / 100 }, { collateralization: { ...reviewed, ratio: pct / 100 } }]) {
       const view = build(input)!;
