@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SfraxStockPerimeterObservationSchema } from "./sfrax-supply";
 import { DepegAuditVerdictSchema } from "./depeg-audit";
 import { CAUSE_OF_DEATH_VALUES } from "./cause-of-death";
 import { FreshnessAssessmentSchema } from "@pharos/contracts/api-meta";
@@ -200,6 +201,7 @@ const StablecoinDataRawSchema = z.object({
   supplyObservedAt: z.number().nullable().optional(),
   supplyRestored: z.boolean().optional(),
   supplyUnavailableReason: SupplyUnavailableReasonSchema.optional(),
+  supplyPerimeter: SfraxStockPerimeterObservationSchema.optional(),
   supplyGapFill: SupplyGapFillProvenanceSchema.optional(),
   supplyChainGuard: SupplyChainGuardProvenanceSchema.optional(),
   circulating: SupplyBucketsSchema,
@@ -254,6 +256,7 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
   ...(asset.supplyObservedAt != null ? { supplyObservedAt: asset.supplyObservedAt } : {}),
   ...(asset.supplyRestored === true ? { supplyRestored: true } : {}),
   ...(asset.supplyUnavailableReason != null ? { supplyUnavailableReason: asset.supplyUnavailableReason } : {}),
+  ...(asset.supplyPerimeter != null ? { supplyPerimeter: asset.supplyPerimeter } : {}),
   ...(asset.supplyGapFill != null ? { supplyGapFill: asset.supplyGapFill } : {}),
   ...(asset.supplyChainGuard != null ? { supplyChainGuard: asset.supplyChainGuard } : {}),
   circulating: asset.circulating,

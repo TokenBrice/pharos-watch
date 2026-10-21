@@ -2,6 +2,7 @@ import { CHAIN_META } from "../types/chain-identity";
 import type { StablecoinMeta } from "../types";
 import type { SupplyUnavailableReason } from "../types/market";
 import { SUPPLY_RPC_DEFAULTS } from "./chain-rpc-registry";
+import { isFixedDecimalDeployment } from "./deployment-amounts";
 
 export type OnchainSupplyContract = NonNullable<StablecoinMeta["contracts"]>[number];
 
@@ -61,11 +62,55 @@ const NON_EVM_PROBE_FAMILY_BY_CHAIN: Readonly<Record<string, OnchainSupplyProbeF
   icp: "icp",
 };
 
-// A configured refusal is still a runtime publication path, not a quantity
-// capability. sFRAX needs native Solana, prefunded ferries, migrated Fraxtal
-// escrow/holder claims and protocol-owned/encumbered inventory reconciled.
+/** Owner-reviewed current-token-stock perimeter; pending/retired claims are separate diagnostics. */
+export const SFRAX_STOCK_PERIMETER = {
+  assetId: "sfrax-frax",
+  contracts: [
+    { chain: "ethereum", address: "0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32", decimals: 18 },
+    { chain: "arbitrum", address: "0xe3b3fe7bca19ca77ad877a5bebab186becfad906", decimals: 18 },
+    { chain: "avalanche", address: "0x3405e88af759992937b84e58f2fe691ef0eea320", decimals: 18 },
+    { chain: "base", address: "0xe4796ccb6bb5de2290c417ac337f2b66ca2e770e", decimals: 18 },
+    { chain: "blast", address: "0xe4796ccb6bb5de2290c417ac337f2b66ca2e770e", decimals: 18, ...SUPPLY_RPC_DEFAULTS.blast },
+    { chain: "bsc", address: "0xa63f56985f9c7f3bc9ffc5685535649e0c1a55f3", decimals: 18 },
+    { chain: "fraxtal", address: "0x5bff88ca1442c2496f7e475e9e7786383bc070c0", decimals: 18, ...SUPPLY_RPC_DEFAULTS.fraxtal },
+    { chain: "metis", address: "0xe4796ccb6bb5de2290c417ac337f2b66ca2e770e", decimals: 18, ...SUPPLY_RPC_DEFAULTS.metis },
+    { chain: "optimism", address: "0x2dd1b4d4548accea497050619965f91f78b3b532", decimals: 18 },
+    { chain: "solana", address: "DnVyztLHnDyTqL3xfPYF9Uqpgrhcxphn6e31sVAwtg6K", decimals: 9 },
+  ],
+  oftAdapter: "0xe4796ccb6bb5de2290c417ac337f2b66ca2e770e",
+  migratedStandardBridge: "0x34c0bd5877a5ee7099d0f5688d65f4bb9158bde2",
+  migratedRemoteToken: "0xfc00000000000000000000000000000000000008",
+  migratedL1Token: "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+  // Included in native stock. No sFRAX-specific protocol-owned exclusion is reviewed.
+  compoundHolder: "0x3afdc9bca9213a35503b077a6072f3d0d5ab0840",
+  ferries: [
+    { chain: "arbitrum", key: "arbitrumFerry", native: "0x2453b1fbd17cea069a31c9d16a27f4f93a85cc0d", remote: "0x1b0b9991df27a4f2847478127d51fb29883882f5" },
+    { chain: "avalanche", key: "avalancheFerry", native: "0x59ae66fb395893e3fd965adb06a52d06c49df8a9", remote: "0x0304a365c0fbb4b1ad423887861b9b69a5f0c00e" },
+    { chain: "bsc", key: "bscFerry", native: "0xe3e7f354ac948ceba925181c81618d7c9b3da8c9", remote: "0x5e8422345238f34275888049021821e8e08caa1f" },
+    { chain: "optimism", key: "optimismFerry", native: "0x9694dcf5b6ccf6216b05fe64945f62603e2d2367", remote: "0xd1738eb733a636d1b8665f48bc8a24da889c2562" },
+  ],
+  historicalNativeFerries: [
+    { chain: "fraxtal", key: "historicalFraxtalFerry", native: "0x2b4864c2f2a2c275c6c66b90a2ae6be9fa9cbe47", targetToken: "0xfc00000000000000000000000000000000000008" },
+    // Halted destination is outside active float. Measure L1 custody; do not invent its L2 zero or pending outcome.
+    { chain: "polygon-zkevm", key: "retiredZkevmFerry", native: "0x602ccfee6b4ba8eb5e35cf26e05fdede379e578e", targetToken: "0x2c37fb628b35dfdfd515d41b0caae11b542773c3" },
+  ],
+  solanaMintAuthority: "3BcysJF4fQx86fVTDTBGNpZyRpeMyTF8XsuvPHJQuP3V",
+  solanaProgram: "DBQQ2NrApPx8uarKmBtZGTg6jsPk4ya2Mi2hRKZvV2tY",
+} as const;
+
+export function isSfraxStockContractRoster(meta: StablecoinMeta): boolean {
+  return meta.id === SFRAX_STOCK_PERIMETER.assetId
+    && meta.contracts?.length === SFRAX_STOCK_PERIMETER.contracts.length
+    && SFRAX_STOCK_PERIMETER.contracts.every((expected) => meta.contracts?.some((actual) =>
+      isFixedDecimalDeployment(actual) && actual.chain === expected.chain
+      && (expected.chain === "solana" ? actual.address === expected.address : actual.address.toLowerCase() === expected.address)
+      && actual.decimals === expected.decimals));
+}
+
+// Default refusal remains until the same run produces an admitted, complete
+// current-token-stock observation. It is not a blanket acceptance of restored rows.
 const REVIEWED_ONCHAIN_SUPPLY_HOLDS: Readonly<Record<string, SupplyUnavailableReason>> = {
-  "sfrax-frax": "economic-float-unreconciled",
+  [SFRAX_STOCK_PERIMETER.assetId]: "economic-float-unreconciled",
 };
 
 export function getOnchainSupplyHoldReason(assetId: string): SupplyUnavailableReason | null {

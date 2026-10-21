@@ -1,5 +1,6 @@
 import { logWorkerEvent, logWorkerEventArgs } from "../../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { getOnchainSupplyHoldReason } from "@shared/lib/onchain-supply-probe";
 import { throwIfAborted } from "../../../lib/abort";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import type { DwellirNativeCapability } from "../../../lib/dwellir-native";
@@ -68,19 +69,6 @@ export async function fetchFiatCoinGeckoTokens(
         if (!priceResolution) {
           priceResolution = resolveLowVolumeCoinGeckoPrice(cgData, meta.geckoId);
         }
-        const hold = reviewedOnchainSupplyHoldFields(meta.id);
-        if (hold) {
-          logWorkerEvent({
-            scope: "handler", job: "sync-stablecoins", level: "warn", event: "supplemental-supply-withheld",
-            message: `[fiat-cg] ${meta.symbol} economic supply perimeter is not reconciled`,
-            metadata: { stablecoinId: meta.id, reason: hold.supplyUnavailableReason, rule: "R4" },
-          });
-          return {
-            ...buildSupplementalAsset({ meta, priceResolution, nowSec, mcap: null, supplySource: "onchain-supply-withheld" }),
-            ...hold,
-          };
-        }
-
         const pegReferencePrice = toPositiveFiniteNumber(fxFallbackRates?.[pKey]);
         // USD is the base currency; fxFallbackRates omits peggedUSD. Default to 1.0 for
         // plain USD-pegged coins with no CG/DL price source so the on-chain fallback can compute mcap.
@@ -128,6 +116,7 @@ export async function fetchFiatCoinGeckoTokens(
         let supplySource: string = "coingecko-fallback";
         let supplyObservedAt = mcap && meta.geckoId ? cgData[meta.geckoId]?.last_updated_at ?? null : null;
         let chainCirculating: PeggedAsset["chainCirculating"] = {};
+        let supplyPerimeter: PeggedAsset["supplyPerimeter"];
 
         // Fallback: on-chain totalSupply × market/peg-reference price when CG has no market cap.
         // This keeps preview-only plain-par fiat assets in supply coverage without inventing a live market quote.
@@ -138,6 +127,7 @@ export async function fetchFiatCoinGeckoTokens(
             supplySource = aggregateOnChainMcap.supplySource;
             supplyObservedAt = aggregateOnChainMcap.observedAt ?? null;
             chainCirculating = toPublicChainCirculating(aggregateOnChainMcap.chainCirculating);
+            supplyPerimeter = aggregateOnChainMcap.supplyPerimeter;
           }
         }
 
@@ -149,6 +139,18 @@ export async function fetchFiatCoinGeckoTokens(
             supplyObservedAt = onChainMcap.observedAt ?? null;
             chainCirculating = toPublicChainCirculating(onChainMcap.chainCirculating);
           }
+        }
+        if (getOnchainSupplyHoldReason(meta.id) && !supplyPerimeter) {
+          const hold = reviewedOnchainSupplyHoldFields({ id: meta.id }, nowSec)!;
+          logWorkerEvent({
+            scope: "handler", job: "sync-stablecoins", level: "warn", event: "supplemental-supply-withheld",
+            message: `[fiat-cg] ${meta.symbol} current token-stock perimeter unavailable`,
+            metadata: { stablecoinId: meta.id, reason: hold.supplyUnavailableReason, rule: "R4" },
+          });
+          return {
+            ...buildSupplementalAsset({ meta, priceResolution, nowSec, mcap: null, supplySource: "onchain-supply-withheld" }),
+            ...hold,
+          };
         }
 
         if (needsClassScope) {
@@ -206,6 +208,7 @@ export async function fetchFiatCoinGeckoTokens(
           mcap,
           supplySource,
           supplyObservedAt,
+          supplyPerimeter,
           circulatingPrevDay: null,
           circulatingPrevWeek: null,
           circulatingPrevMonth: null,

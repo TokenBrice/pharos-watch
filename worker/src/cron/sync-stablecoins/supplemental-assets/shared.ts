@@ -225,6 +225,7 @@ export function buildSupplementalAsset(input: {
   mcap: number | null;
   supplySource: string;
   supplyObservedAt?: number | null;
+  supplyPerimeter?: PeggedAsset["supplyPerimeter"];
   chainCirculating?: PeggedAsset["chainCirculating"];
   circulatingPrevDay?: number | null;
   circulatingPrevWeek?: number | null;
@@ -250,6 +251,7 @@ export function buildSupplementalAsset(input: {
     priceSyncedAt: priceResolution ? nowSec : (input.priceSyncedAt ?? null),
     supplySource: input.supplySource,
     supplyObservedAt: input.supplyObservedAt ?? null,
+    ...(input.supplyPerimeter ? { supplyPerimeter: input.supplyPerimeter } : {}),
     circulating: input.mcap == null ? {} : { [pKey]: input.mcap },
     circulatingPrevDay: input.circulatingPrevDay != null ? { [pKey]: input.circulatingPrevDay } : null,
     circulatingPrevWeek: input.circulatingPrevWeek != null ? { [pKey]: input.circulatingPrevWeek } : null,

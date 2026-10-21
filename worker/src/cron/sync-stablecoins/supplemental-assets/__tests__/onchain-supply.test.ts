@@ -37,6 +37,7 @@ beforeEach(() => {
   vi.spyOn(evmRpc, "fetchEvmBlockHeader").mockImplementation(async () => ({
     number: 123, hash: BLOCK_HASH, timestamp: Math.floor(Date.now() / 1000) - 30,
   }));
+  vi.spyOn(evmRpc, "fetchEvmRpcBatch").mockResolvedValue(null);
   vi.spyOn(evmRpc, "fetchEvmUint256AtBlock").mockImplementation(async (chain, contract, data) =>
     data === TOTAL_SUPPLY_SELECTOR
       ? probeTrackedTokenSupplyMock(undefined, { chain })
@@ -46,7 +47,7 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("supply deployment failure reasons", () => {
-  it.each([false, true])("withholds sFRAX before RPC with an explicit economic-float reason (native-only roster: %s)", async (nativeOnly) => {
+  it.each([false, true])("withholds sFRAX when the joined stock generation is unavailable (native-only roster: %s)", async (nativeOnly) => {
     const tracked = TRACKED_META_BY_ID.get("sfrax-frax")!;
     const meta = nativeOnly ? { ...tracked, contracts: tracked.contracts!.filter(({ chain }) => chain === "ethereum") } : tracked;
     for (const mock of [probeTrackedTokenSupplyMock, fetchErc20TotalSupplyMock, fetchSolanaTokenSupplyMock, fetchOnchainUint256Mock]) {
@@ -768,7 +769,7 @@ describe("curation-expanded complete supply rosters", () => {
     },
   );
 
-  it.each([70, 110])("withholds sFRAX regardless of apparently conserved remote gross stock (%s)", async (remote) => {
+  it.each([70, 110])("cannot substitute legacy gross-stock helper output (%s) for the joined sFRAX certificate", async (remote) => {
     const meta = TRACKED_META_BY_ID.get("sfrax-frax")!;
     const supplies = {
       ethereum: 100, arbitrum: remote - 60, avalanche: 0, base: 10, blast: 10, bsc: 10, fraxtal: 10, metis: 10, optimism: 10,

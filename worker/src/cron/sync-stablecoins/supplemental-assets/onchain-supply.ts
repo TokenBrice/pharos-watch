@@ -3,6 +3,8 @@ import { logWorkerEventArgs } from "../../../lib/structured-log";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
 import { PinnedNativeShareObservationSchema, type PinnedNativeShareObservation } from "@shared/types/reserve-nav-supply";
+import type { SfraxStockPerimeterObservation } from "@shared/types/sfrax-supply";
+import { fetchSfraxStockSupply } from "./sfrax-supply";
 import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmUint256AtBlock, type EvmBlockHeader, type EvmRpcOptions } from "../../../lib/evm-rpc";
 import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserves/store-shared";
 import { CHAIN_META } from "@shared/types/chain-identity";
@@ -10,6 +12,7 @@ import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import {
   CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS,
   CURATED_AGGREGATE_ESCROW_RESIDUALS,
+  SFRAX_STOCK_PERIMETER,
   onchainSupplyProbeFamily,
   getOnchainSupplyHoldReason,
   selectCuratedAggregateOnchainSupplyProbeContracts,
@@ -92,6 +95,7 @@ export interface OnChainMcapResult {
   observedAt?: number | null;
   /** Display-label keys are retained for public compatibility. */
   chainCirculating?: Record<string, OnChainMcapChainRow>;
+  supplyPerimeter?: SfraxStockPerimeterObservation;
 }
 
 export interface SingleContractOnChainMcapResult extends OnChainMcapResult {
@@ -134,7 +138,7 @@ export async function fetchPinnedNativeShares(
 }
 
 export function prefersOnChainSupplyMcap(meta: StablecoinMeta): boolean {
-  return PREFER_ONCHAIN_SUPPLY_MCAP_IDS.has(meta.id);
+  return meta.id === SFRAX_STOCK_PERIMETER.assetId || PREFER_ONCHAIN_SUPPLY_MCAP_IDS.has(meta.id);
 }
 
 /** Convert an internal on-chain result into the stable public chain row shape. */
@@ -558,6 +562,7 @@ export async function fetchCuratedAggregateOnChainMcap(
   dwellirNative?: DwellirNativeCapability,
 ): Promise<OnChainMcapResult | null> {
   throwIfAborted(signal);
+  if (meta.id === SFRAX_STOCK_PERIMETER.assetId) return fetchSfraxStockSupply(meta, priceUsd, chainRpcs, signal);
   const holdReason = getOnchainSupplyHoldReason(meta.id);
   if (holdReason) {
     logWorkerEvent({
