@@ -106,6 +106,10 @@ Both exact-address callers share one enabled predicate, a flat target list and a
 
 Kraken's curated `SOFIDUSD` market supplies SoFiUSD's hard-market quote through the existing batched ticker request, corroborating the contract-verified CoinGecko `sofiusd` identity. SoFiUSD no longer has a nominal-par override: admitted observed market consensus publishes through the ordinary validation path. Kraken's bid/ask midpoint retains its local-fetch clock, and CoinGecko agreement does not upgrade that quote to single-source depeg authority. Failed or absent quotes stay unavailable rather than publishing par. Provider registration alone does not establish a published observation.
 
+Frontier Stable Token uses the curated Kraken `FRNTUSD` bid/ask market through that same batch and local-fetch clock policy. CoinGecko's `frontier-stable-token` ticker set identifies this Wyoming-token market, but a stale CoinGecko last-trade quote does not become fresh merely because the book remains quoted. Missing Kraken responses remain unavailable; neither the issuer's dollar redemption target nor reserve balances substitute for an observed price.
+
+USDY uses `detailProvider: "coingecko"` so a missing DefiLlama live-list row does not prevent the existing supplemental lane from admitting its fresh CoinGecko price and aggregate market cap. The retained `llamaId` preserves provider identity; when an admitted DefiLlama list row exists, primary supply still wins over a duplicate supplemental row. USDY remains NAV/yield-bearing: its observed price may exceed one dollar, and no nominal-par valuation or bridge-deployment supply sum is introduced.
+
 ### Nominal-reference recovery boundary
 
 `protocol-par` is a nominal reference, never an observed market quote. The current nominal routes are Bima USBD, Quill USDQ (`usdq-quill`, not Quantoz USDQ), Mento XOFm and Mento ZARm. `isObservedPrice()` rejects both the nominal observation mode and any composite source containing `protocol-par`; a fresh sync timestamp does not make parity observed.

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../../../test-helpers/cron";
 import type * as FetchRetry from "../../../../lib/fetch-retry";
+import usdy from "@shared/data/stablecoins/coins/usdy-ondo-finance.json";
 
 const fetchWithRetryMock = vi.fn();
 const probeTrackedTokenSupplyMock = vi.fn();
@@ -74,6 +75,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
       id: "zys-zephyr-protocol", name: "Zephyr Yield Share", symbol: "ZYS", detailProvider: "coingecko",
       flags: { pegCurrency: "USD", backing: "crypto-backed", governance: "decentralized", yieldBearing: true, navToken: true },
     },
+    { ...usdy, flags: { ...usdy.flags, pegCurrency: "USD" } },
   ],
 }));
 
@@ -108,6 +110,53 @@ describe("fetchFiatCoinGeckoTokens", () => {
     probeTrackedTokenSupplyMock.mockReset();
     fetchErc20TotalSupplyMock.mockReset();
     resolveVaultNavSupplyPriceMock.mockReset().mockResolvedValue(null);
+  });
+
+  it("publishes USDY from its configured supplemental source when the DefiLlama list omits it", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const marketCap = 2_356_848_686.3214035;
+    fetchWithRetryMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ coins: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await fetchFiatCoinGeckoTokens({
+      "ondo-us-dollar-yield": {
+        usd: 1.15,
+        usd_market_cap: marketCap,
+        last_updated_at: nowSec,
+      },
+    });
+
+    expect(result.find((asset) => asset.id === "usdy-ondo-finance")).toMatchObject({
+      id: "usdy-ondo-finance",
+      price: 1.15,
+      priceSource: "coingecko",
+      priceObservedAt: nowSec,
+      priceObservedAtMode: "upstream",
+      supplySource: "coingecko-fallback",
+      supplyObservedAt: nowSec,
+      circulating: { peggedUSD: marketCap },
+      chainCirculating: {},
+    });
+    // The shared fixture still probes unpriced plain-par ftUSD, never USDY.
+    expect(probeTrackedTokenSupplyMock.mock.calls.map(([meta]) => meta.id)).toEqual(["ftusd-flying-tulip"]);
+  });
+
+  it("does not invent USDY supply or par when its current market observations are unavailable", async () => {
+    fetchWithRetryMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ coins: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await fetchFiatCoinGeckoTokens({});
+
+    expect(result.find((asset) => asset.id === "usdy-ondo-finance")).toBeUndefined();
+    expect(probeTrackedTokenSupplyMock.mock.calls.map(([meta]) => meta.id)).toEqual(["ftusd-flying-tulip"]);
   });
 
   it("prefers fresh CoinGecko market cap over curated aggregate on-chain supply", async () => {

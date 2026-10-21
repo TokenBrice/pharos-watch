@@ -453,6 +453,30 @@ describe("fetchKrakenPrices", () => {
     expect(outcome.value.size).toBe(1);
   });
 
+  it("requests Wyoming FRNT's exact USD book and uses its bid/ask instead of the last trade", async () => {
+    const requestedUrls: string[] = [];
+    mockFetch([{
+      match: (request) => {
+        requestedUrls.push(request.url);
+        return true;
+      },
+      body: {
+        error: [],
+        result: {
+          FRNTUSD: { a: ["1.00000000"], b: ["0.99840000"], c: ["1.00000000"] },
+        },
+      },
+    }]);
+
+    const outcome = await fetchKrakenPrices(["FRNT"]);
+
+    expect(KRAKEN_KNOWN_SYMBOLS).toContain("FRNT");
+    expect(requestedUrls).toEqual(["https://api.kraken.com/0/public/Ticker?pair=FRNTUSD"]);
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.get("FRNT")).toBeCloseTo(0.9992, 8);
+    expect(outcome.value.size).toBe(1);
+  });
+
   it("returns upstream-error outcome when Kraken returns an API error", async () => {
     mockFetch([{ match: () => true, body: { error: ["EGeneral:Temporary lockout"], result: {} } }]);
 

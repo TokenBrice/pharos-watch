@@ -9,6 +9,9 @@ export const BINANCE_MARKETS: readonly {
 export const KRAKEN_MARKETS = [
   { symbol: "DAI", requestPair: "DAIUSD", responseKeys: ["DAIUSD"] },
   { symbol: "EURC", requestPair: "EURCUSD", responseKeys: ["EURCUSD"] },
+  // Kraken's FRNT/USD book is the same Wyoming token listed by CoinGecko;
+  // its live bid/ask survives quiet trading that leaves CG's last trade stale.
+  { symbol: "FRNT", requestPair: "FRNTUSD", responseKeys: ["FRNTUSD"] },
   // 2026-09-27: Kraken lists MXNB/USD (response key MXNBUSD) and CoinGecko's
   // `mxnb` ticker set includes this exact market, so the hard-market voice
   // corroborates mxnb-juno instead of leaving it a pool-challenge-downgraded
