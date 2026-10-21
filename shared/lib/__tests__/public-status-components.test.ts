@@ -114,7 +114,7 @@ describe("public status components", () => {
     expect(headlineToStatusLevel(projection.headline.state)).toBe("healthy");
   });
 
-  it.each(["broad", "unknown cap", "stale cache", "missing clock", "unknown lane", "stale mint", "unattributed"] as const)(
+  it.each(["broad", "unknown cap", "stale cache", "missing clock", "unknown lane", "stale mint"] as const)(
     "does not let asset notices conceal %s failure", (failure) => {
       const health = assetScopedHealth();
       if (failure === "broad") health.stablecoinPublication!.expectedActiveCount = 10;
@@ -126,7 +126,6 @@ describe("public status components", () => {
         health.mintBurn.sync.freshnessStatus = "stale";
         health.mintBurn.sync.lastSuccessfulSyncAt = NOW - 6000;
       }
-      if (failure === "unattributed") health.status = "degraded";
       expect(projectPublicStatus(health).headline.state).not.toBe("operational");
     },
   );
@@ -257,12 +256,30 @@ describe("public status components", () => {
     expect(component(health, "data-refresh").reasons).toContain("scheduler:unavailable:slot-start-query-failed");
   });
 
+  it("attributes a degraded raw verdict to bounded listing and price findings without inventing a website failure", () => {
+    const health = assetScopedHealth();
+    health.status = "degraded";
+    health.mintBurn.sync.warning = null;
+    const projection = projectPublicStatus(health);
+    expect(projection.components.find(({ id }) => id === "stablecoin-data")).toMatchObject({
+      state: "degraded",
+      reasons: ["publication-incomplete:asset-scoped", "price-coverage-incomplete:asset-scoped"],
+    });
+    expect(projection.components.find(({ id }) => id === "website-api")).toMatchObject({
+      state: "operational", reasons: [],
+    });
+    expect(projection.headline).toEqual({
+      state: "operational", title: "Systems operational with notices", affected: ["stablecoin-data"],
+    });
+  });
+
   it("surfaces a non-healthy raw verdict even when no component explains it", () => {
     const health = makeHealthyHealthResponse();
     health.status = "degraded";
     expect(component(health, "website-api")).toMatchObject({
       state: "degraded", reasons: ["unattributed-public-health:degraded"],
     });
+    expect(projectPublicStatus(health).headline.state).toBe("degraded");
   });
 
   it("keeps a D1 watch capacity state operational, matching the worker verdict", () => {
