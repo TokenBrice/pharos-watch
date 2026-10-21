@@ -14,6 +14,32 @@
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC deposited into a Gauntlet-curated MetaMorpho vault on Morpho Blue; the curator allocates across conservative USDC lending markets backed by blue-chip crypto and real-world asset collateral",
   "pegMechanism": "ERC-4626 MetaMorpho vault shares appreciate against USDC as borrower interest accrues; withdrawals redeem vault shares for available USDC liquidity or wait for Morpho market liquidity to return",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-21",
+    "reviewer": "Pharos Safety Score R1 vault parity review",
+    "rationale": "The exact Ethereum MetaMorpho V1 receipt 0xdd0f28e19c1780eb6396170735d45153d261490d represents a proportional claim on USDC-denominated lending positions, not a direct fiat-cash claim against Circle. Content as of 2026-10-20: C04 verified the exact instrument and indexed state at block 26236794, with totalAssets 23798175929309 and withdrawableAssets 21839336279050 raw USDC. Earlier exact source and full eight-market inventory at Ethereum block 26098754 establish lender-only positions. Interest, fees and borrower losses affect share NAV; withdrawals remain liquidity-dependent. This sourced departure from the fiat-cash parent establishes protocol-position identity only, not legal segregation, independent child assurance or guaranteed recovery.",
+    "sources": [
+      {
+        "label": "Exact Gauntlet USDC Prime V1 deployment",
+        "url": "https://app.morpho.org/ethereum/vault/0xdd0f28e19c1780eb6396170735d45153d261490d"
+      },
+      {
+        "label": "Exact immutable MetaMorpho source; existing review as of 2026-10-01 at block 26098754",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdd0f28e19c1780eb6396170735d45153d261490d"
+      },
+      {
+        "label": "Exact indexed state as of 2026-10-20, block 26236794; not a direct on-chain whole-book certificate",
+        "url": "https://api.morpho.org/v0/vaults-v1/1:0xdd0f28e19c1780eb6396170735d45153d261490d/state"
+      },
+      {
+        "label": "Morpho lender-position liquidity limits",
+        "url": "https://docs.morpho.org/curate/concepts/liquidity.md"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "gauntlet-usdc-prime-morpho-vault",
   "links": [

@@ -40,7 +40,7 @@
     "attestorJurisdiction": "Netherlands",
     "attestorLicense": "EMI (MiCA)",
     "latestReport": {
-      "publishedAt": "2026-08-30",
+      "publishedAt": "2026-10-14",
       "reviewReference": {
         "date": "2026-06-30",
         "reviewedAt": "2026-08-14",
@@ -53,7 +53,7 @@
       "confidence": "unknown",
       "sources": [
         {
-          "label": "Quantoz transparency: snapshot published 30 August 2026",
+          "label": "Quantoz transparency: snapshot published 14 October 2026",
           "url": "https://www.quantoz.com/transparency"
         }
       ]
@@ -101,6 +101,11 @@
       "chain": "algorand",
       "address": "2768422954",
       "decimals": 6
+    },
+    {
+      "chain": "stellar",
+      "address": "EURQ-GCA6KZBWPBOEF6M2MZBTXRMKLMWRZOUCL2JFSIDT3WTDBOFIVDC4C4CE",
+      "decimals": 7
     }
   ],
   "custodyModel": "institutional-regulated",

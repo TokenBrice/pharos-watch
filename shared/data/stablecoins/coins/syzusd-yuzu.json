@@ -107,6 +107,11 @@
       "chain": "aptos",
       "address": "0x5763307032c1971376260ca48cc627eb7cfde4d021aabc6bce9ffb9c7aa30619",
       "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0xa343e5053e26371909fb8a2e9b7b391a49e7d2fd",
+      "decimals": 18
     }
   ],
   "collateralQuality": "exotic",

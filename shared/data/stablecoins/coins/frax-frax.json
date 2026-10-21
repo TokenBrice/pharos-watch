@@ -127,7 +127,7 @@
     }
   ],
   "governanceQuality": "dao-governance",
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "mixed",
   "liveReservesConfig": {
     "adapter": "frax-balance-sheet",
     "version": 3,

@@ -15,21 +15,25 @@
   "geckoId": "mxnb",
   "proofOfReserves": {
     "type": "attestation",
-    "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q2_2026_en.pdf",
+    "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q3_2026_en.pdf",
     "provider": "BDO Mexico (Castillo Miranda y Compania) quarterly financial valuation reports, signed by a corporate-finance/valuation partner acting as consultants under IVSC valuation standards; the report expressly does not confirm reserve accounts with banks and expresses no assurance opinion",
     "attestorTier": "regional",
     "cadence": "quarterly",
     "attestorJurisdiction": "Mexico",
     "latestReport": {
-      "periodEnd": "2026-06-30",
-      "publishedAt": "2026-07-16",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-14",
       "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "unknown",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Sol curation campaign 2026-10-09 (Lane50Tori); Q2 consultancy valuation re-read, not an audit or named assurance-standard engagement; original June 30 / July 16 dates retained",
+      "reviewer": "C08 bottom-up refinement 2026-10-21; Q3 report retrieved 2026-10-20, period September 30 and signature October 14; IVSC consultancy, not an audit or named assurance-standard engagement",
       "confidence": "probable",
       "sources": [
+        {
+          "label": "BDO Mexico MXNB Q3 2026 financial valuation report, signed October 14; no bank confirmation or assurance opinion",
+          "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q3_2026_en.pdf"
+        },
         {
           "label": "BDO Mexico MXNB Q2 2026 valuation report",
           "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q2_2026_en.pdf"

@@ -48,22 +48,29 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "unknown",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
-    "adapter": "m0",
+    "adapter": "m0-solana-wrapper",
     "version": 1,
-    "semantics": "protocol-reserve",
-    "breakerScope": "m0",
+    "semantics": "single-asset",
+    "breakerScope": "m0-solana-wrapper:usdk-kast",
     "display": {
       "url": "https://dashboard.m0.org/",
       "label": "M0 Dashboard"
     },
     "inputs": {
       "primary": {
-        "kind": "http-json",
-        "url": "https://protocol-api.m0.org/graphql"
+        "kind": "onchain-solana"
       }
+    },
+    "params": {
+      "program": "extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw",
+      "globalAccount": "AiiXk9Rztiv9E72Ying8byGzvxnVmyaeunysYEmvG1NU",
+      "wrapperMint": "usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX",
+      "underlyingMint": "mzerojk9tg56ebsrEAhfkyc9VgKjTW2zDqp6C5mhjzH",
+      "underlyingVault": "EHNaRY1ZdtaoPVMqE3TW6pacACzEoU1e9V1ToLyavowN",
+      "assetLabel": "M0 M held in USDK's exact Solana extension vault"
     }
   },
   "launchDate": "2025-04-08",

@@ -12,8 +12,29 @@
   "variantOf": "frxusd-frax",
   "variantKind": "savings-passthrough",
   "pegReferenceId": "frxusd-frax",
-  "collateral": "frxUSD deposited into Frax's savings vault; the wrapper remains fully backed by frxUSD while protocol income and custodian yield accrue through the vault exchange rate",
-  "pegMechanism": "Deposit frxUSD to mint sfrxUSD and redeem sfrxUSD for the current convertToAssets amount of frxUSD; the share price rises as Frax routes frxUSD yield to the staking vault",
+  "parentBackingInheritance": {
+    "state": "withheld",
+    "reason": "mixed-strategy-without-measured-parent-claim",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "FD01 bottom-up refinement 2026-10-21",
+    "rationale": "The Benchmark Yield Strategy can allocate the whole book among carry-trade, DeFi AMO and Treasury venues. The issuer's 2026-10-20T22:03:47Z balance-sheet export identifies frxUSD lending and liquidity positions alongside reUSD, crvUSD and USDT. An frxUSD accounting unit and frxUSD-denominated redemption do not establish that the whole strategy book is a measured single-parent frxUSD claim. Withhold favorable parent Backing inheritance while retaining the serial parent cap and peg relationship; this review grants no new portfolio weights, reserve reconciliation or recovery guarantee.",
+    "sources": [
+      {
+        "label": "Frax sfrxUSD Benchmark Yield Strategy",
+        "url": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd"
+      },
+      {
+        "label": "FIP-434 strategy whitelist, capital reuse and discretionary allocations",
+        "url": "https://gov.frax.finance/t/fip-434-sfrxusd-amo-deployments-future-strategies/3786"
+      },
+      {
+        "label": "Issuer sfrxUSD balance-sheet export at 2026-10-20T22:03:47Z, Ethereum block 26236663 and Fraxtal block 42861558",
+        "url": "https://api.frax.finance/v2/sfrxusd/balance-sheet/latest/export"
+      }
+    ]
+  },
+  "collateral": "Frax's Benchmark Yield Strategy positions across governance-approved lending, liquidity, carry-trade and Treasury venues; frxUSD is the accounting and redemption asset, while the strategy book can hold other assets",
+  "pegMechanism": "sfrxUSD is redeemable into frxUSD at the protocol exchange rate through Fraxtal's MintRedeemer or a cross-chain MintRedeemHop. The canonical Ethereum token's ordinary ERC-4626 deposit and withdrawal entrypoints are disabled; the strategy return and protocol-set accounting determine frxUSD per share.",
   "mechanismArchetype": "tbill",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -219,7 +240,7 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-top",
+  "custodyModel": "unknown",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Frax staking (sfrxUSD)",

@@ -114,6 +114,11 @@
       "chain": "optimism",
       "address": "0x2dd1b4d4548accea497050619965f91f78b3b532",
       "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "DnVyztLHnDyTqL3xfPYF9Uqpgrhcxphn6e31sVAwtg6K",
+      "decimals": 9
     }
   ],
   "collateralQuality": "rwa",

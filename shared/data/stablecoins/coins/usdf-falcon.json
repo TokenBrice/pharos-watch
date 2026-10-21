@@ -80,6 +80,11 @@
       "chain": "xdc",
       "address": "0x8210c0634ab8f273806e4b7866e9db353773c44b",
       "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x",
+      "decimals": 9
     }
   ],
   "collateralQuality": "exotic",

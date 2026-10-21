@@ -89,6 +89,12 @@
         "reviewedAt": "2026-09-11",
         "sourceUrl": "https://docs.spark.fi/"
       },
+      "walletCashAccounting": {
+        "mode": "excluded",
+        "basis": "SavingsDai totalAssets counts Pot pie/chi; burns exit Pot and DaiJoin, never vault-held DAI donations.",
+        "reviewedAt": "2026-10-20",
+        "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0x83f20f44975d03b1b09e64809b757c47f942beea"
+      },
       "redemptionLiquidity": {
         "source": "atomic-full-backing"
       }

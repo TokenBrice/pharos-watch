@@ -2,7 +2,7 @@
   "id": "qcad-stablecorp",
   "name": "Stablecorp QCAD",
   "symbol": "QCAD",
-  "oneLiner": "QCAD is Stablecorp's Canadian dollar stablecoin redeemable 1:1 against CAD fiat in regulated Canadian banks under the QCAD Digital Trust framework.",
+  "oneLiner": "QCAD is Stablecorp's CAD stablecoin: prospectus-qualified tokens use QCAD Digital Trust; legacy tokens have separate reserves and redemption terms.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "CAD",
@@ -94,6 +94,14 @@
         "confidence": "verified"
       },
       "sources": [
+        {
+          "label": "August 2026 Trust-only attestation, signed October 14; newer reference, not the May composition authority",
+          "url": "https://www.sedarplus.ca/csa-party/records/document.html?id=fbf56cb55e09ea802ca1ebf72554554f052a0cb99c7f1e2ba91706350a698de0"
+        },
+        {
+          "label": "Retrieved August attestation text: August 18/31 reserves and Trust liabilities CAD 1,653,040.54; Appendix A Ethereum only",
+          "url": "https://r.jina.ai/https://www.sedarplus.ca/csa-party/records/document.html?id=fbf56cb55e09ea802ca1ebf72554554f052a0cb99c7f1e2ba91706350a698de0"
+        },
         {
           "label": "Davidson & Company QCAD reasonable-assurance attestation - May 2026 (retained composition-matching report)",
           "url": "https://www.sedarplus.ca/csa-party/records/document.html?id=cdb08e008e109f2cfd9f81ad62011f100ac1bd0d95a48ed4861aaaaaba974b5c"

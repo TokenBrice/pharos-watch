@@ -116,6 +116,11 @@
       "chain": "redbelly",
       "address": "0x54a210e824b0f89da988e4b5586440ab354f0e46",
       "decimals": 6
+    },
+    {
+      "chain": "arc",
+      "address": "0xdec15d98d8c16d9ca2f8cc94ba4b88fe4f259393",
+      "decimals": 6
     }
   ],
   "custodyModel": "institutional-regulated",

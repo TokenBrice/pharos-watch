@@ -2,7 +2,7 @@
   "id": "nwisdom-nest",
   "name": "Nest Wisdom Vault",
   "symbol": "nWISDOM",
-  "oneLiner": "nWISDOM is a Nest vault share backed mainly by WisdomTree Connect tokenized fund exposure (xCRDYX), accruing yield through NAV rather than a hard $1 peg.",
+  "oneLiner": "nWISDOM is Nest's NAV-priced vault; its feed includes material nUSDR receivable exposure with undisclosed economic terms.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized-dependent",
@@ -10,8 +10,8 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "Predominantly WisdomTree Private Credit and Alternative Income Digital Fund tokenised shares (xCRDYX), which hold publicly-traded alternative credit vehicles (BDCs, closed-end credit funds and mortgage REITs) tracking the Gapstow index, plus a small Nest Treasury Vault (nTBILL) position and a stablecoin (pUSD / USDC) liquidity buffer for redemptions",
-  "pegMechanism": "Vault LP token whose value targets a dollar base and accretes through underlying WisdomTree fund NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
+  "collateral": "Nest's exact positions feed identifies nUSDR at Plume 0x9f7c9b376db048720671b93d5258f75c66653225, stablecoin balances, nTBILL and a near-zero xCRDYX position. The nUSDR token name is Nest USD Receivable, but its legal obligor, enforceable claim, maturity and realization terms are not established by the public disclosures; it is not classified as cash or a stablecoin merely because the API lists it under liquidAssets.",
+  "pegMechanism": "Vault LP token whose value follows the Nest strategy NAV, including underlying fund and receivable valuations; primary mint and redemption occur through Nest at NAV using route-specific supported stablecoins",
   "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",
   "geckoId": "nest-wisdomtree-vault",

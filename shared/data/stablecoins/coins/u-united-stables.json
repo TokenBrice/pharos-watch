@@ -17,18 +17,18 @@
     "attestorTier": "niche",
     "cadence": "real-time",
     "latestReport": {
-      "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-11",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-08",
       "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "review",
       "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "partial",
-      "reviewer": "Pharos reserve research 2026-10-19 (August Moore CPA ISAE 3000 report PDF reviewed; supply reconciled for BNB Smart Chain, Ethereum and Tron, not Robinhood)",
+      "liabilityReconciliation": "full",
+      "reviewer": "FD24 bottom-up refinement 2026-10-20: September Moore CPA ISAE 3000 limited-assurance report reviewed, including scanned pages 1-5; four-network supply reconciled. Moore signed October 7; board approval signed October 8 is the conservative publication-date stand-in. No audit opinion, future liquidity or stablecoin/RWUSD par-value assurance is claimed.",
       "confidence": "verified",
       "sources": [
         {
-          "label": "United Stables Reserves Report as at August 31 2026 with Moore CPA Limited ISAE 3000 limited-assurance report (signed September 11 2026)",
-          "url": "https://u.tech/assets/audit-report/USL%20-%20Assurance%20%26%20Reserves%20Report%20Aug_19082026.pdf"
+          "label": "United Stables Reserves Report as at September 30 2026; Moore CPA Limited ISAE 3000 conclusion signed October 7 and board approval October 8",
+          "url": "https://u.tech/assets/audit-report/USL%20-%20Assurance%20%26%20Reserves%20Report%20for%20Sep_08102026.pdf"
         },
         {
           "label": "United Stables monthly independent assurance reports",

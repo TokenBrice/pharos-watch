@@ -7,8 +7,8 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Adapter-held positions: Curve USDU/USDC LP tokens, Morpho USDU Core vault shares (curated lending), and TermMax USDU vault shares (fixed-term lending) as on-chain backing",
-  "pegMechanism": "Protocol-minted via DAO-approved adapters; convertible to USDC via Curve pools",
+  "collateral": "Adapter-held positions include historical Curve USDU/USDC LP and USDU-denominated Morpho/TermMax vault claims, plus reviewed USDC- and USDT-denominated ERC-4626 positions in SwapBridgeMorphoV1 modules. The issuer's legacy three-rail backing API does not establish a complete current all-module allocation.",
+  "pegMechanism": "Protocol-minted via DAO-approved adapters; secondary-market conversion and reviewed USDC/USDT swap modules provide liquidity-dependent exits with nominal-parity accounting.",
   "llamaId": "304",
   "detailProvider": "defillama",
   "links": [
@@ -37,13 +37,13 @@
   "notices": [
     {
       "type": "info",
-      "title": "Post-wind-down collateral coverage",
-      "message": "USDU Finance's transparency page currently reports roughly 100% collateralization after a sharp supply wind-down, with backing concentrated in Morpho USDU Core vault shares and Curve USDU/USDC LP tokens."
+      "title": "Incomplete current backing disclosure",
+      "message": "The issuer's backing API reports legacy Curve, TermMax and Morpho totals, but does not identify every current and historical residual module or reconcile them to total USDU liabilities. Its displayed collateralization ratio is not a verified whole-book measure."
     },
     {
       "type": "warning",
       "title": "Conflicting issuer disclosures",
-      "message": "USDU Finance's live transparency endpoint now reports backing approximately equal to circulating supply after the wind-down. Treat exact collateralization and allocation figures as live-snapshot values because supply and adapter balances have moved materially."
+      "message": "USDU's transparency page and protocol-minting docs describe different issuance paths from the reviewed USDC/USDT swap modules. Complete current backing allocation, external valuation and liability reconciliation remain unresolved; the incomplete dashboard alone establishes neither full collateralization nor a reserve shortfall."
     }
   ],
   "launchDate": "2025-07-04",

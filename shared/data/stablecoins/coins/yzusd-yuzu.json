@@ -209,7 +209,10 @@
         "[Aave]_USDC": "usdc-circle",
         "[Curvance]_AUSD": "ausd-agora",
         "[Morpho]_USDC": "usdc-circle",
-        "[Re]_reUSD_LP": "reusd-re-protocol"
+        "[Re]_reUSD_LP": "reusd-re-protocol",
+        "[Global_Dollar]_USDG": "usdg-paxos",
+        "[AAVE]_USDT": "usdt-tether",
+        "[Sky]_sUSDS_Loop": "susds-sky"
       },
       "depTypeMap": {
         "[Fluid]_fUSDT0": "collateral",
@@ -249,7 +252,10 @@
         "[Aave]_USDC": "collateral",
         "[Curvance]_AUSD": "collateral",
         "[Morpho]_USDC": "collateral",
-        "[Re]_reUSD_LP": "collateral"
+        "[Re]_reUSD_LP": "collateral",
+        "[Global_Dollar]_USDG": "collateral",
+        "[AAVE]_USDT": "collateral",
+        "[Sky]_sUSDS_Loop": "collateral"
       },
       "renameMap": {
         "[Fluid]_fUSDT0": "Fluid fUSDT0",

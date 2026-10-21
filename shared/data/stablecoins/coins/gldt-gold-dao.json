@@ -32,7 +32,7 @@
   "detailProvider": "commodity",
   "geckoId": "gold-token",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "agreed-upon-procedures",
     "url": "https://docs.gold-dao.org/other/audit-reports",
     "provider": "KPMG SA Neuchatel (Swiss Auditing Standard 920 reports of factual findings, expressly neither an audit nor a review, restricted use; reconciles 7.9kg gold at Loomis to GLD NFT certificates of Bity Tokenisation SA - not to GLDT token supply - sampling 100 of 790 serials; newest report periodEnd 2025-09-21, published 2025-10-02, series stalled ~10.5 months against the claimed cycle; gldt.org itself hosts no artefact)",
     "attestorTier": "big4",
@@ -44,7 +44,7 @@
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "PoR verification sweep 2026-08 (PDF read: Swiss AS 920 factual findings, no assurance expressed; reconciles gold to GLD NFT certificates, not GLDT supply; newest artefact in a stalled series)",
+      "reviewer": "PoR verification sweep 2026-08 (PDF read: Swiss AS 920 factual findings, no assurance expressed; reconciles gold to GLD NFT certificates, not GLDT supply; newest artefact in a stalled series). Source-scoped correction: The source review re-read the report and current issuer index on 2026-10-20; corrected engagement type from independent-audit to agreed-upon-procedures without changing report dates, scope or reconciliation.",
       "confidence": "verified",
       "sources": [
         {

@@ -18,7 +18,7 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://frax.com/transparency",
-    "provider": "Frax/Chaos Labs reserve index; Erebor cash issuer-disclosed",
+    "provider": "Frax issuer reserve index; Chaos Labs monitoring historical, current whole-book coverage unverified",
     "attestorTier": "niche",
     "cadence": "real-time"
   },
@@ -201,7 +201,7 @@
       "decimals": 18
     }
   ],
-  "custodyModel": "institutional-top",
+  "custodyModel": "mixed",
   "governanceQuality": "dao-governance",
   "liveReservesConfig": {
     "adapter": "frax-balance-sheet",
