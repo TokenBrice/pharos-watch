@@ -2747,7 +2747,13 @@
         "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=all",
         "https://bscscan.com/address/0xe60106a5cab7e7c64830919d36ab20caaf50ac91",
         "https://ethereum-rpc.publicnode.com",
-        "https://rpc.mantle.xyz"
+        "https://rpc.mantle.xyz",
+        "https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/bsc-api-list/",
+        "https://docs.base.org/specifications/base-protocol/consensus/derivation",
+        "https://docs.mantle.xyz/network/for-developers/resources-and-tooling/mantle-api.md",
+        "https://docs.mantle.xyz/network/system-information/transaction-lifecycle.md",
+        "https://www.dwellir.com/docs/mantle/eth_getBlockByNumber",
+        "https://mainnet.base.org"
       ],
       "economicScope": "All outstanding six-decimal XGLD token claims on BSC, Base, Ethereum and Mantle, including zero and dust holdings. Whole-runtime equality to exact-match XGLDToken/OFT source establishes the same non-rebasing claim unit; transport burns on source and mints on destination, with authenticated bidirectional pending added once. All minted holder balances remain in supply until burned, including treasury, redemption-contract and composer-held balances; no holder exclusion or collateral/XAUt token is treated as XGLD circulation. Twelve current and historical reciprocal pathways are exhaustive from each authenticated zero-nonce creation floor. The issuer two-chain table is not the full on-chain census. Fresh independent CoinGecko price binds the unchanged upstream USD aggregate, never gold par or a static deployment share.",
       "sourceId": "coingecko",
@@ -2766,7 +2772,8 @@
           "routeId": "bsc:0xe60106a5cab7e7c64830919d36ab20caaf50ac91",
           "read": {
             "kind": "evm-total-supply",
-            "safeBlockLag": 3889
+            "safeBlockLag": 3889,
+            "pinPolicy": "finalized-preferred"
           },
           "claimUnit": "xgld-unitas-token",
           "conversionSourceId": null
@@ -2781,7 +2788,8 @@
           "routeId": "base:0xea953ea6634d55dac6697c436b1e81a679db5882",
           "read": {
             "kind": "evm-total-supply",
-            "safeBlockLag": 875
+            "safeBlockLag": 875,
+            "pinPolicy": "finalized-preferred"
           },
           "claimUnit": "xgld-unitas-token",
           "conversionSourceId": null
@@ -2812,7 +2820,8 @@
           "routeId": "mantle:0x385c279445581a186a4182a5503094ebb652ec71",
           "read": {
             "kind": "evm-total-supply",
-            "safeBlockLag": 875
+            "safeBlockLag": 875,
+            "pinPolicy": "finalized-preferred"
           },
           "claimUnit": "xgld-unitas-token",
           "conversionSourceId": null
@@ -2939,7 +2948,10 @@
         "https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api?module=contract&action=getsourcecode&address=0x316cd39632cac4f4cdfc21757c4500fe12f64514",
         "https://rpc.berachain.com",
         "https://sourcify.dev/server/v2/contract/1/0x738d1115b90efa71ae468f1287fc864775e23a31?fields=all",
-        "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all"
+        "https://sourcify.dev/server/v2/contract/8453/0x62344be8ca1c339b46274a4017dd87af436900b1?fields=all",
+        "https://docs.berachain.com/nodes/architecture/beaconkit-consensus",
+        "https://ethereum.org/en/developers/docs/consensus-mechanisms/pos/gasper/",
+        "https://ethereum-rpc.publicnode.com"
       ],
       "economicScope": "All non-rebasing Savingcoin srUSD token-share claims on Ethereum and Berachain. The exact verified Ethereum Savingcoin source is plain ERC20Burnable plus role-gated minting, not rebasing rUSD, wsrUSD, NAV or a gold/par denominator. Standard Ethereum OFTAdapter locks the canonical shares; bytecode/source-correspondent Berachain OFT issues equal 18-decimal share receipts (shared decimals 6). Measure both supplies, adapter-held backing and both authenticated message directions at their exact finalized holding pins; remove backing from Ethereum once, retain all remote receipts, and reconcile backing exactly to receipts plus authenticated pending. All minted shares held in savings, wrappers, treasury or redemption contracts remain claims until burned; underlying rUSD and separately catalogued wsrUSD are not additional srUSD liabilities. Creation-to-finalized PeerSet censuses contain solely this reciprocal two-side path, Berachain EID30362, with authenticated zero outbound nonces before each creation. Independently timestamped CoinGecko srUSD price binds the unchanged upstream aggregate; no static shares or escrow-minus-receipts pending.",
       "sourceId": "coingecko",
@@ -2958,7 +2970,8 @@
           "routeId": "ethereum:0x738d1115b90efa71ae468f1287fc864775e23a31",
           "read": {
             "kind": "evm-total-supply",
-            "safeBlockLag": 128
+            "safeBlockLag": 128,
+            "pinPolicy": "finalized-preferred"
           },
           "claimUnit": "srusd-reservoir-token",
           "conversionSourceId": null
@@ -2973,7 +2986,8 @@
           "routeId": "berachain:0x5475611dffb8ef4d697ae39df9395513b6e947d7",
           "read": {
             "kind": "evm-total-supply",
-            "safeBlockLag": 768
+            "safeBlockLag": 768,
+            "pinPolicy": "finalized-preferred"
           },
           "claimUnit": "srusd-reservoir-token",
           "conversionSourceId": null

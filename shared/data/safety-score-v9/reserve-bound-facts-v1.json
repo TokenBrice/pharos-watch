@@ -252,6 +252,21 @@
         "conclusion": "open-ended",
         "governingInstrument": "JPMorgan OnChain Liquidity-Token Money Market Fund Token Class prospectus dated May 13, 2026, supplemented August 17, 2026, JLTXX CUSIP 46655R119",
         "allInScope": true
+      },
+      {
+        "factKey": "usdgo:cash-demand-deposits:2026-08-31:maturity-applicability",
+        "kind": "maturity-applicability",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:b4e71849e8a3fe183e4d5308" },
+        "asOfSec": 1788220799,
+        "publisher": "Anchorage Digital Bank, National Association / Deloitte & Touche LLP",
+        "sourceUrls": ["https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"],
+        "assertion": "USDGO Reserve Report as of August 31, 2026 23:59:59 UTC, examined by Deloitte and signed September 28, Schedule II page 5 identifies the entire $12,431,912 cash exposure as demand deposit accounts at FDIC-insured depository institutions, held directly in the United States. The exact exposure is therefore on-demand bank balances, not dated term deposits with a contractual repayment maturity. This structural maturity disposition does not establish bank identity, deposit-insurance coverage, stressed liquidity or completed USDGO holder redemption timing; the report separately identifies $12,181,912 as uninsured.",
+        "contentDigest": "945b496e7048c34da46494d6eeea0ded8ba8e026911d56d1552d5d92fa1c9429",
+        "provenance": { "kind": "reviewed-research", "reviewedAt": "2026-10-20", "reviewer": "C09 bottom-up refinement 2026-10-21", "confidence": "high" },
+        "claimId": "USDGO August 31, 2026 Schedule II: all cash held directly in demand deposit accounts",
+        "conclusion": "not-applicable",
+        "governingInstrument": "Deloitte-examined USDGO Reserve Report, August 31, 2026, Schedule II section 1, page 5: demand deposit accounts",
+        "allInScope": true
       }
     ],
     "zarsc-supercoin": [
@@ -1478,6 +1493,28 @@
         "claimId": "PAXG complete allocated physical-gold reserve / reserve:bb342ba2193c0fceb94f272f / 431,313 fine troy ounces at August 31, 2026 21:00 UTC",
         "conclusion": "not-applicable",
         "governingInstrument": "PAX Gold Terms and Conditions, last modified December 12, 2025, sections 1.1, 4.2-4.3, 5.1-5.3; KPMG-examined August 31, 2026 PAXG Redemption Assets Report Exhibit B p.6",
+        "allInScope": true
+      }
+    ],
+    "bc3m-backed": [
+      {
+        "factKey": "bc3m-backed:amundi-fr0010754200:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:5b88ab39ffe7a05d24df56b5" },
+        "asOfSec": 1776297600,
+        "publisher": "Amundi Asset Management",
+        "sourceUrls": ["https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA"],
+        "assertion": "Amundi Euro Government Bond 0-6 M UCITS ETF Acc Prospectus and Reglement, updated April 16, 2026, identifies ISIN FR0010754200 and fund shares as coproprietary interests in a French FCP (Prospectus sections I and III.1, printed pages 2 and 4). Reglement Article 1 states a 99-year fund life subject to early dissolution or extension; Article 11 expressly permits extension by the management company with depositary agreement and requires notice before expiry. Accordingly the extendable fund life is not a predetermined maturity of the held redeemable shares. This exact ISIN is the entire Amundi ETF fund-share reserve of bC3M identified by Backed. The underlying index's 0-to-6-month bond tenor is not share maturity, and no scheduled share payoff, finite maturity maximum or liquidation guarantee is inferred.",
+        "contentDigest": "9b5b037c3820d341f4049ced508c50f1d99c1b59033b8320f60bc4f0c8676445",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-20",
+          "reviewer": "C28 bottom-up refinement 2026-10-21",
+          "confidence": "high"
+        },
+        "claimId": "Amundi Euro Government Bond 0-6 M UCITS ETF Acc shares / ISIN FR0010754200 / bC3M reserve:5b88ab39ffe7a05d24df56b5",
+        "conclusion": "open-ended",
+        "governingInstrument": "Amundi Prospectus et Reglement updated April 16, 2026, Prospectus sections I and III.1 and Reglement Articles 1 and 11",
         "allInScope": true
       }
     ]
