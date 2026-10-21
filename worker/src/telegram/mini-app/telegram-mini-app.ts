@@ -53,8 +53,10 @@ export const TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC = 24 * 60 * 60;
 // 5-min mutation window per community consensus; 24h session window preserved for reads.
 export const TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC = 5 * 60;
 const SESSION_COOLDOWN_SEC = 2;
-const MUTATION_AUTH_FAILURE_COOLDOWN_SEC = 5;
-const MUTATION_AUTH_FAILURE_COOLDOWN_KEY = "mini-app:mutation-auth-failure";
+// Telegram never refreshes initData inside a running Mini App, so one expired
+// launch (one initData hash) is one incident however often the client retries.
+// Matches the 7-day short-lived chat cache retention that prunes the key.
+const STALE_AUTH_TELEMETRY_DEDUPE_SEC = 7 * 24 * 60 * 60;
 const MAX_REQUEST_BODY_BYTES = 16 * 1024;
 const NO_STORE = { noStore: true };
 
@@ -253,8 +255,6 @@ async function validateOrResponse(
   options: {
     maxAgeSec: number;
     start: number;
-    cooldownKey: string;
-    cooldownSec: number;
     /**
      * Usage event emitted on a signed-but-expired launch. Session reads keep
      * `mini_app_session_invalid`; the mutation surface records
@@ -277,32 +277,31 @@ async function validateOrResponse(
     if (err instanceof TelegramMiniAppAuthError) {
       if (err.code === "stale-auth") {
         const staleAuth = err.authContext;
-        if (staleAuth) {
-          const cooldown = await acquireTelegramCommandCooldown(db, {
-            chatId: staleAuth.userId,
-            commandKey: options.cooldownKey,
-            nowSec: unixNow(),
-            cooldownSec: options.cooldownSec,
-          });
-          if (!cooldown.allowed) {
-            return miniAppError(429, "rate-limited", "Mini App auth rate limited", {
-              retryAfterSec: cooldown.retryAfterSec,
-            });
-          }
-        }
         // Stale-auth requires the HMAC signature to have already validated; emit
         // a usage event so operators can distinguish expired sessions from
         // invalid-signature / invalid-auth (which stay silent to avoid an
-        // unauthenticated-write gate). Signed stale-auth carries user context,
-        // so acquire the per-user cooldown before the analytics write.
-        await recordMiniAppEvent(db, {
-          eventType: options.staleAuthEvent.eventType,
-          auth: staleAuth,
-          actionDetail: options.staleAuthEvent.actionDetail,
-          outcome: err.code,
-          failureClass: err.code,
-          latencyMs: Date.now() - options.start,
-        });
+        // unauthenticated-write gate). The event is recorded once per expired
+        // initData and event type, so the metric counts incidents rather than
+        // client retries. The cooldown only gates telemetry: every retry still
+        // gets 401 `stale-auth` so the client can show the relaunch path.
+        const firstSighting = staleAuth
+          ? (await acquireTelegramCommandCooldown(db, {
+            chatId: staleAuth.userId,
+            commandKey: `mini-app:stale:${options.staleAuthEvent.eventType}:${staleAuth.initDataHash.slice(0, 16)}`,
+            nowSec: unixNow(),
+            cooldownSec: STALE_AUTH_TELEMETRY_DEDUPE_SEC,
+          })).allowed
+          : true;
+        if (firstSighting) {
+          await recordMiniAppEvent(db, {
+            eventType: options.staleAuthEvent.eventType,
+            auth: staleAuth,
+            actionDetail: options.staleAuthEvent.actionDetail,
+            outcome: err.code,
+            failureClass: err.code,
+            latencyMs: Date.now() - options.start,
+          });
+        }
       }
       return authResponse(err);
     }
@@ -376,8 +375,6 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
     const auth = await validateOrResponse(db, parsed.initData, configuredBotToken, {
       maxAgeSec: TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC,
       start,
-      cooldownKey: "mini-app:session",
-      cooldownSec: SESSION_COOLDOWN_SEC,
       staleAuthEvent: { eventType: "mini_app_session_invalid" },
     }, botTokenPrevious);
     if (auth instanceof Response) return auth;
@@ -462,8 +459,6 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
         ? TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC
         : TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
       start,
-      cooldownKey: readOnlyPortability ? "mini-app:session" : MUTATION_AUTH_FAILURE_COOLDOWN_KEY,
-      cooldownSec: readOnlyPortability ? SESSION_COOLDOWN_SEC : MUTATION_AUTH_FAILURE_COOLDOWN_SEC,
       staleAuthEvent: {
         eventType: readOnlyPortability ? "mini_app_portability" : "mini_app_mutation_denied",
         actionDetail: mutationActionDetail(parsed.operation),

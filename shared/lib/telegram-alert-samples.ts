@@ -9,8 +9,8 @@ import type { TelegramAlertType } from "../types/status/telegram";
 export const TELEGRAM_PUBLIC_ALERT_SAMPLES: Record<TelegramAlertType, { message: string }> = {
   dews: {
     message: `DEWS
-🟡 USDT — WATCH → ALERT (score: 42)
-Top signals: pool_balance_drift (61%), supply_velocity (48%)
+🟡 USDT stress rose to ALERT (score 42, was WATCH)
+Main drivers: Pool Balance Drift 61, Supply Velocity 48
 
 View on Pharos: pharos.watch/stablecoin/usdt-tether`,
   },
@@ -23,9 +23,9 @@ View on Pharos: pharos.watch/stablecoin/usdc-circle`,
   },
   safety: {
     message: `Safety Grade Change
-USDR — B → F
+USDR Safety grade downgraded to F (was B)
 Score: 70 → 39
-Reason: Active depeg peak 7546 bps capped the pre-variant Safety Score at F (39). Now: Safety F 39 · Liquidity 57, DEX TVL $1.2M · Supply $13.1M
+Reason: Active depeg peak 7546 bps capped the pre-variant Safety Score at F (39).
 
 View on Pharos: pharos.watch/stablecoin/usdr-tangible`,
   },

@@ -130,7 +130,7 @@ describe("buildAlertContextLines", () => {
     expect(context.get("usdc-circle") ?? "").not.toContain("Safety");
   });
 
-  it("includes V9 model provenance from the thin alert envelope", async () => {
+  it("shows the safety grade without internal model identifiers", async () => {
     mocks.loadActiveAlertSafetySourceAssessment.mockResolvedValueOnce(
       safetyAssessment({ "usdc-circle": { grade: "A", score: 85, methodologyVersion: "9.0" } }),
     );
@@ -140,7 +140,7 @@ describe("buildAlertContextLines", () => {
 
     const context = await buildAlertContextLines(db, ["usdc-circle"]);
 
-    expect(context.get("usdc-circle")).toContain("Safety A 85 (V9 9.0)");
+    expect(context.get("usdc-circle")).toBe("Context: Safety A 85");
   });
 
   it("chunks liquidity context reads to stay under the D1 bind limit", async () => {

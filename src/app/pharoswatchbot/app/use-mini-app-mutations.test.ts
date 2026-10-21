@@ -53,7 +53,8 @@ function makeArgs(overrides: Partial<UseMiniAppMutationsArgs> = {}): UseMiniAppM
     webApp: makeWebApp(),
     onSnapshotReplaced: vi.fn(),
     onForgotten: vi.fn(),
-    reloadSession: vi.fn().mockResolvedValue(undefined),
+    authExpired: false,
+    onSessionAuthExpired: vi.fn(),
     messageAutoDismissActive: true,
     mutationsAllowed: true,
     portabilityReadsAllowed: true,
@@ -259,16 +260,38 @@ describe("useMiniAppMutations", () => {
     expect(result.current.message).toBe("Mini App was updated. Close and reopen it from PharosWatchBot.");
   });
 
-  it("reloads the session after stale auth without replacing the rejected snapshot", async () => {
+  it("keeps a stale-auth rejection as visible intent and stops sending edits", async () => {
     apiMocks.postMiniAppSnapshot.mockRejectedValueOnce(new MiniAppRequestError(401, "stale-auth"));
     const onSnapshotReplaced = vi.fn();
-    const reloadSession = vi.fn().mockResolvedValue(undefined);
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ onSnapshotReplaced, reloadSession })));
+    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ onSnapshotReplaced })));
 
     await act(async () => { await result.current.performMutation({ kind: "pause" }); });
     expect(onSnapshotReplaced).not.toHaveBeenCalled();
-    expect(reloadSession).toHaveBeenCalledWith({ clearMessage: false });
-    expect(result.current.message).toBe("Telegram authorization expired. Close and reopen from PharosWatchBot.");
+    expect(result.current.message).toBeNull();
+    expect(result.current.staleAuth).toEqual({ intent: "Not saved: All alerts paused." });
+
+    await act(async () => { await result.current.performMutation({ kind: "clear-snooze" }); });
+    expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledOnce();
+    expect(result.current.staleAuth).toEqual({ intent: "Not saved: Snooze cleared." });
+  });
+
+  it("ends the session when a signed read hits stale-auth", async () => {
+    apiMocks.postMiniAppPortability.mockRejectedValueOnce(new MiniAppRequestError(401, "stale-auth"));
+    const onSessionAuthExpired = vi.fn();
+    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ onSessionAuthExpired })));
+
+    await act(async () => { await result.current.performPortability({ kind: "export-watchlist" }); });
+    expect(onSessionAuthExpired).toHaveBeenCalledOnce();
+    expect(result.current.staleAuth).toEqual({ intent: null });
+    expect(result.current.message).toBeNull();
+  });
+
+  it("never sends an edit while launch auth is already known to be expired", async () => {
+    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ authExpired: true, mutationsAllowed: false })));
+
+    await act(async () => { await result.current.performMutation({ kind: "forget-me" }); });
+    expect(apiMocks.postMiniAppSnapshot).not.toHaveBeenCalled();
+    expect(result.current.staleAuth).toEqual({ intent: "Data deletion was not run." });
   });
 
   it("restores the persisted server row, not stale client tuning, during the undo window", async () => {

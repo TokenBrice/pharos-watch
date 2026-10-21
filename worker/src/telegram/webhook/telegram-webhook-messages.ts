@@ -511,15 +511,15 @@ export function buildManageWatchlistMessage(subscriptions: SubscriptionRow[], pa
 /** Shared availability/evidence disclosure for compact status and coverage. */
 export function formatTelegramSafety(safety: NonNullable<StatusForCoin["safety"]>): string {
   const rating = safety.ratingStatus === "pipeline-gap"
-    ? "Pipeline gap — Unavailable"
+    ? "not available right now"
     : safety.grade ?? (safety.ratingStatus === "not-rated" ? "Unrated" : "Unavailable");
-  return `${rating}${safety.score != null ? ` (${safety.score})` : ""}${safety.ratingStatus !== "pipeline-gap" && safety.partialEvidence ? " — Partial evidence: pipeline gap" : ""} [${safety.model.toUpperCase()} ${safety.methodologyVersion}]`;
+  return `${rating}${safety.score != null ? ` (${safety.score})` : ""}${safety.ratingStatus !== "pipeline-gap" && safety.partialEvidence ? ", some inputs missing" : ""}`;
 }
 
 /** Status and coverage disclose the same accepted source evidence. */
 export function formatTelegramYield(status: StatusForCoin): string {
   const value = status.yield;
-  if (!value) return `Yield: unavailable (${escapeHtml(status.yieldUnavailableReason ?? "yield-ranking-not-found")})`;
+  if (!value) return "Yield: unavailable";
   const provenance = value.provenance;
   const freshness = provenance?.sourceFreshness ?? "unknown";
   const reason = freshness === "stale" ? "source-stale"
@@ -545,10 +545,10 @@ export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
     ? `Safety: ${formatTelegramSafety(s.safety)}, ${formatAge(s.safety.publishedAt, nowSec)}`
     : s.safetyUnavailableReason
       ? "Safety: temporarily unavailable"
-      : "Safety: UNKNOWN";
+      : "Safety: not rated";
   const depegLine =
     s.depeg.status === "active"
-      ? `Depeg: ACTIVE — ${s.depeg.direction} peg, peak ${(s.depeg.peakDeviationBps / 100).toFixed(1)}%, started ${formatElapsed(s.depeg.startedAt, nowSec)}`
+      ? `Depeg: active, ${s.depeg.direction} peg, peak ${(s.depeg.peakDeviationBps / 100).toFixed(1)}%, started ${formatElapsed(s.depeg.startedAt, nowSec)}`
       : "Depeg: stable";
   // Optional context keeps its producer clock: values outside their existing budget are labelled
   // stale, and unavailable supply is stated explicitly rather than rendered as $0 or dropped.
@@ -562,7 +562,7 @@ export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
   const liquidityLine = s.liquidity
     ? `Liquidity: ${s.liquidity.score ?? "NR"}${liquidityTvl ? `, TVL ${liquidityTvl}` : ""} (${formatAge(s.liquidity.updatedAt, nowSec)}${staleSuffix(s.liquidity.current)})`
     : s.liquidityUnavailableReason
-      ? `Liquidity: unavailable (${escapeHtml(s.liquidityUnavailableReason)})`
+      ? "Liquidity: unavailable"
       : null;
   const yieldLine = formatTelegramYield(s);
   const flowSigned = s.flow ? formatTelegramSignedCompactUsd(s.flow.netFlowUsd) : null;

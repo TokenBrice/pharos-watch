@@ -2,7 +2,7 @@ import {
   getReportCardGradeRank,
   UNKNOWN_REPORT_CARD_GRADE_RANK,
 } from "@shared/lib/report-card-core";
-import type { SafetyChange } from "../../../telegram/common/alerts-formatting";
+import { SAFETY_PILLAR_GLOSS, type SafetyChange } from "../../../telegram/common/alerts-formatting";
 import type {
   AlertSafetySourceRow,
   AlertSafetyV9ExplainSnapshot,
@@ -23,6 +23,11 @@ function capitalize(value: string): string {
   return value.length === 0
     ? value
     : `${value[0]!.toUpperCase()}${value.slice(1)}`;
+}
+
+function pillarGloss(pillar: string): string {
+  const gloss = SAFETY_PILLAR_GLOSS[pillar];
+  return gloss ? ` ${capitalize(pillar)} measures ${gloss}.` : "";
 }
 
 function compareGradeOrScore(
@@ -101,7 +106,16 @@ export function buildV9SafetyReason(
     "grade" | "score" | "v9Explain"
   >,
 ): string {
+  const overallDirection = compareGradeOrScore(
+    previous?.grade ?? current.grade,
+    current.grade,
+    previous?.score ?? null,
+    current.score,
+  );
+  // A newly binding cap explains a fall, never a rise: an upgrade that lands
+  // on a cap is explained by the pillar that moved.
   if (
+    overallDirection !== "upgrade" &&
     current.v9Explain.bindingCap &&
     (
       current.v9Explain.bindingCap.reason !==
@@ -112,17 +126,11 @@ export function buildV9SafetyReason(
         previous?.v9Explain.bindingCap?.limit
     )
   ) {
-    return `Reason: ${ensureSentence(
-      current.v9Explain.bindingCap.reason,
-    )}`;
+    return current.v9Explain.bindingCap.kind === "parent"
+      ? "Reason: Capped at the Safety Score of the coin it is built on."
+      : `Reason: ${ensureSentence(current.v9Explain.bindingCap.reason)}`;
   }
 
-  const overallDirection = compareGradeOrScore(
-    previous?.grade ?? current.grade,
-    current.grade,
-    previous?.score ?? null,
-    current.score,
-  );
   const pillarMovement = largestPillarMovement(
     current.v9Explain.pillars,
     previous?.v9Explain.pillars,
@@ -130,12 +138,12 @@ export function buildV9SafetyReason(
   );
   if (pillarMovement) {
     const direction =
-      pillarMovement.current > pillarMovement.previous ? "improved" : "fell";
+      pillarMovement.current > pillarMovement.previous ? "rose" : "fell";
     return `Reason: ${capitalize(
       pillarMovement.pillar,
-    )} pillar ${direction} from ${Math.round(
+    )} score ${direction} from ${Math.round(
       pillarMovement.previous,
-    )} to ${Math.round(pillarMovement.current)}.`;
+    )} to ${Math.round(pillarMovement.current)}.${pillarGloss(pillarMovement.pillar)}`;
   }
 
   const previousReasons = new Set(
@@ -150,11 +158,10 @@ export function buildV9SafetyReason(
     )?.message ?? current.v9Explain.reasons[0]?.message;
   if (reason) return `Reason: ${ensureSentence(reason)}`;
   if (current.v9Explain.weakestPillar) {
-    return `Reason: Weakest pillar is ${
-      current.v9Explain.weakestPillar.pillar
-    } (${Math.round(current.v9Explain.weakestPillar.score)}).`;
+    const { pillar, score } = current.v9Explain.weakestPillar;
+    return `Reason: ${capitalize(pillar)} is the weakest score at ${Math.round(score)}.${pillarGloss(pillar)}`;
   }
-  return `Reason: Safety Score is ${current.grade ?? "Unavailable — pipeline gap"}${
+  return `Reason: Safety Score is ${current.grade ?? "not available right now"}${
     current.score === null ? "." : ` (${Math.round(current.score)}).`
   }`;
 }

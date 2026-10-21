@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   SAFETY_AVAILABILITY_HOLD_MAX_SEC,
   SAFETY_RUNTIME_AVAILABILITY_REASON_CODES,
+  buildDewsChanges,
   buildLaunchPromotions,
   buildSafetyChanges,
   holdSuppressedSafetyBaselines,
 } from "../telegram-alert-changes";
-import type { SafetySnapshot } from "../telegram-alert-snapshots";
+import { buildDewsAlertableSnapshot, type SafetySnapshot } from "../telegram-alert-snapshots";
 
 describe("telegram alert change builders", () => {
   describe("buildSafetyChanges", () => {
@@ -238,6 +239,36 @@ describe("telegram alert change builders", () => {
       const current: SafetySnapshot = { alpha: { ...previous.alpha, grade: null } };
       expect(buildSafetyChanges(current, previous, () => "ALPHA").changes).toEqual([]);
       expect(buildSafetyChanges(previous, current, () => "ALPHA").changes).toEqual([]);
+    });
+  });
+
+  describe("buildDewsChanges", () => {
+    const dewsRow = (band: string) => ({ stablecoin_id: "alpha", score: 60, band, signals_json: null });
+
+    it("sends escalations and drops de-escalations within the alertable range", () => {
+      expect(buildDewsChanges([dewsRow("WARNING")], { alpha: "ALERT" }, { alpha: "ALERT" }, () => "ALPHA"))
+        .toEqual([expect.objectContaining({ oldBand: "ALERT", newBand: "WARNING" })]);
+      expect(buildDewsChanges([dewsRow("WARNING")], { alpha: "DANGER" }, { alpha: "DANGER" }, () => "ALPHA")).toEqual([]);
+      expect(buildDewsChanges([dewsRow("ALERT")], { alpha: "WARNING" }, { alpha: "WARNING" }, () => "ALPHA")).toEqual([]);
+    });
+
+    it("treats a rise from below the alertable range as an escalation labelled from the observed band", () => {
+      expect(buildDewsChanges([dewsRow("ALERT")], { alpha: "WARNING" }, { alpha: "WATCH" }, () => "ALPHA"))
+        .toEqual([expect.objectContaining({ oldBand: "WATCH", newBand: "ALERT" })]);
+      // Reached DANGER months ago, calmed, now rises CALM to WARNING.
+      expect(buildDewsChanges([dewsRow("WARNING")], { alpha: "DANGER" }, { alpha: "CALM" }, () => "ALPHA"))
+        .toEqual([expect.objectContaining({ oldBand: "CALM", newBand: "WARNING" })]);
+    });
+
+    it("still dedupes a return to the same alert band after a dip", () => {
+      expect(buildDewsChanges([dewsRow("DANGER")], { alpha: "DANGER" }, { alpha: "WATCH" }, () => "ALPHA")).toEqual([]);
+    });
+
+    it("advances the baseline through an unsent de-escalation so the next rise alerts", () => {
+      const afterDrop = buildDewsAlertableSnapshot([dewsRow("WARNING")], { alpha: "DANGER" });
+      expect(afterDrop).toEqual({ alpha: "WARNING" });
+      expect(buildDewsChanges([dewsRow("DANGER")], afterDrop, afterDrop, () => "ALPHA"))
+        .toEqual([expect.objectContaining({ oldBand: "WARNING", newBand: "DANGER" })]);
     });
   });
 

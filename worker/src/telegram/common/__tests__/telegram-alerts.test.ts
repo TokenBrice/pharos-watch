@@ -1,9 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { emptyConsolidatedAlerts, singleCoinAlerts } from "./telegram-alerts.test-support";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { TELEGRAM_PUBLIC_ALERT_SAMPLES } from "@shared/lib/telegram-alert-samples";
 import {
   formatDewsLine,
   formatDepegTriggeredLine,
+  formatSafetyLine,
   formatConsolidatedMessage,
   splitMessage,
   isDewsAlertable,
@@ -89,7 +91,7 @@ describe("formatConsolidatedMessage", () => {
 });
 
 describe("formatDewsLine", () => {
-  it("renders DEWS sub-signal values as percentages", () => {
+  it("renders DEWS sub-signals with human labels and unitless 0-100 values", () => {
     const line = formatDewsLine({
       stablecoinId: "usdt-tether",
       symbol: "USDT",
@@ -97,12 +99,19 @@ describe("formatDewsLine", () => {
       newBand: "ALERT",
       score: 42,
       topSignals: [
-        { name: "pool_balance_drift", value: 61 },
-        { name: "supply_velocity", value: 48 },
+        { name: "pool", value: 61 },
+        { name: "supply", value: 48 },
       ],
     });
-    expect(line).toContain("pool_balance_drift (61%)");
-    expect(line).toContain("supply_velocity (48%)");
+    expect(line).toBe("\u{1F7E1} <b>USDT</b> stress rose to ALERT (score 42, was WATCH)\nMain drivers: Pool Balance Drift 61, Supply Velocity 48");
+    expect(line).not.toContain("%");
+  });
+
+  it("names a de-escalation and falls back for an unknown prior band", () => {
+    expect(formatDewsLine({ stablecoinId: "a", symbol: "A", oldBand: "DANGER", newBand: "WARNING", score: 60, topSignals: [] }))
+      .toBe("\u{1F7E0} <b>A</b> stress eased to WARNING (score 60, was DANGER)");
+    expect(formatDewsLine({ stablecoinId: "a", symbol: "A", oldBand: "UNKNOWN", newBand: "ALERT", score: 40, topSignals: [] }))
+      .toBe("\u{1F7E1} <b>A</b> stress is now ALERT (score 40)");
   });
 
   it.each([
@@ -115,6 +124,37 @@ describe("formatDewsLine", () => {
       stablecoinId: "usdt-tether", symbol: "USDT", oldBand, newBand, score, topSignals: [],
     });
     expect(line.startsWith(glyph)).toBe(true);
+  });
+});
+
+describe("formatSafetyLine", () => {
+  it.each([
+    ["D", "C", "raised"],
+    ["C-", "D", "downgraded"],
+    ["NR", "B", "changed"],
+  ] as const)("states the direction of %s to %s", (oldGrade, newGrade, verb) => {
+    expect(formatSafetyLine({ stablecoinId: "x", symbol: "IUSD", oldGrade, newGrade, oldScore: 39, newScore: 42 }))
+      .toBe(`<b>IUSD</b> Safety grade ${verb} to ${newGrade} (was ${oldGrade})\nScore: 39 → 42`);
+  });
+});
+
+describe("public alert samples", () => {
+  const plainBody = (html: string) => html.replace(/<[^>]+>/g, "").split("\n\n")[0];
+
+  it("keeps the DEWS and safety samples verbatim with formatter output", () => {
+    const dews = formatConsolidatedMessage({
+      ...emptyConsolidatedAlerts(),
+      dews: [{ stablecoinId: "usdt-tether", symbol: "USDT", oldBand: "WATCH", newBand: "ALERT", score: 42, topSignals: [{ name: "pool", value: 61 }, { name: "supply", value: 48 }] }],
+    });
+    const safety = formatConsolidatedMessage({
+      ...emptyConsolidatedAlerts(),
+      safety: [{
+        stablecoinId: "usdr-tangible", symbol: "USDR", oldGrade: "B", newGrade: "F", oldScore: 70, newScore: 39,
+        contextLine: "Reason: Active depeg peak 7546 bps capped the pre-variant Safety Score at F (39).",
+      }],
+    });
+    expect(TELEGRAM_PUBLIC_ALERT_SAMPLES.dews.message.startsWith(`${plainBody(dews)}\n\n`)).toBe(true);
+    expect(TELEGRAM_PUBLIC_ALERT_SAMPLES.safety.message.startsWith(`${plainBody(safety)}\n\n`)).toBe(true);
   });
 });
 

@@ -627,6 +627,13 @@ function seedPreMigrationFixture(db: DatabaseSync, targets: readonly string[]): 
       `);
       continue;
     }
+    if (target === "telegram_subscriptions") {
+      db.exec(`
+        INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews)
+        VALUES ('migration-gate-fixture', 'mnee-mnee', 1), ('migration-gate-fixture', 'usdt-tether', 1);
+      `);
+      continue;
+    }
     if (target === "tape_events") {
       db.exec(`
         INSERT INTO tape_events (

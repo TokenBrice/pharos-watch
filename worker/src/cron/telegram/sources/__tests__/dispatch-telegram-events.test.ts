@@ -98,7 +98,7 @@ describe("buildTelegramDispatchEvents", () => {
 
     expect(events.dewsChanges[0].contextLine).toBe("Context: Safety C+ 61");
     expect(events.depegTriggered[0].contextLine).toBe("Context: Safety F 39");
-    expect(events.safetyChanges[0].contextLine).toContain("Reason: Exit pillar fell from 72 to 61.");
+    expect(events.safetyChanges[0].contextLine).toContain("Reason: Exit score fell from 72 to 61.");
     expect(events.safetyChanges[0].contextLine).not.toContain("Context:");
   });
 

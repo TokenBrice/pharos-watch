@@ -10,6 +10,7 @@ import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { suggestClosestToken } from "../common/alerts-parser";
 import { TOP_VIEW_NAMES } from "../common/constants";
 import { formatTelegramCompactUsd } from "../common/telegram-format";
+import { SAFETY_PILLAR_GLOSS } from "../common/alerts-formatting";
 import type { StatusForCoin } from "./telegram-webhook-status";
 import { formatTelegramSafety, formatTelegramYield } from "./telegram-webhook-messages";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER, normalizeDexLiquidityEvidence } from "../../lib/dex-liquidity";
@@ -190,7 +191,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
           `${i}. ${row.symbol} — ${row.apy30d.toFixed(2)}% 30d, PYS ${
             row.pharosYieldScore != null
               ? Math.round(row.pharosYieldScore)
-              : `unavailable (${row.pysNullReason ?? "safety-unrated"})`
+              : "unavailable"
           }, TVL ${formatTelegramCompactUsd(row.sourceTvlUsd) ?? "n/a"} (${row.yieldSource})`,
       );
     }
@@ -228,7 +229,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
           `${i}. ${row.symbol} — score ${row.liquidity_score ?? "NR"}, TVL ${formatTelegramCompactUsd(row.total_tvl_usd) ?? "n/a"}, ${row.pool_count} pools`,
       );
       return invalidCoverageCount > 0
-        ? `${message}\nCoverage unavailable for ${invalidCoverageCount} token(s) (invalid-coverage-evidence).`
+        ? `${message}\nCoverage unavailable for ${invalidCoverageCount} token(s).`
         : message;
     }
     case "chains": {
@@ -260,7 +261,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
       );
       return activeSource.kind !== "error"
         ? message
-        : `${message}\n${escapeHtml(`Chain health unavailable; expected model V9, ${activeSource.reason.replace(/-/g, " ")}.`)}`;
+        : `${message}\nChain health is not available right now.`;
     }
     case "safety": {
       const source = await loadActiveSafetyScoreIndex(db);
@@ -272,7 +273,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
         .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
         .slice(0, TOP_LIMIT);
       return formatTopRows(
-        "Top Safety Scores (V9)",
+        "Top Safety Scores",
         cards,
         (card, i) =>
           `${i}. ${TRACKED_META_BY_ID.get(card.id)?.symbol ?? card.id} — ${card.grade} (${card.score ?? "NR"})`,
@@ -304,11 +305,10 @@ export async function buildWhyMessage(db: D1Database, stablecoinId: string): Pro
   const lines = [
     `<b>${escapeHtml(symbol)} Safety Score</b>`,
     card.ratingStatus === "pipeline-gap"
-      ? "Overall: Unavailable — pipeline gap"
+      ? "Overall: not available right now"
       : `Overall: ${card.grade}${card.score != null ? ` (${card.score})` : ""}`,
-    `Model: V9 · ${escapeHtml(source.snapshot.safetyScoreIdentity.methodologyVersion)} · ${escapeHtml(source.snapshot.safetyScoreIdentity.publicationGenerationId)}`,
   ];
-  if (card.partialEvidence) lines.push("Partial evidence: pipeline gap");
+  if (card.partialEvidence) lines.push("Some inputs are missing, so this grade is provisional.");
   const weaknesses = Object.entries(card.pillars)
     .sort(([, a], [, b]) =>
       (a.score ?? Number.POSITIVE_INFINITY) -
@@ -319,8 +319,9 @@ export async function buildWhyMessage(db: D1Database, stablecoinId: string): Pro
     lines.push("");
     lines.push("<b>Weakest pillars</b>");
     for (const [pillar, detail] of weaknesses) {
+      const gloss = SAFETY_PILLAR_GLOSS[pillar];
       lines.push(
-        `- ${escapeHtml(formatPillarName(pillar))}: ${detail.score ?? "Unavailable"}`,
+        `- ${escapeHtml(formatPillarName(pillar))}: ${detail.score ?? "Unavailable"}${gloss ? ` (${escapeHtml(gloss)})` : ""}`,
       );
     }
   }
@@ -357,7 +358,7 @@ export function buildCoverageMessage(symbol: string, status: StatusForCoin): str
     `DEWS: ${status.dews ? `${status.dews.band} (${formatAge(status.dews.computedAt)})` : "missing"}`,
     `Safety: ${
       status.safety
-        ? formatTelegramSafety(status.safety)
+        ? `${formatTelegramSafety(status.safety)} [${status.safety.model.toUpperCase()} ${status.safety.methodologyVersion}]`
         : status.safetyUnavailableReason
           ? "unavailable"
           : "missing"

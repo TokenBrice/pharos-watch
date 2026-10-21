@@ -3,7 +3,9 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  TELEGRAM_MINI_APP_CATALOG_VERSION,
   TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM,
+  TELEGRAM_MINI_APP_CONTRACT_VERSION,
   TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM,
   telegramMiniAppStateRevision,
 } from "@shared/lib/telegram-mini-app-contract";
@@ -342,29 +344,158 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(fetchMock).not.toHaveBeenCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/mutate/), expect.anything());
   });
 
-  it("shows stale-auth read-only copy on every panel and preserves relaunch context", async () => {
+  it("shows one reopen state on every panel, keeps controls readable, and preserves relaunch context", async () => {
     const staleState: TelegramMiniAppState = {
       ...baseState,
       viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
     };
     const openTelegramLink = vi.fn();
     const impactOccurred = vi.fn();
+    const notificationOccurred = vi.fn();
+    const mainButton = { show: vi.fn(), hide: vi.fn(), setParams: vi.fn(), onClick: vi.fn(), offClick: vi.fn() };
+    const close = vi.fn();
     const fetchMock = await renderReadyMiniApp({
       state: staleState,
-      launch: { initDataUnsafe: { start_param: "settings" }, openTelegramLink, HapticFeedback: { impactOccurred } },
+      launch: {
+        initDataUnsafe: { start_param: "settings" },
+        openTelegramLink,
+        close,
+        MainButton: mainButton,
+        HapticFeedback: { impactOccurred, notificationOccurred },
+      },
     });
 
     for (const panel of ["home", "watchlist", "presets", "settings"] as const) {
       fireEvent.click(screen.getByRole("tab", { name: panel }));
-      expect(screen.getByText("Reopen Telegram to edit settings")).toBeTruthy();
-      expect(screen.getByText("This session is still readable, but edits require a fresh launch from Telegram.")).toBeTruthy();
+      expect(screen.getAllByRole("heading", { name: "Reopen to edit" })).toHaveLength(1);
     }
     expect(screen.queryByText("Group settings are command-only for now")).toBeNull();
-    expect(screen.getByRole("button", { name: /Safety/i })).toHaveProperty("disabled", true);
-    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/mutate/), expect.anything());
-    fireEvent.click(screen.getByRole("button", { name: "Relaunch and keep this panel" }));
+    // Only edits expired; signed reads stay valid for 24h, so refresh stays available.
+    expect(screen.getByRole("button", { name: "Refresh session" })).toHaveProperty("disabled", false);
+    await waitFor(() => expect(mainButton.setParams).toHaveBeenCalledWith(expect.objectContaining({ text: "Reopen to edit", is_active: true })));
+
+    // Edits stay tappable, are never sent with the expired initData, and leave visible intent.
+    const safetyToggle = screen.getByRole("button", { name: /Safety/i });
+    expect(safetyToggle).toHaveProperty("disabled", false);
+    fireEvent.click(safetyToggle);
+    expect(await screen.findByText("Not saved: Safety alerts enabled.")).toBeTruthy();
+    expect(notificationOccurred).toHaveBeenCalledWith("warning");
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    const relaunch = mainButton.onClick.mock.calls.at(-1)?.[0] as () => void;
+    act(() => relaunch());
     expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PharosWatchBot?startapp=settings");
     expect(impactOccurred).toHaveBeenCalledWith("light");
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("keeps refreshing readable state after the 5-minute edit window and still routes edits to reopen", async () => {
+    const editExpiredState: TelegramMiniAppState = {
+      ...baseState,
+      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockResolvedValueOnce({ ok: true, json: async () => editExpiredState })
+      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ error: "offline", code: "internal" }) });
+    await renderReadyMiniApp({ fetchImpl: fetchMock });
+
+    // Hidden for 10 minutes: the visibility refetch still runs with the same initData.
+    const now = Date.now();
+    const visibility = vi.spyOn(document, "visibilityState", "get");
+    visibility.mockReturnValue("hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+    vi.spyOn(Date, "now").mockReturnValue(now + 10 * 60 * 1000 + 1);
+    visibility.mockReturnValue("visible");
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(await screen.findByRole("heading", { name: "Reopen to edit" })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Edit after the 5-minute window: never sent, intent kept, reopen path shown.
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+    fireEvent.click(screen.getByRole("button", { name: /Safety/i }));
+    expect(await screen.findByText("Not saved: Safety alerts enabled.")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // A failed read refresh keeps its stale-data banner alongside the reopen banner.
+    fireEvent.click(screen.getByRole("button", { name: "Refresh session" }));
+    expect(await screen.findByRole("heading", { name: "Showing last-known settings" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Reopen to edit" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Retry refresh" })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("keeps signed reads after the edit window and ends the session when a read hits stale-auth", async () => {
+    const editExpiredState: TelegramMiniAppState = {
+      ...baseState,
+      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => editExpiredState })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({
+        contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+        catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+        result: { kind: "watchlist-export", token: "pw2.payload.digest", directCount: 1, presetCount: 0 },
+      }) })
+      .mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ error: "expired", code: "stale-auth" }) });
+    await renderReadyMiniApp({ fetchImpl: fetchMock, launch: { initDataUnsafe: { start_param: "settings" } } });
+
+    fireEvent.click(screen.getByRole("button", { name: /Export watchlist/i }));
+    expect(await screen.findByText("pw2.payload.digest")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Refresh session" })).toHaveProperty("disabled", false);
+
+    fireEvent.click(screen.getByRole("button", { name: /Export watchlist/i }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Refresh session" })).toHaveProperty("disabled", true));
+    expect(screen.getByRole("button", { name: /Export watchlist/i })).toHaveProperty("disabled", true);
+    fireEvent.click(screen.getByRole("button", { name: /Export watchlist/i }));
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("treats an expired session read as terminal instead of retrying the same initData", async () => {
+    const close = vi.fn();
+    const openTelegramLink = vi.fn();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ error: "expired", code: "stale-auth" }) });
+    renderMiniApp({ fetchImpl: fetchMock, launch: { close, openTelegramLink } });
+
+    expect(await screen.findByRole("heading", { name: "Reopen to edit" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+    expect(screen.queryByText(/Telegram authorization expired/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Refresh session" })).toHaveProperty("disabled", true);
+
+    const now = Date.now();
+    const visibility = vi.spyOn(document, "visibilityState", "get");
+    visibility.mockReturnValue("hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+    vi.spyOn(Date, "now").mockReturnValue(now + 60 * 60 * 1000);
+    visibility.mockReturnValue("visible");
+    document.dispatchEvent(new Event("visibilitychange"));
+    await act(async () => { await Promise.resolve(); });
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    // Without a native MainButton the inline relaunch carries the same deep link.
+    fireEvent.click(screen.getByRole("button", { name: "Reopen to edit" }));
+    expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PharosWatchBot?startapp=home");
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("routes a stale-auth mutation to the reopen state without a session retry", async () => {
+    const fetchMock = await renderReadyMiniApp({
+      fetchImpl: vi.fn()
+        .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+        .mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ error: "expired", code: "stale-auth" }) }),
+    });
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+    fireEvent.click(screen.getByRole("button", { name: /Safety/i }));
+
+    expect(await screen.findByRole("heading", { name: "Reopen to edit" })).toBeTruthy();
+    expect(screen.getByText("Not saved: Safety alerts enabled.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Safety/i }).getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(screen.getByRole("button", { name: /Launch/i }));
+    expect(await screen.findByText("Not saved: Launch alerts enabled.")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("keeps last-known state read-only through a refresh failure until retry", async () => {

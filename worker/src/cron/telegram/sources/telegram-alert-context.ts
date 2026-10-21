@@ -68,7 +68,7 @@ export async function buildAlertContextLines(
     const liq = liquidityResult.get(id);
     if (card) {
       parts.push(
-        `Safety ${card.grade}${card.score != null ? ` ${card.score}` : ""} (${safety!.safetyScoreIdentity.model.toUpperCase()} ${safety!.safetyScoreIdentity.methodologyVersion})`,
+        `Safety ${card.grade}${card.score != null ? ` ${card.score}` : ""}`,
       );
     }
     if (liq && assessTelegramContextClock(liq.updatedAt, nowSec, TELEGRAM_CONTEXT_BUDGET_SEC.dexLiquidity).current) {

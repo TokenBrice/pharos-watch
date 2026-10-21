@@ -375,6 +375,36 @@ describe("Telegram Mini App portable watchlist lifecycle", () => {
     })).rejects.toMatchObject({ code: "stale-import-preview" } satisfies Partial<TelegramMiniAppMutationError>);
   });
 
+  it("tolerates rows for removed and no-longer-subscribable coins", async () => {
+    const { db, sqlite } = setup();
+    const insertRow = sqlite.prepare(`
+      INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews, alert_dews_override)
+      VALUES (?, ?, 1, 1)
+    `);
+    insertRow.run(AUTH.userId, "removed-from-registry");
+    insertRow.run(AUTH.userId, "pc0000031-tradable");
+
+    const exported = await executeTelegramMiniAppPortabilityOperation(db, AUTH, { kind: "export-watchlist" });
+    expect(exported?.result).toMatchObject({ kind: "watchlist-export", directCount: 3, presetCount: 2 });
+    const token = (exported!.result as Extract<NonNullable<typeof exported>["result"], { kind: "watchlist-export" }>).token;
+
+    // Re-importing the self-exported token skips the delisted coin and leaves its row alone.
+    const preview = await executeTelegramMiniAppPortabilityOperation(db, AUTH, { kind: "preview-watchlist-import", token });
+    expect(preview?.result).toMatchObject({
+      kind: "watchlist-import-preview",
+      preview: { directAdds: [], directRemoves: ["removed-from-registry"], directChanges: [] },
+    });
+
+    await expect(applyTelegramMiniAppMutation(db, AUTH, { kind: "remove-coin", stablecoinId: "never-followed" }))
+      .rejects.toMatchObject({ code: "unknown-coin" });
+    await expect(applyTelegramMiniAppMutation(db, AUTH, { kind: "remove-coin", stablecoinId: "removed-from-registry" }))
+      .resolves.toBeUndefined();
+    expect(sqlite.prepare("SELECT stablecoin_id FROM telegram_subscriptions WHERE chat_id = ? ORDER BY stablecoin_id").all(AUTH.userId))
+      .toEqual([{ stablecoin_id: "dai-makerdao" }, { stablecoin_id: "pc0000031-tradable" }, { stablecoin_id: "usdc-circle" }]);
+    expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers WHERE chat_id = ?").get(AUTH.userId))
+      .toEqual({ preference_generation: 8 });
+  });
+
   it("previews, confirms, and undoes a bounded direct bulk edit without touching presets", async () => {
     const { db, sqlite } = setup();
     const preview = await executeTelegramMiniAppBulkWatchlistPreview(db, AUTH, {

@@ -413,17 +413,18 @@ describe("handleTelegramMiniAppSession", () => {
     expect(invalidDb.getHistory()).toHaveLength(0);
   });
 
-  it("rate-limits stale auth telemetry by signed Mini App user", async () => {
+  it("records stale auth telemetry once per expired initData and still returns stale-auth on retry", async () => {
     const staleInitData = await signedInitData({
       auth_date: String(NOW_SEC - 301),
       chat_type: "private",
       user: JSON.stringify({ id: 42, username: "alice" }),
     });
-    const cooldownKey = "telegram:command-cooldown:42:mini-app:mutation-auth-failure";
+    const hashPrefix = new URLSearchParams(staleInitData).get("hash")!.slice(0, 16);
+    const cooldownKey = `telegram:command-cooldown:42:mini-app:stale:mini_app_mutation_denied:${hashPrefix}`;
     const db = makeMiniAppDb([
       {
         match: "INSERT INTO cache (key, value, updated_at)",
-        matchBinds: [cooldownKey, "1", NOW_SEC, NOW_SEC - 5],
+        matchBinds: [cooldownKey, "1", NOW_SEC, NOW_SEC - 7 * 24 * 60 * 60],
         rows: [],
         runMeta: { changes: 0 },
       },
@@ -440,7 +441,8 @@ describe("handleTelegramMiniAppSession", () => {
       BOT_TOKEN,
     );
 
-    expect(await readJsonResponse(response, 429)).toMatchObject({ code: "rate-limited" });
+    // F6: a retry inside the dedupe window must keep the relaunch path, not 429.
+    expect(await readJsonResponse(response, 401)).toMatchObject({ code: "stale-auth" });
     expect(historyMatches(db, "INSERT INTO cache (key, value, updated_at)", { 0: cooldownKey })).toBe(true);
     expect(historyMatches(db, "INSERT INTO telegram_usage_daily", {1:"mini_app_mutation_denied"})).toBe(false);
   });

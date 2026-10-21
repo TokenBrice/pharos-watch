@@ -780,10 +780,40 @@ describe("drainPendingQueue contract cases", () => {
     const ownerLoss = await withPendingQueueScenario({ now, pending: { id: 706, chatId: "owner-loss", html: "owner", createdAt: now - 60, expiresAt: now + 600, dedupeKey: "owner-key" } }, async ({ sqlite, db }) => {
       let changed = false;
       const losing = { ...db, prepare: (sql: string) => { if (!changed && sql.includes("SET delivery_state = 'sent'") && sql.includes("AND delivery_owner = ?")) { changed = true; sqlite.prepare("UPDATE telegram_pending_alerts SET delivery_owner = 'takeover', delivery_generation = delivery_generation + 1 WHERE id = 706").run(); } return db.prepare(sql); } } as D1Database;
-      await expect(drainPendingQueue(losing, "bot-token", 1)).rejects.toThrow("sent-state persistence was not confirmed");
+      const sendsBefore = mockSendToChat.mock.calls.length;
+      // The committed checkpoint no longer aborts the run; the takeover owner keeps the row.
+      await expect(drainPendingQueue(losing, "bot-token", 1)).resolves.toMatchObject({ sent: 0, executionUnknown: 1 });
+      expect(mockSendToChat.mock.calls.length - sendsBefore).toBe(1);
       return sqlite.prepare("SELECT delivery_state, delivery_owner, delivery_generation FROM telegram_pending_alerts WHERE id = 706").get();
     });
     expect(ownerLoss).toEqual({ delivery_state: "sending", delivery_owner: "takeover", delivery_generation: 2 });
+  });
+
+  it("neither credits nor deletes a send whose terminal updates all changed zero rows", async () => {
+    mockSendToChat.mockResolvedValue(makeTelegramSentResult());
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      insertRiskPendingSqlite(sqlite, { id: 708, chatId: "renamed", sourceEventId: "rename-source", dedupeKey: "rename-key" });
+      insertAlertJobFixture(sqlite, { jobId: "rename-job", alertType: "dews", sourceEventId: "rename-source", severity: "warning" }, 1_000);
+      insertAlertJobTargetFixture(sqlite, { jobId: "rename-job", targetKey: "rename-target", chatId: "renamed", alertType: "dews", pendingDedupeKey: "rename-key", sourceEventId: "rename-source", status: "queued" }, 1_000);
+      let renamed = false;
+      // A concurrent chat migration renames the target between identity lookup and commit.
+      const racing = { ...db, prepare: (sql: string) => {
+        if (!renamed && sql.includes("SET delivery_state = 'sent'") && sql.includes("AND delivery_owner = ?")) {
+          renamed = true;
+          sqlite.prepare("UPDATE telegram_alert_job_targets SET pending_dedupe_key = 'rename-key-migrated' WHERE job_id = 'rename-job'").run();
+        }
+        return db.prepare(sql);
+      } } as D1Database;
+      const result = await drainPendingQueue(racing, "bot-token", 1);
+      expect(result).toMatchObject({ attempted: 1, sent: 0, executionUnknown: 1 });
+      expect(sqlite.prepare("SELECT delivery_state FROM telegram_pending_alerts WHERE id = 708").get())
+        .toEqual({ delivery_state: "sending" });
+      expect(sqlite.prepare("SELECT final_delivery_state FROM telegram_alert_job_targets WHERE job_id = 'rename-job'").get())
+        .toEqual({ final_delivery_state: null });
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("checkpoints an attempted timeout as execution-unknown and handles abort-after-send", async () => {
