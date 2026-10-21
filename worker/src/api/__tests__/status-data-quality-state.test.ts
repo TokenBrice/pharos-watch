@@ -849,7 +849,7 @@ describe("handleStatus", () => {
       expect(degradedCause).toBeDefined();
     });
 
-    it("names an absent active ID and degrades the admin data-quality plane", async () => {
+    it("names an absent active ID as an info Watch without degrading the admin data-quality plane", async () => {
       const missingId = fixtureACTIVE_STABLECOINS[fixtureACTIVE_STABLECOINS.length - 1]!.id;
       const expectedActiveCount = fixtureACTIVE_STABLECOINS.length;
       const db = buildMixedCacheDb({
@@ -873,14 +873,15 @@ describe("handleStatus", () => {
       const res = await handleStatus({ db, trustedAdmin: true, request });
       const body = (await res.json()) as CanonicalScopeBody;
 
-      expect(body.dataQualityStatus).toBe("degraded");
+      expect(body.dataQualityStatus).toBe("healthy");
       expect(body.dataQuality.totalStablecoins).toBe(expectedActiveCount);
       expect(body.dataQuality.missingPrices).toBe(1);
       expect(body.dataQuality.stablecoinPublication).toEqual(expect.objectContaining({
         status: "incomplete",
         missingActiveIds: [missingId],
       }));
-      expect(body.causes.dataQuality.map((cause) => cause.code)).toContain("stablecoin_publication_incomplete");
+      expect(body.causes.dataQuality.find((cause) => cause.code === "stablecoin_publication_incomplete"))
+        .toMatchObject({ severity: "info" });
     });
   });
 

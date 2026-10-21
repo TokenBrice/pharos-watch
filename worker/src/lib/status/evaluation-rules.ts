@@ -4,7 +4,6 @@ import {
   STATUS_RESERVE_COMPOSITION_THRESHOLDS,
   STATUS_RESERVE_COHORT_SLO,
   STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC,
-  assessActivePriceGapDuration,
   getActiveAssetServiceBreadthThreshold,
   getActivePriceCoverageBreadthStatus,
   getCacheRatioThresholds,
@@ -744,7 +743,7 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
   (input) => {
       const publication = input.dataQuality.stablecoinPublication;
       if (publication == null || publication.status === "complete") return null;
-      const status = getStablecoinPublicationImpactStatus(publication, input.activePriceCoverage, input.nowSec);
+      const status = getStablecoinPublicationImpactStatus(publication);
       const cause = publication.status === "incomplete"
         ? (() => {
             const missing = publication.missingActiveIds;
@@ -798,9 +797,9 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
               : "not degrading public status."}`,
           { metric: "missingActivePrices", value: coverage.missingPriceCount ?? undefined, threshold: 1 },
         ));
-        // Breadth- and duration-driven degradations open a public uptime
-        // incident, so each gets its own allowlisted cause; the generic
-        // incomplete-coverage warning above stays admin-only.
+        // A breadth-driven degradation opens a public uptime incident, so it
+        // gets its own allowlisted cause; the generic incomplete-coverage
+        // warning above stays admin-only. Gap duration only names assets.
         if (breadthDegraded) {
           const threshold = getActiveAssetServiceBreadthThreshold(coverage.expectedActiveCount);
           causes.push(makeCause(
@@ -809,18 +808,6 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
             "warning",
             `Live prices are unavailable for ${coverage.missingPriceCount ?? "an unknown number of"} of ${coverage.expectedActiveCount ?? "an unknown number of"} active assets, reaching the service-wide breadth threshold${threshold == null ? "" : ` (${threshold})`}.`,
             { metric: "missingActivePrices", value: coverage.missingPriceCount ?? undefined, threshold: threshold ?? undefined },
-          ));
-        }
-        const gapDuration = assessActivePriceGapDuration(coverage, input.nowSec);
-        if (gapDuration.status !== "healthy") {
-          causes.push(makeCause(
-            "data-quality",
-            "active_price_coverage_duration_degraded",
-            "warning",
-            gapDuration.worstGenerations == null
-              ? `Live-price gap continuity is unavailable; conservatively retaining a warning for: ${gapDuration.degradedGapIds.join(", ")}.`
-              : `Persistent live-price gap(s) have outlived the duration budget (${gapDuration.worstGenerations} consecutive missing generations, threshold ${STATUS_MISSING_PRICE_THRESHOLDS.generationsElevated}): ${gapDuration.degradedGapIds.join(", ")}. Each requires catalog review to re-source the price or retire the listing.`,
-            { metric: "missingPriceDurationGenerations", value: gapDuration.worstGenerations ?? undefined, threshold: STATUS_MISSING_PRICE_THRESHOLDS.generationsElevated },
           ));
         }
       } else if (coverage.status === "unknown") {
@@ -985,7 +972,6 @@ const RUNBOOK_BY_CODE: Record<string, string> = {
   stablecoin_publication_incomplete: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   stablecoin_publication_unknown: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   active_price_coverage_incomplete: `${RUNBOOK_BASE}/stablecoins-cache.md`,
-  active_price_coverage_duration_degraded: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   active_price_coverage_breadth_degraded: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   active_price_coverage_unknown: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   price_gap_reviews_expiring: `${RUNBOOK_BASE}/review-renewal.md`,

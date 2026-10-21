@@ -1,7 +1,7 @@
 import {
-  assessActivePriceGapDuration,
   getActivePriceCoverageBreadthStatus,
   getBlacklistGapStatus,
+  getCriticalDurationActivePriceGapIds,
   getStablecoinPublicationImpactStatus,
 } from "@shared/lib/status-thresholds";
 import { getD1CapacityImpactStatus } from "@shared/lib/d1-capacity";
@@ -804,9 +804,7 @@ export async function assessPublicHealth(
     );
   }
 
-  const stablecoinPublicationImpactStatus = getStablecoinPublicationImpactStatus(
-    stablecoinPublication, activePriceCoverage, now,
-  );
+  const stablecoinPublicationImpactStatus = getStablecoinPublicationImpactStatus(stablecoinPublication);
   if (stablecoinPublication.status === "incomplete") {
     warnings.push(
       `stablecoin-publication-incomplete:${stablecoinPublication.missingActiveIds.join(",") || "count-mismatch"}`,
@@ -819,23 +817,18 @@ export async function assessPublicHealth(
   // JSON `activePriceCoverage` payload still reports exact counts/ids/status for
   // observability, alert-eligible misses still emit warnings for operator triage,
   // and the warning below names every alert-eligible id. Only missing coverage
-  // evidence itself fails closed. A gap that has outlived the duration bands,
-  // which the ratio bands cannot see, is a catalog decision (re-source or
-  // retire): it is always named, and it degrades availability only for a
-  // material asset (market cap >= durationMaterialMarketCapUsd). It never
-  // reports the public surface as stale — the data is served, one price is not.
-  // Reviewed gaps remain missing in the payload but do not warn or contribute
-  // to duration degradation. The coverage reader re-arms them at expiry.
-  // Breadth is separate: unavailable prices reaching the shared active-asset
-  // breadth threshold degrade the service whatever their size or review state.
+  // evidence itself fails closed. A gap that has outlived the duration bands
+  // is a catalog decision (re-source or retire): it is always named, at any
+  // market cap, but never degrades status on its own. Reviewed gaps remain
+  // missing in the payload but do not warn; the coverage reader re-arms them at
+  // expiry. Only breadth degrades: unavailable prices reaching the shared
+  // active-asset breadth threshold, whatever their size or review state.
   const acknowledgedGapIds = new Set(activePriceCoverage.acknowledgedGapIds ?? []);
   const alertEligibleIds = activePriceCoverage.alertEligibleIds.filter((id) => !acknowledgedGapIds.has(id));
   const activePriceCoverageAlertEligible = alertEligibleIds.length > 0;
-  const gapDuration = assessActivePriceGapDuration(activePriceCoverage, now);
-  const criticalDurationIds = gapDuration.criticalGapIds;
-  const activePriceCoverageDurationStatus = gapDuration.status;
+  const criticalDurationIds = getCriticalDurationActivePriceGapIds(activePriceCoverage);
   const activePriceCoverageImpactStatus: HealthResponse["status"] =
-    activePriceCoverage.status === "unknown" || activePriceCoverageDurationStatus !== "healthy"
+    activePriceCoverage.status === "unknown"
       || getActivePriceCoverageBreadthStatus(activePriceCoverage) !== "healthy"
       ? "degraded"
       : "healthy";

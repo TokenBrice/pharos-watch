@@ -96,16 +96,16 @@ describe("public status components", () => {
     expect(component(health, "blacklist")).toMatchObject({ state: "degraded", reasons: ["blacklist-amounts-missing"] });
   });
 
-  it("keeps bounded material listings honest without treating them as a whole-service incident", () => {
+  it("keeps a USYC-sized ($2.4B) missing listing and a week-old price gap as operational notices", () => {
     const health = assetScopedHealth();
-    expect(getStablecoinPublicationImpactStatus(health.stablecoinPublication!, health.activePriceCoverage!, NOW)).toBe("healthy");
+    expect(getStablecoinPublicationImpactStatus(health.stablecoinPublication!)).toBe("healthy");
     expect(getPublicMintBurnStatus(health.mintBurn.sync)).toBe("healthy");
     const projection = projectPublicStatus(health);
     expect(projection.headline).toMatchObject({
       state: "operational", title: "Systems operational with notices", affected: ["stablecoin-data", "mint-burn"],
     });
     expect(component(health, "stablecoin-data")).toMatchObject({
-      state: "degraded",
+      state: "operational",
       reasons: ["publication-incomplete:asset-scoped", "price-coverage-incomplete:asset-scoped"],
     });
     expect(component(health, "mint-burn")).toMatchObject({
@@ -159,11 +159,11 @@ describe("public status components", () => {
     expect(projectPublicStatus(health).headline.state).toBe(headlineState);
   });
 
-  it.each(["broad", "unknown cap", "stale cache", "missing clock", "unknown lane", "stale mint"] as const)(
+  it.each(["broad", "unknown coverage", "stale cache", "missing clock", "unknown lane", "stale mint"] as const)(
     "does not let asset notices conceal %s failure", (failure) => {
       const health = assetScopedHealth();
       if (failure === "broad") health.stablecoinPublication!.expectedActiveCount = 10;
-      if (failure === "unknown cap") health.activePriceCoverage!.missingActiveAssets[0].lastKnownMarketCapUsd = null;
+      if (failure === "unknown coverage") health.stablecoinPublication = { ...health.stablecoinPublication!, status: "unknown" };
       if (failure === "stale cache") health.caches.stablecoins = cache(13 * 600);
       if (failure === "missing clock") health.mintBurn.sync.lastSuccessfulSyncAt = null;
       if (failure === "unknown lane") health.mintBurn.sync.criticalLaneHealthy = null;
@@ -301,20 +301,17 @@ describe("public status components", () => {
     expect(component(health, "data-refresh").reasons).toContain("scheduler:unavailable:slot-start-query-failed");
   });
 
-  it("attributes a degraded raw verdict to bounded listing and price findings without inventing a website failure", () => {
+  it("does not let operational listing and price notices explain a degraded raw verdict", () => {
     const health = assetScopedHealth();
     health.status = "degraded";
     health.mintBurn.sync.warning = null;
     const projection = projectPublicStatus(health);
     expect(projection.components.find(({ id }) => id === "stablecoin-data")).toMatchObject({
-      state: "degraded",
+      state: "operational",
       reasons: ["publication-incomplete:asset-scoped", "price-coverage-incomplete:asset-scoped"],
     });
     expect(projection.components.find(({ id }) => id === "website-api")).toMatchObject({
-      state: "operational", reasons: [],
-    });
-    expect(projection.headline).toEqual({
-      state: "operational", title: "Systems operational with notices", affected: ["stablecoin-data"],
+      state: "degraded", reasons: ["unattributed-public-health:degraded"],
     });
   });
 

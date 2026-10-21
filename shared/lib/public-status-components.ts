@@ -11,11 +11,9 @@ import {
 } from "./public-health";
 import { formatRelativeAgeSeconds } from "./relative-time";
 import {
-  assessActivePriceGapDuration,
   getActivePriceCoverageBreadthStatus,
   getBlacklistGapStatus,
   getCacheRatioThresholds,
-  getStablecoinPublicationComponentStatus,
   getStablecoinPublicationImpactStatus,
 } from "./status-thresholds";
 import {
@@ -236,14 +234,9 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
   const publication = health.stablecoinPublication;
   const coverage = health.activePriceCoverage;
   if (publication && publication.status !== "complete") {
-    const impact = getStablecoinPublicationImpactStatus(
-      publication, coverage ?? { missingActiveAssets: [] }, health.timestamp,
-    );
-    const componentStatus = getStablecoinPublicationComponentStatus(
-      publication, coverage ?? { missingActiveAssets: [] }, health.timestamp,
-    );
+    const impact = getStablecoinPublicationImpactStatus(publication);
     add("stablecoin-data", {
-      state: impact !== "healthy" || componentStatus !== "healthy" ? "degraded" : "operational",
+      state: impact !== "healthy" ? "degraded" : "operational",
       summary: publication.status === "unknown"
         ? "Listing coverage cannot be verified right now."
         : `${publication.missingActiveIds.length || "Some"} tracked stablecoin${publication.missingActiveIds.length === 1 ? " is" : "s are"} missing from published listings.`,
@@ -263,12 +256,6 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
         state: "degraded",
         summary: `${coverage.missingPriceCount} of ${coverage.expectedActiveCount} tracked stablecoins have no live price.`,
         reason: "price-coverage-breadth",
-      });
-    } else if (assessActivePriceGapDuration(coverage, health.timestamp).status !== "healthy") {
-      add("stablecoin-data", {
-        state: "degraded",
-        summary: "Some material stablecoins have had no live price for an extended period.",
-        reason: "price-gap-duration",
       });
     } else if (coverage.status === "incomplete") {
       add("stablecoin-data", {

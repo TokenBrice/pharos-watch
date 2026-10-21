@@ -5,7 +5,7 @@ import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { numberValue } from "@shared/lib/type-guards";
 import { ActivePriceCoverageHealthSchema } from "@shared/types/status/core";
 import { NominalPriceReferenceSchema, type NominalPriceReference } from "@shared/types/core";
-import { STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC, getActivePriceGapMaterialityMarketCapUsd } from "@shared/lib/status-thresholds";
+import { STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC, hasActivePriceGapMarketCapEvidence } from "@shared/lib/status-thresholds";
 import type {
   ActivePriceCoverageGap,
   ActivePriceCoverageGapAcknowledgement,
@@ -828,7 +828,7 @@ export async function seedAbsentActivePriceCoverageMarketCaps(
   nowSec: number,
 ): Promise<void> {
   const gaps = coverage.missingActiveAssets.filter((gap) =>
-    gap.rejectionReason === "active-row-missing" && getActivePriceGapMaterialityMarketCapUsd(gap, nowSec) == null,
+    gap.rejectionReason === "active-row-missing" && !hasActivePriceGapMarketCapEvidence(gap, nowSec),
   );
   if (gaps.length === 0) return;
   try {

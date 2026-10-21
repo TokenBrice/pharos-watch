@@ -108,7 +108,7 @@ describe("status dashboard model", () => {
     },
   );
 
-  it.each([96_534_823.01, 500_000_000])("keeps canonical publication materiality for a last-known cap of %s", (cap) => {
+  it.each([96_534_823.01, 500_000_000, 2_400_000_000])("keeps a single missing listing operational at a last-known cap of %s", (cap) => {
     const healthData = makeHealthyHealthResponse();
     healthData.stablecoinPublication = {
       status: "incomplete", missingActiveIds: ["hbd-hive"], expectedActiveCount: 396,
@@ -119,7 +119,7 @@ describe("status dashboard model", () => {
       lastKnownMarketCapObservedAt: healthData.timestamp, lastKnownMarketCapSource: "supply_history",
     })]);
     const component = projectPublicStatus(healthData).components.find((entry) => entry.id === "stablecoin-data");
-    expect(component?.state).toBe(cap === 500_000_000 ? "degraded" : "operational");
+    expect(component?.state).toBe("operational");
   });
 
   it("retains named warnings, mint/burn details and blacklist gaps before fallback summaries", () => {
