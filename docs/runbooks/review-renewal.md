@@ -35,6 +35,8 @@ Edit `STABLECOIN_PRICE_GAP_REVIEWS` in `worker/src/lib/stablecoin-publication-co
 - After verifying recovery through an admitted source with its real observation clock, remove an obsolete expired review instead of renewing an acknowledgement the asset no longer needs. Preserve source-specific freshness and admission guards; a merely numeric upstream response is not recovery.
 - For unresolved venue divergence, record the rejected quote and the alternative venue's identity/depth limits, keep the gap missing, and use only a short explicit source-review deadline. An acknowledgement does not establish that the divergence is harmless or admit either venue.
 - If current official evidence announces termination, name the lifecycle owner's archive/freeze decision and deadline explicitly. A temporary review changes no lifecycle fields, proves no redemption, and must not become a substitute for that decision.
+- Keep source-review acknowledgement expiry separate from an existing lifecycle/holder-exit decision deadline. A fresh source review may acknowledge the still-missing price for a short explicit interval, but must retain the original lifecycle deadline and accountable owner in its reason; it neither satisfies that decision nor authorizes extending it. Report any outstanding lifecycle decision explicitly at hand-off.
+- Recheck inherited-price dependencies as well as the asset's own exact contracts. A stale parent quote, fallback-confidence parent, below-floor pool or unreviewed native cross-rate is not recovery. Record actual observation clocks and depth; an empty market response is different from a failed request.
 
 ### Reserve-feed reviews
 
