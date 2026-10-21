@@ -41,13 +41,21 @@
       {
         "label": "Ankura October 12, 2026 daily report, 8pm ET; archive member 2026/10 October/Daily Report - Ondo Stocks - 2026-10-12_20_00_ET - Ankura Attestation.pdf; SHA-256 6ecb8a01ded8f57fd477cecad63eb997dca0a42e9c9e6a8e83036b6fd4b0eb48; aggregate reference only, retrieved 2026-10-15 by Rev_GldonOndo",
         "url": "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&dl=1"
+      },
+      {
+        "label": "Ankura October 16, 2026 daily report, 8pm ET; pooled program report, retrieved 2026-10-20; SHA-256 970202ff05bd98789815dbf3547703adaac7724407db3928e6c91898b6cf87fd",
+        "url": "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&dl=1"
+      },
+      {
+        "label": "Ankura September 1-30, 2026 monthly reconciliation; pooled program report, retrieved 2026-10-20; SHA-256 b73f1a4b41b37112a44a4bddd783998e32c1d54a9700dc1a86279eea50637365",
+        "url": "https://www.dropbox.com/scl/fo/7rlmba8f49nvbp3xwz1of/ABv0vSjd6cIDAUTIlwm2KwA?rlkey=hokf0tffqvezfmsto25cvpovs&dl=1"
       }
     ],
     "rationale": "The 100% share-and-cash envelope mirrors IAUon and SLVon; issuer API Physical Gold weight describes the underlying ETF, not a measured GLDon reserve mix. Final Terms permit Other Collateral and Additional Collateral, whose current usage is not established. Program trust disclosures require additional collateral beyond full backing at all times and describe a contractually obligated Ondo Foundation guarantee through Flux Finance, Inc. These are documented program commitments, not a measured GLDon overcollateralization ratio or a token-specific independent reconciliation.",
     "compositionBasis": "Issuer product and backing disclosures reopened 2026-10-02",
     "compositionAsOf": "2026-10-02",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current GLDon-specific GLD/cash/Other Collateral weights and liabilities are undisclosed. The October 12, 2026 8pm ET Ankura report, retrieved 2026-10-15, reports $1,706,290,808.28 program assets, $1,599,477,597.46 program liabilities and a 106.68% aggregate ratio across Ondo Stocks, USDY and USDon. It has no GLDon-specific asset or liability row. This newer aggregate reference does not refresh the October 2 composition date or establish token-specific allocation, custody-provider shares or financial assurance.",
+    "knownUnknownExposure": "Re-searched the issuer product page, exact GLDon info API, Final Terms, trust-and-transparency page and both issuer-linked report archives on 2026-10-20. The latest retrieved daily member is October 16, 2026 at 8pm ET: pooled program assets $1,726,170,597.75 and liabilities $1,614,699,308.79 (106.90%). The newly retrieved September 1-30 monthly report has pooled assets $1,604,493,838.75 and liabilities $1,507,053,135.40 (106.47%). Both include Ondo Stocks, USDY, USDon, securities, cash and stablecoins without GLDon-specific assets, liabilities or custody weights. GLD-share/cash/Other Collateral allocations remain undisclosed. The API's Physical Gold 100% describes the underlying ETF, not wrapper reserves. Neither report supports a GLDon allocation, coverage ratio or custody-provider share. Original composition, reserve-review and custody clocks remain unchanged.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

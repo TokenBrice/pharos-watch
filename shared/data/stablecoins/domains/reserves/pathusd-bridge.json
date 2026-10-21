@@ -44,6 +44,10 @@
       {
         "label": "Bridge pathUSD public categories observed 2026-10-10T23:35:13Z by Sol curation campaign 2026-10-11 (L55UTY); payload as of 2026-10-10T23:20:35Z: cash $17,816,876.50 plus treasury $53,541,201.47 exceeds total reserves $71,358,064.05 by $13.92; instrument-level mapping remains undisclosed",
         "url": "https://transparency.bridge.xyz/v0/stablecoins/path_usd"
+      },
+      {
+        "label": "Recheck retrieved 2026-10-20; API snapshot 2026-10-20T22:10:29Z: cash $8,363,732.36 plus treasury $45,628,742.64 totals $53,992,475.00, exceeding reported reserves $53,992,445.68 by $29.32; no instrument/provider census disclosed",
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/path_usd"
       }
     ],
     "rationale": "Tempo identifies pathUSD as issued by Bridge and backed one-for-one by USD-denominated reserves. The October 9, 2026 public API payload at 10:20:33Z reports cash of $19,161,280.75 and treasury of $52,096,485.21, totaling $71,257,765.96, versus reported total reserves of $71,257,752.29: a $13.67 discrepancy. Generic reserve-management documentation lists traditional and tokenized treasury partners but does not identify the instruments within pathUSD's treasury category or their shares. No composition weights are normalized over either conflicting denominator, no treasury-class or tracked-token allocation is assumed, and no liquidity bound is joined to unidentified reserve exposures. The existing composition and composition date remain unchanged; the current researched classification is supplied separately in the campaign fragment.",
@@ -65,22 +69,16 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "BlackRock",
-        "role": "custodian",
-        "jurisdiction": "United States"
-      },
-      {
-        "name": "Fidelity",
-        "role": "custodian",
-        "jurisdiction": "United States"
+        "name": "Undisclosed pathUSD-specific depository institutions, securities custodians and digital-asset wallet providers",
+        "role": "custodian"
       }
     ],
     "segregation": "segregated",
-    "bankruptcyRemoteness": "structured",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-14",
     "reviewer": "OpenAI Codex backing review",
-    "confidence": "verified",
+    "confidence": "probable",
     "sources": [
       {
         "label": "Bridge stablecoin issuance FAQ",
@@ -89,8 +87,17 @@
       {
         "label": "Bridge issuance overview",
         "url": "https://apidocs.bridge.xyz/platform/issuance"
+      },
+      {
+        "label": "Bridge reserve-management partner menu, retrieved 2026-10-20; generic options do not identify pathUSD holdings",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
+      },
+      {
+        "label": "Bridge Building Inc Stablecoin Terms section 2, retrieved 2026-10-20; segregated reserve accounts but no holder property interest in reserves",
+        "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
       }
     ],
-    "uncertainty": "Bridge names BlackRock and Fidelity as custody partners and explicitly states that reserve accounts are segregated and bankruptcy remote. It does not publish pathUSD provider shares, the exact provider role by reserve slice, or rehypothecation terms."
+    "uncertainty": "Correction researched 2026-10-20; original review start retained. The issuer FAQ asserts segregated bankruptcy-remote accounts and names BlackRock and Fidelity, while the reserve-management page describes a generic partner menu rather than pathUSD-specific holdings. No current exact provider allocation or enforceable pathUSD insolvency-priority instrument was retrieved. Binding Stablecoin Terms section 2 requires segregation subject to applicable requirements but expressly denies holders a direct or indirect property interest in, or right to withdraw, reserve assets. Segregation remains an issuer contractual assertion; bankruptcy remoteness, provider identity across the full book and rehypothecation restrictions remain unestablished.",
+    "knownUnknownExposurePct": 100
   }
 }

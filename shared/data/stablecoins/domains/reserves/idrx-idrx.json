@@ -14,7 +14,8 @@
         "custody",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "maturityDaysMax": 2115
     },
     {
       "name": "IDR bank deposits at PT Bank Ina Perdana Tbk",
@@ -116,8 +117,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (Lane19Sygnum)",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "C07 bottom-up refinement 2026-10-21",
     "confidence": "verified",
     "sources": [
       {
@@ -127,13 +128,21 @@
       {
         "label": "IDRX public document index record 19; published October 9, 2026 at 03:14:33Z",
         "url": "https://idrx.co/api/documents?page=1&take=100"
+      },
+      {
+        "label": "Government of Indonesia ORI030T3 information memorandum (issued July 6, 2026; retrieved 2026-10-20)",
+        "url": "https://www.bca.co.id/id/Individu/produk/Investasi-dan-Asuransi/obligasi/pasar-perdana/-/media/Files/campaign/2026/ORI30/20260706-memorandum-ori030t3"
+      },
+      {
+        "label": "Government of Indonesia ORI030T6 information memorandum (issued July 6, 2026; retrieved 2026-10-20)",
+        "url": "https://www.bca.co.id/id/individu/produk/investasi-dan-asuransi/obligasi/pasar-perdana/-/media/Files/campaign/2026/ORI30/20260706-memorandum-ori030t6"
       }
     ],
-    "rationale": "The newly published September 2026 agreed-upon-procedures report presents the reserve account at September 30, 2026, 12:31 PM WIB. Its eight balances are ORI030 Rp4,005,850,153; Bank Ina Rp16,740,530,150; Bank Nationalnobu Rp67,784,983; BRI Rp10,244,545; Bank Mandiri Rp10,085,000; Duitku Rp1,604,097,929; PINTU Rp996,226,547; and Indodax Rp706,912,188. They sum exactly to the stated Rp24,141,731,495 reserves, against Rp24,033,769,441 reported circulation. Weights use each exact balance divided by this reserve denominator without decimal rounding. Signed pages 3\u20134 identify Jojo Sunarjo & Rekan and October 7, 2026, and explicitly disclaim an audit, review or assurance opinion. Report circulation enumerates Base, Polygon, Lisk, Kaia, BSC, Solana and Celo; this reserve allocation does not establish complete current multichain liability coverage. Neither the report nor account balances establish realization horizons, so no immediate-liquidity assumption is carried forward.",
+    "rationale": "The newly published September 2026 agreed-upon-procedures report presents the reserve account at September 30, 2026, 12:31 PM WIB. Its eight balances are ORI030 Rp4,005,850,153; Bank Ina Rp16,740,530,150; Bank Nationalnobu Rp67,784,983; BRI Rp10,244,545; Bank Mandiri Rp10,085,000; Duitku Rp1,604,097,929; PINTU Rp996,226,547; and Indodax Rp706,912,188. They sum exactly to the stated Rp24,141,731,495 reserves, against Rp24,033,769,441 reported circulation. Weights use each exact balance divided by this reserve denominator without decimal rounding. Signed pages 3\u20134 identify Jojo Sunarjo & Rekan and October 7, 2026, and explicitly disclaim an audit, review or assurance opinion. Report circulation enumerates Base, Polygon, Lisk, Kaia, BSC, Solana and Celo; this reserve allocation does not establish complete current multichain liability coverage. Neither the report nor account balances establish realization horizons, so no immediate-liquidity assumption is carried forward. New instrument research verified 2026-10-20: government-issued ORI030T3 and ORI030T6 memoranda dated July 6, 2026, hosted by named distribution partner BCA, bind principal maturity to July 15, 2029 and July 15, 2032 respectively. The report does not identify the held tranche. The ORI030 slice therefore uses only the conservative latest documented series maturity, July 15, 2032, or 2,115 calendar days from the unchanged September 30 composition snapshot. This is a contractual worst-case maturity maximum, not a tranche identification, weighted-average maturity, rapid sale guarantee or final settlement bound. Other reserve fields and weights retain the September report's scope and dates.",
     "compositionBasis": "Eight institution/instrument balances in the September 30, 2026 AUP complete reserve table, divided by Rp24,141,731,495",
     "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "All reported reserve balances are identified. The ORI030 underlying depository, enforceable segregation, bankruptcy remoteness, rehypothecation protections, bond contractual maturity and stressed realization horizons are not established. A report-complete reserve table is not a complete current liability census.",
+    "knownUnknownExposure": "All reported reserve balances are identified. The ORI030 exact tranche and underlying depository, enforceable segregation, bankruptcy remoteness, rehypothecation protections and stressed realization horizons are not established. Only a conservative maximum over the documented ORI030T3/T6 contractual maturities is known. A report-complete reserve table is not a complete current liability census.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

@@ -13,8 +13,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (Lane08Midas)",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "NR2 bottom-up refinement 2026-10-21",
     "confidence": "verified",
     "sources": [
       {
@@ -34,7 +34,7 @@
         "url": "https://www.fordefi.com/customer-stories/how-midas-brings-tokenized-investment-opportunities-on-chain-with-fordefis-defi-native-custody-2ti85"
       },
       {
-        "label": "Midas mHYPER protocol exposures, updated 2026-10-09T10:06:22.767Z; accessed October 9, 2026",
+        "label": "Midas mHYPER protocol exposures, updated 2026-10-20T21:06:47.738Z; retrieved October 20, 2026",
         "url": "https://api-prod.midas.app/api/transparency?token=mHYPER"
       },
       {
@@ -48,13 +48,17 @@
       {
         "label": "mHYPER signed Final Terms dated July 17, 2026; delta-neutral mandate, leverage and claim scope",
         "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media"
+      },
+      {
+        "label": "Hyperithm-wide Accountable dashboard; different aggregate book, not mHYPER-specific; retrieved October 20, 2026",
+        "url": "https://accountable.hyperithm.com/"
       }
     ],
-    "rationale": "Classification and disclosure scope re-reviewed October 9, 2026, without renewing the July 20 composition. The exact-product issuer API updated 2026-10-09T10:06:22.767Z reports assets of 31.5319457355 million USD, borrow liabilities of -0.0000181694 million USD and net equity of 31.5319275661 million USD. It has protocol-level aggregates but no main_positions inventory; cex_1, cex_2 and cex_3 remain anonymous. These are diagnostic totals, not a complete instrument, signed hedge, custody or all-liability inventory. The signed July 17, 2026 Final Terms establish the binding delta-neutral reference-portfolio mandate but not measured holdings or hedge compliance.",
+    "rationale": "Disclosure scope re-reviewed October 20, 2026, without renewing the July 20 composition. The exact-product issuer API updated 2026-10-20T21:06:47.738Z reports assets of 29.1002046176 million USD, borrow liabilities of -0.0000280279 million USD and net equity of 29.1001765897 million USD. It has no main_positions inventory; anonymous cex_1/2/3 and unmapped general_wallet account for 20.30% and 34.44% of reported net equity respectively. Protocol aggregates and wallet labels do not identify complete instruments, signed hedges, custody allocations or every token liability. The July 17, 2026 signed Final Terms establish an investment mandate, not measured holdings. The whole-book institutional-unregulated custody label is withdrawn: named Fordefi infrastructure does not establish every underlying venue's custody tier.",
     "compositionBasis": "Current Midas product and attestation disclosures; live NAV row identity from the Midas Chainlink NAV oracle adapter",
     "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "October 9 disclosure review: protocol assets/equity and anonymous CEX1/2/3 balances do not identify complete economically valued reserve instruments, signed hedge legs, venue operators, custody allocations or every token liability. No main_positions are published for mHYPER. The July 17, 2026 signed terms cap gross leverage at 8.0x and require delta neutrality, but mandate limits are not observed allocation or reserve reconciliation. Preserve the July 20 compositionAsOf, 100% unknown exposure and existing NAV source-age limits; neither the current API timestamp nor this review renews composition.",
+    "knownUnknownExposure": "October 20 disclosure review: no complete economically valued instrument inventory, signed hedge legs, named CEX operators, custody allocation or all-liability census is published in the retrieved exact-product API. The signed terms require delta neutrality and cap gross leverage at 8.0x, but mandates are not observed compliance. Preserve July 20 compositionAsOf, 100% unresolved look-through exposure and existing NAV source-age limits. Accountable's Hyperithm-wide dashboard is a different aggregate book and cannot be substituted for the exact mHYPER liability or reserve denominator.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -69,8 +73,8 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Fordefi",
-        "role": "custodian"
+        "name": "Fordefi (MPC infrastructure for issuer self-custody)",
+        "role": "other"
       }
     ],
     "segregation": "mixed",
@@ -89,6 +93,6 @@
         "url": "https://midas.app/mhyper"
       }
     ],
-    "uncertainty": "Fordefi documents dedicated workspaces in which the strategy manager holds an MPC share and Midas holds an administrative policy share. Assets are actively deployed across protocols and venues, so provider allocation, venue segregation, and reuse conditions remain strategy-dependent."
+    "uncertainty": "Fordefi documents issuer self-custody through dedicated workspaces: the strategy manager holds an MPC share and Midas holds an administrative policy share. Fordefi is infrastructure, not an independently established legal custodian. Assets are deployed across protocols and anonymous CEX venues; complete provider allocation, venue segregation and reuse conditions remain unresolved. Original custody review start is retained."
   }
 }

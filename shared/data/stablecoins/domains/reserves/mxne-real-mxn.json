@@ -15,8 +15,7 @@
         "counterparty",
         "smart-contract"
       ],
-      "liquidityHorizon": "seven-days",
-      "maturityDaysMax": 7
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -35,9 +34,13 @@
       {
         "label": "Brale MXNe product page",
         "url": "https://brale.xyz/stablecoins/MXNe"
+      },
+      {
+        "label": "Brale Etherfuse case study, exact CETES backing relationship (retrieved 2026-10-20)",
+        "url": "https://brale.xyz/case-studies/etherfuse"
       }
     ],
-    "rationale": "Brale's current MXNe page identifies the Etherfuse partnership; Etherfuse's current CETES page identifies the token as Mexican federal CETES and states that brokerages use INDEVAL custody; and BHR México's July 24, 2026 reasonable-assurance examination reconciles CETES token value in circulation of MXN 93,193,000.05 to MXN 98,494,098 of backing assets (105.69%) held at BBVA México, STP, Actinver, and Casa de Bolsa BASE. The 100% row records the fully identified Etherfuse CETES Stablebond backing category, not an MXNe-specific balance claim.",
+    "rationale": "Brale's MXNe page identifies the Etherfuse partnership; Etherfuse's CETES page identifies the token as Mexican federal CETES and states that brokerages use INDEVAL custody; and the previously reviewed BHR México July 24, 2026 examination reconciles CETES token value in circulation of MXN 93,193,000.05 to MXN 98,494,098 of backing assets (105.69%) held at BBVA México, STP, Actinver, and Casa de Bolsa BASE. The 100% row records the identified Etherfuse CETES Stablebond backing category, not an MXNe-specific balance claim. Source-scoped correction, verified 2026-10-20; original review start 2026-08-20 and compositionAsOf 2026-07-24 retained. The reopened CETES instrument page and Brale partnership case study establish short-term CETES exposure but no enforceable seven-day maximum residual maturity or complete-claim seven-day redemption-liquidity bound. The unsupported maturityDaysMax 7 is removed and liquidityHorizon is unknown. The September 29 BHR report remains an upstream Etherfuse book and does not renew this MXNe-specific composition or supply reconciliation.",
     "compositionBasis": "Current Brale MXNe and Etherfuse CETES disclosures plus BHR México's July 24, 2026 assets-and-liabilities reasonable-assurance examination",
     "compositionAsOf": "2026-07-24",
     "scope": "full-composition",
@@ -61,19 +64,16 @@
       {
         "name": "Banco Bilbao Vizcaya Argentaria, S.A. / Grupo Financiero BBVA México",
         "role": "custodian",
-        "sharePct": 92.5059,
         "jurisdiction": "Mexico"
       },
       {
         "name": "Casa de Bolsa BASE",
         "role": "custodian",
-        "sharePct": 4.7465,
         "jurisdiction": "Mexico"
       },
       {
         "name": "Grupo Financiero Actinver, S.A. de C.V.",
         "role": "custodian",
-        "sharePct": 2.7476,
         "jurisdiction": "Mexico"
       },
       {
@@ -82,7 +82,7 @@
         "jurisdiction": "Mexico"
       }
     ],
-    "segregation": "segregated",
+    "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-08-08",
@@ -98,6 +98,6 @@
         "url": "https://app.etherfuse.com/bonds/cetes"
       }
     ],
-    "uncertainty": "The BHR report names and allocates the Etherfuse CETES program's three reserve institutions; Etherfuse separately identifies INDEVAL as the securities depository. The public sources do not identify the MXNe-specific sub-portfolio allocation, legal insolvency treatment, or rehypothecation terms."
+    "uncertainty": "The historical BHR report names and allocates the Etherfuse CETES program's reserve institutions; Etherfuse separately identifies INDEVAL as the securities depository. Source-scoped correction, verified 2026-10-20; original 2026-08-08 custody review and source pins retained. The upstream program's reported percentages and segregated accounts do not establish the direct Brale MXNe custody account, its allocation or the holder's enforceable segregation rights. Provider names remain upstream leads, their unsupported MXNe sharePct values are removed, and whole-claim segregation remains unknown. The public Brale MXNe product, partnership case study, public terms and Etherfuse reserve portal do not identify MXNe-specific account allocation, insolvency treatment or rehypothecation terms."
   }
 }

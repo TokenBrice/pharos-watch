@@ -3,13 +3,13 @@
   "reserves": [
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xc5d6a7b61d18afa11435a889557b068bb9f29930:deployed",
-      "name": "Savings USDD deployed strategy positions",
+      "name": "Savings USDD Pot accounting claim",
       "pct": 100,
       "risk": "high",
       "coinId": "usdd-tron-dao-reserve",
       "depType": "wrapper",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "USDD savings system (sUSDD vault) and the TRON DAO Reserve Smart Allocator strategy",
+      "issuerOrObligor": "USDD savings system: immutable SavingsUsdd wrapper, chain-local UsddJoin and Pot",
       "riskFactors": [
         "smart-contract",
         "liquidity",
@@ -41,15 +41,19 @@
         "url": "https://etherscan.io/address/0xc5d6a7b61d18afa11435a889557b068bb9f29930"
       },
       {
+        "label": "Exact immutable SavingsUsdd source; accounting correction reviewed 2026-10-20 without renewing historical composition",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc5d6a7b61d18afa11435a889557b068bb9f29930"
+      },
+      {
         "label": "USDD Smart Allocator allocation detail API",
         "url": "https://openapi.usdd.io/api/v1/smart-allocator/detail-overview"
       }
     ],
-    "rationale": "Re-keyed 2026-09-29 to the exact reviewed row identity. The previous slice carried the idle-underlying source key from a period when the vault held its USDD idle; pinned reads now show the vault fully deployed, so the reviewed deployedExposure attestation on the live adapter config attributes the full deployed share to this reviewed slice and the producer publishes it keyed by the USDD underlying address rather than a vault-addressed deployed remainder. Pinned Ethereum reads at block 26083816 (2026-09-29T14:47:11Z) confirm the sUSDD vault at 0xc5d6a7b61d18afa11435a889557b068bb9f29930 has asset() returning USDD at 0x4f8e5de400de08b164e7421b3ee387f461becd1a, totalAssets() of 198738616.64 USDD against 186200657.69 sUSDD shares, and a zero idle USDD balance held by the vault, so the full composition is the deployed strategy position. USDD documentation states that deposited USDD accrues returns through the Smart Allocator strategy, which deploys protocol capital onto lending platforms selected by the USDD and JUST DAO teams such as Aave and JustLend, and that each sUSDD remains fully redeemable for USDD at any time with no lock-up. The slice is therefore classified as a high-risk protocol position linked to the tracked parent USDD; venue-level allocation of this vault's deployed USDD inside the protocol-managed reserve is not published per position, and the parent dependency carries USDD reserve, peg, and governance risks.",
-    "compositionBasis": "Exact live ERC-4626 deployed-strategy row, pinned Ethereum reads at block 26083816 (2026-09-29T14:47:11Z), and current USDD issuer documentation",
+    "rationale": "Source-scoped accounting correction reviewed 2026-10-20; original 2026-09-29 review start and composition pin retained. Historical Ethereum block 26083816 (2026-09-29T14:47:11Z) records asset() as USDD 0x4f8e5de400de08b164e7421b3ee387f461becd1a, totalAssets() of 198738616.64 USDD, 186200657.69 sUSDD shares and zero idle USDD. The exact verified SavingsUsdd code explains the zero balance: _mint transfers USDD, calls UsddJoin.join and Pot.join, then increases share supply; _burn decreases share supply and calls Pot.exit and UsddJoin.exit. totalAssets() is converted share accounting, not a measurement of external strategy assets. The position is therefore the high-risk USDD savings/Pot claim linked to the parent, not independently measured Smart Allocator venue positions. Issuer terms describe anytime USDD withdrawal with no lock-up. Parent reserve, peg and governance risks remain inherited; no current balance, venue allocation, financial assurance or legal safeguard is inferred from this source correction.",
+    "compositionBasis": "Historical Ethereum block 26083816 (2026-09-29T14:47:11Z) savings-claim accounting; exact immutable source correction reviewed 2026-10-20, without a new holdings observation",
     "compositionAsOf": "2026-09-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "The deployed row identifies the sUSDD savings position inside the USDD protocol's Smart Allocator-managed reserve; the issuer does not attribute specific lending venues or platforms to the sUSDD vault's deposited USDD, and the underlying USDD reserve composition is tracked on the parent asset.",
+    "knownUnknownExposure": "The reviewed row identifies a USDD savings/Pot accounting claim. The issuer's Smart Allocator description concerns the wider USDD yield/reserve system and does not attribute external venue positions directly to this vault. Underlying USDD reserve composition and unresolved allocator look-through remain on the required parent asset.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

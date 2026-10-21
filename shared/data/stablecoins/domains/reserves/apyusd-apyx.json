@@ -101,6 +101,6 @@
         "url": "https://1731598137-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F6XK8DXRkFImTNSbo86o2%2Fuploads%2F133oAatMzJ47DEJ8gAoT%2FAugust%202026%20Attestation%20Opinion%20(Final).pdf?alt=media&token=0386fd1d-2316-4320-b799-96ec6c4e827e"
       }
     ],
-    "uncertainty": "The immediate asset is apxUSD held by the Ethereum vault, verified at block 26095809. The August 31 underlying securities report names Alpaca for brokerage-held STRC and Preference Foundation-controlled wallets for STRCx. These underlying providers do not directly custody apyUSD or establish a token-holder claim. Provider shares across the complete backing, segregation, bankruptcy remoteness and rehypothecation protections are not established; the existing institutional-regulated summary does not describe every layer."
+    "uncertainty": "The Ethereum vault holds apxUSD, verified at block 26095809. The August 31 securities report identifies brokerage-held STRC at Alpaca and self-custodied STRCx wallets controlled by Preference Foundation. Those underlying providers do not directly custody apyUSD or establish a holder claim. Complete provider shares, segregation, bankruptcy remoteness and rehypothecation protections remain unestablished. The mixed summary records heterogeneous custody without granting a whole-book institutional tier."
   }
 }

@@ -16,7 +16,7 @@
         "custody",
         "legal"
       ],
-      "liquidityHorizon": "immediate",
+      "liquidityHorizon": "unknown",
       "sourceKey": "m0-wrapper-underlying:m"
     }
   ],
@@ -36,9 +36,17 @@
       {
         "label": "Startale USDSC product page",
         "url": "https://usd.startale.com/"
+      },
+      {
+        "label": "M0 current liquidity and exact-route requirements (retrieved 2026-10-20)",
+        "url": "https://docs.m0.org/build/accessing-liquidity"
+      },
+      {
+        "label": "Startale USD counterparty and discretionary swap terms (retrieved 2026-10-20)",
+        "url": "https://usd.startale.com/terms"
       }
     ],
-    "rationale": "Startale identifies USDSC as an M0 extension that wraps M. M0 documents extensions as 1:1 backed by eligible collateral and describes M collateral as typically U.S. Treasury bills held in SPVs with validator attestations. The direct reserve relationship is therefore retained as 100% M without duplicating M's underlying Treasury envelope.",
+    "rationale": "Startale identifies USDSC as an M0 extension that wraps M. M0 documents extensions as 1:1 backed by eligible collateral and describes M collateral as typically U.S. Treasury bills held in SPVs with validator attestations. The direct reserve relationship is therefore retained as 100% M without duplicating M's underlying Treasury envelope. Source-scoped correction, verified 2026-10-20; original review start 2026-07-14 retained. The current M0 liquidity documentation distinguishes atomic extension-to-extension conversion from issuer-onboarded primary redemption and source-specific solver routes; the current Startale terms permit discretionary pricing and suspension. Neither establishes a whole-claim immediate M-to-USD liquidity horizon, so the unsupported immediate factor is corrected to unknown. A parent's Treasury custody label and unnamed qualified custodians also do not establish the complete child-plus-parent custody tier.",
     "compositionBasis": "Startale USDSC M0-extension relationship and M0 collateral documentation",
     "scope": "dependency-relationships",
     "knownUnknownExposure": "No unlinked direct reserve asset remains. The Startale-specific issuer, SPV account, and custody allocation are not separately disclosed in the reviewed sources.",

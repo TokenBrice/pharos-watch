@@ -122,11 +122,27 @@
       ],
       "liquidityHorizon": "immediate",
       "sourceKey": "nest-vault-positions:usdg"
+    },
+    {
+      "name": "Nest pending redemption receivables",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "BlackOpal LiquidStone II FIDC (Brazilian credit-card receivables) via Nest vault",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "legal",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "nest-vault-positions:pending-withdrawals"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (Lane25Nest)",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "Sol curation campaign 2026-10-09 (Lane25Nest); FD27 pending-OALS2T classification 2026-10-20",
     "confidence": "verified",
     "sources": [
       {
@@ -164,9 +180,13 @@
       {
         "label": "Robinhood Chain canonical USDG contract (accessed 2026-10-09)",
         "url": "https://docs.robinhood.com/chain/contracts/"
+      },
+      {
+        "label": "Exact nOPAL OALS2T pending withdrawal request 15, retrieved 2026-10-20",
+        "url": "https://api.nest.credit/v1/vaults/nest-opal-vault/positions"
       }
     ],
-    "rationale": "Classification-only review on 2026-10-09. The exact nOPAL positions API identifies a USDG liquid balance at Robinhood chain 4663 contract 0x5fc5360d0400a0fd4f2af552add042d716f1d168; Robinhood's canonical token directory corroborates that address. The zero-percent USDG row is a keyed classification, not an asserted current allocation; live observations own its weight. All previously authored percentages and compositionAsOf retain their September 4 provenance and are not refreshed by this review. BlackOpal and Nest describe short-duration receivables and a liquid sleeve but do not disclose a contractual whole-OALS2T maturity maximum or stressed liquidation horizon. The nTBILL receipt's underlying short-duration strategy does not establish a contractual maturity maximum for the receipt itself. Its current up-to-four-day redemption estimate is qualified by liquidity-dependent processing and does not support the previously authored one-day stressed liquidation horizon, which remains unknown.",
+    "rationale": "Classification-only extension researched 2026-10-20: the exact nOPAL positions endpoint binds pending withdrawal request 15 to OALS2T on Plume, token 0x04e5a6f7ee9977d38f57945c31b72178c9cf1c06, in yieldAssets slug liquid-stone. Its disclosed value is 650202.1325963091; no current allocation percentage is authored. The pending-withdrawals metadata row is private-credit redemption receivable exposure to the same LiquidStone II obligor, not immediately liquid stablecoins. Admission relies on the companion producer guard requiring yield/liquid-stone/OALS2T; a different underlying must fail closed pending a new review. Its zero percentage is a live-key classification placeholder like the existing USDG row, not an observation of zero current exposure. The October 9 USDG classification and all other historic classifications retain their original evidence; every pre-existing percentage and compositionAsOf remains the September 4 snapshot. This review establishes neither current whole-book composition nor new custody safeguards. BlackOpal/Nest do not disclose a whole-OALS2T contractual maturity maximum or stressed realization horizon. nTBILL's qualified up-to-four-day redemption estimate likewise does not establish a receipt maturity maximum or unconditional stressed settlement bound.",
     "compositionBasis": "Classification metadata for exact live-adapter source keys; historical percentages remain the Nest positions/NAV snapshot fetched 2026-09-04, not current whole-book composition.",
     "compositionAsOf": "2026-09-04",
     "scope": "classification-only",

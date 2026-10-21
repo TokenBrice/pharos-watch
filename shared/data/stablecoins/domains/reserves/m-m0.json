@@ -76,8 +76,8 @@
         "jurisdiction": "Luxembourg"
       }
     ],
-    "segregation": "segregated",
-    "bankruptcyRemoteness": "structured",
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-17",
     "reviewer": "Kimi V9 FIAT-CTRL evidence (shard-06)",
@@ -100,7 +100,7 @@
         "url": "https://protocol-api.m0.org/graphql"
       }
     ],
-    "uncertainty": "M0 Foundation documentation (2024-11-20) names the approved collateral structures, Superstate Inc. (investment manager) / Superstate Asset Trust (Delaware collateral storage vehicle) / UMB Bank, N.A. (custodian), and CrossLend GmbH (SPV operator) / Asset Repository S.a.r.l (Luxembourg SPV) / DEKA Bank (custodian), with asset segregation under the Delaware Statutory Trust Act and bankruptcy-remoteness stated as a required structural property. The 97.9% UMB share maps the 2026-07-15 first-party collateral capture (97.9% USTB, sole eligible on-chain collateral token) to the USTB structure's documented custodian, so one structure/custodian chain concentrates >90% of collateral. Current minter-level allocation across the two structures, the ~2.1% cash custody arrangements, and a general rehypothecation prohibition are not publicly documented.",
+    "uncertainty": "M0 Foundation documentation (2024-11-20) names the approved collateral structures, Superstate Inc. (investment manager) / Superstate Asset Trust (Delaware collateral storage vehicle) / UMB Bank, N.A. (custodian), and CrossLend GmbH (SPV operator) / Asset Repository S.a.r.l (Luxembourg SPV) / DEKA Bank (custodian), with asset segregation under the Delaware Statutory Trust Act and bankruptcy-remoteness stated as required structural properties. The 97.9% UMB share maps only the historical 2026-07-15 first-party USTB collateral capture to that structure's then-documented custodian; it is not a current allocation. Current minter-level adoption of the legal structures, cash custody arrangements and a general rehypothecation prohibition are not publicly documented. Source-scoped correction (2026-10-20): a permitted structure and historical majority allocation do not establish whole-current-book segregation or bankruptcy remoteness. Those aggregate protections and the whole-book custodyModel are corrected to unknown; historical provider entries, share, source pins and original 2026-07-17 review start are preserved. Current on-chain collateral/debt accounting does not establish custody-provider or underlying asset allocation.",
     "knownUnknownExposurePct": 2.1
   }
 }

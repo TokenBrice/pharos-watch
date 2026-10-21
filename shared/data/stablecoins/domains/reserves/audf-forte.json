@@ -76,8 +76,16 @@
       {
         "label": "Cointree AUDF PDS — distributor disclosure of token-holder reserve/insolvency rights",
         "url": "https://www.cointree.com/company/pds/audf-pds/"
+      },
+      {
+        "label": "Current issuer-linked AUDF Terms of Use, dated 15 January 2025 v4.0 (recovered 2026-10-21)",
+        "url": "https://www.forteaud.com/api/documents/view/terms-of-use"
+      },
+      {
+        "label": "Issuer AUDF PDS, dated 30 June 2026 (retrieved 2026-10-21)",
+        "url": "https://www.forteaud.com/api/documents/view/product-disclosure-statement"
       }
     ],
-    "uncertainty": "The May 2026 reserve report described one segregated, unencumbered AUDF reserve account in Australia without naming the bank. The August 31 report audits AUD 5,142,851.53 cash assets but does not establish holder trust/title, successor-custody continuity, or token-liability reconciliation. Current Cointree distributor PDS expressly says holders have no trust/proprietary reserve interest and are unsecured creditors on Forte insolvency. The cited January 2026 issuer terms return HTTP 404; current binding issuer terms, bank identity, provider allocations, anti-rehypothecation, and continuity arrangements remain unverified. This disclosure-scope update does not refresh the favorable historical segregation observation."
+    "uncertainty": "The May 2026 reserve report described one segregated, unencumbered AUDF reserve account in Australia without naming the bank. The August 31 report audits AUD 5,142,851.53 cash assets but does not establish holder trust/title, successor-custody continuity, or token-liability reconciliation. Source recovery on 2026-10-21 found the current issuer-linked terms and PDS through the rendered Legal & Regulatory directory: the obsolete January-2026-named /s/ URL returning HTTP 404 is link migration, not evidence of issuer non-disclosure. The retrieved terms are dated 15 January 2025 v4.0; clauses 1(g)-(i), 4.1(c) and 17(c) give only a contingent contractual redemption claim, deny a trust/fiduciary relationship and disclaim custody warranties. The issuer's 30 June 2026 PDS, pages 5 and 7, independently states no trust/proprietary reserve interest, unsecured-creditor insolvency status and no reserve security interest. These adverse legal terms support retaining the absence of bankruptcy-remoteness credit independently of the obsolete URL and of the distributor PDS. Bank identity, provider allocations, anti-rehypothecation and successor-custody arrangements remain undisclosed on the retrieved issuer terms, issuer PDS, transparency and reserve audit surfaces. The issuer's regulated-financial-institutions statement does not identify the bank or independently close all material custody layers. No custodian is asserted to be unregulated. Existing provider identity, historical segregation observation and original review dates remain unchanged."
   }
 }

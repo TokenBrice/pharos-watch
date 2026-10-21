@@ -413,11 +413,74 @@
       "pct": 0,
       "risk": "high",
       "assetClass": "protocol-position"
+    },
+    {
+      "sourceKey": "accountable:yuzu:deployment:global-dollar-usdg",
+      "name": "Global Dollar USDG",
+      "pct": 0,
+      "risk": "low",
+      "coinId": "usdg-paxos",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Paxos Global Dollar USDG",
+      "riskFactors": ["counterparty", "custody", "liquidity"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "accountable:yuzu:deployment:aave-usdt-uppercase",
+      "name": "Aave USDT (uppercase source label)",
+      "pct": 0,
+      "risk": "medium",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave USDT lending markets and underlying Tether USDT",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "accountable:yuzu:deployment:sky-susds-loop",
+      "name": "Sky sUSDS loop",
+      "pct": 0,
+      "risk": "high",
+      "coinId": "susds-sky",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky sUSDS held in Yuzu leveraged loop positions",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "market", "leverage"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "accountable:yuzu:deployment:morpho-usdc",
+      "name": "Morpho USDC",
+      "pct": 0,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Morpho USDC lending positions and underlying Circle USDC",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "market"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "accountable:yuzu:deployment:re-reusd-lp",
+      "name": "Re reUSD LP",
+      "pct": 0,
+      "risk": "high",
+      "coinId": "reusd-re-protocol",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Yuzu reUSD liquidity-provider positions and underlying Re Protocol reUSD",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "market"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-10",
-    "reviewer": "Sol curation campaign 2026-10-11 (L45YZUSD); classification-only AUSD LP/reUSD PT rows; prior W4C08Usdu and WS1.D identity caveats retained",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "Sol curation campaign 2026-10-11 (L45YZUSD); prior W4C08Usdu and WS1.D identity caveats retained; C03 classification-only additions reviewed 2026-10-20, original compositionAsOf and historical allocations unchanged",
     "confidence": "probable",
     "sources": [
       {
@@ -439,6 +502,18 @@
       {
         "label": "Yuzu Accountable transparency documentation",
         "url": "https://yuzu-money.gitbook.io/yuzu-money/transparency/accountable"
+      },
+      {
+        "label": "Accountable exposure_split 2026-10-19 06:00:03 UTC (retrieved 2026-10-20); five zero-percent rows classify exact live keys only, not historical allocations; position liquidity remains unknown",
+        "url": "https://cache.accountable.capital/dashboard/yuzu"
+      },
+      {
+        "label": "Global Dollar issuer token identity (retrieved 2026-10-20); direct USDG row only, not PT USDG",
+        "url": "https://globaldollar.com/about-usdg"
+      },
+      {
+        "label": "Sky sUSDS token and vault identity (retrieved 2026-10-20); the Yuzu loop is not direct immediately redeemable sUSDS",
+        "url": "https://developers.skyeco.com/protocol/tokens/susds/"
       }
     ],
     "rationale": "Re-opened 2026-08-29: the Accountable dashboard's exposure_split timestamp is 2026-08-28 09:26:05 UTC. It reports named strategy values including Ethena USDe, Sky USDS staking, Aave USDC, Maple syrupUSDT/syrupUSDG/syrupUSDC loops, Agora PT AUSD, Yuzu yzPRIME, Superstate USTB, PayPal PYUSD, Ethena sUSDe, Liquidity_Buffer, Sky PT sUSDS, Fasanara mGLO/mGLOBAL, Aave USDT0/RLUSD/GHO/GHO Savings, and Securitize VBILL. The named positive exposure values total $63,611,871.26, while the nearest contemporaneous reserve timeline total is $63,751,113.85; Accountable's Rest_of_Assets bucket is $83,029.55. The resulting 0.348657% residual is retained as Other reserve assets rather than silently normalizing the split to 100%; the tiny sub-cent Ethena USDe entry is below the positive percentage precision and is omitted. New Sky and PayPal buckets are retained as explicit protocol-position slices, but they have no reviewed tracked-coin link in the current adapter map. No strategy-level allocation beyond these Accountable buckets is inferred.",

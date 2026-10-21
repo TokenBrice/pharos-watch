@@ -62,7 +62,7 @@
     ],
     "segregation": "mixed",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "permitted",
+    "rehypothecation": "unknown",
     "reviewedAt": "2026-07-14",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
@@ -76,6 +76,6 @@
         "url": "https://docs.morpho.org/developers/contracts/morpho-vaults/"
       }
     ],
-    "uncertainty": "Assets are held by identifiable noncustodial vault and market contracts, with idle and market allocations changing over time. Reuse is explicit because USDC is supplied to borrower markets. Contract-level isolation does not establish legal bankruptcy remoteness, and no static provider allocation is appropriate."
+    "uncertainty": "Assets are held by identifiable noncustodial vault and market contracts, with idle and market allocations changing over time. Contract-level isolation does not establish legal bankruptcy remoteness, and no static provider allocation is appropriate. Source-scoped correction. The source review rechecked the cited Morpho V1 contract documentation and exact Smokehouse product page on 2026-10-20: depositing USDC into borrower markets establishes intentional strategy lending, but neither source establishes a custodian's contractual right to repledge assets. The prior permitted legal-rehypothecation label conflated these different scopes and is withdrawn to unknown. Current Steakhouse vault terms likewise disclaim custody and fiduciary obligations without supplying legal reuse rights. Actual lending/capital reuse, all reserve risk factors, original review start and composition pins remain unchanged."
   }
 }

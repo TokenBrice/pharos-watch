@@ -54,12 +54,16 @@
         "label": "3Jane USD3/sUSD3 suppliers (senior liability and the two credit sleeves)",
         "url": "https://docs.3jane.xyz/usd3-susd3/suppliers.md"
       }
+      ,{
+        "label": "3Jane source-native backing and facility dashboard, retrieved 2026-10-20; underlying facility carrying dates October 14-16",
+        "url": "https://app.3jane.xyz/info/backing"
+      }
     ],
     "rationale": "Write-time Ethereum reads at block 25648096 (2026-07-30) on canonical USD3 0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc resolved nav(), totalAssets(), totalSupply(), USD3 waUSDC accounting, Aave market liquidity, availableWithdrawLimit(address(0)), minCommitmentTime(), isShutdown(), and USD3's USDC balance. The adapter-valued snapshot resolves 90.8% Fintech and crypto credit receivables and 9.2% Aave USDC liquidity buffer, with no idle USDC, zero minimum commitment time, and isShutdown=false. 3Jane's current backing and supplier disclosures independently describe the two credit sleeves (Fintech Credit Conduits and Crypto Credit Lines) and idle USDC supplied to the Aave V3 USDC market. The on-chain snapshot supplies the dated weights; the issuer disclosure supplies the honest group identities and the immediate-liquidity claim.",
     "compositionBasis": "Canonical USD3 on-chain accounting, valued through its waUSDC position and the Aave V3 USDC market at Ethereum block 25648096; issuer documentation for the backing-sleeve identities.",
     "compositionAsOf": "2026-07-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "3Jane publishes this live on-chain view as one combined credit-receivables group. Its current public disclosure identifies Fintech Credit Conduits and Crypto Credit Lines but does not publish a dated on-chain or dashboard split between those sleeves, facility/originator weights, or individual merchant obligors. The combined group remains structured at the disclosed level; its unverified sub-split is not inferred.",
+    "knownUnknownExposure": "The retained July 30 on-chain composition emits one combined credit-receivables group. Source recovery on 2026-10-20 supersedes the earlier blanket statement that public sleeve and facility weights are absent: the issuer backing dashboard now discloses separate money-market, Erebor staging, warehouse, forward-flow and credit-line categories and named LendSwift, Slope and Settle facilities. The recovered source payload has query dataUpdatedAt values around 2026-10-20T22:24:47Z, while its facility carrying rows retain October 16, October 15 and October 14 as-of dates respectively. Warehouse collateral value is not its carrying claim; TVV includes credit enhancement and is not the reserve-claim denominator. Those distinct scopes/clocks cannot be normalized into a current whole-book split or backdated into the July composition. A producer/accounting integration remains required before narrowing the combined adapter exposure. Complete merchant/facility contractual maturity maxima and whole-position realization bounds remain unestablished.",
     "knownUnknownExposurePct": 90.8,
     "nonLinkDispositions": [
       {
@@ -67,7 +71,7 @@
         "reserveName": "Fintech and crypto credit receivables",
         "pct": 90.8,
         "disposition": "basket-needs-split",
-        "rationale": "The current on-chain accounting emits one credit-receivables value. 3Jane documents the Fintech Credit Conduits and Crypto Credit Lines sleeves but does not disclose their current weights or the underlying facility and merchant allocations, so no narrower dependency or obligor split is authored."
+        "rationale": "The retained adapter snapshot emits one combined credit-receivables value. October 20 source recovery establishes that the issuer now publishes named sleeve/facility breakdowns, but those mixed-date carrying, collateral and verified-backing figures have not been reconciled to the exact adapter reserve denominator. The basket-needs-split disposition therefore remains an integration/accounting gap, not a blanket claim that all facility weights are undisclosed. No narrower dependency, obligor weight or contractual maturity is inferred, and the historical composition/review dates and percentages are preserved."
       }
     ]
   },

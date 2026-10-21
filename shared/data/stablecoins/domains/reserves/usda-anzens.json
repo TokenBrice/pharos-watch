@@ -2,57 +2,78 @@
   "id": "usda-anzens",
   "reserves": [
     {
-      "name": "Cash, cash equivalents, U.S. Treasury bills, and Treasury-focused money-market funds",
-      "pct": 100,
-      "risk": "very-low",
-      "assetClass": "other",
-      "issuerOrObligor": "Anzens reserve counterparties and U.S. government securities; individual holdings are not disclosed",
-      "riskFactors": [
-        "credit",
-        "duration",
-        "liquidity",
-        "custody",
-        "counterparty",
-        "concentration"
-      ],
+      "name": "Superstate Short Duration U.S. Government Securities Fund book-entry shares (CUSIP 86851T204)",
+      "pct": 93.77856104,
+      "risk": "low",
+      "coinId": "ustb-superstate",
+      "depType": "collateral",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Superstate Short Duration U.S. Government Securities Fund, a series of a Delaware statutory trust",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "legal", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "U.S. dollars custodied by BitGo Trust for Anzens",
+      "pct": 6.22143896,
+      "risk": "low",
+      "assetClass": "cash",
+      "issuerOrObligor": "BitGo Trust Company and undisclosed reserve-bank counterparties",
+      "riskFactors": ["credit", "liquidity", "custody", "counterparty", "legal", "concentration"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase-1 reserve research 2026-07-28",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "FD17 bottom-up refinement 2026-10-21",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Anzens USDA homepage",
-        "url": "https://www.anzens.com/"
+        "label": "Anzens issuer publication June 24 2026: May 31 USDA examination signed June 22",
+        "url": "https://www.linkedin.com/posts/anzens-usda_attestation-report-activity-7475533327001821184-awG3"
       },
       {
-        "label": "Anzens terms and conditions",
-        "url": "https://www.anzens.com/landing/terms-and-conditions"
+        "label": "The Network Firm five-page USDA examination and full reserve table",
+        "url": "https://media.licdn.com/dms/document/media/v2/D561FAQHjBb-cNmmw-w/feedshare-document-pdf-analyzed/B56Z723v_nH4AY-/0/1782258271385?e=1793232000&v=beta&t=QtGXfpP88xOgN5eTs5mxNCZOUx10Y7I4PmuXDgIFshw"
+      },
+      {
+        "label": "Superstate USTB: exact CUSIP 86851T204 and equivalent tokenized/book-entry share forms",
+        "url": "https://superstate.com/assets/ustb"
+      },
+      {
+        "label": "Superstate book-entry USTB share mechanics",
+        "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb"
+      },
+      {
+        "label": "Koios USDA policy/asset-name and examined fingerprint match",
+        "url": "https://api.koios.rest/api/v1/policy_asset_list?_asset_policy=fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28 of Anzens homepage FAQ (USDA 100% reserves backed by dollars and dollar equivalents / U.S. government treasuries) and Terms §9 (Reserves = cash, cash equivalents, U.S. Treasury Bills of different durations, and U.S. Treasury-focused money market funds). No current weights or attestation table; envelope 100% aggregate other with ku=100.",
-    "compositionBasis": "Anzens issuer homepage and terms; reserve categories disclosed without current weights",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Newly recovered historical primary report, not a current observation: The Network Firm LLP's AICPA examination is as of May 31, 2026 at 23:59 UTC, signed June 22 and published by Anzens June 24. It reconciles 8,481,698 USDA with $8,946,628 reserve fair value, comprising $8,390,019 of direct book-entry Superstate fund shares (CUSIP 86851T204) and $556,609 of U.S. dollars. Percentages are those reported USD fair values divided by the complete reported reserve denominator, rounded to eight decimal places, not inferred present holdings. The report's USDA fingerprint matches the authored Cardano policy and asset name. The USTB link is the exact same CUSIP and legal fund in book-entry form, not an assertion that Anzens held a token contract. The 142-day-old period exceeds both the 120-day named-report composition budget and the 100-day assurance budget at the October 20 review; no current composition, solvency, custody, or financial-assurance credit is claimed. Cash and fund-share realization bounds remain unknown.",
+    "compositionBasis": "May 31 2026 USDA reserve fair-value table examined by The Network Firm LLP; historical only",
+    "compositionAsOf": "2026-05-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer identifies the eligible reserve envelope but does not publish current category weights, holdings, counterparties, or custody-provider shares.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "Both reserve categories and weights are identified for the historical report period only. Current holdings and weights, named reserve banks, whole-book holder legal protections and current custody allocations remain unestablished. No report or portfolio date is advanced to the retrieval date.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
-        "reserveIndex": 0,
-        "reserveName": "Cash, cash equivalents, U.S. Treasury bills, and Treasury-focused money-market funds",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "Anzens names the reserve categories but does not publish a current allocation among cash, cash equivalents, Treasury Bills, and Treasury-focused money-market funds."
+        "reserveIndex": 1,
+        "reserveName": "U.S. dollars custodied by BitGo Trust for Anzens",
+        "pct": 6.22143896,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The examined holding is fiat USD under BitGo reserve custody, not a tokenized dollar or tracked stablecoin claim; reserve-bank identities and withdrawal terms are not disclosed."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "BitGo Trust Company (customer USDA account services; reserve custody unverified)",
+        "name": "BitGo Trust Company (fiat-reserve custody as of May 31, 2026; current scope unverified)",
         "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Anzens Inc. (direct holder of Superstate fund book-entry reserve shares as of May 31, 2026)",
+        "role": "other",
         "jurisdiction": "United States"
       }
     ],
@@ -70,9 +91,13 @@
       {
         "label": "Anzens terms and conditions",
         "url": "https://www.anzens.com/landing/terms-and-conditions"
+      },
+      {
+        "label": "Anzens May 31 2026 reserve examination: historical BitGo fiat custody and direct fund-share holdings",
+        "url": "https://www.linkedin.com/posts/anzens-usda_attestation-report-activity-7475533327001821184-awG3"
       }
     ],
-    "uncertainty": "Reviewed 2026-10-09T10:36:53Z. The base coin retains January 31, 2026 examination context identifying BitGo fiat custody and Superstate fund shares held directly by Anzens; that historical mixed-layer description does not establish a current whole-book custody tier or reserve-provider weights. Anzens Terms section 8 assigns customer-account onboarding and digital-asset transaction execution to BitGo Trust. Section 9 identifies cash, cash equivalents, U.S. Treasury bills and Treasury-focused money-market funds as USDA reserves, but does not establish current custodian shares or segregated reserve accounts. Customer-token custody does not establish whole-reserve custody. Reserve segregation, bankruptcy remoteness and rehypothecation protections remain unverified on the reviewed current surfaces. The unknown percentage concerns current provider allocation, not an assertion that no historical provider was named. No composition date or holding weight is refreshed.",
+    "uncertainty": "The October 9 custody review start and unknown safeguards are retained without renewal. Newly recovered on October 20: the May 31, 2026 examination signed June 22 identifies BitGo-held fiat reserves in accounts segregated from BitGo proprietary assets, and Superstate fund book-entry shares held directly by Anzens. This is a historical mixed-layer reserve custody description, not merely customer-token account services, but it does not establish current provider weights or whole-holder legal segregation, bankruptcy remoteness, rehypothecation restrictions or successor arrangements. Current Anzens terms distinguish BitGo customer-account services from the reserve envelope. No current whole-book institutional custody tier or provider share is inferred.",
     "knownUnknownExposurePct": 100
   }
 }

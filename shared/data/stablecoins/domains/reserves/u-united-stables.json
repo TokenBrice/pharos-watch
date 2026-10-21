@@ -2,57 +2,94 @@
   "id": "u-united-stables",
   "reserves": [
     {
-      "sourceKey": "united-por:total-reserve",
-      "name": "Cash, U.S. Treasury bills, and fiat-referenced stablecoins (variable mix)",
-      "pct": 100,
-      "risk": "low",
+      "name": "USDC, USDT and USD1 stablecoins (individual and Binance-Peg weights undisclosed)",
+      "pct": 44.914639,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Issuers of the report's USDC, USDT and USD1 balances; Binance-Peg intermediary and individual issuer weights undisclosed",
+      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "USD current-account balances and money market fund units (mix undisclosed)",
+      "pct": 24.926793,
+      "risk": "medium",
       "assetClass": "other",
-      "issuerOrObligor": "United States Treasury and undisclosed fiat and stablecoin issuers",
-      "riskFactors": [
-        "counterparty",
-        "liquidity",
-        "custody",
-        "smart-contract"
-      ],
+      "issuerOrObligor": "Undisclosed banks, custodian and money market fund",
+      "riskFactors": ["counterparty", "custody", "duration", "liquidity", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Binance RWUSD principal-protected yield product",
+      "pct": 13.457246,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Binance",
+      "riskFactors": ["counterparty", "custody", "liquidity", "credit", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Tokenised US Treasury fund units (fund identity undisclosed)",
+      "pct": 16.701321,
+      "risk": "medium",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Undisclosed tokenised US Treasury fund",
+      "riskFactors": ["counterparty", "custody", "smart-contract", "duration", "liquidity"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map WS1.D reserve research",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "FD24 bottom-up refinement 2026-10-20",
     "confidence": "verified",
     "sources": [
       {
-        "label": "United Stables aggregate proof of reserves (accessed 2026-09-30)",
-        "url": "https://u.tech/u-client-api/v1/public/u/por"
+        "label": "United Stables September 30 2026 reserves report, report pages 1-2; Moore CPA Limited scanned assurance pages 1-5 (retrieved 2026-10-20)",
+        "url": "https://u.tech/assets/audit-report/USL%20-%20Assurance%20%26%20Reserves%20Report%20for%20Sep_08102026.pdf"
       },
       {
-        "label": "United Stables reserve disclosure",
-        "url": "https://u.tech/"
+        "label": "United Stables monthly independent report archive (retrieved 2026-10-20)",
+        "url": "https://u.tech/transparency/audit-report/"
       },
       {
-        "label": "United Stables terms and conditions",
-        "url": "https://u.tech/terms/"
-      },
-      {
-        "label": "United Stables Reserves Report as at August 31 2026 with Moore CPA Limited ISAE 3000 limited-assurance report (signed September 11 2026)",
-        "url": "https://u.tech/assets/audit-report/USL%20-%20Assurance%20%26%20Reserves%20Report%20Aug_19082026.pdf"
+        "label": "United Stables July 27 2026 governing reserve and redemption terms (retrieved 2026-10-20)",
+        "url": "https://u.tech/resources/legal-policy/terms/"
       }
     ],
-    "rationale": "The issuer API accessed 2026-09-30 remains genuinely single-bucket at source: totalReserve $1,540,127,120.98 and totalToken $1,497,830,391.63, updatedAt 2026-09-30T05:37:40.598Z, ripcord false. It discloses no constituent balances, contracts, custody allocation, or stablecoin weights. The contractual cash, Treasury and fiat-referenced stablecoin envelope remains a variable mix. Accepted mint or redemption assets do not prove positive holdings. Supplementary note 2026-10-19: the issuer's Reserves Report as at 2026-08-31, under a Moore CPA Limited ISAE 3000 limited-assurance conclusion signed 2026-09-11, does split that month's reserves by category: $1,284,976,249 of reserve assets against 1,275,499,208 U (100.74%), comprising stablecoins $418,354,080 (USDC, USDT and USD1; $389,453,533 held at an exchange), cash and cash equivalents $360,683,508 (including $278,574,977 at an asset manager, partly money market fund units), Binance RWUSD $304,175,870 (a principal-protected yield product held as a Binance account balance, redeemable for USDC subject to Binance quotas and fees, not transferable outside Binance and not a claim on any underlying asset) and tokenised U.S. Treasury fund units $201,762,791. Moore's emphasis of matter states it gives no assurance on the stability of the par-valued stablecoin and RWUSD balances. That dated monthly snapshot is not applied to the live single-bucket row above.",
-    "compositionBasis": "Aggregate issuer PoR at 2026-09-30T05:37:40.598Z; single-bucket source with no asset-level composition",
+    "rationale": "The September 30 2026 report measures USD 1,511,117,427 reserves against 1,496,671,535 U, including Robinhood Chain. Four category amounts are stablecoins USD 678,712,943, cash and cash equivalents USD 376,673,120, Binance RWUSD USD 203,354,791 and tokenised US Treasury fund units USD 252,376,573. Percentages divide those exact amounts by the reported reserve total, rounded to six decimals; rounding totals 99.999999%. The stablecoin bucket includes USDC, USDT and USD1 plus Binance-Peg USDC/USDT without individual weights; no guessed dependency edges are authored. USD 667,722,196 of stablecoins and all RWUSD are held at an exchange. Cash-equivalent custody locations do not establish the split between deposits and money market fund units. RWUSD is a nontransferable Binance account balance redeemable for USDC subject to quotas and fees, not a claim on underlying assets; it is not classified as direct Treasury exposure. Fund units likewise are not directly held Treasury bills and the fund is unnamed. Moore provides ISAE 3000 limited assurance, not an audit opinion or assurance on future par values, liquidity, provider agreements or controls. Its daily MMF redemption and sub-90-day fund-holdings description does not establish a whole-basket hard maturity or stressed realization bound. This is a dated monthly composition, not a split of the newer aggregate-only live PoR endpoint.",
+    "compositionBasis": "September 30 2026 United Stables Reserves Report; exact category values divided by USD 1,511,117,427",
     "compositionAsOf": "2026-09-30",
-    "compositionSource": "live-adapter",
     "scope": "full-composition",
-    "knownUnknownExposure": "All reserve value is reported as one variable basket; asset weights, stablecoin identities, banking counterparties, custodians, and liquidity terms are undisclosed.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "83.298678% remains unresolved for dependency allocation or asset-class lookthrough: stablecoin identities are named but individual and Binance-Peg weights are not; current-account versus MMF mix is not split; RWUSD is not a direct underlying-asset claim. The fund-share category is identified but its fund/provider and redemption bounds remain unknown. No category has a demonstrated full-scope liquidity or maturity maximum.",
+    "knownUnknownExposurePct": 83.298678,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Cash, U.S. Treasury bills, and fiat-referenced stablecoins (variable mix)",
-        "pct": 100,
+        "reserveName": "USDC, USDT and USD1 stablecoins (individual and Binance-Peg weights undisclosed)",
+        "pct": 44.914639,
         "disposition": "basket-needs-split",
-        "rationale": "Blocked on source disclosure: one totalReserve balance cannot resolve cash, Treasury and stablecoin allocations or positively held issuers. No guessed candidate weights or links. Issuer questionnaire pending."
+        "rationale": "The report names USDC, USDT and USD1, including Binance-Peg USDC/USDT, but publishes no individual weights or exact wrapped-token exposures. No equal weighting or direct-token dependency is inferred."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "USD current-account balances and money market fund units (mix undisclosed)",
+        "pct": 24.926793,
+        "disposition": "basket-needs-split",
+        "rationale": "The report combines current-account balances and MMF units. Custody-location amounts do not establish a complete instrument allocation."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Binance RWUSD principal-protected yield product",
+        "pct": 13.457246,
+        "disposition": "insufficient-evidence",
+        "rationale": "RWUSD is a nontransferable Binance account balance with quota- and fee-dependent USDC redemption, expressly not a claim on underlying assets. Neither a tracked stablecoin nor directly held Treasury collateral is established."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Tokenised US Treasury fund units (fund identity undisclosed)",
+        "pct": 16.701321,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The reserve holds units of an unnamed Treasury fund, not direct Treasury bills or an identified tracked stablecoin. No specific fund identity is inferred."
       }
     ]
   },

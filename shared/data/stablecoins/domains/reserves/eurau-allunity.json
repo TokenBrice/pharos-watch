@@ -16,7 +16,7 @@
         "concentration",
         "legal"
       ],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -33,7 +33,7 @@
         "url": "https://framerusercontent.com/assets/OfesVRYgYGUO0B0k1xr7EqFHeOQ.pdf"
       }
     ],
-    "rationale": "AllUnity's Trust Center publication dated 2026-09-16 states that its stablecoins are fully backed by bank reserves held at EU CRR credit institutions and entirely segregated from operational funds. The current page still labels the reserve audit report as coming soon and does not publish bank identities, provider shares, or an instrument split. The disclosed full backing envelope therefore remains one euro bank-reserve category; the missing independent audit does not change the issuer-disclosed composition.",
+    "rationale": "AllUnity's Trust Center publication dated 2026-09-16 states that its stablecoins are fully backed by bank reserves held at EU CRR credit institutions and entirely segregated from operational funds. The current page still labels the reserve audit report as coming soon and does not publish bank identities, provider shares, or an instrument split. The disclosed full backing envelope therefore remains one euro bank-reserve category; the missing independent audit does not change the issuer-disclosed composition. Source-scoped correction: The source review retrieved these same sources on 2026-10-20. Neither the Trust Center nor whitepaper v1.3 establishes a one-day liquidation/withdrawal horizon for the complete reserve category; the whitepaper permits EUR cash or HQLA and discloses no actual account withdrawal terms. Only liquidityHorizon is corrected from one-day to unknown; all original review dates, composition dates, weights and historical pins are preserved.",
     "compositionBasis": "AllUnity Trust Center full bank-reserve disclosure published 2026-09-16, read with the EURAU white paper v1.3 reserve terms",
     "compositionAsOf": "2026-09-16",
     "scope": "full-composition",

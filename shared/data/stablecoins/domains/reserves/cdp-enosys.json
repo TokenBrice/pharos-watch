@@ -43,7 +43,7 @@
         "smart-contract",
         "custody"
       ],
-      "liquidityHorizon": "one-day",
+      "liquidityHorizon": "unknown",
       "sourceKey": "liquity-v2-branches:flare:0x4c18ff3c89632c3dd62e796c0afa5c07c4c1b2b3"
     },
     {
@@ -58,7 +58,7 @@
         "smart-contract",
         "custody"
       ],
-      "liquidityHorizon": "one-day",
+      "liquidityHorizon": "unknown",
       "sourceKey": "liquity-v2-branches:flare:0x12e605bc104e93b45e1ad99f9e555f659051c2bb"
     }
   ],
@@ -78,9 +78,21 @@
       {
         "label": "Flare public RPC used by the configured adapter",
         "url": "https://flare-api.flare.network/ext/C/rpc"
+      },
+      {
+        "label": "Sceptre ordinary 14.5-day unstaking and claim window (retrieved 2026-10-20)",
+        "url": "https://www.sceptre.fi/post/unstaking-from-sceptre"
+      },
+      {
+        "label": "Sceptre instant unstaking uses a finite buffer (retrieved 2026-10-20)",
+        "url": "https://www.sceptre.fi/post/instant-unstaking-is-now-live-on-sceptre-for-flare"
+      },
+      {
+        "label": "Firelight current unstaking windows and phase transition (retrieved 2026-10-20)",
+        "url": "https://docs.firelight.finance/for-stakers/deployments-and-withdrawals"
       }
     ],
-    "rationale": "Enosys Loans is a Liquity V2 friendly fork whose documented collateral branches are FXRP, WFLR, stXRP, and sFLR, priced by the Flare Time Series Oracle. The configured on-chain adapter's branch snapshot resolves all four live collateral rows and supplies the point-in-time weights; those weights remain dynamic and are not treated as permanent composition.",
+    "rationale": "Enosys Loans is a Liquity V2 friendly fork whose documented collateral branches are FXRP, WFLR, stXRP, and sFLR, priced by the Flare Time Series Oracle. The configured on-chain adapter's branch snapshot resolves all four live collateral rows and supplies the point-in-time weights; those weights remain dynamic and are not treated as permanent composition. Source-scoped correction: classification-only review on 2026-10-20 withdrew unsupported one-day horizons for sFLR and stXRP; original composition, review start, weights, and pins are not renewed. Sceptre documents ordinary 14.5-day unbonding and a finite instant-unstaking buffer, not a demonstrated one-day whole-position realization bound. Firelight's current documentation describes Phase 2 unstaking of 30–60 days, but correspondence of that phase to the exact Enosys collateral token is not independently closed. Neither source establishes the former one-day claims; both factors remain unknown rather than assuming DEX depth or transferring another variant's horizon.",
     "compositionBasis": "Enosys Loans documented collateral branches and the configured Flare branch snapshot (live-reserves capture of 2026-07-19); percentages rounded to one decimal",
     "compositionAsOf": "2026-07-19",
     "scope": "full-composition",
