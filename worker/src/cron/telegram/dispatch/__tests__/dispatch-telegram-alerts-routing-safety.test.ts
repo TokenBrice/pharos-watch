@@ -219,7 +219,7 @@ describe("dispatchTelegramAlerts", () => {
     const harness = createDispatchHarness();
     const safety = { "usdc-circle": { grade: "C+", score: 64, methodologyVersion: "7.09" } };
     seedDispatchSnapshots(harness, {
-      safety: { "usdc-circle": { grade: "B-", score: 65, methodologyVersion: "7.09" } },
+      safety: { "usdc-circle": { grade: "B", score: 65, methodologyVersion: "7.09" } },
       safetySource: safety,
     });
     harness.seed({
@@ -286,7 +286,7 @@ describe("dispatchTelegramAlerts", () => {
     const harness = createDispatchHarness();
     const safety = { "usdc-circle": { grade: "C+", score: 64, methodologyVersion: "7.09" } };
     seedDispatchSnapshots(harness, {
-      safety: { "usdc-circle": { grade: "B-", score: 65, methodologyVersion: "7.09" } },
+      safety: { "usdc-circle": { grade: "B", score: 65, methodologyVersion: "7.09" } },
       safetySource: safety,
     });
     harness.seed({

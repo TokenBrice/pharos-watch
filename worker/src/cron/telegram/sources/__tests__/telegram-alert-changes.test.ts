@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildLaunchPromotions, buildSafetyChanges } from "../telegram-alert-changes";
+import {
+  SAFETY_AVAILABILITY_HOLD_MAX_SEC,
+  SAFETY_RUNTIME_AVAILABILITY_REASON_CODES,
+  buildLaunchPromotions,
+  buildSafetyChanges,
+  holdSuppressedSafetyBaselines,
+} from "../telegram-alert-changes";
 import type { SafetySnapshot } from "../telegram-alert-snapshots";
 
 describe("telegram alert change builders", () => {
@@ -14,6 +20,10 @@ describe("telegram alert change builders", () => {
         )).toEqual({
           changes: [{ stablecoinId: "alpha", symbol: "ALPHA", oldGrade: "A", newGrade: "B", oldScore: 85, newScore: 72 }],
           suppressedMethodologyChanges: 0,
+          suppressedRuntimeAvailabilityChanges: 0,
+          suppressedMinorSafetyChanges: 0,
+          heldBaselineIds: [],
+          availabilityHeldIds: [],
         });
       },
     );
@@ -23,12 +33,12 @@ describe("telegram alert change builders", () => {
         { alpha: { grade: "A", score: 89, ratingStatus: "rated", partialEvidence: null, methodologyVersion: null }, newcomer: { grade: "B", score: 70, ratingStatus: "rated", partialEvidence: null, methodologyVersion: null } },
         { alpha: { grade: "A", score: 85, ratingStatus: "rated", partialEvidence: null, methodologyVersion: null } },
         () => "ALPHA",
-      )).toEqual({ changes: [], suppressedMethodologyChanges: 0 });
+      )).toEqual({ changes: [], suppressedMethodologyChanges: 0, suppressedRuntimeAvailabilityChanges: 0, suppressedMinorSafetyChanges: 0, heldBaselineIds: [], availabilityHeldIds: [] });
     });
 
     it("emits nothing when the current snapshot is unavailable", () => {
       expect(buildSafetyChanges(null, { alpha: { grade: "A", score: 85, ratingStatus: "rated", partialEvidence: null, methodologyVersion: null } }, () => "ALPHA"))
-        .toEqual({ changes: [], suppressedMethodologyChanges: 0 });
+        .toEqual({ changes: [], suppressedMethodologyChanges: 0, suppressedRuntimeAvailabilityChanges: 0, suppressedMinorSafetyChanges: 0, heldBaselineIds: [], availabilityHeldIds: [] });
     });
     it("suppresses methodology-version-only grade changes", () => {
       const current: SafetySnapshot = {
@@ -52,7 +62,7 @@ describe("telegram alert change builders", () => {
 
       const result = buildSafetyChanges(current, previous, () => "USDC");
 
-      expect(result).toEqual({ changes: [], suppressedMethodologyChanges: 1 });
+      expect(result).toEqual({ changes: [], suppressedMethodologyChanges: 1, suppressedRuntimeAvailabilityChanges: 0, suppressedMinorSafetyChanges: 0, heldBaselineIds: [], availabilityHeldIds: [] });
     });
 
     it.each([
@@ -90,6 +100,125 @@ describe("telegram alert change builders", () => {
       expect(result).toEqual({
         changes: [],
         suppressedMethodologyChanges: 0,
+        suppressedRuntimeAvailabilityChanges: 0,
+        suppressedMinorSafetyChanges: 0,
+        heldBaselineIds: [],
+        availabilityHeldIds: [],
+      });
+    });
+
+    const ratedRow = (grade: string, score: number, reasonCodes: string[] | null = []) => ({
+      grade, score, ratingStatus: "rated", partialEvidence: null, methodologyVersion: "10.25",
+      v9Explain: { reasons: [], ...(reasonCodes ? { reasonCodes } : {}), bindingCap: null, weakestPillar: null, pillars: {} },
+    }) as unknown as SafetySnapshot[string];
+
+    it("derives availability codes from the V9 responsibility authority", () => {
+      expect(SAFETY_RUNTIME_AVAILABILITY_REASON_CODES.has("missing-runtime-route-evidence")).toBe(true);
+      expect(SAFETY_RUNTIME_AVAILABILITY_REASON_CODES.has("runtime-bridge-materiality-unavailable")).toBe(true);
+      expect(SAFETY_RUNTIME_AVAILABILITY_REASON_CODES.has("missing-peg-input")).toBe(true);
+      expect(SAFETY_RUNTIME_AVAILABILITY_REASON_CODES.has("correlated-exit-routes")).toBe(false);
+      // Reviewer-authored integration findings must still alert.
+      expect(SAFETY_RUNTIME_AVAILABILITY_REASON_CODES.has("material-dependency-unavailable")).toBe(false);
+      expect(SAFETY_RUNTIME_AVAILABILITY_REASON_CODES.has("bounded-mechanism-review")).toBe(false);
+      expect(SAFETY_RUNTIME_AVAILABILITY_REASON_CODES.has("unsupported-same-notional-route")).toBe(false);
+      expect(SAFETY_RUNTIME_AVAILABILITY_REASON_CODES.has("material-bridge-supply-unmatched")).toBe(false);
+      expect(SAFETY_RUNTIME_AVAILABILITY_REASON_CODES.has("missing-mint-authority")).toBe(false);
+    });
+
+    it("suppresses and holds a grade flip caused by a runtime availability code toggling", () => {
+      const result = buildSafetyChanges(
+        { iusd: ratedRow("D", 49, ["missing-runtime-route-evidence"]) },
+        { iusd: ratedRow("B", 72) },
+        () => "IUSD",
+      );
+      expect(result).toMatchObject({ changes: [], suppressedRuntimeAvailabilityChanges: 1, heldBaselineIds: ["iusd"] });
+      expect(buildSafetyChanges(
+        { iusd: ratedRow("B", 72) },
+        { iusd: ratedRow("D", 49, ["missing-runtime-route-evidence"]) },
+        () => "IUSD",
+      ).suppressedRuntimeAvailabilityChanges).toBe(1);
+    });
+
+    it("treats a baseline without persisted reason codes as unknown, not toggled", () => {
+      const result = buildSafetyChanges(
+        { a: ratedRow("D", 45, ["missing-runtime-route-evidence"]) },
+        { a: ratedRow("B", 72, null) },
+        () => "A",
+      );
+      expect(result.changes).toHaveLength(1);
+    });
+
+    it("suppresses a grade flip when partial evidence appears or changes shape", () => {
+      const partial = (pillars: string[]) => ({ ...ratedRow("C-", 50), partialEvidence: { pillars } }) as unknown as SafetySnapshot[string];
+      expect(buildSafetyChanges({ wm: partial(["control"]) }, { wm: ratedRow("B", 70) }, () => "WM"))
+        .toMatchObject({ changes: [], suppressedRuntimeAvailabilityChanges: 1 });
+      expect(buildSafetyChanges({ wm: { ...partial(["exit"]), grade: "B" } as SafetySnapshot[string] }, { wm: partial(["control"]) }, () => "WM"))
+        .toMatchObject({ changes: [], suppressedRuntimeAvailabilityChanges: 1 });
+    });
+
+    it("keeps a large move when the same availability code persists on both sides", () => {
+      const codes = ["runtime-bridge-materiality-unavailable"];
+      const result = buildSafetyChanges({ a: ratedRow("C", 55, codes) }, { a: ratedRow("B+", 76, codes) }, () => "A");
+      expect(result.changes).toHaveLength(1);
+    });
+
+    it("suppresses one-notch moves but keeps drops into D or F", () => {
+      const minor = buildSafetyChanges(
+        { eurc: ratedRow("A-", 81), ybold: ratedRow("C+", 64) },
+        { eurc: ratedRow("A", 83), ybold: ratedRow("C", 58) },
+        (id) => id,
+      );
+      expect(minor.changes).toEqual([]);
+      expect(minor.suppressedMinorSafetyChanges).toBe(2);
+
+      const severe = buildSafetyChanges(
+        { x: ratedRow("D", 45), y: ratedRow("F", 19), z: ratedRow("D", 47) },
+        { x: ratedRow("C-", 50), y: ratedRow("D", 40), z: ratedRow("F", 20) },
+        (id) => id,
+      );
+      // x: C- -> D and y: D -> F alert; z: F -> D is a one-notch upgrade.
+      expect(severe.changes.map((change) => change.stablecoinId)).toEqual(["x", "y"]);
+      expect(severe.suppressedMinorSafetyChanges).toBe(1);
+    });
+
+    describe("holdSuppressedSafetyBaselines", () => {
+      it("keeps the last alerted row so one-notch steps still add up to an alert", () => {
+        const start = { a: ratedRow("A", 83) };
+        const step1 = { a: ratedRow("A-", 81) };
+        const baseline1 = holdSuppressedSafetyBaselines(step1, start, 1_000);
+        expect(baseline1.a!.grade).toBe("A");
+        const step2 = { a: ratedRow("B+", 78) };
+        expect(buildSafetyChanges(step2, baseline1, () => "A").changes).toHaveLength(1);
+      });
+
+      it("holds through an availability gap so the flip back is silent and a persisting drop still alerts", () => {
+        const healthy = { iusd: ratedRow("C", 55) };
+        const gap = { iusd: ratedRow("D", 49, ["missing-runtime-route-evidence"]) };
+        const held = holdSuppressedSafetyBaselines(gap, healthy, 1_000);
+        expect(held.iusd!.grade).toBe("C");
+        // Input returns at the same grade: no change.
+        expect(buildSafetyChanges(healthy, held, () => "IUSD").changes).toEqual([]);
+        // Input returns but the grade really fell: alert against the held row.
+        expect(buildSafetyChanges({ iusd: ratedRow("F", 20) }, held, () => "IUSD").changes).toHaveLength(1);
+      });
+
+      it("alerts once an availability-driven drop persists past the hold cap", () => {
+        const healthy = { iusd: ratedRow("C", 55) };
+        const gap = { iusd: ratedRow("D", 49, ["missing-runtime-route-evidence"]) };
+        let baseline = holdSuppressedSafetyBaselines(gap, healthy, 1_000);
+        expect(baseline.iusd!.heldSinceSec).toBe(1_000);
+        baseline = holdSuppressedSafetyBaselines(gap, baseline, 1_000 + 3_600);
+        expect(baseline.iusd!.heldSinceSec).toBe(1_000);
+        expect(buildSafetyChanges(gap, baseline, () => "IUSD", 1_000 + 3_600).changes).toEqual([]);
+        const late = 1_000 + SAFETY_AVAILABILITY_HOLD_MAX_SEC;
+        expect(buildSafetyChanges(gap, baseline, () => "IUSD", late).changes).toHaveLength(1);
+        // The emitted change advances the baseline and clears the hold.
+        expect(holdSuppressedSafetyBaselines(gap, baseline, late).iusd!.heldSinceSec).toBeUndefined();
+      });
+
+      it("persists current rows unchanged when nothing is suppressed", () => {
+        const current = { a: ratedRow("C", 55) };
+        expect(holdSuppressedSafetyBaselines(current, { a: ratedRow("A", 83) }, 1_000)).toBe(current);
       });
     });
 
@@ -101,7 +230,7 @@ describe("telegram alert change builders", () => {
         { alpha: transition === "entering" ? gap : rated },
         { alpha: transition === "entering" ? rated : gap },
         () => "ALPHA",
-      )).toEqual({ changes: [], suppressedMethodologyChanges: 0 });
+      )).toEqual({ changes: [], suppressedMethodologyChanges: 0, suppressedRuntimeAvailabilityChanges: 0, suppressedMinorSafetyChanges: 0, heldBaselineIds: [], availabilityHeldIds: [] });
     });
 
     it("suppresses a null grade even when its status is inconsistent", () => {

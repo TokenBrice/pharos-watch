@@ -17,6 +17,8 @@ const AlertSafetyPillarSchema = z.object({
 });
 export const AlertSafetyV9ExplainSnapshotSchema = z.object({
   reasons: z.array(z.object({ code: z.string(), message: z.string() })),
+  /** Card reason codes; absent on baselines written before 2026-10-21. */
+  reasonCodes: z.array(z.string()).optional(),
   bindingCap: z.object({ kind: z.string(), limit: z.number().finite(), reason: z.string() }).nullable(),
   weakestPillar: z.object({ pillar: z.string(), score: z.number().finite() }).nullable(),
   pillars: z.object({
@@ -35,6 +37,8 @@ export const AlertSafetySourceRowSchema = z.object({
   partialEvidence: V9CompactPartialEvidenceSchema.nullable(),
   methodologyVersion: z.string().nullable(),
   operationallyAffected: z.boolean().optional(),
+  /** Set on a baseline row held for a suppressed availability move (unix sec). */
+  heldSinceSec: z.number().int().nonnegative().optional(),
   v9Explain: AlertSafetyV9ExplainSnapshotSchema,
 }).superRefine(refineV9RatingStatusFields);
 export type AlertSafetySourceRow = z.output<typeof AlertSafetySourceRowSchema>;

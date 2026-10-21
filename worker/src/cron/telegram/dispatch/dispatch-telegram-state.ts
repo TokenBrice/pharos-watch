@@ -37,6 +37,7 @@ import {
   type DewsSnapshot,
   type SafetySnapshot,
 } from "../sources/telegram-alert-snapshots";
+import { holdSuppressedSafetyBaselines } from "../sources/telegram-alert-changes";
 
 type CachedValue = { value: string; updatedAt: number } | null;
 
@@ -339,7 +340,9 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
     safety:
       currentSafetySnapshot != null && safetySourceAssessment.generation != null
         ? buildAlertSafetySnapshotEnvelope(
-            currentSafetySnapshot,
+            !safetySnapshotNeedsSeed && previousSafetySnapshot != null
+              ? holdSuppressedSafetyBaselines(currentSafetySnapshot, previousSafetySnapshot, nowSec)
+              : currentSafetySnapshot,
             safetySourceAssessment.generation,
             safetySourceAssessment.envelope!.safetyScoreIdentity,
           )

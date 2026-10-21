@@ -114,6 +114,7 @@ export function buildAlertSafetyV9SourceEnvelopeFromParts(source: {
               code: reason.code,
               message: truncateDetail(card.witnessTexts === undefined ? reason.message : resolveV9PublicWitnessText(card, reason.message)),
             })),
+            reasonCodes: [...card.reasonCodes],
             bindingCap:
               card.bindingCap === null
                 ? null
