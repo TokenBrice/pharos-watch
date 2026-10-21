@@ -1,9 +1,9 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema } from "@shared/types/market";
 import type { PriceSourceHealth } from "@shared/types/status";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META } from "@shared/types/chain-identity";
-import { CURATED_AGGREGATE_ESCROW_RESIDUALS, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
+import { CURATED_AGGREGATE_ESCROW_RESIDUALS, getOnchainSupplyHoldReason, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
 import {
   getCirculatingRawOrNull,
   SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
@@ -100,6 +100,33 @@ function normalizeOptionalTimestamp(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+/** Same refusal applies to fresh, provider and restored rows at final publication. */
+export function reviewedOnchainSupplyHoldFields(assetId: string): Pick<PeggedAsset,
+  "supplySource" | "supplyUnavailableReason" | "supplyObservedAt" | "supplyRestored" | "supplyGapFill" | "supplyChainGuard"
+  | "circulating" | "circulatingPrevDay" | "circulatingPrevWeek" | "circulatingPrevMonth" | "chainCirculating" | "chains"
+> | null {
+  const reason = getOnchainSupplyHoldReason(assetId);
+  if (!reason) return null;
+  const meta = ACTIVE_META_BY_ID.get(assetId);
+  const chainCirculating = Object.fromEntries((meta?.contracts ?? []).map(({ chain }) => [
+    CHAIN_META[chain]?.name ?? chain, { chainId: chain, current: null },
+  ]));
+  return {
+    supplySource: "onchain-supply-withheld",
+    supplyUnavailableReason: reason,
+    supplyObservedAt: undefined,
+    supplyRestored: undefined,
+    supplyGapFill: undefined,
+    supplyChainGuard: undefined,
+    circulating: {},
+    circulatingPrevDay: null,
+    circulatingPrevWeek: null,
+    circulatingPrevMonth: null,
+    chainCirculating,
+    chains: Object.keys(chainCirculating),
+  };
+}
+
 export function normalizeStablecoinsPayload(payload: StablecoinsPayload): StablecoinsPayload {
   return {
     ...payload,
@@ -108,6 +135,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
         gecko_id: _ignoredSnakeCase,
         supplyObservedAt: _ignoredSupplyObservedAt,
         supplyRestored: _ignoredSupplyRestored,
+        supplyUnavailableReason: _ignoredSupplyUnavailableReason,
         supplyChainGuard: _ignoredSupplyChainGuard,
         ...rest
       } = asset as PeggedAsset & { gecko_id?: unknown };
@@ -160,6 +188,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
         circulatingPrevDay: toPegBuckets(asset.circulatingPrevDay),
         circulatingPrevWeek: toPegBuckets(asset.circulatingPrevWeek),
         circulatingPrevMonth: toPegBuckets(asset.circulatingPrevMonth),
+        ...reviewedOnchainSupplyHoldFields(String(asset.id)),
       };
     }),
   };
@@ -509,6 +538,12 @@ export function mergeSupplementalLastKnownGood(
     const id = String(asset.id);
     if (primaryAssetIds.has(id)) {
       skippedDuplicates++;
+      continue;
+    }
+
+    const hold = reviewedOnchainSupplyHoldFields(id);
+    if (hold) {
+      resolved.set(id, { ...asset, ...hold });
       continue;
     }
 

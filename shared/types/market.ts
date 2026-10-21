@@ -64,6 +64,10 @@ export {
   type ExitRouteScope,
 } from "./exit-route";
 
+/** Canonical producer refusal, not a measured zero or a provider-history fallback. */
+export const SupplyUnavailableReasonSchema = z.enum(["supply-chain-dropout", "economic-float-unreconciled"]);
+export type SupplyUnavailableReason = z.infer<typeof SupplyUnavailableReasonSchema>;
+
 export const PegBucketsSchema = z.record(z.string(), z.number());
 
 const StablecoinDetailTokenSchema = z.object({
@@ -87,10 +91,10 @@ export const StablecoinDetailResponseSchema = z.object({
   /** Canonical carry-forward provenance for the admitted current supply overlay. */
   currentSupplyRestored: z.boolean().optional(),
   /**
-   * Canonical supply-chain-dropout quarantine past its carry ceiling: current supply is unavailable,
-   * so consumers must not substitute the provider's dated history for it.
+   * Canonical producer refusal: consumers must not substitute the provider's
+   * dated history for current unavailable supply.
    */
-  currentSupplyUnavailableReason: z.literal("supply-chain-dropout").optional(),
+  currentSupplyUnavailableReason: SupplyUnavailableReasonSchema.optional(),
   tokens: z.array(StablecoinDetailTokenSchema).optional(),
 }).passthrough();
 export type StablecoinDetailResponse = z.infer<typeof StablecoinDetailResponseSchema>;
@@ -195,6 +199,7 @@ const StablecoinDataRawSchema = z.object({
   supplySource: z.string().optional(),
   supplyObservedAt: z.number().nullable().optional(),
   supplyRestored: z.boolean().optional(),
+  supplyUnavailableReason: SupplyUnavailableReasonSchema.optional(),
   supplyGapFill: SupplyGapFillProvenanceSchema.optional(),
   supplyChainGuard: SupplyChainGuardProvenanceSchema.optional(),
   circulating: SupplyBucketsSchema,
@@ -248,6 +253,7 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
   supplySource: asset.supplySource,
   ...(asset.supplyObservedAt != null ? { supplyObservedAt: asset.supplyObservedAt } : {}),
   ...(asset.supplyRestored === true ? { supplyRestored: true } : {}),
+  ...(asset.supplyUnavailableReason != null ? { supplyUnavailableReason: asset.supplyUnavailableReason } : {}),
   ...(asset.supplyGapFill != null ? { supplyGapFill: asset.supplyGapFill } : {}),
   ...(asset.supplyChainGuard != null ? { supplyChainGuard: asset.supplyChainGuard } : {}),
   circulating: asset.circulating,

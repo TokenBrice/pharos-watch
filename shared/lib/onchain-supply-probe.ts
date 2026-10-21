@@ -1,5 +1,6 @@
 import { CHAIN_META } from "../types/chain-identity";
 import type { StablecoinMeta } from "../types";
+import type { SupplyUnavailableReason } from "../types/market";
 import { SUPPLY_RPC_DEFAULTS } from "./chain-rpc-registry";
 
 export type OnchainSupplyContract = NonNullable<StablecoinMeta["contracts"]>[number];
@@ -59,6 +60,18 @@ const NON_EVM_PROBE_FAMILY_BY_CHAIN: Readonly<Record<string, OnchainSupplyProbeF
   starknet: "starknet",
   icp: "icp",
 };
+
+// A configured refusal is still a runtime publication path, not a quantity
+// capability. sFRAX needs native Solana, prefunded ferries, migrated Fraxtal
+// escrow/holder claims and protocol-owned/encumbered inventory reconciled.
+const REVIEWED_ONCHAIN_SUPPLY_HOLDS: Readonly<Record<string, SupplyUnavailableReason>> = {
+  "sfrax-frax": "economic-float-unreconciled",
+};
+
+export function getOnchainSupplyHoldReason(assetId: string): SupplyUnavailableReason | null {
+  return Object.prototype.hasOwnProperty.call(REVIEWED_ONCHAIN_SUPPLY_HOLDS, assetId)
+    ? REVIEWED_ONCHAIN_SUPPLY_HOLDS[assetId] : null;
+}
 
 const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   string,
@@ -374,21 +387,6 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // ~3.21M units implied by CoinGecko's last (09-26) market cap, so no holder
   // exclusion applies.
   "hbusdt-hyperbeat": [supplyProbeChain("hyperevm")],
-  // Legacy sFRAX keeps the native Ethereum ERC-4626 share denominator.
-  // Eight registered representations are read only for conserved chain
-  // attribution, never summed into new native liabilities. Verified 2026-10-15;
-  // Avalanche reports an explicit zero, not an unavailable observation.
-  "sfrax-frax": [
-    { chain: "ethereum" },
-    { chain: "arbitrum" },
-    { chain: "avalanche", allowZeroSupply: true },
-    { chain: "base" },
-    supplyProbeChain("blast"),
-    { chain: "bsc" },
-    supplyProbeChain("fraxtal"),
-    supplyProbeChain("metis"),
-    { chain: "optimism" },
-  ],
   // IAUon and SLVon are Ondo tokenized-commodity shares with no canonical-chain
   // escrow: verified 2026-07-29 that the Ethereum holder set contains no bridge
   // or adapter contract near the remote supplies, and CoinGecko's total supply
@@ -851,7 +849,6 @@ export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, 
   "dusd-dialectic": "ethereum",
   "gldt-gold-dao": "icp",
   "susds-sky": "ethereum",
-  "sfrax-frax": "ethereum",
   "sdai-sky": "ethereum",
   "susde-ethena": "ethereum",
   "wsrusd-reservoir": "ethereum",
@@ -942,6 +939,7 @@ export function supportsOnchainSupplyProbe(contract: OnchainSupplyContract): boo
 }
 
 export function selectSingleOnchainSupplyProbeContract(meta: StablecoinMeta): OnchainSupplyContract | null {
+  if (getOnchainSupplyHoldReason(meta.id)) return null;
   const contracts = meta.contracts ?? [];
   if (contracts.length !== 1) return null;
   const [contract] = contracts;
@@ -955,6 +953,7 @@ export function selectSupplementalOnchainSupplyProbeContract(meta: StablecoinMet
 export function selectCuratedAggregateOnchainSupplyProbeContracts(
   meta: StablecoinMeta,
 ): readonly CuratedAggregateOnchainSupplyContract[] | null {
+  if (getOnchainSupplyHoldReason(meta.id)) return null;
   const curatedContracts = CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS[meta.id];
   if (!curatedContracts || curatedContracts.length === 0) return null;
 
@@ -982,6 +981,7 @@ export function selectCuratedAggregateOnchainSupplyProbeContracts(
 
 export function hasRuntimeOnchainSupplyPath(meta: StablecoinMeta): boolean {
   return (
+    getOnchainSupplyHoldReason(meta.id) != null ||
     isZephyrScannerSupplyId(meta.id) ||
     selectSupplementalOnchainSupplyProbeContract(meta) != null ||
     selectCuratedAggregateOnchainSupplyProbeContracts(meta) != null

@@ -1,5 +1,5 @@
 import type { ContractDeployment, NominalPriceReference, PriceConfidence, PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/core";
-import type { SupplyChainGuardProvenance, SupplyGapFillProvenance } from "@shared/types/market";
+import type { SupplyChainGuardProvenance, SupplyGapFillProvenance, SupplyUnavailableReason } from "@shared/types/market";
 import { stampPriceMetadata } from "./shared";
 
 export interface PriceValidationStats {
@@ -53,6 +53,7 @@ export interface PeggedAsset {
   supplySource?: string;
   supplyObservedAt?: number | null;
   supplyRestored?: boolean;
+  supplyUnavailableReason?: SupplyUnavailableReason;
   /** DEC-01 provenance when the aggregate was raised by the bounded CoinGecko gap-fill. */
   supplyGapFill?: SupplyGapFillProvenance;
   supplyChainGuard?: SupplyChainGuardProvenance;

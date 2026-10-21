@@ -11,6 +11,7 @@ import { returnIfAborted } from "./runtime";
 import {
   getStablecoinsCacheAgeSec,
   normalizeStablecoinsPayload,
+  reviewedOnchainSupplyHoldFields,
   StablecoinListResponseSchema,
   summarizeValidationIssues,
   writeInvalidStablecoinsDiagnostic,
@@ -118,6 +119,8 @@ export async function validateAndWriteStablecoinsCache(
   // Tag frozen coins so /api/stablecoins exposes `frozen` and `frozenAt` per-coin.
   // Runs after intake's mergeFrozenSnapshots so injected rows also get tagged here.
   for (const asset of assets) {
+    const hold = reviewedOnchainSupplyHoldFields(String(asset.id));
+    if (hold) Object.assign(asset, hold);
     const frozenMeta = FROZEN_META_BY_ID.get(asset.id);
     if (FROZEN_IDS.has(asset.id)) {
       asset.frozen = true;

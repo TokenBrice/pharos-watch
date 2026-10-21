@@ -46,6 +46,25 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("supply deployment failure reasons", () => {
+  it.each([false, true])("withholds sFRAX before RPC with an explicit economic-float reason (native-only roster: %s)", async (nativeOnly) => {
+    const tracked = TRACKED_META_BY_ID.get("sfrax-frax")!;
+    const meta = nativeOnly ? { ...tracked, contracts: tracked.contracts!.filter(({ chain }) => chain === "ethereum") } : tracked;
+    for (const mock of [probeTrackedTokenSupplyMock, fetchErc20TotalSupplyMock, fetchSolanaTokenSupplyMock, fetchOnchainUint256Mock]) {
+      mock.mockClear();
+    }
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await fetchCuratedAggregateOnChainMcap(meta, 1.14, buildChainRpcs())).toBeNull();
+    expect(await fetchOnChainMcap(meta, 1.14, buildChainRpcs())).toBeNull();
+    expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)))).toContainEqual(expect.objectContaining({
+      event: "onchain-supply-aggregate-withheld",
+      metadata: { stablecoinId: "sfrax-frax", reason: "economic-float-unreconciled", rule: "R4" },
+    }));
+    expect(probeTrackedTokenSupplyMock).not.toHaveBeenCalled();
+    expect(fetchErc20TotalSupplyMock).not.toHaveBeenCalled();
+    expect(fetchSolanaTokenSupplyMock).not.toHaveBeenCalled();
+    expect(fetchOnchainUint256Mock).not.toHaveBeenCalled();
+  });
+
   it("keeps pre-resolved URLs incumbent-only while retaining the map-aware EVM path", async () => {
     const chainRpcs = buildChainRpcs("test-alchemy", undefined, { dwellirApiKey: "test-dwellir" });
     const sonic = chainRpcs.get("sonic")!;
@@ -662,11 +681,6 @@ describe("curation-expanded complete supply rosters", () => {
       canonical: undefined,
       supplies: { ethereum: 100, arbitrum: 10, base: 20, optimism: 30, unichain: 40 },
     },
-    {
-      id: "sfrax-frax",
-      canonical: "ethereum",
-      supplies: { ethereum: 100, arbitrum: 10, avalanche: 0, base: 10, blast: 10, bsc: 10, fraxtal: 10, metis: 10, optimism: 10 },
-    },
   ];
 
   beforeEach(() => {
@@ -748,11 +762,20 @@ describe("curation-expanded complete supply rosters", () => {
     },
   );
 
-  it.each([100, 110])("withholds sFRAX when representation stock (%s) exhausts the native denominator", async (remote) => {
+  it.each([70, 110])("withholds sFRAX regardless of apparently conserved remote gross stock (%s)", async (remote) => {
     const meta = TRACKED_META_BY_ID.get("sfrax-frax")!;
-    const supplies = { ...cases[4].supplies, arbitrum: remote - 60 };
+    const supplies = {
+      ethereum: 100, arbitrum: remote - 60, avalanche: 0, base: 10, blast: 10, bsc: 10, fraxtal: 10, metis: 10, optimism: 10,
+      solana: 0.000117001,
+    };
     installSupplyReads(meta, supplies);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     await expect(fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs())).resolves.toBeNull();
+    expect(probeTrackedTokenSupplyMock).not.toHaveBeenCalled();
+    expect(fetchSolanaTokenSupplyMock).not.toHaveBeenCalled();
+    expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)))).toContainEqual(expect.objectContaining({
+      metadata: expect.objectContaining({ stablecoinId: meta.id, reason: "economic-float-unreconciled" }),
+    }));
   });
 
   it.each(["decimals", "exception"])("fails syzUSD closed on Aptos %s failure", async (failure) => {

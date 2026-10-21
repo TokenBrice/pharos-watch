@@ -11,6 +11,7 @@ import {
   CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS,
   CURATED_AGGREGATE_ESCROW_RESIDUALS,
   onchainSupplyProbeFamily,
+  getOnchainSupplyHoldReason,
   selectCuratedAggregateOnchainSupplyProbeContracts,
   selectSupplementalOnchainSupplyProbeContract,
   type OnchainSupplyProbeFamily,
@@ -549,6 +550,16 @@ export async function fetchCuratedAggregateOnChainMcap(
   signal?: AbortSignal,
   dwellirNative?: DwellirNativeCapability,
 ): Promise<OnChainMcapResult | null> {
+  throwIfAborted(signal);
+  const holdReason = getOnchainSupplyHoldReason(meta.id);
+  if (holdReason) {
+    logWorkerEvent({
+      scope: "lib", job: "sync-stablecoins", level: "warn", event: "onchain-supply-aggregate-withheld",
+      message: "Reviewed aggregate is unavailable until its economic float perimeter is reconciled",
+      metadata: { stablecoinId: meta.id, reason: holdReason, rule: "R4" },
+    });
+    return null;
+  }
   const selectedContracts = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
   if (!selectedContracts) {
     return null;

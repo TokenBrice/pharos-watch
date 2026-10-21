@@ -8,6 +8,7 @@ import type { PeggedAsset } from "../enrich-prices";
 import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats, isZephyrScannerAssetId } from "../zephyr-zsd";
 import { resolveVaultNavSupplyPrice } from "../../../lib/authoritative-price-sources";
 import { loadReserveNavSupplyPrice, reserveNavSupplyScopeReason } from "../../../lib/reserve-nav-price";
+import { reviewedOnchainSupplyHoldFields } from "../shared";
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, fetchPinnedNativeShares, prefersOnChainSupplyMcap, toPublicChainCirculating } from "./onchain-supply";
 import {
   fetchSupplementalPriceData,
@@ -67,6 +68,19 @@ export async function fetchFiatCoinGeckoTokens(
         if (!priceResolution) {
           priceResolution = resolveLowVolumeCoinGeckoPrice(cgData, meta.geckoId);
         }
+        const hold = reviewedOnchainSupplyHoldFields(meta.id);
+        if (hold) {
+          logWorkerEvent({
+            scope: "handler", job: "sync-stablecoins", level: "warn", event: "supplemental-supply-withheld",
+            message: `[fiat-cg] ${meta.symbol} economic supply perimeter is not reconciled`,
+            metadata: { stablecoinId: meta.id, reason: hold.supplyUnavailableReason, rule: "R4" },
+          });
+          return {
+            ...buildSupplementalAsset({ meta, priceResolution, nowSec, mcap: null, supplySource: "onchain-supply-withheld" }),
+            ...hold,
+          };
+        }
+
         const pegReferencePrice = toPositiveFiniteNumber(fxFallbackRates?.[pKey]);
         // USD is the base currency; fxFallbackRates omits peggedUSD. Default to 1.0 for
         // plain USD-pegged coins with no CG/DL price source so the on-chain fallback can compute mcap.

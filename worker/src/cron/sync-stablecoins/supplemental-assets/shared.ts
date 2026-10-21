@@ -222,7 +222,7 @@ export function buildSupplementalAsset(input: {
   priceObservedAtMode?: PriceObservedAtMode | null;
   priceSyncedAt?: number | null;
   nowSec?: number;
-  mcap: number;
+  mcap: number | null;
   supplySource: string;
   supplyObservedAt?: number | null;
   chainCirculating?: PeggedAsset["chainCirculating"];
@@ -250,7 +250,7 @@ export function buildSupplementalAsset(input: {
     priceSyncedAt: priceResolution ? nowSec : (input.priceSyncedAt ?? null),
     supplySource: input.supplySource,
     supplyObservedAt: input.supplyObservedAt ?? null,
-    circulating: { [pKey]: input.mcap },
+    circulating: input.mcap == null ? {} : { [pKey]: input.mcap },
     circulatingPrevDay: input.circulatingPrevDay != null ? { [pKey]: input.circulatingPrevDay } : null,
     circulatingPrevWeek: input.circulatingPrevWeek != null ? { [pKey]: input.circulatingPrevWeek } : null,
     circulatingPrevMonth: input.circulatingPrevMonth != null ? { [pKey]: input.circulatingPrevMonth } : null,
