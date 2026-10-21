@@ -83,7 +83,25 @@ describe("handleSafetyGrades", () => {
     expect(stale.headers.get("Cache-Control")).toBe("no-store");
     expect(stale.headers.get("ETag")).toBeNull();
     expect(stale.headers.get("Warning")).toContain(`fresh budget ${SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC}s`);
+    expect(stale.headers.get("X-Data-Freshness")).toBe("stale");
+    expect(stale.headers.get("X-Data-Freshness-Reason")).toBe("safety-score-publication-age");
     await expect(stale.json()).resolves.toMatchObject({ publicationStatus: "current", updatedAt: snapshot.updatedAt });
+  });
+
+  it.each([1, 60])("reports a publication %ss in the future as generically stale too", async (skew) => {
+    const snapshot = makeReportCardsV9Response();
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot });
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime((snapshot.updatedAt - skew) * 1000);
+
+    const response = await handleSafetyGrades(mockD1([]));
+
+    expect(response.headers.get("X-Safety-Score-Status")).toBe("stale");
+    expect(response.headers.get("X-Data-Freshness")).toBe("stale");
+    expect(response.headers.get("X-Data-Freshness-Reason")).toBe("future-timestamp");
+    expect(response.headers.get("Warning")).toMatch(/^110 - .*future-dated/);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("ETag")).toBeNull();
   });
 
   it("serves held publications uncached", async () => {

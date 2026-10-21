@@ -232,7 +232,7 @@ export function safetyScoreSnapshotHeaders(
   const nowSec = Date.now() / 1000;
   const held = snapshot.publicationHealth.status === "held";
   const status = held ? "held" : isSafetyScoreV9SnapshotFresh(snapshot, Math.floor(nowSec)) ? "current" : "stale";
-  return addFreshnessHeaders({
+  const headers = addFreshnessHeaders({
     "Content-Type": "application/json",
     "Cache-Control": status === "current" ? CACHE_PROFILES.standard : CACHE_PROFILES.noStore,
     "X-Safety-Score-Status": status,
@@ -241,4 +241,14 @@ export function safetyScoreSnapshotHeaders(
   }, snapshot.updatedAt, API_FRESHNESS_MAX_AGE_SEC.reportCards, {
     assessedAt: nowSec, freshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
   });
+  if (status !== "stale") return headers;
+  // The generic helper tolerates small future skew, but the safety verdict
+  // does not; keep the generic freshness surface consistent with it.
+  const future = !(snapshot.updatedAt <= nowSec);
+  return {
+    ...headers,
+    "X-Data-Freshness": "stale",
+    "X-Data-Freshness-Reason": future ? "future-timestamp" : "safety-score-publication-age",
+    Warning: headers.Warning ?? `110 - "Safety Score publication is ${future ? "future-dated" : "stale"} (consumer budget ${SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC}s)"`,
+  };
 }
