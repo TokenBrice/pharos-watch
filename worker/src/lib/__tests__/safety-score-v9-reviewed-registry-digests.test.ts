@@ -55,9 +55,9 @@ describe("reviewed registry provenance identity", () => {
     const expanded = expandReviewedRegistryReferences(V9AuthoredEvidenceGapClassificationsEnvelopeSchema.parse(gaps), "entries", {
       sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
     });
-    // Full authored-registry identity pin; deliberate curation rotates this snapshot.
-    expect(sha256Hex(stableJsonStringifyV1(expanded))).toBe("06671e804130e2925ba0a568d0a406ff4ad9e7e7b8a3c6b931cf97e11884f4a1");
     expect(V9EvidenceGapClassificationsV1Schema.parse(expanded).entries).toHaveLength(gaps.entries.length);
+    // Full authored-registry identity pin; deliberate curation rotates this snapshot.
+    expect(sha256Hex(stableJsonStringifyV1(expanded))).toBe("03ef76dae69cc1bc928f894175dc4617d1ab77d97e6591961b42d0e3bc5633ac");
     expect(V9EvidenceGapClassificationsV1Schema.safeParse(gaps).success).toBe(false);
   });
 

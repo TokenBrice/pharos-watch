@@ -117,12 +117,12 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-21T00:37:06.297Z",
+      "reviewedAt": "2026-10-21T00:37:07Z",
       "reviewer": "C24 bottom-up refinement 2026-10-21; Round 3 denominator review",
       "sourcesRefs": [
         "source:0e696f0c7ba7b9ebc2bfba93",
         "source:90a43d68f109ad9053e34839",
-        "source:1743230f2717699e2390bac8"
+        "source:56786ce46abcdc4ac9e33da5"
       ],
       "searchedSurfacesRefs": [
         "surface:0ec51e3661ebffc7ed97af99",
@@ -144,12 +144,12 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-21T00:37:06.297Z",
+      "reviewedAt": "2026-10-21T00:37:07Z",
       "reviewer": "C24 bottom-up refinement 2026-10-21; Round 3 denominator review",
       "sourcesRefs": [
         "source:0e696f0c7ba7b9ebc2bfba93",
         "source:90a43d68f109ad9053e34839",
-        "source:1743230f2717699e2390bac8"
+        "source:56786ce46abcdc4ac9e33da5"
       ],
       "searchedSurfacesRefs": [
         "surface:0ec51e3661ebffc7ed97af99",
@@ -64689,6 +64689,17 @@
         "url": "https://aegis.accountable.capital:10443/dashboard/YUSD",
         "observedAt": "2026-10-21T00:37:06.297Z",
         "datumAsOf": "2026-10-21T00:16:37.056Z",
+        "location": "data.reserves.total_supply; supply_split; exact report-clock RPC totalSupply/balanceOf and verified adapter runtime; original bytes retained in C24-R3-accountable-original.json",
+        "excerpt": "Headline34542277.11; native ETH32830055.267757626290848552+BSC1628876.518789426108546679+Avalanche83335.237498+Arbitrum10.090001=34542277.114046052399395231. Separate Base11.626401; native adapter balances0/0. Full provenance C24-R3-yusd-denominator.json.",
+        "assertion": "The current four-chain dashboard headline is numerically accounted for by independently readable native/remote supplies, without Base. Native adapters use burn/mint and hold zero tokens, so Base is not a duplicate of permanent adapter escrow. Whole-token headline comparison has not been demonstrated. This does not establish the semantics of every nested ZKP or total complete worldwide/pending liability inventory, and is not an insolvency finding."
+      }
+    },
+    {
+      "id": "source:56786ce46abcdc4ac9e33da5",
+      "value": {
+        "url": "https://aegis.accountable.capital:10443/dashboard/YUSD",
+        "observedAt": "2026-10-21T00:37:07Z",
+        "datumAsOf": "2026-10-21T00:16:38Z",
         "location": "data.reserves.total_supply; supply_split; exact report-clock RPC totalSupply/balanceOf and verified adapter runtime; original bytes retained in C24-R3-accountable-original.json",
         "excerpt": "Headline34542277.11; native ETH32830055.267757626290848552+BSC1628876.518789426108546679+Avalanche83335.237498+Arbitrum10.090001=34542277.114046052399395231. Separate Base11.626401; native adapter balances0/0. Full provenance C24-R3-yusd-denominator.json.",
         "assertion": "The current four-chain dashboard headline is numerically accounted for by independently readable native/remote supplies, without Base. Native adapters use burn/mint and hold zero tokens, so Base is not a duplicate of permanent adapter escrow. Whole-token headline comparison has not been demonstrated. This does not establish the semantics of every nested ZKP or total complete worldwide/pending liability inventory, and is not an insolvency finding."
