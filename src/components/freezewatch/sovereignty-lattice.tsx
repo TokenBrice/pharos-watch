@@ -114,9 +114,6 @@ export function SovereigntyLattice({ coverage, stats, chains, isLoading, error, 
       </div>
 
       <div className="min-w-0 max-w-full overflow-x-auto p-4 sm:p-5">
-        {state === "stale-with-data" ? (
-          <QueryStateNotice state={state} label="Watched contract coverage" onRetry={onRetry} />
-        ) : null}
         {rows.length > 0 && visibleChains.length > 0 ? (
           <div
             className="grid gap-1"

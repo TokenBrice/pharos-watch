@@ -520,7 +520,6 @@ export function DetailRiskContextSections({
               <StablecoinSafetyScoreV9Card
                 card={reportCard}
                 identity={reportCardsResponse.safetyScoreIdentity}
-                publicationHealth={reportCardsResponse.publicationHealth}
                 updatedAtMs={viewModel.reportCardUpdatedAt}
                 stablecoinName={viewModel.coin.name}
                 evidenceAnchors={evidenceAnchors}

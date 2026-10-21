@@ -119,9 +119,10 @@ describe("MarketDataSection history expansion", () => {
   });
 
   it("keeps the expanded-history freshness chip on its old producer clock after a successful read", async () => {
-    const updatedAtSec = Math.floor(Date.now() / 1000) - 3 * DAY;
+    // Past the public stale band (12x the daily producer interval).
+    const updatedAtSec = Math.floor(Date.now() / 1000) - 13 * DAY;
     vi.stubGlobal("fetch", vi.fn(async () => Response.json(FULL_HISTORY, {
-      headers: { "X-Data-Updated-At": String(updatedAtSec), "X-Data-Age": String(3 * DAY) },
+      headers: { "X-Data-Updated-At": String(updatedAtSec), "X-Data-Age": String(13 * DAY) },
     })));
     const { container } = renderSeededSection();
     fireEvent.click(screen.getByRole("button", { name: "All" }));

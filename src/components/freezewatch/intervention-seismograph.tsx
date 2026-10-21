@@ -131,9 +131,6 @@ export function InterventionSeismograph({ stats, chart, isLoading, error, onRetr
 
   return (
     <section aria-labelledby={titleId} className="pharos-card-shell p-4 animate-in fade-in duration-300 sm:p-5">
-      {state === "stale-with-data" ? (
-        <QueryStateNotice state={state} label="Intervention seismograph" onRetry={onRetry} />
-      ) : null}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-1">
           <p className="pharos-label">Intervention seismograph</p>

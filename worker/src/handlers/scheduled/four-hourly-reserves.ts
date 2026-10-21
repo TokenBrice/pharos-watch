@@ -13,6 +13,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
  * Connection budget: 4/6 peak (3 + 1) across the declared chains.
  */
 import { syncKinesisSupply } from "../../cron/sync-kinesis-supply";
+import { buildTelegramOperatorCreds } from "../../lib/runtime-credentials";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups, type ScheduledSlotTask, type ScheduledSlotTaskChain } from "./slot-groups";
 import {
@@ -164,7 +165,11 @@ function buildReserveSyncSlotGroups(
           // its generation has finished and this ordered consumer can execute.
           run: async (signal) => {
             const { runCronSentinel } = await import("../../cron/cron-sentinel");
-            return runCronSentinel(runtime.db, { mode: "reserve-post-sync", signal });
+            return runCronSentinel(runtime.db, {
+              mode: "reserve-post-sync",
+              operatorTelegramCreds: buildTelegramOperatorCreds(runtime.env),
+              signal,
+            });
           },
         },
       ],

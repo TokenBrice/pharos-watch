@@ -247,7 +247,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span>Source: on-chain mint and burn events, {scopeLabel.toLowerCase()}</span>
           <span aria-hidden="true">·</span>
-          <span>Critical-lane sync every {SYNC_CADENCE_MIN} min; evidence may lag</span>
+          <span>Critical-lane sync every {SYNC_CADENCE_MIN} min</span>
           {sync?.lastSuccessfulSyncAt != null ? (
             <FreshnessIndicator
               compact

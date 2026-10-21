@@ -211,27 +211,26 @@ describe("FlowGaugeHero", () => {
     expect(screen.getByText("USDC pulls it down most; USDG lifts it most.")).toBeTruthy();
   });
 
-  it("names a degraded read as a reason-coded chip, not a body callout", () => {
-    const { container } = render(
-      <FlowGaugeHero
-        gauge={gauge()}
-        coins={coins}
-        sync={null}
-        dataHealth={{
-          label: "Mint/Burn Flows",
-          state: "degraded",
-          message: "Data is delayed or from a degraded source.",
-          dataUpdatedAt: 1_790_000_000_000,
-          ageMs: 5_400_000,
-          staleTime: 3_600_000,
-          meta: null,
-          degradationReason: "source",
-        }}
-      />,
+  it("keeps a degraded read off the hero and names a stale one as a reason-coded chip", () => {
+    const health = {
+      label: "Mint/Burn Flows",
+      message: "Data is delayed or from a degraded source.",
+      dataUpdatedAt: 1_790_000_000_000,
+      ageMs: 5_400_000,
+      staleTime: 3_600_000,
+      meta: null,
+    };
+    const { container, rerender } = render(
+      <FlowGaugeHero gauge={gauge()} coins={coins} sync={null}
+        dataHealth={{ ...health, state: "degraded", degradationReason: "source" }} />,
     );
 
-    expect(container.querySelector('[data-reason-codes="data-health-degraded source"]')?.textContent).toContain("Source warning");
+    expect(container.querySelector('[data-reason-codes^="data-health-"]')).toBeNull();
+    expect(container.textContent).not.toContain("Source warning");
     expect(container.textContent).not.toContain("Data quality warning");
+
+    rerender(<FlowGaugeHero gauge={gauge()} coins={coins} sync={null} dataHealth={{ ...health, state: "stale" }} />);
+    expect(container.querySelector('[data-reason-codes="data-health-stale"]')?.textContent).toContain("Older snapshot");
   });
 
   it.each(["source-stale", "publication-held"])("explains classification-null before valuation-null and retains its dependency budget: %s", (reason) => {

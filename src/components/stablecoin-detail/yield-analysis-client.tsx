@@ -534,12 +534,6 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
 
   return (
     <YieldAnalysisFrame id={id} staticCoin={staticCoin} logoSrc={logoSrc} model={readyModel}>
-      <QueryErrorNotice error={rankingsQuery.error} hasData onRetry={() => { void rankingsQuery.refetch(); }} />
-      {rankingsQuery.meta?.warning ? (
-        <div className="rounded-lg border border-state-warn-solid/25 bg-state-warn-solid/5 px-3 py-2 text-xs text-state-warn-bright">
-          {formatDataHealthWarning(rankingsQuery.meta.warning)}
-        </div>
-      ) : null}
       {peerRailModel ? <YieldPeerRail model={peerRailModel} currentId={id} /> : null}
 
       <YieldSourceRiskCard

@@ -76,13 +76,20 @@ describe("DepegHistory provenance badges", () => {
     expect(screen.queryByText(/of 3 incidents/)).toBeNull();
   });
 
-  it.each([false, true])("offers retry after failure with retained rows=%s", (hasRows) => {
+  it("offers retry after a failure with no retained rows", () => {
     const refetch = vi.fn();
-    mockEvents(hasRows ? [makeEvent()] : [], { error: new Error("history unavailable"), refetch });
+    mockEvents([], { error: new Error("history unavailable"), refetch });
     render(<DepegHistory stablecoinId="usdc-circle" />);
-    expect(screen.queryByTestId("stablecoin-depeg-history-table") !== null).toBe(hasRows);
+    expect(screen.queryByTestId("stablecoin-depeg-history-table")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /retry/i }));
     expect(refetch).toHaveBeenCalledOnce();
+  });
+
+  it("keeps retained rows without a reader notice after a failed refresh (ADR-42)", () => {
+    mockEvents([makeEvent()], { error: new Error("history unavailable"), refetch: vi.fn() });
+    render(<DepegHistory stablecoinId="usdc-circle" />);
+    expect(screen.getByTestId("stablecoin-depeg-history-table")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
   });
 
   it("renders pending_reason and confirmation_sources badges when present", () => {

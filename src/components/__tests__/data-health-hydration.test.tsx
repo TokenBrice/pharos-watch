@@ -8,9 +8,9 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import { DataHealthBanner } from "@/components/data-health-banner";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { deriveDataHealth } from "@/lib/data-health";
-import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { StablecoinDetailLiveSummaryStart } from "@/app/stablecoin/[id]/client";
-import { isDetailSnapshotQuery, seedStablecoinDetailQueryCache, type ApiMeta } from "@/lib/api";
+import { seedStablecoinDetailQueryCache, type ApiMeta } from "@/lib/api";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 
@@ -65,18 +65,17 @@ describe("data-health hydration", () => {
     }
     const mounted = render(<>
       <Beacon />
-      <StaleDataBanner persistent queries={[{ label: "Prices", dataUpdatedAt: savedAt, staleTime: 1000, hasData: true, meta }]} />
+      <StaleDataBanner queries={[{ label: "Prices", dataUpdatedAt: savedAt, staleTime: 1000, hasData: true, meta }]} />
     </>);
+    const banner = () => mounted.container.querySelector("[data-health-state]");
     expect(screen.getByTestId("beacon").textContent).toBe("current");
-    // <output> is also a status region; inspect the banner's own reserved slot.
-    const banner = mounted.container.querySelector("[data-freshness-slot]")!;
-    expect(banner.getAttribute("role")).toBe("status");
-    expect(banner.getAttribute("data-health-state")).toBe("fresh");
+    expect(banner()).toBeNull();
     act(() => vi.advanceTimersByTime(1001));
     expect(screen.getByTestId("beacon").textContent).toBe("retained");
-    expect(banner.getAttribute("data-health-state")).toBe("degraded");
+    // Degraded is operator signal; the public banner waits for the stale band.
+    expect(banner()).toBeNull();
     act(() => vi.advanceTimersByTime(1000));
-    expect(banner.getAttribute("data-health-state")).toBe("stale");
+    expect(banner()?.getAttribute("data-health-state")).toBe("stale");
     expect(fetch).not.toHaveBeenCalled();
     mounted.unmount();
     expect(vi.getTimerCount()).toBe(0);
@@ -99,39 +98,22 @@ describe("data-health hydration", () => {
     await hydrateSavedHtml(html, element, "5:00 AM PDT");
   });
 
-  it("preserves saved-data errors in server HTML", () => {
+  it("keeps a failed refresh over saved data out of server HTML", () => {
     vi.spyOn(Date, "now").mockReturnValue(savedAt);
     const html = renderToString(<StaleDataBanner queries={[{
       label: "Liquidity", dataUpdatedAt: savedAt, staleTime: 15 * 60_000,
       hasData: true, error: new Error("offline"),
     }]} />);
-    expect(html).toContain("Refresh failed; showing saved data");
-    expect(html).toContain("Last successful update:");
+    expect(html).toBe("");
   });
 
   it("preserves producer age relative to the saved query receipt in server HTML", () => {
     const html = renderToString(<StaleDataBanner queries={[{
       label: "Liquidity", dataUpdatedAt: savedAt, staleTime: 3600_000, hasData: true,
-      meta: { updatedAt: (savedAt - 9 * 3600_000) / 1000, ageSeconds: 9 * 3600, status: "degraded" },
+      meta: { updatedAt: (savedAt - 13 * 3600_000) / 1000, ageSeconds: 13 * 3600, status: "stale" },
     }]} />);
-    expect(html).toContain("Live refresh is running behind");
+    expect(html).toContain("Showing an older snapshot");
     expect(html).toContain("Last successful update:");
-  });
-  it("hydrates the persistent seeded-refresh slot before localizing its producer timestamp", async () => {
-    vi.spyOn(Date, "now").mockReturnValue(savedAt + 10 * 3600_000);
-    const element = <StaleDataBanner persistent queries={[{
-      label: "Detail snapshot", dataUpdatedAt: savedAt, staleTime: 15 * 60_000, hasData: true,
-      meta: { updatedAt: savedAt / 1000, ageSeconds: 36000, status: "fresh" },
-      isSnapshot: true, isFetching: true, isFetchedAfterMount: false,
-    }]} />;
-    const html = renderToString(element);
-    expect(html).toContain("Refreshing… saved data from");
-    expect(html).toContain("UTC");
-    expect(html).toContain('data-freshness-slot');
-    expect(html).toContain("h-12");
-    expect(html).not.toContain("min-h-48");
-    expect(html).not.toContain("<details open");
-    await hydrateSavedHtml(html, element, "Refreshing… saved data from");
   });
 
   it("hydrates settled stale reserves without turning a new request receipt into a generation", async () => {
@@ -154,16 +136,13 @@ describe("data-health hydration", () => {
     } } });
     const queries = buildDetailStaleQueries(params.queries, params.supplemental, "usdt-tether")
       .filter((query) => query.label === "Live Reserves");
-    const element = <StaleDataBanner persistent queries={queries} />;
+    const element = <StaleDataBanner queries={queries} />;
     const html = renderToString(element);
     expect(html).toContain('data-health-state="stale"');
-    expect(html).toContain("freshness budget 2d");
-    expect(html).toContain("original-reserve-generation");
-    expect(html).not.toContain("Refreshing…");
     await hydrateSavedHtml(html, element, "Showing an older snapshot");
   });
 
-  it("hydrates the saved slot before an already-resolved parser read settles its query cache", async () => {
+  it("hydrates the saved banner before an already-resolved parser read settles its query cache", async () => {
     vi.spyOn(Date, "now").mockReturnValue(savedAt + 10 * 3600_000);
     const id = "usdt-tether";
     const queryKey = FRONTEND_API_QUERY_DESCRIPTORS.stablecoinLiveSummary(id).queryKey;
@@ -190,13 +169,10 @@ describe("data-health hydration", () => {
       browserClient.setQueryData(queryKey, settled, { updatedAt: savedAt });
     });
     function SavedFreshnessSlot() {
-      const client = useQueryClient();
       const query = useQuery({ queryKey, queryFn: async () => settled, staleTime: Infinity });
-      const isSnapshot = isDetailSnapshotQuery(client, queryKey);
-      return <StaleDataBanner persistent queries={[{
+      return <StaleDataBanner queries={[{
         label: "Detail snapshot", dataUpdatedAt: query.dataUpdatedAt, staleTime: 15 * 60_000,
         hasData: Boolean(query.data), meta: query.data?.meta,
-        isSnapshot, isFetching: isSnapshot, isFetchedAfterMount: !isSnapshot,
       }]} />;
     }
     const html = renderToString(
@@ -204,7 +180,6 @@ describe("data-health hydration", () => {
         <StablecoinDetailLiveSummaryStart id={id}><SavedFreshnessSlot /></StablecoinDetailLiveSummaryStart>
       </QueryClientProvider>,
     );
-    expect(html).toContain('data-health-state="refreshing"');
     expect(serverPrefetch).not.toHaveBeenCalled();
     try {
       await hydrateSavedHtml(html,

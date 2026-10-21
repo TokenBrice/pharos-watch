@@ -345,7 +345,6 @@ export function useFreezeWatchPageController() {
     stablecoinFxFallbackRates: stablecoinData?.fxFallbackRates,
     stablecoinsError: supportStablecoinsError,
     reportCardMap,
-    reportCardsResponse: reportCardsData,
     blacklistStatusBuckets,
     supportDataLoading: supportStablecoinsLoading || supportReportCardsLoading,
     refetchSummary,

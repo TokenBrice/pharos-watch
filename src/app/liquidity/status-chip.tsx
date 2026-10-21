@@ -3,7 +3,7 @@
 import { OpsStatusChip } from "@/components/ops-status-chip";
 import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
 import type { ApiMeta } from "@/lib/api";
-import { deriveDataHealth } from "@/lib/data-health";
+import { deriveDataHealth, isPublicWarning } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -33,17 +33,16 @@ export function LiquidityStatusChip({
       </OpsStatusChip>
     );
   }
-  if (health.state === "fresh") return null;
+  // Source advisories and mild lateness are operator signal; readers see only material staleness.
+  if (!isPublicWarning(health)) return null;
   const warnCodes = (meta?.warning?.match(/\b\d{3}(?= - )/g) ?? []).map((code) => `warn-${code}`);
-  // HTTP 110 ("Response is stale") names the state, whatever the age tier says.
-  const stale = health.state === "stale" || warnCodes.includes("warn-110");
   // Header-derived meta carries no budget; the endpoint's own authority does (R3/R5).
   const freshBudgetSec = meta && "freshBudgetSec" in meta && meta.freshBudgetSec != null
     ? meta.freshBudgetSec
     : API_FRESHNESS_MAX_AGE_SEC.dexLiquidity * FRESHNESS_RATIOS.FRESH;
   return (
     <OpsStatusChip
-      label={health.state === "unavailable" ? "Data unavailable" : stale ? "Stale data" : error ? "Refresh failed" : health.degradationReason === "source" ? "Data warning" : "Delayed data"}
+      label={health.state === "unavailable" ? "Data unavailable" : "Stale data"}
       reasonCodes={[`api-${meta?.status ?? "unknown"}`, `health-${health.state}`, ...warnCodes]}
     >
       <p>{health.message}</p>

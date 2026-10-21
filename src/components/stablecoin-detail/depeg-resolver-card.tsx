@@ -23,10 +23,10 @@ export function StablecoinDepegResolverCard({ stablecoinId, logoSrc }: Stablecoi
   if (!unavailable && !usableRows) return null;
   return (
     <div className="space-y-3">
-      {unavailable || (resolver.error != null && usableRows) ? (
+      {unavailable ? (
         <section aria-label="Depeg Duration Resolver availability" className="space-y-2">
           <QueryStateNotice
-            state={usableRows ? "stale-with-data" : "unavailable"}
+            state="unavailable"
             label="Depeg Duration Resolver"
             onRetry={() => void resolver.refetch()}
           />

@@ -18,6 +18,8 @@ import {
   loadProducerFreshnessFacts,
   type ProducerFreshnessFact,
 } from "../lib/status/freshness-oracle";
+import { rethrowIfAborted } from "../lib/abort";
+import { loadSafetyScoreV9PublicationHealth } from "../lib/safety-score-v9/publication-health";
 import { deliverOperatorAlert } from "./cron-sentinel-rules";
 
 // Registry-derived lanes prove freshness from cron_runs MAX(started_at), and
@@ -351,6 +353,41 @@ export function evaluateCronStaleness(
 
 type ProducerFreshnessState = Record<string, "ok" | "stale">;
 
+/**
+ * Operator conditions share the producer transition state. Producer keys are
+ * bare job names; every other section prefixes its key with `<section>:` so a
+ * condition that disappears (a recovered detail write, a released hold) is
+ * reported as recovered instead of silently dropped.
+ */
+export interface OperatorWatchCondition {
+  section: OperatorWatchSection;
+  /** Stable identity within the section (job name, coin id, rule name). */
+  id: string;
+  /** Operator-facing detail; defaults to `id`. */
+  label?: string;
+  active: boolean;
+}
+
+type OperatorWatchSection = "producer" | "detail-write" | "dependency" | "safety-publication";
+
+const OPERATOR_SECTION_TITLES: Record<OperatorWatchSection, { raised: string; recovered: string }> = {
+  producer: { raised: "Stale producers", recovered: "Recovered producers" },
+  "detail-write": { raised: "Detail cache write failures", recovered: "Detail cache writes recovered" },
+  dependency: { raised: "Dependency still stale after root recovery", recovered: "Dependency caught up" },
+  "safety-publication": { raised: "Safety Score publication held", recovered: "Safety Score publication released" },
+};
+
+function conditionKey(condition: Pick<OperatorWatchCondition, "section" | "id">): string {
+  return condition.section === "producer" ? condition.id : `${condition.section}:${condition.id}`;
+}
+
+function sectionOfKey(key: string): OperatorWatchSection {
+  const prefix = key.slice(0, key.indexOf(":"));
+  return key.includes(":") && prefix in OPERATOR_SECTION_TITLES && prefix !== "producer"
+    ? prefix as OperatorWatchSection
+    : "producer";
+}
+
 function parseProducerFreshnessState(value: string | null | undefined): ProducerFreshnessState {
   if (!value) return {};
   try {
@@ -375,7 +412,9 @@ export interface CronStalenessWatchdogOptions {
 
 async function alertOnFreshnessTransitions(params: {
   db: D1Database;
-  observations: readonly CronStalenessObservation[];
+  conditions: readonly OperatorWatchCondition[];
+  /** Sections whose evidence could not be read this run keep their prior state. */
+  unknownSections?: readonly OperatorWatchSection[];
   nowSec: number;
   operatorTelegramCreds: TelegramCreds | null;
   signal?: AbortSignal;
@@ -388,14 +427,38 @@ async function alertOnFreshnessTransitions(params: {
   const next: ProducerFreshnessState = {};
   const stale: string[] = [];
   const recovered: string[] = [];
+  const raisedLines = new Map<OperatorWatchSection, string[]>();
+  const recoveredLines = new Map<OperatorWatchSection, string[]>();
+  const push = (lines: Map<OperatorWatchSection, string[]>, section: OperatorWatchSection, line: string) => {
+    lines.set(section, [...(lines.get(section) ?? []), line]);
+  };
 
-  for (const observation of params.observations) {
-    const current = isStale(observation) ? "stale" : "ok";
-    const prior = previous[observation.producerJob] ?? "ok";
-    next[observation.producerJob] = current;
+  for (const condition of params.conditions) {
+    const key = conditionKey(condition);
+    const current = condition.active ? "stale" : "ok";
+    const prior = previous[key] ?? "ok";
+    // Only producers keep an explicit "ok"; other sections are a set of active keys.
+    if (condition.section === "producer" || current === "stale") next[key] = current;
     if (prior === current) continue;
-    if (current === "stale") stale.push(observation.producerJob);
-    else recovered.push(observation.producerJob);
+    if (current === "stale") {
+      stale.push(key);
+      push(raisedLines, condition.section, condition.label ?? condition.id);
+    } else {
+      recovered.push(key);
+      push(recoveredLines, condition.section, condition.id);
+    }
+  }
+  const unknown = new Set(params.unknownSections ?? []);
+  for (const [key, prior] of Object.entries(previous)) {
+    const section = sectionOfKey(key);
+    if (section === "producer" || key in next) continue;
+    if (unknown.has(section)) {
+      next[key] = prior;
+      continue;
+    }
+    if (prior !== "stale") continue;
+    recovered.push(key);
+    push(recoveredLines, section, key.slice(section.length + 1));
   }
 
   if (stale.length === 0 && recovered.length === 0) {
@@ -408,10 +471,14 @@ async function alertOnFreshnessTransitions(params: {
     return { stale, recovered, sent: false, cooldown };
   }
 
-  const sections = [
-    stale.length > 0 ? `<b>Stale producers</b>: ${stale.map(escapeHtml).join(", ")}` : null,
-    recovered.length > 0 ? `<b>Recovered producers</b>: ${recovered.map(escapeHtml).join(", ")}` : null,
-  ].filter((section): section is string => section != null);
+  const sections = (Object.keys(OPERATOR_SECTION_TITLES) as OperatorWatchSection[]).flatMap((section) => [
+    raisedLines.has(section)
+      ? `<b>${OPERATOR_SECTION_TITLES[section].raised}</b>: ${raisedLines.get(section)!.map(escapeHtml).join(", ")}`
+      : null,
+    recoveredLines.has(section)
+      ? `<b>${OPERATOR_SECTION_TITLES[section].recovered}</b>: ${recoveredLines.get(section)!.map(escapeHtml).join(", ")}`
+      : null,
+  ]).filter((section): section is string => section != null);
   const delivery = await deliverOperatorAlert(
     params.operatorTelegramCreds,
     `<b>Pharos freshness watchdog</b>\n\n${sections.join("\n")}`,
@@ -462,9 +529,43 @@ export async function runCronStalenessWatchdog(
   }
 
   const detailWriteFailures = await loadDetailWriteFailures(db, nowSec);
+  const safetyPublication = await loadSafetyScoreV9PublicationHealth(db, signal).then(
+    (health) => ({ ok: true as const, health }),
+    (error: unknown) => {
+      rethrowIfAborted(error, signal);
+      return { ok: false as const };
+    },
+  );
+  const safetyPublicationHeld = safetyPublication.ok && safetyPublication.health?.status === "held";
   const alertTransitions = await alertOnFreshnessTransitions({
     db,
-    observations: watchedObservations,
+    conditions: [
+      ...watchedObservations.map((observation): OperatorWatchCondition => ({
+        section: "producer",
+        id: observation.producerJob,
+        active: isStale(observation),
+      })),
+      ...detailWriteFailures.map((failure): OperatorWatchCondition => ({
+        section: "detail-write",
+        id: failure.stablecoinId,
+        label: `${failure.stablecoinId} (${failure.reason})`,
+        active: true,
+      })),
+      ...dependencyRecoveryChecks.map((check): OperatorWatchCondition => ({
+        section: "dependency",
+        id: `${check.root}->${check.dependent}`,
+        active: check.state === "root-recovered-dependent-stale",
+      })),
+      ...(safetyPublication.ok ? [{
+        section: "safety-publication" as const,
+        id: "v9",
+        label: safetyPublicationHeld && safetyPublication.health
+          ? `v9 (${safetyPublication.health.reasons.map((reason) => reason.code).join(", ") || "no reason code"})`
+          : "v9",
+        active: safetyPublicationHeld,
+      }] : []),
+    ],
+    unknownSections: safetyPublication.ok ? [] : ["safety-publication"],
     nowSec,
     operatorTelegramCreds: options.operatorTelegramCreds ?? null,
     signal,
@@ -484,6 +585,9 @@ export async function runCronStalenessWatchdog(
       firedRuleIds: [
         ...(stale.length > 0 ? ["producer-stale"] : []),
         ...(detailWriteFailures.length > 0 ? ["detail-write-failure"] : []),
+        ...(dependencyRecoveryChecks.some((check) => check.state === "root-recovered-dependent-stale")
+          ? ["dependency-recovery-lag"] : []),
+        ...(safetyPublicationHeld ? ["safety-publication-held"] : []),
       ],
       checkedProducers: watchedObservations.map((observation) => observation.producerJob),
       stale,

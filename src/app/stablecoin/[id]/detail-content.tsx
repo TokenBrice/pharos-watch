@@ -99,6 +99,12 @@ function resolveGradeRead(viewModel: ReadyDetailViewModel) {
   return resolveDetailGradeRead(viewModel.reportCard, viewModel.staleQueries);
 }
 
+/** The producer generation, never the browser's request receipt; unknown hides the stamp. */
+function detailSnapshotGenerationMs(queries: ReadyDetailViewModel["staleQueries"]): number {
+  const updatedAt = queries.find((query) => query.label === "Detail snapshot")?.meta?.updatedAt;
+  return updatedAt != null && updatedAt > 0 ? updatedAt * 1000 : 0;
+}
+
 function DetailIdentity({
   heroModel,
   heroRef,
@@ -122,12 +128,12 @@ function DetailIdentity({
         hasData={viewModel.supplyHistory.length > 0}
         onRetry={viewModel.handleRetryAll}
         queries={viewModel.staleQueries}
-        persistent
       />
       <HeroIdentityHeader
         model={heroModel}
         onOpenFeedback={onOpenFeedback}
         gradeRead={resolveGradeRead(viewModel)}
+        updatedAtMs={detailSnapshotGenerationMs(viewModel.staleQueries)}
       />
       <MobileStickySummary
         coin={viewModel.coin}

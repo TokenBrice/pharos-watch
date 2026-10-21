@@ -3,11 +3,10 @@
 import { IntentLink } from "@/components/intent-link";
 import { History, Table2 } from "lucide-react";
 import type { SafetyScoreV9CurrentCard } from "@shared/types";
-import type { ReportCardsV9Response, V9PublicationHealth } from "@shared/types/report-cards-v9";
+import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
-import { OpsStatusChip } from "@/components/ops-status-chip";
 import { PartialEvidenceChip } from "@/components/stablecoin-detail/ops-status-chip";
 import { ScoreConstructionPanel } from "@/components/stablecoin-detail/score-construction-panel";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
@@ -26,7 +25,6 @@ import {
   type PillarEvidenceAnchors,
 } from "@/components/stablecoin-detail/safety-score-v9-breakdown";
 import { CapSection, ScoreAdjustment } from "@/components/stablecoin-detail/safety-score-v9-adjustments";
-import { describeDataCoverageHoldCauses } from "@/lib/safety-score-data-coverage";
 import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { buildStablecoinSafetyScoreV9Presentation } from "@/lib/stablecoin-safety-score-v9-presentation";
@@ -68,44 +66,6 @@ function HeaderActions({ updatedAtMs }: { updatedAtMs: number | null }) {
   );
 }
 
-function formatRelativeTime(timestampMs: number): string {
-  const ageSec = Math.max(0, Math.floor((Date.now() - timestampMs) / 1000));
-  if (ageSec < 60) return "less than a minute ago";
-  const ageMin = Math.floor(ageSec / 60);
-  if (ageMin < 60) return `${ageMin}m ago`;
-  const ageHours = Math.floor(ageMin / 60);
-  if (ageHours < 24) return `${ageHours}h ago`;
-  return `${Math.floor(ageHours / 24)}d ago`;
-}
-
-/** Held publication is pipeline state: an amber header chip, detail on tap (D6). */
-function HeldPublicationChip({ health }: { health: V9PublicationHealth }) {
-  if (health.status !== "held") return null;
-  const heldSinceMs = health.heldSinceSec === null ? null : health.heldSinceSec * 1000;
-  const causes = describeDataCoverageHoldCauses(health.reasons);
-  return (
-    <OpsStatusChip label="Ratings held" reasonCodes={health.reasons.map((reason) => reason.code)}>
-      <p className="text-foreground">
-        Ratings are held at the last verified snapshot
-        {heldSinceMs !== null ? (
-          <>
-            {" "}since{" "}
-            <time
-              suppressHydrationWarning
-              dateTime={new Date(heldSinceMs).toISOString()}
-              title={new Date(heldSinceMs).toLocaleString(undefined, { timeZoneName: "long" })}
-            >
-              {formatRelativeTime(heldSinceMs)}
-            </time>
-          </>
-        ) : null}
-        .
-      </p>
-      {causes.length > 0 ? <p className="text-muted-foreground">{causes.join(" ")}</p> : null}
-    </OpsStatusChip>
-  );
-}
-
 /** Composite modifiers inline beside the score, so a headline below every
  *  pillar (LUSD 78 under 79/84/90) reconciles at a glance. */
 function ScoreModifiers({ card }: { card: StablecoinSafetyScoreV9DisplayCard }) {
@@ -131,7 +91,6 @@ function ScoreModifiers({ card }: { card: StablecoinSafetyScoreV9DisplayCard }) 
 export interface StablecoinSafetyScoreV9CardProps {
   card: StablecoinSafetyScoreV9DisplayCard;
   identity: ReportCardsV9Response["safetyScoreIdentity"];
-  publicationHealth: V9PublicationHealth;
   updatedAtMs: number | null;
   stablecoinName?: string;
   /** Which pillar evidence boards the page renders; omitted, every pillar row links to its board. */
@@ -141,7 +100,6 @@ export interface StablecoinSafetyScoreV9CardProps {
 export function StablecoinSafetyScoreV9Card({
   card,
   identity,
-  publicationHealth,
   updatedAtMs,
   stablecoinName,
   evidenceAnchors,
@@ -154,7 +112,6 @@ export function StablecoinSafetyScoreV9Card({
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           {/* No coin prefix: the dossier hero and rail already name the coin. */}
           <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Safety Score</StablecoinModuleTitle>
-          <HeldPublicationChip health={publicationHealth} />
           {card.partialEvidence !== null ? <PartialEvidenceChip partialEvidence={card.partialEvidence} /> : null}
         </div>
         <HeaderActions updatedAtMs={updatedAtMs} />

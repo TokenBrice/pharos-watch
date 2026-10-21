@@ -155,7 +155,7 @@ describe("BlacklistSection", () => {
     expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
   });
 
-  it("renders cached summary data with a stale notice when refresh fails", () => {
+  it("keeps cached summary data without a reader notice when a refresh fails", () => {
     const cachedSummary = summaryStub();
     vi.mocked(useBlacklistSummary).mockReturnValue({
       ...cachedSummary,
@@ -166,11 +166,7 @@ describe("BlacklistSection", () => {
 
     render(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
 
-    expect(
-      screen
-        .getAllByRole("status")
-        .some((node) => node.textContent?.includes("refresh failed; showing the last available data")),
-    ).toBe(true);
+    expect(screen.queryByText(/refresh failed/i)).toBeNull();
     expect(screen.getByText(/Frozen addresses/i)).toBeTruthy();
   });
 
@@ -242,22 +238,24 @@ describe("BlacklistSection", () => {
 it.each([
   { meta: { updatedAt: Math.floor(Date.now() / 1000) - 86_400, status: "fresh", freshBudgetSec: 60, degradedBudgetSec: 120 }, state: "stale" },
   { meta: { updatedAt: null, status: "unknown", ageSeconds: null }, state: "unavailable" },
-  { meta: { updatedAt: Math.floor(Date.now() / 1000), status: "fresh", warning: "Scan incomplete" }, state: "degraded" },
-] as { meta: ApiMeta; state: string }[])("keeps blacklist producer metadata authoritative after refetch ($state)", ({ meta, state }) => {
+  { meta: { updatedAt: Math.floor(Date.now() / 1000), status: "fresh", warning: "Scan incomplete" }, state: null },
+] as { meta: ApiMeta; state: string | null }[])("keeps blacklist producer metadata authoritative after refetch ($state)", ({ meta, state }) => {
   const receipt = Date.now();
   const result = { ...summaryStub(), meta, dataUpdatedAt: receipt, error: null, refetch: vi.fn() };
   vi.mocked(useBlacklistSummary).mockReturnValue(result);
   const { container, rerender } = render(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
   const producerTime = meta.updatedAt != null ? new Date(meta.updatedAt * 1000).toISOString() : null;
   expect(container.querySelector("time")?.getAttribute("datetime")).toBe(producerTime);
-  expect(container.querySelector(`[data-health-state="${state}"]`)).toBeTruthy();
+  // A source advisory over a current generation is operator signal; only stale or missing data is public.
+  if (state) expect(container.querySelector(`[data-health-state="${state}"]`)).toBeTruthy();
+  else expect(container.querySelector("[data-health-state]")).toBeNull();
   vi.mocked(useBlacklistSummary).mockReturnValue({ ...result, dataUpdatedAt: receipt + 30_000 });
   rerender(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
   expect(container.querySelector("time")?.getAttribute("datetime")).toBe(producerTime);
   vi.mocked(useBlacklistSummary).mockReturnValue({ ...result, error: new Error("refresh failed") });
   rerender(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
   expect(container.querySelector("time")?.getAttribute("datetime")).toBe(producerTime);
-  expect(screen.getByText(/refresh failed; showing the last available data/)).toBeTruthy();
+  expect(screen.queryByText(/refresh failed/i)).toBeNull();
   expect(screen.getByText(/Frozen addresses/i)).toBeTruthy();
 });
 
@@ -273,7 +271,7 @@ it("ages the saved blacklist generation without a query update", () => {
   expect(container.querySelector("[data-health-state]")).toBeNull();
   act(() => vi.advanceTimersByTime(50));
   act(() => vi.advanceTimersByTime(60_001));
-  expect(container.querySelector('[data-health-state="degraded"]')).toBeTruthy();
+  expect(container.querySelector("[data-health-state]")).toBeNull();
   act(() => vi.advanceTimersByTime(60_000));
   expect(container.querySelector('[data-health-state="stale"]')).toBeTruthy();
   expect(container.querySelector("time")?.getAttribute("datetime")).toBe(new Date(receipt).toISOString());

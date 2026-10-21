@@ -367,7 +367,13 @@ The Daily Digest and weekly market recap remain public editorial editions on the
 
 Daily Digest and Weekly Recap outbox retry budgets are evaluated after a retryable transport response: 12 claimed retryable attempts may return to `pending`; the 13th retryable result, or one at least 24 hours after generation, becomes `failed_permanent` with an attempt- or age-budget error class. These are retry-return limits, not pre-send gates. Ambiguous attempted transports remain `execution_unknown` and are never made replayable by the budget.
 
-Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs stored in `telegram_subscribers`. Operator-only alerts (currently the cron freshness watchdog and the digest-publication watchdog, both dispatched by `cron-sentinel` in `status` mode) use `TELEGRAM_OPERATOR_CHAT_ID` via `buildTelegramOperatorCreds()`; they are ops signal rather than audience content, so they must never be sent with the public channel credentials, and an unset operator chat suppresses the send instead of falling back.
+Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs stored in `telegram_subscribers`. Operator-only alerts use `TELEGRAM_OPERATOR_CHAT_ID` via `buildTelegramOperatorCreds()`; they are ops signal rather than audience content, so they must never be sent with the public channel credentials, and an unset operator chat suppresses the send instead of falling back. Public pages warn only on material staleness, so these alerts are the primary signal for degraded-but-servable data. Current senders:
+
+- **Freshness watchdog** (`cron-sentinel` `status` mode, every 15 minutes): stale and recovered producers, per-coin detail cache write failures, DEX liquidity → DEWS still stale after its root recovered, and Safety Score publication held/released (with hold reason codes).
+- **Digest-publication watchdog** (`status` mode): missing daily/weekly edition rows and channel posts.
+- **Reserve watchdog** (`cron-sentinel` `reserve-post-sync` mode, after each live-reserve cohort): configured coins whose latest reserve sync is `degraded` or `error` (keyed by status plus failure category or warning codes, so a changed reason re-alerts), collateral drift coins, more than five coins on curated fallback, and the persistently-stale independent-source warning.
+
+Each watchdog alerts only on transitions (new, recovered, or a changed reason), groups them into one message, and shares a 30-minute cooldown. Cooldown, missing credentials or a failed send leave the transition pending for the next run; a failed send marks the run `operator-alert-delivery-failed`. Evidence that could not be read keeps its prior state rather than reporting a recovery.
 
 ## Operational Notes
 

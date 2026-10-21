@@ -10,7 +10,6 @@ import { stablecoinLabel } from "@/lib/stablecoin-label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { DependencyHero } from "./dependency-hero";
@@ -112,7 +111,6 @@ export function DependencyMapClient() {
 
   return (
     <div className="space-y-4">
-      <SafetyScoreV9StatusNotice response={reportData} />
       {reportCardsError && (
         <QueryErrorNotice error={reportCardsError} hasData={!!reportData.nodes.length} onRetry={() => { void refetchReportCards(); }} />
       )}

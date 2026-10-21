@@ -35,9 +35,6 @@ export interface DetailQueryResource<TData> {
   error: unknown | null;
   meta: ApiMeta | null;
   enabled?: boolean;
-  isFetching?: boolean;
-  isFetchedAfterMount?: boolean;
-  isSnapshot?: boolean;
 }
 
 export interface DetailSupplyHistoryInput extends DetailQueryResource<SupplyHistoryPoint[]> {
@@ -116,9 +113,6 @@ export interface StablecoinDetailStaleQuery {
   enabled?: boolean;
   /** First fetch in flight: the freshness banner waits instead of reporting "not populated". */
   isLoading?: boolean;
-  isFetching?: boolean;
-  isFetchedAfterMount?: boolean;
-  isSnapshot?: boolean;
 }
 
 export type StablecoinDetailFeatureStatus = GatedQueryViewState;

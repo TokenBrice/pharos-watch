@@ -8,14 +8,13 @@ import { formatElapsedSeconds } from "@shared/lib/format";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 
 /**
- * Degraded or stale `/api/chains` reads as a hero chip (on `/chains/` and chain profiles), never a body callout. A non-fresh report-card dependency names itself,
- * because it alone is why every chain's Chain Health is NR while supply and shares still publish.
+ * A stale `/api/chains` read shows as a hero chip (on `/chains/` and chain profiles), never a body callout. A non-fresh report-card dependency names itself,
+ * because it alone is why every chain's Chain Health is NR while supply and shares still publish. Degraded reads are operator signal only.
  */
 export function ChainsFreshnessChip({ meta }: { meta: ApiMeta | null | undefined }) {
-  if (!meta || (meta.status === "fresh" && !meta.warning)) return null;
-  const reportCards = meta.dependencies?.reportCards;
+  const reportCards = meta?.dependencies?.reportCards;
   const healthHeld = reportCards != null && reportCards.status !== "fresh";
-  const stale = meta.status === "stale";
+  if (!meta || (meta.status !== "stale" && !healthHeld)) return null;
   // Header-derived meta carries no budget; the endpoint's own authority does (R3/R5).
   const freshBudgetSec = "freshBudgetSec" in meta && meta.freshBudgetSec != null
     ? meta.freshBudgetSec
@@ -25,7 +24,7 @@ export function ChainsFreshnessChip({ meta }: { meta: ApiMeta | null | undefined
       label={
         healthHeld
           ? `Chain Health inputs ${reportCards.status === "stale" || reportCards.status === "unavailable" ? reportCards.status : "delayed"}`
-          : stale ? "Stale data" : "Delayed data"
+          : "Stale data"
       }
       reasonCodes={[
         `api-${meta.status}`,

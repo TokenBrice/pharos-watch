@@ -89,7 +89,8 @@ describe("FlowsClient", () => {
     useMintBurnFlowsMock.mockReturnValue(makeQueryResult({ data: summary }));
     render(<FlowsClient faqItems={[]} />);
     expect(flowGaugeHeroMock).toHaveBeenCalledWith(expect.objectContaining({ window: summary.window }), undefined);
-    expect(screen.getByText(/Critical-lane sync every .* min; evidence may lag/)).toBeTruthy();
+    expect(screen.getByText(/Critical-lane sync every .* min$/)).toBeTruthy();
+    expect(screen.queryByText(/evidence may lag/)).toBeNull();
     expect(screen.queryByText(/Refreshed every/)).toBeNull();
   });
 
@@ -113,9 +114,10 @@ describe("FlowsClient", () => {
     });
   });
 
-  it("surfaces a standalone weekly query failure in the error notice", () => {
+  it("keeps a standalone weekly query failure over served summary data out of the body", () => {
     render(<FlowsClient faqItems={[]} />);
 
-    expect(screen.getByText("Refresh delayed")).toBeTruthy();
+    expect(screen.queryByText("Refresh delayed")).toBeNull();
+    expect(screen.queryByText("Failed to load this dataset")).toBeNull();
   });
 });

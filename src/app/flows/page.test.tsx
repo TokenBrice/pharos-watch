@@ -51,7 +51,7 @@ function makeQueryResult(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function buildFlowData(syncWarning: string | null) {
+function buildFlowData(syncWarning: string | null, freshnessStatus: "degraded" | "stale" = "degraded") {
   return {
     gauge: {
       score: 0,
@@ -72,7 +72,7 @@ function buildFlowData(syncWarning: string | null) {
     },
     sync: {
       lastSuccessfulSyncAt: Math.floor(Date.now() / 1000) - 3_000,
-      freshnessStatus: "degraded",
+      freshnessStatus,
       warning: syncWarning,
       criticalLaneHealthy: false,
     },
@@ -84,18 +84,18 @@ describe("FlowsPage", () => {
     mockUseMintBurnFlows.mockReset();
   });
 
-  it("suppresses the generic stale-data banner when a specific sync warning is present", () => {
-    const syncWarning = "Mint/burn sync freshness is degraded versus the 30-minute cron cadence.";
+  it.each(["degraded", "stale"] as const)("names a %s sync warning only once it is stale, as a hero chip", (freshnessStatus) => {
+    const syncWarning = "Mint/burn sync freshness is behind the 30-minute cron cadence.";
 
     mockUseMintBurnFlows.mockImplementation((hours = 24) => {
       if (hours === 168) {
         return makeQueryResult({
-          data: buildFlowData(syncWarning),
+          data: buildFlowData(syncWarning, freshnessStatus),
         }) as unknown as ReturnType<typeof useMintBurnFlows>;
       }
 
       return makeQueryResult({
-        data: buildFlowData(syncWarning),
+        data: buildFlowData(syncWarning, freshnessStatus),
         meta: {
           updatedAt: Math.floor(Date.now() / 1000) - 3_000,
           ageSeconds: 3_000,
@@ -106,9 +106,9 @@ describe("FlowsPage", () => {
 
     const html = renderToStaticMarkup(<FlowsPage />);
 
-    // The sync warning is a hero status chip (detail in its popover), never a body callout.
-    expect(html).toContain('data-reason-codes="freshness-degraded"');
-    expect(html).toContain("Sync delayed");
+    // A stale sync warning is a hero status chip (detail in its popover), never a body callout.
+    expect(html.includes('data-reason-codes="freshness-stale"')).toBe(freshnessStatus === "stale");
+    expect(html.includes("Sync delayed")).toBe(freshnessStatus === "stale");
     expect(html).not.toContain("Data may be delayed");
   });
 
@@ -122,7 +122,7 @@ describe("FlowsPage", () => {
     expect(html).toContain("-42|worsening|burning");
   });
 
-  it("names a delayed read as a hero chip, not a body banner, when no sync-specific warning exists", () => {
+  it("keeps a delayed read off the hero and body when no sync-specific warning exists", () => {
     mockUseMintBurnFlows.mockImplementation((hours = 24) => {
       if (hours === 168) {
         return makeQueryResult({
@@ -145,11 +145,11 @@ describe("FlowsPage", () => {
 
     expect(html).not.toContain("Mint/burn sync freshness is degraded");
     expect(html).not.toContain("Live refresh is running behind");
-    expect(html).toContain('data-reason-codes="data-health-degraded age"');
-    expect(html).toContain("Data delayed");
+    expect(html).not.toContain("data-health-degraded");
+    expect(html).not.toContain("Data delayed");
   });
 
-  it("names a failed refresh over saved data as a hero chip when fresh API metadata accompanies a retry error", () => {
+  it("keeps a failed refresh over saved data off the hero when fresh API metadata accompanies a retry error", () => {
     const refreshError = new Error("network");
 
     mockUseMintBurnFlows.mockImplementation((hours = 24) => {
@@ -173,7 +173,7 @@ describe("FlowsPage", () => {
     const html = renderToStaticMarkup(<FlowsPage />);
 
     expect(html).not.toContain("Refresh failed; showing saved data");
-    expect(html).toContain('data-reason-codes="data-health-degraded refresh"');
+    expect(html).not.toContain("data-health-degraded");
     expect(html).not.toContain("Older snapshot");
   });
 

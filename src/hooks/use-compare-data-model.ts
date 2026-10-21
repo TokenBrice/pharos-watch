@@ -335,7 +335,6 @@ export function useCompareDataModel({
     hasPrimaryData,
     pegRates,
     radarCards,
-    reportCardsResponse: reportCardsData,
     supplySeries,
   };
 }

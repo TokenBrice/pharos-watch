@@ -288,14 +288,13 @@ describe("ContagionSnapshot", () => {
           refetch: vi.fn(),
         }),
     ],
-  ])("keeps the cached graph and warns when the %s refresh fails", (_name, degrade) => {
+  ])("keeps the cached graph without a reader notice when the %s refresh fails", (_name, degrade) => {
     degrade();
 
     render(<ContagionSnapshot stablecoinId="usde-ethena" />);
 
-    expect(screen.getByRole("status").textContent).toContain(
-      "refresh failed; showing the last available data",
-    );
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByTestId("contagion-graph").getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
   });
 

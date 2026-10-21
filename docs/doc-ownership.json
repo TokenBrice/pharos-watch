@@ -1569,6 +1569,7 @@
       "docs": [{ "path": "docs/architecture.md", "anchor": "frontend-runtime-and-seo-surface" }],
       "background": [
         {"path": "docs/design-language.md", "anchor": "context"},
+        {"path": "docs/architecture.md", "anchor": "adr-42"},
         {"path": "docs/alt-pegs-page.md", "anchor": "data-contract"},
         {"path": "docs/alt-pegs-page.md", "anchor": "route-shape"},
         {"path": "docs/api-page.md", "anchor": "api-shell-contract"},

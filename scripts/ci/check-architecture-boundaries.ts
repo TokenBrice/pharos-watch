@@ -41,6 +41,7 @@ const TELEGRAM_PUBLIC_ENTRIES: readonly (readonly [string, readonly string[]])[]
     "worker/src/cron/cron-sentinel-rules.ts", "worker/src/cron/cron-sentinel.ts",
     "worker/src/cron/cron-staleness-watchdog.ts", "worker/src/cron/daily-digest.ts",
     "worker/src/cron/digest-publication-watchdog.ts", "worker/src/cron/digest/publish.ts",
+    "worker/src/cron/reserve-post-sync-watchdog.ts", "worker/src/cron/reserve-sync-operator-alert.ts",
     "worker/src/cron/digest/telegram-transport.ts", "worker/src/cron/digest/wrapper-style-gate.ts",
     "worker/src/cron/weekly-recap.ts", "worker/src/lib/runtime-credentials.ts", "worker/src/routes/shared.ts",
   ]],

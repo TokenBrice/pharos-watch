@@ -88,7 +88,7 @@ describe("DependencyMapClient", () => {
     expect(screen.getByText(/Excludes 1 coins without supply data/)).toBeTruthy();
   });
 
-  it("retains the held notice and unpublished v5 coverage and supply facts", async () => {
+  it("keeps held publication off the page and retains unpublished v5 coverage and supply facts", async () => {
     const full = makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle", supply: undefined, dependencyCoverage: undefined }), makeV9Card({ id: "dai-makerdao", supply: undefined, dependencyCoverage: undefined })],
       dependencyGraph: { edges: [{ from: "usdc-circle", to: "dai-makerdao", kind: "basket", materiality: "basket-weighted", weight: 0.4, upstreamScore: 80 }] } });
     full.publicationHealth.status = "held";
@@ -98,7 +98,7 @@ describe("DependencyMapClient", () => {
     mockUseDependencyGraph.mockReturnValue(makeQueryResult(slim) as unknown as ReturnType<typeof useDependencyGraph>);
     render(<DependencyMapClient />);
     await screen.findByRole("figure", { name: /Dependency graph showing/ });
-    expect(screen.getByRole("status").textContent).toContain("Ratings are held at the last verified snapshot");
+    expect(screen.queryByText(/Ratings are held at the last verified snapshot/)).toBeNull();
     expect(screen.getByText(/Not published for this generation/)).toBeTruthy();
     expect(screen.getByRole("figure", { name: /Dependency graph showing/ })).toBeTruthy();
   });

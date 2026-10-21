@@ -206,14 +206,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
       </div>
 
       <div className="empty:hidden border-b border-border/40 px-4 py-3 sm:px-5">
-        {query.error ? (
-          <QueryStateNotice
-            state="stale-with-data"
-            label="Mint and burn flow data"
-            dataUpdatedAt={health.dataUpdatedAt}
-            onRetry={() => void query.refetch()}
-          />
-        ) : <StaleDataBanner queries={[healthInput]} />}
+        <StaleDataBanner queries={[healthInput]} />
       </div>
 
       <div className="grid border-b border-border/40 lg:grid-cols-2 lg:divide-x lg:divide-border/40">

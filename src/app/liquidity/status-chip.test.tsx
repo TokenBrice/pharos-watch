@@ -14,10 +14,19 @@ vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => true }));
 const stats = { totalTvlUnavailableReason: null } as LiquidityStatsData;
 
 describe("LiquidityStatusChip", () => {
-  it("names a 110 warning as stale and falls back to the endpoint's fresh budget", () => {
+  it("keeps a degraded 110 warning off the hero and falls back to the endpoint's fresh budget once stale", () => {
+    const { unmount } = render(createElement(LiquidityStatusChip, {
+      stats,
+      dataUpdatedAt: Date.now(),
+      meta: { status: "degraded", warning: '110 - "Response is stale (999s old, fresh budget 115200s)"' } as ApiMeta,
+    }));
+    expect(screen.queryByRole("button")).toBeNull();
+    unmount();
+
     render(createElement(LiquidityStatusChip, {
       stats,
-      meta: { status: "degraded", warning: '110 - "Response is stale (999s old, fresh budget 115200s)"' },
+      dataUpdatedAt: Date.now(),
+      meta: { status: "stale", warning: '110 - "Response is stale (999s old, fresh budget 115200s)"' } as ApiMeta,
     }));
     const chip = screen.getByRole("button", { name: /Stale data/ });
     expect(chip.getAttribute("data-reason-codes")).toContain("warn-110");
@@ -45,7 +54,7 @@ describe("LiquidityStatusChip", () => {
   });
 });
 
-it("ages saved fresh liquidity metadata to delayed and stale without fetching or rerendering", () => {
+it("ages saved fresh liquidity metadata to stale without fetching or rerendering, skipping the delayed band", () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-10-20T12:00:00Z"));
   const receipt = Date.now();
@@ -56,7 +65,7 @@ it("ages saved fresh liquidity metadata to delayed and stale without fetching or
   expect(screen.queryByRole("button")).toBeNull();
   act(() => vi.advanceTimersByTime(50));
   act(() => vi.advanceTimersByTime(60_001));
-  expect(screen.getByRole("button", { name: /Delayed data/ })).toBeTruthy();
+  expect(screen.queryByRole("button")).toBeNull();
   act(() => vi.advanceTimersByTime(60_000));
   const chip = screen.getByRole("button", { name: /Stale data/ });
   fireEvent.click(chip);
@@ -66,7 +75,6 @@ it("ages saved fresh liquidity metadata to delayed and stale without fetching or
 it.each([
   { meta: { updatedAt: Math.floor(Date.now() / 1000) - 3 * 86_400, status: "fresh" }, label: "Stale data" },
   { meta: { updatedAt: null, status: "unknown", ageSeconds: null }, label: "Data unavailable" },
-  { meta: { updatedAt: Math.floor(Date.now() / 1000), status: "fresh", dependencies: { pools: { status: "stale", reason: "pool-old" } } }, label: "Data warning" },
 ] as { meta: ApiMeta; label: string }[])("assesses $label from the producer rather than the new receipt", ({ meta, label }) => {
   const receipt = Date.now();
   const { rerender } = render(<LiquidityStatusChip stats={stats} meta={meta} dataUpdatedAt={receipt} />);
@@ -79,12 +87,14 @@ it.each([
   expect(screen.getByRole("button", { name: (name) => name.includes(label) })).toBeTruthy();
 });
 
-it("keeps the producer clock while qualifying a failed refresh with saved depth", () => {
+it("keeps source advisories and failed refreshes over saved depth as operator signal", () => {
   const receipt = Date.now();
   const updatedAt = Math.floor(receipt / 1000) - 60;
-  render(<LiquidityStatusChip stats={stats} dataUpdatedAt={receipt} error={new Error("offline")}
-    meta={{ updatedAt, status: "fresh" }} />);
-  fireEvent.click(screen.getByRole("button", { name: /Refresh failed/ }));
-  expect(document.querySelector("time")?.getAttribute("datetime")).toBe(new Date(updatedAt * 1000).toISOString());
-  expect(screen.getByText(/Using last successful data while refresh retries/)).toBeTruthy();
+  const { unmount } = render(<LiquidityStatusChip stats={stats} dataUpdatedAt={receipt} error={new Error("offline")}
+    meta={{ updatedAt, ageSeconds: 60, status: "fresh" }} />);
+  expect(screen.queryByRole("button")).toBeNull();
+  unmount();
+  render(<LiquidityStatusChip stats={stats} dataUpdatedAt={receipt}
+    meta={{ updatedAt, ageSeconds: 60, status: "fresh", dependencies: { pools: { status: "stale", reason: "pool-old" } } }} />);
+  expect(screen.queryByRole("button")).toBeNull();
 });

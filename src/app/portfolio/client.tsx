@@ -8,7 +8,6 @@ import { usePortfolio } from "@/hooks/use-portfolio";
 import { trackEvent } from "@/lib/analytics";
 import { copyText } from "@/lib/clipboard";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
-import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { encodePortfolioHoldings, mergeCoinsParam } from "@/lib/portfolio-codec";
 import { PortfolioEmptyState } from "@/components/portfolio-empty-state";
@@ -122,7 +121,6 @@ export function PortfolioClient() {
           },
         ]}
       />
-      <SafetyScoreV9StatusNotice response={reportData} />
       </>}
       <PortfolioHeroStrip holdingCount={portfolio.holdings.length} totalUsd={portfolio.totalUsd} />
       <PortfolioHoldingsEditor

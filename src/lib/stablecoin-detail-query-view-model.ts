@@ -156,9 +156,6 @@ function staleQueryFrom<T>(
     meta: query.meta,
     enabled: query.enabled,
     isLoading: query.isLoading,
-    isFetching: query.isFetching,
-    isFetchedAfterMount: query.isFetchedAfterMount,
-    isSnapshot: query.isSnapshot,
   };
 }
 
@@ -285,9 +282,6 @@ export function buildDetailStaleQueries(
       hasData: queries.supplyHistory.dataUpdatedAt > 0 || (queries.supplyHistory.data?.length ?? 0) > 0,
       meta: queries.supplyHistory.meta,
       isLoading: queries.supplyHistory.isLoading,
-      isFetching: queries.supplyHistory.isFetching,
-      isFetchedAfterMount: queries.supplyHistory.isFetchedAfterMount,
-      isSnapshot: queries.supplyHistory.isSnapshot,
     },
   ];
   if (queries.annualPriceHistory?.enabled) {

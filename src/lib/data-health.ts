@@ -254,6 +254,15 @@ export function deriveDataHealth(input: QueryHealthInput, nowMs = Date.now()): D
   return result;
 }
 
+/**
+ * The one public-visibility authority: readers see a warning only when data is past the stale
+ * band or missing with nothing retained. `degraded` (source advisories, failed refreshes over
+ * saved data, catch-up, mild lateness) is operator signal, routed to Telegram and /status.
+ */
+export function isPublicWarning(entry: DataHealthInfo): boolean {
+  return entry.state === "stale" || entry.state === "unavailable" || entry.state === "error";
+}
+
 export function mergeHealthStates(entries: DataHealthInfo[]): MergedDataHealth {
   if (entries.length === 0) {
     return { state: "fresh", affectedLabels: [], latestUpdatedAt: null };
