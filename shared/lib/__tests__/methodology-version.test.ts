@@ -344,7 +344,7 @@ describe("methodology registry", () => {
   });
 
   it("retains the archive-free attribution release and aligns current Safety policy identity", () => {
-    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.27");
+    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.28");
     expect(SAFETY_SCORE_POLICY.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.23")!;
     expect(release).toMatchObject({
@@ -375,8 +375,8 @@ describe("methodology registry", () => {
       commits: [], reconstructed: false,
     });
     expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.25");
-    // 10.27 activates at the same 2026-10-22 boundary and supersedes 10.26 there.
-    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.27");
+    // The local v10.28 candidate shares the upstream 10.26/10.27 provisional cut.
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.28");
     expect(release.impact.join(" ")).toContain("gradeHold");
     expect(release.impact.join(" ")).toContain("no deployment or production acceptance is claimed");
   });
@@ -388,9 +388,33 @@ describe("methodology registry", () => {
       commits: [], reconstructed: false,
     });
     expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.25");
-    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.27");
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.28");
     expect(release.impact.join(" ")).toContain("5400s");
     expect(release.impact.join(" ")).toContain("no deployment or production acceptance is claimed");
+  });
+
+  it("records the local v10.28 evaluation-closure candidate without claiming activation", () => {
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.28")!;
+    expect(release).toMatchObject({
+      version: "10.28", date: "2026-10-21", effectiveAt: 1_792_627_200, reconstructed: false, commits: [],
+    });
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.28");
+    expect(release.summary).toMatch(/local, unreleased/i);
+    const impact = release.impact.join(" ");
+    expect(impact).toMatch(/configured redemption channel/);
+    expect(impact).toMatch(/issuer-undisclosed payout/);
+    expect(impact).toMatch(/provider:<chain>:<contract>/);
+    expect(release.summary).toMatch(/deferred to Release 2/);
+    expect(impact).not.toMatch(/25-asset issuer-backend cohort|OWNER DECISION \/ ISOLATABLE/);
+    expect(impact).toMatch(/lender-collateral-classes-v1\.json/);
+    expect(impact).not.toMatch(/at least two consecutive dated reports|source-bound danger witness/);
+    expect(impact).toMatch(/aggregate share is at most 1%/);
+    expect(impact).toMatch(/wrapperMildRiskFloorGrade D/);
+    expect(impact).toMatch(/Preserve admitted exact-controller MPC\/HSM technical custody/);
+    expect(SAFETY_SCORE_POLICY.semantic.formula.danger).not.toHaveProperty("requireSourceBoundDangerWitness");
+    expect(SAFETY_SCORE_POLICY.semantic.formula.wrapperMildRiskFloorGrade).toBe("D");
+    expect(impact).toMatch(/Current explicit mechanism-component reviews/);
+    expect(impact).toMatch(/no deployment or production acceptance is asserted/i);
   });
 
 });

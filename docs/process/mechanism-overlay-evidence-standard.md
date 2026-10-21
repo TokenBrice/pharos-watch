@@ -70,6 +70,8 @@ only when no admissible revision is available, and grants no evidence or credit.
 
 Full independent and operational financial assurance require complete applicable scope; overlays cannot bypass that gate. Exact authoring and producer contracts live in [Stablecoin Data](../stablecoin-data.md#registry-editing-entry) and [Live Reserves](../live-reserves.md#snapshot-admission-gates).
 
+Owner-adopted v10.28 `publishedResidualCategory: true` is an explicit reviewed assertion of an issuer-published named measured category, not a name/producer heuristic. Require its exact source key, issuer category, amount and complete same-close book denominator under admitted full-composition provenance. Static admission preserves the marker; live relief requires a full-composition key/name/percentage match, never classification-only review. Do not mark invented balancing rows, missing censuses, unvalued positions or inferred coverage. Aggregate eligible shares must be ≤1%, without upward epsilon or relief by splitting. Original clocks, identities, references, full weights and scoped C/U pillar pricing remain; only the evidence-limiting reason changes. No classification, assurance, liquidity or reserve credit is granted. Other admission, uncertainty and withhold gates remain; “non-limiting” never means unpriced or fully disclosed reserves.
+
 
 ## Explicitly insufficient (never admit these)
 
@@ -174,6 +176,16 @@ remain separate; a descriptor grants no quality or applicability credit.
   component uses its own admission/expiry gate and evidence reference; never
   replace the global date to renew untouched metrics, measurements or siblings.
   A component-only review does not extend an expired whole overlay's admission.
+- A current explicit component review governs its own evidence clock after the
+  report-scope and technical-observation gates have been applied. A separate older
+  `latestReport` remains diagnostic research history; it is not co-bound as a
+  required current source that can expire the newer component. This does not
+  renew the report or bypass scoped financial-assurance admission.
+- Future and same-day-unadmitted components retain no quality credit. Any already
+  registered historical evidence stays referenced through diagnostic gap history,
+  separately from current fact references and causal proof. Expiry retains stale
+  history and the ordinary bounded gap; none of these transitions may orphan an
+  evidence row or turn an asset-local admission gap into a global schema failure.
 - Date-only overlay claims become score-bearing only after the reviewed UTC day has elapsed.
   During that day the admission gap is method-owned; clocks before the review date receive
   neither the future overlay nor its disposition.

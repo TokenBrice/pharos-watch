@@ -10,7 +10,7 @@ The public grade-distribution total is labeled **assets**, since its A/B/C/D/F/N
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v10`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.27`<!-- GENERATED-END: methodology-version-safety-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.28`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public breakdown/publication schema v7, API wrapper v8 and score trace v4; retained older publications require explicit historical dispatch or refusal, never fabricated causes or route identity
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - **Evaluation build:** `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST` in `shared/data/safety-score-v9/evaluation-build-manifest-v1.ts` binds the offline candidate runtime import graph: captured fixed-input normalization, extension construction, fact-set compilation, evaluation and projection, including executable admission schemas, reviewed score-input data and full-catalog bytes/decoder. Edits anywhere in that evaluation-time closure rotate replay/publication identity. Capture-only network observers/producers and build-time generators are outside it; exact-input/fact digests bind their admitted output. Capture binding and runtime identity consumers are unchanged.
@@ -22,6 +22,8 @@ The public grade-distribution total is labeled **assets**, since its A/B/C/D/F/N
 Historical V8 methodology is documented in the scoring changelog. It is not a production API, fallback, selector input, or frontend model.
 
 Release changes, activation status, replay evidence and outstanding acceptance obligations live in the [structured scoring history](https://pharos.watch/methodology/scoring-changelog/), including [v10.15](https://pharos.watch/methodology/scoring-changelog/archive/v10/#scoring-v10-15), [v10.18](https://pharos.watch/methodology/scoring-changelog/archive/v10/#scoring-v10-18) and [v10.21](https://pharos.watch/methodology/scoring-changelog/#scoring-v10-21). v10.26 grade hysteresis (`gradeHold`) and bounded carry-forward are specified in the [appendix](process/report-cards-appendix.md#v1026-bounded-carry-forward-and-grade-hysteresis), v10.27 chain-supply carry-forward [there too](process/report-cards-appendix.md#v1027-chain-supply-carry-forward). A version definition or fixed-input replay does not establish fresh producer closure or production health.
+
+The local v10.28 Release 1 candidate is recorded in [structured history](https://pharos.watch/methodology/scoring-changelog/#scoring-v10-28). It includes exit correctness, mild-wrapper protection, current-review-gated MPC/HSM custody, atomic exact-parent exits, published-residual materiality and headline reasons. Stricter D33 standards, PoR-cadence changes, upgrade-only competition, parent-governed U, bounded residual-cap grandfathering and source-bound F witnesses are deferred. This source-tree version establishes neither production activation nor replay or first-publication acceptance.
 
 V10.01 introduces cause-aware scoring after the V10 major release. Internal `safety-score-v9` implementation names and API route paths remain unchanged; public body schemas distinguish technical availability from NR. Digest snapshots label their grade distribution from the captured methodology major version, preserving V9 editions rather than relabelling history.
 
@@ -35,17 +37,19 @@ V10 evaluates three pillars:
 | Exit | <!-- GENERATED-START: report-cards-exit-pillar-weight -->35%<!-- GENERATED-END: report-cards-exit-pillar-weight --> | Same-notional executable capacity, cost, settlement, confidence, independent backup credit, and stress horizon |
 | Economic Control | <!-- GENERATED-START: report-cards-control-pillar-weight -->25%<!-- GENERATED-END: report-cards-control-pillar-weight --> | Mint, upgrade, oracle, bridge, and other binding control paths |
 
-The Economic Control mint component evaluates native issuance posture, process certification and seasoning, not a second standalone Mint Authority score. It distinguishes affirmative governance and veto constraints from unrestricted operator discretion, and preserves measured adverse reach when evidence is incomplete. The [public methodology](https://pharos.watch/methodology/#safety-scores-methodology) explains the active model; exact ladders and D33 availability rules are maintained in `docs/mint-authority-scoring.md`.
+Control grades mint/process/seasoning once; known adverse reach survives incomplete evidence. The [mint contract](mint-authority-scoring.md#mint-authority-entry) owns the existing D33 ladder. Release 1 retains the existing proof-of-reserves cadence inference and mint-path competition rather than adopting the stricter Release 2 standards.
 
-Economic Control consumes the normalized asset facts and admitted mint/oracle/bridge reviews directly at one evaluator seam; canonical ordering and policy validation remain evaluator-owned. Private mint, oracle and bridge phases share one evaluation-local context; inventory checks and section fallbacks remain explicit, and final component normalization preserves causal metadata, canonical traces and the same binding minimum. See `docs/process/report-cards-appendix.md#scoped-evidence-and-exit-evaluation` for the internal contract.
+Control consumes normalized facts and admitted mint/oracle/bridge reviews. Policy, canonical-order, inventory and fallback checks retain causes, traces and the binding minimum ([contract](process/report-cards-appendix.md#scoped-evidence-and-exit-evaluation)).
 
-Custody, bridge, incident, oracle and reserve-review credit is scope-bound: identity, current primary evidence and the relevant denominator must be established independently. One favorable review cannot close sibling controls or grant unmeasured capacity. Detailed maintainer admission gates live in `docs/process/report-cards-appendix.md#campaign-admission-rules`.
+Custody/bridge/incident/oracle/reserve credit needs exact identity, current evidence and its denominator. MPC/HSM needs its own complete/current control-profile review, never a parent renewal. Custody-only questions retain admitted technical credit and scoped U, not human-quorum/execution/process proof ([admission gates](process/report-cards-appendix.md#campaign-admission-rules)).
 
-Issuer keys retain complete normalized phrases. Exact reviewed aliases cover governance identity (MakerDAO/Sky) or an explicitly approved issuer group: StraitsX SGD Issuance Pte. Ltd. and StraitsX USD Issuance Pte. Ltd. share the StraitsX common-mode-control group, not a single legal issuer or reserve pool. Other leading-name matches do not merge; crossed/unresolved groups retain the constraint. See the [issuer-identity contract](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/report-cards-appendix.md#scoped-evidence-and-exit-evaluation).
+Match complete normalized issuer phrases. Exact reviewed aliases cover MakerDAO/Sky governance identity or the approved StraitsX SGD Issuance Pte. Ltd./StraitsX USD Issuance Pte. Ltd. common-mode-control group—not one legal issuer or reserve pool. Leading-name matches never merge; crossed/unresolved groups retain the constraint ([issuer contract](process/report-cards-appendix.md#scoped-evidence-and-exit-evaluation)).
 
-Retained live reserve snapshots with any fatal warning are not Backing inputs, even when that warning code appears in a per-coin degraded allowlist. Legacy warning decoding preserves the evidence, not its scoring authority; clean, informational and permitted degraded snapshots retain their existing admission rules. The [reserve admission contract](live-reserves.md#snapshot-admission-gates) also withholds impossible fatal live detail and accepted snapshots.
+Any fatal warning bars a retained live-reserve snapshot from Backing, even if per-coin allowlisted as degraded. Legacy decoding preserves warning evidence, not scoring authority; clean, informational and permitted degraded snapshots keep existing admission rules. [Reserve admission](live-reserves.md#snapshot-admission-gates) also withholds impossible fatal live detail and accepted snapshots.
 
-Mechanism-review overlays and independently reviewed components accept a strict evidence date or exact UTC timestamp. Date-only claims retain next-UTC-midnight admission; timestamped claims enter at their evidence instant, never before it. The unchanged 365-day expiry runs from the original review start (UTC midnight for a date, the exact instant for a timestamp). This admission-timing capability is score-neutral for existing date-only entries; it neither renews evidence nor changes quality grades, scoring formulas or weights. Authoring rules live in [Mechanism-overlay evidence standard](process/mechanism-overlay-evidence-standard.md#process-requirements).
+Owner-adopted v10.28 materiality: explicitly reviewed issuer-named residual categories aggregating to ≤1% of a complete measured book do not alone limit Backing evidence. Their whole-book weights, scoped C/U pricing and identities remain; no reserve/assurance/liquidity credit is added. Unmarked categories, coverage gaps and larger aggregates retain limiting gates ([evidence standard](process/mechanism-overlay-evidence-standard.md#scoped-reports-and-bounded-observations)).
+
+Mechanism strict dates enter next UTC midnight; exact UTC timestamps enter at their instant. Overlays/components expire 365 days from the original review start. Current components govern after report-scope/technical gates; old reports stay diagnostic, not co-expiring. Future/same-day-unadmitted components keep history without credit. [Authoring](process/mechanism-overlay-evidence-standard.md#process-requirements) retains strict validation, scoped financial assurance and non-orphaned refs. Timing changes no date-only score, quality, formula or weight.
 
 Evaluated upstream constraints survive C/U provenance: same-slice known and unresolved losses combine as `max(K,U)`, not their sum. Supported profile constraints survive unavailable sibling obligations; inherited Backing alone does not establish a wrapper.
 
@@ -57,22 +61,25 @@ Independently admitted same-resource observations remain selectable alternatives
 
 Weights bound headroom, not an unrestricted average. With included pillars S, renormalize their original weights, let m be their minimum and M their weighted mean, then Q = m + 20 × tanh((M − m)/20). Three included pillars keep 40/35/25; exactly one A/B-only pillar permits a two-pillar rating. Q ≤ M ≤ max(S) holds before independently evidenced additions. Peg behavior, positively evidenced structural/method/parent/history limits and wrapper-local risk still apply; missing-data and generic evidence ceilings do not.
 
-Exit and wrapper valuation require independently admitted exact identities, original source clocks and fresh execution evidence; incomplete measurements never establish exhaustion. The [model admission details](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/report-cards-appendix.md#model-admission-details) own published-fee/calendar bounds, unwind thresholds, measured-history/hash/FX gates, ERC-4626/custodian witnesses, output pricing and unavailable-price cause proofs.
+F needs a score-causal admitted source or existing numeric peg witness, not an adverse label. Known unbounded authority qualifies beside C/U process gaps; unwitnessed F stays NR, never a D uplift. [Cap/witness rules](process/report-cards-appendix.md#cap-limits-and-scope-gates) retain source clocks, D gates and public diagnostics.
 
+Exit and wrapper valuation require independently admitted exact identities, original source clocks and fresh execution evidence; incomplete measurements never establish exhaustion. The [model admission details](process/report-cards-appendix.md#model-admission-details) own published-fee/calendar bounds, unwind thresholds, measured-history/hash/FX gates, ERC-4626/custodian witnesses, output pricing and unavailable-price cause proofs.
 
-Missing evidence is classified by scoped proof: A pipeline unavailable; B current required public data not curated; C researched non-disclosure; U unresolved; D measured adverse. A/B factors stay visible with null scored values and zero effective weight, never synthetic favorable facts. Mixed components keep known/C/U/D constraints. `partialEvidence` flags contributing subcomponent exclusions as well as whole pillars; route-exclusive A/B gaps on unscored optional Exit alternatives remain diagnostic only, without hiding other exclusions. Two or three A/B-only pillars publish `ratingStatus: "pipeline-gap"`, null score/grade and diagnostic breakdowns, not NR or a one-pillar Safety Score. Exactly one excluded pillar publishes a two-pillar partial rating only if the other gates pass.
+Scoped proof classifies missing evidence: A pipeline unavailable; B current public data not curated; C researched non-disclosure; U unresolved; D measured adverse. A/B factors retain null scored values and zero weight, not favorable facts; mixed components keep known/C/U/D constraints. `partialEvidence` flags contributing subcomponent and whole-pillar exclusions; optional unscored Exit-route A/B gaps stay diagnostic without hiding other exclusions. Two or three A/B-only pillars publish `ratingStatus: "pipeline-gap"`, null score/grade and diagnostic breakdowns—not NR or a one-pillar rating. Exactly one excluded pillar permits a two-pillar partial rating only if other gates pass.
 
 The public U label is “Unresolved”: researched inputs can still lack a conclusive admissible source. This wording does not change machine keys or scoring.
 
-Reviewed suspension removes only the exact channel's capacity/credit and masked obligations; it proves neither exhaustion nor whole-asset danger. Independent alternatives remain evaluable, and insufficient alternatives retain a scoped U whole-Exit census witness. [Admission details](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/report-cards-appendix.md#model-admission-details) prevent suspension from bypassing genuine uncertainty/NR.
+Reviewed suspension removes only the exact channel's capacity/credit and masked obligations; it proves neither exhaustion nor whole-asset danger. Independent alternatives remain evaluable, and insufficient alternatives retain a scoped U whole-Exit census witness. [Admission details](process/report-cards-appendix.md#model-admission-details) prevent suspension from bypassing genuine uncertainty/NR.
 
-Wrapper reviews scope accounting/mutability/withdrawals, not capacity/aggregate closure. Terms price access, execution model, settlement/fees, not measurement/model certainty; adverse floors, certificate freshness and independent fail-closed unwind gates remain.
+Wrapper reviews price local powers/terms, not measurement certainty, capacity or aggregate closure. [Eligible direct parent returns](process/report-cards-appendix.md#wrapper-local-evidence) stay reviewed/moderate without end-to-end bounds; parent realization and worse independent terms remain priced. Mild charges/form fallback stop non-F parent limits at policy D before rounding; high/critical/measured-adverse findings and F parents keep full charges. Independent pillar/peg danger, certificate freshness and fail-closed unwind gates remain.
 
 ### Morpho lender collateral-book Backing (v10.19)
 
-Morpho books weight frozen accepted Backing or class quality by allocation and LLTV². Idle keeps parent quality; the blend cannot exceed it. Same-parent multi-slice books keep lower generic constraints; unavailable books keep prior scoring. Sub-1%-NAV oracle branches stay disclosed, weighted; unmatched claims keep the prior aggregate.
+Morpho books use frozen accepted Backing or class quality. Same-parent multi-slice books keep lower generic constraints; unavailable books keep prior scoring. Sub-1%-NAV oracle branches stay disclosed and weighted; unmatched claims keep the prior aggregate.
 
-For collateral quality `q` and LLTV fraction `l`, transmitted lender quality is `100 − l² × (100 − q)`. Allocation-weighted book quality scales the deployed share of parent Backing, while idle retains parent quality; the final blend is capped at the parent. The [v10.19 changelog](https://pharos.watch/methodology/scoring-changelog/archive/v10/#scoring-v10-19) retains calibration evidence and production-acceptance boundaries.
+Class qualities remain methodology policy; exact chain/token classifications live in the strict reviewed `lender-collateral-classes-v1.json` data registry with reviewer, original date and sources. The compiler binds its own registry digest and evaluation-build closure, without symbol aliases or renewed allocation clocks. The [Morpho appendix](process/report-cards-appendix.md#exact-nav-partition-and-quality-source) owns registry admission and migration boundaries.
+
+For collateral quality `q`/LLTV fraction `l`, lender quality is `100 − l² × (100 − q)`. Allocation-weighted quality scales deployed parent Backing; idle retains it and the blend stays capped at parent quality ([v10.19 calibration/acceptance](https://pharos.watch/methodology/scoring-changelog/archive/v10/#scoring-v10-19)).
 
 ### Report schema v8
 
@@ -109,9 +116,9 @@ Archive tooling (`worker/scripts/export-safety-score-capture-archive.ts`) lists 
 
 `GET /api/report-cards/v9` is the full live Safety Score API. `GET /api/dependency-graph/v1` exposes a free, no-key graph projection of the same accepted publication, not another scoring authority.
 
-The handler coalesces generation-bound reads, verifying integrity and live health before `200`. Missing/invalid evidence returns reason-bearing `503 no-store`; valid health identity/time mismatches serve held accepted bytes. No rescoring or V8 fallback; retired unversioned/preview routes return `404`.
+Coalesce generation-bound reads; verify integrity/live health before `200`. Missing/invalid evidence returns reason-bearing `503 no-store`; valid health identity/time mismatches serve held accepted bytes. Never rescore or fall back to V8; retired unversioned/preview routes return `404`.
 
-A current response emits `X-Safety-Score-Status: current`. A held response serves the last accepted ratings, emits `X-Safety-Score-Status: held`, uses the accepted timestamp for freshness, and forces `Cache-Control: no-store`. A non-held publication older than the consumer budget (`SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC`, 3,600 seconds: one missed 30-minute publication), or future-dated, emits `X-Safety-Score-Status: stale` with `X-Data-Freshness: stale`, `X-Data-Freshness-Reason` (`safety-score-publication-age` or `future-timestamp`, including skew the generic helper would tolerate), `Warning: 110` and `no-store`; body `publicationHealth`/`publicationStatus` still describe the producer health record. Every response names `X-Safety-Score-Freshness-Budget` and `X-Safety-Score-Generation`, and a current response's shared/browser TTL plus `stale-while-revalidate` is clamped to the remaining budget, so a cached `current` copy cannot outlive it. `/api/report-cards/v9`, its site projections, `/api/safety-grades` and `/api/dependency-graph/v1` share this policy.
+`X-Safety-Score-Status` is `current`, or `held` for last accepted ratings/clock served `no-store`. Non-held publications older than 3600s (one missed 30-minute publication) or future at any skew instead emit status `stale`, `X-Data-Freshness: stale`, `X-Data-Freshness-Reason` (`safety-score-publication-age`/`future-timestamp`), `Warning: 110` and `no-store`; body `publicationHealth`/`publicationStatus` remain producer health. Every response includes `X-Safety-Score-Freshness-Budget`/`X-Safety-Score-Generation`. Current shared/browser TTL plus `stale-while-revalidate` cannot exceed remaining budget. This covers `/api/report-cards/v9`, site projections, `/api/safety-grades` and `/api/dependency-graph/v1`.
 
 [Materialization admission and rollout](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/worker-infrastructure-appendix.md#v9-public-response-materialization) owns wire resolution, live-health re-admission, atomic storage, repair, retirement and qualification.
 
@@ -119,58 +126,31 @@ Site-only [compact list/detail representations](https://github.com/TokenBrice/ph
 
 Endpoint freshness uses 2x `compute-safety-score-v9` (3600 s), tolerating one missed 30-minute publication, matching consumer fail-close. `worker/src/lib/safety-score-v9/consumer-freshness.ts` rejects non-finite or future `updatedAt` (and non-finite `now`); no clock-skew allowance or alternate consumer budget is introduced.
 
-The response includes:
+The response carries V9 identity/source digests, methodology/policy identity, active-set completeness, current/held health, native three-pillar cards with nullable excluded diagnostics and status-aware breakdowns, per-card `backingFromLiveReserves`, the serial/basket dependency graph and accepted `updatedAt`.
 
-- complete V9 identity and source digests
-- methodology and policy identity
-- active-set completeness
-- current or held publication health
-- native three-pillar cards, nullable excluded-pillar diagnostics and status-aware breakdowns
-- per-card `backingFromLiveReserves` provenance for score-grade reserve coverage
-- the canonical serial/basket dependency graph
-- accepted `updatedAt`
-
-See [Report schema v8](#report-schema-v8) for cause-aware fields and typed route identity. `/api/report-cards/v9` wraps public publication 7 as body schema 8; old public v6 is rejected rather than inferred current. Completeness reconciles `expectedCount = ratedCount + notRatedCount + pipelineGapCount`, with disjoint sorted NR/pipeline IDs. Index 2 and free-grades 1 preserve compact status/partial metadata; graph/scenario schema 2 preserves technical parent/model nulls separately from NR.
-
-
-Pillar freshness stays categorical; opt-in operands follow the compact-representation contract above. Scores and legacy wire stay unchanged.
+`/api/report-cards/v9` wraps publication 7 as body 8; reject public v6 rather than infer it current. `expectedCount = ratedCount + notRatedCount + pipelineGapCount`; NR/pipeline IDs are disjoint and sorted. Index 2/free-grades 1 retain compact status/partial metadata; graph/scenario 2 distinguish technical parent/model nulls from NR. Pillar freshness stays categorical, opt-in operands follow the compact-representation contract, and scores/legacy wire are unchanged. [Report schema v8](#report-schema-v8) owns cause-bearing fields and typed route identity.
 
 See the [public API reference](https://pharos.watch/api/) for the wire contract.
 
 ## Consumers
 
-All active safety consumers resolve the canonical V9 publication:
+Canonical V9 consumers: Safety Scores, homepage, stablecoin detail, comparison, portfolio/dependency map; yield hydration; digest and mint/burn flight-to-quality; Telegram alerts; OG, public datasets, coverage/status; append-only grade history.
 
-- Safety Scores, homepage, stablecoin detail, comparison, portfolio, and dependency map
-- Yield Intelligence safety hydration
-- daily digest and mint/burn flight-to-quality classification
-- Telegram grade-change alerts
-- OG cards, public datasets, and coverage/status surfaces
-- append-only safety-grade history
+Every rated card's read-only top-driver `reason` is populated: binding cap first, else weakest-pillar reason, preferring a recognized score-matching binding mint posture for Control; lacking either, state the pillar/score. Nonbinding/differently scored postures cannot supply it. Badges/reason codes may stay empty; scores, grades, evidence, schema and withheld behavior are unchanged. This explains current constraints, not historical grade changes or misconduct.
 
-The stability-index OG consumer renders an explicit unavailable state when no PSI sample exists; absence is never presented as score `0` or the `MELTDOWN` band.
+Stability-index OG shows unavailable without PSI, never `0`/`MELTDOWN`. Coverage labels `expectedCount` assets assessed (rated/NR/pipeline-gap), reconciles statuses separately and reserves scored-population wording for `ratedCount`; a hold replaces the headline.
 
-The score-input coverage module labels `completeness.expectedCount` as assets assessed, covering rated, not-rated and pipeline-gap cards. Its detail reconciles those statuses separately; only `ratedCount` can describe a scored/rated population, and a publication hold continues to replace the headline.
+Current-only consumers reject held ratings. Displays may show held accepted data with notice; yield publication may use it only with accepted identity stamped and within its stale-coherent window. No active V8 cache or request-time V8 scoring remains.
 
-Consumers that require current ratings reject held publications. Display surfaces may show the held accepted snapshot with an explicit notice, and a producer that stamps the accepted identity on its own payload (yield publication) may consume the held accepted ratings inside the same stale-coherent window the yield read path applies. No active consumer uses the V8 compact score cache or computes V8 cards on request.
-
-The downstream canonical score-map helper keeps unavailable source denominators/coverage ratios null, with an empty returned score map, upstream reason and null publication identity/time. Yield readers preserve that unavailable state, never `0%`/`100%`; measured zero and held accepted coverage remain distinct from missing evidence. [Yield Public Wire Contract](./yield-intelligence.md#public-wire-contract) owns presentation.
-
-Selector creation recomputes against the live V9 publication (`functions/lib/selector-canonical-snapshot.ts`); a `503` now indicates canonical-source or schema failure, not a policy hold. Existing signed selector snapshots remain readable through their historical contract.
+Score-map/yield readers retain null unavailable denominators/ratios, empty score map, upstream reason and null publication identity/time; never missing-as-`0%`/`100%`. Measured zero, held coverage and missing evidence stay distinct ([yield wire](./yield-intelligence.md#public-wire-contract)). Selector creation recomputes live V9 (`functions/lib/selector-canonical-snapshot.ts`); `503` means canonical-source/schema failure, not policy hold. Signed snapshots retain historical readability.
 
 ## History
 
-The compiler admits each asset's local extension and validates each asset's facts independently. An attributable asset-local build, admission, schema, evaluation, or public-card failure publishes that asset as a technical `pipeline-gap` with null score/grade, not issuer NR. Unaffected assets continue only when at least 90% of active assets remain unaffected, counting quarantined assets and their affected dependents, and all other publication gates pass. Unattributable dependency-graph, aggregate, evaluator, identity, and other global failures still hold the whole publication.
+Asset-local build/admission/schema/evaluation/public-card failures yield technical `pipeline-gap` with null score/grade, never issuer NR. Continue unaffected assets only with ≥90% unaffected active assets, counting quarantines and their affected dependents, and every other gate passing; unattributable graph/aggregate/evaluator/identity/global failures hold the cohort.
 
-The asset-local allowance does not override the explicit [measured DEX history hold](process/report-cards-appendix.md#canonical-publication): one expired, previously mature contributing route can still hold the cohort under ADR-35. Count/rateability floors passing is not permission to quarantine that stale score-bearing input. Recovery requires fresh admitted producer evidence; a new liquidity timestamp or discovery-priority hint cannot renew its embedded history.
+This does not override the [measured DEX history hold](process/report-cards-appendix.md#canonical-publication): one expired, previously mature contributing route can hold under ADR-35 despite count/rateability floors. Recovery needs fresh admitted producer evidence, not a new liquidity timestamp or discovery-priority hint. Pre-9.07 captures are read-only compatibility, never a legacy publisher/live fallback; reproduction uses recorded registry/policy/build, while current-tree replay is a separate comparison ([compatibility](process/report-cards-appendix.md#historical-capture-compatibility)).
 
-Frozen pre-9.07 captures retain read-only format compatibility, not a legacy publisher or live-input fallback. Historical reproduction requires the recorded registry, policy and evaluation build; current-tree replay is a separately identified comparison (`docs/process/report-cards-appendix.md#historical-capture-compatibility`).
+`snapshot-safety-grade-history` appends identified V9 organic transitions only when not held; partial publication suppresses quarantined assets/dependents and their recovery. V2 rows record model, methodology, policy, evaluation-build, base-input, publication generation and transition kind. Compare publication identities, never capture `v9-input`: producer-only changes create no boundary; build rotation writes one `methodology-boundary-baseline` per asset, not organic transitions.
 
-`snapshot-safety-grade-history` appends identified V9 organic transitions and suppresses writes while publication is held. During a partial publication it also suppresses transitions for quarantined assets and their affected dependents, including the subsequent recovery, so technical pipeline gaps are not recorded as organic rating changes. Each V2 row records model, methodology, policy, evaluation-build, base-input, publication generation, and transition kind.
-
-The writer compares *publication* identities. The capture's `v9-input` identity never reaches it, so a capture-producer change cannot manufacture a boundary or an organic transition by itself. The evaluation build is part of publication-identity comparability, so the first publication after an evaluation-build rotation writes one `methodology-boundary-baseline` per asset rather than organic grade changes.
-
-`GET /api/safety-score-history` remains the public per-asset timeline. Historical V8 and activation-boundary rows remain readable as archive data; they are never live publication inputs.
-
-The stablecoin detail Grade History module combines that legacy archive with `GET /api/safety-score-history-v2`. It collapses consecutive same-grade baselines, while retaining a boundary row when the published grade changes and labelling it as a methodology baseline rather than implying an organic upgrade or downgrade. This keeps the current V9 grade and the date it first appeared visible without comparing non-comparable publication identities.
+`GET /api/safety-score-history` remains the per-asset timeline; V8/activation boundaries are archive-only. Grade History combines it with `/api/safety-score-history-v2`, collapses consecutive same-grade baselines and labels changed-grade boundaries methodology baselines, retaining current grade/first-seen date without comparing incompatible identities.
 

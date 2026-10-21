@@ -28,6 +28,70 @@ live-overlap dedupe.
   reported as a conflict and must go through the append-only repair path instead
   of a direct delete.
 
+## Sealed-event input corruption (retain history)
+
+When original observations prove input corruption but an economic episode is
+real, do **not** delete the event, fabricate a replacement peak, or add a replay
+suppression. Use `worker/scripts/record-depeg-input-corruption.ts` to append an
+`input_corruption` erratum and quarantine the event with audit verdict `disputed`.
+The raw event, assessments, sealed prediction bytes/hash, incident membership,
+and first-publication archive stay unchanged. Existing provenance fields are
+retained; only its verdict, public JSON verdict, and update clock change.
+
+1. Review the evidence and exact event/coin/prediction/incident identities.
+   Keep the nonempty reviewed evidence file in the durable repair packet.
+   `--reviewed-evidence` and `--reviewed-by` attest operator review; the tool
+   records its absolute path and SHA-256, not an automated economic verdict.
+   Keep those exact bytes with the command output, including the pre-repair
+   provenance recorded in `admin_action_audit`.
+2. Preview from the repository root:
+
+   ```bash
+   npx tsx worker/scripts/record-depeg-input-corruption.ts \
+     --event-id <event-id> --prediction-id <sealed-prediction-id> \
+     --stablecoin-id <canonical-coin-id> --incident-key <incident-key> \
+     --reviewed-evidence <reviewed-file> --reviewed-by <reviewer> \
+     --note '<source-bound corruption finding; known replacement limits>'
+   ```
+
+   Default is an **offline DRY-RUN**, even with `--remote`: it prints the exact
+   guarded SQL statements, evidence hash, expiry, and readback query without
+   contacting D1. Live guards are evaluated only on apply. The plan expires
+   after 15 minutes; a later invocation generates fresh timestamps.
+3. Before applying, retain a fresh D1 Time Travel bookmark and schedule the
+   atomic-import maintenance window described in
+   [one-shot backfills](./one-shot-backfills.md). Recheck evidence and identity,
+   then run the same command with **both** `--apply --remote`. No local apply
+   mode exists. It makes one unchunked atomic D1 import: guarded audit,
+   erratum, erratum-linked `provenance_invalidation` authorization,
+   consumption, disputed provenance, and final guard. Existing schema triggers
+   append the single-use authorization-use record. No migration is required.
+
+   Guards refuse a missing/open/wrong-coin event, mismatched prediction or
+   incident, multiple linked sealed predictions, any prior prediction erratum,
+   an already ineligible verdict in either provenance representation,
+   malformed/non-object public provenance JSON, an unexpired unused repair
+   grant, or an expired plan. These are reconciliation stops, not reasons to
+   bypass a trigger. SQL guard failure rolls back the whole import.
+4. Retain the successful readback: exactly one erratum, its authorization,
+   consumption and trigger-written use; `audit_verdict` and public
+   `auditVerdict` both `disputed`; sealed `row_hash` equals `row_hash_before`.
+   The import receipt can contain Wrangler progress lines even with `--json`;
+   the CLI extracts its JSON envelope, then performs a separate `--json` SELECT
+   and prints the erratum, prediction, authorization, consumption/use clocks and
+   unchanged sealed hash. A receipt-parsing error after import does **not** mean
+   rollback: reconcile the printed readback query before considering a retry.
+   Re-read raw event and sealed prediction against the reviewed pre-repair
+   packet. The resolver exposes the original prediction with its invalidation
+   overlay after its normal publication refresh. Current PegScore excludes
+   disputed provenance on the next admitted producer recomputation; existing
+   cached publications are not rewritten by this command. Confirm excluded
+   event readback and the recomputed peg multiplier without assuming perfect peg.
+
+If execution is interrupted or reports an error, reconcile the append-only
+ledgers and provenance before any retry. A committed repair deliberately refuses
+to run twice; never remove errata or authorizations to make it runnable again.
+
 ## Removal sequence
 
 Run the commands below from the repository root with Wrangler authentication. Historical repairs are no longer browser actions; see [one-shot backfills](./one-shot-backfills.md).
