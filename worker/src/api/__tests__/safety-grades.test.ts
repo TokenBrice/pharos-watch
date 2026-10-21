@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPublicApiAccess } from "@shared/lib/api-endpoints";
 import { SafetyGradesResponseSchema } from "@shared/types/report-cards-v9";
 import { makeReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
 
 const mockLoadActiveSafetyScoreSource = vi.fn();
 
@@ -15,6 +16,7 @@ const { getRouteMatch } = await import("../../routes/registry");
 
 describe("handleSafetyGrades", () => {
   beforeEach(() => mockLoadActiveSafetyScoreSource.mockReset());
+  afterEach(() => vi.useRealTimers());
 
   it("keeps pipeline-gap null grades separate from NR and preserves partial rated evidence", async () => {
     const base = makeReportCardsV9Response();
@@ -37,6 +39,8 @@ describe("handleSafetyGrades", () => {
     mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot: {
       ...snapshot, cards: snapshot.cards.map(({ id, score, grade, ratingStatus, partialEvidence }) => ({ id, score, grade, ratingStatus, partialEvidence })),
     } });
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(snapshot.updatedAt * 1000);
 
     const response = await handleSafetyGrades(mockD1([]));
 
@@ -49,6 +53,37 @@ describe("handleSafetyGrades", () => {
     );
     expect(getRouteMatch("/api/safety-grades")?.endpoint?.key).toBe("safety-grades");
     expect(getPublicApiAccess("/api/safety-grades")).toBe("exempt");
+  });
+
+  it("reports current through the consumer budget and stale, uncached, once it is exceeded", async () => {
+    const snapshot = makeReportCardsV9Response();
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot });
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const at = async (age: number) => {
+      vi.setSystemTime((snapshot.updatedAt + age) * 1000);
+      return handleSafetyGrades(mockD1([]));
+    };
+
+    const early = await at(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC - 600);
+    expect(early.headers.get("X-Safety-Score-Status")).toBe("current");
+    expect(early.headers.get("X-Safety-Score-Freshness-Budget")).toBe(String(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC));
+    expect(early.headers.get("X-Safety-Score-Generation")).toBe(snapshot.safetyScoreIdentity.publicationGenerationId);
+    // A cacheable current copy may not outlive the budget, SWR included.
+    expect(early.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60");
+    const nearBoundary = await at(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC - 100);
+    expect(nearBoundary.headers.get("Cache-Control")).toBe("public, s-maxage=100, max-age=60");
+
+    const boundary = await at(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC);
+    expect(boundary.headers.get("X-Safety-Score-Status")).toBe("current");
+    expect(boundary.headers.get("Cache-Control")).toBe("no-store");
+
+    const stale = await at(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC + 1);
+    expect(stale.status).toBe(200);
+    expect(stale.headers.get("X-Safety-Score-Status")).toBe("stale");
+    expect(stale.headers.get("Cache-Control")).toBe("no-store");
+    expect(stale.headers.get("ETag")).toBeNull();
+    expect(stale.headers.get("Warning")).toContain(`fresh budget ${SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC}s`);
+    await expect(stale.json()).resolves.toMatchObject({ publicationStatus: "current", updatedAt: snapshot.updatedAt });
   });
 
   it("serves held publications uncached", async () => {

@@ -8,7 +8,7 @@ export const handleReportCardsV9 = async (db: D1Database, url?: URL): Promise<Re
     const snapshot = await loadV9PublicMaterializedResponse(db);
     const operands = url?.searchParams.get("freshness") === "operands";
     return withRepresentationEtag(new Response(operands ? snapshot.body : legacyV9FreshnessBody(snapshot.body),
-      { headers: safetyScoreSnapshotHeaders(snapshot) }),
+      { headers: safetyScoreSnapshotHeaders(snapshot, snapshot.representationIdentity.generationId) }),
       ["report-cards-v9", ...(operands ? ["operands"] : []), snapshot.representationIdentity, snapshot.publicationHealth]);
   } catch (error) {
     const reason = error instanceof V9PublicMaterializationUnavailableError

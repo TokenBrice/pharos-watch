@@ -6,8 +6,6 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeReportCardsV9Card, makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 import { API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC } from "../../lib/api-freshness-age";
 import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9";
 import { ReportCardsV9DetailResponseSchema } from "@shared/types/report-cards-v9-projections";
@@ -18,6 +16,7 @@ import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-ca
 import { currentInput } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
 import { persistSafetyScoreV9Publication } from "../../lib/safety-score-v9/publication-store";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-health";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
 import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import { handleReportCardsV9 } from "../report-cards-v9";
 import { getRouteMatch } from "../../routes/registry";
@@ -313,7 +312,7 @@ describe("materialized V9 response", () => {
 
   it("preserves source clocks across hits, expiry and repair; computes freshness at the request instant", async () => {
     const { db, sqlite, publication } = await seed();
-    const budget = API_FRESHNESS_MAX_AGE_SEC.reportCards * FRESHNESS_RATIOS.FRESH;
+    const budget = SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC;
     for (const age of [0, budget - 0.5, budget, budget + 1, budget * 10, -API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC - 1]) {
       vi.useFakeTimers();
       vi.setSystemTime((publication.publishedAtSec + age) * 1000);
@@ -322,6 +321,9 @@ describe("materialized V9 response", () => {
       expect(body).toMatchObject({ updatedAt: publication.publishedAtSec, asOfSec: publication.asOfSec, source: { sourceGenerations: publication.sourceGenerations } });
       expect(response.headers.get("Age")).toBeNull();
       if (age >= budget || age < 0) expect(response.headers.get("Cache-Control")).toBe("no-store");
+      expect(response.headers.get("X-Safety-Score-Status")).toBe(age > budget || age < 0 ? "stale" : "current");
+      expect(response.headers.get("X-Safety-Score-Freshness-Budget")).toBe(String(budget));
+      expect(response.headers.get("X-Safety-Score-Generation")).toBe(publication.publicationGenerationId);
     }
     sqlite.exec("DELETE FROM safety_score_public_fragments; DELETE FROM safety_score_public_manifests");
     expect(await (await handleReportCardsV9(db)).json()).toMatchObject({ updatedAt: publication.publishedAtSec, asOfSec: publication.asOfSec });
@@ -540,10 +542,12 @@ describe("materialized V9 response", () => {
   });
 
   it("does not treat an independently recorded failed attempt as a hold", async () => {
-    const { db, sqlite } = await seed();
+    const { db, sqlite, publication } = await seed();
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
       SAFETY_SCORE_V9_CACHE_KEYS.failedPublicationAttempt, '{"outcome":"failed"}', 999,
     );
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(publication.publishedAtSec * 1000);
     const response = await handleReportCardsV9(db);
     expect(response.headers.get("X-Safety-Score-Status")).toBe("current");
     expect(await response.json()).toMatchObject({ publicationHealth: { status: "current" } });

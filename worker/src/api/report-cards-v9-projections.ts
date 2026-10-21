@@ -7,7 +7,7 @@ async function respond(db: D1Database, representationKey: string, operands = fal
   try {
     const snapshot = await loadV9PublicMaterializedResponse(db, representationKey);
     const body = representationKey === "table" || operands ? snapshot.body : legacyV9FreshnessBody(snapshot.body);
-    return withRepresentationEtag(new Response(body, { headers: safetyScoreSnapshotHeaders(snapshot) }), {
+    return withRepresentationEtag(new Response(body, { headers: safetyScoreSnapshotHeaders(snapshot, snapshot.representationIdentity.generationId) }), {
       representationKey, ...(operands ? { freshness: "operands" } : {}), ...snapshot.representationIdentity, publicationHealth: snapshot.publicationHealth,
     });
   } catch (error) {
