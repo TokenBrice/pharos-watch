@@ -309,7 +309,6 @@ export function mapTelegramBotStats(input: {
   } = input;
   const unavailableFields = input.unavailableFields ?? [];
   const telemetryErrors = input.telemetryErrors ?? {};
-  const now = input.now ?? Math.floor(Date.now() / 1000);
 
   const pendingCount = pendingCapacity
     ? pendingCapacity.active

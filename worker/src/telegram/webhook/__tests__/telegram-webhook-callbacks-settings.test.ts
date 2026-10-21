@@ -12,7 +12,6 @@ import {
   firstAckBody,
   handleCallbackQuery,
   lastAckBody,
-  lastEditedMessageBody,
   makeCallbackQuery,
   mockTelegramD1,
   resetCallbackTest,

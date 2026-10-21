@@ -1,9 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
-import { makeBulkPendingRow, pendingDisambiguationTable } from "./telegram-rows.test-support.ts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../store/subscription-eligibility";
-import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { classifyTelegramCommand, TELEGRAM_COMMAND_POLICIES } from "../telegram-webhook-ingress-policy";
 
 import { COMMAND_HANDLERS, type WebhookCommandHandler } from "../../commands";
@@ -16,7 +13,6 @@ import {
   makeWebhookRequest,
   makeCallbackRequest,
   sentMessageBody,
-  makeStablecoinsCacheTable,
   makeStablecoinsCacheValue,
   latestSendMessageBody,
   resetTelegramWebhookTest,

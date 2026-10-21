@@ -101,7 +101,7 @@ Registration requests messages, callback queries and bot-membership updates only
 
 **Must NOT.**
 - Bypass `CALLBACK_ACTIONS`; add every prefix and its keyboard builder together.
-- Duplicate Store write logic; route new mutations through `telegram-webhook-store.ts`.
+- Duplicate Store write logic; route new mutations through the topic modules in `worker/src/telegram/store/`.
 - Inline subscription upserts for settings; use `worker/src/telegram/store/subscriptions.ts` builders to preserve `/set` parity.
 - Depend on a concrete action handler; reuse its `build*Message` helper, not `handle*`.
 
@@ -113,7 +113,6 @@ Registration requests messages, callback queries and bot-membership updates only
 
 **Owned files.**
 - `worker/src/telegram/commands/` — `index.ts` dispatch, `context.ts` request shape, `action-runner.ts` shared resolution/confirmation, and per-command handlers.
-- `worker/src/telegram/store/telegram-webhook-disambiguation-selection.ts` — pending-selection execution through the action runner.
 - `worker/src/telegram/webhook/telegram-webhook-messages.ts`, `telegram-webhook-insights.ts`, `telegram-webhook-status.ts` — shared builders and domain loaders.
 
 **Allowed inbound dependencies.** Ingress (via `COMMAND_HANDLERS`), Callback routing (which re-invokes some handlers via their build-message helpers and may call `action-runner` for the disambiguation reply path).
@@ -210,7 +209,7 @@ Delivery diagnostics reconcile atomically across command replies and alert batch
 Chat migration derives insert/select columns and conflict assignments from one ordered local descriptor per merged table, including copy-only identities. Paired quiet-hour windows, null-safe minima, snooze normalization and generation increments retain explicit merge rules; repeated service events preserve complete destination rows. Child-table order, collision cleanup, private recap purge and processed-update evidence remain unchanged.
 
 **Owned files.**
-- `worker/src/telegram/store/telegram-webhook-store.ts`, `worker/src/telegram/store/*` — stable import barrel and topic-specific SQL builders.
+- `worker/src/telegram/store/*` — topic-specific SQL builders, imported directly (no barrel).
 - Cached chat administrators in `worker/src/telegram/webhook/telegram-webhook-auth.ts` — denial-hint names only, never authorization.
 - `worker/src/telegram/store/usage-analytics.ts` — identifier-free usage and lifecycle aggregates.
 - `worker/src/telegram/webhook/webhook-registration.ts` — registration cadence/cache state; HTTP through Outbound.
