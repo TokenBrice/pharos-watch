@@ -8,7 +8,7 @@ import type { MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-cov
 import type { MintBurnContractConfig, MintBurnTier } from "../../lib/mint-burn-contracts";
 import { deferConfig, loadActiveConfigDeferrals, shouldDeferConfig } from "./run-state";
 import { createMintBurnConfigSummary, type MintBurnConfigSummary } from "./sync-config";
-import { syncMintBurnConfigWithRetries } from "./scan-with-retry";
+import { mintBurnScanRequestFloor, MINT_BURN_RETRY_BOUNDARY_REQUESTS, syncMintBurnConfigWithRetries } from "./scan-with-retry";
 import type { MintBurnChainContext } from "./chain-context";
 import type { MintBurnCoverageRepairSummary } from "./repair-coverage";
 import {
@@ -33,9 +33,18 @@ export function configTier(config: MintBurnContractConfig): MintBurnTier {
   return config.tier ?? "critical";
 }
 
-function configScanRange(config: MintBurnContractConfig, lastBlock: number | undefined, chainHead: number, maxScanRange: number) {
+function configScanRange(
+  config: MintBurnContractConfig, lastBlock: number | undefined, chainHead: number, maxScanRange: number,
+  context: Pick<MintBurnChainContext, "rpcEndpoints" | "endpointHeads">, requestBudgetLimit: number,
+) {
   const fromBlock = (lastBlock ?? (config.startBlock - 1)) + 1;
-  return { fromBlock, scanTo: Math.min(fromBlock + maxScanRange - 1, chainHead) };
+  let scanTo = Math.min(fromBlock + maxScanRange - 1, chainHead);
+  while (scanTo > fromBlock && mintBurnScanRequestFloor({
+    config, fromBlock, scanTo, rpcEndpoints: context.rpcEndpoints, endpointHeads: context.endpointHeads,
+  }) > requestBudgetLimit) {
+    scanTo = fromBlock + Math.floor((scanTo - fromBlock) / 2);
+  }
+  return { fromBlock, scanTo };
 }
 
 export interface MintBurnRunConfigPhaseResult {
@@ -111,13 +120,24 @@ export async function runMintBurnConfigPhase(input: {
   const nowSec = Math.floor(Date.now() / 1000);
   const activeProviderDeferrals = await loadActiveConfigDeferrals(input.db, nowSec);
   const deferredKeys = new Set(activeProviderDeferrals.keys());
+  const configBudgetLimitFor = (config: MintBurnContractConfig): number =>
+    configTier(config) === "critical" && config.bridgeDetection
+      ? input.criticalBridgeConfigBudgetLimit ?? input.criticalConfigBudgetLimit
+      : configTier(config) === "critical" ? input.criticalConfigBudgetLimit : input.extendedConfigBudgetLimit;
+  const scanRanges = new Map<string, { fromBlock: number; scanTo: number }>();
   const boundaryRequests = new Map<string, ConservationBoundaryRequest>();
   for (const config of input.configs) {
     const key = configKey(config);
     const chainContext = input.chainContexts.get(config.chain.chainId);
-    if (deferredKeys.has(key) || chainContext?.chainHead == null || !getMintBurnConservationEligibility(config).supported) continue;
-    const { fromBlock, scanTo } = configScanRange(config, input.lastBlocksAfterRun.get(key), chainContext.chainHead, input.maxScanRange);
-    if (fromBlock <= chainContext.chainHead) boundaryRequests.set(key, { key, config, fromBlock, toBlock: scanTo });
+    if (deferredKeys.has(key) || chainContext?.chainHead == null) continue;
+    // Plan a fundable initial range before the conservation prepass so its
+    // supply boundaries and the subsequent log/proof scan stay identical.
+    const range = configScanRange(config, input.lastBlocksAfterRun.get(key), chainContext.chainHead,
+      input.maxScanRange, chainContext, configBudgetLimitFor(config));
+    scanRanges.set(key, range);
+    if (range.fromBlock <= chainContext.chainHead && getMintBurnConservationEligibility(config).supported) {
+      boundaryRequests.set(key, { key, config, fromBlock: range.fromBlock, toBlock: range.scanTo });
+    }
   }
   const conservationBoundaries = await fetchConservationBoundaries({
     requests: [...boundaryRequests.values()],
@@ -128,11 +148,9 @@ export async function runMintBurnConfigPhase(input: {
     deadlineMs: Math.min(deadlineMs, Date.now() + MINT_BURN_CONSERVATION_PREPASS_MAX_MS),
   });
 
-  // The persisted frontier rotates capacity-deferred configs to the next run.
-  // Reserve one complete set of log queries for half the extended roster before
-  // allowing hot configs to spend their full cap on recursion/timestamps/context.
-  // This keeps a few expensive contracts from turning the two-cycle sweep into
-  // three or more cycles; real provider/runtime failures still remain visible.
+  // Reserve log queries for the extended roster, but treat this as a soft
+  // capacity target: starving the current scan of timestamps/proof headers
+  // creates attempts without progress. Complete scans win over attempt counts.
   const reservedScanRequests = new Array<number>(input.configs.length + 1).fill(0);
   if (input.lane === "extended") {
     const coverageTarget = Math.ceil(input.configs.length / 2);
@@ -141,7 +159,7 @@ export async function runMintBurnConfigPhase(input: {
       const key = configKey(config);
       const context = input.chainContexts.get(config.chain.chainId);
       const needsScan = !deferredKeys.has(key) && context?.chainHead != null
-        && configScanRange(config, input.lastBlocksAfterRun.get(key), context.chainHead, input.maxScanRange).fromBlock <= context.chainHead;
+        && (scanRanges.get(key)?.fromBlock ?? Infinity) <= context.chainHead;
       reservedScanRequests[i] = reservedScanRequests[i + 1]!
         + (needsScan ? config.events.length + conservationOnlyEventDefsFor(config).length : 0);
     }
@@ -243,29 +261,43 @@ export async function runMintBurnConfigPhase(input: {
       continue;
     }
 
-    const { fromBlock, scanTo } = configScanRange(config, input.lastBlocksAfterRun.get(key), chainContext.chainHead, input.maxScanRange);
+    const plannedRange = scanRanges.get(key)!;
+    const currentFromBlock = (input.lastBlocksAfterRun.get(key) ?? (config.startBlock - 1)) + 1;
+    const { fromBlock, scanTo } = plannedRange.fromBlock === currentFromBlock
+      && plannedRange.scanTo <= chainContext.chainHead
+      ? plannedRange
+      : configScanRange(config, input.lastBlocksAfterRun.get(key), chainContext.chainHead,
+        input.maxScanRange, chainContext, configBudgetLimitFor(config));
     if (fromBlock > chainContext.chainHead) {
       summary.skippedReason = "up-to-date";
       contractsSkipped++;
       finalizeSummary("satisfied");
       continue;
     }
+    const scanBudgetInput = { config, fromBlock, scanTo, rpcEndpoints: chainContext.rpcEndpoints,
+      endpointHeads: chainContext.endpointHeads };
+    const minimumScanRequests = mintBurnScanRequestFloor(scanBudgetInput);
+    const tierBudgetLimit = configBudgetLimitFor(config);
+    if (Math.min(tierBudgetLimit, remainingBudget - (tier === "extended" ? 10 : 0)) < minimumScanRequests) {
+      summary.skippedReason = tier === "extended" ? "extended-deferred-under-pressure" : "global-budget-exhausted";
+      if (tier === "extended") contractsDeferredExtended++;
+      contractsSkipped++;
+      finalizeSummary(tier === "critical" ? "unsatisfied" : "n/a");
+      continue;
+    }
+    const retryReserve = mintBurnScanRequestFloor({
+      ...scanBudgetInput, scanTo: fromBlock + Math.floor((scanTo - fromBlock) / 2),
+    }) + (getMintBurnConservationEligibility(config).supported ? MINT_BURN_RETRY_BOUNDARY_REQUESTS : 0);
 
     summary.attempted = true;
     contractsProcessed++;
-    const tierBudgetLimit =
-      tier === "critical" && config.bridgeDetection
-        ? input.criticalBridgeConfigBudgetLimit ?? input.criticalConfigBudgetLimit
-        : tier === "critical"
-          ? input.criticalConfigBudgetLimit
-          : input.extendedConfigBudgetLimit;
     const configBudgetLimit = Math.max(
       1,
       Math.min(
-        input.budget.limit - input.budget.count,
+        input.budget.limit - input.budget.count - (tier === "extended" ? 10 : 0),
         tierBudgetLimit,
         input.lane === "extended"
-          ? Math.max(1, input.budget.limit - input.budget.count - 10 - reservedScanRequests[i + 1]!)
+          ? Math.max(minimumScanRequests + retryReserve, input.budget.limit - input.budget.count - 10 - reservedScanRequests[i + 1]!)
           : tierBudgetLimit,
       ),
     );
