@@ -154,6 +154,7 @@ describe("Safety Score v9 evaluation-build manifest", () => {
       "worker/src/lib/report-cards-fixed-input.ts",
       "worker/src/lib/safety-score-v9/supply-attribution.ts",
       "shared/lib/safety-score-v9/mechanism-profiles.ts",
+      "shared/lib/safety-score-v9/lender-collateral-classes.ts",
       "shared/lib/safety-score-v9/reserve-scope.ts",
       "shared/lib/safety-score-v9/reserve-provenance.ts",
     ]) {
@@ -162,6 +163,7 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     expect(paths.some((path) => /(?:__tests__|fixtures|\.test[.-])/.test(path))).toBe(false);
     expect(V9_SCORE_INPUT_DATA_PATHS).toContain("shared/data/safety-score-v9/reserve-bound-facts-v1.json");
     expect(V9_SCORE_INPUT_DATA_PATHS).toContain("shared/data/safety-score-v9/mechanism-review-overlays-v1.json");
+    expect(V9_SCORE_INPUT_DATA_PATHS).toContain("shared/data/safety-score-v9/lender-collateral-classes-v1.json");
     expect(paths).not.toContain("scripts/build-data/generate-worker-stablecoin-catalog.ts");
     expect(paths).not.toContain("shared/lib/__tests__/safety-score-v9-matched-invariants.test-support.ts");
     expect(paths).toContain("worker/src/lib/scheduled-checkpoint-primitives.ts");
@@ -197,6 +199,7 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     "worker/src/lib/report-cards-fixed-input.ts",
     "worker/src/lib/safety-score-v9/supply-attribution.ts",
     "shared/lib/safety-score-v9/mechanism-profiles.ts",
+    "shared/lib/safety-score-v9/lender-collateral-classes.ts",
     "shared/lib/safety-score-v9/reserve-scope.ts",
     "shared/lib/safety-score-v9/reserve-provenance.ts",
     ...V9_SCORE_INPUT_DATA_PATHS,

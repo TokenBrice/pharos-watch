@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CanonicalTextSchema, ScoreSchema, Sha256Schema, StrictIsoDateSchema, UnixSecondsSchema } from "./safety-schema-primitives";
+import { CanonicalChainIdSchema, CanonicalTextSchema, ScoreSchema, Sha256Schema, StrictIsoDateSchema, UnixSecondsSchema } from "./safety-schema-primitives";
 
 const Text = CanonicalTextSchema;
 // Structural canonical-form admission; normalization belongs to capture, not wire parsing.
@@ -28,6 +28,24 @@ const LenderCollateralClassSchema = z.enum([
   "principal-token", "yield-bearing-stable", "structured-credit", "other-unknown",
 ]);
 export type LenderCollateralClass = z.output<typeof LenderCollateralClassSchema>;
+
+export const LenderCollateralClassReviewSchema = z.strictObject({
+  chain: CanonicalChainIdSchema, address: Address, class: LenderCollateralClassSchema,
+  reviewedAt: StrictIsoDateSchema, reviewer: Text,
+  sources: z.array(z.strictObject({ label: Text, url: z.string().url() })).min(1),
+});
+export type LenderCollateralClassReview = z.output<typeof LenderCollateralClassReviewSchema>;
+
+export const LenderCollateralClassesRegistrySchema = z.strictObject({
+  schemaVersion: z.literal(1),
+  registryId: z.literal("safety-score-v9.lender-collateral-classes.v1"),
+  reviews: z.array(LenderCollateralClassReviewSchema).min(1),
+}).superRefine((registry, ctx) => {
+  if (!sortedUnique(registry.reviews.map((row) => `${row.chain}:${row.address}`))) {
+    fail(ctx, ["reviews"], "Class token keys must be unique and sorted");
+  }
+});
+export type LenderCollateralClassesRegistry = z.output<typeof LenderCollateralClassesRegistrySchema>;
 const LenderBookReasonSchema = z.enum([
   "rpc-unavailable", "aborted", "deadline", "unsupported-chain", "unsupported-adapter",
   "unsupported-irm", "identity-mismatch", "block-changed", "incomplete-census", "census-limit",
@@ -199,11 +217,6 @@ export const LenderCollateralBookPolicySchema = z.strictObject({
     assetId: Text,
     deployments: z.array(z.strictObject({ chain: Text, kind: Kind })).min(1),
   })).min(1),
-  collateralClasses: z.array(z.strictObject({
-    chain: Text, address: Address, class: LenderCollateralClassSchema,
-    reviewedAt: StrictIsoDateSchema,
-    sources: z.array(z.strictObject({ label: Text, url: z.string().url() })).min(1),
-  })),
 }).superRefine((policy, ctx) => {
   if (policy.admittedAssets.length !== 33 || policy.admittedAssets.reduce((count, asset) => count + asset.deployments.length, 0) !== 35) {
     fail(ctx, ["admittedAssets"], "Reviewed Morpho census must contain 33 assets and 35 deployments");
@@ -214,6 +227,5 @@ export const LenderCollateralBookPolicySchema = z.strictObject({
       fail(ctx, ["admittedAssets", index, "deployments"], "Allowed deployments must be unique and sorted");
     }
   });
-  if (!sortedUnique(policy.collateralClasses.map((row) => `${row.chain}:${row.address}`))) fail(ctx, ["collateralClasses"], "Class token keys must be unique and sorted");
 });
 export type LenderCollateralBookPolicy = z.output<typeof LenderCollateralBookPolicySchema>;

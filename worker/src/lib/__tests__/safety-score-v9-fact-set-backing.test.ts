@@ -28,6 +28,7 @@ import { CompiledV9FactSetV3Schema, V9AssetFactsV3Schema } from "@shared/types/s
 import { refineV9CauseContribution } from "@shared/types/safety-score-v9-causes";
 import { buildLenderBookFact } from "../safety-score-v9/fact-set-lender-book";
 import { canonicalizeLenderBookObservation, deriveLenderBookObservationIdentity } from "@shared/lib/safety-score-v9/lender-book-registry";
+import { getLenderCollateralClassesRegistry } from "@shared/lib/safety-score-v9/lender-collateral-classes";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { LenderBookObservationSchema, LenderCollateralBackingSchema, type LenderBookObservation, type LenderCollateralBacking } from "@shared/types/safety-score-v9-lender-book";
 import { LiveReserveSnapshotProvenanceSchema } from "@shared/lib/safety-score-v9/reserve-provenance";
@@ -870,6 +871,36 @@ describe("v10.19 frozen lender-book fact admission", () => {
     expect(evaluateV1019LenderBook(fact, 90, V9_CANDIDATE_POLICY_V1)?.reserveQuality).toBeCloseTo(80.0154, 8);
     expect(ctx.fixedInput.liveReserveMap[assetId]).toBeDefined();
     expect(fact.status.evidenceRefIds.every((id) => ctx.evidence.has(id))).toBe(true);
+  });
+
+  it("binds class evidence to the reviewed data registry rather than methodology policy", () => {
+    const ctx = context(book());
+    const fact = buildLenderBookFact(ctx)!;
+    const admitted = getLenderCollateralClassesRegistry();
+    const classEvidence = fact.status.evidenceRefIds.map((id) => ctx.evidence.get(id)!)
+      .find((row) => row.sourceId === admitted.registry.registryId);
+    expect(classEvidence).toMatchObject({
+      sourceId: "safety-score-v9.lender-collateral-classes.v1",
+      sourceGenerationId: admitted.digest,
+      observedAtSec: Date.parse("2026-10-14") / 1000,
+    });
+    expect(fact.collaterals[0]).toMatchObject({ quality: 85, collateralClass: "btc-wrapper" });
+  });
+
+  it("retains the original future-review guard after moving token reviews out of policy", () => {
+    expect(() => buildLenderBookFact(context(book({
+      collateral: "0x7f47c3e6b2c00fc4eb4d5ae50d0ab0ab6888eb4d",
+    })))).toThrow("Future lender collateral class review");
+  });
+
+  it.each([
+    ["0x232128844e5af56fd4b3f8bf97e08ab477282ab5", "yield-bearing-stable"],
+    ["0x7f47c3e6b2c00fc4eb4d5ae50d0ab0ab6888eb4d", "principal-token"],
+  ])("compiles reviewed exact receipt %s from the data registry after its original review date", (collateral, collateralClass) => {
+    const admittedAt = Date.parse("2026-10-21T00:00:00Z") / 1000;
+    const observed = book({ collateral, age: clockSec - admittedAt + 100 });
+    const fact = buildLenderBookFact(context(observed, undefined, admittedAt))!;
+    expect(fact.collaterals[0]).toMatchObject({ quality: 55, collateralClass, qualitySource: "authored-class" });
   });
 
   it.each(["rpc-unavailable", "unreconciled", "deadline"] as const)(
