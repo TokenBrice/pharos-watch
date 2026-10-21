@@ -5,6 +5,8 @@ import {
   STATUS_RESERVE_COHORT_SLO,
   STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC,
   assessActivePriceGapDuration,
+  getActiveAssetServiceBreadthThreshold,
+  getActivePriceCoverageBreadthStatus,
   getCacheRatioThresholds,
   getStablecoinPublicationImpactStatus,
 } from "@shared/lib/status-thresholds";
@@ -793,9 +795,19 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
             : `${baseMessage}${notAlerting}; not degrading public status.`,
           { metric: "missingActivePrices", value: coverage.missingPriceCount ?? undefined, threshold: 1 },
         ));
-        // A duration-driven degradation opens a public uptime incident, so it
-        // gets its own allowlisted cause; the generic incomplete-coverage
-        // warning above stays admin-only.
+        // Breadth- and duration-driven degradations open a public uptime
+        // incident, so each gets its own allowlisted cause; the generic
+        // incomplete-coverage warning above stays admin-only.
+        if (getActivePriceCoverageBreadthStatus(coverage) !== "healthy") {
+          const threshold = getActiveAssetServiceBreadthThreshold(coverage.expectedActiveCount);
+          causes.push(makeCause(
+            "data-quality",
+            "active_price_coverage_breadth_degraded",
+            "warning",
+            `Live prices are unavailable for ${coverage.missingPriceCount ?? "an unknown number of"} of ${coverage.expectedActiveCount ?? "an unknown number of"} active assets, reaching the service-wide breadth threshold${threshold == null ? "" : ` (${threshold})`}.`,
+            { metric: "missingActivePrices", value: coverage.missingPriceCount ?? undefined, threshold: threshold ?? undefined },
+          ));
+        }
         const gapDuration = assessActivePriceGapDuration(coverage, input.nowSec);
         if (gapDuration.status !== "healthy") {
           causes.push(makeCause(
@@ -849,24 +861,8 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
           { metric: "missingPriceRatio", value: input.missingPriceRatio, threshold: STATUS_MISSING_PRICE_THRESHOLDS.ratioStale },
         )]);
       }
-      if (input.missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded) {
-        return ruleResult("degraded", [makeCause(
-          "data-quality",
-          "missing_prices_degraded",
-          "warning",
-          `Missing price ratio is degraded (${formatPercentFromRatio(input.missingPriceRatio)} > ${formatPercentFromRatio(STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded)}).`,
-          { metric: "missingPriceRatio", value: input.missingPriceRatio, threshold: STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded },
-        )]);
-      }
-      if (input.missingPriceRatio >= STATUS_MISSING_PRICE_THRESHOLDS.ratioElevated) {
-        return ruleResult("healthy", [makeCause(
-          "data-quality",
-          "missing_prices_elevated",
-          "info",
-          `Missing price ratio is elevated (${formatPercentFromRatio(input.missingPriceRatio)} ≥ ${formatPercentFromRatio(STATUS_MISSING_PRICE_THRESHOLDS.ratioElevated)}); not degrading status but worth watching.`,
-          { metric: "missingPriceRatio", value: input.missingPriceRatio, threshold: STATUS_MISSING_PRICE_THRESHOLDS.ratioElevated },
-        )]);
-      }
+      // Below the stale band, price breadth is graded by the shared
+      // active-asset breadth threshold (`active_price_coverage_breadth_degraded`).
       return null;
   },
   (input) => {
@@ -987,6 +983,7 @@ const RUNBOOK_BY_CODE: Record<string, string> = {
   stablecoin_publication_unknown: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   active_price_coverage_incomplete: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   active_price_coverage_duration_degraded: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  active_price_coverage_breadth_degraded: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   active_price_coverage_unknown: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   price_gap_reviews_expiring: `${RUNBOOK_BASE}/review-renewal.md`,
   price_gap_reviews_expired: `${RUNBOOK_BASE}/review-renewal.md`,

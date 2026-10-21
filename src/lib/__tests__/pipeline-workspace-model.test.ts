@@ -90,7 +90,7 @@ describe("pipeline quality model", () => {
     expect(missing).toMatchObject({
       currentValue: "50 (50.0%)",
       eligiblePopulation: "100 active stablecoins returned by the cache",
-      warningThreshold: ">18%",
+      warningThreshold: ">=5 assets",
       staleThreshold: ">45%",
       state: "critical",
     });

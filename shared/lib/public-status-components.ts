@@ -12,6 +12,7 @@ import {
 import { formatRelativeAgeSeconds } from "./relative-time";
 import {
   assessActivePriceGapDuration,
+  getActivePriceCoverageBreadthStatus,
   getBlacklistGapStatus,
   getCacheRatioThresholds,
   getStablecoinPublicationComponentStatus,
@@ -256,6 +257,12 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
         state: "degraded",
         summary: "Live price coverage cannot be verified right now.",
         reason: "price-coverage-unknown",
+      });
+    } else if (getActivePriceCoverageBreadthStatus(coverage) !== "healthy") {
+      add("stablecoin-data", {
+        state: "degraded",
+        summary: `${coverage.missingPriceCount} of ${coverage.expectedActiveCount} tracked stablecoins have no live price.`,
+        reason: "price-coverage-breadth",
       });
     } else if (assessActivePriceGapDuration(coverage, health.timestamp).status !== "healthy") {
       add("stablecoin-data", {

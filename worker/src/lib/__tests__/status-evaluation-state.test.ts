@@ -1238,10 +1238,9 @@ describe("status rule-set behavior at policy boundaries", () => {
   });
 
   it.each([
-    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioElevated }, "healthy"],
-    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded }, "healthy"],
-    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded + 0.0001 }, "degraded"],
-    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioStale }, "degraded"],
+    // Below the stale band, price breadth is graded from exact coverage, not the ratio.
+    [{ missingPriceRatio: 0.3 }, "healthy"],
+    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioStale }, "healthy"],
     [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioStale + 0.0001 }, "stale"],
     [{ blacklistMissingRatio: STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded }, "degraded"],
     [{ blacklistMissingRatio: STATUS_BLACKLIST_THRESHOLDS.missingRatioStale }, "stale"],

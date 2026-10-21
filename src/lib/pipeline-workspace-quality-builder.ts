@@ -5,6 +5,7 @@ import {
   STATUS_MISSING_PRICE_THRESHOLDS,
   STATUS_ONCHAIN_FRESH_WINDOW_SEC,
   STATUS_ONCHAIN_THRESHOLDS,
+  getActiveAssetServiceBreadthThreshold,
   hasRepresentativeOnchainRatioSample,
 } from "@shared/lib/status-thresholds";
 import { numberValue } from "@shared/lib/type-guards";
@@ -26,13 +27,12 @@ export function buildPipelineQualityModel(data: StatusResponse): PipelineQuality
   const missingRatio =
     totalStablecoins != null && totalStablecoins > 0 && missingPrices != null ? missingPrices / totalStablecoins : null;
   const missingUnknown = dq.stablecoinsCacheStatus === "error" || missingRatio == null;
-  let missingState: PipelineSeverity = missingUnknown
+  const missingBreadthThreshold = getActiveAssetServiceBreadthThreshold(totalStablecoins);
+  let missingState: PipelineSeverity = missingUnknown || missingPrices == null
     ? "unknown"
-    : thresholdState(
-        missingRatio,
-        STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded,
-        STATUS_MISSING_PRICE_THRESHOLDS.ratioStale,
-      );
+    : missingRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioStale
+      ? "critical"
+      : missingBreadthThreshold == null || missingPrices >= missingBreadthThreshold ? "watch" : "healthy";
   if (missingState === "healthy" && dq.stablecoinsCacheStatus === "degraded") missingState = "watch";
 
   const blacklistTotal = numberValue(dq.blacklistTotal);
@@ -120,7 +120,7 @@ export function buildPipelineQualityModel(data: StatusResponse): PipelineQuality
         totalStablecoins != null && totalStablecoins > 0
           ? `${totalStablecoins} active stablecoins returned by the cache`
           : "Unknown active stablecoin population",
-      warningThreshold: `>${formatPercentFromRatio(STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded, 0)}`,
+      warningThreshold: missingBreadthThreshold == null ? "Unknown active population" : `>=${missingBreadthThreshold} assets`,
       staleThreshold: `>${formatPercentFromRatio(STATUS_MISSING_PRICE_THRESHOLDS.ratioStale, 0)}`,
       state: missingState,
       stateDetail: missingUnknown

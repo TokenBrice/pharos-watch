@@ -4,7 +4,7 @@ import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC, STATUS_MISSING_PRICE_THRESHOLDS, getStablecoinPublicationServiceBreadthThreshold } from "@shared/lib/status-thresholds";
+import { STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC, STATUS_MISSING_PRICE_THRESHOLDS, getActiveAssetServiceBreadthThreshold } from "@shared/lib/status-thresholds";
 import { makePriceCoverageMetadata } from "./public-health.test-support";
 import { fxRatesCacheRows } from "./fx-rate-state.test-support";
 import { STABLECOIN_PRICE_GAP_REVIEWS, evaluateStablecoinActivePriceCoverage, evaluateStablecoinPublicationCoverage, seedAbsentActivePriceCoverageMarketCaps } from "../stablecoin-publication-coverage";
@@ -18,7 +18,7 @@ import type { PublicHealthAssessment } from "../public-health-assessment";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const MATERIAL_MARKET_CAP_USD = STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd;
-const PUBLICATION_BREADTH = getStablecoinPublicationServiceBreadthThreshold(ACTIVE_IDS.size)!;
+const PUBLICATION_BREADTH = getActiveAssetServiceBreadthThreshold(ACTIVE_IDS.size)!;
 afterEach(() => fixtures.closeAll());
 
 /**

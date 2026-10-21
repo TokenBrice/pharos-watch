@@ -117,7 +117,7 @@ describe("public status components", () => {
   it.each([
     [4, "operational", "operational", ["publication-incomplete:asset-scoped", "price-coverage-incomplete:asset-scoped"]],
     [19, "operational", "operational", ["publication-incomplete:asset-scoped", "price-coverage-incomplete:asset-scoped"]],
-    [20, "degraded", "degraded", ["publication-incomplete", "price-coverage-incomplete:asset-scoped"]],
+    [20, "degraded", "degraded", ["publication-incomplete", "price-coverage-breadth"]],
   ] as const)("projects %s immaterial listing and price gaps of 396 by cohort breadth", (count, componentState, headlineState, reasons) => {
     const health = assetScopedHealth();
     const assets = Array.from({ length: count }, (_, index) => ({
@@ -135,6 +135,27 @@ describe("public status components", () => {
     };
     health.mintBurn.sync.warning = null;
     expect(component(health, "stablecoin-data")).toMatchObject({ state: componentState, reasons });
+    expect(projectPublicStatus(health).headline.state).toBe(headlineState);
+  });
+
+  it.each([
+    [19, "operational", "operational", "price-coverage-incomplete:asset-scoped"],
+    [20, "degraded", "degraded", "price-coverage-breadth"],
+  ] as const)("projects %s short immaterial price gaps of 396 by cohort breadth", (count, componentState, headlineState, reason) => {
+    const health = assetScopedHealth();
+    const assets = Array.from({ length: count }, (_, index) => ({
+      ...health.activePriceCoverage!.missingActiveAssets[0], stablecoinId: `missing-${index}`, symbol: `M${index}`,
+      marketCapUsd: 5_000_000, consecutiveMissingGenerations: 2, alertEligible: false,
+    }));
+    const ids = assets.map((asset) => asset.stablecoinId);
+    health.stablecoinPublication = { ...health.stablecoinPublication!, status: "complete", presentActiveCount: 396, missingActiveIds: [] };
+    health.activePriceCoverage = {
+      ...health.activePriceCoverage!, presentActiveCount: 396, pricedActiveCount: 396 - count,
+      missingPriceCount: count, missingActiveIds: ids, missingActiveAssets: assets,
+      alertEligibleCount: 0, alertEligibleIds: [], maxConsecutiveMissingGenerations: 2,
+    };
+    health.mintBurn.sync.warning = null;
+    expect(component(health, "stablecoin-data")).toMatchObject({ state: componentState, reasons: [reason] });
     expect(projectPublicStatus(health).headline.state).toBe(headlineState);
   });
 

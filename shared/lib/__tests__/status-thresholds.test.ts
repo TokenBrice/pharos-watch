@@ -4,7 +4,8 @@ import {
   getBlacklistGapStatus,
   getStablecoinPublicationComponentStatus,
   getStablecoinPublicationImpactStatus,
-  getStablecoinPublicationServiceBreadthThreshold,
+  getActivePriceCoverageBreadthStatus,
+  getActiveAssetServiceBreadthThreshold,
   getActivePriceGapMaterialityMarketCapUsd,
   STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC,
   getCacheHealthyMaxRatio,
@@ -51,10 +52,18 @@ describe("missing-price duration bands", () => {
     expect(getMissingPriceDurationStatus(null)).toBe("degraded");
   });
 
-  it("leaves the ratio bands that drive the missing-price rules untouched", () => {
-    expect(STATUS_MISSING_PRICE_THRESHOLDS.ratioElevated).toBe(0.15);
-    expect(STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded).toBe(0.18);
+  it("keeps only the stale ratio band for missing prices", () => {
     expect(STATUS_MISSING_PRICE_THRESHOLDS.ratioStale).toBe(0.45);
+    expect(Object.keys(STATUS_MISSING_PRICE_THRESHOLDS)).not.toContain("ratioDegraded");
+  });
+
+  it.each([
+    ["complete", 0, "healthy"], ["incomplete", 4, "healthy"], ["incomplete", 19, "healthy"],
+    ["incomplete", 20, "degraded"], ["unknown", null, "healthy"],
+  ] as const)("grades %s price coverage with %s unavailable of 396 by cohort breadth", (status, missingPriceCount, expected) => {
+    expect(getActivePriceCoverageBreadthStatus({
+      status, expectedActiveCount: status === "unknown" ? null : 396, missingPriceCount,
+    })).toBe(expected);
   });
 });
 
@@ -107,7 +116,7 @@ describe("publication materiality evidence", () => {
   });
   it.each([[0, null], [-1, null], [null, null], [10, 1], [100, 5], [396, 20], [400, 20], [401, 21], [800, 40]] as const)(
     "derives the service-wide breadth threshold (%s expected)", (expectedActiveCount, threshold) => {
-      expect(getStablecoinPublicationServiceBreadthThreshold(expectedActiveCount)).toBe(threshold);
+      expect(getActiveAssetServiceBreadthThreshold(expectedActiveCount)).toBe(threshold);
     });
   it.each([[19, "healthy"], [20, "degraded"]] as const)(
     "degrades the listing component for %s immaterial omissions of 396 only at breadth", (count, expected) => {

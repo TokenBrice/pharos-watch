@@ -11,7 +11,9 @@ import type { StatusCause } from "../types/status";
  * cause codes at info severity, so admin triage watches them without opening
  * public uptime incidents. Unknown coverage remains public-impacting. Ordinary
  * incomplete price coverage is a Watch; a persistent material gap escalates
- * through `active_price_coverage_duration_degraded`.
+ * through `active_price_coverage_duration_degraded`, and unavailable prices at
+ * the shared active-asset breadth threshold through
+ * `active_price_coverage_breadth_degraded`.
  *
  * The 2026-04-13 status-stability hardening defined the included/excluded
  * code list.
@@ -31,6 +33,7 @@ const PUBLIC_IMPACT_CODES: ReadonlySet<string> = new Set([
   "safety_score_publication_held",
   "safety_score_publication_stale",
   "active_price_coverage_duration_degraded",
+  "active_price_coverage_breadth_degraded",
   "active_price_coverage_unknown",
   "stablecoin_publication_incomplete",
   "stablecoin_publication_unknown",
