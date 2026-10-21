@@ -381,7 +381,15 @@ describe("methodology registry", () => {
     expect(impact).toMatch(/curated mint reconciliation/);
     expect(impact).toMatch(/25-asset issuer-backend cohort/);
     expect(impact).toMatch(/OWNER DECISION \/ ISOLATABLE/);
-    expect(impact).toMatch(/eight source-reviewed exact Morpho/);
+    expect(impact).toMatch(/lender-collateral-classes-v1\.json/);
+    expect(impact).toMatch(/longest actually observed publication lag/);
+    expect(impact).toMatch(/at least two consecutive dated reports/);
+    expect(impact).toMatch(/at or below 1% of compatible admitted supply/);
+    expect(impact).toMatch(/F requires an explicit source-bound danger witness/);
+    expect(impact).toMatch(/wrapperMildRiskFloorGrade D/);
+    expect(impact).toMatch(/Preserve admitted exact-controller MPC\/HSM technical custody/);
+    expect(SAFETY_SCORE_POLICY.semantic.formula.danger.requireSourceBoundDangerWitness).toBe(true);
+    expect(SAFETY_SCORE_POLICY.semantic.formula.wrapperMildRiskFloorGrade).toBe("D");
     expect(impact).toMatch(/Current explicit mechanism-component reviews/);
     expect(impact).toMatch(/no acceptance or deployment is asserted/i);
   });
