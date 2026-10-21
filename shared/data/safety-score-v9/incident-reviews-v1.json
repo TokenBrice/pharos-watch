@@ -2,6 +2,106 @@
   "schemaVersion": 1,
   "incidents": [
     {
+      "incidentId": "crvusd-taiko-2026-canonical-vault-proof-forgery",
+      "assetId": "crvusd-curve",
+      "domain": "control",
+      "kind": "supply-integrity-failure",
+      "occurredAt": "2026-06-21",
+      "resolvedAt": "2026-07-02",
+      "status": "resolved",
+      "scope": {
+        "kind": "deployment",
+        "deploymentKey": "taiko:0xc8f4518ed4bab9a972808a493107926ce8237068",
+        "exposureShare": 0.0025097053561691477
+      },
+      "posture": {
+        "component": "mint",
+        "controlKinds": [
+          "bridge"
+        ],
+        "incidentState": "resolved"
+      },
+      "reviewedAt": "2026-10-11",
+      "reviewer": "Sol curation campaign 2026-10-11 (I28CrvUSD)",
+      "primarySources": [
+        {
+          "label": "Exact crvUSD ERC20Vault fraudulent payout transaction",
+          "url": "https://etherscan.io/tx/0x4986e4a4c8c541bc623bff9a6f1caa1795d92d0fcff8efef4d79d7ac4834ee61",
+          "publishedAt": "2026-06-21"
+        },
+        {
+          "label": "Taiko Labs incident postmortem and verified recovery",
+          "url": "https://paragraph.com/@taiko-labs/taiko-security-incident-a-postmortem-and-next-steps",
+          "publishedAt": "2026-07-23"
+        }
+      ],
+      "finding": "Forged Taiko finality proofs caused an unauthorized Ethereum ERC20Vault payout of 156832.011092154729015188 crvUSD on June 21, 2026, compromising collateral for the exact Taiko representation 0xc8f4518ed4bab9a972808a493107926ce8237068 and bridge-meta:crvusd-curve:7ce5ebdc7ae091ec3913. Ethereum block 25368853 transaction 0x4986e4a4c8c541bc623bff9a6f1caa1795d92d0fcff8efef4d79d7ac4834ee61 transferred the entire pre-block crvUSD balance from ERC20Vault 0x996282ca11e5deb6b5d122cc3b9a1fcaad4415ab to the attacker. ExposureShare is that vault balance divided by StablecoinLens.circulating_supply() at pre-theft block 25368852, hash 0x49c657870ac828efb8ee830d1839b29f448226a8166c8166083d8bcc2a4002a9: 156832011092154729015188 / 62490208544458581632110058 = 0.0025097053561691475. Retained pinned research journals under agents/curation-campaign/research/I28CrvUSD-taiko-incident-*.json; inflated token totalSupply is not the denominator. This is deployment-specific bridge supply-integrity history, not a failure of Curve native issuance or every crvUSD bridge.",
+      "remediation": {
+        "state": "verified",
+        "lastVerifiedAt": "2026-07-23",
+        "summary": "Taiko Labs documents invalidating fraudulent checkpoints and closing the attack path through Proposal 34 on June 29; Bridge and ERC20Vault were recollateralized 1:1 in kind on June 30, and unpaused on July 2 through Proposal 35. All users were made whole. No claim is made that the subsequently scheduled August Unzen upgrade was actually executed.",
+        "sources": [
+          {
+            "label": "Taiko Labs incident postmortem and verified recovery",
+            "url": "https://paragraph.com/@taiko-labs/taiko-security-incident-a-postmortem-and-next-steps",
+            "publishedAt": "2026-07-23"
+          }
+        ]
+      }
+    },
+    {
+      "incidentId": "fdusd-2025-04-02-secondary-market-confidence-depeg",
+      "assetId": "fdusd-first-digital",
+      "domain": "peg",
+      "kind": "holder-exit-impairment",
+      "occurredAt": "2025-04-02",
+      "resolvedAt": "2025-04-03",
+      "status": "resolved",
+      "scope": {
+        "kind": "holder-exit"
+      },
+      "posture": {
+        "treatment": "peg-multiplier-only"
+      },
+      "reviewedAt": "2026-10-21",
+      "reviewer": "R2 incident evidence research; severity rank 4 of broader sweep; draft for owner integration",
+      "primarySources": [
+        {
+          "label": "Cointelegraph: April 2 FDUSD low of USD 0.87 and subsequent USD 25.8 million redemptions",
+          "url": "https://cointelegraph.com/news/first-digital-redeems-26m-fdusd-after-stablecoin-depeg",
+          "publishedAt": "2025-04-04"
+        },
+        {
+          "label": "Cryptopolitan syndicated by CryptoRank: FDUSD recovered above USD 0.99 by April 3",
+          "url": "https://cryptorank.io/news/feed/905e7-binance-fdusd-stablecoin-regain-its-usd-peg",
+          "publishedAt": "2025-04-03"
+        },
+        {
+          "label": "First Digital primary confirmation that redemptions continued smoothly with linked burn transactions",
+          "url": "https://x.com/FirstDigitalHQ/status/1907706280120381832",
+          "publishedAt": "2025-04-03"
+        }
+      ],
+      "finding": "On April 2, 2025, FDUSD briefly traded as low as USD 0.87, approximately 13% below its USD target, after public allegations about First Digital Trust's solvency. The discount was an observed secondary-market confidence event. The allegations are not adopted as established FDUSD reserve loss: the issuer denied them, confirmed ongoing redemptions on April 3 and supplied burn-transaction links; Cointelegraph subsequently reported approximately USD 25.8 million redeemed. A separate April 3 market report observed recovery above USD 0.99. This row does not conflate the disputed TUSD custody situation with proven FDUSD insolvency.",
+      "remediation": {
+        "state": "verified",
+        "lastVerifiedAt": "2025-04-04",
+        "summary": "April 3 reporting observed FDUSD back above USD 0.99, near its target, and primary issuer posts confirmed continued redemption processing. April 4 reporting corroborated completed redemptions. The resolution records recovery from the material April 2 dislocation, not an exact USD 1.000000 price or an independent opinion on all custody allegations.",
+        "sources": [
+          {
+            "label": "April 3 market observation of recovery above USD 0.99",
+            "url": "https://cryptorank.io/news/feed/905e7-binance-fdusd-stablecoin-regain-its-usd-peg",
+            "publishedAt": "2025-04-03"
+          },
+          {
+            "label": "First Digital April 3 primary redemption confirmation",
+            "url": "https://x.com/FirstDigitalHQ/status/1907706280120381832",
+            "publishedAt": "2025-04-03"
+          }
+        ]
+      }
+    },
+    {
       "incidentId": "fxusd-2025-router-flash-loan-disclosure",
       "assetId": "fxusd-f-x-protocol",
       "domain": "security-history",
@@ -43,263 +143,281 @@
       }
     },
     {
-      "incidentId": "parallel-2026-failed-exploit-attempt",
-      "assetId": "usdp-parallel",
-      "domain": "control",
-      "kind": "mint-control-failure",
-      "occurredAt": "2026-05-11",
-      "status": "mitigated",
-      "scope": {
-        "kind": "root-claim"
-      },
-      "posture": {
-        "component": "mint",
-        "controlKinds": [
-          "mint",
-          "upgrade"
-        ],
-        "incidentState": "resolved"
-      },
-      "reviewedAt": "2026-08-24",
-      "reviewer": "Safety Score V9 C-grade remediation review",
-      "primarySources": [
-        {
-          "label": "Parallel governance PIP-69",
-          "url": "https://gov.parallel.best/t/pip-69-usdp-parallelizer-bridging-modules-parameters-updates/541",
-          "publishedAt": "2026-05-11"
-        },
-        {
-          "label": "Parallel governance PGP-43",
-          "url": "https://gov.parallel.best/t/pgp-43-l-additional-parallel-v3-2-security-audit/542",
-          "publishedAt": "2026-07-02"
-        }
-      ],
-      "finding": "A failed exploit attempt exposed a critical Parallelizer bug. Governance tightened mint, burn, and bridge limits; the July follow-up reported fix audits 95% complete.",
-      "remediation": {
-        "state": "in-progress",
-        "lastVerifiedAt": "2026-07-02",
-        "summary": "The exploit attempt failed, limits were tightened, affected collateral was being phased out, and audits of the deployed fix were reported 95% complete.",
-        "sources": [
-          {
-            "label": "Parallel governance PIP-69",
-            "url": "https://gov.parallel.best/t/pip-69-usdp-parallelizer-bridging-modules-parameters-updates/541",
-            "publishedAt": "2026-05-11"
-          },
-          {
-            "label": "Parallel governance PGP-43",
-            "url": "https://gov.parallel.best/t/pgp-43-l-additional-parallel-v3-2-security-audit/542",
-            "publishedAt": "2026-07-02"
-          }
-        ]
-      }
-    },
-    {
-      "incidentId": "usd3-2026-batch-auction-vulnerability-disclosure",
-      "assetId": "usd3-reserve-protocol",
-      "domain": "security-history",
-      "kind": "disclosed-remediated-vulnerability",
-      "dateBasis": "public-disclosure",
-      "resolutionDateBasis": "primary-confirmation",
-      "occurredAt": "2026-02-26",
-      "resolvedAt": "2026-03-04",
+      "incidentId": "honey-2025-11-03-bex-containment-redemption-outage",
+      "assetId": "honey-berachain",
+      "domain": "operational",
+      "kind": "material-operational-outage",
+      "occurredAt": "2025-11-03",
+      "resolvedAt": "2025-11-04",
       "status": "resolved",
-      "realization": "no-reported-exploit",
-      "scope": {
-        "kind": "integration-only",
-        "integrationKey": "reserve-usd3:easyauction-batch-auctions"
-      },
-      "posture": {
-        "treatment": "informational-only"
-      },
-      "reviewedAt": "2026-10-01",
-      "reviewer": "Safety Score V9 owner ruling D27",
-      "primarySources": [
-        {
-          "label": "Reserve disclosure and USD3 batch-auction disabling confirmation",
-          "url": "https://forum.reserve.org/t/ip-deprecating-batch-auctions-in-yield-dtfs/1458",
-          "publishedAt": "2026-02-26"
-        }
-      ],
-      "finding": "Reserve disclosed a third-party EasyAuction batch-auction vulnerability used by yield DTFs and explicitly stated that it was never exploited, the risk was mitigated, and funds were safe. The March 4 follow-up names USD3 among the integrations disabled through governance. This record is limited to that historical integration and asserts no theft, outage, canonical mint failure, or continuity to the current deployment.",
-      "remediation": {
-        "state": "verified",
-        "lastVerifiedAt": "2026-03-04",
-        "summary": "The issuer's March 4 follow-up explicitly names USD3 among passed proposals disabling the potential exploit vector. This verifies the reported integration removal, not an independently pinned remediation transaction or exact execution date.",
-        "sources": [
-          {
-            "label": "Reserve March 4 confirmation naming USD3",
-            "url": "https://forum.reserve.org/t/ip-deprecating-batch-auctions-in-yield-dtfs/1458/3",
-            "publishedAt": "2026-03-04"
-          }
-        ]
-      }
-    },
-    {
-      "incidentId": "xaut-2023-transferfrom-vulnerability-disclosure",
-      "assetId": "xaut-tether",
-      "domain": "security-history",
-      "kind": "disclosed-remediated-vulnerability",
-      "dateBasis": "public-disclosure",
-      "resolutionDateBasis": "primary-confirmation",
-      "occurredAt": "2023-05-27",
-      "resolvedAt": "2023-05-27",
-      "status": "resolved",
-      "realization": "no-reported-exploit",
-      "scope": {
-        "kind": "contract-component",
-        "deploymentKey": "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
-        "componentKey": "transferfrom"
-      },
-      "posture": {
-        "treatment": "informational-only"
-      },
-      "reviewedAt": "2026-10-01",
-      "reviewer": "Safety Score V9 owner ruling D27",
-      "primarySources": [
-        {
-          "label": "BlockSec Tether Gold public transfer vulnerability disclosure",
-          "url": "https://blocksec.com/blog/public-transfer-vulnerability-of-the-tether-gold-smart-contract",
-          "publishedAt": "2023-05-27"
-        }
-      ],
-      "finding": "BlockSec disclosed a transferFrom vulnerability in the named Ethereum XAUT contract that allowed anyone to transfer other users' tokens to a predefined trusted recipient, with a potential pool-price manipulation path. It reported discovery on April 5 and demonstrated a fork proof of concept, not a realized exploit or loss. This is historical transfer-component exposure, not evidence of mint compromise, supply inflation, or a current active vulnerability.",
-      "remediation": {
-        "state": "verified",
-        "lastVerifiedAt": "2023-05-27",
-        "summary": "BlockSec states that it found the issue fixed on the disclosure date and illustrates the corrected transferFrom check. The resolution date is this public confirmation, not an inferred upgrade transaction date.",
-        "sources": [
-          {
-            "label": "BlockSec confirmation and illustration of transferFrom fix",
-            "url": "https://blocksec.com/blog/public-transfer-vulnerability-of-the-tether-gold-smart-contract",
-            "publishedAt": "2023-05-27"
-          }
-        ]
-      }
-    },
-    {
-      "incidentId": "zephyr-2025-supply-integrity-reconciliation",
-      "assetId": "zsd-zephyr-protocol",
-      "domain": "control",
-      "kind": "supply-integrity-failure",
-      "occurredAt": "2025-06-11",
-      "resolvedAt": "2025-08-27",
-      "status": "resolved",
-      "scope": {
-        "kind": "root-claim"
-      },
-      "posture": {
-        "component": "mint",
-        "controlKinds": [
-          "mint"
-        ],
-        "incidentState": "resolved"
-      },
-      "reviewedAt": "2026-08-24",
-      "reviewer": "Safety Score V9 C-grade remediation review",
-      "primarySources": [
-        {
-          "label": "Zephyr audit postmortem",
-          "url": "https://zephyrprotocol.com/blog/2025-08-27-Zephyr-Audit-Postmortem",
-          "publishedAt": "2025-08-27"
-        },
-        {
-          "label": "Zephyr v2.3.0 release",
-          "url": "https://github.com/ZephyrProtocol/zephyr/releases/tag/v2.3.0",
-          "publishedAt": "2025-06-11"
-        }
-      ],
-      "finding": "Zephyr disclosed cross-asset morphing, range-proof anomalies, invalidated balances, and a 1,921,650 ZEPH reconciliation mint, establishing a resolved supply-integrity failure.",
-      "remediation": {
-        "state": "verified",
-        "lastVerifiedAt": "2025-08-27",
-        "summary": "Zephyr completed the audit response, invalidated unaudited asset types and balances, and disclosed the reconciliation mint in its postmortem.",
-        "sources": [
-          {
-            "label": "Zephyr audit postmortem",
-            "url": "https://zephyrprotocol.com/blog/2025-08-27-Zephyr-Audit-Postmortem",
-            "publishedAt": "2025-08-27"
-          },
-          {
-            "label": "Zephyr v2.3.0 release",
-            "url": "https://github.com/ZephyrProtocol/zephyr/releases/tag/v2.3.0",
-            "publishedAt": "2025-06-11"
-          }
-        ]
-      }
-    },
-    {
-      "incidentId": "sdola-2026-llamalend-donation-oracle",
-      "assetId": "sdola-inverse-finance",
-      "domain": "wrapper-local",
-      "kind": "share-accounting-integration-failure",
-      "occurredAt": "2026-03-02",
-      "resolvedAt": "2026-03-13",
-      "status": "resolved",
-      "scope": {
-        "kind": "integration-only",
-        "integrationKey": "llamalend-sdola-long2"
-      },
-      "posture": {
-        "shareAccountingNavOracle": "high",
-        "measuredUnwind": "high"
-      },
-      "reviewedAt": "2026-08-24",
-      "reviewer": "Safety Score V9 C-grade remediation review",
-      "primarySources": [
-        {
-          "label": "LlamaRisk LlamaLend sDOLA-long2 postmortem",
-          "url": "https://www.llamarisk.com/research/llamalend-sdola-long2-post-mortem",
-          "publishedAt": "2026-03-13"
-        }
-      ],
-      "finding": "A donation-sensitive ERC-4626 share price combined with LlamaLend's unsmoothed convertToAssets oracle and LLAMMA state to liquidate external borrowers; the event did not impair the sDOLA root claim or its holders.",
-      "remediation": {
-        "state": "verified",
-        "lastVerifiedAt": "2026-03-13",
-        "summary": "The integration was unwound with 10.6 million sDOLA shares redeemed successfully; sDOLA holders gained 13.79%, while measured loss remained with external leveraged borrowers.",
-        "sources": [
-          {
-            "label": "LlamaRisk LlamaLend sDOLA-long2 postmortem",
-            "url": "https://www.llamarisk.com/research/llamalend-sdola-long2-post-mortem",
-            "publishedAt": "2026-03-13"
-          }
-        ]
-      }
-    },
-    {
-      "incidentId": "nusd-neutrl-2026-09-discounted-holder-exit",
-      "assetId": "nusd-neutrl",
-      "occurredAt": "2026-09-17",
-      "status": "active",
       "scope": {
         "kind": "holder-exit"
       },
-      "reviewedAt": "2026-10-02",
-      "reviewer": "Sol final D/F review 2026-10-02 (DfReview03)",
+      "posture": {
+        "category": "redemption",
+        "blocker": "active-material-incident"
+      },
+      "reviewedAt": "2026-10-21",
+      "reviewer": "R2 incident evidence research; severity rank 3 of broader sweep; draft for owner integration",
       "primarySources": [
         {
-          "label": "Neutrl September 17 separate fixed-rate USDC redemption program announcement",
-          "url": "https://x.com/Neutrl/status/2100614848241414280",
-          "publishedAt": "2026-09-17"
+          "label": "Berachain Foundation primary BEX incident postmortem with exact HONEY pause/resume timeline",
+          "url": "https://x.com/berachain/status/1986952318068146323",
+          "publishedAt": "2025-11-08"
         }
       ],
-      "finding": "The separate September 17 recovery program redeems NUSD for fixed-rate USDC, not restored par redemption. Fresh exact NusdRedemption 0xb3f07d3392102fc23264a78e2a1a8b6421123828 state at Ethereum block26104271 has redemptionRate510000000000000000 and quoteRedeem(1e18)=510000 USDC base units, a49% discount to the1USD target. This is program payout, not a complete valuation of remaining illiquid reserves.",
+      "finding": "The November 3, 2025 Balancer-v2-copycat attack on BEX caused a real interruption to HONEY's holder exit. Berachain's primary postmortem records HONEY mint/redeem paused November 3 at 08:55 UTC and resumed November 4 at 15:45 UTC, approximately 30 hours 50 minutes later; the chain itself was halted approximately 30 hours. The exploited sUSDe/USDe/HONEY pool contained roughly USD 12.3 million, and additional BEX pools were also affected, but those LP losses must not be attributed as a HONEY reserve haircut. HONEY is the same registered asset subsequently rebranded Bera USD. This row records the completed operational redemption interruption, not a HONEY mint compromise, currently active pause or established stablecoin reserve loss.",
       "remediation": {
-        "state": "in-progress",
-        "lastVerifiedAt": "2026-10-02",
-        "summary": "A separate fixed-rate program is available subject to acknowledgement and terms; no dated primary evidence of restored ordinary par redemption was found.",
+        "state": "verified",
+        "lastVerifiedAt": "2025-11-08",
+        "summary": "The November 8 primary postmortem retrospectively confirms the November 4 15:45 UTC resumption of HONEY mint/redeem and recovery transactions following the chain restart. BEX pool remediation and user reimbursement were separately still in progress; this resolution applies only to the HONEY operational exit outage.",
         "sources": [
           {
-            "label": "Neutrl September 17 separate fixed-rate USDC redemption program announcement",
-            "url": "https://x.com/Neutrl/status/2100614848241414280",
-            "publishedAt": "2026-09-17"
+            "label": "Berachain primary incident timeline: HONEY mint/redeem resumed November 4 at 15:45 UTC",
+            "url": "https://x.com/berachain/status/1986952318068146323",
+            "publishedAt": "2025-11-08"
+          }
+        ]
+      }
+    },
+    {
+      "incidentId": "i00usdcb-usdc-circle-158829a4407bd5254a9b-20261011",
+      "assetId": "usdc-circle",
+      "domain": "control",
+      "kind": "supply-integrity-failure",
+      "occurredAt": "2026-06-21",
+      "resolvedAt": "2026-07-02",
+      "status": "resolved",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:usdc-circle:158829a4407bd5254a9b"
+      },
+      "reviewedAt": "2026-10-11",
+      "reviewer": "Sol curation campaign 2026-10-11 (I00USDCb)",
+      "primarySources": [
+        {
+          "label": "Taiko Labs July23 postmortem: USDC vault theft, recollateralization and July2 reopening",
+          "url": "https://paragraph.com/@taiko-labs/taiko-security-incident-a-postmortem-and-next-steps",
+          "publishedAt": "2026-07-23"
+        }
+      ],
+      "finding": "incident / resolved supply-integrity-failure: June21–22 forged-state payouts released 675,761 USDC from canonical ERC20Vault; primary confirms June30 recollateralization and July2 reopening. Exact-control scope, share unknown. Exact packet deployment taiko:0x07d83526730c7438048d55a4fc0b850e2aab6f0b and control bridge-meta:usdc-circle:158829a4407bd5254a9b are joined through the existing reviewed USDC risk-review route, not a chain-name-only match. Reviewed at 2026-10-11T05:30:46Z. No historical exposureShare is established or authored. This does not fan the event to sibling USDC controls or the root claim. Primary Taiko address directory binds this USDC token and L2 ERC20Vault 0x1670000000000000000000000000000000000002 to canonical L1 ERC20Vault 0x996282ca11e5deb6b5d122cc3b9a1fcaad4415ab; the postmortem names that L1 vault and exact USDC payouts. The July23 scheduled Unzen upgrade is not assumed executed.",
+      "remediation": {
+        "state": "verified",
+        "lastVerifiedAt": "2026-07-23",
+        "summary": "Primary July23 postmortem confirms attack path closed, invalid checkpoints removed June29, bridge/vault recollateralized 1:1 June30 and unpaused July2 with normal operations under conservative quotas. This is sourced historical resolution, not a new current contract audit.",
+        "sources": [
+          {
+            "label": "Taiko Labs July23 postmortem: USDC vault theft, recollateralization and July2 reopening",
+            "url": "https://paragraph.com/@taiko-labs/taiko-security-incident-a-postmortem-and-next-steps",
+            "publishedAt": "2026-07-23"
           }
         ]
       },
-      "domain": "peg",
-      "kind": "holder-exit-impairment",
       "posture": {
-        "treatment": "peg-multiplier-only"
+        "component": "mint",
+        "controlKinds": [
+          "bridge"
+        ],
+        "incidentState": "resolved"
+      }
+    },
+    {
+      "incidentId": "i00usdcb-usdc-circle-52b72ec3cb21ad6fcb03-20261011",
+      "assetId": "usdc-circle",
+      "domain": "control",
+      "kind": "supply-integrity-failure",
+      "occurredAt": "2023-07-06",
+      "resolvedAt": null,
+      "status": "active",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:usdc-circle:52b72ec3cb21ad6fcb03"
+      },
+      "reviewedAt": "2026-10-11",
+      "reviewer": "Sol curation campaign 2026-10-11 (I00USDCb)",
+      "primarySources": [
+        {
+          "label": "US Bankruptcy Court September30 decision: Multichain USDC theft, Moonriver/Fantom Multi-USDC and continuing recovery litigation",
+          "url": "https://www.nysb.uscourts.gov/sites/default/files/opinions/331862_47_opinion.pdf",
+          "publishedAt": "2026-09-30"
+        },
+        {
+          "label": "Fantom Foundation judgment announcement and recovery process",
+          "url": "https://blog.fantom.foundation/fantom-foundation-awarded-default-judgement-against-multichain/",
+          "publishedAt": "2024-03-04"
+        },
+        {
+          "label": "Fantom Foundation replacement bridges: old Multichain assets remain depegged",
+          "url": "https://blog.fantom.foundation/layerzero-and-axelar-introduce-usdc-usdt-weth-and-wbtc-to-fantom/",
+          "publishedAt": "2023-07-25"
+        }
+      ],
+      "finding": "incident / active supply-integrity-failure: legacy Multichain USDC backing theft and unresolved recovery. Exact control bound by existing reviewed route/controller; September30 court opinion confirms continuing blocked assets and litigation, not completed restitution. Share unknown. Exact packet deployment fantom:0x04068da6c83afcfa0e13ba15a6696662335d5b75 and control bridge-meta:usdc-circle:52b72ec3cb21ad6fcb03 are joined through the existing reviewed USDC risk-review route, not a chain-name-only match. Reviewed at 2026-10-11T05:30:46Z. No historical exposureShare is established or authored. This does not fan the event to sibling USDC controls or the root claim. Reviewed destination controller/MPC identity is 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe; the court identifies Multi-USDC on Fantom and Moonriver, and confirms USDC reserve theft while expressly leaving the specific compromise mechanism unproven. Active denotes unresolved reserve/redemption recovery, not evidence that the original exploit is still running.",
+      "remediation": {
+        "state": "in-progress",
+        "lastVerifiedAt": "2026-09-30",
+        "summary": "September30 2026 primary court decision confirms recognized Singapore liquidation, recovery litigation and continuing blacklisting of suspected hacker addresses. It does not establish holder distributions, reserve restoration or resumed legacy bridge redemption; July2023 service cessation is not treated as financial resolution.",
+        "sources": [
+          {
+            "label": "US Bankruptcy Court September30 decision: Multichain USDC theft, Moonriver/Fantom Multi-USDC and continuing recovery litigation",
+            "url": "https://www.nysb.uscourts.gov/sites/default/files/opinions/331862_47_opinion.pdf",
+            "publishedAt": "2026-09-30"
+          }
+        ]
+      },
+      "posture": {
+        "component": "mint",
+        "controlKinds": [
+          "bridge"
+        ],
+        "incidentState": "active"
+      }
+    },
+    {
+      "incidentId": "i00usdcb-usdc-circle-f1044b4b908e894508ee-20261011",
+      "assetId": "usdc-circle",
+      "domain": "control",
+      "kind": "supply-integrity-failure",
+      "occurredAt": "2023-07-06",
+      "resolvedAt": null,
+      "status": "active",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:usdc-circle:f1044b4b908e894508ee"
+      },
+      "reviewedAt": "2026-10-11",
+      "reviewer": "Sol curation campaign 2026-10-11 (I00USDCb)",
+      "primarySources": [
+        {
+          "label": "US Bankruptcy Court September30 decision: Multichain USDC theft, Moonriver/Fantom Multi-USDC and continuing recovery litigation",
+          "url": "https://www.nysb.uscourts.gov/sites/default/files/opinions/331862_47_opinion.pdf",
+          "publishedAt": "2026-09-30"
+        },
+        {
+          "label": "Moonwell/Gauntlet July6–7 Moonriver USDC.multi incident and market freeze",
+          "url": "https://forum.moonwell.fi/t/gauntlet-multichain-risk-community-update/528",
+          "publishedAt": "2023-07-06"
+        }
+      ],
+      "finding": "incident / active supply-integrity-failure: legacy Multichain USDC.multi affected by July2023 custody loss; exact route joined to existing reviewed token/controller, primary Moonwell notice and September30 court opinion name Moonriver Multi-USDC. Recovery remains in progress; no numeric loss/share inferred. Exact packet deployment moonriver:0xe3f5a90f9cb311505cd691a46596599aa1a0ad7d and control bridge-meta:usdc-circle:f1044b4b908e894508ee are joined through the existing reviewed USDC risk-review route, not a chain-name-only match. Reviewed at 2026-10-11T05:30:46Z. No historical exposureShare is established or authored. This does not fan the event to sibling USDC controls or the root claim. Reviewed destination controller/MPC identity is 0x10c6b61dbf44a083aec3780acf769c77be747e23; the court identifies Multi-USDC on Fantom and Moonriver, and confirms USDC reserve theft while expressly leaving the specific compromise mechanism unproven. Active denotes unresolved reserve/redemption recovery, not evidence that the original exploit is still running.",
+      "remediation": {
+        "state": "in-progress",
+        "lastVerifiedAt": "2026-09-30",
+        "summary": "September30 2026 primary court decision confirms recognized Singapore liquidation, recovery litigation and continuing blacklisting of suspected hacker addresses. It does not establish holder distributions, reserve restoration or resumed legacy bridge redemption; July2023 service cessation is not treated as financial resolution.",
+        "sources": [
+          {
+            "label": "US Bankruptcy Court September30 decision: Multichain USDC theft, Moonriver/Fantom Multi-USDC and continuing recovery litigation",
+            "url": "https://www.nysb.uscourts.gov/sites/default/files/opinions/331862_47_opinion.pdf",
+            "publishedAt": "2026-09-30"
+          }
+        ]
+      },
+      "posture": {
+        "component": "mint",
+        "controlKinds": [
+          "bridge"
+        ],
+        "incidentState": "active"
+      }
+    },
+    {
+      "incidentId": "i05daib-dai-makerdao-12975af529371706f658-20261011",
+      "assetId": "dai-makerdao",
+      "occurredAt": "2026-06-21",
+      "resolvedAt": "2026-07-02",
+      "status": "resolved",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:dai-makerdao:12975af529371706f658"
+      },
+      "reviewedAt": "2026-10-11",
+      "reviewer": "Sol curation campaign 2026-10-11 (I05DAIb)",
+      "primarySources": [
+        {
+          "label": "Taiko Labs exploit, recollateralization and reopening postmortem",
+          "url": "https://paragraph.com/@taiko-labs/taiko-security-incident-a-postmortem-and-next-steps",
+          "publishedAt": "2026-07-23"
+        },
+        {
+          "label": "Exact Taiko DAI creation receipt joining compromised L1 ERC20Vault to L2 controller",
+          "url": "https://taikoscan.io/tx/0x3df3afa7f2f29f3434bbabea17d6a8b80a497de02124e103417e65187d281c74",
+          "publishedAt": "2024-06-27"
+        }
+      ],
+      "finding": "The exact Taiko DAI creation transaction at block 104400 (2024-06-27T01:51:47Z) names L1 ERC20Vault 0x996282ca11e5deb6b5d122cc3b9a1fcaad4415ab as the sender to L2 ERC20Vault 0x1670000000000000000000000000000000000002, binding this DAI control to the vault and message-validation path compromised by forged proofs on June 21, 2026. The primary postmortem confirms accepted fraudulent withdrawals, emergency pause June 22, restored state and rejected debug-mode proofs June 29, 1:1 recollateralization June 30, and reopening July 2. This is exact-control failure history, not an assertion that DAI was stolen: DAI is absent from the loss table. Historical whole-DAI exposure share is unknown and omitted. No sibling control or root-claim propagation is authored.",
+      "remediation": {
+        "state": "verified",
+        "lastVerifiedAt": "2026-07-23",
+        "summary": "Taiko Labs' July 23 postmortem confirms the June 29 executed SGX debug-mode fix and invalidation of fraudulent checkpoints/retriable claims, June 30 in-kind 1:1 recapitalization from operating cash, and July 2 executed unpause of the Bridge and ERC20Vault under conservative quotas. It states every L2 balance was fully backed when operations resumed. The planned August Unzen activation is not claimed as exercised.",
+        "sources": [
+          {
+            "label": "Taiko Labs exploit, recollateralization and reopening postmortem",
+            "url": "https://paragraph.com/@taiko-labs/taiko-security-incident-a-postmortem-and-next-steps",
+            "publishedAt": "2026-07-23"
+          }
+        ]
+      },
+      "domain": "control",
+      "kind": "mint-control-failure",
+      "posture": {
+        "component": "mint",
+        "controlKinds": [
+          "bridge"
+        ],
+        "incidentState": "resolved"
+      }
+    },
+    {
+      "incidentId": "i05daib-dai-makerdao-7785df7044fd62e94dc6-20261011",
+      "assetId": "dai-makerdao",
+      "occurredAt": "2022-06-23",
+      "resolvedAt": null,
+      "status": "mitigated",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:dai-makerdao:7785df7044fd62e94dc6"
+      },
+      "reviewedAt": "2026-10-11",
+      "reviewer": "Sol curation campaign 2026-10-11 (I05DAIb)",
+      "primarySources": [
+        {
+          "label": "Harmony official exact 1DAI impacted-assets table; reimbursement proposal withdrawn",
+          "url": "https://talk.harmony.one/t/reimbursement-proposal-horizon-incident/20665",
+          "publishedAt": "2022-07-27"
+        },
+        {
+          "label": "Harmony official Horizon key-compromise and containment report",
+          "url": "https://talk.harmony.one/t/summary-of-the-horizon-bridge-incident/20990",
+          "publishedAt": "2022-08-03"
+        }
+      ],
+      "finding": "The Horizon validator-key compromise drained backing of exact Harmony 1DAI 0xef977d2f931c1978db5f6747666fa1eacb0d0339. Harmony's official incident-time table lists 6,070,000 affected 1DAI. Exact-control scope preserves the documented supply-integrity failure without an unestablished whole-DAI exposure share. Mitigated denotes the primary-reported containment of the attack by halting the legacy bridge, not restored backing, repayment, present-day bridge operability or financial resolution. The withdrawn reimbursement proposal and Recovery One formation proposal do not establish completed restitution. No sibling deployment or root-claim incident is asserted.",
+      "remediation": {
+        "state": "in-progress",
+        "lastVerifiedAt": "2022-08-10",
+        "summary": "Historical containment is established by the August 3 primary postmortem: Horizon halted and cloud access isolated, security operations and forensic recovery initiated. The August 10 Harmony-supported Recovery One proposal describes an effort to address unbacked assets; it is not completed repayment. This retained evidence date is not refreshed to the October review date, and current restitution remains unverified.",
+        "sources": [
+          {
+            "label": "Harmony-supported Recovery One formation proposal, not completed restitution",
+            "url": "https://talk.harmony.one/t/recovery-one-community-governance-for-depegged-tokens/21104",
+            "publishedAt": "2022-08-10"
+          },
+          {
+            "label": "Harmony official Horizon key-compromise and containment report",
+            "url": "https://talk.harmony.one/t/summary-of-the-horizon-bridge-incident/20990",
+            "publishedAt": "2022-08-03"
+          }
+        ]
+      },
+      "domain": "control",
+      "kind": "supply-integrity-failure",
+      "posture": {
+        "component": "mint",
+        "controlKinds": [
+          "bridge"
+        ],
+        "incidentState": "resolved"
       }
     },
     {
@@ -454,153 +572,6 @@
       }
     },
     {
-      "incidentId": "crvusd-taiko-2026-canonical-vault-proof-forgery",
-      "assetId": "crvusd-curve",
-      "domain": "control",
-      "kind": "supply-integrity-failure",
-      "occurredAt": "2026-06-21",
-      "resolvedAt": "2026-07-02",
-      "status": "resolved",
-      "scope": {
-        "kind": "deployment",
-        "deploymentKey": "taiko:0xc8f4518ed4bab9a972808a493107926ce8237068",
-        "exposureShare": 0.0025097053561691477
-      },
-      "posture": {
-        "component": "mint",
-        "controlKinds": [
-          "bridge"
-        ],
-        "incidentState": "resolved"
-      },
-      "reviewedAt": "2026-10-11",
-      "reviewer": "Sol curation campaign 2026-10-11 (I28CrvUSD)",
-      "primarySources": [
-        {
-          "label": "Exact crvUSD ERC20Vault fraudulent payout transaction",
-          "url": "https://etherscan.io/tx/0x4986e4a4c8c541bc623bff9a6f1caa1795d92d0fcff8efef4d79d7ac4834ee61",
-          "publishedAt": "2026-06-21"
-        },
-        {
-          "label": "Taiko Labs incident postmortem and verified recovery",
-          "url": "https://paragraph.com/@taiko-labs/taiko-security-incident-a-postmortem-and-next-steps",
-          "publishedAt": "2026-07-23"
-        }
-      ],
-      "finding": "Forged Taiko finality proofs caused an unauthorized Ethereum ERC20Vault payout of 156832.011092154729015188 crvUSD on June 21, 2026, compromising collateral for the exact Taiko representation 0xc8f4518ed4bab9a972808a493107926ce8237068 and bridge-meta:crvusd-curve:7ce5ebdc7ae091ec3913. Ethereum block 25368853 transaction 0x4986e4a4c8c541bc623bff9a6f1caa1795d92d0fcff8efef4d79d7ac4834ee61 transferred the entire pre-block crvUSD balance from ERC20Vault 0x996282ca11e5deb6b5d122cc3b9a1fcaad4415ab to the attacker. ExposureShare is that vault balance divided by StablecoinLens.circulating_supply() at pre-theft block 25368852, hash 0x49c657870ac828efb8ee830d1839b29f448226a8166c8166083d8bcc2a4002a9: 156832011092154729015188 / 62490208544458581632110058 = 0.0025097053561691475. Retained pinned research journals under agents/curation-campaign/research/I28CrvUSD-taiko-incident-*.json; inflated token totalSupply is not the denominator. This is deployment-specific bridge supply-integrity history, not a failure of Curve native issuance or every crvUSD bridge.",
-      "remediation": {
-        "state": "verified",
-        "lastVerifiedAt": "2026-07-23",
-        "summary": "Taiko Labs documents invalidating fraudulent checkpoints and closing the attack path through Proposal 34 on June 29; Bridge and ERC20Vault were recollateralized 1:1 in kind on June 30, and unpaused on July 2 through Proposal 35. All users were made whole. No claim is made that the subsequently scheduled August Unzen upgrade was actually executed.",
-        "sources": [
-          {
-            "label": "Taiko Labs incident postmortem and verified recovery",
-            "url": "https://paragraph.com/@taiko-labs/taiko-security-incident-a-postmortem-and-next-steps",
-            "publishedAt": "2026-07-23"
-          }
-        ]
-      }
-    },
-    {
-      "incidentId": "i05daib-dai-makerdao-7785df7044fd62e94dc6-20261011",
-      "assetId": "dai-makerdao",
-      "occurredAt": "2022-06-23",
-      "resolvedAt": null,
-      "status": "mitigated",
-      "scope": {
-        "kind": "control",
-        "controlKey": "bridge-meta:dai-makerdao:7785df7044fd62e94dc6"
-      },
-      "reviewedAt": "2026-10-11",
-      "reviewer": "Sol curation campaign 2026-10-11 (I05DAIb)",
-      "primarySources": [
-        {
-          "label": "Harmony official exact 1DAI impacted-assets table; reimbursement proposal withdrawn",
-          "url": "https://talk.harmony.one/t/reimbursement-proposal-horizon-incident/20665",
-          "publishedAt": "2022-07-27"
-        },
-        {
-          "label": "Harmony official Horizon key-compromise and containment report",
-          "url": "https://talk.harmony.one/t/summary-of-the-horizon-bridge-incident/20990",
-          "publishedAt": "2022-08-03"
-        }
-      ],
-      "finding": "The Horizon validator-key compromise drained backing of exact Harmony 1DAI 0xef977d2f931c1978db5f6747666fa1eacb0d0339. Harmony's official incident-time table lists 6,070,000 affected 1DAI. Exact-control scope preserves the documented supply-integrity failure without an unestablished whole-DAI exposure share. Mitigated denotes the primary-reported containment of the attack by halting the legacy bridge, not restored backing, repayment, present-day bridge operability or financial resolution. The withdrawn reimbursement proposal and Recovery One formation proposal do not establish completed restitution. No sibling deployment or root-claim incident is asserted.",
-      "remediation": {
-        "state": "in-progress",
-        "lastVerifiedAt": "2022-08-10",
-        "summary": "Historical containment is established by the August 3 primary postmortem: Horizon halted and cloud access isolated, security operations and forensic recovery initiated. The August 10 Harmony-supported Recovery One proposal describes an effort to address unbacked assets; it is not completed repayment. This retained evidence date is not refreshed to the October review date, and current restitution remains unverified.",
-        "sources": [
-          {
-            "label": "Harmony-supported Recovery One formation proposal, not completed restitution",
-            "url": "https://talk.harmony.one/t/recovery-one-community-governance-for-depegged-tokens/21104",
-            "publishedAt": "2022-08-10"
-          },
-          {
-            "label": "Harmony official Horizon key-compromise and containment report",
-            "url": "https://talk.harmony.one/t/summary-of-the-horizon-bridge-incident/20990",
-            "publishedAt": "2022-08-03"
-          }
-        ]
-      },
-      "domain": "control",
-      "kind": "supply-integrity-failure",
-      "posture": {
-        "component": "mint",
-        "controlKinds": [
-          "bridge"
-        ],
-        "incidentState": "resolved"
-      }
-    },
-    {
-      "incidentId": "i05daib-dai-makerdao-12975af529371706f658-20261011",
-      "assetId": "dai-makerdao",
-      "occurredAt": "2026-06-21",
-      "resolvedAt": "2026-07-02",
-      "status": "resolved",
-      "scope": {
-        "kind": "control",
-        "controlKey": "bridge-meta:dai-makerdao:12975af529371706f658"
-      },
-      "reviewedAt": "2026-10-11",
-      "reviewer": "Sol curation campaign 2026-10-11 (I05DAIb)",
-      "primarySources": [
-        {
-          "label": "Taiko Labs exploit, recollateralization and reopening postmortem",
-          "url": "https://paragraph.com/@taiko-labs/taiko-security-incident-a-postmortem-and-next-steps",
-          "publishedAt": "2026-07-23"
-        },
-        {
-          "label": "Exact Taiko DAI creation receipt joining compromised L1 ERC20Vault to L2 controller",
-          "url": "https://taikoscan.io/tx/0x3df3afa7f2f29f3434bbabea17d6a8b80a497de02124e103417e65187d281c74",
-          "publishedAt": "2024-06-27"
-        }
-      ],
-      "finding": "The exact Taiko DAI creation transaction at block 104400 (2024-06-27T01:51:47Z) names L1 ERC20Vault 0x996282ca11e5deb6b5d122cc3b9a1fcaad4415ab as the sender to L2 ERC20Vault 0x1670000000000000000000000000000000000002, binding this DAI control to the vault and message-validation path compromised by forged proofs on June 21, 2026. The primary postmortem confirms accepted fraudulent withdrawals, emergency pause June 22, restored state and rejected debug-mode proofs June 29, 1:1 recollateralization June 30, and reopening July 2. This is exact-control failure history, not an assertion that DAI was stolen: DAI is absent from the loss table. Historical whole-DAI exposure share is unknown and omitted. No sibling control or root-claim propagation is authored.",
-      "remediation": {
-        "state": "verified",
-        "lastVerifiedAt": "2026-07-23",
-        "summary": "Taiko Labs' July 23 postmortem confirms the June 29 executed SGX debug-mode fix and invalidation of fraudulent checkpoints/retriable claims, June 30 in-kind 1:1 recapitalization from operating cash, and July 2 executed unpause of the Bridge and ERC20Vault under conservative quotas. It states every L2 balance was fully backed when operations resumed. The planned August Unzen activation is not claimed as exercised.",
-        "sources": [
-          {
-            "label": "Taiko Labs exploit, recollateralization and reopening postmortem",
-            "url": "https://paragraph.com/@taiko-labs/taiko-security-incident-a-postmortem-and-next-steps",
-            "publishedAt": "2026-07-23"
-          }
-        ]
-      },
-      "domain": "control",
-      "kind": "mint-control-failure",
-      "posture": {
-        "component": "mint",
-        "controlKinds": [
-          "bridge"
-        ],
-        "incidentState": "resolved"
-      }
-    },
-    {
       "incidentId": "i14fraxb-frax-frax-0b25230af4d5892116f3-20261011",
       "assetId": "frax-frax",
       "domain": "control",
@@ -653,144 +624,486 @@
       }
     },
     {
-      "incidentId": "i00usdcb-usdc-circle-158829a4407bd5254a9b-20261011",
-      "assetId": "usdc-circle",
-      "domain": "control",
-      "kind": "supply-integrity-failure",
-      "occurredAt": "2026-06-21",
-      "resolvedAt": "2026-07-02",
-      "status": "resolved",
+      "incidentId": "nusd-neutrl-2026-09-discounted-holder-exit",
+      "assetId": "nusd-neutrl",
+      "occurredAt": "2026-09-17",
+      "status": "active",
       "scope": {
-        "kind": "control",
-        "controlKey": "bridge-meta:usdc-circle:158829a4407bd5254a9b"
+        "kind": "holder-exit"
       },
-      "reviewedAt": "2026-10-11",
-      "reviewer": "Sol curation campaign 2026-10-11 (I00USDCb)",
+      "reviewedAt": "2026-10-02",
+      "reviewer": "Sol final D/F review 2026-10-02 (DfReview03)",
       "primarySources": [
         {
-          "label": "Taiko Labs July23 postmortem: USDC vault theft, recollateralization and July2 reopening",
-          "url": "https://paragraph.com/@taiko-labs/taiko-security-incident-a-postmortem-and-next-steps",
-          "publishedAt": "2026-07-23"
+          "label": "Neutrl September 17 separate fixed-rate USDC redemption program announcement",
+          "url": "https://x.com/Neutrl/status/2100614848241414280",
+          "publishedAt": "2026-09-17"
         }
       ],
-      "finding": "incident / resolved supply-integrity-failure: June21\u201322 forged-state payouts released 675,761 USDC from canonical ERC20Vault; primary confirms June30 recollateralization and July2 reopening. Exact-control scope, share unknown. Exact packet deployment taiko:0x07d83526730c7438048d55a4fc0b850e2aab6f0b and control bridge-meta:usdc-circle:158829a4407bd5254a9b are joined through the existing reviewed USDC risk-review route, not a chain-name-only match. Reviewed at 2026-10-11T05:30:46Z. No historical exposureShare is established or authored. This does not fan the event to sibling USDC controls or the root claim. Primary Taiko address directory binds this USDC token and L2 ERC20Vault 0x1670000000000000000000000000000000000002 to canonical L1 ERC20Vault 0x996282ca11e5deb6b5d122cc3b9a1fcaad4415ab; the postmortem names that L1 vault and exact USDC payouts. The July23 scheduled Unzen upgrade is not assumed executed.",
+      "finding": "The separate September 17 recovery program redeems NUSD for fixed-rate USDC, not restored par redemption. Fresh exact NusdRedemption 0xb3f07d3392102fc23264a78e2a1a8b6421123828 state at Ethereum block26104271 has redemptionRate510000000000000000 and quoteRedeem(1e18)=510000 USDC base units, a49% discount to the1USD target. This is program payout, not a complete valuation of remaining illiquid reserves.",
       "remediation": {
-        "state": "verified",
-        "lastVerifiedAt": "2026-07-23",
-        "summary": "Primary July23 postmortem confirms attack path closed, invalid checkpoints removed June29, bridge/vault recollateralized 1:1 June30 and unpaused July2 with normal operations under conservative quotas. This is sourced historical resolution, not a new current contract audit.",
+        "state": "in-progress",
+        "lastVerifiedAt": "2026-10-02",
+        "summary": "A separate fixed-rate program is available subject to acknowledgement and terms; no dated primary evidence of restored ordinary par redemption was found.",
         "sources": [
           {
-            "label": "Taiko Labs July23 postmortem: USDC vault theft, recollateralization and July2 reopening",
-            "url": "https://paragraph.com/@taiko-labs/taiko-security-incident-a-postmortem-and-next-steps",
-            "publishedAt": "2026-07-23"
+            "label": "Neutrl September 17 separate fixed-rate USDC redemption program announcement",
+            "url": "https://x.com/Neutrl/status/2100614848241414280",
+            "publishedAt": "2026-09-17"
           }
         ]
+      },
+      "domain": "peg",
+      "kind": "holder-exit-impairment",
+      "posture": {
+        "treatment": "peg-multiplier-only"
+      }
+    },
+    {
+      "incidentId": "parallel-2026-failed-exploit-attempt",
+      "assetId": "usdp-parallel",
+      "domain": "control",
+      "kind": "mint-control-failure",
+      "occurredAt": "2026-05-11",
+      "status": "mitigated",
+      "scope": {
+        "kind": "root-claim"
       },
       "posture": {
         "component": "mint",
         "controlKinds": [
-          "bridge"
+          "mint",
+          "upgrade"
         ],
         "incidentState": "resolved"
+      },
+      "reviewedAt": "2026-08-24",
+      "reviewer": "Safety Score V9 C-grade remediation review",
+      "primarySources": [
+        {
+          "label": "Parallel governance PIP-69",
+          "url": "https://gov.parallel.best/t/pip-69-usdp-parallelizer-bridging-modules-parameters-updates/541",
+          "publishedAt": "2026-05-11"
+        },
+        {
+          "label": "Parallel governance PGP-43",
+          "url": "https://gov.parallel.best/t/pgp-43-l-additional-parallel-v3-2-security-audit/542",
+          "publishedAt": "2026-07-02"
+        }
+      ],
+      "finding": "A failed exploit attempt exposed a critical Parallelizer bug. Governance tightened mint, burn, and bridge limits; the July follow-up reported fix audits 95% complete.",
+      "remediation": {
+        "state": "in-progress",
+        "lastVerifiedAt": "2026-07-02",
+        "summary": "The exploit attempt failed, limits were tightened, affected collateral was being phased out, and audits of the deployed fix were reported 95% complete.",
+        "sources": [
+          {
+            "label": "Parallel governance PIP-69",
+            "url": "https://gov.parallel.best/t/pip-69-usdp-parallelizer-bridging-modules-parameters-updates/541",
+            "publishedAt": "2026-05-11"
+          },
+          {
+            "label": "Parallel governance PGP-43",
+            "url": "https://gov.parallel.best/t/pgp-43-l-additional-parallel-v3-2-security-audit/542",
+            "publishedAt": "2026-07-02"
+          }
+        ]
       }
     },
     {
-      "incidentId": "i00usdcb-usdc-circle-52b72ec3cb21ad6fcb03-20261011",
-      "assetId": "usdc-circle",
-      "domain": "control",
-      "kind": "supply-integrity-failure",
-      "occurredAt": "2023-07-06",
-      "resolvedAt": null,
-      "status": "active",
+      "incidentId": "sdola-2026-llamalend-donation-oracle",
+      "assetId": "sdola-inverse-finance",
+      "domain": "wrapper-local",
+      "kind": "share-accounting-integration-failure",
+      "occurredAt": "2026-03-02",
+      "resolvedAt": "2026-03-13",
+      "status": "resolved",
       "scope": {
-        "kind": "control",
-        "controlKey": "bridge-meta:usdc-circle:52b72ec3cb21ad6fcb03"
+        "kind": "integration-only",
+        "integrationKey": "llamalend-sdola-long2"
       },
-      "reviewedAt": "2026-10-11",
-      "reviewer": "Sol curation campaign 2026-10-11 (I00USDCb)",
+      "posture": {
+        "shareAccountingNavOracle": "high",
+        "measuredUnwind": "high"
+      },
+      "reviewedAt": "2026-08-24",
+      "reviewer": "Safety Score V9 C-grade remediation review",
       "primarySources": [
         {
-          "label": "US Bankruptcy Court September30 decision: Multichain USDC theft, Moonriver/Fantom Multi-USDC and continuing recovery litigation",
-          "url": "https://www.nysb.uscourts.gov/sites/default/files/opinions/331862_47_opinion.pdf",
-          "publishedAt": "2026-09-30"
-        },
-        {
-          "label": "Fantom Foundation judgment announcement and recovery process",
-          "url": "https://blog.fantom.foundation/fantom-foundation-awarded-default-judgement-against-multichain/",
-          "publishedAt": "2024-03-04"
-        },
-        {
-          "label": "Fantom Foundation replacement bridges: old Multichain assets remain depegged",
-          "url": "https://blog.fantom.foundation/layerzero-and-axelar-introduce-usdc-usdt-weth-and-wbtc-to-fantom/",
-          "publishedAt": "2023-07-25"
+          "label": "LlamaRisk LlamaLend sDOLA-long2 postmortem",
+          "url": "https://www.llamarisk.com/research/llamalend-sdola-long2-post-mortem",
+          "publishedAt": "2026-03-13"
         }
       ],
-      "finding": "incident / active supply-integrity-failure: legacy Multichain USDC backing theft and unresolved recovery. Exact control bound by existing reviewed route/controller; September30 court opinion confirms continuing blocked assets and litigation, not completed restitution. Share unknown. Exact packet deployment fantom:0x04068da6c83afcfa0e13ba15a6696662335d5b75 and control bridge-meta:usdc-circle:52b72ec3cb21ad6fcb03 are joined through the existing reviewed USDC risk-review route, not a chain-name-only match. Reviewed at 2026-10-11T05:30:46Z. No historical exposureShare is established or authored. This does not fan the event to sibling USDC controls or the root claim. Reviewed destination controller/MPC identity is 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe; the court identifies Multi-USDC on Fantom and Moonriver, and confirms USDC reserve theft while expressly leaving the specific compromise mechanism unproven. Active denotes unresolved reserve/redemption recovery, not evidence that the original exploit is still running.",
+      "finding": "A donation-sensitive ERC-4626 share price combined with LlamaLend's unsmoothed convertToAssets oracle and LLAMMA state to liquidate external borrowers; the event did not impair the sDOLA root claim or its holders.",
       "remediation": {
-        "state": "in-progress",
-        "lastVerifiedAt": "2026-09-30",
-        "summary": "September30 2026 primary court decision confirms recognized Singapore liquidation, recovery litigation and continuing blacklisting of suspected hacker addresses. It does not establish holder distributions, reserve restoration or resumed legacy bridge redemption; July2023 service cessation is not treated as financial resolution.",
+        "state": "verified",
+        "lastVerifiedAt": "2026-03-13",
+        "summary": "The integration was unwound with 10.6 million sDOLA shares redeemed successfully; sDOLA holders gained 13.79%, while measured loss remained with external leveraged borrowers.",
         "sources": [
           {
-            "label": "US Bankruptcy Court September30 decision: Multichain USDC theft, Moonriver/Fantom Multi-USDC and continuing recovery litigation",
-            "url": "https://www.nysb.uscourts.gov/sites/default/files/opinions/331862_47_opinion.pdf",
-            "publishedAt": "2026-09-30"
+            "label": "LlamaRisk LlamaLend sDOLA-long2 postmortem",
+            "url": "https://www.llamarisk.com/research/llamalend-sdola-long2-post-mortem",
+            "publishedAt": "2026-03-13"
           }
         ]
+      }
+    },
+    {
+      "incidentId": "usd3-2026-batch-auction-vulnerability-disclosure",
+      "assetId": "usd3-reserve-protocol",
+      "domain": "security-history",
+      "kind": "disclosed-remediated-vulnerability",
+      "dateBasis": "public-disclosure",
+      "resolutionDateBasis": "primary-confirmation",
+      "occurredAt": "2026-02-26",
+      "resolvedAt": "2026-03-04",
+      "status": "resolved",
+      "realization": "no-reported-exploit",
+      "scope": {
+        "kind": "integration-only",
+        "integrationKey": "reserve-usd3:easyauction-batch-auctions"
+      },
+      "posture": {
+        "treatment": "informational-only"
+      },
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Safety Score V9 owner ruling D27",
+      "primarySources": [
+        {
+          "label": "Reserve disclosure and USD3 batch-auction disabling confirmation",
+          "url": "https://forum.reserve.org/t/ip-deprecating-batch-auctions-in-yield-dtfs/1458",
+          "publishedAt": "2026-02-26"
+        }
+      ],
+      "finding": "Reserve disclosed a third-party EasyAuction batch-auction vulnerability used by yield DTFs and explicitly stated that it was never exploited, the risk was mitigated, and funds were safe. The March 4 follow-up names USD3 among the integrations disabled through governance. This record is limited to that historical integration and asserts no theft, outage, canonical mint failure, or continuity to the current deployment.",
+      "remediation": {
+        "state": "verified",
+        "lastVerifiedAt": "2026-03-04",
+        "summary": "The issuer's March 4 follow-up explicitly names USD3 among passed proposals disabling the potential exploit vector. This verifies the reported integration removal, not an independently pinned remediation transaction or exact execution date.",
+        "sources": [
+          {
+            "label": "Reserve March 4 confirmation naming USD3",
+            "url": "https://forum.reserve.org/t/ip-deprecating-batch-auctions-in-yield-dtfs/1458/3",
+            "publishedAt": "2026-03-04"
+          }
+        ]
+      }
+    },
+    {
+      "incidentId": "usde-2025-10-10-binance-local-holder-exit-dislocation",
+      "assetId": "usde-ethena",
+      "domain": "peg",
+      "kind": "holder-exit-impairment",
+      "occurredAt": "2025-10-10",
+      "resolvedAt": "2025-10-11",
+      "status": "resolved",
+      "scope": {
+        "kind": "holder-exit"
+      },
+      "posture": {
+        "treatment": "peg-multiplier-only"
+      },
+      "reviewedAt": "2026-10-21",
+      "reviewer": "R2 incident evidence research; severity rank 2 of broader sweep; draft for owner integration",
+      "primarySources": [
+        {
+          "label": "CoinDesk October 11 report: USDe briefly traded at USD 0.65 on Binance and quickly regained parity",
+          "url": "https://www.coindesk.com/markets/2025/10/11/ethena-s-usde-briefly-loses-peg-during-usd19b-crypto-liquidation-cascade",
+          "publishedAt": "2025-10-11"
+        },
+        {
+          "label": "CoinDesk correction: Binance-local dislocation, not a global USDe depeg",
+          "url": "https://www.coindesk.com/markets/2025/10/13/no-ethena-s-usde-didn-t-de-peg",
+          "publishedAt": "2025-10-13"
+        },
+        {
+          "label": "Ethena founder primary explanation of venue-local orderbook, oracle and deposit/withdrawal issues",
+          "url": "https://x.com/gdog97_/status/1977302805368222104",
+          "publishedAt": "2025-10-12"
+        }
+      ],
+      "finding": "During the October 10, 2025 market sell-off, USDe briefly traded as low as USD 0.65 on Binance, a roughly 35% venue-local discount, with collateral liquidations amplified by that venue's own orderbook-based pricing and deposit/withdrawal problems. CoinDesk's follow-up and Ethena's primary explanation explicitly distinguish this from a global USDe depeg: minting and redemption had no downtime, backing was not impaired, and deep on-chain pools remained near par. The founder reports less than 30 bps deviation in those pools; CoinDesk reports less than 100 bps. The USD 0.65 print must not be substituted for the global aggregated peg or converted into a 35% reserve loss. This row is confined to impaired secondary exit on Binance, not sUSDe share impairment or a protocol exploit.",
+      "remediation": {
+        "state": "verified",
+        "lastVerifiedAt": "2025-10-13",
+        "summary": "CoinDesk's October 11 report documents rapid restoration of parity; October 12 primary statements confirm uninterrupted protocol redemption, and the October 13 correction explains the venue-local scope. resolvedAt uses the first dated recovery report, not an invented minute-level recovery timestamp or a claim that all liquidated accounts were compensated.",
+        "sources": [
+          {
+            "label": "CoinDesk dated October 11 recovery report",
+            "url": "https://www.coindesk.com/markets/2025/10/11/ethena-s-usde-briefly-loses-peg-during-usd19b-crypto-liquidation-cascade",
+            "publishedAt": "2025-10-11"
+          },
+          {
+            "label": "CoinDesk venue-scope correction",
+            "url": "https://www.coindesk.com/markets/2025/10/13/no-ethena-s-usde-didn-t-de-peg",
+            "publishedAt": "2025-10-13"
+          },
+          {
+            "label": "Ethena primary account of uninterrupted mint/redeem",
+            "url": "https://x.com/gdog97_/status/1977302805368222104",
+            "publishedAt": "2025-10-12"
+          }
+        ]
+      }
+    },
+    {
+      "incidentId": "usx-solstice-2025-12-26-secondary-market-liquidity-dislocation",
+      "assetId": "usx-solstice",
+      "domain": "peg",
+      "kind": "holder-exit-impairment",
+      "occurredAt": "2025-12-26",
+      "resolvedAt": "2025-12-26",
+      "status": "resolved",
+      "scope": {
+        "kind": "holder-exit"
+      },
+      "posture": {
+        "treatment": "peg-multiplier-only"
+      },
+      "reviewedAt": "2026-10-21",
+      "reviewer": "R2 incident evidence research; severity rank 1 of broader sweep; draft for owner integration",
+      "primarySources": [
+        {
+          "label": "SolanaFloor: December 26 USX secondary-market discount to USD 0.78, recovery and permissioned redemption limits",
+          "url": "https://solanafloor.com/ko/news/solstice-assures-holders-usx-remains-fully-backed-as-stablecoin-de-pegs-on-secondary",
+          "publishedAt": "2025-12-26"
+        },
+        {
+          "label": "Solstice primary postmortem: Orca/Raydium sell pressure, liquidity injection, intact backing and institutional-only par redemption",
+          "url": "https://x.com/solsticefi/status/2004486619848445978",
+          "publishedAt": "2025-12-26"
+        }
+      ],
+      "finding": "On December 26, 2025, beginning around 01:45 UTC, USX selling on Orca and Raydium exceeded available secondary-market liquidity. SolanaFloor documents a wick to USD 0.78, a roughly 22% discount. The issuer confirms liquidity injection began around 04:30 UTC, primary backing remained above 100% and 1:1 redemption continued for permissioned institutional partners only; retail sellers could realize losses and secondary trades were final. Some lower-quality reports assert USD 0.10, but that figure is not adopted because it conflicts with the independently read SolanaFloor account and no exact-pool executed-trade proof was verified. This is a material secondary holder-exit event, not evidence of an insolvent reserve or failed primary redemptions.",
+      "remediation": {
+        "state": "verified",
+        "lastVerifiedAt": "2025-12-26",
+        "summary": "The issuer's December 26 postmortem says liquidity was injected and pricing stabilized near peg; the same-day SolanaFloor report quotes USD 0.9987. Resolution is dated to that observed recovery, not a guarantee of future liquidity or compensation to sellers.",
+        "sources": [
+          {
+            "label": "SolanaFloor same-day USD 0.9987 recovery observation",
+            "url": "https://solanafloor.com/ko/news/solstice-assures-holders-usx-remains-fully-backed-as-stablecoin-de-pegs-on-secondary",
+            "publishedAt": "2025-12-26"
+          },
+          {
+            "label": "Solstice December 26 liquidity and near-peg recovery confirmation",
+            "url": "https://x.com/solsticefi/status/2004486619848445978",
+            "publishedAt": "2025-12-26"
+          }
+        ]
+      }
+    },
+    {
+      "incidentId": "xaut-2023-transferfrom-vulnerability-disclosure",
+      "assetId": "xaut-tether",
+      "domain": "security-history",
+      "kind": "disclosed-remediated-vulnerability",
+      "dateBasis": "public-disclosure",
+      "resolutionDateBasis": "primary-confirmation",
+      "occurredAt": "2023-05-27",
+      "resolvedAt": "2023-05-27",
+      "status": "resolved",
+      "realization": "no-reported-exploit",
+      "scope": {
+        "kind": "contract-component",
+        "deploymentKey": "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
+        "componentKey": "transferfrom"
+      },
+      "posture": {
+        "treatment": "informational-only"
+      },
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Safety Score V9 owner ruling D27",
+      "primarySources": [
+        {
+          "label": "BlockSec Tether Gold public transfer vulnerability disclosure",
+          "url": "https://blocksec.com/blog/public-transfer-vulnerability-of-the-tether-gold-smart-contract",
+          "publishedAt": "2023-05-27"
+        }
+      ],
+      "finding": "BlockSec disclosed a transferFrom vulnerability in the named Ethereum XAUT contract that allowed anyone to transfer other users' tokens to a predefined trusted recipient, with a potential pool-price manipulation path. It reported discovery on April 5 and demonstrated a fork proof of concept, not a realized exploit or loss. This is historical transfer-component exposure, not evidence of mint compromise, supply inflation, or a current active vulnerability.",
+      "remediation": {
+        "state": "verified",
+        "lastVerifiedAt": "2023-05-27",
+        "summary": "BlockSec states that it found the issue fixed on the disclosure date and illustrates the corrected transferFrom check. The resolution date is this public confirmation, not an inferred upgrade transaction date.",
+        "sources": [
+          {
+            "label": "BlockSec confirmation and illustration of transferFrom fix",
+            "url": "https://blocksec.com/blog/public-transfer-vulnerability-of-the-tether-gold-smart-contract",
+            "publishedAt": "2023-05-27"
+          }
+        ]
+      }
+    },
+    {
+      "incidentId": "yousd-2026-01-12-harvest-swap-reserve-shortfall",
+      "assetId": "yousd-yield-optimizer",
+      "domain": "operational",
+      "kind": "material-operational-outage",
+      "occurredAt": "2026-01-12",
+      "resolvedAt": "2026-01-14",
+      "status": "resolved",
+      "scope": {
+        "kind": "root-claim"
+      },
+      "posture": {
+        "category": "reserve",
+        "blocker": "active-material-incident"
+      },
+      "reviewedAt": "2026-10-21",
+      "reviewer": "R2 incident evidence research; draft for owner integration",
+      "primarySources": [
+        {
+          "label": "Ethereum block 24218806: YO Rewards Harvester executes the lossmaking swap at 2026-01-12 13:02:59 UTC",
+          "url": "https://etherscan.io/tx/0x6aff59e800dc219ff0d1614b3dc512e7a07159197b2a6a26969a9ca25c3e33b4",
+          "publishedAt": "2026-01-12"
+        },
+        {
+          "label": "Ethereum block 24221672: 3,711,640.477024321032215381 stkGHO transferred back to the yoUSD vault at 2026-01-12 22:39:23 UTC",
+          "url": "https://etherscan.io/tx/0x50f62ffaea191b1355d5812be6007f0d673e6a473fefe38bd48b02128d267969",
+          "publishedAt": "2026-01-12"
+        },
+        {
+          "label": "Rekt investigation: swap parameters, reserve loss, temporary Pendle pause and treasury backstop",
+          "url": "https://rekt.news/yo-protocols-slippage-bomb",
+          "publishedAt": "2026-01-14"
+        },
+        {
+          "label": "YO primary incident disclosure: USD 3.7 million shortfall covered, balances unaffected, guardrails standardized",
+          "url": "https://x.com/yield/status/2011492717889798348",
+          "publishedAt": "2026-01-14"
+        }
+      ],
+      "finding": "On January 12, 2026, yoUSD's own automated harvester executed an unfavorable stkGHO-to-USDC swap against assets of the Ethereum yoUSD vault 0x0000000f2eb9f69274678c76222b35eec7588a65. The source transaction sent 3,840,651.397502403762632376 stkGHO from the vault and ultimately returned approximately 112,036 USDC; YO subsequently confirmed a USD 3.7 million reserve shortfall. Independent analysis attributes the execution to an unreasonable starting quote and ineffective slippage guardrails, not a malicious exploit. The Pendle yoUSD market was temporarily paused. A same-day replenishment transferred 3,711,640.477024321032215381 stkGHO back to the vault. YO's January 14 disclosure states that treasury funds fully covered the shortfall, user balances were unaffected and protocol solvency was not impaired. The roughly 97% loss was on the swapped position, not on total vault NAV or the yoUSD market price. This row records the realized reserve-management failure and associated operational interruption, not a mint compromise, share-accounting/oracle exploit, documented whole-token depeg, or currently active loss.",
+      "remediation": {
+        "state": "verified",
+        "lastVerifiedAt": "2026-01-14",
+        "summary": "The January 12 transfer verifies the replenishment amount and destination. On January 14 YO publicly confirmed full operational restoration, treasury coverage and standardized trading guardrails. resolvedAt is that dated primary confirmation, not an asserted exact implementation timestamp; no independent current audit or remaining LP recovery amount is inferred.",
+        "sources": [
+          {
+            "label": "Ethereum block 24221672: yoUSD reserve replenishment",
+            "url": "https://etherscan.io/tx/0x50f62ffaea191b1355d5812be6007f0d673e6a473fefe38bd48b02128d267969",
+            "publishedAt": "2026-01-12"
+          },
+          {
+            "label": "YO primary January 14 restoration and guardrail confirmation",
+            "url": "https://x.com/yield/status/2011492717889798348",
+            "publishedAt": "2026-01-14"
+          }
+        ]
+      }
+    },
+    {
+      "incidentId": "yousd-2026-03-22-resolv-rlp-holder-exit-impairment",
+      "assetId": "yousd-yield-optimizer",
+      "domain": "peg",
+      "kind": "holder-exit-impairment",
+      "occurredAt": "2026-03-22",
+      "status": "mitigated",
+      "scope": {
+        "kind": "holder-exit"
+      },
+      "posture": {
+        "treatment": "peg-multiplier-only"
+      },
+      "reviewedAt": "2026-10-21",
+      "reviewer": "R2 incident evidence research; draft for owner integration",
+      "primarySources": [
+        {
+          "label": "YO official RLP proposal: originally April 13, April 14 update, last edited June 11; impairment and affected-holder snapshot",
+          "url": "https://forum.yo.xyz/t/request-for-feedback-proposed-yousd-rlp-plan/9",
+          "publishedAt": "2026-06-11"
+        },
+        {
+          "label": "YO March 22 initial RLP exposure and precautionary yoUSD pause",
+          "url": "https://x.com/yield/status/2035678211195937065",
+          "publishedAt": "2026-03-22"
+        },
+        {
+          "label": "YO March 22 reopening with a 2.95 percent withdrawal fee",
+          "url": "https://x.com/yield/status/2035843134563967363",
+          "publishedAt": "2026-03-22"
+        },
+        {
+          "label": "YO June 9 RLP recovery: USDC allocation and RESOLV vesting over 24 months",
+          "url": "https://x.com/yield/status/2064344799927234934",
+          "publishedAt": "2026-06-09"
+        },
+        {
+          "label": "YO June 11 announcement that RLP recovery funds were distributed",
+          "url": "https://x.com/yield/status/2064867204055584981",
+          "publishedAt": "2026-06-11"
+        }
+      ],
+      "finding": "On March 22, 2026, the Resolv incident impaired yoUSD through its RLP strategy exposure. YO initially reported 2.75% RLP exposure and paused the vault; the same day it reopened deposits and withdrawals with a 2.95% withdrawal fee aligned with then-current RLP exposure. The fee accrued to remaining holders and was an actual loss for users who exited. YO's April proposal, subsequently revised, states a 1,214,131.87 USDC RLP impairment, models share NAV falling from approximately 1.0722 to 1.0447 (2.56%), proposes removing the withdrawal fee and carving recovery rights out to affected holders, and records a holder snapshot at April 16 15:46 UTC. Those figures describe different dates and mechanics, not interchangeable loss rates. YO explicitly declined treasury coverage for this external strategy loss, unlike the January operational loss. June announcements describe a USDC distribution plus RESOLV tokens vesting over 24 months, not unconditional full cash recovery. This is sourced holder-exit/NAV impairment, not a yoUSD mint exploit or evidence that its USD market price fell below one dollar. The proposal's intended execution deadline and snapshot are not independent on-chain proof of the exact NAV-write-down execution transaction.",
+      "remediation": {
+        "state": "in-progress",
+        "lastVerifiedAt": "2026-06-11",
+        "summary": "YO confirmed initial recovery funds distributed on June 11 after describing the USDC allocation and quarterly distribution of a 24-month-vesting RESOLV allocation. No complete cash make-whole proof, final realized recovery ratio for yoUSD holders, or exact current fee-state pin was verified. status mitigated preserves partial recovery without asserting that the vault is still paused or that its old 2.95% fee remains active today. The forum API dates its first post to April 13 and last revision to June 11; the latter is the source date for the revised page.",
+        "sources": [
+          {
+            "label": "YO June 9 partial recovery and vesting terms",
+            "url": "https://x.com/yield/status/2064344799927234934",
+            "publishedAt": "2026-06-09"
+          },
+          {
+            "label": "YO June 11 initial recovery distribution confirmation",
+            "url": "https://x.com/yield/status/2064867204055584981",
+            "publishedAt": "2026-06-11"
+          }
+        ]
+      }
+    },
+    {
+      "incidentId": "zephyr-2025-supply-integrity-reconciliation",
+      "assetId": "zsd-zephyr-protocol",
+      "domain": "control",
+      "kind": "supply-integrity-failure",
+      "occurredAt": "2025-06-11",
+      "resolvedAt": "2025-08-27",
+      "status": "resolved",
+      "scope": {
+        "kind": "root-claim"
       },
       "posture": {
         "component": "mint",
         "controlKinds": [
-          "bridge"
+          "mint"
         ],
-        "incidentState": "active"
-      }
-    },
-    {
-      "incidentId": "i00usdcb-usdc-circle-f1044b4b908e894508ee-20261011",
-      "assetId": "usdc-circle",
-      "domain": "control",
-      "kind": "supply-integrity-failure",
-      "occurredAt": "2023-07-06",
-      "resolvedAt": null,
-      "status": "active",
-      "scope": {
-        "kind": "control",
-        "controlKey": "bridge-meta:usdc-circle:f1044b4b908e894508ee"
+        "incidentState": "resolved"
       },
-      "reviewedAt": "2026-10-11",
-      "reviewer": "Sol curation campaign 2026-10-11 (I00USDCb)",
+      "reviewedAt": "2026-08-24",
+      "reviewer": "Safety Score V9 C-grade remediation review",
       "primarySources": [
         {
-          "label": "US Bankruptcy Court September30 decision: Multichain USDC theft, Moonriver/Fantom Multi-USDC and continuing recovery litigation",
-          "url": "https://www.nysb.uscourts.gov/sites/default/files/opinions/331862_47_opinion.pdf",
-          "publishedAt": "2026-09-30"
+          "label": "Zephyr audit postmortem",
+          "url": "https://zephyrprotocol.com/blog/2025-08-27-Zephyr-Audit-Postmortem",
+          "publishedAt": "2025-08-27"
         },
         {
-          "label": "Moonwell/Gauntlet July6\u20137 Moonriver USDC.multi incident and market freeze",
-          "url": "https://forum.moonwell.fi/t/gauntlet-multichain-risk-community-update/528",
-          "publishedAt": "2023-07-06"
+          "label": "Zephyr v2.3.0 release",
+          "url": "https://github.com/ZephyrProtocol/zephyr/releases/tag/v2.3.0",
+          "publishedAt": "2025-06-11"
         }
       ],
-      "finding": "incident / active supply-integrity-failure: legacy Multichain USDC.multi affected by July2023 custody loss; exact route joined to existing reviewed token/controller, primary Moonwell notice and September30 court opinion name Moonriver Multi-USDC. Recovery remains in progress; no numeric loss/share inferred. Exact packet deployment moonriver:0xe3f5a90f9cb311505cd691a46596599aa1a0ad7d and control bridge-meta:usdc-circle:f1044b4b908e894508ee are joined through the existing reviewed USDC risk-review route, not a chain-name-only match. Reviewed at 2026-10-11T05:30:46Z. No historical exposureShare is established or authored. This does not fan the event to sibling USDC controls or the root claim. Reviewed destination controller/MPC identity is 0x10c6b61dbf44a083aec3780acf769c77be747e23; the court identifies Multi-USDC on Fantom and Moonriver, and confirms USDC reserve theft while expressly leaving the specific compromise mechanism unproven. Active denotes unresolved reserve/redemption recovery, not evidence that the original exploit is still running.",
+      "finding": "Zephyr disclosed cross-asset morphing, range-proof anomalies, invalidated balances, and a 1,921,650 ZEPH reconciliation mint, establishing a resolved supply-integrity failure.",
       "remediation": {
-        "state": "in-progress",
-        "lastVerifiedAt": "2026-09-30",
-        "summary": "September30 2026 primary court decision confirms recognized Singapore liquidation, recovery litigation and continuing blacklisting of suspected hacker addresses. It does not establish holder distributions, reserve restoration or resumed legacy bridge redemption; July2023 service cessation is not treated as financial resolution.",
+        "state": "verified",
+        "lastVerifiedAt": "2025-08-27",
+        "summary": "Zephyr completed the audit response, invalidated unaudited asset types and balances, and disclosed the reconciliation mint in its postmortem.",
         "sources": [
           {
-            "label": "US Bankruptcy Court September30 decision: Multichain USDC theft, Moonriver/Fantom Multi-USDC and continuing recovery litigation",
-            "url": "https://www.nysb.uscourts.gov/sites/default/files/opinions/331862_47_opinion.pdf",
-            "publishedAt": "2026-09-30"
+            "label": "Zephyr audit postmortem",
+            "url": "https://zephyrprotocol.com/blog/2025-08-27-Zephyr-Audit-Postmortem",
+            "publishedAt": "2025-08-27"
+          },
+          {
+            "label": "Zephyr v2.3.0 release",
+            "url": "https://github.com/ZephyrProtocol/zephyr/releases/tag/v2.3.0",
+            "publishedAt": "2025-06-11"
           }
         ]
-      },
-      "posture": {
-        "component": "mint",
-        "controlKinds": [
-          "bridge"
-        ],
-        "incidentState": "active"
       }
     }
   ],
