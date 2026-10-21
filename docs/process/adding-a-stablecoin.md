@@ -116,7 +116,7 @@ Record one accepted path in the research packet, proving **both** current price 
 
 Do not treat a filled JSON profile, static route or canonical-order inclusion as sufficient. If either requirement fails, do not add the asset as active; retain pre-launch/watchlist material or document the missing upstream path before continuing.
 
-Runtime price-coverage monitoring is separate from this pre-edit gate. Missing price neither suppresses an otherwise admitted market cap nor makes the served surface stale. [Active-price gap duration bands](../status-dashboard.md#active-price-gap-duration-bands) owns continuity, materiality, alert thresholds and acknowledgement; `STATUS_MISSING_PRICE_THRESHOLDS` owns their values. Persistent unpriceability needs reviewed re-sourcing or a catalog decision, not indefinite waiting.
+Runtime price-coverage monitoring is separate from this pre-edit gate. Missing price neither suppresses an otherwise admitted market cap nor makes the served surface stale. [Active-price gap duration bands](../status-dashboard.md#active-price-gap-duration-bands) owns continuity, alert thresholds and acknowledgement; `STATUS_MISSING_PRICE_THRESHOLDS` owns their values. Persistent unpriceability needs reviewed re-sourcing or a catalog decision, not indefinite waiting.
 
 Exclusions:
 

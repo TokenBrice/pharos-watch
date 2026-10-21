@@ -10,10 +10,11 @@ import type { StatusCause } from "../types/status";
  * listing omissions and fresh, healthy mint/burn execution notices retain their
  * cause codes at info severity, so admin triage watches them without opening
  * public uptime incidents. Unknown coverage remains public-impacting. Ordinary
- * incomplete price coverage is a Watch; a persistent material gap escalates
- * through `active_price_coverage_duration_degraded`, and unavailable prices at
- * the shared active-asset breadth threshold through
- * `active_price_coverage_breadth_degraded`.
+ * incomplete price coverage is a Watch; unavailable prices at the shared
+ * active-asset breadth threshold escalate through
+ * `active_price_coverage_breadth_degraded`. `active_price_coverage_duration_degraded`
+ * is no longer emitted (the $1B single-asset rule was retired 2026-10-21) but
+ * stays listed so legacy history rows keep their public classification.
  *
  * The 2026-04-13 status-stability hardening defined the included/excluded
  * code list.

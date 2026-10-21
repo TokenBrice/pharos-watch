@@ -96,9 +96,7 @@ export function getPublicHealthWarningPresentation(
   if (warning.startsWith("stablecoin-publication-incomplete:")) {
     const ids = healthData.stablecoinPublication?.missingActiveIds ?? [];
     const publication = healthData.stablecoinPublication;
-    const impact = publication && getStablecoinPublicationImpactStatus(
-      publication, healthData.activePriceCoverage ?? { missingActiveAssets: [] }, healthData.timestamp,
-    );
+    const impact = publication && getStablecoinPublicationImpactStatus(publication);
     return {
       title: "Stablecoin publication coverage",
       detail: ids.length === 0
@@ -106,7 +104,7 @@ export function getPublicHealthWarningPresentation(
         : `Published listings are missing ${formatAffectedAssets(ids.length, ids)}. ${
           impact === "healthy"
             ? "These bounded asset omissions remain visible component notices; the publication service remains operational."
-            : "Unverified or widespread omissions degrade public health until coverage recovers."
+            : "Widespread omissions degrade public health until coverage recovers."
         }`,
     };
   }

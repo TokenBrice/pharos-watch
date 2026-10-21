@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   FRESHNESS_RATIOS,
   getBlacklistGapStatus,
-  getStablecoinPublicationComponentStatus,
   getStablecoinPublicationImpactStatus,
   getActivePriceCoverageBreadthStatus,
   getActiveAssetServiceBreadthThreshold,
-  getActivePriceGapMaterialityMarketCapUsd,
+  getCriticalDurationActivePriceGapIds,
+  hasActivePriceGapMarketCapEvidence,
   STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC,
   getCacheHealthyMaxRatio,
   getCacheRatioThresholds,
@@ -67,71 +67,61 @@ describe("missing-price duration bands", () => {
   });
 });
 
-describe("publication materiality evidence", () => {
+describe("publication breadth and market-cap evidence", () => {
   const now = 1_790_000_000;
-  it("retains billion-dollar component and price-duration materiality", () => {
-    expect(STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd).toBe(1_000_000_000);
+  it("no longer carries a single-asset market-cap materiality threshold", () => {
+    expect(Object.keys(STATUS_MISSING_PRICE_THRESHOLDS)).not.toContain("durationMaterialMarketCapUsd");
   });
   it.each([
-    [now, 60_000_000, 120_000_000],
-    [now - STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC, 30_000_000, 60_000_000],
-    [now - STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC - 1, 30_000_000, null],
-    [now + 1, 30_000_000, null],
-    [null, 30_000_000, null],
-  ])("admits dated evidence without renewing its clock (%s)", (observedAt, cap, expected) => {
-    expect(getActivePriceGapMaterialityMarketCapUsd({
+    [now, 60_000_000, true],
+    [now - STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC, 30_000_000, true],
+    [now - STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC - 1, 30_000_000, false],
+    [now + 1, 30_000_000, false],
+    [null, 30_000_000, false],
+  ])("admits dated producer evidence without renewing its clock (%s)", (observedAt, cap, expected) => {
+    expect(hasActivePriceGapMarketCapEvidence({
       marketCapUsd: null, lastKnownMarketCapUsd: cap, lastKnownMarketCapObservedAt: observedAt,
     }, now)).toBe(expected);
   });
-  it("keeps current-generation caps unscaled", () => {
-    expect(getActivePriceGapMaterialityMarketCapUsd({
-      marketCapUsd: 60_000_000, lastKnownMarketCapUsd: 60_000_000, lastKnownMarketCapObservedAt: now,
-    }, now)).toBe(60_000_000);
+  it("treats a current-generation cap as evidence", () => {
+    expect(hasActivePriceGapMarketCapEvidence({
+      marketCapUsd: 60_000_000, lastKnownMarketCapUsd: null, lastKnownMarketCapObservedAt: null,
+    }, now)).toBe(true);
   });
   it.each(["unknown", "incomplete"] as const)("fails closed for %s publication without ids", (status) => {
-    expect(getStablecoinPublicationImpactStatus({ status, missingActiveIds: [], expectedActiveCount: 396 }, { missingActiveAssets: [] }, now))
-      .toBe("degraded");
-  });
-  it("fails closed when a missing publication id has no coverage entry", () => {
-    expect(getStablecoinPublicationImpactStatus(
-      { status: "incomplete", missingActiveIds: ["x"], expectedActiveCount: 396 }, { missingActiveAssets: [] }, now,
-    )).toBe("degraded");
+    expect(getStablecoinPublicationImpactStatus({ status, missingActiveIds: [], expectedActiveCount: 396 })).toBe("degraded");
   });
   it.each([
     [1, 396, "healthy"], [4, 396, "healthy"], [19, 396, "healthy"], [20, 396, "degraded"],
     [20, 401, "healthy"], [21, 401, "degraded"], [4, 100, "healthy"], [5, 100, "degraded"], [1, 10, "degraded"],
     [1, 0, "degraded"],
-  ] as const)("bounds service-wide listing impact (%s missing of %s)", (count, expectedActiveCount, expected) => {
+  ] as const)("bounds listing impact by breadth alone (%s missing of %s)", (count, expectedActiveCount, expected) => {
     const missingActiveIds = Array.from({ length: count }, (_, index) => `missing-${index}`);
-    const publication = { status: "incomplete" as const, missingActiveIds, expectedActiveCount };
-    const coverage = { missingActiveAssets: missingActiveIds.map((stablecoinId): ActivePriceCoverageGap => ({
-      stablecoinId, symbol: "MISSING", marketCapUsd: null,
-      lastKnownMarketCapUsd: 2_344_462_796.3038855, lastKnownMarketCapObservedAt: now - 7 * 86400,
-      currentPrice: null, currentSource: null, currentObservedAt: null, currentConfidence: null,
-      rejectionReason: "missing", lastAcceptedPrice: null, lastAcceptedSource: null, lastAcceptedObservedAt: null,
-      consecutiveMissingGenerations: 10, alertEligible: true,
-    })) };
-    expect(getStablecoinPublicationImpactStatus(publication, coverage, now)).toBe(expected);
-    expect(getStablecoinPublicationComponentStatus(publication, coverage, now)).toBe("degraded");
+    expect(getStablecoinPublicationImpactStatus({ status: "incomplete", missingActiveIds, expectedActiveCount })).toBe(expected);
   });
   it.each([[0, null], [-1, null], [null, null], [10, 1], [100, 5], [396, 20], [400, 20], [401, 21], [800, 40]] as const)(
     "derives the service-wide breadth threshold (%s expected)", (expectedActiveCount, threshold) => {
       expect(getActiveAssetServiceBreadthThreshold(expectedActiveCount)).toBe(threshold);
     });
-  it.each([[19, "healthy"], [20, "degraded"]] as const)(
-    "degrades the listing component for %s immaterial omissions of 396 only at breadth", (count, expected) => {
-      const missingActiveIds = Array.from({ length: count }, (_, index) => `missing-${index}`);
-      const coverage = { missingActiveAssets: missingActiveIds.map((stablecoinId): ActivePriceCoverageGap => ({
-        stablecoinId, symbol: "MISSING", marketCapUsd: 5_000_000,
-        lastKnownMarketCapUsd: 5_000_000, lastKnownMarketCapObservedAt: now,
-        currentPrice: null, currentSource: null, currentObservedAt: null, currentConfidence: null,
-        rejectionReason: "missing", lastAcceptedPrice: null, lastAcceptedSource: null, lastAcceptedObservedAt: null,
-        consecutiveMissingGenerations: 10, alertEligible: true,
-      })) };
-      const publication = { status: "incomplete" as const, missingActiveIds, expectedActiveCount: 396 };
-      expect(getStablecoinPublicationComponentStatus(publication, coverage, now)).toBe(expected);
-      expect(getStablecoinPublicationImpactStatus(publication, coverage, now)).toBe(expected);
-    });
+});
+
+describe("critical-duration gap ids", () => {
+  const gap = (stablecoinId: string, consecutiveMissingGenerations: number | null, extra: Partial<ActivePriceCoverageGap> = {}): ActivePriceCoverageGap => ({
+    stablecoinId, symbol: "GAP", marketCapUsd: 2_400_000_000,
+    currentPrice: null, currentSource: null, currentObservedAt: null, currentConfidence: null,
+    rejectionReason: "missing", lastAcceptedPrice: null, lastAcceptedSource: null, lastAcceptedObservedAt: null,
+    consecutiveMissingGenerations, alertEligible: true, ...extra,
+  });
+  it("names unacknowledged alert-eligible gaps past the critical band only", () => {
+    const critical = STATUS_MISSING_PRICE_THRESHOLDS.generationsCritical;
+    expect(getCriticalDurationActivePriceGapIds({
+      missingActiveAssets: [
+        gap("critical", critical), gap("elevated", critical - 1), gap("unknown", null),
+        gap("not-eligible", critical, { alertEligible: false }), gap("acknowledged", critical),
+      ],
+      acknowledgedGapIds: ["acknowledged"],
+    })).toEqual(["critical"]);
+  });
 });
 
 describe("getBlacklistGapStatus", () => {

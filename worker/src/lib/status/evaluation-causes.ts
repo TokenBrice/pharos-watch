@@ -3,7 +3,6 @@ import type { StatusCause } from "@shared/types/status";
 const OVERALL_CAUSE_PERSISTENCE_LIMIT = 12;
 const DURABLE_ACTIVE_PRICE_CAUSE_CODES = new Set([
   "active_price_coverage_incomplete",
-  "active_price_coverage_duration_degraded",
   "active_price_coverage_breadth_degraded",
   "active_price_coverage_unknown",
 ]);

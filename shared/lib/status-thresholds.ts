@@ -129,7 +129,10 @@ export function hasRepresentativeOnchainRatioSample(trackedCoins: number): boole
 // generations and escalate independently of the ratio. `generationsElevated` is
 // one day at the current cadence, where a gap stops looking like a fetch hiccup;
 // `generationsCritical` is a week, where re-pricing an asset is a catalog
-// decision rather than a fetch gap to wait out.
+// decision rather than a fetch gap to wait out. Since 2026-10-21 duration only
+// names gaps (warnings, Watch); it no longer degrades status for a single
+// asset of any size: the owner retired the $1B materiality rule, so only the
+// shared breadth threshold below degrades listings and prices.
 /** One day of consecutive missing active-price generations at the live `sync-stablecoins` cadence (96 at 15 minutes). */
 const MISSING_PRICE_GENERATIONS_PER_DAY = Math.round((24 * 3600) / CRON_INTERVALS["sync-stablecoins"]);
 
@@ -137,12 +140,6 @@ export const STATUS_MISSING_PRICE_THRESHOLDS = {
   ratioStale: 0.45,
   generationsElevated: MISSING_PRICE_GENERATIONS_PER_DAY,
   generationsCritical: 7 * MISSING_PRICE_GENERATIONS_PER_DAY,
-  /**
-   * A long-running gap degrades the service only for an asset at least this large.
-   * Smaller long-running gaps stay named warnings: one thin asset without a
-   * price is a catalog follow-up, not an app-wide degradation.
-   */
-  durationMaterialMarketCapUsd: 1_000_000_000,
 } as const;
 
 /**
@@ -150,9 +147,9 @@ export const STATUS_MISSING_PRICE_THRESHOLDS = {
  * and unavailable live prices stay asset-scoped notices until a material share
  * of the cohort is affected: 5% of the expected active cohort (the low end of
  * the owner's 5-10% guidance; 20 of 396). A pure share keeps a small cohort
- * from hiding broad loss behind an absolute floor. Below it, listing omissions
- * still need admissible materiality evidence to stay asset-scoped, and a $1B
- * asset still degrades its own component (prices: after a day's gap).
+ * from hiding broad loss behind an absolute floor. Below it, gaps of any
+ * market cap stay named, operational Watch notices; the single-asset $1B
+ * materiality rule was retired the same day, so this is the only count rule.
  */
 export const STATUS_ACTIVE_ASSET_SERVICE_BREADTH_SHARE = 0.05;
 
@@ -186,66 +183,42 @@ export function getActivePriceCoverageBreadthStatus(
   return reachesActiveAssetServiceBreadth(coverage.missingPriceCount, coverage.expectedActiveCount) ? "degraded" : "healthy";
 }
 
-/** A month covers intermittent daily snapshots; doubling retained caps bounds growth risk.
- * Current caps are unscaled; absent or older evidence still fails closed. */
+/** Producer evidence window for an absent row's retained market cap. The cap is
+ * diagnostic payload only; since 2026-10-21 no status verdict reads it. */
 export const STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC = 30 * 24 * 3600;
-export const STATUS_LAST_KNOWN_MARKET_CAP_GROWTH_FACTOR = 2;
 
-/** Materiality-only cap: retained evidence is conservatively scaled, never published as current. */
-export function getActivePriceGapMaterialityMarketCapUsd(
+/** Whether a gap already carries a current cap or dated, in-window retained cap evidence. */
+export function hasActivePriceGapMarketCapEvidence(
   asset: Pick<ActivePriceCoverageGap, "marketCapUsd" | "lastKnownMarketCapUsd" | "lastKnownMarketCapObservedAt">,
   nowSec: number,
-): number | null {
-  if (asset.marketCapUsd != null && Number.isFinite(asset.marketCapUsd) && asset.marketCapUsd >= 0) {
-    return asset.marketCapUsd;
-  }
+): boolean {
+  if (asset.marketCapUsd != null && Number.isFinite(asset.marketCapUsd) && asset.marketCapUsd >= 0) return true;
   const cap = asset.lastKnownMarketCapUsd;
   const observedAt = asset.lastKnownMarketCapObservedAt;
   return cap != null && Number.isFinite(cap) && cap >= 0
     && observedAt != null && Number.isFinite(observedAt) && observedAt > 0
-    && observedAt <= nowSec && nowSec - observedAt <= STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC
-    ? cap * STATUS_LAST_KNOWN_MARKET_CAP_GROWTH_FACTOR : null;
+    && observedAt <= nowSec && nowSec - observedAt <= STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC;
 }
 
-/** Component materiality is separate from the service-wide breadth verdict. */
-export function getStablecoinPublicationComponentStatus(
-  publication: Pick<StablecoinPublicationHealth, "status" | "missingActiveIds" | "expectedActiveCount">,
-  coverage: Pick<ActivePriceCoverageHealth, "missingActiveAssets">,
-  nowSec: number,
-): StatusHealthValue {
-  if (publication.status === "complete") return "healthy";
-  if (publication.status === "unknown" || publication.missingActiveIds.length === 0
-    || exceedsPublicationServiceBreadth(publication)) return "degraded";
-  const gapsById = new Map(coverage.missingActiveAssets.map((asset) => [asset.stablecoinId, asset]));
-  return publication.missingActiveIds.some((id) => {
-    const asset = gapsById.get(id);
-    const cap = asset ? getActivePriceGapMaterialityMarketCapUsd(asset, nowSec) : null;
-    return cap == null || cap >= STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd;
-  }) ? "degraded" : "healthy";
-}
-
-/** A bounded, evidenced asset omission is a notice, not loss of the publication service. */
+/**
+ * Listing omissions degrade the service only when unverifiable (unknown
+ * coverage or an unnamed count mismatch) or at the shared breadth threshold.
+ * Named omissions below it are operational notices of any market cap. The
+ * listings component and service-wide verdict share this one result.
+ */
 export function getStablecoinPublicationImpactStatus(
   publication: Pick<StablecoinPublicationHealth, "status" | "missingActiveIds" | "expectedActiveCount">,
-  coverage: Pick<ActivePriceCoverageHealth, "missingActiveAssets">,
-  nowSec: number,
 ): StatusHealthValue {
   if (publication.status === "complete") return "healthy";
-  const missing = publication.missingActiveIds;
-  if (publication.status === "unknown" || missing.length === 0
-    || exceedsPublicationServiceBreadth(publication)) return "degraded";
-  // Missing materiality evidence is not permission to call an omission bounded.
-  return missing.some((id) => {
-    const asset = coverage.missingActiveAssets.find((gap) => gap.stablecoinId === id);
-    return !asset || getActivePriceGapMaterialityMarketCapUsd(asset, nowSec) == null;
-  }) ? "degraded" : "healthy";
+  return publication.status === "unknown" || publication.missingActiveIds.length === 0
+    || exceedsPublicationServiceBreadth(publication) ? "degraded" : "healthy";
 }
 
 /**
  * Gap *duration* for a single missing active price, in consecutive missing
- * generations. Deliberately independent of `missingPriceRatio`: coverage breadth
- * and gap persistence are different questions, and a small number of permanent
- * gaps never moves the ratio.
+ * generations. Deliberately independent of coverage breadth: gap persistence is
+ * a different question, and a small number of permanent gaps never moves it.
+ * Duration names gaps for catalog follow-up; it never degrades status.
  */
 export function getMissingPriceDurationStatus(consecutiveMissingGenerations: number | null): StatusHealthValue {
   // Unknown continuity cannot establish a critical duration, but must not clear a warning.
@@ -259,52 +232,15 @@ export function getMissingPriceDurationStatus(consecutiveMissingGenerations: num
   return "healthy";
 }
 
-export interface ActivePriceGapDurationVerdict {
-  /** Worst duration band across material unacknowledged alert-eligible gaps. */
-  status: StatusHealthValue;
-  /** Worst consecutive-missing-generation count among those material gaps. */
-  worstGenerations: number | null;
-  /** Material unacknowledged alert-eligible gaps whose own band is past `elevated`. */
-  degradedGapIds: string[];
-  /** Every unacknowledged alert-eligible gap at the `critical` band, material or not. */
-  criticalGapIds: string[];
-}
-
-/**
- * Duration verdict over a coverage payload's unacknowledged alert-eligible
- * gaps. Shared by the public-health assessment (impact status, critical ids)
- * and the data-quality evaluator (dedicated transition cause) so both derive
- * the same degradation from the same evidence. Unknown market cap fails
- * closed as material.
- */
-export function assessActivePriceGapDuration(
+/** Unacknowledged alert-eligible gaps at the `critical` duration band (named in `/api/health` warnings). */
+export function getCriticalDurationActivePriceGapIds(
   coverage: Pick<ActivePriceCoverageHealth, "missingActiveAssets" | "acknowledgedGapIds">,
-  nowSec: number = Math.floor(Date.now() / 1000),
-): ActivePriceGapDurationVerdict {
+): string[] {
   const acknowledgedGapIds = new Set(coverage.acknowledgedGapIds ?? []);
-  const alertGaps = coverage.missingActiveAssets.filter(
-    (asset) => asset.alertEligible && !asset.acknowledgedGap && !acknowledgedGapIds.has(asset.stablecoinId),
-  );
-  const materialGaps = alertGaps.filter(
-    (asset) => {
-      const cap = getActivePriceGapMaterialityMarketCapUsd(asset, nowSec);
-      return cap == null || cap >= STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd;
-    },
-  );
-  const worstGenerations = materialGaps.some((asset) => asset.consecutiveMissingGenerations == null)
-    ? null
-    : materialGaps.reduce((worst, asset) => Math.max(worst, asset.consecutiveMissingGenerations!), 0);
-  return {
-    status: materialGaps.some((asset) => getMissingPriceDurationStatus(asset.consecutiveMissingGenerations) === "stale")
-      ? "stale" : getMissingPriceDurationStatus(worstGenerations),
-    worstGenerations,
-    degradedGapIds: materialGaps
-      .filter((asset) => getMissingPriceDurationStatus(asset.consecutiveMissingGenerations) !== "healthy")
-      .map((asset) => asset.stablecoinId),
-    criticalGapIds: alertGaps
-      .filter((asset) => getMissingPriceDurationStatus(asset.consecutiveMissingGenerations) === "stale")
-      .map((asset) => asset.stablecoinId),
-  };
+  return coverage.missingActiveAssets
+    .filter((asset) => asset.alertEligible && !asset.acknowledgedGap && !acknowledgedGapIds.has(asset.stablecoinId)
+      && getMissingPriceDurationStatus(asset.consecutiveMissingGenerations) === "stale")
+    .map((asset) => asset.stablecoinId);
 }
 
 // --- Cache ratio thresholds (availability status) ---
