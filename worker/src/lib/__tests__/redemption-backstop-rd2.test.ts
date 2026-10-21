@@ -62,7 +62,7 @@ async function resolve(id: string, supply: number | null = supplyUsd, clockSec =
   return { config, capacity, row };
 }
 
-function assertConsumerGaps(row: RedemptionBackstopEntry, clockSec = now) {
+function assertConsumerGaps(row: RedemptionBackstopEntry, clockSec = now, capacityState: "known" | "missing" = "missing") {
   const assetId = row.stablecoinId;
   const draft = makeV9FixedInput({ assetId, clockSec });
   draft.redemptionBackstopMap = { [assetId]: row };
@@ -77,7 +77,7 @@ function assertConsumerGaps(row: RedemptionBackstopEntry, clockSec = now) {
   const redemptionRoutes = asset.exitRoutes.filter((route) => route.lane === "redemption");
   expect(redemptionRoutes).toHaveLength(1);
   for (const factor of ["capacity", "settlement", "cost"] as const) {
-    expect(redemptionRoutes[0]!.factorStatuses[factor]?.observationState).toBe("missing");
+    expect(redemptionRoutes[0]!.factorStatuses[factor]?.observationState).toBe(factor === "capacity" ? capacityState : "missing");
   }
   const evaluated = evaluateV9Exit({
     circulatingUsd: asset.supply.circulatingUsd,
@@ -90,7 +90,6 @@ function assertConsumerGaps(row: RedemptionBackstopEntry, clockSec = now) {
 describe("RD2 legal entitlement remains eventual diagnostic evidence", () => {
   it.each([
     ["fusd-finchain", "usdt-tether"],
-    ["usdn-noble", "usdc-circle"],
     ["gusd-gate", "usdc-circle"],
     ["usdk-kast", "m-m0"],
   ])("preserves %s's reviewed token endpoint through the real producer and Safety review", async (id, outputId) => {
@@ -121,6 +120,22 @@ describe("RD2 legal entitlement remains eventual diagnostic evidence", () => {
       valuation: { referenceAssetKey: outputId },
     });
     expect(priced[0]!.output?.assetKeys).not.toContain("fiat:USD");
+  });
+
+  it("retains Noble's reviewed wM endpoint without fabricating a funded quote or USDC payout", async () => {
+    const id = "usdn-noble";
+    const config = getRedemptionBackstopConfig(id)!;
+    const row = await buildRedemptionBackstopEntry(
+      mockD1Strict([]), id, config, supplyUsd, null, now,
+      { reserveSnapshotMetadata: null, exitExecutionReviews: [] },
+    );
+    expect(config.outputAssets).toEqual(["wm-m0"]);
+    expect(config.capacityModel).toEqual({ kind: "unquantified" });
+    expect(row).toMatchObject({ outputAssetType: "stable-single", resolutionState: "missing-capacity", immediateCapacityUsd: null });
+    expect(row.capacityProfile?.scoringUsd).toBeNull();
+    expect(row.capacityProfile?.eventualUsd).toBeNull();
+    expect(buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput(row), id)).toEqual([]);
+    expect(buildSafetyScoreV9RouteReviews(fixedInput(row), id)).toEqual([]);
   });
 
   it("withdraws only the reviewed ordinary YieldFi yUSD channel even with retained positive telemetry", () => {
@@ -195,7 +210,10 @@ describe("RD2 legal entitlement remains eventual diagnostic evidence", () => {
   );
 
   it.each(eventualClaims)("documents %s without immediate/scoring promotion or broader holder access", async (id, holderAccess) => {
-    const { capacity, row } = await resolve(id);
+    // Current terms must admit at their real review date, never the older fixture clock.
+    const termsDate = getRedemptionBackstopConfig(id)!.v9RouteReviewTerms?.reviewedAt;
+    const clockSec = termsDate ? Math.max(now, Date.parse(termsDate) / 1000 + 86400) : now;
+    const { capacity, row } = await resolve(id, supplyUsd, clockSec);
     expect(capacity).toMatchObject({
       eventualCapacityUsd: supplyUsd,
       eventualCapacityRatio: 1,
@@ -207,15 +225,17 @@ describe("RD2 legal entitlement remains eventual diagnostic evidence", () => {
       capacitySemantics: "eventual-only",
       capacityProfile: { eventualUsd: supplyUsd, immediateUsd: null, scoringUsd: null, scoringHorizon: "eventual" },
     });
-    const retained = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput(row), id);
+    const retained = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput(row, clockSec), id);
     expect(retained).toHaveLength(1);
     expect(retained[0]!.observation).toMatchObject({ routeFamily: "eventual-redemption", scoreEligible: false });
-    expect(buildSafetyScoreV9RouteReviews(fixedInput(row), id)).toMatchObject([
+    expect(buildSafetyScoreV9RouteReviews(fixedInput(row, clockSec), id)).toMatchObject([
       { coverageClass: "diagnostic", capacityScoringHorizon: "eventual", holderAccess, settlementSlaSec: null },
     ]);
-    assertConsumerGaps(row);
+    // USDSM now has a sourced eventual entitlement; that closes its capacity
+    // terms gap, never same-notional execution, completed settlement or all-in cost.
+    assertConsumerGaps(row, clockSec, id === "usdsm-stable-mint" ? "known" : "missing");
     for (const routeStatus of ["suspended", "unknown"] as const) {
-      expect(deriveSupplyModelExitRouteObservation({ ...row, routeStatus }, now)).toBeNull();
+      expect(deriveSupplyModelExitRouteObservation({ ...row, routeStatus }, clockSec)).toBeNull();
     }
   });
 
@@ -306,8 +326,8 @@ describe("RD2 issuer-fee and output boundaries", () => {
   });
 
   it("retains GoldZip physical delivery without inventing USD proceeds or free delivery", async () => {
-    // Admit the October 15 source review only after its reviewed UTC day ends.
-    const { config, observation, reviews } = await captured("xgz-goldzip", Date.UTC(2026, 9, 16, 12) / 1_000);
+    // Admit the current October 20 source review only after its reviewed UTC day ends.
+    const { config, observation, reviews } = await captured("xgz-goldzip", Date.UTC(2026, 9, 21, 12) / 1_000);
     expect(observation).toMatchObject({
       scoreEligible: false, output: { kind: "physical-commodity-delivery", assetKeys: ["commodity:xau"], sameNotionalEligible: false },
     });

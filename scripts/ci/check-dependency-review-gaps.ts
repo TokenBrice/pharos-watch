@@ -3,7 +3,7 @@
 /**
  * Structural gate over the dependency graph.
  *
- * The full dependency-coverage report (`npm run audit:dependency-coverage`)
+ * The full dependency-coverage report (`npm run audit:coverage -- --domain=dependency-coverage`)
  * stays a manual curation tool: most of its counters describe a real backlog
  * that moves slowly and ratcheting it only produced bookkeeping commits.
  *
@@ -32,7 +32,7 @@ const failures = evaluateDependencyCoverageStructure(audit, { requireAdapterMapp
 
 if (failures.length > 0) {
   process.stderr.write(`Dependency review-gap check failed:\n${failures.map((failure) => `- ${failure}`).join("\n")}\n`);
-  process.stderr.write("Run `npm run audit:dependency-coverage` for the full report.\n");
+  process.stderr.write("Run `npm run audit:coverage -- --domain=dependency-coverage` for the full report.\n");
   process.exit(1);
 }
 

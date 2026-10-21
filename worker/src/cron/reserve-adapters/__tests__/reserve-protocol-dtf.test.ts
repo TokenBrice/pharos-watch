@@ -2,7 +2,8 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
 import { encodeAbiParameters } from "viem/utils";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type * as BackstopConfigs from "@shared/lib/redemption-backstop-configs";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeAddress, encodeUint256 } from "../../../lib/evm-selectors";
 import { installAdapterNetwork, runAdapter, type AdapterNetwork } from "./reserve-adapter.test-support";
 import eusd from "@shared/data/stablecoins/coins/eusd-electronic-usd.json";
@@ -12,6 +13,22 @@ const coin = {
   symbol: "USD3",
   contracts: [{ chain: "ethereum", address: "0x0d86883faf4ffd7aeb116390af37746f45b6f378", decimals: 18 }],
 };
+
+// Synthetic tracked-output basket: live USD3 now correctly retains unresolved
+// receipt identities and cannot certify these underlying-output identities.
+vi.mock("@shared/lib/redemption-backstop-configs", async (importOriginal) => {
+  const actual = await importOriginal<typeof BackstopConfigs>();
+  return { ...actual, REDEMPTION_BACKSTOP_CONFIGS: {
+    ...actual.REDEMPTION_BACKSTOP_CONFIGS,
+    "fixture-dtf-basket": {
+      ...actual.REDEMPTION_BACKSTOP_CONFIGS["usd3-reserve-protocol"],
+      outputAssets: ["susds-sky", "usdc-circle", "steakusdc-steakhouse"],
+      unresolvedOutputAssetKeys: undefined, unresolvedOutputDisposition: undefined,
+      capacityModel: { kind: "reserve-sync-metadata" },
+    },
+  } };
+});
+const valuationCoin = { ...coin, id: "fixture-dtf-basket" };
 
 const MAIN_SELECTOR = "0xdffeadd0";
 const ASSET_REGISTRY_SELECTOR = "0x979d7e86";
@@ -330,12 +347,12 @@ describe("reserve-protocol-dtf adapter", () => {
     expect(result.metadata?.redemption?.routeStatusReason).toContain("redemptionAvailable() throttle read");
   });
 
-  it("emits a complete same-run USD3 redemption-basket valuation", async () => {
+  it("emits a complete same-run configured redemption-basket valuation", async () => {
     const observedAt = Date.UTC(2026, 7, 12, 12) / 1_000;
     mockReserveProtocolOnchain();
 
     const result = await fetchReserveProtocolDtfReserves(
-      coin as never,
+      valuationCoin as never,
       createOnchainConfig(),
       signal,
       { nowSec: observedAt },
@@ -360,7 +377,7 @@ describe("reserve-protocol-dtf adapter", () => {
   it("withholds output valuation when one leg is unreadable but preserves capacity", async () => {
     mockReserveProtocolOnchain({ unreadableValuationAsset: STEAK_USDC });
 
-    const result = await fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal);
+    const result = await fetchReserveProtocolDtfReserves(valuationCoin as never, createOnchainConfig(), signal);
 
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 40,
@@ -379,7 +396,7 @@ describe("reserve-protocol-dtf adapter", () => {
     // mid-valuation and assert the reason propagates rather than degrading to a
     // null output valuation.
     await expect(
-      fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), controller.signal),
+      fetchReserveProtocolDtfReserves(valuationCoin as never, createOnchainConfig(), controller.signal),
     ).rejects.toBe(reason);
   });
 
@@ -392,8 +409,16 @@ describe("reserve-protocol-dtf adapter", () => {
       ],
     });
 
-    const result = await fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal);
+    const result = await fetchReserveProtocolDtfReserves(valuationCoin as never, createOnchainConfig(), signal);
 
+    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 40, routeStatus: "open" });
+    expect(result.metadata?.redemption?.outputValuation).toBeUndefined();
+    expect(activeNetwork.rpcCalls.some((call) => call.selector === CONVERT_TO_ASSETS_SELECTOR)).toBe(false);
+  });
+
+  it("does not certify underlying-output valuation for live USD3's unresolved receipts", async () => {
+    mockReserveProtocolOnchain();
+    const result = await fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal);
     expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 40, routeStatus: "open" });
     expect(result.metadata?.redemption?.outputValuation).toBeUndefined();
     expect(activeNetwork.rpcCalls.some((call) => call.selector === CONVERT_TO_ASSETS_SELECTOR)).toBe(false);

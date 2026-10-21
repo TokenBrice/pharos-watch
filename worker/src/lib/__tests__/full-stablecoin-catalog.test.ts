@@ -34,9 +34,9 @@ describe("Worker full stablecoin catalog", () => {
     expect(decodedAsset.map(digest)).toEqual(sourceAsset.map(digest));
   });
 
-  it("keeps both reviewed domains non-caching across the full cohort", () => {
+  it("keeps all packed reviewed domains non-caching across the full cohort", () => {
     for (const coin of decodedAsset) {
-      for (const field of ["blacklistabilityReview", "mintAuthority"] as const) {
+      for (const field of ["blacklistabilityReview", "mintAuthority", "bridgeRouteRisk", "oracleRisk", "genius"] as const) {
         const first = coin[field];
         if (first == null) continue;
         expect(Object.getOwnPropertyDescriptor(coin, field)?.get).toBeTypeOf("function");
@@ -88,6 +88,24 @@ describe("Worker full stablecoin catalog", () => {
       return builder.finish();
     };
     expect(buildEvidence(review)).toEqual(buildEvidence(records[0].blacklistabilityReview));
+  });
+
+  it("preserves lazy evidence getters when stripping a suspended feed", () => {
+    const record = {
+      id: "fixture", blacklistabilityReview: { evidence: "complete reviewed evidence" },
+      liveReservesConfig: { suspended: true },
+    };
+    const packed = packReviews([record]);
+    const source = decodeWorkerStablecoinCatalog(packed)[0]!;
+    const readReview = vi.fn(Object.getOwnPropertyDescriptor(source, "blacklistabilityReview")!.get!);
+    Object.defineProperty(source, "blacklistabilityReview", { enumerable: true, configurable: true, get: readReview });
+    const normalized = canonicalRegistry.withoutSuspendedLiveReserves(source);
+    expect(normalized === source).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(normalized, "liveReservesConfig")).toBe(false);
+    expect(source.liveReservesConfig?.suspended).toBe(true);
+    expect(readReview).not.toHaveBeenCalled();
+    expect(Object.getOwnPropertyDescriptor(normalized, "blacklistabilityReview")?.get).toBe(readReview);
+    expect(normalized.blacklistabilityReview).toEqual(source.blacklistabilityReview);
   });
 
   it("rejects malformed or unbounded lazy evidence before publishing records", () => {

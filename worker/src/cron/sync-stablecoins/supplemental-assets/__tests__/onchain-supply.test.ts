@@ -37,6 +37,7 @@ beforeEach(() => {
   vi.spyOn(evmRpc, "fetchEvmBlockHeader").mockImplementation(async () => ({
     number: 123, hash: BLOCK_HASH, timestamp: Math.floor(Date.now() / 1000) - 30,
   }));
+  vi.spyOn(evmRpc, "fetchEvmRpcBatch").mockResolvedValue(null);
   vi.spyOn(evmRpc, "fetchEvmUint256AtBlock").mockImplementation(async (chain, contract, data) =>
     data === TOTAL_SUPPLY_SELECTOR
       ? probeTrackedTokenSupplyMock(undefined, { chain })
@@ -46,6 +47,31 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("supply deployment failure reasons", () => {
+  it.each([false, true])("withholds sFRAX when the joined stock generation is unavailable (native-only roster: %s)", async (nativeOnly) => {
+    const tracked = TRACKED_META_BY_ID.get("sfrax-frax")!;
+    const meta = nativeOnly ? { ...tracked, contracts: tracked.contracts!.filter(({ chain }) => chain === "ethereum") } : tracked;
+    for (const mock of [probeTrackedTokenSupplyMock, fetchErc20TotalSupplyMock, fetchSolanaTokenSupplyMock, fetchOnchainUint256Mock]) {
+      mock.mockClear();
+    }
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await fetchCuratedAggregateOnChainMcap(meta, 1.14, buildChainRpcs())).toBeNull();
+    expect(await fetchOnChainMcap(meta, 1.14, buildChainRpcs())).toBeNull();
+    const events = warn.mock.calls.map(([line]) => JSON.parse(String(line)));
+    expect(events).toContainEqual(expect.objectContaining({
+      event: "onchain-supply-aggregate-withheld",
+      metadata: { stablecoinId: "sfrax-frax", reason: "economic-float-unreconciled", rule: "R4" },
+    }));
+    expect(events).toHaveLength(2);
+    expect(events).toContainEqual(expect.objectContaining({
+      event: "onchain-supply-contract-withheld",
+      metadata: { stablecoinId: "sfrax-frax", reason: "economic-float-unreconciled", rule: "R4" },
+    }));
+    expect(probeTrackedTokenSupplyMock).not.toHaveBeenCalled();
+    expect(fetchErc20TotalSupplyMock).not.toHaveBeenCalled();
+    expect(fetchSolanaTokenSupplyMock).not.toHaveBeenCalled();
+    expect(fetchOnchainUint256Mock).not.toHaveBeenCalled();
+  });
+
   it("keeps pre-resolved URLs incumbent-only while retaining the map-aware EVM path", async () => {
     const chainRpcs = buildChainRpcs("test-alchemy", undefined, { dwellirApiKey: "test-dwellir" });
     const sonic = chainRpcs.get("sonic")!;
@@ -654,17 +680,13 @@ describe("curation-expanded complete supply rosters", () => {
     {
       id: "syzusd-yuzu",
       canonical: "plasma",
-      supplies: { plasma: 100, ethereum: 10, monad: 10, hyperevm: 10, sei: 10, pharos: 10, berachain: 10, aptos: 0.25 },
+      // Synthetic complete stock includes the newly verified Base representation.
+      supplies: { plasma: 100, ethereum: 10, monad: 10, hyperevm: 10, sei: 10, pharos: 10, berachain: 10, aptos: 0.25, base: 10 },
     },
     {
       id: "susdc-spark-v1",
       canonical: undefined,
       supplies: { ethereum: 100, arbitrum: 10, base: 20, optimism: 30, unichain: 40 },
-    },
-    {
-      id: "sfrax-frax",
-      canonical: "ethereum",
-      supplies: { ethereum: 100, arbitrum: 10, avalanche: 0, base: 10, blast: 10, bsc: 10, fraxtal: 10, metis: 10, optimism: 10 },
     },
   ];
 
@@ -747,11 +769,20 @@ describe("curation-expanded complete supply rosters", () => {
     },
   );
 
-  it.each([100, 110])("withholds sFRAX when representation stock (%s) exhausts the native denominator", async (remote) => {
+  it.each([70, 110])("cannot substitute legacy gross-stock helper output (%s) for the joined sFRAX certificate", async (remote) => {
     const meta = TRACKED_META_BY_ID.get("sfrax-frax")!;
-    const supplies = { ...cases[4].supplies, arbitrum: remote - 60 };
+    const supplies = {
+      ethereum: 100, arbitrum: remote - 60, avalanche: 0, base: 10, blast: 10, bsc: 10, fraxtal: 10, metis: 10, optimism: 10,
+      solana: 0.000117001,
+    };
     installSupplyReads(meta, supplies);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     await expect(fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs())).resolves.toBeNull();
+    expect(probeTrackedTokenSupplyMock).not.toHaveBeenCalled();
+    expect(fetchSolanaTokenSupplyMock).not.toHaveBeenCalled();
+    expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)))).toContainEqual(expect.objectContaining({
+      metadata: expect.objectContaining({ stablecoinId: meta.id, reason: "economic-float-unreconciled" }),
+    }));
   });
 
   it.each(["decimals", "exception"])("fails syzUSD closed on Aptos %s failure", async (failure) => {

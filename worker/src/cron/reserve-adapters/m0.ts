@@ -488,11 +488,14 @@ async function fetchM0OnchainCollateral(
 }
 
 export async function fetchM0Reserves(
-  _coin: ReserveAdapterCoin,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
+  if (coin.id !== "m-m0") {
+    throw new Error("m0 adapter observes MinterGateway collateral for M only; extension backing requires its own wrapper observation");
+  }
   const apiKey = ctx?.m0ApiKey?.trim();
   if (!apiKey) {
     throw new Error("M0_API_KEY not configured; the M0 Protocol API requires keyed access");

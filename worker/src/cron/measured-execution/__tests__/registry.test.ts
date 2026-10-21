@@ -27,6 +27,19 @@ describe("measured execution deployment registry", () => {
     expect(getDexMeasuredExecutionDeployment("uniswap-v3-quoter-v2", "Optimism")).toBeNull();
   });
 
+  it("pins the reviewed Monad Uniswap deployment without granting score eligibility", () => {
+    expect(getDexMeasuredExecutionDeployment("uniswap-v3-quoter-v2", "MoNaD")).toEqual({
+      adapterProfileId: "uniswap-v3-quoter-v2",
+      protocol: "uniswap-v3",
+      chain: "monad",
+      endpointAddress: "0x661e93cca42afacb172121ef892830ca3b70f08d",
+      expectedCodeHash: "0xad90650112df6d1329f20af88a7ad67de8249cae2092e2660ced24e647a9a5be",
+      factoryAddress: "0x204faca1764b154221e35c0d20abb3c525710498",
+      expectedFactoryCodeHash: "0x343475d01b14fa838452aebbc1b600ef871a46233c97effb3260bb9a2597d519",
+    });
+    expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "monad")).toBe(false);
+  });
+
   it("pins the reviewed Monad Pancake deployment without granting score eligibility", () => {
     expect(getDexMeasuredExecutionDeployment("pancakeswap-v3-quoter-v2", "MoNaD")).toEqual({
       adapterProfileId: "pancakeswap-v3-quoter-v2",

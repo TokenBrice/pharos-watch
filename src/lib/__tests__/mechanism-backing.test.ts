@@ -27,19 +27,30 @@ interface OverlayShape {
 const OVERLAYS = mechanismReviewOverlays.overlays as unknown as OverlayShape[];
 
 describe("buildMechanismBackingView", () => {
-  it("surfaces the delta-neutral hedge metrics the collateral rail cannot serve", () => {
+  it("surfaces measured delta-neutral backing while retaining unmeasured hedge and margin gaps", () => {
     const view = buildMechanismBackingView("usde-ethena");
     expect(view).not.toBeNull();
     expect(view?.archetype).toBe("synthetic-delta-neutral");
-    expect(view?.metrics.map((metric) => metric.key)).toEqual([
-      "hedgeCoverageRatio",
-      "marginBufferPct",
-      "lossAbsorptionShare",
-    ]);
-    // Ratios are rescaled to percent; marginBufferPct is authored in percent
-    // already and must not be multiplied a second time.
-    expect(view?.metrics[0]?.value).toBeCloseTo(100, 6);
-    expect(view?.metrics[1]?.value).toBeCloseTo(0.104755, 6);
+    expect(view?.metrics.map((metric) => metric.key)).toEqual(["lossAbsorptionShare"]);
+    expect(view?.metrics[0]?.value).toBeCloseTo(1.5493, 6);
+    for (const key of ["hedgeCoverageRatio", "marginBufferPct"]) {
+      expect(view?.notes.find((note) => note.key === `metric:${key}`)).toMatchObject({
+        state: "unavailable",
+        rationale: expect.any(String),
+        sourceUrl: expect.stringMatching(/^https:\/\//),
+      });
+    }
+  });
+
+  it("rescales measured ratios without multiplying authored percentages again", () => {
+    useOverlay({
+      archetype: "synthetic-delta-neutral",
+      metrics: { hedgeCoverageRatio: 1, marginBufferPct: 0.104755, lossAbsorptionShare: 0.015493 },
+    });
+    const metrics = buildMechanismBackingView("controlled")?.metrics;
+    expect(metrics?.find((metric) => metric.key === "hedgeCoverageRatio")?.value).toBeCloseTo(100, 6);
+    expect(metrics?.find((metric) => metric.key === "marginBufferPct")?.value).toBeCloseTo(0.104755, 6);
+    expect(metrics?.find((metric) => metric.key === "lossAbsorptionShare")?.value).toBeCloseTo(1.5493, 6);
   });
 
   it("surfaces RWA credit-fund duration and valuation cadence", () => {
@@ -73,7 +84,9 @@ describe("buildMechanismBackingView", () => {
     const note = view?.notes.find((entry) => entry.key === "metric:marginBufferPct");
     expect(note?.state).toBe("unavailable");
     // A gap reads under the same name the measured metric carries elsewhere.
-    const measured = buildMechanismBackingView("usde-ethena")?.metrics.find((metric) => metric.key === "marginBufferPct");
+    useOverlay({ archetype: "synthetic-delta-neutral", metrics: { marginBufferPct: 1 } });
+    const measured = buildMechanismBackingView("controlled")?.metrics.find((metric) => metric.key === "marginBufferPct");
+    expect(measured).toBeDefined();
     expect(note?.label).toBe(measured?.label);
   });
 

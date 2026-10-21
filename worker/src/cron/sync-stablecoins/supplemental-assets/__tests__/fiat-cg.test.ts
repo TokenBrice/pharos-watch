@@ -99,7 +99,7 @@ vi.mock("../../../../lib/authoritative-price-sources", () => ({
   resolveVaultNavSupplyPrice: (...args: unknown[]) => resolveVaultNavSupplyPriceMock(...args),
 }));
 
-import { fetchFiatCoinGeckoTokens } from "../fiat-cg";
+import { fetchFiatCoinGeckoTokens, FIAT_CG_METAS } from "../fiat-cg";
 import { applyConsensusResults, createValidationContextResolver } from "../../pricing";
 import { normalizeStablecoinsPayload } from "../../shared";
 import { validatePublishedAssetPrice } from "../../../../lib/price-publish-policy";
@@ -157,6 +157,31 @@ describe("fetchFiatCoinGeckoTokens", () => {
 
     expect(result.find((asset) => asset.id === "usdy-ondo-finance")).toBeUndefined();
     expect(probeTrackedTokenSupplyMock.mock.calls.map(([meta]) => meta.id)).toEqual(["ftusd-flying-tulip"]);
+  });
+
+  it("publishes unavailable sFRAX despite a fresh positive CG cap and preserves independent price", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    FIAT_CG_METAS.push({
+      ...FIAT_CG_METAS[0]!, id: "sfrax-frax", name: "Staked FRAX", symbol: "sFRAX", geckoId: "fixture-unreconciled-sfrax",
+      flags: { ...FIAT_CG_METAS[0]!.flags, yieldBearing: true, navToken: true },
+    });
+    try {
+      fetchWithRetryMock.mockResolvedValueOnce(new Response(JSON.stringify({ coins: {} }), { status: 200 }));
+      const result = await fetchFiatCoinGeckoTokens({
+        "fixture-unreconciled-sfrax": { usd: 1.14, usd_market_cap: 99_999_999, last_updated_at: nowSec },
+      });
+      const held = result.find(({ id }) => id === "sfrax-frax")!;
+      expect(held).toMatchObject({
+        circulating: {}, supplySource: "onchain-supply-withheld", supplyUnavailableReason: "economic-float-unreconciled",
+        price: 1.14, priceObservedAt: nowSec,
+      });
+      expect(held.supplyObservedAt).toBeUndefined();
+      expect(held.supplyRestored).toBeUndefined();
+      expect(probeTrackedTokenSupplyMock.mock.calls.filter(([meta]) => meta?.id === "sfrax-frax")).toHaveLength(0);
+      expect(resolveVaultNavSupplyPriceMock.mock.calls.filter(([id]) => id === "sfrax-frax")).toHaveLength(0);
+    } finally {
+      FIAT_CG_METAS.pop();
+    }
   });
 
   it("prefers fresh CoinGecko market cap over curated aggregate on-chain supply", async () => {

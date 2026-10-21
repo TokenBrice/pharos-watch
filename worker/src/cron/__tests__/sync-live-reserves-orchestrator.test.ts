@@ -460,20 +460,30 @@ describe("orderConfiguredCoinsForSync", () => {
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["gho"].evidenceClass).toBe("independent");
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["curated-validated"].evidenceClass).toBe("static-validated");
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["single-asset"].evidenceClass).toBe("weak-live-probe");
-    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["m0"].sharedSourceMode).toBe("source-invariant");
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["m0"].sharedSourceMode).toBe("none");
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["myrc-independent-assurance"].sharedSourceMode).toBe("source-invariant");
 
     const ordered = orderConfiguredCoinsForSync([
       makeQueueCoin("w1", "single-asset"),
       makeQueueCoin("i1", "liquity-v1"),
       makeQueueCoin("s1", "curated-validated"),
-      makeQueueCoin("m1", "m0"),
+      makeQueueCoin("m1", "myrc-independent-assurance"),
       makeQueueCoin("i2", "gho"),
-      makeQueueCoin("m2", "m0"),
+      makeQueueCoin("m2", "myrc-independent-assurance"),
     ]);
 
     // m2 joins its source-invariant group at m1's anchor position; everything
     // else keeps the original deterministic order within its class segment.
     expect(ordered.map((coin) => coin.id)).toEqual(["i1", "m1", "m2", "i2", "s1", "w1"]);
+  });
+
+  it("does not group subject-bound M0 reads across another independent source", () => {
+    const ordered = orderConfiguredCoinsForSync([
+      makeQueueCoin("m1", "m0"),
+      makeQueueCoin("i1", "gho"),
+      makeQueueCoin("m2", "m0"),
+    ]);
+    expect(ordered.map((coin) => coin.id)).toEqual(["m1", "i1", "m2"]);
   });
 
   it("keeps the real configured queue a permutation with non-decreasing evidence-class rank", () => {
@@ -493,7 +503,8 @@ describe("orderConfiguredCoinsForSync", () => {
     const sourceInvariantAdapters = Object.entries(LIVE_RESERVE_ADAPTER_DEFINITIONS)
       .filter(([, definition]) => definition.sharedSourceMode === "source-invariant")
       .map(([key]) => key);
-    expect(sourceInvariantAdapters).toContain("m0");
+    expect(sourceInvariantAdapters).toContain("myrc-independent-assurance");
+    expect(sourceInvariantAdapters).not.toContain("m0");
 
     for (const adapter of sourceInvariantAdapters) {
       const positions = SYNC_ORDERED_CONFIGURED_COINS

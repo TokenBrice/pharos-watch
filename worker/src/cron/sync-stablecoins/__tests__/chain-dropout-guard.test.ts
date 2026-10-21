@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema, SupplyGapFillProvenanceSchema } from "@shared/types/market";
@@ -9,11 +9,15 @@ import type { PeggedAsset } from "../enrich-prices-shared";
 import type * as FetchRetry from "../../../lib/fetch-retry";
 import type * as Onchain from "../../reserve-adapters/onchain";
 import type * as DbCache from "../../../lib/db-cache";
+import type * as NativeAggregate from "../supplemental-assets/onchain-supply";
 
-const mocks = vi.hoisted(() => ({ chart: vi.fn(), onchain: vi.fn(), getCache: vi.fn(), setCache: vi.fn() }));
+const mocks = vi.hoisted(() => ({ chart: vi.fn(), onchain: vi.fn(), nativeAggregate: vi.fn(), getCache: vi.fn(), setCache: vi.fn() }));
 vi.mock("../../../lib/fetch-retry", async (importOriginal) => ({ ...(await importOriginal<typeof FetchRetry>()), fetchTextWithRetry: mocks.chart }));
 vi.mock("../../reserve-adapters/onchain", async (importOriginal) => ({ ...(await importOriginal<typeof Onchain>()), fetchErc20TotalSupply: mocks.onchain }));
 vi.mock("../../../lib/db-cache", async (importOriginal) => ({ ...(await importOriginal<typeof DbCache>()), getCache: mocks.getCache, setCacheIfNewer: mocks.setCache }));
+vi.mock("../supplemental-assets/onchain-supply", async (importOriginal) => ({
+  ...(await importOriginal<typeof NativeAggregate>()), fetchCuratedAggregateOnChainMcap: mocks.nativeAggregate,
+}));
 
 import {
   CHAIN_DROPOUT_ONCHAIN_ROSTER,
@@ -49,13 +53,92 @@ function usdg(): PeggedAsset {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(Date, "now").mockReturnValue(NOW * 1000);
   mocks.onchain.mockResolvedValue(null);
   mocks.chart.mockResolvedValue(null);
+  mocks.nativeAggregate.mockResolvedValue(null);
   mocks.getCache.mockResolvedValue(null);
   mocks.setCache.mockResolvedValue({ written: true, skippedBecauseNewer: false });
 });
+afterEach(() => vi.restoreAllMocks());
 
 describe("chain dropout guard", () => {
+  it("recovers sticky USDon from a complete native census read after sync-start without renewing its clock", async () => {
+    vi.spyOn(Date, "now").mockReturnValue((NOW + 120) * 1000);
+    const nativeObservedAt = NOW + 60;
+    const asset: PeggedAsset = {
+      ...usdg(), id: "usdon-ondo", symbol: "USDon", name: "USDon", circulating: { peggedUSD: 65_000_000 },
+      chains: ["Ethereum", "BSC"],
+      chainCirculating: { Ethereum: { current: 35_000_000 }, BSC: { current: 30_000_000 } },
+    };
+    const state: ChainDropoutState = { version: 1, pairs: {
+      [JSON.stringify(["usdon-ondo", "solana"])]: {
+        assetId: "usdon-ondo", chainLabel: "Solana", chainId: "solana", baselineUsd: 8_925_000,
+        baselineObservedAt: NOW - 8 * DAY, baselineSource: "state", quarantinedSince: NOW - 8 * DAY,
+        ambiguousSince: NOW - 8 * DAY, heldTotalUsd: null,
+      },
+    } };
+    mocks.nativeAggregate.mockResolvedValue({
+      mcap: 78_000_000, supplySource: "onchain-total-supply", observedAt: nativeObservedAt,
+      chainCirculating: {
+        Ethereum: { current: 35_000_000, chainId: "ethereum" },
+        BSC: { current: 30_000_000, chainId: "bsc" },
+        Solana: { current: 13_000_000, chainId: "solana" },
+      },
+    });
+    const result = await guardChainDropouts({ assets: [asset], now: NOW, state });
+    expect(result).toMatchObject({ flagged: 1, repaired: 1, historyFetches: 0, quarantinedAssetIds: [], unavailableAssetIds: [] });
+    expect(mocks.nativeAggregate).toHaveBeenCalledTimes(1);
+    expect(mocks.nativeAggregate.mock.calls[0][0].id).toBe("usdon-ondo");
+    expect(mocks.nativeAggregate.mock.calls[0][1]).toBe(1);
+    expect(asset).toMatchObject({
+      circulating: { peggedUSD: 78_000_000 }, supplySource: "onchain-total-supply", supplyObservedAt: nativeObservedAt,
+      chainCirculating: { Solana: { current: 13_000_000 } },
+      supplyChainGuard: { status: "repaired", chains: [{ resolution: "onchain-total-supply", observedAt: nativeObservedAt, observedAtKind: "local-read" }] },
+    });
+    expect(asset.supplyRestored).toBeUndefined();
+    expect(asset.circulatingPrevDay).toBeNull();
+    expect(asset.circulatingPrevWeek).toBeNull();
+    expect(asset.circulatingPrevMonth).toBeNull();
+    const saved = Object.values(result.state.pairs).find((pair) => pair.chainId === "solana")!;
+    expect(saved).toMatchObject({ baselineUsd: 13_000_000, baselineObservedAt: nativeObservedAt, quarantinedSince: null });
+    expect(saved.ambiguousSince).toBeUndefined();
+    expect(saved.heldTotalUsd).toBeUndefined();
+  });
+
+  it.each(["unavailable", "missing-leg", "stale", "future", "nonconserving"])(
+    "does not release USDon quarantine for a %s native census", async (failure) => {
+      const asset: PeggedAsset = {
+        ...usdg(), id: "usdon-ondo", symbol: "USDon", name: "USDon", circulating: { peggedUSD: 65_000_000 },
+        chains: ["Ethereum", "BSC"], chainCirculating: { Ethereum: { current: 35_000_000 }, BSC: { current: 30_000_000 } },
+      };
+      const state: ChainDropoutState = { version: 1, pairs: {
+        [JSON.stringify(["usdon-ondo", "solana"])]: {
+          assetId: "usdon-ondo", chainLabel: "Solana", chainId: "solana", baselineUsd: 8_925_000,
+          baselineObservedAt: NOW - 8 * DAY, baselineSource: "state", quarantinedSince: NOW - 8 * DAY,
+          ambiguousSince: NOW - 8 * DAY, heldTotalUsd: null,
+        },
+      } };
+      const chainCirculating: Record<string, { current: number; chainId: string }> = {
+        Ethereum: { current: 35_000_000, chainId: "ethereum" }, BSC: { current: 30_000_000, chainId: "bsc" },
+        Solana: { current: 13_000_000, chainId: "solana" },
+      };
+      if (failure === "missing-leg") delete chainCirculating.Ethereum;
+      mocks.nativeAggregate.mockResolvedValue(failure === "unavailable" ? null : {
+        mcap: failure === "nonconserving" ? 100_000_000 : 78_000_000,
+        supplySource: "onchain-total-supply",
+        observedAt: failure === "stale" ? NOW - 1801 : failure === "future" ? NOW + 61 : NOW - 60,
+        chainCirculating,
+      });
+      const result = await guardChainDropouts({ assets: [asset], now: NOW, state });
+      expect(result.repaired).toBe(0);
+      expect(result.unavailableAssetIds).toEqual(["usdon-ondo"]);
+      expect(asset.supplyRestored).toBe(true);
+      expect(asset.supplyChainGuard?.status).toBe("unavailable");
+      expect(getCirculatingRawOrNull(asset)).toBeNull();
+    },
+  );
+
   it("keeps pre-resolved corroboration URLs incumbent-only even with promoted Dwellir", async () => {
     const chainRpcs = buildChainRpcs("test-alchemy", undefined, { dwellirApiKey: "test-dwellir" });
     const xlayer = chainRpcs.get("xlayer")!;

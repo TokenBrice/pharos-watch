@@ -1,9 +1,11 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema } from "@shared/types/market";
 import type { PriceSourceHealth } from "@shared/types/status";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META } from "@shared/types/chain-identity";
-import { CURATED_AGGREGATE_ESCROW_RESIDUALS, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
+import { CURATED_AGGREGATE_ESCROW_RESIDUALS, getOnchainSupplyHoldReason, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract, SFRAX_STOCK_PERIMETER, isSfraxStockContractRoster } from "@shared/lib/onchain-supply-probe";
+import { deriveSfraxStockPerimeter } from "@shared/lib/sfrax-supply";
+import { SFRAX_STOCK_MAX_AGE_SEC } from "@shared/types/sfrax-supply";
 import {
   getCirculatingRawOrNull,
   SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
@@ -100,7 +102,51 @@ function normalizeOptionalTimestamp(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-export function normalizeStablecoinsPayload(payload: StablecoinsPayload): StablecoinsPayload {
+/** Same refusal applies to fresh, provider and restored rows at final publication. */
+export function reviewedOnchainSupplyHoldFields(asset: Pick<PeggedAsset,
+  "id" | "supplySource" | "supplyObservedAt" | "supplyRestored" | "supplyUnavailableReason" | "supplyPerimeter" | "circulating" | "chainCirculating"
+>, runStartedAt?: number): Pick<PeggedAsset,
+  "supplySource" | "supplyUnavailableReason" | "supplyObservedAt" | "supplyRestored" | "supplyGapFill" | "supplyChainGuard"
+  | "circulating" | "circulatingPrevDay" | "circulatingPrevWeek" | "circulatingPrevMonth" | "chainCirculating" | "chains" | "supplyPerimeter"
+> | null {
+  const assetId = String(asset.id);
+  const reason = getOnchainSupplyHoldReason(assetId);
+  if (!reason) return null;
+  const meta = ACTIVE_META_BY_ID.get(assetId);
+  if (meta && runStartedAt != null && asset.supplyPerimeter && !asset.supplyRestored && !asset.supplyUnavailableReason
+    && asset.supplySource === "onchain-circulating-supply" && isSfraxStockContractRoster(meta)) {
+    const derived = deriveSfraxStockPerimeter(asset.supplyPerimeter);
+    const now = Math.floor(Date.now() / 1000);
+    if (derived && derived.observation.readStartedAt >= runStartedAt && derived.observation.readCompletedAt <= now
+      && now - derived.observedAt <= SFRAX_STOCK_MAX_AGE_SEC && asset.supplyObservedAt === derived.observedAt
+      && Object.keys(asset.circulating ?? {}).length === 1 && asset.circulating?.peggedUSD === derived.mcap
+      && Object.keys(asset.chainCirculating ?? {}).length === SFRAX_STOCK_PERIMETER.contracts.length
+      && Object.entries(derived.chainCirculating).every(([label, row]) => {
+        const actual = asset.chainCirculating?.[label];
+        return actual?.chainId === row.chainId && actual.current === row.current;
+      })) return null;
+  }
+  const chainCirculating = Object.fromEntries((meta?.contracts ?? []).map(({ chain }) => [
+    CHAIN_META[chain]?.name ?? chain, { chainId: chain, current: null },
+  ]));
+  return {
+    supplySource: "onchain-supply-withheld",
+    supplyUnavailableReason: reason,
+    supplyObservedAt: undefined,
+    supplyRestored: undefined,
+    supplyGapFill: undefined,
+    supplyChainGuard: undefined,
+    supplyPerimeter: undefined,
+    circulating: {},
+    circulatingPrevDay: null,
+    circulatingPrevWeek: null,
+    circulatingPrevMonth: null,
+    chainCirculating,
+    chains: Object.keys(chainCirculating),
+  };
+}
+
+export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStartedAt?: number): StablecoinsPayload {
   return {
     ...payload,
     peggedAssets: payload.peggedAssets.map((asset) => {
@@ -108,6 +154,8 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
         gecko_id: _ignoredSnakeCase,
         supplyObservedAt: _ignoredSupplyObservedAt,
         supplyRestored: _ignoredSupplyRestored,
+        supplyUnavailableReason: _ignoredSupplyUnavailableReason,
+        supplyPerimeter: _ignoredSupplyPerimeter,
         supplyChainGuard: _ignoredSupplyChainGuard,
         ...rest
       } = asset as PeggedAsset & { gecko_id?: unknown };
@@ -139,6 +187,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
           : null;
       const supplyObservedAt = normalizeOptionalTimestamp(asset.supplyObservedAt);
       const supplyChainGuard = SupplyChainGuardProvenanceSchema.safeParse(asset.supplyChainGuard);
+      const hold = reviewedOnchainSupplyHoldFields(asset, runStartedAt);
 
       return {
         ...rest,
@@ -156,10 +205,12 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
         priceSourceConfidenceProfile: hasUsablePrice ? (asset.priceSourceConfidenceProfile ?? null) : null,
         ...(supplyObservedAt != null ? { supplyObservedAt } : {}),
         ...(asset.supplyRestored === true ? { supplyRestored: true } : {}),
+        ...(asset.id === SFRAX_STOCK_PERIMETER.assetId && !hold && asset.supplyPerimeter ? { supplyPerimeter: asset.supplyPerimeter } : {}),
         ...(supplyChainGuard.success ? { supplyChainGuard: supplyChainGuard.data } : {}),
         circulatingPrevDay: toPegBuckets(asset.circulatingPrevDay),
         circulatingPrevWeek: toPegBuckets(asset.circulatingPrevWeek),
         circulatingPrevMonth: toPegBuckets(asset.circulatingPrevMonth),
+        ...hold,
       };
     }),
   };
@@ -509,6 +560,12 @@ export function mergeSupplementalLastKnownGood(
     const id = String(asset.id);
     if (primaryAssetIds.has(id)) {
       skippedDuplicates++;
+      continue;
+    }
+
+    const hold = reviewedOnchainSupplyHoldFields(asset, nowSec);
+    if (hold) {
+      resolved.set(id, { ...asset, ...hold });
       continue;
     }
 

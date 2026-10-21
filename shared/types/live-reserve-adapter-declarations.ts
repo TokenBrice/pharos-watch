@@ -335,6 +335,15 @@ const hyloSolanaParamsSchema = z.object({
   inactiveExoPairs: z.array(hyloAddressSchema).max(16),
 }).strict();
 
+const m0SolanaWrapperParamsSchema = z.object({
+  program: hyloAddressSchema,
+  globalAccount: hyloAddressSchema,
+  wrapperMint: hyloAddressSchema,
+  underlyingMint: hyloAddressSchema,
+  underlyingVault: hyloAddressSchema,
+  assetLabel: z.string().min(1),
+}).strict();
+
 const usdaiProofOfReservesParamsSchema = z.object({
   anchor: z.object({
     vaultAddress: EvmAddressSchema,
@@ -1145,6 +1154,12 @@ const erc4626SingleAssetParamsSchema = z
   .object({
     slice: reserveSliceDescriptorSchema,
     deployedExposure: erc4626DeployedExposureSchema.optional(),
+    // Reviewed token balances outside totalAssets()/withdrawal accounting are
+    // observations only, never holder-owned idle backing or cash capacity.
+    walletCashAccounting: erc4626DeployedExposureSchema.extend({
+      mode: z.literal("excluded"),
+      sourceUrl: AbsoluteUrlSchema,
+    }).optional(),
     // Whole-token pooled claim, not an allocation to its accounting asset.
     // Underlying observations remain contextual and look-through stays unknown.
     pooledClaim: erc4626DeployedExposureSchema.optional(),
@@ -2736,12 +2751,18 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "independent",
     preferredFreshnessMode: "verified",
-    sharedSourceMode: "source-invariant",
+    // Subject-bound: gateway collateral is M backing, not an extension's M custody.
+    sharedSourceMode: "none",
     configValidation: CONFIG_PROTOCOL_V1,
     redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_VALIDATION,
   },
   "m0-wrapper-underlying": declareAdapter(m0WrapperUnderlyingParamsSchema, ONCHAIN_SINGLE_ASSET_V1),
+  "m0-solana-wrapper": declareAdapter(m0SolanaWrapperParamsSchema, ONCHAIN_SINGLE_ASSET_NO_TELEMETRY_V1, {
+    primaryInputKinds: ["onchain-solana"],
+    sourceOriginClass: "onchain-observation",
+    preferredFreshnessMode: "not-applicable",
+  }),
   "makina-strategy": {
     primaryInputKinds: ["http-json"],
     paramsSchema: makinaStrategyParamsSchema,

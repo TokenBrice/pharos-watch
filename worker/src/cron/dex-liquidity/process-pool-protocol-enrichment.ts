@@ -6,6 +6,7 @@ import {
   isCryptoSwap,
 } from "./pool-helpers";
 import { resolveActiveCurveCryptoSwapCandidateByTvl } from "./process-pool-execution-capability";
+import { getReviewedQuoterV2SourcePoolPolicy } from "./pool-identity";
 import type {
   PoolProcessingContext,
   PoolProtocolEnrichment,
@@ -17,6 +18,7 @@ export function enrichPoolProtocol(
   identity: ResolvedPoolIdentity,
 ): PoolProtocolEnrichment {
   const { pool, protocol, chainNorm, poolSymbols, poolType } = identity;
+  const reviewedQuoterPool = protocol === "uniswap-v3" ? getReviewedQuoterV2SourcePoolPolicy(pool) : undefined;
   const activeCryptoSwapTvlMatch =
     protocol === "curve" &&
     identity.fpCurveKey != null &&
@@ -79,9 +81,9 @@ export function enrichPoolProtocol(
         (Date.now() / 1000 - curveData.creationTs) / DAY_SECONDS,
       );
     }
-  } else if (poolType === "uniswap-v3-5bp" && context.uniV3PoolFees.size > 0) {
+  } else if (poolType === "uniswap-v3-5bp" && (context.uniV3PoolFees.size > 0 || reviewedQuoterPool != null)) {
     const addrKey = canonicalExitRouteAssetKey(chainNorm, pool.pool);
-    let feeTier = context.uniV3PoolFees.get(addrKey);
+    let feeTier = context.uniV3PoolFees.get(addrKey) ?? reviewedQuoterPool?.feePips;
     if (feeTier == null) {
       const symKey = `${chainNorm}:${poolSymbols
         .map((symbol) => symbol.toUpperCase())

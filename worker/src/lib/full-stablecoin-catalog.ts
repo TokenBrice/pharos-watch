@@ -88,7 +88,8 @@ export function decodeWorkerStablecoinCatalog(asset: PackedCatalog): readonly St
         throw new Error(`Invalid packed stablecoin evidence: ${id}`);
       }
       for (const [field, packed] of Object.entries(packedEvidence)) {
-        if ((field !== "blacklistabilityReview" && field !== "mintAuthority")
+        if ((field !== "blacklistabilityReview" && field !== "mintAuthority"
+            && field !== "bridgeRouteRisk" && field !== "oracleRisk" && field !== "genius")
           || record[field] !== null || !Array.isArray(packed) || packed.length !== 2) {
           throw new Error(`Invalid packed stablecoin evidence: ${id}`);
         }

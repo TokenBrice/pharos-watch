@@ -1,4 +1,5 @@
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
+import { QUOTER_V2_REVIEWED_SHADOW_POOLS } from "@shared/lib/measured-execution-deployment-policies";
 import {
   canonicalExitRouteChain,
   canonicalExitRouteScopedId,
@@ -7,6 +8,36 @@ import {
 import { normalizeProtocol } from "./pool-helpers";
 import { suiClmmFamily, suiCoinType, suiObjectId } from "./sui/identity";
 import type { LlamaPool } from "./types";
+
+/** Exact reviewed provider alias only; token fingerprints never select a pool. */
+export function getReviewedQuoterV2SourcePoolPolicy(
+  pool: Partial<Pick<LlamaPool, "pool" | "chain" | "project" | "underlyingTokens">>,
+) {
+  // These provider fields are optional evidence for this alias, not a reason
+  // to discard an otherwise usable yield observation.
+  const { pool: poolId, chain, project, underlyingTokens } = pool;
+  if (
+    typeof poolId !== "string" ||
+    typeof chain !== "string" ||
+    typeof project !== "string" ||
+    !Array.isArray(underlyingTokens)
+  ) return undefined;
+  return QUOTER_V2_REVIEWED_SHADOW_POOLS.find((policy) =>
+    canonicalExitRouteChain(chain) === policy.chain &&
+    normalizeProtocol(project) === policy.protocol &&
+    (poolId.toLowerCase() === policy.poolAddress || poolId === policy.defillamaPoolId) &&
+    underlyingTokens.length === policy.poolTokens.length &&
+    policy.poolTokens.every((token) =>
+      underlyingTokens.some((address) => canonicalEvmAddress(address) === token.address)));
+}
+
+/** Identity-only normalization, after the yield cache preserves provider UUIDs. */
+export function attachReviewedQuoterV2SourcePoolIdentities(pools: LlamaPool[]): void {
+  for (const pool of pools) {
+    const policy = getReviewedQuoterV2SourcePoolPolicy(pool);
+    if (policy) pool.pool = policy.poolAddress;
+  }
+}
 
 /** Provider identity is not physical identity; pair fingerprints never own TVL. */
 export function buildPrimaryPoolKey(chain: string, poolId: string, protocol: string, physicalPoolId?: string): string {

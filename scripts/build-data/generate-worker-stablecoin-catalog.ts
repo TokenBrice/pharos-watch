@@ -12,7 +12,7 @@ const REPO_ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const SOURCE_PATH = resolve(REPO_ROOT, "shared/data/stablecoins/coins.generated.json");
 const OUTPUT_PATH = resolve(REPO_ROOT, "shared/data/stablecoins/coins.worker-full.generated.json");
 
-type LazyField = "blacklistabilityReview" | "mintAuthority";
+type LazyField = "blacklistabilityReview" | "mintAuthority" | "bridgeRouteRisk" | "oracleRisk" | "genius";
 type CatalogSource = { id: string } & Partial<Record<LazyField, unknown>>;
 type PackedText = [bytes: number, payload: string];
 export type PackedRecord = [id: string, bytes: number, payload: string, reviews?: Partial<Record<LazyField, PackedText>>];
@@ -30,7 +30,7 @@ export function buildWorkerStablecoinCatalog<T extends CatalogSource>(coins: rea
   const rows = coins.map((coin): PackedRecord => {
     const record: CatalogSource = { ...coin };
     const reviews: Partial<Record<LazyField, PackedText>> = {};
-    for (const field of ["blacklistabilityReview", "mintAuthority"] as const) {
+    for (const field of ["blacklistabilityReview", "mintAuthority", "bridgeRouteRisk", "oracleRisk", "genius"] as const) {
       if (coin[field] == null) continue;
       const packed = packText(JSON.stringify(coin[field]));
       reviews[field] = packed;

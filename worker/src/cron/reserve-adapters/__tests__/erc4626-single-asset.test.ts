@@ -195,6 +195,45 @@ function trackedVaultSyncState(snapshot: { fetchedAt: number; attemptId: string 
 
 describe("fetchErc4626SingleAssetReserves", () => {
 
+  it.each([0n, 630_000_000_000_000_000n, 150_000_000_000_000_000_000n])(
+    "excludes sDAI wallet donations from reviewed Pot backing: %s",
+    async (idleBalance) => {
+      const vault = "0x83f20f44975d03b1b09e64809b757c47f942beea";
+      const asset = "0x6b175474e89094c44da98b954eedeac495271d0f";
+      const accountedAssets = 100_000_000_000_000_000_000n;
+      installErc4626Network({
+        vault, asset, idleBalance, decimals: 18,
+        totalAssets: accountedAssets, totalSupply: accountedAssets, convertedAssets: accountedAssets,
+      });
+      const walletCashAccounting = {
+        mode: "excluded" as const,
+        basis: "SavingsDai totalAssets counts Pot pie/chi; burns exit Pot and DaiJoin, never vault-held DAI donations.",
+        reviewedAt: "2026-10-20",
+        sourceUrl: `https://eth.blockscout.com/api/v2/smart-contracts/${vault}`,
+      };
+      const previous = structuredClone(TRACKED_META_BY_ID.get("sdai-sky")!.liveReservesConfig!);
+      delete previous.params!.walletCashAccounting;
+      const corrected = { ...previous, params: { ...previous.params, walletCashAccounting } };
+      expect(parseLiveReserveAdapterParams("erc4626-single-asset", corrected.params).walletCashAccounting)
+        .toEqual(walletCashAccounting);
+      expect(computeLiveReserveConfigFingerprint(corrected))
+        .not.toBe(computeLiveReserveConfigFingerprint(previous));
+
+      const result = await runTrackedVault("sdai-sky", () => corrected);
+      expect(result.slices).toEqual([expect.objectContaining({
+        sourceKey: `erc4626-single-asset:ethereum:${vault}:deployed`,
+        coinId: "dai-makerdao", depType: "wrapper", pct: 100,
+      })]);
+      expect(result.metadata).toMatchObject({
+        totalAssetsRaw: accountedAssets.toString(),
+        idleUnderlyingBalanceRaw: idleBalance.toString(),
+        deployedPct: 100,
+        unknownExposurePct: 0,
+        details: { walletCashAccounting },
+      });
+    },
+  );
+
   it.each([0n, 25_000_000n, 100_000_000n, null])(
     "keeps Maple's pooled claim opaque regardless of observed idle cash %s",
     async (idleBalance) => {

@@ -292,6 +292,42 @@ describe("fetchDataSources", () => {
     ]);
   });
 
+  it.each([
+    { name: "available", protocols: [] },
+    { name: "unavailable", protocols: null },
+    { name: "malformed", protocols: { protocols: [] } },
+  ])("normalizes the reviewed EURW alias without changing yields when protocols is $name", async ({ protocols }) => {
+    const uuid = "c57840e5-a0e1-5b7c-9627-3afbfbd33bcd";
+    const token0 = "0x1111b3ded9f1fe1801ad4ebef8e2788183a24111";
+    const token1 = "0x754704bc059f8c67012fed69bc8a327a5aafb603";
+    const row = { ...FAKE_DL_POOLS[0], pool: uuid, chain: "Monad", project: "uniswap-v3",
+      symbol: "EURW-USDC", exposure: "multi", underlyingTokens: [token0, token1], poolMeta: "0.01%" };
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url) => {
+      const key = String(url);
+      if (key.includes("yields.llama.fi")) return { response: new Response(""), body: { data: [row, ...FAKE_DL_POOLS] } };
+      if (key.includes("api.llama.fi/protocols")) {
+        return protocols === null ? null : { response: new Response(""), body: protocols };
+      }
+      return { response: new Response(""), body: { data: { poolData: [] } } };
+    });
+    const result = await fetchDataSources(null, createMockDb(), {
+      chainAddressToId: new Map([[`monad:${token0}`, "eurw-newrails"], [`monad:${token1}`, "usdc-circle"]]),
+      symbolToChainScopedIds: new Map(),
+    });
+    expect(result?.pools).toEqual([expect.objectContaining({
+      pool: "0xe153201e40f50ebc9da7be3aa9c419f185c97f44", tvlUsd: 100_000, poolMeta: "0.01%",
+    })]);
+    expect(result?.dlYieldsAvailable).toBe(true);
+    expect(recordOutcome).not.toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.DL_YIELDS, false);
+    expect(vi.mocked(buildDlStablecoinPoolsCache)).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ pool: "pool-0", tvlUsd: 100_000 }),
+    ]));
+    expect(vi.mocked(buildDlStablecoinPoolsCache)).not.toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ pool: "0xe153201e40f50ebc9da7be3aa9c419f185c97f44" }),
+    ]));
+    expect(vi.mocked(fetchJsonWithRetry).mock.calls.some(([url]) => String(url).includes("poolsPro"))).toBe(false);
+  });
+
   it.each([true, false])("keeps list measurements and yield UUIDs when V4 identity enrichment succeeds=%s", async (succeeds) => {
     const token0 = "0x6c3ea9036406852006290770bedfcaba0e23a0e8";
     const token1 = "0xdc035d45d973e3ec169d2276ddab16f1e407384f";

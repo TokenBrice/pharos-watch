@@ -7,6 +7,7 @@ import { z } from "zod";
 import { parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
 import { createLocalVitestCommand, runSpawnCommand, type CommandImplementation, type SpawnCommand } from "../lib/command-runner.mts";
 import { RESOURCE_HARNESS_REVISION, RESOURCE_PHASES } from "../../worker/scripts/lib/v9-resource-policy";
+import { PublicationByteMetricsSchema } from "@shared/lib/safety-score-v9-resource-bytes";
 
 export const RESOURCE_TEST_FILE = "worker/src/lib/__tests__/safety-score-v9-resource-budget.test.ts";
 const CONTAGION_CASE = "evaluates a bounded nine-scenario matrix within 256 MiB of old-space";
@@ -27,8 +28,8 @@ const faithfulReportSchema = z.object({
   appliedPolicy: z.object({ globalPostGcHeapBytes: z.literal(117440512), phaseLimitsBytes: z.record(z.string(), z.number().int().positive().max(117440512)) }).optional(),
   runs: z.array(z.object({
     violations: z.array(z.unknown()).length(0),
-    live: z.object({ status: z.literal(0), signal: z.null(), reasons: z.array(z.unknown()).length(0), phaseMaxima: z.record(z.string(), z.object({ postGcHeapBytes: z.number().int().positive() })) }),
-    "hard-cap": z.object({ status: z.literal(0), signal: z.null(), reasons: z.array(z.unknown()).length(0) }),
+    live: z.object({ status: z.literal(0), signal: z.null(), reasons: z.array(z.unknown()).length(0), phaseMaxima: z.record(z.string(), z.object({ postGcHeapBytes: z.number().int().positive() })), correctness: z.object({ publicationBytes: PublicationByteMetricsSchema }) }),
+    "hard-cap": z.object({ status: z.literal(0), signal: z.null(), reasons: z.array(z.unknown()).length(0), correctness: z.object({ publicationBytes: PublicationByteMetricsSchema }) }),
   })).length(1),
 });
 export function assertFaithfulResourceReport(report: unknown, invocationId: string) {
@@ -75,8 +76,10 @@ export async function runV9ResourceLane({
     const summaryReport = z.object({
       policy: z.string(),
       appliedPolicy: z.object({ phaseLimitsBytes: z.record(z.string(), z.number()) }).optional(),
-      runs: z.array(z.object({ live: z.object({ phaseMaxima: z.record(z.string(), z.object({ postGcHeapBytes: z.number() }).nullable()) }).optional(),
-        "hard-cap": z.object({ status: z.number().nullable() }).optional() })),
+      runs: z.array(z.object({ live: z.object({ phaseMaxima: z.record(z.string(), z.object({ postGcHeapBytes: z.number() }).nullable()),
+        correctness: z.object({ publicationBytes: PublicationByteMetricsSchema }).optional() }).optional(),
+        "hard-cap": z.object({ status: z.number().nullable(), signal: z.string().nullable().optional(),
+          correctness: z.object({ publicationBytes: PublicationByteMetricsSchema }).optional() }).optional() })),
     }).parse(raw);
     const maxima = summaryReport.runs[0]?.live?.phaseMaxima ?? {};
     const limits = summaryReport.appliedPolicy?.phaseLimitsBytes ?? {};
@@ -85,10 +88,14 @@ export async function runV9ResourceLane({
       const limit = limits[phase];
       return `| ${phase} | ${live ?? "missing"} | ${limit ?? "unavailable"} | ${live === undefined || limit === undefined ? "unavailable" : limit - live} |`;
     });
+    const byteRows = summaryReport.runs.flatMap((run) => (["live", "hard-cap"] as const).map((mode) => {
+      const bytes = run[mode]?.correctness?.publicationBytes;
+      return `| ${mode} | ${bytes?.units ?? "unavailable"} | ${bytes?.largestUnitBytes ?? "unavailable"} | ${bytes?.unitLimitBytes ?? "unavailable"} | ${bytes?.streamedTotalBytes ?? "unavailable"} | ${bytes?.streamedTotalRegressionLimitBytes ?? "unavailable"} | ${bytes?.streamedTotalLimitBytes ?? "unavailable"} |`;
+    }));
     const artifactLink = process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
       ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}#artifacts` : "resource report artifacts";
     const factsMiB = maxima["facts-compiled"] ? (maxima["facts-compiled"].postGcHeapBytes / 1048576).toFixed(2) : "unavailable";
-    const summary = `## Safety Score V9 resource guard\n\npolicy: **"${summaryReport.policy}"**.${summaryReport.policy === "unqualified" ? ` Phase limits are NOT enforced without a qualified policy. facts-compiled: ${factsMiB} MiB; qualification requires every phase <=110 MiB over five successful live+natural runs. Complete phases, correctness/bytes and natural 128 MiB remain required. Further remediation (P3/P4) is needed when the ceiling is exceeded.` : ""}\n\n| Phase | Post-GC bytes | Limit bytes | Margin bytes |\n|---|---:|---:|---:|\n${rows.length ? rows.join("\n") : "| unavailable | unavailable | unavailable | unavailable |"}\n\nNatural 128 MiB exit status: ${summaryReport.runs[0]?.["hard-cap"]?.status ?? "unavailable"}. Node-only regression evidence, not Workers capacity. [Full evidence](${artifactLink}).\n`;
+    const summary = `## Safety Score V9 resource guard\n\npolicy: **"${summaryReport.policy}"**.${summaryReport.policy === "unqualified" ? ` Phase limits are NOT enforced without a qualified policy. facts-compiled: ${factsMiB} MiB; qualification requires every phase <=110 MiB over five successful live+natural runs. Complete phases, correctness/bytes and natural 128 MiB remain required. Further remediation (P3/P4) is needed when the ceiling is exceeded.` : ""}\n\n| Phase | Post-GC bytes | Limit bytes | Margin bytes |\n|---|---:|---:|---:|\n${rows.length ? rows.join("\n") : "| unavailable | unavailable | unavailable | unavailable |"}\n\nCanonical byte metrics (one admitted card per unit; streamed total includes envelope metadata):\n\n| Run mode | Card units | Largest unit bytes | Calibrated unit cap bytes | Streamed total bytes | Aggregate regression cap bytes | Hard total cap bytes |\n|---|---:|---:|---:|---:|---:|---:|\n${byteRows.join("\n")}\n\nCalibrated byte regression guards do not replace the natural memory gate or the independent compressed/stored transport caps.\n\nNatural 128 MiB exit status: ${summaryReport.runs[0]?.["hard-cap"]?.status ?? "unavailable"}; signal: ${summaryReport.runs[0]?.["hard-cap"]?.signal ?? "none observed"}. Node-only regression evidence, not Workers capacity. [Full evidence](${artifactLink}).\n`;
     writeFileSync(join(resourceDirectory, "summary.md"), summary);
     if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
     summaryWritten = true;

@@ -28,6 +28,7 @@ const TOKEN_ABI = parseAbi([
 const MAX_POOLS = 128;
 const MAX_REQUESTS = 384;
 const MAX_WALL_MS = 120_000;
+const REQUEST_TIMEOUT_MS = 8_000;
 const MAX_BLOCK_AGE_SEC = 30 * 60;
 
 interface PoolKey {
@@ -239,7 +240,7 @@ export async function enrichUniswapV4ExecutionTargets(input: {
   const deadlineMs = nowMs + (input.deadline?.childCeilingMs(MAX_WALL_MS, nowMs) ?? MAX_WALL_MS);
   const budget = createDexMeasuredExecutionRpcBudget({ maxRequests: MAX_REQUESTS, deadlineMs });
   const rpcOptions: EvmRpcOptions = {
-    chainRpcs: input.chainRpcs, signal: input.signal, timeoutMs: 8_000, deadlineMs, maxRetries: 0,
+    chainRpcs: input.chainRpcs, signal: input.signal, timeoutMs: REQUEST_TIMEOUT_MS, deadlineMs, maxRetries: 0,
     beforeRequest: () => budget.tryConsume(),
   };
   const byChain = new Map<string, PoolProbe[]>();
@@ -270,13 +271,40 @@ export async function enrichUniswapV4ExecutionTargets(input: {
       if (!header || header.timestamp > nowSec + 60 || nowSec - header.timestamp > MAX_BLOCK_AGE_SEC) { mark("identity-block-unavailable"); continue; }
       const verified = await deps.verify({ deployment: chainProbes[0]!.deployment, blockNumber: header.number, blockHash: header.hash, chainRpcs: input.chainRpcs, signal: input.signal, rpcBudget: budget });
       if (!verified.ok) { mark(verified.reason); continue; }
+      // Pool discovery must not spend the request/time needed to confirm the
+      // pinned header. Otherwise a bounded search discards earlier valid reads
+      // from this chain as an apparent reorg when final admission cannot run.
+      let identityStopReason: "request-budget-exhausted" | "runtime-deadline-exceeded" | null = null;
+      const identityDeadlineMs = deadlineMs - REQUEST_TIMEOUT_MS;
+      const identityRpcOptions: EvmRpcOptions = {
+        ...rpcOptions,
+        stateBlockHash: header.hash,
+        deadlineMs: identityDeadlineMs,
+        beforeRequest: () => {
+          if (Date.now() >= identityDeadlineMs) {
+            identityStopReason = "runtime-deadline-exceeded";
+            return false;
+          }
+          if (budget.remainingRequests <= 1) {
+            identityStopReason = "request-budget-exhausted";
+            return false;
+          }
+          return budget.tryConsume();
+        },
+      };
       const pending: { pool: PoolEntry; target: DexMeasuredExecutionTarget }[] = [];
       for (const probe of chainProbes) {
-        if (budget.stopReason) break;
+        if (budget.stopReason || identityStopReason) break;
+        if (Date.now() >= identityDeadlineMs) {
+          identityStopReason = "runtime-deadline-exceeded";
+          break;
+        }
         const candidate = await readUniswapV4ExecutionCandidate({
           deployment: probe.deployment, poolId: probe.poolId, retainedTvlUsd: probe.tvlUsd,
-          blockNumber: header.number, rpcOptions: { ...rpcOptions, stateBlockHash: header.hash }, dependencies: deps,
+          blockNumber: header.number, rpcOptions: identityRpcOptions, dependencies: deps,
         });
+        if (Date.now() >= identityDeadlineMs) identityStopReason = "runtime-deadline-exceeded";
+        if (identityStopReason) break;
         for (const { stablecoinId, pool } of probe.references) {
           const target = candidate && buildUniswapV4MeasuredExecutionTarget({
             candidate, stablecoinId, chainAddressToId: input.chainAddressToId,
@@ -297,6 +325,13 @@ export async function enrichUniswapV4ExecutionTargets(input: {
         delete pool.extra!.executionCapabilityGate;
         delete pool.extra!.measuredExecutionDiagnostic;
         entryForChain(chain).enriched++;
+      }
+      if (identityStopReason) {
+        for (const probe of chainProbes) for (const { pool } of probe.references) {
+          if (pool.extra!.measuredExecutionTarget || pool.extra!.measuredExecutionDiagnostic) continue;
+          pool.extra!.measuredExecutionDiagnostic = { adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID, detail: identityStopReason };
+          incrementReason(entryForChain(chain).dropReasons, identityStopReason);
+        }
       }
     } catch (error) {
       rethrowIfAborted(error, input.signal);

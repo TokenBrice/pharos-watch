@@ -971,7 +971,7 @@ describe("tracked stablecoin metadata", () => {
         baseTokenAddress: "0x46850aD61C2B7d64d08c9C754F45254596696984",
         implementationAddress: "0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9",
         redemptionCapacity: {
-          holderEligibility: "whitelisted-primary",
+          holderEligibility: "any-holder",
         },
       },
     });

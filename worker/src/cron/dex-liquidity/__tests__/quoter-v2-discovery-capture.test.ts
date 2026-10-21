@@ -153,6 +153,7 @@ describe("retained discovered rows enter actual target production", () => {
   });
   it.each([
     ["uniswap-v3-quoter-v2", "uniswap-v3", "xlayer"],
+    ["uniswap-v3-quoter-v2", "uniswap-v3", "monad"],
     ["hyperswap-v3-quoter-v2", "hyperswap-v3", "hyperevm"],
     ["kodiak-v3-quoter-v2", "kodiak-v3", "berachain"],
     ["pancakeswap-v3-quoter-v2", "pancakeswap", "monad"],

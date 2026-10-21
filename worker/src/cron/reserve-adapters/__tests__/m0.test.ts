@@ -10,7 +10,7 @@ import type { OnchainLogEntry } from "../onchain";
 import { adaptM0Collateral, adaptM0OnchainCollateral } from "../m0";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
-import { expectWarningEffect, expectWarnings, runAdapter } from "./reserve-adapter.test-support";
+import { expectWarningEffect, expectWarnings, installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 
 // The CollateralUpdated scan is the only M0 on-chain fallback step the adapter
 // harness cannot answer (it routes eth_call/block methods only), so it is
@@ -214,6 +214,18 @@ describe("adaptM0Collateral", () => {
 });
 
 describe("fetchM0Reserves", () => {
+  it.each(["usdn-noble", "xo-exodus", "usdk-kast"])(
+    "rejects gateway collateral as local backing for %s before fetching",
+    async (id) => {
+      const network = installAdapterNetwork({});
+      await expect(runAdapter("m0", "m-m0", {
+        coin: { id }, network, ctx: { m0ApiKey: "test-key" },
+      })).rejects.toThrow("extension backing requires its own wrapper observation");
+      expect(network.requests).toEqual([]);
+      expect(getReserveAdapter("m0")?.sharedSourceMode).toBe("none");
+    },
+  );
+
   it("fetches the keyed GraphQL payload through the shared network harness", async () => {
     const { result, network } = await runAdapter("m0", "m-m0", {
       network: {

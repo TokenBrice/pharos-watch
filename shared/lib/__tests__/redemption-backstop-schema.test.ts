@@ -149,7 +149,7 @@ describe("redemption backstop schema", () => {
     ["paxg-paxos", 1, 430, 0, 0],
     ["kau-kinesis", 1 / 31.1034768, 100, 45, 100],
     ["kag-kinesis", 1, 200, 45, 100],
-    ["ggbr-goldfish-gold", 0.001, 13500, 300, 0],
+    ["ggbr-goldfish-gold", 0.001, 1000, 300, 0],
     ["pgold-pleasing", 1, 32.15, 50, 0],
     ["xaum-matrixdock", 1, 32.148, 25, 0],
     ["dgld-gold-token-sa", 1, 1 / 31.1034768, 0, 0],

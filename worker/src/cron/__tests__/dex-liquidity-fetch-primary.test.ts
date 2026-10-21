@@ -32,17 +32,6 @@ vi.mock("../dex-liquidity/pool-helpers", () => ({
 }));
 vi.mock("../dex-liquidity/price-sanity", () => ({ isPlausibleDexObservationPrice: vi.fn(() => true) }));
 vi.mock("../../lib/price-validation", () => ({}));
-vi.mock("../dex-liquidity/pool-identity", () => ({
-  buildPoolIdentity: vi.fn(),
-  createKnownPoolIdentityIndex: vi.fn(() => ({
-    exactKeys: new Set(),
-    derivedKeyCounts: new Map(),
-    derivedToExactKeys: new Map(),
-    wildcardKeyCounts: new Map(),
-    wildcardToExactKeys: new Map(),
-  })),
-  registerKnownPoolIdentity: vi.fn(),
-}));
 vi.mock("../dex-liquidity/token-resolution", () => ({
   resolveTrackedStablecoinId: vi.fn(),
   getChainScopedSymbolIds: vi.fn(
@@ -111,6 +100,9 @@ describe("fetchDataSources — unavailable and malformed decoded sources", () =>
     const result = await fetchDataSources(null, db, PRIMARY_POOL_LOOKUPS);
     // dlYieldsAvailable = true, so catastrophic check passes → returns DataSources
     expect(result?.pools.map((pool) => pool.pool)).toEqual(pools.map((pool) => pool.pool));
+    expect(result?.dlYieldsAvailable).toBe(true);
+    expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-yields", true);
+    expect(recordOutcome).not.toHaveBeenCalledWith(expect.anything(), "defillama-yields", false);
     // Circuit breaker should record DL protocols failure
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-protocols", false);
   });

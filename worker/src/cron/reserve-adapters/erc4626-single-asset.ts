@@ -61,6 +61,7 @@ interface SingleAssetSliceConfig {
   expectedAssetAddress?: string;
   deployedExposure?: LiveReserveAdapterParamsByKey["erc4626-single-asset"]["deployedExposure"];
   pooledClaim?: LiveReserveAdapterParamsByKey["erc4626-single-asset"]["pooledClaim"];
+  walletCashAccounting?: LiveReserveAdapterParamsByKey["erc4626-single-asset"]["walletCashAccounting"];
   redemptionLiquidity?: Erc4626RedemptionLiquidityConfig;
   redemptionLock?: LiveReserveAdapterParamsByKey["erc4626-single-asset"]["redemptionLock"];
   redemptionRoute?: LiveReserveAdapterParamsByKey["erc4626-single-asset"]["redemptionRoute"];
@@ -80,6 +81,7 @@ function parseSliceConfig(config: LiveReservesConfig): SingleAssetSliceConfig {
       : {}),
     ...(params.deployedExposure ? { deployedExposure: params.deployedExposure } : {}),
     ...(params.pooledClaim ? { pooledClaim: params.pooledClaim } : {}),
+    ...(params.walletCashAccounting ? { walletCashAccounting: params.walletCashAccounting } : {}),
     ...(params.redemptionLiquidity ? { redemptionLiquidity: params.redemptionLiquidity } : {}),
     ...(params.redemptionLock ? { redemptionLock: params.redemptionLock } : {}),
     ...(params.redemptionRoute ? { redemptionRoute: params.redemptionRoute } : {}),
@@ -288,7 +290,7 @@ export async function fetchErc4626SingleAssetReserves(
         contractAddress,
         assetAddress,
         configured: sliceConfig.redemptionLiquidity,
-        idleCapacityRaw: idleUnderlyingBalanceRaw,
+        idleCapacityRaw: sliceConfig.walletCashAccounting ? null : idleUnderlyingBalanceRaw,
         underlyingDecimalsRaw,
         supplyAssetsRaw,
         call,
@@ -366,9 +368,10 @@ export async function fetchErc4626SingleAssetReserves(
       "Vault underlying holdings could not be measured; reserve exposure is unattributed",
     ));
   }
-  // MetaMorpho V1 totalAssets excludes skimmable wallet donations. They are
-  // contextual balances, not idle assets in the holder's accounted reserve book.
-  const excludesWalletCash = sliceConfig.redemptionLiquidity?.source === "morpho-vault-v1";
+  // MetaMorpho V1 excludes skimmable donations; an explicit reviewed exclusion
+  // also covers vaults whose accounting and burn path omit wallet balances.
+  const excludesWalletCash = sliceConfig.walletCashAccounting?.mode === "excluded"
+    || sliceConfig.redemptionLiquidity?.source === "morpho-vault-v1";
   const heldRaw = idleUnderlyingBalanceRaw == null || excludesWalletCash
     ? 0n
     : idleUnderlyingBalanceRaw < totalAssetsRaw ? idleUnderlyingBalanceRaw : totalAssetsRaw;
@@ -475,6 +478,9 @@ export async function fetchErc4626SingleAssetReserves(
           : {}),
         ...(sliceConfig.pooledClaim
           ? { compositionBasis: "opaque-pooled-claim", pooledClaimBasis: sliceConfig.pooledClaim.basis, contextualObservationsOnly: true }
+          : {}),
+        ...(sliceConfig.walletCashAccounting
+          ? { walletCashAccounting: sliceConfig.walletCashAccounting }
           : {}),
         ...(assetAddress
           ? { assetAddressMatchesExpected: sliceConfig.expectedAssetAddress == null || assetAddress === sliceConfig.expectedAssetAddress }

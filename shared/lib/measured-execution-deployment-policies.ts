@@ -277,4 +277,43 @@ export const QUOTER_V2_REVIEWED_RETAINED_POOLS = [
       { address: "0x4c35853a3b4e647fd266f4de678dcc8fec410bf6", symbol: "ZARm", decimals: 18, trackedAssetId: "zarm-mento" },
     ],
   },
+  {
+    // Issuer-listed pool; ordered tokens/decimals/fee/factory/getPool verified
+    // 2026-10-21 at Ethereum 26237409 (0xd9d34af0fb1c08313deef877e5f1a8285b63de645129b1cbbbc3f055ac5c57cd).
+    // https://raw.githubusercontent.com/homecoin-finance/gitbook/live/resources/dex-pools.md
+    adapterProfileId: "uniswap-v3-quoter-v2", protocol: "uniswap-v3", chain: "ethereum",
+    poolAddress: "0xd89278702e8221555b5d7d6a202551caffb7c50b", feePips: 100,
+    factoryAddress: "0x1f98431c8ad98523631ae4a59f267346ea31f984",
+    inputAssetIds: ["home-homecoin"],
+    poolTokens: [
+      { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", decimals: 6, trackedAssetId: "usdc-circle" },
+      { address: "0xb8919522331c59f5c16bdfaa6a121a6e03a91f62", symbol: "HOME", decimals: 6, trackedAssetId: "home-homecoin" },
+    ],
+  },
+] as const;
+
+/**
+ * Collection-only physical identities; never an active deployment admission.
+ * Source aliases are reviewed against the provider's pool_old mapping, not
+ * inferred from a token-pair fingerprint. Runtime membership is rechecked.
+ */
+export const QUOTER_V2_REVIEWED_SHADOW_POOLS = [
+  {
+    lifecycle: "shadow",
+    reviewedAt: "2026-10-21",
+    reviewedBlockNumber: 115358664,
+    reviewedBlockHash: "0x2eacfe9e714807a6486e75bff345a69d260087e2a2f7a5ac19158f58e9fbf331",
+    sourceUrls: [
+      "https://docs.uniswap.org/contracts/v3/reference/deployments/monad-deployments",
+      "https://yields.llama.fi/poolsPro?project=uniswap-v3",
+    ],
+    adapterProfileId: "uniswap-v3-quoter-v2", protocol: "uniswap-v3", chain: "monad",
+    poolAddress: "0xe153201e40f50ebc9da7be3aa9c419f185c97f44", feePips: 100,
+    factoryAddress: "0x204faca1764b154221e35c0d20abb3c525710498",
+    defillamaPoolId: "c57840e5-a0e1-5b7c-9627-3afbfbd33bcd",
+    poolTokens: [
+      { address: "0x1111b3ded9f1fe1801ad4ebef8e2788183a24111", symbol: "EURW", decimals: 6, trackedAssetId: "eurw-newrails" },
+      { address: "0x754704bc059f8c67012fed69bc8a327a5aafb603", symbol: "USDC", decimals: 6, trackedAssetId: "usdc-circle" },
+    ],
+  },
 ] as const;

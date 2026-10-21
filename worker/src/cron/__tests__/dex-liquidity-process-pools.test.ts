@@ -22,6 +22,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { computeStablecoinScores } from "../dex-liquidity/scoring";
 import { persistScores } from "../dex-liquidity/persistence";
 
+import { QUOTER_V2_REVIEWED_SHADOW_POOLS } from "@shared/lib/measured-execution-deployment-policies";
 function makePool(overrides: Partial<LlamaPool>): LlamaPool {
   return {
     pool: "0xpool",
@@ -61,6 +62,26 @@ function makeCurveEntry(overrides: Partial<CurvePoolEntry>): CurvePoolEntry {
 describe("processPoolMetrics", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("labels the reviewed EURW pool at its actual 1bp fee without claiming measured execution", () => {
+    const policy = QUOTER_V2_REVIEWED_SHADOW_POOLS[0];
+    const { metrics } = processPoolMetrics({
+      pools: [makePool({
+        pool: policy.poolAddress, chain: policy.chain, project: policy.protocol, symbol: "EURW-USDC",
+        underlyingTokens: policy.poolTokens.map((token) => token.address), poolMeta: "0.01%",
+      })],
+      dexProjects: new Set(["uniswap-v3"]),
+      chainAddressToId: new Map(policy.poolTokens.map((token) => [`monad:${token.address}`, token.trackedAssetId])),
+      symbolToChainScopedIds: new Map(), curvePoolMap: new Map(),
+      uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(),
+    });
+    const pool = metrics.get("eurw-newrails")!.pools[0]!;
+    expect(pool).toMatchObject({
+      poolId: `monad:${policy.poolAddress}`, poolType: "uniswap-v3-1bp", tvlUsd: 100_000,
+      extra: { feeTier: 1, measurement: { balanceMeasured: false, priceMeasured: false } },
+    });
+    expect(pool.extra?.measuredExecutionTarget).toBeUndefined();
   });
 
   it.each([

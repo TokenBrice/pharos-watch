@@ -310,11 +310,16 @@ describe("getRedemptionBackstopConfig", () => {
   });
 
 
-  it("excludes USDA from Indigo's current complete PSM payout set", () => {
-    expect(getRedemptionBackstopConfig("iusd-indigo-protocol")?.outputAssets).toEqual([
+  it("retains Indigo's complete three-choice PSM payout census without valuing its untracked USDr branch", () => {
+    const config = getRedemptionBackstopConfig("iusd-indigo-protocol");
+    expect(config?.outputAssets).toBeUndefined();
+    expect(config?.unresolvedOutputDisposition).toBe("reviewed-external");
+    expect(config?.unresolvedOutputAssetKeys).toEqual([
       "usdm-moneta",
       "usdc-circle",
+      "asset:cardano:7d9e4a0ee1a3f5d5ff8159ea91a83310cf2795ee7a87170c7aea05ae.55534472",
     ]);
+    expect(config?.unresolvedOutputAssetKeys).not.toContain("usda-anzens");
   });
 
   it.each([
