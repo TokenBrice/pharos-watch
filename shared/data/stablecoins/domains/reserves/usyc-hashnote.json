@@ -14,7 +14,7 @@
         "liquidity",
         "custody"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
@@ -39,7 +39,7 @@
         "url": "https://usyc.docs.hashnote.com/overview/subscription-and-redemption"
       }
     ],
-    "rationale": "Current Circle disclosures identify the fund strategy as short-term U.S. Treasury bills and reverse repurchase agreements backed by U.S. government securities, but do not publish a durable current allocation between those categories. The reviewed row therefore preserves the exact aggregate identity emitted by the Chainlink NAV adapter. Source-scoped correction; classification-only review 2026-10-20, preserving the original 2026-07-14 review start and composition date. Circle's current USYC product page describes one-block redemption below instant capacity and T+0/T+1 above capacity, while the official subscription page offers separately configured Private Liquidity Tellers for additional fees. These holder-route terms do not establish an unconditional whole-reserve Treasury/repo realization maximum. Withdraw the unsupported one-day reserve liquidity horizon to unknown; no measured illiquidity, maturity maximum, new composition or refreshed holdings is asserted.",
+    "rationale": "Current Circle disclosures identify the fund strategy as short-term U.S. Treasury bills and reverse repurchase agreements backed by U.S. government securities, but do not publish a durable current allocation between those categories. The reviewed row therefore preserves the exact aggregate identity emitted by the Chainlink NAV adapter.",
     "compositionBasis": "Circle USYC fund and developer disclosures",
     "compositionAsOf": "2026-07-14",
     "scope": "full-composition",

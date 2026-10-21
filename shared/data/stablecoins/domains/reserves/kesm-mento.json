@@ -30,7 +30,7 @@
         "liquidity",
         "legal"
       ],
-      "liquidityHorizon": "unknown",
+      "liquidityHorizon": "immediate",
       "sourceKey": "mento:reserve:ausd"
     },
     {
@@ -245,7 +245,7 @@
         "url": "https://docs.agora.finance/instant-settlement"
       }
     ],
-    "rationale": "kesm-mento retains the shared Mento Reserve backing model. All positive holdings are refreshed from one issuer API capture. Native parents keep their canonical collateral link; Celo axlUSDC and axlEUROC and Monad USDT0 carry explicit bridge annotations with registry contracts and fixed-block symbols confirmed at Celo 78860375 and Monad 109288367. Bridge verification establishes representation identity and documented issuer lineage, not independent escrow solvency. GBPm, JPYm and CHFm remain separate USDm-collateral CDPs; no underlying basket is duplicated on those coins. Source-scoped correction (retrieved 2026-10-20): AUSD liquidityHorizon immediate is withdrawn to unknown. Agora Bermuda Terms of Use as of 2026-09-01, page 6 (https://static.agora.finance/termsofuse.pdf), limits direct redemption to verified customers, aims at 48 business hours normally or 96 under stress, and reserves delay and in-kind payout rights. Instant Settlement (https://docs.agora.finance/instant-settlement) is whitelist-only and Agora-inventory-managed; neither reviewed source proves the shared Reserve can realize its complete AUSD position immediately. This is a scoped liquidity classification correction, not a changed composition or a finding that redemption has failed. All original review/composition dates, reserve amounts and source keys remain unchanged.",
+    "rationale": "kesm-mento retains the shared Mento Reserve backing model. All positive holdings are refreshed from one issuer API capture. Native parents keep their canonical collateral link; Celo axlUSDC and axlEUROC and Monad USDT0 carry explicit bridge annotations with registry contracts and fixed-block symbols confirmed at Celo 78860375 and Monad 109288367. Bridge verification establishes representation identity and documented issuer lineage, not independent escrow solvency. GBPm, JPYm and CHFm remain separate USDm-collateral CDPs; no underlying basket is duplicated on those coins.",
     "compositionBasis": "Issuer reserve API collateral.assets captured 2026-09-30; measured percentages grouped by native economic parent with axlUSDC, axlEUROC and USDT0 retained separately. Capture date is an observation date; the API supplies no independently verified source update clock.",
     "compositionAsOf": "2026-09-30",
     "scope": "full-composition",

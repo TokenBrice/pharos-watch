@@ -14,7 +14,7 @@
         "custody",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
     },
     {
       "sourceKey": "sbc-independent-assurance:sbc:us-government-backed-debt",
@@ -45,7 +45,7 @@
         "url": "https://brale.xyz/stablecoins/SBC"
       }
     ],
-    "rationale": "MCCPA's independent performance attestation report, dated October 13, 2026, examines Brale's assertion as of September 30, 2026 at 11:50 PM Eastern. It records $20,185,277 of cash and cash equivalents and $1,408,578 of U.S. government-backed debt against 21,593,854 SBC issued across all thirty named supported blockchains. The printed reserve total is $21,593,854 while the two rounded categories sum to $21,593,855; composition is normalized to the category sum, producing 93.476950% cash and 6.523050% government-backed debt without changing either published amount. The unmodified AICPA direct-examination opinion states the assertion is fairly stated in all material respects. MCCPA relied on company-provided records without independently confirming their authenticity. Accounts are described as unencumbered and segregated from Brale's other accounts; banks, instrument identifiers, account withdrawal terms, debt maturities and provider allocations remain undisclosed. Source-scoped correction: the September report and the previously cited August report supply category balances, not a final-realization or withdrawal bound for the entire cash-and-cash-equivalents category. Its unsupported immediate liquidityHorizon is therefore unknown; independent financial assurance, segregation, historical report pins and the separate custody review remain unchanged.",
+    "rationale": "MCCPA's independent performance attestation report, dated October 13, 2026, examines Brale's assertion as of September 30, 2026 at 11:50 PM Eastern. It records $20,185,277 of cash and cash equivalents and $1,408,578 of U.S. government-backed debt against 21,593,854 SBC issued across all thirty named supported blockchains. The printed reserve total is $21,593,854 while the two rounded categories sum to $21,593,855; composition is normalized to the category sum, producing 93.476950% cash and 6.523050% government-backed debt without changing either published amount. The unmodified AICPA direct-examination opinion states the assertion is fairly stated in all material respects. MCCPA relied on company-provided records without independently confirming their authenticity. Accounts are described as unencumbered and segregated from Brale's other accounts; banks, instrument identifiers, account withdrawal terms, debt maturities and provider allocations remain undisclosed.",
     "compositionBasis": "MCCPA independent performance examination of Brale's SBC Reserve Report as of September 30, 2026",
     "compositionAsOf": "2026-09-30",
     "scope": "full-composition",

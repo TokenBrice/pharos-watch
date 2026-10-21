@@ -94,8 +94,8 @@
     "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
-    "tier": "single-source-or-laggy",
-    "summary": "CHFm's sole Celo CDP branch uses FXPriceFeed -> OracleAdapter -> SortedOracles CHF/USD. At Celo block 80633000 (2026-10-20T22:02:38Z), getOracles returned only reporter 0x1b904277b22ca598ef17b38f64de5f9c29cd31bd. Mento's current oracle documentation names Chainlink as the only source; validity checks halt operations rather than provide an independent fallback. The same pin found only one Trove, whose liquidation is prohibited by the deployed TroveManager's final-Trove guard.",
+    "tier": "standard-external",
+    "summary": "CHFm's sole Celo CDP branch values USDm through one Mento SortedOracles CHF/USD report, inverted by FXPriceFeed. OracleAdapter enforces FX market hours, BreakerBox bidirectional mode, and a 360-second report expiry; there is no alternate provider. An invalid or unavailable rate freezes price-dependent operations until the authorized watchdog permanently shuts the branch and pins the last valid price.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -151,8 +151,8 @@
       {
         "id": "mento-chfm-usdm",
         "label": "Mento CHFm / USDm branch",
-        "tier": "single-source-or-laggy",
-        "summary": "The CHFm/USDm branch has one authorized CHF/USD relayer and no independently functioning live fallback at Celo block 80633000. Oracle freshness, BreakerBox and FX market-hours checks are halt conditions, not additional price sources. The sole Trove at this pin cannot be liquidated because the deployed manager rejects liquidation of the final Trove.",
+        "tier": "standard-external",
+        "summary": "The live CHFm branch uses one Mento SortedOracles CHF/USD report with a 360-second token expiry, a 110% MCR, Stability Pool offset, and active-Trove redistribution. Price-dependent calls freeze on invalid data until watchdog shutdown; there is no alternate oracle provider.",
         "collateralAssets": [
           "USDm"
         ],

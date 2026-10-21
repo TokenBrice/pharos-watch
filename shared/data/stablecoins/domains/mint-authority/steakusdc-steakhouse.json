@@ -84,7 +84,7 @@
         "observedAt": "2026-10-01",
         "observedBlock": 26095798,
         "failureDomainKeys": [
-          "safe:ethereum:0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd"
+          "ethereum:0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd"
         ],
         "sources": [
           {

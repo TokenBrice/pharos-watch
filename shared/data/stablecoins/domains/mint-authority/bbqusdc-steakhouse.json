@@ -84,7 +84,7 @@
         "modulesOrGuardsStatus": "none-detected",
         "observedAt": "2026-10-20",
         "observedBlock": 26236622,
-        "failureDomainKeys": ["safe:ethereum:0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd"],
+        "failureDomainKeys": ["ethereum:0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd"],
         "capDescription": "Smokehouse V1 owner-held parameter authority, not arbitrary USDC issuance or immutable-vault code replacement. Strategy allocation, fee configuration and curator powers remain local economic controls.",
         "evidence": "Exact Smokehouse V1 owner() at Ethereum block 26236622, hash 0x942fd9743fc8fc922b4b1ef4058834d2a5254ce8dba3037cf1ad33f999e80fe5, timestamp 2026-10-20T21:55:35Z returned the full Safe address 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd; observed 2026-10-21T20:26:08.208Z through the keyless Alchemy endpoint. This replaces reliance on the earlier abbreviated owner text. The Safe's separate steakUSDC configuration snapshot at block 26095798 on 2026-10-01 records the ten-owner roster, threshold five, empty modules and zero guard; that snapshot is not refreshed by owner(). Neither proof establishes private custody, independent humans or legal protection.",
         "sources": [

@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "bounded-admin",
     "confidence": "verified",
-    "summary": "gtUSDC is an immutable MetaMorpho V1 vault (no proxy); shares minted only against USDC deposits. Vault owner is a Gauntlet Safe 4/7 (v1.3.0). No upgrade path. Base USDC issuance inherited from Circle.",
+    "summary": "gtUSDC is an immutable MetaMorpho V1 vault (no proxy); shares minted only against USDC deposits. Vault owner is Gauntlet Safe 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec, four-of-six as of Ethereum block 26197394 on 2026-10-15. No upgrade path. Base USDC issuance inherited from Circle.",
     "inheritedFrom": "usdc-circle",
     "upgradeability": {
       "model": "immutable",
@@ -35,7 +35,7 @@
         "authorityType": "contract",
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "none-detected",
-        "capDescription": "Vault shares minted only against deposited USDC. No EIP-1967 proxy admin or implementation slot found. The vault is immutable. Owner (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec) is a Safe 4/7 managing vault parameters only, not minting.",
+        "capDescription": "Vault shares minted only against deposited USDC. No EIP-1967 proxy admin or implementation slot found. The vault is immutable. Owner (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec) manages vault parameters only, not minting; its separately pinned Safe configuration at Ethereum block 26197394 on 2026-10-15 is four-of-six.",
         "sources": [
           {
             "label": "Morpho vault page",
@@ -80,7 +80,7 @@
         "modulesOrGuardsStatus": "none-detected",
         "observedAt": "2026-10-15",
         "observedBlock": 26197394,
-        "failureDomainKeys": ["safe:ethereum:0xc684c6587712e5e7bdf9fd64415f23bd2b05faec"],
+        "failureDomainKeys": ["ethereum:0xc684c6587712e5e7bdf9fd64415f23bd2b05faec"],
         "capDescription": "Structured owner identity previously recorded only in vault prose. Owner/curator allocation and parameter powers do not authorize arbitrary vault-share issuance or replacement of immutable MetaMorpho bytecode. No blanket action delay or independent-signer credit is inferred.",
         "evidence": "Owner relationship as of Ethereum block 26098754 on 2026-10-01: the exact gtUSDC source review records owner()=0xc684c6587712e5e7bdf9fd64415f23bd2b05faec. Configuration of that same exact Safe as of Ethereum block 26197394 on 2026-10-15 is retained from the gtUSDTp review: four-of-six, no enabled modules, zero guard and a nonzero fallback handler. This is shared-controller identity, not a fresh gtUSDC runtime read or an execution-complete fallback certificate. Private key custody and human independence remain unestablished.",
         "sources": [

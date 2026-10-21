@@ -130,7 +130,7 @@
         "modulesOrGuardsStatus": "none-detected",
         "observedAt": "2026-10-15",
         "observedBlock": 26197394,
-        "failureDomainKeys": ["safe:ethereum:0xc684c6587712e5e7bdf9fd64415f23bd2b05faec"],
+        "failureDomainKeys": ["ethereum:0xc684c6587712e5e7bdf9fd64415f23bd2b05faec"],
         "capDescription": "Owner-held VaultV2 parameter and allocation authority; no arbitrary share mint or mutable-bytecode power is established. Selector-specific delays are not a blanket execution delay.",
         "evidence": "Owner relationship as of Ethereum block 26095807 on 2026-10-01 is retained from the exact deployment review. The same exact Safe's later gtUSDTp review at Ethereum block 26197394 on 2026-10-15 establishes four-of-six with no enabled modules and zero guard, superseding the earlier seven-signer roster only for the Safe configuration. It does not refresh the Ethereum USDC vault's runtime or allocation, or establish key custody, human independence or fallback noninterference.",
         "sources": [

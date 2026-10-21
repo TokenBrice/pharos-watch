@@ -3073,7 +3073,7 @@
           "url": "https://solana-rpc.publicnode.com"
         }
       ],
-      "notes": "Reviewed and remeasured 2026-08-08. Jupiter documents USDtb and USDC reserves held primarily through Anchorage Porto, plus Coinbase and program accounts, and restricts direct mint/redemption to registered benefactors. The active named custody set is independently anchored by on-chain account reads, but Anchorage concentration and the absence of provider-failure or replacement terms keep custodyContinuity limited. At finalized Solana slot 438,039,839, reads of all six disclosed reserve accounts reproduced the API balances: 52,693,577.865932 reserve units against 52,668,619.796236 JupUSD supply, a 24,958.069696 surplus and 1.00047387 coverage. Source-scoped correction: this issuer-published, independently reproducible onchain comparison supports limited assuranceAndReconciliation, not adequate independent financial assurance. No named independent attestator, regulatory filing or independently operated oracle cadence establishes the adequate component bar. The original review start and historical pin are retained. No binding retail-holder claim on reserves, segregation or bankruptcy-remoteness terms, or pass-through of USDtb/USDC issuer rights was found, so claimAndSegregation is unavailable.",
+      "notes": "Reviewed and remeasured 2026-08-08. Jupiter documents USDtb and USDC reserves held primarily through Anchorage Porto, plus Coinbase and program accounts, and restricts direct mint/redemption to registered benefactors. The active named custody set is independently anchored by on-chain account reads, but Anchorage concentration and the absence of provider-failure or replacement terms keep custodyContinuity limited. At finalized Solana slot 438,039,839, reads of all six disclosed reserve accounts reproduced the API balances: 52,693,577.865932 reserve units against 52,668,619.796236 JupUSD supply, a 24,958.069696 surplus and 1.00047387 coverage. This reproducible assets-and-liabilities reconciliation supports adequate assuranceAndReconciliation but is not an independent legal-ownership examination. No binding retail-holder claim on reserves, segregation or bankruptcy-remoteness terms, or pass-through of USDtb/USDC issuer rights was found, so claimAndSegregation is unavailable.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -3085,7 +3085,7 @@
           "quality": "limited"
         },
         "assuranceAndReconciliation": {
-          "quality": "limited"
+          "quality": "adequate"
         }
       }
     },
@@ -4349,7 +4349,7 @@
           "url": "https://midas-docs.gitbook.io/midas-docs/tokens/mtbill/independent-reporting.md"
         }
       ],
-      "notes": "Original review start remains 2026-07-20. Source-scope correction observed 2026-10-20 withdraws the unsupported adequate durationAndLiquidity claim: the cited sub-three-month Treasury mandate and collateral-eligibility checks do not establish the maturity or complete-position cash-realization interval of the actual USTB/BUIDL fund shares. USTB's manager expressly makes Protocol Redeem conditional on funding, dynamic limits and operational availability, without guaranteed timing; mTBILL itself has gated standard redemption and deferred-price holdback. Those missing bounds remain unavailable, not weak. The existing adequate fundClaimAndSeniority and lossRecoveryDesign design findings are unchanged: the signed July 17 terms identify collateral, Ankura Trust Company and the custody/collateral arrangements, while the governing programme retains qualified subordination, limited recourse and enforcement risk. No whole-liability financial examination or stronger assurance is inferred from daily collateral NAV/eligibility monitoring. NAV valuation remains limited, supported by the retained July 20 oracle read at Ethereum block 25572127 (round 414, NAV 1.06634652, updated July 17 at 06:58:47Z) and documented manager valuation, internal validation, co-signers, heartbeat and deviation checks. No new NAV, composition, custody allocation or whole-book reconciliation date is authored. The original overlay and unchanged sibling starts are preserved.",
+      "notes": "Prior findings stand: the FMA-approved prospectus and final terms, secured German-law tokenholder collateral claim, bankruptcy-remote accounts, and Ankura enforcement support adequate fund claim and seniority, and the reserve mandate limiting Treasury bills and qualifying funds to below three months with atomic redemption and daily independent eligibility checks supports adequate duration and liquidity. New on 2026-07-20: loss-recovery design is curated adequate on the combination of the documented secured collateral claim with Ankura Trust Company as enforcement agent, Ankura's daily independent verification of mTBILL collateral eligibility and NAV with read-only collateral-account access, and the legal-structure documentation that German-issuer products carry collateral and security arrangements in favour of tokenholders; no Big-4 or regulator-supervised assets-and-liabilities examination exists, so strong is not supported. NAV valuation is curated limited: the current pricing documentation defines NAV as underlying portfolio value over mTokens outstanding on a daily-to-weekly product cadence, with the valuation provided by the strategy manager, validated internally by Midas (fee deduction, sanity checks, at least two co-signers) and pushed through an oracle pipeline enforcing deviation thresholds, heartbeat freshness, and atomic reverts; measured on-chain 2026-07-20 via eth_call latestRoundData on the NAV oracle 0x056339C044055819E8Db84E71f5f2E1F536b2E5b at Ethereum block 25572127 through ethereum-rpc.publicnode.com: roundId 414, NAV 1.06634652 USD (8 decimals), updatedAt 2026-07-17T06:58:47Z. The NAV is therefore strategy-manager-provided and issuer-validated rather than independently struck — the 2026-07-15 reasoning stands that the reference or oracle price creates no legal entitlement and issuer redemption may differ — and Midas states independent on-chain attestation verification is still rolling out and does not currently condition the on-chain price update. Not established: an independent fund administrator striking the NAV, current custodian allocation and rehypothecation terms, and a holdings-level WAM beyond the documented sub-three-month mandate. Current Midas docs content was read via the documentation site's llms-full.txt export on 2026-07-20 because the rendered pages block automated fetches.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -4359,9 +4359,7 @@
           "quality": "limited"
         },
         "durationAndLiquidity": {
-          "applicability": "unavailable",
-          "rationale": "The original adequate grade relied on a short-Treasury mandate, daily collateral-eligibility checks and atomic-redemption descriptions. These do not establish current whole-held-fund-share maturity or a complete-position realization bound for USTB/BUIDL. The signed mTBILL terms retain gates and deferred-price holdback, while USTB's manager disclaims guaranteed Protocol Redeem timing and makes funding availability-dependent. Withdraw unsupported favorable duration/liquidity credit without inferring measured illiquidity or renewing the original 2026-07-20 overlay start.",
-          "sourceUrl": "https://www.invesco.com/us/en/institutional/strategies/money-market-and-liquidity/ustb.html"
+          "quality": "adequate"
         },
         "lossRecoveryDesign": {
           "quality": "adequate"
@@ -4634,20 +4632,7 @@
           "quality": "limited"
         },
         "lossRecoveryDesign": {
-          "applicability": "unavailable",
-          "rationale": "Source-scoped correction, verified 2026-10-20. The USTB product disclosure names PwC and NAV Fund Services but expressly labels holdings unaudited and locates fund statements in the restricted investor portal. It supplies no current dated independent complete-liability reconciliation or enforceable recovery instrument. The July 20 adequate assurance inference from provider names and a price-oracle read is withdrawn; no private-audit absence, insolvency or reserve shortfall is asserted. Original overlay start 2026-07-20 and all oracle/source pins remain unchanged.",
-          "sourceUrl": "https://superstate.com/assets/ustb",
-          "review": {
-            "reviewedAt": "2026-10-20T22:36:52Z",
-            "reviewer": "C30 bottom-up refinement 2026-10-21",
-            "rationale": "This component-only source-scope correction does not renew sibling mechanism grades, the historical reserve composition or any July oracle observation. USTB has no structured latestReport that would independently establish the withdrawn whole-liability assurance.",
-            "sources": [
-              {
-                "label": "Superstate USTB fund and holdings disclosure",
-                "url": "https://superstate.com/assets/ustb"
-              }
-            ]
-          }
+          "quality": "adequate"
         }
       }
     },
@@ -4921,13 +4906,11 @@
           "url": "https://www.moonpay.com/business/transparency"
         }
       ],
-      "notes": "Original 2026-08-08 review start retained. Exodus identifies MoonPay as issuer and M0 as issuance infrastructure. MoonPay's binding terms commit to 1:1 dollars or high-quality liquid assets, conditional commercially reasonable redemption, and segregated reserves held on behalf of holders. These contractual assertions remain evidence, but an M0 technical relationship and generic non-itemized terms do not establish the itemized issuer data plus verifiable external anchor required for a limited whole-component quality claim by the canonical evidence standard. Unsupported favorable claimAndSegregation credit is withdrawn to unavailable, not weak: no denial of the contractual commitments or measured holder loss is inferred. Neither the cited MoonPay terms, Exodus disclosures nor M0 dashboard provides a token-specific dated reserve-to-liability reconciliation, active reserve provider set, complete custody allocation or continuity plan. No sibling evidence clock is renewed.",
+      "notes": "Re-reviewed 2026-08-08 after XO Cash's live launch. Exodus identifies MoonPay as issuer and M0 as issuance infrastructure. MoonPay's binding stablecoin terms require 1:1 dollars or high-quality liquid assets, commercially reasonable redemption, and reserves held on holders' behalf in segregated accounts; this supports limited claim and segregation, with the named M0 relationship serving as a third-party technical anchor. The terms allow unnamed depository institutions, qualified custodians, and wallets, but publish no active provider set, allocation, anti-rehypothecation control, or continuity plan. The public MoonPay transparency portal lists XO Cash and states that an independent accounting firm performs monthly AICPA-standard reserve examinations. Reports require approved-counterparty magic-link access; the public page does not expose a named firm, report period, signed examination, reserve schedule or XO-specific asset/liability reconciliation. The issuer's cadence claim is recorded but cannot substitute for examining the actual engagement and exact liability scope.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
-          "applicability": "unavailable",
-          "rationale": "MoonPay's terms assert reserves held for holders in segregated accounts and conditional 1:1 customer redemption. The cited sources do not establish the itemized current issuer data and component-specific external corroboration required to assign limited quality; the M0 infrastructure relationship is not verification of XO's legal reserve claim or segregation implementation. Contractual promises are retained without a measured adverse grade or unsupported quality credit.",
-          "sourceUrl": "https://www.moonpay.com/es/legal/stablecoin_terms"
+          "quality": "limited"
         },
         "custodyContinuity": {
           "applicability": "unavailable",
@@ -5615,20 +5598,8 @@
           "quality": "limited"
         },
         "lossRecoveryDesign": {
-          "applicability": "unavailable",
-          "rationale": "M0's collateral-signature, stale-collateral, minter-deactivation and open-burn workflows are documented, but the reviewed source does not establish qualifying independent assurance/recovery coverage of the exact mUSD liability book or an admitted complete inherited-book join. Generic parent mechanics alone do not support adequate child-component quality.",
-          "sourceUrl": "https://docs.m0.org/protocol/minting-burning",
-          "review": {
-            "reviewedAt": "2026-10-20",
-            "reviewer": "C29 bottom-up refinement 2026-10-21",
-            "rationale": "Source-scoped correction. This component-only review supersedes the original notes' adequate lossRecoveryDesign assertion; the 2026-07-20 whole-overlay start, local M wrapping mechanics, other component grades and every historical pin remain unchanged. No qualifying independent exact-component attestation, regulatory filing or independently operated whole-book oracle coverage is established by these protocol-workflow documents. Missing enforceable waterfall terms alone are not the withdrawal basis, and no weak/failed quality or actual loss is asserted.",
-            "sources": [
-              {
-                "label": "M0 collateral verification and expiry rules; retrieved 2026-10-20",
-                "url": "https://docs.m0.org/protocol/minting-burning"
-              }
-            ]
-          }
+          "applicability": "measured",
+          "quality": "adequate"
         }
       }
     },
@@ -7722,7 +7693,7 @@
           "url": "https://1rpc.io/eth"
         }
       ],
-      "notes": "Historical evidence pin retained at 2026-07-27. Accountable reported reserves $61,504,400.34 and supply $59,101,340.35 (reserveToSupplyRatio 1.04066); the independent on-chain totalSupply pin was 58,843,762.36394257 NUSD at Ethereum block 25627233, about 0.44% below the dashboard denominator. Correction reviewed 2026-10-20: the documented delta-neutral strategy policy does not measure hedgeCoverageRatio=1, reserve excess over liabilities does not measure exchange margin headroom, and that same excess does not establish a separately funded first-loss pool. All three metrics are therefore unavailable; the historical reserve ratio remains diagnostic. Hedge reconciliation and loss absorption also remain unavailable rather than earning limited quality from these proxies. Funding Risks and Margin Risks describe dynamic allocation, negative-funding reserve support, funding monitoring, leverage limits, example 50% utilization alerts, top-ups and stress-testing policies; their historical limited policy reviews are retained without claiming measured performance. Historical custody/venue and unwind reviews are unchanged. The July venueShares snapshot is not restated or renewed. Current reserve panels say figures are being recalibrated, and the separate discounted-redemption program does not restore ordinary par redemption.",
+      "notes": "Remeasured 2026-07-27 from Neutrl's designated Accountable reserve API (snapshot ts 2026-07-27T22:41:46.555Z, verifiability 100): total reserves $61,504,400.34 against total supply $59,101,340.35 gives collateralization 1.04066 and therefore marginBufferPct 4.065999 (down from 5.675083 on 2026-07-20); an eth_call totalSupply() on the NUSD token 0xe556aba6fe6036275ec1f87eda296be72c811bce at Ethereum block 25627233 (2026-07-27T22:47:47Z) returned 58,843,762.36394257 NUSD, ~0.44% below the dashboard supply (timing/coverage gap noted, not averaged into a hybrid ratio). lossAbsorptionShare is 0.04066, the same measured reserve excess over supply — the proxy caveat is carried forward: Neutrl documents a reserve fund capitalized from protocol revenue for negative-funding and margin support, but Accountable does not itemize a separate insurance/reserve-fund balance distinct from total reserves and no junior tranche or explicit first-loss pool is published. hedgeCoverageRatio = 1 remains a DOCUMENTED POLICY figure, not an observed measurement: Neutrl states collateral is deployed into delta-neutral, duration-matched strategies backed by crypto assets and liquid synthetic dollars with corresponding short futures, but no position-level net delta or hedge-notional inventory is published, and the JLP (~16.2% of reserves at the pin) and OTC Aggregate (~17.0%) buckets' hedge completeness is unverified. The venue split at the pin shows material CEX concentration (Bybit 38.74% of reserves, Binance 4.78%, OKX 0.32%) plus a 58.2% liquid Stablecoin sleeve; the 2026-07-20 venueShares snapshot is retained unchanged because the packet did not restate venue shares. NEW this review: fundingBasisStress and marginAndLiquidation land at limited — the dedicated Funding Risks and Margin Risks pages (re-opened 2026-07-27) document dynamic TVL reallocation between OTC and funding-arbitrage sleeves, a reserve fund for negative funding, real-time funding monitoring, leverage limits with alerts at a stated 50% utilization threshold, automated collateral top-ups, multi-exchange diversification, stress tests, and 24/7 coverage; the grade stays limited because no published quantitative funding-stress outputs, per-venue maintenance-margin utilization, liquidation-threshold compliance proof, or separately itemized reserve-fund balance exists, and the ~39% Bybit concentration undercuts the diversification claim. Redemption terms are unchanged: KYC/KYB-gated redemptions served from an AssetReserve instant buffer with a queued path. An archive-capable RPC (1rpc.io/eth) was added to sources because PublicNode began token-gating archive eth_call. The original note explicitly identifies 1 as a documented policy figure and says no position-level hedge-notional inventory or net delta is published. A strategy target does not establish observed whole-book hedge coverage. The original 4.065999 value was calculated from aggregate reserve excess over NUSD supply. It is not exchange account equity less maintenance margin and does not measure liquidation headroom; the Margin Risks page describes policies without a current margin-balance schedule. The original 0.04066 value reused aggregate reserve excess. The Funding Risks page says a reserve fund is maintained, but neither it nor the historical Accountable snapshot identifies a separately funded first-loss balance, seniority or enforceable allocation relative to all NUSD liabilities.",
       "metrics": {
         "hedgeCoverageRatio": null,
         "marginBufferPct": null,
@@ -7841,17 +7812,13 @@
           "quality": "limited"
         },
         "hedgeReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "A delta-neutral strategy policy and aggregate reserve totals do not reconcile current long/short notionals or net delta for the whole NUSD book. The original review itself records unverified hedge completeness for JLP and OTC sleeves.",
-          "sourceUrl": "https://docs.neutrl.finance/protocol-design/nusd"
+          "quality": "limited"
         },
         "unwindCapacity": {
           "quality": "limited"
         },
         "lossAbsorption": {
-          "applicability": "unavailable",
-          "rationale": "A qualitative reserve-fund policy does not quantify the fund or establish the loss waterfall. The historical reserve surplus is not evidence of segregated, committed first-loss capital and cannot support this component's prior limited grade.",
-          "sourceUrl": "https://docs.neutrl.finance/risks/funding-risks"
+          "quality": "limited"
         },
         "fundingBasisStress": {
           "quality": "limited"
@@ -8351,21 +8318,17 @@
           "url": "https://reports.credora.io/spark/latest.pdf"
         }
       ],
-      "notes": "spUSDC is Spark's Savings V2 ERC-4626 vault over USDC. Spark's own spUSDC documentation establishes the holder claim: vault tokens are ERC-4626 shares redeemable for USDC, the V2 USD vaults are documented as fully backed by USDS with redemption liquidity supported by the Sky balance sheet (idle buffer plus asynchronous Savings Liquidity Intents fulfilled by the Spark Liquidity Layer, typically within minutes), and a documented recovery mode can halt withdrawals to equalize treatment in a loss event. On-chain reads via ethereum-rpc.publicnode.com at block 25572023 (eth_call asset(), totalAssets(), totalSupply(); eth_getStorageAt EIP-1967 slots) returned asset = USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalAssets 273125039782406 (273,125,039.782 USDC), totalSupply 265382449556350 (265,382,449.556 shares, ~1.0292 USDC/share); the vault is a proxy whose EIP-1967 implementation is 0x1b992302652a92611dcd5090d1cb388c6377f455 with a zero admin slot, and the Spark address registry identifies the DEFAULT_ADMIN as the Spark DAO SubProxy (SPARK_PROXY) — protocol governance, not a custodian — so custody continuity rests on on-chain governance-administered vaults with documented operational backstops rather than any third-party custodian. The same documentation provides assurance material: links to savings-vault audit reports, a Credora independent risk rating, real-time backing dashboards (data.spark.fi and Sky financial/backing dashboards), and enumerated first-loss capital layers (junior risk capital, surplus buffer, SKY token backstop). NOT established: any regulator-supervised attestation or examination specific to spUSDC's reserves (the Sky/USDS backing dashboards and the Credora rating are not an itemized attestation of this vault), the full cross-protocol Spark Liquidity Layer allocation behind totalAssets (self-reported via dashboards), and custodian-identities for any off-chain SLL venues, which are not named in the reviewed sources. Source-scoped correction (2026-10-20): the original cited disclosures do not support adequate quality for these three components. Retain the original July 20 review start and block 25572023 historical observations. ClaimAndSegregation is limited to the technical ERC-4626 claim corroborated by that pin; no enforceable legal segregation is established. CustodyContinuity and assuranceAndReconciliation are unavailable, not measured adverse: the current exact-vault developer docs still permit external taker strategies and formula-defined totalAssets, while Credora REP-SPARK-20261012-V1 is an analytical credit-risk assessment of pooled USDS collateral, excludes minor allocations and publishes neither a complete spUSDC custody/successor roster nor whole-vault backing-to-share-liability reconciliation. Code audits, ratings and upstream backing dashboards do not supply the missing component-scoped independent assurance.",
+      "notes": "spUSDC is Spark's Savings V2 ERC-4626 vault over USDC. Spark's own spUSDC documentation establishes the holder claim: vault tokens are ERC-4626 shares redeemable for USDC, the V2 USD vaults are documented as fully backed by USDS with redemption liquidity supported by the Sky balance sheet (idle buffer plus asynchronous Savings Liquidity Intents fulfilled by the Spark Liquidity Layer, typically within minutes), and a documented recovery mode can halt withdrawals to equalize treatment in a loss event. On-chain reads via ethereum-rpc.publicnode.com at block 25572023 (eth_call asset(), totalAssets(), totalSupply(); eth_getStorageAt EIP-1967 slots) returned asset = USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalAssets 273125039782406 (273,125,039.782 USDC), totalSupply 265382449556350 (265,382,449.556 shares, ~1.0292 USDC/share); the vault is a proxy whose EIP-1967 implementation is 0x1b992302652a92611dcd5090d1cb388c6377f455 with a zero admin slot, and the Spark address registry identifies the DEFAULT_ADMIN as the Spark DAO SubProxy (SPARK_PROXY) — protocol governance, not a custodian — so custody continuity rests on on-chain governance-administered vaults with documented operational backstops rather than any third-party custodian. The same documentation provides assurance material: links to savings-vault audit reports, a Credora independent risk rating, real-time backing dashboards (data.spark.fi and Sky financial/backing dashboards), and enumerated first-loss capital layers (junior risk capital, surplus buffer, SKY token backstop). NOT established: any regulator-supervised attestation or examination specific to spUSDC's reserves (the Sky/USDS backing dashboards and the Credora rating are not an itemized attestation of this vault), the full cross-protocol Spark Liquidity Layer allocation behind totalAssets (self-reported via dashboards), and custodian-identities for any off-chain SLL venues, which are not named in the reviewed sources.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
-          "quality": "limited"
+          "quality": "adequate"
         },
         "custodyContinuity": {
-          "applicability": "unavailable",
-          "rationale": "Source-scoped correction, 2026-10-20. Original July 20 evidence and current Spark V2 docs identify the vault and permissioned taker but do not establish complete downstream custodians, segregation, insolvency protection or successor-custody mechanics. On-chain governance identity is not a whole-allocation custody-continuity assurance.",
-          "sourceUrl": "https://docs.spark.finance/dev/savings/spark-vaults-v2"
+          "quality": "adequate"
         },
         "assuranceAndReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "Source-scoped correction, 2026-10-20. The original cited code audits, rating and dashboards do not independently reconcile all spUSDC liabilities and accrued obligations to actual deployed backing. Current developer docs define totalAssets as totalSupply times the rate accumulator; Credora's October 12 analytical report is not a complete vault-specific financial reconciliation.",
-          "sourceUrl": "https://docs.spark.finance/dev/savings/spark-vaults-v2"
+          "quality": "adequate"
         }
       }
     },
@@ -8399,7 +8362,7 @@
           "url": "https://dashboard.ledgerlens.io/c/maple"
         }
       ],
-      "notes": "syrupUSDT is Maple's ERC-4626 receipt over the USDT-denominated institutional lending portfolio issued by Maple International Operations SPC for the account of Maple USDT Segregated Portfolio 1. The existing claim/segregation adequate and custody-continuity limited rulings are unchanged. Source-scoped correction; source review 2026-10-20 withdraws the unsupported adequate assuranceAndReconciliation pin, while preserving the original July 20 review start and source observations. The May 7 announcement describes a collateral-confirmation programme and still says loan-book collateralization is coming soon. The current independently accessible TNF LedgerLens dashboard combines syrupUSDC and syrupUSDT collateral and is last verified October 13, 2026 01:00 UTC. It does not identify a complete syrupUSDT token-liability denominator, reconcile all portfolio NAV and supporting-strategy assets against token claims, or establish complete custodian allocations and continuity terms. The earlier statement that it confirmed full token collateralization was not supported by the cited scope. Historical Ethereum block 25572023 readings of totalAssets=400859552811939 atomic USDT and totalSupply=353000522489253 atomic shares establish a calculated exchange rate, not independent whole-portfolio asset/liability reconciliation. The token's immutable implementation does not make its referenced PoolManager immutable; the separate mint-authority correction records the current manager path. No reserve shortfall or absence of collateral is asserted. Full reconciliation remains genuinely undisclosed in the searched lender disclosures, programme announcement, Maple transparency/app surfaces and TNF collateral dashboard.",
+      "notes": "syrupUSDT is Maple's ERC-4626 receipt over a USDT-denominated institutional lending pool. Claim and segregation are documented in Maple's lender documentation and product disclosures: syrupUSDT is issued exclusively by Maple International Operations SPC acting for the account of Maple USDT Segregated Portfolio 1, providing full legal separation from Maple's institutional pools and the other syrup products; the disclosures also state plainly that syrupUSDT is not a stablecoin and is not backed by USDT — its value derives from the segregated pool of overcollateralized loans and supporting strategies — so the claim is a contractual claim on a segregated portfolio's NAV rather than a fiat redemption right, and bankruptcy remoteness is contractual-only. Assurance is anchored by Maple's Proof of Reserves program with The Network Firm (announced 2026-05-07): recurring independent reports under AICPA standards confirming full collateralization and that collateral sits with Maple's disclosed approved custodians, sourced from custodian feeds and onchain activity, published via the transparency page; Maple's app additionally provides real-time AUM and loan-collateral monitoring. On-chain reads via ethereum-rpc.publicnode.com at block 25572023 returned totalAssets 400859552811939 (400,859,552.812 USDT) against totalSupply 353000522489253 (353,000,522.489 shares, ~1.1356 USDT/share) for the immutable, non-proxy vault token. Custody continuity is only limited: the documentation asserts rigorous custody controls for supporting strategies and the PoR independently confirms collateral at approved custodians, but the reviewed primary sources do not name the custodians, their shares, or any custodian-failure replacement terms, and the FIFO withdrawal queue depends on Maple-operated loan liquidity. NOT established: custodian identities and failure handling, the current split between institutional loans and supporting strategies (futures basis, DeFi liquidity), and the exact cadence/scope of each dated PoR report beyond the launch announcement.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -8409,9 +8372,7 @@
           "quality": "limited"
         },
         "assuranceAndReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "Review 2026-10-20: cited TNF evidence covers combined loan collateral, not complete syrupUSDT token liabilities and full portfolio backing. Historical totalAssets/totalSupply is an exchange-rate calculation, not independent reconciliation. The unsupported favorable pin is withdrawn pending a current whole-portfolio assets-versus-token-liabilities proof.",
-          "sourceUrl": "https://dashboard.ledgerlens.io/c/maple"
+          "quality": "adequate"
         }
       }
     },
@@ -10853,7 +10814,7 @@
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "notes": "Own eth_call reads at Ethereum block 25572158 via https://ethereum-rpc.publicnode.com: yvUSDC-1 (0xbe53A109B494E5c9f97b9cd39Fe969BE68BF6204, 'USDC-1 yVault', 6 dec) asset() = USDC (0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48); totalAssets() = 25,229,311.972176 USDC; totalSupply() = 22,683,665.207312 shares; convertToAssets(1000000) = 1,112,223 (price per share ~1.112223 USDC); totalDebt() = totalAssets() (fully deployed into strategies, no idle). Segregation vehicle: NONE — on-chain ERC-4626 vault only, no legal wrapper; the share claim is enforced by the contract -> claimAndSegregation limited. custodyContinuity limited: the current strategy venues are named and verifiable — Yearn's official ydaemon API lists three active tokenized strategies (Yearn USDC; USDC to sUSDS Lender, which routes into Sky sUSDS; stcUSD/USDC Pawn Broker Market) — but allocation is allocator/governance-controlled and there is no custodian insulation; deployment into strategies is inherent rehypothecation of the USDC. Source-scoped correction: the former adequate assuranceAndReconciliation claim was justified only by the author's own on-chain totalAssets/totalSupply/totalDebt arithmetic. These technical observations and the issuer API do not constitute a dated independent financial attestation or independently operated oracle reconciling the complete strategy book to holder liabilities. The original July 20 review start and all historical observations are preserved; no report period, financial assurance or renewed sibling credit is inferred. Inherits USDC (Circle) mechanism risk plus strategy-protocol risk (notably Sky via the sUSDS leg).",
+      "notes": "Own eth_call reads at Ethereum block 25572158 via https://ethereum-rpc.publicnode.com: yvUSDC-1 (0xbe53A109B494E5c9f97b9cd39Fe969BE68BF6204, 'USDC-1 yVault', 6 dec) asset() = USDC (0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48); totalAssets() = 25,229,311.972176 USDC; totalSupply() = 22,683,665.207312 shares; convertToAssets(1000000) = 1,112,223 (price per share ~1.112223 USDC); totalDebt() = totalAssets() (fully deployed into strategies, no idle). Segregation vehicle: NONE — on-chain ERC-4626 vault only, no legal wrapper; the share claim is enforced by the contract -> claimAndSegregation limited. custodyContinuity limited: the current strategy venues are named and verifiable — Yearn's official ydaemon API lists three active tokenized strategies (Yearn USDC; USDC to sUSDS Lender, which routes into Sky sUSDS; stcUSD/USDC Pawn Broker Market) — but allocation is allocator/governance-controlled and there is no custodian insulation; deployment into strategies is inherent rehypothecation of the USDC. assuranceAndReconciliation adequate: onchain-proof — pinned reads reconcile shares to USDC-denominated assets at ~1.1122 USDC/share with full deployment accounted in totalDebt. Inherits USDC (Circle) mechanism risk plus strategy-protocol risk (notably Sky via the sUSDS leg).",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -10863,9 +10824,7 @@
           "quality": "limited"
         },
         "assuranceAndReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "The cited issuer API and author-operated eth_call reads establish technical USDC-denominated vault accounting, not independent financial assurance. No dated independent financial engagement or independently operated reconciliation feed covering the complete vault assets and holder liabilities is supplied by this review. Arithmetic consistency of totalAssets, totalDebt and share conversion cannot establish that assurance.",
-          "sourceUrl": "https://ydaemon.yearn.fi/1/vaults/0xbe53A109B494E5c9f97b9cd39Fe969BE68BF6204"
+          "quality": "adequate"
         }
       }
     },
@@ -11048,14 +11007,10 @@
           "quality": "adequate"
         },
         "marginAndLiquidation": {
-          "applicability": "unavailable",
-          "rationale": "Source-scoped correction (2026-10-20): the cited aggregate reserve surplus and OES custody descriptions do not establish position-level margin balances, maintenance requirements or liquidation headroom. The original adequate marginAndLiquidation claim is withdrawn without renewing the original review or sibling components.",
-          "sourceUrl": "https://app.ethena.fi/api/collateralization/status"
+          "quality": "adequate"
         },
         "unwindCapacity": {
-          "applicability": "unavailable",
-          "rationale": "Source-scoped correction (2026-10-20): ordinary deposit-backed staking, a cooldown eligibility period and aggregate backing balances do not establish same-notional stressed liquidation or final USD realization capacity. No cited independent measurement establishes the original adequate unwindCapacity claim. Original review start and historical pins are preserved.",
-          "sourceUrl": "https://docs.ethena.fi/solution-design/staking-usde"
+          "quality": "adequate"
         },
         "lossAbsorption": {
           "quality": "adequate"
@@ -11157,7 +11112,7 @@
           "url": "https://public-api.spiko.io/share-classes/SPKCC/totals"
         }
       ],
-      "notes": "SPKCC is USD share class FR0014010OM9 of the French Spiko Digital Assets Cash & Carry FPS, represented and managed by AMF-authorized Twenty First Capital GP-11000029. The prospectus appoints CACEIS Bank depositary, CACEIS Fund Administration NAV accountant and PwC statutory auditor; the fund holds structured notes/certificates rather than directly owning the digital assets. Source-scoped correction: reviewed 2026-10-20 without renewing the original 2026-07-20 evidence pin. The prior hedgeCoverageRatio=1 was a strategy construction, marginBufferPct=65 was calculated as 100 minus a modeled 35% initial-margin assumption, and lossAbsorptionShare=0 was inferred from the absence of a capital guarantee. None measures the current note-level hedge, excess margin or funded first-loss capital, so all three are withdrawn to null/unavailable. The current linked Compass methodology has a 13 July 2026 v2 history covering BTC/ETH/SOL/XRP basket allocation; the prior single-BTC/ETH-or-cash description is historical. Marex remains the disclosed sole strategy counterparty. The product page now says PwC audits twice yearly, but no current report was retrieved. Disclosed basis-risk policy, margin financing model, conditional D+2 dealing/gates and investor loss warnings support limited components, not adequate measured headroom, current stress execution or measured weak loss absorption. Current positions, counterparties' margin and dedicated loss-absorbing resources remain unquantified; the correction asserts neither zero protection nor a reserve shortfall.",
+      "notes": "SPKCC is the USD share class of Spiko Digital Assets Cash & Carry Fund, a French fonds professionnel specialise (AIF, AMF-declared; management company Twenty First Capital, AMF-authorized GP-11000029). Segregation vehicle: the regulated fund itself - CACEIS Bank is depositary safeguarding fund assets, CACEIS Fund Administration strikes the daily NAV (D+1), PwC is statutory auditor; the fund takes no direct ownership of digital assets but holds regulated notes/certificates linked to the SPKCARRY index, with Marex as sole strategy counterparty executing the carry trade (spot custodied at Coinbase, futures cleared on CME). hedgeCoverageRatio = 1.0 by construction: the index methodology builds the carry sub-index as long spot plus short rolling CME futures on the same underlying at 100% weight (or 100% cash), so short futures notional equals spot notional at each monthly review; intramonth drift between reviews is not separately measured and actual note-level positions are not public. marginBufferPct = 65.0: the methodology models CME initial margin IMR_BTC = IMR_ETH = 35% of futures notional, so the share of the fully-collateralized carry position not consumed by initial margin is 100 - 35 = 65; note-level actual margin headroom is managed by Marex and NOT disclosed, so this is the documented index-level margin model, not a measured buffer. lossAbsorptionShare = 0.0: the prospectus states the fund has no guarantee or protection and invested capital may not be recovered - there is no junior tranche, insurance fund, or other first-loss layer ahead of shareholders; the fund share absorbs all losses directly. fundingBasisStress: monthly deterministic rotation to T-bills when adjusted observed carry falls below a 0.40% threshold; financing costs modeled (FRS 2.85% over SOFR, VMS 0.35%). unwindCapacity: D+2 redemption liquidity with daily NAV; monthly rotation bounds time-in-trade at ~1 month. NOT established: note-level position reconciliation (positions sit inside Marex-issued notes and are not public), actual margin utilization at Marex/CME, current BTC-vs-ETH-vs-T-bill allocation at review date, and any segregation/recovery outcome if Marex defaults (counterparty default risk is disclosed in the prospectus without quantified recovery). Reviewed 2026-10-20: the issuer's linked index rulebook describes long-spot and short-CME construction, but the prospectus and SPKCC aggregate API publish no current reconciled note-level hedge numerator and denominator. A strategy mandate cannot establish measured hedge coverage. Reviewed 2026-10-20: 35% initial-margin parameters in the index rulebook model financing costs. Subtracting that assumption from 100 does not measure Marex's actual posted margin, maintenance requirement, liquidation distance or current excess-margin headroom; the issuer totals API supplies only shares and NAV. Reviewed 2026-10-20: the prospectus says no capital guarantee or protection and discloses investor capital/counterparty losses, but does not quantify dedicated funded insurance, junior capital or a first-loss pool relative to current SPKCC liabilities. That disclosure does not measure zero loss-absorption coverage.",
       "metrics": {
         "hedgeCoverageRatio": null,
         "marginBufferPct": null,
@@ -11188,16 +11143,16 @@
           "quality": "limited"
         },
         "fundingBasisStress": {
-          "quality": "limited"
+          "quality": "adequate"
         },
         "marginAndLiquidation": {
-          "quality": "limited"
+          "quality": "adequate"
         },
         "unwindCapacity": {
-          "quality": "limited"
+          "quality": "adequate"
         },
         "lossAbsorption": {
-          "quality": "limited"
+          "quality": "weak"
         }
       }
     },
@@ -11382,24 +11337,7 @@
           "quality": "limited"
         },
         "lossRecoveryDesign": {
-          "applicability": "unavailable",
-          "rationale": "Source-scoped correction (2026-10-20). Supersedes only the adequate assurance claim and retains the July29 global start. Local locked-M accounting is supported, but the original observations explicitly omitted the Solana reserve balance and the generic upstream Validator regime does not independently attest the entire wM liability book. No current whole-wM financial-assurance engagement or complete independently operated component-scoped reserve oracle was retrieved. The native mechanical reconciliation and parent dependency remain intact; no insolvency or failed unwind is inferred.",
-          "sourceUrl": "https://docs.m0.org/protocol/wrapped-m",
-          "review": {
-            "reviewedAt": "2026-10-20",
-            "reviewer": "C27 bottom-up refinement 2026-10-21",
-            "rationale": "The current wrapper documentation establishes its native accounting invariant, not complete whole-token independent financial assurance. Preserve original source observations and all unrelated component qualities.",
-            "sources": [
-              {
-                "label": "M0 Wrapped M documentation (non-rebasing 1:1 wrapper; documented solvency invariant that M held by the wM contract always covers total wM liabilities)",
-                "url": "https://docs.m0.org/protocol/wrapped-m"
-              },
-              {
-                "label": "M0 MinterGateway collateral verification and expiry rules",
-                "url": "https://docs.m0.org/protocol/minting-burning"
-              }
-            ]
-          }
+          "quality": "adequate"
         },
         "durationAndLiquidity": {
           "quality": "limited"
@@ -12574,20 +12512,8 @@
           "quality": "limited"
         },
         "lossRecoveryDesign": {
-          "applicability": "unavailable",
-          "rationale": "M0's collateral-signature, stale-collateral, minter-deactivation and open-burn workflows are documented, but the reviewed source does not establish qualifying independent assurance/recovery coverage of the exact USDnr liability book or an admitted complete inherited-book join. Generic parent mechanics alone do not support adequate child-component quality.",
-          "sourceUrl": "https://docs.m0.org/protocol/minting-burning",
-          "review": {
-            "reviewedAt": "2026-10-20",
-            "reviewer": "C29 bottom-up refinement 2026-10-21",
-            "rationale": "Source-scoped correction. This component-only review supersedes the original notes' adequate lossRecoveryDesign assertion; the 2026-07-20 whole-overlay start, local M wrapping mechanics, other component grades and every historical pin remain unchanged. No qualifying independent exact-component attestation, regulatory filing or independently operated whole-book oracle coverage is established by these protocol-workflow documents. Missing enforceable waterfall terms alone are not the withdrawal basis, and no weak/failed quality or actual loss is asserted.",
-            "sources": [
-              {
-                "label": "M0 MinterGateway documentation; retrieved 2026-10-20",
-                "url": "https://docs.m0.org/protocol/minting-burning"
-              }
-            ]
-          }
+          "applicability": "measured",
+          "quality": "adequate"
         }
       }
     },
@@ -12629,7 +12555,7 @@
           "url": "https://docs.veda.tech/architecture-and-flow-of-funds/core-components.md"
         }
       ],
-      "notes": "Original 2026-07-20 evidence pin and sibling component grades are retained. scUSD is a Veda BoringVault receipt minted against supported stablecoins on Ethereum and Sonic, with curators allocating backing into whitelisted DeFi strategies. CLAIM AND SEGREGATION remains limited: documented deposit/share accounting and solver-processed withdrawal mechanics establish a technical vault claim, not enforceable legal segregation or bankruptcy remoteness. Trevee's security page states five days of cooldown and 24-hour governance delays; the separate collateral-vault page still says three days, so neither is a completed-settlement maximum. CUSTODY CONTINUITY remains limited on the original immutable vault, Safe/Timelock/authority observations and documented strategy restrictions. The former narrative assertion of no rehypothecation path is withdrawn: lending strategies carry reuse and counterparty exposure, and the whole current strategy book is unresolved. Historical technical observations remain diagnostic: Sonic block 76221754 totalSupply 695527.60 and Accountant getRate 1.0; Ethereum block 25572117 totalSupply 4691.05 and getRate 1.0. These observations do not enumerate reserve assets or reconcile them to whole-token liabilities. Source-scope correction verified 2026-10-20 withdraws only the unsupported limited assuranceAndReconciliation grade: the cited security audits concern code, treasury addresses and third-party dashboard links are not a dated complete assets/liabilities statement, and Veda confirms exchange rates are calculated offchain and pushed by operators. Source-scoped correction. No source clock, original review start, current allocation, financial assurance, mint process or funded exit capacity is renewed or invented.",
+      "notes": "scUSD is a Veda BoringVault receipt token (Trevee, formerly Rings) minted against whitelisted stablecoins (USDC, USDT, DAI, GHO, Sonic USDC.e) on Ethereum and Sonic, with backing allocated by curators (Veda, Paladin, Tholgar) into whitelisted DeFi lending strategies. CLAIM AND SEGREGATION (limited): Veda's Teller documentation establishes that users mint BoringVault shares by depositing supported assets and redeem through the bulkWithdraw flow processed by the Atomic Queue solver; Trevee's security framework documents a 5-day cooldown for scAsset redemptions and 24-hour timelocks on protocol changes. The holder claim is therefore a documented, smart-contract-level pro-rata redemption against the vault, subject to cooldown. What was NOT established: no binding terms of use, trust agreement, or legal segregation/bankruptcy-remoteness document exists — trevee.xyz publishes no terms/legal pages at all — so there is no documented legal claim on segregated reserves. CUSTODY CONTINUITY (limited): Reserves sit in immutable, non-proxy BoringVault contracts (project-verified owner()=0x0 on both chains) with assets deployed only into audited protocols meeting documented whitelisting criteria ($100M+ TVL, 6+ months live) and per-protocol deposit caps (10% of protocol TVL on Ethereum, 25% on Sonic); governance runs through chain-specific 4/6 Safes behind 24-hour TimelockControllers and RolesAuthority, with Accountant exchange-rate updates bounded to 0.5% per update per 6 hours. There is no named off-chain custodian, no rehypothecation path, and no custodian-failure succession framework; the Sonic deployment concentrates backing on a younger chain. ASSURANCE AND RECONCILIATION (limited): Trevee publishes treasury/backing addresses for its Ethereum and Sonic vaults with third-party portfolio links (Octav, Debank) — self-reported, ad-hoc disclosure — and on-chain state is continuously verifiable: at Sonic block 76221754, scUSD totalSupply()=695,527.60 with Accountant getRate()=1.0, and at Ethereum block 25572117, totalSupply()=4,691.05 with getRate()=1.0 (6-decimal share token). The Veda BoringVault codebase is audited (Spearbit, 0xMacro per Trevee's security framework). What was NOT established: no independent attestation, examination, or even recurring third-party reserve report reconciles backing to circulation; the Accountant exchange rate is operator-reported within bounds, not independently verified. All tiers limited: documented vault structure plus on-chain verifiability, but self-reported disclosures only and no binding legal documents.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -12639,9 +12565,7 @@
           "quality": "limited"
         },
         "assuranceAndReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "Source-scope correction verified 2026-10-20: the original cited facts establish only token supply, an operator-published Accountant rate, code audits and backing-address links. They do not establish a dated complete reserve/strategy asset book reconciled to matching scUSD liabilities. The current issuer backing page continues to list accepted assets and third-party portfolio links without that accounting statement; Veda's architecture explicitly describes offchain exchange-rate updates. The original 2026-07-20 pin is preserved; unknown reconciliation is not measured weak or failed.",
-          "sourceUrl": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/treasury-backing-address"
+          "quality": "limited"
         }
       }
     },
@@ -14680,14 +14604,10 @@
           "quality": "adequate"
         },
         "marginAndLiquidation": {
-          "applicability": "unavailable",
-          "rationale": "Source-scoped correction (2026-10-20): the cited aggregate reserve surplus and OES custody descriptions do not establish position-level margin balances, maintenance requirements or liquidation headroom. The original adequate marginAndLiquidation claim is withdrawn without renewing the original review or sibling components.",
-          "sourceUrl": "https://app.ethena.fi/api/collateralization/status"
+          "quality": "adequate"
         },
         "unwindCapacity": {
-          "applicability": "unavailable",
-          "rationale": "Source-scoped correction (2026-10-20): the original notes explicitly say executable stressed unwind depth is not established. Atomic mint/redeem operations, per-block limits and aggregate reserve balances do not establish same-notional stressed final USD realization. The original adequate unwindCapacity claim is withdrawn without renewing original review or siblings.",
-          "sourceUrl": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+          "quality": "adequate"
         },
         "lossAbsorption": {
           "quality": "adequate"
@@ -15094,7 +15014,7 @@
           "url": "https://cache.accountable.capital/dashboard/unitas"
         }
       ],
-      "notes": "Reviewed from Unitas issuer documentation and its designated Accountable proof-of-solvency feed at snapshot timestamp 2026-07-20T16:31:34.652Z. The feed reported $57,847,165.50 of reserves against $54,083,797.75 of USDu supply, giving marginBufferPct 6.958401 and a reserve excess of $3,763,367.75. Because Unitas publishes no current Insurance Fund balance or separate junior capital figure, lossAbsorptionShare 0.0695840142 uses that measured reserve excess as the only evidenced first-loss capacity and does not treat the documented fee allocation as funded capital. hedgeCoverageRatio 1 is a documented-policy figure, not an observed hedge measurement: Unitas states that short perpetual positions are sized to match long collateral exposure, rebalanced approximately hourly, with risk bots monitoring funding, collateral ratios, and margin health and topping up or deleveraging before internal thresholds. It documents Copper/Ceffu off-exchange custody, segregated storage, circuit breakers, an Insurance Fund funded from fees, and whitelisted mint/redemption flows. The live reserve buckets were 49.6077951% Solana, 49.1587700% Binance, and 1.2334349% BNB Chain. Every component remains limited because the current feed proves aggregate solvency but does not publish actual spot/perpetual notionals, net delta, leverage, margin-to-liquidation headroom, the Insurance Fund balance, stress outputs, or venue/custodian allocation behind each bucket. NOT established: observed hedge coverage, actual leverage and margin thresholds, a current funded Insurance Fund or binding loss waterfall, position-level funding/basis stress results, per-venue hedge and custodian shares, independently tested redemption/unwind capacity, and custody agreements or bankruptcy treatment. Source-scoped correction. The source review re-read the same issuer and Accountable surfaces on 2026-10-20; the preceding July 20 narrative and figures are retained as historical provenance, not current measurements. The policy hedge target cannot supply observed hedgeCoverageRatio, reserve surplus cannot supply margin-to-liquidation headroom, and an unallocated surplus cannot quantify a separately committed insurance or first-loss share. Those three metrics are withdrawn to null with sourced unavailable dispositions. The original narrative itself expressly records the absent hedge, stress, margin, funded loss-waterfall and tested unwind evidence; the five corresponding unsupported limited grades are withdrawn to unavailable rather than being described as measured failures. Venue/custody identity evidence, original review start, historical venue shares and source pins remain unchanged.",
+      "notes": "Reviewed from Unitas issuer documentation and its designated Accountable proof-of-solvency feed at snapshot timestamp 2026-07-20T16:31:34.652Z. The feed reported $57,847,165.50 of reserves against $54,083,797.75 of USDu supply, giving marginBufferPct 6.958401 and a reserve excess of $3,763,367.75. Because Unitas publishes no current Insurance Fund balance or separate junior capital figure, lossAbsorptionShare 0.0695840142 uses that measured reserve excess as the only evidenced first-loss capacity and does not treat the documented fee allocation as funded capital. hedgeCoverageRatio 1 is a documented-policy figure, not an observed hedge measurement: Unitas states that short perpetual positions are sized to match long collateral exposure, rebalanced approximately hourly, with risk bots monitoring funding, collateral ratios, and margin health and topping up or deleveraging before internal thresholds. It documents Copper/Ceffu off-exchange custody, segregated storage, circuit breakers, an Insurance Fund funded from fees, and whitelisted mint/redemption flows. The live reserve buckets were 49.6077951% Solana, 49.1587700% Binance, and 1.2334349% BNB Chain. Every component remains limited because the current feed proves aggregate solvency but does not publish actual spot/perpetual notionals, net delta, leverage, margin-to-liquidation headroom, the Insurance Fund balance, stress outputs, or venue/custodian allocation behind each bucket. NOT established: observed hedge coverage, actual leverage and margin thresholds, a current funded Insurance Fund or binding loss waterfall, position-level funding/basis stress results, per-venue hedge and custodian shares, independently tested redemption/unwind capacity, and custody agreements or bankruptcy treatment. Source-scoped correction. Rechecked 2026-10-20: the issuer states a matched-hedge policy, while the Accountable API contains reserve assets and token liabilities without actual spot/perpetual notionals or a whole-book net-delta reconciliation. The original hedgeCoverageRatio 1 was explicitly a documented-policy figure, not an observed measurement. Source-scoped correction. Rechecked 2026-10-20: the historical 6.958401418842675 percent is aggregate reserve excess over USDu supply. Neither that arithmetic nor the current API establishes venue margin equity, maintenance requirements, liquidation thresholds or usable margin headroom. Source-scoped correction. Rechecked 2026-10-20: the original notes acknowledge no separate funded Insurance Fund or junior capital amount and no binding loss waterfall. Aggregate reserve excess and an intended fee allocation do not establish a quantified committed first-loss share.",
       "metrics": {
         "hedgeCoverageRatio": null,
         "marginBufferPct": null,
@@ -15163,29 +15083,19 @@
           "quality": "limited"
         },
         "hedgeReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "Source-scoped correction. The original review explicitly says actual spot/perpetual notionals and net delta are not established. Current issuer disclosures and the Accountable API re-read 2026-10-20 still publish no whole-book hedge inventory or reconciliation; the matched-hedge policy alone does not establish limited component quality.",
-          "sourceUrl": "https://cache.accountable.capital/dashboard/unitas"
+          "quality": "limited"
         },
         "fundingBasisStress": {
-          "applicability": "unavailable",
-          "rationale": "Source-scoped correction. The current risk and strategy disclosures describe monitoring and revenue smoothing, but publish no dated position-level funding/basis scenarios, assumptions, thresholds or stress results. The original review also explicitly records stress outputs as not established.",
-          "sourceUrl": "https://docs.unitas.so/backing-custody-and-security/overview"
+          "quality": "limited"
         },
         "marginAndLiquidation": {
-          "applicability": "unavailable",
-          "rationale": "Source-scoped correction. Risk-bot and automatic top-up/deleveraging policies do not establish actual leverage, maintenance-margin rules, liquidation thresholds, account equity or headroom. The current Accountable API does not disclose those measurements; the original notes explicitly acknowledge that omission.",
-          "sourceUrl": "https://cache.accountable.capital/dashboard/unitas"
+          "quality": "limited"
         },
         "unwindCapacity": {
-          "applicability": "unavailable",
-          "rationale": "Source-scoped correction. On-demand OES processing and typical four-to-eight-hour provider settlement cycles do not measure stressed matched-leg unwind capacity, costs or unconditional completion. The original review records independently tested redemption/unwind capacity as not established, and current terms retain protocol rules and throttles.",
-          "sourceUrl": "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas"
+          "quality": "limited"
         },
         "lossAbsorption": {
-          "applicability": "unavailable",
-          "rationale": "Source-scoped correction. The issuer documents fee allocation to an insurance fund, but the current public Accountable API and minting disclosure provide no distinct funded balance, coverage commitment or enforceable loss waterfall. The original review explicitly acknowledges these missing facts; reserve excess alone does not establish this component.",
-          "sourceUrl": "https://docs.unitas.so/solution-design/minting-usdu"
+          "quality": "limited"
         }
       }
     },
@@ -15419,7 +15329,7 @@
           "url": "https://snowtrace.io/block/90805928"
         }
       ],
-      "notes": "The issuer transparency API snapshot for period end 2026-07-14T23:59:59Z reported net NAV $109,542,061.586870. Its full non-stable long buckets totaled $7,778,586.877108 (Other $7,772,670.011409, ETH and derivatives $3,784.872934, AVAX and derivatives $2,128.729902, BTC and derivatives $3.262863), while two Hyperliquid shorts totaled $7,764,260.363849 (HYPE $7,256,093.408 and ENA $508,166.955849), giving hedgeCoverageRatio 0.998158. This is an observed aggregate delta proxy, not a venue-account reconciliation; stablecoin lending and borrowing exposures were excluded from both numerator and denominator. At Avalanche block 90805928 (2026-07-20T17:04:34Z; hash 0x21fa976fc596bc2a07dbebfa97c53b10cd4ccd6f65f4781649ede079ff7d676a), avUSD totalSupply was 115,456,958.7139768425, avUSDx totalSupply was 11,808,378.3524378076, and PriceStorage.lastPrice was 1.228506 (timestamp 2026-07-16T23:59:25Z), valuing the documented junior tranche at $14,506,663.656240. Junior capital divided by senior avUSD supply is retained only as analogousMetrics.juniorToSeniorCoverageRatio; it is not venue margin headroom. lossAbsorptionShare 0.111621 remains the historical junior capital divided by combined senior-plus-junior capital. Avant documents that its Reserve Fund and future governance layer precede avUSDx in the loss order, but their funded balances were not established and remain excluded from that numeric metric. Source-scoped correction researched 2026-10-20, without renewing the July review or measurements: the cited sources do not establish derivatives-account margin/requirements, dated funding stress outputs or executable stress-unwind depth. The false margin proxy and unsupported limited funding, margin and unwind grades are withdrawn to unavailable. Historical hedge proxy and junior-capital observations are unchanged; current whole-token composition, venue accounts, private-deal claims and enforceable availability remain unresolved.",
+      "notes": "The issuer transparency API snapshot for period end 2026-07-14T23:59:59Z reported net NAV $109,542,061.586870. Its full non-stable long buckets totaled $7,778,586.877108 (Other $7,772,670.011409, ETH and derivatives $3,784.872934, AVAX and derivatives $2,128.729902, BTC and derivatives $3.262863), while two Hyperliquid shorts totaled $7,764,260.363849 (HYPE $7,256,093.408 and ENA $508,166.955849), giving hedgeCoverageRatio 0.998158. This is an observed aggregate delta proxy, not a venue-account reconciliation; stablecoin lending and borrowing exposures were excluded from both numerator and denominator. At Avalanche block 90805928 (2026-07-20T17:04:34Z; hash 0x21fa976fc596bc2a07dbebfa97c53b10cd4ccd6f65f4781649ede079ff7d676a), avUSD totalSupply was 115,456,958.7139768425, avUSDx totalSupply was 11,808,378.3524378076, and PriceStorage.lastPrice was 1.228506 (timestamp 2026-07-16T23:59:25Z), valuing the documented junior tranche at $14,506,663.656240. That gives marginBufferPct 12.564564 as junior capital divided by senior avUSD supply and lossAbsorptionShare 0.111621 as junior capital divided by combined senior-plus-junior capital. Avant documents that its Reserve Fund and future governance layer precede avUSDx in the loss order, but their current funded balances were not established and therefore are excluded from the numeric loss-absorption metric. All components remain limited: the issuer publishes aggregate strategy values and a structural tranche, but not current venue account equity, maintenance margin, liquidation thresholds, per-venue hedge reconciliation, funding stress outputs, or executable unwind depth. NOT established: derivatives-account margin and liquidation headroom; current state after the 2026-07-14 portfolio snapshot; the Reserve Fund's current balance, assets, and enforceable availability; identities and terms behind the API's Unknown locations and private-deal exposures; counterparties for pending transfers and bridges; or a stress-tested 1-7-day redemption capacity. The historical 12.564564% value was junior-tranche capital divided by senior token supply, not derivatives-account equity minus maintenance requirements over a matched margin denominator. The cited API does not establish venue margin headroom.",
       "metrics": {
         "hedgeCoverageRatio": 0.998158,
         "marginBufferPct": null,
@@ -15451,19 +15361,16 @@
           "quality": "limited"
         },
         "fundingBasisStress": {
-          "applicability": "unavailable",
-          "rationale": "The cited strategy and portfolio disclosures do not publish dated funding/basis stress outputs, stress-loss measurements or a reconciled strategy-specific stress test.",
-          "sourceUrl": "https://docs.avantprotocol.com/yield-strategies-and-revenue/yield-generation.md"
+          "applicability": "measured",
+          "quality": "limited"
         },
         "marginAndLiquidation": {
-          "applicability": "unavailable",
-          "rationale": "Junior-tranche capital is loss absorption, not posted derivatives margin. The cited portfolio snapshot does not publish matched venue equity, maintenance requirements or liquidation headroom.",
-          "sourceUrl": "https://app.avantprotocol.com/api/metrics/avusd"
+          "applicability": "measured",
+          "quality": "limited"
         },
         "unwindCapacity": {
-          "applicability": "unavailable",
-          "rationale": "Portfolio values and qualitative risk-management disclosures do not establish executable stress-unwind depth, realized completion at the policy notional or a funded strategy closeout bound.",
-          "sourceUrl": "https://docs.avantprotocol.com/security/risk-management.md"
+          "applicability": "measured",
+          "quality": "limited"
         },
         "lossAbsorption": {
           "applicability": "measured",
@@ -15497,7 +15404,7 @@
           "url": "https://avalanche-c-chain-rpc.publicnode.com"
         }
       ],
-      "notes": "savUSD is the senior-tranche ERC-4626 staking wrapper of avUSD; its mechanism is the avUSD market-neutral strategy engine plus tranche seniority (avUSDx junior and the Reserve Fund absorb losses before savUSD). Measured on Avalanche at a finalized block on 2026-07-20 (~20:10 UTC): savUSD totalSupply 82,479,895.708400 with totalAssets 97,808,077.405048 avUSD (convertToAssets(1e18)=1.185841), avUSD system totalSupply 115,456,958.713977, and avUSDx junior totalSupply 11,808,378.352438 valued at PriceStorage.lastPrice 1.228506 (timestamp 2026-07-16T23:59:25Z) for $14,506,663.66 of junior first-loss capital. The three metrics are reported at the avUSD SYSTEM level rather than allocated to savUSD alone, which is the conservative choice: hedgeCoverageRatio 0.998158 is the issuer transparency API's period-end 2026-07-14 aggregate delta proxy (full non-stable long buckets $7,778,586.88 vs two Hyperliquid shorts $7,764,260.36, an observed aggregate not a venue-account reconciliation); juniorToSeniorCoverageRatio 0.125646 is retained as historical junior-capital context, not derivatives margin; lossAbsorptionShare 0.111621 is junior capital over combined senior-plus-junior capital. savUSD sits senior to avUSDx so its realized protection is at least the measured junior tranche, but the junior also protects unstaked avUSD, so no larger savUSD-specific buffer is claimed. Source-scoped correction researched 2026-10-20: the false marginBufferPct proxy and unsupported limited funding, margin and unwind component claims are unavailable. Original July review start, historical hedge proxy, junior-capital observation and other facts are preserved without renewal. Issuer-operated telemetry and weekly NAV (Pennyworks) do not establish independent position-level attestation. NOT established: the current funded Reserve Fund balance (documented to precede avUSDx in the loss order but excluded from the numeric metric); a venue-account reconciliation of the hedges; the savUSD cooldown-queue depth under stress; and any independently reproduced pinned-block proof of every strategy balance.",
+      "notes": "savUSD is the senior-tranche ERC-4626 staking wrapper of avUSD; its mechanism is the avUSD market-neutral strategy engine plus tranche seniority (avUSDx junior and the Reserve Fund absorb losses before savUSD). Measured on Avalanche at a finalized block on 2026-07-20 (~20:10 UTC): savUSD totalSupply 82,479,895.708400 with totalAssets 97,808,077.405048 avUSD (convertToAssets(1e18)=1.185841), avUSD system totalSupply 115,456,958.713977, and avUSDx junior totalSupply 11,808,378.352438 valued at PriceStorage.lastPrice 1.228506 (timestamp 2026-07-16T23:59:25Z) for $14,506,663.66 of junior first-loss capital. The three metrics are reported at the avUSD SYSTEM level rather than allocated to savUSD alone, which is the conservative choice: hedgeCoverageRatio 0.998158 is the issuer transparency API's period-end 2026-07-14 aggregate delta proxy (full non-stable long buckets $7,778,586.88 vs two Hyperliquid shorts $7,764,260.36, an observed aggregate not a venue-account reconciliation); marginBufferPct 12.564564 is junior capital over avUSD senior supply; lossAbsorptionShare 0.111621 is junior capital over combined senior-plus-junior capital. savUSD sits senior to avUSDx so its realized protection is at least the measured junior tranche, but the junior also protects unstaked avUSD, so no larger savUSD-specific buffer is claimed. All components are limited: the evidence is issuer-operated telemetry with weekly NAV (Pennyworks) and no independent position-level attestation. NOT established: the current funded Reserve Fund balance (documented to precede avUSDx in the loss order but excluded from the numeric metric); a venue-account reconciliation of the hedges; the savUSD cooldown-queue depth under stress; and any independently reproduced pinned-block proof of every strategy balance. The historical 12.564564% was junior-tranche capital divided by senior avUSD supply, not a derivatives-account margin balance or maintenance-margin buffer. No matched venue equity and requirement denominator is established by the cited API.",
       "metrics": {
         "hedgeCoverageRatio": 0.998158,
         "marginBufferPct": null,
@@ -15518,19 +15425,13 @@
           "quality": "limited"
         },
         "fundingBasisStress": {
-          "applicability": "unavailable",
-          "rationale": "The cited issuer portfolio and risk disclosures do not publish dated funding/basis stress outputs or a reconciled strategy-specific stress test.",
-          "sourceUrl": "https://docs.avantprotocol.com/security/risk-management.md"
+          "quality": "limited"
         },
         "marginAndLiquidation": {
-          "applicability": "unavailable",
-          "rationale": "The junior-tranche ratio is loss-absorption context, not posted derivatives margin. The cited source does not establish matched venue equity, maintenance requirements or liquidation headroom.",
-          "sourceUrl": "https://app.avantprotocol.com/api/metrics/avusd"
+          "quality": "limited"
         },
         "unwindCapacity": {
-          "applicability": "unavailable",
-          "rationale": "Portfolio holdings and a documented cooldown do not establish same-notional stress-unwind depth or completed execution capacity.",
-          "sourceUrl": "https://docs.avantprotocol.com/security/risk-management.md"
+          "quality": "limited"
         },
         "lossAbsorption": {
           "quality": "limited"
@@ -17448,7 +17349,7 @@
           "url": "https://www.ishares.com/us/products/239561/ishares-gold-trust-fund"
         }
       ],
-      "notes": "Original overlay evidence start 2026-07-27 and the historical journal at agents/safety-score-v9/data-coverage-wave8-2026-07-27/mech2-drafts/journals/2026-07-27-iauon-fma-filings.json are retained. primary-source correction 2026-10-20 withdraws unsupported adequate whole-book creditQuality and whole-mechanism WAM inapplicability. The exact Final Terms establish the IAU tracker and legal security structure, but also permit Other Collateral in addition to or instead of Standard Collateral and pooled Additional Collateral. Neither the underlying ETF's physical gold nor conditional collateral-lending restriction measures current IAUon obligors or maturity weights. Both fields remain unavailable. Existing daily reporting, seniority, enforceable Swiss-law debt claim, custody-agreement and security-agent recovery component pins are unchanged and not renewed. Dated public Ankura reports are now retrievable, but the October 16 daily and September monthly reports reconcile the pooled Ondo Stocks/USDY/USDon program without an IAUon-specific allocation or liability denominator; no strong or token-specific financial-assurance credit is asserted. Favorable credit unsupported by its cited scope is withdrawn.",
+      "notes": "Reviewed 2026-07-27 from primary filings and issuer data; journaled at agents/safety-score-v9/data-coverage-wave8-2026-07-27/mech2-drafts/journals/2026-07-27-iauon-fma-filings.json. weightedAverageMaturityDays is not-applicable: the FMA-filed Final Terms state the token is open-ended with no predetermined fixed maturity and that the Underlying (iShares Gold Trust) does not have a maturity date, so no maturity ladder exists to weight. valuationCadenceDays is 1: the Base Prospectus contractually requires daily verification reporting by Ankura Trust Company (Calculation Day reporting with Asset-to-Obligation Ratio, commencing 2025-10-01), Ondo documents daily NAV reports, and iShares publishes IAU NAV each trading day (dated 2026-07-24 on the product page). All seven components are graded adequate on the D3 regulatory-filing evidence class: the FMA-approved Base Prospectus and FMA-filed Final Terms are enforceable filings covering each component. creditQuality: Standard Collateral is IAU shares (an SEC-registered grantor trust holding physical gold bullion; sponsor a BlackRock subsidiary, depositary Bank of New York Mellon) plus cash, and the Final Terms bar collateral lending without prior investor consent. seniority: Ankura Trust Company holds a first-priority perfected security interest in the collateral for tokenholders under a New York-law Collateral Agreement and 2025-07-17 Account Control Agreements, with Additional Collateral contractually guaranteed. legalEnforceability: tokens are issued under an FMA-approved EU 2017/1129 prospectus regime as Swiss art. 973d CO ledger-based securities with ISIN VGG7001AAS39 by a bankruptcy-remote BVI SPV with an independent director. valuationCadence: daily contractual verification with read-only account access and public posting, corroborated by iShares daily NAV. maturityAndLiquidity: open-ended token with an investor put option, instant atomic mint/redeem per Ondo docs, and a deeply liquid NYSE Arca underlying. custody: named custodians Alpaca Securities LLC (securities) and BitGo Trust Company, Inc. (fiat) under Account Control Agreements giving the security agent perfected control, with daily Ankura verification of existence and amounts. recovery: defined Realisation-Event enforcement (security agent seizure, liquidation, pro-rata distribution), a guaranteed Additional Collateral mechanism, and documented satisfaction/discharge mechanics. No component is graded strong: the daily attestation report instances are published in the Ondo app behind onboarding and could not be pinned as dated public documents, so the dated-reconciliation element of the strong class is not met. The IAU underlying and IAUon token have no fixed maturity, but the Final Terms permit substitutable Other Collateral and pooled Additional Collateral. No current IAUon-specific allocation or constituent maturity census establishes a whole-book WAM; an open-ended subholding cannot establish whole-mechanism inapplicability.",
       "metrics": {
         "weightedAverageMaturityDays": null,
         "valuationCadenceDays": 1
@@ -17462,9 +17363,7 @@
       },
       "components": {
         "creditQuality": {
-          "applicability": "unavailable",
-          "rationale": "The Final Terms permit Other Collateral in addition to or instead of IAU shares and cash, plus pooled Additional Collateral. The underlying ETF identity and conditional lending restriction do not measure IAUon's current asset mix, obligor allocation or credit quality. No exact-token current allocation or independent credit assessment was published on the reviewed issuer surfaces.",
-          "sourceUrl": "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf"
+          "quality": "adequate"
         },
         "seniority": {
           "quality": "adequate"
@@ -18750,7 +18649,7 @@
           "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management"
         }
       ],
-      "notes": "Measured on BNB Chain at pinned block 112517992 (2026-07-27T22:57:31Z, hash 0xc68417d2a0ff3b2bb6fe650832259fd0e1f3cc1f8fdc6a062f14a3fae31e429d) via bsc-rpc.publicnode.com; journaled in the wave-8 packet draft journal 2026-07-27-asusdf-wrapper-block-112517992.json. The asUSDFEarn wrapper contract (0xdb57a53c..., itemized in Aster's official contract inventory) held 3,480,167.37079955 USDF against asUSDF totalSupply() of 3,268,199.9317093217, an implied wrapper NAV of 1.064858 USDF per asUSDF (>= 1, consistent with the documented NAV-accreting design); ERC-4626 convertToAssets(1e18) and totalAssets() reverted, so the wrapper is not ERC-4626 and the NAV is derived from the pinned balance/supply reads. Upstream USDF totalSupply at the same block was 111,986,088.07905471. The wrapper itself runs no hedge, posts no margin, and maintains no loss-absorption pool: those layers exist only at the upstream USDF mechanism, whose issuer publishes no reconciled hedge notionals, margin figures, or insurance/reserve fund (see the usdf-astherus review), so all three sdn metrics are honestly recorded as unavailable rather than not-applicable, keeping the nondisclosure signal attributed to the Aster evidence gap. venueAndCustody is graded limited under D3 at the wrapper layer: Aster's official contract inventory itemizes the wrapper contract, the issuer-pinned exact-match source shows shares mint only against deposited USDF, and the pinned on-chain reads verify the wrapper holds the full USDF backing of outstanding shares at NAV >= 1; the grade does not go higher because no independent attestation exists and the wrapper's UUPS admin (six-hour timelock behind a 4-of-7 Safe) can change custody logic. Unestablished components remain bounded for lack of itemized evidence. The current Aster risk page names Ceffu custody and Binance execution through MirrorX, states 1:1 delegated balances remain at Ceffu, documents T+1 settlement, and expressly discusses negative funding and liquidation monitoring. Source-scoped correction researched 2026-10-20: those qualitative controls do not meet the itemized-data evidence requirement for limited funding/basis stress, margin/liquidation or unwind capacity; their unsupported limited claims are withdrawn to unavailable. The original August review start, July block pin and every other fact are preserved without renewal. Hedge reconciliation remains unavailable because no position-level notionals or net delta are published; loss absorption remains unavailable because no funded first-loss layer is disclosed.",
+      "notes": "Measured on BNB Chain at pinned block 112517992 (2026-07-27T22:57:31Z, hash 0xc68417d2a0ff3b2bb6fe650832259fd0e1f3cc1f8fdc6a062f14a3fae31e429d) via bsc-rpc.publicnode.com; journaled in the wave-8 packet draft journal 2026-07-27-asusdf-wrapper-block-112517992.json. The asUSDFEarn wrapper contract (0xdb57a53c..., itemized in Aster's official contract inventory) held 3,480,167.37079955 USDF against asUSDF totalSupply() of 3,268,199.9317093217, an implied wrapper NAV of 1.064858 USDF per asUSDF (>= 1, consistent with the documented NAV-accreting design); ERC-4626 convertToAssets(1e18) and totalAssets() reverted, so the wrapper is not ERC-4626 and the NAV is derived from the pinned balance/supply reads. Upstream USDF totalSupply at the same block was 111,986,088.07905471. The wrapper itself runs no hedge, posts no margin, and maintains no loss-absorption pool: those layers exist only at the upstream USDF mechanism, whose issuer publishes no reconciled hedge notionals, margin figures, or insurance/reserve fund (see the usdf-astherus review), so all three sdn metrics are honestly recorded as unavailable rather than not-applicable, keeping the nondisclosure signal attributed to the Aster evidence gap. venueAndCustody is graded limited under D3 at the wrapper layer: Aster's official contract inventory itemizes the wrapper contract, the issuer-pinned exact-match source shows shares mint only against deposited USDF, and the pinned on-chain reads verify the wrapper holds the full USDF backing of outstanding shares at NAV >= 1; the grade does not go higher because no independent attestation exists and the wrapper's UUPS admin (six-hour timelock behind a 4-of-7 Safe) can change custody logic. All other components are omitted (bounded-unknown) for lack of itemized evidence. The current Aster risk page names Ceffu custody and Binance execution through MirrorX, states 1:1 delegated balances remain at Ceffu, documents T+1 settlement, and expressly discusses negative funding and liquidation monitoring. Those affirmative but issuer-only controls support limited funding/basis stress, margin/liquidation, and unwind capacity. Hedge reconciliation remains unavailable because no position-level notionals or net delta are published; loss absorption remains unavailable because no funded first-loss layer is disclosed. The reviewed sources do not disclose a funded wrapper or upstream USDF insurance reserve or quantified first-loss layer; nondisclosure does not establish that none exists.",
       "metrics": {
         "hedgeCoverageRatio": null,
         "marginBufferPct": null,
@@ -18783,19 +18682,13 @@
           "sourceUrl": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management"
         },
         "fundingBasisStress": {
-          "applicability": "unavailable",
-          "rationale": "The cited issuer disclosure describes possible negative funding and lower APY but publishes no dated funding/basis stress output or measured strategy-specific stress result.",
-          "sourceUrl": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management"
+          "quality": "limited"
         },
         "marginAndLiquidation": {
-          "applicability": "unavailable",
-          "rationale": "Qualitative position monitoring and frequent P/L settlement do not establish dated margin balances, maintenance requirements or liquidation headroom.",
-          "sourceUrl": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management"
+          "quality": "limited"
         },
         "unwindCapacity": {
-          "applicability": "unavailable",
-          "rationale": "Ceffu T+1 settlement and the wrapper waiting period do not establish same-notional stress-unwind depth or completed withdrawal capacity.",
-          "sourceUrl": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management"
+          "quality": "limited"
         },
         "lossAbsorption": {
           "applicability": "unavailable",
@@ -19066,7 +18959,7 @@
           "url": "https://midas.app/mhyper"
         }
       ],
-      "notes": "mHYPER original July 29 review and July 28 Ethereum block 25627252 source pins are retained. venueAndCustody remains limited on Midas MPC documentation corroborated by Fordefi; unwindCapacity retains its existing limited contractual/operational posture. lossAbsorption remains weak on the qualified-subordinated debt claim without deposit protection or product-specific security. Source-scoped correction: unsupported favorable hedgeReconciliation, fundingBasisStress and marginAndLiquidation qualities are withdrawn to unavailable. Their original rationales relied on NAV/PoR publication and platform-level monitoring or a strategy mandate, while explicitly acknowledging no exact-product hedge inventory, funding stress result or margin headroom. Workflow verification does not independently anchor those component facts. No metric is invented and no original review start, unrelated quality or source pin is renewed.",
+      "notes": "Wave-8 GROK-RESEARCH phase-1 mechanism packet for mhyper-midas (synthetic-delta-neutral). Write-time re-open 2026-07-28: Final Terms PDF HTTP 200 with market-neutral Underlying and Collateral/Security Agent n/a; Attestation Engine markdown confirms mHYPER POR table; Fordefi case study and wallet/strategy-rules pages re-resolved; eth_call pin at block 25627252 as above. Metrics: all three SDN metrics honestly unavailable (mandate is market-neutral but no measured hedgeCoverageRatio, marginBufferPct, or lossAbsorptionShare). Components graded limited only where dual sources support posture: venueAndCustody (Midas MPC docs + Fordefi third-party case study), hedgeReconciliation (attestation docs + on-chain mhyper-por + por-verifier README; not adequate because allocation still planned and on-chain verification at pin is same-address as attestor), unwindCapacity (Final Terms redemption + MSL/issuance docs). fundingBasisStress, marginAndLiquidation, and lossAbsorption left empty rather than weak-from-missing-evidence (no mHYPER-specific dual-sourced stress/margin design or quantified absorption pool for base token). Coin metadata claiming Security Agent lien is contradicted by product Final Terms n/a and is not used. 2026-07-29 candidate: fundingBasisStress is limited because the product mandate includes funding-rate arbitrage and Midas documents platform surveillance and credit/depeg stress scenarios, without an mHYPER-specific threshold or result. marginAndLiquidation is limited because Midas documents IM/MM and market-neutrality monitoring plus leverage rules, without product-level margin headroom. lossAbsorption is weak from positive binding evidence: the mHYPER Final Terms state Collateral and Security Agent are not applicable, while the KID states the qualified-subordinated debt claim has no deposit protection and can suffer total loss. This does not create a numeric zero; lossAbsorptionShare remains null and unavailable, as do the other required metrics.",
       "metrics": {
         "hedgeCoverageRatio": null,
         "marginBufferPct": null,
@@ -19094,22 +18987,16 @@
           "quality": "limited"
         },
         "hedgeReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "The cited Attestation Engine establishes publication of NAV/reserve claims, not signed long/short hedge inventory or reconciled net delta for mHYPER. The original notes themselves state that allocation was planned and the on-chain verification at the original pin was by the attestor address. Withdraw unsupported favorable limited quality; the exact hedge-reconciliation fact remains unavailable, with the original review start retained.",
-          "sourceUrl": "https://docs.midas.app/transparency/the-midas-attestation-engine"
+          "quality": "limited"
         },
         "unwindCapacity": {
           "quality": "limited"
         },
         "fundingBasisStress": {
-          "applicability": "unavailable",
-          "rationale": "The cited risk-monitoring source describes platform-level credit/depeg scenarios and a funding-arbitrage mandate. It provides no exact mHYPER funding-rate history, basis-shock result, break-even horizon or component-specific external anchor. The original rationale acknowledged the absent product-specific result. Withdraw unsupported favorable limited quality without changing the original review start.",
-          "sourceUrl": "https://docs.midas.app/investment-risk-management/risk-monitoring"
+          "quality": "limited"
         },
         "marginAndLiquidation": {
-          "applicability": "unavailable",
-          "rationale": "The cited risk-monitoring source describes platform IM/MM and leverage surveillance, but publishes no mHYPER venue margin balances, maintenance requirements, liquidation distances or measured closeout capacity. A monitoring policy or leverage mandate is not an independently anchored product-specific margin assessment. Withdraw unsupported favorable limited quality without changing the original review start.",
-          "sourceUrl": "https://docs.midas.app/investment-risk-management/risk-monitoring"
+          "quality": "limited"
         },
         "lossAbsorption": {
           "quality": "weak"
