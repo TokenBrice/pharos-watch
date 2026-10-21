@@ -11,15 +11,13 @@ import type {
 import type { RedemptionRouteSuspension } from "../../types/redemption";
 import {
   blendExitCapacityComponent,
-  firstPositiveExitBreakpointValue,
-  hasMaterialExitCapacity,
   interpolateExitBreakpointScore,
   resolveExitDelayBandMultiplier,
   resolveExitScoringRequest,
   resolveExitThresholdBandMultiplier,
 } from "../exit-route-scoring";
 import { clampScore, roundTo } from "../math";
-import { assertV9ValidatedPolicyEnvelope } from "./policy";
+import { assertV9ValidatedPolicyEnvelope, unknownQuality } from "./policy";
 import { resolveV9StatusCauses, v9ScoringDisposition } from "./control-primitives";
 import { compareText, domainDigest, uniqueSorted } from "./primitives";
 import { admitExitExecutionCertificate, exitExecutionInputGenerationId, resolveExitExecutionRequestPoint } from "./exit-execution";
@@ -43,6 +41,8 @@ export interface V9ExitStressRequest {
   maxCostBps: number;
   comparisonWindowSec: number;
   rawSupplyRequestUsd: number;
+  supplyObservedAtSec?: number | null;
+  sizingUncertaintyReason?: "missing-supply" | "stale-supply" | "unusable-supply" | null;
 }
 
 export interface V9ExitCapacityPoint {
@@ -91,7 +91,6 @@ export interface V9ExitEvaluationRoute {
   executionModelId?: string;
   executionCertificate?: ExitExecutionCertificate;
   capacityCurve: readonly V9ExitCapacityPoint[];
-  routeScoreCap: "queue-redeem" | "offchain-issuer" | null;
   failureDomains: readonly string[];
   physicalResourceKeys: readonly string[];
 }
@@ -104,7 +103,6 @@ export interface V9ExitRouteTrace {
   effectiveScoringWeight: number;
   confidenceDimensions: V9ConfidenceDimensions | null;
   capacityEvidenceTier: ExitRouteCapacityEvidenceTier;
-  eligibilityMultiplier: number;
   rawSameNotionalCostBps: number | null;
   supportedComponentCeiling: number | null;
   factorContributions?: Readonly<Record<string, V9CauseContribution>>;
@@ -165,10 +163,9 @@ export interface V9ExitEvaluationResult {
 export function selectV9ExitStressRequest(
   circulatingUsd: number | null,
   envelope: V9ValidatedPolicyEnvelope,
-): V9ExitStressRequest | null {
+): V9ExitStressRequest {
   assertV9ValidatedPolicyEnvelope(envelope);
-  const request = resolveExitScoringRequest("stress-grid", circulatingUsd, envelope.policy.semantic.exit.stressRequest);
-  if (request === null) return null;
+  const request = resolveExitScoringRequest("stress-grid", circulatingUsd, envelope.policy.semantic.exit.stressRequest)!;
   return {
     requestedNotionalUsd: request.requestedNotionalUsd,
     maxCostBps: request.maxCostBps,
@@ -384,6 +381,15 @@ function isCreditableNonAtomicRedemption(
   );
 }
 
+function hasBoundedTerms(route: V9ExitEvaluationRoute): boolean {
+  return route.lane === "redemption" && route.observationState === "known" &&
+    !route.executionModelId && (route.settlementBoundUnproven || hasUnquantifiedFee(route) ||
+      (["cost", "settlement"] as const).some((key) => {
+        const cause = routeCause(route, key).cause;
+        return cause === "C" || cause === "U";
+      }));
+}
+
 function routeExclusionReason(route: V9ExitEvaluationRoute, envelope: V9ValidatedPolicyEnvelope): V9ReasonCode | null {
   // Exact-channel cessation is neither a measured zero nor evidence about any other rail.
   if (route.routeSuspension) return null;
@@ -396,7 +402,7 @@ function routeExclusionReason(route: V9ExitEvaluationRoute, envelope: V9Validate
     return "unsupported-same-notional-route";
   }
   if (route.physicalToUsd?.rejectionReason != null) return "missing-same-notional-route";
-  if (route.settlementBoundUnproven) return "unproven-settlement-bound";
+  if (route.settlementBoundUnproven && !hasBoundedTerms(route)) return "unproven-settlement-bound";
   if (route.outputResolved === false) return "unresolved-exit-output";
   if (route.observationState === "missing") {
     return "missing-runtime-route-evidence";
@@ -404,22 +410,8 @@ function routeExclusionReason(route: V9ExitEvaluationRoute, envelope: V9Validate
   if (route.observationState !== "known" && route.observationState !== "stale") {
     return "unsupported-same-notional-route";
   }
-  // A documented redemption mechanism can remain useful diagnostic evidence
-  // even when its reviewed scoring terms are incomplete. The V9 adapter marks
-  // that bounded-gap disposition diagnostic while preserving its modeled
-  // capacity curve. Classify the absent scoreable terms as Pharos-side missing
-  // same-notional evidence (globally bounded; `integration-missing` unless an
-  // authored producer gap carries `producer-failed`), not as an
-  // unsupported method or an adverse issuer fact.
-  if (
-    route.lane === "redemption" &&
-    route.coverageClass === "diagnostic" &&
-    route.evidenceKind === "documented-terms"
-  ) {
-    return "missing-same-notional-route";
-  }
   const creditableNonAtomic = isCreditableNonAtomicRedemption(route, envelope);
-  if ((!route.scoreEligible || route.coverageClass === "diagnostic") && !creditableNonAtomic) {
+  if ((!route.scoreEligible || route.coverageClass === "diagnostic") && !creditableNonAtomic && !hasBoundedTerms(route)) {
     return "unsupported-same-notional-route";
   }
   const scoreable =
@@ -456,6 +448,12 @@ function resolveIncludedRouteCapacity(
       ? { ...request, maxCostBps: envelope.policy.semantic.exit.physicalToUsd.maxCostBps }
       : request);
   if (capacityPoint === null) return { state: "incomparable" };
+  // A modeled zero is not an exhaustion measurement. A missing settlement
+  // bound also cannot turn a zero lower bound into executable recovery.
+  if (capacityPoint.executableUsd === 0 && !isExhaustionMeasurement(route)) {
+    return { state: "excluded", exclusionReason: route.settlementBoundUnproven
+      ? "unproven-settlement-bound" : "missing-same-notional-route" };
+  }
   if (
     !Number.isFinite(route.outputValueRetention) ||
     route.outputValueRetention < 0 ||
@@ -502,6 +500,28 @@ export interface V9DistinctExitCapacity {
   valuedExecutableUsd: number;
 }
 
+/** Exact resources identify one rail; issuer/protocol labels only correlate it. */
+function supersededModeledRoutes(
+  routes: readonly V9ExitEvaluationRoute[],
+  request: V9ExitStressRequest,
+  envelope: V9ValidatedPolicyEnvelope,
+): Set<string> {
+  const certified = routes.filter((route) => {
+    if (!route.executionModelId || !route.executionCertificate || !route.scoreEligible ||
+      route.observationState !== "known" || !route.outputResolved || routeExclusionReason(route, envelope) !== null) return false;
+    const point = resolveExitExecutionRequestPoint(route.executionCertificate, request);
+    return point !== null && point.certification !== "diagnostic";
+  });
+  const superseded = new Set<string>();
+  for (const route of routes) {
+    if (route.executionModelId) continue;
+    if (certified.some((certificate) => certificate.lane === route.lane &&
+      route.physicalResourceKeys.some((key) => !key.startsWith("issuer:") && !key.startsWith("protocol:") &&
+        certificate.physicalResourceKeys.includes(key)))) superseded.add(route.routeKey);
+  }
+  return superseded;
+}
+
 /** Resolve distinct physical-resource capacity at an explicit stress request. */
 export function resolveV9DistinctExitCapacity(
   routes: readonly V9ExitEvaluationRoute[],
@@ -509,7 +529,9 @@ export function resolveV9DistinctExitCapacity(
   envelope: V9ValidatedPolicyEnvelope,
 ): V9DistinctExitCapacity {
   assertV9ValidatedPolicyEnvelope(envelope);
+  const superseded = supersededModeledRoutes(routes, request, envelope);
   const included = routes.flatMap((route) => {
+    if (superseded.has(route.routeKey)) return [];
     const resolved = resolveIncludedRouteCapacity(route, request, envelope);
     return resolved.state !== "included"
       ? []
@@ -567,8 +589,11 @@ function hasUnquantifiedFee(route: V9ExitEvaluationRoute): boolean {
 }
 
 function routeCause(route: V9ExitEvaluationRoute, factorKey?: keyof NonNullable<V9ExitRouteFactV2["factorStatuses"]>) {
-  const status = factorKey ? route.factorStatuses?.[factorKey] : route.status;
-  const implicitUnknown = factorKey === "holderEligibility" && route.holderEligibility === "unknown" ||
+  const status = factorKey === "access"
+    ? route.factorStatuses?.access ?? (route.holderEligibility === "unknown" ? route.factorStatuses?.holderEligibility : undefined)
+    : factorKey ? route.factorStatuses?.[factorKey] : route.status;
+  const implicitUnknown = (factorKey === "holderEligibility" || factorKey === "access") && route.holderEligibility === "unknown" ||
+    factorKey === "settlement" && route.settlementBoundUnproven ||
     factorKey === "observationConfidence" && route.observationConfidence === "unknown" ||
     factorKey === "executionConfidence" && route.modelConfidence === "unknown" ||
     factorKey === "capacityEvidenceTier" && (route.capacityEvidenceTier === undefined || route.capacityEvidenceTier === "unknown") ||
@@ -586,7 +611,6 @@ function evaluateRoute(
   route: V9ExitEvaluationRoute,
   request: V9ExitStressRequest,
   envelope: V9ValidatedPolicyEnvelope,
-  preExitDangerHeld: boolean,
 ): V9ExitRouteTrace {
   const attribution = {
     routeId: route.routeId,
@@ -598,7 +622,6 @@ function evaluateRoute(
     effectiveScoringWeight: routeCause(route).excluded ? 0 : 1,
     confidenceDimensions: null,
     capacityEvidenceTier: route.capacityEvidenceTier ?? "unknown",
-    eligibilityMultiplier: 1,
     rawSameNotionalCostBps: null,
     supportedComponentCeiling: null,
     ...(route.feeEvidence ? { feeEvidence: route.feeEvidence } : {}),
@@ -614,27 +637,6 @@ function evaluateRoute(
     dailyLimitUsd: route.dailyLimitUsd,
     minRedeemUsd: route.minRedeemUsd,
   } as const;
-  // Danger-held exclusion (owner ruling 2026-07-23): the SIM-EXIT-L2
-  // undisclosed-fee lever emits modeled capacity for an opaque-fee route, but an
-  // asset already held down by a non-exit adverse fact does not get to buy exit
-  // credit back with it. The route reverts to the pre-lever unsupported
-  // same-notional exclusion — byte-identical to how a zero-capacity undisclosed
-  // route resolved before the lever — so the pre-exit danger that gates the
-  // credit never feeds back through the exit pillar it is measured on. Every
-  // other route, and every route on a non-danger-held asset, is unaffected.
-  if (preExitDangerHeld && feePreventsBonus(route)) {
-    return {
-      routeKey: route.routeKey,
-      ...attribution,
-      score: null,
-      included: false,
-      exclusionReason: "unsupported-same-notional-route",
-      capacityPoint: null,
-      components: null,
-      confidenceFactor: null,
-      capsApplied: [],
-    };
-  }
   const resolvedCapacity = resolveIncludedRouteCapacity(route, request, envelope);
   if (resolvedCapacity.state === "excluded") {
     return {
@@ -666,38 +668,13 @@ function evaluateRoute(
   const { capacityPoint, valuedExecutableUsd, costEvidence } = resolvedCapacity;
   const policy = envelope.policy.semantic.exit;
   const completionRatio = valuedExecutableUsd / request.requestedNotionalUsd;
-  // A lower bound proves executable capacity, never its absence above that
-  // bound. Discounted or modeled terms are credit evidence, not measurements
-  // of exhaustion, even when the inventory was reviewed complete.
-  if (
-    !isExhaustionMeasurement(route) &&
-    !hasMaterialExitCapacity(
-      {
-        executableCapacityUsd: capacityPoint.executableUsd,
-        requestedNotionalUsd: request.requestedNotionalUsd,
-      },
-      policy,
-    )
-  ) {
-    return {
-      routeKey: route.routeKey,
-      ...attribution,
-      score: null,
-      included: false,
-      exclusionReason: "missing-same-notional-route",
-      capacityPoint: null,
-      components: null,
-      confidenceFactor: null,
-      capsApplied: [],
-    };
-  }
-  // Once a route has passed the evidence and comparability gates, measured
-  // zero or immaterial capacity is an adverse observation, not unsupported
-  // methodology. Keep it included so the trace retains its capacity point,
-  // components, confidence, and the explicit zero/immaterial capacity cap.
   const coverageScore = interpolateExitBreakpointScore(completionRatio, policy.coverageRatioBreakpoints);
   const absoluteScore = interpolateExitBreakpointScore(valuedExecutableUsd, policy.absoluteCapacityBreakpoints);
-  const delayMultiplier = settlementDelayMultiplier(route.settlementDelaySec, policy.settlementDelayBands);
+  const settlementCause = routeCause(route, "settlement");
+  const unknownSettlement = route.settlementBoundUnproven ||
+    settlementCause.cause === "C" || settlementCause.cause === "U";
+  const delayMultiplier = unknownSettlement ? 1
+    : settlementDelayMultiplier(route.settlementDelaySec, policy.settlementDelayBands);
   let capacity = blendExitCapacityComponent(coverageScore, absoluteScore) * delayMultiplier;
   const constraintMultipliers: string[] = [];
   if (route.queueDepthUsd !== null && route.queueDepthUsd > 0) {
@@ -715,8 +692,12 @@ function evaluateRoute(
     if (multiplier < 1) constraintMultipliers.push(`minimum-redeem:${multiplier}`);
   }
   const components = {
-    access: policy.accessScores[route.access],
-    settlement: policy.settlementScores[route.settlement],
+    access: route.holderEligibility === "unknown"
+      ? unknownQuality("exit", routeCause(route, "holderEligibility").cause, envelope.policy.semantic)
+      : policy.accessScores[route.access],
+    settlement: unknownSettlement
+      ? unknownQuality("exit", settlementCause.cause, envelope.policy.semantic)
+      : policy.settlementScores[route.settlement],
     executionCertainty: policy.executionScores[route.execution],
     capacity,
     outputAssetQuality: Math.min(
@@ -725,7 +706,7 @@ function evaluateRoute(
     ) * route.outputValueRetention,
     cost:
       costEvidence === "upper-bound"
-        ? policy.boundedCostScore
+        ? unknownQuality("exit", routeCause(route, "cost").cause, envelope.policy.semantic)
         : clampScore(100 * (1 - capacityPoint.executionCostBps / Math.max(1, request.maxCostBps))),
   };
   const factorKeys = {
@@ -738,9 +719,12 @@ function evaluateRoute(
   let totalWeight = 0;
   for (const key of Object.keys(factorKeys) as (keyof typeof factorKeys)[]) {
     const causal = routeCause(route, factorKeys[key]);
-    // Admission already established capacity/output. A gap in an adjacent
-    // quality factor is omitted without asserting free execution or rights.
-    const value = causal.excluded ? null : components[key];
+    // Capacity and output remain measured even when adjacent research carries
+    // a gap. Substitute only the genuinely unknown quality subfactor.
+    const unknown = key !== "capacity" && key !== "outputAssetQuality" &&
+      (causal.cause === "C" || causal.cause === "U");
+    const value = causal.excluded ? null : unknown
+      ? unknownQuality("exit", causal.cause, envelope.policy.semantic) : components[key];
     scoredComponents[key] = value;
     const weight = value === null ? 0 : policy.componentWeights[key];
     weightedScore += (value ?? 0) * weight;
@@ -755,38 +739,11 @@ function evaluateRoute(
   }
   let score = totalWeight > 0 ? weightedScore / totalWeight : 0;
   const capsApplied: string[] = [...constraintMultipliers];
-  // Capacity carries only a minority of the component ladder, so access,
-  // settlement, execution certainty, output quality and a bounded-unknown cost
-  // would otherwise carry a route that moves no meaningful value at the stress
-  // request. A route that clears nothing — or so little that filling it is not
-  // an exit at any portfolio size — has no exit value, and the cost of a trade
-  // that cannot meaningfully happen is not a mitigating fact: it floors at
-  // zero. The cut is a fraction of what was actually asked for, so it scales
-  // with the asset; clearing exactly nothing is its degenerate case.
+  // Only an admitted measured zero establishes exhaustion. Small positive
+  // capacity is priced continuously by the coverage and absolute ladders.
   if (valuedExecutableUsd === 0) {
     score = 0;
     capsApplied.push("zero-executable-capacity");
-  } else if (!hasMaterialExitCapacity(
-    {
-      executableCapacityUsd: capacityPoint.executableUsd,
-      requestedNotionalUsd: request.requestedNotionalUsd,
-    },
-    policy,
-  )) {
-    score = 0;
-    capsApplied.push("immaterial-executable-capacity");
-  } else {
-    const firstPositiveCoverage = firstPositiveExitBreakpointValue(
-      policy.coverageRatioBreakpoints,
-    );
-    if (
-      firstPositiveCoverage > 0 &&
-      completionRatio < firstPositiveCoverage &&
-      score > 50
-    ) {
-      score = 50;
-      capsApplied.push("insufficient-completion:50");
-    }
   }
   const confidenceDimension = (key: "observationConfidence" | "executionConfidence" | "capacityEvidenceTier", value: number) => {
     const causal = routeCause(route, key);
@@ -795,44 +752,22 @@ function evaluateRoute(
   const confidenceDimensions: V9ConfidenceDimensions = {
     observation: confidenceDimension("observationConfidence", Math.min(
       policy.observationConfidenceFactors[route.observationConfidence], staleObservationFactor(route, envelope))),
-    model: confidenceDimension("executionConfidence", policy.modeledConfidenceFactors[route.modelConfidence === "unknown" ? "low" : route.modelConfidence]),
-    capacityMethod: confidenceDimension("capacityEvidenceTier", policy.capacityEvidenceTierFactors[route.capacityEvidenceTier ?? "unknown"]),
+    model: confidenceDimension("executionConfidence",
+      route.evidenceKind === "documented-terms" && route.modelConfidence === "medium"
+        ? policy.observationConfidenceFactors.medium
+        : policy.modeledConfidenceFactors[route.modelConfidence === "unknown" ? "low" : route.modelConfidence]),
+    capacityMethod: confidenceDimension("capacityEvidenceTier",
+      route.capacityEvidenceTier === "live-queue-proxy" || route.capacityEvidenceTier === undefined ||
+        route.capacityEvidenceTier === "unknown" ? policy.limitedCapacityConfidenceFactor : 1),
   };
   const confidenceFactor = Math.min(
     confidenceDimensions.observation.factor, confidenceDimensions.model.factor, confidenceDimensions.capacityMethod.factor,
   );
   if (route.observationState === "stale") capsApplied.push("observation:stale");
-  const eligibilityMultiplier = route.holderEligibility === "unknown" && routeCause(route, "holderEligibility").excluded
-    ? 1 : policy.holderEligibilityMultipliers[route.holderEligibility];
-  score *= confidenceFactor * eligibilityMultiplier;
-  const routeCap =
-    route.physicalToUsd ? policy.routeFamilyCaps.offchainIssuer :
-    route.routeScoreCap === "queue-redeem" ||
-    route.capacityScoringHorizon === "daily" ||
-    route.capacityScoringHorizon === "queued" ||
-    route.capacityScoringHorizon === "eventual"
-      ? policy.routeFamilyCaps.queueRedeem
-      : route.routeScoreCap === "offchain-issuer"
-        ? policy.routeFamilyCaps.offchainIssuer
-        : null;
-  if (routeCap !== null && score > routeCap) {
-    score = routeCap;
-    capsApplied.push(
-      route.routeScoreCap === "queue-redeem" || route.routeScoreCap === "offchain-issuer"
-        ? `route-family:${route.routeScoreCap}`
-        : `capacity-horizon:${route.capacityScoringHorizon}`,
-    );
-  }
-  // A `documented-terms` redemption is a reviewed T&C promise — the weakest
-  // scoreable evidence kind — not an on-chain-enforced or reserve-verified exit.
-  // It is capped below the credit a live-reserve / on-chain route can reach so a
-  // paper promise cannot read as a contract-verifiable exit. The cap stacks as a
-  // min on top of the settlement haircut and every reliability gate; a route
-  // already scoring below the ceiling (a typical same-day EMI) is untouched, and
-  // stronger evidence kinds are never capped here.
-  if (route.evidenceKind === "documented-terms" && score > policy.documentedTermsCreditCeiling) {
-    score = policy.documentedTermsCreditCeiling;
-    capsApplied.push("evidence-kind:documented-terms");
+  score *= confidenceFactor;
+  if (hasBoundedTerms(route) && score > policy.boundedTermsRecoveryCeiling) {
+    score = policy.boundedTermsRecoveryCeiling;
+    capsApplied.push("bounded-terms");
   }
   return {
     routeKey: route.routeKey,
@@ -841,7 +776,6 @@ function evaluateRoute(
     included: true,
     exclusionReason: null,
     confidenceDimensions,
-    eligibilityMultiplier,
     rawSameNotionalCostBps: routeCause(route, "cost").cause === null && !hasUnquantifiedFee(route) ? capacityPoint.executionCostBps : null,
     supportedComponentCeiling: totalWeight > 0 ? weightedScore / totalWeight : null,
     factorContributions,
@@ -975,15 +909,6 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
     capacityCurve: route.capacityCurve.every((point) => point.executionCostBps !== null)
       ? route.capacityCurve as readonly V9ExitCapacityPoint[]
       : route.capacityCurve.filter((point): point is V9ExitCapacityPoint => point.executionCostBps !== null),
-    routeScoreCap:
-      route.settlementModel === "queued" ||
-      route.capacityScoringHorizon === "daily" ||
-      route.capacityScoringHorizon === "queued" ||
-      route.capacityScoringHorizon === "eventual"
-        ? "queue-redeem"
-        : route.holderAccess === "issuer-only"
-          ? "offchain-issuer"
-          : null,
     failureDomains: route.failureDomains.map((domain) => `${domain.kind}:${domain.key}`),
     physicalResourceKeys: route.physicalResourceKeys,
   };
@@ -1005,16 +930,37 @@ export function selectV9ExitCirculatingUsd(supply: V9AssetFactsBase["supply"]): 
     : null;
 }
 
+/** Retain the original amount evidence clock even when it cannot size the request. */
+export function resolveV9ExitSupplySizing(
+  asset: Pick<V9AssetFactsBase, "supply"> & Partial<Pick<V9AssetFactsBase, "evidence">>,
+): {
+  circulatingUsd: number | null;
+  supplyObservedAtSec: number | null;
+  sizingUncertaintyReason: V9ExitStressRequest["sizingUncertaintyReason"];
+} {
+  const circulatingUsd = selectV9ExitCirculatingUsd(asset.supply);
+  const supplyEvidence = asset.evidence?.filter((reference) =>
+    asset.supply.status.evidenceRefIds.includes(reference.evidenceId));
+  const supplyObservedAtSec = supplyEvidence?.length
+    ? Math.min(...supplyEvidence.map((reference) => reference.observedAtSec)) : null;
+  return {
+    circulatingUsd,
+    supplyObservedAtSec,
+    sizingUncertaintyReason: circulatingUsd !== null && Number.isFinite(circulatingUsd) && circulatingUsd > 0
+      ? null : asset.supply.status.observationState === "stale" ? "stale-supply"
+        : asset.supply.circulatingUsd === null ? "missing-supply" : "unusable-supply",
+  };
+}
+
 export function evaluateV9ExitAssetFacts(
-  asset: Pick<V9AssetFactsBase, "supply" | "exitStatus" | "exitRoutes"> & { gaps?: readonly V9FactGapV3[] },
+  asset: Pick<V9AssetFactsBase, "supply" | "exitStatus" | "exitRoutes"> & Partial<Pick<V9AssetFactsBase, "evidence">> & { gaps?: readonly V9FactGapV3[] },
   envelope: V9ValidatedPolicyEnvelope,
-  preExitDangerHeld = false,
   executionContext?: { assetId: string; clockSec: number },
 ): V9ExitEvaluationResult {
   return evaluateV9Exit(
     {
       ...executionContext,
-      circulatingUsd: selectV9ExitCirculatingUsd(asset.supply),
+      ...resolveV9ExitSupplySizing(asset),
       gaps: asset.gaps,
       portfolioFactStatus: asset.exitStatus,
       portfolioStatus:
@@ -1022,7 +968,6 @@ export function evaluateV9ExitAssetFacts(
           ? "reviewed-complete"
           : "incomplete",
       routes: asset.exitRoutes.map(projectV9ExitEvaluationRoute),
-      preExitDangerHeld,
     },
     envelope,
   );
@@ -1043,20 +988,19 @@ function disjoint(left: readonly string[], right: readonly string[]): boolean {
 export function evaluateV9Exit(
   args: {
     circulatingUsd: number | null;
+    supplyObservedAtSec?: number | null;
+    sizingUncertaintyReason?: V9ExitStressRequest["sizingUncertaintyReason"];
     assetId?: string;
     clockSec?: number;
     portfolioStatus?: "reviewed-complete" | "incomplete";
     portfolioFactStatus?: V9FactStatusV2;
     gaps?: readonly V9FactGapV3[];
     routes: readonly V9ExitEvaluationRoute[];
-    /** The asset is held down by a pre-exit adverse fact; undisclosed-fee routes earn no credit. */
-    preExitDangerHeld?: boolean;
   },
   envelope: V9ValidatedPolicyEnvelope,
 ): V9ExitEvaluationResult {
   assertV9ValidatedPolicyEnvelope(envelope);
-  const boundedFloor = envelope.policy.semantic.exit.boundedUnknownScore;
-  const unprovenSettlementBoundedFloor = boundedFloor;
+  const sizingUnknown = args.circulatingUsd === null || !Number.isFinite(args.circulatingUsd) || args.circulatingUsd <= 0;
   const inventoryCause = resolveV9StatusCauses([args.portfolioFactStatus], args.gaps);
   const pillarMetadata = {
     aggregationDisposition: "included" as "included" | "excluded-a-b",
@@ -1064,20 +1008,13 @@ export function evaluateV9Exit(
     limitedEvidenceCauses: inventoryCause.causes.filter((cause): cause is "C" | "U" | "D" => cause === "C" || cause === "U" || cause === "D"),
     supportedComponentKeys: [] as string[],
   };
-  const stressRequest = selectV9ExitStressRequest(args.circulatingUsd, envelope);
-  if (stressRequest === null) {
-    return {
-      ...pillarMetadata,
-      aggregationDisposition: inventoryCause.excluded ? "excluded-a-b" : "included",
-      score: inventoryCause.excluded ? null : boundedFloor,
-      stressRequest: null,
-      primaryRouteKey: null,
-      diversificationRouteKey: null,
-      diversificationBonus: 0,
-      reasons: ["missing-same-notional-route"],
-      routes: [],
-    };
-  }
+  const stressRequest: V9ExitStressRequest = {
+    ...selectV9ExitStressRequest(args.circulatingUsd, envelope),
+    supplyObservedAtSec: args.supplyObservedAtSec ?? null,
+    sizingUncertaintyReason: sizingUnknown
+      ? args.sizingUncertaintyReason ?? (args.circulatingUsd === null ? "missing-supply" : "unusable-supply")
+      : null,
+  };
   const routes = args.routes.map((route) => {
     route = { ...route, gaps: args.gaps ?? route.gaps };
     if (!route.executionModelId) return route;
@@ -1094,13 +1031,14 @@ export function evaluateV9Exit(
       ? { ...route, coverageClass: admission.point.certification }
       : { ...route, scoreEligible: false };
   }).sort((left, right) => compareText(left.routeKey, right.routeKey));
-  const traces = routes.map((route) =>
-    evaluateRoute(
-      route,
-      stressRequest,
-      envelope,
-      args.preExitDangerHeld ?? false,
-    ));
+  const superseded = supersededModeledRoutes(routes, stressRequest, envelope);
+  const traces = routes.map((route) => {
+    const trace = evaluateRoute(route, stressRequest, envelope);
+    return !superseded.has(route.routeKey) ? trace : {
+      ...trace, included: false, score: null, effectiveScoringWeight: 0,
+      supportedComponentCeiling: null, exclusionReason: null,
+    };
+  });
   const evaluated = traces
     .flatMap((trace, index) => (trace.score === null ? [] : [{ trace, route: routes[index]!, score: trace.score }]))
     .sort((left, right) => right.score - left.score || compareText(left.route.routeKey, right.route.routeKey));
@@ -1117,7 +1055,6 @@ export function evaluateV9Exit(
         : routeCause(route, "capacity").cause !== null ? routeCause(route, "capacity") : routeCause(route);
   };
   const excludedGap = (trace: V9ExitRouteTrace) => excludedCause(trace).excluded;
-  const chargedDiagnosticReasons = traces.flatMap((trace) => trace.exclusionReason && !excludedGap(trace) ? [trace.exclusionReason] : []);
   if (evaluated.length === 0) {
     const hasBoundedMissingRoute = diagnosticReasons.includes("missing-same-notional-route") ||
       routes.some((route) => route.routeSuspension !== undefined ||
@@ -1144,7 +1081,7 @@ export function evaluateV9Exit(
       ...pillarMetadata,
       aggregationDisposition: pureExcludedInventory ? "excluded-a-b" : "included",
       score: provenEmptyInventory ? 0 : pureExcludedInventory ? null
-        : defaultReason === "unproven-settlement-bound" ? unprovenSettlementBoundedFloor : boundedFloor,
+        : unknownQuality("exit", pillarMetadata.limitedEvidenceCauses.includes("C") ? "C" : inventoryCause.cause, envelope.policy.semantic),
       stressRequest,
       primaryRouteKey: null,
       diversificationRouteKey: null,
@@ -1207,69 +1144,30 @@ export function evaluateV9Exit(
     }
   }
   const hasOtherIncludedRoute = evaluated.length > 1;
-  const boundedGapReason =
-    boundedFloor !== null && (chargedDiagnosticReasons.includes("missing-same-notional-route") ||
-      (!isExhaustionMeasurement(primary.route) && !routeCause(primary.route, "capacity").excluded) ||
-      (primary.score === 0 && routes.some((route) =>
-        route.applicability !== "not-applicable" && !isExhaustionMeasurement(route) && !routeCause(route, "capacity").excluded && !routeCause(route).excluded)))
-      ? "missing-same-notional-route"
-      : unprovenSettlementBoundedFloor !== null && chargedDiagnosticReasons.includes("unproven-settlement-bound")
-        ? "unproven-settlement-bound"
-        : null;
-  const boundedGapFloor =
-    boundedGapReason === "missing-same-notional-route"
-      ? boundedFloor
-      : boundedGapReason === "unproven-settlement-bound"
-        ? unprovenSettlementBoundedFloor
-        : null;
-  const boundedGapFloorApplies =
-    boundedGapFloor !== null && primary.score + diversificationBonus < boundedGapFloor;
   const controllingCauses: ("C" | "U")[] = [];
-  if (boundedGapFloorApplies) {
-    const floorCauses = [...inventoryCause.causes,
-      ...traces.filter((trace) => trace.exclusionReason && !excludedGap(trace)).flatMap((trace) => excludedCause(trace).causes),
-      ...routeCause(primary.route, "capacity").causes];
-    for (const cause of floorCauses) if (cause === "C" || cause === "U") controllingCauses.push(cause);
-    if (controllingCauses.length === 0) controllingCauses.push("U");
-  } else {
-    for (const candidate of independent && diversificationBonus > 0 ? [primary, independent] : [primary]) {
-      const trace = candidate.trace;
-      if (candidate.score <= 0 || trace.capsApplied.some((cap) =>
-        cap.startsWith("route-family:") || cap.startsWith("capacity-horizon:") || cap.startsWith("evidence-kind:"))) continue;
-      for (const contribution of Object.values(trace.factorContributions ?? {})) {
-        if (contribution.effectiveScoringWeight > 0 && contribution.score !== null && contribution.score < 100 &&
-          (contribution.cause === "C" || contribution.cause === "U")) controllingCauses.push(contribution.cause);
-      }
-      for (const dimension of Object.values(trace.confidenceDimensions ?? {})) {
-        if (dimension.factor < 1 && dimension.factor === trace.confidenceFactor &&
-          (dimension.cause === "C" || dimension.cause === "U")) controllingCauses.push(dimension.cause);
-      }
-      const eligibility = routeCause(candidate.route, "holderEligibility");
-      if (candidate.route.holderEligibility === "unknown" && trace.eligibilityMultiplier < 1 &&
-        (eligibility.cause === "C" || eligibility.cause === "U")) controllingCauses.push(eligibility.cause);
+  for (const candidate of independent && diversificationBonus > 0 ? [primary, independent] : [primary]) {
+    const trace = candidate.trace;
+    if (candidate.score <= 0) continue;
+    for (const contribution of Object.values(trace.factorContributions ?? {})) {
+      if (contribution.effectiveScoringWeight > 0 && contribution.score !== null && contribution.score < 100 &&
+        (contribution.cause === "C" || contribution.cause === "U")) controllingCauses.push(contribution.cause);
+    }
+    for (const dimension of Object.values(trace.confidenceDimensions ?? {})) {
+      if (dimension.factor < 1 && dimension.factor === trace.confidenceFactor &&
+        (dimension.cause === "C" || dimension.cause === "U")) controllingCauses.push(dimension.cause);
     }
   }
   pillarMetadata.limitedEvidenceCauses = uniqueSorted(controllingCauses);
-  // Positive lower-bound capacity is a usable route, not a missing route.
-  // Its floor eligibility does not create a missing-evidence ceiling.
-  // An excluded alternative stays diagnostic while a positive route carries
-  // the claim; non-exhaustive zeros remain evidence gaps at any floor.
-  const evidenceGapReason = primary.score === 0 ? boundedGapReason : null;
   return {
     ...pillarMetadata,
-    score: boundedGapFloorApplies
-      ? boundedGapFloor
-      : roundTo(primary.score + diversificationBonus, 2),
+    score: roundTo(primary.score + diversificationBonus, 2),
     stressRequest,
-    primaryRouteKey: boundedGapFloorApplies ? null : primary.route.routeKey,
-    diversificationRouteKey: boundedGapFloorApplies ? null : independent?.route.routeKey ?? null,
-    diversificationBonus: boundedGapFloorApplies ? 0 : roundTo(diversificationBonus, 2),
-    // Missing-evidence reasons follow the route evidence, not the numerical
-    // floor comparison: raising an unknown rung must not activate a new cap.
-    // Optional exclusions remain visible on their per-route traces.
+    primaryRouteKey: primary.route.routeKey,
+    diversificationRouteKey: independent?.route.routeKey ?? null,
+    diversificationBonus: roundTo(diversificationBonus, 2),
     reasons: uniqueSorted([
-      ...(evidenceGapReason ? [evidenceGapReason] : []),
-      ...(!evidenceGapReason && primary.score === 0 ? ["no-viable-exit-path"] : []),
+      ...(sizingUnknown ? ["missing-same-notional-route"] : []),
+      ...(primary.score === 0 ? ["no-viable-exit-path"] : []),
       ...(hasOtherIncludedRoute && !candidates.some((candidate) => candidate !== primary &&
         disjoint(primary.domains, candidate.domains) && disjoint(primary.resources, candidate.resources)) ? ["correlated-exit-routes"] : []),
     ]) as V9ReasonCode[],

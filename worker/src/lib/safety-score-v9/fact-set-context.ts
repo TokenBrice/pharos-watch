@@ -302,7 +302,11 @@ export function addGap(context: AssetBuildContext, gap: V9FactGapV3): string {
     ({ verdict }) => v9EvidenceCauseScopeKey(verdict.assetId, verdict.scope) === exactScopeKey,
   ) ?? capturedReserveFailure(context, scope, gap) ?? capturedPegSupplyFailure(context, scope, gap);
   if (captured) addEvidence(context, captured.evidence);
-  const classification = scoped[0];
+  // Reviewed missing terms are bounded uncertainty, not absent route applicability.
+  // Only a positive nondisclosure proof selects C; research backlog classifications
+  // cannot exclude this established subject. Independent runtime failures still apply.
+  const classification = gap.policyRuleId === "v9.exit.reviewed-terms" && scoped[0]?.cause !== "C"
+    ? undefined : scoped[0];
   let typedReview: unknown;
   if (scope.componentKey.startsWith("mechanism-review:") && scope.factorKey === null) {
     const componentKey = scope.componentKey.slice("mechanism-review:".length);
@@ -695,7 +699,9 @@ export function compileRouteFactorStatuses(
     factorStatuses[factorKey] = missing || explicitlyMissing
       ? missingLocalFact(context, {
           componentKey: `exit-route:${route.routeKey}:${factorKey}`, reasonCode: "missing-same-notional-route",
-          ownerDomain: "exit", responsibility: "unresearched", policyRuleId: "v9.exit.route-factors",
+          ownerDomain: "exit", responsibility: "unresearched",
+          policyRuleId: explicitlyMissing && (factorKey === "cost" || factorKey === "settlement")
+            ? "v9.exit.reviewed-terms" : "v9.exit.route-factors",
           path: { kind: "optional-exit", routeKey: route.routeKey },
           message: `The ${factorKey} datum for route ${route.routeKey} has not been established.`,
           evidenceRefIds: route.status.evidenceRefIds,

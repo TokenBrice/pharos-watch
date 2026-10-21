@@ -2,7 +2,7 @@ import { z } from "zod";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-route-suspension";
-import type { RedemptionRouteSuspension } from "@shared/types/redemption";
+import type { RedemptionBackstopEntry, RedemptionRouteSuspension } from "@shared/types/redemption";
 import { allocationReviewClockSec as reviewAdmissionClockSec } from "@shared/types/safety-score-v9-allocation";
 import { isDexExitRouteCoverageWithinRouteBudget } from "@shared/lib/p4-exit-route-capacity";
 import { isDexExitRouteScoreEligible } from "@shared/lib/p4-exit-route-capability-policy";
@@ -33,6 +33,7 @@ import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-
 import { v9EvidenceResponsibilityForCauseProof } from "@shared/types/safety-score-v9-causes";
 import { findRedemptionReserveQuarantine, redemptionReserveQuarantineScope } from "./redemption-reserve-quarantine";
 import { reserveBackedRedemptionRouteMaxAgeSec } from "./redemption-route-freshness";
+import { usesPrimaryRedemptionReviewTerms } from "../redemption-exit-route-observations";
 import type {
   V9AssetFactsV3,
   V9EvidenceResponsibility,
@@ -294,9 +295,15 @@ function buildSuspendedRoute(context: AssetBuildContext, suspension: RedemptionR
 }
 function capacityEvidenceTierForObservation(
   observation: ExitRouteObservation,
+  redemption?: RedemptionBackstopEntry,
 ): NonNullable<ExitRouteObservation["capacityEvidenceTier"]> {
   if (observation.capacityEvidenceTier && observation.capacityEvidenceTier !== "unknown") {
     return observation.capacityEvidenceTier;
+  }
+  // Older queue observations may omit the tier, but their captured method
+  // still proves proxy measurement rather than direct executable inventory.
+  if (redemption?.capacityKind === "live-queue" || redemption?.capacityKind === "live-proxy-validated") {
+    return "live-queue-proxy";
   }
   // A positive method identity is not a missing datum merely because an older
   // producer did not serialize the tier. Freshness/admission remains separate.
@@ -328,16 +335,26 @@ function buildRoute(
     rejection: z.infer<typeof RejectionSchema> | null;
     retained: boolean;
   },
+  supply: V9AssetFactsV3["supply"],
 ): V9ExitRouteFactV2 {
   const suspension = args.lane === "redemption" ? resolveReviewedRouteSuspension(
     getRedemptionBackstopConfig(context.asset.assetId), args.observation.routeId, context.fixedInput.clockSec,
   ) : undefined;
   if (suspension) return buildSuspendedRoute(context, suspension);
+  const redemption = args.lane === "redemption"
+    ? context.fixedInput.redemptionBackstopMap[context.asset.assetId] : undefined;
+  if (redemption && (redemption.routeStatus === "paused" || redemption.routeStatus === "suspended") &&
+    usesPrimaryRedemptionReviewTerms(context.asset.assetId, args.observation)) {
+    args = { ...args, disposition: "rejected", rejection: {
+      code: "redemption-route-closed", reason: "The captured primary redemption channel is closed.",
+      rejectedAtSec: context.fixedInput.clockSec,
+    } };
+  }
   const generationId =
     args.lane === "dex" ? context.fixedInput.dexGenerationId : context.fixedInput.redemptionGenerationId;
   const routeKey = canonicalV9RouteKey(args.lane, generationId, args.observation.routeId);
   const certificate = args.observation.executionCertificate;
-  const supplyUsd = getCirculatingRawOrNull(context.fixedInput.aggregateCirculatingById?.[context.asset.assetId] ?? {});
+  const supplyUsd = selectV9ExitCirculatingUsd(supply);
   const executionPolicy = args.observation.executionModelId ? executionPolicyForInput(context) : null;
   const executionRequest = executionPolicy ? selectV9ExitStressRequest(supplyUsd, executionPolicy) : null;
   const executionAdmission = args.observation.executionModelId
@@ -414,7 +431,7 @@ function buildRoute(
       observationConfidence: args.observation.confidence,
       observationHistory: args.observation.observationHistory ?? null,
       evidenceKind: args.observation.evidenceKind,
-      capacityEvidenceTier: capacityEvidenceTierForObservation(args.observation),
+      capacityEvidenceTier: capacityEvidenceTierForObservation(args.observation, redemption),
       ...(args.observation.feeEvidence ? { feeEvidence: args.observation.feeEvidence } : {}),
       factorStatuses: rejectedFactorStatuses,
       coverageClass: "diagnostic",
@@ -632,7 +649,7 @@ function buildRoute(
     executionCertainty: args.review.executionCertainty,
     modelConfidence: args.review.modelConfidence,
     observationConfidence: args.observation.confidence,
-    capacityEvidenceTier: capacityEvidenceTierForObservation(args.observation),
+    capacityEvidenceTier: capacityEvidenceTierForObservation(args.observation, redemption),
     observationHistory: args.observation.observationHistory ?? null,
     evidenceKind: args.observation.evidenceKind,
     ...(args.review.feeEvidence === null ? {} :
@@ -795,7 +812,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
     const reviewKey = `${row.lane}:${row.observation.routeId}`;
     const review = reviewByKey.get(reviewKey);
     if (review) consumedReviews.add(reviewKey);
-    return buildRoute(context, { ...row, review });
+    return buildRoute(context, { ...row, review }, supply);
   });
   // A configured live-only rail with failed capacity telemetry still exists.
   // Preserve the producer gap so a small observed DEX route cannot turn an

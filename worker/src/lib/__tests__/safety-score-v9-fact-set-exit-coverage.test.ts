@@ -15,6 +15,7 @@ import { buildV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-ga
 import {
   evaluateV9Exit,
   projectV9ExitEvaluationRoute,
+  selectV9ExitCirculatingUsd,
 } from "@shared/lib/safety-score-v9/exit";
 import { evaluateV9EconomicControl } from "@shared/lib/safety-score-v9/control";
 import {
@@ -72,6 +73,59 @@ describe("route compiler policy reuse", () => {
       loadPolicy.mockRestore();
       validateReviews.mockRestore();
     }
+  });
+});
+
+describe("route evidence independent of sizing and status labels", () => {
+  it("uses maximum stress with stale supply while preserving original evidence clocks", () => {
+    const draft = structuredClone(queuedRedemptionFixedInput());
+    const supplyObservedAt = draft.clockSec - 100_000;
+    draft.aggregateCirculatingById.alpha!.observedAtSec = supplyObservedAt;
+    const observation = draft.redemptionBackstopMap.alpha!.capacityProfile!.exitRouteObservations![0]!;
+    const routeObservedAt = observation.observedAt;
+    const fixed = rebuildFixed(draft);
+    const reviewed = extension({ clockSec: fixed.clockSec, registryFingerprint: fixed.registryFingerprint });
+    reviewed.sources.chainSupply.observedAtSec = supplyObservedAt;
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
+    const context = factBuilderContext(fixed, reviewed);
+    const supply = buildSupply(context);
+    const built = buildRoutes(context, supply);
+    const result = evaluateV9Exit({
+      circulatingUsd: selectV9ExitCirculatingUsd(supply),
+      routes: built.exitRoutes.map(projectV9ExitEvaluationRoute), gaps: [...context.gaps.values()],
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(selectV9ExitCirculatingUsd(supply)).toBeNull();
+    expect(result.stressRequest?.requestedNotionalUsd).toBe(25_000_000);
+    const route = built.exitRoutes.find((candidate) => candidate.lane === "redemption")!;
+    expect(context.evidence.get(route.status.evidenceRefIds[0]!)?.observedAtSec).toBe(routeObservedAt);
+    expect(fixed.aggregateCirculatingById.alpha!.observedAtSec).toBe(supplyObservedAt);
+  });
+
+  it.each([
+    { routeStatus: "open", evidenceKind: "onchain-contract-state", admitted: true },
+    { routeStatus: "unknown", evidenceKind: "onchain-contract-state", admitted: true },
+    { routeStatus: "paused", evidenceKind: "onchain-contract-state", admitted: false },
+    { routeStatus: "suspended", evidenceKind: "onchain-contract-state", admitted: false },
+    { routeStatus: "open", evidenceKind: "documented-terms", admitted: false },
+  ] as const)("uses execution, not status labels: $routeStatus / $evidenceKind", ({ routeStatus, evidenceKind, admitted }) => {
+    const draft = structuredClone(queuedRedemptionFixedInput(300, true));
+    const row = draft.redemptionBackstopMap.alpha!;
+    Object.assign(row, { routeStatus, routeStatusSource: "static-config", sourceMode: "dynamic",
+      capacityKind: "live-direct", settlementModel: "atomic", settlementDelaySec: 0,
+      accessModel: "permissionless-onchain", holderEligibility: "any-holder", feeBps: 0 });
+    const observation = row.capacityProfile!.exitRouteObservations![0]!;
+    observation.evidenceKind = evidenceKind;
+    if (routeStatus === "unknown") observation.scoreEligible = false;
+    const fixed = rebuildFixed(draft);
+    const reviewed = extension({ clockSec: fixed.clockSec, registryFingerprint: fixed.registryFingerprint });
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
+    const context = factBuilderContext(fixed, reviewed);
+    const route = buildRoutes(context, buildSupply(context)).exitRoutes.find((candidate) => candidate.lane === "redemption")!;
+    expect(route.status.observationState).toBe(routeStatus === "paused" || routeStatus === "suspended" ? "unsupported" : "known");
+    if (routeStatus === "open" || routeStatus === "unknown") expect(route.coverageClass).toBe(admitted ? "exact-lower-bound" : "diagnostic");
+    const result = evaluateV9Exit({ circulatingUsd: 20_000_000, gaps: [...context.gaps.values()],
+      routes: [projectV9ExitEvaluationRoute(route)] }, V9_CANDIDATE_POLICY_V1);
+    expect(result.primaryRouteKey === route.routeKey).toBe(admitted);
   });
 });
 
@@ -152,7 +206,7 @@ describe("configured redemption channel census", () => {
           circulatingUsd: 10_000_000, portfolioFactStatus: compiled.exitStatus,
           gaps: [...context.gaps.values()], routes: compiled.exitRoutes.map(projectV9ExitEvaluationRoute),
         }, V9_CANDIDATE_POLICY_V1);
-        expect(evaluated.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+        expect(evaluated.score).toBe(50);
         expect(evaluated.reasons).toContain("missing-same-notional-route");
         expect(evaluated.reasons).not.toContain("no-viable-exit-path");
         expect(evaluated.routes.find((route) => route.routeKey === channel.routeKey)).toMatchObject({
@@ -234,7 +288,7 @@ describe("explicit route factor gaps and source chronology", () => {
       reviewed.assets[0]!.retainedRoutes = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, assetId);
       const route = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!.exitRoutes
         .find((candidate) => candidate.lane === "redemption")!;
-      expect(route.coverageClass).toBe(admitted ? "diagnostic" : "exact-lower-bound");
+      expect(route.coverageClass).toBe("exact-lower-bound");
       expect(route.factorStatuses.cost!.observationState).toBe(admitted ? "missing" : "known");
     });
   });
@@ -272,13 +326,17 @@ describe("explicit route factor gaps and source chronology", () => {
       const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
       const asset = compiled.assets[0]!;
       const route = asset.exitRoutes.find((candidate) => candidate.lane === "redemption")!;
-      expect(route.coverageClass).toBe("diagnostic");
+      expect(route.coverageClass).toBe("exact-lower-bound");
       expect(route.capacityCurve.some((point) => point.executionCostBps === 7)).toBe(true);
       expect(route.settlementSlaSec).toBe(0);
       expect(route.factorStatuses[factor]!.observationState).toBe("missing");
       const gap = asset.gaps.find((candidate) => route.factorStatuses[factor]!.gapIds.includes(candidate.gapId))!;
       expect(gap.causeScope).toMatchObject({ routeKey: route.routeKey, factorKey: factor, requiredDatum: factor });
       expect(gap.gapId).toBe(`${assetId}:gap:exit-route:${route.routeKey}:${factor}`);
+      if (factor === "cost" || factor === "settlement") {
+        expect(gap.policyRuleId).toBe("v9.exit.reviewed-terms");
+        expect(["C", "U"]).toContain(gap.causeProof.cause);
+      }
       const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
       expect(evaluated.exit.causeGapIds).toContain(gap.gapId);
     });
@@ -447,7 +505,7 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       gaps: asset.gaps, portfolioFactStatus: asset.exitStatus,
       routes: asset.exitRoutes.map(projectV9ExitEvaluationRoute),
     }, V9_CANDIDATE_POLICY_V1);
-    expect(result.score).toBe(emptyDex ? V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore : 0);
+    expect(result.score).toBe(emptyDex ? 50 : 0);
     expect(result.aggregationDisposition).toBe("included");
     if (emptyDex) expect(result.limitedEvidenceCauses).toContain("U");
     expect(result.routes.find((route) => route.routeKey === missing.routeKey)).toMatchObject({
@@ -577,7 +635,7 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
     // Unproven settlement remains a bounded C/U Exit floor; it is no longer a
     // final-score named ceiling.
     const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
-    expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(evaluated.exit.score).toBe(50);
     expect(evaluated.exit.reasons).toContain("unproven-settlement-bound");
     expect(evaluated.exit.reasons).not.toContain("no-viable-exit-path");
     const settlementGapIds = redemption.factorStatuses!.settlement!.gapIds;
@@ -710,7 +768,7 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
   });
 
   it.each(["exact-lower-bound", "exact-complete"] as const)(
-    "keeps known route facts separate from immaterial %s execution evidence",
+    "scores small positive %s execution evidence without a binary exclusion",
     (coverageClass) => {
       const draft = structuredClone(exactFixedInput());
       const observation = draft.dexLiqMap.alpha!.exitRouteObservations![0]!;
@@ -739,18 +797,9 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
         portfolioFactStatus: asset.exitStatus,
         routes: [projectV9ExitEvaluationRoute(route)],
       }, V9_CANDIDATE_POLICY_V1);
-      if (coverageClass === "exact-lower-bound") {
-        expect(result.routes[0]).toMatchObject({
-          included: false,
-          score: null,
-          exclusionReason: "missing-same-notional-route",
-        });
-        expect(result.reasons).toContain("missing-same-notional-route");
-        expect(result.reasons).not.toContain("no-viable-exit-path");
-      } else {
-        expect(result.routes[0]).toMatchObject({ included: true, score: 0 });
-        expect(result.reasons).toContain("no-viable-exit-path");
-      }
+      expect(result.routes[0]).toMatchObject({ included: true, capacityPoint: { executableUsd: 13 } });
+      expect(result.score).toBeGreaterThan(0);
+      expect(result.reasons).not.toContain("no-viable-exit-path");
     },
   );
 
@@ -1099,9 +1148,13 @@ describe("cause-bound Exit compiler admission", () => {
       exclusionReason: "missing-runtime-route-evidence" });
   });
 
-  it("transports a same-run queue/proxy tier without clearing its queue, limits or eligibility", () => {
+  it.each([true, false])("retains queue/proxy confidence with an explicit tier: %s", (explicitTier) => {
     const draft = structuredClone(queuedRedemptionFixedInput(300, false));
-    draft.redemptionBackstopMap.alpha!.capacityProfile!.exitRouteObservations![0]!.capacityEvidenceTier = "live-queue-proxy";
+    const row = draft.redemptionBackstopMap.alpha!;
+    row.capacityKind = "live-queue";
+    const observation = row.capacityProfile!.exitRouteObservations![0]!;
+    if (explicitTier) observation.capacityEvidenceTier = "live-queue-proxy";
+    else delete observation.capacityEvidenceTier;
     const fixed = rebuildFixed(draft);
     const reviewed = structuredClone(extension());
     reviewed.registryFingerprint = fixed.registryFingerprint;
@@ -1114,8 +1167,7 @@ describe("cause-bound Exit compiler admission", () => {
       observation: { factor: 1 }, model: { factor: 1 }, capacityMethod: { factor: 0.75 },
     });
     expect(result.routes[0]).toMatchObject({ capacityEvidenceTier: "live-queue-proxy",
-      queueDepthUsd: 1_500_000, dailyLimitUsd: 1_000_000, minRedeemUsd: 1_000_000,
-      eligibilityMultiplier: 0.9 });
+      queueDepthUsd: 1_500_000, dailyLimitUsd: 1_000_000, minRedeemUsd: 1_000_000 });
     expect(route.settlementModel).toBe("queued");
     expect(route.scoreEligible).toBe(false);
     expect(result.score).toBeGreaterThan(0);

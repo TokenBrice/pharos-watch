@@ -28,12 +28,12 @@ export function validateExitExecutionModelReviews(input: unknown, envelope: V9Va
   const seen = new Set<string>();
   for (const review of registry.reviews) {
     const digest = exitExecutionReviewDigest(review);
-    if (seen.has(digest) || !envelope.policy.semantic.exit.executionModels[review.modelId] || Date.parse(review.expiresAt) <= Date.parse(review.reviewedAt)) {
+    if (seen.has(digest) || Date.parse(review.expiresAt) <= Date.parse(review.reviewedAt)) {
       throw new Error("Invalid or duplicate exit execution model review");
     }
     seen.add(digest);
   }
-  return registry.reviews;
+  return registry.reviews.filter((review) => envelope.policy.semantic.exit.executionModels[review.modelId]?.admission === "enabled");
 }
 
 export function resolveExitExecutionRequestPoint(certificate: ExitExecutionCertificate, request: { requestedNotionalUsd: number; maxCostBps: number }): ExitExecutionRequestPoint | null {

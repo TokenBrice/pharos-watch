@@ -16,6 +16,7 @@ import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-route-sus
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { resolveRedemptionFiatReference, REDEMPTION_FIAT_REFERENCE_MAX_AGE_SEC } from "@shared/lib/redemption-fiat-reference";
+import executionModelReviews from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import type { ExitRouteObservation, ExitRouteOutput } from "@shared/types/exit-route";
 import { exitRawUsd, exitUsdBoundary } from "@shared/lib/safety-score-v9/exit-execution-units";
 import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
@@ -593,6 +594,7 @@ function buildCertifiedRouteReview(fixedInput: Readonly<SafetyScoreV9CompilerInp
     settlementModel: maximumSec === 0 ? "atomic" : maximumSec === null ? "unknown" : "bounded-delay",
     settlementSlaSec: maximumSec, queueDepthUsd: null, dailyLimitUsd: null, minRedeemUsd: null,
     physicalResourceKeys: [...new Set([...certificate.resourceKeys,
+      `execution-endpoint:${certificate.identity.endpoint}`,
       ...(observation.sharedResourceKey ? [observation.sharedResourceKey] : []),
     ])].sort(compareText),
     failureDomains: certificate.failureDomainKeys.map((key) => ({ kind: "redemption-rail" as const, key })).sort((a, b) => compareText(a.key, b.key)),
@@ -717,27 +719,34 @@ function redemptionExecutionCertainty(
 function redemptionCoverageClass(
   entry: RedemptionBackstopEntry,
   observation: ExitRouteObservation,
-  clockSec: number,
 ): RouteReview["coverageClass"] {
-  const config = getRedemptionBackstopConfig(entry.stablecoinId);
-  const reviewed = config?.v9RouteReviewTerms;
-  const reviewSec = reviewed?.reviewedAt ? reviewAdmissionClockSec(reviewed.reviewedAt) : NaN;
-  // Primary terms bind every redemption-lane ID unless separately reviewed.
-  if (reviewed?.scoringDisposition === "bounded-terms-gap" &&
-    usesPrimaryRedemptionReviewTerms(entry.stablecoinId, observation) &&
-    Number.isFinite(reviewSec) && reviewSec <= clockSec) {
-    return "diagnostic";
-  }
-  // Current-open evidence also gates discounted credit. Producer rejection
-  // must not let a paused or unknown immediate rail bypass this requirement.
-  const requiresCurrentOpenAttribution =
-    entry.sourceMode === "dynamic" &&
+  const requiresExecutableEvidence = entry.sourceMode === "dynamic" &&
     (entry.capacityKind === "live-direct" || entry.capacityKind === "live-direct-bounded") &&
     (entry.settlementModel === "atomic" || entry.settlementModel === "immediate");
-  const hasCurrentOpenAttribution =
-    entry.routeStatus === "open" &&
-    (entry.routeStatusSource === "onchain" || entry.routeStatusSource === "protocol-api");
-  return requiresCurrentOpenAttribution && !hasCurrentOpenAttribution ? "diagnostic" : "exact-lower-bound";
+  // Executed current state establishes openness; a status-source label does
+  // not. Concrete closure is vetoed separately by the fact compiler.
+  const executableEvidence = (observation.evidenceKind === "onchain-contract-state" ||
+    observation.evidenceKind === "live-reserve-state" &&
+      (entry.capacityKind === "live-direct" || entry.capacityKind === "live-direct-bounded")) &&
+    observation.output.kind !== "unknown" &&
+    (observation.capacityCurve ?? [observation]).some((point) => point.executableUsd > 0);
+  return requiresExecutableEvidence && !executableEvidence ? "diagnostic" : "exact-lower-bound";
+}
+
+function primaryRedemptionResourceKeys(
+  assetId: string,
+  observation: ExitRouteObservation,
+  clockSec: number,
+): string[] {
+  if (!usesPrimaryRedemptionReviewTerms(assetId, observation) || observation.scope.kind !== "protocol") return [];
+  const outputs = resolvedExitRouteOutputAssetKeys(observation.output).slice().sort(compareText);
+  return executionModelReviews.reviews.flatMap((review) =>
+    review.modelId === "erc4626-instant" && review.producer.kind === "erc4626-instant" &&
+      review.identity.assetId === assetId && review.identity.endpoint === review.identity.deployment &&
+      Date.parse(review.reviewedAt) / 1000 <= clockSec && Date.parse(review.expiresAt) / 1000 >= clockSec &&
+      review.identity.outputAssetKeys.length === outputs.length &&
+      [...review.identity.outputAssetKeys].sort(compareText).every((key, index) => key === outputs[index])
+      ? [`execution-endpoint:${review.identity.endpoint}`] : []);
 }
 
 function redemptionReviewTerms(entry: RedemptionBackstopEntry, clockSec: number, outputIdentityMatches = true): {
@@ -940,6 +949,7 @@ function buildRedemptionRouteReview(
   const reviewedTerms = redemptionReviewTerms(entry, fixedInput.clockSec, stableOutputIdentityMatches);
   const physicalResourceKeys = [
     ...(observation.sharedResourceKey ? [observation.sharedResourceKey] : []),
+    ...primaryRedemptionResourceKeys(entry.stablecoinId, observation, fixedInput.clockSec),
     ...(scope.kind === "issuer"
       ? [`issuer:${scope.issuerId}`]
       : scope.kind === "protocol"
@@ -980,7 +990,7 @@ function buildRedemptionRouteReview(
     executionModel: redemptionExecutionModel(entry),
     executionCertainty: redemptionExecutionCertainty(entry, modelConfidence),
     modelConfidence,
-    coverageClass: routeSuspension ? "diagnostic" : redemptionCoverageClass(entry, observation, fixedInput.clockSec),
+    coverageClass: routeSuspension ? "diagnostic" : redemptionCoverageClass(entry, observation),
     capacityScoringHorizon: entry.capacityProfile?.scoringHorizon ?? "unknown",
     ...redemptionSettlement(reviewedTerms.settlementModel, reviewedTerms.settlementDelaySec),
     ...(reviewedTerms.settlementDelaySec !== undefined &&

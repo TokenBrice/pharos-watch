@@ -35,10 +35,11 @@ describe("the one exit request, two denominators", () => {
     expect(selectV9ExitStressRequest(supply, envelope)?.requestedNotionalUsd).toBe(grid);
   });
 
-  it("rejects a missing or non-positive supply on both requests", () => {
+  it("keeps an unknown denominator unavailable while selecting maximum stress", () => {
     for (const circulatingUsd of [null, undefined, 0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
       expect(resolveExitScoringRequest("supply-denominator", circulatingUsd, EXIT_ROUTE_SCORING_TABLES.request)).toBeNull();
-      expect(resolveExitScoringRequest("stress-grid", circulatingUsd, EXIT_ROUTE_SCORING_TABLES.request)).toBeNull();
+      expect(resolveExitScoringRequest("stress-grid", circulatingUsd, EXIT_ROUTE_SCORING_TABLES.request))
+        .toMatchObject({ requestedNotionalUsd: 25_000_000, rawSupplyRequestUsd: 25_000_000 });
     }
   });
 

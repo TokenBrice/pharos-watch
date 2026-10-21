@@ -8,14 +8,13 @@ const point = (executableUsd: number) => ({ requestedNotionalUsd: 1_000_000, max
   executableUsd, completionRatio: executableUsd / 1_000_000, executionCostBps: 0 });
 
 describe("Exit exhaustion requires an exhaustive measurement", () => {
-  it.each([0, 667.62])("does not infer exhaustion from a $%s exact lower bound", (executableUsd) => {
+  it.each([0])("does not infer exhaustion from a $%s exact lower bound", (executableUsd) => {
     const result = evaluateV9Exit({ circulatingUsd: 20_000_000, portfolioStatus: "reviewed-complete",
       routes: [makeExitRoute({ coverageClass: "exact-lower-bound", capacityCurve: [point(executableUsd)] })],
     }, policy);
-    expect(result.score).toBe(policy.policy.semantic.exit.boundedUnknownScore);
+    expect(result.score).toBe(50);
     expect(result.reasons).toContain("missing-same-notional-route");
     expect(result.reasons).not.toContain("no-viable-exit-path");
-    expect(result.routes[0]!.capsApplied).not.toContain("immaterial-executable-capacity");
     expect(result.routes[0]!.capsApplied).not.toContain("zero-executable-capacity");
   });
 
@@ -24,14 +23,14 @@ describe("Exit exhaustion requires an exhaustive measurement", () => {
       routes: [makeExitRoute({ scoreEligible: false, evidenceKind: "documented-terms",
         observationConfidence: "low", modelConfidence: "low", capacityCurve: [point(0)] })],
     }, policy);
-    expect(result.score).toBe(policy.policy.semantic.exit.boundedUnknownScore);
+    expect(result.score).toBe(50);
     expect(result.reasons).toContain("missing-same-notional-route");
     expect(result.reasons).not.toContain("no-viable-exit-path");
   });
 
-  it.each([0, 667.62])("keeps a $%s exact-complete measurement adverse", (executableUsd) => {
+  it("keeps an exact-complete zero measurement adverse", () => {
     const result = evaluateV9Exit({ circulatingUsd: 20_000_000, portfolioStatus: "reviewed-complete",
-      routes: [makeExitRoute({ capacityCurve: [point(executableUsd)] })],
+      routes: [makeExitRoute({ capacityCurve: [point(0)] })],
     }, policy);
     expect(result.score).toBe(0);
     expect(result.reasons).toContain("no-viable-exit-path");
@@ -60,27 +59,28 @@ describe("Exit exhaustion requires an exhaustive measurement", () => {
     const result = evaluateV9Exit({ circulatingUsd: 20_000_000, portfolioStatus: "reviewed-complete",
       routes: [makeExitRoute({ coverageClass: "exact-lower-bound", capacityCurve: [point(1_000_000)] })],
     }, policy);
-    expect(result.score).toBeGreaterThan(policy.policy.semantic.exit.boundedUnknownScore);
+    expect(result.score).toBeGreaterThan(50);
     expect(result.primaryRouteKey).toBe("redemption:issuer");
     expect(result.routes[0]!.capacityPoint!.executableUsd).toBe(1_000_000);
   });
 
-  it("keeps the existing raw-capacity materiality boundary when valuing lower-bound credit", () => {
+  it("retains positive lower-bound capacity when valuing output", () => {
     const result = evaluateV9Exit({ circulatingUsd: 20_000_000, portfolioStatus: "reviewed-complete",
       routes: [makeExitRoute({ coverageClass: "exact-lower-bound", outputValueRetention: 0.9999,
         capacityCurve: [point(10_000)] })],
     }, policy);
     expect(result.routes[0]).toMatchObject({ included: true, capacityPoint: { executableUsd: 9_999 } });
-    expect(result.score).toBeGreaterThan(policy.policy.semantic.exit.boundedUnknownScore);
+    expect(result.score).toBeGreaterThan(50);
   });
 
-  it("bounds weak positive lower-bound credit without discarding its executable prefix", () => {
+  it("keeps weak positive lower-bound credit below unknown without discarding its executable prefix", () => {
     const result = evaluateV9Exit({ circulatingUsd: 20_000_000, portfolioStatus: "reviewed-complete",
       routes: [makeExitRoute({ coverageClass: "exact-lower-bound", observationConfidence: "low",
         modelConfidence: "low", settlement: "queued", settlementDelaySec: 30 * 86_400,
         capacityCurve: [point(100_000)] })],
     }, policy);
-    expect(result.score).toBe(policy.policy.semantic.exit.boundedUnknownScore);
+    expect(result.score).toBeGreaterThan(0);
+    expect(result.score).toBeLessThan(50);
     expect(result.reasons).not.toContain("missing-same-notional-route");
     expect(result.reasons).not.toContain("no-viable-exit-path");
     expect(result.routes[0]).toMatchObject({ included: true, capacityPoint: { executableUsd: 100_000 } });
@@ -91,21 +91,21 @@ describe("Exit exhaustion requires an exhaustive measurement", () => {
     { scoreEligible: false, lane: "dex" as const, routeFamily: "dex-amm" as const },
     { executionModelId: "unreviewed-model" },
     { outputResolved: false },
-  ])("cannot infer whole-token exhaustion alongside an unmeasured alternative %j", (alternative) => {
+  ])("does not replace an admitted measured zero with an unmeasured alternative %j", (alternative) => {
     const result = evaluateV9Exit({ circulatingUsd: 20_000_000, portfolioStatus: "reviewed-complete",
       routes: [makeExitRoute({ capacityCurve: [point(0)] }),
         makeExitRoute({ routeKey: "redemption:alternative", capacityCurve: [point(0)], ...alternative })],
     }, policy);
-    expect(result.score).toBe(policy.policy.semantic.exit.boundedUnknownScore);
-    expect(result.reasons).toContain("missing-same-notional-route");
-    expect(result.reasons).not.toContain("no-viable-exit-path");
+    expect(result.score).toBe(0);
+    expect(result.primaryRouteKey).toBe("redemption:issuer");
+    expect(result.routes.find((route) => route.routeKey === "redemption:alternative")!.included).toBe(false);
   });
 
   it("does not treat an unavailable execution certificate as measured absence", () => {
     const result = evaluateV9Exit({ circulatingUsd: 20_000_000, portfolioStatus: "reviewed-complete",
       routes: [makeExitRoute({ executionModelId: "unreviewed-model" })],
     }, policy);
-    expect(result.score).toBe(policy.policy.semantic.exit.boundedUnknownScore);
+    expect(result.score).toBe(50);
     expect(result.reasons).toContain("missing-same-notional-route");
     expect(result.reasons).not.toContain("no-viable-exit-path");
   });
@@ -116,7 +116,7 @@ describe("Exit exhaustion requires an exhaustive measurement", () => {
       expect(result.score).toBe(0);
       expect(result.reasons).toEqual(["no-viable-exit-path"]);
     } else {
-      expect(result.score).toBe(policy.policy.semantic.exit.boundedUnknownScore);
+      expect(result.score).toBe(50);
       expect(result.reasons).toEqual(["missing-same-notional-route"]);
     }
   });

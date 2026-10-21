@@ -324,8 +324,11 @@ export function resolveExitScoringRequest(
   circulatingUsd: number | null | undefined,
   policy: ExitRequestPolicy,
 ): ExitScoringRequest | null {
-  const rawSupplyRequestUsd = resolveExitRequestSupplyNotionalUsd(circulatingUsd, policy);
-  if (rawSupplyRequestUsd === null) return null;
+  const supplyRequestUsd = resolveExitRequestSupplyNotionalUsd(circulatingUsd, policy);
+  // Missing sizing evidence cannot make an executable stress request smaller.
+  // Supply-denominator callers still require an observed denominator.
+  if (supplyRequestUsd === null && kind !== "stress-grid") return null;
+  const rawSupplyRequestUsd = supplyRequestUsd ?? policy.capUsd;
   const grid = [...policy.notionalGridUsd].sort((left, right) => left - right);
   const requestedNotionalUsd =
     kind === "stress-grid"
