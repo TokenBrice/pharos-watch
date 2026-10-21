@@ -290,7 +290,7 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
 
   it.each([
     { assetClass: "bank-deposit" as const, expectedState: "known", expectedQuality: 91.9 },
-    { assetClass: undefined, expectedState: "bounded-unknown", expectedQuality: 35 },
+    { assetClass: undefined, expectedState: "bounded-unknown", expectedQuality: 50 * .55 + 98 * .3 + 94 * .15 },
   ])("keeps missing obligor uncertainty scoped to concentration: $assetClass", ({ assetClass, expectedState, expectedQuality }) => {
     const fixed = makeV9FixedInput({ reserves: [{
       sourceKey: "fixture:holding", name: "Captured holding", pct: 100, risk: "low",
@@ -318,7 +318,7 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
     expect(backing.contributions.find(entry => entry.componentKey === `reserve:${row.exposureKey}`)!.cause)
       .toBe(assetClass === undefined ? "U" : null);
     expect(backing.contributions.find(entry => entry.componentKey === "reserve:concentration"))
-      .toMatchObject({ score: 35, cause: "U" });
+      .toMatchObject({ score: 50, cause: "U" });
     if (assetClass !== undefined) {
       expect(V9AssetFactsV3Schema.safeParse({ ...compiled, reserveExposures: [{
         ...row, issuerOrObligorKey: "identified-bank",
@@ -559,7 +559,7 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
       expect(gap.causeScope).toMatchObject({ componentKey: "reserve-residual", requiredDatum: "reserveClassification" });
       const scored = evaluateV9ReserveExposures({ ...asset, resolvedUpstreamExposures: [] }, V9_CANDIDATE_POLICY_V1);
       expect(scored.contributions.find(row => row.componentKey.startsWith("reserve:unclassified-residual:")))
-        .toMatchObject({ score: 35, wholeAssetWeight: pct / 100, cause: "U", scoringDisposition: "bounded-uncertainty" });
+        .toMatchObject({ score: 50, wholeAssetWeight: pct / 100, cause: "U", scoringDisposition: "bounded-uncertainty" });
     },
   );
 
@@ -1205,12 +1205,9 @@ describe("v10.19 frozen lender-book fact admission", () => {
     },
   );
 
-  it("names retained capture absence legacy-unobserved rather than a successful empty book", () => {
+  it("does not fabricate a lender subject or a successful empty book when no observation exists", () => {
     const ctx = context();
-    const fact = buildLenderBookFact(ctx)!;
-    expect(fact.observation).toBeNull();
-    expect(ctx.gaps.get(fact.status.gapIds[0]!)?.message).toContain("legacy-unobserved");
-    expect(ctx.gaps.get(fact.status.gapIds[0]!)?.causeProof.cause).toBe("U");
+    expect(buildLenderBookFact(ctx)).toBeUndefined();
   });
 
   it("admits successful exhaustive all-idle reads without pretending missing positions are zero", () => {
@@ -1221,11 +1218,11 @@ describe("v10.19 frozen lender-book fact admission", () => {
     expect(result.deploymentQualities[0]!.bookQuality).toBeNull();
   });
 
-  it("unknown exact collateral is a contributing U35, not source failure A or score zero", () => {
+  it("unknown exact collateral contributes U50, not source failure A or score zero", () => {
     const ctx = context(book({ collateral: address(99) }));
     const fact = buildLenderBookFact(ctx)!;
     expect(fact.status.observationState).toBe("bounded-unknown");
-    expect(fact.collaterals[0]).toMatchObject({ quality: 35, qualitySource: "bounded-unknown", sourceCause: "U", fallbackReason: "unmapped-collateral" });
+    expect(fact.collaterals[0]).toMatchObject({ quality: 50, qualitySource: "bounded-unknown", sourceCause: "U", fallbackReason: "unmapped-collateral" });
     expect(fact.collaterals[0]!.sourceGapIds.every((id) => ctx.gaps.get(id)?.causeProof.cause === "U")).toBe(true);
     expect(evaluateV1019LenderBook(fact, 90, V9_CANDIDATE_POLICY_V1)).not.toBeNull();
   });
@@ -1477,14 +1474,11 @@ describe("v10.19 frozen lender-book fact admission", () => {
     expect(() => buildLenderBookFact(context({ ...valid, contentSha256: "d".repeat(64) }))).toThrow(/Invalid lender book/);
   });
 
-  it("cannot silently admit one successful deployment of a required three-deployment book", () => {
-    const ctx = context(book());
-    const payload = { ...book(), assetId: "gtusdcp-gauntlet" };
-    const incompleteBook = { ...payload, ...deriveLenderBookObservationIdentity(payload) };
-    const partial = { ...ctx, asset: { ...ctx.asset, assetId: "gtusdcp-gauntlet" },
-      fixedInput: { ...ctx.fixedInput, liveReserveProvenanceMap: { "gtusdcp-gauntlet": {
-        source: "onchain", fetchedAt: clockSec - 100, lenderBookObservation: incompleteBook,
-      } } } };
-    expect(() => buildLenderBookFact(partial)).toThrow(/Invalid lender book/);
+  it("rejects an incomplete measured book instead of fabricating the omitted allocation", () => {
+    const measured = book();
+    if (measured.status !== "ok") throw new Error("Expected measured fixture");
+    const payload = { ...measured, deployments: measured.deployments.map(row => ({ ...row, markets: [] })) };
+    const incomplete = { ...payload, ...deriveLenderBookObservationIdentity(payload) };
+    expect(() => buildLenderBookFact(context(incomplete))).toThrow(/Invalid lender book/);
   });
 });

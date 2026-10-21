@@ -139,7 +139,6 @@ export interface V9BackingStructuralReason {
   readonly pathKey: string;
   readonly metricApplicability?: V9MechanismMetricApplicability["state"];
   readonly materialShare: number | null;
-  readonly ceiling: number;
   readonly evidenceRefIds: readonly string[];
   readonly failureDomains: readonly V9FailureDomainRef[];
 }
@@ -218,7 +217,7 @@ export interface V9BackingResult {
   readonly archetype: string;
   readonly rateability: "rateable" | "NR";
   readonly score: number | null;
-  readonly aggregationDisposition: "included" | "excluded-a-b";
+  readonly aggregationDisposition: "included" | "excluded-a-b" | "unavailable";
   readonly causeGapIds: readonly string[];
   readonly limitedEvidenceCauses: readonly V9EvidenceCause[];
   readonly supportedComponentKeys: readonly string[];
@@ -302,14 +301,10 @@ export function backingPolicy(policy: V9BackingEvaluationPolicy): V9BackingSeman
 export function createV9BackingStructuralReason(
   policy: V9BackingEvaluationPolicy,
   signal: V9BackingSignalRule,
-  details: Omit<V9BackingStructuralReason, "kind" | "severity" | "ceiling">,
+  details: Omit<V9BackingStructuralReason, "kind" | "severity">,
 ): V9BackingStructuralReason {
   assertV9BackingPolicy(policy);
-  const ceiling = policy.policy.semantic.structural.signalLimits[signal.kind][signal.severity];
-  if (ceiling === null) {
-    throw new Error(`Safety Score v9 backing signal ${signal.kind}:${signal.severity} has no structural limit`);
-  }
-  return { ...details, kind: signal.kind, severity: signal.severity, ceiling };
+  return { ...details, kind: signal.kind, severity: signal.severity };
 }
 
 export interface ReserveEvaluation {

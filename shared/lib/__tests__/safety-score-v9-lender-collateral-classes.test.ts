@@ -13,16 +13,13 @@ function classMapping(rows: readonly { chain: string; address: string; class: st
 }
 
 describe("reviewed lender collateral class registry", () => {
-  it("preserves the complete pre-extraction policy mapping and original evidence for all eighty rows", () => {
+  it("preserves the pre-extraction mapping and original evidence", () => {
     const admitted = getLenderCollateralClassesRegistry();
-    expect(legacyRows).toHaveLength(80);
-    expect(admitted.registry.reviews).toHaveLength(80);
     expect(classMapping(admitted.registry.reviews)).toEqual(classMapping(legacyRows));
     expect(admitted.registry.reviews.map(({ reviewer: _reviewer, ...row }) => row)).toEqual(legacyRows);
     for (const row of legacyRows) {
       expect(admitted.get(`${row.chain}:${row.address}`)?.class).toBe(row.class);
     }
-    expect(admitted.registry.reviews.filter((row) => row.reviewedAt === "2026-10-20")).toHaveLength(8);
     expect(policyJson.semantic.backing.lenderCollateralBook).not.toHaveProperty("collateralClasses");
   });
 

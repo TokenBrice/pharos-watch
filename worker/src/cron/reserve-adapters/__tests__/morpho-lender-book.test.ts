@@ -109,6 +109,13 @@ const primeRows: MarketFixture[] = [
 });
 
 describe("Morpho NAV-accounted lender-book producer", () => {
+  it("rejects unsupported configured capability without fabricating a book", async () => {
+    const f = fixture();
+    const result = await observeMorphoLenderBook({ ...f.coin, id: "synthetic-unsupported-lender" },
+      { ...f.config, params: { ...f.config.params, redemptionLiquidity: undefined } }, new AbortController().signal);
+    expect(result).toMatchObject({ assetId: "synthetic-unsupported-lender",
+      status: "unavailable", reason: "unsupported-adapter", deployments: null });
+  });
   it("passes the existing finalized lender pin and capture clock to recent-state routing", async () => {
     const batch = vi.spyOn(evmRpc, "fetchEvmMulticall3Aggregate3AtBlock");
     expect((await observe()).result.status).toBe("ok");

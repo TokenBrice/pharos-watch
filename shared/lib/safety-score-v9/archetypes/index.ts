@@ -1,6 +1,6 @@
 import {
   applyV9MeasuredCollateralization,
-  createUnknownArchetypeV9BackingResult,
+  createUnavailableV9BackingResult,
   evaluateV9ArchetypeBacking,
 } from "./evaluation";
 import {
@@ -67,10 +67,21 @@ export function evaluateV9Backing(
   review: V9MechanismRiskReview | V9UnknownMechanismRiskReview,
   policy: V9BackingEvaluationPolicy,
 ): V9BackingResult {
-  // Unsupported-archetype fallback stays: an asset whose curated archetype has
-  // no evaluator must degrade, never throw.
+  // An unsupported mechanism cannot establish a scored subject by itself.
+  // Preserve any actual reserves and bound only their missing mechanism.
   if (!isSupportedMechanismReview(review)) {
-    return createUnknownArchetypeV9BackingResult(asset.assetId, review.archetype, policy);
+    return createUnavailableV9BackingResult(asset, {
+      archetype: "unresolved",
+      mechanismRiskReview: {
+        review: null,
+        status: {
+          applicability: { state: "required", policyRuleId: "v9.backing.archetype", rationale: null, gapId: null },
+          observationState: "unsupported",
+          evidenceRefIds: [],
+          gapIds: [],
+        },
+      },
+    }, policy);
   }
   // No re-parse: the review reached here through the compiled fact set, whose
   // `V9MechanismRiskReviewFactV2Schema.review` field is this exact schema.

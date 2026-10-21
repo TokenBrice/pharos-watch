@@ -3,7 +3,7 @@ import { clampScore } from "../math";
 import { decimalSnap } from "./formula";
 import { evaluateV1019LenderBook, v1019LenderMarketQuality } from "./lender-book";
 import { lenderMarketKey } from "./lender-book-registry";
-import { resolveV9ReasonTreatment } from "./policy";
+import { resolveV9ReasonTreatment, unknownQuality } from "./policy";
 import { gapsForV9Ids, type V9GapIndex } from "./gap-index";
 import { canonicalDomains, canonicalUniqueBy, compareText, uniqueSorted } from "./primitives";
 import {
@@ -21,7 +21,6 @@ export const V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT = 0.99;
 export function verifiedLiveInheritedExposures(
   asset: Pick<V9BackingAssetInput, "reserveStatus" | "reserveExposures" | "reserveResiduals">,
   inherited: Pick<V9InheritedStablecoinBacking, "parentAssetId">,
-  allowCompleteMultiSlice = false,
 ): readonly V9ReserveExposureFactV2[] | undefined {
   const exposures = asset.reserveExposures;
   if (
@@ -36,13 +35,9 @@ export function verifiedLiveInheritedExposures(
       !Number.isFinite(exposure.weight) || exposure.weight < 0)
   ) return undefined;
   const weight = exposures.reduce((sum, exposure) => sum + exposure.weight, 0);
-  if (exposures.length === 1) {
-    return weight >= V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT ? exposures : undefined;
-  }
-  return allowCompleteMultiSlice &&
-    Math.abs(weight - 1) <= SCORE_EPSILON &&
-    (asset.reserveResiduals ?? []).every(residual => residual.weight === 0)
-    ? exposures : undefined;
+  const residualWeight = (asset.reserveResiduals ?? []).reduce((sum, residual) => sum + residual.weight, 0);
+  return weight >= V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT &&
+    weight + residualWeight <= 1 + SCORE_EPSILON ? exposures : undefined;
 }
 
 /**
@@ -52,9 +47,6 @@ export function verifiedLiveInheritedExposures(
  * wrapper's own pillars; incomplete local review is handled once by the
  * fact-aware parent limit. Concentration is intentionally NOT re-penalized —
  * the parent's backing pillar already prices its own internal diversification.
- * Non-lender inheritance still defers to the generic path at the unknown floor.
- * An admitted lender book instead retains even a very weak inherited quality:
- * generic fallback must not erase the measured allocation haircut.
  */
 export function inheritedStablecoinReserveEvaluation(
   asset: V9BackingAssetInput,
@@ -67,8 +59,7 @@ export function inheritedStablecoinReserveEvaluation(
   const lenderEvaluation = asset.lenderBook === undefined || asset.lenderBook.observation?.assetId !== asset.assetId ? null
     : evaluateV1019LenderBook(asset.lenderBook, inherited.parentBackingScore, policy);
   const inheritedQuality = lenderEvaluation?.reserveQuality ?? clampScore(inherited.parentBackingScore);
-  const liveExposures = verifiedLiveInheritedExposures(asset, inherited,
-    backing.lenderCollateralBook.admittedAssets.some(row => row.assetId === asset.assetId));
+  const liveExposures = verifiedLiveInheritedExposures(asset, inherited);
   const evidenceRefIds = uniqueSorted([
     ...asset.reserveStatus.evidenceRefIds,
     ...(liveExposures?.flatMap(exposure => exposure.status.evidenceRefIds) ?? []),
@@ -104,7 +95,7 @@ export function inheritedStablecoinReserveEvaluation(
     const cause = causes.includes("C") ? "C" : causes.includes("U") ? "U" : causes.includes("A") ? "A" : causes.includes("B") ? "B" : null;
     return {
       componentKey: `${componentKey}:residual:${residual.residualId}`,
-      score: cause === "A" || cause === "B" ? null : backing.boundedUnknownQuality,
+      score: cause === "A" || cause === "B" ? null : unknownQuality("backing", cause, policy.policy.semantic),
       normalizedWeight: residual.weight,
       effectiveScoringWeight: cause === "A" || cause === "B" ? 0 : residual.weight,
       cause,
@@ -115,7 +106,6 @@ export function inheritedStablecoinReserveEvaluation(
   const includedWeight = weight + residualFactors.reduce((sum, factor) => sum + factor.effectiveScoringWeight, 0);
   const score = clampScore(decimalSnap((inheritedQuality * weight +
     residualFactors.reduce((sum, factor) => sum + (factor.score ?? 0) * factor.effectiveScoringWeight, 0)) / includedWeight));
-  if (lenderEvaluation === null && score <= backing.boundedUnknownQuality + SCORE_EPSILON) return null;
   const lenderFactors: V9BackingFactorContribution[] = [];
   if (lenderEvaluation !== null && asset.lenderBook?.observation?.status === "ok") {
     const limiting = lenderEvaluation.deploymentQualities.find(row => row.reserveQuality === lenderEvaluation.reserveQuality)!;

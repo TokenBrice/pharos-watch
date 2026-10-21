@@ -11,6 +11,7 @@ import {
 import {
   deriveLenderBookObservationIdentity,
   canonicalizeLenderBookObservation,
+  supportsLenderBookObservation,
 } from "@shared/lib/safety-score-v9/lender-book-registry";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
@@ -536,42 +537,54 @@ export async function observeMorphoLenderBook(
   try {
     if (signal.aborted || ctx?.abortSignal?.aborted) fail("aborted");
     if (Date.now() >= deadlineMs) fail("deadline");
-    const admission = bounds.admittedAssets.find(row => row.assetId === coin.id);
-    if (!admission || config.adapter !== "erc4626-single-asset") fail("identity-mismatch");
+    if (!supportsLenderBookObservation(config)) fail("unsupported-adapter");
     const params = parseLiveReserveAdapterParams("erc4626-single-asset", config.params);
     const meta = WORKER_TRACKED_META_BY_ID.get(coin.id);
     const parent = meta?.pegReferenceId ? WORKER_TRACKED_META_BY_ID.get(meta.pegReferenceId) : undefined;
     if (!parent) fail("identity-mismatch");
+    const configured = meta?.contracts ?? [];
+    const supplied = coin.contracts ?? [];
+    if (configured.length === 0 || supplied.length !== configured.length ||
+      new Set(configured.map(row => row.chain)).size !== configured.length ||
+      configured.some(row => !supplied.some(candidate => candidate.chain === row.chain &&
+        canonicalEvmAddress(candidate.address) === canonicalEvmAddress(row.address)))) fail("identity-mismatch");
     const deployments: LenderDeploymentObservation[] = [];
-    for (const admitted of admission.deployments) {
-      const contracts = coin.contracts?.filter(row => row.chain === admitted.chain) ?? [];
-      if (contracts.length !== 1) fail("identity-mismatch");
-      const vault = canonicalEvmAddress(contracts[0].address);
+    for (const contract of configured) {
+      const vault = canonicalEvmAddress(contract.address);
       if (!vault) fail("identity-mismatch");
-      const catalogVaults = meta?.contracts?.filter(row => row.chain === admitted.chain) ?? [];
-      if (catalogVaults.length !== 1 || canonicalEvmAddress(catalogVaults[0].address) !== vault) fail("identity-mismatch");
-      failedDeploymentKey = `${admitted.chain}:${vault}`;
-      const chainConfig = ctx?.chainRpcs?.get(admitted.chain);
+      const chain = contract.chain;
+      failedDeploymentKey = `${chain}:${vault}`;
+      const chainConfig = ctx?.chainRpcs?.get(chain);
       if (!chainConfig || chainConfig.type !== "evm") fail("unsupported-chain");
-      const extraRpcUrls = config.inputs.primary.kind === "onchain-evm" && config.inputs.primary.chain === admitted.chain
+      const primary = config.inputs.primary.kind === "onchain-evm" && config.inputs.primary.chain === chain;
+      const extraRpcUrls = primary
         ? [params.rpcUrl, params.fallbackRpcUrl].filter((value): value is string => Boolean(value)) : [];
       const options: EvmRpcOptions = { chainRpcs: ctx?.chainRpcs, signal: phaseSignal, extraRpcUrls,
         timeoutMs: Math.min(12_000, Math.max(1, deadlineMs - Date.now())), deadlineMs, maxRetries: 0 };
-      const pinKey = `morpho-book:finalized:${admitted.chain}`;
+      const pinKey = `morpho-book:finalized:${chain}`;
       let pinPromise = ctx?.requestCache?.get(pinKey) as Promise<EvmBlockHeader | null> | undefined;
       if (!pinPromise) {
-        pinPromise = runAdapterIo(ctx, pinKey, () => fetchEvmBlockHeaderAtTag(admitted.chain, "finalized", options), { signal: phaseSignal });
+        pinPromise = runAdapterIo(ctx, pinKey, () => fetchEvmBlockHeaderAtTag(chain, "finalized", options), { signal: phaseSignal });
         ctx?.requestCache?.set(pinKey, pinPromise);
       }
       // A shared pending pin may belong to another attempt's longer budget.
       const pin = await awaitPhaseRead(() => pinPromise, phaseSignal);
       if (!pin) fail("rpc-unavailable");
-      const reader = new PinnedReader(admitted.chain, pin, phaseSignal, ctx, deadlineMs, extraRpcUrls, Math.floor(startedMs / 1000));
-      const parentTokens = (parent.contracts ?? []).filter(row => row.chain === admitted.chain)
+      const reader = new PinnedReader(chain, pin, phaseSignal, ctx, deadlineMs, extraRpcUrls, Math.floor(startedMs / 1000));
+      let kind: Kind = params.redemptionLiquidity?.source === "morpho-vault-v2" ? "vault-v2" : "metamorpho-v1";
+      if (!primary) {
+        const [adapterCount, morpho] = await reader.read([
+          { ...call(vault, "adaptersLength()"), allowFailure: true },
+          { ...call(vault, "MORPHO()"), allowFailure: true },
+        ]);
+        if ((adapterCount === null) === (morpho === null)) fail("unsupported-adapter");
+        kind = adapterCount !== null ? "vault-v2" : "metamorpho-v1";
+      }
+      const parentTokens = (parent.contracts ?? []).filter(row => row.chain === chain)
         .map(row => canonicalEvmAddress(row.address)).filter((value): value is `0x${string}` => value !== null);
-      const observed = await deployment(reader, vault, admitted.kind, parentTokens);
-      const header = await reader.io(`lender-book-recheck:${admitted.chain}`, rpcOptions =>
-        fetchEvmBlockHeader(admitted.chain, pin.number, rpcOptions));
+      const observed = await deployment(reader, vault, kind, parentTokens);
+      const header = await reader.io(`lender-book-recheck:${chain}`, rpcOptions =>
+        fetchEvmBlockHeader(chain, pin.number, rpcOptions));
       if (!header) fail("rpc-unavailable");
       if (header.hash !== pin.hash || header.timestamp !== pin.timestamp) fail("block-changed");
       deployments.push(observed);

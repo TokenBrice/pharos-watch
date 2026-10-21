@@ -4,6 +4,7 @@ import type { V9BackingSemanticPolicy } from "./backing-primitives";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { maximumBusinessDaySettlement } from "../business-calendars";
 import { V9_EMPTY_ARRAY } from "../../types/safety-score-v9-immutable";
+import { unknownQuality } from "./policy";
 
 export function reserveBoundScopeKey(scope: ReserveBoundedFact["scope"]): string {
   return stableJsonStringifyV1(scope.kind === "reserve-envelope" ? [scope.kind] : scope.kind === "exposure" ? [scope.kind, scope.exposureKey] : [scope.kind, scope.exposureKey, scope.instrumentId]);
@@ -22,7 +23,7 @@ export function reserveBoundTermDays(term: { value: number; unit: "days" | "cale
 }
 function maturityQuality(days: number, policy: V9BackingSemanticPolicy): number {
   let maximum = Infinity;
-  let quality = policy.boundedUnknownQuality;
+  let quality = policy.componentQuality.weak;
   for (const band of policy.reserve.maturityBands) {
     const bound = band.maxDaysInclusive ?? Infinity;
     if (days <= bound && bound <= maximum) { maximum = bound; quality = band.score; }
@@ -170,8 +171,8 @@ export function v9FullyBoundReserveFactorEvidence(
   policy: V9BackingSemanticPolicy, clockSec: number,
 ): V9FullyBoundReserveFactorEvidence {
   const bounds = resolveV9ReserveFactorBounds(exposure, rows, policy, clockSec, {
-    liquidity: policy.reserve.liquidityQuality.unknown,
-    maturity: policy.reserve.maturityUnknownQuality,
+    liquidity: unknownQuality("backing", null),
+    maturity: unknownQuality("backing", null),
   });
   return {
     liquidity: bounds.liquidityCoveredShare === 1 && bounds.liquidityCoveredQuality !== null
@@ -215,19 +216,19 @@ export function findV9ReserveBoundFactorStatusIssues(
   return issues ?? V9_EMPTY_ARRAY;
 }
 
-export function evaluateV9ReserveEligibilityEnvelope(rows: readonly V9ReserveBoundedFact[], policy: V9BackingSemanticPolicy, clockSec: number): { quality: number; evidenceRefIds: string[] } | null {
+export function evaluateV9ReserveEligibilityEnvelope(rows: readonly V9ReserveBoundedFact[], policy: V9BackingSemanticPolicy, clockSec: number, unknown = unknownQuality("backing", null)): { quality: number; evidenceRefIds: string[] } | null {
   if (rows.length === 0) return null;
   const candidates = coherentFacts(rows, clockSec).filter((row) => row.fact.scope.kind === "reserve-envelope" && row.fact.kind === "eligibility-envelope");
   const results = candidates.flatMap((row) => {
     const fact = row.fact;
     if (fact.kind !== "eligibility-envelope" || !fact.legallyBinding || !fact.exhaustive) return [];
     const weights = policy.reserve.factorWeights, total = weights.assetQuality + weights.liquidity + weights.maturity;
-    const allocations = fact.allocations.map((entry) => ({ ...entry, quality: (policy.reserve.assetClassQuality[entry.assetClass] * weights.assetQuality + policy.reserve.liquidityQuality.unknown * weights.liquidity + (policy.reserve.maturityNotApplicableClasses.includes(entry.assetClass) ? 100 : entry.maximumTerm === null ? policy.reserve.maturityUnknownQuality : maturityQuality(reserveBoundTermDays(entry.maximumTerm), policy)) * weights.maturity) / total })).sort((a, b) => a.quality - b.quality || a.assetClass.localeCompare(b.assetClass));
+    const allocations = fact.allocations.map((entry) => ({ ...entry, quality: (policy.reserve.assetClassQuality[entry.assetClass] * weights.assetQuality + unknown * weights.liquidity + (policy.reserve.maturityNotApplicableClasses.includes(entry.assetClass) ? 100 : entry.maximumTerm === null ? unknown : maturityQuality(reserveBoundTermDays(entry.maximumTerm), policy)) * weights.maturity) / total })).sort((a, b) => a.quality - b.quality || a.assetClass.localeCompare(b.assetClass));
     let remaining = 1 - allocations.reduce((sum, entry) => sum + entry.minShare, 0);
     let quality = allocations.reduce((sum, entry) => sum + entry.minShare * entry.quality, 0);
     for (const entry of allocations) { const share = Math.min(remaining, entry.maxShare - entry.minShare); quality += share * entry.quality; remaining -= share; }
     if (remaining > 1e-9 || remaining < -1e-9) return [];
-    return [{ quality: Math.max(policy.boundedUnknownQuality, quality), evidenceRefIds: row.status.evidenceRefIds }];
+    return [{ quality, evidenceRefIds: row.status.evidenceRefIds }];
   });
   return results.length ? results.reduce((worst, result) => result.quality < worst.quality ? result : worst) : null;
 }

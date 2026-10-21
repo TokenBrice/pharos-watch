@@ -94,9 +94,7 @@ function stressFallbackReason(
   if (fact === undefined) {
     return {
       reason:
-        assetId === "mim-abracadabra"
-          ? "no-reconciled-committed-pool-and-no-complete-family-simulator"
-          : "unsupported-family-or-missing-complete-measurement",
+        "unsupported-family-or-missing-complete-measurement",
       ageSec: null,
     };
   }

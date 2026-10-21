@@ -3,7 +3,7 @@ import type { V9FactGapV2, V9FactGapV3 } from "../../types/safety-score-v9-facts
 import type { V9BackingAssetInput, V9MechanismFactV1 } from "../safety-score-v9/backing-primitives";
 import { V9MechanismRiskReviewSchema } from "../../types/safety-score-v9-backing";
 import { evaluateV9Backing, type V9MechanismRiskReview } from "../safety-score-v9/archetypes";
-import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 import { evaluateV9ReserveExposures } from "../safety-score-v9/backing";
 import { asset as backingAsset, exposure, knownStatus, missingMechanism } from "./safety-score-v9-backing.test-support";
@@ -58,7 +58,7 @@ describe("v10.01 mechanism factor admission", () => {
     const bounded = result.contributions.find(row => row.componentKey === "mechanism:assurance-and-reconciliation:scope:unknown")!;
     expect(included).toMatchObject({ score: 95, wholeAssetWeight: 0.6 });
     expect(omitted).toMatchObject({ score: null, wholeAssetWeight: 0.25, effectiveScoringWeight: 0, cause });
-    expect(bounded).toMatchObject({ score: 35, wholeAssetWeight: 0.15, cause: "U" });
+    expect(bounded).toMatchObject({ score: unknownQuality("backing", "U"), wholeAssetWeight: 0.15, cause: "U" });
     expect(included.effectiveScoringWeight / bounded.effectiveScoringWeight).toBeCloseTo(4, 12);
     expect(result.contributions.reduce((sum, row) => sum + row.effectiveScoringWeight, 0)).toBeCloseTo(1, 12);
     expect(result.contributions.reduce((sum, row) => sum + (row.score ?? 0) * row.effectiveScoringWeight, 0)).toBeCloseTo(result.score!, 12);
@@ -97,11 +97,11 @@ describe("v10.01 mechanism factor admission", () => {
     }, V9_CANDIDATE_POLICY_V1);
     const row = result.contributions.find((entry) => entry.componentKey === "mechanism:custody-continuity")!;
     const knownQuality = quality === "failed" ? 10 : quality === "weak" ? 35 : 95;
-    expect(row.score).toBe(cause === "A" || cause === "B" ? knownQuality : Math.min(knownQuality, 35));
+    expect(row.score).toBe(cause === "A" || cause === "B" ? knownQuality : Math.min(knownQuality, unknownQuality("backing", cause)));
     expect(row.observationState).not.toBe("known");
     expect(row.factors).toContainEqual(expect.objectContaining({
       componentKey: "mechanism:custody-continuity:factor:insurance", cause, causeGapIds: [gap.gapId],
-      score: cause === "A" || cause === "B" ? null : 35,
+      score: cause === "A" || cause === "B" ? null : unknownQuality("backing", cause),
       effectiveScoringWeight: cause === "A" || cause === "B" ? 0 : 1,
     }));
     expect(row.factors).toContainEqual(expect.objectContaining({
@@ -137,7 +137,7 @@ describe("v10.01 mechanism factor admission", () => {
     expect(result.contributions.find(row => row.componentKey === "mechanism:claim-and-segregation"))
       .toMatchObject({ score: 35, cause: "C", scoringDisposition: "bounded-uncertainty", causeGapIds: [gap.gapId] });
     expect(result.contributions.find(row => row.componentKey === "mechanism:assurance-and-reconciliation"))
-      .toMatchObject({ score: 35, cause: "U", scoringDisposition: "bounded-uncertainty" });
+      .toMatchObject({ score: unknownQuality("backing", "U"), cause: "U", scoringDisposition: "bounded-uncertainty" });
     expect(result.contributions.find(row => row.componentKey === "mechanism:custody-continuity"))
       .toMatchObject({ score: 10, cause: "D", scoringDisposition: "measured-adverse" });
     expect(result.contributions.reduce((sum, row) => sum + (row.score ?? 0) * row.effectiveScoringWeight, 0)).toBeCloseTo(result.score!, 12);
@@ -315,11 +315,11 @@ describe("Safety Score v9 archetype backing adapters", () => {
       expect(bounded.contributions).toContainEqual(expect.objectContaining({
         componentKey: `mechanism:${key}`,
         observationState: "bounded-unknown",
-        score: quality.boundedUnknownQuality,
+        score: V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.backing.U,
       }));
       expect(bounded.contributions.find((row) => row.componentKey === `mechanism:${key}`)?.effectiveWeight).toBeCloseTo(weight, 8);
       expect(proved.score! - bounded.score!).toBeCloseTo(
-        weight * (quality.componentQuality.strong - quality.boundedUnknownQuality), 8,
+        weight * (quality.componentQuality.strong - V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.backing.U), 8,
       );
       const adverse = evaluateV9Backing(asset(), { ...base, [field]: weakObservedFact("bad-ledger") }, V9_CANDIDATE_POLICY_V1);
       expect(adverse.score!).toBeLessThan(proved.score!);
@@ -334,20 +334,20 @@ describe("Safety Score v9 archetype backing adapters", () => {
       const result = evaluateV9Backing(asset([missing.gap]), { ...reviews[archetype], holderClaim: missing.fact }, V9_CANDIDATE_POLICY_V1);
       expect(result.rateability).toBe("rateable");
       expect(result.contributions.find(row => row.componentKey === "mechanism:holder-claim")).toMatchObject({
-        score: 35, cause: "U", scoringDisposition: "bounded-uncertainty",
+        score: 50, cause: "U", scoringDisposition: "bounded-uncertainty",
       });
       expect(result.structuralReasons).toEqual([]);
     },
   );
 
-  it("bounds an unidentified UCITS share claim but caps a proved failed position claim", () => {
+  it("bounds an unidentified UCITS share claim but preserves a proved failed position claim", () => {
     const missing = missingMechanism("fund-claim-and-segregation", "missing-share", "mechanism.required", "Exact share class unverified");
     const unidentified = evaluateV9Backing(asset([missing.gap]), {
       ...reviews["ucits-trs-fund"], fundClaimAndSegregation: missing.fact,
     }, V9_CANDIDATE_POLICY_V1);
     expect(unidentified.rateability).toBe("rateable");
     expect(unidentified.contributions.find(row => row.componentKey === "mechanism:fund-claim-and-segregation")).toMatchObject({
-      score: 35, cause: "U", scoringDisposition: "bounded-uncertainty",
+      score: 50, cause: "U", scoringDisposition: "bounded-uncertainty",
     });
     const failed = evaluateV9Backing(asset(), {
       ...reviews["protocol-position"],
@@ -357,7 +357,10 @@ describe("Safety Score v9 archetype backing adapters", () => {
       kind: "unsafe-backing", severity: "critical", responsibility: "measured-adverse",
       pathKey: "mechanism:holder-claim",
     }));
-    expect(failed.pillarCeiling).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.structural.signalLimits["unsafe-backing"].critical);
+    expect(failed.contributions).toContainEqual(expect.objectContaining({
+      componentKey: "mechanism:holder-claim", observationState: "known",
+      score: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.componentQuality.failed,
+    }));
   });
 
   it("retains protocol-position local risk under complete live parent backing, while legacy inheritance stays unchanged", () => {
@@ -440,7 +443,6 @@ describe("Safety Score v9 archetype backing adapters", () => {
         kind: "unsafe-backing",
         responsibility: "measured-adverse",
         pathKey: "mechanism:collateralization-ratio",
-        ceiling: baseline.score! * 0.64,
         evidenceRefIds: ["evidence:vault-census"],
       }));
       expect(result.contributions.reduce((sum, row) => sum + (row.score ?? 0) * row.effectiveWeight, 0))
@@ -753,11 +755,46 @@ describe("Safety Score v9 archetype backing adapters", () => {
   });
 
 
-  it("bounds an unknown archetype without inventing a successful methodology or direct NR", () => {
-    const result = evaluateV9Backing(asset(), { archetype: "new-design" }, V9_CANDIDATE_POLICY_V1);
-    expect(result).toMatchObject({ rateability: "rateable", score: 35, limitedEvidenceCauses: ["U"] });
-    expect(result.unresolved).toEqual([expect.objectContaining({ code: "missing-archetype", treatment: "pillar", cause: "U" })]);
+  it("preserves measured reserves when an unsupported mechanism has only bounded uncertainty", () => {
+    const input = { ...asset(), assetId: "synthetic-unsupported-mechanism" };
+    const reserve = evaluateV9ReserveExposures(input, V9_CANDIDATE_POLICY_V1);
+    const result = evaluateV9Backing(input, { archetype: "new-design" }, V9_CANDIDATE_POLICY_V1);
+    const reserveWeight = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.archetypes["protocol-position"].reserveWeight;
+    expect(result).toMatchObject({ rateability: "rateable", limitedEvidenceCauses: ["U"] });
+    expect(result.score).toBeCloseTo(reserve.score! * reserveWeight + unknownQuality("backing", "U") * (1 - reserveWeight), 12);
+    expect(result.contributions.filter(row => row.source !== "mechanism")
+      .reduce((sum, row) => sum + row.effectiveScoringWeight, 0)).toBeCloseTo(reserveWeight, 12);
+    expect(result.contributions).toContainEqual(expect.objectContaining({
+      componentKey: "mechanism:archetype", score: unknownQuality("backing", "U"), cause: "U",
+    }));
+    expect(result.unresolved).toContainEqual(expect.objectContaining({ code: "missing-archetype", cause: "U" }));
   });
+
+  it("does not rate an evidence-free unsupported subject from a numeric default", () => {
+    const base = asset();
+    const input: V9BackingAssetInput = { ...base, assetId: "synthetic-evidence-free-subject",
+      reserveExposures: [], reserveBoundFacts: [], reserveResiduals: [],
+      reserveStatus: { ...base.reserveStatus, evidenceRefIds: [] },
+      resolvedUpstreamExposures: [], inheritedStablecoinBacking: undefined };
+    const result = evaluateV9Backing(input, { archetype: "new-design" }, V9_CANDIDATE_POLICY_V1);
+    expect(result).toMatchObject({ score: null, aggregationDisposition: "unavailable" });
+    expect(result.supportedComponentKeys).toEqual([]);
+    expect(result.contributions.every(row => row.effectiveScoringWeight === 0)).toBe(true);
+  });
+
+  it.each(["fiat-cash", "protocol-position"] as const)(
+    "does not invent a subject from the known %s archetype label alone", archetype => {
+      const base = asset();
+      const status = { ...base.reserveStatus, observationState: "missing" as const, evidenceRefIds: [], gapIds: [] };
+      const input: V9BackingAssetInput = { ...base, assetId: "synthetic-evidence-free-known-archetype",
+        reserveExposures: [], reserveBoundFacts: [], reserveResiduals: [], reserveStatus: status,
+        resolvedUpstreamExposures: [], inheritedStablecoinBacking: undefined };
+      const result = createUnavailableV9BackingResult(input,
+        { archetype, mechanismRiskReview: { review: null, status } }, V9_CANDIDATE_POLICY_V1);
+      expect(result).toMatchObject({ score: null, aggregationDisposition: "unavailable", supportedComponentKeys: [] });
+      expect(result.contributions).toEqual([]);
+    },
+  );
 
   it("bounds a missing non-substitutable claim rather than making it direct NR", () => {
     const { gap, fact: missingClaim } = missingMechanism(
@@ -778,7 +815,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
     expect(result.unresolved).toContainEqual(expect.objectContaining({
       code: "critical-unresolved", treatment: "pillar", cause: "U",
     }));
-    expect(result.contributions.find(row => row.componentKey === "mechanism:claim-and-segregation")!.score).toBe(35);
+    expect(result.contributions.find(row => row.componentKey === "mechanism:claim-and-segregation")!.score).toBe(unknownQuality("backing", "U"));
   });
 
   it("redistributes an explicitly inapplicable component without inventing a weak score", () => {
@@ -951,7 +988,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
     ).toThrow(/unavailable weightedAverageMaturityDays must be null/);
   });
 
-  it("emits the algorithmic reflexivity ceiling independently of strong components", () => {
+  it("retains algorithmic reflexivity evidence independently of strong components", () => {
     const base = reviews.algorithmic;
     const result = evaluateV9Backing(
       asset(),
@@ -967,10 +1004,9 @@ describe("Safety Score v9 archetype backing adapters", () => {
       expect.objectContaining({
         kind: "algorithmic-reflexivity",
         severity: "critical",
-        ceiling: 39,
       }),
     );
-    expect(result.pillarCeiling).toBe(39);
+    expect(result.pillarCeiling).toBeNull();
   });
 
   it("does not require an issuer for direct non-obligor collateral", () => {
@@ -996,16 +1032,16 @@ describe("Safety Score v9 CDP collateralization bands (Lever 4)", () => {
   const collateralizationReason = (result: ReturnType<typeof evaluateV9Backing>) =>
     result.structuralReasons.find((reason) => reason.pathKey === "mechanism:collateralization-parameters");
 
-  it("lifts a solvent-but-thin CDP (ratio ~1.03, no bad debt) off the critical F floor", () => {
+  it("retains a high-severity signal for a solvent-but-thin CDP without a duplicate ceiling", () => {
     const result = evaluateV9Backing(asset(), { ...cdpBase, collateralizationRatio: 1.03 }, V9_CANDIDATE_POLICY_V1);
-    expect(collateralizationReason(result)).toMatchObject({ kind: "unsafe-backing", severity: "high", ceiling: 59 });
+    expect(collateralizationReason(result)).toMatchObject({ kind: "unsafe-backing", severity: "high" });
     expect(result.structuralReasons.some((reason) => reason.severity === "critical")).toBe(false);
-    expect(result.pillarCeiling).toBe(59);
+    expect(result.pillarCeiling).toBeNull();
   });
 
   it("keeps a moderate rung in [1.05, 1.10) so there is no critical->nothing cliff", () => {
     const result = evaluateV9Backing(asset(), { ...cdpBase, collateralizationRatio: 1.07 }, V9_CANDIDATE_POLICY_V1);
-    expect(collateralizationReason(result)).toMatchObject({ severity: "moderate", ceiling: 74 });
+    expect(collateralizationReason(result)).toMatchObject({ severity: "moderate" });
   });
 
   it("never fires the CR signal for a 1:1 aggregator / PSM (metric applicability not-applicable)", () => {
@@ -1031,14 +1067,13 @@ describe("Safety Score v9 CDP collateralization bands (Lever 4)", () => {
     expect(collateralizationReason(result)).toBeUndefined();
   });
 
-  it("still floors a genuinely undercollateralized CDP (<1.00) to critical", () => {
+  it("retains critical undercollateralization evidence for a genuinely undercollateralized CDP", () => {
     const result = evaluateV9Backing(asset(), { ...cdpBase, collateralizationRatio: 0.95 }, V9_CANDIDATE_POLICY_V1);
     expect(collateralizationReason(result)).toMatchObject({
       kind: "unsafe-backing",
       severity: "critical",
-      ceiling: 39,
     });
-    expect(result.pillarCeiling).toBe(39);
+    expect(result.pillarCeiling).toBeNull();
   });
 
   it("escalates a thin CDP with observed material bad debt to critical via the CR predicate only", () => {
@@ -1047,7 +1082,7 @@ describe("Safety Score v9 CDP collateralization bands (Lever 4)", () => {
       { ...cdpBase, collateralizationRatio: 1.03, shutdownAndBadDebt: weakObservedFact("shutdown") },
       V9_CANDIDATE_POLICY_V1,
     );
-    expect(collateralizationReason(result)).toMatchObject({ severity: "critical", ceiling: 39 });
+    expect(collateralizationReason(result)).toMatchObject({ severity: "critical" });
     // `weak` bad-debt quality must NOT trip the untouched shutdown-and-bad-debt component
     // (that structural component only fires on `failed`) — the critical comes from the CR gate.
     expect(result.structuralReasons.some((reason) => reason.pathKey === "mechanism:shutdown-and-bad-debt")).toBe(false);

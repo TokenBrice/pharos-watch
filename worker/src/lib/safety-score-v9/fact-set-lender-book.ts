@@ -1,7 +1,7 @@
 import { createV9EvidenceReference, createV9FactStatus, requiredV9Applicability } from "@shared/lib/safety-score-v9/evidence";
 import { deriveLenderBookObservationIdentity, lenderBookAdmissionReason, lenderMarketKey } from "@shared/lib/safety-score-v9/lender-book-registry";
 import { getLenderCollateralClassesRegistry } from "@shared/lib/safety-score-v9/lender-collateral-classes";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compareText, domainDigest, uniqueSorted } from "@shared/lib/safety-score-v9/primitives";
 import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
 import type { V9EvidenceCauseScope } from "@shared/types/safety-score-v9-causes";
@@ -71,10 +71,10 @@ function acceptedSourceReason(bundle: LenderCollateralBacking | undefined, clock
 /** Compile only frozen, admitted bytes. No live registry, publication or evaluator lookup. */
 export function buildLenderBookFact(context: AssetBuildContext): V1019LenderBookFact | undefined {
   const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook;
-  if (!policy.admittedAssets.some((asset) => asset.assetId === context.asset.assetId)) return undefined;
   const provenance = context.fixedInput.liveReserveProvenanceMap[context.asset.assetId];
   const observation: LenderBookObservation | undefined = provenance?.lenderBookObservation;
   const failure = provenance?.lenderBookObservationFailure;
+  if (observation === undefined && failure === undefined && provenance?.lenderBookLatestAttemptFailure === undefined) return undefined;
   const bundle = context.fixedInput.lenderCollateralBacking;
   if (bundle && bundle.registryFingerprint !== context.fixedInput.registryFingerprint) {
     throw new Error(`Lender collateral registry fingerprint mismatch for ${context.asset.assetId}`);
@@ -234,7 +234,7 @@ export function buildLenderBookFact(context: AssetBuildContext): V1019LenderBook
         gapIds.push(gapId); localGapIds.push(gapId);
       }
       collaterals.push({ marketKey, collateralClass, trackedAssetId,
-        quality: accepted?.backingScore ?? policy.classQuality[collateralClass],
+        quality: accepted?.backingScore ?? (collateralClass === "other-unknown" ? unknownQuality("backing", "U") : policy.classQuality[collateralClass]),
         qualitySource: accepted ? "previous-accepted-backing" : unknown ? "bounded-unknown" : "authored-class",
         fallbackReason: accepted ? null : fallbackReason,
         acceptedPublicationGenerationId: accepted ? bundle!.publicationGenerationId : null,

@@ -20,7 +20,7 @@ import {
   type V9BackingResult,
   type V9EffectiveBackingContribution,
 } from "../backing-primitives";
-import { resolveV9ReasonTreatment } from "../policy";
+import { resolveV9ReasonTreatment, unknownQuality } from "../policy";
 import { createV9GapIndex } from "../gap-index";
 import { canonicalDomains, canonicalUniqueBy, compareText, uniqueSorted } from "../primitives";
 
@@ -71,9 +71,13 @@ function finalizeBackingResult(result: Omit<V9BackingResult, "aggregationDisposi
       compareText(left.responsibility ?? "", right.responsibility ?? ""),
     "last",
   );
+  const hasExcludedEvidence = result.score === null && result.rateability === "rateable" && result.contributions.some(row =>
+    ((row.cause === "A" || row.cause === "B") && row.causeGapIds.length > 0) ||
+    row.factors?.some(factor => (factor.cause === "A" || factor.cause === "B") && factor.causeGapIds.length > 0));
   return {
     ...result,
-    aggregationDisposition: result.score === null && result.rateability === "rateable" ? "excluded-a-b" as const : "included" as const,
+    aggregationDisposition: result.score !== null ? "included"
+      : result.rateability === "rateable" && hasExcludedEvidence ? "excluded-a-b" : "unavailable",
     causeGapIds: uniqueSorted(result.contributions.flatMap(row => row.causeGapIds)),
     limitedEvidenceCauses: uniqueSorted(result.contributions.flatMap(row => row.effectiveScoringWeight > 0 ? [
       ...(row.score !== null && (row.cause === "C" || row.cause === "U" || row.cause === "D") ? [row.cause] : []),
@@ -229,10 +233,7 @@ function evaluateV9ArchetypeBackingInternal(
       rateability: reserve.rateability,
       score: reserve.score,
       ...(inheritedApplications === undefined ? {} : { collateralizationApplications: inheritedApplications }),
-      pillarCeiling:
-        reserve.structuralReasons.length === 0
-          ? null
-          : Math.min(...reserve.structuralReasons.map((reason) => reason.ceiling)),
+      pillarCeiling: null,
       contributions: effectiveBackingContributions(
         reserve.contributions,
         1,
@@ -269,7 +270,8 @@ function evaluateV9ArchetypeBackingInternal(
         const attribution = v9BackingStatusCause(constraint.status, gapIndex, !measured);
         const adverse = measured && constraint.quality === "failed";
         const score = attribution.cause === "A" || attribution.cause === "B" ? null
-          : measured ? backing.componentQuality[constraint.quality!] : backing.boundedUnknownQuality;
+          : measured ? backing.componentQuality[constraint.quality!]
+            : unknownQuality("backing", attribution.cause === "D" ? null : attribution.cause, policy.policy.semantic);
         const factorPath = `${pathKey}:factor:${constraint.factKey}`;
         if (!measured) {
           unresolved.push(...gapReasons(gapIndex, constraint.status.gapIds, factorPath,
@@ -324,7 +326,8 @@ function evaluateV9ArchetypeBackingInternal(
       const excluded = attribution.cause === "A" || attribution.cause === "B";
       const measured = fragment.status.observationState === "known" && fragment.status.applicability.state === "required" &&
         fragment.status.evidenceRefIds.length > 0 && fragment.quality !== null;
-      const tier = measured ? backing.componentQuality[fragment.quality!] : backing.boundedUnknownQuality;
+      const tier = measured ? backing.componentQuality[fragment.quality!]
+        : unknownQuality("backing", attribution.cause === "D" ? null : attribution.cause, policy.policy.semantic);
       const seasoned = fullyAssured && component.componentKey === "assurance-and-reconciliation" &&
         (fragment.quality === "strong" || fragment.quality === "adequate") &&
         input.asset.trackRecordMonths !== undefined && input.asset.trackRecordMonths >= backing.assuranceSeasonedCredit.minMonths;
@@ -373,8 +376,7 @@ function evaluateV9ArchetypeBackingInternal(
   const score = rateability === "NR" || combinedWeight <= SCORE_EPSILON ? null : clampScore(
     ((reserve.score ?? 0) * activeReserveWeight + mechanismWeightedScore * activeMechanismWeight) / combinedWeight,
   );
-  const pillarCeiling =
-    structuralReasons.length === 0 ? null : Math.min(...structuralReasons.map((reason) => reason.ceiling));
+  const pillarCeiling = null;
   return finalizeBackingResult({
     assetId: input.asset.assetId,
     archetype: input.archetype,
@@ -405,31 +407,6 @@ export function evaluateV9ArchetypeBacking(
   return evaluateV9ArchetypeBackingInternal(input, policy, "reviewed");
 }
 
-export function createUnknownArchetypeV9BackingResult(
-  assetId: string,
-  archetype: string,
-  policy: V9BackingEvaluationPolicy,
-): V9BackingResult {
-  assertV9BackingPolicy(policy);
-  return finalizeBackingResult({
-    assetId,
-    archetype,
-    rateability: "rateable",
-    score: backingPolicy(policy).boundedUnknownQuality,
-    pillarCeiling: null,
-    contributions: [normalizeV9BackingContribution({
-      componentKey: "mechanism:archetype", source: "mechanism",
-      score: backingPolicy(policy).boundedUnknownQuality, normalizedWeight: 1,
-      weightedScore: backingPolicy(policy).boundedUnknownQuality, effectiveWeight: 1,
-      observationState: "bounded-unknown", provenance: null, evidenceRefIds: [],
-      failureDomains: [], upstreamAssetId: null, cause: "U",
-    })],
-    structuralReasons: [],
-    unresolved: [{ code: "missing-archetype", pathKey: "mechanism:archetype", gapIds: [], treatment: "pillar", cause: "U" }],
-    evidenceRefIds: [],
-    failureDomains: [],
-  });
-}
 
 export function createUnavailableV9BackingResult(
   asset: V9BackingAssetInput,
@@ -455,6 +432,14 @@ export function createUnavailableV9BackingResult(
     evidenceRefIds: uniqueSorted(unavailableReview.mechanismRiskReview.status.evidenceRefIds),
     failureDomains: [],
   } as const;
+  const hasReserveSubject = asset.inheritedStablecoinBacking !== undefined ||
+    asset.reserveExposures.length > 0 || asset.reserveStatus.evidenceRefIds.length > 0 ||
+    (asset.reserveBoundFacts ?? []).some(row => row.status.observationState === "known");
+  const hasMechanismSubject = hasReserveSubject || unavailableReview.mechanismRiskReview.status.evidenceRefIds.length > 0;
+  if (!hasMechanismSubject) {
+    return finalizeBackingResult({ ...shared, rateability: "rateable", score: null,
+      pillarCeiling: null, contributions: [] });
+  }
   if (unavailableReview.archetype === "unresolved") {
     const reserve = evaluateV9ReserveExposures(asset, policy);
     const attribution = v9BackingStatusCause(unavailableReview.mechanismRiskReview.status, gapIndex, true);
@@ -463,13 +448,26 @@ export function createUnavailableV9BackingResult(
         pillarCeiling: null, contributions: effectiveBackingContributions(reserve.contributions, 1, 0,
           backingPolicy(policy).reserve.concentrationWeight), unresolved: [...unresolved, ...reserve.unresolved] });
     }
-    const bounded = createUnknownArchetypeV9BackingResult(asset.assetId, unavailableReview.archetype, policy);
+    const quality = unknownQuality("backing", attribution.cause === "D" ? null : attribution.cause, policy.policy.semantic);
+    const reserveWeight = hasReserveSubject && reserve.score !== null
+      ? backingPolicy(policy).archetypes["protocol-position"].reserveWeight : 0;
+    const mechanismWeight = 1 - reserveWeight;
+    const bounded = [normalizeV9BackingContribution({
+      componentKey: "mechanism:archetype", source: "mechanism", score: quality,
+      normalizedWeight: 1, weightedScore: quality,
+      observationState: unavailableReview.mechanismRiskReview.status.observationState,
+      provenance: null, evidenceRefIds: unavailableReview.mechanismRiskReview.status.evidenceRefIds,
+      failureDomains: [], upstreamAssetId: null, ...attribution,
+    })];
     return finalizeBackingResult({
-      ...shared, rateability: "rateable", score: bounded.score, pillarCeiling: null,
-      contributions: [
-        ...effectiveBackingContributions(reserve.contributions, 0, 0, backingPolicy(policy).reserve.concentrationWeight),
-        ...bounded.contributions.map(row => ({ ...row, ...attribution, scoringDisposition: "bounded-uncertainty" as const })),
-      ],
+      ...shared, rateability: "rateable",
+      score: (reserve.score ?? 0) * reserveWeight + quality * mechanismWeight,
+      pillarCeiling: null,
+      contributions: effectiveBackingContributions([...reserve.contributions, ...bounded],
+        reserveWeight, mechanismWeight, backingPolicy(policy).reserve.concentrationWeight),
+      structuralReasons: reserve.structuralReasons,
+      evidenceRefIds: [...shared.evidenceRefIds, ...reserve.contributions.flatMap(row => row.evidenceRefIds)],
+      failureDomains: reserve.contributions.flatMap(row => row.failureDomains),
       unresolved: [...unresolved, ...reserve.unresolved],
     });
   }

@@ -49,7 +49,7 @@ import {
 } from "./executable-redemption-observers";
 import type { ExecutableRedemptionObservation } from "./executable-redemption-read-client";
 import { observeMorphoLenderBook } from "./morpho-lender-book";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { supportsLenderBookObservation } from "@shared/lib/safety-score-v9/lender-book-registry";
 
 const YEARN_V3_IS_SHUTDOWN_SELECTOR = "0xbf86d690";
 
@@ -462,8 +462,7 @@ export async function fetchErc4626SingleAssetReserves(
 
   // Run only after ordinary reserve and redemption I/O has settled. The census
   // uses ctx.attemptDeadlineMs with a return margin, preserving these results.
-  const lenderBookObservation = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook
-    .admittedAssets.some(row => row.assetId === coin.id)
+  const lenderBookObservation = supportsLenderBookObservation(config)
     ? await observeMorphoLenderBook(coin, config, signal, _ctx)
     : undefined;
 
