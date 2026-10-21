@@ -167,6 +167,9 @@ export function propagateV9SerialParentAdverseAttribution(
       source: "parent-score",
       ...parentAttributionFields(item, context),
       responsibility: "measured-adverse",
+      ...(item.evidenceRefIds?.length ? { evidenceRefIds: item.evidenceRefIds } : {}),
+      ...(item.source === "active-depeg" || item.source === "peg-performance" || item.measuredPegWitness
+        ? { measuredPegWitness: true as const } : {}),
     }),
     keyOf: parentAdverseKey,
     compare: compareParentAdverse,
@@ -405,6 +408,7 @@ function wrapperLocalAttribution(limit: V9WrapperParentLimit | null | undefined)
               `Reviewed wrapper-local ${adjustment.factKey} risk contributes ` +
               `${adjustment.discountPoints} discount points.`,
             responsibility: "measured-adverse",
+            ...(adjustment.evidenceRefIds.length > 0 ? { evidenceRefIds: adjustment.evidenceRefIds } : {}),
           }],
     ),
     bounded: [],
@@ -572,10 +576,12 @@ export function scoreV9EvaluatedAsset(
   const normalizedReasons = new WeakMap<V9PillarReason, V9UnresolvedFact>();
   const normalizedScoreBearingReasons = normalizeReasonList(baseScoreBearingReasons, envelope, normalizedReasons);
   const pillarReasonProvenance: V9PillarReasonProvenance[] = PILLAR_KEYS.flatMap((pillar) => [
-    ...normalizeReasonList(input.pillars[pillar].reasons, envelope, normalizedReasons).map((fact) => ({
-      pillar,
-      fact,
-    })),
+    ...input.pillars[pillar].reasons.flatMap((reason) =>
+      normalizeReasonList([reason], envelope, normalizedReasons).map((fact) => ({
+        pillar, fact,
+        ...(reason.causeProof?.cause === "D"
+          ? { evidenceRefIds: reason.causeProof.evidenceRefIds } : {}),
+      }))),
     ...(input.pillars[pillar].boundedComponents ?? []).flatMap((component) =>
       normalizeReasonList([component.reason], envelope, normalizedReasons).map((fact) => ({
         pillar, fact, componentScore: component.score, effectiveScoringWeight: component.effectiveScoringWeight,

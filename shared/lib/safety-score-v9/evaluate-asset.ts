@@ -228,7 +228,29 @@ function attributedReasonPath(
   return `${basePath}:cause:${encodeURIComponent(attribution.causalKey)}`;
 }
 
-function structuralSignalFromBacking(assetId: string, reason: V9BackingResult["structuralReasons"][number]): V9StructuralSignal {
+/** Preserve exact admitted fact identities, not aggregate review/gap labels. */
+function signalEvidence(asset: V9AssetFactsV3, evidenceRefIds: readonly string[]): V9StructuralSignal["evidence"] {
+  const ids = new Set(evidenceRefIds);
+  return asset.evidence.flatMap((reference) =>
+    !ids.has(reference.evidenceId) || reference.disposition === "rejected" ||
+    (reference.causeBinding !== undefined && reference.causeBinding.adverseFactId === null)
+      ? []
+      : [{
+          sourceId: reference.evidenceId,
+          observedAt: new Date(reference.observedAtSec * 1_000).toISOString(),
+          ...(reference.publishedAtSec === null ? {} : {
+            publishedAt: new Date(reference.publishedAtSec * 1_000).toISOString(),
+          }),
+          ...(reference.url === null ? {} : { url: reference.url }),
+          note: `${reference.sourceId}; ${reference.sourceGenerationId}`,
+        }]);
+}
+
+function structuralSignalFromBacking(
+  assetId: string,
+  reason: V9BackingResult["structuralReasons"][number],
+  evidenceById: ReadonlyMap<string, V9StructuralSignal["evidence"][number]>,
+): V9StructuralSignal {
   return {
     kind: reason.kind,
     severity: reason.severity,
@@ -252,7 +274,10 @@ function structuralSignalFromBacking(assetId: string, reason: V9BackingResult["s
     evidenceConfidence: reason.materialShare === null ? "low" : "high",
     pricedInPillar: "backing",
     failureDomainKeys: reason.failureDomains.map(domainKey),
-    evidence: [],
+    evidence: reason.evidenceRefIds.flatMap((id) => {
+      const reference = evidenceById.get(id);
+      return reference === undefined ? [] : [reference];
+    }),
   };
 }
 
@@ -385,7 +410,16 @@ function structuralSignalFromControl(
         }
       : {}),
     failureDomainKeys,
-    evidence: [],
+    evidence: signalEvidence(asset, controls.flatMap((control) => [
+      ...control.status.evidenceRefIds,
+      ...(failure.kind === "active-control-incident"
+        ? control.factorStatuses?.incidentState?.evidenceRefIds ?? []
+        : [
+            ...(control.factorStatuses?.capAuthority?.evidenceRefIds ?? []),
+            ...(control.factorStatuses?.claimImpairment?.evidenceRefIds ?? []),
+            ...(control.factorStatuses?.economicLossScope?.evidenceRefIds ?? []),
+          ]),
+    ])),
   };
 }
 
@@ -510,6 +544,7 @@ function backingPillar(
   envelope: V9ValidatedPolicyEnvelope,
   gapIndex: V9EvaluationGapIndex,
   evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
+  asset: V9AssetFactsV3,
 ): V9PillarEvaluation {
   const gapProjectedReasons: V9PillarReason[] = [];
   const syntheticReasons: Array<{
@@ -647,6 +682,19 @@ function backingPillar(
     appendBoundedComponent(row);
     for (const factor of row.factors ?? []) appendBoundedComponent(factor, row.effectiveScoringWeight);
   }
+  const structuralEvidence = new Map<string, V9StructuralSignal["evidence"][number]>();
+  if (result.structuralReasons.length > 0) {
+    for (const reference of signalEvidence(asset, result.evidenceRefIds)) {
+      structuralEvidence.set(reference.sourceId, reference);
+    }
+    // Inherited shortfalls keep the originating source identity and clock.
+    for (const row of result.contributions) {
+      const upstream = row.upstreamAssetId === null ? undefined : evaluatedById.get(row.upstreamAssetId);
+      for (const signal of upstream?.scoreInput.pillars.backing.structuralSignals ?? []) {
+        for (const reference of signal.evidence) structuralEvidence.set(reference.sourceId, reference);
+      }
+    }
+  }
   return {
     ...pillarCauseMetadata(result, gapIndex, result.contributions.flatMap((row) => [
       ...(row.scoringDisposition === "excluded-pipeline" || row.scoringDisposition === "excluded-uncurated" ? [row.componentKey] : []),
@@ -656,7 +704,7 @@ function backingPillar(
     ...reasonClassifiedEvidence(result.score, evidenceReasons, "strong", result.aggregationDisposition === "excluded-a-b"),
     reasons: canonicalReasons([...reasons, ...boundedComponents.map((component) => component.reason)]),
     boundedComponents,
-    structuralSignals: result.structuralReasons.map((reason) => structuralSignalFromBacking(result.assetId, reason)),
+    structuralSignals: result.structuralReasons.map((reason) => structuralSignalFromBacking(result.assetId, reason, structuralEvidence)),
   };
 }
 
@@ -776,6 +824,7 @@ function exitPillar(
               ? `The score-bearing ${primary.coverageClass} measurement for primary exit route ${primary.routeKey} had zero executable capacity for the ${primaryTrace.capacityPoint.requestedNotionalUsd} USD stress request at ${primaryTrace.capacityPoint.maxCostBps} bps.`
               : `The score-bearing ${primary.coverageClass} measurement for primary exit route ${primary.routeKey} had ${primaryTrace.capacityPoint.executableUsd} USD of executable capacity for the ${primaryTrace.capacityPoint.requestedNotionalUsd} USD stress request at ${primaryTrace.capacityPoint.maxCostBps} bps, below the policy-derived material-capacity floor.`,
           responsibility: "measured-adverse",
+          evidenceRefIds: primary.status.evidenceRefIds,
         }]
       : [];
   const primaryStrong =
@@ -1218,6 +1267,7 @@ function applyRoleDependencyProjection(
         path: `pillar:${projection.targetPillar}:dependency:${event.exposureKey}:${event.riskEventKey}`,
         message: `Measured adverse ${event.roles.join("/")} dependency on ${event.upstreamAssetIds.join(", ")} contributes to the combined measured and bounded-loss limit of ${projection.limit} on ${projection.targetPillar}; event ${event.riskEventKey} on exposure ${event.exposureKey} carries ${(event.exposureShare * 100).toFixed(2)}% admitted exposure and ${event.modeledLossPoints} loss points (evidence: ${event.evidenceRefIds.join(", ")}; gaps: ${(event.causeGapIds ?? []).join(", ")}).`,
         responsibility: "measured-adverse",
+        evidenceRefIds: event.evidenceRefIds,
       })),
     ],
     reasons: canonicalReasons([
@@ -1571,8 +1621,16 @@ function parentInput(
     );
   }
   const fallback = envelope.policy.semantic.formula.wrapperStrategyCap;
+  const floorGrade = envelope.policy.semantic.formula.wrapperMildRiskFloorGrade;
+  const minimumNonDangerScore = envelope.policy.semantic.formula.gradeThresholds.find(
+    (threshold) => threshold.grade === floorGrade,
+  )?.minScore;
+  if (minimumNonDangerScore === undefined) {
+    throw new Error(`Safety Score v9 policy has no ${floorGrade} wrapper grade floor`);
+  }
   const wrapperLimit = resolveV9WrapperParentLimit({
     parentScore: rawScore,
+    minimumNonDangerScore,
     localFacts: asset.wrapperLocalFacts,
     gaps: asset.gaps,
     fallbackDiscounts: {
@@ -1703,7 +1761,7 @@ export function evaluateV9Asset({
     claimGraph: asset.accessReview.freeze.claimGraph,
   });
   const peg = pegInput(asset, envelope, gapIndex);
-  const backingPillarEvaluation = backingPillar(backing, envelope, gapIndex, evaluatedById);
+  const backingPillarEvaluation = backingPillar(backing, envelope, gapIndex, evaluatedById, asset);
   const inheritedBackingPillars = resolved.basket.flatMap((dependency) => {
     const upstream = evaluatedById.get(dependency.upstreamAssetId)?.scoreInput.pillars.backing;
     return upstream?.excludedCauseGapIds?.length ? [{ assetId: dependency.upstreamAssetId, pillar: upstream }] : [];

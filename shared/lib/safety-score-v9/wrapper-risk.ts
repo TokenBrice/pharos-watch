@@ -7,7 +7,7 @@ import {
   type V9WrapperRiskAssessment,
 } from "../../types/safety-score-v9-wrapper";
 import { round4 } from "../math";
-import { assertScore, compareText } from "./primitives";
+import { assertScore, compareText, uniqueSorted } from "./primitives";
 import type { V9FactGapV3, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
 import type { V9EvidenceCause, V9ScoringDisposition } from "../../types/safety-score-v9-causes";
 import { resolveV9StatusCauses, v9ScoringDisposition } from "./control-primitives";
@@ -20,6 +20,7 @@ export interface V9WrapperParentLimitInput {
   parentScore: number;
   localFacts: V9ApplicableWrapperLocalFacts;
   fallbackDiscounts: Readonly<Record<V9WrapperForm, number>>;
+  minimumNonDangerScore: number;
   gaps?: readonly V9FactGapV3[];
 }
 
@@ -32,6 +33,7 @@ export interface V9WrapperLocalRiskAdjustment {
   cause: V9EvidenceCause | null;
   causeGapIds: readonly string[];
   scoringDisposition: V9ScoringDisposition;
+  evidenceRefIds: readonly string[];
 }
 
 export interface V9WrapperMissingFact {
@@ -50,6 +52,8 @@ export interface V9WrapperParentLimit {
   localRiskDiscount: number;
   fallbackDiscount: number;
   appliedDiscount: number;
+  /** Present only when mild local deductions stop at the non-danger band. */
+  gradeFloor?: number;
   riskTransfer: {
     disposition: V9WrapperFactDisposition;
     mechanism: V9ApplicableWrapperLocalFacts["riskTransfer"]["mechanism"];
@@ -115,6 +119,7 @@ function unavailableDisposition(
  */
 export function resolveV9WrapperParentLimit(input: V9WrapperParentLimitInput): V9WrapperParentLimit {
   assertScore(input.parentScore, "wrapper parent score");
+  assertScore(input.minimumNonDangerScore, "wrapper non-danger grade floor");
   const form = input.localFacts.form;
   const configuredFallbackDiscount = input.fallbackDiscounts[form];
   if (
@@ -148,6 +153,13 @@ export function resolveV9WrapperParentLimit(input: V9WrapperParentLimitInput): V
       assessment,
       maximumDiscountPoints,
       discountPoints,
+      evidenceRefIds: uniqueSorted([
+        ...fact.evidenceRefIds,
+        ...(fact.status?.evidenceRefIds ?? []),
+        ...(fact.incidentPostures ?? []).flatMap((posture) =>
+          factKey === "measuredUnwind" && posture.scope.kind === "integration-only"
+            ? [] : posture.evidenceRefIds),
+      ]),
       ...causal,
     };
   });
@@ -182,7 +194,23 @@ export function resolveV9WrapperParentLimit(input: V9WrapperParentLimitInput): V
         fact.cause === "C" || fact.cause === "U" || fact.disposition === "issuer-undisclosed"),
   );
   const fallbackDiscount = fallbackRequired ? configuredFallbackDiscount : 0;
-  const appliedDiscount = round4(Math.max(localRiskDiscount, fallbackDiscount));
+  const requestedDiscount = round4(Math.max(localRiskDiscount, fallbackDiscount));
+  const localDanger = adjustments.some((adjustment) =>
+    adjustment.discountPoints > 0 &&
+    (adjustment.assessment === "high" || adjustment.assessment === "critical" ||
+      adjustment.scoringDisposition === "measured-adverse"),
+  );
+  // Preserve an F parent's full transmission and every severe/measured local
+  // finding. Ordinary local quality charges (including C/U form fallback) may
+  // reduce a non-F parent only as far as the policy's non-danger band.
+  const gradeFloor =
+    input.parentScore >= input.minimumNonDangerScore && !localDanger &&
+    input.parentScore - requestedDiscount < input.minimumNonDangerScore
+      ? input.minimumNonDangerScore
+      : undefined;
+  const appliedDiscount = gradeFloor === undefined
+    ? requestedDiscount
+    : round4(input.parentScore - gradeFloor);
 
   const requestedCredit =
     factsComplete &&
@@ -208,6 +236,7 @@ export function resolveV9WrapperParentLimit(input: V9WrapperParentLimitInput): V
     localRiskDiscount,
     fallbackDiscount,
     appliedDiscount,
+    ...(gradeFloor === undefined ? {} : { gradeFloor }),
     riskTransfer: {
       disposition: input.localFacts.riskTransfer.disposition,
       mechanism: input.localFacts.riskTransfer.mechanism,

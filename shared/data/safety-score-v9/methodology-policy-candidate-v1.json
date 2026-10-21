@@ -193,6 +193,7 @@
         "staked": 5,
         "vault": 10
       },
+      "wrapperMildRiskFloorGrade": "D",
       "assetPremiums": [
         {
           "assetId": "usdt-tether",
@@ -231,7 +232,8 @@
         ],
         "dangerOnlyGrades": [
           "F"
-        ]
+        ],
+        "requireSourceBoundDangerWitness": true
       }
     },
     "evidence": {

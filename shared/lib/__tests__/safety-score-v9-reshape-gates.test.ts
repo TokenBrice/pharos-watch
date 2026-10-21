@@ -28,7 +28,7 @@ function signal(kind: V9StructuralSignalKind, severity: V9Severity): V9Structura
     reason: `${kind}:${severity}`,
     responsibility: "measured-adverse",
     failureDomainKeys: [],
-    evidence: [],
+    evidence: [{ sourceId: "fixture:reviewed-primary-risk", observedAt: "2026-01-01T00:00:00Z" }],
   };
 }
 

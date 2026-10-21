@@ -89,6 +89,10 @@ export interface V9AdverseAttribution {
   path: string;
   message: string;
   responsibility: "measured-adverse";
+  /** Internal admitted fact references; public attribution keeps its stable wire shape. */
+  evidenceRefIds?: readonly string[];
+  /** Retained through parent propagation from the admitted numeric peg source. */
+  measuredPegWitness?: true;
 }
 
 export type V9PillarAdverseAttribution = V9AdverseAttribution & {
@@ -122,6 +126,7 @@ export type V9ParentBoundedUncertaintyAttribution = V9BoundedUncertaintyAttribut
 export interface V9PillarReasonProvenance {
   pillar: V9QualityPillar;
   fact: V9UnresolvedFact;
+  evidenceRefIds?: readonly string[];
   componentScore?: number;
   effectiveScoringWeight?: number;
 }
@@ -225,15 +230,30 @@ function floorTo(value: number, decimals: number): number {
 function canonicalAdverseAttribution(
   values: readonly V9AdverseAttribution[],
 ): V9AdverseAttribution[] {
-  return canonicalUniqueBy(
-    values,
-    (value) => `${value.source}\u0000${value.path}\u0000${value.message}`,
-    (left, right) =>
-      compareText(left.source, right.source) ||
-      compareText(left.path, right.path) ||
-      compareText(left.message, right.message),
-    "last",
-  );
+  const byIdentity = new Map<string, V9AdverseAttribution>();
+  for (const value of values) {
+    const key = `${value.source}\u0000${value.path}\u0000${value.message}`;
+    const previous = byIdentity.get(key);
+    byIdentity.set(key, previous === undefined ? value : {
+      ...value,
+      ...((previous.evidenceRefIds?.length ?? 0) + (value.evidenceRefIds?.length ?? 0) > 0
+        ? { evidenceRefIds: [...new Set([...(previous.evidenceRefIds ?? []), ...(value.evidenceRefIds ?? [])])].sort(compareText) }
+        : {}),
+      ...(previous.measuredPegWitness || value.measuredPegWitness ? { measuredPegWitness: true as const } : {}),
+    });
+  }
+  return [...byIdentity.values()].sort((left, right) =>
+    compareText(left.source, right.source) ||
+    compareText(left.path, right.path) ||
+    compareText(left.message, right.message));
+}
+
+function hasSourceBoundDangerWitness(attribution: readonly V9AdverseAttribution[]): boolean {
+  return attribution.some((item) =>
+    // These two sources are emitted only from admitted measured peg operands,
+    // never from missing-price or unknown-history fallbacks.
+    item.source === "active-depeg" || item.source === "peg-performance" ||
+    item.measuredPegWitness === true || (item.evidenceRefIds?.length ?? 0) > 0);
 }
 
 function canonicalBoundedUncertaintyAttribution(
@@ -1146,6 +1166,11 @@ function scoreV9InputWithCaps(
             path: fact.path ?? `reason:${fact.code}`,
             message: fact.reason,
             responsibility: "measured-adverse",
+            evidenceRefIds: [...new Set(pillarReasonProvenance.flatMap((candidate) =>
+              candidate.fact.code === fact.code &&
+              candidate.fact.path === fact.path &&
+              candidate.fact.reason === fact.reason
+                ? candidate.evidenceRefIds ?? [] : []))].sort(compareText),
           }]
         : [],
     ),
@@ -1159,6 +1184,9 @@ function scoreV9InputWithCaps(
             path: `structural:${signal.kind}:${signal.severity}`,
             message: signal.reason,
             responsibility: "measured-adverse",
+            ...(signal.evidence.length > 0
+              ? { evidenceRefIds: signal.evidence.map((reference) => reference.sourceId) }
+              : {}),
           }],
     ),
     ...scenarioCaps.flatMap<V9AdverseAttribution>((cap) =>
@@ -1220,9 +1248,9 @@ function scoreV9InputWithCaps(
       : []),
   ]);
 
-  // A low public grade needs a causal account. D may be measured weakness or a
-  // provisional result shaped by explicit policy-bounded uncertainty. F remains
-  // danger-only and therefore always requires measured-adverse attribution.
+  // D keeps its measured-weakness/bounded-uncertainty gate. F additionally needs
+  // a named source-bound danger witness, not merely an adverse label. Known
+  // unbounded mint proof remains eligible despite unrelated C/U siblings.
   const attributedGrade =
     finalScore === null ? null : gradeForScore(finalScore, policy);
   if (
@@ -1244,7 +1272,9 @@ function scoreV9InputWithCaps(
     attributedGrade !== null &&
     attributedGrade !== "NR" &&
     danger.dangerOnlyGrades.includes(attributedGrade) &&
-    adverseAttribution.length === 0
+    (danger.requireSourceBoundDangerWitness
+      ? !hasSourceBoundDangerWitness(adverseAttribution)
+      : adverseAttribution.length === 0)
   ) {
     effectiveNrReasons.push({
       code: "f-without-measured-adverse",

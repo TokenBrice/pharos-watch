@@ -991,18 +991,22 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): V9UninternedPubl
     },
     adverseAttribution: {
       semantics: "causal-measured-adverse-v1",
-      items: [...trace.adverseAttribution]
+      // NR retains underlying diagnostics, but cannot assert that a cap bound
+      // a published score. The internal trace still keeps every adverse fact.
+      items: trace.adverseAttribution.filter((item) => trace.finalScore !== null ||
+        (item.source !== "parent-score" && item.source !== "wrapper-local" && item.source !== "active-depeg"))
         .sort(
           (left, right) =>
             compareText(left.source, right.source) ||
             compareText(left.path, right.path) ||
             compareText(left.message, right.message),
         )
-        .map((attribution) => ({ ...attribution })),
+        .map(({ evidenceRefIds: _evidenceRefIds, measuredPegWitness: _measuredPegWitness, ...attribution }) => attribution),
     },
     boundedUncertaintyAttribution: {
       semantics: "causal-bounded-uncertainty-v1",
-      items: [...trace.boundedUncertaintyAttribution]
+      items: trace.boundedUncertaintyAttribution.filter((item) => trace.finalScore !== null ||
+        (item.source !== "parent-score" && item.source !== "wrapper-local"))
         .sort(
           (left, right) =>
             compareText(left.source, right.source) ||
@@ -1033,7 +1037,7 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): V9UninternedPubl
         : {
             ...trace.wrapperParentLimit,
             missingFacts: trace.wrapperParentLimit.missingFacts.map((fact) => ({ ...fact, causeGapIds: uniqueSorted(fact.causeGapIds) })),
-            adjustments: trace.wrapperParentLimit.adjustments.map((adjustment) => ({ ...adjustment, causeGapIds: uniqueSorted(adjustment.causeGapIds) })),
+            adjustments: trace.wrapperParentLimit.adjustments.map(({ evidenceRefIds: _evidenceRefIds, ...adjustment }) => ({ ...adjustment, causeGapIds: uniqueSorted(adjustment.causeGapIds) })),
             riskTransfer: { ...trace.wrapperParentLimit.riskTransfer },
           },
   };

@@ -4,6 +4,16 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import type { V9ResolvedDependencyInputs } from "../safety-score-v9/dependencies";
 import type { V9AssetFactsV2 } from "../../types/safety-score-v9-facts";
 import {
+  V9_WRAPPER_LOCAL_FACT_KEYS,
+  type V9ApplicableWrapperLocalFacts,
+  type V9WrapperLocalFactKey,
+  type V9WrapperRiskAssessment,
+} from "../../types/safety-score-v9-wrapper";
+import { SafetyScoreV9ScoreTraceSchema } from "../../types/safety-score-v9-public-trace";
+import { resolveV9WrapperParentLimit } from "../safety-score-v9/wrapper-risk";
+import { scoreV9EvaluatedAsset } from "../safety-score-v9/score";
+import { makeV9Pillar, makeV9ProductionScoreInput } from "./safety-score-v9-score.test-support";
+import {
   coreFixture,
   fullAsset,
   minimalAsset,
@@ -161,5 +171,157 @@ describe("wrapper discounts propagate through the production set evaluator", () 
     expect(completeWrapper.trace.wrapperParentLimit).toMatchObject({
       form, factsComplete: true, treatment: "local-facts", fallbackDiscount: 0, appliedDiscount: 2, limit: 77,
     });
+  });
+});
+
+function reviewedLocalFacts(
+  assessments: Partial<Record<V9WrapperLocalFactKey, V9WrapperRiskAssessment>> = {},
+): V9ApplicableWrapperLocalFacts {
+  return {
+    schemaVersion: 1,
+    applicability: "wrapper",
+    form: "native-staked",
+    formDisposition: "reviewed",
+    formSignals: ["wrapper-form:native-staked"],
+    formEvidenceRefIds: ["evidence:base"],
+    facts: Object.fromEntries(V9_WRAPPER_LOCAL_FACT_KEYS.map((key) => [key, {
+      disposition: "reviewed",
+      assessment: assessments[key] ?? "none",
+      signals: [],
+      evidenceRefIds: ["evidence:base"],
+      status: knownStatus(),
+    }])) as V9ApplicableWrapperLocalFacts["facts"],
+    riskTransfer: {
+      disposition: "not-applicable",
+      mechanism: "none",
+      maximumParentLossAbsorptionPoints: 0,
+      signals: ["no-risk-transfer"],
+      evidenceRefIds: [],
+    },
+  };
+}
+
+function mildRiskLimit(parentScore: number, localFacts = reviewedLocalFacts()) {
+  const formula = POLICY.policy.semantic.formula;
+  return resolveV9WrapperParentLimit({
+    parentScore,
+    localFacts,
+    minimumNonDangerScore: formula.gradeThresholds.find(
+      (threshold) => threshold.grade === formula.wrapperMildRiskFloorGrade,
+    )!.minScore,
+    fallbackDiscounts: {
+      pure: formula.wrapperStrategyCap.pure,
+      "native-staked": formula.wrapperStrategyCap.staked,
+      "strategy-vault": formula.wrapperStrategyCap.vault,
+    },
+  });
+}
+
+describe("mild wrapper deductions cannot manufacture F from a non-F parent", () => {
+  it.each([
+    { parent: 41, strategyComplexity: "low", shareAccountingNavOracle: "moderate", withdrawalTerms: "moderate", discount: 1.95 },
+    { parent: 40, strategyComplexity: "moderate", shareAccountingNavOracle: "low", withdrawalTerms: "moderate", discount: 1.95 },
+  ] as const)("stops a $parent parent at the policy D floor before cap flooring", (row) => {
+    const limit = mildRiskLimit(row.parent, reviewedLocalFacts({
+      strategyComplexity: row.strategyComplexity,
+      shareAccountingNavOracle: row.shareAccountingNavOracle,
+      withdrawalTerms: row.withdrawalTerms,
+    }));
+    expect(limit).toMatchObject({
+      parentScore: row.parent, localRiskDiscount: row.discount,
+      appliedDiscount: row.parent - 40, gradeFloor: 40, limit: 40,
+    });
+    if (row.parent === 41) {
+      const trace = scoreV9EvaluatedAsset(makeV9ProductionScoreInput({
+        parent: { required: true, score: limit.limit, propagatedReasons: [], wrapperParentLimit: limit },
+      }), POLICY);
+      expect(trace.bindingCap).toMatchObject({ source: "parent", limit: 40 });
+      expect(trace.finalScore).toBe(40);
+      expect(trace.finalGrade).toBe("D");
+    }
+  });
+
+  it("bounds a C/U fallback without inventing favorable reviewed local facts", () => {
+    const local = reviewedLocalFacts();
+    local.facts.custodyEscrow = {
+      disposition: "issuer-undisclosed", assessment: null, signals: [],
+      evidenceRefIds: [],
+    };
+    expect(mildRiskLimit(42, local)).toMatchObject({
+      factsComplete: false, fallbackDiscount: 5, localRiskDiscount: 0,
+      appliedDiscount: 2, gradeFloor: 40, limit: 40,
+      missingFacts: [{ factClass: "custodyEscrow", disposition: "issuer-undisclosed" }],
+    });
+  });
+
+  it.each(["high", "critical"] as const)("retains the full effect of a %s local finding", (severity) => {
+    const limit = mildRiskLimit(40, reviewedLocalFacts({ withdrawalTerms: severity }));
+    expect(limit.gradeFloor).toBeUndefined();
+    expect(limit.appliedDiscount).toBe(severity === "high" ? 2.1 : 3);
+    expect(limit.limit).toBe(severity === "high" ? 37.9 : 37);
+  });
+
+  it("retains a measured-adverse incident even when its assessment is moderate", () => {
+    const local = reviewedLocalFacts({ measuredUnwind: "moderate" });
+    local.facts.measuredUnwind.signals = ["prior-incident"];
+    const limit = mildRiskLimit(41, local);
+    expect(limit).toMatchObject({ appliedDiscount: 1.75, limit: 39.25 });
+    expect(limit.gradeFloor).toBeUndefined();
+    expect(limit.adjustments.find((row) => row.factKey === "measuredUnwind"))
+      .toMatchObject({ assessment: "moderate", scoringDisposition: "measured-adverse" });
+  });
+
+  it("still transmits an F parent and keeps ordinary deductions above the F boundary", () => {
+    const local = reviewedLocalFacts({ withdrawalTerms: "moderate" });
+    expect(mildRiskLimit(39, local)).toMatchObject({ appliedDiscount: 1.05, limit: 37.95 });
+    expect(mildRiskLimit(44, local)).toMatchObject({ appliedDiscount: 1.05, limit: 42.95 });
+    expect(mildRiskLimit(50, local)).toMatchObject({ appliedDiscount: 1.05, limit: 48.95 });
+    expect(mildRiskLimit(39, local).gradeFloor).toBeUndefined();
+    expect(mildRiskLimit(44, local).gradeFloor).toBeUndefined();
+  });
+
+  it("does not floor independently adverse wrapper scoring", () => {
+    const limit = mildRiskLimit(41, reviewedLocalFacts({ withdrawalTerms: "moderate" }));
+    const trace = scoreV9EvaluatedAsset(makeV9ProductionScoreInput({
+      parent: { required: true, score: limit.limit, propagatedReasons: [], wrapperParentLimit: limit },
+      peg: { applicable: true, score: 1, activeDepegBps: null, reasons: [] },
+    }), POLICY);
+    expect(trace.finalScore).toBeLessThan(40);
+    expect(trace.finalGrade).toBe("F");
+  });
+
+  it("withholds an independently sub-F-boundary wrapper without manufacturing D", () => {
+    const local = reviewedLocalFacts({ strategyComplexity: "moderate" });
+    local.form = "strategy-vault";
+    local.facts.custodyEscrow = {
+      disposition: "issuer-undisclosed", assessment: null, signals: [], evidenceRefIds: [],
+    };
+    const limit = mildRiskLimit(46, local);
+    const trace = scoreV9EvaluatedAsset(makeV9ProductionScoreInput({
+      pillars: { backing: makeV9Pillar(35), exit: makeV9Pillar(35), control: makeV9Pillar(45) },
+      parent: { required: true, score: limit.limit, propagatedReasons: [], wrapperParentLimit: limit },
+    }), POLICY);
+    expect(limit).toMatchObject({ fallbackDiscount: 10, appliedDiscount: 6, gradeFloor: 40, limit: 40 });
+    expect(trace.bindingCap).toBeNull();
+    expect(trace.finalScore).toBeNull();
+    expect(trace.finalGrade).toBe("NR");
+    expect(trace.nrReasons).toContainEqual(expect.objectContaining({ code: "f-without-measured-adverse" }));
+  });
+
+  it("publicly reconciles the bounded deduction and rejects a severe-finding floor", () => {
+    const limit = mildRiskLimit(41, reviewedLocalFacts({ withdrawalTerms: "moderate" }));
+    const publicLimit = {
+      ...limit,
+      missingFacts: [],
+      adjustments: limit.adjustments.map(({ causeGapIds: _ids, evidenceRefIds: _refs, ...adjustment }) => adjustment),
+    };
+    const schema = SafetyScoreV9ScoreTraceSchema.shape.wrapperParentLimit;
+    expect(schema.safeParse(publicLimit).success).toBe(true);
+    expect(schema.safeParse({ ...publicLimit, appliedDiscount: 1.05 }).success).toBe(false);
+    expect(schema.safeParse({
+      ...publicLimit,
+      adjustments: publicLimit.adjustments.map((row) =>
+        row.factKey === "withdrawalTerms" ? { ...row, assessment: "high" } : row),
+    }).success).toBe(false);
   });
 });

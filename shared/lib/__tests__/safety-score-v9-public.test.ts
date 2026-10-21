@@ -1311,6 +1311,45 @@ describe("Safety Score v9 public projection", () => {
     });
   });
 
+  it("keeps source-bound F witness metadata internal to the evaluator", () => {
+    const input = fixture("source-bound-danger", { score: 80, grade: "A-" });
+    input.trace.adverseAttribution = [{
+      source: "structural-signal",
+      path: "structural:material-bridge:high",
+      message: "Reviewed bridge authority has a source-bound adverse path.",
+      responsibility: "measured-adverse",
+      evidenceRefIds: ["evidence:reviewed-bridge-authority"],
+    }];
+    const card = projectSafetyScoreV9Card(input).card;
+    expect(card.scoreTrace.adverseAttribution.items).toEqual([{
+      source: "structural-signal",
+      path: "structural:material-bridge:high",
+      message: "Reviewed bridge authority has a source-bound adverse path.",
+      responsibility: "measured-adverse",
+    }]);
+  });
+
+  it("does not publish a binding-parent assertion after the F witness gate withholds the score", () => {
+    const input = fixture("unsupported-parent-danger", {
+      score: null, grade: "NR",
+      nrReasons: [{
+        code: "f-without-measured-adverse", field: "adverseAttribution",
+        message: "Score below the F threshold without a measured adverse fact", cause: "U",
+      }],
+    });
+    input.trace.adverseAttribution = [{
+      source: "parent-score",
+      path: "parent:root:structural:centralized-mint:high",
+      message: "Required parent root: reviewed but unreferenced danger.",
+      responsibility: "measured-adverse",
+    }];
+    const card = projectSafetyScoreV9Card(input).card;
+    expect(card.grade).toBe("NR");
+    expect(card.bindingCap).toBeNull();
+    expect(card.scoreTrace.adverseAttribution.items).toEqual([]);
+    expect(input.trace.adverseAttribution).toHaveLength(1);
+  });
+
   it("projects the native USDT premium as an explicit score stage", () => {
     const cap: V9CapTrace = {
       source: "structural",
