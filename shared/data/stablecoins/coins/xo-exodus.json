@@ -54,24 +54,26 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "m0",
+    "adapter": "m0-solana-wrapper",
     "version": 1,
-    "semantics": "protocol-reserve",
-    "breakerScope": "m0",
-    "suspended": {
-      "reason": "M0 gateway collateral observes upstream M backing, not XO local M custody/liabilities; await identity-bound wrapper reserve producer",
-      "since": "2026-10-20",
-      "reviewBy": "2026-11-20"
-    },
+    "semantics": "single-asset",
+    "breakerScope": "m0-solana-wrapper:xo-exodus",
     "display": {
       "url": "https://dashboard.m0.org/",
       "label": "M0 Dashboard"
     },
     "inputs": {
       "primary": {
-        "kind": "http-json",
-        "url": "https://protocol-api.m0.org/graphql"
+        "kind": "onchain-solana"
       }
+    },
+    "params": {
+      "program": "mexteGyWXgUR65XepNKtLJ2H66MmyLWrDSeA1bqzZ4C",
+      "globalAccount": "FeR9748EN7X9JxPv97ic53LbYjMwN25g5TqQi86z3a8w",
+      "wrapperMint": "xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y",
+      "underlyingMint": "mzerojk9tg56ebsrEAhfkyc9VgKjTW2zDqp6C5mhjzH",
+      "underlyingVault": "GeBTfYujk4JLr2MBCZznMTLTGch1QrUyYcMKen4KUFU2",
+      "assetLabel": "Indexed M held in XO's local Solana custody vault"
     }
   },
   "launchDate": "2026-05-08",

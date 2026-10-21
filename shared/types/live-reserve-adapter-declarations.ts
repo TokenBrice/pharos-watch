@@ -335,6 +335,15 @@ const hyloSolanaParamsSchema = z.object({
   inactiveExoPairs: z.array(hyloAddressSchema).max(16),
 }).strict();
 
+const m0SolanaWrapperParamsSchema = z.object({
+  program: hyloAddressSchema,
+  globalAccount: hyloAddressSchema,
+  wrapperMint: hyloAddressSchema,
+  underlyingMint: hyloAddressSchema,
+  underlyingVault: hyloAddressSchema,
+  assetLabel: z.string().min(1),
+}).strict();
+
 const usdaiProofOfReservesParamsSchema = z.object({
   anchor: z.object({
     vaultAddress: EvmAddressSchema,
@@ -2749,6 +2758,11 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     validation: DASHBOARD_VALIDATION,
   },
   "m0-wrapper-underlying": declareAdapter(m0WrapperUnderlyingParamsSchema, ONCHAIN_SINGLE_ASSET_V1),
+  "m0-solana-wrapper": declareAdapter(m0SolanaWrapperParamsSchema, ONCHAIN_SINGLE_ASSET_NO_TELEMETRY_V1, {
+    primaryInputKinds: ["onchain-solana"],
+    sourceOriginClass: "onchain-observation",
+    preferredFreshnessMode: "not-applicable",
+  }),
   "makina-strategy": {
     primaryInputKinds: ["http-json"],
     paramsSchema: makinaStrategyParamsSchema,

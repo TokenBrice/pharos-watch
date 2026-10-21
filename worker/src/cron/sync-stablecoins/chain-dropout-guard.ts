@@ -3,7 +3,9 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { canonicalizeChainCirculating, normalizeChainSupplyValue } from "@shared/lib/chains/circulating";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
-import { getCirculatingRawOrNull, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC, SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC } from "@shared/lib/supply";
+import { selectCuratedAggregateOnchainSupplyProbeContracts } from "@shared/lib/onchain-supply-probe";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { SupplyChainGuardProvenance } from "@shared/types/market";
 import { buildChainRpcs, registryRpcEndpoints, type ChainRpcConfig } from "../../lib/chain-registry";
 import { getCache, setCacheIfNewer } from "../../lib/db-cache";
@@ -15,6 +17,7 @@ import { fetchErc20TotalSupply } from "../reserve-adapters/onchain";
 import { getPegReferencePriceUsd } from "./supply-gap-reconciliation";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import { CHAIN_DROPOUT_SEED, CHAIN_DROPOUT_SEED_OBSERVED_AT, CHAIN_DROPOUT_SEED_VALID_UNTIL } from "./chain-dropout-seed";
+import { fetchCuratedAggregateOnChainMcap, toPublicChainCirculating } from "./supplemental-assets/onchain-supply";
 
 const CHAIN_DROPOUT_STATE_KEY = "sync-stablecoins:chain-dropout-state";
 export const CHAIN_DROPOUT_POLICY = {
@@ -349,9 +352,66 @@ export async function guardChainDropouts(input: {
     }
   }
   const chainRpcs = input.chainRpcs ?? buildChainRpcs();
+  // A complete reviewed native/canonical aggregate can replace the whole
+  // affected generation. Unlike an additive one-chain repair, this measures
+  // every healthy leg too, so a persisted attribution hold cannot double count.
+  const nativeRecovered = new Set<PeggedAsset>();
+  const nativeAttempted = new Set<PeggedAsset>();
+  for (const candidate of candidates) {
+    if (nativeAttempted.has(candidate.asset)) continue;
+    const meta = ACTIVE_META_BY_ID.get(candidate.state.assetId);
+    const selected = meta ? selectCuratedAggregateOnchainSupplyProbeContracts(meta) : null;
+    const priceUsd = getPegReferencePriceUsd(candidate.state.assetId, candidate.pegKey);
+    if (!meta || !selected || priceUsd == null) continue;
+    nativeAttempted.add(candidate.asset);
+    const observed = await fetchCuratedAggregateOnChainMcap(meta, priceUsd, chainRpcs, signal);
+    // Intake's `now` is sync-start, potentially minutes before these real reads.
+    // Validate against the read phase without rewriting the observation clock.
+    const nativeReadNow = Math.floor(Date.now() / 1000);
+    if (!observed?.chainCirculating || observed.observedAt == null || !Number.isFinite(observed.mcap) || observed.mcap <= 0
+      || observed.observedAt > nativeReadNow + SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC
+      || nativeReadNow - observed.observedAt > 2 * CRON_INTERVALS["sync-stablecoins"]) continue;
+    const rows = Object.values(observed.chainCirculating);
+    if (rows.some((row) => !Number.isFinite(row.current) || row.current < 0)
+      || selected.some(({ config }) => !rows.some((row) => row.chainId === config.chain))
+      || rows.reduce((sum, row) => sum + row.current, 0) !== observed.mcap) continue;
+    const affected = candidates.filter((entry) => entry.asset === candidate.asset);
+    if (affected.some((entry) => !rows.some((row) => row.chainId === entry.state.chainId))) continue;
+    for (const entry of affected) {
+      const row = rows.find((value) => value.chainId === entry.state.chainId)!;
+      repair(entry, row.current, observed.observedAt, "onchain-total-supply");
+    }
+    const asset = candidate.asset;
+    asset.circulating = { [candidate.pegKey]: observed.mcap };
+    asset.circulatingPrevDay = null;
+    asset.circulatingPrevWeek = null;
+    asset.circulatingPrevMonth = null;
+    asset.chainCirculating = toPublicChainCirculating(observed.chainCirculating);
+    asset.chains = Object.keys(asset.chainCirculating);
+    asset.supplySource = observed.supplySource;
+    asset.supplyObservedAt = observed.observedAt;
+    delete asset.supplyRestored;
+    delete asset.supplyGapFill;
+    asset.supplyChainGuard = { reason: "supply-chain-dropout", status: "repaired", chains: affected.map((entry) => entry.evidence) };
+    for (const pair of Object.values(state.pairs)) {
+      if (pair.assetId !== candidate.state.assetId) continue;
+      const row = rows.find((value) => value.chainId === pair.chainId);
+      if (!row) continue;
+      pair.baselineUsd = row.current;
+      pair.baselineObservedAt = observed.observedAt;
+      pair.baselineSource = "state";
+      pair.quarantinedSince = null;
+      pair.releasedAt = observed.observedAt;
+      delete pair.ambiguousSince;
+      delete pair.heldTotalUsd;
+    }
+    result.repaired += affected.length;
+    nativeRecovered.add(asset);
+  }
   // All network reads are strictly serial and consume bodies at the existing reader boundary.
   for (const candidate of candidates) {
     throwIfAborted(signal);
+    if (nativeRecovered.has(candidate.asset)) continue;
     const onchain = await readOnchain(candidate, chainRpcs, signal);
     if (onchain == null) continue;
     if (onchain > CHAIN_DROPOUT_POLICY.collapseRatio * candidate.state.baselineUsd) {
@@ -384,6 +444,7 @@ export async function guardChainDropouts(input: {
     }
   }
   for (const asset of input.assets) {
+    if (nativeRecovered.has(asset)) continue;
     let affected = candidates.filter((candidate) => candidate.asset === asset && (!candidate.resolved || candidate.evidence.repairedCurrentUsd != null));
     if (affected.length === 0) continue;
     let unrepaired = affected.filter((candidate) => !candidate.resolved);

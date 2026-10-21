@@ -79,6 +79,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "liquity-v2-branches": lazyAdapter(() => import("./liquity-v2-branches").then((mod) => mod.fetchLiquityV2BranchReserves)),
   m0: lazyAdapter(() => import("./m0").then((mod) => mod.fetchM0Reserves)),
   "m0-wrapper-underlying": lazyAdapter(() => import("./m0-wrapper-underlying").then((mod) => mod.fetchM0WrapperUnderlyingReserves)),
+  "m0-solana-wrapper": lazyAdapter(() => import("./m0-solana-wrapper").then((mod) => mod.fetchM0SolanaWrapperReserves)),
   "makina-strategy": lazyAdapter(() => import("./makina-strategy").then((mod) => mod.fetchMakinaStrategyReserves)),
   "matrixdock-frs": lazyAdapter(() => import("./matrixdock-frs").then((mod) => mod.fetchMatrixdockFrsReserves)),
   "megausd-custody": lazyAdapter(() => import("./custody-inventory").then((mod) => mod.fetchCustodyInventoryReserves)),
