@@ -366,6 +366,7 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       "Historical physical collection/delivery starts at 1 kg in kilogram multiples. The historical one-business-day statement applies to purchase/sale transactions, not bullion release or delivery, so it cannot supply a physicalToUsd settlement leg. Unpriced cross-border logistics remain unavailable. No physicalToUsd block is admitted from these suspended-platform disclosures.",
       "The current transparency page still links only the December 31, 2025 AREVA AUP. Its historical 13,100 gross grams and non-assured holder-rights notes do not establish current bar inventory, release throughput, purity-adjusted weight or currently available holder service.",
       "VNX Global's current terms separately permit proprietary exchange of Commodity Tokens, including VNXAU, for fiat or other digital assets. Section 6 makes that service resource-dependent, discretionary and not guaranteed. This successor venue is not a physical redemption obligation and does not establish a complete payout set, current same-notional execution capacity or settlement maximum. The old issuer-platform suspension is not evidence that all VNXAU market exits have ceased.",
+      "Source recovery 2026-10-21: the legacy VNX Commodity Token Terms PDF still returns AmazonS3 AccessDenied, including a normal browser GET. The current linked VNX Global Terms refer commodity-token holder rights to separate VNX Commodities terms rather than reproducing them: Annex II lists only VCHF and VGBP, while Annex III's conversion and withdrawal fees do not establish a complete VNXAU-specific proprietary-exchange or physical-redemption charge. Do not assign the 2% conversion figure to VNXAU, infer that existing property rights vanished, or restore this legacy rail from the unrecovered document. No route review date or scoring datum is renewed.",
       "Independent verification found that Metals.io still directs physical-redemption requests in 1 kg multiples to support@vnx.li, without publishing a release timeline or evidence that the issuer service resumed. Its current Etherlink VNXAU market interface separately returned an indicative 1,000-token sale quote in USDC, subject to sign-in and execution. This is a secondary-market diagnostic, not physical redemption, measured same-notional capacity or proof that every holder can execute."
     ],
   },
@@ -425,16 +426,16 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
   "ggbr-goldfish-gold": {
     ...commodityIssuerBase,
     ...documentedBoundSupplyFull("2026-08-09"),
-    reviewedAt: "2026-10-01",
+    reviewedAt: "2026-10-20",
     outputAssetType: "physical-commodity-delivery",
     physicalCommodityDelivery: {
-      commodity: "XAU", deliverableOuncesPerToken: 0.001, minimumDeliveryTokens: 13500,
+      commodity: "XAU", deliverableOuncesPerToken: 0.001, minimumDeliveryTokens: 1000,
       deliveryTermsUnbounded: true,
       feeModel: { bps: 300, flatUsd: 0, deliveryUsd: 0 }, sameNotionalEligible: false,
     },
     physicalToUsd: {
       metal: "XAU", fineTroyOuncesPerToken: 0.001,
-      lot: { minimumTokens: 13500, incrementTokens: null, bars: [] },
+      lot: { minimumTokens: 1000, incrementTokens: null, bars: [] },
       vaultLocations: ["other"], barClass: "small-bar-or-coin",
       saleLocation: "in-vault", deliveryScope: "same-jurisdiction", fineness: null,
       eligibility: "verified-customer",
@@ -443,9 +444,9 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
         { leg: "issuer-processing", maximumBusinessDays: null, typicalBusinessDays: 7 },
         { leg: "physical-gold-release-in-vault", maximumBusinessDays: null, typicalBusinessDays: null },
       ],
-      reviewedAt: "2026-10-01", reviewExpiresAt: "2026-12-30",
+      reviewedAt: "2026-10-20", reviewExpiresAt: "2026-12-30",
       evidence: [
-        { url: "https://app.goldfishgold.com/redemption", quote: "Minimum Redemption: 13500.00 GGBR. Redemption Fee: 3%. Processing Time: 5-7 Business Days. Delivery Options: Vault Storage / Physical Delivery. Note: Physical gold redemption requires KYC verification and may incur additional shipping and insurance fees." },
+        { url: "https://app.goldfishgold.com/redemption", quote: "Minimum Redemption: 1000.00 GGBR. Redemption Fee: 3%. Processing Time: 5-7 Business Days. Delivery Options: Vault Storage / Physical Delivery. Note: Physical gold redemption requires KYC verification and may incur additional shipping and insurance fees." },
         { url: "https://goldfishgold.com/", quote: "By design, these tokens are engineered to track the live spot price of gold with one token representing exactly 1/1000th of a troy ounce, giving users a transparent, fractional, and highly liquid way to digitally own gold." },
         { url: "https://goldfishgold.com/support", quote: "Goldfish utilizes an \"in-situ\" (unmined) collateral model. The gold backing GGBR is fully verified, measured, and legally secured, but it remains in the ground at the Happy 2 claims." },
       ],
@@ -453,7 +454,7 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
     routeStatus: "open",
     costModel: {
       ...documentedVariableFee(
-        "Current redemption app: minimum 13,500 GGBR, 3% redemption fee, additional shipping and insurance unpriced",
+        "Current redemption app: minimum 1,000 GGBR, 3% redemption fee, additional shipping and insurance unpriced",
       ),
       feeBpsMin: 300,
       feeBpsMax: 300,
@@ -474,8 +475,8 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       sourceRefRouteCapacity("Goldfish whitepaper", "https://goldfishgold.com/whitepaper"),
     ],
     notes: [
-      "Current app minimum 13,500 GGBR and 3% fee supersede the older support FAQ's 8,818.49 GGBR minimum and 2%-3% processing/delivery range; additional shipping and insurance remain unbounded.",
-      "Re-reviewed 2026-10-01: the public redemption app now displays 'Processing Time 5-7 Business Days' alongside the 13,500 GGBR minimum and 3% fee. Processing time is not a final physical-delivery SLA or proof of a same-notional USD payout; eligible jurisdictions and additional delivery costs remain unbounded.",
+      "Reviewed 2026-10-20: the rendered app now displays a 1,000 GGBR minimum and 3% fee. At Ethereum block 26236714 (2026-10-20T22:13:59Z, hash 0xf003f0fe817f2301e121aad3cf421eb46e98f95d3c284288ad60f5294a183e9d), RedemptionProxy 0x7856001e687694212697d67e810b0e05e0d4a046 minimumRedemption() returns 1000e18, redemptionFeeRate() returns 300, ggbrToken() matches the catalog token and paused() is false. Evidence: https://api-ethereum-mainnet.n.dwellir.com; these are parameter reads, not a completed redemption or capacity witness.",
+      "The displayed 5-7 business days remains processing only. Final physical delivery, shipping/insurance charges and spendable-USD cashout remain unbounded; the lower verified lot does not establish same-notional eligibility.",
     ],
   },
   "euroe-membrane": {

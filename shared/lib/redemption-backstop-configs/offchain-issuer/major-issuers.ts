@@ -84,28 +84,6 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ],
     notes: ["Zero is the disclosed Ripple Mint issuer fee only, not a zero all-in bank/payment-cost guarantee; governing Customer Agreement conditions remain applicable. No access, capacity or completion SLA is inferred from the FAQ."],
   },
-  "usdon-ondo": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull("2026-04-20"),
-    routeStatus: "open",
-    costModel: undisclosedReviewedFee(
-      "Ondo Global Markets docs describe 1:1 USDC <-> USDon platform conversion when swapper liquidity is available; public materials reviewed do not publish a standalone fixed USDon redemption fee",
-    ),
-    docs: [
-      sourceRefRouteCapacity("Ondo available assets", "https://docs.ondo.finance/ondo-global-markets/available-assets"),
-      sourceRef(
-        "Ondo investing and redeeming",
-        "https://docs.ondo.finance/ondo-global-markets/investing-and-redeeming",
-        ["route", "settlement"],
-      ),
-      sourceRef("Ondo trust and transparency", "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency", [
-        "capacity",
-      ]),
-    ],
-    notes: [
-      "Modeled as a whitelisted Ondo Global Markets settlement-cash route; current instant USDC output can depend on swapper liquidity, so this remains documented-bound eventual capacity rather than live immediate liquidity",
-    ],
-  },
   "usdsui-sui": {
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-04-20"),
@@ -379,7 +357,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     docs: [
       sourceRefRouteCapacityFees(
         "StraitsX XUSD overview",
-        "https://support.straitsx.com/hc/en-us/articles/40297191431961-What-is-XUSD",
+        "https://support.straitsx.com/support/solutions/articles/157000366324-what-is-xusd-",
       ),
     ],
   },

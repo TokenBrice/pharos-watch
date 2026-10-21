@@ -153,13 +153,20 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
     ["mxne-real-mxn"],
     {
       ...issuerBase,
-      ...documentedBoundSupplyFull("2026-05-17"),
+      reviewedAt: "2026-10-20",
+      holderEligibility: "verified-customer",
+      outputAssets: ["usdc-circle"],
+      capacityModel: { kind: "unquantified" },
+      costModel: documentedVariableFee("Brale's MXNe-specific all-in redemption and currency-conversion fee ceiling is not publicly disclosed; service fees are specified in the customer's Services Agreement."),
       docs: [
-        sourceRefFull("Brale MXNe", "https://brale.xyz/stablecoins/MXNe"),
-        sourceRefRouteCapacity(
-          "Etherfuse MXNe launch",
-          "https://www.etherfuse.com/blogs/etherfuse-r-introduces-real-mxn-mxne-stablecoin-on-solana-base-and-stellar",
-        ),
+        sourceRef("Brale MXNe exact deployment inventory (retrieved 2026-10-20)", "https://brale.xyz/stablecoins/MXNe", ["route"]),
+        sourceRef("Brale MXNe launch and approved-business USDC/USDP route (retrieved 2026-10-20)", "https://brale.xyz/blog/introducing-mxne", ["route", "access"]),
+        sourceRef("Brale Etherfuse partnership and cross-currency swaps (retrieved 2026-10-20)", "https://brale.xyz/case-studies/etherfuse", ["route", "access"]),
+        sourceRef("Brale public terms, customer-specific service fees (retrieved 2026-10-20)", "https://brale.xyz/legal/terms", ["route", "fees", "access"]),
+      ],
+      notes: [
+        "MXNe is MXN-denominated. The issuer's 1:1 conversion language is not a claim that one MXNe pays one USDC; the route requires a current exact FX/amount observation.",
+        "The Brale launch also names USDP; this configuration deliberately models only the USDC payout choice, without claiming exclusivity or direct fiat-MXN delivery.",
       ],
     },
     { sourceFilePath: SOURCE_FILE_PATH },

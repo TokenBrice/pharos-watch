@@ -13,7 +13,6 @@ import {
 } from "../shared";
 import {
   reviewedDirectRedemptionSupplyFull,
-  REVIEWED_DIRECT_REDEMPTION_AT,
   REVIEWED_FOLLOWUP_REMEDIATION_AT,
   REVIEWED_REMEDIATION_AT,
 } from "./shared";
@@ -336,24 +335,36 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     ...issuerBase,
     outputAssetType: "stable-basket",
     outputAssets: ["usdc-circle", "usdt-tether"],
-    capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound" },
+    capacityModel: { kind: "unquantified" },
+    settlementModel: "days",
     costModel: fixedFee(
       10,
       "StandX User Terms: the redemption pricing quote includes a 10 bps reimbursement charge covering hedge execution and blockchain gas; the product FAQ agrees that redeeming DUSD incurs a 0.1% fee",
     ),
-    reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
+    reviewedAt: "2026-10-20",
     docs: [
       sourceRef("StandX payout FAQ (reviewed 2026-09-30; fee re-read 2026-10-03)", "https://docs.standx.com/docs/dusd-overview/product-faq", ["route", "fees"]),
       sourceRef("StandX user terms and conditions (reviewed 2026-10-03)", "https://docs.standx.com/docs/resources/user-terms-conditions", ["fees"]),
-      sourceRefRouteCapacity("StandX docs", "https://docs.standx.com/"),
+      sourceRef("StandX seven-day redemption procedure", "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd", ["route", "access", "settlement"]),
+      sourceRef("StandX October 15, 2026 wind-down announcement", "https://x.com/StandX_Official/status/2110613283967230232", ["route", "settlement"]),
       sourceRef("StandX website", "https://www.standx.com/", ["route"]),
     ],
     notes: [
       "Payout identity reviewed 2026-09-30: StandX's product FAQ says holders get back USDT/USDC after redemption; the multi-output route retains conservative stable-basket semantics.",
-      "Tracked metadata describes 1:1 USDT and USDC redemption from a delta-neutral strategy wrapper",
-      "The reviewed 5% bound matches the tracked stability-reserve stablecoin fund rather than assuming the full hedged book is instantly withdrawable",
+      "USDT is redeemable 1:1 before fees; USDC is priced at redemption, and issuer terms pass adverse reserve losses through pro rata. A choice of payout is not a weighted basket.",
+      "Source correction 2026-10-20: withdraw the unsupported documented-bound 5% stability-reserve capacity and inherited same-day settlement. No reserve percentage, full-supply executable capacity or unconditional rolling settlement maximum is established by the current cited sources.",
       "Fee reviewed 2026-10-03: the governing User Terms fix the redemption reimbursement charge at 10 bps and the product FAQ agrees; separate product redemption prose describing a market-variable fee is inconsistent with both and is not given precedence over the legal terms.",
+      "All yield ended October 15, 2026 and new minting closes October 20. The issuer continues to accept holder redemptions until January 31, 2027 and schedules all final seven-day requests to complete by February 7. Its own PancakeSwap/Raydium liquidity will be removed January 31; this notice does not declare the current redemption route suspended.",
     ],
+    v9RouteReviewTerms: {
+      minRedeemUsd: 10,
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef("StandX exact redemption procedure and seven-day lock", "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd", ["route", "access", "settlement"]),
+        sourceRef("StandX User Terms: dynamic limits and reimbursement charge", "https://docs.standx.com/docs/resources/user-terms-conditions", ["route", "access", "fees"]),
+        sourceRef("StandX October 15, 2026 wind-down announcement", "https://x.com/StandX_Official/status/2110613283967230232", ["route", "settlement"]),
+      ],
+    },
   },
   "brla-brla-digital": {
     ...issuerBase,
@@ -402,7 +413,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     ],
     notes: [
       "Fiat-backed via MoonPay; reserves cryptographically attested on-chain by M0 Validators before minting",
-      "Fresh live reserve metadata reads the current M balance held by the ctUSD extension and verifies the configured M0 SwapFacility path before admitting redemption capacity.",
+      "Live reserve metadata reads the M balance held by the ctUSD extension and verifies the configured M0 SwapFacility identity. This is direct backing evidence, not fiat-USD redemption capacity; a separately documented and enrolled ctUSD-to-M execution path would require its own exact output and execution proof.",
     ],
   },
   "xo-exodus": {
@@ -449,15 +460,22 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   },
   "usdm-mega": {
     ...issuerBase,
-    ...documentedBoundSupplyFull("2026-04-16"),
+    capacityModel: { kind: "unquantified" },
+    holderEligibility: "whitelisted-primary",
+    outputAssets: ["usdc-circle"],
+    reviewedAt: "2026-10-20",
     costModel: undisclosedReviewedFee(
-      "USDM is issued on Ethena's USDtb rails; primary redemption follows USDtb's documented issuer rail and is KYC-gated; public USDM-specific redemption fees are not published",
+      "MegaUSD (BVI) Ltd's April 2026 Mint User Agreement discloses fees only before transaction confirmation; gas, financial-institution fees and other transaction costs are additional. No complete fee schedule or all-in cost ceiling is published.",
     ),
     docs: [
-      sourceRef("MegaETH", "https://www.megaeth.com/", ["route"]),
-      sourceRefRouteCapacity("Ethena USDtb", "https://ethena.fi/usdtb"),
+      sourceRef("MegaUSD Mint User Agreement (April 2026; retrieved 2026-10-20)", "https://app.megausd.money/mint-agreement", ["route", "capacity", "access", "settlement", "fees"]),
+      sourceRef("MegaUSD Terms of Service (April 2026; retrieved 2026-10-20)", "https://app.megausd.money/terms", ["route", "access", "settlement", "fees"]),
     ],
-    notes: ["USDM reuses Ethena's USDtb issuer redemption rail; reserve yield funds MegaETH sequencer costs"],
+    notes: [
+      "The direct counterparty is MegaUSD (BVI) Ltd. Only onboarded Mint Users with whitelisted wallets may redeem; U.S. persons and other restricted jurisdictions are excluded.",
+      "The terms expressly name USDC as a redemption asset and permit other supported assets. No USD cash payout or direct holder claim against USDtb's issuer is inferred.",
+      "Reserve balances and upstream USDtb redemption arrangements do not establish MegaUSD's executable capacity, a 24-hour completion guarantee or a 200-bps cost bound.",
+    ],
   },
   "usdkg-gold-dollar": {
     ...issuerBase,
@@ -537,20 +555,16 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
     costModel: documentedVariableFee(
-      "CFX documents 1:1 MOVEUSD redemption through designated channels; fees, currency conversions, and account-maintenance charges may apply, and no single fixed public redemption fee is published",
+      "CFX offers customer-authenticated binding withdrawal quotes with route-specific amounts and fees. Public documentation does not establish a complete numeric MOVEUSD-to-USD deduction ceiling.",
     ),
     docs: [
-      sourceRefRouteCapacityAccess("MoveUSD overview", "https://docs.moveusd.com/docs/what-is-moveusd"),
-      sourceRef("MoveUSD disclosures", "https://docs.moveusd.com/docs/disclosures-disclaimers", [
-        "route",
-        "access",
-        "fees",
-        "settlement",
-      ]),
+      sourceRefRouteCapacityAccess("CFX tokenized-deposit mint and redemption overview", "https://cfx.to/on-chain"),
+      sourceRef("CFX Platform Overview", "https://docs.cfx.to/docs/key-features.md", ["route", "access", "settlement"]),
+      sourceRef("CFX Create Withdrawal Quote", "https://docs.cfx.to/reference/post_v1-withdrawal-quote.md", ["route", "access", "fees"]),
     ],
     notes: [
       "Modeled as CFX's verified-customer designated-channel redemption rail, not secondary-market Perena or Solana liquidity.",
-      "Docs state redemptions can use designated bank accounts, authorized OTC partners, or direct transfer mechanisms, with KYC/AML and good-standing account requirements.",
+      "Current public API documents verified-identity wallet or ledger withdrawals into supported bank/payment instruments. Historical MoveUSD overview/disclosure URLs now redirect to generic platform documentation and do not independently supply current contractual fee or completion bounds.",
     ],
   },
 };
