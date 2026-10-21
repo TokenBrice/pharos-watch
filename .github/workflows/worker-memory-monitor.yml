@@ -144,7 +144,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/worker-incidents-previous"
-          artifact_id="$(gh api --paginate --slurp "repos/$GH_REPO/actions/artifacts?per_page=100" --jq '[.[].artifacts[] | select(.expired == false and (.name | startswith("worker-incidents-")) and .workflow_run.head_branch == "main")] | sort_by(.created_at) | last | .id // empty')"
+          artifact_id="$(gh api --paginate --slurp "repos/$GH_REPO/actions/artifacts?per_page=100" | jq -r '[.[].artifacts[] | select(.expired == false and (.name | startswith("worker-incidents-")) and .workflow_run.head_branch == "main")] | sort_by(.created_at) | last | .id // empty')"
           if [[ -n "$artifact_id" ]]; then
             gh api "repos/$GH_REPO/actions/artifacts/$artifact_id/zip" > "$RUNNER_TEMP/worker-incidents-previous.zip"
             unzip -q "$RUNNER_TEMP/worker-incidents-previous.zip" -d "$RUNNER_TEMP/worker-incidents-previous"
