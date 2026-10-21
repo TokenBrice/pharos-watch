@@ -654,7 +654,8 @@ describe("curation-expanded complete supply rosters", () => {
     {
       id: "syzusd-yuzu",
       canonical: "plasma",
-      supplies: { plasma: 100, ethereum: 10, monad: 10, hyperevm: 10, sei: 10, pharos: 10, berachain: 10, aptos: 0.25 },
+      // Synthetic complete stock includes the newly verified Base representation.
+      supplies: { plasma: 100, ethereum: 10, monad: 10, hyperevm: 10, sei: 10, pharos: 10, berachain: 10, aptos: 0.25, base: 10 },
     },
     {
       id: "susdc-spark-v1",

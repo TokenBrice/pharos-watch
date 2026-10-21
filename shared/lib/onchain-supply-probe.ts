@@ -68,6 +68,14 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // supply is admitted only after the Worker reconciles it to the matching
   // Ethereum xReserve domain balance within one basis point.
   "usdcx-movement": [{ chain: "movement" }],
+  // Reviewed issuer-native USDon deployments: each separately minted stock is
+  // additive, not an Ethereum lockbox plus representation. The complete roster
+  // repairs DefiLlama's omitted Solana leg without mixing a retained baseline.
+  "usdon-ondo": [
+    { chain: "ethereum", allowZeroSupply: true },
+    { chain: "bsc", allowZeroSupply: true },
+    { chain: "solana", allowZeroSupply: true },
+  ],
   // Reviewed 2026-10-15: five independently deposit-backed Legacy sUSDC vaults.
   // Local held sUSDS equals each local sUSDC supply. These native liabilities
   // sum; they are not remote tokens minted against Ethereum sUSDC escrow.
@@ -775,6 +783,9 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("pharos", { fallbackRpcUrl: undefined }),
     supplyProbeChain("berachain"),
     supplyProbeChain("aptos"),
+    // Reciprocal Plasma/Base pool identity reviewed 2026-10-20. This is a
+    // represented-stock census leg, not bridge-control or in-flight clearance.
+    { chain: "base" },
   ],
   // IDRT is minted natively on Ethereum, BSC and Polygon: each is a
   // non-upgradeable Ownable ERC-20 whose owner() is the same PT Rupiah Token

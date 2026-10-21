@@ -257,7 +257,7 @@ describe("curated on-chain supply paths", () => {
     { id: "witry-brix", chains: ["ethereum", "megaeth"], canonical: "ethereum" },
     { id: "brlv-crown", chains: ["base", "ethereum"], zero: ["ethereum"],
       endpoints: { base: undefined, ethereum: undefined } },
-    { id: "syzusd-yuzu", chains: ["plasma", "ethereum", "monad", "hyperevm", "sei", "pharos", "berachain", "aptos"], canonical: "plasma",
+    { id: "syzusd-yuzu", chains: ["plasma", "ethereum", "monad", "hyperevm", "sei", "pharos", "berachain", "aptos", "base"], canonical: "plasma",
       zero: ["hyperevm"],
       endpoints: { plasma: "https://rpc.plasma.to", monad: "https://rpc.monad.xyz" } },
     { id: "idrt-rupiah-token", chains: ["ethereum", "bsc", "polygon", "harmony"],
