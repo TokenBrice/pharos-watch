@@ -333410,6 +333410,918 @@
       "sentinels": [],
       "nextReviewTrigger": "Exact deployed Tron runtime/compiler-input source match and admitted hash-pinned current effective route authentication/control state with full conservation/bypass scope; otherwise re-review 2026-11-21.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "INCIDENT_STATE:xaut-tether:07ed34103c4b8bff47a7",
+      "taskIds": [],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "C04 final exact-deployment incident investigation",
+      "evidence": [
+        "https://docs.usdt0.to/api/deployments",
+        "https://evmapi.confluxscan.org/api?module=contract&action=getsourcecode&address=0x407cea8bc0b1c42a72a1f38e3c8e60a3929f7422",
+        "https://evmapi.confluxscan.org/api?module=contract&action=getsourcecode&address=0x207059273474e6226a2e68085439015ad5fd7e4c",
+        "https://api.llama.fi/hacks",
+        "https://rekt.news/bitget-rekt",
+        "https://layerzero.network/blog/kelpdao-incident-statement"
+      ],
+      "rationale": "Exact Conflux token owner and implementation recovered at block159572414/hash0x7502a8f0d2f5d1bd1403ee5be7732168fe402c054773435cd40ba367603ebd6c. Verified token and paired OFT ABIs recovered;50,001-block recent filtered history returned0 relevant events. This is not absence proof: creation receipt, OFT implementation/code pin, source-bound current emergency reads and complete privileged OFT/endpoint event coverage are not completed. No matching XAUT/USDT0/LayerZero/Everdawn entry in1313-row tracker; provider Kelp statement scopes its incident to rsETH and rekt Bitget concerns exchange theft/laundering, not established exact XAUt0 deployment compromise. Terminal defer for this research round, not an adverse finding or issuer-undisclosed conclusion; do not admit no-known-incident.",
+      "changeRefs": [
+        "agents/2026-10-20-safety-refinement/C04-final-conflux-identity.json",
+        "agents/2026-10-20-safety-refinement/C04-final-conflux-logs.json",
+        "agents/2026-10-20-safety-refinement/C04-final-incident-probes.json"
+      ],
+      "sentinels": [
+        "xaut-tether:gap:control:bridge-meta:xaut-tether:07ed34103c4b8bff47a7:incidentState"
+      ],
+      "nextReviewTrigger": "Complete creation receipt, exact token/OFT/endpoint authority-event coverage and source-bound current emergency reads. Source surfaces are reachable; this remains incomplete curation, not proved infrastructure unavailability.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "INCIDENT_STATE:xaut-tether:e52c1bc49fd7c452529c",
+      "taskIds": [],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "C04 final exact-deployment incident investigation",
+      "evidence": [
+        "https://docs.usdt0.to/api/deployments",
+        "https://sourcify.dev/server/v2/contract/56/0x9151434b16b9763660705744891fa906f660ecc5?fields=abi,sources,runtimeBytecode,deployment",
+        "https://sourcify.dev/server/v2/contract/56/0xded1660192d4d82e7c0b628ba556861edbb5cada?fields=abi,sources",
+        "https://api.llama.fi/hacks",
+        "https://rekt.news/bitget-rekt",
+        "https://layerzero.network/blog/kelpdao-incident-statement"
+      ],
+      "rationale": "Exact BSC token owner and implementation recovered at block128862963/hash0x3cc389d8e8ffdd8617171acdaa58403854d591c7e67916c6380bd46ba7d8beb0 using explicitly selected Alchemy after Dwellir/public historical-state errors. BscScan403 was overcome using Sourcify verified ABIs.50,001-block recent filtered token/OFT logs returned0 events. Creation metadata is recovered but not its receipt; current paired OFT implementation/code pin, emergency reads and full privileged OFT/endpoint events remain incomplete. Common tracker/provider surfaces disclose no established exact deployment incident but cannot independently prove absence. Terminal defer for this round; no adverse or issuer-undisclosed finding, no no-known-incident admission.",
+      "changeRefs": [
+        "agents/2026-10-20-safety-refinement/C04-final-bsc-alchemy-identity.json",
+        "agents/2026-10-20-safety-refinement/C04-final-bsc-logs.json",
+        "agents/2026-10-20-safety-refinement/C04-final-incident-probes.json"
+      ],
+      "sentinels": [
+        "xaut-tether:gap:control:bridge-meta:xaut-tether:e52c1bc49fd7c452529c:incidentState"
+      ],
+      "nextReviewTrigger": "Complete source-bound current token/OFT/endpoint emergency and privileged-event proof plus creation receipt. Do not report BSC historical state unavailable: explicit Alchemy succeeded.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "INCIDENT_STATE:xaut-tether:3ae510e75943e08b5794",
+      "taskIds": [],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "C04 final exact-deployment incident investigation",
+      "evidence": [
+        "https://docs.usdt0.to/api/deployments",
+        "https://api.mainnet-beta.solana.com",
+        "https://solscan.io/token/AymATz4TCL9sWNEEV9Kvyz45CHVhDZ6kUgjTJPzLpU9P",
+        "https://api.llama.fi/hacks",
+        "https://rekt.news/bitget-rekt",
+        "https://layerzero.network/blog/kelpdao-incident-statement"
+      ],
+      "rationale": "Official OFT address XWxJJE6Dq8EgdnhMWYU587f7St4HJuWbBHPstV2GtKR was read successfully at finalized contextslot459473667. It is a223-byte non-executable state account owned by9zWqf5jhauvxMc9RETXD9xbaMBrJpzPzGB6PR34Ksq6Z, not the executable program. Thus an attempt to read its programdata would target the wrong account. Current context is not an exact archived slot pin. Executable owner/programdata/upgrade authority, source-bound OFT pause/peer decoding and SPL mint/freeze history remain incomplete. Common incident surfaces do not establish an exact breach but are insufficient for no-known-incident. Terminal defer; no issuer-undisclosed conclusion.",
+      "changeRefs": [
+        "agents/2026-10-20-safety-refinement/C04-final-incident-probes.json"
+      ],
+      "sentinels": [
+        "xaut-tether:gap:control:bridge-meta:xaut-tether:3ae510e75943e08b5794:incidentState"
+      ],
+      "nextReviewTrigger": "Decode exact OFT state and actual executable owner/programdata/upgrade authority, pin mint/freeze and emergency state, and inspect exact history. Non-executable OFT state is not an inaccessible executable.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "INCIDENT_STATE:xaut-tether:b56e6f94297d2255216a",
+      "taskIds": [],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "C04 final exact-deployment incident investigation",
+      "evidence": [
+        "https://docs.usdt0.to/api/deployments",
+        "https://tonapi.io/v2/blockchain/accounts/EQA1R_LuQCLHlMgOo1S4G7Y7W1cd0FrAkbA10Zq7rddKxi9k",
+        "https://tonapi.io/v2/blockchain/accounts/EQCQ2f8ceBRwX8x0-LdZhHbWXzuVNvwTJymwYG8L6C5hf_5V",
+        "https://api.llama.fi/hacks",
+        "https://rekt.news/bitget-rekt",
+        "https://layerzero.network/blog/kelpdao-incident-statement"
+      ],
+      "rationale": "Both exact TON jetton master and OFT account APIs returned200 with active status, executable code and data. Their last transaction logicaltimes111180754000005 and111181047000003 and hashes are preserved in the probe record. Active is not unpaused. Source binding, exact masterchain/transaction pinned emergency-state decoding, complete controller authority graph and transaction history remain incomplete. Prior getter method errors cannot be interpreted as false. Common incident surfaces are not enough for a negative review. Terminal defer, not issuer nondisclosure or demonstrated incident.",
+      "changeRefs": [
+        "agents/2026-10-20-safety-refinement/C04-final-incident-probes.json"
+      ],
+      "sentinels": [
+        "xaut-tether:gap:control:bridge-meta:xaut-tether:b56e6f94297d2255216a:incidentState"
+      ],
+      "nextReviewTrigger": "Bind public TON code/data to reviewed source and decode actual emergency handlers/state with an exact chain pin and complete authority/history proof.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "INCIDENT_STATE:xaut-tether:f7f0bb9cb9a1774de726",
+      "taskIds": [],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "C04 final exact-deployment incident investigation",
+      "evidence": [
+        "https://docs.usdt0.to/api/deployments",
+        "https://api.hyperliquid.xyz/info",
+        "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/hypercore-less-than-greater-than-hyperevm-transfers",
+        "https://api.llama.fi/hacks",
+        "https://rekt.news/bitget-rekt",
+        "https://layerzero.network/blog/kelpdao-incident-statement"
+      ],
+      "rationale": "Exact native HyperCore tokenDetails request for0xfd61ec89811ba3cf2ae12d0ed8ef1afd returned200/nameXAUT0/deployer0xbb3791c5ede3eb0cfd3caa7b39de98d754cc14ca. Its184467440737.0955200195 pre-minted maximum and near-identical reported total are not economic circulating liabilities or proof of a bridge exploit. HyperCore identity is distinct from HyperEVM token/OFT/composer. The response has no complete historical/emergency-state pin; transport/composer authority and source-bound emergency/history closure remain incomplete. Common incident surfaces do not establish an exact breach or justify no-known-incident. Terminal defer; do not classify this public enumerable surface as issuer-undisclosed.",
+      "changeRefs": [
+        "agents/2026-10-20-safety-refinement/C04-final-incident-probes.json"
+      ],
+      "sentinels": [
+        "xaut-tether:gap:control:bridge-meta:xaut-tether:f7f0bb9cb9a1774de726:incidentState"
+      ],
+      "nextReviewTrigger": "Complete exact native-to-EVM transport/authority and emergency-history proof at a conserved pin; never substitute native pre-mint for runtime materiality.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:usdat-saturn",
+      "taskIds": [
+        "V9S-96d376a82f603afe",
+        "V9S-982db315369fae18",
+        "V9S-b1cf81b99637f842"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "C10 bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://docs.chain.link/ccip/directory/mainnet/token/USDat (retrieved 2026-10-21)",
+        "https://docs.chain.link/ccip/directory/mainnet/chain/mainnet (retrieved 2026-10-21)",
+        "https://docs.chain.link/ccip/directory/mainnet/chain/bsc-mainnet (retrieved 2026-10-21)",
+        "https://docs.chain.link/ccip/directory/mainnet/chain/monad-mainnet (retrieved 2026-10-21)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x408428bca0e24a25ac8baac1b70f64af257717c3 (retrieved 2026-10-21)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x2caafd3b4cf606220580c885bd2b448fb93dc03b (retrieved 2026-10-21)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x7bce1a3297604cafa601f05799b6ed98e8c01b7f (retrieved 2026-10-21)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9b9ec8e26955c034828bbd78e22ab258d983dcdb (retrieved 2026-10-21)",
+        "https://ethereum-rpc.publicnode.com (retrieved 2026-10-21)",
+        "https://bnb-mainnet.g.alchemy.com/v2/ (retrieved 2026-10-21)",
+        "https://rpc.monad.xyz (retrieved 2026-10-21)",
+        "https://sourcify.dev/server/v2/contract/143/0xf0237a1cb794ea830129966049ef99243082ff0c?fields=abi,sources (retrieved 2026-10-21)",
+        "https://monadscan.com/tx/0x5404536470291b447a020f36ed9b7034aca502031a5b8ac7aa3c5255678425f4 (retrieved 2026-10-21)"
+      ],
+      "rationale": "Final40-minute round materially resolves the former generic validator search: exact numbered/hash-checked Ethereum26238166, BNB128863060 and Monad115214364 identify current2.0 onramps, the entire router-accepted mixed legacy/current offramp inventory, each2.0 default resolver and its sole inbound CommitteeVerifier, and all six actual9-of-16 signature configurations. Current1.6 OCR commit F5/n16 and execution-transmitter configurations are retained; all six older1.2/1.5 CommitStore current digests match original historical signer ConfigSet events with16/F5. Current owner roles and emergency MCMS trees were enumerated, retaining10800s timelocks and real bypass reach. Added source-bound prose only; no uniform global threshold, human independence, numeric control upgrade, material share or fresh full execution certificate was invented. Terminal remaining prerequisite is exact complete representation SaturnTimelock non-enumerable role/execution-history and residual source/runtime/controller correspondence plus incident admission; this is not a finding that an enumerable public permission graph is inherently issuer-undisclosed. INFRA-BRIDGE acknowledged mixed2.0/legacy intake and that no USDat collector fix or materiality closure landed.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/usdat-saturn.json",
+        "agents/2026-10-20-safety-refinement/results/C10-round4-ccip-evidence.json",
+        "agents/2026-10-20-safety-refinement/results/C10.md"
+      ],
+      "sentinels": [],
+      "nextReviewTrigger": "Asset/source-intake owner obtains creation-bound complete current0xf0237a1cb794ea830129966049ef99243082ff0c role histories on BNB/Monad and residual exact controller/runtime execution certificate; INFRA-BRIDGE separately admits a conserving current native/representation/escrow/in-flight generation including BNB and all still-accepted ramp versions. Reopen on those concrete artifacts or2026-11-04; no repetitive generic16-operator search or fabricated share.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:usdat-saturn",
+      "taskIds": [
+        "V9G-4bb88e9855ccab45",
+        "V9G-3aa27994628d32c5",
+        "V9G-53de0fd40d4b9f0a",
+        "V9G-e389f5701781b1f7",
+        "V9G-16f69e4391f368aa",
+        "V9G-ecabffc32e1312ff",
+        "V9G-919b6f8ca293dc62",
+        "V9G-9fbdf45f9a276246"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "C10 bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://ccip.chain.link/status (retrieved 2026-10-21; hydrated browser observation2026-10-21T03:28:10Z)",
+        "https://api.llama.fi/hacks (retrieved 2026-10-21)",
+        "https://rekt.news/ (retrieved 2026-10-21; scoped search)",
+        "https://saturnlabs.substack.com/p/saturn-adopts-chainlink-ccip-following (retrieved 2026-10-20; re-searched2026-10-21)",
+        "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md (retrieved 2026-10-20; re-searched2026-10-21)",
+        "https://etherscan.io/address/0xa0de671eb84de9dee1d311d996d25c41f63a0d86 (retrieved 2026-10-21)",
+        "https://eth.blockscout.com/api/v2/transactions/0x98f2ceb40b3d3026a78c5efb7d133cbb90841dc285c9b2d8ac28721653ceee9f (retrieved 2026-10-21)",
+        "https://bscscan.com/address/0x904939a965edc2efbd44fd4db223f07680510c61 (retrieved 2026-10-21; HTTP403)",
+        "https://bscscan.com/address/0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef (retrieved 2026-10-21; HTTP403)",
+        "https://monadvision.com/address/0x8ab40e2dabcd24dcff0a06a68eb59990405270f0 (retrieved 2026-10-21; static reader lacked event history)",
+        "https://sourcify.dev/server/v2/contract/56/0x65458213bb2398f968ca1760b806956966b9adac?fields=abi,sources (retrieved 2026-10-21; HTTP404)",
+        "https://sourcify.dev/server/v2/contract/143/0x79EdA68D227eaA4B6431B123aa89f31F4bC70e5d?fields=abi,sources (retrieved 2026-10-21)",
+        "https://eth-mainnet.g.alchemy.com/v2/ (retrieved 2026-10-21)",
+        "https://bnb-mainnet.g.alchemy.com/v2/ (retrieved 2026-10-21)",
+        "https://rpc.monad.xyz (retrieved 2026-10-21)",
+        "https://raw.githubusercontent.com/SunWeb3Sec/DeFiHackLabs/main/src/test/2024-05/SATURN_exp.sol (retrieved 2026-10-21)",
+        "https://rekt.news/newmarkettrading-rekt/ (retrieved 2026-10-21)",
+        "https://gist.github.com/sgInnora/b70ad98327649ed4ab976a122f45e485 (retrieved 2026-10-21)"
+      ],
+      "rationale": "Final scoped research establishes current native/representation tokens unpaused, exact USDat/global RMN curses false, enabled observed token buckets and provider-reported four Ethereum/BNB-to/from-Monad2.0 lanes Operational; none is lifetime absence. Verified-ABI emergency/role/upgrade/rate event filters returned empty over exactly50000 Ethereum/BNB blocks and Monad's explicitly enforced100-block provider maximum. Original403/pruned-trie/413 failures and explicit successful archive/max-range recoveries are retained. Creation index anchors were recovered for all three pools and both remote tokens, but a BNB factory child-creation summary is not a raw child-creation receipt/trace. Exact researcher source binds the2024 SATURN exploit to different BNBtoken0x9bdf251435cbc6774c7796632e9c80b233055b93; ReKt NMT holder-wallet losses and Innora's0xd166sUSDat disclosure are separately scoped and not USDat CCIP compromise. Current BNB implementation slot and15589 executable-prefix bytes match verified Monad reference except each declared CBOR metadata suffix; this narrows source opacity without falsely claiming full-bytecode exact verification. The first October6 USDat role-grant operation was independently pinned Ready, not executed, with sole current pool mint/burn roles; the second schedule targets sUSDat and is excluded. Terminal source/history and exact scoped incident-admission prerequisites remain. No no-known-incident row or favorable incident state is authored, and no noncontemporaneous supply comparison becomes a deficit or financial-reconciliation certificate.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/usdat-saturn.json",
+        "agents/2026-10-20-safety-refinement/results/C10-round4-ccip-evidence.json",
+        "agents/2026-10-20-safety-refinement/results/C10-round4-status-browser.json",
+        "agents/2026-10-20-safety-refinement/results/C10.md"
+      ],
+      "sentinels": [],
+      "nextReviewTrigger": "Source/incident intake supplies authoritative BNB factory child-creation and residual exact-source/control-history artifacts and completes the exact scoped adverse-disposition review, using the recovered index anchors and explicit bounded event windows rather than restarting generic searches. A new whole-second UTC negative review may be authored only after its practical bar is met; it must not assert whole-book solvency, erase real Ready permission changes or clear unrelated controls. INFRA-BRIDGE separately owns conserving current materiality and accepted readback. Reopen on concrete artifacts or2026-11-04.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:hyperusdca-hyperithm:final-current-graph",
+      "taskIds": [
+        "V9G-73d4e138fe030b93"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "C18 bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://monadscan.com/block/115214295 (retrieved 2026-10-21; hash0x2dfbf260b323cd06bff7018cae91f578c389e4dd785750614385d9076667e26d; timestamp2026-10-21T03:05:20Z)",
+        "https://monadscan.com/address/0xcd85b66df1839f7a14ed112f639cb7db90dcac7a#code (retrieved 2026-10-21)",
+        "https://monadscan.com/address/0x41dd1bd32a1db1460e7253969d591132f75f74d6#code (retrieved 2026-10-21)",
+        "https://monadscan.com/address/0xf786154e56e5c88ce984800dea71b48ea4ffabfe#code (retrieved 2026-10-21)",
+        "https://api.etherscan.io/v2/api?chainid=143&module=logs&action=getLogs&address=0x2ad631f72fb16d91c4953a7f4260a97c2fe2f31e&fromBlock=0&toBlock=115214295&page=1&offset=1000 (retrieved 2026-10-21; Missing/Invalid API Key)"
+      ],
+      "rationale": "Terminal outcome of final40-minute pass: reject a higher-than45 oracle assessment, but defer the separate complete-actor certificate. Current seven-market census, all prior graph/round identities, six OCR owner/transmitter/config getters and exact latest ConfigSet events were recovered. Current ChainlinkSafe4of9 has ConfirmedTransactionModule managed by that same Safe; PT backup1of1 no modules/guard; SY upgrade owner3of5 no modules/guard. PT conversion is now fully traced to exact SY implementation returning constantONE over six-decimal USDat; its owner governance has a positively active default-admin EOA, not independent dollar valuation. Accountable globals joins both strategies to securityAdmin/owner/operationsAdmin Safe4b07 with threshold2. Midas AccessControl has active default-admin SafeB608 (threshold1), active manual-feed adminsD1E014/404686, and separate ProxyAdmin owner TimelockFC8 with172800-second delay; that delay does not constrain the direct feed-role grant path. Preserve original review starts and known adverse45. Exhaustive historical roles/scoped delegations and some enabled-module subgraphs are not certified: public Monad logs reject spans>100, Dwellir Monad header unavailable, unauthenticated Etherscan index rejects key; full role enumeration is not relabeled issuer-undisclosed. Private source accuracy and human custody remain external disclosure questions. No root closure or score uplift claimed.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/hyperusdca-hyperithm.json",
+        "agents/2026-10-20-safety-refinement/results/C18.md",
+        "agents/2026-10-20-safety-refinement/results/C18-final-hyper-graph.json",
+        "agents/2026-10-20-safety-refinement/results/C18-final-hyper-current-controllers.json",
+        "agents/2026-10-20-safety-refinement/results/C18-final-hyper-active-privileged-price-authorities.json",
+        "agents/2026-10-20-safety-refinement/results/C18-final-hyper-sy-source-graph.json",
+        "agents/2026-10-20-safety-refinement/results/C18-final-hyper-final-authority-bound.json"
+      ],
+      "sentinels": [
+        "hyperusdca-hyperithm:gap:economic-control:oracle::tier"
+      ],
+      "nextReviewTrigger": "Complete indexed grant/revoke/scoped-access history through the pinned state and source-bound enabled-module execution certificate; only then consider root cause reclassification. Any change to manual/loan mark authority or independent USDat-dollar/fallback topology triggers immediate reassessment. Known45 adverse constraint does not wait for optimistic actor enumeration.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:bbqusdc-steakhouse-v2:final-current-graph",
+      "taskIds": [
+        "V9G-7b6376b1d8e25381"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "C18 bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://etherscan.io/block/26238162 (retrieved 2026-10-21; hash0x9e4d978f601fb8740fdcec4336d17dfeeca506adefa0729ef9b7d5c8bfcafe41; timestamp2026-10-21T03:04:47Z)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9f983115741d0f7f2eae07831415057ad3de34d2 (retrieved 2026-10-21)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xa6d6950c9f177f1de7f7757fb33539e3ec60182a (retrieved 2026-10-21)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x84d4eaeb10f9e57b67622f667c6c13e22fa4b2b6 (retrieved 2026-10-21)",
+        "https://eth.blockscout.com/api/v2/transactions/0xb4033e32b836c261eb46517dcd7b14ec0b6f93f1070dd9d050d7a79d42f20c09 (retrieved 2026-10-21)",
+        "https://eth.blockscout.com/api/v2/transactions/0x99a5ba9fafc582f41435c5d8d83fde15553b7dc6764cc6002fe58a5a27420ea3 (retrieved 2026-10-21)",
+        "https://eth.blockscout.com/api/v2/addresses/0x84d4eaeb10f9e57b67622f667c6c13e22fa4b2b6/transactions (retrieved 2026-10-21)"
+      ],
+      "rationale": "Terminal final-pass outcome rejects an oracle-quality promotion and defers a full actor/freshness certificate. Current census is TEN nonzero markets, not eight: added both actual cbBTC branch/path identities, source/round/MetaOracle joins and LLTV86 with new applicability datedOctober21 (not admitted beforeOctober22). Preserve original8 review starts and their scoped kind reviews rather than falsifying a ten-branch certificate. Captured current old8 outer paths, all15 actual configured feed identities/rounds, Ojo900-secondTWAP vs6%-discount/synthetic timestamps, equity selectors and EAC joins, five external aggregator current OCR getters including actual TSLAbackup4D3, private NAV/settings and CDO owner/strategy/borrower identities. Sixteen available published-runtime literal correspondences match pinned code; not local compiler proof. ReUSD automation is disabled; live emergency updaterE888 has current role and the observed latest NAV came from force-update, bypassing ordinary deviation rejection. Refine that branch opaque45 to privileged-internal45 with evidence, not uplift. CDO borrowerC08F has empty code, not an inaccessible contract source. Remaining exhaustive role/config-event histories, inherited RedStone timestamp/operator detail and module subgraphs are still bounded certification work; no issuer-nondisclosure override or whole-feed certificate. PublicRPC403 was recovered via authenticated Dwellir; indexed topic422/filter429 and incomplete historical pagination remain honestly documented. No root sentinel or production closure asserted.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/bbqusdc-steakhouse-v2.json",
+        "agents/2026-10-20-safety-refinement/results/C18.md",
+        "agents/2026-10-20-safety-refinement/results/C18-final-bbq-ten-market-params.json",
+        "agents/2026-10-20-safety-refinement/results/C18-final-bbq-private-marks.json",
+        "agents/2026-10-20-safety-refinement/results/C18-final-bbq-nav-current-memberships.json",
+        "agents/2026-10-20-safety-refinement/results/C18-final-bbq-complete-configured-feed-rounds.json",
+        "agents/2026-10-20-safety-refinement/results/C18-final-bbq-runtime-correspondence.json",
+        "agents/2026-10-20-safety-refinement/results/C18-final-acquisition-and-NAV-provenance.json"
+      ],
+      "sentinels": [
+        "bbqusdc-steakhouse-v2:gap:economic-control:oracle",
+        "incomplete-oracle-liquidation-branch"
+      ],
+      "nextReviewTrigger": "Exact current ten-branch component admission after new-path date gate; complete role/configuration indexed history, RedStone source-data timestamp/upgrade-owner and enabled-module execution scope, then successful central feed-kind/readback. No replay may backdate October21 applicability into October20 or claim an eight-branch whole-book certificate.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:susn-noon",
+      "taskIds": [
+        "V9G-3aa8d4ea25f3c8f9",
+        "V9G-14e733f240dbf0e9",
+        "V9G-355ec8040dc1dd20",
+        "V9G-01f9cfb23843f99d",
+        "V9G-1e239686aac927ff",
+        "V9G-706834e96e7cd4cb",
+        "V9G-810a6e8f2fddd115",
+        "V9G-cf46c4b2ced8ddb8",
+        "V9G-62805e36821024d6",
+        "V9G-17251a07f0fb6bb5",
+        "V9G-d6674ea283849178",
+        "V9G-4fa4310a71f27cf8",
+        "V9G-af7da7345448e728",
+        "V9G-a1d6410bbd63c24b",
+        "V9G-47706c6064ae6387",
+        "V9G-be1dffcc1b86d19f",
+        "V9G-896f505cd075bd92",
+        "V9G-6de8b9f0b2dfb407",
+        "V9G-58e0f6e36c64342d",
+        "V9G-c19d05ddfd134f23",
+        "V9G-f51b889d45ed3271",
+        "V9G-6cd403bb0df07f16"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": "terminal-exact-source-and-runtime-prerequisite",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "C21 bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md (retrieved 2026-10-21)",
+        "https://api-ethereum-mainnet.n.dwellir.com (retrieved 2026-10-21)",
+        "https://api-zksync-era-mainnet-full.n.dwellir.com (retrieved 2026-10-21)",
+        "https://rpc.sophon.xyz (retrieved 2026-10-21)",
+        "https://api-hyperliquid-mainnet-evm.n.dwellir.com (retrieved 2026-10-21)",
+        "https://api-base-mainnet-archive.n.dwellir.com (retrieved 2026-10-21)",
+        "https://rpc.mainnet.citrea.xyz (retrieved 2026-10-21)",
+        "https://api-berachain-mainnet.n.dwellir.com (retrieved 2026-10-21)",
+        "https://rpc.tac.build (retrieved 2026-10-21)",
+        "https://api-starknet-mainnet.n.dwellir.com (retrieved 2026-10-21)",
+        "https://explorer.tac.build/api/v2/smart-contracts/0x36849808656f85eceb5fb6aebd8e4c1532b6cfc7 (retrieved 2026-10-21)",
+        "https://block-explorer-api.mainnet.zksync.io/api?module=contract&action=getsourcecode&address=0x8b9e886b6850615911c61a7cd10c9c6630d1a03d (retrieved 2026-10-21)",
+        "https://api-explorer.sophon.xyz/api?module=contract&action=getsourcecode&address=0xf280f30e0dbde661ce8e38acd658fc40f755ef80 (retrieved 2026-10-21)",
+        "https://forum.noon.capital/t/bridge-reconciliation-mechanism-process-overview-and-recovery-log/107 (retrieved 2026-10-21)",
+        "https://api.llama.fi/hacks (retrieved 2026-10-21)"
+      ],
+      "rationale": "Final-round terminal scoped defer, superseding the generic initial investigation disposition. Recovered numbered/hash-pinned current state for all nine catalogued deployments; exact source/ABI for both zkVM implementations; byte-for-byte runtime equality for Base/HyperEVM/Citrea/Berachain; current Safe owners/modules/guards, default-ISM module trees and configured-origin quorums, operational rate-limit buckets and LayerZero peers/libraries/receive-DVN settings. Authored seven previously absent bridge-control records, including four3-of-5Safe roots, TAC3-of-6Safe and separate TAC/Sophon single-EOA ProxyAdmin paths; zkSync/Sophon owner facts are now3-of-4Safe. Starknet is a Braavos account with one Stark signer and threshold0, not an independently established multisig. This is not a complete execution certificate: separate operational contracts, source-bound authorization/build proof, delegated/session paths and the Sui-directed OFT-instance binding remain public executable/source prerequisites, not inherently issuer-undisclosed. Current dead TAC/Sophon peers and1atomic-unit buckets, plus true EOA upgrade/admin reach, are positively established adverse facts whose asset materiality is not inferred. Exact Sophon source burn12728926841000000000000 versus reconciliation12728900000000000000000 leaves0.026841sUSN difference; recovery recipient was NoonSafe, not source sender. An exact indexed Ethereum Safe-to-source-sender transfer search through block26238168 returned no records; other payout paths are not excluded. Current issuer recovery log does not establish that residual/downstream completion. DefiLlama1313-entry response has no exact Noon/sUSN hit but two TAC chain/bridge incidents; generic tracker absence and quiet1000-block emergency queries do not justify five blanket no-incident reviews. Date-only new sidecar facts are2026-10-21, pending end-of-day admission; no backdating, global unsafe verdict, incident absence or production closure is claimed.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/susn-noon.json",
+        "agents/2026-10-20-safety-refinement/research/C21-susn-final-satellite-state.json",
+        "agents/2026-10-20-safety-refinement/research/C21-susn-final-source-addendum.json",
+        "agents/2026-10-20-safety-refinement/results/C21.md"
+      ],
+      "sentinels": [],
+      "nextReviewTrigger": "Central admission after2026-10-22T00:00:00Z for date-only facts; reopen exact scope on a bound Sui shared-OFT/CoinType/AdminCap packet, complete source-bound operational/DVN/Braavos-session execution certificate, or exact Sophon residual/refund/no-impact proof. Generic repeated issuer/tracker searching alone does not close these source/runtime obligations.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:susn-noon",
+      "taskIds": [
+        "V9G-941871149e70134d"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": "terminal-canonical-route-and-accounting-prerequisite",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "C21 bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://explorer.tac.build/api/v2/smart-contracts/0x6d1019bdbe1da163134aba821bbfc1ccaeb988a8 (retrieved 2026-10-21)",
+        "https://explorer.tac.build/api/v2/smart-contracts/0x36849808656f85eceb5fb6aebd8e4c1532b6cfc7 (retrieved 2026-10-21)",
+        "https://rpc.tac.build (retrieved 2026-10-21)",
+        "https://api-ethereum-mainnet.n.dwellir.com (retrieved 2026-10-21)",
+        "https://docs.noon.capital/2.-usdusn-and-usdsusn/cross-chain-interoperability/bridging-operations.md (retrieved 2026-10-21)"
+      ],
+      "rationale": "TAC local transport research is no longer unperformed: block27350483/hash0xe849509e1886763f6a8743193a57c65fecefa47d3ee7bad380cf53166f62ec31, exact verified implementation, complete filtered token mutation history and current peers prove a Hyperlane representation, owner3-of-6Safe, mailbox/default-ISM and a separate source/runtime-verified EOA-owned ProxyAdmin. Authored reviewed representation semantics rather than retain opaque transport identity. However local representation classification is not healthy end-to-end activation: Ethereum/Base/zkSync/HyperEVM current TAC sender mappings are0xdead and rate buckets are1atomic-unit per transaction; TAC still has536396304678010128210 atomic shares and outbound peer mappings. Genuine impaired known counterparty paths must not be graded as clean operational bridging, and deprecated status is not zero liability. Exact remaining recovery/channel lifecycle and conserved canonical escrow/in-flight linkage remain terminal issuer/accounting/runtime prerequisites. Sidecar date-only observation21 admits only after day-end; no selected-route or total-grade uplift is claimed.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/susn-noon.json",
+        "agents/2026-10-20-safety-refinement/research/C21-susn-final-satellite-state.json",
+        "agents/2026-10-20-safety-refinement/results/C21.md"
+      ],
+      "sentinels": [],
+      "nextReviewTrigger": "After date-only admission, re-review on issuer-provided deprecated TAC lifecycle/recovery documentation joined to exact transactions and a current conserving canonical escrow/pending attribution packet; no inferred zero or static share substitution.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_MATERIALITY:susn-noon",
+      "taskIds": [
+        "V9S-6999ea456c120902",
+        "V9S-fce8c85717d15b63",
+        "V9S-7de0d0516289ebaa",
+        "V9S-850bc1be455c0fbc",
+        "V9S-b2cf67a76ed6faf2",
+        "V9S-fa0baa9fa074dea3",
+        "V9S-bc7cd50366a1243a",
+        "V9S-5b3de0575c8b2a7c",
+        "V9S-323c7f676745a280",
+        "V9S-73ac78acffe1a2e1",
+        "V9S-5b2038d9bd66415f"
+      ],
+      "workType": "BRIDGE_MATERIALITY",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "deferState": "terminal-conserved-runtime-and-instance-binding-required",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "C21 bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md (retrieved 2026-10-21)",
+        "https://api-ethereum-mainnet.n.dwellir.com (retrieved 2026-10-21)",
+        "https://api-sui-mainnet-full.n.dwellir.com (retrieved 2026-10-21)",
+        "https://docs.layerzero.network/v2/developers/evm/technical-reference/endpoints (retrieved 2026-10-21)"
+      ],
+      "rationale": "The fresh nine-deployment quantities are observations, not independent liabilities or conserved route shares. Exact Ethereum PeerSet history and current peers(30378) expose an additional Sui-directed configured boundary0xa356ca2010fcdf44d6cecfcecf18b73c32188d361e39dff3a96ac8de0dec7b1b omitted from the nine-token registry. Sui object read identifies an immutable generic OFT package version1/digest8MxodDF8Cyb7Z3xrQL3u4RRVvtjEdkiADBdbRmvEFEty, not an exact sUSN CoinType or shared-OFT instance. Querying its OFTInitedEvent index fails with a referenced-transaction-events error. Therefore no tenth coin deployment, active transfer path, supply, zero or materiality is inferred. This new source/instance-binding boundary must be resolved before claiming exhaustive native/remote/escrow/pending scope. Independently conserved current quantities including deprecated TAC/Sophon and the exact incident residual remain INFRA-BRIDGE/producer admission work; no sidecar material share or native-label workaround is authored.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/susn-noon.json",
+        "agents/2026-10-20-safety-refinement/research/C21-susn-final-satellite-state.json",
+        "agents/2026-10-20-safety-refinement/research/C21-susn-final-source-addendum.json",
+        "agents/2026-10-20-safety-refinement/results/C21.md"
+      ],
+      "sentinels": [],
+      "nextReviewTrigger": "Obtain a recoverable exact Sui OFT-instance/CoinType/AdminCap and lifecycle binding, then one admitted conserving canonical-native/representation/escrow/pending capture including deprecated routes; otherwise retain runtime-bridge-materiality-unavailable and selected-bridge-route-unresolved.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:sfrax-frax",
+      "taskIds": [
+        "V9S-7069c60be8e25176"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "FD01 bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://raw.githubusercontent.com/FraxFinance/frax-oft-solana/main/deployments/solana-mainnet/sFraxOFT.json (retrieved 2026-10-21)",
+        "https://raw.githubusercontent.com/FraxFinance/frax-oft-solana/main/programs/oft/src/state/oft.rs (retrieved 2026-10-21)",
+        "https://raw.githubusercontent.com/FraxFinance/frax-oft-solana/main/programs/oft/src/state/peer.rs (retrieved 2026-10-21)",
+        "https://raw.githubusercontent.com/FraxFinance/frax-oft-solana/main/sfrax-layerzero.config.ts (retrieved 2026-10-21)",
+        "https://ethereum-rpc.publicnode.com (retrieved 2026-10-21)",
+        "https://solana-mainnet.g.alchemy.com/v2/ (retrieved 2026-10-21)",
+        "https://raw.githubusercontent.com/FraxFinance/frax-solidity/master/src/types/constants.ts (retrieved 2026-10-21)",
+        "https://sourcify.dev/server/v2/contract/42161/0xe3b3fe7bca19ca77ad877a5bebab186becfad906?fields=all (retrieved 2026-10-21)",
+        "https://sourcify.dev/server/v2/contract/56/0xa63f56985f9c7f3bc9ffc5685535649e0c1a55f3?fields=all (retrieved 2026-10-21)"
+      ],
+      "rationale": "Final research round closes an actual identity/census omission, not the complete bridge denominator. Ethereum26238161 peers(30168) from the adapter over native legacy sFRAX encodes the official OftConfig3BcysJF4fQx86fVTDTBGNpZyRpeMyTF8XsuvPHJQuP3V. Official legacy deployment and exact-slot459474896 Account Archive records bind mintDnVyztLHnDyTqL3xfPYF9Uqpgrhcxphn6e31sVAwtg6K, decimals9, positive rawSupply117001, programDBQQ2NrApPx8uarKmBtZGTg6jsPk4ya2Mi2hRKZvV2tY and reciprocal Ethereum peer. Added the mint to owned contracts and a source-bound explicitly unresolved route; no source/executable, DVN, control-independence, incident, materiality or favorable route credit. New route date is honestly2026-10-21, not backdated. Also recorded exact reciprocal Fraxferry pairs, native/remote inventories and single-Safe minter-array facts for Arbitrum/BSC/Optimism while preserving unknown semantics and old route review starts. The eight-remote inventory was incomplete; the complete economic certificate is still deferred.",
+      "changeRefs": [
+        "shared/data/stablecoins/coins/sfrax-frax.json",
+        "shared/data/stablecoins/domains/risk-review/sfrax-frax.json",
+        "agents/2026-10-20-safety-refinement/results/FD01-final-economic-census.json",
+        "agents/2026-10-20-safety-refinement/results/FD01.md"
+      ],
+      "sentinels": [],
+      "nextReviewTrigger": "Central catalog admission at the true date-only boundary2026-10-22T00:00:00Z, complete source-bound Solana execution/security review and a fresh conserving runtime generation; otherwise re-review2026-11-20. Identity enrollment itself is not a bridge-share closure.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "CHAIN_SUPPLY:sfrax-frax",
+      "taskIds": [
+        "V9G-76da3c839750c530"
+      ],
+      "workType": "CHAIN_SUPPLY",
+      "resolutionMode": "producer-runtime",
+      "decision": "reject",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "FD01 bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://raw.githubusercontent.com/FraxFinance/frax-solidity/master/src/types/constants.ts (retrieved 2026-10-21)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x2453b1fbd17cea069a31c9d16a27f4f93a85cc0d (retrieved 2026-10-21)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe3e7f354ac948ceba925181c81618d7c9b3da8c9 (retrieved 2026-10-21)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9694dcf5b6ccf6216b05fe64945f62603e2d2367 (retrieved 2026-10-21)",
+        "https://ethereum-rpc.publicnode.com (retrieved 2026-10-21)",
+        "https://arb1.arbitrum.io/rpc (retrieved 2026-10-21)",
+        "https://bnb-mainnet.g.alchemy.com/v2/ (retrieved 2026-10-21)",
+        "https://mainnet.optimism.io (retrieved 2026-10-21)",
+        "https://rpc.frax.com (retrieved 2026-10-21)",
+        "https://solana-mainnet.g.alchemy.com/v2/ (retrieved 2026-10-21)",
+        "https://gov.frax.finance/t/fip-419-launch-frax-usd-provide-upgrade-path-to-frax-stablecoin/3543 (retrieved 2026-10-21)",
+        "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698 (retrieved 2026-10-21)"
+      ],
+      "rationale": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required: reject the unsupported favorable premise that subtracting the eight remote gross totalSupply stocks from native Ethereum supply proves a current conserved holder allocation. No producer edit or source pin renewal was performed by FD01. The existing configured observer omits the now-proven positive Solana limb. Canonical Arbitrum/BSC/OP stocks30000/100000/50000 have pre-funded ferry inventories23865.63616174/99520.31530988/49456.97109388 and independently governor-Safe mint reach; their entire gross stocks are not holder float. At Ethereum26238161 the StandardBridge still holds and maps23366933.887958826436962586 legacy native shares against fc08, while current Fraxtal42870613 fc08 l1Token/remoteToken is new sfrxUSD cf62f905562626cfcdd2261162a51fd02fc9c5b6, not native sFRAX A663. Migration proposals describe upgrades and later separated books, not an exact current residual-claim reconciliation. Current per-contract quantities are observed, but neither arbitrary native+remote summation nor gross native-minus-remote reallocation is an admitted economic denominator. No measured reserve loss, stranded-fund verdict, zero residual, manual circulating override or material percentage is inferred.",
+      "changeRefs": [
+        "shared/data/stablecoins/coins/sfrax-frax.json",
+        "shared/data/stablecoins/domains/risk-review/sfrax-frax.json",
+        "agents/2026-10-20-safety-refinement/results/FD01-final-economic-census.json",
+        "agents/2026-10-20-safety-refinement/results/FD01-final-ferry-cancellation-census.json",
+        "agents/2026-10-20-safety-refinement/results/FD01.md"
+      ],
+      "sentinels": [],
+      "nextReviewTrigger": "INFRA-PRODUCER/INFRA-BRIDGE produce and admit an exact mixed ferry-inventory/OFT/native/migration-residual partition including Solana9/EVM18 units and current request binding, supported by a source-bound migration-residual lifecycle certificate; otherwise2026-11-20. Preserve null evaluated supply until admission.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "WRAPPER_ALLOCATION:sfrax-frax",
+      "taskIds": [
+        "V9G-1beed0e3c295cf03",
+        "V9G-aeb956f391fc2baf"
+      ],
+      "workType": "WRAPPER_ALLOCATION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "FD01 bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://raw.githubusercontent.com/FraxFinance/frax-solidity/master/src/types/constants.ts (retrieved 2026-10-21)",
+        "https://raw.githubusercontent.com/FraxFinance/frax-oft-solana/main/deployments/solana-mainnet/sFraxOFT.json (retrieved 2026-10-21)",
+        "https://raw.githubusercontent.com/FraxFinance/frax-oft-solana/main/programs/oft/src/state/oft.rs (retrieved 2026-10-21)",
+        "https://raw.githubusercontent.com/FraxFinance/frax-oft-solana/main/programs/oft/src/state/peer.rs (retrieved 2026-10-21)",
+        "https://verify.osec.io/status/DBQQ2NrApPx8uarKmBtZGTg6jsPk4ya2Mi2hRKZvV2tY (retrieved 2026-10-21)",
+        "https://raw.githubusercontent.com/FraxFinance/frax-oft-solana/main/README.md (retrieved 2026-10-21)",
+        "https://sourcify.dev/server/v2/contract/43114/0x3405e88af759992937b84e58f2fe691ef0eea320?fields=all (retrieved 2026-10-21)",
+        "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x3405e88af759992937b84e58f2fe691ef0eea320 (retrieved 2026-10-21)",
+        "https://ipfs.io/ipfs/QmWfFDti4GjrUbDieFCYRK97ym51NhDjySjHqrNoCjQdAU (retrieved 2026-10-21)",
+        "https://facts.frax.finance (retrieved 2026-10-21)",
+        "https://api.frax.finance/v2/frax/sfrax/summary/latest (retrieved 2026-10-21)",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest (retrieved 2026-10-21)",
+        "https://api.frax.finance/v2/fraxferry/ferry/fraxferry_v2__ethereum_fraxtal__sFRAX (retrieved 2026-10-21)"
+      ],
+      "rationale": "Final round terminal researched deferral with a concrete expanded accounting witness packet, not a blanket issuer-opacity label. Recovered nine EVM exact-pin supplies/runtime hashes, four canonical minter-array bounds, five reciprocal ferry pairs, every observed execution tail and source-tail hash, all275 current destination cancellation flags, legacy LayerZero peer reads and the omitted Solana mint/config/program/executable-account/reciprocal-peer state at an exact finalized slot. All observed ferry executeIndex values equal batch counts and tails cover counterpart transaction counts; no current cancellation flag is set. These facts do not prove historical payouts, complete arbitrary owner funding, LayerZero pending-message conservation or the migration-residual holder claim. Solana program identity and allocated payload are observed, but OtterSec reports unverified/no matching commit or hash; the official deployment JSON and generic build README supply no exact source-to-deployed-build manifest. Avalanche source remains unavailable through Routescan, Sourcify and exact onchain metadata CID recovery (HTTP429/service-worker responses, timeout, payment-required and browser security challenge); zero observed supply is not an absence-of-future-authority proof. Named terminal prerequisites are source/build intake, the current migrated-escrow lifecycle/claim join and a conserving mixed-architecture runtime certificate. Previously researched holder legal nondisclosures remain narrowly C; no whole-book no-reuse/custody credit, issuer-negative incident claim or zero unknown share is authored.",
+      "changeRefs": [
+        "shared/data/stablecoins/coins/sfrax-frax.json",
+        "shared/data/stablecoins/domains/risk-review/sfrax-frax.json",
+        "agents/2026-10-20-safety-refinement/results/FD01-final-economic-census.json",
+        "agents/2026-10-20-safety-refinement/results/FD01-final-ferry-cancellation-census.json",
+        "agents/2026-10-20-safety-refinement/results/FD01-final-issuer-accounting-surfaces.json",
+        "agents/2026-10-20-safety-refinement/results/FD01.md"
+      ],
+      "sentinels": [],
+      "nextReviewTrigger": "Reopen on exact Avalanche metadata/build recovery, a source-to-runtime manifest for DBQQ last deployment284582996, issuer/migration-residual claim reconciliation, or a fresh complete runtime partition/unwind certificate; otherwise2026-11-20. Do not clear wrapper custody/reuse/measuredUnwind fallbacks from this partial research packet.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "CHAIN_SUPPLY:sfrax-frax",
+      "taskIds": [
+        "V9G-76da3c839750c530"
+      ],
+      "workType": "CHAIN_SUPPLY",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "FD01 bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://raw.githubusercontent.com/FraxFinance/frax-oft-solana/main/deployments/solana-mainnet/sFraxOFT.json (retrieved 2026-10-21)",
+        "https://ethereum-rpc.publicnode.com (retrieved 2026-10-21)",
+        "https://solana-mainnet.g.alchemy.com/v2/ (retrieved 2026-10-21)"
+      ],
+      "rationale": "Orchestrator-directed admission correction, superseding the final-round proposal to enroll Solana in contracts immediately. Main reports check:stablecoin-data rejects sfrax-frax because it needs one unambiguous supported onchain supply contract, and the targeted complete-partition test fails: sync would publish no sFRAX supply. These failures are accepted as ground truth and were not rerun. Removed only the newly added Solana contracts row, restoring the prior nine-EVM contract roster. The independently evidenced positive legacy Solana mint remains truthfully documented in the unresolved risk-review route and retained research/results. Its absence from contracts is an explicit infrastructure admission prerequisite, not a claim that the mint does not exist or has zero supply. No source date, raw quantity, adverse control fact or uncertainty was weakened.",
+      "changeRefs": [
+        "shared/data/stablecoins/coins/sfrax-frax.json",
+        "shared/data/stablecoins/domains/risk-review/sfrax-frax.json",
+        "agents/2026-10-20-safety-refinement/results/FD01.md"
+      ],
+      "sentinels": [],
+      "nextReviewTrigger": "INFRA-PRODUCER adds supported exact-slot Solana leg handling to the complete sFRAX supply roster/probe and the orchestrator admits a complete conserving generation; then re-enroll the proven mint in contracts. Otherwise re-review2026-11-20. Never enroll it first and make sync withhold all sFRAX supply.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "CHAIN_SUPPLY:sfrax-frax",
+      "taskIds": [
+        "V9G-76da3c839750c530"
+      ],
+      "workType": "CHAIN_SUPPLY",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "FD01 bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://raw.githubusercontent.com/FraxFinance/frax-oft-solana/main/deployments/solana-mainnet/sFraxOFT.json (retrieved 2026-10-21)",
+        "https://ethereum-rpc.publicnode.com (retrieved 2026-10-21)",
+        "https://solana-mainnet.g.alchemy.com/v2/ (retrieved 2026-10-21)"
+      ],
+      "rationale": "Superseding admission ruling relayed by INFRA-PRODUCER from Main: restore the independently verified Solana deployment in contracts while the producer/path/test/documentation owner fixes admission and preserves fail-closed supply pending the complete native-Solana/ferry/migrated-Fraxtal-escrow/protocol-inventory perimeter. Restored the exact source-bound mintDnVyztLHnDyTqL3xfPYF9Uqpgrhcxphn6e31sVAwtg6K with9 decimals; kept the unresolved risk-review route and all positive/negative numeric observations unchanged. The earlier temporary removal and reported failures remain historical ledger provenance, not the final intended catalog state. Registration now reflects deployment truth; it is not a conserving supply certificate or a claim that the producer fixes have passed. No supply, market-cap, material-share or grade credit is authored.",
+      "changeRefs": [
+        "shared/data/stablecoins/coins/sfrax-frax.json",
+        "agents/2026-10-20-safety-refinement/results/FD01.md"
+      ],
+      "sentinels": [],
+      "nextReviewTrigger": "INFRA-PRODUCER lands and centrally verifies the owned admission/path changes; a fresh conserving native-Solana/ferry/OFT/migration-residual/protocol-inventory generation then establishes supported current supply. Until then preserve fail-closed unavailable supply. Otherwise re-review2026-11-20.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "CHAIN_SUPPLY:sfrax-frax",
+      "taskIds": [
+        "V9G-76da3c839750c530"
+      ],
+      "workType": "CHAIN_SUPPLY",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "FD01 bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://raw.githubusercontent.com/FraxFinance/frax-oft-solana/main/deployments/solana-mainnet/sFraxOFT.json (retrieved 2026-10-21)",
+        "https://api.frax.finance/v2/frax/balance-sheet/latest (retrieved 2026-10-21)",
+        "https://ethereum-rpc.publicnode.com (retrieved 2026-10-21)",
+        "https://solana-mainnet.g.alchemy.com/v2/ (retrieved 2026-10-21)"
+      ],
+      "rationale": "Superseding producer handoff: the prior deferred-enrollment and pending-refusal-implementation premises are retired. Verified Solana identity remains registered, and INFRA-PRODUCER implemented an explicit economic-float-unreconciled hold with onchain-supply-withheld publication, rather than hiding the deployment or permitting the unsupported gross-supply allocation. FD01 read the configured hold and updated producer guide/results. INFRA-PRODUCER reports246/246 Main-authorized focused tests, catalog validation and Worker typecheck passed; these are peer-reported checks, not checks exercised by FD01 or proof of accepted production readback. The implemented path refuses aggregate and single-contract quantity reads before RPC and fences restored/provider/main/fallback/detail/history supply recovery; intended publication is empty aggregate buckets and null current values for all ten known chains, never zero. The economic denominator, migration/holder-claim join and canonical supply-dependent unwind remain unresolved. This deferral now concerns a complete conserving economic certificate and fresh admitted generation, not basic deployment enrollment or the already-implemented publication fence.",
+      "changeRefs": [
+        "agents/2026-10-20-safety-refinement/results/FD01.md",
+        "agents/2026-10-20-safety-refinement/results/INFRA-PRODUCER.md",
+        "agents/2026-10-20-safety-refinement/guides/producer-inputs.md"
+      ],
+      "sentinels": [],
+      "nextReviewTrigger": "Admit a reviewed native/Solana/remote, prefunded-ferry, OFT/StandardBridge escrow, pending/migrated-holder and protocol-owned/encumbered-inventory conservation certificate with a successful fresh producer generation; only then remove economic-float-unreconciled. Until then retain registered identity and explicit unavailable supply. Otherwise re-review2026-11-20.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:alusd-alchemix",
+      "taskIds": [
+        "V9G-aa9c7d751ef05a49"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "INFRA-ALUSD bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://docs.alchemix.fi/dev/contracts/ethereum (retrieved 2026-10-21)",
+        "https://docs.alchemix.fi/dev/contracts/arbitrum (retrieved 2026-10-21)",
+        "https://docs.alchemix.fi/dev/contracts/optimism (retrieved 2026-10-21)",
+        "https://docs.alchemix.fi/user/concepts/myt-and-yield (retrieved 2026-10-21)",
+        "https://docs.alchemix.fi/user/v3-migration (retrieved 2026-10-21)",
+        "https://docs.alchemix.fi/user/safety/risk-considerations#the-alchemix-bridge (retrieved 2026-10-21)",
+        "https://docs.alchemix.fi/dev/alchemist/alchemist-contract (retrieved 2026-10-21)",
+        "https://docs.alchemix.fi/dev/transmuter/transmuter-contract (retrieved 2026-10-21)",
+        "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemix-on-l2 (retrieved 2026-10-21)",
+        "https://github.com/alchemix-finance/deployments/tree/cd0740cf897deda5e4afc63a835f660271a3d91b (retrieved 2026-10-21)",
+        "https://ethereum-rpc.publicnode.com (retrieved 2026-10-21; pinned block 26237866, hash 0xb0062e276dce948dc5d4e65a0807685b5c2380c0eae7e6348f7ad5fd31f5ad3a)",
+        "https://arb1.arbitrum.io/rpc (retrieved 2026-10-21; pinned block 516777760, hash 0x62686d6df5c779db5ff4c0c4790332aed347119e48a1ed5fc6383a285e395238)",
+        "https://mainnet.optimism.io (retrieved 2026-10-21; pinned block 158474755, hash 0x794b390eceac442df905b7c51a2648271a706addb775775d404c053a5135f7a0)",
+        "https://api-ethereum-mainnet-erigon.n.dwellir.com (retrieved 2026-10-21; same pinned Ethereum legacy custody census)",
+        "https://rpc.linea.build (retrieved 2026-10-21; pinned candidate block 32380520, hash 0xd0ec159bca46d834ff44033ad7ac0a887c03533a5458044bd64c2525deb372da)"
+      ],
+      "rationale": "Recovered all eight currently enumerated V3 MYT strategy values at finalized Ethereum/Arbitrum/Optimism pins, but these are not the whole alUSD beneficial reserve and liability book. Ethereum frozen V2 activeBalance accounting remains positive for fourteen tokens while actual custody is zero for eleven and positive for three, and the old buffer retains four positive underlying wallets. Migration offsets, legacy/AMO/pending holder claims and mixed native/lockbox/remote/in-flight liabilities are not yet reconciled. A positive Linea deployment candidate outside the catalog also needs identity and perimeter review. Full MYT NAV includes other holders and rate-capped undistributed assets, so neither totalAssets nor USDC denomination can substitute for alUSD-owned reserves. The permitted incomplete-work fallback is a precise observer/failure/test specification with retained primary receipts and no partial runtime declaration, registry entry, corpus exemption or config cutover. This is an infrastructure/research blocker, not a measured shortfall or terminal issuer opacity.",
+      "changeRefs": [
+        "docs/process/live-reserves-appendix.md",
+        "agents/2026-10-20-safety-refinement/results/INFRA-ALUSD.md"
+      ],
+      "sentinels": [
+        "alusd-alchemix:gap:reserve-composition",
+        "missing-reserve-composition"
+      ],
+      "nextReviewTrigger": "Reviewed conserving post-migration V2/V3/Transmuter/AMO and complete native/represented/pending bridge perimeter plus full pinned success fixture; checkpoint 2026-11-01. Production closure additionally requires a tested complete adapter, deployment, successful fresh reserve cycle and accepted current-config capture/replay.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:slvon-ondo",
+      "taskIds": [
+        "V9G-6bf67f6793db225d",
+        "V9G-fe56991d20dbae1e",
+        "V9G-095adb236a7778e6",
+        "V9G-c5a7aba19269df39",
+        "V9G-b75ddb2d383e8c2c",
+        "V9G-a1ef9f3c689dbf1b"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "NR3 bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://verify.osec.io/status/XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm (retrieved 2026-10-21)",
+        "https://verify.osec.io/job/80f5742f-fdcb-4a6d-b8b4-aa6aeda0d824 (retrieved 2026-10-21)",
+        "https://sourcify.dev/server/v2/contract/56/0x4d4e562d6882dc523b8d629d2e9df9230b699933?fields=compilation,sources,runtimeBytecode (retrieved 2026-10-21)",
+        "https://sourcify.dev/server/v2/contract/56/0x72c697d72beb419152ed457b9f1eee29c12e0ccb?fields=compilation,sources,runtimeBytecode (retrieved 2026-10-21)",
+        "https://hyperevmscan.io/address/0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d#code (retrieved 2026-10-21)",
+        "https://hyperevmscan.io/address/0xe3153764ab2a0a928a59c3805503b2ac56b802a3#code (retrieved 2026-10-21)",
+        "https://docs.squads.so/main/development/reference/accounts.md (retrieved 2026-10-21)",
+        "https://layerzero.network/blog/layerzero-labs-kelpdao-incident-report (retrieved 2026-10-21)",
+        "https://x.com/ilblackdragon/status/2105686871200366663 (retrieved 2026-10-21)",
+        "https://docs.ondo.finance/tools/ondo-bridge.md (retrieved 2026-10-20)",
+        "https://ondo.finance/blog/ondo-security-philosophy (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xbc6d5c103a3f586e68bd475942a49d041b171c3e (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x58d73026c64da97ce858766384477d2e8775e9ec (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xff2baba46df92919705e60120c477ae5b7341eb3 (retrieved 2026-10-20)",
+        "https://ethereum-rpc.publicnode.com (retrieved 2026-10-20)",
+        "https://api.llama.fi/hacks (retrieved 2026-10-20)",
+        "https://ondo.finance/blog (retrieved 2026-10-20)"
+      ],
+      "rationale": "Final round supersedes Round3 public-research status. Ethereum26238146/BSC128863032/HyperEVM49100165 enumerate every declared registrar/timelock role and Safe/module/guard/fallback/signer path: PAUSER1-of9, UNPAUSER/proposer4-of7, external admin5-of9, named executor/canceller EOA, with source-bound mutable roles/delay and arbitrary root calls preserved. Exact Solana459474170 independently matches current GM/Squads ELF to completed source builds and exact verification-PDA recipes; vendor Squads requester trusted:false is separate from matching immutable code. Finalized parent152/SpendingLimits0 discovery is followed by exact archive of all76 proposals. Stale ConfigTx3 is barred; VaultTx35 is fixed sanity-admin revocation with a currently null role PDA, retained reactivatable. Added partial upgrade-vault execution scope. Remaining mutable future CPI target-domain admission is a named owner-methodology prerequisite because conservative-maximal domains currently admit EVM CALL only; conserving complete liabilities remain runtime-owned. Human custody and other-chain incident intake remain separately unresolved. All named public permission/build/current-bypass research is completed; no complete-scope, tier or central fact closure is claimed.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/mint-authority/slvon-ondo.json",
+        "shared/data/stablecoins/domains/risk-review/slvon-ondo.json",
+        "agents/2026-10-20-safety-refinement/fragments/NR3-1.json",
+        "agents/2026-10-20-safety-refinement/evidence/NR3/final-permission-and-executable-observations.json"
+      ],
+      "sentinels": [
+        "slvon-ondo:gap:control:bridge-meta:slvon-ondo:0fecd7f73c4d55e292f7:materialSupplyShare",
+        "unresolved-control-identity",
+        "slvon-ondo:gap:control:bridge-meta:slvon-ondo:5c2cf9c0b3dd842f9f2c:incidentState",
+        "slvon-ondo:gap:control:bridge-meta:slvon-ondo:e3832d5b78815b0a9c35:incidentState",
+        "slvon-ondo:gap:deployment-control:bridge-meta:slvon-ondo:5c2cf9c0b3dd842f9f2c",
+        "slvon-ondo:gap:deployment-control:bridge-meta:slvon-ondo:e3832d5b78815b0a9c35",
+        "slvon-ondo:gap:deployment-controls"
+      ],
+      "nextReviewTrigger": "Central partial-scope admission/readback; owner ruling on a conservative Solana CPI envelope; conserving liabilities, remaining incident-history intake and exact-account custody disclosure. Otherwise review2026-11-20; retain original starts/pins.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:slvon-ondo",
+      "taskIds": [
+        "V9G-97d0e40ea0a577ad"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "NR3 bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1 (retrieved 2026-10-21)",
+        "https://sourcify.dev/server/v2/contract/56/0x8860bbfc7a83e4788a981f4e9f30878331413b26?fields=compilation,sources,runtimeBytecode (retrieved 2026-10-21)",
+        "https://hyperevmscan.io/address/0x6253fbc5bcf4f49c80745694366f05d6c7be0e83#code (retrieved 2026-10-21)",
+        "https://sourcify.dev/server/v2/contract/56/0x72c697d72beb419152ed457b9f1eee29c12e0ccb?fields=compilation,sources,runtimeBytecode (retrieved 2026-10-21)",
+        "https://hyperevmscan.io/address/0xe3153764ab2a0a928a59c3805503b2ac56b802a3#code (retrieved 2026-10-21)",
+        "https://hyperevmscan.io/address/0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d#code (retrieved 2026-10-21)",
+        "https://docs.ondo.finance/tools/ondo-bridge.md (retrieved 2026-10-20)",
+        "https://ondo.finance/blog/ondo-security-philosophy (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xbc6d5c103a3f586e68bd475942a49d041b171c3e (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x58d73026c64da97ce858766384477d2e8775e9ec (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xff2baba46df92919705e60120c477ae5b7341eb3 (retrieved 2026-10-20)",
+        "https://ethereum-rpc.publicnode.com (retrieved 2026-10-20)",
+        "https://api.llama.fi/hacks (retrieved 2026-10-20)",
+        "https://ondo.finance/blog (retrieved 2026-10-20)"
+      ],
+      "rationale": "Final exact current source/pin census resolves all declared registrar PAUSER/UNPAUSER and timelock admin/proposer/executor/canceller paths, including Safe owners, complete empty module pages, guards, fallback handlers and signer code classes. Registrar pause gates registration only. Preserve root arbitrary calls, direct role grants and mutable delay/limits; reject immutable-cap and exclusive bounded-controller credit. No generic public registrar/timelock search remains. Conserved liability materiality and remaining exact incident history are external runtime/source intake; native Solana partial scope records exact builds/current bypass census and the distinct EVM-only maximal-domain methodology boundary. Human signer/DVN custody remains genuinely undisclosed; no tier promotion.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/slvon-ondo.json",
+        "agents/2026-10-20-safety-refinement/fragments/NR3-1.json"
+      ],
+      "sentinels": [
+        "slvon-ondo:gap:economic-control:bridge",
+        "missing-bridge-routes"
+      ],
+      "nextReviewTrigger": "Conserving bridge/liability generation, remaining incident-history intake and exact-account custody disclosure; central authority readback. Otherwise review2026-11-20; no clock renewal.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:iauon-ondo",
+      "taskIds": [
+        "V9G-1436b65ea64b2495",
+        "V9G-018a7ca50e6cbd00",
+        "V9G-fdc83c4607bbb64c",
+        "V9G-c5fd45643bd02770",
+        "V9G-b1a5a67b0fca5adf",
+        "V9G-231ff8634d25fc7d"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "NR3 bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://verify.osec.io/status/XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm (retrieved 2026-10-21)",
+        "https://verify.osec.io/job/80f5742f-fdcb-4a6d-b8b4-aa6aeda0d824 (retrieved 2026-10-21)",
+        "https://sourcify.dev/server/v2/contract/56/0x4d4e562d6882dc523b8d629d2e9df9230b699933?fields=compilation,sources,runtimeBytecode (retrieved 2026-10-21)",
+        "https://sourcify.dev/server/v2/contract/56/0x72c697d72beb419152ed457b9f1eee29c12e0ccb?fields=compilation,sources,runtimeBytecode (retrieved 2026-10-21)",
+        "https://hyperevmscan.io/address/0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d#code (retrieved 2026-10-21)",
+        "https://hyperevmscan.io/address/0xe3153764ab2a0a928a59c3805503b2ac56b802a3#code (retrieved 2026-10-21)",
+        "https://docs.squads.so/main/development/reference/accounts.md (retrieved 2026-10-21)",
+        "https://layerzero.network/blog/layerzero-labs-kelpdao-incident-report (retrieved 2026-10-21)",
+        "https://x.com/ilblackdragon/status/2105686871200366663 (retrieved 2026-10-21)",
+        "https://docs.ondo.finance/tools/ondo-bridge.md (retrieved 2026-10-20)",
+        "https://ondo.finance/blog/ondo-security-philosophy (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xbc6d5c103a3f586e68bd475942a49d041b171c3e (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x58d73026c64da97ce858766384477d2e8775e9ec (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xff2baba46df92919705e60120c477ae5b7341eb3 (retrieved 2026-10-20)",
+        "https://ethereum-rpc.publicnode.com (retrieved 2026-10-20)",
+        "https://api.llama.fi/hacks (retrieved 2026-10-20)",
+        "https://ondo.finance/blog (retrieved 2026-10-20)"
+      ],
+      "rationale": "Final round completes IAUon's named public research. Ethereum26238146/BSC128863032/HyperEVM49100165 fully enumerate declared registrar roles and timelock/Safe paths; source-backed PAUSER1-of9, UNPAUSER/proposer4-of7, external admin5-of9, named executor/canceller EOA and mutable role/delay/arbitrary-call powers are preserved. Exact Solana459474170 current ELF matches completed GM/Squads source builds plus exact verification-PDA recipes; immutable Squads vendor requester trusted:false is disclosed separately from byte correspondence. Finalized parent152/SpendingLimits0 census plus exact archive of all76 proposals closes current bypass inventory. Stale ConfigTx3 is barred; VaultTx35 is only fixed sanity-admin revocation with currently null role PDA, retained reactivatable. Added partial native upgrade scope and corrected the stale summary calling the proven vault a bare system account. Future arbitrary CPI is not a finite allowlist: complete conservative-envelope admission is an owner methodology prerequisite under the existing EVM-only domain, with conserving liabilities runtime-owned. Human custody/other-chain incident intake remain separate. No complete scope or score credit is claimed.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/mint-authority/iauon-ondo.json",
+        "shared/data/stablecoins/domains/risk-review/iauon-ondo.json",
+        "agents/2026-10-20-safety-refinement/fragments/NR3-1.json",
+        "agents/2026-10-20-safety-refinement/evidence/NR3/final-permission-and-executable-observations.json"
+      ],
+      "sentinels": [
+        "iauon-ondo:gap:control:bridge-meta:iauon-ondo:270a65441da2d5c47963:incidentState",
+        "unresolved-control-identity",
+        "iauon-ondo:gap:control:bridge-meta:iauon-ondo:33b134ce74bc8bbefa25:materialSupplyShare",
+        "iauon-ondo:gap:control:bridge-meta:iauon-ondo:a63827c3e04bcf2190a6:incidentState",
+        "iauon-ondo:gap:deployment-control:bridge-meta:iauon-ondo:270a65441da2d5c47963",
+        "iauon-ondo:gap:deployment-control:bridge-meta:iauon-ondo:a63827c3e04bcf2190a6",
+        "iauon-ondo:gap:deployment-controls"
+      ],
+      "nextReviewTrigger": "Central partial-scope admission; owner conservative Solana CPI-envelope ruling; conserving liabilities, remaining incident-history intake and independently exact-account custody disclosure. Otherwise review2026-11-20; preserve original starts/pins.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:iauon-ondo",
+      "taskIds": [
+        "V9G-22c3224127c50b7d"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "NR3 bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1 (retrieved 2026-10-21)",
+        "https://sourcify.dev/server/v2/contract/56/0x8860bbfc7a83e4788a981f4e9f30878331413b26?fields=compilation,sources,runtimeBytecode (retrieved 2026-10-21)",
+        "https://hyperevmscan.io/address/0x6253fbc5bcf4f49c80745694366f05d6c7be0e83#code (retrieved 2026-10-21)",
+        "https://sourcify.dev/server/v2/contract/56/0x72c697d72beb419152ed457b9f1eee29c12e0ccb?fields=compilation,sources,runtimeBytecode (retrieved 2026-10-21)",
+        "https://hyperevmscan.io/address/0xe3153764ab2a0a928a59c3805503b2ac56b802a3#code (retrieved 2026-10-21)",
+        "https://hyperevmscan.io/address/0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d#code (retrieved 2026-10-21)",
+        "https://docs.ondo.finance/tools/ondo-bridge.md (retrieved 2026-10-20)",
+        "https://ondo.finance/blog/ondo-security-philosophy (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xbc6d5c103a3f586e68bd475942a49d041b171c3e (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x58d73026c64da97ce858766384477d2e8775e9ec (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xff2baba46df92919705e60120c477ae5b7341eb3 (retrieved 2026-10-20)",
+        "https://ethereum-rpc.publicnode.com (retrieved 2026-10-20)",
+        "https://api.llama.fi/hacks (retrieved 2026-10-20)",
+        "https://ondo.finance/blog (retrieved 2026-10-20)"
+      ],
+      "rationale": "Final source/pin/Safe census closes every declared registrar pauser/unpauser and timelock admin/proposer/executor/canceller path on all3 chains. Registrar pause concerns new registration, not existing-token transfer. Preserve actual arbitrary root calls, direct role grants, mutable delay and cap reconfiguration. No generic enumerable permission search remains. Exact human signer/DVN custody is still undisclosed; conserving bridge liabilities and remaining incident-history intake remain external prerequisites. Native Solana partial scope separately records exact code and complete current proposal/bypass census, without pretending the EVM maximal-domain schema admits arbitrary Solana CPI. No bridge tier or rating promotion.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/iauon-ondo.json",
+        "agents/2026-10-20-safety-refinement/fragments/NR3-1.json"
+      ],
+      "sentinels": [
+        "iauon-ondo:gap:economic-control:bridge",
+        "missing-bridge-routes"
+      ],
+      "nextReviewTrigger": "Current conserving liability generation, remaining incident-history intake and exact-account custody disclosure; central readback. Otherwise review2026-11-20; no original-clock renewal.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:gldon-ondo",
+      "taskIds": [
+        "V9G-616e6274bb17e1d7",
+        "V9G-1b66604508170e67",
+        "V9G-3354c01e85780478",
+        "V9G-5928b0c0adf82767",
+        "V9G-5f8d99bc98b1ce1e",
+        "V9G-092274b8c9499644",
+        "V9G-856acef96ab209fa"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "NR3 bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://verify.osec.io/status/XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm (retrieved 2026-10-21)",
+        "https://verify.osec.io/job/80f5742f-fdcb-4a6d-b8b4-aa6aeda0d824 (retrieved 2026-10-21)",
+        "https://sourcify.dev/server/v2/contract/56/0x4d4e562d6882dc523b8d629d2e9df9230b699933?fields=compilation,sources,runtimeBytecode (retrieved 2026-10-21)",
+        "https://sourcify.dev/server/v2/contract/56/0x72c697d72beb419152ed457b9f1eee29c12e0ccb?fields=compilation,sources,runtimeBytecode (retrieved 2026-10-21)",
+        "https://hyperevmscan.io/address/0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d#code (retrieved 2026-10-21)",
+        "https://hyperevmscan.io/address/0xe3153764ab2a0a928a59c3805503b2ac56b802a3#code (retrieved 2026-10-21)",
+        "https://docs.squads.so/main/development/reference/accounts.md (retrieved 2026-10-21)",
+        "https://layerzero.network/blog/layerzero-labs-kelpdao-incident-report (retrieved 2026-10-21)",
+        "https://x.com/ilblackdragon/status/2105686871200366663 (retrieved 2026-10-21)",
+        "https://docs.ondo.finance/tools/ondo-bridge.md (retrieved 2026-10-20)",
+        "https://ondo.finance/blog/ondo-security-philosophy (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xbc6d5c103a3f586e68bd475942a49d041b171c3e (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x58d73026c64da97ce858766384477d2e8775e9ec (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xff2baba46df92919705e60120c477ae5b7341eb3 (retrieved 2026-10-20)",
+        "https://ethereum-rpc.publicnode.com (retrieved 2026-10-20)",
+        "https://api.llama.fi/hacks (retrieved 2026-10-20)",
+        "https://ondo.finance/blog (retrieved 2026-10-20)"
+      ],
+      "rationale": "Final round completes GLDon's named public research. Ethereum26238146/BSC128863032/HyperEVM49100165 completely enumerate declared registrar/timelock roles and downstream Safe/module/guard/fallback/signer identities, preserving PAUSER1-of9, UNPAUSER/proposer4-of7, external admin5-of9, named EOA and actual mutable/arbitrary-call powers. Exact Solana459474170 independently matches current GM/Squads ELF to completed source builds and exact verification-PDA recipes; Squads is immutable and vendor requester trust is separately false, not a byte mismatch. Finalized parent152/SpendingLimits0 census plus exact archive of all76 proposals closes public bypass inventory. Stale ConfigTx3 is barred; VaultTx35 is fixed sanity-admin revocation with currently null role PDA and retained authorized reactivation. Added partial upgrade-vault scope and narrowed the old generic scoped question to future unrestricted CPI target-domain admission: the current maximal-domain contract supports EVM CALL only, while complete conserving liabilities remain runtime-owned. Human custody and other-chain incident intake remain separate. No complete scope or favorable score credit is claimed; original clocks/pins and adverse powers remain.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/mint-authority/gldon-ondo.json",
+        "shared/data/stablecoins/domains/risk-review/gldon-ondo.json",
+        "agents/2026-10-20-safety-refinement/fragments/NR3-1.json",
+        "agents/2026-10-20-safety-refinement/evidence/NR3/final-permission-and-executable-observations.json"
+      ],
+      "sentinels": [
+        "gldon-ondo:gap:control:bridge-meta:gldon-ondo:7582a0059d87ffdcf0f8:incidentState",
+        "unresolved-control-identity",
+        "gldon-ondo:gap:control:bridge-meta:gldon-ondo:7582a0059d87ffdcf0f8:materialSupplyShare",
+        "gldon-ondo:gap:control:mint-meta:gldon-ondo:c7e0be586745be96d260:keyCustody",
+        "gldon-ondo:gap:control:mint-meta:gldon-ondo:e1790941e16231666d8f:keyCustody",
+        "gldon-ondo:gap:deployment-control:bridge-meta:gldon-ondo:7582a0059d87ffdcf0f8",
+        "gldon-ondo:gap:deployment-control:mint-meta:gldon-ondo:50e3c0c3d84288f2a25c",
+        "scoped-control-question",
+        "gldon-ondo:gap:deployment-controls"
+      ],
+      "nextReviewTrigger": "Central source-bound partial-scope admission; owner conservative Solana CPI-envelope ruling; conserving liabilities, remaining incident-history intake and exact-account custody disclosure. Otherwise review2026-11-20; preserve original starts/pins.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:gldon-ondo",
+      "taskIds": [
+        "V9G-370b4b30bad95e9a"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "NR3 bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1 (retrieved 2026-10-21)",
+        "https://sourcify.dev/server/v2/contract/56/0x8860bbfc7a83e4788a981f4e9f30878331413b26?fields=compilation,sources,runtimeBytecode (retrieved 2026-10-21)",
+        "https://hyperevmscan.io/address/0x6253fbc5bcf4f49c80745694366f05d6c7be0e83#code (retrieved 2026-10-21)",
+        "https://sourcify.dev/server/v2/contract/56/0x72c697d72beb419152ed457b9f1eee29c12e0ccb?fields=compilation,sources,runtimeBytecode (retrieved 2026-10-21)",
+        "https://hyperevmscan.io/address/0xe3153764ab2a0a928a59c3805503b2ac56b802a3#code (retrieved 2026-10-21)",
+        "https://hyperevmscan.io/address/0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d#code (retrieved 2026-10-21)",
+        "https://docs.ondo.finance/tools/ondo-bridge.md (retrieved 2026-10-20)",
+        "https://ondo.finance/blog/ondo-security-philosophy (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xbc6d5c103a3f586e68bd475942a49d041b171c3e (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x58d73026c64da97ce858766384477d2e8775e9ec (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xff2baba46df92919705e60120c477ae5b7341eb3 (retrieved 2026-10-20)",
+        "https://ethereum-rpc.publicnode.com (retrieved 2026-10-20)",
+        "https://api.llama.fi/hacks (retrieved 2026-10-20)",
+        "https://ondo.finance/blog (retrieved 2026-10-20)"
+      ],
+      "rationale": "Final exact current-source and pinned role/Safe census closes the remaining registrar PAUSER/UNPAUSER and timelock admin/proposer/executor/canceller research on all3 chains. Registrar pause is registration-only; root arbitrary calls, direct role grants, adjustable delays and limits remain real constraints. Native Solana code correspondence and all current proposal/bypass candidates are researched and retained in partial scope; no generic missing-build or unenumerated-current-spending-limit task remains. Full future arbitrary-CPI envelope admission is a named owner methodology prerequisite, not issuer opacity. Conserved bridge liabilities, remaining incident-history intake and genuinely undisclosed human signer/DVN custody remain separate. No tier, immutable-cap or rating credit is promoted.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/gldon-ondo.json",
+        "agents/2026-10-20-safety-refinement/fragments/NR3-1.json"
+      ],
+      "sentinels": [
+        "gldon-ondo:gap:economic-control:bridge",
+        "missing-bridge-routes"
+      ],
+      "nextReviewTrigger": "Fresh conserving bridge/liability evidence, remaining incident-history intake and exact-account custody disclosure; central readback. Otherwise review2026-11-20; no original-clock renewal.",
+      "factsClosed": 0
     }
   ]
 }
