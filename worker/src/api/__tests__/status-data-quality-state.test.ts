@@ -1,5 +1,5 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { STATUS_ONCHAIN_FRESH_WINDOW_SEC } from "@shared/lib/status-thresholds";
+import { STATUS_ONCHAIN_FRESH_WINDOW_SEC, getActiveAssetServiceBreadthThreshold } from "@shared/lib/status-thresholds";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
@@ -659,12 +659,9 @@ describe("handleStatus", () => {
   // 2026-04-13 status-stability hardening: missing-price thresholds.
   // -------------------------------------------------------------------------
   //
-  // Raise `missingPriceRatio` thresholds from 0.15/0.40 to 0.18/0.45 so the
-  // normal ~15% operating point with 181 active canonical stablecoins no
-  // longer flaps at the 15% boundary. Add a new info-severity
-  // `missing_prices_elevated` cause in the 15-18% band for early-warning
-  // observability.
-  describe("missingPriceRatio raised thresholds + elevated info cause", () => {
+  // `missingPriceRatio` keeps only its 45% stale band; below it, breadth is
+  // graded by the shared active-asset threshold (5% of the active cohort).
+  describe("missing-price breadth and stale ratio", () => {
     /**
      * Build a peggedAssets list using real canonical IDs from
      * ACTIVE_STABLECOINS. The first `total` active IDs are used; the first
@@ -703,28 +700,17 @@ describe("handleStatus", () => {
 
     it.each([
       {
-        name: "stays healthy just below the 18% degraded threshold",
-        missing: (total: number) => Math.floor(total * 0.18),
+        name: "stays healthy one below the shared breadth threshold",
+        missing: (total: number) => getActiveAssetServiceBreadthThreshold(total)! - 1,
         status: "healthy",
-        absent: ["missing_prices_degraded", "missing_prices_stale"],
+        absent: ["active_price_coverage_breadth_degraded", "missing_prices_degraded", "missing_prices_stale"],
       },
       {
-        name: "degrades just above the 18% threshold",
-        missing: (total: number) => Math.floor(total * 0.18) + 1,
+        name: "degrades at the shared breadth threshold",
+        missing: (total: number) => getActiveAssetServiceBreadthThreshold(total)!,
         status: "degraded",
-        cause: { code: "missing_prices_degraded", threshold: 0.18, severity: "warning" },
-      },
-      {
-        name: "stays healthy and emits missing_prices_elevated in the 15-18% band",
-        missing: (total: number) => Math.ceil(total * 0.16),
-        status: "healthy",
-        cause: { code: "missing_prices_elevated", threshold: 0.15, severity: "info" },
-      },
-      {
-        name: "does not emit missing_prices_elevated below the 15% elevated floor",
-        missing: (total: number) => Math.floor(total * 0.14),
-        status: "healthy",
-        absent: ["missing_prices_elevated", "missing_prices_degraded", "missing_prices_stale"],
+        cause: { code: "active_price_coverage_breadth_degraded", severity: "warning" },
+        absent: ["missing_prices_degraded", "missing_prices_elevated"],
       },
       {
         name: "goes stale just above the 45% threshold",
@@ -859,7 +845,7 @@ describe("handleStatus", () => {
       expect(body.dataQualityStatus).toBe("degraded");
       expect(body.dataQuality.totalStablecoins).toBe(canonicalTotal);
       expect(body.dataQuality.missingPrices).toBe(canonicalMissing);
-      const degradedCause = body.causes.dataQuality.find((c) => c.code === "missing_prices_degraded");
+      const degradedCause = body.causes.dataQuality.find((c) => c.code === "active_price_coverage_breadth_degraded");
       expect(degradedCause).toBeDefined();
     });
 

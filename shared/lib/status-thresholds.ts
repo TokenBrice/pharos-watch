@@ -115,10 +115,15 @@ export function hasRepresentativeOnchainRatioSample(trackedCoins: number): boole
 // of slack above normal; the elevated band 0.15-0.18 is surfaced as an
 // info-severity cause for observability without driving status.
 //
+// Breadth below the stale band moved to the shared active-asset breadth
+// threshold on 2026-10-21 (`getActivePriceCoverageBreadthStatus`): the 0.15
+// elevated and 0.18 degraded ratios were retired so listings and prices use
+// one number. `ratioStale` remains the critical band.
+//
 // Duration dimension added 2026-09-21 (holistic review LV01-05). The ratio bands
 // answer "how much of the active set is unpriceable", so a handful of
 // permanently unpriceable assets never trips them: nine of 335 active assets
-// (2.7%) sat below `ratioElevated`, one of them with no accepted price for 5,957
+// (2.7%) sat below the then-15% elevated ratio, one of them with no accepted price for 5,957
 // consecutive generations (~62 days) while its market cap kept publishing.
 // `generations*` therefore count consecutive missing `sync-stablecoins`
 // generations and escalate independently of the ratio. `generationsElevated` is
@@ -129,8 +134,6 @@ export function hasRepresentativeOnchainRatioSample(trackedCoins: number): boole
 const MISSING_PRICE_GENERATIONS_PER_DAY = Math.round((24 * 3600) / CRON_INTERVALS["sync-stablecoins"]);
 
 export const STATUS_MISSING_PRICE_THRESHOLDS = {
-  ratioElevated: 0.15,
-  ratioDegraded: 0.18,
   ratioStale: 0.45,
   generationsElevated: MISSING_PRICE_GENERATIONS_PER_DAY,
   generationsCritical: 7 * MISSING_PRICE_GENERATIONS_PER_DAY,
@@ -142,9 +145,47 @@ export const STATUS_MISSING_PRICE_THRESHOLDS = {
   durationMaterialMarketCapUsd: 1_000_000_000,
 } as const;
 
-/** Bound asset-scoped listing notices by both absolute count and active-cohort share. */
-export const STATUS_PUBLICATION_IMMATERIAL_MISSING_MARGIN = 3;
-export const STATUS_PUBLICATION_ASSET_SCOPED_MAX_SHARE = 0.01;
+/**
+ * Owner rule (2026-10-21): with ~400 tracked active assets, missing listings
+ * and unavailable live prices stay asset-scoped notices until a material share
+ * of the cohort is affected: 5% of the expected active cohort (the low end of
+ * the owner's 5-10% guidance; 20 of 396). A pure share keeps a small cohort
+ * from hiding broad loss behind an absolute floor. Below it, listing omissions
+ * still need admissible materiality evidence to stay asset-scoped, and a $1B
+ * asset still degrades its own component (prices: after a day's gap).
+ */
+export const STATUS_ACTIVE_ASSET_SERVICE_BREADTH_SHARE = 0.05;
+
+/** Affected-asset count at which a listing or price gap becomes service-wide; null when the cohort size is unknown. */
+export function getActiveAssetServiceBreadthThreshold(expectedActiveCount: number | null | undefined): number | null {
+  if (expectedActiveCount == null || !Number.isFinite(expectedActiveCount) || expectedActiveCount <= 0) return null;
+  return Math.ceil(expectedActiveCount * STATUS_ACTIVE_ASSET_SERVICE_BREADTH_SHARE);
+}
+
+function reachesActiveAssetServiceBreadth(affectedCount: number | null | undefined, expectedActiveCount: number | null | undefined): boolean {
+  const threshold = getActiveAssetServiceBreadthThreshold(expectedActiveCount);
+  return threshold == null || affectedCount == null || affectedCount >= threshold;
+}
+
+function exceedsPublicationServiceBreadth(
+  publication: Pick<StablecoinPublicationHealth, "missingActiveIds" | "expectedActiveCount">,
+): boolean {
+  return reachesActiveAssetServiceBreadth(publication.missingActiveIds.length, publication.expectedActiveCount);
+}
+
+/**
+ * Unavailable live prices (every missing active price, reviewed or not: each is
+ * unavailable to readers) degrade the service at the shared breadth threshold.
+ * Unknown coverage has its own fail-closed path; only an incomplete payload is
+ * graded here, and missing counts fail closed.
+ */
+export function getActivePriceCoverageBreadthStatus(
+  coverage: Pick<ActivePriceCoverageHealth, "status" | "expectedActiveCount" | "missingPriceCount">,
+): StatusHealthValue {
+  if (coverage.status !== "incomplete") return "healthy";
+  return reachesActiveAssetServiceBreadth(coverage.missingPriceCount, coverage.expectedActiveCount) ? "degraded" : "healthy";
+}
+
 /** A month covers intermittent daily snapshots; doubling retained caps bounds growth risk.
  * Current caps are unscaled; absent or older evidence still fails closed. */
 export const STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC = 30 * 24 * 3600;
@@ -168,13 +209,13 @@ export function getActivePriceGapMaterialityMarketCapUsd(
 
 /** Component materiality is separate from the service-wide breadth verdict. */
 export function getStablecoinPublicationComponentStatus(
-  publication: Pick<StablecoinPublicationHealth, "status" | "missingActiveIds">,
+  publication: Pick<StablecoinPublicationHealth, "status" | "missingActiveIds" | "expectedActiveCount">,
   coverage: Pick<ActivePriceCoverageHealth, "missingActiveAssets">,
   nowSec: number,
 ): StatusHealthValue {
   if (publication.status === "complete") return "healthy";
   if (publication.status === "unknown" || publication.missingActiveIds.length === 0
-    || publication.missingActiveIds.length > STATUS_PUBLICATION_IMMATERIAL_MISSING_MARGIN) return "degraded";
+    || exceedsPublicationServiceBreadth(publication)) return "degraded";
   const gapsById = new Map(coverage.missingActiveAssets.map((asset) => [asset.stablecoinId, asset]));
   return publication.missingActiveIds.some((id) => {
     const asset = gapsById.get(id);
@@ -191,11 +232,8 @@ export function getStablecoinPublicationImpactStatus(
 ): StatusHealthValue {
   if (publication.status === "complete") return "healthy";
   const missing = publication.missingActiveIds;
-  const expected = publication.expectedActiveCount;
   if (publication.status === "unknown" || missing.length === 0
-    || missing.length > STATUS_PUBLICATION_IMMATERIAL_MISSING_MARGIN
-    || expected == null || expected <= 0
-    || missing.length / expected > STATUS_PUBLICATION_ASSET_SCOPED_MAX_SHARE) return "degraded";
+    || exceedsPublicationServiceBreadth(publication)) return "degraded";
   // Missing materiality evidence is not permission to call an omission bounded.
   return missing.some((id) => {
     const asset = coverage.missingActiveAssets.find((gap) => gap.stablecoinId === id);

@@ -1,5 +1,6 @@
 import {
   assessActivePriceGapDuration,
+  getActivePriceCoverageBreadthStatus,
   getBlacklistGapStatus,
   getStablecoinPublicationImpactStatus,
 } from "@shared/lib/status-thresholds";
@@ -825,6 +826,8 @@ export async function assessPublicHealth(
   // reports the public surface as stale — the data is served, one price is not.
   // Reviewed gaps remain missing in the payload but do not warn or contribute
   // to duration degradation. The coverage reader re-arms them at expiry.
+  // Breadth is separate: unavailable prices reaching the shared active-asset
+  // breadth threshold degrade the service whatever their size or review state.
   const acknowledgedGapIds = new Set(activePriceCoverage.acknowledgedGapIds ?? []);
   const alertEligibleIds = activePriceCoverage.alertEligibleIds.filter((id) => !acknowledgedGapIds.has(id));
   const activePriceCoverageAlertEligible = alertEligibleIds.length > 0;
@@ -833,6 +836,7 @@ export async function assessPublicHealth(
   const activePriceCoverageDurationStatus = gapDuration.status;
   const activePriceCoverageImpactStatus: HealthResponse["status"] =
     activePriceCoverage.status === "unknown" || activePriceCoverageDurationStatus !== "healthy"
+      || getActivePriceCoverageBreadthStatus(activePriceCoverage) !== "healthy"
       ? "degraded"
       : "healthy";
   if (activePriceCoverage.status === "unknown") {

@@ -860,6 +860,53 @@ describe("status cause text", () => {
     }));
   });
 
+  it.each([
+    [4, "healthy", "info"],
+    [19, "healthy", "info"],
+    [20, "degraded", "warning"],
+  ] as const)("grades %s evidenced publication omissions of 396 by cohort breadth", (count, expectedStatus, severity) => {
+    const nowSec = 1_790_000_000;
+    const ids = Array.from({ length: count }, (_, index) => `missing-${index}`);
+    const evaluated = evaluateStablecoinActivePriceCoverage([], ids, {
+      nowSec, previousAcceptedAssetsById: new Map(ids.map((id) => [id, {
+        id, circulating: { peggedUSD: 5_000_000 }, supplyObservedAt: nowSec - 900,
+      }])),
+    });
+    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      nowSec,
+      dataQuality: makeDataQuality({
+        stablecoinPublication: {
+          status: "incomplete", expectedActiveCount: 396, presentActiveCount: 396 - count, waivedActiveCount: 0,
+          missingActiveIds: ids, waivedActiveIds: [], expiredWaiverIds: [], observedAt: nowSec,
+        },
+      }),
+      activePriceCoverage: { ...evaluated, status: "incomplete", observedAt: nowSec },
+    }));
+    expect(result.status).toBe(expectedStatus);
+    expect(result.causes).toContainEqual(expect.objectContaining({
+      code: "stablecoin_publication_incomplete", severity,
+    }));
+  });
+
+  it.each([
+    [19, "not degrading public status.", false],
+    [20, "public status is degraded by the service-wide breadth threshold.", true],
+  ] as const)("words %s first-generation price misses of 396 by the breadth verdict", (count, wording, breadth) => {
+    const nowSec = 1_790_000_000;
+    const ids = Array.from({ length: 396 }, (_, index) => `asset-${index}`);
+    const priced = ids.slice(count).map((id) => ({ id, price: 1, priceSource: "coingecko" }));
+    const evaluated = evaluateStablecoinActivePriceCoverage(priced, ids, { nowSec });
+    expect(evaluated.alertEligibleIds).toEqual([]);
+    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      nowSec,
+      activePriceCoverage: { ...evaluated, status: "incomplete", observedAt: nowSec },
+    }));
+    const cause = result.causes.find((entry) => entry.code === "active_price_coverage_incomplete");
+    expect(cause).toMatchObject({ severity: "info" });
+    expect(cause?.message.endsWith(wording)).toBe(true);
+    expect(result.causes.some((entry) => entry.code === "active_price_coverage_breadth_degraded")).toBe(breadth);
+  });
+
   it("emits a durable warning without degrading for incomplete active-price coverage", () => {
     const activePriceCoverage = {
       ...makePublicHealth().activePriceCoverage,
@@ -1210,10 +1257,9 @@ describe("status rule-set behavior at policy boundaries", () => {
   });
 
   it.each([
-    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioElevated }, "healthy"],
-    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded }, "healthy"],
-    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded + 0.0001 }, "degraded"],
-    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioStale }, "degraded"],
+    // Below the stale band, price breadth is graded from exact coverage, not the ratio.
+    [{ missingPriceRatio: 0.3 }, "healthy"],
+    [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioStale }, "healthy"],
     [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioStale + 0.0001 }, "stale"],
     [{ blacklistMissingRatio: STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded }, "degraded"],
     [{ blacklistMissingRatio: STATUS_BLACKLIST_THRESHOLDS.missingRatioStale }, "stale"],
