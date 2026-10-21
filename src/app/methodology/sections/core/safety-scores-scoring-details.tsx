@@ -160,7 +160,9 @@ export function SafetyScoresScoringDetails() {
           (<code className="text-xs">gradeHold</code>). Scores are never held or smoothed, and moves into or out of NR
           or a pipeline gap publish immediately. When a run&apos;s deployment-supply attribution misses an asset, the
           last admitted attribution is reused for one further 30-minute cycle, keeping its original observation time;
-          after that the existing unavailable-supply treatment applies.
+          after that the existing unavailable-supply treatment applies. Likewise, when the stablecoin supply sync has not
+          re-observed an asset, its last observed circulating supply stays usable for one further hour beyond the
+          30-minute supply budget, keeping its original observation time; a fresh observation always replaces it.
         </p>
       </div>
 

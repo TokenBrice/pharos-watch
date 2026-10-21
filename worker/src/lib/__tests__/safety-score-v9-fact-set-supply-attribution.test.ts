@@ -14,6 +14,7 @@ import {
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { REVIEWED_ECONOMIC_SUPPLY_PLANS } from "../safety-score-v9/supply-attribution-contract";
+import { CHAIN_SUPPLY_CARRY_FORWARD_EXTRA_AGE_SEC } from "../safety-score-v9/supply-attribution";
 import {
   deriveXautRepresentationGroupSupplyAttribution,
   XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
@@ -629,7 +630,10 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       },
       {
         name: "stale-review",
-        extension: { bridge: "required" as const, chainSupplyObservedAtSec: AS_OF_SEC - 501 },
+        extension: {
+          bridge: "required" as const,
+          chainSupplyObservedAtSec: AS_OF_SEC - extension().sources.chainSupply.maxAgeSec! - CHAIN_SUPPLY_CARRY_FORWARD_EXTRA_AGE_SEC - 1,
+        },
         responsibility: "unresearched" as const,
         observationState: "stale" as const,
       },
@@ -785,8 +789,43 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     expect(evidence.freshness.state).toBe("current");
     expect(alpha.supply.status.observationState).toBe("known");
   });
+  it("carries a retained per-asset chain-supply observation through its bounded window and names the widened budget (10.27)", () => {
+    const baseMaxAgeSec = extension().sources.chainSupply.maxAgeSec!;
+    const chainSupplyByChain = {
+      Ethereum: { current: 4_000_000, circulatingPrevDay: 4_000_000,
+        circulatingPrevWeek: 4_000_000, circulatingPrevMonth: 4_000_000 },
+    };
+    const compile = (ageSec: number) => {
+      const clockSec = AS_OF_SEC + ageSec;
+      const fixed = exactFixedInput({
+        clockSec, chainSupplyByChain, aggregateCirculating: { peggedUSD: 4_000_000 }, supplyObservedAtSec: AS_OF_SEC,
+      });
+      return compileSafetyScoreV9FactSetFromFixedInput(fixed, extension({ clockSec })).assets[0]!;
+    };
+    const evidenceOf = (asset: ReturnType<typeof compile>) =>
+      asset.evidence.find((entry) => entry.evidenceId === "alpha:chain-supply")!;
+
+    const fresh = evidenceOf(compile(baseMaxAgeSec));
+    expect(fresh.freshness).toMatchObject({ state: "current", maxAgeSec: baseMaxAgeSec });
+
+    const carried = compile(baseMaxAgeSec + CHAIN_SUPPLY_CARRY_FORWARD_EXTRA_AGE_SEC);
+    expect(evidenceOf(carried).observedAtSec).toBe(AS_OF_SEC);
+    expect(evidenceOf(carried).freshness).toMatchObject({
+      state: "current",
+      ageSec: baseMaxAgeSec + CHAIN_SUPPLY_CARRY_FORWARD_EXTRA_AGE_SEC,
+      maxAgeSec: baseMaxAgeSec + CHAIN_SUPPLY_CARRY_FORWARD_EXTRA_AGE_SEC,
+    });
+    expect(carried.supply.status.observationState).toBe("known");
+    expect(evaluateV9ExitAssetFacts(carried, V9_CANDIDATE_POLICY_V1).stressRequest).not.toBeNull();
+
+    const expired = compile(baseMaxAgeSec + CHAIN_SUPPLY_CARRY_FORWARD_EXTRA_AGE_SEC + 1);
+    expect(evidenceOf(expired).freshness.state).toBe("stale");
+    expect(evaluateV9ExitAssetFacts(expired, V9_CANDIDATE_POLICY_V1).stressRequest).toBeNull();
+  });
+
   it.each(["chain", "aggregate"] as const)("attributes stale %s supply to A without refreshing or zero-filling it", (name) => {
-    const ageSec = name === "chain" ? 501 : 7 * 86400 + 1;
+    const ageSec = name === "chain" ? extension().sources.chainSupply.maxAgeSec! + CHAIN_SUPPLY_CARRY_FORWARD_EXTRA_AGE_SEC + 1
+      : 7 * 86400 + 1;
     const clockSec = AS_OF_SEC + ageSec;
     const observedAtSec = AS_OF_SEC;
     const chainSupplyByChain = name === "chain" ? {
