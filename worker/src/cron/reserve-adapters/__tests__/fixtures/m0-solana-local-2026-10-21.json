@@ -1,4 +1,5 @@
 {
+  "_capture": "<!-- captured-at: 2026-10-21T00:46:13Z -->",
   "request": {
     "jsonrpc": "2.0",
     "id": 1,
@@ -138,6 +139,5 @@
     "hash": "H3KnRaA39hyxiKht88g3s59rBXC6G7HNUziouoGKFjbA",
     "timestamp": 1792543566
   },
-  "rpcUrl": "https://solana-rpc.publicnode.com",
-  "_capture": "captured-at: 2026-10-21T00:46:46Z"
+  "rpcUrl": "https://solana-rpc.publicnode.com"
 }

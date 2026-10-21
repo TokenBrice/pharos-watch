@@ -46,6 +46,17 @@ describe("sealed input-corruption operator", () => {
     expect(() => parseInputCorruptionArgs([...cli, "--local"])).toThrow();
   });
 
+  it("uses strict singleton options and supports help without reading evidence", async () => {
+    expect(() => parseInputCorruptionArgs([...cli, "--event-id", "2"])).toThrow("--event-id may only be specified once");
+    expect(() => parseInputCorruptionArgs([...cli, "--apply", "--apply", "--remote"])).toThrow("--apply may only be specified once");
+    expect(() => parseInputCorruptionArgs([...cli, "unexpected"])).toThrow();
+    expect(parseInputCorruptionArgs(["-h"])).toEqual({ help: true, apply: false, input: null });
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    await main(["--help"]);
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("offline DRY-RUN"));
+    expect(createRemoteD1Client).not.toHaveBeenCalled();
+  });
+
   it.each(["--reviewed-evidence", "--reviewed-by", "--note"])("refuses missing %s", (flag) => {
     const args = [...cli];
     args.splice(args.indexOf(flag), 2);

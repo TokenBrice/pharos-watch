@@ -2,9 +2,8 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { parseArgs } from "node:util";
 import { z } from "zod";
-import { runCliEntrypoint } from "../../scripts/lib/cli-args.mjs";
+import { CliUsageError, parseStrictCliArgs, runCliEntrypoint } from "../../scripts/lib/cli-args.mjs";
 import { decodeD1Envelopes } from "../../scripts/lib/remote-d1";
 import type { DdrRepairOperation } from "../src/lib/depeg-resolver-repair-store";
 import { createRemoteD1Client, sqlString } from "./lib/remote-d1";
@@ -27,21 +26,21 @@ const inputSchema = z.object({
 export type InputCorruptionPlanInput = z.infer<typeof inputSchema>;
 
 export function parseInputCorruptionArgs(argv: string[]) {
-  const { values } = parseArgs({ args: argv, strict: true, allowPositionals: false, options: {
+  const { values } = parseStrictCliArgs(argv, { options: {
     apply: { type: "boolean", default: false }, remote: { type: "boolean", default: false },
-    help: { type: "boolean", default: false }, "event-id": { type: "string" },
+    "event-id": { type: "string" },
     "prediction-id": { type: "string" }, "stablecoin-id": { type: "string" },
     "incident-key": { type: "string" }, "reviewed-evidence": { type: "string" },
     "reviewed-by": { type: "string" }, note: { type: "string" },
   } });
-  if (values.apply && !values.remote) throw new Error("--apply requires explicit --remote");
+  if (values.apply && !values.remote) throw new CliUsageError("--apply requires explicit --remote");
   if (values.help) return { help: true as const, apply: false, input: null };
   const required = (key: keyof typeof values): string => {
     const value = values[key];
-    if (typeof value !== "string" || !value.trim()) throw new Error(`--${key} is required`);
+    if (typeof value !== "string" || !value.trim()) throw new CliUsageError(`--${key} is required`);
     return value;
   };
-  return { help: false as const, apply: values.apply, input: {
+  return { help: false as const, apply: values.apply === true, input: {
     eventId: positiveInteger.parse(Number(required("event-id"))),
     publicPredictionId: positiveInteger.parse(Number(required("prediction-id"))),
     stablecoinId: required("stablecoin-id"), incidentKey: required("incident-key"),

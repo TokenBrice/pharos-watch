@@ -13,7 +13,6 @@ import {
 } from "../shared";
 import {
   reviewedDirectRedemptionSupplyFull,
-  REVIEWED_DIRECT_REDEMPTION_AT,
   REVIEWED_FOLLOWUP_REMEDIATION_AT,
   REVIEWED_REMEDIATION_AT,
 } from "./shared";
