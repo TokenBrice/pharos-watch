@@ -67,12 +67,15 @@ function getReducedMotionSnapshotWithSsrDefault() {
   return getEffectiveReducedMotion(currentPreference, true);
 }
 
+// Server snapshots are also used for the client's hydration render, so they
+// must ignore window/matchMedia and the stored override; reading them here made
+// reduced-motion visitors hydrate against different markup (React #418).
 function getReducedMotionServerSnapshot() {
-  return getEffectiveReducedMotion("system", false);
+  return false;
 }
 
 function getReducedMotionServerSnapshotWithSsrDefault() {
-  return getEffectiveReducedMotion("system", true);
+  return true;
 }
 
 /**

@@ -1,6 +1,7 @@
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { V9_EVIDENCE_PRODUCER_INTERVAL_SEC } from "@shared/lib/cron-cadences";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import { XAUT_ASSET_ID, XAUT_SUPPLY_ATTRIBUTION_CARRY_FORWARD_MAX_AGE_SEC, XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC } from "./xaut-supply-attribution-contract";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
@@ -80,6 +81,16 @@ export function safetyScoreV9ChainSupplyObservedAtSec(
   );
 }
 
+/**
+ * When a sync-stablecoins run does not re-observe an asset, the producer keeps
+ * its last observed supply with the original supplyObservedAt. That retained
+ * per-asset observation stays usable for four more producer intervals beyond
+ * the chain-supply budget (1800s to 5400s): the next scheduled sync, up to two
+ * missed provider observations, and one retry. A fresh observation always
+ * replaces it, so the window cannot mask a supply move the provider reports.
+ */
+export const CHAIN_SUPPLY_CARRY_FORWARD_EXTRA_AGE_SEC = V9_EVIDENCE_PRODUCER_INTERVAL_SEC["sync-stablecoins"] * 4;
+
 export function safetyScoreV9ChainSupplyMaxAgeSec(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
@@ -104,6 +115,13 @@ export function safetyScoreV9ChainSupplyMaxAgeSec(
   if (attribution?.model === "reviewed-deployment-unit-partition-v1" &&
       attribution.carriedForwardFromGenerationId !== undefined && fallbackMaxAgeSec !== null) {
     return fallbackMaxAgeSec + SUPPLY_ATTRIBUTION_CARRY_FORWARD_EXTRA_AGE_SEC;
+  }
+  // Only a per-asset observation the producer retained past the chain-supply
+  // budget is carried; the evidence names the widened budget and its age.
+  const aggregateObservedAtSec = fixedInput.aggregateCirculatingById[assetId]?.observedAtSec;
+  if (!attribution && fallbackMaxAgeSec !== null && aggregateObservedAtSec != null &&
+      fixedInput.clockSec - aggregateObservedAtSec > fallbackMaxAgeSec) {
+    return fallbackMaxAgeSec + CHAIN_SUPPLY_CARRY_FORWARD_EXTRA_AGE_SEC;
   }
   return fallbackMaxAgeSec;
 }

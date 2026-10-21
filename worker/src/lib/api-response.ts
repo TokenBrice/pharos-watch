@@ -6,6 +6,7 @@ import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-prof
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { logWorkerEvent } from "./structured-log";
+import { isSafetyScoreV9SnapshotFresh, SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9/consumer-freshness";
 
 type ApiHandler<T extends unknown[] = unknown[]> = (...args: T) => Promise<Response>;
 
@@ -202,7 +203,7 @@ export function jsonFreshDegradedResponse(payload: { _meta: { degraded: boolean 
 }
 
 interface SafetyScoreSnapshotResponseMetadata {
-  publicationHealth: Pick<V9PublicationHealth, "status">;
+  publicationHealth: V9PublicationHealth;
   updatedAt: number;
 }
 
@@ -214,16 +215,40 @@ export function jsonSafetyScoreSnapshotResponse(
   body: unknown,
   representation: string,
 ): Response {
-  return withRepresentationEtag(jsonResponseWithHeaders(body, safetyScoreSnapshotHeaders(snapshot)),
-    [representation, snapshot.safetyScoreIdentity, snapshot.publicationHealth]);
+  return withRepresentationEtag(jsonResponseWithHeaders(body, safetyScoreSnapshotHeaders(
+    snapshot, snapshot.safetyScoreIdentity.publicationGenerationId)), [representation, snapshot.safetyScoreIdentity, snapshot.publicationHealth]);
 }
 
-/** Shared policy for object responses and admitted immutable byte streams. */
-export function safetyScoreSnapshotHeaders(snapshot: SafetyScoreSnapshotResponseMetadata): Record<string, string> {
+/**
+ * Shared policy for object responses and admitted immutable byte streams.
+ * The verdict uses the V9 consumer budget (one missed publication), not the
+ * generic 8x endpoint runway: a stalled producer must read `stale`, and an
+ * edge-cached `current` copy must not outlive that budget.
+ */
+export function safetyScoreSnapshotHeaders(
+  snapshot: SafetyScoreSnapshotResponseMetadata,
+  generationId: string,
+): Record<string, string> {
+  const nowSec = Date.now() / 1000;
   const held = snapshot.publicationHealth.status === "held";
-  return addFreshnessHeaders({
+  const status = held ? "held" : isSafetyScoreV9SnapshotFresh(snapshot, Math.floor(nowSec)) ? "current" : "stale";
+  const headers = addFreshnessHeaders({
     "Content-Type": "application/json",
-    "Cache-Control": held ? CACHE_PROFILES.noStore : CACHE_PROFILES.standard,
-    "X-Safety-Score-Status": held ? "held" : "current",
-  }, snapshot.updatedAt, API_FRESHNESS_MAX_AGE_SEC.reportCards);
+    "Cache-Control": status === "current" ? CACHE_PROFILES.standard : CACHE_PROFILES.noStore,
+    "X-Safety-Score-Status": status,
+    "X-Safety-Score-Generation": generationId,
+    "X-Safety-Score-Freshness-Budget": String(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC),
+  }, snapshot.updatedAt, API_FRESHNESS_MAX_AGE_SEC.reportCards, {
+    assessedAt: nowSec, freshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+  });
+  if (status !== "stale") return headers;
+  // The generic helper tolerates small future skew, but the safety verdict
+  // does not; keep the generic freshness surface consistent with it.
+  const future = !(snapshot.updatedAt <= nowSec);
+  return {
+    ...headers,
+    "X-Data-Freshness": "stale",
+    "X-Data-Freshness-Reason": future ? "future-timestamp" : "safety-score-publication-age",
+    Warning: headers.Warning ?? `110 - "Safety Score publication is ${future ? "future-dated" : "stale"} (consumer budget ${SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC}s)"`,
+  };
 }

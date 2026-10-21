@@ -344,7 +344,7 @@ describe("methodology registry", () => {
   });
 
   it("retains the archive-free attribution release and aligns current Safety policy identity", () => {
-    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.26");
+    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.27");
     expect(SAFETY_SCORE_POLICY.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.23")!;
     expect(release).toMatchObject({
@@ -375,8 +375,21 @@ describe("methodology registry", () => {
       commits: [], reconstructed: false,
     });
     expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.25");
-    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.26");
+    // 10.27 activates at the same 2026-10-22 boundary and supersedes 10.26 there.
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.27");
     expect(release.impact.join(" ")).toContain("gradeHold");
+    expect(release.impact.join(" ")).toContain("no deployment or production acceptance is claimed");
+  });
+
+  it("discloses bounded chain-supply carry-forward at the next Safety release boundary", () => {
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.27")!;
+    expect(release).toMatchObject({
+      version: "10.27", date: "2026-10-21", effectiveAt: 1_792_627_200,
+      commits: [], reconstructed: false,
+    });
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.25");
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.27");
+    expect(release.impact.join(" ")).toContain("5400s");
     expect(release.impact.join(" ")).toContain("no deployment or production acceptance is claimed");
   });
 

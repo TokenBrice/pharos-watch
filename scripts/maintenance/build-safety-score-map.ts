@@ -2052,11 +2052,12 @@ function renderProvenance(
     ? asOf.toISOString().slice(11, 16)
     : asOf.toISOString().slice(0, 16).replace("T", " ");
   const parts: string[] = [];
-  if (publicationHealth.status === "held") {
-    // A held publication still renders, but never as if it were current.
-    const since = publicationHealth.heldSinceSec === null
-      ? "SCORES HELD"
-      : `SCORES HELD SINCE ${new Date(publicationHealth.heldSinceSec * 1000).toISOString().slice(0, 10)}`;
+  if (publicationHealth.status !== "current") {
+    // A held or stale publication still renders, but never as if it were current.
+    const since = publicationHealth.status === "stale" ? "SCORES STALE"
+      : publicationHealth.heldSinceSec === null
+        ? "SCORES HELD"
+        : `SCORES HELD SINCE ${new Date(publicationHealth.heldSinceSec * 1000).toISOString().slice(0, 10)}`;
     const w = Math.ceil(monoWidth(since, 10.5) + 18);
     parts.push(`<g data-publication-held="true"><rect x="${right - w}" y="${y + 2}" width="${w}" height="18" rx="9" fill="none" stroke="${INK}" stroke-opacity="0.7" stroke-width="1"/>`);
     parts.push(svgText({ x: right - w / 2, y: y + 14.6, size: 10.5, text: since, weight: 700, fill: INK, anchor: "middle", spacing: "0.4" }), `</g>`);
@@ -2153,8 +2154,21 @@ function renderSlot(slot: MapSlot): string {
 }
 
 interface MapPublicationHealth {
-  status: "current" | "held";
+  status: "current" | "held" | "stale";
   heldSinceSec: number | null;
+}
+
+/**
+ * The body only records producer health; the endpoint's
+ * `X-Safety-Score-Status: stale` verdict (publication past the consumer budget)
+ * lives in the header and must never render as current.
+ */
+export function mapPublicationHealth(
+  health: Pick<ReportCardsV9CurrentResponse["publicationHealth"], "status" | "heldSinceSec">,
+  headerStatus: string | null,
+): MapPublicationHealth {
+  if (health.status === "held") return { status: "held", heldSinceSec: health.heldSinceSec };
+  return { status: headerStatus === "stale" ? "stale" : "current", heldSinceSec: null };
 }
 
 function buildSvg({
@@ -2227,11 +2241,11 @@ function buildSvg({
   parts.push(`<image href="${brandMark}" x="${MARGIN_X}" y="18" width="26" height="26"/>`);
   parts.push(svgText({ x: MARGIN_X + 34, y: 37, size: 14, text: "PHAROS", font: "sans", weight: 700, spacing: "2.4" }));
   parts.push(svgText({ x: MARGIN_X + 122, y: 37, size: 11, text: stamp.eyebrow, weight: 600, fill: INK_SECONDARY, spacing: "1.2" }));
-  if (publicationHealth.status === "held") {
-    // Beside the date, where a feed reader looks: a held publication must
-    // never be mistaken for today's scores.
+  if (publicationHealth.status !== "current") {
+    // Beside the date, where a feed reader looks: a held or stale publication
+    // must never be mistaken for today's scores.
     const x = MARGIN_X + 122 + stamp.eyebrow.length * (11 * MONO_ADVANCE + 1.2) + 10;
-    const text = "SCORES HELD";
+    const text = publicationHealth.status === "stale" ? "SCORES STALE" : "SCORES HELD";
     const w = Math.ceil(text.length * (10.5 * MONO_ADVANCE + 0.6) + 16);
     parts.push(`<g data-publication-held-eyebrow="true"><rect x="${x.toFixed(1)}" y="23" width="${w}" height="19" rx="9.5" fill="${NAME_CHIP}"/>`);
     parts.push(svgText({ x: x + w / 2, y: 36.4, size: 10.5, text, weight: 800, fill: FIELD, anchor: "middle", spacing: "0.6" }), `</g>`);
@@ -2710,7 +2724,7 @@ async function buildMap(options: {
     issue,
     chartKey,
     annotations,
-    publicationHealth: reportCards.publicationHealth,
+    publicationHealth: mapPublicationHealth(reportCards.publicationHealth, reportCardsResult.publicationStatus),
     supplyFreshness,
   });
   if (unsupportedGlyphs.size > 0) {

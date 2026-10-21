@@ -50,7 +50,10 @@ describe("dependency graph projection", () => {
   it("preserves accepted edges and publication-bound zero, null, role and coverage facts", async () => {
     const snapshot = fixturePublication();
     mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot });
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(snapshot.updatedAt * 1000);
     const response = await handleDependencyGraph(mockD1([]));
+    vi.useRealTimers();
     expect(response.status).toBe(200);
     expect(response.headers.get("X-Safety-Score-Status")).toBe("current");
     const body = DependencyGraphResponseSchema.parse(await response.json());
