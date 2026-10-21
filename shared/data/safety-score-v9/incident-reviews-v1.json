@@ -631,23 +631,43 @@
       "scope": {
         "kind": "holder-exit"
       },
-      "reviewedAt": "2026-10-02",
-      "reviewer": "Sol final D/F review 2026-10-02 (DfReview03)",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "R2 uplift holder-loss sweep; primary-source draft for owner integration",
       "primarySources": [
         {
-          "label": "Neutrl September 17 separate fixed-rate USDC redemption program announcement",
+          "label": "Executed recovery redemption: 150.98339 NUSD burned and 77.001528 USDC paid; Ethereum block 26243530",
+          "url": "https://etherscan.io/tx/0x2c1c033b4c81c01ab4a0b94211754b29f314b37974592479e1ecf529bec1743e",
+          "publishedAt": "2026-10-21"
+        },
+        {
+          "label": "September 17 executed recovery redemption: 222.755560362213800648 NUSD burned for 113.605335 USDC",
+          "url": "https://etherscan.io/tx/0x6829c121770ce8c8d40913c08cced1804e65055b2a2d55ddd53aae7632ec8415",
+          "publishedAt": "2026-09-17"
+        },
+        {
+          "label": "NusdRedemption deployment receipt; RedemptionRateSet 510000000000000000",
+          "url": "https://etherscan.io/tx/0xd40af7d3115deaf898b14ace317dab8423316cc7b7660b2f5208886a4782d164",
+          "publishedAt": "2026-09-16"
+        },
+        {
+          "label": "Neutrl official September 17 fixed-rate recovery redemption program; tokens burned for USDC",
           "url": "https://x.com/Neutrl/status/2100614848241414280",
           "publishedAt": "2026-09-17"
         }
       ],
-      "finding": "The separate September 17 recovery program redeems NUSD for fixed-rate USDC, not restored par redemption. Fresh exact NusdRedemption 0xb3f07d3392102fc23264a78e2a1a8b6421123828 state at Ethereum block26104271 has redemptionRate510000000000000000 and quoteRedeem(1e18)=510000 USDC base units, a49% discount to the1USD target. This is program payout, not a complete valuation of remaining illiquid reserves.",
+      "finding": "Neutrl announced a separate fixed-rate USDC recovery redemption program on September 17, 2026, with NUSD or sNUSD burned upon completed redemption. The NusdRedemption contract at 0xb3f07d3392102fc23264a78e2a1a8b6421123828 was deployed on September 16 (Ethereum block 25991113, 16:04:11 UTC) with a RedemptionRateSet event of 510000000000000000. Successful transaction 0x6829c121770ce8c8d40913c08cced1804e65055b2a2d55ddd53aae7632ec8415 at Ethereum block 26000391 on September 17, 2026, 23:07:47 UTC burned 222.755560362213800648 NUSD and paid 113.605335 USDC, proving holder realization on the recorded event date. Execution at the same rate is corroborated by transaction 0x2c1c033b4c81c01ab4a0b94211754b29f314b37974592479e1ecf529bec1743e at Ethereum block 26243530 on October 21, 2026, 21:00:23 UTC: its Redeemed event records nusdAmount 150983390000000000000 and usdcAmount 77001528, matching a burn of 150.98339 NUSD and payment of 77.001528 USDC. The nominal fixed payout is 0.51 USDC per surrendered NUSD, so realizedHolderLossPct 49 measures the recovery haircut on the surrendered dollar-denominated token claim; six-decimal USDC rounding dust is not a separate severity estimate. This is an executed issuer-program redemption, not a secondary-market discount or a hypothetical quote. Participation is elective, but the fixed haircut is imposed on a holder who redeems through this recovery route, like a loss-bearing withdrawal fee. No claim is made that every outstanding holder redeemed, that 49 percent is a final whole-reserve NAV loss, that future recoveries are impossible, or that portal terms waive all legal rights; those terms were region-restricted in this review.",
       "remediation": {
         "state": "in-progress",
-        "lastVerifiedAt": "2026-10-02",
-        "summary": "A separate fixed-rate program is available subject to acknowledgement and terms; no dated primary evidence of restored ordinary par redemption was found.",
+        "lastVerifiedAt": "2026-10-21",
+        "summary": "The September 17 issuer announcement says this fixed-rate recovery program is expected to remain open until November 14, 2026, subject to terms. An October 21 on-chain burn and USDC payout proves execution at the reduced rate; it does not prove restored ordinary par redemption, full recovery of illiquid reserves, or a final recovery ratio. Preserve active holder-exit impairment rather than claiming resolution.",
         "sources": [
           {
-            "label": "Neutrl September 17 separate fixed-rate USDC redemption program announcement",
+            "label": "Executed recovery redemption: 150.98339 NUSD burned and 77.001528 USDC paid; Ethereum block 26243530",
+            "url": "https://etherscan.io/tx/0x2c1c033b4c81c01ab4a0b94211754b29f314b37974592479e1ecf529bec1743e",
+            "publishedAt": "2026-10-21"
+          },
+          {
+            "label": "Neutrl official September 17 fixed-rate recovery redemption program; tokens burned for USDC",
             "url": "https://x.com/Neutrl/status/2100614848241414280",
             "publishedAt": "2026-09-17"
           }
@@ -657,7 +677,8 @@
       "kind": "holder-exit-impairment",
       "posture": {
         "treatment": "peg-multiplier-only"
-      }
+      },
+      "realizedHolderLossPct": 49
     },
     {
       "incidentId": "parallel-2026-failed-exploit-attempt",
@@ -706,6 +727,77 @@
             "label": "Parallel governance PGP-43",
             "url": "https://gov.parallel.best/t/pgp-43-l-additional-parallel-v3-2-security-audit/542",
             "publishedAt": "2026-07-02"
+          }
+        ]
+      }
+    },
+    {
+      "incidentId": "reusd-2025-06-26-unbacked-issuance-insurance-pool-slashing",
+      "assetId": "reusd-resupply",
+      "domain": "control",
+      "kind": "supply-integrity-failure",
+      "occurredAt": "2025-06-26",
+      "status": "mitigated",
+      "scope": {
+        "kind": "root-claim"
+      },
+      "posture": {
+        "component": "mint",
+        "controlKinds": [
+          "mint",
+          "oracle"
+        ],
+        "incidentState": "resolved"
+      },
+      "reviewedAt": "2026-10-21",
+      "reviewer": "R2 uplift holder-loss sweep; primary-source draft for owner integration",
+      "primarySources": [
+        {
+          "label": "Resupply additional security guardrails: deployed contracts and prospective integration steps",
+          "url": "https://gov.resupply.finance/t/introduce-additional-protocol-security-guardrails/71",
+          "publishedAt": "2025-08-13"
+        },
+        {
+          "label": "Resupply July 8 confirmation that Phase 1 was completed and affected IP depositors were slashed",
+          "url": "https://gov.resupply.finance/t/resupply-recovery-plan-phase-2-activate-ip-retention-program/63",
+          "publishedAt": "2025-07-08"
+        },
+        {
+          "label": "Resupply recovery plan: six million reUSD insurance-pool burn; 15.5 percent pool-specific denominator",
+          "url": "https://gov.resupply.finance/t/resupply-recovery-plan/47",
+          "publishedAt": "2025-06-28"
+        },
+        {
+          "label": "Yearn YIP-86 confirms six million insurance-pool contribution and proposes remaining debt loan",
+          "url": "https://gov.yearn.fi/t/yip-86-resupply-bad-debt-repayment-loan/14516",
+          "publishedAt": "2025-07-09"
+        },
+        {
+          "label": "Resupply official crvUSD-wstUSR market postmortem and exact UTC exploit chronology",
+          "url": "https://paragraph.com/@resupply/resupply-crvusd-wstusr-market-post-mortem",
+          "publishedAt": "2025-06-28"
+        }
+      ],
+      "finding": "Resupply's primary postmortem dates the exploit to June 26, 2025, 01:53:59 UTC, not the June 25 date used in some secondary coverage. Manipulation of the empty crvUSD-wstUSR CurveLend vault share value caused an exchange-rate calculation to round to zero, bypassing Resupply's borrower-solvency check and allowing ten million unbacked reUSD debt. The guardian disabled the pair and paused Insurance Pool withdrawals. The June 28 recovery plan allocated six million reUSD of the shortfall to the Insurance Pool, approximately 15.5 percent of its 38.7 million deposited reUSD, with treasury/DAO sources covering other amounts. The July 8 Phase 2 disclosure states Phase 1 had completed and specifically identifies already-slashed IP depositors; the July 9 Yearn proposal independently confirms that the Insurance Pool covered six million. This is documented realized depositor loss in the separate first-loss Insurance Pool. It is not evidence that every ordinary reUSD token holder suffered a 15.5 percent NAV write-down or primary-redemption haircut. realizedHolderLossPct is intentionally omitted: the sourced 15.5 percent denominator is Insurance Pool assets, not the whole reUSD holder claim, and no measured whole-token holder-loss fraction is established. The row retains the actual root issuance failure without globalizing the pool-specific haircut. Retention rewards in RSUP are incentives, explicitly not unconditional cash reimbursement.",
+      "remediation": {
+        "state": "in-progress",
+        "lastVerifiedAt": "2025-08-13",
+        "summary": "The guardian disabled the affected pair; the July 8 disclosure confirms insurance-pool slashing and Phase 1 completion. The July 9 Yearn proposal still identifies approximately 1.13 million of remaining bad debt and proposes a treasury loan. The August 13 guardrails proposal states replacement contracts were deployed but lists formal integration actions still required. Those primary sources support mitigation, not a fabricated exact full-repayment date, executed integration of every guardrail, or restitution to all slashed depositors. The historical resolved control posture is required by schema for a mitigated incident and does not assert a verified resolvedAt date.",
+        "sources": [
+          {
+            "label": "Resupply additional security guardrails: deployed contracts and prospective integration steps",
+            "url": "https://gov.resupply.finance/t/introduce-additional-protocol-security-guardrails/71",
+            "publishedAt": "2025-08-13"
+          },
+          {
+            "label": "Resupply July 8 confirmation that Phase 1 was completed and affected IP depositors were slashed",
+            "url": "https://gov.resupply.finance/t/resupply-recovery-plan-phase-2-activate-ip-retention-program/63",
+            "publishedAt": "2025-07-08"
+          },
+          {
+            "label": "Yearn YIP-86 confirms six million insurance-pool contribution and proposes remaining debt loan",
+            "url": "https://gov.yearn.fi/t/yip-86-resupply-bad-debt-repayment-loan/14516",
+            "publishedAt": "2025-07-09"
           }
         ]
       }
@@ -1000,6 +1092,7 @@
       "domain": "peg",
       "kind": "holder-exit-impairment",
       "occurredAt": "2026-03-22",
+      "realizedHolderLossPct": 2.95,
       "status": "mitigated",
       "scope": {
         "kind": "holder-exit"
