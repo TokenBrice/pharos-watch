@@ -355,6 +355,7 @@ describe("prepareSafetyScoreV9Input", () => {
     expect(JSON.parse(String(result.metadata)).transferMateriality).toEqual({
       status: "unavailable",
       code: "TypeError",
+      message: "TypeError: observer invariant failed",
     });
   });
 

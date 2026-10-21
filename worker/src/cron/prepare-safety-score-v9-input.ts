@@ -299,6 +299,7 @@ export async function prepareSafetyScoreV9Input(
         error instanceof Error && error.name
           ? error.name.slice(0, 160)
           : "Error",
+      message: safeErrorMessage(error),
     };
   }
   const committedAtSec = Math.floor(Date.now() / 1_000);

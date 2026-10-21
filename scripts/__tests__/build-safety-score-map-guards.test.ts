@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it, onTestFinished, vi } from "v
 import { firefox } from "playwright";
 import { makeReportCardsV9Card, makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 
-import { runSafetyScoreMapCli, parseMapReportCards } from "../maintenance/build-safety-score-map";
+import { runSafetyScoreMapCli, parseMapReportCards, mapPublicationHealth } from "../maintenance/build-safety-score-map";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import {
   makeSafetyMapPsiPayload,
@@ -25,6 +25,14 @@ describe("Safety map availability semantics", () => {
     const response = makeSafetyMapReportCardsResponse({ cards: [gap, partial], fixtureId: "availability", methodologyVersion: "10.01", defaultUpdatedAt: 1790972280, asOfSec: 1790972280 });
     const result = parseMapReportCards(response);
     expect(result.cards.map(card => ({ id: card.id, grade: card.grade, score: card.score }))).toEqual([{ id: "partial", grade: partial.grade, score: partial.score }]);
+  });
+
+  it("never renders a stale-header publication as current", () => {
+    const current = { status: "current" as const, heldSinceSec: null };
+    expect(mapPublicationHealth(current, "stale")).toEqual({ status: "stale", heldSinceSec: null });
+    expect(mapPublicationHealth(current, "current")).toEqual({ status: "current", heldSinceSec: null });
+    expect(mapPublicationHealth(current, null)).toEqual({ status: "current", heldSinceSec: null });
+    expect(mapPublicationHealth({ status: "held", heldSinceSec: 5 }, "held")).toEqual({ status: "held", heldSinceSec: 5 });
   });
 });
 
