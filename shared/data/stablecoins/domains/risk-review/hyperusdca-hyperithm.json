@@ -135,7 +135,7 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Vault NAV is internal share accounting, while the nine Morpho collateral branches below are the preserved 2026-10-15 inventory, not a newly certified current census. C18 review 2026-10-21 at Monad block 115153416 (2026-10-20T21:58:57Z) independently reads one adapter and seven market IDs: the former cbBTC and mHyperBTC claims are zero; the other seven claims remain nonzero. Exact oracle/first-level feed identities and available round timestamps were re-read, but no whole-book governance/freshness certificate or review-clock renewal is asserted. aHYPER/aHyperBTC retain manager- and enabled-security-admin-upgradeable loan accounting; mHYPER retains manually submitted pricing. The PT backup still routes to its primary and its Pendle input synthesizes updatedAt from block.timestamp. Known adverse pricing already supports a 45-quality constraint. Complete nested feed governance, collateral recoverability and full fallback/freshness safeguards remain unresolved; no whole-book tier promotion is made.",
+    "summary": "The nine branches retain the original2026-10-15 review/observation starts. C18 final research at Monad115214295 (2026-10-21T03:05:20Z; hash0x2dfbf260b323cd06bff7018cae91f578c389e4dd785750614385d9076667e26d) confirms one adapter and seven nonzero markets; cbBTC/mHyperBTC claims remain zero. Current prices, feed slots/rounds, OCR configuration/transmitter getters, selected ConfigSet events, strategy implementations/managers and Accountable Global Registry authority were recovered. Enabled security-admin root is Safe0x4b07aaa370189e5603df56c84f59c5a59181bfb1. Midas default-admin Safe0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 and both known manual-feed admins positively hold their roles. Privileged loan/manual marks and PT correlated/synthetic-timestamp/unit-rate pricing independently support quality45. Safe thresholds alone do not exhaust enabled-module authority. Exhaustive role/delegation history, private source-data accuracy and human signing custody are not certified; no whole-book tier promotion or review-clock renewal.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -241,6 +241,10 @@
       {
         "label": "C18 2026-10-21 exact oracle, nested rounds/controllers and seven-market census; original October 15 review clock preserved",
         "url": "https://monadscan.com/block/115153416"
+      },
+      {
+        "label": "C18 final exact seven-market census, current nested control/OCR and PT-SY graph, read2026-10-21",
+        "url": "https://monadscan.com/block/115214295"
       }
     ],
     "branches": [
@@ -375,7 +379,7 @@
             "observedBlock": 113592449
           }
         ],
-        "fallbackBehavior": "Original Monad block 113592449 (2026-10-15T10:44:05Z) observation and review start preserved. C18 2026-10-21 re-read at block 115153416, hash 0xff2ed64f42d14884bdeda88fa810383df5fdc5ac5d6eb909918b68ae38864806, 2026-10-20T21:58:57Z: currentOracle and primary remain 0x67cd0fc83d3eb39808bd3e686d18324dd269ed6c; backup 0x313c14e7262b59a9366b59692a4e0b140427a723 returns that same primary, owner 0x9bec4dbade98251cc20d3c15c27bfdaa45434d4a. Primary BASE_FEED_1 is 0x5346c2c152e471daad390224491acd8f6b860977; the other three feed slots and both vault slots are zero. Its immutable Pendle market is 0x88c5d8a908834e44b421cb67aec9a931782f9538, twapDuration 900 seconds, baseOracleType 1 (PT_TO_ASSET). Exact published Pendle source returns roundId/startedAt/answeredInRound zero and updatedAt=block.timestamp; this is not the age of the underlying market observations or an independently timestamped external price. OracleRouter.setOracle is owner-only, not an independent feed. The unchanged 1% deviation and 4h/12h challenge/healing mechanism cannot detect agreement caused by both routes reading the same primary. This positively establishes single-source pricing at quality 45, not safe redundant pricing, executable PT recovery or a complete whole-book feed certificate.",
+        "fallbackBehavior": "Original113592449 (2026-10-15T10:44:05Z) and intermediate115153416 pins/review starts preserved. Final Monad115214295 (2026-10-21T03:05:20Z) still selects primary0x67cd0fc83d3eb39808bd3e686d18324dd269ed6c; backup0x313c14e7262b59a9366b59692a4e0b140427a723 returns that same primary. Backup ownerSafe0x9bec4dbade98251cc20d3c15c27bfdaa45434d4a is1of1, no modules/guard. Sole primary feed0x5346c2c152e471daad390224491acd8f6b860977 uses market0x88c5d8a908834e44b421cb67aec9a931782f9538, PT_TO_ASSET, 900-second TWAP; observe([900,0]) succeeds. Market readTokens joins SY0x0898c3346275e79db4892feb1c18875ec154f274 and this exact PT. SY asset/yield token is USDat0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef, six decimals, exchangeRate1e18. Pinned SY implementation0xcd85b66df1839f7a14ed112f639cb7db90dcac7a returns constant PMath.ONE, not an independent dollar price. SY owner is upgradeable PendleGovernanceProxy0x2ad631f72fb16d91c4953a7f4260a97c2fe2f31e; admin candidate0x8119ec16f0573b7dac7c0cb94eb504fb32456ee1 positively holds default-admin. SY ProxyAdmin0xa28c08f165116587d4f3e708743b4dee155c5e64 is owned by3of5 Safe0x7877adfaded756f3248a0ebfe8ac2e2ef87b75ac, no modules/guard. Pendle synthesizes updatedAt=block.timestamp and other round/timing fields zero; Morpho checks nonnegative answer, not maximum age. Unchanged1% deviation and4h/12h timers cannot create independence when both routes read one primary. Sourced single-source45, not independent dollar-price redundancy, executable recovery or complete role-history certification.",
         "collateralParameters": [
           {
             "asset": "PT-USDat-14JAN2027",

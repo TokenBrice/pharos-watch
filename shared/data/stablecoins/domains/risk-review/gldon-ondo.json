@@ -83,7 +83,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Native Ethereum/BNB/Solana issuance and the HyperEVM representation remain inventoried. Historical pins establish reciprocal peers, selected three-DVN libraries and mutable token-specific pathway limits. Supplemental 2026-10-21 reads at Ethereum 26237357, BSC 128843108 and HyperEVM 49091044 resolve each additional MESSENGER_ADMIN as BridgeRegistrar: factory-role registration of deterministic new token IDs, with a separate 7200-second admin timelock, not unrestricted arbitrary calldata execution. Verified OndoOwner DEFAULT_ADMIN separately retains arbitrary target/calldata superCall, ownership transfer and limit reconfiguration. Each current root Safe is 4-of-7 with no enabled modules, zero guard and standard fallback. Current token/global/exact-token Inspector pause flags are false. Solana deployed-runtime execution correspondence, complete execution certification, independent human signer/DVN custody and reconciled materiality remain unresolved. Historical pins and original review starts are preserved; no owner tier or durable cap credit is promoted.",
+    "summary": "GLDon native Ethereum/BNB/Solana issuance and the HyperEVM representation remain separately inventoried; prior peers, three-DVN libraries and mutable pathway limits are retained. Final 2026-10-21 pins Ethereum26238146/BSC128863032/HyperEVM49100165 enumerate every declared BridgeRegistrar role: factory, 1-of-9 Safe PAUSER, 4-of-7 Safe UNPAUSER, and DEFAULT_ADMIN via the respective 7200-second timelock. Each timelock has self plus a 5-of-9 admin Safe, one 4-of-7 proposer, and executor/canceller rosters of the 1-of-9 Safe plus code-empty 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; no open zero-address executor is present. All identified Safes have empty complete module pages and zero guards. Verified timelock CALL requires a scheduled ready operation; updateDelay requires self-call, while external default admins can directly change roles. Registrar pause gates registration rather than existing-token transfer. Separate OndoOwner arbitrary superCall and mutable configuration persist. Exact native Solana build correspondence and complete current proposal/bypass census are recorded in the partial mint-authority scope; unrestricted future CPI target-domain and conserving liability admission are not invented. Human signer/DVN custody and other-chain incident admission remain separate. Original review starts/pins are preserved; no tier or durable cap credit is promoted.",
     "reviewedAt": "2026-10-15",
     "reviewer": "Rev_GldonOndo primary-source and pinned-chain review",
     "confidence": "manual-review",
@@ -180,6 +180,9 @@
         "label": "NR3 2026-10-21 exact HyperEVM BridgeRegistrar verified source",
         "url": "https://hyperevmscan.io/address/0xe3153764ab2a0a928a59c3805503b2ac56b802a3#code"
       },
+      {"label": "NR3 final exact Ethereum timelock source and role/delay semantics", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"},
+      {"label": "NR3 final exact BSC timelock source/runtime correspondence", "url": "https://sourcify.dev/server/v2/contract/56/0x8860bbfc7a83e4788a981f4e9f30878331413b26?fields=compilation,sources,runtimeBytecode"},
+      {"label": "NR3 final exact HyperEVM timelock source/runtime correspondence", "url": "https://hyperevmscan.io/address/0x6253fbc5bcf4f49c80745694366f05d6c7be0e83#code"},
       {
         "label": "Ondo Stocks bridge: native burn/mint on all supported EVM chains and same token amount",
         "url": "https://docs.ondo.finance/tools/ondo-bridge.md"

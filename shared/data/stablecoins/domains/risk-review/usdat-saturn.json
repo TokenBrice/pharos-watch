@@ -470,6 +470,7 @@
         "routeChecks": {
           "attestorQuorum": "The pools use CCIP RMN/ARMProxy deployments Ethereum 0x411de17f12d1a34ecc7f45f49844626267c75e81, BNB 0x9e09697842194f77d315e0907f1bda77922e8f84 and Monad 0x99dfca5d88f4d9c023531f4403966b8d61562acd. At Ethereum block 26095799, getAllAuthorizedCallers() returned 0xd9ab1714df2b5d0011b22f6d94812e7813fa5795 and newly observed 0x2ace0735c229a2cd12c86c734be48007578e1200. At Monad block 109541539, it returned 0xae458c0cc4183482d5a32c945781fe053f2592ea and the same new 0x2ace0735c229a2cd12c86c734be48007578e1200. Empty getVersionedConfig() signer arrays remain a limitation of this curse-contract surface, not proof of a current independent validator roster or adequate quorum.",
           "trustedPeerOrRemote": "Pool peer mappings for Ethereum selector 5009297550715157269, BNB 11344663589394136015, and Monad 8481857512324358265 are unchanged from the 2026-08-16 sidecar. TokenPool 1.6.1 _validateLockOrBurn / _validateReleaseOrMint both require RMN not cursed.",
+          "signingModel": "Supplemental C10 research 2026-10-21, without renewing the original control review/pins: header-checked Ethereum block 26238166 (2026-10-21T03:05:35Z), BNB 128863060 (03:05:40Z) and Monad 115214364 (03:05:41Z) bind the existing pools to the directory routers and their entire accepted offramp inventories. Current 2.0 offramps are Ethereum 0x408428bca0e24a25ac8baac1b70f64af257717c3, BNB 0x4914044f8d787bd5dc7528f00775d850dc54477e and Monad 0xa315658c5e11b0ca99de255f07f10e6c584e4e01. Each enabled USDat source lane has default CCV VersionedVerifierResolver 0x2caafd3b4cf606220580c885bd2b448fb93dc03b and no additional lane-mandated CCV. Its current inbound version 0xe9a05a20 resolves to CommitteeVerifier Ethereum 0x7bce1a3297604cafa601f05799b6ed98e8c01b7f, BNB 0xae458c0cc4183482d5a32c945781fe053f2592ea and Monad 0xabd7fa8f6a4a1fee853b5ae94bc404b4eb3f672e; getSignatureConfig for both peer selectors on each chain returns threshold 9 and sixteen exact keys. This is nine cryptographic signatures, not proof of sixteen independent human operators. The routers also retain legacy offramps: current 1.6 commit configs have F=5, sixteen signers and signature verification enabled, while execution configs use sixteen transmitters with signature verification disabled and still require committed roots. All six referenced 1.2/1.5 CommitStore current digests were matched to their original ConfigSet signer events, each with sixteen signers and F=5. Do not replace this mixed validation graph with the RMN compatibility getters or one global 9-of-16 label. Complete representation-timelock permission history, remaining controller execution/source correspondence and scoped incident admission are still open; no global threshold, independent custody, exhaustive execution certificate or incident absence is admitted by this supplement.",
           "pausersAdminsUpgraders": "isCursed() and isCursed(bytes16) for the three USDat selectors and GLOBAL_CURSE_SUBJECT 0x01000000000000000000000000000001 were false at Ethereum 25783946 / BNB 116709059 / Monad 97138917. ARMProxy.owner() on each chain is the local USDat pool RBACTimelock. This is the scoreable emergency-halt surface; pools have no local pause()."
         },
         "observedAt": "2026-08-18",
@@ -494,6 +495,34 @@
           {
             "label": "Ethereum ARMProxy",
             "url": "https://etherscan.io/address/0x411dE17f12D1A34ecC7F45f49844626267c75e81"
+          },
+          {
+            "label": "Current exact USDat token/pool directory (retrieved 2026-10-21)",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDat"
+          },
+          {
+            "label": "Verified Ethereum OffRamp 2.0 default and lane-mandated CCV semantics",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x408428bca0e24a25ac8baac1b70f64af257717c3"
+          },
+          {
+            "label": "Verified current versioned verifier resolver",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2caafd3b4cf606220580c885bd2b448fb93dc03b"
+          },
+          {
+            "label": "Verified CommitteeVerifier and SignatureQuorumValidator source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7bce1a3297604cafa601f05799b6ed98e8c01b7f"
+          },
+          {
+            "label": "Header-checked Ethereum current lane and historical OCR config observations",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Explicit archive-capable BNB recovery after public-node missing trie node",
+            "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Header-checked Monad current lane and original OCR config observations",
+            "url": "https://rpc.monad.xyz"
           }
         ],
         "evidence": "At Ethereum block 25783924 the LockRelease pool 0xa0de671eb84de9dee1d311d996d25c41f63a0d86 returned getRmnProxy() = 0x411de17f12d1a34ecc7f45f49844626267c75e81 (ARMProxy 1.0.0, owner 0x44835bbba9d40deda9b64858095ecfb2693c9449, getARM() = 0x0b047953451a207743fb62541b21199b95190602). That ARM is verified RMN 2.1.0; owner() = 0x6608920e3f6b591ec3cf15ca1ddf66fbe117f56a; getAllAuthorizedCallers() = [0xd9ab1714df2b5d0011b22f6d94812e7813fa5795]; getVersionedConfig() = (0, empty Config). isCursed() = false; isCursed(eth/bnb/monad/global) = false; getCursedSubjects() returned five other bytes16 chain selectors. BNB pool getRmnProxy() = directory 0x9e09…8f84 → ARM 0xca659c9e6e2f54ee9d9e1e7032805e8a8f361e7c (RMN 2.1.0, owner 0xa390731d4758c6944a3c2322479685dcc6d51714). Monad pool getRmnProxy() = directory 0x99df…2AcD → ARM 0x45272144fa079bb81c8004f208ab2176e6fe5bed (RMN 2.1.0, owner 0x48bc5ab224b818300041956f0da2e675bf676d27)."

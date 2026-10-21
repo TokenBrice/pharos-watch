@@ -73,7 +73,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "IAUon's Ethereum and BSC native deployments have OndoOFT overlays; HyperEVM is a LayerZero OFT representation. Historical route pins establish six reciprocal peers, three required DVNs and mutable pathway limits, not an immutable liability cap. Supplemental 2026-10-21 reads at Ethereum 26237357, BSC 128843108 and HyperEVM 49091044 resolve each additional MESSENGER_ADMIN as BridgeRegistrar: factory-role registration of deterministic new token IDs, with a separate 7200-second admin timelock, not unrestricted arbitrary calldata execution. Verified OndoOwner DEFAULT_ADMIN separately retains arbitrary target/calldata superCall, ownership transfer and limit reconfiguration. Each current root Safe is 4-of-7, with no enabled modules, zero guard and standard fallback. Current token/global/exact-token Inspector pause flags are false. Complete source/runtime execution certification, human signer/DVN custody and a reconciled circulating-liability partition remain unresolved. Native GMTokenManager and Solana issuance stay in Mint Authority. Historical pins and original review starts are preserved; no owner tier or durable cap credit is promoted.",
+    "summary": "IAUon native GM issuance and separate OndoOFT/HyperEVM representation remain distinct; existing peers, three-DVN configurations and mutable pathway caps are retained. Final 2026-10-21 pins Ethereum26238146/BSC128863032/HyperEVM49100165 enumerate every declared BridgeRegistrar role: one factory, 1-of-9 Safe PAUSER, 4-of-7 Safe UNPAUSER, and DEFAULT_ADMIN through its respective 7200-second timelock. Each timelock's admins are itself and a 5-of-9 Safe; proposer is the 4-of-7 Safe; executors/cancellers are the 1-of-9 Safe and code-empty 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b, with no open zero-address executor. All identified Safes have complete empty module pages and zero guards. Source binds arbitrary timelock CALL to scheduled ready operations and delay changes to self-call; external default admins can directly change role membership. Registrar pause gates new registration, not existing-token transfer. Separate OndoOwner arbitrary superCall and mutable limits persist. Native Solana source/build and complete current proposal census are recorded in the partial mint-authority execution scope; future arbitrary-CPI target-domain and conserving liability admission are not manufactured. Human signer/DVN custody and other-chain incident admission remain separate. Original review starts and pins are preserved; no tier or durable cap credit is promoted.",
     "reviewedAt": "2026-08-28",
     "reviewer": "Codex; Sol curation campaign 2026-10-09 (W4T08Nexus), route accounting only",
     "confidence": "verified",
@@ -130,6 +130,9 @@
         "label": "NR3 2026-10-21 exact HyperEVM BridgeRegistrar verified source",
         "url": "https://hyperevmscan.io/address/0xe3153764ab2a0a928a59c3805503b2ac56b802a3#code"
       },
+      {"label": "NR3 final exact Ethereum timelock source and role/delay semantics", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"},
+      {"label": "NR3 final exact BSC timelock source/runtime correspondence", "url": "https://sourcify.dev/server/v2/contract/56/0x8860bbfc7a83e4788a981f4e9f30878331413b26?fields=compilation,sources,runtimeBytecode"},
+      {"label": "NR3 final exact HyperEVM timelock source/runtime correspondence", "url": "https://hyperevmscan.io/address/0x6253fbc5bcf4f49c80745694366f05d6c7be0e83#code"},
       {
         "label": "Ondo Stocks bridge: native burn/mint on all supported EVM chains and same token amount",
         "url": "https://docs.ondo.finance/tools/ondo-bridge.md"

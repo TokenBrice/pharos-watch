@@ -378,14 +378,19 @@
         "id": "tac:0x5ced7f73b76a555ccb372cc0f0137bec5665f81e",
         "destinationChain": "tac",
         "contractAddress": "0x5ced7f73b76a555ccb372cc0f0137bec5665f81e",
-        "protocol": "Noon TAC deployment; exact current transport unreviewed",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Sol curation campaign 2026-10-11 (C08USN): issuer registry lists this deprecated TAC sUSN address. Pinned https://rpc.tac.build block 26795569, hash 0xc0823095b63e488e3c18155688a5fd0940774413f5bfc658b7c7442f54c32c06, timestamp 2026-10-11T00:51:29Z, observed 2026-10-11T00:51:51.117Z and 2026-10-11T00:52:28.173Z, establishes name Staked USN, symbol sUSN, 18 decimals and totalSupply 536396304678010128210 atomic units. Identity and nonzero supply do not certify current proxy/controller reach, exact canonical escrow linkage, every historical transport lane or authenticated in-flight accounting. No transfer posture or material supply share is inferred from this deployment observation.",
+        "protocol": "Noon deprecated Hyperlane sUSN representation; canonical return peers disabled",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "tac",
+        "controllerAddress": "0x868dd9bce1d60362f2169e7b91e6aa2f71f64750",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-21",
+        "observedBlock": 27350483,
+        "reviewNote": "C21 final round 2026-10-21T03:07:14Z: block27350483/hash0xe849509e1886763f6a8743193a57c65fecefa47d3ee7bad380cf53166f62ec31 establishes the same nonzero536396304678010128210 atomic supply, implementation0x6d1019bdbe1da163134aba821bbfc1ccaeb988a8 and owner3-of-6Safe0x868dd9bce1d60362f2169e7b91e6aa2f71f64750. Exact verified TAC USNHyperlane source gates handle minting on mailbox and registered remote sender, and burns outbound shares. mailbox0x3a464f746d23ab22155710f44db16dca53e0775e, token ISM0 delegates to defaultISM0xad3bce653f56d4e03d0789d01d055b06cf6ac48f. Historical full mutation logs and current remoteTokens confirm Ethereum, zkSync, Sophon, Starknet, HyperEVM and Base peers. This classifies representation semantics, NOT a healthy current round trip: current Ethereum/Base/zkSync/HyperEVM TAC remoteTokens(239) are0xdead, and their corresponding rate buckets are1atomic unit per transaction. A separate EOA controls the TAC ProxyAdmin. Historical prior block26795569 identity is retained in the existing source reference. No canonical receipt, remaining exit or economic materiality is inferred; complete escrow/in-flight accounting remains required.",
         "sources": [
           {
             "label": "Noon issuer deployment registry; deprecated TAC sUSN",
@@ -398,6 +403,10 @@
           {
             "label": "Pinned TAC RPC identity and nonzero totalSupply, block 26795569",
             "url": "https://rpc.tac.build"
+          },
+          {
+            "label": "C21 current TAC implementation verified source and ABI, retrieved 2026-10-21",
+            "url": "https://explorer.tac.build/api/v2/smart-contracts/0x6d1019bdbe1da163134aba821bbfc1ccaeb988a8"
           }
         ]
       }
@@ -445,16 +454,16 @@
         "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "lockboxOrEscrow": "Noon documents Ethereum-to-destination lock-mint and destination-to-Ethereum burn-unlock. At Ethereum block 25771191, the current ERC-4626 cross-chain path locks wrapper inventory on Ethereum and unlocks it only after an accepted Hyperlane message; this is supply-conserving bridge escrow, not independent issuer-native minting.",
-          "trustedPeerOrRemote": "The current implementation exposes owner-authorized Hyperlane mailbox, ISM, and remote-token configuration. The Ethereum mailbox is 0xc005dc82818d67af737725bd4bf75435d065d239, interchainSecurityModule() returns zero so the mailbox default ISM is effective, and the LayerZero Endpoint V2 is 0x1a44076050125825900e736c501f859c50fe728c. The default ISM validator set and quorum were not decoded.",
-          "pausersAdminsUpgraders": "The Noon Safe owns the wrapper and administers the bridge configuration. The current implementation adds pause and a 48-hour stuck-message correction flow. Bridge-critical implementation replacement passes through ProxyAdmin 0x1908284b50ee152c9f00c8e65a81fc1c4520bd81 and timelock 0xe5e412c212b4fbbf550a94e7bd5e83db0b315a7f owned by the same Safe; that timelock currently holds an armed, expiry-free upgrade scheduled 2026-06-10 and executable since 2026-06-12, so the 172800-second delay does not presently bind a bridge-logic change (re-checked 2026-09-22).",
+          "trustedPeerOrRemote": "Historical mailbox/token-ISM observations are retained. C21 Ethereum block26238168/hash0xc6bef3df97a64a1ef6dd152bad36889296fbab9d7411a74a9819c9fadf32ec29, observed2026-10-21T03:07:14Z: token ISM0 delegates to mailbox defaultISM0xdd0998a3533b137a3520bca7c0fb0b4f5886ae82, a2-of-2pausable/routing aggregation. Current remoteTokens for TAC239 and Sophon50104 are0xdead. Current LayerZero peers30334(Sophon) and30295 are zero,30165(zkSync) is live, and30378 is a live Sui-directed32-byte peer0xa356ca2010fcdf44d6cecfcecf18b73c32188d361e39dff3a96ac8de0dec7b1b; peer/library/receive-ULN configurations were read using complete indexed PeerSet history. The latter peer resolves to an immutable generic OFT Move package, not yet an exact sUSN CoinType/shared-instance/admin-cap binding; no tenth token deployment or supply is inferred. Full recursive DVN/delegate and conserved liability scope remain unresolved.",
+          "pausersAdminsUpgraders": "Historical September22 evidence found the June10 operation armed. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required, C21: the exact October12 receipt cancels that operation, as already recorded by the native mint review. It no longer establishes current zero-further-notice replacement. The Safe retains pause, rescue and mutable bridge configuration powers; ProxyAdmin/timelock remains a distinct upgrade path, whose complete current operation inventory is not certified by cancellation of one operation.",
           "onchainAmountBounds": "Outbound transfers lock existing sUSN wrapper inventory and accepted return messages unlock that inventory; no independent canonical bridge mint path or route-level aggregate limit was verified."
         },
-        "capDescription": "The Noon Safe controls the Ethereum lockbox's bridge administration, Hyperlane/remote-token configuration, pause and stuck-message correction, while the ProxyAdmin/timelock path can replace bridge-critical logic after 172800 seconds; an armed dormant timelock operation scheduled 2026-06-10 currently makes that replacement executable with zero further notice. Native sUSN issuance remains deposit-gated.",
+        "capDescription": "The Noon Safe controls Ethereum lockbox bridge administration, mailbox/ISM/remote-token configuration, pause and stuck-message correction. The ProxyAdmin/timelock is a distinct mutable implementation path. Historical June10 armed-operation zero-notice evidence was superseded by the exact October12 cancellation; no other current operation inventory is certified here. Native sUSN issuance remains deposit-gated.",
         "canRaiseCap": true,
         "bypassSurfaces": [
-          "Hyperlane mailbox default ISM validator set and quorum were not decoded.",
-          "LayerZero Endpoint V2 per-channel peers and configuration were not re-derived.",
-          "The upgrade timelock holds an armed dormant operation (vault implementation 0xb9E5B8d826939580db142faBA61FcdEA9AAca6E7, scheduled 2026-06-10, no expiry) executable at any moment, so the Safe can replace bridge-critical wrapper logic with zero further notice until it is cancelled."
+          "Current default-ISM module roots, configured-origin validator leaves and pausable states are decoded in C21's source packet; complete source-bound recursive controller reach is not certified.",
+          "Current LayerZero peer/library/receive-DVN configurations are read, but exact recursive DVN/delegate scope and the Sui-directed peer's token-instance binding remain unresolved.",
+          "The historical June10 operation was cancelled October12; remaining upgrade paths and current operation inventory require their own exact scope and cannot be inferred from that cancellation."
         ],
         "observedAt": "2026-08-16",
         "observedBlock": 25771191,
@@ -482,6 +491,14 @@
           {
             "label": "C21 exact UpgradeCancelled receipt, block 26175136, October 12, 2026 08:16:47 UTC; retrieved 2026-10-20",
             "url": "https://etherscan.io/tx/0x9c16bcd0d9aa0d68457e5bc15fd157e1e475f2981940e6c07639f4ef5713f07e"
+          },
+          {
+            "label": "Current Ethereum mailbox/ISM/peers/libraries/DVNs/limiter and account reads at block26238168, observed2026-10-21T03:07:14Z; historical review start retained",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Current source-verified Ethereum implementation0xef2ea425; C21 retrieved2026-10-21",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xef2ea4250b7ce4d0aa9ca70607ecef278c6eab15?fields=abi,sources,compilation"
           }
         ],
         "evidence": "At Ethereum block 25771191 on 2026-08-16, the sUSN proxy resolved to implementation 0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d, owner() was the Noon 3-of-6 Safe 0x1ea169ecccf7714e7ba04900e1a3357cca77327f, mailbox() was 0xc005dc82818d67af737725bd4bf75435d065d239, interchainSecurityModule() was zero, and LayerZero endpoint() was 0x1a44076050125825900e736c501f859c50fe728c. The verified implementation exposes owner-authorized Hyperlane configuration, remote-token handling, pause, and 48-hour stuck-message correction; ProxyAdmin 0x1908284b50ee152c9f00c8e65a81fc1c4520bd81 is governed by the 172800-second timelock 0xe5e412c212b4fbbf550a94e7bd5e83db0b315a7f. These are bridge-route controls over locked wrapper inventory, while native share issuance remains the deposit-gated staking flow. Adverse re-check 2026-09-22 at block 26036288: the proxy implementation slot is unchanged, while the timelock still reports the 2026-06-10-scheduled upgrade to 0xb9E5B8d826939580db142faBA61FcdEA9AAca6E7 as armed with no expiry, so bridge-critical wrapper logic is currently replaceable without notice. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required (C21, 2026-10-20): the last zero-further-notice conclusion is historical, not the current status of that operation. The exact October 12 receipt at block 26175136 emitted UpgradeCancelled from this timelock for this proxy, ProxyAdmin 0x1908284b50ee152c9f00c8e65a81fc1c4520bd81, target 0xb9e5b8d826939580db142faba61fcdea9aaca6e7 and operation 0x6e39336750b5862a6a87ec267de08804f12e47e91e1febbf7c4d2767c6727902. The native mint review already records the separate October 1 upgrade. This corrects only the obsolete armed-operation assertion, not all current bridge implementations, default ISMs, peers, rate limits, incidents, materiality or other scheduled operations. Original review start and historical pins remain unchanged."
@@ -502,22 +519,34 @@
           "contract:zksync:0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e",
           "contract:zksync:0xd07c30af3ff30d96bdc9c6044958230eb797ddbf"
         ],
-        "authorityType": "contract",
-        "modulesOrGuardsStatus": "not-applicable",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 4,
+        "safe": {
+          "owners": ["0x0649f6fc279b0eb94d5b15de013b87b0e50d2d88", "0xe45bb0d3cc77702e1310bb621c59c778304a42d0", "0x7b1187106a3ac9d2602f41224a06e247fc12be37", "0x09ce2d1c37772f7ff666b6447a66a5ebd2833799"],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x2f870a80647bbc554f3a0ebd093f11b4d2a7492a",
+          "observedBlock": 72577262,
+          "observedAt": "2026-10-21",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "trustedPeerOrRemote": "At zkSync block 71576848, owner() returned 0x15d91eb2c3188bb85881d2e09b5025f3fcc4a263, mailbox() returned 0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e, token-level ISM() returned zero, and the LayerZero endpoint was 0xd07c30af3ff30d96bdc9c6044958230eb797ddbf. A zero token-level ISM delegates to the mailbox default ISM; its validator set and quorum were not decoded.",
           "caps": "At zkSync block 71804227 on 2026-09-01, representation 0xb6a09d426861c63722aa0b333a9ce5d5a9b04c4f exposed no mint ceiling: cap(), maxSupply(), mintCap(), supplyCap(), mintingLimit(), mintingMaxLimitOf(address), and mintingCurrentLimitOf(address) all reverted, so it is a plain Hyperlane synthetic rather than an xERC20 with configured minting limits. token() returned the contract itself and its EIP-1967 implementation was 0x9f80bbe82dbad5d74904c83bd8990c8ba9dfe82a, so the owner-administered proxy can replace the mint logic; nothing caps an accepted delivery.",
-          "pausersAdminsUpgraders": "The route-local owner contract is the reviewed destination bridge administrator. Its owner-contract multisig threshold and any upgrade authorization were not independently verified.",
+          "pausersAdminsUpgraders": "C21 pinned block72577262, observed2026-10-21T03:07:14Z: owner is a3-of-4Safe, modules list terminates at sentinel1 with no enabled modules, guard0, singleton0x1727c2c531cf966f902e5927b98490fdfb3b2b70. ProxyAdmin0x5130c9cd9e85b4a95f9b44c7eb8667106e8fdecc is separately owned by0x6e7fd7751649993a8c01837ab7f035d21e6f2ace, whose owner is this Safe. Full current source/controller operation scope is not replaced by the nominal Safe threshold.",
           "onchainAmountBounds": "The representation mints and burns on accepted Hyperlane message delivery against sUSN locked on Ethereum; no independent native collateral or route-level aggregate cap was verified."
         },
         "capDescription": "The zkSync destination representation is a Hyperlane bridge mint/burn route against Ethereum-locked sUSN, with the route-local owner controlling bridge administration and peer-related configuration.",
         "canRaiseCap": true,
         "bypassSurfaces": [
-          "Hyperlane mailbox default ISM validator set and quorum were not decoded.",
-          "The owner contract's multisig threshold and upgrade authorization were not independently verified."
+          "Current configured-origin Hyperlane module/validator/quorum reads are in C21's packet; complete source-bound controller, LayerZero DVN/delegate and historical peer-storage execution scope remains uncertified.",
+          "C21 established the current nominal3-of-4Safe, empty modules and zero guard; separate ProxyAdmin/timelock, operational delegate/limiter owners and complete execution scope remain independent obligations."
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 71576848,
+        "observedAt": "2026-10-21",
+        "observedBlock": 72577262,
         "sources": [
           {
             "label": "Noon interoperability docs",
@@ -530,6 +559,14 @@
           {
             "label": "Hyperlane docs",
             "url": "https://docs.hyperlane.xyz/"
+          },
+          {
+            "label": "Current pinned zkSync owner/Safe/roles/mailbox/ISM/LayerZero/limiter, observed2026-10-21T03:07:14Z; earlier evidence pins retained",
+            "url": "https://api-zksync-era-mainnet-full.n.dwellir.com"
+          },
+          {
+            "label": "Current exact zkSync implementation verified source and ABI, retrieved2026-10-21",
+            "url": "https://block-explorer-api.mainnet.zksync.io/api?module=contract&action=getsourcecode&address=0x8b9e886b6850615911c61a7cd10c9c6630d1a03d"
           }
         ],
         "evidence": "At zkSync block 71576848 on 2026-08-16, the sUSN representation owner was contract 0x15d91eb2c3188bb85881d2e09b5025f3fcc4a263, mailbox was 0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e, token-level ISM() returned zero, and the LayerZero endpoint was 0xd07c30af3ff30d96bdc9c6044958230eb797ddbf. The destination is a Hyperlane representation whose mint/burn path is message-delivery gated against Ethereum-locked sUSN; it is not an independent Noon native issuance deployment."
@@ -550,22 +587,34 @@
           "contract:sophon:0x9bbdf86b272d224323136e15594fdce487f40ce7",
           "contract:sophon:0x5c6cff4b7c49805f8295ff73c204ac83f3bc4ae7"
         ],
-        "authorityType": "contract",
-        "modulesOrGuardsStatus": "not-applicable",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 4,
+        "safe": {
+          "owners": ["0x0649f6fc279b0eb94d5b15de013b87b0e50d2d88", "0xe45bb0d3cc77702e1310bb621c59c778304a42d0", "0x09ce2d1c37772f7ff666b6447a66a5ebd2833799", "0x7b1187106a3ac9d2602f41224a06e247fc12be37"],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x9301e98dd367135f21bdf66f342a249c9d5f9069",
+          "observedBlock": 29677288,
+          "observedAt": "2026-10-21",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "trustedPeerOrRemote": "At Sophon block 29641987, owner() returned 0x553d36879016ce22977a622804eee76dc0dc88e0, mailbox() returned 0x9bbdf86b272d224323136e15594fdce487f40ce7, token-level ISM() returned zero, and the LayerZero endpoint was 0x5c6cff4b7c49805f8295ff73c204ac83f3bc4ae7. A zero token-level ISM delegates to the mailbox default ISM; its validator set and quorum were not decoded.",
           "caps": "At Sophon block 29658914 on 2026-09-01, representation 0xb87dbe27db932bacaaa96478443b6519d52c5004 exposed no mint ceiling: cap(), maxSupply(), mintCap(), supplyCap(), mintingLimit(), mintingMaxLimitOf(address), and mintingCurrentLimitOf(address) all reverted, so it is a plain Hyperlane synthetic rather than an xERC20 with configured minting limits. token() returned the contract itself and its EIP-1967 implementation was 0xf280f30e0dbde661ce8e38acd658fc40f755ef80, so the owner-administered proxy can replace the mint logic; nothing caps an accepted delivery.",
-          "pausersAdminsUpgraders": "The route-local owner contract is the reviewed destination bridge administrator. Its owner-contract multisig threshold and any upgrade authorization were not independently verified.",
+          "pausersAdminsUpgraders": "C21 pinned block29677288, observed2026-10-21T03:07:14Z: token owner is3-of-4Safe with empty modules and guard0. This Safe is NOT the sole privileged root: ProxyAdmin0x90d0307d14009b9081cab5a3ee92c62625649d5f is owned by zero-code EOA0x173806021b18c4e60170e412dc88f991eb00d699, which also currently holds DEFAULT_ADMIN_ROLE and BLACKLIST_MANAGER_ROLE. The source-verified ProxyAdmin can replace bridge logic without a timelock.",
           "onchainAmountBounds": "The representation mints and burns on accepted Hyperlane message delivery against sUSN locked on Ethereum; no independent native collateral or route-level aggregate cap was verified."
         },
         "capDescription": "The Sophon destination representation is a Hyperlane bridge mint/burn route against Ethereum-locked sUSN, with the route-local owner controlling bridge administration and peer-related configuration.",
         "canRaiseCap": true,
         "bypassSurfaces": [
-          "Hyperlane mailbox default ISM validator set and quorum were not decoded.",
-          "The owner contract's multisig threshold and upgrade authorization were not independently verified."
+          "Current configured-origin Hyperlane module/validator/quorum reads are in C21's packet; retired-route lifecycle, full validation/controller execution scope and the exact Sophon incident residual remain unresolved.",
+          "C21 established the3-of-4Safe owner but also a distinct currently active EOA ProxyAdmin owner/default-admin/blacklist manager; the Safe threshold does not constrain that separate privileged path."
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 29641987,
+        "observedAt": "2026-10-21",
+        "observedBlock": 29677288,
         "sources": [
           {
             "label": "Noon interoperability docs",
@@ -578,6 +627,10 @@
           {
             "label": "Hyperlane docs",
             "url": "https://docs.hyperlane.xyz/"
+          },
+          {
+            "label": "Current exact Sophon implementation verified source and ABI, retrieved2026-10-21",
+            "url": "https://api-explorer.sophon.xyz/api?module=contract&action=getsourcecode&address=0xf280f30e0dbde661ce8e38acd658fc40f755ef80"
           }
         ],
         "evidence": "At Sophon block 29641987 on 2026-08-16, the sUSN representation owner was contract 0x553d36879016ce22977a622804eee76dc0dc88e0, mailbox was 0x9bbdf86b272d224323136e15594fdce487f40ce7, token-level ISM() returned zero, and the LayerZero endpoint was 0x5c6cff4b7c49805f8295ff73c204ac83f3bc4ae7. The destination is a Hyperlane representation whose mint/burn path is message-delivery gated against Ethereum-locked sUSN; it is not an independent Noon native issuance deployment."
@@ -600,19 +653,19 @@
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
-          "trustedPeerOrRemote": "At Starknet block 13410062, owner() returned 0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, mailbox() returned 0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8, token-level ISM() returned zero, and class hash remained 0x30e4a76333c45038320b6dcd0e2327eec72983de6e16513152d97277290dc7d. A zero token-level ISM delegates to the mailbox default ISM; its validator set and quorum were not decoded.",
+          "trustedPeerOrRemote": "Historical August16 state is retained. C21 block16693903/hash0x75dca895f5bf4ea884e3fb178ce784b3292f72e6436c54c6d4cf48b11136791, observed2026-10-21T03:09:52Z, confirms unchanged token class hash, owner and mailbox; token ISM0. Current domains() enumerates exactly Ethereum1 and zkSync324 with matching canonical sUSN peers. DefaultISM0x6e66fe528f954d3630228d54fb509efe2fd8a646ab0f2265003c20fbf6d5b0a requires2-of-2modules: a routing module and an unpaused pausable module. The two configured origins use respectively6-of-9 Ethereum and2-of-3 zkSync validator leaves, with exact addresses in C21's final source packet. Upgradable mailbox/router/pauser controllers and complete execution/incident scope are not thereby certified.",
           "caps": "At Starknet block 14195197 on 2026-09-01, representation 0x02411565ef1a14decfbe83d2e987cced918cd752508a3d9c55deb67148d14d17 had no cap, max_supply, get_cap, or mint_limit entrypoint (each call returned \"Requested entrypoint does not exist\"), so no mint ceiling exists. owner remained 0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, mailbox remained 0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8, interchain_security_module returned zero, and the class hash was unchanged at 0x30e4a76333c45038320b6dcd0e2327eec72983de6e16513152d97277290dc7d. Nothing caps an accepted Hyperlane delivery.",
-          "pausersAdminsUpgraders": "The route-local owner contract is the reviewed destination bridge administrator. Its owner-contract multisig threshold and any upgrade authorization were not independently verified.",
+          "pausersAdminsUpgraders": "C21 current owner class ABI identifies Braavos001.002.000, not a Safe. get_signers returns one Stark public key0x38156224d6c067d825a4f6838e674ee2d2f71127a27c3110af7934bc4125f0b and no secp256r1/WebAuthn signers; get_multisig_threshold=0, deferred removal=0, recovery execution-time delay345600seconds, low/high withdrawal limits0. That recovery delay is NOT a timelock on arbitrary token upgrades. Session/outside execution and actual deployed Cairo authorization remain separate recursive-scope obligations; no hardware custody or independent multisig is inferred.",
           "onchainAmountBounds": "The representation mints and burns on accepted Hyperlane message delivery against sUSN locked on Ethereum; no independent native collateral or route-level aggregate cap was verified."
         },
         "capDescription": "The Starknet destination representation is a Hyperlane bridge mint/burn route against Ethereum-locked sUSN, with the route-local owner controlling bridge administration and peer-related configuration.",
         "canRaiseCap": true,
         "bypassSurfaces": [
-          "Hyperlane mailbox default ISM validator set and quorum were not decoded.",
-          "The owner contract's multisig threshold and upgrade authorization were not independently verified."
+          "Current configured-origin Hyperlane validator leaves are decoded, but upgradable mailbox/router/pauser controller execution and source/build completeness remain unverified.",
+          "Current token owner is a Braavos account with one Stark key and multisig threshold0; its session/outside-execution reach is not certified by the recovery delay."
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 13410062,
+        "observedAt": "2026-10-21",
+        "observedBlock": 16693903,
         "sources": [
           {
             "label": "Noon interoperability docs",
@@ -625,9 +678,214 @@
           {
             "label": "Hyperlane docs",
             "url": "https://docs.hyperlane.xyz/"
+          },
+          {
+            "label": "Current pinned Starknet class/owner/signers/mailbox/router and default-ISM quorums, observed2026-10-21T03:09:52Z; earlier evidence pins retained",
+            "url": "https://api-starknet-mainnet.n.dwellir.com"
           }
         ],
         "evidence": "At Starknet block 13410062 on 2026-08-16, the sUSN representation owner was 0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, mailbox was 0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8, token-level ISM() returned zero, and class hash remained 0x30e4a76333c45038320b6dcd0e2327eec72983de6e16513152d97277290dc7d. The destination is a Hyperlane representation whose mint/burn path is message-delivery gated against Ethereum-locked sUSN; it is not an independent Noon native issuance deployment."
+      },
+      {
+        "id": "susn-tac-hyperlane-representation-owner",
+        "label": "sUSN deprecated TAC token owner3-of-6Safe",
+        "routeRefs": ["tac:0x5ced7f73b76a555ccb372cc0f0137bec5665f81e"],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin", "peer-config"],
+        "controllerChain": "tac",
+        "controllerAddress": "0x868dd9bce1d60362f2169e7b91e6aa2f71f64750",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "owners": ["0x7b1187106a3ac9d2602f41224a06e247fc12be37", "0x0649f6fc279b0eb94d5b15de013b87b0e50d2d88", "0xe45bb0d3cc77702e1310bb621c59c778304a42d0", "0x09ce2d1c37772f7ff666b6447a66a5ebd2833799", "0xe8241facb568e4c880490e8ab4e015f2572e6976", "0x8b3641db7737ffab752718fcc772161ec09fad01"],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "observedBlock": 27350483,
+          "observedAt": "2026-10-21",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "capDescription": "Owner can replace mailbox/ISM and register remote senders; authenticated handle mints representations. DEFAULT_ADMIN_ROLE permits role grants. The separate EOA-owned ProxyAdmin bypass is represented independently.",
+        "observedAt": "2026-10-21",
+        "observedBlock": 27350483,
+        "sources": [
+          {"label": "Exact TAC implementation verified source", "url": "https://explorer.tac.build/api/v2/smart-contracts/0x6d1019bdbe1da163134aba821bbfc1ccaeb988a8"},
+          {"label": "Pinned TAC owner, Safe, mailbox, roles and full mutation logs; C21 observed2026-10-21T03:07:14Z", "url": "https://rpc.tac.build"}
+        ],
+        "evidence": "C21 block27350483/hash0xe849509e1886763f6a8743193a57c65fecefa47d3ee7bad380cf53166f62ec31: owner3-of-6Safe with empty modules, guard0 and singleton0x29fcb43b46531bca003ddc8fcb67ffe91900c762. All six listed signer accounts have zero code on TAC at this pin. Full token RoleGranted/RoleRevoked enumeration plus current hasRole establishes this Safe holds DEFAULT_ADMIN_ROLE, while the old EOA's token admin/blacklist roles are false. This does not remove the separate EOA-owned ProxyAdmin, establish key custody/independence, or certify exhaustive execution scope. Source and runtime prove local bridge mint/burn mechanics, not end-to-end payout or materiality."
+      },
+      {
+        "id": "susn-tac-proxyadmin-eoa",
+        "label": "sUSN TAC independent single-EOA ProxyAdmin upgrade path",
+        "routeRefs": ["tac:0x5ced7f73b76a555ccb372cc0f0137bec5665f81e"],
+        "capabilities": ["upgrade", "admin"],
+        "controllerChain": "tac",
+        "controllerAddress": "0x173806021b18c4e60170e412dc88f991eb00d699",
+        "authorityType": "eoa",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "capDescription": "Direct owner of ProxyAdmin0x36849808656f85eceb5fb6aebd8e4c1532b6cfc7 can immediately replace TAC token implementation via upgradeAndCall, bypassing the token-owner Safe and changing all bridge mint/burn logic.",
+        "observedAt": "2026-10-21",
+        "observedBlock": 27350483,
+        "sources": [
+          {"label": "Verified TAC ProxyAdmin source and deployed runtime", "url": "https://explorer.tac.build/api/v2/smart-contracts/0x36849808656f85eceb5fb6aebd8e4c1532b6cfc7"},
+          {"label": "Verified TAC TransparentUpgradeableProxy", "url": "https://explorer.tac.build/api/v2/smart-contracts/0x5ced7f73b76a555ccb372cc0f0137bec5665f81e"},
+          {"label": "Current pinned TAC proxy/admin/owner/code, observed2026-10-21T03:07:14Z", "url": "https://rpc.tac.build"}
+        ],
+        "evidence": "At block27350483 the EIP1967 admin slot is0x36849808656f85eceb5fb6aebd8e4c1532b6cfc7 and that same immutable admin address occurs in the live proxy runtime. Its runtime exactly equals the explorer-verified ProxyAdmin deployed bytecode. owner() is0x173806021b18c4e60170e412dc88f991eb00d699, whose code is0x at this pin. Verified ProxyAdmin upgradeAndCall is onlyOwner with no delay. This is a positively established single-key implementation-replacement path, not a conclusion from missing Safe research. No exact custody or operator independence is inferred."
+      },
+      {
+        "id": "susn-sophon-proxyadmin-eoa",
+        "label": "sUSN Sophon independent EOA upgrade/admin/blacklist path",
+        "routeRefs": ["sophon:0xb87dbe27db932bacaaa96478443b6519d52c5004"],
+        "capabilities": ["upgrade", "admin"],
+        "controllerChain": "sophon",
+        "controllerAddress": "0x173806021b18c4e60170e412dc88f991eb00d699",
+        "authorityType": "eoa",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "capDescription": "EOA owns ProxyAdmin0x90d0307d14009b9081cab5a3ee92c62625649d5f and can replace bridge logic without the3-of-4token-ownerSafe; it also directly retains token DEFAULT_ADMIN_ROLE and BLACKLIST_MANAGER_ROLE.",
+        "observedAt": "2026-10-21",
+        "observedBlock": 29677288,
+        "sources": [
+          {"label": "Verified Sophon ProxyAdmin source", "url": "https://api-explorer.sophon.xyz/api?module=contract&action=getsourcecode&address=0x90d0307d14009b9081cab5a3ee92c62625649d5f"},
+          {"label": "Verified current Sophon StakedUSNOFTHyperlane implementation", "url": "https://api-explorer.sophon.xyz/api?module=contract&action=getsourcecode&address=0xf280f30e0dbde661ce8e38acd658fc40f755ef80"},
+          {"label": "Pinned Sophon proxy/admin/roles/owner/code and full mutation logs, observed2026-10-21T03:07:14Z", "url": "https://rpc.sophon.xyz"}
+        ],
+        "evidence": "Block29677288/hash0x7adb434a443133609cafade118f70df95d548c2925f53b51141323375e52f972: proxy admin slot points to0x90d0307d14009b9081cab5a3ee92c62625649d5f, owner() returns0x173806021b18c4e60170e412dc88f991eb00d699 and its code is0x. Explorer reports verified standard ProxyAdmin with onlyOwner immediate upgradeAndCall. Full token role-grant history and current hasRole establish the same EOA still has DEFAULT_ADMIN_ROLE and BLACKLIST_MANAGER_ROLE. The distinct token-owner3-of-4Safe does not constrain these powers. Deprecated status and residual146791950999999999999 atomic sUSN do not establish immateriality or clean incident resolution."
+      },
+      {
+        "id": "susn-base-hyperlane-representation-owner",
+        "label": "sUSN Base bridge-configuration3-of-5Safe",
+        "routeRefs": ["base:0x34a2798d47b238a7cba9d87d49618dee6c4d999f"],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin", "pause", "peer-config", "rate-limit"],
+        "controllerChain": "base",
+        "controllerAddress": "0xf56d33ef52642ce226a566610a979dc8d954592d",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": ["0x09ce2d1c37772f7ff666b6447a66a5ebd2833799", "0x5ef8aa9cb6b2dedcd02509058cf99d3d44d023c3", "0x7b1187106a3ac9d2602f41224a06e247fc12be37", "0xe45bb0d3cc77702e1310bb621c59c778304a42d0", "0x8b3641db7737ffab752718fcc772161ec09fad01"],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "observedBlock": 52881338,
+          "observedAt": "2026-10-21",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "capDescription": "Mutable mailbox/ISM/remote-token and rate-limiter selection can alter or bypass nominal delivery limits. Configured ordinary Hyperlane buckets are4million shares per28800seconds, not an immutable economic issuance cap; deprecated TAC/Sophon buckets are1atomic unit per transaction and peers0xdead.",
+        "observedAt": "2026-10-21",
+        "observedBlock": 52881338,
+        "sources": [
+          {"label": "Exact-match Base StakedUSNHyperlane implementation", "url": "https://sourcify.dev/server/v2/contract/8453/0xa02ca8c6130b75b320faa785034e95d4374a8942?fields=abi,sources,compilation"},
+          {"label": "Pinned Base state and recursive reads, observed2026-10-21T03:07:14Z", "url": "https://api-base-mainnet-archive.n.dwellir.com"}
+        ],
+        "evidence": "C21 block52881338/hash0x052b20261dbb64e9a37315f0ca6a12c57796788e0a23edccce8c5911db708316: token owner3-of-5Safe, singleton0x29fcb43b46531bca003ddc8fcb67ffe91900c762, no modules, zero guard, all five signer accounts zero-code on Base. Token unpaused; implementation0xa02ca8c6130b75b320faa785034e95d4374a8942; mailbox0xea87ae93fa0019a82a727bfd3ebd1cfca8f64f1d and defaultISM0x0c53271f445d5f0cd1c7388f04a8c2ec55cf88b9 require2-of-2pausable/routing modules. Limiter0xefff8c4260af5da5eb26194cb45407f497756db7 has its own owner0x77044c9c050bcfd80d1ab42aa070bd3f65b32ef2; ProxyAdmin owner is the separate timelock0xa9bb96bb79492aa64199f078362ecd069d565e85. This is a nominal authority/state admission, not complete signing independence, recursive execution, incident or materiality proof."
+      },
+      {
+        "id": "susn-hyperevm-hyperlane-representation-owner",
+        "label": "sUSN HyperEVM bridge-configuration3-of-5Safe",
+        "routeRefs": ["hyperevm:0x34a2798d47b238a7cba9d87d49618dee6c4d999f"],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin", "pause", "peer-config", "rate-limit"],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x3d6b578afdfdcd9e74eb0cdbddcf2435502fc5b8",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": ["0x09ce2d1c37772f7ff666b6447a66a5ebd2833799", "0xe45bb0d3cc77702e1310bb621c59c778304a42d0", "0x8b3641db7737ffab752718fcc772161ec09fad01", "0x7b1187106a3ac9d2602f41224a06e247fc12be37", "0x5ef8aa9cb6b2dedcd02509058cf99d3d44d023c3"],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "observedBlock": 49100278,
+          "observedAt": "2026-10-21",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "capDescription": "Owner can replace mailbox/ISM, register remote senders and select or disable the limiter;4million-shares/28800second configured ordinary buckets do not form an immutable cap. TAC/Sophon counterparts are0xdead with1atomic-unit buckets.",
+        "observedAt": "2026-10-21",
+        "observedBlock": 49100278,
+        "sources": [
+          {"label": "Exact-match Base source; current HyperEVM implementation runtime equality", "url": "https://sourcify.dev/server/v2/contract/8453/0xa02ca8c6130b75b320faa785034e95d4374a8942?fields=abi,sources,compilation"},
+          {"label": "Pinned HyperEVM state and recursive reads, observed2026-10-21T03:07:14Z", "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com"}
+        ],
+        "evidence": "C21 block49100278/hash0x328b2ba5a53411f7a6fcedd3e7ee2e766f2b22601b6af3f68417c96426f88c09: owner3-of-5Safe, singleton0x29fcb43b46531bca003ddc8fcb67ffe91900c762, empty modules, zero guard and zero-code signer accounts. Current implementation0xffc95e7e447dc94dce706b8afda751349e676227 runtime exactly equals the source-verified Base implementation. Token is unpaused; mailbox0x3a464f746d23ab22155710f44db16dca53e0775e, defaultISM0xcc8aaa232674c735f17015540e22e73854052ef5,2-of-2pausable/routing modules. Limiter0x77044c9c050bcfd80d1ab42aa070bd3f65b32ef2 and ProxyAdmin owner0x73d59063212c1a3fd32882d46a84efb37911550d are separate mutable control domains. No complete execution, custody, independence, incident or materiality assertion."
+      },
+      {
+        "id": "susn-citrea-hyperlane-representation-owner",
+        "label": "sUSN Citrea bridge-configuration3-of-5Safe",
+        "routeRefs": ["citrea:0xda67b4284609d2d48e5d10cfac411572727dc1ed"],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin", "pause", "peer-config", "rate-limit"],
+        "controllerChain": "citrea",
+        "controllerAddress": "0xb2ad758ee2710527a28d906f9588938c2e5cfc80",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": ["0x09ce2d1c37772f7ff666b6447a66a5ebd2833799", "0x5ef8aa9cb6b2dedcd02509058cf99d3d44d023c3", "0x7b1187106a3ac9d2602f41224a06e247fc12be37", "0xe45bb0d3cc77702e1310bb621c59c778304a42d0", "0x8b3641db7737ffab752718fcc772161ec09fad01"],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "observedBlock": 14224770,
+          "observedAt": "2026-10-21",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "capDescription": "Mutable owner-selected mailbox/ISM/remote senders and limiter can alter delivery controls; observed Ethereum buckets are4million shares/28800seconds, not immutable economic caps.",
+        "observedAt": "2026-10-21",
+        "observedBlock": 14224770,
+        "sources": [
+          {"label": "Exact-match Base source; current Citrea implementation runtime equality", "url": "https://sourcify.dev/server/v2/contract/8453/0xa02ca8c6130b75b320faa785034e95d4374a8942?fields=abi,sources,compilation"},
+          {"label": "Pinned Citrea state and recursive reads, observed2026-10-21T03:07:14Z", "url": "https://rpc.mainnet.citrea.xyz"}
+        ],
+        "evidence": "C21 block14224770/hash0xe44da9ce1bb283b0f5895c4cc4413821e221f4e6adbf2a959a77eff6b558be05: owner3-of-5Safe with empty modules, zero guard, zero-code signer accounts and singleton0x29fcb43b46531bca003ddc8fcb67ffe91900c762. Implementation0x6d1019bdbe1da163134aba821bbfc1ccaeb988a8 exactly equals current source-verified Base StakedUSNHyperlane runtime; the same numeric implementation address on TAC has DIFFERENT runtime and source and is not conflated. Token unpaused; Ethereum remote matches canonical sUSN. DefaultISM0x1ebd3841770ff9e656c2eb6664f064d6aa199395 requires2-of-2modules. Separate limiter0xc79a424a9fb6dd94cd54715b97f5d0703cede815 and ProxyAdmin timelock0xf6f40baafbcbb29855f4d9a29576b812e0b33fac remain distinct control domains. Indexed historical logs are not treated as an exhaustive storage census; no full execution, incident or materiality certification."
+      },
+      {
+        "id": "susn-berachain-hyperlane-representation-owner",
+        "label": "sUSN Berachain bridge-configuration3-of-5Safe",
+        "routeRefs": ["berachain:0xda67b4284609d2d48e5d10cfac411572727dc1ed"],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin", "pause", "peer-config", "rate-limit"],
+        "controllerChain": "berachain",
+        "controllerAddress": "0x94e9f383b085d32973634ea7c9bb2038ef9a3c58",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": ["0x09ce2d1c37772f7ff666b6447a66a5ebd2833799", "0x5ef8aa9cb6b2dedcd02509058cf99d3d44d023c3", "0x7b1187106a3ac9d2602f41224a06e247fc12be37", "0xe45bb0d3cc77702e1310bb621c59c778304a42d0", "0x8b3641db7737ffab752718fcc772161ec09fad01"],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "observedBlock": 27768653,
+          "observedAt": "2026-10-21",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "capDescription": "Owner can change mailbox/ISM, registered senders and selected limiter. Observed Ethereum buckets4million shares/28800seconds are mutable operational limits, not permanent caps on economic issuance.",
+        "observedAt": "2026-10-21",
+        "observedBlock": 27768653,
+        "sources": [
+          {"label": "Exact-match Base source; current Berachain implementation runtime equality", "url": "https://sourcify.dev/server/v2/contract/8453/0xa02ca8c6130b75b320faa785034e95d4374a8942?fields=abi,sources,compilation"},
+          {"label": "Pinned Berachain state and recursive reads, observed2026-10-21T03:07:14Z", "url": "https://api-berachain-mainnet.n.dwellir.com"}
+        ],
+        "evidence": "C21 block27768653/hash0x58789e0f97adc8f22c5277fb853ded03b6e867da2c3fd89741b17c5757ba1378: owner3-of-5Safe, empty modules, zero guard, zero-code signer accounts, singleton0x29fcb43b46531bca003ddc8fcb67ffe91900c762. Current implementation0x657284c8337ab91b1a7d4eb66be97596f4878117 exactly equals the source-verified Base runtime. Token unpaused, canonical Ethereum remote configured. DefaultISM0x5ca7cc2f5a2301434fdfcd2e8a77efe7e0c9ff0b requires2-of-2routing/pausable modules. Limiter0x51a30e647d33a044967fa3dbb04d6ed6f45455f6 and ProxyAdmin timelock0xea84ac70f00f47ad6fbe51233aae25799b9f0a02 are independent mutable control domains. No human independence, custody, full recursive execution, incident or materiality proof is inferred."
       }
     ]
   }

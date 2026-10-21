@@ -184,6 +184,27 @@
         "timelockDelaySec": 7200,
         "observedAt": "2026-10-15",
         "observedBlock": 457209355,
+        "executionScope": {
+          "controllerDeployment": "solana:9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM",
+          "reviewedAt": "2026-10-21", "observedAt": "2026-10-21", "expiresAt": "2026-11-20",
+          "reviewer": "NR3 exact source and archived permission census",
+          "confidence": "partial",
+          "sources": [
+            {"label": "Exact immutable Squads completed source build; vendor requester trust is separately false", "url": "https://verify.osec.io/job/80f5742f-fdcb-4a6d-b8b4-aa6aeda0d824"},
+            {"label": "Current exact GM executable/source match", "url": "https://verify.osec.io/status/XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm"},
+            {"label": "Exact Squads permission, configuration, batch and spending-limit source", "url": "https://github.com/Squads-Protocol/v4/tree/2a47b4cc76068fb8accec3d5a599e6020c50f796/programs/squads_multisig_program/src"},
+            {"label": "Exact archive slot459474170; current finalized discovery censuses retained separately", "url": "https://solana-mainnet.g.alchemy.com/v2/"}
+          ],
+          "pin": {"position": "459474170", "hash": "2m9schg65a7aBNYZnF1Ev4YXChmwE6MXTpJp2wdkbqpE", "runtimeIdentity": "squads-v4:sha256:d48660833989ecea3145ff726164fe640bd90696f03ce00dfd0cda258cbf2fac;gm:sha256:dc49355e579318b7e33e1ded2bec04a22853177a5acecd35fdd304d9b2b22ec8;vault:0", "signerIdentity": "multisig:EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr:sha256:6ad9189de58cef9b4124be027db8cca9790f5e70ab0c4c3c5446b49cb27c085e"},
+          "observedState": {"position": "459474170", "hash": "2m9schg65a7aBNYZnF1Ev4YXChmwE6MXTpJp2wdkbqpE", "runtimeIdentity": "squads-v4:sha256:d48660833989ecea3145ff726164fe640bd90696f03ce00dfd0cda258cbf2fac;gm:sha256:dc49355e579318b7e33e1ded2bec04a22853177a5acecd35fdd304d9b2b22ec8;vault:0", "signerIdentity": "multisig:EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr:sha256:6ad9189de58cef9b4124be027db8cca9790f5e70ab0c4c3c5446b49cb27c085e"},
+          "inventory": "partial",
+          "closure": {"entrypoints": true, "mutableTargets": false, "delegateAndFallback": true, "permissions": true, "upgrades": true, "bypasses": true, "liabilityInventory": false},
+          "paths": [
+            {"id": "vault-cpi", "targetDeployment": "solana:SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf", "entrypointKind": "solana-instruction", "entrypoints": ["vault_transaction_execute", "batch_execute_transaction"], "callMode": "native", "capabilities": ["upgrade", "parameter-change"], "capSemantics": {"kind": "unbounded", "bound": null}, "claimImpairment": "unbounded", "economicLossScope": "global-claim", "unavoidableDelaySec": 7200, "activation": "active", "affectedLiabilityIds": [], "affectedDeployments": [], "reach": "root", "controlRefs": ["configuration"], "reactivationRefs": [], "permissionChangeRefs": ["configuration"], "upgradeRefs": [], "bypassRefs": []},
+            {"id": "configuration", "targetDeployment": "solana:SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf", "entrypointKind": "solana-instruction", "entrypoints": ["config_transaction_execute"], "callMode": "native", "capabilities": ["parameter-change"], "capSemantics": {"kind": "raiseable", "bound": null}, "claimImpairment": "unknown", "economicLossScope": "unknown", "unavoidableDelaySec": 7200, "activation": "active", "affectedLiabilityIds": [], "affectedDeployments": [], "reach": "root", "controlRefs": [], "reactivationRefs": [], "permissionChangeRefs": [], "upgradeRefs": [], "bypassRefs": []},
+            {"id": "approved-revocation-35", "targetDeployment": "solana:XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm", "entrypointKind": "solana-instruction", "entrypoints": ["revoke_role:AdminRoleOndoSanityCheck"], "callMode": "native", "capabilities": ["parameter-change"], "capSemantics": {"kind": "not-applicable", "bound": null}, "claimImpairment": "none", "economicLossScope": "access-only", "unavoidableDelaySec": 0, "activation": "disabled-reactivatable", "affectedLiabilityIds": [], "affectedDeployments": [], "reach": "root", "controlRefs": [], "reactivationRefs": ["vault-cpi"], "permissionChangeRefs": [], "upgradeRefs": [], "bypassRefs": []}
+          ]
+        },
         "sources": [
           {
             "label": "Issuer-published Solana GM program",
@@ -210,7 +231,7 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "Separate exact-slot Account Archive observations at solana block/slot 457209355, hash CDgKoooF2tDeo6sX7VTqP5n1vDxKRJFewEkHrPZzBVzL, timestamp 2026-10-15T10:46:59.000Z, RPC https://solana-mainnet.g.alchemy.com/v2/ bind issuer program XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm to program-data F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU and its upgrade authority 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM. Squads-owned Multisig EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr decodes to threshold=4, members=7, time_lock=7200, zero config_authority, transaction_index=69, stale_transaction_index=67. Members, each permission mask 7: 3GDhxifYcMxrmkNWC7ARD7UfpALf5FF4zZB5NFuMfiSW, 97VPg6E4Ncdy513ncFpdCNvS3uxEDR6rjTUNDdLvHQmz, 9MDbuzJMuYfeSXGxieuuLXbJMBt1YR92Vr3W1oMRHQRB, Do6TjuVbtSoCDBerE4zwgq6F9Qpto1Qp4JH3u7z3udBJ, EgKrikyPT56NzRJDeNAZSMStfK7LJRe8fFRCopCBUcrY, FGb3upaQC5sRuTnEHRMbpmkkUGiqat9wPVDVnKvSeZvb, HoiPiUt9ZxPusdkP9yXpSGJFLxU8ZHqW4WPNZbcPrcHt. The retained October 3 derivation binds vault index 0 to this off-curve authority; the historical execution source is retained without claiming a fresh transaction census. Current account state verifies topology, not exact deployed Squads runtime/source correspondence, all spending-limit accounts or exhaustive bypass closure. Human independence remains unknown."
+        "evidence": "Historical exact archive slot457209355, hashCDgKoooF2tDeo6sX7VTqP5n1vDxKRJFewEkHrPZzBVzL, timestamp2026-10-15T10:46:59Z and vault derivation remain retained without renewal. New exact archive slot459474170 (2026-10-21T03:10:44Z; hash2m9schg65a7aBNYZnF1Ev4YXChmwE6MXTpJp2wdkbqpE) binds current GLDon mint, GM/Squads binaries and the same vault0 4-of-7/mask7/zero-config-authority/7200-second topology, now txIndex76/stale67. Independently hashed ELF matches completed source builds and exact verification-PDA parameters; Squads is immutable, with vendor requester trusted:false separately disclosed. Finalized context census152/SpendingLimits0 and exact archive of all76 proposals resolve the public census. Stale Approved ConfigTx3 cannot execute; Approved VaultTx35 is a fixed sanity-admin revocation whose role PDA is currently null but can be recreated by authorized governance. Future arbitrary CPI, consensus changes and GM upgrades are preserved. Partial scope leaves mutableTargets and complete liability inventory unpromoted; current conservative-maximal target-domain admission is EVM-only. Human key custody/independence remains unknown."
       }
     ],
     "upgradeability": {
@@ -387,7 +408,7 @@
         },
         {
           "controlRef": "GLDon Solana GM program upgrade authority",
-          "question": "Exact-slot Account Archive reads at solana block/slot 457209355, hash CDgKoooF2tDeo6sX7VTqP5n1vDxKRJFewEkHrPZzBVzL, timestamp 2026-10-15T10:46:59.000Z, RPC https://solana-mainnet.g.alchemy.com/v2/ now verify the GM program-data upgrade authority and Squads 4-of-7 topology with 7200-second configured delay. The old statement that the pinned helper has no Solana endpoint is obsolete. Exact deployed Squads runtime/build correspondence, the full spending-limit account inventory and every reachable reconfiguration/bypass path remain unverified. Family immutability disclosures and public code do not certify this exact vault's exhaustive execution closure; human key independence remains separate.",
+          "question": "Final 2026-10-21 exact archive slot459474170 and independently matched current GM/Squads build hashes resolve executable identity. Finalized parent/spending-limit census and exact archive of all76 proposals, including stale-approved gates and fixed revocation payload, resolve the enumerated public permission/bypass research. Remaining complete-scope admission is the unrestricted future Solana CPI target/message domain: existing conservative-maximal downstream-domain support validates EVM CALL only. The authored partial scope leaves mutableTargets and complete liability inventory unpromoted, preserving arbitrary GM upgrade powers, future reconfiguration and separately unknown human key custody/independence. Owner methodology admission of an equivalently conservative CPI envelope and conserving runtime liability evidence are named prerequisites; original scoped review start is preserved.",
           "subject": "execution-scope",
           "reviewedAt": "2026-10-15",
           "reviewer": "Rev_GldonOndo exact-slot archive review",
