@@ -288,9 +288,7 @@ export interface BatchResult extends SendToChatResult {
     | "global_rate_limit"
     | "aborted"
     | "soft_deadline"
-    | "pre_send"
-    | "transport_control"
-    | "delivery_mode_pause";
+    | "pre_send";
 }
 
 export type PreSendBatchResult = Omit<BatchResult, "chatId" | "attempted">;
@@ -342,10 +340,7 @@ function buildPredecessorFailureResult(chatId: string, predecessor: BatchResult)
     ...predecessor,
     chatId,
     attempted: false,
-    skippedReason:
-      predecessor.skippedReason === "transport_control" || predecessor.skippedReason === "delivery_mode_pause"
-        ? predecessor.skippedReason
-        : "predecessor_failure",
+    skippedReason: "predecessor_failure",
   };
 }
 
@@ -432,25 +427,6 @@ export async function schedulePerChatBatches<T extends { chatId: string }>(
       results[entry.index] = waveResults[waveIndex];
     }
     await options.afterSendBatch?.(entries, waveResults);
-
-    const transportStop = waveResults.find(
-      (result) => result.attempted === false && result.skippedReason === "transport_control",
-    );
-    if (
-      transportStop &&
-      waveResults.every(
-        (result) => result.attempted === false && result.skippedReason === "transport_control",
-      )
-    ) {
-      const buildTransportStop = (item: T): BatchResult => ({
-        ...transportStop,
-        chatId: item.chatId,
-        attempted: false,
-      });
-      for (const queue of waveQueues) fillQueueTail(queue, buildTransportStop);
-      fillAllReady(buildTransportStop);
-      break;
-    }
 
     const globalRateLimitedResult = waveResults.find(
       (result) =>

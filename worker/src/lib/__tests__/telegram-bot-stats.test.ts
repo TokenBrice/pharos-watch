@@ -146,6 +146,7 @@ describe("mapTelegramBotStats", () => {
       presetImpliedCoinSubscriptions: 12,
       activePresetFollowers: 2,
       avgSubscriptionsPerSubscribedChat: 3.5,
+      pendingDisambiguations: 0,
       pendingDeliveries: 11,
       quality: {
         status: "complete",
@@ -271,6 +272,7 @@ describe("mapTelegramBotStats", () => {
       presetImpliedCoinSubscriptions: null,
       activePresetFollowers: 0,
       avgSubscriptionsPerSubscribedChat: 0,
+      pendingDisambiguations: 0,
       pendingDeliveries: 0,
       quality: {
         status: "complete",
