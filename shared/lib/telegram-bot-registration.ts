@@ -4,8 +4,6 @@ export const TELEGRAM_ALLOWED_UPDATES = [
   "message",
   "callback_query",
   "my_chat_member",
-  "inline_query",
-  "chosen_inline_result",
 ] as const;
 
 // Canonical @-handle for the bot. Single source of truth for the dispatch

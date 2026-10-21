@@ -19,7 +19,7 @@ Verify quarterly or after a BotFather UI change.
 
 Rows marked `operator-captured outside repo` are not source-controlled assets today. Capture their live BotFather values in the quarterly review note or update this runbook when the assets become repo-owned.
 
-Enable Inline Mode through BotFather `/setinline` with a status-oriented placeholder. Worker registration includes `inline_query` / `chosen_inline_result` but cannot enable this BotFather toggle. For chosen-card measurement, configure a conservative `/setinlinefeedback` sample; feedback is aggregate-only, not functional delivery evidence.
+Inline-query status cards are not supported. Disabling Inline Mode through BotFather `/setinline` is optional operator cleanup, not a deployment precondition; the live toggle state is not observed by this repository. Worker registration excludes inline updates, and unsolicited updates are acknowledged without a reply or telemetry under the [ingress contract](../telegram-architecture.md#1-ingress). No user notice is sent. Ordinary `/status` and Mini App launch surfaces are unchanged.
 
 ## Smoke Tests
 

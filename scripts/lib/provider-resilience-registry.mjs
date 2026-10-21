@@ -257,7 +257,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     resilience: {
       transport: "direct-fetch",
       timeout: "Uses AbortSignal.timeout() and caller signals.",
-      body: "Cancels unused successful send and callback/inline-query bodies; reads send failures and edit responses with a 16 KiB bounded text reader for retry classification.",
+      body: "Cancels unused successful send and callback bodies; reads send failures and edit responses with a 16 KiB bounded text reader for retry classification.",
       circuitSources: ["CIRCUIT_SOURCE.TELEGRAM_API"],
     },
     requiredMarkers: [

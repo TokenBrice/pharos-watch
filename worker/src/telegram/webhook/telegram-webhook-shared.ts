@@ -237,16 +237,6 @@ export interface TelegramWebhookUpdate {
     from?: { id?: number; username?: string };
     message?: { chat?: { id?: number; type?: string }; message_id?: number };
   };
-  inline_query?: {
-    id?: string;
-    query?: string;
-    from?: { id?: number; username?: string };
-    offset?: string;
-  };
-  chosen_inline_result?: {
-    result_id?: string;
-    from?: { id?: number; username?: string };
-  };
 }
 
 export interface PendingDisambiguationRow {

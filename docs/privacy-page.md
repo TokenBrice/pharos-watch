@@ -44,6 +44,8 @@ Telegram processing includes subscriber identity/settings, follows/presets, quie
 
 Mini App validates signed initData but stores neither raw value nor hash. [Mini App](./telegram-mini-app.md) owns mutation freshness, read/session portability, cooldown and aggregate telemetry. General Telegram logs use allowlisted low-cardinality fields; chat-specific investigation stays in authenticated D1/admin diagnostics, not raw general-log identifiers.
 
+Inline-query status cards and their query/selection counters are retired. Unsolicited inline updates follow the [unsupported-update ingress contract](./telegram-architecture.md#1-ingress) without new usage telemetry; historical identifier-free aggregates retain their ordinary retention policy.
+
 ## Update Rules
 
 Change visible policy and this owner together for processing/storage/retention changes, plus the closest feature owner. Preserve host/path gates, raw-query/token exclusions and erasure limitations. Migrations/store/cleanup modules own implementation, not a second database inventory in policy prose.

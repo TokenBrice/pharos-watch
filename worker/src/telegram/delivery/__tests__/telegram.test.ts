@@ -5,7 +5,6 @@ let fetchSpy = mockFetch([], { requireMatch: true });
 
 const {
   answerCallbackQuery,
-  answerInlineQuery,
   buildTelegramMessage,
   editMessage,
   schedulePerChatBatches,
@@ -377,43 +376,6 @@ describe("editMessage", () => {
 
     await expect(editMessage("12345", 17, "test", "bot-token")).resolves.toBe(false);
     expect(bodyCancelled).toBe(true);
-  });
-});
-
-describe("answerInlineQuery", () => {
-  const results = [
-    {
-      type: "article" as const,
-      id: "status:usdc-circle",
-      title: "USDC status",
-      input_message_content: { message_text: "<b>USDC</b>", parse_mode: "HTML" as const },
-    },
-  ];
-
-  it("posts cacheable shared inline results", async () => {
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-
-    await expect(answerInlineQuery("inline-id", "bot-token", results, { cacheTimeSec: 30 })).resolves.toBe(true);
-
-    expect(String(fetchSpy.mock.calls[0]?.[0])).toContain("/answerInlineQuery");
-    expect(JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body))).toMatchObject({
-      inline_query_id: "inline-id",
-      results,
-      cache_time: 30,
-      is_personal: false,
-    });
-  });
-
-  it("logs a classified failure without retaining the query identifier", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    fetchSpy.mockResolvedValueOnce(new Response("unavailable", { status: 503 }));
-
-    await expect(answerInlineQuery("inline-secret", "bot-token", results, { cacheTimeSec: 5 })).resolves.toBe(false);
-
-    const record = JSON.parse(String(warn.mock.calls[0]?.[0])) as Record<string, unknown>;
-    expect(record).toMatchObject({ action: "answer-inline-query", statusCode: 503, errorClass: "server_error" });
-    expect(JSON.stringify(record)).not.toContain("inline-secret");
-    warn.mockRestore();
   });
 });
 

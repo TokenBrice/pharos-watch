@@ -48,6 +48,8 @@ Settings adapters validate transport codes and describe the result; State / pers
 **Responsibility.** Authenticate `POST /api/telegram-webhook`, claim each update by owner/generation, and route through flood, pending-flow, group-admin, and cooldown gates. [Update deduplication](./telegram-alerts.md#update-deduplication) owns normalized-intent recovery and effect fences; [ingress incidents](./runbooks/telegram-webhook-retry-dedupe.md) owns admission/retry diagnosis. Parsing/authorization precede replay-safe local mutation; only the irreversible Bot API boundary starts an external effect.
 `worker/src/telegram/webhook/` owns this seam; the [implementation appendix](#ingress-implementation-appendix) maps entrypoints, lifecycle/pending gates and canonical read-only projections.
 
+Registration requests messages, callback queries and bot-membership updates only. Unsupported types, including retired inline queries and chosen-inline feedback, return `200 ok` after authentication/parsing, before D1 claims or Bot API work. No answer, notice or usage event is emitted; `/status` remains available.
+
 
 **Allowed inbound dependencies.** `worker/src/index.ts` request router (this is an HTTP entrypoint).
 
@@ -410,14 +412,13 @@ The reconciled menu is `Manage Alerts`, a Web App link to `https://pharos.watch/
 - `worker/src/telegram/webhook/telegram-webhook-ingress-policy.ts` — flood, cooldown, admin and channel gates.
 - `worker/src/telegram/webhook/telegram-webhook-pending-gate.ts` — pending-flow decisions.
 - `worker/src/telegram/webhook/telegram-webhook-group-welcome.ts` — group lifecycle/welcome.
-- `worker/src/telegram/webhook/telegram-inline-queries.ts` — read-only inline cards.
 - `worker/src/telegram/webhook/telegram-webhook-shared.ts` — cross-seam types/copy.
 
 Group lifecycle and pending-flow policy remain explicit ingress sub-seams: `telegram-webhook-group-welcome.ts` owns bot-added/removed handling and atomic welcome claims; `telegram-webhook-pending-gate.ts` owns pass-through, clear-and-run, ownership refusal, and reply-and-stop decisions before `COMMAND_HANDLERS`.
 
 `telegram-webhook-shared.ts` is the cross-seam contract for update/pending/bulk types and framed bot copy. Command rows and alert-family lists derive from shared manifests; widening a type is routine, restructuring this contract is a seam change.
 
-Read-only status loads the accepted yield-rankings response once and projects APY, venue, PYS and source provenance from the same canonical coin row. Status replies, coverage and inline cards share that projection and its evidence formatter: stale/unknown observations retain their producer clock and reason, not the cache/publication clock. Missing rankings or a missing accepted row render unavailable; there is no raw-table fallback or independent score lookup.
+Read-only status loads the accepted yield-rankings response once and projects APY, venue, PYS and source provenance from the same canonical coin row. Status replies and coverage share that projection and its evidence formatter: stale/unknown observations retain their producer clock and reason, not the cache/publication clock. Missing rankings or a missing accepted row render unavailable; there is no raw-table fallback or independent score lookup.
 
 ## Dispatch Implementation Appendix
 

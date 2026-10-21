@@ -22,8 +22,6 @@ const MINI_APP_MVP_ALLOWED_UPDATES = [
   "message",
   "callback_query",
   "my_chat_member",
-  "inline_query",
-  "chosen_inline_result",
 ] as const;
 const CACHE_SELECT_MATCH = "SELECT value, updated_at FROM cache WHERE key = ?";
 const CACHE_WRITE_MATCH = "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)";
@@ -68,7 +66,7 @@ async function expectedWebhookCacheValue(
   return JSON.stringify({
     version: 2,
     url,
-    allowed_updates: ["message", "callback_query", "my_chat_member", "inline_query", "chosen_inline_result"],
+    allowed_updates: ["message", "callback_query", "my_chat_member"],
     secret_token: {
       present: true,
       marker: await secretTokenMarker(secret),
@@ -196,7 +194,7 @@ describe("reconcileTelegramWebhookRegistration", () => {
     expect(body).toEqual({
       url: "https://api.pharos.watch/api/telegram-webhook",
       secret_token: "secret-token",
-      allowed_updates: ["message", "callback_query", "my_chat_member", "inline_query", "chosen_inline_result"],
+      allowed_updates: ["message", "callback_query", "my_chat_member"],
     });
     expect(body.allowed_updates).toHaveLength(MINI_APP_MVP_ALLOWED_UPDATES.length);
     expect(body.allowed_updates).not.toContain("web_app_data");
@@ -207,14 +205,16 @@ describe("reconcileTelegramWebhookRegistration", () => {
     expect(typeof writes[0]?.binds[2]).toBe("number");
   });
 
-  it.each(["different updates", "rotated secret", "stale"] as const)(
+  it.each(["retired update types", "rotated secret", "stale"] as const)(
     "re-registers for %s rather than trusting the cached configuration",
     async (scenario) => {
       const nowSec = Math.floor(Date.now() / 1000);
       const cached = JSON.parse(await expectedWebhookCacheValue(
         undefined, scenario === "rotated secret" ? "old-secret-token" : "secret-token",
       ));
-      if (scenario === "different updates") cached.allowed_updates = ["message"];
+      if (scenario === "retired update types") {
+        cached.allowed_updates = ["message", "callback_query", "my_chat_member", "inline_query", "chosen_inline_result"];
+      }
       const db = mockD1([
         cacheSelectEntry("telegram:webhook-reconciled", {
           value: JSON.stringify(cached),
@@ -238,7 +238,7 @@ describe("reconcileTelegramWebhookRegistration", () => {
       expect(JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string)).toEqual({
         url: "https://api.pharos.watch/api/telegram-webhook",
         secret_token: "secret-token",
-        allowed_updates: ["message", "callback_query", "my_chat_member", "inline_query", "chosen_inline_result"],
+        allowed_updates: ["message", "callback_query", "my_chat_member"],
       });
     },
   );
