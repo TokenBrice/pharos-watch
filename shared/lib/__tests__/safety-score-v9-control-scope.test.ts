@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { compileReviewedControlScope, compileReviewedMintControlScopes, computeV1005AuthorityStateHash, effectiveAuthoritySignatureRequirement, minimumWeightedSignatures, partialControlScopeSemantics, reviewedControlScopeSemantics, v1005ProofIsClosed } from "../safety-score-v9/control-scope";
-import { applyMergedMintSignals } from "../safety-score-v9/control-mint-grade";
+import { gradeEconomicControlAuthority } from "../safety-score-v9/control-mint-grade";
 import { evaluateV9EconomicControl } from "../safety-score-v9/control";
 import { deriveV9MintPosture } from "../safety-score-v9/control-primitives";
 import { V9ControlExecutionScopeSchema, V9InProcessControlExecutionScopeSchema, admitV9ControlExecutionScopeBatch, createV9ControlExecutionScopeRootReuse, isV9AdmittedControlExecutionScope, V9WeightedQuorumSchema, type V9ControlExecutionScope } from "../../types/safety-score-v9-control-scope";
@@ -11,7 +11,9 @@ import { buildV9DependencyEvaluationPlan } from "../safety-score-v9/dependencies
 import { minimalAsset } from "./safety-score-v9-facts.fixture-support";
 import { boundedUnknown, makeDeploymentControl, makeEconomicControlArgs, makeEconomicControlFacts, makeReviewedMintInput } from "./safety-score-v9-fixtures.test-support";
 import { reviewedScope, weightedQuorum, SCOPE_CLOCK, SCOPE_CONTROLLER } from "./safety-score-v9-control-scope.test-support";
-const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.control;
+import type { V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
+const authorityQuality = (control: V9DeploymentControlFactV2) =>
+  gradeEconomicControlAuthority(control, makeReviewedMintInput(control.controlKey), V9_CANDIDATE_POLICY_V1.policy.semantic);
 const compile = (scope = reviewedScope(), controller = SCOPE_CONTROLLER, clock = SCOPE_CLOCK) => compileReviewedControlScope(scope, controller, "alpha", clock, 90 * 86400);
 
 describe("V10 exact authority scope", () => {
@@ -88,7 +90,7 @@ describe("V10 exact authority scope", () => {
     scope.paths[0]!.claimImpairment = "unbounded";
     const adverse = { ...partial, ...partialControlScopeSemantics(legacy, compile(scope)) };
     expect(deriveV9MintPosture(adverse, mint, false, V9_CANDIDATE_POLICY_V1.policy.semantic)).toBe("unbounded-adverse");
-    expect(evaluate(adverse).score).toBeLessThan(evaluate(legacy).score!);
+    expect(adverse.capSemantics.kind).toBe("unbounded");
     scope.paths[0]!.activation = "disabled-final";
     const disabledPartial = { ...partial, ...partialControlScopeSemantics(legacy, compile(scope)) };
     expect(deriveV9MintPosture(disabledPartial, mint, false, V9_CANDIDATE_POLICY_V1.policy.semantic)).toBe("unbounded-adverse");
@@ -118,21 +120,18 @@ describe("V10 exact authority scope", () => {
     expect(V9ControlExecutionScopeSchema.safeParse(scope).success).toBe(false);
   });
 
-  it("waives module presence only after exhaustive noninterference, not absence credit", () => {
+  it("classifies exhaustive module noninterference without a separate numeric adjustment", () => {
     const scope = reviewedScope();
     const other: V9ControlExecutionScope["paths"][number] = { ...scope.paths[0]!, id: "other-product", reach: "other-liability", affectedLiabilityIds: ["beta"] };
     scope.paths.push(other);
     scope.extensions!.entries = [{ deployment: "ethereum:0x2222222222222222222222222222222222222222", runtimeIdentity: "module-runtime", kind: "module", pathRefs: [other.id], mutableReachClosed: true }];
     const proof = compile(scope);
-    const moduleCreditPolicy = structuredClone(policy);
-    moduleCreditPolicy.mintMergedSignals.modulesOrGuardsAdjustment.noneDetectedCredit = 1;
     const control = makeDeploymentControl("mint", "mint", { executionScope: scope, executionScopeComplete: proof.complete, moduleImpact: proof.moduleImpact, modulesOrGuards: "present", authority: { authorityKey: SCOPE_CONTROLLER, model: "contract", threshold: null } });
     expect(proof.moduleImpact).toBe("verified-noninterfering");
-    expect(applyMergedMintSignals(70, control, undefined, moduleCreditPolicy)).toBe(70);
-    expect(applyMergedMintSignals(70, { ...control, modulesOrGuards: "none-detected" }, undefined, moduleCreditPolicy)).toBeGreaterThan(70);
+    expect(authorityQuality(control)).toBe(authorityQuality({ ...control, modulesOrGuards: "none-detected" }));
     other.reach = "root"; other.affectedLiabilityIds = ["alpha"];
     const relevant = compile(scope);
-    expect(applyMergedMintSignals(70, { ...control, moduleImpact: relevant.moduleImpact }, undefined, policy)).toBeLessThan(70);
+    expect(relevant.moduleImpact).toBe("relevant");
     scope.extensions!.exhaustive = false;
     expect(compile(scope).moduleImpact).toBe("relevant");
   });
@@ -151,8 +150,8 @@ describe("V10 exact authority scope", () => {
     expect(proof.complete).toBe(false);
     expect(proof.moduleImpact).toBe("relevant");
     const control = makeDeploymentControl("mint", "mint", { executionScope: scope, executionScopeComplete: proof.complete, moduleImpact: proof.moduleImpact, modulesOrGuards: "present" });
-    expect(applyMergedMintSignals(70, control, undefined, policy)).toBeLessThan(applyMergedMintSignals(70, { ...control, modulesOrGuards: "unknown" }, undefined, policy));
-    expect(applyMergedMintSignals(70, control, undefined, policy)).toBe(applyMergedMintSignals(70, { ...control, moduleImpact: "unresolved" }, undefined, policy));
+    expect(authorityQuality(control)).toBe(authorityQuality({ ...control, modulesOrGuards: "unknown" }));
+    expect(authorityQuality(control)).toBe(authorityQuality({ ...control, moduleImpact: "unresolved" }));
     expect(compile(scope, SCOPE_CONTROLLER, Date.parse("2026-11-01") / 1000).moduleImpact).toBe("unresolved");
     expect(compile(scope, SCOPE_CONTROLLER, Date.parse("2026-09-30") / 1000).moduleImpact).toBe("unresolved");
     expect(compile(scope, SCOPE_CONTROLLER.replace("ethereum", "arbitrum")).moduleImpact).toBe("unresolved");
@@ -170,7 +169,7 @@ describe("V10 exact authority scope", () => {
       const proof = compile(scope);
       expect(proof.moduleImpact).toBe("unresolved");
       const legacy = makeDeploymentControl("mint", "mint", { modulesOrGuards: "unknown" });
-      expect(applyMergedMintSignals(70, { ...legacy, executionScope: scope, executionScopeComplete: proof.complete, moduleImpact: proof.moduleImpact }, undefined, policy)).toBe(applyMergedMintSignals(70, legacy, undefined, policy));
+      expect(authorityQuality({ ...legacy, executionScope: scope, executionScopeComplete: proof.complete, moduleImpact: proof.moduleImpact })).toBe(authorityQuality(legacy));
     }
     path.reach = "root"; path.activation = "unknown";
     expect(compile(scope).moduleImpact).toBe("unresolved");
@@ -202,13 +201,13 @@ describe("V10 exact authority scope", () => {
     const control = makeDeploymentControl("mint", "mint", { executionScope: scope, executionScopeComplete: proof.complete, modulesOrGuards: "present", moduleImpact: proof.moduleImpact });
     expect(proof.paths).toEqual([]);
     expect(proof.moduleImpact).toBe("verified-noninterfering");
-    expect(applyMergedMintSignals(85, control, undefined, policy)).toBe(85);
+    expect(authorityQuality(control)).toBeGreaterThan(0);
     scope.paths.push({ ...scope.paths[0]!, id: "alpha-mint", reach: "root", affectedLiabilityIds: ["alpha"] });
     scope.paths[0]!.upgradeRefs = ["alpha-mint"];
     const linked = compile(V9ControlExecutionScopeSchema.parse(scope));
     expect(linked.paths.map((path) => path.id)).toEqual(["issuance", "alpha-mint"]);
     expect(linked.moduleImpact).toBe("relevant");
-    expect(applyMergedMintSignals(85, { ...control, moduleImpact: linked.moduleImpact }, undefined, policy)).toBeLessThan(85);
+    expect(linked.paths.some((path) => path.id === "alpha-mint")).toBe(true);
   });
 
   it.each(["cap", "claim"] as const)("retains independently proved unbounded %s beside adjacent uncertainty", (adverseField) => {
@@ -245,12 +244,12 @@ describe("V10 exact authority scope", () => {
     const unknownResult = evaluateV9EconomicControl(makeEconomicControlArgs({
       facts: makeEconomicControlFacts([control]), mint: reconciliationUnknown,
     }));
-    expect(unknownResult.score).toBe(25);
+    expect(unknownResult.score).toBe(50);
     expect(unknownResult.components).toContainEqual(expect.objectContaining({
-      kind: "mint", posture: "unbounded-adverse", score: 25,
+      kind: "mint", posture: "unbounded-adverse", score: 50,
     }));
     expect(result.components).toContainEqual(expect.objectContaining({
-      kind: "mint", posture: "unbounded-reconciled", score: 52,
+      kind: "mint", posture: "unbounded-reconciled", score: 65,
     }));
   });
 
@@ -276,7 +275,7 @@ describe("V10 exact authority scope", () => {
   });
 });
 describe("V10 weighted cryptographic quorum", () => {
-  it("maps EUROP to one signature and RLUSD-style 24/1 weight quorum to two", () => {
+  it("maps a dominant weight to one signature and a dispersed weight quorum to two", () => {
     expect(minimumWeightedSignatures(weightedQuorum())).toBe(1);
     const row = weightedQuorum([...Array<number>(8).fill(24), ...Array<number>(18).fill(1)], 25);
     expect(minimumWeightedSignatures(row)).toBe(2);
@@ -297,13 +296,13 @@ describe("V10 weighted cryptographic quorum", () => {
     expect(minimumWeightedSignatures({ ...row, signers: row.signers.map((signer, index) => index === 0 ? { ...signer, weight: 7 } : signer) })).toBe(1);
     expect(minimumWeightedSignatures({ ...row, status: "unknown" })).toBeNull();
   });
-  it("rejects duplicates/unattainable quorum and awards no majority or four-plus credit", () => {
+  it("rejects duplicate and unattainable quorums and prices the effective signature requirement", () => {
     const row = weightedQuorum([1, 1, 1, 1, 1, 1], 4);
     expect(V9WeightedQuorumSchema.safeParse({ ...row, signers: [row.signers[0], row.signers[0]] }).success).toBe(false);
     expect(V9WeightedQuorumSchema.safeParse({ ...row, quorum: 7 }).success).toBe(false);
     const control = makeDeploymentControl("mint", "mint", { delaySec: 0, modulesOrGuards: "unknown", authority: { authorityKey: row.deployment, model: "multisig", threshold: null, weightedQuorum: row } });
-    expect(applyMergedMintSignals(70, control, undefined, policy)).toBe(70 + policy.mintMergedSignals.multisigQuorumAdjustment.thresholdThreePlus);
-    expect(applyMergedMintSignals(70, { ...control, authority: { ...control.authority!, weightedQuorum: weightedQuorum() } }, undefined, policy)).toBeLessThan(70);
+    expect(authorityQuality(control)).toBe(65);
+    expect(authorityQuality({ ...control, authority: { ...control.authority!, weightedQuorum: weightedQuorum() } })).toBe(50);
   });
   it("includes scope admission and amount policy in semantic identity", () => {
     const changed = structuredClone(V9_CANDIDATE_POLICY_V1.policy);

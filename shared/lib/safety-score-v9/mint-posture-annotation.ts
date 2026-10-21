@@ -14,10 +14,10 @@ import {
 const V9_CURATED_MINT_POSTURE_QUEUE_DIGEST_DOMAIN = "safety-score-v9.curated-mint-posture-queue.v2";
 
 /**
- * Safety 9.1 demoted the curated `mintAuthority.authorityPosture` field to a
- * validated annotation. V9's derived posture is canonical and is the only one
- * that scores; the curated value is compared against it and any disagreement
- * becomes a curation item here, never a score effect.
+ * The curated `mintAuthority.authorityPosture` field is a validated annotation.
+ * Both curated and derived postures describe economic semantics; the authority
+ * ladder scores independently admitted topology, bounds and assurance facts.
+ * A classification disagreement becomes a curation item, never a score effect.
  *
  * This follows the evidence-gap-queue pattern: a pure function over published
  * facts, a strict entry shape, deterministic ordering, and a content digest so
@@ -83,7 +83,7 @@ const ACTIONS: Record<V9CuratedMintPostureDisagreement, string> = {
   "curated-unreviewed":
     "The mint posture is derived but the curated annotation is still unknown. Fill in `mintAuthority.authorityPosture` so the annotation can keep validating the derivation.",
   "derived-unresolved":
-    "The curated annotation names a posture that the control facts cannot derive. Author the missing control semantics so the pillar stops holding the bounded-unknown quality.",
+    "The curated annotation names a posture that the control facts cannot derive. Review the missing economic semantics without treating the annotation itself as authority evidence.",
 };
 
 function classify(

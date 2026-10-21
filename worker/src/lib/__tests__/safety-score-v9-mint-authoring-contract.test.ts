@@ -318,13 +318,13 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
   });
 
   it.each([
-    { authorityType: "issuer-backend", reconciliation: undefined, cadence: "monthly", expected: "periodic", score: 55 },
-    { authorityType: "issuer-backend", reconciliation: "unknown", cadence: "monthly", expected: "periodic", score: 55 },
-    { authorityType: "issuer-backend", reconciliation: "none", cadence: "monthly", expected: "none", score: 25 },
-    { authorityType: "issuer-backend", reconciliation: "unknown", cadence: "none", expected: "unknown", score: 25 },
-    { authorityType: "issuer-backend", reconciliation: "unknown", cadence: "undisclosed", expected: "unknown", score: 25 },
-    { authorityType: "multisig", reconciliation: "unknown", cadence: "monthly", expected: "unknown", score: 25 },
-    { authorityType: "multisig", reconciliation: undefined, cadence: "monthly", expected: "not-applicable", score: 25 },
+    { authorityType: "issuer-backend", reconciliation: undefined, cadence: "monthly", expected: "periodic", score: 75 },
+    { authorityType: "issuer-backend", reconciliation: "unknown", cadence: "monthly", expected: "periodic", score: 75 },
+    { authorityType: "issuer-backend", reconciliation: "none", cadence: "monthly", expected: "none", score: 60 },
+    { authorityType: "issuer-backend", reconciliation: "unknown", cadence: "none", expected: "unknown", score: 60 },
+    { authorityType: "issuer-backend", reconciliation: "unknown", cadence: "undisclosed", expected: "unknown", score: 60 },
+    { authorityType: "multisig", reconciliation: "unknown", cadence: "monthly", expected: "unknown", score: 65 },
+    { authorityType: "multisig", reconciliation: undefined, cadence: "monthly", expected: "not-applicable", score: 65 },
   ] as const)(
     "prices $authorityType / $reconciliation / $cadence only from admitted authority and reconciliation evidence",
     ({ authorityType, reconciliation, cadence, expected, score }) => {
@@ -353,14 +353,14 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       expect(asset.economicControlReview.mint.reconciliation).toBe(expected);
       const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
       expect(evaluated.control.components.find((component) => component.kind === "mint")).toMatchObject({
-        posture: score === 55 ? "unbounded-reconciled" : "unbounded-adverse", score,
+        score,
       });
       expect(asset.economicControlReview.mint.factorStatuses?.reconciliation === undefined)
         .toBe(expected !== "unknown");
     },
   );
 
-  it("applies R3 to a prudential reconciled mint without a centralized-mint cap", () => {
+  it("adds independently reviewed reconciliation and prudential assurance without exceeding immutable quality", () => {
     const input = fixedInput();
     const extension = buildSafetyScoreV9BaselineExtension(input, {
       metaById: metaWith(AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE),
@@ -370,8 +370,8 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     const asset = evaluated.assets.find((candidate) => candidate.assetId === ASSET_ID)!;
 
     const mintComponent = asset.control.components.find((component) => component.kind === "mint");
-    expect(mintComponent).toMatchObject({ posture: "unbounded-reconciled", score: 80 });
-    expect(asset.control.structuralFailures).not.toContainEqual(expect.objectContaining({ kind: "centralized-mint" }));
+    expect(mintComponent).toMatchObject({ posture: "unbounded-reconciled", score: 90 });
+    expect(asset.control.structuralFailures).toContainEqual(expect.objectContaining({ kind: "centralized-mint", severity: "high" }));
   });
 
   it("keeps Axis's KMS-disclosed operator custody unresolved without an HSM attestation", () => {

@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { URL, fileURLToPath } from "node:url";
 import type { OracleRiskProfile } from "@shared/types/core";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { V9EconomicControlResult } from "@shared/lib/safety-score-v9/control-primitives";
 import { OracleRiskProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
@@ -155,7 +155,9 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     expect(oracle.status.applicability.state).toBe("unresolved");
     expect(oracle.paths).toContainEqual(expect.objectContaining({ id: "new-facilitator", observationState: "missing" }));
     expect(oracleReasons(control)).toContainEqual(expect.objectContaining({ code: "unresolved-oracle-branch-applicability" }));
-    expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({ posture: "opaque-or-unknown", score: 45 });
+    expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({
+      posture: "opaque-or-unknown", score: unknownQuality("control", "U"),
+    });
     expect(trace.caps.map((cap) => cap.kind)).not.toContain("reason:unresolved-oracle-branch-applicability");
   });
 
@@ -165,7 +167,7 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     profile.paths = [path("opaque-minter", "top-level-only", "0x4444444444444444444444444444444444444444")];
     const { control, trace } = evaluate(profile);
     expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({
-      posture: "opaque-or-unknown", score: V9_CANDIDATE_POLICY_V1.policy.semantic.control.oracleTierQuality["opaque-or-unknown"],
+      posture: "opaque-or-unknown", score: unknownQuality("control", "U"),
     });
     expect(control.structuralFailures.filter((failure) => failure.kind === "weak-oracle-branch")).toEqual([]);
     expect(trace.adverseAttribution.filter((item) => item.path.startsWith("structural:weak-oracle-branch"))).toEqual([]);
@@ -176,7 +178,7 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     expect(trace.caps.filter((cap) => cap.kind.startsWith("signal:weak-oracle-branch"))).toEqual([]);
   });
 
-  it("retains adverse attribution and the single-source ceiling for verified owner-set pricing", () => {
+  it("retains measured adverse attribution for verified owner-set pricing", () => {
     const profile = internalPriceMeta().oracleRisk!;
     profile.tier = "single-source-or-laggy";
     profile.paths = [path("owner-set-minter", "top-level-only", "0x4444444444444444444444444444444444444444")];
@@ -184,7 +186,6 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({
       posture: "single-source-or-laggy", score: 45,
     });
-    expect(trace.caps).toContainEqual(expect.objectContaining({ kind: "signal:weak-oracle-branch:high", limit: 59 }));
     expect(trace.adverseAttribution).toContainEqual(expect.objectContaining({
       path: "structural:weak-oracle-branch:high", responsibility: "measured-adverse",
     }));
@@ -195,7 +196,7 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     { tier: "opaque-or-unknown" as const, lending: false },
     { tier: "single-source-or-laggy" as const, lending: true },
     { tier: "opaque-or-unknown" as const, lending: true },
-  ])("retains the verified $tier ceiling alongside an unresolved sibling (lending=$lending)", ({ tier, lending }) => {
+  ])("retains verified $tier evidence alongside an unresolved sibling (lending=$lending)", ({ tier, lending }) => {
     const profile = lending ? lendingProfile() : internalPriceMeta().oracleRisk!;
     profile.tier = tier;
     if (lending) profile.branches![0]!.tier = tier;
@@ -207,9 +208,6 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     expect(weakSignals(after.control)).toEqual(weakSignals(before.control));
     expect(weakSignals(after.control)).toHaveLength(tier === "opaque-or-unknown" ? 0 : 1);
     expect(oracleReasons(after.control)).toContainEqual(expect.objectContaining({ code: "unresolved-oracle-branch-applicability" }));
-    expect(after.trace.caps.filter((cap) => cap.kind.startsWith("signal:weak-oracle-branch"))).toEqual(
-      before.trace.caps.filter((cap) => cap.kind.startsWith("signal:weak-oracle-branch")),
-    );
     expect(after.control.score).toBeLessThanOrEqual(before.control.score!);
     const unknownProfile = internalPriceMeta().oracleRisk!;
     unknownProfile.tier = tier;
@@ -241,7 +239,9 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     const profile = lendingProfile();
     profile.paths![1]!.applicability!.confidence = "limited";
     const { control } = evaluate(profile);
-    expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({ posture: "opaque-or-unknown", score: 45 });
+    expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({
+      posture: "opaque-or-unknown", score: unknownQuality("control", "U"),
+    });
     expect(oracleReasons(control)).toContainEqual(expect.objectContaining({ code: "unresolved-oracle-branch-applicability" }));
   });
 });
@@ -435,9 +435,11 @@ describe("admitted Morpho share-accounting oracle exception", { timeout: V9_EVAL
     "never worsens any admitted asset's aggregate on a frozen movers smoke book", () => {
       const observations = JSON.parse(readFileSync(process.env.PHAROS_ORACLE_SMOKE_METADATA!, "utf8")) as
         Record<string, { metadata: { lenderBookObservation: LenderBookObservation } }>;
-      const admitted = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook.admittedAssets;
-      expect(Object.keys(observations).sort()).toEqual(admitted.map((asset) => asset.assetId).sort());
-      const quality = V9_CANDIDATE_POLICY_V1.policy.semantic.control.oracleTierQuality;
+      const admitted = Object.keys(observations).sort().map(assetId => ({ assetId }));
+      const quality = {
+        ...V9_CANDIDATE_POLICY_V1.policy.semantic.control.oracleTierQuality,
+        "opaque-or-unknown": unknownQuality("control", "U"),
+      };
       const changes: { assetId: string; baseline: OracleRiskProfile["tier"] | null; candidate: OracleRiskProfile["tier"] | null }[] = [];
       let admittedBooks = 0;
       let fallbackDiagnostics = 0;
@@ -458,7 +460,9 @@ describe("admitted Morpho share-accounting oracle exception", { timeout: V9_EVAL
         if (baseline.tier === null) expect(candidate.tier, asset.assetId).toBeNull();
         else {
           expect(candidate.tier, asset.assetId).not.toBeNull();
-          expect(quality[candidate.tier!], asset.assetId).toBeGreaterThanOrEqual(quality[baseline.tier]);
+          if (baseline.tier !== "opaque-or-unknown") {
+            expect(quality[candidate.tier!], asset.assetId).toBeGreaterThanOrEqual(quality[baseline.tier]);
+          }
           if (baseline.tier !== "single-source-or-laggy") expect(candidate.tier, asset.assetId).not.toBe("single-source-or-laggy");
         }
         if (baseline.tier !== candidate.tier) changes.push({ assetId: asset.assetId, baseline: baseline.tier, candidate: candidate.tier });

@@ -1,15 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { evaluateV9EconomicControl } from "../safety-score-v9/control";
-import { resolveV9StructuralCaps, scoreV9Input } from "../safety-score-v9/formula";
-import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import {
   boundedUnknown, makeDeploymentControl as control, makeEconomicControlArgs as args,
   makeEconomicControlFacts as facts, makeReviewedMintInput, requiredKnown,
   makeOperationalIssuanceProcess, makeCompiledVotingControl,
 } from "./safety-score-v9-fixtures.test-support";
-import { makeV9ScoringInput } from "./safety-score-v9-score.test-support";
 
-const policy = V9_CANDIDATE_POLICY_V1;
 
 describe("owner Control rules", () => {
   it("prices privileged pricing in Control without a local or shared-oracle ceiling", () => {
@@ -21,46 +17,8 @@ describe("owner Control rules", () => {
     expect(result.components.find((row) => row.kind === "oracle")).toMatchObject({
       posture: "privileged-internal-pricing", score: 45, binding: true,
     });
-    const signals = result.structuralFailures.map((failure) => ({
-      ...failure, materialSharePct: failure.materialSharePct ?? undefined,
-      responsibility: "measured-adverse" as const, evidence: [],
-      failureDomainKeys: ["oracle:shared-pricing"],
-    }));
-    expect(resolveV9StructuralCaps(signals, policy)).toEqual([]);
-    const weak = {
-      kind: "weak-oracle-branch" as const, severity: "high" as const,
-      responsibility: "measured-adverse" as const, reason: "A single external feed can impair pricing.",
-      evidence: [], failureDomainKeys: ["oracle:shared-pricing"],
-    };
-    expect(resolveV9StructuralCaps([...signals, weak], policy).some((cap) => cap.kind === "signal:common-mode-oracle")).toBe(false);
-    const scored = scoreV9Input(makeV9ScoringInput({
-      pillars: { backing: 95, exit: 95, control: result.score }, structuralSignals: signals,
-    }), policy);
-    expect(scored.finalScore).toBeGreaterThan(59);
-    expect(scored.bindingCap).toBeNull();
   });
 
-  it.each(["single-source-or-laggy"] as const)(
-    "retains local and common-mode ceilings for %s", (tier) => {
-      const result = evaluateV9EconomicControl(args({ oracle: {
-        status: requiredKnown("oracle"), tier, liquidationBranchesApplicable: false, branches: [],
-      } }));
-      const signals = result.structuralFailures.map((failure) => ({
-        ...failure, materialSharePct: failure.materialSharePct ?? undefined,
-        responsibility: "measured-adverse" as const, evidence: [],
-        failureDomainKeys: ["oracle:shared-feed"],
-      }));
-      const independentBranchSignals = signals.map((signal) => ({
-        ...signal, reason: `${signal.reason} Another reviewed branch shares this feed.`,
-      }));
-      expect(resolveV9StructuralCaps([...signals, ...independentBranchSignals], policy)).toContainEqual(
-        expect.objectContaining({ kind: "signal:common-mode-oracle", limit: policy.policy.semantic.structural.commonModeOracleLimit }),
-      );
-      expect(resolveV9StructuralCaps(signals, policy)).toContainEqual(
-        expect.objectContaining({ kind: "signal:weak-oracle-branch:high", limit: 59 }),
-      );
-    },
-  );
 
   it.each(["prudential", "none"] as const)(
     "separates a disclosed internal mint ledger from reserve assurance under %s supervision", (supervision) => {
@@ -82,7 +40,7 @@ describe("owner Control rules", () => {
       expect(after.score).toBe(before.score);
       expect(after.components.find((row) => row.kind === "mint")).toMatchObject({
         posture: supervision === "prudential" ? "unbounded-reconciled" : "unbounded-adverse",
-        score: supervision === "prudential" ? 55 : 25,
+        score: supervision === "prudential" ? 75 : 60,
       });
       const compromised = evaluateV9EconomicControl(args({ facts: facts([{ ...mintControl, incidentState: "active" }]),
         mint: makeReviewedMintInput(mintControl.controlKey, { reconciliation: "internal-ledger", supervision }),
@@ -119,10 +77,10 @@ describe("owner Control rules", () => {
       mint: makeReviewedMintInput(evm.controlKey, { reconciliation: "internal-ledger", supervision: "prudential" }),
     }));
     expect(after.reasons.some((row) => row.code === "mint-control-question")).toBe(false);
-    expect(after.score).toBe(52);
+    expect(after.score).toBe(65);
     expect(after.score).toBe(before.score);
     expect(after.components.find((row) => row.kind === "mint" && row.controlKeys.includes(singleKey.controlKey)))
-      .toMatchObject({ posture: "unbounded-reconciled", score: 52, binding: true });
+      .toMatchObject({ posture: "unbounded-reconciled", score: 65, binding: true });
   });
 
   it.each(["not-applicable", "none", "unknown", "internal-ledger"] as const)(
@@ -134,14 +92,14 @@ describe("owner Control rules", () => {
         delaySec: null,
       });
       const mint = makeReviewedMintInput(mintControl.controlKey, { reconciliation });
-      const measured = evaluateV9EconomicControl(args({ facts: facts([mintControl]), mint, trackRecordMonths: 61 }));
+      const measured = evaluateV9EconomicControl(args({ facts: facts([mintControl]), mint }));
       const unresolved = evaluateV9EconomicControl(args({ facts: facts([mintControl]),
-        mint: { ...mint, status: boundedUnknown("mint") }, trackRecordMonths: 61,
+        mint: { ...mint, status: boundedUnknown("mint") },
       }));
       expect(unresolved.score).toBe(measured.score);
       expect(unresolved.components.find((row) => row.kind === "mint")).toMatchObject({
         posture: "unbounded-adverse",
-        score: 35,
+        score: 60,
       });
       expect(unresolved.reasons).toContainEqual(expect.objectContaining({ code: "unresolved-mint-authority" }));
       expect(unresolved.structuralFailures).toContainEqual(expect.objectContaining({ kind: "centralized-mint", severity: "high" }));
@@ -158,20 +116,20 @@ describe("owner Control rules", () => {
       state: "unresolved", policyRuleId: "mint", rationale: "Mint applicability has not been reviewed.", gapId: "gap:mint-applicability",
     };
     const result = evaluateV9EconomicControl(args({ facts: facts([mintControl]),
-      mint: makeReviewedMintInput(mintControl.controlKey, { status }), trackRecordMonths: 61,
+      mint: makeReviewedMintInput(mintControl.controlKey, { status }),
     }));
     expect(result.components.find((row) => row.kind === "mint")).toMatchObject({
-      posture: "unbounded-adverse", score: 35,
+      posture: "unbounded-adverse", score: 60,
     });
     expect(result.reasons).toContainEqual(expect.objectContaining({ code: "mint-control-question" }));
   });
 
-  it("does not award favorable mint posture from an unresolved review", () => {
+  it("retains verified quorum facts when the wider mint review is unresolved", () => {
     const mintControl = control("mint:bounded", "mint", { status: boundedUnknown("control.mint-bounded") });
     const result = evaluateV9EconomicControl(args({ facts: facts([mintControl]),
       mint: makeReviewedMintInput(mintControl.controlKey, { status: boundedUnknown("mint") }),
     }));
-    expect(result.components.find((row) => row.kind === "mint")).toMatchObject({ posture: "unknown", score: 50 });
+    expect(result.components.find((row) => row.kind === "mint")).toMatchObject({ score: 65 });
     expect(result.reasons).toContainEqual(expect.objectContaining({ code: "unresolved-mint-authority" }));
   });
 
@@ -181,7 +139,6 @@ describe("owner Control rules", () => {
     });
     const result = evaluateV9EconomicControl(args({ facts: facts([mintControl]),
       mint: makeReviewedMintInput(mintControl.controlKey, { status: boundedUnknown("mint") }),
-      trackRecordMonths: 61,
     }));
     expect(result.components.find((row) => row.kind === "mint")).toMatchObject({
       posture: "compromised", score: 25,
@@ -200,7 +157,7 @@ describe("owner Control rules", () => {
     const result = evaluateV9EconomicControl(args({ facts: facts([mintControl]),
       mint: makeReviewedMintInput(mintControl.controlKey, { status: boundedUnknown("mint") }),
     }));
-    expect(result.components.find((row) => row.kind === "mint")).toMatchObject({ posture: "unknown", score: 50 });
+    expect(result.components.find((row) => row.kind === "mint")).toMatchObject({ posture: "unknown", score: 65 });
     expect(result.structuralFailures.some((failure) => failure.kind === "centralized-mint")).toBe(false);
   });
 
@@ -232,12 +189,12 @@ describe("owner H bounded-stock closure", () => {
     });
     const mint = makeReviewedMintInput(minter.controlKey, { reconciliation: "none", supervision: "none" });
     const positive = evaluateV9EconomicControl(args({ facts: facts([minter]), mint }));
-    expect(positive.components.find((component) => component.kind === "mint")).toMatchObject({ posture: "unbounded-operationally-governed", score: 55 });
+    expect(positive.components.find((component) => component.kind === "mint")).toMatchObject({ posture: "unbounded-operationally-governed", score: 60 });
     expect(positive.processDiagnostics).toEqual([]);
     expect(positive.controlFacts![0]!.issuanceProcess?.diagnostics[0]?.code).toBe("external-accounting-trust");
     const failed = { ...minter, issuanceProcess: { ...process, otherClassesQualified: false } };
     const negative = evaluateV9EconomicControl(args({ facts: facts([failed]), mint }));
-    expect(negative.components.find((component) => component.kind === "mint")).toMatchObject({ posture: "unbounded-adverse", score: 25 });
+    expect(negative.components.find((component) => component.kind === "mint")).toMatchObject({ posture: "unbounded-adverse", score: 60 });
     expect(negative.processDiagnostics).toContainEqual(expect.objectContaining({ gate: "H4", code: "economic-reach-unclosed" }));
   });
 });

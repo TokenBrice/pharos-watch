@@ -1,7 +1,6 @@
 import type { V9DeploymentControlFactV2, V9FactStatusV2, V1005ProcessDiagnostic } from "../../types/safety-score-v9-facts";
 import type {
   V9ReasonCode,
-  V9Severity,
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
 import { V9_NEUTRAL_CONTROL_SCORE } from "../../types/safety-score-v9-public-facts";
@@ -9,6 +8,7 @@ import {
   assertV9ReasonCodesRegistered,
   assertV9ValidatedPolicyEnvelope,
   resolveV9ReasonTreatment,
+  unknownQuality,
 } from "./policy";
 import { v9StructuralSignalSharePct } from "./backing-primitives";
 import { canonicalDomains, compareText, domainKey, uniqueSorted } from "./primitives";
@@ -22,10 +22,8 @@ import {
   providerRowExclusionShares,
 } from "./control-bridge-join";
 import {
-  applyMergedMintSignals,
-  gradeVerifiedControlAuthority,
-  isStaticallyVerifiedControl,
-  mintQualityLadder,
+  applyResolvedControlIncidentHistory,
+  gradeEconomicControlAuthority,
 } from "./control-mint-grade";
 import {
   bindingByMateriality,
@@ -185,20 +183,6 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     normalizedReasons.some((reason) => reason.code === "unresolved-control-identity" && reason.path === "controls")
       ? [facts.controlStatus] : [], facts.gaps,
   );
-  // BASE did not price unresolved inventory as a separate control. Preserve
-  // that numeric treatment: disclose the actual gap without a new minimum.
-  const inventoryDiagnostic = inventoryCause.cause === "C" || inventoryCause.cause === "U";
-  if (inventoryDiagnostic || inventoryCause.excluded) {
-    normalizedComponents.push({
-      componentKey: "control:inventory", kind: "inventory", posture: "unknown",
-      score: inventoryCause.excluded ? null : policy.control.boundedUnknownQuality,
-      cause: inventoryCause.cause, causeGapIds: inventoryCause.causeGapIds,
-      scoringDisposition: v9ScoringDisposition(inventoryCause.cause),
-      effectiveScoringWeight: 0,
-      binding: false, controlKeys: [], failureDomains: [],
-    });
-    normalizedComponents.sort((left, right) => compareText(left.componentKey, right.componentKey));
-  }
   const bindingScores = normalizedComponents
     .filter((component) => component.binding && component.score !== null)
     .map((component) => component.score!);
@@ -332,270 +316,82 @@ function evaluateControlInventory(context: ControlEvaluationContext): void {
 
 function evaluateMintPhase(context: ControlEvaluationContext): void {
   const { args, policy, facts, controlsByKey, components, controlBinding, addReason, addStructuralFailure } = context;
-  const controls = facts.controls;
-  const issuanceFacts = facts.issuanceFacts;
   const mint = args.mint;
-  const retainedAdverseMintControls =
-    mint.status.applicability.state !== "not-applicable" &&
-    !isKnownRequired(mint.status)
-      ? controls.filter((control) => {
-          if (
-            control.controlKind === "bridge" ||
-            control.status.applicability.state === "not-applicable" ||
-            !isControlEconomicallyRelevant(control) ||
-            (!control.capabilities.includes("mint") && control.controlKey !== mint.controlKey)
-          ) return false;
-          const posture = deriveV9MintPosture(control, mint, false, policy, issuanceFacts);
-          return posture === "unknown" ||
-            (control.status.evidenceRefIds.length > 0 && isUnboundedMintPosture(posture));
-        })
-      : [];
-  if (mint.status.applicability.state === "not-applicable") {
-    const noneResolvedScore = policy.control.mintPostureQuality["none-resolved"];
-    components.push({
-      componentKey: "mint",
-      kind: "mint",
-      posture: "none-resolved",
-      score: applyMergedMintSignals(
-        noneResolvedScore,
-        null,
-        args.resolvedIncidentAgeMonths,
-        policy.control,
-      ),
-      binding: true,
-      controlKeys: [],
-      failureDomains: [],
-    });
-  } else if (mint.status.applicability.state === "unresolved") {
+  if (mint.status.applicability.state === "unresolved") {
     addReason("mint-control-question", "local-component", "mint");
-  } else if (mint.status.observationState !== "known") {
-    addReason(
-      mint.status.observationState === "missing" ? "missing-mint-authority" : "unresolved-mint-authority",
-      "local-component",
-      "mint",
-      mint.controlKey,
-    );
+  } else if (mint.status.applicability.state !== "not-applicable" && mint.status.observationState !== "known") {
+    addReason(mint.status.observationState === "missing" ? "missing-mint-authority" : "unresolved-mint-authority",
+      "local-component", "mint", mint.controlKey);
   }
-  if (isKnownRequired(mint.status) || retainedAdverseMintControls.length > 0) {
-    const mintControl = mint.controlKey === null ? null : (controlsByKey.get(mint.controlKey) ?? null);
-    const immutableMechanism =
-      mint.controlKey === null && mint.upgrade.state === "immutable" && mint.reconciliation === "not-applicable";
-    if (mint.controlKey === null && !immutableMechanism) {
-      addReason("missing-mint-authority", "local-component", "mint");
-    } else if (mint.controlKey !== null && (!mintControl || !controlCanRepresent(mintControl, "mint"))) {
-      addReason("unresolved-control-identity", "local-component", "mint", mint.controlKey);
+  if (mint.upgrade.state === "unknown" || (mint.upgrade.state === "reviewed" &&
+      (mint.upgrade.controlKey === null || !controlsByKey.has(mint.upgrade.controlKey)))) {
+    addReason("unknown-upgrade-authority", "local-component", "mint:upgrade", mint.upgrade.controlKey);
+    components.push({
+      componentKey: "mint:upgrade", kind: "mint", posture: "unknown",
+      score: unknownQuality("control", resolveV9StatusCauses([mint.status, mint.factorStatuses?.upgrade], facts.gaps).cause, policy),
+      binding: true, controlKeys: [], failureDomains: [], causeStatuses: [mint.status, mint.factorStatuses?.upgrade],
+    });
+    addStructuralFailure({
+      kind: "unreviewed-upgrade", severity: "high", binding: true,
+      reason: "Economically effective upgrade authority is not fully reviewed.",
+      materialSharePct: null, controlKeys: [], failureDomains: [],
+    });
+  }
+  // The mint review's anchor is not an exhaustive authority inventory. Upgrade,
+  // custody, fee/accountant, allocator and parameter paths compete on the same
+  // ladder even when minting itself is immutable or its wider review is partial.
+  const economicControls = facts.controls.filter((control) =>
+    control.status.applicability.state !== "not-applicable" && isControlEconomicallyRelevant(control));
+  for (const control of economicControls) {
+    if (control.controlKind !== "bridge" && control.capSemantics.kind === "unknown") {
+      addReason("unknown-control-cap-authority", "local-component", "mint:cap", control.controlKey);
     }
-    let upgradeControl: V9DeploymentControlFactV2 | null = null;
-    let upgradeUnreviewed = false;
-    if (mint.upgrade.state === "unknown") {
-      upgradeUnreviewed = true;
-      addReason("unknown-upgrade-authority", "local-component", "mint:upgrade", mint.upgrade.controlKey);
-    } else if (mint.upgrade.state === "reviewed") {
-      upgradeControl = mint.upgrade.controlKey === null ? null : (controlsByKey.get(mint.upgrade.controlKey) ?? null);
-      if (!upgradeControl || !controlCanRepresent(upgradeControl, "upgrade")) {
-        upgradeUnreviewed = true;
-        addReason("missing-upgrade-control", "local-component", "mint:upgrade", mint.upgrade.controlKey);
-      } else if (!isKnownRequired(upgradeControl.status)) {
-        upgradeUnreviewed = true;
-        addReason("missing-upgradeability-review", "local-component", "mint:upgrade", mint.upgrade.controlKey);
-      }
+    if (control.controlKind !== "bridge" && control.claimImpairment === "unknown") {
+      addReason("unknown-control-mint-ability", "local-component", "mint:claim-impairment", control.controlKey);
     }
-
-    // The review key anchors admission; it is not an exhaustive mint inventory.
-    // Every non-bridge durable-mint path must compete, including separate
-    // deployment observations of the same authority.
-    const mintControls = isKnownRequired(mint.status)
-      ? controls.filter(
-          (control) =>
-            control.controlKind !== "bridge" &&
-            control.status.applicability.state !== "not-applicable" &&
-            (control.capabilities.includes("mint") || control === mintControl),
-        )
-      : retainedAdverseMintControls;
-    for (const mintControl of mintControls.length > 0 ? mintControls : [null]) {
-      if (mintControl?.capSemantics.kind === "unknown") {
-        addReason("unknown-control-cap-authority", "local-component", "mint:cap", mintControl.controlKey);
-      }
-      if (mintControl?.claimImpairment === "unknown") {
-        addReason("unknown-control-mint-ability", "local-component", "mint:claim-impairment", mintControl.controlKey);
-      }
-      if (
-        mintControl &&
-        mintControl.claimImpairment !== "none" &&
-        mintControl.authority?.model === "issuer-backend" &&
-        (mint.reconciliation === "not-applicable" || mint.reconciliation === "unknown")
-      ) {
-        addReason("mint-control-question", "local-component", "mint:reconciliation", mintControl.controlKey);
-      }
-
-      const posture = deriveV9MintPosture(mintControl, mint, immutableMechanism, policy, issuanceFacts);
-      const componentControlKeys = uniqueSorted(
-        [mintControl?.controlKey, upgradeControl?.controlKey].filter((value): value is string => value !== undefined),
-      );
-      const componentFailureDomains = canonicalDomains([
-        ...(mintControl?.failureDomains ?? []),
-        ...(upgradeControl?.failureDomains ?? []),
-      ]);
-      const mintControlKeys = mintControl === null ? [] : [mintControl.controlKey];
-      const mintFailureDomains = canonicalDomains(mintControl?.failureDomains ?? []);
-      const upgradeControlKeys = upgradeControl === null ? [] : [upgradeControl.controlKey];
-      const upgradeFailureDomains = canonicalDomains(upgradeControl?.failureDomains ?? []);
-      const mintBinding = mintControl === null ? true : controlBinding(mintControl);
-      const mintReconciled = mint.reconciliation === "continuous" || mint.reconciliation === "periodic";
-      const gradedPostureScore =
-        (posture === "concentrated-admin" || posture === "unbounded-reconciled") && mintReconciled
-          ? mint.supervision === "prudential"
-            ? policy.control.mintPostureGrading.prudentialReconciled
-            : mint.supervision === "attestation-only"
-              ? policy.control.mintPostureGrading.attestationOnlyReconciled
-              : policy.control.mintPostureQuality[posture]
-          : policy.control.mintPostureQuality[posture];
-      // T5 seasoned-issuer credit (owner ruling 2026-07-22, R2): a reconciled,
-      // non-adverse measured posture with >= seasonedCreditMinMonths of track
-      // record earns seasonedCreditPoints, capped at the next rung of the merged
-      // posture/grading ladder — longevity can close the gap to the next rung
-      // but never leapfrog it. D29 governance and D30 minority-veto issuance use
-      // that ordinary ladder; the adverse rung keeps its dedicated ceiling,
-      // and active compromise never earns credit.
-      const mintPostureScore = (() => {
-        const grading = policy.control.mintPostureGrading;
-        const postureSeasonedEligible =
-          posture === "unbounded-adverse" ||
-          posture === "unbounded-governed" ||
-          posture === "unbounded-veto-guarded" ||
-          posture === "unbounded-operationally-governed";
-        if (
-          grading.seasonedCreditPoints <= 0 ||
-          args.trackRecordMonths === undefined ||
-          args.trackRecordMonths < grading.seasonedCreditMinMonths ||
-          (!mintReconciled && !postureSeasonedEligible) ||
-          posture === "unknown" ||
-          posture === "compromised"
-        ) {
-          return gradedPostureScore;
-        }
-        const nextRung = mintQualityLadder(policy.control).find((value) => value > gradedPostureScore);
-        // Strictly below the next rung: a seasoned credit rewards longevity but can
-        // never make a lower posture class read identical to the class above it
-        // (adversarial-review finding on the credit widening to 10).
-        const ceiling =
-          posture === "unbounded-adverse"
-            ? grading.adverseSeasonedCreditCeiling
-            : nextRung === undefined
-              ? gradedPostureScore
-              : nextRung - 1;
-        return Math.min(gradedPostureScore + grading.seasonedCreditPoints, ceiling);
-      })();
-      // Safety 9.1 merged mint grader: quorum granularity, Safe module evidence,
-      // and resolved-incident age decay refine the posture-derived score. The
-      // active-incident path above is untouched — a live compromise still pins the
-      // posture at compromised and raises the critical signal.
-      const mergedMintScore = applyMergedMintSignals(
-        mintPostureScore,
-        mintControl,
-        args.resolvedIncidentAgeMonths,
-        policy.control,
-        facts.gaps,
-      );
-      components.push({
-        componentKey: "mint",
-        kind: "mint",
-        posture,
-        score: mergedMintScore,
-        binding: mintBinding,
-        controlKeys: componentControlKeys,
-        failureDomains: componentFailureDomains,
+    if (control.authority?.model === "issuer-backend" && control.claimImpairment !== "none" &&
+        (mint.reconciliation === "not-applicable" || mint.reconciliation === "unknown")) {
+      addReason("mint-control-question", "local-component", "mint:reconciliation", control.controlKey);
+    }
+    const posture = deriveV9MintPosture(control, mint, false, policy, facts.issuanceFacts);
+    const score = applyResolvedControlIncidentHistory(
+      gradeEconomicControlAuthority(control, mint, policy, facts.gaps, facts.issuanceFacts, facts.assetId),
+      control, args.resolvedIncidentAgeMonths, policy.control,
+    );
+    const binding = controlBinding(control, provenNullShareDeploymentBound(facts, control));
+    components.push({
+      componentKey: "mint", kind: "mint", posture, score, binding,
+      controlKeys: [control.controlKey], failureDomains: canonicalDomains(control.failureDomains),
+    });
+    if (control.controlKind !== "bridge" && isUnboundedMintPosture(posture)) {
+      addStructuralFailure({
+        kind: "centralized-mint",
+        severity: control.incidentState === "active" ? "critical" : "high",
+        binding,
+        reason: control.incidentState === "active"
+          ? "An economically effective authority is under an active incident."
+          : "An economically effective authority has unbounded power over the holder claim.",
+        materialSharePct: control.materialSupplyShare === null ? null : v9StructuralSignalSharePct(
+          facts.assetId, "structuralSignals[*].materialSharePct", control.materialSupplyShare),
+        controlKeys: [control.controlKey], failureDomains: canonicalDomains(control.failureDomains),
       });
-      if (isUnboundedMintPosture(posture)) {
-        // R3 keeps reconciled mint risk inside the control pillar for prudential
-        // issuers and emits a low diagnostic for attestation-only reconciliation.
-        // D29/D30 governance processes are low diagnostics, without treating
-        // their economically unbounded issuance as bounded.
-        const prudentiallySupervised = posture === "unbounded-reconciled" && mint.supervision === "prudential";
-        const severity: V9Severity | null =
-          posture === "compromised"
-            ? "critical"
-            : posture === "unbounded-operationally-governed"
-              ? "moderate"
-              : posture === "unbounded-governed" || posture === "unbounded-veto-guarded"
-                ? "low"
-                : posture === "unbounded-adverse"
-                  ? "high"
-                  : prudentiallySupervised
-                    ? null
-                    : mint.supervision === "attestation-only"
-                      ? "low"
-                      : "high";
-        if (severity !== null) {
-          addStructuralFailure({
-            kind: "centralized-mint",
-            severity,
-            binding: mintBinding,
-            reason:
-              posture === "compromised"
-                ? "Minting authority is under an active incident."
-                : posture === "unbounded-operationally-governed"
-                  ? "Discretionary expansion and operational-envelope changes require public token governance; formula interest and activity-bound compensation can execute immediately within reviewed envelopes. Economically unbounded."
-                  : posture === "unbounded-veto-guarded"
-                    ? "Minting is economically unbounded but every new issuer faces a public minority-veto window."
-                    : posture === "unbounded-governed"
-                      ? "Minting is economically unbounded but held only by delayed on-chain governance."
-                      : posture === "unbounded-adverse"
-                        ? "Economically effective mint authority is unbounded, and no qualifying governance, reconciliation, or supervisory process is evidenced."
-                        : "Minting is economically unbounded.",
-            materialSharePct:
-              mintControl?.materialSupplyShare == null
-                ? null
-                : v9StructuralSignalSharePct(
-                    facts.assetId,
-                    "structuralSignals[*].materialSharePct",
-                    mintControl.materialSupplyShare,
-                  ),
-            controlKeys: mintControlKeys,
-            failureDomains: mintFailureDomains,
-          });
-        }
-      } else if (posture === "concentrated-admin" || posture === "collateral-gated") {
-        addStructuralFailure({
-          kind: "centralized-mint",
-          severity: "moderate",
-          binding: mintBinding,
-          reason:
-            posture === "collateral-gated"
-              ? "Minting is collateral-gated behind a privileged administrator surface."
-              : "Minting depends on one concentrated administrator path.",
-          materialSharePct:
-            mintControl?.materialSupplyShare == null
-              ? null
-              : v9StructuralSignalSharePct(
-                  facts.assetId,
-                  "structuralSignals[*].materialSharePct",
-                  mintControl.materialSupplyShare,
-                ),
-          controlKeys: mintControlKeys,
-          failureDomains: mintFailureDomains,
-        });
-      }
-      if (upgradeUnreviewed) {
-        const upgradeBinding =
-          upgradeControl === null ? mintBinding : controlBinding(upgradeControl);
-        addStructuralFailure({
-          kind: "unreviewed-upgrade",
-          severity: "high",
-          binding: upgradeBinding,
-          reason: "Mint-critical upgrade authority is not fully reviewed.",
-          materialSharePct:
-            upgradeControl?.materialSupplyShare == null
-              ? null
-              : v9StructuralSignalSharePct(
-                  facts.assetId,
-                  "structuralSignals[*].materialSharePct",
-                  upgradeControl.materialSupplyShare,
-                ),
-          controlKeys: upgradeControlKeys,
-          failureDomains: upgradeFailureDomains,
-        });
-      }
+    }
+  }
+  if (economicControls.length === 0 || mint.status.applicability.state === "not-applicable") {
+    const mintControl = mint.controlKey === null ? undefined : controlsByKey.get(mint.controlKey);
+    const immutable = mint.status.applicability.state === "not-applicable" ||
+      (isKnownRequired(mint.status) && mint.upgrade.state === "immutable" &&
+        ((mint.controlKey === null && mint.reconciliation === "not-applicable") ||
+          (mintControl?.claimImpairment === "none" && mintControl.economicLossScope === "access-only")));
+    if (immutable) {
+      components.push({
+        componentKey: "mint", kind: "mint", posture: "none-resolved",
+        score: applyResolvedControlIncidentHistory(policy.control.authorityLadder.immutableNoPower,
+          null, args.resolvedIncidentAgeMonths, policy.control),
+        binding: true, controlKeys: [], failureDomains: [],
+      });
+    } else if (isKnownRequired(mint.status)) {
+      addReason("missing-mint-authority", "local-component", "mint", mint.controlKey);
     }
   }
 }
@@ -617,7 +413,7 @@ function evaluateOraclePhase(context: ControlEvaluationContext): void {
       // Components compete by minimum quality; they are not additive charges.
       components.push({
         componentKey: "oracle", kind: "oracle", posture: "opaque-or-unknown",
-        score: policy.control.boundedUnknownQuality, binding: true,
+        score: unknownQuality("control", resolveV9StatusCauses([oracle.status], facts.gaps).cause, policy), binding: true,
         controlKeys: [], failureDomains: [],
       });
     }
@@ -691,7 +487,9 @@ function evaluateOraclePhase(context: ControlEvaluationContext): void {
         componentKey: retainedOracleTier === null ? "oracle" : "oracle:known-paths",
         kind: "oracle",
         posture: oracleTier,
-        score: policy.control.oracleTierQuality[oracleTier],
+        score: oracleTier === "opaque-or-unknown"
+          ? unknownQuality("control", resolveV9StatusCauses([oracle.factorStatuses?.tier, oracle.status], facts.gaps).cause, policy)
+          : policy.control.oracleTierQuality[oracleTier],
         binding: true,
         controlKeys: linkedControls.map((control) => control.controlKey).sort(compareText),
         failureDomains,
@@ -823,7 +621,6 @@ function evaluateBridgePhase(context: ControlEvaluationContext): void {
         if (binding) {
           addReason("selected-bridge-route-unresolved", "deployment-control", "bridge:route", route.controlKey);
         }
-        continue;
       }
       if (control.economicLossScope === "deployment" && control.materialSupplyShare === null && !provenImmaterial) {
         addReason(
@@ -852,7 +649,9 @@ function evaluateBridgePhase(context: ControlEvaluationContext): void {
         componentKey: `bridge:${control.deploymentKey}:${control.controlKey}`,
         kind: "bridge",
         posture: route.tier,
-        score: policy.control.bridgeTierQuality[route.tier],
+        score: route.tier === "opaque-or-unknown"
+          ? unknownQuality("control", resolveV9StatusCauses([route.factorStatuses?.tier, bridge.status, control.status], facts.gaps).cause, policy)
+          : policy.control.bridgeTierQuality[route.tier],
         binding,
         controlKeys: [control.controlKey],
         failureDomains: canonicalDomains(control.failureDomains),
@@ -904,76 +703,32 @@ function evaluateBridgePhase(context: ControlEvaluationContext): void {
 
 function appendControlFallbacks(context: ControlEvaluationContext): void {
   const { args, policy, facts, controlsByKey, components, reasons } = context;
-  const issuanceFacts = facts.issuanceFacts;
-  // An unavailable section remains diagnostic and uses its typed bounded rung
-  // only when its cause is C/U. A/B never binds the minimum.
-  const boundedFallbacks = [
+  const fallbacks = [
     { kind: "mint", componentKey: "mint", posture: "unknown" },
     { kind: "oracle", componentKey: "oracle", posture: "opaque-or-unknown" },
     { kind: "bridge", componentKey: "bridge:unverified", posture: "opaque-or-unknown" },
   ] as const;
-  for (const fallback of boundedFallbacks) {
+  for (const fallback of fallbacks) {
+    if (components.some((component) => component.kind === fallback.kind)) continue;
     const section = fallback.kind === "mint" ? args.mint : fallback.kind === "oracle" ? args.oracle : args.bridge;
-    const missingSection = resolveV9StatusCauses([section.status], facts.gaps);
-    if (components.some((component) => component.kind === fallback.kind &&
-      (!missingSection.excluded || component.posture === "unknown" || component.posture === "opaque-or-unknown"))) continue;
-    // Aggregate inventory reasons are section-neutral. A control-specific
-    // reason may authorize only the section that control can represent.
-    const verifiedGapControlKeys = new Set<string>();
-    const causeStatuses: (V9FactStatusV2 | undefined)[] = [];
-    let hasBindingGap = missingSection.excluded;
-    let hasUnverifiedGap = missingSection.excluded;
+    const causeStatuses: (V9FactStatusV2 | undefined)[] = [section.status];
+    let hasBindingGap = resolveV9StatusCauses([section.status], facts.gaps).excluded;
     for (const reason of reasons.values()) {
       if (resolveV9ReasonTreatment(args.policy, reason.code).reason.defaultTreatment === "diagnostic") continue;
       const sectionMatch = reason.path === fallback.kind || reason.path.startsWith(`${fallback.kind}:`);
-      const reasonControl = reason.controlKey === null ? undefined : controlsByKey.get(reason.controlKey);
-      const controlMatch = reasonControl !== undefined && controlFallbackKind(reasonControl) === fallback.kind;
-      if (!sectionMatch && !controlMatch) continue;
+      const control = reason.controlKey === null ? undefined : controlsByKey.get(reason.controlKey);
+      if (!sectionMatch && !(control && controlFallbackKind(control) === fallback.kind)) continue;
       hasBindingGap = true;
-      if (reasonControl !== undefined) {
-        causeStatuses.push(reasonControl.status, ...Object.values(reasonControl.factorStatuses ?? {}));
-        if (fallback.kind === "bridge") {
-          causeStatuses.push(args.bridge.routes.find((route) => route.controlKey === reasonControl.controlKey)?.factorStatuses?.tier);
-        }
-      }
+      if (control) causeStatuses.push(control.status, ...Object.values(control.factorStatuses ?? {}));
       if (sectionMatch && (reason.path.includes("supply") || reason.path.includes("materiality"))) {
         causeStatuses.push(facts.supply.status);
       }
-      // LEVER 5 (2026-07-21): a gap raised by a statically-verified control row
-      // (its authority is reviewed; only an adjacent fact such as exposure share
-      // or the mechanism review is missing) can be graded on that same row. A
-      // section-level gap, or one behind an unverified row, is a genuine unknown
-      // and holds the neutral default — this keeps assets whose control facts are
-      // NOT verified pinned at the bounded-unknown quality.
-      if (reasonControl !== undefined && isStaticallyVerifiedControl(reasonControl)) {
-        verifiedGapControlKeys.add(reasonControl.controlKey);
-      } else {
-        hasUnverifiedGap = true;
-      }
     }
     if (!hasBindingGap) continue;
-    // Grade on the verified rows' own authority only when every authorizing gap
-    // was raised by such a row (condition i: same-row, not asset-generic). The
-    // grade may land above OR below the 45 default (condition ii).
-    const gradeable = !hasUnverifiedGap && verifiedGapControlKeys.size > 0;
-    const gradedControlKeys = uniqueSorted([...verifiedGapControlKeys]);
-    const score = gradeable
-      ? Math.min(
-          ...gradedControlKeys.map((controlKey) =>
-            gradeVerifiedControlAuthority(controlsByKey.get(controlKey)!, policy, facts.gaps, issuanceFacts),
-          ),
-        )
-      : fallback.kind === "mint" ? policy.control.mintPostureQuality.unknown : policy.control.boundedUnknownQuality;
     components.push({
-      componentKey: components.some((component) => component.componentKey === fallback.componentKey)
-        ? `${fallback.componentKey}:unverified` : fallback.componentKey,
-      kind: fallback.kind,
-      posture: fallback.posture,
-      score,
-      binding: true,
-      controlKeys: gradeable ? gradedControlKeys : [],
-      failureDomains: [],
-      causeStatuses,
+      componentKey: fallback.componentKey, kind: fallback.kind, posture: fallback.posture,
+      score: unknownQuality("control", resolveV9StatusCauses(causeStatuses, facts.gaps).cause, policy),
+      binding: true, controlKeys: [], failureDomains: [], causeStatuses,
     });
   }
 }
@@ -1027,7 +782,8 @@ function normalizeControlComponents(
       (args.mint.reconciliation === "unknown" ||
         (args.mint.reconciliation === "internal-ledger" && args.mint.supervision !== "prudential"));
     const uncertainty = component.kind === "mint"
-      ? linkedControls.map((control) => control.factorStatuses?.topology) : [];
+      ? linkedControls.flatMap((control) => [control.factorStatuses?.authority, control.factorStatuses?.topology,
+          control.factorStatuses?.multisigTopology]) : [];
     if (reconciliationQuestion) uncertainty.push(args.mint.factorStatuses?.reconciliation);
     const causal = resolveV9StatusCauses(
       unknown ? [section.status, ...factorStatuses, ...uncertainty, ...(component.causeStatuses ?? [])] : uncertainty,
@@ -1039,12 +795,17 @@ function normalizeControlComponents(
       causal.cause = "U";
       causal.causes = ["U"];
     }
-    const excludedUnknown = unknown && causal.excluded;
+    const usableAuthority = component.kind === "mint" && linkedControls.some((control) =>
+      control.status.evidenceRefIds.length > 0 && (control.authority !== null && control.authority.model !== "unknown" ||
+        control.claimImpairment !== "unknown" || control.capSemantics.kind !== "unknown"));
+    const excludedUnknown = unknown && causal.excluded && !usableAuthority;
+    const effectiveCause = causal.excluded && !excludedUnknown ? null : causal.cause;
     const metadata = {
-      cause: !unknown && causal.excluded ? null : causal.cause, causeGapIds: causal.causeGapIds,
-      scoringDisposition: v9ScoringDisposition(!unknown && causal.excluded ? null : causal.cause),
+      cause: effectiveCause, causeGapIds: causal.causeGapIds,
+      scoringDisposition: v9ScoringDisposition(effectiveCause),
       effectiveScoringWeight: excludedUnknown ? 0 : 1,
-      score: excludedUnknown ? null : component.score,
+      score: excludedUnknown ? null : unknown && (component.kind !== "mint" || linkedControls.length === 0)
+        ? unknownQuality("control", causal.cause, context.policy) : component.score,
       binding: excludedUnknown ? false : component.binding,
     };
     const { causeStatuses: _causeStatuses, ...componentFacts } = component;

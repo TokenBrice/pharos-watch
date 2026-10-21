@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { evaluateV9EconomicControl } from "@shared/lib/safety-score-v9/control";
-import { applyMergedMintSignals, gradeVerifiedControlAuthority } from "@shared/lib/safety-score-v9/control-mint-grade";
+import { gradeEconomicControlAuthority } from "@shared/lib/safety-score-v9/control-mint-grade";
 import { isV9GovernedIssuanceQualified, isV9VetoGuardedIssuanceQualified, isV9OperationallyGovernedIssuanceQualified } from "@shared/lib/safety-score-v9/control-primitives";
 import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-facts";
 import { reviewedScope, weightedQuorum, SCOPE_CLOCK, SCOPE_CONTROLLER } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
@@ -551,7 +551,7 @@ describe("v10.01 control atomic cause scopes", () => {
       expect(gap.causeProof.cause).toBe(cause);
       const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
       expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
-        posture: "unbounded-adverse", score: 25, cause, causeGapIds: [gapId],
+        posture: "unbounded-adverse", score: 65, cause, causeGapIds: [gapId],
       });
       expect(result.structuralFailures).toContainEqual(expect.objectContaining({
         kind: "centralized-mint", severity: "high", binding: true,
@@ -566,10 +566,10 @@ describe("v10.01 control atomic cause scopes", () => {
       const gapId = asset.economicControlReview.mint.factorStatuses!.reconciliation!.gapIds[0]!;
       const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
       expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
-        posture: "unbounded-reconciled", score: 55,
+        posture: "unbounded-reconciled", score: 80,
         cause: assetId === "reviewed-issuer" ? "C" : "U", causeGapIds: [gapId],
       });
-      expect(result.structuralFailures).not.toContainEqual(expect.objectContaining({ kind: "centralized-mint" }));
+      expect(result.structuralFailures).toContainEqual(expect.objectContaining({ kind: "centralized-mint", severity: "high" }));
     },
   );
 });
@@ -735,10 +735,10 @@ describe("v10.08 weighted topology and reviewer-scoped control questions", () =>
       });
       const policy = V9_CANDIDATE_POLICY_V1.policy.semantic;
       const controlPolicy = policy.control;
-      expect(applyMergedMintSignals(55, control, undefined, controlPolicy)).toBe(55);
-      expect(applyMergedMintSignals(55, { ...control, keyCustody: "unknown" }, undefined, controlPolicy))
-        .toBe(55 - controlPolicy.mintMergedSignals.unattestedEoaPenalty);
-      expect(gradeVerifiedControlAuthority(control, policy)).toBe(controlPolicy.mintMergedSignals.attestedKeyCustodyQuality);
+      const mint = asset.economicControlReview.mint;
+      const quality = gradeEconomicControlAuthority(control, mint, policy, asset.gaps);
+      expect(quality).toBe(gradeEconomicControlAuthority({ ...control, keyCustody: "unknown" }, mint, policy, asset.gaps));
+      expect(quality).toBe(gradeEconomicControlAuthority({ ...control, keyCustody: "hardware-wallet" }, mint, policy, asset.gaps));
       expect(isV9GovernedIssuanceQualified(control, controlPolicy.governedIssuance)).toBe(false);
       expect(isV9VetoGuardedIssuanceQualified(control, controlPolicy.governedIssuance)).toBe(false);
       expect(isV9OperationallyGovernedIssuanceQualified(control, policy).qualified).toBe(false);

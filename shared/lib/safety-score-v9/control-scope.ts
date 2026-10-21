@@ -54,6 +54,17 @@ function controlPathAffectsLiability(path: V9ControlExecutionScope["paths"][numb
   }
   return false;
 }
+
+/** Economic reach is scoped to the exact liability, including transitive bypasses. */
+export function economicControlExecutionPaths(control: V9DeploymentControlFactV2, assetId?: string): V9ControlExecutionScope["paths"] {
+  const scopes = control.executionScopeContributors
+    ? control.executionScopeContributors.flatMap((entry) => entry.scope ? [entry.scope] : [])
+    : control.executionScope ? [control.executionScope] : [];
+  const complete = control.executionScopeComplete === true;
+  return scopes.flatMap((scope) => scope.paths.filter((path) => controlPathIsReachable(path, complete) &&
+    (assetId === undefined || controlPathAffectsLiability(path, scope, assetId, false, complete)) &&
+    (path.claimImpairment !== "none" || path.economicLossScope !== "access-only")));
+}
 export interface V9ReviewedControlProjection {
   complete: boolean;
   reviewed: boolean;

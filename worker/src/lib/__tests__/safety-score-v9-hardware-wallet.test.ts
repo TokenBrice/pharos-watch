@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { MintAuthorityProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
 import type { MintAuthorityKeyCustodyAttestation } from "@shared/types/core";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { gradeVerifiedControlAuthority } from "@shared/lib/safety-score-v9/control-mint-grade";
-import { makeDeploymentControl } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
+import { gradeEconomicControlAuthority } from "@shared/lib/safety-score-v9/control-mint-grade";
+import { makeDeploymentControl, makeReviewedMintInput } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import { reviewedKeyCustody } from "../safety-score-v9/extension-shared";
 
 const attestation: MintAuthorityKeyCustodyAttestation = {
@@ -32,10 +32,12 @@ describe("conservative hardware-wallet custody", () => {
     expect(reviewedKeyCustody({ ...attestation, reviewedAt: "2024-10-10" }, clock)).toBe("unknown");
     expect(reviewedKeyCustody({ ...attestation, reviewedAt: "2026-10-10" }, Date.parse("2026-10-10T23:59:59Z") / 1000)).toBe("unknown");
   });
-  it("does not grant MPC/HSM scoring or independent-human credit", () => {
+  it("does not substitute storage hardware for an independently enforced quorum", () => {
     const control = makeDeploymentControl("storage", "mint", { authority: { authorityKey: "issuer-key", model: "eoa", threshold: null }, keyCustody: "hardware-wallet" });
     const semantic = V9_CANDIDATE_POLICY_V1.policy.semantic;
-    expect(gradeVerifiedControlAuthority(control, semantic)).toBe(gradeVerifiedControlAuthority({ ...control, keyCustody: "unknown" }, semantic));
-    expect(gradeVerifiedControlAuthority(control, semantic)).toBeLessThan(gradeVerifiedControlAuthority({ ...control, keyCustody: "hsm" }, semantic));
+    const mint = makeReviewedMintInput(control.controlKey);
+    expect(gradeEconomicControlAuthority(control, mint, semantic)).toBe(50);
+    expect(gradeEconomicControlAuthority({ ...control, keyCustody: "unknown" }, mint, semantic)).toBe(50);
+    expect(gradeEconomicControlAuthority({ ...control, keyCustody: "hsm" }, mint, semantic)).toBe(50);
   });
 });

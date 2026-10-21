@@ -79,7 +79,7 @@ describe("unresolved deployment share pricing", () => {
       expect(result.scoreInput.pillars.control.evidenceLevel).toBe("strong");
       expect(result.scoreInput.pillars.control.score).toBeCloseTo(
         result.control.score! -
-          Math.max(0, result.control.score! - V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality) * share,
+          Math.max(0, result.control.score! - V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.control.U) * share,
       );
       expect(result.trace.caps.map((cap) => cap.kind)).not.toContain("reason:unresolved-control-identity");
       if (share === 0) expect(result.control.unresolvedDeploymentAdjustment).toBeUndefined();
@@ -133,7 +133,7 @@ describe("unresolved deployment share pricing", () => {
     expect(control.status.observationState).toBe("bounded-unknown");
     expect(result.scoreInput.pillars.control.score).toBeCloseTo(
       zero.result.scoreInput.pillars.control.score! -
-      Math.max(0, zero.result.control.score! - V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality) * share,
+      Math.max(0, zero.result.control.score! - V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.control.U) * share,
     );
     expect(result.trace.unresolvedFacts).toContainEqual(expect.objectContaining({ code: "unresolved-control-identity", sourceGapId: control.status.gapIds[0] }));
     expect(result.trace.caps.map((cap) => cap.kind)).not.toContain("reason:unresolved-control-identity");
@@ -214,7 +214,7 @@ describe("unresolved deployment share pricing", () => {
       expect(result.scoreInput.pillars.control.evidenceLevel).toBe("limited");
     } else {
       expect(result.scoreInput.pillars.control.score).toBeCloseTo(
-        result.control.score! - Math.max(0, result.control.score! - V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality) * count * share,
+        result.control.score! - Math.max(0, result.control.score! - V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.control.U) * count * share,
       );
     }
   });
@@ -293,7 +293,7 @@ describe("unresolved deployment share pricing", () => {
     });
     expect(result.scoreInput.pillars.control.score).toBeCloseTo(
       result.control.score! -
-        Math.max(0, result.control.score! - V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality) *
+        Math.max(0, result.control.score! - V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.control.U) *
           (joined.result.control.unresolvedDeploymentShare! + 2 * residueShare),
     );
     expect(result.scoreInput.pillars.control.score).toBeLessThan(joined.result.scoreInput.pillars.control.score!);
