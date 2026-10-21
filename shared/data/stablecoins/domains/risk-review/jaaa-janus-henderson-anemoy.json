@@ -22,7 +22,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "JAAA represents fund shares issued natively by the Janus Henderson/Anemoy/Centrifuge tokenization stack. Native issuance is distinct from cross-chain transport. The separately dated October 20 review records the documented Centrifuge EVM share-transfer messaging rail on the five already-reviewed EVM deployments; it does not certify Solana transport, an exhaustive expanded deployment census, current adapter quorum, or supply conservation.",
+    "summary": "JAAA represents fund shares issued by the Janus Henderson/Anemoy/Centrifuge tokenization stack. The reviewed sources support tokenized fund issuance rather than a user-facing external bridge route, so the multichain posture is treated as issuer-native at probable confidence.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
     "confidence": "verified",
@@ -166,40 +166,6 @@
           {
             "label": "JAAA mint on Solana explorer (mint authority probed 2026-07-20)",
             "url": "https://solscan.io/token/AAAJXeGjpKu7W3X4QTSU4pm1Wbj4G2LPcdg7A6xJLLyG"
-          }
-        ]
-      }
-    ]
-    ,"nativeExternalTransferReviews": [
-      {
-        "id": "jaaa-centrifuge-evm-share-transfer-rail",
-        "routeRefs": [
-          "ethereum:0x5a0f93d040de44e78f251b03c43be9cf317dcf64",
-          "base:0x5a0f93d040de44e78f251b03c43be9cf317dcf64",
-          "bsc:0x58f93d6b1ef2f44ec379cb975657c132cbed3b6b",
-          "avalanche:0x58f93d6b1ef2f44ec379cb975657c132cbed3b6b",
-          "monad:0xad48f183e586e92a591a610397ebf534609df797"
-        ],
-        "tier": "external-validated-network",
-        "reviewedAt": "2026-10-20",
-        "reviewer": "C20 bottom-up refinement 2026-10-21",
-        "rationale": "The current issuer JAAA page describes native share issuance and multichain investor support. Centrifuge's exact token deployment registry names these five JAAA EVM identities, matching the existing reviewed-native routes. Its current bridge guide explicitly permits native mint-and-burn share transfers for any share token between supported EVM networks through Spoke.crosschainTransferShares. The protocol messaging specification routes cross-chain messages through Gateway and pool adapters, with configured confirmation thresholds and recovery index, and defines InitiateTransferShares/ExecuteTransferShares messages. The documented external validation rail therefore remains applicable despite native issuance. This records external-validated-network transport only, not an independently verified current JAAA adapter/validator quorum, immutable amount cap, absence of incidents, or conserved material supply. Solana is explicitly excluded as a bridge target by the guide and is outside this review. Newly listed additional JAAA networks are discovery candidates, not silently admitted routes. Sources retrieved 2026-10-20; the original route observations and aggregate review start are preserved.",
-        "sources": [
-          {
-            "label": "Anemoy JAAA native issuance and multichain access",
-            "url": "https://www.anemoy.io/funds/jaaa"
-          },
-          {
-            "label": "Centrifuge exact JAAA token deployment registry",
-            "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
-          },
-          {
-            "label": "Centrifuge EVM share-token burn-and-mint bridge guide",
-            "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/"
-          },
-          {
-            "label": "Centrifuge Gateway, pool adapters and share-transfer message specification",
-            "url": "https://docs.centrifuge.io/developer/protocol/architecture/messaging/"
           }
         ]
       }

@@ -38,31 +38,6 @@
     "reviewedAt": "2026-08-18",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal); Codex mint-bridge-boundary migration FIX-03",
     "confidence": "manual-review",
-    "nativeExternalTransferReviews": [
-      {
-        "id": "vbill-wormhole-native-transfer-rail",
-        "routeRefs": [
-          "avalanche:0x7f4546ef315efc65336187fe3765ea779ac90183",
-          "bsc:0x14d72634328c4d03bba184a48081df65f1911279",
-          "ethereum:0x2255718832bc9fd3be1caf75084f4803da14ff01",
-          "solana:34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1"
-        ],
-        "tier": "external-validated-network",
-        "reviewedAt": "2026-10-20T22:16:22Z",
-        "reviewer": "FD40 bottom-up refinement 2026-10-21",
-        "rationale": "Wormhole's May 13, 2025 provider disclosure names VanEck Treasury Fund, Ltd. (VBILL), the same Avalanche, BNB Chain, Ethereum and Solana deployment cohort, and Wormhole-powered transfers of VBILL between supported chains. The issuer launch independently states cross-chain interoperability enabled by Wormhole. This establishes a separately declared external-validation transfer rail; the native-only inventory must not erase it. The existing reviewed native deployment identities and issuance semantics remain unchanged. Neither the announcement nor the sampled native redemption proves VBILL-specific manager and peer identities, effective validator configuration, rate limits, administrative signing topology, complete execution reach, in-flight conservation or an immutable loss bound; all remain unresolved. This is a correction of omitted bridge exposure, not favorable control credit.",
-        "sources": [
-          {
-            "label": "Wormhole VBILL interoperability disclosure, May 13, 2025 (retrieved October 20, 2026)",
-            "url": "https://wormhole.com/blog/securitize-announces-wormhole-as-official-interoperability-provider-for-vaneck-vbill"
-          },
-          {
-            "label": "VanEck and Securitize VBILL launch, May 13, 2025",
-            "url": "https://investors.securitize.io/news/news-details/2025/VanEck-Launches-First-Tokenized-Fund-VBILL-on-Securitize-05-13-2025/default.aspx"
-          }
-        ]
-      }
-    ],
     "sources": [
       {
         "label": "Securitize VBILL page",

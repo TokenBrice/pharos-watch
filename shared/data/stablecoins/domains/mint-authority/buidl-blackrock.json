@@ -316,7 +316,7 @@
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
-    "supervision": "prudential",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -366,22 +366,10 @@
         {
           "label": "Aptos BUIDL metadata",
           "url": "https://explorer.aptoslabs.com/account/0x50038be55be5b964cfa32cf128b5cf05f123959f286b4cc02b86cafd48945f89?network=mainnet"
-        },
-        {
-          "label": "Chronicle BUIDL dashboard and technical-verification disclaimer (retrieved 2026-10-20)",
-          "url": "https://chroniclelabs.org/dashboard/proof-of-asset/blackrock-buidl"
-        },
-        {
-          "label": "BVI FSC exact BUIDL issuing fund: currently regulated Professional Fund (listing dated 2026-08-31; retrieved 2026-10-20)",
-          "url": "https://www.bvifsc.vg/regulated-entities/blackrock-usd-institutional-digital-liquidity-fund-ltd"
-        },
-        {
-          "label": "Securitize issuer-authored BUIDL STEP application: SIBA professional fund and exact share issuer",
-          "url": "https://forum.arbitrum.foundation/t/securitize-markets-buidl-step-application/23652"
         }
       ],
-      "evidence": "The fixed exact cutoff was anchored at Ethereum block 25526129, BSC block 109812367, Optimism block 154188051, Arbitrum block 483535601, Avalanche block 90233120, Polygon block 90179923, Solana slot 432714278, and Aptos ledger version 6262999136. All six EVM token/trust-service pairs were uncapped and shared one zero-code EOA owner/MASTER that could mint, administer issuers, and upgrade immediately. Solana's live pre-cutoff issue transaction resolved the issuer signer and PDA path; its issuer, controller, and transfer-hook programs shared a separate immediate single-key upgrader. Aptos Roles resolved one issuer plus a master/package owner with immediate compatible-upgrade authority. These root controls are complete; chain-local delegated EVM issuer lists are not asserted to be identical across deployments. Independently verified new supervision fact: the BVI FSC exact-entity entry dated 2026-08-31 lists BlackRock USD Institutional Digital Liquidity Fund Ltd. as a currently regulated Professional Fund. Securitize's issuer-authored disclosure identifies this same SIBA professional fund as the issuer of the BUIDL participating shares. This establishes ongoing supervision of the exact issuing fund, not prudential supervision of Chronicle or proof of backing reconciliation. The original authority review began 2026-07-15; every authority/observation pin above is retained and is not renewed by this process-only review.",
-      "reviewer": "Codex Safety Score V9 registry pass / SOL-IV calibration; C28 bottom-up refinement 2026-10-21 (process-only review)",
+      "evidence": "The fixed exact cutoff was anchored at Ethereum block 25526129, BSC block 109812367, Optimism block 154188051, Arbitrum block 483535601, Avalanche block 90233120, Polygon block 90179923, Solana slot 432714278, and Aptos ledger version 6262999136. All six EVM token/trust-service pairs were uncapped and shared one zero-code EOA owner/MASTER that could mint, administer issuers, and upgrade immediately. Solana's live pre-cutoff issue transaction resolved the issuer signer and PDA path; its issuer, controller, and transfer-hook programs shared a separate immediate single-key upgrader. Aptos Roles resolved one issuer plus a master/package owner with immediate compatible-upgrade authority. These root controls are complete; chain-local delegated EVM issuer lists are not asserted to be identical across deployments.",
+      "reviewer": "Codex Safety Score V9 registry pass / SOL-IV calibration",
       "reviewedAt": "2026-07-15"
     }
   }
