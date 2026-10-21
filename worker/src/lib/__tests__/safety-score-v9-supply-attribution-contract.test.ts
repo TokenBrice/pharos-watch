@@ -255,6 +255,18 @@ describe("reviewed deployment supply attribution contract", () => {
     ).toBeNull();
   });
 
+  it("admits a carried-forward packet for one further 30-minute cycle only (10.26)", () => {
+    const oldest = Math.min(...observations().map((row) => row.blockTimeSec));
+    const carry = (clockSec: number) => deriveReviewedDeploymentUnitPartition({
+      assetId: "wm-m0", aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
+      scoringClockSec: clockSec, observations: observations(), carriedForwardFromGenerationId: "gen-prior",
+    });
+    expect(derive(observations(), oldest + 1801)).toBeNull();
+    expect(carry(oldest + 1801)).toMatchObject({ carriedForwardFromGenerationId: "gen-prior" });
+    expect(carry(oldest + 3600)).not.toBeNull();
+    expect(carry(oldest + 3601)).toBeNull();
+  });
+
   it("ages every deployment independently and retains the oldest route on re-admission", () => {
     const rowsAtAge = (ageSec: number) => observations().map((row, index) => ({
       ...row, blockTimeSec: CLOCK_SEC - ageSec + (index === 0 ? 0 : 120),

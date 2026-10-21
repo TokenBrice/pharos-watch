@@ -5,7 +5,7 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { beginLiveReserveCheckpoint } from "../scheduled-recovery-checkpoint";
-import { ACCEPTED_RESERVE_GENERATION_KEY, acceptedReserveMetadataMap, assessConsumedRedemptionReserves, consumedReserveInput, loadAcceptedReserveGeneration, sealAcceptedReserveGeneration } from "../accepted-reserve-generation";
+import { ACCEPTED_RESERVE_GENERATION_KEY, acceptedReserveMetadataMap, assessConsumedRedemptionReserves, CONSUMED_RESERVE_CARRY_FORWARD_SEC, consumedReserveInput, loadAcceptedReserveGeneration, sealAcceptedReserveGeneration } from "../accepted-reserve-generation";
 import { assessReserveSnapshotFreshness, evaluateLiveReserveAdmission } from "../live-reserves/store-snapshot-state";
 
 const CLOCK = 1_790_000_000;
@@ -278,7 +278,13 @@ describe("producer-owned accepted reserve generations", () => {
     const unavailable = { state: "unavailable", quarantined: {} };
     expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, CLOCK + 59)).toEqual(fresh);
     expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, CLOCK + 60)).toEqual(fresh);
-    expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, CLOCK + 61)).toEqual({ state: "fresh", quarantined: { [ASSET]: "stale" } });
+    // 10.26: fresh at the run's assessment, so carried to the run clock plus
+    // two producer intervals, naming its age and generation; never beyond.
+    const carryUntil = CLOCK + CONSUMED_RESERVE_CARRY_FORWARD_SEC;
+    expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, CLOCK + 61)).toEqual({ state: "fresh", quarantined: {},
+      carriedForward: { [ASSET]: { reserveGenerationId: accepted.generationId, assessedAtSec: CLOCK, ageSec: 48 * 3600 + 1, carriedUntilSec: carryUntil } } });
+    expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, carryUntil).carriedForward).toHaveProperty(ASSET);
+    expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, carryUntil + 1)).toEqual({ state: "fresh", quarantined: { [ASSET]: "stale" } });
     expect(assessConsumedRedemptionReserves(entries, {}, CLOCK, CLOCK)).toEqual(unavailable);
     expect(assessConsumedRedemptionReserves(entries, { ...metadata, consumedReserveInputs: {} }, CLOCK, CLOCK)).toEqual(unavailable);
   });
@@ -296,7 +302,16 @@ describe("producer-owned accepted reserve generations", () => {
     const entries = [{ stablecoinId: ASSET, reserveInput: input }] as RedemptionBackstopEntry[];
     const metadata = { reserveViewSchemaVersion: 2, reserveGenerationId: accepted.generationId, reserveContentSha256: accepted.contentSha256, runClockSec: CLOCK, consumedReserveInputs: { [ASSET]: input } };
     expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, CLOCK + 60)).toEqual({ state: "fresh", quarantined: {} });
-    expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, CLOCK + 61)).toEqual({ state: "fresh", quarantined: { [ASSET]: "stale" } });
+    expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, CLOCK + 61)).toMatchObject({ quarantined: {},
+      carriedForward: { [ASSET]: { assessedAtSec: CLOCK, carriedUntilSec: CLOCK + CONSUMED_RESERVE_CARRY_FORWARD_SEC } } });
+    expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, CLOCK + CONSUMED_RESERVE_CARRY_FORWARD_SEC + 1))
+      .toEqual({ state: "fresh", quarantined: { [ASSET]: "stale" } });
+    // Evidence already past its source budget at the run's own assessment is never carried.
+    const staleAtRun = { ...input, freshness: assessReserveSnapshotFreshness({ fetchedAt: CLOCK - 60, attemptId: "success", metadata: {
+      freshnessMode: "verified", sourceTimestamp: CLOCK - budget - 1,
+    } }, coin, CLOCK, 172800) };
+    expect(assessConsumedRedemptionReserves([{ stablecoinId: ASSET, reserveInput: staleAtRun }] as RedemptionBackstopEntry[],
+      { ...metadata, consumedReserveInputs: { [ASSET]: staleAtRun } }, CLOCK, CLOCK + 61)).toEqual({ state: "fresh", quarantined: { [ASSET]: "stale" } });
     expect(assessConsumedRedemptionReserves(entries, { ...metadata, reserveGenerationId: "different" }, CLOCK, CLOCK).state).toBe("unavailable");
     expect(assessConsumedRedemptionReserves(entries, { ...metadata, consumedReserveInputs: { [ASSET]: { ...input, configFingerprint: "b".repeat(64) } } }, CLOCK, CLOCK).state).toBe("unavailable");
     // A consistent binding to a configuration that has since changed loses only that asset.

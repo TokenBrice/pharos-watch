@@ -20,6 +20,13 @@ import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-sc
 import { emitSupplyAttributionDiagnostic } from "./supply-attribution-diagnostics";
 
 const REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
+/**
+ * 10.26 bounded carry-forward: the last admitted packet may be re-derived when
+ * a run's capture rejects or omits the asset, for at most one further 30-minute
+ * consumer cycle (two 12/14-minute capture opportunities, i.e. one retry).
+ * Beyond it the existing unavailable-materiality fallback applies.
+ */
+export const SUPPLY_ATTRIBUTION_CARRY_FORWARD_EXTRA_AGE_SEC = 30 * 60;
 const REVIEWED_DEPLOYMENT_SUPPLY_MAX_SKEW_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxSkewSec;
 
 const EVM_ADDRESS_RE = /^0x[0-9a-f]{40}$/;
@@ -625,6 +632,7 @@ export function reviewedDeploymentObservationTimingIssue(input: {
   captureEndedAtSec: number;
   observedAtSec: number;
   deployments: readonly Pick<ReviewedDeploymentSupplyObservation, "routeId" | "blockTimeSec">[];
+  carriedForward?: boolean;
 }): ReviewedDeploymentObservationTimingIssue | null {
   if (
     !Number.isInteger(input.clockSec) ||
@@ -700,7 +708,9 @@ export function reviewedDeploymentObservationTimingIssue(input: {
       failedRouteId: futureUnsupportedBySource.routeId,
     };
   }
-  if (input.clockSec - earliestBlockTimeSec > REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC) {
+  const maxAgeSec = REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC +
+    (input.carriedForward === true ? SUPPLY_ATTRIBUTION_CARRY_FORWARD_EXTRA_AGE_SEC : 0);
+  if (input.clockSec - earliestBlockTimeSec > maxAgeSec) {
     return {
       code: "stale",
       failedRouteId: boundaryRouteId(input.deployments, "earliest"),
@@ -754,6 +764,7 @@ export function reviewedDeploymentAttributionValidationError(input: {
     captureEndedAtSec: attribution.captureEndedAtSec,
     observedAtSec: attribution.observedAtSec,
     deployments,
+    carriedForward: attribution.carriedForwardFromGenerationId !== undefined,
   });
   if (timingIssue) {
     return `reviewed deployment observation time is invalid for ${assetId}: ${timingIssue.code}`;
@@ -805,6 +816,7 @@ export function deriveReviewedDeploymentUnitPartition(input: {
   registryFingerprint: string;
   scoringClockSec: number;
   observations: readonly ReviewedDeploymentSupplyObservation[];
+  carriedForwardFromGenerationId?: string;
 }): ReviewedDeploymentUnitPartitionV1 | null {
   const inventory = buildReviewedDeploymentRouteInventory(input.assetId);
   if (
@@ -829,6 +841,9 @@ export function deriveReviewedDeploymentUnitPartition(input: {
     registryFingerprint: input.registryFingerprint,
     routeInventoryDigest: inventory.digest,
     deployments,
+    ...(input.carriedForwardFromGenerationId === undefined
+      ? {}
+      : { carriedForwardFromGenerationId: input.carriedForwardFromGenerationId }),
   };
 
   return reviewedDeploymentAttributionValidationError({

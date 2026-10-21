@@ -236,6 +236,19 @@ export const SafetyScoreV9EvidenceSummarySchema = z
     reasons: SafetyScoreV9PublicReasonListSchema,
   })
   .strict();
+/**
+ * Since 10.26 a rated letter-grade change publishes only once two consecutive
+ * publications compute the same new band. Until then the card keeps the
+ * previously published grade beside its raw score and names the computed band
+ * and the accepted publication whose grade it retains.
+ */
+const V9LetterGradeSchema = V9GradeSchema.exclude(["NR"]);
+export const SafetyScoreV9GradeHoldSchema = z.object({
+  rawGrade: V9LetterGradeSchema,
+  heldFromGenerationId: z.string().min(1),
+}).strict();
+export type SafetyScoreV9GradeHold = z.infer<typeof SafetyScoreV9GradeHoldSchema>;
+
 const SafetyScoreV9CardShape = {
   id: z.string().min(1),
   localCauseGaps: canonicalTextArray(),
@@ -256,6 +269,7 @@ const SafetyScoreV9CardShape = {
   dependencyCoverage: z.array(SafetyScoreV9DependencyCoverageSchema).optional(),
   score: ScoreSchema.nullable(),
   grade: V9GradeSchema.nullable(),
+  gradeHold: SafetyScoreV9GradeHoldSchema.optional(),
   ratingStatus: V9RatingStatusSchema,
   partialEvidence: V9PartialEvidenceSchema.nullable(),
   qualityScore: ScoreSchema.nullable(),
@@ -299,7 +313,12 @@ function refineCardBase(
       ctx.addIssue({ code: "custom", message: "Pipeline gaps require their distinct availability reason and null card score stages, never NR" });
     }
   }
-  if (card.score !== null && card.grade !== scoreToGrade(card.score)) {
+  if (card.gradeHold !== undefined) {
+    if (card.ratingStatus !== "rated" || card.score === null || card.grade === null || card.grade === "NR" ||
+        card.gradeHold.rawGrade !== scoreToGrade(card.score) || card.gradeHold.rawGrade === card.grade) {
+      issue(ctx, ["gradeHold"], "A grade hold retains a different rated letter grade beside the raw score band");
+    }
+  } else if (card.score !== null && card.grade !== scoreToGrade(card.score)) {
     issue(ctx, ["grade"], "V9 numeric score and grade band must agree");
   }
   if (card.ratingStatus === "rated" && Object.values(card.pillars).filter((pillar) => pillar.aggregationDisposition !== "excluded-a-b" && pillar.score !== null).length < 2) {

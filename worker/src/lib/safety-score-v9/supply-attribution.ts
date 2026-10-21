@@ -2,11 +2,11 @@ import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
-import { XAUT_ASSET_ID, XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC } from "./xaut-supply-attribution-contract";
+import { XAUT_ASSET_ID, XAUT_SUPPLY_ATTRIBUTION_CARRY_FORWARD_MAX_AGE_SEC, XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC } from "./xaut-supply-attribution-contract";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { SupplyAttributionJournalV1 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS } from "@shared/lib/safety-score-v9-supply-attribution-journal";
-import { CENTRIFUGE_BURN_MINT_ASSET_IDS, REVIEWED_ECONOMIC_SUPPLY_PLANS, hasCompleteEligibleProviderSupply } from "./supply-attribution-contract";
+import { CENTRIFUGE_BURN_MINT_ASSET_IDS, REVIEWED_ECONOMIC_SUPPLY_PLANS, SUPPLY_ATTRIBUTION_CARRY_FORWARD_EXTRA_AGE_SEC, hasCompleteEligibleProviderSupply } from "./supply-attribution-contract";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
 
 // Replay reads only the captured partition; observers live in supply-attribution-capture.ts.
@@ -94,10 +94,18 @@ export function safetyScoreV9ChainSupplyMaxAgeSec(
   if (attribution?.model === "reviewed-economic-deployment-partition-v1") {
     return V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
   }
-  return assetId === XAUT_ASSET_ID &&
-    attribution?.model === "canonical-lock-mint-group-partition-v2"
-    ? XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC
-    : fallbackMaxAgeSec;
+  if (assetId === XAUT_ASSET_ID && attribution?.model === "canonical-lock-mint-group-partition-v2") {
+    return attribution.carriedForwardFromGenerationId === undefined
+      ? XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC
+      : XAUT_SUPPLY_ATTRIBUTION_CARRY_FORWARD_MAX_AGE_SEC;
+  }
+  // A carried-forward packet keeps its original observation clock; its
+  // evidence stays current only through the bounded carry window.
+  if (attribution?.model === "reviewed-deployment-unit-partition-v1" &&
+      attribution.carriedForwardFromGenerationId !== undefined && fallbackMaxAgeSec !== null) {
+    return fallbackMaxAgeSec + SUPPLY_ATTRIBUTION_CARRY_FORWARD_EXTRA_AGE_SEC;
+  }
+  return fallbackMaxAgeSec;
 }
 
 export function safetyScoreV9ChainSupplySourcePayload(fixedInput: Readonly<SafetyScoreV9CompilerInput>) {

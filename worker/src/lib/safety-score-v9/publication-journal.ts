@@ -11,7 +11,7 @@ export const SAFETY_SCORE_PUBLICATION_JOURNAL_RETENTION_SEC = 120 * 86_400;
 type Card = SafetyScoreV9CurrentResponse["cards"][number];
 type Pillar = keyof Card["pillars"];
 type PrimaryRoute = NonNullable<NonNullable<Card["breakdowns"]>["exit"]["primaryRoute"]>;
-export interface SafetyScoreCompactCard extends Pick<Card, "score" | "grade" | "ratingStatus" | "reasonCodes" | "pegMultiplier"> {
+export interface SafetyScoreCompactCard extends Pick<Card, "score" | "grade" | "gradeHold" | "ratingStatus" | "reasonCodes" | "pegMultiplier"> {
   nrReasons: { code: Card["nrReasons"][number]["code"]; causes: string[] }[];
   partialEvidence: Pick<NonNullable<Card["partialEvidence"]>, "reasonCode" | "excludedPillars" | "causes"> | null;
   pillars: Record<Pillar, { score: number | null; inclusion: string; causes: readonly string[] }>;
@@ -27,7 +27,8 @@ export interface SafetyScoreCompactCard extends Pick<Card, "score" | "grade" | "
 export function buildSafetyScoreCompactCard(card: Card): SafetyScoreCompactCard {
   const primary = card.breakdowns?.exit.primaryRoute;
   return {
-    score: card.score, grade: card.grade, ratingStatus: card.ratingStatus,
+    score: card.score, grade: card.grade, ...(card.gradeHold ? { gradeHold: card.gradeHold } : {}),
+    ratingStatus: card.ratingStatus,
     reasonCodes: [...card.reasonCodes].sort(),
     nrReasons: card.nrReasons.map(({ code, causes }) => ({ code, causes: [...(causes ?? [])].sort() }))
       .sort((a, b) => a.code < b.code ? -1 : a.code > b.code ? 1 : 0),

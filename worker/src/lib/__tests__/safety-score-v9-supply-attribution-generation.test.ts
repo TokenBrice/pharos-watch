@@ -25,6 +25,8 @@ import {
 } from "../safety-score-v9/xaut-supply-attribution-contract";
 import {
   applySafetyScoreV9SupplyAttributionGeneration,
+  buildSafetyScoreV9SupplyAttributionLastAdmitted,
+  parseSafetyScoreV9SupplyAttributionLastAdmitted,
   computeSafetyScoreV9SupplyAttributionGenerationId,
   createSafetyScoreV9SupplyAttributionGeneration,
   diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility,
@@ -987,6 +989,47 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
         xautAgedOut.fixedInput.safetyScoreV9SupplyAttributionById,
       ),
     ).toEqual(["wm-m0"]);
+  });
+
+  it("carries the last admitted packets through one further consumer cycle, then falls back (10.26)", () => {
+    const admitted = applySafetyScoreV9SupplyAttributionGeneration(
+      fixtures.coTenantAtXautBoundary,
+      fixtures.coTenantStaleGeneration,
+    );
+    const lastAdmitted = buildSafetyScoreV9SupplyAttributionLastAdmitted(admitted, null)!;
+    expect(Object.keys(lastAdmitted.attributionById)).toEqual(["wm-m0", "xaut-tether"]);
+    expect(parseSafetyScoreV9SupplyAttributionLastAdmitted(JSON.stringify(lastAdmitted))).toEqual(lastAdmitted);
+    expect(parseSafetyScoreV9SupplyAttributionLastAdmitted("{\"schemaVersion\":2}")).toBeNull();
+
+    // The generation still admits wM but XAUT aged past its own bound: the
+    // last admitted XAUT packet is re-derived and names its origin generation.
+    const carried = applySafetyScoreV9SupplyAttributionGeneration(
+      fixtures.coTenantPastXautBoundary,
+      fixtures.coTenantStaleGeneration,
+      lastAdmitted,
+    );
+    expect(carried).toMatchObject({
+      status: "applied", acceptedAssetIds: ["wm-m0"], invalidAssetIds: ["xaut-tether"],
+      carriedForwardAssetIds: ["xaut-tether"],
+    });
+    expect(carried.fixedInput.safetyScoreV9SupplyAttributionById["xaut-tether"]).toMatchObject({
+      carriedForwardFromGenerationId: lastAdmitted.generationId,
+    });
+    expect(carried.fixedInput.safetyScoreV9SupplyAttributionById["wm-m0"]).not.toHaveProperty("carriedForwardFromGenerationId");
+
+    // A missing generation keeps the documented unavailable status while
+    // carrying both packets; a carried packet keeps its original generation.
+    const missing = applySafetyScoreV9SupplyAttributionGeneration(fixtures.coTenantAtXautBoundary, null, lastAdmitted);
+    expect(missing).toMatchObject({ status: "unavailable", carriedForwardAssetIds: ["wm-m0", "xaut-tether"] });
+
+    // Beyond the carry window the packets are not re-derivable: fallback.
+    const expired = applySafetyScoreV9SupplyAttributionGeneration(
+      { ...fixtures.coTenantAtXautBoundary, clockSec: fixtures.coTenantAtXautBoundary.clockSec + 2 * 3600 },
+      null,
+      lastAdmitted,
+    );
+    expect(expired).toMatchObject({ status: "unavailable", carriedForwardAssetIds: [] });
+    expect(expired.fixedInput.safetyScoreV9SupplyAttributionById).toEqual({});
   });
 
   it("re-applies generations using every wM leg's 1800s bound while retaining XAUT's override", () => {

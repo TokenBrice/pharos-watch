@@ -15,6 +15,8 @@ import type { XautLockMintObservation, XautRepresentationGroupSupplyAttributionV
 // generation is published and then ages across the 30-minute consumption window
 // before a consumer re-derives it. At 1800s that always expired mid-window.
 export const XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC = 3_600;
+/** 10.26 carried-forward packets get one further 30-minute consumer cycle. */
+export const XAUT_SUPPLY_ATTRIBUTION_CARRY_FORWARD_MAX_AGE_SEC = XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC + 30 * 60;
 export const XAUT_DISCLOSURE_MAX_AGE_SEC = 2 * 86_400;
 export const XAUT_ASSET_ID = "xaut-tether";
 export const XAUT_REPRESENTATION_ID = "xaut0-omnichain";
@@ -408,7 +410,9 @@ export function xautRepresentationGroupAttributionValidationError(input: {
     attribution.observedAtSec > input.clockSec ||
     attribution.observation.blockTimeSec > input.clockSec ||
     input.clockSec - attribution.observation.blockTimeSec >
-      XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC
+      (attribution.carriedForwardFromGenerationId === undefined
+        ? XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC
+        : XAUT_SUPPLY_ATTRIBUTION_CARRY_FORWARD_MAX_AGE_SEC)
   ) {
     return "XAUT finalized lock/mint observation time is invalid";
   }
@@ -461,6 +465,7 @@ export function deriveXautRepresentationGroupSupplyAttribution(input: {
   registryFingerprint: string;
   scoringClockSec: number;
   observation: XautLockMintObservation;
+  carriedForwardFromGenerationId?: string;
 }): XautRepresentationGroupSupplyAttributionV2 | null {
   const inventory = buildXautRepresentationGroupInventory();
   const identityError = xautLockMintIdentityValidationError(input.observation);
@@ -482,6 +487,9 @@ export function deriveXautRepresentationGroupSupplyAttribution(input: {
       input.observation.blockTimeSec,
       input.observation.disclosure.sourceTimestampSec,
     ),
+    ...(input.carriedForwardFromGenerationId === undefined
+      ? {}
+      : { carriedForwardFromGenerationId: input.carriedForwardFromGenerationId }),
     registryFingerprint: input.registryFingerprint,
     routeInventoryDigest: inventory.digest,
     canonical: {
