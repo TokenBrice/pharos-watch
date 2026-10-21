@@ -317,6 +317,7 @@ const SafetyScoreV9WrapperParentLimitSchema = z
     localRiskDiscount: z.number().finite().min(0).max(100),
     fallbackDiscount: z.number().finite().min(0).max(100),
     appliedDiscount: z.number().finite().min(0).max(100),
+    gradeFloor: ScoreSchema.optional(),
     riskTransfer: z
       .object({
         disposition: V9WrapperFactDispositionSchema,
@@ -374,11 +375,23 @@ const SafetyScoreV9WrapperParentLimitSchema = z
     if (limit.factsComplete !== (limit.missingFacts.length === 0)) {
       issue(ctx, ["factsComplete"], "V9 wrapper completeness must exactly match its missing facts");
     }
-    const expectedAppliedDiscount = limit.factsComplete
+    const requestedDiscount = limit.factsComplete
       ? limit.localRiskDiscount
       : Math.max(limit.localRiskDiscount, limit.fallbackDiscount);
+    if (limit.gradeFloor !== undefined && (
+      limit.parentScore < limit.gradeFloor ||
+      limit.parentScore - requestedDiscount >= limit.gradeFloor ||
+      limit.adjustments.some((adjustment) => adjustment.discountPoints > 0 &&
+        (adjustment.assessment === "high" || adjustment.assessment === "critical" ||
+          adjustment.scoringDisposition === "measured-adverse"))
+    )) {
+      issue(ctx, ["gradeFloor"], "V9 wrapper grade protection requires a crossing from a non-danger parent without severe or measured-adverse local findings");
+    }
+    const expectedAppliedDiscount = limit.gradeFloor === undefined
+      ? requestedDiscount
+      : limit.parentScore - limit.gradeFloor;
     if (!numbersAgree(limit.appliedDiscount, expectedAppliedDiscount)) {
-      issue(ctx, ["appliedDiscount"], "V9 wrapper discount must use local risk when complete and the conservative maximum when incomplete");
+      issue(ctx, ["appliedDiscount"], "V9 wrapper discount must use the conservative local maximum, limited only by an admitted mild-risk grade floor");
     }
     if (limit.riskTransfer.appliedCredit > limit.riskTransfer.requestedCredit + SCORE_TOLERANCE) {
       issue(ctx, ["riskTransfer", "appliedCredit"], "V9 wrapper cannot apply more risk-transfer credit than documented");

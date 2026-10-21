@@ -560,6 +560,9 @@ const V9FormulaPolicySchema = z
     wrapperStrategyCap: z
       .object({ pure: ScoreSchema, staked: ScoreSchema, vault: ScoreSchema })
       .strict(),
+    // Mild wrapper-local quality findings cannot manufacture F from a non-F
+    // parent. The threshold comes from this grade's existing policy band.
+    wrapperMildRiskFloorGrade: z.literal("D"),
     assetPremiums: z.array(V9AssetPremiumPolicySchema).default([]),
     withhold: z
       .object({
@@ -741,6 +744,7 @@ const V9BackingPolicySchema = z
           })
           .strict(),
         maxUnclassifiedCuratedResidualPct: z.number().finite().min(0).max(100),
+        publishedResidualDeMinimisMaxShare: z.number().finite().min(0).max(1),
         issuerAttestedConfidenceMultiplier: z.number().finite().positive().max(1),
         concentrationWeight: z.number().finite().min(0).max(1),
         concentrationBands: z

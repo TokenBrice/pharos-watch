@@ -60,6 +60,7 @@ function facts(
 function input(overrides: Partial<V9WrapperParentLimitInput> = {}): V9WrapperParentLimitInput {
   return {
     parentScore: 84,
+    minimumNonDangerScore: 40,
     localFacts: facts(),
     fallbackDiscounts: DISCOUNTS,
     ...overrides,

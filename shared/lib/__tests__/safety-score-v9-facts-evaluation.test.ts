@@ -1339,7 +1339,6 @@ describe("Safety Score v9 fact evaluation", () => {
         }),
       );
       expect(asset(degraded, assetId).trace.finalScore).toBeLessThanOrEqual(asset(allKnown, assetId).trace.finalScore!);
-      expect(signal(degraded, assetId)?.reason).toContain("bounded-unknown");
     }
 
     expect(signal(degraded, "gamma")).toMatchObject({

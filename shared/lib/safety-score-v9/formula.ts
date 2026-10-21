@@ -324,7 +324,9 @@ function scopedRiskSignal(
   };
 }
 
-export function structuralSignalNeedsHardCap(signal: V9StructuralSignal): boolean {
+export function structuralSignalNeedsHardCap(signal: Pick<V9StructuralSignal,
+  "economicLossScope" | "responsibility" | "pricedInPillar" | "additionalHardCapRisk"
+>): boolean {
   // Retained V2 signals predate explicit loss scope and keep their legacy cap.
   if (signal.economicLossScope === undefined) {
     return signal.responsibility === undefined || signal.responsibility === "measured-adverse";
@@ -1122,7 +1124,7 @@ function scoreV9InputWithCaps(
     effectiveNrReasons.push({
       code: "insufficient-evidence",
       field: "evidenceLevel",
-      message: "Critical evidence is insufficient for a v9 research rating.",
+      message: "Critical evidence is insufficient for a Safety Score rating.",
       causeGapIds: [...new Set(limitingPillars.flatMap((item) => item.causeGapIds))].sort(compareText),
       contributingPillars: limitingPillars.map((item) => item.pillar),
       cause: limitingPillars.some((item) => item.causes.includes("C")) ? "C"

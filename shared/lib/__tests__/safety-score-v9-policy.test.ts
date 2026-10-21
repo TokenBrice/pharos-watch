@@ -80,6 +80,19 @@ describe("Safety Score v9 methodology policy", () => {
     }
   });
 
+  it("validates and digests the published residual de-minimis share independently", () => {
+    const changed = candidateClone();
+    changed.semantic.backing.reserve.publishedResidualDeMinimisMaxShare = 0.1;
+    expect(loadV9MethodologyPolicy(changed).semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    expect(changed.semantic.backing.structural.materialExposureShare)
+      .toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.materialExposureShare);
+    for (const invalid of [-0.001, 1.001, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const policy = candidateClone();
+      policy.semantic.backing.reserve.publishedResidualDeMinimisMaxShare = invalid;
+      expect(() => loadV9MethodologyPolicy(policy)).toThrow();
+    }
+  });
+
   it("validates and digests the halted-chain stall budget", () => {
     const changed = candidateClone();
     changed.semantic.materiality.haltedChainMinStallSec += 1;

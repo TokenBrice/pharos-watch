@@ -11,6 +11,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import type { V9PublicCardProjectionInput } from "../safety-score-v9/public";
 import {
   buildSafetyScoreV9Response,
+  createSafetyScoreV9ResponseProjector,
   projectSafetyScoreV9Card,
   projectTopDriver,
   V9PublicCardProjectionError,
@@ -324,6 +325,59 @@ function cap(args: Pick<V9CapTrace, "kind" | "limit" | "source" | "reason" | "bi
 }
 
 describe("Safety Score v9 public projection", () => {
+  it("rehydrates admitted card shards without losing public evidence or optional fields", () => {
+    const inputs = ["beta", "alpha"].map((id) => fixture(id, { score: 91.8, grade: "A+" }));
+    inputs[0]!.display = { ...inputs[0]!.display, labels: { ...inputs[0]!.display?.labels, "control:mint": "Mint \u2014 public evidence" } };
+    const expectedCards = inputs.map((input) => projectSafetyScoreV9Card(input).card)
+      .sort((left, right) => left.id < right.id ? -1 : 1);
+    const projector = createSafetyScoreV9ResponseProjector();
+    for (const input of inputs) projector.project(input);
+    // The owned shards must not depend on the producer's later object lifetime.
+    inputs[0]!.display = { ...inputs[0]!.display, labels: { "control:mint": "Changed after projection" } };
+    const response = projector.finalize({
+      candidateId: "safety-score-v9:v1:shard-round-trip",
+      policyVersion: "9.0",
+      publicationGenerationId: "report-cards:v9:v1:shard-round-trip",
+      publishedAtSec: 1_001,
+      resultDigest: computeV9CompactResultDigest(inputs.map((input) => projectCompactV9ScoreTrace(input.trace))),
+    });
+    expect(response.cards).toEqual(expectedCards);
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(true);
+  });
+
+  it("releases evaluator signal objects before common-mode reconciliation without changing publication", () => {
+    const results = ["alpha", "beta"].map((id) => fixture(id, { score: 91.8, grade: "A+" }));
+    for (const input of results) input.trace = {
+      ...input.trace,
+      structuralSignals: [{
+        kind: "centralized-mint", severity: "high", reason: "Shared mint authority.",
+        economicLossScope: "global-claim", responsibility: "measured-adverse",
+        pricedInPillar: "control", failureDomainKeys: ["mint-control:shared"], evidence: [],
+      }],
+    };
+    const args = {
+      candidateId: "safety-score-v9:v1:common-mode-ownership", policyVersion: "9.0",
+      publicationGenerationId: "report-cards:v9:v1:common-mode-ownership", publishedAtSec: 1_001,
+      commonModeGroups: [{
+        failureDomain: { kind: "mint-control" as const, key: "shared" },
+        members: results.map((input) => ({ assetId: input.trace.assetId, owner: "control" as const, pathKey: "mint" })),
+      }],
+    };
+    const expected = buildSafetyScoreV9Response({ ...args, results });
+    const projector = createSafetyScoreV9ResponseProjector();
+    for (const input of results) {
+      const signal = Proxy.revocable(input.trace.structuralSignals[0]!, {});
+      projector.project({ ...input, trace: { ...input.trace, structuralSignals: [signal.proxy] } });
+      // The public draft is already admitted. Later reconciliation must use
+      // its compact summary, not reread the evaluator's signal/evidence graph.
+      signal.revoke();
+    }
+    expect(projector.finalize({ ...args, resultDigest: expected.resultDigest })).toEqual(expected);
+    expect(expected.commonModeGroups).toEqual([{
+      id: "mint-control:shared", kind: "mint-control", key: "shared", memberAssetIds: ["alpha", "beta"],
+    }]);
+  });
+
   it.each([null, 0.64])("ignores retired local Backing stamps for public and compact identity (ratio %s)", (ratio) => {
     const ordinary = evaluateV9ArchetypeBacking({
       archetype: "fiat-cash", asset: backingAsset([exposure({ key: "cash", weight: 1, issuer: "issuer:cash" })]),
@@ -904,7 +958,7 @@ describe("Safety Score v9 public projection", () => {
       kind: "pillar-bound",
       label: "exit",
       value: 90,
-      reason: null,
+      reason: "Exit is the weakest pillar at 90/100.",
       evidenceFreshness: "current",
     });
 
@@ -921,6 +975,52 @@ describe("Safety Score v9 public projection", () => {
       reason: "Backing is missing.",
       evidenceFreshness: "current",
     });
+  });
+
+  it.each(["backing", "exit", "control"] as const)("uses the existing %s pillar reason without borrowing another pillar", (pillar) => {
+    const input = fixture("pillar-reason", { score: 91.8, grade: "A+" });
+    input.scoreInput.pillars[pillar].reasons = [{
+      code: "missing-pillar-evidence", message: "The scoped evidence remains unresolved.",
+    }];
+    const card = projectSafetyScoreV9Card(input).card;
+    const withWeakest = { ...card, weakestPillar: { pillar, score: card.pillars[pillar].score! }, breakdowns: null };
+    const before = JSON.stringify(withWeakest);
+    expect(projectTopDriver(withWeakest)?.reason).toBe("The scoped evidence remains unresolved.");
+    expect(projectTopDriver(resolveV9PublicWitnessTexts(withWeakest))).toEqual(projectTopDriver(withWeakest));
+    expect(JSON.stringify(withWeakest)).toBe(before);
+  });
+
+  it.each(Object.keys(V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureQuality))(
+    "explains a binding %s mint posture even with no reason codes",
+    (posture) => {
+      const card = resolveV9PublicWitnessTexts(projectSafetyScoreV9Card(fixture("mint-headline", {
+        score: 91.8, grade: "A+",
+      })).card);
+      card.weakestPillar = { pillar: "control", score: card.pillars.control.score! };
+      card.breakdowns!.control.components[0]!.posture = posture;
+      expect(card.reasonCodes).toEqual([]);
+      const driver = projectTopDriver(card);
+      expect(driver).toMatchObject({ kind: "pillar-bound", label: "control", value: 94 });
+      expect(driver?.reason).toBeTruthy();
+      expect(driver?.reason).not.toBe(posture);
+      if (posture === "unbounded-adverse") expect(driver?.reason).toContain("no qualifying governance, reconciliation, or supervisory process is evidenced");
+      if (posture === "unknown") expect(driver?.reason).toBe("The mint authority posture remains unresolved.");
+    },
+  );
+
+  it("does not use a nonbinding, differently scored, or unfamiliar mint posture as the headline", () => {
+    const card = resolveV9PublicWitnessTexts(projectSafetyScoreV9Card(fixture("nonbinding-mint", {
+      score: 91.8, grade: "A+",
+    })).card);
+    card.weakestPillar = { pillar: "control", score: card.pillars.control.score! };
+    const mint = card.breakdowns!.control.components[0]!;
+    for (const change of [{ binding: false }, { score: 93 }, { posture: "unrecognized" }]) {
+      const changed = {
+        ...card,
+        breakdowns: { ...card.breakdowns!, control: { ...card.breakdowns!.control, components: [{ ...mint, ...change }] } },
+      };
+      expect(projectTopDriver(changed)?.reason).toBe("Economic Control is the weakest pillar at 94/100.");
+    }
   });
 
   it("publishes rated, NR and pipeline-gap cards with disjoint completeness counts", () => {

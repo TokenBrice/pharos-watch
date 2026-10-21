@@ -27,7 +27,7 @@ import { round4 } from "../math";
 import type { V9DependencyEconomicRole } from "../../types/dependency-types";
 import type { V9AccessPostureResult } from "./access-posture";
 import type { V9BackingResult } from "./backing-primitives";
-import type { V9EconomicControlResult } from "./control-primitives";
+import type { V9EconomicControlResult, V9MintPosture } from "./control-primitives";
 import type { V9CommonModeGroup, V9ResolvedDependencyInputs } from "./dependencies";
 import type { V9ExitEvaluationResult, V9ExitHolderEligibility } from "./exit";
 import { structuralSignalNeedsHardCap } from "./formula";
@@ -104,7 +104,11 @@ export interface V9PublicResponseProjector {
 }
 
 export interface V9CommonModeProjectionResult {
-  trace: Pick<V9ProductionScoreTrace, "assetId" | "structuralSignals" | "caps" | "deploymentAdjustments">;
+  trace: Pick<V9ProductionScoreTrace, "assetId" | "caps" | "deploymentAdjustments"> & {
+    structuralSignals: readonly Pick<V9ProductionScoreTrace["structuralSignals"][number],
+      "kind" | "severity" | "reason" | "failureDomainKeys" |
+      "economicLossScope" | "responsibility" | "pricedInPillar" | "additionalHardCapRisk">[];
+  };
 }
 
 type V9PublicResultIdentity = Pick<V9ProductionScoreTrace,
@@ -117,7 +121,7 @@ export interface SafetyScoreV9TopDriver {
   label: string | null;
   /** Binding cap limit or weakest pillar score. */
   value: number | null;
-  /** Full public explanation when the driver is a cap or a withheld result. */
+  /** Public explanation of the existing binding cap, weakest pillar, or withholding. */
   reason: string | null;
   evidenceFreshness: SafetyScoreV9EvidenceFreshness;
 }
@@ -1131,6 +1135,40 @@ export function projectSafetyScoreV9Card(input: V9PublicCardProjectionInput): { 
   return { card: SafetyScoreV9CurrentCardSchema.parse(projection.cards[0]), foreignCauseGaps: projection.foreignCauseGaps };
 }
 
+const MINT_HEADLINE_REASONS: Readonly<Record<V9MintPosture, string>> = {
+  "none-resolved": "No privileged mint authority is established in the reviewed scope.",
+  "bounded-admin": "Privileged mint authority is economically bounded.",
+  "partially-bounded-admin": "Privileged mint authority is only partly economically bounded.",
+  "concentrated-admin": "Mint authority is concentrated in privileged administrators.",
+  "collateral-gated": "Privileged minting is collateral-gated.",
+  "unbounded-reconciled": "Mint authority is economically unbounded, with qualifying reconciliation or prudential supervision.",
+  "unbounded-governed": "Mint authority is economically unbounded but subject to qualifying delayed governance.",
+  "unbounded-veto-guarded": "Mint authority is economically unbounded but subject to a qualifying public minority-veto window.",
+  "unbounded-operationally-governed": "Mint authority is economically unbounded within qualifying governed operational envelopes.",
+  "unbounded-adverse": "Economically effective mint authority is unbounded, and no qualifying governance, reconciliation, or supervisory process is evidenced.",
+  compromised: "Mint authority is under an active incident.",
+  unknown: "The mint authority posture remains unresolved.",
+};
+
+function weakestPillarHeadline(
+  card: SafetyScoreV9CurrentCard,
+  weakest: NonNullable<SafetyScoreV9CurrentCard["weakestPillar"]>,
+): string {
+  // A binding mint posture explains authority even when no evidence-gap badge
+  // is emitted. Never borrow a nonbinding mint component's posture.
+  if (weakest.pillar === "control") {
+    const mint = card.breakdowns?.control.components.find((component) =>
+      component.kind === "mint" && component.binding && component.score === weakest.score);
+    if (mint && Object.prototype.hasOwnProperty.call(MINT_HEADLINE_REASONS, mint.posture)) {
+      return MINT_HEADLINE_REASONS[mint.posture as V9MintPosture];
+    }
+  }
+  const reason = card.pillars[weakest.pillar].reasons[0]?.message;
+  if (reason) return reason;
+  const label = weakest.pillar === "control" ? "Economic Control" : weakest.pillar === "backing" ? "Backing" : "Exit";
+  return `${label} is the weakest pillar at ${weakest.score}/100.`;
+}
+
 /**
  * Projects the existing public card into the one-line driver used by list
  * surfaces. This is deliberately a read-only projection: it does not inspect
@@ -1163,7 +1201,7 @@ export function projectTopDriver(card: SafetyScoreV9CurrentCard): SafetyScoreV9T
       kind: "pillar-bound",
       label: card.weakestPillar.pillar,
       value: card.weakestPillar.score,
-      reason: null,
+      reason: weakestPillarHeadline(card, card.weakestPillar),
       evidenceFreshness,
     };
   }
@@ -1296,7 +1334,10 @@ export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjecto
   let identity: V9PublicResultIdentity | null = null;
   let sourceGenerations = "";
   const seen = new Set<string>();
-  const drafts = new Map<string, V9InternedPublicCardDraft>();
+  // Keep admitted cards as independent JSON shards while evaluator facts and
+  // upstream results are live. Rehydrate only after evaluation has released
+  // those graphs; retaining every expanded draft defeats incremental evaluation.
+  const drafts = new Map<string, string>();
   const failures = new Map<string, z.core.$ZodIssue[]>();
   const commonModeResults: V9CommonModeProjectionResult[] = [];
   const dexObservedAtSec = new Map<string, number | null>();
@@ -1322,14 +1363,22 @@ export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjecto
       }
       commonModeResults.push({ trace: {
         assetId: trace.assetId,
-        structuralSignals: trace.structuralSignals,
+        // Group reconciliation needs signal identity and cap eligibility, not
+        // the evaluator's expanded evidence graph. Retaining that graph here
+        // defeats per-asset release while the public cards accumulate.
+        structuralSignals: trace.structuralSignals.map((signal) => ({
+          kind: signal.kind, severity: signal.severity, reason: signal.reason,
+          failureDomainKeys: signal.failureDomainKeys,
+          economicLossScope: signal.economicLossScope, responsibility: signal.responsibility,
+          pricedInPillar: signal.pricedInPillar, additionalHardCapRisk: signal.additionalHardCapRisk,
+        })),
         caps: trace.caps,
         deploymentAdjustments: trace.deploymentAdjustments,
       } });
       try {
         const { card, foreignCauseGaps } = projectSafetyScoreV9Card(input);
         const { foreignCauseGapRefs: _localRefs, ...draft } = card;
-        drafts.set(trace.assetId, { ...draft, foreignCauseGaps });
+        drafts.set(trace.assetId, JSON.stringify({ ...draft, foreignCauseGaps }));
       } catch (error) {
         if (!(error instanceof z.ZodError)) throw error;
         failures.set(trace.assetId, error.issues);
@@ -1348,7 +1397,11 @@ export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjecto
         }));
       }
       const resultDigest = typeof args.resultDigest === "function" ? args.resultDigest() : args.resultDigest;
-      const { cards, foreignCauseGaps } = finalizeV9PublicCauseGaps(ids.map((id) => drafts.get(id)!));
+      const { cards, foreignCauseGaps } = finalizeV9PublicCauseGaps(ids.map((id) => {
+        const draft: V9InternedPublicCardDraft = JSON.parse(drafts.get(id)!);
+        drafts.delete(id);
+        return draft;
+      }));
       drafts.clear();
       seen.clear();
       const notRatedIds = cards.filter((card) => card.ratingStatus === "not-rated").map((card) => card.id);

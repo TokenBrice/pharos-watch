@@ -51,6 +51,7 @@ import {
   readCompiledV9FactSetForEvaluation,
   type V9EvaluationFactSetRead,
 } from "./facts";
+import { deserializeV9FactShard, serializeV9FactShard } from "./fact-shard";
 import {
   assertV9ValidatedPolicyEnvelope,
   resolveV9PolicyChainMaturityIdentity,
@@ -140,8 +141,23 @@ export class V9AssetEvaluationError extends Error {
   }
 }
 
+type V9PlanningFacts = Pick<V9AssetFactsV3,
+  "assetId" | "assetIssuerKey" | "dependencies" | "reserveExposures" |
+  "exitRoutes" | "exitStatus" | "controls" | "peg" | "supply" | "economicControlReview"
+>;
+
+function projectPlanningFacts(asset: V9AssetFactsV3): V9PlanningFacts {
+  return {
+    assetId: asset.assetId, assetIssuerKey: asset.assetIssuerKey,
+    dependencies: asset.dependencies, reserveExposures: asset.reserveExposures,
+    exitRoutes: asset.exitRoutes, exitStatus: asset.exitStatus,
+    controls: asset.controls, peg: asset.peg, supply: asset.supply,
+    economicControlReview: asset.economicControlReview,
+  };
+}
+
 function marketRankByAsset(
-  assets: readonly V9AssetFactsV3[],
+  assets: readonly V9PlanningFacts[],
   activeAssetIds: readonly string[],
 ): Map<string, number> {
   const active = new Set(activeAssetIds);
@@ -348,7 +364,7 @@ function referenceExitRequest(envelope: V9ValidatedPolicyEnvelope): V9ExitStress
 }
 
 function summarizeDexDomainExposure(
-  asset: V9AssetFactsBase,
+  asset: V9PlanningFacts,
   envelope: V9ValidatedPolicyEnvelope,
 ): ReadonlyMap<string, V9ConservativeShareBounds> {
   const request = referenceExitRequest(envelope);
@@ -407,7 +423,7 @@ export interface V9ControlDomainScopeAssessment {
 export function assessV9ControlDomainScope(
   failureDomain: V9FailureDomainRef,
   members: readonly V9CommonModeMember[],
-  asset: V9AssetFactsBase | undefined,
+  asset: Pick<V9AssetFactsBase, "controls"> | undefined,
   supplyExposure: V9SupplyChainExposure,
 ): V9ControlDomainScopeAssessment {
   const globalClaim = (): V9ControlDomainScopeAssessment => ({
@@ -462,7 +478,7 @@ export function assessV9ControlDomainScope(
 
 function commonModeMemberStatus(
   member: V9CommonModeMember,
-  assetsById: ReadonlyMap<string, V9AssetFactsV3>,
+  assetsById: ReadonlyMap<string, V9PlanningFacts>,
 ): V9FactStatusV2 | null {
   const asset = assetsById.get(member.assetId);
   if (!asset) return null;
@@ -491,7 +507,7 @@ function commonModeMemberStatus(
 
 function isKnownCommonModeMember(
   member: V9CommonModeMember,
-  assetsById: ReadonlyMap<string, V9AssetFactsV3>,
+  assetsById: ReadonlyMap<string, V9PlanningFacts>,
 ): boolean {
   const status = commonModeMemberStatus(member, assetsById);
   return status !== null && isKnownRequiredStatus(status);
@@ -499,7 +515,7 @@ function isKnownCommonModeMember(
 
 function isBoundedUnknownCommonModeMember(
   member: V9CommonModeMember,
-  assetsById: ReadonlyMap<string, V9AssetFactsV3>,
+  assetsById: ReadonlyMap<string, V9PlanningFacts>,
 ): boolean {
   const status = commonModeMemberStatus(member, assetsById);
   return status !== null &&
@@ -553,7 +569,7 @@ function bridgeSupplyIsConsistent(supply: V9AssetFactsBase["supply"]): boolean {
 }
 
 function summarizeBridgeDomainExposure(
-  asset: V9AssetFactsBase,
+  asset: V9PlanningFacts,
   representationGroupMaterialShareThreshold: number,
 ): ReadonlyMap<string, V9BridgeDomainExposure> {
   const controlsByKey = new Map(asset.controls.map((control) => [control.controlKey, control]));
@@ -673,7 +689,7 @@ function summarizeBridgeDomainExposure(
 }
 
 function buildCommonModeContext(
-  asset: V9AssetFactsBase | undefined,
+  asset: V9PlanningFacts | undefined,
   envelope: V9ValidatedPolicyEnvelope,
 ): V9CommonModeContext {
   // A missing asset fact fails closed: no attributed share, no reviewed tiers.
@@ -863,7 +879,7 @@ function commonModeReasonQualifier(
 function commonModeSignalsByAsset(
   plan: V9DependencyEvaluationPlan,
   envelope: V9ValidatedPolicyEnvelope,
-  assetsById: ReadonlyMap<string, V9AssetFactsV3>,
+  assetsById: ReadonlyMap<string, V9PlanningFacts>,
 ): Map<string, readonly V9StructuralSignal[]> {
   const materiality = envelope.policy.semantic.materiality;
   const contextByAsset = new Map<string, V9CommonModeContext>();
@@ -1056,7 +1072,7 @@ function commonModeSignalsByAsset(
           ? `${effectiveMembers.length} reviewed paths across ${censusAssetIds.length} independent root liabilities share ${key}`
           : `${effectiveMembers.length} reviewed paths across ${censusAssetIds.length} assets share ${key}`;
         const memberQualityClause = groupHasBoundedUnknownMember
-          ? `; ${boundedUnknownMemberCount} shared member${boundedUnknownMemberCount === 1 ? " is" : "s are"} bounded-unknown and remains adverse`
+          ? `; ${boundedUnknownMemberCount} shared member${boundedUnknownMemberCount === 1 ? " remains" : "s remain"} unresolved`
           : "";
         reason = `${groupClause}${memberQualityClause}, ${qualifier}.`;
       }
@@ -1185,13 +1201,35 @@ function evaluateV9FactSetRead(
   assertV9ValidatedPolicyEnvelope(envelope);
   let factSet: V9EvaluationFactSetRead["factSet"] | null = factSetRead.factSet!;
   const assetsById = new Map(factSet.assets.map((asset) => [asset.assetId, asset]));
-  const marketRanks = marketRankByAsset(factSet.assets, factSet.activeAssetIds);
+  const activeAssetIds = factSet.activeAssetIds;
+  const identity = {
+    factSetDigest: factSetRead.sourceFactSetDigest,
+    baseInputGenerationId: factSet.baseInputGenerationId,
+    evaluationBuildDigest: SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST,
+    asOfSec: factSet.asOfSec,
+    sourceGenerations: sourceGenerations(factSet),
+  };
+  factSetRead.factSet = null;
+  factSet = null;
+  // Release full evidence rows before allocating the global planning graph.
+  // Planning retains its exact inputs, never a reduced scoring/admission asset.
+  const factShards = onAssetProjected === undefined ? null : new Map<string, Uint8Array>();
+  const planningById = new Map<string, V9PlanningFacts>();
+  for (const [assetId, asset] of assetsById) {
+    planningById.set(assetId, projectPlanningFacts(asset));
+    if (factShards !== null) {
+      factShards.set(assetId, serializeV9FactShard(asset));
+      assetsById.delete(assetId);
+    }
+  }
+  const planningAssets = [...planningById.values()];
+  const marketRanks = marketRankByAsset(planningAssets, activeAssetIds);
   const dependencyPlan = buildV9DependencyEvaluationPlan({
-    activeAssetIds: factSet.activeAssetIds,
-    assets: factSet.assets,
+    activeAssetIds,
+    assets: planningAssets,
   });
   const dependencyResolutionContext = createV9DependencyResolutionContext(dependencyPlan);
-  const commonSignals = commonModeSignalsByAsset(dependencyPlan, envelope, assetsById);
+  const commonSignals = commonModeSignalsByAsset(dependencyPlan, envelope, planningById);
   const evaluatedById = new Map<string, V9EvaluatedAsset>();
   const downstreamEvaluatedById = interventions?.projectEvaluatedUpstream
     ? new Map<string, V9EvaluatedAsset>() : evaluatedById;
@@ -1203,7 +1241,7 @@ function evaluateV9FactSetRead(
     remainingReaders: new Map<string, number>(),
   };
   if (projection) {
-    for (const asset of factSet.assets) {
+    for (const asset of planningAssets) {
       // Every evaluated upstream read comes from a dependency or a tracked reserve claim.
       const upstreams = uniqueSorted([
         ...asset.dependencies.edges.map((edge) => edge.upstreamAssetId),
@@ -1215,23 +1253,19 @@ function evaluateV9FactSetRead(
       }
     }
   }
+  planningById.clear();
+  planningAssets.length = 0;
   // Terminal unavailable-asset roots per evaluated asset, propagated in
   // topological order: an unavailable asset inherits the union of the roots of
   // its own unavailable upstreams, or is its own root when nothing upstream is
   // unavailable. Backing aggregates materiality by these roots (VER2-001).
   const unavailabilityRootsById = new Map<string, readonly string[]>();
-  const identity = {
-    factSetDigest: factSetRead.sourceFactSetDigest,
-    baseInputGenerationId: factSet.baseInputGenerationId,
-    evaluationBuildDigest: SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST,
-    asOfSec: factSet.asOfSec,
-    sourceGenerations: sourceGenerations(factSet),
-  };
-  factSetRead.factSet = null;
-  factSet = null;
 
   for (const assetId of dependencyPlan.topologicalOrder) {
-    const asset = assetsById.get(assetId);
+    const asset = factShards === null
+      ? assetsById.get(assetId)
+      : deserializeV9FactShard(factShards.get(assetId)!);
+    factShards?.delete(assetId);
     if (!asset) throw new Error(`Safety Score v9 dependency plan references missing asset ${assetId}`);
     try {
     const unresolved = resolveV9DependencyInput(dependencyResolutionContext, assetId, upstreamResultsById);

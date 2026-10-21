@@ -1571,8 +1571,16 @@ function parentInput(
     );
   }
   const fallback = envelope.policy.semantic.formula.wrapperStrategyCap;
+  const floorGrade = envelope.policy.semantic.formula.wrapperMildRiskFloorGrade;
+  const minimumNonDangerScore = envelope.policy.semantic.formula.gradeThresholds.find(
+    (threshold) => threshold.grade === floorGrade,
+  )?.minScore;
+  if (minimumNonDangerScore === undefined) {
+    throw new Error(`Safety Score v9 policy has no ${floorGrade} wrapper grade floor`);
+  }
   const wrapperLimit = resolveV9WrapperParentLimit({
     parentScore: rawScore,
+    minimumNonDangerScore,
     localFacts: asset.wrapperLocalFacts,
     gaps: asset.gaps,
     fallbackDiscounts: {

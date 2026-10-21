@@ -541,7 +541,7 @@ function evaluateMintPhase(context: ControlEvaluationContext): void {
                     : posture === "unbounded-governed"
                       ? "Minting is economically unbounded but held only by delayed on-chain governance."
                       : posture === "unbounded-adverse"
-                        ? "Economically effective minting is unbounded without a qualified governance, reconciliation, or supervisory process."
+                        ? "Economically effective mint authority is unbounded, and no qualifying governance, reconciliation, or supervisory process is evidenced."
                         : "Minting is economically unbounded.",
             materialSharePct:
               mintControl?.materialSupplyShare == null
