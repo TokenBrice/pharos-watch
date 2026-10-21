@@ -53,15 +53,18 @@ function refineBreakdownAdjustments(
     evaluatedScore: number | null;
     publishedScore: number | null;
     adjustments: readonly SafetyScoreV9PillarAdjustment[];
-    aggregationDisposition?: "included" | "excluded-a-b"; aggregationWeight: number;
+    aggregationDisposition?: "included" | "excluded-a-b" | "unavailable"; aggregationWeight: number;
     causeGapRefs?: readonly number[]; limitedEvidenceCauses?: readonly string[];
   },
   ctx: z.RefinementCtx,
 ): void {
-  if (breakdown.aggregationDisposition === "excluded-a-b" && (breakdown.evaluatedScore !== null ||
-      breakdown.publishedScore !== null || breakdown.aggregationWeight !== 0 || (breakdown.causeGapRefs?.length ?? 0) === 0 ||
+  if ((breakdown.aggregationDisposition ?? "included") !== "included" && (breakdown.evaluatedScore !== null ||
+      breakdown.publishedScore !== null || breakdown.aggregationWeight !== 0 ||
       (breakdown.limitedEvidenceCauses?.length ?? 0) > 0)) {
-    ctx.addIssue({ code: "custom", message: "Excluded pillars preserve null diagnostic scores and zero aggregate weight" });
+    ctx.addIssue({ code: "custom", message: "Excluded or unavailable pillars preserve null diagnostic scores and zero aggregate weight" });
+  }
+  if (breakdown.aggregationDisposition === "excluded-a-b" && (breakdown.causeGapRefs?.length ?? 0) === 0) {
+    ctx.addIssue({ code: "custom", message: "A/B-excluded pillars require their proved causal gaps" });
   }
   if (breakdown.evaluatedScore === null && breakdown.adjustments.length > 0) {
     ctx.addIssue({ code: "custom", path: ["adjustments"], message: "Excluded diagnostic pillars cannot receive score adjustments" });
@@ -191,6 +194,8 @@ const SafetyScoreV9ExitBreakdownBaseSchema = z
         requestedNotionalUsd: z.number().finite().positive(),
         maxCostBps: z.number().finite().nonnegative(),
         comparisonWindowSec: z.number().finite().positive(),
+        supplyObservedAtSec: z.number().int().nonnegative().nullable().optional(),
+        sizingUncertaintyReason: z.enum(["missing-supply", "stale-supply", "unusable-supply"]).nullable().optional(),
       })
       .strict()
       .nullable(),
@@ -222,7 +227,6 @@ const SafetyScoreV9ExitBreakdownBaseSchema = z
         capacityEvidenceTier: ExitRouteCapacityEvidenceTierSchema,
         rawSameNotionalCostBps: z.number().finite().nonnegative().nullable(),
         supportedComponentCeiling: ScoreSchema.nullable(),
-        eligibilityMultiplier: z.number().finite().min(0).max(1),
         capsApplied: z.array(z.string().min(1)),
         capacity: z
           .object({
@@ -337,8 +341,7 @@ function refineExitBreakdown(breakdown: ExitBreakdownRefinementInput, ctx: z.Ref
     }
     const preCapRouteScore =
       weightedComponentScore *
-      breakdown.primaryRoute.confidenceFactor *
-      breakdown.primaryRoute.eligibilityMultiplier;
+      breakdown.primaryRoute.confidenceFactor;
     const routeScoreReconciles =
       breakdown.primaryRoute.capsApplied.length === 0
         ? Math.abs(breakdown.primaryRoute.score - preCapRouteScore) <= EXIT_SCORE_TOLERANCE
@@ -499,7 +502,7 @@ const SafetyScoreV9ControlBreakdownSchema = z
     const binding = breakdown.components.filter((component) => component.binding && component.score !== null);
     const bindingScoreReconciles =
       binding.length === 0
-        ? numbersAgree(breakdown.evaluatedScore, breakdown.aggregationDisposition === "excluded-a-b" ? null : V9_NEUTRAL_CONTROL_SCORE)
+        ? numbersAgree(breakdown.evaluatedScore, (breakdown.aggregationDisposition ?? "included") !== "included" ? null : V9_NEUTRAL_CONTROL_SCORE)
         : numbersAgree(
             Math.min(...binding.map((component) => component.score!)),
             breakdown.evaluatedScore,

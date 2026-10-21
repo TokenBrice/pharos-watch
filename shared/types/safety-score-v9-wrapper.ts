@@ -104,48 +104,6 @@ const V9WrapperLocalDimensionsSchema = z
   })
   .strict();
 
-export const V9WrapperRiskTransferMechanismSchema = z.enum([
-  "none",
-  "first-loss-capital",
-  "insurance",
-  "overcollateralization",
-  "other",
-  "unknown",
-]);
-
-const V9WrapperRiskTransferFactSchema = z
-  .object({
-    disposition: V9WrapperFactDispositionSchema,
-    mechanism: V9WrapperRiskTransferMechanismSchema,
-    maximumParentLossAbsorptionPoints: z.number().finite().min(0).max(100),
-    signals: canonicalTextArray(1, "value"),
-    evidenceRefIds: canonicalTextArray(0, "value"),
-    status: V9FactStatusV2Schema.optional(),
-  })
-  .strict()
-  .superRefine((fact, ctx) => {
-    if (fact.disposition === "reviewed") {
-      if (fact.mechanism === "unknown") {
-        ctx.addIssue({ code: "custom", path: ["mechanism"], message: "Reviewed risk transfer cannot be unknown" });
-      }
-      if (fact.evidenceRefIds.length === 0) {
-        ctx.addIssue({ code: "custom", path: ["evidenceRefIds"], message: "Reviewed risk transfer requires evidence" });
-      }
-      if (
-        (fact.mechanism === "none") !==
-        (fact.maximumParentLossAbsorptionPoints === 0)
-      ) {
-        issue(ctx, ["maximumParentLossAbsorptionPoints"], "Reviewed risk-transfer credit requires an explicit loss-absorption mechanism");
-      }
-      return;
-    }
-    if (
-      fact.mechanism !== (fact.disposition === "not-applicable" ? "none" : "unknown") ||
-      fact.maximumParentLossAbsorptionPoints !== 0
-    ) {
-      issue(ctx, undefined, "Unavailable risk transfer must be unknown and zero; not-applicable risk transfer must be none and zero");
-    }
-  });
 
 const V9NotWrapperLocalFactsSchema = z
   .object({
@@ -172,7 +130,6 @@ const V9ApplicableWrapperLocalFactsSchema = z
       evidenceRefIds: canonicalTextArray(1, "value"),
     }).strict().optional(),
     facts: V9WrapperLocalDimensionsSchema,
-    riskTransfer: V9WrapperRiskTransferFactSchema,
   })
   .strict()
   .superRefine((facts, ctx) => {

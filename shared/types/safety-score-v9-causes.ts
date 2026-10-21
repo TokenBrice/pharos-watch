@@ -340,11 +340,11 @@ export type V9RatingStatus = z.infer<typeof V9RatingStatusSchema>;
 const V9PartialEvidenceSchema = z.object({
   reasonCode: z.literal("partial-evidence-pipeline-gap"),
   excludedPillars: canonicalTextArray().pipe(z.array(z.enum(["backing", "exit", "control"]))),
-  excludedComponentKeys: canonicalTextArray(), causeGapIds: canonicalTextArray(1),
-  causes: canonicalTextArray(1).pipe(z.array(V9EvidenceCauseSchema.extract(["A", "B"]))),
+  excludedComponentKeys: canonicalTextArray(), causeGapIds: canonicalTextArray(),
+  causes: canonicalTextArray().pipe(z.array(V9EvidenceCauseSchema.extract(["A", "B"]))),
 }).strict();
 export type V9PartialEvidence = z.infer<typeof V9PartialEvidenceSchema>;
-export const V9PillarAggregationDispositionSchema = z.enum(["included", "excluded-a-b"]);
+export const V9PillarAggregationDispositionSchema = z.enum(["included", "excluded-a-b", "unavailable"]);
 export const V9CompactPartialEvidenceSchema = V9PartialEvidenceSchema.pick({
   reasonCode: true, excludedPillars: true, causes: true,
 });

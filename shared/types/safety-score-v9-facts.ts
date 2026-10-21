@@ -20,6 +20,7 @@ import { V9CdpStressCoverageFactSchema, V9MechanismRiskReviewSchema, type V9Mech
 import { V9OperationalResilienceFactSchema } from "./safety-score-v9-operational-resilience";
 import { V9AllocationScopeFactSchema } from "./safety-score-v9-allocation";
 import { LenderBookObservationSchema, LenderCollateralResolutionSchema, LenderBookFailedAttemptSchema } from "./safety-score-v9-lender-book";
+import { V9AdmittedHolderLossEventSchema } from "./safety-score-v9-incidents";
 import {
   V9WrapperLocalFactsSchema,
   type V9ApplicableWrapperLocalFacts,
@@ -1594,6 +1595,7 @@ const V9AssetFactsBaseFields = {
   supply: V9SupplyFactV2Schema,
   operationalResilience: V9OperationalResilienceFactSchema.nullable().optional(),
   operationalResilienceStatus: V9FactStatusV2Schema.optional(),
+  realizedHolderLossEvents: canonicalArrayBy(V9AdmittedHolderLossEventSchema, (event) => event.incidentId).optional(),
   causeResolutionDiagnostics: z.array(V9CauseResolutionDiagnosticSchema).optional(),
   // Optional only for retained V2 compatibility. V3 requires the complete,
   // policy-independent wrapper-local contract for every asset.
@@ -1630,6 +1632,11 @@ type V9AssetFactsValidationInput = Omit<V9AssetFactsV2Object, "dependencies"> & 
 };
 
 function validateAssetFacts(asset: V9AssetFactsValidationInput, ctx: z.RefinementCtx): void {
+  for (const [index, event] of (asset.realizedHolderLossEvents ?? []).entries()) {
+    if (event.assetId !== asset.assetId) {
+      issue(ctx, ["realizedHolderLossEvents", index, "assetId"], "Holder loss must belong to this exact asset");
+    }
+  }
   for (const [index, control] of asset.controls.entries()) {
     if (asset.issuanceFacts && control.controlKind !== "bridge" && control.issuanceFactsRef !== asset.issuanceFacts.ref) {
       ctx.addIssue({ code: "custom", path: ["controls", index, "issuanceFactsRef"], message: "Every native control must bind the asset-wide issuance facts" });
@@ -1778,9 +1785,6 @@ export const V9AssetFactsV3Schema = V9AssetFactsV3ObjectSchema.superRefine((asse
       if (!["reviewed", "not-applicable"].includes(fact.disposition) && (!fact.status || fact.status.gapIds.length === 0)) {
         ctx.addIssue({ code: "custom", path: ["wrapperLocalFacts", "facts", key, "status"], message: "Unavailable wrapper facts require resolving causal gaps" });
       }
-    }
-    if (!["reviewed", "not-applicable"].includes(wrapper.riskTransfer.disposition) && (!wrapper.riskTransfer.status || wrapper.riskTransfer.status.gapIds.length === 0)) {
-      ctx.addIssue({ code: "custom", path: ["wrapperLocalFacts", "riskTransfer"], message: "Unavailable risk transfer requires cause status without positive credit" });
     }
   }
   const gapsById = new Map(asset.gaps.map((gap) => [gap.gapId, gap]));
@@ -1981,7 +1985,6 @@ export function factStatuses(asset: V9AssetFactsBase): Array<{ label: string; st
     ...(asset.wrapperLocalFacts?.applicability === "wrapper" ? [
       ...(asset.wrapperLocalFacts.formStatus ? [{ label: "wrapper:form", status: asset.wrapperLocalFacts.formStatus }] : []),
       ...Object.entries(asset.wrapperLocalFacts.facts).flatMap(([key, fact]) => fact.status ? [{ label: `wrapper:${key}`, status: fact.status }] : []),
-      ...(asset.wrapperLocalFacts.riskTransfer.status ? [{ label: "wrapper:risk-transfer", status: asset.wrapperLocalFacts.riskTransfer.status }] : []),
     ] : []),
     { label: "economic-control:mint", status: asset.economicControlReview.mint.status },
     ...Object.entries(asset.economicControlReview.mint.factorStatuses ?? {}).map(([key, status]) => ({ label: `economic-control:mint:${key}`, status })),
@@ -2167,7 +2170,6 @@ function validateAssetReferences(
         );
       }
     }
-    captureRefs("wrapper-local:risk-transfer", wrapperLocalFacts.riskTransfer.evidenceRefIds, []);
   }
   for (const route of asset.exitRoutes) {
     captureRefs(`settlement:${route.routeKey}`, route.settlementEvidenceRefIds, []);

@@ -616,18 +616,9 @@ describe("SafetyScoreV9ResponseSchema", () => {
 
   });
 
-  it("reconciles every score adjustment to its ordinary score and relieved card cap", () => {
+  it("reconciles every score adjustment to its ordinary score without cap relief", () => {
     const valid = adjustedResponse();
-    expect(SafetyScoreV9CurrentResponseSchema.parse(valid).cards[0]?.score).toBe(94);
-
-    const missingCap = adjustedResponse();
-    missingCap.cards[0]!.caps = missingCap.cards[0]!.caps.filter(
-      (cap) => cap.source !== "structural",
-    );
-    missingCap.cards[0]!.bindingCap = null;
-    expect(() => SafetyScoreV9CurrentResponseSchema.parse(missingCap)).toThrow(
-      /cap relief must match exactly one current card cap/,
-    );
+    expect(SafetyScoreV9CurrentResponseSchema.parse(valid).cards[0]?.score).toBe(87);
 
     const impossibleOrdinaryScore = adjustedResponse();
     impossibleOrdinaryScore.cards[0]!.scoreTrace.scoreAdjustments[0]!.publishedScoreBefore = 95;
@@ -635,12 +626,6 @@ describe("SafetyScoreV9ResponseSchema", () => {
       /permitted rounding headroom/,
     );
 
-    const fictionalRelief = adjustedResponse();
-    fictionalRelief.cards[0]!.scoreTrace.scoreAdjustments[0]!.capRelief.kind =
-      "signal:unsafe-backing:low";
-    expect(() => SafetyScoreV9CurrentResponseSchema.parse(fictionalRelief)).toThrow(
-      /cap relief must match exactly one current card cap/,
-    );
   });
 
   it.each([
@@ -688,6 +673,49 @@ describe("SafetyScoreV9ResponseSchema", () => {
       }
     }
   });
+  it("keeps evidence-free pillars unavailable without fabricating A/B causes across all masks", () => {
+    const pillars = ["backing", "control", "exit"] as const;
+    for (let mask = 1; mask < 8; mask++) {
+      const unavailable = pillars.filter((_pillar, index) => (mask & (1 << index)) !== 0);
+      const parsed = SafetyScoreV9CurrentResponseSchema.parse(partialResponse(unavailable, unavailable));
+      const card = parsed.cards[0]!;
+      expect(card.ratingStatus).toBe(unavailable.length >= 2 ? "pipeline-gap" : "rated");
+      expect(card.localCauseGaps).toEqual([]);
+      expect(card.partialEvidence).toMatchObject({ causes: [], causeGapRefs: [], excludedComponentKeys: [] });
+      for (const pillar of unavailable) {
+        expect(card.pillars[pillar]).toMatchObject({ aggregationDisposition: "unavailable", score: null, supportedComponentKeys: [] });
+        expect(card.breakdowns![pillar]).toMatchObject({
+          aggregationDisposition: "unavailable", evaluatedScore: null, publishedScore: null, aggregationWeight: 0,
+        });
+        if (card.scoreTrace.aggregation) expect(card.scoreTrace.aggregation.effectiveScoringWeights[pillar]).toBe(0);
+      }
+    }
+  });
+
+  it("keeps unavailable and proved A/B exclusions distinct in the same card", () => {
+    const parsed = SafetyScoreV9CurrentResponseSchema.parse(partialResponse(["backing", "exit"], ["backing"]));
+    const card = parsed.cards[0]!;
+    expect(card.pillars.backing.aggregationDisposition).toBe("unavailable");
+    expect(card.pillars.exit.aggregationDisposition).toBe("excluded-a-b");
+    expect(card.partialEvidence).toMatchObject({ excludedPillars: ["backing", "exit"], causes: ["B"], causeGapRefs: [0] });
+    expect(card.localCauseGaps).toEqual(["exit"]);
+  });
+
+  it("rejects a numeric unavailable default, nonzero excluded weight, or invented A/B availability cause", () => {
+    const numeric = partialResponse(["backing"], ["backing"]);
+    numeric.cards[0]!.pillars.backing.score = 50;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(numeric).success).toBe(false);
+    const weighted = partialResponse(["backing"], ["backing"]);
+    weighted.cards[0]!.breakdowns!.backing.aggregationWeight = 0.4;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(weighted).success).toBe(false);
+    const fabricated = partialResponse(["backing"], ["backing"]);
+    fabricated.cards[0]!.partialEvidence!.causes = ["A"];
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(fabricated).success).toBe(false);
+    const unproved = partialResponse(["backing"]);
+    unproved.cards[0]!.partialEvidence!.causes = [];
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(unproved).success).toBe(false);
+  });
+
 
   it("keeps pipeline-gap distinct from NR on the current free grades surface", () => {
     const card = SafetyScoreV9CurrentResponseSchema.parse(partialResponse(["backing", "control"])).cards[0]!;

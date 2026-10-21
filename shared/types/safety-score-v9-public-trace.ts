@@ -9,12 +9,9 @@ import {
 } from "./safety-score-v9";
 import { V9EvidenceResponsibilitySchema } from "./safety-score-v9-fact-primitives";
 import {
-  V9_WRAPPER_LOCAL_FACT_KEYS,
   V9WrapperFactDispositionSchema,
   V9WrapperFormSchema,
   V9WrapperLocalFactKeySchema,
-  V9WrapperRiskAssessmentSchema,
-  V9WrapperRiskTransferMechanismSchema,
 } from "./safety-score-v9-wrapper";
 import {
   isUniqueSorted,
@@ -169,7 +166,7 @@ const SafetyScoreV9AdverseAttributionItemSchema = z
       "reason",
       "structural-signal",
       "track-record",
-      "wrapper-local",
+      "realized-holder-loss",
     ]),
     path: z.string().min(1),
     message: z.string().min(1),
@@ -193,7 +190,7 @@ const SafetyScoreV9AdverseAttributionTraceSchema = z
 
 const SafetyScoreV9BoundedUncertaintyAttributionItemSchema = z
   .object({
-    source: z.enum(["parent-score", "reason", "wrapper-local"]),
+    source: z.enum(["parent-score", "reason"]),
     code: V9ReasonCodeSchema,
     path: z.string().min(1),
     message: z.string().min(1),
@@ -208,9 +205,6 @@ const SafetyScoreV9BoundedUncertaintyAttributionItemSchema = z
     }
     if (item.source === "parent-score" && !isV9WitnessTextReference(item.path) && !item.path.startsWith("parent:")) {
       issue(ctx, ["path"], "V9 parent bounded-uncertainty attribution requires a parent-prefixed path");
-    }
-    if (item.source === "wrapper-local" && !isV9WitnessTextReference(item.path) && !item.path.startsWith("wrapper-local:")) {
-      issue(ctx, ["path"], "V9 wrapper bounded-uncertainty attribution requires a wrapper-local path");
     }
   });
 
@@ -305,7 +299,7 @@ const SafetyScoreV9EvidenceResponsibilityTraceSchema = evidenceResponsibilityTra
 
 const SafetyScoreV9WrapperMissingFactClassSchema = z.union([
   V9WrapperLocalFactKeySchema,
-  z.enum(["riskTransfer", "wrapperForm"]),
+  z.literal("wrapperForm"),
 ]);
 
 const SafetyScoreV9WrapperParentLimitSchema = z
@@ -313,19 +307,7 @@ const SafetyScoreV9WrapperParentLimitSchema = z
     schemaVersion: z.literal(1),
     parentScore: ScoreSchema,
     form: V9WrapperFormSchema,
-    treatment: z.enum(["local-facts", "fallback-discount", "documented-risk-transfer"]),
-    localRiskDiscount: z.number().finite().min(0).max(100),
-    fallbackDiscount: z.number().finite().min(0).max(100),
     appliedDiscount: z.number().finite().min(0).max(100),
-    gradeFloor: ScoreSchema.optional(),
-    riskTransfer: z
-      .object({
-        disposition: V9WrapperFactDispositionSchema,
-        mechanism: V9WrapperRiskTransferMechanismSchema,
-        requestedCredit: z.number().finite().min(0).max(100),
-        appliedCredit: z.number().finite().min(0).max(100),
-      })
-      .strict(),
     limit: ScoreSchema,
     factsComplete: z.boolean(),
     missingFacts: z.array(
@@ -339,20 +321,6 @@ const SafetyScoreV9WrapperParentLimitSchema = z
         })
         .strict(),
     ),
-    adjustments: z.array(
-      z
-        .object({
-          factKey: V9WrapperLocalFactKeySchema,
-          disposition: V9WrapperFactDispositionSchema,
-          assessment: V9WrapperRiskAssessmentSchema.nullable(),
-          maximumDiscountPoints: z.number().finite().positive().max(100),
-          discountPoints: z.number().finite().min(0).max(100),
-          cause: V9EvidenceCauseSchema.nullable().optional(),
-          causeGapRefs: causeGapRefs().optional(),
-          scoringDisposition: V9ScoringDispositionSchema.optional(),
-        })
-        .strict(),
-    ),
   })
   .strict()
   .superRefine((limit, ctx) => {
@@ -360,52 +328,12 @@ const SafetyScoreV9WrapperParentLimitSchema = z
     if (!isUniqueSorted(missingKeys)) {
       ctx.addIssue({ code: "custom", path: ["missingFacts"], message: "V9 wrapper missing facts must be unique and sorted" });
     }
-    const adjustmentKeys = limit.adjustments.map((adjustment) => adjustment.factKey);
-    const expectedAdjustmentKeys = [...V9_WRAPPER_LOCAL_FACT_KEYS];
-    if (JSON.stringify(adjustmentKeys) !== JSON.stringify(expectedAdjustmentKeys)) {
-      issue(ctx, ["adjustments"], "V9 wrapper adjustments must cover every local fact in canonical order");
-    }
-    const expectedLocalRiskDiscount = limit.adjustments.reduce(
-      (sum, adjustment) => sum + adjustment.discountPoints,
-      0,
-    );
-    if (!numbersAgree(limit.localRiskDiscount, expectedLocalRiskDiscount)) {
-      issue(ctx, ["localRiskDiscount"], "V9 wrapper local-risk discount must reconcile its fact adjustments");
-    }
     if (limit.factsComplete !== (limit.missingFacts.length === 0)) {
       issue(ctx, ["factsComplete"], "V9 wrapper completeness must exactly match its missing facts");
     }
-    const requestedDiscount = limit.factsComplete
-      ? limit.localRiskDiscount
-      : Math.max(limit.localRiskDiscount, limit.fallbackDiscount);
-    if (limit.gradeFloor !== undefined && (
-      limit.parentScore < limit.gradeFloor ||
-      limit.parentScore - requestedDiscount >= limit.gradeFloor ||
-      limit.adjustments.some((adjustment) => adjustment.discountPoints > 0 &&
-        (adjustment.assessment === "high" || adjustment.assessment === "critical" ||
-          adjustment.scoringDisposition === "measured-adverse"))
-    )) {
-      issue(ctx, ["gradeFloor"], "V9 wrapper grade protection requires a crossing from a non-danger parent without severe or measured-adverse local findings");
-    }
-    const expectedAppliedDiscount = limit.gradeFloor === undefined
-      ? requestedDiscount
-      : limit.parentScore - limit.gradeFloor;
-    if (!numbersAgree(limit.appliedDiscount, expectedAppliedDiscount)) {
-      issue(ctx, ["appliedDiscount"], "V9 wrapper discount must use the conservative local maximum, limited only by an admitted mild-risk grade floor");
-    }
-    if (limit.riskTransfer.appliedCredit > limit.riskTransfer.requestedCredit + SCORE_TOLERANCE) {
-      issue(ctx, ["riskTransfer", "appliedCredit"], "V9 wrapper cannot apply more risk-transfer credit than documented");
-    }
-    const expectedLimit =
-      Math.max(0, limit.parentScore - limit.appliedDiscount) + limit.riskTransfer.appliedCredit;
+    const expectedLimit = Math.max(0, Math.floor(limit.parentScore - limit.appliedDiscount));
     if (!numbersAgree(limit.limit, expectedLimit)) {
-      issue(ctx, ["limit"], "V9 wrapper limit must apply parent risk, local discount, and documented credit exactly once");
-    }
-    if (
-      (limit.treatment === "fallback-discount") !== (!limit.factsComplete && limit.fallbackDiscount > 0) ||
-      (limit.treatment === "documented-risk-transfer") !== (limit.riskTransfer.appliedCredit > 0)
-    ) {
-      issue(ctx, ["treatment"], "V9 wrapper treatment must match applied fallback eligibility and risk-transfer credit");
+      issue(ctx, ["limit"], "Wrapper limit must apply its form deduction to the parent once");
     }
   });
 
@@ -420,14 +348,6 @@ const SafetyScoreV9ScoreAdjustmentSchema = z
     scoreAfter: ScoreSchema,
     publishedScoreBefore: ScoreSchema,
     publishedScoreAfter: ScoreSchema,
-    capRelief: z
-      .object({
-        source: z.literal("structural"),
-        kind: z.string().min(1),
-        fromLimit: ScoreSchema,
-        toLimit: ScoreSchema,
-      })
-      .strict(),
   })
   .strict()
   .superRefine((adjustment, ctx) => {
@@ -437,23 +357,14 @@ const SafetyScoreV9ScoreAdjustmentSchema = z
     if (adjustment.appliedPoints > adjustment.configuredPoints + SCORE_TOLERANCE) {
       issue(ctx, ["appliedPoints"], "V9 score adjustment cannot exceed its configured points");
     }
-    if (adjustment.capRelief.fromLimit >= adjustment.capRelief.toLimit) {
-      issue(ctx, ["capRelief"], "V9 score adjustment cap relief must increase the named limit");
-    }
     if (
       adjustment.publishedScoreBefore >
       adjustment.scoreBefore + PUBLIC_SCORE_ROUNDING_HEADROOM + SCORE_TOLERANCE
     ) {
       issue(ctx, ["publishedScoreBefore"], "V9 ordinary published score exceeds its permitted rounding headroom");
     }
-    if (adjustment.publishedScoreBefore > adjustment.capRelief.fromLimit + SCORE_TOLERANCE) {
-      issue(ctx, ["publishedScoreBefore"], "V9 ordinary published score cannot exceed the original cap limit");
-    }
     if (adjustment.publishedScoreAfter + SCORE_TOLERANCE < adjustment.publishedScoreBefore) {
       issue(ctx, ["publishedScoreAfter"], "V9 score adjustment cannot reduce the published score");
-    }
-    if (adjustment.publishedScoreAfter > adjustment.capRelief.toLimit + SCORE_TOLERANCE) {
-      issue(ctx, ["publishedScoreAfter"], "V9 score adjustment cannot publish above its relieved cap");
     }
   });
 

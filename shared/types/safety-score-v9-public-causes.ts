@@ -37,8 +37,8 @@ export const V9ConfidenceDimensionsSchema = z.object({
 export const V9PartialEvidenceSchema = z.object({
   reasonCode: z.literal("partial-evidence-pipeline-gap"),
   excludedPillars: canonicalTextArray().pipe(z.array(z.enum(["backing", "exit", "control"]))),
-  excludedComponentKeys: canonicalTextArray(), causeGapRefs: causeGapRefs(1),
-  causes: canonicalTextArray(1).pipe(z.array(V9EvidenceCauseSchema.extract(["A", "B"]))),
+  excludedComponentKeys: canonicalTextArray(), causeGapRefs: causeGapRefs(),
+  causes: canonicalTextArray().pipe(z.array(V9EvidenceCauseSchema.extract(["A", "B"]))),
 }).strict();
 export const V9PillarCauseShape = {
   aggregationDisposition: V9PillarAggregationDispositionSchema.optional().describe("Defaults to included"), supportedComponentKeys: canonicalTextArray(),

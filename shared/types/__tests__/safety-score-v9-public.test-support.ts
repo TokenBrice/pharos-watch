@@ -100,7 +100,6 @@ export function breakdowns(backingScore = 90, exitScore = 92, controlScore = 95.
         capacityEvidenceTier: "live-direct",
         rawSameNotionalCostBps: 0,
         supportedComponentCeiling: exitScore,
-        eligibilityMultiplier: 1,
         capsApplied: [],
       },
       diversification: null,
@@ -159,13 +158,6 @@ function response() {
         pillars: { backing: pillar(90), exit: pillar(92), control: pillar(95.2) },
         weakestPillar: { pillar: "backing", score: 90 },
         caps: [
-          {
-            kind: "bounded-compensability",
-            limit: 98,
-            source: "bounded-compensability",
-            reason: "Weakest-pillar headroom.",
-            binding: false,
-          },
           { kind: "track-record", limit: 90, source: "track-record", reason: "Track record binds.", binding: true },
         ],
         bindingCap: {
@@ -257,39 +249,23 @@ export function currentResponse() {
 export function adjustedResponse() {
   const adjusted = currentResponse();
   const card = adjusted.cards[0]!;
-  const structuralCap: CurrentResponse["cards"][number]["caps"][number] = {
-    kind: "signal:centralized-mint:low",
-    limit: 94,
-    source: "structural",
-    reason: "The premium relieves only the named low-severity structural cap.",
-    binding: true,
-  };
-  card.score = 94;
-  card.grade = "A+";
-  card.pegAdjustedScore = 96;
-  card.caps = [
-    { ...card.caps[0]!, binding: false },
-    structuralCap,
-  ];
-  card.bindingCap = structuralCap;
-  card.scoreTrace.stages.preCapScore = 96;
-  card.scoreTrace.stages.publishedScore = 94;
+  card.score = 87;
+  card.grade = "A";
+  card.pegAdjustedScore = 87;
+  card.caps = [];
+  card.bindingCap = null;
+  card.scoreTrace.stages.preCapScore = 87;
+  card.scoreTrace.stages.publishedScore = 87;
   card.scoreTrace.scoreAdjustments = [{
     source: "asset-premium",
     kind: "market-anchor-longevity",
     label: "#1 & Longevity Premium",
-    configuredPoints: 4,
+    configuredPoints: 12,
     appliedPoints: 4,
-    scoreBefore: 92,
-    scoreAfter: 96,
+    scoreBefore: 83,
+    scoreAfter: 87,
     publishedScoreBefore: 83,
-    publishedScoreAfter: 94,
-    capRelief: {
-      source: "structural",
-      kind: "signal:centralized-mint:low",
-      fromLimit: 83,
-      toLimit: 94,
-    },
+    publishedScoreAfter: 87,
   }];
   return adjusted;
 }
@@ -392,12 +368,16 @@ export function deploymentResponse() {
   return result;
 }
 
-export function partialResponse(excluded: readonly ("backing" | "exit" | "control")[]) {
+export function partialResponse(
+  excluded: readonly ("backing" | "exit" | "control")[],
+  unavailable: readonly ("backing" | "exit" | "control")[] = [],
+) {
   const result = currentResponse();
   const card = result.cards[0]!;
   const pillars = ["backing", "control", "exit"] as const;
   const excludedPillars = [...excluded].sort();
-  card.localCauseGaps = excludedPillars;
+  const excludedAB = excludedPillars.filter((key) => !unavailable.includes(key));
+  card.localCauseGaps = excludedAB;
   const included = pillars.filter((key) => !excluded.includes(key));
   const pipeline = included.length < 2;
   const weights = { backing: 0.4, exit: 0.35, control: 0.25 };
@@ -405,8 +385,29 @@ export function partialResponse(excluded: readonly ("backing" | "exit" | "contro
   for (const key of pillars) {
     card.breakdowns![key].aggregationWeight = pipeline || excluded.includes(key) ? 0 : weights[key] / totalWeight;
     if (!excluded.includes(key)) continue;
+    if (unavailable.includes(key)) {
+      Object.assign(card.pillars[key], {
+        score: null, aggregationDisposition: "unavailable", supportedComponentKeys: [],
+        causeGapRefs: [], limitedEvidenceCauses: [],
+      });
+      Object.assign(card.breakdowns![key], {
+        evaluatedScore: null, publishedScore: null, aggregationDisposition: "unavailable",
+        causeGapRefs: [], limitedEvidenceCauses: [], adjustments: [],
+      });
+      if (key === "backing") {
+        card.breakdowns!.backing.groups = [];
+        card.breakdowns!.backing.components = [];
+      } else if (key === "exit") {
+        card.breakdowns!.exit.primaryRoute = null;
+        card.breakdowns!.exit.diversification = null;
+        card.breakdowns!.exit.alternatives = [];
+      } else {
+        card.breakdowns!.control.components = [];
+      }
+      continue;
+    }
     const cause = key === "exit" ? "B" as const : "A" as const;
-    const gapRef = excludedPillars.indexOf(key);
+    const gapRef = excludedAB.indexOf(key);
     const disposition = cause === "A" ? "excluded-pipeline" as const : "excluded-uncurated" as const;
     const diagnostic = { cause, causeGapRefs: [gapRef], scoringDisposition: disposition, effectiveScoringWeight: 0, score: null };
     Object.assign(card.pillars[key], {
@@ -432,9 +433,9 @@ export function partialResponse(excluded: readonly ("backing" | "exit" | "contro
   if (excluded.length > 0) {
     card.partialEvidence = {
       reasonCode: "partial-evidence-pipeline-gap", excludedPillars,
-      excludedComponentKeys: excludedPillars.map((key) => `${key}:fixture-known`),
-      causeGapRefs: excludedPillars.map((_, index) => index),
-      causes: excluded.includes("exit") && excluded.length > 1 ? ["A", "B"] : excluded.includes("exit") ? ["B"] : ["A"],
+      excludedComponentKeys: excludedAB.map((key) => `${key}:fixture-known`),
+      causeGapRefs: excludedAB.map((_, index) => index),
+      causes: excludedAB.includes("exit") && excludedAB.length > 1 ? ["A", "B"] : excludedAB.includes("exit") ? ["B"] : excludedAB.length > 0 ? ["A"] : [],
     };
     card.reasonCodes = ["partial-evidence-pipeline-gap"];
   }

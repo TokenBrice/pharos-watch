@@ -212,20 +212,6 @@ export const LenderCollateralBookPolicySchema = z.strictObject({
   transmissionExponent: z.literal(2), oracleMaterialNavShare: z.literal(0.01),
   observationMaxAgeSec: z.literal(28800), maxAdapters: z.literal(16),
   maxMarketsPerDeployment: z.literal(128), rpcBatchCalls: z.literal(32),
-  classQuality: z.record(LenderCollateralClassSchema, ScoreSchema),
-  admittedAssets: z.array(z.strictObject({
-    assetId: Text,
-    deployments: z.array(z.strictObject({ chain: Text, kind: Kind })).min(1),
-  })).min(1),
-}).superRefine((policy, ctx) => {
-  if (policy.admittedAssets.length !== 33 || policy.admittedAssets.reduce((count, asset) => count + asset.deployments.length, 0) !== 35) {
-    fail(ctx, ["admittedAssets"], "Reviewed Morpho census must contain 33 assets and 35 deployments");
-  }
-  if (!sortedUnique(policy.admittedAssets.map((asset) => asset.assetId))) fail(ctx, ["admittedAssets"], "Admitted assets must be unique and sorted");
-  policy.admittedAssets.forEach((asset, index) => {
-    if (!sortedUnique(asset.deployments.map((deployment) => `${deployment.chain}:${deployment.kind}`))) {
-      fail(ctx, ["admittedAssets", index, "deployments"], "Allowed deployments must be unique and sorted");
-    }
-  });
+  classQuality: z.record(LenderCollateralClassSchema.exclude(["other-unknown"]), ScoreSchema),
 });
 export type LenderCollateralBookPolicy = z.output<typeof LenderCollateralBookPolicySchema>;

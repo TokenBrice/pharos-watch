@@ -42,7 +42,7 @@ export const DANGER_PEG_MULTIPLIER_FLOOR =
 // minimum-track-record exception remains a ceiling. Read the registry authority,
 // not the retired evidence-cap classification, without importing shared/lib.
 const V9_BOUNDED_ATTRIBUTION_REASON_CODES = methodologyPolicy.reasonRegistry
-  .filter((reason) => reason.defaultTreatment !== "diagnostic" || reason.ceilingRule?.source === "minimum-track-record")
+  .filter((reason) => reason.defaultTreatment !== "diagnostic")
   .map((reason) => V9ReasonCodeSchema.parse(reason.code));
 export const V9_BOUNDED_ATTRIBUTION_REASON_CODE_SET =
   new Set<V9ReasonCode>(V9_BOUNDED_ATTRIBUTION_REASON_CODES);
@@ -189,13 +189,16 @@ export const SafetyScoreV9PillarSchema = z
   })
   .strict()
   .superRefine((pillar, ctx) => {
-    if ((pillar.aggregationDisposition === "excluded-a-b") !== (pillar.score === null) &&
-        pillar.aggregationDisposition === "excluded-a-b") {
-      ctx.addIssue({ code: "custom", path: ["score"], message: "Excluded pillars must have null score" });
+    if ((pillar.aggregationDisposition ?? "included") !== "included" && pillar.score !== null) {
+      ctx.addIssue({ code: "custom", path: ["score"], message: "Excluded or unavailable pillars must have null score" });
     }
     if (pillar.aggregationDisposition === "excluded-a-b" &&
         ((pillar.causeGapRefs?.length ?? 0) === 0 || (pillar.limitedEvidenceCauses?.length ?? 0) > 0 || pillar.supportedComponentKeys.length > 0)) {
       ctx.addIssue({ code: "custom", message: "Excluded pillars require A/B gaps, no scoreable support and no limiting C/U/D" });
+    }
+    if (pillar.aggregationDisposition === "unavailable" &&
+        ((pillar.limitedEvidenceCauses?.length ?? 0) > 0 || pillar.supportedComponentKeys.length > 0)) {
+      ctx.addIssue({ code: "custom", message: "Unavailable pillars cannot claim scoreable support or limiting C/U/D" });
     }
     if (!isUniqueSorted(pillar.components)) {
       ctx.addIssue({ code: "custom", path: ["components"], message: "V9 pillar components must be unique and sorted" });

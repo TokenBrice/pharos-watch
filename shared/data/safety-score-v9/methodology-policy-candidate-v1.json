@@ -2,8 +2,13 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.28",
+  "releaseVersion": "10.29",
   "semantic": {
+    "unknownQuality": {
+      "backing": { "C": 35, "U": 50 },
+      "exit": { "C": 35, "U": 50 },
+      "control": { "C": 50, "U": 60 }
+    },
     "accessLookthrough": {
       "edgeKinds": ["reserve-position", "receipt", "bridge-representation"],
       "coverageStates": ["complete", "incomplete"],
@@ -81,7 +86,6 @@
         "control": 0.25
       },
       "compensabilityHeadroom": 20,
-      "controlCompensabilityHeadroom": 30,
       "pegExponent": 0.4,
       "pegHistoryWindowSec": 94672800,
       "pegQuietHistoryFloor": 97,
@@ -102,31 +106,10 @@
       "trackRecordCeilings": [
         {
           "minMonthsInclusive": 0,
-          "maxMonthsExclusive": 6,
-          "limit": 79,
-          "kind": "track-record:<6m",
-          "reason": "Less than six months of implementation history."
-        },
-        {
-          "minMonthsInclusive": 6,
           "maxMonthsExclusive": 24,
           "limit": 84,
           "kind": "track-record:<24m",
-          "reason": "Less than two years of implementation history."
-        },
-        {
-          "minMonthsInclusive": 24,
-          "maxMonthsExclusive": 36,
-          "limit": 86,
-          "kind": "track-record:<36m",
-          "reason": "Less than three years of implementation history."
-        },
-        {
-          "minMonthsInclusive": 36,
-          "maxMonthsExclusive": null,
-          "limit": null,
-          "kind": "track-record:>=36m",
-          "reason": "At least three years of implementation history."
+          "reason": "Less than two years of known implementation history."
         }
       ],
       "gradeThresholds": [
@@ -175,25 +158,19 @@
           "minScore": 0
         }
       ],
-      "capTiePriority": [
-        "active-depeg",
-        "structural",
-        "parent",
-        "evidence",
-        "track-record",
-        "bounded-compensability"
-      ],
-      "scoreDecimals": 0,
-      "rounding": {
-        "uncapped": "nearest",
-        "capped": "floor"
+      "capTiePriority": ["active-depeg", "realized-holder-loss", "parent", "track-record"],
+      "rounding": { "uncapped": "nearest" },
+      "realizedHolderLoss": {
+        "minimumLossPct": 1,
+        "initialLimit": 49,
+        "holdDays": 365,
+        "recoveryDays": 365
       },
       "wrapperStrategyCap": {
         "pure": 3,
         "staked": 5,
         "vault": 10
       },
-      "wrapperMildRiskFloorGrade": "D",
       "assetPremiums": [
         {
           "assetId": "usdt-tether",
@@ -204,44 +181,15 @@
           "minimumTrackRecordMonths": 120,
           "requiredMarketRank": 1,
           "minimumExitScore": 70,
-          "requiredEvidenceLevel": "limited",
-          "capRelief": {
-            "source": "structural",
-            "kind": "signal:centralized-mint:low",
-            "fromLimit": 83,
-            "toLimit": 87
-          }
+          "requiredEvidenceLevel": "limited"
         }
       ],
-      "withhold": {
-        "maxScoreExclusive": 55,
-        "minimumLimitedPillarCount": 2,
-        "requiresLimitedBacking": true
-      },
       "danger": {
-        "withholdPegMultiplierFloor": 0.9,
-        "preExitPegMultiplierFloor": 0.9,
         "adverseAttributionPegMultiplierFloor": 0.9,
-        "activeDepegMinimumBpsExclusive": 0,
-        "withholdCentralizedMintSeverities": [
-          "high",
-          "critical"
-        ],
-        "preExitCentralizedMintSeverities": [
-          "critical"
-        ],
-        "dangerOnlyGrades": [
-          "F"
-        ]
+        "activeDepegMinimumBpsExclusive": 0
       }
     },
     "evidence": {
-      "ceilings": {
-        "strong": null,
-        "adequate": null,
-        "limited": null,
-        "insufficient": null
-      },
       "rank": {
         "strong": 0,
         "adequate": 1,
@@ -353,7 +301,6 @@
       "nativeInventoryUnmatchedDustShareMax": 0.00001,
       "unresolvedDeploymentBlendStartSharePct": 5,
       "unresolvedDeploymentFullCeilingSharePct": 15,
-      "commonModeOracleMinBranches": 2,
       "commonControlMinAssets": 2,
       "commonControlMinPaths": 2,
       "commonModeSignal": {
@@ -388,44 +335,8 @@
           "synthetic-dollar": 55,
           "principal-token": 55,
           "yield-bearing-stable": 55,
-          "structured-credit": 35,
-          "other-unknown": 35
-        },
-        "admittedAssets": [
-          { "assetId": "arcusdc-galaxy", "deployments": [{ "chain": "arc", "kind": "vault-v2" }] },
-          { "assetId": "armusdcs-wintermute", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "bbqusdc-steakhouse", "deployments": [{ "chain": "ethereum", "kind": "metamorpho-v1" }] },
-          { "assetId": "bbqusdc-steakhouse-v2", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "cscbusdc-clearstar", "deployments": [{ "chain": "base", "kind": "vault-v2" }] },
-          { "assetId": "ethenausdc-steakhouse", "deployments": [{ "chain": "base", "kind": "vault-v2" }] },
-          { "assetId": "gtusdc-gauntlet", "deployments": [{ "chain": "ethereum", "kind": "metamorpho-v1" }] },
-          { "assetId": "gtusdcp-gauntlet", "deployments": [{ "chain": "arbitrum", "kind": "metamorpho-v1.1" }, { "chain": "base", "kind": "metamorpho-v1" }, { "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "gtusdtp-gauntlet", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "gusdcq-galaxy", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "gusdtq-galaxy", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "hyperusdca-hyperithm", "deployments": [{ "chain": "monad", "kind": "vault-v2" }] },
-          { "assetId": "kpkusdcprime-kpk", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "kpkusdcyield-kpk", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "krusdc-keyrock", "deployments": [{ "chain": "arc", "kind": "vault-v2" }] },
-          { "assetId": "pendleusdc-pendle", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "senpathusd-sentora", "deployments": [{ "chain": "tempo", "kind": "vault-v2" }] },
-          { "assetId": "senpyusdmain-sentora", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "senpyusdmwin-sentora", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "senpyusdprimev2-sentora", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "senpyusdpst-sentora", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "senrlusdv2-sentora", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "sirloinusdc-steakhouse", "deployments": [{ "chain": "base", "kind": "vault-v2" }] },
-          { "assetId": "skymoneyusdsflagship-sky", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "skymoneyusdtsavings-sky", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "sparkusdc-spark", "deployments": [{ "chain": "base", "kind": "metamorpho-v1.1" }] },
-          { "assetId": "sparkusdtbc-spark", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "steakcusdc-steakhouse", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "steakeurcv-steakhouse", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "steakusdc-steakhouse", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "steakusdg-steakhouse", "deployments": [{ "chain": "robinhood", "kind": "vault-v2" }] },
-          { "assetId": "steakusdt-steakhouse", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] },
-          { "assetId": "sxsrlusd-sentora", "deployments": [{ "chain": "ethereum", "kind": "vault-v2" }] }
-        ]
+          "structured-credit": 35
+        }
       },
       "componentQuality": {
         "strong": 95,
@@ -434,7 +345,6 @@
         "weak": 35,
         "failed": 10
       },
-      "boundedUnknownQuality": 35,
       "reserveScope": {
         "crossChainObservationMaxSkewSec": 120,
         "maxFutureSkewSec": 0,
@@ -484,8 +394,7 @@
           "immediate": 98,
           "one-day": 92,
           "seven-days": 78,
-          "over-seven-days": 55,
-          "unknown": 55
+          "over-seven-days": 55
         },
         "maturityNotApplicableClasses": [
           "cash",
@@ -517,7 +426,6 @@
             "score": 48
           }
         ],
-        "maturityUnknownQuality": 48,
         "factorWeights": {
           "assetQuality": 0.55,
           "liquidity": 0.3,
@@ -875,16 +783,6 @@
     },
     "exit": {
       "executionModels": {
-        "orderbook": {
-          "admission": "research-only",
-          "requiredGates": ["market-identity", "account", "deposit", "withdrawal", "fees", "settlement"],
-          "exactRequestRequired": true,
-          "sourceMaxAgeSec": 300,
-          "priceMaxAgeSec": 300,
-          "futureSkewSec": 60,
-          "permittedBases": ["exhaustive-book-walk", "observed-prefix-book-walk"],
-          "maximumCertification": "diagnostic"
-        },
         "securitize-offramp": {
           "admission": "enabled",
           "requiredGates": ["implementation", "holder-eligibility", "holds", "provider-eligibility", "inventory", "allowance", "fees", "min-output", "execution", "settlement"],
@@ -904,19 +802,7 @@
           "futureSkewSec": 60,
           "permittedBases": ["transaction-simulation"],
           "maximumCertification": "exact-complete"
-        },
-        "mento-broker": { "admission": "research-only", "requiredGates": ["execution", "trading-limits", "oracle", "breaker", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
-        "cdp-holder-redemption": { "admission": "research-only", "requiredGates": ["execution", "holder-right", "debt", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
-        "erc4626-realizable": { "admission": "research-only", "requiredGates": ["execution", "liquidity", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
-        "stable-basket-withdraw": { "admission": "research-only", "requiredGates": ["execution", "every-output-leg", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
-        "conditional-holder-redemption": { "admission": "research-only", "requiredGates": ["execution", "holder-right", "quota", "liquidity", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
-        "funded-queue": { "admission": "research-only", "requiredGates": ["funded-claim", "nav", "fees", "completion-maximum"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["funded-claim"], "maximumCertification": "diagnostic" },
-        "bridge-withdrawal": { "admission": "research-only", "requiredGates": ["initiation", "proof", "finalization", "destination-liquidity", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["funded-claim"], "maximumCertification": "diagnostic" },
-        "rate-bearing-balancer": { "admission": "research-only", "requiredGates": ["execution", "rate", "transfer", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
-        "stableswap-underlying": { "admission": "research-only", "requiredGates": ["execution", "underlying-identity", "rate", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
-        "saucerswap": { "admission": "research-only", "requiredGates": ["execution", "pool-identity", "transfer", "fees", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation"], "maximumCertification": "diagnostic" },
-        "documented-cash-or-physical": { "admission": "research-only", "requiredGates": ["holder-right", "fees", "limits", "settlement", "usd-endpoint"], "exactRequestRequired": true, "sourceMaxAgeSec": 7776000, "priceMaxAgeSec": 86400, "futureSkewSec": 60, "permittedBases": ["documented-only"], "maximumCertification": "diagnostic" },
-        "migration": { "admission": "research-only", "requiredGates": ["recipient", "entitlement", "fees", "capacity", "settlement"], "exactRequestRequired": true, "sourceMaxAgeSec": 300, "priceMaxAgeSec": 300, "futureSkewSec": 60, "permittedBases": ["transaction-simulation", "funded-claim"], "maximumCertification": "diagnostic" }
+        }
       },
       "stressRequest": {
         "notionalGridUsd": [
@@ -995,9 +881,7 @@
         "unknown": 0.6
       },
       "staleObservationConfidenceFactor": 0.6,
-      "capacityEvidenceTierFactors": {
-        "live-direct": 1, "live-queue-proxy": 0.75, "documented": 1, "heuristic": 1, "unknown": 0.75
-      },
+      "limitedCapacityConfidenceFactor": 0.75,
       "maximumScoreEligiblePortfolioCandidates": 64,
       "scoreableEvidenceKinds": {
         "dex": [
@@ -1051,10 +935,6 @@
         "nav": 20
       },
       "unboundedDeliveryCap": 55,
-      "routeFamilyCaps": {
-        "queueRedeem": 70,
-        "offchainIssuer": 65
-      },
       "coverageRatioBreakpoints": [
         {
           "value": 0,
@@ -1149,18 +1029,7 @@
           "multiplier": 0.9
         }
       ],
-      "holderEligibilityMultipliers": {
-        "any-holder": 1,
-        "verified-customer": 0.9,
-        "verified-customer-neutral": 1,
-        "whitelisted-primary": 0.85,
-        "pre-incident-holder": 0.85,
-        "issuer-discretionary": 0.6,
-        "unknown": 0.85
-      },
-      "boundedUnknownScore": 35,
-      "boundedCostScore": 50,
-      "documentedTermsCreditCeiling": 80
+      "boundedTermsRecoveryCeiling": 70
     },
     "control": {
       "exactScope": {
@@ -1176,19 +1045,20 @@
         "weightedRule": "minimum-signatures-no-independence-credit",
         "issuedCurrencyAmount": { "significantDigits": 16, "minExponent": -96, "maxExponent": 80, "maxInputLength": 256 }
       },
-      "mintPostureQuality": {
-        "none-resolved": 100,
-        "bounded-admin": 85,
-        "partially-bounded-admin": 70,
-        "unbounded-veto-guarded": 70,
-        "unbounded-governed": 60,
-        "unbounded-operationally-governed": 55,
-        "concentrated-admin": 55,
-        "collateral-gated": 50,
-        "unbounded-reconciled": 55,
-        "unbounded-adverse": 25,
+      "authorityLadder": {
+        "singleSigner": 50,
+        "opaqueController": 60,
+        "quorum": 65,
+        "quorumTimelock": 70,
+        "governanceTimelock": 75,
+        "immutableNoPower": 90,
         "compromised": 25,
-        "unknown": 50
+        "economicBoundCredit": 10,
+        "reconciliationCredit": 15,
+        "prudentialSupervisionCredit": 15,
+        "attestationCredit": 10,
+        "maximumAssuranceCredit": 30,
+        "maxComponentQuality": 90
       },
       "governedIssuance": {
         "minUnavoidableDelaySec": 172800,
@@ -1225,14 +1095,7 @@
           }
         }
       },
-      "mintPostureGrading": {
-        "prudentialReconciled": 80,
-        "attestationOnlyReconciled": 70,
-        "seasonedCreditPoints": 10,
-        "seasonedCreditMinMonths": 60,
-        "adverseSeasonedCreditCeiling": 39
-      },
-      "mintMergedSignals": {
+      "resolvedIncidentHistory": {
         "resolvedIncidentQualityCaps": {
           "recent": 55,
           "aging": 70,
@@ -1241,23 +1104,6 @@
         "resolvedIncidentDecayMinMonths": {
           "aging": 24,
           "dated": 48
-        },
-        "attestedKeyCustodyQuality": 45,
-        "unattestedEoaPenalty": 3,
-        "multisigQuorumAdjustment": {
-          "unknownTopology": -6,
-          "singleSigner": -12,
-          "twoSigner": -1,
-          "thresholdThreePlus": 0,
-          "thresholdFourPlusCredit": 2,
-          "majorityThresholdCredit": 2,
-          "timelockCredit": 3,
-          "minAdjustment": -12,
-          "maxAdjustment": 0
-        },
-        "modulesOrGuardsAdjustment": {
-          "noneDetectedCredit": 0,
-          "presentPenalty": 2
         }
       },
       "oracleTierQuality": {
@@ -1266,8 +1112,7 @@
         "redundant-with-failover": 90,
         "medianized-with-delay": 80,
         "standard-external": 70,
-        "single-source-or-laggy": 45,
-        "opaque-or-unknown": 45
+        "single-source-or-laggy": 45
       },
       "bridgeTierQuality": {
         "single-chain-or-native": 95,
@@ -1276,76 +1121,9 @@
         "issuer-native-lock-mint": 75,
         "external-validated-network": 65,
         "liquidity-or-intent-route": 65,
-        "external-lock-mint": 45,
-        "opaque-or-unknown": 45
+        "external-lock-mint": 45
       },
-      "materialBridgeHighShareThreshold": 0.25,
-      "boundedUnknownQuality": 45
-    },
-    "structural": {
-      "signalLimits": {
-        "unsafe-backing": {
-          "low": 84,
-          "moderate": 74,
-          "high": 59,
-          "critical": 39
-        },
-        "speculative-credit": {
-          "low": 79,
-          "moderate": 74,
-          "high": 59,
-          "critical": 39
-        },
-        "algorithmic-reflexivity": {
-          "low": 84,
-          "moderate": 74,
-          "high": 59,
-          "critical": 39
-        },
-        "centralized-mint": {
-          "low": 83,
-          "moderate": 74,
-          "high": 59,
-          "critical": 39
-        },
-        "unreviewed-upgrade": {
-          "low": null,
-          "moderate": 74,
-          "high": 59,
-          "critical": 39
-        },
-        "material-bridge": {
-          "low": null,
-          "moderate": 74,
-          "high": 59,
-          "critical": 39
-        },
-        "peripheral-bridge": {
-          "low": null,
-          "moderate": null,
-          "high": null,
-          "critical": null
-        },
-        "weak-oracle-branch": {
-          "low": null,
-          "moderate": 74,
-          "high": 59,
-          "critical": null
-        },
-        "active-control-incident": {
-          "low": 84,
-          "moderate": 74,
-          "high": 59,
-          "critical": 39
-        },
-        "critical-dependency": {
-          "low": null,
-          "moderate": 79,
-          "high": 64,
-          "critical": 49
-        }
-      },
-      "commonModeOracleLimit": 49
+      "materialBridgeHighShareThreshold": 0.25
     },
     "operationalResilience": {
       "minimumLiveHistoryMonths": 36,
@@ -1399,7 +1177,7 @@
       "collateralUpstreamUnknown": "exposure-bounded-unless-serial-claim-unestablished",
       "dependencyScc": "member-and-descendant-treatment",
       "commonModeAggregation": "failure-domain",
-      "implementationDateUnknown": "most-conservative-track-record-ceiling",
+      "implementationDateUnknown": "disclosed-no-age-ceiling",
       "navAndPegReference": "nav-in-backing-peg-reference-in-peg",
       "frozenAssets": "archive-only-no-live-recompute",
       "historyTransition": "new-model-baseline",
@@ -1468,7 +1246,6 @@
       "boundedness": "exposure-bounded",
       "permittedTreatments": [
         "pillar",
-        "ceiling",
         "diagnostic"
       ],
       "defaultTreatment": "pillar",
@@ -1584,8 +1361,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Exit routes were measured under different stress requests",
-      "auditClassification": "unresolved-methodology",
-      "ceilingRule": null
+      "auditClassification": "unresolved-methodology"
     },
     {
       "code": "incomplete-dex-route-coverage",
@@ -1603,8 +1379,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "DEX route coverage is incomplete",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "incomplete-oracle-liquidation-branch",
@@ -1621,8 +1396,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Oracle and liquidation branch is incomplete",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "insufficient-evidence",
@@ -1658,8 +1432,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Material deployment supply is not mapped to a bridge route",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "material-dependency-unavailable",
@@ -1677,8 +1450,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Material upstream dependency is unavailable",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "material-reserve-slice-unstructured",
@@ -1710,7 +1482,6 @@
       "boundedness": "exposure-bounded",
       "permittedTreatments": ["pillar"],
       "defaultTreatment": "pillar",
-      "ceilingRule": null,
       "releaseSeverity": "review-required",
       "publicLabel": "Material reserve exposure remains unknown",
       "auditClassification": "missing-data"
@@ -1730,8 +1501,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Mint control question is unresolved",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "missing-applicable-peg",
@@ -1748,8 +1518,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Applicable peg evidence is missing",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "missing-archetype",
@@ -1785,8 +1554,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Bridge profile lacks deployment routes",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "missing-bridge-routes",
@@ -1804,8 +1572,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Material bridge routes are not reviewed",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "missing-custody-profile",
@@ -1822,8 +1589,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Custody profile is missing",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "missing-implementation-date",
@@ -1836,11 +1602,8 @@
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
-      "permittedTreatments": ["ceiling", "diagnostic"],
-      "defaultTreatment": "ceiling",
-      "ceilingRule": {
-        "source": "minimum-track-record"
-      },
+      "permittedTreatments": ["diagnostic"],
+      "defaultTreatment": "diagnostic",
       "releaseSeverity": "review-required",
       "publicLabel": "Implementation date is unknown",
       "auditClassification": "missing-data"
@@ -1858,7 +1621,6 @@
       "boundedness": "globally-bounded",
       "permittedTreatments": ["pillar", "diagnostic"],
       "defaultTreatment": "pillar",
-      "ceilingRule": null,
       "releaseSeverity": "review-required",
       "publicLabel": "Latest assurance report is missing",
       "auditClassification": "missing-data"
@@ -1878,8 +1640,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Mint authority path is missing",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "missing-oracle-profile",
@@ -1901,8 +1662,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Oracle and liquidation profile is missing",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "oracle-topology-undisclosed",
@@ -1915,8 +1675,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "The issuer has not disclosed the oracle topology",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "missing-parent-score",
@@ -1953,8 +1712,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Peg input is missing",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "peg-price-unavailable-adverse-history",
@@ -1972,8 +1730,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "No usable price exists and the tracked peg record is adverse",
-      "auditClassification": "measured-structural",
-      "ceilingRule": null
+      "auditClassification": "measured-structural"
     },
     {
       "code": "peg-supply-floor-withheld",
@@ -1991,8 +1748,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Peg deviation is withheld below the $1M supply floor",
-      "auditClassification": "measured-structural",
-      "ceilingRule": null
+      "auditClassification": "measured-structural"
     },
     {
       "code": "missing-pillar",
@@ -2104,8 +1860,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Required oracle branches are missing",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "missing-reserve-composition",
@@ -2123,8 +1878,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Reserve composition is missing",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "missing-runtime-route-evidence",
@@ -2142,8 +1896,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Runtime exit-route evidence is missing",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "missing-same-notional-route",
@@ -2160,8 +1913,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Comparable exit route is missing",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "unproven-settlement-bound",
@@ -2178,8 +1930,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Redemption is an operator-batched request queue with no proven settlement bound",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "missing-upgrade-control",
@@ -2196,8 +1947,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Upgrade authority is not linked to a reviewed control",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "missing-upgradeability-review",
@@ -2214,8 +1964,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Upgradeability review is missing",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "nonmaterial-bridge-supply-unmatched",
@@ -2307,7 +2056,6 @@
       "boundedness": "globally-bounded",
       "permittedTreatments": ["pillar"],
       "defaultTreatment": "pillar",
-      "ceilingRule": null,
       "releaseSeverity": "review-required",
       "publicLabel": "Independently audited reserve composition is not current",
       "auditClassification": "missing-data"
@@ -2326,7 +2074,6 @@
       "boundedness": "globally-bounded",
       "permittedTreatments": ["pillar"],
       "defaultTreatment": "pillar",
-      "ceilingRule": null,
       "releaseSeverity": "review-required",
       "publicLabel": "Reserve review covers only part of the backing envelope",
       "auditClassification": "missing-data"
@@ -2347,8 +2094,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Bridge deployment materiality is unavailable",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "scoped-control-question",
@@ -2366,8 +2112,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "A reviewer-scoped control question is open",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "selected-bridge-route-missing",
@@ -2384,8 +2129,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Selected bridge route is missing",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "selected-bridge-route-unresolved",
@@ -2402,8 +2146,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Selected bridge route is unresolved",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "unknown-control-cap-authority",
@@ -2420,8 +2163,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Control cap authority is unknown",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "unknown-control-mint-ability",
@@ -2438,8 +2180,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Control mint ability is unknown",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "unknown-upgrade-authority",
@@ -2456,8 +2197,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Upgrade authority is unknown",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "unresolved-control-identity",
@@ -2475,8 +2215,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Critical control identity is unresolved",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "unresolved-exit-output",
@@ -2512,8 +2251,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Mint authority is unresolved",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "unresolved-oracle-branch-applicability",
@@ -2530,8 +2268,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Oracle branch applicability is unresolved",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "unsupported-same-notional-route",
@@ -2548,8 +2285,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "No comparable route is supported",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "unreviewed-dependency-relationships",
@@ -2568,8 +2304,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Dependency relationships are not reviewed",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "unreviewed-oracle-profile",
@@ -2586,8 +2321,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Oracle profile lacks review provenance",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "unreviewed-reserve-envelope",
@@ -2605,8 +2339,7 @@
       "defaultTreatment": "pillar",
       "releaseSeverity": "review-required",
       "publicLabel": "Reserve envelope is not reviewed",
-      "auditClassification": "missing-data",
-      "ceilingRule": null
+      "auditClassification": "missing-data"
     },
     {
       "code": "partial-evidence-pipeline-gap", "ownerDomain": "evidence",

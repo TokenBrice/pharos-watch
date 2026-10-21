@@ -20,8 +20,8 @@ type BoundedBackingContribution = Pick<SafetyScoreV9BackingBreakdown["components
 
 function matchesBoundedBackingComponent(card: SafetyScoreV9CardRefinementInput, item: BoundedAttributionItem): boolean {
   const backing = card.breakdowns?.backing;
-  if (backing === undefined || backing.aggregationDisposition === "excluded-a-b" ||
-      card.pillars.backing.aggregationDisposition === "excluded-a-b" ||
+  if (backing === undefined || (backing.aggregationDisposition ?? "included") !== "included" ||
+      (card.pillars.backing.aggregationDisposition ?? "included") !== "included" ||
       card.pillars.backing.score === null || backing.aggregationWeight <= 0 ||
       !card.pillars.backing.reasons.some(reason =>
         reason.code === item.code && reason.path === item.path && reason.message === item.message &&
@@ -134,22 +134,7 @@ export function refineCard(
     }
     if ("scoreAdjustments" in scoreTrace) {
       for (const [index, adjustment] of scoreTrace.scoreAdjustments.entries()) {
-        const relievedCaps = card.caps.filter(
-          (cap) =>
-            cap.source === adjustment.capRelief.source &&
-            cap.kind === adjustment.capRelief.kind,
-        );
-        if (
-          relievedCaps.length !== 1 ||
-          !numbersAgree(relievedCaps[0]!.limit, adjustment.capRelief.toLimit)
-        ) {
-          issue(ctx, ["scoreTrace", "scoreAdjustments", index, "capRelief"], "V9 score adjustment cap relief must match exactly one current card cap");
-        }
-        const unchangedCaps = card.caps.filter(
-          (cap) =>
-            cap.source !== adjustment.capRelief.source ||
-            cap.kind !== adjustment.capRelief.kind,
-        );
+        const unchangedCaps = card.caps;
         if (
           unchangedCaps.some(
             (cap) => adjustment.publishedScoreBefore > cap.limit + SCORE_TOLERANCE,
@@ -172,12 +157,13 @@ export function refineCard(
     }
     if (scoreTrace.aggregation !== null) {
       const aggregation = scoreTrace.aggregation;
-      const included = (["backing", "exit", "control"] as const).filter((pillar) => card.pillars[pillar].aggregationDisposition !== "excluded-a-b").sort();
+      const included = (["backing", "exit", "control"] as const).filter((pillar) => (card.pillars[pillar].aggregationDisposition ?? "included") === "included").sort();
       const weightSum = included.reduce((sum, pillar) => sum + V9_PILLAR_WEIGHTS[pillar], 0);
       const mean = included.reduce((sum, pillar) => sum + (card.pillars[pillar].score ?? 0) * aggregation.effectiveScoringWeights[pillar], 0);
       if (JSON.stringify(included) !== JSON.stringify(aggregation.includedPillars) ||
           included.some((pillar) => card.pillars[pillar].score === null ||
             Math.abs(aggregation.effectiveScoringWeights[pillar] - V9_PILLAR_WEIGHTS[pillar] / weightSum) > 1e-9) ||
+          aggregation.excludedPillars.some((pillar) => aggregation.effectiveScoringWeights[pillar] !== 0) ||
           !numbersAgree(mean, aggregation.supportCeiling)) {
         ctx.addIssue({ code: "custom", path: ["scoreTrace", "aggregation"], message: "Aggregation must use the included pillars and renormalized policy weights only" });
       }
@@ -310,28 +296,9 @@ export function refineCard(
       if (item.source === "track-record") {
         issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 track-record ceilings cannot authorize measured-adverse attribution");
       }
-      if (item.source === "wrapper-local") {
-        const limit = scoreTrace.wrapperParentLimit;
-        const adjustment = limit?.adjustments.find(
-          (candidate) =>
-            item.path === `wrapper-local:${candidate.factKey}` &&
-            candidate.discountPoints > 0,
-        );
-        const expectedMessage =
-          adjustment === undefined
-            ? null
-            : `Reviewed wrapper-local ${adjustment.factKey} risk contributes ` +
-              `${adjustment.discountPoints} discount points.`;
-        if (
-          card.bindingCap?.source !== "parent" ||
-          limit === null ||
-          (!limit.factsComplete &&
-            limit.localRiskDiscount < limit.fallbackDiscount) ||
-          adjustment === undefined ||
-          item.message !== expectedMessage
-        ) {
-          issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 wrapper adverse attribution must reconcile to a binding reviewed local-risk discount");
-        }
+      if (item.source === "realized-holder-loss" &&
+          (card.bindingCap?.source !== "realized-holder-loss" || !item.path.startsWith("incident:"))) {
+        issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "Holder-loss attribution requires its incident witness and binding loss cap");
       }
     }
     // An unrated card deliberately withholds the binding assertion: its score
@@ -353,14 +320,8 @@ export function refineCard(
               reason.message === item.message,
           ),
         );
-        const matchesReasonCap = reconcilableCaps.some(
-          (cap) =>
-            cap.source === "evidence" &&
-            cap.kind === `reason:${item.code}` &&
-            cap.reason === item.message,
-        );
-        if (!matchesPillarReason && !matchesReasonCap && !matchesBoundedBackingComponent(card, item)) {
-          issue(ctx, ["scoreTrace", "boundedUncertaintyAttribution", "items"], "V9 direct bounded attribution must match a low pillar reason, charged backing component, or binding reason cap");
+        if (!matchesPillarReason && !matchesBoundedBackingComponent(card, item)) {
+          issue(ctx, ["scoreTrace", "boundedUncertaintyAttribution", "items"], "Direct bounded attribution must match a low pillar reason or charged backing component");
         }
       } else if (item.source === "parent-score") {
         const parent = attributedSerialParent(card, item.path, item.message);
@@ -375,29 +336,6 @@ export function refineCard(
         ) {
           issue(ctx, ["scoreTrace", "boundedUncertaintyAttribution", "items"], "V9 parent bounded attribution requires the binding low minimum serial parent");
         }
-      } else {
-        const limit = scoreTrace.wrapperParentLimit;
-        const missingFact = limit?.missingFacts.find(
-          (candidate) =>
-            item.path === `wrapper-local:${candidate.factClass}` &&
-            item.responsibility === candidate.disposition,
-        );
-        const expectedMessage =
-          missingFact === undefined || limit === null
-            ? null
-            : `Wrapper-local ${missingFact.factClass} is ${missingFact.disposition}; ` +
-              `the ${limit.form} fallback discount bounds the unresolved local layer.`;
-        if (
-          item.code !== "bounded-mechanism-review" ||
-          card.bindingCap?.source !== "parent" ||
-          limit === null ||
-          limit.factsComplete ||
-          limit.fallbackDiscount <= limit.localRiskDiscount ||
-          missingFact === undefined ||
-          item.message !== expectedMessage
-        ) {
-          issue(ctx, ["scoreTrace", "boundedUncertaintyAttribution", "items"], "V9 wrapper bounded attribution must reconcile to a binding fallback discount");
-        }
       }
     }
     if (
@@ -407,16 +345,6 @@ export function refineCard(
       )
     ) {
       issue(ctx, ["scoreTrace", "evidenceResponsibility"], "A rated V9 card cannot retain critical unresolved facts");
-    }
-    if (
-      rawGrade === "D" &&
-      scoreTrace.adverseAttribution.items.length === 0 &&
-      scoreTrace.boundedUncertaintyAttribution.items.length === 0
-    ) {
-      issue(ctx, ["scoreTrace", "boundedUncertaintyAttribution"], "A V9 D card requires causal measured-adverse or bounded-uncertainty attribution");
-    }
-    if (rawGrade === "F" && scoreTrace.adverseAttribution.items.length === 0) {
-      issue(ctx, ["scoreTrace", "adverseAttribution"], "A V9 F card requires causal measured-adverse attribution");
     }
   }
 }

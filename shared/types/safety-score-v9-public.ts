@@ -299,9 +299,13 @@ function refineCardBase(
 ): void {
   refineV9PublicGapReferences(card, ctx);
   refineV9RatingStatusFields(card, ctx);
-  const excludedPillars = (["backing", "exit", "control"] as const).filter((pillar) => card.pillars[pillar].aggregationDisposition === "excluded-a-b").sort();
+  const excludedPillars = (["backing", "exit", "control"] as const).filter((pillar) => (card.pillars[pillar].aggregationDisposition ?? "included") !== "included").sort();
   if (JSON.stringify(excludedPillars) !== JSON.stringify(card.partialEvidence?.excludedPillars ?? [])) {
     ctx.addIssue({ code: "custom", path: ["partialEvidence"], message: "Partial evidence must reconcile excluded pillars" });
+  }
+  const hasExcludedAB = excludedPillars.some((pillar) => card.pillars[pillar].aggregationDisposition === "excluded-a-b");
+  if (hasExcludedAB !== ((card.partialEvidence?.causes.length ?? 0) > 0)) {
+    ctx.addIssue({ code: "custom", path: ["partialEvidence", "causes"], message: "Only proved A/B exclusions may carry partial-evidence causes" });
   }
   if (excludedPillars.some((pillar) => card.pillars[pillar].causeGapRefs?.some((ref) => !card.partialEvidence?.causeGapRefs.includes(ref)))) {
     ctx.addIssue({ code: "custom", path: ["partialEvidence"], message: "Excluded pillar gaps must remain visible in partial evidence" });
@@ -321,7 +325,7 @@ function refineCardBase(
   } else if (card.score !== null && card.grade !== scoreToGrade(card.score)) {
     issue(ctx, ["grade"], "V9 numeric score and grade band must agree");
   }
-  if (card.ratingStatus === "rated" && Object.values(card.pillars).filter((pillar) => pillar.aggregationDisposition !== "excluded-a-b" && pillar.score !== null).length < 2) {
+  if (card.ratingStatus === "rated" && Object.values(card.pillars).filter((pillar) => (pillar.aggregationDisposition ?? "included") === "included" && pillar.score !== null).length < 2) {
     ctx.addIssue({ code: "custom", path: ["pillars"], message: "A rated result requires at least two included pillars" });
   }
   if (

@@ -131,6 +131,8 @@ const CommonIncidentShape = {
   ),
   finding: CanonicalTextSchema,
   remediation: V9IncidentRemediationEvidenceSchema,
+  /** Source-proved loss as a percentage of the whole token holder claim. */
+  realizedHolderLossPct: z.number().finite().positive().max(100).optional(),
 };
 
 const V9ControlIncidentSchema = z
@@ -219,6 +221,9 @@ export const V9ReviewedIncidentSchema = z
     V9SecurityHistoryIncidentSchema,
   ])
   .superRefine((incident, ctx) => {
+    if (incident.domain === "security-history" && incident.realizedHolderLossPct !== undefined) {
+      issue(ctx, ["realizedHolderLossPct"], "Informational security history cannot assert a realized holder loss");
+    }
     if (incident.scope.kind === "control" &&
         !incident.scope.controlKey.startsWith(`mint-meta:${incident.assetId}:`) &&
         !incident.scope.controlKey.startsWith(`bridge-meta:${incident.assetId}:`)) {
@@ -308,3 +313,15 @@ export const V9AuthoredIncidentRegistryEnvelopeSchema = V9ReviewedIncidentRegist
   searchedSurfaceObservations: z.array(z.object({ id: CanonicalKeySchema, value: z.unknown() }).strict()),
   negativeReviews: z.array(z.object({ assetId: CanonicalTextSchema }).passthrough()),
 });
+
+/** Pure projection of an admitted positive incident, retaining its original witness. */
+export const V9AdmittedHolderLossEventSchema = z.object({
+  incidentId: CanonicalKeySchema,
+  assetId: CanonicalKeySchema,
+  scope: V9IncidentScopeSchema,
+  occurredAt: StrictIsoDateSchema,
+  realizedHolderLossPct: z.number().finite().positive().max(100),
+  primarySources: z.array(V9IncidentSourceSchema).min(1),
+  finding: CanonicalTextSchema,
+}).strict();
+export type V9AdmittedHolderLossEvent = z.infer<typeof V9AdmittedHolderLossEventSchema>;

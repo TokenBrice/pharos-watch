@@ -49,7 +49,7 @@ export function findSafetyScoreV9ParentAttributionIssues(
       const upstream = cardsById.get(dependency.upstreamAssetId);
       if (!upstream) continue;
       const backing = upstream.pillars.backing;
-      const status = backing.aggregationDisposition === "excluded-a-b" ? "pipeline-gap"
+      const status = (backing.aggregationDisposition ?? "included") !== "included" ? "pipeline-gap"
         : backing.score !== null ? "rated" : "not-rated";
       if (dependency.ratingStatus !== status) {
         issues.push({ cardId: card.id, message: `Parent Backing availability does not reconcile to ${dependency.upstreamAssetId}` });
