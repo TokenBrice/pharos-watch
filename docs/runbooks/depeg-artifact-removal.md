@@ -76,6 +76,11 @@ retained; only its verdict, public JSON verdict, and update clock change.
 4. Retain the successful readback: exactly one erratum, its authorization,
    consumption and trigger-written use; `audit_verdict` and public
    `auditVerdict` both `disputed`; sealed `row_hash` equals `row_hash_before`.
+   The import receipt can contain Wrangler progress lines even with `--json`;
+   the CLI extracts its JSON envelope, then performs a separate `--json` SELECT
+   and prints the erratum, prediction, authorization, consumption/use clocks and
+   unchanged sealed hash. A receipt-parsing error after import does **not** mean
+   rollback: reconcile the printed readback query before considering a retry.
    Re-read raw event and sealed prediction against the reviewed pre-repair
    packet. The resolver exposes the original prediction with its invalidation
    overlay after its normal publication refresh. Current PegScore excludes

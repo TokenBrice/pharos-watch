@@ -89,6 +89,13 @@ export function buildInputCorruptionPlan(input: InputCorruptionPlanInput) {
     statements, readbackSql };
 }
 
+/** Wrangler file imports emit progress before their JSON, unlike SELECTs. */
+export function decodeInputCorruptionImportReceipt(stdout: string) {
+  const jsonStart = stdout.search(/^[ \t]*[\[{]/m);
+  if (jsonStart < 0) throw new Error("D1 import receipt JSON unavailable; reconcile ledgers before any retry");
+  return decodeD1Envelopes(JSON.parse(stdout.slice(jsonStart)));
+}
+
 export async function main(argv: string[]): Promise<void> {
   const args = parseInputCorruptionArgs(argv);
   if (args.help) {
@@ -105,7 +112,7 @@ export async function main(argv: string[]): Promise<void> {
   const db = createRemoteD1Client("stablecoin-db");
   if (!db.executeStatementsRaw) throw new Error("Unchunked atomic D1 import unavailable");
   // Never split the erratum, grant, consumption and invalidation across imports.
-  decodeD1Envelopes(JSON.parse(db.executeStatementsRaw(plan.statements, SCRIPT)));
+  decodeInputCorruptionImportReceipt(db.executeStatementsRaw(plan.statements, SCRIPT));
   const rows = db.query<{ row_hash: string; row_hash_before: string; audit_verdict: string; public_audit_verdict: string }>(plan.readbackSql);
   if (rows.length !== 1 || rows[0].row_hash !== rows[0].row_hash_before || rows[0].audit_verdict !== "disputed" || rows[0].public_audit_verdict !== "disputed") {
     throw new Error("Repair readback failed; reconcile append-only ledgers before any retry");
