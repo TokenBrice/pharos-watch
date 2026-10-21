@@ -354,7 +354,7 @@ DDL authority is the active [Worker migration stream](../worker/migrations/MANIF
 | `telegram_chat_delivery_diagnostics` | Successful alert vs reply times and failure class — Outbound / State |
 | `telegram_digest_outbox` | Exact edition/photo/text transport — Digest. Kept by design: the digest does not use `telegram_jobs` |
 
-The retired legacy tables (pending queue, target plans, source events, dead letters, freeze cohorts, recap, transport circuit, delivery pauses, pending disambiguation, webhook operation mutations and adoption funnel) are no longer read or written and are dropped by the Telegram legacy-table cleanup migration.
+The retired legacy tables (pending queue, target plans, source events, dead letters, freeze cohorts, recap, transport circuit, delivery pauses, pending disambiguation, webhook operation mutations and adoption funnel) were dropped from production D1 by the operated Telegram legacy-table cleanup (see [completed destructive cleanup](../worker/migrations/MANIFEST.md#completed-destructive-cleanup-operations)). Their DDL stays in `0000_baseline.sql` and `EXPECTED_SCHEMA.txt` until the next baseline squash, so a fresh replay still creates them empty.
 
 Indexes are part of that migration authority; this map does not duplicate index DDL.
 
