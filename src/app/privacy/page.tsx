@@ -172,13 +172,18 @@ export default function PrivacyPage() {
             For the PharosWatchBot Mini App, the signed Telegram{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">initData</code> body is never persisted. It is
             validated request-locally through Telegram&apos;s HMAC signature and freshness window. Mutations use a
-            5-minute auth window plus a bounded per-user Pharos edit budget, while read-only session and watchlist
-            portability requests accept a Telegram-signed launch up to 24 hours old so an open panel stays usable
-            across the day. Exported watchlist tokens and pasted import tokens are returned or decoded request-locally
-            and are not stored as token blobs. The embedded route does not load
-            Google Analytics or report Web Vitals. After signed authentication succeeds, the Worker records only
-            low-cardinality daily counters for Mini App adoption, operation outcomes, and error categories; those
-            aggregate rows contain no chat ID.
+            5-minute auth window plus a bounded per-user Pharos edit budget, while read-only session and bulk-watchlist
+            preview requests accept a Telegram-signed launch up to 24 hours old so an open panel stays usable across
+            the day. The embedded route does not load Google Analytics or report Web Vitals. After signed
+            authentication succeeds, the Worker records only low-cardinality daily counters for Mini App operation
+            outcomes and error categories; those aggregate rows contain no chat ID.
+          </p>
+          <p>
+            PharosWatchBot no longer records sign-up funnel telemetry: landing-page Telegram links are plain links
+            with no click counter, and bot starts, setup completions, first follows, and first Mini App edits are no
+            longer counted by campaign. Previously collected funnel rows are aggregate counts without chat IDs and
+            are scheduled for deletion; the short-lived per-client click-quota rows, keyed by a salted IP hash, expire
+            within two days.
           </p>
           <p>
             The Telegram Worker also emits sampled operational logs to Cloudflare Workers Logs for reliability and

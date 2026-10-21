@@ -25,20 +25,28 @@ type TelegramIngressTelemetryReason =
   | "handler_rate_limited";
 
 type TelegramIngressRateLimitBinding =
-  | "TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT"
   | "TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT"
   | "TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT";
 
+interface TelegramIngressRateLimit {
+  binding: TelegramIngressRateLimitBinding;
+  sourceBinding: "TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT" | "TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT";
+  rateLimit: number;
+  periodSec: 60;
+  rateLimitKey: string;
+}
+
+/**
+ * The webhook has no pre-auth limiter: its secret header is checked by the
+ * handler without D1 before any work, so unauthenticated traffic can never
+ * exhaust a budget shared with Telegram's own deliveries.
+ */
 export interface TelegramIngressPolicy {
   route: TelegramIngressRoute;
   method: "POST";
   path: string;
-  binding: TelegramIngressRateLimitBinding;
-  sourceBinding: "TELEGRAM_WEBHOOK_SOURCE_RATE_LIMIT" | "TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT" | "TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT";
-  rateLimit: number;
-  periodSec: 60;
   bodyLimitBytes: number;
-  rateLimitKey: string;
+  rateLimit: TelegramIngressRateLimit | null;
 }
 
 export const TELEGRAM_INGRESS_POLICIES = {
@@ -46,34 +54,34 @@ export const TELEGRAM_INGRESS_POLICIES = {
     route: "webhook",
     method: "POST",
     path: API_PATHS.telegramWebhook(),
-    binding: "TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT",
-    sourceBinding: "TELEGRAM_WEBHOOK_SOURCE_RATE_LIMIT",
-    rateLimit: 2_400,
-    periodSec: 60,
     bodyLimitBytes: 128 * 1024,
-    rateLimitKey: "telegram-webhook",
+    rateLimit: null,
   },
   mini_app_session: {
     route: "mini_app_session",
     method: "POST",
     path: API_PATHS.telegramMiniAppSession(),
-    binding: "TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT",
-    sourceBinding: "TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT",
-    rateLimit: 1_600,
-    periodSec: 60,
     bodyLimitBytes: 16 * 1024,
-    rateLimitKey: "telegram-mini-app-session",
+    rateLimit: {
+      binding: "TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT",
+      sourceBinding: "TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT",
+      rateLimit: 1_600,
+      periodSec: 60,
+      rateLimitKey: "telegram-mini-app-session",
+    },
   },
   mini_app_mutation: {
     route: "mini_app_mutation",
     method: "POST",
     path: API_PATHS.telegramMiniAppMutation(),
-    binding: "TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT",
-    sourceBinding: "TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT",
-    rateLimit: 9_600,
-    periodSec: 60,
     bodyLimitBytes: 16 * 1024,
-    rateLimitKey: "telegram-mini-app-mutation",
+    rateLimit: {
+      binding: "TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT",
+      sourceBinding: "TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT",
+      rateLimit: 9_600,
+      periodSec: 60,
+      rateLimitKey: "telegram-mini-app-mutation",
+    },
   },
 } as const satisfies Record<TelegramIngressRoute, TelegramIngressPolicy>;
 
@@ -87,10 +95,8 @@ export interface TelegramIngressGateResult {
 }
 
 export interface TelegramIngressAbuseEnv {
-  TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT: RateLimit;
   TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT: RateLimit;
   TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT: RateLimit;
-  TELEGRAM_WEBHOOK_SOURCE_RATE_LIMIT: RateLimit;
   TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT: RateLimit;
   TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT: RateLimit;
   SITE_API_SHARED_SECRET?: string;
@@ -101,23 +107,10 @@ function resolvePolicy(request: Request, url: URL): TelegramIngressPolicy | null
   return POLICIES_BY_PATH.get(url.pathname) ?? null;
 }
 
-function resolveRateLimitKey(policy: TelegramIngressPolicy, url: URL): string {
+function resolveRateLimitKey(rateLimit: TelegramIngressRateLimit, url: URL): string {
   return url.hostname === API_HOSTNAME
-    ? policy.rateLimitKey
-    : `${policy.rateLimitKey}:noncanonical-host`;
-}
-
-function resolveRateLimiter(
-  env: TelegramIngressAbuseEnv,
-  binding: TelegramIngressRateLimitBinding,
-): RateLimit | undefined {
-  if (binding === "TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT") {
-    return env.TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT;
-  }
-  if (binding === "TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT") {
-    return env.TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT;
-  }
-  return env.TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT;
+    ? rateLimit.rateLimitKey
+    : `${rateLimit.rateLimitKey}:noncanonical-host`;
 }
 
 function logRejection(args: {
@@ -207,9 +200,57 @@ function rebuildBoundedRequest(request: Request, body: Uint8Array): Request {
   });
 }
 
+async function applyPreAuthRateLimit(
+  request: Request,
+  url: URL,
+  env: TelegramIngressAbuseEnv,
+  policy: TelegramIngressPolicy,
+  rateLimit: TelegramIngressRateLimit,
+): Promise<Response | null> {
+  const limiter = env[rateLimit.binding];
+  const sourceLimiter = env[rateLimit.sourceBinding];
+  const hashSecret = env.SITE_API_SHARED_SECRET?.trim();
+  if (!limiter || !sourceLimiter || !hashSecret) {
+    logRejection({
+      policy,
+      stage: "rate_limit",
+      status: 503,
+      reason: "rate_limit_unavailable",
+    });
+    return rejectionResponse(503, "Telegram ingress temporarily unavailable", "temporarily-unavailable", 1);
+  }
+
+  let allowed: boolean;
+  try {
+    const routeKey = resolveRateLimitKey(rateLimit, url);
+    const sourceHash = await hashClientIp(request.headers.get("CF-Connecting-IP") ?? "unknown", hashSecret);
+    allowed = (await sourceLimiter.limit({ key: `${routeKey}:source:${sourceHash}` })).success
+      && (await limiter.limit({ key: routeKey })).success;
+  } catch {
+    logRejection({
+      policy,
+      stage: "rate_limit",
+      status: 503,
+      reason: "rate_limit_unavailable",
+    });
+    return rejectionResponse(503, "Telegram ingress temporarily unavailable", "temporarily-unavailable", 1);
+  }
+  if (!allowed) {
+    logRejection({
+      policy,
+      stage: "rate_limit",
+      status: 429,
+      reason: "preauth_rate_limited",
+    });
+    return rejectionResponse(429, "Telegram ingress rate limited", "rate-limited", rateLimit.periodSec);
+  }
+  return null;
+}
+
 /**
- * Applies the fleet-backed pre-auth budget and a hard body cap before any
- * Telegram secret/HMAC validation, D1 access, or request attribution runs.
+ * Applies a hard body cap to every Telegram ingress route, and the fleet-backed
+ * pre-auth budget to the Mini App routes, before any Telegram secret/HMAC
+ * validation, D1 access, or request attribution runs.
  */
 export async function evaluateTelegramIngressAbuseGate(
   request: Request,
@@ -245,51 +286,9 @@ export async function evaluateTelegramIngressAbuseGate(
     };
   }
 
-  const limiter = resolveRateLimiter(env, policy.binding);
-  const sourceLimiter = env[policy.sourceBinding];
-  const hashSecret = env.SITE_API_SHARED_SECRET?.trim();
-  if (!limiter || !sourceLimiter || !hashSecret) {
-    logRejection({
-      policy,
-      stage: "rate_limit",
-      status: 503,
-      reason: "rate_limit_unavailable",
-    });
-    return {
-      request,
-      response: rejectionResponse(503, "Telegram ingress temporarily unavailable", "temporarily-unavailable", 1),
-    };
-  }
-
-  let allowed: boolean;
-  try {
-    const routeKey = resolveRateLimitKey(policy, url);
-    const sourceHash = await hashClientIp(request.headers.get("CF-Connecting-IP") ?? "unknown", hashSecret);
-    allowed = (await sourceLimiter.limit({ key: `${routeKey}:source:${sourceHash}` })).success
-      && (await limiter.limit({ key: routeKey })).success;
-  } catch {
-    logRejection({
-      policy,
-      stage: "rate_limit",
-      status: 503,
-      reason: "rate_limit_unavailable",
-    });
-    return {
-      request,
-      response: rejectionResponse(503, "Telegram ingress temporarily unavailable", "temporarily-unavailable", 1),
-    };
-  }
-  if (!allowed) {
-    logRejection({
-      policy,
-      stage: "rate_limit",
-      status: 429,
-      reason: "preauth_rate_limited",
-    });
-    return {
-      request,
-      response: rejectionResponse(429, "Telegram ingress rate limited", "rate-limited", policy.periodSec),
-    };
+  if (policy.rateLimit) {
+    const rejected = await applyPreAuthRateLimit(request, url, env, policy, policy.rateLimit);
+    if (rejected) return { request, response: rejected };
   }
 
   const body = await readBoundedBody(request, policy);

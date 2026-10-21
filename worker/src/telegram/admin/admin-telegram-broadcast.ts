@@ -32,7 +32,7 @@ import {
   recordTelegramTransportOutcomes,
 } from "../delivery/transport-control";
 
-const SCOPES = ["all", "deliverable-watchers", "global-subscribers"] as const;
+const SCOPES = ["all", "deliverable-watchers", "global-subscribers", "retired-launch-opt-ins"] as const;
 type BroadcastScope = TelegramBroadcastScope;
 
 const SAMPLE_SIZE = 5;

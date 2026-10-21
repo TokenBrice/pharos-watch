@@ -89,14 +89,6 @@ const ENV_BINDING_DEFINITIONS = [
     runtimes: { worker: { status: "optional" } },
   },
   {
-    key: "TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT",
-    valueType: "RateLimit",
-    description: "Cloudflare pre-authentication rate limiter for Telegram webhook requests.",
-    runtimes: {
-      worker: { status: "required" },
-    },
-  },
-  {
     key: "TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT",
     valueType: "RateLimit",
     description: "Cloudflare pre-authentication rate limiter for Telegram Mini App session requests.",
@@ -111,12 +103,6 @@ const ENV_BINDING_DEFINITIONS = [
     runtimes: {
       worker: { status: "required" },
     },
-  },
-  {
-    key: "TELEGRAM_WEBHOOK_SOURCE_RATE_LIMIT",
-    valueType: "RateLimit",
-    description: "Cloudflare per-source pre-authentication rate limiter for Telegram webhook requests.",
-    runtimes: { worker: { status: "required" } },
   },
   {
     key: "TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT",
@@ -706,16 +692,6 @@ const ENV_BINDING_DEFINITIONS = [
     key: "SELECTOR_SNAPSHOT_IP_HASH_SECRET",
     valueType: "string",
     description: "Dedicated HMAC pepper for selector-snapshot IP rate-limit and daily-quota keys; raw IP addresses are never stored.",
-    docs: { includeInOperatorOriginAccess: true },
-    example: { section: "pagesSiteDataRequired", value: "" },
-    runtimes: {
-      pagesSiteData: { status: "required" },
-    },
-  },
-  {
-    key: "TELEGRAM_ADOPTION_IP_HASH_SECRET",
-    valueType: "string",
-    description: "Dedicated HMAC pepper for PharosWatchBot CTA telemetry per-client minute quotas; raw IP addresses are never stored.",
     docs: { includeInOperatorOriginAccess: true },
     example: { section: "pagesSiteDataRequired", value: "" },
     runtimes: {

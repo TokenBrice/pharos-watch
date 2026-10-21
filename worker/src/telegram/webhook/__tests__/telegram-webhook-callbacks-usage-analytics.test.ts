@@ -98,60 +98,27 @@ describe("handleCallbackQuery", () => {
 describe("handleCallbackQuery discoverability", () => {
   beforeEach(resetCallbackTest);
 
-  it("why:<id> sends the safety Why explainer and acks", async () => {
+  it.each(["why", "coverage"])("retired %s:<id> buttons send the status card without writes", async (action) => {
     const db = mockTelegramD1([]);
-    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("why:usdc-circle", { id: "cb-why", from: { id: 999, username: "alice" }, message: { chat: { id: 42, type: "private" }, message_id: 1 } }));
-
-    const sendBody = firstSentMessageBody();
-    expect(sendBody.text).toContain("usdc-circle Safety Score");
-    const whyButtons = (sendBody.reply_markup?.inline_keyboard ?? []).flat();
-    expect(
-      whyButtons.some(
-        (button: { text?: string; web_app?: { url?: string } }) =>
-          button.text === "Open in app" && button.web_app?.url?.includes("startapp=why_usdc-circle"),
-      ),
-    ).toBe(true);
-    expect(firstAckBody().text).toBe("Why sent.");
-    expect(db.getHistory().some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
-  });
-
-  it("coverage:<id> sends a coverage card with no subscription writes", async () => {
-    const db = mockTelegramD1([]);
-    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("coverage:usdc-circle", { id: "cb-cov", from: { id: 999, username: "alice" }, message: { chat: { id: 42, type: "private" }, message_id: 1 } }));
+    await handleCallbackQuery(db, "fake-token", makeCallbackQuery(`${action}:usdc-circle`, { id: `cb-${action}`, from: { id: 999, username: "alice" }, message: { chat: { id: 42, type: "private" }, message_id: 1 } }));
 
     const body = firstSentMessageBody();
-    expect(body.text).toContain("USDC coverage");
-    const coverageButtons = (body.reply_markup?.inline_keyboard ?? []).flat();
-    expect(
-      coverageButtons.some(
-        (button: { text?: string; web_app?: { url?: string } }) =>
-          button.text === "Open in app" && button.web_app?.url?.includes("startapp=coverage_usdc-circle"),
-      ),
-    ).toBe(true);
-    expect(firstAckBody().text).toBe("Coverage sent.");
+    expect(body.text).toContain("<b>USDC</b>");
+    const buttons = (body.reply_markup?.inline_keyboard ?? []).flat();
+    expect(buttons).toEqual(expect.arrayContaining([
+      expect.objectContaining({ text: "Follow USDC", callback_data: "quicksub:usdc-circle" }),
+    ]));
+    expect(buttons.some((button: { text?: string; web_app?: { url?: string } }) =>
+      button.text === "Manage USDC" && button.web_app?.url?.includes("startapp=coin_usdc-circle"))).toBe(true);
+    expect(firstAckBody().text).toBe("Status sent.");
     expect(db.getHistory().some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
   });
 
-  it("why and coverage callbacks keep discovery buttons in group chats without mini-app buttons", async () => {
-    const whyDb = mockTelegramD1([]);
-    await handleCallbackQuery(whyDb, "fake-token", makeCallbackQuery("why:usdc-circle", { id: "cb-why-group", from: { id: 999, username: "alice" }, message: { chat: { id: -42, type: "group" }, message_id: 1 } }));
-    const whyButtons = (firstSentMessageBody().reply_markup?.inline_keyboard ?? []).flat();
-    expect(whyButtons).toEqual(expect.arrayContaining([
-      expect.objectContaining({ text: "Why?", callback_data: "why:usdc-circle" }),
-      expect.objectContaining({ text: "Coverage", callback_data: "coverage:usdc-circle" }),
-      expect.objectContaining({ text: "Subscribe", callback_data: "quicksub:usdc-circle" }),
-    ]));
-    expect(whyButtons.some((button) => button.web_app)).toBe(false);
-
-    const coverageDb = mockTelegramD1([]);
-    await handleCallbackQuery(coverageDb, "fake-token", makeCallbackQuery("coverage:usdc-circle", { id: "cb-cov-group", from: { id: 999, username: "alice" }, message: { chat: { id: -42, type: "group" }, message_id: 1 } }));
-    const coverageButtons = (lastSentMessageBody().reply_markup?.inline_keyboard ?? []).flat();
-    expect(coverageButtons).toEqual(expect.arrayContaining([
-      expect.objectContaining({ text: "Why?", callback_data: "why:usdc-circle" }),
-      expect.objectContaining({ text: "Coverage", callback_data: "coverage:usdc-circle" }),
-      expect.objectContaining({ text: "Subscribe", callback_data: "quicksub:usdc-circle" }),
-    ]));
-    expect(coverageButtons.some((button) => button.web_app)).toBe(false);
+  it("status cards in group chats keep Follow and drop Mini App buttons", async () => {
+    const db = mockTelegramD1([]);
+    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("status:usdc-circle", { id: "cb-status-group", from: { id: 999, username: "alice" }, message: { chat: { id: -42, type: "group" }, message_id: 1 } }));
+    const buttons = (firstSentMessageBody().reply_markup?.inline_keyboard ?? []).flat();
+    expect(buttons).toEqual([expect.objectContaining({ text: "Follow USDC", callback_data: "quicksub:usdc-circle" })]);
   });
 
   it("quicksub:<id> in a group refuses non-admin without writing to D1", async () => {
@@ -205,8 +172,8 @@ describe("handleCallbackQuery discoverability", () => {
 
   it.each([
     ["status", "Status sent."],
-    ["why", "Why sent."],
-    ["coverage", "Coverage sent."],
+    ["why", "Status sent."],
+    ["coverage", "Status sent."],
     ["quicksub", "Subscribed to DEWS + depeg for USDC."],
   ])("%s:<id> still acks when sendAuditedTelegramReply throws (P1.16)", async (action, acknowledgement) => {
     const db = mockTelegramD1(

@@ -29,7 +29,7 @@ Admin broadcasts are lower priority than risk alerts. They enqueue into `telegra
    In the operator broadcast panel, live send stays disabled until a successful preview covers the exact current `messageHtml` and audience. Editing either requires a new preview. If a preview response is lost, **Retry same intent** replays the original request body and idempotency key; a successful retry confirms only that original draft, not edits made while its outcome was unknown. Reconcile that intent, then use **Preview (dry run)** to review the edited draft before sending live.
 
 3. **Estimate drain time.** Read the dry-run `targetMessageCount` and `deliveryEstimate`. Proceed only when `hasMaterialTtlReserve` is true: estimated fleet drain must leave at least the hard 15-minute reserve inside the 45-minute TTL. Dry runs return the estimate with `200`; live requests return `409` when the reserve is unavailable. No acknowledgement flag bypasses it.
-4. **Choose the smallest scope.** Prefer `deliverable-watchers`. Use `global-subscribers` only for global-alert policy notices, and `all` only when intentionally targeting every subscriber row.
+4. **Choose the smallest scope.** Prefer `deliverable-watchers`. Use `global-subscribers` only for global-alert policy notices, and `all` only when intentionally targeting every subscriber row. Use `retired-launch-opt-ins` only for the one-time launch-retirement notice (`TELEGRAM_LAUNCH_RETIREMENT_NOTICE_HTML`).
 5. **Avoid market-event windows.** Do not broadcast during an active depeg, DEWS burst, safety-grade publication issue, or Telegram 429 storm.
 
 ## Live Send

@@ -3,7 +3,7 @@ import { escapeHtml } from "../delivery/telegram";
 import { deleteCache, getCache, setCacheIfAbsent } from "../../lib/db-cache";
 import { logTelegramEvent } from "../common/log";
 import { isChannelChatType, isGroupChatType } from "./telegram-webhook-auth";
-import { forgetSubscriber } from "../store/telegram-webhook-store";
+import { forgetSubscriber } from "../store/subscriber-lifecycle";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
 import { TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC } from "../common/constants";
 
@@ -55,11 +55,9 @@ async function clearGroupLifecycleCache(db: D1Database, chatId: string): Promise
 
 function buildGroupWelcomeMessage(adderMention: string): string {
   return [
-    `<b>Thanks for adding Pharos Watch</b>${adderMention ? `, ${adderMention}` : ""}.`,
-    "",
-    "I send stablecoin alerts into this chat: DEWS stress, depeg events, safety grade changes, and launches.",
-    "",
-    `Group admins can run <code>/subscribe@${TELEGRAM_BOT_USERNAME} dews usd-top25</code> here. For your own watchlist and quiet hours, message me in DM.`,
+    `<b>Pharos Watch is in this group</b>${adderMention ? `. Thanks, ${adderMention}` : ""}.`,
+    `Admins can turn on alerts here, e.g. /subscribe@${TELEGRAM_BOT_USERNAME} usd-top25`,
+    "For your own alerts and quiet hours, message me privately.",
   ].join("\n");
 }
 
@@ -67,10 +65,10 @@ function buildGroupWelcomeReplyMarkup(): {
   inline_keyboard: { text: string; url: string }[][];
 } {
   return {
-    inline_keyboard: [
-      [{ text: "Read the docs →", url: `https://pharos.watch/${TELEGRAM_BOT_USERNAME.toLowerCase()}/` }],
-      [{ text: "Personal alerts in DM →", url: `${TELEGRAM_BOT_URL}?start=setup` }],
-    ],
+    inline_keyboard: [[
+      { text: "Personal alerts", url: `${TELEGRAM_BOT_URL}?start=setup` },
+      { text: "How it works", url: `https://pharos.watch/${TELEGRAM_BOT_USERNAME.toLowerCase()}/` },
+    ]],
   };
 }
 

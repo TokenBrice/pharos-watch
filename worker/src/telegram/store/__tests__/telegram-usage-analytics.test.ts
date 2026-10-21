@@ -232,10 +232,6 @@ describe("telegram usage analytics", () => {
       // Empty cached history triggers a heavy-section rebuild; keep every other read available.
       { match: "FROM telegram_subscriptions", rows: [] },
       { match: "FROM telegram_watcher_lifecycle_daily", rows: [] },
-      { match: "FROM telegram_usage_daily", rows: [] },
-      { match: "FROM telegram_adoption_daily", rows: [] },
-      { match: "FROM telegram_adoption_retention_daily", rows: [] },
-      { match: "INSERT INTO telegram_adoption_retention_daily", rows: [] },
       { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
     ]);
 

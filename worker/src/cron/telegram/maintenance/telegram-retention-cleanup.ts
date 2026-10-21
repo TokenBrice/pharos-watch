@@ -12,10 +12,6 @@ import {
   type TelegramProcessedUpdateBacklog,
 } from "../../../telegram/store/processed-updates";
 import { reconcileExpiredTelegramAlertJobTargets } from "../delivery/telegram-alert-target-status";
-import {
-  TELEGRAM_ADOPTION_SESSION_CACHE_PREFIX,
-  TELEGRAM_ADOPTION_SESSION_TTL_SEC,
-} from "../../../telegram/adoption/adoption-analytics";
 
 const DAY_SEC = 24 * 60 * 60;
 const {
@@ -29,6 +25,9 @@ const {
   reEngagementWarningCache: RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC,
 } = TELEGRAM_RETENTION_WINDOWS;
 const MINI_APP_MUTATION_BURST_CACHE_PREFIX = "telegram:mini-app-mutation-burst:";
+// Retired adoption writer; prune residual session keys until the PR E schema cleanup.
+const MINI_APP_ADOPTION_SESSION_CACHE_PREFIX = "telegram:adoption-mini-app-session:";
+const MINI_APP_ADOPTION_SESSION_TTL_SEC = 30 * 60;
 const HIGH_VOLUME_RETENTION_DELETE_LIMIT = RETENTION_DELETE_RUN_LIMIT;
 export const TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT = 1_000;
 const TELEGRAM_PROCESSED_UPDATE_PRUNE_TIME_BUDGET_MS = 2_000;
@@ -47,7 +46,7 @@ const RETENTION_DAYS = {
   adoptionClientQuota: 2,
   chatDiagnostics: CHAT_DIAGNOSTICS_RETENTION_SEC / DAY_SEC,
   shortLivedChatCache: SHORT_LIVED_CHAT_CACHE_RETENTION_SEC / DAY_SEC,
-  miniAppAdoptionSessionCache: TELEGRAM_ADOPTION_SESSION_TTL_SEC / DAY_SEC,
+  miniAppAdoptionSessionCache: MINI_APP_ADOPTION_SESSION_TTL_SEC / DAY_SEC,
   reEngagementWarningCache: RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC / DAY_SEC,
   processedUpdates: 7,
 } as const;
@@ -756,8 +755,8 @@ ${indentSqlFragment(SOURCE_EVENT_CHILD_ABSENCE_SQL, 13)}
     },
     {
       name: "miniAppAdoptionSessionCache",
-      cachePrefix: TELEGRAM_ADOPTION_SESSION_CACHE_PREFIX,
-      cutoff: nowSec - TELEGRAM_ADOPTION_SESSION_TTL_SEC,
+      cachePrefix: MINI_APP_ADOPTION_SESSION_CACHE_PREFIX,
+      cutoff: nowSec - MINI_APP_ADOPTION_SESSION_TTL_SEC,
     },
     {
       name: "commandFloodCache",

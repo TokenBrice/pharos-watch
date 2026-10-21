@@ -4,7 +4,11 @@ import {
   TELEGRAM_ALERT_PERSISTENCE,
 } from "@shared/lib/telegram-alert-families";
 
-export type TelegramBroadcastScope = "all" | "deliverable-watchers" | "global-subscribers";
+export type TelegramBroadcastScope =
+  | "all"
+  | "deliverable-watchers"
+  | "global-subscribers"
+  | "retired-launch-opt-ins";
 
 export async function loadBroadcastTargetChatIds(
   db: D1Database,
@@ -17,7 +21,19 @@ export async function loadBroadcastTargetChatIds(
     .map((spec) => `${spec.globalColumn} = 1`)
     .join(" OR ");
 
-  const sql = scope === "global-subscribers"
+  // One-time retirement notice audience: chats that still carry a launch
+  // opt-in (global or per-coin). The retired columns are read only here.
+  const sql = scope === "retired-launch-opt-ins"
+    ? `SELECT s.chat_id
+         FROM telegram_subscribers s
+        WHERE s.${TELEGRAM_ALERT_PERSISTENCE.launch.globalColumn} = 1
+           OR EXISTS (
+             SELECT 1 FROM telegram_subscriptions
+              WHERE chat_id = s.chat_id
+                AND ${TELEGRAM_ALERT_PERSISTENCE.launch.subscriptionColumn} = 1
+           )
+        ORDER BY s.chat_id`
+    : scope === "global-subscribers"
     ? `SELECT chat_id FROM telegram_subscribers
         WHERE ${globalSubscriberPredicate}
         ORDER BY chat_id`

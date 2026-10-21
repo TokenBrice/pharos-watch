@@ -32,7 +32,6 @@ import {
 import { BotSection } from "./bot-section";
 import { CommandManual } from "./command-manual";
 import { MiniAppScreenshotCarousel } from "./mini-app-screenshot-carousel";
-import { TelegramAdoptionLink } from "./telegram-adoption-link";
 import { MINI_APP_FEATURES, MINI_APP_SCREENSHOTS, TELEGRAM_ACTIONS } from "./telegram-content";
 
 const PROSE_LINK_CLASS =
@@ -57,17 +56,17 @@ export function PrimaryActions() {
   return (
     <div id="bot" className="flex scroll-mt-24 flex-wrap items-center gap-x-3 gap-y-3 pt-2">
       <Button asChild size="lg" className="gap-2">
-        <TelegramAdoptionLink href={SETUP_DEEP_LINK} placement="hero" target="_blank" rel="noopener noreferrer">
+        <a href={SETUP_DEEP_LINK} target="_blank" rel="noopener noreferrer">
           <Send className="h-4 w-4" aria-hidden="true" />
           Open in Telegram
           <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-        </TelegramAdoptionLink>
+        </a>
       </Button>
       <Button asChild size="lg" variant="outline" className="gap-2">
-        <TelegramAdoptionLink href={MINI_APP_HOME_DEEP_LINK} placement="miniapp_home" target="_blank" rel="noopener noreferrer">
+        <a href={MINI_APP_HOME_DEEP_LINK} target="_blank" rel="noopener noreferrer">
           <Smartphone className="h-4 w-4" aria-hidden="true" />
           Open the Mini App
-        </TelegramAdoptionLink>
+        </a>
       </Button>
       <p className="pharos-meta">Free. No sign-up beyond Telegram. Works in private chats and groups.</p>
     </div>
@@ -115,16 +114,16 @@ export function GettingStarted() {
         </div>
         <div className="flex flex-wrap gap-2.5">
           <Button asChild className="gap-2">
-            <TelegramAdoptionLink href={RECOMMENDED_SETUP_DEEP_LINK} placement="setup" target="_blank" rel="noopener noreferrer">
+            <a href={RECOMMENDED_SETUP_DEEP_LINK} target="_blank" rel="noopener noreferrer">
               Use recommended setup
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </TelegramAdoptionLink>
+            </a>
           </Button>
           <Button asChild variant="outline" className="gap-2">
-            <TelegramAdoptionLink href={MINI_APP_SETUP_DEEP_LINK} placement="miniapp_setup" target="_blank" rel="noopener noreferrer">
+            <a href={MINI_APP_SETUP_DEEP_LINK} target="_blank" rel="noopener noreferrer">
               <Smartphone className="h-4 w-4" aria-hidden="true" />
               Set up in the Mini App
-            </TelegramAdoptionLink>
+            </a>
           </Button>
         </div>
       </div>
@@ -219,21 +218,20 @@ export function MiniAppShowcase() {
           </ul>
           <div className="mt-6 flex flex-wrap gap-2.5">
             <Button asChild className="gap-2">
-              <TelegramAdoptionLink href={MINI_APP_HOME_DEEP_LINK} placement="miniapp_home" target="_blank" rel="noopener noreferrer">
+              <a href={MINI_APP_HOME_DEEP_LINK} target="_blank" rel="noopener noreferrer">
                 <Smartphone className="h-4 w-4" aria-hidden="true" />
                 Open the Mini App
-              </TelegramAdoptionLink>
+              </a>
             </Button>
             <Button asChild variant="outline" className="gap-2">
-              <TelegramAdoptionLink
+              <a
                 href={MINI_APP_WATCHLIST_DEEP_LINK}
-                placement="miniapp_watchlist"
                 target="_blank"
                 rel="noopener noreferrer"
               >
                 Open watchlist
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </TelegramAdoptionLink>
+              </a>
             </Button>
           </div>
         </div>
@@ -385,11 +383,11 @@ export function FinalCta() {
         </p>
       </div>
       <Button asChild size="lg" className="w-fit gap-2">
-        <TelegramAdoptionLink href={SETUP_DEEP_LINK} placement="hero" target="_blank" rel="noopener noreferrer">
+        <a href={SETUP_DEEP_LINK} target="_blank" rel="noopener noreferrer">
           <Send className="h-4 w-4" aria-hidden="true" />
           Open in Telegram
           <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-        </TelegramAdoptionLink>
+        </a>
       </Button>
     </section>
   );

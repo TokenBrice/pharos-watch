@@ -2,14 +2,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import { D1_BATCH_SIZE } from "../../../lib/constants";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { mockTelegramD1 as mockD1 } from "../../../test-helpers/__shared/telegram";
+import { countTelegramProcessedUpdateBacklog, pruneTelegramProcessedUpdates } from "../processed-updates";
 import {
-  countTelegramProcessedUpdateBacklog,
   persistPendingConfirmBulk,
   persistPendingDisambiguation,
   persistPendingDisambiguationRow,
-  pruneTelegramProcessedUpdates,
-  upsertSubscriberRow,
-} from "../telegram-webhook-store";
+} from "../disambiguation";
+import { upsertSubscriberRow } from "../subscribers";
 import { createLatestSchemaSqlite, createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();

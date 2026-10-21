@@ -7,7 +7,7 @@
 Detection signals:
 
 - `telegram_usage_daily` records session-read `mini_app_session_invalid` with outcomes `stale-auth` (expired but signature-valid) or `rate_limited` (session cooldown exceeded). Stale signed writes record `mini_app_mutation_denied`, failure class `stale-auth`, and normalized `action_detail` labels (`coin`, `preset`, `quiet_hours`, `chat`, `recap`, …), separate from session-read expiry. Stale-auth events are deduplicated per expired `initData` (signed `hash`) and event type for 7 days, so they count incidents (expired launches), not retries; every retry still returns `401 stale-auth`. Before 2026-10-21 each rejected request was counted, so a single kept-open webview could produce a daily stale-auth streak. Body-size (`413`), schema (`400 validation-error`), invalid-signature and malformed-auth failures do not write usage analytics. Inspect HTTP response status/code for those failures; the handlers do not emit a dedicated log event for each rejection.
-- The Mini App pulse strip (`/api/telegram-pulse`) shows `miniAppSessionsToday` flat or falling. Its `miniAppDeniedToday` counter tracks post-auth mutation denials (`mini_app_mutation_denied`, including the `stale-auth` failure class) and does not move for a session-read auth-failure spike; use the `event_type = 'mini_app_session_invalid'` query below for that signal.
+- `mini_app_session_valid` counts in `telegram_usage_daily` go flat or fall. `mini_app_mutation_denied` tracks post-auth mutation denials (including the `stale-auth` failure class) and does not move for a session-read auth-failure spike; use the `event_type = 'mini_app_session_invalid'` query below for that signal. The public pulse no longer carries Mini App counters.
 - A high share of `mini_app_mutation_denied` rows with `failure_class = 'rate_limited'` means authenticated users or scripts exhausted the Pharos mutation budget. The server allows 12 mutation attempts per Telegram user in a 30-second window anchored to the first admitted write; this signal is distinct from Telegram Bot API delivery rate limits.
 - Client/network captures show `POST /api/telegram-mini-app/mutate` returning `401` with `code = "stale-auth"`; aggregate stale-auth volume is available in the query below, not a per-user usage log.
 
@@ -97,10 +97,9 @@ npx wrangler secret list
 
 If `TELEGRAM_BOT_TOKEN_PREVIOUS` is missing during a rotation overlap, set it to the prior token and redeploy per [`telegram-secret-rotation.md`](./telegram-secret-rotation.md).
 
-Check the Mini App pulse and Worker cron health:
+Check Worker cron health:
 
 ```bash
-curl -sS -H "Referer: https://pharos.watch/" https://pharos.watch/_site-data/telegram-pulse | jq '{miniAppSessionsToday, miniAppMutationsToday, miniAppDeniedToday, miniAppReplayClaimsToday}'
 curl -sS -H "CF-Access-Client-Id: $CF_ID" \
         -H "CF-Access-Client-Secret: $CF_SECRET" \
         https://ops-api.pharos.watch/api/status | jq '.telegramBot'

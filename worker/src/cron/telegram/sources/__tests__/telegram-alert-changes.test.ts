@@ -1,301 +1,344 @@
 import { describe, expect, it } from "vitest";
+import { TELEGRAM_ALERT_POLICY } from "@shared/lib/telegram-delivery-policy";
 import {
-  SAFETY_AVAILABILITY_HOLD_MAX_SEC,
-  SAFETY_RUNTIME_AVAILABILITY_REASON_CODES,
-  buildDewsChanges,
-  buildLaunchPromotions,
+  applyDewsExitHysteresis,
   buildSafetyChanges,
   holdSuppressedSafetyBaselines,
+  planDewsAlerts,
+  reseedSafetyBaseline,
 } from "../telegram-alert-changes";
-import { buildDewsAlertableSnapshot, type SafetySnapshot } from "../telegram-alert-snapshots";
+import type { DewsCandidateSnapshot, DewsRow, DewsSnapshot, SafetySnapshot } from "../telegram-alert-snapshots";
+
+const DWELL = TELEGRAM_ALERT_POLICY.safety.dwellSec;
+const COOLDOWN = TELEGRAM_ALERT_POLICY.safety.downgradeCooldownSec;
+const T0 = 1_000_000;
+
+const ratedRow = (grade: string, score: number, extra: Partial<SafetySnapshot[string]> = {}) => ({
+  grade, score, ratingStatus: "rated", partialEvidence: null, methodologyVersion: "10.26", ...extra,
+}) as SafetySnapshot[string];
+
+const noSuppression = {
+  suppressedMethodologyChanges: 0,
+  suppressedPendingDwellSafetyChanges: 0,
+  suppressedMinorSafetyChanges: 0,
+  suppressedUpgradeSafetyChanges: 0,
+  suppressedCooldownSafetyChanges: 0,
+};
+
+/** Replays dispatch runs: detect against the baseline, then persist the next baseline. */
+function runSafety(baseline: SafetySnapshot, current: SafetySnapshot, nowSec: number) {
+  const summary = buildSafetyChanges(current, baseline, (id) => id.toUpperCase(), nowSec);
+  return { summary, baseline: holdSuppressedSafetyBaselines(current, baseline, nowSec) };
+}
 
 describe("telegram alert change builders", () => {
   describe("buildSafetyChanges", () => {
+    it("holds a severe downgrade until it has persisted for the dwell, then alerts once", () => {
+      let baseline: SafetySnapshot = { a: ratedRow("B", 72) };
+      const dropped = { a: ratedRow("C", 58) };
+
+      let run = runSafety(baseline, dropped, T0);
+      expect(run.summary.changes).toEqual([]);
+      expect(run.summary.suppressedPendingDwellSafetyChanges).toBe(1);
+      expect(run.baseline.a).toMatchObject({ grade: "B", pendingKind: "severe-downgrade", pendingSinceSec: T0 });
+
+      run = runSafety(run.baseline, dropped, T0 + DWELL - 1);
+      expect(run.summary.changes).toEqual([]);
+      expect(run.baseline.a!.pendingSinceSec).toBe(T0);
+
+      run = runSafety(run.baseline, dropped, T0 + DWELL);
+      expect(run.summary.changes).toEqual([
+        { stablecoinId: "a", symbol: "A", oldGrade: "B", newGrade: "C", oldScore: 72, newScore: 58 },
+      ]);
+      baseline = run.baseline;
+      expect(baseline.a).toMatchObject({ grade: "C", lastAlertedAtSec: T0 + DWELL });
+      expect(baseline.a!.pendingSinceSec).toBeUndefined();
+
+      expect(runSafety(baseline, dropped, T0 + DWELL + 1800).summary.changes).toEqual([]);
+    });
+
+    it("drops a flap that recovers inside the dwell and restarts the clock on the next drop", () => {
+      const healthy = { iusd: ratedRow("C", 55) };
+      const flap = { iusd: ratedRow("D", 49) };
+      let run = runSafety(healthy, flap, T0);
+      run = runSafety(run.baseline, healthy, T0 + 1800);
+      expect(run.summary).toMatchObject({ changes: [], ...noSuppression });
+      expect(run.baseline.iusd!.pendingSinceSec).toBeUndefined();
+
+      run = runSafety(run.baseline, flap, T0 + 4 * 3600);
+      run = runSafety(run.baseline, flap, T0 + 4 * 3600 + DWELL - 1);
+      expect(run.summary.changes).toEqual([]);
+      expect(run.baseline.iusd!.pendingSinceSec).toBe(T0 + 4 * 3600);
+    });
+
+    it("keeps one dwell clock while the grade moves within the severe range and reports the latest grade", () => {
+      let run = runSafety({ a: ratedRow("B", 72) }, { a: ratedRow("D", 45) }, T0);
+      run = runSafety(run.baseline, { a: ratedRow("F", 20) }, T0 + DWELL);
+      expect(run.summary.changes).toEqual([expect.objectContaining({ oldGrade: "B", newGrade: "F" })]);
+    });
+
+    it("treats a drop into D or F as severe at any size and one-notch drops above D as minor", () => {
+      const result = buildSafetyChanges(
+        { x: ratedRow("D", 45), y: ratedRow("F", 19), eurc: ratedRow("A-", 81) },
+        {
+          x: ratedRow("C-", 50, { pendingKind: "severe-downgrade", pendingSinceSec: T0 - DWELL }),
+          y: ratedRow("D", 40, { pendingKind: "severe-downgrade", pendingSinceSec: T0 - DWELL }),
+          eurc: ratedRow("A", 83),
+        },
+        (id) => id,
+        T0,
+      );
+      expect(result.changes.map((change) => change.stablecoinId)).toEqual(["x", "y"]);
+      expect(result.suppressedMinorSafetyChanges).toBe(1);
+    });
+
+    it("keeps the last alerted row through minor steps so they add up to a severe move", () => {
+      let run = runSafety({ a: ratedRow("A", 83) }, { a: ratedRow("A-", 81) }, T0);
+      expect(run.summary.suppressedMinorSafetyChanges).toBe(1);
+      expect(run.baseline.a!.grade).toBe("A");
+      run = runSafety(run.baseline, { a: ratedRow("B+", 78) }, T0 + 1800);
+      expect(run.summary.suppressedPendingDwellSafetyChanges).toBe(1);
+      run = runSafety(run.baseline, { a: ratedRow("B+", 78) }, T0 + 1800 + DWELL);
+      expect(run.summary.changes).toEqual([expect.objectContaining({ oldGrade: "A", newGrade: "B+" })]);
+    });
+
+    it("never sends upgrades live and adopts a held upgrade as the new baseline after the dwell", () => {
+      let run = runSafety({ a: ratedRow("D", 40) }, { a: ratedRow("B", 72) }, T0);
+      expect(run.summary).toMatchObject({ changes: [], suppressedUpgradeSafetyChanges: 1 });
+      expect(run.baseline.a).toMatchObject({ grade: "D", pendingKind: "upgrade", pendingSinceSec: T0 });
+      run = runSafety(run.baseline, { a: ratedRow("B", 72) }, T0 + DWELL);
+      expect(run.summary.changes).toEqual([]);
+      expect(run.baseline.a!.grade).toBe("B");
+      expect(run.baseline.a!.pendingKind).toBeUndefined();
+    });
+
+    it("restarts the dwell when a pending upgrade turns into a severe downgrade", () => {
+      let run = runSafety({ a: ratedRow("B", 72) }, { a: ratedRow("A", 85) }, T0);
+      run = runSafety(run.baseline, { a: ratedRow("C", 58) }, T0 + DWELL);
+      expect(run.summary.changes).toEqual([]);
+      expect(run.baseline.a).toMatchObject({ grade: "B", pendingKind: "severe-downgrade", pendingSinceSec: T0 + DWELL });
+    });
+
+    it("holds a second severe downgrade through the cooldown and sends it when the cooldown ends", () => {
+      // B -> D alerted at T0; D -> F at T0 + 10h must not be lost.
+      const alertedAt = T0;
+      let run = runSafety({ a: ratedRow("D", 40, { lastAlertedAtSec: alertedAt }) }, { a: ratedRow("F", 20) }, alertedAt + 10 * 3600);
+      run = runSafety(run.baseline, { a: ratedRow("F", 20) }, alertedAt + 10 * 3600 + DWELL);
+      expect(run.summary).toMatchObject({ changes: [], suppressedCooldownSafetyChanges: 1 });
+      expect(run.baseline.a).toMatchObject({
+        grade: "D", lastAlertedAtSec: alertedAt, pendingKind: "severe-downgrade", pendingSinceSec: alertedAt + 10 * 3600,
+      });
+      run = runSafety(run.baseline, { a: ratedRow("F", 20) }, alertedAt + COOLDOWN);
+      expect(run.summary.changes).toEqual([expect.objectContaining({ oldGrade: "D", newGrade: "F" })]);
+      expect(run.baseline.a).toMatchObject({ grade: "F", lastAlertedAtSec: alertedAt + COOLDOWN });
+    });
+
+    it.each([
+      ["a pipeline gap", { grade: null, score: null, ratingStatus: "pipeline-gap", partialEvidence: { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["exit"], causes: ["A"] }, methodologyVersion: "10.26" }],
+      ["an operational quarantine", { grade: "NR", score: null, ratingStatus: "not-rated", partialEvidence: null, methodologyVersion: "10.26", operationallyAffected: true }],
+    ])("keeps the pending dwell and cooldown clocks through %s", (_label, gapRow) => {
+      let run = runSafety({ a: ratedRow("B", 72, { lastAlertedAtSec: T0 - COOLDOWN }) }, { a: ratedRow("D", 45) }, T0);
+      run = runSafety(run.baseline, { a: gapRow as SafetySnapshot[string] }, T0 + 3600);
+      expect(run.summary.changes).toEqual([]);
+      expect(run.baseline.a).toMatchObject({
+        grade: "B", pendingKind: "severe-downgrade", pendingSinceSec: T0, lastAlertedAtSec: T0 - COOLDOWN,
+      });
+      run = runSafety(run.baseline, { a: ratedRow("D", 45) }, T0 + DWELL);
+      expect(run.summary.changes).toEqual([expect.objectContaining({ oldGrade: "B", newGrade: "D" })]);
+    });
+
     it.each(["same", "missing-current", "missing-previous"] as const)(
-      "emits a real grade transition with %s methodology",
+      "compares across %s methodology versions",
       (methodology) => {
-        expect(buildSafetyChanges(
-          { alpha: { grade: "B", score: 72, ratingStatus: "rated", partialEvidence: null, methodologyVersion: methodology === "missing-current" ? null : "9.0" } },
-          { alpha: { grade: "A", score: 85, ratingStatus: "rated", partialEvidence: null, methodologyVersion: methodology === "missing-previous" ? null : "9.0" } },
-          (id) => id === "alpha" ? "ALPHA" : "WRONG",
-        )).toEqual({
-          changes: [{ stablecoinId: "alpha", symbol: "ALPHA", oldGrade: "A", newGrade: "B", oldScore: 85, newScore: 72 }],
-          suppressedMethodologyChanges: 0,
-          suppressedRuntimeAvailabilityChanges: 0,
-          suppressedMinorSafetyChanges: 0,
-          heldBaselineIds: [],
-          availabilityHeldIds: [],
-        });
+        const result = buildSafetyChanges(
+          { alpha: ratedRow("C", 58, { methodologyVersion: methodology === "missing-current" ? null : "9.0" }) },
+          { alpha: ratedRow("A", 85, { methodologyVersion: methodology === "missing-previous" ? null : "9.0", pendingKind: "severe-downgrade", pendingSinceSec: T0 - DWELL }) },
+          () => "ALPHA",
+          T0,
+        );
+        expect(result.changes).toHaveLength(1);
       },
     );
 
     it("does not turn score-only movement or a new coin into a grade transition", () => {
-      expect(buildSafetyChanges(
-        { alpha: { grade: "A", score: 89, ratingStatus: "rated", partialEvidence: null, methodologyVersion: null }, newcomer: { grade: "B", score: 70, ratingStatus: "rated", partialEvidence: null, methodologyVersion: null } },
-        { alpha: { grade: "A", score: 85, ratingStatus: "rated", partialEvidence: null, methodologyVersion: null } },
+      const result = buildSafetyChanges(
+        { alpha: ratedRow("A", 89), newcomer: ratedRow("B", 70) },
+        { alpha: ratedRow("A", 85) },
         () => "ALPHA",
-      )).toEqual({ changes: [], suppressedMethodologyChanges: 0, suppressedRuntimeAvailabilityChanges: 0, suppressedMinorSafetyChanges: 0, heldBaselineIds: [], availabilityHeldIds: [] });
+        T0,
+      );
+      expect(result).toMatchObject({ changes: [], ...noSuppression });
     });
 
     it("emits nothing when the current snapshot is unavailable", () => {
-      expect(buildSafetyChanges(null, { alpha: { grade: "A", score: 85, ratingStatus: "rated", partialEvidence: null, methodologyVersion: null } }, () => "ALPHA"))
-        .toEqual({ changes: [], suppressedMethodologyChanges: 0, suppressedRuntimeAvailabilityChanges: 0, suppressedMinorSafetyChanges: 0, heldBaselineIds: [], availabilityHeldIds: [] });
+      expect(buildSafetyChanges(null, { alpha: ratedRow("A", 85) }, () => "ALPHA", T0))
+        .toMatchObject({ changes: [], ...noSuppression });
     });
-    it("suppresses methodology-version-only grade changes", () => {
-      const current: SafetySnapshot = {
-        "usdc-circle": {
-          grade: "C+",
-          score: 61,
-          ratingStatus: "rated",
-          partialEvidence: null,
-          methodologyVersion: "9.0",
-        },
-      };
-      const previous: SafetySnapshot = {
-        "usdc-circle": {
-          grade: "B",
-          score: 72,
-          ratingStatus: "rated",
-          partialEvidence: null,
-          methodologyVersion: "9.1",
-        },
-      };
 
-      const result = buildSafetyChanges(current, previous, () => "USDC");
-
-      expect(result).toEqual({ changes: [], suppressedMethodologyChanges: 1, suppressedRuntimeAvailabilityChanges: 0, suppressedMinorSafetyChanges: 0, heldBaselineIds: [], availabilityHeldIds: [] });
+    it("suppresses methodology-version-only grade changes and advances the baseline", () => {
+      const current = { usdc: ratedRow("C+", 61, { methodologyVersion: "9.0" }) };
+      const previous = { usdc: ratedRow("B", 72, { methodologyVersion: "9.1" }) };
+      expect(buildSafetyChanges(current, previous, () => "USDC", T0))
+        .toMatchObject({ changes: [], ...noSuppression, suppressedMethodologyChanges: 1 });
+      expect(holdSuppressedSafetyBaselines(current, previous, T0).usdc!.grade).toBe("C+");
     });
 
     it.each([
       ["quarantine", true, false],
       ["recovery", false, true],
-    ])("suppresses an operational %s grade transition", (
-      _label,
-      currentAffected,
-      previousAffected,
-    ) => {
-      const result = buildSafetyChanges(
-        {
-          alpha: {
-            grade: currentAffected ? "NR" : "A",
-            score: currentAffected ? null : 85,
-            ratingStatus: currentAffected ? "not-rated" : "rated",
-            partialEvidence: null,
-            methodologyVersion: "9.0",
-            operationallyAffected: currentAffected,
-          },
-        },
-        {
-          alpha: {
-            grade: previousAffected ? "NR" : "A",
-            score: previousAffected ? null : 85,
-            ratingStatus: previousAffected ? "not-rated" : "rated",
-            partialEvidence: null,
-            methodologyVersion: "9.0",
-            operationallyAffected: previousAffected,
-          },
-        },
-        () => "ALPHA",
-      );
-
-      expect(result).toEqual({
-        changes: [],
-        suppressedMethodologyChanges: 0,
-        suppressedRuntimeAvailabilityChanges: 0,
-        suppressedMinorSafetyChanges: 0,
-        heldBaselineIds: [],
-        availabilityHeldIds: [],
-      });
-    });
-
-    const ratedRow = (grade: string, score: number, reasonCodes: string[] | null = []) => ({
-      grade, score, ratingStatus: "rated", partialEvidence: null, methodologyVersion: "10.25",
-      v9Explain: { reasons: [], ...(reasonCodes ? { reasonCodes } : {}), bindingCap: null, weakestPillar: null, pillars: {} },
-    }) as unknown as SafetySnapshot[string];
-
-    it("derives availability codes from the V9 responsibility authority", () => {
-      expect(SAFETY_RUNTIME_AVAILABILITY_REASON_CODES.has("missing-runtime-route-evidence")).toBe(true);
-      expect(SAFETY_RUNTIME_AVAILABILITY_REASON_CODES.has("runtime-bridge-materiality-unavailable")).toBe(true);
-      expect(SAFETY_RUNTIME_AVAILABILITY_REASON_CODES.has("missing-peg-input")).toBe(true);
-      expect(SAFETY_RUNTIME_AVAILABILITY_REASON_CODES.has("correlated-exit-routes")).toBe(false);
-      // Reviewer-authored integration findings must still alert.
-      expect(SAFETY_RUNTIME_AVAILABILITY_REASON_CODES.has("material-dependency-unavailable")).toBe(false);
-      expect(SAFETY_RUNTIME_AVAILABILITY_REASON_CODES.has("bounded-mechanism-review")).toBe(false);
-      expect(SAFETY_RUNTIME_AVAILABILITY_REASON_CODES.has("unsupported-same-notional-route")).toBe(false);
-      expect(SAFETY_RUNTIME_AVAILABILITY_REASON_CODES.has("material-bridge-supply-unmatched")).toBe(false);
-      expect(SAFETY_RUNTIME_AVAILABILITY_REASON_CODES.has("missing-mint-authority")).toBe(false);
-    });
-
-    it("suppresses and holds a grade flip caused by a runtime availability code toggling", () => {
-      const result = buildSafetyChanges(
-        { iusd: ratedRow("D", 49, ["missing-runtime-route-evidence"]) },
-        { iusd: ratedRow("B", 72) },
-        () => "IUSD",
-      );
-      expect(result).toMatchObject({ changes: [], suppressedRuntimeAvailabilityChanges: 1, heldBaselineIds: ["iusd"] });
-      expect(buildSafetyChanges(
-        { iusd: ratedRow("B", 72) },
-        { iusd: ratedRow("D", 49, ["missing-runtime-route-evidence"]) },
-        () => "IUSD",
-      ).suppressedRuntimeAvailabilityChanges).toBe(1);
-    });
-
-    it("treats a baseline without persisted reason codes as unknown, not toggled", () => {
-      const result = buildSafetyChanges(
-        { a: ratedRow("D", 45, ["missing-runtime-route-evidence"]) },
-        { a: ratedRow("B", 72, null) },
-        () => "A",
-      );
-      expect(result.changes).toHaveLength(1);
-    });
-
-    it("suppresses a grade flip when partial evidence appears or changes shape", () => {
-      const partial = (pillars: string[]) => ({ ...ratedRow("C-", 50), partialEvidence: { pillars } }) as unknown as SafetySnapshot[string];
-      expect(buildSafetyChanges({ wm: partial(["control"]) }, { wm: ratedRow("B", 70) }, () => "WM"))
-        .toMatchObject({ changes: [], suppressedRuntimeAvailabilityChanges: 1 });
-      expect(buildSafetyChanges({ wm: { ...partial(["exit"]), grade: "B" } as SafetySnapshot[string] }, { wm: partial(["control"]) }, () => "WM"))
-        .toMatchObject({ changes: [], suppressedRuntimeAvailabilityChanges: 1 });
-    });
-
-    it("keeps a large move when the same availability code persists on both sides", () => {
-      const codes = ["runtime-bridge-materiality-unavailable"];
-      const result = buildSafetyChanges({ a: ratedRow("C", 55, codes) }, { a: ratedRow("B+", 76, codes) }, () => "A");
-      expect(result.changes).toHaveLength(1);
-    });
-
-    it("suppresses one-notch moves but keeps drops into D or F", () => {
-      const minor = buildSafetyChanges(
-        { eurc: ratedRow("A-", 81), ybold: ratedRow("C+", 64) },
-        { eurc: ratedRow("A", 83), ybold: ratedRow("C", 58) },
-        (id) => id,
-      );
-      expect(minor.changes).toEqual([]);
-      expect(minor.suppressedMinorSafetyChanges).toBe(2);
-
-      const severe = buildSafetyChanges(
-        { x: ratedRow("D", 45), y: ratedRow("F", 19), z: ratedRow("D", 47) },
-        { x: ratedRow("C-", 50), y: ratedRow("D", 40), z: ratedRow("F", 20) },
-        (id) => id,
-      );
-      // x: C- -> D and y: D -> F alert; z: F -> D is a one-notch upgrade.
-      expect(severe.changes.map((change) => change.stablecoinId)).toEqual(["x", "y"]);
-      expect(severe.suppressedMinorSafetyChanges).toBe(1);
-    });
-
-    describe("holdSuppressedSafetyBaselines", () => {
-      it("keeps the last alerted row so one-notch steps still add up to an alert", () => {
-        const start = { a: ratedRow("A", 83) };
-        const step1 = { a: ratedRow("A-", 81) };
-        const baseline1 = holdSuppressedSafetyBaselines(step1, start, 1_000);
-        expect(baseline1.a!.grade).toBe("A");
-        const step2 = { a: ratedRow("B+", 78) };
-        expect(buildSafetyChanges(step2, baseline1, () => "A").changes).toHaveLength(1);
-      });
-
-      it("holds through an availability gap so the flip back is silent and a persisting drop still alerts", () => {
-        const healthy = { iusd: ratedRow("C", 55) };
-        const gap = { iusd: ratedRow("D", 49, ["missing-runtime-route-evidence"]) };
-        const held = holdSuppressedSafetyBaselines(gap, healthy, 1_000);
-        expect(held.iusd!.grade).toBe("C");
-        // Input returns at the same grade: no change.
-        expect(buildSafetyChanges(healthy, held, () => "IUSD").changes).toEqual([]);
-        // Input returns but the grade really fell: alert against the held row.
-        expect(buildSafetyChanges({ iusd: ratedRow("F", 20) }, held, () => "IUSD").changes).toHaveLength(1);
-      });
-
-      it("alerts once an availability-driven drop persists past the hold cap", () => {
-        const healthy = { iusd: ratedRow("C", 55) };
-        const gap = { iusd: ratedRow("D", 49, ["missing-runtime-route-evidence"]) };
-        let baseline = holdSuppressedSafetyBaselines(gap, healthy, 1_000);
-        expect(baseline.iusd!.heldSinceSec).toBe(1_000);
-        baseline = holdSuppressedSafetyBaselines(gap, baseline, 1_000 + 3_600);
-        expect(baseline.iusd!.heldSinceSec).toBe(1_000);
-        expect(buildSafetyChanges(gap, baseline, () => "IUSD", 1_000 + 3_600).changes).toEqual([]);
-        const late = 1_000 + SAFETY_AVAILABILITY_HOLD_MAX_SEC;
-        expect(buildSafetyChanges(gap, baseline, () => "IUSD", late).changes).toHaveLength(1);
-        // The emitted change advances the baseline and clears the hold.
-        expect(holdSuppressedSafetyBaselines(gap, baseline, late).iusd!.heldSinceSec).toBeUndefined();
-      });
-
-      it("persists current rows unchanged when nothing is suppressed", () => {
-        const current = { a: ratedRow("C", 55) };
-        expect(holdSuppressedSafetyBaselines(current, { a: ratedRow("A", 83) }, 1_000)).toBe(current);
-      });
+    ])("suppresses an operational %s grade transition", (_label, currentAffected, previousAffected) => {
+      const row = (affected: boolean) => affected
+        ? { grade: "NR", score: null, ratingStatus: "not-rated", partialEvidence: null, methodologyVersion: "9.0", operationallyAffected: true } as SafetySnapshot[string]
+        : ratedRow("A", 85, { operationallyAffected: false });
+      expect(buildSafetyChanges({ alpha: row(currentAffected) }, { alpha: row(previousAffected) }, () => "ALPHA", T0))
+        .toMatchObject({ changes: [], ...noSuppression });
     });
 
     it.each(["entering", "recovering"] as const)("uses an %s pipeline gap as a silent baseline", (transition) => {
-      const rated: SafetySnapshot[string] = { grade: "A", score: 85, ratingStatus: "rated", partialEvidence: null, methodologyVersion: "10.01" };
-      const gap: SafetySnapshot[string] = { grade: null, score: null, ratingStatus: "pipeline-gap", methodologyVersion: "10.01",
+      const rated = ratedRow("A", 85);
+      const gap: SafetySnapshot[string] = { grade: null, score: null, ratingStatus: "pipeline-gap", methodologyVersion: "10.26",
         partialEvidence: { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["backing", "exit"], causes: ["A"] } };
       expect(buildSafetyChanges(
         { alpha: transition === "entering" ? gap : rated },
         { alpha: transition === "entering" ? rated : gap },
         () => "ALPHA",
-      )).toEqual({ changes: [], suppressedMethodologyChanges: 0, suppressedRuntimeAvailabilityChanges: 0, suppressedMinorSafetyChanges: 0, heldBaselineIds: [], availabilityHeldIds: [] });
+        T0,
+      )).toMatchObject({ changes: [], ...noSuppression });
     });
 
     it("suppresses a null grade even when its status is inconsistent", () => {
-      const previous: SafetySnapshot = { alpha: { grade: "B", score: 72, ratingStatus: "rated", partialEvidence: null, methodologyVersion: null } };
+      const previous: SafetySnapshot = { alpha: ratedRow("B", 72) };
       const current: SafetySnapshot = { alpha: { ...previous.alpha, grade: null } };
-      expect(buildSafetyChanges(current, previous, () => "ALPHA").changes).toEqual([]);
-      expect(buildSafetyChanges(previous, current, () => "ALPHA").changes).toEqual([]);
+      expect(buildSafetyChanges(current, previous, () => "ALPHA", T0).changes).toEqual([]);
+      expect(buildSafetyChanges(previous, current, () => "ALPHA", T0).changes).toEqual([]);
     });
   });
 
-  describe("buildDewsChanges", () => {
-    const dewsRow = (band: string) => ({ stablecoin_id: "alpha", score: 60, band, signals_json: null });
-
-    it("sends escalations and drops de-escalations within the alertable range", () => {
-      expect(buildDewsChanges([dewsRow("WARNING")], { alpha: "ALERT" }, { alpha: "ALERT" }, () => "ALPHA"))
-        .toEqual([expect.objectContaining({ oldBand: "ALERT", newBand: "WARNING" })]);
-      expect(buildDewsChanges([dewsRow("WARNING")], { alpha: "DANGER" }, { alpha: "DANGER" }, () => "ALPHA")).toEqual([]);
-      expect(buildDewsChanges([dewsRow("ALERT")], { alpha: "WARNING" }, { alpha: "WARNING" }, () => "ALPHA")).toEqual([]);
-    });
-
-    it("treats a rise from below the alertable range as an escalation labelled from the observed band", () => {
-      expect(buildDewsChanges([dewsRow("ALERT")], { alpha: "WARNING" }, { alpha: "WATCH" }, () => "ALPHA"))
-        .toEqual([expect.objectContaining({ oldBand: "WATCH", newBand: "ALERT" })]);
-      // Reached DANGER months ago, calmed, now rises CALM to WARNING.
-      expect(buildDewsChanges([dewsRow("WARNING")], { alpha: "DANGER" }, { alpha: "CALM" }, () => "ALPHA"))
-        .toEqual([expect.objectContaining({ oldBand: "CALM", newBand: "WARNING" })]);
-    });
-
-    it("still dedupes a return to the same alert band after a dip", () => {
-      expect(buildDewsChanges([dewsRow("DANGER")], { alpha: "DANGER" }, { alpha: "WATCH" }, () => "ALPHA")).toEqual([]);
-    });
-
-    it("advances the baseline through an unsent de-escalation so the next rise alerts", () => {
-      const afterDrop = buildDewsAlertableSnapshot([dewsRow("WARNING")], { alpha: "DANGER" });
-      expect(afterDrop).toEqual({ alpha: "WARNING" });
-      expect(buildDewsChanges([dewsRow("DANGER")], afterDrop, afterDrop, () => "ALPHA"))
-        .toEqual([expect.objectContaining({ oldBand: "WARNING", newBand: "DANGER" })]);
+  describe("holdSuppressedSafetyBaselines", () => {
+    it("carries the cooldown clock onto an advanced row and strips stale pending fields", () => {
+      const persisted = holdSuppressedSafetyBaselines(
+        { a: ratedRow("B", 73, { pendingKind: "upgrade", pendingSinceSec: 1 }) },
+        { a: ratedRow("B", 72, { lastAlertedAtSec: 5, pendingKind: "upgrade", pendingSinceSec: 1 }) },
+        T0,
+      );
+      expect(persisted.a).toEqual(ratedRow("B", 73, { lastAlertedAtSec: 5 }));
     });
   });
 
-  describe("buildLaunchPromotions", () => {
-    it("emits a launch alert when a tracked coin leaves the pre-launch set", () => {
-      const result = buildLaunchPromotions(
-        new Set(["dai-makerdao", "still-prelaunch"]),
-        new Set(["still-prelaunch"]),
-        new Set(["dai-makerdao", "still-prelaunch"]),
-        new Map([
-          ["dai-makerdao", { symbol: "DAI", name: "Dai" }],
-          ["still-prelaunch", { symbol: "PRE", name: "Still Prelaunch" }],
-        ]),
-      );
+  describe("reseedSafetyBaseline", () => {
+    const previous = {
+      a: ratedRow("B", 72, { pendingKind: "severe-downgrade", pendingSinceSec: T0, lastAlertedAtSec: T0 - COOLDOWN }),
+      b: ratedRow("A", 85, { lastAlertedAtSec: T0 - 20 }),
+    };
+    const current = { a: ratedRow("D", 45), b: ratedRow("A", 86), c: ratedRow("C", 55) };
 
-      expect(result).toEqual([{ stablecoinId: "dai-makerdao", symbol: "DAI", name: "Dai" }]);
+    it("carries pending rows and cooldown clocks across a comparable reseed", () => {
+      const seeded = reseedSafetyBaseline(current, previous, true);
+      expect(seeded.a).toBe(previous.a);
+      expect(seeded.b).toEqual(ratedRow("A", 86, { lastAlertedAtSec: T0 - 20 }));
+      expect(seeded.c).toEqual(current.c);
+      // The resumed dwell still fires on schedule.
+      expect(buildSafetyChanges(current, seeded, (id) => id, T0 + DWELL).changes).toHaveLength(1);
     });
 
-    it("ignores coins that are still pre-launch, inactive, or missing metadata", () => {
-      const result = buildLaunchPromotions(
-        new Set(["still-prelaunch", "inactive-coin", "unknown-coin"]),
-        new Set(["still-prelaunch"]),
-        new Set(["still-prelaunch", "unknown-coin"]),
-        new Map([["inactive-coin", { symbol: "OLD", name: "Inactive Coin" }]]),
-      );
+    it("takes current rows silently across an incomparable identity (methodology release)", () => {
+      const seeded = reseedSafetyBaseline(current, previous, false);
+      expect(seeded.a).toEqual(ratedRow("D", 45, { lastAlertedAtSec: T0 - COOLDOWN }));
+      expect(buildSafetyChanges(current, seeded, (id) => id, T0 + DWELL)).toMatchObject({ changes: [], ...noSuppression });
+    });
+  });
 
-      expect(result).toEqual([]);
+  describe("planDewsAlerts", () => {
+    const row = (band: string, score: number, computedAt = T0): DewsRow =>
+      ({ stablecoin_id: "alpha", score, band, signals_json: null, computed_at: computedAt });
+    const plan = (
+      rows: DewsRow[],
+      alertable: DewsSnapshot,
+      observed: DewsSnapshot,
+      candidates: DewsCandidateSnapshot = {},
+      nowSec = T0,
+    ) => planDewsAlerts(rows, alertable, observed, candidates, () => "ALPHA", nowSec);
+
+    it("holds an escalation until a second DEWS computation confirms it", () => {
+      const first = plan([row("WARNING", 60, T0)], { alpha: "ALERT" }, { alpha: "ALERT" });
+      expect(first.changes).toEqual([]);
+      expect(first.suppressedPendingDewsEscalations).toBe(1);
+      expect(first.nextAlertable).toEqual({ alpha: "ALERT" });
+      expect(first.nextObserved).toEqual({ alpha: "WARNING" });
+
+      // Another dispatch run over the same computation does not count twice.
+      const sameComputation = plan([row("WARNING", 60, T0)], first.nextAlertable, first.nextObserved, first.nextCandidates);
+      expect(sameComputation.changes).toEqual([]);
+
+      const second = plan([row("WARNING", 61, T0 + 1800)], first.nextAlertable, first.nextObserved, first.nextCandidates);
+      expect(second.changes).toEqual([expect.objectContaining({ oldBand: "ALERT", newBand: "WARNING", score: 61 })]);
+      expect(second.nextAlertable).toEqual({ alpha: "WARNING" });
+      expect(second.nextCandidates).toEqual({});
+    });
+
+    it("drops a one-computation spike (eMXN 23 to 59 to 23)", () => {
+      const spike = plan([row("WARNING", 59, T0)], {}, { alpha: "WATCH" });
+      expect(spike.changes).toEqual([]);
+      const back = plan([row("WATCH", 23, T0 + 1800)], spike.nextAlertable, spike.nextObserved, spike.nextCandidates);
+      expect(back.changes).toEqual([]);
+      expect(back.nextCandidates.alpha).toEqual({ quietSinceSec: T0 });
+    });
+
+    it("leaves a band only once the score falls more than the margin below its lower bound", () => {
+      // WARNING starts at 56; the exit margin keeps 51..55 in WARNING.
+      expect(applyDewsExitHysteresis(54, "ALERT", "WARNING")).toBe("WARNING");
+      expect(applyDewsExitHysteresis(51, "ALERT", "WARNING")).toBe("WARNING");
+      expect(applyDewsExitHysteresis(50, "ALERT", "WARNING")).toBe("ALERT");
+      // Steps down one band at a time from DANGER.
+      expect(applyDewsExitHysteresis(52, "ALERT", "DANGER")).toBe("WARNING");
+      expect(applyDewsExitHysteresis(62, "DANGER", "WARNING")).toBe("DANGER");
+      expect(applyDewsExitHysteresis(54, "ALERT", undefined)).toBe("ALERT");
+
+      // 54 <-> 62 straddling the ALERT/WARNING boundary stays in WARNING: no re-alert.
+      const held = plan([row("ALERT", 54, T0 + 1800)], { alpha: "WARNING" }, { alpha: "WARNING" });
+      expect(held.nextObserved).toEqual({ alpha: "WARNING" });
+      expect(held.changes).toEqual([]);
+      expect(held.suppressedDewsDeescalations).toBe(0);
+    });
+
+    it("keeps counting a pending escalation that eases but stays above the alerted band", () => {
+      const first = plan([row("DANGER", 80, T0)], {}, { alpha: "CALM" });
+      expect(first.changes).toEqual([]);
+      const eased = plan([row("WARNING", 60, T0 + 1800)], first.nextAlertable, first.nextObserved, first.nextCandidates);
+      expect(eased.suppressedDewsDeescalations).toBe(0);
+      expect(eased.changes).toEqual([expect.objectContaining({ oldBand: "CALM", newBand: "WARNING" })]);
+      expect(eased.nextAlertable).toEqual({ alpha: "WARNING" });
+    });
+
+    it("drops de-escalations within the alertable range and advances the alertable baseline", () => {
+      const result = plan([row("WARNING", 60)], { alpha: "DANGER" }, { alpha: "DANGER" });
+      expect(result.changes).toEqual([]);
+      expect(result.suppressedDewsDeescalations).toBe(1);
+      expect(result.nextAlertable).toEqual({ alpha: "WARNING" });
+    });
+
+    it("labels a rise from below the alertable range from the observed band", () => {
+      const result = plan(
+        [row("WARNING", 60, T0 + 1800)],
+        { alpha: "DANGER" },
+        { alpha: "CALM" },
+        { alpha: { computedAt: T0, computations: 1 } },
+      );
+      expect(result.changes).toEqual([expect.objectContaining({ oldBand: "CALM", newBand: "WARNING" })]);
+    });
+
+    it("still dedupes a return to the same alert band after a short dip", () => {
+      expect(plan([row("DANGER", 80)], { alpha: "DANGER" }, { alpha: "WATCH" }).changes).toEqual([]);
+    });
+
+    it("clears the alertable baseline after the quiet window so a later alert states the real prior band", () => {
+      const quiet = TELEGRAM_ALERT_POLICY.dews.baselineResetQuietSec;
+      const calm = plan([row("WATCH", 20)], { alpha: "DANGER" }, { alpha: "WATCH" }, { alpha: { quietSinceSec: T0 } }, T0 + quiet - 1);
+      expect(calm.nextAlertable).toEqual({ alpha: "DANGER" });
+      const reset = plan([row("WATCH", 20)], { alpha: "DANGER" }, { alpha: "WATCH" }, { alpha: { quietSinceSec: T0 } }, T0 + quiet);
+      expect(reset.nextAlertable).toEqual({});
+      expect(reset.resetDewsBaselines).toBe(1);
+      expect(reset.nextCandidates).toEqual({ alpha: { quietSinceSec: T0 } });
     });
   });
 });

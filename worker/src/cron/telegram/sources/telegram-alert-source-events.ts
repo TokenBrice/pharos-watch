@@ -68,12 +68,10 @@ function parseEvents(
     "depegResolved",
     "depegWorsening",
     "safetyChanges",
-    "launchPromoted",
     "reservePromoted",
     "dewsIds",
     "depegIds",
     "safetyIds",
-    "launchIds",
     "reserveIds",
   ];
   if (arrayKeys.some((key) => !Array.isArray(value[key]))) {
@@ -103,7 +101,6 @@ function parseBaseline(payload: string): TelegramAlertSnapshots {
     !value.dews ||
     !value.dewsAlertable ||
     !value.depeg ||
-    !Array.isArray(value.launch) ||
     !(Array.isArray(value.reserveDispatched) || value.reserveDispatched === null)
   ) {
     throw new Error("Telegram source event baseline has an invalid snapshot shape");
@@ -146,7 +143,6 @@ function relevantAlertTypes(events: TelegramDispatchEvents): TelegramAlertType[]
   if (events.dewsIds.length > 0) types.push("dews");
   if (events.depegIds.length > 0) types.push("depeg");
   if (events.safetyIds.length > 0) types.push("safety");
-  if (events.launchIds.length > 0) types.push("launch");
   if (events.reserveIds.length > 0) types.push("reserve");
   return types;
 }

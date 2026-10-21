@@ -1,48 +1,38 @@
-import { buildListMessage, buildManageEntryKeyboard, buildMiniAppOnlyKeyboard } from "../webhook/telegram-webhook-messages";
-import { buildTelegramMiniAppUrl } from "../common/mini-app-url";
-import {
-  loadPresetSubscriptions,
-  loadSubscriberByChat,
-  loadSubscriptionRowsByChat,
-} from "../store/telegram-webhook-store";
-import type { WebhookCommandHandler } from "./context";
+import { TELEGRAM_PRESET_LABEL_BY_ID } from "../common/presets";
+import { buildListMessage, buildManageAlertsKeyboard, followsNothing } from "../webhook/telegram-webhook-messages";
+import { buildOnboardingKeyboard } from "../webhook/telegram-webhook-setup";
+import { loadPresetSubscriptions } from "../store/presets";
+import { loadSubscriberByChat } from "../store/subscribers";
+import { loadSubscriptionRowsByChat } from "../store/subscriptions";
+import { loadTelegramChatHealthDiagnostics } from "../store/usage-analytics";
+import { replyWithOptionalMiniApp, type WebhookCommandHandler } from "./context";
 
 export const handleList: WebhookCommandHandler = async (ctx) => {
   const { db, chatId } = ctx;
-  const isPrivateChat = ctx.chatType === "private";
-  const subscriber = await loadSubscriberByChat(db, chatId);
-
-  const [subscriptions, presetSubscriptions] = await Promise.all([
+  const [subscriber, subscriptions, presetSubscriptions, diagnostics] = await Promise.all([
+    loadSubscriberByChat(db, chatId),
     loadSubscriptionRowsByChat(db, chatId),
     loadPresetSubscriptions(db, chatId),
+    // Diagnostics only feed the "Last alert delivered" line; a failed read drops that line.
+    loadTelegramChatHealthDiagnostics(db, chatId).catch(() => null),
   ]);
 
-  const rows = subscriptions;
-  if (!subscriber && rows.length === 0 && presetSubscriptions.length === 0) {
-    const message = "No active subscriptions. Use /subscribe to get started, or try /presets for preset watchlists.";
-    if (isPrivateChat) {
-      await ctx.replyToChatWithMarkup(message, {
-        replyMarkup: {
-          inline_keyboard: [
-            [{ text: "Open control panel", web_app: { url: buildTelegramMiniAppUrl("watchlist") } }],
-            [{ text: "Browse presets", web_app: { url: buildTelegramMiniAppUrl("presets") } }],
-          ],
-        },
-      });
+  if (followsNothing({ subscriber, subscriptions, presetSubscriptions })) {
+    const message = "You don't follow any stablecoins yet.";
+    if (ctx.chatType === "private") {
+      await ctx.replyToChatWithMarkup(message, { replyMarkup: buildOnboardingKeyboard() });
       return;
     }
-    await ctx.replyToChat(message);
+    await ctx.replyToChat(`${message} Admins can start with /subscribe@PharosWatchBot usd-top25.`);
     return;
   }
 
-  const message = buildListMessage(subscriber, rows, presetSubscriptions);
-  // Only attach the [Manage] keyboard when there is at least one explicit
-  // coin subscription — preset-only or quiet-hours-only chats have nothing
-  // to manage from this surface.
-  const replyMarkup = rows.length > 0
-    ? buildManageEntryKeyboard({ includeMiniAppButton: isPrivateChat })
-    : isPrivateChat
-      ? buildMiniAppOnlyKeyboard("Open control panel")
-      : undefined;
-  await ctx.replyToChatWithMarkup(message, replyMarkup ? { replyMarkup } : {});
+  const message = buildListMessage({
+    subscriber,
+    subscriptions,
+    presetSubscriptions,
+    presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
+    lastDeliveryAt: diagnostics?.lastSuccessfulDeliveryAt ?? null,
+  });
+  await replyWithOptionalMiniApp(ctx, message, buildManageAlertsKeyboard());
 };

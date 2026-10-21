@@ -124,13 +124,7 @@ describe("InstrumentPanel", () => {
   });
 
   it("keeps operational Mini App and delivery counts off the public board", () => {
-    mockPulse({
-      ...pulse,
-      miniAppDeniedToday: 1,
-      miniAppMutationsToday: 1,
-      miniAppReplayClaimsToday: 1,
-      miniAppSessionsToday: 2,
-    });
+    mockPulse(pulse);
     render(<InstrumentPanel />);
 
     expect(screen.queryByText("Mini App today")).toBeNull();

@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { TELEGRAM_LAUNCH_RETIRED_MESSAGE } from "@shared/lib/telegram-alert-families";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   createTelegramFetchSpy,
@@ -88,12 +88,13 @@ describe("handleSettingsCommand", () => {
     expect(callbacks).toEqual(
       expect.arrayContaining([
         "settings:q:1",
-        "settings:gt:dews",
-        "settings:gt:depeg",
-        "settings:gt:safety",
-        "settings:gt:launch",
+        "settings:gt:dews:1",
+        "settings:gt:depeg:1",
+        "settings:gt:safety:1",
+        "settings:gt:reserve:1",
       ]),
     );
+    expect(callbacks.some((c) => c.startsWith("settings:gt:launch"))).toBe(false);
   });
 
   it("adds paginated per-coin owner buttons to the home view", async () => {
@@ -128,7 +129,8 @@ describe("handleSettingsCommand", () => {
     expect(callbacks.some((c) => c.startsWith("settings:c:usdc-circle:db:"))).toBe(true);
     expect(callbacks.some((c) => c.startsWith("settings:c:usdc-circle:sm:"))).toBe(true);
     expect(callbacks.some((c) => c.startsWith("settings:c:usdc-circle:ds:"))).toBe(true);
-    expect(callbacks.some((c) => c.startsWith("settings:c:usdc-circle:lc:"))).toBe(true);
+    expect(callbacks.some((c) => c.startsWith("settings:c:usdc-circle:rs:"))).toBe(true);
+    expect(callbacks.some((c) => c.startsWith("settings:c:usdc-circle:lc:"))).toBe(false);
     expect(callbacks).toContain("settings:home");
   });
 
@@ -136,7 +138,7 @@ describe("handleSettingsCommand", () => {
     const db = mockD1();
     await handleSettingsCommand(db, "fake-token", "42", null, "NOPE");
     expect(sendCalls().length).toBe(1);
-    expect(jsonBody(sendCalls()[0]).text).toContain("not found");
+    expect(jsonBody(sendCalls()[0]).text).toContain("No stablecoin or preset called");
   });
 });
 
@@ -145,7 +147,6 @@ describe("per-coin local override descriptions", () => {
     ["dews", "DEWS min band", "db"],
     ["depeg", "Depeg step", "ds"],
     ["safety", "Safety mode", "sm"],
-    ["launch", "Launch", "lc"],
     ["reserve", "Reserve", "rs"],
     ["freeze", "Freeze alerts", "fz"],
   ])("distinguishes inherited zero from explicit %s off through the Store loader", async (family, label, code) => {
@@ -198,77 +199,30 @@ describe("per-coin local override descriptions", () => {
 });
 
 describe("handleSettingsCallback — chat-level", () => {
-  it("settings:gt:dews flips the global flag and re-renders", async () => {
-    const db = mockD1([{ match: "INSERT INTO telegram_subscribers", rows: [] }]);
-    await handleSettingsCallback(
-      db,
-      "fake-token",
-      {
-        id: "cb",
-        data: "settings:gt:dews",
-        from: { id: 1, username: "alice" },
+  it("settings:gt:<type>:<value> sets the target value, so a redelivered tap stays put", async () => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, global_alert_dews) VALUES ('42', 1, 1, 0)");
+    for (let delivery = 0; delivery < 2; delivery += 1) {
+      await handleSettingsCallback(db, "fake-token", {
+        id: "cb", data: "settings:gt:dews:1", from: { id: 1, username: "alice" },
         message: { chat: { id: 42, type: "private" }, message_id: 999 },
-      },
-      "gt",
-      "dews",
-    );
-
-    expect(editCalls().length).toBe(1);
-    expect(ackCalls().length).toBe(1);
-    expect(jsonBody(ackCalls()[0]).text).toContain("dews");
+      }, "gt", "dews:1");
+    }
+    expect(sqlite.prepare("SELECT global_alert_dews FROM telegram_subscribers WHERE chat_id = '42'").get())
+      .toEqual({ global_alert_dews: 1 });
+    expect(jsonBody(ackCalls()[0]).text).toBe("Global dews on.");
   });
 
-  it("replays a stored global target rather than toggling the changed current state", async () => {
+  it("refreshes instead of toggling on a bare pre-v2 settings:gt:<type> button", async () => {
     const { db, sqlite } = fixtures.open();
-    sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, global_alert_dews)
-      VALUES ('42', 1, 1, 1)`);
+    sqlite.exec("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, global_alert_dews) VALUES ('42', 1, 1, 1)");
     await handleSettingsCallback(db, "fake-token", {
-      id: "cb", from: { id: 1 }, message: { chat: { id: 42 }, message_id: 999 },
-    }, "gt", "dews", {
-      beforeIrreversibleEffect: async () => undefined,
-      storedIntent: createTelegramWebhookIntent("callback:settings-gt", { alertType: "dews", next: 1 }, "required"),
-    });
+      id: "cb", data: "settings:gt:dews", from: { id: 1 }, message: { chat: { id: 42, type: "private" }, message_id: 999 },
+    }, "gt", "dews");
     expect(sqlite.prepare("SELECT global_alert_dews FROM telegram_subscribers WHERE chat_id = '42'").get())
       .toEqual({ global_alert_dews: 1 });
     expect(editCalls()).toHaveLength(1);
-    expect(ackCalls()).toHaveLength(1);
-  });
-
-  it("delivers a replayed panel and acknowledgement without reapplying the mutation", async () => {
-    const { db, sqlite } = fixtures.open();
-    sqlite.exec(`INSERT INTO telegram_subscribers
-      (chat_id, created_at, last_active_at, global_alert_dews, preference_generation) VALUES ('42', 1, 1, 0, 7)`);
-    await handleSettingsCallback(db, "fake-token", {
-      id: "cb", from: { id: 1 }, message: { chat: { id: 42 }, message_id: 999 },
-    }, "gt", "dews", {
-      beforeIrreversibleEffect: async () => undefined,
-      storedIntent: createTelegramWebhookIntent("callback:settings-gt", { alertType: "dews", next: 1 }, "required"),
-      wasMutationApplied: true,
-    });
-    expect(sqlite.prepare(`SELECT global_alert_dews, preference_generation
-      FROM telegram_subscribers WHERE chat_id = '42'`).get())
-      .toEqual({ global_alert_dews: 0, preference_generation: 7 });
-    expect(editCalls()).toHaveLength(1);
-    expect(ackCalls()).toHaveLength(1);
-  });
-
-  it("does not confirm or acknowledge a failed atomic settings mutation", async () => {
-    const { db, sqlite } = fixtures.open();
-    sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, global_alert_dews)
-      VALUES ('42', 1, 1, 0)`);
-    const confirmAtomicMutationApplied = vi.fn();
-    await expect(handleSettingsCallback(db, "fake-token", {
-      id: "cb", from: { id: 1 }, message: { chat: { id: 42 }, message_id: 999 },
-    }, "gt", "dews", {
-      beforeIrreversibleEffect: async () => undefined,
-      prepareMutationAppliedStatement: () => db.prepare("INSERT INTO telegram_subscribers (chat_id) VALUES (NULL)"),
-      confirmAtomicMutationApplied,
-    })).rejects.toThrow();
-    expect(confirmAtomicMutationApplied).not.toHaveBeenCalled();
-    expect(sqlite.prepare("SELECT global_alert_dews FROM telegram_subscribers WHERE chat_id = '42'").get())
-      .toEqual({ global_alert_dews: 0 });
-    expect(editCalls()).toEqual([]);
-    expect(ackCalls()).toEqual([]);
+    expect(jsonBody(ackCalls()[0]).text).toContain("Tap again");
   });
 
   it("settings:q:1 enables quiet hours with the default 22-07 window", async () => {
@@ -388,7 +342,7 @@ describe("handleSettingsCallback — per-coin", () => {
     ["sm:d", "downgrade-only"],
     ["ds:250", "250bps"],
     ["ds:0", "Depeg off"],
-    ["lc:1", "Launch on"],
+    ["rs:1", "Reserve on"],
     ["db:0", "DEWS off"],
   ])("settings:c:<id>:%s edits the panel and acknowledges the setting", async (setting, acknowledgement) => {
     const db = mockD1([
@@ -404,6 +358,17 @@ describe("handleSettingsCallback — per-coin", () => {
     expect(jsonBody(editCalls()[0]).text).toContain("USDC settings");
     expect(ackCalls()).toHaveLength(1);
     expect(jsonBody(ackCalls()[0]).text).toContain(acknowledgement);
+  });
+
+  it.each([["c", "usdc-circle:lc:1"], ["gt", "launch"]])("retired launch button settings:%s:%s answers a toast without writing", async (subAction, subArg) => {
+    const db = mockD1();
+    await handleSettingsCallback(db, "fake-token", {
+      id: "cb", data: `settings:${subAction}:${subArg}`, from: { id: 1 },
+      message: { chat: { id: 42, type: "private" }, message_id: 999 },
+    }, subAction, subArg);
+    expect(jsonBody(ackCalls()[0]).text).toBe(TELEGRAM_LAUNCH_RETIRED_MESSAGE);
+    expect(editCalls()).toHaveLength(0);
+    expect(db.getHistory().some((entry) => /INSERT|UPDATE|DELETE/.test(entry.sql))).toBe(false);
   });
 
   it("unknown setting code under settings:c:<id>:?? receives an unknown-setting acknowledgement", async () => {
@@ -539,7 +504,7 @@ describe("message builders", () => {
     };
 
     const message = buildHomeMessage(subscriber);
-    expect(message).toContain("<b>Global alerts</b>\nDEWS: ON\nDepeg: ON (+25bps)\nSafety: OFF\nLaunch: ON\nReserve: ON\nFreeze: OFF\n");
+    expect(message).toContain("<b>Global alerts</b>\nDEWS: ON\nDepeg: ON (+25bps)\nSafety: OFF\nReserve: ON\nFreeze: OFF\n");
 
     // Regression pin: the hand-written copy listed only DEWS/Depeg/Safety/Launch
     // while buildHomeKeyboard rendered a toggle row for all six, so a chat with
@@ -547,7 +512,7 @@ describe("message builders", () => {
     const toggleLabels = buildHomeKeyboard(subscriber)
       .inline_keyboard.flat()
       .flatMap((button) => (button.callback_data?.startsWith("settings:gt:") ? [button.text.split(":")[0]!] : []));
-    expect(toggleLabels).toHaveLength(6);
+    expect(toggleLabels).toHaveLength(5);
     for (const label of toggleLabels) {
       expect(message).toContain(`\n${label}: `);
     }

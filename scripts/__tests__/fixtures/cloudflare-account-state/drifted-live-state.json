@@ -14,10 +14,9 @@
           "CF_ACCESS_TEAM_DOMAIN": { "type": "plain_text" },
           "OPS_API_SERVICE_TOKEN_ID": { "type": "secret_text" },
           "OPS_API_SERVICE_TOKEN_SECRET": { "type": "secret_text" },
-          "SELECTOR_SNAPSHOT_IP_HASH_SECRET": { "type": "secret_text" },
+          "SELECTOR_SNAPSHOT_IP_HASH_SECRET": { "type": "plain_text" },
           "SITE_API_ORIGIN": { "type": "plain_text", "value": "https://wrong.example" },
-          "SITE_API_SHARED_SECRET": { "type": "secret_text" },
-          "TELEGRAM_ADOPTION_IP_HASH_SECRET": { "type": "plain_text" }
+          "SITE_API_SHARED_SECRET": { "type": "secret_text" }
         },
         "d1Bindings": ["DB"],
         "kvBindings": []

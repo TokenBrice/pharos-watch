@@ -74,10 +74,9 @@ const TELEGRAM_WRITE_DEFAULTS: MockTableConfig[] = [
   { match: "DELETE FROM cache", rows: [] },
 ];
 const TELEGRAM_HARNESS_FALLBACKS: MockTableConfig[] = [
-  { match: "INSERT OR IGNORE INTO telegram_processed_updates", rows: [] },
+  { match: "INSERT INTO telegram_processed_updates", rows: [] },
   { match: "UPDATE telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
   { match: "DELETE FROM telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
-  { match: "INSERT INTO telegram_webhook_operation_mutations", rows: [] },
   { match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [] },
   { match: "preference_generation = preference_generation + 1", rows: [] },
 ];

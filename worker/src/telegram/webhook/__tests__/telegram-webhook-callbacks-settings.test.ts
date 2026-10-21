@@ -42,8 +42,8 @@ afterEach(() => fixtures.closeAll());
 
 describe("handleCallbackQuery", () => {
   describe("settings dispatch", () => {
-    it.each(["xx:1", "db:bad", "sm:bad", "ds:123", "lc:2", "rs:yes", "fz:"])(
-      "terminalizes invalid per-coin setting %s once without a mutation requirement",
+    it.each(["xx:1", "db:bad", "sm:bad", "ds:123", "rs:yes", "fz:"])(
+      "acks invalid per-coin setting %s once and dedupes its redelivery",
       async (setting) => {
         resetTelegramWebhookTest();
         const { db, sqlite } = fixtures.open();
@@ -58,21 +58,17 @@ describe("handleCallbackQuery", () => {
         expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers WHERE chat_id = '42'").get())
           .toEqual({ preference_generation: 7 });
         expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscriptions").get()).toEqual({ count: 0 });
-        expect(sqlite.prepare(`SELECT status, effect_state, intent_mutates, mutation_applied_at
-          FROM telegram_processed_updates WHERE update_id = 800`).get())
-          .toEqual({ status: "processed", effect_state: "complete", intent_mutates: 0, mutation_applied_at: null });
+        expect(sqlite.prepare("SELECT status FROM telegram_processed_updates WHERE update_id = 800").get())
+          .toEqual({ status: "processed" });
       },
     );
 
-    it("commits a valid per-coin setting and its mutation marker before the first Bot API effect", async () => {
+    it("commits a valid per-coin setting before the first Bot API effect", async () => {
       resetTelegramWebhookTest();
       const { db, sqlite } = fixtures.open();
       const observedBeforeEffects: unknown[] = [];
       webhookFetchSpy.mockImplementation(async () => {
-        observedBeforeEffects.push({
-          setting: sqlite.prepare("SELECT alert_dews FROM telegram_subscriptions WHERE chat_id = '42'").get(),
-          proof: sqlite.prepare("SELECT mutation_applied_at FROM telegram_processed_updates WHERE update_id = 801").get(),
-        });
+        observedBeforeEffects.push(sqlite.prepare("SELECT alert_dews FROM telegram_subscriptions WHERE chat_id = '42'").get());
         return new Response(JSON.stringify({ ok: true, result: true }), { status: 200 });
       });
       const response = await handleTelegramWebhook(db,
@@ -80,9 +76,7 @@ describe("handleCallbackQuery", () => {
       expect(response.status).toBe(200);
       expect(webhookFetchSpy).toHaveBeenCalled();
       expect(observedBeforeEffects.length).toBeGreaterThan(0);
-      for (const observed of observedBeforeEffects) {
-        expect(observed).toEqual({ setting: { alert_dews: 1 }, proof: { mutation_applied_at: expect.any(Number) } });
-      }
+      for (const observed of observedBeforeEffects) expect(observed).toEqual({ alert_dews: 1 });
     });
 
     it("settings:home routes to the settings handler and edits the message", async () => {
@@ -152,7 +146,7 @@ describe("handleCallbackQuery", () => {
       });
       mockTelegramMembership(fetchSpy, "member", { id: 7, is_bot: false, first_name: "member" });
 
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("settings:gt:dews", { id: "cb-settings-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 999 } }));
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("settings:gt:dews:1", { id: "cb-settings-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 999 } }));
 
       const history = db.getHistory();
       expect(history.some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
@@ -209,29 +203,4 @@ describe("handleCallbackQuery", () => {
     });
   });
 
-  describe("tz timezone callback", () => {
-    it("tz:<zone> persists a valid IANA zone with timezone in the upsert", async () => {
-      const db = mockTelegramD1([{ match: "INSERT INTO telegram_subscribers", rows: [] }]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("tz:Europe/Paris", { id: "cb-tz" }));
-
-      const upsert = db
-        .getHistory()
-        .find((h) => /INSERT INTO telegram_subscribers/.test(h.sql) && /timezone = excluded\.timezone/.test(h.sql));
-      expect(upsert).toBeDefined();
-      expect(upsert!.binds).toContain("Europe/Paris");
-
-      const editBody = lastEditedMessageBody();
-      expect(editBody.text).toContain("Current timezone: Europe/Paris");
-      expect(editBody.text).toContain("Quiet hours from /mute");
-      expect(lastAckBody().text).toContain("Europe/Paris");
-    });
-
-    it("tz:<unknown> rejects with a toast and does not write", async () => {
-      const db = mockTelegramD1([]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("tz:Mars/Olympus_Mons", { id: "cb-tz-bad" }));
-
-      expect(db.getHistory().some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
-      expect(lastAckBody().text).toMatch(/unknown timezone/i);
-    });
-  });
 });

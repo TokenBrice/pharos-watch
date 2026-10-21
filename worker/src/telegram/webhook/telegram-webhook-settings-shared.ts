@@ -7,10 +7,9 @@
 import type { SubscriberRow } from "./telegram-webhook-shared";
 import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
 import {
-  TELEGRAM_ALERT_TYPES,
-  isTelegramAlertType,
-  type TelegramAlertType,
-} from "@shared/types/status";
+  TELEGRAM_LIVE_ALERT_TYPES,
+  type TelegramLiveAlertType,
+} from "@shared/types/status/telegram";
 
 
 /** Default UTC quiet-hours window used when the user toggles quiet hours on
@@ -19,13 +18,13 @@ import {
 export const DEFAULT_QUIET_START_HOUR = 22;
 export const DEFAULT_QUIET_END_HOUR = 7;
 
-/** The chat-wide toggles are exactly the canonical alert families, in order. */
-export const GLOBAL_ALERT_TYPES = TELEGRAM_ALERT_TYPES;
-export type GlobalAlertType = TelegramAlertType;
+/** The chat-wide toggles are the live alert families, in order (launch is retired). */
+export const GLOBAL_ALERT_TYPES = TELEGRAM_LIVE_ALERT_TYPES;
+export type GlobalAlertType = TelegramLiveAlertType;
 
 
 export function isGlobalAlertType(value: string): value is GlobalAlertType {
-  return isTelegramAlertType(value);
+  return (GLOBAL_ALERT_TYPES as readonly string[]).includes(value);
 }
 
 

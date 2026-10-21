@@ -1,17 +1,14 @@
 import { handleSnoozeCallback } from "./snooze";
 import { handleCoinSnoozeCallback } from "./coinsnooze";
 import { handleStatusCallback } from "./status";
-import { handleWhyCallback } from "./why";
-import { handleCoverageCallback } from "./coverage";
 import { handleQuickSubCallback } from "./quicksub";
 import { handleDepegStepCallback } from "./depegstep";
 import { handleSafetyDownCallback } from "./safetydown";
-import { handleBulkActionCallback } from "./confirm";
-import { handleManageCallback } from "./manage";
-import { handleUnsubCallback } from "./unsub";
-import { handleSelectCallback } from "./select";
+import { handleFewerCallback } from "./fewer";
+import { handleBulkCallback, handleForgetCallback } from "./confirm";
+import { handlePickCallback } from "./pick";
 import { handleHelpCallback } from "./help";
-import { handleTimezoneCallback } from "./tz";
+import { handleRetiredButtonCallback } from "./legacy";
 import type { CallbackAction, CallbackHandler } from "./_shared";
 
 export type { CallbackAction, CallbackHandler, ParsedCallbackData, TelegramCallbackQuery } from "./_shared";
@@ -22,26 +19,27 @@ export type { CallbackAction, CallbackHandler, ParsedCallbackData, TelegramCallb
  * the bespoke `setup:*` and `settings:*` paths. Mirrors the structure of
  * `worker/src/telegram/commands/index.ts`'s `COMMAND_HANDLERS`.
  *
- * `confirm:bulk` / `confirm:forget` and `cancel:bulk` / `cancel:forget` share
- * one handler (`handleBulkActionCallback`) because the dispatch logic across
- * the two prefixes is identical.
- *
- * `settings` is handled before registry lookup by its dedicated sub-dispatcher.
+ * `why:<id>` and `coverage:<id>` buttons on old /status cards now render the
+ * status card; the other retired prefixes answer with a short hint.
  */
 export const CALLBACK_HANDLERS: Record<Exclude<CallbackAction, "settings">, CallbackHandler> = {
   snooze: handleSnoozeCallback,
   coinsnooze: handleCoinSnoozeCallback,
   status: handleStatusCallback,
-  why: handleWhyCallback,
-  coverage: handleCoverageCallback,
   quicksub: handleQuickSubCallback,
   depegstep: handleDepegStepCallback,
   safetydown: handleSafetyDownCallback,
-  confirm: handleBulkActionCallback,
-  cancel: handleBulkActionCallback,
-  manage: handleManageCallback,
-  unsub: handleUnsubCallback,
-  select: handleSelectCallback,
+  fewer: handleFewerCallback,
+  pick: handlePickCallback,
+  bulk: handleBulkCallback,
+  forget: handleForgetCallback,
   help: handleHelpCallback,
-  tz: handleTimezoneCallback,
+  why: handleStatusCallback,
+  coverage: handleStatusCallback,
+  confirm: handleRetiredButtonCallback,
+  cancel: handleRetiredButtonCallback,
+  manage: handleRetiredButtonCallback,
+  unsub: handleRetiredButtonCallback,
+  select: handleRetiredButtonCallback,
+  tz: handleRetiredButtonCallback,
 };

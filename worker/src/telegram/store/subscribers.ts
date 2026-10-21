@@ -1,7 +1,5 @@
 import { unixNowSec as unixNow } from "@shared/lib/time-constants";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
-import { formatIsoDate } from "@shared/lib/format";
-import type { TelegramAdoptionCampaign, TelegramAdoptionPlacement } from "@shared/lib/telegram-adoption-analytics";
 import { executeAtomicBatch } from "../../lib/db";
 import type { SubscriberRow } from "../webhook/telegram-webhook-shared";
 import {
@@ -29,17 +27,6 @@ export function prepareEnsureSubscriberExists(
   `).bind(chatId, username, nowSec, nowSec);
 }
 
-export interface TelegramFollowAttribution {
-  campaign: TelegramAdoptionCampaign;
-  placement: TelegramAdoptionPlacement;
-}
-
-export interface TelegramFollowOptions {
-  adoption?: TelegramFollowAttribution;
-  /** False only when a composed mutation claims once before all its domain writes. */
-  recordFirstFollow?: boolean;
-}
-
 /** Prepend only to a validated enable transition, in its atomic domain batch.
  * Existing effective follows are not proof of a missing historical milestone.
  */
@@ -50,7 +37,6 @@ export function prepareTelegramFirstFollowStatements(
     username: string | null;
     feature: "direct" | "preset" | "global";
     nowSec: number;
-    adoption?: TelegramFollowAttribution;
     guard?: { sql: string; binds: unknown[] };
     ensureSubscriber?: boolean;
   },
@@ -65,14 +51,6 @@ export function prepareTelegramFirstFollowStatements(
   const binds = [input.chatId, ...(input.guard?.binds ?? [])];
   return [
     ...(input.ensureSubscriber === false ? [] : [prepareEnsureSubscriberExists(db, input.chatId, input.username, input.nowSec)]),
-    db.prepare(`INSERT INTO telegram_adoption_daily (
-        day, campaign, placement, stage, feature, latency_bucket, outcome, count, first_seen_at, last_seen_at
-      ) SELECT ?, ?, ?, 'first_follow', ?, '', 'success', 1, ?, ?
-        WHERE EXISTS (SELECT 1 FROM telegram_subscribers WHERE ${eligible})
-      ON CONFLICT(day, campaign, placement, stage, feature, latency_bucket, outcome)
-      DO UPDATE SET count = telegram_adoption_daily.count + 1, last_seen_at = excluded.last_seen_at`)
-      .bind(formatIsoDate(input.nowSec), input.adoption?.campaign ?? "organic", input.adoption?.placement ?? "unknown",
-        input.feature, input.nowSec, input.nowSec, ...binds),
     db.prepare(`UPDATE telegram_subscribers SET first_follow_at = ? WHERE ${eligible}`)
       .bind(input.nowSec, ...binds),
   ];
@@ -254,14 +232,14 @@ export function prepareUpsertSubscriberRow(
 export async function upsertSubscriberRow(
   db: D1Database,
   input: UpsertSubscriberInput,
-  options: TelegramOperationBatchOptions & TelegramFollowOptions = {},
+  options: TelegramOperationBatchOptions = {},
 ): Promise<void> {
   const enablesGlobal = Object.values(input.globalAlertOverrides ?? input.globalAlertBumps ?? {}).some((value) => value === 1);
   await executeAtomicBatch(
     db,
     appendTelegramOperationStatements([
       ...(enablesGlobal ? prepareTelegramFirstFollowStatements(db, {
-        ...input, feature: "global", adoption: options.adoption,
+        ...input, feature: "global",
       }) : []),
       prepareUpsertSubscriberRow(db, input),
     ], options),
@@ -312,12 +290,12 @@ export async function upsertGlobalAlertTypes(
   chatId: string,
   username: string | null,
   alertTypes: Set<string>,
-  options: { clearPending?: boolean; operationStatements?: D1PreparedStatement[] } & TelegramFollowOptions = {},
+  options: { clearPending?: boolean; operationStatements?: D1PreparedStatement[] } = {},
 ): Promise<void> {
   const nowSec = unixNow();
   const statements = [
     ...(TELEGRAM_ALERT_TYPES.some((type) => alertTypes.has(type))
-      ? prepareTelegramFirstFollowStatements(db, { chatId, username, nowSec, feature: "global", adoption: options.adoption })
+      ? prepareTelegramFirstFollowStatements(db, { chatId, username, nowSec, feature: "global" })
       : []),
     prepareUpsertSubscriberRow(db, {
       chatId,

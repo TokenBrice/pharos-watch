@@ -49,7 +49,7 @@ export function CommandManual() {
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder='Filter commands — try "mute", "timezone", "usdt"'
+          placeholder='Filter commands, e.g. "pause" or "usdc"'
           className="pharos-focus-ring h-11 w-full rounded-md border border-border/60 bg-background/60 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground/70"
         />
       </div>
@@ -61,8 +61,7 @@ export function CommandManual() {
 
       {filteredGroups.length === 0 ? (
         <p className="mt-6 rounded-lg border border-dashed border-border/60 px-4 py-6 text-sm text-muted-foreground">
-          No commands match &ldquo;{query}&rdquo;. Try a command verb like <code>/set</code>, a coin ticker, or a
-          setting name.
+          No commands match &ldquo;{query}&rdquo;. Try a command like <code>/status</code> or a coin ticker.
         </p>
       ) : (
         <div className="mt-6 space-y-8" aria-label="PharosWatchBot command reference">

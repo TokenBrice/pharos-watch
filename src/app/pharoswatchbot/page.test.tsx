@@ -12,11 +12,9 @@ import {
   TELEGRAM_MINI_APP_PAYLOAD_PATTERN,
   TELEGRAM_START_PAYLOAD_MAX_LENGTH,
 } from "@shared/lib/telegram-mini-app-payloads";
-import {
-  TELEGRAM_BOT_COMMANDS,
-} from "@shared/lib/telegram-bot-registration";
+import { TELEGRAM_COMMAND_NAMES } from "@shared/lib/telegram-bot-registration";
 import { TELEGRAM_PUBLIC_ALERT_SAMPLES } from "@shared/lib/telegram-alert-samples";
-import { telegramAdoptionEntryForPlacement, telegramAdoptionSource } from "@shared/lib/telegram-adoption-analytics";
+import { parseTelegramLandingToken, telegramLandingEntryForPlacement } from "@shared/lib/telegram-landing-links";
 
 describe("PharosWatchBotPage", () => {
   it("keeps the public alert and command contracts complete", () => {
@@ -24,7 +22,6 @@ describe("PharosWatchBotPage", () => {
       "dews",
       "depeg",
       "safety",
-      "launch",
       "reserve",
       "freeze",
     ]);
@@ -38,8 +35,8 @@ describe("PharosWatchBotPage", () => {
         group.commands.map((entry) => entry.command.match(/^\/([a-z]+)/)?.[1]).filter(Boolean),
       ),
     );
-    expect([...publicCommands].sort()).toEqual(TELEGRAM_BOT_COMMANDS.map((entry) => entry.command).sort());
-    for (const retiredCommand of ["import", "export", "recap"]) {
+    expect([...publicCommands].sort()).toEqual([...TELEGRAM_COMMAND_NAMES].sort());
+    for (const retiredCommand of ["import", "export", "recap", "set", "mute", "timezone", "top", "brief"]) {
       expect(publicCommands.has(retiredCommand)).toBe(false);
     }
   });
@@ -49,9 +46,9 @@ describe("PharosWatchBotPage", () => {
     const startPayload = url.searchParams.get("start");
 
     expect(`${url.origin}${url.pathname}`).toBe(PHAROSWATCHBOT_BOT_URL);
-    const setupEntry = telegramAdoptionEntryForPlacement("setup");
+    const setupEntry = telegramLandingEntryForPlacement("setup");
     expect(startPayload).toBe(setupEntry.token);
-    expect(telegramAdoptionSource(startPayload)).toEqual({ campaign: "landing", placement: "setup" });
+    expect(parseTelegramLandingToken(startPayload)).toBe(setupEntry);
     expect(RECOMMENDED_SETUP_COMMAND).toBe("/subscribe dews,depeg usd-top25");
     expect(startPayload?.length).toBeLessThanOrEqual(TELEGRAM_START_PAYLOAD_MAX_LENGTH);
     expect(TELEGRAM_MINI_APP_PAYLOAD_PATTERN.test(startPayload ?? "")).toBe(true);

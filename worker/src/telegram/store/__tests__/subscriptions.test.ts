@@ -14,8 +14,9 @@ type SettingCase = {
   expected: Record<string, unknown>;
 };
 const settingCases: SettingCase[] = [
-  ...(["dews", "depeg", "safety", "launch", "reserve", "freeze"] as const).flatMap((family): SettingCase[] => {
-    const code = { dews: "db", depeg: "ds", safety: "sm", launch: "lc", reserve: "rs", freeze: "fz" }[family];
+  // Launch is retired: no live path writes alert_launch any more.
+  ...(["dews", "depeg", "safety", "reserve", "freeze"] as const).flatMap((family): SettingCase[] => {
+    const code = { dews: "db", depeg: "ds", safety: "sm", reserve: "rs", freeze: "fz" }[family];
     const off = {
       name: `${family} off`, callback: [code, "0"] as [string, string],
       command: { ticker: "USDC", setting: family, enabled: false, minBand: null, mode: null } as ParsedSetCommand,
@@ -26,7 +27,7 @@ const settingCases: SettingCase[] = [
           : family === "depeg" ? { depeg_worsening_bps_step: null } : {}),
       },
     };
-    return family === "launch" || family === "reserve" || family === "freeze"
+    return family === "reserve" || family === "freeze"
       ? [off, {
         name: `${family} on`, callback: [code, "1"],
         command: { ticker: "USDC", setting: family, enabled: true }, patch: { [family]: true },

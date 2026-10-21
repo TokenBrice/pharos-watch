@@ -186,7 +186,9 @@ describe("dispatchTelegramAlerts", () => {
       safetyAlertsSuppressed: true,
       noWorkRun: false,
     });
-    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM cache").get()).toEqual({ count: 7 });
+    // No DEWS rows were readable, so the three DEWS keys stay unwritten (R2).
+    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM cache").get()).toEqual({ count: 4 });
+    expect(readCacheValue(harness.sqlite, "alert:dews-snapshot")).toBeNull();
     expect(readCacheValue(harness.sqlite, "alert:reserve-observed-snapshot")).not.toBeNull();
     expect(readCacheValue(harness.sqlite, "telegram:preset-query-failure-count")).toBe("0");
     expect(mockRecordOutcome).toHaveBeenCalledTimes(1);
@@ -262,22 +264,22 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata).toMatchObject({ eventlessFastPath: true, pendingTotal: 0 });
     expect(result.itemCount).toBe(1);
     expect(progressUpdates.find((update) => update.stage === "source-loading")).toMatchObject({
-      itemsTotal: 6,
-      metadata: { providerFamilies: ["dews", "depeg", "safety", "launch", "reserve", "freeze"] },
+      itemsTotal: 5,
+      metadata: { providerFamilies: ["dews", "depeg", "safety", "reserve", "freeze"] },
     });
     expect(progressUpdates.find((update) => update.stage === "source-loaded")).toMatchObject({
-      itemsDone: 6,
-      itemsTotal: 6,
+      itemsDone: 5,
+      itemsTotal: 5,
       metadata: {
-        providerFamilies: ["dews", "depeg", "safety", "launch", "reserve", "freeze"],
+        providerFamilies: ["dews", "depeg", "safety", "reserve", "freeze"],
         reserveSourceUnavailable: true,
         countTotals: { reserveDriftIds: 0 },
       },
     });
     expect(progressUpdates.find((update) => update.stage === "event-detection")).toMatchObject({
-      itemsTotal: 6,
+      itemsTotal: 5,
       metadata: {
-        providerFamilies: ["dews", "depeg", "safety", "launch", "reserve", "freeze"],
+        providerFamilies: ["dews", "depeg", "safety", "reserve", "freeze"],
         reserveSourceUnavailable: true,
       },
     });
@@ -318,6 +320,7 @@ describe("dispatchTelegramAlerts", () => {
   ])("drains due pending rows before the $label early return", async (scenario) => {
     const now = Math.floor(Date.now() / 1000);
     const sourceEventId = `telegram-source:test:v1:${scenario.label}`;
+    // Legacy payload shape (with retired launch fields) stays readable.
     const emptyEvents = JSON.stringify({
       dewsChanges: [],
       depegTriggered: [],

@@ -125,7 +125,6 @@ export interface CommsWorkbenchModel {
     alertTypeChats: Record<TelegramAlertType | "allTypes", number | null>;
     presetQueryFailures: number | null;
     inactiveSubscribersCleanedThisWeek: number | null;
-    webhookEffectUnknown: number | null;
     topStablecoins: Array<{
       stablecoinId: string;
       symbol: string;
@@ -466,7 +465,6 @@ export function buildCommsWorkbenchModel(input: {
         unavailableFields,
         "inactiveSubscribersCleanedThisWeek",
       ),
-      webhookEffectUnknown: optionalBotNumber(telegramBot, unavailableFields, "webhookEffectUnknown"),
       topStablecoins:
         telegramBot?.topStablecoins.map((coin) => ({
           stablecoinId: coin.stablecoinId,

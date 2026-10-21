@@ -18,7 +18,6 @@ import {
   unixNow,
   type UpsertSubscriberInput,
   prepareTelegramFirstFollowStatements,
-  type TelegramFollowOptions,
 } from "./subscribers";
 import {
   appendTelegramOperationStatements,
@@ -263,7 +262,7 @@ export function prepareSubscriberAndSubscriptionStatements(
   username: string | null,
   alertTypes: Set<string>,
   stablecoinIds: string[],
-  options?: { clearPending?: boolean; depegWorseningBpsStep?: 100 | 250 | 500 | null } & TelegramFollowOptions,
+  options?: { clearPending?: boolean; depegWorseningBpsStep?: 100 | 250 | 500 | null },
 ): D1PreparedStatement[] {
   const now = unixNow();
   // A pending depeg-step write implies the depeg family regardless of whether
@@ -275,8 +274,8 @@ export function prepareSubscriberAndSubscriptionStatements(
   const uniqueStablecoinIds = Array.from(new Set(stablecoinIds));
 
   const statements: D1PreparedStatement[] = [
-    ...(options?.recordFirstFollow !== false && uniqueStablecoinIds.length > 0 && Object.values(alertFlags).some((flag) => flag === 1)
-      ? prepareTelegramFirstFollowStatements(db, { chatId, username, nowSec: now, feature: "direct", adoption: options?.adoption })
+    ...(uniqueStablecoinIds.length > 0 && Object.values(alertFlags).some((flag) => flag === 1)
+      ? prepareTelegramFirstFollowStatements(db, { chatId, username, nowSec: now, feature: "direct" })
       : []),
     prepareUpsertSubscriberRow(db, {
       chatId,
@@ -344,7 +343,7 @@ export async function upsertSubscriberAndSubscriptions(
     clearPending?: boolean;
     depegWorseningBpsStep?: 100 | 250 | 500 | null;
     operationStatements?: D1PreparedStatement[];
-  } & TelegramFollowOptions,
+  },
 ): Promise<void> {
   const statements = prepareSubscriberAndSubscriptionStatements(
     db,
@@ -364,7 +363,7 @@ export function prepareSettingToSubscriptions(
   username: string | null,
   coins: readonly Pick<ResolvedCoin, "id">[],
   command: ParsedSetCommand,
-  options: TelegramFollowOptions & { clearPending?: boolean } = {},
+  options: { clearPending?: boolean } = {},
 ): D1PreparedStatement[] {
   const now = unixNow();
   // `depeg-step` always implies the depeg family; every other setting bumps its
@@ -377,8 +376,8 @@ export function prepareSettingToSubscriptions(
         : {};
 
   const statements: D1PreparedStatement[] = [
-    ...(options.recordFirstFollow !== false && coins.length > 0 && Object.values(perCoinAlertBumps ?? {}).some((flag) => flag === 1)
-      ? prepareTelegramFirstFollowStatements(db, { chatId, username, nowSec: now, feature: "direct", adoption: options.adoption })
+    ...(coins.length > 0 && Object.values(perCoinAlertBumps ?? {}).some((flag) => flag === 1)
+      ? prepareTelegramFirstFollowStatements(db, { chatId, username, nowSec: now, feature: "direct" })
       : []),
     prepareUpsertSubscriberRow(db, {
       chatId,
@@ -407,7 +406,7 @@ export async function applySettingToSubscriptions(
   username: string | null,
   coins: ResolvedCoin[],
   command: ParsedSetCommand,
-  options: TelegramOperationBatchOptions & TelegramFollowOptions & { clearPending?: boolean } = {},
+  options: TelegramOperationBatchOptions & { clearPending?: boolean } = {},
 ): Promise<void> {
   const statements = prepareSettingToSubscriptions(db, chatId, username, coins, command, options);
   await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
@@ -428,11 +427,11 @@ export async function setGlobalDepegWorseningStep(
   chatId: string,
   username: string | null,
   step: 100 | 250 | 500 | null,
-  options: TelegramOperationBatchOptions & TelegramFollowOptions & { clearPending?: boolean } = {},
+  options: TelegramOperationBatchOptions & { clearPending?: boolean } = {},
 ): Promise<void> {
   const now = unixNow();
   const statements: D1PreparedStatement[] = [
-    ...prepareTelegramFirstFollowStatements(db, { chatId, username, nowSec: now, feature: "global", adoption: options.adoption }),
+    ...prepareTelegramFirstFollowStatements(db, { chatId, username, nowSec: now, feature: "global" }),
     prepareUpsertSubscriberRow(db, {
       chatId,
       username,
@@ -458,7 +457,7 @@ export async function applyGlobalSetting(
   chatId: string,
   username: string | null,
   command: ParsedSetCommand,
-  options: TelegramOperationBatchOptions & TelegramFollowOptions & { clearPending?: boolean } = {},
+  options: TelegramOperationBatchOptions & { clearPending?: boolean } = {},
 ): Promise<void> {
   if (command.setting === "depeg-step") {
     await setGlobalDepegWorseningStep(db, chatId, username, command.step, options);
@@ -469,7 +468,7 @@ export async function applyGlobalSetting(
   const nowSec = unixNow();
   const statements = [
     ...(command.enabled
-      ? prepareTelegramFirstFollowStatements(db, { chatId, username, nowSec, feature: "global", adoption: options.adoption })
+      ? prepareTelegramFirstFollowStatements(db, { chatId, username, nowSec, feature: "global" })
       : []),
     prepareUpsertSubscriberRow(db, {
       chatId,

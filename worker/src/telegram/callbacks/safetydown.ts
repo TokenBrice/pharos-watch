@@ -18,8 +18,6 @@ export const handleSafetyDownCallback: CallbackHandler = async (context) => {
     actionDetail: "safetydown",
     logAction: "safetydown",
     logMessage: "safetydown callback write failed",
-    intentKind: "callback:safetydown",
-    intentPayload: (id) => ({ coinId: id, mode: "downgrade-only" }),
     write: async (id, options) => {
       const prepared = prepareCoinSettingStatements(
         db,

@@ -12,7 +12,7 @@ import { TELEGRAM_PRESET_IDS } from "./telegram-presets";
 
 export type { TelegramAlertType };
 
-export const TELEGRAM_MINI_APP_CONTRACT_VERSION = "7";
+export const TELEGRAM_MINI_APP_CONTRACT_VERSION = "8";
 export const TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM = "mini_app_contract";
 export const TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM = "mini_app_catalog";
 export { TELEGRAM_MINI_APP_CATALOG_VERSION };
@@ -31,9 +31,6 @@ const TELEGRAM_MINI_APP_ERROR_CODES = [
   "invalid-coin-patch",
   "invalid-alert-types",
   "invalid-timezone",
-  "invalid-portable-token",
-  "empty-portable-state",
-  "stale-import-preview",
   "stale-bulk-preview",
   "contract-version-mismatch",
   "catalog-version-mismatch",
@@ -149,21 +146,6 @@ const BulkWatchlistUndoSchema = z.object({
 }).strict();
 
 export const TelegramMiniAppOperationSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("export-watchlist") }).strict(),
-  z
-    .object({
-      kind: z.literal("preview-watchlist-import"),
-      token: z.string().min(1).max(4_000),
-    })
-    .strict(),
-  z
-    .object({
-      kind: z.literal("confirm-watchlist-import"),
-      token: z.string().min(1).max(4_000),
-      expectedPreferenceGeneration: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
-      previewFingerprint: z.string().regex(/^preview-v1-[0-9]+-[0-9a-f]{8}$/),
-    })
-    .strict(),
   z.object({ kind: z.literal("preview-bulk-watchlist") })
     .merge(BulkWatchlistSelectionSchema)
     .strict(),
@@ -282,10 +264,6 @@ export const TelegramMiniAppOperationSchema = z.discriminatedUnion("kind", [
 ]);
 
 export type TelegramMiniAppOperation = z.infer<typeof TelegramMiniAppOperationSchema>;
-export type TelegramMiniAppPortabilityOperation = Extract<
-  TelegramMiniAppOperation,
-  { kind: "export-watchlist" | "preview-watchlist-import" | "confirm-watchlist-import" }
->;
 export type TelegramMiniAppBulkWatchlistOperation = Extract<
   TelegramMiniAppOperation,
   { kind: "preview-bulk-watchlist" | "confirm-bulk-watchlist" | "undo-bulk-watchlist" }
@@ -425,38 +403,6 @@ export const TelegramMiniAppSnapshotSchema = z
 
 export const TelegramMiniAppResponseSchema = z.union([TelegramMiniAppSnapshotSchema, TelegramMiniAppStateSchema]);
 
-const TelegramMiniAppImportPreviewSchema = z.object({
-  directAdds: z.array(z.string()),
-  directRemoves: z.array(z.string()),
-  directChanges: z.array(z.string()),
-  presetAdds: z.array(z.string()),
-  presetRemoves: z.array(z.string()),
-  presetChanges: z.array(z.string()),
-  directBroadenedCoverage: z.array(z.object({ id: z.string(), alertTypes: z.array(TelegramAlertTypeSchema) }).strict()),
-  directRemovedCoverage: z.array(z.object({ id: z.string(), alertTypes: z.array(TelegramAlertTypeSchema) }).strict()),
-  presetBroadenedCoverage: z.array(z.object({ id: z.string(), alertTypes: z.array(z.enum(["dews", "depeg", "safety"])) }).strict()),
-  presetRemovedCoverage: z.array(z.object({ id: z.string(), alertTypes: z.array(z.enum(["dews", "depeg", "safety"])) }).strict()),
-}).strict();
-
-export const TelegramMiniAppPortabilityResponseSchema = z.object({
-  contractVersion: z.string(),
-  catalogVersion: z.string(),
-  result: z.discriminatedUnion("kind", [
-    z.object({
-      kind: z.literal("watchlist-export"),
-      token: z.string().min(1).max(4_000),
-      directCount: z.number().int().nonnegative(),
-      presetCount: z.number().int().nonnegative(),
-    }).strict(),
-    z.object({
-      kind: z.literal("watchlist-import-preview"),
-      expectedPreferenceGeneration: z.number().int().nonnegative(),
-      previewFingerprint: z.string().regex(/^preview-v1-[0-9]+-[0-9a-f]{8}$/),
-      preview: TelegramMiniAppImportPreviewSchema,
-    }).strict(),
-  ]),
-}).strict();
-
 const TelegramMiniAppBulkSourceImpactSchema = z.object({
   stablecoinId: z.string(),
   action: z.enum(["add", "remove"]),
@@ -492,7 +438,6 @@ export type TelegramMiniAppMutableState = z.infer<typeof TelegramMiniAppMutableS
 export type TelegramMiniAppState = z.infer<typeof TelegramMiniAppStateSchema>;
 export type TelegramMiniAppSnapshot = z.infer<typeof TelegramMiniAppSnapshotSchema>;
 export type TelegramMiniAppResponse = z.infer<typeof TelegramMiniAppResponseSchema>;
-export type TelegramMiniAppPortabilityResponse = z.infer<typeof TelegramMiniAppPortabilityResponseSchema>;
 export type TelegramMiniAppBulkWatchlistResponse = z.infer<typeof TelegramMiniAppBulkWatchlistResponseSchema>;
 
 export function telegramMiniAppStateRevision(state: TelegramMiniAppMutableState): string {

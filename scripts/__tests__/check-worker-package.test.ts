@@ -81,7 +81,6 @@ describe("check-worker-package", () => {
     `${"./../".repeat(10_000)}src/api/og.tsx`,
     "../../worker/src/telegram/webhook/telegram-webhook.ts",
     "../../worker/src/telegram/mini-app/telegram-mini-app.ts",
-    "../../worker/src/telegram/adoption/telegram-adoption.ts",
     "../../worker/src/telegram/admin/admin-telegram-broadcast.ts",
     "../../worker/src/telegram/webhook/telegram-pulse.ts",
     "../../src/telegram/webhook/telegram-webhook.ts",

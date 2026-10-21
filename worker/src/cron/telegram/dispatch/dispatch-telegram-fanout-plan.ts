@@ -45,6 +45,7 @@ export function buildTelegramAlertsByChat(
         route.shouldInclude,
         inputs.perCoinSnoozeMap,
         inputs.perCoinExplicitlyOffMaps[family.family],
+        family.family,
       );
     }
   }

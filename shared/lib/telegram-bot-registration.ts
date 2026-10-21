@@ -1,4 +1,4 @@
-import { TELEGRAM_ALERT_FAMILY_COMMAND_TOKENS, TELEGRAM_ALERT_FAMILY_PHRASE_LIST } from "./telegram-alert-families";
+import { TELEGRAM_ALERT_FAMILY_COMMAND_TOKENS } from "./telegram-alert-families";
 
 export const TELEGRAM_ALLOWED_UPDATES = [
   "message",
@@ -18,277 +18,129 @@ export const TELEGRAM_BOT_URL = `https://t.me/${TELEGRAM_BOT_USERNAME}`;
 // scripts use the same reviewed payloads.
 export const TELEGRAM_BOT_NAME = "Pharos Watch";
 export const TELEGRAM_BOT_SHORT_DESCRIPTION =
-  "Stablecoin risk alerts and a visual control panel for watchlists, quiet hours, and tuning.";
-// The family list derives from the canonical alert-family manifest so the
-// profile copy stays count-free and cannot drift from the runtime families.
-export const TELEGRAM_BOT_DESCRIPTION =
-  `Pharos Watch pushes alerts across the tracked stablecoin universe: ${TELEGRAM_ALERT_FAMILY_PHRASE_LIST}. Subscribe to curated presets like usd-top25, or build a custom watchlist of any tracked coin. Tap the menu button to open the Mini App — your visual control panel for watchlists, quiet hours, and per-coin tuning. Learn more at https://pharos.watch/pharoswatchbot/`;
+  "Alerts when a stablecoin you follow loses its peg, shows rising stress, or changes Safety grade. Free.";
+export const TELEGRAM_BOT_DESCRIPTION = [
+  "Pharos Watch messages you when a stablecoin you follow loses its peg, shows early signs of stress, or has its Safety grade changed.",
+  "Tap Start to follow the 25 largest USD stablecoins in one tap, or choose your own coins. Change anything later in Manage Alerts.",
+  "Free. Data and methods: https://pharos.watch/pharoswatchbot/",
+].join("\n\n");
 
 /**
  * One typed form of a command. `syntax`/`help` are plain text; renderers are
  * responsible for HTML escaping (bot messages) or JSX text (public pages).
  */
 export interface TelegramCommandVariant {
-  /** Typed syntax with placeholders, e.g. "/subscribe <types> <targets>". */
+  /** Typed syntax with placeholders, e.g. "/subscribe <targets>". */
   readonly syntax: string;
-  /** Concise one-line meaning used by the bot's /help listing. */
+  /** Concise one-line meaning used by /help and the public command list. */
   readonly help: string;
-  /** Exact usage example for the public reference; null when the bare syntax is the example. */
+  /** Exact usage example; null when the bare syntax is the example. */
   readonly example: string | null;
 }
 
 export interface TelegramCommandReferenceEntry {
-  /** BotFather menu description for the private scope (group remap below). */
+  /** BotFather menu description. */
   readonly description: string;
-  /** "private" hides the command from the group menu (start, forget). */
-  readonly audience: "private" | "chat";
-  /** Syntax variants shared by /help and the public command reference. */
+  /**
+   * Menu placement: "all" registers in private and group menus, "private" in
+   * the private menu only, "typed" in neither (the command still works).
+   */
+  readonly menu: "all" | "private" | "typed";
+  /** Syntax variants shared by /help and the public command list. */
   readonly variants: readonly TelegramCommandVariant[];
-  /** Deprecated command tokens still dispatched to this command. */
-  readonly deprecatedAliases?: readonly string[];
 }
 
-// Canonical command reference. Insertion order is the BotFather menu order;
-// registration menus, the bot's /help copy, and the public command reference
-// all derive from this one manifest so the three surfaces cannot drift.
+// Canonical command set. Insertion order is the BotFather menu order; the
+// registration menus, the bot's /help copy, and the public command list on
+// /pharoswatchbot all derive from this one manifest so they cannot drift.
+// Retired commands are not listed here: the Worker answers them with a
+// one-line redirect (worker/src/telegram/commands/legacy.ts).
 export const TELEGRAM_COMMAND_REFERENCE = {
   start: {
-    description: "Get started with Pharos alerts",
-    audience: "private",
+    description: "Set up alerts",
+    menu: "private",
     variants: [
-      {
-        syntax: "/start",
-        help: "Open the guided setup flow or process a Telegram deep-link payload",
-        example: "/start",
-      },
-    ],
-  },
-  help: {
-    description: "Command reference",
-    audience: "chat",
-    variants: [{ syntax: "/help", help: "Show the command reference", example: null }],
-  },
-  sample: {
-    description: "Preview a synthetic alert before subscribing",
-    audience: "chat",
-    variants: [
-      {
-        syntax: "/sample",
-        help: "Preview a sample DEWS alert without changing subscriptions",
-        example: "/sample",
-      },
+      { syntax: "/start", help: "Follow the 25 largest USD stablecoins in one tap, or choose your own coins", example: null },
     ],
   },
   status: {
-    description: "Current peg, DEWS, and safety for one coin (e.g. /status USDC)",
-    audience: "chat",
+    description: "Your alerts, or one coin (e.g. /status USDC)",
+    menu: "all",
     variants: [
-      {
-        syntax: "/status <ticker>",
-        help: "Current peg, DEWS band, and safety grade for one coin — no subscription needed",
-        example: "/status USDC",
-      },
-    ],
-  },
-  brief: {
-    description: "Latest Pharos market brief",
-    audience: "chat",
-    deprecatedAliases: ["market"],
-    variants: [
-      {
-        syntax: "/brief",
-        help: "Latest market brief from the daily digest inputs",
-        example: "/brief",
-      },
-    ],
-  },
-  top: {
-    description: "Rank current views: depeg, dews, yield, liquidity, chains, safety",
-    audience: "chat",
-    variants: [
-      {
-        syntax: "/top <view>",
-        help: "Rank current views: depeg, dews, yield, liquidity, chains, or safety",
-        example: "/top depeg",
-      },
-    ],
-  },
-  why: {
-    description: "Explain one coin Safety Score (e.g. /why USDC)",
-    audience: "chat",
-    variants: [
-      {
-        syntax: "/why <ticker>",
-        help: "Explain the current Safety Score in plain language",
-        example: "/why USDC",
-      },
-    ],
-  },
-  coverage: {
-    description: "Show which Pharos data surfaces cover one coin",
-    audience: "chat",
-    variants: [
-      {
-        syntax: "/coverage <ticker>",
-        help: "Show which Pharos data surfaces currently cover one coin",
-        example: "/coverage USDC",
-      },
-    ],
-  },
-  health: {
-    description: "Show delivery diagnostics for this chat",
-    audience: "chat",
-    variants: [
-      {
-        syntax: "/health",
-        help: "Show delivery diagnostics for this chat: queued alerts, quiet hours, snooze, and recent failure class",
-        example: null,
-      },
+      { syntax: "/status", help: "What you follow, whether alerts are on, and active depegs", example: null },
+      { syntax: "/status <ticker>", help: "Peg, stress level and Safety grade for one coin", example: "/status USDC" },
     ],
   },
   list: {
-    description: "Show your current subscriptions and settings",
-    audience: "chat",
-    variants: [{ syntax: "/list", help: "Show current subscriptions and settings", example: null }],
+    description: "What you follow",
+    menu: "all",
+    variants: [{ syntax: "/list", help: "Presets and coins you follow, quiet hours and pause", example: null }],
   },
   subscribe: {
-    description: "Subscribe to alerts (e.g. /subscribe usd-top-50 depeg-step 250)",
-    audience: "chat",
+    description: "Follow coins or a preset (e.g. /subscribe USDC)",
+    menu: "all",
     variants: [
+      {
+        syntax: "/subscribe <targets>",
+        help: "Follow coins or a preset for depeg and stress alerts",
+        example: "/subscribe USDC USDT",
+      },
       {
         syntax: "/subscribe <types> <targets>",
-        help: `Enable alert types (${TELEGRAM_ALERT_FAMILY_COMMAND_TOKENS}) for coins; presets support dews, depeg, and safety only`,
+        help: `Choose alert types (${TELEGRAM_ALERT_FAMILY_COMMAND_TOKENS}); presets support dews, depeg and safety`,
         example: "/subscribe dews,depeg usd-top25",
-      },
-      {
-        syntax: "/subscribe <types> all",
-        help: "Enable alert types across all tracked stablecoins; safety all delivers downgrades only, with a 3-point drop when scored",
-        example: "/subscribe depeg,safety all",
-      },
-      {
-        syntax: "/subscribe <targets> depeg-step <value>",
-        help: "Enable depeg alerts for coins or preset watchlists and re-alert when worsening crosses the step (100, 250, or 500 bps)",
-        example: "/subscribe usd-top50 depeg-step 250",
-      },
-    ],
-  },
-  unsubscribe: {
-    description: "Remove coin subscriptions",
-    audience: "chat",
-    variants: [
-      {
-        syntax: "/unsubscribe <targets>",
-        help: "Remove specific coin subscriptions or preset-expanded coins",
-        example: "/unsubscribe usd-top25",
-      },
-      {
-        syntax: "/unsubscribe all",
-        help: "Remove all per-coin and all-stablecoin subscriptions",
-        example: null,
-      },
-    ],
-  },
-  presets: {
-    description: "Browse preset watchlists like usd-top25 / non-usd-top25",
-    audience: "chat",
-    variants: [
-      {
-        syntax: "/presets",
-        help: "Show the preset watchlist catalog and examples",
-        example: "/presets",
-      },
-    ],
-  },
-  set: {
-    description: "Tune per-coin or global thresholds (e.g. /set all depeg-step 250)",
-    audience: "chat",
-    variants: [
-      {
-        syntax: "/set <ticker> <setting> <value>",
-        help: "Tune one coin's DEWS band, depeg on/off or step, safety mode, or launch/reserve/freeze toggles",
-        example: "/set USDT dews WARNING",
-      },
-      {
-        syntax: "/set all <setting> <value>",
-        help: "Toggle an alert family across every tracked coin, or set the global depeg severity step",
-        example: "/set all depeg-step 250",
       },
     ],
   },
   settings: {
-    description: "Open the inline settings keyboard (e.g. /settings or /settings USDC)",
-    audience: "chat",
+    description: "Alert settings",
+    menu: "all",
     variants: [
-      {
-        syntax: "/settings",
-        help: "Review and edit chat-level alert settings; add a ticker for the per-coin panel",
-        example: "/settings USDC",
-      },
-    ],
-  },
-  mute: {
-    description: "Enable quiet hours (e.g. /mute 22-07; uses your /timezone)",
-    audience: "chat",
-    variants: [
-      {
-        syntax: "/mute <start>-<end>",
-        help: "Quiet hours like 22-07 in your /timezone (defaults to UTC; notifications silenced, messages still delivered)",
-        example: "/mute 22-07",
-      },
+      { syntax: "/settings", help: "Open alert settings (in groups, an inline settings keyboard)", example: null },
     ],
   },
   pause: {
-    description: "Pause all alerts indefinitely; /pause off to resume",
-    audience: "chat",
+    description: "Pause or resume all alerts",
+    menu: "private",
     variants: [
-      {
-        syntax: "/pause [off|1h|4h|24h]",
-        help: "Pause all alert delivery indefinitely, resume with off, or pause for 1h, 4h, or 24h",
-        example: "/pause 4h",
-      },
+      { syntax: "/pause [1h|4h|24h|off]", help: "Hold all alerts until you resume, or for a set time", example: "/pause 4h" },
     ],
   },
-  timezone: {
-    description: "Set chat timezone for quiet hours (e.g. /timezone Europe/Paris)",
-    audience: "chat",
+  help: {
+    description: "Commands and help",
+    menu: "all",
+    variants: [{ syntax: "/help", help: "Short command list", example: null }],
+  },
+  unsubscribe: {
+    description: "Stop following coins",
+    menu: "typed",
     variants: [
-      {
-        syntax: "/timezone <IANA-zone>",
-        help: "Set chat timezone for quiet hours, or send /timezone alone to pick from common zones",
-        example: "/timezone Europe/Paris",
-      },
+      { syntax: "/unsubscribe <targets>", help: "Stop following coins or a preset", example: "/unsubscribe USDC" },
+      { syntax: "/unsubscribe all", help: "Remove every follow and global alert in this chat", example: null },
     ],
-  },
-  unsnooze: {
-    description: "Clear active alert snooze",
-    audience: "chat",
-    variants: [{ syntax: "/unsnooze", help: "Clear an active alert snooze immediately", example: null }],
-  },
-  unmutehours: {
-    description: "Disable quiet hours",
-    audience: "chat",
-    variants: [{ syntax: "/unmutehours", help: "Disable quiet hours", example: null }],
-  },
-  cancel: {
-    description: "Cancel a pending ticker selection",
-    audience: "chat",
-    variants: [{ syntax: "/cancel", help: "Cancel a pending selection", example: null }],
   },
   forget: {
-    description: "Delete all your subscriber data",
-    audience: "private",
-    variants: [{ syntax: "/forget", help: "Delete all your subscriber data", example: null }],
+    description: "Delete all your data",
+    menu: "typed",
+    variants: [{ syntax: "/forget", help: "Delete everything Pharos Watch stores about this chat", example: null }],
   },
 } as const satisfies Record<string, TelegramCommandReferenceEntry>;
 
-// BotFather registration list derives from the reference so menu order and
-// descriptions stay in sync with /help and the public command reference.
-export const TELEGRAM_BOT_COMMANDS = Object.entries(TELEGRAM_COMMAND_REFERENCE).map(([command, entry]) => ({
-  command,
-  description: entry.description,
-}));
+export type TelegramCommandName = keyof typeof TELEGRAM_COMMAND_REFERENCE;
 
-// Derive the group command list from the same reference, excluding private commands.
-export const TELEGRAM_BOT_GROUP_COMMANDS = Object.entries(TELEGRAM_COMMAND_REFERENCE)
-  .filter(([, entry]) => entry.audience !== "private")
+export const TELEGRAM_COMMAND_NAMES = Object.keys(TELEGRAM_COMMAND_REFERENCE) as TelegramCommandName[];
+
+const commandEntries = Object.entries(TELEGRAM_COMMAND_REFERENCE) as [
+  TelegramCommandName,
+  TelegramCommandReferenceEntry,
+][];
+
+// BotFather private menu: every "all" and "private" command, in manifest order.
+export const TELEGRAM_BOT_COMMANDS = commandEntries
+  .filter(([, entry]) => entry.menu !== "typed")
+  .map(([command, entry]) => ({ command, description: entry.description }));
+
+// BotFather group menu: only "all" commands.
+export const TELEGRAM_BOT_GROUP_COMMANDS = commandEntries
+  .filter(([, entry]) => entry.menu === "all")
   .map(([command, entry]) => ({ command, description: entry.description }));

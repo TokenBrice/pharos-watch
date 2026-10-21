@@ -346,14 +346,14 @@ describe("freeze dedicated outbox", () => {
       sqlite.prepare(
         `INSERT INTO tape_events (event_id, type, severity, ts, title, summary, payload_json, source_table, source_row_id, transition, created_at)
          VALUES ('freeze-baseline', 'freeze.blocked', 'warning', ?, 'x', 'x', ?, 'blacklist_events', 'blacklist-baseline', 'opened', ?)`,
-      ).run(now * 1000, JSON.stringify({ stablecoin: 'USDC', stablecoinId: 'usdc-circle', chainName: 'Ethereum', sourceEventId: 'blacklist-baseline' }), now);
+      ).run(now * 1000, JSON.stringify({ stablecoin: 'USDC', stablecoinId: 'usdc-circle', chainName: 'Ethereum', amountUsdAtEvent: 1_000_000, sourceEventId: 'blacklist-baseline' }), now);
       const database = createSqliteD1(sqlite);
       await dispatchFreezeAlertOutbox(database, now);
 
       sqlite.prepare(
         `INSERT INTO tape_events (event_id, type, severity, ts, title, summary, payload_json, source_table, source_row_id, transition, created_at)
          VALUES ('freeze-no-audience', 'freeze.blocked', 'warning', ?, 'x', 'x', ?, 'blacklist_events', 'blacklist-no-audience', 'opened', ?)`,
-      ).run((now + 1) * 1000, JSON.stringify({ stablecoin: 'USDC', stablecoinId: 'usdc-circle', chainName: 'Ethereum', sourceEventId: 'blacklist-no-audience' }), now + 1);
+      ).run((now + 1) * 1000, JSON.stringify({ stablecoin: 'USDC', stablecoinId: 'usdc-circle', chainName: 'Ethereum', amountUsdAtEvent: 1_000_000, sourceEventId: 'blacklist-no-audience' }), now + 1);
 
       const result = await dispatchFreezeAlertOutbox(database, now + 2);
       expect(result).toMatchObject({
@@ -399,14 +399,14 @@ describe("freeze dedicated outbox", () => {
       sqlite.prepare(
         `INSERT INTO tape_events (event_id, type, severity, ts, title, summary, payload_json, source_table, source_row_id, transition, created_at)
          VALUES ('freeze-1', 'freeze.blocked', 'warning', ?, 'x', 'x', ?, 'blacklist_events', 'blacklist-1', 'opened', ?)`,
-      ).run(now * 1000, JSON.stringify({ stablecoin: 'USDC', stablecoinId: 'usdc-circle', chainName: 'Ethereum', amountUsdAtEvent: null, sourceEventId: 'blacklist-1' }), now);
+      ).run(now * 1000, JSON.stringify({ stablecoin: 'USDC', stablecoinId: 'usdc-circle', chainName: 'Ethereum', amountUsdAtEvent: 1_000_000, sourceEventId: 'blacklist-1' }), now);
       const db = createSqliteD1(sqlite);
       // First healthy read establishes the no-historical-alert baseline.
       await dispatchFreezeAlertOutbox(db, now);
       sqlite.prepare(
         `INSERT INTO tape_events (event_id, type, severity, ts, title, summary, payload_json, source_table, source_row_id, transition, created_at)
          VALUES ('freeze-2', 'freeze.blocked', 'warning', ?, 'x', 'x', ?, 'blacklist_events', 'blacklist-2', 'opened', ?)`,
-      ).run((now + 1) * 1000, JSON.stringify({ stablecoin: 'USDC', stablecoinId: 'usdc-circle', chainName: 'Ethereum', amountUsdAtEvent: null, sourceEventId: 'blacklist-2' }), now + 1);
+      ).run((now + 1) * 1000, JSON.stringify({ stablecoin: 'USDC', stablecoinId: 'usdc-circle', chainName: 'Ethereum', amountUsdAtEvent: 1_000_000, sourceEventId: 'blacklist-2' }), now + 1);
       const result = await dispatchFreezeAlertOutbox(db, now + 2);
       expect(result.queued).toBe(2);
       expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_freeze_alert_targets").get()).toMatchObject({ n: 2 });
@@ -415,6 +415,54 @@ describe("freeze dedicated outbox", () => {
         .toMatchObject({ disable_notification: 1 });
       expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_alert_job_targets WHERE alert_type = 'freeze'").get()).toMatchObject({ n: 2 });
       expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_alert_target_plans").get()).toMatchObject({ n: 0 });
+      const htmlFor = (chatId: string) => (sqlite.prepare(
+        "SELECT message_html FROM telegram_pending_alerts WHERE chat_id = ?",
+      ).get(chatId) as { message_html: string }).message_html;
+      expect(htmlFor("2")).toContain("Via your watchlist");
+      expect(htmlFor("1")).toContain("Via all stablecoins");
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("queues only real-time freeze events: >= $1M freeze/unfreeze or any destroy", async () => {
+    const sqlite = createLatestSchemaSqlite().sqlite;
+    try {
+      const now = 2_000_000_000;
+      sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES ('project-tape', ?, 1, 'ok')").run(now - 5);
+      sqlite.prepare(
+        `INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, preference_generation, global_alert_freeze)
+         VALUES ('1', ?, ?, 1, 1)`,
+      ).run(now, now);
+      const insertTape = sqlite.prepare(
+        `INSERT INTO tape_events (event_id, type, severity, ts, title, summary, payload_json, source_table, source_row_id, transition, created_at)
+         VALUES (?, ?, 'warning', ?, 'x', 'x', ?, 'blacklist_events', ?, 'opened', ?)`,
+      );
+      const insert = (eventId: string, type: string, amountUsdAtEvent: number | null, ts: number) =>
+        insertTape.run(eventId, type, ts * 1000, JSON.stringify({
+          stablecoin: "USDC", stablecoinId: "usdc-circle", chainName: "Ethereum", amountUsdAtEvent, sourceEventId: `blacklist-${eventId}`,
+        }), `blacklist-${eventId}`, ts);
+      insert("baseline", "freeze.blocked", 1_000_000, now);
+      const database = createSqliteD1(sqlite);
+      await dispatchFreezeAlertOutbox(database, now);
+
+      insert("small", "freeze.blocked", 999_999, now + 1);
+      insert("unknown", "freeze.blocked", null, now + 1);
+      insert("destroy-unknown", "freeze.destroyed", null, now + 1);
+      insert("large-unfreeze", "freeze.unblocked", 1_000_000, now + 1);
+      const result = await dispatchFreezeAlertOutbox(database, now + 2);
+
+      expect(result).toMatchObject({ observed: 4, queued: 2, skippedBelowRealtimeThreshold: 2 });
+      const events = sqlite.prepare("SELECT tape_event_id FROM telegram_freeze_alert_events ORDER BY tape_event_id").all();
+      expect(events).toEqual([{ tape_event_id: "destroy-unknown" }, { tape_event_id: "large-unfreeze" }]);
+      const lastId = (sqlite.prepare("SELECT MAX(id) AS id FROM tape_events").get() as { id: number }).id;
+      expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'alert:freeze-tape-cursor'").get())
+        .toMatchObject({ value: String(lastId) });
+
+      // Skipped events are not retried on later runs.
+      const next = await dispatchFreezeAlertOutbox(database, now + 3);
+      expect(next).toMatchObject({ observed: 0, skippedBelowRealtimeThreshold: 0 });
+      expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_freeze_alert_events").get()).toMatchObject({ n: 2 });
     } finally {
       sqlite.close();
     }
@@ -440,7 +488,7 @@ describe("freeze dedicated outbox", () => {
       insertTape.run(
         'freeze-baseline',
         now * 1000,
-        JSON.stringify({ stablecoin: 'USDC', stablecoinId: 'usdc-circle', chainName: 'Ethereum', sourceEventId: 'blacklist-baseline' }),
+        JSON.stringify({ stablecoin: 'USDC', stablecoinId: 'usdc-circle', chainName: 'Ethereum', amountUsdAtEvent: 1_000_000, sourceEventId: 'blacklist-baseline' }),
         'blacklist-baseline',
         now,
       );
@@ -449,7 +497,7 @@ describe("freeze dedicated outbox", () => {
       insertTape.run(
         'freeze-paged',
         (now + 1) * 1000,
-        JSON.stringify({ stablecoin: 'USDC', stablecoinId: 'usdc-circle', chainName: 'Ethereum', sourceEventId: 'blacklist-paged' }),
+        JSON.stringify({ stablecoin: 'USDC', stablecoinId: 'usdc-circle', chainName: 'Ethereum', amountUsdAtEvent: 1_000_000, sourceEventId: 'blacklist-paged' }),
         'blacklist-paged',
         now + 1,
       );
@@ -484,7 +532,7 @@ describe("freeze dedicated outbox", () => {
       sqlite.prepare(
         `INSERT INTO tape_events (event_id, type, severity, ts, title, summary, payload_json, source_table, source_row_id, transition, created_at)
          VALUES ('freeze-mixed-baseline', 'freeze.blocked', 'warning', ?, 'x', 'x', ?, 'blacklist_events', 'blacklist-mixed-baseline', 'opened', ?)`,
-      ).run(now * 1000, JSON.stringify({ stablecoin: 'USDC', stablecoinId: 'usdc-circle', chainName: 'Ethereum', sourceEventId: 'blacklist-mixed-baseline' }), now);
+      ).run(now * 1000, JSON.stringify({ stablecoin: 'USDC', stablecoinId: 'usdc-circle', chainName: 'Ethereum', amountUsdAtEvent: 1_000_000, sourceEventId: 'blacklist-mixed-baseline' }), now);
       const db = createSqliteD1(sqlite);
       await dispatchFreezeAlertOutbox(db, now);
 

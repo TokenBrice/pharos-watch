@@ -3,7 +3,7 @@ import { timingSafeCompare, hasValidAdminCredential, requireAdmin, withAdmin } f
 import {
   resetTelegramInvalidSecretLogStateForTests,
 } from "../../common/log";
-import { isGroupAdminActor, validateTelegramWebhookSecret } from "../telegram-webhook-auth";
+import { isGroupAdminActor, resolveGroupAdminStatus, validateTelegramWebhookSecret } from "../telegram-webhook-auth";
 
 describe("timingSafeCompare", () => {
   it("denies group authorization on oversized Telegram member evidence", async () => {
@@ -29,6 +29,34 @@ describe("timingSafeCompare", () => {
   });
   it("returns false when both empty", async () => {
     expect(await timingSafeCompare("", "")).toBe(false);
+  });
+});
+
+describe("resolveGroupAdminStatus", () => {
+  it.each([
+    ["admin", () => Response.json({ ok: true, result: { status: "administrator" } }), "admin"],
+    ["creator", () => Response.json({ ok: true, result: { status: "creator" } }), "admin"],
+    ["member", () => Response.json({ ok: true, result: { status: "member" } }), "not_admin"],
+    ["definitive 400 refusal", () => new Response("{}", { status: 400 }), "not_admin"],
+    ["429 throttle", () => new Response("{}", { status: 429 }), "unknown"],
+    ["502 server error", () => new Response("{}", { status: 502 }), "unknown"],
+    ["ok:false body", () => Response.json({ ok: false }), "unknown"],
+  ] as const)("classifies a %s lookup", async (_label, respond, expected) => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(respond());
+    try {
+      expect(await resolveGroupAdminStatus("bot-token", "-100", "1")).toBe(expected);
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
+
+  it("treats a network failure as unknown, not as a non-admin", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("network down"));
+    try {
+      expect(await resolveGroupAdminStatus("bot-token", "-100", "1")).toBe("unknown");
+    } finally {
+      fetchMock.mockRestore();
+    }
   });
 });
 

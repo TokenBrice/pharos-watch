@@ -1,26 +1,15 @@
 import { parseTargetArgs, resolveTicker } from "../common/alerts-parser";
 import { recordTelegramUsageEvent } from "../store/usage-analytics";
-import {
-  buildNotFoundMessage,
-} from "../webhook/telegram-webhook-messages";
-import { PENDING_OWNERSHIP_CONFLICT_MESSAGE } from "../store/telegram-webhook-store";
+import { unixNow } from "../store/subscribers";
+import { buildNotFoundMessage } from "../webhook/telegram-webhook-messages";
 import type { WebhookCommandHandler } from "./context";
-import {
-  buildBulkConfirmReplyMarkup,
-  buildTelegramActionContext,
-  dedupePresetIds,
-  makeActionRunner,
-  persistBulkConfirmPrompt,
-} from "./action-runner";
+import { buildBulkConfirmReplyMarkup, dedupePresetIds, runFollowCommand } from "./action-runner";
 
 export const handleUnsubscribe: WebhookCommandHandler = async (ctx, args) => {
   const { db } = ctx;
-  // /unsubscribe deliberately drops the username: it never creates a
-  // subscriber row, so it must not refresh the stored handle.
-  const actionContext = buildTelegramActionContext(ctx, { username: null });
   const parsed = parseTargetArgs(args, { resolutionScope: "tracked" });
   if (args.trim().length === 0) {
-    await ctx.replyToChat("Specify ticker(s) or preset(s) to unsubscribe, or use /unsubscribe all");
+    await ctx.replyToChat("Name the coins or preset to stop following, e.g. /unsubscribe USDC, or /unsubscribe all.");
     await recordTelegramUsageEvent(db, {
       eventType: "unsubscribe",
       actionDetail: "validation",
@@ -31,7 +20,7 @@ export const handleUnsubscribe: WebhookCommandHandler = async (ctx, args) => {
   }
 
   if (parsed.includeAll && (parsed.tickers.length > 0 || parsed.presetIds.length > 0)) {
-    await ctx.replyToChat('Use /unsubscribe all by itself, or specify ticker/preset targets without "all".');
+    await ctx.replyToChat('Use /unsubscribe all by itself, or name coins and presets without "all".');
     await recordTelegramUsageEvent(db, {
       eventType: "unsubscribe",
       actionDetail: "validation",
@@ -56,39 +45,20 @@ export const handleUnsubscribe: WebhookCommandHandler = async (ctx, args) => {
   }
 
   if (parsed.includeAll) {
-    const payload = {
-      kind: "unsubscribe" as const,
-      presetIds: [],
-      coinIds: [],
-      unsubscribeAll: true,
-    };
-    const persisted = await persistBulkConfirmPrompt(actionContext, payload, {
-      requireMatchingStoredIntent: true,
-    });
-    if (!persisted) {
-      await ctx.replyToChat(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
-      return;
-    }
     await ctx.replyToChatWithMarkup(
       // The destructive scope is per-chat (direct subscriptions, preset
       // follows, global alert settings, snoozes), never the catalog size.
       "This will remove all coin subscriptions, preset follows, global alert settings and snoozes for this chat. Confirm?",
-      { replyMarkup: buildBulkConfirmReplyMarkup(persisted) },
+      { replyMarkup: buildBulkConfirmReplyMarkup({ kind: "unsubscribe" }, ctx.operationNowSec ?? unixNow()) },
     );
     return;
   }
 
-  const presetIds = dedupePresetIds(parsed.presetIds);
-  const runAction = makeActionRunner(
-    actionContext,
-    ctx.botToken,
-    { kind: "unsubscribe", presetIds },
+  // /unsubscribe never creates a subscriber row, so it must not refresh the stored handle.
+  await runFollowCommand(
+    { ...ctx, username: null },
+    parsed.tickers,
+    { kind: "unsubscribe", presetIds: dedupePresetIds(parsed.presetIds) },
+    "tracked",
   );
-  await runAction({
-    tickers: parsed.tickers,
-    actionType: "unsubscribe",
-    actionPayload: { presetIds },
-    resolutionScope: "tracked",
-    clearPendingOnTerminal: ctx.clearPendingOnMutation,
-  });
 };

@@ -5,6 +5,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
+import { TELEGRAM_LAUNCH_RETIREMENT_NOTICE_HTML } from "@shared/lib/telegram-alert-families";
 
 let fetchSpy: ReturnType<typeof mockFetch>;
 let telegramOutcomes: Response[];
@@ -124,6 +125,20 @@ describe("handleAdminTelegramBroadcast canary gate", () => {
     }
   });
 
+
+  it("targets only chats with a retired launch opt-in and accepts the committed notice", async () => {
+    const { sqlite, db } = latestDb();
+    sqlite.prepare(`INSERT INTO telegram_subscribers (chat_id, global_alert_launch, global_alert_dews, created_at, last_active_at)
+      VALUES ('10', 1, 0, 1, 1), ('20', 0, 1, 1, 1), ('30', 0, 0, 1, 1), ('40', 0, 1, 1, 1)`).run();
+    sqlite.prepare(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_launch, alert_dews)
+      VALUES ('20', 'usdc-circle', 1, 0), ('30', 'usdc-circle', 0, 1), ('40', 'usdc-circle', 0, 1)`).run();
+    const response = await handleAdminTelegramBroadcast({
+      db,
+      request: request({ messageHtml: TELEGRAM_LAUNCH_RETIREMENT_NOTICE_HTML, scope: "retired-launch-opt-ins", dryRun: true }),
+      trustedAdmin: true,
+    });
+    expect(await readJsonResponse(response, 200)).toMatchObject({ targetChatCount: 2, sample: ["10", "20"] });
+  });
 
   it("dry-run reports the mandatory private canary and material TTL reserve", async () => {
     const { sqlite, db } = latestDb();

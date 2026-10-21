@@ -28,8 +28,6 @@ export const handleDepegStepCallback: CallbackHandler = async (context) => {
     actionDetail: "depegstep",
     logAction: "depegstep",
     logMessage: "depegstep callback write failed",
-    intentKind: "callback:depegstep",
-    intentPayload: ({ id, step }) => ({ coinId: id, step }),
     write: async ({ id, step }, options) => {
       const prepared = prepareCoinSettingStatements(
         db,

@@ -2,18 +2,10 @@ import { escapeHtml } from "../delivery/telegram";
 import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
 import { SNOOZE_SECONDS } from "../common/constants";
 import { recordTelegramUsageEvent } from "../store/usage-analytics";
-import { buildMiniAppOnlyKeyboard } from "../webhook/telegram-webhook-messages";
-import {
-  clearAlertSnooze,
-  setSubscriberSnooze,
-  unixNow,
-} from "../store/telegram-webhook-store";
-import {
-  confirmCommandMutation,
-  prepareCommandMutation,
-  replyWithOptionalMiniApp,
-  type WebhookCommandHandler,
-} from "./context";
+import { buildManageAlertsKeyboard } from "../webhook/telegram-webhook-messages";
+import { clearAlertSnooze, setSubscriberSnooze } from "../store/snooze";
+import { unixNow } from "../store/subscribers";
+import { replyWithOptionalMiniApp, type WebhookCommandHandler } from "./context";
 
 type SnoozeDurationToken = keyof typeof SNOOZE_SECONDS;
 
@@ -33,19 +25,15 @@ const RESUME_TOKENS = new Set(["off", "resume"]);
  * - A supported duration token (`1h` | `4h` | `24h`) ⇒ ordinary timed snooze,
  *   NOT the sentinel.
  *
- * Group invocations are admin-gated upstream like `/mute`
- * (`GROUP_ADMIN_GATED_COMMANDS` in `telegram-webhook.ts`).
+ * Group invocations are admin-gated upstream (ingress command policy).
+ * `/unsnooze` is a legacy alias for `/pause off`.
  */
 export const handlePause: WebhookCommandHandler = async (ctx, args) => {
   const { db, chatId, username } = ctx;
   const token = args.trim().toLowerCase();
 
   if (token.length === 0) {
-    const operation = await prepareCommandMutation(ctx, "pause", { snoozeUntil: PAUSE_SENTINEL_TS });
-    if (!ctx.wasMutationApplied) {
-      await setSubscriberSnooze(db, chatId, username, PAUSE_SENTINEL_TS, operation);
-      confirmCommandMutation(ctx, operation);
-    }
+    await setSubscriberSnooze(db, chatId, username, PAUSE_SENTINEL_TS);
     await recordTelegramUsageEvent(db, {
       eventType: "snooze_change",
       actionDetail: "pause",
@@ -54,19 +42,15 @@ export const handlePause: WebhookCommandHandler = async (ctx, args) => {
     await replyWithOptionalMiniApp(
       ctx,
       escapeHtml(
-        "All alerts paused indefinitely. Send /pause off (or /unsnooze) to resume.",
+        "All alerts paused until you resume. Send /pause off to resume.",
       ),
-      buildMiniAppOnlyKeyboard("Open in app", "snooze"),
+      buildManageAlertsKeyboard("snooze"),
     );
     return;
   }
 
   if (RESUME_TOKENS.has(token)) {
-    const operation = await prepareCommandMutation(ctx, "pause", { snoozeUntil: null });
-    if (!ctx.wasMutationApplied) {
-      await clearAlertSnooze(db, chatId, username, operation);
-      confirmCommandMutation(ctx, operation);
-    }
+    await clearAlertSnooze(db, chatId, username);
     await recordTelegramUsageEvent(db, {
       eventType: "snooze_change",
       actionDetail: "pause",
@@ -75,21 +59,14 @@ export const handlePause: WebhookCommandHandler = async (ctx, args) => {
     await replyWithOptionalMiniApp(
       ctx,
       escapeHtml("Alerts resumed."),
-      buildMiniAppOnlyKeyboard("Open in app", "snooze"),
+      buildManageAlertsKeyboard("snooze"),
     );
     return;
   }
 
   if (isSnoozeDurationToken(token)) {
-    const storedUntil = Number(ctx.storedIntent?.payload.snoozeUntil);
-    const snoozeUntil = Number.isFinite(storedUntil)
-      ? storedUntil
-      : (ctx.operationNowSec ?? unixNow()) + SNOOZE_SECONDS[token];
-    const operation = await prepareCommandMutation(ctx, "pause", { snoozeUntil, duration: token });
-    if (!ctx.wasMutationApplied) {
-      await setSubscriberSnooze(db, chatId, username, snoozeUntil, operation);
-      confirmCommandMutation(ctx, operation);
-    }
+    const snoozeUntil = (ctx.operationNowSec ?? unixNow()) + SNOOZE_SECONDS[token];
+    await setSubscriberSnooze(db, chatId, username, snoozeUntil);
     await recordTelegramUsageEvent(db, {
       eventType: "snooze_change",
       actionDetail: "pause",
@@ -98,14 +75,14 @@ export const handlePause: WebhookCommandHandler = async (ctx, args) => {
     await replyWithOptionalMiniApp(
       ctx,
       escapeHtml(`Alerts paused for ${token}. Send /pause off to resume sooner.`),
-      buildMiniAppOnlyKeyboard("Open in app", "snooze"),
+      buildManageAlertsKeyboard("snooze"),
     );
     return;
   }
 
   await ctx.replyToChat(
     escapeHtml(
-      "Usage: /pause (pause indefinitely), /pause off (resume), or /pause 1h|4h|24h (timed).",
+      "Send /pause to hold all alerts, /pause 1h, 4h or 24h for a set time, or /pause off to resume.",
     ),
   );
 };

@@ -3,7 +3,7 @@ import type { ConsolidatedAlerts } from "../alerts-formatting";
 export function emptyConsolidatedAlerts(overrides: Partial<ConsolidatedAlerts> = {}): ConsolidatedAlerts {
   return {
     dews: [], depegTriggered: [], depegResolved: [], depegWorsening: [],
-    safety: [], launch: [], reserve: [], freeze: [],
+    safety: [], reserve: [], freeze: [],
     ...overrides,
   };
 }

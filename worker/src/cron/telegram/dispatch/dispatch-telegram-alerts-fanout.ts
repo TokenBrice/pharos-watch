@@ -9,8 +9,8 @@ import {
 } from "./dispatch-telegram-predicates";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
 
-export type LegacyFanoutAlertType = Exclude<TelegramAlertType, "freeze">;
-export type PresetFanoutAlertType = Exclude<LegacyFanoutAlertType, "launch" | "reserve">;
+export type LegacyFanoutAlertType = Exclude<TelegramAlertType, "freeze" | "launch">;
+export type PresetFanoutAlertType = Exclude<LegacyFanoutAlertType, "reserve">;
 
 interface FanoutSubscriberLoadOptions {
   chatIds?: readonly string[];
@@ -27,7 +27,6 @@ export interface AlertStablecoinIds {
   dewsIds: string[];
   depegIds: string[];
   safetyIds: string[];
-  launchIds: string[];
   reserveIds: string[];
 }
 
@@ -71,10 +70,6 @@ export const TELEGRAM_FANOUT_FAMILIES = [
   {
     family: "safety", idsKey: "safetyIds", presetFamily: "safety",
     routes: [route("safetyChanges", "safety", shouldIncludeSafetyForSubscriber)],
-  },
-  {
-    family: "launch", idsKey: "launchIds", presetFamily: null,
-    routes: [route("launchPromoted", "launch")],
   },
   {
     family: "reserve", idsKey: "reserveIds", presetFamily: null,

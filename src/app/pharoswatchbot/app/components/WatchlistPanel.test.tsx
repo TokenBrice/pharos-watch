@@ -117,7 +117,7 @@ describe("WatchlistPanel", () => {
     expect(onMutate).toHaveBeenCalledWith({ kind: "set-coin", stablecoinId: "usdt-tether", patch: { alertTypes: { dews: true, depeg: true } } });
   });
 
-  it("owns row action selection and keeps launch-only rows untunable", () => {
+  it("owns row action selection and keeps reserve-only rows untunable", () => {
     const onMutate = vi.fn();
     const onRemove = vi.fn();
     const onOpenInsight = vi.fn();
@@ -153,12 +153,12 @@ describe("WatchlistPanel", () => {
     expect(onMutate).toHaveBeenLastCalledWith({ kind: "set-coin-snooze", stablecoinId: "usdc-circle", durationToken: "clear" });
 
     cleanup();
-    const launchOnly = {
+    const reserveOnly = {
       ...baseState,
-      subscriptions: [{ ...baseState.subscriptions[0], alertTypes: { dews: false, depeg: false, safety: false, launch: true, reserve: false, freeze: false }, depegStepBps: null }],
+      subscriptions: [{ ...baseState.subscriptions[0], alertTypes: { dews: false, depeg: false, safety: false, launch: false, reserve: true, freeze: false }, depegStepBps: null }],
     };
-    renderWatchlist({ state: launchOnly });
-    expect(screen.getByText("Launch: on/off only. No tuning.")).toBeTruthy();
+    renderWatchlist({ state: reserveOnly });
+    expect(screen.getByText("Reserve: on/off only. No tuning.")).toBeTruthy();
     expect(screen.queryByText("Tune USDC")).toBeNull();
   });
 

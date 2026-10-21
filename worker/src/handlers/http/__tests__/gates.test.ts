@@ -120,13 +120,6 @@ describe("evaluateAccessGate", () => {
     },
   );
 
-  it("rejects adoption telemetry outside the trusted site-proxy lane even with a valid API key", async () => {
-    apiKeyMocks.authenticateApiKey.mockResolvedValue({ kind: "valid", key: validKey });
-    const request = new Request("https://api.pharos.watch/api/telegram-adoption", { method: "POST", headers: { "X-API-Key": "valid" } });
-    expect((await evaluateAccessGate(request, new URL(request.url), makeEnv())).response?.status).toBe(404);
-    expect(apiKeyMocks.authenticateApiKey).not.toHaveBeenCalled();
-  });
-
   it("preserves Access-authenticated ops-api admin routing", async () => {
     verifyAccessJwt.mockResolvedValueOnce(true);
     const request = new Request("https://ops-api.pharos.watch/api/status", {
@@ -202,22 +195,16 @@ describe("evaluateAccessGate", () => {
     expect(result.isSiteProxy).toBe(false);
   });
 
-  it("allows only the site-proxy POST for the Telegram adoption mutation", async () => {
-    const postRequest = new Request("https://site-api.pharos.watch/api/telegram-adoption", {
+  it("no longer admits the retired Telegram adoption mutation on the site-api lane", async () => {
+    const request = new Request("https://site-api.pharos.watch/api/telegram-adoption", {
       method: "POST",
       headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
     });
-    const getRequest = new Request("https://site-api.pharos.watch/api/telegram-adoption", {
-      headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
-    });
 
-    const postResult = await evaluateAccessGate(postRequest, new URL(postRequest.url), makeEnv());
-    const getResult = await evaluateAccessGate(getRequest, new URL(getRequest.url), makeEnv());
+    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv());
 
-    expect(postResult.response).toBeNull();
-    expect(postResult.isSiteProxy).toBe(true);
-    expect(getResult.response?.status).toBe(405);
-    expect(getResult.response?.headers.get("Allow")).toBe("POST");
+    expect(result.response?.status).toBe(404);
+    expect(result.isSiteProxy).toBe(false);
   });
 
   it("rejects site-api requests without the site-proxy credential", async () => {
@@ -240,24 +227,6 @@ describe("evaluateAccessGate", () => {
     expect(result.response).toBeNull();
     expect(result.isSiteProxy).toBe(true);
     expect(result.requestLane).toBe("site-api");
-  });
-
-  it("allows only the site-proxy POST for the adoption mutation on preview hosts", async () => {
-    const postRequest = new Request("https://pharos-watch-preview.workers.dev/api/telegram-adoption", {
-      method: "POST",
-      headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
-    });
-    const getRequest = new Request("https://pharos-watch-preview.workers.dev/api/telegram-adoption", {
-      headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
-    });
-
-    const postResult = await evaluateAccessGate(postRequest, new URL(postRequest.url), makeEnv());
-    const getResult = await evaluateAccessGate(getRequest, new URL(getRequest.url), makeEnv());
-
-    expect(postResult.response).toBeNull();
-    expect(postResult.isSiteProxy).toBe(true);
-    expect(getResult.response?.status).toBe(405);
-    expect(getResult.response?.headers.get("Allow")).toBe("POST");
   });
 
   it("grants the site-api lane to allowed preview (*.workers.dev) GETs with the site-proxy secret", async () => {

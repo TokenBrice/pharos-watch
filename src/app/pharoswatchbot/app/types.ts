@@ -6,8 +6,6 @@ export type {
   TelegramMiniAppOperation,
   TelegramMiniAppBulkWatchlistOperation,
   TelegramMiniAppBulkWatchlistResponse,
-  TelegramMiniAppPortabilityOperation,
-  TelegramMiniAppPortabilityResponse,
   TelegramMiniAppState,
   TelegramSafetyMode,
   TelegramSnoozeDurationToken,

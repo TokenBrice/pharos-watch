@@ -201,9 +201,9 @@ describe("validateSubscribeArgs", () => {
       contains: ['either "all" or specific tickers/presets'],
     },
     {
-      name: "rejects launch alerts with preset watchlists",
-      parsed: { alertTypes: new Set(["launch"]), presetIds: ["usd-top25"] },
-      contains: ["Preset watchlists support dews, depeg, and safety only"],
+      name: "rejects retired launch alerts with the digest redirect",
+      parsed: { alertTypes: new Set(["dews"]), retiredAlertTypes: ["launch"], tickers: ["USDC"] },
+      contains: ["Launch alerts are retired", "@pharoswatch channel digest"],
     },
   ];
 
@@ -215,6 +215,22 @@ describe("validateSubscribeArgs", () => {
     const result = validateSubscribeArgs({ ...baseArgs(), ...parsed });
     for (const fragment of contains) expect(result).toContain(fragment);
     for (const fragment of absent ?? []) expect(result).not.toContain(fragment);
+  });
+});
+
+describe("retired launch alert type", () => {
+  it("is neither an alert type nor a ticker, and validation explains the retirement", () => {
+    const parsed = parseSubscribeArgs("launch USDPT");
+    expect(parsed.alertTypes.size).toBe(0);
+    expect(parsed.retiredAlertTypes).toEqual(["launch"]);
+    expect(parsed.tickers).toEqual(["USDPT"]);
+    expect(validateSubscribeArgs(parsed)).toContain("Launch alerts are retired");
+  });
+
+  it("is dropped from the valid-type hint", () => {
+    expect(validateSubscribeArgs(parseSubscribeArgs("lanch"))).toBe(
+      'Unknown alert type: lanch. Valid types: dews, depeg, safety, reserve, freeze.',
+    );
   });
 });
 

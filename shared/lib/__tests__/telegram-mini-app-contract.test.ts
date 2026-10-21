@@ -8,7 +8,6 @@ import {
   TelegramMiniAppMutableStateSchema,
   TelegramMiniAppMutationRequestSchema,
   TelegramMiniAppOperationSchema,
-  TelegramMiniAppPortabilityResponseSchema,
   TelegramMiniAppResponseSchema,
   createTelegramMiniAppSnapshot,
   telegramMiniAppVersionCompatibility,
@@ -32,9 +31,6 @@ const { catalog: _catalog, ...mutableState } = makeMiniAppState({
 });
 
 const operations: TelegramMiniAppOperation[] = [
-  { kind: "export-watchlist" },
-  { kind: "preview-watchlist-import", token: "pw2.token.digest" },
-  { kind: "confirm-watchlist-import", token: "pw2.token.digest", expectedPreferenceGeneration: 4, previewFingerprint: "preview-v1-12-deadbeef" },
   { kind: "preview-bulk-watchlist", addStablecoinIds: ["usdc-circle"], removeStablecoinIds: ["dai-makerdao"] },
   { kind: "confirm-bulk-watchlist", addStablecoinIds: ["usdc-circle"], removeStablecoinIds: [], expectedPreferenceGeneration: 4, previewFingerprint: "preview-v1-12-deadbeef" },
   { kind: "undo-bulk-watchlist", restoreDirectRows: [{ stablecoinId: "dai-makerdao", alertDews: true, alertDepeg: true, alertSafety: false, alertLaunch: false, alertReserve: false, overrideDews: true, overrideDepeg: true, overrideSafety: false, overrideLaunch: false, overrideReserve: false, dewsMinBand: null, safetyMode: null, depegWorseningBpsStep: null }], removeStablecoinIds: ["usdc-circle"], expectedPreferenceGeneration: 5, expectedFingerprint: "preview-v1-12-deadbeef" },
@@ -140,28 +136,10 @@ describe("Telegram Mini App shared contract", () => {
     });
   });
 
-  it("requires the exact, versioned portability preview response", () => {
-    expect(TelegramMiniAppPortabilityResponseSchema.safeParse({
-      contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
-      catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
-      result: {
-        kind: "watchlist-import-preview",
-        expectedPreferenceGeneration: 4,
-        previewFingerprint: "preview-v1-12-deadbeef",
-        preview: {
-          directAdds: ["usdc-circle"],
-          directRemoves: [],
-          directChanges: [],
-          presetAdds: [],
-          presetRemoves: [],
-          presetChanges: [],
-          directBroadenedCoverage: [{ id: "usdc-circle", alertTypes: ["dews"] }],
-          directRemovedCoverage: [],
-          presetBroadenedCoverage: [],
-          presetRemovedCoverage: [],
-        },
-      },
-    }).success).toBe(true);
+  it("rejects the retired watchlist token export and import operations", () => {
+    for (const kind of ["export-watchlist", "preview-watchlist-import", "confirm-watchlist-import"]) {
+      expect(TelegramMiniAppOperationSchema.safeParse({ kind, token: "pw2.token.digest" }).success).toBe(false);
+    }
   });
 
   it("bounds bulk watchlist selections and requires a server-issued undo state fingerprint", () => {
@@ -235,7 +213,7 @@ describe("Telegram Mini App shared contract", () => {
   });
 
   it("rejects absent and malformed confirmation and undo fingerprints", () => {
-    for (const kind of ["confirm-watchlist-import", "confirm-bulk-watchlist", "undo-bulk-watchlist"] as const) {
+    for (const kind of ["confirm-bulk-watchlist", "undo-bulk-watchlist"] as const) {
       const operation = operations.find((entry) => entry.kind === kind)!;
       expect(TelegramMiniAppOperationSchema.safeParse(operation).success).toBe(true);
       const key = kind === "undo-bulk-watchlist" ? "expectedFingerprint" : "previewFingerprint";

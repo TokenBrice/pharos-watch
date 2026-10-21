@@ -115,6 +115,8 @@ function prepareSubscriberPurge(
     prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?", chatId),
     prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?", chatId),
     prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?", chatId),
+    // A private chat id is the user id: also drop group prompts this user started.
+    prepare("DELETE FROM telegram_pending_disambiguation WHERE initiator_user_id = ?", chatId),
     prepare("DELETE FROM telegram_pending_alerts WHERE chat_id = ?", chatId),
     prepare("DELETE FROM telegram_recap_targets WHERE chat_id = ?", chatId),
     prepare("DELETE FROM telegram_recap_preferences WHERE chat_id = ?", chatId),
@@ -155,14 +157,18 @@ const CHAT_CACHE_EXACT_KEY_BUILDERS = [
   (chatId: string) => `telegram:re-engagement-warned:${chatId}`,
   (chatId: string) => `telegram:chat-admins:${chatId}`,
   (chatId: string) => `telegram:group-welcome:${chatId}`,
+  // Retired adoption and inline-mode writers; residue ages out via retention cleanup.
   (chatId: string) => `telegram:adoption-mini-app-session:${chatId}`,
+  (chatId: string) => `telegram:command-flood:inline:${chatId}`,
   // Legacy raw-chat keys only; active admission now uses anonymous epoch keys.
   (chatId: string) => `telegram:mini-app-mutation-burst:${chatId}`,
 ] as const;
 
 const CHAT_CACHE_PREFIX_BUILDERS = [
   (chatId: string) => `telegram:command-flood:${chatId}:`,
+  // Includes the Mini App `mini-app:session` and `mini-app:stale:*` keys.
   (chatId: string) => `telegram:command-cooldown:${chatId}:`,
+  (chatId: string) => `telegram:command-cooldown:inline:${chatId}:`,
   (chatId: string) => `telegram:chat-member:${chatId}:`,
 ] as const;
 

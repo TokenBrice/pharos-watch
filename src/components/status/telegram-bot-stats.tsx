@@ -547,7 +547,6 @@ function AudienceCoverage({ model }: { model: CommsWorkbenchModel }) {
               value={formatStatusTimestamp(audience.lastSubscriberActivityAt, { fallback: "Unknown" })}
             />
             <MetricRow label="Preset query failures" value={formatCount(audience.presetQueryFailures)} />
-            <MetricRow label="Webhook effects Unknown" value={formatCount(audience.webhookEffectUnknown)} />
             <MetricRow label="Inactive cleaned, 7d" value={formatCount(audience.inactiveSubscribersCleanedThisWeek)} />
           </dl>
           <dl className="min-w-0 divide-y divide-border/40">

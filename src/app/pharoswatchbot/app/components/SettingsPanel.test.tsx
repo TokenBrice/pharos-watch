@@ -10,8 +10,6 @@ function renderSettings(overrides: Partial<SettingsPanelProps> = {}): { props: S
   const props: SettingsPanelProps = {
     state: baseState,
     canMutate: true,
-    canReadPortability: false,
-    isPortabilityRequestBusy: false,
     isMutating: false,
     pendingOperation: null,
     onMutate: vi.fn(),
@@ -19,9 +17,6 @@ function renderSettings(overrides: Partial<SettingsPanelProps> = {}): { props: S
     onUnsubscribeAll: vi.fn(),
     onForgetMe: vi.fn(),
     hasShowConfirm: false,
-    onExportWatchlist: async () => null,
-    onPreviewWatchlistImport: async () => null,
-    onConfirmWatchlistImport: async () => null,
     ...overrides,
   };
   const view = render(<SettingsPanel {...props} />);

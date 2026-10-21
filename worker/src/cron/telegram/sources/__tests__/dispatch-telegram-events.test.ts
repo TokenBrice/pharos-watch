@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TELEGRAM_ALERT_POLICY } from "@shared/lib/telegram-delivery-policy";
 import { buildTelegramDispatchEvents } from "../dispatch-telegram-events";
 import { makeNoopD1 } from "../../../../test-helpers/noop-d1";
 import {
@@ -40,6 +41,7 @@ describe("buildTelegramDispatchEvents", () => {
         score: 42,
         band: "WARNING",
         signals_json: null,
+        computed_at: 1_799_999_000,
       }], activeDepegRows: [{
         stablecoin_id: "coin-depeg",
         symbol: "DPG",
@@ -77,6 +79,9 @@ describe("buildTelegramDispatchEvents", () => {
             ratingStatus: "rated",
             partialEvidence: null,
             methodologyVersion: "9.0",
+            // The severe drop has already held for the full dwell.
+            pendingKind: "severe-downgrade",
+            pendingSinceSec: 1_800_000_000 - TELEGRAM_ALERT_POLICY.safety.dwellSec,
             v9Explain: {
               reasons: [],
               bindingCap: null,
@@ -91,6 +96,7 @@ describe("buildTelegramDispatchEvents", () => {
         },
         safeDewsAlertable: { "coin-dews": "WATCH" },
         safeDewsSnapshot: { "coin-dews": "WATCH" },
+        safeDewsCandidates: { "coin-dews": { computedAt: 1_799_997_200, computations: 1 } },
         safeDepegSnapshot: {},
       }),
       (id) => ({ "coin-safe": "SAFE", "coin-dews": "DEWS", "coin-depeg": "DPG" })[id] ?? id,

@@ -1,34 +1,17 @@
 import { D1_BATCH_SIZE } from "../../lib/constants";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { isSubscribableCoin } from "./subscription-eligibility";
-import { TELEGRAM_PRESET_IDS } from "@shared/lib/telegram-presets";
 import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
-  packWatchlistDirectState,
-  packWatchlistPresetState,
   unpackWatchlistDirectState,
-  unpackWatchlistPresetState,
-  type WatchlistTokenDirectState,
-  type WatchlistTokenPresetState,
-  type WatchlistTokenV2State,
-} from "../mini-app/watchlist-token";
+  type WatchlistDirectState,
+  type WatchlistPresetState,
+  type WatchlistState,
+} from "../mini-app/watchlist-state";
 import type { PresetSubscriptionRow, SubscriptionRow } from "../webhook/telegram-webhook-shared";
-import { unixNow, prepareTelegramFirstFollowStatements, type TelegramFollowOptions } from "./subscribers";
-import { pendingDisambiguationClearStatement } from "./disambiguation";
-
-export interface WatchlistImportPreview {
-  directAdds: string[];
-  directRemoves: string[];
-  directChanges: string[];
-  directChangeBefore: string[];
-  presetAdds: string[];
-  presetRemoves: string[];
-  presetChanges: string[];
-  presetChangeBefore: string[];
-}
+import { unixNow, prepareTelegramFirstFollowStatements } from "./subscribers";
 
 interface PortableSubscriptionRow extends SubscriptionRow {
   alert_dews_override: number;
@@ -46,7 +29,7 @@ type PortableSnapshotRow = { preference_generation: number } & (
   | { row_kind: null }
 );
 
-function directFromRow(row: PortableSubscriptionRow): WatchlistTokenDirectState {
+function directFromRow(row: PortableSubscriptionRow): WatchlistDirectState {
   return {
     stablecoinId: row.stablecoin_id,
     alertDews: Boolean(row.alert_dews),
@@ -75,7 +58,7 @@ function directFromRow(row: PortableSubscriptionRow): WatchlistTokenDirectState 
   };
 }
 
-function presetFromRow(row: PresetSubscriptionRow): WatchlistTokenPresetState {
+function presetFromRow(row: PresetSubscriptionRow): WatchlistPresetState {
   return {
     presetId: row.preset_id,
     alertDews: Boolean(row.alert_dews),
@@ -95,7 +78,7 @@ export async function loadWatchlistPortableState(
   registryVersion: string,
   includeSnoozeOnlyRows = false,
 ): Promise<{
-  state: WatchlistTokenV2State;
+  state: WatchlistState;
   preferenceGeneration: number | null;
   directSnoozes: Map<string, number | null>;
 }> {
@@ -128,8 +111,8 @@ export async function loadWatchlistPortableState(
      ORDER BY row_kind, stablecoin_id, preset_id
   `).bind(chatId, chatId, chatId).all<PortableSnapshotRow>();
   const rows = result.results ?? [];
-  const direct: WatchlistTokenDirectState[] = [];
-  const presets: WatchlistTokenPresetState[] = [];
+  const direct: WatchlistDirectState[] = [];
+  const presets: WatchlistPresetState[] = [];
   const directSnoozes = new Map<string, number | null>();
   for (const row of rows) {
     if (row.row_kind === "preset") {
@@ -152,64 +135,11 @@ export async function loadWatchlistPortableState(
   };
 }
 
-function diffPacked(
-  current: readonly string[],
-  desired: readonly string[],
-  idFromEntry: (entry: string) => string,
-): { adds: string[]; removes: string[]; changes: string[]; changeBefore: string[] } {
-  const currentById = new Map(current.map((entry) => [idFromEntry(entry), entry]));
-  const desiredById = new Map(desired.map((entry) => [idFromEntry(entry), entry]));
-  const adds: string[] = [];
-  const removes: string[] = [];
-  const changes: string[] = [];
-  const changeBeforeById = new Map<string, string>();
-  for (const [id, entry] of desiredById) {
-    const previous = currentById.get(id);
-    if (previous == null) adds.push(id);
-    else if (previous !== entry) {
-      changes.push(id);
-      changeBeforeById.set(id, previous);
-    }
-  }
-  for (const id of currentById.keys()) {
-    if (!desiredById.has(id)) removes.push(id);
-  }
-  changes.sort();
-  return {
-    adds: adds.sort(),
-    removes: removes.sort(),
-    changes,
-    changeBefore: changes.map((id) => changeBeforeById.get(id)!),
-  };
-}
-
-export function buildWatchlistImportPreview(
-  current: WatchlistTokenV2State,
-  desired: WatchlistTokenV2State,
-): WatchlistImportPreview {
-  const currentDirect = current.direct.map(packWatchlistDirectState);
-  const desiredDirect = desired.direct.map(packWatchlistDirectState);
-  const currentPresets = current.presets.map(packWatchlistPresetState);
-  const desiredPresets = desired.presets.map(packWatchlistPresetState);
-  const direct = diffPacked(currentDirect, desiredDirect, (entry) => unpackWatchlistDirectState(entry)!.stablecoinId);
-  const presets = diffPacked(currentPresets, desiredPresets, (entry) => unpackWatchlistPresetState(entry)!.presetId);
-  return {
-    directAdds: direct.adds,
-    directRemoves: direct.removes,
-    directChanges: direct.changes,
-    directChangeBefore: direct.changeBefore,
-    presetAdds: presets.adds,
-    presetRemoves: presets.removes,
-    presetChanges: presets.changes,
-    presetChangeBefore: presets.changeBefore,
-  };
-}
-
 function prepareWatchlistDirectInsertStatements(
   db: D1Database,
   chatId: string,
   generationLease: number,
-  rows: readonly WatchlistTokenDirectState[],
+  rows: readonly WatchlistDirectState[],
 ): D1PreparedStatement[] {
   const columnsPerRow = 17;
   const rowsPerStatement = Math.floor((D1_MAX_BOUND_PARAMETERS - 2) / columnsPerRow);
@@ -274,51 +204,6 @@ function prepareWatchlistDirectInsertStatements(
   return statements;
 }
 
-function preparePresetInsertStatements(
-  db: D1Database,
-  chatId: string,
-  generationLease: number,
-  rows: readonly WatchlistTokenPresetState[],
-  nowSec: number,
-): D1PreparedStatement[] {
-  const columnsPerRow = 8;
-  const rowsPerStatement = Math.floor((D1_MAX_BOUND_PARAMETERS - 2) / columnsPerRow);
-  const statements: D1PreparedStatement[] = [];
-  for (let index = 0; index < rows.length; index += rowsPerStatement) {
-    const chunk = rows.slice(index, index + rowsPerStatement);
-    const placeholders = chunk.map(() => `(${new Array(columnsPerRow).fill("?").join(", ")})`).join(", ");
-    const binds = chunk.flatMap((row) => [
-      chatId,
-      row.presetId,
-      row.alertDews ? 1 : 0,
-      row.alertDepeg ? 1 : 0,
-      row.alertSafety ? 1 : 0,
-      row.depegWorseningBpsStep,
-      nowSec,
-      nowSec,
-    ]);
-    statements.push(db.prepare(`
-      WITH import_guard AS (
-        SELECT 1 FROM telegram_subscribers WHERE chat_id = ? AND preference_generation = ?
-      ), incoming (
-        chat_id, preset_id, alert_dews, alert_depeg, alert_safety,
-        depeg_worsening_bps_step, created_at, updated_at
-      ) AS (VALUES ${placeholders})
-      INSERT INTO telegram_preset_subscriptions (
-        chat_id, preset_id, alert_dews, alert_depeg, alert_safety,
-        depeg_worsening_bps_step, created_at, updated_at
-      ) SELECT incoming.* FROM incoming, import_guard WHERE true
-      ON CONFLICT(chat_id, preset_id) DO UPDATE SET
-        alert_dews = excluded.alert_dews,
-        alert_depeg = excluded.alert_depeg,
-        alert_safety = excluded.alert_safety,
-        depeg_worsening_bps_step = excluded.depeg_worsening_bps_step,
-        updated_at = excluded.updated_at
-    `).bind(chatId, generationLease, ...binds));
-  }
-  return statements;
-}
-
 function prepareGuardedDeletes(
   db: D1Database,
   chatId: string,
@@ -349,14 +234,11 @@ async function executeGenerationFencedWatchlistMutation(
   db: D1Database,
   input: {
     chatId: string;
-    adoption?: TelegramFollowOptions["adoption"];
     ensureSubscriber?: { username: string | null };
     expectedPreferenceGeneration: number;
     generationLease: number;
-    firstFollowFeature?: "direct" | "preset";
+    firstFollowFeature?: "direct";
     prepareGuardedStatements: (nowSec: number) => D1PreparedStatement[];
-    unguardedTerminalStatements?: D1PreparedStatement[];
-    unguardedEffectStatements?: D1PreparedStatement[];
     statementLimitLabel: string;
   },
 ): Promise<"applied" | "stale"> {
@@ -376,19 +258,17 @@ async function executeGenerationFencedWatchlistMutation(
     `).bind(input.generationLease, nowSec, input.chatId, input.expectedPreferenceGeneration),
     ...(input.firstFollowFeature
       ? prepareTelegramFirstFollowStatements(db, {
-          chatId: input.chatId, username: null, nowSec, adoption: input.adoption,
+          chatId: input.chatId, username: null, nowSec,
           ensureSubscriber: false, feature: input.firstFollowFeature,
           guard: { sql: "preference_generation = ?", binds: [input.generationLease] },
         })
       : []),
     ...input.prepareGuardedStatements(nowSec),
-    ...(input.unguardedTerminalStatements ?? []),
     db.prepare(`
       UPDATE telegram_subscribers
          SET preference_generation = ?
        WHERE chat_id = ? AND preference_generation = ?
     `).bind(input.expectedPreferenceGeneration + 1, input.chatId, input.generationLease),
-    ...(input.unguardedEffectStatements ?? []),
   ];
   if (statements.length > D1_BATCH_SIZE) {
     throw new RangeError(`${input.statementLimitLabel} requires too many atomic statements (${statements.length})`);
@@ -398,95 +278,9 @@ async function executeGenerationFencedWatchlistMutation(
   return Number(results[guardResultIndex]?.meta?.changes ?? 0) > 0 ? "applied" : "stale";
 }
 
-export async function applyWatchlistImportV2(
-  db: D1Database,
-  input: {
-    chatId: string;
-    adoption?: TelegramFollowOptions["adoption"];
-    /**
-     * A Mini App preview is intentionally read-only. When its confirmation is
-     * the first write for a chat, create the subscriber in this same atomic
-     * batch before the preference-generation guard.
-     */
-    ensureSubscriber?: { username: string | null };
-    expectedPreferenceGeneration: number;
-    generationLease: number;
-    directEntries: readonly string[];
-    presetEntries: readonly string[];
-    directRemoveIds: readonly string[];
-    presetRemoveIds: readonly string[];
-    pendingExpiresAt: number;
-    pendingActionPayload: string;
-    operationStatements?: D1PreparedStatement[];
-  },
-): Promise<"applied" | "stale"> {
-  const direct = input.directEntries.map(unpackWatchlistDirectState);
-  const presets = input.presetEntries.map(unpackWatchlistPresetState);
-  if (direct.some((row) => row == null) || presets.some((row) => row == null)) {
-    throw new Error("Stored watchlist import payload is malformed");
-  }
-  const directRows = direct as WatchlistTokenDirectState[];
-  const presetRows = presets as WatchlistTokenPresetState[];
-  const directIds = directRows.map((row) => row.stablecoinId);
-  const presetIds = presetRows.map((row) => row.presetId);
-  const knownPresets = new Set<string>(TELEGRAM_PRESET_IDS);
-  if (
-    new Set(directIds).size !== directIds.length
-    || new Set(presetIds).size !== presetIds.length
-    || directIds.some((id) => !isSubscribableCoin(id))
-    || presetIds.some((id) => !knownPresets.has(id))
-    || new Set(input.directRemoveIds).size !== input.directRemoveIds.length
-    || new Set(input.presetRemoveIds).size !== input.presetRemoveIds.length
-    || input.directRemoveIds.some((id) => directIds.includes(id))
-    || input.presetRemoveIds.some((id) => presetIds.includes(id))
-  ) {
-    throw new Error("Stored watchlist import payload failed confirmation validation");
-  }
-  return executeGenerationFencedWatchlistMutation(db, {
-    ...input,
-    statementLimitLabel: "Watchlist import",
-    firstFollowFeature: presetRows.some((row) => row.alertDews || row.alertDepeg || row.alertSafety)
-      ? "preset"
-      : directRows.some((row) => row.alertDews || row.alertDepeg || row.alertSafety || row.alertLaunch || row.alertReserve || row.alertFreeze)
-        ? "direct" : undefined,
-    prepareGuardedStatements: (nowSec) => [
-      ...prepareGuardedDeletes(db, input.chatId, input.generationLease, "telegram_subscriptions", "stablecoin_id", input.directRemoveIds),
-      ...prepareGuardedDeletes(db, input.chatId, input.generationLease, "telegram_preset_subscriptions", "preset_id", input.presetRemoveIds),
-      db.prepare(`
-        DELETE FROM telegram_subscriptions
-         WHERE chat_id = ?
-           AND alert_dews = 0 AND alert_depeg = 0 AND alert_safety = 0
-           AND alert_launch = 0 AND alert_reserve = 0
-           AND alert_freeze = 0
-           AND alert_dews_override = 0 AND alert_depeg_override = 0
-           AND alert_safety_override = 0 AND alert_launch_override = 0
-           AND alert_reserve_override = 0 AND alert_freeze_override = 0
-           AND dews_min_band IS NULL AND safety_mode IS NULL
-           AND depeg_worsening_bps_step IS NULL
-           AND (alert_snooze_until_ts IS NULL OR alert_snooze_until_ts <= ?)
-           AND EXISTS (
-             SELECT 1 FROM telegram_subscribers
-              WHERE chat_id = ? AND preference_generation = ?
-           )
-      `).bind(input.chatId, nowSec, input.chatId, input.generationLease),
-      ...prepareWatchlistDirectInsertStatements(db, input.chatId, input.generationLease, directRows),
-      ...preparePresetInsertStatements(db, input.chatId, input.generationLease, presetRows, nowSec),
-    ],
-    // Consume this exact preview even when the generation guard is stale. The
-    // operation marker commits in the same batch, making stale rejection a
-    // terminal, retry-safe outcome while every preference statement remains a no-op.
-    unguardedTerminalStatements: [pendingDisambiguationClearStatement(db, input.chatId, {
-      actionType: "confirm-bulk",
-      actionPayload: input.pendingActionPayload,
-      expiresAt: input.pendingExpiresAt,
-    })],
-    unguardedEffectStatements: input.operationStatements,
-  });
-}
-
 /**
  * Applies a bounded direct-row patch under the same preference-generation
- * lease used by the portability importer. Presets are intentionally absent:
+ * lease. Presets are intentionally absent:
  * bulk watchlist editing must never materialize, delete, or otherwise alter a
  * preset source.
  */
@@ -494,7 +288,6 @@ export async function applyWatchlistDirectPatch(
   db: D1Database,
   input: {
     chatId: string;
-    adoption?: TelegramFollowOptions["adoption"];
     ensureSubscriber?: { username: string | null };
     expectedPreferenceGeneration: number;
     generationLease: number;
@@ -517,7 +310,7 @@ export async function applyWatchlistDirectPatch(
   ) {
     throw new Error("Bulk direct watchlist patch failed validation");
   }
-  const directRows = rows as WatchlistTokenDirectState[];
+  const directRows = rows as WatchlistDirectState[];
   const snoozeValues = input.directSnoozeValues ?? [];
   if (
     snoozeValues.length > directRows.length

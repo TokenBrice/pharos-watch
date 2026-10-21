@@ -45,15 +45,15 @@ Settings adapters validate transport codes and describe the result; State / pers
 
 ## 1. Ingress
 
-**Responsibility.** Authenticate `POST /api/telegram-webhook`, claim each update by owner/generation, and route through flood, pending-flow, group-admin, and cooldown gates. [Update deduplication](./telegram-alerts.md#update-deduplication) owns normalized-intent recovery and effect fences; [ingress incidents](./runbooks/telegram-webhook-retry-dedupe.md) owns admission/retry diagnosis. Parsing/authorization precede replay-safe local mutation; only the irreversible Bot API boundary starts an external effect.
-`worker/src/telegram/webhook/` owns this seam; the [implementation appendix](#ingress-implementation-appendix) maps entrypoints, lifecycle/pending gates and canonical read-only projections.
+**Responsibility.** Authenticate `POST /api/telegram-webhook` (constant-time secret compare, no D1, before any work), claim each `update_id`, and route commands through the flood and group-admin gates. Plain text is ignored: multi-step flows use stateless buttons, so ingress reads no chat text state. A processed duplicate is acked and skipped; a thrown error releases the claim and returns non-2xx so Telegram redelivers. Replies are unfenced, so a rare duplicate reply on redelivery is accepted. [Update deduplication](./telegram-alerts.md#update-deduplication) owns the behavior; [ingress incidents](./runbooks/telegram-webhook-retry-dedupe.md) owns admission/retry diagnosis.
+`worker/src/telegram/webhook/` owns this seam; the [implementation appendix](#ingress-implementation-appendix) maps entrypoints, lifecycle handling and canonical read-only projections.
 
 Registration requests messages, callback queries and bot-membership updates only. Unsupported types, including retired inline queries and chosen-inline feedback, return `200 ok` after authentication/parsing, before D1 claims or Bot API work. No answer, notice or usage event is emitted; `/status` remains available.
 
 
 **Allowed inbound dependencies.** `worker/src/index.ts` request router (this is an HTTP entrypoint).
 
-**Allowed outbound dependencies.** Command parsing, Callback routing, Action handlers (via `COMMAND_HANDLERS`), State / persistence (for the processed-update claim, the pending-disambiguation read, the cooldown gate), Outbound transport (for reply helpers), Common.
+**Allowed outbound dependencies.** Command parsing, Callback routing, Action handlers (via `COMMAND_HANDLERS`), State / persistence (for the processed-update claim, the pending-disambiguation read, the flood counter), Outbound transport (for reply helpers), Common.
 
 **Must NOT.**
 - Format alert messages — that is Action handlers / Common (`worker/src/telegram/common/alerts-formatting.ts`).
@@ -66,7 +66,7 @@ Registration requests messages, callback queries and bot-membership updates only
 
 ## 2. Command parsing
 
-**Responsibility.** Pure command/target/deep-link/pending-action parsing; no I/O.
+**Responsibility.** Pure command/target/deep-link parsing; no I/O.
 
 **Owned files.**
 - `worker/src/telegram/webhook/telegram-webhook-parsing.ts`
@@ -87,17 +87,17 @@ Registration requests messages, callback queries and bot-membership updates only
 
 ## 3. Callback routing
 
-**Responsibility.** Validate callback prefixes against `CALLBACK_ACTIONS` before handler D1 work, authorize mutating group actions, invoke shared builders/store helpers, and acknowledge the callback. Ingress owns flood/cooldown admission; `setup:*` and `settings:*` have bounded sub-dispatchers. [Commands](./telegram-alerts.md#commands) owns callback behavior.
+**Responsibility.** Validate callback prefixes against `CALLBACK_ACTIONS` before handler D1 work, authorize mutating group actions, invoke shared builders/store helpers, and acknowledge the callback. Ingress owns flood admission; `setup:*` and `settings:*` have bounded sub-dispatchers. [Commands](./telegram-alerts.md#commands) owns callback behavior.
 
 **Owned files.**
-- `worker/src/telegram/webhook/telegram-webhook-callbacks.ts`
+- `handleCallbackQuery` in `worker/src/telegram/webhook/telegram-webhook-update-dispatch.ts` — router entry.
 - `worker/src/telegram/callbacks/` — registry and per-action implementation.
 - `worker/src/telegram/webhook/telegram-webhook-setup.ts` — state machine shared with Ingress ticker input.
 - `worker/src/telegram/webhook/telegram-webhook-settings.ts`, `telegram-webhook-settings-render.ts`, `telegram-webhook-settings-mutations.ts`, `telegram-webhook-settings-shared.ts` — settings subsystem.
 
-**Allowed inbound dependencies.** Ingress only (`handleCallbackQuery` is called from `handleTelegramWebhook`).
+**Allowed inbound dependencies.** Ingress only (`handleCallbackQuery` is called from the update dispatcher).
 
-**Allowed outbound dependencies.** Command parsing (`parsePendingDisambiguation` for bulk-confirm), Action handlers (re-runs `/why`, `/coverage` via the same helpers; falls through for quicksub via store helpers), State / persistence, Outbound transport, Common.
+**Allowed outbound dependencies.** Action handlers (re-runs `/why`, `/coverage` via the same helpers; falls through for quicksub via store helpers), State / persistence, Outbound transport, Common.
 
 **Must NOT.**
 - Bypass `CALLBACK_ACTIONS`; add every prefix and its keyboard builder together.
@@ -114,7 +114,7 @@ Registration requests messages, callback queries and bot-membership updates only
 **Owned files.**
 - `worker/src/telegram/commands/` — `index.ts` dispatch, `context.ts` request shape, `action-runner.ts` shared resolution/confirmation, and per-command handlers.
 - `worker/src/telegram/store/telegram-webhook-disambiguation-selection.ts` — pending-selection execution through the action runner.
-- `worker/src/telegram/webhook/telegram-webhook-messages.ts`, `telegram-webhook-insights.ts`, `telegram-webhook-status.ts`, `telegram-webhook-resolution.ts` — shared builders and domain loaders/resolution.
+- `worker/src/telegram/webhook/telegram-webhook-messages.ts`, `telegram-webhook-insights.ts`, `telegram-webhook-status.ts` — shared builders and domain loaders.
 
 **Allowed inbound dependencies.** Ingress (via `COMMAND_HANDLERS`), Callback routing (which re-invokes some handlers via their build-message helpers and may call `action-runner` for the disambiguation reply path).
 
@@ -187,15 +187,15 @@ The chat deadline is also stored independently in D1 `cache` under `telegram:cha
 
 ## 7. State / persistence
 
-**Responsibility.** Own authoritative subscriber/direct/preset SQL, pending state, operation proof, cooldowns, chat migration and diagnostics. Retired recap tables remain for retention/privacy erasure pending separate destructive cleanup.
+**Responsibility.** Own authoritative subscriber/direct/preset SQL, pending state, the processed-update claim, flood/cooldown counters, chat migration and diagnostics. Retired recap tables remain for retention/privacy erasure pending separate destructive cleanup.
 
-Direct/local coin intent and persistent preset intent remain separate; neither setup nor Mini App import may flatten resolved presets into direct rows. Existing indistinguishable legacy rows remain conservatively direct/local. [Preset watchlists](./telegram-alerts.md#preset-watchlists) owns inheritance/override behavior; [Mini App portability](./telegram-mini-app.md#configuration-portability) owns signed preview/confirmation. Command import/export handlers and their portable-import callback payload are retired; malformed or retired confirmation payloads are rejected without mutation, while ordinary command bulk confirmations remain in Callback routing.
+Direct/local coin intent and persistent preset intent remain separate; neither setup nor Mini App bulk edits may flatten resolved presets into direct rows. Existing indistinguishable legacy rows remain conservatively direct/local. [Preset watchlists](./telegram-alerts.md#preset-watchlists) owns inheritance/override behavior. Watchlist token import/export is retired in the bot and the Mini App ([portability](./telegram-mini-app.md#configuration-portability)); its portable-import callback payload is retired too; malformed or retired confirmation payloads are rejected without mutation, while ordinary command bulk confirmations remain in Callback routing.
 
-`shared/types/status/telegram.ts` owns tuning value tuples, schema primitives and derived types; `shared/lib/telegram-alert-families.ts` owns reversible settings callback codes. DEWS classification remains owned by `shared/lib/classification/risk.ts`. The Store's `prepareSettingToSubscriptions` assembles subscriber activity, preference generation, direct override and tuning writes without executing them, preserving composition with webhook operation proof. First-follow attribution can be claimed once by an outer Mini App batch rather than by each nested setting.
+`shared/types/status/telegram.ts` owns tuning value tuples, schema primitives and derived types; `shared/lib/telegram-alert-families.ts` owns reversible settings callback codes. DEWS classification remains owned by `shared/lib/classification/risk.ts`. The Store's `prepareSettingToSubscriptions` assembles subscriber activity, preference generation, direct override and tuning writes without executing them, preserving composition with webhook operation proof. The first-follow milestone can be claimed once by an outer Mini App batch rather than by each nested setting.
 
 Subscriber UPSERTs use common chat/username/activity inputs and one SQL builder. Global bumps and overrides are exclusive with a runtime conflict guard; overrides retain precedence over per-coin bumps. Single-column timezone/snooze inserts rely on D1 defaults for untouched columns. Undefined preserves a preference; null clears it. Username coalescing, quiet hours, generation increments and operation-proof rollback are unchanged.
 
-Mini App watchlist import and bounded direct patches keep separate confirmation validators but share one generation-fenced atomic batch: ensure the parent when requested, claim the generation lease, apply guarded preference/adoption writes, restore the next generation, and prove the result from the lease claim. Import alone cleans empty rows; direct patches alone restore explicit undo snoozes. The retained Store import helper can compose an exact pending-preview deletion and operation proof in the same transaction, but Mini App portability does not create or consume command previews. Both paths retain D1 bind/statement bounds and overload retry.
+Mini App bounded direct patches (bulk edit, single removal and their undo) run in one generation-fenced atomic batch: ensure the parent when requested, claim the generation lease, apply guarded preference and first-follow writes, restore explicit undo snoozes, restore the next generation, and prove the result from the lease claim. The batch retains D1 bind/statement bounds and overload retry.
 
 Unavailable pulse quality is `unknown`, never `complete`; do not write a lifecycle snapshot when pending-delivery evidence is unavailable.
 
@@ -211,8 +211,8 @@ Chat migration derives insert/select columns and conflict assignments from one o
 
 **Owned files.**
 - `worker/src/telegram/store/telegram-webhook-store.ts`, `worker/src/telegram/store/*` — stable import barrel and topic-specific SQL builders.
-- `worker/src/telegram/webhook/chat-member.ts` — chat-admin read policy.
-- `worker/src/telegram/store/usage-analytics.ts`, `worker/src/telegram/adoption/adoption-analytics.ts` — usage/lifecycle and identifier-free adoption.
+- Cached chat administrators in `worker/src/telegram/webhook/telegram-webhook-auth.ts` — denial-hint names only, never authorization.
+- `worker/src/telegram/store/usage-analytics.ts` — identifier-free usage and lifecycle aggregates.
 - `worker/src/telegram/webhook/webhook-registration.ts` — registration cadence/cache state; HTTP through Outbound.
 - D1 schemas: [purpose map](#d1-schema); migrations own columns/keys/indexes. No KV: snapshots, backoff, cooldown/flood, admin/welcome, registration and degradation markers use the D1 `cache` table. Exact chat-key cleanup is owned by `prepareDeleteTelegramChatCacheStatements` in `worker/src/telegram/store/subscriber-lifecycle.ts`, not a manually maintained key roster.
 
@@ -283,7 +283,7 @@ Distinct-chat scheduling stays in `schedulePerChatBatches`; the durable queue dr
 
 **Must NOT.**
 - Accept mutation auth older than the 5-minute mutation window.
-- Treat portable export or preview as a mutation: they use the 24-hour signed-read window and session throttle, while import confirmation remains a 5-minute mutation and must revalidate its exact preview.
+- Treat a bulk preview as a mutation: it uses the 24-hour signed-read window and session throttle, while bulk confirmation remains a 5-minute mutation and must revalidate its exact preview.
 - Flatten preset/global coverage into direct rows during bulk editing; bulk confirmation and undo may change only the bounded direct-row set and must fail stale on generation/fingerprint drift.
 - Mutate group/supergroup/channel chat rows until a fresh admin verification path and group-scoped launch ownership model exist.
 - Write analytics, aggregate counters, or cooldown rows before signed `initData` validation succeeds. Body-too-large, malformed JSON, and schema-denied Mini App requests must return without D1 writes because the endpoints are public API-key-exempt surfaces.
@@ -319,7 +319,7 @@ Behavior changes stay inside current seams. Bug fixes, handlers, tests and field
 
 `scripts/ci/check-architecture-boundaries.ts` enforces `telegram-public-surface` on production Worker sources outside the Telegram owners. Each resolved incoming edge must match an exact importer/entry-module pair; static imports, re-exports, literal dynamic imports and authored type-only dependencies are covered. The owners are the feature core in `worker/src/telegram/` and the scheduler implementation in `worker/src/cron/telegram/`; registered route and HTTP-handler adapters remain external consumers. Imports between the two owners are internal; passing through a permitted public entry does not prohibit its internal dependencies. Unrelated features do not gain a directory-wide or scheduled-handler exemption.
 
-Telegram moves must rename the corresponding public-entry allowlist paths atomically with their callers, removing obsolete locations rather than adding compatibility re-exports. The checker recognizes the feature subtree, so a new deep destination import is not an escape hatch. `scripts/ci/check-worker-package.ts` separately rejects Heavy source-map reachability into Telegram's HTTP-bearing destinations (`webhook/`, including pulse, `commands/`, `callbacks/`, `mini-app/`, `adoption/`, and `admin/`); it does not ban generic delivery or outbox modules.
+Telegram moves must rename the corresponding public-entry allowlist paths atomically with their callers, removing obsolete locations rather than adding compatibility re-exports. The checker recognizes the feature subtree, so a new deep destination import is not an escape hatch. `scripts/ci/check-worker-package.ts` separately rejects Heavy source-map reachability into Telegram's HTTP-bearing destinations (`webhook/`, including pulse, `commands/`, `callbacks/`, `mini-app/`, and `admin/`); it does not ban generic delivery or outbox modules.
 
 Re-evaluate a boundary when one fix repeatedly crosses seams, callbacks accumulate unrelated dependencies, Ingress becomes business logic, or SQL/policy is duplicated. Delivery policy stays in `shared/lib/telegram-delivery-policy.ts`; State owns shared SQL. These are design signals, not numerical acceptance gates.
 
@@ -336,9 +336,10 @@ DDL authority is the active [Worker migration stream](../worker/migrations/MANIF
 | Table family | Purpose / seam |
 | --- | --- |
 | `telegram_subscribers`, `telegram_subscriptions`, `telegram_preset_subscriptions` | Chat defaults, independent direct/local preferences and dynamic preset follows — State |
-| `telegram_pending_disambiguation` | TTL/initiator-owned selection, bulk confirmation and setup state — State / Ingress |
+| `telegram_pending_disambiguation` | Retired text state: ingress no longer reads it and selection/confirmation/setup use stateless buttons. Only the expiry cleanup still touches it until the drop. |
 | `telegram_pending_alerts`, `telegram_alert_dead_letters` | Authoritative queued effects and terminal audit — Queue |
-| `telegram_processed_updates`, `telegram_webhook_operation_mutations` | Owner/generation update intent, atomic mutation proof and effect fence — Ingress / State |
+| `telegram_processed_updates` | Update-id claim (`processing` → `processed`; released on error) — Ingress / State. Intent/effect columns are no longer written. |
+| `telegram_webhook_operation_mutations` | Retired; no writer or reader. Dropped in a separate destructive rollout. |
 | `telegram_alert_source_events`, `telegram_alert_source_resolution_pages` | Immutable sources, resumable resolution and planning ownership — Dispatch |
 | `telegram_alert_source_resolution_memberships`, `telegram_alert_source_resolution_targets` | Normalized preset membership/follower lineage — Dispatch |
 | `telegram_alert_planning_subscribers` | Frozen candidate cohort and planning decisions — Dispatch |
@@ -346,8 +347,8 @@ DDL authority is the active [Worker migration stream](../worker/migrations/MANIF
 | `telegram_alert_jobs`, `telegram_alert_job_targets`, `telegram_alert_job_target_items` | Exclusive final delivery truth and source-item lineage — Dispatch / Queue |
 | `telegram_freeze_alert_events`, `telegram_freeze_alert_targets` | Immutable Tape/blacklist identity and one-time freeze cohort — Dispatch |
 | `telegram_recap_preferences`, `telegram_recap_targets` | Retired personalized-recap audit only; expiry and `/forget` erasure remain, no planner or preference mutation |
-| `telegram_usage_daily`, `telegram_adoption_daily`, `telegram_adoption_retention_daily` | Identifier-free usage/funnel and feature-retention aggregates — State |
-| `telegram_adoption_ingress_quota`, `telegram_adoption_client_quota` | Global and dedicated-pepper HMAC-IP CTA ingress ceilings — State |
+| `telegram_usage_daily` | Identifier-free usage aggregates — State |
+| `telegram_adoption_daily`, `telegram_adoption_retention_daily`, `telegram_adoption_ingress_quota`, `telegram_adoption_client_quota` | Retired sign-up funnel aggregates and HMAC-IP CTA quota buckets; no writers, retention-pruned until the coordinated drop |
 | `telegram_watcher_lifecycle_daily`, `telegram_watcher_lifecycle_events_daily` | Persisted lifecycle history and atomic transition counts — State |
 | `telegram_chat_delivery_diagnostics` | Successful alert vs reply times and failure class — Outbound / State |
 | `telegram_transport_circuit`, `telegram_transport_failure_observations`, `telegram_delivery_pauses` | Durable circuit, short-lived outage inference, generation-fenced pauses — Outbound |
@@ -359,7 +360,7 @@ Indexes are part of that migration authority. The [load harness](./telegram-aler
 
 **Inactive subscribers.** `telegram-inactive-cleanup` uses the `daily0300Utc` lane behind the seven-day `cron:telegram-inactive-cleanup:last-run` guard. At 180 inactive days a profile is eligible only with every global flag off, no preset/pending/disambiguation state, no enabled recap, and only inert direct rows. Inert means all family flags **and override markers** off, no snooze and no tuning: explicit-off choices retain the profile. Live follows never expire for inactivity; no re-engagement warning is sent to ineligible profiles. Indexed scan caps at 100 atomic cascades/run; each child delete rechecks eligibility so returning/new intent survives. Latest seven-day item count supplies `inactiveSubscribersCleanedThisWeek`.
 
-**User deletion and expiry.** Pending disambiguation uses command TTL. Sent/expired/cancelled/permanent queue rows leave live transport, with dead-letter evidence where applicable; expired-row diagnostic-copy failure logs a bypass and still deletes fenced live work. `/forget` immediately deletes subscriber-owned settings, diagnostics, pending/freeze/recap/planning/plan/target/item/dead-letter/transport-observation state plus exact/prefix cache residue from `prepareDeleteTelegramChatCacheStatements` (`worker/src/telegram/store/subscriber-lifecycle.ts`). `/unsubscribe all` stops follows without immediate erasure.
+**User deletion and expiry.** Pending disambiguation uses command TTL. Sent/expired/cancelled/permanent queue rows leave live transport, with dead-letter evidence where applicable; expired-row diagnostic-copy failure logs a bypass and still deletes fenced live work. `/forget` immediately deletes subscriber-owned settings, diagnostics, pending (including group prompts keyed by `initiator_user_id`)/freeze/recap/planning/plan/target/item/dead-letter/transport-observation state plus exact/prefix cache residue from `prepareDeleteTelegramChatCacheStatements` (`worker/src/telegram/store/subscriber-lifecycle.ts`). `/unsubscribe all` stops follows without immediate erasure.
 
 **Retention** (`telegram-retention-cleanup`):
 
@@ -370,9 +371,9 @@ Indexes are part of that migration authority. The [load harness](./telegram-aler
 | Legacy terminal targets without plan generation | 14d only with no pending/sending/claimed/unknown effect; source-less terminal jobs only after targets gone |
 | Expired source-less discovered/queued jobs and unresolved sources with no dependent workflow/target/job | 30d |
 | Unresolved/unknown effects, degraded job audit, dead letters, freeze audit | 90d; no supported operator replay |
-| Usage/adoption/feature-retention aggregates | 400d |
-| CTA quota buckets | 2d |
-| Mini App first-mutation correlation | 30min; `/forget` immediately clears it |
+| Usage aggregates and residual retired funnel aggregates | 400d |
+| Residual retired CTA quota buckets | 2d |
+| Residual retired Mini App first-mutation correlation | 30min; `/forget` immediately clears it |
 
 Ordered SQL batches replace uncapped deletion: 10,000 rows/pass normally, up to 100,000/table/run for high-volume workflow/replay. Processed updates use 1,000-row batches, two-second internal budget, 5,000-row ceiling and a 5,001-row debt probe (exact below limit, lower bound at saturation). Debt/saturation sets `runBudgetTruncated` and per-table `cappedAtLimit`. High-growth passes report cutoffs/limit/deletes/oldest remaining and eligible clocks/duration/isolated errors; one family error degrades the cron while others continue. Dead-letter evidence survives the 14-day workflow window.
 
@@ -380,9 +381,9 @@ Telegram custom Worker logs are deliberately non-correlatable to a chat. `worker
 
 Cloudflare Workers Logs processes sampled custom records under the Cloudflare account permissions configured outside this repository. `worker/wrangler.toml` enables observability and invocation logs with `head_sampling_rate = 0.1`; the repository configures no separate Workers Logpush archive and no Telegram-specific/provider retention duration. Treat console logs as sampled, short-lived operational hints, not the durable incident ledger.
 
-[Update deduplication](./telegram-alerts.md#update-deduplication) owns processed/planned/started/unknown behavior and retention. Local mutation proof and claim loss share one D1 transaction; the effect fence is crossed only at an irreversible Bot API call. Status lifecycle counts are diagnostics, not replay authority.
+[Update deduplication](./telegram-alerts.md#update-deduplication) owns the claim/processed/release behavior and retention. Legacy `planned`/`started`/`execution_unknown` rows are reclaimable after the 60-second stale window and pruned at seven days; status lifecycle counts over them are diagnostics only.
 
-When Telegram upgrades a group to a supergroup, the webhook handles `migrate_to_chat_id` and `migrate_from_chat_id` service messages before command parsing. The migration helper merges the old numeric chat ID into the new one across subscriber state, per-coin subscriptions, preset follows, pending selections, normalized source-resolution targets, planning snapshots, rendered target plans, pending/dead-letter delivery rows, alert job targets and their item lineage, transport observations, delivery diagnostics, processed-update chat references, and known exact D1 cache keys such as `telegram:chat-admins:<chat_id>` and `telegram:group-welcome:<chat_id>`. Pre-handoff planned targets are cancelled before the chat ID moves so a plan rendered for the old destination cannot be replayed against the new chat. The helper is idempotent because Telegram can deliver either service message first.
+When Telegram upgrades a group to a supergroup, the webhook handles `migrate_to_chat_id` and `migrate_from_chat_id` service messages before command parsing. The migration helper merges the old numeric chat ID into the new one across subscriber state, per-coin subscriptions, preset follows, pending selections, normalized source-resolution targets, planning snapshots, rendered target plans, pending/dead-letter delivery rows, alert job targets and their item lineage, transport observations, delivery diagnostics, processed-update chat references, and known exact D1 cache keys such as `telegram:chat-admins:<chat_id>` and `telegram:group-welcome:<chat_id>`. Pre-handoff planned targets are cancelled before the chat ID moves so a plan rendered for the old destination cannot be replayed against the new chat. The helper is idempotent because Telegram can deliver either service message first. A transient D1 failure during migration returns non-2xx (claim released) so Telegram redelivers the service message; a deterministic failure is acked with `error_class = chat-migration` so it cannot hold back later updates.
 
 When `my_chat_member` reports that a group or supergroup removed the bot
 (`left`/`kicked`), the webhook immediately runs the same subscriber-state
@@ -405,17 +406,15 @@ The reconciled menu is `Manage Alerts`, a Web App link to `https://pharos.watch/
 ## Ingress Implementation Appendix
 
 **Owned files.**
-- `worker/src/telegram/webhook/telegram-webhook.ts` — HTTP entry/claim bootstrap.
-- `worker/src/telegram/webhook/telegram-webhook-auth.ts` — secret/admin validation.
-- `worker/src/telegram/webhook/telegram-webhook-update-normalization.ts` — pure update/chat/migration shapes; no D1 or Bot API.
-- `worker/src/telegram/webhook/telegram-webhook-effect-fence.ts` — claim/normalized-intent effect boundary.
-- `worker/src/telegram/webhook/telegram-webhook-update-dispatch.ts` — policy/pending-gated intent routing.
-- `worker/src/telegram/webhook/telegram-webhook-ingress-policy.ts` — flood, cooldown, admin and channel gates.
-- `worker/src/telegram/webhook/telegram-webhook-pending-gate.ts` — pending-flow decisions.
+- `worker/src/telegram/webhook/telegram-webhook.ts` — HTTP entry, update-id claim/release and update-shape normalization.
+- `worker/src/telegram/webhook/telegram-webhook-auth.ts` — secret validation, tri-state group-admin lookup (`admin | not_admin | unknown`) and cached admin names.
+- `worker/src/telegram/webhook/telegram-webhook-update-dispatch.ts` — gated message routing and the callback router.
+- `worker/src/telegram/webhook/telegram-webhook-ingress-policy.ts` — command policy table, per-chat flood counter, admin and channel gates.
 - `worker/src/telegram/webhook/telegram-webhook-group-welcome.ts` — group lifecycle/welcome.
 - `worker/src/telegram/webhook/telegram-webhook-shared.ts` — cross-seam types/copy.
+- `worker/src/telegram/store/processed-updates.ts` — processed-update claim, flood/cooldown counters, retention.
 
-Group lifecycle and pending-flow policy remain explicit ingress sub-seams: `telegram-webhook-group-welcome.ts` owns bot-added/removed handling and atomic welcome claims; `telegram-webhook-pending-gate.ts` owns pass-through, clear-and-run, ownership refusal, and reply-and-stop decisions before `COMMAND_HANDLERS`.
+Group lifecycle remains an explicit ingress sub-seam: `telegram-webhook-group-welcome.ts` owns bot-added/removed handling and atomic welcome claims. `/start` payload kinds are classified by an exhaustive switch, so a new deep-link kind cannot silently fall into the read-only policy.
 
 `telegram-webhook-shared.ts` is the cross-seam contract for update/pending/bulk types and framed bot copy. Command rows and alert-family lists derive from shared manifests; widening a type is routine, restructuring this contract is a seam change.
 

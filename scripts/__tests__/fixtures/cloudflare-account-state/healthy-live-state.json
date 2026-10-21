@@ -31,9 +31,6 @@
           },
           "SITE_API_SHARED_SECRET": {
             "type": "secret_text"
-          },
-          "TELEGRAM_ADOPTION_IP_HASH_SECRET": {
-            "type": "secret_text"
           }
         },
         "d1Bindings": [

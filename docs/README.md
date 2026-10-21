@@ -87,7 +87,6 @@ Complete coverage of `docs/runbooks/` and `docs/incident-response/`. Labels and 
 | procedure | [Telegram BotFather configuration](./runbooks/telegram-mini-app-botfather.md) |
 | procedure | [Telegram secret rotation](./runbooks/telegram-secret-rotation.md) |
 | procedure | [Yield history cleanup and writer pause](./runbooks/yield-history-cleanup-writer-pause.md) |
-| reference | [Telegram adoption report queries](./runbooks/telegram-adoption-report.md) |
 | reference | [Telegram read-only operator queries](./runbooks/telegram-operator-queries.md#read-only-incident-entry) |
 | reference | [Yield health and deterministic all-fail cooldown diagnostics](./runbooks/yield-health.md) |
 

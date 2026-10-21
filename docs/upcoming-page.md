@@ -20,9 +20,9 @@ Filtering starts from the full pre-launch projection before sorting. Shared URL 
 
 Year/month/quarter/half-year/day targets describe inclusive UTC periods and expire at the following midnight, not their sorting date. Drift depends on the current target, not revision history. The tracker reads the visitor clock after mount through `selectPreLaunchClockView` (`src/lib/pre-launch.ts`): it feeds Slipped (coins with a current target that was pushed once, delayed or is overdue; a coin whose earlier target was retired with none set resolves through `resolveDriftDisplay` to a neutral "No current target", carries no ring and is not counted), the soonest open target (overdue targets never qualify), the drift column and the constellation rings (amber = target pushed, red = overdue; coins folded into a "+N" marker are tallied on it, so rings plus tallies equal Slipped), and re-reads at the next target expiry without fetch. Detail readiness and launch path share one hydration-safe visitor-clock snapshot (`usePreLaunchNowMs` in `src/components/pre-launch-readiness.tsx`), refreshed at each UTC midnight and when a hidden tab becomes visible. Those daily boundaries cover every target expiry and announcement-age increment, even after all targets expire; no far-future target timeout or API request is needed. Server and first-hydration clock readings stay null. Phase/milestone metadata remains server-renderable. Never interpret fuzzy dates as precise launch promises.
 
-## Launch Alert Promotion
+## Launch Follow Action
 
-The global launch alert is the header's Alerts action, linking to the bot landing (`/pharoswatchbot/#getting-started`); its accessible name carries `/subscribe launch all` for `@PharosWatchBot`. No body callout. Asset-specific exact commands belong on destination pre-launch detail pages and use canonical identity, not ticker guessing. [Stablecoin detail](./stablecoin-detail-page.md) owns those commands/landing contracts.
+Per-user launch alerts are retired. The header action is `Follow @pharoswatch` (`PreLaunchAlertAction`), an external link to the Telegram channel whose digest lists the stablecoins Pharos starts tracking. No body callout. Pre-launch detail pages carry the same action; [Stablecoin detail](./stablecoin-detail-page.md) owns that contract.
 
 ## Share Card
 

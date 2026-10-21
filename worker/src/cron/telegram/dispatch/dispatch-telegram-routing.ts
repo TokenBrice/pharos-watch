@@ -3,7 +3,9 @@ import {
   buildAlertReplyMarkup,
   resolveAlertLinkPreviewOptions,
   splitMessage,
+  type AlertVia,
   type ConsolidatedAlerts,
+  type FewerBaseSettings,
 } from "../../../telegram/common/alerts-formatting";
 import type { BatchMessage } from "../../../telegram/delivery/telegram";
 import {
@@ -19,10 +21,10 @@ type AlertAppender<T> = (alerts: ConsolidatedAlerts) => T[];
 /**
  * Priority used to pick the "dominant" type for a consolidated message.
  * Depeg fires on live price action and is the most operationally urgent,
- * followed by DEWS (stress), safety (grade movement), then launch (info).
+ * followed by DEWS (stress), safety (grade movement), then reserve.
  * Used purely for delivery-metric attribution.
  */
-const ALERT_TYPE_PRIORITY: readonly TelegramAlertType[] = ["depeg", "dews", "safety", "launch", "reserve"];
+const ALERT_TYPE_PRIORITY: readonly TelegramAlertType[] = ["depeg", "dews", "safety", "reserve"];
 
 function dominantAlertType(alerts: ConsolidatedAlerts): TelegramAlertType {
   if (alerts.depegTriggered.length + alerts.depegResolved.length + alerts.depegWorsening.length > 0) {
@@ -30,7 +32,6 @@ function dominantAlertType(alerts: ConsolidatedAlerts): TelegramAlertType {
   }
   if (alerts.dews.length > 0) return "dews";
   if (alerts.safety.length > 0) return "safety";
-  if (alerts.launch.length > 0) return "launch";
   if (alerts.reserve.length > 0) return "reserve";
   if ((alerts.freeze?.length ?? 0) > 0) return "freeze";
   // Fallback: an empty consolidated alert should not reach this path. Pick the
@@ -44,7 +45,6 @@ function alertTypesForConsolidated(alerts: ConsolidatedAlerts): TelegramAlertTyp
     types.push("depeg");
   if (alerts.dews.length > 0) types.push("dews");
   if (alerts.safety.length > 0) types.push("safety");
-  if (alerts.launch.length > 0) types.push("launch");
   if (alerts.reserve.length > 0) types.push("reserve");
   if ((alerts.freeze?.length ?? 0) > 0) types.push("freeze");
   return types;
@@ -73,6 +73,8 @@ export interface SubscriberRow {
   isGlobal: boolean;
   /** A settings/direct write explicitly owns this alert family's local policy. */
   hasLocalOverride?: boolean;
+  /** Preset follows that routed this row (preset rows only), for the "Via" footer. */
+  presetIds?: readonly string[];
 }
 
 export interface AlertsByChatEntry {
@@ -83,6 +85,10 @@ export interface AlertsByChatEntry {
   quietHoursEndUtc: number | null;
   timezone: string | null;
   preferenceGeneration?: number;
+  /** Union of the follow sources that routed this chat's events. */
+  via?: AlertVia;
+  /** Routed depeg step / DEWS floor per `<family>:<coin>` for the Fewer button. */
+  fewerBase?: Record<string, number | string | null>;
 }
 
 export interface RoutedSubscriberAlert {
@@ -99,6 +105,7 @@ export interface RoutedSubscriberAlert {
   preferenceGeneration?: number;
   alertScope?: PendingAlertScopeItem[];
   safetyScoreIdentity?: SafetyScorePublicationIdentity;
+  fewerBase?: FewerBaseSettings;
 }
 
 export function emptyAlerts(): ConsolidatedAlerts {
@@ -108,18 +115,21 @@ export function emptyAlerts(): ConsolidatedAlerts {
     depegResolved: [],
     depegWorsening: [],
     safety: [],
-    launch: [],
     reserve: [],
     freeze: [],
   };
 }
 
-function addAlertToChat<T>(
+function addAlertToChat<T extends { stablecoinId: string }>(
   alertsByChat: Map<string, AlertsByChatEntry>,
   sub: SubscriberRow,
   append: AlertAppender<T>,
   event: T,
+  family?: TelegramAlertType,
 ): void {
+  const fewerBase = family === "depeg"
+    ? sub.depeg_worsening_bps_step
+    : family === "dews" ? sub.dews_min_band : undefined;
   const preferenceGeneration = Number.isFinite(sub.preference_generation)
     ? Math.max(0, Math.floor(sub.preference_generation ?? 0))
     : 0;
@@ -127,6 +137,11 @@ function addAlertToChat<T>(
   if (existing) {
     existing.lastActiveAt = Math.max(existing.lastActiveAt, sub.last_active_at);
     existing.preferenceGeneration = Math.min(existing.preferenceGeneration ?? 0, preferenceGeneration);
+    existing.via = mergeAlertVia(existing.via, sub);
+    if (fewerBase !== undefined) {
+      existing.fewerBase ??= {};
+      existing.fewerBase[`${family}:${event.stablecoinId}`] ??= fewerBase;
+    }
     append(existing.alerts).push(event);
     return;
   }
@@ -141,7 +156,19 @@ function addAlertToChat<T>(
     quietHoursEndUtc: sub.quiet_hours_end_utc ?? null,
     timezone: sub.timezone ?? null,
     preferenceGeneration,
+    via: mergeAlertVia(undefined, sub),
+    ...(fewerBase !== undefined ? { fewerBase: { [`${family}:${event.stablecoinId}`]: fewerBase } } : {}),
   });
+}
+
+function mergeAlertVia(via: AlertVia | undefined, sub: SubscriberRow): AlertVia {
+  const presetIds = new Set(via?.presetIds ?? []);
+  for (const presetId of sub.presetIds ?? []) presetIds.add(presetId);
+  return {
+    presetIds: [...presetIds].sort(),
+    watchlist: (via?.watchlist ?? false) || (!sub.isGlobal && (sub.presetIds?.length ?? 0) === 0),
+    allStablecoins: (via?.allStablecoins ?? false) || sub.isGlobal,
+  };
 }
 
 export function routeAlertEvents<T extends { stablecoinId: string }>(
@@ -161,6 +188,7 @@ export function routeAlertEvents<T extends { stablecoinId: string }>(
    */
   perCoinSnoozedByStablecoin?: ReadonlyMap<string, ReadonlySet<string>>,
   perCoinDisabledByStablecoin?: ReadonlyMap<string, ReadonlySet<string>>,
+  family?: TelegramAlertType,
 ): void {
   for (const event of events) {
     const specificSubscribers = specificSubsByStablecoin.get(event.stablecoinId) ?? [];
@@ -172,7 +200,7 @@ export function routeAlertEvents<T extends { stablecoinId: string }>(
       if (disabledForEvent?.has(sub.chat_id)) continue;
       if (snoozedForEvent?.has(sub.chat_id)) continue;
       if (!shouldInclude(sub, event)) continue;
-      addAlertToChat(alertsByChat, sub, append, event);
+      addAlertToChat(alertsByChat, sub, append, event, family);
     }
 
     for (const sub of globalSubscribers) {
@@ -180,7 +208,7 @@ export function routeAlertEvents<T extends { stablecoinId: string }>(
       if (disabledForEvent?.has(sub.chat_id)) continue;
       if (snoozedForEvent?.has(sub.chat_id)) continue;
       if (!shouldInclude(sub, event)) continue;
-      addAlertToChat(alertsByChat, sub, append, event);
+      addAlertToChat(alertsByChat, sub, append, event, family);
     }
   }
 }
@@ -207,7 +235,6 @@ function countChatAlerts(alerts: ConsolidatedAlerts): number {
     alerts.depegResolved.length +
     alerts.depegWorsening.length +
     alerts.safety.length +
-    alerts.launch.length +
     alerts.reserve.length +
     (alerts.freeze?.length ?? 0)
   );
@@ -249,7 +276,7 @@ function formatPlannedSubscriber(
   plan: PlannedSubscriberAlert,
   resolveDisableNotification: (entry: AlertsByChatEntry) => boolean,
 ): RoutedSubscriberAlert {
-  const canonicalHtml = formatConsolidatedMessage(plan.entry.alerts);
+  const canonicalHtml = formatConsolidatedMessage(plan.entry.alerts, { via: plan.entry.via ?? null });
   const routed: RoutedSubscriberAlert = {
     chatId: plan.chatId,
     lastActiveAt: plan.entry.lastActiveAt,
@@ -259,6 +286,7 @@ function formatPlannedSubscriber(
     disableNotification: resolveDisableNotification(plan.entry),
     alertType: plan.alertType,
     alertTypes: plan.alertTypes,
+    ...(plan.entry.fewerBase ? { fewerBase: plan.entry.fewerBase } : {}),
   };
   if (plan.sourceEventId) {
     routed.sourceEventId = plan.sourceEventId;
@@ -308,7 +336,7 @@ export function expandSubscriberChunks(
         html: chunk,
         canonicalHtml: sub.canonicalHtml,
         disableNotification: sub.disableNotification,
-        replyMarkup: buildAlertReplyMarkup(sub.alerts, chunkIndex, { privateChat }),
+        replyMarkup: buildAlertReplyMarkup(sub.alerts, chunkIndex, { privateChat, fewerBase: sub.fewerBase }),
         chunkIndex,
         ...((sub.alertTypes ?? [sub.alertType]).length === 1
           ? { alertType: (sub.alertTypes ?? [sub.alertType])[0] }
