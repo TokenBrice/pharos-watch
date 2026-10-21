@@ -366,6 +366,44 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     }
   });
 
+  it.each(["mpc", "hsm"] as const)("admits bridge %s custody only with a current complete own review", (kind) => {
+    for (const state of ["current", "stale-profile", "incomplete-profile", "stale-control"] as const) {
+      const scope = reviewedScope();
+      Object.assign(scope.paths[0]!, {
+        capabilities: ["bridge-mint"], economicLossScope: "deployment", reach: "deployment",
+        affectedDeployments: [ARBITRUM_ROUTE],
+      });
+      const metadata = meta("alpha", {
+        bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE), representationRoute(ARBITRUM_ROUTE)], {
+          reviewedAt: state === "stale-profile" ? "1970-01-01" : "2026-10-01",
+          confidence: state === "incomplete-profile" ? "unknown" : "verified",
+          controls: [
+            bridgeControl({
+              keyCustodyAttestation: { kind, sources: [SOURCE] },
+              observedAt: state === "stale-control" ? "1970-01-01" : "2026-10-01",
+            }),
+            bridgeControl({
+              id: "closure-proven-sibling", routeRefs: [ARBITRUM_ROUTE],
+              controllerChain: "ethereum", controllerAddress: ETHEREUM_ROUTE.split(":")[1],
+              executionScope: scope,
+            }),
+          ],
+          scopedQuestions: [{
+            controlRef: "fixture-bridge-control", subject: "key-custody-independence",
+            question: "Independent human approval policy remains unverified.",
+            reviewedAt: "2026-10-01", reviewer: "Fixture reviewer",
+          }],
+        }),
+      });
+      const adapted = adaptBridgeFixture(metadata, null, undefined, SCOPE_CLOCK);
+      const control = adapted.controls.find((candidate) => candidate.deploymentKey === BASE_ROUTE)!;
+      expect(control).toMatchObject({
+        keyCustody: state === "current" ? kind : "unknown",
+        scopedQuestionSubject: "key-custody-independence",
+      });
+    }
+  });
+
   it("quarantines a mismatched raw registry route before bridge adaptation", () => {
     const mismatched = representationRoute(BASE_ROUTE, {
       destinationChain: "arbitrum",

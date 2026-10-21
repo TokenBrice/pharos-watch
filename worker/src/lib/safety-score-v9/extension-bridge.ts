@@ -395,6 +395,7 @@ function structuredBridgeControl(
   control: BridgeRouteControl,
   materialSupplyShare: number | null,
   clockSec: number,
+  reviewComplete: boolean,
 ): ControlOverlay {
   const deploymentId = normalizedBridgeDeploymentId(route.id);
   const projection = compileReviewedControlScope(control.executionScope, `${control.controllerChain ?? "chain-unresolved"}:${control.controllerAddress ?? ""}`, assetId, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC);
@@ -407,7 +408,9 @@ function structuredBridgeControl(
   const { capSemantics, claimImpairment } = projection.complete
     ? reviewedControlScopeSemantics(projection.paths)
     : projection.reviewed ? partialControlScopeSemantics(legacySemantics, projection) : legacySemantics;
-  const keyCustody = reviewedKeyCustody(control.keyCustodyAttestation, clockSec);
+  // A closure-proven sibling can admit this inventory entry, but cannot renew
+  // the parent review or this control's own technical-custody evidence.
+  const keyCustody = reviewComplete ? reviewedKeyCustody(control.keyCustodyAttestation, clockSec) : "unknown";
   return {
     controlKey: `bridge-meta:${assetId}:${domainDigest(
       "safety-score-v9.structured-bridge-control-key.v1",
@@ -936,6 +939,7 @@ export function adaptBridgeReview(
   }
   const confidence = confidenceForResearch(profile.confidence);
   const reviewStale = researchReviewObservationState(profile.reviewedAt, clockSec) === "stale";
+  const reviewComplete = !reviewStale && reviewedObservationState(confidence) === "known";
   const evidenceKeys = evidence.add({
     // A stale review still evidences the bridge fact itself, but it cannot
     // carry known claims in the umbrella deployment-control inventory.
@@ -992,6 +996,8 @@ export function adaptBridgeReview(
           control,
           safetyScoreV9RouteSupplyShare(supplyReview ?? null, routeId),
           clockSec,
+          reviewComplete &&
+            (control.observedAt === undefined || researchReviewObservationState(control.observedAt, clockSec) === "current"),
         ),
       } satisfies StructuredBridgeOverlayEntry;
     });
