@@ -24,7 +24,7 @@ export const TELEGRAM_ALERT_POLICY = {
     dwellSec: 6 * 60 * 60,
     /** No second live downgrade alert for the same coin inside this window. */
     downgradeCooldownSec: 24 * 60 * 60,
-    /** Global ("all stablecoins") safety also needs this score drop when scored. */
+    /** Global-only ("all stablecoins") safety moves need this score change, when scored, to appear in the roll-up. */
     globalMinScoreDrop: 3,
   },
   dews: {
@@ -38,7 +38,31 @@ export const TELEGRAM_ALERT_POLICY = {
   freeze: {
     /** Freeze/unfreeze events at or above this USD amount go live; destroy always does. */
     realtimeMinAmountUsd: 1_000_000,
+    /** Smaller or unpriced freezes reach direct followers in one batch per chat this often. */
+    batchIntervalSec: 60 * 60,
   },
+  /** Daily "Changes" roll-up: everything that is not sent live. */
+  rollup: {
+    /** Local hour (chat timezone, UTC when unset) from which the day's roll-up is due. */
+    localHour: 9,
+    /** Window for a chat's first roll-up, before it has a previous one. */
+    firstWindowSec: 24 * 60 * 60,
+    /** Change-log retention; longer than any roll-up window a paused chat could need. */
+    changeLogRetentionSec: 8 * 24 * 60 * 60,
+    /** Lines listed per roll-up before the rest are summarized as "N more changes". */
+    maxListedChanges: 25,
+  },
+  /** Per-chat budget for live messages; depeg is exempt and overflow goes to the roll-up. */
+  chatCap: {
+    maxRealtimeMessages: 6,
+    windowSec: 24 * 60 * 60,
+  },
+  /**
+   * Families whose global ("all stablecoins") opt-in is roll-up only: no live
+   * send reaches a chat covered for a coin solely through the global opt-in.
+   * Per-coin and preset follows keep live alerts.
+   */
+  rollupOnlyGlobalFamilies: ["safety", "dews"],
 } as const;
 
 /** Default source/queue TTL; modeled 20% headroom is not a D1 latency guarantee. */
@@ -79,8 +103,16 @@ export const TELEGRAM_DISPATCH_SOFT_DEADLINE_MS = 4 * 60_000;
 /** Upper bound on message attempts per dispatcher run. */
 export const TELEGRAM_MAX_MESSAGES_PER_RUN = 3_600;
 
-/** Pending-drain share reserved from the per-run send budget. */
+/**
+ * Pending-drain share reserved from the per-run send budget. Delivery v2 has no
+ * hard row budget (it drains until the soft deadline); admin broadcast
+ * preflight uses this as the conservative rows-per-run drain rate.
+ */
 export const TELEGRAM_PENDING_DRAIN_BUDGET = 1_800;
+
+/** Delivery v2 fan-out: chats built per page and pages per dispatch run. */
+export const TELEGRAM_FANOUT_PAGE_CHATS = 200;
+export const TELEGRAM_FANOUT_MAX_PAGES_PER_RUN = 12;
 
 /** Subscribers captured and planned per durable target-plan transition. */
 export const TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE = 90;

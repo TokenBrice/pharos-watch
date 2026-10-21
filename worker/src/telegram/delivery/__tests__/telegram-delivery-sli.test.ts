@@ -8,380 +8,94 @@ const fixtures = createLatestSchemaFixtureTracker();
 
 afterEach(fixtures.closeAll);
 
-function insertSource(
-  sqlite: DatabaseSync,
-  id: string,
-  detectedAt: number,
-  expiresAt: number,
-  plannedAt: number | null,
-): void {
-  sqlite
-    .prepare(
-      `INSERT INTO telegram_alert_source_events (
-       source_event_id, status, detected_at, expires_at, event_payload, baseline_payload,
-       target_plan_state, target_plan_generation, target_plan_completed_at
-     ) VALUES (?, 'planned', ?, ?, '{}', '{}', 'delivery_open', 1, ?)`,
-    )
-    .run(id, detectedAt, expiresAt, plannedAt);
+function insertJob(sqlite: DatabaseSync, id: string, kind: string, state: string, createdAt: number): void {
+  sqlite.prepare(
+    `INSERT INTO telegram_jobs (job_id, kind, payload_json, state, created_at, expires_at)
+     VALUES (?, ?, '{}', ?, ?, ?)`,
+  ).run(id, kind, state, createdAt, createdAt + 7200);
 }
 
-function insertJob(
+function insertDelivery(
   sqlite: DatabaseSync,
-  id: string,
-  sourceId: string,
-  alertType: string,
-  createdAt: number,
-  expiresAt: number,
-): void {
-  sqlite
-    .prepare(
-      `INSERT INTO telegram_alert_jobs (
-       job_id, alert_type, source_event_id, severity, created_at, expires_at, status
-     ) VALUES (?, ?, ?, 'critical', ?, ?, 'queued')`,
-    )
-    .run(id, alertType, sourceId, createdAt, expiresAt);
-}
-
-function insertTarget(
-  sqlite: DatabaseSync,
-  input: {
+  row: {
     jobId: string;
-    sourceId: string;
-    key: string;
-    alertType: string;
+    chatId: string;
+    kind?: string;
+    state: string;
     createdAt: number;
-    expiresAt?: number | null;
-    state?: string | null;
-    finalAt?: number | null;
-    error?: string | null;
-    cancellationReason?: string | null;
+    doneAt?: number | null;
+    expiresAt?: number;
+    families?: string | null;
+    reason?: string | null;
+    errorClass?: string | null;
+    attempts?: number;
+    priority?: number;
   },
 ): void {
-  sqlite
-    .prepare(
-      `INSERT INTO telegram_alert_job_targets (
-       job_id, target_key, chat_id, alert_type, status, pending_dedupe_key, created_at,
-       source_event_id, target_expires_at, final_delivery_state, final_delivery_at,
-       final_delivery_error, error_class, cancellation_reason
-     ) VALUES (?, ?, ?, ?, 'queued', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      input.jobId,
-      input.key,
-      `chat-${input.key}`,
-      input.alertType,
-      `dedupe-${input.key}`,
-      input.createdAt,
-      input.sourceId,
-      input.expiresAt ?? null,
-      input.state ?? null,
-      input.finalAt ?? null,
-      input.error ?? null,
-      input.error ?? null,
-      input.cancellationReason ?? null,
-    );
-}
-
-function insertTargetItems(
-  sqlite: DatabaseSync,
-  jobId: string,
-  sourceId: string,
-  targetKey: string,
-  itemKeys: readonly string[],
-): void {
-  const statement = sqlite.prepare(
-    `INSERT INTO telegram_alert_job_target_items (
-       job_id, target_key, source_event_id, item_key, created_at
-     ) VALUES (?, ?, ?, ?, ?)`,
+  sqlite.prepare(
+    `INSERT INTO telegram_deliveries (
+       job_id, kind, chat_id, seq, body_hash, families, priority, state, attempts,
+       next_attempt_at, expires_at, created_at, done_at, reason, error_class
+     ) VALUES (?, ?, ?, 0, 'h', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    row.jobId,
+    row.kind ?? "alert",
+    row.chatId,
+    row.families === undefined ? "depeg" : row.families,
+    row.priority ?? 10,
+    row.state,
+    row.attempts ?? 0,
+    row.createdAt,
+    row.expiresAt ?? row.createdAt + 7200,
+    row.createdAt,
+    row.doneAt ?? null,
+    row.reason ?? null,
+    row.errorClass ?? null,
   );
-  for (const itemKey of itemKeys) statement.run(jobId, targetKey, sourceId, itemKey, NOW - 800);
 }
 
-describe("Telegram delivery SLI rollup", () => {
-  it("derives event and authoritative target SLIs without claiming end-user receipt", async () => {
+describe("Telegram delivery SLI rollup (delivery v2)", () => {
+  it("derives job and delivery SLIs from telegram_jobs/telegram_deliveries without claiming receipt", async () => {
     const { sqlite, db } = fixtures.open();
-    insertSource(sqlite, "event-a", NOW - 1_000, NOW + 2_000, NOW - 900);
-    insertSource(sqlite, "event-unplanned", NOW - 800, NOW + 2_000, null);
-    insertJob(sqlite, "job-a", "event-a", "depeg", NOW - 900, NOW - 100);
+    insertJob(sqlite, "alert:a", "alert", "done", NOW - 600);
+    insertJob(sqlite, "alert:b", "alert", "planning", NOW - 120);
+    insertJob(sqlite, "broadcast:x", "broadcast", "done", NOW - 600);
+    insertDelivery(sqlite, { jobId: "alert:a", chatId: "1", state: "sent", createdAt: NOW - 590, doneAt: NOW - 580 });
+    insertDelivery(sqlite, { jobId: "alert:a", chatId: "2", state: "sent", createdAt: NOW - 590, doneAt: NOW - 500, families: "depeg,safety" });
+    insertDelivery(sqlite, { jobId: "alert:a", chatId: "3", state: "suppressed_duplicate", createdAt: NOW - 590, doneAt: NOW - 590, reason: "duplicate_prior_delivery" });
+    insertDelivery(sqlite, { jobId: "alert:a", chatId: "4", state: "blocked", createdAt: NOW - 590, doneAt: NOW - 570, reason: "blocked", errorClass: "blocked", attempts: 1 });
+    insertDelivery(sqlite, { jobId: "alert:a", chatId: "5", state: "unknown", createdAt: NOW - 590, doneAt: NOW - 1000 + 100, reason: "ambiguous_send" });
+    insertDelivery(sqlite, { jobId: "alert:a", chatId: "6", state: "cancelled", createdAt: NOW - 590, doneAt: NOW - 590, reason: "coin_snoozed" });
+    insertDelivery(sqlite, { jobId: "alert:b", chatId: "7", state: "pending", createdAt: NOW - 100, families: "safety", priority: 20 });
+    insertDelivery(sqlite, { jobId: "broadcast:x", chatId: "1", kind: "broadcast", state: "sent", createdAt: NOW - 590, doneAt: NOW - 580, families: "adminBroadcast" });
 
-    insertTarget(sqlite, {
-      jobId: "job-a",
-      sourceId: "event-a",
-      key: "accepted-before",
-      alertType: "depeg",
-      createdAt: NOW - 850,
-      state: "accepted",
-      finalAt: NOW - 700,
-    });
-    insertTarget(sqlite, {
-      jobId: "job-a",
-      sourceId: "event-a",
-      key: "accepted-after",
-      alertType: "depeg",
-      createdAt: NOW - 840,
-      state: "accepted",
-      finalAt: NOW - 50,
-    });
-    insertTarget(sqlite, {
-      jobId: "job-a",
-      sourceId: "event-a",
-      key: "unknown",
-      alertType: "depeg",
-      createdAt: NOW - 2_000,
-      state: "execution_unknown",
-      finalAt: NOW - 1_000,
-      error: "timeout",
-    });
-    insertTarget(sqlite, {
-      jobId: "job-a",
-      sourceId: "event-a",
-      key: "cancel",
-      alertType: "depeg",
-      createdAt: NOW - 500,
-      state: "cancelled",
-      finalAt: NOW - 400,
-      error: "preference_changed",
-      cancellationReason: "scope_disabled",
-    });
-    insertTarget(sqlite, {
-      jobId: "job-a",
-      sourceId: "event-a",
-      key: "subscriber-gone",
-      alertType: "depeg",
-      createdAt: NOW - 450,
-      state: "cancelled",
-      finalAt: NOW - 350,
-      cancellationReason: "subscriber_missing",
-    });
-    insertTarget(sqlite, {
-      jobId: "job-a",
-      sourceId: "event-a",
-      key: "preference-variant",
-      alertType: "depeg",
-      createdAt: NOW - 430,
-      state: "cancelled",
-      finalAt: NOW - 330,
-      cancellationReason: "preference_policy_changed",
-    });
-    insertTarget(sqlite, {
-      jobId: "job-a",
-      sourceId: "event-a",
-      key: "backlog",
-      alertType: "depeg",
-      createdAt: NOW - 400,
-    });
-
-    sqlite
-      .prepare(
-        `INSERT INTO telegram_alert_dead_letters (
-         chat_id, message_html, created_at, expired_at, attempts, reason, last_error_class
-       ) VALUES ('chat-dead', 'message', ?, ?, 4, 'max_attempts', 'server_error')`,
-      )
-      .run(NOW - 700, NOW - 300);
-
-    const report = await loadTelegramDeliverySliRollup(db, { nowSec: NOW });
-
-    expect(report.detectionToPlan).toEqual({
-      eligibleCount: 2,
-      observedCount: 1,
-      averageSec: 100,
-      maximumSec: 100,
-      quality: "partial",
-    });
-    expect(report.planToTelegramAcceptance).toMatchObject({
-      eligibleCount: 2,
-      observedCount: 2,
-      averageSec: 525,
-      maximumSec: 850,
-      quality: "complete",
-    });
-    expect(report.telegramAcceptanceBeforeTtl).toMatchObject({
-      telegramAcceptedCount: 2,
-      knownTtlCount: 2,
-      acceptedBeforeTtlCount: 1,
-      acceptedAfterTtlCount: 1,
-      rate: 0.5,
-      quality: "complete",
-    });
-    expect(report.authoritativeTargetOutcomes).toEqual({
+    const rollup = await loadTelegramDeliverySliRollup(db, { nowSec: NOW });
+    expect(rollup.detectionToPlan).toMatchObject({ eligibleCount: 2, observedCount: 1, averageSec: 10 });
+    expect(rollup.authoritativeTargetOutcomes).toMatchObject({
       total: 7,
       telegramAccepted: 2,
-      failed: 0,
-      cancelled: 3,
-      expired: 0,
+      failed: 1,
+      cancelled: 2,
       executionUnknown: 1,
       unresolved: 1,
-      telegramAcceptanceRate: 2 / 7,
     });
-    expect(report.familyAttribution).toEqual({
-      dews: 0,
-      depeg: 0,
-      safety: 0,
-      launch: 0,
-      reserve: 0,
-      freeze: 0,
-      mixed: 0,
-      unknown: 7,
-    });
-    expect(report.preferenceChangeCancellations).toMatchObject({
-      count: 2,
-      reasons: [
-        { reason: "preference_policy_changed", count: 1 },
-        { reason: "scope_disabled", count: 1 },
-      ],
-      reasonsTruncated: false,
-    });
-    expect(report.backlog).toMatchObject({
-      windowStartsAt: NOW - 86_400,
-      windowBounded: true,
-      count: 1,
-      oldestAgeSec: 400,
-      buckets: [{ priority: 10, ageBucket: "5m_15m", count: 1, oldestAgeSec: 400 }],
-    });
-    expect(report.executionUnknown).toEqual({ count: 1, oldestAgeSec: 1_000, olderThan15mCount: 1 });
-    expect(report.deadLetters).toMatchObject({
-      count: 1,
-      totalAttempts: 4,
-      reasons: [{ reason: "max_attempts", count: 1 }],
-      lastErrorReasons: [{ reason: "server_error", count: 1 }],
-    });
-    expect(report.evidence).toMatchObject({ latestAt: NOW - 50, ageSec: 50, freshness: "fresh" });
-    expect(Object.keys(report.planToTelegramAcceptance).join(" ")).not.toContain("receipt");
+    expect(rollup.planToTelegramAcceptance).toMatchObject({ eligibleCount: 2, observedCount: 2, maximumSec: 90 });
+    expect(rollup.telegramAcceptanceBeforeTtl).toMatchObject({ acceptedBeforeTtlCount: 2, rate: 1 });
+    expect(rollup.familyAttribution).toMatchObject({ depeg: 5, safety: 1, mixed: 1, unknown: 0 });
+    expect(rollup.preferenceChangeCancellations).toMatchObject({ count: 1, reasons: [{ reason: "coin_snoozed", count: 1 }] });
+    expect(rollup.observedTargetErrorReasons.reasons).toContainEqual({ reason: "duplicate_prior_delivery", count: 1 });
+    expect(rollup.backlog).toMatchObject({ count: 1, buckets: [{ priority: 20, ageBucket: "lt_5m", count: 1 }] });
+    expect(rollup.executionUnknown).toMatchObject({ count: 1, olderThan15mCount: 1, oldestAgeSec: 900 });
+    expect(rollup.deadLetters).toMatchObject({ count: 1, totalAttempts: 1, reasons: [{ reason: "blocked", count: 1 }] });
+    expect(rollup.evidence.freshness).toBe("fresh");
   });
 
-  it("caps the scan window and reports empty, stale, and bounded dimensions honestly", async () => {
-    const { sqlite, db } = fixtures.open();
-    insertSource(sqlite, "too-old", NOW - 8 * 86_400, NOW - 7 * 86_400, NOW - 8 * 86_400 + 60);
-    insertJob(sqlite, "too-old-job", "too-old", "depeg", NOW - 8 * 86_400, NOW - 7 * 86_400);
-    insertTarget(sqlite, {
-      jobId: "too-old-job",
-      sourceId: "too-old",
-      key: "too-old-target",
-      alertType: "depeg",
-      createdAt: NOW - 8 * 86_400,
-      state: "accepted",
-      finalAt: NOW - 8 * 86_400 + 10,
-    });
-    insertTargetItems(sqlite, "too-old-job", "too-old", "too-old-target", ["depeg-triggered:old"]);
-
-    const empty = await loadTelegramDeliverySliRollup(db, { nowSec: NOW, lookbackSec: 30 * 86_400 });
-    expect(empty.window).toMatchObject({ lookbackSec: 7 * 86_400, bounded: true });
-    expect(empty.evidence).toEqual({ latestAt: null, ageSec: null, freshness: "empty", freshnessThresholdSec: 900 });
-    expect(empty.detectionToPlan.quality).toBe("empty");
-    expect(empty.familyAttribution).toEqual({
-      dews: 0, depeg: 0, safety: 0, launch: 0, reserve: 0, freeze: 0, mixed: 0, unknown: 0,
-    });
-
-    insertSource(sqlite, "stale", NOW - 4_000, NOW + 1_000, NOW - 3_900);
-    insertJob(sqlite, "job-stale", "stale", "reserve", NOW - 3_900, NOW + 1_000);
-    for (let index = 0; index < 3; index++) {
-      insertTarget(sqlite, {
-        jobId: "job-stale",
-        sourceId: "stale",
-        key: `error-${index}`,
-        alertType: "reserve",
-        createdAt: NOW - 3_800 + index,
-        state: "failed",
-        finalAt: NOW - 3_700 + index,
-        error: `error-${index}`,
-      });
-    }
-
-    const stale = await loadTelegramDeliverySliRollup(db, {
-      nowSec: NOW,
-      lookbackSec: 7_200,
-      freshnessSec: 60,
-      reasonLimit: 2,
-    });
-    expect(stale.evidence.freshness).toBe("stale");
-    expect(stale.observedTargetErrorReasons).toEqual({
-      reasons: [
-        { reason: "error-0", count: 1 },
-        { reason: "error-1", count: 1 },
-      ],
-      truncated: true,
-    });
-  });
-
-  it("matches previous SQL for all item-key families, mixed targets and unknown items", async () => {
-    const { sqlite, db } = fixtures.open();
-    insertSource(sqlite, "families", NOW - 1_000, NOW + 1_000, NOW - 900);
-    insertJob(sqlite, "family-job", "families", "depeg", NOW - 900, NOW + 1_000);
-    const cases = [
-      ["dews:one", "dews:two", "future:extra"],
-      ["depeg-triggered:one"], ["depeg-worsening:one"], ["depeg-resolved:one"],
-      ["safety:one"], ["launch:one"], ["reserve:one"], ["freeze:one"],
-      ["dews:one", "freeze:one"], [], ["depeg:wrong-separator"], ["future:one"],
-      ["dews:one", "depeg-triggered:one", "safety:one", "launch:one", "reserve:one", "freeze:one"],
-    ];
-    for (const [index, items] of cases.entries()) {
-      const key = `family-${index}`;
-      insertTarget(sqlite, {
-        jobId: "family-job", sourceId: "families", key, alertType: "depeg", createdAt: NOW - 800,
-      });
-      insertTargetItems(sqlite, "family-job", "families", key, items);
-    }
-    // Retained pre-refactor family query: the oracle never imports generated projections.
-    const previous = sqlite.prepare(`WITH recent_sources AS MATERIALIZED (
-      SELECT source_event_id FROM telegram_alert_source_events WHERE detected_at >= ? AND detected_at <= ?
-    ), family_flags AS (
-      SELECT target.job_id, target.target_key,
-        COALESCE(MAX(item.item_key LIKE 'dews:%'), 0) AS dews,
-        COALESCE(MAX(item.item_key LIKE 'depeg-%'), 0) AS depeg,
-        COALESCE(MAX(item.item_key LIKE 'safety:%'), 0) AS safety,
-        COALESCE(MAX(item.item_key LIKE 'launch:%'), 0) AS launch,
-        COALESCE(MAX(item.item_key LIKE 'reserve:%'), 0) AS reserve,
-        COALESCE(MAX(item.item_key LIKE 'freeze:%'), 0) AS freeze
-      FROM recent_sources source
-      CROSS JOIN telegram_alert_job_targets target INDEXED BY idx_tajt_authoritative_ready
-      LEFT JOIN telegram_alert_job_target_items item ON item.job_id = target.job_id AND item.target_key = target.target_key
-      WHERE target.source_event_id = source.source_event_id GROUP BY target.job_id, target.target_key
-    ), attributed AS (
-      SELECT *, dews + depeg + safety + launch + reserve + freeze AS family_count FROM family_flags
-    ) SELECT
-      SUM(CASE WHEN family_count = 1 AND dews = 1 THEN 1 ELSE 0 END) AS dews,
-      SUM(CASE WHEN family_count = 1 AND depeg = 1 THEN 1 ELSE 0 END) AS depeg,
-      SUM(CASE WHEN family_count = 1 AND safety = 1 THEN 1 ELSE 0 END) AS safety,
-      SUM(CASE WHEN family_count = 1 AND launch = 1 THEN 1 ELSE 0 END) AS launch,
-      SUM(CASE WHEN family_count = 1 AND reserve = 1 THEN 1 ELSE 0 END) AS reserve,
-      SUM(CASE WHEN family_count = 1 AND freeze = 1 THEN 1 ELSE 0 END) AS freeze,
-      SUM(CASE WHEN family_count > 1 THEN 1 ELSE 0 END) AS mixed,
-      SUM(CASE WHEN family_count = 0 THEN 1 ELSE 0 END) AS unknown FROM attributed`)
-      .get(NOW - 86_400, NOW);
-    const report = await loadTelegramDeliverySliRollup(db, { nowSec: NOW });
-    expect(report.familyAttribution).toEqual(previous);
-    expect(report.familyAttribution).toEqual({
-      dews: 1, depeg: 3, safety: 1, launch: 1, reserve: 1, freeze: 1, mixed: 2, unknown: 3,
-    });
-    expect(report.authoritativeTargetOutcomes.total).toBe(cases.length);
-  });
-
-  it("materializes the bounded source window and forces the source-first target index", async () => {
-    const { sqlite, db } = fixtures.open();
-    insertSource(sqlite, "indexed-event", NOW - 100, NOW + 1_000, NOW - 90);
-    const preparedSql: string[] = [];
-    const instrumented = {
-      ...db,
-      prepare: (sql: string) => {
-        preparedSql.push(sql);
-        return db.prepare(sql);
-      },
-    } as D1Database;
-
-    await loadTelegramDeliverySliRollup(instrumented, { nowSec: NOW });
-
-    const sourceTargetQueries = preparedSql.filter((sql) => sql.includes("recent_sources"));
-    expect(sourceTargetQueries).toHaveLength(2);
-    for (const sql of sourceTargetQueries) {
-      expect(sql).toContain("recent_sources AS MATERIALIZED");
-      expect(sql).toContain("CROSS JOIN telegram_alert_job_targets target INDEXED BY idx_tajt_authoritative_ready");
-      const plan = sqlite.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(NOW - 86_400, NOW);
-      expect(JSON.stringify(plan)).toContain("idx_tajt_authoritative_ready");
-    }
-  });
-
-  it("rejects an invalid observation clock", async () => {
+  it("reports an empty window honestly", async () => {
     const { db } = fixtures.open();
-    await expect(loadTelegramDeliverySliRollup(db, { nowSec: -1 })).rejects.toThrow("nowSec is invalid");
+    const rollup = await loadTelegramDeliverySliRollup(db, { nowSec: NOW, lookbackSec: 60 });
+    expect(rollup.window.lookbackSec).toBe(300);
+    expect(rollup.evidence).toMatchObject({ latestAt: null, freshness: "empty" });
+    expect(rollup.authoritativeTargetOutcomes.total).toBe(0);
+    expect(rollup.detectionToPlan.quality).toBe("empty");
   });
 });

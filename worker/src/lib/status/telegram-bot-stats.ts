@@ -199,15 +199,17 @@ ${TELEGRAM_PRESET_ROLLUP_SQL}
 
 const TELEGRAM_PENDING_DISAMBIGUATION_SQL =
   "SELECT COUNT(*) AS pending_count FROM telegram_pending_disambiguation WHERE expires_at > ?";
-const TELEGRAM_PENDING_DELIVERIES_SQL =
-  "SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts WHERE delivery_state = 'pending'";
-const TELEGRAM_RETRY_ERROR_CLASSES_SQL = `SELECT last_error_class AS error_class, COUNT(*) AS pending_count
-  FROM telegram_pending_alerts
- WHERE delivery_state = 'pending'
-   AND last_error_class IS NOT NULL
-   AND last_error_class <> ''
- GROUP BY last_error_class
- ORDER BY pending_count DESC, last_error_class ASC
+// Delivery v2 open rows plus whatever the legacy drain-only shim still holds.
+const TELEGRAM_PENDING_DELIVERIES_SQL = `SELECT
+  (SELECT COUNT(*) FROM telegram_deliveries WHERE state IN ('pending', 'retry'))
+  + (SELECT COUNT(*) FROM telegram_pending_alerts WHERE delivery_state = 'pending') AS pending_count`;
+const TELEGRAM_RETRY_ERROR_CLASSES_SQL = `SELECT error_class, COUNT(*) AS pending_count
+  FROM telegram_deliveries
+ WHERE state = 'retry'
+   AND error_class IS NOT NULL
+   AND error_class <> ''
+ GROUP BY error_class
+ ORDER BY pending_count DESC, error_class ASC
  LIMIT 10`;
 function roundMetric(value: unknown, digits = 2): number {
   const parsed = Number(value ?? 0);

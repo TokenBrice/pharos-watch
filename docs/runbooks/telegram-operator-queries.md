@@ -2,7 +2,7 @@
 
 Use these read-only SQL snippets during PharosWatchBot incidents. This page owns reusable diagnostics; the [incident runbooks](../telegram-alerts.md#runbooks) retain their prerequisites, stop conditions, remediation, and readback.
 
-> **Agent navigation** — [Incident entry](#read-only-incident-entry) · [Pending queue](#pending-queue) · [Subscriber controls](#subscriber-delivery-controls) · [Transport circuit](#transport-circuit) · [Delivery pauses](#delivery-pauses) · [Alert jobs](#alert-jobs) · [Dispatch diagnostics](#dispatch-runtime-diagnostics) · [Source target planning](#source-target-planning) · [Dead letters](#dead-letters) · [Webhook dedupe](#webhook-dedupe) · [Usage funnel](#usage-funnel)
+> **Agent navigation** — [Incident entry](#read-only-incident-entry) · [Delivery v2 jobs and rows](#delivery-v2-jobs-and-rows) · [Rows for one chat](#delivery-rows-for-one-chat) · [Legacy pending queue](#pending-queue) · [Subscriber controls](#subscriber-delivery-controls) · [Transport circuit](#transport-circuit) · [Delivery pauses](#delivery-pauses) · [Alert jobs](#alert-jobs) · [Dispatch diagnostics](#dispatch-runtime-diagnostics) · [Source target planning](#source-target-planning) · [Dead letters](#dead-letters) · [Webhook dedupe](#webhook-dedupe) · [Usage funnel](#usage-funnel)
 
 ## Read-Only Incident Entry
 
@@ -11,9 +11,66 @@ Use these read-only SQL snippets during PharosWatchBot incidents. This page owns
 - Run SQL in the Cloudflare D1 console or with `npx --no-install wrangler d1 execute stablecoin-db --remote --command "<SQL>"` from `worker/`. Replace every `?` with the current Unix timestamp (seconds), and substitute only the affected chat/update/job/source identifiers. Preserve the inspected IDs, owners, generations, and timestamps for readback.
 - These queries use the active schema in `worker/migrations/0000_baseline.sql` plus subsequent migrations. Confirm deployed schema parity before interpreting a failed query as an empty result. Never reset or delete `sending`, `started`, or `execution_unknown` evidence to force replay; incident-specific mutation authority is not supplied here.
 
+## Delivery v2 Jobs and Rows
+
+`telegram_jobs` holds one row per logical send and `telegram_deliveries` one row per job, chat and chunk ([semantics](../telegram-alerts.md#delivery-persistence)). Terminal rows keep no body.
+
+Open jobs and their row mix:
+
+```sql
+SELECT j.job_id, j.kind, j.state, j.cursor, j.planned_count, j.error,
+       ? - j.created_at AS age_sec, j.expires_at - ? AS ttl_left_sec,
+       SUM(d.state IN ('pending', 'retry')) AS open_rows,
+       SUM(d.state = 'sending') AS sending,
+       SUM(d.state = 'sent') AS sent,
+       SUM(d.state = 'suppressed_duplicate') AS suppressed,
+       SUM(d.state IN ('failed', 'blocked', 'expired', 'cancelled', 'unknown')) AS other_terminal
+  FROM telegram_jobs j
+  LEFT JOIN telegram_deliveries d ON d.job_id = j.job_id
+ WHERE j.state IN ('planning', 'ready') OR j.created_at > ? - 86400
+ GROUP BY j.job_id
+ ORDER BY j.created_at DESC
+ LIMIT 50;
+```
+
+Backlog by priority and state, with due/deferred split and oldest age:
+
+```sql
+SELECT priority, state,
+       COUNT(*) AS rows,
+       SUM(next_attempt_at <= ?) AS due,
+       MAX(? - created_at) AS oldest_age_sec,
+       MIN(expires_at - ?) AS nearest_ttl_sec
+  FROM telegram_deliveries
+ WHERE state IN ('pending', 'retry', 'sending')
+ GROUP BY 1, 2
+ ORDER BY priority, state;
+```
+
+Last 24 h outcomes and reasons (suppression, gating, transport classes):
+
+```sql
+SELECT kind, state, COALESCE(reason, error_class, '-') AS reason, COUNT(*) AS rows
+  FROM telegram_deliveries
+ WHERE created_at > ? - 86400
+ GROUP BY 1, 2, 3
+ ORDER BY rows DESC;
+```
+
+### Delivery Rows For One Chat
+
+```sql
+SELECT id, job_id, kind, seq, state, attempts, priority, reason, error_class, status_code,
+       created_at, next_attempt_at, expires_at, sending_at, done_at, claim_owner
+  FROM telegram_deliveries
+ WHERE chat_id = '<chat_id>'
+ ORDER BY created_at DESC, job_id, seq
+ LIMIT 50;
+```
+
 ## Pending Queue
 
-Pending by priority, source, alert type, and age:
+Legacy `telegram_pending_alerts` (drain-only shim during the delivery v2 cutover; no new rows). Pending by priority, source, alert type, and age:
 
 ```sql
 SELECT

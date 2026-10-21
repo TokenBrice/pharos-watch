@@ -6,31 +6,32 @@ import {
 } from "../../lib/route-wrappers";
 import { parseRequestJsonWithSchema } from "../../lib/api-json-body";
 import { logAdminAction } from "../../lib/admin-action-audit";
-import {
-  enqueuePendingAlerts,
-} from "../outbox/pending-queue";
+import { enqueueTelegramJob } from "../delivery/jobs";
 import {
   estimateTelegramDrainTimeSec,
   readTelegramPendingCapacitySnapshot,
 } from "../outbox/pending-capacity";
+import { TELEGRAM_PENDING_DRAIN_BUDGET } from "../common/constants";
 import {
-  TELEGRAM_PENDING_DRAIN_BUDGET,
-  TELEGRAM_PENDING_PRIORITY,
-} from "../common/constants";
+  TELEGRAM_DISPATCH_INTERVAL_SEC,
+  TELEGRAM_FANOUT_MAX_PAGES_PER_RUN,
+  TELEGRAM_FANOUT_PAGE_CHATS,
+} from "@shared/lib/telegram-delivery-policy";
 import {
   PENDING_NEAR_TTL_WINDOW_SEC,
   TELEGRAM_ALERT_TTL_SEC,
 } from "../common/constants";
 import { splitMessage } from "../common/alerts-formatting";
-import { loadBroadcastTargetChatIds, type TelegramBroadcastScope } from "../delivery/broadcast-targets";
-import { sendToChat, type BatchMessage } from "../delivery/telegram";
-import { z } from "zod";
 import {
-  claimTelegramTransportPermit,
-  readTelegramDeliveryPause,
-  readTelegramTransportCircuit,
-  recordTelegramTransportOutcomes,
-} from "../delivery/transport-control";
+  loadBroadcastTargetChatIds,
+  type TelegramBroadcastJobPayload,
+  type TelegramBroadcastScope,
+} from "../delivery/broadcast-targets";
+import { sendToChat } from "../delivery/telegram";
+import { z } from "zod";
+import { shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { sha256Hex } from "../../lib/hash";
 
 const SCOPES = ["all", "deliverable-watchers", "global-subscribers", "retired-launch-opt-ins"] as const;
 type BroadcastScope = TelegramBroadcastScope;
@@ -154,11 +155,18 @@ function preflightTelegramHtml(html: string): { ok: true } | { ok: false; error:
   return { ok: true };
 }
 
-function buildDeliveryEstimate(currentPendingActive: number, targetMessageCount: number) {
+/**
+ * Delivery v2 timing: the job fans out from the next dispatch run (one
+ * interval), at most `TELEGRAM_FANOUT_PAGE_CHATS × TELEGRAM_FANOUT_MAX_PAGES_PER_RUN`
+ * chats per run, while the drain sends the projected backlog at the
+ * conservative per-run rate. The slower of the two bounds the finish time.
+ */
+function buildDeliveryEstimate(currentPendingActive: number, targetMessageCount: number, targetChatCount: number) {
   const projectedPendingMessages = currentPendingActive + targetMessageCount;
-  const estimatedDrainTimeSec = estimateTelegramDrainTimeSec(
-    projectedPendingMessages,
-    TELEGRAM_PENDING_DRAIN_BUDGET,
+  const fanoutRuns = Math.ceil(targetChatCount / (TELEGRAM_FANOUT_PAGE_CHATS * TELEGRAM_FANOUT_MAX_PAGES_PER_RUN));
+  const estimatedDrainTimeSec = TELEGRAM_DISPATCH_INTERVAL_SEC + Math.max(
+    estimateTelegramDrainTimeSec(projectedPendingMessages, TELEGRAM_PENDING_DRAIN_BUDGET),
+    fanoutRuns * TELEGRAM_DISPATCH_INTERVAL_SEC,
   );
   const adminBroadcastTtlSec = TELEGRAM_ALERT_TTL_SEC.adminBroadcast;
   const minimumTtlReserveSec = PENDING_NEAR_TTL_WINDOW_SEC;
@@ -167,6 +175,7 @@ function buildDeliveryEstimate(currentPendingActive: number, targetMessageCount:
     currentPendingActive,
     projectedPendingMessages,
     drainBudgetPerRun: TELEGRAM_PENDING_DRAIN_BUDGET,
+    fanoutRuns,
     adminBroadcastTtlSec,
     estimatedDrainTimeSec,
     minimumTtlReserveSec,
@@ -223,7 +232,7 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<BroadcastCo
     const targetMessageCount = fleetChatIds.length * chunks.length;
     const nowSec = Math.floor(Date.now() / 1000);
     const pendingCapacity = await readTelegramPendingCapacitySnapshot(db, nowSec);
-    const deliveryEstimate = buildDeliveryEstimate(pendingCapacity.active, targetMessageCount);
+    const deliveryEstimate = buildDeliveryEstimate(pendingCapacity.active, targetMessageCount, fleetChatIds.length);
 
     if (dryRun) {
       await logAdminAction(
@@ -305,13 +314,7 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<BroadcastCo
       return adminErrorResponse(500, "TELEGRAM_BOT_TOKEN is not configured");
     }
 
-    const [adminPause, transportCircuit] = await Promise.all([
-      readTelegramDeliveryPause(db, "admin", nowSec),
-      readTelegramTransportCircuit(db),
-    ]);
-    if (adminPause?.active || transportCircuit.state !== "closed") {
-      const rejectedReason = adminPause?.active ? "admin-delivery-paused" : "transport-outage";
-      const deferUntil = adminPause?.active ? adminPause.expiresAt : transportCircuit.nextProbeAt;
+    if (!await shouldAttemptFetch(db, CIRCUIT_SOURCE.TELEGRAM_API)) {
       await logAdminAction(
         db,
         {
@@ -324,8 +327,7 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<BroadcastCo
             dryRun: false,
             targetChatCount: chatIds.length,
             targetMessageCount,
-            rejectedReason,
-            deferUntil,
+            rejectedReason: "transport-outage",
           },
         },
         request,
@@ -333,26 +335,12 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<BroadcastCo
       return adminJsonResponse(
         {
           error: "Telegram admin delivery is temporarily unavailable",
-          reason: rejectedReason,
-          deferUntil,
+          reason: "transport-outage",
         },
         { status: 409 },
       );
     }
 
-    const permit = await claimTelegramTransportPermit(db, {
-      mode: "admin",
-      owner: `admin-broadcast-canary:${crypto.randomUUID()}`,
-      nowSec,
-      requestedDistinctChats: 1,
-    });
-    if (!permit.allowed) {
-      return adminJsonResponse({
-        error: "Telegram canary delivery is temporarily unavailable",
-        reason: permit.reason,
-        deferUntil: permit.deferUntil,
-      }, { status: permit.reason === "operator_pause" ? 409 : 503 });
-    }
     const canaryResults = [];
     for (const chunk of chunks) {
       const result = await sendToChat(canaryChatId, chunk, telegramBotToken, {
@@ -362,12 +350,6 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<BroadcastCo
       canaryResults.push(result);
       if (!result.ok) break;
     }
-    await recordTelegramTransportOutcomes(
-      db,
-      permit,
-      canaryResults.map((result) => ({ chatId: canaryChatId, result })),
-      Math.floor(Date.now() / 1000),
-    );
     const canaryFailure = canaryResults.find((result) => !result.ok);
     if (canaryFailure || canaryResults.length !== chunks.length) {
       const status = canaryFailure?.errorClass === "bad_request"
@@ -395,23 +377,16 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<BroadcastCo
       }, { status });
     }
 
-    const messages: BatchMessage[] = [];
-    for (const chatId of fleetChatIds) {
-      for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex += 1) {
-        messages.push({
-          chatId,
-          html: chunks[chunkIndex] as string,
-          disableNotification: false,
-          canonicalHtml: messageHtml,
-          chunkIndex,
-        });
-      }
-    }
-
-    await enqueuePendingAlerts(db, messages, nowSec, {
-      sourceType: "admin_broadcast",
-      priority: TELEGRAM_PENDING_PRIORITY.adminBroadcast,
-      ttlSec: TELEGRAM_ALERT_TTL_SEC.adminBroadcast,
+    // The fleet fan-out runs in the dispatcher (CPU-bounded pages), so the
+    // request only records one durable job.
+    const jobDigest = await sha256Hex(JSON.stringify({ messageHtml, scope, canaryChatId, nowSec }));
+    const jobId = `broadcast:${jobDigest.slice(0, 32)}`;
+    await enqueueTelegramJob(db, {
+      jobId,
+      kind: "broadcast",
+      payload: { messageHtml, scope, excludeChatId: canaryChatId } satisfies TelegramBroadcastJobPayload,
+      createdAt: nowSec,
+      expiresAt: nowSec + TELEGRAM_ALERT_TTL_SEC.adminBroadcast,
     });
 
     await logAdminAction(
@@ -427,7 +402,8 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<BroadcastCo
           chunkCount: chunks.length,
           targetMessageCount,
           deliveryEstimate,
-          enqueued: messages.length,
+          enqueued: targetMessageCount,
+          jobId,
           canaryChatId,
           canaryChunksSent: canaryResults.length,
           messageLength: messageHtml.length,
@@ -437,7 +413,8 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<BroadcastCo
     );
 
     return adminJsonResponse({
-      enqueued: messages.length,
+      enqueued: targetMessageCount,
+      jobId,
       deliveryEstimate,
       canary: { chatId: canaryChatId, chunksSent: canaryResults.length },
     }, { status: 200 });

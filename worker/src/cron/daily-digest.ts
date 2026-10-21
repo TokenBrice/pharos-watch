@@ -83,7 +83,7 @@ async function buildDailyTelegramPublication(
     : null;
   const standingLine = formatStandingConditionsLine(input?.standingConditions);
   const appendixSuffix = appendices?.metadata.hasAppendix
-    ? `+appendix(cemetery=${appendices.metadata.cemeteryDetected},tracked=${appendices.metadata.trackedDetected},prelaunch=${appendices.metadata.preLaunchDetected})`
+    ? `+appendix(cemetery=${appendices.metadata.cemeteryDetected},tracked=${appendices.metadata.trackedDetected},prelaunch=${appendices.metadata.preLaunchDetected},launched=${appendices.metadata.launchedDetected})`
     : "";
   return buildDigestTelegramPublication(creds, missingCredentialNames, {
     editionKey: `daily:${digestDate}`,

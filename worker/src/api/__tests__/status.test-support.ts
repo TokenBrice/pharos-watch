@@ -209,11 +209,8 @@ const STATUS_D1_SECTIONS: Record<StatusD1Section, MockTableConfig[]> = {
   telegram: [
     { match: "FROM telegram_preset_subscriptions", rows: [] },
     { match: "FROM telegram_watcher_lifecycle_daily", rows: [], first: null },
-    { match: "FROM telegram_alert_source_events", rows: [], first: null },
-    { match: "FROM telegram_alert_job_targets", rows: [], first: null },
-    { match: "FROM telegram_alert_jobs", rows: [], first: null },
-    { match: "FROM telegram_alert_job_target_items", rows: [], first: null },
-    { match: "FROM telegram_alert_dead_letters", rows: [], first: null },
+    { match: "FROM telegram_jobs", rows: [], first: null },
+    { match: "FROM telegram_deliveries", rows: [], first: null },
     { match: "FROM telegram_usage_daily", rows: [], first: null },
   ],
 };

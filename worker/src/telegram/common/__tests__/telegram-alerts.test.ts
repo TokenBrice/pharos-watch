@@ -148,7 +148,8 @@ describe("public alert samples", () => {
     .inline_keyboard.map((row) => row.map((button) => button.text));
   const watchlist = { presetIds: [], watchlist: true, allStablecoins: false };
   const usdTop25 = { presetIds: ["usd-top25"], watchlist: false, allStablecoins: false };
-  const fixtures: Record<keyof typeof TELEGRAM_PUBLIC_ALERT_SAMPLES, { alerts: ConsolidatedAlerts; via: AlertVia }> = {
+  // Reserve is a daily roll-up sample, contract-tested in rollup-content.test.ts.
+  const fixtures: Record<Exclude<keyof typeof TELEGRAM_PUBLIC_ALERT_SAMPLES, "reserve">, { alerts: ConsolidatedAlerts; via: AlertVia }> = {
     dews: {
       alerts: emptyConsolidatedAlerts({ dews: [{
         stablecoinId: "usdt-tether", symbol: "USDT", oldBand: "ALERT", newBand: "WARNING", score: 58,
@@ -167,10 +168,6 @@ describe("public alert samples", () => {
         stablecoinId: "usdr-tangible", symbol: "USDR", oldGrade: "B", newGrade: "D", oldScore: 70, newScore: 44,
         contextLine: "Reason: Exit score fell from 72 to 35. Exit measures how easily holders can redeem or sell near $1.",
       }] }),
-      via: watchlist,
-    },
-    reserve: {
-      alerts: emptyConsolidatedAlerts({ reserve: [{ stablecoinId: "usdc-circle", symbol: "USDC", name: "Circle USD Coin" }] }),
       via: watchlist,
     },
     freeze: {

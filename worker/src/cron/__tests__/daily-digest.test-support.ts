@@ -383,7 +383,7 @@ export function makeDailyDigestScenario(
     telegramDelivery: { editionKey: "daily:2026-03-06", state: "sent", outcome: "sent", chunksSent: 1, nextChunkIndex: 1, chunkCount: 1, errorClass: null, retryAfterSec: null },
     appendices: {
       appendixHtml: null,
-      metadata: { hasAppendix: false, cemeteryDetected: 0, trackedDetected: 0, preLaunchDetected: 0, cemeterySymbols: [], trackedSymbols: [], preLaunchSymbols: [], frozenDetected: 0, frozenSymbols: [], seededSnapshots: [] },
+      metadata: { hasAppendix: false, cemeteryDetected: 0, trackedDetected: 0, preLaunchDetected: 0, cemeterySymbols: [], trackedSymbols: [], preLaunchSymbols: [], launchedDetected: 0, launchedSymbols: [], frozenDetected: 0, frozenSymbols: [], seededSnapshots: [] },
     },
   };
   return {

@@ -84,10 +84,10 @@ interface FakeDbConfig {
   dispatchMetadata?: Record<string, unknown> | null;
 }
 
-const PENDING_CAPACITY_TOTAL_SQL = "SUM(CASE WHEN delivery_state = 'pending' THEN 1 ELSE 0 END) AS total";
+const PENDING_CAPACITY_TOTAL_SQL = "SUM(CASE WHEN state = 'pending' THEN 1 ELSE 0 END) AS total";
 
 function isPendingCapacityQuery(sql: string): boolean {
-  return sql.includes("FROM telegram_pending_alerts") && sql.includes(PENDING_CAPACITY_TOTAL_SQL);
+  return sql.includes("FROM telegram_deliveries") && sql.includes(PENDING_CAPACITY_TOTAL_SQL);
 }
 
 function makePendingCapacityRow(config: FakeDbConfig = {}) {

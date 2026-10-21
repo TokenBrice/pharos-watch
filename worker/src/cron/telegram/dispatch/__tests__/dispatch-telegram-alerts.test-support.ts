@@ -32,6 +32,9 @@ const STABLECOINS_CACHE_WITH_USDC = JSON.stringify({
 
 const mockShouldAttemptFetch = vi.fn();
 const mockRecordOutcome = vi.fn();
+// The roll-up/freeze-batch hook has its own suites (rollup/__tests__); here it
+// is a not-due no-op so dispatcher assertions cover live alerts only.
+const mockRunTelegramRollupStep = vi.fn();
 const fixtureSqliteDatabases: DatabaseSync[] = [];
 
 function safetyScoreIdentity(publicationGenerationId: string) {
@@ -46,6 +49,11 @@ function safetyScoreIdentity(publicationGenerationId: string) {
     publicationGenerationId,
   };
 }
+
+vi.mock("../../rollup/rollup-step", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../rollup/rollup-step")>(),
+  runTelegramRollupStep: mockRunTelegramRollupStep,
+}));
 
 vi.mock("../../../../lib/circuit-breaker", () =>
   mockCircuitBreaker({
@@ -288,6 +296,11 @@ function resetDispatchTelegramAlertsTest() {
   formatConsolidatedMessageSpy.mockReset();
   mockShouldAttemptFetch.mockReset();
   mockRecordOutcome.mockReset();
+  mockRunTelegramRollupStep.mockReset();
+  mockRunTelegramRollupStep.mockResolvedValue({
+    freezeBatch: { state: "not-due", changes: 0, chats: 0 },
+    rollup: { state: "not-due", dueChats: 0, sentChats: 0, emptyChats: 0, deferredChats: 0 },
+  });
   mockSendToChat.mockReset();
   telegramDeliveryTranscript.length = 0;
   scriptedDeliveryResults = [];
@@ -765,6 +778,7 @@ function defaultDispatchCaches(overrides: Record<string, unknown> = {}): Record<
 }
 
 export {
+  mockRunTelegramRollupStep,
   STABLECOINS_CACHE_WITH_USDC,
   mockShouldAttemptFetch,
   mockRecordOutcome,

@@ -23,23 +23,26 @@ function unavailableDeliverySli(): TelegramDeliverySliStatus {
 }
 
 describe("Telegram delivery telemetry SQL", () => {
-  it("counts durable pending-table execution-unknown rows and uses the oldest ambiguity", async () => {
+  it("counts v2 and legacy-shim execution-unknown rows and uses the oldest ambiguity", async () => {
     const sqlite = createLatestSchemaSqlite().sqlite;
     try {
       sqlite.exec(`
         INSERT INTO telegram_pending_alerts
           (chat_id, message_html, created_at, expires_at, delivery_state, delivery_started_at)
         VALUES ('pending-chat', 'test', 100, 10000, 'execution_unknown', 100);
-        INSERT INTO telegram_alert_job_targets
-          (job_id, target_key, chat_id, alert_type, pending_dedupe_key, effect_state, created_at)
-        VALUES ('stats-job', 'stats-target', 'stats-chat', 'dews', 'stats-key', 'execution_unknown', 200);
+        INSERT INTO telegram_deliveries
+          (job_id, kind, chat_id, body_hash, state, next_attempt_at, expires_at, created_at, sending_at, done_at)
+        VALUES ('alert:x', 'alert', 'v2-chat', 'h', 'unknown', 200, 10000, 200, 200, 4900),
+               ('alert:x', 'alert', 'v2-due', 'h', 'pending', 200, 10000, 200, NULL, NULL);
       `);
       const snapshot = await loadTelegramPendingCapacity(createSqliteD1(sqlite), 5_001);
       expect(snapshot).toMatchObject({
-        pendingExecutionUnknown: 1,
-        freshExecutionUnknown: 1,
+        pendingExecutionUnknown: 2,
+        freshExecutionUnknown: 0,
         executionUnknown: 2,
         oldestExecutionUnknownAgeSec: 4_901,
+        due: 1,
+        active: 1,
       });
     } finally {
       sqlite.close();

@@ -139,110 +139,51 @@ interface TelegramPendingCapacityRow {
   fresh_uncertain_sample_count: number | string | null;
 }
 
-export const TELEGRAM_PENDING_CAPACITY_SQL = `SELECT
-  SUM(CASE WHEN delivery_state = 'pending' THEN 1 ELSE 0 END) AS total,
+/**
+ * Delivery v2 backlog over `telegram_deliveries` (open = pending/retry), plus
+ * the legacy `telegram_pending_alerts` rows the drain-only shim still owns
+ * during cutover. The `fresh_*` columns (legacy job-target effects) are zero:
+ * the v2 pipeline has no second effect ledger.
+ */
+export const TELEGRAM_PENDING_CAPACITY_SQL = `WITH p(now_sec, near_ttl_at, stale_before, ttl_sec) AS (SELECT ?, ?, ?, ?),
+rows AS (
+  SELECT CASE WHEN state IN ('pending', 'retry') THEN 'pending' ELSE state END AS state,
+         created_at, expires_at, next_attempt_at AS next_at, sending_at AS started_at
+    FROM telegram_deliveries
+   WHERE state IN ('pending', 'retry', 'sending', 'unknown', 'sent')
+     AND (state IN ('pending', 'retry', 'sending') OR done_at >= (SELECT now_sec FROM p) - 86400)
+  UNION ALL
+  SELECT CASE delivery_state WHEN 'execution_unknown' THEN 'unknown' ELSE delivery_state END,
+         created_at, COALESCE(expires_at, created_at + (SELECT ttl_sec FROM p)),
+         COALESCE(not_before_at, 0), COALESCE(delivery_started_at, created_at)
+    FROM telegram_pending_alerts
+   WHERE delivery_state IN ('pending', 'sending', 'execution_unknown', 'sent')
+)
+SELECT
+  SUM(CASE WHEN state = 'pending' THEN 1 ELSE 0 END) AS total,
+  SUM(CASE WHEN state = 'pending' AND expires_at <= p.now_sec THEN 1 ELSE 0 END) AS expired,
+  SUM(CASE WHEN state = 'pending' AND expires_at > p.now_sec AND next_at <= p.now_sec THEN 1 ELSE 0 END) AS due,
+  SUM(CASE WHEN state = 'pending' AND expires_at > p.now_sec AND next_at > p.now_sec THEN 1 ELSE 0 END) AS deferred,
+  SUM(CASE WHEN state = 'pending' AND expires_at > p.now_sec AND expires_at <= p.near_ttl_at THEN 1 ELSE 0 END) AS near_ttl,
+  MIN(CASE WHEN state = 'pending' AND expires_at > p.now_sec THEN created_at END) AS oldest_pending_created_at,
+  MIN(CASE WHEN state = 'pending' AND expires_at > p.now_sec AND next_at <= p.now_sec THEN created_at END) AS oldest_due_created_at,
+  SUM(CASE WHEN state = 'sending' AND started_at > p.stale_before THEN 1 ELSE 0 END) AS pending_sending,
   SUM(CASE
-        WHEN delivery_state = 'pending'
-         AND COALESCE(expires_at, created_at + ?) <= ?
-        THEN 1 ELSE 0
-      END) AS expired,
-  SUM(CASE
-        WHEN delivery_state = 'pending'
-         AND COALESCE(expires_at, created_at + ?) > ?
-         AND (not_before_at IS NULL OR not_before_at <= ?)
-        THEN 1 ELSE 0
-      END) AS due,
-  SUM(CASE
-        WHEN delivery_state = 'pending'
-         AND COALESCE(expires_at, created_at + ?) > ?
-         AND not_before_at IS NOT NULL
-         AND not_before_at > ?
-        THEN 1 ELSE 0
-      END) AS deferred,
-  SUM(CASE
-        WHEN delivery_state = 'pending'
-         AND COALESCE(expires_at, created_at + ?) > ?
-         AND COALESCE(expires_at, created_at + ?) <= ?
-        THEN 1 ELSE 0
-      END) AS near_ttl,
-  MIN(CASE
-        WHEN delivery_state = 'pending'
-         AND COALESCE(expires_at, created_at + ?) > ?
-        THEN created_at
-      END) AS oldest_pending_created_at,
-  MIN(CASE
-        WHEN delivery_state = 'pending'
-         AND COALESCE(expires_at, created_at + ?) > ?
-         AND (not_before_at IS NULL OR not_before_at <= ?)
-        THEN created_at
-      END) AS oldest_due_created_at,
-  SUM(CASE
-        WHEN delivery_state = 'sending'
-         AND COALESCE(delivery_started_at, created_at) > ?
-        THEN 1 ELSE 0
-      END) AS pending_sending,
-  SUM(CASE
-        WHEN (delivery_state = 'sending'
-          AND COALESCE(delivery_started_at, created_at) <= ?)
-          OR (
-            delivery_state = 'execution_unknown'
-            AND COALESCE(expires_at, created_at + ?) > ?
-          )
+        WHEN (state = 'sending' AND started_at <= p.stale_before)
+          OR (state = 'unknown' AND expires_at > p.now_sec)
         THEN 1 ELSE 0
       END) AS pending_execution_unknown,
-  SUM(CASE WHEN delivery_state = 'sent' THEN 1 ELSE 0 END) AS sent_cleanup,
+  SUM(CASE WHEN state = 'sent' THEN 1 ELSE 0 END) AS sent_cleanup,
   MIN(CASE
-        WHEN (delivery_state = 'sending'
-          AND COALESCE(delivery_started_at, created_at) <= ?)
-          OR (
-            delivery_state = 'execution_unknown'
-            AND COALESCE(expires_at, created_at + ?) > ?
-          )
-        THEN COALESCE(delivery_started_at, created_at)
+        WHEN (state = 'sending' AND started_at <= p.stale_before)
+          OR (state = 'unknown' AND expires_at > p.now_sec)
+        THEN started_at
       END) AS oldest_pending_execution_unknown_at,
-  (SELECT SUM(CASE
-                WHEN effect_state = 'sending' AND effect_at > ?
-                THEN 1 ELSE 0
-              END)
-     FROM (
-       SELECT effect_state, COALESCE(effect_started_at, effect_completed_at, created_at) AS effect_at
-         FROM telegram_alert_job_targets
-        WHERE effect_state IN ('sending', 'execution_unknown')
-        ORDER BY COALESCE(effect_started_at, effect_completed_at, created_at) ASC
-        LIMIT ?
-     )) AS fresh_sending,
-  (SELECT SUM(CASE
-                WHEN effect_state = 'execution_unknown'
-                  OR (effect_state = 'sending' AND effect_at <= ?)
-                THEN 1 ELSE 0
-              END)
-     FROM (
-       SELECT effect_state, COALESCE(effect_started_at, effect_completed_at, created_at) AS effect_at
-         FROM telegram_alert_job_targets
-        WHERE effect_state IN ('sending', 'execution_unknown')
-        ORDER BY COALESCE(effect_started_at, effect_completed_at, created_at) ASC
-        LIMIT ?
-     )) AS fresh_execution_unknown,
-  (SELECT MIN(CASE
-                WHEN effect_state = 'execution_unknown'
-                  OR (effect_state = 'sending' AND effect_at <= ?)
-                THEN effect_at
-              END)
-     FROM (
-       SELECT effect_state, COALESCE(effect_started_at, effect_completed_at, created_at) AS effect_at
-         FROM telegram_alert_job_targets
-        WHERE effect_state IN ('sending', 'execution_unknown')
-        ORDER BY COALESCE(effect_started_at, effect_completed_at, created_at) ASC
-        LIMIT ?
-     )) AS oldest_fresh_execution_unknown_at,
-  (SELECT COUNT(*)
-     FROM (
-       SELECT 1
-         FROM telegram_alert_job_targets
-        WHERE effect_state IN ('sending', 'execution_unknown')
-        LIMIT ?
-     )) AS fresh_uncertain_sample_count
- FROM telegram_pending_alerts`;
+  0 AS fresh_sending,
+  0 AS fresh_execution_unknown,
+  NULL AS oldest_fresh_execution_unknown_at,
+  0 AS fresh_uncertain_sample_count
+ FROM rows CROSS JOIN p`;
 
 function normalizedNumber(value: unknown): number {
   const parsed = typeof value === "number" ? value : Number(value);
@@ -320,24 +261,7 @@ export async function loadTelegramPendingCapacity(
 ): Promise<TelegramPendingCapacitySnapshot> {
   const row = await db
     .prepare(TELEGRAM_PENDING_CAPACITY_SQL)
-    .bind(
-      PENDING_TTL_SEC, nowSec,
-      PENDING_TTL_SEC, nowSec, nowSec,
-      PENDING_TTL_SEC, nowSec, nowSec,
-      PENDING_TTL_SEC, nowSec, PENDING_TTL_SEC, nowSec + PENDING_NEAR_TTL_WINDOW_SEC,
-      PENDING_TTL_SEC, nowSec,
-      PENDING_TTL_SEC, nowSec, nowSec,
-      nowSec - PENDING_OLD_AGE_ALERT_SEC,
-      nowSec - PENDING_OLD_AGE_ALERT_SEC, PENDING_TTL_SEC, nowSec,
-      nowSec - PENDING_OLD_AGE_ALERT_SEC, PENDING_TTL_SEC, nowSec,
-      nowSec - PENDING_OLD_AGE_ALERT_SEC,
-      TELEGRAM_EXECUTION_UNKNOWN_SAMPLE_LIMIT,
-      nowSec - PENDING_OLD_AGE_ALERT_SEC,
-      TELEGRAM_EXECUTION_UNKNOWN_SAMPLE_LIMIT,
-      nowSec - PENDING_OLD_AGE_ALERT_SEC,
-      TELEGRAM_EXECUTION_UNKNOWN_SAMPLE_LIMIT,
-      TELEGRAM_EXECUTION_UNKNOWN_SAMPLE_LIMIT,
-    )
+    .bind(nowSec, nowSec + PENDING_NEAR_TTL_WINDOW_SEC, nowSec - PENDING_OLD_AGE_ALERT_SEC, PENDING_TTL_SEC)
     .first<TelegramPendingCapacityRow>();
   return mapTelegramPendingCapacity(row, nowSec, drainBudgetPerRun);
 }

@@ -12,6 +12,7 @@ import {
   type DepegWorsening,
 } from "../../../telegram/common/alerts-formatting";
 import { buildAlertContextLines } from "./telegram-alert-context";
+import { recordDispatchChangeLog } from "./telegram-change-log-detection";
 import {
   buildReserveTransitions,
   buildSafetyChanges,
@@ -364,6 +365,28 @@ export async function buildTelegramDispatchEvents(
     new Set(snapshotState.currentReserveDriftIds),
     WORKER_TRACKED_META_BY_ID,
   );
+
+  // Roll-up material. A failure here must not block live alerts; the safety
+  // observed snapshot does not advance, so its moves are retried next run.
+  try {
+    await recordDispatchChangeLog(db, {
+      currentSafetySnapshot,
+      dewsChanges: [...dewsChanges, ...dewsPlan.deescalations],
+      dewsRows,
+      reserveAlerts: reservePromoted,
+      getSymbol,
+      nowSec: snapshotState.nowSec,
+    });
+  } catch (error) {
+    logWorkerEvent({
+      scope: "handler",
+      job: "dispatch-telegram-alerts",
+      event: "telegram_change_log_write_failed",
+      level: "warn",
+      message: "Failed to record roll-up changes",
+      error,
+    });
+  }
 
   const dewsIds = dewsChanges.map((c) => c.stablecoinId);
   const depegIds = [
