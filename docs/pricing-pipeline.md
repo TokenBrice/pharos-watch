@@ -106,9 +106,9 @@ Both exact-address callers share one enabled predicate, a flat target list and a
 
 Kraken's curated `SOFIDUSD` market supplies SoFiUSD's hard-market quote through the existing batched ticker request, corroborating the contract-verified CoinGecko `sofiusd` identity. SoFiUSD no longer has a nominal-par override: admitted observed market consensus publishes through the ordinary validation path. Kraken's bid/ask midpoint retains its local-fetch clock, and CoinGecko agreement does not upgrade that quote to single-source depeg authority. Failed or absent quotes stay unavailable rather than publishing par. Provider registration alone does not establish a published observation.
 
-Frontier Stable Token uses the curated Kraken `FRNTUSD` bid/ask market through that same batch and local-fetch clock policy. CoinGecko's `frontier-stable-token` ticker set identifies this Wyoming-token market, but a stale CoinGecko last-trade quote does not become fresh merely because the book remains quoted. Missing Kraken responses remain unavailable; neither the issuer's dollar redemption target nor reserve balances substitute for an observed price.
+Frontier Stable Token quotes the curated Kraken `FRNTUSD` bid/ask market in that batch; missing responses stay unavailable.
 
-USDY uses `detailProvider: "coingecko"` so a missing DefiLlama live-list row does not prevent the existing supplemental lane from admitting its fresh CoinGecko price and aggregate market cap. The retained `llamaId` preserves provider identity; when an admitted DefiLlama list row exists, primary supply still wins over a duplicate supplemental row. USDY remains NAV/yield-bearing: its observed price may exceed one dollar, and no nominal-par valuation or bridge-deployment supply sum is introduced.
+USDY uses `detailProvider: "coingecko"` so its supplemental lane admits a fresh CoinGecko price and market cap without a live DefiLlama row; an admitted row's primary supply still wins.
 
 ### Nominal-reference recovery boundary
 
