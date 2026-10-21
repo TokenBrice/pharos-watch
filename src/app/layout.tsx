@@ -97,8 +97,10 @@ export default function RootLayout({
           href="/feed/cemetery.xml"
         />
       </head>
+      {/* usePrefersReducedMotion stamps data-motion on <body> before hydration. */}
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} ${bricolageDisplay.variable} antialiased`}
+        suppressHydrationWarning
       >
         {gaId && <GoogleAnalytics measurementId={gaId} />}
         {gaId && <WebVitalsReporter />}
