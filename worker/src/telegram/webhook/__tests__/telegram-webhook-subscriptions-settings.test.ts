@@ -281,7 +281,7 @@ describe("handleTelegramWebhook", () => {
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, command, "test-secret", { updateId: 1 }), "test-secret", "bot-token");
 
-    expect(callbackFromLatest(prefix)).toMatch(new RegExp(`^${prefix}`));
+    expect(callbackFromLatest(prefix)?.startsWith(prefix)).toBe(true);
     expect(sqlite.prepare("SELECT * FROM telegram_subscriptions").all()).toEqual(before);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_disambiguation").get()).toEqual({ count: 0 });
   });
