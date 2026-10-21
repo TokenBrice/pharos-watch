@@ -534,6 +534,53 @@
             "url": "https://plasmascan.to/address/0x31672de4726227feb22f2dfbcfa985c71bea86b2"
           }
         ]
+      },
+      {
+        "id": "base:0xa343e5053e26371909fb8a2e9b7b391a49e7d2fd",
+        "sourceChain": "plasma",
+        "destinationChain": "base",
+        "canonicalChain": "plasma",
+        "contractAddress": "0xa343e5053e26371909fb8a2e9b7b391a49e7d2fd",
+        "protocol": "Yuzu syzUSD Base CCIP deployment; exact pool source admission unresolved",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "New exact token identity independently verified on 2026-10-20. Canonical Plasma pool 0x31672de4726227feb22f2dfbcfa985c71bea86b2 at block 35592500 (2026-10-20T22:04:49Z, hash 0xb5e75a73effe72ae00dea4ceb6e6d84bb60dfdcdb73861e2b69de0141ae3cb56) now names eight remote selectors, including official Base selector 15971525489660198786 and this token. At Base block 52872832 (2026-10-20T22:23:31Z, hash 0x3f0498486876f4daadf185ce1bead6f2bf9fa01627b0b7f1be73318b2b7f8ca3), name/symbol/decimals are Staked Yuzu USD/syzUSD/18; the official TokenAdminRegistry maps it to pool 0x1dc613ab63000af7c5c303cf9838614ad366d123, which returns this token, BurnMintTokenPool 1.6.1, official Base router and a reciprocal Plasma token. The pool is the token's sole reported minter/burner; token and pool owner are Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae and maxSupply() is zero (unlimited). These known identities and privileged powers are retained, but exact pool source is unavailable from Blockscout and Sourcify (404), so full route/control admission is intentionally unresolved. No native-liability classification, current share, incident absence, immutable cap or completeness of the old seven-remote roster is inferred.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-20",
+        "observedBlock": 52872832,
+        "controllerChain": "base",
+        "controllerAddress": "0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x1dc613ab63000af7c5c303cf9838614ad366d123",
+          "eoa:yuzu:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae"
+        ],
+        "sources": [
+          {
+            "label": "Issuer-owned canonical Plasma pool and remote token read at block 35592500",
+            "url": "https://rpc.plasma.to"
+          },
+          {
+            "label": "Chainlink official Base selector, router and TokenAdminRegistry",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/chain/ethereum-mainnet-base-1"
+          },
+          {
+            "label": "Exact Base syzUSD token metadata and verified FactoryBurnMintERC20 source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xa343e5053e26371909fb8a2e9b7b391a49e7d2fd"
+          },
+          {
+            "label": "Pinned Base token, registry and reciprocal pool observations at block 52872832",
+            "url": "https://mainnet.base.org"
+          },
+          {
+            "label": "Exact Base pool explorer record; verified source not returned",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x1dc613ab63000af7c5c303cf9838614ad366d123"
+          }
+        ]
       }
     ],
     "controls": [

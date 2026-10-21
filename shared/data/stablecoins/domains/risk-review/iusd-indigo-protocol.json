@@ -90,6 +90,30 @@
         "url": "https://analytics.indigoprotocol.io/api/asset-prices"
       }
     ],
+    "branchKindReviews": [
+      {
+        "kind": "collateral-parameter",
+        "branchIds": ["iusd-ada", "iusd-night"],
+        "reviewedAt": "2026-10-20",
+        "reviewer": "FD08 bottom-up refinement 2026-10-21",
+        "confidence": "verified",
+        "rationale": "The official V3 assets API publishes both declared iUSD branches' numeric ratios. Koios utxo_info independently returned the exact unspent parameter outputs named by that API: ADA fb6cd010b29b585770cd493e2b65e1c6075ae9601a7a0d2b925a844ea93fe93c#2 at creation block 13499836 (Unix 1780444483) and NIGHT 207df4a3aff31c8f14ddb7cfc713cee083e56f515ff5ec0640bb3cd37eb912d9#0 at creation block 13763027 (Unix 1785797912). Their inline rational datums agree with the API: ADA redemption/maintenance/liquidation 150%/130%/110%; NIGHT 150%/150%/120%. These are parameter observations accessed 2026-10-20, not a common current reserve/supply checkpoint, a feed freshness review, or proof of liquidation execution.",
+        "sources": [
+          {
+            "label": "Indigo V3 assets API, iUSD collateralAssets",
+            "url": "https://analytics.indigoprotocol.io/api/v3/assets"
+          },
+          {
+            "label": "Koios exact unspent iUSD collateral-parameter outputs, POST utxo_info",
+            "url": "https://api.koios.rest/api/v1/utxo_info"
+          },
+          {
+            "label": "Indigo V3 pair-specific collateral parameters",
+            "url": "https://docs.indigoprotocol.io/readme/indigo-protocol-v3.md"
+          }
+        ]
+      }
+    ],
     "branches": [
       {
         "id": "iusd-ada",
@@ -120,7 +144,8 @@
         "collateralParameters": [
           {
             "asset": "ADA",
-            "note": "Indigo V3 requires pair-specific liquidation, maintenance, and redemption ratios. The public analytics snapshot identifies the active ADA branch but does not expose the current numeric ratios, which remain an explicit parameter-level unknown."
+            "minimumCollateralRatioPct": 110,
+            "note": "The V3 assets API accessed 2026-10-20 reports liquidation ratio 110%, maintenance ratio 130%, redemption ratio 150%, and minimum collateral amount 10000000 raw ADA units. Exact unspent parameter output fb6cd010b29b585770cd493e2b65e1c6075ae9601a7a0d2b925a844ea93fe93c#2 independently returns the same inline rational ratios through Koios. The minimumCollateralRatioPct records the liquidation threshold, not the higher maintenance requirement."
           }
         ],
         "liquidationMechanism": "Indigo liquidations use a two-step freeze and liquidation flow. When an ADA-backed iUSD CDP breaches its branch ratio, the iUSD Stability Pool burns deposited iUSD against the debt and distributes seized ADA collateral to depositors.",
@@ -180,7 +205,8 @@
         "collateralParameters": [
           {
             "asset": "NIGHT",
-            "note": "Indigo V3 requires pair-specific liquidation, maintenance, and redemption ratios. The public analytics snapshot identifies the active NIGHT branch but does not expose the current numeric ratios, which remain an explicit parameter-level unknown."
+            "minimumCollateralRatioPct": 120,
+            "note": "The V3 assets API accessed 2026-10-20 reports liquidation ratio 120%, maintenance ratio 150%, redemption ratio 150%, and minimum collateral amount 100000000 raw NIGHT units. Exact unspent parameter output 207df4a3aff31c8f14ddb7cfc713cee083e56f515ff5ec0640bb3cd37eb912d9#0 independently returns the same inline rational ratios through Koios. The minimumCollateralRatioPct records the liquidation threshold, not the higher maintenance requirement."
           }
         ],
         "liquidationMechanism": "Indigo liquidations use a two-step freeze and liquidation flow. When a NIGHT-backed iUSD CDP breaches its branch ratio, the iUSD Stability Pool burns deposited iUSD against the debt and distributes seized NIGHT collateral to depositors.",

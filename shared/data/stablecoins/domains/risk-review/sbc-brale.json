@@ -71,6 +71,64 @@
         "url": "https://brale.xyz/stablecoins/SBC"
       }
     ],
+    "controls": [
+      {
+        "id": "sbc-ethereum-oft-owner",
+        "label": "Ethereum SBC OFT owner and Endpoint delegate",
+        "routeRefs": ["ethereum:0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"],
+        "capabilities": ["admin", "peer-config", "rate-limit"],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x5c3cd52996a93e19badd02af73987874a8a5553c",
+        "authorityType": "eoa",
+        "canRaiseCap": true,
+        "capDescription": "The current owner can replace peers and delegate, change fees and outflow rate limits. These mutable transport settings are not an immutable aggregate issuance bound.",
+        "observedAt": "2026-10-20",
+        "observedBlock": 26236780,
+        "failureDomainKeys": ["ethereum:0x5c3cd52996a93e19badd02af73987874a8a5553c"],
+        "evidence": "Pinned Ethereum block 26236780, hash 0x41499941fd1ed9c9831ca69cc3e49fc8273c157e8ab98623c08d4c9efa3372b4, timestamp 2026-10-20T22:27:11Z: owner() on OFT proxy 0xb9d852a3f9b3a82e243faab0272604102a111e1a and delegates(proxy) on Endpoint 0x1a44076050125825900e736c501f859c50fe728c both return this address; its code is 0x. The proxy implementation slot returns 0x36e55de93cf279df1a02093c50f5bab77b4319de. Verified OAppCoreUpgradeable gates setPeer/setDelegate by onlyOwner; the adapter gates setRateLimits likewise. Retrieved 2026-10-20. Configured bidirectional peers, DVN quorum and remote administrators remain unestablished; no independent human signer or key-custody claim is made.",
+        "sources": [
+          {"label": "Exact SBC OFT implementation and inherited owner paths", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x36e55de93cf279df1a02093c50f5bab77b4319de"},
+          {"label": "Ethereum pinned state provider; block 26236780", "url": "https://ethereum-rpc.publicnode.com"},
+          {"label": "Ethereum observation block 26236780", "url": "https://eth.blockscout.com/block/26236780"}
+        ]
+      },
+      {
+        "id": "sbc-ethereum-oft-upgrader",
+        "label": "Ethereum SBC OFT ProxyAdmin owner",
+        "routeRefs": ["ethereum:0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"],
+        "capabilities": ["upgrade", "admin", "bridge-mint"],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x5c3cd52996a93e19badd02af73987874a8a5553c",
+        "authorityType": "eoa",
+        "canRaiseCap": true,
+        "capDescription": "ProxyAdmin owner can immediately replace and execute the OFT adapter implementation. The adapter currently has SBC MINTER_ROLE; replacement mint logic is not bounded by the present peer checks or outbound rate limiter.",
+        "observedAt": "2026-10-20",
+        "observedBlock": 26236780,
+        "failureDomainKeys": ["ethereum:0x5c3cd52996a93e19badd02af73987874a8a5553c"],
+        "evidence": "At Ethereum block 26236780 (hash 0x41499941fd1ed9c9831ca69cc3e49fc8273c157e8ab98623c08d4c9efa3372b4; 2026-10-20T22:27:11Z), the OFT proxy EIP-1967 admin slot is 0x5699c09ca4586cd9ae0eefac676df41514d5eac1 and owner() on that verified ProxyAdmin returns this code-empty address. Verified ProxyAdmin upgrade/upgradeAndCall are onlyOwner with no execution delay. SBC token 0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16 returns true for hasRole(keccak256(MINTER_ROLE), OFT proxy); adapter token() independently returns that exact SBC token. Thus the current upgrade root can replace bridge mint logic while retaining the proxy's mint permission. This is Ethereum transport authority, not a second native issuer mint control. Retrieved 2026-10-20; no complete remote-channel or incident certificate is claimed.",
+        "sources": [
+          {"label": "Exact transparent OFT proxy source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb9d852a3f9b3a82e243faab0272604102a111e1a"},
+          {"label": "Exact OFT ProxyAdmin source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5699c09ca4586cd9ae0eefac676df41514d5eac1"},
+          {"label": "Ethereum pinned state provider; block 26236780", "url": "https://ethereum-rpc.publicnode.com"},
+          {"label": "Ethereum observation block 26236780", "url": "https://eth.blockscout.com/block/26236780"}
+        ]
+      },
+      {
+        "id": "sbc-ethereum-oft-verification-unresolved",
+        "label": "Ethereum SBC OFT configured verification quorum (unresolved)",
+        "routeRefs": ["ethereum:0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"],
+        "capabilities": ["validator"],
+        "authorityType": "unknown",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-20",
+        "observedBlock": 26236780,
+        "evidence": "The exact native SBC OFT implementation accepts receive traffic through the configured LayerZero endpoint and owner-set peers. The pinned Ethereum endpoint linkage and effective delegate are established, but the complete bidirectional peer inventory, configured send/receive libraries, required/optional DVNs, thresholds and all remote administrators are not. Preserve this unresolved validation contributor rather than treating the newly reviewed local owner/upgrader as an exhaustive external-channel certificate. Retrieved 2026-10-20.",
+        "sources": [
+          {"label": "Exact SBC OFT source and inherited endpoint/peer receive gates", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x36e55de93cf279df1a02093c50f5bab77b4319de"},
+          {"label": "Brale native SBC LayerZero integration", "url": "https://brale.xyz/blog/sbc-integrates-layerzero-for-cross-chain-transfers"}
+        ]
+      }
+    ],
     "routes": [
       {
         "id": "ethereum:0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",

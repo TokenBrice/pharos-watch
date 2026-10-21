@@ -113,7 +113,7 @@
     "tier": "single-source-or-laggy",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
-    "summary": "At Ethereum block 26197000, the exact MorphoChainlinkOracleV2 still combined PST-USDC calculated exchange rate, USDC/USD and PYUSD/USD feeds in one multiplicative/divisive path, not redundant alternatives. Its ChainlinkDataFeedLib ignores updatedAt and has no fallback or stale-answer rejection. Feed proxies and OCR2 aggregators share a 4-of-9 owner Safe. Their on-chain administration is identified; independent PST valuation inputs and heartbeat guarantees remain unestablished.",
+    "summary": "At Ethereum block 26197000, the exact MorphoChainlinkOracleV2 combined PST-USDC calculated exchange rate, USDC/USD and PYUSD/USD feeds in one multiplicative/divisive path, not redundant alternatives. Its ChainlinkDataFeedLib ignores updatedAt and has no fallback or stale-answer rejection. Feed proxies and OCR2 aggregators share the previously pinned 4-of-9 owner Safe. Source correction, retrieved 2026-10-20: Chainlink's Ethereum directory https://reference-data-directory.vercel.app/feeds-mainnet.json publishes a 3600-second heartbeat for the exact PST-USDC proxy 0x4be50be32db1510240d542f77c5b36ca0d0965e6 and an 86400-second heartbeat for PYUSD/USD 0x8f1df6d7f2db73eece86a18b4381f4707b918fb1. Publication cadence is therefore disclosed; it is not a consumer-enforced freshness bound or independent verification of the internally formed PST NAV described by Sentora. Original review start and on-chain pins are retained.",
     "reviewedAt": "2026-10-15",
     "reviewer": "Pharos batch-64 review (Rev_SenpyusdpstSentora)",
     "confidence": "verified",
@@ -338,7 +338,7 @@
             "observedBlock": 26197000
           }
         ],
-        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides its fixed feed inputs without an alternate fallback. ChainlinkDataFeedLib checks nonnegative answers but explicitly ignores staleness and min/max bounds. At block 26197000 the three latestRoundData updatedAt values were 1792053671, 1792053671 and 1792007699 respectively. These observations do not establish a guaranteed heartbeat or independently verified PST NAV; the parent oracle would accept a stale nonnegative answer.",
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides its fixed feed inputs without an alternate fallback. ChainlinkDataFeedLib checks nonnegative answers but explicitly ignores staleness and min/max bounds. At block 26197000 the three latestRoundData updatedAt values were 1792053671, 1792053671 and 1792007699 respectively; these historical observations are unchanged. Source correction, retrieved 2026-10-20: https://reference-data-directory.vercel.app/feeds-mainnet.json publishes a 3600-second heartbeat for the exact PST-USDC proxy and an 86400-second heartbeat for the exact PYUSD/USD proxy. A published heartbeat does not enforce answer age in this consumer, establish independent PST NAV inputs or create a fallback. The parent oracle would still accept a stale nonnegative answer.",
         "observedAt": "2026-10-15",
         "observedBlock": 26197000,
         "collateralParameters": [

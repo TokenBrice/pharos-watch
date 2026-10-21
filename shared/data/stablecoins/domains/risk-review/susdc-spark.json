@@ -38,7 +38,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "The tracked Ethereum and Avalanche spUSDC deployments are local ERC-4626 USDC vaults behind upgradeable ERC-1967 UUPS proxies, not immutable clones. Pinned reads on 2026-10-01 confirm local USDC assets and DEFAULT_ADMIN_ROLE holders Spark SubProxy on Ethereum and Spark executor on Avalanche. Wrapper upgrades remain in Mint Authority; these local share contracts are not Avalanche Bridge representations.",
+    "summary": "The tracked Ethereum, Avalanche and X Layer spUSDC deployments are local ERC-4626 USDC vaults behind upgradeable ERC-1967 UUPS proxies, not immutable clones or bridged spUSDC representations. The original October 1 Ethereum/Avalanche review remains unchanged. Verified the omitted X Layer native vault on 2026-10-20 against the official registry, exact implementation source and block 73621689; its upgrade authority belongs in Mint Authority. No manual supply share or executable redemption capacity is inferred.",
     "reviewedAt": "2026-10-01",
     "reviewer": "Sol curation pass 2026-10-01 (CurA20USDf)",
     "confidence": "verified",
@@ -54,6 +54,18 @@
       {
         "label": "Spark Savings Vaults V2: UUPS architecture and local USDC deployments",
         "url": "https://docs.spark.finance/dev/savings/spark-vaults-v2"
+      },
+      {
+        "label": "Official X Layer native SparkVault and executor registry, retrieved 2026-10-20",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/XLayer.sol"
+      },
+      {
+        "label": "Exact-match X Layer SparkVault implementation, retrieved 2026-10-20",
+        "url": "https://sourcify.dev/server/v2/contract/196/0xdce929a335c75a1676ef5957a4d7a3b928c48820?fields=abi,sources"
+      },
+      {
+        "label": "X Layer block 73621689, hash 0xc9b913e415700edec90708aeacc6b06ef6454535784a9a626be7720cfb820cbc, timestamp 2026-10-19T06:18:45Z; retrieved 2026-10-20",
+        "url": "https://rpc.xlayer.tech"
       }
     ],
     "routes": [
@@ -107,6 +119,40 @@
           {
             "label": "Spark address registry",
             "url": "https://github.com/sparkdotfi/spark-address-registry"
+          }
+        ]
+      },
+      {
+        "id": "xlayer:0xf90e63079d97a0a1f479b2b168457f420caff6ba",
+        "destinationChain": "xlayer",
+        "contractAddress": "0xf90e63079d97a0a1f479b2b168457f420caff6ba",
+        "protocol": "Spark native savings vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The source review retrieved 2026-10-20: official Spark V2 docs and XLayer.sol identify this exact native Spark Savings USDC vault, distinct from Ethereum/Avalanche despite the shared symbol. At X Layer block 73621689 (hash 0xc9b913e415700edec90708aeacc6b06ef6454535784a9a626be7720cfb820cbc, 2026-10-19T06:18:45Z), name/symbol/decimals are Spark Savings USDC/spUSDC/6, asset()=0xb6ceceab302e2e4948951ee7843fc24e92933061 and getImplementation()=0xdce929a335c75a1676ef5957a4d7a3b928c48820. Exact-match SparkVault source mints local shares only after underlying asset transfer and deposit-cap checks. This is not bridge minting of remote spUSDC. Its sole DEFAULT_ADMIN_ROLE member is Executor 0xcf5af6f53cec74b791cb4182ac778ca9cd323510; native upgrades are inventoried in Mint Authority. Current docs say X Layer spUSDC is not whitelisted for Savings Vault Intents, so no asynchronous capacity or settlement guarantee is asserted.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-20",
+        "observedBlock": 73621689,
+        "sources": [
+          {
+            "label": "Official exact native deployment and underlying identity, retrieved 2026-10-20",
+            "url": "https://docs.spark.finance/dev/savings/spark-vaults-v2"
+          },
+          {
+            "label": "Official X Layer registry, retrieved 2026-10-20",
+            "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/XLayer.sol"
+          },
+          {
+            "label": "Exact-match deployed SparkVault source, retrieved 2026-10-20",
+            "url": "https://sourcify.dev/server/v2/contract/196/0xdce929a335c75a1676ef5957a4d7a3b928c48820?fields=abi,sources"
+          },
+          {
+            "label": "X Layer block 73621689 pinned native identity, observed 2026-10-20",
+            "url": "https://rpc.xlayer.tech"
           }
         ]
       }

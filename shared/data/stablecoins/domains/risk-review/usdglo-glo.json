@@ -66,6 +66,14 @@
       {
         "label": "Glo VeChain support retirement notice (2025-11-18; effective 2026-01-01)",
         "url": "https://www.glodollar.org/articles/glo-dollar-and-vechain"
+      },
+      {
+        "label": "USDGLO September 2026 management assertion (retrieved 2026-10-20; supply scope includes VeChain)",
+        "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-09-2026.pdf"
+      },
+      {
+        "label": "Exact VeChain USDGLO explorer (retrieved 2026-10-20; deployment identity and eighteen decimals only)",
+        "url": "https://vechainstats.com/account/0x29c630cce4ddb23900f5fe66ab55e488c15b9f5e/"
       }
     ],
     "routes": [
@@ -244,6 +252,19 @@
             "url": "https://docs.glodollar.org/"
           }
         ]
+      },
+      {
+        "id": "vechain:0x29c630cce4ddb23900f5fe66ab55e488c15b9f5e",
+        "destinationChain": "vechain",
+        "contractAddress": "0x29c630cce4ddb23900f5fe66ab55e488c15b9f5e",
+        "protocol": "Glo Dollar on VeChain (support retired; residual route classification unresolved)",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Identity researched 2026-10-20: Glo's official deployment directory and Brale's current USDGLO page still list this exact VeChain token; VeChainStats identifies Glo Dollar / USDGLO and eighteen decimals. The November 18, 2025 retirement notice ended support January 1, 2026, but the September 30, 2026 management assertion explicitly still includes VeChain in total issued supply. The explorer displays residual circulation and a UUPS proxy, not independently pinned current issuance, upgrade or cross-chain conservation evidence. Do not infer zero liabilities, immutability, or another chain's Brale controller from retirement or the explorer's Likely Immutable label. Current residual liability partition, representation/native classification, historical/pending transfers and route controls remain unresolved; the existing seven-route pins and review start are unchanged."
       }
     ]
   }

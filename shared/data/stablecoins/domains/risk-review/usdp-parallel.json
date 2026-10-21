@@ -125,6 +125,66 @@
         "url": "https://docs.parallel.best/products/parallel-v3/fees"
       }
     ],
+    "controls": [
+      {
+        "id": "parallel-ethereum-oft-access-manager",
+        "routeRefs": [
+          "ethereum:0x9b3a8f7cec208e247d97dee13313690977e24459"
+        ],
+        "label": "Ethereum USDp LayerZero OFT owner and mutable validation/limit authority",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x94ea8800444017695345156319e96bdb1e355f7a",
+        "authorityType": "contract",
+        "capabilities": ["bridge-mint", "bridge-burn", "admin", "pause", "rate-limit", "peer-config"],
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "observedAt": "2026-10-21",
+        "observedBlock": 26237389,
+        "capDescription": "Exact BridgeableTokenP 0x78bb4882b77d74ad9b04ab71fe8e61f72595823c owns role110 to mint canonical Ethereum USDp on received LayerZero messages; source burns principal with the sending holder's allowance and can issue OFT receipt claims when credit limits are reached. Its owner is ParallelAccessManager. Current daily credit/debit limits are 250000 USDp and global credit/debit limits 1500000 USDp, not immutable economic caps: owner-authorized setters can raise them, with source MAX_GLOBAL_LIMIT equal to int256.max. Owner can also retarget peers and endpoint delegate. No direct upgrade capability, holder-seizure path or immutable whole-claim loss bound is asserted.",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Pinned Ethereum-side reads cover the 23 non-Ethereum networks in the issuer's current 24-chain inventory, using LayerZero metadata's exact native chain IDs/EIDs, including active PlumePhoenix98866/eid30370 (not deprecated Plume98865/eid30318). All 23 active peers are nonzero. This is the Ethereum outbound/inbound configured-peer census for that catalogued roster, not proof that every remote deployment or every possible unpublished EID was exhaustively reviewed.",
+          "attestorQuorum": "Ethereum endpoint getConfig for both send and receive libraries on all 23 catalogued lanes requires LayerZero Labs0x589dedbd617e0cbcb916a9223f4d1300c294236b and Nethermind0xa59ba433ac34d2927232918ef5b2eaafcf130ba5, plus1of2 optional DVNs: Horizen0x380275805876ff19055ea900cdb2b46a94ecf20d or Canary0xa4fe5a5b9a846458a70cd0748228aed3bf65c2cd. This is configured network identity, not a signing-custody or independence certificate.",
+          "pausersAdminsUpgraders": "ParallelAccessManager owns this exact immutable module. At the pin, setPeer/setDelegate select role10; pause/unpause/credit-limit/isolation setters select role20; role10/20 admin is role0 and canonical USDp mint role110 admin is role10. Ethereum Protocol Safe0x25fc7ffa8f9da3582a36633d04804f0004706f9b holds role0 with zero execution delay, returns5of8, and canCall setPeer/setDelegate immediately. Hypernative0xcd6f2a5d4dda89645ab463d38ca64b8a7309696f canCall pause/unpause immediately. Full Safe modules/custody and remote role graphs are not certified.",
+          "rateLimits": "250000 daily credit/debit and1500000 global credit/debit at the pin; isolation=false and paused=false. These readings do not prove no historical operational interruption.",
+          "unsupportedReason": "The exact September5 pause/resume are confirmed Hypernative execute calls, but the issuer's September recap gives an undated same-day false-alert/no-Parallel-risk disposition without binding it to these hashes or module. Exact incident-state linkage and current conserved cross-chain/in-flight liability partition remain unresolved. No incident-none or material-supply percentage is authored."
+        },
+        "sources": [
+          {
+            "label": "Exact Ethereum BridgeableTokenP verified source and deployed runtime (retrieved 2026-10-21)",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x78bb4882b77d74ad9b04ab71fe8e61f72595823c"
+          },
+          {
+            "label": "Exact owning ParallelAccessManager verified source and deployed runtime (retrieved 2026-10-21)",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x94ea8800444017695345156319e96bdb1e355f7a"
+          },
+          {
+            "label": "Official USDp module inventory on24 chains (retrieved 2026-10-21)",
+            "url": "https://docs.parallel.best/developers-hub/contract-addresses/parallel-v3/usdp.md"
+          },
+          {
+            "label": "LayerZero official exact EIDs/native chain IDs and DVN identity metadata (retrieved 2026-10-21)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata"
+          },
+          {
+            "label": "Ethereum pinned block26237389 RPC authority/peer/validation reads (observed 2026-10-21)",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact September5 Hypernative pause transaction",
+            "url": "https://eth.blockscout.com/api/v2/transactions/0x32e06721d830498b79ecf752721de27d7add50d8919dc72cc6955475006fcc71"
+          },
+          {
+            "label": "Exact September5 Hypernative unpause transaction",
+            "url": "https://eth.blockscout.com/api/v2/transactions/0x7564846acd28910c0d7c735fc43f9fb09bb27088c101b12743e9e90e093f8750"
+          },
+          {
+            "label": "Issuer September recap: undated Hypernative alert closed with no Parallel/Frax risk; not an exact transaction linkage (retrieved 2026-10-21)",
+            "url": "https://gov.parallel.best/t/2026-parallel-protocol-roadmap-cooper-labs/514"
+          }
+        ],
+        "evidence": "Round3 research, 2026-10-21. Ethereum block26237389, hash0x475c39179c6a5450d9360ade51c7c5e1d6808cdfd07e15af6ff194ad0a23f26d, timestamp2026-10-21T00:29:47Z. Header hash matched before/after all state reads. Exact module and AccessManager runtime bytes equal the explorer-verified deployed bytecode at this pin. Owner/principal, active role110 mint permission, mutable owner control and current Ethereum-side23-lane peer/ULN census establish this scoped authority and claim-impairment path. Module _creditPrincipalToken calls native USDp.mint; _debit burns with holder allowance; _credit can leave OFT receipt claims when native credit is exhausted. Parameter/peer/delegate administration is directly callable through the observed AccessManager roles, not inferred from DAO branding. September5 pause and unpause were both executed by the issuer-identified Hypernative EOA through this exact AccessManager, lasting15:11:11Z–17:56:11Z; no mint-control/supply-integrity failure or loss is inferred. The current September recap discloses a false alert concerning dTRINITY and no Parallel/Frax risk, but lacks the exact date/hash/module join needed to resolve this incident factor. This is deliberately partial scope: no exhaustive root/Safe-module certificate, remote owner census, incident absence, liability-share attribution or zero-current incident inference. Historical profile/route review starts remain unchanged; the new control's date-only observation cannot admit before2026-10-22T00:00:00Z."
+      }
+    ],
     "routes": [
       {
         "id": "ethereum:0x9b3a8f7cec208e247d97dee13313690977e24459",

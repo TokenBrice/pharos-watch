@@ -37,8 +37,8 @@
     "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
-    "tier": "oracleless",
-    "summary": "USDu is issued against a protocol-managed delta-neutral reserve portfolio rather than borrower debt positions with oracle-triggered collateral liquidation.",
+    "tier": "privileged-internal-pricing",
+    "summary": "Source-scoped correction. The original oracleless rationale established only that USDu has no borrower CDP liquidation engine; it did not establish absence of a price-sensitive mint/redemption authority. Rechecked 2026-10-20: the active BSC UnitasMintingV2 uses off-chain orders carrying collateral_amount and usdu_amount, accepted by a privileged MINTER_ROLE or REDEEMER_ROLE executor after benefactor/delegated/EIP-1271 authorization. Its stable-asset guard compares nominal decimal-normalized amounts against admin-set stablesDeltaLimit, without an independent market-price feed; non-stable order amounts have no such price comparison. The operator therefore controls execution of economically effective quotes. BSC block 128826770/hash 0xbbf56fed79c35af279a5a79ebfa2ad934ac1eebaccc338fa133147438e31081f (2026-10-20T22:33:29Z) binds USDu.minter() to 0xbb984ce670100aa855f6152f88b26ee57f4ea82a and minter.usdu() back to the token; runtime text SHA-256 684d35568e31c5c6cd4c1574ca46a86ad2bb09d0e43fd7487e96764455849fc9 matches the historical verified-source pin. This corrects the known native BSC pricing path, not the unresolved Solana program's authority or a claim of a pricing incident. Original review starts and prior sources are retained.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
@@ -72,6 +72,18 @@
       {
         "label": "Unitas delta-neutral stability",
         "url": "https://docs.unitas.so/solution-overview/delta-neutral-stability"
+      },
+      {
+        "label": "Verified UnitasMintingV2 signed-quote and nominal stable-limit source, retrieved 2026-10-20",
+        "url": "https://sourcify.dev/server/v2/contract/56/0xbb984ce670100aa855f6152f88b26ee57f4ea82a?fields=sources,abi"
+      },
+      {
+        "label": "BSC authorization and runtime pin 128826770, 2026-10-20T22:33:29Z",
+        "url": "https://bscscan.com/block/128826770"
+      },
+      {
+        "label": "Unitas Terms of Service, 27 August 2026, retrieved 2026-10-20",
+        "url": "https://docs.unitas.so/resources/terms-of-service.md"
       }
     ]
   },

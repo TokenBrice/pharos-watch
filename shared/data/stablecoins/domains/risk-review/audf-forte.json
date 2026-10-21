@@ -56,6 +56,18 @@
       {
         "label": "Stargate",
         "url": "https://stargate.finance/"
+      },
+      {
+        "label": "Forte current deployment directory (retrieved 2026-10-20; Arc identity only)",
+        "url": "https://www.forteaud.com/"
+      },
+      {
+        "label": "Arc Mainnet AUDF token metadata (retrieved 2026-10-20; AUDF, six decimals)",
+        "url": "https://explorer.arc.io/api/v2/tokens/0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b"
+      },
+      {
+        "label": "Arc AUDF verified proxy (retrieved 2026-10-20; not a current controller certificate)",
+        "url": "https://explorer.arc.io/api/v2/smart-contracts/0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b"
       }
     ],
     "routes": [
@@ -198,6 +210,19 @@
             "url": "https://www.forteaud.com/"
           }
         ]
+      },
+      {
+        "id": "arc:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+        "destinationChain": "arc",
+        "contractAddress": "0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+        "protocol": "Forte AUDF on Arc (route and control classification unresolved)",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Identity researched 2026-10-20: Forte's current homepage explicitly links this Arc Mainnet token, and the explorer API identifies Forte AUD / AUDF with six decimals. The verified transparent proxy lists Stablecoin implementation 0xc9357d8fb84dd3041612dc5b2a2cd914d9405572 and constructor initial owner 0xfd5d8237da011a140949eb23517fbbb9edf142ce, but constructor identity is not current role or controller proof. Native-versus-bridge issuance, current authorization/upgrade graph, external transfer peers, incident state and runtime liability partition are unresolved. Existing five-route controls and historical review dates are not copied to Arc; no supply amount or share is authored."
       }
     ],
     "controls": [

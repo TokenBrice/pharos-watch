@@ -135,7 +135,7 @@
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
-    "summary": "Eight current accounted Morpho collateral branches are pinned at Ethereum block 26197050 (2026-10-15T09:34:59Z). The material mF-ONE branch uses a manually submitted Midas NAV feed; current implementation, access-control address and feed-admin role remain verified, preserving privileged-internal-pricing. Source-backed paths identify tranche accounting for wFalconX, lower-of-two Ojo PT valuation, reUSD NAV updater logic, RedStone weETH pricing, Origami rate conversion and two MetaOracle primary/backup paths. Current oracle prices, directly exposed feed timestamps and MetaOracle selected sides are observed; they do not certify complete current administrator membership, underlying-data freshness, independent market value, fallback availability or funded insurance. Aggregate confidence remains limited.",
+    "summary": "The eight branches reviewed on 2026-10-15 are historical. Final research at Ethereum block26238162 (2026-10-21T03:04:47Z; hash0x9e4d978f601fb8740fdcec4336d17dfeeca506adefa0729ef9b7d5c8bfcafe41) enumerates ten nonzero adapter markets: two cbBTC positions have returned to accounted exposure and are now represented with truthfully dated applicability and bounded-unknown tier. All eight prior oracle paths, nested PT inputs, equity selectors/EAC feeds, private NAV state and external OCR configuration getters were re-read. Material mF-ONE manual marks, owner/manager-controlled wFalconX accounting and an active reUSD emergency NAV setter remain positively adverse. The original October15 review starts are preserved; new October21 paths do not claim earlier admission. Complete exhaustive role/configuration histories and some alternate-controller certificates remain bounded prerequisites. No whole-book independent-pricing, fallback or maximum-data-age certificate is asserted.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -201,6 +201,10 @@
       {
         "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
         "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Final current ten-market census, nested state, exact controllers and round observations, read2026-10-21",
+        "url": "https://etherscan.io/block/26238162"
       }
     ],
     "branchKindReviews": [
@@ -380,7 +384,7 @@
         "id": "0x2a0b893471c785a1f0fda00df7fca578b703eef7ae7186d2429c2824b5212467",
         "label": "wFalconX collateral market 0x2a0b8934",
         "tier": "opaque-or-unknown",
-        "summary": "Verified wrapper creation identifies tranche/CDO 0xc26a6fa2c37b38e549a4a1807543801db684f99 behind feed 0x50449b3d1f5931d568a1951ee506a9534e7f7dff. Chainlink-compatible ABI does not establish independent market pricing. Its pinned latestRoundData returns a zero timestamp; no upstream-data freshness is certified. At Ethereum block 26197050 (2026-10-15T09:34:59Z), exact market oracle price() returns raw 1115076000000000000000000. This is a pricing observation, not proof of market-value accuracy, solvency or a freshness guarantee.",
+        "summary": "Source-scoped correction; source review 2026-10-21, original observation/review starts preserved. Exact published TranchesChainlinkOracle source and deployed-bytecode immutables identify tranche collateralToken 0xc26a6fa2c37b38e549a4a1807543801db684f99c, distinct from its CDO 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d, behind feed 0x50449b3d1f5931d568a1951ee506a9534e7f7dff; the former truncated tranche/CDO identity conflated two contracts. latestRoundData returns cdo.virtualPrice(collateralToken), with roundId, startedAt, updatedAt and answeredInRound all zero. This is tranche accounting, not independent market pricing or upstream-data freshness. At the preserved Ethereum block 26197050 (2026-10-15T09:34:59Z), exact market oracle price() returns raw 1115076000000000000000000; no claim of market-value accuracy, solvency or a freshness guarantee is made.",
         "collateralAssets": [
           "0x4614f7a56a3eb83b2ff9fa4b4b9575b28fb68644"
         ],
@@ -397,7 +401,7 @@
             "observedBlock": 26197050
           }
         ],
-        "fallbackBehavior": "Verified wrapper creation identifies tranche/CDO 0xc26a6fa2c37b38e549a4a1807543801db684f99 behind feed 0x50449b3d1f5931d568a1951ee506a9534e7f7dff. Chainlink-compatible ABI does not establish independent market pricing. Its pinned latestRoundData returns a zero timestamp; no upstream-data freshness is certified.",
+        "fallbackBehavior": "Source-scoped correction; source review 2026-10-21, original observation/review starts preserved. Feed 0x50449b3d1f5931d568a1951ee506a9534e7f7dff returns only CDO 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d virtualPrice for tranche 0xc26a6fa2c37b38e549a4a1807543801db684f99c. Exact published source has no alternate pricing branch, max-age rejection or nonzero data timestamp. Its Chainlink-compatible interface supplies no independent market-price fallback; complete downstream CDO/strategy authority and valuation-source certification remain unresolved.",
         "observedAt": "2026-10-15",
         "observedBlock": 26197050,
         "collateralParameters": [
@@ -570,8 +574,8 @@
       {
         "id": "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
         "label": "reUSD collateral market 0x4565ac05",
-        "tier": "opaque-or-unknown",
-        "summary": "Verified feed 0x72b5760cfbe437dd01409f44055fdfb8f8121b46 reads NAV provider 0x84d4eaeb10f9e57b67622f667c6c13e22fa4b2b6 getCurrentNAV(). Published source exposes updater, admin, emergency-updater, keeper and Chainlink Functions/Automation paths. Complete current role membership, mutable deviation settings and underlying NAV input verification remain unresolved. At Ethereum block 26197050 (2026-10-15T09:34:59Z), exact market oracle price() returns raw 1107212112352092400000000. This is a pricing observation, not proof of market-value accuracy, solvency or a freshness guarantee.",
+        "tier": "privileged-internal-pricing",
+        "summary": "Feed0x72b5760cfbe437dd01409f44055fdfb8f8121b46 reads NAVConsumer0x84d4eaeb10f9e57b67622f667c6c13e22fa4b2b6. Historical Ethereum26197050 (2026-10-15T09:34:59Z) oracle price1107212112352092400000000 remains a historical observation. Final current Ethereum26238162 (2026-10-21T03:04:47Z) independently confirms an active emergency updater, mutable admin path, disabled automation and a latest NAV written through the force-update path; exact source permits direct role-authorized NAV and bypasses ordinary deviation rejection. Configuration reads nav_value from an operator-specified secret URL without an observation timestamp. These are positively established privileged internal marks at quality45, not an independent external-price feed. Full historical role enumeration, private NAV correctness and maximum underlying-data age remain unestablished.",
         "collateralAssets": [
           "0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
         ],
@@ -588,7 +592,7 @@
             "observedBlock": 26197050
           }
         ],
-        "fallbackBehavior": "Verified feed 0x72b5760cfbe437dd01409f44055fdfb8f8121b46 reads NAV provider 0x84d4eaeb10f9e57b67622f667c6c13e22fa4b2b6 getCurrentNAV(). Published source exposes updater, admin, emergency-updater, keeper and Chainlink Functions/Automation paths. Complete current role membership, mutable deviation settings and underlying NAV input verification remain unresolved.",
+        "fallbackBehavior": "Original October15 pins/review starts preserved. Final Ethereum26238162 (2026-10-21T03:04:47Z) joins this exact feed to NAVConsumer0x84d4eaeb10f9e57b67622f667c6c13e22fa4b2b6 and confirms active emergency-updater0xe888df3218e070fae8d90d2ba6fcac5520217484, admin0x3f0da1c363e34802c6f12f9c27276dc0e6696fd8 and default-admin Timelock0x69ddea332723cf5407151aaf68b9b076557fca93. Current automationEnabled=false, deviationCheckEnabled=true, maxDeviationBps1000, latestTimestamp=lastForceUpdateTimestamp1792539935, NAV1108435747763288800. Exact source forceNAVUpdate accepts role-authorized nonzero NAV and bypasses ordinary deviation rejection; four-hour minimum forced-update spacing is not maximum data age. Indexed transaction0x99a5ba9fafc582f41435c5d8d83fde15553b7dc6764cc6002fe58a5a27420ea3 at26237169 records callerE888 and reason CLF-Deprecated. Retrieved configuration transaction0xb4033e32b836c261eb46517dcd7b14ec0b6f93f1070dd9d050d7a79d42f20c09 loads nav_value from secrets.navUrl without an observation timestamp. This positively establishes privileged internal pricing45, not independent Chainlink valuation, complete role enumeration, source accuracy or a bounded maximum underlying-data age.",
         "observedAt": "2026-10-15",
         "observedBlock": 26197050,
         "collateralParameters": [
@@ -834,6 +838,72 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4270e1817576bba4b640466be79a408ef128f828"
           }
         ]
+      },
+      {
+        "id": "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
+        "label": "cbBTC collateral market 0x64d65c9a",
+        "tier": "opaque-or-unknown",
+        "summary": "Ethereum block26238162 (2026-10-21T03:04:47Z): enumerated nonzero expectedSupplyAssets184092475811 rawUSDC; collateral0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf, oracle0xa6d6950c9f177f1de7f7757fb33539e3ec60182a, LLTV86%. Sole base feed is EAC0xf4030086522a5beea4988f8ca5b36dbc97bee88c; all other feed/vault slots zero. Current EAC owner0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca, aggregator0x4a3411ac2948b33c69666b35cc6d055b27ea84f1 and accessController zero are pinned. This closes an omitted nonzero branch identity, not complete nested operator/source/freshness assurance.",
+        "collateralAssets": ["0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"],
+        "chains": ["ethereum"],
+        "feeds": [
+          {
+            "provider": "EAC input; complete nested-governance assurance unresolved",
+            "path": "Sole BASE_FEED_1 of0xa6d6950c9f177f1de7f7757fb33539e3ec60182a",
+            "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
+            "chain": "ethereum",
+            "observedAt": "2026-10-21",
+            "observedBlock": 26238162
+          }
+        ],
+        "fallbackBehavior": "Exact outer source consumes configured nonnegative answers without max-age rejection. Zero quote feed is a unit assumption, not an independent USDC quote or alternate source.",
+        "collateralParameters": [
+          {
+            "asset": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+            "maximumLtvPct": 86,
+            "note": "Current exact immutable idToMarketParams LLTV at block26238162; no liquidation-availability guarantee."
+          }
+        ],
+        "liquidationState": "unknown",
+        "backstop": "No funded exact-market recovery commitment is established by the inventory/feed reads.",
+        "sources": [
+          {"label": "Current ten-market census, params and feed state, read2026-10-21", "url": "https://etherscan.io/block/26238162"},
+          {"label": "Exact published Morpho oracle and feed identities", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa6d6950c9f177f1de7f7757fb33539e3ec60182a"},
+          {"label": "Exact EAC source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf4030086522a5beea4988f8ca5b36dbc97bee88c"}
+        ],
+        "observedAt": "2026-10-21",
+        "observedBlock": 26238162
+      },
+      {
+        "id": "0xbc99de6a88904cd0e69042ad6f266e63182801f030c636507c3caf590ffd84fe",
+        "label": "cbBTC collateral market 0xbc99de6a",
+        "tier": "opaque-or-unknown",
+        "summary": "Ethereum block26238162 (2026-10-21T03:04:47Z): enumerated nonzero expectedSupplyAssets634233300 rawUSDC; collateral0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf, LLTV86%. Oracle0x9f983115741d0f7f2eae07831415057ad3de34d2 is an exact EIP1167 clone of MetaOracleDeviationTimelock0x9b4655239e91dc9e1f7599bb88fba41b4542de5b. Selected primary0x8c9464d99512dcd6f80be72aac20dafd9ea2c831, backup0x0acdc416c592a592edf2e64b178aa8d4d47e05a8, deviation2%, challenge7200s, healing28800s. Respective sole base EAC inputs0x91d32e6f01d6473b596f54c6e304e06d774f86b2 and0x2665701293fcbeb223d11a08d826563edcce423a have current numbered round reads. No complete nested operator/freshness/independence certificate.",
+        "collateralAssets": ["0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"],
+        "chains": ["ethereum"],
+        "feeds": [
+          {"provider": "MetaOracle primary EAC input", "path": "BASE_FEED_1 of primary0x8c9464d99512dcd6f80be72aac20dafd9ea2c831", "address": "0x91d32e6f01d6473b596f54c6e304e06d774f86b2", "chain": "ethereum", "observedAt": "2026-10-21", "observedBlock": 26238162},
+          {"provider": "MetaOracle backup EAC input; independence unestablished", "path": "BASE_FEED_1 of backup0x0acdc416c592a592edf2e64b178aa8d4d47e05a8", "address": "0x2665701293fcbeb223d11a08d826563edcce423a", "chain": "ethereum", "observedAt": "2026-10-21", "observedBlock": 26238162}
+        ],
+        "fallbackBehavior": "Published MetaOracle source uses revert-only fallback, not maximum underlying-data-age failover. Both nested Morpho oracles have no second feed or vault slot and ignore underlying round age. No redundant-with-failover credit.",
+        "collateralParameters": [
+          {
+            "asset": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+            "maximumLtvPct": 86,
+            "note": "Current exact immutable idToMarketParams LLTV at block26238162; no liquidation-availability guarantee."
+          }
+        ],
+        "liquidationState": "unknown",
+        "backstop": "No funded exact-market recovery commitment is established by the inventory/feed reads.",
+        "sources": [
+          {"label": "Current ten-market census, params and selected oracle configuration, read2026-10-21", "url": "https://etherscan.io/block/26238162"},
+          {"label": "Exact clone runtime and implementation identity", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9f983115741d0f7f2eae07831415057ad3de34d2"},
+          {"label": "Exact published MetaOracle implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b4655239e91dc9e1f7599bb88fba41b4542de5b"},
+          {"label": "Exact primary EAC source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x91d32e6f01d6473b596f54c6e304e06d774f86b2"},
+          {"label": "Exact backup EAC source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2665701293fcbeb223d11a08d826563edcce423a"}
+        ],
+        "observedAt": "2026-10-21",
+        "observedBlock": 26238162
       }
     ],
     "paths": [
@@ -1170,6 +1240,36 @@
               "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ]
+        }
+      },
+      {
+        "id": "ethereum:0xa6d6950c9f177f1de7f7757fb33539e3ec60182a",
+        "chain": "ethereum",
+        "address": "0xa6d6950c9f177f1de7f7757fb33539e3ec60182a",
+        "pricingAuthority": "external-price",
+        "branchId": "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-21",
+          "reviewer": "C18 bottom-up refinement 2026-10-21",
+          "confidence": "probable",
+          "rationale": "Current nonzero exact adapter claim and immutable market params join this cbBTC market to this oracle. New date-only applicability is not admitted before2026-10-22T00:00:00Z; no complete nested-feed or recovery certificate.",
+          "sources": [{"label": "Current numbered inventory and exact oracle, read2026-10-21", "url": "https://etherscan.io/block/26238162"}]
+        }
+      },
+      {
+        "id": "ethereum:0x9f983115741d0f7f2eae07831415057ad3de34d2",
+        "chain": "ethereum",
+        "address": "0x9f983115741d0f7f2eae07831415057ad3de34d2",
+        "pricingAuthority": "external-price",
+        "branchId": "0xbc99de6a88904cd0e69042ad6f266e63182801f030c636507c3caf590ffd84fe",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-21",
+          "reviewer": "C18 bottom-up refinement 2026-10-21",
+          "confidence": "probable",
+          "rationale": "Current nonzero exact adapter claim and immutable params join this cbBTC market to the exact MetaOracle clone. New date-only applicability is not admitted before2026-10-22T00:00:00Z; no independent-fallback or full controller certificate.",
+          "sources": [{"label": "Current numbered inventory and selected oracle configuration, read2026-10-21", "url": "https://etherscan.io/block/26238162"}]
         }
       }
     ]

@@ -74,7 +74,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "The native Ethereum vault has eight independently verified legacy sFRAX representations. Their bridge mint, upgrade and messaging controls are separate from native share issuance; a complete cross-chain transport and liability reconciliation is not established.",
+    "summary": "The native Ethereum vault has nine identified legacy sFRAX representation mints, including the separately verified Solana mint. Prefunded Fraxferry inventories, LayerZero mint/burn paths and migrated legacy escrow require distinct accounting; a complete cross-chain transport and holder-liability reconciliation is not established.",
     "reviewedAt": "2026-10-15",
     "reviewer": "Rev_SfraxFrax batch64 primary-evidence review",
     "confidence": "manual-review",
@@ -128,7 +128,7 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Identity, 18 decimals and deployed code were pinned independently of the stale issuer table. Verified CrossChainCanonicalV2 permits owner/timelock-authorized minter membership and minter_mint; complete active minter-to-escrow transport and liability matching remains unresolved.",
+        "reviewNote": "Identity, 18 decimals and deployed code were pinned independently of the stale issuer table. Verified CrossChainCanonicalV2 permits owner/timelock-authorized minter membership and minter_mint. Scoped 2026-10-21 research at Arbitrum516791319 confirms the one-entry minter array contains governor Safe0xe61d9ed1e5dc261d1e90a99304fadcef2c76fd10, not a locking bridge. The official reciprocal Fraxferry pair is Ethereum0x2453b1fbd17cea069a31c9d16a27f4f93a85cc0d / Arbitrum0x1b0b9991df27a4f2847478127d51fb29883882f5; the remote ferry holds23865.63616174 of30000 issued shares and Ethereum holds14710.28083236 native shares. Prefunded inventory is not circulating holder float or proof of mechanically conserved lock-mint liabilities. Both execution tails reach their counterpart transaction counts, with matching source hashes; this closes those observed queue-tail boundaries only. Complete accounting, historical cancellations, auxiliary funding and whole-holder claims remain unresolved; original route review/pin is not renewed.",
         "observedAt": "2026-10-15",
         "observedBlock": 515038652,
         "sources": [
@@ -139,6 +139,18 @@
           {
             "label": "arbitrum pinned token identity at block 515038652 (2026-10-15T10:57:14.000Z)",
             "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Official Fraxferry pair registry, retrieved 2026-10-21",
+            "url": "https://raw.githubusercontent.com/FraxFinance/frax-solidity/master/src/types/constants.ts"
+          },
+          {
+            "label": "Exact Ethereum sFRAX-Arbitrum Fraxferry source and constructor",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2453b1fbd17cea069a31c9d16a27f4f93a85cc0d"
+          },
+          {
+            "label": "Exact canonical implementation and storage layout matched to Arbitrum516791319 runtime",
+            "url": "https://sourcify.dev/server/v2/contract/42161/0xe3b3fe7bca19ca77ad877a5bebab186becfad906?fields=all"
           }
         ]
       },
@@ -244,7 +256,7 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Identity, 18 decimals and deployed code were pinned independently of the stale issuer table. Verified CrossChainCanonicalV2 permits owner/timelock-authorized minter membership and minter_mint; complete active minter-to-escrow transport and liability matching remains unresolved.",
+        "reviewNote": "Identity, 18 decimals and deployed code were pinned independently of the stale issuer table. Verified CrossChainCanonicalV2 permits owner/timelock-authorized minter membership and minter_mint. Scoped 2026-10-21 research at BSC128863069 confirms the one-entry minter array contains governor Safe0x8811da0385ccf1848b21475a42ea4d07fc5d964a. The official reciprocal Fraxferry pair is Ethereum0xe3e7f354ac948ceba925181c81618d7c9b3da8c9 / BSC0x5e8422345238f34275888049021821e8e08caa1f; the remote ferry holds99520.31530988 of100000 issued shares and Ethereum holds644.52990002 native shares. A preseeded Safe-minted stock is not mechanically escrow-matched circulating supply. Both observed execution tails reach counterpart transaction counts and bind matching source hashes, without proving an absence of historical cancellations or complete funding/accounting. Keep classification unresolved and the original route review/pin unchanged.",
         "observedAt": "2026-10-15",
         "observedBlock": 127774470,
         "sources": [
@@ -255,6 +267,18 @@
           {
             "label": "bsc pinned token identity at block 127774470 (2026-10-15T10:57:19.000Z)",
             "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Official Fraxferry pair registry, retrieved 2026-10-21",
+            "url": "https://raw.githubusercontent.com/FraxFinance/frax-solidity/master/src/types/constants.ts"
+          },
+          {
+            "label": "Exact Ethereum sFRAX-BSC Fraxferry source and constructor",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe3e7f354ac948ceba925181c81618d7c9b3da8c9"
+          },
+          {
+            "label": "Exact canonical implementation and storage layout matched to BSC128863069 runtime",
+            "url": "https://sourcify.dev/server/v2/contract/56/0xa63f56985f9c7f3bc9ffc5685535649e0c1a55f3?fields=all"
           }
         ]
       },
@@ -333,7 +357,7 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Identity, 18 decimals and deployed code were pinned independently of the stale issuer table. Verified CrossChainCanonicalV2 permits owner/timelock-authorized minter membership and minter_mint; complete active minter-to-escrow transport and liability matching remains unresolved.",
+        "reviewNote": "Identity, 18 decimals and deployed code were pinned independently of the stale issuer table. Verified CrossChainCanonicalV2 permits owner/timelock-authorized minter membership and minter_mint. Scoped 2026-10-21 research at Optimism158476580 confirms the one-entry minter array contains governor Safe0x0df840dcbf1229262a4125c1fc559bd338ec9491. The official reciprocal Fraxferry pair is Ethereum0x9694dcf5b6ccf6216b05fe64945f62603e2d2367 / Optimism0xd1738eb733a636d1b8665f48bc8a24da889c2562; the remote ferry holds49456.97109388 of50000 issued shares and Ethereum holds1714.87339102 native shares. Prefunded inventory and owner-controlled issuance preclude treating totalSupply as an exact circulating lock-mint allocation. Observed execution tails reach counterpart transaction counts and have matching source hashes; complete funding, cancellation and holder-liability accounting is still unresolved. Original route review/pin is not renewed.",
         "observedAt": "2026-10-15",
         "observedBlock": 158231534,
         "sources": [
@@ -344,6 +368,57 @@
           {
             "label": "optimism pinned token identity at block 158231534 (2026-10-15T10:57:25.000Z)",
             "url": "https://api-optimism-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Official Fraxferry pair registry, retrieved 2026-10-21",
+            "url": "https://raw.githubusercontent.com/FraxFinance/frax-solidity/master/src/types/constants.ts"
+          },
+          {
+            "label": "Exact Ethereum sFRAX-Optimism Fraxferry source and constructor",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9694dcf5b6ccf6216b05fe64945f62603e2d2367"
+          },
+          {
+            "label": "Exact Optimism CrossChainCanonicalV2 implementation",
+            "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0x2dd1b4d4548accea497050619965f91f78b3b532"
+          }
+        ]
+      },
+      {
+        "id": "solana:DnVyztLHnDyTqL3xfPYF9Uqpgrhcxphn6e31sVAwtg6K",
+        "sourceChain": "ethereum",
+        "destinationChain": "solana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "DnVyztLHnDyTqL3xfPYF9Uqpgrhcxphn6e31sVAwtg6K",
+        "protocol": "LayerZero legacy sFRAX Solana OFT",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Official 2024-08-19 sFraxOFT deployment binds this SPL mint to OftConfig3BcysJF4fQx86fVTDTBGNpZyRpeMyTF8XsuvPHJQuP3V and executable programDBQQ2NrApPx8uarKmBtZGTg6jsPk4ya2Mi2hRKZvV2tY, distinct from modern sfrxUSD. Ethereum26238161 at2026-10-21T03:04:35Z adapter0xe4796ccb6bb5de2290c417ac337f2b66ca2e770e peers(30168) is the bytes32 encoding of that config. Exact finalized Solana slot459474896, hashj5HJsrt19y3SwQCgrw3Ct1ksmeq1ooWn52e4KoGPDKz, at2026-10-21T03:13:22Z confirms mintAuthority=config, decimals9, rawSupply117001, freezeAuthority6tzUZqC33igPgP7YyDnUxQg6eupMmZGRGKdVAksgRzvk. Legacy Rust layout decodes config as Native(Some(6tzUZqC33igPgP7YyDnUxQg6eupMmZGRGKdVAksgRzvk)), with the same admin; Native here is an OFT mint/burn implementation branch, not proof of independent native economic liabilities. ProgramDataP2H6jEqP4Fxh1bGra6TVGx4w5MvWXQmdbw8TshKzsrP is upgradeable by that authority. Source-to-deployed-executable correspondence, recursive authority/peer/security scope, message/pending conservation and holder impairment remain incomplete; no route-quality, independence, incident absence or material-share credit is granted.",
+        "observedAt": "2026-10-21",
+        "observedBlock": 459474896,
+        "sources": [
+          {
+            "label": "Official legacy sFRAX Solana deployment record",
+            "url": "https://raw.githubusercontent.com/FraxFinance/frax-oft-solana/main/deployments/solana-mainnet/sFraxOFT.json"
+          },
+          {
+            "label": "Legacy OftConfig account layout and Native/Adapter enum",
+            "url": "https://raw.githubusercontent.com/FraxFinance/frax-oft-solana/main/programs/oft/src/state/oft.rs"
+          },
+          {
+            "label": "Legacy Solana LayerZero receive and mint/unlock paths",
+            "url": "https://raw.githubusercontent.com/FraxFinance/frax-oft-solana/main/programs/oft/src/instructions/lz_receive.rs"
+          },
+          {
+            "label": "Ethereum26238161 pinned native-sFRAX adapter peer read",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact-slot Solana Account Archive reads at459474896, retained with matching block hash and context",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
           }
         ]
       }
@@ -655,9 +730,27 @@
         "controllerChain": "fraxtal",
         "controllerAddress": "0x5f25218ed9474b721d6a38c115107428e832fa2e",
         "label": "fraxtal legacy sFRAX OFT governor",
-        "authorityType": "unknown",
-        "observedAt": "2026-10-15",
-        "observedBlock": 42625564,
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0"
+          ],
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+          "observedBlock": 42862029,
+          "observedAt": "2026-10-20",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-20",
+        "observedBlock": 42862029,
         "sources": [
           {
             "label": "Issuer OFT controller and ProxyAdmin disclosure",
@@ -666,9 +759,21 @@
           {
             "label": "fraxtal pinned owner and endpoint at block 42625564",
             "url": "https://rpc.frax.com"
+          },
+          {
+            "label": "Fraxtal block 42862029 (2026-10-20T22:19:29Z): token owner, Safe threshold/owners and singleton",
+            "url": "https://fraxscan.com/block/42862029"
+          },
+          {
+            "label": "Verified GnosisSafeL2 singleton matching the pinned Safe storage target",
+            "url": "https://fraxscan.com/address/0xfb1bffc9d739b8d520daf37df666da4c687191ea#code"
+          },
+          {
+            "label": "Issuer current chain-local Safe and separate Fraxtal ProxyAdmin owner",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
           }
         ],
-        "evidence": "Pinned owner() and endpoint() match the issuer-listed OFT governor and LayerZero endpoint. No current Safe quorum, signer independence or minimum delay is asserted for this controller. The exact proxy implementation slot is 0x7feda252881b9c6166b387d3d11d1bdfc076d5cb and admin slot is 0x223a681fc5c5522c85c96157c0efa18cd6c5405c; upgrade authority is recorded separately, without treating source documentation as a current Safe execution certificate. Owner-configured peers authorize the message-credit mint/burn rail; this is bridge issuance control, not discretionary native Ethereum vault share issuance."
+        "evidence": "At Fraxtal block 42862029 (2026-10-20T22:19:29Z, hash 0x002ba1f700ae34bcaf75d9d698369ff82f79cb875f885bec2b0d27b7fc4327f1), legacy sFRAX owner() remains 0x5f25218ed9474b721d6a38c115107428e832fa2e. That exact Safe returns threshold 3 and six owners; slot zero targets verified GnosisSafeL2 0xfb1bffc9d739b8d520daf37df666da4c687191ea. The token implementation remains 0x7feda252881b9c6166b387d3d11d1bdfc076d5cb and admin remains 0x223a681fc5c5522c85c96157c0efa18cd6c5405c. Earlier endpoint/route semantics are preserved. Owner-configured peers authorize the representation credit rail; this is not native Ethereum share issuance. This establishes signing topology only: module/guard census, key custody, human independence, minimum delay, incident state and complete peer/minter/transport closure are not established."
       },
       {
         "id": "fraxtal-legacy-sfrax-proxy-admin",
@@ -679,11 +784,28 @@
           "upgrade"
         ],
         "controllerChain": "fraxtal",
-        "controllerAddress": "0x223a681fc5c5522c85c96157c0efa18cd6c5405c",
-        "label": "Fraxtal legacy sFRAX ProxyAdmin",
-        "authorityType": "contract",
-        "observedAt": "2026-10-15",
-        "observedBlock": 42625564,
+        "controllerAddress": "0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6",
+        "label": "Fraxtal legacy sFRAX ProxyAdmin owner Safe",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2",
+            "0x6933bcc3e96f1c4d2cb73cb391d854b18ab7a4f2",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928"
+          ],
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+          "observedBlock": 42862029,
+          "observedAt": "2026-10-20",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-20",
+        "observedBlock": 42862029,
         "sources": [
           {
             "label": "Issuer OFT controller and ProxyAdmin disclosure",
@@ -692,9 +814,21 @@
           {
             "label": "fraxtal pinned owner and endpoint at block 42625564",
             "url": "https://rpc.frax.com"
+          },
+          {
+            "label": "Fraxtal block 42862029: exact token admin slot, ProxyAdmin owner and owner Safe quorum",
+            "url": "https://fraxscan.com/block/42862029"
+          },
+          {
+            "label": "Issuer separate Fraxtal 3-of-5 ProxyAdmin owner",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Verified GnosisSafeL2 singleton",
+            "url": "https://fraxscan.com/address/0xfb1bffc9d739b8d520daf37df666da4c687191ea#code"
           }
         ],
-        "evidence": "Pinned EIP-1967 admin slot identifies this ProxyAdmin; the issuer documents its upgrade-control role. No current ultimate ProxyAdmin ownership quorum, mandatory delay or complete replacement-path certificate is asserted."
+        "evidence": "At Fraxtal block 42862029 (2026-10-20T22:19:29Z, hash 0x002ba1f700ae34bcaf75d9d698369ff82f79cb875f885bec2b0d27b7fc4327f1), the exact legacy sFRAX EIP-1967 admin slot remains ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c. ProxyAdmin.owner() returns Safe 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, independently returning threshold 3, five owners and singleton 0xfb1bffc9d739b8d520daf37df666da4c687191ea. The controller identity now names that actual signing authority rather than stopping at its ProxyAdmin execution ingress. Upgrade capability and exact route scope are unchanged. No module/guard absence, independent humans, key custody, mandatory delay, incident absence or complete execution certificate is asserted."
       },
       {
         "id": "metis-legacy-sfrax-oft-governor",
@@ -710,9 +844,27 @@
         "controllerChain": "metis",
         "controllerAddress": "0xf4a4f32732f9b2fb84ee28c58616946f3bf80f7d",
         "label": "metis legacy sFRAX OFT governor",
-        "authorityType": "unknown",
-        "observedAt": "2026-10-15",
-        "observedBlock": 23279223,
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x13fe84d36d7a507bb4bdac6dcaf13a10961fc470",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0xc8de9f45601da8c76158b8caf3e56e8a037f2228",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+          "observedBlock": 23300210,
+          "observedAt": "2026-10-20",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-20",
+        "observedBlock": 23300210,
         "sources": [
           {
             "label": "Issuer OFT controller and ProxyAdmin disclosure",
@@ -721,9 +873,17 @@
           {
             "label": "metis pinned owner and endpoint at block 23279223",
             "url": "https://andromeda.metis.io/?owner=1088"
+          },
+          {
+            "label": "Metis block 23300210 (2026-10-20T22:19:20Z): token owner, Safe threshold/owners, proxy and singleton runtime",
+            "url": "https://andromeda-explorer.metis.io/block/23300210"
+          },
+          {
+            "label": "Verified GnosisSafeL2 source; exact singleton runtime matches the Metis pinned runtime",
+            "url": "https://fraxscan.com/address/0xfb1bffc9d739b8d520daf37df666da4c687191ea#code"
           }
         ],
-        "evidence": "Pinned owner() and endpoint() match the issuer-listed OFT governor and LayerZero endpoint. No current Safe quorum, signer independence or minimum delay is asserted for this controller. The legacy OFT owner manages peers/delegate and auxiliary minter-burners; full active minter/validator census remains unestablished."
+        "evidence": "At Metis block 23300210 (2026-10-20T22:19:20Z, hash 0x17989aae004306056a15835bd09a81d124c0b289aee6c3e6a66355043decc194), legacy sFRAX owner() remains 0xf4a4f32732f9b2fb84ee28c58616946f3bf80f7d. That exact Safe returns threshold 3, six owners and singleton 0xfb1bffc9d739b8d520daf37df666da4c687191ea. Its proxy runtime is the standard storage-target Safe proxy, and its singleton runtime is byte-for-byte identical to Fraxtal's verified GnosisSafeL2 at block 42862029 (UTF-8 runtime-hex SHA256 3d06c66a744a520cb1a46c2017b13a724b95d163704f1363adee08235934f8f6). Earlier endpoint semantics are retained. The governor can configure peers/delegate and auxiliary minter-burners. This establishes cryptographic signing topology only; module/guard census, human independence, key custody, minimum delay, incident state and complete active minter/validator inventory remain unestablished."
       }
     ]
   }

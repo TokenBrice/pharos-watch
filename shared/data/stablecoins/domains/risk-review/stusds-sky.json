@@ -128,7 +128,7 @@
           }
         ],
         "liquidationMechanism": "When enabled, permissionless Dog.bark immediately confiscates an unsafe LSEV2-SKY-A position and starts its LockstakeClipper descending-price SKY auction; the Clipper undelegates and unstakes SKY, sells it for USDS, and burns the configured exit-fee portion of leftovers. The live Clipper was at stop level 3 at the reviewed block, which disables new kicks, auction resets, and purchases, so the nominal liquidation path was not executable then.",
-        "liquidationDelaySec": 0,
+        "liquidationState": "uncallable",
         "backstop": "stUSDS is the segregated risk-capital backstop. The vault reported about $180.09 million of total assets against about $156.10 million of accrued Lockstake debt and zero debt currently in auction at finalized block 25531413. LockstakeClipper points its cuttee to the stUSDS vault; when an auction exhausts SKY before recovering original debt, it calls stUSDS.cut for the shortfall, transfers USDS into Vow, and reduces the stUSDS exchange rate.",
         "shutdownOrBadDebtBehavior": "Auction shortfall is socialized directly to stUSDS holders through cut(), which lowers chi and therefore redeemable USDS per share. Governance can zero the branch line to halt new Lockstake borrowing and can stop the Clipper; the reviewed implementation assumes Maker emergency shutdown cannot be triggered and requires any system shutdown to be orchestrated by governance. At the reviewed block the Clipper was fully stopped, branch debt remained positive, and no auction debt was active.",
         "failureDomainKeys": [

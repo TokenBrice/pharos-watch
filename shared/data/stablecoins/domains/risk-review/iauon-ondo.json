@@ -1,5 +1,36 @@
 {
   "id": "iauon-ondo",
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "IAUon Final Terms appoint the issuer and Ondo Finance as calculation agents and value issuance/redemption using broker-provided IAU prices and the attributable underlying units per token. Current Ondo Stocks pricing documentation says the investor quote is calculated using proprietary methodology, inventory, order size and market conditions. An independently published IAU NAV or a portfolio-scope Chainlink feed does not establish independent authority over the executable IAUon redemption quote.",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "NR3 bottom-up refinement 2026-10-21",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "IAUon Final Terms: exact Ethereum token, calculation agents and broker-reference redemption formula; retrieved 2026-10-20",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf"
+      },
+      {
+        "label": "Ondo Stocks proprietary indicative and order-specific quote pricing; retrieved 2026-10-20",
+        "url": "https://docs.ondo.finance/ondo-stocks/token-and-quote-pricing.md"
+      }
+    ],
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-20",
+      "reviewer": "NR3 bottom-up refinement 2026-10-21",
+      "rationale": "IAUon is an issuer-valued secured tracker of IAU, not a borrower collateral/liquidation mechanism. Its issue and redemption price authority remains economically applicable even though no borrower liquidation branches exist.",
+      "sources": [
+        {
+          "label": "IAUon Final Terms: tracker, issue and redemption valuation",
+          "url": "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf"
+        }
+      ]
+    }
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [
@@ -42,9 +73,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "IAUon's Ethereum and BSC native deployments have OndoOFT bridge overlays and HyperEVM is a LayerZero OFT bridge representation. October 2 pinned reads bind each OFT's tokenId and internal Messenger, the six reciprocal peers, three required DVNs on every selected send/receive path, and token-specific inbound/outbound limits. Off-chain DVN signer custody, additional administrator authorization, Safe extension closure and a reconciled circulating-supply partition remain unresolved. Native GMTokenManager and Solana issuance stay in Mint Authority.",
-    "reviewedAt": "2026-08-28",
-    "reviewer": "Codex; Sol curation campaign 2026-10-09 (W4T08Nexus), route accounting only",
+    "summary": "IAUon native GM issuance and separate OndoOFT/HyperEVM representation remain distinct; existing peers, three-DVN configurations and mutable pathway caps are retained. Final 2026-10-21 pins Ethereum26238146/BSC128863032/HyperEVM49100165 enumerate every declared BridgeRegistrar role: one factory, 1-of-9 Safe PAUSER, 4-of-7 Safe UNPAUSER, and DEFAULT_ADMIN through its respective 7200-second timelock. Each timelock's admins are itself and a 5-of-9 Safe; proposer is the 4-of-7 Safe; executors/cancellers are the 1-of-9 Safe and code-empty 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b, with no open zero-address executor. All identified Safes have complete empty module pages and zero guards. Source binds arbitrary timelock CALL to scheduled ready operations and delay changes to self-call; external default admins can directly change role membership. Registrar pause gates new registration, not existing-token transfer. Separate OndoOwner arbitrary superCall and mutable limits persist. Native Solana source/build and complete current proposal census are recorded in the partial mint-authority execution scope; future arbitrary-CPI target-domain and conserving liability admission are not manufactured. Human signer/DVN custody and other-chain incident admission remain separate. Historical observations remain; this rewritten review is dated 2026-10-21, with no tier or durable cap credit promoted.",
+    "reviewedAt": "2026-10-21",
+    "reviewer": "NR3 final exact-source and pinned-role review",
     "confidence": "verified",
     "protocols": [
       {
@@ -75,6 +106,33 @@
         "label": "R1 2026-10-09 exact verified HyperEVM IAUon OndoOFT",
         "url": "https://hyperevmscan.io/address/0xce61f9246755cc399fd7f37d6b3478590b75aace#code"
       },
+      {
+        "label": "NR3 2026-10-21 exact Ethereum OndoOwner privileged call source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc6d5c103a3f586e68bd475942a49d041b171c3e"
+      },
+      {
+        "label": "NR3 2026-10-21 exact Ethereum BridgeRegistrar registration authority",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x58d73026c64da97ce858766384477d2e8775e9ec"
+      },
+      {
+        "label": "NR3 2026-10-21 BSC OndoOwner verified source and pinned runtime correspondence",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x4d4e562d6882dc523b8d629d2e9df9230b699933?fields=compilation,sources,runtimeBytecode"
+      },
+      {
+        "label": "NR3 2026-10-21 BSC BridgeRegistrar verified source and pinned runtime correspondence",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x72c697d72beb419152ed457b9f1eee29c12e0ccb?fields=compilation,sources,runtimeBytecode"
+      },
+      {
+        "label": "NR3 2026-10-21 exact HyperEVM OndoOwner verified source",
+        "url": "https://hyperevmscan.io/address/0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d#code"
+      },
+      {
+        "label": "NR3 2026-10-21 exact HyperEVM BridgeRegistrar verified source",
+        "url": "https://hyperevmscan.io/address/0xe3153764ab2a0a928a59c3805503b2ac56b802a3#code"
+      },
+      {"label": "NR3 final exact Ethereum timelock source and role/delay semantics", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"},
+      {"label": "NR3 final exact BSC timelock source/runtime correspondence", "url": "https://sourcify.dev/server/v2/contract/56/0x8860bbfc7a83e4788a981f4e9f30878331413b26?fields=compilation,sources,runtimeBytecode"},
+      {"label": "NR3 final exact HyperEVM timelock source/runtime correspondence", "url": "https://hyperevmscan.io/address/0x6253fbc5bcf4f49c80745694366f05d6c7be0e83#code"},
       {
         "label": "Ondo Stocks bridge: native burn/mint on all supported EVM chains and same token amount",
         "url": "https://docs.ondo.finance/tools/ondo-bridge.md"
