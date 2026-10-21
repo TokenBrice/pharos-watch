@@ -13,7 +13,6 @@ import { PENDING_TTL_SEC, TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-de
 // Retention prose derives from the shared delivery policy so the public
 // inventory cannot drift from production TTL constants (TGB-028).
 const RISK_ALERT_TTL_HOURS = PENDING_TTL_SEC / 3600;
-const LAUNCH_ALERT_TTL_MINUTES = TELEGRAM_ALERT_TTL_SEC.launch / 60;
 const ADMIN_ALERT_TTL_MINUTES = TELEGRAM_ALERT_TTL_SEC.adminBroadcast / 60;
 
 export const metadata: Metadata = buildPageMetadata({
@@ -116,36 +115,16 @@ export default function PrivacyPage() {
               inactivity.
             </li>
             <li>
-              <strong>Pending alerts</strong> (overflow and retry queue for delivery): {RISK_ALERT_TTL_HOURS}-hour TTL
-              for depeg, DEWS, safety, reserve, freeze, and legacy alerts; {LAUNCH_ALERT_TTL_MINUTES}-minute TTL for launch
-              alerts and {ADMIN_ALERT_TTL_MINUTES}-minute TTL for admin broadcasts.
+              <strong>Queued alert deliveries</strong>: {RISK_ALERT_TTL_HOURS}-hour TTL for depeg, DEWS, safety,
+              reserve, and freeze alerts and {ADMIN_ALERT_TTL_MINUTES}-minute TTL for admin broadcasts. Message text is
+              cleared once a delivery finishes; the delivery outcome (state, attempts, error category) is kept for
+              90 days. <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">/forget</code> removes that chat&apos;s
+              delivery rows, roll-up records and pending changes immediately.
             </li>
             <li>
-              <strong>Retired personalized recap records</strong>: existing preference and delivery-target records are
-              retained for retirement audit and rollback evidence; there is no active recap schedule or delivery.
-              Existing sent and skipped aggregate target metadata follows its 30-day retention, while cancelled,
-              expired, execution-unknown, and permanently failed audit metadata follows its 90-day retention.
-              Destructive schema cleanup requires a separate migration after the 90-day evidence window and rollback
-              floor close.{" "}
-              <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">/forget</code> removes the preference, target
-              metadata, and chat-attributable pending or dead-letter rows immediately.
-            </li>
-            <li>
-              <strong>Alert job manifests and per-target audit</strong>: 90-day retention. A private-chat{" "}
-              <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">/forget</code> removes that chat&apos;s target
-              rows and per-target item lineage, planning snapshots, rendered target plans, and transport-failure
-              observations; aggregate job manifests remain until their normal prune.
-            </li>
-            <li>
-              <strong>Freeze event and recipient lineage</strong>: immutable Tape and blacklist source identities plus
-              the one-time opt-in recipient cohort are retained for 90 days. A private-chat{" "}
-              <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">/forget</code> removes that chat&apos;s freeze
-              target rows immediately; source events remain until their normal audit prune.
-            </li>
-            <li>
-              <strong>Dead-letter audit trail</strong> for expired or permanently failed deliveries: 90-day retention,
-              or immediate removal for that chat through{" "}
-              <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">/forget</code>.
+              <strong>Retired features</strong>: records from the retired personalized recap, the legacy alert queue
+              and its dead-letter, planning and freeze-recipient audit trails were deleted when their tables were
+              dropped.
             </li>
             <li>
               <strong>Processed-update idempotency claims</strong>: 7-day prune.
@@ -177,9 +156,8 @@ export default function PrivacyPage() {
           <p>
             PharosWatchBot no longer records sign-up funnel telemetry: landing-page Telegram links are plain links
             with no click counter, and bot starts, setup completions, first follows, and first Mini App edits are no
-            longer counted by campaign. Previously collected funnel rows are aggregate counts without chat IDs and
-            are scheduled for deletion; the short-lived per-client click-quota rows, keyed by a salted IP hash, expire
-            within two days.
+            longer counted by campaign. The previously collected aggregate funnel rows and the salted-IP click-quota
+            rows have been deleted.
           </p>
           <p>
             The Telegram Worker also emits sampled operational logs to Cloudflare Workers Logs for reliability and

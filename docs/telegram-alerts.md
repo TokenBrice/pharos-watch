@@ -13,11 +13,11 @@ The main ingress, dispatch, and digest entrypoints are:
 - `worker/src/cron/daily-digest.ts` posts immutable digest editions; [digest Telegram delivery](./digest-pipeline.md#telegram) owns appendices/outbox behavior.
 - [Architecture seams](./telegram-architecture.md#seam-overview) owns entrypoint/file responsibilities; this guide owns runtime behavior.
 
-The sign-up funnel (landing click beacon, `/api/telegram-adoption`, campaign/placement stage counters and retention cohorts) is retired; its tables are dropped by the Telegram legacy-table cleanup migration.
+The sign-up funnel (landing click beacon, `/api/telegram-adoption`, campaign/placement stage counters and retention cohorts) is retired; its aggregate tables and the salted-IP click-quota tables were dropped in the operated Telegram legacy-table cleanup.
 
 ## Personalized Daily Recap
 
-Personalized watchlist recaps are retired. Legacy `/recap` commands use the ordinary unknown-command response; old recap buttons receive an unrecognized-action toast; signed `set-recap` requests fail schema validation before database access. Risk alerts, Mini App watchlists, quiet hours, snoozes, Tape and the public editorial daily/weekly digests are unaffected. The recap tables are dropped by the Telegram legacy-table cleanup migration.
+Personalized watchlist recaps are retired. Legacy `/recap` commands use the ordinary unknown-command response; old recap buttons receive an unrecognized-action toast; signed `set-recap` requests fail schema validation before database access. Risk alerts, Mini App watchlists, quiet hours, snoozes, Tape and the public editorial daily/weekly digests are unaffected. The recap preference and target tables were dropped in the operated Telegram legacy-table cleanup (the 90-day evidence window was waived by the owner on 2026-10-21).
 
 Public route/pulse/privacy are owned by [Mini App frontend](./telegram-mini-app.md#frontend-main-page). The site-proxy pulse is website-internal; direct public API reads still require an API key. [Snapshot inputs](#snapshot-inputs) owns safety source suppression; no Telegram live-score cache or full-publication fallback is allowed.
 
@@ -291,7 +291,7 @@ Delivery uses two tables: `telegram_jobs` (one row per logical send) and `telegr
 - **Terminal audit.** Terminal rows keep state, attempts, error class, status code and reason, and drop their body. They are retained for 90 days (`TELEGRAM_RETENTION_WINDOWS.alertAudit`). There is no dead-letter copy and no operator replay or clear endpoint.
 - **Admin broadcasts.** HTML preflight comes first. A live run needs a private canary, an available Telegram API circuit and at least 15 minutes of projected reserve inside the TTL. The estimate is one dispatch interval for the job to start, plus the slower of fan-out (2,400 chats per run) and drain (1,800 rows per run, conservative, over the existing backlog plus the broadcast). Every canary chunk must succeed before the job is recorded. [Broadcast preflight](./runbooks/telegram-delivery.md#admin-broadcast-preflight) owns the operator procedure.
 
-The legacy pipeline (target plans, source events, `telegram_pending_alerts`, dead letters, the per-bot transport circuit and delivery pauses) was retired with delivery v2; its tables are dropped by the Telegram legacy-table cleanup migration.
+The legacy pipeline (target plans, source events, `telegram_pending_alerts`, dead letters, the per-bot transport circuit and delivery pauses) was retired with delivery v2; its tables were dropped in the operated Telegram legacy-table cleanup.
 
 ## Digest Appendices
 
