@@ -29,6 +29,7 @@ import {
 import { DEFAULT_CRON_TIMEOUT_MS } from "@shared/lib/scheduled-runner-registry";
 import type { SlotDeadline } from "../lib/cron-timeouts";
 import { loadMatchingCoreStablecoinsPublishedAt } from "../lib/v9-slot-window";
+import { safeErrorMessage } from "../lib/safe-error-message";
 
 export const V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS = 3 * 60_000;
 const V9_INPUT_STABLECOINS_SETTLE_POLL_MS = 2_500;
@@ -237,12 +238,15 @@ export async function prepareSafetyScoreV9Input(
       storedBytes: v9SeedEntry.storedBytes,
     };
   } catch (error) {
+    // Keep a bounded, sanitized message: the class name alone (`Error`) left
+    // the 2026-10-21 provenance-row stall undiagnosable from run metadata.
     v9ExactSeed = {
       status: "unavailable",
       code:
         error instanceof Error && error.name
           ? error.name.slice(0, 160)
           : "Error",
+      message: safeErrorMessage(error),
     };
   }
   let transferMaterialityEntry: {

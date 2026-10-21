@@ -585,8 +585,14 @@ describe("prepareSafetyScoreV9Input", () => {
   });
 
   it("cannot clear a recapture request when exact seed capture fails", async () => {
-    mockCapturePegProvenance.mockImplementationOnce(() => { throw new Error("seed unavailable"); });
-    await prepareSafetyScoreV9Input(makeDb());
+    mockCapturePegProvenance.mockImplementationOnce(() => {
+      throw new TypeError("depeg_event_provenance row 42 invalid; contact ops@example.com " + "x".repeat(400));
+    });
+    const result = await prepareSafetyScoreV9Input(makeDb());
+    const { v9ExactSeed } = JSON.parse(result.metadata!);
+    expect(v9ExactSeed).toMatchObject({ status: "unavailable", code: "TypeError" });
+    expect(v9ExactSeed.message).toMatch(/^TypeError: depeg_event_provenance row 42 invalid; contact \[email\] x+…$/);
+    expect(v9ExactSeed.message.length).toBeLessThanOrEqual(220);
     expect(mockCommitCaptureControl.mock.calls[0]![3]).toBe(false);
     expect(mockCommitCaptureControl.mock.calls[0]![1].map((entry: { key: string }) => entry.key))
       .not.toContain("report-cards:v9-peg-provenance-seed:exact");
