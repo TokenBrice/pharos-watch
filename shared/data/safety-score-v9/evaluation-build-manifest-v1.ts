@@ -74,15 +74,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "f3f0655a8768e2be888256ed9dbab5cc16bd942834677b908decb2644bda0ba4"
+      "sha256": "6400e23c269e2586ff8e84337a24995699527ff477e9bec270e6d9dfd8d337a8"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "906752a86b78594b8277a3df9894c3d50d9943765021dd5085c7a72b649a9922"
+      "sha256": "13a6110105617f0938e36a8e7d943c84ffba10a00393c6b6a49305e840c14d67"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
-      "sha256": "ae7bb5a70658e9d096e6612a19561abdfa594e328fa76f90eb3776c36153b083"
+      "sha256": "bb73c391f0cb3e3b522195d712d5adbcfb821591ff5d151da484c21c4fd7b613"
     },
     {
       "path": "shared/lib/api-endpoints/paths.ts",
@@ -546,7 +546,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/formula.ts",
-      "sha256": "4518ded26a23eebe5f12ecc13c84781f5a1994345c0ecd921ecff081d2f2cd4c"
+      "sha256": "2238b1e32a26bdb638d7f725c51f4f818c012420b1f5fe546031275601eb5c96"
     },
     {
       "path": "shared/lib/safety-score-v9/gap-index.ts",
@@ -994,7 +994,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9.ts",
-      "sha256": "5602b0e8438253105a92d1cfa8ffd096dd278f0527a63faed58c79b5fa965b0a"
+      "sha256": "52d77e99682279eafbfc841fd88c41bdd4234daad44b45cca344d510cdd3d5bf"
     },
     {
       "path": "shared/types/stablecoin-meta-control-schemas.ts",
@@ -1327,7 +1327,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-21-block-26239813-shock-coverage.json.gz"
     }
   ],
-  "digest": "5a2dc8f7d0b9d2efe6030bebae6a236da8c3153518ee68050c1d2ba1cef5f022"
+  "digest": "740a49a82d04123ec3b074817946d11dc98bcbb341d2d7bf221161b48c7a88c1"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
