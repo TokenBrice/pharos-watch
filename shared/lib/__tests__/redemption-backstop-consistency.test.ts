@@ -139,7 +139,7 @@ describe("redemption backstop config consistency", () => {
     ["usdc-circle", "offchain-issuer", "supply-ratio", "dynamic-or-unclear"],
     ["usdcv-societe-generale-forge", "offchain-issuer", "supply-full", "dynamic-or-unclear"],
     ["chfau-allunity", "offchain-issuer", "supply-full", "fee-bps"],
-    ["m-m0", "offchain-issuer", "unquantified", "dynamic-or-unclear"],
+    ["m-m0", "offchain-issuer", "supply-full", "dynamic-or-unclear"],
     ["usdcx-movement", "queue-redeem", "reserve-sync-metadata", "dynamic-or-unclear"],
     ["usdn-noble", "queue-redeem", "unquantified", "dynamic-or-unclear"],
     ["usdon-ondo", "psm-swap", "unquantified", "dynamic-or-unclear"],

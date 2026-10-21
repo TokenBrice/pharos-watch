@@ -23,18 +23,13 @@ describe("reviewed Spiko and major-issuer route boundaries", () => {
     expect(resolveReviewedRedemptionSettlementDelay(config.v9RouteReviewTerms, clock)).toBeUndefined();
   });
 
-  it.each([
-    ["eutbl-spiko", ["settlement", "cost"]],
-    ["eursafo-spiko", ["settlement"]],
-    ["ustbl-spiko", ["settlement", "cost"]],
-    ["safo-spiko-usd", ["settlement", "cost"]],
-  ] as const)(
-    "retains %s zero fund exit fees without treating them as completed all-in payout terms", (id, missingScoringFields) => {
+  it.each(["eutbl-spiko", "eursafo-spiko", "ustbl-spiko", "safo-spiko-usd"])(
+    "retains %s zero fund exit fees but explicitly withholds completed settlement", (id) => {
       const config = getRedemptionBackstopConfig(id)!;
       expect(resolveRedemptionCostBpsAtNotional(config.costModel, 100_000)).toBe(0);
       expect(config.v9RouteReviewTerms).toMatchObject({
         settlementModel: "days", scoringDisposition: "bounded-terms-gap",
-        missingScoringFields, reviewedAt: "2026-10-07",
+        missingScoringFields: ["settlement"], reviewedAt: "2026-10-07",
       });
       expect(config.v9RouteReviewTerms).not.toHaveProperty("settlementDelaySec");
       expect(config.v9RouteReviewTerms).not.toHaveProperty("businessDayTerms");
