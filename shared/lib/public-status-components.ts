@@ -483,10 +483,11 @@ export function projectPublicStatus(
 ): PublicStatusProjection {
   const findings = collectFindings(health);
 
-  // R2 fail-safe: a non-healthy raw verdict must surface somewhere, even if no
-  // component mapping explained it (for example a new input added upstream).
+  // R2 fail-safe: surface a raw failure only when no non-operational finding
+  // explains it. Asset-scoped findings still attribute the raw verdict; their
+  // service-wide severity is decided separately by buildPublicHeadline.
   const anyFinding = [...findings.values()].some((list) => list.some((finding) =>
-    finding.state !== "operational" && finding.reason !== "publication-incomplete:asset-scoped"));
+    finding.state !== "operational"));
   if (!anyFinding && health.status !== "healthy") {
     findings.get("website-api")!.push({
       state: "degraded",

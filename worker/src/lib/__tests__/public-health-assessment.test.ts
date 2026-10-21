@@ -509,6 +509,38 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.warnings).toContain(`stablecoin-publication-incomplete:${missing.join(",")}`);
   });
 
+  it("keeps a bounded USDY omission and its short price gap out of overall and website availability", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const ids = [...ACTIVE_IDS];
+    const missingId = "usdy-ondo-finance";
+    const assets = ids.filter((id) => id !== missingId).map((id) => ({ id, price: 1, priceSource: "coingecko" }));
+    const activePriceCoverage = evaluateStablecoinActivePriceCoverage(assets, ids, {
+      nowSec,
+      previousAcceptedAssetsById: new Map([[missingId, {
+        id: missingId, circulating: { peggedUSD: 2_344_462_796.3038855 },
+        supplyObservedAt: nowSec - 7 * 86400,
+      }]]),
+    });
+    activePriceCoverage.missingActiveAssets[0].consecutiveMissingGenerations = 18;
+    const assessment = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: {
+        activePublicationCoverage: evaluateStablecoinPublicationCoverage(assets.map(({ id }) => id), nowSec),
+        activePriceCoverage,
+      },
+    }), nowSec, { logPrefix: "test" });
+    expect(assessment.overallStatus).toBe("healthy");
+    expect(assessment.stablecoinPublicationImpactStatus).toBe("healthy");
+    expect(assessment.activePriceCoverageImpactStatus).toBe("healthy");
+    const response = buildPublicHealthResponse(assessment, nowSec);
+    expect(response.components?.find(({ id }) => id === "stablecoin-data")).toMatchObject({
+      state: "degraded", reasons: ["publication-incomplete:asset-scoped", "price-coverage-incomplete:asset-scoped"],
+    });
+    expect(response.components?.find(({ id }) => id === "website-api")).toMatchObject({
+      state: "operational", reasons: [],
+    });
+    expect(response.headline?.state).toBe("operational");
+  });
+
   it("seeds the reported HBD snapshot on the next missing generation and keeps health warning-only", async () => {
     const nowSec = Date.UTC(2026, 9, 9, 12) / 1000;
     const ids = [...ACTIVE_IDS];

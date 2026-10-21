@@ -587,6 +587,8 @@ Per-asset isolation (R8) requires distinguishing an incomplete asset from a fail
 
 Public component history is deliberately more granular than overall uptime: an asset-scoped material listing loss can colour its own component bar degraded while the persisted headline/legacy level is operational/healthy. Fresh mint/burn notices do not create degraded bars. State changes continue through `reconcilePublicStatusState`, which uses the same projection as live health; old observed incidents are not rewritten or erased. Raw snapshots/edge caches can retain the prior policy verdict until the next assessment; effective admin recovery still follows hysteresis. Triage's `normalizeStatusIssues` and `getCausesVerdict` consume the same cause severity/public-impact authority: bounded listing and fresh mint/burn notices are info/Watch, small unwaived prices are warning/Watch, and unknown or service-impacting warning/critical causes remain Act now.
 
+The raw-verdict attribution guard accepts every non-operational component finding, including asset-scoped listing/price findings. Attribution is separate from headline severity: a retained raw `degraded` verdict explained by a bounded component notice must not create a fictitious Website and API incident. Only a raw failure with no non-operational finding gets `unattributed-public-health:*`; purely operational notices alone do not explain it.
+
 The public-impact allowlist in `shared/lib/status-public-impact.ts` is the legacy-history/admin-triage authority, not a rule that every warning degrades the current headline. Its complete cause families map as follows:
 
 | Cause codes | Component / service-wide treatment |
