@@ -853,9 +853,18 @@ function buildWrapperExitDimensions(
   if (publishedTerms?.review.kind === "published-withdrawal-terms") {
     const termRisks = publishedTerms.review.terms.map((term): V9WrapperRiskAssessment => {
       if (term.holderAccess === "issuer-only" || term.executionModel === "discretionary") return "critical";
-      if (term.fee.kind === "undisclosed" || term.settlementBoundSec === null) return "high";
+      // An immediate, fee-free return of the required serial parent is local
+      // settlement. Its later cash realization remains priced by that parent;
+      // a null end-to-end bound must not invent an additional local delay.
+      const immediateParentOutput =
+        isDirectSerialWrapper(context, state.form, state.wrapperEdge) &&
+        term.outputAssetIds.every((assetId) => assetId === state.wrapperEdge!.upstreamAssetId) &&
+        (term.executionModel === "atomic" || term.executionModel === "deterministic") &&
+        term.cooldownSec === 0 &&
+        term.fee.kind === "fixed-bps" && term.fee.bps === 0;
+      if (term.fee.kind === "undisclosed" || (term.settlementBoundSec === null && !immediateParentOutput)) return "high";
       if (term.executionModel === "queued" || (term.cooldownSec ?? 0) > 0) {
-        return term.settlementBoundSec > 604_800 ? "high" : "moderate";
+        return (term.settlementBoundSec ?? Number.POSITIVE_INFINITY) > 604_800 ? "high" : "moderate";
       }
       // Static terms never prove a current gate configuration or execution.
       return "moderate";

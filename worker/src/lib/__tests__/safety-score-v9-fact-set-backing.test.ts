@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type mechanismReviewOverlaysAsset from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
 import {
   buildSafetyScoreV9BaselineExtension,
   type V9ExtensionRegistryMeta,
@@ -27,6 +28,7 @@ import { CompiledV9FactSetV3Schema, V9AssetFactsV3Schema } from "@shared/types/s
 import { refineV9CauseContribution } from "@shared/types/safety-score-v9-causes";
 import { buildLenderBookFact } from "../safety-score-v9/fact-set-lender-book";
 import { canonicalizeLenderBookObservation, deriveLenderBookObservationIdentity } from "@shared/lib/safety-score-v9/lender-book-registry";
+import { getLenderCollateralClassesRegistry } from "@shared/lib/safety-score-v9/lender-collateral-classes";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { LenderBookObservationSchema, LenderCollateralBackingSchema, type LenderBookObservation, type LenderCollateralBacking } from "@shared/types/safety-score-v9-lender-book";
 import { LiveReserveSnapshotProvenanceSchema } from "@shared/lib/safety-score-v9/reserve-provenance";
@@ -79,6 +81,34 @@ vi.mock("@shared/data/safety-score-v9/evidence-gap-classifications-v1.json", () 
       excerpt: "Every deposit's maximum term is listed.", assertion: "The exact required maturity datum is public." } },
   ], searchedSurfaceObservations: [{ id: "usdt-report", value: "https://example.com/usdt-report" }] },
 }));
+vi.mock("@shared/data/safety-score-v9/mechanism-review-overlays-v1.json", async (importOriginal) => {
+  const original = await importOriginal<{ default: typeof mechanismReviewOverlaysAsset }>();
+  const source = { label: "Pinned recovery terms", url: "https://example.com/recovery-terms" };
+  return {
+    default: {
+      ...original.default,
+      overlays: [
+        ...original.default.overlays,
+        ...[
+          { assetId: "fixture-instant-recovery", reviewedAt: "2026-10-20T22:23:27Z" },
+          { assetId: "fixture-date-recovery", reviewedAt: "2026-10-20" },
+          { assetId: "fixture-expired-recovery", reviewedAt: "2026-10-18T00:00:00Z" },
+        ].map(({ assetId, reviewedAt }) => ({
+          assetId, archetype: "tbill", reviewedAt: "2026-10-19", sources: [source],
+          notes: "A separately timed recovery review does not refresh historical financial assurance.",
+          metrics: {},
+          components: {
+            lossRecoveryDesign: {
+              quality: "adequate",
+              review: { reviewedAt, reviewer: "Fixture reviewer",
+                rationale: "Dated regulatory filing establishes a component-scoped recovery commitment.", sources: [source] },
+            },
+          },
+        })),
+      ],
+    },
+  };
+});
 const ASSET_ID = "alpha";
 /** Far past the fixture composition, so its published evidence has expired. */
 const EXPIRED_HISTORY_CLOCK_SEC = Date.UTC(2027, 7, 1) / 1_000;
@@ -127,6 +157,54 @@ function compileWithEmptyLiveReserves(
     },
   };
 }
+
+describe("mechanism component evidence clocks and diagnostic history", () => {
+  function compileRecovery(assetId: string, clock: string) {
+    const fixed = makeV9FixedInput({ assetId, clockSec: Date.parse(clock) / 1_000, reserves: [] });
+    const extension = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([[assetId, eligibleReserveMeta({ id: assetId, mechanismArchetype: "tbill" })]]),
+    });
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    const asset = compiled.assets[0]!;
+    if (asset.mechanismRiskReview.review?.archetype !== "tbill") throw new Error("Expected T-bill mechanism fixture");
+    return { extension: extension.assets[0]!, asset, recovery: asset.mechanismRiskReview.review.lossRecoveryDesign };
+  }
+
+  it.each([
+    { assetId: "fixture-instant-recovery", state: "missing" },
+    { assetId: "fixture-date-recovery", state: "unsupported" },
+  ])("retains report history without credit or an orphan for an inadmissible $assetId review", ({ assetId, state }) => {
+    const { asset, recovery } = compileRecovery(assetId, "2026-10-20T22:23:26Z");
+    expect(recovery).toMatchObject({ quality: null, status: { observationState: state, evidenceRefIds: [] } });
+    const gap = asset.gaps.find((row) => row.gapId === `${assetId}:gap:mechanism-review:lossRecoveryDesign`)!;
+    const reportEvidence = asset.evidence.filter((row) => row.sourceId === "stablecoin.proof-of-reserves.latest-report");
+    expect(reportEvidence).not.toHaveLength(0);
+    expect(gap.evidenceHistory?.evidenceRefIds).toEqual(expect.arrayContaining(reportEvidence.map((row) => row.evidenceId)));
+    expect(asset.evidence.some((row) => row.sourceId === "safety-score-v9.mechanism-review-overlay:lossRecoveryDesign")).toBe(false);
+  });
+
+  it.each([
+    { assetId: "fixture-instant-recovery", clock: "2026-10-20T22:23:27Z" },
+    { assetId: "fixture-date-recovery", clock: "2026-10-21T00:00:00Z" },
+  ])("lets the current explicit $assetId review govern without stale-report poisoning", ({ assetId, clock }) => {
+    const { extension, asset, recovery } = compileRecovery(assetId, clock);
+    expect(recovery).toMatchObject({ quality: "adequate", status: { observationState: "known", gapIds: [] } });
+    const report = extension.researchEvidence.find((row) => row.sourceId === "stablecoin.proof-of-reserves.latest-report")!;
+    expect(report).toBeDefined();
+    expect(extension.componentEvidence.find((row) => row.componentKey === "mechanism-risk-review-history")?.evidenceKeys).toContain(report.evidenceKey);
+    expect(extension.componentEvidence.find((row) => row.componentKey === "mechanism-risk-review:lossRecoveryDesign")?.evidenceKeys).not.toContain(report.evidenceKey);
+    expect(recovery.status.evidenceRefIds.every((id) => asset.evidence.find((row) => row.evidenceId === id)?.freshness.state === "current")).toBe(true);
+    expect(asset.gaps.some((row) => row.gapId === `${assetId}:gap:mechanism-review:lossRecoveryDesign`)).toBe(false);
+  });
+
+  it("withdraws an expired explicit review without orphaning its historical report", () => {
+    const { asset, recovery } = compileRecovery("fixture-expired-recovery", "2027-10-18T00:00:00Z");
+    expect(recovery).toMatchObject({ quality: null, status: { observationState: "stale" } });
+    const reportEvidence = asset.evidence.filter((row) => row.sourceId === "stablecoin.proof-of-reserves.latest-report");
+    expect(reportEvidence).not.toHaveLength(0);
+    expect(recovery.status.evidenceRefIds).toEqual(expect.arrayContaining(reportEvidence.map((row) => row.evidenceId)));
+  });
+});
 
 describe("Safety Score v9 backing fact-set reserve history", () => {
   it("retains keyed zero-balance classifications without emitting zero-weight backing facts or quarantining the asset", () => {
@@ -453,13 +531,59 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
       assets: [{
         ...asset,
         reserveClassifications: asset.reserveClassifications.map((classification) =>
-          tails.has(classification.exposureKey) ? { ...classification, unclassifiedResidual: true as const } : classification),
+          tails.has(classification.exposureKey) ? {
+            ...classification, unclassifiedResidual: true as const,
+            ...(rows.find(row => computeSafetyScoreV9ReserveExposureKey(row) === classification.exposureKey)
+              ?.publishedResidualCategory ? { publishedResidualCategory: true as const } : {}),
+          } : classification),
       }],
     };
     const input = normalizeSafetyScoreV9CompilerInput(fixed);
     return compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(input,
       materializeSafetyScoreV9FactSetExtension(input, extension));
   }
+
+  it.each([0.0014195216154720709, 1, 1.000001, 10])(
+    "retains bounded pricing but applies published residual gate at %s percent", (pct) => {
+      const result = compileLivePartition([
+        { sourceKey: "fixture:cash", name: "Cash", pct: 100 - pct, risk: "very-low",
+          assetClass: "cash", issuerOrObligor: "bank:alpha" },
+        { sourceKey: "fixture:published", name: "Other Cash and Cash Equivalents", pct, risk: "high",
+          unclassifiedResidual: true, residualReason: "insufficient-evidence", publishedResidualCategory: true },
+      ]);
+      expect(result.quarantines).toEqual([]);
+      const asset = result.factSet.assets[0]!;
+      const residual = asset.reserveResiduals[0]!;
+      const gap = asset.gaps.find(row => residual.status.gapIds.includes(row.gapId))!;
+      expect(gap.reasonCode).toBe(pct <= 1 ? "bounded-unknown-reserve-exposure" : "partial-reserve-review");
+      expect(gap.causeScope).toMatchObject({ componentKey: "reserve-residual", requiredDatum: "reserveClassification" });
+      const scored = evaluateV9ReserveExposures({ ...asset, resolvedUpstreamExposures: [] }, V9_CANDIDATE_POLICY_V1);
+      expect(scored.contributions.find(row => row.componentKey.startsWith("reserve:unclassified-residual:")))
+        .toMatchObject({ score: 35, wholeAssetWeight: pct / 100, cause: "U", scoringDisposition: "bounded-uncertainty" });
+    },
+  );
+
+  it.each(["unmarked", "split", "incomplete"] as const)(
+    "does not exempt %s reserve uncertainty", (kind) => {
+      const tail: ReserveSlice = {
+        sourceKey: "fixture:published", name: "Other Cash and Cash Equivalents", pct: 0.6, risk: "high",
+        unclassifiedResidual: true, residualReason: "insufficient-evidence",
+        ...(kind === "unmarked" ? {} : { publishedResidualCategory: true }),
+      };
+      const rows: ReserveSlice[] = [
+        { sourceKey: "fixture:cash", name: "Cash", pct: kind === "split" ? 98.8 : kind === "incomplete" ? 99 : 99.4,
+          risk: "very-low", assetClass: "cash", issuerOrObligor: "bank:alpha" },
+        tail,
+        ...(kind === "split" ? [{ ...tail, sourceKey: "fixture:second", name: "Other Receivables" }] : []),
+      ];
+      const result = compileLivePartition(rows);
+      expect(result.quarantines).toEqual([]);
+      const asset = result.factSet.assets[0]!;
+      for (const residual of asset.reserveResiduals) {
+        expect(asset.gaps.find(row => residual.status.gapIds.includes(row.gapId))!.reasonCode).toBe("partial-reserve-review");
+      }
+    },
+  );
 
   it("reconciles accepted live rounding overshoot without erasing dust or a disjoint explicit remainder", () => {
     const rows: ReserveSlice[] = [
@@ -793,6 +917,36 @@ describe("v10.19 frozen lender-book fact admission", () => {
     expect(evaluateV1019LenderBook(fact, 90, V9_CANDIDATE_POLICY_V1)?.reserveQuality).toBeCloseTo(80.0154, 8);
     expect(ctx.fixedInput.liveReserveMap[assetId]).toBeDefined();
     expect(fact.status.evidenceRefIds.every((id) => ctx.evidence.has(id))).toBe(true);
+  });
+
+  it("binds class evidence to the reviewed data registry rather than methodology policy", () => {
+    const ctx = context(book());
+    const fact = buildLenderBookFact(ctx)!;
+    const admitted = getLenderCollateralClassesRegistry();
+    const classEvidence = fact.status.evidenceRefIds.map((id) => ctx.evidence.get(id)!)
+      .find((row) => row.sourceId === admitted.registry.registryId);
+    expect(classEvidence).toMatchObject({
+      sourceId: "safety-score-v9.lender-collateral-classes.v1",
+      sourceGenerationId: admitted.digest,
+      observedAtSec: Date.parse("2026-10-14") / 1000,
+    });
+    expect(fact.collaterals[0]).toMatchObject({ quality: 85, collateralClass: "btc-wrapper" });
+  });
+
+  it("retains the original future-review guard after moving token reviews out of policy", () => {
+    expect(() => buildLenderBookFact(context(book({
+      collateral: "0x7f47c3e6b2c00fc4eb4d5ae50d0ab0ab6888eb4d",
+    })))).toThrow("Future lender collateral class review");
+  });
+
+  it.each([
+    ["0x232128844e5af56fd4b3f8bf97e08ab477282ab5", "yield-bearing-stable"],
+    ["0x7f47c3e6b2c00fc4eb4d5ae50d0ab0ab6888eb4d", "principal-token"],
+  ])("compiles reviewed exact receipt %s from the data registry after its original review date", (collateral, collateralClass) => {
+    const admittedAt = Date.parse("2026-10-21T00:00:00Z") / 1000;
+    const observed = book({ collateral, age: clockSec - admittedAt + 100 });
+    const fact = buildLenderBookFact(context(observed, undefined, admittedAt))!;
+    expect(fact.collaterals[0]).toMatchObject({ quality: 55, collateralClass, qualitySource: "authored-class" });
   });
 
   it.each(["rpc-unavailable", "unreconciled", "deadline"] as const)(

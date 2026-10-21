@@ -6,6 +6,7 @@ import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-publi
 import {
   evaluateV9FactSet,
   evaluateValidatedV9FactSet,
+  evaluateValidatedV9FactSetForPublication,
   V9AssetEvaluationError,
 } from "@shared/lib/safety-score-v9/evaluate-set";
 import * as evaluateSetModule from "@shared/lib/safety-score-v9/evaluate-set";
@@ -650,11 +651,13 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     }
   });
 
-  it("keeps strict, trusted, full, and compact paths identical with provenance guards", () => {
+  it.each([false, true])("keeps strict, trusted, full, and compact paths identical with provenance guards (quarantined=%s)", (quarantined) => {
     const fixedInput = exactFixedInput("alpha");
+    const extension = reviewedExtension(fixedInput);
+    if (quarantined) extension.assets[0]!.launchedAtSec = -1;
     const full = buildSafetyScoreV9Candidate({
       fixedInput,
-      extension: reviewedExtension(fixedInput),
+      extension,
       publishedAtSec: PUBLISHED_AT_SEC,
     });
     const clockBoundPolicy = loadV9CandidateMethodologyPolicy(fixedInput.clockSec);
@@ -673,6 +676,15 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     expect(trustedEvaluation).toEqual(strictEvaluation);
     expect(trustedEvaluation).toEqual(full.evaluatedSet);
     expect(trustedCompilation).toEqual(full.compiledFacts);
+    const owner = { factSet: full.compiledFacts };
+    const projectedAssets: Array<(typeof full.evaluatedSet.assets)[number]> = [];
+    const projected = evaluateValidatedV9FactSetForPublication(
+      owner, clockBoundPolicy, (asset) => projectedAssets.push(asset),
+    );
+    const { assets, ...projectionIdentity } = trustedEvaluation;
+    expect(owner.factSet).toBeNull();
+    expect(projected).toEqual(projectionIdentity);
+    expect(stableJsonStringifyV1(projectedAssets)).toBe(stableJsonStringifyV1(assets));
     expect(compact).toEqual({
       candidate: full.candidate,
       compilerFactSchemaDigest: full.compilerFactSchemaDigest,

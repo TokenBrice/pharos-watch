@@ -567,12 +567,13 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
           V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
         let finalized = finalizedChains.has(row.chainId) || preferFinalized
           ? await fetchEvmBlockHeader(row.chainId, "finalized", {
-            ...options, ...(finalizedChains.has(row.chainId) ? { minTimestampSec } : {}),
+            ...options, minTimestampSec,
           }) : null;
         if (finalized && preferFinalized) {
           const canonical = await fetchEvmBlockHeader(row.chainId, finalized.number, options);
           if (!canonical || canonical.hash !== finalized.hash || canonical.timestamp !== finalized.timestamp ||
-            finalized.number > head || finalized.timestamp > input.scoringClockSec) finalized = null;
+            finalized.number > head || finalized.timestamp > input.scoringClockSec ||
+            finalized.timestamp < minTimestampSec) finalized = null;
         }
         if (finalizedChains.has(row.chainId) && !finalized) return false;
         if (finalized) finalizedHeaders.set(row.chainId, finalized);

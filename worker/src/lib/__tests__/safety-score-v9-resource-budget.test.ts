@@ -17,6 +17,43 @@ import { assessSafetyScoreV9ResourceBudget } from "../safety-score-v9/resource-b
 import { buildResourcePressure } from "../cron-resource-pressure";
 import { REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES } from "../report-cards-fixed-input-cache-codec";
 import { createResourceProbeEnv } from "./safety-score-v9-resource-env.test-support";
+import { measurePublicationByteBudget, PublicationByteMetricsSchema, RESOURCE_PUBLICATION_CARD_UNIT_MAX_BYTES, RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES } from "@shared/lib/safety-score-v9-resource-bytes";
+import { SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES } from "@shared/lib/safety-score-v9-publication-limits";
+
+describe("Safety Score V9 incremental publication byte budgets", () => {
+  it("counts canonical UTF-8 card units and allows streamed cohorts above the former aggregate guard", () => {
+    const cards = [{ id: "unit-a", text: "é漢🙂\ud800" }, { id: "unit-b", text: "x" }];
+    const metrics = measurePublicationByteBudget({ cards }, 8_158_138);
+    expect(metrics).toEqual({ unit: "card", units: 2, largestUnitBytes: Buffer.byteLength(JSON.stringify(cards[0])),
+      unitLimitBytes: RESOURCE_PUBLICATION_CARD_UNIT_MAX_BYTES, streamedTotalBytes: 8_158_138,
+      streamedTotalRegressionLimitBytes: RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES,
+      streamedTotalLimitBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES });
+  });
+
+  it("enforces calibrated per-unit and aggregate regression bounds below the hard cap", () => {
+    const overhead = Buffer.byteLength(JSON.stringify({ id: "unit", text: "" }));
+    const card = { id: "unit", text: "x".repeat(RESOURCE_PUBLICATION_CARD_UNIT_MAX_BYTES - overhead) };
+    const metrics = measurePublicationByteBudget({ cards: [card] }, RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES);
+    expect(metrics.largestUnitBytes).toBe(RESOURCE_PUBLICATION_CARD_UNIT_MAX_BYTES);
+    const oversizedCard = { ...card, text: `${card.text}x` };
+    expect(() => measurePublicationByteBudget({ cards: [oversizedCard] },
+      RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES)).toThrow("synthetic-publication-card-unit-byte-budget:unit");
+    expect(() => measurePublicationByteBudget({ cards: [{ id: "unit" }] },
+      SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES + 1)).toThrow();
+    expect(() => measurePublicationByteBudget({ cards: [{ id: "unit" }] },
+      RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES + 1)).toThrow();
+    expect(RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES).toBe(8_250_000);
+    expect(RESOURCE_PUBLICATION_CARD_UNIT_MAX_BYTES).toBe(106_404);
+    expect(RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES).toBeLessThan(SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES);
+    for (const change of [{ largestUnitBytes: RESOURCE_PUBLICATION_CARD_UNIT_MAX_BYTES + 1 },
+      { unitLimitBytes: RESOURCE_PUBLICATION_CARD_UNIT_MAX_BYTES + 1 },
+      { streamedTotalLimitBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES + 1 },
+      { streamedTotalRegressionLimitBytes: RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES + 1 },
+      { streamedTotalBytes: 0 }, { units: 0 }]) {
+      expect(() => PublicationByteMetricsSchema.parse({ ...metrics, ...change })).toThrow();
+    }
+  });
+});
 
 describe("Safety Score V9 compile admission", () => {
   it.each([
@@ -109,7 +146,6 @@ describe("Safety Score V9 compile admission", () => {
 
 const ROOT = resolve(import.meta.dirname, "../../../..");
 const TEST_DIRECTORY = resolve(import.meta.dirname);
-const PUBLICATION_BYTE_BUDGET = 7_100_000;
 // Frozen pre-Phase-2 BASE from 335ecb0f5, smoke-out/base-20261003-0149.json
 // .pipeline.candidate encoded with stableJsonStringifyV1 and gzipCanonicalJson;
 // uncompressedBytes/contentSha256 below are the persisted pre-gzip bytes.
@@ -145,6 +181,7 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 co
           import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
           import { buildSafetyScoreV9PublicationFromNormalizedInput } from "../safety-score-v9/candidate.ts";
           import { serializeSafetyScoreV9Publication } from "../safety-score-v9/publication-codec.ts";
+          import { measurePublicationByteBudget } from "@shared/lib/safety-score-v9-resource-bytes";
           import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input.ts";
           import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension.ts";
           import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set.ts";
@@ -238,7 +275,8 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 co
             const stored = await serializeSafetyScoreV9Publication(result.candidate);
             const metadata = JSON.parse(stored);
             process.stdout.write(JSON.stringify({ baseInputGenerationId: result.candidate.baseInputGenerationId,
-              candidateBytes: metadata.uncompressedBytes, compressedBytes: metadata.compressedBytes }));
+              candidateBytes: metadata.uncompressedBytes, compressedBytes: metadata.compressedBytes,
+              publicationBytes: measurePublicationByteBudget(result.candidate, metadata.uncompressedBytes) }));
             process.exit(0);
           }
           throw new Error("Expected explicit contagion or historical capture protocol");
@@ -292,9 +330,9 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 co
       env: createResourceProbeEnv(process.env, { capturePath: process.env.SAFETY_SCORE_V9_RESOURCE_CAPTURE }),
     });
     expect(result.status, result.stderr).toBe(0);
-    const output = JSON.parse(result.stdout) as { candidateBytes: number; baseInputGenerationId: string };
+    const output = JSON.parse(result.stdout) as { candidateBytes: number; baseInputGenerationId: string; publicationBytes: unknown };
     expect(output.baseInputGenerationId).toBe(FROZEN_BASE.inputGenerationId);
-    expect(output.candidateBytes).toBeLessThanOrEqual(PUBLICATION_BYTE_BUDGET);
+    expect(() => PublicationByteMetricsSchema.parse(output.publicationBytes)).not.toThrow();
     console.info({ basePath: FROZEN_BASE.path, baseDigest: FROZEN_BASE.digest, baseBytes: FROZEN_BASE.bytes,
       candidateBytes: output.candidateBytes, deltaBytes: output.candidateBytes - FROZEN_BASE.bytes });
   });

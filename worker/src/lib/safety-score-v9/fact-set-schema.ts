@@ -107,6 +107,7 @@ const ReserveClassificationSchema = z
     trackedAssetDisposition: z.enum(["source", "reviewed-non-link"]).optional(),
     /** Exact reviewed source identity whose amount remains unclassified. */
     unclassifiedResidual: z.literal(true).optional(),
+    publishedResidualCategory: z.literal(true).optional(),
   })
   .strict();
 

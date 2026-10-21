@@ -1,11 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import * as structuredLog from "../structured-log";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { admitAndSerializeSafetyScoreV9Publication, parseSafetyScoreV9Publication } from "../safety-score-v9/publication-codec";
 import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../safety-score-v9/publication-assessment";
 import {
-  buildSafetyScoreV9AcceptedBaselineProjection, buildSafetyScoreV9LenderCollateralProjection,
+  buildSafetyScoreV9AcceptedBaselineProjection, buildSafetyScoreV9AcceptedProjections,
+  buildSafetyScoreV9LenderCollateralProjection,
   parseSafetyScoreV9AcceptedBaselineProjection, parseSafetyScoreV9LenderCollateralProjection,
   serializeSafetyScoreV9AcceptedBaselineProjection, serializeSafetyScoreV9LenderCollateralProjection,
   SAFETY_SCORE_V9_ACCEPTED_BASELINE_PROJECTION_MAX_BYTES, SAFETY_SCORE_V9_LENDER_COLLATERAL_PROJECTION_MAX_BYTES,
@@ -118,6 +120,39 @@ describe("Safety Score V9 accepted projection writers", () => {
       const invalid = structuredClone(projection);
       mutate(invalid);
       expect(() => serializeSafetyScoreV9AcceptedBaselineProjection(invalid)).toThrow();
+    }
+  });
+
+  it("warns once before writing a projection above half its byte cap", () => {
+    const logger = vi.spyOn(structuredLog, "logWorkerEvent");
+    try {
+      // Card shape sets the per-row cost, so 1,400 accepted cards push the
+      // baseline past half its 458,752-byte cap without crossing the cap itself.
+      const cards = Array.from({ length: 1_400 }, (_, index) =>
+        makeWorkerV9Card({ id: `fixture-bulk-${String(index).padStart(4, "0")}` }));
+      const publication = makeWorkerSafetyScoreV9Publication({ cards });
+      const projections = buildSafetyScoreV9AcceptedProjections(publication);
+      const encoder = new TextEncoder();
+      const baselineBytes = encoder.encode(projections.baseline).byteLength;
+      const lenderBytes = encoder.encode(projections.lender).byteLength;
+      expect(baselineBytes).toBeGreaterThan(SAFETY_SCORE_V9_ACCEPTED_BASELINE_PROJECTION_MAX_BYTES / 2);
+      expect(baselineBytes).toBeLessThanOrEqual(SAFETY_SCORE_V9_ACCEPTED_BASELINE_PROJECTION_MAX_BYTES);
+      expect(lenderBytes).toBeLessThan(SAFETY_SCORE_V9_LENDER_COLLATERAL_PROJECTION_MAX_BYTES / 2);
+      const warnings = logger.mock.calls.filter(([event]) => event.event === "safety_score_v9_accepted_projection_size_warning");
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]![0]).toEqual({
+        scope: "lib", level: "warn", event: "safety_score_v9_accepted_projection_size_warning",
+        message: "Accepted Safety Score v9 projection exceeds half its byte cap",
+        metadata: {
+          baselineBytes, baselineMaxBytes: SAFETY_SCORE_V9_ACCEPTED_BASELINE_PROJECTION_MAX_BYTES,
+          lenderBytes, lenderMaxBytes: SAFETY_SCORE_V9_LENDER_COLLATERAL_PROJECTION_MAX_BYTES,
+        },
+      });
+      expect(parseSafetyScoreV9AcceptedBaselineProjection({
+        value: projections.baseline, updatedAt: publication.publishedAtSec,
+      }).expectedCount).toBe(cards.length);
+    } finally {
+      logger.mockRestore();
     }
   });
 

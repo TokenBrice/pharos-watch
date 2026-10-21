@@ -16,6 +16,8 @@ import {
 import { normalizeFixedInput } from "../report-cards-fixed-input";
 import wrapperLocalReviews from "@shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json";
 import { SafetyScoreV9WrapperLocalReviewSchema } from "@shared/types/safety-score-v9-wrapper-local-review";
+import wsrusdReserves from "@shared/data/stablecoins/domains/reserves/wsrusd-reservoir.json";
+import asusdfReserves from "@shared/data/stablecoins/domains/reserves/asusdf-astherus.json";
 
 function fixedInputWithTrackedParent() {
   return makeV9TwoAssetFixedInput();
@@ -391,6 +393,37 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
       assessment: "high",
       signals: ["wrapper-custody-provider-count:1", "wrapper-rehypothecation:permitted"],
     });
+  });
+
+  it.each([
+    ["wsrUSD", wsrusdReserves.custodyProfile,
+      "https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract"],
+    ["asUSDF", asusdfReserves.custodyProfile,
+      "https://github.com/astherus-contract/ass-usdf-earn-contract/blob/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol"],
+  ] as const)("keeps %s parent-only custody reuse local without relaxing inherited parent risk", (_name, profile, sourceUrl) => {
+    expect(profile.rehypothecation).toBe("prohibited");
+    expect(profile.reviewedAt).toBe("2026-07-20");
+    expect(profile.sources).toContainEqual(expect.objectContaining({
+      url: sourceUrl,
+    }));
+    const fixed = fixedInputWithTrackedParent();
+    const extension = wrapperExtension(fixed, "savings-passthrough");
+    const wrapper = extension.assets.find((asset) => asset.assetId === "alpha")!;
+    wrapper.wrapperCustodyReview = {
+      custodyModel: "unknown",
+      providers: [{ providerKey: profile.providers[0]!.name, role: "other", shareFraction: 1 }],
+      segregation: "unknown", bankruptcyRemoteness: "none", knownUnknownExposureShare: null,
+      rehypothecation: profile.rehypothecation === "prohibited" ? "prohibited" : "permitted",
+    };
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    const asset = compiled.assets.find((asset) => asset.assetId === "alpha")!;
+    if (asset.wrapperLocalFacts.applicability !== "wrapper") throw new Error("Expected wrapper facts");
+    expect(asset.wrapperLocalFacts.facts.rehypothecationCorrelation).toMatchObject({
+      disposition: "reviewed", assessment: "low",
+    });
+    expect(asset.dependencies.edges).toContainEqual(expect.objectContaining({
+      upstreamAssetId: "beta", dependencyType: "wrapper", pathKind: "serial-dependency",
+    }));
   });
 
   it.each([

@@ -1045,7 +1045,7 @@ export function adaptBridgeReview(
       );
       if (anyNamed && allUnresolvedNamed) {
         structuredRouteControlsByDeployment.set(routeId, { ...merged, scopedQuestionFresh: true,
-          ...(custodyOnly ? { scopedQuestionSubject: "key-custody-independence" as const, keyCustody: "unknown" as const } : {}) });
+          ...(custodyOnly ? { scopedQuestionSubject: "key-custody-independence" as const } : {}) });
       }
     }
   }

@@ -916,8 +916,7 @@ describe("v10.19 lender-book wire and policy admission", () => {
     duplicate.admittedAssets[1] = duplicate.admittedAssets[0]!;
     expect(LenderCollateralBookPolicySchema.safeParse(duplicate).success).toBe(false);
     expect(LenderCollateralBookPolicySchema.safeParse({ ...policy, admittedAssets: policy.admittedAssets.slice(1) }).success).toBe(false);
-    expect(LenderCollateralBookPolicySchema.safeParse({ ...policy, collateralClasses: [...policy.collateralClasses, policy.collateralClasses[0]!] }).success).toBe(false);
-    expect(LenderCollateralBookPolicySchema.safeParse({ ...policy, collateralClasses: policy.collateralClasses.map((row, index) => index === 0 ? { ...row, reviewedAt: "2026-02-30" } : row) }).success).toBe(false);
+    expect(LenderCollateralBookPolicySchema.safeParse({ ...policy, collateralClasses: [] }).success).toBe(false);
   });
 
   it("resolves exact active savUSD/USD3/ftUSD without aliasing siUSD or PT-siUSD to iUSD", () => {

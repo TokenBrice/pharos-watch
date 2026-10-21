@@ -293,7 +293,13 @@ export function buildReviewedReserveClassifications(
         )
       : classification;
     return unclassifiedExposureKeys.has(classification.exposureKey)
-      ? { ...reviewedClassification, unclassifiedResidual: true }
+      ? {
+          ...reviewedClassification,
+          unclassifiedResidual: true,
+          ...(review.scope === "full-composition" && match?.reviewed.publishedResidualCategory &&
+            live?.name === match.reviewed.name && live.pct === match.reviewed.pct
+            ? { publishedResidualCategory: true as const } : {}),
+        }
       : reviewedClassification;
   });
 }

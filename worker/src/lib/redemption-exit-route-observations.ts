@@ -169,11 +169,19 @@ function resolveOutput(
   stablecoinId: string,
   config: Pick<
     RedemptionBackstopConfig,
-    "routeFamily" | "outputAssetType" | "outputAssets" | "unresolvedOutputAssetKeys" | "physicalCommodityDelivery"
+    "routeFamily" | "outputAssetType" | "outputAssets" | "unresolvedOutputAssetKeys" | "unresolvedOutputDisposition" | "physicalCommodityDelivery"
   >,
   outputValuation?: LiveReserveRedemptionOutputValuation | null,
 ): ExitRouteOutput {
   const meta = WORKER_TRACKED_META_BY_ID.get(stablecoinId);
+  // Reviewed non-disclosure cannot become fiat, a variant parent, or generic
+  // USD-normalized collateral merely because no concrete output was authored.
+  if (config.unresolvedOutputDisposition === "issuer-undisclosed" && !config.outputAssets?.length) {
+    return {
+      kind: "unresolved-asset",
+      ...(config.unresolvedOutputAssetKeys?.length ? { assetKeys: [...config.unresolvedOutputAssetKeys] } : {}),
+    };
+  }
   // Explicit unresolved identities override variantOf and issuer peg currency.
   // Alternative payouts must not silently become the parent token or fiat.
   if (config.unresolvedOutputAssetKeys?.length && !config.outputAssets?.length && config.outputAssetType !== "stable-basket") {
@@ -572,6 +580,7 @@ export function deriveSupplyModelExitRouteObservation(
     outputAssets: staticConfig?.outputAssets,
     physicalCommodityDelivery: staticConfig?.physicalCommodityDelivery,
     unresolvedOutputAssetKeys: staticConfig?.unresolvedOutputAssetKeys,
+    unresolvedOutputDisposition: staticConfig?.unresolvedOutputDisposition,
   });
   const fiatOutputValued = output.kind !== "fiat" || !output.currency || output.currency === "USD" ||
     resolveRedemptionFiatUsdRate(output.currency, fiatReferences) !== null;

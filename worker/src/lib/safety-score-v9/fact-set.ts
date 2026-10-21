@@ -1,4 +1,4 @@
-import { compileV9FactSetV3, safeParseV9AssetFactsV3 } from "@shared/lib/safety-score-v9/compile";
+import { compileV9FactSetV3, createV9PublicationAssetCompactor, safeParseV9AssetFactsV3 } from "@shared/lib/safety-score-v9/compile";
 import { sha256HexFromUtf8Chunks } from "../hash";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
@@ -9,7 +9,6 @@ import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyChunksV1, stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
-  V9AssetFactsV3Schema,
   V9EffectiveDependenciesV3Schema,
   type CompiledV9FactSetV3,
   type V9AssetFactsV3,
@@ -347,7 +346,7 @@ function buildQuarantinedAssetFacts(
       gapIds: [gapId],
     });
   const reference = context.asset.pegReference;
-  return V9AssetFactsV3Schema.parse({
+  const parsed = safeParseV9AssetFactsV3({
     assetId: context.asset.assetId,
     assetIssuerKey: context.asset.assetIssuerKey ?? null,
     archetype: context.asset.archetype,
@@ -444,6 +443,8 @@ function buildQuarantinedAssetFacts(
       unavailableStatus(),
     ),
   });
+  if (!parsed.success) throw parsed.error;
+  return parsed.data;
 }
 
 type V9AssetQuarantineStage = "extension-admission" | "fact-build" | "fact-validation" | "evaluation";
@@ -658,6 +659,7 @@ function compileSafetyScoreV9FactSetWithIsolation(
   ] as const));
   if (consumeExtensionAssets) materializedExtensions.delete(extension);
   const outcomes = new Array<{ facts: V9AssetFactsV3; quarantine: V9AssetQuarantine | null }>(extension.assets.length);
+  const compactAsset = consumeExtensionAssets ? createV9PublicationAssetCompactor() : null;
   for (let index = 0; index < extension.assets.length; index++) {
     const asset = extension.assets[index]!;
     const evaluationFailure = evaluationFailures.get(asset.assetId);
@@ -666,6 +668,7 @@ function compileSafetyScoreV9FactSetWithIsolation(
       : evaluationFailure === undefined
         ? compileAssetOutcome(fixedInput, extension, asset, researchPayloadSha256, parentDeploymentKeys)
         : evaluationQuarantineOutcome(fixedInput, extension, asset, researchPayloadSha256, evaluationFailure);
+    if (compactAsset !== null) outcomes[index]!.facts = compactAsset(outcomes[index]!.facts);
     // The materializer owns this array; assets themselves remain immutable.
     // Leave indices stable until the loop ends, without copying the remaining cohort.
     if (consumeExtensionAssets) delete extension.assets[index];

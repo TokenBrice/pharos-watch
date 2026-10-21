@@ -27,7 +27,13 @@ function compile(quarantined: boolean) {
 
 describe("redemption rows quarantined for inadmissible consumed reserve evidence", () => {
   it("keeps a producer-failed redemption rail instead of reading the withheld row as an absent route", () => {
-    expect(compile(false).compiled.assets[0]!.exitRoutes.some((route) => route.lane === "redemption")).toBe(false);
+    // A documented channel without a captured row remains diagnostic, not absent.
+    // Only the consumed-reserve quarantine may attribute its capacity gap to A.
+    const baseline = compile(false).compiled.assets[0]!;
+    const baselineRoute = baseline.exitRoutes.find((route) => route.lane === "redemption")!;
+    expect(baselineRoute).toMatchObject({ coverageClass: "diagnostic", scoreEligible: false, capacityCurve: [] });
+    const baselineGap = baseline.gaps.find((gap) => baselineRoute.factorStatuses.capacity!.gapIds.includes(gap.gapId))!;
+    expect(baselineGap).toMatchObject({ responsibility: "unresearched", causeProof: { cause: "U" } });
 
     const { compiled, quarantine } = compile(true);
     const asset = compiled.assets[0]!;

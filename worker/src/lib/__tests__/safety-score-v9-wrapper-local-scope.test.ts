@@ -355,6 +355,95 @@ function publishedLocalFixture(kind: "published-accounting" | "published-emergen
   return fixture;
 }
 
+function immediateParentTermsFixture() {
+  const fixture = publishedLocalFixture("published-withdrawal-terms");
+  fixture.wrapper.variantKind = "savings-passthrough";
+  const review = fixture.wrapper.wrapperLocalReviews![0]!;
+  if (review.kind !== "published-withdrawal-terms") throw new Error("Expected terms");
+  const term = review.terms[0]!;
+  Object.assign(term, {
+    holderAccess: "permissionless", executionModel: "atomic", cooldownSec: 0,
+    fee: { kind: "fixed-bps", bps: 0 }, prerequisites: ["parent-output-only; cash-realization-is-downstream"],
+  });
+  return { ...fixture, review, term };
+}
+
+describe("direct serial wrapper local withdrawal settlement", () => {
+  it.each([
+    ["savings-passthrough", "atomic"],
+    ["savings-passthrough", "deterministic"],
+    ["pure-wrapper", "atomic"],
+    ["pure-wrapper", "deterministic"],
+  ] as const)("prices %s %s fee-free parent output locally without U fallback", (variantKind, executionModel) => {
+    const fixture = immediateParentTermsFixture();
+    fixture.wrapper.variantKind = variantKind;
+    fixture.term.executionModel = executionModel;
+    const before = structuredClone(fixture.asset);
+    const { facts, context } = fixture.build();
+    expect(facts.facts.withdrawalTerms).toMatchObject({ disposition: "reviewed", assessment: "moderate" });
+    expect(facts.facts.withdrawalTerms.signals).toEqual(expect.arrayContaining([
+      "wrapper-withdrawal-settlement-bound-sec:unproven",
+      "wrapper-withdrawal-fee:fixed-bps:0",
+      "wrapper-withdrawal-prerequisite:parent-output-only; cash-realization-is-downstream",
+    ]));
+    expect(context.gaps.has("alpha:gap:wrapper-local:withdrawalTerms")).toBe(false);
+    expect(fixture.asset.dependencies.edges).toContainEqual(expect.objectContaining({
+      pathKind: "serial-dependency", dependencyType: "wrapper", upstreamAssetId: "beta",
+    }));
+    expect(facts.facts.measuredUnwind.assessment).toBeNull();
+    expect(fixture.asset).toEqual(before);
+  });
+
+  it.each([
+    "local-fee", "formula-fee", "undisclosed-fee", "local-delay", "unknown-delay",
+    "queued", "unknown-execution", "strategy-vault", "risk-absorption",
+    "missing-parent", "different-output", "mixed-outputs",
+  ] as const)("keeps the null-bound high assessment for %s", (restriction) => {
+    const fixture = immediateParentTermsFixture();
+    switch (restriction) {
+      case "local-fee": fixture.term.fee = { kind: "fixed-bps", bps: 1 }; break;
+      case "formula-fee": fixture.term.fee = { kind: "formula", description: "Mutable local redemption fee" }; break;
+      case "undisclosed-fee": fixture.term.fee = { kind: "undisclosed" }; break;
+      case "local-delay": fixture.term.cooldownSec = 1; break;
+      case "unknown-delay": fixture.term.cooldownSec = null; break;
+      case "queued": fixture.term.executionModel = "queued"; break;
+      case "unknown-execution": fixture.term.executionModel = "unknown"; break;
+      case "strategy-vault": fixture.wrapper.variantKind = "strategy-vault"; break;
+      case "risk-absorption": fixture.wrapper.variantKind = "risk-absorption"; break;
+      case "missing-parent": fixture.asset.dependencies.edges = []; break;
+      case "different-output": fixture.term.outputAssetIds = ["gamma"]; break;
+      case "mixed-outputs": fixture.term.outputAssetIds = ["beta", "gamma"]; break;
+    }
+    expect(fixture.build().facts.facts.withdrawalTerms).toMatchObject({ disposition: "reviewed", assessment: "high" });
+  });
+
+  it.each(["issuer-only", "discretionary"] as const)("retains critical %s restrictions", (restriction) => {
+    const fixture = immediateParentTermsFixture();
+    if (restriction === "issuer-only") fixture.term.holderAccess = "issuer-only";
+    else fixture.term.executionModel = "discretionary";
+    expect(fixture.build().facts.facts.withdrawalTerms.assessment).toBe("critical");
+  });
+
+  it("retains the worst restriction across documented routes", () => {
+    const fixture = immediateParentTermsFixture();
+    fixture.review.terms.push({ ...fixture.term, routeKey: "queued-alternative", executionModel: "queued" });
+    expect(fixture.build().facts.facts.withdrawalTerms.assessment).toBe("high");
+  });
+
+  it("does not erase independently observed local queue restrictions", () => {
+    const fixture = immediateParentTermsFixture();
+    const routeFixture = wrapperFixture("savings-passthrough");
+    const route = compileSafetyScoreV9FactSetFromFixedInput(routeFixture.fixed, routeFixture.extension)
+      .assets.find((asset) => asset.assetId === "alpha")!.exitRoutes[0]!;
+    fixture.asset.exitRoutes = [{
+      ...route, lane: "redemption", status: v9Status(),
+      holderAccess: "permissionless", executionModel: "queued",
+      settlementModel: "queued", settlementSlaSec: 604_801,
+    }];
+    expect(fixture.build().facts.facts.withdrawalTerms.assessment).toBe("high");
+  });
+});
+
 describe("non-pure source-bound wrapper local facts", () => {
   it.each([
     ["published-accounting", "shareAccountingNavOracle", "moderate"],

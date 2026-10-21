@@ -356,6 +356,7 @@ describe("Safety Score v9 domain-routed incident adapter", () => {
 
     const result = resolveV9WrapperParentLimit({
       parentScore: 55.8,
+      minimumNonDangerScore: 40,
       localFacts: routed,
       fallbackDiscounts: { pure: 3, "native-staked": 5, "strategy-vault": 10 },
     });

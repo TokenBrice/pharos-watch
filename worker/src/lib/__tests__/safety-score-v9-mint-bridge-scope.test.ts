@@ -351,6 +351,21 @@ function overlayEntry(
 }
 
 describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
+  it.each(["mpc", "hsm"] as const)("admits %s custody only with a current complete control review", (kind) => {
+    for (const state of ["current", "stale", "incomplete"] as const) {
+      const profile = mintProfile({
+        controls: [mintControl({ keyCustodyAttestation: { kind, sources: [SOURCE] } })],
+      });
+      if (state === "incomplete") profile.review.disposition = "unresolved";
+      const { extension } = compileFixture(meta("fixture-custody-review", { mintAuthority: profile }), {
+        clockSec: state === "stale" ? 400 * 86400 : 10_000,
+      });
+      const review = extension.assets[0]!.controlReview!;
+      assert(review.state !== "no-privileged-controls");
+      expect(review.controls[0]!.keyCustody).toBe(state === "current" ? kind : "unknown");
+    }
+  });
+
   it("quarantines a mismatched raw registry route before bridge adaptation", () => {
     const mismatched = representationRoute(BASE_ROUTE, {
       destinationChain: "arbitrum",
@@ -1982,9 +1997,20 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
   });
 
   it("keeps USDGLO's unmatched VeChain liability bridge-applicable after canonical registration", () => {
-    const metadata = ACTIVE_META_BY_ID.get("usdglo-glo")!;
-    const profile = metadata.bridgeRouteRisk!;
-    const routes = profile.routes!;
+    // Freeze a reviewed native inventory that deliberately excludes VeChain;
+    // the live USDGLO inventory now records that residual deployment.
+    const routes = [route(ETHEREUM_ROUTE), route(BASE_ROUTE)];
+    const metadata = meta("usdglo-glo", {
+      bridgeRouteRisk: bridgeProfile(routes, {
+        nativeInventoryReview: {
+          kind: "exhaustive-material-native-census", exhaustive: true,
+          reviewedAt: "1970-01-01", reviewer: "Fixture reviewer",
+          routeIds: routes.map((candidate) => candidate.id),
+          rationale: "Fixture census covers the reviewed native deployments only.",
+          sources: [SOURCE],
+        },
+      }),
+    });
     const unmatchedShare = 0.009971743002968847;
     const supplyReview: NonNullable<Parameters<typeof adaptBridgeReview>[1]> = {
       selectedBridgeRoutes: [
@@ -2012,7 +2038,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       ...routes.map((candidate) => [candidate.destinationChain, { current: 100 / routes.length }]),
       ["VeChain", { current: 100 * unmatchedShare }],
     ]);
-    const adapted = adaptBridgeFixture(metadata, supplyReview, chainRows, v9TestClockSec());
+    const adapted = adaptBridgeFixture(metadata, supplyReview, chainRows);
 
     expect(adapted.review.status.applicability.state).toBe("required");
     expect(adapted.review.diagnostics).toMatchObject({

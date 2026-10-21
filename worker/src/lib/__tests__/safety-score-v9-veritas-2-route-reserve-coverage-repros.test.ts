@@ -14,7 +14,9 @@ import type {
 import { scoreV9Input } from "@shared/lib/safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { V9FactStatusV2, V9ReserveExposureFactV2 } from "@shared/types/safety-score-v9-facts";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import * as redemptionBackstops from "@shared/lib/redemption-backstops";
+import { capturedAccessMetaById } from "./safety-score-v9-capture.test-support";
 import {
   createReportCardsFixedInput,
   type ReportCardsFixedInputDraft,
@@ -31,7 +33,9 @@ function freshDraft(): ReportCardsFixedInputDraft {
 
 function compileAsset(draft: ReportCardsFixedInputDraft) {
   const fixedInput = createReportCardsFixedInput(draft);
-  const extension = buildSafetyScoreV9BaselineExtension(fixedInput);
+  const extension = buildSafetyScoreV9BaselineExtension(fixedInput, {
+    metaById: capturedAccessMetaById, reviewedTransferFacts: new Map(),
+  });
   const factSet = compileSafetyScoreV9FactSetFromFixedInput(fixedInput, extension);
   return {
     asset: factSet.assets.find((candidate) => candidate.assetId === ASSET_ID)!,
@@ -83,8 +87,15 @@ describe("VERITAS-II finding stale known-empty DEX coverage is treated as curren
       unknownChains: [],
     };
 
+    // This isolates a DEX-only census; a separately documented issuer channel
+    // would correctly prevent a whole-Exit negative and add independent evidence.
+    const originalGetConfig = redemptionBackstops.getRedemptionBackstopConfig;
+    const configFixture = vi.spyOn(redemptionBackstops, "getRedemptionBackstopConfig")
+      .mockImplementation((id) => id === ASSET_ID ? null : originalGetConfig(id));
+    try {
     const { asset, evaluated } = compileAsset(draft);
     const evidence = asset.evidence.find((reference) =>
+      reference.sourceId === "report-cards-dex-route-observation" &&
       asset.exitStatus.evidenceRefIds.includes(reference.evidenceId),
     )!;
 
@@ -94,6 +105,9 @@ describe("VERITAS-II finding stale known-empty DEX coverage is treated as curren
     // stale local emptiness cannot promote it to a global observed-empty book.
     expect(asset.exitStatus.observationState).toBe("bounded-unknown");
     expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    } finally {
+      configFixture.mockRestore();
+    }
   });
 });
 

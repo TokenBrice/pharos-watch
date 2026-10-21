@@ -21,7 +21,8 @@ function compileTransport(clockSec = CLOCK) {
     hyperevm: { current: 9_000_000, circulatingPrevDay: 9_000_000, circulatingPrevWeek: 9_000_000, circulatingPrevMonth: 9_000_000 },
     hyperliquid: { current: 1_000_000, circulatingPrevDay: 1_000_000, circulatingPrevWeek: 1_000_000, circulatingPrevMonth: 1_000_000 },
   } });
-  const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: new Map([["feusd-felix", {
+  // This transport fixture is independent of later ordinary-transfer research.
+  const extension = buildSafetyScoreV9BaselineExtension(fixed, { reviewedTransferFacts: new Map(), metaById: new Map([["feusd-felix", {
     id: "feusd-felix", bridgeRouteRisk, mechanismArchetype: "fiat-cash" as const,
     contracts: [{ chain: "hyperevm", address: "0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70", decimals: 18 }],
   }]]) });

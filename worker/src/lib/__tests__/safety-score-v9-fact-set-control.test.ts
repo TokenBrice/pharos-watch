@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { evaluateV9EconomicControl } from "@shared/lib/safety-score-v9/control";
+import { applyMergedMintSignals, gradeVerifiedControlAuthority } from "@shared/lib/safety-score-v9/control-mint-grade";
+import { isV9GovernedIssuanceQualified, isV9VetoGuardedIssuanceQualified, isV9OperationallyGovernedIssuanceQualified } from "@shared/lib/safety-score-v9/control-primitives";
 import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-facts";
 import { reviewedScope, weightedQuorum, SCOPE_CLOCK, SCOPE_CONTROLLER } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
 import { effectiveAuthoritySignatureRequirement } from "@shared/lib/safety-score-v9/control-scope";
@@ -702,6 +704,61 @@ describe("v10.08 weighted topology and reviewer-scoped control questions", () =>
     },
   );
 
+  it.each(["mpc", "hsm"] as const)(
+    "retains reviewed native %s custody under an open independence question without granting independence credit",
+    (kind) => {
+      const fixed = exactFixedInput();
+      const metadata = cappedMinterMeta();
+      const authored = metadata.mintAuthority!.controls![0]!;
+      authored.authorityType = "eoa";
+      authored.keyCustodyAttestation = {
+        kind, sources: [{ label: "Exact controller custody disclosure", url: "https://example.com/custody" }],
+      };
+      metadata.mintAuthority!.review.scopedQuestions = [{
+        controlRef: SCOPE_CONTROLLER, subject: "key-custody-independence",
+        question: "The exact key uses reviewed technical custody; which humans approve its signing policy?",
+        reviewedAt: "1970-01-01", reviewer: "Fixture reviewer",
+      }];
+      metadata.mintAuthority = MintAuthorityProfileSchema.parse(metadata.mintAuthority);
+      const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(metadata) });
+      const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+      const control = asset.controls.find((row) => row.authority?.authorityKey === SCOPE_CONTROLLER)!;
+      expect(control.keyCustody).toBe(kind);
+      expect(control.status.observationState).toBe("known");
+      expect(control.authority).toMatchObject({ model: "eoa", threshold: null });
+      expect(control.executionScopeComplete).not.toBe(true);
+      const independenceGap = asset.gaps.find((gap) => gap.gapId === control.factorStatuses?.keyCustody?.gapIds[0])!;
+      expect(independenceGap).toMatchObject({
+        causeScope: { componentKey: `control:${control.controlKey}`, factorKey: "keyCustody" },
+        causeProof: { cause: "U" },
+        message: expect.stringContaining("Human independence or approval policy"),
+      });
+      const policy = V9_CANDIDATE_POLICY_V1.policy.semantic;
+      const controlPolicy = policy.control;
+      expect(applyMergedMintSignals(55, control, undefined, controlPolicy)).toBe(55);
+      expect(applyMergedMintSignals(55, { ...control, keyCustody: "unknown" }, undefined, controlPolicy))
+        .toBe(55 - controlPolicy.mintMergedSignals.unattestedEoaPenalty);
+      expect(gradeVerifiedControlAuthority(control, policy)).toBe(controlPolicy.mintMergedSignals.attestedKeyCustodyQuality);
+      expect(isV9GovernedIssuanceQualified(control, controlPolicy.governedIssuance)).toBe(false);
+      expect(isV9VetoGuardedIssuanceQualified(control, controlPolicy.governedIssuance)).toBe(false);
+      expect(isV9OperationallyGovernedIssuanceQualified(control, policy).qualified).toBe(false);
+    },
+  );
+
+  it.each(["mpc", "hsm"] as const)(
+    "retains technical %s custody through weighted-topology compilation while independence remains U",
+    (keyCustody) => {
+      const source = weightedControl(weightedQuorum());
+      const asset = compileControls([{ ...source, keyCustody, scopedQuestionFresh: true,
+        scopedQuestionSubject: "key-custody-independence" }]);
+      const control = asset.controls[0]!;
+      expect(control.keyCustody).toBe(keyCustody);
+      expect(effectiveAuthoritySignatureRequirement(control.authority)).toBe(effectiveAuthoritySignatureRequirement(source.authority));
+      expect(control.factorStatuses?.keyCustody?.observationState).toBe("missing");
+      expect(asset.gaps.find((gap) => gap.gapId === control.factorStatuses?.keyCustody?.gapIds[0])?.causeProof.cause).toBe("U");
+    },
+  );
+
   it.each([undefined, "authority-semantics", "execution-scope", "key-custody-independence"] as const)(
     "admits authored %s question subjects without letting custody-only uncertainty gate native economics",
     (subject) => {
@@ -741,13 +798,15 @@ describe("v10.08 weighted topology and reviewer-scoped control questions", () =>
     expect(control.scopedQuestionSubject).not.toBe("key-custody-independence");
   });
 
-  it("retains typed bridge custody uncertainty separately from resolved route semantics", () => {
+  it.each([undefined, "mpc", "hsm"] as const)("retains typed bridge custody uncertainty separately from resolved route semantics with %s custody", (keyCustody) => {
     const fixed = exactFixedInput();
     const route = reviewedLockMintRoute(SCOPE_CONTROLLER);
     const metadata = bridgeMeta([route], {
       controls: [{ id: "controller", label: "Bridge controller", controllerChain: "ethereum",
         controllerAddress: SCOPE_CONTROLLER.split(":")[1]!, authorityType: "multisig", threshold: 2, signerCount: 6,
         routeRefs: [route.id], capabilities: ["bridge-mint"], canRaiseCap: true,
+        ...(keyCustody ? { keyCustodyAttestation: { kind: keyCustody,
+          sources: [{ label: "Exact bridge controller custody", url: "https://example.com/bridge-custody" }] } } : {}),
         sources: [{ label: "Pinned bridge", url: "https://example.com/bridge" }] }],
       scopedQuestions: [{ controlRef: "controller", subject: "key-custody-independence",
         question: "Which custody provider protects the controller keys?", reviewedAt: "1970-01-01", reviewer: "Fixture reviewer" }],
@@ -768,7 +827,7 @@ describe("v10.08 weighted topology and reviewer-scoped control questions", () =>
     expect(asset.gaps.find((gap) => gap.gapId === control.status.gapIds[0])?.reasonCode).toBe(
       "unresolved-control-identity",
     );
-    expect(control.keyCustody).toBe("unknown");
+    expect(control.keyCustody).toBe(keyCustody ?? "unknown");
     expect(control.factorStatuses?.keyCustody?.observationState).toBe("missing");
   });
 
