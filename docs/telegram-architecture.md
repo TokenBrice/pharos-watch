@@ -113,7 +113,7 @@ Registration requests messages, callback queries and bot-membership updates only
 
 **Owned files.**
 - `worker/src/telegram/commands/` — `index.ts` dispatch, `context.ts` request shape, `action-runner.ts` shared resolution/confirmation, and per-command handlers.
-- `worker/src/telegram/webhook/telegram-webhook-messages.ts`, `telegram-webhook-insights.ts`, `telegram-webhook-status.ts` — shared builders and domain loaders.
+- `worker/src/telegram/webhook/telegram-webhook-messages.ts`, `telegram-webhook-status.ts` — shared builders and domain loaders.
 
 **Allowed inbound dependencies.** Ingress (via `COMMAND_HANDLERS`), Callback routing (which re-invokes some handlers via their build-message helpers and may call `action-runner` for the disambiguation reply path).
 
