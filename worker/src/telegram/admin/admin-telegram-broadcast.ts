@@ -33,7 +33,7 @@ import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { sha256Hex } from "../../lib/hash";
 
-const SCOPES = ["all", "deliverable-watchers", "global-subscribers", "retired-launch-opt-ins"] as const;
+const SCOPES = ["all", "deliverable-watchers", "global-subscribers"] as const;
 type BroadcastScope = TelegramBroadcastScope;
 
 const SAMPLE_SIZE = 5;

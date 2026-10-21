@@ -37,7 +37,6 @@ import {
 import {
   mapTelegramDigestPermittedDelivery,
   runTelegramDigestDeliveryWithPermit,
-  type TelegramDigestPermittedDelivery,
 } from "./telegram-transport";
 import {
   scanTelegramDigestWrapper,
@@ -382,7 +381,7 @@ export async function deliverDigestEdition(
     owner: job,
     editionKey: input.telegram?.editionKey ?? `${input.kind}:${input.digestDate}`,
     signal: input.signal,
-    deliver: async (creds): Promise<TelegramDigestPermittedDelivery> => {
+    deliver: async (creds): Promise<string> => {
       if (!input.telegram || !telegramOutboxReady) {
         throw new Error("Telegram digest outbox was not persisted");
       }

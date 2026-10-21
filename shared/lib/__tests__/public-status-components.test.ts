@@ -146,6 +146,9 @@ describe("public status components", () => {
       reasons: ["safety-score-publication-held", "safety-score-publication-held:redemption-stale"],
       ageSeconds: 30,
     });
+    expect(component(health, "safety-scores").summary).toContain(
+      `Ratings are held at the last verified snapshot since ${new Date((NOW - 60) * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC`,
+    );
     expect(component(health, "risk-signals").state).toBe("operational");
     expect(projectPublicStatus(health).components.filter((item) => item.id !== "safety-scores")
       .every((item) => item.state === "operational")).toBe(true);

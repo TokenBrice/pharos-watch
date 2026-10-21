@@ -4,7 +4,6 @@ import { Fragment, useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { ReportCardMiniV9 } from "@/components/report-card-mini-v9";
-import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { useReportCardsV9Table } from "@/hooks/api-hooks";
 import { logosById } from "@/lib/logos";
 import { useStablecoins } from "@/hooks/use-stablecoins";
@@ -318,7 +317,6 @@ export function ReportCardsV9Client() {
           },
         ]}
       />
-      <SafetyScoreV9StatusNotice response={reportCardsQuery.data} />
       <SafetyScoresHero
         stats={headlineStats}
         gradeCounts={gradeCounts}

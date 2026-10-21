@@ -1,5 +1,4 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { PENDING_DELIVERY_STATES } from "../common/constants";
 import type { TelegramAlertTypeChats, TelegramWatcherHistoryPoint } from "@shared/types/status";
 import { TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS } from "@shared/lib/status-thresholds";
 import { formatIsoDate } from "@shared/lib/format";
@@ -122,7 +121,6 @@ export interface TelegramChatHealthDiagnostics {
 
 const SNAPSHOT_REFRESH_INTERVAL_SEC = TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS;
 const LIFECYCLE_HISTORY_DAYS = 90;
-const PENDING_DELIVERY_STATE_PLACEHOLDERS = PENDING_DELIVERY_STATES.map(() => "?").join(", ");
 
 // Both per-chat rollups come from the canonical family manifest (TGB-028), so the
 // pulse aggregate cannot drift from the status/bot aggregates or the plan checks.
@@ -214,10 +212,9 @@ async function loadPendingDeliveryCount(
     const row = await db
       .prepare(
         `SELECT COUNT(*) AS pending_count
-           FROM telegram_pending_alerts
-          WHERE delivery_state IN (${PENDING_DELIVERY_STATE_PLACEHOLDERS})`,
+           FROM telegram_deliveries
+          WHERE state IN ('pending', 'retry')`,
       )
-      .bind(...PENDING_DELIVERY_STATES)
       .first<PendingCountRow>();
     return { count: coerceCount(row?.pending_count), unavailableFields: [] };
   } catch (err) {

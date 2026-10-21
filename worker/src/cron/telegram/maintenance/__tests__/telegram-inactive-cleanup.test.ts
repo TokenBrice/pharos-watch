@@ -18,6 +18,14 @@ const INACTIVE_RETENTION_SEC = 180 * ONE_DAY_SEC;
 
 const CACHE_LAST_RUN_KEY = "cron:telegram-inactive-cleanup:last-run";
 
+function insertOpenDelivery(sqlite: DatabaseSync, chatId: string, createdAt: number): void {
+  sqlite.prepare(
+    `INSERT INTO telegram_deliveries (
+       job_id, kind, chat_id, body_hash, state, next_attempt_at, expires_at, created_at
+     ) VALUES ('job-open', 'alert', ?, 'h', 'pending', ?, ?, ?)`,
+  ).run(chatId, createdAt, createdAt + ONE_DAY_SEC, createdAt);
+}
+
 
 type GlobalAlertColumn =
   | "global_alert_dews"
@@ -165,7 +173,7 @@ describe("runTelegramInactiveCleanup", () => {
     expect(metadata.deleted).toBe(2);
     expect(metadata.cappedAtLimit).toBe(false);
   });
-  it.each(["activity", "direct", "preset", "global", "recap", "pending", "wizard"] as const)(
+  it.each(["activity", "direct", "preset", "global", "pending"] as const)(
     "rejects an inactive purge when %s becomes live after candidate selection",
     async (intent) => {
       const { sqlite, db } = setupLatestSchemaSqlite();
@@ -189,16 +197,8 @@ describe("runTelegramInactiveCleanup", () => {
             VALUES ('returning', 'usd-top25', 1, ?, ?)`).run(now, now);
         } else if (intent === "global") {
           sqlite.prepare("UPDATE telegram_subscribers SET global_alert_depeg = 1 WHERE chat_id = 'returning'").run();
-        } else if (intent === "recap") {
-          sqlite.prepare(`INSERT INTO telegram_recap_preferences (chat_id, enabled, created_at, updated_at)
-            VALUES ('returning', 1, ?, ?)`).run(now, now);
-        } else if (intent === "pending") {
-          sqlite.prepare(`INSERT INTO telegram_pending_alerts (chat_id, message_html, created_at)
-            VALUES ('returning', 'live', ?)`).run(now);
         } else {
-          sqlite.prepare(`INSERT INTO telegram_pending_disambiguation
-            (chat_id, alert_types, resolved_ids, ambiguous_ticker, candidates, remaining_tickers, expires_at)
-            VALUES ('returning', '[]', '[]', 'USD', '[]', '[]', ?)`).run(now + ONE_DAY_SEC);
+          insertOpenDelivery(sqlite, "returning", now);
         }
         return batch(statements);
       });
@@ -219,12 +219,8 @@ describe("runTelegramInactiveCleanup", () => {
         expect(sqlite.prepare("SELECT chat_id FROM telegram_preset_subscriptions").get()).toEqual({ chat_id: "returning" });
       } else if (intent === "global") {
         expect(sqlite.prepare("SELECT global_alert_depeg FROM telegram_subscribers").get()).toEqual({ global_alert_depeg: 1 });
-      } else if (intent === "recap") {
-        expect(sqlite.prepare("SELECT enabled FROM telegram_recap_preferences").get()).toEqual({ enabled: 1 });
       } else if (intent === "pending") {
-        expect(sqlite.prepare("SELECT message_html FROM telegram_pending_alerts").get()).toEqual({ message_html: "live" });
-      } else if (intent === "wizard") {
-        expect(sqlite.prepare("SELECT chat_id FROM telegram_pending_disambiguation").get()).toEqual({ chat_id: "returning" });
+        expect(sqlite.prepare("SELECT chat_id FROM telegram_deliveries").get()).toEqual({ chat_id: "returning" });
       }
     },
   );
@@ -234,7 +230,7 @@ describe("runTelegramInactiveCleanup", () => {
     const { sqlite, db } = setupLatestSchemaSqlite();
     const now = Math.floor(Date.now() / 1000);
     const staleAt = now - INACTIVE_RETENTION_SEC - 1;
-    for (const chatId of ["has-sub", "has-preset", "has-pending-alert", "has-pending-disambig", "has-recap", "eligible"]) {
+    for (const chatId of ["has-sub", "has-preset", "has-pending-delivery", "eligible"]) {
       insertSubscriber(sqlite, chatId, staleAt);
     }
     insertSubscriber(sqlite, "active", now - 3600);
@@ -244,28 +240,15 @@ describe("runTelegramInactiveCleanup", () => {
          (chat_id, preset_id, alert_dews, created_at, updated_at)
        VALUES ('has-preset', 'usd-top25', 1, ?, ?)`,
     ).run(staleAt, staleAt);
-    sqlite.prepare(
-      "INSERT INTO telegram_pending_alerts (chat_id, message_html, created_at) VALUES ('has-pending-alert', 'pending', ?)",
-    ).run(staleAt);
-    sqlite.prepare(
-      `INSERT INTO telegram_pending_disambiguation
-         (chat_id, alert_types, resolved_ids, ambiguous_ticker, candidates, remaining_tickers, expires_at)
-       VALUES ('has-pending-disambig', '[]', '[]', 'USD', '[]', '[]', ?)`,
-    ).run(now + ONE_DAY_SEC);
-    sqlite.prepare(
-      `INSERT INTO telegram_recap_preferences (chat_id, enabled, created_at, updated_at)
-       VALUES ('has-recap', 1, ?, ?)`,
-    ).run(staleAt, staleAt);
+    insertOpenDelivery(sqlite, "has-pending-delivery", staleAt);
 
     const result = await runTelegramInactiveCleanup(db);
 
     expect(result.itemCount).toBe(1);
     expect(listSubscriberIds(sqlite)).toEqual([
       "active",
-      "has-pending-alert",
-      "has-pending-disambig",
+      "has-pending-delivery",
       "has-preset",
-      "has-recap",
       "has-sub",
     ]);
   });
@@ -392,25 +375,14 @@ describe("runTelegramInactiveCleanup", () => {
        VALUES (?, ?, 1, ?, ?)`,
     ).run("preset-follow", "usd-top25", staleAt, staleAt);
 
-    insertSubscriber(sqlite, "pending-alert", staleAt);
-    sqlite.prepare(
-      `INSERT INTO telegram_pending_alerts (chat_id, message_html, created_at)
-       VALUES (?, ?, ?)`,
-    ).run("pending-alert", "pending", staleAt);
-
-    insertSubscriber(sqlite, "pending-interaction", staleAt);
-    sqlite.prepare(
-      `INSERT INTO telegram_pending_disambiguation (
-         chat_id, alert_types, resolved_ids, ambiguous_ticker, candidates,
-         remaining_tickers, expires_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    ).run("pending-interaction", "[]", "[]", "USD", "[]", "[]", now + ONE_DAY_SEC);
+    insertSubscriber(sqlite, "pending-delivery", staleAt);
+    insertOpenDelivery(sqlite, "pending-delivery", staleAt);
 
     const result = await runTelegramInactiveCleanup(db);
 
     expect(result.itemCount).toBe(1);
     expect(listSubscriberIds(sqlite)).toEqual(
-      [...meaningfulRows.map(([chatId]) => chatId), "pending-alert", "pending-interaction", "preset-follow"].sort(),
+      [...meaningfulRows.map(([chatId]) => chatId), "pending-delivery", "preset-follow"].sort(),
     );
     expect(
       sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscriptions WHERE chat_id = ?")

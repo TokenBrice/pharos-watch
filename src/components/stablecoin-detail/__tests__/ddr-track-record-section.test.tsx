@@ -183,15 +183,14 @@ describe("DdrTrackRecordSection", () => {
     expect(screen.getByText("+1 more reviewed incidents")).toBeTruthy();
   });
 
-  it("retains stale-cache review evidence behind a status and retry notice", () => {
+  it("retains stale-cache review evidence with its snapshot reason and no retry notice", () => {
     const query = mockReview([PREDICTION_ROW]);
     query.data!._meta.degraded = true;
     query.data!._meta.degradedReason = "stale-cache";
     render(<DdrTrackRecordSection stablecoinId={COIN} />);
     expect(screen.getByText("Snapshot reason: stale-cache")).toBeTruthy();
     expect(screen.getByRole("group", { name: "DDR track record facts" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Retry ddr track record" }));
-    expect(query.refetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "Retry ddr track record" })).toBeNull();
   });
 
   it("distinguishes request failure without data from a healthy empty review", () => {

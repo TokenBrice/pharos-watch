@@ -2,8 +2,6 @@ import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { packWatchlistDirectState, type WatchlistDirectState } from "../../mini-app/watchlist-state";
-import { persistPendingConfirmBulk } from "../disambiguation";
-import { prepareEnsureSubscriberExists } from "../subscribers";
 import { applyWatchlistDirectPatch, loadWatchlistPortableState } from "../watchlist-import";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isSubscribableCoin } from "../subscription-eligibility";
@@ -38,7 +36,6 @@ function direct(stablecoinId: string, alertDews: boolean): WatchlistDirectState 
 
 function seed(
   sqlite: DatabaseSync,
-  payload: object,
   options: { updateId?: number; generation?: number; activeSnoozeUntilTs?: number } = {},
 ): void {
   const updateId = options.updateId ?? 7001;
@@ -70,12 +67,6 @@ function seed(
       ('chat', 'usd-top25', 1, 0, 0, NULL, ?, ?),
       ('chat', 'eur-top10', 1, 1, 0, 250, ?, ?)
   `).run(NOW, NOW, NOW, NOW);
-  sqlite.prepare(`
-    INSERT INTO telegram_pending_disambiguation (
-      chat_id, alert_types, resolved_ids, ambiguous_ticker, candidates,
-      remaining_tickers, expires_at, action_type, action_payload, initiator_user_id
-    ) VALUES ('chat', '[]', '[]', '', '[]', '[]', ?, 'confirm-bulk', ?, 'actor')
-  `).run(NOW + 300, JSON.stringify(payload));
   sqlite.prepare(`
     INSERT INTO telegram_processed_updates (
       update_id, received_at, update_type, chat_id, status, effect_state,
@@ -164,40 +155,6 @@ describe("generation-fenced watchlist direct patch", () => {
     }
   });
 
-  it("creates a new subscriber before the pending preview inside the same batch", async () => {
-    const { sqlite, db } = openLatestSchema();
-    try {
-      sqlite.exec(`
-        CREATE TRIGGER require_import_subscriber_before_pending
-        BEFORE INSERT ON telegram_pending_disambiguation
-        WHEN NOT EXISTS (
-          SELECT 1 FROM telegram_subscribers WHERE chat_id = NEW.chat_id
-        )
-        BEGIN
-          SELECT RAISE(ABORT, 'subscriber must precede pending preview');
-        END;
-      `);
-      const persisted = await persistPendingConfirmBulk(db, {
-        chatId: "new-chat",
-        initiatorUserId: "actor",
-        expiresAt: NOW + 300,
-        payload: {
-          kind: "subscribe",
-          alertTypes: ["dews"],
-          presetIds: [],
-          coinIds: ["usdc-circle"],
-          subscribeAll: false,
-        },
-        beforePendingStatements: [prepareEnsureSubscriberExists(db, "new-chat", "alice", NOW)],
-      });
-      expect(persisted).toBe(true);
-      expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers WHERE chat_id = 'new-chat'").get()).toEqual({ preference_generation: 0 });
-      expect(sqlite.prepare("SELECT action_type FROM telegram_pending_disambiguation WHERE chat_id = 'new-chat'").get()).toEqual({ action_type: "confirm-bulk" });
-    } finally {
-      sqlite.close();
-    }
-  });
-
   it("creates a first-time Mini App subscriber inside the guarded batch", async () => {
     const { sqlite, db } = openLatestSchema();
     const desired = [direct("usdc-circle", true)];
@@ -218,12 +175,11 @@ describe("generation-fenced watchlist direct patch", () => {
     }
   });
 
-  it("rejects stale preferences without touching pending state", async () => {
+  it("rejects stale preferences without touching state", async () => {
     const { sqlite, db } = openLatestSchema();
     const desired = [direct("usdc-circle", false)];
-    const payload = { kind: "watchlist-import-v2", directEntries: desired.map(packWatchlistDirectState) };
     try {
-      seed(sqlite, payload);
+      seed(sqlite);
       const before = readState(sqlite);
       const outcome = await applyWatchlistDirectPatch(db, {
         chatId: "chat",
@@ -234,7 +190,6 @@ describe("generation-fenced watchlist direct patch", () => {
       });
       expect(outcome).toBe("stale");
       expect(readState(sqlite)).toEqual(before);
-      expect(sqlite.prepare("SELECT 1 FROM telegram_pending_disambiguation WHERE chat_id = 'chat'").get()).toEqual({ 1: 1 });
     } finally {
       sqlite.close();
     }
@@ -243,9 +198,8 @@ describe("generation-fenced watchlist direct patch", () => {
   it("rolls every guarded write back when the batch tail fails", async () => {
     const { sqlite, db } = openLatestSchema();
     const desired = [direct("usdc-circle", false)];
-    const payload = { kind: "watchlist-import-v2", directEntries: desired.map(packWatchlistDirectState) };
     try {
-      seed(sqlite, payload);
+      seed(sqlite);
       const before = readState(sqlite);
       sqlite.exec(`
         CREATE TRIGGER fail_generation_restore BEFORE UPDATE OF preference_generation ON telegram_subscribers
@@ -268,7 +222,7 @@ describe("generation-fenced watchlist direct patch", () => {
   it("revalidates packed ids before touching durable state", async () => {
     const { sqlite, db } = openLatestSchema();
     try {
-      seed(sqlite, {});
+      seed(sqlite);
       const before = readState(sqlite);
       await expect(applyWatchlistDirectPatch(db, {
         chatId: "chat",
@@ -286,7 +240,7 @@ describe("generation-fenced watchlist direct patch", () => {
   it("does not load expired snooze-only rows as watchlist intent", async () => {
     const { sqlite, db } = openLatestSchema();
     try {
-      seed(sqlite, {});
+      seed(sqlite);
       sqlite.exec(`
         INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_freeze_override)
         VALUES ('chat', 'pyusd-paypal', 1);

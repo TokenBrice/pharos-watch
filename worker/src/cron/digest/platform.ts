@@ -409,9 +409,7 @@ export function classifyDigestChannelStatus(status: string): DigestChannelDispos
     || status === "queued: pending"
     || status === "queued: sending"
     || status === "queued: transport-control-unavailable"
-    || status === "queued: transport-operator_pause"
-    || status === "queued: transport-outage_open"
-    || status === "queued: transport-probe_owned_elsewhere"
+    || status === "queued: transport-circuit-open"
     || status === "outbox-pending"
     || status === "outbox-sending"
   ) {

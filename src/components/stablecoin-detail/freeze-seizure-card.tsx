@@ -13,7 +13,6 @@ import {
   type RailStationTone,
 } from "@/components/stablecoin-detail/rail-station";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
-import { QueryStateNotice } from "@/components/query-state-notice";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
@@ -415,15 +414,7 @@ export function FreezeSeizureModule({
         </EvidenceFooter>
       }
     >
-      {usedStation ? usageQuery.error ? (
-        <QueryStateNotice
-          state="stale-with-data"
-          label="Freeze usage data"
-          dataUpdatedAt={health.dataUpdatedAt}
-          onRetry={() => void usageQuery.refetch()}
-          compact
-        />
-      ) : <StaleDataBanner queries={[healthInput]} /> : null}
+      {usedStation ? <StaleDataBanner queries={[healthInput]} /> : null}
       {transferReview && transferReview.deployments.length > 0 ? (
         <ModuleDisclosure label="Reviewed deployments" count={transferReview.deployments.length}>
           <div className="mt-2 space-y-2 pb-1 text-xs">

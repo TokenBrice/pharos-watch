@@ -196,8 +196,7 @@ it("preserves observed positive shares alongside an explicit zero chain balance"
   expect(screen.queryByText("Other")).toBeNull();
 });
 
-it("keeps cached distribution visible behind a stale notice and drops it once the refresh lands", () => {
-  const refetch = vi.fn();
+it("keeps cached distribution visible without a notice through a failed refresh and its recovery", () => {
   const cached = {
     data: {
       peggedAssets: [
@@ -206,7 +205,7 @@ it("keeps cached distribution visible behind a stale notice and drops it once th
     },
     isLoading: false,
     dataUpdatedAt: Date.now(),
-    refetch,
+    refetch: vi.fn(),
   };
   useStablecoinsMock.mockReturnValue({ ...cached, error: new Error("list refresh failed") });
   useDexLiquidityMock.mockReturnValue({
@@ -219,23 +218,15 @@ it("keeps cached distribution visible behind a stale notice and drops it once th
 
   const { rerender } = render(<DistributionSection stablecoinId="usdc-circle" />);
 
-  // Error must not win over data that is still worth showing.
-  // The stale notice shares the status role with the freshness chip, so
-  // match it by its message instead of by role alone.
-  const staleNotice = () =>
-    screen
-      .getAllByRole("status")
-      .find((node) => node.textContent?.includes("Chain distribution data refresh failed"));
-  expect(staleNotice()).toBeDefined();
+  // Error must not win over data that is still worth showing, and a failed
+  // refresh over that data is operator signal, not a reader notice.
+  expect(screen.queryByText(/Chain distribution data refresh failed/)).toBeNull();
   expect(screen.getByText("60%")).toBeTruthy();
-
-  fireEvent.click(screen.getByRole("button", { name: "Retry chain distribution data" }));
-  expect(refetch).toHaveBeenCalledTimes(1);
 
   useStablecoinsMock.mockReturnValue({ ...cached, error: null });
   rerender(<DistributionSection stablecoinId="usdc-circle" />);
 
-  expect(staleNotice()).toBeUndefined();
+  expect(screen.queryByText(/refresh failed/i)).toBeNull();
   expect(screen.getByText("60%")).toBeTruthy();
 });
 
@@ -285,8 +276,8 @@ function mockDistributions(meta: ApiMeta | null, receipt = Date.now(), error: Er
 
 it("keeps both old producer generations through a successful refetch and failed refresh", () => {
   const receipt = Date.now();
-  const updatedAt = Math.floor(receipt / 1000) - 86_400;
-  const meta: ApiMeta = { updatedAt, status: "stale", ageSeconds: 86_400 };
+  const updatedAt = Math.floor(receipt / 1000) - 30 * 86_400;
+  const meta: ApiMeta = { updatedAt, status: "stale", ageSeconds: 30 * 86_400 };
   mockDistributions(meta, receipt);
   const { container, rerender } = render(<DistributionSection stablecoinId="usdc-circle" />);
   const assertProducer = () => {
@@ -304,19 +295,21 @@ it("keeps both old producer generations through a successful refetch and failed 
   mockDistributions(meta, receipt + 30_000, new Error("refresh failed"));
   rerender(<DistributionSection stablecoinId="usdc-circle" />);
   assertProducer();
-  expect(screen.getAllByText(/refresh failed; showing the last available data/)).toHaveLength(2);
+  expect(screen.queryByText(/refresh failed/i)).toBeNull();
 });
 
 it.each([
   { meta: { updatedAt: null, status: "unknown", ageSeconds: null }, state: "unavailable" },
   { meta: { status: "stale" }, state: "stale" },
-  { meta: { status: "fresh", warning: "Source coverage incomplete" }, state: "degraded" },
-  { meta: { status: "fresh", dependencies: { source: { status: "stale", reason: "source-old" } } }, state: "degraded" },
-] as { meta: ApiMeta; state: string }[])("qualifies distribution metadata independently of a fresh receipt ($state)", ({ meta, state }) => {
+  { meta: { status: "fresh", warning: "Source coverage incomplete" }, state: null },
+  { meta: { status: "fresh", dependencies: { source: { status: "stale", reason: "source-old" } } }, state: null },
+] as { meta: ApiMeta; state: string | null }[])("qualifies distribution metadata independently of a fresh receipt ($state)", ({ meta, state }) => {
   const receipt = Date.now();
   mockDistributions({ updatedAt: Math.floor(receipt / 1000), ...meta }, receipt);
   const { container } = render(<DistributionSection stablecoinId="usdc-circle" />);
-  expect(container.querySelectorAll(`[data-health-state="${state}"]`)).toHaveLength(2);
+  // Source advisories over a current generation are operator signal; only stale or missing data is public.
+  expect(container.querySelectorAll(state ? `[data-health-state="${state}"]` : "[data-health-state]"))
+    .toHaveLength(state ? 2 : 0);
   if (state === "unavailable") {
     for (const chip of container.querySelectorAll("time")) {
       expect(chip.hasAttribute("datetime")).toBe(false);
@@ -344,7 +337,7 @@ it("ages both distribution notices in place under their served budgets", () => {
   expect(container.querySelector("[data-health-state]")).toBeNull();
   act(() => vi.advanceTimersByTime(50));
   act(() => vi.advanceTimersByTime(60_001));
-  expect(container.querySelectorAll('[data-health-state="degraded"]')).toHaveLength(2);
+  expect(container.querySelectorAll("[data-health-state]")).toHaveLength(0);
   act(() => vi.advanceTimersByTime(60_000));
   expect(container.querySelectorAll('[data-health-state="stale"]')).toHaveLength(2);
   for (const chip of container.querySelectorAll("time")) {

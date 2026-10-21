@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import type { DewsChange } from "../../../../telegram/common/alerts-formatting";
 import {
   buildTelegramAlertsByChat,
-  renderTelegramSubscriberPage,
 } from "../dispatch-telegram-fanout-plan";
 import type { TelegramFanoutPlanEvents } from "../../sources/dispatch-telegram-events";
 import {
@@ -131,97 +130,6 @@ describe("dispatch telegram fanout planning", () => {
       inputs,
     });
     expect(routing).toEqual({ alertsByChat: new Map() });
-  });
-
-  it("rejects a whole page over budget and preserves direct, preset, global routing and vetoes", () => {
-    const inputs = fanoutInputs({
-      direct: {
-        ...fanoutInputs().direct,
-        dews: new Map([
-          [
-            "usdc-circle",
-            [
-              subscriber({ chat_id: "direct", last_active_at: 100 }),
-              subscriber({ chat_id: "direct-off", last_active_at: 400 }),
-            ],
-          ],
-        ]),
-      },
-      preset: {
-        ...fanoutInputs().preset,
-        dews: {
-          kind: "ok",
-          rows: new Map([
-            ["usdc-circle", [subscriber({ chat_id: "preset", last_active_at: 200, isGlobal: false, hasLocalOverride: false, presetIds: ["usd-top25"] })]],
-          ]),
-        },
-      },
-      global: {
-        ...fanoutInputs().global,
-        dews: [
-          subscriber({ chat_id: "global", last_active_at: 300, isGlobal: true }),
-          subscriber({ chat_id: "global-off", last_active_at: 350, isGlobal: true }),
-        ],
-      },
-      perCoinExplicitlyOffMaps: {
-        ...emptyExplicitlyOffMaps(),
-        dews: new Map([["usdc-circle", new Set(["direct-off", "global-off"])]]),
-      },
-    });
-
-    const args = {
-      events: fanoutEvents({ dewsChanges: [DEWS_WARNING] }),
-      inputs,
-      nowSec: NOW_SEC,
-      formatBudget: 1,
-    };
-    expect(() => renderTelegramSubscriberPage(args))
-      .toThrow("Telegram subscriber page exceeded the bounded rendering budget");
-    const queue = renderTelegramSubscriberPage({ ...args, formatBudget: 3 });
-
-    expect(queue.map((entry) => entry.chatId)).toEqual(["global", "preset", "direct"]);
-    expect(queue.every((entry) => entry.chunks.length === 1)).toBe(true);
-    expect(queue.every((entry) => entry.canonicalHtml.startsWith("🟠 <b>USDC</b>"))).toBe(true);
-    const footerByChat = Object.fromEntries(queue.map((entry) => [entry.chatId, entry.canonicalHtml.match(/<i>Via [^<]*<\/i>/)?.[0]]));
-    expect(footerByChat).toEqual({
-      global: "<i>Via all stablecoins · stress alerts</i>",
-      preset: "<i>Via USD Top 25 · stress alerts</i>",
-      direct: "<i>Via your watchlist · stress alerts</i>",
-    });
-  });
-
-  it("admits the first candidate above budget and preserves quiet-hour, escalation and lineage policy", () => {
-    const events = fanoutEvents({
-      dewsChanges: Array.from({ length: 17 }, () => DEWS_WARNING),
-    });
-    const inputs = fanoutInputs({
-      direct: {
-        ...fanoutInputs().direct,
-        dews: new Map([["usdc-circle", [subscriber({
-          chat_id: "quiet",
-          preference_generation: 7,
-          quiet_hours_enabled: 1,
-          quiet_hours_start_utc: 0,
-          quiet_hours_end_utc: 23,
-          timezone: "UTC",
-        })]]]),
-      },
-    });
-    const args = { events, inputs, nowSec: Date.UTC(2027, 0, 1, 12) / 1000, formatBudget: 1, sourceEventId: "source:test" };
-    const [quiet] = renderTelegramSubscriberPage(args);
-    expect(quiet).toMatchObject({
-      chatId: "quiet",
-      sourceEventId: "source:test",
-      preferenceGeneration: 7,
-      alertScope: [{ stablecoinId: "usdc-circle", family: "dews" }],
-      disableNotification: true,
-    });
-    expect(quiet.canonicalHtml).toContain("<b>17 alerts</b>");
-    expect(quiet.chunks.length).toBeGreaterThan(0);
-    inputs.direct.dews.set("usdc-circle", [subscriber({ chat_id: "loud" })]);
-    expect(renderTelegramSubscriberPage(args)[0].disableNotification).toBe(false);
-    const recovery = fanoutEvents({ dewsChanges: [{ ...DEWS_WARNING, oldBand: "DANGER", newBand: "WARNING" }] });
-    expect(renderTelegramSubscriberPage({ ...args, events: recovery })[0].disableNotification).toBe(true);
   });
 
   it("exposes capture eligibility from routing without building rendered messages", () => {

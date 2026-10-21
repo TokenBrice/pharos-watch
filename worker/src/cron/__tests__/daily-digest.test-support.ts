@@ -125,11 +125,11 @@ export function mockTelegramDigestTransportModule(
     ...actual,
     runTelegramDigestDeliveryWithPermit: vi.fn(async (params: {
       creds: unknown;
-      deliver: (creds: unknown) => Promise<{ status: string }>;
+      deliver: (creds: unknown) => Promise<string>;
     }) => {
       if (!params.creds) return "no-creds";
       try {
-        return (await params.deliver(params.creds)).status;
+        return await params.deliver(params.creds);
       } catch (error) {
         return `failed: ${String(error).slice(0, 100)}`;
       }

@@ -9,10 +9,6 @@ import { TELEGRAM_ALERT_POLICY } from "@shared/lib/telegram-delivery-policy";
 import { buildAlertSafetyV9SourceEnvelopeFromParts, ALERT_SAFETY_V9_SOURCE_GENERATION } from "../../../../lib/alert-safety-source-cache";
 import type { CronProgressUpdate } from "../../../../lib/cron-logger";
 import {
-  insertPendingSqlite,
-  makeTelegramDeliveryResult,
-} from "../../delivery/__tests__/telegram-pending-queue.test-support";
-import {
   insertTelegramSubscriber,
   type TelegramSubscriberSeed,
 } from "./telegram-subscriber.test-support";
@@ -87,7 +83,16 @@ const telegramDeliveryTranscript: TelegramDeliveryTranscriptEntry[] = [];
 let scriptedDeliveryResults: TelegramDeliveryResult[] = [];
 const scriptedDeliveryResultsByChat = new Map<string, TelegramDeliveryResult[]>();
 
-const DEFAULT_DELIVERY_RESULT: TelegramDeliveryResult = makeTelegramDeliveryResult();
+const DEFAULT_DELIVERY_RESULT: TelegramDeliveryResult = {
+  ok: true,
+  blocked: false,
+  retryable: false,
+  permanentFailure: false,
+  statusCode: 200,
+  errorClass: null,
+  delivery: "sent",
+  retryAfterSec: null,
+};
 
 function recordDisabledTelegramDelivery(
   chatId: string,
@@ -380,62 +385,6 @@ export interface DispatchSafetySeed {
   recordedAt?: number;
 }
 
-export interface DispatchPendingSeed {
-  id?: number;
-  chatId: string;
-  html: string;
-  createdAt?: number;
-  attempts?: number;
-  notBeforeAt?: number | null;
-  dedupeKey?: string | null;
-  chunkIndex?: number | null;
-  priority?: number;
-  sourceType?: string;
-  alertType?: AlertFamilySeed | null;
-  expiresAt?: number | null;
-  updatedAt?: number;
-  lastErrorClass?: string | null;
-  retryAfterSec?: number | null;
-  deliveryState?: "pending" | "sending" | "execution_unknown" | "sent_cleanup";
-  deliveryOwner?: string | null;
-  deliveryGeneration?: number;
-  deliveryStartedAt?: number | null;
-  deliveryCompletedAt?: number | null;
-  deliveryClaimExpiresAt?: number | null;
-  sourceEventId?: string | null;
-  alertScopeJson?: string | null;
-  preferenceGeneration?: number | null;
-  markupPolicyJson?: string | null;
-}
-
-export interface DispatchSourceEventSeed {
-  sourceEventId: string;
-  schemaVersion?: number;
-  status?: "resolving" | "planned" | "baseline_committed" | "complete" | "expired";
-  detectedAt?: number;
-  expiresAt?: number;
-  eventPayload: string;
-  baselinePayload: string;
-  attemptCount?: number;
-  lastAttemptAt?: number | null;
-  lastErrorClass?: string | null;
-  baselineCommittedAt?: number | null;
-  completedAt?: number | null;
-  targetPlanState?:
-    "unstarted" | "capturing" | "planning" | "materializing" | "ready" | "delivery_open" | "degraded" | "expired";
-  targetPlanGeneration?: number;
-}
-
-export interface DispatchTargetSeed {
-  sourceEventId: string;
-  chatId: string;
-  alertType?: AlertFamilySeed;
-  targetKey?: string;
-  pendingDedupeKey?: string;
-  planGeneration?: number;
-  status?: "planned" | "queued" | "sent" | "failed" | "expired";
-}
-
 export interface DispatchSeed {
   cache?: Record<string, unknown>;
   dews?: DispatchDewsSeed[];
@@ -444,9 +393,6 @@ export interface DispatchSeed {
   subscribers?: DispatchSubscriberSeed[];
   subscriptions?: DispatchSubscriptionSeed[];
   presets?: DispatchPresetSeed[];
-  pending?: DispatchPendingSeed[];
-  sourceEvents?: DispatchSourceEventSeed[];
-  targets?: DispatchTargetSeed[];
 }
 
 export type DispatchOperation = "active-snoozes" | "preset-subscribers" | "resolved-depeg-lookup" | "subscriber-fanout";
@@ -602,74 +548,6 @@ function seedSafety(sqlite: DatabaseSync, input: DispatchSafetySeed): void {
     );
 }
 
-function seedPending(sqlite: DatabaseSync, input: DispatchPendingSeed): void {
-  insertPendingSqlite(sqlite, {
-    ...input,
-    sourceType: input.sourceType ?? "risk_alert",
-  });
-}
-
-function seedSourceEvent(sqlite: DatabaseSync, input: DispatchSourceEventSeed): void {
-  const current = nowSec();
-  sqlite
-    .prepare(
-      `INSERT INTO telegram_alert_source_events (
-       source_event_id, schema_version, status, detected_at, expires_at,
-       event_payload, baseline_payload, attempt_count, last_attempt_at,
-       last_error_class, baseline_committed_at, completed_at, target_plan_state,
-       target_plan_generation
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      input.sourceEventId,
-      input.schemaVersion ?? 1,
-      input.status ?? "planned",
-      input.detectedAt ?? current,
-      input.expiresAt ?? current + 3_600,
-      input.eventPayload,
-      input.baselinePayload,
-      input.attemptCount ?? 0,
-      input.lastAttemptAt ?? null,
-      input.lastErrorClass ?? null,
-      input.baselineCommittedAt ?? null,
-      input.completedAt ?? null,
-      input.targetPlanState ?? "unstarted",
-      input.targetPlanGeneration ?? 0,
-    );
-}
-
-function seedTarget(sqlite: DatabaseSync, input: DispatchTargetSeed): void {
-  const current = nowSec();
-  const alertType = input.alertType ?? "dews";
-  const jobId = `job:${input.sourceEventId}:${alertType}`;
-  const targetKey = input.targetKey ?? `${input.chatId}:${alertType}:0`;
-  sqlite
-    .prepare(
-      `INSERT OR IGNORE INTO telegram_alert_jobs (
-       job_id, alert_type, source_event_id, severity, created_at, expires_at
-     ) VALUES (?, ?, ?, 'normal', ?, ?)`,
-    )
-    .run(jobId, alertType, input.sourceEventId, current, current + 3_600);
-  sqlite
-    .prepare(
-      `INSERT INTO telegram_alert_job_targets (
-       job_id, target_key, chat_id, chunk_index, alert_type, status,
-       pending_dedupe_key, created_at, source_event_id, plan_generation
-     ) VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      jobId,
-      targetKey,
-      input.chatId,
-      alertType,
-      input.status ?? "planned",
-      input.pendingDedupeKey ?? `pending:${targetKey}`,
-      current,
-      input.sourceEventId,
-      input.planGeneration ?? 0,
-    );
-}
-
 function dispatchOperationForSql(sql: string): DispatchOperation | null {
   if (sql.includes("pharos:telegram-dispatch:active-snoozes")) return "active-snoozes";
   if (
@@ -738,9 +616,6 @@ function seedDispatchFixture(sqlite: DatabaseSync, input: DispatchSeed): void {
   for (const row of input.dews ?? []) seedDews(sqlite, row);
   for (const row of input.depegs ?? []) seedDepeg(sqlite, row);
   for (const row of input.safety ?? []) seedSafety(sqlite, row);
-  for (const row of input.pending ?? []) seedPending(sqlite, row);
-  for (const row of input.sourceEvents ?? []) seedSourceEvent(sqlite, row);
-  for (const row of input.targets ?? []) seedTarget(sqlite, row);
 }
 
 function createDispatchHarness(

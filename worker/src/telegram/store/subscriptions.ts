@@ -23,7 +23,6 @@ import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
 } from "../delivery/operation-batch";
-import { pendingDisambiguationClearStatement } from "./disambiguation";
 
 
 export interface BuiltSubscriptionUpsert {
@@ -262,7 +261,7 @@ export function prepareSubscriberAndSubscriptionStatements(
   username: string | null,
   alertTypes: Set<string>,
   stablecoinIds: string[],
-  options?: { clearPending?: boolean; depegWorseningBpsStep?: 100 | 250 | 500 | null },
+  options?: { depegWorseningBpsStep?: 100 | 250 | 500 | null },
 ): D1PreparedStatement[] {
   const now = unixNow();
   // A pending depeg-step write implies the depeg family regardless of whether
@@ -284,9 +283,6 @@ export function prepareSubscriberAndSubscriptionStatements(
       perCoinAlertBumps: { ...alertFlags },
     }),
   ];
-  if (options?.clearPending) {
-    statements.push(pendingDisambiguationClearStatement(db, chatId));
-  }
   const depegStepColumn = TELEGRAM_ALERT_PERSISTENCE.depeg.settingsColumn;
   const depegStepUpdate =
     options?.depegWorseningBpsStep === undefined
@@ -340,7 +336,6 @@ export async function upsertSubscriberAndSubscriptions(
   alertTypes: Set<string>,
   stablecoinIds: string[],
   options?: {
-    clearPending?: boolean;
     depegWorseningBpsStep?: 100 | 250 | 500 | null;
     operationStatements?: D1PreparedStatement[];
   },
@@ -363,7 +358,6 @@ export function prepareSettingToSubscriptions(
   username: string | null,
   coins: readonly Pick<ResolvedCoin, "id">[],
   command: ParsedSetCommand,
-  options: { clearPending?: boolean } = {},
 ): D1PreparedStatement[] {
   const now = unixNow();
   // `depeg-step` always implies the depeg family; every other setting bumps its
@@ -386,9 +380,6 @@ export function prepareSettingToSubscriptions(
       perCoinAlertBumps,
     }),
   ];
-  if (options.clearPending) {
-    statements.push(pendingDisambiguationClearStatement(db, chatId));
-  }
 
   for (const coin of coins) {
     statements.push(bindSubscriptionUpsert(
@@ -406,9 +397,9 @@ export async function applySettingToSubscriptions(
   username: string | null,
   coins: ResolvedCoin[],
   command: ParsedSetCommand,
-  options: TelegramOperationBatchOptions & { clearPending?: boolean } = {},
+  options: TelegramOperationBatchOptions = {},
 ): Promise<void> {
-  const statements = prepareSettingToSubscriptions(db, chatId, username, coins, command, options);
+  const statements = prepareSettingToSubscriptions(db, chatId, username, coins, command);
   await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }
 
@@ -427,7 +418,7 @@ export async function setGlobalDepegWorseningStep(
   chatId: string,
   username: string | null,
   step: 100 | 250 | 500 | null,
-  options: TelegramOperationBatchOptions & { clearPending?: boolean } = {},
+  options: TelegramOperationBatchOptions = {},
 ): Promise<void> {
   const now = unixNow();
   const statements: D1PreparedStatement[] = [
@@ -446,9 +437,6 @@ export async function setGlobalDepegWorseningStep(
     )
       .bind(step, now, chatId),
   ];
-  if (options.clearPending) {
-    statements.push(pendingDisambiguationClearStatement(db, chatId));
-  }
   await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }
 
@@ -457,7 +445,7 @@ export async function applyGlobalSetting(
   chatId: string,
   username: string | null,
   command: ParsedSetCommand,
-  options: TelegramOperationBatchOptions & { clearPending?: boolean } = {},
+  options: TelegramOperationBatchOptions = {},
 ): Promise<void> {
   if (command.setting === "depeg-step") {
     await setGlobalDepegWorseningStep(db, chatId, username, command.step, options);
@@ -477,9 +465,6 @@ export async function applyGlobalSetting(
       globalAlertOverrides: { [command.setting]: override },
     }),
   ];
-  if (options.clearPending) {
-    statements.push(pendingDisambiguationClearStatement(db, chatId));
-  }
   await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }
 

@@ -73,7 +73,7 @@ describe("ReportCardsV9Client", () => {
     expect(preview.textContent).toContain("Full market map");
   });
 
-  it("discloses a fresh successful held publication while keeping accepted ratings visible", () => {
+  it("leaves held publication to /status while keeping accepted ratings visible", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const response = makeReportCardsV9Response({
       updatedAt: nowSec,
@@ -88,12 +88,9 @@ describe("ReportCardsV9Client", () => {
     };
     mocks.useReportCardsV9.mockReturnValue({ ...query(response), dataUpdatedAt: nowSec * 1000 });
     render(<ReportCardsV9Client />);
-    const notice = screen.getByRole("status");
-    expect(notice.textContent).toContain("Ratings are held at the last verified snapshot");
-    expect(notice.textContent).toContain("The latest ratings update could not be verified.");
-    expect(notice.querySelector("time")?.getAttribute("datetime")).toBe(new Date((nowSec - 60) * 1000).toISOString());
-    expect(notice.textContent).not.toContain("assessment-failed");
-    expect(notice.textContent).not.toContain("internal assessment detail");
+    expect(screen.queryByText(/Ratings are held at the last verified snapshot/)).toBeNull();
+    expect(document.body.textContent).not.toContain("assessment-failed");
+    expect(document.body.textContent).not.toContain("internal assessment detail");
     expect(screen.getByTestId("v9-card").textContent).toBe("asset-a");
   });
 

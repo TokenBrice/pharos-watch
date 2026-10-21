@@ -353,15 +353,14 @@ describe("Telegram digest outbox", () => {
     expect(loadEdition(sqlite)).toMatchObject({ state: "sent", attempts: 2 });
   });
 
-  it("keeps a due retry queued when the authoritative fresh-delivery permit is paused", async () => {
+  it("keeps a due edition queued while the Telegram API circuit is open", async () => {
     const { sqlite, db } = fixtures.open();
     await enqueueDaily(db);
     const nowSec = Math.floor(Date.now() / 1000);
-    sqlite.prepare(
-      `INSERT INTO telegram_delivery_pauses
-         (mode, generation, expires_at, reason, actor, created_at, updated_at)
-       VALUES ('fresh', 1, ?, 'operator maintenance', 'test', ?, ?)`,
-    ).run(nowSec + 300, nowSec, nowSec);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('circuit:telegram-api', ?, ?)").run(
+      JSON.stringify({ state: "open", consecutiveFailures: 3, lastFailureAt: nowSec, lastSuccessAt: null, openedAt: nowSec }),
+      nowSec,
+    );
     const fetchMock = mockFetch([], { requireMatch: true });
 
     const summary = await drainTelegramDigestOutbox(db, creds);

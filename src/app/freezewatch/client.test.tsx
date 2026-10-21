@@ -196,13 +196,13 @@ describe("FreezeWatchClient", () => {
     expect(screen.queryByText(/Could not refresh Blacklist/)).toBeNull();
   });
 
-  it("keeps retained supply and score data visible with source-qualified refresh warnings", () => {
+  it("keeps retained supply and score data visible without reader refresh warnings", () => {
     currentSearch = "?status=yes";
     mocks.useStablecoins.mockReturnValue(stubQuery({ data: { peggedAssets: [] }, error: new Error("supply offline") }));
     mocks.useReportCardsV9.mockReturnValue(stubQuery({ data: { cards: [] }, error: new Error("scores offline") }));
     render(<FreezeWatchClient />);
     expect(screen.getByTestId("stablecoin-table")).toBeTruthy();
-    expect(screen.getByText(/Supply and Report Cards remain available/)).toBeTruthy();
+    expect(screen.queryByText(/Supply and Report Cards/)).toBeNull();
     expect(screen.queryByText(/Freeze status data is temporarily unavailable/)).toBeNull();
   });
 
@@ -227,15 +227,14 @@ describe("FreezeWatchClient", () => {
     expect(screen.getByText(/No freeze-ledger quarter data/)).toBeTruthy();
   });
 
-  it("retains auxiliary summary facts and labels failed refreshes", () => {
+  it("retains auxiliary summary facts without reader notices for failed refreshes", () => {
     const summary = makeSummary();
     summary.stats.perCoinQuarterlyEventTypes.USDC = [{ quarter: "Q1 '26", blacklist: 7, unblacklist: 0, destroy: 0 }];
     mocks.useBlacklistSummary.mockReturnValue(stubQuery({ data: summary, error: new Error("summary offline") }));
     render(<FreezeWatchClient />);
     expect(screen.getByText("Events tracked").nextElementSibling?.textContent).toBe("7");
     expect(screen.getByRole("button", { name: "USDC Ethereum coverage supported" })).toBeTruthy();
-    expect(screen.getByText(/Intervention seismograph refresh failed/)).toBeTruthy();
-    expect(screen.getByText(/Watched contract coverage refresh failed/)).toBeTruthy();
+    expect(screen.queryByText(/refresh failed/)).toBeNull();
   });
 
   it("reads the hero and the drilldown as unavailable when the support query fails", () => {

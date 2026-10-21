@@ -30,9 +30,6 @@ const TELEGRAM_PUBLIC_ENTRIES: readonly (readonly [string, readonly string[]])[]
   ["worker/src/telegram/webhook/telegram-pulse.ts", [
     "worker/src/handlers/scheduled/five-minute-telegram.ts", "worker/src/routes/public-routes.ts",
   ]],
-  ["worker/src/telegram/store/disambiguation.ts", [
-    "worker/src/handlers/scheduled/five-minute-telegram.ts",
-  ]],
   ["worker/src/telegram/webhook/telegram-webhook.ts", [
     "worker/src/routes/messaging-routes.ts",
   ]],
@@ -44,6 +41,7 @@ const TELEGRAM_PUBLIC_ENTRIES: readonly (readonly [string, readonly string[]])[]
     "worker/src/cron/cron-sentinel-rules.ts", "worker/src/cron/cron-sentinel.ts",
     "worker/src/cron/cron-staleness-watchdog.ts", "worker/src/cron/daily-digest.ts",
     "worker/src/cron/digest-publication-watchdog.ts", "worker/src/cron/digest/publish.ts",
+    "worker/src/cron/reserve-post-sync-watchdog.ts", "worker/src/cron/reserve-sync-operator-alert.ts",
     "worker/src/cron/digest/telegram-transport.ts", "worker/src/cron/digest/wrapper-style-gate.ts",
     "worker/src/cron/weekly-recap.ts", "worker/src/lib/runtime-credentials.ts", "worker/src/routes/shared.ts",
   ]],
@@ -62,12 +60,6 @@ const TELEGRAM_PUBLIC_ENTRIES: readonly (readonly [string, readonly string[]])[]
   ]],
   ["worker/src/telegram/outbox/pending-capacity.ts", [
     "worker/src/lib/status/supplements.ts", "worker/src/lib/status/telegram-bot-stats.ts",
-  ]],
-  ["worker/src/telegram/delivery/transport-control.ts", [
-    "worker/src/cron/digest/telegram-transport.ts",
-  ]],
-  ["worker/src/telegram/delivery/transport-errors.ts", [
-    "worker/src/cron/digest/telegram-transport.ts",
   ]],
   ["worker/src/telegram/store/usage-analytics.ts", [
     "worker/src/lib/status/telegram-bot-stats.ts",

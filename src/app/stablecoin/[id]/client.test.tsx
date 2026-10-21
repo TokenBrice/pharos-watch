@@ -159,31 +159,23 @@ describe("StablecoinDetailClient", () => {
     longformScrollspyNavMock.mockClear();
   });
 
-  it("keeps the actual compact freshness strip through saved refresh, stale and failed settlement", () => {
+  it("shows a health notice only once detail evidence is past the stale band", () => {
     const now = Date.now();
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const query = {
       label: "Detail snapshot", staleTime: 15 * 60_000, hasData: true, dataUpdatedAt: now,
-      error: null, meta: { updatedAt: (now - 10 * 3600_000) / 1000, ageSeconds: 36000, status: "fresh" as const },
-      isSnapshot: true, isFetching: true, isFetchedAfterMount: false,
+      error: null, meta: { updatedAt: now / 1000, ageSeconds: 0, status: "fresh" as const, warning: '199 - "Quality drift"' },
     };
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({ staleQueries: [query] }));
-    const element = <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />;
-    const { container, rerender } = render(element);
-    const slot = container.querySelector("[data-freshness-slot]")!;
-    expect(slot.getAttribute("data-health-state")).toBe("refreshing");
-    expect(slot.querySelector(":scope > p")?.textContent).toContain("Refreshing… saved data from");
+    const { container, rerender } = render(<StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
+    expect(container.querySelector("[data-health-state]")).toBeNull();
     for (const error of [null, new Error("offline")]) {
       useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
-        staleQueries: [{ ...query, error, isSnapshot: false, isFetchedAfterMount: true, isFetching: false,
-          meta: { ...query.meta, status: "stale" } }],
+        staleQueries: [{ ...query, error, meta: { updatedAt: (now - 10 * 3600_000) / 1000, ageSeconds: 36000, status: "stale" as const } }],
       }));
       rerender(<StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
-      expect(container.querySelector("[data-freshness-slot]")).toBe(slot);
-      expect(slot.getAttribute("data-health-state")).toBe("stale");
-      expect(slot.querySelector(":scope > p")?.textContent).toBe("Showing an older snapshot");
-      expect(slot.className.split(" ")).toContain("h-12");
-      expect(slot.querySelector("details")?.open).toBe(false);
+      expect(container.querySelector("[data-health-state]")?.getAttribute("data-health-state")).toBe("stale");
+      expect(container.textContent).toContain("Showing an older snapshot");
     }
   });
 

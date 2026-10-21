@@ -15,9 +15,7 @@ grade/rating, V9-pillar, or binding-cap claim.
 Newly enqueued editions render the separate map photo first, followed by the
 four-line map summary as the first text section. A chronic `Standing:` line is
 an expandable context blockquote, and `New Cemetery Entries` / `Tracking
-Changes` remain expandable blockquotes in that same text payload. The optional
-recap CTA is authored only when the resolved rollout is `public` and links to
-the bot's private chat; a missing policy intentionally suppresses the CTA.
+Changes` remain expandable blockquotes in that same text payload.
 These are payload changes, not in-place migrations:
 accepted photos and text chunks from an existing edition are never re-rendered
 or resent.
@@ -178,12 +176,6 @@ After the next five-minute poll:
 
 ## Rollback
 
-The additive schema introduced historically by `0184_telegram_digest_outbox.sql`
-and `0221_telegram_digest_safety_identity.sql` remains in place during a Worker
-rollback; those migration files are squashed lineage now absorbed by
-`0000_baseline.sql`, not active replay files. Before restoring an older Worker, reconcile all
-`sending` and `execution_unknown` rows; the legacy sender does not understand
-this effect fence. Keep terminal rows for forensics rather than deleting them
-during rollback.
+The outbox schema is part of `0000_baseline.sql`. Before restoring an older Worker, reconcile all `sending` and `execution_unknown` rows, and keep terminal rows for forensics rather than deleting them during rollback.
 
-Before deploying the ledger-only weekly cutover, retain a read-only inventory of every retry-eligible legacy edition joined to its X cache marker/ledger and Telegram outbox. Missing durable evidence is unknown, not permission to resend; reconcile it before retrying. Both weekly readers and writers must change in one Worker deployment, after the finalizer fence. A rollback must not restore automatic sending from stale weekly metadata; keep ambiguous legacy delivery stopped until durable evidence is reconciled.
+The outbox has no private transport circuit: bot-wide send failures use the generic `telegram-api` breaker shared with alert delivery ([bot-wide transport](./telegram-delivery.md#bot-wide-transport)).

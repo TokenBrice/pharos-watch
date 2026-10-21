@@ -49,7 +49,7 @@ function networkError(): TypeError {
 }
 
 describe("buildReserveFetchNotice", () => {
-  it("retains quarantine labels and dated review disclosure across fallback and stale modes", () => {
+  it("keeps non-age sync faults (even acknowledged ones) out of the reader chip across fallback and stale modes", () => {
     for (const mode of ["live-stale", "curated-fallback", "template-fallback", "unavailable"] as const) {
       const reserves = makeReserves({ mode, sync: {
         enabled: true, status: "error", stale: true, bootstrap: false, lastError: "source rejected",
@@ -60,12 +60,8 @@ describe("buildReserveFetchNotice", () => {
           sources: [{ url: "https://example.com/report", evidenceDate: "2026-09-18" }],
         },
       } });
-      const status = buildReserveFeedStatus(reserves, null)!;
-      expect(status.label).toContain("error");
-      expect(status.rows.join(" ")).toContain("Await issuer update");
-      expect(status.rows.join(" ")).toContain("2026-09-18");
-      expect(status.rows.join(" ")).toContain("https://example.com/report");
-      expect(status.rows.join(" ")).toContain("expires:");
+      // Operator signal (Telegram, /status); the footnote still names fallback/stale modes.
+      expect(buildReserveFeedStatus(reserves, null)).toBeNull();
       expect(reserves.sync?.stale).toBe(true);
     }
   });
@@ -267,47 +263,27 @@ describe("buildReserveFeedStatus", () => {
     expect(buildReserveFeedStatus(null, null)).toBeNull();
   });
 
-  it("ok status with uncertain write → degraded chip (partial data)", () => {
-    const status = buildReserveFeedStatus(
+  it("keeps non-age sync faults over a served book as operator signal, not a reader chip", () => {
+    for (const reserves of [
       makeReserves({ mode: "live", sync: makeSync({ status: "ok", uncertainWrite: true }) }),
-      null,
-    );
-    expect(status?.label).toBe("Reserve sync degraded · uncertain-write");
-    expect(status?.rows).toContain("Sync status: ok");
-    expect(status?.rows).toContain("Latest write state uncertain");
-    expect(status?.tone).toBe("watch");
-  });
-
-  it("error status with full failure detail → amber chip carrying the failure category", () => {
-    const status = buildReserveFeedStatus(
       makeReserves({
         mode: "live",
         sync: makeSync({ status: "error", failureCategory: "upstream", lastError: "503 from adapter", uncertainWrite: true }),
       }),
-      null,
-    );
-    expect(status?.label).toBe("Reserve sync error · upstream");
-    expect(status?.reason).toBe("upstream");
-    expect(status?.rows).toEqual([
-      "Reason: upstream",
-      "Sync status: error",
-      "Last error: 503 from adapter",
-      "Latest write state uncertain",
-    ]);
-    expect(status?.tone).toBe("watch");
-  });
-
-  it("degraded status → amber degraded chip", () => {
-    const status = buildReserveFeedStatus(makeReserves({
-      mode: "curated-fallback",
-      sync: makeSync({
-        status: "degraded",
-        warnings: ["Upstream reserve source timestamp exceeds the accepted age"],
+      makeReserves({
+        mode: "curated-fallback",
+        sync: makeSync({ status: "degraded", warnings: ["Upstream reserve source timestamp exceeds the accepted age"] }),
       }),
-    }), null);
-    expect(status?.label).toBe("Reserve sync degraded · warnings");
-    expect(status?.rows).toContain("Upstream reserve source timestamp exceeds the accepted age");
-    expect(status?.tone).toBe("watch");
+      makeReserves({
+        mode: "live",
+        sync: makeSync({
+          status: "degraded",
+          warnings: ["liquity-v2-branches unavailable or unclassified constituents: WETH (balance-unavailable)"],
+        }),
+      }),
+    ]) {
+      expect(buildReserveFeedStatus(reserves, null)).toBeNull();
+    }
   });
 
   it("a validation error that only reports source age becomes a stale chip naming date and budget in days", () => {
@@ -374,25 +350,25 @@ describe("buildReserveFeedStatus", () => {
     { lastError: "run-budget-exhausted" },
     { failureCategory: "circuit-open" },
     { warnings: ["Adapter returned a partial slice set"] },
-  ])("skipped bootstrap with attempt or failure evidence %o stays degraded", (evidence) => {
+  ])("skipped bootstrap with attempt or failure evidence %o leaves the chip to operators", (evidence) => {
     const reserves = makeReserves({
       mode: "curated-fallback",
       sync: makeSync({ status: "skipped", bootstrap: true, ...evidence }),
     });
-    expect(buildReserveFeedStatus(reserves, null)?.label).toContain("Reserve sync degraded");
+    expect(buildReserveFeedStatus(reserves, null)).toBeNull();
     expect(buildReserveFootnoteModel(reserves, true, "rwa backed")?.text)
       .toBe("Live sync unavailable; showing curated reserve baseline");
   });
 
-  it("a failed fetch outranks the sync state and stays retryable with a machine-readable reason", () => {
-    const status = buildReserveFeedStatus(
+  it("a failed fetch is retryable only when no reserve read is retained", () => {
+    expect(buildReserveFeedStatus(
       makeReserves({ mode: "live", sync: makeSync({ status: "degraded", warnings: ["Adapter returned a partial slice set"] }) }),
       new Error("boom"),
-    );
-    expect(status?.label).toBe("Live reserve refresh delayed");
+    )).toBeNull();
+    const status = buildReserveFeedStatus(null, new Error("boom"));
+    expect(status?.label).toBe("Live reserve feed unavailable");
     expect(status?.reason).toBe("fetch-failed");
     expect(status?.retryable).toBe(true);
-    expect(status?.rows).toContain("Adapter returned a partial slice set");
     expect(buildReserveFeedStatus(null, new ApiFetchError("/r", 503, null))?.reason).toBe("api-unavailable");
     expect(buildReserveFeedStatus(null, networkError())?.reason).toBe("network");
   });
@@ -537,8 +513,8 @@ describe("dated reserve disclosures", () => {
     expect(status?.label).toBe("Reserve feed stale · last report 30 Jun · 46.3-day budget");
     expect(status?.reason).toBe("source-age");
     expect(status?.rows.join(" ")).not.toContain("5775332");
-    expect(buildReserveFeedStatus({ ...reserves, sync: { ...reserves.sync!, status: "error", lastError: "HTTP 503" } }, null)?.label)
-      .toBe("Reserve sync error · unclassified");
+    expect(buildReserveFeedStatus({ ...reserves, sync: { ...reserves.sync!, status: "error", lastError: "HTTP 503" } }, null))
+      .toBeNull();
   });
 
   it("prefers the report date over the source timestamp", () => {
@@ -577,7 +553,7 @@ describe("dated reserve disclosures", () => {
   it.each([
     ["an uncertain write", { uncertainWrite: true } as const],
     ["a recorded last error", { lastError: "HTTP 503" } as const],
-  ])("stays a sync-degraded chip when a stale-age warning arrives with %s", (_label, extra) => {
+  ])("leaves a stale-age warning mixed with %s to the footnote's Stale marker", (_label, extra) => {
     const status = buildReserveFeedStatus(
       makeReserves({
         mode: "live-stale",
@@ -589,11 +565,7 @@ describe("dated reserve disclosures", () => {
       }),
       null,
     );
-    expect(status?.reason).not.toBe("source-age");
-    expect(status?.label).toContain("Reserve sync degraded");
-    // Ages in a diagnostic read in days, never raw seconds.
-    expect(status?.rows.join(" ")).toContain("66.8 days old");
-    expect(status?.rows.join(" ")).not.toContain("5775332");
+    expect(status).toBeNull();
   });
 });
 

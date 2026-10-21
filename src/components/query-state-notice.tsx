@@ -1,14 +1,12 @@
 "use client";
 
 import { AlertTriangle, RefreshCw } from "lucide-react";
-import { formatRelativeTimeMs } from "@shared/lib/relative-time";
 import { NOTICE_TONE_COLORS } from "@shared/lib/classification";
 import type { QueryViewState } from "@/lib/query-view-state";
 
 interface QueryStateNoticeProps {
   state: Extract<QueryViewState, "unavailable" | "stale-with-data">;
   label: string;
-  dataUpdatedAt?: number;
   onRetry?: () => void;
   compact?: boolean;
 }
@@ -16,20 +14,17 @@ interface QueryStateNoticeProps {
 export function QueryStateNotice({
   state,
   label,
-  dataUpdatedAt = 0,
   onRetry,
   compact = false,
-}: QueryStateNoticeProps): React.JSX.Element {
-  const isStale = state === "stale-with-data";
-  const age = isStale && dataUpdatedAt > 0 ? formatRelativeTimeMs(dataUpdatedAt) : null;
-  const message = isStale
-    ? `${label} refresh failed; showing the last available data${age ? ` from ${age}` : ""}.`
-    : `${label} is temporarily unavailable. No status claim is being made.`;
-  const tone = NOTICE_TONE_COLORS[isStale ? "stale" : "unavailable"];
+}: QueryStateNoticeProps): React.JSX.Element | null {
+  // A failed refresh over retained data is operator signal (Telegram, /status), not a reader notice.
+  if (state === "stale-with-data") return null;
+  const message = `${label} is temporarily unavailable. No status claim is being made.`;
+  const tone = NOTICE_TONE_COLORS.unavailable;
 
   return (
     <div
-      role={isStale ? "status" : "alert"}
+      role="alert"
       aria-live="polite"
       className={`flex items-start gap-2 rounded-md ${tone.tone} ${
         compact ? "px-2.5 py-2 text-xs" : "px-3 py-2.5 text-sm"

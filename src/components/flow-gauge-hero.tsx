@@ -10,7 +10,7 @@ import { UniverseChip } from "@/components/universe-chip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { buildRunLineModel, selectRunLineDrivers, type RunLineModel } from "@/lib/flow-run-line-model";
-import { formatDataHealthWarning, type DataHealthInfo } from "@/lib/data-health";
+import { formatDataHealthWarning, isPublicWarning, type DataHealthInfo } from "@/lib/data-health";
 import { buildGaugeVerdict } from "@/lib/flow-signal-ui";
 import { cn } from "@/lib/utils";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -47,18 +47,9 @@ interface FlowGaugeHeroProps {
   isLoading?: boolean;
 }
 
-const DATA_HEALTH_CHIP_LABELS = {
-  age: "Data delayed",
-  source: "Source warning",
-  refresh: "Refresh failed",
-  "catch-up": "Sources catching up",
-} as const;
-
-/** The data-health finding as a chip: label, machine reasons, and the budget and generation it was judged against (R3/R4). */
+/** A public data-health finding as a chip: label, machine reasons, and the budget and generation it was judged against (R3/R4). */
 function DataHealthChip({ health }: { health: DataHealthInfo }) {
-  const label = health.state === "stale"
-    ? "Older snapshot"
-    : DATA_HEALTH_CHIP_LABELS[health.degradationReason ?? "age"];
+  const label = health.state === "stale" ? "Older snapshot" : "Data unavailable";
   const reason = health.meta && "reason" in health.meta ? health.meta.reason : undefined;
   const budgetSec = health.meta && "freshBudgetSec" in health.meta && typeof health.meta.freshBudgetSec === "number"
     ? health.meta.freshBudgetSec
@@ -212,8 +203,10 @@ function GaugeStatusChips({
           <p>Missing valuation could change the flight-to-quality verdict, so none is published.</p>
         </OpsStatusChip>
       ) : null}
-      {dataHealth && !sync?.warning ? <DataHealthChip health={dataHealth} /> : null}
-      {sync?.warning ? (
+      {/* Degraded reads (source advisories, failed refreshes, catch-up) are operator signal, not chips. */}
+      {dataHealth && isPublicWarning(dataHealth) && !(sync?.warning && sync.freshnessStatus === "stale")
+        ? <DataHealthChip health={dataHealth} /> : null}
+      {sync?.warning && sync.freshnessStatus === "stale" ? (
         <OpsStatusChip label="Sync delayed" reasonCodes={[`freshness-${sync.freshnessStatus}`]}>
           <p>{formatDataHealthWarning(sync.warning)}</p>
           <p className="text-muted-foreground">

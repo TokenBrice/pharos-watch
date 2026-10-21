@@ -51,9 +51,12 @@ function seedWithOverrides(now: number, overrides: SeedRun[]): Record<string, un
     .sort((a, b) => (b.started_at as number) - (a.started_at as number));
 }
 
+// Present in every per-job history subquery, whether or not a batch needs a UNION.
+const CRON_HISTORY_MATCH = "FROM cron_runs\n          WHERE job = ?\n            AND NOT (";
+
 function makeDb(_now: number, rows: Record<string, unknown>[]) {
   return mockD1([
-    { match: "UNION ALL", rows },
+    { match: CRON_HISTORY_MATCH, rows },
     { match: "SELECT MAX(output_at)", rows: [] },
     { match: "FROM cron_leases", rows: [] },
     { match: "FROM cron_run_progress", rows: [] },
@@ -73,7 +76,7 @@ describe("loadCronHealth optional reads", () => {
       const now = 1_775_890_000;
       const db = mockD1([
         ...(match ? [{ match, rows: [], throwError: new Error("optional-read-failed") }] : []),
-        { match: "UNION ALL", rows: seedWithOverrides(now, []) },
+        { match: CRON_HISTORY_MATCH, rows: seedWithOverrides(now, []) },
       ]);
       const snapshot = await loadCronHealth(db, now);
       expect([
@@ -361,7 +364,7 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
   it("keeps snapshot telemetry unknown when parent admission evidence cannot be read", async () => {
     const db = mockD1([
       { match: "WITH finished_slots", rows: [], throwError: new Error("parent evidence unavailable") },
-      { match: "UNION ALL", rows: seedWithOverrides(NOW, []) },
+      { match: CRON_HISTORY_MATCH, rows: seedWithOverrides(NOW, []) },
     ]);
     const snapshot = await loadCronHealth(db, NOW);
     expect(snapshot.crons["snapshot-psi"].healthy).toBeNull();
@@ -760,7 +763,7 @@ describe("loadCronHealth — progress timestamp admission", () => {
       const rows = seedWithOverrides(NOW, []).filter((row) => row.job !== job);
       if (priorStatus) rows.push(makeCronRow(job, priorStatus, 60, NOW));
       const snapshot = await loadCronHealth(mockD1([
-        { match: "UNION ALL", rows },
+        { match: CRON_HISTORY_MATCH, rows },
         { match: "FROM cron_leases", rows: [{ job, lease_owner: "owner", lease_until: NOW + 300 }] },
         { match: "FROM cron_run_progress", rows: [{
           job, started_at: startedAt, updated_at: updatedAt, stage: "recovery", lease_owner: "owner",
@@ -777,7 +780,7 @@ describe("loadCronHealth — progress timestamp admission", () => {
 
   it("admits the inclusive future-skew allowance for live recovery", async () => {
     const snapshot = await loadCronHealth(mockD1([
-      { match: "UNION ALL", rows: seedWithOverrides(NOW, [{ job, status: "error", ageSec: 60 }]) },
+      { match: CRON_HISTORY_MATCH, rows: seedWithOverrides(NOW, [{ job, status: "error", ageSec: 60 }]) },
       { match: "FROM cron_leases", rows: [{ job, lease_owner: "owner", lease_until: NOW + 300 }] },
       { match: "FROM cron_run_progress", rows: [{
         job, started_at: NOW + 60, updated_at: NOW + 60, lease_owner: "owner",
@@ -794,7 +797,7 @@ describe("loadCronHealth — progress timestamp admission", () => {
     ["ok", NOW, false, true],
   ] as const)("keeps %s terminal evidence independent of the actual heartbeat read clock", async (status, readNow, live, unavailable) => {
     const snapshot = await loadCronHealth(mockD1([
-      { match: "UNION ALL", rows: seedWithOverrides(NOW, [{ job, status, ageSec: 60 }]) },
+      { match: CRON_HISTORY_MATCH, rows: seedWithOverrides(NOW, [{ job, status, ageSec: 60 }]) },
       { match: "FROM cron_leases", rows: [{ job, lease_owner: "owner", lease_until: NOW + 300 }] },
       { match: "FROM cron_run_progress", rows: [{
         job, started_at: NOW + 120, updated_at: NOW + 120, lease_owner: "owner",
@@ -812,7 +815,7 @@ describe("loadCronHealth — stale cron artifact readout", () => {
   it("surfaces expired leases and orphaned progress without treating them as in-flight", async () => {
     const rows = seedWithOverrides(NOW, []);
     const db = mockD1([
-      { match: "UNION ALL", rows },
+      { match: CRON_HISTORY_MATCH, rows },
       {
         match: "FROM cron_leases",
         rows: [{
@@ -862,7 +865,7 @@ describe("loadCronHealth — stale cron artifact readout", () => {
   it("treats progress without a lease owner as orphaned when lease reads succeed", async () => {
     const rows = seedWithOverrides(NOW, []);
     const db = mockD1([
-      { match: "UNION ALL", rows },
+      { match: CRON_HISTORY_MATCH, rows },
       { match: "FROM cron_leases", rows: [] },
       {
         match: "FROM cron_run_progress",
@@ -941,7 +944,7 @@ describe("loadCronHealth — running scheduled slot telemetry", () => {
   it("surfaces running-slot query failures distinctly from event-marker failures", async () => {
     const rows = seedWithOverrides(NOW, []);
     const db = mockD1([
-      { match: "UNION ALL", rows },
+      { match: CRON_HISTORY_MATCH, rows },
       { match: "FROM cron_leases", rows: [] },
       { match: "FROM cron_run_progress", rows: [] },
       { match: "FROM cache", rows: [] },
@@ -991,7 +994,7 @@ describe("loadCronHealth — cron event markers", () => {
       recordedAt: NOW - 60,
     };
     const db = mockD1([
-      { match: "UNION ALL", rows },
+      { match: CRON_HISTORY_MATCH, rows },
       { match: "FROM cron_leases", rows: [] },
       { match: "FROM cron_run_progress", rows: [] },
       {
@@ -1021,7 +1024,7 @@ describe("loadCronHealth — cron event markers", () => {
   it("surfaces event-marker query failures distinctly from running-slot failures", async () => {
     const rows = seedWithOverrides(NOW, []);
     const db = mockD1([
-      { match: "UNION ALL", rows },
+      { match: CRON_HISTORY_MATCH, rows },
       { match: "FROM cron_leases", rows: [] },
       { match: "FROM cron_run_progress", rows: [] },
       {
@@ -1047,7 +1050,7 @@ describe("loadCronHealth — cron event markers", () => {
   it("surfaces both scheduled-slot query failure paths when both reads fail", async () => {
     const rows = seedWithOverrides(NOW, []);
     const db = mockD1([
-      { match: "UNION ALL", rows },
+      { match: CRON_HISTORY_MATCH, rows },
       { match: "FROM cron_leases", rows: [] },
       { match: "FROM cron_run_progress", rows: [] },
       {
@@ -1083,7 +1086,7 @@ describe("corroboration event visibility and chronology", () => {
     metadata: { slotStartedAt: now - 120, workerVersion: "worker-v1", providerDiagnostics: [{ source: "dexscreener-exact", status: 429 }] } };
   async function snapshot(events: Array<{ key: string; event: unknown }>) {
     return loadCronHealth(mockD1([
-      { match: "UNION ALL", rows: seedWithOverrides(now, []) },
+      { match: CRON_HISTORY_MATCH, rows: seedWithOverrides(now, []) },
       { match: "FROM cron_leases", rows: [] }, { match: "FROM cron_run_progress", rows: [] },
       { match: "FROM cache", rows: events.map(({ key, event }) => ({ key, value: JSON.stringify(event), updated_at: now })) },
     ]), now);

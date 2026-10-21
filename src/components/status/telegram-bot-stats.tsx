@@ -541,7 +541,6 @@ function AudienceCoverage({ model }: { model: CommsWorkbenchModel }) {
         </summary>
         <div className="mt-3 grid min-w-0 gap-x-6 lg:grid-cols-2">
           <dl className="min-w-0 divide-y divide-border/40">
-            <MetricRow label="Pending disambiguations" value={formatCount(audience.pendingDisambiguations)} />
             <MetricRow
               label="Last subscriber activity"
               value={formatStatusTimestamp(audience.lastSubscriberActivityAt, { fallback: "Unknown" })}

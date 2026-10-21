@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
-import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { SelectorCallout } from "@/components/selector/selector-callout";
 import { TableExportMenu } from "@/components/table-export-menu";
 import { ScreenerToolbar } from "@/components/screener/screener-toolbar";
@@ -365,9 +364,7 @@ export function ScreenerClient() {
         hasData={hasStablecoinRows}
         onRetry={freshnessGroup.refetchAll}
         queries={freshnessGroup.queries}
-        persistent
       />
-      <SafetyScoreV9StatusNotice response={reportData} />
 
       <SelectorCallout />
 

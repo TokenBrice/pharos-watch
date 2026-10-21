@@ -227,15 +227,17 @@ describe("FreezeSeizureModule", () => {
 it.each([
   { meta: { updatedAt: Math.floor(Date.now() / 1000) - 86_400, status: "fresh", freshBudgetSec: 60, degradedBudgetSec: 120 }, state: "stale" },
   { meta: { updatedAt: null, status: "unknown", ageSeconds: null }, state: "unavailable" },
-  { meta: { updatedAt: Math.floor(Date.now() / 1000), status: "fresh", dependencies: { scanner: { status: "stale", reason: "scan-old" } } }, state: "degraded" },
-] as { meta: ApiMeta; state: string }[])("qualifies observed zero freeze usage with its producer generation ($state)", ({ meta, state }) => {
+  { meta: { updatedAt: Math.floor(Date.now() / 1000), status: "fresh", dependencies: { scanner: { status: "stale", reason: "scan-old" } } }, state: null },
+] as { meta: ApiMeta; state: string | null }[])("qualifies observed zero freeze usage with its producer generation ($state)", ({ meta, state }) => {
   const receipt = Date.now();
   const result = { ...statsFor("USDT", { events: 0, addresses: 0, frozen: 0, destroyed: 0 }), meta, dataUpdatedAt: receipt };
   usageResult(result);
   const { container, rerender } = renderModule();
   const producerTime = meta.updatedAt != null ? new Date(meta.updatedAt * 1000).toISOString() : null;
   expect(container.querySelector("time")?.getAttribute("datetime")).toBe(producerTime);
-  expect(container.querySelector(`[data-health-state="${state}"]`)).toBeTruthy();
+  // A stale dependency under a current generation is operator signal; only stale or missing data is public.
+  if (state) expect(container.querySelector(`[data-health-state="${state}"]`)).toBeTruthy();
+  else expect(container.querySelector("[data-health-state]")).toBeNull();
   expect(rail().getAttribute("aria-label")).toMatch(/used/i);
   usageResult({ ...result, dataUpdatedAt: receipt + 30_000 });
   rerender(<FreezeSeizureModule summary={SUMMARY} symbol="USDT" variant="tile" />);
@@ -243,7 +245,7 @@ it.each([
   usageResult({ ...result, error: new Error("refresh failed"), refetch: vi.fn() });
   rerender(<FreezeSeizureModule summary={SUMMARY} symbol="USDT" variant="tile" />);
   expect(container.querySelector("time")?.getAttribute("datetime")).toBe(producerTime);
-  expect(screen.getByText(/refresh failed; showing the last available data/)).toBeTruthy();
+  expect(screen.queryByText(/refresh failed/i)).toBeNull();
   expect(rail().getAttribute("aria-label")).toMatch(/used/i);
 });
 
@@ -259,7 +261,7 @@ it("ages retained freeze usage without changing its observation generation", () 
   expect(container.querySelector("[data-health-state]")).toBeNull();
   act(() => vi.advanceTimersByTime(50));
   act(() => vi.advanceTimersByTime(60_001));
-  expect(container.querySelector('[data-health-state="degraded"]')).toBeTruthy();
+  expect(container.querySelector("[data-health-state]")).toBeNull();
   act(() => vi.advanceTimersByTime(60_000));
   expect(container.querySelector('[data-health-state="stale"]')).toBeTruthy();
   expect(container.querySelector("time")?.getAttribute("datetime")).toBe(new Date(receipt).toISOString());

@@ -41,10 +41,6 @@ afterEach(() => {
   fixtures.closeAll();
 });
 
-function pendingRows(sqlite: ReturnType<typeof fixtures.open>["sqlite"]): unknown[] {
-  return sqlite.prepare("SELECT * FROM telegram_pending_disambiguation").all();
-}
-
 describe("/subscribe and /unsubscribe", () => {
   it("follows a unique ticker for DEWS and depeg by default", async () => {
     const { sqlite, db } = fixtures.open();
@@ -86,7 +82,6 @@ describe("/subscribe and /unsubscribe", () => {
     const data = buttonsFromMarkup(options.replyMarkup).map((button) => button.callback_data);
     expect(data.length).toBeGreaterThan(1);
     expect(data[0]).toBe(`pick:su:2:USDF:${coinIdHash(resolveTicker("USDF", "subscribable").matches[0]!.id)}`);
-    expect(pendingRows(sqlite)).toEqual([]);
   });
 
   it("follows a preset at once", async () => {
@@ -106,7 +101,6 @@ describe("/subscribe and /unsubscribe", () => {
     expect(buttonsFromMarkup(options.replyMarkup).map((button) => button.callback_data))
       .toEqual([`bulk:sa:6:${(NOW + 900).toString(36)}`, "bulk:no"]);
     expect(sqlite.prepare("SELECT * FROM telegram_subscribers").all()).toEqual([]);
-    expect(pendingRows(sqlite)).toEqual([]);
   });
 
   it("answers a bare /subscribe with the one-tap choices", async () => {
@@ -177,8 +171,8 @@ describe("/settings, /list and /forget", () => {
     expect(message).not.toMatch(/Precedence|usdc-circle|\/presets|\/unsnooze/);
   });
 
-  it("prompts /forget with an expiring button, honest retention copy, and no stored state", async () => {
-    const { sqlite, db } = fixtures.open();
+  it("prompts /forget with an expiring button, honest retention copy", async () => {
+    const { db } = fixtures.open();
     const ctx = makeCommandContext(db, { operationNowSec: NOW });
     await handleForget(ctx, "");
     const [message, options] = vi.mocked(ctx.replyToChatWithMarkup).mock.calls[0]!;
@@ -186,6 +180,5 @@ describe("/settings, /list and /forget", () => {
     expect(message).toContain("ids of messages already processed");
     expect(buttonsFromMarkup(options.replyMarkup).map((button) => button.callback_data))
       .toEqual([`forget:yes:${(NOW + 900).toString(36)}`, "forget:no"]);
-    expect(pendingRows(sqlite)).toEqual([]);
   });
 });

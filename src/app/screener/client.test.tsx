@@ -149,9 +149,8 @@ describe("ScreenerClient freshness notices", () => {
     setDefaultMocks();
   });
 
-  it("keeps freshness in the shared fixed-height slot across loading and ready states", () => {
+  it("keeps counts and export controls at a fixed footprint across loading and ready states", () => {
     const view = render(<ScreenerClient />);
-    expect(mocks.QueryFreshnessNotices.mock.calls.at(-1)?.[0]).toMatchObject({ persistent: true });
     expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({ triggerClassName: "min-w-24" });
     const unavailableCount = view.getByText("Screener counts unavailable.");
     expect(unavailableCount.classList.contains("min-h-12")).toBe(true);
@@ -175,7 +174,6 @@ describe("ScreenerClient freshness notices", () => {
     const readyCount = view.getByText(/tracked/).closest("p");
     expect(readyCount?.classList.contains("min-h-12")).toBe(true);
     expect(readyCount?.classList.contains("lg:min-h-8")).toBe(true);
-    expect(mocks.QueryFreshnessNotices.mock.calls.at(-1)?.[0]).toMatchObject({ persistent: true });
     expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({
       triggerLabel: "Export", triggerClassName: "min-w-24", disabled: false,
     });

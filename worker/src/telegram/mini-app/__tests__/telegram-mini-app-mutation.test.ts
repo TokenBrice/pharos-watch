@@ -66,7 +66,6 @@ describe("handleTelegramMiniAppMutation", () => {
     }
     expect(sqlite.prepare("SELECT first_follow_at FROM telegram_subscribers WHERE chat_id = '42'").get())
       .toEqual({ first_follow_at: NOW_SEC });
-    expect(sqlite.prepare("SELECT count(*) AS count FROM telegram_adoption_daily").get()).toEqual({ count: 0 });
   });
 
   it("does not claim a first follow for an off-only coin patch", async () => {
@@ -564,7 +563,6 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(sqlite.prepare("SELECT stablecoin_id FROM telegram_subscriptions WHERE chat_id = '42'").all()).toEqual([]);
     expect(sqlite.prepare("SELECT preset_id, alert_dews, alert_depeg, alert_safety FROM telegram_preset_subscriptions WHERE chat_id = '42'").all())
       .toEqual([{ preset_id: "usd-top25", alert_dews: 1, alert_depeg: 1, alert_safety: 0 }]);
-    expect(sqlite.prepare("SELECT count(*) AS count FROM telegram_adoption_daily").get()).toEqual({ count: 0 });
   });
 
   it("keeps authenticated transient failures inside the bounded mutation budget", async () => {
@@ -1070,10 +1068,6 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(response.status).toBe(200);
     expect(historyMatches(db, "DELETE FROM telegram_subscriptions WHERE chat_id = ?", { 0: "42" })).toBe(true);
     expect(historyMatches(db, "DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?", { 0: "42" })).toBe(true);
-    expect(historyMatches(db, "DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?", { 0: "42" })).toBe(true);
-    expect(historyMatches(db, "DELETE FROM telegram_pending_alerts WHERE chat_id = ?", { 0: "42" })).toBe(true);
-    expect(historyMatches(db, "DELETE FROM telegram_alert_job_targets WHERE chat_id = ?", { 0: "42" })).toBe(true);
-    expect(historyMatches(db, "DELETE FROM telegram_alert_dead_letters WHERE chat_id = ?", { 0: "42" })).toBe(true);
     expect(historyMatches(db, "DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?", { 0: "42" })).toBe(true);
     expect(historyMatches(db, "DELETE FROM telegram_subscribers WHERE chat_id = ?", { 0: "42" })).toBe(true);
     // Legacy raw-chat burst keys are still erased; anonymous admission is not profile-owned.

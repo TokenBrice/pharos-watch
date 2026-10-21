@@ -44,8 +44,8 @@ function IncidentRow({ incident }: { incident: DdrTrackRecordIncidentRow }) {
  *
  * Deliberately a ledger, not a forecast timeline — the detail page's DDR card
  * owns the forward-looking language; this module is the track record behind it.
- * Healthy empty feeds and in-flight reads are omitted; unavailable or retained
- * stale evidence remains visibly qualified.
+ * Healthy empty feeds, in-flight reads and retained evidence over a failed
+ * refresh show no notice; only unavailable evidence is visibly qualified.
  */
 export function DdrTrackRecordSection({ stablecoinId }: { stablecoinId: string }) {
   const enabled = isDepegResolverEnabled() && isDepegResolverReviewerEnabled();
@@ -109,14 +109,6 @@ export function DdrTrackRecordSection({ stablecoinId }: { stablecoinId: string }
           {limitedPopulation ? "Partial coverage" : record.chipLabel}
         </Badge>}
     >
-        {unavailable ? (
-          <QueryStateNotice
-            state="stale-with-data"
-            label="DDR track record"
-            dataUpdatedAt={(data?._meta?.computedAt ?? 0) * 1000}
-            onRetry={() => void query.refetch()}
-          />
-        ) : null}
         {degraded ? (
           <p className="text-xs text-muted-foreground">Snapshot reason: {data?._meta?.degradedReason ?? "degraded"}</p>
         ) : null}

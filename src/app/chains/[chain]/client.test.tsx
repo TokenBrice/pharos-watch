@@ -131,7 +131,7 @@ describe("ChainProfileClient", () => {
 
     render(<ChainProfileClient chainId="ethereum" />);
 
-    expect(screen.getByText(/refresh delayed/i)).toBeTruthy();
+    expect(screen.getByText("Failed to load this dataset")).toBeTruthy();
     expect(screen.queryByText("Pharos doesn't have a chain read for this one yet.")).toBeNull();
   });
 
@@ -153,14 +153,14 @@ describe("ChainProfileClient", () => {
     expect(screen.queryByText(/Data quality warning/)).toBeNull();
   });
 
-  it("shows a stale-data notice while still rendering the chain when cached data exists", () => {
+  it("keeps rendering the cached chain without a reader notice after a failed refresh (ADR-42)", () => {
     useChainProfileDataMock.mockReturnValue(makeHookState({
       routeError: new Error("cached response"),
     }));
 
     render(<ChainProfileClient chainId="ethereum" />);
 
-    expect(screen.getByText(/refresh delayed/i)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
     // the chain name is the page H1; the hero renders the chain's figures, never a duplicate name card or chain ID
     expect(screen.getByText("Total supply")).toBeTruthy();
     expect(screen.queryByText(/Chain ID/)).toBeNull();

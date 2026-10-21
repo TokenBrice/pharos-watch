@@ -32,25 +32,19 @@ export function YieldDataHealth({ dataUpdatedAt, error, hasData, meta, adapterMa
   );
 }
 
+/** Safety-hydration fallbacks and degradation are operator signal (Telegram, /status); withheld values render as missing. */
+const OPERATOR_ONLY_WARNING_CODES: ReadonlySet<string> = new Set([
+  "yield-safety-hydration-stale",
+  "yield-safety-hydration-degraded",
+]);
+
 export function YieldApiWarnings({ warnings }: { warnings: YieldRankingsSummaryResponse["warnings"] }) {
-  if (!warnings || warnings.length === 0) return null;
+  const visible = (warnings ?? []).filter((warning) => !OPERATOR_ONLY_WARNING_CODES.has(warning.code));
+  if (visible.length === 0) return null;
 
   return (
     <section aria-label="Yield API warnings" className="space-y-2">
-      {warnings.map((warning) =>
-        // A publish-time snapshot fallback keeps the page fully populated, so it
-        // reads as a neutral freshness note rather than an amber degradation.
-        warning.code === "yield-safety-hydration-stale" ? (
-          <div
-            key={`${warning.code}:${warning.message}`}
-            className={cn("rounded-xl border px-4 py-3 text-sm text-muted-foreground", SEVERITY_TONE_CLASS.neutral.banner)}
-          >
-            <p className="font-medium">{warning.message}</p>
-            {warning.reasons && warning.reasons.length > 0 ? (
-              <p className="mt-1 text-xs text-muted-foreground/80">{warning.reasons.join(", ")}</p>
-            ) : null}
-          </div>
-        ) : (
+      {visible.map((warning) => (
         <div
           key={`${warning.code}:${warning.message}`}
           className={cn("rounded-xl border px-4 py-3 text-sm text-state-warn-ink", SEVERITY_TONE_CLASS.watch.banner)}
@@ -60,8 +54,7 @@ export function YieldApiWarnings({ warnings }: { warnings: YieldRankingsSummaryR
             <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-100/80">{warning.reasons.join(", ")}</p>
           ) : null}
         </div>
-        ),
-      )}
+      ))}
     </section>
   );
 }

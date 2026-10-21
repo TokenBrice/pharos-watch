@@ -27,7 +27,7 @@ describe("CompareClient flow coverage", () => {
       comparisonCoins: [], detailErrors: {}, detailLoading: false, flowCardData: [], flowCoverageCount,
       flowErrorNotice: null, flowScopeLabel: "Configured issuance chains", flowSeries: [{ id: "usdc-circle", data: [] }],
       flowUpdatedAt: null, freshnessQueries: [], globalError: null, handleRetry: vi.fn(), hasPrimaryData: true,
-      pegRates: {}, radarCards: [], reportCardsResponse: undefined, supplySeries: [],
+      pegRates: {}, radarCards: [], supplySeries: [],
     });
     const { container } = render(<CompareClient />);
     expect(screen.getByRole("heading", { name: "Live Flow Signals" })).toBeTruthy();

@@ -1,7 +1,7 @@
 "use client";
 
 import { DataHealthBanner } from "@/components/data-health-banner";
-import { deriveDataHealth, type DataHealthCatchUp, type DataHealthInfo } from "@/lib/data-health";
+import { deriveDataHealth, type DataHealthCatchUp } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 import type { ApiMeta } from "@/lib/api";
 import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
@@ -26,15 +26,8 @@ export interface StaleQuery {
    * treated as in flight.
    */
   isLoading?: boolean;
-  /** A saved query's first live read, distinct from subsequent polling. */
-  isFetching?: boolean;
-  isFetchedAfterMount?: boolean;
-  /** True only while this cache generation is an unsettled build snapshot. */
-  isSnapshot?: boolean;
   /** Producer catch-up detail, so an aged coverage clock with current totals is not read as a stall. */
   catchUp?: DataHealthCatchUp | null;
-  /** Drop this entry when its only finding is a producer catch-up (compact surfaces defer that notice to the owning page). */
-  hideCatchUp?: boolean;
 }
 
 /**
@@ -52,11 +45,9 @@ function isFirstFetchInFlight(query: StaleQuery): boolean {
 
 export function StaleDataBanner({
   queries,
-  persistent = false,
   onRetry,
 }: {
   queries: readonly StaleQuery[];
-  persistent?: boolean;
   onRetry?: () => void;
 }) {
   const inputs = queries.filter((q) => !isFirstFetchInFlight(q)).map((q) => {
@@ -73,19 +64,7 @@ export function StaleDataBanner({
     };
   });
   const nowMs = useFreshnessBoundary(inputs);
-  const refreshingEntries: DataHealthInfo[] = [];
-  const health = inputs.flatMap(({ query: q, ...input }) => {
-    const info = deriveDataHealth(input, nowMs ?? q.dataUpdatedAt);
-    if (persistent && q.isSnapshot && q.isFetching && q.isFetchedAfterMount === false
-      && !q.error && info.dataUpdatedAt > 0 && (q.hasData ?? q.dataUpdatedAt > 0)
-      && info.degradationReason !== "source" && !info.catchUp
-      && (!q.meta?.warning || q.meta.warning.startsWith("110 "))
-      && Object.values(q.meta?.dependencies ?? {}).every((dependency) => dependency.status === "fresh")) {
-      refreshingEntries.push(info);
-      return [];
-    }
-    return q.hideCatchUp && info.degradationReason === "catch-up" ? [] : [info];
-  });
+  const health = inputs.map(({ query: q, ...input }) => deriveDataHealth(input, nowMs ?? q.dataUpdatedAt));
 
-  return <DataHealthBanner entries={health} persistent={persistent} refreshingEntries={refreshingEntries} onRetry={queries.some((query) => query.error) ? onRetry : undefined} />;
+  return <DataHealthBanner entries={health} onRetry={queries.some((query) => query.error) ? onRetry : undefined} />;
 }

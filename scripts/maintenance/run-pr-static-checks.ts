@@ -23,7 +23,6 @@ import {
   type GateReport,
   type OutputWriter,
 } from "../lib/report-violations.mts";
-import { hasTelegramLoadGuardImpact } from "../lib/telegram-load-guard.mts";
 import { PATH_FAMILIES, enumerateDocReferences, matchesOwnershipGlob } from "../lib/doc-ownership-registry.mts";
 import { runDirectCli } from "../lib/cli-args.mjs";
 import { PR_DOC_COMMANDS, type PrLaneCommandDefinition } from "../lib/pr-lanes.mts";
@@ -223,9 +222,6 @@ export function selectPrBaselineChecks(changedFiles: readonly string[]) {
       { name: "check:worker-config" },
       { name: "check:worker-package" },
     );
-  }
-  if (hasTelegramLoadGuardImpact(changedFiles)) {
-    commands.push({ name: "check:telegram-load" });
   }
   return { classification, commands };
 }

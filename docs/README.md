@@ -65,11 +65,10 @@ Complete coverage of `docs/runbooks/` and `docs/incident-response/`. Labels and 
 | symptom | [D1 connectivity, capacity and telemetry pressure](./runbooks/db-connectivity.md) |
 | symptom | [Mint/burn integrity diagnosis](./runbooks/mint-burn-integrity.md) |
 | symptom | [Stablecoin cache or publication failure](./runbooks/stablecoins-cache.md) |
+| symptom | [Telegram delivery, backlog, presets and broadcasts](./runbooks/telegram-delivery.md) |
 | symptom | [Telegram digest outbox recovery](./runbooks/telegram-digest-outbox.md) |
-| symptom | [Telegram Mini App auth failures](./runbooks/telegram-mini-app-auth-failures.md) |
-| symptom | [Telegram delivery, backlog and bot-wide outages](./runbooks/telegram-no-delivery.md) |
-| symptom | [Telegram preset resolution failure](./runbooks/telegram-preset-resolution-failure.md) |
-| symptom | [Telegram ingress, abuse controls, retries and setup incidents](./runbooks/telegram-webhook-retry-dedupe.md) |
+| symptom | [Telegram Mini App auth and BotFather operations](./runbooks/telegram-mini-app-operations.md) |
+| symptom | [Telegram webhook ingress, retries, secrets and admin gate](./runbooks/telegram-webhook.md) |
 | symptom | [Workflow failure triage](./runbooks/workflow-incidents.md) |
 | symptom | [Yield benchmark fallback or stale state](./runbooks/yield-benchmark-fallback-stale.md) |
 | symptom | [Yield rankings stale or missing](./runbooks/yield-rankings-stale-or-missing.md) |
@@ -82,12 +81,7 @@ Complete coverage of `docs/runbooks/` and `docs/incident-response/`. Labels and 
 | procedure | [Lease and circuit-breaker recovery](./runbooks/lease-and-breaker-recovery.md) |
 | procedure | [One-shot historical backfill contract](./runbooks/one-shot-backfills.md#operator-contract) |
 | procedure | [Scoped review renewal](./runbooks/review-renewal.md) |
-| procedure | [Telegram broadcast preflight](./runbooks/telegram-admin-broadcast-safety.md) |
-| procedure | [Telegram group-admin gating rollback](./runbooks/telegram-group-admin-gating-rollback.md) |
-| procedure | [Telegram BotFather configuration](./runbooks/telegram-mini-app-botfather.md) |
-| procedure | [Telegram secret rotation](./runbooks/telegram-secret-rotation.md) |
 | procedure | [Yield history cleanup and writer pause](./runbooks/yield-history-cleanup-writer-pause.md) |
-| reference | [Telegram read-only operator queries](./runbooks/telegram-operator-queries.md#read-only-incident-entry) |
 | reference | [Yield health and deterministic all-fail cooldown diagnostics](./runbooks/yield-health.md) |
 
 <!-- GENERATED-END: runbook-index -->

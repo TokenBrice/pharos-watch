@@ -371,8 +371,13 @@ describe("TimelineClient", () => {
     render(<TimelineClient />);
     expect(screen.queryByRole("region", { name: /Currently open/ })).toBeNull();
     expect(screen.queryByText(/1 open incident/)).toBeNull();
+    // An unfinished census is withheld quietly; only loading and failed reads explain themselves.
+    if (label.includes("traversal")) {
+      expect(screen.queryByRole("region", { name: "Active incident status" })).toBeNull();
+      return;
+    }
     expect(screen.getByRole("region", { name: "Active incident status" }).textContent)
-      .toMatch(label === "loading" ? /Loading/ : label.includes("traversal") ? /incomplete/ : /unavailable/);
+      .toMatch(label === "loading" ? /Loading/ : /unavailable/);
   });
 
   it("ages the active producer independently of a fresh tape publication", () => {
@@ -417,7 +422,7 @@ describe("TimelineClient", () => {
     expect(screen.getByText(/Load more \(1,245 remaining\)/)).toBeTruthy();
   });
 
-  it("marks the total incomplete when API pages reject malformed rows", () => {
+  it("keeps rejected malformed rows out of the reader-facing total", () => {
     mockEvents(
       [
         makeTapeEvent({ id: "evt-1", title: "Event one" }),
@@ -429,7 +434,7 @@ describe("TimelineClient", () => {
     render(<TimelineClient />);
 
     expect(screen.getByText("Showing 2 of 5 events")).toBeTruthy();
-    expect(screen.getByText("Incomplete (3 rows rejected)")).toBeTruthy();
+    expect(screen.queryByText(/rows rejected/)).toBeNull();
   });
 
   it("ages producer freshness and UTC labels without moving the query anchor", () => {

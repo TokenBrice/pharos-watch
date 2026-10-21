@@ -172,13 +172,11 @@ describe("dispatchTelegramAlerts", () => {
       harness.sqlite
         .prepare(
           `SELECT
-             (SELECT COUNT(*) FROM telegram_alert_source_events) AS sources,
-             (SELECT COUNT(*) FROM telegram_alert_planning_subscribers) AS subscribers,
-             (SELECT COUNT(*) FROM telegram_alert_target_plans) AS plans,
-             (SELECT COUNT(*) FROM telegram_alert_job_targets) AS targets`,
+             (SELECT COUNT(*) FROM telegram_jobs) AS jobs,
+             (SELECT COUNT(*) FROM telegram_deliveries) AS deliveries`,
         )
         .get(),
-    ).toEqual({ sources: 0, subscribers: 0, plans: 0, targets: 0 });
+    ).toEqual({ jobs: 0, deliveries: 0 });
     expect(readCacheValue(harness.sqlite, "alert:safety-snapshot")).not.toBe(heldSafetySnapshot);
     expect(telegramDeliveryTranscript).toEqual([]);
   });
@@ -475,12 +473,7 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata).toMatchObject({ eventsDetected: { safety: 0 }, subscribersNotified: 0 });
     expect(metadata).toMatchObject({ eventlessFastPath: true });
     expect(telegramDeliveryTranscript).toEqual([]);
-    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_source_events").get()).toEqual({
-      count: 0,
-    });
-    expect(
-      harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_planning_subscribers").get(),
-    ).toEqual({ count: 0 });
+    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_jobs").get()).toEqual({ count: 0 });
     expect(readCacheValue(harness.sqlite, "alert:safety-snapshot")).toContain('"bold-liquity"');
     expect(readCacheValue(harness.sqlite, "alert:safety-snapshot")).toContain('"usdc-circle"');
   });

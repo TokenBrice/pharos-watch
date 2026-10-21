@@ -55,17 +55,6 @@ function openSqlite(): DatabaseSync {
   return sqlite;
 }
 
-function insertPending(sqlite: DatabaseSync): void {
-  sqlite
-    .prepare(
-      `INSERT INTO telegram_pending_disambiguation (
-         chat_id, alert_types, resolved_ids, ambiguous_ticker, candidates,
-         remaining_tickers, expires_at
-       ) VALUES (?, '[]', '[]', 'usd', '[]', '[]', 0)`,
-    )
-    .run(CHAT_ID);
-}
-
 function stateSnapshot(sqlite: DatabaseSync): unknown {
   return {
     subscriber: sqlite
@@ -77,9 +66,6 @@ function stateSnapshot(sqlite: DatabaseSync): unknown {
     presets: sqlite
       .prepare("SELECT * FROM telegram_preset_subscriptions WHERE chat_id = ? ORDER BY preset_id")
       .all(CHAT_ID),
-    pending: sqlite
-      .prepare("SELECT * FROM telegram_pending_disambiguation WHERE chat_id = ?")
-      .get(CHAT_ID),
   };
 }
 
@@ -89,7 +75,6 @@ const subscribeInput = {
   directStablecoinIds: ["usdc-circle", "usdt-tether"],
   presetIds: ["usd-top25"],
   alertTypes: new Set(["dews", "depeg"]),
-  clearPending: true,
   depegWorseningBpsStep: 250 as const,
 };
 
@@ -129,17 +114,16 @@ describe("atomic Telegram subscribe intent", () => {
     }
   });
 
-  it("commits subscriber, coin, preset, and pending-clear statements in one batch", async () => {
+  it("commits subscriber, coin, and preset statements in one batch", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW_MS);
     const sqlite = openSqlite();
     const batchSizes: number[] = [];
     try {
-      insertPending(sqlite);
       await applySubscribeIntent(createFaultInjectingD1(sqlite, { batchSizes }), subscribeInput);
 
       // Both direct and preset enable kernels enlist their idempotent first-follow claims.
-      expect(batchSizes).toEqual([9]);
+      expect(batchSizes).toEqual([8]);
       expect(sqlite.prepare(`
         SELECT username, alert_dews, alert_depeg, last_active_at, preference_generation
           FROM telegram_subscribers
@@ -170,8 +154,6 @@ describe("atomic Telegram subscribe intent", () => {
         alert_depeg: 1,
         depeg_worsening_bps_step: 250,
       });
-      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_disambiguation").get())
-        .toEqual({ count: 0 });
     } finally {
       sqlite.close();
     }
@@ -192,7 +174,6 @@ describe("atomic Telegram subscribe intent", () => {
     for (let boundary = 0; boundary <= statementCount; boundary += 1) {
       const sqlite = openSqlite();
       try {
-        insertPending(sqlite);
         const before = stateSnapshot(sqlite);
         const db = createFaultInjectingD1(sqlite, { failAtBoundary: boundary });
 
@@ -207,32 +188,25 @@ describe("atomic Telegram subscribe intent", () => {
 });
 
 describe("atomic Telegram unsubscribe intent", () => {
-  it("commits coin removal, preset removal, activity touch, and pending clear in one batch", async () => {
+  it("commits coin removal, preset removal, and activity touch in one batch", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW_MS);
     const sqlite = openSqlite();
     const batchSizes: number[] = [];
     try {
-      await applySubscribeIntent(createSqliteD1(sqlite), {
-        ...subscribeInput,
-        clearPending: false,
-      });
-      insertPending(sqlite);
+      await applySubscribeIntent(createSqliteD1(sqlite), subscribeInput);
       vi.setSystemTime(NOW_MS + 60_000);
 
       await applyUnsubscribeIntent(createFaultInjectingD1(sqlite, { batchSizes }), {
         chatId: CHAT_ID,
         directStablecoinIds: subscribeInput.directStablecoinIds,
         presetIds: subscribeInput.presetIds,
-        clearPending: true,
       });
 
-      expect(batchSizes).toEqual([4]);
+      expect(batchSizes).toEqual([3]);
       expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscriptions").get())
         .toEqual({ count: 0 });
       expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_preset_subscriptions").get())
-        .toEqual({ count: 0 });
-      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_disambiguation").get())
         .toEqual({ count: 0 });
       expect(sqlite.prepare(
         "SELECT last_active_at, preference_generation FROM telegram_subscribers WHERE chat_id = ?",
@@ -252,7 +226,6 @@ describe("atomic Telegram unsubscribe intent", () => {
       chatId: CHAT_ID,
       directStablecoinIds: subscribeInput.directStablecoinIds,
       presetIds: subscribeInput.presetIds,
-      clearPending: true,
     };
     const probe = openSqlite();
     const batchSizes: number[] = [];
@@ -266,11 +239,7 @@ describe("atomic Telegram unsubscribe intent", () => {
     for (let boundary = 0; boundary <= statementCount; boundary += 1) {
       const sqlite = openSqlite();
       try {
-        await applySubscribeIntent(createSqliteD1(sqlite), {
-          ...subscribeInput,
-          clearPending: false,
-        });
-        insertPending(sqlite);
+        await applySubscribeIntent(createSqliteD1(sqlite), subscribeInput);
         const before = stateSnapshot(sqlite);
         const db = createFaultInjectingD1(sqlite, { failAtBoundary: boundary });
 
@@ -298,7 +267,6 @@ describe("atomic Telegram unsubscribe intent", () => {
         directStablecoinIds: stablecoinIds,
         presetIds,
         alertTypes: new Set(["dews"]),
-        clearPending: true,
       });
       expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscriptions").get())
         .toEqual({ count: 410 });
@@ -309,7 +277,6 @@ describe("atomic Telegram unsubscribe intent", () => {
         chatId: CHAT_ID,
         directStablecoinIds: stablecoinIds,
         presetIds,
-        clearPending: true,
       });
       expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscriptions").get())
         .toEqual({ count: 0 });
@@ -322,13 +289,12 @@ describe("atomic Telegram unsubscribe intent", () => {
 });
 
 describe("atomic Telegram bulk/setup variants", () => {
-  it("rolls back global setup together with its pending clear", async () => {
+  it("rolls back global setup atomically", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW_MS);
     for (let boundary = 0; boundary <= 2; boundary += 1) {
       const sqlite = openSqlite();
       try {
-        insertPending(sqlite);
         const before = stateSnapshot(sqlite);
         const db = createFaultInjectingD1(sqlite, { failAtBoundary: boundary });
 
@@ -337,7 +303,6 @@ describe("atomic Telegram bulk/setup variants", () => {
           CHAT_ID,
           "alice",
           new Set(["dews", "reserve"]),
-          { clearPending: true },
         )).rejects.toThrow(`injected failure at boundary ${boundary}`);
         expect(stateSnapshot(sqlite)).toEqual(before);
       } finally {
@@ -346,21 +311,17 @@ describe("atomic Telegram bulk/setup variants", () => {
     }
   });
 
-  it("rolls back unsubscribe-all together with its pending clear", async () => {
+  it("rolls back unsubscribe-all atomically", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW_MS);
-    for (let boundary = 0; boundary <= 4; boundary += 1) {
+    for (let boundary = 0; boundary <= 3; boundary += 1) {
       const sqlite = openSqlite();
       try {
-        await applySubscribeIntent(createSqliteD1(sqlite), {
-          ...subscribeInput,
-          clearPending: false,
-        });
-        insertPending(sqlite);
+        await applySubscribeIntent(createSqliteD1(sqlite), subscribeInput);
         const before = stateSnapshot(sqlite);
         const db = createFaultInjectingD1(sqlite, { failAtBoundary: boundary });
 
-        await expect(unsubscribeAll(db, CHAT_ID, { clearPending: true }))
+        await expect(unsubscribeAll(db, CHAT_ID))
           .rejects.toThrow(`injected failure at boundary ${boundary}`);
         expect(stateSnapshot(sqlite)).toEqual(before);
       } finally {

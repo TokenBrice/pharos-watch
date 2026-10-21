@@ -520,16 +520,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     connectionGroup: "five-minute-telegram-chain",
   },
   {
-    job: "telegram-disambiguation-cleanup",
-    label: "Telegram disambiguation cleanup",
-    group: "five-minute",
-    scheduleKey: "fiveMinuteTelegramAlerts",
-    triggerMode: "isolated",
-    freshnessSurface: "none",
-    maxConnections: 0, // DB-only DELETE of expired pending disambiguation rows
-    connectionGroup: "five-minute-telegram-chain",
-  },
-  {
     job: "telegram-pulse-snapshot",
     label: "Telegram pulse snapshot",
     group: "five-minute",

@@ -329,9 +329,14 @@ describe("ReservesSection", () => {
       expect(screen.getByRole("figure").getAttribute("aria-label")).not.toContain("49.9");
     });
 
-    it("retries from the Feed status disclosure after a failed fetch and keeps the reviewed visual", () => {
+    it("keeps a failed refetch over a retained read out of the header", () => {
+      renderSection({ reserves: makeReserves({ mode: "curated-fallback" }), reserveFetchError: new Error("boom") });
+      expect(screen.queryByRole("button", { name: "Live reserve feed unavailable" })).toBeNull();
+    });
+
+    it("retries from the Feed status disclosure after a failed first fetch and keeps the reviewed visual", () => {
       const onRetry = vi.fn();
-      renderSection({ reserves: makeReserves({ mode: "curated-fallback" }), reserveFetchError: new Error("boom"), onRetry });
+      renderSection({ reserves: null, reserveFetchError: new Error("boom"), onRetry });
       expect(screen.getByRole("button", { name: "Live reserve feed unavailable" })).toBeDefined();
       expect(screen.getByRole("figure").getAttribute("aria-label")).toContain("U.S. Treasury bills 80%");
       fireEvent.click(screen.getByRole("button", { name: "Retry", hidden: true }));

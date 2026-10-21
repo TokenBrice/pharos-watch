@@ -1,13 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { D1_BATCH_SIZE } from "../../../lib/constants";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import { mockTelegramD1 as mockD1 } from "../../../test-helpers/__shared/telegram";
 import { countTelegramProcessedUpdateBacklog, pruneTelegramProcessedUpdates } from "../processed-updates";
-import {
-  persistPendingConfirmBulk,
-  persistPendingDisambiguation,
-  persistPendingDisambiguationRow,
-} from "../disambiguation";
 import { upsertSubscriberRow } from "../subscribers";
 import { createLatestSchemaSqlite, createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
@@ -48,106 +41,6 @@ describe("upsertSubscriberRow", () => {
       FROM telegram_subscribers WHERE chat_id = '42'`).get()).toEqual({
       alert_dews: 1, alert_depeg: 1, alert_safety: 1,
     });
-  });
-});
-
-describe("persistPendingDisambiguationRow", () => {
-  it("stores a versioned canonical payload while satisfying legacy NOT NULL columns", async () => {
-    const candidates = [{ id: "usdf-falcon", symbol: "USDF", name: "Falcon USD" }];
-    const db = mockD1([{ match: "INSERT INTO telegram_pending_disambiguation", rows: [] }]);
-
-    await persistPendingDisambiguation(db, {
-      chatId: "42",
-      actionType: "subscribe",
-      actionPayload: { presetIds: ["usd-top25"] },
-      alertTypes: new Set(["dews"]),
-      resolvedCoins: [{ id: "usdc-circle", symbol: "USDC", name: "USD Coin" }],
-      ambiguousTicker: "USDF",
-      candidates,
-      remainingTickers: ["USDA"],
-      initiatorUserId: "123",
-    });
-    db.assertAllMatchesUsed();
-
-    const [entry] = db.getHistory();
-    expect(JSON.parse(String(entry?.binds[2]))).toEqual({
-      presetIds: ["usd-top25"],
-      schemaVersion: 1,
-      alertTypes: ["dews"],
-      resolvedIds: ["usdc-circle"],
-      ambiguousTicker: "USDF",
-      candidates,
-      remainingTickers: ["USDA"],
-    });
-    expect(entry?.binds.slice(3, 8)).toEqual([
-      JSON.stringify(["dews"]),
-      JSON.stringify(["usdc-circle"]),
-      "USDF",
-      JSON.stringify(candidates),
-      JSON.stringify(["USDA"]),
-    ]);
-  });
-
-  it.each([
-    { owner: "actor-1", expiresIn: 300, accepted: false },
-    { owner: "actor-2", expiresIn: 300, accepted: true },
-    { owner: "actor-1", expiresIn: -1, accepted: true },
-  ])("enforces pending ownership for $owner with expiry $expiresIn", async ({ owner, expiresIn, accepted }) => {
-    const { db, sqlite } = fixtures.open();
-    const now = Math.floor(Date.now() / 1000);
-    const pending = {
-      chatId: "-100", actionType: "setup-step" as const, actionPayload: { step: "branch" },
-      alertTypes: [], resolvedIds: [], ambiguousTicker: "", candidates: [], remainingTickers: [],
-      initiatorUserId: owner, expiresAt: now + expiresIn,
-    };
-    await persistPendingDisambiguationRow(db, pending);
-    expect(await persistPendingDisambiguationRow(db, {
-      ...pending, initiatorUserId: "actor-2", expiresAt: now + 600, actionPayload: { step: "replacement" },
-    })).toBe(accepted);
-    expect(sqlite.prepare(`SELECT initiator_user_id, action_payload FROM telegram_pending_disambiguation
-      WHERE chat_id = '-100'`).get()).toEqual({
-      initiator_user_id: accepted ? "actor-2" : owner,
-      action_payload: JSON.stringify({ step: accepted ? "replacement" : "branch" }),
-    });
-  });
-
-  it("refuses bulk confirmation without replacing another owner's fresh operation", async () => {
-    const { db, sqlite } = fixtures.open();
-    await persistPendingDisambiguationRow(db, {
-      chatId: "-100", actionType: "setup-step", actionPayload: { step: "branch" },
-      alertTypes: [], resolvedIds: [], ambiguousTicker: "", candidates: [], remainingTickers: [],
-      initiatorUserId: "actor-1", expiresAt: Math.floor(Date.now() / 1000) + 300,
-    });
-    expect(await persistPendingConfirmBulk(db, {
-      chatId: "-100", payload: { kind: "unsubscribe", presetIds: [], coinIds: [], unsubscribeAll: true },
-      initiatorUserId: "actor-2",
-    })).toBe(false);
-    expect(sqlite.prepare(`SELECT action_type, initiator_user_id FROM telegram_pending_disambiguation
-      WHERE chat_id = '-100'`).get()).toEqual({ action_type: "setup-step", initiator_user_id: "actor-1" });
-  });
-
-  it("rejects pending disambiguation batches above the D1 limit", async () => {
-    const db = mockD1([]);
-    const operationStatements = Array.from(
-      { length: D1_BATCH_SIZE },
-      () => db.prepare("UPDATE telegram_subscriptions SET alert_depeg = alert_depeg"),
-    );
-
-    await expect(
-      persistPendingDisambiguationRow(db, {
-        chatId: "-100",
-        actionType: "setup-step",
-        actionPayload: { step: "branch" },
-        alertTypes: [],
-        resolvedIds: [],
-        ambiguousTicker: "",
-        candidates: [],
-        remainingTickers: [],
-        initiatorUserId: "actor-2",
-        operationStatements,
-      }),
-    ).rejects.toThrow(`Pending disambiguation requires too many atomic statements (${D1_BATCH_SIZE + 1})`);
-    expect(db.getHistory()).toEqual([]);
   });
 });
 

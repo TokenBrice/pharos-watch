@@ -52,6 +52,8 @@ describe("YieldHistoryChart", () => {
       const status = screen.getByLabelText(`${state === "primary-error" ? "Primary" : "Alternate"} history status`);
       if (state === "loading") expect(within(status).getByText("Loading history")).toBeTruthy();
       else if (state === "stale") expect(within(status).getByText("Showing an older snapshot")).toBeTruthy();
+      // A failed refresh over retained observations is operator signal (ADR-42).
+      else if (state === "retained-error") expect(status.textContent).toBe("");
       else {
         if (state === "warning") expect(within(status).getByText("Source history incomplete")).toBeTruthy();
         else expect(within(status).getByRole("status")).toBeTruthy();

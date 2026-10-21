@@ -48,7 +48,7 @@ export function buildTelegramCreds(env: TelegramCredentialEnv): TelegramCreds | 
 }
 
 /**
- * Destination for operator-only alerts (cron freshness watchdog). Deliberately
+ * Destination for operator-only alerts (freshness, digest-publication and reserve post-sync watchdogs). Deliberately
  * separate from `buildTelegramCreds`: watchdog transitions are ops signal, not
  * audience content, so they must never reach the public digest channel. With
  * `TELEGRAM_OPERATOR_CHAT_ID` unset the alert is suppressed rather than

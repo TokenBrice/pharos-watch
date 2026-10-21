@@ -119,9 +119,9 @@ describe("YieldSourceSheet", () => {
     rerender(<YieldSourceSheet {...props} ranking={retained} error={new Error("refresh failed")} />);
     expect(screen.getByRole("link", { name: "usdc-best" })).toBeTruthy();
     expect(screen.getByTestId("yield-history-chart").textContent).toContain("alt-usdc");
-    expect(screen.getByRole("status")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-    expect(onRetry).toHaveBeenCalledTimes(2);
+    // Retained ranking stays usable without a reader notice (ADR-42).
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
     rerender(<YieldSourceSheet {...props} ranking={retained} />);
     expect(screen.queryByRole("status")).toBeNull();
     expect(screen.getByTestId("yield-history-chart").textContent).toContain("alt-usdc");

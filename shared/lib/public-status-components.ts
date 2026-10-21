@@ -293,9 +293,13 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
       add("safety-scores", gradeAge("Safety Scores", ageSeconds, budget, "safety-score-publication"));
     }
     if (safety.status === "held") {
+      // Ratings-held disclosure lives here only; rating surfaces no longer carry a notice.
+      const heldSince = safety.heldSinceSec != null
+        ? ` since ${new Date(safety.heldSinceSec * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC`
+        : "";
       add("safety-scores", {
         state: "degraded",
-        summary: "Safety Score publication is held while required inputs recover. The last accepted scores are still served when available.",
+        summary: `Ratings are held at the last verified snapshot${heldSince} while required inputs recover. The last accepted scores are still served when available.`,
         reason: "safety-score-publication-held",
         ageSeconds,
         budget,

@@ -17,20 +17,9 @@ import {
   TELEGRAM_SPLIT_VERSION,
 } from "./constants";
 import { buildTelegramMiniAppUrl } from "./mini-app-url";
-import type { ResolvedCoin } from "./alerts-parser";
 
 // Expose chunking constants alongside the formatter that consumes them.
 export { TELEGRAM_MESSAGE_CHUNK_LIMIT, TELEGRAM_SPLIT_VERSION };
-
-/** Format a disambiguation prompt for the user. */
-export function formatDisambiguation(ticker: string, candidates: ResolvedCoin[]): string {
-  const lines = candidates.map((c, i) => `${i + 1}. ${c.symbol} — ${c.name} (${c.id})`);
-  return [
-    `"${ticker}" matches ${candidates.length} coins:`,
-    ...lines,
-    'Reply with the number(s) you want (e.g. "1" or "1,2")',
-  ].join("\n");
-}
 
 // ---------- Alert Message Formatting ----------
 

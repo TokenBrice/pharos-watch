@@ -33,26 +33,6 @@ export class TelegramSendOriginatedError extends Error {
   }
 }
 
-export function parseTelegramTransportErrorClass(value: string | null): TelegramTransportErrorClass | null {
-  switch (value) {
-    case "blocked":
-    case "chat_not_found":
-    case "chat_migrated":
-    case "formatting_error":
-    case "payload_too_large":
-    case "rate_limit":
-    case "server_error":
-    case "bad_request":
-    case "auth_error":
-    case "timeout":
-    case "network":
-    case "unknown":
-      return value;
-    default:
-      return null;
-  }
-}
-
 interface TelegramErrorPayload {
   description: string | null;
   retryAfterSec: number | null;
@@ -181,19 +161,4 @@ export function classifyTelegramCaughtFailure(error: unknown): TelegramTransport
   return failure("unknown", { retryable: true, permanentFailure: false });
 }
 
-export function isBotWideTelegramFailure(
-  result: Pick<TelegramTransportFailure, "errorClass" | "rateLimitScope">,
-): boolean {
-  return result.errorClass === "auth_error"
-    || (result.errorClass === "rate_limit" && result.rateLimitScope === "global");
-}
-
-export function isTransientTelegramOutageFailure(
-  result: Pick<TelegramTransportFailure, "errorClass">,
-): boolean {
-  return result.errorClass === "server_error"
-    || result.errorClass === "timeout"
-    || result.errorClass === "network"
-    || result.errorClass === "unknown";
-}
 import { parseJsonObject } from "../../lib/json-parse";

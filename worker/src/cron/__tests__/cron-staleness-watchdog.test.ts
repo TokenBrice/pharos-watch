@@ -8,9 +8,15 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.useRealTimers();
 });
-const { buildCacheStatusesMock, sendToChatMock } = vi.hoisted(() => ({
+const { buildCacheStatusesMock, sendToChatMock, loadPublicationHealthMock } = vi.hoisted(() => ({
   buildCacheStatusesMock: vi.fn(),
   sendToChatMock: vi.fn(async (..._args: unknown[]) => ({ ok: true })),
+  loadPublicationHealthMock: vi.fn(async (..._args: unknown[]): Promise<unknown> => null),
+}));
+
+vi.mock("../../lib/safety-score-v9/publication-health", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/safety-score-v9/publication-health")>()),
+  loadSafetyScoreV9PublicationHealth: loadPublicationHealthMock,
 }));
 
 vi.mock("../../lib/api-freshness", async (importOriginal) => ({
@@ -105,6 +111,56 @@ describe("cron staleness watchdog", () => {
     buildCacheStatusesMock.mockReset();
     sendToChatMock.mockClear();
     sendToChatMock.mockResolvedValue({ ok: true });
+    loadPublicationHealthMock.mockReset();
+    loadPublicationHealthMock.mockResolvedValue(null);
+  });
+
+  it("alerts detail write failures and reports their recovery once the marker clears", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+    const failureRows = [{
+      key: "detail-write-failure:usdt-tether",
+      value: JSON.stringify({ reason: "value-too-large" }),
+      updated_at: Math.floor(Date.now() / 1000) - 60,
+    }];
+    const db = fakeDb(failureRows);
+    mockCacheStatus({});
+    await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(sendToChatMock.mock.calls[0]?.[1]).toContain("Detail cache write failures</b>: usdt-tether (value-too-large)");
+
+    failureRows.splice(0);
+    vi.setSystemTime(new Date("2026-08-22T01:00:00Z"));
+    const recovery = await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(2);
+    expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Detail cache writes recovered</b>: usdt-tether");
+    expect(JSON.parse(recovery.metadata ?? "{}").alertTransitions).toMatchObject({
+      recovered: ["detail-write:usdt-tether"], sent: true,
+    });
+  });
+
+  it("alerts a held Safety Score publication and keeps it pending while the health read fails", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+    const db = fakeDb();
+    mockCacheStatus({});
+    loadPublicationHealthMock.mockResolvedValue({ status: "held", reasons: [{ code: "coverage-below-floor" }] });
+    const held = await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock.mock.calls[0]?.[1]).toContain("Safety Score publication held</b>: v9 (coverage-below-floor)");
+    expect(JSON.parse(held.metadata ?? "{}").firedRuleIds).toContain("safety-publication-held");
+
+    vi.setSystemTime(new Date("2026-08-22T01:00:00Z"));
+    loadPublicationHealthMock.mockRejectedValue(new Error("read failed"));
+    await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+
+    vi.setSystemTime(new Date("2026-08-22T02:00:00Z"));
+    loadPublicationHealthMock.mockResolvedValue({ status: "accepted", reasons: [] });
+    await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(2);
+    expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Safety Score publication released</b>: v9");
   });
 
 

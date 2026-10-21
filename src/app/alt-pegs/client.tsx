@@ -6,7 +6,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
-import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { NonUsdShareChart } from "@/components/non-usd-share-chart";
 import { useDexLiquidityTable, useNonUsdShare, usePegSummary, useReportCardsV9Table, useStablecoinCharts } from "@/hooks/api-hooks";
 import { TimeRangeOption, isTimeRangeOption } from "@/hooks/use-time-range-filter";
@@ -174,7 +173,6 @@ export function AltPegsClient() {
       {stablecoinsQuery.isError ? (
         <QueryErrorNotice error={stablecoinsQuery.error} hasData onRetry={() => void stablecoinsQuery.refetch()} />
       ) : null}
-      <SafetyScoreV9StatusNotice response={reportCardsQuery.data} />
 
       <NonUsdHero
         snapshot={snapshot}

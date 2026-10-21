@@ -13,8 +13,6 @@ import {
 } from "../../../telegram/common/constants";
 import { TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 import type { TelegramAlertType } from "@shared/types/status";
-import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
-import { buildPendingAlertScope, type PendingAlertScopeItem } from "../../../telegram/outbox/pending-provenance";
 
 type AlertAppender<T> = (alerts: ConsolidatedAlerts) => T[];
 
@@ -84,7 +82,6 @@ export interface AlertsByChatEntry {
   quietHoursStartUtc: number | null;
   quietHoursEndUtc: number | null;
   timezone: string | null;
-  preferenceGeneration?: number;
   /** Union of the follow sources that routed this chat's events. */
   via?: AlertVia;
   /** Routed depeg step / DEWS floor per `<family>:<coin>` for the Fewer button. */
@@ -101,10 +98,6 @@ export interface RoutedSubscriberAlert {
   disableNotification: boolean;
   alertType: TelegramAlertType;
   alertTypes?: readonly TelegramAlertType[];
-  sourceEventId?: string;
-  preferenceGeneration?: number;
-  alertScope?: PendingAlertScopeItem[];
-  safetyScoreIdentity?: SafetyScorePublicationIdentity;
   fewerBase?: FewerBaseSettings;
 }
 
@@ -130,13 +123,9 @@ function addAlertToChat<T extends { stablecoinId: string }>(
   const fewerBase = family === "depeg"
     ? sub.depeg_worsening_bps_step
     : family === "dews" ? sub.dews_min_band : undefined;
-  const preferenceGeneration = Number.isFinite(sub.preference_generation)
-    ? Math.max(0, Math.floor(sub.preference_generation ?? 0))
-    : 0;
   const existing = alertsByChat.get(sub.chat_id);
   if (existing) {
     existing.lastActiveAt = Math.max(existing.lastActiveAt, sub.last_active_at);
-    existing.preferenceGeneration = Math.min(existing.preferenceGeneration ?? 0, preferenceGeneration);
     existing.via = mergeAlertVia(existing.via, sub);
     if (fewerBase !== undefined) {
       existing.fewerBase ??= {};
@@ -155,7 +144,6 @@ function addAlertToChat<T extends { stablecoinId: string }>(
     quietHoursStartUtc: sub.quiet_hours_start_utc ?? null,
     quietHoursEndUtc: sub.quiet_hours_end_utc ?? null,
     timezone: sub.timezone ?? null,
-    preferenceGeneration,
     via: mergeAlertVia(undefined, sub),
     ...(fewerBase !== undefined ? { fewerBase: { [`${family}:${event.stablecoinId}`]: fewerBase } } : {}),
   });
@@ -221,8 +209,6 @@ export interface PlannedSubscriberAlert {
   entry: AlertsByChatEntry;
   alertType: TelegramAlertType;
   alertTypes?: readonly TelegramAlertType[];
-  sourceEventId?: string;
-  safetyScoreIdentity?: SafetyScorePublicationIdentity;
   /** Cheap chunk-count estimate (no formatting); see `estimateChatChunks`. */
   estimatedChunks: number;
 }
@@ -251,8 +237,6 @@ function estimateChatChunks(alerts: ConsolidatedAlerts): number {
 /** Order page candidates newest-first and estimate chunks before formatting. */
 export function planSubscriberQueue(
   alertsByChat: Map<string, AlertsByChatEntry>,
-  sourceEventId?: string,
-  safetyScoreIdentity?: SafetyScorePublicationIdentity | null,
 ): PlannedSubscriberAlert[] {
   return [...alertsByChat.entries()]
     .map(([chatId, entry]) => ({
@@ -260,12 +244,6 @@ export function planSubscriberQueue(
       entry,
       alertType: dominantAlertType(entry.alerts),
       alertTypes: alertTypesForConsolidated(entry.alerts),
-      sourceEventId,
-      ...(
-        safetyScoreIdentity && entry.alerts.safety.length > 0
-          ? { safetyScoreIdentity }
-          : {}
-      ),
       estimatedChunks: estimateChatChunks(entry.alerts),
     }))
     .sort((a, b) => b.entry.lastActiveAt - a.entry.lastActiveAt);
@@ -288,14 +266,6 @@ function formatPlannedSubscriber(
     alertTypes: plan.alertTypes,
     ...(plan.entry.fewerBase ? { fewerBase: plan.entry.fewerBase } : {}),
   };
-  if (plan.sourceEventId) {
-    routed.sourceEventId = plan.sourceEventId;
-    routed.preferenceGeneration = plan.entry.preferenceGeneration ?? 0;
-    routed.alertScope = buildPendingAlertScope(plan.entry.alerts);
-    if (plan.safetyScoreIdentity) {
-      routed.safetyScoreIdentity = plan.safetyScoreIdentity;
-    }
-  }
   return routed;
 }
 
@@ -340,16 +310,6 @@ export function expandSubscriberChunks(
         chunkIndex,
         ...((sub.alertTypes ?? [sub.alertType]).length === 1
           ? { alertType: (sub.alertTypes ?? [sub.alertType])[0] }
-          : {}),
-        ...(sub.sourceEventId && sub.preferenceGeneration != null && sub.alertScope
-          ? {
-              sourceEventId: sub.sourceEventId,
-              preferenceGeneration: sub.preferenceGeneration,
-              alertScope: sub.alertScope,
-              ...(sub.safetyScoreIdentity
-                ? { safetyScoreIdentity: sub.safetyScoreIdentity }
-                : {}),
-            }
           : {}),
         ...(linkPreviewOptions ? { linkPreviewOptions } : {}),
       });

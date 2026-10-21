@@ -6,7 +6,6 @@ import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
 } from "../delivery/operation-batch";
-import { pendingDisambiguationClearStatement } from "./disambiguation";
 
 /** Re-exported under the worker-local name every Telegram store module already imports. */
 export { unixNow };
@@ -14,7 +13,7 @@ export { unixNow };
 export const PENDING_OWNERSHIP_CONFLICT_MESSAGE =
   "Another user has a pending selection in this chat. Ask them to finish or /cancel it first.";
 
-export function prepareEnsureSubscriberExists(
+function prepareEnsureSubscriberExists(
   db: D1Database,
   chatId: string,
   username: string | null,
@@ -290,7 +289,7 @@ export async function upsertGlobalAlertTypes(
   chatId: string,
   username: string | null,
   alertTypes: Set<string>,
-  options: { clearPending?: boolean; operationStatements?: D1PreparedStatement[] } = {},
+  options: { operationStatements?: D1PreparedStatement[] } = {},
 ): Promise<void> {
   const nowSec = unixNow();
   const statements = [
@@ -311,8 +310,5 @@ export async function upsertGlobalAlertTypes(
       },
     }),
   ];
-  if (options.clearPending) {
-    statements.push(pendingDisambiguationClearStatement(db, chatId));
-  }
   await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }

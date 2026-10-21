@@ -1,6 +1,6 @@
 # PharosWatchBot Mini App
 
-Runtime contract for PharosWatchBot Mini App launch, payloads, signed auth and confirmed client controls. [Telegram alerts](./telegram-alerts.md) owns bot commands/dispatch/delivery; [architecture](./telegram-architecture.md#9-mini-app-surface) owns the sole implementation roster and seam prohibitions; [BotFather runbook](./runbooks/telegram-mini-app-botfather.md) owns external configuration.
+Runtime contract for PharosWatchBot Mini App launch, payloads, signed auth and confirmed client controls. [Telegram alerts](./telegram-alerts.md) owns bot commands/dispatch/delivery; [architecture](./telegram-architecture.md#9-mini-app-surface) owns the sole implementation roster and seam prohibitions; [BotFather runbook](./runbooks/telegram-mini-app-operations.md#botfather-configuration) owns external configuration.
 
 > **Agent navigation** — Start with the [Telegram architecture seam map](./telegram-architecture.md). Client/auth/state sections: [overview](#overview) · [launch surfaces](#launch-surfaces) · [payload scheme](#payload-scheme) · [client state](#client-state-and-control-semantics) · [auth](#auth-model) · [Mini App launch entrypoints](#mini-app-launch-entrypoints) · [frontend main page](#frontend-main-page) · [public pulse](#public-pulse-privacy-and-freshness).
 
@@ -25,7 +25,7 @@ The static control panel is `https://pharos.watch/pharoswatchbot/app/`. Web App 
 | Surface | Owner / reconciliation |
 | --- | --- |
 | Persistent `Manage Alerts` menu | Five-minute Worker lane, 15-minute fresh-cache marker; Bot API failure/backoff can delay drift repair |
-| Profile `Launch app`, preview/loading assets | BotFather; use [configured state and smoke tests](./runbooks/telegram-mini-app-botfather.md#configured-state), not a duplicated feature checklist |
+| Profile `Launch app`, preview/loading assets | BotFather; use [configured state and smoke tests](./runbooks/telegram-mini-app-operations.md#configured-state), not a duplicated feature checklist |
 | Private command replies / quick-subscribe | `/start`, `/help`, `/presets`, `/settings`, `/list`, `/status`, `/why`, `/coverage`, `/set`, `/mute`, `/unmutehours`, `/timezone`, `/unsnooze`, `/pause`, `/health`, `/forget` attach context-aware buttons; quicksub uses `coin_<id>` |
 | Direct `https://t.me/PharosWatchBot?startapp=<payload>` | Shared payload parser chooses view; signed `initData` still authorizes every API operation. Stale-auth relaunch preserves current panel/context |
 
@@ -123,7 +123,7 @@ Coin detail renders On and On via as switched on. Turning an inherited family of
 
 ## Auth Model
 
-`validateTelegramMiniAppInitData` in `worker/src/telegram/mini-app/mini-app-auth.ts` owns Telegram HMAC validation and timing-safe comparison. Require signed hash, auth date and user; untrusted browser fields or launch hints are not identity. Try current bot token then configured previous token for overlap ([secret rotation](./runbooks/telegram-secret-rotation.md)); outbound sends use current token only.
+`validateTelegramMiniAppInitData` in `worker/src/telegram/mini-app/mini-app-auth.ts` owns Telegram HMAC validation and timing-safe comparison. Require signed hash, auth date and user; untrusted browser fields or launch hints are not identity. Try current bot token then configured previous token for overlap ([secret rotation](./runbooks/telegram-webhook.md#secret-rotation)); outbound sends use current token only.
 
 Freshness windows:
 
@@ -133,7 +133,7 @@ Freshness windows:
 - **Telemetry:** signed stale rejections record one aggregate event per expired `initData` and surface (keyed by the first 16 hex characters of the signed `hash` in the per-user command-cooldown cache, held for 7 days to match short-lived chat cache retention), so counts measure incidents, not client retries. Every retry still returns `401 stale-auth`; the dedupe gates only the telemetry write. Reads use `mini_app_session_invalid`; writes use `mini_app_mutation_denied`, failure `stale-auth` and normalized `mutationActionDetail`, not raw operation kind. Bulk previews record `mini_app_portability` (historical event name).
 - **Burst admission:** 12 schema/signature-valid attempts per user in an anchored 30-second window beginning with first admission, not wall-clock buckets. Excess returns 429 with identical integer `retryAfterSec`/`Retry-After`. Disable writes with visible non-live countdown and one polite announcement at start/end; keep reads available and require explicit action afterward, never replay.
 - **Budget retention:** burst is independent of profile ownership, domain idempotency and webhook dedupe. `/forget` deletes subscriber/watchlist state and all raw chat-keyed cache entries, including legacy burst keys, but cannot reset the remaining admission budget. D1 stores only a bot-token HMAC of user plus a short epoch, count and original window clock; the current/previous epoch lookup preserves the anchored deadline across an epoch boundary. An anonymous identity serves only that <=30-second window, never a cross-window profile identifier, and neither forgetting nor rejected attempts extends it. Expired anonymous rows have no admission authority or cross-window identity and are physically pruned by the existing daily bounded cache cleanup; this is not a 30-second physical-deletion guarantee.
-- **Body/auth order:** both endpoints cap bodies at 16 KiB using declared length and bounded streams before JSON/schema/HMAC. Rejected body/JSON/schema never touches D1. [Ingress runbook](./runbooks/telegram-webhook-retry-dedupe.md#preauth-ingress-abuse-controls) owns early limiter interpretation.
+- **Body/auth order:** both endpoints cap bodies at 16 KiB using declared length and bounded streams before JSON/schema/HMAC. Rejected body/JSON/schema never touches D1. [Ingress runbook](./runbooks/telegram-webhook.md#preauth-ingress-abuse-controls) owns early limiter interpretation.
 - **Privacy:** exact embedded route/descendants omit Google Analytics, page views/events/Web Vitals and GA/Tag Manager CSP origins while permitting Telegram bridge; public landing retains normal configured analytics. First-party usage aggregates are signed-auth-only and identifier-free; the adoption funnel (launch campaign/placement, session-to-first-mutation latency) is retired and writes nothing. Preauth rejection writes nothing.
   The `telegram_subscribers.first_follow_at` milestone is still claimed inside the same Store mutation transaction (including bulk generation guards); off-only, snooze-only, stale/no-op and failed changes do not set it.
 - **Groups:** group/supergroup/channel stay read-only, visibly directing users to `/settings@PharosWatchBot` in the group.
@@ -142,7 +142,7 @@ Theme normalization belongs to `telegram-theme.ts` / `applyTelegramTheme()`: pre
 
 ## BotFather Operator Checklist
 
-BotFather-owned items (Main Mini App URL, profile launch toggle, preview screenshots, loading-screen icon, loading background color) are not reconciled by Worker code. The current configured state plus deploy-time smoke tests live in [`runbooks/telegram-mini-app-botfather.md`](./runbooks/telegram-mini-app-botfather.md). Verify quarterly or after a BotFather UI change.
+BotFather-owned items (Main Mini App URL, profile launch toggle, preview screenshots, loading-screen icon, loading background color) are not reconciled by Worker code. The current configured state plus deploy-time smoke tests live in the [BotFather runbook](./runbooks/telegram-mini-app-operations.md#botfather-configuration). Verify quarterly or after a BotFather UI change.
 
 ## Debugging Workflow
 
@@ -156,10 +156,10 @@ Real-device inspection paths for triaging Mini App issues:
 
 For incident triage, use the [complete Telegram runbook hub](./telegram-alerts.md#runbooks) rather than DevTools. Mini App-specific entry points:
 
-- [`runbooks/telegram-mini-app-auth-failures.md`](./runbooks/telegram-mini-app-auth-failures.md) — `mini_app_session_invalid` spikes.
-- [`runbooks/telegram-preset-resolution-failure.md`](./runbooks/telegram-preset-resolution-failure.md) — `presetQueryFailures` / `presetResolutionFailures` rising.
-- [Ingress/setup incidents](./runbooks/telegram-webhook-retry-dedupe.md#setup-state) — setup wizard does not progress.
-- [`runbooks/telegram-group-admin-gating-rollback.md`](./runbooks/telegram-group-admin-gating-rollback.md) — flipping the group admin gate from hard to soft.
+- [Auth failures](./runbooks/telegram-mini-app-operations.md#auth-failures) — `mini_app_session_invalid` spikes.
+- [Preset resolution failure](./runbooks/telegram-delivery.md#preset-resolution-failure) — `presetFailure` / `presetQueryFailures` rising.
+- [Ingress/setup incidents](./runbooks/telegram-webhook.md#setup-state) — setup wizard does not progress.
+- [Group admin gate rollback](./runbooks/telegram-webhook.md#group-admin-gate-rollback) — flipping the group admin gate from hard to soft.
 
 ## Test Fixtures
 
@@ -177,7 +177,7 @@ Record the Telegram/client version, OS/device, appearance, assistive setting, an
 
 ## Mini App Launch Entrypoints
 
-[Launch surfaces](#launch-surfaces) is the single inventory for Worker-reconciled and BotFather-owned entrypoints. [Payload scheme](#payload-scheme) owns view routing; the [BotFather runbook](./runbooks/telegram-mini-app-botfather.md#smoke-tests) owns operator configuration and real-client launch tests.
+[Launch surfaces](#launch-surfaces) is the single inventory for Worker-reconciled and BotFather-owned entrypoints. [Payload scheme](#payload-scheme) owns view routing; the [BotFather runbook](./runbooks/telegram-mini-app-operations.md#smoke-tests) owns operator configuration and real-client launch tests.
 
 ## Frontend Main Page
 

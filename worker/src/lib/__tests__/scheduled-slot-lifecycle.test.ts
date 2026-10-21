@@ -132,7 +132,7 @@ describe("event-entry scheduled lifecycle", () => {
     expect(db.getSlot("quarterHourly", slotStartedAt)).toMatchObject({ state: "running", execution_owner: "takeover", execution_generation: 2, updated_at: slotStartedAt + 840 });
   });
 
-  it("groups one started and three required unstarted errors under one parent incident", async () => {
+  it("groups one started and two required unstarted errors under one parent incident", async () => {
     const now = Date.now() / 1000;
     const startedAt = now - 1800;
     const db = makeLeaseDb({
@@ -142,7 +142,7 @@ describe("event-entry scheduled lifecycle", () => {
     });
     db.sqlite.prepare("UPDATE cron_slot_executions SET child_marker_version = 1").run();
     const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now, limit: 10 });
-    expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 4, notStartedCronRuns: 3 });
+    expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 3, notStartedCronRuns: 2 });
     const runs = db.getRuns();
     expect(runs.every((run) => run.status === "error")).toBe(true);
     const metadata = runs.map((run) => JSON.parse(run.metadata!));
@@ -150,6 +150,6 @@ describe("event-entry scheduled lifecycle", () => {
       expect(item.parentIncidentId).toBe(`scheduled-slot:fiveMinuteTelegramAlerts:${startedAt}:dead-owner`);
     }
     const event = db.getCache("cron:event:fiveminutetelegramalerts:scheduled-slot-abandoned");
-    expect(JSON.parse(event!.value).metadata).toMatchObject({ childIncidentCounts: { started: 1, notStarted: 3 } });
+    expect(JSON.parse(event!.value).metadata).toMatchObject({ childIncidentCounts: { started: 1, notStarted: 2 } });
   });
 });

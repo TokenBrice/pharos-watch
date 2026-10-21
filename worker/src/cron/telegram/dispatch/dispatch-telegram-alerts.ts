@@ -31,7 +31,6 @@ import {
   type FreezeJobDetection,
 } from "../jobs/freeze-job";
 import { fanOutPlanningTelegramJobs, sweepTelegramJobs } from "../jobs/run-jobs";
-import { runLegacyPendingDrainShim } from "../jobs/legacy-pending-shim";
 import { runTelegramRollupStep, type TelegramRollupStepResult } from "../rollup/rollup-step";
 import { classifyTelegramLogError, logTelegramEvent } from "../../../telegram/common/log";
 
@@ -49,9 +48,8 @@ import type { TelegramDispatchSharedState } from "./dispatch-telegram-state";
  *   2. freeze Tape events -> one job per event, atomically with the cursor;
  *   3. fan out `planning` jobs one CPU-bounded page at a time;
  *   4. drain due deliveries (4 concurrent chats, chunks serial per chat);
- *   5. legacy `telegram_pending_alerts` drain-only shim;
- *   6. sweep: stale `sending` -> unknown, TTL -> expired, finished jobs -> done.
- * Telegram calls happen only in 4/5 and are skipped while the generic
+ *   5. sweep: stale `sending` -> unknown, TTL -> expired, finished jobs -> done.
+ * Telegram calls happen only in 4 and are skipped while the generic
  * Telegram API circuit is open; detection and fan-out still run so baselines
  * stay continuous and work is queued for the TTL window.
  */
@@ -82,8 +80,8 @@ export async function dispatchTelegramAlerts(
   throwIfAborted(signal);
 
   // Planning failures (freeze/alert detection, fan-out) are isolated: they are
-  // recorded and the run ends degraded, but drain, the legacy shim and the
-  // sweep still run, so already-queued deliveries keep flowing.
+  // recorded and the run ends degraded, but drain and the sweep still
+  // run, so already-queued deliveries keep flowing.
   const planningErrors: string[] = [];
   const isolate = async <T>(stage: string, fallback: T, run: () => Promise<T>): Promise<T> => {
     try {
@@ -188,11 +186,10 @@ export async function dispatchTelegramAlerts(
   const drain = transportAllowed
     ? await drainTelegramDeliveries(db, botToken, { signal, softDeadlineAtMs, holdKinds })
     : null;
-  const legacy = await runLegacyPendingDrainShim(db, botToken, nowSec, { signal, softDeadlineAtMs, transportAllowed });
   const sweep = await sweepTelegramJobs(db, Math.floor(Date.now() / 1000));
 
-  const sent = (drain?.sent ?? 0) + legacy.sent;
-  const attempted = (drain?.attempted ?? 0) + legacy.attempted;
+  const sent = drain?.sent ?? 0;
+  const attempted = drain?.attempted ?? 0;
   if (transportAllowed) {
     await recordOutcome(
       db,
@@ -281,8 +278,6 @@ export async function dispatchTelegramAlerts(
       sweepSendingToUnknown: sweep.sendingToUnknown,
       sweepExpired: sweep.expired,
       jobsDone: sweep.jobsDone,
-      legacyShimActive: legacy.active,
-      legacySent: legacy.sent,
       planningErrors,
     },
     noWorkRun: !mustSeedSnapshots && attempted === 0 && fanout.deliveriesPlanned === 0 && sweep.expired === 0

@@ -55,7 +55,6 @@ export const PROGRESS_TELEMETRY_SKIP_JOBS: Readonly<Record<string, true>> = {
   "stability-index": true,
   "compute-dews": true,
   "project-tape": true,
-  "telegram-disambiguation-cleanup": true,
   "telegram-pulse-snapshot": true,
   "snapshot-supply": true,
   "snapshot-chain-supply": true,

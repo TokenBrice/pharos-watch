@@ -18,7 +18,6 @@ function mockD1(tables: MockTableConfig[] = [], options: MockTelegramD1Options =
       ...(options.fallbackTables ?? []),
       // Store enable batches include the idempotent first-follow claim.
       { match: "INSERT OR IGNORE INTO telegram_subscribers", rows: [] },
-      { match: "INSERT INTO telegram_adoption_daily", rows: [] },
     ],
   });
 }

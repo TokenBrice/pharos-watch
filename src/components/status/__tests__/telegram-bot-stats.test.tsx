@@ -17,7 +17,6 @@ function telegramBot(): NonNullable<StatusResponse["telegramBot"]> {
       mutedChatsWithSubscriptions: 2,
       explicitCoinSubscriptions: 11,
       presetImpliedCoinSubscriptions: 4,
-      pendingDisambiguations: 1,
       lastSubscriberActivityAt: NOW_SECONDS - 300,
       customPreferenceChats: 4,
       quietHoursEnabledChats: 3,
@@ -141,7 +140,7 @@ describe("TelegramBotStats", () => {
     expect(screen.getByText(/30-minute policy threshold/)).toBeTruthy();
     expect(screen.getByText(/watchdog threshold remains backend-owned/i)).toBeTruthy();
     expect(screen.getByRole("link", { name: /Backlog expiration runbook/i }).getAttribute("href")).toContain(
-      "telegram-no-delivery.md#backlog-and-expiration",
+      "telegram-delivery.md#backlog-and-expiration",
     );
   });
 
@@ -205,7 +204,7 @@ describe("TelegramBotStats", () => {
     expect(screen.getByRole("link", { name: /Inspect dispatch cron/i }).getAttribute("href")).toBe("/admin/crons");
     expect(screen.getByRole("link", { name: /Open delivery actions/i }).getAttribute("href")).toBe("/admin/actions");
     const runbook = screen.getByRole("link", { name: /No-delivery runbook/i });
-    expect(runbook.getAttribute("href")).toContain("telegram-no-delivery.md");
+    expect(runbook.getAttribute("href")).toContain("telegram-delivery.md");
     expect(runbook.getAttribute("target")).toBe("_blank");
   });
 

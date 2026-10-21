@@ -29,7 +29,6 @@ describe("StablecoinSafetyScoreV9Card", () => {
       <StablecoinSafetyScoreV9Card
         card={card}
         identity={response.safetyScoreIdentity}
-        publicationHealth={response.publicationHealth}
         updatedAtMs={response.updatedAt * 1000}
         evidenceAnchors={anchors}
       />,
@@ -76,7 +75,6 @@ describe("StablecoinSafetyScoreV9Card", () => {
       <StablecoinSafetyScoreV9Card
         card={card}
         identity={response.safetyScoreIdentity}
-        publicationHealth={response.publicationHealth}
         updatedAtMs={response.updatedAt * 1000}
         stablecoinName="Test Stablecoin"
       />,
@@ -147,7 +145,6 @@ describe("StablecoinSafetyScoreV9Card", () => {
       <StablecoinSafetyScoreV9Card
         card={validatedCard}
         identity={response.safetyScoreIdentity}
-        publicationHealth={response.publicationHealth}
         updatedAtMs={response.updatedAt * 1000}
       />,
     );
@@ -181,7 +178,6 @@ describe("StablecoinSafetyScoreV9Card", () => {
       <StablecoinSafetyScoreV9Card
         card={card}
         identity={response.safetyScoreIdentity}
-        publicationHealth={response.publicationHealth}
         updatedAtMs={response.updatedAt * 1000}
       />,
     );
@@ -192,7 +188,7 @@ describe("StablecoinSafetyScoreV9Card", () => {
     })).toBeTruthy();
   });
 
-  it("shows held publication as a header chip; reason codes stay machine-readable, never copy", () => {
+  it("shows no held-publication chip; held state belongs to /status", () => {
     const card = makeV9Card();
     const response = makeReportCardsV9Response({
       cards: [card],
@@ -211,16 +207,11 @@ describe("StablecoinSafetyScoreV9Card", () => {
       <StablecoinSafetyScoreV9Card
         card={card}
         identity={response.safetyScoreIdentity}
-        publicationHealth={response.publicationHealth}
         updatedAtMs={response.updatedAt * 1000}
       />,
     );
 
-    const chip = screen.getByRole("button", { name: /Ratings held/ });
-    expect(chip.getAttribute("data-reason-codes")).toBe("dex-stale");
-    fireEvent.click(chip);
-    const time = document.querySelector("time");
-    expect(time?.getAttribute("datetime")).toBe(new Date(1_752_534_060 * 1000).toISOString());
+    expect(screen.queryByRole("button", { name: /Ratings held/ })).toBeNull();
     expect(document.body.textContent).not.toContain("dex-stale");
   });
 
@@ -244,7 +235,6 @@ describe("StablecoinSafetyScoreV9Card", () => {
       <StablecoinSafetyScoreV9Card
         card={card}
         identity={response.safetyScoreIdentity}
-        publicationHealth={response.publicationHealth}
         updatedAtMs={null}
       />,
     );
