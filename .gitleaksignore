@@ -372,3 +372,14 @@ d2961f89365ac611e8a36dcb87313e76fb70a4aa:worker/src/cron/measured-execution/__te
 # in an admin dialog fixture; neither is a credential.
 e22e82c1a3edb5484d84fc3d32de3fef55d80f02:worker/src/cron/__tests__/sync-mint-burn-multichain.test.ts:generic-api-key:91
 abbd074ed1de1ff8c35fccc6fa3effe6b5718e78:src/components/status/__tests__/admin-action-execution-dialog.test.tsx:generic-api-key:52
+
+# Reviewed 2026-10-21: safety-refinement curation false positives. Two evidence
+# gap ids containing "gldt" (GLDT asset slug), the public Solana JupUSD mint
+# address, the public GitBook-hosted download URL of GLDT's published Sep 2025
+# audit PDF (object-access token minted by the issuer's public docs), and ledger
+# prose; none is a credential.
+fc6a00bdb7a9e3d1af2ff04fb226f394a1e71939:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:gitlab-deploy-token:44576
+fc6a00bdb7a9e3d1af2ff04fb226f394a1e71939:shared/data/safety-score-v9/evidence-gap-classifications-v1.json:gitlab-deploy-token:44602
+fc6a00bdb7a9e3d1af2ff04fb226f394a1e71939:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:12194
+fc6a00bdb7a9e3d1af2ff04fb226f394a1e71939:shared/data/stablecoins/domains/mint-authority/gldt-gold-dao.json:generic-api-key:118
+82922f0d89d640888b5ca0d064133473efe6ab26:.github/artifacts/safety-score-missing-data-reviewed-ledger.json:generic-api-key:308436
