@@ -23,7 +23,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "SG-FORGE issues USDCV natively on Ethereum (SmartCoin V4 UUPS) and Solana (SPL Token-2022); per-chain mint authority resolves to SG-FORGE-controlled accounts. No third-party bridge carries the representation.",
+    "summary": "The September 2026 white paper lists issuer-native USDCV on Ethereum, Solana and Canton. Reviewed Ethereum (SmartCoin V4 UUPS) and Solana (SPL Token-2022) mint authorities resolve to SG-FORGE-controlled accounts; no Canton contract identifier or authority has been verified in the catalog. No third-party bridge carries the representation.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
     "confidence": "verified",
@@ -35,6 +35,10 @@
       {
         "label": "USDCV white paper",
         "url": "https://www.sgforge.com/wp-content/uploads/2025/08/SG-Forge-USDCV-White-Paper_V2.0_Ethereum_Solana_11082025.pdf"
+      },
+      {
+        "label": "USDCV MiCA white paper v2.2, 30 September 2026: issuer-native ledger perimeter",
+        "url": "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf"
       }
     ],
     "routes": [

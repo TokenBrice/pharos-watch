@@ -2663,13 +2663,32 @@
         {
           "label": "EURCV September 2026 whitepaper: D.10 daily aggregate outstanding-supply Collateral Test",
           "url": "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf"
+        },
+        {
+          "label": "ESMA interim MiCA register: EURCV EMT row naming Societe Generale - Forge and ACPR",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
         }
       ],
-      "notes": "EURCV is a MiCA e-money token issued by ACPR-licensed electronic-money institution SG-FORGE. Its whitepaper gives EEA-resident permitted holders an Article 49 MiCA issuer claim and par redemption right and documents safeguarded segregated accounts; the product disclosure reports bankruptcy remoteness. That regulator-supervised structure supports strong claim and segregation within the disclosed EEA and permitted-holder scope, not universal direct redemption. The whitepaper names Societe Generale, SG-FORGE's parent, as initial custodian, discloses the same-group conflict, and the July 14 disclosure places 100% of EUR reserves there. Because this is self-reported, concentrated same-group custody without a live alternate provider or independent current reconciliation, custody continuity is limited. Failover mechanics and concentration limits were not established. Research 2026-10-03: D.10 documents daily custodian information and Business-Day reconciliation of aggregate outstanding EURCV to collateral. This is an issuer-reported reconciliation procedure with named segregated-account agreement and custodian, supporting limited assuranceAndReconciliation, not an independent audit or examination. The rolling dashboard does not independently establish the historical October 3 snapshot.",
+      "notes": "EURCV is a MiCA e-money token issued by ACPR-licensed electronic-money institution SG-FORGE. Its whitepaper gives EEA-resident permitted holders an Article 49 MiCA issuer claim and par redemption right and documents safeguarded segregated accounts; the product disclosure reports bankruptcy remoteness. That regulator-supervised structure supports adequate claim and segregation within the disclosed EEA and permitted-holder scope, not universal direct redemption; strong is not claimed because no independent reserve attestor exists and the named Hacken engagement is a smart-contract audit only. 2026-10-21: graded to the same evidence rung as USDCV, which carries the same clause set in its September 2026 white paper. The whitepaper names Societe Generale, SG-FORGE's parent, as initial custodian, discloses the same-group conflict, and the July 14 disclosure places 100% of EUR reserves there. Because this is self-reported, concentrated same-group custody without a live alternate provider or independent current reconciliation, custody continuity is limited. Failover mechanics and concentration limits were not established. Research 2026-10-03: D.10 documents daily custodian information and Business-Day reconciliation of aggregate outstanding EURCV to collateral. This is an issuer-reported reconciliation procedure with named segregated-account agreement and custodian, supporting limited assuranceAndReconciliation, not an independent audit or examination. The rolling dashboard does not independently establish the historical October 3 snapshot.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
-          "quality": "strong"
+          "quality": "adequate",
+          "review": {
+            "reviewedAt": "2026-10-21",
+            "reviewer": "R2 family-consistency research (SG-FORGE pair)",
+            "rationale": "Re-graded under the fiat-cash evidence-class table. The September 2026 MiCA white paper (v2.2, 2026-09-30) documents the Art. 49 at-all-times claim, the L. 526-32 protection from other creditors including insolvency, the L. 522-17 segregated-account agreement and the Art. 54 collateral rules, and the ESMA interim MiCA register names SG-FORGE as ACPR-authorised EMI for the token. That satisfies the regulatory-filing branch of adequate. strong is not met: there is no independent named attestor or auditor for reserves, and the only audit named in the white paper (Hacken) covers smart-contract code, which the overlay standard excludes from financial assurance. limited is too low: this is a dated ACPR-notified filing, not a bare issuer dashboard.",
+            "sources": [
+              {
+                "label": "EURCV MiCA white paper v2.2, September 2026 (I.07, D.1, D.3, D.10, E.10)",
+                "url": "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf"
+              },
+              {
+                "label": "ESMA interim MiCA register: EURCV EMT row naming Societe Generale - Forge and ACPR",
+                "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+              }
+            ]
+          }
         },
         "custodyContinuity": {
           "quality": "limited"
@@ -3324,13 +3343,36 @@
         {
           "label": "Solana finalized token-supply read for USDCV",
           "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "USDCV MiCA white paper v2.2, September 2026 (I.07, D.1, D.3, D.10)",
+          "url": "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf"
+        },
+        {
+          "label": "ESMA interim MiCA register: USDCV EMT row naming Societe Generale - Forge and ACPR",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
         }
       ],
-      "notes": "SG-FORGE's MiCA whitepaper gives eligible EEA holders an at-par redemption claim and describes an exclusive insolvency-protected claim over collateral held in a French-law segregated account. Because this evidence is issuer-published without a current itemized independent reserve report, claim and segregation is limited rather than strong. The whitepaper names BNY Mellon SA/NV as the initial collateral custodian and permits later custodians, supporting limited custody continuity. Current independent custody assurance, provider allocation, anti-rehypothecation, and failure or replacement mechanics were not established. 2026-07-20 follow-up: SG-FORGE's product page continues to publish a daily self-reported collateral disclosure (USDCV collateral shown 100 percent at BNY as of 2026-07-20), but no independent reserve examination or attestation is published — the whitepaper's audit sections cover only Hacken smart-contract audits — so assurance and reconciliation remains uncurated.\n\n2026-07-29 preparation-only evidence delta under docs/process/mechanism-overlay-evidence-standard.md. assuranceAndReconciliation = limited: SG-FORGE's dated issuer dashboard reports collateral and circulation of 12,422,451.00, and fixed Ethereum and Solana reads independently reproduce exactly 12,422,451 tokens outstanding. This meets limited evidence: structured issuer data with external on-chain liability anchors. Every unavailable conclusion is sourced nondisclosure that retains the bounded gap; it is not a weak or failed grade. This full replacement candidate preserves all existing non-target components, metrics, and sources. It is non-score-bearing pending independent review and later curation authorization.",
+      "notes": "SG-FORGE's MiCA whitepaper gives eligible EEA holders an at-par redemption claim and describes an exclusive insolvency-protected claim over collateral held in a French-law segregated account. Because the evidence is a current ACPR-notified MiCA white paper but has no independent reserve attestor, claim and segregation is adequate rather than strong; the same rung applies to EURCV, which carries the same clauses. 2026-10-21: reviewed against white paper v2.2 (2026-09-30); the superseded v2.0 (2025-08) reasoning above is retained as history. The whitepaper names BNY Mellon SA/NV as the initial collateral custodian and permits later custodians, supporting limited custody continuity. Current independent custody assurance, provider allocation, anti-rehypothecation, and failure or replacement mechanics were not established. 2026-07-20 follow-up: SG-FORGE's product page continues to publish a daily self-reported collateral disclosure (USDCV collateral shown 100 percent at BNY as of 2026-07-20), but no independent reserve examination or attestation is published — the whitepaper's audit sections cover only Hacken smart-contract audits — so assurance and reconciliation remains uncurated.\n\n2026-07-29 preparation-only evidence delta under docs/process/mechanism-overlay-evidence-standard.md. assuranceAndReconciliation = limited: SG-FORGE's dated issuer dashboard reports collateral and circulation of 12,422,451.00, and fixed Ethereum and Solana reads independently reproduce exactly 12,422,451 tokens outstanding. This meets limited evidence: structured issuer data with external on-chain liability anchors. Every unavailable conclusion is sourced nondisclosure that retains the bounded gap; it is not a weak or failed grade. This full replacement candidate preserves all existing non-target components, metrics, and sources.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
-          "quality": "limited"
+          "quality": "adequate",
+          "review": {
+            "reviewedAt": "2026-10-21",
+            "reviewer": "R2 family-consistency research (SG-FORGE pair)",
+            "rationale": "Same clause set as EURCV in the same white-paper template: Art. 49 at-all-times par claim for EEA holders, exclusive pro-rata claim over the segregated account, protection from other creditors including insolvency under L. 526-32, L. 522-17 segregated-account agreement, Art. 54 collateral rules. The graded fact is the legal claim and segregation structure, which is identical to EURCV's. The absence of an independent reserve report is not a claim defect, it is why the component is adequate rather than strong, and it applies equally to both tokens. limited understated a dated ACPR-notified regulatory filing.",
+            "sources": [
+              {
+                "label": "USDCV MiCA white paper v2.2, September 2026 (I.07, D.1, D.3, D.10)",
+                "url": "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf"
+              },
+              {
+                "label": "ESMA interim MiCA register: USDCV EMT row naming Societe Generale - Forge and ACPR",
+                "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+              }
+            ]
+          }
         },
         "custodyContinuity": {
           "quality": "limited"

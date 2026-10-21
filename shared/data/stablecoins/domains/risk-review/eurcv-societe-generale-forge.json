@@ -14,7 +14,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "EURCV is issued natively by SG Forge on each supported ledger: an Ethereum ERC-20, a Solana Token-2022 mint, an XRP Ledger issued currency, and a Stellar credit asset. Each deployment's issuing authority was read directly on-chain on 2026-07-20; no lock-and-mint or third-party bridge leg carries the claim. Pinned ledger reads on 2026-07-21 sum to 128,041,811.64 EURCV across the four issuer-native deployments. Stellar carries 15,030,600 EURCV, or 11.73882172%, so the chain:stellar common-mode exposure is attributed and remains above the 10% materiality threshold.",
+    "summary": "The September 2026 white paper lists issuer-native EURCV on Ethereum, Solana, XRP Ledger, Stellar and Canton. The following authority observations and historical supply partition cover only the four reviewed Ethereum ERC-20, Solana Token-2022, XRP Ledger issued-currency and Stellar credit-asset deployments; Canton identity and authority remain unverified in the catalog. Each deployment's issuing authority was read directly on-chain on 2026-07-20; no lock-and-mint or third-party bridge leg carries the claim. Pinned ledger reads on 2026-07-21 sum to 128,041,811.64 EURCV across the four issuer-native deployments. Stellar carries 15,030,600 EURCV, or 11.73882172%, so the chain:stellar common-mode exposure is attributed and remains above the 10% materiality threshold.",
     "reviewedAt": "2026-07-21",
     "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether); Phase 3 cur-2 non-EVM controller reads (2026-07-20); SOL-KEYSTONE supply attribution (2026-07-21)",
     "confidence": "verified",
@@ -38,6 +38,10 @@
       {
         "label": "SG Forge EURCV MiCA white paper (four-ledger issuance identifiers)",
         "url": "https://www.sgforge.com/wp-content/uploads/2025/10/EURCV-WP-Ethereum-Solana_XRPL_Stellar_2025.10.14.pdf"
+      },
+      {
+        "label": "EURCV MiCA white paper v2.2, 30 September 2026: issuer-native ledger perimeter",
+        "url": "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf"
       }
     ],
     "routes": [
