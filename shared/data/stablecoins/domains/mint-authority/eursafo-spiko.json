@@ -510,7 +510,7 @@
         "observedBlock": 26095799
       },
       {
-        "label": "EURSAFO native Minter initiator \u2014 group 10 0x7a493c05479f6132cb895c72c49439139b595eb4",
+        "label": "EURSAFO native Minter initiator — group 10 0x7a493c05479f6132cb895c72c49439139b595eb4",
         "role": "backend-signer",
         "authorityType": "eoa",
         "directMintAbility": "cap-limited",
@@ -621,7 +621,7 @@
         }
       },
       {
-        "label": "EURSAFO native Minter initiator \u2014 group 10 0xe582cddcb3d2374adbb34c9afe76683d019c8a2b",
+        "label": "EURSAFO native Minter initiator — group 10 0xe582cddcb3d2374adbb34c9afe76683d019c8a2b",
         "role": "backend-signer",
         "authorityType": "eoa",
         "directMintAbility": "cap-limited",
@@ -765,7 +765,7 @@
         }
       },
       {
-        "label": "EURSAFO native Minter pending-mint approver \u2014 group 9 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949",
+        "label": "EURSAFO native Minter pending-mint approver — group 9 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949",
         "role": "backend-signer",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
@@ -908,7 +908,7 @@
         }
       },
       {
-        "label": "EURSAFO native Minter pending-mint approver \u2014 group 9 0x4d1d9c5b5d9ca448194313d799de374f362bd460",
+        "label": "EURSAFO native Minter pending-mint approver — group 9 0x4d1d9c5b5d9ca448194313d799de374f362bd460",
         "role": "backend-signer",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
@@ -1051,7 +1051,7 @@
         }
       },
       {
-        "label": "EURSAFO native Minter pending-mint approver \u2014 group 9 0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a",
+        "label": "EURSAFO native Minter pending-mint approver — group 9 0x6ca0aa6d3bf500d65f6e17a27af05c74ed4bfb5a",
         "role": "backend-signer",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
@@ -1194,7 +1194,7 @@
         }
       },
       {
-        "label": "EURSAFO native Minter pending-mint approver \u2014 group 9 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7",
+        "label": "EURSAFO native Minter pending-mint approver — group 9 0xd9dbe8ea915131d821279a0eb51bec0fd8affbe7",
         "role": "backend-signer",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
@@ -1364,7 +1364,7 @@
         }
       },
       {
-        "label": "EURSAFO native Minter pending-mint approver \u2014 group 9 0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
+        "label": "EURSAFO native Minter pending-mint approver — group 9 0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
         "role": "backend-signer",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
@@ -1507,7 +1507,7 @@
         }
       },
       {
-        "label": "EURSAFO native Minter pending-mint approver \u2014 group 9 0xe67d2cbeae3090be017c66e7a6943961619a5d35",
+        "label": "EURSAFO native Minter pending-mint approver — group 9 0xe67d2cbeae3090be017c66e7a6943961619a5d35",
         "role": "backend-signer",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
@@ -1650,7 +1650,7 @@
         }
       },
       {
-        "label": "EURSAFO native Minter pending-mint approver \u2014 group 9 0xf949ca7be175a5fcbd3febb9a0235de608ca7898",
+        "label": "EURSAFO native Minter pending-mint approver — group 9 0xf949ca7be175a5fcbd3febb9a0235de608ca7898",
         "role": "backend-signer",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
@@ -3030,10 +3030,10 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
+    "reconciliation": "unknown",
     "supervision": "prudential",
     "review": {
-      "evidence": "The earlier pinned implementation, 3-of-6 Safe, raiseable daily limit, discretionary over-limit approval and lack of enforced approval timelock remain confirmed. Round-2 indexed role-history recovery and current reads at Ethereum block 26098764 resolve the seven group-9 approvers and two group-10 initiators and correct their previously reversed labels. Ethereum mint requirements are group 0 or group 2; all current group-2 principals were identified, including the Minter and five contracts whose getToken() values name other funds. Complete non-Ethereum operator rosters and exact key-custody mappings remain open. CACEIS daily valuation and Chainlink's exact EURSAFO NAV feed are now verified separately in oracleRisk. PwC appointment and AMF authorization remain separate from a current financial assurance report.",
+      "evidence": "The earlier pinned implementation, 3-of-6 Safe, raiseable daily limit, discretionary over-limit approval and lack of enforced approval timelock remain confirmed. Round-2 indexed role-history recovery and current reads at Ethereum block 26098764 resolve the seven group-9 approvers and two group-10 initiators and correct their previously reversed labels. Ethereum mint requirements are group 0 or group 2; all current group-2 principals were identified, including the Minter and five contracts whose getToken() values name other funds. Complete non-Ethereum operator rosters and exact key-custody mappings remain open. CACEIS daily valuation and Chainlink's exact EURSAFO NAV feed are now verified separately in oracleRisk. PwC appointment and AMF authorization remain separate from a current financial assurance report. R2 family reconciliation correction 2026-10-21: all four classes are claims on one SAFO sub-fund with the same CACEIS NAV, AMF-filed June semiannual report, statutory-auditor appointment and eight native registers. Neither daily NAV delivery, the PwC appointment nor the unaudited June filing establishes a complete current supply-to-backing comparison across all share classes and registers, so reconciliation is unknown for every class. Earlier periodic-reconciliation conclusions are withdrawn; prudential supervision and original technical observations and review clocks are retained.",
       "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoEur)",
       "reviewedAt": "2026-10-01",
       "disposition": "scoreable",

@@ -8058,48 +8058,66 @@
     },
     {
       "assetId": "safo-spiko-usd",
-      "archetype": "rwa-credit-fund",
-      "reviewedAt": "2026-07-20",
+      "archetype": "ucits-trs-fund",
+      "reviewedAt": "2026-10-21",
       "sources": [
         {
-          "label": "Spiko Dollar product page (BNP Paribas TRS counterparty paying SOFR + 0.35% daily, daily margining/rebalancing, CACEIS depositary, Amundi manager, PwC four annual audits, AMF UCITS authorization, senior claim on the bank)",
-          "url": "https://www.spiko.io/spiko-dollar"
-        },
-        {
-          "label": "Spiko SICAV prospectus (sub-fund 3.2.4 Spiko Amundi Overnight Swap Fund, USD share FR0014015LE1; DLT share-register addresses; daily NAV; D+1 settlement; overnight-rate volatility; no unhedged exposure beyond one-month maturity; CACEIS UCITS V depositary duties)",
+          "label": "Spiko SICAV prospectus, 1 September 2026: SAFO strategy, class rights, CACEIS depositary and uniform 25% redemption threshold",
           "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
         },
         {
-          "label": "AMF GECO registry entry for the Spiko Amundi Overnight Swap Fund",
-          "url": "https://geco.amf-france.org/produit-d-epargne/c79399"
+          "label": "Exact USD share-class KID, FR0014015LE1",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/KID_usdSAFO_EN.pdf"
+        },
+        {
+          "label": "Exact USD share-class identity, native registers and five share decimals",
+          "url": "https://public-api.spiko.io/share-classes/SAFO"
+        },
+        {
+          "label": "Exact USD share-class totals and daily NAV",
+          "url": "https://public-api.spiko.io/share-classes/SAFO/totals"
+        },
+        {
+          "label": "SAFO signed equity, swap and cash inventory valued 21 October 2026",
+          "url": "https://public-api.spiko.io/fund-assets/?fundId=59c2c924-ebf8-492d-a4b0-72d72ebf61e6"
+        },
+        {
+          "label": "AMF-hosted June 2026 SAFO semiannual report, not an audit opinion",
+          "url": "https://geco.amf-france.org/back-office/document/download/429960"
+        },
+        {
+          "label": "Spiko USD share-class product page",
+          "url": "https://www.spiko.io/spiko-dollar"
         }
       ],
-      "notes": "Reviewed 2026-07-20 against the AMF-authorized Spiko SICAV prospectus and the Spiko product page. SAFO is the USD share class of the Spiko Amundi Overnight Swap Fund, an AMF-supervised UCITS sub-fund managed by Amundi, with CACEIS Bank as depositary performing UCITS V safekeeping duties independent of the management company, and PwC performing four statutory audits per year. The prospectus names the exact SAFO token addresses as the sub-fund's DLT share registers. The sub-fund swaps the performance of its diversified securities portfolio for SOFR plus a predetermined margin through fully collateralized total-return swaps with tier-1 banks; the current counterparty is BNP Paribas with daily margining and a daily basket rebalance documented on the product page. weightedAverageMaturityDays is recorded as 1, a documented policy figure rather than an observed measurement: the prospectus states the portfolio's volatility is in line with overnight rates and that no unhedged exposure to instruments with a maturity of more than one month is permitted; the underlying securities carry longer residual maturities but are TRS-hedged, so the metric records the hedged exposure, not the gross securities maturity. valuationCadenceDays is 1: the prospectus states the NAV is calculated daily (except French public holidays or Paris exchange closure), with orders cleared by 12:25 Paris time, executed on the same day's NAV, and settled T+1. custody is strong: AMF-supervised UCITS with a named depositary, statutory asset segregation, and Big-4 statutory audits. valuationCadence is strong on the prospectus-documented daily NAV under the UCITS regime with PwC statutory audits. creditQuality is adequate: BNP Paribas is a global systemically important bank and the TRS is fully collateralized with daily margining, but the collateral is a listed-equity basket carrying gap risk between margin calls. seniority is adequate: the fund owns the securities portfolio outright and the product page documents a senior claim on the bank for residual losses after liquidation. maturityAndLiquidity is adequate on daily dealing with T+1 settlement and USD 1 minimums. legalEnforceability is adequate: the AMF-authorized prospectus establishes the share claim and the DLT register, but the DLT-registered-share enforcement path is novel and untested, keeping it below strong. recovery is adequate on the documented double protection - the bank's creditworthiness plus prompt liquidation of the fund-owned portfolio, with daily margining bounding uncollateralized exposure to about one day. Not established: the current basket composition beyond the product page's illustrative table, any per-NAV external examination, and the eligible counterparty list beyond BNP Paribas.",
-      "metrics": {
-        "weightedAverageMaturityDays": 1,
-        "valuationCadenceDays": 1
-      },
+      "notes": "Exact USD share class FR0014015LE1, fund 59c2c924-ebf8-492d-a4b0-72d72ebf61e6; eight native registers and five share decimals per the issuer share-class API; objective Capitalized EFFR + 0.50%. Limited fund claim rests on exact prospectus/KID rights plus current token/deployment corroboration. Limited portfolio hedge rests on the filed portfolio-wide TRS strategy and the identity-bound 21 October 2026 physical equity, signed derivative and cash inventory, externally anchored by the AMF-filed June report. Signed swap legs are retained as distinct economic concepts, never absolute reserve weights. No complete hedge/NAV assurance, collateral netting or reuse, custody continuity or funded stressed-recovery grade is asserted. The Chainlink NAVLink `SAFO NAV` feed delivers the CACEIS NAV; it is priced in oracleRisk and grants no reconciliation credit. (Supersedes the 2026-07-20 entry, which cited a stale SOFR + 0.35% rate and mislabelled the sub-fund as a credit fund.)",
+      "metrics": {},
       "components": {
-        "creditQuality": {
-          "quality": "adequate"
+        "fundClaimAndSegregation": {
+          "quality": "limited"
         },
-        "seniority": {
-          "quality": "adequate"
+        "portfolioHedge": {
+          "quality": "limited"
         },
-        "legalEnforceability": {
-          "quality": "adequate"
+        "navAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "Searched exact share-class totals/NAV APIs, current itemized SAFO holdings, prospectus and the AMF-filed June 2026 semiannual assets/liabilities report. No current complete assets-to-matching-liabilities reconciliation across every share class and eight native registers, with circulation exclusions and independently reconciled valuation residuals, was recovered. Aggregate class totals and a non-audited June filing do not close current reconciliation.",
+          "sourceUrl": "https://public-api.spiko.io/fund-assets/?fundId=59c2c924-ebf8-492d-a4b0-72d72ebf61e6"
         },
-        "valuationCadence": {
-          "quality": "strong"
+        "counterpartyAndCollateral": {
+          "applicability": "unavailable",
+          "rationale": "Searched the exact USD KID, SAFO prospectus and dated physical/signed-swap inventory. The TRS strategy, collateral policy and counterparty risks are documented, but dated complete posted/received collateral exposures, actual reuse, enforceable netting and independently verified current allocation are not disclosed; the prospectus states counterparty risk may not be offset by financial guarantees received.",
+          "sourceUrl": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
         },
-        "maturityAndLiquidity": {
-          "quality": "adequate"
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "Searched the exact USD KID and prospectus depositary/custodian provisions. CACEIS and legal separation are documented; complete current itemized immediate custody/subcustody locations and continuity protections for the whole physical/derivative/collateral book remain unverified.",
+          "sourceUrl": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
         },
-        "custody": {
-          "quality": "strong"
-        },
-        "recovery": {
-          "quality": "adequate"
+        "defaultRecovery": {
+          "applicability": "unavailable",
+          "rationale": "Searched the exact USD KID default sections and SAFO prospectus risk/redemption/collateral terms. Legal separation and counterparty-default market/currency risk are documented; the exact funded stressed-recovery resources and priority for every swap/collateral/portfolio residual were not established. Ordinary D+1 redemption is not funded default-recovery proof.",
+          "sourceUrl": "https://cdn.spiko.finance/legal_docs/EN/KID_usdSAFO_EN.pdf"
         }
       }
     },
@@ -13707,60 +13725,66 @@
     },
     {
       "assetId": "gbpsafo-spiko",
-      "archetype": "rwa-credit-fund",
-      "reviewedAt": "2026-07-20",
+      "archetype": "ucits-trs-fund",
+      "reviewedAt": "2026-10-21",
       "sources": [
         {
-          "label": "Key Information Document, SPIKO AMUNDI OVERNIGHT SWAP FUND - GBP share (ISIN FR0014015LF8, published 2026-03-20): AMF-authorized UCITS sub-fund of Spiko SICAV; manufacturer Twenty First Capital (AMF GP 11000029); objective SONIA + 0.25%; TRS hedging with 'no unhedged exposure to instruments with a maturity longer than 1 month'; daily 12:25 Paris cut-off at next known NAV; shares registered in nominative form on the DLT; Depositary CACEIS Bank; SRI 1/7; counterparty-risk disclosures",
-          "url": "https://cdn.spiko.finance/legal_docs/EN/KID_gbpSAFO_EN.pdf"
-        },
-        {
-          "label": "Spiko SICAV prospectus: GBP share-class DLT share-register addresses (matching the on-chain token contracts); delegated manager Amundi Asset Management (AMF GP-10400036); TRS approx. 100% of net assets (max 100%) with underlying securities fully owned by the sub-fund and held by the custodian; daily NAV; D+1 settlement; redemption gate at 25% of net assets (max 20 valuation days over 3 months); swing pricing capped at 0.50%; collateral policy with no reuse of securities collateral; articles of association (each sub-fund's shares represent the SICAV assets allocated to it)",
+          "label": "Spiko SICAV prospectus, 1 September 2026: SAFO strategy, class rights, CACEIS depositary and uniform 25% redemption threshold",
           "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
         },
         {
-          "label": "Spiko tech docs, What is Smart Cash: the TRS resets to zero every business day, limiting counterparty exposure to one day of market variation; fund retains full ownership of the securities portfolio held at CACEIS",
-          "url": "https://docs.spiko.io/documentation/product_overview/smart_cash/what_is_smart_cash"
+          "label": "Exact GBP share-class KID, FR0014015LF8",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/KID_gbpSAFO_EN.pdf"
         },
         {
-          "label": "Spiko tech docs, Stakeholders: Amundi (AMF GP-04000036) delegated portfolio manager; CACEIS Bank depositary (ACPR/AMF supervised, banking license 18129); CACEIS Fund Administration calculates the daily NAV; PwC statutory auditor; Spiko Finance licensed by ACPR as investment firm CIB 19183; HSBC as GBP correspondent bank; current TRS counterparty BNP Paribas; client deposits never held by Spiko",
-          "url": "https://docs.spiko.io/documentation/product_overview/smart_cash/stakeholders"
+          "label": "Exact GBP share-class identity, native registers and five share decimals",
+          "url": "https://public-api.spiko.io/share-classes/gbpSAFO"
         },
         {
-          "label": "Spiko tech docs, Smart Cash fund table: gbpSAFO = 'Spiko Amundi Overnight Swap Fund - GBP Share', ISIN FR0014015LF8, benchmark SONIA + 0.25%, overnight access on business days (D+1), 12:25 Paris cut-off",
-          "url": "https://docs.spiko.io/documentation/product_overview/smart_cash/funds"
+          "label": "Exact GBP share-class totals and daily NAV",
+          "url": "https://public-api.spiko.io/share-classes/gbpSAFO/totals"
         },
         {
-          "label": "Spiko Pound product page: BNP Paribas pays SONIA + 0.27% daily under the fully collateralized total-return swap; daily mark-to-market of the equity basket; AMF UCITS authorization; PwC performs four audits per year; bank-default liquidation design",
+          "label": "SAFO signed equity, swap and cash inventory valued 21 October 2026",
+          "url": "https://public-api.spiko.io/fund-assets/?fundId=59c2c924-ebf8-492d-a4b0-72d72ebf61e6"
+        },
+        {
+          "label": "AMF-hosted June 2026 SAFO semiannual report, not an audit opinion",
+          "url": "https://geco.amf-france.org/back-office/document/download/429960"
+        },
+        {
+          "label": "Spiko GBP share-class product page",
           "url": "https://www.spiko.io/spiko-pound"
         }
       ],
-      "notes": "GBPSAFO (gbpSAFO) is the GBP share class of the Spiko Amundi Overnight Swap Fund, a sub-fund of the French Spiko SICAV authorized by the AMF as a UCITS (KID, published 2026-03-20; SICAV prospectus). The token is not a wrapper: the KID states subscriptions/redemptions 'cover shares to be registered in nominative form within the proposed DLT', and the prospectus lists the GBP share's DLT share-register addresses (Ethereum 0xc273986a..., Polygon 0x4fe515c6..., Arbitrum 0xbe023308..., Starknet 0x06e8a999..., Base 0x2f6c0e5e..., Etherlink 0xfe20ebe3..., Stellar CAGYRR...) which match the deployed token contracts — the on-chain token IS the fund-share register entry. creditQuality (adequate): the fund's economic exposure is the overnight-rate leg of a total-return swap (~100% of net assets) with BNP Paribas, a G-SIB, collateralized by a diversified securities portfolio the sub-fund owns outright at CACEIS and that is marked to market and reset daily (exposure limited to one day of market variation per the docs); UCITS diversification rules apply and the KID assigns SRI 1/7; held at adequate rather than strong because the prospectus permits high-yield (down to B-/B3) and subordinated securities in the swapped portfolio and up to 120% gross exposure, so the tail risk in a counterparty default is a real, disclosed credit exposure. seniority (strong): the GBP share is a registered share of the sub-fund, and the articles of association establish that each sub-fund's shares represent the SICAV assets allocated to it; no instrument senior to the shares exists other than ordinary fund creditors and the daily-reset TRS leg, in an AMF-authorized UCITS. legalEnforceability (strong): the holder claim is a French-law UCITS share evidenced by the nominative DLT register itself (prospectus-named token contracts), under AMF supervision with a UCITS-V depositary. valuationCadence (strong; metric 1 day): the prospectus sets daily NAV calculation (every day except French holidays/Paris exchange closures), struck by the independent administrator CACEIS Fund Administration, with PwC as statutory auditor and four audits per year per the product page. maturityAndLiquidity (adequate; metric 1 day): daily dealing with 12:25 Paris cut-off at same-day NAV and D+1 settlement, against an exposure that resets overnight (daily-reset TRS; 'no unhedged exposure to instruments with a maturity longer than 1 month' per the KID and prospectus), plus documented anti-dilution protections (25%-of-NAV daily redemption gate limited to 20 valuation days over 3 months, swing pricing capped at 0.50%); kept at adequate because in the counterparty-default tail the fund would hold an unhedged equity/bond portfolio of up to 120% gross that must be liquidated, a state the documentation covers only as a risk scenario. custody (strong): CACEIS Bank is the UCITS depositary (safekeeping + oversight duties, independent of the management company, supervised by ACPR/AMF), the swapped securities are held in full ownership by the sub-fund at CACEIS rather than at the swap counterparty, client cash never sits on Spiko's balance sheet, and HSBC is the named GBP correspondent bank. recovery (adequate): the default waterfall is documented — daily reset bounds swap exposure to one day of variation, the fund owns and would liquidate the securities portfolio, financial-guarantee/collateral rules (haircuts, no reuse of securities collateral) apply, and residual loss would be a claim on the defaulting counterparty; not rated higher because the design is untested ('never experienced a default since 2014' is an issuer claim) and the KID concedes the collateral may not offset the risk. METRICS: weightedAverageMaturityDays = 1 — the fund's net exposure matures/resets overnight (SONIA benchmark, TRS 'resets to zero every business day' per the docs, sub-one-month cap on any unhedged exposure per the KID/prospectus); the gross swapped securities portfolio is fully hedged by the TRS, so its maturities do not create unhedged duration for holders. valuationCadenceDays = 1 (daily NAV). NOT established: the current TRS margin and counterparty list beyond BNP Paribas (the prospectus points to a list on the Spiko website, not re-verified here); any FCA registration or UK regulatory status (the hint's FCA angle was not confirmed — all supervision evidence found is French AMF/ACPR); position-level portfolio composition on the review date; and the PwC reports themselves (only their existence and quarterly cadence are evidenced).",
-      "metrics": {
-        "weightedAverageMaturityDays": 1,
-        "valuationCadenceDays": 1
-      },
+      "notes": "Exact GBP share class FR0014015LF8, fund 59c2c924-ebf8-492d-a4b0-72d72ebf61e6; eight native registers and five share decimals per the issuer share-class API; objective Capitalized SONIA + 0.50%. Limited fund claim rests on exact prospectus/KID rights plus current token/deployment corroboration. Limited portfolio hedge rests on the filed portfolio-wide TRS strategy and the identity-bound 21 October 2026 physical equity, signed derivative and cash inventory, externally anchored by the AMF-filed June report. Signed swap legs are retained as distinct economic concepts, never absolute reserve weights. No complete hedge/NAV assurance, collateral netting or reuse, custody continuity or funded stressed-recovery grade is asserted. (Supersedes the 2026-07-20 entry, which cited a stale SOFR + 0.35% rate and mislabelled the sub-fund as a credit fund.)",
+      "metrics": {},
       "components": {
-        "creditQuality": {
-          "quality": "adequate"
+        "fundClaimAndSegregation": {
+          "quality": "limited"
         },
-        "seniority": {
-          "quality": "strong"
+        "portfolioHedge": {
+          "quality": "limited"
         },
-        "legalEnforceability": {
-          "quality": "strong"
+        "navAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "Searched exact share-class totals/NAV APIs, current itemized SAFO holdings, prospectus and the AMF-filed June 2026 semiannual assets/liabilities report. No current complete assets-to-matching-liabilities reconciliation across every share class and eight native registers, with circulation exclusions and independently reconciled valuation residuals, was recovered. Aggregate class totals and a non-audited June filing do not close current reconciliation.",
+          "sourceUrl": "https://public-api.spiko.io/fund-assets/?fundId=59c2c924-ebf8-492d-a4b0-72d72ebf61e6"
         },
-        "valuationCadence": {
-          "quality": "strong"
+        "counterpartyAndCollateral": {
+          "applicability": "unavailable",
+          "rationale": "Searched the exact GBP KID, SAFO prospectus and dated physical/signed-swap inventory. The TRS strategy, collateral policy and counterparty risks are documented, but dated complete posted/received collateral exposures, actual reuse, enforceable netting and independently verified current allocation are not disclosed; the prospectus states counterparty risk may not be offset by financial guarantees received.",
+          "sourceUrl": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
         },
-        "maturityAndLiquidity": {
-          "quality": "adequate"
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "Searched the exact GBP KID and prospectus depositary/custodian provisions. CACEIS and legal separation are documented; complete current itemized immediate custody/subcustody locations and continuity protections for the whole physical/derivative/collateral book remain unverified.",
+          "sourceUrl": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
         },
-        "custody": {
-          "quality": "strong"
-        },
-        "recovery": {
-          "quality": "adequate"
+        "defaultRecovery": {
+          "applicability": "unavailable",
+          "rationale": "Searched the exact GBP KID default sections and SAFO prospectus risk/redemption/collateral terms. Legal separation and counterparty-default market/currency risk are documented; the exact funded stressed-recovery resources and priority for every swap/collateral/portfolio residual were not established. Ordinary D+1 redemption is not funded default-recovery proof.",
+          "sourceUrl": "https://cdn.spiko.finance/legal_docs/EN/KID_gbpSAFO_EN.pdf"
         }
       }
     },

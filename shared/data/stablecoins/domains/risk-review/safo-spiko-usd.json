@@ -233,5 +233,44 @@
         ]
       }
     ]
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "CACEIS Fund Administration calculates the SAFO fund NAV, which determines subscriptions and redemptions. Chainlink publishes the exact USD SAFO NAV as NAVLink feed `SAFO NAV` through Ethereum proxy 0xC1E5FA6d48ba11cA163b03f2aBf843471eB7B2fB. At block 26243906 description() returned SAFO NAV, decimals() returned 6, aggregator() returned 0x3f2647A71cc99ff788a87160FEfB535F6Eb6896f, and latestRoundData answered 1024734 (1.024734 USD) updated at 2026-10-21T00:48:57Z. This establishes the external NAV publication path, without claiming independent valuation of CACEIS data, a second feed, or automatic failover. The documented heartbeat is 97200 seconds; the feed is not consumed by any reviewed SAFO liquidation path.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "R2 family consistency review (FAM-SPIKO)",
+      "rationale": "SAFO USD subscriptions/redemptions use a fund NAV authority. This is a UCITS fund share with a top-level NAV publication path, not borrower-specific liquidation branches.",
+      "sources": [
+        {
+          "label": "Spiko SICAV prospectus, 1 September 2026, SAFO share-class and NAV terms",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        {
+          "label": "Exact USD share-class API identity, FR0014015LE1",
+          "url": "https://public-api.spiko.io/share-classes/SAFO"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-21",
+    "reviewer": "R2 family consistency review (FAM-SPIKO)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Chainlink Ethereum feed directory: exact SAFO NAV feed identity, NAVLink product, CACEIS Fund Administrator source, 97200-second heartbeat",
+        "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
+      },
+      {
+        "label": "Ethereum SAFO NAV proxy, observed at block 26243906",
+        "url": "https://etherscan.io/address/0xC1E5FA6d48ba11cA163b03f2aBf843471eB7B2fB"
+      },
+      {
+        "label": "Spiko NAV data-feed documentation",
+        "url": "https://docs.spiko.io/documentation/tokenization/nav"
+      }
+    ]
   }
 }

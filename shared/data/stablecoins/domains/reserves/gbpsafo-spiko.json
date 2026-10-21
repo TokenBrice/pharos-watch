@@ -3,24 +3,26 @@
   "reserves": [
     {
       "sourceKey": "spiko-api:gbpsafo:total-assets",
-      "name": "Fully collateralized overnight total-return swap exposure",
+      "name": "Spiko Amundi Overnight Swap Fund (GBP) shares",
       "pct": 100,
       "risk": "medium",
       "assetClass": "fund-share",
-      "issuerOrObligor": "Spiko AMF-authorized GBP overnight swap fund and swap counterparties",
+      "issuerOrObligor": "Spiko SICAV, SAFO sub-fund and total-return swap counterparties",
       "riskFactors": [
         "counterparty",
+        "market",
         "liquidity",
         "custody",
-        "market"
+        "legal",
+        "smart-contract"
       ],
-      "liquidityHorizon": "over-seven-days"
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W1R12 primary-source liquidity review",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-21",
+    "reviewer": "R2 family consistency review (FAM-SPIKO)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Spiko Pound product page",
@@ -33,21 +35,37 @@
       {
         "label": "Exact GBP share KID, 29 July 2026",
         "url": "https://cdn.spiko.finance/legal_docs/EN/KID_gbpSAFO_EN.pdf"
+      },
+      {
+        "label": "Exact GBP share-class identity, native registers and five share decimals",
+        "url": "https://public-api.spiko.io/share-classes/gbpSAFO"
+      },
+      {
+        "label": "Exact GBP share-class totals and daily NAV",
+        "url": "https://public-api.spiko.io/share-classes/gbpSAFO/totals"
+      },
+      {
+        "label": "SAFO signed equity, swap and cash inventory valued 21 October 2026",
+        "url": "https://public-api.spiko.io/fund-assets/?fundId=59c2c924-ebf8-492d-a4b0-72d72ebf61e6"
+      },
+      {
+        "label": "AMF-hosted June 2026 SAFO semiannual report, not an audit opinion",
+        "url": "https://geco.amf-france.org/back-office/document/download/429960"
       }
     ],
-    "rationale": "GBP overnight swap fund-share identity and BNP Paribas are disclosed. The September 2026 prospectus permits bonds, equities and money-market instruments under TRS. Ordinary redemptions settle D+1 business day after a 15:00 Paris cutoff, but the same share claim is subject to gates at 25% net redemptions, carried-over orders without priority, and up to 20 valuation days of capping over three months. The conservative whole-claim liquidity horizon is therefore over-seven-days, not an unconditional one-day stress realization guarantee. No composition weights or composition date were refreshed by this metadata-only review.",
-    "compositionBasis": "Spiko GBP fund product disclosure",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "The 100% slice identifies the immediate proportional GBP share-class claim on Spiko Amundi Overnight Swap Fund, not a measured 100% derivative allocation or a direct claim on BNP Paribas. The September 2026 prospectus establishes portfolio-wide total-return swaps at approximately 100% of net assets, with the physical securities owned by the sub-fund and held by CACEIS. The 21 October inventory publishes physical equity, cash and signed swap legs; negative derivative market values are not normalized to positive reserve weights. The class objective is Capitalized SONIA + 0.50% before class fees, superseding stale product-page rate claims. Ordinary redemption settles D+1 after a 15:00 Paris cutoff, subject to the currency market being open. A uniform 25% sub-fund net-assets gate may cap redemptions for at most 20 valuation days over three months, with unexecuted orders carried over without priority; one-day records ordinary contractual liquidity, not unconditional stressed realization. Complete current collateral netting, reuse, subcustody and all-share-class/native-register financial reconciliation remain unverified.",
+    "compositionBasis": "GBP fund-share identity, exact KID/prospectus, 21 October 2026 signed inventory and AMF-filed June report",
+    "compositionAsOf": "2026-10-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current security-level holdings and measured swap-counterparty allocation are undisclosed in the reviewed public sources; BNP Paribas is named, but no portfolio weight is established.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The dated fund inventory is public and the immediate reserve identity is a proportional fund-share claim; class-specific constituent allocations are not needed to identify that claim. Complete current counterparty-by-contract collateral, enforceable netting, actual reuse and immediate subcustody allocation remain unverified; disclosure is not evidence of zero exposure.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Fully collateralized overnight total-return swap exposure",
+        "reserveName": "Spiko Amundi Overnight Swap Fund (GBP) shares",
         "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The issuer names BNP Paribas but does not provide current constituent or counterparty weights."
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The total-return swap is an external UCITS fund exposure with a bank counterparty rather than a tracked stablecoin dependency."
       }
     ]
   },
@@ -60,7 +78,7 @@
       }
     ],
     "segregation": "segregated",
-    "bankruptcyRemoteness": "unknown",
+    "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-10-01",
     "reviewer": "Sol curation pass 2026-10-01 (CurB06GBPSAFO)",

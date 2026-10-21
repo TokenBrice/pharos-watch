@@ -11,8 +11,8 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "EUR share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
-  "pegMechanism": "EUR-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
+  "collateral": "EUR share class of Spiko Amundi Overnight Swap Fund. Physical bonds, equities and money-market instruments are hedged through portfolio-wide total-return swaps with one or more counterparties; BNP Paribas is the identified counterparty and CACEIS Bank the depositary. Counterparty default can expose underlying security and currency risks.",
+  "pegMechanism": "EUR-denominated NAV-accreting UCITS share class with KYC-gated subscriptions and redemptions at daily fund NAV through Spiko. Orders are centralized by 15:00 Paris time; ordinary redemption settles D+1, subject to the currency market being open. The management company may cap redemptions when net requests reach 25% of sub-fund net assets; the trigger is the same for all share classes, with at most 20 valuation days of capping over three months. Unexecuted orders carry over without priority; suspension and swing pricing can also limit or delay exit.",
   "mechanismArchetype": "ucits-trs-fund",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -41,26 +41,26 @@
   "detailProvider": "coingecko",
   "geckoId": "spiko-amundi-overnight-swap-fund-eur",
   "proofOfReserves": {
-    "type": "independent-audit",
-    "url": "https://cdn.spiko.finance/legal_docs/EN/SAFO_Letter_EN.pdf",
-    "provider": "PricewaterhouseCoopers Audit is the statutory auditor named in the Spiko SICAV prospectus. The linked AMF authorization certificate is not a financial assurance report. The AMF-hosted 30 June 2026 semiannual report contains SAFO assets, liabilities, share counts and NAVs, but no audit opinion; a current SAFO-specific financial audit opinion remains unverified.",
-    "attestorTier": "big4",
-    "cadence": "annual",
+    "type": "self-reported",
+    "url": "https://geco.amf-france.org/back-office/document/download/429960",
+    "provider": "Issuer-filed Spiko SICAV semiannual financial disclosure covering the SAFO sub-fund and its share classes, not a signed audit opinion. PricewaterhouseCoopers Audit is the named statutory auditor; no SAFO-specific financial audit opinion or complete current all-share-class/native-register reconciliation was retrieved.",
+    "attestorTier": "self",
+    "cadence": "semi-annual",
     "attestorJurisdiction": "France",
     "latestReport": {
       "periodEnd": "2026-06-30",
       "assuranceMethod": "unknown",
       "scope": "unknown",
       "liabilityReconciliation": "unknown",
-      "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoEur)",
+      "reviewer": "Batch64 primary-source review (Rev_ChfsafoSpiko)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "AMF-hosted Spiko SICAV semiannual report at 30 June 2026, SAFO pages 26–43; reports assets and liabilities, but on-chain liability reconciliation and assurance scope are unknown; no audit opinion",
+          "label": "AMF-hosted June 2026 SAFO semiannual report, not an audit opinion",
           "url": "https://geco.amf-france.org/back-office/document/download/429960"
         },
         {
-          "label": "Spiko SICAV prospectus, statutory auditor and annual reporting engagement",
+          "label": "Spiko SICAV prospectus, 1 September 2026",
           "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
         }
       ]
