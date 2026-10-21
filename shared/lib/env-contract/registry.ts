@@ -418,7 +418,7 @@ const ENV_BINDING_DEFINITIONS = [
   {
     key: "TELEGRAM_OPERATOR_CHAT_ID",
     valueType: "string",
-    description: "Private Telegram chat for operator-only alerts (cron freshness watchdog); operator alerts are suppressed when unset and never fall back to `TELEGRAM_CHAT_ID`.",
+    description: "Private Telegram chat for operator-only alerts (freshness, digest-publication and reserve post-sync watchdogs); operator alerts are suppressed when unset and never fall back to `TELEGRAM_CHAT_ID`.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },

@@ -20,7 +20,6 @@ import { Share2, X, Download, type LucideIcon } from "lucide-react";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
-import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { CompareEmptyState } from "@/components/compare-empty-state";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
 import type { CompareRadarCohort } from "@/components/radar-chart-v9";
@@ -294,7 +293,6 @@ export function CompareClient() {
     hasPrimaryData,
     pegRates,
     radarCards,
-    reportCardsResponse,
     supplySeries,
   } = useCompareDataModel({
     selectedIds,
@@ -359,7 +357,6 @@ export function CompareClient() {
         onRetry={handleRetry}
         queries={freshnessQueries}
       />
-      <SafetyScoreV9StatusNotice response={reportCardsResponse} />
       <CompareScopeHero coinOptions={coinOptions} selectedCount={selectedIds.length} />
       {selectedIds.length >= 2 ? (
         <div className="pharos-card-shell px-4 py-3">

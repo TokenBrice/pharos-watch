@@ -19,11 +19,6 @@
       "count": 2
     }
   },
-  "src/components/blacklist-stats.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 1
-    }
-  },
   "src/components/command-palette-root.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 4

@@ -2,7 +2,6 @@
 
 import { FaqSection } from "@/components/faq-section";
 import { StaleDataBanner } from "@/components/stale-data-banner";
-import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import {
   CoverageFeatureSnapshotCard,
   CoverageMatrixCard,
@@ -19,7 +18,6 @@ export default function CoveragePageClient() {
   return (
     <div className="space-y-6">
       <StaleDataBanner queries={model.staleQueries} />
-      <SafetyScoreV9StatusNotice response={model.safetyScoreResponse} />
       {model.isInitialDataLoading || model.isStablecoinDataUnavailable ? (
         <CoverageMatrixDataStateCard state={model.isStablecoinDataUnavailable ? "error" : "loading"} />
       ) : (

@@ -164,13 +164,13 @@ describe("BlacklistStats", () => {
     expect(screen.getByText("2 stablecoins · supply data unavailable")).toBeTruthy();
   });
 
-  it("surfaces ambiguous-order freeze events in the data-quality notice", () => {
+  it.each(["degraded", "stale"] as const)("shows the data-quality notice only for stale coverage (%s)", (status) => {
     render(
       <BlacklistStats
         summary={{
           ...makeSummary(),
           dataQuality: {
-            status: "degraded",
+            status,
             warnings: [],
             ambiguousOrderCount: 3,
             ambiguousOrderReason: "tron-cross-transaction-order",
@@ -185,7 +185,11 @@ describe("BlacklistStats", () => {
       />,
     );
 
-    expect(screen.getByText("Data quality")).toBeTruthy();
+    if (status === "degraded") {
+      expect(screen.queryByText("Data quality")).toBeNull();
+      return;
+    }
+    expect(screen.getByText("Freeze ledger coverage is stale")).toBeTruthy();
     expect(screen.getByText(/3 events have an ambiguous order/)).toBeTruthy();
     expect(screen.getByText(/Tron transfers in separate transactions/)).toBeTruthy();
   });

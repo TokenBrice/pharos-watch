@@ -225,7 +225,6 @@ describe("useCompareDataModel", () => {
       error: dexError,
       hasData: true,
     });
-    expect(result.current.reportCardsResponse).toBe(reportCards);
     expect(result.current.radarCards).toEqual([
       {
         card: reportCards.cards[0],

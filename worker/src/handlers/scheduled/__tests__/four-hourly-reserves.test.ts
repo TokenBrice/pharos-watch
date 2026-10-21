@@ -18,6 +18,7 @@ vi.mock("../../../lib/collateral-drift", () => ({
 vi.mock("../../../lib/live-reserves/store", () => ({
   getMaxSyncAge: vi.fn(),
   computeReserveCompositionOverview: vi.fn(),
+  loadReserveSyncStateMap: vi.fn(async () => new Map()),
 }));
 const sentinelSourceStates = vi.hoisted(() => new Map<string, { value: string; updatedAt: number }>());
 vi.mock("../../../lib/db-cache", () => ({

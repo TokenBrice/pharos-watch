@@ -97,7 +97,8 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
   return (
     <SectionErrorBoundary name="Chain Detail">
       <div className="space-y-6">
-        <QueryErrorNotice error={routeError} hasData={hasAnyData} onRetry={() => { void refetchAll(); }} />
+        {/* Retained data for this chain silences a failed refresh (ADR-42); a missing chain read does not. */}
+        <QueryErrorNotice error={routeError} hasData={hasAnyData && chain != null} onRetry={() => { void refetchAll(); }} />
         {/* degraded or stale data is the hero's status chip; the body only reports a hard error */}
         {hero}
         {chain && (

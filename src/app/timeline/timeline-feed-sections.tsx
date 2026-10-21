@@ -84,7 +84,6 @@ export function EmptyState({
 interface SummaryBandProps {
   loadedCount: number;
   totalCount: number | null;
-  droppedRows: number;
   openCount: number | null;
   windowLabel: string;
   severityLabel: string;
@@ -98,7 +97,7 @@ interface SummaryBandProps {
   onTogglePhosphor: () => void;
 }
 
-export function SummaryBand({ loadedCount, totalCount, droppedRows, openCount, windowLabel, severityLabel, dataUpdatedAt, meta, error, nowMs, lastEventTs, phosphor, showPhosphorToggle, onTogglePhosphor }: SummaryBandProps) {
+export function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severityLabel, dataUpdatedAt, meta, error, nowMs, lastEventTs, phosphor, showPhosphorToggle, onTogglePhosphor }: SummaryBandProps) {
   const showsPartial = totalCount != null && totalCount > loadedCount;
   const countNode = showsPartial ? (
     <span className="font-semibold text-foreground">
@@ -118,13 +117,6 @@ export function SummaryBand({ loadedCount, totalCount, droppedRows, openCount, w
     );
   }
   parts.push(countNode);
-  if (droppedRows > 0) {
-    parts.push(
-      <span key="incomplete" className="font-semibold text-amber-700 dark:text-amber-400">
-        Incomplete ({droppedRows.toLocaleString()} {droppedRows === 1 ? "row" : "rows"} rejected)
-      </span>,
-    );
-  }
   parts.push(<span key="window">{windowLabel}</span>);
   parts.push(<span key="severity">{severityLabel}</span>);
   const health = deriveDataHealth({ label: "Timeline", staleTime: CRON_TAPE, dataUpdatedAt, meta, error, hasData: dataUpdatedAt > 0 }, nowMs);
@@ -190,6 +182,8 @@ interface OpenIncidentsSectionProps {
 
 export function OpenIncidentsSection({ incidents, status, health, onRetry, logos, nowMs }: OpenIncidentsSectionProps) {
   if (status === "available" && incidents?.length === 0) return null;
+  // An unfinished census is not a reader notice; only a failed read is.
+  if (status === "incomplete" && !incidents?.length) return null;
   return (
     <section
       role="region"
@@ -206,7 +200,6 @@ export function OpenIncidentsSection({ incidents, status, health, onRetry, logos
       {!incidents ? (
         <div role="status" className="border-y border-amber-500/30 px-3 py-2 font-mono text-xs text-muted-foreground">
           {status === "loading" ? "Loading current activity…"
-            : status === "incomplete" ? "Current activity incomplete; the active incident census has not finished."
             : "Current activity unavailable; active incidents cannot be confirmed."}
           {health.dataUpdatedAt > 0 ? (
             <span title={health.message}> Last source update {timeAgo(Math.floor(health.dataUpdatedAt / 1000), nowMs / 1000)}.</span>

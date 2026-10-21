@@ -46,7 +46,9 @@ export async function runCronSentinel(
   } else {
     sources.push({
       source: "reserve-post-sync",
-      run: () => runReservePostSyncWatchdog(db, options.signal),
+      run: () => runReservePostSyncWatchdog(db, options.signal, {
+        operatorTelegramCreds: options.operatorTelegramCreds ?? null,
+      }),
     });
   }
 

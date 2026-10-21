@@ -136,8 +136,8 @@ describe("FlowSummaryCard", () => {
 it.each([
   { meta: { updatedAt: Math.floor(Date.now() / 1000) - 86_400, status: "fresh" }, state: "stale" },
   { meta: { updatedAt: null, status: "unknown", ageSeconds: null }, state: "unavailable" },
-  { meta: { updatedAt: Math.floor(Date.now() / 1000), status: "fresh", warning: "Flow source incomplete" }, state: "degraded" },
-] as { meta: ApiMeta; state: string }[])("retains the admitted flow generation across receipts and errors ($state)", ({ meta, state }) => {
+  { meta: { updatedAt: Math.floor(Date.now() / 1000), status: "fresh", warning: "Flow source incomplete" }, state: null },
+] as { meta: ApiMeta; state: string | null }[])("retains the admitted flow generation across receipts and errors ($state)", ({ meta, state }) => {
   const receipt = Date.now();
   const query = {
     data: { coins: [makeMintBurnFlowCoin()] },
@@ -147,14 +147,16 @@ it.each([
   const { container, rerender } = render(<FlowSummaryCard stablecoinId="usdc-circle" />);
   const producerTime = meta.updatedAt != null ? new Date(meta.updatedAt * 1000).toISOString() : null;
   expect(container.querySelector("time")?.getAttribute("datetime")).toBe(producerTime);
-  expect(container.querySelector(`[data-health-state="${state}"]`)).toBeTruthy();
+  // A source advisory over a current generation is operator signal; only stale or missing data is public.
+  if (state) expect(container.querySelector(`[data-health-state="${state}"]`)).toBeTruthy();
+  else expect(container.querySelector("[data-health-state]")).toBeNull();
   useMintBurnFlowsMock.mockReturnValue({ ...query, dataUpdatedAt: receipt + 30_000 });
   rerender(<FlowSummaryCard stablecoinId="usdc-circle" />);
   expect(container.querySelector("time")?.getAttribute("datetime")).toBe(producerTime);
   useMintBurnFlowsMock.mockReturnValue({ ...query, error: new Error("refresh failed") });
   rerender(<FlowSummaryCard stablecoinId="usdc-circle" />);
   expect(container.querySelector("time")?.getAttribute("datetime")).toBe(producerTime);
-  expect(screen.getByText(/refresh failed; showing the last available data/)).toBeTruthy();
+  expect(screen.queryByText(/refresh failed/i)).toBeNull();
 });
 
 it("does not attribute the aggregate FTQ dependency to coin flow totals", () => {
@@ -174,7 +176,7 @@ it("does not attribute the aggregate FTQ dependency to coin flow totals", () => 
     .toBe(new Date(Math.floor(receipt / 1000) * 1000).toISOString());
 });
 
-it("ages saved flow metadata through both health boundaries without refetching", () => {
+it("ages saved flow metadata to stale without refetching, skipping the delayed band", () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-10-20T12:00:00Z"));
   const receipt = Date.now();
@@ -187,7 +189,7 @@ it("ages saved flow metadata through both health boundaries without refetching",
   expect(container.querySelector("[data-health-state]")).toBeNull();
   act(() => vi.advanceTimersByTime(50));
   act(() => vi.advanceTimersByTime(60_001));
-  expect(container.querySelector('[data-health-state="degraded"]')).toBeTruthy();
+  expect(container.querySelector("[data-health-state]")).toBeNull();
   act(() => vi.advanceTimersByTime(60_000));
   expect(container.querySelector('[data-health-state="stale"]')).toBeTruthy();
   expect(container.querySelector("time")?.getAttribute("datetime")).toBe(new Date(receipt).toISOString());

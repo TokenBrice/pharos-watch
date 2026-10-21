@@ -3,7 +3,6 @@
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { StablecoinIdentityTransition } from "@/components/view-transitions";
 import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-detail/constants";
-import { DataHealthBanner } from "@/components/data-health-banner";
 import { BackToSource } from "@/components/back-to-source";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
@@ -25,7 +24,6 @@ export function StablecoinDetailLoadingShell({
   return (
     <div>
       <BackToSource className="mb-2" />
-      <DataHealthBanner entries={[]} persistent />
       <section className="pharos-card-shell overflow-hidden px-4 py-4 sm:px-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 space-y-3">

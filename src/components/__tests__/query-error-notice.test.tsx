@@ -20,17 +20,14 @@ describe("QueryErrorNotice", () => {
   });
 
 
-  it("renders stale notice when hasData=true", () => {
-    render(
+  it("stays silent over retained data (ADR-42 operator signal)", () => {
+    const { container } = render(
       <QueryErrorNotice
         error={new Error("Network request failed")}
         hasData
       />,
     );
-    expect(screen.getByText("Refresh delayed")).toBeTruthy();
-    expect(
-      screen.getByText(/Showing the last successful snapshot/i),
-    ).toBeTruthy();
+    expect(container.textContent).toBe("");
   });
 
 

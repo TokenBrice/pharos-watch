@@ -38,7 +38,7 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 it.each([
   ["peg", "pegSummary"], ["liquidity", "dexLiquidity"], ["ratings", "reportCards"],
-] as const)("exposes independent stale/degraded/failed %s health while retaining saved table values", (key, preset) => {
+] as const)("exposes only stale %s health while retaining saved table values", (key, preset) => {
   const saved = mocks[key]();
   const label = DATA_HEALTH_PRESETS[preset].label;
   mocks[key].mockReturnValue({ ...saved, meta: { ...saved.meta, status: "stale" } });
@@ -49,25 +49,30 @@ it.each([
   expect(screen.getByTestId("saved-table").textContent).toContain('"currentDeviationBps":-15');
   expect(screen.getByTestId("saved-table").textContent).toContain('"grade":"B+"');
 
+  // Degraded and failed-over-saved-data reads are operator signal (ADR-42).
   mocks[key].mockReturnValue({ ...saved, meta: { ...saved.meta, status: "degraded" } });
   view.rerender(<StablecoinFilteredTable activeFilters={[]} />);
-  expect(screen.getByRole("status").textContent).toContain(label);
+  expect(screen.queryByRole("status")).toBeNull();
   mocks[key].mockReturnValue({ ...saved, error: new Error("HTTP 502") });
   view.rerender(<StablecoinFilteredTable activeFilters={[]} />);
-  expect(screen.getAllByRole("status").some((node) => node.textContent?.includes(label))).toBe(true);
+  expect(screen.queryByRole("status")).toBeNull();
+
+  mocks[key].mockReturnValue({ ...saved, error: new Error("HTTP 502"), meta: { ...saved.meta, status: "stale" } });
+  view.rerender(<StablecoinFilteredTable activeFilters={[]} />);
+  expect(screen.getByRole("status").textContent).toContain(label);
   fireEvent.click(screen.getByRole("button", { name: /retry/i }));
   expect(saved.refetch).toHaveBeenCalledOnce();
   expect(mocks.stablecoins().refetch).not.toHaveBeenCalled();
   expect(screen.getByTestId("saved-table").textContent).toContain('"grade":"B+"');
 });
 
-it("keeps held-publication disclosure distinct from failed rating refresh health", () => {
+it("shows neither held publication nor a failed refresh over saved ratings", () => {
   const saved = mocks.ratings();
   mocks.ratings.mockReturnValue({ ...saved, error: new Error("HTTP 502"), data: {
     ...saved.data, publicationHealth: { status: "held", heldSinceSec: null, reasons: [] },
   } });
   render(<StablecoinFilteredTable activeFilters={[]} />);
-  expect(screen.getByText(/Ratings are held at the last verified snapshot/)).toBeTruthy();
-  expect(screen.getByText("Refresh failed; showing saved data")).toBeTruthy();
+  expect(screen.queryByText(/Ratings are held at the last verified snapshot/)).toBeNull();
+  expect(screen.queryByText("Refresh failed; showing saved data")).toBeNull();
   expect(screen.getByTestId("saved-table").textContent).toContain('"grade":"B+"');
 });

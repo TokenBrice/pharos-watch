@@ -6,7 +6,6 @@ import { logosById } from "@/lib/logos";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { StablecoinTable } from "@/components/stablecoin-table";
-import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
 import type { FilterTag } from "@shared/types";
 import type { PegRateSource } from "@shared/lib/peg-rates";
@@ -54,7 +53,6 @@ export function StablecoinFilteredTable({ activeFilters, renderNotice }: Stablec
           { preset: "reportCards", dataUpdatedAt: reportCardsQuery.dataUpdatedAt, error: reportCardsQuery.error, hasData: !!reportCardsData?.cards?.length, meta: reportCardsQuery.meta },
         ]}
       />
-      <SafetyScoreV9StatusNotice response={reportCardsData} />
       {renderNotice?.({ pegRateSources: tableInputs.pegRateSources })}
       <StablecoinTable
         data={data?.peggedAssets}

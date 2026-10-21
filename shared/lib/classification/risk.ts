@@ -141,14 +141,7 @@ interface NoticeToneStyle {
 /** Style config keyed by query-error notice type.
  *  The `icon` field (a React component) is intentionally omitted — it belongs
  *  in the component layer, not in runtime-neutral shared lib. */
-export const NOTICE_TONE_COLORS: Record<"stale" | "unavailable" | "network" | "error", NoticeToneStyle> = {
-  stale: {
-    title: "Refresh delayed",
-    message: "Showing the last successful snapshot while live refresh retries.",
-    detail: "The rest of this view should remain usable while the dataset catches up.",
-    tone: "border-amber-500/30 bg-amber-500/8 text-amber-700 dark:text-amber-400",
-    iconBg: "bg-amber-500/15",
-  },
+export const NOTICE_TONE_COLORS: Record<"unavailable" | "network" | "error", NoticeToneStyle> = {
   unavailable: {
     title: "Waiting for first sync",
     message: "This dataset has not populated yet.",

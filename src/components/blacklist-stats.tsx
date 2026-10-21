@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { BlacklistMetricCardSkeletonGrid } from "@/components/blacklist-metric-card-skeleton-grid";
 import { InteractiveMetricStatCard, MetricStatCard } from "@/components/metric-stat-card";
 import { QueryStateNotice } from "@/components/query-state-notice";
-import { cn } from "@/lib/utils";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import type { BlacklistStatusBucket } from "@shared/lib/blacklist-status-buckets";
 import { computeFreezableSummary } from "@shared/lib/freezewatch/freezable-summary";
@@ -89,12 +88,8 @@ export function BlacklistStats({
     ? `${baseUnfreezableSubtext} · View list →`
     : baseUnfreezableSubtext;
   const ambiguousOrderCount = dataQuality?.ambiguousOrderCount ?? 0;
-  const hasFreezeLedgerWarnings =
-    dataQuality &&
-    (dataQuality.status !== "ok" || dataQuality.freezeLedger.providerFailedCount > 0 || ambiguousOrderCount > 0);
-  const qualityTone = dataQuality?.status === "stale" ? "stale" : "degraded";
-  const qualityTitle =
-    dataQuality?.status === "stale" ? "Freeze ledger coverage is stale" : "Freeze ledger coverage is degraded";
+  // Only material staleness is a reader notice; degraded ledger checks are operator signal.
+  const hasFreezeLedgerWarnings = dataQuality?.status === "stale";
 
   if (isLoading) {
     return (
@@ -114,15 +109,12 @@ export function BlacklistStats({
       ) : null}
       {hasFreezeLedgerWarnings ? (
         <Card
-          className={cn(
-            "pharos-card-shell border-l-[3px] sm:col-span-2",
-            qualityTone === "stale" ? "border-l-state-warn-solid/70" : "border-l-orange-500/70",
-          )}
+          className="pharos-card-shell border-l-[3px] border-l-state-warn-solid/70 sm:col-span-2"
           role="status"
         >
           <CardHeader className="pb-2">
             <p className="pharos-label">Data quality</p>
-            <h3 className="text-sm font-semibold text-foreground">{qualityTitle}</h3>
+            <h3 className="text-sm font-semibold text-foreground">Freeze ledger coverage is stale</h3>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
             <p>

@@ -58,7 +58,7 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `TELEGRAM_BOT_TOKEN` | `string` | optional | - | - | Telegram bot credential used for digest delivery and alert dispatch. |
 | `TELEGRAM_BOT_TOKEN_PREVIOUS` | `string` | optional | - | - | Optional previous Telegram bot token marker used for rotation consistency checks. |
 | `TELEGRAM_CHAT_ID` | `string` | optional | - | - | Telegram target chat/channel for digest posts and announcements. |
-| `TELEGRAM_OPERATOR_CHAT_ID` | `string` | optional | - | - | Private Telegram chat for operator-only alerts (cron freshness watchdog); operator alerts are suppressed when unset and never fall back to `TELEGRAM_CHAT_ID`. |
+| `TELEGRAM_OPERATOR_CHAT_ID` | `string` | optional | - | - | Private Telegram chat for operator-only alerts (freshness, digest-publication and reserve post-sync watchdogs); operator alerts are suppressed when unset and never fall back to `TELEGRAM_CHAT_ID`. |
 | `TELEGRAM_WEBHOOK_SECRET` | `string` | optional | - | - | Telegram webhook secret used to authenticate the webhook lane. |
 | `TELEGRAM_WEBHOOK_SECRET_PREVIOUS` | `string` | optional | - | - | Optional overlap Telegram webhook secret accepted during secret rotation. |
 | `MINT_BURN_DISABLED_IDS` | `string` | optional | - | - | Mint/burn runtime disable list by stablecoin ID (CSV). |
