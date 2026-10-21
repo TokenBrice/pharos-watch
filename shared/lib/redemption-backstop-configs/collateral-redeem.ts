@@ -859,6 +859,8 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       v9RouteReviewTerms: {
         settlementModel: "days",
         settlementDelaySec: 302_400,
+        scoringDisposition: "bounded-terms-gap",
+        missingScoringFields: ["cost"],
         rationale: "Reviewed 2026-10-20 against the node-reported Hive 1.28.8 revision 274384a8adddf54b69965a7fd43d8eb0ddda7701: native convert schedules the request for 302400 seconds and process_conversions automatically issues and credits HIVE to the owner for every due regular request. The completed endpoint is asset:hive, not fiat USD. Request 1041114513 for 1000 HBD in block 110848396 (2026-10-17T08:59:03Z) filled in block 110948374 (2026-10-20T20:59:00Z) for 20408.163 HIVE; both native block identities were corroborated on two nodes. This ordinary protocol completion bound assumes a progressing chain and established price feed; it grants neither same-notional executable capacity nor a USD realization guarantee. Debt-ratio haircut and current HIVE payout valuation remain unquantified cost/output facts.",
         reviewedAt: "2026-10-20",
         docs: [

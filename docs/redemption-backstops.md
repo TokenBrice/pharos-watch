@@ -262,11 +262,13 @@ Config cloning uses native `structuredClone` on data-only configs at registry in
 
 The public registry import lives in `shared/lib/redemption-backstops.ts`. The actual config inventory is split by route family under `shared/lib/redemption-backstop-configs/` to keep review and change scopes small.
 
+Family ownership follows the modeled holder endpoint, not issuer branding: opaque asynchronous burn/attest/release belongs to `queue-redeem`, and inventory-dependent on-chain swaps to `psm-swap`, including whitelisted cohorts. Preserve the reviewed access, execution, payout and gap facts when correcting family ownership; do not falsify them to satisfy a family constraint. Such corrections can change route diagnostics and require replay.
+
 `outputAssets` records concrete holder-route outputs, not every reserve asset. Stable outputs use tracked stablecoin IDs; collateral outputs use canonical `asset:<symbol>` keys. Configured baskets are limited to 16 members, matching the `ExitRouteOutput.assetKeys` bound. Leave the field unset when the published route is incomplete or when its tracked and untracked members cannot all be represented: an incomplete subset must not turn an unresolved basket into a resolved one. When a complete reviewed route contains untracked assets, `unresolvedOutputAssetKeys` may preserve the exact identities for diagnostics; those keys do not resolve or score the output.
 
 Explicit stable `outputAssets` take precedence over offchain issuers' legacy fiat default; payouts are not input NAV or reserve holdings. Physical delivery and unresolved commodity collateral retain precedence. The output schema requires currency for fiat, and commodity identity plus `sameNotionalEligible: false` for physical delivery; it rejects fiat/tracked fields on physical outputs and requires source-timed USD evidence for any valuation. Issuer rails never infer payouts from `variantOf`; the legacy fiat projection is not evidence of bank settlement.
 
-The reviewed issuer selections explicitly pay USDT for FinChain FUSD, USDC for Noble USDN and Gate GUSD, and M for KAST USDK. These tracked endpoints flow through the real producer and Safety output review rather than `fiat:USD`. KAST's M unwrap is not a separately mediated partner fiat ramp; every route retains its existing access, cost, capacity and settlement constraints.
+The reviewed issuer selections explicitly pay USDT for FinChain FUSD, USDC for Gate GUSD, wM for Noble USDN, and M for KAST USDK. Noble's separate wM-to-USDC market swap is not its direct bridge-redemption output. These tracked endpoints flow through the producer and Safety output review rather than `fiat:USD`. KAST's M unwrap is not a separately mediated partner fiat ramp; every route retains its reviewed access, cost, capacity and settlement constraints.
 
 Config modules own per-asset payout evidence and gaps. A single tracked payout scores output quality **100** at par only with captured valuation; a multi-output route retains conservative `stable-basket` quality **80** and weakest-price semantics, not invented equal weights or holder-choice branches. Known physical delivery remains non-comparable unless its separately reviewed metal-sale path is admitted.
 
@@ -362,6 +364,7 @@ The resulting row is tagged with one `sourceMode`:
 - `docs.reviewedAt` is the route-review date, not a claim that the rendered fallback link itself was the reviewed source; the detail card now shows review date and provenance together
 - `docs.sources[]` records structured provenance for what the linked source supports (`route`, `capacity`, `fees`, `access`, `settlement`)
 - The registry check ratchets aggregate source-support coverage and emits per-config warnings when a `documented-bound` capacity route lacks explicit `route` or `capacity` support. These warnings are backlog controls, not hard CI errors, until the remaining documented-bound source-support gaps are cleaned up.
+- Audited source-role corrections may update the ratchet only with exact asset/source attribution; backing or another token's terms must never be tagged as executable-capacity evidence merely to preserve a count.
 - `feeDescription` carries docs-backed fee text when the route fee is fixed, conditional, dynamic, flat-fee-based, or publicly undisclosed
 - `notes` merges config notes plus runtime notes such as stale reserve metadata expiry, conservative fallback use, or live fee fallback
 - `capsApplied` records any score caps triggered during scoring

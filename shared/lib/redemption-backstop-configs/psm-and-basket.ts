@@ -30,6 +30,47 @@ const REVIEWED_MENTO_XOFM_PSM_AT = "2026-07-27";
 const reviewedBasketRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_BASKET_REDEMPTION_AT);
 
 const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
+  "usdon-ondo": {
+    ...psmSwapBase,
+    executionModel: "rules-based-nav",
+    capacityModel: { kind: "unquantified" },
+    reviewedAt: "2026-10-20",
+    accessModel: "whitelisted-onchain",
+    holderEligibility: "whitelisted-primary",
+    settlementModel: "atomic",
+    outputAssets: ["usdc-circle"],
+    routeStatus: "open",
+    costModel: undisclosedReviewedFee(
+      "Ondo documents gross 1:1 USDon/USDC swaps for separately whitelisted callers, subject to opposite-token inventory. The verified USDonManager delegates redemption to BaseRWAManager, including the configured redemption-fee module and user-specific registry/router checks. Public gross-parity wording does not establish a complete current request-specific fee, gas or net-output bound.",
+    ),
+    v9RouteReviewTerms: {
+      settlementModel: "atomic",
+      settlementDelaySec: 0,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "cost"],
+      rationale:
+        "The documented direct USDon-to-USDC swap is atomic when funded and authorized. Swapper replenishment has no guaranteed elapsed bound, public platform backing is not funded swap capacity, and no registered-caller same-notional fee/gas/net-output witness is available. No USD bank-wire redemption is currently supported.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef("Ondo Stocks USDon direct swaps (reviewed 2026-10-20)", "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md", ["route", "access", "settlement"]),
+        sourceRef("Ondo USDonManager deployment (reviewed 2026-10-20)", "https://docs.ondo.finance/addresses.md", ["route"]),
+        sourceRef("USDonManager verified source (reviewed 2026-10-20)", "https://eth.blockscout.com/api/v2/smart-contracts/0x05CCbB4b74854f8A067b83475E8c34f5a413D7e1", ["route", "access", "fees", "settlement"]),
+      ],
+    },
+    docs: [
+      sourceRef("Ondo available assets", "https://docs.ondo.finance/ondo-stocks/available-assets.md", ["route"]),
+      sourceRef(
+        "Ondo investing and redeeming",
+        "https://docs.ondo.finance/ondo-global-markets/investing-and-redeeming",
+        ["route", "access", "settlement"],
+      ),
+      sourceRef("Ondo Stocks fee and gas disclosure", "https://docs.ondo.finance/ondo-stocks/fees-and-taxes.md", ["fees"]),
+      sourceRef("USDonManager verified redemption source", "https://eth.blockscout.com/api/v2/smart-contracts/0x05CCbB4b74854f8A067b83475E8c34f5a413D7e1", ["route", "access", "fees", "settlement"]),
+    ],
+    notes: [
+      "Corrected 2026-10-20: the configured channel is an inventory-dependent, separately whitelisted on-chain USDon-to-USDC swap, not fiat USD redemption. The earlier full-supply documented-bound model was unsupported by the cited platform backing and stock-redemption disclosures and is withdrawn; neither full-supply eventual capacity nor a replenishment completion guarantee is inferred.",
+    ],
+  },
   "usdxl-last": {
     ...psmSwapBase,
     reviewedAt: "2026-10-11",

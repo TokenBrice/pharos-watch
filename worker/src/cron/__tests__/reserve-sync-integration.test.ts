@@ -6,7 +6,7 @@ import type * as WorkerRuntimeRegistry from "@shared/lib/stablecoins/worker-runt
 
 const testRegistry = vi.hoisted(() => ({ stablecoins: ["shared-a", "shared-b", "control"].map((id) => ({
   id, name: id, symbol: id, flags: { backing: "rwa-backed", pegCurrency: "USD", governance: "centralized", yieldBearing: false, rwa: true, navToken: false },
-  liveReservesConfig: { adapter: "m0", version: 1, semantics: "collateral-mix", inputs: { primary: { kind: "http-json", url: id === "control" ? "https://example.com/control" : "https://example.com/shared" } } },
+  liveReservesConfig: { adapter: "myrc-independent-assurance", version: 1, semantics: "attestation-mix", inputs: { primary: { kind: "http-json", url: id === "control" ? "https://example.com/control" : "https://example.com/shared" } }, params: { product: "MYRC", profile: "myrc-v1" } },
 })) }));
 
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry(testRegistry));

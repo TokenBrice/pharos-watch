@@ -867,40 +867,6 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       "Multipli documents an institution-only primary redemption rail into underlying liquidity-class assets, so the route remains a delayed issuer exit rather than an instant public stablecoin off-ramp",
     ],
   },
-  "usdn-noble": {
-    ...issuerBase,
-    capacityModel: { kind: "unquantified" },
-    outputAssets: ["wm-m0"],
-    accessModel: "permissionless-onchain",
-    holderEligibility: "any-holder",
-    settlementModel: "queued",
-    executionModel: "deterministic-onchain",
-    reviewedAt: "2026-10-20",
-    costModel: undisclosedReviewedFee(
-      "Noble's current USDN redemption application transfers USDN to Ethereum as wM through claim, transfer and relay steps. The application offers a separate wM-to-USDC swap; no complete same-notional bridge, relay, gas and downstream-swap cost ceiling is published.",
-    ),
-    v9RouteReviewTerms: {
-      scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["capacity", "settlement", "cost"],
-      rationale:
-        "The current application identifies Ethereum wM as the direct bridge-redemption output and a separate swap for USDC. NASD's February 26, 2025 site terms disclaim an issuer/intermediary role and make third-party protocols responsible for transactions. Neither the current terms, architecture nor app provides funded same-notional capacity, a maximum completed-payout duration or an all-in cost bound. No direct USDC issuer-redemption commitment or full-supply capacity is inferred.",
-      reviewedAt: "2026-10-20",
-      docs: [
-        sourceRef("NASD terms (last revised 2025-02-26)", "https://dollar.noble.xyz/terms-of-use", ["route", "access"]),
-        sourceRef("Noble current USDN-to-wM redemption application (retrieved 2026-10-20)", "https://dollar.noble.xyz/", ["route", "access", "settlement"]),
-        sourceRef("USDN overview", "https://docs.noble.xyz/learn/usdn/overview/", ["route"]),
-      ],
-    },
-    docs: [
-      sourceRef("Noble current USDN-to-wM redemption application (retrieved 2026-10-20)", "https://dollar.noble.xyz/", ["route", "access", "settlement"]),
-      sourceRef("Separate Ethereum wM-to-USDC swap (retrieved 2026-10-20)", "https://dollar.noble.xyz/swap", ["route", "fees"]),
-      sourceRef("USDN architecture", "https://docs.noble.xyz/learn/usdn/architecture/", ["route", "access"]),
-      sourceRef("NASD site terms, last revised February 26, 2025", "https://dollar.noble.xyz/terms-of-use", ["route", "access", "fees"]),
-    ],
-    notes: [
-      "The retained configured channel is diagnostic and unquantified. The app's direct bridge output is wM on Ethereum, not fiat or USDC; a separate market swap is needed for USDC. Current capacity and cost need an exact Noble Portal/relay observation and independently valued output, not M0 gateway collateral or a supply-full issuer model.",
-    ],
-  },
   "aeur-anchored-coins": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,

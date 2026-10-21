@@ -21,6 +21,18 @@ const KNOWN_TICKERS = [
 ];
 const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
+    "u-united-stables::USDC, USDT and USD1 stablecoins (individual and Binance-Peg weights undisclosed)::USDC",
+    "FD24 (2026-10-20): the reviewed report gives no constituent or Binance-Peg weights; assigning USDC to this unresolved basket would fabricate a full dependency.",
+  ],
+  [
+    "u-united-stables::USDC, USDT and USD1 stablecoins (individual and Binance-Peg weights undisclosed)::USDT",
+    "FD24 (2026-10-20): the reviewed report gives no constituent or Binance-Peg weights; assigning USDT to this unresolved basket would fabricate a full dependency.",
+  ],
+  [
+    "eusd-electronic-usd::Gauntlet USDC Frontier vault (gtusdcf)::USDC",
+    "FD19 (2026-10-20): zero-weight classification-only Frontier vault claim, not direct USDC or the separately tracked Prime vault; no measured constituent dependency is established.",
+  ],
+  [
     "usd3-reserve-protocol::Steakhouse USDC V1 vault shares::USDC",
     "Untracked Steakhouse USDC Morpho V1 vault shares (0xbeef01735c132ada46aa9aa4c54623caa92a64cb); USDC is the underlying candidate only, and the tracked steakUSDC is the V2 token.",
   ],

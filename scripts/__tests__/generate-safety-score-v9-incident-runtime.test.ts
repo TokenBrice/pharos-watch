@@ -19,9 +19,9 @@ describe("incident runtime projection", () => {
     expect(() => projectNegativeIncidentReview({ ...reviews[0], windowEndSec: Number.MAX_SAFE_INTEGER })).toThrow();
   });
 
-  it("keeps generated runtime bytes and the full expanded-review digest unchanged", () => {
-    // Ordered pre-normalization authored payload, not a newly generated candidate digest.
-    expect(sha256Hex(stableJsonStringifyV1(expanded))).toBe("5b7625c3705851e7be90799af9a6a64d8d30d624c0d481066898e84977e2f540");
+  it("pins the full expanded-review identity and exact generated runtime bytes", () => {
+    // Ordered pre-normalization authored identity; deliberate curation rotates this pin.
+    expect(sha256Hex(stableJsonStringifyV1(expanded))).toBe("c6dfda6370220ac28f1003ab72a1a421e214bb03ef248ba902bec13ed24d5b43");
     const runtime = readFileSync(new URL("../../shared/data/safety-score-v9/incident-runtime-v1.generated.json", import.meta.url), "utf8");
     expect(`${JSON.stringify(buildIncidentRuntime(source))}\n`).toBe(runtime);
   });

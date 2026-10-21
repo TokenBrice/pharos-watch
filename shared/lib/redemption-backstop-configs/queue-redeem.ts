@@ -105,6 +105,91 @@ function erc4626ReserveTelemetryQueueConfig(options: {
 }
 
 const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
+  "usdn-noble": {
+    ...queueRedeemBase,
+    capacityModel: { kind: "unquantified" },
+    outputAssets: ["wm-m0"],
+    accessModel: "permissionless-onchain",
+    holderEligibility: "any-holder",
+    settlementModel: "queued",
+    executionModel: "deterministic-onchain",
+    reviewedAt: "2026-10-20",
+    costModel: undisclosedReviewedFee(
+      "Noble's current USDN redemption application transfers USDN to Ethereum as wM through claim, transfer and relay steps. The application offers a separate wM-to-USDC swap; no complete same-notional bridge, relay, gas and downstream-swap cost ceiling is published.",
+    ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "The current application identifies Ethereum wM as the direct bridge-redemption output and a separate swap for USDC. NASD's February 26, 2025 site terms disclaim an issuer/intermediary role and make third-party protocols responsible for transactions. Neither the current terms, architecture nor app provides funded same-notional capacity, a maximum completed-payout duration or an all-in cost bound. No direct USDC issuer-redemption commitment or full-supply capacity is inferred.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef("NASD terms (last revised 2025-02-26)", "https://dollar.noble.xyz/terms-of-use", ["route", "access"]),
+        sourceRef("Noble current USDN-to-wM redemption application (retrieved 2026-10-20)", "https://dollar.noble.xyz/", ["route", "access", "settlement"]),
+        sourceRef("USDN overview", "https://docs.noble.xyz/learn/usdn/overview/", ["route"]),
+      ],
+    },
+    docs: [
+      sourceRef("Noble current USDN-to-wM redemption application (retrieved 2026-10-20)", "https://dollar.noble.xyz/", ["route", "access", "settlement"]),
+      sourceRef("Separate Ethereum wM-to-USDC swap (retrieved 2026-10-20)", "https://dollar.noble.xyz/swap", ["route", "fees"]),
+      sourceRef("USDN architecture", "https://docs.noble.xyz/learn/usdn/architecture/", ["route", "access"]),
+      sourceRef("NASD site terms, last revised February 26, 2025", "https://dollar.noble.xyz/terms-of-use", ["route", "access", "fees"]),
+    ],
+    notes: [
+      "The retained configured channel is diagnostic and unquantified. The app's direct bridge output is wM on Ethereum, not fiat or USDC; a separate market swap is needed for USDC. Current capacity and cost need an exact Noble Portal/relay observation and independently valued output, not M0 gateway collateral or a supply-full issuer model.",
+    ],
+  },
+  "usdcx-movement": defineReviewedQueueRedeemConfig(REVIEWED_STABLECOIN_AUDIT_AT, {
+    outputAssets: ["usdc-circle"],
+    executionModel: "opaque",
+    settlementModel: "queued",
+    capacityModel: { kind: "reserve-sync-metadata" },
+    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
+    costModel: {
+      ...documentedVariableFee(
+        "Circle publishes destination-specific protocol, withdrawal gas and optional forwarding fees. The retained 2 bps and $2 figures cover only part of that schedule; forwarding can add $1.45 plus $0.50 and destination gas, while Movement execution gas is separate. They are not a complete all-in route ceiling",
+      ),
+      feeBpsMin: 0,
+      feeBpsMax: 2,
+      gasOrBridgeCostUsd: 2,
+    },
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      reviewedAt: "2026-10-20",
+      rationale:
+        "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Circle's withdrawal tutorial requires a remote-chain burn, remote attester signature, Circle validation, withdrawal attestation and finalized release; created, verified and unverified requests remain pending and failed requests require remediation. No unconditional completion bound is published. An Ethereum domain-10005 collateral balance is backing telemetry, not a funded same-notional execution certificate across Ethereum/Arc/Gateway and pending liabilities. Published protocol fees exclude some forwarding and remote/destination gas, so 2 bps plus $2 is not an all-in ceiling. Preserve original route review provenance, actual USDC output and partial published fee terms without importing zero-second settlement or treating the entire escrow balance as currently executable.",
+      docs: [
+        sourceRef(
+          "Circle xReserve burn, signature, validation and finalized-release steps",
+          "https://developers.circle.com/xreserve/tutorials/initiate-a-withdrawal-as-a-remote-blockchain",
+          ["route", "capacity", "access", "settlement"],
+        ),
+        sourceRef(
+          "Circle xReserve complete destination and forwarding fee tables",
+          "https://developers.circle.com/xreserve/references/fees",
+          ["fees"],
+        ),
+      ],
+    },
+    docs: [
+      sourceRefFull("Circle xReserve", "https://www.circle.com/xreserve"),
+      sourceRef("Circle xReserve fees (reviewed 2026-10-03)", "https://developers.circle.com/xreserve/references/fees", ["fees"]),
+      sourceRef(
+        "Circle xReserve asynchronous withdrawal completion",
+        "https://developers.circle.com/xreserve/tutorials/initiate-a-withdrawal-as-a-remote-blockchain",
+        ["route", "capacity", "access", "settlement"],
+      ),
+      sourceRefRouteCapacityAccess(
+        "Movement USDCx announcement",
+        "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin",
+      ),
+    ],
+    notes: [
+      "USDCx exits into tracked Circle USDC through the xReserve contract; final fiat redemption remains Circle's issuer route.",
+      "The Ethereum balanceOfNativeCollateral(USDC, Movement domain 10005) read remains collateral evidence only. Exact releasable capacity, all-source accounting and an elapsed completion bound are unresolved; no funded instant or atomic USDC exit is certified.",
+    ],
+  }),
   "earnusd-lido": defineQueueRedeemConfig({
     outputAssets: ["usdc-circle"],
     holderEligibility: "any-holder",
