@@ -503,6 +503,7 @@ describe("handleMintBurnFlows contract tests", () => {
       },
     });
     expect(res.headers.get("Warning")).toContain("v9-snapshot-unavailable");
+    expect(res.headers.get("X-Data-Freshness")).toBe("fresh");
 
     const history = cachedDb.getHistory();
     expect(history.some((entry) => entry.sql.includes("FROM mint_burn_hourly"))).toBe(false);
@@ -991,6 +992,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.sync?.warning).toContain("freshness lookup failed");
     expect(res.headers.get("X-Data-Age")).toBe("unavailable");
+    expect(res.headers.get("X-Data-Freshness")).toBe("unknown");
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(res.headers.get("X-Data-Freshness-Reason")).toBe("freshness-lookup-failed");
     expect(body.sync?.lastSuccessfulSyncAt).toBeNull();

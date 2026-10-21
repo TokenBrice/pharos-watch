@@ -106,6 +106,10 @@ Both exact-address callers share one enabled predicate, a flat target list and a
 
 Kraken's curated `SOFIDUSD` market supplies SoFiUSD's hard-market quote through the existing batched ticker request, corroborating the contract-verified CoinGecko `sofiusd` identity. SoFiUSD no longer has a nominal-par override: admitted observed market consensus publishes through the ordinary validation path. Kraken's bid/ask midpoint retains its local-fetch clock, and CoinGecko agreement does not upgrade that quote to single-source depeg authority. Failed or absent quotes stay unavailable rather than publishing par. Provider registration alone does not establish a published observation.
 
+Frontier Stable Token quotes the curated Kraken `FRNTUSD` bid/ask market in that batch; missing responses stay unavailable.
+
+USDY uses `detailProvider: "coingecko"` so its supplemental lane admits a fresh CoinGecko price and market cap without a live DefiLlama row; an admitted row's primary supply still wins.
+
 ### Nominal-reference recovery boundary
 
 `protocol-par` is a nominal reference, never an observed market quote. The current nominal routes are Bima USBD, Quill USDQ (`usdq-quill`, not Quantoz USDQ), Mento XOFm and Mento ZARm. `isObservedPrice()` rejects both the nominal observation mode and any composite source containing `protocol-par`; a fresh sync timestamp does not make parity observed.

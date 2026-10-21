@@ -152,6 +152,8 @@ export const ReserveCohortStatusSchema = /* @__PURE__ */ (() => z.object({
   continuationPending: z.boolean(),
   completionP95Sec: z.number().finite().nonnegative().nullable(),
   completedCohorts: z.number().int().nonnegative(),
+  /** Maximum full-cohort duration completed in the recovery window; null/absent cannot prove recovery. */
+  recentCompletionMaxSec: z.number().finite().nonnegative().nullable().optional(),
   queueExecution: ReserveContinuationExecutionStatusSchema.nullable().optional(),
 }).strict())();
 export type ReserveCohortStatus = z.output<typeof ReserveCohortStatusSchema>;

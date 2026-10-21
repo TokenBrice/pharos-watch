@@ -111,8 +111,8 @@ describe("status dashboard model", () => {
   it.each([96_534_823.01, 500_000_000])("keeps canonical publication materiality for a last-known cap of %s", (cap) => {
     const healthData = makeHealthyHealthResponse();
     healthData.stablecoinPublication = {
-      status: "incomplete", missingActiveIds: ["hbd-hive"], expectedActiveCount: 1,
-      presentActiveCount: 0, waivedActiveCount: 0, waivedActiveIds: [], expiredWaiverIds: [], observedAt: healthData.timestamp,
+      status: "incomplete", missingActiveIds: ["hbd-hive"], expectedActiveCount: 396,
+      presentActiveCount: 395, waivedActiveCount: 0, waivedActiveIds: [], expiredWaiverIds: [], observedAt: healthData.timestamp,
     };
     healthData.activePriceCoverage = makeActivePriceCoverage([makeMissingActiveAsset({
       stablecoinId: "hbd-hive", marketCapUsd: null, lastKnownMarketCapUsd: cap,

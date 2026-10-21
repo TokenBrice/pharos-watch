@@ -138,8 +138,6 @@ export interface ResolvedStablecoinPublicationWaivers {
  * to an asset that has a price. */
 export const STABLECOIN_PUBLICATION_WAIVERS: readonly StablecoinPublicationWaiver[] = [];
 
-const PRICE_GAP_REVIEWED_AT_SEC = Date.UTC(2026, 8, 23) / 1000;
-
 /** Reviewed price-gap acknowledgements for active stablecoins whose every
  * admissible price lane is empty. Entries are registry edits reviewed like
  * code: each needs an owner, a reason, dated public sources, and an expiry
@@ -150,16 +148,17 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     stablecoinId: "hbd-hive",
     owner: "ops",
     reason:
-      "Reviewed 2026-10-18 23:42 UTC: CoinGecko's fresh HBD quote is $2.436045 (2026-10-18 23:41:44 UTC), above the unchanged exclusive USD upper bound of $1.19; its two Upbit-family HBD/BTC tickers imply about $2.40. The native Hive HBD/HIVE book with separately observed fresh HIVE/USD instead implies $0.9800-$0.9819, but this is an unadmitted cross-rate: no reviewed runtime HIVE/USD dependency or native order-book depth policy exists. The max-500-level read offers about $32.2K combined posted inventory, with only 812.755/533.453 HBD within 5% on the two sides; order-book inventory is not pool TVL and the ordinary $50K direct-pool floor is not a universal order-book rule. No native source is admitted. This is unresolved venue divergence, not a harmless premium or stale-only feed. Acknowledge the missing-price alert only until 2026-10-21 00:00 UTC for ops to resolve the upstream divergence and review an identity-safe, depth-reviewed source and USD dependency; retain the rejected quote, missing gap, price bounds and conversion-peg exclusion.",
+      "Reviewed 2026-10-21 14:13 UTC: CoinGecko's fresh HBD quote is $1.87 (2026-10-21 14:12:04 UTC), above the unchanged exclusive USD upper bound of $1.19; Upbit Indonesia and Upbit HBD/BTC tickers imply $1.92 and $1.83. DefiLlama repeats the out-of-range venue price ($1.9768). The native Hive HBD/HIVE book with separately observed HIVE/USD instead implies $0.99759-$0.99760, but remains an unadmitted cross-rate: no reviewed runtime HIVE/USD dependency or native order-book depth policy exists. The max-500-level read contains 215,190.014/16,267.135 HBD posted asks/bids, not executable USD depth or pool TVL. This is unresolved venue divergence, not a harmless premium or stale-only feed. Ops must resolve the rejected upstream quote and review an identity-safe source, depth policy and USD dependency by 2026-10-24 14:13 UTC; this short source-review acknowledgement preserves the missing gap, price bounds and conversion-peg exclusion.",
     sources: [
       "https://www.coingecko.com/en/coins/hive_dollar",
       "https://api.coingecko.com/api/v3/coins/hive_dollar/tickers",
       "https://api.coingecko.com/api/v3/simple/price?ids=hive,hive_dollar&vs_currencies=usd&include_last_updated_at=true",
+      "https://coins.llama.fi/prices/current/coingecko:hive_dollar",
       "https://api.hive.blog",
       "https://developers.hive.io/apidefinitions/#condenser_api.get_order_book",
     ],
-    reviewedAt: Date.UTC(2026, 9, 18, 23, 42) / 1000,
-    expiresAt: Date.UTC(2026, 9, 21) / 1000,
+    reviewedAt: Date.UTC(2026, 9, 21, 14, 13) / 1000,
+    expiresAt: Date.UTC(2026, 9, 24, 14, 13) / 1000,
   },
   {
     stablecoinId: "usdn-noble",
@@ -203,12 +202,13 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     stablecoinId: "wusd-worldwide",
     owner: "ops",
     reason:
-      "Re-reviewed 2026-10-19 07:21 UTC using the October 19 source captures: WSPN's 1:1 contract migration completed in December 2024 and is already reflected in the canonical deployments; July/August 2026 venue delistings and supply contraction are separate later events. CoinGecko worldwide-usd has no tickers and its simple price remains dated 2026-08-21 22:51:40 UTC. Exact current-contract ETH/POL/Viction pools returned by GeckoTerminal are all below the $50K liquidity floor (largest sampled: $313.26/$1,125.54/$470.67); exact DexScreener reads are empty. Corporate redemption is advertised but current availability is unverified: documented mainnet wallet.wspn.io fails DNS (NXDOMAIN), and the quote-only request never reached HTTP. No production quote or bank settlement was observed; administrative withdrawal approval is not a payout guarantee. Keep active missing-price monitoring and require an operational exact-token issuer route or qualifying market, with an explicit lifecycle/route decision by October 23; do not infer issuer termination or extend the deadline.",
+      "Reviewed 2026-10-21 14:13 UTC: CoinGecko worldwide-usd remains dated 2026-08-21 22:51:40 UTC with zero tickers; DefiLlama list price is null and its coins API supplies no WUSD quote. Exact current-contract Ethereum/Polygon/Viction DexScreener reads are empty. GeckoTerminal's largest returned pools hold only $313.26/$1,132.36/$451.76 respectively, below the unchanged $50K per-pool floor. The documented wallet.wspn.io still resolves to an NXDOMAIN load-balancer target; no operational issuer quote or bank settlement was observed. WSPN's completed 2024 contract migration does not establish current redemption or termination. Ops retains the October 23 lifecycle/route decision deadline; this new five-day source review only acknowledges the unresolved price gap until October 26 14:13 UTC and does not extend or satisfy that lifecycle decision. Require an exact-token operational issuer route or qualifying market, retaining active missing-price monitoring and all admission gates.",
     sources: [
       "https://www.mexc.com/announcements/article/mexc-completes-the-wspn-wusd-contract-swap-17827791520755",
       "https://support.coins.ph/hc/en-us/articles/60655699647641-WUSD-Delisting-on-August-4-2026",
       "https://stablecoins.llama.fi/stablecoin/234",
       "https://api.coingecko.com/api/v3/simple/price?ids=worldwide-usd&vs_currencies=usd&include_last_updated_at=true",
+      "https://coins.llama.fi/prices/current/coingecko:worldwide-usd",
       "https://api.coingecko.com/api/v3/coins/worldwide-usd/tickers",
       "https://api.dexscreener.com/token-pairs/v1/ethereum/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
       "https://api.dexscreener.com/token-pairs/v1/polygon/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
@@ -221,8 +221,8 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
       "https://developer.wspn.io/6223538m0.md",
       "https://dns.google/resolve?name=wallet.wspn.io&type=A",
     ],
-    reviewedAt: Date.UTC(2026, 9, 19, 7, 21, 45) / 1000,
-    expiresAt: Date.UTC(2026, 9, 23) / 1000,
+    reviewedAt: Date.UTC(2026, 9, 21, 14, 13) / 1000,
+    expiresAt: Date.UTC(2026, 9, 26, 14, 13) / 1000,
   },
   {
     stablecoinId: "pht-pht",
@@ -285,13 +285,21 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     stablecoinId: "bnusd-balanced",
     owner: "ops",
     reason:
-      "During the v1-to-v2 migration, no reviewed market is admissible: DefiLlama removed the list price, CoinGecko is stale, and CMC is inactive. Pricing the live ICON sICX/bnUSD pool requires a separately reviewed sICX/USD source and adapter. The 1:1 Sodax migration deadline is 2026-12-01; review a migration-claim valuation path or freeze before that deadline.",
+      "Reviewed 2026-10-21 14:13 UTC: this identity tracks ICON Balanced v1 bnUSD(old), not the distinct Sonic successor. DefiLlama list/detail 204 price is null and the coins API has no balanced-dollars quote. CoinGecko remains dated 2026-06-26 20:26:20 UTC ($0.96769) with zero tickers; exact ICON/Base/Arbitrum/BSC DexScreener reads return no pairs. Official Balanced migration instructions still describe 1:1 old/new migration on ICON, Stellar and Sui, with other legacy chains requiring bridging first. That advertised migration is not an observed market price or an executed claim valuation. No independently reviewed sICX/USD dependency and native pool adapter exists. Ops must review an identity-safe observed market or executable migration-claim route, or make a freeze decision by October 28 14:13 UTC; preserve the missing price and all source admission guards. Do not apply the successor's price to bnUSD(old) or infer an unsupported migration termination date.",
     sources: [
       "https://docs.balanced.network/migrate-assets",
       "https://github.com/icon-project/sodax-sdks/blob/main/packages/sdk/docs/MIGRATION.md",
+      "https://stablecoins.llama.fi/stablecoin/204",
+      "https://coins.llama.fi/prices/current/coingecko:balanced-dollars",
+      "https://api.coingecko.com/api/v3/simple/price?ids=balanced-dollars&vs_currencies=usd&include_last_updated_at=true",
+      "https://api.coingecko.com/api/v3/coins/balanced-dollars/tickers",
+      "https://api.dexscreener.com/token-pairs/v1/icon/cx88fd7df7ddff82f7cc735c871dc519838cb235bb",
+      "https://api.dexscreener.com/token-pairs/v1/base/0x78b7cd9308287deb724527d8703c889e2d6c3708",
+      "https://api.dexscreener.com/token-pairs/v1/arbitrum/0xa67f4b09eed22f8201ee0637cbe9d654e63f946e",
+      "https://api.dexscreener.com/token-pairs/v1/bsc/0xc65132325bd4fcf2ec5f3a9375487163b6999206",
     ],
-    reviewedAt: PRICE_GAP_REVIEWED_AT_SEC,
-    expiresAt: Date.UTC(2026, 9, 22) / 1000,
+    reviewedAt: Date.UTC(2026, 9, 21, 14, 13) / 1000,
+    expiresAt: Date.UTC(2026, 9, 28, 14, 13) / 1000,
   },
   {
     stablecoinId: "usdn-smardex",

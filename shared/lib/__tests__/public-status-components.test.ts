@@ -8,6 +8,8 @@ import {
   PUBLIC_CACHE_COMPONENT,
   PUBLIC_STATUS_CACHE_REGISTRY_KEYS,
 } from "../public-status-components";
+import { getPublicMintBurnStatus } from "../public-health";
+import { getStablecoinPublicationImpactStatus } from "../status-thresholds";
 import { PUBLIC_COMPONENT_LABEL } from "../classification/operational-status";
 import { PUBLIC_STATUS_COMPONENT_IDS, type HealthResponse } from "../../types/status";
 
@@ -19,6 +21,34 @@ function cache(ageSeconds: number | null, maxAge = 600): HealthResponse["caches"
 
 function component(health: HealthResponse, id: string) {
   return projectPublicStatus(health).components.find((item) => item.id === id)!;
+}
+
+function assetScopedHealth(): HealthResponse {
+  const health = makeHealthyHealthResponse();
+  const missingActiveAssets = [
+    { stablecoinId: "usdy-ondo-finance", symbol: "USDY", marketCapUsd: null,
+      lastKnownMarketCapUsd: 2_344_462_796.3038855, lastKnownMarketCapObservedAt: NOW - 7 * 86400,
+      consecutiveMissingGenerations: 10 },
+    { stablecoinId: "frnt-wyoming", symbol: "FRNT", marketCapUsd: 967_947.92,
+      consecutiveMissingGenerations: 9 * 96 },
+  ].map((asset) => ({
+    ...asset, currentPrice: null, currentSource: null, currentObservedAt: null, currentConfidence: null,
+    lastAcceptedPrice: null, lastAcceptedSource: null, lastAcceptedObservedAt: null,
+    rejectionReason: "missing", alertEligible: true,
+  }));
+  health.stablecoinPublication = {
+    status: "incomplete", expectedActiveCount: 396, presentActiveCount: 395, waivedActiveCount: 0,
+    missingActiveIds: ["usdy-ondo-finance"], waivedActiveIds: [], expiredWaiverIds: [], observedAt: NOW,
+  };
+  health.activePriceCoverage = {
+    status: "incomplete", expectedActiveCount: 396, presentActiveCount: 395, pricedActiveCount: 394,
+    missingPriceCount: 2, pricedActiveIds: [], missingActiveIds: missingActiveAssets.map((asset) => asset.stablecoinId),
+    affectedMarketCapUsd: null, missingActiveAssets, alertEligibleCount: 2,
+    alertEligibleIds: missingActiveAssets.map((asset) => asset.stablecoinId),
+    maxConsecutiveMissingGenerations: 9 * 96, observedAt: NOW,
+  };
+  health.mintBurn.sync.warning = "Critical mint/burn lane is running in degraded mode; coverage may be partial.";
+  return health;
 }
 
 describe("public status components", () => {
@@ -65,6 +95,41 @@ describe("public status components", () => {
     expect(component(health, "mint-burn")).toMatchObject({ state, reasons: expect.arrayContaining([reason]) });
     expect(component(health, "blacklist")).toMatchObject({ state: "degraded", reasons: ["blacklist-amounts-missing"] });
   });
+
+  it("keeps bounded material listings honest without treating them as a whole-service incident", () => {
+    const health = assetScopedHealth();
+    expect(getStablecoinPublicationImpactStatus(health.stablecoinPublication!, health.activePriceCoverage!, NOW)).toBe("healthy");
+    expect(getPublicMintBurnStatus(health.mintBurn.sync)).toBe("healthy");
+    const projection = projectPublicStatus(health);
+    expect(projection.headline).toMatchObject({
+      state: "operational", title: "Systems operational with notices", affected: ["stablecoin-data", "mint-burn"],
+    });
+    expect(component(health, "stablecoin-data")).toMatchObject({
+      state: "degraded",
+      reasons: ["publication-incomplete:asset-scoped", "price-coverage-incomplete:asset-scoped"],
+    });
+    expect(component(health, "mint-burn")).toMatchObject({
+      state: "operational", reasons: ["mint-burn-run-degraded"],
+    });
+    expect(headlineToStatusLevel(projection.headline.state)).toBe("healthy");
+  });
+
+  it.each(["broad", "unknown cap", "stale cache", "missing clock", "unknown lane", "stale mint", "unattributed"] as const)(
+    "does not let asset notices conceal %s failure", (failure) => {
+      const health = assetScopedHealth();
+      if (failure === "broad") health.stablecoinPublication!.expectedActiveCount = 10;
+      if (failure === "unknown cap") health.activePriceCoverage!.missingActiveAssets[0].lastKnownMarketCapUsd = null;
+      if (failure === "stale cache") health.caches.stablecoins = cache(13 * 600);
+      if (failure === "missing clock") health.mintBurn.sync.lastSuccessfulSyncAt = null;
+      if (failure === "unknown lane") health.mintBurn.sync.criticalLaneHealthy = null;
+      if (failure === "stale mint") {
+        health.mintBurn.sync.freshnessStatus = "stale";
+        health.mintBurn.sync.lastSuccessfulSyncAt = NOW - 6000;
+      }
+      if (failure === "unattributed") health.status = "degraded";
+      expect(projectPublicStatus(health).headline.state).not.toBe("operational");
+    },
+  );
 
 
   it("degrades held Safety Scores with their machine reason without changing Risk signals", () => {

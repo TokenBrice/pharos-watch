@@ -455,7 +455,7 @@ describe("adaptAccountableDashboard", () => {
         reserves_split: [
           { value: 50.6, name: "Binance" },
           { value: 48.3, name: "Solana" },
-          { value: 1.1, name: "Bnb_smartchain" },
+          { value: 1.1, name: "BNB Smart Chain" },
         ],
       },
     });
@@ -463,8 +463,10 @@ describe("adaptAccountableDashboard", () => {
     expect(result.slices).toEqual([
       { sourceKey: "accountable:unitas:deployment:binance", name: "Binance", pct: 50.6, risk: "high" },
       { sourceKey: "accountable:unitas:deployment:solana", name: "Solana", pct: 48.3, risk: "high" },
-      { sourceKey: "accountable:unitas:deployment:bnb-smartchain", name: "Bnb_smartchain", pct: 1.1, risk: "high" },
+      { sourceKey: "accountable:unitas:deployment:bnb-smartchain", name: "BNB Smart Chain", pct: 1.1, risk: "high" },
     ]);
+    expect(result.warnings?.some((warning) => warning.code === "unmapped-bucket")).not.toBe(true);
+    expect(result.slices.every((slice) => slice.coinId == null && slice.depType == null && slice.assetClass == null)).toBe(true);
   });
 
   it("maps XGLD's reviewed gross location labels without claiming net backing or custody", async () => {
@@ -473,13 +475,13 @@ describe("adaptAccountableDashboard", () => {
       ts: "2026-10-06T06:00:00Z",
       reserves: {
         total_reserves: 100,
-        reserves_split: [{ name: "Binance", value: 98.08 }, { name: "Bnb_smartchain", value: 1.92 }],
+        reserves_split: [{ name: "Binance", value: 98.08 }, { name: "BNB Smart Chain", value: 1.92 }],
       },
     });
 
     expect(result.slices).toEqual([
       { sourceKey: "accountable:unitas:xgld:binance", name: "Binance", pct: 98.1, risk: "high" },
-      { sourceKey: "accountable:unitas:xgld:bnb-smartchain", name: "Bnb_smartchain", pct: 1.9, risk: "high" },
+      { sourceKey: "accountable:unitas:xgld:bnb-smartchain", name: "BNB Smart Chain", pct: 1.9, risk: "high" },
     ]);
     expect(result.metadata).toMatchObject({ breakdownCount: 2, mappedBucketCount: 2 });
     expect(result.metadata).not.toHaveProperty("unknownExposurePct");

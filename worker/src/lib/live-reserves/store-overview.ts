@@ -74,20 +74,30 @@ async function loadReserveCohortCompletions(db: D1Database, now: number) {
       WHERE schedule_key = 'fourHourlyReserveSync' AND job = 'sync-live-reserves'
         AND state = 'completed' AND completed_at IS NOT NULL
         AND next_item_key IS NULL AND items_done = items_total
-        AND slot_started_at >= ? AND slot_started_at <= ?
-      GROUP BY slot_started_at ORDER BY slot_started_at DESC LIMIT 64`,
-  ).bind(now - STATUS_RESERVE_COHORT_SLO.windowSec, now)
+        AND slot_started_at <= ?
+      GROUP BY slot_started_at
+      HAVING slot_started_at >= ? OR MIN(completed_at) >= ?
+      ORDER BY slot_started_at DESC LIMIT 64`,
+  ).bind(now, now - STATUS_RESERVE_COHORT_SLO.windowSec, now - STATUS_RESERVE_COHORT_SLO.recoveryWindowSec)
     .all<{ slot_started_at: number; completed_at: number }>();
-  const durations = (rows.results ?? []).map((row) => {
+  const durations: number[] = [];
+  let recentCompletionMaxSec: number | null = null;
+  for (const row of rows.results ?? []) {
     if (!Number.isFinite(row.slot_started_at) || !Number.isFinite(row.completed_at)
       || row.completed_at < row.slot_started_at || row.completed_at > now) {
       throw new Error("reserve-cohort-completion-clock-invalid");
     }
-    return row.completed_at - row.slot_started_at;
-  });
+    const duration = row.completed_at - row.slot_started_at;
+    if (row.slot_started_at >= now - STATUS_RESERVE_COHORT_SLO.windowSec) durations.push(duration);
+    if (row.completed_at >= now - STATUS_RESERVE_COHORT_SLO.recoveryWindowSec) {
+      recentCompletionMaxSec = Math.max(recentCompletionMaxSec ?? duration, duration);
+    }
+  }
   return {
     completedCohorts: durations.length,
     completionP95Sec: percentileNearestRank(durations, 95),
+    // A bounded page cannot certify that every recent completion met the SLO.
+    recentCompletionMaxSec: rows.results?.length === 64 ? null : recentCompletionMaxSec,
   };
 }
 

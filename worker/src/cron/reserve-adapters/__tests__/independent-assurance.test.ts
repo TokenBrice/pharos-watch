@@ -218,7 +218,7 @@ function assuranceFenceCases() {
       product: "FDUSD",
       html: indexFixture("fdusd-independent-assurance.html"),
       newerHtml: indexFixture("fdusd-independent-assurance.html") +
-        '<a href="https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/cafe_ISAE3000%20-%20Attestation%20Report%20on%20Reserves%20Account%20September%202026.pdf">September 2026</a>',
+        '<div role="listitem" class="transparency-report_item w-dyn-item"><div>Oct 2026</div><a href="https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/cafe_Attestation%20Report%20on%20Reserves%20Account%20Oct.pdf">Download</a></div>',
     },
     {
       adapter: "rlusd-independent-assurance",

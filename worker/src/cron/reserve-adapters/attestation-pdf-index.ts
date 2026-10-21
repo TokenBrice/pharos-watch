@@ -81,11 +81,18 @@ interface PdfLinkCandidate {
 }
 
 function decodeUrlish(value: string): string {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
+  // Webflow may encode an already encoded upload filename. Decode only the
+  // text used for classification/date discovery; preserve the exact href.
+  for (let pass = 0; pass < 2; pass++) {
+    try {
+      const decoded = decodeURIComponent(value);
+      if (decoded === value) break;
+      value = decoded;
+    } catch {
+      break;
+    }
   }
+  return value;
 }
 
 function isPdfHref(href: string): boolean {

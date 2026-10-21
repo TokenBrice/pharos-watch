@@ -48,7 +48,7 @@ export function makeHealthyHealthResponse(): HealthResponse {
       majorStaleCount: 0,
       staleMajorSymbols: [],
       sync: {
-        lastSuccessfulSyncAt: null,
+        lastSuccessfulSyncAt: 1_699_999_970,
         freshnessStatus: "fresh",
         warning: null,
         criticalLaneHealthy: true,

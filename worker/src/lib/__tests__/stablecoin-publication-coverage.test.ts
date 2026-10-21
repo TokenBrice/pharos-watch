@@ -379,7 +379,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(next.missingActiveAssets[0]).toMatchObject({ consecutiveMissingGenerations: null, alertEligible: true });
   });
 
-  it.each(["wusd-worldwide", "pht-pht", "vcred-vcred", "hbd-hive", "usdn-noble", "usdk-kast"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
+  it.each(["wusd-worldwide", "pht-pht", "vcred-vcred", "hbd-hive", "usdn-noble", "usdk-kast", "bnusd-balanced"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
     const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
     const ids = [review.stablecoinId, "usdt-tether"];
     const first = evaluateStablecoinActivePriceCoverage(
@@ -428,6 +428,35 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       previousCoverage: acknowledged,
     });
     expect(priced).toMatchObject({ complete: true, pricedActiveIds: ids, acknowledgedGapCount: 0, missingPriceCount: 0 });
+  });
+
+  it("keeps the October 21 renewals evidence-dated, short and outside the immediate reminder window", () => {
+    const reviewedAt = Date.UTC(2026, 9, 21, 14, 13) / 1000;
+    for (const [id, maxDays] of [["hbd-hive", 3], ["wusd-worldwide", 5], ["bnusd-balanced", 7]] as const) {
+      const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
+      expect(review.reviewedAt).toBe(reviewedAt);
+      expect(review.expiresAt - reviewedAt).toBeGreaterThan(48 * 3600);
+      expect(review.expiresAt - reviewedAt).toBeLessThanOrEqual(maxDays * 86_400);
+      expect(review.owner).toBe("ops");
+      expect(review.reason).toContain("2026-10-21");
+      expect(review.sources.every((source) => /^https:\/\/\S+$/.test(source))).toBe(true);
+      const coverage = evaluateStablecoinActivePriceCoverage([{ id, price: null }], [id], {
+        nowSec: reviewedAt, priceGapReviews: [review],
+      });
+      expect(coverage).toMatchObject({
+        missingActiveIds: [id], acknowledgedGapIds: [id], pricedActiveIds: [],
+        invalidGapReviewIds: [], expiredGapReviewIds: [], alertEligibleIds: [],
+      });
+    }
+    const hbd = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "hbd-hive")!;
+    expect(hbd.reason).toContain("$1.87");
+    expect(hbd.reason).toContain("unresolved venue divergence");
+    expect(hbd.reason).toContain("not executable USD depth");
+    const wusd = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide")!;
+    expect(wusd.reason).toContain("retains the October 23 lifecycle/route decision deadline");
+    const bnusd = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "bnusd-balanced")!;
+    expect(bnusd.reason).toContain("bnUSD(old)");
+    expect(bnusd.reason).toContain("not an observed market price");
   });
 
   it("excludes frozen USDKG from the active census even when upstream retains its row", () => {
@@ -597,18 +626,19 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
   });
 
   it.each([
-    ["pht-pht", Date.UTC(2026, 9, 25, 23, 45) / 1000],
-    ["vcred-vcred", Date.UTC(2026, 9, 25, 23, 45) / 1000],
-    ["wusd-worldwide", Date.UTC(2026, 9, 23) / 1000],
-  ] as const)("corrects %s evidence without extending its decision deadline or changing lifecycle", (id, expiresAt) => {
+    ["pht-pht", Date.UTC(2026, 9, 25, 23, 45) / 1000, Date.UTC(2026, 9, 19, 7, 21, 45) / 1000],
+    ["vcred-vcred", Date.UTC(2026, 9, 25, 23, 45) / 1000, Date.UTC(2026, 9, 19, 7, 21, 45) / 1000],
+    ["wusd-worldwide", Date.UTC(2026, 9, 26, 14, 13) / 1000, Date.UTC(2026, 9, 21, 14, 13) / 1000],
+  ] as const)("corrects %s evidence while retaining its lifecycle decision deadline", (id, expiresAt, reviewedAt) => {
     const coin = ACTIVE_STABLECOINS.find((entry) => entry.id === id)!;
     expect(coin).toBeDefined();
     const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
     expect(review).toMatchObject({
-      owner: "ops", expiresAt, reviewedAt: Date.UTC(2026, 9, 19, 7, 21, 45) / 1000,
+      owner: "ops", expiresAt, reviewedAt,
     });
     if (id === "wusd-worldwide") {
-      expect(review.reason).toContain("unverified");
+      expect(review.reason).toContain("retains the October 23 lifecycle/route decision deadline");
+      expect(review.reason).toContain("no operational issuer quote or bank settlement was observed");
       expect(review.sources).toContain("https://dns.google/resolve?name=wallet.wspn.io&type=A");
       expect(coin.notices?.[0].message).toContain("historical on-chain evidence at block 112793798");
       expect(coin.contracts).toHaveLength(3);

@@ -196,6 +196,24 @@ describe("buildComponentDayCells", () => {
 });
 
 describe("foldPublicIncidents", () => {
+  it("retains component degradation without opening a service incident for a bounded listing notice", () => {
+    const notice = row(1, NOW - 3600, [
+      { id: "stablecoin-data", state: "degraded", reasons: ["publication-incomplete:asset-scoped"] },
+    ], {
+      to: "healthy",
+      headline: { state: "operational", title: "Systems operational with notices", affected: ["stablecoin-data"] },
+    });
+    expect(foldPublicIncidents([notice])).toEqual([]);
+    const cells = buildComponentDayCells({
+      transitions: [notice], liveComponents: live({ "stablecoin-data": "degraded" }),
+      liveObservedAt: NOW, publicHistoryStartedAt: TODAY,
+      componentHistoryStartedAt: Object.fromEntries(PUBLIC_STATUS_COMPONENT_IDS.map((id) => [id, TODAY])),
+      boundary: { at: TODAY, components: [] }, nowSec: NOW, days: 1,
+    });
+    expect(cells["stablecoin-data"][0].state).toBe("degraded");
+    expect(cells["mint-burn"][0].state).toBe("operational");
+  });
+
   it("folds degrade, escalation and recovery rows into one incident with affected components", () => {
     const incidents = foldPublicIncidents([
       row(3, NOW - 600, []),

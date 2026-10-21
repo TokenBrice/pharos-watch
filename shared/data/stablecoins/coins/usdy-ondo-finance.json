@@ -14,7 +14,7 @@
   "collateral": "Short-term U.S. Treasury bills and bank demand deposits",
   "pegMechanism": "Eligible registered holders can redeem USDY through Ondo's InstantManager for supported stablecoins at the oracle-priced value, subject to compliance, pause state, user and global limits, actual router liquidity, and user-specific fees. The issuer integration guide specifies USDC on Ethereum, USDT on BNB Chain, and pathUSD on Tempo. This on-chain route is distinct from bank-wire redemption and does not establish current same-notional capacity or an all-holder fee ceiling.",
   "llamaId": "129",
-  "detailProvider": "defillama",
+  "detailProvider": "coingecko",
   "geckoId": "ondo-us-dollar-yield",
   "proofOfReserves": {
     "type": "attestation",

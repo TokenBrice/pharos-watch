@@ -33,6 +33,13 @@ describe("transitionHasPublicImpact", () => {
     expect(transitionHasPublicImpact([cause()])).toBe(false);
   });
 
+  it.each(["stablecoin_publication_incomplete", "mint_burn_public_degraded"])(
+    "keeps bounded %s notices out of uptime incidents but preserves escalations", (code) => {
+      expect(transitionHasPublicImpact([cause({ code, severity: "info" })])).toBe(false);
+      expect(transitionHasPublicImpact([cause({ code, severity: "warning" })])).toBe(true);
+    },
+  );
+
   it.each([
     ["price_gap_reviews_expiring", "info"],
     ["price_gap_reviews_expiring", "warning"],

@@ -14,6 +14,7 @@ import {
   assessActivePriceGapDuration,
   getBlacklistGapStatus,
   getCacheRatioThresholds,
+  getStablecoinPublicationComponentStatus,
   getStablecoinPublicationImpactStatus,
 } from "./status-thresholds";
 import {
@@ -233,15 +234,20 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
 
   const publication = health.stablecoinPublication;
   const coverage = health.activePriceCoverage;
-  if (publication && getStablecoinPublicationImpactStatus(
-    publication, coverage ?? { missingActiveAssets: [] }, health.timestamp,
-  ) !== "healthy") {
+  if (publication && publication.status !== "complete") {
+    const impact = getStablecoinPublicationImpactStatus(
+      publication, coverage ?? { missingActiveAssets: [] }, health.timestamp,
+    );
+    const componentStatus = getStablecoinPublicationComponentStatus(
+      publication, coverage ?? { missingActiveAssets: [] }, health.timestamp,
+    );
     add("stablecoin-data", {
-      state: "degraded",
+      state: impact !== "healthy" || componentStatus !== "healthy" ? "degraded" : "operational",
       summary: publication.status === "unknown"
         ? "Listing coverage cannot be verified right now."
         : `${publication.missingActiveIds.length || "Some"} tracked stablecoin${publication.missingActiveIds.length === 1 ? " is" : "s are"} missing from published listings.`,
-      reason: publication.status === "unknown" ? "publication-unknown" : "publication-incomplete",
+      reason: publication.status === "unknown" ? "publication-unknown"
+        : impact === "healthy" ? "publication-incomplete:asset-scoped" : "publication-incomplete",
     });
   }
   if (coverage) {
@@ -256,6 +262,12 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
         state: "degraded",
         summary: "Some material stablecoins have had no live price for an extended period.",
         reason: "price-gap-duration",
+      });
+    } else if (coverage.status === "incomplete") {
+      add("stablecoin-data", {
+        state: "operational",
+        summary: `${coverage.missingPriceCount ?? "Some"} tracked assets have no live price. Other listings and prices remain available.`,
+        reason: "price-coverage-incomplete:asset-scoped",
       });
     }
   }
@@ -341,6 +353,12 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
         reason: mintBurnSync.criticalLaneHealthy ? "mint-burn-run-degraded" : "mint-burn-run-failed",
       });
     }
+  } else if (mintBurnSync.warning != null) {
+    add("mint-burn", {
+      state: "operational",
+      summary: "Critical mint and burn data is fresh. The latest run reported an execution notice.",
+      reason: "mint-burn-run-degraded",
+    });
   }
 
   const blacklistStatus = getBlacklistGapStatus({ missingRatio: health.blacklist.missingRatio });
@@ -420,9 +438,13 @@ export interface PublicStatusProjection {
   components: PublicStatusComponent[];
 }
 
-export function buildPublicHeadline(components: readonly Pick<PublicStatusComponent, "id" | "state">[]): PublicStatusHeadline {
+export function buildPublicHeadline(
+  components: readonly (Pick<PublicStatusComponent, "id" | "state"> & Partial<Pick<PublicStatusComponent, "reasons">>)[],
+): PublicStatusHeadline {
   const affected = components
-    .filter((component) => component.state !== "operational")
+    .filter((component) => component.state !== "operational"
+      && !(component.reasons?.length && component.reasons.every((reason) =>
+        reason === "publication-incomplete:asset-scoped" || reason === "price-coverage-incomplete:asset-scoped")))
     .sort((a, b) => STATE_RANK[b.state] - STATE_RANK[a.state]
       || PUBLIC_STATUS_COMPONENT_IDS.indexOf(a.id) - PUBLIC_STATUS_COMPONENT_IDS.indexOf(b.id));
   const outages = affected.filter((component) => component.state === "outage");
@@ -443,7 +465,12 @@ export function buildPublicHeadline(components: readonly Pick<PublicStatusCompon
   if (affected.length > 0) {
     return { state: "delayed", title: `Updates delayed: ${names(affected)}`, affected: ids };
   }
-  return { state: "operational", title: "All systems operational", affected: [] };
+  const notices = components.filter((component) => component.reasons?.length);
+  return {
+    state: "operational",
+    title: notices.length > 0 ? "Systems operational with notices" : "All systems operational",
+    affected: notices.map((component) => component.id),
+  };
 }
 
 /**
@@ -458,7 +485,8 @@ export function projectPublicStatus(
 
   // R2 fail-safe: a non-healthy raw verdict must surface somewhere, even if no
   // component mapping explained it (for example a new input added upstream).
-  const anyFinding = [...findings.values()].some((list) => list.length > 0);
+  const anyFinding = [...findings.values()].some((list) => list.some((finding) =>
+    finding.state !== "operational" && finding.reason !== "publication-incomplete:asset-scoped"));
   if (!anyFinding && health.status !== "healthy") {
     findings.get("website-api")!.push({
       state: "degraded",

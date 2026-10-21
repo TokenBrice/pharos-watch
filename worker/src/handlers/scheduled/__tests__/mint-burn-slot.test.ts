@@ -34,7 +34,8 @@ describe("mint/burn slot lanes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.syncMintBurn.mockResolvedValue({ status: "ok", itemCount: 1 });
-    mocks.refreshAggregateMintBurnFlowCache.mockResolvedValue(new Response("{}"));
+    mocks.refreshAggregateMintBurnFlowCache.mockImplementation(async () =>
+      new Response("{}", { headers: { "X-Data-Freshness": "fresh" } }));
   });
 
   afterEach(() => vi.restoreAllMocks());
@@ -52,6 +53,67 @@ describe("mint/burn slot lanes", () => {
     expect(mocks.refreshAggregateMintBurnFlowCache).toHaveBeenCalledWith(rt.db, 24);
     expect(mocks.refreshAggregateMintBurnFlowCache).toHaveBeenCalledWith(rt.db, 168);
     expect(summary.jobs.map((job) => job.job)).toEqual(["sync-mint-burn"]);
+  });
+
+  it("retains FTQ advisories without degrading completed fresh flow publication", async () => {
+    const warning = '199 - "Flight-to-quality classification is unavailable (publication-held)."';
+    mocks.refreshAggregateMintBurnFlowCache.mockImplementation(async () =>
+      new Response("{}", { headers: { "X-Data-Freshness": "fresh", Warning: warning } }));
+    const rt = runtime("halfHourlyMintBurnCritical", "4 * * * *");
+
+    const summary = await runHalfHourlyMintBurnCriticalSlot(rt);
+    const result = await vi.mocked(rt.runLeasedCron).mock.results[0].value;
+
+    expect(summary.jobs[0]).toMatchObject({ status: "ok", outcome: "ok" });
+    expect(JSON.parse(result?.metadata ?? "{}").sidecars[0]).toMatchObject({
+      status: "ok", reason: null, itemCount: 2,
+      windows: [
+        { hours: 24, published: true, freshness: "fresh", warning },
+        { hours: 168, published: true, freshness: "fresh", warning },
+      ],
+    });
+  });
+
+  it.each(["degraded", "stale", "unknown", null])(
+    "degrades published windows with %s flow freshness",
+    async (freshness) => {
+      mocks.refreshAggregateMintBurnFlowCache.mockImplementation(async () =>
+        new Response("{}", { headers: freshness == null ? {} : { "X-Data-Freshness": freshness } }));
+      const summary = await runHalfHourlyMintBurnCriticalSlot(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
+
+      expect(summary.jobs[0]).toMatchObject({
+        status: "degraded", reason: "mint-burn-aggregate-freshness-unavailable",
+      });
+    },
+  );
+
+  it("names a failed aggregate publication without claiming the scan failed", async () => {
+    mocks.refreshAggregateMintBurnFlowCache
+      .mockResolvedValueOnce(new Response("unavailable", { status: 503 }))
+      .mockResolvedValueOnce(new Response("{}", { headers: { "X-Data-Freshness": "fresh" } }));
+    const rt = runtime("halfHourlyMintBurnCritical", "4 * * * *");
+
+    const summary = await runHalfHourlyMintBurnCriticalSlot(rt);
+    const result = await vi.mocked(rt.runLeasedCron).mock.results[0].value;
+
+    expect(summary.jobs[0]).toMatchObject({
+      status: "degraded", reason: "mint-burn-aggregate-publication-failed",
+    });
+    expect(JSON.parse(result?.metadata ?? "{}").sidecars[0]).toMatchObject({
+      status: "error", reason: "mint-burn-aggregate-publication-failed", itemCount: 1,
+    });
+  });
+
+  it("preserves a primary scan failure reason when aggregate publication also fails", async () => {
+    mocks.syncMintBurn.mockResolvedValue({
+      status: "degraded", itemCount: 1, metadata: JSON.stringify({ reason: "finality-head-unavailable" }),
+    });
+    mocks.refreshAggregateMintBurnFlowCache.mockImplementation(async () => {
+      throw new Error("cache write failed");
+    });
+    const summary = await runHalfHourlyMintBurnCriticalSlot(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
+
+    expect(summary.jobs[0]).toMatchObject({ status: "degraded", reason: "finality-head-unavailable" });
   });
 
   it("runs the extended lane without aggregate cache publication", async () => {

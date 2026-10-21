@@ -26,7 +26,11 @@ export type FreshnessStatus = z.output<typeof FreshnessStatusSchema>;
 export const STATUS_PUBLICATION_PENDING_MAX_AGE_SEC = 2 * 3600;
 
 /** D7: full reserve cohort (producer plus consumers), ops-only, nearest-rank p95. */
-export const STATUS_RESERVE_COHORT_SLO = { maxAgeSec: 30 * 60, windowSec: 7 * 24 * 3600 } as const;
+export const STATUS_RESERVE_COHORT_SLO = {
+  maxAgeSec: 30 * 60,
+  windowSec: 7 * 24 * 3600,
+  recoveryWindowSec: 24 * 3600,
+} as const;
 
 export function classifyPublicationDiagnostic(surface: PublicationSurfaceHealth | undefined): {
   status: StatusHealthOrUnknown;
@@ -138,8 +142,9 @@ export const STATUS_MISSING_PRICE_THRESHOLDS = {
   durationMaterialMarketCapUsd: 1_000_000_000,
 } as const;
 
-/** Three isolated minor omissions tolerate upstream tail churn; four is a breadth incident. */
+/** Bound asset-scoped listing notices by both absolute count and active-cohort share. */
 export const STATUS_PUBLICATION_IMMATERIAL_MISSING_MARGIN = 3;
+export const STATUS_PUBLICATION_ASSET_SCOPED_MAX_SHARE = 0.01;
 /** A month covers intermittent daily snapshots; doubling retained caps bounds growth risk.
  * Current caps are unscaled; absent or older evidence still fails closed. */
 export const STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC = 30 * 24 * 3600;
@@ -161,7 +166,8 @@ export function getActivePriceGapMaterialityMarketCapUsd(
     ? cap * STATUS_LAST_KNOWN_MARKET_CAP_GROWTH_FACTOR : null;
 }
 
-export function getStablecoinPublicationImpactStatus(
+/** Component materiality is separate from the service-wide breadth verdict. */
+export function getStablecoinPublicationComponentStatus(
   publication: Pick<StablecoinPublicationHealth, "status" | "missingActiveIds">,
   coverage: Pick<ActivePriceCoverageHealth, "missingActiveAssets">,
   nowSec: number,
@@ -174,6 +180,26 @@ export function getStablecoinPublicationImpactStatus(
     const asset = gapsById.get(id);
     const cap = asset ? getActivePriceGapMaterialityMarketCapUsd(asset, nowSec) : null;
     return cap == null || cap >= STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd;
+  }) ? "degraded" : "healthy";
+}
+
+/** A bounded, evidenced asset omission is a notice, not loss of the publication service. */
+export function getStablecoinPublicationImpactStatus(
+  publication: Pick<StablecoinPublicationHealth, "status" | "missingActiveIds" | "expectedActiveCount">,
+  coverage: Pick<ActivePriceCoverageHealth, "missingActiveAssets">,
+  nowSec: number,
+): StatusHealthValue {
+  if (publication.status === "complete") return "healthy";
+  const missing = publication.missingActiveIds;
+  const expected = publication.expectedActiveCount;
+  if (publication.status === "unknown" || missing.length === 0
+    || missing.length > STATUS_PUBLICATION_IMMATERIAL_MISSING_MARGIN
+    || expected == null || expected <= 0
+    || missing.length / expected > STATUS_PUBLICATION_ASSET_SCOPED_MAX_SHARE) return "degraded";
+  // Missing materiality evidence is not permission to call an omission bounded.
+  return missing.some((id) => {
+    const asset = coverage.missingActiveAssets.find((gap) => gap.stablecoinId === id);
+    return !asset || getActivePriceGapMaterialityMarketCapUsd(asset, nowSec) == null;
   }) ? "degraded" : "healthy";
 }
 

@@ -33,8 +33,8 @@ describe("public status helpers", () => {
       ...BASE_HEALTH,
       warnings: ["stablecoin-publication-incomplete:hbd-hive"],
       stablecoinPublication: {
-        status: "incomplete", missingActiveIds: ["hbd-hive"], expectedActiveCount: 1,
-        presentActiveCount: 0, waivedActiveCount: 0, waivedActiveIds: [], expiredWaiverIds: [], observedAt: BASE_HEALTH.timestamp,
+        status: "incomplete", missingActiveIds: ["hbd-hive"], expectedActiveCount: 396,
+        presentActiveCount: 395, waivedActiveCount: 0, waivedActiveIds: [], expiredWaiverIds: [], observedAt: BASE_HEALTH.timestamp,
       },
       activePriceCoverage: makeActivePriceCoverage([makeMissingActiveAsset({
         stablecoinId: "hbd-hive", marketCapUsd: null, lastKnownMarketCapUsd: cap,
@@ -44,6 +44,7 @@ describe("public status helpers", () => {
     const presentation = getPublicHealthWarningPresentation(health.warnings[0]!, health);
     expect(presentation.detail).toContain("hbd-hive");
     expect(presentation.detail).not.toBe(health.warnings[0]);
+    expect(presentation.detail).toContain("component notices");
   });
   it("explains an unnamed publication count mismatch without asserting missing assets", () => {
     const health: HealthResponse = {

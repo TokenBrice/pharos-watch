@@ -34,6 +34,23 @@ describe("PublicServiceSummarySection", () => {
     expect(screen.getByTestId("public-component-risk-signals")).toBeTruthy();
   });
 
+  it("renders an operational component notice without presenting healthy-state age as incident duration", () => {
+    render(<PublicServiceSummarySection
+      components={components({
+        "mint-burn": {
+          summary: "Critical mint and burn data is fresh. The latest run reported an execution notice.",
+          reasons: ["mint-burn-run-degraded"], since: NOW - 3600,
+        },
+      })}
+      dayCells={null} historyState="loading" historyDays={30} nowSec={NOW} publicHistoryStartedAt={null}
+    />);
+    const row = within(screen.getByTestId("public-component-mint-burn"));
+    expect(row.getByText("Operational")).toBeTruthy();
+    expect(row.getByText(/Critical mint and burn data is fresh/)).toBeTruthy();
+    expect(row.getByText("mint-burn-run-degraded")).toBeTruthy();
+    expect(row.queryByText(/^For /)).toBeNull();
+  });
+
   it("names the summary, budget and machine reason of a non-operational component (R3/R4)", () => {
     render(<PublicServiceSummarySection
       components={components({

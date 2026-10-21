@@ -6,12 +6,12 @@ import type { StatusCause } from "../types/status";
  * concerns (aggregate missing-price ratios, blacklist ratio drift, reserve
  * coverage, on-chain monitor) are intentionally excluded so the public
  * transition history and the `/api/health`-backed hero badge tell one
- * coherent story. Missing exact active-price coverage remains public-impacting
- * because the public surface cannot prove its own price coverage; ordinary
- * incomplete active-price coverage is warning-only and does not open uptime
- * incidents, but a persistent gap that outlives the duration budget degrades
- * public health and therefore opens one through its dedicated
- * `active_price_coverage_duration_degraded` cause.
+ * coherent story. Warning/critical causes denote service-wide impact; bounded
+ * listing omissions and fresh, healthy mint/burn execution notices retain their
+ * cause codes at info severity, so admin triage watches them without opening
+ * public uptime incidents. Unknown coverage remains public-impacting. Ordinary
+ * incomplete price coverage is a Watch; a persistent material gap escalates
+ * through `active_price_coverage_duration_degraded`.
  *
  * The 2026-04-13 status-stability hardening defined the included/excluded
  * code list.
