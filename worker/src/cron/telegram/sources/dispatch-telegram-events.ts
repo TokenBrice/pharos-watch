@@ -7,6 +7,7 @@ import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 import { crossesTelegramDepegWorseningStep } from "@shared/lib/telegram-delivery-policy";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { throwIfAborted } from "../../../lib/abort";
+import { logWorkerEvent } from "../../../lib/structured-log";
 import { buildInClause, chunkArray } from "../../../lib/db";
 import { TELEGRAM_DEPEG_STEPS } from "@shared/types/status/telegram";
 import {
@@ -140,6 +141,7 @@ export function countSuppressedSafetyChangesAtSeed(
         snapshotState.currentSafetySnapshot,
         snapshotState.previousSafetySnapshot ?? {},
         getSymbol,
+        snapshotState.nowSec,
       ).changes.length
     : 0;
 }
@@ -327,9 +329,24 @@ export async function buildTelegramDispatchEvents(
         : {}),
     }));
 
-  const { changes: rawSafetyChanges, suppressedMethodologyChanges } = !safetySnapshotNeedsSeed
-    ? buildSafetyChanges(currentSafetySnapshot, safeSafetySnapshot, getSymbol)
-    : { changes: [], suppressedMethodologyChanges: 0 };
+  const {
+    changes: rawSafetyChanges,
+    suppressedMethodologyChanges,
+    suppressedRuntimeAvailabilityChanges,
+    suppressedMinorSafetyChanges,
+  } = !safetySnapshotNeedsSeed
+    ? buildSafetyChanges(currentSafetySnapshot, safeSafetySnapshot, getSymbol, snapshotState.nowSec)
+    : { changes: [], suppressedMethodologyChanges: 0, suppressedRuntimeAvailabilityChanges: 0, suppressedMinorSafetyChanges: 0 };
+  if (suppressedRuntimeAvailabilityChanges > 0 || suppressedMinorSafetyChanges > 0) {
+    logWorkerEvent({
+      scope: "handler",
+      job: "dispatch-telegram-alerts",
+      event: "telegram_safety_changes_suppressed",
+      level: "info",
+      message: "Suppressed safety grade changes",
+      metadata: { suppressedRuntimeAvailabilityChanges, suppressedMinorSafetyChanges, emittedSafetyChanges: rawSafetyChanges.length },
+    });
+  }
 
   const prevLaunchIds = new Set(parseSnapshotIds(sourceData.launchCache) ?? []);
   const currentLaunchIds = new Set(WORKER_PRE_LAUNCH_STABLECOINS.map((c) => c.id));
