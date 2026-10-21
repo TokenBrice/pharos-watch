@@ -888,6 +888,25 @@ describe("status cause text", () => {
     }));
   });
 
+  it.each([
+    [19, "not degrading public status.", false],
+    [20, "public status is degraded by the service-wide breadth threshold.", true],
+  ] as const)("words %s first-generation price misses of 396 by the breadth verdict", (count, wording, breadth) => {
+    const nowSec = 1_790_000_000;
+    const ids = Array.from({ length: 396 }, (_, index) => `asset-${index}`);
+    const priced = ids.slice(count).map((id) => ({ id, price: 1, priceSource: "coingecko" }));
+    const evaluated = evaluateStablecoinActivePriceCoverage(priced, ids, { nowSec });
+    expect(evaluated.alertEligibleIds).toEqual([]);
+    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      nowSec,
+      activePriceCoverage: { ...evaluated, status: "incomplete", observedAt: nowSec },
+    }));
+    const cause = result.causes.find((entry) => entry.code === "active_price_coverage_incomplete");
+    expect(cause).toMatchObject({ severity: "info" });
+    expect(cause?.message.endsWith(wording)).toBe(true);
+    expect(result.causes.some((entry) => entry.code === "active_price_coverage_breadth_degraded")).toBe(breadth);
+  });
+
   it("emits a durable warning without degrading for incomplete active-price coverage", () => {
     const activePriceCoverage = {
       ...makePublicHealth().activePriceCoverage,

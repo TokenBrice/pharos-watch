@@ -783,6 +783,7 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
           ? ` ${reviewed.length} acknowledged gap(s) under review: ${reviewed.join("; ")}.`
           : "";
         const baseMessage = `Live prices are missing for ${coverage.missingPriceCount ?? "an unknown number of"} active asset(s).${acknowledgement}`;
+        const breadthDegraded = getActivePriceCoverageBreadthStatus(coverage) !== "healthy";
         const notAlerting = reviewed.length > 0
           ? " Every missing gap is either acknowledged under review or below the alert-eligible persistence threshold"
           : " No gap has reached the alert-eligible persistence threshold";
@@ -792,13 +793,15 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
           alertIds.length > 0 ? "warning" : "info",
           alertIds.length > 0
             ? `${baseMessage} Alert-eligible (unacknowledged) gaps: ${alertIds.join(", ")}.`
-            : `${baseMessage}${notAlerting}; not degrading public status.`,
+            : `${baseMessage}${notAlerting}; ${breadthDegraded
+              ? "public status is degraded by the service-wide breadth threshold."
+              : "not degrading public status."}`,
           { metric: "missingActivePrices", value: coverage.missingPriceCount ?? undefined, threshold: 1 },
         ));
         // Breadth- and duration-driven degradations open a public uptime
         // incident, so each gets its own allowlisted cause; the generic
         // incomplete-coverage warning above stays admin-only.
-        if (getActivePriceCoverageBreadthStatus(coverage) !== "healthy") {
+        if (breadthDegraded) {
           const threshold = getActiveAssetServiceBreadthThreshold(coverage.expectedActiveCount);
           causes.push(makeCause(
             "data-quality",
