@@ -22,6 +22,7 @@ export interface MintBurnSidecarOutcome {
   name: string;
   status: "ok" | "degraded" | "error";
   itemCount: number;
+  reason: string | null;
   error?: string | null;
   metadata?: Record<string, unknown>;
 }
@@ -46,10 +47,13 @@ function appendSidecarOutcome(result: CronResult, sidecar: MintBurnSidecarOutcom
     status,
     metadata: JSON.stringify({
       ...metadata,
+      ...((result.status == null || result.status === "ok") && sidecar.status !== "ok"
+        ? { reason: sidecar.reason } : {}),
       sidecars: [{
         name: sidecar.name,
         status: sidecar.status,
         itemCount: sidecar.itemCount,
+        reason: sidecar.reason,
         error: sidecar.error ?? null,
         ...(sidecar.metadata ?? {}),
       }],

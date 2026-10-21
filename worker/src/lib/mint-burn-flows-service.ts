@@ -464,6 +464,8 @@ function buildMintBurnFlowResponse(body: Record<string, unknown>, freshness: Cro
   const headers = new Headers(
     buildCronFreshnessHeaders(freshness, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC, CACHE_PROFILES.standard),
   );
+  const freshnessMeta = buildCronFreshnessMeta(freshness, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC);
+  headers.set("X-Data-Freshness", freshnessMeta.status);
   const meta = isRecord(body._meta) ? body._meta : {};
   const dependencies = isRecord(meta.dependencies) ? meta.dependencies : null;
   const sync = isRecord(body.sync) ? body.sync : null;
@@ -478,7 +480,7 @@ function buildMintBurnFlowResponse(body: Record<string, unknown>, freshness: Cro
   const responseBody = {
     ...body,
     _meta: {
-      ...buildCronFreshnessMeta(freshness, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC),
+      ...freshnessMeta,
       ...(dependencies ? { dependencies } : {}),
       ...(headers.has("Warning") ? { warning: headers.get("Warning") } : {}),
     },
