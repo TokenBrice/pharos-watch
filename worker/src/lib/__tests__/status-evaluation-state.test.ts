@@ -860,6 +860,34 @@ describe("status cause text", () => {
     }));
   });
 
+  it.each([
+    [4, "healthy", "info"],
+    [19, "healthy", "info"],
+    [20, "degraded", "warning"],
+  ] as const)("grades %s evidenced publication omissions of 396 by cohort breadth", (count, expectedStatus, severity) => {
+    const nowSec = 1_790_000_000;
+    const ids = Array.from({ length: count }, (_, index) => `missing-${index}`);
+    const evaluated = evaluateStablecoinActivePriceCoverage([], ids, {
+      nowSec, previousAcceptedAssetsById: new Map(ids.map((id) => [id, {
+        id, circulating: { peggedUSD: 5_000_000 }, supplyObservedAt: nowSec - 900,
+      }])),
+    });
+    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      nowSec,
+      dataQuality: makeDataQuality({
+        stablecoinPublication: {
+          status: "incomplete", expectedActiveCount: 396, presentActiveCount: 396 - count, waivedActiveCount: 0,
+          missingActiveIds: ids, waivedActiveIds: [], expiredWaiverIds: [], observedAt: nowSec,
+        },
+      }),
+      activePriceCoverage: { ...evaluated, status: "incomplete", observedAt: nowSec },
+    }));
+    expect(result.status).toBe(expectedStatus);
+    expect(result.causes).toContainEqual(expect.objectContaining({
+      code: "stablecoin_publication_incomplete", severity,
+    }));
+  });
+
   it("emits a durable warning without degrading for incomplete active-price coverage", () => {
     const activePriceCoverage = {
       ...makePublicHealth().activePriceCoverage,

@@ -114,6 +114,30 @@ describe("public status components", () => {
     expect(headlineToStatusLevel(projection.headline.state)).toBe("healthy");
   });
 
+  it.each([
+    [4, "operational", "operational", ["publication-incomplete:asset-scoped", "price-coverage-incomplete:asset-scoped"]],
+    [19, "operational", "operational", ["publication-incomplete:asset-scoped", "price-coverage-incomplete:asset-scoped"]],
+    [20, "degraded", "degraded", ["publication-incomplete", "price-coverage-incomplete:asset-scoped"]],
+  ] as const)("projects %s immaterial listing and price gaps of 396 by cohort breadth", (count, componentState, headlineState, reasons) => {
+    const health = assetScopedHealth();
+    const assets = Array.from({ length: count }, (_, index) => ({
+      ...health.activePriceCoverage!.missingActiveAssets[0], stablecoinId: `missing-${index}`, symbol: `M${index}`,
+      marketCapUsd: 5_000_000, lastKnownMarketCapUsd: 5_000_000, lastKnownMarketCapObservedAt: NOW,
+    }));
+    const ids = assets.map((asset) => asset.stablecoinId);
+    health.stablecoinPublication = {
+      ...health.stablecoinPublication!, presentActiveCount: 396 - count, missingActiveIds: ids,
+    };
+    health.activePriceCoverage = {
+      ...health.activePriceCoverage!, presentActiveCount: 396 - count, pricedActiveCount: 396 - count,
+      missingPriceCount: count, missingActiveIds: ids, missingActiveAssets: assets,
+      alertEligibleCount: count, alertEligibleIds: ids, maxConsecutiveMissingGenerations: 10,
+    };
+    health.mintBurn.sync.warning = null;
+    expect(component(health, "stablecoin-data")).toMatchObject({ state: componentState, reasons });
+    expect(projectPublicStatus(health).headline.state).toBe(headlineState);
+  });
+
   it.each(["broad", "unknown cap", "stale cache", "missing clock", "unknown lane", "stale mint"] as const)(
     "does not let asset notices conceal %s failure", (failure) => {
       const health = assetScopedHealth();

@@ -142,9 +142,30 @@ export const STATUS_MISSING_PRICE_THRESHOLDS = {
   durationMaterialMarketCapUsd: 1_000_000_000,
 } as const;
 
-/** Bound asset-scoped listing notices by both absolute count and active-cohort share. */
-export const STATUS_PUBLICATION_IMMATERIAL_MISSING_MARGIN = 3;
-export const STATUS_PUBLICATION_ASSET_SCOPED_MAX_SHARE = 0.01;
+/**
+ * Owner rule (2026-10-21): with ~400 tracked active assets, evidenced listing
+ * omissions stay asset-scoped notices until a material share of the cohort is
+ * affected: 5% of the expected active cohort (the low end of the owner's 5-10%
+ * guidance; 20 of 396). A pure share keeps a small cohort from hiding broad
+ * loss behind an absolute floor. Below it, omissions still need admissible
+ * materiality evidence to stay asset-scoped, and a $1B asset still degrades
+ * its own component.
+ */
+export const STATUS_PUBLICATION_SERVICE_BREADTH_SHARE = 0.05;
+
+/** Missing-ID count at which an omission becomes service-wide; null when the cohort size is unknown. */
+export function getStablecoinPublicationServiceBreadthThreshold(expectedActiveCount: number | null | undefined): number | null {
+  if (expectedActiveCount == null || !Number.isFinite(expectedActiveCount) || expectedActiveCount <= 0) return null;
+  return Math.ceil(expectedActiveCount * STATUS_PUBLICATION_SERVICE_BREADTH_SHARE);
+}
+
+function exceedsPublicationServiceBreadth(
+  publication: Pick<StablecoinPublicationHealth, "missingActiveIds" | "expectedActiveCount">,
+): boolean {
+  const threshold = getStablecoinPublicationServiceBreadthThreshold(publication.expectedActiveCount);
+  return threshold == null || publication.missingActiveIds.length >= threshold;
+}
+
 /** A month covers intermittent daily snapshots; doubling retained caps bounds growth risk.
  * Current caps are unscaled; absent or older evidence still fails closed. */
 export const STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC = 30 * 24 * 3600;
@@ -168,13 +189,13 @@ export function getActivePriceGapMaterialityMarketCapUsd(
 
 /** Component materiality is separate from the service-wide breadth verdict. */
 export function getStablecoinPublicationComponentStatus(
-  publication: Pick<StablecoinPublicationHealth, "status" | "missingActiveIds">,
+  publication: Pick<StablecoinPublicationHealth, "status" | "missingActiveIds" | "expectedActiveCount">,
   coverage: Pick<ActivePriceCoverageHealth, "missingActiveAssets">,
   nowSec: number,
 ): StatusHealthValue {
   if (publication.status === "complete") return "healthy";
   if (publication.status === "unknown" || publication.missingActiveIds.length === 0
-    || publication.missingActiveIds.length > STATUS_PUBLICATION_IMMATERIAL_MISSING_MARGIN) return "degraded";
+    || exceedsPublicationServiceBreadth(publication)) return "degraded";
   const gapsById = new Map(coverage.missingActiveAssets.map((asset) => [asset.stablecoinId, asset]));
   return publication.missingActiveIds.some((id) => {
     const asset = gapsById.get(id);
@@ -191,11 +212,8 @@ export function getStablecoinPublicationImpactStatus(
 ): StatusHealthValue {
   if (publication.status === "complete") return "healthy";
   const missing = publication.missingActiveIds;
-  const expected = publication.expectedActiveCount;
   if (publication.status === "unknown" || missing.length === 0
-    || missing.length > STATUS_PUBLICATION_IMMATERIAL_MISSING_MARGIN
-    || expected == null || expected <= 0
-    || missing.length / expected > STATUS_PUBLICATION_ASSET_SCOPED_MAX_SHARE) return "degraded";
+    || exceedsPublicationServiceBreadth(publication)) return "degraded";
   // Missing materiality evidence is not permission to call an omission bounded.
   return missing.some((id) => {
     const asset = coverage.missingActiveAssets.find((gap) => gap.stablecoinId === id);
