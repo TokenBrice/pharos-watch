@@ -1,63 +1,67 @@
 // @vitest-environment jsdom
 
 import { act, cleanup, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { initialViewFromStartParam, relaunchPayloadForView, useMiniAppView, type ViewKey } from "./use-mini-app-view";
-import type { CoinInsightTarget } from "./types";
-import { baseState } from "@shared/test-utils/telegram-mini-app-state";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  initialStackFromStartParam,
+  relaunchPayloadForScreen,
+  useMiniAppView,
+  type MiniAppScreen,
+} from "./use-mini-app-view";
 
-afterEach(() => { cleanup(); vi.useRealTimers(); });
+afterEach(() => cleanup());
 
-describe("current relaunch context", () => {
-  it("relaunches the newly focused coin after the highlight expires, not the launch coin", () => {
-    vi.useFakeTimers();
-    const { result } = renderHook(() => useMiniAppView(baseState));
-    act(() => result.current.initializeFromStartParam("coin_usdt-tether"));
-    act(() => result.current.navigateToCoin("usdc-circle"));
-    act(() => vi.advanceTimersByTime(2_000));
-    expect(result.current.highlightedCoinId).toBeNull();
-    expect(result.current.visibleCoinTarget).toBe("usdt-tether");
-    expect(relaunchPayloadForView(result.current.view, result.current.coinInsightTarget, result.current.currentCoinTarget)).toBe("coin_usdc-circle");
-
-    act(() => result.current.activateView("presets"));
-    act(() => result.current.activateView("watchlist"));
-    expect(result.current.visibleCoinTarget).toBeNull();
-    expect(result.current.currentCoinTarget).toBeNull();
-    expect(relaunchPayloadForView(result.current.view, null, result.current.currentCoinTarget)).toBe("watchlist");
+describe("initialStackFromStartParam", () => {
+  it.each<[string | null, MiniAppScreen[]]>([
+    [null, [{ name: "home" }]],
+    ["unknown-token", [{ name: "home" }]],
+    ["watchlist", [{ name: "home" }]],
+    ["coin_usdc-circle", [{ name: "home" }, { name: "coin", coinId: "usdc-circle" }]],
+    ["why_usdc-circle", [{ name: "home" }, { name: "coin", coinId: "usdc-circle" }]],
+    ["coverage_usdc-circle", [{ name: "home" }, { name: "coin", coinId: "usdc-circle" }]],
+    ["settings", [{ name: "home" }, { name: "settings" }]],
+    ["quiet-hours", [{ name: "home" }, { name: "settings" }]],
+    ["forget", [{ name: "home" }, { name: "settings" }]],
+    ["setup", [{ name: "home" }, { name: "add-coins" }]],
+  ])("routes %s", (startParam, stack) => {
+    expect(initialStackFromStartParam(startParam)).toEqual({ stack });
   });
 });
 
-
-describe("relaunchPayloadForView", () => {
-  it.each<[ViewKey, CoinInsightTarget | null, string | null, string]>([
-    ["home", null, null, "home"],
-    ["settings", null, null, "settings"],
-    ["presets", null, null, "presets"],
-    ["watchlist", null, null, "watchlist"],
-    ["watchlist", null, "usdc-circle", "coin_usdc-circle"],
-    ["watchlist", { kind: "why", coinId: "usdc-circle" }, null, "why_usdc-circle"],
-    ["watchlist", { kind: "coverage", coinId: "usdc-circle" }, "usdc-circle", "coverage_usdc-circle"],
-  ])("encodes %s view (insight %o, coin %o) as %s", (view, insight, coinId, expected) => {
-    expect(relaunchPayloadForView(view, insight, coinId)).toBe(expected);
+describe("relaunchPayloadForScreen", () => {
+  it.each<[MiniAppScreen, string]>([
+    [{ name: "home" }, "home"],
+    [{ name: "coin", coinId: "usdt-tether" }, "coin_usdt-tether"],
+    [{ name: "settings" }, "settings"],
+    [{ name: "add-coins" }, "setup"],
+    [{ name: "group", groupId: "usd-top25" }, "home"],
+    [{ name: "add-group" }, "home"],
+  ])("encodes %o as %s", (screen, payload) => {
+    expect(relaunchPayloadForScreen(screen)).toBe(payload);
   });
 
-  it("round-trips every payload back to the same view, coin, and insight", () => {
-    const contexts: Array<{ view: ViewKey; insight: CoinInsightTarget | null; coinId: string | null }> = [
-      { view: "home", insight: null, coinId: null },
-      { view: "settings", insight: null, coinId: null },
-      { view: "presets", insight: null, coinId: null },
-      { view: "watchlist", insight: null, coinId: null },
-      { view: "watchlist", insight: null, coinId: "usdt-tether" },
-      { view: "watchlist", insight: { kind: "why", coinId: "usdt-tether" }, coinId: "usdt-tether" },
-      { view: "watchlist", insight: { kind: "coverage", coinId: "usdt-tether" }, coinId: "usdt-tether" },
-    ];
-    for (const context of contexts) {
-      const restored = initialViewFromStartParam(relaunchPayloadForView(context.view, context.insight, context.coinId));
-      expect(restored.view).toBe(context.view);
-      expect(restored.insight).toEqual(context.insight);
-      if (context.view === "watchlist" && (context.insight || context.coinId)) {
-        expect(restored.coinId).toBe(context.insight?.coinId ?? context.coinId);
-      }
+  it("round-trips coin, settings and add-coins screens", () => {
+    for (const screen of [{ name: "coin", coinId: "usdt-tether" }, { name: "settings" }, { name: "add-coins" }] as MiniAppScreen[]) {
+      expect(initialStackFromStartParam(relaunchPayloadForScreen(screen)).stack.at(-1)).toEqual(screen);
     }
+  });
+});
+
+describe("useMiniAppView", () => {
+  it("pushes, ignores duplicate pushes, pops, and initializes only once", () => {
+    const { result } = renderHook(() => useMiniAppView());
+    act(() => result.current.initializeFromStartParam("coin_usdc-circle"));
+    expect(result.current.screen).toEqual({ name: "coin", coinId: "usdc-circle" });
+    expect(result.current.depth).toBe(2);
+    act(() => result.current.initializeFromStartParam("settings"));
+    expect(result.current.depth).toBe(2);
+    act(() => result.current.showSettings());
+    act(() => result.current.showSettings());
+    expect(result.current.depth).toBe(3);
+    act(() => result.current.back());
+    act(() => result.current.back());
+    act(() => result.current.back());
+    expect(result.current.screen).toEqual({ name: "home" });
+    expect(result.current.depth).toBe(1);
   });
 });

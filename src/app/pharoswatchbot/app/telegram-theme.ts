@@ -212,12 +212,20 @@ export function normalizeTelegramTheme(
     CONTROL_CONTRAST,
     text,
   );
-  const buttonText = ensureContrastAcross(
-    parsed(theme?.button_text_color, fallback.buttonText),
-    [button],
-    TEXT_CONTRAST,
-    text,
-  );
+  // Telegram paints its own MainButton with the host label colour, so an
+  // unmodified host pair that clears the 3:1 large-label bar stays native (e.g.
+  // iOS white on #007aff); a missing, hostile or re-mixed pair targets 4.5:1.
+  const hostButton = parseHexColor(theme?.button_color);
+  const hostButtonText = parseHexColor(theme?.button_text_color);
+  const buttonIsNative = hostButton != null && toHex(hostButton) === toHex(button);
+  const buttonText = buttonIsNative && hostButtonText && rgbContrastRatio(hostButtonText, button) >= CONTROL_CONTRAST
+    ? hostButtonText
+    : ensureContrastAcross(
+      parsed(theme?.button_text_color, fallback.buttonText),
+      [button],
+      TEXT_CONTRAST,
+      text,
+    );
   const accentText = ensureContrastAcross(
     parsed(theme?.accent_text_color ?? theme?.link_color, fallback.link),
     surfaces,

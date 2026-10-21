@@ -1,55 +1,38 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  BellRing,
+  CalendarClock,
   ExternalLink,
-  ListChecks,
-  LockKeyhole,
-  MessageSquareText,
+  Gauge,
   MoonStar,
-  Radio,
   Send,
-  ShieldCheck,
-  SlidersHorizontal,
   Smartphone,
+  ThumbsDown,
   Users,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CopyButton } from "@/components/copy-button";
 import {
   MINI_APP_HOME_DEEP_LINK,
   MINI_APP_SETUP_DEEP_LINK,
-  MINI_APP_WATCHLIST_DEEP_LINK,
-  RECOMMENDED_SETUP_COMMAND,
   RECOMMENDED_SETUP_DEEP_LINK,
   SETUP_DEEP_LINK,
 } from "@/lib/telegram-route-constants";
-import {
-  PENDING_TTL_SEC,
-  TELEGRAM_ALERT_TTL_SEC,
-  TELEGRAM_DISPATCH_INTERVAL_SEC,
-} from "@shared/lib/telegram-delivery-policy";
 import { BotSection } from "./bot-section";
 import { CommandManual } from "./command-manual";
 import { MiniAppScreenshotCarousel } from "./mini-app-screenshot-carousel";
-import { MINI_APP_FEATURES, MINI_APP_SCREENSHOTS, TELEGRAM_ACTIONS } from "./telegram-content";
+import {
+  DAILY_CHANGES_TIME,
+  DAILY_LIVE_ALERT_CAP,
+  LIVE_FREEZE_MIN_LABEL,
+  MINI_APP_FEATURES,
+  MINI_APP_SCREENSHOTS,
+  TELEGRAM_ACTIONS,
+} from "./telegram-content";
 
 const PROSE_LINK_CLASS =
   "pharos-focus-ring rounded-sm underline underline-offset-4 transition-colors hover:text-foreground";
-
-function CommandChip({ command }: { command: string }) {
-  return (
-    <div className="flex min-w-0 items-center gap-1 rounded-lg border border-border/60 bg-background/70 py-0.5 pl-2.5 pr-0.5">
-      <code className="block min-w-0 flex-1 whitespace-pre-wrap font-mono text-xs text-foreground [overflow-wrap:anywhere]">
-        {command}
-      </code>
-      <CopyButton
-        text={command}
-        className="size-11 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground sm:size-8"
-      />
-    </div>
-  );
-}
 
 /** Header CTAs. `#bot` is the anchor other routes link to for "get alerts". */
 export function PrimaryActions() {
@@ -76,15 +59,15 @@ export function PrimaryActions() {
 const SETUP_STEPS = [
   {
     title: "Open @PharosWatchBot",
-    detail: "Telegram opens the private setup flow. A group works too, but group mutations require an admin.",
+    detail: "Send /start in a private chat. A group works too; there, only admins can change settings.",
   },
   {
-    title: "Approve the low-noise default",
-    detail: "DEWS and depeg alerts for the current top 25 USD stablecoins. Preset membership updates as the market changes.",
+    title: "Follow the top 25 in one tap",
+    detail: "Depeg and stress alerts for the 25 largest USD stablecoins, updated as the market moves.",
   },
   {
-    title: "Check and adjust",
-    detail: "/list audits effective follows, /health diagnoses delivery, /set or the Mini App tunes thresholds.",
+    title: "Adjust in Manage Alerts",
+    detail: "Add or drop coins, set quiet hours, or pause. Changes save as you make them.",
   },
 ] as const;
 
@@ -95,72 +78,67 @@ export function GettingStarted() {
       id="getting-started"
       kicker="How it works"
       title="Start in two minutes"
-      lead="One useful default now; tune only when you need to."
+      lead="One useful default now. Adjust only when you need to."
     >
-      <ol className="grid gap-5 sm:grid-cols-3 sm:gap-6">
+      <ol className="grid gap-4 sm:grid-cols-3 sm:gap-6">
         {SETUP_STEPS.map((step, index) => (
-          <li key={step.title} className="border-t border-border/55 pt-4">
-            <p className="pharos-numeric text-xs font-semibold text-muted-foreground">
-              {String(index + 1).padStart(2, "0")}
+          <li key={step.title} className="border-t border-border/55 pt-3 sm:pt-4">
+            <p className="flex items-baseline gap-2 text-sm font-semibold text-foreground">
+              <span className="pharos-numeric text-xs text-muted-foreground">{String(index + 1).padStart(2, "0")}</span>
+              {step.title}
             </p>
-            <p className="mt-1.5 text-sm font-semibold text-foreground">{step.title}</p>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{step.detail}</p>
           </li>
         ))}
       </ol>
-      <div className="mt-6 flex flex-col gap-4 border-t border-border/55 pt-6 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0 lg:max-w-md lg:flex-1">
-          <CommandChip command={RECOMMENDED_SETUP_COMMAND} />
-        </div>
-        <div className="flex flex-wrap gap-2.5">
-          <Button asChild className="gap-2">
-            <a href={RECOMMENDED_SETUP_DEEP_LINK} target="_blank" rel="noopener noreferrer">
-              Use recommended setup
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </a>
-          </Button>
-          <Button asChild variant="outline" className="gap-2">
-            <a href={MINI_APP_SETUP_DEEP_LINK} target="_blank" rel="noopener noreferrer">
-              <Smartphone className="h-4 w-4" aria-hidden="true" />
-              Set up in the Mini App
-            </a>
-          </Button>
-        </div>
+      <div className="mt-6 flex flex-wrap gap-2.5 border-t border-border/55 pt-6">
+        <Button asChild className="gap-2">
+          <a href={RECOMMENDED_SETUP_DEEP_LINK} target="_blank" rel="noopener noreferrer">
+            Follow the top 25
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </a>
+        </Button>
+        <Button asChild variant="outline" className="gap-2">
+          <a href={MINI_APP_SETUP_DEEP_LINK} target="_blank" rel="noopener noreferrer">
+            <Smartphone className="h-4 w-4" aria-hidden="true" />
+            Choose my coins
+          </a>
+        </Button>
       </div>
     </BotSection>
   );
 }
 
-const ALERT_CONTROLS: readonly { icon: LucideIcon; title: string; detail: string; command: string }[] = [
+const ALERT_CONTROLS: readonly { icon: LucideIcon; title: string; detail: string }[] = [
   {
-    icon: ListChecks,
-    title: "Preset watchlists",
-    detail: "Follow cohorts like usd-top25 or mcap-ge-1b. Membership updates as the market changes.",
-    command: "/presets",
+    icon: BellRing,
+    title: "Live only when it matters",
+    detail: `Depegs, rising stress, severe downgrades and freezes of ${LIVE_FREEZE_MIN_LABEL} or more.`,
   },
   {
-    icon: SlidersHorizontal,
-    title: "Per-coin thresholds",
-    detail: "Choose the DEWS band, depeg step (100, 250 or 500 bps) and safety mode coin by coin.",
-    command: "/set USDT dews WARNING",
+    icon: CalendarClock,
+    title: "One daily Changes message",
+    detail: `Smaller grade moves and reserve changes, together at ${DAILY_CHANGES_TIME} your time. Nothing changed, no message.`,
+  },
+  {
+    icon: Gauge,
+    title: `At most ${DAILY_LIVE_ALERT_CAP} a day`,
+    detail: `Outside depegs, at most ${DAILY_LIVE_ALERT_CAP} live alerts a day. The rest wait for the Changes message.`,
+  },
+  {
+    icon: ThumbsDown,
+    title: "Fewer like this",
+    detail: "Under every alert: mute the coin for 24 hours, pause all for 4, or turn that alert type down.",
   },
   {
     icon: MoonStar,
-    title: "Quiet hours and snooze",
-    detail: "Silence nights in your own timezone, or pause for 1h, 4h or 24h during a noisy market.",
-    command: "/mute 22-07",
+    title: "Quiet hours and pause",
+    detail: "Silence nights in your timezone, or pause for 1, 4 or 24 hours.",
   },
   {
     icon: Users,
     title: "Group watch desks",
-    detail: "Add the bot to a Telegram group and address commands to it so one chat runs a shared desk.",
-    command: "/subscribe@PharosWatchBot dews usd-top25",
-  },
-  {
-    icon: MessageSquareText,
-    title: "Ask on demand",
-    detail: "Price, supply, DEWS band, safety grade and liquidity for any coin, plus /why, /top and /brief.",
-    command: "/status USDC",
+    detail: "Add the bot to a group to share alerts. Admins choose what it follows.",
   },
 ];
 
@@ -169,22 +147,19 @@ export function AlertControls() {
     <BotSection
       id="controls"
       kicker="Low noise"
-      title="Tuned to you, quiet by default"
-      lead="Alerts fire only on change. Everything else is yours to tune, from the commands below or the Mini App."
+      title="Quiet by default"
+      lead="Few live alerts, one daily summary, and a one-tap way to turn anything down."
     >
-      <ul className="grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
         {ALERT_CONTROLS.map((control) => {
           const Icon = control.icon;
           return (
-            <li key={control.title} className="flex min-w-0 flex-col gap-2 border-t border-border/55 pt-4">
+            <li key={control.title} className="flex min-w-0 flex-col gap-1 border-t border-border/55 pt-3">
               <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                 {control.title}
               </p>
               <p className="text-sm leading-relaxed text-muted-foreground">{control.detail}</p>
-              <div className="mt-auto pt-1">
-                <CommandChip command={control.command} />
-              </div>
             </li>
           );
         })}
@@ -201,36 +176,27 @@ export function MiniAppShowcase() {
           <div className="max-w-2xl space-y-1.5">
             <p className="pharos-kicker">Mini App</p>
             <h2 id="control-title" className="pharos-section-title">
-              The same alert state, without slash commands
+              Manage Alerts, without typing commands
             </h2>
             <p className="pharos-lead">
-              Watchlist, presets, quiet hours, snooze and delivery health in a few taps. Deep reads like{" "}
-              <code>/why</code>, <code>/brief</code> and <code>/top</code> stay in chat.
+              Tap Manage Alerts under any alert or next to the message box. One screen shows your coins and how
+              quiet things are.
             </p>
           </div>
-          <ul className="mt-6 grid gap-x-8 sm:grid-cols-2">
+          {/* Phones see the same screens in the carousel right below, so the list starts at sm. */}
+          <ul className="mt-5 hidden gap-x-8 sm:grid sm:grid-cols-2">
             {MINI_APP_FEATURES.map((feature) => (
-              <li key={feature.title} className="border-t border-border/55 py-3">
+              <li key={feature.title} className="border-t border-border/55 py-2.5">
                 <p className="text-sm font-semibold text-foreground">{feature.title}</p>
                 <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">{feature.detail}</p>
               </li>
             ))}
           </ul>
-          <div className="mt-6 flex flex-wrap gap-2.5">
+          <div className="mt-6">
             <Button asChild className="gap-2">
               <a href={MINI_APP_HOME_DEEP_LINK} target="_blank" rel="noopener noreferrer">
                 <Smartphone className="h-4 w-4" aria-hidden="true" />
                 Open the Mini App
-              </a>
-            </Button>
-            <Button asChild variant="outline" className="gap-2">
-              <a
-                href={MINI_APP_WATCHLIST_DEEP_LINK}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Open watchlist
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </a>
             </Button>
           </div>
@@ -284,86 +250,15 @@ export function TelegramChannels() {
   );
 }
 
-// Reliability copy derives from the shared delivery policy so the public
-// contract cannot drift from production TTL/cadence constants (TGB-028).
-function formatPolicyDuration(seconds: number): string {
-  if (seconds % 3600 === 0) {
-    const hours = seconds / 3600;
-    return hours === 1 ? "1 hour" : `${hours} hours`;
-  }
-  const minutes = Math.round(seconds / 60);
-  return minutes === 1 ? "1 minute" : `${minutes} minutes`;
-}
-
-const DISPATCH_CADENCE_LABEL = formatPolicyDuration(TELEGRAM_DISPATCH_INTERVAL_SEC);
-const RISK_ALERT_TTL_LABEL = formatPolicyDuration(PENDING_TTL_SEC);
-const LAUNCH_ALERT_TTL_LABEL = formatPolicyDuration(TELEGRAM_ALERT_TTL_SEC.launch);
-const ADMIN_ALERT_TTL_LABEL = formatPolicyDuration(TELEGRAM_ALERT_TTL_SEC.adminBroadcast);
-
 export function CommandReference() {
   return (
     <BotSection
       id="manual"
-      kicker="Reference"
-      title="Every command"
-      lead="Copy any command into the bot. Filter by verb, setting or ticker."
+      kicker="Commands"
+      title="A short command list"
+      lead="Everything also works from Manage Alerts. Type / in Telegram to open the menu."
     >
       <CommandManual />
-    </BotSection>
-  );
-}
-
-export function ReliabilityContract() {
-  return (
-    <BotSection
-      id="reliability"
-      kicker="Reliability and privacy"
-      title="What Pharos promises, and what it does not"
-      lead="Alerts are a bounded notification service, not a guaranteed emergency pager. Each message links back to Pharos so you can inspect the underlying signal."
-    >
-      <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-3">
-        <div className="border-t border-border/55 pt-4">
-          <dt className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Radio className="h-4 w-4 text-muted-foreground" aria-hidden="true" /> Source cadence
-          </dt>
-          <dd className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            The dispatcher runs every {DISPATCH_CADENCE_LABEL}. Safety follows the live report-card publish path;
-            reserve drift follows the four-hour live-reserve producer and only fires for supported live-reserve coins.
-          </dd>
-        </div>
-        <div className="border-t border-border/55 pt-4">
-          <dt className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <ShieldCheck className="h-4 w-4 text-muted-foreground" aria-hidden="true" /> Bounded delivery
-          </dt>
-          <dd className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Eligible alerts can send immediately or enter a retry queue. Risk alerts expire after {RISK_ALERT_TTL_LABEL};
-            launch alerts after {LAUNCH_ALERT_TTL_LABEL} and admin broadcasts after {ADMIN_ALERT_TTL_LABEL}. Terminal
-            and ambiguous outcomes stay visible to operators rather than being silently replayed.
-          </dd>
-        </div>
-        <div className="border-t border-border/55 pt-4">
-          <dt className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <LockKeyhole className="h-4 w-4 text-muted-foreground" aria-hidden="true" /> Privacy
-          </dt>
-          <dd className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Pharos stores your chat ID, optional username, follows, alert settings, quiet hours, snooze state, and
-            short-lived command or queue metadata. Use <code>/forget</code> in a private chat for immediate deletion;
-            inactive unsubscribed chats are pruned after 180 days.
-          </dd>
-        </div>
-      </dl>
-      <p className="pharos-meta mt-5">
-        Adoption metrics are aggregate counts; small daily changes are hidden to avoid identifying individual chats.
-        Read the full{" "}
-        <Link href="/privacy/" className={PROSE_LINK_CLASS}>
-          privacy policy
-        </Link>{" "}
-        or the{" "}
-        <Link href="/methodology/" className={PROSE_LINK_CLASS}>
-          methodology
-        </Link>{" "}
-        behind DEWS, safety grades and depeg scoring.
-      </p>
     </BotSection>
   );
 }
@@ -379,7 +274,7 @@ export function FinalCta() {
           Start getting alerts
         </h2>
         <p className="pharos-lead">
-          Open the bot, approve one preset, and the next depeg, downgrade or freeze has somewhere to land.
+          Follow the top 25 in one tap, and the next depeg or downgrade has somewhere to land.
         </p>
       </div>
       <Button asChild size="lg" className="w-fit gap-2">

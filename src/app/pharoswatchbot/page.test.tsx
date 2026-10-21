@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  MINI_APP_FEATURES,
+  TELEGRAM_ACTIONS,
   TELEGRAM_ALERT_EXAMPLES,
   TELEGRAM_COMMAND_GROUPS,
+  TELEGRAM_COMMAND_REFERENCE_TIPS,
+  TELEGRAM_FAQ,
+  TELEGRAM_PAGE_DESCRIPTION,
 } from "./telegram-content";
+import { buildTelegramPageJsonLd } from "./telegram-json-ld";
+import { TELEGRAM_ALERT_POLICY } from "@shared/lib/telegram-delivery-policy";
 import {
   PHAROSWATCHBOT_BOT_URL,
   RECOMMENDED_SETUP_COMMAND,
@@ -39,6 +46,25 @@ describe("PharosWatchBotPage", () => {
     for (const retiredCommand of ["import", "export", "recap", "set", "mute", "timezone", "top", "brief"]) {
       expect(publicCommands.has(retiredCommand)).toBe(false);
     }
+  });
+
+  it("keeps retired features and commands out of the public copy", () => {
+    const copy = JSON.stringify([
+      TELEGRAM_PAGE_DESCRIPTION,
+      TELEGRAM_ACTIONS,
+      MINI_APP_FEATURES,
+      TELEGRAM_ALERT_EXAMPLES.map((alert) => alert.tagline),
+      TELEGRAM_COMMAND_REFERENCE_TIPS,
+      TELEGRAM_FAQ,
+      buildTelegramPageJsonLd("https://pharos.watch"),
+    ]);
+    for (const retired of [/recap/i, /launch alert/i, /\bpresets tab/i, /export|import/i, /\/(mute|unmutehours|timezone|presets|set|top|brief|why|health)\b/]) {
+      expect(copy).not.toMatch(retired);
+    }
+    expect(copy).toMatch(/daily Changes message/);
+    expect(copy).toMatch(/Fewer like this/);
+    expect(copy).toContain(`at most ${TELEGRAM_ALERT_POLICY.chatCap.maxRealtimeMessages} live alerts a day`);
+    expect(copy).toContain(`${String(TELEGRAM_ALERT_POLICY.rollup.localHour).padStart(2, "0")}:00`);
   });
 
   it("builds the recommended setup deep link from a registry-valid start payload", () => {

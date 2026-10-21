@@ -59,7 +59,6 @@ function makeArgs(overrides: Partial<UseMiniAppMutationsArgs> = {}): UseMiniAppM
     onForgotten: vi.fn(),
     authExpired: false,
     onSessionAuthExpired: vi.fn(),
-    messageAutoDismissActive: true,
     mutationsAllowed: true,
     signedReadsAllowed: true,
     ...overrides,
@@ -179,19 +178,18 @@ describe("useMiniAppMutations", () => {
     expect(result.current.isMutating).toBe(false);
     expect(result.current.pendingOperation).toBeNull();
     expect(args.onSnapshotReplaced).not.toHaveBeenCalled();
-    expect(result.current.message).not.toBeNull();
+    expect(result.current.notice?.tone).toBe("error");
   });
 
   it("invalidates a remove undo when unsubscribing all", async () => {
     const showConfirm = vi.fn((_message: string, callback: (confirmed: boolean) => void) => callback(true));
     await persistedMutations();
     const { result } = renderHook(() => useMiniAppMutations(makeArgs({ webApp: makeWebApp({ showConfirm }) })));
-    await act(async () => { result.current.remove(baseState.subscriptions[0]!); });
-    await waitFor(() => expect(result.current.pendingUndo).not.toBeNull());
-    expect(result.current.pendingUndo).toEqual(baseState.subscriptions[0]);
+    await act(async () => { await result.current.remove(baseState.subscriptions[0]!); });
+    expect(result.current.notice).toMatchObject({ text: "USDC removed.", undoLabel: "Undo" });
     await act(async () => { result.current.unsubscribeAll(); });
-    expect(result.current.pendingUndo).toBeNull();
-    await act(async () => { result.current.undoRemove(); });
+    expect(result.current.notice?.undoLabel).toBeUndefined();
+    await act(async () => { result.current.undo(); });
     expect(apiMocks.postMiniAppSnapshot.mock.calls.map((call) => call[1].operation.kind)).toEqual(["remove-coin", "unsubscribe-all"]);
   });
   it("locks mutation state until the returned server snapshot replaces the owner state", async () => {
@@ -231,7 +229,7 @@ describe("useMiniAppMutations", () => {
     await act(async () => { await result.current.performMutation(operation); });
     expect(result.current.mutationRetryAfterSec).toBe(3);
     expect(result.current.announcement).toBe("Pharos edit limit reached. Settings are disabled for 3 seconds.");
-    expect(result.current.message).toBeNull();
+    expect(result.current.notice).toBeNull();
 
     await act(async () => { expect(await result.current.performMutation(operation)).toBeNull(); });
     expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledOnce();
@@ -258,7 +256,7 @@ describe("useMiniAppMutations", () => {
     await act(async () => { await result.current.performMutation({ kind: "pause" }); });
     expect(apiMocks.refreshMiniAppBundleOnce).toHaveBeenCalledWith({ contractVersion: "3", catalogVersion: "catalog-v2-next" });
     expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledOnce();
-    expect(result.current.message).toBe("Mini App was updated. Close and reopen it from PharosWatchBot.");
+    expect(result.current.notice).toMatchObject({ tone: "error", text: "Pharos was updated. Close and reopen it from PharosWatchBot." });
   });
 
   it("keeps a stale-auth rejection as visible intent and stops sending edits", async () => {
@@ -268,12 +266,12 @@ describe("useMiniAppMutations", () => {
 
     await act(async () => { await result.current.performMutation({ kind: "pause" }); });
     expect(onSnapshotReplaced).not.toHaveBeenCalled();
-    expect(result.current.message).toBeNull();
-    expect(result.current.staleAuth).toEqual({ intent: "Not saved: All alerts paused." });
+    expect(result.current.notice).toBeNull();
+    expect(result.current.staleAuth).toEqual({ intent: "Not saved: Alerts paused until you resume." });
 
     await act(async () => { await result.current.performMutation({ kind: "clear-snooze" }); });
     expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledOnce();
-    expect(result.current.staleAuth).toEqual({ intent: "Not saved: Snooze cleared." });
+    expect(result.current.staleAuth).toEqual({ intent: "Not saved: Alerts resumed." });
   });
 
   it("ends the session when a signed read hits stale-auth", async () => {
@@ -284,7 +282,7 @@ describe("useMiniAppMutations", () => {
     await act(async () => { await result.current.performBulkWatchlistPreview(BULK_PREVIEW); });
     expect(onSessionAuthExpired).toHaveBeenCalledOnce();
     expect(result.current.staleAuth).toEqual({ intent: null });
-    expect(result.current.message).toBeNull();
+    expect(result.current.notice).toBeNull();
   });
 
   it("never sends an edit while launch auth is already known to be expired", async () => {
@@ -301,42 +299,42 @@ describe("useMiniAppMutations", () => {
     const coin = baseState.subscriptions[0]!;
     const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
 
-    await act(async () => { result.current.remove(coin); });
-    await waitFor(() => expect(result.current.pendingUndo).toEqual(coin));
+    await act(async () => { await result.current.remove(coin); });
     expect(row()).toBeUndefined();
-    expect(result.current.pendingUndo).toEqual(coin);
-    await act(async () => { result.current.undoRemove(); });
+    expect(result.current.notice?.undoLabel).toBe("Undo");
+    await act(async () => { result.current.undo(); });
     await waitFor(() => expect(result.current.isMutating).toBe(false));
     expect(row()).toEqual(before);
-    expect(result.current.pendingUndo).toBeNull();
+    expect(result.current.notice).toMatchObject({ text: "Change undone." });
   });
 
   it("refuses stale undo after another preference edit without retrying or overwriting it", async () => {
     const { db, auth, row, applyTelegramMiniAppMutation } = await persistedMutations();
     const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
-    await act(async () => { result.current.remove(baseState.subscriptions[0]!); });
-    await waitFor(() => expect(result.current.pendingUndo).not.toBeNull());
+    await act(async () => { await result.current.remove(baseState.subscriptions[0]!); });
+    expect(result.current.notice?.undoLabel).toBe("Undo");
     await applyTelegramMiniAppMutation(db, auth, {
       kind: "set-coin", stablecoinId: "usdc-circle",
       patch: { alertTypes: { safety: true }, safetyMode: "upgrade-only" },
     });
     const concurrent = row();
-    await act(async () => { result.current.undoRemove(); });
+    await act(async () => { result.current.undo(); });
     await waitFor(() => expect(result.current.isMutating).toBe(false));
     expect(row()).toEqual(concurrent);
-    expect(result.current.message).not.toBeNull();
-    expect(result.current.pendingUndo).toBeNull();
-    await act(async () => { result.current.undoRemove(); });
+    expect(result.current.notice).toMatchObject({ tone: "error" });
+    await act(async () => { result.current.undo(); });
     expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledTimes(2);
   });
 
-  it("does not dispatch a canceled remove confirmation", () => {
+  it("does not dispatch a canceled remove confirmation", async () => {
     const showConfirm = vi.fn((_message: string, callback: (confirmed: boolean) => void) => callback(false));
     const coin = baseState.subscriptions[0]!;
     const { result } = renderHook(() => useMiniAppMutations(makeArgs({ webApp: makeWebApp({ showConfirm }) })));
 
-    act(() => { result.current.remove(coin); });
-    expect(showConfirm).toHaveBeenCalledWith("Remove USDC from your watchlist?", expect.any(Function));
+    let removed!: Promise<boolean>;
+    act(() => { removed = result.current.remove(coin); });
+    expect(showConfirm).toHaveBeenCalledWith("Remove USDC from your coins?", expect.any(Function));
+    await expect(removed).resolves.toBe(false);
     expect(apiMocks.postMiniAppSnapshot).not.toHaveBeenCalled();
   });
 
@@ -347,11 +345,11 @@ describe("useMiniAppMutations", () => {
     const { row } = await persistedMutations();
     const { result } = renderHook(() => useMiniAppMutations(makeArgs({ webApp: makeWebApp({ showConfirm }) })));
 
-    act(() => { result.current.remove(coin); });
-    await waitFor(() => expect(result.current.pendingUndo).toEqual(coin));
+    act(() => { void result.current.remove(coin); });
+    await waitFor(() => expect(result.current.notice?.undoLabel).toBe("Undo"));
     await act(async () => { vi.advanceTimersByTime(5_001); });
-    expect(result.current.pendingUndo).toBeNull();
-    await act(async () => { result.current.undoRemove(); });
+    expect(result.current.notice?.undoLabel).toBeUndefined();
+    await act(async () => { result.current.undo(); });
     expect(row()).toBeUndefined();
     expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledOnce();
   });
@@ -370,7 +368,7 @@ describe("useMiniAppMutations", () => {
     expect(showConfirm).toHaveBeenCalledTimes(1);
     act(() => { confirmationCallbacks.shift()?.(true); });
     await waitFor(() => expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledTimes(1));
-    act(() => { result.current.unfollowPreset(preset); });
+    act(() => { void result.current.unfollowPreset(preset); });
     expect(showConfirm).toHaveBeenCalledTimes(2);
     act(() => { confirmationCallbacks.shift()?.(true); });
     await waitFor(() => expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledTimes(2));
@@ -383,14 +381,69 @@ describe("useMiniAppMutations", () => {
 
     expect(showConfirm).toHaveBeenCalledTimes(4);
     expect(showConfirm.mock.calls.map(([message]) => message)).toEqual([
-      "Unsubscribe from all alerts? This clears every coin, preset, and global toggle.",
-      "Unfollow USD Top 25? Direct coin settings and overlapping presets will stay unchanged.",
+      "Unsubscribe from all alerts? This clears every coin, preset, and All stablecoins setting.",
+      "Unfollow USD Top 25? Coins you added yourself stay as they are.",
       "Delete all your Pharos alert data? This cannot be undone.",
-      "Are you absolutely sure? Your subscriber row will be deleted.",
+      "Are you absolutely sure? Your alerts and settings will be deleted.",
     ]);
     expect(apiMocks.postMiniAppSnapshot.mock.calls[0]?.[1]).toEqual({ initData: "signed-init-data", operation: { kind: "unsubscribe-all" } });
     expect(apiMocks.postMiniAppSnapshot.mock.calls[1]?.[1]).toEqual({ initData: "signed-init-data", operation: { kind: "unfollow-preset", presetId: "usd-top25" } });
     expect(apiMocks.postMiniAppSnapshot.mock.calls[2]?.[1]).toEqual({ initData: "signed-init-data", operation: { kind: "forget-me" } });
     await waitFor(() => expect(result.current.forgottenView).toBe(true));
+  });
+  it("previews then confirms a bulk edit and arms the server-derived undo", async () => {
+    const undo = { expectedPreferenceGeneration: 3, expectedFingerprint: "preview-v1-3-abcdef12", restoreDirectRows: [], removeStablecoinIds: ["usdt-tether"] };
+    apiMocks.postMiniAppBulkWatchlistPreview.mockResolvedValue({
+      contractVersion: "9", catalogVersion: "c",
+      result: { kind: "bulk-watchlist-preview", expectedPreferenceGeneration: 2, previewFingerprint: "preview-v1-2-abcdef12", adds: ["usdt-tether"], removes: [], unchanged: [], sourceImpact: [], undo },
+    });
+    apiMocks.postMiniAppSnapshot.mockResolvedValue(makeSnapshot());
+    const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
+    await act(async () => { expect(await result.current.applyBulkWatchlist(["usdt-tether"], [])).toBe(true); });
+    expect(apiMocks.postMiniAppSnapshot.mock.calls[0]?.[1].operation).toEqual({
+      kind: "confirm-bulk-watchlist", addStablecoinIds: ["usdt-tether"], removeStablecoinIds: [],
+      expectedPreferenceGeneration: 2, previewFingerprint: "preview-v1-2-abcdef12",
+    });
+    expect(result.current.notice).toMatchObject({ text: "Added 1 coin.", undoLabel: "Undo" });
+    await act(async () => { result.current.undo(); });
+    expect(apiMocks.postMiniAppSnapshot.mock.calls[1]?.[1].operation).toEqual({ kind: "undo-bulk-watchlist", ...undo });
+  });
+
+  it("keeps a bulk edit as unsaved intent once launch auth expired, without a preview read", async () => {
+    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ authExpired: true })));
+    await act(async () => { expect(await result.current.applyBulkWatchlist(["usdt-tether", "usdc-circle"], [])).toBe(false); });
+    expect(apiMocks.postMiniAppBulkWatchlistPreview).not.toHaveBeenCalled();
+    expect(apiMocks.postMiniAppSnapshot).not.toHaveBeenCalled();
+    expect(result.current.staleAuth).toEqual({ intent: "Not saved: Added 2 coins." });
+  });
+  it("tells the user a second edit was not sent while one is still saving", async () => {
+    const { promise, resolve } = Promise.withResolvers<TelegramMiniAppClientSnapshot>();
+    apiMocks.postMiniAppSnapshot.mockReturnValueOnce(promise);
+    const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
+    let first!: Promise<TelegramMiniAppClientSnapshot | null>;
+    act(() => { first = result.current.performMutation({ kind: "pause" }); });
+    await act(async () => { expect(await result.current.performMutation({ kind: "clear-snooze" })).toBeNull(); });
+    expect(result.current.notice).toMatchObject({ tone: "error", text: "Still saving your last change. Try again in a moment." });
+    expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledOnce();
+    await act(async () => { resolve(makeSnapshot()); await first; });
+  });
+
+  it("keeps the undo armed while another request is in flight", async () => {
+    await persistedMutations();
+    const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
+    await act(async () => { await result.current.remove(baseState.subscriptions[0]!); });
+    expect(result.current.notice?.undoLabel).toBe("Undo");
+    const pending = Promise.withResolvers<TelegramMiniAppClientSnapshot>();
+    const realImpl = apiMocks.postMiniAppSnapshot.getMockImplementation()!;
+    apiMocks.postMiniAppSnapshot.mockImplementationOnce(() => pending.promise);
+    let busy!: Promise<TelegramMiniAppClientSnapshot | null>;
+    act(() => { busy = result.current.performMutation({ kind: "pause" }); });
+    act(() => { result.current.undo(); });
+    // The ignored tap neither sends nor consumes the server-derived undo token.
+    expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledTimes(2);
+    expect(result.current.notice?.undoLabel).toBe("Undo");
+    await act(async () => { pending.resolve(makeSnapshot()); await busy; });
+    apiMocks.postMiniAppSnapshot.mockImplementation(realImpl);
+    expect(apiMocks.postMiniAppSnapshot.mock.calls.map((call) => call[1].operation.kind)).toEqual(["remove-coin", "pause"]);
   });
 });

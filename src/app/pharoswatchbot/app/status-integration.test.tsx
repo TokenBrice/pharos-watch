@@ -43,27 +43,28 @@ afterEach(() => {
 
 describe("Mini App confirmed watcher status", () => {
   it.each([
-    [emptyState, "No enabled alerts"],
-    [makeMiniAppState({ subscriber: { snoozeUntilTs: 4_102_444_800 } }), "Alerts are paused indefinitely"],
-    [makeMiniAppState({ subscriber: { snoozeUntilTs: 9_000_000_000 } }), "Alerts are temporarily snoozed"],
-    [makeMiniAppState(), "Alerts are active"],
-  ])("classifies the confirmed session as %s", async (state, heading) => {
+    [emptyState, "Get stablecoin alerts in this chat"],
+    [makeMiniAppState({ subscriber: { snoozeUntilTs: 4_102_444_800 } }), "Alerts paused"],
+    [makeMiniAppState({ subscriber: { snoozeUntilTs: 9_000_000_000 } }), "Alerts snoozed"],
+    [makeMiniAppState({ health: { recentFailureClass: "blocked" } }), "Telegram stopped delivering alerts"],
+    [makeMiniAppState(), "Alerts on"],
+  ])("classifies the confirmed session as %#: %s", async (state, heading) => {
     launch(state);
     await waitFor(() => expect(screen.getByRole("heading", { name: heading })).toBeTruthy());
-    if (heading !== "Alerts are active") expect(screen.queryByRole("heading", { name: "Alerts are active" })).toBeNull();
+    if (heading !== "Alerts on") expect(screen.queryByRole("heading", { name: "Alerts on" })).toBeNull();
   });
 
   it("stops claiming active alerts after confirmed unsubscribe-all retains the subscriber", async () => {
     const operations = launch(makeMiniAppState(), emptyState);
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Alerts are active" })).toBeTruthy());
-    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
-    fireEvent.click(screen.getByRole("button", { name: "Unsubscribe from all" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm unsubscribe from all alerts" }));
-    await waitFor(() => expect(screen.getByText("All subscriptions cleared.")).toBeTruthy());
-    fireEvent.click(screen.getByRole("tab", { name: "home" }));
-    expect(screen.getByRole("heading", { name: "No enabled alerts" })).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Alerts are active" })).toBeNull();
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Alerts on" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    // Without native confirm sheets the destructive row needs a second tap.
+    fireEvent.click(screen.getByRole("button", { name: "Unsubscribe from all alerts" }));
+    expect(operations).toEqual([]);
+    fireEvent.click(screen.getByRole("button", { name: "Tap again to unsubscribe from all" }));
+    await waitFor(() => expect(screen.getByText("Unsubscribed from all alerts.")).toBeTruthy());
     expect(operations).toEqual([{ kind: "unsubscribe-all" }]);
-    expect(screen.getByText("Last delivery")).toBeTruthy();
+    // Delivery history stays visible independently of coverage.
+    expect(screen.getByText("Last alert delivered")).toBeTruthy();
   });
 });

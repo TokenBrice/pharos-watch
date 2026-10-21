@@ -12,10 +12,12 @@ export type UseTelegramMainButtonArgs = {
   active?: boolean;
   color?: string;
   textColor?: string;
+  /** Native spinner while the action's request runs. */
+  progress?: boolean;
 };
 
 export function useTelegramMainButton(args: UseTelegramMainButtonArgs): void {
-  const { webApp, text, handler, visible, active, color, textColor } = args;
+  const { webApp, text, handler, visible, active, color, textColor, progress } = args;
 
   useEffect(() => {
     const mb = webApp?.MainButton;
@@ -46,4 +48,11 @@ export function useTelegramMainButton(args: UseTelegramMainButtonArgs): void {
     mb.hide?.();
     return undefined;
   }, [webApp, text, handler, visible, active, color, textColor]);
+
+  useEffect(() => {
+    const mb = webApp?.MainButton;
+    if (!mb || !progress) return undefined;
+    mb.showProgress?.(false);
+    return () => mb.hideProgress?.();
+  }, [progress, webApp]);
 }

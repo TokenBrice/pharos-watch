@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import { ALERT_LABELS } from "./constants";
+import { ALERT_LABELS, SNOOZE_DURATION_LABELS, presetLabel as presetCopyLabel } from "./constants";
+import { formatQuietHoursRange } from "./format";
 import {
   miniAppErrorMessage,
   MiniAppRequestError,
@@ -26,59 +27,87 @@ import type {
 
 const MUTATE_ENDPOINT = API_PATHS.telegramMiniAppMutation();
 
-/** Grace period during which a removed coin can be restored via the undo toast. */
+/** Grace period during which a removal or bulk edit can be undone from the snackbar. */
 const UNDO_WINDOW_MS = 5_000;
 
 type SignedReadOperation = Extract<TelegramMiniAppBulkWatchlistOperation, { kind: "preview-bulk-watchlist" }>;
 
-function mutationSuccessAnnouncement(operation: TelegramMiniAppOperation, state: TelegramMiniAppState | null): string {
+function coinSymbol(state: TelegramMiniAppState | null, stablecoinId: string): string {
+  return state?.subscriptions.find((c) => c.stablecoinId === stablecoinId)?.symbol
+    ?? state?.catalog.searchableCoins.find((c) => c.stablecoinId === stablecoinId)?.symbol
+    ?? "Coin";
+}
+
+function presetLabel(state: TelegramMiniAppState | null, presetId: string): string {
+  return presetCopyLabel(presetId, state?.presets.find((preset) => preset.id === presetId)?.label
+    ?? state?.catalog.recommendedPresets.find((preset) => preset.id === presetId)?.label
+    ?? "Preset");
+}
+
+function countCoins(count: number): string {
+  return `${count} ${count === 1 ? "coin" : "coins"}`;
+}
+
+/** User-facing confirmation for a saved change; also the stale-auth "Not saved" intent. */
+export function mutationSuccessAnnouncement(operation: TelegramMiniAppOperation, state: TelegramMiniAppState | null): string {
   switch (operation.kind) {
     case "preview-bulk-watchlist":
-      return "Bulk watchlist preview ready.";
-    case "confirm-bulk-watchlist":
-      return "Bulk watchlist edit applied.";
+    case "confirm-bulk-watchlist": {
+      const added = operation.addStablecoinIds.length;
+      const removed = operation.removeStablecoinIds.length;
+      if (removed === 0) return `Added ${countCoins(added)}.`;
+      if (added === 0) return `Removed ${countCoins(removed)}.`;
+      return `Added ${countCoins(added)}, removed ${removed}.`;
+    }
     case "undo-bulk-watchlist":
-      return "Bulk watchlist edit undone.";
+      return "Change undone.";
     case "recommended-setup":
-      return "Recommended setup applied.";
+      return "Following USD Top 25: early warnings and depegs.";
     case "set-global":
-      return `${ALERT_LABELS[operation.alertType]} alerts ${operation.enabled ? "enabled" : "disabled"}.`;
+      return `All stablecoins: ${ALERT_LABELS[operation.alertType]} ${operation.enabled ? "on" : "off"}.`;
     case "set-global-depeg-step":
-      return operation.depegStepBps == null ? "Global depeg step cleared." : `Global depeg step set to ${operation.depegStepBps} bps.`;
+      return "All stablecoins: depeg re-alerts updated.";
     case "set-quiet-hours":
-      return operation.enabled ? "Quiet hours updated." : "Quiet hours disabled.";
+      return operation.enabled
+        ? operation.startHourUtc != null && operation.endHourUtc != null
+          ? `Quiet hours ${formatQuietHoursRange(operation.startHourUtc, operation.endHourUtc)}.`
+          : "Quiet hours on."
+        : "Quiet hours off.";
     case "clear-snooze":
-      return "Snooze cleared.";
+      return "Alerts resumed.";
     case "set-coin": {
-      const symbol = state?.subscriptions.find((c) => c.stablecoinId === operation.stablecoinId)?.symbol
-        ?? state?.catalog.searchableCoins.find((c) => c.stablecoinId === operation.stablecoinId)?.symbol
-        ?? "Coin";
+      const symbol = coinSymbol(state, operation.stablecoinId);
+      const changed = Object.entries(operation.patch.alertTypes ?? {});
+      if (changed.length === 1 && Object.keys(operation.patch).length === 1) {
+        const [type, enabled] = changed[0] as [keyof typeof ALERT_LABELS, boolean];
+        return `${symbol}: ${ALERT_LABELS[type]} ${enabled ? "on" : "off"}.`;
+      }
       return `${symbol} updated.`;
     }
-    case "remove-coin": {
-      const symbol = state?.subscriptions.find((c) => c.stablecoinId === operation.stablecoinId)?.symbol ?? "Coin";
-      return `${symbol} removed from watchlist.`;
-    }
+    case "remove-coin":
+      return `${coinSymbol(state, operation.stablecoinId)} removed.`;
     case "set-snooze":
-      return `Snoozed for ${operation.durationToken}.`;
+      return `Snoozed for ${SNOOZE_DURATION_LABELS[operation.durationToken]}.`;
     case "pause":
-      return "All alerts paused.";
+      return "Alerts paused until you resume.";
     case "set-coin-snooze": {
-      const symbol = state?.subscriptions.find((c) => c.stablecoinId === operation.stablecoinId)?.symbol ?? "Coin";
+      const symbol = coinSymbol(state, operation.stablecoinId);
       return operation.durationToken === "clear"
         ? `${symbol} snooze cleared.`
-        : `${symbol} snoozed for ${operation.durationToken}.`;
+        : `${symbol} snoozed for ${SNOOZE_DURATION_LABELS[operation.durationToken]}.`;
     }
     case "set-timezone":
-      return operation.timezone == null ? "Timezone cleared." : `Timezone set to ${operation.timezone}.`;
+      return operation.timezone == null ? "Time zone cleared." : `Time zone set to ${operation.timezone}.`;
     case "unsubscribe-all":
-      return "All subscriptions cleared.";
+      return "Unsubscribed from all alerts.";
     case "forget-me":
       return "All your data has been deleted.";
     case "follow-preset":
-      return "Preset followed.";
+      return state?.presets.some((preset) => preset.id === operation.presetId)
+        ? `${presetLabel(state, operation.presetId)} updated.`
+        : `Following ${presetLabel(state, operation.presetId)}.`;
     case "unfollow-preset":
-      return "Preset unfollowed.";
+      return `Unfollowed ${presetLabel(state, operation.presetId)}.`;
   }
 }
 
@@ -95,6 +124,7 @@ function confirmThenFire(
   confirmFn: TelegramWebAppSdk["showConfirm"] | undefined,
   message: string,
   fire: () => void,
+  cancel?: () => void,
 ) {
   if (!confirmFn) {
     fire();
@@ -102,6 +132,7 @@ function confirmThenFire(
   }
   confirmFn(message, (confirmed) => {
     if (confirmed) fire();
+    else cancel?.();
   });
 }
 
@@ -122,14 +153,21 @@ export interface UseMiniAppMutationsArgs {
    * and never sent; only a fresh launch can save them.
    */
   authExpired: boolean;
-  /** Whether the 6s message auto-dismiss is active. Caller passes `status === "ready"`. */
-  messageAutoDismissActive: boolean;
   /** False while session state is refreshing, stale, or otherwise read-only. */
   mutationsAllowed: boolean;
   /** Signed private-session reads remain available through Telegram's 24h window. */
   signedReadsAllowed: boolean;
   /** A signed read hit `stale-auth`: the 24h session window is over and no signed request can succeed. */
   onSessionAuthExpired: () => void;
+}
+
+/** One snackbar message. Errors persist until dismissed; success hides itself. */
+export interface MiniAppNotice {
+  id: number;
+  tone: "success" | "error";
+  text: string;
+  /** Present while an undo for this change is still valid. */
+  undoLabel?: string;
 }
 
 export interface UseMiniAppMutationsResult {
@@ -139,14 +177,12 @@ export interface UseMiniAppMutationsResult {
   pendingOperation: TelegramMiniAppOperation | null;
   /** Remaining server-directed edit lockout after a bounded-burst 429. */
   mutationRetryAfterSec: number;
-  /** Banner copy. Auto-clears 6s after set when `messageAutoDismissActive` is true. */
-  message: string | null;
-  /** Aria-live announcement. */
+  /** Latest success, error or undo message for the bottom snackbar. */
+  notice: MiniAppNotice | null;
+  /** Aria-live announcement for state changes that are not snackbar messages. */
   announcement: string;
   /** True once `forget-me` has resolved successfully — caller should switch to terminal view. */
   forgottenView: boolean;
-  /** Undo toast state. Non-null between successful `remove-coin` resolve and the 5s expiry. */
-  pendingUndo: SubscribedCoin | null;
   /** Returned status when `checkHomeScreenStatus` probe ran. Null until then. */
   homeScreenStatus: string | null;
   /**
@@ -161,27 +197,34 @@ export interface UseMiniAppMutationsResult {
   performMutation: (operation: TelegramMiniAppOperation) => Promise<TelegramMiniAppClientSnapshot | null>;
   /** Signed read-only bulk preview request. Does not consume edit burst capacity. */
   performBulkWatchlistPreview: (operation: Extract<TelegramMiniAppBulkWatchlistOperation, { kind: "preview-bulk-watchlist" }>) => Promise<TelegramMiniAppBulkWatchlistResponse | null>;
-  /** Bound handler for the remove-coin flow: confirm-then-mutate + arm undo on success. */
-  remove: (coin: SubscribedCoin) => void;
-  /** Bound handler for the undo button. No-op if `pendingUndo` is null. */
-  undoRemove: () => void;
+  /** Preview then confirm a multi-coin add/remove; arms an undo in the snackbar. Resolves true on success. */
+  applyBulkWatchlist: (addStablecoinIds: string[], removeStablecoinIds: string[]) => Promise<boolean>;
+  /** Confirm-then-remove one coin; arms an undo in the snackbar. Resolves true on success. */
+  remove: (coin: SubscribedCoin) => Promise<boolean>;
+  /** Run the snackbar undo. No-op once the window has expired. */
+  undo: () => void;
+  /** Hide the current snackbar message. */
+  dismissNotice: () => void;
+  /** Show a client-side validation message in the snackbar. */
+  showError: (text: string) => void;
 
-  /** Imperative hook for the "add to home screen" CTA in StatusPanel. */
+  /** Imperative hook for the "add to home screen" row. */
   addToHomeScreen: () => void;
 
-  /** Confirm-then-unfollow flow for the Presets panel. */
-  unfollowPreset: (preset: FollowedPreset) => void;
-  /** Confirm-then-unsubscribe-all flow for the Settings danger zone. */
+  /** Confirm-then-unfollow flow for a followed group. Resolves true on success. */
+  unfollowPreset: (preset: FollowedPreset) => Promise<boolean>;
+  /** Confirm-then-pause flow ("until I resume"). */
+  pause: () => void;
+  /** Confirm-then-unsubscribe-all flow for the Settings data section. */
   unsubscribeAll: () => void;
-  /** Two-step confirm forget-me flow for the Settings danger zone. */
+  /** Two-step confirm forget-me flow for the Settings data section. */
   forgetMe: () => void;
-
-  /** Allow callers to set the banner explicitly (e.g. session-bootstrap errors). */
-  setMessage: (next: string | null) => void;
 }
 
+type UndoOperation = Extract<TelegramMiniAppOperation, { kind: "undo-bulk-watchlist" }>;
+
 /**
- * Server-confirmed mutation flow + pending feedback + undo + announcements.
+ * Server-confirmed mutation flow + pending feedback + undo + snackbar notices.
  *
  * Fragile invariants this hook protects:
  * 1. Visible values remain at the last confirmed snapshot while a request is pending.
@@ -190,8 +233,10 @@ export interface UseMiniAppMutationsResult {
  *    this hook and persist across renders for the browser session.
  * 3. `enableClosingConfirmation` / `disableClosingConfirmation` are paired around the
  *    `performMutation` POST in a `try/finally`.
- * 4. `unsubscribeAll` clears any pending undo before dispatching — otherwise the toast
+ * 4. `unsubscribeAll` clears any pending undo before dispatching — otherwise the snackbar
  *    would point at a coin that no longer exists in the just-emptied subscriber row.
+ * 5. Undo only ever replays the server-derived snapshot (`undo-bulk-watchlist`), never a
+ *    patch reconstructed from rendered state, and never retries automatically.
  */
 export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMutationsResult {
   const {
@@ -201,7 +246,6 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     onSnapshotReplaced,
     onForgotten,
     authExpired,
-    messageAutoDismissActive,
     mutationsAllowed,
     signedReadsAllowed,
     onSessionAuthExpired,
@@ -209,17 +253,16 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   // webApp identity is stable per render, so showConfirm is safe to hoist once.
   const showConfirm = webApp?.showConfirm;
   const [isMutating, setIsMutating] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [notice, setNotice] = useState<MiniAppNotice | null>(null);
   const [announcement, setAnnouncement] = useState("");
-  const [pendingUndo, setPendingUndo] = useState<SubscribedCoin | null>(null);
-  const undoTokenRef = useRef<TelegramMiniAppClientSnapshot["undo"]>(undefined);
+  const undoOperationRef = useRef<UndoOperation | null>(null);
+  const noticeIdRef = useRef(0);
   const [homeScreenStatus, setHomeScreenStatus] = useState<string | null>(null);
   const [forgottenView, setForgottenView] = useState(false);
   const [pendingOperation, setPendingOperation] = useState<TelegramMiniAppOperation | null>(null);
   const [mutationRetryAfterSec, setMutationRetryAfterSec] = useState(0);
   const [staleAuth, setStaleAuth] = useState<{ intent: string | null } | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const messageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasRequestedWriteAccessRef = useRef(false);
   const hasMutatedThisSessionRef = useRef(false);
   const hasProbedHomeScreenRef = useRef(false);
@@ -227,24 +270,41 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   const terminalRef = useRef(false);
   const requestInFlightRef = useRef(false);
 
-  // 6s message auto-dismiss while the parent reports the session is ready.
-  useEffect(() => {
-    if (messageTimerRef.current) {
-      clearTimeout(messageTimerRef.current);
-      messageTimerRef.current = null;
+  const clearUndo = useCallback(() => {
+    if (undoTimerRef.current) {
+      clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
     }
-    if (!message || !messageAutoDismissActive) return;
-    messageTimerRef.current = setTimeout(() => {
-      setMessage(null);
-      messageTimerRef.current = null;
-    }, 6_000);
-    return () => {
-      if (messageTimerRef.current) {
-        clearTimeout(messageTimerRef.current);
-        messageTimerRef.current = null;
-      }
-    };
-  }, [message, messageAutoDismissActive]);
+    undoOperationRef.current = null;
+    setNotice((current) => (current?.undoLabel ? { ...current, undoLabel: undefined } : current));
+  }, []);
+
+  const showNotice = useCallback((tone: MiniAppNotice["tone"], text: string, undo?: UndoOperation) => {
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = null;
+    undoOperationRef.current = undo ?? null;
+    noticeIdRef.current += 1;
+    setNotice({ id: noticeIdRef.current, tone, text, ...(undo ? { undoLabel: "Undo" } : {}) });
+    if (undo) {
+      undoTimerRef.current = setTimeout(() => {
+        undoTimerRef.current = null;
+        undoOperationRef.current = null;
+        setNotice((current) => (current?.undoLabel ? { ...current, undoLabel: undefined } : current));
+      }, UNDO_WINDOW_MS);
+    }
+  }, []);
+
+  const dismissNotice = useCallback(() => {
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = null;
+    undoOperationRef.current = null;
+    setNotice(null);
+  }, []);
+
+  const showError = useCallback((text: string) => {
+    showNotice("error", text);
+    webApp?.HapticFeedback?.notificationOccurred?.("error");
+  }, [showNotice, webApp]);
 
   useEffect(() => {
     if (mutationRetryAfterSec <= 0) {
@@ -266,14 +326,19 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     if (authExpired || staleAuth) {
       // Resending the frozen initData is guaranteed to fail; keep the intent visible instead.
       setStaleAuth({ intent: staleAuthIntent(operation, state) });
-      setMessage(null);
       setAnnouncement("Change not saved. Reopen the Mini App to edit.");
       webApp?.HapticFeedback?.notificationOccurred?.("warning");
       return null;
     }
-    if (requestInFlightRef.current || !initData || !mutationsAllowed || state?.viewer.canMutate !== true || mutationRetryAfterSec > 0) return null;
+    if (requestInFlightRef.current) {
+      // Never drop an edit silently: say why it did not go out.
+      showNotice("error", "Still saving your last change. Try again in a moment.");
+      return null;
+    }
+    if (!initData || !mutationsAllowed || state?.viewer.canMutate !== true || mutationRetryAfterSec > 0) return null;
     requestInFlightRef.current = true;
-    // Capture pre-mutation snapshot for engagement gating (T-57).
+    // Capture pre-mutation snapshot for engagement gating (T-57) and success copy.
+    const preState = state;
     const preSubscriberExists = state?.subscriber.exists ?? false;
     const preChatType = state?.viewer.chatType ?? null;
     setIsMutating(true);
@@ -283,22 +348,17 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       const next = await postMiniAppSnapshot(MUTATE_ENDPOINT, { initData, operation });
       if (operation.kind === "forget-me") {
         terminalRef.current = true;
-        clearTimeout(undoTimerRef.current ?? undefined);
-        undoTimerRef.current = null;
-        undoTokenRef.current = undefined;
-        setPendingUndo(null);
+        dismissNotice();
         onForgotten();
         setForgottenView(true);
-        setMessage(null);
         setAnnouncement(mutationSuccessAnnouncement(operation, next.state));
         webApp?.HapticFeedback?.notificationOccurred?.("success");
         return next;
       }
       onSnapshotReplaced(next);
-      setMessage(null);
-      setAnnouncement(mutationSuccessAnnouncement(operation, next.state));
+      showNotice("success", mutationSuccessAnnouncement(operation, preState ?? next.state));
       const haptics = webApp?.HapticFeedback;
-      if (operation.kind === "recommended-setup" || operation.kind === "set-coin" || operation.kind === "remove-coin") {
+      if (operation.kind === "recommended-setup" || operation.kind === "set-coin" || operation.kind === "remove-coin" || operation.kind === "confirm-bulk-watchlist") {
         haptics?.notificationOccurred?.("success");
       } else {
         haptics?.impactOccurred?.("light");
@@ -337,18 +397,16 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
           contractVersion: err.serverContractVersion,
           catalogVersion: err.serverCatalogVersion,
         });
-        setMessage(miniAppErrorMessage(err, "mutation"));
+        showNotice("error", miniAppErrorMessage(err, "mutation"));
       } else if (err instanceof MiniAppRequestError && err.status === 429 && err.code === "rate-limited") {
         const retryAfterSec = err.retryAfterSec ?? 1;
         setMutationRetryAfterSec((current) => Math.max(current, retryAfterSec));
-        setMessage(null);
         setAnnouncement(`Pharos edit limit reached. Settings are disabled for ${retryAfterSec} ${retryAfterSec === 1 ? "second" : "seconds"}.`);
       } else if (isStaleAuthError(err)) {
         setStaleAuth({ intent: staleAuthIntent(operation, state) });
-        setMessage(null);
         setAnnouncement("Change not saved. Reopen the Mini App to edit.");
       } else {
-        setMessage(miniAppErrorMessage(err, "mutation"));
+        showNotice("error", miniAppErrorMessage(err, "mutation"));
       }
       webApp?.HapticFeedback?.notificationOccurred?.("error");
       return null;
@@ -358,7 +416,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       setPendingOperation(null);
       webApp?.disableClosingConfirmation?.();
     }
-  }, [authExpired, initData, mutationRetryAfterSec, mutationsAllowed, onForgotten, onSnapshotReplaced, staleAuth, state, webApp]);
+  }, [authExpired, dismissNotice, initData, mutationRetryAfterSec, mutationsAllowed, onForgotten, onSnapshotReplaced, showNotice, staleAuth, state, webApp]);
 
   const mutate = useCallback((operation: TelegramMiniAppOperation) => {
     void performMutation(operation);
@@ -367,18 +425,13 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   const performSignedRead = useCallback(async <T>(
     operation: SignedReadOperation,
     request: () => Promise<T>,
-    successAnnouncement: string,
   ): Promise<T | null> => {
     if (terminalRef.current || requestInFlightRef.current || !initData || !signedReadsAllowed || state?.viewer.chatId == null || isMutating) return null;
     requestInFlightRef.current = true;
     setIsMutating(true);
     setPendingOperation(operation);
     try {
-      const response = await request();
-      setMessage(null);
-      setAnnouncement(successAnnouncement);
-      webApp?.HapticFeedback?.impactOccurred?.("light");
-      return response;
+      return await request();
     } catch (err) {
       if (isMiniAppVersionMismatch(err)) {
         refreshMiniAppBundleOnce({
@@ -388,10 +441,9 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       }
       if (isStaleAuthError(err)) {
         setStaleAuth((current) => current ?? { intent: null });
-        setMessage(null);
         onSessionAuthExpired();
       } else {
-        setMessage(miniAppErrorMessage(err, "mutation"));
+        showNotice("error", miniAppErrorMessage(err, "mutation"));
       }
       webApp?.HapticFeedback?.notificationOccurred?.("error");
       return null;
@@ -400,73 +452,93 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       requestInFlightRef.current = false;
       setPendingOperation(null);
     }
-  }, [initData, isMutating, onSessionAuthExpired, signedReadsAllowed, state?.viewer.chatId, webApp]);
+  }, [initData, isMutating, onSessionAuthExpired, showNotice, signedReadsAllowed, state?.viewer.chatId, webApp]);
 
   const performBulkWatchlistPreview = useCallback(async (
     operation: Extract<TelegramMiniAppBulkWatchlistOperation, { kind: "preview-bulk-watchlist" }>,
   ): Promise<TelegramMiniAppBulkWatchlistResponse | null> => performSignedRead(
     operation,
     () => postMiniAppBulkWatchlistPreview(MUTATE_ENDPOINT, { initData, operation }),
-    "Bulk watchlist preview ready.",
   ), [initData, performSignedRead]);
 
-  const clearUndoToast = useCallback(() => {
-    if (undoTimerRef.current) {
-      clearTimeout(undoTimerRef.current);
-      undoTimerRef.current = null;
+  const applyBulkWatchlist = useCallback(async (addStablecoinIds: string[], removeStablecoinIds: string[]): Promise<boolean> => {
+    const selection = { addStablecoinIds, removeStablecoinIds };
+    if (authExpired || staleAuth) {
+      // Same visible-intent path as performMutation; the preview read would fail too.
+      setStaleAuth({ intent: staleAuthIntent({ kind: "preview-bulk-watchlist", ...selection }, state) });
+      setAnnouncement("Change not saved. Reopen the Mini App to edit.");
+      webApp?.HapticFeedback?.notificationOccurred?.("warning");
+      return false;
     }
-    setPendingUndo(null);
-    undoTokenRef.current = undefined;
-  }, []);
+    const response = await performBulkWatchlistPreview({ kind: "preview-bulk-watchlist", ...selection });
+    if (response?.result.kind !== "bulk-watchlist-preview") return false;
+    const preview = response.result;
+    const next = await performMutation({
+      kind: "confirm-bulk-watchlist",
+      ...selection,
+      expectedPreferenceGeneration: preview.expectedPreferenceGeneration,
+      previewFingerprint: preview.previewFingerprint,
+    });
+    if (!next) return false;
+    showNotice("success", mutationSuccessAnnouncement({
+      kind: "confirm-bulk-watchlist",
+      ...selection,
+      expectedPreferenceGeneration: preview.expectedPreferenceGeneration,
+      previewFingerprint: preview.previewFingerprint,
+    }, next.state), { kind: "undo-bulk-watchlist", ...preview.undo });
+    return true;
+  }, [authExpired, performBulkWatchlistPreview, performMutation, showNotice, staleAuth, state, webApp]);
 
-  const remove = useCallback((coin: SubscribedCoin) => {
+  const remove = useCallback((coin: SubscribedCoin) => new Promise<boolean>((resolve) => {
     const fire = () => void (async () => {
       const next = await performMutation({ kind: "remove-coin", stablecoinId: coin.stablecoinId });
-      if (!next) return;
-      clearUndoToast();
-      if (!next.undo) return;
-      undoTokenRef.current = next.undo;
-      setPendingUndo(coin);
-      undoTimerRef.current = setTimeout(() => {
-        setPendingUndo(null);
-        undoTokenRef.current = undefined;
-        undoTimerRef.current = null;
-      }, UNDO_WINDOW_MS);
+      if (!next) {
+        resolve(false);
+        return;
+      }
+      showNotice("success", `${coin.symbol} removed.`, next.undo ? { kind: "undo-bulk-watchlist", ...next.undo } : undefined);
+      resolve(true);
     })();
-    confirmThenFire(showConfirm, `Remove ${coin.symbol} from your watchlist?`, fire);
-  }, [clearUndoToast, performMutation, showConfirm]);
+    confirmThenFire(showConfirm, `Remove ${coin.symbol} from your coins?`, fire, () => resolve(false));
+  }), [performMutation, showConfirm, showNotice]);
 
-  const undoRemove = useCallback(() => {
-    const captured = undoTokenRef.current;
-    if (!captured) return;
-    clearUndoToast();
-    void performMutation({ kind: "undo-bulk-watchlist", ...captured });
-  }, [clearUndoToast, performMutation]);
+  const undo = useCallback(() => {
+    const captured = undoOperationRef.current;
+    // Keep the undo armed while another save is in flight; the button is disabled meanwhile.
+    if (!captured || requestInFlightRef.current) return;
+    // Success or failure replaces the notice (and its undo) with a visible result.
+    void performMutation(captured);
+  }, [performMutation]);
 
-  const unfollowPreset = useCallback((preset: FollowedPreset) => {
-    // Presets aren't joined to subscribed coins in the current state payload, so we
-    // always show the confirm sheet when the Telegram bridge exposes one (T-48).
-    confirmThenFire(showConfirm, `Unfollow ${preset.label}? Direct coin settings and overlapping presets will stay unchanged.`, () => {
-      void performMutation({ kind: "unfollow-preset", presetId: preset.id });
+  const unfollowPreset = useCallback((preset: FollowedPreset) => new Promise<boolean>((resolve) => {
+    // Group membership is dynamic, so always confirm when the bridge exposes a native sheet (T-48).
+    confirmThenFire(showConfirm, `Unfollow ${presetCopyLabel(preset.id, preset.label)}? Coins you added yourself stay as they are.`, () => {
+      void performMutation({ kind: "unfollow-preset", presetId: preset.id }).then((next) => resolve(next != null));
+    }, () => resolve(false));
+  }), [performMutation, showConfirm]);
+
+  const pause = useCallback(() => {
+    confirmThenFire(showConfirm, "Pause all alerts until you resume them?", () => {
+      void performMutation({ kind: "pause" });
     });
   }, [performMutation, showConfirm]);
 
   const unsubscribeAll = useCallback(() => {
-    // R3 fix: clear any pending undo before unsubscribing-all so the toast cannot
+    // R3 fix: clear any pending undo before unsubscribing-all so the snackbar cannot
     // re-add a coin to a now-empty subscriber row.
     const fire = () => {
-      clearUndoToast();
+      clearUndo();
       void performMutation({ kind: "unsubscribe-all" });
     };
-    confirmThenFire(showConfirm, "Unsubscribe from all alerts? This clears every coin, preset, and global toggle.", fire);
-  }, [clearUndoToast, performMutation, showConfirm]);
+    confirmThenFire(showConfirm, "Unsubscribe from all alerts? This clears every coin, preset, and All stablecoins setting.", fire);
+  }, [clearUndo, performMutation, showConfirm]);
 
   const forgetMe = useCallback(() => {
     // Destructive, irreversible op: keep the confirmed state visible until
     // the server accepts deletion, then switch to the terminal view.
     const fire = () => void performMutation({ kind: "forget-me" });
     confirmThenFire(showConfirm, "Delete all your Pharos alert data? This cannot be undone.", () => {
-      confirmThenFire(showConfirm, "Are you absolutely sure? Your subscriber row will be deleted.", fire);
+      confirmThenFire(showConfirm, "Are you absolutely sure? Your alerts and settings will be deleted.", fire);
     });
   }, [performMutation, showConfirm]);
 
@@ -478,31 +550,32 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     });
   }, [webApp]);
 
-  // Unmount cleanup for both timers owned by this hook.
+  // Unmount cleanup for the undo timer owned by this hook.
   useEffect(() => () => {
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
   }, []);
 
   return {
     isMutating,
     pendingOperation,
     mutationRetryAfterSec,
-    message,
+    notice,
     announcement,
     forgottenView,
-    pendingUndo,
     homeScreenStatus,
     staleAuth,
     mutate,
     performMutation,
     performBulkWatchlistPreview,
+    applyBulkWatchlist,
     remove,
-    undoRemove,
+    undo,
+    dismissNotice,
+    showError,
     addToHomeScreen,
     unfollowPreset,
+    pause,
     unsubscribeAll,
     forgetMe,
-    setMessage,
   };
 }

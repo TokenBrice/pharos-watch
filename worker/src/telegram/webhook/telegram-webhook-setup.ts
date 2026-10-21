@@ -56,14 +56,14 @@ Admins can turn on alerts here, e.g. /subscribe@${TELEGRAM_BOT_USERNAME} usd-top
 For your own alerts and quiet hours, message me privately.`;
 
 function manageAlertsButton(): InlineKeyboardButton {
-  return { text: MANAGE_ALERTS_LABEL, web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.watchlist) } };
+  return { text: MANAGE_ALERTS_LABEL, web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.home) } };
 }
 
 /** The new-user choices. Private chats only: groups cannot open the Mini App. */
 export function buildOnboardingKeyboard(options: { includeSample?: boolean } = {}): InlineKeyboardMarkup {
   const rows: InlineKeyboardButton[][] = [
     [{ text: FOLLOW_TOP_LABEL, callback_data: "setup:top25" }],
-    [{ text: "Choose my own coins", web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.watchlist) } }],
+    [{ text: "Choose my own coins", web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.setup) } }],
   ];
   if (options.includeSample !== false) rows.push([{ text: "Show me a sample alert", callback_data: "setup:sample" }]);
   return { inline_keyboard: rows };
