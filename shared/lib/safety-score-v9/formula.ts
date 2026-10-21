@@ -56,6 +56,7 @@ export interface V9StructuralCap {
 export interface V9AttributedScenarioCap extends V9StructuralCap {
   responsibility: "measured-adverse";
   pricedInPillar?: V9QualityPillar;
+  evidenceRefIds?: readonly string[];
 }
 
 export type V9NRReasonCode = V9ReasonCode;
@@ -518,6 +519,7 @@ export interface V9ReserveLossFacts {
   exposurePct: number;
   lossAbsorptionPct: number;
   failureDomainKey: string;
+  evidence?: V9StructuralSignal["evidence"];
 }
 
 export interface V9WindowedPegScoreFacts {
@@ -586,7 +588,7 @@ export function deriveV9ReserveLossSignal(
     reason: `${facts.exposurePct}% reserve exposure has ${facts.lossAbsorptionPct}% loss absorption, leaving ${roundTo(unabsorbedExposurePct, 4)}% unabsorbed.`,
     materialSharePct: roundTo(unabsorbedExposurePct, 4),
     failureDomainKeys: [facts.failureDomainKey],
-    evidence: [],
+    evidence: facts.evidence ?? [],
   };
 }
 
@@ -1202,6 +1204,7 @@ function scoreV9InputWithCaps(
                 : `scenario-pillar:${cap.pricedInPillar}:${cap.kind}`,
             message: cap.reason,
             responsibility: cap.responsibility,
+            ...(cap.evidenceRefIds?.length ? { evidenceRefIds: cap.evidenceRefIds } : {}),
           }]
         : [],
     ),

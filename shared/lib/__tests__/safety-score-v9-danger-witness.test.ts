@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { V9StructuralSignal } from "../../types/safety-score-v9";
-import { scoreV9Input } from "../safety-score-v9/formula";
+import { deriveV9ReserveLossSignal, scoreV9Input } from "../safety-score-v9/formula";
 import { loadV9MethodologyPolicy, V9_CANDIDATE_POLICY_V1 as policy } from "../safety-score-v9/policy";
 import { propagateV9SerialParentAdverseAttribution, scoreV9EvaluatedAsset } from "../safety-score-v9/score";
 import {
@@ -121,6 +121,19 @@ describe("source-bound F danger witnesses", () => {
     } }), policy);
     expect(trace.finalGrade).toBe("F");
     expect(trace.adverseAttribution[0]!.measuredPegWitness).toBe(true);
+  });
+
+  it.each([false, true])("preserves reserve-loss source evidence without manufacturing it (sourced=%s)", (sourced) => {
+    const evidence = sourced ? [primaryEvidence] : [];
+    const signal = deriveV9ReserveLossSignal({
+      exposurePct: 100, lossAbsorptionPct: 0, failureDomainKey: "reserve:measured-loss", evidence,
+    }, policy);
+    expect(signal.evidence).toBe(evidence);
+    const trace = scoreV9Input(scoringInput({ structuralSignals: [signal] }), policy);
+    expect(trace.finalGrade).toBe(sourced ? "F" : "NR");
+    expect(trace.adverseAttribution).toContainEqual(expect.objectContaining({
+      path: "structural:unsafe-backing:critical",
+    }));
   });
 
   it("projects underlying control source identities and original clocks without borrowing U process proof", () => {

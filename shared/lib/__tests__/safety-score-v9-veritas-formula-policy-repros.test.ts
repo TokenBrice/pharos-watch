@@ -151,15 +151,25 @@ function scoringInput(
     }]);
   }
 
+  function scoreBoundedInput(pillars: V9ScoringInput["pillars"], evidenceLevel: V9EvidenceLevel = "strong") {
+    const input = boundedInput(pillars, evidenceLevel);
+    // Model the same admitted D reason as production's exact reason provenance,
+    // rather than expecting its bare measured-adverse label to authorize F.
+    return scoreV9Input(input, V9_CANDIDATE_POLICY_V1, [], 0, false, [], [], [], [], [], [{
+      pillar: "exit", fact: input.unresolved[0]!,
+      evidenceRefIds: ["fixture:veritas:measured-exit-exhaustion"],
+    }]);
+  }
+
   describe("VERITAS bounded-state invariants", () => {
     it("does not price raw evidence levels a second time across pillar combinations", () => {
       for (let backing = 0; backing <= 100; backing += 5) {
         for (let exit = 0; exit <= 100; exit += 5) {
           for (let control = 0; control <= 100; control += 5) {
             const pillars = { backing, exit, control };
-            const limited = scoreV9Input(boundedInput(pillars, "limited"), V9_CANDIDATE_POLICY_V1);
-            const adequate = scoreV9Input(boundedInput(pillars, "adequate"), V9_CANDIDATE_POLICY_V1);
-            const strong = scoreV9Input(boundedInput(pillars), V9_CANDIDATE_POLICY_V1);
+            const limited = scoreBoundedInput(pillars, "limited");
+            const adequate = scoreBoundedInput(pillars, "adequate");
+            const strong = scoreBoundedInput(pillars);
 
             expect(limited.finalScore).not.toBeNull();
             expect(adequate.finalScore).not.toBeNull();

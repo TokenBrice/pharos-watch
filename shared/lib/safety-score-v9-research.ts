@@ -35,6 +35,8 @@ export {
 
 export interface V9ResearchScenarioCap extends V9StructuralCap {
   pricedInPillar?: V9QualityPillar;
+  /** Explicit hypothetical source assumptions; never synthesized by the adapter. */
+  evidenceRefIds?: readonly string[];
 }
 
 const V9_QUALITY_PILLARS = ["backing", "exit", "control"] as const satisfies readonly V9QualityPillar[];

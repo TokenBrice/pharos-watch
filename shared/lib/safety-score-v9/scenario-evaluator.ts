@@ -16,6 +16,8 @@ export interface V9ScenarioStructuralCap {
   readonly limit: number;
   readonly reason: string;
   readonly pricedInPillar?: V9QualityPillar;
+  /** Source-bound assumed fact in this hypothetical corpus, not live primary evidence. */
+  readonly evidenceRefIds?: readonly string[];
 }
 
 /** Informational research context that never resolves to a numeric cap. */

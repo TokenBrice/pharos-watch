@@ -248,6 +248,7 @@ export const GOLDEN_SCENARIOS: Scenario[] = [
         limit: 39,
         reason:
           "Dominant speculative and illiquid credit exposure creates a critical solvency failure path that liquidity cannot offset.",
+        evidenceRefIds: ["golden-scenario:speculative-private-credit:reserve:critical-loss-path"],
       },
     ],
     expected: {
@@ -320,6 +321,7 @@ export const GOLDEN_SCENARIOS: Scenario[] = [
         kind: "algorithmic-reflexivity",
         limit: 39,
         reason: "Endogenous reflexive backing is an existential failure mode and cannot receive a passing grade.",
+        evidenceRefIds: ["golden-scenario:algorithmic-reflexive:backing:endogenous-loss-path"],
       },
     ],
     expected: {
@@ -628,6 +630,7 @@ export const GOLDEN_SCENARIOS: Scenario[] = [
         kind: "compromised-mint-authority",
         limit: 24,
         reason: "An active uncapped mint compromise is an immediate existential solvency failure.",
+        evidenceRefIds: ["golden-scenario:compromised-mint-authority:control:active-compromise"],
       },
     ],
     expected: {
@@ -720,6 +723,7 @@ export const GOLDEN_SCENARIOS: Scenario[] = [
         kind: "signal:centralized-mint:critical",
         limit: 39,
         reason: "Economically effective minting is unbounded or compromised.",
+        evidenceRefIds: ["golden-scenario:unbounded-adverse-mint-anchor:control:unbounded-authority"],
       },
     ],
     expected: {

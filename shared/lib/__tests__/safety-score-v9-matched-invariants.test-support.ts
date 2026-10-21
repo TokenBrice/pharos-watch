@@ -2,6 +2,10 @@ import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { V9EvidenceLevel, V9StructuralSignal, V9UnresolvedFact } from "@shared/types/safety-score-v9";
 
 const OBSERVED_AT = 1_780_000_000;
+const RESERVE_LOSS_EVIDENCE = [{
+  sourceId: "fixture:matched-reserve-loss-measurement",
+  observedAt: new Date(OBSERVED_AT * 1_000).toISOString(),
+}];
 
 function dexRoute(overrides: Partial<ExitRouteObservation> = {}): ExitRouteObservation {
   return {
@@ -79,8 +83,8 @@ export const MATCHED_V9_INVARIANTS = [
     id: "reserve-loss-materiality",
     kind: "reserve-loss",
     rationale: "Greater unabsorbed loss-bearing reserve exposure cannot score better.",
-    before: { exposurePct: 15, lossAbsorptionPct: 50, failureDomainKey: "reserve:matched" },
-    after: { exposurePct: 35, lossAbsorptionPct: 10, failureDomainKey: "reserve:matched" },
+    before: { exposurePct: 15, lossAbsorptionPct: 50, failureDomainKey: "reserve:matched", evidence: RESERVE_LOSS_EVIDENCE },
+    after: { exposurePct: 35, lossAbsorptionPct: 10, failureDomainKey: "reserve:matched", evidence: RESERVE_LOSS_EVIDENCE },
   },
   {
     id: "bridge-materiality",

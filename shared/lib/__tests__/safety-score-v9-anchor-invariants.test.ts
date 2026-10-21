@@ -72,7 +72,7 @@ function signal(kind: V9StructuralSignal["kind"], severity: V9StructuralSignal["
     responsibility: "measured-adverse",
     ...(pricedInPillar === undefined ? {} : { pricedInPillar }),
     failureDomainKeys: [`fixture:${kind}`],
-    evidence: [],
+    evidence: [{ sourceId: `fixture:reviewed-${kind}`, observedAt: "2026-07-16T18:19:02Z" }],
   };
 }
 

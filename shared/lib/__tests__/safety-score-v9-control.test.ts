@@ -942,7 +942,7 @@ describe("Safety Score v9 economic control", () => {
               responsibility: "measured-adverse",
               reason: "Minting is economically unbounded but supply is reconciled against reserves.",
               failureDomainKeys: ["mint-control:fixture"],
-              evidence: [],
+              evidence: [{ sourceId: "fixture:reviewed-mint-authority", observedAt: "2026-01-01T00:00:00Z" }],
             },
           ],
           unresolved: [],
