@@ -524,7 +524,7 @@ async function fetchLiquityV2MechanismMetrics(
     for (const binding of config.branches) {
       const balance = balancesByName.get(binding.name);
       const debt = debtsByName.get(binding.name);
-      if (!balance || !debt || debt.debtRaw == null) {
+      if (!balance || balance.balanceRaw == null || !debt || debt.debtRaw == null) {
         throw new Error(`missing reserve/debt state for ${binding.name}`);
       }
       const { priceRaw, redeemable } = branchPrices.get(binding.name)!;
@@ -534,7 +534,7 @@ async function fetchLiquityV2MechanismMetrics(
       );
       const priceUsd = decimalNumberFromBigInt(priceRaw, 18);
       const collateralUsd = valueUsdFromBigIntPrice(
-        balance.balanceRaw ?? 0n,
+        balance.balanceRaw,
         balance.balanceDecimals ?? balance.branch.token.decimals,
         priceUsd,
       );
@@ -552,7 +552,7 @@ async function fetchLiquityV2MechanismMetrics(
         name: binding.name,
         troveManagerAddress: binding.troveManagerAddress,
         stabilityPoolAddress: binding.stabilityPoolAddress,
-        collateralRaw: (balance.balanceRaw ?? 0n).toString(),
+        collateralRaw: balance.balanceRaw.toString(),
         debtRaw: debt.debtRaw.toString(),
         stabilityPoolDepositsRaw: stabilityPoolDepositsRaw.toString(),
         priceRaw: priceRaw.toString(),

@@ -563,6 +563,46 @@ describe("fetchLiquityV2BranchReserves BOLD mechanism metrics", () => {
     expect(mechanismCalls.every((call) => call.viaMulticall)).toBe(true);
   });
 
+  it.each([null, 0n])("keeps unavailable branch collateral distinct from observed zero (%s)", async (balanceRaw) => {
+    const weth = boldParams.branches.find((branch) => branch.name === "WETH")!;
+    const { result } = await runAdapter("liquity-v2-branches", "bold-liquity", {
+      network: {
+        block: BLOCK,
+        rpc: {
+          ...boldBranchRpc({
+            balances: new Map(boldParams.branches.map((branch) => [branch.name, 1_000n * WAD])),
+            debts: new Map(boldParams.branches.map((branch) => [branch.name, 1_000_000n * WAD])),
+            feeRaw: 5n * 10n ** 15n,
+          }),
+          ...boldMechanismRpc({
+            totalSupply: 3_000_000n * WAD,
+            prices: new Map(boldParams.branches.map((branch) => [branch.name, 2_000n * WAD])),
+            redeemable: new Map(),
+            deposits: new Map(boldParams.branches.map((branch) => [branch.name, 500_000n * WAD])),
+          }),
+          [`${weth.token.address}:balanceOf(address)`]: balanceRaw,
+        },
+        json: {
+          [llamaUrl(boldParams.branches.filter((branch) => branch.name !== "WETH").map((branch) => branch.token))]: BOLD_FULL_QUOTES,
+        },
+      },
+      nowSec: NOW,
+    });
+    if (balanceRaw == null) {
+      expect(result.metadata?.totalReserveUsd).toBeUndefined();
+      expect(result.metadata?.collateralizationRatio).toBeUndefined();
+      expect(result.metadata?.liquidationCapacityRatio).toBeUndefined();
+      expect(result.metadata?.details).not.toHaveProperty("mechanismMetrics");
+      expect(result.metadata).toMatchObject({ valuationComplete: false, unknownExposurePct: 100 });
+      expectWarnings(result, ["branch-reserve-book-partial", "liquity-v2-mechanism-metrics-unavailable"]);
+    } else {
+      expect(result.metadata?.totalReserveUsd).toBe(4_000_000);
+      expect(result.metadata?.collateralizationRatio).toBeCloseTo(4 / 3, 6);
+      expectWarnings(result, []);
+    }
+    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 3_000_000, routeStatus: "open" });
+  });
+
   it("withholds reserves and leaves redemption unrated when fallback receipt identity and redeemability are unreadable", async () => {
     const { result } = await runAdapter("liquity-v2-branches", "bold-liquity", {
       network: boldFallbackNetwork(new Map(boldParams.branches.map((branch) => [branch.name, 1_000_000n * WAD as bigint]))),

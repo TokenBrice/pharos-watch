@@ -16,8 +16,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-10",
-    "reviewer": "Sol curation campaign 2026-10-11 (L57FUSD)",
+    "reviewedAt": "2026-10-21",
+    "reviewer": "Pharos reserve-feed source review 2026-10-21",
     "confidence": "verified",
     "sources": [
       {
@@ -25,13 +25,13 @@
         "url": "https://www.supercoin.co.za/terms-of-service"
       },
       {
-        "label": "Current issuer archive August snapshot AUP PDF, retrieved 2026-10-10T23:32:30Z; period remains August 31",
-        "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ac7affed6a421dc6a08490d_ZARsc%20Proof%20of%20Reserves%20Report%20(Agreed-Upon%20Procedures)%20-%20Aug%20Snapshot%202026-08-31%201400%20UTC.pdf"
+        "label": "Official September 30, 2026 14:00 UTC snapshot AUP report, signed October 21; no assurance opinion",
+        "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ad8adcc2dde2a518e28202b_6ad8acbed517875aae5c68c9_ZARsc%2520Proof%2520of%2520Reserves%2520Report%2520(Agreed-Upon%2520Procedures)%2520-%2520Sept%2520Snapshot%25202026-09-30%25201400%2520UTC.pdf"
       }
     ],
-    "rationale": "August 31 book only: Moore obtained directly from Absa a current-account statement showing ZAR 8,412,465.96 in Super Money SA's name. Issued supply is 8,177,042, with 467,883.071866 designated non-circulating by management. Management allocates ZAR 467,883.07 of reserves to that treasury balance, leaving ZAR 7,944,582.89 against 7,709,158.928134 circulation. Bank-level segregation of that allocation was not independently established. The engagement expresses no assurance opinion.",
+    "rationale": "September 30, 2026 14:00 UTC book only: Moore obtained directly from Absa a current-account statement showing ZAR 8,402,400.83 in Super Money SA's name. Issued supply is 8,177,042, with 1,471,220.015722 designated non-circulating by management across Internal Treasury, DeFi Vault and VALR Corporate Account. Management allocates ZAR 1,471,220.02 of reserves to those balances, leaving ZAR 6,931,180.81 against 6,705,821.984278 circulation. The reported 103.36% coverage is scoped to that management-defined circulation, not current whole-token liabilities. Bank-level segregation of the allocation was not independently established. The ISRS 4400 (Revised) engagement expresses no assurance opinion.",
     "compositionBasis": "Retrieved independent report; historical snapshot and scope retained",
-    "compositionAsOf": "2026-08-31",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
     "knownUnknownExposure": "No verified trust, bankruptcy priority, or bank-level segregation of issuer-designated non-circulating reserve amounts. Composition is historical, not a live reserve claim.",
     "knownUnknownExposurePct": 0,

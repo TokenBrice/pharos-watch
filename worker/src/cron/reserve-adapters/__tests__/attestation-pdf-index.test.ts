@@ -310,8 +310,8 @@ describe("adaptAttestationPdfIndex", () => {
     expect(validation.warnings.some((warning) => warning.code === "stale-redemption-source-timestamp")).toBe(false);
   });
 
-  it.each([usdu, zarsc])("keeps $id's reviewed reserve clock without fabricated redemption", (coin) => {
-    const config = coin.liveReservesConfig as LiveReservesConfig;
+  it("keeps USDU's reviewed reserve clock without fabricated redemption", () => {
+    const config = usdu.liveReservesConfig as LiveReservesConfig;
     const params = parseLiveReserveAdapterParams("attestation-pdf-index", config.params);
     const report = params.reviewedReport!;
     const result = adaptAttestationPdfIndex(`<a href="${report.url}">USDU Examination Attestation report August 2026</a>`, params);
@@ -323,6 +323,24 @@ describe("adaptAttestationPdfIndex", () => {
     const validation = expectValidAdapterOutput("attestation-pdf-index", result, { now: Date.UTC(2026, 9, 8) / 1000 });
     expect(validation.warnings).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
     expect(validation.warnings.some((warning) => warning.code === "stale-redemption-source-timestamp")).toBe(false);
+  });
+
+  it("binds Supercoin's double-encoded September report without using its October signing date", () => {
+    const params = parseLiveReserveAdapterParams("attestation-pdf-index", zarsc.liveReservesConfig.params);
+    const url = "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ad8adcc2dde2a518e28202b_6ad8acbed517875aae5c68c9_ZARsc%2520Proof%2520of%2520Reserves%2520Report%2520(Agreed-Upon%2520Procedures)%2520-%2520Sept%2520Snapshot%25202026-09-30%25201400%2520UTC.pdf";
+    const result = adaptAttestationPdfIndex(`<a href="${url}">Sept</a>`, params);
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: Date.UTC(2026, 8, 30) / 1000,
+      reportDate: "2026-09-30",
+      reportBalanceDate: "2026-09-30",
+      reportPdfUrl: url,
+      freshnessMode: "verified",
+    });
+    expect(result.slices).toEqual(params.slices);
+    expect(result.metadata).not.toHaveProperty("redemption");
+    expect(expectValidAdapterOutput("attestation-pdf-index", result, {
+      now: Date.UTC(2026, 9, 21) / 1000,
+    }).warnings).toEqual([]);
   });
 
   it("uses ZARP's reviewed September balances rather than the October report date", () => {

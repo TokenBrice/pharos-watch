@@ -11,11 +11,11 @@
       "bucket": "reserves_split",
       "riskMap": {
         "Binance": "high",
-        "Bnb_smartchain": "high"
+        "BNB Smart Chain": "high"
       },
       "sourceKeyMap": {
         "Binance": "accountable:unitas:xgld:binance",
-        "Bnb_smartchain": "accountable:unitas:xgld:bnb-smartchain"
+        "BNB Smart Chain": "accountable:unitas:xgld:bnb-smartchain"
       }
     }
   },

@@ -43,20 +43,43 @@ export const FDUSD_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
       /(?:ISAE[-_ ]?3000|Attestation[ _]+Report[ _]+on[ _]+Reserves[ _]+Account)/i.test(decodedHref);
   },
   reportDateFromCandidate: fdusdReportDate,
+  prepareIndexHtml: prepareFdusdIndexHtml,
 };
 
-function fdusdReportDate(href: string, _text: string): string | null {
-  // The reviewed Webflow convention puts the reporting month in the CDN
-  // basename. Ignore surrounding link text so unrelated page dates cannot
-  // advance or disarm the newer-report fence.
+async function prepareFdusdIndexHtml(html: string): Promise<string> {
+  // Bind only the date cell immediately beside this row's download anchor.
+  // A page heading or a neighboring report cannot date an undated candidate.
+  return html.replace(
+    /(<div\b[^>]*\bclass=["'][^"']*\btransparency-report_item\b[^"']*["'][^>]*>\s*<div\b[^>]*>)([A-Za-z]+)\s+((?:19|20)\d{2})(<\/div>\s*<a\b[^>]*>)/gi,
+    (row, before: string, monthLabel: string, yearLabel: string, after: string) => {
+      const month = monthNumberFromLabel(monthLabel.slice(0, 3));
+      const year = Number(yearLabel);
+      const date = month ? formatValidIsoDate(year, month, lastDayOfMonth(year, month)!, 2000) : null;
+      return date ? `${before}${monthLabel} ${yearLabel}${after}FDUSD report period:${date} ` : row;
+    },
+  );
+}
+
+function fdusdReportDate(href: string, text: string): string | null {
+  // Keep explicit filename dates authoritative. The issuer's yearless filename
+  // convention additionally requires its matching same-row month/year cell.
   const fileName = decodeURIComponent(new URL(href).pathname.split("/").pop() ?? "");
   const match = fileName.match(
     /\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[_\s]+((?:19|20)\d{2})\b/i,
   );
-  if (!match) return null;
-  const month = monthNumberFromLabel(match[1].slice(0, 3));
-  const year = Number(match[2]);
-  if (!month) return null;
-  return formatValidIsoDate(year, month, lastDayOfMonth(year, month)!, 2000);
+  if (match) {
+    const month = monthNumberFromLabel(match[1].slice(0, 3));
+    const year = Number(match[2]);
+    return month ? formatValidIsoDate(year, month, lastDayOfMonth(year, month)!, 2000) : null;
+  }
+  const filenameMonth = fileName.match(
+    /(?:^|[_\s(])(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)(?:[_\s).]|$)/i,
+  );
+  const rowDate = text.match(/\bFDUSD report period:((?:19|20)\d{2})-(\d{2})-(\d{2})\b/);
+  if (!filenameMonth || !rowDate) return null;
+  const month = monthNumberFromLabel(filenameMonth[1].slice(0, 3));
+  const year = Number(rowDate[1]);
+  if (!month || month !== Number(rowDate[2]) || Number(rowDate[3]) !== lastDayOfMonth(year, month)) return null;
+  return formatValidIsoDate(year, month, Number(rowDate[3]), 2000);
 }
 

@@ -8,8 +8,8 @@
     "inputs": { "primary": { "kind": "http-html", "url": "https://www.supercoin.co.za/proof-of-reserves-reports" } },
     "params": {
       "reviewedReport": {
-        "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ac7affed6a421dc6a08490d_ZARsc%20Proof%20of%20Reserves%20Report%20(Agreed-Upon%20Procedures)%20-%20Aug%20Snapshot%202026-08-31%201400%20UTC.pdf",
-        "balanceDate": "2026-08-31"
+        "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ad8adcc2dde2a518e28202b_6ad8acbed517875aae5c68c9_ZARsc%2520Proof%2520of%2520Reserves%2520Report%2520(Agreed-Upon%2520Procedures)%2520-%2520Sept%2520Snapshot%25202026-09-30%25201400%2520UTC.pdf",
+        "balanceDate": "2026-09-30"
       },
       "slices": [{
         "name": "ZAR cash in Absa current account", "pct": 100, "risk": "low",
@@ -27,7 +27,7 @@
     "pegCurrency": "ZAR",
     "governance": "centralized"
   },
-  "collateral": "Rand cash in an Absa Bank current account in Super Money SA's name, independently supported in Moore's August 31, 2026 agreed-upon-procedures report.",
+  "collateral": "Rand cash in an Absa Bank current account in Super Money SA's name, supported by Moore's September 30, 2026 agreed-upon-procedures report, which expresses no assurance opinion.",
   "pegMechanism": "One ZAR per token is the issuer reference. Supported exchange sale/off-ramp is live without guaranteed price or liquidity; direct redemption within two business days is conditional on the future Supercoin App launch.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
@@ -68,7 +68,7 @@
     },
     {
       "label": "Reserve report",
-      "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ac7affed6a421dc6a08490d_ZARsc%20Proof%20of%20Reserves%20Report%20(Agreed-Upon%20Procedures)%20-%20Aug%20Snapshot%202026-08-31%201400%20UTC.pdf"
+      "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ad8adcc2dde2a518e28202b_6ad8acbed517875aae5c68c9_ZARsc%2520Proof%2520of%2520Reserves%2520Report%2520(Agreed-Upon%2520Procedures)%2520-%2520Sept%2520Snapshot%25202026-09-30%25201400%2520UTC.pdf"
     },
     {
       "label": "Monthly Moore agreed-upon-procedures report archive",
@@ -113,24 +113,24 @@
   ],
   "proofOfReserves": {
     "type": "agreed-upon-procedures",
-    "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ac7affed6a421dc6a08490d_ZARsc%20Proof%20of%20Reserves%20Report%20(Agreed-Upon%20Procedures)%20-%20Aug%20Snapshot%202026-08-31%201400%20UTC.pdf",
+    "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ad8adcc2dde2a518e28202b_6ad8acbed517875aae5c68c9_ZARsc%2520Proof%2520of%2520Reserves%2520Report%2520(Agreed-Upon%2520Procedures)%2520-%2520Sept%2520Snapshot%25202026-09-30%25201400%2520UTC.pdf",
     "provider": "Moore Blockchain and Digital Assets JHB (Pty) Ltd; ISRS 4400 (Revised) procedures expressly provide no assurance opinion",
     "attestorTier": "regional",
     "cadence": "monthly",
     "attestorJurisdiction": "South Africa",
     "latestReport": {
-      "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-16",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-21",
       "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
-      "reviewer": "Sol curation campaign 2026-10-11 (L57FUSD); current archive PDF retrieved 2026-10-10T23:32:30Z",
+      "reviewer": "Pharos reserve-feed source review 2026-10-21; official September snapshot AUP PDF",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Moore Blockchain and Digital Assets JHB (Pty) Ltd August 31 AUP report",
-          "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ac7affed6a421dc6a08490d_ZARsc%20Proof%20of%20Reserves%20Report%20(Agreed-Upon%20Procedures)%20-%20Aug%20Snapshot%202026-08-31%201400%20UTC.pdf"
+          "label": "Moore September 30 AUP report, signed October 21; no assurance opinion",
+          "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ad8adcc2dde2a518e28202b_6ad8acbed517875aae5c68c9_ZARsc%2520Proof%2520of%2520Reserves%2520Report%2520(Agreed-Upon%2520Procedures)%2520-%2520Sept%2520Snapshot%25202026-09-30%25201400%2520UTC.pdf"
         }
       ]
     }

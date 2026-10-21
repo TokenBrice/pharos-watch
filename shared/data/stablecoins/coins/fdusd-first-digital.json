@@ -7,7 +7,7 @@
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "U.S. Treasury bills, cash in custody accounts, and fixed deposits held in reserve accounts for FD121 (BVI) Limited, as reported on August 31, 2026. A related-party Hong Kong trust company manages the accounts; underlying financial institutions are not named.",
+  "collateral": "U.S. Treasury bills, cash in custody accounts, and fixed deposits held in reserve accounts for FD121 (BVI) Limited, as reported on September 30, 2026. A related-party Hong Kong trust company manages the accounts; underlying financial institutions are not named.",
   "pegMechanism": "Direct 1:1 redemption through FD121 (BVI) Limited; reserves custodied by First Digital Trust Limited",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
@@ -41,17 +41,18 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Hong Kong",
     "latestReport": {
-      "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-11",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-16",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "attestation",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Claude curation campaign 2026-09-21 (AssuranceFinish)",
+      "reviewer": "Pharos reserve-feed source review 2026-10-21; September AOGB ISAE 3000 report",
       "confidence": "verified",
       "sources": [
         {
-          "label": "AOGB FDUSD reserves attestation - August 2026",
-          "url": "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6aa8fb9c867332b394838288_Attestation%20Report%20on%20Reserves%20Account%20August%202026.pdf"
+          "label": "AOGB FDUSD reserves limited-assurance report - September 2026",
+          "url": "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6ad828758ca468da1c9db6e6_Attestation%20Report%20on%20Reserves%20Account%20Sept.pdf"
         }
       ]
     }

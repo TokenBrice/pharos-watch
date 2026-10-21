@@ -4,11 +4,11 @@ export const PROFILE: CompilerProfile = {
   product: "FDUSD",
   profile: "fdusd-v1",
   officialIndexUrl: "https://firstdigitallabs.webflow.io/transparency",
-  reportUrl: "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6aa8fb9c867332b394838288_Attestation%20Report%20on%20Reserves%20Account%20August%202026.pdf",
-  reportDate: "2026-08-31",
-  reportAsOf: "2026-08-31T21:00:00-04:00",
-  reportTimeZone: "Eastern Time (daylight saving, UTC-4; the report also prints 1 September 2026 at 9:00am HKT)",
-  reportIssuedAt: "2026-09-11T23:59:00+08:00",
+  reportUrl: "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6ad828758ca468da1c9db6e6_Attestation%20Report%20on%20Reserves%20Account%20Sept.pdf",
+  reportDate: "2026-09-30",
+  reportAsOf: "2026-09-30T21:00:00-04:00",
+  reportTimeZone: "Eastern Time (daylight saving, UTC-4; the report also prints 1 October 2026 at 9:00am HKT)",
+  reportIssuedAt: "2026-10-16T23:59:00+08:00",
   attestor: "AOGB CPA Limited",
   engagement: "Independent limited assurance engagement under ISAE 3000 (Revised) issued by the IAASB",
   conclusion: "nothing-came-to-attention",
@@ -16,7 +16,7 @@ export const PROFILE: CompilerProfile = {
   assetRows: [
     {
       code: "treasury-bills",
-      label: "United States Treasury Bills (nine maturities, 1-Sep-26 through 20-Oct-26)",
+      label: "United States Treasury Bills (nine maturities, 13-Oct-26 through 17-Nov-26)",
       // eslint-disable-next-line security/detect-unsafe-regex -- anchored pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
       pattern: /\(A\) Sub-total:\s+([\d,]+(?:\.\d{2})?)/,
     },
@@ -51,8 +51,8 @@ export const PROFILE: CompilerProfile = {
     { label: "AOGB CPA Limited", pattern: /AOGB CPA Limited/ },
     { label: "ISAE 3000 (Revised)", pattern: /International Standard on Assurance Engagements 3000 \(Revised\)/ },
     { label: "limited assurance", pattern: /limited assurance/i },
-    { label: "report date and time", pattern: /31 August 2026 at 9:00pm Eastern Time/ },
-    { label: "HKT cross-reference", pattern: /1 September 2026 at 9:00am Hong Kong Time/ },
+    { label: "report date and time", pattern: /30 September 2026 at 9:00pm Eastern Time/ },
+    { label: "HKT cross-reference", pattern: /1 October 2026 at 9:00am Hong Kong Time/ },
     { label: "independent limited assurance conclusion", pattern: /independent limited assurance conclusion/ },
     { label: "favorable conclusion", pattern: /nothing has come to our attention[\s\S]*?not prepared, in all material respects/ },
   ],
@@ -61,11 +61,11 @@ export const PROFILE: CompilerProfile = {
   ],
   reportedTotals: [
     // eslint-disable-next-line security/detect-unsafe-regex -- anchored pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
-    { label: "FDUSD reserve accounts total", expected: "336969677.04", pattern: /\(A\) \+ \(B\) \+ \(C\) Total assets held in Reserve Accounts:\s+US\$?([\d,]+(?:\.\d{2})?)/ },
+    { label: "FDUSD reserve accounts total", expected: "326311744.04", pattern: /\(A\) \+ \(B\) \+ \(C\) Total assets held in Reserve Accounts:\s+US\$?([\d,]+(?:\.\d{2})?)/ },
     // eslint-disable-next-line security/detect-unsafe-regex -- anchored pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
-    { label: "FDUSD supply total", expected: "335636418.35", pattern: /issued and in circulation[\s\S]{0,300}?([\d,]+(?:\.\d{2})?) FDUSD/ },
+    { label: "FDUSD supply total", expected: "325042596.91", pattern: /issued and in circulation[\s\S]{0,300}?([\d,]+(?:\.\d{2})?) FDUSD/ },
   ],
-  reportedAssetTotal: "336969677.04",
-  computedAssetTotal: "336969677.04",
-  reportedLiabilityTotal: "335636418.35",
+  reportedAssetTotal: "326311744.04",
+  computedAssetTotal: "326311744.04",
+  reportedLiabilityTotal: "325042596.91",
 };
