@@ -156,7 +156,7 @@ describe("handleTelegramPulse", () => {
         rows: [{ stablecoin_id: "usdc-circle", subscribers: 12 }],
       },
       {
-        match: "FROM telegram_pending_alerts",
+        match: "FROM telegram_deliveries",
         first: { pending_count: 0 },
         rows: [],
       },
@@ -177,7 +177,7 @@ describe("handleTelegramPulse", () => {
       { match: "FROM telegram_subscribers s", first: pulseAggregate(), rows: [] },
       { match: "FROM telegram_preset_subscriptions", rows: [] },
       { match: "FROM telegram_subscriptions", rows: [] },
-      { match: "FROM telegram_pending_alerts", first: { pending_count: 0 }, rows: [] },
+      { match: "FROM telegram_deliveries", first: { pending_count: 0 }, rows: [] },
     ]);
 
     const body = await (await handleTelegramPulse(db)).json() as Record<string, unknown>;
@@ -206,7 +206,7 @@ describe("handleTelegramPulse", () => {
         rows: [],
       },
       {
-        match: "FROM telegram_pending_alerts",
+        match: "FROM telegram_deliveries",
         throwError: new Error("pending table unavailable"),
         rows: [],
       },
@@ -268,7 +268,7 @@ describe("handleTelegramPulse", () => {
       },
       { match: "FROM telegram_preset_subscriptions", rows: [] },
       { match: "FROM telegram_subscriptions", rows: [] },
-      { match: "FROM telegram_pending_alerts", first: { pending_count: 0 }, rows: [] },
+      { match: "FROM telegram_deliveries", first: { pending_count: 0 }, rows: [] },
     ]);
 
     const pulse = await publishTelegramPulseSnapshot(db, nowSec);
@@ -295,7 +295,7 @@ describe("publishTelegramPulseSnapshot", () => {
       });
       vi.spyOn(statement, "get").mockImplementation((...values) => {
         observed.sql.push(sql);
-        if (observed.pendingUnavailable && sql.includes("FROM telegram_pending_alerts")) {
+        if (observed.pendingUnavailable && sql.includes("FROM telegram_deliveries")) {
           throw new Error("pending table unavailable");
         }
         return Reflect.apply(get, statement, values);
@@ -412,7 +412,7 @@ describe("publishTelegramPulseSnapshot", () => {
     expect(recovered.pulse.quality).toEqual({ status: "complete", unavailableFields: [] });
     expect(recovered.status).toBe("ok");
     expectHeavyReads(rebuiltReads);
-    expect(reads.sql.some((sql) => sql.includes("FROM telegram_pending_alerts"))).toBe(true);
+    expect(reads.sql.some((sql) => sql.includes("FROM telegram_deliveries"))).toBe(true);
     expect(reads.sql.some((sql) => sql.includes("GROUP BY stablecoin_id"))).toBe(false);
     expect(reads.sql.some((sql) => sql.includes("WHERE day >= ? AND day < ?"))).toBe(false);
     expect(reads.sql.some((sql) => sql.includes("FROM telegram_usage_daily"))).toBe(false);
@@ -492,7 +492,7 @@ describe("publishTelegramPulseSnapshotWithOutcome", () => {
         rows: [],
       },
       {
-        match: "FROM telegram_pending_alerts",
+        match: "FROM telegram_deliveries",
         first: { pending_count: 0 },
         rows: [],
       },

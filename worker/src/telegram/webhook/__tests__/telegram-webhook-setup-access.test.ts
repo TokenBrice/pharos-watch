@@ -27,7 +27,6 @@ describe("handleTelegramWebhook", () => {
         db, makeWebhookRequest(123, `/start ${payload}`, "test-secret", { updateId: 2 }), "test-secret", "bot-token",
       );
       expect(response.status).toBe(200);
-      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_disambiguation").get()).toEqual({ count: 0 });
       if (confirms) {
         expect(latestSendMessageBody().text).toContain("Confirm");
         expect(JSON.stringify(latestSendMessageBody().reply_markup)).toContain("bulk:sa:");

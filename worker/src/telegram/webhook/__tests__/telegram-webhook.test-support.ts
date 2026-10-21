@@ -211,7 +211,6 @@ const TELEGRAM_WEBHOOK_HARNESS_FALLBACKS: MockTableConfig[] = [
   { match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [] },
   // Store enable batches include the idempotent first-follow claim.
   { match: "INSERT OR IGNORE INTO telegram_subscribers", rows: [] },
-  { match: "INSERT INTO telegram_adoption_daily", rows: [] },
   { match: "preference_generation = preference_generation + 1", rows: [] },
 ];
 

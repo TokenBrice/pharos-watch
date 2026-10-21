@@ -14,11 +14,6 @@ export interface TelegramCreds {
   chatId: string;
 }
 
-interface PendingAlertScopeItem {
-  stablecoinId: string;
-  family: import("@shared/types/status").TelegramAlertType;
-}
-
 /** Telegram Bot API inline keyboard button shape. */
 export interface InlineKeyboardButton {
   text: string;
@@ -283,14 +278,6 @@ export interface BatchMessage {
    * card for the "View on Pharos" link on the first chunk of single-coin alerts.
    */
   linkPreviewOptions?: LinkPreviewOptions;
-  /** Immutable source identity for queued risk-alert provenance. */
-  sourceEventId?: string;
-  /** Chat preference generation observed while this alert target was planned. */
-  preferenceGeneration?: number;
-  /** Exact coin/family pairs represented by this immutable rendered target. */
-  alertScope?: PendingAlertScopeItem[];
-  /** Safety model/policy/build identity bound to any safety items in this target. */
-  safetyScoreIdentity?: import("@shared/types/safety-score-publication").SafetyScorePublicationIdentity;
 }
 
 export interface BatchResult extends SendToChatResult {
@@ -301,9 +288,7 @@ export interface BatchResult extends SendToChatResult {
     | "global_rate_limit"
     | "aborted"
     | "soft_deadline"
-    | "pre_send"
-    | "transport_control"
-    | "delivery_mode_pause";
+    | "pre_send";
 }
 
 export type PreSendBatchResult = Omit<BatchResult, "chatId" | "attempted">;
@@ -355,10 +340,7 @@ function buildPredecessorFailureResult(chatId: string, predecessor: BatchResult)
     ...predecessor,
     chatId,
     attempted: false,
-    skippedReason:
-      predecessor.skippedReason === "transport_control" || predecessor.skippedReason === "delivery_mode_pause"
-        ? predecessor.skippedReason
-        : "predecessor_failure",
+    skippedReason: "predecessor_failure",
   };
 }
 
@@ -445,25 +427,6 @@ export async function schedulePerChatBatches<T extends { chatId: string }>(
       results[entry.index] = waveResults[waveIndex];
     }
     await options.afterSendBatch?.(entries, waveResults);
-
-    const transportStop = waveResults.find(
-      (result) => result.attempted === false && result.skippedReason === "transport_control",
-    );
-    if (
-      transportStop &&
-      waveResults.every(
-        (result) => result.attempted === false && result.skippedReason === "transport_control",
-      )
-    ) {
-      const buildTransportStop = (item: T): BatchResult => ({
-        ...transportStop,
-        chatId: item.chatId,
-        attempted: false,
-      });
-      for (const queue of waveQueues) fillQueueTail(queue, buildTransportStop);
-      fillAllReady(buildTransportStop);
-      break;
-    }
 
     const globalRateLimitedResult = waveResults.find(
       (result) =>

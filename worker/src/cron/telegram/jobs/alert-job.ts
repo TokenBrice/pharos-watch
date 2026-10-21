@@ -168,7 +168,7 @@ async function buildAlertJobPage(
   }
 
   const { alertsByChat } = buildTelegramAlertsByChat({ events: payload.events, inputs });
-  const planned = planSubscriberQueue(alertsByChat, undefined, payload.events.safetyScoreIdentity);
+  const planned = planSubscriberQueue(alertsByChat);
   // Quiet hours are applied at send time; only non-escalations are silent here.
   const routed = formatPlannedSubscribers(planned, (entry) => !hasEscalation(entry.alerts));
   const routedByChat = new Map(routed.map((sub) => [sub.chatId, sub]));

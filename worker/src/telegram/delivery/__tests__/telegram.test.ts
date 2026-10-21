@@ -716,35 +716,6 @@ describe("schedulePerChatBatches", () => {
     ).toBe(true);
   });
 
-  it("stops every queue when the pre-send transport controller closes delivery", async () => {
-    const send = vi.fn();
-    const results = await schedulePerChatBatches([{ chatId: "a" }, { chatId: "a" }, { chatId: "b" }], 2, send, {
-      beforeSendBatch: async (entries) =>
-        new Map(
-          entries.map((entry) => [
-            entry.index,
-            {
-              ok: false,
-              blocked: false,
-              retryable: true,
-              permanentFailure: false,
-              statusCode: null,
-              errorClass: "timeout" as const,
-              delivery: "retryable_failure" as const,
-              retryAfterSec: null,
-              skippedReason: "transport_control" as const,
-            },
-          ]),
-        ),
-    });
-
-    expect(send).not.toHaveBeenCalled();
-    expect(results).toHaveLength(3);
-    expect(results.every((result) => result.attempted === false && result.skippedReason === "transport_control")).toBe(
-      true,
-    );
-  });
-
   it("defers untouched queues after a globally scoped rate limit", async () => {
     const results = await schedulePerChatBatches(
       [{ chatId: "a" }, { chatId: "b" }, { chatId: "c" }],

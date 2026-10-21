@@ -197,12 +197,8 @@ LEFT JOIN (
 ${TELEGRAM_PRESET_ROLLUP_SQL}
 ) preset ON preset.chat_id = s.chat_id`;
 
-const TELEGRAM_PENDING_DISAMBIGUATION_SQL =
-  "SELECT COUNT(*) AS pending_count FROM telegram_pending_disambiguation WHERE expires_at > ?";
-// Delivery v2 open rows plus whatever the legacy drain-only shim still holds.
-const TELEGRAM_PENDING_DELIVERIES_SQL = `SELECT
-  (SELECT COUNT(*) FROM telegram_deliveries WHERE state IN ('pending', 'retry'))
-  + (SELECT COUNT(*) FROM telegram_pending_alerts WHERE delivery_state = 'pending') AS pending_count`;
+const TELEGRAM_PENDING_DELIVERIES_SQL =
+  "SELECT COUNT(*) AS pending_count FROM telegram_deliveries WHERE state IN ('pending', 'retry')";
 const TELEGRAM_RETRY_ERROR_CLASSES_SQL = `SELECT error_class, COUNT(*) AS pending_count
   FROM telegram_deliveries
  WHERE state = 'retry'
@@ -237,10 +233,8 @@ async function loadTelegramBotAggregate(db: D1Database): Promise<TelegramBotAggr
 async function loadTelegramPendingCount(
   db: D1Database,
   sql: string,
-  bindValue?: number,
 ): Promise<TelegramBotPendingRow | null> {
-  const statement = bindValue == null ? db.prepare(sql) : db.prepare(sql).bind(bindValue);
-  return statement.first<TelegramBotPendingRow>();
+  return db.prepare(sql).first<TelegramBotPendingRow>();
 }
 
 async function loadTelegramRetryErrorClasses(db: D1Database): Promise<TelegramBotRetryErrorClassRow[] | null> {
@@ -286,7 +280,6 @@ async function loadPresetQueryFailureCount(db: D1Database): Promise<number> {
 export function mapTelegramBotStats(input: {
   now?: number;
   aggregate: TelegramBotAggregateRow | null;
-  pendingDisambiguations: TelegramBotPendingRow | null;
   pendingDeliveries: TelegramBotPendingRow | null;
   pendingCapacity?: TelegramPendingCapacitySnapshot | null;
   retryErrorClasses?: TelegramBotRetryErrorClassRow[] | null;
@@ -300,7 +293,6 @@ export function mapTelegramBotStats(input: {
 }): TelegramBotStats {
   const {
     aggregate,
-    pendingDisambiguations,
     pendingDeliveries,
     pendingCapacity,
     retryErrorClasses,
@@ -342,7 +334,8 @@ export function mapTelegramBotStats(input: {
     presetImpliedCoinSubscriptions,
     activePresetFollowers,
     avgSubscriptionsPerSubscribedChat: roundMetric(aggregate?.avg_subscriptions_per_subscribed_chat, 1),
-    pendingDisambiguations: coerceCount(pendingDisambiguations?.pending_count),
+    // Compatibility for Pages builds that still require the retired field (removed in PR E).
+    pendingDisambiguations: 0,
     pendingDeliveries: pendingCount,
     lastSubscriberActivityAt: coerceNullableTimestamp(aggregate?.last_subscriber_activity_at),
     customPreferenceChats: coerceCount(aggregate?.custom_preference_chats),
@@ -454,7 +447,6 @@ export function buildTelegramDeliverySliStatus(
 export async function getTelegramBotStats(db: D1Database, now: number): Promise<TelegramBotStats> {
   const [
     aggregate,
-    pendingDisambiguations,
     pendingDeliveries,
     pendingCapacityResult,
     retryErrorClassesResult,
@@ -465,7 +457,6 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     deliverySliResult,
   ] = await Promise.all([
     loadTelegramBotAggregate(db),
-    loadTelegramPendingCount(db, TELEGRAM_PENDING_DISAMBIGUATION_SQL, now),
     loadTelegramPendingCount(db, TELEGRAM_PENDING_DELIVERIES_SQL),
     loadOptionalTelegramTelemetry(loadTelegramPendingCapacity(db, now)),
     loadOptionalTelegramTelemetry(loadTelegramRetryErrorClasses(db)),
@@ -494,7 +485,6 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
   return mapTelegramBotStats({
     now,
     aggregate,
-    pendingDisambiguations,
     pendingDeliveries,
     pendingCapacity: pendingCapacityResult.value,
     retryErrorClasses: retryErrorClassesResult.value,

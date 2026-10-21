@@ -73,7 +73,6 @@ describe("handleTelegramWebhook", () => {
     await handleTelegramWebhook(db, makeCallbackRequest(callback, { updateId: 9802 }), "test-secret", "bot-token");
     expect(sqlite.prepare("SELECT first_follow_at, global_alert_dews FROM telegram_subscribers WHERE chat_id = '123'").get())
       .toEqual({ first_follow_at: now, global_alert_dews: 1 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_disambiguation").get()).toEqual({ count: 0 });
   });
 
   it("applies an 11-coin /subscribe at once without a confirmation", async () => {

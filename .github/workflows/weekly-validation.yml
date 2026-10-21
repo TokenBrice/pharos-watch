@@ -102,21 +102,6 @@ jobs:
       - run: npm run typecheck
       - run: npm run typecheck:worker
 
-  telegram-load:
-    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    concurrency:
-      group: telegram-load
-      cancel-in-progress: true
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: $/.github/actions/setup-workspace
-      - run: npm run check:telegram-load
-
   compare-account-state:
     runs-on: ubuntu-latest
     timeout-minutes: 10

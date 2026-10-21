@@ -15,10 +15,8 @@ import { mapWithConcurrency } from "../../../lib/concurrency";
  *   - `last_active_at < (now - INACTIVE_RETENTION_SEC)` (180 days), AND
  *   - the chat has no meaningful rows in `telegram_subscriptions` (enabled
  *     alerts, explicit override markers, snooze, or tuning), AND
- *   - the chat has zero rows in any of:
- *       `telegram_preset_subscriptions`
- *       `telegram_pending_alerts`
- *       `telegram_pending_disambiguation`
+ *   - the chat has no `telegram_preset_subscriptions` rows and no open
+ *     (`pending`/`retry`/`sending`) `telegram_deliveries` rows, AND
  *   - no `global_alert_*` flags are enabled on `telegram_subscribers`
  *
  * Cap at `MAX_DELETIONS_PER_RUN` per invocation so a large backlog cannot

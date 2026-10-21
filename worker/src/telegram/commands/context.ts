@@ -12,8 +12,6 @@ export interface WebhookCommandContext {
   botToken: string;
   /** Stable timestamp captured when the update was normalized. */
   operationNowSec?: number;
-  /** Fold the clear of a stale pending row into this command's write. */
-  clearPendingOnMutation?: boolean;
   /** Sends a plain text message to the originating chat. */
   replyToChat: (message: string) => Promise<void>;
   /** Sends a message with an optional inline keyboard / reply markup. */

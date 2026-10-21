@@ -59,7 +59,7 @@ function healthD1(tables: MockTableConfig[]) {
       { match: "stamped_identity", rows: [], first: null, allowUnused: true },
       { match: "publication_identity", rows: [], first: null, allowUnused: true },
       { match: "telegram_subscribers", rows: [], first: { n: 0 }, allowUnused: true },
-      { match: "telegram_pending_alerts", rows: [], first: null, allowUnused: true },
+      { match: "telegram_deliveries", rows: [], first: null, allowUnused: true },
       { match: "dispatch-telegram-alerts", rows: [], first: null, allowUnused: true },
     ],
   });
@@ -1298,7 +1298,7 @@ describe("handleHealth", () => {
       { match: "SELECT status", rows: [], first: { status: "ok" } },
       { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
       { match: "telegram_subscribers", rows: [], first: { n: 42 } },
-      { match: "telegram_pending_alerts", rows: [], first: telegramCapacityRow },
+      { match: "telegram_deliveries", rows: [], first: telegramCapacityRow },
       {
         match: "dispatch-telegram-alerts",
         rows: [],
@@ -1325,7 +1325,7 @@ describe("handleHealth", () => {
       { match: "SELECT status", rows: [], first: { status: "ok" } },
       { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
       { match: "telegram_subscribers", rows: [], first: { n: 42 } },
-      { match: "telegram_pending_alerts", rows: [], throwError: new Error("capacity unavailable") },
+      { match: "telegram_deliveries", rows: [], throwError: new Error("capacity unavailable") },
       {
         match: "dispatch-telegram-alerts",
         rows: [],

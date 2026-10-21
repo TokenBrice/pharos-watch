@@ -7,6 +7,7 @@ import { buildInClause, chunkArray, executeAtomicBatch } from "../../lib/db";
 import { D1_BATCH_SIZE } from "../../lib/constants";
 import { logTelegramEvent } from "../common/log";
 import { isQuietHoursActive } from "../common/quiet-hours";
+import { recordTelegramDeliveryOutcomes } from "../store/usage-analytics";
 import {
   flushChatSuccessResets,
   handleBlockedChat,
@@ -379,6 +380,8 @@ export async function drainTelegramDeliveries(
   const owner = `telegram-drain:${crypto.randomUUID()}`;
   const blockedChatsThisRun = new Set<string>();
   const sentChats = new Set<string>();
+  // Per-chat delivery diagnostics shown by /status, /list and the Mini App.
+  const deliveryOutcomes: Array<{ chatId: string; ok: boolean; errorClass: string | null; nowSec: number }> = [];
   const globalBackoff = await readTelegramGlobalBackoff(db, now());
   if (globalBackoff != null) {
     result.globalBackoffUntil = globalBackoff;
@@ -386,166 +389,180 @@ export async function drainTelegramDeliveries(
     return result;
   }
 
-  while (true) {
-    if (options.signal?.aborted) {
-      result.stoppedReason = "aborted";
-      break;
-    }
-    if (options.softDeadlineAtMs != null && Date.now() >= options.softDeadlineAtMs) {
-      result.stoppedReason = "deadline";
-      break;
-    }
-    const remaining = options.maxRows == null ? CLAIM_PAGE_SIZE : Math.min(CLAIM_PAGE_SIZE, options.maxRows - result.claimed);
-    if (remaining <= 0) break;
-    const claimNow = now();
-    const claimed = await claimDueDeliveries(db, owner, claimNow, remaining, options.jobId, options.holdKinds);
-    if (claimed.length === 0) {
-      result.stoppedReason = "empty";
-      break;
-    }
-    result.claimed += claimed.length;
+  // Diagnostics for every attempted send, also when the drain throws partway.
+  try {
+    while (true) {
+      if (options.signal?.aborted) {
+        result.stoppedReason = "aborted";
+        break;
+      }
+      if (options.softDeadlineAtMs != null && Date.now() >= options.softDeadlineAtMs) {
+        result.stoppedReason = "deadline";
+        break;
+      }
+      const remaining = options.maxRows == null ? CLAIM_PAGE_SIZE : Math.min(CLAIM_PAGE_SIZE, options.maxRows - result.claimed);
+      if (remaining <= 0) break;
+      const claimNow = now();
+      const claimed = await claimDueDeliveries(db, owner, claimNow, remaining, options.jobId, options.holdKinds);
+      if (claimed.length === 0) {
+        result.stoppedReason = "empty";
+        break;
+      }
+      result.claimed += claimed.length;
 
-    const gate = await gateClaimedRows(db, claimed, claimNow);
-    const preSettled: Settlement[] = [];
-    const sendable: ClaimedTelegramDelivery[] = [];
-    for (const row of claimed) {
-      const verdict = gate.verdict.get(row.id);
-      if (verdict) {
-        preSettled.push({
-          row,
-          attempted: false,
-          state: verdict.state,
-          reason: verdict.reason,
-          ...(verdict.notBefore != null ? { nextAttemptAt: verdict.notBefore } : {}),
-        });
-        if (verdict.state === "cancelled") result.cancelled += 1;
+      const gate = await gateClaimedRows(db, claimed, claimNow);
+      const preSettled: Settlement[] = [];
+      const sendable: ClaimedTelegramDelivery[] = [];
+      for (const row of claimed) {
+        const verdict = gate.verdict.get(row.id);
+        if (verdict) {
+          preSettled.push({
+            row,
+            attempted: false,
+            state: verdict.state,
+            reason: verdict.reason,
+            ...(verdict.notBefore != null ? { nextAttemptAt: verdict.notBefore } : {}),
+          });
+          if (verdict.state === "cancelled") result.cancelled += 1;
+          else result.deferred += 1;
+          continue;
+        }
+        if (blockedChatsThisRun.has(row.chat_id)) {
+          preSettled.push({ row, attempted: false, state: "cancelled", reason: "chat_blocked_this_run" });
+          result.cancelled += 1;
+          continue;
+        }
+        sendable.push(row);
+      }
+      await persistSettlements(db, preSettled, claimNow, owner);
+      if (sendable.length > 0) options.onDeliveryStarted?.();
+
+      let globalStop: number | null = null;
+      const attemptedIds = new Set<number>();
+      const failedHeadJobByChat = new Map<string, string>();
+      const settledIds = new Set<number>();
+      const items = sendable.map((row) => ({ chatId: row.chat_id, row }));
+      let scheduled: BatchResult[];
+      try {
+        scheduled = await schedulePerChatBatches(
+        items,
+        SEND_BATCH_SIZE,
+        (item) => {
+          attemptedIds.add(item.row.id);
+          return sendClaimedRow(item.row, botToken, gate.silentChats.has(item.row.chat_id), options);
+        },
+        {
+          signal: options.signal,
+          softDeadlineAtMs: options.softDeadlineAtMs ?? null,
+          beforeSendBatch: async (entries) => {
+            if (globalStop == null) return;
+            return new Map<number, PreSendBatchResult>(entries.map((entry) => [entry.index, {
+              ok: false,
+              blocked: false,
+              retryable: true,
+              permanentFailure: false,
+              statusCode: 429,
+              errorClass: "rate_limit",
+              delivery: "retryable_failure",
+              retryAfterSec: Math.max(0, globalStop! - now()),
+              skippedReason: "global_rate_limit",
+            }]));
+          },
+          afterSendBatch: async (entries, waveResults) => {
+            const settleNow = now();
+            const settlements = entries.map((entry, index) =>
+              classifyAttempt(entry.item.row, waveResults[index]!, settleNow, failedHeadJobByChat.get(entry.item.row.chat_id)));
+            for (const settlement of settlements) {
+              if (settlement.attempted && settlement.state !== "sent") {
+                failedHeadJobByChat.set(settlement.row.chat_id, settlement.row.job_id);
+              }
+            }
+            await persistSettlements(db, settlements, settleNow, owner);
+            for (const settlement of settlements) settledIds.add(settlement.row.id);
+            const rateLimited = waveResults.filter((wave) => wave.attempted !== false && wave.errorClass === "rate_limit");
+            const rateLimitedChats = new Set(rateLimited.map((wave) => wave.chatId));
+            const chatBackoffs: D1PreparedStatement[] = [];
+            settlements.forEach((settlement, index) => {
+              if (!settlement.attempted) return;
+              deliveryOutcomes.push({
+                chatId: settlement.row.chat_id,
+                ok: settlement.state === "sent",
+                errorClass: waveResults[index]!.errorClass,
+                nowSec: settleNow,
+              });
+            });
+            for (const settlement of settlements) {
+              if (settlement.attempted) result.attempted += 1;
+              if (settlement.state === "sent") {
+                result.sent += 1;
+                sentChats.add(settlement.row.chat_id);
+              } else if (settlement.state === "retry") {
+                result.retried += 1;
+              } else if (settlement.state === "failed") {
+                result.failed += 1;
+              } else if (settlement.state === "unknown") {
+                result.unknown += 1;
+              } else if (settlement.state === "cancelled") {
+                result.cancelled += 1;
+              } else if (settlement.state === "blocked") {
+                result.blocked += 1;
+                const cascade = await handleBlockedChat(db, settlement.row.chat_id, settleNow, blockedChatsThisRun);
+                if (cascade.disabled) result.blockedChatsDisabled += 1;
+              }
+            }
+            // Chat Retry-After applies to every queued row for that chat, even
+            // when the 429 was the attempt that exhausted its own row.
+            for (const wave of rateLimited) {
+              chatBackoffs.push(db.prepare(
+                `UPDATE telegram_deliveries SET next_attempt_at = MAX(next_attempt_at, ?)
+                  WHERE chat_id = ? AND state IN ('pending', 'retry')`,
+              ).bind(settleNow + pendingBackoffSec(0, wave.retryAfterSec), wave.chatId));
+            }
+            if (chatBackoffs.length > 0) await executeAtomicBatch(db, chatBackoffs);
+            if (rateLimitedChats.size >= GLOBAL_RATE_LIMIT_MIN_CHATS) {
+              const until = settleNow + Math.max(1, ...rateLimited.map((wave) => wave.retryAfterSec ?? 1));
+              globalStop = until;
+              result.globalBackoffUntil = until;
+              await setTelegramGlobalBackoff(db, until);
+            }
+          },
+        },
+        );
+      } catch (error) {
+        // Rows that never crossed the send boundary go back to the queue; rows
+        // that did stay `sending` and the sweep records them as `unknown`.
+        const releaseNow = now();
+        await persistSettlements(db, sendable
+          .filter((row) => !settledIds.has(row.id) && !attemptedIds.has(row.id))
+          .map((row) => ({ row, attempted: false, state: "retry" as const, nextAttemptAt: releaseNow, reason: "drain_aborted" })),
+        releaseNow, owner).catch(() => undefined);
+        throw error;
+      }
+      // Tails skipped after a failed predecessor, the soft deadline or an abort
+      // never reach `afterSendBatch`; settle them as unattempted here.
+      const tailNow = now();
+      const tails = items.flatMap((item, index) =>
+        settledIds.has(item.row.id)
+          ? []
+          : [classifyAttempt(item.row, scheduled[index]!, tailNow, failedHeadJobByChat.get(item.row.chat_id))]);
+      await persistSettlements(db, tails, tailNow, owner);
+      for (const settlement of tails) {
+        if (settlement.state === "cancelled") result.cancelled += 1;
         else result.deferred += 1;
-        continue;
       }
-      if (blockedChatsThisRun.has(row.chat_id)) {
-        preSettled.push({ row, attempted: false, state: "cancelled", reason: "chat_blocked_this_run" });
-        result.cancelled += 1;
-        continue;
+      // `beforeSendBatch` short-circuits once a flood is inferred; those rows
+      // are settled as unattempted retries by `afterSendBatch` above.
+      if (globalStop != null) {
+        result.stoppedReason = "global-backoff";
+        break;
       }
-      sendable.push(row);
+      if (claimed.length < remaining) {
+        result.stoppedReason = "empty";
+        break;
+      }
     }
-    await persistSettlements(db, preSettled, claimNow, owner);
-    if (sendable.length > 0) options.onDeliveryStarted?.();
-
-    let globalStop: number | null = null;
-    const attemptedIds = new Set<number>();
-    const failedHeadJobByChat = new Map<string, string>();
-    const settledIds = new Set<number>();
-    const items = sendable.map((row) => ({ chatId: row.chat_id, row }));
-    let scheduled: BatchResult[];
-    try {
-      scheduled = await schedulePerChatBatches(
-      items,
-      SEND_BATCH_SIZE,
-      (item) => {
-        attemptedIds.add(item.row.id);
-        return sendClaimedRow(item.row, botToken, gate.silentChats.has(item.row.chat_id), options);
-      },
-      {
-        signal: options.signal,
-        softDeadlineAtMs: options.softDeadlineAtMs ?? null,
-        beforeSendBatch: async (entries) => {
-          if (globalStop == null) return;
-          return new Map<number, PreSendBatchResult>(entries.map((entry) => [entry.index, {
-            ok: false,
-            blocked: false,
-            retryable: true,
-            permanentFailure: false,
-            statusCode: 429,
-            errorClass: "rate_limit",
-            delivery: "retryable_failure",
-            retryAfterSec: Math.max(0, globalStop! - now()),
-            skippedReason: "global_rate_limit",
-          }]));
-        },
-        afterSendBatch: async (entries, waveResults) => {
-          const settleNow = now();
-          const settlements = entries.map((entry, index) =>
-            classifyAttempt(entry.item.row, waveResults[index]!, settleNow, failedHeadJobByChat.get(entry.item.row.chat_id)));
-          for (const settlement of settlements) {
-            if (settlement.attempted && settlement.state !== "sent") {
-              failedHeadJobByChat.set(settlement.row.chat_id, settlement.row.job_id);
-            }
-          }
-          await persistSettlements(db, settlements, settleNow, owner);
-          for (const settlement of settlements) settledIds.add(settlement.row.id);
-          const rateLimited = waveResults.filter((wave) => wave.attempted !== false && wave.errorClass === "rate_limit");
-          const rateLimitedChats = new Set(rateLimited.map((wave) => wave.chatId));
-          const chatBackoffs: D1PreparedStatement[] = [];
-          for (const settlement of settlements) {
-            if (settlement.attempted) result.attempted += 1;
-            if (settlement.state === "sent") {
-              result.sent += 1;
-              sentChats.add(settlement.row.chat_id);
-            } else if (settlement.state === "retry") {
-              result.retried += 1;
-            } else if (settlement.state === "failed") {
-              result.failed += 1;
-            } else if (settlement.state === "unknown") {
-              result.unknown += 1;
-            } else if (settlement.state === "cancelled") {
-              result.cancelled += 1;
-            } else if (settlement.state === "blocked") {
-              result.blocked += 1;
-              const cascade = await handleBlockedChat(db, settlement.row.chat_id, settleNow, blockedChatsThisRun);
-              if (cascade.disabled) result.blockedChatsDisabled += 1;
-            }
-          }
-          // Chat Retry-After applies to every queued row for that chat, even
-          // when the 429 was the attempt that exhausted its own row.
-          for (const wave of rateLimited) {
-            chatBackoffs.push(db.prepare(
-              `UPDATE telegram_deliveries SET next_attempt_at = MAX(next_attempt_at, ?)
-                WHERE chat_id = ? AND state IN ('pending', 'retry')`,
-            ).bind(settleNow + pendingBackoffSec(0, wave.retryAfterSec), wave.chatId));
-          }
-          if (chatBackoffs.length > 0) await executeAtomicBatch(db, chatBackoffs);
-          if (rateLimitedChats.size >= GLOBAL_RATE_LIMIT_MIN_CHATS) {
-            const until = settleNow + Math.max(1, ...rateLimited.map((wave) => wave.retryAfterSec ?? 1));
-            globalStop = until;
-            result.globalBackoffUntil = until;
-            await setTelegramGlobalBackoff(db, until);
-          }
-        },
-      },
-      );
-    } catch (error) {
-      // Rows that never crossed the send boundary go back to the queue; rows
-      // that did stay `sending` and the sweep records them as `unknown`.
-      const releaseNow = now();
-      await persistSettlements(db, sendable
-        .filter((row) => !settledIds.has(row.id) && !attemptedIds.has(row.id))
-        .map((row) => ({ row, attempted: false, state: "retry" as const, nextAttemptAt: releaseNow, reason: "drain_aborted" })),
-      releaseNow, owner).catch(() => undefined);
-      throw error;
-    }
-    // Tails skipped after a failed predecessor, the soft deadline or an abort
-    // never reach `afterSendBatch`; settle them as unattempted here.
-    const tailNow = now();
-    const tails = items.flatMap((item, index) =>
-      settledIds.has(item.row.id)
-        ? []
-        : [classifyAttempt(item.row, scheduled[index]!, tailNow, failedHeadJobByChat.get(item.row.chat_id))]);
-    await persistSettlements(db, tails, tailNow, owner);
-    for (const settlement of tails) {
-      if (settlement.state === "cancelled") result.cancelled += 1;
-      else result.deferred += 1;
-    }
-    // `beforeSendBatch` short-circuits once a flood is inferred; those rows
-    // are settled as unattempted retries by `afterSendBatch` above.
-    if (globalStop != null) {
-      result.stoppedReason = "global-backoff";
-      break;
-    }
-    if (claimed.length < remaining) {
-      result.stoppedReason = "empty";
-      break;
-    }
+  } finally {
+    await recordTelegramDeliveryOutcomes(db, deliveryOutcomes);
   }
 
   result.acceptedChats = sentChats.size;

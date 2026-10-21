@@ -152,14 +152,12 @@ async function applyFollowRequest(
       directStablecoinIds: coinIds,
       presetIds: request.presetIds,
       depegWorseningBpsStep: request.depegStep,
-      clearPending: ctx.clearPendingOnMutation,
     });
   } else {
     await applyUnsubscribeIntent(ctx.db, {
       chatId: ctx.chatId,
       directStablecoinIds: coinIds,
       presetIds: request.presetIds,
-      clearPending: ctx.clearPendingOnMutation,
     });
   }
 

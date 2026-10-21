@@ -13,7 +13,6 @@ import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
 } from "../delivery/operation-batch";
-import { pendingDisambiguationClearStatement } from "./disambiguation";
 
 export interface SubscribeIntentInput {
   chatId: string;
@@ -21,7 +20,6 @@ export interface SubscribeIntentInput {
   directStablecoinIds: readonly string[];
   presetIds?: readonly string[];
   alertTypes: Set<string>;
-  clearPending?: boolean;
   depegWorseningBpsStep?: 100 | 250 | 500 | null;
   operationStatements?: D1PreparedStatement[];
 }
@@ -30,7 +28,6 @@ export interface UnsubscribeIntentInput {
   chatId: string;
   directStablecoinIds: readonly string[];
   presetIds?: readonly string[];
-  clearPending?: boolean;
   operationStatements?: D1PreparedStatement[];
 }
 
@@ -87,7 +84,7 @@ export function prepareSubscriberAndPresetStatements(
   presetIds: readonly string[],
   directStablecoinIds: string[],
   alertTypes: Set<string>,
-  options?: { clearPending?: boolean; depegWorseningBpsStep?: 100 | 250 | 500 | null },
+  options?: { depegWorseningBpsStep?: 100 | 250 | 500 | null },
 ): D1PreparedStatement[] {
   return [
     ...(presetIds.length > 0 && (options?.depegWorseningBpsStep !== undefined || ["dews", "depeg", "safety"].some((type) => alertTypes.has(type)))
@@ -172,10 +169,7 @@ function prepareSubscribeIntentStatements(
     input.presetIds ?? [],
     [...input.directStablecoinIds],
     input.alertTypes,
-    {
-      clearPending: input.clearPending,
-      depegWorseningBpsStep: input.depegWorseningBpsStep,
-    },
+    { depegWorseningBpsStep: input.depegWorseningBpsStep },
   );
 }
 
@@ -211,15 +205,11 @@ function prepareUnsubscribeIntentStatements(
   const presetIds = Array.from(new Set(input.presetIds ?? []));
   if (directStablecoinIds.length === 0 && presetIds.length === 0) return [];
 
-  const statements = [
+  return [
     ...prepareRemoveSubscriptionStatements(db, input.chatId, directStablecoinIds, { touchSubscriber: false }),
     ...prepareRemovePresetSubscriptionStatements(db, input.chatId, presetIds),
     preparePreferenceGenerationBump(db, input.chatId),
   ];
-  if (input.clearPending) {
-    statements.push(pendingDisambiguationClearStatement(db, input.chatId));
-  }
-  return statements;
 }
 
 export async function applyUnsubscribeIntent(

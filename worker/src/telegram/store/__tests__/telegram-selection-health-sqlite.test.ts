@@ -4,9 +4,6 @@ import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
 import { loadSubscriptionRowsByChat } from "../subscriptions";
 import { describeSubscriptionSettings } from "../../webhook/telegram-webhook-messages";
-import { buildPendingAlertEnqueueStatement } from "../../outbox/pending-queue";
-import { revalidatePendingAlertPreferences } from "../../../cron/telegram/delivery/preference-revalidation";
-import type { PendingAlertRow } from "../../../cron/telegram/delivery/types";
 
 const NOW = 1_800_000_000;
 const fixtures = createLatestSchemaFixtureTracker();
@@ -41,21 +38,5 @@ describe("list override projection", () => {
     }
     if (mode === "depeg-off") expect(description).toContain("off: Depeg");
     if (mode === "snooze-only") expect(description).toContain("snoozed for 1 h");
-    for (const family of ["depeg", "freeze"] as const) {
-      await buildPendingAlertEnqueueStatement(db, {
-        chatId: "42", html: family, canonicalHtml: family, chunkIndex: 0,
-        disableNotification: false, replyMarkup: undefined, linkPreviewOptions: undefined,
-        alertType: family, sourceEventId: `event-${family}`,
-        preferenceGeneration: 0, alertScope: [{ stablecoinId: "usdc-circle", family }],
-      }, NOW, { ttlSec: 7200 }).run();
-    }
-    const pending = await db.prepare(`SELECT p.*, s.alert_snooze_until_ts, s.quiet_hours_enabled,
-      s.quiet_hours_start_utc, s.quiet_hours_end_utc, s.timezone
-      FROM telegram_pending_alerts p JOIN telegram_subscribers s ON p.chat_id = s.chat_id ORDER BY p.id`).all<PendingAlertRow>();
-    const outcomes = await revalidatePendingAlertPreferences(db, pending.results, NOW + 3600);
-    expect(outcomes.map((outcome) => outcome.kind)).toEqual([
-      mode === "depeg-off" || mode === "all-off" ? "cancel" : "eligible",
-      mode === "all-off" ? "cancel" : "eligible",
-    ]);
   });
 });

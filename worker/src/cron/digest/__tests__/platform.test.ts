@@ -690,7 +690,7 @@ describe("digest channel status", () => {
     ["skipped: safety-identity-unavailable", "retryable"],
     ["queued: pending", "retryable"],
     ["queued: sending", "retryable"],
-    ["queued: transport-outage_open", "retryable"],
+    ["queued: transport-circuit-open", "retryable"],
     ["outbox-pending", "retryable"],
     ["outbox-sending", "retryable"],
     ["skipped: execution-unknown", "terminal-unsent"],

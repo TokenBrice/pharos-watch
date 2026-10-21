@@ -16,15 +16,8 @@ export interface TelegramSubscriptionFixture extends Record<string, unknown> {
   stablecoin_id: string;
 }
 
-export interface TelegramPendingOperationFixture extends Record<string, unknown> {
-  action_type: string;
-  action_payload: string;
-  expires_at: number;
-  initiator_user_id: string | null;
-}
-
 type TelegramWriteOperation = "insert" | "update" | "delete";
-type TelegramWriteTarget = "subscriber" | "subscription" | "pendingOperation";
+type TelegramWriteTarget = "subscriber" | "subscription";
 
 export type TelegramWriteResultOverrides = Partial<
   Record<TelegramWriteTarget, Partial<Record<TelegramWriteOperation, number>>>
@@ -35,7 +28,6 @@ export interface MockTelegramD1Options extends MockD1Options {
   fallbackTables?: MockTableConfig[];
   subscriber?: TelegramSubscriberFixture | null;
   subscriptions?: TelegramSubscriptionFixture[];
-  pendingOperation?: TelegramPendingOperationFixture | null;
   writeResults?: TelegramWriteResultOverrides;
   /** Reject any write the scenario did not declare instead of accepting the broad defaults. */
   strictWrites?: boolean;
@@ -54,11 +46,6 @@ const TELEGRAM_WRITE_MATCHES: Record<
     insert: "INSERT INTO telegram_subscriptions",
     update: "UPDATE telegram_subscriptions",
     delete: "DELETE FROM telegram_subscriptions",
-  },
-  pendingOperation: {
-    insert: "INSERT INTO telegram_pending_disambiguation",
-    update: "UPDATE telegram_pending_disambiguation",
-    delete: "DELETE FROM telegram_pending_disambiguation",
   },
 };
 
@@ -94,11 +81,9 @@ export function mockTelegramD1(
 ): MockD1Database {
   const subscriberConfigured = Object.prototype.hasOwnProperty.call(options, "subscriber");
   const subscriptionsConfigured = Object.prototype.hasOwnProperty.call(options, "subscriptions");
-  const pendingOperationConfigured = Object.prototype.hasOwnProperty.call(options, "pendingOperation");
   const {
     subscriber = null,
     subscriptions = [],
-    pendingOperation = null,
     writeResults = {},
     fallbackTables = [],
     strictWrites = true,
@@ -113,16 +98,7 @@ export function mockTelegramD1(
       allowUnused: !subscriberConfigured,
     },
     { match: "FROM telegram_subscriptions", rows: subscriptions, allowUnused: !subscriptionsConfigured },
-    {
-      match: "FROM telegram_pending_disambiguation",
-      rows: pendingOperation == null ? [] : [pendingOperation],
-      first: pendingOperation,
-      allowUnused: !pendingOperationConfigured,
-    },
     { match: "FROM telegram_preset_subscriptions", rows: [], allowUnused: true },
-    { match: "FROM telegram_pending_alerts", rows: [], first: null, allowUnused: true },
-    { match: "FROM telegram_recap_preferences", rows: [], first: null, allowUnused: true },
-    { match: "FROM telegram_recap_targets", rows: [], allowUnused: true },
     { match: "FROM price_cache", rows: [], first: null, allowUnused: true },
     { match: "FROM dex_liquidity", rows: [], first: null, allowUnused: true },
     { match: "FROM yield_data", rows: [], first: null, allowUnused: true },

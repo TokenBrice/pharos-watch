@@ -4,7 +4,6 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   enqueueTelegramJob,
-  hashTelegramDeliveryBody,
   type TelegramDeliveryInput,
 } from "../jobs";
 import { drainTelegramDeliveries, TELEGRAM_DELIVERY_CLAIM_TTL_SEC } from "../job-drain";
@@ -83,6 +82,26 @@ describe("telegram delivery v2 queue", () => {
     expect(sqlite.prepare("SELECT state FROM telegram_jobs").get()).toEqual({ state: "done" });
   });
 
+  it("records per-chat delivery diagnostics for attempted sends", async () => {
+    const { sqlite, db } = setup();
+    addSubscriber(sqlite, "1");
+    addSubscriber(sqlite, "2");
+    await enqueueTelegramJob(db, job("broadcast:diag", [
+      { chatId: "1", body: "hello", audience: "notice" },
+      { chatId: "2", body: "hello", audience: "notice" },
+    ]));
+    const sendMessage = vi.fn(async (chatId: string) =>
+      chatId === "1" ? ok : failure({ retryable: false, permanentFailure: true, statusCode: 400, errorClass: "bad_request", delivery: "permanent_failure" }));
+    await drainTelegramDeliveries(db, "token", { nowSec: () => NOW, sendMessage });
+    expect(sqlite.prepare(
+      `SELECT chat_id, last_successful_delivery_at, last_delivery_attempt_at, recent_failure_class
+         FROM telegram_chat_delivery_diagnostics ORDER BY chat_id`,
+    ).all()).toEqual([
+      { chat_id: "1", last_successful_delivery_at: NOW, last_delivery_attempt_at: NOW, recent_failure_class: null },
+      { chat_id: "2", last_successful_delivery_at: null, last_delivery_attempt_at: NOW, recent_failure_class: "bad_request" },
+    ]);
+  });
+
   it("suppresses an identical body for the same chat within 24 h as suppressed_duplicate", async () => {
     const { sqlite, db } = setup();
     for (const chat of ["1", "2"]) addSubscriber(sqlite, chat);
@@ -103,17 +122,6 @@ describe("telegram delivery v2 queue", () => {
     // Outside the window the same body is delivered again.
     await enqueueTelegramJob(db, job("alert:c", [{ chatId: "1", body: "IUSD D -> C", dedupeBody: "IUSD D -> C" }], NOW + 86_401));
     expect(rows(sqlite, "alert:c")[0]?.state).toBe("pending");
-  });
-
-  it("bridges suppression to legacy sent rows with the same dedupe identity", async () => {
-    const { sqlite, db } = setup();
-    addSubscriber(sqlite, "1");
-    sqlite.prepare(
-      `INSERT INTO telegram_pending_alerts (chat_id, message_html, created_at, dedupe_key, delivery_state)
-       VALUES ('1', 'x', ?, ?, 'sent')`,
-    ).run(NOW - 60, `1:${hashTelegramDeliveryBody(0, "same body")}`);
-    await enqueueTelegramJob(db, job("alert:a", [{ chatId: "1", body: "same body", dedupeBody: "same body" }]));
-    expect(rows(sqlite)[0]?.state).toBe("suppressed_duplicate");
   });
 
   it("never sends a row twice across overlapping drains", async () => {
@@ -184,17 +192,6 @@ describe("telegram delivery v2 queue", () => {
     ]);
     await drainTelegramDeliveries(db, "token", { nowSec: () => NOW + 2, sendMessage });
     expect(sqlite.prepare("SELECT state FROM telegram_deliveries WHERE job_id = 'broadcast:good'").get()).toEqual({ state: "sent" });
-  });
-
-  it("bridges suppression to still-pending legacy rows so cutover cannot double-send", async () => {
-    const { sqlite, db } = setup();
-    addSubscriber(sqlite, "1");
-    sqlite.prepare(
-      `INSERT INTO telegram_pending_alerts (chat_id, message_html, created_at, dedupe_key, delivery_state)
-       VALUES ('1', 'x', ?, ?, 'pending')`,
-    ).run(NOW - 60, `1:${hashTelegramDeliveryBody(0, "same body")}`);
-    await enqueueTelegramJob(db, job("alert:a", [{ chatId: "1", body: "same body", dedupeBody: "same body" }]));
-    expect(rows(sqlite)[0]?.state).toBe("suppressed_duplicate");
   });
 
   it("propagates chat Retry-After even when the 429 exhausts the row's attempts", async () => {
@@ -409,5 +406,31 @@ describe("telegram job fan-out", () => {
     const result = await fanOutPlanningTelegramJobs(db, NOW);
     expect(result.jobsCancelled).toBe(1);
     expect(sqlite.prepare("SELECT state FROM telegram_jobs").get()).toEqual({ state: "cancelled" });
+  });
+});
+
+describe("telegram delivery v2 query plans", () => {
+  it("serves the drain claim and the 24 h duplicate probe from their partial indexes", async () => {
+    const { sqlite, db } = setup();
+    addSubscriber(sqlite, "1");
+    const statements: string[] = [];
+    const prepare = sqlite.prepare.bind(sqlite);
+    vi.spyOn(sqlite, "prepare").mockImplementation((sql: string) => {
+      statements.push(sql);
+      return prepare(sql);
+    });
+    await enqueueTelegramJob(db, job("alert:a", [{ chatId: "1", body: "same body", dedupeBody: "same body" }]));
+    await drainTelegramDeliveries(db, "token", { nowSec: () => NOW, sendMessage: async () => ok });
+    const plan = (needle: string) => {
+      const sql = statements.find((candidate) => candidate.includes(needle));
+      expect(sql, needle).toBeDefined();
+      return (prepare(`EXPLAIN QUERY PLAN ${sql}`).all() as Array<{ detail: string }>).map((row) => row.detail);
+    };
+    const insert = plan("INSERT OR IGNORE INTO telegram_deliveries");
+    expect(insert.some((detail) => detail.includes("idx_telegram_deliveries_chat"))).toBe(true);
+    const claim = plan("RETURNING id, job_id, kind, chat_id");
+    expect(claim).toContain("SCAN d USING INDEX idx_telegram_deliveries_due");
+    // A bare SCAN would be a full table scan of telegram_deliveries.
+    expect([...insert, ...claim].filter((detail) => /^SCAN (d|prior|prev|telegram_deliveries)$/.test(detail))).toEqual([]);
   });
 });

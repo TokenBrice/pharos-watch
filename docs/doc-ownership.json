@@ -753,7 +753,7 @@
       ],
       "reading": [
         {
-          "sources": ["worker/src/cron/telegram/dispatch/**", "worker/src/cron/telegram/sources/**", "worker/src/cron/telegram/target-plans/**", "worker/src/cron/telegram/freeze/**"],
+          "sources": ["worker/src/cron/telegram/dispatch/**", "worker/src/cron/telegram/sources/**", "worker/src/cron/telegram/jobs/**", "worker/src/cron/telegram/rollup/**", "worker/src/cron/telegram/freeze/**"],
           "local": [
             { "path": "docs/telegram-alerts.md", "anchor": "dispatch" },
             { "path": "docs/telegram-alerts.md", "anchor": "dispatch-routing-and-formatting" },
@@ -805,7 +805,7 @@
             { "path": "docs/telegram-alerts.md", "anchor": "dispatch-routing-and-formatting" },
             { "path": "docs/telegram-alerts.md", "anchor": "delivery-persistence" }
           ],
-          "required": [{ "path": "docs/runbooks/telegram-admin-broadcast-safety.md" }]
+          "required": [{ "path": "docs/runbooks/telegram-delivery.md", "anchor": "admin-broadcast-preflight" }]
         },
         {
           "sources": ["worker/src/handlers/scheduled/*telegram*.ts", "worker/src/cron/telegram/maintenance/**", "worker/src/telegram/webhook/*registration*.ts", "worker/src/telegram/webhook/__tests__/*registration*.ts", "shared/lib/telegram-bot-registration.ts"],
@@ -863,19 +863,12 @@
       ],
       "background": [
         { "path": "docs/telegram-alerts.md", "anchor": "command-implementation-appendix" },
-        { "path": "docs/telegram-alerts.md", "anchor": "delivery-implementation-appendix" },
         { "path": "docs/telegram-architecture.md", "anchor": "ingress-implementation-appendix" },
         { "path": "docs/telegram-architecture.md", "anchor": "dispatch-implementation-appendix" },
-        { "path": "docs/runbooks/telegram-no-delivery.md", "runbook": { "label": "Telegram delivery, backlog and bot-wide outages", "kind": "symptom" } },
-        { "path": "docs/runbooks/telegram-admin-broadcast-safety.md", "runbook": { "label": "Telegram broadcast preflight", "kind": "procedure" } },
+        { "path": "docs/runbooks/telegram-delivery.md", "runbook": { "label": "Telegram delivery, backlog, presets and broadcasts", "kind": "symptom" } },
         { "path": "docs/runbooks/telegram-digest-outbox.md", "runbook": { "label": "Telegram digest outbox recovery", "kind": "symptom" } },
-        { "path": "docs/runbooks/telegram-group-admin-gating-rollback.md", "runbook": { "label": "Telegram group-admin gating rollback", "kind": "procedure" } },
-        { "path": "docs/runbooks/telegram-mini-app-auth-failures.md", "runbook": { "label": "Telegram Mini App auth failures", "kind": "symptom" } },
-        { "path": "docs/runbooks/telegram-mini-app-botfather.md", "runbook": { "label": "Telegram BotFather configuration", "kind": "procedure" } },
-        { "path": "docs/runbooks/telegram-operator-queries.md", "anchor": "read-only-incident-entry", "runbook": { "label": "Telegram read-only operator queries", "kind": "reference" } },
-        { "path": "docs/runbooks/telegram-preset-resolution-failure.md", "runbook": { "label": "Telegram preset resolution failure", "kind": "symptom" } },
-        { "path": "docs/runbooks/telegram-secret-rotation.md", "runbook": { "label": "Telegram secret rotation", "kind": "procedure" } },
-        { "path": "docs/runbooks/telegram-webhook-retry-dedupe.md", "runbook": { "label": "Telegram ingress, abuse controls, retries and setup incidents", "kind": "symptom" } }
+        { "path": "docs/runbooks/telegram-mini-app-operations.md", "runbook": { "label": "Telegram Mini App auth and BotFather operations", "kind": "symptom" } },
+        { "path": "docs/runbooks/telegram-webhook.md", "runbook": { "label": "Telegram webhook ingress, retries, secrets and admin gate", "kind": "symptom" } }
       ],
       "alsoRead": ["worker/src/telegram/AGENTS.md"],
       "checks": ["npx vitest run worker/src/api worker/src/cron worker/src/telegram"],

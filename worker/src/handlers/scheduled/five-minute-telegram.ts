@@ -1,15 +1,14 @@
 import { classifyTelegramLogError, logTelegramEvent } from "../../telegram/common/log";
 /**
  * Five-minute Telegram trigger (2,7,12,... * * * *):
- *   serial: dispatch (with token) -> watchdog -> cleanup -> pulse
+ *   serial: dispatch (with token) -> watchdog -> pulse
  *   budget-only, after critical lane: all four cached registration checks
  *
  * Subscriber alerts use a dedicated isolated Telegram lane.
  * Connection budget: 4/6 peak
  */
-// The four job graphs (alert dispatch, pulse snapshot, degradation watchdog,
-// disambiguation cleanup) are loaded via dynamic
-// import() at dispatch time, like the compile-time public-runners map.
+// The three job graphs (alert dispatch, pulse snapshot, degradation watchdog)
+// are loaded via dynamic import() at dispatch time, like the compile-time public-runners map.
 // Heavy entrypoints cannot reach this lane; public isolates still defer its
 // job initialization until dispatch. Only types may be imported statically.
 import type { TelegramDispatchSharedState } from "../../cron/telegram/dispatch/dispatch-telegram-alerts";
@@ -187,14 +186,6 @@ function buildTelegramSlotGroups(
           pendingCapacitySnapshot: sharedTelegramState.pendingCapacitySnapshot,
           safetySourceAssessment: sharedTelegramState.safetySourceAssessment,
         });
-      },
-    },
-    {
-      job: "telegram-disambiguation-cleanup",
-      errorMessage: "[cron] telegram-disambiguation-cleanup failed:",
-      run: async (signal) => {
-        const { cleanExpiredDisambiguations } = await import("../../telegram/store/disambiguation");
-        return cleanExpiredDisambiguations(runtime.db, signal);
       },
     },
     {

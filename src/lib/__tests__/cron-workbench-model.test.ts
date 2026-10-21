@@ -87,8 +87,8 @@ describe("cron workbench model", () => {
 
       expect(getCronRunbooks(model.rows[0]!)).toEqual([
         {
-          href: expect.stringContaining("/docs/runbooks/telegram-no-delivery.md"),
-          label: "Telegram no delivery runbook",
+          href: expect.stringContaining("/docs/runbooks/telegram-delivery.md"),
+          label: "Telegram delivery runbook",
         },
       ]);
     },

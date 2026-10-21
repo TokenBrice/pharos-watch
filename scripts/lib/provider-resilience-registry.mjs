@@ -198,7 +198,6 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     description: "Daily and weekly digest Telegram delivery.",
     files: [
       "worker/src/telegram/delivery/telegram.ts",
-      "worker/src/telegram/delivery/transport-control.ts",
       "worker/src/telegram/outbox/digest-outbox.ts",
       "worker/src/cron/digest/platform.ts",
       "worker/src/cron/daily-digest.ts",
@@ -208,7 +207,6 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     ],
     tests: [
       "worker/src/telegram/delivery/__tests__/telegram.test.ts",
-      "worker/src/telegram/delivery/__tests__/telegram-transport-control.test.ts",
       "worker/src/telegram/outbox/__tests__/telegram-digest-outbox.test.ts",
       "worker/src/cron/__tests__/daily-digest.test.ts",
       "worker/src/cron/digest/__tests__/telegram-transport.test.ts",
@@ -217,25 +215,20 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     ],
     allowBareFetch: true,
     directFetchJustification:
-      "Telegram helper maps Bot API statuses and Retry-After into delivery classes; fresh digest sends claim the D1 transport permit and the scheduled outbox drain records Telegram API circuit outcomes.",
+      "Telegram helper maps Bot API statuses and Retry-After into delivery classes; fresh digest sends and the scheduled outbox drain are gated by the shared Telegram API circuit, whose outcomes the alert dispatcher records.",
     resilience: {
-      transport: "direct-fetch plus D1-authoritative Telegram transport permit",
+      transport: "direct-fetch gated by the shared Telegram API circuit",
       timeout: "Uses AbortSignal.timeout() and caller signals.",
       body: "Cancels unused successful send bodies and reads failure diagnostics with a 16 KiB bounded text reader.",
-      circuitSources: ["telegram_transport_circuit"],
+      circuitSources: ["CIRCUIT_SOURCE.TELEGRAM_API"],
     },
     requiredMarkers: [
       "AbortSignal.timeout",
       "cancelResponseBodyQuietly",
       "readResponseTextBoundedWithSignal",
       "drainTelegramDigestOutbox",
-      "telegram_transport_circuit",
       "runTelegramDigestDeliveryWithPermit",
-      "claimTelegramTransportPermit",
-      "recordTelegramTransportOutcomes",
-      "mode: \"fresh\"",
       "shouldAttemptFetch",
-      "recordOutcomeSafe",
     ],
   },
   {
@@ -249,7 +242,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       "worker/src/cron/telegram/dispatch/__tests__/dispatch-telegram-alerts-routing-safety.test.ts",
       "worker/src/cron/telegram/dispatch/__tests__/dispatch-telegram-alerts-backoff-transitions.test.ts",
       "worker/src/cron/telegram/dispatch/__tests__/dispatch-telegram-alerts-snooze-presets.test.ts",
-      "worker/src/cron/telegram/delivery/__tests__/telegram-pending-queue.test.ts",
+      "worker/src/telegram/delivery/__tests__/telegram-jobs-sqlite.test.ts",
     ],
     allowBareFetch: true,
     directFetchJustification:

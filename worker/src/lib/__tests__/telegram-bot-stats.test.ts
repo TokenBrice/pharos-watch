@@ -23,13 +23,10 @@ function unavailableDeliverySli(): TelegramDeliverySliStatus {
 }
 
 describe("Telegram delivery telemetry SQL", () => {
-  it("counts v2 and legacy-shim execution-unknown rows and uses the oldest ambiguity", async () => {
+  it("counts execution-unknown delivery rows and uses the oldest ambiguity", async () => {
     const sqlite = createLatestSchemaSqlite().sqlite;
     try {
       sqlite.exec(`
-        INSERT INTO telegram_pending_alerts
-          (chat_id, message_html, created_at, expires_at, delivery_state, delivery_started_at)
-        VALUES ('pending-chat', 'test', 100, 10000, 'execution_unknown', 100);
         INSERT INTO telegram_deliveries
           (job_id, kind, chat_id, body_hash, state, next_attempt_at, expires_at, created_at, sending_at, done_at)
         VALUES ('alert:x', 'alert', 'v2-chat', 'h', 'unknown', 200, 10000, 200, 200, 4900),
@@ -37,10 +34,10 @@ describe("Telegram delivery telemetry SQL", () => {
       `);
       const snapshot = await loadTelegramPendingCapacity(createSqliteD1(sqlite), 5_001);
       expect(snapshot).toMatchObject({
-        pendingExecutionUnknown: 2,
+        pendingExecutionUnknown: 1,
         freshExecutionUnknown: 0,
-        executionUnknown: 2,
-        oldestExecutionUnknownAgeSec: 4_901,
+        executionUnknown: 1,
+        oldestExecutionUnknownAgeSec: 4_801,
         due: 1,
         active: 1,
       });
@@ -75,7 +72,6 @@ describe("mapTelegramBotStats", () => {
         quiet_hours_enabled_chats: "2",
         active_preset_followers: "2",
       },
-      pendingDisambiguations: { pending_count: "11" },
       pendingDeliveries: { pending_count: "12" },
       pendingCapacity: {
         total: 12,
@@ -150,7 +146,7 @@ describe("mapTelegramBotStats", () => {
       presetImpliedCoinSubscriptions: 12,
       activePresetFollowers: 2,
       avgSubscriptionsPerSubscribedChat: 3.5,
-      pendingDisambiguations: 11,
+      pendingDisambiguations: 0,
       pendingDeliveries: 11,
       quality: {
         status: "complete",
@@ -258,7 +254,6 @@ describe("mapTelegramBotStats", () => {
         quiet_hours_enabled_chats: null,
         active_preset_followers: null,
       },
-      pendingDisambiguations: null,
       pendingDeliveries: { pending_count: "bad" },
       topStablecoins: [{ stablecoin_id: "usdt-tether", subscribers: "bad" }],
       deliverySli: unavailableDeliverySli(),

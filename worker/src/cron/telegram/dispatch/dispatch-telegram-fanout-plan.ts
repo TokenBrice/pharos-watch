@@ -3,13 +3,8 @@ import {
   TELEGRAM_FANOUT_FAMILIES,
   type FanoutSubscriptionInputs,
 } from "./dispatch-telegram-alerts-fanout";
-import { hasEscalation } from "./dispatch-telegram-predicates";
-import { isQuietHoursActive } from "../../../telegram/common/quiet-hours";
 import {
-  formatPlannedSubscribers,
-  planSubscriberQueue,
   routeAlertEvents,
-  type RoutedSubscriberAlert,
   type AlertsByChatEntry,
 } from "./dispatch-telegram-routing";
 import { mergeSubscriberMaps } from "./dispatch-telegram-subscribers";
@@ -51,30 +46,4 @@ export function buildTelegramAlertsByChat(
   }
 
   return { alertsByChat };
-}
-
-/** Render the entire authoritative page, or reject it before persisting any target. */
-export function renderTelegramSubscriberPage(args: TelegramFanoutRoutingArgs & {
-  nowSec: number;
-  formatBudget: number;
-  sourceEventId?: string;
-}): RoutedSubscriberAlert[] {
-  const { alertsByChat } = buildTelegramAlertsByChat(args);
-  const planned = planSubscriberQueue(alertsByChat, args.sourceEventId, args.events.safetyScoreIdentity);
-  let allocated = 0;
-  for (const [index, plan] of planned.entries()) {
-    // The first candidate is admitted even when its estimate exceeds the budget.
-    if (index > 0 && allocated + plan.estimatedChunks > args.formatBudget) {
-      throw new Error("Telegram subscriber page exceeded the bounded rendering budget");
-    }
-    allocated += plan.estimatedChunks;
-  }
-  return formatPlannedSubscribers(planned, (entry) =>
-    !hasEscalation(entry.alerts) || isQuietHoursActive(
-      args.nowSec,
-      entry.quietHoursEnabled,
-      entry.quietHoursStartUtc,
-      entry.quietHoursEndUtc,
-      entry.timezone,
-    ));
 }

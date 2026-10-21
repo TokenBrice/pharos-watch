@@ -26,7 +26,6 @@
 | `cron-sentinel` | 15m | 30m O | watch | No unavailable telemetry reclassified as zero incidents; bounded evidence collection can be partial with reasons. |
 | `dispatch-telegram-alerts` | 5m | 10m O | watch | Durable pending queue and bounded retries allowed; enqueue is not delivered evidence. |
 | `telegram-degradation-watchdog` | 5m | 10m O | watch | Durable broker retry allowed; unavailable broker state remains unknown. |
-| `telegram-disambiguation-cleanup` | 5m | 10m O | watch | Bounded cleanup batches allowed; residual expiry backlog remains visible. |
 | `telegram-pulse-snapshot` | 5m | 10m C | watch | Quiet/empty measured pulse allowed; failed source read cannot become an empty pulse. |
 | `sync-blacklist` | 6h | 12h C | critical | Confirmed quiet scan allowed; gaps retain configuration/safe-head identity and never relax coverage admission. |
 | `sync-mint-burn` | 30m | 1h C | critical | Quiet confirmed scan allowed; incomplete critical scan remains explicit and cannot renew full-pass evidence. |

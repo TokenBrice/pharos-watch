@@ -14,7 +14,7 @@ import {
 export async function unsubscribeAll(
   db: D1Database,
   chatId: string,
-  options: { clearPending?: boolean; operationStatements?: D1PreparedStatement[] } = {},
+  options: { operationStatements?: D1PreparedStatement[] } = {},
 ): Promise<void> {
   const now = unixNow();
   const statements = [
@@ -43,11 +43,6 @@ export async function unsubscribeAll(
       )
       .bind(now, chatId),
   ];
-  if (options.clearPending) {
-    statements.push(
-      db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
-    );
-  }
   await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }
 
@@ -65,13 +60,10 @@ export const INACTIVE_TELEGRAM_SUBSCRIBER_ELIGIBILITY_SQL = `
         OR sub.depeg_worsening_bps_step IS NOT NULL OR sub.alert_snooze_until_ts IS NOT NULL)
   )
   AND NOT EXISTS (SELECT 1 FROM telegram_preset_subscriptions ps WHERE ps.chat_id = s.chat_id)
-  AND NOT EXISTS (SELECT 1 FROM telegram_pending_alerts pa WHERE pa.chat_id = s.chat_id)
   AND NOT EXISTS (
     SELECT 1 FROM telegram_deliveries td
      WHERE td.chat_id = s.chat_id AND td.state IN ('pending', 'retry', 'sending')
   )
-  AND NOT EXISTS (SELECT 1 FROM telegram_pending_disambiguation pd WHERE pd.chat_id = s.chat_id)
-  AND NOT EXISTS (SELECT 1 FROM telegram_recap_preferences rp WHERE rp.chat_id = s.chat_id AND rp.enabled = 1)
   AND s.global_alert_dews = 0 AND s.global_alert_depeg = 0 AND s.global_alert_safety = 0
   AND s.global_alert_launch = 0 AND s.global_alert_reserve = 0 AND s.global_alert_freeze = 0
 `;
@@ -118,10 +110,6 @@ function prepareSubscriberPurge(
   return [
     prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?", chatId),
     prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?", chatId),
-    prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?", chatId),
-    // A private chat id is the user id: also drop group prompts this user started.
-    prepare("DELETE FROM telegram_pending_disambiguation WHERE initiator_user_id = ?", chatId),
-    prepare("DELETE FROM telegram_pending_alerts WHERE chat_id = ?", chatId),
     // Roll-up jobs are per chat. Delete them by delivery ownership first (this
     // also catches jobs created under a group's pre-migration chat id), then by
     // the `rollup:<date>:<chatId>` id for jobs whose rows are already gone.
@@ -153,32 +141,6 @@ function prepareSubscriberPurge(
     ),
     prepare("DELETE FROM telegram_change_log WHERE chat_id = ?", chatId),
     prepare("DELETE FROM telegram_rollup_state WHERE chat_id = ?", chatId),
-    prepare("DELETE FROM telegram_recap_targets WHERE chat_id = ?", chatId),
-    prepare("DELETE FROM telegram_recap_preferences WHERE chat_id = ?", chatId),
-    prepare("DELETE FROM telegram_freeze_alert_targets WHERE chat_id = ?", chatId),
-    prepare("DELETE FROM telegram_alert_source_resolution_targets WHERE chat_id = ?", chatId),
-    prepare(
-      `DELETE FROM telegram_alert_target_plan_items
-        WHERE (source_event_id, plan_generation, plan_key) IN (
-          SELECT source_event_id, plan_generation, plan_key
-            FROM telegram_alert_target_plans
-           WHERE chat_id = ?
-        )`,
-      chatId,
-    ),
-    prepare("DELETE FROM telegram_alert_job_targets WHERE chat_id = ?", chatId),
-    // Job-target item lineage has no chat_id column, but its target_key is
-    // chat-prefixed (`<chatId>:v<split>:<chunk>:<hash>`), so the rows are
-    // chat-owned audit data and must not survive /forget.
-    prepare(
-      `DELETE FROM telegram_alert_job_target_items
-        WHERE (${dedupePrefixPredicate("target_key")})`,
-      chatId, chatId, chatId,
-    ),
-    prepare("DELETE FROM telegram_alert_target_plans WHERE chat_id = ?", chatId),
-    prepare("DELETE FROM telegram_alert_planning_subscribers WHERE chat_id = ?", chatId),
-    prepare("DELETE FROM telegram_transport_failure_observations WHERE chat_id = ?", chatId),
-    prepare("DELETE FROM telegram_alert_dead_letters WHERE chat_id = ?", chatId),
     prepare("DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?", chatId),
     ...prepareDeleteTelegramChatCacheStatements(db, chatId, guard),
     // Keep the eligibility authority alive until all guarded child deletes finish.
@@ -278,8 +240,8 @@ type MergeStrategy =
 interface MigrationDescriptor {
   table: string;
   columns: ReadonlyArray<{ column: string; select?: string; strategy: MergeStrategy }>;
-  /** Omitted for INSERT OR IGNORE; identity columns still declare copy-only. */
-  conflictColumns?: readonly string[];
+  /** Identity columns still declare copy-only. */
+  conflictColumns: readonly string[];
 }
 
 const MIGRATION_TABLE_DESCRIPTORS: readonly MigrationDescriptor[] = [
@@ -372,21 +334,6 @@ const MIGRATION_TABLE_DESCRIPTORS: readonly MigrationDescriptor[] = [
     ],
   },
   {
-    table: "telegram_pending_disambiguation",
-    columns: [
-      { column: "chat_id", select: "?", strategy: "copy-only" },
-      { column: "alert_types", strategy: "copy-only" },
-      { column: "resolved_ids", strategy: "copy-only" },
-      { column: "ambiguous_ticker", strategy: "copy-only" },
-      { column: "candidates", strategy: "copy-only" },
-      { column: "remaining_tickers", strategy: "copy-only" },
-      { column: "expires_at", strategy: "copy-only" },
-      { column: "action_type", strategy: "copy-only" },
-      { column: "action_payload", strategy: "copy-only" },
-      { column: "initiator_user_id", strategy: "copy-only" },
-    ],
-  },
-  {
     table: "telegram_chat_delivery_diagnostics",
     conflictColumns: ["chat_id"],
     columns: [
@@ -428,108 +375,17 @@ function buildMigrationStatement(
 ): D1PreparedStatement {
   const insertColumns = descriptor.columns.map(({ column }) => column).join(",\n        ");
   const selectColumns = descriptor.columns.map(({ column, select }) => select ?? column).join(",\n        ");
+  const conflict = descriptor.conflictColumns.join(", ");
+  const setClause = descriptor.columns
+    .filter(({ strategy }) => strategy !== "copy-only")
+    .map(({ column, strategy }) => `${column} = ${renderMergeExpr(descriptor.table, column, strategy)}`)
+    .join(",\n        ");
   // SAFETY: All identifiers and expressions come from the closed-set local
   // MIGRATION_TABLE_DESCRIPTORS above. No runtime data flows into the SQL string.
-  const verb = descriptor.conflictColumns ? "INSERT INTO" : "INSERT OR IGNORE INTO";
-  let sql = `${verb} ${descriptor.table} (\n        ${insertColumns}\n      )\n      SELECT\n        ${selectColumns}\n      FROM ${descriptor.table}\n      WHERE chat_id = ?`;
-  if (descriptor.conflictColumns) {
-    const conflict = descriptor.conflictColumns.join(", ");
-    const setClause = descriptor.columns
-      .filter(({ strategy }) => strategy !== "copy-only")
-      .map(({ column, strategy }) => `${column} = ${renderMergeExpr(descriptor.table, column, strategy)}`)
-      .join(",\n        ");
-    sql += `\n      ON CONFLICT(${conflict}) DO UPDATE SET\n        ${setClause}`;
-  }
-  return db.prepare(sql);
-}
-
-function dedupePrefixPredicate(column: string): string {
-  return `${column} IS NOT NULL
-        AND substr(${column}, 1, length(?)) = ?
-        AND substr(${column}, length(?) + 1, 1) = ':'`;
-}
-
-function bindDedupePrefixRewrite(
-  statement: D1PreparedStatement,
-  oldChatId: string,
-  newChatId: string,
-): D1PreparedStatement {
-  return statement.bind(
-    newChatId,
-    oldChatId,
-    newChatId,
-    oldChatId,
-    oldChatId,
-    oldChatId,
+  return db.prepare(
+    `INSERT INTO ${descriptor.table} (\n        ${insertColumns}\n      )\n      SELECT\n        ${selectColumns}\n      FROM ${descriptor.table}\n      WHERE chat_id = ?`
+      + `\n      ON CONFLICT(${conflict}) DO UPDATE SET\n        ${setClause}`,
   );
-}
-
-function bindDedupePrefixCleanup(
-  statement: D1PreparedStatement,
-  oldChatId: string,
-  newChatId: string,
-): D1PreparedStatement {
-  return statement.bind(newChatId, oldChatId, oldChatId, oldChatId);
-}
-
-function preparePendingDedupeMigrationStatements(
-  db: D1Database,
-  oldChatId: string,
-  newChatId: string,
-): D1PreparedStatement[] {
-  const pendingPredicate = dedupePrefixPredicate("dedupe_key");
-  const targetDedupePredicate = dedupePrefixPredicate("pending_dedupe_key");
-  const targetKeyPredicate = dedupePrefixPredicate("target_key");
-  return [
-    bindDedupePrefixRewrite(
-      db.prepare(`
-        UPDATE OR IGNORE telegram_pending_alerts
-           SET dedupe_key = ? || substr(dedupe_key, length(?) + 1)
-         WHERE chat_id = ?
-           AND ${pendingPredicate}
-      `),
-      oldChatId,
-      newChatId,
-    ),
-    bindDedupePrefixCleanup(
-      db.prepare(`
-        DELETE FROM telegram_pending_alerts
-         WHERE chat_id = ?
-           AND ${pendingPredicate}
-      `),
-      oldChatId,
-      newChatId,
-    ),
-    bindDedupePrefixRewrite(
-      db.prepare(`
-        UPDATE telegram_alert_job_targets
-           SET pending_dedupe_key = ? || substr(pending_dedupe_key, length(?) + 1)
-         WHERE chat_id = ?
-           AND ${targetDedupePredicate}
-      `),
-      oldChatId,
-      newChatId,
-    ),
-    db.prepare(`
-        UPDATE OR IGNORE telegram_alert_job_target_items
-           SET target_key = ? || substr(target_key, length(?) + 1)
-         WHERE ${targetKeyPredicate}
-      `).bind(newChatId, oldChatId, oldChatId, oldChatId, oldChatId),
-    bindDedupePrefixRewrite(
-      db.prepare(`
-        UPDATE OR IGNORE telegram_alert_job_targets
-           SET target_key = ? || substr(target_key, length(?) + 1)
-         WHERE chat_id = ?
-           AND ${targetKeyPredicate}
-      `),
-      oldChatId,
-      newChatId,
-    ),
-    db.prepare(`
-        DELETE FROM telegram_alert_job_target_items
-         WHERE ${targetKeyPredicate}
-      `).bind(oldChatId, oldChatId, oldChatId),
-  ];
 }
 
 /**
@@ -544,59 +400,20 @@ export async function migrateTelegramChatId(
   options: { operationStatements?: D1PreparedStatement[] } = {},
 ): Promise<void> {
   if (!oldChatId || !newChatId || oldChatId === newChatId) return;
-  const now = unixNow();
 
   const statements: D1PreparedStatement[] = [
     ...MIGRATION_TABLE_DESCRIPTORS.map((descriptor) =>
       buildMigrationStatement(db, descriptor).bind(newChatId, oldChatId),
     ),
-    db.prepare("UPDATE telegram_pending_alerts SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
     // Body hashes carry no chat id; a (job, seq) already held by the new chat wins.
     db.prepare("UPDATE OR IGNORE telegram_deliveries SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
     db.prepare("DELETE FROM telegram_deliveries WHERE chat_id = ?").bind(oldChatId),
     db.prepare("UPDATE telegram_change_log SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
     db.prepare("UPDATE OR IGNORE telegram_rollup_state SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
     db.prepare("DELETE FROM telegram_rollup_state WHERE chat_id = ?").bind(oldChatId),
-    // Recaps are private-chat-only. Never carry recap preferences, targets,
-    // pending payloads, or dead-letter audit rows across a group migration.
-    db.prepare(
-      "DELETE FROM telegram_pending_alerts WHERE chat_id IN (?, ?) AND source_type = 'personalized_recap'",
-    ).bind(oldChatId, newChatId),
-    db.prepare("DELETE FROM telegram_recap_targets WHERE chat_id IN (?, ?)").bind(oldChatId, newChatId),
-    db.prepare("DELETE FROM telegram_recap_preferences WHERE chat_id IN (?, ?)").bind(oldChatId, newChatId),
-    db.prepare("UPDATE OR IGNORE telegram_freeze_alert_targets SET chat_id = ? WHERE chat_id = ?")
-      .bind(newChatId, oldChatId),
-    db.prepare("DELETE FROM telegram_freeze_alert_targets WHERE chat_id = ?").bind(oldChatId),
-    db.prepare("UPDATE OR IGNORE telegram_alert_source_resolution_targets SET chat_id = ? WHERE chat_id = ?")
-      .bind(newChatId, oldChatId),
-    db.prepare("DELETE FROM telegram_alert_source_resolution_targets WHERE chat_id = ?").bind(oldChatId),
-    db.prepare(
-      `UPDATE telegram_alert_job_targets
-          SET status = 'expired',
-              cancelled_at = COALESCE(cancelled_at, ?),
-              cancellation_reason = COALESCE(cancellation_reason, 'chat_migrated_before_handoff'),
-              final_delivery_state = COALESCE(final_delivery_state, 'cancelled'),
-              final_delivery_at = COALESCE(final_delivery_at, ?),
-              final_delivery_error = COALESCE(final_delivery_error, 'chat_migrated_before_handoff')
-        WHERE chat_id = ? AND status = 'planned'`,
-    ).bind(now, now, oldChatId),
-    db.prepare("UPDATE telegram_alert_job_targets SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
-    db.prepare("UPDATE OR IGNORE telegram_alert_planning_subscribers SET chat_id = ? WHERE chat_id = ?")
-      .bind(newChatId, oldChatId),
-    db.prepare("DELETE FROM telegram_alert_planning_subscribers WHERE chat_id = ?").bind(oldChatId),
-    db.prepare("UPDATE telegram_alert_target_plans SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
-    db.prepare("UPDATE OR IGNORE telegram_transport_failure_observations SET chat_id = ? WHERE chat_id = ?")
-      .bind(newChatId, oldChatId),
-    db.prepare("DELETE FROM telegram_transport_failure_observations WHERE chat_id = ?").bind(oldChatId),
-    ...preparePendingDedupeMigrationStatements(db, oldChatId, newChatId),
-    db.prepare("UPDATE telegram_alert_dead_letters SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
-    db.prepare(
-      "DELETE FROM telegram_alert_dead_letters WHERE chat_id IN (?, ?) AND source_type = 'personalized_recap'",
-    ).bind(oldChatId, newChatId),
     db.prepare("UPDATE telegram_processed_updates SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
     db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(oldChatId),
     db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(oldChatId),
-    db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(oldChatId),
     db.prepare("DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?").bind(oldChatId),
     db.prepare("DELETE FROM telegram_subscribers WHERE chat_id = ?").bind(oldChatId),
     ...prepareChatMigrationCacheStatements(db, oldChatId, newChatId),

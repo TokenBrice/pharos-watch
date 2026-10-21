@@ -1,16 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const transport = vi.hoisted(() => ({
-  claim: vi.fn(),
-  record: vi.fn(),
+const circuit = vi.hoisted(() => ({ shouldAttemptFetch: vi.fn() }));
+
+vi.mock("../../../lib/circuit-breaker", () => ({
+  shouldAttemptFetch: circuit.shouldAttemptFetch,
 }));
 
-vi.mock("../../../telegram/delivery/transport-control", () => ({
-  claimTelegramTransportPermit: transport.claim,
-  recordTelegramTransportOutcomes: transport.record,
-}));
-
-import { runTelegramDigestDeliveryWithPermit } from "../telegram-transport";
+import { mapTelegramDigestPermittedDelivery, runTelegramDigestDeliveryWithPermit } from "../telegram-transport";
 
 const creds = { botToken: "bot", chatId: "chat" };
 const db = {} as D1Database;
@@ -18,126 +14,68 @@ const db = {} as D1Database;
 describe("runTelegramDigestDeliveryWithPermit", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    transport.record.mockResolvedValue({ state: "closed" });
   });
 
-  it("fails closed without crossing the send boundary when the fresh mode is paused", async () => {
-    transport.claim.mockResolvedValue({
-      allowed: false,
-      mode: "fresh",
-      maxDistinctChats: 0,
-      reason: "operator_pause",
-      circuitGeneration: 4,
-      probeOwner: null,
-      probeGeneration: null,
-      pauseGeneration: 2,
-      deferUntil: 1_800_000_000,
-    });
+  it("stays queued without crossing the send boundary while the Telegram circuit is open", async () => {
+    circuit.shouldAttemptFetch.mockResolvedValue(false);
     const deliver = vi.fn();
 
     const status = await runTelegramDigestDeliveryWithPermit({
-      db,
-      creds,
-      owner: "daily-digest",
-      editionKey: "daily:2026-08-16",
-      deliver,
+      db, creds, owner: "daily-digest", editionKey: "daily:2026-08-16", deliver,
     });
 
-    expect(status).toBe("queued: transport-operator_pause");
+    expect(status).toBe("queued: transport-circuit-open");
     expect(deliver).not.toHaveBeenCalled();
-    expect(transport.claim).toHaveBeenCalledWith(db, expect.objectContaining({
-      mode: "fresh",
-      requestedDistinctChats: 1,
-    }));
+    expect(circuit.shouldAttemptFetch).toHaveBeenCalledWith(db, "telegram-api");
   });
 
-  it("records the transport result only after the permitted delivery completes", async () => {
-    transport.claim.mockResolvedValue({
-      allowed: true,
-      mode: "fresh",
-      maxDistinctChats: 1,
-      reason: "closed",
-      circuitGeneration: 4,
-      probeOwner: null,
-      probeGeneration: null,
-      pauseGeneration: null,
-      deferUntil: null,
-    });
-    const order: string[] = [];
-    const deliver = vi.fn(async () => {
-      order.push("delivery-complete");
-      return {
-        status: "ok",
-        transportOutcome: { ok: true, errorClass: null, retryAfterSec: null },
-      };
-    });
-    transport.record.mockImplementation(async () => {
-      order.push("outcome-recorded");
-      return { state: "closed" };
-    });
-
-    const status = await runTelegramDigestDeliveryWithPermit({
-      db,
-      creds,
-      owner: "weekly-recap",
-      editionKey: "weekly:2026-08-16",
-      deliver,
-    });
-
-    expect(status).toBe("ok");
-    expect(order).toEqual(["delivery-complete", "outcome-recorded"]);
-    expect(transport.record).toHaveBeenCalledWith(
-      db,
-      expect.objectContaining({ allowed: true }),
-      [{ chatId: "chat", result: expect.objectContaining({ ok: true }) }],
-      expect.any(Number),
-    );
+  it("delivers while the circuit is closed", async () => {
+    circuit.shouldAttemptFetch.mockResolvedValue(true);
+    expect(await runTelegramDigestDeliveryWithPermit({
+      db, creds, owner: "weekly-recap", editionKey: "weekly:2026-08-16", deliver: async () => "ok",
+    })).toBe("ok");
   });
 
-  it("queues without delivery when permit acquisition fails", async () => {
-    transport.claim.mockRejectedValue(new Error("permit unavailable"));
+  it("queues without delivery when the circuit cannot be read", async () => {
+    circuit.shouldAttemptFetch.mockRejectedValue(new Error("circuit unavailable"));
     const deliver = vi.fn();
     expect(await runTelegramDigestDeliveryWithPermit({
       db, creds, owner: "daily-digest", editionKey: "daily:test", deliver,
     })).toBe("queued: transport-control-unavailable");
     expect(deliver).not.toHaveBeenCalled();
-    expect(transport.record).not.toHaveBeenCalled();
   });
 
-  it("releases an allowed permit without sending after abort during acquisition", async () => {
+  it("does not send after an abort during the circuit read", async () => {
     const controller = new AbortController();
-    let allow!: (value: { allowed: true }) => void;
-    const promise = new Promise<{ allowed: true }>((resolve) => {
-      allow = resolve;
+    circuit.shouldAttemptFetch.mockImplementation(async () => {
+      controller.abort(new Error("stopped during admission"));
+      return true;
     });
-    transport.claim.mockReturnValue(promise);
     const deliver = vi.fn();
-    const pending = runTelegramDigestDeliveryWithPermit({
-      db, creds, owner: "daily-digest", editionKey: "daily:test", deliver, signal: controller.signal,
-    });
-    controller.abort(new Error("stopped during acquisition"));
-    allow({ allowed: true });
-    expect(await pending).toBe("failed: Error: stopped during acquisition");
-    expect(deliver).not.toHaveBeenCalled();
-    expect(transport.record).toHaveBeenCalledExactlyOnceWith(db, { allowed: true }, [], expect.any(Number));
-  });
-
-  it.each([false, true])("preserves delivery failure when release failure is %s", async (releaseFails) => {
-    transport.claim.mockResolvedValue({ allowed: true });
-    if (releaseFails) transport.record.mockRejectedValue(new Error("release unavailable"));
-    const deliver = vi.fn().mockRejectedValue(new Error("delivery unavailable"));
     expect(await runTelegramDigestDeliveryWithPermit({
-      db, creds, owner: "daily-digest", editionKey: "daily:test", deliver,
-    })).toBe("failed: Error: delivery unavailable");
-    expect(transport.record).toHaveBeenCalledExactlyOnceWith(db, { allowed: true }, [], expect.any(Number));
+      db, creds, owner: "daily-digest", editionKey: "daily:test", deliver, signal: controller.signal,
+    })).toBe("failed: Error: stopped during admission");
+    expect(deliver).not.toHaveBeenCalled();
   });
 
-  it("releases an already-handled delivery without inventing a successful send", async () => {
-    transport.claim.mockResolvedValue({ allowed: true });
+  it("reports a delivery failure", async () => {
+    circuit.shouldAttemptFetch.mockResolvedValue(true);
     expect(await runTelegramDigestDeliveryWithPermit({
       db, creds, owner: "daily-digest", editionKey: "daily:test",
-      deliver: async () => ({ status: "already-sent", transportOutcome: null }),
-    })).toBe("already-sent");
-    expect(transport.record).toHaveBeenCalledExactlyOnceWith(db, { allowed: true }, [], expect.any(Number));
+      deliver: vi.fn().mockRejectedValue(new Error("delivery unavailable")),
+    })).toBe("failed: Error: delivery unavailable");
+  });
+});
+
+describe("mapTelegramDigestPermittedDelivery", () => {
+  const labels = { success: "ok", alreadySent: "skipped: already-sent" };
+
+  it.each([
+    [{ outcome: "sent", state: "sent", errorClass: null }, "ok"],
+    [{ outcome: "skipped", state: "sent", errorClass: null }, "skipped: already-sent"],
+    [{ outcome: "skipped", state: "sending", errorClass: null }, "queued: sending"],
+    [{ outcome: "pending", state: "pending", errorClass: "rate_limit" }, "failed: Telegram digest pending: rate_limit"],
+  ] as const)("maps %o to %s", (delivery, expected) => {
+    expect(mapTelegramDigestPermittedDelivery(delivery, labels)).toBe(expected);
   });
 });

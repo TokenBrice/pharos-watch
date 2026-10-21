@@ -12,6 +12,27 @@ function setupChatMigrationSqlite(): { sqlite: DatabaseSync; db: D1Database } {
   return fixtures.open();
 }
 
+// Legacy pipeline tables that no runtime code reads or writes; a later
+// migration drops them, so lifecycle coverage no longer applies.
+const RETIRED_TELEGRAM_TABLES = new Set([
+  "telegram_pending_disambiguation",
+  "telegram_pending_alerts",
+  "telegram_recap_preferences",
+  "telegram_recap_targets",
+  "telegram_freeze_alert_targets",
+  "telegram_freeze_alert_events",
+  "telegram_transport_failure_observations",
+  "telegram_transport_circuit",
+  "telegram_delivery_pauses",
+  "telegram_webhook_operation_mutations",
+]);
+
+function isRetiredTelegramTable(name: string): boolean {
+  return RETIRED_TELEGRAM_TABLES.has(name)
+    || name.startsWith("telegram_alert_")
+    || name.startsWith("telegram_adoption_");
+}
+
 function discoverTelegramChatIdTablesFromMigrations(): string[] {
   const { sqlite } = fixtures.open();
   const tables = sqlite.prepare(`
@@ -24,7 +45,7 @@ function discoverTelegramChatIdTablesFromMigrations(): string[] {
       )
     ORDER BY tables.name
   `).all() as { name: string }[];
-  return tables.map((table) => table.name);
+  return tables.map((table) => table.name).filter((name) => !isRetiredTelegramTable(name));
 }
 
 function collectTelegramTablesFromSql(history: Array<{ sql: string }>): Set<string> {
@@ -41,7 +62,6 @@ const CHAT_ROW_MERGE_TABLES = [
   "telegram_subscribers",
   "telegram_subscriptions",
   "telegram_preset_subscriptions",
-  "telegram_pending_disambiguation",
   "telegram_chat_delivery_diagnostics",
 ] as const;
 
@@ -142,30 +162,19 @@ describe("forgetSubscriber", () => {
         .filter((table): table is string => typeof table === "string"),
     );
     expect([...deletedTables].sort()).toEqual(chatTables.filter((table) => !retainedOnForget.has(table)));
+    expect([...collectTelegramTablesFromSql(db.getHistory())].filter(isRetiredTelegramTable)).toEqual([]);
   });
 
-  it("deletes rows in every Telegram table that names the user outside chat_id", async () => {
-    const { sqlite, db } = setupChatMigrationSqlite();
+  it("has no live Telegram table that names the user outside chat_id", () => {
+    const { sqlite } = setupChatMigrationSqlite();
     const userColumns = sqlite.prepare(`
       SELECT tables.name AS table_name, columns.name AS column_name
         FROM sqlite_master AS tables, pragma_table_info(tables.name) AS columns
        WHERE tables.type = 'table' AND tables.name GLOB 'telegram_*' AND columns.name GLOB '*user_id'
        ORDER BY tables.name, columns.name
     `).all() as { table_name: string; column_name: string }[];
-    expect(userColumns).toEqual([{ table_name: "telegram_pending_disambiguation", column_name: "initiator_user_id" }]);
-    for (const chatId of ["-100", "-200"]) {
-      sqlite.prepare(`
-        INSERT INTO telegram_pending_disambiguation (
-          chat_id, alert_types, resolved_ids, ambiguous_ticker, candidates,
-          remaining_tickers, expires_at, initiator_user_id
-        ) VALUES (?, '[]', '[]', '', '[]', '[]', 9999999999, ?)
-      `).run(chatId, chatId === "-100" ? "42" : "43");
-    }
-
-    await forgetSubscriber(db, "42");
-
-    expect(sqlite.prepare("SELECT chat_id, initiator_user_id FROM telegram_pending_disambiguation").all())
-      .toEqual([{ chat_id: "-200", initiator_user_id: "43" }]);
+    // A new live user-keyed table must be added to forgetSubscriber's purge.
+    expect(userColumns.filter((row) => !isRetiredTelegramTable(row.table_name))).toEqual([]);
   });
 
   it("rolls back lifecycle deletes when an appended operation statement fails", async () => {
@@ -190,16 +199,6 @@ describe("forgetSubscriber", () => {
       )
       VALUES (?, ?, ?, ?)
     `).run(chatId, "alice", 100, 200);
-    sqlite.prepare(`
-      INSERT INTO telegram_alert_job_targets (
-        job_id, target_key, chat_id, alert_type, pending_dedupe_key, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?)
-    `).run("job-1", "target-1", chatId, "depeg", "pending-1", 100);
-    sqlite.prepare(`
-      INSERT INTO telegram_alert_dead_letters (
-        chat_id, message_html, created_at, expired_at, reason
-      ) VALUES (?, ?, ?, ?, ?)
-    `).run(chatId, "expired", 100, 200, "ttl_expired");
     const deletedCacheKeys = [
       `telegram:chat-send-backoff:${chatId}`,
       `telegram:command-flood:${chatId}`,
@@ -236,10 +235,6 @@ describe("forgetSubscriber", () => {
 
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscribers WHERE chat_id = ?").get(chatId))
       .toEqual({ count: 0 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_job_targets WHERE chat_id = ?").get(chatId))
-      .toEqual({ count: 0 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_dead_letters WHERE chat_id = ?").get(chatId))
-      .toEqual({ count: 0 });
     for (const key of deletedCacheKeys) {
       expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").get(key)).toBeUndefined();
     }
@@ -268,60 +263,6 @@ describe("forgetSubscriber", () => {
     }]);
   });
 
-  it("deletes chat-prefixed job-target item lineage while preserving other chats", async () => {
-    const { sqlite, db } = setupChatMigrationSqlite();
-    const chatId = "42";
-    const insertItem = sqlite.prepare(`
-      INSERT INTO telegram_alert_job_target_items (
-        job_id, target_key, source_event_id, item_key, created_at
-      ) VALUES (?, ?, ?, ?, ?)
-    `);
-    // target_key is chat-prefixed: `<chatId>:v<split>:<chunk>:<hash>`.
-    insertItem.run("job-1", `${chatId}:v3:0:abc`, "evt-1", "item-1", 100);
-    insertItem.run("job-1", `${chatId}:v3:1:def`, "evt-1", "item-2", 100);
-    // Neighbor whose chat id shares the forgotten chat's digits as a prefix.
-    insertItem.run("job-1", "420:v3:0:ghi", "evt-1", "item-3", 100);
-
-    await forgetSubscriber(db, chatId);
-
-    const remaining = sqlite
-      .prepare("SELECT target_key FROM telegram_alert_job_target_items ORDER BY target_key")
-      .all();
-    expect(remaining).toEqual([{ target_key: "420:v3:0:ghi" }]);
-  });
-
-  it("removes recap preferences, targets, and pending payloads on forget", async () => {
-    const { sqlite, db } = setupChatMigrationSqlite();
-    const chatId = "recap-forget";
-    const now = 1_700_000_000;
-    sqlite.prepare("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES (?, ?, ?)")
-      .run(chatId, now, now);
-    sqlite.prepare(`
-      INSERT INTO telegram_recap_preferences
-        (chat_id, enabled, delivery_hour_local, next_due_at, created_at, updated_at)
-      VALUES (?, 1, 9, ?, ?, ?)
-    `).run(chatId, now + 3600, now, now);
-    sqlite.prepare(`
-      INSERT INTO telegram_recap_targets
-        (recap_key, chat_id, local_date, window_start_at, window_end_at,
-         preference_generation, watchlist_fingerprint, status, created_at, updated_at)
-      VALUES (?, ?, '2026-07-11', ?, ?, 0, 'fingerprint', 'queued', ?, ?)
-    `).run(`recap:${chatId}:2026-07-11:v1`, chatId, now - 3600, now, now, now);
-    sqlite.prepare(`
-      INSERT INTO telegram_pending_alerts
-        (chat_id, message_html, created_at, updated_at, dedupe_key, source_type, source_event_id)
-      VALUES (?, 'recap', ?, ?, ?, 'personalized_recap', ?)
-    `).run(chatId, now, now, `recap:${chatId}:2026-07-11:v1`, `recap:${chatId}:2026-07-11:v1`);
-
-    await forgetSubscriber(db, chatId);
-
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_preferences WHERE chat_id = ?").get(chatId))
-      .toEqual({ count: 0 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets WHERE chat_id = ?").get(chatId))
-      .toEqual({ count: 0 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE chat_id = ?").get(chatId))
-      .toEqual({ count: 0 });
-  });
 });
 
 describe("migrateTelegramChatId", () => {
@@ -349,6 +290,7 @@ describe("migrateTelegramChatId", () => {
 
     const touchedTables = collectTelegramTablesFromSql(db.getHistory());
     expect(chatTables.filter((table) => !touchedTables.has(table))).toEqual([]);
+    expect([...touchedTables].filter(isRetiredTelegramTable)).toEqual([]);
   });
 
   it("round-trips every current column in merge-owned chat tables from the latest schema", async () => {
@@ -493,17 +435,6 @@ describe("migrateTelegramChatId", () => {
       depeg_worsening_bps_step: null, created_at: 200, updated_at: 300,
     });
 
-    insertRow(sqlite, "telegram_pending_disambiguation", {
-      chat_id: oldChatId, alert_types: "dews", resolved_ids: "[]", ambiguous_ticker: "USD",
-      candidates: "[]", remaining_tickers: "[]", expires_at: 1_700_001_000,
-      action_type: "setup-step", action_payload: "{\"old\":true}", initiator_user_id: "42",
-    });
-    insertRow(sqlite, "telegram_pending_disambiguation", {
-      chat_id: newChatId, alert_types: "safety", resolved_ids: "[]", ambiguous_ticker: "EUR",
-      candidates: "[]", remaining_tickers: "[]", expires_at: 1_700_001_500,
-      action_type: "subscribe", action_payload: "{\"new\":true}", initiator_user_id: "43",
-    });
-
     insertRow(sqlite, "telegram_chat_delivery_diagnostics", {
       chat_id: oldChatId, last_successful_delivery_at: 300, last_successful_reply_at: 700,
       last_delivery_attempt_at: 800, recent_failure_class: "forbidden", updated_at: 900,
@@ -513,39 +444,6 @@ describe("migrateTelegramChatId", () => {
       last_delivery_attempt_at: 750, recent_failure_class: null, updated_at: 850,
     });
 
-    insertRow(sqlite, "telegram_pending_alerts", {
-      chat_id: oldChatId, message_html: "old duplicate", created_at: 100, dedupe_key: `${oldChatId}:same`,
-    });
-    insertRow(sqlite, "telegram_pending_alerts", {
-      chat_id: newChatId, message_html: "new duplicate", created_at: 100, dedupe_key: `${newChatId}:same`,
-    });
-    insertRow(sqlite, "telegram_pending_alerts", {
-      chat_id: oldChatId, message_html: "old unique", created_at: 100, dedupe_key: `${oldChatId}:unique`,
-    });
-
-    insertRow(sqlite, "telegram_alert_job_targets", {
-      job_id: "job-old", target_key: `${oldChatId}:unique`, chat_id: oldChatId,
-      alert_type: "depeg", pending_dedupe_key: `${oldChatId}:unique`, created_at: 100,
-    });
-    insertRow(sqlite, "telegram_alert_dead_letters", {
-      chat_id: oldChatId, message_html: "expired", created_at: 100, expired_at: 200, reason: "ttl_expired",
-    });
-    sqlite.prepare(`
-      INSERT INTO telegram_recap_preferences
-        (chat_id, enabled, delivery_hour_local, next_due_at, created_at, updated_at)
-      VALUES (?, 1, 9, 500, 100, 100)
-    `).run(oldChatId);
-    sqlite.prepare(`
-      INSERT INTO telegram_recap_targets
-        (recap_key, chat_id, local_date, window_start_at, window_end_at,
-         preference_generation, watchlist_fingerprint, status, created_at, updated_at)
-      VALUES (?, ?, '2026-07-11', 100, 200, 0, 'fingerprint', 'queued', 100, 100)
-    `).run(`recap:${oldChatId}:2026-07-11:v1`, oldChatId);
-    sqlite.prepare(`
-      INSERT INTO telegram_pending_alerts
-        (chat_id, message_html, created_at, updated_at, dedupe_key, source_type, source_event_id)
-      VALUES (?, 'recap', 100, 100, ?, 'personalized_recap', ?)
-    `).run(oldChatId, `${oldChatId}:recap`, `recap:${oldChatId}:2026-07-11:v1`);
     sqlite.prepare(`
       INSERT INTO telegram_processed_updates (update_id, received_at, chat_id)
       VALUES (?, ?, ?)
@@ -663,16 +561,6 @@ describe("migrateTelegramChatId", () => {
       updated_at: 300,
     });
     expect(sqlite.prepare(`
-      SELECT * FROM telegram_pending_disambiguation
-       WHERE chat_id = ?
-    `).get(newChatId)).toEqual({
-      chat_id: newChatId, alert_types: "safety", resolved_ids: "[]", ambiguous_ticker: "EUR",
-      candidates: "[]", remaining_tickers: "[]", expires_at: 1_700_001_500,
-      action_type: "subscribe",
-      action_payload: "{\"new\":true}",
-      initiator_user_id: "43",
-    });
-    expect(sqlite.prepare(`
       SELECT * FROM telegram_chat_delivery_diagnostics
        WHERE chat_id = ?
     `).get(newChatId)).toEqual({
@@ -684,28 +572,6 @@ describe("migrateTelegramChatId", () => {
       updated_at: 900,
     });
 
-    expect(sqlite.prepare(`
-      SELECT message_html, dedupe_key
-        FROM telegram_pending_alerts
-       WHERE chat_id = ?
-       ORDER BY message_html
-    `).all(newChatId)).toEqual([
-      { message_html: "new duplicate", dedupe_key: `${newChatId}:same` },
-      { message_html: "old unique", dedupe_key: `${newChatId}:unique` },
-    ]);
-    expect(sqlite.prepare(`
-      SELECT chat_id, pending_dedupe_key
-        FROM telegram_alert_job_targets
-       WHERE job_id = 'job-old'
-    `).get()).toEqual({
-      chat_id: newChatId,
-      pending_dedupe_key: `${newChatId}:unique`,
-    });
-    expect(sqlite.prepare("SELECT chat_id FROM telegram_alert_dead_letters").get()).toEqual({ chat_id: newChatId });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_preferences").get()).toEqual({ count: 0 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets").get()).toEqual({ count: 0 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE source_type = 'personalized_recap'").get())
-      .toEqual({ count: 0 });
     expect(sqlite.prepare("SELECT chat_id FROM telegram_processed_updates").get()).toEqual({ chat_id: newChatId });
     expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(`telegram:group-welcome:${newChatId}`))
       .toEqual({ value: "legacy welcome", updated_at: 200 });

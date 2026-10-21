@@ -802,9 +802,9 @@ const CRON_JOB_RUNBOOKS: Readonly<Record<string, string>> = {
   "sync-yield-supplemental": "yield-health.md",
   "yield-coverage-audit": "yield-health.md",
   "fetch-tbill-rate": "yield-benchmark-fallback-stale.md",
-  "dispatch-telegram-alerts": "telegram-no-delivery.md",
+  "dispatch-telegram-alerts": "telegram-delivery.md",
   "telegram-digest-outbox-drain": "telegram-digest-outbox.md",
-  "telegram-degradation-watchdog": "telegram-no-delivery.md",
+  "telegram-degradation-watchdog": "telegram-delivery.md",
 };
 
 export interface CronRunbookLink {

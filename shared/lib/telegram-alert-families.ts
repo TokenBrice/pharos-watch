@@ -313,13 +313,3 @@ export const TELEGRAM_ALERT_FAMILY_COMMAND_TOKENS = TELEGRAM_LIVE_ALERT_TYPES.jo
 /** Reply when a user asks for the retired launch family (e.g. `/subscribe launch`). */
 export const TELEGRAM_LAUNCH_RETIRED_MESSAGE =
   "Launch alerts are retired. New stablecoins Pharos starts tracking are listed in the @pharoswatch channel digest, and upcoming launches are on pharos.watch/upcoming.";
-
-/**
- * One-time admin-broadcast notice for chats that had launch alerts on
- * (scope `retired-launch-opt-ins`; see docs/telegram-alerts.md). Telegram HTML.
- */
-export const TELEGRAM_LAUNCH_RETIREMENT_NOTICE_HTML = [
-  "<b>Launch alerts are retired</b>",
-  "You had launch alerts turned on. PharosWatchBot no longer sends them; your other alerts are unchanged.",
-  'New stablecoins Pharos starts tracking are listed in the <a href="https://t.me/pharoswatch">@pharoswatch</a> channel digest, and upcoming launches are on <a href="https://pharos.watch/upcoming/">pharos.watch/upcoming</a>.',
-].join("\n\n");

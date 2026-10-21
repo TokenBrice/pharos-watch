@@ -5,7 +5,6 @@ import {
   createDispatchHarness,
   defaultDispatchCaches,
   dispatchTelegramAlerts,
-  formatConsolidatedMessageSpy,
   mockRecordOutcome,
   mockShouldAttemptFetch,
   readCacheValue,
@@ -153,43 +152,7 @@ describe("dispatchTelegramAlerts", () => {
       noWorkRun: true,
     });
     expect(telegramDeliveryTranscript).toEqual([]);
-    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_source_events").get()).toEqual({
-      count: 0,
-    });
-    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_target_plans").get()).toEqual({
-      count: 0,
-    });
+    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_jobs").get()).toEqual({ count: 0 });
   });
-
-  it("drains a legacy-source pending target during an eventless run", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const harness = createDispatchHarness();
-    healthySources(harness, { dews: [{ stablecoinId: "usdc-circle", score: 12, band: "CALM" }] });
-    harness.seed({
-      pending: [
-        {
-          id: 1,
-          chatId: "chat-imported",
-          html: "<b>Imported overflow alert</b>",
-          createdAt: now - 120,
-          sourceType: "legacy",
-        },
-      ],
-    });
-    const result = await dispatchTelegramAlerts(harness.db, "bot-token");
-    const metadata = JSON.parse(result.metadata);
-
-    expect(result.itemCount).toBe(1);
-    expect(metadata).toMatchObject({
-      eventlessFastPath: true,
-      pendingAttempted: 1,
-      pendingDrained: 1,
-      messagesSent: 1,
-    });
-    expect(formatConsolidatedMessageSpy).not.toHaveBeenCalled();
-    expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "chat-imported" })]);
-    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
-  });
-
 });
 

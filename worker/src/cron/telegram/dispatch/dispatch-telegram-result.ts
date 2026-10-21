@@ -61,28 +61,6 @@ export interface DispatchCapacityMetadata {
 
 export type DispatchResult = TelegramDispatchCronResult & DispatchCapacityMetadata;
 
-/**
- * Published progress-tail view (`deferredTail`) of a capacity snapshot. Its
- * column names differ from the flattened run-metadata projection, so this is a
- * view over `pendingCapacityProgressFields` rather than a second mapping of the
- * snapshot; only `total` (which the flattened projection does not carry) is read
- * from the snapshot.
- */
-export function pendingTailState(snapshot: PendingCapacitySnapshot | null | undefined): Record<string, unknown> | null {
-  if (!snapshot) return null;
-  const fields = pendingCapacityProgressFields(snapshot);
-  return {
-    total: snapshot.total,
-    active: fields.pendingTotal,
-    due: fields.pendingDue,
-    deferred: fields.pendingDeferredCount,
-    expired: fields.pendingExpiredCount,
-    nearTtl: fields.pendingNearTtlCount,
-    oldestPendingAgeSec: fields.oldestPendingAgeSec,
-    estimatedDrainTimeSec: fields.estimatedDrainTimeSec,
-  };
-}
-
 function safetySourceFields(
   assessment: AlertSafetySourceAssessment,
   suppressed: boolean,
@@ -145,20 +123,6 @@ function pendingDispatchFields(
     pendingRetryAfterSec: drainResult.retryAfterSec,
     pendingEnqueued,
     pendingExpired: expiredCount,
-  };
-}
-
-/**
- * Published progress-metadata subset of the drain counters. It reads the built
- * result — the single drain → counters projection — so the progress totals
- * cannot drift from the run counters they mirror.
- */
-export function pendingCountTotals(result: DispatchResult) {
-  return {
-    pendingAttempted: result.pendingAttempted,
-    pendingSent: result.pendingSent,
-    pendingDeferred: result.pendingDeferred,
-    pendingDropped: result.pendingDropped,
   };
 }
 

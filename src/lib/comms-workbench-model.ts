@@ -118,7 +118,6 @@ export interface CommsWorkbenchModel {
     presetImpliedCoinSubscriptions: number | null;
     activePresetFollowers: number | null;
     averageSubscriptionsPerChat: number | null;
-    pendingDisambiguations: number | null;
     lastSubscriberActivityAt: number | null;
     customPreferenceChats: number | null;
     quietHoursEnabledChats: number | null;
@@ -206,21 +205,21 @@ function buildRecoveryLinks(input: {
   if (input.backlogAssessment === "attention") {
     links.push({
       label: "Backlog expiration runbook",
-      href: `${REPOSITORY_BLOB_URL}/docs/runbooks/telegram-no-delivery.md#backlog-and-expiration`,
+      href: `${REPOSITORY_BLOB_URL}/docs/runbooks/telegram-delivery.md#backlog-and-expiration`,
       external: true,
     });
   }
   if (input.rateLimited) {
     links.push({
       label: "Rate-limit runbook",
-      href: `${REPOSITORY_BLOB_URL}/docs/runbooks/telegram-no-delivery.md#rate-limit-storm`,
+      href: `${REPOSITORY_BLOB_URL}/docs/runbooks/telegram-delivery.md#rate-limit-storm`,
       external: true,
     });
   }
   if (input.health === "failed" || (input.permanentFailures ?? 0) > 0) {
     links.push({
       label: "No-delivery runbook",
-      href: `${REPOSITORY_BLOB_URL}/docs/runbooks/telegram-no-delivery.md`,
+      href: `${REPOSITORY_BLOB_URL}/docs/runbooks/telegram-delivery.md`,
       external: true,
     });
   }
@@ -442,7 +441,6 @@ export function buildCommsWorkbenchModel(input: {
       ),
       activePresetFollowers: optionalBotNumber(telegramBot, unavailableFields, "activePresetFollowers"),
       averageSubscriptionsPerChat: telegramBot?.avgSubscriptionsPerSubscribedChat ?? null,
-      pendingDisambiguations: telegramBot?.pendingDisambiguations ?? null,
       lastSubscriberActivityAt: telegramBot?.lastSubscriberActivityAt ?? null,
       customPreferenceChats: telegramBot?.customPreferenceChats ?? null,
       quietHoursEnabledChats: telegramBot?.quietHoursEnabledChats ?? null,

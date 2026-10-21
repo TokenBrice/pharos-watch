@@ -145,14 +145,16 @@ describe("telegram usage analytics", () => {
   it("counts only pending delivery rows in lifecycle snapshots", async () => {
     const { sqlite, db } = fixtures.open();
     const insert = sqlite.prepare(
-      "INSERT INTO telegram_pending_alerts (chat_id, message_html, created_at, delivery_state) VALUES (?, 'test', ?, ?)",
+      `INSERT INTO telegram_deliveries (job_id, kind, chat_id, body_hash, state, next_attempt_at, expires_at, created_at)
+       VALUES ('job', 'alert', ?, 'h', ?, ?, ?, ?)`,
     );
-    for (let index = 0; index < 3; index += 1) {
-      insert.run(`pending-${index}`, 1_771_833_600, "pending");
+    const at = 1_771_833_600;
+    for (const [chatId, state] of [["open-1", "pending"], ["open-2", "pending"], ["open-3", "retry"]] as const) {
+      insert.run(chatId, state, at, at + 3600, at);
     }
-    for (const state of ["sending", "sent", "execution_unknown"] as const) {
+    for (const state of ["sending", "sent", "unknown"] as const) {
       for (let index = 0; index < 4; index += 1) {
-        insert.run(`${state}-${index}`, 1_771_833_600, state);
+        insert.run(`${state}-${index}`, state, at, at + 3600, at);
       }
     }
 
@@ -175,7 +177,7 @@ describe("telegram usage analytics", () => {
       { match: "FROM telegram_subscribers s", rows: [] },
       { match: "FROM telegram_preset_subscriptions", rows: [] },
       { match: "FROM telegram_watcher_lifecycle_events_daily", rows: [] },
-      { match: "FROM telegram_pending_alerts", rows: [], throwError: new Error("pending read failed") },
+      { match: "FROM telegram_deliveries", rows: [], throwError: new Error("pending read failed") },
       {
         match: "SELECT snapshot_at FROM telegram_watcher_lifecycle_daily",
         rows: existingSnapshotAt == null ? [] : [{ snapshot_at: existingSnapshotAt }],
@@ -192,7 +194,7 @@ describe("telegram usage analytics", () => {
     expect(snapshot.churnedWatchers).toBe(0);
     expect(snapshot.reactivatedWatchers).toBe(0);
     expect(snapshot.presetImpliedCoinFollows).toBe(0);
-    expect(db.getHistory().filter((entry) => entry.sql.includes("FROM telegram_pending_alerts"))).toHaveLength(1);
+    expect(db.getHistory().filter((entry) => entry.sql.includes("FROM telegram_deliveries"))).toHaveLength(1);
     expect(db.getHistory().some((entry) =>
       entry.sql.includes("INSERT INTO telegram_watcher_lifecycle_daily"),
     )).toBe(false);
@@ -204,7 +206,7 @@ describe("telegram usage analytics", () => {
       { match: "FROM telegram_subscribers s", rows: [] },
       { match: "FROM telegram_preset_subscriptions", rows: [] },
       { match: "FROM telegram_watcher_lifecycle_events_daily", rows: [] },
-      { match: "FROM telegram_pending_alerts", rows: [{ pending_count: pendingCount }] },
+      { match: "FROM telegram_deliveries", rows: [{ pending_count: pendingCount }] },
       { match: "SELECT snapshot_at FROM telegram_watcher_lifecycle_daily", rows: [] },
       { match: "INSERT INTO telegram_watcher_lifecycle_daily", rows: [] },
     ]);
@@ -227,7 +229,7 @@ describe("telegram usage analytics", () => {
       { match: "FROM telegram_subscribers s", rows: [] },
       { match: "FROM telegram_preset_subscriptions", rows: [] },
       { match: "FROM telegram_watcher_lifecycle_events_daily", rows: [] },
-      { match: "FROM telegram_pending_alerts", rows: [], throwError: new Error("pending read failed") },
+      { match: "FROM telegram_deliveries", rows: [], throwError: new Error("pending read failed") },
       { match: "SELECT snapshot_at FROM telegram_watcher_lifecycle_daily", rows: [] },
       // Empty cached history triggers a heavy-section rebuild; keep every other read available.
       { match: "FROM telegram_subscriptions", rows: [] },

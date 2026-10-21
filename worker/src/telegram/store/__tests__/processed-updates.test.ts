@@ -28,8 +28,6 @@ describe("telegram processed-update claim", () => {
     await expect(claimTelegramProcessedUpdate(db, claimInput(NOW + 3_600))).resolves.toEqual({ status: "duplicate" });
     expect(sqlite.prepare("SELECT status, processed_at, chat_id FROM telegram_processed_updates").all())
       .toEqual([{ status: "processed", processed_at: NOW, chat_id: "42" }]);
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_webhook_operation_mutations").get())
-      .toEqual({ count: 0 });
   });
 
   it("asks Telegram to retry while a fresh claim is in flight", async () => {
