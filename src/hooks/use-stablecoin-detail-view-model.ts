@@ -120,9 +120,6 @@ export function useStablecoinDetailViewModel({
     return {
       data: summaryData ?? undefined,
       isLoading: !usingArchive && !displayedSummary.data && liveSummaryQuery.isLoading,
-      isFetching: !usingArchive && liveSummaryQuery.isFetching,
-      isFetchedAfterMount: liveSummaryQuery.isFetchedAfterMount,
-      isSnapshot: !usingArchive && !displayedSummary.isRetained && summaryIsSnapshot,
       error: usingArchive ? null : liveSummaryQuery.error,
       dataUpdatedAt: usingArchive ? 0 : displayedSummary.isRetained
         ? (displayedSummary.meta?.updatedAt ?? 0) * 1000 : liveSummaryQuery.dataUpdatedAt,
@@ -135,8 +132,7 @@ export function useStablecoinDetailViewModel({
       enabled: !usingArchive,
     };
   }, [archivedLiveSummary, displayedSummary.data, displayedSummary.meta, displayedSummary.isRetained,
-    liveSummaryQuery.dataUpdatedAt, liveSummaryQuery.error, liveSummaryQuery.isLoading,
-    liveSummaryQuery.isFetching, liveSummaryQuery.isFetchedAfterMount, summaryIsSnapshot]);
+    liveSummaryQuery.dataUpdatedAt, liveSummaryQuery.error, liveSummaryQuery.isLoading]);
   useEffect(() => {
     // Early prefetch may finish before this observer mounts; explicit admitted
     // live provenance, not isFetchedAfterMount, distinguishes it from a seed.
@@ -171,14 +167,7 @@ export function useStablecoinDetailViewModel({
   const yieldRankings = useGatedQuerySlice(yieldRankingsQuery, yieldEnabled);
   const stressSignals = useGatedQuerySlice(stressSignalsQuery, stressEnabled);
 
-  const supplyHistorySlice = useQuerySlice(supplyQuery);
-  const supplyIsSnapshot = isDetailSnapshotQuery(queryClient, FRONTEND_API_QUERY_DESCRIPTORS.supplyHistory(id, STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS).queryKey);
-  const supplyHistory = useMemo(() => ({
-    ...supplyHistorySlice,
-    isFetching: supplyQuery.isFetching,
-    isFetchedAfterMount: supplyQuery.isFetchedAfterMount,
-    isSnapshot: supplyIsSnapshot,
-  }), [supplyHistorySlice, supplyQuery.isFetching, supplyQuery.isFetchedAfterMount, supplyIsSnapshot]);
+  const supplyHistory = useQuerySlice(supplyQuery);
   const annualPriceHistory = useGatedQuerySlice(annualPriceQuery, annualPriceEnabled);
   const pegSummary = useQuerySlice(pegQuery);
   const queries = useMemo(

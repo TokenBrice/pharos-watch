@@ -157,7 +157,6 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
     meta,
     dataUpdatedAt,
     total,
-    droppedRows,
   } = feed.events;
 
   const interactions = useTimelineFeedInteractions({
@@ -234,7 +233,6 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
       <SummaryBand
         loadedCount={feed.visibleEvents.length}
         totalCount={total}
-        droppedRows={droppedRows}
         openCount={feed.openIncidents?.length ?? null}
         windowLabel={feedController.windowLabel}
         severityLabel={feedController.severityLabel}

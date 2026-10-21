@@ -350,17 +350,7 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
       ariaLabel={`Circulating supply distribution across ${categoryCount} ${categoryCount === 1 ? "chain" : "chains"}${unattributed > 0 ? `, plus ${formatCurrency(unattributed)} Unattributed supply` : ""}`}
       data={data}
       total={total}
-      notice={
-        query.error ? (
-          <QueryStateNotice
-            state="stale-with-data"
-            label="Chain distribution data"
-            dataUpdatedAt={health.dataUpdatedAt}
-            onRetry={() => void query.refetch()}
-            compact
-          />
-        ) : <StaleDataBanner queries={[healthInput]} />
-      }
+      notice={<StaleDataBanner queries={[healthInput]} />}
     />
   );
 }
@@ -433,17 +423,7 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
       ariaLabel={`DEX liquidity TVL distribution across ${categoryCount} ${categoryCount === 1 ? "protocol" : "protocols"}`}
       data={data}
       total={total}
-      notice={
-        query.error ? (
-          <QueryStateNotice
-            state="stale-with-data"
-            label="DEX distribution data"
-            dataUpdatedAt={health.dataUpdatedAt}
-            onRetry={() => void query.refetch()}
-            compact
-          />
-        ) : <StaleDataBanner queries={[healthInput]} />
-      }
+      notice={<StaleDataBanner queries={[healthInput]} />}
     />
   );
 }

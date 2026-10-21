@@ -6,6 +6,7 @@ import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 
 interface FreshnessIndicatorProps {
   updatedAtMs: number;
@@ -22,14 +23,14 @@ interface FreshnessIndicatorProps {
  * budget (`API_FRESHNESS_MAX_AGE_SEC`), which is the producer's own cadence — so
  * with no headroom the chip turned amber the instant one normal cycle elapsed,
  * and a routine refresh read as a warning (amber at 15m, neutral at 14m). The
- * compact chips get the same 2x producer headroom the cron-backed hooks already
- * use for `refetchInterval`, so amber now means a producer run was missed.
+ * compact chips use the public stale band (`FRESHNESS_RATIOS.DEGRADED`), so amber
+ * means the data is several producer cycles late, the same bar as the page banner.
  *
  * The operations surfaces (status dashboard, public status hero) render the
  * non-compact variant and pass their own deliberate UI thresholds; those stay
  * exact.
  */
-const CONTENT_STALE_GRACE_FACTOR = 2;
+const CONTENT_STALE_GRACE_FACTOR = FRESHNESS_RATIOS.DEGRADED;
 
 function formatAge(ageMs: number): string {
   if (ageMs < 5000) return "just now";

@@ -350,11 +350,6 @@ function formatBudget(seconds: number): string {
   return `${Math.max(1, Math.round(seconds / SECONDS_PER_HOUR))}-hour budget`;
 }
 
-/** "1066290s old … (max 604800s)" becomes "12.3 days old … (max 7 days)": ages read in days, never raw seconds. */
-function humanizeDurations(text: string): string {
-  return text.replace(/\b(\d{3,})s\b/g, (_match, seconds: string) => formatDuration(Number(seconds)));
-}
-
 /** Date of the evidence the feed last collected: attested report date first, else the source timestamp. */
 function reserveEvidenceDate(reserves: ReserveResult): number | null {
   const assurance = reserves.metadata?.details?.assurance;
@@ -421,26 +416,9 @@ function buildSyncFeedStatus(reserves: ReserveResult): ReserveFeedStatusModel | 
     };
   }
 
-  const reason = sync.failureCategory
-    ?? (sync.uncertainWrite
-      ? "uncertain-write"
-      : sync.lastError ? "unclassified" : sync.warnings?.length ? "warnings" : sync.status);
-  const base = sync.status === "error" ? "Reserve sync error" : "Reserve sync degraded";
-  const rows = [
-    `Reason: ${reason}`,
-    `Sync status: ${sync.status}`,
-    ...(sync.lastError ? [`Last error: ${humanizeDurations(sync.lastError)}`] : []),
-    ...(sync.uncertainWrite ? ["Latest write state uncertain"] : []),
-    ...(sync.warnings ?? []).map(humanizeDurations),
-  ];
-  return {
-    label: reason === sync.status ? base : `${base} · ${reason}`,
-    tone: "watch",
-    reason,
-    summary: `Live reserve sync reported ${sync.status}. The reviewed reserve composition is unaffected.`,
-    rows,
-    retryable: false,
-  };
+  // Other sync faults over a served live book (partial reads, uncertain writes, adapter errors) are
+  // operator signal (Telegram, /status); unreadable constituents stay marked at the value itself.
+  return null;
 }
 
 /**
@@ -460,7 +438,8 @@ export function buildReserveFeedStatus(
     ...review.sources.map((source) => `Evidence (${source.evidenceDate}): ${source.url}`),
     "This acknowledgement does not change stale/error evidence or scoring admission.",
   );
-  if (!fetchError) return sync;
+  // A failed refetch over a retained reserve read is not a reader notice.
+  if (!fetchError || reserves) return sync;
 
   const notice = buildReserveFetchNotice(fetchError, reserves);
   const reason = fetchError instanceof ApiFetchError && fetchError.status === 503
@@ -471,7 +450,7 @@ export function buildReserveFeedStatus(
     tone: notice.tone,
     reason,
     summary: notice.message,
-    rows: [`Reason: ${reason}`, notice.message, ...(sync?.rows ?? [])],
+    rows: [`Reason: ${reason}`, notice.message],
     retryable: true,
   };
 }

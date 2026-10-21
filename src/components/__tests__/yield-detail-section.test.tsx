@@ -189,10 +189,10 @@ describe("YieldDetailSection", () => {
     expect(container.textContent).not.toContain("APY from depositing");
   });
 
-  it("keeps retained ranking visible while announcing refresh failure", () => {
+  it("keeps retained ranking visible without a reader notice after a failed refresh (ADR-42)", () => {
     mockRankingsQuery({ data: makeYieldDetailResponse([makeRanking()]), error: new Error("refresh failed") });
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
-    expect(screen.getByRole("status")).toBeTruthy();
+    expect(screen.queryByRole("status")).toBeNull();
     expect(screen.getByTestId("yield-history-chart")).toBeTruthy();
   });
 

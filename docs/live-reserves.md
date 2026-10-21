@@ -199,7 +199,7 @@ Suspended, unconfigured and pre-launch assets return `404` from the reserve endp
 | `sourceAgeBudgetSec` | Effective source-age budget: `min(scoring.maxSourceAgeSec, adapter validation.maxSourceAgeSec)`, else the fetch budget; `null` when source age was not judged |
 | `sourceAgeBudgetCap` | Which cap won: `scoring` (per-coin cap, including ties), `adapter`, or `fetch-budget`; `null` when source age was not judged |
 
-Uncertain write attempts are intentionally exposed as `sync.uncertainWrite = true` instead of being collapsed into generic stale/error narration. The API may still serve the last consistent snapshot or fallback presentation, but operators can tell that the latest attempted write is ambiguous until a clean follow-up run resolves it. Detail-page polling uses the normal 4-hour reserve cadence only for clean live responses; live responses with `sync.status !== "ok"` or `sync.uncertainWrite = true` use recovery polling and render the active status, failure category, and last error above the reserve card footer.
+Uncertain write attempts are intentionally exposed as `sync.uncertainWrite = true` instead of being collapsed into generic stale/error narration. The API may still serve the last consistent snapshot or fallback presentation, but operators can tell that the latest attempted write is ambiguous until a clean follow-up run resolves it. Detail-page polling uses the normal 4-hour reserve cadence only for clean live responses; live responses with `sync.status !== "ok"` or `sync.uncertainWrite = true` use recovery polling; readers see no sync-status narration ([ADR-42](./architecture.md#adr-42)).
 
 ### Reviewed liability scopes
 

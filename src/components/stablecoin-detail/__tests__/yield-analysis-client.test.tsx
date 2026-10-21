@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import YieldAnalysisClient from "@/components/stablecoin-detail/yield-analysis-client";
 import { makeYieldDetailRanking, makeYieldDetailResponse } from "@/components/__tests__/yield-detail.test-support";
@@ -184,20 +184,18 @@ describe("YieldAnalysisClient", () => {
     expect(screen.getByRole("button", { name: "Reset to all sources" })).toBeTruthy();
   });
 
-  it("retains the workbench and exposes refresh errors and API quality warnings", () => {
-    const refetch = vi.fn();
+  it("retains the workbench without reader notices for refresh errors and quality advisories (ADR-42)", () => {
     setRankingsQuery({
       data: makeResponse([makeRanking()]),
       error: new Error("refresh failed"),
       meta: { warning: "Required input quality degraded" },
-      refetch,
+      refetch: vi.fn(),
     });
     render(<YieldAnalysisClient id="usdn-smardex" staticCoin={staticCoin("usdn-smardex", "SMARDEX USDN", "USDN", true)} />);
-    expect(screen.getByRole("status")).toBeTruthy();
-    expect(screen.getByText("Required input quality degraded")).toBeTruthy();
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByText("Required input quality degraded")).toBeNull();
     expect(screen.getByTestId("yield-history-chart")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-    expect(refetch).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
   });
 
   it.each([
@@ -408,6 +406,6 @@ describe("YieldAnalysisClient", () => {
 
     expect(screen.getByTestId("pys-breakdown")).toBeTruthy();
     expect(screen.getByTestId("yield-history-chart")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Retry" }).closest('[role="status"]')).toBe(screen.getByRole("status"));
+    expect(screen.queryByRole("status")).toBeNull();
   });
 });

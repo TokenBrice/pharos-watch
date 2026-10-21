@@ -33,7 +33,7 @@ describe("FreshnessIndicator", () => {
       timestamp.focus();
       vi.advanceTimersByTime(220);
     });
-    expect(screen.getByRole("tooltip").textContent).toContain("more than 2m old");
+    expect(screen.getByRole("tooltip").textContent).toContain("more than 12m old");
   });
 
   it("increments age via internal timer", () => {
@@ -92,14 +92,14 @@ describe("FreshnessIndicator", () => {
     expect(screen.getByRole("time").querySelector(".sr-only")?.textContent).toBe("Dashboard fetch has not loaded");
   });
 
-  it("gives compact chips a doubled staleness budget and noncompact chips the exact one", () => {
+  it("gives compact chips the public stale band and noncompact chips the exact budget", () => {
     vi.setSystemTime(new Date(1_700_000_000_000));
     const updatedAtMs = 1_700_000_000_000 - 90_000;
     const { rerender } = render(<FreshnessIndicator updatedAtMs={updatedAtMs} staleAfterMs={60_000} compact />);
     expect(screen.getByRole("time").getAttribute("data-stale")).toBe("false");
     expect(screen.getByRole("time").getAttribute("datetime")).toBe("2023-11-14T22:11:50.000Z");
-    expect(screen.getByRole("time").getAttribute("data-stale-after-ms")).toBe("120000");
-    expect(screen.getByRole("time").querySelector(".sr-only")?.textContent).toContain("more than 2m old");
+    expect(screen.getByRole("time").getAttribute("data-stale-after-ms")).toBe("720000");
+    expect(screen.getByRole("time").querySelector(".sr-only")?.textContent).toContain("more than 12m old");
 
     rerender(<FreshnessIndicator updatedAtMs={updatedAtMs} staleAfterMs={60_000} />);
     expect(screen.getByRole("time").getAttribute("data-stale")).toBe("true");
@@ -109,7 +109,7 @@ describe("FreshnessIndicator", () => {
 
     rerender(<FreshnessIndicator updatedAtMs={updatedAtMs} staleAfterMs={60_000} compact />);
     expect(screen.getByRole("time").getAttribute("data-stale")).toBe("false");
-    rerender(<FreshnessIndicator updatedAtMs={updatedAtMs - 45_000} staleAfterMs={60_000} compact />);
+    rerender(<FreshnessIndicator updatedAtMs={updatedAtMs - 700_000} staleAfterMs={60_000} compact />);
     expect(screen.getByRole("time").getAttribute("data-stale")).toBe("true");
   });
 

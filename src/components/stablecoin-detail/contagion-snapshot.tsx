@@ -105,12 +105,9 @@ export function ContagionSnapshot({
   const hasRightColumn = hasVariantCard || hasCollateralUsage;
   const sourceError = reportCardsQuery.error ?? stablecoinsQuery.error;
   const hasSourceData = rc !== undefined && list !== undefined;
-  const sourceUpdatedTimes = [reportCardsQuery.dataUpdatedAt, stablecoinsQuery.dataUpdatedAt].filter(
-    (value) => value > 0,
-  );
-  const sourceDataUpdatedAt = sourceUpdatedTimes.length > 0 ? Math.min(...sourceUpdatedTimes) : 0;
+  const sourceUnavailable = sourceError != null && !hasSourceData;
 
-  if (!detailCard && !hasContagion && !hasRightColumn && !sourceError) {
+  if (!detailCard && !hasContagion && !hasRightColumn && !sourceUnavailable) {
     return null;
   }
 
@@ -146,11 +143,10 @@ export function ContagionSnapshot({
         </IntentLink>
       </div>
       <div className={DETAIL_MODULE_BODY_CLASS}>
-        {sourceError ? (
+        {sourceUnavailable ? (
           <QueryStateNotice
-            state={hasSourceData ? "stale-with-data" : "unavailable"}
+            state="unavailable"
             label="Dependency graph data"
-            dataUpdatedAt={sourceDataUpdatedAt}
             onRetry={() => {
               void reportCardsQuery.refetch();
               void stablecoinsQuery.refetch();

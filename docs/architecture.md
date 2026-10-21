@@ -141,7 +141,7 @@ These records are a living charter: amend in place for precision, scope, or chan
 
 Eight data-integrity rules were adopted on 2026-09-22 after a repo-wide review found each one violated in five or more independent places. ADR-28 to ADR-35 state them; the per-domain contract wording lives in the owning docs named by each record.
 
-Read an individual decision rather than the entire record collection: [ADR-1](#adr-1) · [ADR-2](#adr-2) · [ADR-3](#adr-3) · [ADR-4](#adr-4) · [ADR-6](#adr-6) · [ADR-7](#adr-7) · [ADR-8](#adr-8) · [ADR-9](#adr-9) · [ADR-10](#adr-10) · [ADR-19](#adr-19) · [ADR-20](#adr-20) · [ADR-21](#adr-21) · [ADR-22](#adr-22) · [ADR-23](#adr-23) · [ADR-24](#adr-24) · [ADR-25](#adr-25) · [ADR-26](#adr-26) · [ADR-27](#adr-27) · [ADR-28](#adr-28) · [ADR-29](#adr-29) · [ADR-30](#adr-30) · [ADR-31](#adr-31) · [ADR-32](#adr-32) · [ADR-33](#adr-33) · [ADR-34](#adr-34) · [ADR-35](#adr-35) · [ADR-36](#adr-36) · [ADR-37](#adr-37) · [ADR-38](#adr-38) · [ADR-39](#adr-39) · [ADR-40](#adr-40) · [ADR-41](#adr-41) · [ADR-5](#adr-5).
+Read an individual decision rather than the entire record collection: [ADR-1](#adr-1) · [ADR-2](#adr-2) · [ADR-3](#adr-3) · [ADR-4](#adr-4) · [ADR-6](#adr-6) · [ADR-7](#adr-7) · [ADR-8](#adr-8) · [ADR-9](#adr-9) · [ADR-10](#adr-10) · [ADR-19](#adr-19) · [ADR-20](#adr-20) · [ADR-21](#adr-21) · [ADR-22](#adr-22) · [ADR-23](#adr-23) · [ADR-24](#adr-24) · [ADR-25](#adr-25) · [ADR-26](#adr-26) · [ADR-27](#adr-27) · [ADR-28](#adr-28) · [ADR-29](#adr-29) · [ADR-30](#adr-30) · [ADR-31](#adr-31) · [ADR-32](#adr-32) · [ADR-33](#adr-33) · [ADR-34](#adr-34) · [ADR-35](#adr-35) · [ADR-36](#adr-36) · [ADR-37](#adr-37) · [ADR-38](#adr-38) · [ADR-39](#adr-39) · [ADR-40](#adr-40) · [ADR-41](#adr-41) · [ADR-42](#adr-42) · [ADR-5](#adr-5).
 
 
 ### Active Records
@@ -356,7 +356,12 @@ Domain applications: [R8 redemption admission](process/architecture-appendix.md#
 - The observer bounds ten physical RPCs, three seconds per call, twenty seconds overall and one MiB per body, composed with inherited cancellation. Raw arrays are bounded by 500 orders/side and 1,000 trades and do not persist. Research calls measured 360–535 ms on hive.blog and 49–134 ms on deathwing; those sequential samples are not production CPU/heap or p95 evidence. Public quotas remain undocumented. One aggregate circuit outcome and generation-linked diagnostic packet reuse existing persistence.
 - [Native Hive acceptance](process/pricing-pipeline-appendix.md#native-hive-order-book) owns the first-run/full-day evidence and rejection-rate distinction. Roll back collection and live registration together if those gates fail; retain historical labels through the retired-source mechanism, never publish par, loosen gates, delete history or alter supply. There is no schema reversal or Worker-role migration.
 
-### Superseded Records
+#### ADR-42
+
+**Relations:** applies [ADR-29](#adr-29) and [ADR-30](#adr-30) to reader surfaces · **Enforcement:** `isPublicWarning` in `src/lib/data-health.ts`; banner, notice and hero tests · **Approval:** owner-approved public-warnings simplification, 2026-10-21 · **Acceptance:** pending first production reserve post-sync operator alert
+
+- **ADR-42 — Readers see material data problems only; operators get the rest.** A public surface warns only when data is past its stale band (`FRESHNESS_RATIOS.DEGRADED`, 12× the producer interval, or the producer's `degradedBudgetSec`), is missing with nothing retained, or is curated as quarantined/delisted. `degraded` findings (source/quality advisories, non-fresh dependencies, failed refreshes over retained data, catch-up and mild lateness) are not reader notices: they reach the operator Telegram through the sentinel watchdogs and stay inspectable on /status. `isPublicWarning` is the single visibility authority; components do not invent their own thresholds.
+- R2 still binds at the value: an unreadable observation stays unavailable where it is displayed, and suppressing a page-level notice never turns a failed read into a healthy claim. R3/R4 budgets, generations and machine reasons remain in API payloads and /status; only their reader display is removed. Owners: [detail page](./stablecoin-detail-page.md), [Telegram operator alerts](./telegram-alerts.md).
 
 #### ADR-5
 

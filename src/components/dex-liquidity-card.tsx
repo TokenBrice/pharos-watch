@@ -180,14 +180,6 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
             {verdictLine ? <p className="text-xs text-muted-foreground">{verdictLine}</p> : null}
           </div>
         ) : null}
-        {query.error ? (
-          <QueryStateNotice
-            state="stale-with-data"
-            label="DEX liquidity data"
-            dataUpdatedAt={query.dataUpdatedAt}
-            onRetry={() => void query.refetch()}
-          />
-        ) : null}
         {!isRated && (
           <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
             {liq.unavailableReason ? (

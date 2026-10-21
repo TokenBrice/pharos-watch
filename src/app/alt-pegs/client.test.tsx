@@ -176,7 +176,8 @@ describe("AltPegsClient", () => {
   it.each([
     { ageBudgets: 0, error: null, hasData: true, notice: null },
     { ageBudgets: 20, error: null, hasData: true, notice: "Showing an older snapshot" },
-    { ageBudgets: 0, error: new Error("Offline"), hasData: true, notice: "Refresh failed; showing saved data" },
+    // A failed refresh over retained data is operator signal (ADR-42).
+    { ageBudgets: 0, error: new Error("Offline"), hasData: true, notice: null },
     { ageBudgets: 0, error: new Error("Offline"), hasData: false, notice: "Refresh failed" },
   ])("surfaces share health for $ageBudgets snapshot budgets and hasData=$hasData", ({ ageBudgets, error, hasData, notice }) => {
     const now = Date.now();
@@ -219,7 +220,12 @@ describe("AltPegsClient", () => {
     expect(screen.queryByTestId("alt-peg-stablecoin-table") !== null).toBe(hasData);
     expect(screen.queryByTestId("alt-peg-cohort-chart") !== null).toBe(hasData);
     expect(screen.queryByText("Peg diversity atlas") !== null).toBe(hasData);
-    if (hasData) expect(screen.getByText("Refresh failed; showing saved data")).toBeTruthy();
+    if (hasData) {
+      // Retained data stays usable without a reader notice (ADR-42).
+      expect(screen.queryByText(/Refresh failed/)).toBeNull();
+      expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+      return;
+    }
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(refetchMock).toHaveBeenCalledOnce();
   });

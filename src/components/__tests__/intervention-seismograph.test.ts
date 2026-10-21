@@ -81,17 +81,14 @@ describe("InterventionSeismograph", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("preserves the measured total and marks a failed refresh as saved data", () => {
-    const onRetry = vi.fn();
+  it("preserves the measured total without a reader notice when a refresh fails over saved data", () => {
     render(createElement(InterventionSeismograph, {
       stats: makeStats({ USDC: [{ quarter: "Q1 '26", blacklist: 5, unblacklist: 1, destroy: 2 }] }),
-      chart: [], isLoading: true, error: new Error("summary refresh failed"), onRetry,
+      chart: [], isLoading: true, error: new Error("summary refresh failed"), onRetry: vi.fn(),
     }));
     expect(screen.getByText("Events tracked").nextElementSibling?.textContent).toBe("8");
-    expect(screen.getByRole("status").textContent).toMatch(/refresh failed.*last available data/);
+    expect(screen.queryByText(/refresh failed/)).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Retry intervention seismograph" }));
-    expect(onRetry).toHaveBeenCalledOnce();
   });
 
   it.each([[0, "0"], [-3, "-3"], [1_500, "1.5k"]] as const)("preserves finite count %s in the headline", (blacklist, expected) => {

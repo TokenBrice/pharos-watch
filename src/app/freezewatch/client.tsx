@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
-import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { FilterSearchInput } from "@/components/filter-search-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UsdsStatusCard } from "@/components/usds-status-card";
@@ -82,7 +81,6 @@ export default function FreezeWatchClient() {
     stablecoins,
     stablecoinFxFallbackRates,
     reportCardMap,
-    reportCardsResponse,
     blacklistStatusBuckets,
     supportDataLoading,
     stablecoinsError,
@@ -180,7 +178,6 @@ export default function FreezeWatchClient() {
         }}
         queries={freshnessQueries}
       />
-      <SafetyScoreV9StatusNotice response={reportCardsResponse} />
 
       <section
         aria-label="Freeze exposure overview"

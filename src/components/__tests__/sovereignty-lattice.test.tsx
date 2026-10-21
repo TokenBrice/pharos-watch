@@ -46,7 +46,7 @@ describe("SovereigntyLattice", () => {
   it("keeps a saved empty configuration set distinct from cold failure", () => {
     render(<SovereigntyLattice coverage={emptyCoverage} stats={stats} chains={[]} isLoading={false}
       error={new Error("refresh failed")} onCellSelect={vi.fn()} />);
-    expect(screen.getByRole("status").textContent).toMatch(/refresh failed.*last available data/);
+    expect(screen.queryByText(/refresh failed/)).toBeNull();
     expect(screen.getByText(/No live coverage configurations/)).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
   });

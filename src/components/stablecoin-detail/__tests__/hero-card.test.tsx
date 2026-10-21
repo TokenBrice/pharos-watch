@@ -15,6 +15,9 @@ import type {
   YieldRanking,
 } from "@shared/types";
 
+const hydration = vi.hoisted(() => ({ hydrated: false }));
+vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => hydration.hydrated }));
+
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
   return createNextLinkMock();
@@ -565,5 +568,25 @@ describe("HeroIdentityHeader", () => {
     expect(renderHeader({ reportCard: null }, "failed")).toContain("Grade unavailable");
     expect(renderHeader({ reportCard: null }, "pending")).toContain('aria-label="Loading Safety Score"');
     expect(renderHeader({ reportCard: null })).not.toContain("Grade unavailable");
+  });
+
+  it("stamps the snapshot age neutrally, only once the reader clock is known", () => {
+    const model = buildStablecoinDetailHeroViewModel(makeHeroProps());
+    const now = Date.parse("2026-10-21T12:00:00Z");
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    const render = (updatedAtMs: number) =>
+      renderToStaticMarkup(<HeroIdentityHeader model={model} onOpenFeedback={() => {}} updatedAtMs={updatedAtMs} />);
+    try {
+      expect(render(now - 12 * 60_000)).not.toContain("Updated");
+      hydration.hydrated = true;
+      const markup = render(now - 12 * 60_000);
+      // One stamp per breakpoint: closing the action row below lg, bottom-right at lg+.
+      expect(markup.match(/Updated 12m ago/g)).toHaveLength(2);
+      expect(markup).not.toMatch(/amber|text-warning/);
+      expect(render(0)).not.toContain("Updated");
+    } finally {
+      hydration.hydrated = false;
+      vi.restoreAllMocks();
+    }
   });
 });
