@@ -169,7 +169,7 @@
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
-    "supervision": "none",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -219,9 +219,21 @@
         {
           "label": "HyperEVMScan exact-match LatamStable implementation",
           "url": "https://hyperevmscan.io/address/0x8898786f1e1e9ed77def940a2ecb7cf07af8d6ba#code"
+        },
+        {
+          "label": "Current official wFIAT attestation archive (retrieved 2026-10-20)",
+          "url": "https://action.ripio.com/en/wfiat-attestations"
+        },
+        {
+          "label": "wCLP June 30, 2026 certification, signed July 28 (retrieved 2026-10-20)",
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCLP%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
+        },
+        {
+          "label": "wFIAT whitepaper v1.0 October 2025 (retrieved 2026-10-20)",
+          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf"
         }
       ],
-      "evidence": "The corrected native scope is seven independent WCLP issuer deployments. Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis expose the same LatamStable implementation with issuer EOA MINTER_ROLE and UPGRADER_ROLE. HyperEVM's verified creation input initializes the same implementation with all privileged roles assigned to Ripio's reviewed 4-of-7 Safe, giving that Safe direct uncapped mint and UUPS upgrade authority there. The LimitedMinterBridge adapter's bridge burn/mint, rate-limit, admin, and pause machinery remains in bridgeRouteRisk. Reconciliation remains unknown and no independent prudential supervisor is evidenced.",
+      "evidence": "The corrected native scope is seven independent WCLP issuer deployments. Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis expose the same LatamStable implementation with issuer EOA MINTER_ROLE and UPGRADER_ROLE. HyperEVM's verified creation input initializes the same implementation with all privileged roles assigned to Ripio's reviewed 4-of-7 Safe, giving that Safe direct uncapped mint and UUPS upgrade authority there. The LimitedMinterBridge adapter's bridge burn/mint, rate-limit, admin, and pause machinery remains in bridgeRouteRisk. Reconciliation remains unknown and no independent prudential supervisor is evidenced. Source-scope correction verified 2026-10-20 in a source review: supervision none is withdrawn to unknown. The retrieved issuer sources do not positively establish absence of supervision. The whitepaper's 'may publish' wording and generic group licences do not establish a recurring assurance process or prudential supervision of the exact unnamed issuing affiliate for this token. Reconciliation remains unknown; native unbounded authority, every other adverse fact, original review start and all historical observation pins are unchanged. No non-reconciliation, shortfall or incident is inferred.",
       "reviewer": "Claude curation campaign 2026-09-21 (Ctrl6)",
       "reviewedAt": "2026-09-21",
       "disposition": "scoreable"

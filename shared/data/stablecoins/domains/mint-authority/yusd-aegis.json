@@ -166,9 +166,53 @@
         {
           "label": "Accountable live YUSD proof of reserves and liabilities",
           "url": "https://aegis.accountable.capital/"
+        },
+        {
+          "label": "Exact Accountable YUSD reserve and supply_split comparison, data.ts 2026-10-20T22:16:36.993Z (retrieved 2026-10-20)",
+          "url": "https://aegis.accountable.capital:10443/dashboard/YUSD"
+        },
+        {
+          "label": "Aegis Accountable continuous whole-liability verification claim (January 13 guide, retrieved 2026-10-20)",
+          "url": "https://paragraph.com/@aegis-im-2/transparency-dashboard-guide"
+        },
+        {
+          "label": "Pinned Base RPC: YUSDOFT supply, decimals and runtime at block 52872624, 2026-10-20T22:16:35Z",
+          "url": "https://mainnet.base.org"
+        },
+        {
+          "label": "Exact Base YUSDOFT verified source/runtime matched at block 52872624 (retrieved 2026-10-20)",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xca2671dcd031a72359f456c212f62a9bda737cd7?fields=all"
+        },
+        {
+          "label": "Issuer native burn/mint adapter source; retrieved 2026-10-20, not a dashboard denominator specification",
+          "url": "https://raw.githubusercontent.com/Aegis-im/aegis-contracts/b48bf0644a70c308a9eca005399d279ee14c5c25/contracts/YUSDMintBurnOFTAdapter.sol"
+        },
+        {
+          "label": "Round 3 report-clock Ethereum native supply and zero adapter balance, block 26237323; retrieved 2026-10-21",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Round 3 report-clock BSC native supply and zero adapter balance, block 128840521; keyless provider URL, retrieved 2026-10-21",
+          "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+        },
+        {
+          "label": "Ethereum native burn/mint adapter verified runtime matched at block 26237323; retrieved 2026-10-21",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xaf12b0ae5a72d7b8a8ec675f3e76e2db56143565?fields=all"
+        },
+        {
+          "label": "BSC native burn/mint adapter verified runtime matched at block 128840521; retrieved 2026-10-21",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x539e46827c37a3ef11c7ce521cc56b4d59e602e3?fields=all"
+        },
+        {
+          "label": "Round 3 report-clock Avalanche OFT supply, block 98102149; retrieved 2026-10-21",
+          "url": "https://api.avax.network/ext/bc/C/rpc"
+        },
+        {
+          "label": "Round 3 report-clock Arbitrum OFT supply, block 516754957; retrieved 2026-10-21",
+          "url": "https://arb1.arbitrum.io/rpc"
         }
       ],
-      "evidence": "Native Mint Authority review refreshed for Ethereum block 25770366 and BSC block 116345704. Ethereum YUSD.owner() remained 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8, YUSD.minter() remained AegisMinting 0xC4Df68e592245cA5202fE8b7C438d2b799820fc2, and the Ethereum AegisMinting path requires a whitelisted collateral order and the single AegisConfig.trustedSigner() 0xb28c97E348C3078fC1F6Fcc61b79c8a0DA35008e. BSC YUSD.owner() remained the same Safe, YUSD.minter() remained AegisMinting 0x02bf8f0e046F471709E578b1E633077096ce65CF, and BSC AegisMinting.owner()/defaultAdmin() and AegisConfig.owner() remained the Safe with the same trusted signer. Ethereum mintLimit() has periodDuration = 0 and maxPeriodAmount = 0; BSC has a 600-second, 210,000e18 configurable period limit, so the native economic cap remains unbounded and raiseable. The Safe is 3-of-5 with no enabled modules and a zero guard, can call YUSD.setMinter immediately, and can change native AegisMinting settings without a timelock; all four native deployments are non-proxy. The native review covers mint(Order,signature), depositIncome, native owner/default-admin/settings powers, and Accountable-backed continuous reconciliation with attestation-only supervision. LayerZero adapters, OFTs, peers, delegates, DVNs, and mintForCrossChain/burnForCrossChain are bridge capabilities retained under Bridge Risk and are not counted here.",
+      "evidence": "Native Mint Authority review refreshed for Ethereum block 25770366 and BSC block 116345704. Ethereum YUSD.owner() remained 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8, YUSD.minter() remained AegisMinting 0xC4Df68e592245cA5202fE8b7C438d2b799820fc2, and the Ethereum AegisMinting path requires a whitelisted collateral order and the single AegisConfig.trustedSigner() 0xb28c97E348C3078fC1F6Fcc61b79c8a0DA35008e. BSC YUSD.owner() remained the same Safe, YUSD.minter() remained AegisMinting 0x02bf8f0e046F471709E578b1E633077096ce65CF, and BSC AegisMinting.owner()/defaultAdmin() and AegisConfig.owner() remained the Safe with the same trusted signer. Ethereum mintLimit() has periodDuration = 0 and maxPeriodAmount = 0; BSC has a 600-second, 210,000e18 configurable period limit, so the native economic cap remains unbounded and raiseable. The Safe is 3-of-5 with no enabled modules and a zero guard, can call YUSD.setMinter immediately, and can change native AegisMinting settings without a timelock; all four native deployments are non-proxy. The native review covers mint(Order,signature), depositIncome, native owner/default-admin/settings powers, and Accountable-backed continuous reconciliation with attestation-only supervision. LayerZero adapters, OFTs, peers, delegates, DVNs, and mintForCrossChain/burnForCrossChain are bridge capabilities retained under Bridge Risk and are not counted here. Accountable data.ts 1792541797056 (2026-10-21T00:16:37.056Z) reports total_supply34542277.11 and the same Ethereum/BSC/Avalanche/Arbitrum split. At Ethereum26237323 (hash0xa184d568779775480c9fb1eaca5d373e8f947db4a12361ba52cbea9df9e88865,00:16:35Z) native totalSupply is32830055.267757626290848552; at BSC128840521 (hash0xd5d52af88054594c010939272796e39428946024ddaed82615995da2907e7448,00:16:37Z) native totalSupply is1628876.518789426108546679. Both native OFT adapter token balances are zero; their pinned live runtimes exactly match Sourcify's verified burn/mint adapters, whose debit burns native supply and credit mints it rather than retaining permanent escrow. Native minter token balances are0 on Ethereum and0.999 on BSC; these are already part of native totalSupply, not additional liabilities. Report-clock Avalanche98102149 supply83335.237498 and Arbitrum516754957 supply10.090001 yield exact four-chain sum34542277.114046052399395231, rounding to the displayed headline34542277.11. Separately pinned Base52876225 (hash0x57a9449b05e11bc369745f2dabcddd2932c02ecc2deef862a7500093b713ec6e,00:16:37Z) has11.626401 YUSD; four-plus-Base is34542288.740447052399395231. Therefore the four-chain headline is numerically accounted for without Base, and Base is not a duplicate of permanent native-adapter escrow. This is not a complete worldwide/pending liability census or an interpretation of every nested ZKP: the current nested liabilities proof reports559905.963217848 rather than the headline, and no undocumented scaling or netting is inferred. The October20 Base pin52872624/hash0x81a7cb820656e0b4f590ef1db86d0c1c998befe0aba0866d380f444f5bb277ae/22:16:35Z remains valid historical supply/runtime evidence. Full Round3 numeric/hash/time/observedAt receipts and original API bytes are retained in C24-R3-yusd-denominator.json and its cited artifacts. Public BSC historical-state and Dwellir historical-state failures are retained, not treated as zero; Alchemy supplied the exact requested state. No reserve shortfall, absence of an examiner, exact all-chain materiality percentage or measured non-reconciliation is asserted. Original August16 review start and every original native authority/control pin remain unchanged; this process-only evidence update does not renew them.",
       "reviewer": "Pharos V9 Phase 3 curation lane cur-12 (on-chain reads); Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-16",
       "disposition": "scoreable"

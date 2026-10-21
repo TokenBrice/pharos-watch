@@ -179,9 +179,13 @@
           {
             "label": "Exact immutable VaultV2 allocator functions",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11"
+          },
+          {
+            "label": "Soter Labs allocator operator disclosure, revision 8e7fdea, retrieved 2026-10-20",
+            "url": "https://raw.githubusercontent.com/soterlabs/morpho-allocator-bots/8e7fdea1bfed9be334fd0fcdb45244420056e907/README.md"
           }
         ],
-        "evidence": "At block 26196563 isAllocator=true and isSentinel=false. getThreshold=1 and getOwners returns the three recorded owners; module pagination is empty and guard storage is zero. This allocator can allocate/deallocate within admitted adapter and market caps, set the liquidity adapter/data and change maxRate without a timelock. It cannot raise allocation caps or arbitrarily mint shares. Liquidity-adapter changes can obstruct ordinary withdrawals; forceDeallocate remains a separate liquidity-dependent exit. Beneficial ownership, signer independence and offchain key custody are not established."
+        "evidence": "At block 26196563 isAllocator=true and isSentinel=false. getThreshold=1 and getOwners returns the three recorded owners; module pagination is empty and guard storage is zero. This allocator can allocate/deallocate within admitted adapter and market caps, set the liquidity adapter/data and change maxRate without a timelock. It cannot raise allocation caps or arbitrarily mint shares. Liquidity-adapter changes can obstruct ordinary withdrawals; forceDeallocate remains a separate liquidity-dependent exit. Beneficial ownership, signer independence and offchain key custody are not established. Additional source research on 2026-10-20: Soter Labs' operator-published repository at revision 8e7fdea1bfed9be334fd0fcdb45244420056e907 identifies this exact allocator Safe and its already-enumerated owner 0xaf64ad999d65da1cecec2e694ce9caccc423d72a as the autonomous bot signer; the signing key is described as a sealed Railway environment variable. This establishes a disclosed software-signing workflow only, not HSM/MPC/hardware-wallet custody, recovery controls, beneficial-human independence or a new on-chain observation. Existing October 15 pins and review start are retained."
       }
     ],
     "review": {

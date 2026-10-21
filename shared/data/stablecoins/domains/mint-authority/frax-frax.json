@@ -252,7 +252,7 @@
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
-    "supervision": "none",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -262,9 +262,17 @@
         {
           "label": "Safe Transaction Service",
           "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
+        },
+        {
+          "label": "Legacy FRAX current balance-sheet ledger (retrieved 2026-10-20)",
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest"
+        },
+        {
+          "label": "FIP430 separate Legacy FRAX and frxUSD accounting and liabilities (retrieved 2026-10-20)",
+          "url": "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698"
         }
       ],
-      "evidence": "Re-reviewed at Ethereum block 26095801. Enumeration of frax_pools_array indices 0-24, terminated by an out-of-bounds revert at index 25, found six nonzero native pool/AMO addresses; frax_pools(address) independently confirmed the five previously omitted entries. The main AMO Minter has a 700 million FRAX cap on mintFraxForAMO and a Frax Comptroller 3-of-5 Safe owner. Rari and UniV3 mintFRAXForInvestments have separate 100 million and 12.5 million FRAX caps. The main minter's oldPoolRedeem and UniV3's mintRedeemPart1 instead use collateral-borrow checks; both pinned simulations reverted because legacy-pool redemption is paused. These observations do not establish a whole-contract FRAX cap independent of the other control paths. Pool_USDC is mint-paused but retains token-level authorization. The authorized Convex AMO is a transparent proxy with implementation 0x485395dad57afac9e926e634a25dba5c3708e25d and ProxyAdmin 0xe53d45abe10ce20427d20c5a1b6360fa5ba0ce0a owned by the same Safe; the earlier profile's immutable whole-issuance conclusion omitted this path. Canonical FRAX and the main AMO Minter themselves have zero implementation and correct admin slots and direct verified sources. Historical 2026-08-15 economic posture remains: raiseable owner-path caps are economically unbounded; the issuer balance sheet self-reports whole-supply liabilities continuously; supervision is none. The independently fetched 2026-10-01T07:43:47Z balance sheet reports totalAssets, totalLiabilities, remaining FRAX supply, borrowed debt and FXB adjustments, but self-published accounting is not independent assurance. No incident finding is inferred from these additional authorized contracts.",
+      "evidence": "Re-reviewed at Ethereum block 26095801. Enumeration of frax_pools_array indices 0-24, terminated by an out-of-bounds revert at index 25, found six nonzero native pool/AMO addresses; frax_pools(address) independently confirmed the five previously omitted entries. The main AMO Minter has a 700 million FRAX cap on mintFraxForAMO and a Frax Comptroller 3-of-5 Safe owner. Rari and UniV3 mintFRAXForInvestments have separate 100 million and 12.5 million FRAX caps. The main minter's oldPoolRedeem and UniV3's mintRedeemPart1 instead use collateral-borrow checks; both pinned simulations reverted because legacy-pool redemption is paused. These observations do not establish a whole-contract FRAX cap independent of the other control paths. Pool_USDC is mint-paused but retains token-level authorization. The authorized Convex AMO is a transparent proxy with implementation 0x485395dad57afac9e926e634a25dba5c3708e25d and ProxyAdmin 0xe53d45abe10ce20427d20c5a1b6360fa5ba0ce0a owned by the same Safe; the earlier profile's immutable whole-issuance conclusion omitted this path. Canonical FRAX and the main AMO Minter themselves have zero implementation and correct admin slots and direct verified sources. Historical 2026-08-15 economic posture remains: raiseable owner-path caps are economically unbounded. The independently fetched 2026-10-01T07:43:47Z balance sheet reports totalAssets, totalLiabilities, remaining FRAX supply, borrowed debt and FXB adjustments, but self-published accounting is not independent assurance. No incident finding is inferred from these additional authorized contracts. Supervision none is corrected to unknown because the original AMO and Safe sources do not positively establish absence of a supervisory regime.",
       "reviewer": "Sol curation pass 2026-10-01 (CurA50FRAX)",
       "reviewedAt": "2026-10-01",
       "disposition": "scoreable"

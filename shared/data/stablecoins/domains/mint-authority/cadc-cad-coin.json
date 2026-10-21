@@ -289,9 +289,17 @@
           {
             "label": "Base PublicNode RPC",
             "url": "https://base-rpc.publicnode.com"
+          },
+          {
+            "label": "Arbitrum public RPC; October 21 numerically pinned admin and Safe execution-root reads",
+            "url": "https://arb1.arbitrum.io/rpc"
+          },
+          {
+            "label": "Base public RPC; October 21 numerically pinned admin and Safe execution-root reads",
+            "url": "https://mainnet.base.org"
           }
         ],
-        "evidence": "At Ethereum block 25531359, Polygon block 90221893, Arbitrum block 483787658, and Base block 48624243, the legacy proxy admin address was deployed as a chain-local Safe v1.4.1 instance with the same sole owner 0x568b35d8c100d07293cc59c8d9dd9a7ebdc22ed5, threshold 1, no enabled modules, and a zero guard slot. It can immediately call the verified FiatTokenProxy upgrade functions on the first four deployments."
+        "evidence": "At Ethereum block 25531359, Polygon block 90221893, Arbitrum block 483787658, and Base block 48624243, the legacy proxy admin address was deployed as a chain-local Safe v1.4.1 instance with the same sole owner 0x568b35d8c100d07293cc59c8d9dd9a7ebdc22ed5, threshold 1, no enabled modules, and a zero guard slot. It can immediately call the verified FiatTokenProxy upgrade functions on the first four deployments. Supersession check retrieved 2026-10-21: admin() still returned this exact admin address at Ethereum block 26241224 (hash 0x37b5751066c07df35db0ee4516eed359f6a805c0ee78adcb63140a329e5ae94a, 13:18:23Z), Polygon block 95922635 (hash 0xf347937c681c54ae90d22ae9ed6f248e2c66858e47acee60e5c0586573d17324, 13:28:41Z), Arbitrum block 516925838 (hash 0xeb6ab63d5b5c41c860abd9718daf94f4c6ff87c25fb3d1800475d346d9cfbdbb, 13:28:40Z), and Base block 52899987 (hash 0xc06b38924547520381fdc027ac0d601e7ee92cdacf54059f737ba513f9daaa0d, 13:28:41Z). Separate same-pin Safe reads on Ethereum/Arbitrum/Base and a fresh Polygon block 95923001 (hash 0xf76694cfd6897967805d8b7750a040b7bfe326692edd7ae1065acbc71eb9d27c, 13:37:50Z) each returned the same sole owner 0x568b35d8c100d07293cc59c8d9dd9a7ebdc22ed5, threshold 1, empty module page with terminal sentinel 0x1, and zero guard storage. The sole owner's code returned 0x at each pin; no timelock contract owner or admin replacement was observed. These are narrow supplemental execution-root observations, not a renewal of the original July profile, version or fallback-handler review."
       },
       {
         "chain": "linea",
@@ -318,7 +326,7 @@
             "url": "https://rpc.linea.build"
           }
         ],
-        "evidence": "At Linea block 31369755, the legacy ZeppelinOS admin slot on CADC resolved directly to 0xa0f5c8e8bcbdf066643c2ea8484cba7a3aff01f9 and eth_getCode returned 0x. This single EOA can replace the implementation immediately and is therefore the weakest deployment-wide upgrade authority."
+        "evidence": "At Linea block 31369755, the legacy ZeppelinOS admin slot on CADC resolved directly to 0xa0f5c8e8bcbdf066643c2ea8484cba7a3aff01f9 and eth_getCode returned 0x. This single EOA can replace the implementation immediately and is therefore the weakest deployment-wide upgrade authority. Supersession check retrieved 2026-10-21: admin() still returned this exact address at Linea block 32386112 (hash 0x36247fa142468217695ef1809ebd17b4c08b5785c74a0811a145a138cebf0123, timestamp 2026-10-21T13:28:36Z); eth_getCode at the same numeric pin returned 0x. The verified FiatTokenProxy upgrade surface and original July review remain unchanged; no later timelock or replacement admin was observed."
       },
       {
         "chain": "solana",
@@ -351,10 +359,26 @@
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "Sourcify verifies all five EVM deployments as FiatTokenProxy/ZeppelinOSProxy contracts whose AdminUpgradeabilityProxy path exposes upgradeTo and upgradeToAndCall. At Ethereum block 25531348, Polygon block 90221803, Arbitrum block 483787112, Base block 48624176, and Linea block 31369755, the legacy implementation slot resolved in contract order to 0x0c9b0169..., 0x82d095da..., 0x30828472..., 0xdd022586..., and 0x8056da37.... The legacy admin slot resolved to 0x616c8314... on the first four chains and 0xa0f5c8e8... on Linea. The shared-address admin is a 1-of-1 Safe on each of the first four chains with sole owner 0x568b35d8..., no modules, and no guard; the Linea admin is an EOA. The previously reviewed logic-level owner/masterMinter Safes remain separate controls. Solana mint 9ewjJpmD... remains owned by the SPL Token program with its distinct mint and freeze authorities and is now explicitly represented by the Solana direct-minter control; it is not included in the EVM proxy arrays. Mint-tier review (2026-07-15): HDCPA Professional Corporation independently attests CADC reserves monthly; the latest archive entry covers June 2026 and was uploaded 2026-07-06, reconciling CADC supply to CAD held at ATB Financial. FINTRAC's registry match for Loon Finance Inc. is an AML/MSB registration, not prudential stablecoin-issuer supervision. Economic-posture fields reviewed 2026-08-15: the issuer backend and owner Safes can raise mint allowances, while a 1-of-1 Safe or EOA can immediately replace proxy logic; monthly independent reserve reconciliation exists without prudential issuer supervision.",
+      "evidence": "Sourcify verifies all five EVM deployments as FiatTokenProxy/ZeppelinOSProxy contracts whose AdminUpgradeabilityProxy path exposes upgradeTo and upgradeToAndCall. At Ethereum block 25531348, Polygon block 90221803, Arbitrum block 483787112, Base block 48624176, and Linea block 31369755, the legacy implementation slot resolved in contract order to 0x0c9b0169..., 0x82d095da..., 0x30828472..., 0xdd022586..., and 0x8056da37.... The legacy admin slot resolved to 0x616c8314... on the first four chains and 0xa0f5c8e8... on Linea. The shared-address admin is a 1-of-1 Safe on each of the first four chains with sole owner 0x568b35d8..., no modules, and no guard; the Linea admin is an EOA. The previously reviewed logic-level owner/masterMinter Safes remain separate controls. Solana mint 9ewjJpmD... remains owned by the SPL Token program with its distinct mint and freeze authorities and is now explicitly represented by the Solana direct-minter control; it is not included in the EVM proxy arrays. Mint-tier review (2026-07-15): HDCPA Professional Corporation independently attests CADC reserves monthly; the latest archive entry covers June 2026 and was uploaded 2026-07-06, reconciling CADC supply to CAD held at ATB Financial. FINTRAC's registry match for Loon Finance Inc. is an AML/MSB registration, not prudential stablecoin-issuer supervision. Economic-posture fields reviewed 2026-08-15: the issuer backend and owner Safes can raise mint allowances, while a 1-of-1 Safe or EOA can immediately replace proxy logic; monthly independent reserve reconciliation exists without prudential issuer supervision. Current evidence retrieved 2026-10-20 supersedes only those favorable process claims: the newest API object CADC_Bank_Attestation_Sep_2026.pdf was uploaded 2026-10-20T17:58:10.609Z and visually shows an ATB bank confirmation dated September 30 for PayTrie AB Inc's Business Growth Plus savings balance of CAD 1,824,204.09. It has no CADC token-liability denominator, reserve-to-supply comparison, named requesting accountant, accountant opinion or recurring whole-book reconciliation procedure.",
       "reviewer": "Codex SOL-V mint-tier research; Kimi P2 control cohort dc-7 (lead pyusd-paypal); Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-16",
       "sources": [
+        {
+          "label": "URES5 October 21 final process search: September bank-confirmation bytes match SHA256 91d4fab363e8b3f9ec22570ff5b7e000040231e39fc4465b4efffce3582444eb; report lacks CADC liabilities and examiner opinion; original review start retained",
+          "url": "https://loon.finance/api/attestations"
+        },
+        {
+          "label": "September 30 ATB bank confirmation, retrieved and visually reviewed 2026-10-20; CADC_Bank_Attestation_Sep_2026.pdf",
+          "url": "https://loon.finance/api/attestations"
+        },
+        {
+          "label": "Loon governing terms, February 2026 version; retrieved 2026-10-20",
+          "url": "https://loon.finance/terms-of-service/"
+        },
+        {
+          "label": "Loon current reserve and attestation assertions; retrieved 2026-10-20",
+          "url": "https://loon.finance/support-centre/"
+        },
         {
           "label": "Loon Finance",
           "url": "https://loon.finance/"

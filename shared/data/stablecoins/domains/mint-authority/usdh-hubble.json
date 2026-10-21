@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
-    "summary": "USDH mint authority is a PDA of the Hubble Protocol program. The live program remains upgradeable through Hubble DAO SPL Governance: three of seven current council votes can meet the 40% approval threshold, early vote tipping is enabled, and the instruction hold-up is zero.",
+    "summary": "USDH mint authority is a PDA of the Hubble Protocol program. Exact-slot reads on 2026-10-20 confirm the same live program-upgrade authority, the Hubble DAO SPL Governance account, a 40% council approval threshold, early vote tipping, and zero instruction hold-up. The seven-voter council census is the historical July observation, not a refreshed membership claim.",
     "upgradeability": {
       "model": "custom",
       "proxyAddresses": [
@@ -19,8 +19,8 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "Hubble program upgrade governance",
-      "observedAt": "2026-07-13",
-      "observedBlock": 432742753,
+      "observedAt": "2026-10-20",
+      "observedBlock": 459392526,
       "sources": [
         {
           "label": "Solana RPC",
@@ -37,6 +37,10 @@
         {
           "label": "Hubble program governance",
           "url": "https://explorer.solana.com/address/vX3gFkePCptwTmJAcMypCq9trzrtarVf9PmT3AEke1v"
+        },
+        {
+          "label": "Exact archival Solana slot 459392526, block time 2026-10-20T22:16:03Z; ProgramData and governance configuration observed 2026-10-20",
+          "url": "https://explorer.solana.com/block/459392526"
         }
       ]
     },

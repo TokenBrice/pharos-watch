@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "EURQ is issuer-minted by Quantoz across Ethereum (3/5 HadronMultisig owner, 3/5 proxy admin), Polygon (3/5 HadronMultisig owner, 3/5 proxy admin), XRPL (single master-key issuer account), and Algorand (single manager account). All mint-capable surfaces confirmed.",
+    "summary": "EURQ is issuer-minted by Quantoz across Ethereum (3/5 HadronMultisig owner, 3/5 proxy admin), Polygon (3/5 HadronMultisig owner, 3/5 proxy admin), XRPL (single master-key issuer account), and Algorand (single manager account) under the original pinned reviews. Supplemental issuer-identity research on 2026-10-20 confirms Stellar native EURQ issuance; its signing topology and key custody are not established. The issuer also lists Xahau, an unsupported Pharos chain, so the authored inventory is not an exhaustive all-network control census.",
     "controls": [
       {
         "chain": "ethereum",
@@ -143,6 +143,33 @@
           }
         ],
         "evidence": "At Algorand indexer round 65562351 on 2026-10-01, ASA 2768422954 remained active with six decimals and manager UALFRIYMF7HTTWPGJCBEKJ2AIROCAQR57SO7ZK7LW2SFXQF6346PSDDU2M. Its freeze, clawback and reserve addresses are 3PJ3E3D6XI7YWMJAUX6WDCHWZ4GC2WHTAQIWJBYVJ326LM2I6NSMSLGCDY. Account authorization and off-chain key custody are not determined from the ASA record alone."
+      },
+      {
+        "deploymentRefs": [
+          "stellar:EURQ-GCA6KZBWPBOEF6M2MZBTXRMKLMWRZOUCL2JFSIDT3WTDBOFIVDC4C4CE"
+        ],
+        "label": "EURQ Stellar issuer account",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-20",
+        "sources": [
+          {
+            "label": "Quantoz official token network register (retrieved 2026-10-20)",
+            "url": "https://www.quantoz.com/tokens/"
+          },
+          {
+            "label": "Quantoz Stellar issuer metadata (retrieved 2026-10-20)",
+            "url": "https://quantozpay.com/.well-known/stellar.toml"
+          },
+          {
+            "label": "Stellar native issuer and asset semantics",
+            "url": "https://developers.stellar.org/docs/learn/fundamentals/stellar-data-structures/assets"
+          }
+        ],
+        "evidence": "The current issuer register and issuer-controlled Stellar TOML identify live native EURQ issued by GCA6KZBWPBOEF6M2MZBTXRMKLMWRZOUCL2JFSIDT3WTDBOFIVDC4C4CE. Stellar classic assets are created by issuer payments, and responsibility and control reside with the issuing account. This documentary review establishes issuer-controlled native issuance, not the account's current signers, cryptographic threshold, key custody, complete execution reach, reserve reconciliation or a measured supply share."
       }
     ],
     "economicCapSemantics": "unbounded",

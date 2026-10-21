@@ -79,9 +79,13 @@
         {
           "label": "Solana RPC getAccountInfo",
           "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Solstice weekly whole-USX proof-of-solvency commitment (retrieved 2026-10-20)",
+          "url": "https://docs.solstice.finance/legal-documents/attestations-and-proof-of-solvency.md"
         }
       ],
-      "evidence": "Finalized Solana slot 452212332 reconfirms the USX mint/freeze authority Ze3CQhTMi6... as program-owned, and ProgramData 3P5mNf86... retains upgrade authority BzMuMbtah9..., a System Program-owned non-executable account. The historical authority identities are unchanged. The smart-contract documentation's multisig assertion and the USX product page's non-upgradeable assertion conflict with this observed BPF upgrade path; no off-chain quorum attestation was verified.",
+      "evidence": "Finalized Solana slot 452212332 reconfirms the USX mint/freeze authority Ze3CQhTMi6... as program-owned, and ProgramData 3P5mNf86... retains upgrade authority BzMuMbtah9..., a System Program-owned non-executable account. The historical authority identities are unchanged. The smart-contract documentation's multisig assertion and the USX product page's non-upgradeable assertion conflict with this observed BPF upgrade path; no off-chain quorum attestation was verified. Source-scoped correction, 2026-10-20: issuer proof-of-solvency documentation commits weekly Accountable verification of all outstanding USX against entity-wide assets and liabilities. The dashboard API retrieved 2026-10-20T22:29:41.601Z still has data.ts 1791555362082 and a last reserve/supply timeline point dated 2026-10-09 ($213,223,802.57 reserves versus $210,694,003.63 supply), outside the weekly cadence. The October 17 cryptographic snapshot timestamp does not supply a newer matched reserve/supply report. Current dashboard, USX product and proof-of-solvency pages were searched; no newer dated whole-book report was established. The separately timestamped October 17 cryptographic snapshot remains distinct from the compared $213,223,802.57 reserves and $210,694,003.63 supply.",
       "reviewer": "Sol curation pass 2026-10-01 (CurA11USYC)",
       "reviewedAt": "2026-10-01",
       "disposition": "scoreable"

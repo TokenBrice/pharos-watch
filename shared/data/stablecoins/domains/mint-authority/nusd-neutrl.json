@@ -81,7 +81,7 @@
     "reconciliation": "unknown",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "MINTER_ROLE is held by StableMinter 0xFF0B98C0B1d8390b2A7cFFBCcd4e20bFcfb8191D; DEFAULT_ADMIN_ROLE is held by 0x51De41ec06e779715d7FB71Ef83A736cFc903217, verified EOA by eth_getCode returning 0x. Rechecked at Ethereum block 25530540: both NUSD and StableMinter have empty ERC-1967 implementation slots, direct deployed bytecode, and owner() = 0x51De41ec06e779715d7FB71Ef83A736cFc903217. Mint logic is not proxy-upgradeable, while the admin can change StableMinter parameters or authorize a replacement minter. Historical economic-posture review on 2026-08-15 described Accountable as continuously reporting reserves against sole-chain NUSD supply without a named prudential supervisor. On 2026-10-01, the issuer's Transparency page describes real-time visibility into reserves and liabilities and periodic reserve audits (e.g., monthly or quarterly), but does not document a continuous reserve-to-liability reconciliation procedure covering current NUSD liabilities and all deployments. Under D22, visible totals alone do not establish continuous reconciliation, so the current category is unknown. The Accountable API returned HTTP 503; this retrieval failure is not evidence that an internal process ceased. The Ethereum OFTAdapter lockbox, Arbitrum and Plasma OFT_NUSD representations, LayerZero peers/DVNs, rate limits, pause surface, and shared Safe are excluded from this native review and authored under Bridge Risk.",
+      "evidence": "MINTER_ROLE is held by StableMinter 0xFF0B98C0B1d8390b2A7cFFBCcd4e20bFcfb8191D; DEFAULT_ADMIN_ROLE is held by 0x51De41ec06e779715d7FB71Ef83A736cFc903217, verified EOA by eth_getCode returning 0x. Rechecked at Ethereum block 25530540: both NUSD and StableMinter have empty ERC-1967 implementation slots, direct deployed bytecode, and owner() = 0x51De41ec06e779715d7FB71Ef83A736cFc903217. Mint logic is not proxy-upgradeable, while the admin can change StableMinter parameters or authorize a replacement minter. Historical economic-posture review on 2026-08-15 described Accountable as continuously reporting reserves against sole-chain NUSD supply without a named prudential supervisor. On 2026-10-01, the issuer's Transparency page describes real-time visibility into reserves and liabilities and periodic reserve audits (e.g., monthly or quarterly), but does not document a continuous reserve-to-liability reconciliation procedure covering current NUSD liabilities and all deployments. Under D22, visible totals alone do not establish continuous reconciliation, so the current category is unknown. The Accountable API returned HTTP 503; this retrieval failure is not evidence that an internal process ceased. The Ethereum OFTAdapter lockbox, Arbitrum and Plasma OFT_NUSD representations, LayerZero peers/DVNs, rate limits, pause surface, and shared Safe are excluded from this native review and authored under Bridge Risk. On 2026-10-20, pinned Ethereum block 26236711 (hash 0x0e4edd9c7f3aa9b502777b0ed67ae267545c2b7d021ad82cda02993d0d7ae73b, timestamp 2026-10-20T22:13:23Z) still returned hasRole(DEFAULT_ADMIN_ROLE,0x51De41ec06e779715d7FB71Ef83A736cFc903217)=true and StableMinter.owner() equal to that address.",
       "reviewer": "Codex CTRL batch 07; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-16",
       "sources": [
@@ -92,6 +92,18 @@
         {
           "label": "Neutrl minting docs",
           "url": "https://docs.neutrl.finance/"
+        },
+        {
+          "label": "Neutrl Transparency policy (reviewed 2026-10-20; no dated named-attestor report)",
+          "url": "https://docs.neutrl.finance/protocol-design/transparency"
+        },
+        {
+          "label": "Neutrl reserves page (reviewed 2026-10-20; figures being recalibrated)",
+          "url": "https://www.neutrl.finance/reserves"
+        },
+        {
+          "label": "Ethereum authority pin 26236711",
+          "url": "https://etherscan.io/block/26236711"
         }
       ]
     }

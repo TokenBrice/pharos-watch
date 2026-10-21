@@ -439,6 +439,10 @@
     "review": {
       "sources": [
         {
+          "label": "AOGB August 31 whole-liability report, signed September 11; retrieved 2026-10-20",
+          "url": "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6aa8fb9c867332b394838288_Attestation%20Report%20on%20Reserves%20Account%20August%202026.pdf"
+        },
+        {
           "label": "First Digital FDUSD deployment directory",
           "url": "https://www.firstdigitallabs.com/fdusd"
         },
@@ -467,7 +471,7 @@
           "url": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
         }
       ],
-      "evidence": "All six positive-supply issuer-native deployments were traced at cutoff 2026-07-13T20:34:40Z. Ethereum block 25526129, BSC block 109812367, Arbitrum block 483535601, Sui checkpoint 298226093, Solana slot 432714278, and TON masterchain seqno 79471628 resolved exact mint principals, thresholds, signer counts, module or guard state, pending-admin state, and every issuer-controlled mint-logic upgrade path. No unresolved native deployment or mint-capable controller remains. AOGB CPA Limited (Hong Kong) publishes monthly ISAE 3000 attestations reconciling FDUSD supply to reserves (latest period end 2026-06-30, published 2026-07-10), so supply is reconciled. Supervision is attestation-only: First Digital Trust holds a Hong Kong TCSP registration and participated in the HKMA stablecoin sandbox, but the HKMA's first stablecoin issuer licences (2026-04-10) went to Anchorpoint and HSBC, not First Digital/FD121, and neither the sandbox nor a TCSP registration is prudential reserve/issuance supervision. FDUSD therefore sits in the high tier. Economic-posture fields reviewed 2026-08-15: issuer multisigs control uncapped minting across six native domains, with monthly AOGB reconciliation and no prudential issuer licence.",
+      "evidence": "All six positive-supply issuer-native deployments were traced at cutoff 2026-07-13T20:34:40Z. Ethereum block 25526129, BSC block 109812367, Arbitrum block 483535601, Sui checkpoint 298226093, Solana slot 432714278, and TON masterchain seqno 79471628 resolved exact mint principals, thresholds, signer counts, module or guard state, pending-admin state, and every issuer-controlled mint-logic upgrade path. No unresolved native deployment or mint-capable controller remains. AOGB CPA Limited (Hong Kong) publishes monthly ISAE 3000 attestations reconciling FDUSD supply to reserves (latest period end 2026-06-30, published 2026-07-10), so supply is reconciled. Supervision is attestation-only: First Digital Trust holds a Hong Kong TCSP registration and participated in the HKMA stablecoin sandbox, but the HKMA's first stablecoin issuer licences (2026-04-10) went to Anchorpoint and HSBC, not First Digital/FD121, and neither the sandbox nor a TCSP registration is prudential reserve/issuance supervision. FDUSD therefore sits in the high tier. Economic-posture fields reviewed 2026-08-15: issuer multisigs control uncapped minting across six native domains, with monthly AOGB reconciliation and no prudential issuer licence. Review on 2026-10-20 recovered AOGB's August 31 report signed September 11, covering all six native deployments and comparing 335,636,418.35 FDUSD with USD 336,969,677.04 reserves.",
       "reviewer": "Codex fixed-cutoff authority audit; Claude SOL-V mint-tier mop-up; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable"

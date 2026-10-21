@@ -105,9 +105,9 @@
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
-    "supervision": "none",
+    "supervision": "unknown",
     "review": {
-      "evidence": "Ethereum and Plume reads on 2026-07-14 confirmed the inALPHA vault at 0x64ab176c...b855 has direct runtime code, zero EIP-1967 implementation/admin slots, no UUPS interface, Safe owner 0xa08a0dc4...a982, and RolesAuthority 0x5e500500...82ef on both chains. The current authorized teller at 0x20428f90...fafff has identical runtime bytecode on both chains, zero EIP-1967 slots, no UUPS interface, the same Safe owner, and role 3 authorization for the vault enter() capability at Ethereum block 25,769,980 and Plume block 87,665,989; the previously authored 0x6104fe10...0cb6 address has no role. The mint-critical vault and teller implementations are therefore immutable on both tracked deployments; the Safe can still change authorization through the separately reviewed RolesAuthority control path. Evidence challenge completed 2026-07-15: Nest publishes issuer-operated hourly NAV and live vault composition, with the latest public vault-data snapshot dated 2026-07-08, but no recurring independent reconciliation of nALPHA supply to its multi-asset portfolio was found. Nest DAO LLC is a Marshall Islands DAO LLC, not a prudentially supervised fund issuer. Economic-posture fields reviewed 2026-08-15: the owner Safe can change authorization without an independent timelock, and issuer-operated NAV data is not independent whole-supply reconciliation or prudential supervision. Wave 2 external research reviewed 2026-08-15: Nest's live positions feed now returns portfolio values, NAV, aggregate total supply, and supply by chain across all current issuance routes, establishing continuous whole-supply reconciliation under the rubric while remaining issuer-operated rather than prudentially supervised.",
+      "evidence": "Ethereum and Plume reads on 2026-07-14 confirmed the inALPHA vault at 0x64ab176c...b855 has direct runtime code, zero EIP-1967 implementation/admin slots, no UUPS interface, Safe owner 0xa08a0dc4...a982, and RolesAuthority 0x5e500500...82ef on both chains. The current authorized teller at 0x20428f90...fafff has identical runtime bytecode on both chains, zero EIP-1967 slots, no UUPS interface, the same Safe owner, and role 3 authorization for the vault enter() capability at Ethereum block 25,769,980 and Plume block 87,665,989; the previously authored 0x6104fe10...0cb6 address has no role. The mint-critical vault and teller implementations are therefore immutable on both tracked deployments; the Safe can still change authorization through the separately reviewed RolesAuthority control path. Evidence challenge completed 2026-07-15: Nest publishes issuer-operated hourly NAV and live vault composition, with the latest public vault-data snapshot dated 2026-07-08, but no recurring independent reconciliation of nALPHA supply to its multi-asset portfolio was found. Economic-posture fields reviewed 2026-08-15: the owner Safe can change authorization without an independent timelock, and issuer-operated NAV data is not independent whole-supply reconciliation or prudential supervision. Wave 2 external research reviewed 2026-08-15: Nest's live positions feed now returns portfolio values, NAV, aggregate total supply, and supply by chain across all current issuance routes, establishing continuous whole-supply reconciliation under the rubric while remaining issuer-operated rather than prudentially supervised. Its positions endpoint names vault 0x64ab176c545bb85eca75d53c3ffcb361deafb855 and discloses only 0.410183 pUSD of positive holdings, while price reports NAV 1.8890182896 and totalSupply 1.979688; last-price-update retains February 23, 2026 timestamps 1771867995 and 1771867979. Current nALPHA at 0x593ccca4c4bf58b7526a4c164ceef4003c6388db is a different token and cannot supply this legacy claim's process evidence. Nest DAO LLC is not established as a prudentially supervised issuer of this token.",
       "reviewer": "Codex CTRL root batch 06; Kimi P2 control cohort dc-2 (lead usdc-circle); Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
@@ -147,6 +147,14 @@
         {
           "label": "Nest nALPHA cross-chain integration documentation",
           "url": "https://docs.nest.credit/developers/integration-guides/nalpha/"
+        },
+        {
+          "label": "Exact legacy inALPHA source clock, researched 2026-10-20",
+          "url": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/last-price-update"
+        },
+        {
+          "label": "Nest operations and valuation, legacy scope checked 2026-10-20",
+          "url": "https://docs.nest.credit/about/vault-operations-and-valuation"
         }
       ]
     }

@@ -309,9 +309,9 @@
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
-    "supervision": "none",
+    "supervision": "unknown",
     "review": {
-      "evidence": "Pinned Polygon block 94755001 confirms changed token and module implementations, unchanged Timelock ownership, four previously authored wrapper holders plus PermissionedRamp with wrapper role 2, and three market modules with minter role 1. Each Timelock role returns the same Safe and minDelay() remains 43200. Polygon block 94755196 shows the Safe is now 3-of-7 with a nonzero fallback handler. Current verified source retains collateral-backed wrapping and position-claim settlement, but this session did not establish a complete token role history, PermissionedRamp witness census, or module bridge-role conservation boundary; no exhaustive authority claim is inferred. D14 review 2026-10-03: verified CollateralToken implementation 0xce84e053301a82937f90ee2c2c1889cab1db25de exposes owner-only addMinter(address) and role-only mint(address,uint256) with no collateral transfer or cap check. The Safe can authorize an arbitrary recipient minter through its 43200-second timelock; deposit-backed ramps do not bound that independent token-local path. Economic semantics are unbounded; no token-governor D29 qualification is claimed.",
+      "evidence": "Pinned Polygon block 94755001 confirms changed token and module implementations, unchanged Timelock ownership, four previously authored wrapper holders plus PermissionedRamp with wrapper role 2, and three market modules with minter role 1. Each Timelock role returns the same Safe and minDelay() remains 43200. Polygon block 94755196 shows the Safe is now 3-of-7 with a nonzero fallback handler. Current verified source retains collateral-backed wrapping and position-claim settlement, but this session did not establish a complete token role history, PermissionedRamp witness census, or module bridge-role conservation boundary; no exhaustive authority claim is inferred. D14 review 2026-10-03: verified CollateralToken implementation 0xce84e053301a82937f90ee2c2c1889cab1db25de exposes owner-only addMinter(address) and role-only mint(address,uint256) with no collateral transfer or cap check. The Safe can authorize an arbitrary recipient minter through its 43200-second timelock; deposit-backed ramps do not bound that independent token-local path. Economic semantics are unbounded; no token-governor D29 qualification is claimed. The transparency page distinguishes the CFTC-regulated US venue from this international pUSD deployment; no exact pUSD prudential mandate or affirmative absence of every supervisory regime is established, so supervision is unknown rather than none.",
       "reviewer": "Sol v10.02 D14/D29 sweep (U8SafeRootedFloorB)",
       "reviewedAt": "2026-10-03",
       "sources": [
@@ -334,6 +334,14 @@
         {
           "label": "Polygon Blockscout - Polymarket governance Safe",
           "url": "https://polygon.blockscout.com/address/0x3dce0a29139a851da1dfca56af8e8a6440b4d952"
+        },
+        {
+          "label": "Polymarket international versus US regulatory scope, retrieved 2026-10-20",
+          "url": "https://polymarket.com/transparency"
+        },
+        {
+          "label": "Polymarket international Terms effective 11 August 2026, retrieved 2026-10-20",
+          "url": "https://docs.google.com/document/d/1N4aYlRcqaWCeKMID7vUSWJ1UPMvw_v6SP4cOFN8ZxR4/export?format=txt"
         }
       ]
     }

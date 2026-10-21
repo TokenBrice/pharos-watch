@@ -654,9 +654,37 @@
         {
           "label": "Fact Finance BRLV proof-of-reserves report - May 2026",
           "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_5_2026_79d38795ea.pdf"
+        },
+        {
+          "label": "Crown current whitepaper; retrieved 2026-10-20",
+          "url": "https://docs.crown-brlv.com/whitepaper.md"
+        },
+        {
+          "label": "Crown Portuguese monthly-report index; retrieved 2026-10-20",
+          "url": "https://www.crown-brlv.com/transparencia/"
+        },
+        {
+          "label": "Fact Finance September 30, 2026 technical verification memo; retrieved 2026-10-20",
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf"
+        },
+        {
+          "label": "Fact Finance Crown daily liabilities versus reserves; retrieved 2026-10-21",
+          "url": "https://api.fact.finance/reserves/dailyhistorical/crown"
+        },
+        {
+          "label": "Fact Finance Crown liability chain inventory; retrieved 2026-10-21",
+          "url": "https://api.fact.finance/reserves/tokens/crown"
+        },
+        {
+          "label": "Fact Finance Crown stated heartbeat and contract identity; retrieved 2026-10-21",
+          "url": "https://api.fact.finance/reserves/info/crown"
+        },
+        {
+          "label": "Fact Finance Crown chain attribution; retrieved 2026-10-21",
+          "url": "https://api.fact.finance/reserves/chains/crown"
         }
       ],
-        "evidence": "At Base block 50068610, the canonical BRLV proxy resolves through a zero EIP-1967 admin slot to verified implementation 0x1750731729b27cfd00ea55bc61e9dcfade2273f3; the shared DEFAULT_ADMIN EOA 0x239d4a can manage Base minters and grant UPGRADE_ROLE, while active Base UPGRADE_ROLE EOA 0xcdfc72 provides an immediate token upgrade path. Base's issuer relay directly mints, and BRLVRewards retains its canonical-domain surplus-bounded reward branch; the rewards proxy has active and role-admin upgrade EOAs with zero delay. Ethereum bridgedBRLV, the Base canonical gateway's remote mint/burn machinery, and their bridge administrators are retained as structured Bridge Risk controls rather than compiled into canonical Mint Authority. Crown backs BRLV with segregated Brazilian federal Treasury bonds and Tesouro Selic ETFs; Fact Finance performs daily independent reserve verification with full liability reconciliation published on Crown's transparency page, so supply is continuously reconciled. Reserve custody sits at BCB-regulated banks, but that is custodial regulation, not issuer supervision: no BCB or CVM registry names Crown/BRLV as a licensed stablecoin issuer, so supervision is attestation-only and BRLV remains in the high tier. R13's 2026-10-05 inventory correction at Base block 52199500 additionally authors BURNER_ROLE EOA 0x09dd8946662a9d60dbba9538d211cf45f819faba: arbitrary-from share burn and root collateral burn retain unbounded claim impairment in a complete 7702/direct-signer scope. The complete token census also identifies CLAIM_ROLE holder 0x38e47312ad5745c06fe097f997057dee31453737. This holder is explicitly excluded from executable native authority at this pin, not overlooked: verified inherited YieldStripping claimRewards, claimRewardsV2 and claimTax unconditionally revert, and BRLV's corresponding internal overrides also unconditionally revert. A CLAIM_ROLE grant alone cannot reactivate those entrypoints; native UUPS administrators can replace the implementation and are already inventoried with unrestricted root reach. No independent mint/burn/admin/upgrade authority is attributed to this dormant claim role.",
+        "evidence": "At Base block 50068610, the canonical BRLV proxy resolves through a zero EIP-1967 admin slot to verified implementation 0x1750731729b27cfd00ea55bc61e9dcfade2273f3; the shared DEFAULT_ADMIN EOA 0x239d4a can manage Base minters and grant UPGRADE_ROLE, while active Base UPGRADE_ROLE EOA 0xcdfc72 provides an immediate token upgrade path. Base's issuer relay directly mints, and BRLVRewards retains its canonical-domain surplus-bounded reward branch; the rewards proxy has active and role-admin upgrade EOAs with zero delay. Ethereum bridgedBRLV, the Base canonical gateway's remote mint/burn machinery, and their bridge administrators are retained as structured Bridge Risk controls rather than compiled into canonical Mint Authority. Crown backs BRLV with segregated Brazilian federal Treasury bonds and Tesouro Selic ETFs; Fact Finance performs daily independent reserve verification with full liability reconciliation published on Crown's transparency page, so supply is continuously reconciled. Reserve custody sits at BCB-regulated banks, but that is custodial regulation, not issuer supervision: no BCB or CVM registry names Crown/BRLV as a licensed stablecoin issuer, so supervision is attestation-only and BRLV remains in the high tier. R13's 2026-10-05 inventory correction at Base block 52199500 additionally authors BURNER_ROLE EOA 0x09dd8946662a9d60dbba9538d211cf45f819faba: arbitrary-from share burn and root collateral burn retain unbounded claim impairment in a complete 7702/direct-signer scope. The complete token census also identifies CLAIM_ROLE holder 0x38e47312ad5745c06fe097f997057dee31453737. This holder is explicitly excluded from executable native authority at this pin, not overlooked: verified inherited YieldStripping claimRewards, claimRewardsV2 and claimTax unconditionally revert, and BRLV's corresponding internal overrides also unconditionally revert. A CLAIM_ROLE grant alone cannot reactivate those entrypoints; native UUPS administrators can replace the implementation and are already inventoried with unrestricted root reach. No independent mint/burn/admin/upgrade authority is attributed to this dormant claim role. Primary-source correction 2026-10-21: the issuer-embedded Fact Finance dashboard does expose dated daily comparison rows, so absence of observable daily reports is not a valid withdrawal rationale. Its dailyhistorical API includes 2026-10-19 circulation BRL 372932800 versus reserves BRL 373324687.57 and 2026-10-20 circulation BRL 373116861 versus reserves BRL 373515974.98; info declares a 1 day heartbeat.",
         "reviewer": "Codex mint/bridge boundary migration; verified finding 2026-08-16",
         "reviewedAt": "2026-08-16",
       "scopedQuestions": [
