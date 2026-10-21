@@ -331753,6 +331753,32 @@
       ],
       "nextReviewTrigger": "Binding final-USDC completion SLA including funding/pause conditions, or admitted exact funded matured-request completion certificate; otherwise re-review 2026-11-20.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:tusd-trueusd",
+      "taskIds": [
+        "V9G-0c26d3feec49d8ef",
+        "V9G-2b5f5be9f561a3f4"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "FIX-TUSD bottom-up refinement 2026-10-21",
+      "evidence": [
+        "https://rpc.mainnet.near.org (retrieved 2026-10-21)",
+        "https://api.github.com/repos/Near-One/rainbow-token-connector/git/blobs/d6b052824e9e762da0bef3c18dc7dabd865b6402 (retrieved 2026-10-21)",
+        "https://api.nearblocks.io/v1/txns/C8pcbxRW22UkssmtA9qWfaHCaY3bxN6E9TfzXUHf1gQS (retrieved 2026-10-20)"
+      ],
+      "rationale": "Controller-identity correction landed; full claim group remains deferred. At NEAR block 220873626/hash 6cogfa7buBM1XzJLm1dTXQzVAfBfAiymKTitAb2Zsf9H (2026-10-21T00:22:46.535711946Z), pinned view_state on exact TUSD account 0000000000085d4780b73119b644ae5ecd22b376.factory.bridge.near returns STATE beginning with Borsh AccountId omni.bridge.near (u32 little-endian length 16). Hash-pinned and numeric-pinned headers before/after match; upstream source blob identifies controller as the first BridgeToken field. get_controller and controller methods returned MethodNotFound, not a null/zero controller. Corrected controllerAddress and its contract failure-domain identity, removed the sole-factory mint/burn claim, and retained historical route/aggregate pins and September supply observation. The historical migration is evidence from C11's October 20 research; this run's direct NearBlocks request returned HTTP 403. Storage identity and upstream layout do not establish deployed-WASM/source correspondence, complete controller powers/signing topology, proof validation, account-key bypasses, caller-aware emergency status or incident absence. These remain exact-current-runtime research prerequisites; no favorable authority/emergency or negative-incident certificate is authored. Mint-authority sidecar contains no NEAR/factory controller claim and is intentionally unchanged. New RPC evidence postdates capture clock 1792541826 and is not backdated into that capture. No sentinel closure or score uplift is claimed; generated control IDs/common-mode joins may change and require central attribution.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/tusd-trueusd.json",
+        "agents/2026-10-20-safety-refinement/scratch/FIX-TUSD-near-controller.json",
+        "agents/2026-10-20-safety-refinement/results/FIX-TUSD.md"
+      ],
+      "sentinels": [],
+      "nextReviewTrigger": "Exact NEAR token/Omni runtime owner supplies deployed-WASM/source correspondence, complete authorization/account-key/upgrade inventory and caller-aware pinned emergency evidence plus scoped incident research; central verifier then regenerates and replays at a compatible clock. Administrative re-review 2026-11-20. Existing NEAR deployment-control and incidentState obligations remain open even if generated keys rotate.",
+      "factsClosed": 0
     }
   ]
 }
