@@ -50,6 +50,34 @@ describe("TelegramWebhookEffectFence", () => {
   });
 
   it.each([
+    { inline_query: { id: "retired-query", query: "USDC", from: { id: 123 } } },
+    { chosen_inline_result: { result_id: "status:usdc-circle", from: { id: 123 } } },
+    { unsupported_update: {} },
+  ])("acknowledges unsupported updates without D1 or Bot API work: %j", async (payload) => {
+    resetTelegramWebhookTest();
+    const { sqlite, db } = createFixture();
+    fixtures.push(sqlite);
+    const prepare = vi.spyOn(db, "prepare").mockImplementation(() => {
+      throw new Error("D1 unavailable");
+    });
+    const request = new Request("https://api.pharos.watch/api/telegram-webhook", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Telegram-Bot-Api-Secret-Token": "test-secret",
+      },
+      body: JSON.stringify({ update_id: 999, ...payload }),
+    });
+
+    const response = await handleTelegramWebhook(db, request, "test-secret", "bot-token");
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("ok");
+    expect(prepare).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it.each([
     ["ingress:no-effect", "none", "{}"],
     ["outbound:command-reply", "none", '{"effectKind":"command-reply"}'],
     ["command:/help", "none", '{"command":"/help"}'],

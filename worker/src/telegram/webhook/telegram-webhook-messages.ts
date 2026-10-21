@@ -516,7 +516,7 @@ export function formatTelegramSafety(safety: NonNullable<StatusForCoin["safety"]
   return `${rating}${safety.score != null ? ` (${safety.score})` : ""}${safety.ratingStatus !== "pipeline-gap" && safety.partialEvidence ? " — Partial evidence: pipeline gap" : ""} [${safety.model.toUpperCase()} ${safety.methodologyVersion}]`;
 }
 
-/** Status, coverage and inline cards disclose the same accepted source evidence. */
+/** Status and coverage disclose the same accepted source evidence. */
 export function formatTelegramYield(status: StatusForCoin): string {
   const value = status.yield;
   if (!value) return `Yield: unavailable (${escapeHtml(status.yieldUnavailableReason ?? "yield-ranking-not-found")})`;

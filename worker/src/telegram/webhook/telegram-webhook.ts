@@ -18,16 +18,13 @@ import {
 } from "./telegram-webhook-effect-fence";
 import {
   resolveChatMigration,
+  resolveUpdateType,
   type TelegramWebhookUpdateWithChatMember,
 } from "./telegram-webhook-update-normalization";
 import {
   handleTelegramCallbackQueryUpdate,
   handleTelegramMessageUpdate,
 } from "./telegram-webhook-update-dispatch";
-import {
-  handleTelegramChosenInlineResultUpdate,
-  handleTelegramInlineQueryUpdate,
-} from "./telegram-inline-queries";
 
 const MISSING_BOT_TOKEN_WARN_INTERVAL_MS = 60_000;
 let lastMissingBotTokenWarnAtMs: number | null = null;
@@ -89,6 +86,9 @@ export const handleTelegramWebhook = withErrorHandler(
       return ok();
     }
 
+    // Unsupported updates have no work to claim or external effect to fence.
+    if (resolveUpdateType(update) === "unknown") return ok();
+
     const nowSec = unixNow();
     const claimOutcome = await establishTelegramWebhookEffectFence(db, update, nowSec);
     if (claimOutcome.kind === "respond") {
@@ -114,21 +114,6 @@ export const handleTelegramWebhook = withErrorHandler(
     };
 
     try {
-      if (update.inline_query) {
-        await handleTelegramInlineQueryUpdate({
-          db,
-          botToken,
-          inlineQuery: update.inline_query,
-          effectFence,
-        });
-        return finishOk();
-      }
-
-      if (update.chosen_inline_result) {
-        await handleTelegramChosenInlineResultUpdate(db);
-        return finishOk();
-      }
-
       if (update.callback_query) {
         return await handleTelegramCallbackQueryUpdate({
           db,

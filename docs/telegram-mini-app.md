@@ -25,7 +25,7 @@ The static control panel is `https://pharos.watch/pharoswatchbot/app/`. Web App 
 | Surface | Owner / reconciliation |
 | --- | --- |
 | Persistent `Manage Alerts` menu | Five-minute Worker lane, 15-minute fresh-cache marker; Bot API failure/backoff can delay drift repair |
-| Profile `Launch app`, preview/loading assets, Inline Mode | BotFather; use [configured state and smoke tests](./runbooks/telegram-mini-app-botfather.md#configured-state), not a duplicated feature checklist |
+| Profile `Launch app`, preview/loading assets | BotFather; use [configured state and smoke tests](./runbooks/telegram-mini-app-botfather.md#configured-state), not a duplicated feature checklist |
 | Private command replies / quick-subscribe | `/start`, `/help`, `/presets`, `/settings`, `/list`, `/status`, `/why`, `/coverage`, `/set`, `/mute`, `/unmutehours`, `/timezone`, `/unsnooze`, `/pause`, `/health`, `/forget` attach context-aware buttons; quicksub uses `coin_<id>` |
 | Direct `https://t.me/PharosWatchBot?startapp=<payload>` | Shared payload parser chooses view; signed `initData` still authorizes every API operation. Stale-auth relaunch preserves current panel/context |
 

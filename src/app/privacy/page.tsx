@@ -31,7 +31,7 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       variant="longform"
       containerClassName="max-w-2xl"
-      leadParagraphs={["Last updated: October 2026"]}
+      leadParagraphs={["Last updated: October 21, 2026"]}
     >
       <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <div className="pharos-card-shell px-5 py-4">
@@ -179,11 +179,6 @@ export default function PrivacyPage() {
             Google Analytics or report Web Vitals. After signed authentication succeeds, the Worker records only
             low-cardinality daily counters for Mini App adoption, operation outcomes, and error categories; those
             aggregate rows contain no chat ID.
-          </p>
-          <p>
-            Inline-mode status queries use public tracked-coin data. Pharos stores only aggregate query and selected-card
-            counters; query text, inline query IDs, result IDs, chat IDs, and user IDs are not persisted in D1 or custom
-            Worker logs.
           </p>
           <p>
             The Telegram Worker also emits sampled operational logs to Cloudflare Workers Logs for reliability and
