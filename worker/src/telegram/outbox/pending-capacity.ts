@@ -3,13 +3,12 @@ import type { TelegramPendingDeliveryBacklog } from "@shared/types/status";
 import {
   PENDING_NEAR_TTL_WINDOW_SEC,
   PENDING_OLD_AGE_ALERT_SEC,
-  PENDING_TTL_SEC,
   TELEGRAM_DISPATCH_INTERVAL_SEC,
   TELEGRAM_PENDING_DRAIN_BUDGET,
 } from "../common/constants";
 import { logTelegramEvent } from "../common/log";
 
-export const TELEGRAM_EXECUTION_UNKNOWN_SAMPLE_LIMIT = 5_001;
+const TELEGRAM_EXECUTION_UNKNOWN_SAMPLE_LIMIT = 5_001;
 
 export interface TelegramPendingCapacitySnapshot {
   total: number;
@@ -140,24 +139,16 @@ interface TelegramPendingCapacityRow {
 }
 
 /**
- * Delivery v2 backlog over `telegram_deliveries` (open = pending/retry), plus
- * the legacy `telegram_pending_alerts` rows the drain-only shim still owns
- * during cutover. The `fresh_*` columns (legacy job-target effects) are zero:
- * the v2 pipeline has no second effect ledger.
+ * Delivery v2 backlog over `telegram_deliveries` (open = pending/retry). The
+ * `fresh_*` columns are zero: the v2 pipeline has no second effect ledger.
  */
-export const TELEGRAM_PENDING_CAPACITY_SQL = `WITH p(now_sec, near_ttl_at, stale_before, ttl_sec) AS (SELECT ?, ?, ?, ?),
+export const TELEGRAM_PENDING_CAPACITY_SQL = `WITH p(now_sec, near_ttl_at, stale_before) AS (SELECT ?, ?, ?),
 rows AS (
   SELECT CASE WHEN state IN ('pending', 'retry') THEN 'pending' ELSE state END AS state,
          created_at, expires_at, next_attempt_at AS next_at, sending_at AS started_at
     FROM telegram_deliveries
    WHERE state IN ('pending', 'retry', 'sending', 'unknown', 'sent')
      AND (state IN ('pending', 'retry', 'sending') OR done_at >= (SELECT now_sec FROM p) - 86400)
-  UNION ALL
-  SELECT CASE delivery_state WHEN 'execution_unknown' THEN 'unknown' ELSE delivery_state END,
-         created_at, COALESCE(expires_at, created_at + (SELECT ttl_sec FROM p)),
-         COALESCE(not_before_at, 0), COALESCE(delivery_started_at, created_at)
-    FROM telegram_pending_alerts
-   WHERE delivery_state IN ('pending', 'sending', 'execution_unknown', 'sent')
 )
 SELECT
   SUM(CASE WHEN state = 'pending' THEN 1 ELSE 0 END) AS total,
@@ -261,7 +252,7 @@ export async function loadTelegramPendingCapacity(
 ): Promise<TelegramPendingCapacitySnapshot> {
   const row = await db
     .prepare(TELEGRAM_PENDING_CAPACITY_SQL)
-    .bind(nowSec, nowSec + PENDING_NEAR_TTL_WINDOW_SEC, nowSec - PENDING_OLD_AGE_ALERT_SEC, PENDING_TTL_SEC)
+    .bind(nowSec, nowSec + PENDING_NEAR_TTL_WINDOW_SEC, nowSec - PENDING_OLD_AGE_ALERT_SEC)
     .first<TelegramPendingCapacityRow>();
   return mapTelegramPendingCapacity(row, nowSec, drainBudgetPerRun);
 }

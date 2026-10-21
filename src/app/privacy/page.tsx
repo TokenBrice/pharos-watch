@@ -116,10 +116,6 @@ export default function PrivacyPage() {
               inactivity.
             </li>
             <li>
-              <strong>Pending disambiguation</strong> (ambiguous ticker prompts, setup wizard state, bulk-action
-              confirmations): 5-minute TTL.
-            </li>
-            <li>
               <strong>Pending alerts</strong> (overflow and retry queue for delivery): {RISK_ALERT_TTL_HOURS}-hour TTL
               for depeg, DEWS, safety, reserve, freeze, and legacy alerts; {LAUNCH_ALERT_TTL_MINUTES}-minute TTL for launch
               alerts and {ADMIN_ALERT_TTL_MINUTES}-minute TTL for admin broadcasts.

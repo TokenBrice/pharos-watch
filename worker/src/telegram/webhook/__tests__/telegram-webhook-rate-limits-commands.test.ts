@@ -245,7 +245,6 @@ describe("handleTelegramWebhook", () => {
 
     expect(sentMessageBody().text).toContain("Welcome back.");
     expect(sentCallbacks()).toEqual(expect.arrayContaining(["snooze:24h", "help:commands"]));
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_disambiguation").get()).toEqual({ count: 0 });
     sqlite.close();
   });
 

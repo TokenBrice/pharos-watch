@@ -304,7 +304,6 @@ export const TelegramBotStatsSchema = z.object({
   presetImpliedCoinSubscriptions: z.number().nullable().optional(),
   activePresetFollowers: z.number().optional(),
   avgSubscriptionsPerSubscribedChat: z.number(),
-  pendingDisambiguations: z.number(),
   pendingDeliveries: z.number(),
   lastSubscriberActivityAt: z.number().nullable(),
   customPreferenceChats: z.number(),

@@ -113,12 +113,8 @@ function serializeOptions(input: TelegramDeliveryInput): string | null {
   return Object.keys(options).length > 0 ? JSON.stringify(options) : null;
 }
 
-/**
- * Per-chat body identity. `${chatId}:${hash}` is byte-identical to the legacy
- * `telegram_pending_alerts.dedupe_key`, so the 24 h suppression also spans
- * rows the legacy pipeline sent before cutover.
- */
-export function hashTelegramDeliveryBody(seq: number, body: string): string {
+/** Per-chat body identity used by the 24 h duplicate suppression. */
+function hashTelegramDeliveryBody(seq: number, body: string): string {
   return `v${TELEGRAM_SPLIT_VERSION}:${seq}:${fnv1a32(body).toString(36)}`;
 }
 
@@ -198,13 +194,6 @@ export function buildTelegramDeliveryInsertStatements(
                 AND prior.created_at >= p.since_sec
                 AND prior.job_id <> v.column1
                 AND prior.state IN (${priorStates})
-           ) OR v.column15 = 1 AND EXISTS (
-             -- Cutover bridge (remove with the legacy queue): rows the legacy
-             -- pipeline sent in the last 24 h share the same dedupe identity.
-             SELECT 1 FROM telegram_pending_alerts legacy
-              WHERE legacy.dedupe_key = v.column3 || ':' || v.column8
-                AND legacy.created_at >= p.since_sec
-                AND legacy.delivery_state IN ('pending', 'sending', 'sent', 'execution_unknown')
            )
        RETURNING state`,
     ).bind(nowSec, nowSec - TELEGRAM_DUPLICATE_BODY_WINDOW_SEC, ...chunk.flat());

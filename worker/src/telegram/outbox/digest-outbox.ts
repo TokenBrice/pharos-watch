@@ -1,4 +1,6 @@
 import { throwIfAborted } from "../../lib/abort";
+import { shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { executeAtomicBatch } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -12,12 +14,6 @@ import {
 } from "../delivery/telegram";
 import { splitMessage } from "../common/alerts-formatting";
 import type { TelegramDigestSuccessAction } from "../digest/digest-appendices";
-import {
-  claimTelegramTransportPermit,
-  recordTelegramTransportOutcomes,
-  type TelegramTransportOutcome,
-} from "../delivery/transport-control";
-import { parseTelegramTransportErrorClass } from "../delivery/transport-errors";
 import { logWorkerEvent } from "../../lib/structured-log";
 import {
   DigestSafetyContextSchema,
@@ -151,29 +147,6 @@ export interface TelegramDigestOutboxDrainSummary {
   retainedExecutionUnknownTotal: number;
   retainedFailedPermanentTotal: number;
   prunedSent: number;
-}
-
-function digestTransportOutcome(
-  chatId: string,
-  delivery: TelegramDigestDeliveryResult,
-): TelegramTransportOutcome | null {
-  if (delivery.outcome === "sent") {
-    return {
-      chatId,
-      result: { ok: true, errorClass: null, retryAfterSec: null },
-    };
-  }
-  const errorClass = parseTelegramTransportErrorClass(delivery.errorClass);
-  if (errorClass == null || delivery.outcome === "skipped") return null;
-  return {
-    chatId,
-    result: {
-      ok: false,
-      errorClass,
-      retryAfterSec: delivery.retryAfterSec,
-      ...(errorClass === "rate_limit" ? { rateLimitScope: "chat" as const } : {}),
-    },
-  };
 }
 
 function parseStringArray(raw: string, label: string): string[] {
@@ -1045,32 +1018,13 @@ export async function drainTelegramDigestOutbox(
     retainedFailedPermanentTotal: 0,
     prunedSent: 0,
   };
-  for (const editionKey of editionKeys) {
+  // The generic Telegram API circuit (owned by the alert dispatcher) gates
+  // every send; while it is open, due editions stay queued.
+  const transportAllowed = editionKeys.length > 0 && await shouldAttemptFetch(db, CIRCUIT_SOURCE.TELEGRAM_API);
+  if (!transportAllowed) summary.skipped = editionKeys.length;
+  for (const editionKey of transportAllowed ? editionKeys : []) {
     throwIfAborted(options.signal);
-    const permit = await claimTelegramTransportPermit(db, {
-      mode: "fresh",
-      owner: `telegram-digest-outbox-drain:${editionKey}`,
-      nowSec: Math.floor(Date.now() / 1000),
-      requestedDistinctChats: 1,
-    });
-    if (!permit.allowed) {
-      summary.skipped += editionKeys.length - summary.attempted;
-      break;
-    }
-    let result: TelegramDigestDeliveryResult;
-    try {
-      result = await deliverTelegramDigestEdition(db, creds, editionKey, options.signal);
-      const transportOutcome = digestTransportOutcome(creds.chatId, result);
-      await recordTelegramTransportOutcomes(
-        db,
-        permit,
-        transportOutcome == null ? [] : [transportOutcome],
-        Math.floor(Date.now() / 1000),
-      );
-    } catch (error) {
-      await recordTelegramTransportOutcomes(db, permit, [], Math.floor(Date.now() / 1000));
-      throw error;
-    }
+    const result = await deliverTelegramDigestEdition(db, creds, editionKey, options.signal);
     summary.attempted++;
     if (result.outcome === "sent") summary.sent++;
     else if (result.outcome === "pending") summary.pending++;

@@ -158,7 +158,6 @@ export async function handleSetupFollowTop(context: SetupCallbackContext): Promi
       alertTypes: new Set(RECOMMENDED_ALERT_TYPES),
       directStablecoinIds: [],
       presetIds: [RECOMMENDED_PRESET_ID],
-      clearPending: true,
     });
     await recordTelegramUsageEvent(context.db, {
       eventType: "setup_complete",

@@ -14,11 +14,6 @@ export interface TelegramCreds {
   chatId: string;
 }
 
-interface PendingAlertScopeItem {
-  stablecoinId: string;
-  family: import("@shared/types/status").TelegramAlertType;
-}
-
 /** Telegram Bot API inline keyboard button shape. */
 export interface InlineKeyboardButton {
   text: string;
@@ -283,14 +278,6 @@ export interface BatchMessage {
    * card for the "View on Pharos" link on the first chunk of single-coin alerts.
    */
   linkPreviewOptions?: LinkPreviewOptions;
-  /** Immutable source identity for queued risk-alert provenance. */
-  sourceEventId?: string;
-  /** Chat preference generation observed while this alert target was planned. */
-  preferenceGeneration?: number;
-  /** Exact coin/family pairs represented by this immutable rendered target. */
-  alertScope?: PendingAlertScopeItem[];
-  /** Safety model/policy/build identity bound to any safety items in this target. */
-  safetyScoreIdentity?: import("@shared/types/safety-score-publication").SafetyScorePublicationIdentity;
 }
 
 export interface BatchResult extends SendToChatResult {

@@ -25,11 +25,6 @@ export const SNOOZE_SECONDS = {
   "24h": 24 * 60 * 60,
 } as const;
 
-// ---------- Top-N insight views ----------
-
-/** Recognized `/top` view names (used for routing + did-you-mean suggestions). */
-export const TOP_VIEW_NAMES = ["depeg", "dews", "yield", "liquidity", "chains", "safety"] as const;
-
 // ---------- Message chunking ----------
 
 /**
@@ -49,11 +44,8 @@ export const TELEGRAM_SPLIT_VERSION = 4;
 
 export const TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX = "telegram:chat-send-backoff:";
 
-export type PendingDeliveryState = "pending" | "sending" | "sent" | "execution_unknown";
-export const PENDING_DELIVERY_STATES = ["pending"] as const satisfies readonly PendingDeliveryState[];
-
 // Preserve the established Worker import surface while the policy itself stays
-// runtime-neutral and is shared with the synthetic load guard.
+// runtime-neutral.
 /** Compatibility defaults for historical pending rows, not active alert families. */
 export const TELEGRAM_ALERT_TTL_SEC = {
   ...SHARED_TELEGRAM_ALERT_TTL_SEC,
@@ -80,21 +72,12 @@ export {
   TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
   TELEGRAM_MAX_MESSAGES_PER_RUN,
   TELEGRAM_PENDING_DRAIN_BUDGET,
-  TELEGRAM_HISTORICAL_SOURCE_PRIORITY,
-  TELEGRAM_HISTORICAL_SOURCE_TTL_SEC,
 } from "@shared/lib/telegram-delivery-policy";
-
-// ---------- Webhook disambiguation ----------
-
-/** TTL for pending ticker-disambiguation rows (5 minutes). */
-export const DISAMBIGUATION_TTL_SEC = 5 * 60;
 
 // ---------- Processed-updates retention ----------
 
 /** Retain processed `telegram_processed_updates` rows for 7 days for replay-ack idempotency. */
 export const TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC = 7 * 24 * 60 * 60;
-
-export const TELEGRAM_PENDING_EXECUTION_UNKNOWN_RETENTION_SEC = 90 * 24 * 60 * 60;
 
 /**
  * A `processing` claim older than this belongs to a crashed request and is
@@ -116,13 +99,6 @@ export const CHAT_COMMAND_FLOOD_WINDOW_SEC = 60;
 export const CHAT_COMMAND_FLOOD_LIMIT = 20;
 
 // ---------- Bulk subscribe/unsubscribe confirmation gate ----------
-
-/**
- * Bulk subscribe/unsubscribe commands are gated behind an inline Confirm/Cancel
- * keyboard when the resolved coin set exceeds this threshold OR the literal
- * `all` token was used.
- */
-export const BULK_CONFIRM_COIN_THRESHOLD = 10;
 
 /** Maximum number of coin symbols to inline in the bulk-confirm preview line. */
 export const BULK_CONFIRM_PREVIEW_LIMIT = 5;

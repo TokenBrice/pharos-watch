@@ -7,6 +7,7 @@ import { buildInClause, chunkArray, executeAtomicBatch } from "../../lib/db";
 import { D1_BATCH_SIZE } from "../../lib/constants";
 import { logTelegramEvent } from "../common/log";
 import { isQuietHoursActive } from "../common/quiet-hours";
+import { recordTelegramDeliveryOutcomes } from "../store/usage-analytics";
 import {
   flushChatSuccessResets,
   handleBlockedChat,
@@ -379,6 +380,8 @@ export async function drainTelegramDeliveries(
   const owner = `telegram-drain:${crypto.randomUUID()}`;
   const blockedChatsThisRun = new Set<string>();
   const sentChats = new Set<string>();
+  // Per-chat delivery diagnostics shown by /status, /list and the Mini App.
+  const deliveryOutcomes: Array<{ chatId: string; ok: boolean; errorClass: string | null; nowSec: number }> = [];
   const globalBackoff = await readTelegramGlobalBackoff(db, now());
   if (globalBackoff != null) {
     result.globalBackoffUntil = globalBackoff;
@@ -477,6 +480,15 @@ export async function drainTelegramDeliveries(
           const rateLimited = waveResults.filter((wave) => wave.attempted !== false && wave.errorClass === "rate_limit");
           const rateLimitedChats = new Set(rateLimited.map((wave) => wave.chatId));
           const chatBackoffs: D1PreparedStatement[] = [];
+          settlements.forEach((settlement, index) => {
+            if (!settlement.attempted) return;
+            deliveryOutcomes.push({
+              chatId: settlement.row.chat_id,
+              ok: settlement.state === "sent",
+              errorClass: waveResults[index]!.errorClass,
+              nowSec: settleNow,
+            });
+          });
           for (const settlement of settlements) {
             if (settlement.attempted) result.attempted += 1;
             if (settlement.state === "sent") {
@@ -550,6 +562,7 @@ export async function drainTelegramDeliveries(
 
   result.acceptedChats = sentChats.size;
   if (sentChats.size > 0) await flushChatSuccessResets(db, sentChats);
+  await recordTelegramDeliveryOutcomes(db, deliveryOutcomes);
   if (result.attempted > 0 || result.unknown > 0) {
     logTelegramEvent({
       level: "info",

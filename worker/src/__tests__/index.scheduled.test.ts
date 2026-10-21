@@ -31,7 +31,6 @@ const cronMocks = vi.hoisted(() => ({
     "projectTape",
     "dispatchTelegramAlerts",
     "runTelegramDegradationWatchdog",
-    "cleanExpiredDisambiguations",
     "runStatusSelfCheck",
     "runCronStalenessWatchdog",
     "runDigestPublicationWatchdog",
@@ -192,9 +191,6 @@ vi.mock("../cron/project-tape", () => ({ projectTape: cronMocks.projectTape }));
 vi.mock("../cron/telegram/dispatch/dispatch-telegram-alerts", () => ({ dispatchTelegramAlerts: cronMocks.dispatchTelegramAlerts }));
 vi.mock("../cron/telegram/maintenance/telegram-degradation-watchdog", () => ({
   runTelegramDegradationWatchdog: cronMocks.runTelegramDegradationWatchdog,
-}));
-vi.mock("../telegram/store/disambiguation", () => ({
-  cleanExpiredDisambiguations: cronMocks.cleanExpiredDisambiguations,
 }));
 vi.mock("../telegram/webhook/telegram-pulse", () => ({
   publishTelegramPulseSnapshotWithOutcome: cronMocks.publishTelegramPulseSnapshotWithOutcome,

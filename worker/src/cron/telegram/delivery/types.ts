@@ -1,85 +1,4 @@
-import type { TelegramSendErrorClass } from "../../../telegram/delivery/telegram";
 import type { TelegramPendingCapacitySnapshot } from "../../../telegram/outbox/pending-capacity";
-import type { PendingDeliveryState } from "../../../telegram/common/constants";
-import type { TelegramAlertType } from "@shared/types/status";
-
-export interface PendingAlertRow {
-  id: number;
-  chat_id: string;
-  message_html: string;
-  disable_notification: number;
-  created_at: number;
-  expires_at: number | null;
-  attempts: number;
-  not_before_at: number | null;
-  priority: number | null;
-  source_type: string | null;
-  alert_type: TelegramAlertType | null;
-  last_error_class: string | null;
-  dedupe_key: string | null;
-  chunk_index: number | null;
-  source_event_id: string | null;
-  alert_scope_json: string | null;
-  preference_generation: number | null;
-  markup_policy_json: string | null;
-  delivery_state: PendingDeliveryState;
-  delivery_owner: string | null;
-  delivery_generation: number;
-  delivery_started_at: number | null;
-  delivery_completed_at: number | null;
-  delivery_claim_expires_at: number | null;
-  processing_owner?: string | null;
-  processing_started_at?: number | null;
-  processing_expires_at?: number | null;
-  alert_snooze_until_ts: number | null;
-  quiet_hours_enabled: number | null;
-  quiet_hours_start_utc: number | null;
-  quiet_hours_end_utc: number | null;
-  timezone: string | null;
-}
-
-export interface PendingDeliveryClaim {
-  id: number;
-  owner: string;
-  generation: number;
-}
-
-export type PendingDeadLetterReason =
-  | "ttl_expired"
-  | "permanent_failure"
-  | "max_attempts"
-  | "blocked_disabled"
-  | "preference_changed"
-  | "execution_unknown_archived"
-  | "manual_clear";
-
-export interface DeadLetterPendingRow {
-  id: number;
-  chat_id: string;
-  message_html: string;
-  created_at: number;
-  attempts: number | null;
-  last_error_class?: string | null;
-  dedupe_key?: string | null;
-  chunk_index?: number | null;
-  priority?: number | null;
-  source_type?: string | null;
-  alert_type?: string | null;
-  source_event_id?: string | null;
-  alert_scope_json?: string | null;
-  preference_generation?: number | null;
-  markup_policy_json?: string | null;
-  delivery_state?: PendingDeliveryState | null;
-  delivery_owner?: string | null;
-  delivery_generation?: number | null;
-  delivery_started_at?: number | null;
-  delivery_completed_at?: number | null;
-  delivery_claim_expires_at?: number | null;
-  expires_at?: number | null;
-  processing_owner?: string | null;
-  processing_started_at?: number | null;
-  processing_expires_at?: number | null;
-}
 
 export interface PendingDrainResult {
   attempted: number;
@@ -103,25 +22,6 @@ export interface PendingDrainResult {
 }
 
 export type PendingCapacitySnapshot = TelegramPendingCapacitySnapshot;
-
-export interface PendingRetryUpdate extends PendingDeliveryClaim {
-  retryAfterSec: number | null;
-  errorClass: TelegramSendErrorClass | null;
-  notBeforeAt: number | null;
-}
-
-export interface PendingDeferUpdate {
-  id: number;
-  notBeforeAt: number;
-  reason?: string | null;
-  deliveryClaim?: PendingDeliveryClaim;
-}
-
-export interface PendingDeliveryDiagnostic {
-  chatId: string;
-  ok: boolean;
-  errorClass?: string | null;
-}
 
 export function emptyDrainResult(): PendingDrainResult {
   return {

@@ -15,7 +15,7 @@ import { buildInClause, chunkArray, executeAtomicBatch } from "../../../lib/db";
  * On D1 error this returns false so we never call `disableBlockedSubscriber`
  * with stale strike state.
  */
-export async function registerSubscriberBlockAndShouldDisable(
+async function registerSubscriberBlockAndShouldDisable(
   db: D1Database,
   chatId: string,
   nowSec: number,
@@ -59,7 +59,7 @@ export interface BlockedSubscriberCascadeResult {
   failed: boolean;
 }
 
-export async function registerSubscriberBlockAndMaybeDisable(
+async function registerSubscriberBlockAndMaybeDisable(
   db: D1Database,
   chatId: string,
   nowSec: number,
@@ -114,7 +114,7 @@ export async function flushChatSuccessResets(
   }
 }
 
-export async function disableBlockedSubscriber(db: D1Database, chatId: string): Promise<boolean> {
+async function disableBlockedSubscriber(db: D1Database, chatId: string): Promise<boolean> {
   try {
     await executeAtomicBatch(db, [
       db

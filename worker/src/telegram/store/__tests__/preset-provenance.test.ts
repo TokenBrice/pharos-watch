@@ -2,7 +2,6 @@ import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { mergeSubscriberMaps } from "../../../cron/telegram/dispatch/dispatch-telegram-subscribers";
-import { loadTelegramSourcePresetSubscribersForChats } from "../../../cron/telegram/sources/telegram-alert-source-memberships";
 import type { SubscriberRow } from "../../../cron/telegram/dispatch/dispatch-telegram-routing";
 import { applySubscribeIntent, applyUnsubscribeIntent } from "../presets";
 
@@ -175,52 +174,6 @@ describe("Telegram direct/preset provenance on the latest schema", () => {
       });
 
       expect(directRows(sqlite, "legacy")).toEqual(legacy);
-    } finally {
-      sqlite.close();
-    }
-  });
-
-  it("loads captured preset provenance through the source-scoped dispatch path", async () => {
-    const { sqlite, db } = openLatestSchema();
-    try {
-      insertSubscriber(sqlite, "dynamic");
-      sqlite.prepare(
-        `INSERT INTO telegram_preset_subscriptions (
-           chat_id, preset_id, alert_dews, created_at, updated_at
-         ) VALUES ('dynamic', 'mcap-ge-1b', 1, ?, ?)`,
-      ).run(NOW, NOW);
-      sqlite.prepare(
-        `INSERT INTO telegram_alert_source_resolution_pages (
-           source_event_id, page_key, alert_type, page_index, memberships_resolved,
-           status, created_at, updated_at, completed_at
-         ) VALUES ('source-1', 'dews:0', 'dews', 0, 1, 'complete', ?, ?, ?)`,
-      ).run(NOW, NOW, NOW);
-      sqlite.prepare(
-        `INSERT INTO telegram_alert_source_resolution_memberships (
-           source_event_id, alert_type, preset_id, stablecoin_id, created_at
-         ) VALUES ('source-1', 'dews', 'mcap-ge-1b', 'usdc-circle', ?)`,
-      ).run(NOW);
-      sqlite.prepare(
-        `INSERT INTO telegram_alert_source_resolution_targets (
-           source_event_id, page_key, preset_id, chat_id, created_at
-         ) VALUES ('source-1', 'dews:0', 'mcap-ge-1b', 'dynamic', ?)`,
-      ).run(NOW);
-
-      const loaded = await loadTelegramSourcePresetSubscribersForChats(
-        db,
-        "source-1",
-        "dews",
-        ["dynamic"],
-        NOW,
-      );
-      expect(loaded.kind).toBe("ok");
-      if (loaded.kind !== "ok") return;
-      expect([...loaded.rows.keys()]).toEqual(["usdc-circle"]);
-      expect(loaded.rows.get("usdc-circle")?.[0]).toMatchObject({
-        chat_id: "dynamic",
-        hasLocalOverride: false,
-      });
-      expect(directRows(sqlite, "dynamic")).toEqual([]);
     } finally {
       sqlite.close();
     }

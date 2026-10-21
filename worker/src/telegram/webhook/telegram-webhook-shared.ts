@@ -1,43 +1,11 @@
 import { WORKER_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { TelegramDewsBand, TelegramSafetyMode } from "@shared/types/status/telegram";
 import type { ResolvedCoin } from "../common/alerts-parser";
-import { DISAMBIGUATION_TTL_SEC } from "../common/constants";
 import type { TelegramChatMemberUpdated } from "./telegram-webhook-group-welcome";
 import {
   TELEGRAM_WEBHOOK_INTENT_VERSION,
   type TelegramWebhookOperationIntent,
 } from "../store/processed-updates";
-
-// Re-export so existing callers importing this constant from this module keep working.
-export { DISAMBIGUATION_TTL_SEC };
-
-// `DISAMBIGUATION_TTL_SEC` is defined in `../telegram/common/constants` and
-// re-exported from the top of this module.
-
-export type PendingActionType = "subscribe" | "unsubscribe" | "set" | "confirm-bulk" | "forget-confirm";
-
-/**
- * Stored payload for a "confirm-bulk" pending action. Captures everything
- * needed to execute the deferred subscribe/unsubscribe once the user taps
- * Confirm on the inline keyboard.
- */
-export type ConfirmBulkPayload = { flowId?: string } & (
-  | {
-      kind: "subscribe";
-      alertTypes: string[];
-      presetIds: string[];
-      depegWorseningBpsStep?: 100 | 250 | 500 | null;
-      coinIds: string[];
-      subscribeAll: boolean;
-    }
-  | {
-      kind: "unsubscribe";
-      presetIds: string[];
-      coinIds: string[];
-      unsubscribeAll: boolean;
-    });
-
-export const SETUP_PENDING_ACTION_TYPE = "setup-step";
 
 export type ParsedSetCommand =
   | { ticker: string; setting: "dews"; enabled: boolean; minBand: TelegramDewsBand | null }
@@ -85,18 +53,6 @@ export interface TelegramWebhookUpdate {
 export type TelegramWebhookUpdateWithChatMember = TelegramWebhookUpdate & {
   my_chat_member?: TelegramChatMemberUpdated;
 };
-
-export interface PendingDisambiguationRow {
-  action_type?: string | null;
-  action_payload?: string | null;
-  alert_types: string;
-  resolved_ids: string;
-  ambiguous_ticker: string;
-  candidates: string;
-  remaining_tickers: string;
-  expires_at: number;
-  initiator_user_id?: string | null;
-}
 
 export interface SubscriberRow {
   alert_dews: number;

@@ -17,34 +17,9 @@ import { handleMyChatMember } from "../telegram-webhook-group-welcome";
 const LIFECYCLE_MIGRATION_FALLBACKS = [
   { match: "INSERT INTO telegram_subscriptions", rows: [] },
   { match: "INSERT INTO telegram_preset_subscriptions", rows: [] },
-  { match: "INSERT OR IGNORE INTO telegram_pending_disambiguation", rows: [] },
-  { match: "UPDATE OR IGNORE telegram_pending_alerts", rows: [] },
-  { match: "UPDATE telegram_pending_alerts", rows: [] },
-  { match: "DELETE FROM telegram_pending_alerts", rows: [] },
-  { match: "DELETE FROM telegram_recap_targets", rows: [] },
-  { match: "DELETE FROM telegram_recap_preferences", rows: [] },
-  { match: "UPDATE OR IGNORE telegram_freeze_alert_targets", rows: [] },
-  { match: "DELETE FROM telegram_freeze_alert_targets", rows: [] },
-  { match: "UPDATE OR IGNORE telegram_alert_source_resolution_targets", rows: [] },
-  { match: "DELETE FROM telegram_alert_source_resolution_targets", rows: [] },
-  { match: "UPDATE telegram_alert_job_targets", rows: [] },
-  { match: "UPDATE OR IGNORE telegram_alert_job_targets", rows: [] },
-  { match: "DELETE FROM telegram_alert_job_targets", rows: [] },
-  { match: "UPDATE OR IGNORE telegram_alert_job_target_items", rows: [] },
-  { match: "DELETE FROM telegram_alert_job_target_items", rows: [] },
-  { match: "UPDATE OR IGNORE telegram_alert_planning_subscribers", rows: [] },
-  { match: "DELETE FROM telegram_alert_planning_subscribers", rows: [] },
-  { match: "UPDATE telegram_alert_target_plans", rows: [] },
-  { match: "DELETE FROM telegram_alert_target_plans", rows: [] },
-  { match: "UPDATE OR IGNORE telegram_transport_failure_observations", rows: [] },
-  { match: "DELETE FROM telegram_transport_failure_observations", rows: [] },
-  { match: "UPDATE telegram_alert_dead_letters", rows: [] },
-  { match: "DELETE FROM telegram_alert_dead_letters", rows: [] },
-  { match: "DELETE FROM telegram_alert_target_plan_items", rows: [] },
   { match: "DELETE FROM telegram_chat_delivery_diagnostics", rows: [] },
   { match: "DELETE FROM telegram_subscriptions", rows: [] },
   { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
-  { match: "DELETE FROM telegram_pending_disambiguation", rows: [] },
   { match: "DELETE FROM telegram_subscribers", rows: [] },
   { match: "UPDATE OR IGNORE telegram_deliveries", rows: [] },
   { match: "DELETE FROM telegram_deliveries", rows: [] },
@@ -221,8 +196,6 @@ describe("handleTelegramWebhook", () => {
         makeWebhookRequest(123, "/help", "test-secret", { updateId: 5_500 }), "test-secret", "bot-token");
       expect(duplicate.status).toBe(200);
       expect(fetchSpy).toHaveBeenCalledTimes(2);
-      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_webhook_operation_mutations").get())
-        .toEqual({ count: 0 });
     } finally {
       sqlite.close();
       errorSpy.mockRestore();
@@ -372,11 +345,6 @@ describe("handleTelegramWebhook", () => {
     ).toBe(true);
     expect(
       history.some(
-        (entry) => entry.sql.includes("DELETE FROM telegram_pending_alerts") && entry.binds.includes("-123"),
-      ),
-    ).toBe(true);
-    expect(
-      history.some(
         (entry) =>
           entry.sql.includes("DELETE FROM cache WHERE key = ?") && entry.binds.includes("telegram:group-welcome:-123"),
       ),
@@ -459,46 +427,6 @@ describe("handleTelegramWebhook", () => {
           entry.sql.includes("INSERT INTO telegram_subscribers") &&
           entry.binds[0] === "-100123" &&
           entry.binds[1] === "-123",
-      ),
-    ).toBe(true);
-    expect(
-      history.some(
-        (entry) =>
-          entry.sql.includes("UPDATE telegram_pending_alerts SET chat_id = ? WHERE chat_id = ?") &&
-          entry.binds[0] === "-100123" &&
-          entry.binds[1] === "-123",
-      ),
-    ).toBe(true);
-    expect(
-      history.some(
-        (entry) =>
-          entry.sql.includes("UPDATE OR IGNORE telegram_pending_alerts") &&
-          entry.sql.includes("SET dedupe_key = ? || substr(dedupe_key, length(?) + 1)") &&
-          entry.binds.slice(0, 3).join("|") === "-100123|-123|-100123",
-      ),
-    ).toBe(true);
-    expect(
-      history.some(
-        (entry) =>
-          entry.sql.includes("DELETE FROM telegram_pending_alerts") &&
-          entry.sql.includes("substr(dedupe_key, 1, length(?))") &&
-          entry.binds.slice(0, 2).join("|") === "-100123|-123",
-      ),
-    ).toBe(true);
-    expect(
-      history.some(
-        (entry) =>
-          entry.sql.includes("UPDATE telegram_alert_job_targets") &&
-          entry.sql.includes("SET pending_dedupe_key = ? || substr(pending_dedupe_key, length(?) + 1)") &&
-          entry.binds.slice(0, 3).join("|") === "-100123|-123|-100123",
-      ),
-    ).toBe(true);
-    expect(
-      history.some(
-        (entry) =>
-          entry.sql.includes("UPDATE OR IGNORE telegram_alert_job_targets") &&
-          entry.sql.includes("SET target_key = ? || substr(target_key, length(?) + 1)") &&
-          entry.binds.slice(0, 3).join("|") === "-100123|-123|-100123",
       ),
     ).toBe(true);
     expect(

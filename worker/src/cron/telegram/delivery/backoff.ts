@@ -6,7 +6,7 @@ import {
 import { logTelegramEvent } from "../../../telegram/common/log";
 
 const PENDING_BACKOFF_CAP_SEC = PENDING_BACKOFF_SCHEDULE_SEC[PENDING_BACKOFF_SCHEDULE_SEC.length - 1];
-export const TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY = "telegram:global-send-backoff-until";
+const TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY = "telegram:global-send-backoff-until";
 
 /**
  * Backoff seconds for the *next* attempt given the prior attempt count.

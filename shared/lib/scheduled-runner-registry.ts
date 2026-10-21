@@ -218,7 +218,6 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     jobChains: [[
       "dispatch-telegram-alerts",
       "telegram-degradation-watchdog",
-      "telegram-disambiguation-cleanup",
       "telegram-pulse-snapshot",
     ]],
     budgetOnlyJobs: ["telegram-registration-reconciliation"],

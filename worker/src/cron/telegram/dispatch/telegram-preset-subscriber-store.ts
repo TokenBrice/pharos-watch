@@ -11,7 +11,7 @@ import type { SubscriberRow } from "./dispatch-telegram-routing";
 
 export type PresetAlertType = Extract<TelegramAlertType, "dews" | "depeg" | "safety">;
 
-export const PRESET_ALERT_TYPES: readonly PresetAlertType[] = ["dews", "depeg", "safety"];
+const PRESET_ALERT_TYPES: readonly PresetAlertType[] = ["dews", "depeg", "safety"];
 
 export const PRESET_ALERT_COLUMN = Object.fromEntries(
   PRESET_ALERT_TYPES.map((family) => [family, TELEGRAM_ALERT_PERSISTENCE[family].subscriptionColumn]),

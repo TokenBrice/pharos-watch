@@ -116,25 +116,8 @@ describe("dispatchTelegramAlerts", () => {
     });
     expect(mockSendToChat).toHaveBeenCalledTimes(attemptedAtDisable);
     expect(
-      harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE chat_id = '99999'").get(),
+      harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_deliveries WHERE chat_id = '99999' AND state IN ('pending', 'retry')").get(),
     ).toEqual({ count: 0 });
-  });
-
-  it("drains pending queue on an eventless dispatch", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const harness = createDispatchHarness();
-    seedDispatchSnapshots(harness);
-    harness.seed({
-      pending: [
-        { id: 1, chatId: "100", html: "<b>Old alert</b>", createdAt: now - 120 },
-        { id: 2, chatId: "200", html: "<b>Old alert 2</b>", createdAt: now - 60 },
-      ],
-    });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
-
-    expect(metadata.pendingDrained).toBe(2);
-    expect(telegramDeliveryTranscript.map((entry) => entry.chatId)).toEqual(["100", "200"]);
-    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
   });
 
   // This case is the file's whole runtime (6.45s of 7.95s, measured 2026-09-09),

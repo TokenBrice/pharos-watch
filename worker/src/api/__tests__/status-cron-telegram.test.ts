@@ -184,7 +184,7 @@ describe("handleStatus", () => {
               providerFamily: "telegram-api",
               phase: "pending-drain",
               countTotals: { pendingAttempted: 2, pendingTotal: 7 },
-              cursor: { queue: "telegram_pending_alerts" },
+              cursor: { queue: "telegram_deliveries" },
               deferredTail: { total: 7, due: 2, deferred: 5, oldestPendingAgeSec: 120 },
             }),
           },
@@ -228,7 +228,7 @@ describe("handleStatus", () => {
       providerFamily: "telegram-api",
       phase: "pending-drain",
       countTotals: { pendingAttempted: 2, pendingTotal: 7 },
-      cursor: { queue: "telegram_pending_alerts" },
+      cursor: { queue: "telegram_deliveries" },
       deferredTail: { total: 7, due: 2, deferred: 5, oldestPendingAgeSec: 120 },
     });
   });
@@ -387,11 +387,6 @@ describe("handleStatus", () => {
         },
       },
       {
-        match: "FROM telegram_pending_disambiguation",
-        rows: [],
-        first: { pending_count: 3 },
-      },
-      {
         match: TELEGRAM_PENDING_CAPACITY_SQL,
         rows: [],
         first: {
@@ -409,7 +404,7 @@ describe("handleStatus", () => {
         },
       },
       {
-        match: "(SELECT COUNT(*) FROM telegram_deliveries WHERE state IN ('pending', 'retry'))",
+        match: "SELECT COUNT(*) AS pending_count FROM telegram_deliveries WHERE state IN ('pending', 'retry')",
         rows: [],
         first: { pending_count: 4 },
       },
@@ -429,7 +424,6 @@ describe("handleStatus", () => {
         totalChats: number;
         deliverableChats: number;
         totalSubscriptions: number;
-        pendingDisambiguations: number;
         pendingDeliveries: number;
         deliverySli: {
           availability: string;
@@ -463,7 +457,6 @@ describe("handleStatus", () => {
     expect(body.telegramBot?.totalChats).toBe(12);
     expect(body.telegramBot?.deliverableChats).toBe(9);
     expect(body.telegramBot?.totalSubscriptions).toBe(37);
-    expect(body.telegramBot?.pendingDisambiguations).toBe(3);
     expect(body.telegramBot?.pendingDeliveries).toBe(4);
     expect(body.telegramBot?.deliverySli).toMatchObject({
       availability: "available",

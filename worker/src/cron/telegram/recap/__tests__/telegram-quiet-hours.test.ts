@@ -1,19 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DISAMBIGUATION_TTL_SEC } from "../../../../telegram/webhook/telegram-webhook-shared";
-import { cleanExpiredDisambiguations } from "../../../../telegram/store/disambiguation";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   isQuietHoursActive,
   isValidIanaTimezone,
   resetQuietHoursFallbackTelemetryForTests,
 } from "../../../../telegram/common/quiet-hours";
-import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const hour = (hourUtc: number) => hourUtc * 3600;
-const { open, closeAll } = createLatestSchemaFixtureTracker();
 
 afterEach(() => {
   resetQuietHoursFallbackTelemetryForTests();
-  closeAll();
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
@@ -78,103 +73,5 @@ describe("isValidIanaTimezone", () => {
     expect(isValidIanaTimezone("not a zone")).toBe(false);
     expect(isValidIanaTimezone("Mars/Olympus_Mons")).toBe(false);
     expect(isValidIanaTimezone("a".repeat(65))).toBe(false);
-  });
-});
-
-interface DisambiguationRow {
-  chat_id: string;
-  expires_at: number;
-}
-
-function setupDisambiguations(rows: DisambiguationRow[]) {
-  const { sqlite, db } = open();
-  const insert = sqlite.prepare(`INSERT INTO telegram_pending_disambiguation
-    (chat_id, alert_types, resolved_ids, ambiguous_ticker, candidates, remaining_tickers, expires_at)
-    VALUES (?, '[]', '[]', 'USD', '[]', '[]', ?)`);
-  for (const row of rows) insert.run(row.chat_id, row.expires_at);
-  const remaining = () => sqlite.prepare(
-    "SELECT chat_id FROM telegram_pending_disambiguation ORDER BY chat_id",
-  ).all().map((row) => row.chat_id);
-  return { db, remaining };
-}
-
-describe("cleanExpiredDisambiguations", () => {
-  const NOW_SEC = 1_800_000_000;
-  const GRACE_SEC = Math.max(2 * DISAMBIGUATION_TTL_SEC, 600);
-
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(NOW_SEC * 1000);
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it("throws before any D1 work when the signal is already aborted", async () => {
-    const rows: DisambiguationRow[] = [{ chat_id: "1", expires_at: NOW_SEC - GRACE_SEC - 60 }];
-    const { db, remaining } = setupDisambiguations(rows);
-    const controller = new AbortController();
-    controller.abort(new Error("aborted"));
-
-    await expect(cleanExpiredDisambiguations(db, controller.signal)).rejects.toThrow("aborted");
-    expect(remaining()).toEqual(["1"]);
-  });
-
-  it("removes rows whose expires_at is older than the grace window", async () => {
-    const rows: DisambiguationRow[] = [
-      { chat_id: "old", expires_at: NOW_SEC - GRACE_SEC - 60 },
-      { chat_id: "older", expires_at: NOW_SEC - GRACE_SEC - 3600 },
-    ];
-    const { db, remaining } = setupDisambiguations(rows);
-
-    const result = await cleanExpiredDisambiguations(db);
-
-    expect(remaining()).toEqual([]);
-    expect(result.itemCount).toBe(2);
-    expect(result.status).toBe("ok");
-    const metadata = JSON.parse(result.metadata!) as {
-      disambiguationRowsCleaned: number;
-      cutoffSec: number;
-    };
-    expect(metadata.disambiguationRowsCleaned).toBe(2);
-    expect(metadata.cutoffSec).toBe(NOW_SEC - GRACE_SEC);
-  });
-
-  it("preserves rows within the grace window (still inside active TTL or recently expired)", async () => {
-    const rows: DisambiguationRow[] = [
-      // Active selection — expires_at is in the future.
-      { chat_id: "active", expires_at: NOW_SEC + 60 },
-      // Just expired, well within the grace window.
-      { chat_id: "fresh-expired", expires_at: NOW_SEC - 30 },
-      // Expired exactly at the cutoff boundary — strict `<` keeps it.
-      { chat_id: "boundary", expires_at: NOW_SEC - GRACE_SEC },
-      { chat_id: "past-cutoff", expires_at: NOW_SEC - GRACE_SEC - 1 },
-    ];
-    const { db, remaining } = setupDisambiguations(rows);
-
-    const result = await cleanExpiredDisambiguations(db);
-
-    expect(remaining()).toEqual(["active", "boundary", "fresh-expired"]);
-    expect(result.itemCount).toBe(1);
-  });
-
-  it("caps each cron pass to avoid monopolizing the Telegram slot", async () => {
-    const rows: DisambiguationRow[] = Array.from({ length: 5_001 }, (_, index) => ({
-      chat_id: `old-${index}`,
-      expires_at: NOW_SEC - GRACE_SEC - 60 - index,
-    }));
-    const { db, remaining } = setupDisambiguations(rows);
-
-    const result = await cleanExpiredDisambiguations(db);
-
-    expect(remaining()).toEqual(["old-0"]);
-    expect(result.itemCount).toBe(5_000);
-    const metadata = JSON.parse(result.metadata!) as {
-      batches: number;
-      disambiguationCleanupHasMore: boolean;
-    };
-    expect(metadata.batches).toBe(10);
-    expect(metadata.disambiguationCleanupHasMore).toBe(true);
   });
 });

@@ -204,7 +204,6 @@ describe("handleTelegramWebhook", () => {
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe reserve all", "test-secret", { updateId: 1 }), "test-secret", "bot-token");
 
     const confirm = callbackFromLatest("bulk:sa:");
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_disambiguation").get()).toEqual({ count: 0 });
     expect(sqlite.prepare("SELECT global_alert_reserve FROM telegram_subscribers WHERE chat_id = '123'").get() ?? null)
       .not.toEqual({ global_alert_reserve: 1 });
 
@@ -226,7 +225,6 @@ describe("handleTelegramWebhook", () => {
     expect(sqlite.prepare("SELECT preset_id, depeg_worsening_bps_step FROM telegram_preset_subscriptions WHERE chat_id = '123'").all())
       .toEqual([{ preset_id: presetId, depeg_worsening_bps_step: step }]);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscriptions WHERE chat_id = '123'").get()).toEqual({ count: 0 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_disambiguation").get()).toEqual({ count: 0 });
     expect(latestSendMessageBody().text).not.toContain("Something went wrong");
   });
 
@@ -244,7 +242,6 @@ describe("handleTelegramWebhook", () => {
     expect(sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = '123'").all()).toEqual(before);
     expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers WHERE chat_id = '123'").get())
       .toEqual({ preference_generation: 7 });
-    expect(sqlite.prepare("SELECT * FROM telegram_pending_disambiguation").all()).toEqual([]);
   });
 
   it("refuses launch alerts for a preset without writing a follow", async () => {
@@ -283,7 +280,6 @@ describe("handleTelegramWebhook", () => {
 
     expect(callbackFromLatest(prefix)?.startsWith(prefix)).toBe(true);
     expect(sqlite.prepare("SELECT * FROM telegram_subscriptions").all()).toEqual(before);
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_disambiguation").get()).toEqual({ count: 0 });
   });
 
   it("asks for a stateless bulk:ua confirmation for /unsubscribe all, then clears every alert flag", async () => {
@@ -297,7 +293,6 @@ describe("handleTelegramWebhook", () => {
 
     const confirm = callbackFromLatest("bulk:ua:");
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscriptions").get()).toEqual({ count: 1 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_disambiguation").get()).toEqual({ count: 0 });
 
     await handleTelegramWebhook(db, makeCallbackRequest(confirm, { chatId: 123, updateId: 2 }), "test-secret", "bot-token");
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscriptions").get()).toEqual({ count: 0 });
@@ -315,7 +310,6 @@ describe("handleTelegramWebhook", () => {
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/unsubscribe usd-top25", "test-secret", { updateId: 1 }), "test-secret", "bot-token");
 
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_preset_subscriptions").get()).toEqual({ count: 0 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_disambiguation").get()).toEqual({ count: 0 });
   });
 
   it("allows legacy frozen coin subscriptions to be removed by exact id", async () => {
