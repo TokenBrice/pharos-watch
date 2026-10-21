@@ -227,22 +227,22 @@ export function buildLaunchPromotions(
  * The snapshot to persist as the next safety baseline: current rows, except
  * coins whose move was suppressed keep their previous (last alerted) row.
  */
-export function holdSuppressedSafetyBaselines(
-  currentSafetySnapshot: SafetySnapshot,
-  previousSafetySnapshot: SafetySnapshot,
+export function holdSuppressedSafetyBaselines<Row extends SafetySnapshotRow>(
+  currentSafetySnapshot: Record<string, Row>,
+  previousSafetySnapshot: Record<string, Row>,
   nowSec: number,
-): SafetySnapshot {
+): Record<string, Row> {
   const { heldBaselineIds, availabilityHeldIds } = buildSafetyChanges(
     currentSafetySnapshot, previousSafetySnapshot, (id) => id, nowSec,
   );
   if (heldBaselineIds.length === 0) return currentSafetySnapshot;
   const availabilityHeld = new Set(availabilityHeldIds);
-  const persisted: SafetySnapshot = { ...currentSafetySnapshot };
+  const persisted: Record<string, Row> = { ...currentSafetySnapshot };
   for (const id of heldBaselineIds) {
     const { heldSinceSec, ...previous } = previousSafetySnapshot[id]!;
-    persisted[id] = availabilityHeld.has(id)
+    persisted[id] = (availabilityHeld.has(id)
       ? { ...previous, heldSinceSec: heldSinceSec ?? nowSec }
-      : previous;
+      : previous) as Row;
   }
   return persisted;
 }
