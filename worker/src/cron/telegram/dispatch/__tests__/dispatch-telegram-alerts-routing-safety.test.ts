@@ -8,6 +8,7 @@ import {
   readCacheValue,
   resetDispatchTelegramAlertsTest,
   telegramDeliveryTranscript,
+  mockRunTelegramRollupStep,
 } from "./dispatch-telegram-alerts.test-support";
 
 // Routing scenarios require published DEWS; pointerless diagnostic rows are not alert sources.
@@ -88,19 +89,16 @@ describe("dispatchTelegramAlerts", () => {
     });
     expect(metadata).toMatchObject({ subscribersNotified: 1, messagesSent: 1 });
     expect(metadata.authoritativePlanning).toMatchObject({
-      sourceEventId: expect.stringMatching(/^telegram-source:/),
+      sourceEventId: expect.stringMatching(/^alert:/),
       sourceEventFamilies: ["dews", "depeg", "safety"],
-      capturedSubscriberCount: 1,
-      capturePageCount: 1,
-      planningPageCount: 1,
-      fanoutInputLoadCallCount: 1,
-      fanoutInputCacheHitCount: 1,
+      plannedTargetCount: 1,
       handoffEnqueuedCount: 1,
       handoffPageCount: 1,
     });
-    expect(
-      harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_planning_subscribers").get(),
-    ).toEqual({ count: 1 });
+    // The job row and the advanced baseline commit together.
+    expect(harness.sqlite.prepare("SELECT kind, state FROM telegram_jobs").get()).toEqual({ kind: "alert", state: "done" });
+    expect(harness.sqlite.prepare("SELECT chat_id, state FROM telegram_deliveries").all())
+      .toEqual([{ chat_id: "12345", state: "sent" }]);
     expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "12345" })]);
   });
 
@@ -185,7 +183,7 @@ describe("dispatchTelegramAlerts", () => {
     expect(telegramDeliveryTranscript).toEqual([]);
   });
 
-  it("fans out global all-stablecoin alert subscriptions without per-coin rows", async () => {
+  it("keeps global (all-stablecoin) DEWS follows roll-up only: no live send", async () => {
     const harness = createDispatchHarness();
     seedDispatchSnapshots(harness, { dews: { "usdc-circle": "CALM" } });
     harness.seed({
@@ -194,11 +192,11 @@ describe("dispatchTelegramAlerts", () => {
     });
     const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
 
-    expect(metadata).toMatchObject({ eventsDetected: { dews: 1 }, subscribersNotified: 1, messagesSent: 1 });
-    expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "777" })]);
+    expect(metadata).toMatchObject({ eventsDetected: { dews: 1 }, subscribersNotified: 0, messagesSent: 0 });
+    expect(telegramDeliveryTranscript).toEqual([]);
   });
 
-  it("sends global safety alerts only for material downgrades", async () => {
+  it("keeps global (all-stablecoin) safety follows roll-up only: no live send", async () => {
     const harness = createDispatchHarness();
     const safety = { "usdc-circle": { grade: "C+", score: 66, methodologyVersion: "7.09" } };
     seedDispatchSnapshots(harness, {
@@ -211,8 +209,72 @@ describe("dispatchTelegramAlerts", () => {
     });
     const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
 
-    expect(metadata).toMatchObject({ eventsDetected: { safety: 1 }, subscribersNotified: 1, messagesSent: 1 });
-    expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "777" })]);
+    expect(metadata).toMatchObject({ eventsDetected: { safety: 1 }, subscribersNotified: 0, messagesSent: 0 });
+    expect(telegramDeliveryTranscript).toEqual([]);
+  });
+
+  it("isolates a fan-out failure: queued rows still drain and the run ends degraded", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const harness = createDispatchHarness();
+    harness.seed({ subscribers: [{ chatId: "12345", lastActiveAt: now }] });
+    harness.sqlite.prepare(
+      `INSERT INTO telegram_jobs (job_id, kind, payload_json, state, created_at, expires_at)
+       VALUES ('alert:corrupt', 'alert', '{', 'planning', ?, ?), ('broadcast:queued', 'broadcast', '{}', 'ready', ?, ?)`,
+    ).run(now, now + 3600, now, now + 3600);
+    harness.sqlite.prepare(
+      `INSERT INTO telegram_deliveries (job_id, kind, chat_id, audience, body, body_hash, state, next_attempt_at, expires_at, created_at)
+       VALUES ('broadcast:queued', 'broadcast', '12345', 'notice', 'queued notice', 'h', 'pending', ?, ?, ?)`,
+    ).run(now, now + 3600, now);
+    const result = await dispatchTelegramAlerts(harness.db, "bot-token");
+    const metadata = JSON.parse(result.metadata);
+
+    expect(result).toMatchObject({ status: "degraded", error: expect.stringContaining("fanout:") });
+    expect(metadata).toMatchObject({ messagesSent: 1, deliveryV2: { planningErrors: [expect.stringMatching(/^fanout:/)] } });
+    expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "12345" })]);
+  });
+
+  it("holds freeze rows (fail closed) when retraction checks fail, while other kinds still drain", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const harness = createDispatchHarness();
+    harness.seed({ subscribers: [{ chatId: "12345", lastActiveAt: now }, { chatId: "678", lastActiveAt: now }] });
+    harness.sqlite.prepare(
+      `INSERT INTO telegram_jobs (job_id, kind, payload_json, state, created_at, expires_at)
+       VALUES ('freeze:tape-x', 'freeze', '{}', 'ready', ?, ?), ('broadcast:queued', 'broadcast', '{}', 'ready', ?, ?)`,
+    ).run(now, now + 3600, now, now + 3600);
+    const insert = harness.sqlite.prepare(
+      `INSERT INTO telegram_deliveries (job_id, kind, chat_id, audience, body, body_hash, state, next_attempt_at, expires_at, created_at)
+       VALUES (?, ?, ?, ?, 'body', 'h', 'pending', ?, ?, ?)`,
+    );
+    insert.run("freeze:tape-x", "freeze", "678", "alert", now, now + 3600, now);
+    insert.run("broadcast:queued", "broadcast", "12345", "notice", now, now + 3600, now);
+    // Retraction validation cannot read Tape this run.
+    harness.sqlite.exec("DROP TABLE tape_events");
+    const result = await dispatchTelegramAlerts(harness.db, "bot-token");
+    const metadata = JSON.parse(result.metadata);
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.deliveryV2).toMatchObject({ heldKinds: ["freeze", "freeze_batch"] });
+    expect(metadata.deliveryV2.planningErrors).toEqual(expect.arrayContaining([expect.stringMatching(/^freeze-retraction:/)]));
+    expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "12345" })]);
+    expect(harness.sqlite.prepare("SELECT state FROM telegram_deliveries WHERE kind = 'freeze'").get())
+      .toEqual({ state: "pending" });
+  });
+
+  it("does not block live alerts when the roll-up step throws", async () => {
+    const harness = createDispatchHarness();
+    mockRunTelegramRollupStep.mockRejectedValueOnce(new Error("roll-up down"));
+    seedDispatchSnapshots(harness, {
+      safety: { "usdc-circle": { grade: "B", score: 70, methodologyVersion: "7.09" } },
+      safetySource: { "usdc-circle": { grade: "C+", score: 66, methodologyVersion: "7.09" } },
+    });
+    harness.seed({
+      safety: [{ stablecoinId: "usdc-circle", grade: "C+", score: 66 }],
+      ...direct("12345", { safety: true }),
+    });
+    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+
+    expect(mockRunTelegramRollupStep).toHaveBeenCalledOnce();
+    expect(metadata).toMatchObject({ messagesSent: 1, deliveryV2: { rollupState: "failed" } });
   });
 
   it("holds a fresh severe safety drop for the dwell, so a one-run flip never alerts", async () => {
@@ -324,7 +386,7 @@ describe("dispatchTelegramAlerts", () => {
         .filter((entry) => entry.operation === "resolved-depeg-lookup")
         .map((entry) => entry.binds.length),
     ).toEqual([90, 11]);
-    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_source_events").get()).toEqual({
+    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_jobs WHERE kind = 'alert'").get()).toEqual({
       count: 1,
     });
     expect(telegramDeliveryTranscript).toEqual([]);

@@ -409,7 +409,7 @@ describe("handleStatus", () => {
         },
       },
       {
-        match: "SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts WHERE delivery_state = 'pending'",
+        match: "(SELECT COUNT(*) FROM telegram_deliveries WHERE state IN ('pending', 'retry'))",
         rows: [],
         first: { pending_count: 4 },
       },

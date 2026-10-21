@@ -49,47 +49,49 @@ export function miniAppErrorMessage(err: unknown, context: MiniAppErrorContext):
   if (err instanceof MiniAppRequestError) {
     // Shared arm: stale auth produces the same copy in both surfaces.
     if (err.code === "stale-auth") {
-      return "Telegram authorization expired. Close and reopen from PharosWatchBot.";
+      return "This window has expired. Reopen it from PharosWatchBot to keep editing.";
     }
     if (err.code === "contract-version-mismatch" || err.code === "catalog-version-mismatch") {
-      return "Mini App was updated. Close and reopen it from PharosWatchBot.";
+      return "Pharos was updated. Close and reopen it from PharosWatchBot.";
     }
 
     if (context === "session") {
-      if (err.status === 401) return "Telegram launch authorization was rejected. Close and reopen from PharosWatchBot.";
-      if (err.status === 429) return "Telegram is still opening your session. Wait a moment, then retry.";
-      if (err.status === 503) return "Telegram Mini App auth is temporarily unavailable. Try again shortly.";
-      return "Could not load Mini App settings. Reopen from Telegram or try again.";
+      if (err.status === 401) return "Telegram couldn't confirm this window. Close and reopen it from PharosWatchBot.";
+      if (err.status === 429) return "Still opening. Wait a moment, then try again.";
+      if (err.status === 503) return "Pharos is busy right now. Try again in a minute.";
+      return "Couldn't load your alerts. Try again.";
     }
 
     // context === "mutation"
     switch (err.code) {
       case "rate-limited":
-        return "Pharos edit limit reached. Wait for the countdown before editing again.";
+        return "Too many changes in a row. Wait a few seconds, then try again.";
       case "not-private":
-        return "This Mini App can only edit personal alerts. Use the bot commands in groups.";
+        return "Group alerts are managed in the group chat with /settings.";
       case "validation-error":
       case "unknown-coin":
       case "unknown-preset":
       case "invalid-coin-patch":
       case "invalid-alert-types":
       case "invalid-timezone":
-        return "Change was rejected by the server.";
+        return "That change wasn't accepted. Nothing was saved.";
       case "body-too-large":
-        return "Request was too large to send.";
+        return "That change was too large to send. Nothing was saved.";
       case "not-configured":
       case "preset-unavailable":
-        return "Mini App backend is temporarily unavailable. Try again shortly.";
+        return "Pharos is busy right now. Nothing was saved; try again in a minute.";
+      case "stale-bulk-preview":
+        return "Your coins changed in the meantime. Nothing was saved; check the list and try again.";
       case "internal":
-        return "Something went wrong. Try again or reopen Telegram.";
+        return "Something went wrong. Nothing was saved; try again.";
       default:
         break;
     }
-    if (err.status >= 500) return "Something went wrong. Try again or reopen Telegram.";
-    return "Change was not saved. Reopen from Telegram if authorization expired.";
+    if (err.status >= 500) return "Something went wrong. Nothing was saved; try again.";
+    return "Change not saved. Try again.";
   }
 
   return context === "session"
-    ? "Could not load Mini App settings. Reopen from Telegram or try again."
-    : "Change was not saved. Reopen from Telegram if authorization expired.";
+    ? "Couldn't load your alerts. Check your connection and try again."
+    : "Change not saved. Check your connection and try again.";
 }

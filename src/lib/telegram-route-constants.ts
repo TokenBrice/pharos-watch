@@ -52,4 +52,3 @@ export const SETUP_DEEP_LINK = buildTelegramLandingDeepLink("hero");
 export const RECOMMENDED_SETUP_DEEP_LINK = buildTelegramLandingDeepLink("setup");
 export const MINI_APP_SETUP_DEEP_LINK = buildTelegramLandingDeepLink("miniapp_setup");
 export const MINI_APP_HOME_DEEP_LINK = buildTelegramLandingDeepLink("miniapp_home");
-export const MINI_APP_WATCHLIST_DEEP_LINK = buildTelegramLandingDeepLink("miniapp_watchlist");

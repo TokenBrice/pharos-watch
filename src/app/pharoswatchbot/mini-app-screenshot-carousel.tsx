@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Pause, Play } from "lucide-react";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
 
 interface MiniAppScreenshot {
@@ -17,9 +18,11 @@ const ROTATE_MS = 5_000;
 
 export function MiniAppScreenshotCarousel({ screenshots }: { screenshots: readonly MiniAppScreenshot[] }) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [paused, setPaused] = useState(
-    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
+  // Reduced motion starts paused; useSyncExternalStore keeps the first client
+  // frame equal to the server render (no hydration mismatch).
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const [userPaused, setUserPaused] = useState<boolean | null>(null);
+  const paused = userPaused ?? prefersReducedMotion;
 
   useEffect(() => {
     if (paused || screenshots.length <= 1) return;
@@ -49,7 +52,7 @@ export function MiniAppScreenshotCarousel({ screenshots }: { screenshots: readon
                   height={screenshot.height}
                   loading={screenshot.title === "Home" ? "eager" : "lazy"}
                   sizes="(min-width: 1024px) 340px, (min-width: 640px) 70vw, 88vw"
-                  className="mx-auto h-full max-h-[calc(100svh-9rem)] w-auto rounded-lg object-contain lg:max-h-[560px]"
+                  className="mx-auto h-full max-h-[30rem] w-auto rounded-lg object-contain lg:max-h-[560px]"
                 />
               </div>
               <figcaption className="flex items-baseline gap-2 border-t border-white/8 px-4 py-2.5 font-mono text-3xs uppercase text-white/65">
@@ -69,7 +72,7 @@ export function MiniAppScreenshotCarousel({ screenshots }: { screenshots: readon
           type="button"
           aria-label={paused ? "Play Mini App screenshots" : "Pause Mini App screenshots"}
           aria-pressed={paused}
-          onClick={() => setPaused((current) => !current)}
+          onClick={() => setUserPaused(!paused)}
           className="pharos-focus-ring inline-flex size-11 shrink-0 items-center justify-center rounded-md border border-border/65 bg-background/70 text-foreground hover:bg-muted/45"
         >
           {paused ? (
@@ -86,7 +89,7 @@ export function MiniAppScreenshotCarousel({ screenshots }: { screenshots: readon
             aria-pressed={activeIndex === idx}
             onClick={() => {
               setActiveIndex(idx);
-              setPaused(true);
+              setUserPaused(true);
             }}
             className={cn(
               "pharos-focus-ring pharos-control-pill min-h-11 shrink-0 px-2.5 py-1 text-xs",

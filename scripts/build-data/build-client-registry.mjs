@@ -659,6 +659,7 @@ export function buildComplianceRegistryOutput({
 export function buildTelegramMiniAppCatalogOutput({
   sourceJsonPath = SOURCE_JSON_ABS,
   sourceCoins = readSourceCoins(sourceJsonPath),
+  canonicalOrderJsonPath = CANONICAL_ORDER_JSON_ABS,
 } = {}) {
   const parsed = sourceCoins;
 
@@ -666,7 +667,9 @@ export function buildTelegramMiniAppCatalogOutput({
     throw new Error(`[client-registry] ${SOURCE_JSON_REL} is not a JSON array`);
   }
 
-  const searchableCoins = parsed
+  // `rank` is the 1-based position in the curated canonical market-cap order.
+  // The Mini App uses it only to sort search results and followed coins.
+  const searchableCoins = orderSourceCoins(parsed, readCanonicalOrder(canonicalOrderJsonPath))
     .filter((coin) => !["frozen", "quarantined", "delisted"].includes(coin.status ?? "active"))
     .map((coin, index) => {
       if (
@@ -683,6 +686,9 @@ export function buildTelegramMiniAppCatalogOutput({
         name: coin.name,
         peg: coin.flags.pegCurrency,
         status: coin.status ?? "active",
+        rank: index + 1,
+        // Wrapped, savings, vault and yield-bearing variants; the Mini App lists base coins first.
+        variant: typeof coin.variantOf === "string" || coin.flags.yieldBearing === true,
       };
     });
 

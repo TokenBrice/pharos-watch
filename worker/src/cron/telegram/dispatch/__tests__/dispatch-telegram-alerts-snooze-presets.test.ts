@@ -5,12 +5,10 @@ import {
   cleanupDispatchTelegramAlertsTest,
   createDispatchHarness as createBaseDispatchHarness,
   dispatchTelegramAlerts,
-  mockRecordOutcome,
   parseLogRecords,
   readCacheValue,
   resetDispatchTelegramAlertsTest,
   scriptTelegramDeliveries,
-  scriptTelegramDeliveriesForChat,
   STABLECOINS_CACHE_WITH_USDC,
   telegramDeliveryTranscript,
 } from "./dispatch-telegram-alerts.test-support";
@@ -88,8 +86,12 @@ describe("dispatchTelegramAlerts", () => {
     harness.seed({
       dews: [{ stablecoinId: "usdc-circle" }],
       subscribers: [
-        { chatId: "A", snoozeUntil: now + 3_600, global: { dews: true } },
-        { chatId: "B", global: { dews: true } },
+        { chatId: "A", snoozeUntil: now + 3_600 },
+        { chatId: "B" },
+      ],
+      subscriptions: [
+        { chatId: "A", stablecoinId: "usdc-circle", alerts: { dews: true } },
+        { chatId: "B", stablecoinId: "usdc-circle", alerts: { dews: true } },
       ],
     });
     const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
@@ -147,40 +149,6 @@ describe("dispatchTelegramAlerts", () => {
     ).toEqual({ alert_dews: 0, alert_depeg: 0 });
   });
 
-  it("holds direct targets durably when the preset-subscribers query must resume", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const harness = createDispatchHarness([
-      { operation: "preset-subscribers", error: new Error("D1_ERROR: connection reset") },
-    ]);
-    sources(harness, { dews: { "usdc-circle": "CALM" } });
-    harness.cache("stablecoins", STABLECOINS_CACHE_WITH_USDC);
-    harness.seed(dewsDirect("12345"));
-    try {
-      const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
-      expect(metadata).toMatchObject({
-        presetFailure: true,
-        presetQueryFailures: 1,
-        presetResolutionFailures: 0,
-        snapshotSeeded: false,
-        subscribersNotified: 0,
-        messagesSent: 0,
-      });
-      expect(telegramDeliveryTranscript).toEqual([]);
-      expect(
-        harness.sqlite.prepare("SELECT status, target_plan_state FROM telegram_alert_source_events").get(),
-      ).toMatchObject({ status: "resolving", target_plan_state: "unstarted" });
-      expect(parseLogRecords(warnSpy).find((record) => record.action === "preset-query")).toMatchObject({
-        failureKind: "query-failed",
-        alertType: "dews",
-        requestedStablecoinCount: 1,
-      });
-      expect(readCacheValue(harness.sqlite, "telegram:preset-query-failure-count")).toBe("1");
-      expect(mockRecordOutcome).not.toHaveBeenCalled();
-    } finally {
-      warnSpy.mockRestore();
-    }
-  });
-
   it("does not resolve dynamic presets when no preset subscriber rows exist", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const harness = createDispatchHarness();
@@ -204,118 +172,6 @@ describe("dispatchTelegramAlerts", () => {
     } finally {
       warnSpy.mockRestore();
     }
-  });
-
-  it("holds direct targets durably when dynamic preset resolution must resume", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const harness = createDispatchHarness();
-    sources(harness, { dews: { "usdc-circle": "CALM" } });
-    harness.seed({
-      ...dewsDirect("direct-chat"),
-      subscribers: [{ chatId: "direct-chat" }, { chatId: "preset-chat" }],
-      presets: [{ chatId: "preset-chat", presetId: "usd-top25", alerts: { dews: true } }],
-    });
-    try {
-      const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
-      expect(metadata).toMatchObject({
-        presetFailure: true,
-        presetQueryFailures: 0,
-        presetResolutionFailures: 1,
-        subscribersNotified: 0,
-        messagesSent: 0,
-      });
-      expect(telegramDeliveryTranscript).toEqual([]);
-      expect(
-        harness.sqlite.prepare("SELECT status, target_plan_state FROM telegram_alert_source_events").get(),
-      ).toMatchObject({ status: "resolving", target_plan_state: "unstarted" });
-      expect(parseLogRecords(warnSpy).find((record) => record.action === "preset-resolution")).toMatchObject({
-        failureKind: "resolution-failed",
-        reason: "stablecoins-cache-unavailable",
-        alertType: "dews",
-      });
-    } finally {
-      warnSpy.mockRestore();
-    }
-  });
-
-  it("clears the preset-failure counter on a successful run", async () => {
-    const harness = createDispatchHarness();
-    sources(harness, { dews: { "usdc-circle": "CALM" } });
-    harness.cache("telegram:preset-query-failure-count", "2");
-    harness.seed(dewsDirect("12345"));
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
-
-    expect(metadata).toMatchObject({ presetFailure: false, presetQueryFailures: 0 });
-    expect(readCacheValue(harness.sqlite, "telegram:preset-query-failure-count")).toBe("0");
-  });
-
-  it("attributes authoritative target delivery by dominant category", async () => {
-    const harness = createDispatchHarness();
-    sources(harness, { dews: { "usdc-circle": "CALM" } });
-    harness.seed({
-      dews: [{ stablecoinId: "usdc-circle" }],
-      depegs: [{ stablecoinId: "usdc-circle" }],
-      subscribers: [{ chatId: "A" }, { chatId: "C" }],
-      subscriptions: [
-        { chatId: "A", stablecoinId: "usdc-circle", alerts: { dews: true } },
-        { chatId: "C", stablecoinId: "usdc-circle", alerts: { depeg: true } },
-      ],
-    });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
-
-    expect(metadata.messagesSent).toBe(2);
-    expect(
-      harness.sqlite
-        .prepare("SELECT alert_type, status, final_delivery_state FROM telegram_alert_job_targets ORDER BY alert_type")
-        .all(),
-    ).toEqual([
-      { alert_type: "depeg", status: "sent", final_delivery_state: "accepted" },
-      { alert_type: "dews", status: "sent", final_delivery_state: "accepted" },
-    ]);
-  });
-
-  it("buckets blocked/failed/enqueued by alert type", async () => {
-    const harness = createDispatchHarness();
-    sources(harness, { dews: { "usdc-circle": "CALM" } });
-    harness.seed({
-      dews: [{ stablecoinId: "usdc-circle" }],
-      depegs: [{ stablecoinId: "usdc-circle" }],
-      subscribers: [{ chatId: "A" }, { chatId: "B" }],
-      subscriptions: [
-        { chatId: "A", stablecoinId: "usdc-circle", alerts: { dews: true } },
-        { chatId: "B", stablecoinId: "usdc-circle", alerts: { depeg: true } },
-      ],
-    });
-    scriptTelegramDeliveriesForChat("A", {
-      ok: false,
-      blocked: true,
-      retryable: false,
-      permanentFailure: true,
-      statusCode: 403,
-      errorClass: "blocked",
-      delivery: "blocked",
-      retryAfterSec: null,
-    });
-    scriptTelegramDeliveriesForChat("B", {
-      ok: false,
-      blocked: false,
-      retryable: false,
-      permanentFailure: true,
-      statusCode: 400,
-      errorClass: "permanent",
-      delivery: "failed",
-      retryAfterSec: null,
-    });
-    await dispatchTelegramAlerts(harness.db, "bot-token");
-
-    expect(
-      harness.sqlite
-        .prepare("SELECT alert_type, status, error_class FROM telegram_alert_job_targets ORDER BY alert_type")
-        .all(),
-    ).toEqual([
-      { alert_type: "depeg", status: "failed", error_class: "permanent" },
-      { alert_type: "dews", status: "failed", error_class: "blocked" },
-    ]);
   });
 
   it("chunks a 120-coin depeg fan-out for one chat without losing coin identities", async () => {
@@ -344,12 +200,15 @@ describe("dispatchTelegramAlerts", () => {
       metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
       if (metadata.cappedAtLimit !== true) break;
     }
+    // Sent rows drop their body, so read the delivered chunks from the transport transcript.
     const megaMessages = harness.sqlite
-      .prepare(
-        "SELECT message_html AS html, chunk_index FROM telegram_alert_job_targets WHERE chat_id = ? ORDER BY chunk_index",
-      )
-      .all("mega-chat") as Array<{ html: string; chunk_index: number }>;
-    const targetCount = harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_job_targets").get() as {
+      .prepare("SELECT seq AS chunk_index FROM telegram_deliveries WHERE chat_id = ? ORDER BY seq")
+      .all("mega-chat")
+      .map((row, index) => ({
+        chunk_index: (row as { chunk_index: number }).chunk_index,
+        html: telegramDeliveryTranscript[index]?.html ?? "",
+      }));
+    const targetCount = harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_deliveries").get() as {
       count: number;
     };
 
@@ -415,35 +274,6 @@ describe("dispatchTelegramAlerts", () => {
     expect(telegramDeliveryTranscript).toEqual([]);
   });
 
-  it("persists alert job manifests for reserve fanout", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const harness = createDispatchHarness();
-    sources(harness, {
-      dewsAlertable: {},
-      reserve: {
-        generation: ALERT_RESERVE_SOURCE_GENERATION,
-        publishedAt: now - 60,
-        continuous: true,
-        driftIds: ["usdc-circle"],
-        observedSince: { "usdc-circle": now - 120 }, unavailableIds: [],
-      },
-      reserveDispatched: [],
-      reserveObserved: { "usdc-circle": now - 120 },
-      safety: {},
-    });
-    harness.seed({
-      subscribers: [{ chatId: "555" }],
-      subscriptions: [{ chatId: "555", stablecoinId: "usdc-circle", alerts: { reserve: true } }],
-    });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
-
-    expect(metadata).toMatchObject({ eventsDetected: { reserve: 1 }, subscribersNotified: 1, messagesSent: 1 });
-    expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "555" })]);
-    expect(
-      harness.sqlite.prepare("SELECT alert_type, status, final_delivery_state FROM telegram_alert_job_targets").get(),
-    ).toMatchObject({ alert_type: "reserve", status: "sent", final_delivery_state: "accepted" });
-  });
-
   it("delivers a new detected event when a depeg closes and reopens between snapshots", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
@@ -492,7 +322,7 @@ describe("dispatchTelegramAlerts", () => {
     });
     expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "12345" })]);
     expect(
-      harness.sqlite.prepare("SELECT alert_type, status, final_delivery_state FROM telegram_alert_job_targets").get(),
-    ).toMatchObject({ alert_type: "depeg", status: "sent", final_delivery_state: "accepted" });
+      harness.sqlite.prepare("SELECT kind, families, state FROM telegram_deliveries").get(),
+    ).toMatchObject({ kind: "alert", families: "depeg", state: "sent" });
   });
 });

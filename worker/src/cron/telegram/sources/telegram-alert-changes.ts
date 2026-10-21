@@ -47,6 +47,8 @@ export interface DewsAlertPlan {
   suppressedPendingDewsEscalations: number;
   /** Moves down within the alertable range (daily roll-up material). */
   suppressedDewsDeescalations: number;
+  /** Unsent moves down from an alertable band, including below ALERT, for the daily roll-up. */
+  deescalations: DewsChange[];
   /** Alerted-band baselines cleared after the quiet window. */
   resetDewsBaselines: number;
 }
@@ -76,6 +78,7 @@ export function planDewsAlerts(
     nextCandidates: {},
     suppressedPendingDewsEscalations: 0,
     suppressedDewsDeescalations: 0,
+    deescalations: [],
     resetDewsBaselines: 0,
   };
   for (const row of rows) {
@@ -86,6 +89,11 @@ export function planDewsAlerts(
     const candidate = previousCandidates[id];
 
     if (!isDewsAlertable(band)) {
+      if (typeof observedBand === "string" && isDewsAlertable(observedBand)) {
+        plan.deescalations.push({
+          stablecoinId: id, symbol: getSymbol(id), oldBand: observedBand, newBand: band, score: row.score, topSignals: [],
+        });
+      }
       const quietSinceSec = candidate?.quietSinceSec ?? nowSec;
       if (plan.nextAlertable[id] != null && nowSec - quietSinceSec >= DEWS_POLICY.baselineResetQuietSec) {
         delete plan.nextAlertable[id];
@@ -109,6 +117,9 @@ export function planDewsAlerts(
     ) {
       plan.nextAlertable[id] = band;
       plan.suppressedDewsDeescalations++;
+      plan.deescalations.push({
+        stablecoinId: id, symbol: getSymbol(id), oldBand: observedBand, newBand: band, score: row.score, topSignals: [],
+      });
       continue;
     }
 

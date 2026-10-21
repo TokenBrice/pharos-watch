@@ -66,6 +66,10 @@ export const INACTIVE_TELEGRAM_SUBSCRIBER_ELIGIBILITY_SQL = `
   )
   AND NOT EXISTS (SELECT 1 FROM telegram_preset_subscriptions ps WHERE ps.chat_id = s.chat_id)
   AND NOT EXISTS (SELECT 1 FROM telegram_pending_alerts pa WHERE pa.chat_id = s.chat_id)
+  AND NOT EXISTS (
+    SELECT 1 FROM telegram_deliveries td
+     WHERE td.chat_id = s.chat_id AND td.state IN ('pending', 'retry', 'sending')
+  )
   AND NOT EXISTS (SELECT 1 FROM telegram_pending_disambiguation pd WHERE pd.chat_id = s.chat_id)
   AND NOT EXISTS (SELECT 1 FROM telegram_recap_preferences rp WHERE rp.chat_id = s.chat_id AND rp.enabled = 1)
   AND s.global_alert_dews = 0 AND s.global_alert_depeg = 0 AND s.global_alert_safety = 0
@@ -118,6 +122,37 @@ function prepareSubscriberPurge(
     // A private chat id is the user id: also drop group prompts this user started.
     prepare("DELETE FROM telegram_pending_disambiguation WHERE initiator_user_id = ?", chatId),
     prepare("DELETE FROM telegram_pending_alerts WHERE chat_id = ?", chatId),
+    // Roll-up jobs are per chat. Delete them by delivery ownership first (this
+    // also catches jobs created under a group's pre-migration chat id), then by
+    // the `rollup:<date>:<chatId>` id for jobs whose rows are already gone.
+    prepare(
+      `DELETE FROM telegram_jobs
+        WHERE kind = 'rollup'
+          AND job_id IN (SELECT job_id FROM telegram_deliveries WHERE chat_id = ?)`,
+      chatId,
+    ),
+    prepare("DELETE FROM telegram_deliveries WHERE chat_id = ?", chatId),
+    prepare(
+      "DELETE FROM telegram_jobs WHERE kind = 'rollup' AND substr(job_id, -length(?) - 1) = ':' || ?",
+      chatId, chatId,
+    ),
+    // Fan-out cursors are the last chat id written. Rewind one that names this
+    // chat to the previous subscriber: every chat up to it was already written
+    // (replayed rows are ignored by the unique key), so resume stays correct.
+    prepare(
+      `UPDATE telegram_jobs
+          SET cursor = COALESCE((SELECT MAX(chat_id) FROM telegram_subscribers WHERE chat_id < ?), '')
+        WHERE state = 'planning' AND cursor = ?`,
+      chatId, chatId,
+    ),
+    // A broadcast job remembers its canary chat; scrub it from the shared payload.
+    prepare(
+      `UPDATE telegram_jobs SET payload_json = json_remove(payload_json, '$.excludeChatId')
+        WHERE kind = 'broadcast' AND json_extract(payload_json, '$.excludeChatId') = ?`,
+      chatId,
+    ),
+    prepare("DELETE FROM telegram_change_log WHERE chat_id = ?", chatId),
+    prepare("DELETE FROM telegram_rollup_state WHERE chat_id = ?", chatId),
     prepare("DELETE FROM telegram_recap_targets WHERE chat_id = ?", chatId),
     prepare("DELETE FROM telegram_recap_preferences WHERE chat_id = ?", chatId),
     prepare("DELETE FROM telegram_freeze_alert_targets WHERE chat_id = ?", chatId),
@@ -516,6 +551,12 @@ export async function migrateTelegramChatId(
       buildMigrationStatement(db, descriptor).bind(newChatId, oldChatId),
     ),
     db.prepare("UPDATE telegram_pending_alerts SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
+    // Body hashes carry no chat id; a (job, seq) already held by the new chat wins.
+    db.prepare("UPDATE OR IGNORE telegram_deliveries SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
+    db.prepare("DELETE FROM telegram_deliveries WHERE chat_id = ?").bind(oldChatId),
+    db.prepare("UPDATE telegram_change_log SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
+    db.prepare("UPDATE OR IGNORE telegram_rollup_state SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
+    db.prepare("DELETE FROM telegram_rollup_state WHERE chat_id = ?").bind(oldChatId),
     // Recaps are private-chat-only. Never carry recap preferences, targets,
     // pending payloads, or dead-letter audit rows across a group migration.
     db.prepare(

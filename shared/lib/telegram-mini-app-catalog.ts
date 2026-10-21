@@ -8,6 +8,10 @@ export interface TelegramMiniAppCatalogCoin {
   name: string;
   peg: string;
   status: string;
+  /** 1-based position in the curated canonical market-cap order; a sort key, not a published statistic. */
+  rank: number;
+  /** Wrapped, savings, vault or yield-bearing variant of another coin (`variantOf` or `flags.yieldBearing`). */
+  variant: boolean;
 }
 
 export interface TelegramMiniAppCatalogPreset {
@@ -44,4 +48,4 @@ export const TELEGRAM_MINI_APP_CATALOG: TelegramMiniAppCatalog = Object.freeze({
 });
 
 /** Content-derived version shared by the Worker and the static client build. */
-export const TELEGRAM_MINI_APP_CATALOG_VERSION = `catalog-v1-${fnv1a32Hex(JSON.stringify(TELEGRAM_MINI_APP_CATALOG))}`;
+export const TELEGRAM_MINI_APP_CATALOG_VERSION = `catalog-v2-${fnv1a32Hex(JSON.stringify(TELEGRAM_MINI_APP_CATALOG))}`;

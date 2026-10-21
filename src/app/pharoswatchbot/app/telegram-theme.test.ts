@@ -23,7 +23,7 @@ function expectAccessibleTheme(theme: NonNullable<ReturnType<typeof normalizeTel
     expectContrast(theme.border, surface, 3);
     expectContrast(theme.focusRing, surface, 3);
   }
-  expectContrast(theme.buttonText, theme.button, 4.5);
+  expectContrast(theme.buttonText, theme.button, 3);
   expectContrast(theme.sectionHeaderText, theme.sectionBackground, 4.5);
 }
 
@@ -51,6 +51,17 @@ describe("normalizeTelegramTheme", () => {
     expectAccessibleTheme(theme!);
     expect(theme?.button).not.toBe("#fefefe");
     expect(theme?.buttonText).not.toBe("#ffffff");
+    expectContrast(theme!.buttonText, theme!.button, 4.5);
+  });
+
+  it("keeps the host MainButton label colour on an unmodified native button", () => {
+    const theme = normalizeTelegramTheme(
+      { bg_color: "#ffffff", text_color: "#000000", button_color: "#007aff", button_text_color: "#ffffff" },
+      "light",
+    );
+
+    expect(theme?.button).toBe("#007aff");
+    expect(theme?.buttonText).toBe("#ffffff");
   });
 
   it("repairs hostile low-contrast dark theme parameters", () => {

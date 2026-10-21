@@ -42,7 +42,42 @@ export const SCANNER_BLIND_SPOT_EXPORTS: Record<string, string> = {
   "shared/lib/telegram-mini-app-contract.ts::TelegramSafetyMode":
     "Public Mini App typing contract; external Mini App code consumes this surface, which the src/app/pharoswatchbot/app/types.ts barrel re-exports for it.",
 };
-export const DEBT_MODULES: Record<string, string> = {};
+export const DEBT_MODULES: Record<string, string> = {
+  "worker/src/cron/telegram/dispatch/dispatch-telegram-authoritative-path.ts":
+    "Telegram delivery v2 cutover (PR C): legacy pipeline left unreferenced for the 24 h soak; PR D deletes it (agents/2026-10-21-telegram-bot-review/PLAN.md Phase 3).",
+  "worker/src/cron/telegram/dispatch/dispatch-telegram-authoritative-planning.ts":
+    "Telegram delivery v2 cutover (PR C): legacy pipeline left unreferenced for the 24 h soak; PR D deletes it (agents/2026-10-21-telegram-bot-review/PLAN.md Phase 3).",
+  "worker/src/cron/telegram/dispatch/dispatch-telegram-pending-lifecycle.ts":
+    "Telegram delivery v2 cutover (PR C): legacy pipeline left unreferenced for the 24 h soak; PR D deletes it (agents/2026-10-21-telegram-bot-review/PLAN.md Phase 3).",
+  "worker/src/cron/telegram/dispatch/dispatch-telegram-queue-paths.ts":
+    "Telegram delivery v2 cutover (PR C): legacy pipeline left unreferenced for the 24 h soak; PR D deletes it (agents/2026-10-21-telegram-bot-review/PLAN.md Phase 3).",
+  "worker/src/cron/telegram/dispatch/dispatch-telegram-source-lifecycle.ts":
+    "Telegram delivery v2 cutover (PR C): legacy pipeline left unreferenced for the 24 h soak; PR D deletes it (agents/2026-10-21-telegram-bot-review/PLAN.md Phase 3).",
+  "worker/src/cron/telegram/sources/telegram-alert-event-lineage.ts":
+    "Telegram delivery v2 cutover (PR C): legacy pipeline left unreferenced for the 24 h soak; PR D deletes it (agents/2026-10-21-telegram-bot-review/PLAN.md Phase 3).",
+  "worker/src/cron/telegram/sources/telegram-alert-source-events.ts":
+    "Telegram delivery v2 cutover (PR C): legacy pipeline left unreferenced for the 24 h soak; PR D deletes it (agents/2026-10-21-telegram-bot-review/PLAN.md Phase 3).",
+  "worker/src/cron/telegram/sources/telegram-alert-source-memberships.ts":
+    "Telegram delivery v2 cutover (PR C): legacy pipeline left unreferenced for the 24 h soak; PR D deletes it (agents/2026-10-21-telegram-bot-review/PLAN.md Phase 3).",
+  "worker/src/cron/telegram/target-plans/coordinator.ts":
+    "Telegram delivery v2 cutover (PR C): legacy pipeline left unreferenced for the 24 h soak; PR D deletes it (agents/2026-10-21-telegram-bot-review/PLAN.md Phase 3).",
+  "worker/src/cron/telegram/target-plans/delivery.ts":
+    "Telegram delivery v2 cutover (PR C): legacy pipeline left unreferenced for the 24 h soak; PR D deletes it (agents/2026-10-21-telegram-bot-review/PLAN.md Phase 3).",
+  "worker/src/cron/telegram/target-plans/horizon.ts":
+    "Telegram delivery v2 cutover (PR C): legacy pipeline left unreferenced for the 24 h soak; PR D deletes it (agents/2026-10-21-telegram-bot-review/PLAN.md Phase 3).",
+  "worker/src/cron/telegram/target-plans/materialization.ts":
+    "Telegram delivery v2 cutover (PR C): legacy pipeline left unreferenced for the 24 h soak; PR D deletes it (agents/2026-10-21-telegram-bot-review/PLAN.md Phase 3).",
+  "worker/src/cron/telegram/target-plans/read-model.ts":
+    "Telegram delivery v2 cutover (PR C): legacy pipeline left unreferenced for the 24 h soak; PR D deletes it (agents/2026-10-21-telegram-bot-review/PLAN.md Phase 3).",
+  "worker/src/cron/telegram/target-plans/source-state.ts":
+    "Telegram delivery v2 cutover (PR C): legacy pipeline left unreferenced for the 24 h soak; PR D deletes it (agents/2026-10-21-telegram-bot-review/PLAN.md Phase 3).",
+  "worker/src/cron/telegram/target-plans/telegram-alert-target-plan-contract.ts":
+    "Telegram delivery v2 cutover (PR C): legacy pipeline left unreferenced for the 24 h soak; PR D deletes it (agents/2026-10-21-telegram-bot-review/PLAN.md Phase 3).",
+  "worker/src/cron/telegram/target-plans/types.ts":
+    "Telegram delivery v2 cutover (PR C): legacy pipeline left unreferenced for the 24 h soak; PR D deletes it (agents/2026-10-21-telegram-bot-review/PLAN.md Phase 3).",
+  "worker/src/telegram/outbox/pending-queue.ts":
+    "Telegram delivery v2 cutover (PR C): legacy pipeline left unreferenced for the 24 h soak; PR D deletes it (agents/2026-10-21-telegram-bot-review/PLAN.md Phase 3).",
+};
 
 /** Unreferenced exports kept on purpose; deletion is a separate pass. */
 export const DEBT_EXPORTS: Record<string, string> = {};

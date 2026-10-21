@@ -45,10 +45,10 @@ export const TELEGRAM_MINI_APP_PAYLOAD_PATTERN = /^[A-Za-z0-9_-]+$/;
 /**
  * Non-parametric Mini App payload tokens. Frozen so callers cannot mutate it.
  *
- * `setup_recommended` is preserved for backward compatibility with any older
- * deployments that may still emit it. New emit sites should prefer one of the
- * other tokens (e.g. `watchlist` after a recommended setup completes — see
- * `worker/src/telegram/webhook/telegram-webhook-setup.ts`).
+ * `setup` is the onboarding "Choose my own coins" target: new users land on
+ * the setup screen, existing users on coin selection. `setup_recommended` is
+ * preserved for backward compatibility with any older deployments that may
+ * still emit it.
  */
 export const MINI_APP_PAYLOAD_NAMES = Object.freeze({
   home: "home",
@@ -59,6 +59,7 @@ export const MINI_APP_PAYLOAD_NAMES = Object.freeze({
   snooze: "snooze",
   health: "health",
   forget: "forget",
+  setup: "setup",
   setupRecommended: "setup_recommended",
 } as const);
 
@@ -158,6 +159,7 @@ export type TelegramMiniAppIntent =
   | "snooze"
   | "health"
   | "forget"
+  | "setup"
   | "coin"
   | "why"
   | "coverage";
@@ -190,5 +192,7 @@ export function miniAppPayloadIntent(payload: TelegramMiniAppPayload): TelegramM
       return "health";
     case MINI_APP_PAYLOAD_NAMES.forget:
       return "forget";
+    case MINI_APP_PAYLOAD_NAMES.setup:
+      return "setup";
   }
 }

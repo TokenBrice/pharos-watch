@@ -267,6 +267,7 @@ const OWNER_MANAGED_TABLES = [
   ["telegram_adoption_ingress_quota", "updated_at", "worker/src/cron/telegram/maintenance/telegram-retention-cleanup.ts", "2 days", "strict updated_at cutoff"],
   ["telegram_adoption_client_quota", "updated_at", "worker/src/cron/telegram/maintenance/telegram-retention-cleanup.ts", "2 days", "strict updated_at cutoff"],
   ["telegram_chat_delivery_diagnostics", "updated_at", "worker/src/cron/telegram/maintenance/telegram-retention-cleanup.ts", "90 days", "strict updated_at cutoff"],
+  ["telegram_change_log", "observed_at", "worker/src/cron/telegram/rollup/change-log.ts", "TELEGRAM_ALERT_POLICY.rollup.changeLogRetentionSec (8 days)", "strict observed_at cutoff; pruned by the roll-up scan"],
 ] as const;
 
 const OWNER_MANAGED_RETENTION_POLICIES: readonly OwnerManagedRetentionPolicy[] = OWNER_MANAGED_TABLES.map(
@@ -363,7 +364,10 @@ export const RETENTION_NON_APPEND_TABLES: Readonly<Record<string, string>> = {
   telegram_delivery_pauses: "current transport admission state",
   telegram_digest_outbox: "mutable delivery lifecycle; dedicated outbox owner",
   telegram_pending_alerts: "mutable pending delivery queue; dedicated cleanup owner",
+  telegram_jobs: "mutable delivery v2 job state (planning/ready/done); telegram-retention-cleanup prunes completed jobs with no rows after 30 days",
+  telegram_deliveries: "mutable delivery v2 rows (claim, attempts, terminal state); telegram-retention-cleanup prunes terminal rows by done_at after 30 days",
   telegram_pending_disambiguation: "expiring interaction state",
+  telegram_rollup_state: "one upserted last-roll-up marker per chat; removed by /forget",
   telegram_preset_subscriptions: "current subscriber preferences",
   telegram_recap_preferences: "retired recap audit pending separate schema cleanup",
   telegram_subscribers: "mutable subscriber lifecycle",

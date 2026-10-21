@@ -1,145 +1,104 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   MINI_APP_PAYLOAD_NAMES,
   formatCoinPayload,
-  formatCoveragePayload,
-  formatWhyPayload,
   miniAppPayloadIntent,
   parseMiniAppPayload,
 } from "@shared/lib/telegram-mini-app-payloads";
-import type { CoinInsightTarget, TelegramMiniAppState } from "./types";
+import type { TelegramPresetId } from "@shared/lib/telegram-presets";
 
-export type ViewKey = "home" | "watchlist" | "presets" | "settings";
+/** One screen in the pushed-screen stack; Home is always the root. */
+export type MiniAppScreen =
+  | { name: "home" }
+  | { name: "coin"; coinId: string }
+  | { name: "group"; groupId: TelegramPresetId | "all" }
+  | { name: "add-coins" }
+  | { name: "add-group" }
+  | { name: "settings" };
+
+const HOME: MiniAppScreen = { name: "home" };
 
 /**
- * Inverse of `initialViewFromStartParam`: encode the user's current place as a
- * `?startapp=` payload so the stale-auth relaunch affordance can reopen a fresh
- * Telegram launch on the same panel (and coin/insight context) instead of
- * dropping the user back at Home.
+ * Inverse of `initialStackFromStartParam`: encode the visible screen as a
+ * `?startapp=` payload so the stale-auth relaunch reopens where the user was.
  */
-export function relaunchPayloadForView(
-  view: ViewKey,
-  insight: CoinInsightTarget | null,
-  coinId: string | null,
-): string {
-  if (view === "watchlist") {
-    if (insight) {
-      return insight.kind === "why" ? formatWhyPayload(insight.coinId) : formatCoveragePayload(insight.coinId);
-    }
-    if (coinId) return formatCoinPayload(coinId);
-    return MINI_APP_PAYLOAD_NAMES.watchlist;
-  }
-  if (view === "presets") return MINI_APP_PAYLOAD_NAMES.presets;
-  if (view === "settings") return MINI_APP_PAYLOAD_NAMES.settings;
+export function relaunchPayloadForScreen(screen: MiniAppScreen): string {
+  if (screen.name === "coin") return formatCoinPayload(screen.coinId);
+  if (screen.name === "settings") return MINI_APP_PAYLOAD_NAMES.settings;
+  if (screen.name === "add-coins") return MINI_APP_PAYLOAD_NAMES.setup;
   return MINI_APP_PAYLOAD_NAMES.home;
 }
 
-export function initialViewFromStartParam(startParam: string | null): {
-  view: ViewKey;
-  coinId: string | null;
-  insight: CoinInsightTarget | null;
-} {
+export function initialStackFromStartParam(startParam: string | null): { stack: MiniAppScreen[] } {
   const payload = parseMiniAppPayload(startParam);
-  if (!payload) return { view: "home", coinId: null, insight: null };
+  if (!payload) return { stack: [HOME] };
   const intent = miniAppPayloadIntent(payload);
-  if (intent === "settings" || intent === "presets") return { view: intent, coinId: null, insight: null };
-  if (intent === "quiet-hours" || intent === "forget") return { view: "settings", coinId: null, insight: null };
-  if (intent === "coin") return { view: "watchlist", coinId: payload.kind === "coin" ? payload.coinId : null, insight: null };
-  if (intent === "why" || intent === "coverage") {
-    return {
-      view: "watchlist",
-      coinId: payload.kind === "why" || payload.kind === "coverage" ? payload.coinId : null,
-      insight: payload.kind === "why" || payload.kind === "coverage" ? { kind: payload.kind, coinId: payload.coinId } : null,
-    };
+  if (payload.kind === "coin" || payload.kind === "why" || payload.kind === "coverage") {
+    return { stack: [HOME, { name: "coin", coinId: payload.coinId }] };
   }
-  if (intent === "watchlist") return { view: "watchlist", coinId: null, insight: null };
-  return { view: "home", coinId: null, insight: null };
+  if (intent === "settings" || intent === "quiet-hours" || intent === "forget" || intent === "health") {
+    return { stack: [HOME, { name: "settings" }] };
+  }
+  // "Choose my own coins": coin selection for everyone; Back returns to Home (setup for new users).
+  if (intent === "setup") return { stack: [HOME, { name: "add-coins" }] };
+  return { stack: [HOME] };
 }
 
-export function useMiniAppView(state: TelegramMiniAppState | null) {
-  const [view, setView] = useState<ViewKey>("home");
-  const [coinTarget, setCoinTarget] = useState<string | null>(null);
-  const [visibleCoinTarget, setVisibleCoinTarget] = useState<string | null>(null);
-  const [currentCoinTarget, setCurrentCoinTarget] = useState<string | null>(null);
-  const [coinInsightTarget, setCoinInsightTarget] = useState<CoinInsightTarget | null>(null);
-  const [highlightedCoinId, setHighlightedCoinId] = useState<string | null>(null);
+function sameScreen(left: MiniAppScreen, right: MiniAppScreen): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function scrollToTop(top = 0) {
+  if (typeof window === "undefined") return;
+  // Wait for the next screen to render before restoring its scroll position.
+  requestAnimationFrame(() => window.scrollTo({ top, behavior: "auto" }));
+}
+
+export function useMiniAppView() {
+  const [stack, setStack] = useState<MiniAppScreen[]>([HOME]);
+  const scrollPositionsRef = useRef<number[]>([]);
   const initializedRef = useRef(false);
 
   const initializeFromStartParam = useCallback((startParam: string | null) => {
     if (initializedRef.current) return;
     initializedRef.current = true;
-    const initial = initialViewFromStartParam(startParam);
-    setView(initial.view);
-    setCoinTarget(initial.coinId);
-    setVisibleCoinTarget(initial.insight ? null : initial.coinId);
-    setCurrentCoinTarget(initial.coinId);
-    setCoinInsightTarget(initial.insight);
+    const initial = initialStackFromStartParam(startParam);
+    setStack(initial.stack);
   }, []);
 
-
-  const activateView = useCallback((key: ViewKey) => {
-    setView(key);
-    if (key !== "watchlist") {
-      setCoinInsightTarget(null);
-      setCoinTarget(null);
-      setHighlightedCoinId(null);
-      setCurrentCoinTarget(null);
-      setVisibleCoinTarget(null);
-    }
+  const push = useCallback((screen: MiniAppScreen) => {
+    setStack((current) => {
+      if (sameScreen(current[current.length - 1], screen)) return current;
+      scrollPositionsRef.current[current.length - 1] = typeof window === "undefined" ? 0 : window.scrollY;
+      return [...current, screen];
+    });
+    scrollToTop();
   }, []);
 
-  const handleBack = useCallback(() => {
-    if (coinInsightTarget) setCoinInsightTarget(null);
-    else activateView("home");
-  }, [activateView, coinInsightTarget]);
-
-  const navigateToCoin = useCallback((coinId: string) => {
-    setView("watchlist");
-    setCoinInsightTarget(null);
-    setCurrentCoinTarget(coinId);
-    setCoinTarget(coinId);
+  const back = useCallback(() => {
+    setStack((current) => {
+      if (current.length <= 1) return current;
+      scrollToTop(scrollPositionsRef.current[current.length - 2] ?? 0);
+      return current.slice(0, -1);
+    });
   }, []);
 
-  useEffect(() => {
-    if (!coinTarget || view !== "watchlist" || !state) return;
-    const exists = state.subscriptions.some((coin) => coin.stablecoinId === coinTarget)
-      || state.catalog.searchableCoins.some((coin) => coin.stablecoinId === coinTarget)
-      || visibleCoinTarget === coinTarget;
-    if (!exists) return;
-    const targetId = coinTarget;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- the highlight must commit before the deferred scroll tick focuses the row.
-    setHighlightedCoinId(targetId);
-    const scrollTimer = setTimeout(() => {
-      const node = typeof document === "undefined" ? null : document.getElementById(`coin-row-${targetId}`);
-      const reduceMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-      node?.focus({ preventScroll: true });
-      node?.scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" });
-    }, 0);
-    const clearTimer = setTimeout(() => {
-      setHighlightedCoinId((current) => (current === targetId ? null : current));
-      setCoinTarget((current) => (current === targetId ? null : current));
-    }, 2_000);
-    return () => {
-      clearTimeout(scrollTimer);
-      clearTimeout(clearTimer);
-      setHighlightedCoinId((current) => (current === targetId ? null : current));
-    };
-  }, [coinTarget, state, view, visibleCoinTarget]);
+  /** Replace the top screen (e.g. a followed group detail after following it). */
+  const replace = useCallback((screen: MiniAppScreen) => {
+    setStack((current) => [...current.slice(0, -1), screen]);
+  }, []);
+
+  const showSettings = useCallback(() => push({ name: "settings" }), [push]);
 
   return {
-    view,
-    coinInsightTarget,
-    highlightedCoinId,
-    visibleCoinTarget,
-    currentCoinTarget,
-    backButtonVisible: view !== "home" || coinInsightTarget != null,
+    screen: stack[stack.length - 1],
+    depth: stack.length,
     initializeFromStartParam,
-    handleBack,
-    showSettings: useCallback(() => activateView("settings"), [activateView]),
-    activateView,
-    setCoinInsightTarget,
-    navigateToCoin,
+    push,
+    back,
+    replace,
+    showSettings,
   };
 }

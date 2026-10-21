@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildClientRegistryOutput,
   buildComplianceRegistryOutput,
+  buildTelegramMiniAppCatalogOutput,
   buildWorkerRuntimeRegistryOutput,
   projectCoin,
   projectWorkerRuntimeCoin,
@@ -172,6 +173,40 @@ describe("client registry field contract", () => {
       );
     }
     expect(projectionReads).toBe(0);
+  });
+
+  it("ranks the Mini App catalog by canonical market-cap order and skips frozen coins", ({ onTestFinished }) => {
+    const fixtureDir = mkdtempSync(join(tmpdir(), "pharos-mini-app-catalog-order-"));
+    onTestFinished(() => rmSync(fixtureDir, { recursive: true, force: true }));
+    const coin = (id: string, status?: string) => ({ id, symbol: id.toUpperCase(), name: id, status, flags: { pegCurrency: "USD" } });
+    const canonicalOrderJsonPath = join(fixtureDir, "canonical-order.json");
+    writeFileSync(canonicalOrderJsonPath, JSON.stringify(["big", "gone", "small"]));
+
+    const { searchableCoins } = buildTelegramMiniAppCatalogOutput({
+      sourceCoins: [coin("small"), coin("gone", "frozen"), coin("big")],
+      canonicalOrderJsonPath,
+    });
+
+    expect(searchableCoins.map((entry: { stablecoinId: string; rank: number }) => [entry.stablecoinId, entry.rank])).toEqual([["big", 1], ["small", 2]]);
+  });
+
+  it("marks wrapped and yield-bearing variants in the Mini App catalog", ({ onTestFinished }) => {
+    const fixtureDir = mkdtempSync(join(tmpdir(), "pharos-mini-app-catalog-variant-"));
+    onTestFinished(() => rmSync(fixtureDir, { recursive: true, force: true }));
+    const canonicalOrderJsonPath = join(fixtureDir, "canonical-order.json");
+    writeFileSync(canonicalOrderJsonPath, JSON.stringify(["base", "wrapper", "yield"]));
+
+    const { searchableCoins } = buildTelegramMiniAppCatalogOutput({
+      sourceCoins: [
+        { id: "base", symbol: "BASE", name: "base", flags: { pegCurrency: "USD", yieldBearing: false } },
+        { id: "wrapper", symbol: "WRAP", name: "wrapper", variantOf: "base", flags: { pegCurrency: "USD" } },
+        { id: "yield", symbol: "YLD", name: "yield", flags: { pegCurrency: "USD", yieldBearing: true } },
+      ],
+      canonicalOrderJsonPath,
+    });
+
+    expect(searchableCoins.map((entry: { stablecoinId: string; variant: boolean }) => [entry.stablecoinId, entry.variant]))
+      .toEqual([["base", false], ["wrapper", true], ["yield", true]]);
   });
 
   it("projects only the mint-authority coverage summary and excludes detail evidence", () => {

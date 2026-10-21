@@ -29,6 +29,11 @@ describe("telegram mini app payloads", () => {
     expect(miniAppPayloadIntent(parseMiniAppPayload("watchlist")!)).toBe("watchlist");
   });
 
+  it("routes the onboarding setup target", () => {
+    expect(parseMiniAppPayload("setup")).toEqual({ kind: "named", name: "setup" });
+    expect(miniAppPayloadIntent(parseMiniAppPayload("SETUP")!)).toBe("setup");
+  });
+
   it("rejects empty insight ids and malformed payloads", () => {
     expect(parseMiniAppPayload("why_")).toBeNull();
     expect(parseMiniAppPayload("coverage_")).toBeNull();

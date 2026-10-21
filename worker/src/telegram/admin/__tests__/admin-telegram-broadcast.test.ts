@@ -6,6 +6,13 @@ import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { TELEGRAM_LAUNCH_RETIREMENT_NOTICE_HTML } from "@shared/lib/telegram-alert-families";
+import { shouldAttemptFetch } from "../../../lib/circuit-breaker";
+import { fanOutPlanningTelegramJobs } from "../../../cron/telegram/jobs/run-jobs";
+
+vi.mock("../../../lib/circuit-breaker", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../../lib/circuit-breaker")>(),
+  shouldAttemptFetch: vi.fn(async () => true),
+}));
 
 let fetchSpy: ReturnType<typeof mockFetch>;
 let telegramOutcomes: Response[];
@@ -25,7 +32,7 @@ function request(body: unknown, idempotencyKey?: string) {
 
 function capacityRow(active: number) {
   return {
-    match: "SUM(CASE WHEN delivery_state = 'pending' THEN 1 ELSE 0 END) AS total",
+    match: "SUM(CASE WHEN state = 'pending' THEN 1 ELSE 0 END) AS total",
     rows: [],
     first: {
       total: active,
@@ -183,6 +190,28 @@ describe("handleAdminTelegramBroadcast canary gate", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("refuses a fleet too large to fan out within the broadcast TTL", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_subscribers ORDER BY chat_id",
+        rows: Array.from({ length: 30_000 }, (_, index) => ({ chat_id: String(100_000 + index) })),
+      },
+      capacityRow(0),
+      { match: "INSERT INTO admin_action_audit", rows: [], runMeta: { changes: 1 } },
+    ]);
+    const response = await handleAdminTelegramBroadcast({
+      db,
+      request: request({ messageHtml: "<b>Maintenance</b>", scope: "all", dryRun: false, canaryChatId: "10" }),
+      trustedAdmin: true,
+      telegramBotToken: "token",
+    });
+    // 29,999 rows drain in 17 runs (1,800/run) after the first-run wait (fan-out needs 13): 90 min > 45 min TTL.
+    expect(await readJsonResponse(response, 409)).toMatchObject({
+      deliveryEstimate: { fanoutRuns: 13, estimatedDrainTimeSec: 5_400, hasMaterialTtlReserve: false },
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("does not enqueue fleet work when Telegram rejects the private parse canary", async () => {
     telegramOutcomes = [new Response(JSON.stringify({
       ok: false,
@@ -200,7 +229,7 @@ describe("handleAdminTelegramBroadcast canary gate", () => {
       telegramBotToken: "token",
     });
     expect(await readJsonResponse(response, 422)).toMatchObject({ fleetEnqueued: 0, errorClass: "formatting_error" });
-    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_pending_alerts").get()).toMatchObject({ n: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_jobs").get()).toMatchObject({ n: 0 });
   });
 
   it("requires both a private canary and bot token for live fanout", async () => {
@@ -224,32 +253,19 @@ describe("handleAdminTelegramBroadcast canary gate", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it.each(["pause", "circuit"] as const)("honors the admin %s transport gate before canary send", async (gate) => {
+  it("honors the Telegram API circuit before canary send", async () => {
     const { sqlite, db } = latestDb();
-    const now = Math.floor(Date.now() / 1000);
     sqlite.prepare(
       "INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('20', 1, 1)",
     ).run();
-    if (gate === "pause") {
-      sqlite.prepare(
-        `INSERT INTO telegram_delivery_pauses (mode, generation, expires_at, reason, actor, created_at, updated_at)
-         VALUES ('admin', 1, ?, 'incident', 'operator', ?, ?)`,
-      ).run(now + 300, now, now);
-    } else {
-      sqlite.prepare(
-        `UPDATE telegram_transport_circuit
-            SET state = 'open', generation = 1, cause_class = 'auth_error',
-                cause_scope = 'fatal', opened_at = ?, next_probe_at = ?, updated_at = ?
-          WHERE singleton_id = 1`,
-      ).run(now, now + 300, now);
-    }
+    vi.mocked(shouldAttemptFetch).mockResolvedValueOnce(false);
     const response = await handleAdminTelegramBroadcast({
       db,
       request: request({ messageHtml: "ok", scope: "all", dryRun: false, canaryChatId: "10" }),
       trustedAdmin: true,
       telegramBotToken: "token",
     });
-    expect(response.status).toBe(409);
+    expect(await readJsonResponse(response, 409)).toMatchObject({ reason: "transport-outage" });
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -270,12 +286,15 @@ describe("handleAdminTelegramBroadcast canary gate", () => {
     });
     const sent = JSON.parse((fetchSpy.mock.calls[0]?.[1] as RequestInit).body as string);
     expect(sent).toMatchObject({ chat_id: "10", text: "<b>Maintenance</b>", disable_notification: true });
+    // One durable job; the dispatcher fans it out (the canary chat is excluded).
+    expect(sqlite.prepare("SELECT kind, state FROM telegram_jobs").all()).toEqual([{ kind: "broadcast", state: "planning" }]);
+    await fanOutPlanningTelegramJobs(db, Math.floor(Date.now() / 1000));
     const fleet = sqlite.prepare(
-      "SELECT chat_id, source_type FROM telegram_pending_alerts ORDER BY chat_id",
+      "SELECT chat_id, kind, audience, priority FROM telegram_deliveries ORDER BY chat_id",
     ).all();
     expect(fleet).toEqual([
-      expect.objectContaining({ chat_id: "20", source_type: "admin_broadcast" }),
-      expect.objectContaining({ chat_id: "30", source_type: "admin_broadcast" }),
+      { chat_id: "20", kind: "broadcast", audience: "notice", priority: 90 },
+      { chat_id: "30", kind: "broadcast", audience: "notice", priority: 90 },
     ]);
   });
 
@@ -290,7 +309,7 @@ describe("handleAdminTelegramBroadcast canary gate", () => {
     const messageHtml = `${open}${line.repeat(240)}${close}`;
     const canaryChunks: string[] = [];
     fetchSpy.mockImplementation(async (_input, init) => {
-      expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_pending_alerts").get()).toMatchObject({ n: 0 });
+      expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_jobs").get()).toMatchObject({ n: 0 });
       const sent = JSON.parse(String(init?.body)) as { text: string; chat_id: string; disable_notification: boolean };
       expect(sent).toMatchObject({ chat_id: "10", disable_notification: true });
       expect(sent.text.length).toBeLessThanOrEqual(4000);
@@ -315,11 +334,12 @@ describe("handleAdminTelegramBroadcast canary gate", () => {
     expect(canaryChunks.length).toBeGreaterThan(1);
     expect(canaryChunks.map((chunk) => chunk.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&")).join(""))
       .toBe("Maintenance & recovery \u{1F680}\n\n".repeat(240));
+    await fanOutPlanningTelegramJobs(db, Math.floor(Date.now() / 1000));
     const queued = sqlite.prepare(
-      "SELECT message_html, dedupe_key FROM telegram_pending_alerts WHERE chat_id = '20' ORDER BY chunk_index",
+      "SELECT body, body_hash FROM telegram_deliveries WHERE chat_id = '20' ORDER BY seq",
     ).all();
-    expect(queued.map((row) => row.message_html)).toEqual(canaryChunks);
-    expect(queued.every((row) => String(row.dedupe_key).startsWith("20:v4:"))).toBe(true);
+    expect(queued.map((row) => row.body)).toEqual(canaryChunks);
+    expect(queued.every((row) => String(row.body_hash).startsWith("v4:"))).toBe(true);
   });
 
   it("replays an idempotent live response without a second canary or duplicate fanout", async () => {
@@ -343,6 +363,6 @@ describe("handleAdminTelegramBroadcast canary gate", () => {
     expect(first.status).toBe(200);
     expect(second.headers.get("X-Idempotent-Replay")).toBe("true");
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_pending_alerts").get()).toMatchObject({ n: 1 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_jobs").get()).toMatchObject({ n: 1 });
   });
 });

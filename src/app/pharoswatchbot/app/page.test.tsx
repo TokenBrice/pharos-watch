@@ -7,11 +7,11 @@ import {
   TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM,
   TELEGRAM_MINI_APP_CONTRACT_VERSION,
   TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM,
-  telegramMiniAppStateRevision,
 } from "@shared/lib/telegram-mini-app-contract";
+import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
 import { isMiniAppErrorCode, miniAppErrorMessage, MiniAppRequestError } from "./error-messages";
 import PharosWatchBotMiniAppPage, { metadata } from "./page";
-import { baseState } from "@shared/test-utils/telegram-mini-app-state";
+import { baseState, makeMiniAppState } from "@shared/test-utils/telegram-mini-app-state";
 import type { TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
@@ -106,7 +106,7 @@ async function renderReadyMiniApp(options: {
   fetchImpl?: ReturnType<typeof vi.fn>;
 } = {}): Promise<ReturnType<typeof vi.fn>> {
   const fetchMock = renderMiniApp(options);
-  await waitFor(() => expect(screen.getByRole("tab", { name: "home" })).toBeTruthy());
+  await waitFor(() => expect(screen.getByText(/Pharos stores your Telegram user ID/)).toBeTruthy());
   return fetchMock;
 }
 
@@ -124,6 +124,79 @@ function expectMutationRequest(
   else expect(fetchMock).toHaveBeenNthCalledWith(callNumber, url, init);
 }
 
+function nativeButton() {
+  const callbacks: Array<() => void> = [];
+  const live = new Set<() => void>();
+  let visible = false;
+  let text: string | undefined;
+  return {
+    callbacks,
+    live,
+    get isVisible() { return visible; },
+    get text() { return visible ? text : undefined; },
+    show: vi.fn(() => { visible = true; }),
+    hide: vi.fn(() => { visible = false; }),
+    onClick: vi.fn((callback: () => void) => { callbacks.push(callback); live.add(callback); }),
+    offClick: vi.fn((callback: () => void) => { live.delete(callback); }),
+    setParams: vi.fn((params: { text?: string; is_visible?: boolean }) => {
+      if (params.text != null) text = params.text;
+      if (params.is_visible != null) visible = params.is_visible;
+    }),
+    showProgress: vi.fn(),
+    hideProgress: vi.fn(),
+    /** Click whatever handler is currently attached. */
+    click() { for (const callback of [...live]) callback(); },
+  };
+}
+
+const ok = (body: unknown) => ({ ok: true, json: async () => body });
+const preview = (adds: string[], removes: string[] = []) => ok({
+  contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+  catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+  result: {
+    kind: "bulk-watchlist-preview",
+    expectedPreferenceGeneration: 1,
+    previewFingerprint: "preview-v1-12-deadbeef",
+    adds,
+    removes,
+    unchanged: [],
+    sourceImpact: [],
+    undo: { expectedPreferenceGeneration: 2, expectedFingerprint: "preview-v1-12-deadbeef", restoreDirectRows: [], removeStablecoinIds: adds },
+  },
+});
+const staleAuthState: TelegramMiniAppState = { ...baseState, viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" } };
+const newUserState: TelegramMiniAppState = { ...baseState, subscriber: { ...baseState.subscriber, exists: false, snoozeUntilTs: null } };
+const top25 = (alertTypes: Partial<TelegramMiniAppState["presets"][number]["alertTypes"]>, memberIds: string[] | null) => ({
+  id: "usd-top25" as const,
+  label: "USD Top 25",
+  alertTypes: { dews: false, depeg: false, safety: false, ...alertTypes },
+  depegStepBps: null,
+  memberIds,
+});
+const rankedCatalog: TelegramMiniAppState["catalog"] = {
+  recommendedPresets: [{ id: "usd-top25", label: "USD Top 25" }, { id: "usd-top50", label: "USD Top 50" }],
+  searchableCoins: [
+    { stablecoinId: "usd0-usual", symbol: "USD0", name: "Usual USD", peg: "USD", rank: 70 },
+    { stablecoinId: "usdc-circle", symbol: "USDC", name: "USD Coin", peg: "USD", rank: 6 },
+    { stablecoinId: "usdt-tether", symbol: "USDT", name: "Tether", peg: "USD", rank: 1 },
+  ],
+};
+
+/** Switch names are "<label>: <subtitle>"; match the label part only. */
+function switchName(label: string): (accessibleName: string) => boolean {
+  return (accessibleName) => accessibleName === label || accessibleName.startsWith(`${label}:`);
+}
+
+function hideFor(ms: number): void {
+  const now = Date.now();
+  const visibility = vi.spyOn(document, "visibilityState", "get");
+  visibility.mockReturnValue("hidden");
+  document.dispatchEvent(new Event("visibilitychange"));
+  vi.spyOn(Date, "now").mockReturnValue(now + ms);
+  visibility.mockReturnValue("visible");
+  document.dispatchEvent(new Event("visibilitychange"));
+}
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
@@ -136,25 +209,12 @@ afterEach(() => {
 
 describe("PharosWatchBotMiniAppPage", () => {
   it("makes forget-me terminal for retained native Back, Settings, and Main callbacks", async () => {
-    const nativeButton = () => {
-      const callbacks: Array<() => void> = [];
-      let visible = false;
-      return {
-        callbacks,
-        get isVisible() { return visible; },
-        show: vi.fn(() => { visible = true; }),
-        hide: vi.fn(() => { visible = false; }),
-        onClick: vi.fn((callback: () => void) => { callbacks.push(callback); }),
-        offClick: vi.fn(),
-        setParams: vi.fn(),
-      } satisfies NonNullable<MiniAppWebApp["MainButton"]> & { callbacks: Array<() => void> };
-    };
     const back = nativeButton();
     const settings = nativeButton();
     const main = nativeButton();
     const confirmations: Array<(confirmed: boolean) => void> = [];
     const close = vi.fn();
-    const state = { ...baseState, subscriber: { ...baseState.subscriber, snoozeUntilTs: 2_147_483_647 } };
+    const state = { ...baseState, subscriber: { ...baseState.subscriber, snoozeUntilTs: PAUSE_SENTINEL_TS } };
     const fetchMock = await renderReadyMiniApp({
       state,
       launch: {
@@ -162,12 +222,13 @@ describe("PharosWatchBotMiniAppPage", () => {
         showConfirm: vi.fn((_message, callback) => { confirmations.push(callback); }),
       },
     });
-    await waitFor(() => expect(main.onClick).toHaveBeenCalled());
+    await waitFor(() => expect(main.text).toBe("Resume alerts"));
     const retainedResume = main.callbacks.at(-1)!;
-    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+    act(() => settings.click());
+    await waitFor(() => expect(back.isVisible).toBe(true));
     const retainedBack = back.callbacks.at(-1)!;
     const retainedSettings = settings.callbacks.at(-1)!;
-    fireEvent.click(screen.getByRole("button", { name: /Delete all my data/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete all my data" }));
     act(() => { confirmations.shift()?.(true); });
     act(() => { confirmations.shift()?.(true); });
     await waitFor(() => expect(screen.getByText("Your data has been deleted")).toBeTruthy());
@@ -186,22 +247,21 @@ describe("PharosWatchBotMiniAppPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /Close/i }));
     expect(close).toHaveBeenCalledOnce();
   });
+
   it("keeps metadata and the Mini App error-code contract", () => {
     expect(metadata.robots).toEqual({ index: false, follow: false });
     expect(isMiniAppErrorCode("empty-alert-types")).toBe(false);
     expect(isMiniAppErrorCode("stale_auth")).toBe(false);
     expect(isMiniAppErrorCode(null)).toBe(false);
     expect(miniAppErrorMessage(new MiniAppRequestError(429, "rate-limited", 12), "mutation"))
-      .toBe("Pharos edit limit reached. Wait for the countdown before editing again.");
+      .toBe("Too many changes in a row. Wait a few seconds, then try again.");
     expect(isMiniAppErrorCode("stale-recap-preference")).toBe(false);
-    expect(isMiniAppErrorCode("recap-unavailable")).toBe(false);
   });
 
   it("renders browser preview immediately without calling session APIs", () => {
     const fetchMock = vi.fn();
     installMiniAppFetch(fetchMock);
     render(<PharosWatchBotMiniAppPage />);
-
     expect(screen.getByText("PharosWatchBot app preview")).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -209,24 +269,16 @@ describe("PharosWatchBotMiniAppPage", () => {
   it("waits for the page script to expose delayed Telegram launch data", async () => {
     vi.useFakeTimers();
     window.history.replaceState({}, "", "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop");
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => baseState });
+    const fetchMock = vi.fn().mockResolvedValue(ok(baseState));
     installMiniAppFetch(fetchMock);
 
     render(<PharosWatchBotMiniAppPage />);
     const script = document.querySelector<HTMLScriptElement>('script[src="https://telegram.org/js/telegram-web-app.js"]');
     expect(script).toBeTruthy();
-
     await act(async () => { vi.advanceTimersByTime(600); });
     expect(fetchMock).not.toHaveBeenCalled();
 
-    window.Telegram = {
-      WebApp: {
-        initData: "signed-init-data",
-        platform: "tdesktop",
-        initDataUnsafe: { user: { username: "watcher" } },
-        ready: vi.fn(),
-      },
-    };
+    window.Telegram = { WebApp: { initData: "signed-init-data", platform: "tdesktop", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn() } };
     await act(async () => {
       script?.dispatchEvent(new Event("load"));
       vi.advanceTimersByTime(50);
@@ -234,14 +286,11 @@ describe("PharosWatchBotMiniAppPage", () => {
       await Promise.resolve();
     });
 
-    expect(screen.getByText("@watcher")).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/session\?/), expect.objectContaining({
-      method: "POST",
-      body: JSON.stringify({ initData: "signed-init-data" }),
-    }));
+    expect(screen.getByRole("heading", { name: "Alerts on" })).toBeTruthy();
     const sessionUrl = new URL(String(fetchMock.mock.calls[0]?.[0]), "https://pharos.watch");
-    expect(sessionUrl.searchParams.get(TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM)).toBeTruthy();
-    expect(sessionUrl.searchParams.get(TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM)).toBeTruthy();
+    expect(sessionUrl.pathname).toBe("/api/telegram-mini-app/session");
+    expect(sessionUrl.searchParams.get(TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM)).toBe(TELEGRAM_MINI_APP_CONTRACT_VERSION);
+    expect(sessionUrl.searchParams.get(TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM)).toBe(TELEGRAM_MINI_APP_CATALOG_VERSION);
   });
 
   it("treats browser-created and unsupported-host SDK objects as preview", () => {
@@ -251,16 +300,13 @@ describe("PharosWatchBotMiniAppPage", () => {
     installMiniAppFetch(fetchMock);
     render(<PharosWatchBotMiniAppPage />);
     expect(screen.getByText("PharosWatchBot app preview")).toBeTruthy();
-    expect(fetchMock).not.toHaveBeenCalled();
 
     cleanup();
     window.history.replaceState({}, "", "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=unknown");
     window.Telegram = { WebApp: { initData: "signed-init-data", platform: "unknown", ready: vi.fn() } };
-    const unsupportedFetch = vi.fn();
-    installMiniAppFetch(unsupportedFetch);
     render(<PharosWatchBotMiniAppPage />);
     expect(screen.getByText("PharosWatchBot app preview")).toBeTruthy();
-    expect(unsupportedFetch).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("offers a bot link or close action when launch data never arrives", async () => {
@@ -271,223 +317,323 @@ describe("PharosWatchBotMiniAppPage", () => {
     render(<PharosWatchBotMiniAppPage />);
     await act(async () => { vi.advanceTimersByTime(8_050); });
     expect(screen.getByRole("link", { name: "Open PharosWatchBot" }).getAttribute("href")).toBe("https://t.me/PharosWatchBot");
-    expect(fetchMock).not.toHaveBeenCalled();
 
     cleanup();
     const close = vi.fn();
     window.Telegram = { WebApp: { initData: "", platform: "tdesktop", ready: vi.fn(), close } };
-    installMiniAppFetch(fetchMock);
     render(<PharosWatchBotMiniAppPage />);
     await act(async () => { vi.advanceTimersByTime(8_050); });
-    expect(screen.getByText("Telegram launch data was not available. Close and reopen from PharosWatchBot.")).toBeTruthy();
+    expect(screen.getByText("Telegram didn't pass your launch details. Close and reopen from PharosWatchBot.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Close and reopen" }));
-    expect(close).toHaveBeenCalledTimes(1);
+    expect(close).toHaveBeenCalledOnce();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("loads the Telegram session and renders the four-panel shell", async () => {
+  it("loads the session into the tab-free Home screen", async () => {
     const ready = vi.fn();
     const expand = vi.fn();
-    const fetchMock = await renderReadyMiniApp({ launch: { ready, expand } });
-
+    const state = makeMiniAppState({ presets: [top25({ dews: true, depeg: true }, ["usdc-circle"])] });
+    await renderReadyMiniApp({ state, launch: { ready, expand } });
     expect(ready).toHaveBeenCalled();
     expect(expand).toHaveBeenCalled();
-    expect(screen.getByText("Alerts are active")).toBeTruthy();
-    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["home", "watchlist", "presets", "settings"]);
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/session\?/), expect.objectContaining({
-      method: "POST",
-      body: JSON.stringify({ initData: "signed-init-data" }),
-    }));
+    expect(screen.queryAllByRole("tab")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "Refresh session" })).toBeNull();
+    for (const section of ["Coverage", "Your coins", "Make it quieter"]) expect(screen.getByRole("heading", { name: section })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^USD Top 25/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^All stablecoins/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "USDC, DEWS · Depeg" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Settings" })).toBeTruthy();
   });
 
-  it("shows authorization copy and retries a failed session load", async () => {
+  it("shows plain session errors and retries a failed load", async () => {
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn() } };
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ error: "Invalid Telegram Mini App session" }) });
-    installMiniAppFetch(fetchMock);
+    installMiniAppFetch(vi.fn().mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ error: "Invalid" }) }));
     render(<PharosWatchBotMiniAppPage />);
-    await waitFor(() => expect(screen.getByText("Telegram launch authorization was rejected. Close and reopen from PharosWatchBot.")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Telegram couldn't confirm this window. Close and reopen it from PharosWatchBot.")).toBeTruthy());
 
     cleanup();
-    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn() } };
+    const main = nativeButton();
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), MainButton: main } };
     const retryFetch = vi.fn()
       .mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: "Unavailable" }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+      .mockResolvedValueOnce(ok(baseState));
     installMiniAppFetch(retryFetch);
     render(<PharosWatchBotMiniAppPage />);
-    await waitFor(() => expect(screen.getByText("Could not load Mini App settings. Reopen from Telegram or try again.")).toBeTruthy());
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Couldn't load your alerts. Try again.")).toBeTruthy());
+    // The MainButton owns the retry, so no competing inline Close or Retry.
+    await waitFor(() => expect(main.text).toBe("Try again"));
+    expect(screen.queryByRole("button", { name: "Close and reopen" })).toBeNull();
+    act(() => main.click());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Alerts on" })).toBeTruthy());
     expect(retryFetch).toHaveBeenCalledTimes(2);
   });
 
   it.each([
-    ["home", null, "Alerts are active"],
-    ["watchlist", "coin_usdc-circle", "Add a coin"],
-    ["presets", "presets", "Followed presets"],
-    ["settings", "settings", "Global alerts"],
-    ["quiet-hours", "quiet-hours", "Global alerts"],
-    ["forget", "forget", "Danger zone"],
-  ] as const)("boots the %s panel through the page router", async (_route, startParam, expected) => {
-    await renderReadyMiniApp(startParam == null ? {} : { launch: { initDataUnsafe: { start_param: startParam } } });
-    expect(screen.getByText(expected)).toBeTruthy();
+    [null, "Alerts on"],
+    ["watchlist", "Alerts on"],
+    ["settings", "Settings"],
+    ["quiet-hours", "Settings"],
+    ["forget", "Settings"],
+    ["coin_usdc-circle", "USDC"],
+    ["why_usdc-circle", "USDC"],
+    ["coverage_usdc-circle", "USDC"],
+  ] as const)("boots start_param %s on its screen", async (startParam, heading) => {
+    const fetchMock = await renderReadyMiniApp(startParam == null ? {} : { launch: { initDataUnsafe: { start_param: startParam } } });
+    expect(screen.getByRole("heading", { level: 1, name: heading })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 
-  it.each([
-    ["why_usdc-circle", "Why USDC"],
-    ["coverage_usdc-circle", "Coverage USDC"],
-    ["why_old-coin", "This launch target is not in the current Mini App catalog. No settings were changed."],
-    ["coin_old-coin", "This launch target is not in the current Mini App catalog. No settings were changed."],
-  ] as const)("handles %s launch targets without mutating state", async (startParam, expected) => {
-    const fetchMock = await renderReadyMiniApp({ launch: { initDataUnsafe: { start_param: startParam } } });
-    expect(screen.getByText(expected)).toBeTruthy();
-    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/mutate/), expect.anything());
+  it("shows the setup screen to new users and opens coin selection from startapp=setup for everyone", async () => {
+    const main = nativeButton();
+    await renderReadyMiniApp({ state: newUserState, launch: { MainButton: main } });
+    expect(screen.getByRole("heading", { name: "Get stablecoin alerts in this chat" })).toBeTruthy();
+    await waitFor(() => expect(main.text).toBe("Use recommended setup"));
+    // One primary action, never mirrored inline.
+    expect(screen.queryByRole("button", { name: "Use recommended setup" })).toBeNull();
+
+    for (const state of [newUserState, baseState]) {
+      cleanup();
+      const back = nativeButton();
+      await renderReadyMiniApp({ state, launch: { BackButton: back, initDataUnsafe: { start_param: "setup" } } });
+      expect(await screen.findByLabelText("Search stablecoins")).toBeTruthy();
+      await waitFor(() => expect(back.isVisible).toBe(true));
+    }
   });
 
-  it("shows one reopen state on every panel, keeps controls readable, and preserves relaunch context", async () => {
-    const staleState: TelegramMiniAppState = {
-      ...baseState,
-      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
-    };
+  it("hides every edit control for a read-only group chat", async () => {
+    const main = nativeButton();
+    const state = makeMiniAppState({ viewer: { chatId: null, chatType: "supergroup", canMutate: false, mutationBlockReason: "not-private" }, subscriber: { exists: false } });
+    await renderReadyMiniApp({ state, launch: { MainButton: main } });
+    expect(screen.getByRole("heading", { name: "Group alerts are managed in the group" })).toBeTruthy();
+    expect(screen.queryAllByRole("switch")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "Add coins" })).toBeNull();
+    expect(main.isVisible).toBe(false);
+  });
+
+  it("explains coin coverage: on, via a group, muted, and unknown membership", async () => {
+    const coin = { ...baseState.subscriptions[0]!, alertTypes: { ...baseState.subscriptions[0]!.alertTypes, depeg: false }, alertOverrides: { dews: false, depeg: true, safety: false, launch: false, reserve: false, freeze: false } };
+    const state = makeMiniAppState({
+      subscriber: { globalAlerts: { dews: false, depeg: false } },
+      subscriptions: [coin],
+      presets: [top25({ dews: true, depeg: true, safety: true }, ["usdc-circle"])],
+      catalog: rankedCatalog,
+    });
+    const openLink = vi.fn();
+    const openTelegramLink = vi.fn();
+    const fetchMock = await renderReadyMiniApp({ state, launch: { initDataUnsafe: { start_param: "coin_usdc-circle" }, openLink, openTelegramLink } });
+    const sw = (name: string) => screen.getByRole("switch", { name: switchName(`USDC ${name}`) });
+    expect(sw("Early warning").getAttribute("aria-checked")).toBe("true");
+    expect(sw("Depeg").getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByText("Muted for USDC (USD Top 25 covers it)")).toBeTruthy();
+    expect(sw("Safety Score").getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByText("On via USD Top 25")).toBeTruthy();
+    expect(screen.queryByRole("switch", { name: /Launch/ })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /View on Pharos/ }));
+    expect(openLink).toHaveBeenCalledWith("https://pharos.watch/stablecoin/usdc-circle");
+    fireEvent.click(screen.getByRole("button", { name: /Explain in chat/ }));
+    expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PharosWatchBot?start=why_usdc-circle");
+
+    // Turning an inherited family off writes the per-coin mute.
+    fireEvent.click(sw("Safety Score"));
+    await waitFor(() => expectMutationRequest(fetchMock, { kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { safety: false } } }));
+
+    cleanup();
+    await renderReadyMiniApp({
+      state: { ...state, presets: [top25({ safety: true }, null)] },
+      launch: { initDataUnsafe: { start_param: "coin_usdc-circle" } },
+    });
+    expect(screen.getByRole("switch", { name: switchName("USDC Safety Score") }).getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByText("Can't check USD Top 25 coverage right now")).toBeTruthy();
+  });
+
+  it("follows an unfollowed coin from the MainButton and leaves unknown coins untouched", async () => {
+    const main = nativeButton();
+    const fetchMock = await renderReadyMiniApp({ state: makeMiniAppState({ catalog: rankedCatalog }), launch: { MainButton: main, initDataUnsafe: { start_param: "coin_usdt-tether" } } });
+    expect(screen.getByText("Not in your coins yet.")).toBeTruthy();
+    // Read-only until followed: no switch could silently follow it, and no snooze row.
+    expect(screen.queryAllByRole("switch")).toHaveLength(0);
+    expect(screen.queryByRole("group", { name: /Snooze USDT/ })).toBeNull();
+    expect(screen.getByText("Follow USDT to choose its alerts.")).toBeTruthy();
+    // Early warning and Depeg come from All stablecoins in the fixture.
+    expect(screen.getAllByText("On")).toHaveLength(2);
+    expect(screen.getAllByText("Off")).toHaveLength(3);
+    await waitFor(() => expect(main.text).toBe("Follow USDT"));
+    act(() => main.click());
+    await waitFor(() => expectMutationRequest(fetchMock, { kind: "set-coin", stablecoinId: "usdt-tether", patch: { alertTypes: { dews: true, depeg: true } } }));
+
+    cleanup();
+    const unknownMain = nativeButton();
+    const unknownFetch = await renderReadyMiniApp({ launch: { MainButton: unknownMain, initDataUnsafe: { start_param: "coin_old-coin" } } });
+    expect(screen.getByText("Nothing to change")).toBeTruthy();
+    expect(unknownMain.isVisible).toBe(false);
+    expect(unknownFetch).toHaveBeenCalledOnce();
+  });
+
+  it("adds coins through one ranked multi-select, the bulk preview/confirm pair, and a snackbar undo", async () => {
+    const main = nativeButton();
+    const back = nativeButton();
+    const state = makeMiniAppState({ catalog: rankedCatalog });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(ok(state))
+      .mockResolvedValueOnce(preview(["usdt-tether", "usd0-usual"]))
+      .mockResolvedValueOnce(ok(state))
+      .mockResolvedValueOnce(ok(state));
+    await renderReadyMiniApp({ fetchImpl: fetchMock, launch: { MainButton: main, BackButton: back } });
+    fireEvent.click(screen.getByRole("button", { name: "Add coins" }));
+    fireEvent.change(screen.getByLabelText("Search stablecoins"), { target: { value: "usd" } });
+    const rows = () => screen.getAllByRole("checkbox").map((row) => [row.getAttribute("aria-label"), row.getAttribute("aria-checked")]);
+    expect(rows()).toEqual([["USDT Tether", "false"], ["USDC USD Coin, following", "true"], ["USD0 Usual USD", "false"]]);
+    expect(main.isVisible).toBe(false);
+    fireEvent.click(screen.getByRole("checkbox", { name: "USDT Tether" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "USD0 Usual USD" }));
+    expect(rows()).toEqual([["USDT Tether, will be added", "true"], ["USDC USD Coin, following", "true"], ["USD0 Usual USD, will be added", "true"]]);
+    expect(screen.getAllByText(/^Will be added/)).toHaveLength(2);
+    // The MainButton count matches exactly the rows marked as changes.
+    await waitFor(() => expect(main.text).toBe("Add 2 coins"));
+    fireEvent.click(screen.getByRole("checkbox", { name: "USDC USD Coin, following" }));
+    expect(screen.getByRole("checkbox", { name: "USDC USD Coin, will be removed" }).getAttribute("aria-checked")).toBe("false");
+    await waitFor(() => expect(main.text).toBe("Save 3 changes"));
+    fireEvent.click(screen.getByRole("checkbox", { name: "USDC USD Coin, will be removed" }));
+    await waitFor(() => expect(main.text).toBe("Add 2 coins"));
+
+    act(() => main.click());
+    await waitFor(() => expect(screen.getByText("Added 2 coins.")).toBeTruthy());
+    const selection = { addStablecoinIds: ["usdt-tether", "usd0-usual"], removeStablecoinIds: [] };
+    expectMutationRequest(fetchMock, { kind: "preview-bulk-watchlist", ...selection }, 2);
+    expectMutationRequest(fetchMock, { kind: "confirm-bulk-watchlist", ...selection, expectedPreferenceGeneration: 1, previewFingerprint: "preview-v1-12-deadbeef" }, 3);
+    expect(screen.getByRole("heading", { name: "Alerts on" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(screen.getByRole("button", { name: "Undo" })).toHaveProperty("disabled", true);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    expectMutationRequest(fetchMock, { kind: "undo-bulk-watchlist", expectedPreferenceGeneration: 2, expectedFingerprint: "preview-v1-12-deadbeef", restoreDirectRows: [], removeStablecoinIds: ["usdt-tether", "usd0-usual"] });
+  });
+
+  it("follows a preset from Follow a preset through the MainButton", async () => {
+    const main = nativeButton();
+    const fetchMock = await renderReadyMiniApp({ state: makeMiniAppState({ catalog: rankedCatalog }), launch: { MainButton: main } });
+    fireEvent.click(screen.getByRole("button", { name: "Follow a preset" }));
+    fireEvent.click(screen.getByRole("button", { name: /^USD Top 50/ }));
+    await waitFor(() => expect(main.text).toBe("Follow USD Top 50"));
+    fireEvent.click(screen.getByRole("switch", { name: switchName("USD Top 50 Safety Score") }));
+    act(() => main.click());
+    await waitFor(() => expectMutationRequest(fetchMock, { kind: "follow-preset", presetId: "usd-top50", alertTypes: { dews: true, depeg: true, safety: true } }));
+  });
+
+  it("commits quiet hours on change and rejects equal start and end locally", async () => {
+    const state = makeMiniAppState({ subscriber: { quietHours: { enabled: true, startHourUtc: 22, endHourUtc: 7, timezone: "Europe/Paris" } } });
+    const fetchMock = await renderReadyMiniApp({ state, launch: { initDataUnsafe: { start_param: "quiet-hours" } } });
+    expect(screen.queryByRole("button", { name: /Save/ })).toBeNull();
+    fireEvent.change(screen.getByLabelText("From"), { target: { value: "7" } });
+    expect(await screen.findByText("Quiet hours need different start and end times.")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledOnce();
+    fireEvent.change(screen.getByLabelText("From"), { target: { value: "23" } });
+    await waitFor(() => expectMutationRequest(fetchMock, { kind: "set-quiet-hours", enabled: true, startHourUtc: 23, endHourUtc: 7 }));
+    await waitFor(() => expect(screen.getByRole("switch", { name: switchName("Quiet hours") })).toHaveProperty("disabled", false));
+    fireEvent.click(screen.getByRole("switch", { name: switchName("Quiet hours") }));
+    await waitFor(() => expectMutationRequest(fetchMock, { kind: "set-quiet-hours", enabled: false }));
+  });
+
+  it("states a snooze once, in the status strip, with an inline Resume only without a MainButton", async () => {
+    const state = makeMiniAppState({ subscriber: { snoozeUntilTs: 9_000_000_000 } });
+    const fetchMock = vi.fn().mockResolvedValueOnce(ok(state)).mockResolvedValueOnce(ok(baseState));
+    await renderReadyMiniApp({ fetchImpl: fetchMock });
+    expect(screen.getByRole("heading", { name: "Alerts snoozed" })).toBeTruthy();
+    expect(screen.queryByText(/^Snoozed until/)).toBeNull();
+    expect(screen.queryByRole("button", { name: /Snooze all alerts for/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Pause until I resume" })).toBeNull();
+    expect(screen.getByRole("button", { name: /^Quiet hours/ })).toBeTruthy();
+    fireEvent.click(within(screen.getByRole("group", { name: "Resume alerts" })).getByRole("button"));
+    await waitFor(() => expectMutationRequest(fetchMock, { kind: "clear-snooze" }));
+
+    cleanup();
+    const main = nativeButton();
+    await renderReadyMiniApp({ state, launch: { MainButton: main } });
+    await waitFor(() => expect(main.text).toBe("Resume alerts"));
+    expect(screen.queryByRole("group", { name: "Resume alerts" })).toBeNull();
+  });
+
+  it("puts the recovery action in the MainButton for blocked delivery", async () => {
+    const main = nativeButton();
+    const openTelegramLink = vi.fn();
+    await renderReadyMiniApp({ state: makeMiniAppState({ health: { recentFailureClass: "blocked" } }), launch: { MainButton: main, openTelegramLink } });
+    expect(screen.getByRole("heading", { name: "Telegram stopped delivering alerts" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Alerts on" })).toBeNull();
+    await waitFor(() => expect(main.text).toBe("Open chat with PharosWatchBot"));
+    act(() => main.click());
+    expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PharosWatchBot");
+  });
+
+  it("shows one reopen state, keeps controls tappable, never sends, and relaunches the current screen", async () => {
+    const main = nativeButton();
     const openTelegramLink = vi.fn();
     const impactOccurred = vi.fn();
     const notificationOccurred = vi.fn();
-    const mainButton = { show: vi.fn(), hide: vi.fn(), setParams: vi.fn(), onClick: vi.fn(), offClick: vi.fn() };
     const close = vi.fn();
     const fetchMock = await renderReadyMiniApp({
-      state: staleState,
-      launch: {
-        initDataUnsafe: { start_param: "settings" },
-        openTelegramLink,
-        close,
-        MainButton: mainButton,
-        HapticFeedback: { impactOccurred, notificationOccurred },
-      },
+      state: { ...staleAuthState, catalog: rankedCatalog },
+      launch: { initDataUnsafe: { start_param: "coin_usdc-circle" }, openTelegramLink, close, MainButton: main, HapticFeedback: { impactOccurred, notificationOccurred } },
     });
+    expect(screen.getAllByRole("heading", { name: "Editing paused" })).toHaveLength(1);
+    await waitFor(() => expect(main.text).toBe("Reopen to edit"));
 
-    for (const panel of ["home", "watchlist", "presets", "settings"] as const) {
-      fireEvent.click(screen.getByRole("tab", { name: panel }));
-      expect(screen.getAllByRole("heading", { name: "Reopen to edit" })).toHaveLength(1);
-    }
-    expect(screen.queryByText("Group settings are command-only for now")).toBeNull();
-    // Only edits expired; signed reads stay valid for 24h, so refresh stays available.
-    expect(screen.getByRole("button", { name: "Refresh session" })).toHaveProperty("disabled", false);
-    await waitFor(() => expect(mainButton.setParams).toHaveBeenCalledWith(expect.objectContaining({ text: "Reopen to edit", is_active: true })));
-
-    // Edits stay tappable, are never sent with the expired initData, and leave visible intent.
-    const safetyToggle = screen.getByRole("button", { name: /Safety/i });
-    expect(safetyToggle).toHaveProperty("disabled", false);
-    fireEvent.click(safetyToggle);
-    expect(await screen.findByText("Not saved: Safety alerts enabled.")).toBeTruthy();
+    const safety = screen.getByRole("switch", { name: switchName("USDC Safety Score") });
+    expect(safety).toHaveProperty("disabled", false);
+    fireEvent.click(safety);
+    expect(await screen.findByText("Not saved: USDC: Safety Score on. Reopen to edit.")).toBeTruthy();
+    // The intent lives in the snackbar only; the banner stays a single reopen notice.
+    expect(screen.queryByText("Not saved: USDC: Safety Score on.")).toBeNull();
+    expect(screen.getAllByRole("heading", { name: "Editing paused" })).toHaveLength(1);
     expect(notificationOccurred).toHaveBeenCalledWith("warning");
     expect(fetchMock).toHaveBeenCalledOnce();
 
-    const relaunch = mainButton.onClick.mock.calls.at(-1)?.[0] as () => void;
-    act(() => relaunch());
-    expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PharosWatchBot?startapp=settings");
+    act(() => main.click());
+    expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PharosWatchBot?startapp=coin_usdc-circle");
     expect(impactOccurred).toHaveBeenCalledWith("light");
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(close).toHaveBeenCalledOnce();
   });
 
-  it("keeps refreshing readable state after the 5-minute edit window and still routes edits to reopen", async () => {
-    const editExpiredState: TelegramMiniAppState = {
-      ...baseState,
-      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
-    };
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
-      .mockResolvedValueOnce({ ok: true, json: async () => editExpiredState })
-      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ error: "offline", code: "internal" }) });
-    await renderReadyMiniApp({ fetchImpl: fetchMock });
-
-    // Hidden for 10 minutes: the visibility refetch still runs with the same initData.
-    const now = Date.now();
-    const visibility = vi.spyOn(document, "visibilityState", "get");
-    visibility.mockReturnValue("hidden");
-    document.dispatchEvent(new Event("visibilitychange"));
-    vi.spyOn(Date, "now").mockReturnValue(now + 10 * 60 * 1000 + 1);
-    visibility.mockReturnValue("visible");
-    document.dispatchEvent(new Event("visibilitychange"));
-    expect(await screen.findByRole("heading", { name: "Reopen to edit" })).toBeTruthy();
+  it("keeps refreshing readable state after the 5-minute edit window and routes edits to reopen", async () => {
+    const main = nativeButton();
+    const fetchMock = vi.fn().mockResolvedValueOnce(ok(baseState)).mockResolvedValueOnce(ok(staleAuthState));
+    await renderReadyMiniApp({ fetchImpl: fetchMock, launch: { MainButton: main, openTelegramLink: vi.fn() } });
+    hideFor(10 * 60 * 1000 + 1);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2), { timeout: 3000 });
+    expect(await screen.findByRole("heading", { name: "Editing paused" })).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
-    // Edit after the 5-minute window: never sent, intent kept, reopen path shown.
-    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
-    fireEvent.click(screen.getByRole("button", { name: /Safety/i }));
-    expect(await screen.findByText("Not saved: Safety alerts enabled.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^All stablecoins/ }));
+    fireEvent.click(screen.getByRole("switch", { name: switchName("All stablecoins Safety Score") }));
+    expect(await screen.findByText("Not saved: All stablecoins: Safety Score on. Reopen to edit.")).toBeTruthy();
+    await waitFor(() => expect(main.text).toBe("Reopen to edit"));
     expect(fetchMock).toHaveBeenCalledTimes(2);
-
-    // A failed read refresh keeps its stale-data banner alongside the reopen banner.
-    fireEvent.click(screen.getByRole("button", { name: "Refresh session" }));
-    expect(await screen.findByRole("heading", { name: "Showing last-known settings" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Reopen to edit" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Retry refresh" })).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
-  it("keeps signed reads after the edit window and ends the session when a read hits stale-auth", async () => {
-    const editExpiredState: TelegramMiniAppState = {
-      ...baseState,
-      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
-    };
+  it("ends the session when a signed preview read hits stale-auth", async () => {
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => editExpiredState })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({
-        contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
-        catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
-        result: {
-          kind: "bulk-watchlist-preview",
-          expectedPreferenceGeneration: 1,
-          previewFingerprint: "preview-v1-12-deadbeef",
-          adds: ["usdt-tether"],
-          removes: [],
-          unchanged: [],
-          sourceImpact: [],
-          undo: {
-            expectedPreferenceGeneration: 2,
-            expectedFingerprint: "preview-v1-12-deadbeef",
-            restoreDirectRows: [],
-            removeStablecoinIds: ["usdt-tether"],
-          },
-        },
-      }) })
+      .mockResolvedValueOnce(ok(baseState))
       .mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ error: "expired", code: "stale-auth" }) });
-    await renderReadyMiniApp({ fetchImpl: fetchMock, launch: { initDataUnsafe: { start_param: "watchlist" } } });
-
-    fireEvent.change(screen.getByLabelText("Search coins to add in bulk"), { target: { value: "USDT" } });
-    fireEvent.click(within(screen.getByLabelText("Coins to add")).getAllByRole("checkbox")[0]!);
-    const previewButton = () => screen.getByRole("button", { name: /^Preview 1 changes/ });
-    fireEvent.click(previewButton());
-    expect(await screen.findByText("Review exact changes")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Refresh session" })).toHaveProperty("disabled", false);
-
-    fireEvent.click(previewButton());
-    await waitFor(() => expect(screen.getByRole("button", { name: "Refresh session" })).toHaveProperty("disabled", true));
-    expect(previewButton()).toHaveProperty("disabled", true);
-    fireEvent.click(previewButton());
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    await renderReadyMiniApp({ fetchImpl: fetchMock });
+    fireEvent.click(screen.getByRole("button", { name: "Add coins" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "USDT Tether" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add 1 coin" }));
+    expect(await screen.findByRole("heading", { name: "This window has expired" })).toBeTruthy();
+    hideFor(60 * 60 * 1000);
+    await act(async () => { await Promise.resolve(); });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("treats an expired session read as terminal instead of retrying the same initData", async () => {
     const close = vi.fn();
     const openTelegramLink = vi.fn();
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ error: "expired", code: "stale-auth" }) });
+    const fetchMock = vi.fn().mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ error: "expired", code: "stale-auth" }) });
     renderMiniApp({ fetchImpl: fetchMock, launch: { close, openTelegramLink } });
 
-    expect(await screen.findByRole("heading", { name: "Reopen to edit" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
-    expect(screen.queryByText(/Telegram authorization expired/)).toBeNull();
-    expect(screen.getByRole("button", { name: "Refresh session" })).toHaveProperty("disabled", true);
-
-    const now = Date.now();
-    const visibility = vi.spyOn(document, "visibilityState", "get");
-    visibility.mockReturnValue("hidden");
-    document.dispatchEvent(new Event("visibilitychange"));
-    vi.spyOn(Date, "now").mockReturnValue(now + 60 * 60 * 1000);
-    visibility.mockReturnValue("visible");
-    document.dispatchEvent(new Event("visibilitychange"));
+    expect(await screen.findByRole("heading", { name: "This window has expired" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    hideFor(60 * 60 * 1000);
     await act(async () => { await Promise.resolve(); });
     expect(fetchMock).toHaveBeenCalledOnce();
 
@@ -501,222 +647,140 @@ describe("PharosWatchBotMiniAppPage", () => {
   it("routes a stale-auth mutation to the reopen state without a session retry", async () => {
     const fetchMock = await renderReadyMiniApp({
       fetchImpl: vi.fn()
-        .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+        .mockResolvedValueOnce(ok(makeMiniAppState({ catalog: rankedCatalog })))
         .mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ error: "expired", code: "stale-auth" }) }),
+      launch: { initDataUnsafe: { start_param: "coin_usdc-circle" } },
     });
-    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
-    fireEvent.click(screen.getByRole("button", { name: /Safety/i }));
-
-    expect(await screen.findByRole("heading", { name: "Reopen to edit" })).toBeTruthy();
-    expect(screen.getByText("Not saved: Safety alerts enabled.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Safety/i }).getAttribute("aria-pressed")).toBe("false");
-    fireEvent.click(screen.getByRole("button", { name: /Reserve/i }));
-    expect(await screen.findByText("Not saved: Reserve alerts enabled.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("switch", { name: switchName("USDC Safety Score") }));
+    expect(await screen.findByRole("heading", { name: "Editing paused" })).toBeTruthy();
+    expect(screen.getByText("Not saved: USDC: Safety Score on. Reopen to edit.")).toBeTruthy();
+    expect(screen.getByRole("switch", { name: switchName("USDC Safety Score") }).getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(screen.getByRole("switch", { name: switchName("USDC Reserve changes") }));
+    expect(await screen.findByText("Not saved: USDC: Reserve changes on. Reopen to edit.")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("keeps last-known state read-only through a refresh failure until retry", async () => {
-    vi.spyOn(Date, "now").mockReturnValue(1_725_000_000_000);
+    const state = makeMiniAppState({ catalog: rankedCatalog });
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockResolvedValueOnce(ok(state))
       .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ error: "offline", code: "internal" }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
-    await renderReadyMiniApp({ fetchImpl: fetchMock });
-    fireEvent.click(screen.getByRole("button", { name: "Refresh session" }));
-
-    const staleHeading = await screen.findByRole("heading", { name: "Showing last-known settings" });
-    const stalePanel = staleHeading.closest("section");
-    expect(stalePanel).toBeTruthy();
-    const { catalog: _catalog, ...mutableState } = baseState;
-    expect(within(stalePanel as HTMLElement).getByText(telegramMiniAppStateRevision(mutableState))).toBeTruthy();
-    expect(stalePanel?.textContent).toContain("Telegram Mini App auth is temporarily unavailable. Try again shortly.");
-    expect(stalePanel?.querySelector("time")?.getAttribute("datetime")).toBe("2024-08-30T06:40:00.000Z");
-
-    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
-    expect(screen.getByRole("button", { name: /Safety/i })).toHaveProperty("disabled", true);
-    fireEvent.click(within(stalePanel as HTMLElement).getByRole("button", { name: "Retry refresh" }));
-    await waitFor(() => expect(screen.queryByRole("heading", { name: "Showing last-known settings" })).toBeNull());
-    expect(screen.getByRole("button", { name: /Safety/i })).toHaveProperty("disabled", false);
+      .mockResolvedValueOnce(ok(state));
+    await renderReadyMiniApp({ fetchImpl: fetchMock, launch: { initDataUnsafe: { start_param: "coin_usdc-circle" } } });
+    hideFor(10 * 60 * 1000 + 1);
+    expect(await screen.findByRole("heading", { name: "Couldn't refresh" })).toBeTruthy();
+    expect(screen.getByText(/Pharos is busy right now/)).toBeTruthy();
+    expect(screen.queryByText(/state-v1-/)).toBeNull();
+    expect(screen.getByRole("switch", { name: switchName("USDC Safety Score") })).toHaveProperty("disabled", true);
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Couldn't refresh" })).toBeNull());
+    expect(screen.getByRole("switch", { name: switchName("USDC Safety Score") })).toHaveProperty("disabled", false);
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("keeps one successful mutation wired through the page and replaces its visible state", async () => {
-    const nextState: TelegramMiniAppState = {
-      ...baseState,
-      subscriber: { ...baseState.subscriber, globalAlerts: { ...baseState.subscriber.globalAlerts, safety: true } },
-    };
-    let resolveMutation!: (response: { ok: true; json: () => Promise<TelegramMiniAppState> }) => void;
-    const mutationResponse = new Promise<{ ok: true; json: () => Promise<TelegramMiniAppState> }>((resolve) => {
-      resolveMutation = resolve;
-    });
-    const fetchMock = await renderReadyMiniApp({
-      fetchImpl: vi.fn()
-        .mockResolvedValueOnce({ ok: true, json: async () => baseState })
-        .mockReturnValueOnce(mutationResponse),
-    });
-    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
-    const safetyToggle = screen.getByRole("button", { name: /Safety/i });
-    fireEvent.click(safetyToggle);
+    const nextState: TelegramMiniAppState = { ...baseState, subscriber: { ...baseState.subscriber, globalAlerts: { ...baseState.subscriber.globalAlerts, safety: true } } };
+    let resolveMutation!: (response: ReturnType<typeof ok>) => void;
+    const mutationResponse = new Promise<ReturnType<typeof ok>>((resolve) => { resolveMutation = resolve; });
+    const fetchMock = await renderReadyMiniApp({ fetchImpl: vi.fn().mockResolvedValueOnce(ok(baseState)).mockReturnValueOnce(mutationResponse) });
+    fireEvent.click(screen.getByRole("button", { name: /^All stablecoins/ }));
+    const safety = screen.getByRole("switch", { name: switchName("All stablecoins Safety Score") });
+    fireEvent.click(safety);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    expect(safetyToggle.getAttribute("aria-pressed")).toBe("false");
-    expect(safetyToggle.getAttribute("aria-busy")).toBe("true");
-    expect(safetyToggle).toHaveProperty("disabled", true);
-    expect(screen.getByRole("button", { name: /Reserve/i })).toHaveProperty("disabled", true);
-    // Launch alerts are retired: no toggle is rendered.
-    expect(screen.queryByRole("button", { name: /Launch/i })).toBeNull();
-    resolveMutation({ ok: true, json: async () => nextState });
-    await waitFor(() => expect(screen.getByRole("button", { name: /Safety/i }).getAttribute("aria-pressed")).toBe("true"));
+    expect(safety.getAttribute("aria-checked")).toBe("false");
+    expect(safety.getAttribute("aria-busy")).toBe("true");
+    expect(screen.getByRole("switch", { name: switchName("All stablecoins Reserve changes") })).toHaveProperty("disabled", true);
+    expect(screen.queryByRole("switch", { name: /Launch/ })).toBeNull();
+    resolveMutation(ok(nextState));
+    await waitFor(() => expect(screen.getByRole("switch", { name: switchName("All stablecoins Safety Score") }).getAttribute("aria-checked")).toBe("true"));
+    expect(screen.getByText("All stablecoins: Safety Score on.")).toBeTruthy();
     expectMutationRequest(fetchMock, { kind: "set-global", alertType: "safety", enabled: true });
   });
 
-  it("keeps one failed mutation wired through the page without changing confirmed state", async () => {
+  it("shows a failed mutation in the snackbar without changing confirmed state", async () => {
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockResolvedValueOnce(ok(baseState))
       .mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: "x", code: "internal" }) });
     await renderReadyMiniApp({ fetchImpl: fetchMock });
-    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
-    const safetyToggle = screen.getByRole("button", { name: /Safety/i });
-    fireEvent.click(safetyToggle);
-    await waitFor(() => expect(screen.getByText("Something went wrong. Try again or reopen Telegram.")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: /^All stablecoins/ }));
+    fireEvent.click(screen.getByRole("switch", { name: switchName("All stablecoins Safety Score") }));
+    await waitFor(() => expect(screen.getByText("Something went wrong. Nothing was saved; try again.")).toBeTruthy());
     expectMutationRequest(fetchMock, { kind: "set-global", alertType: "safety", enabled: true });
-    expect(screen.getByRole("button", { name: /Safety/i }).getAttribute("aria-pressed")).toBe("false");
-  });
-
-  it("keeps in-app Why/Coverage views and bot reply fallbacks connected", async () => {
-    const openTelegramLink = vi.fn();
-    const openLink = vi.fn();
-    await renderReadyMiniApp({ launch: { openTelegramLink, openLink } });
-    fireEvent.click(screen.getByRole("tab", { name: "watchlist" }));
-    fireEvent.click(screen.getByRole("button", { name: "Why USDC" }));
-    expect(screen.getByText("Why USDC")).toBeTruthy();
-    expect(screen.getByText("Full Safety Score notes are still delivered by the bot reply.")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Open bot reply" }));
-    expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PharosWatchBot?start=why_usdc-circle");
-    fireEvent.click(screen.getByRole("button", { name: "Close Why USDC" }));
-    fireEvent.click(screen.getByRole("button", { name: "Coverage USDC" }));
-    expect(screen.getByText("Alert coverage")).toBeTruthy();
-    expect(screen.getByText("DEWS, Depeg")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Open bot reply" }));
-    expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PharosWatchBot?start=coverage_usdc-circle");
-    fireEvent.click(screen.getByRole("button", { name: "Close Coverage USDC" }));
-    fireEvent.click(screen.getByRole("button", { name: "View USDC on Pharos" }));
-    expect(openLink).toHaveBeenCalledWith("https://pharos.watch/stablecoin/usdc-circle");
+    expect(screen.getByRole("switch", { name: switchName("All stablecoins Safety Score") }).getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(screen.queryByText("Something went wrong. Nothing was saved; try again.")).toBeNull();
   });
 
   it.each<[string, number | null, string | null]>([
-    ["future", 1_800_000_001, "Clear snooze"],
+    ["future", 1_800_000_001, "Resume alerts"],
     ["exactly expired", 1_800_000_000, null],
     ["unset", null, null],
-    ["pause sentinel", 4_102_444_800, "Resume alerts"],
-  ])("uses the shared clock for %s snooze in Home and native MainButton", async (_scenario, snoozeUntilTs, label) => {
+    ["pause sentinel", PAUSE_SENTINEL_TS, "Resume alerts"],
+  ])("uses the shared clock for %s snooze in Home and the native MainButton", async (_scenario, snoozeUntilTs, label) => {
     vi.useFakeTimers();
     vi.setSystemTime(1_800_000_000_000);
-    const mainButton = { show: vi.fn(), hide: vi.fn(), setParams: vi.fn(), onClick: vi.fn(), offClick: vi.fn() };
-    const fetchMock = renderMiniApp({
-      state: { ...baseState, subscriber: { ...baseState.subscriber, snoozeUntilTs } },
-      launch: { MainButton: mainButton },
-    });
+    const main = nativeButton();
+    const fetchMock = renderMiniApp({ state: { ...baseState, subscriber: { ...baseState.subscriber, snoozeUntilTs } }, launch: { MainButton: main } });
     await act(async () => { await vi.advanceTimersByTimeAsync(20); });
-    expect(screen.getByRole("tab", { name: "home" })).toBeTruthy();
     if (label != null) {
-      expect(screen.getByRole("button", { name: label })).toBeTruthy();
-      expect(mainButton.setParams).toHaveBeenCalledWith(expect.objectContaining({ text: label }));
-      expect(mainButton.show).toHaveBeenCalled();
+      expect(main.text).toBe(label);
+      expect(screen.queryByRole("button", { name: /Snooze all alerts for/ })).toBeNull();
     } else {
-      expect(screen.getByRole("button", { name: "Snooze alerts for 1h" })).toBeTruthy();
-      expect(screen.queryByRole("button", { name: "Clear snooze" })).toBeNull();
-      expect(mainButton.show).not.toHaveBeenCalled();
-      expect(mainButton.onClick).not.toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: "Snooze all alerts for 1 hour" })).toBeTruthy();
+      expect(main.show).not.toHaveBeenCalled();
+      expect(main.onClick).not.toHaveBeenCalled();
     }
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
-  it("restores open-session snooze choices and detaches native MainButton exactly at expiry without a POST", async () => {
+  it("restores snooze choices and detaches the native MainButton exactly at expiry without a POST", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_800_000_000_000);
-    const mainButton = { show: vi.fn(), hide: vi.fn(), setParams: vi.fn(), onClick: vi.fn(), offClick: vi.fn() };
-    const fetchMock = renderMiniApp({
-      state: { ...baseState, subscriber: { ...baseState.subscriber, snoozeUntilTs: 1_800_000_002 } },
-      launch: { MainButton: mainButton },
-    });
+    const main = nativeButton();
+    const fetchMock = renderMiniApp({ state: { ...baseState, subscriber: { ...baseState.subscriber, snoozeUntilTs: 1_800_000_002 } }, launch: { MainButton: main } });
     await act(async () => { await vi.advanceTimersByTimeAsync(20); });
-    expect(screen.getByRole("button", { name: "Clear snooze" })).toBeTruthy();
-    const attachedHandler = mainButton.onClick.mock.calls[mainButton.onClick.mock.calls.length - 1]?.[0];
+    expect(main.text).toBe("Resume alerts");
+    const attached = main.callbacks.at(-1);
     await act(async () => { await vi.advanceTimersByTimeAsync(1_980); });
-    expect(screen.queryByRole("button", { name: "Clear snooze" })).toBeNull();
-    expect(screen.queryByText(/Quiet until/)).toBeNull();
-    expect(screen.getByRole("button", { name: "Snooze alerts for 1h" })).toBeTruthy();
-    expect(mainButton.offClick).toHaveBeenCalledWith(attachedHandler);
-    expect(mainButton.hide).toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Snooze all alerts for 1 hour" })).toBeTruthy();
+    expect(main.offClick).toHaveBeenCalledWith(attached);
+    expect(main.isVisible).toBe(false);
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
-  it("does not stack native MainButton listeners across panel-state transitions", async () => {
-    // A snapshot refresh can update nowSec and safely reattach the handler across
-    // a second boundary; fix wall time so cumulative registration counts are exact.
+  it("never stacks native MainButton listeners across state transitions", async () => {
     vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
-    const onClickHandlers: Array<() => void> = [];
-    const liveHandlers = new Set<() => void>();
-    const listenerCounts: number[] = [];
-    const mainButton = {
-      show: vi.fn(),
-      hide: vi.fn(),
-      setParams: vi.fn(),
-      onClick: vi.fn((handler: () => void) => {
-        onClickHandlers.push(handler);
-        liveHandlers.add(handler);
-        listenerCounts.push(liveHandlers.size);
-      }),
-      offClick: vi.fn((handler: () => void) => { liveHandlers.delete(handler); }),
-    };
-    const noSubscriberState: TelegramMiniAppState = { ...baseState, subscriber: { ...baseState.subscriber, exists: false, snoozeUntilTs: null } };
-    const snoozedState: TelegramMiniAppState = { ...baseState, subscriber: { ...baseState.subscriber, exists: true, snoozeUntilTs: 9_000_000_000 } };
-    const clearedState: TelegramMiniAppState = { ...baseState, subscriber: { ...baseState.subscriber, exists: true, snoozeUntilTs: null } };
-    const fetchMock = mockStateResponses(noSubscriberState, snoozedState, clearedState);
-
-    await renderReadyMiniApp({ fetchImpl: fetchMock, launch: { MainButton: mainButton } });
-    await waitFor(() => expect(onClickHandlers.length).toBe(1));
-    fireEvent.click(screen.getByRole("button", { name: /Use recommended setup/i }));
-    await waitFor(() => expect(onClickHandlers.length).toBe(2));
-    fireEvent.click(screen.getByRole("button", { name: /Clear snooze/i }));
+    const main = nativeButton();
+    const liveCounts: number[] = [];
+    main.onClick.mockImplementation((callback: () => void) => { main.callbacks.push(callback); main.live.add(callback); liveCounts.push(main.live.size); });
+    const snoozedState: TelegramMiniAppState = { ...baseState, subscriber: { ...baseState.subscriber, snoozeUntilTs: 9_000_000_000 } };
+    const clearedState: TelegramMiniAppState = { ...baseState, subscriber: { ...baseState.subscriber, snoozeUntilTs: null } };
+    const fetchMock = mockStateResponses(newUserState, snoozedState, clearedState);
+    await renderReadyMiniApp({ fetchImpl: fetchMock, launch: { MainButton: main } });
+    await waitFor(() => expect(main.text).toBe("Use recommended setup"));
+    act(() => main.click());
+    await waitFor(() => expect(main.text).toBe("Resume alerts"));
+    act(() => main.click());
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledTimes(3);
-      expect(screen.queryByRole("button", { name: /Clear snooze/i })).toBeNull();
-      expect(liveHandlers.size).toBe(0);
+      expect(main.live.size).toBe(0);
     });
-
-    expect(listenerCounts).toEqual([1, 1]);
-    expect(new Set(onClickHandlers).size).toBe(onClickHandlers.length);
+    expect(Math.max(...liveCounts)).toBe(1);
+    expect(new Set(main.callbacks).size).toBe(main.callbacks.length);
   });
 
   it("guards duplicate native MainButton clicks while its mutation is in flight", async () => {
-    const onClickHandlers: Array<() => void> = [];
-    const mainButton = {
-      show: vi.fn(),
-      hide: vi.fn(),
-      setParams: vi.fn(),
-      onClick: vi.fn((handler: () => void) => { onClickHandlers.push(handler); }),
-      offClick: vi.fn(),
-    };
-    const noSubscriberState: TelegramMiniAppState = { ...baseState, subscriber: { ...baseState.subscriber, exists: false, snoozeUntilTs: null } };
-    let resolveMutation!: (value: { ok: true; json: () => Promise<TelegramMiniAppState> }) => void;
-    const mutationResponse = new Promise<{ ok: true; json: () => Promise<TelegramMiniAppState> }>((resolve) => { resolveMutation = resolve; });
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => noSubscriberState })
-      .mockReturnValueOnce(mutationResponse);
-    installMiniAppFetch(fetchMock);
-    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { notificationOccurred: vi.fn(), impactOccurred: vi.fn() }, MainButton: mainButton } };
-    render(<PharosWatchBotMiniAppPage />);
-    await waitFor(() => expect(screen.getByRole("tab", { name: "home" })).toBeTruthy());
-    await waitFor(() => expect(onClickHandlers.length).toBe(1));
-
-    act(() => {
-      onClickHandlers[0]?.();
-      onClickHandlers[0]?.();
-    });
+    const main = nativeButton();
+    let resolveMutation!: (value: ReturnType<typeof ok>) => void;
+    const mutationResponse = new Promise<ReturnType<typeof ok>>((resolve) => { resolveMutation = resolve; });
+    const fetchMock = vi.fn().mockResolvedValueOnce(ok(newUserState)).mockReturnValueOnce(mutationResponse);
+    await renderReadyMiniApp({ fetchImpl: fetchMock, launch: { MainButton: main } });
+    await waitFor(() => expect(main.text).toBe("Use recommended setup"));
+    const handler = main.callbacks.at(-1)!;
+    act(() => { handler(); handler(); });
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    resolveMutation(ok(baseState));
+    await waitFor(() => expect(screen.getByText("Following USD Top 25: early warnings and depegs.")).toBeTruthy());
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    resolveMutation({ ok: true, json: async () => baseState });
-    await waitFor(() => expect(screen.getByText("Recommended setup applied.")).toBeTruthy());
   });
 });

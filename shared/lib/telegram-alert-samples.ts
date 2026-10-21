@@ -3,7 +3,8 @@ import type { TelegramLiveAlertType } from "../types/status/telegram";
 /**
  * Public sample messages, one per alert family, rendered verbatim as
  * "shown exactly as the bot sends them" example bubbles on /pharoswatchbot.
- * `message` is the plain-text render of `formatConsolidatedMessage` and
+ * Except for reserve (a daily roll-up sample, see below), `message` is the
+ * plain-text render of `formatConsolidatedMessage` and
  * `buttons` the first-chunk keyboard labels from `buildAlertReplyMarkup`
  * (`worker/src/telegram/common/alerts-formatting.ts`); the formatter test
  * `telegram-alerts.test.ts` asserts both stay identical to formatter output.
@@ -46,14 +47,23 @@ Via your watchlist · Safety alerts
 View on Pharos: pharos.watch/stablecoin/usdr-tangible`,
     buttons: STANDARD_ALERT_BUTTONS("USDR"),
   },
+  // Reserve drift is never sent live: it arrives as a line of the daily
+  // Changes roll-up (`formatRollupMessage` in
+  // `worker/src/cron/telegram/rollup/rollup-content.ts`, contract-tested in
+  // `rollup-content.test.ts`), whose only button is Manage Alerts.
   reserve: {
-    message: `USDC reserves no longer match their reviewed profile
-Pharos's live reserve data for Circle USD Coin now differs from the last reviewed mix. Details on the coin page.
+    message: `Daily changes: 2 changes on your coins, led by PYUSD Safety grade downgraded B → C+
 
-Via your watchlist · reserve alerts
+Safety grades
+PYUSD Safety grade downgraded B → C+
 
-View on Pharos: pharos.watch/stablecoin/usdc-circle`,
-    buttons: STANDARD_ALERT_BUTTONS("USDC"),
+Reserves
+USDC reserves no longer match their reviewed profile
+
+Changes not sent live, once a day · /settings
+
+View on Pharos: pharos.watch`,
+    buttons: [["Manage Alerts"]],
   },
   freeze: {
     message: `USDC issuer froze an address on Ethereum holding $1,000,000

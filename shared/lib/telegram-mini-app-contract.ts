@@ -12,7 +12,7 @@ import { TELEGRAM_PRESET_IDS } from "./telegram-presets";
 
 export type { TelegramAlertType };
 
-export const TELEGRAM_MINI_APP_CONTRACT_VERSION = "8";
+export const TELEGRAM_MINI_APP_CONTRACT_VERSION = "9";
 export const TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM = "mini_app_contract";
 export const TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM = "mini_app_catalog";
 export { TELEGRAM_MINI_APP_CATALOG_VERSION };
@@ -313,6 +313,8 @@ export const TelegramMiniAppCatalogSchema = z
           name: z.string(),
           peg: z.string().nullable().optional(),
           status: z.string().nullable().optional(),
+          rank: z.number().int().positive().optional(),
+          variant: z.boolean().optional(),
         })
         .passthrough(),
     ),
@@ -358,6 +360,9 @@ export const TelegramMiniAppMutableStateSchema = z
           description: z.string().optional(),
           alertTypes: PresetAlertTypesSchema,
           depegStepBps: NullableDepegStepSchema,
+          // Current members resolved against the live market-cap cache. Null or
+          // absent means membership could not be read; never treat it as empty.
+          memberIds: z.array(z.string()).nullable().optional(),
         })
         .passthrough(),
     ),

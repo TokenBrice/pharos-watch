@@ -46,3 +46,15 @@ it("keeps exactly one native listener across handler, activity, SDK and unmount 
   expect(second.offClick).toHaveBeenCalledExactlyOnceWith(handlerB);
   expect(second.hide).toHaveBeenCalled();
 });
+
+it("shows the native progress spinner only while the action runs", () => {
+  const button = { show: vi.fn(), hide: vi.fn(), setParams: vi.fn(), onClick: vi.fn(), offClick: vi.fn(), showProgress: vi.fn(), hideProgress: vi.fn() };
+  const initialProps: UseTelegramMainButtonArgs = { webApp: { initData: "signed", MainButton: button }, text: "Add 2 coins", handler: vi.fn(), progress: false };
+  const { rerender, unmount } = renderHook(useTelegramMainButton, { initialProps });
+  expect(button.showProgress).not.toHaveBeenCalled();
+  rerender({ ...initialProps, progress: true });
+  expect(button.showProgress).toHaveBeenCalledOnce();
+  rerender({ ...initialProps, progress: false });
+  expect(button.hideProgress).toHaveBeenCalledOnce();
+  unmount();
+});

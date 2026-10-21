@@ -9,7 +9,12 @@ import { TELEGRAM_ALERT_TYPES, TELEGRAM_LIVE_ALERT_TYPES, type TelegramAlertType
 import { isDepegStepValue, isTelegramSafetyMode } from "@shared/types/status/telegram";
 import { isDewsAlertBand } from "@shared/lib/classification/risk";
 import type { TelegramMiniAppMutableState } from "@shared/lib/telegram-mini-app-contract";
-import { listTelegramPresets, type TelegramPresetDefinition } from "../common/presets";
+import {
+  listTelegramPresets,
+  resolveTelegramPresetTargets,
+  type TelegramPresetDefinition,
+  type TelegramPresetId,
+} from "../common/presets";
 import { loadTelegramChatHealthDiagnostics } from "../store/usage-analytics";
 import type { TelegramMiniAppAuthContext } from "./mini-app-auth";
 import {
@@ -82,6 +87,25 @@ function presetLabel(row: PresetSubscriptionRow): Pick<TelegramPresetDefinition,
   };
 }
 
+/**
+ * Current preset members so the client can say "via USD Top 25" per coin.
+ * Membership follows the live market-cap cache; a failed read yields null
+ * (unknown), never an empty list that would read as "not covered".
+ */
+async function loadPresetMemberIds(
+  db: D1Database,
+  presetIds: readonly string[],
+): Promise<ReadonlyMap<string, string[]> | null> {
+  if (presetIds.length === 0) return new Map();
+  try {
+    const resolved = await resolveTelegramPresetTargets(db, presetIds as TelegramPresetId[]);
+    if (resolved.kind !== "ok") return null;
+    return new Map(resolved.presets.map((preset) => [preset.definition.id, preset.stablecoinIds]));
+  } catch {
+    return null;
+  }
+}
+
 export async function loadTelegramMiniAppState(
   db: D1Database,
   auth: TelegramMiniAppAuthContext,
@@ -145,6 +169,8 @@ export async function loadTelegramMiniAppState(
       null,
     ] as const;
 
+  const presetMemberIds = await loadPresetMemberIds(db, (presets.results ?? []).map((row) => row.preset_id));
+
   return {
     viewer: {
       userId: auth.userId,
@@ -199,6 +225,7 @@ export async function loadTelegramMiniAppState(
           safety: boolFlag(row.alert_safety),
         },
         depegStepBps: isDepegStepValue(row.depeg_worsening_bps_step) ? row.depeg_worsening_bps_step : null,
+        memberIds: presetMemberIds?.get(row.preset_id) ?? null,
       };
     }),
     health: {

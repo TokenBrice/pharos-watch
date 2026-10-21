@@ -711,6 +711,26 @@ ${indentSqlFragment(SOURCE_EVENT_CHILD_ABSENCE_SQL, 13)}
       cutoff: alertAuditCutoff,
       cutoffBindCount: 2,
     },
+    // Delivery v2: terminal rows (done_at is set only on terminal states), then
+    // jobs that no longer own any row.
+    {
+      name: "deliveryV2Rows",
+      sql: "DELETE FROM telegram_deliveries WHERE done_at < ? AND id IN (SELECT id FROM telegram_deliveries WHERE done_at < ? ORDER BY done_at ASC, id ASC LIMIT ?)",
+      cutoff: alertAuditCutoff,
+      cutoffBindCount: 2,
+      totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT,
+      countsTowardRunBudget: true,
+    },
+    {
+      name: "deliveryV2Jobs",
+      sql: `DELETE FROM telegram_jobs WHERE completed_at < ? AND job_id IN (
+        SELECT job.job_id FROM telegram_jobs job
+         WHERE job.completed_at < ?
+           AND NOT EXISTS (SELECT 1 FROM telegram_deliveries d WHERE d.job_id = job.job_id)
+         ORDER BY job.completed_at ASC, job.job_id ASC LIMIT ?)`,
+      cutoff: alertAuditCutoff,
+      cutoffBindCount: 2,
+    },
     makeSimpleRetentionDeleteStep({ name: "auditJobTargetItems", table: "telegram_alert_job_target_items", timestampColumn: "created_at", cutoff: alertAuditCutoff, totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT, countsTowardRunBudget: true, report: { flat: false, capped: false, group: "jobTargetItems" } }),
     makeSimpleRetentionDeleteStep({ name: "auditJobTargets", table: "telegram_alert_job_targets", timestampColumn: "created_at", cutoff: alertAuditCutoff, totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT, countsTowardRunBudget: true, report: { flat: false, capped: false, group: "jobTargets" } }),
     makeSimpleRetentionDeleteStep({ name: "auditJobs", table: "telegram_alert_jobs", timestampColumn: "created_at", cutoff: alertAuditCutoff, report: { flat: false, capped: false, group: "jobs" } }),

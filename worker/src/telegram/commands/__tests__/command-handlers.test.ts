@@ -141,7 +141,7 @@ describe("/start onboarding", () => {
       "Choose my own coins",
       "Show me a sample alert",
     ]);
-    expect(buttons[1]?.web_app?.url).toContain("startapp=watchlist");
+    expect(buttons[1]?.web_app?.url).toContain("startapp=setup");
   });
 
   it("welcomes a returning user with what they follow", async () => {

@@ -69,67 +69,12 @@ describe("dispatchTelegramAlerts", () => {
     const metadata = JSON.parse(result.metadata);
 
     expect(metadata).toHaveProperty("skipped", "circuit-open");
-    expect(metadata.noWorkRun).toBe(true);
-    // The freeze outbox runs behind the circuit gate, so this zero is measured.
-    expect(metadata.eventsDetected.freeze).toBe(0);
+    // Detection still runs (here: the first-run seed); only transport is skipped.
+    expect(metadata.snapshotSeeded).toBe(true);
+    expect(metadata.deliveryV2).toMatchObject({ drainStoppedReason: "circuit-open", claimed: 0 });
     expect(result.itemCount).toBe(0);
     expect(telegramDeliveryTranscript).toEqual([]);
     expect(mockRecordOutcome).not.toHaveBeenCalled();
-  });
-
-  it("drains due pending rows even when the Telegram API circuit is open", async () => {
-    mockShouldAttemptFetch.mockResolvedValue(false);
-    const now = Math.floor(Date.now() / 1000);
-    const harness = createDispatchHarness();
-    // A pending row carrying the production job-target identity, so the drain's
-    // terminal status write lands on a planning table. The target row requires a
-    // materializable source event (schema generation guard).
-    harness.seed({
-      pending: [{
-        id: 1,
-        chatId: "100",
-        html: "<b>Queued alert</b>",
-        createdAt: now - 120,
-        dedupeKey: "pending-key-1",
-      }],
-      sourceEvents: [{
-        sourceEventId: "source-1",
-        status: "planned",
-        expiresAt: now + 600,
-        eventPayload: "{}",
-        baselinePayload: "{}",
-        targetPlanState: "planning",
-        targetPlanGeneration: 1,
-      }],
-      targets: [{
-        sourceEventId: "source-1",
-        chatId: "100",
-        alertType: "dews",
-        targetKey: "target-1",
-        pendingDedupeKey: "pending-key-1",
-        planGeneration: 1,
-        status: "queued",
-      }],
-    });
-    const result = await dispatchTelegramAlerts(harness.db, "bot-token");
-    const metadata = JSON.parse(result.metadata);
-
-    expect(metadata).toMatchObject({
-      skipped: "circuit-open",
-      pendingAttempted: 1,
-      pendingDrained: 1,
-      messagesSent: 1,
-      noWorkRun: false,
-      eventsDetected: { freeze: 0 },
-    });
-    expect(metadata).not.toHaveProperty("planningRowsWritten");
-    expect(metadata).not.toHaveProperty("d1RowsWritten");
-    expect(result.itemCount).toBe(1);
-    expect(telegramDeliveryTranscript).toEqual([
-      expect.objectContaining({ chatId: "100", html: "<b>Queued alert</b>" }),
-    ]);
-    expect(mockRecordOutcome).toHaveBeenCalledWith(expect.anything(), "telegram-api", true);
-    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
   });
 
   it("carries the freeze-outbox observation into the seed-path result", async () => {
@@ -146,9 +91,8 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.snapshotSeeded).toBe(true);
     expect(metadata.eventsDetected.freeze).toBe(1);
     expect(metadata.noWorkRun).toBe(false);
-    expect(progressUpdates.find((update) => update.stage === "source-loaded")).toMatchObject({
-      metadata: { countTotals: { freezeObserved: 1 } },
-    });
+    expect(metadata.deliveryV2).toMatchObject({ freezeState: "idle", freezeJobsCreated: 0 });
+    expect(progressUpdates[progressUpdates.length - 1]).toMatchObject({ stage: "complete" });
   });
 
   it("does not record a Telegram API circuit failure when dispatch is aborted before delivery", async () => {
@@ -187,10 +131,10 @@ describe("dispatchTelegramAlerts", () => {
       noWorkRun: false,
     });
     // No DEWS rows were readable, so the three DEWS keys stay unwritten (R2).
-    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM cache").get()).toEqual({ count: 4 });
+    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM cache").get()).toEqual({ count: 3 });
     expect(readCacheValue(harness.sqlite, "alert:dews-snapshot")).toBeNull();
     expect(readCacheValue(harness.sqlite, "alert:reserve-observed-snapshot")).not.toBeNull();
-    expect(readCacheValue(harness.sqlite, "telegram:preset-query-failure-count")).toBe("0");
+    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_jobs").get()).toEqual({ count: 0 });
     expect(mockRecordOutcome).toHaveBeenCalledTimes(1);
   });
 
@@ -247,139 +191,5 @@ describe("dispatchTelegramAlerts", () => {
     expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
   });
 
-  it("still drains due pending rows during an otherwise eventless run", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const harness = createDispatchHarness();
-    healthySources(harness, { dews: [] });
-    harness.seed({
-      pending: [{ id: 1, chatId: "eventless-due", html: "<b>Due during eventless run</b>", createdAt: now - 120 }],
-    });
-    const progressUpdates: CronProgressUpdate[] = [];
-    const reportProgress = vi.fn(async (update: CronProgressUpdate) => {
-      progressUpdates.push(update);
-    });
-    const result = await dispatchTelegramAlerts(harness.db, "bot-token", undefined, undefined, reportProgress);
-    const metadata = JSON.parse(result.metadata);
-
-    expect(metadata).toMatchObject({ eventlessFastPath: true, pendingTotal: 0 });
-    expect(result.itemCount).toBe(1);
-    expect(progressUpdates.find((update) => update.stage === "source-loading")).toMatchObject({
-      itemsTotal: 5,
-      metadata: { providerFamilies: ["dews", "depeg", "safety", "reserve", "freeze"] },
-    });
-    expect(progressUpdates.find((update) => update.stage === "source-loaded")).toMatchObject({
-      itemsDone: 5,
-      itemsTotal: 5,
-      metadata: {
-        providerFamilies: ["dews", "depeg", "safety", "reserve", "freeze"],
-        reserveSourceUnavailable: true,
-        countTotals: { reserveDriftIds: 0 },
-      },
-    });
-    expect(progressUpdates.find((update) => update.stage === "event-detection")).toMatchObject({
-      itemsTotal: 5,
-      metadata: {
-        providerFamilies: ["dews", "depeg", "safety", "reserve", "freeze"],
-        reserveSourceUnavailable: true,
-      },
-    });
-    expect(progressUpdates.find((update) => update.stage === "pending-drain")).toMatchObject({
-      metadata: {
-        providerFamily: "telegram-api",
-        phase: "pending-drain",
-        eventlessFastPath: true,
-        deferredTail: { total: 1, due: 1, deferred: 0, expired: 0 },
-      },
-    });
-    expect(progressUpdates.find((update) => update.stage === "complete")).toMatchObject({
-      metadata: {
-        providerFamily: "telegram-dispatch",
-        phase: "complete",
-        countTotals: { pendingAttempted: 1, pendingSent: 1, pendingDeferred: 0, pendingDropped: 0 },
-        deferredTail: { total: 0, due: 0 },
-      },
-    });
-    expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "eventless-due" })]);
-  });
-
-  it.each([
-    {
-      label: "source-event-backfill-required",
-      status: "baseline_committed" as const,
-      expiresAtOffset: 600,
-      targetPlanState: "planning" as const,
-      targets: true,
-    },
-    {
-      label: "source-event-expired",
-      status: "planned" as const,
-      expiresAtOffset: -1,
-      targetPlanState: "planning" as const,
-      targets: false,
-    },
-  ])("drains due pending rows before the $label early return", async (scenario) => {
-    const now = Math.floor(Date.now() / 1000);
-    const sourceEventId = `telegram-source:test:v1:${scenario.label}`;
-    // Legacy payload shape (with retired launch fields) stays readable.
-    const emptyEvents = JSON.stringify({
-      dewsChanges: [],
-      depegTriggered: [],
-      depegResolved: [],
-      depegWorsening: [],
-      safetyChanges: [],
-      launchPromoted: [],
-      reservePromoted: [],
-      suppressedMethodologyChanges: 0,
-      dewsIds: [],
-      depegIds: [],
-      safetyIds: [],
-      launchIds: [],
-      reserveIds: [],
-    });
-    const emptyBaseline = JSON.stringify({
-      dews: {},
-      dewsAlertable: {},
-      depeg: {},
-      safety: {},
-      launch: [],
-      reserveDispatched: [],
-    });
-    const harness = createDispatchHarness();
-    harness.seed({
-      pending: [
-        { id: 1, chatId: `pending-${scenario.label}`, html: "<b>Queued recovery alert</b>", createdAt: now - 120 },
-      ],
-      sourceEvents: [
-        {
-          sourceEventId,
-          status: scenario.status,
-          detectedAt: now - 120,
-          expiresAt: now + scenario.expiresAtOffset,
-          eventPayload: emptyEvents,
-          baselinePayload: emptyBaseline,
-          baselineCommittedAt: scenario.status === "baseline_committed" ? now - 30 : null,
-          targetPlanState: scenario.targetPlanState,
-          targetPlanGeneration: 1,
-        },
-      ],
-      targets: scenario.targets ? [{ sourceEventId, chatId: "planned-target", planGeneration: 1 }] : [],
-    });
-    seedFreezeTapeObservation(harness, now);
-    const result = await dispatchTelegramAlerts(harness.db, "bot-token");
-    const metadata = JSON.parse(result.metadata);
-
-    expect(metadata).toMatchObject({
-      skipped: scenario.label,
-      pendingAttempted: 1,
-      pendingDrained: 1,
-      messagesSent: 1,
-      subscribersNotified: 1,
-      eventsDetected: { freeze: 1 },
-      noWorkRun: false,
-    });
-    expect(result.itemCount).toBe(1);
-    expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: `pending-${scenario.label}` })]);
-    expect(mockRecordOutcome).toHaveBeenCalledWith(expect.anything(), "telegram-api", true);
-  });
 });
 

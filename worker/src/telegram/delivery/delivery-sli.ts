@@ -1,4 +1,3 @@
-import { pendingPrioritySql } from "../outbox/pending-queue";
 import { TELEGRAM_ALERT_TYPES, type TelegramAlertType } from "@shared/types/status/telegram";
 import type {
   TelegramDeliverySliBacklogBucket,
@@ -14,22 +13,6 @@ const DEFAULT_LOOKBACK_SEC = 24 * 60 * 60;
 const DEFAULT_FRESHNESS_SEC = 15 * 60;
 const DEFAULT_REASON_LIMIT = 12;
 const MAX_REASON_LIMIT = 25;
-
-// Persisted item keys use a colon except for depeg's triggered/worsening/resolved variants.
-const FAMILY_ITEM_KEY_PATTERNS = {
-  dews: "dews:%",
-  depeg: "depeg-%",
-  safety: "safety:%",
-  launch: "launch:%",
-  reserve: "reserve:%",
-  freeze: "freeze:%",
-} as const satisfies Record<TelegramAlertType, string>;
-const FAMILY_FLAGS_SQL = TELEGRAM_ALERT_TYPES.map((family) =>
-  `COALESCE(MAX(item.item_key LIKE '${FAMILY_ITEM_KEY_PATTERNS[family]}'), 0) AS ${family}`,
-).join(",\n              ");
-const EXCLUSIVE_FAMILY_PROJECTIONS_SQL = TELEGRAM_ALERT_TYPES.map((family) =>
-  `SUM(CASE WHEN family_count = 1 AND ${family} = 1 THEN 1 ELSE 0 END) AS ${family}`,
-).join(",\n       ");
 
 export interface TelegramDeliverySliOptions {
   nowSec: number;
@@ -146,7 +129,7 @@ function reasons(
 }
 
 /**
- * Load a bounded delivery read model from the event/target audit ledger.
+ * Load a bounded delivery read model from `telegram_jobs`/`telegram_deliveries`.
  * "Accepted" means Telegram's Bot API accepted the send, not that a person
  * opened or read the message.
  */
@@ -164,52 +147,45 @@ export async function loadTelegramDeliverySliRollup(
   const startsAt = nowSec - lookbackSec;
   const reasonQueryLimit = reasonLimit + 1;
 
+  // Delivery v2: alert-family jobs (broadcast and digest excluded) and their
+  // per-chat rows. "Plan" is the latest row insert of a job (fan-out end).
   const core = await db
     .prepare(
-      `WITH recent_sources AS MATERIALIZED (
-       SELECT source_event_id, detected_at, expires_at, target_plan_completed_at
-         FROM telegram_alert_source_events
-        WHERE detected_at >= ? AND detected_at <= ?
+      `WITH recent_jobs AS MATERIALIZED (
+       SELECT job_id, created_at AS detected_at, state,
+              CASE WHEN state IN ('ready', 'done')
+                   THEN (SELECT MAX(created_at) FROM telegram_deliveries d WHERE d.job_id = j.job_id) END
+                AS target_plan_completed_at
+         FROM telegram_jobs j
+        WHERE created_at >= ? AND created_at <= ? AND kind NOT IN ('broadcast', 'digest')
      ), recent_targets AS (
-       SELECT target.source_event_id, target.created_at, target.alert_type,
-              target.target_expires_at, target.final_delivery_state,
-              target.final_delivery_at, source.target_plan_completed_at,
-              COALESCE(target.target_expires_at, job.expires_at, source.expires_at) AS effective_expires_at
-         FROM recent_sources source
-         CROSS JOIN telegram_alert_job_targets target INDEXED BY idx_tajt_authoritative_ready
-         LEFT JOIN telegram_alert_jobs job ON job.job_id = target.job_id
-        WHERE target.source_event_id = source.source_event_id
+       SELECT d.state, d.created_at, d.expires_at, d.done_at,
+              job.target_plan_completed_at
+         FROM recent_jobs job
+         JOIN telegram_deliveries d ON d.job_id = job.job_id
      )
      SELECT
-       (SELECT COUNT(*) FROM recent_sources) AS source_count,
-       (SELECT COUNT(*) FROM recent_sources WHERE target_plan_completed_at IS NOT NULL) AS planned_source_count,
-       (SELECT SUM(MAX(0, target_plan_completed_at - detected_at)) FROM recent_sources
+       (SELECT COUNT(*) FROM recent_jobs) AS source_count,
+       (SELECT COUNT(*) FROM recent_jobs WHERE target_plan_completed_at IS NOT NULL) AS planned_source_count,
+       (SELECT SUM(MAX(0, target_plan_completed_at - detected_at)) FROM recent_jobs
          WHERE target_plan_completed_at IS NOT NULL) AS detection_plan_sum_sec,
-       (SELECT MAX(MAX(0, target_plan_completed_at - detected_at)) FROM recent_sources
+       (SELECT MAX(MAX(0, target_plan_completed_at - detected_at)) FROM recent_jobs
          WHERE target_plan_completed_at IS NOT NULL) AS detection_plan_max_sec,
        COUNT(*) AS target_count,
-       SUM(CASE WHEN final_delivery_state = 'accepted' THEN 1 ELSE 0 END) AS accepted_count,
-       SUM(CASE WHEN final_delivery_state = 'failed' THEN 1 ELSE 0 END) AS failed_count,
-       SUM(CASE WHEN final_delivery_state = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_count,
-       SUM(CASE WHEN final_delivery_state = 'expired' THEN 1 ELSE 0 END) AS expired_count,
-       SUM(CASE WHEN final_delivery_state = 'execution_unknown' THEN 1 ELSE 0 END) AS execution_unknown_count,
-       SUM(CASE WHEN final_delivery_state IS NULL THEN 1 ELSE 0 END) AS unresolved_count,
-       SUM(CASE WHEN final_delivery_state = 'accepted' AND target_plan_completed_at IS NOT NULL
-                 AND final_delivery_at IS NOT NULL THEN 1 ELSE 0 END) AS accepted_with_plan_count,
-       SUM(CASE WHEN final_delivery_state = 'accepted' AND target_plan_completed_at IS NOT NULL
-                 AND final_delivery_at IS NOT NULL
-                THEN MAX(0, final_delivery_at - target_plan_completed_at) END) AS plan_accept_sum_sec,
-       MAX(CASE WHEN final_delivery_state = 'accepted' AND target_plan_completed_at IS NOT NULL
-                 AND final_delivery_at IS NOT NULL
-                THEN MAX(0, final_delivery_at - target_plan_completed_at) END) AS plan_accept_max_sec,
-       SUM(CASE WHEN final_delivery_state = 'accepted' AND effective_expires_at IS NOT NULL
-                 AND final_delivery_at IS NOT NULL THEN 1 ELSE 0 END) AS accepted_known_ttl_count,
-       SUM(CASE WHEN final_delivery_state = 'accepted' AND effective_expires_at IS NOT NULL
-                 AND final_delivery_at <= effective_expires_at THEN 1 ELSE 0 END) AS accepted_before_ttl_count,
-       SUM(CASE WHEN final_delivery_state = 'accepted' AND effective_expires_at IS NOT NULL
-                 AND final_delivery_at > effective_expires_at THEN 1 ELSE 0 END) AS accepted_after_ttl_count,
-       (SELECT MAX(detected_at) FROM recent_sources) AS latest_source_at,
-       MAX(final_delivery_at) AS latest_target_at
+       SUM(CASE WHEN state = 'sent' THEN 1 ELSE 0 END) AS accepted_count,
+       SUM(CASE WHEN state IN ('failed', 'blocked') THEN 1 ELSE 0 END) AS failed_count,
+       SUM(CASE WHEN state IN ('cancelled', 'suppressed_duplicate') THEN 1 ELSE 0 END) AS cancelled_count,
+       SUM(CASE WHEN state = 'expired' THEN 1 ELSE 0 END) AS expired_count,
+       SUM(CASE WHEN state = 'unknown' THEN 1 ELSE 0 END) AS execution_unknown_count,
+       SUM(CASE WHEN state IN ('pending', 'retry', 'sending') THEN 1 ELSE 0 END) AS unresolved_count,
+       SUM(CASE WHEN state = 'sent' AND done_at IS NOT NULL THEN 1 ELSE 0 END) AS accepted_with_plan_count,
+       SUM(CASE WHEN state = 'sent' AND done_at IS NOT NULL THEN MAX(0, done_at - created_at) END) AS plan_accept_sum_sec,
+       MAX(CASE WHEN state = 'sent' AND done_at IS NOT NULL THEN MAX(0, done_at - created_at) END) AS plan_accept_max_sec,
+       SUM(CASE WHEN state = 'sent' AND done_at IS NOT NULL THEN 1 ELSE 0 END) AS accepted_known_ttl_count,
+       SUM(CASE WHEN state = 'sent' AND done_at <= expires_at THEN 1 ELSE 0 END) AS accepted_before_ttl_count,
+       SUM(CASE WHEN state = 'sent' AND done_at > expires_at THEN 1 ELSE 0 END) AS accepted_after_ttl_count,
+       (SELECT MAX(detected_at) FROM recent_jobs) AS latest_source_at,
+       MAX(done_at) AS latest_target_at
      FROM recent_targets`,
     )
     .bind(startsAt, nowSec)
@@ -217,49 +193,32 @@ export async function loadTelegramDeliverySliRollup(
 
   const familyAttribution = await db
     .prepare(
-      // SAFETY: Family identifiers and LIKE patterns come only from the canonical roster and fixed descriptor.
-      `WITH recent_sources AS MATERIALIZED (
-       SELECT source_event_id
-         FROM telegram_alert_source_events
-        WHERE detected_at >= ? AND detected_at <= ?
-     ), family_flags AS (
-       SELECT target.job_id, target.target_key,
-              ${FAMILY_FLAGS_SQL}
-         FROM recent_sources source
-         CROSS JOIN telegram_alert_job_targets target INDEXED BY idx_tajt_authoritative_ready
-         LEFT JOIN telegram_alert_job_target_items item
-           ON item.job_id = target.job_id
-          AND item.target_key = target.target_key
-        WHERE target.source_event_id = source.source_event_id
-        GROUP BY target.job_id, target.target_key
-     ), attributed AS (
-       SELECT *, ${TELEGRAM_ALERT_TYPES.join(" + ")} AS family_count FROM family_flags
-     )
-     SELECT
-       ${EXCLUSIVE_FAMILY_PROJECTIONS_SQL},
-       SUM(CASE WHEN family_count > 1 THEN 1 ELSE 0 END) AS mixed,
-       SUM(CASE WHEN family_count = 0 THEN 1 ELSE 0 END) AS unknown
-      FROM attributed`,
+      // SAFETY: Family identifiers come only from the canonical roster.
+      `SELECT
+       ${TELEGRAM_ALERT_TYPES.map((family) => `SUM(CASE WHEN families = '${family}' THEN 1 ELSE 0 END) AS ${family}`).join(",\n       ")},
+       SUM(CASE WHEN families LIKE '%,%' THEN 1 ELSE 0 END) AS mixed,
+       SUM(CASE WHEN families IS NULL THEN 1 ELSE 0 END) AS unknown
+      FROM telegram_deliveries
+     WHERE created_at >= ? AND created_at <= ? AND kind NOT IN ('broadcast', 'digest')`,
     )
     .bind(startsAt, nowSec)
     .first<FamilyAttributionRow>();
 
   const backlogRows = await db
     .prepare(
-      `SELECT ${pendingPrioritySql("target.alert_type")} AS priority,
+      `SELECT priority,
             CASE
-              WHEN target.created_at > ? - 300 THEN 'lt_5m'
-              WHEN target.created_at > ? - 900 THEN '5m_15m'
-              WHEN target.created_at > ? - 3600 THEN '15m_1h'
-              WHEN target.created_at > ? - 21600 THEN '1h_6h'
+              WHEN created_at > ? - 300 THEN 'lt_5m'
+              WHEN created_at > ? - 900 THEN '5m_15m'
+              WHEN created_at > ? - 3600 THEN '15m_1h'
+              WHEN created_at > ? - 21600 THEN '1h_6h'
               ELSE 'gte_6h'
             END AS age_bucket,
-            COUNT(*) AS count, MIN(target.created_at) AS oldest_created_at,
-            MIN(COALESCE(target.target_expires_at, job.expires_at)) AS nearest_expires_at
-       FROM telegram_alert_job_targets target
-       LEFT JOIN telegram_alert_jobs job ON job.job_id = target.job_id
-      WHERE target.final_delivery_state IS NULL
-        AND target.created_at >= ? AND target.created_at <= ?
+            COUNT(*) AS count, MIN(created_at) AS oldest_created_at,
+            MIN(expires_at) AS nearest_expires_at
+       FROM telegram_deliveries
+      WHERE state IN ('pending', 'retry', 'sending')
+        AND created_at >= ? AND created_at <= ?
       GROUP BY priority, age_bucket
       ORDER BY priority, oldest_created_at`,
     )
@@ -268,17 +227,11 @@ export async function loadTelegramDeliverySliRollup(
 
   const cancellationRows = await db
     .prepare(
-      `SELECT COALESCE(NULLIF(cancellation_reason, ''), NULLIF(final_delivery_error, ''),
-                    NULLIF(error_class, ''), 'unknown') AS reason,
+      `SELECT COALESCE(NULLIF(reason, ''), 'unknown') AS reason,
             COUNT(*) AS count, SUM(COUNT(*)) OVER () AS total_count
-       FROM telegram_alert_job_targets
-      WHERE final_delivery_state = 'cancelled'
-        AND (
-          error_class = 'preference_changed'
-          OR final_delivery_error = 'preference_changed'
-          OR cancellation_reason IN ('scope_disabled', 'preference_changed')
-          OR cancellation_reason LIKE 'preference_%'
-        )
+       FROM telegram_deliveries
+      WHERE state IN ('cancelled', 'retry')
+        AND reason IN ('subscriber_missing', 'coin_snoozed', 'chat_snoozed')
         AND created_at >= ? AND created_at <= ?
       GROUP BY reason
       ORDER BY count DESC, reason
@@ -289,12 +242,12 @@ export async function loadTelegramDeliverySliRollup(
 
   const targetErrorRows = await db
     .prepare(
-      `SELECT COALESCE(NULLIF(final_delivery_error, ''), NULLIF(error_class, ''), 'unknown') AS reason,
+      `SELECT COALESCE(NULLIF(reason, ''), NULLIF(error_class, ''), 'unknown') AS reason,
             COUNT(*) AS count
-       FROM telegram_alert_job_targets
+       FROM telegram_deliveries
       WHERE created_at >= ? AND created_at <= ?
-        AND (final_delivery_error IS NOT NULL OR error_class IS NOT NULL)
-      GROUP BY reason
+        AND (reason IS NOT NULL OR error_class IS NOT NULL)
+      GROUP BY 1
       ORDER BY count DESC, reason
       LIMIT ?`,
     )
@@ -303,38 +256,39 @@ export async function loadTelegramDeliverySliRollup(
 
   const unknown = await db
     .prepare(
-      `SELECT COUNT(*) AS count, MIN(final_delivery_at) AS oldest_at,
-            SUM(CASE WHEN final_delivery_at <= ? - 900 THEN 1 ELSE 0 END) AS older_than_15m_count
-       FROM telegram_alert_job_targets
-      WHERE final_delivery_state = 'execution_unknown'
+      `SELECT COUNT(*) AS count, MIN(done_at) AS oldest_at,
+            SUM(CASE WHEN done_at <= ? - 900 THEN 1 ELSE 0 END) AS older_than_15m_count
+       FROM telegram_deliveries
+      WHERE state = 'unknown'
         AND created_at >= ? AND created_at <= ?`,
     )
     .bind(nowSec, startsAt, nowSec)
     .first<UnknownRow>();
 
+  // Terminal non-deliveries stay in telegram_deliveries (no dead-letter copy).
   const deadSummary = await db
     .prepare(
-      `SELECT COUNT(*) AS count, SUM(attempts) AS total_attempts, MAX(expired_at) AS latest_at
-       FROM telegram_alert_dead_letters
-      WHERE expired_at >= ? AND expired_at <= ?`,
+      `SELECT COUNT(*) AS count, SUM(attempts) AS total_attempts, MAX(done_at) AS latest_at
+       FROM telegram_deliveries
+      WHERE state IN ('failed', 'blocked', 'expired') AND done_at >= ? AND done_at <= ?`,
     )
     .bind(startsAt, nowSec)
     .first<DeadLetterSummaryRow>();
   const deadReasonRows = await db
     .prepare(
       `SELECT COALESCE(NULLIF(reason, ''), 'unknown') AS reason, COUNT(*) AS count
-       FROM telegram_alert_dead_letters
-      WHERE expired_at >= ? AND expired_at <= ?
-      GROUP BY reason ORDER BY count DESC, reason LIMIT ?`,
+       FROM telegram_deliveries
+      WHERE state IN ('failed', 'blocked', 'expired') AND done_at >= ? AND done_at <= ?
+      GROUP BY 1 ORDER BY count DESC, reason LIMIT ?`,
     )
     .bind(startsAt, nowSec, reasonQueryLimit)
     .all<ReasonRow>();
   const deadErrorRows = await db
     .prepare(
-      `SELECT COALESCE(NULLIF(last_error_class, ''), 'unknown') AS reason, COUNT(*) AS count
-       FROM telegram_alert_dead_letters
-      WHERE expired_at >= ? AND expired_at <= ?
-      GROUP BY reason ORDER BY count DESC, reason LIMIT ?`,
+      `SELECT COALESCE(NULLIF(error_class, ''), 'unknown') AS reason, COUNT(*) AS count
+       FROM telegram_deliveries
+      WHERE state IN ('failed', 'blocked', 'expired') AND done_at >= ? AND done_at <= ?
+      GROUP BY 1 ORDER BY count DESC, reason LIMIT ?`,
     )
     .bind(startsAt, nowSec, reasonQueryLimit)
     .all<ReasonRow>();

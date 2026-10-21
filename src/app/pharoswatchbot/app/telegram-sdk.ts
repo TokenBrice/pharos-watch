@@ -40,6 +40,8 @@ interface TelegramButton {
   offClick?: (handler: () => void) => void;
   setText?: (text: string) => void;
   setParams?: (params: { text?: string; color?: string; text_color?: string; is_visible?: boolean; is_active?: boolean }) => void;
+  showProgress?: (leaveActive?: boolean) => void;
+  hideProgress?: () => void;
   text?: string;
   color?: string;
   isVisible?: boolean;
@@ -191,6 +193,13 @@ export function applyTelegramTheme(webApp: TelegramWebAppSdk | null): void {
   }
   if (webApp.colorScheme === "dark" || webApp.colorScheme === "light") {
     root.setProperty("--telegram-color-scheme", webApp.colorScheme);
+  }
+  // Paint the document itself so overscroll and safe-area strips match the
+  // Telegram page colour instead of flashing the site's light background.
+  for (const element of [document.documentElement, document.body]) {
+    if (!element) continue;
+    if (normalizedTheme) element.style.backgroundColor = normalizedTheme.secondaryBackground;
+    else element.style.removeProperty("background-color");
   }
 }
 

@@ -116,6 +116,21 @@ describe("handleTelegramMiniAppSession", () => {
     expect(body.catalog.searchableCoins.length).toBeGreaterThan(0);
   });
 
+  it("reports followed-group membership as unknown, never empty, when the market-cap cache is unreadable", async () => {
+    const initData = await privateInitData();
+    const db = makeMiniAppDb([
+      ...stateReadTables({
+        presets: [{ preset_id: "usd-top25", alert_dews: 1, alert_depeg: 1, alert_safety: 0, depeg_worsening_bps_step: null }],
+      }),
+    ]);
+
+    const response = await handleTelegramMiniAppSession(db, makeMiniAppRequest("/api/telegram-mini-app/session", { initData }), BOT_TOKEN);
+    const body = await response.json() as { presets: Array<{ id: string; memberIds: string[] | null }> };
+
+    expect(response.status).toBe(200);
+    expect(body.presets).toEqual([expect.objectContaining({ id: "usd-top25", memberIds: null })]);
+  });
+
 
   it("hides inert rows but keeps marker-backed local-off and snooze-only rows", async () => {
     const initData = await privateInitData();

@@ -17,7 +17,6 @@ import {
   GettingStarted,
   MiniAppShowcase,
   PrimaryActions,
-  ReliabilityContract,
   TelegramChannels,
 } from "./landing-sections";
 
@@ -31,8 +30,8 @@ export const metadata: Metadata = buildPageMetadata({
 /**
  * Product page for the Telegram bot on the shared feature-page shell: pitch and
  * CTAs → live adoption hero → alert families with verbatim previews → setup →
- * tuning controls → Mini App → channels → reference (commands, reliability,
- * FAQ) → closing CTA.
+ * low-noise controls → Mini App → channels → command card → FAQ (incl.
+ * reliability and privacy) → closing CTA.
  */
 export default function PharosWatchBotPage() {
   return (
@@ -41,7 +40,7 @@ export default function PharosWatchBotPage() {
       path="/pharoswatchbot/"
       title="PharosWatchBot"
       leadParagraphs={[
-        `Stablecoin risk alerts in your Telegram chat, free for all ${TRACKED_STABLECOIN_COUNT.toLocaleString("en-US")} tracked stablecoins. Six alert families watch every peg and message you only when something changes.`,
+        `Stablecoin risk alerts in your Telegram chat, free for all ${TRACKED_STABLECOIN_COUNT.toLocaleString("en-US")} tracked stablecoins. Five alert types watch every peg. Urgent moves arrive live; smaller ones wait for one daily message.`,
       ]}
       headerSupplement={<PrimaryActions />}
     >
@@ -52,7 +51,6 @@ export default function PharosWatchBotPage() {
       <MiniAppShowcase />
       <TelegramChannels />
       <CommandReference />
-      <ReliabilityContract />
       <FaqSection items={TELEGRAM_FAQ} title="Frequently asked questions" includeJsonLd />
       <FinalCta />
       <JsonLdScript json={safeJsonLd(buildTelegramPageJsonLd(SITE_URL))} />

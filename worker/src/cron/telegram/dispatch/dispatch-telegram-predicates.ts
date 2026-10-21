@@ -1,5 +1,5 @@
 import { THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
-import { TELEGRAM_ALERT_POLICY, crossesTelegramDepegWorseningStep } from "@shared/lib/telegram-delivery-policy";
+import { crossesTelegramDepegWorseningStep } from "@shared/lib/telegram-delivery-policy";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   isDewsAlertable,
@@ -37,26 +37,19 @@ function shouldIncludeSafetyChange(change: SafetyChange, mode: string | null): b
   return true;
 }
 
-function isMaterialSafetyDowngrade(change: SafetyChange): boolean {
-  if (isSafetyDeescalation(change.oldGrade, change.newGrade)) return false;
-  if (change.oldScore != null && change.newScore != null) {
-    return change.oldScore - change.newScore >= TELEGRAM_ALERT_POLICY.safety.globalMinScoreDrop;
-  }
-  return true;
-}
-
-
 export function meetsDepegStepThreshold(deviationBps: number, step: number | null): boolean {
   if (step == null || step <= 0) return true;
   return deviationBps >= step;
 }
 
 /**
- * Live safety is downgrade-only for global and preset coverage alike; only a
- * direct per-coin row (`hasLocalOverride`) applies its own safety mode.
+ * Live safety is downgrade-only for preset coverage; only a direct per-coin
+ * row (`hasLocalOverride`) applies its own safety mode. Global safety opt-ins
+ * never reach live fan-out (`rollupOnlyGlobalFamilies`); the roll-up applies
+ * `safety.globalMinScoreDrop` to them.
  */
 export function shouldIncludeSafetyForSubscriber(sub: SubscriberRow, change: SafetyChange): boolean {
-  if (sub.isGlobal) return isMaterialSafetyDowngrade(change);
+  if (sub.isGlobal) return false;
   return shouldIncludeSafetyChange(change, sub.hasLocalOverride === false ? "downgrade-only" : sub.safety_mode);
 }
 

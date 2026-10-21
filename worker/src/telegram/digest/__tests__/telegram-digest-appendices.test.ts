@@ -118,9 +118,9 @@ describe("prepareTelegramDigestAppendices", () => {
     expect(prepared.appendixHtml).toBeNull();
     expect(prepared.metadata).toMatchObject({
       hasAppendix: false,
-      seededSnapshots: ["cemetery:first-run", "tracked:first-run", "frozen:first-run"],
+      seededSnapshots: ["cemetery:first-run", "launched:first-run", "tracked:first-run", "frozen:first-run"],
     });
-    expect(mockSetCache).toHaveBeenCalledTimes(3);
+    expect(mockSetCache).toHaveBeenCalledTimes(4);
     expect(mockSetCache.mock.calls[0]).toEqual([
       {},
       "telegram:cemetery-snapshot",
@@ -132,10 +132,15 @@ describe("prepareTelegramDigestAppendices", () => {
     ]);
     expect(mockSetCache.mock.calls[1]).toEqual([
       {},
+      "telegram:prelaunch-stablecoins-snapshot",
+      JSON.stringify(["eurx-example"]),
+    ]);
+    expect(mockSetCache.mock.calls[2]).toEqual([
+      {},
       "telegram:tracked-stablecoins-snapshot",
       JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
     ]);
-    expect(mockSetCache.mock.calls[2]).toEqual([
+    expect(mockSetCache.mock.calls[3]).toEqual([
       {},
       "frozen_ids_snapshot",
       JSON.stringify(["dusd-fluid"]),
@@ -176,6 +181,7 @@ describe("prepareTelegramDigestAppendices", () => {
         "usda-angle-usda-2026-03",
       ]),
       "telegram:tracked-stablecoins-pending": JSON.stringify(["usdx-example"]),
+      "telegram:prelaunch-stablecoins-snapshot": JSON.stringify(["eurx-example"]),
     });
 
     const prepared = await prepareTelegramDigestAppendices({} as D1Database);
@@ -217,6 +223,7 @@ describe("prepareTelegramDigestAppendices", () => {
       "telegram:tracked-stablecoins-snapshot": JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
       "telegram:tracked-stablecoins-pending": JSON.stringify(["usdx-example"]),
       "frozen_ids_snapshot": JSON.stringify(["dusd-fluid"]),
+      "telegram:prelaunch-stablecoins-snapshot": JSON.stringify(["eurx-example"]),
     });
 
     const prepared = await prepareTelegramDigestAppendices({} as D1Database);
@@ -242,6 +249,7 @@ describe("prepareTelegramDigestAppendices", () => {
       "telegram:cemetery-footer-index": "8",
       "telegram:tracked-stablecoins-snapshot": JSON.stringify(["usdt-tether"]),
       "telegram:tracked-stablecoins-pending": JSON.stringify(["usdx-example"]),
+      "telegram:prelaunch-stablecoins-snapshot": JSON.stringify(["eurx-example"]),
     });
 
     const prepared = await prepareTelegramDigestAppendices({} as D1Database);
@@ -300,6 +308,7 @@ describe("prepareTelegramDigestAppendices", () => {
         "USDA|2026-03|angle usda",
       ]),
       "telegram:tracked-stablecoins-snapshot": JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
+      "telegram:prelaunch-stablecoins-snapshot": JSON.stringify(["eurx-example"]),
     });
 
     const prepared = await prepareTelegramDigestAppendices({} as D1Database);
@@ -335,6 +344,7 @@ describe("prepareTelegramDigestAppendices", () => {
       ]),
       "telegram:tracked-stablecoins-snapshot": JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
       "frozen_ids_snapshot": JSON.stringify([]),
+      "telegram:prelaunch-stablecoins-snapshot": JSON.stringify(["eurx-example"]),
     });
 
     const prepared = await prepareTelegramDigestAppendices({} as D1Database);
@@ -353,6 +363,38 @@ describe("prepareTelegramDigestAppendices", () => {
     expect(mockSetCache).not.toHaveBeenCalled();
     expect(prepared.successActions).toEqual([
       { key: "frozen_ids_snapshot", value: JSON.stringify(["dusd-fluid"]) },
+    ]);
+  });
+
+  it("announces a pre-launch to active promotion once, as a launch rather than a tracked addition", async () => {
+    mockCachedValues({
+      "telegram:cemetery-snapshot": JSON.stringify([
+        "pusd-palm-usd-2026-01",
+        "eura-angle-eura-2026-03",
+        "usda-angle-usda-2026-03",
+      ]),
+      "telegram:tracked-stablecoins-snapshot": JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
+      // sync-stablecoins queued the promoted coin when it first appeared in live data.
+      "telegram:tracked-stablecoins-pending": JSON.stringify(["usdx-example"]),
+      "frozen_ids_snapshot": JSON.stringify(["dusd-fluid"]),
+      "telegram:prelaunch-stablecoins-snapshot": JSON.stringify(["usdx-example", "eurx-example"]),
+    });
+
+    const prepared = await prepareTelegramDigestAppendices({} as D1Database);
+
+    expect(prepared.metadata).toMatchObject({
+      hasAppendix: true,
+      launchedDetected: 1,
+      launchedSymbols: ["USDX"],
+      trackedDetected: 0,
+    });
+    expect(prepared.appendixHtml).toBe(
+      "<b>Launched</b>\n\nNow live after pre-launch:\n\n<blockquote expandable><code>USDX</code> Example USD</blockquote>",
+    );
+    expect(mockSetCache).not.toHaveBeenCalled();
+    expect(prepared.successActions).toEqual([
+      { key: "telegram:prelaunch-stablecoins-snapshot", value: JSON.stringify(["eurx-example"]) },
+      { key: "telegram:tracked-stablecoins-pending", value: "[]" },
     ]);
   });
 });

@@ -11,6 +11,7 @@ const CEMETERY_SNAPSHOT_CACHE_KEY = "telegram:cemetery-snapshot";
 const CEMETERY_FOOTER_INDEX_CACHE_KEY = "telegram:cemetery-footer-index";
 const TRACKED_SNAPSHOT_CACHE_KEY = "telegram:tracked-stablecoins-snapshot";
 const TRACKED_PENDING_CACHE_KEY = "telegram:tracked-stablecoins-pending";
+const PRE_LAUNCH_SNAPSHOT_CACHE_KEY = "telegram:prelaunch-stablecoins-snapshot";
 const FROZEN_SNAPSHOT_CACHE_KEY = "frozen_ids_snapshot";
 
 export const CEMETERY_FOOTERS = [
@@ -42,10 +43,12 @@ export interface TelegramDigestAppendixMetadata {
   cemeteryDetected: number;
   trackedDetected: number;
   preLaunchDetected: number;
+  launchedDetected: number;
   frozenDetected: number;
   cemeterySymbols: string[];
   trackedSymbols: string[];
   preLaunchSymbols: string[];
+  launchedSymbols: string[];
   frozenSymbols: string[];
   seededSnapshots: string[];
 }
@@ -118,6 +121,28 @@ function buildFrozenAppendix(ids: Iterable<string>): string {
 
 function buildTrackedSnapshotPayload(): string {
   return JSON.stringify(TRACKED_STABLECOINS.filter(isTrackedAnnouncementCoin).map((coin) => coin.id));
+}
+
+function buildPreLaunchSnapshotPayload(): string {
+  return JSON.stringify(TRACKED_STABLECOINS.filter((coin) => coin.status === "pre-launch").map((coin) => coin.id));
+}
+
+/** Pre-launch ids from the previous snapshot that are now live (pre-launch to active promotion). */
+function diffLaunchedIds(previousPreLaunchIds: ReadonlySet<string>): Set<string> {
+  const launched = new Set<string>();
+  for (const id of previousPreLaunchIds) {
+    const coin = TRACKED_META_BY_ID.get(id);
+    if (coin && (coin.status == null || coin.status === "active")) launched.add(id);
+  }
+  return launched;
+}
+
+function buildLaunchedAppendix(coins: TrackedStablecoinMeta[]): string {
+  return [
+    "<b>Launched</b>",
+    "Now live after pre-launch:",
+    ...coins.map((coin) => `<blockquote expandable>${formatTrackedCoin(coin)}</blockquote>`),
+  ].join("\n\n");
 }
 
 function parseSnapshotKeys(raw: string): Set<string> | null {
@@ -304,10 +329,12 @@ export async function prepareTelegramDigestAppendices(
     cemeteryDetected: 0,
     trackedDetected: 0,
     preLaunchDetected: 0,
+    launchedDetected: 0,
     frozenDetected: 0,
     cemeterySymbols: [],
     trackedSymbols: [],
     preLaunchSymbols: [],
+    launchedSymbols: [],
     frozenSymbols: [],
     seededSnapshots: [],
   };
@@ -348,6 +375,41 @@ export async function prepareTelegramDigestAppendices(
     snapshotAppendixState,
   );
 
+  // Promotions run before tracked additions: sync-stablecoins also queues a
+  // promoted coin as newly tracked, and it is announced once, as a launch.
+  let launchedIds: ReadonlySet<string> = new Set();
+  await prepareSetSnapshotAppendix(
+    db,
+    {
+      cacheKey: PRE_LAUNCH_SNAPSHOT_CACHE_KEY,
+      snapshotPayload: buildPreLaunchSnapshotPayload(),
+      seedReasons: ["launched:first-run", "launched:invalid-reseeded"],
+      diff: diffLaunchedIds,
+      hasAdditions: (ids) => ids.size > 0,
+      render: async (ids) => {
+        launchedIds = ids;
+        const cachedPending = await getCache(db, TRACKED_PENDING_CACHE_KEY);
+        const pendingIds = cachedPending ? parseSnapshotKeys(cachedPending.value) : null;
+        const remainingPending = [...(pendingIds ?? [])].filter((id) => !ids.has(id));
+        return {
+          appendixHtml: buildLaunchedAppendix(
+            [...ids].map((id) => TRACKED_META_BY_ID.get(id)).filter((coin): coin is TrackedStablecoinMeta => coin != null),
+          ),
+          successActions: pendingIds != null && remainingPending.length !== pendingIds.size
+            ? [{ key: TRACKED_PENDING_CACHE_KEY, value: JSON.stringify(remainingPending) }]
+            : [],
+        };
+      },
+      applyMetadata: (ids) => {
+        metadata.launchedDetected = ids.size;
+        metadata.launchedSymbols = [...ids]
+          .map((id) => TRACKED_META_BY_ID.get(id)?.symbol)
+          .filter((symbol): symbol is string => typeof symbol === "string");
+      },
+    },
+    snapshotAppendixState,
+  );
+
   const trackedSnapshotPayload = buildTrackedSnapshotPayload();
   await prepareSetSnapshotAppendix(
     db,
@@ -367,7 +429,7 @@ export async function prepareTelegramDigestAppendices(
         return new Set([
           ...(additions ?? []),
           ...Array.from(parsedPending ?? []).filter((id) => TRACKED_META_BY_ID.has(id)),
-        ]);
+        ].filter((id) => !launchedIds.has(id)));
       },
       hasAdditions: (ids) => ids.size > 0,
       render: (ids) => {
