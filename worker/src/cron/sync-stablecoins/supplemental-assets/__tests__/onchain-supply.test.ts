@@ -55,8 +55,14 @@ describe("supply deployment failure reasons", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     expect(await fetchCuratedAggregateOnChainMcap(meta, 1.14, buildChainRpcs())).toBeNull();
     expect(await fetchOnChainMcap(meta, 1.14, buildChainRpcs())).toBeNull();
-    expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)))).toContainEqual(expect.objectContaining({
+    const events = warn.mock.calls.map(([line]) => JSON.parse(String(line)));
+    expect(events).toContainEqual(expect.objectContaining({
       event: "onchain-supply-aggregate-withheld",
+      metadata: { stablecoinId: "sfrax-frax", reason: "economic-float-unreconciled", rule: "R4" },
+    }));
+    expect(events).toHaveLength(2);
+    expect(events).toContainEqual(expect.objectContaining({
+      event: "onchain-supply-contract-withheld",
       metadata: { stablecoinId: "sfrax-frax", reason: "economic-float-unreconciled", rule: "R4" },
     }));
     expect(probeTrackedTokenSupplyMock).not.toHaveBeenCalled();

@@ -515,7 +515,14 @@ export async function fetchOnChainMcap(
 ): Promise<SingleContractOnChainMcapResult | null> {
   const supplyContract = selectSupplementalOnchainSupplyProbeContract(meta);
   if (!supplyContract) {
-    if ((meta.contracts?.length ?? 0) > 1) {
+    const holdReason = getOnchainSupplyHoldReason(meta.id);
+    if (holdReason) {
+      logWorkerEvent({
+        scope: "lib", job: "sync-stablecoins", level: "warn", event: "onchain-supply-contract-withheld",
+        message: "Reviewed on-chain supply fallback is unavailable until its economic float perimeter is reconciled",
+        metadata: { stablecoinId: meta.id, reason: holdReason, rule: "R4" },
+      });
+    } else if ((meta.contracts?.length ?? 0) > 1) {
       logWorkerEventArgs("handler", "warn",
         `[fiat-cg] ${meta.symbol}: skipping on-chain supply fallback because multiple contracts could undercount global supply`,
       );

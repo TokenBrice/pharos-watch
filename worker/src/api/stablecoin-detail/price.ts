@@ -80,6 +80,7 @@ export async function enrichMissingDetailPrice(
       delete detail.currentCirculatingUSD;
       delete detail.currentCirculatingPrevDayUSD;
       delete detail.currentSupplyObservedAt;
+      delete detail.currentSupplyRestored;
     }
     if (coin?.nominalPriceReference) detail.nominalPriceReference = coin.nominalPriceReference;
     const observedAt = coin?.priceObservedAt ?? coin?.priceUpdatedAt;

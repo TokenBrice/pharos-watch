@@ -69,6 +69,7 @@ describe("missing detail price enrichment", () => {
     expect(body.currentCirculatingUSD).toBeUndefined();
     expect(body.currentCirculatingPrevDayUSD).toBeUndefined();
     expect(body.currentSupplyObservedAt).toBeUndefined();
+    expect(body).not.toHaveProperty("currentSupplyRestored");
     expect(body.tokens).toEqual(tokens);
     const summary = projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(body));
     expect(summary.circulating).toEqual({});
