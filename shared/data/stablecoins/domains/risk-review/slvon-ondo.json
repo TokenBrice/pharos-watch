@@ -73,7 +73,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "SLVon has issuer-native GM issuance on Ethereum, BSC, and Solana, plus a HyperEVM bridge representation. Ethereum and BSC also expose separate OndoOFT burn/mint bridge minters. Fresh pinned reads locate the unified Messenger behind each OFT, match all six reciprocal EVM peers, and enumerate the selected Endpoint V2 send/receive ULN configurations and token-specific rate limits. No SLVon-specific lockbox is proven; these remain external-validated-network lanes. Owner signer/module posture and economically complete circulating bridge materiality remain unresolved.",
+    "summary": "SLVon has issuer-native GM issuance on Ethereum, BSC, and Solana, plus a HyperEVM bridge representation; native GMTokenManager and Solana issuance remain in Mint Authority. Historical route pins establish reciprocal EVM peers, selected three-DVN ULN configurations and mutable token-specific flow limits, not an immutable issuance ceiling. Supplemental 2026-10-21 reads at Ethereum 26237357, BSC 128843108 and HyperEVM 49091044 resolve the additional MESSENGER_ADMIN on each chain as BridgeRegistrar: factory-role registration of deterministic new token IDs, with its own 7200-second admin timelock. This is not unrestricted arbitrary calldata authority. Separately, verified OndoOwner DEFAULT_ADMIN retains arbitrary target/calldata superCall, ownership transfer and configurable limits; its root Safe is currently 4-of-7 with no enabled modules, zero guard and standard fallback. Current token/global/exact-token Inspector pause flags are false. Complete source/runtime execution certification, independent human signer/DVN custody and economically complete materiality remain unresolved. Historical pins and the original bridge review start are preserved; no owner tier or durable cap credit is promoted.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex bridge route boundary migration; Sol curation campaign 2026-10-09 (W4T08Nexus), route accounting only",
     "confidence": "verified",
@@ -109,6 +109,30 @@
       {
         "label": "R1 2026-10-09 exact verified HyperEVM SLVon OndoOFT",
         "url": "https://hyperevmscan.io/address/0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85#code"
+      },
+      {
+        "label": "NR3 2026-10-21 exact Ethereum OndoOwner privileged call source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc6d5c103a3f586e68bd475942a49d041b171c3e"
+      },
+      {
+        "label": "NR3 2026-10-21 exact Ethereum BridgeRegistrar registration authority",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x58d73026c64da97ce858766384477d2e8775e9ec"
+      },
+      {
+        "label": "NR3 2026-10-21 BSC OndoOwner verified source and pinned runtime correspondence",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x4d4e562d6882dc523b8d629d2e9df9230b699933?fields=compilation,sources,runtimeBytecode"
+      },
+      {
+        "label": "NR3 2026-10-21 BSC BridgeRegistrar verified source and pinned runtime correspondence",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x72c697d72beb419152ed457b9f1eee29c12e0ccb?fields=compilation,sources,runtimeBytecode"
+      },
+      {
+        "label": "NR3 2026-10-21 exact HyperEVM OndoOwner verified source",
+        "url": "https://hyperevmscan.io/address/0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d#code"
+      },
+      {
+        "label": "NR3 2026-10-21 exact HyperEVM BridgeRegistrar verified source",
+        "url": "https://hyperevmscan.io/address/0xe3153764ab2a0a928a59c3805503b2ac56b802a3#code"
       },
       {
         "label": "Ondo Stocks bridge: native burn/mint on all supported EVM chains and same token amount",

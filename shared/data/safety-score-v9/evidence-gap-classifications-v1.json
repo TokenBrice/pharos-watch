@@ -117,18 +117,19 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-20T22:39:34Z",
-      "reviewer": "C24 bottom-up refinement 2026-10-21; D33-ADJUDICATOR concurrence",
+      "reviewedAt": "2026-10-21T00:37:06.297Z",
+      "reviewer": "C24 bottom-up refinement 2026-10-21; Round 3 denominator review",
       "sourcesRefs": [
         "source:0e696f0c7ba7b9ebc2bfba93",
-        "source:90a43d68f109ad9053e34839"
+        "source:90a43d68f109ad9053e34839",
+        "source:1743230f2717699e2390bac8"
       ],
       "searchedSurfacesRefs": [
         "surface:0ec51e3661ebffc7ed97af99",
         "surface:2c4329278134f5f28dc88f7c",
         "surface:b0acaf0592e9df605b931205"
       ],
-      "rationale": "The current Accountable four-chain supply split does not include Base. Exact report-clock block 52872624 proves 11.626401 YUSD on the verified Base burn/mint deployment, but not its economic exclusion from the compared denominator. FIX-ROUND1 proof-limit correction 2026-10-20: the original source observation's positive omitted-liability conclusion is not established by a missing display row. The retained API/issuer surfaces do not disclose the unrounded per-chain liability inputs and conserved aggregation/netting join needed to determine inclusion; C24 confirms that join was not collected. Whole-token scope remains unestablished, so reconciliation stays unknown pending the exact join. The de-minimis concern (about 0.00003366% of displayed supply, not an admitted materiality share) is routed to an owner methodology proposal, never treated as insolvency, measured non-reconciliation or proof of economic exclusion."
+      "rationale": "C24 ROUND-3 2026-10-21 resolves the permanent-escrow alternative, not every proof semantic. At current report data.ts 1792541797056, explicit matching-clock pins give ETH native totalSupply 32830055.267757626290848552 and BSC native 1628876.518789426108546679; native adapter balances are both zero and their live runtimes exactly match verified burn/mint sources. Pinned Avalanche83335.237498 and Arbitrum10.090001 bring the four-chain sum to34542277.114046052399395231, which rounds to dashboard total_supply34542277.11. Separately pinned Base11.626401 makes four-plus-Base34542288.740447052399395231: Base is not permanent native-adapter escrow and is not present in this four-chain headline accounting. No undocumented netting or reserve deficiency is inferred. Exact complete current/pending inventory and nested-ZKP aggregation/scope remain undisclosed; the current nested proof total559905.963217848 does not equal the headline and is not silently reinterpreted. Retain unknown/unknown under the whole-token bar; restore only on independently established full-scope comparison. Original August16 authority pins and review start are unchanged. Immutable earlier observations remain historical and this observation supersedes both overclaim and unresolved-native-escrow qualification."
     },
     {
       "id": "c24-yusd-supervision-20261020",
@@ -143,18 +144,19 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-20T22:39:34Z",
-      "reviewer": "C24 bottom-up refinement 2026-10-21; D33-ADJUDICATOR concurrence",
+      "reviewedAt": "2026-10-21T00:37:06.297Z",
+      "reviewer": "C24 bottom-up refinement 2026-10-21; Round 3 denominator review",
       "sourcesRefs": [
         "source:0e696f0c7ba7b9ebc2bfba93",
-        "source:90a43d68f109ad9053e34839"
+        "source:90a43d68f109ad9053e34839",
+        "source:1743230f2717699e2390bac8"
       ],
       "searchedSurfacesRefs": [
         "surface:0ec51e3661ebffc7ed97af99",
         "surface:2c4329278134f5f28dc88f7c",
         "surface:b0acaf0592e9df605b931205"
       ],
-      "rationale": "Accountable's independent verification is real, but the retrieved API and issuer methodology do not establish the complete deployment-to-liability join. FIX-ROUND1 proof-limit correction 2026-10-20: the original positive omitted-Base-liability assertion overstates the pin and display evidence; whether Base is included in the compared denominator remains unresolved. Supervision stays unknown because whole-liability assurance scope has not been independently established, not because absence of an examiner or exclusion of Base has been proved. Preserve historical engagement and authority evidence; restore attestation-only when the exact complete liability inputs/netting join is verified."
+      "rationale": "C24 ROUND-3 2026-10-21 resolves the permanent-escrow alternative, not every proof semantic. At current report data.ts 1792541797056, explicit matching-clock pins give ETH native totalSupply 32830055.267757626290848552 and BSC native 1628876.518789426108546679; native adapter balances are both zero and their live runtimes exactly match verified burn/mint sources. Pinned Avalanche83335.237498 and Arbitrum10.090001 bring the four-chain sum to34542277.114046052399395231, which rounds to dashboard total_supply34542277.11. Separately pinned Base11.626401 makes four-plus-Base34542288.740447052399395231: Base is not permanent native-adapter escrow and is not present in this four-chain headline accounting. No undocumented netting or reserve deficiency is inferred. Exact complete current/pending inventory and nested-ZKP aggregation/scope remain undisclosed; the current nested proof total559905.963217848 does not equal the headline and is not silently reinterpreted. Retain unknown/unknown under the whole-token bar; restore only on independently established full-scope comparison. Original August16 authority pins and review start are unchanged. Immutable earlier observations remain historical and this observation supersedes both overclaim and unresolved-native-escrow qualification. Independent Accountable engagement is retained as historical evidence; whole-token assurance scope, not examiner existence, remains the missing positive fact."
     },
     {
       "id": "c24-yusd-binance-liquidity-20261020",
@@ -64679,6 +64681,17 @@
         "location": "September30 SBC Reserve Report, page2 category table and Criteria & Notes3",
         "excerpt": "Cash and cash equivalents $20,185,277; U.S. denominated assets held by Brale in unencumbered accounts that are segregated from other accounts of Brale.",
         "assertion": "Neither the September nor preceding August examination identifies the complete cash-equivalent holdings, deposit account types, withdrawal terms or an immediate final-realization bound. The security page and reserve docs describe typical categories and generic liquidity, not an exact all-category horizon. Withdraw only unsupported immediate liquidity; retain financial assurance and segregation."
+      }
+    },
+    {
+      "id": "source:1743230f2717699e2390bac8",
+      "value": {
+        "url": "https://aegis.accountable.capital:10443/dashboard/YUSD",
+        "observedAt": "2026-10-21T00:37:06.297Z",
+        "datumAsOf": "2026-10-21T00:16:37.056Z",
+        "location": "data.reserves.total_supply; supply_split; exact report-clock RPC totalSupply/balanceOf and verified adapter runtime; original bytes retained in C24-R3-accountable-original.json",
+        "excerpt": "Headline34542277.11; native ETH32830055.267757626290848552+BSC1628876.518789426108546679+Avalanche83335.237498+Arbitrum10.090001=34542277.114046052399395231. Separate Base11.626401; native adapter balances0/0. Full provenance C24-R3-yusd-denominator.json.",
+        "assertion": "The current four-chain dashboard headline is numerically accounted for by independently readable native/remote supplies, without Base. Native adapters use burn/mint and hold zero tokens, so Base is not a duplicate of permanent adapter escrow. Whole-token headline comparison has not been demonstrated. This does not establish the semantics of every nested ZKP or total complete worldwide/pending liability inventory, and is not an insolvency finding."
       }
     }
   ],

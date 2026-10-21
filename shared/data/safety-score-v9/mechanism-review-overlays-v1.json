@@ -22001,14 +22001,18 @@
         {
           "label": "Retrieved independent reserve report",
           "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
+        },
+        {
+          "label": "Incorporated Risk Disclosure Statement rendered and read 2026-10-21; No Security, Banking Risk and Counterparty Risk paragraphs",
+          "url": "https://tether.to/en/legal/?tab=risk-disclosure-statement"
         }
       ],
       "metrics": {},
       "components": {
         "claimAndSegregation": {
           "applicability": "unavailable",
-          "rationale": "Terms provide a personal verified-client redemption claim but no token-specific segregated reserve or enforceable insolvency-priority evidence.",
-          "sourceUrl": "https://tether.to/en/legal/"
+          "rationale": "Round-3 source-scope review on 2026-10-21 preserves the original review start and unavailable component. Binding terms section 4.1 and RID section 3 establish MXNT's personal verified-customer redemption claim against the common reserve model; a dedicated peso-only allocation is not inherently required. The incorporated Risk Disclosure Statement's No Security paragraph expressly says that redemption is a contractual right and does not represent security in favour of a holder. That narrow adverse fact does not itself establish the entire reserve-property or insolvency waterfall: current enforceable reserve segregation, recovery priority versus competing creditors and the full holder-protection bundle remain unestablished. Terms section 11.17 concerns wallet/account property and is not extrapolated to every reserve account. Do not turn missing legal protection into a measured insolvency ranking or award a stronger component on common issuer identity alone.",
+          "sourceUrl": "https://tether.to/en/legal/?tab=risk-disclosure-statement"
         },
         "custodyContinuity": {
           "applicability": "unavailable",

@@ -20864,6 +20864,114 @@
         "source:a194e6ee0e0bb2f015074186",
         "source:e9821d48bfb2051ad5356e94"
       ]
+    },
+    {
+      "reviewId": "nr3-slvon-ondo-ethereum-deployment-20261021",
+      "assetId": "slvon-ondo",
+      "scope": {
+        "kind": "deployment",
+        "deploymentKey": "ethereum:0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4",
+        "controlKinds": [
+          "mint",
+          "bridge"
+        ]
+      },
+      "reviewedAt": "2026-10-21T00:46:14.299Z",
+      "reviewer": "NR3 exact deployment incident review 2026-10-21",
+      "windowStartSec": 1753317155,
+      "windowEndSec": 1792542203,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:2168ff0380a2f121381a9439",
+        "surface:30909ef69d26d82da7806523",
+        "surface:245cf620b916eaa6800a9706",
+        "surface:b6df7e908f60e6380b3fe9fa",
+        "surface:d5b58bfdb41669ede51cbfce"
+      ],
+      "sourcesRefs": [
+        "source:c94a2208dc6d6a15ecdc466a",
+        "source:02cf81d30b9e142242af0086",
+        "source:ec163d7f96c365f2a053aad4",
+        "source:abbc09508b519eebba0b3bb0",
+        "source:c9b03278f775d87b092032d3",
+        "source:c4abcb2b8ea3b7bd9e326cc8",
+        "source:69ce6dace54d60e435f3f550",
+        "source:ad3cb17a71652dd99d7237ac",
+        "source:659f29b5b9229e58ffb0669c",
+        "source:d8b4d22096f52a5a11e69dec"
+      ]
+    },
+    {
+      "reviewId": "nr3-iauon-ondo-ethereum-deployment-20261021",
+      "assetId": "iauon-ondo",
+      "scope": {
+        "kind": "deployment",
+        "deploymentKey": "ethereum:0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf",
+        "controlKinds": [
+          "mint",
+          "bridge"
+        ]
+      },
+      "reviewedAt": "2026-10-21T00:46:14.299Z",
+      "reviewer": "NR3 exact deployment incident review 2026-10-21",
+      "windowStartSec": 1753317299,
+      "windowEndSec": 1792542203,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:8a398320662a34292544df75",
+        "surface:4de062281225d2b54ed29391",
+        "surface:245cf620b916eaa6800a9706",
+        "surface:b6df7e908f60e6380b3fe9fa",
+        "surface:d5b58bfdb41669ede51cbfce"
+      ],
+      "sourcesRefs": [
+        "source:c94a2208dc6d6a15ecdc466a",
+        "source:02cf81d30b9e142242af0086",
+        "source:ec163d7f96c365f2a053aad4",
+        "source:5efcd89abcd9fdea6806ff57",
+        "source:1a42dd3b02a1992ee4d83292",
+        "source:c4abcb2b8ea3b7bd9e326cc8",
+        "source:69ce6dace54d60e435f3f550",
+        "source:ad3cb17a71652dd99d7237ac",
+        "source:659f29b5b9229e58ffb0669c",
+        "source:d8b4d22096f52a5a11e69dec"
+      ]
+    },
+    {
+      "reviewId": "nr3-gldon-ondo-ethereum-deployment-20261021",
+      "assetId": "gldon-ondo",
+      "scope": {
+        "kind": "deployment",
+        "deploymentKey": "ethereum:0x423d42e505e64f99b6e277eb7ed324cc5606f139",
+        "controlKinds": [
+          "mint",
+          "bridge"
+        ]
+      },
+      "reviewedAt": "2026-10-21T00:46:14.299Z",
+      "reviewer": "NR3 exact deployment incident review 2026-10-21",
+      "windowStartSec": 1765398431,
+      "windowEndSec": 1792542203,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:3916b7caa3b2efc2856c1378",
+        "surface:0c90fb00173a7755f93fb5a3",
+        "surface:245cf620b916eaa6800a9706",
+        "surface:b6df7e908f60e6380b3fe9fa",
+        "surface:d5b58bfdb41669ede51cbfce"
+      ],
+      "sourcesRefs": [
+        "source:c94a2208dc6d6a15ecdc466a",
+        "source:02cf81d30b9e142242af0086",
+        "source:ec163d7f96c365f2a053aad4",
+        "source:19baeb2503a9ec76e5450354",
+        "source:4e31618ee0d3729cbadf1855",
+        "source:c4abcb2b8ea3b7bd9e326cc8",
+        "source:69ce6dace54d60e435f3f550",
+        "source:ad3cb17a71652dd99d7237ac",
+        "source:659f29b5b9229e58ffb0669c",
+        "source:d8b4d22096f52a5a11e69dec"
+      ]
     }
   ],
   "sourceObservations": [
@@ -57386,6 +57494,146 @@
         "location": "All1313 corpus rows; case-insensitive Noble/USDN search across complete serialized entries; corpus SHA256 abee481a278fcdccef9c245c57254be0497cf20618c3037fe044813f6d1437fb",
         "excerpt": "Reviewer search result:[] for Noble and USDN; absence from this corpus is not a security guarantee."
       }
+    },
+    {
+      "id": "source:c94a2208dc6d6a15ecdc466a",
+      "value": {
+        "label": "Complete current independent incident tracker query",
+        "url": "https://api.llama.fi/hacks",
+        "observedAt": "2026-10-21T00:46:14.299Z",
+        "location": "All 1313 returned records searched for Ondo, SLVon, IAUon and GLDon",
+        "excerpt": "No matching record; full query metadata retained in round3-defillama-search.json. Name matching alone cannot prove absence."
+      }
+    },
+    {
+      "id": "source:02cf81d30b9e142242af0086",
+      "value": {
+        "label": "Pinned emergency flags and recent verified-ABI emergency/role log search",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/",
+        "observedAt": "2026-10-21T00:46:14.299Z",
+        "location": "Ethereum block 26237357; hash 0x2100e266cfdcddcece62d0a4ba5612a40d41d8858cf27690bb10a8f5bdf1dcf7; timestamp 2026-10-21T00:23:23Z. Filter range 26187357–26237357 inclusive (50001 blocks).",
+        "excerpt": "TokenPauseManager.allTokensPaused, isTokenPaused(exact token), Inspector.globalPause and pausedIds(exact tokenId) are false. Verified token, pause-manager and Inspector ABI event signatures filter role/compliance/pause configuration events for the three exact Ethereum tokens and shared managers; the explicit historical query returns no matching logs (empty result is bounded query evidence, not standalone absence proof). Source/runtime correspondence and all raw results are retained in round3-ethereum-* evidence."
+      }
+    },
+    {
+      "id": "source:ec163d7f96c365f2a053aad4",
+      "value": {
+        "label": "Verified GMToken ABI defining exact role/compliance/pause-manager event filters",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xebbcb2cee51c2fee4062c9c1270dcb98b0b22250",
+        "observedAt": "2026-10-21T00:46:14.299Z",
+        "location": "Verified current token implementation ABI",
+        "excerpt": "Event filter roster includes ComplianceSet, Initialized, NameChanged, RoleAdminChanged, RoleGranted, RoleRevoked, SymbolChanged, TokenPauseManagerSet; Transfer and Approval are not used as incident-absence evidence."
+      }
+    },
+    {
+      "id": "source:abbc09508b519eebba0b3bb0",
+      "value": {
+        "label": "Exact deployment explorer and current ordinary activity",
+        "url": "https://etherscan.io/address/0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4#events",
+        "observedAt": "2026-10-21T00:39:16.673Z",
+        "location": "Exact slvon-ondo Ethereum address page and requested events tab",
+        "excerpt": "No exact deployment exploit, compromise or suspended-token notice was found in this bounded explorer review; ordinary current transactions are displayed. This does not establish immutable controls or an exhaustive lifetime event census."
+      }
+    },
+    {
+      "id": "source:c9b03278f775d87b092032d3",
+      "value": {
+        "label": "Exact deployment creator transaction and creation-block header",
+        "url": "https://etherscan.io/tx/0xb7d2e1b4420955f99ccad9942cb003d18b71ee60e9030fbf7b00f58938033028",
+        "observedAt": "2026-10-21T00:41:37.868Z",
+        "location": "Ethereum creation block 22985464; 0x32ce13a645fde0c1d3ac621458d6483467f73f452984b790ea47d47e998c4f1b; 2025-07-24T00:32:35.000Z",
+        "excerpt": "The exact explorer token page identifies this creator transaction. Its successful receipt and matching block-hash header establish deployment first activity. Receipt retained in evidence/NR3/round3-creation-provenance.json."
+      }
+    },
+    {
+      "id": "source:c4abcb2b8ea3b7bd9e326cc8",
+      "value": {
+        "label": "Rail-provider primary postmortem limits Kelp compromise scope",
+        "url": "https://layerzero.network/blog/layerzero-labs-kelpdao-incident-report",
+        "observedAt": "2026-10-21T00:46:14.299Z",
+        "location": "May 20, 2026 executive summary",
+        "excerpt": "Kelp rsETH used a single-verifier configuration. LayerZero explicitly states: No other OApps, channels or transactions were compromised. This does not imply validator custody or arbitrary owner paths are safe."
+      }
+    },
+    {
+      "id": "source:69ce6dace54d60e435f3f550",
+      "value": {
+        "label": "Current issuer announcements searched for exact token and bridge incident",
+        "url": "https://ondo.finance/blog",
+        "observedAt": "2026-10-21T00:46:14.299Z",
+        "location": "Current issuer announcements index plus exact token/name search; newest displayed announcement October 5, 2026",
+        "excerpt": "No SLVon, IAUon or GLDon issuer control-compromise/loss notice was found on the searched surfaces; the announcement index alone is not a complete lifetime assurance."
+      }
+    },
+    {
+      "id": "source:ad3cb17a71652dd99d7237ac",
+      "value": {
+        "label": "Issuer scope statement on spring bridge incidents and USDY response",
+        "url": "https://ondo.finance/blog/ondo-security-philosophy",
+        "observedAt": "2026-10-21T00:46:14.299Z",
+        "location": "April 23, 2026; Kelp and Drift sections",
+        "excerpt": "Issuer explicitly says Ondo Stocks bridges did not pause and assets remained backed during the Kelp incident. Its targeted pause/freeze response concerns USDY stolen in Drift, not an asserted SLVon/IAUon/GLDon issuer compromise. Structural admin/freeze powers are preserved."
+      }
+    },
+    {
+      "id": "source:659f29b5b9229e58ffb0669c",
+      "value": {
+        "label": "Independent incident reporting searched including recent integration alert",
+        "url": "https://rekt.news/",
+        "observedAt": "2026-10-21T00:46:14.299Z",
+        "location": "Current index and exact Ondo/SLVon/IAUon/GLDon indexed search; NEAR Intents October 8 report followed",
+        "excerpt": "No exact deployment incident was found. NEAR Intents is not silently ignored: the discovered October incident was separately scoped using provider primary statement."
+      }
+    },
+    {
+      "id": "source:d8b4d22096f52a5a11e69dec",
+      "value": {
+        "label": "NEAR provider primary statement scopes integration incident to different asset",
+        "url": "https://x.com/ilblackdragon/status/2105686871200366663",
+        "observedAt": "2026-10-21T00:46:14.299Z",
+        "location": "October 1, 2026 15:50:46 UTC; provider incident statement",
+        "excerpt": "Provider states the Omni/NEAR Intents interaction bug was isolated to USDT on BSC. This does not identify an exploit of the exact Ondo token Ethereum deployment or its OndoOFT lane; no token-specific loss is extrapolated."
+      }
+    },
+    {
+      "id": "source:5efcd89abcd9fdea6806ff57",
+      "value": {
+        "label": "Exact deployment explorer and current ordinary activity",
+        "url": "https://etherscan.io/address/0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf#events",
+        "observedAt": "2026-10-21T00:39:17.584Z",
+        "location": "Exact iauon-ondo Ethereum address page and requested events tab",
+        "excerpt": "No exact deployment exploit, compromise or suspended-token notice was found in this bounded explorer review; ordinary current transactions are displayed. This does not establish immutable controls or an exhaustive lifetime event census."
+      }
+    },
+    {
+      "id": "source:1a42dd3b02a1992ee4d83292",
+      "value": {
+        "label": "Exact deployment creator transaction and creation-block header",
+        "url": "https://etherscan.io/tx/0x50df046231615544658a6e5efd5f80834a941fcd3e2966a15ea4c0e2c63bf170",
+        "observedAt": "2026-10-21T00:41:37.952Z",
+        "location": "Ethereum creation block 22985476; 0x88e13327990ee914f328a6761c0a6434ff30fc058cc6ecd4e14477a521d0cc0e; 2025-07-24T00:34:59.000Z",
+        "excerpt": "The exact explorer token page identifies this creator transaction. Its successful receipt and matching block-hash header establish deployment first activity. Receipt retained in evidence/NR3/round3-creation-provenance.json."
+      }
+    },
+    {
+      "id": "source:19baeb2503a9ec76e5450354",
+      "value": {
+        "label": "Exact deployment explorer and current ordinary activity",
+        "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139#events",
+        "observedAt": "2026-10-21T00:39:18.590Z",
+        "location": "Exact gldon-ondo Ethereum address page and requested events tab",
+        "excerpt": "No exact deployment exploit, compromise or suspended-token notice was found in this bounded explorer review; ordinary current transactions are displayed. This does not establish immutable controls or an exhaustive lifetime event census."
+      }
+    },
+    {
+      "id": "source:4e31618ee0d3729cbadf1855",
+      "value": {
+        "label": "Exact deployment creator transaction and creation-block header",
+        "url": "https://etherscan.io/tx/0xd44893c63ea157f403239cb968ffee492e53423c283b42c222260882e5a1e2a1",
+        "observedAt": "2026-10-21T00:41:38.037Z",
+        "location": "Ethereum creation block 23984676; 0xdd546239f027e7425e6d7fc82805386ad28f5e352928855a241a1fe3ead216be; 2025-12-10T20:27:11.000Z",
+        "excerpt": "The exact explorer token page identifies this creator transaction. Its successful receipt and matching block-hash header establish deployment first activity. Receipt retained in evidence/NR3/round3-creation-provenance.json."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -71467,6 +71715,78 @@
         "kind": "incident-tracker",
         "url": "https://api.llama.fi/hacks",
         "finding": "Fetched complete1313-row incident corpus and searched exact Noble/USDN aliases throughout names, descriptions, chains and source records. No matching event was returned. The historical2022 Wormhole exploit is upstream provider history, not an incident attributed to the later Noble USDN deployment."
+      }
+    },
+    {
+      "id": "surface:2168ff0380a2f121381a9439",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://ondo.finance/blog",
+        "finding": "Searched current issuer index and exact slvon-ondo ticker/name and bridge-security announcements; no scoped issuer exploit/loss notice found. April23 security disclosure explicitly separates continuing Ondo Stocks bridges from USDY targeted freezes."
+      }
+    },
+    {
+      "id": "surface:30909ef69d26d82da7806523",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://etherscan.io/address/0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4#events",
+        "finding": "Exact deployment creator receipt establishes 2025-07-24T00:32:35.000Z first activity. Reviewed address/events surface and pinned current four emergency flags (all false); supplementary verified-ABI filtered 50001-block logs returned no matching events. No lifetime event-log completeness is asserted."
+      }
+    },
+    {
+      "id": "surface:245cf620b916eaa6800a9706",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://api.llama.fi/hacks",
+        "finding": "Searched all1313 current records for Ondo and the three exact tickers; no matches. Corroborative, not standalone absence proof."
+      }
+    },
+    {
+      "id": "surface:b6df7e908f60e6380b3fe9fa",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://rekt.news/",
+        "finding": "Reviewed current index and exact token/name indexed searches; followed NEAR Intents integration report. Provider primary statement isolates that incident to USDT on BSC, not this exact deployment."
+      }
+    },
+    {
+      "id": "surface:d5b58bfdb41669ede51cbfce",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://layerzero.network/blog/layerzero-labs-kelpdao-incident-report",
+        "finding": "Rail provider explicitly limits compromised OApp/channel/transactions to Kelp rsETH; no other OApps were compromised. No unaffected-rail inference is made solely from shared branding."
+      }
+    },
+    {
+      "id": "surface:8a398320662a34292544df75",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://ondo.finance/blog",
+        "finding": "Searched current issuer index and exact iauon-ondo ticker/name and bridge-security announcements; no scoped issuer exploit/loss notice found. April23 security disclosure explicitly separates continuing Ondo Stocks bridges from USDY targeted freezes."
+      }
+    },
+    {
+      "id": "surface:4de062281225d2b54ed29391",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://etherscan.io/address/0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf#events",
+        "finding": "Exact deployment creator receipt establishes 2025-07-24T00:34:59.000Z first activity. Reviewed address/events surface and pinned current four emergency flags (all false); supplementary verified-ABI filtered 50001-block logs returned no matching events. No lifetime event-log completeness is asserted."
+      }
+    },
+    {
+      "id": "surface:3916b7caa3b2efc2856c1378",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://ondo.finance/blog",
+        "finding": "Searched current issuer index and exact gldon-ondo ticker/name and bridge-security announcements; no scoped issuer exploit/loss notice found. April23 security disclosure explicitly separates continuing Ondo Stocks bridges from USDY targeted freezes."
+      }
+    },
+    {
+      "id": "surface:0c90fb00173a7755f93fb5a3",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139#events",
+        "finding": "Exact deployment creator receipt establishes 2025-12-10T20:27:11.000Z first activity. Reviewed address/events surface and pinned current four emergency flags (all false); supplementary verified-ABI filtered 50001-block logs returned no matching events. No lifetime event-log completeness is asserted."
       }
     }
   ]

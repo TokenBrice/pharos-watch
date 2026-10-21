@@ -122,8 +122,8 @@
     ]
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "The complete adapter census at Ethereum block 26236800 (2026-10-20T22:31:11Z) contains eight registered Morpho collateral markets, adding PT-USD3-17DEC2026 to the seven-market October 15 inventory. Every market's loan token, collateral, oracle, IRM and LLTV was read at the same block. The new oracle's exact runtime and Ojo clone target are verified, but nested source independence, price-age assumptions and reachable control closure remain unresolved. Original seven-branch observations retain their own dates. VaultV2 share accounting is distinct from borrower collateral pricing.",
+    "tier": "privileged-internal-pricing",
+    "summary": "Round-three review at Ethereum block 26237350 (hash 0x409e1b5967a2bf90b7bf284b77399a45d844d31b5084e65edbc6b92b79a6ab9c, 2026-10-21T00:21:59Z) re-enumerates all eight registered branches and follows their executable feed, controller and timestamp paths. The binding conservative constraint is positively established internal NAV/credit accounting, including reUSD's governed NAVOracle and 3Jane USD3's keeper-reported upgradeable strategy, not an unresearched external oracle. Ojo minimum selection is not failover; PT-USDat's backup currently resolves to its primary. Signed transport and fresh delivery timestamps do not establish independent valuation or current source data. Original October 15 review and prior pins remain historical provenance; this new review does not establish financial assurance, signer-device custody, funded recovery or a liquidation SLA.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -162,9 +162,9 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-15",
-    "reviewer": "Batch64 pinned oracle review",
-    "confidence": "limited",
+    "reviewedAt": "2026-10-21",
+    "reviewer": "C19 bottom-up refinement 2026-10-21",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Ethereum block 26197390, hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, 2026-10-15T10:43:11Z; complete market, gate and direct/nested configuration census",
@@ -209,6 +209,50 @@
       {
         "label": "Exact PT-USD3 Ojo clone target and source, retrieved 2026-10-20",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5aab95e3c6f9ba0ccfa0a17c2c7235633c7c6585"
+      },
+      {
+        "label": "Round-three complete eight-market, nested runtime/configuration and controller pin; Ethereum 26237350, hash 0x409e1b5967a2bf90b7bf284b77399a45d844d31b5084e65edbc6b92b79a6ab9c, 2026-10-21T00:21:59Z; retrieved 2026-10-21",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "reUSD live governed NAV core: authenticated reports, manual bands, markdown delay and source timestamps; retrieved 2026-10-21",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb45ac37cc7ff7ec317e7d8c308781ece431639f6"
+      },
+      {
+        "label": "reUSD legacy sink explicitly rewrites delivery time and can replay old rounds; retrieved 2026-10-21",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe888df3218e070fae8d90d2ba6fcac5520217484"
+      },
+      {
+        "label": "reUSD current CRE report authentication and workflow binding; retrieved 2026-10-21",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x501c493635c29d5705eb3bd85a046f4b3c5e39be"
+      },
+      {
+        "label": "Current NAV AccessManager source and selector-specific permissions, independently pinned; retrieved 2026-10-21",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3f0da1c363e34802c6f12f9c27276dc0e6696fd8"
+      },
+      {
+        "label": "reUSD stored share-price boundary consumed by SY, not an independent market observation; retrieved 2026-10-21",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd1d104a7515989ac82f1afda15a23650411b05b8"
+      },
+      {
+        "label": "PT-USDat backup router, current target and 3-of-3 owner independently pinned; retrieved 2026-10-21",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e7d88e65e1ae85d216deadef807ebcbf862b178"
+      },
+      {
+        "label": "Exact Wildcat market source, borrower/configuration authority and current accounting state; retrieved 2026-10-21",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc9499006a149c553d18171747ed19aa7c6dd19e2"
+      },
+      {
+        "label": "USD3 delegated share accounting and keeper-report mechanics; retrieved 2026-10-21",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd377919fa87120584b21279a491f82d5265a139c"
+      },
+      {
+        "label": "PT-USD3 immutable 20-percent annual linear discount with zero observation timestamp; retrieved 2026-10-21",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3162556e0a53edef51f97b8d84e7ec1c58f70b7"
+      },
+      {
+        "label": "Chainlink active BTC/USD OCR report quorum; current digest joined to exact historical ConfigSet; retrieved 2026-10-21",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4a3411ac2948b33c69666b35cc6d055b27ea84f1"
       }
     ],
     "branchKindReviews": [
@@ -320,6 +364,53 @@
             "url": "https://api-ethereum-mainnet.n.dwellir.com"
           }
         ]
+      },
+      {
+        "kind": "feed",
+        "branchIds": [
+          "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
+          "0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49",
+          "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+          "0x1d09bf979a167075f5608686642fd3cdb458de742a234175892fa03f23693f6b",
+          "0xc7e49dd404825da16988955201ed22ecf8a7b25f0337db8a698d70d7a9f343ea",
+          "0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
+          "0xe3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7",
+          "0xecabc12c73a97c766d0c6aeb4c15c635630d78158b2ac8370455a09efcc50837"
+        ],
+        "reviewedAt": "2026-10-21T00:49:50Z",
+        "reviewer": "C19 bottom-up refinement 2026-10-21",
+        "confidence": "verified",
+        "rationale": "Complete eight-market census and same-pin outer/nested bytecode, immutable parameters, proxies, feed/role state and exact active OCR configuration were researched at Ethereum26237350. Explorer-published verified deployed runtimes match pinned RPC bytes; partially verified explorer metadata is retained, not represented as an independent local compilation. Known feed mechanics include no Morpho timestamp guard; Ojo requiring both inputs; synthetic or zero timestamps on deterministic PT legs; a same-primary PT-USDat backup; governed internal reUSD NAV; Wildcat credit accounting; and keeper-reported USD3 NAV. Current role candidates were researched through exact explorer event surfaces and checked with hasRole at the pin. This review establishes price-path identity, control reach and limitations, not independent valuation, human signer independence, custody, recovery or funded liquidation. Original sibling-kind review dates remain unchanged.",
+        "sources": [
+          {
+            "label": "Complete eight-market current nested feed and controller pin, Ethereum26237350, 2026-10-21T00:21:59Z; retrieved 2026-10-21",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Current reUSD NAVOracle pricing and timestamp boundary",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb45ac37cc7ff7ec317e7d8c308781ece431639f6"
+          },
+          {
+            "label": "Exact Ojo composition and freshness semantics",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5aab95e3c6f9ba0ccfa0a17c2c7235633c7c6585"
+          },
+          {
+            "label": "PT-USDat exact mutable backup target",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e7d88e65e1ae85d216deadef807ebcbf862b178"
+          },
+          {
+            "label": "Exact Wildcat current-accounting price source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd89124a031f75d5cae29fe15376dfcd86b7cf844"
+          },
+          {
+            "label": "Exact USD3 share-accounting implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd377919fa87120584b21279a491f82d5265a139c"
+          },
+          {
+            "label": "Exact active BTC/USD OCR signature requirements and source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4a3411ac2948b33c69666b35cc6d055b27ea84f1"
+          }
+        ]
       }
     ],
     "branches": [
@@ -327,7 +418,7 @@
         "id": "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
         "label": "cbBTC collateral market 0x64d65c9a",
         "tier": "standard-external",
-        "summary": "The exact creation/runtime-matched MorphoChainlinkOracleV2 source has one nonzero price feed, BASE_FEED_1 0xf4030086522a5beea4988f8ca5b36dbc97bee88c, and no base/quote vault or other nonzero feed. ChainlinkDataFeedLib consumes the answer without checking its timestamp or staleness. Upstream aggregator operator/custody review remains incomplete; no independent feed redundancy is claimed.",
+        "summary": "At block26237350 the sole BTC/USD feed 0xf4030086522a5beea4988f8ca5b36dbc97bee88c points to OCR2 aggregator 0x4a3411ac2948b33c69666b35cc6d055b27ea84f1. Current config digest matches ConfigSet at block25296199:31 registered signers/transmitters, f10 and11 required report signatures. Proxy/aggregator owner is Safe0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca, threshold4/9. This is one aggregated price source, not independent failover or proof of human signer independence.",
         "collateralAssets": [
           "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
         ],
@@ -336,16 +427,16 @@
         ],
         "feeds": [
           {
-            "provider": "ChainlinkOracleV2 adapter (Morpho API classification; feed operator/custody not independently established)",
+            "provider": "Chainlink BTC/USD OCR2; exact report quorum and mutable owner reviewed",
             "path": "baseFeedOne of 0xa6d6950c9f177f1de7f7757fb33539e3ec60182a for market 0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
             "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
             "chain": "ethereum",
-            "observedAt": "2026-10-15"
+            "observedAt": "2026-10-21"
           }
         ],
-        "fallbackBehavior": "Exact-match source calls latestRoundData on the sole nonzero feed, rejects negative answers, and discards the returned timestamps. It has no alternate-feed or age-rejection path; a reverting feed propagates the revert. A zero optional input returns one by construction, not fallback to a second provider. Direct formula inputs and market identity re-read at block 26197390 (2026-10-15T10:43:11Z); historical exact-source proof retained.",
-        "observedAt": "2026-10-15",
-        "observedBlock": 26197390,
+        "fallbackBehavior": "The immutable outer formula discards updatedAt and has no alternate feed or age rejection. Source errors propagate. The shared owner Safe has one enabled ConfirmedTransactionModule 0x2e1b5a40edc922bce489668b11749b8eabd67f6b; its exact source requires manager-preconfirmed transaction hashes before executor delivery, not arbitrary executor pricing authority. Proxy replacement and OCR configuration remain owner-controlled. Current pin26237350; no independent financial valuation or key-custody proof is inferred.",
+        "observedAt": "2026-10-21",
+        "observedBlock": 26237350,
         "collateralParameters": [
           {
             "asset": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
@@ -387,7 +478,7 @@
         "id": "0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49",
         "label": "WBTC collateral market 0x3a85e619",
         "tier": "standard-external",
-        "summary": "The exact-source Morpho oracle composes three required feed legs, not redundant alternatives. Its helper has no timestamp-age guard. Pinned block 26197390 establishes the current EAC aggregators and shared proxy owner; upstream signing/control execution remains unresolved.",
+        "summary": "Current pin26237350 binds all three required WBTC/BTC, BTC/USD and USDC/USD formula legs to OCR2 aggregators a5e3a55c/4a3411ac/54bcc589. Exact active config digests join their ConfigSet logs: report signature thresholds6/16,11/31 and6/16 respectively. All share the same owner Safe4/9, so composition and separate signer sets do not establish independent failover.",
         "collateralAssets": [
           "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
         ],
@@ -396,30 +487,30 @@
         ],
         "feeds": [
           {
-            "provider": "ChainlinkOracle adapter (Morpho API classification; feed operator/custody not independently established)",
+            "provider": "Chainlink WBTC/BTC OCR2; 6-of-16 active report-signature requirement",
             "path": "baseFeedOne of 0xdddd770badd886df3864029e4b377b5f6a2b6b83 for market 0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49",
             "address": "0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23",
             "chain": "ethereum",
-            "observedAt": "2026-10-15"
+            "observedAt": "2026-10-21"
           },
           {
-            "provider": "ChainlinkOracle adapter (Morpho API classification; feed operator/custody not independently established)",
+            "provider": "Chainlink BTC/USD OCR2; 11-of-31 active report-signature requirement",
             "path": "baseFeedTwo of 0xdddd770badd886df3864029e4b377b5f6a2b6b83 for market 0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49",
             "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
             "chain": "ethereum",
-            "observedAt": "2026-10-15"
+            "observedAt": "2026-10-21"
           },
           {
-            "provider": "ChainlinkOracle adapter (Morpho API classification; feed operator/custody not independently established)",
+            "provider": "Chainlink USDC/USD OCR2; 6-of-16 active report-signature requirement",
             "path": "quoteFeedOne of 0xdddd770badd886df3864029e4b377b5f6a2b6b83 for market 0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49",
             "address": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
             "chain": "ethereum",
-            "observedAt": "2026-10-15"
+            "observedAt": "2026-10-21"
           }
         ],
-        "fallbackBehavior": "No alternate-source fallback exists in the reviewed composition; all nonzero formula legs are required and errors propagate. Morpho discards updatedAt. At block 26197390 feeds fdfd9c85/f4030086/8fffffd4 use aggregators 0xa5e3a55cea42b86560a5215094981c300899199d, 0x4a3411ac2948b33c69666b35cc6d055b27ea84f1 and 0x54bcc589d9743e521c64233706fc8cb36d275b07. Each proxy owner is 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca and accessController is zero. Owner-controlled replacement remains possible; upstream quorum/independence is unestablished.",
-        "observedAt": "2026-10-15",
-        "observedBlock": 26197390,
+        "fallbackBehavior": "All nonzero formula legs are required; a failed leg propagates and no alternate source is selected. Morpho discards timestamps. At block26237350 current proxy/aggregator owner is Safe0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca, threshold4/9, with a manager-preconfirmed transaction module; accessController remains zero on the three feed proxies. Required report quorums are verified from each live digest and exact ConfigSet, not inferred from an operator brand. Human independence and key custody remain undisclosed, not redundant-source assurances.",
+        "observedAt": "2026-10-21",
+        "observedBlock": 26237350,
         "collateralParameters": [
           {
             "asset": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
@@ -459,8 +550,8 @@
       {
         "id": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
         "label": "PT-reUSD-10DEC2026 collateral market 0x1e9d6146",
-        "tier": "opaque-or-unknown",
-        "summary": "The configured base feed is an OjoPTFeed clone. At block 26197390 FEED_1 and FEED_2 are 0x570ea68f11e63a9108514eb73dc4f88232c9e7f6 and 0x7cfd3ed001d9d65d4022db4e15c6101db2bbc994, with STALENESS_THRESHOLD 86400 seconds. Source selects the lower answer after timestamp checks; nested input/control closure remains incomplete.",
+        "tier": "privileged-internal-pricing",
+        "summary": "Ojo combines immutable 900-second Pendle market0x13285bcbc27f92b47b4edb99d744c07b48c977c0 PT-to-asset TWAP with a fixed6-percent annual maturity-discount model. Its SY0x9487bd5a3b16ecb5f3184453e3ee75b800141648 reads ExchangeRateOracle0x05175571fe251be44511240caf3ac305a4b3fb1e, then stored share price0xd1d104a7515989ac82f1afda15a23650411b05b8. Current price setter is NAVConsumer0x84d4eaeb10f9e57b67622f667c6c13e22fa4b2b6, fed through the legacy sink by governed NAVOracle0xb45ac37cc7ff7ec317e7d8c308781ece431639f6. This is governed internal NAV, not an unresearched independent market-price source.",
         "collateralAssets": [
           "0xecfafdc7741323a945a163ed068b5a3c43483957"
         ],
@@ -469,16 +560,16 @@
         ],
         "feeds": [
           {
-            "provider": "ChainlinkOracleV2 adapter (Morpho API classification; feed operator/custody not independently established)",
+            "provider": "Ojo minimum of Pendle TWAP with governed reUSD NAV normalization and fixed maturity-discount model",
             "path": "baseFeedOne of 0x217d6ddcdb95112c51657f6270e8c079cfdb51f0 for market 0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
             "address": "0x77ee147391eac11c92817e771860ff4aad265d89",
             "chain": "ethereum",
-            "observedAt": "2026-10-15"
+            "observedAt": "2026-10-21"
           }
         ],
-        "fallbackBehavior": "No failover: the Ojo implementation reads both clone-stored inputs and rejects nonzero updatedAt values older than 86400 seconds. Failure or staleness of either prevents a valid composite result. Lower-price selection is not alternate-source fallback. The outer Morpho helper adds no age check. Input identities and threshold are pinned at block 26197390; their nested pricing/control paths remain unresolved.",
-        "observedAt": "2026-10-15",
-        "observedBlock": 26197390,
+        "fallbackBehavior": "Both Ojo inputs must succeed. FEED_1 0x570ea68f11e63a9108514eb73dc4f88232c9e7f6 returns a900-second market TWAP normalized through current SY/YT indices and updatedAt=block.timestamp. FEED_2 0x7cfd3ed001d9d65d4022db4e15c6101db2bbc994 replaces the zero timestamp of linear6-percent model0x8e42d93eac7dfef8d061dd18a2acfc839e724309 with block time. Neither proves source-data freshness. The active NAV core uses CRE provider0x501c493635c29d5705eb3bd85a046f4b3c5e39be with exact workflow/chain/feed/receiver authentication and36-hour report admission, but also authorized manual writes and protected markdowns. Legacy sink0xe888df3218e070fae8d90d2ba6fcac5520217484 explicitly permits replayed old-round delivery to refresh the legacy timestamp. The stored-price read itself adds no age gate. At pin26237350 current source data was2210 seconds old versus legacy delivery2184 seconds old; no independent NAV validation is inferred. Current manager root is48-hour Timelock0x69ddea332723cf5407151aaf68b9b076557fca93; exact selector roles and Safe3/5 governance are separately pinned.",
+        "observedAt": "2026-10-21",
+        "observedBlock": 26237350,
         "collateralParameters": [
           {
             "asset": "0xecfafdc7741323a945a163ed068b5a3c43483957",
@@ -518,8 +609,8 @@
       {
         "id": "0x1d09bf979a167075f5608686642fd3cdb458de742a234175892fa03f23693f6b",
         "label": "v-wmtUSDC collateral market 0x1d09bf97",
-        "tier": "opaque-or-unknown",
-        "summary": "The sole configured feed wraps Wildcat oracle 0xd89124a031f75d5cae29fe15376dfcd86b7cf844, whose source derives price from market scale factor and delinquency discounts. The wrapper reports block time rather than underlying observation age; Morpho adds no freshness guard. Exact market control and partial-source correspondence remain unresolved.",
+        "tier": "single-source-or-laggy",
+        "summary": "Exact runtime/source correspondence and currentState at pin26237350 resolve the Wildcat path: outer Morpho→wrapper0xe44dcf74ab26ec2e23c4f0922dcb9765379f0aae→immutable oracle0xd89124a031f75d5cae29fe15376dfcd86b7cf844→market0xc9499006a149c553d18171747ed19aa7c6dd19e2. Price is internal credit-accounting scaleFactor times a delinquency discount, not an independently executable cash or market-price quote. Borrower0x5b15f94efc3a6e2c82d7db8efd8d5ba55da11feb controls source-authorized loan/configuration actions; financial recovery remains separate.",
         "collateralAssets": [
           "0xf65460b84c13eeb911303336ab0f9d63cc79839f"
         ],
@@ -528,16 +619,16 @@
         ],
         "feeds": [
           {
-            "provider": "ChainlinkOracleV2 adapter (Morpho API classification; feed operator/custody not independently established)",
+            "provider": "Wildcat internal loan accounting and fixed delinquency-discount model",
             "path": "baseFeedOne of 0x6969a0296d9fec77e794651469e362105d2307e8 for market 0x1d09bf979a167075f5608686642fd3cdb458de742a234175892fa03f23693f6b",
             "address": "0xe44dcf74ab26ec2e23c4f0922dcb9765379f0aae",
             "chain": "ethereum",
-            "observedAt": "2026-10-15"
+            "observedAt": "2026-10-21"
           }
         ],
-        "fallbackBehavior": "No alternate oracle/feed fallback exists in the reviewed wrapper chain; Wildcat price() errors propagate. Wrapper timestamps equal block time, not underlying-price observation time. The nested oracle's partially verified source references market 0xc9499006a149c553d18171747ed19aa7c6dd19e2, scaleFactor and timeDelinquent. At block 26197390 the oracle market getter independently matches this Wildcat market; gracePeriod=172800, intermediaryPeriod=604800, finalPeriod=5184000, gracePenaltyBps=100, intermediaryPenaltyBps=975 and maxDiscountBps=9900. These settings and the curator's disclosed private-credit role do not establish legal recovery, market solvency or complete executable/control correspondence.",
-        "observedAt": "2026-10-15",
-        "observedBlock": 26197390,
+        "fallbackBehavior": "No independent fallback exists and source reverts propagate. Wrapper updatedAt is call time. Current oracle parameters at26237350: grace172800s, intermediary604800s, final5184000s, penalty boundaries100/975/9900bps. currentState computes interest/delinquency accounting, not a liquidator bid or solvency attestation. Exact current borrower, factory0xdd7dd3b5076cf89440d05585ff56d246386207be, archController0xfeb516d9d946dd487a9346f6fee11f40c6945ee4 and SphereX engine0x4f90c0a26cc2ad22ee98398dcc02bbe314a1766a are retained. The source exposes borrower-authorized interest/configuration and borrowing paths, not an independent external valuation. No funded backstop, financial assurance or custody independence follows.",
+        "observedAt": "2026-10-21",
+        "observedBlock": 26237350,
         "collateralParameters": [
           {
             "asset": "0xf65460b84c13eeb911303336ab0f9d63cc79839f",
@@ -577,8 +668,8 @@
       {
         "id": "0xc7e49dd404825da16988955201ed22ecf8a7b25f0337db8a698d70d7a9f343ea",
         "label": "PT-USDat-14JAN2027 collateral market 0xc7e49dd4",
-        "tier": "opaque-or-unknown",
-        "summary": "The direct oracle is a MetaOracleDeviationTimelock clone. At block 26197390 primary/current oracle is 0xe61cd215d2724e7eb0dfbb719efe72996b300c8a and backup is 0x4e7d88e65e1ae85d216deadef807ebcbf862b178. Source supports challenge/healing transitions and a revert-triggered alternate-price attempt. Nested oracle/control closure remains incomplete.",
+        "tier": "single-source-or-laggy",
+        "summary": "At block26237350 the meta-oracle's primary/current is0xe61cd215d2724e7eb0dfbb719efe72996b300c8a. Its nominal backup0x4e7d88e65e1ae85d216deadef807ebcbf862b178 is an OracleRouter whose current oracle is exactly that same primary. The primary's sole feed0x1496c684b35eac1bd68c46ffe727cf0e37199327 uses a900-second PT-to-asset TWAP of market0x4ccf6deb3d1895373f604b418ff55d8adae8b846. Nominal alternate addresses therefore do not provide independent fallback.",
         "collateralAssets": [
           "0xba96292ee7673e3b546cc90db6d97111cd9a314f"
         ],
@@ -587,16 +678,16 @@
         ],
         "feeds": [
           {
-            "provider": "MetaOracleDeviationTimelock clone; primary and backup identities pinned",
-            "path": "IOracle.price() at 0x034f45accb8949e55366bec6d4023d1c1e372dad; primary/current 0xe61cd215d2724e7eb0dfbb719efe72996b300c8a, backup 0x4e7d88e65e1ae85d216deadef807ebcbf862b178 at block 26154200",
+            "provider": "MetaOracleDeviationTimelock with currently same-primary backup router",
+            "path": "Pinned26237350: primary/current0xe61cd215d2724e7eb0dfbb719efe72996b300c8a; backup router0x4e7d88e65e1ae85d216deadef807ebcbf862b178 resolves to that same primary",
             "address": "0x034f45accb8949e55366bec6d4023d1c1e372dad",
             "chain": "ethereum",
-            "observedAt": "2026-10-15"
+            "observedAt": "2026-10-21"
           }
         ],
-        "fallbackBehavior": "If selected-oracle price() reverts, the implementation calls the alternate; failure of both propagates. Permissionless challenge/healing transitions use stored deviation/timelock conditions. At block 26197390 deviationThreshold is 10000000000000000, challengeTimelockDuration 14400 seconds, healingTimelockDuration 43200 seconds, and isChallenged/isHealing are false. Configuration does not prove independent providers or correct prices.",
-        "observedAt": "2026-10-15",
-        "observedBlock": 26197390,
+        "fallbackBehavior": "The revert-triggered alternate attempt reaches the same primary at this pin, so a common primary failure is not rescued. Deviation threshold1-percent, challenge14400s, healing43200s, neither active. The backup target is mutable by Safe0x479bb35f7c69d06baff9096aa7d44b59e5d508fd, threshold3/3, with no enabled modules at the pinned complete page. Its source has unrestricted owner setOracle, not a delay guarantee. Pendle feed timestamps are synthetic block time; SY0x7a7de491e1be5287874904e2b7c8488249a4d0a9 returns constant1e18, not an independent USD liquidity quote. Price/model data and report delivery are not financial assurance.",
+        "observedAt": "2026-10-21",
+        "observedBlock": 26237350,
         "collateralParameters": [
           {
             "asset": "0xba96292ee7673e3b546cc90db6d97111cd9a314f",
@@ -637,7 +728,7 @@
         "id": "0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
         "label": "wstETH collateral market 0xb323495f",
         "tier": "standard-external",
-        "summary": "The exact-source oracle composes a WstETH adapter, using tokensPerStEth and immutable stETH/ETH feed 0x86392dc19c0b719886221c78ab11eb8cf5c52812, with the configured quote feed. These are conversion legs, not failover sources. Current proxy aggregators and shared owner are pinned; upstream signer/control closure remains unresolved.",
+        "summary": "At pin26237350 the exact WstETHPriceFeed combines wstETH's stETH-share conversion with Chainlink stETH/ETH0x86392dc19c0b719886221c78ab11eb8cf5c52812; the Morpho quote leg is0x986b5e1e1755e3c2440e960477f25201b0a8bbd4. Their live OCR aggregators c9c8efa8/26ae9b95 each require6 signatures from16 registered signers, matched to current config digests. Both share owner Safe4/9, not independent failover.",
         "collateralAssets": [
           "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0"
         ],
@@ -646,23 +737,23 @@
         ],
         "feeds": [
           {
-            "provider": "ChainlinkOracle adapter (Morpho API classification; feed operator/custody not independently established)",
+            "provider": "WstETH conversion plus Chainlink stETH/ETH OCR2; 6-of-16 active report-signature requirement",
             "path": "baseFeedOne of 0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2 for market 0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
             "address": "0x4f67e4d9bd67efa28236013288737d39aef48e79",
             "chain": "ethereum",
-            "observedAt": "2026-10-15"
+            "observedAt": "2026-10-21"
           },
           {
-            "provider": "ChainlinkOracle adapter (Morpho API classification; feed operator/custody not independently established)",
+            "provider": "Chainlink quote-leg OCR2; 6-of-16 active report-signature requirement",
             "path": "quoteFeedOne of 0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2 for market 0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
             "address": "0x986b5e1e1755e3c2440e960477f25201b0a8bbd4",
             "chain": "ethereum",
-            "observedAt": "2026-10-15"
+            "observedAt": "2026-10-21"
           }
         ],
-        "fallbackBehavior": "No alternate-source fallback exists. The WstETH adapter reads tokensPerStEth and its immutable stETH/ETH feed; Morpho consumes the quote leg without an updatedAt age check. At block 26197390 stETH/ETH aggregator is 0xc9c8efa84eab332d1950e5ba0a913b090775825c and quote aggregator is 0x26ae9b951f84e6c28f58a92133c30e312d42e0fe. Both proxy owners are 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca and accessController is zero. Aggregator replacement remains possible; independence is unestablished.",
-        "observedAt": "2026-10-15",
-        "observedBlock": 26197390,
+        "fallbackBehavior": "Both required conversion legs must succeed; no failover exists. wstETH resolves to stETH0xae7ab96520de3a18e5e111b5eaab095312d7fe84 share accounting, not a second market-price source. Morpho does not reject old updatedAt. At pin26237350 exact OCR configs are bound to their current digests and source-enforced f+1 signatures; feed owners remain Safe0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca, threshold4/9, with manager-preconfirmed transaction module. The human/operator independence and signer-device custody are not inferred from distinct keys.",
+        "observedAt": "2026-10-21",
+        "observedBlock": 26237350,
         "collateralParameters": [
           {
             "asset": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
@@ -703,7 +794,7 @@
         "id": "0xe3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7",
         "label": "3Jane USD3 collateral market 0xe3df58f9",
         "tier": "privileged-internal-pricing",
-        "summary": "The seventh registered market uses 3Jane USD3 collateral, not Reserve Protocol USD3. Fully verified MorphoChainlinkOracleV2 source prices it through BASE_VAULT.convertToAssets(1000000), with all price-feed inputs zero. This internal ERC-4626 rate path remains price-sensitive through the upgradeable USD3 proxy; EIP-1967 implementation=0xd1f1c3f485063712873285bf4ef25ab068f13893 and admin=0x41c838664a9c64905537ff410333b9f5964cc596 at block 26197390. Downstream controls and executable correspondence remain unclosed.",
+        "summary": "The internal3Jane USD3 path is fully traced at pin26237350: immutable Morpho BASE_VAULT.convertToAssets(1000000), proxy implementation0xd1f1c3f485063712873285bf4ef25ab068f13893, then delegated TokenizedStrategy0xd377919fa87120584b21279a491f82d5265a139c. convertToAssets uses stored reported strategy assets/share supply; keeper report harvests loan/NAV state. This is governed internal credit valuation, not an independent external feed or Reserve Protocol USD3.",
         "collateralAssets": ["0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc"],
         "chains": ["ethereum"],
         "feeds": [
@@ -712,13 +803,13 @@
             "path": "Morpho oracle 0x68b4c2b2b2e245ab54a3bd55dfd5a9d84f029c06 BASE_VAULT.convertToAssets(1000000)",
             "address": "0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc",
             "chain": "ethereum",
-            "observedAt": "2026-10-15",
-            "observedBlock": 26197390
+            "observedAt": "2026-10-21",
+            "observedBlock": 26237350
           }
         ],
-        "fallbackBehavior": "No alternate feed or vault fallback exists in the exact oracle source. Zero optional feed/vault inputs are identity factors. A convertToAssets revert propagates. USD3's proxy implementation controls the rate; fresh implementation/admin storage observations at block 26197390 identify the proxy configuration but do not certify downstream authorization or financial assurance.",
-        "observedAt": "2026-10-15",
-        "observedBlock": 26197390,
+        "fallbackBehavior": "No alternate feed or age gate exists; conversion errors propagate. ProxyAdmin0x41c838664a9c64905537ff410333b9f5964cc596 is currently owned by Timelock0x3d3c41419ab401cd25055e8f9421d7d96d887885 with604800-second delay; proposer/canceller0x33333333bd7045f1a601a1e289d7ab21036fb5ef and executors that account plus0x1226858e04b9d077258f153275613734421cd06b are independently checked at26237350. Management is Timelock0x1dccd4628d48a50c1a7adea3848bcc869f08f8c2 with86400-second current delay; keeper is relayer0xc22158100b823e1ef612fba265941efe9e7d7975. Source-defined reporting and upgrade powers do not establish continuous independent valuation or funded redemption.",
+        "observedAt": "2026-10-21",
+        "observedBlock": 26237350,
         "collateralParameters": [
           {
             "asset": "0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc",
@@ -755,23 +846,23 @@
       {
         "id": "0xecabc12c73a97c766d0c6aeb4c15c635630d78158b2ac8370455a09efcc50837",
         "label": "PT-USD3-17DEC2026 collateral market 0xecabc12c",
-        "tier": "opaque-or-unknown",
-        "summary": "The eighth registered market lends USDC against Pendle PT-USD3-17DEC2026. Its immutable MorphoChainlinkOracleV2 has one nonzero feed, the OjoPTFeed clone 0x8252e5bf13d74e483841035043e75d7e24c315af. The exact runtime matches the verified source; nested FEED_1/FEED_2 source independence, effective upstream observation-age protection and reachable pricing controls remain unestablished, so no standard-external quality is assigned.",
+        "tier": "privileged-internal-pricing",
+        "summary": "At pin26237350 Ojo's first leg0x3c95f7d9e6a1f3be25aa53610573b4bac672581b is a900-second PT-to-asset TWAP of Pendle market0x4a5067c3ff1abb7449244025b0e37feaf77d8e3e, normalized through SY0xea3bc608f32847b97965c5e1648bdfcd4c2c40d0 and current SY/YT indices. That SY reads3Jane USD3.convertToAssets(1e18), exposing the same internally reported credit NAV and upgrade path as the direct USD3 branch. The second leg0xf3162556e0a53edef51f97b8d84e7ec1c58f70b7 is a fixed20-percent annual maturity discount, not another independent provider.",
         "collateralAssets": ["0x7f47c3e6b2c00fc4eb4d5ae50d0ab0ab6888eb4d"],
         "chains": ["ethereum"],
         "feeds": [
           {
-            "provider": "OjoPTFeed composition; nested source/control assurances unresolved",
+            "provider": "Ojo minimum of Pendle TWAP with internal USD3 NAV normalization and fixed20-percent maturity-discount model",
             "path": "BASE_FEED_1 of Morpho oracle 0x716021a5d598c22851764923271c90a0aa704754",
             "address": "0x8252e5bf13d74e483841035043e75d7e24c315af",
             "chain": "ethereum",
-            "observedAt": "2026-10-20",
-            "observedBlock": 26236800
+            "observedAt": "2026-10-21",
+            "observedBlock": 26237350
           }
         ],
-        "fallbackBehavior": "Pinned EIP-1167 clone runtime delegates to verified OjoPTFeed 0x5aab95e3c6f9ba0ccfa0a17c2c7235633c7c6585. It reads both configured feeds and returns the lower answer; either revert propagates. The 86400-second check ignores a zero updatedAt, and a wrapper-produced timestamp would not prove freshness of its underlying observation. At the pin FEED_1 is 0x3c95f7d9e6a1f3be25aa53610573b4bac672581b and FEED_2 is 0xf3162556e0a53edef51f97b8d84e7ec1c58f70b7. Their complete source/control graphs are not certified here. The outer Morpho helper discards returned timestamps. Two inputs do not establish independent redundancy.",
-        "observedAt": "2026-10-20",
-        "observedBlock": 26236800,
+        "fallbackBehavior": "Both Ojo inputs must succeed; either revert propagates. Pendle supplies synthetic updatedAt=block.timestamp. The immutable linear-discount leg returns updatedAt=0, deliberately bypassing Ojo's nonzero-timestamp24-hour check; it computes time-to-expiry rather than observing a market. Outer Morpho discards timestamps. SY implementation0x4cf6a53ed5116191b169586cfd9329e2b71bbe32 reads current USD3 reported share conversion; its proxy admin0xa28c08f165116587d4f3e708743b4dee155c5e64 is owned by Safe0x8119ec16f0573b7dac7c0cb94eb504fb32456ee1, threshold3/5. SY owner is source-verified PendleGovernanceProxy0x2ad631f72fb16d91c4953a7f4260a97c2fe2f31e with current governance roles pinned. No independent fallback, financial valuation or source-data age bound is manufactured by these timestamps.",
+        "observedAt": "2026-10-21",
+        "observedBlock": 26237350,
         "collateralParameters": [
           {
             "asset": "0x7f47c3e6b2c00fc4eb4d5ae50d0ab0ab6888eb4d",

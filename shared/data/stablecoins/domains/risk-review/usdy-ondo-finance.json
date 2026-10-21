@@ -18,7 +18,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "USDY has six issuer-native liability surfaces on Ethereum, Plume, Sui, Aptos, Stellar, and Noble. Arbitrum, Mantle, Sei, BNB Chain, and Tempo are LayerZero burn/mint representations sourced from Ethereum; Solana is also a LayerZero bridge representation with a historically observed 1-of-2 SPL mint multisig. Its BB7 authority is off-curve, so System ownership does not establish an independently signing key or a token-level bypass; its exact controlling-program reach remains unresolved. Osmosis, Mantra, and Injective are Noble-sourced IBC vouchers with reviewed escrow matches. DefiLlama also reports trace Penumbra and Glue labels (~$500 combined) that have no canonical chain mapping and remain an accepted bounded pool.",
+    "summary": "USDY has reviewed issuer-native liability surfaces on Ethereum, Plume, Sui, Aptos, Stellar, and Noble. Arbitrum, Mantle, Sei, BNB Chain, Tempo and Solana have LayerZero burn/mint routes. BNB Chain and Tempo also have issuer-listed InstantManagers with current local mint authority; independent-liability versus bridge accounting for those additional workflows is not established by the route inventory. Solana's SPL mint authority is 1-of-2 between the OFT authority and a Squads V3 authority PDA governed by a separately observed 4-of-7 parent; it is not a plain independently signing key. Osmosis, Mantra, and Injective are Noble-sourced IBC vouchers with reviewed escrow matches. DefiLlama's trace Penumbra and Glue labels remain an accepted bounded pool.",
     "reviewedAt": "2026-08-16",
     "reviewer": "OpenAI Codex C01 bridge-boundary review",
     "confidence": "verified",
@@ -237,7 +237,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Bridge representation verified at Solana slot 439719046: the SPL mint authority is 1-of-2 multisig 8n2uiRUd1A9NN78PKESkJe6k6zMqtKCZh3MrK1j9qkB1 with signers 7YNReenG6AXgVUfmSizt6hoVXrznS4zDdgCj1UTLJ2S3 (Ondo's documented Solana OFT adapter) and BB7W8gZouRNRGyr8Djx8zyoRcgckrDXkKiMjNMtPwaAQ. Source-scope correction verified 2026-10-20: BB7 is off the Ed25519 curve and cannot independently sign with a private key. Its reported System ownership does not prove EOA authority or a route-bypassing mint path. Exact controlling-program and invocation reach remain unresolved in bridgeRouteRisk.controls[1]; the original historical slot and 1-of-2 observation are retained.",
+        "reviewNote": "Original slot 439719046 observation retained: SPL mint authority is 1-of-2 multisig 8n2uiRUd1A9NN78PKESkJe6k6zMqtKCZh3MrK1j9qkB1, signers OFT authority 7YNReenG6AXgVUfmSizt6hoVXrznS4zDdgCj1UTLJ2S3 and BB7W8gZouRNRGyr8Djx8zyoRcgckrDXkKiMjNMtPwaAQ. Current finalized slot 459430927 (2026-10-21T00:34:58Z, C9yMG87wL2hT3KnnXYej4xbFPQyQDtYXZ18fcWHkNbG) confirms the same SPL structure. BB7 is the canonical authority-index-1/bump-253 PDA of immutable Squads V3 program SMPLecH534NA9acpos4G6x7uf3LWbCAwZQE9e8ZekMu and parent Ed13d9rMRXptEmCtRnZfuKX7Jf6gxLJLKpsQZd8uPmJP, currently 4-of-7. Verified program source and an executed historical Squads CPI establish governed signing reach, including the SPL mint path outside OFT limits; no independent EOA or measured malicious mint is claimed. Detailed source/runtime and separate freeze-authority scope are in controls[1].",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "sources": [
@@ -482,7 +482,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At BNB latest block 119968874, the USDY OFT adapter 0xae6a049cdda7536af3875b3daaf34f24be5cf00c returned token() = USDY 0x608593d17a2decbbc4399e4185be4922f97ed32e and endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c; owner() returned Safe 0x79dfe7e9a32a9ab32aa77ccf46d788e7290afa3d, whose Safe reads returned threshold 4 and seven owners. Ondo's address inventory and bridge docs identify the BNB USDY deployment and OFT burn/mint path.",
+        "reviewNote": "Original block 119968874 observation retained. At current BNB block 128842981 (2026-10-21T00:35:04Z, 0x1fb72c7b37fdca1c63c2ca50a7231cec8eb3f0975a5a83383d4e136cf7cb16bb), token implementation is verified USDY 0x46008bfc43af32e0250c442d4de8f6d7a78f9955. Token and OFT adapter 0xae6a049cdda7536af3875b3daaf34f24be5cf00c are unpaused; adapter token/endpoint/owner match the original inventory. Safe 0x79dfe7e9a32a9ab32aa77ccf46d788e7290afa3d remains 4-of-7, sole token default admin, one of THREE minters, and adapter owner. Other minters are the OFT adapter and verified issuer-listed USDY_InstantManager 0x9ba360087075a4cef548eed71eed197bf4cfa4e2; the latter directly mints after subscription and currently has subscriptions/redemptions unpaused. This is not evidence that all BNB balances are exclusively Ethereum-bridge liabilities. Token pausers are the governance Safe and separately observed 1-of-9 Safe 0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97; the latter is also an adapter pauser. No complete incident, custody, or liability-partition certificate is claimed.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "bsc",
         "controllerAddress": "0x79dfe7e9a32a9ab32aa77ccf46d788e7290afa3d",
@@ -521,7 +521,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Tempo latest block 37998104, the USDY OFT adapter 0xd45c2377241f1da765570e0d57920f1cf4855bcb returned token() = TIP-20 USDY 0x20c000000000000000000000d479b9f6ec0ceff9 and endpoint() = LayerZero EndpointV2 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c; the TIP-20 decimals() read returned 6. Its EIP-1967 admin slot resolved to ProxyAdmin 0x340c691280b477a6316cb35d8fd4b628d1cccfc3, whose owner() returned 0x3952dec8f7c3e844c27d173f5eb18068e685eb3b. Ondo's address inventory and bridge docs identify the Tempo USDY deployment and OFT burn/mint path.",
+        "reviewNote": "Original block 37998104 observation retained. At current Tempo block 45110477 (2026-10-21T00:37:09Z, 0xcf731285641b88c357b44bf6012d4150536ae7bcfef6678ada44ac17a0ccc4c0), the OFT adapter still returns TIP-20 USDY 0x20c000000000000000000d479b9f6ec0ceff9 and endpoint 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c. Its implementation is 0x14c69c0abf429fd2504974f5fd7ffe57ae923274 and admin contract 0x340c691280b477a6316cb35d8fd4b628d1cccfc3 is owned by 4-of-7 Safe 0x3952dec8f7c3e844c27d173f5eb18068e685eb3b. TIP-20 token paused=false, decimals=6, supplyCap=340282366920938463463374607431768211455 raw units. The Safe has DEFAULT_ADMIN_ROLE, ISSUER_ROLE and UNPAUSE_ROLE, but not PAUSE_ROLE. Both the OFT adapter and issuer-listed InstantManager 0x7e2a9d8b3b97eda5922cdb320fc96e0ff4c8b4c5 have ISSUER_ROLE. These positive membership reads do not enumerate all holders or establish exclusively bridged liabilities. Adapter paused()/owner() revert and must not be inferred from BNB's different implementation; Tempo source-bound adapter pause/peer/rate and complete incident scope remain unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "tempo",
         "controllerAddress": "0x3952dec8f7c3e844c27d173f5eb18068e685eb3b",
@@ -658,11 +658,15 @@
         "signerCount": 2,
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
-          "trustedPeerOrRemote": "Signer 7YNReenG6AXgVUfmSizt6hoVXrznS4zDdgCj1UTLJ2S3 is documented as Ondo's Solana OFT adapter; the second signer BB7W8gZouRNRGyr8Djx8zyoRcgckrDXkKiMjNMtPwaAQ is not proven route-bound.",
-          "caps": "No numeric cap was verified. BB7W8gZouRNRGyr8Djx8zyoRcgckrDXkKiMjNMtPwaAQ is off-curve; neither System ownership nor its presence in the SPL multisig proves an independently signing key or an executable mint path outside LayerZero. Exact program-derived signing reach remains unresolved.",
-          "pausersAdminsUpgraders": "The historically observed SPL mint authority is the 1-of-2 multisig 8n2uiRUd1A9NN78PKESkJe6k6zMqtKCZh3MrK1j9qkB1; the second off-curve authority's exact controlling program, invocation scope, custody and operational purpose remain unresolved."
+          "trustedPeerOrRemote": "At finalized slot 459430927, OFT authority 7YNReenG6AXgVUfmSizt6hoVXrznS4zDdgCj1UTLJ2S3 is owned by program BGJQtQSPxa2nR9BodnjYb3Pbgft7nX5heQk3dr3uaFUB. The other SPL signer BB7W8gZouRNRGyr8Djx8zyoRcgckrDXkKiMjNMtPwaAQ is exactly the Squads V3 authority-index-1 PDA of parent Ed13d9rMRXptEmCtRnZfuKX7Jf6gxLJLKpsQZd8uPmJP (bump 253); it is not constrained to OFT messages.",
+          "signingModel": "The token's SPL authority remains 1-of-2, not 4-of-7. Separately, the BB7 signing branch is governed by the current Squads V3 parent's threshold 4 and seven members. Successful transaction 2Xy1TrYChxyQj1pftvPwqyzMYN1uZALJ5EhnZhEhRpK3WFbaUuxxGdxQK43azAsywpnmDrdKCJmkCQLmx5qjWmg at slot 453948386 executed authority index 1/bump 253; its retained proposal has four approvals. Neither branch establishes independent operators or key custody.",
+          "caps": "No token-level numeric cap was verified. The immutable verified Squads V3 program supports approved arbitrary invoke_signed calls with BB7's authority seeds. BB7 can satisfy the token's 1-of-2 SPL mint authority under its 4-of-7 Squads governance, independently of OFT peer/rate checks. This is a source-bound governed capability, not an observed exploit or an independently signing EOA.",
+          "pausersAdminsUpgraders": "Same-slot mint freeze authority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK is a different Squads V4 vault: parent CDCCa8yPj9eyE57ZT4NJ1pbNdeFCcJEoTyy4UjNbC3pF, vault index 0/bump 255, current threshold 3 with eight permission-mask-7 members, timelock 0 and configAuthority zero. Successful May 1 transaction 5pKQL7J4NV4qS4WfprNbCo9kFigGRYSY7aeBQV64Pc11aMSC9x8o2oe5Y5B4LGkoWjYuMUYRwAwJf2dfm7zP17tb at slot 416895530 executed Squads V4 VaultTransactionExecute into SPL SetAuthority. It is not a freeze/unfreeze or clean-history witness. The BB7 Squads V3 executable has no upgrade authority; this does not certify the separate V4/OFT program upgrade graphs."
         },
         "canRaiseCap": true,
+        "bypassSurfaces": [
+          "Source-bound governed SPL mint path: BB7 is an immutable Squads V3 authority PDA whose current 4-of-7 parent can execute arbitrary approved instructions and satisfy the destination token's 1-of-2 SPL mint authority outside OFT rate limits. This replaces neither the SPL threshold with 4-of-7 nor the historical pin, and is not an independent EOA or measured malicious mint."
+        ],
         "observedAt": "2026-08-16",
         "observedBlock": 439719046,
         "sources": [
@@ -685,9 +689,128 @@
           {
             "label": "Solana primary PDA signing semantics; off-curve authorities have no private key (source-scope correction verified 2026-10-20)",
             "url": "https://solana.com/docs/core/pda"
+          },
+          {
+            "label": "Immutable Squads V3 verified source: exact authority seeds and invoke_signed execution",
+            "url": "https://github.com/Squads-Protocol/squads-mpl/tree/c95b7673d616c377a349ca424261872dfcf8b19d"
+          },
+          {
+            "label": "Squads V3 verified runtime hash; verification remains dated 2025-01-16",
+            "url": "https://verify.osec.io/status/SMPLecH534NA9acpos4G6x7uf3LWbCAwZQE9e8ZekMu"
+          },
+          {
+            "label": "Actual Squads V3 BB7 authority invocation, slot 453948386",
+            "url": "https://solscan.io/tx/2Xy1TrYChxyQj1pftvPwqyzMYN1uZALJ5EhnZhEhRpK3WFbaUuxxGdxQK43azAsywpnmDrdKCJmkCQLmx5qjWmg"
+          },
+          {
+            "label": "Squads V4 primary freeze-vault PDA derivation",
+            "url": "https://github.com/Squads-Protocol/v4/blob/main/sdk/multisig/src/pda.ts"
+          },
+          {
+            "label": "Squads V4 primary multisig account layout",
+            "url": "https://github.com/Squads-Protocol/v4/blob/main/sdk/multisig/src/generated/accounts/Multisig.ts"
           }
         ],
-        "evidence": "At Solana slot 439719046, the USDY SPL mint authority was 1-of-2 multisig 8n2uiRUd1A9NN78PKESkJe6k6zMqtKCZh3MrK1j9qkB1 with signers 7YNReenG6AXgVUfmSizt6hoVXrznS4zDdgCj1UTLJ2S3 and BB7W8gZouRNRGyr8Djx8zyoRcgckrDXkKiMjNMtPwaAQ. The first is Ondo's documented Solana OFT adapter. ORCHESTRATOR-AUTHORIZED adverse-pin correction, owner review required: the prior assertion that BB7 was a plain independently signing key with a proven uncapped SPL mint bypass was inferred from System ownership and is withdrawn. Decoding this exact 32-byte address and testing Edwards25519 point decompression establishes that it is off-curve; Solana's primary PDA documentation states that no private key exists for such an authority. The current explorer's Squad Vault label is only a research lead, not a verified Squads parent, quorum or execution certificate. The exact controlling-program invocation path remains unresolved. Original observation date, slot, multisig threshold, cap-raising flag, failure-domain identities and unresolved incident/custody facts remain unchanged; no new favorable governance, cap, delay or incident claim is made."
+        "evidence": "Original slot 439719046/August 16 observation and the SPL 1-of-2 threshold are preserved. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required: the old inference that System-owned BB7 was a plain independently signing key remains withdrawn. Subsequent current evidence establishes a different, governed bypass capability: at finalized slot 459430927/hash C9yMG87wL2hT3KnnXYej4xbFPQyQDtYXZ18fcWHkNbG, BB7 canonically derives from Squads V3 parent Ed13d9rMRXptEmCtRnZfuKX7Jf6gxLJLKpsQZd8uPmJP, authority index 1/bump 253, with current 4-of-7 membership. ProgramData Q1xCTDDfdfB4jk2Wicw1HdutFVdRik5LMKYMcZdT2rU has upgradeAuthority=None and zero-trimmed executable SHA256 72da599d9ee14b2a03a23ccfa6f06d53eea4a00825ad2191929cbd78fb69205c, exactly matching the retained OtterSec verified build and commit c95b7673d616c377a349ca424261872dfcf8b19d. The verifier's January 16, 2025 date is not renewed. That exact source implements arbitrary approved invoke_signed execution with BB7's seeds; the retained successful October 6 transaction independently witnesses the path. Current separate freeze authority is a 3-of-8 Squads V4 vault, not this 4-of-7 V3 parent. Unknown custody, complete operational/incident disposition, separate V4/OFT upgrade reach and full execution-scope completeness remain unknown. No malicious mint, clean incident history, or whole-control 4-of-7 replacement is asserted."
+      },
+      {
+        "id": "usdy-bsc-layerzero-governance-safe",
+        "label": "USDY BNB Chain token administrator and OFT owner Safe",
+        "routeRefs": ["bsc:0x608593d17a2decbbc4399e4185be4922f97ed32e"],
+        "capabilities": ["bridge-mint", "admin", "rate-limit", "peer-config"],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x79dfe7e9a32a9ab32aa77ccf46d788e7290afa3d",
+        "failureDomainKeys": ["protocol:layerzero", "safe:bsc:0x79dfe7e9a32a9ab32aa77ccf46d788e7290afa3d"],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 7,
+        "safe": {
+          "owners": ["0x59702bb067eeae05ac2c1b8c6f30dffd1cc29893", "0x40482b9538a418cb62b92f14cc13d20092b3dbb4", "0x189d409b807ac1949fe82c143270992fe9457607", "0x60f030d621a4ab27dff024a8e43eb36e2d95fb02", "0xaa1e4eef723ceadd137b3ad39ea540da4b092f8e", "0x74a4c329aa5a6bfa16bd32baf37209f4c632173d", "0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241"],
+          "threshold": 4,
+          "observedBlock": 128842981,
+          "observedAt": "2026-10-21",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "trustedPeerOrRemote": "Observed nonzero peers: Ethereum 30101, Arbitrum 30110, Solana 30168, Mantle 30181 and Sei 30280. Tempo 30370 is zero. This documented-peer read is not a full historical peer census.",
+          "rateLimits": "At block 128842981, inbound limits are 500000 USDY for 30101/30110/30181/30280 and 300000 for 30168, each with 86400-second window; 30370 is zero. Owner-replaceable limits are not a token-level cap.",
+          "pausersAdminsUpgraders": "Verified adapter source permits owner peer/rate changes, pauser grants and unpause. The owner itself has pausers(owner)=false; observed emergency Safe 0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97 has pausers=true. Token DEFAULT_ADMIN and LIST_CONFIGURER are held by this 4-of-7 Safe; token MINTER also includes the OFT adapter and distinct InstantManager. EIP-1967 admin contract 0x887d5001365c0c23cb3f905d1992691e6164f3d6 returns this Safe as owner."
+        },
+        "canRaiseCap": true,
+        "capDescription": "Verified token mint role and owner-replaceable OFT limits; no fixed whole-token issuance maximum established.",
+        "observedAt": "2026-10-21",
+        "observedBlock": 128842981,
+        "sources": [
+          {"label": "Current BNB USDY verified implementation source", "url": "https://api.etherscan.io/v2/api?chainid=56&module=contract&action=getsourcecode&address=0x46008bfc43af32e0250c442d4de8f6d7a78f9955"},
+          {"label": "BNB OndoMintBurnAdapter verified source", "url": "https://api.etherscan.io/v2/api?chainid=56&module=contract&action=getsourcecode&address=0xae6a049cdda7536af3875b3daaf34f24be5cf00c"},
+          {"label": "Issuer deployed-address and InstantManager registry", "url": "https://docs.ondo.finance/addresses.md"}
+        ],
+        "evidence": "Pinned block 128842981/hash 0x1fb72c7b37fdca1c63c2ca50a7231cec8eb3f0975a5a83383d4e136cf7cb16bb binds current implementation, role member counts/enumeration, adapter token/endpoint/owner/pause, Safe quorum/owners and six documented peer/rate reads. Complete module/guard, downstream execution, custody, incident history and native-versus-bridge liability partition remain uncertified. This new current row does not renew the older route/profile observations."
+      },
+      {
+        "id": "usdy-bsc-emergency-pauser-safe",
+        "label": "USDY BNB Chain observed token and OFT emergency pauser",
+        "routeRefs": ["bsc:0x608593d17a2decbbc4399e4185be4922f97ed32e"],
+        "capabilities": ["pause"],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97",
+        "failureDomainKeys": ["protocol:layerzero", "safe:bsc:0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97"],
+        "authorityType": "safe",
+        "threshold": 1,
+        "signerCount": 9,
+        "safe": {
+          "owners": ["0x7d72d4c9c660d8118b9ac440037f7d6cff40c8d2", "0x74a4c329aa5a6bfa16bd32baf37209f4c632173d", "0x756531b70c42c48f98270baac414f9f208a8580b", "0x59702bb067eeae05ac2c1b8c6f30dffd1cc29893", "0x189d409b807ac1949fe82c143270992fe9457607", "0x40482b9538a418cb62b92f14cc13d20092b3dbb4", "0x60f030d621a4ab27dff024a8e43eb36e2d95fb02", "0xaa1e4eef723ceadd137b3ad39ea540da4b092f8e", "0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241"],
+          "threshold": 1,
+          "observedBlock": 128842981,
+          "observedAt": "2026-10-21",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Enumerated token PAUSER_ROLE includes this 1-of-9 Safe, and adapter pausers(address)=true. Verified token and adapter pause mechanisms affect transfers/mint/burn. Adapter unpause is owner-only and token unpause is PAUSER_ROLE-gated. This observed pause grant is not a complete certificate excluding every other callable privilege."
+        },
+        "observedAt": "2026-10-21",
+        "observedBlock": 128842981,
+        "sources": [
+          {"label": "BNB emergency Safe verified proxy", "url": "https://api.etherscan.io/v2/api?chainid=56&module=contract&action=getsourcecode&address=0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97"},
+          {"label": "BNB token and adapter verified source/registry", "url": "https://docs.ondo.finance/addresses.md"}
+        ],
+        "evidence": "Same pinned block 128842981 independently binds token PAUSER_ROLE enumeration, OFT pausers mapping and this exact Safe's getThreshold=1/getOwners=9. Retain the weak emergency quorum as real availability authority, not as a mint-quorum substitute. No unsupported canRaiseCap=false, clean incident state, operator independence or custody claim is authored."
+      },
+      {
+        "id": "usdy-tempo-tip20-governance-safe",
+        "label": "USDY Tempo TIP-20 administrator and issuer Safe",
+        "routeRefs": ["tempo:0x20c000000000000000000000d479b9f6ec0ceff9"],
+        "capabilities": ["bridge-mint", "bridge-burn", "admin"],
+        "controllerChain": "tempo",
+        "controllerAddress": "0x3952dec8f7c3e844c27d173f5eb18068e685eb3b",
+        "failureDomainKeys": ["protocol:layerzero", "safe:tempo:0x3952dec8f7c3e844c27d173f5eb18068e685eb3b"],
+        "authorityType": "safe",
+        "threshold": 4,
+        "signerCount": 7,
+        "safe": {
+          "owners": ["0x59702bb067eeae05ac2c1b8c6f30dffd1cc29893", "0x40482b9538a418cb62b92f14cc13d20092b3dbb4", "0x189d409b807ac1949fe82c143270992fe9457607", "0x60f030d621a4ab27dff024a8e43eb36e2d95fb02", "0xaa1e4eef723ceadd137b3ad39ea540da4b092f8e", "0x74a4c329aa5a6bfa16bd32baf37209f4c632173d", "0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241"],
+          "threshold": 4,
+          "observedBlock": 45110477,
+          "observedAt": "2026-10-21",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "TIP-20 hasRole(address,bytes32) positively binds this Safe to DEFAULT_ADMIN_ROLE, ISSUER_ROLE and UNPAUSE_ROLE; PAUSE_ROLE is false for this Safe and the OFT adapter. The OFT adapter and separate issuer-listed InstantManager both have ISSUER_ROLE. Actual PAUSE_ROLE holder enumeration and adapter emergency/upgrade execution scope remain unresolved.",
+          "caps": "Current token supplyCap is 340282366920938463463374607431768211455 raw units at 6 decimals. TIP-20 DEFAULT_ADMIN_ROLE can change the cap; this is not an immutable economic bound."
+        },
+        "canRaiseCap": true,
+        "capDescription": "Current TIP-20 administrator can setSupplyCap; issuer role permits mint/burn. The adapter's separate peer/rate/emergency implementation is not certified by BNB source.",
+        "observedAt": "2026-10-21",
+        "observedBlock": 45110477,
+        "sources": [
+          {"label": "Tempo TIP-20 protocol role, pause and cap specification", "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"},
+          {"label": "Issuer Tempo token, OFT and InstantManager registry", "url": "https://docs.ondo.finance/addresses.md"},
+          {"label": "Tempo canonical public RPC", "url": "https://rpc.tempo.xyz"}
+        ],
+        "evidence": "Pinned Tempo block 45110477/hash 0xcf731285641b88c357b44bf6012d4150536ae7bcfef6678ada44ac17a0ccc4c0 binds token paused=false, six decimals, cap, positive exact role membership, proxy implementation/admin/owner, and this Safe's four-of-seven quorum/owners. Failed adapter paused()/owner() batches are retained as errors, not used as successful siblings or extrapolated from BNB. No complete role census, source-bound adapter execution, incident, custody or independent-liability accounting is claimed."
       }
     ]
   }

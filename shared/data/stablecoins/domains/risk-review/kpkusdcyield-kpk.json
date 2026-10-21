@@ -118,8 +118,8 @@
     ]
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Vault share NAV uses internal asset/share accounting; Morpho borrower markets require collateral pricing. Historical block 26191269 lender-claim weights remain savUSD 46.760%, USD3 25.558%, siUSD 9.901%, PT-siUSD-7JAN2027 7.549%, srRoyUSDC 6.795%, ftUSD 3.437%, weETH 0.0004% and four one-raw-USDC residuals (srNUSD, YFI, matured PT-cUSD and ssftUSD). Independent Ethereum block 26193333 (2026-10-14T21:08:35Z) reads confirm seven enumerated markets, all eleven positive expected claims, exact market/oracle identities and composer feed slots; adapter realAssets=13477495044968 raw USDC. Chainlink's directory and pinned savUSD feed identify an Avant SAVUSD/AVUSD exchange rate, not an independent savUSD/USD sale price; OCR2 transport does not remove issuer valuation dependence, so savUSD becomes privileged-internal-pricing. The observed material book uses privileged internal pricing. The authored aggregate remains opaque-or-unknown because srNUSD and matured PT-cUSD retain unresolved nested topology; allocation-based relief is conditional on v10.19 admission of a fresh complete lender book and its reviewed path joins. Opaque dust remains disclosed, not relabeled safe or deleted; unknown/unjoined weights remain fail-closed in the compiler. KPK's 10-USDC branch omission and 10%-aggregate threshold are not our methodology. Vault-nav remains top-level-only. Directory heartbeats are reporting targets, not composer-enforced freshness. Confidence remains probable; nested dust backup/admin controls and stressed liquidation are not certified.",
+    "tier": "privileged-internal-pricing",
+    "summary": "Round3 feed review 2026-10-21: Ethereum block 26237322 (2026-10-21T00:16:23Z), hash 0xcddd1204eb3c0b5be1f088efce3a61629463c5ec0de27636de0c5a2950e1089a, resolves both formerly opaque nested pricing paths without favorable price-safety credit. All eleven retained market/oracle identities, current claims, ten direct composers and srNUSD primary/backup composers were re-read. Six enumerated positions sum to adapter realAssets and vault totalAssets of 15048738546500 raw USDC; srNUSD, YFI and matured PT-cUSD each retain one raw USDC outside that enumerated sum, while srRoyUSDC and ftUSD claims are zero. All eleven price() calls succeed, but this is not liquidation execution or source independence. Thirty exact source-hosted runtime bytecodes match pinned code; PendleChainlinkOracle source remains partially verified. srNUSD uses privileged internal NAV and an owner-replaceable backup whose stale RedStone NUSD feed and price() currently revert. PT-cUSD uses a known minimum of Pendle TWAP and deterministic discount feeds plus one RedStone fundamental/USDC service with upgrade authority and no independent conversion-leg fallback. Material siUSD, savUSD, USD3, PT-siUSD and ssftUSD paths retain internal NAV/exchange-rate pricing; neither Chainlink transport nor RedStone signer quorum establishes an independent market sale price. The aggregate therefore becomes known privileged-internal-pricing, not standard-external or redundant. Historical October9/14/15 observation pins remain in sources and unmodified sibling reviews; no collateral, liquidation, backstop, shutdown, maturity, custody or liquidity evidence is renewed by this feed-only review.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -166,8 +166,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-15",
-    "reviewer": "Sol KPK questionnaire follow-up 2026-10-15 (Oracle)",
+    "reviewedAt": "2026-10-21",
+    "reviewer": "C17 bottom-up refinement 2026-10-21 (Round3 feed topology only)",
     "confidence": "probable",
     "sources": [
       {
@@ -233,6 +233,38 @@
       {
         "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); pinned complete composer census, descriptions, owners, aggregators, latestRoundData, PT configuration and residual switching",
         "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Round3 complete eleven-branch claim/composer census, all eleven price calls, nested feed/admin reads and thirty runtime correspondences; Ethereum26237322, hash0xcddd1204eb3c0b5be1f088efce3a61629463c5ec0de27636de0c5a2950e1089a,2026-10-21T00:16:23Z; retrieved2026-10-21",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Exact srNUSD backup composer and nested RedStone fundamental source, retrieved2026-10-21",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdfa7c067be1519fa7e1664ebca7dd95a1bff9afb"
+      },
+      {
+        "label": "Exact RedStone NUSD_FUNDAMENTAL implementation, retrieved2026-10-21",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb6c84a74333bb8bc7cd7024be1bcbdf888232752"
+      },
+      {
+        "label": "Exact OjoPTFeed clone implementation, both-call minimum and freshness guards, retrieved2026-10-21",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5aab95e3c6f9ba0ccfa0a17c2c7235633c7c6585"
+      },
+      {
+        "label": "Partially verified PendleChainlinkOracle with exact pinned runtime correspondence, retrieved2026-10-21; not full compiler verification",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2a121884c2484ee1e616e82340b284618b9b7984"
+      },
+      {
+        "label": "Exact immutable PendleSparkLinearDiscountOracle, maturity and deterministic return, retrieved2026-10-21",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6da10958c691454be7eb5f3e3b91b5713e542b17"
+      },
+      {
+        "label": "Exact RedStone adapter implementation with signed updates and thirty-hour read guard, retrieved2026-10-21",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0c6c73865429e1d87b7b817b95bb1f38f2136529"
+      },
+      {
+        "label": "Exact shared RedStone ProxyAdmin, owner independently pinned at26237322, retrieved2026-10-21",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8223a6271d1e0bda019ee55d545d7b86eff1f573"
       }
     ],
     "branches": [
@@ -415,8 +447,8 @@
       {
         "id": "market-0ff9c1f2b9cb037ecb14029cbacd3a94470458cf5c6884f09c46ae354765d789",
         "label": "srNUSD / USDC",
-        "tier": "opaque-or-unknown",
-        "summary": "At block 26191269 (2026-10-14): expected 1 raw unit, allocation 0, caps 0/0. Primary composer uses srNUSD ERC-4626 NAV only. Clone switching getters match the historical configuration, but the owner-changeable backup router now points to 0xdfa7c067be1519fa7e1664ebca7dd95a1bff9afb; its complete nested topology remains unverified. Historical review: Morpho API identifies srNUSD collateral 0x65a44528e8868166401ea08b549e19552af589db, market 0x0ff9c1f2b9cb037ecb14029cbacd3a94470458cf5c6884f09c46ae354765d789, oracle 0x9e1031d287416b45c89d62780768d35df24df4be, type Unknown. Historical nonzero supply exposure was established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 1239711522681028678000000. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Morpho oracleByAddress returned no structured upstream feed/vault topology for this oracle, so API disclosure does not close this branch.",
+        "tier": "privileged-internal-pricing",
+        "summary": "Round3 at Ethereum26237322 (2026-10-21T00:16:23Z): exact market/oracle identity remains unchanged and expectedSupplyAssets is one raw USDC outside the six-market realAssets enumeration. Primary/current composer uses srNUSD0x65a44528e8868166401ea08b549e19552af589db ERC4626 NAV only, all price feeds zero. Exact clone/implementation correspondence and current primary/backup/router/composer reads close the former topology gap. Backup router0x39e160111c2d8ee3817fa63e60a87839f07de138 is immediately owner-replaceable by0x1a9e836c455792654d8f657941ff59160eed7146 and points to0xdfa7c067be1519fa7e1664ebca7dd95a1bff9afb, which combines the same srNUSD NAV with RedStone NUSD_FUNDAMENTAL and fixed-one quote. The NUSD feed's saved block timestamp1786621979 is2026-08-13T11:52:59Z; both its latestRoundData and backup router price revert at the current pin. Selected primary price succeeds. This positively establishes internal/privileged pricing and unavailable fallback at this pin, not a holder loss, independent backup or executable liquidation. Historical October3/9/14 observations and zero allocation/caps remain historical only.",
         "collateralAssets": [
           "srNUSD"
         ],
@@ -425,31 +457,48 @@
         ],
         "feeds": [
           {
-            "provider": "MetaOracleDeviationTimelock (primary/backup switching; nested backup unresolved)",
+            "provider": "MetaOracleDeviationTimelock (identified primary and owner-changeable backup)",
             "path": "Collateral/USDC price(); primary/current=0xe10a7d39e4ed00351dfe17378b5896e5f8ab422f; backup=0x39e160111c2d8ee3817fa63e60a87839f07de138",
             "address": "0x9e1031d287416b45c89d62780768d35df24df4be",
             "chain": "ethereum",
-            "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedAt": "2026-10-21",
+            "observedBlock": 26237322
           },
           {
             "provider": "MorphoChainlinkOracleV2 (srNUSD NAV only)",
             "path": "Primary BASE_VAULT=0x65a44528e8868166401ea08b549e19552af589db; sample=1000000000000000000; all feeds zero; SCALE_FACTOR=1000000",
             "address": "0xe10a7d39e4ed00351dfe17378b5896e5f8ab422f",
             "chain": "ethereum",
-            "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedAt": "2026-10-21",
+            "observedBlock": 26237322
           },
           {
             "provider": "Owner-changeable OracleRouter backup",
-            "path": "owner=0x1a9e836c455792654d8f657941ff59160eed7146; oracle=0xdfa7c067be1519fa7e1664ebca7dd95a1bff9afb; complete downstream topology unresolved",
+            "path": "owner=0x1a9e836c455792654d8f657941ff59160eed7146; oracle=0xdfa7c067be1519fa7e1664ebca7dd95a1bff9afb; immediate onlyOwner setOracle; exact nested srNUSD NAV/RedStone fundamental path identified; backup price reverts at this pin",
             "address": "0x39e160111c2d8ee3817fa63e60a87839f07de138",
             "chain": "ethereum",
-            "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedAt": "2026-10-21",
+            "observedBlock": 26237322
+          },
+          {
+            "provider": "MorphoChainlinkOracleV2 backup composer",
+            "path": "BASE_VAULT=0x65a44528e8868166401ea08b549e19552af589db; BASE_FEED_1=0x5e7281f74e74d76347f0b8f4a36fd3cb29c19d95; QUOTE_FEED_1=0xc3866d726c204c0836e0677a31973c649888973d; other feed/vault slots zero",
+            "address": "0xdfa7c067be1519fa7e1664ebca7dd95a1bff9afb",
+            "chain": "ethereum",
+            "observedAt": "2026-10-21",
+            "observedBlock": 26237322
+          },
+          {
+            "provider": "RedStone NUSD_FUNDAMENTAL (stale read rejected)",
+            "path": "Proxy implementation0xb6c84a74333bb8bc7cd7024be1bcbdf888232752; adapter0xd72a6ba4a87ddb33e801b3f1c7750b2d0911fc6c; saved block timestamp1786621979; latestRoundData reverts under thirty-hour read guard; shared ProxyAdmin0x8223a6271d1e0bda019ee55d545d7b86eff1f573 owner0x6906f3a09bcc1b7cd3b0c8626724299618df4472",
+            "address": "0x5e7281f74e74d76347f0b8f4a36fd3cb29c19d95",
+            "chain": "ethereum",
+            "stalenessBoundSec": 108000,
+            "observedAt": "2026-10-21",
+            "observedBlock": 26237322
           }
         ],
-        "fallbackBehavior": "The runtime-identified EIP-1167 clone delegates to MetaOracleDeviationTimelock 0xcc319ef091bc520cf6835565826212024b2d25ec. Verified implementation price() tries the selected oracle and uses the other if that call reverts. At block 26154662 primaryOracle and currentOracle are 0xe10a7d39e4ed00351dfe17378b5896e5f8ab422f, backupOracle is 0x39e160111c2d8ee3817fa63e60a87839f07de138, deviationThreshold=10000000000000000, challengeTimelockDuration=14400 seconds, healingTimelockDuration=43200 seconds, and challengeExpiresAt=healingExpiresAt=0. This establishes configured switching behavior and state, not upstream source independence, freshness or guaranteed stressed liquidation. Re-read at block 26191269: primary/current, backup and switching delays unchanged; backup OracleRouter owner=0x1a9e836c455792654d8f657941ff59160eed7146 and oracle=0xdfa7c067be1519fa7e1664ebca7dd95a1bff9afb. Complete backup pricing controls remain unresolved.",
+        "fallbackBehavior": "Exact EIP1167 runtime delegates to MetaOracleDeviationTimelock0xcc319ef091bc520cf6835565826212024b2d25ec. Source price() first calls currentOracle and only on revert calls the other oracle. At26237322 primary/current=e10a7d39e4ed00351dfe17378b5896e5f8ab422f and backup=39e160111c2d8ee3817fa63e60a87839f07de138. Primary/root price succeeds but backup price and its NUSD latestRoundData revert. Thus the named backup is not an available independent failover at this pin. Historical26154662/26191269 deviation/challenge/healing observations are retained in sources and not re-dated or certified anew.",
         "collateralParameters": [
           {
             "asset": "srNUSD",
@@ -495,8 +544,8 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x39e160111c2d8ee3817fa63e60a87839f07de138"
           }
         ],
-        "observedAt": "2026-10-14",
-        "observedBlock": 26191269
+        "observedAt": "2026-10-21",
+        "observedBlock": 26237322
       },
       {
         "id": "market-e07d416323a1afbfe0bf2fe27ffb549ff565cf5c86d21b79fc60664038e597c9",
@@ -750,8 +799,8 @@
       {
         "id": "market-702b7ec7628de2622e51e1bb34a7e6ad9e95f3a25a2ed361e4ce621f23f5e642",
         "label": "PT-cUSD-23JUL2026 / USDC",
-        "tier": "opaque-or-unknown",
-        "summary": "At block 26191269 (2026-10-14): expected 1 raw unit, allocation 0, caps 0/0; matured 2026-07-23 (expiry 1784764800). Composer multiplies Ojo Pendle PT feed by RedStone cUSD_FUNDAMENTAL and divides by RedStone USDC_V2. Ojo updatedAt=1791987287 is synthetic; both RedStone updatedAt=1791901571. Pinned RedStone ProxyAdmin 0x8223a6271d1e0bda019ee55d545d7b86eff1f573 owner=0x6906f3a09bcc1b7cd3b0c8626724299618df4472 is identified, but exact nested PT/admin/update closure is unverified; no adverse lag verdict is inferred from one timestamp. Historical review: Morpho API identifies PT-cUSD-23JUL2026 collateral 0x928fb6ed39100a92b2480f5cbb93453f98d9f4ce, market 0x702b7ec7628de2622e51e1bb34a7e6ad9e95f3a25a2ed361e4ce621f23f5e642, oracle 0x25b30502467639e8fa118451105269e9b9813dd2, type ChainlinkOracleV2. Historical nonzero supply exposure was established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 999979777876677051090364. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Historical Morpho oracleByAddress publishes baseFeedOne=0xf0aeb0e394833e5b320fec5b16cb7668616ca5c4, baseFeedTwo=0x9a5a3c3ed0361505cc1d4e824b3854de5724434a, quoteFeedOne=0xeef31c7d9f2e82e8a497b140cc60cc082be4b94e. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "tier": "single-source-or-laggy",
+        "summary": "Round3 at Ethereum26237322 (2026-10-21T00:16:23Z): expectedSupplyAssets remains one raw USDC outside the enumerated realAssets sum; maturity1784764800 is2026-07-23. Exact composer feed slots remain Ojo PT feed times RedStone cUSD_FUNDAMENTAL divided by RedStone USDC_V2. Ojo's EIP1167 target0x5aab95e3c6f9ba0ccfa0a17c2c7235633c7c6585 calls both PendleChainlinkOracle0x2a121884c2484ee1e616e82340b284618b9b7984 and deterministic PendleSparkLinearDiscountOracle0x6da10958c691454be7eb5f3e3b91b5713e542b17 and returns their minimum. Pendle uses exact market0x9eaaeda23177b7168c55a3a0f937f67919733449, PT_TO_ASSET type1 and900-second TWAP; linear feed binds the exact PT and fixed12.5% annual discount, returning one after maturity. Ojo/Pendle timestamps are synthetic current block; linear updatedAt is zero and exempted by Ojo's24-hour nonzero-time check. RedStone feeds share one adapter/service and mutable ProxyAdmin, three authorized signers of five and a thirty-hour saved-value read guard. Current cUSD/USDC saved timestamp1792509899 is2026-10-20T15:24:59Z. All these calls and aggregate price succeed, but there is no independent conversion-leg failover, source-age guarantee from synthetic timestamps, or guaranteed liquidation execution. Former nested-identity uncertainty is closed conservatively as single-source-or-laggy, not redundant or independently safeguarded.",
         "collateralAssets": [
           "PT-cUSD-23JUL2026"
         ],
@@ -764,35 +813,60 @@
             "path": "Collateral/USDC price(); BASE_VAULT_CONVERSION_SAMPLE=1; SCALE_FACTOR=1000000",
             "address": "0x25b30502467639e8fa118451105269e9b9813dd2",
             "chain": "ethereum",
-            "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedAt": "2026-10-21",
+            "observedBlock": 26237322
           },
           {
             "provider": "Ojo PT Feed Pendle Chainlink-compatible Oracle",
-            "path": "BASE_FEED_1; latestRoundData updatedAt=1791987287",
+            "path": "BASE_FEED_1; EIP1167 implementation0x5aab95e3c6f9ba0ccfa0a17c2c7235633c7c6585; min(FEED_1 Pendle TWAP2a121884c2484ee1e616e82340b284618b9b7984, FEED_2 deterministic linear6da10958c691454be7eb5f3e3b91b5713e542b17); both calls required; synthetic updatedAt1792541783",
             "address": "0xf0aeb0e394833e5b320fec5b16cb7668616ca5c4",
             "chain": "ethereum",
-            "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedAt": "2026-10-21",
+            "observedBlock": 26237322
           },
           {
             "provider": "RedStone Price Feed for cUSD_FUNDAMENTAL",
-            "path": "BASE_FEED_2; latestRoundData updatedAt=1791901571",
+            "path": "BASE_FEED_2; implementation0x2d7a6851cc237bc2c7a5a87f78b7ffdb5db92bcb; latestRoundData answer99972384 updatedAt1792509899; shared adapter0xd72a6ba4a87ddb33e801b3f1c7750b2d0911fc6c and ProxyAdmin0x8223a6271d1e0bda019ee55d545d7b86eff1f573",
             "address": "0x9a5a3c3ed0361505cc1d4e824b3854de5724434a",
             "chain": "ethereum",
-            "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedAt": "2026-10-21",
+            "observedBlock": 26237322
           },
           {
             "provider": "RedStone Price Feed for USDC_V2",
-            "path": "QUOTE_FEED_1; latestRoundData updatedAt=1791901571",
+            "path": "QUOTE_FEED_1; implementation0xbe4d4d2fdde7408bd00b9912705de7bdc3f9bdeb; latestRoundData answer99978000 updatedAt1792509899; same RedStone service/admin as fundamental leg, not independent backup",
             "address": "0xeef31c7d9f2e82e8a497b140cc60cc082be4b94e",
             "chain": "ethereum",
-            "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedAt": "2026-10-21",
+            "observedBlock": 26237322
+          },
+          {
+            "provider": "Pendle PT_TO_ASSET TWAP",
+            "path": "Ojo FEED_1; exact market0x9eaaeda23177b7168c55a3a0f937f67919733449; twapDuration900; baseOracleType1; latestRoundData answer1000000000000000000, synthetic updatedAt1792541783; partially verified source with exact runtime correspondence",
+            "address": "0x2a121884c2484ee1e616e82340b284618b9b7984",
+            "chain": "ethereum",
+            "observedAt": "2026-10-21",
+            "observedBlock": 26237322
+          },
+          {
+            "provider": "PendleSparkLinearDiscountOracle",
+            "path": "Ojo FEED_2; PT0x928fb6ed39100a92b2480f5cbb93453f98d9f4ce; maturity1784764800; baseDiscountPerYear125000000000000000; deterministic answer1000000000000000000 and updatedAt0 after maturity; not an independent live market quote",
+            "address": "0x6da10958c691454be7eb5f3e3b91b5713e542b17",
+            "chain": "ethereum",
+            "observedAt": "2026-10-21",
+            "observedBlock": 26237322
+          },
+          {
+            "provider": "Shared RedStone signed-value adapter",
+            "path": "EIP1967 implementation0x0c6c73865429e1d87b7b817b95bb1f38f2136529; three authorized signatures of five; signed-package timestamps checked; saved positive values expire after108000 seconds; ProxyAdmin0x8223a6271d1e0bda019ee55d545d7b86eff1f573 owner0x6906f3a09bcc1b7cd3b0c8626724299618df4472",
+            "address": "0xd72a6ba4a87ddb33e801b3f1c7750b2d0911fc6c",
+            "chain": "ethereum",
+            "stalenessBoundSec": 108000,
+            "observedAt": "2026-10-21",
+            "observedBlock": 26237322
           }
         ],
-        "fallbackBehavior": "Morpho core calls the immutable market oracle price(); no alternate core oracle. Configured feed/vault calls are composed arithmetically; the composer checks nonnegative answers but not updatedAt freshness. A downstream revert reverts price(); no independent failover or heartbeat guarantee is established.",
+        "fallbackBehavior": "Morpho core's immutable composer has no alternate oracle. Ojo calls both TWAP and deterministic linear feeds before returning their minimum; a failed child call is not caught and cannot use the other as failover. Ojo checks age only for nonzero child timestamps, while Pendle reports synthetic block time and linear reports zero. RedStone fundamental and quote legs share one signed-data adapter, three-of-five fixed authorized signers, a thirty-hour positive-value read guard and mutable ProxyAdmin; signer quorum does not establish independent data-service fallback. Source-bound guards are recorded, but no redundant-with-failover credit or stressed execution guarantee follows.",
         "collateralParameters": [
           {
             "asset": "PT-cUSD-23JUL2026",
@@ -842,8 +916,8 @@
             "url": "https://etherscan.io/tx/0x76c1fabec33659875d8abfc1139988ea9ec5e7147b37440c633ae0e749cadab9"
           }
         ],
-        "observedAt": "2026-10-14",
-        "observedBlock": 26191269
+        "observedAt": "2026-10-21",
+        "observedBlock": 26237322
       },
       {
         "id": "market-88ab06d43b089e574bbe312deee6cdb292702c3a2e765059492c34b1cd298acf",
@@ -1334,14 +1408,14 @@
         "id": "market-0ff9c1f2b9cb037ecb14029cbacd3a94470458cf5c6884f09c46ae354765d789",
         "chain": "ethereum",
         "address": "0x9e1031d287416b45c89d62780768d35df24df4be",
-        "pricingAuthority": "external-price",
+        "pricingAuthority": "internal-price",
         "branchId": "market-0ff9c1f2b9cb037ecb14029cbacd3a94470458cf5c6884f09c46ae354765d789",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-14",
-          "reviewer": "Sol KPK review 2026-10-14 (YieldOracle)",
+          "reviewedAt": "2026-10-21",
+          "reviewer": "C17 bottom-up refinement 2026-10-21 (Round3 srNUSD pricing applicability)",
           "confidence": "probable",
-          "rationale": "At block 26191269 expected 1 raw unit, allocation 0, caps 0/0. The primary is internal srNUSD NAV; the owner-changeable backup remains an unresolved nested pricing path. Historical applicability review 2026-10-03 is retained in the source references; zero own vault borrowing does not remove borrower liquidations.",
+          "rationale": "At26237322 expectedSupplyAssets remains one raw USDC. Current primary/current composer is internal srNUSD ERC4626 NAV with all feeds zero; identified owner-changeable backup combines the same NAV with a stale, reverting RedStone NUSD fundamental feed. This is a required borrower-pricing path with known internal authority, not an opaque exemption or independently available fallback. Historical applicability/source pins are retained.",
           "sources": [
             {
               "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
@@ -1616,6 +1690,52 @@
       }
     ],
     "branchKindReviews": [
+      {
+        "kind": "feed",
+        "branchIds": [
+          "market-34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd",
+          "market-bbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99",
+          "market-0ff9c1f2b9cb037ecb14029cbacd3a94470458cf5c6884f09c46ae354765d789",
+          "market-e07d416323a1afbfe0bf2fe27ffb549ff565cf5c86d21b79fc60664038e597c9",
+          "market-acc49fbf58feb1ac971acce68f8adc177c43682d6a7087bbd4991a05cb7a2c67",
+          "market-973e9dd45799efe8775417bcc420a3ab84a583587b2108985746e2fe201d0c83",
+          "market-702b7ec7628de2622e51e1bb34a7e6ad9e95f3a25a2ed361e4ce621f23f5e642",
+          "market-88ab06d43b089e574bbe312deee6cdb292702c3a2e765059492c34b1cd298acf",
+          "market-e3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7",
+          "market-0c93c623fd2a78a2ffa36b019f74c400c3f3d81fcb22851c88e0c96e510f9689",
+          "market-fdf78c1ecec460f0d54bbf1b2475227e36eb25ee7692562f5d433df2bf80259d"
+        ],
+        "reviewedAt": "2026-10-21T00:40:23Z",
+        "reviewer": "C17 bottom-up refinement 2026-10-21 (Round3 exact feed graph)",
+        "confidence": "probable",
+        "rationale": "All eleven retained market/oracle identities and claims, all ten direct composer six-slot configurations, srNUSD primary/backup configurations, thirty runtime/source correspondences and all eleven current price() results were acquired at Ethereum26237322, hash0xcddd1204eb3c0b5be1f088efce3a61629463c5ec0de27636de0c5a2950e1089a,2026-10-21T00:16:23Z. Six enumerated claims equal15048738546500 raw USDC realAssets; three off-list one-unit residuals are retained, not falsely summed into that NAV. Both formerly unknown nested graphs now have identified implementations, update/admin paths and source guards. srNUSD backup and NUSD latestRoundData actually revert; Ojo's eager two-call minimum and synthetic/zero timestamps do not provide independent failover; RedStone's shared three-of-five service/admin is not provider redundancy. Remaining material branches retain their prior nonexpired internal/exchange-rate or external classification with exact composer identities/configurations re-confirmed. This is conservative feed-only classification, not a financial solvency, liquidation, recovery or custody certificate; original sibling review starts are unchanged. The profile and new observedAt fields accept date-only2026-10-21 and admit only after2026-10-22T00:00:00Z; this kind-specific timestamp does not bypass that whole-profile admission boundary.",
+        "sources": [
+          {
+            "label": "Complete current pinned claim/composer/feed/admin/runtime acquisition, retrieved2026-10-21",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Exact immutable MorphoChainlinkOracleV2 composer source, retrieved2026-10-21",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x25b30502467639e8fa118451105269e9b9813dd2"
+          },
+          {
+            "label": "Exact MetaOracleDeviationTimelock switching and revert fallback source, retrieved2026-10-21",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xcc319ef091bc520cf6835565826212024b2d25ec"
+          },
+          {
+            "label": "Owner-changeable srNUSD backup router source, retrieved2026-10-21",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x39e160111c2d8ee3817fa63e60a87839f07de138"
+          },
+          {
+            "label": "Exact OjoPTFeed two-child minimum and staleness checks, retrieved2026-10-21",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5aab95e3c6f9ba0ccfa0a17c2c7235633c7c6585"
+          },
+          {
+            "label": "Exact RedStone signed updates, read guard and authorized signer implementation, retrieved2026-10-21",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0c6c73865429e1d87b7b817b95bb1f38f2136529"
+          }
+        ]
+      },
       {
         "kind": "backstop",
         "branchIds": [

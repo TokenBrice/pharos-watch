@@ -178,7 +178,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Kaia RPC identifies this deployed 18-decimal token as Compounding Open Dollar (cUSDO); asset() returns the issuer-registered Kaia USDO 0x87e617c7484ade79fcd90db58beb82b057facb48. At block 226390775, the Chainlink-directory Kaia pool reports that same getToken() and typeAndVersion() USDO BurnMintTokenPool 1.5.1. As on Base/BSC, issuer-native network support does not remove the inherited USDO CCIP bridge dependency.",
+        "reviewNote": "Kaia RPC identifies this deployed 18-decimal token as Compounding Open Dollar (cUSDO); asset() returns the issuer-registered Kaia USDO 0x87e617c7484ade79fcd90db58beb82b057facb48. At block 226390775, the Chainlink-directory Kaia pool reports that same getToken() and typeAndVersion() USDO BurnMintTokenPool 1.5.1. As on Base/BSC, issuer-native network support does not remove the inherited USDO CCIP bridge dependency. Identity clarification researched 2026-10-21 at Kaia block 230340031 (2026-10-21T00:34:18Z, hash 0x5a5c89c2c90a48ff7c16a504308af191d8d4e2e4b866cc2de8180ad2a5d5d5ee): cUSDO asset() and pool getToken() still return 0x87e617c7484ade79fcd90db58beb82b057facb48; that USDO proxy's EIP-1967 implementation is exactly 0xc59d97ffd10deec45aecb09011b193e7aeac3d6b, the address labelled Kaia V2 USDO in the current issuer GitHub registry. Direct calls to that implementation return an empty symbol and its own EIP-1967 slot is zero. The registry row therefore does not establish a second migrated liability token: current issuer docs and live wrapper/pool agree on the 0x87e617 proxy. Preserve the original observation pin and all bridge/incident/materiality obligations; this is a proxy-versus-implementation identity clarification, not a new native deployment or a negative incident review.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-09-05",
         "observedBlock": 226390775,
@@ -211,6 +211,10 @@
           {
             "label": "Kaia official JSON-RPC",
             "url": "https://public-en.node.kaia.io"
+          },
+          {
+            "label": "Issuer V2 registry lists the live USDO implementation address (retrieved 2026-10-21)",
+            "url": "https://raw.githubusercontent.com/OpenEdenHQ/openeden.usdoexpress.audit/main/deployed-addresses.md"
           }
         ]
       },
@@ -279,9 +283,17 @@
           {
             "label": "Kaia official JSON-RPC",
             "url": "https://public-en.node.kaia.io"
+          },
+          {
+            "label": "Exact Kaia RMN verified source and deployed runtime (retrieved 2026-10-21)",
+            "url": "https://sourcify.dev/server/v2/contract/8217/0x0a8b976cc612586b9b0c8e3a6690a599391b9f00?fields=all"
+          },
+          {
+            "label": "Exact Kaia owner Safe singleton verified source and runtime (retrieved 2026-10-21)",
+            "url": "https://sourcify.dev/server/v2/contract/8217/0xfb1bffc9d739b8d520daf37df666da4c687191ea?fields=all"
           }
         ],
-        "evidence": "At Kaia block 226390775, the directory-listed pool returned getToken() = 0x87e617c7484ade79fcd90db58beb82b057facb48, typeAndVersion() = USDO BurnMintTokenPool 1.5.1, owner() = 0x19902b456e57224aecbe9ad8827cff50a05b73ae, and getRouter() = 0x4eb2a60af37bc6bb05500f581c00e8ea3075f6e9. This pool supplies the inherited USDO burn/mint route; the local cUSDO wrapper holds that USDO. Owner authority type, remote peers, and current rate-limit buckets were not established in this observation."
+        "evidence": "At Kaia block 226390775, the directory-listed pool returned getToken() = 0x87e617c7484ade79fcd90db58beb82b057facb48, typeAndVersion() = USDO BurnMintTokenPool 1.5.1, owner() = 0x19902b456e57224aecbe9ad8827cff50a05b73ae, and getRouter() = 0x4eb2a60af37bc6bb05500f581c00e8ea3075f6e9. This pool supplies the inherited USDO burn/mint route; the local cUSDO wrapper holds that USDO. Original observation did not establish owner signing type or complete remote paths. Follow-up 2026-10-21 at block 230340031 (2026-10-21T00:34:18Z): owner is a 3-of-4 Safe, singleton 0xfb1bffc9d739b8d520daf37df666da4c687191ea whose pinned runtime exactly matches the exact-chain Sourcify source; module pagination is empty with terminal sentinel and the source-defined guard slot is zero. This does not attest signer independence, custody, or complete downstream execution scope. getRmnProxy() returns direct RMN 0x0a8b976cc612586b9b0c8e3a6690a599391b9f00; its pinned runtime also exactly matches exact-chain Sourcify source. isCursed() is false, cursed-subject count zero, and the sole recorded curse-related operation is tag 4 SetConfig at 2025-08-08T07:32:42Z, not an unexplained curse. RMN owner is 0x47e0e169b1a7a4d8d07ace5585cfda4eab1eb056. These scoped emergency and source findings do not prove a complete no-known-incident review of the token/pool/router/controller lifecycle or conserved route materiality, so no clean incident state, exhaustive execution certificate or renewed review date is authored."
       },
       {
         "id": "cusdo-base-usdo-ccip-pool",

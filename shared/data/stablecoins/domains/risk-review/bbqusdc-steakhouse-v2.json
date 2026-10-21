@@ -380,7 +380,7 @@
         "id": "0x2a0b893471c785a1f0fda00df7fca578b703eef7ae7186d2429c2824b5212467",
         "label": "wFalconX collateral market 0x2a0b8934",
         "tier": "opaque-or-unknown",
-        "summary": "Verified wrapper creation identifies tranche/CDO 0xc26a6fa2c37b38e549a4a1807543801db684f99 behind feed 0x50449b3d1f5931d568a1951ee506a9534e7f7dff. Chainlink-compatible ABI does not establish independent market pricing. Its pinned latestRoundData returns a zero timestamp; no upstream-data freshness is certified. At Ethereum block 26197050 (2026-10-15T09:34:59Z), exact market oracle price() returns raw 1115076000000000000000000. This is a pricing observation, not proof of market-value accuracy, solvency or a freshness guarantee.",
+        "summary": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required; C18 source review 2026-10-21, original observation/review starts preserved. Exact published TranchesChainlinkOracle source and deployed-bytecode immutables identify tranche collateralToken 0xc26a6fa2c37b38e549a4a1807543801db684f99c, distinct from its CDO 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d, behind feed 0x50449b3d1f5931d568a1951ee506a9534e7f7dff; the former truncated tranche/CDO identity conflated two contracts. latestRoundData returns cdo.virtualPrice(collateralToken), with roundId, startedAt, updatedAt and answeredInRound all zero. This is tranche accounting, not independent market pricing or upstream-data freshness. At the preserved Ethereum block 26197050 (2026-10-15T09:34:59Z), exact market oracle price() returns raw 1115076000000000000000000; no claim of market-value accuracy, solvency or a freshness guarantee is made.",
         "collateralAssets": [
           "0x4614f7a56a3eb83b2ff9fa4b4b9575b28fb68644"
         ],
@@ -397,7 +397,7 @@
             "observedBlock": 26197050
           }
         ],
-        "fallbackBehavior": "Verified wrapper creation identifies tranche/CDO 0xc26a6fa2c37b38e549a4a1807543801db684f99 behind feed 0x50449b3d1f5931d568a1951ee506a9534e7f7dff. Chainlink-compatible ABI does not establish independent market pricing. Its pinned latestRoundData returns a zero timestamp; no upstream-data freshness is certified.",
+        "fallbackBehavior": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required; C18 source review 2026-10-21, original observation/review starts preserved. Feed 0x50449b3d1f5931d568a1951ee506a9534e7f7dff returns only CDO 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d virtualPrice for tranche 0xc26a6fa2c37b38e549a4a1807543801db684f99c. Exact published source has no alternate pricing branch, max-age rejection or nonzero data timestamp. Its Chainlink-compatible interface supplies no independent market-price fallback; complete downstream CDO/strategy authority and valuation-source certification remain unresolved.",
         "observedAt": "2026-10-15",
         "observedBlock": 26197050,
         "collateralParameters": [

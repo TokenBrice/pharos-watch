@@ -135,7 +135,7 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Vault NAV is internal share accounting, while nine current Morpho collateral branches govern liquidation. Exact oracle and first-level feed/vault identities are pinned. aHYPER/aHyperBTC use manager- and security-admin-upgradeable loan accounting; mHYPER/mHyperBTC use manually submitted prices. The PT backup routes to its primary. End-to-end external feed governance, collateral recoverability and complete fallback/freshness safeguards remain unresolved; no whole-book tier promotion is made.",
+    "summary": "Vault NAV is internal share accounting, while the nine Morpho collateral branches below are the preserved 2026-10-15 inventory, not a newly certified current census. C18 review 2026-10-21 at Monad block 115153416 (2026-10-20T21:58:57Z) independently reads one adapter and seven market IDs: the former cbBTC and mHyperBTC claims are zero; the other seven claims remain nonzero. Exact oracle/first-level feed identities and available round timestamps were re-read, but no whole-book governance/freshness certificate or review-clock renewal is asserted. aHYPER/aHyperBTC retain manager- and enabled-security-admin-upgradeable loan accounting; mHYPER retains manually submitted pricing. The PT backup still routes to its primary and its Pendle input synthesizes updatedAt from block.timestamp. Known adverse pricing already supports a 45-quality constraint. Complete nested feed governance, collateral recoverability and full fallback/freshness safeguards remain unresolved; no whole-book tier promotion is made.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -237,6 +237,10 @@
       {
         "label": "Monad block 113592449, 2026-10-15T10:44:05Z; exact vault, roles, markets and oracle reads",
         "url": "https://monadscan.com/block/113592449"
+      },
+      {
+        "label": "C18 2026-10-21 exact oracle, nested rounds/controllers and seven-market census; original October 15 review clock preserved",
+        "url": "https://monadscan.com/block/115153416"
       }
     ],
     "branches": [
@@ -329,7 +333,7 @@
       {
         "id": "market-093bd94086b08a013c96dc0776ebf663e9300e742a2c14479211cc35da6c3439",
         "label": "PT-USDat-14JAN2027 / USDC",
-        "tier": "opaque-or-unknown",
+        "tier": "single-source-or-laggy",
         "summary": "Monad block 113592449, hash 0xe28608349f55c565f97911ad6364f00301b952fa3749889c07ce8568eed73140, timestamp 2026-10-15T10:44:05Z: market 0x093bd94086b08a013c96dc0776ebf663e9300e742a2c14479211cc35da6c3439 lends USDC against PT-USDat-14JAN2027 0xa08a69ab9dd3b04d0992bc7afb2c0b907bbdc147, oracle 0x597921a5b5ad74a0bf573fd7b58f80c383dcdab2, LLTV 91.5%. Adapter expectedSupplyAssets=20009605104549 raw USDC (38.776320763% of vault accounting NAV); its borrowShares and posted collateral are zero. price() returned 979159689285244627000000000000000000. A callable price does not establish executable liquidation or recovery. MetaOracleDeviationTimelock primary/current=0x67cd0fc83d3eb39808bd3e686d18324dd269ed6c, backup=0x313c14e7262b59a9366b59692a4e0b140427a723; challenge delay=14400s, healing delay=43200s and deviation threshold=1%. Primary uses PendleChainlinkOracle 0x5346c2c152e471daad390224491acd8f6b860977; the owner-mutable backup OracleRouter points to the same primary, with owner 0x9bec4dbade98251cc20d3c15c27bfdaa45434d4a. These paths do not establish independent backup pricing.",
         "collateralAssets": [
           "PT-USDat-14JAN2027"
@@ -371,7 +375,7 @@
             "observedBlock": 113592449
           }
         ],
-        "fallbackBehavior": "At Monad block 113592449, hash 0xe28608349f55c565f97911ad6364f00301b952fa3749889c07ce8568eed73140, timestamp 2026-10-15T10:44:05Z, currentOracle equals primary 0x67cd0fc83d3eb39808bd3e686d18324dd269ed6c; backup 0x313c14e7262b59a9366b59692a4e0b140427a723 routes to the same primary. Primary BASE_FEED_1=0x5346c2c152e471daad390224491acd8f6b860977 is a PendleChainlinkOracle. The 1% deviation/challenge/healing mechanism and 4h/12h delays do not create an independent pricing source. Full PT conversion economics and underlying recovery remain unresolved.",
+        "fallbackBehavior": "Original Monad block 113592449 (2026-10-15T10:44:05Z) observation and review start preserved. C18 2026-10-21 re-read at block 115153416, hash 0xff2ed64f42d14884bdeda88fa810383df5fdc5ac5d6eb909918b68ae38864806, 2026-10-20T21:58:57Z: currentOracle and primary remain 0x67cd0fc83d3eb39808bd3e686d18324dd269ed6c; backup 0x313c14e7262b59a9366b59692a4e0b140427a723 returns that same primary, owner 0x9bec4dbade98251cc20d3c15c27bfdaa45434d4a. Primary BASE_FEED_1 is 0x5346c2c152e471daad390224491acd8f6b860977; the other three feed slots and both vault slots are zero. Its immutable Pendle market is 0x88c5d8a908834e44b421cb67aec9a931782f9538, twapDuration 900 seconds, baseOracleType 1 (PT_TO_ASSET). Exact published Pendle source returns roundId/startedAt/answeredInRound zero and updatedAt=block.timestamp; this is not the age of the underlying market observations or an independently timestamped external price. OracleRouter.setOracle is owner-only, not an independent feed. The unchanged 1% deviation and 4h/12h challenge/healing mechanism cannot detect agreement caused by both routes reading the same primary. This positively establishes single-source pricing at quality 45, not safe redundant pricing, executable PT recovery or a complete whole-book feed certificate.",
         "collateralParameters": [
           {
             "asset": "PT-USDat-14JAN2027",
@@ -415,6 +419,10 @@
           {
             "label": "Pendle pricing input",
             "url": "https://monadscan.com/address/0x5346c2c152e471daad390224491acd8f6b860977#code"
+          },
+          {
+            "label": "C18 nested primary, fallback owner, Pendle market/TWAP and synthetic-round timestamp pin, read 2026-10-21",
+            "url": "https://monadscan.com/block/115153416"
           }
         ],
         "observedAt": "2026-10-15",
