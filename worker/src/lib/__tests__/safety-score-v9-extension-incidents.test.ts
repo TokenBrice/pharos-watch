@@ -20,6 +20,7 @@ import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-eviden
 import { getSafetyScoreV9OperationalResilienceOverlay } from "../safety-score-v9/extension-operational-resilience";
 import { expandReviewedRegistryReferences } from "@shared/lib/safety-score-v9/reviewed-registry";
 import { V9ReviewedIncidentRegistrySchema } from "@shared/types/safety-score-v9-incidents";
+import { SafetyScoreV9OperationalResilienceOverlaySchema } from "@shared/types/safety-score-v9-operational-resilience-overlays";
 
 const CLOCK_SEC = Date.parse("2026-08-24T23:59:59.000Z") / 1_000;
 
@@ -279,6 +280,40 @@ function wrapperFacts(): V9ApplicableWrapperLocalFacts {
 }
 
 describe("Safety Score v9 domain-routed incident adapter", () => {
+  it("keeps resolved operational windows source-bound and covered by the latest contributing review", () => {
+    const overlayClock = Date.parse("2026-10-01T00:00:00Z") / 1_000;
+    const incidentClock = Date.parse("2026-10-22T00:00:00Z") / 1_000;
+    const productionOverlay = getSafetyScoreV9OperationalResilienceOverlay("usdt-tether", overlayClock);
+    if (productionOverlay === null) throw new Error("Expected operational overlay fixture");
+    for (const [assetId, windowEnd] of [
+      ["honey-berachain", "2025-11-04"],
+      ["yousd-yield-optimizer", "2026-01-14"],
+    ] as const) {
+      const incident = getSafetyScoreV9ReviewedIncidents(assetId, incidentClock)
+        .find((row) => row.domain === "operational");
+      if (incident === undefined) throw new Error("Expected resolved operational incident fixture");
+      for (const reviewedAt of [productionOverlay.reviewedAt, "2026-10-22T00:00:00.000Z"]) {
+        const routed = routeSafetyScoreV9OperationalIncidents({
+          ...productionOverlay,
+          assetId,
+          reviewedAt,
+          incidentReview: { state: "not-reviewed" },
+        }, [incident]);
+        expect(routed).toMatchObject({
+          reviewedAt: reviewedAt === productionOverlay.reviewedAt ? "2026-10-21T00:00:00.000Z" : reviewedAt,
+          incidentReview: {
+            state: "reviewed",
+            windowStart: incident.occurredAt,
+            windowEnd,
+            incidents: [{ incidentKey: incident.incidentId, resolvedAt: windowEnd }],
+          },
+        });
+        expect(SafetyScoreV9OperationalResilienceOverlaySchema.safeParse(routed).success).toBe(true);
+        expect(routed?.expiresAt).toBe(productionOverlay.expiresAt);
+      }
+    }
+  });
+
   it("publishes dated vulnerability history without inventing scored incident postures", () => {
     const reviewClock = Date.parse("2026-10-01T00:00:00Z") / 1_000;
     const productionOverlay = getSafetyScoreV9OperationalResilienceOverlay("usdt-tether", reviewClock);

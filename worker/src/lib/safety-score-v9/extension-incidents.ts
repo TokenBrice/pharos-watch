@@ -410,7 +410,14 @@ export function routeSafetyScoreV9OperationalIncidents(
       incident,
     ]),
   );
+  let reviewedAt = overlay.reviewedAt;
+  let reviewedAtMs = Date.parse(reviewedAt);
   for (const incident of operationalIncidents) {
+    const incidentReviewedAtMs = isoDateSec(incident.reviewedAt) * 1_000;
+    if (incidentReviewedAtMs > reviewedAtMs) {
+      reviewedAt = `${incident.reviewedAt}T00:00:00.000Z`;
+      reviewedAtMs = incidentReviewedAtMs;
+    }
     incidentByKey.set(incident.incidentId, {
       incidentKey: incident.incidentId,
       name: incident.finding,
@@ -436,11 +443,12 @@ export function routeSafetyScoreV9OperationalIncidents(
   // sorted tail directly.
   const windowEndCandidates = [
     ...(existingReview.state === "reviewed" ? [existingReview.windowEnd] : []),
-    ...operationalIncidents.map((incident) => incident.reviewedAt),
+    ...operationalIncidents.map((incident) => incident.resolvedAt ?? incident.reviewedAt),
   ].sort(compareText);
   const windowEnd = windowEndCandidates[windowEndCandidates.length - 1]!;
   return {
     ...overlay,
+    reviewedAt,
     sources: [...new Map(sources.map((source) => [source.sourceId, source])).values()].sort(
       (left, right) => compareText(left.sourceId, right.sourceId),
     ),
