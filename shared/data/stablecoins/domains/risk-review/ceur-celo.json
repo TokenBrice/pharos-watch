@@ -30,7 +30,7 @@
     "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
-    "tier": "single-source-or-laggy",
+    "tier": "standard-external",
     "summary": "At Celo block 78986505, EURm uses 2 registered Celo V3 FPMMs. Every reviewed rateFeedID has one authorized ChainlinkRelayerV1 reporter and one current getRates entry: SortedOracles is a sorted-list median, not redundant live price failover. Effective report expiry is 360 seconds (global default 300). The axlEUROC/EURm pool 0x3aa7c431c06b10f7422e69d3e69b66807a6af696 uses feed 0x26076b9702885d475ac8c3db3bd9f250dc5a318b and relayer 0x72fa4feab8225a234325dccb79862a0ad3ca4fb9. Its two Chainlink aggregator segments multiply EUROC/USD by inverted EUR/USD; they are a composite conversion, not alternatives (maximum timestamp spread 300 seconds). ValueDeltaBreaker is enabled at 0.5%, reference 1e24 and one-second reset cooldown; MedianDelta is disabled. LP/protocol fees are 30/20 basis points. USDm/EURm uses the single-reporter EUR/USD feed 0xf4f9bbda9cd6841fcb9b1510f9269e2db42a6e3a, MedianDelta 4%/900 seconds, LP/protocol fees 15/10 basis points. FPMMs read OracleAdapter.getFXRateIfValid on quotes/swaps. Stable collateral pools use adapter 0xeb23e1339b2119c0f4a0097cb294e990c1fa6423 with always-open market-hours configuration; FX pools use 0xa472fbbf4b890a54381977ac392bdf82eec4383a with FX hours. Both reject stale medians or non-bidirectional BreakerBox modes and have no alternative live feed. Breaker cooldowns are reset waits, not price observation or liquidation delays. All pinned rates were recent and returned nonzero quotes. The tier follows the existing Mento single-source-or-laggy convention, not the former unsupported failover claim.",
     "role": "coin-price-feed",
     "branchModel": "single-path",

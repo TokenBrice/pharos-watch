@@ -2,9 +2,9 @@
   "id": "scrvusd-curve",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "none-resolved-mint",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
-    "summary": "scrvUSD is an ERC-4626 savings wrapper over crvUSD; wrapper minting is deposit/share accounting while durable crvUSD mint authority is inherited from the reviewed Curve parent.",
+    "summary": "scrvUSD is a fixed Yearn V3 clone over crvUSD. Ordinary shares require deposited crvUSD, but its role manager can authorize accountant fee-share issuance without an immutable cumulative fee ceiling. Local share dilution is distinct from inherited durable crvUSD mint authority.",
     "inheritedFrom": "crvusd-curve",
     "controls": [
       {
@@ -32,9 +32,36 @@
           }
         ],
         "evidence": "At Ethereum block 26095892, asset() returned crvUSD 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e and totalDebt() was zero. Runtime bytecode is an EIP-1167 clone with fixed Yearn V3 implementation 0xd8063123bba3b480569244ae66bfe72b6c84b00d; zero EIP-1967 slots alone do not establish immutability. role_manager() is 0x40907540d8a6c65c637785e8f8b742ae6b0b9968, and the Yearn implementation exposes role-controlled strategy, accountant, deposit-limit, and withdrawal-limit management. Both limit modules and the accountant are currently zero. These vault-management powers cannot mint the underlying crvUSD; durable base issuance remains inherited from the reviewed parent."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x40907540d8a6c65c637785e8f8b742ae6b0b9968",
+        "deploymentRefs": [
+          "ethereum:0x0655977feb2f289a4ab78af67bab0d17aab84367"
+        ],
+        "label": "scrvUSD role-manager accountant authorization",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 26095892,
+        "capDescription": "The role manager can assign management roles in the fixed Yearn V3 implementation, including accountant and reporting management. Accountant report fee amounts can issue local fee shares without an immutable cumulative fee ceiling. Zero accountant and strategy debt at the historical pin do not remove this authorization path; it cannot create underlying crvUSD.",
+        "sources": [
+          {
+            "label": "scrvUSD token",
+            "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367#readContract"
+          },
+          {
+            "label": "Exact fixed Yearn V3 implementation fee-share source, retrieved 2026-10-20 in FD02/C03",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd8063123bba3b480569244ae66bfe72b6c84b00d"
+          }
+        ],
+        "evidence": "Historical Ethereum block 26095892 binds the canonical scrvUSD clone to fixed implementation 0xd8063123bba3b480569244ae66bfe72b6c84b00d and role_manager()=0x40907540d8a6c65c637785e8f8b742ae6b0b9968. The retained exact review says this address can assign the implementation's management roles, and identifies role-controlled accountant management. The same exact implementation source reviewed in FD02/C03 exposes set_accountant and _process_report fee-share issuance. Source-scoped symmetry correction authored 2026-10-21 from those existing facts; no new runtime, role membership, installed accountant or custody observation is asserted."
       }
     ],
-    "economicCapSemantics": "bounded",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "upgradeability": {
@@ -61,9 +88,13 @@
         {
           "label": "scrvUSD token",
           "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367#readContract"
+        },
+        {
+          "label": "Exact fixed Yearn V3 implementation fee-share source, retrieved 2026-10-20 in FD02/C03",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd8063123bba3b480569244ae66bfe72b6c84b00d"
         }
       ],
-      "evidence": "Pinned Ethereum block 26095892 confirms a fixed EIP-1167 Yearn V3 clone over crvUSD, zero strategy debt, empty default strategy queue, and zero deposit/withdrawal limit modules and accountant. The fixed implementation cannot be changed through an EIP-1967 administrator. Vault management is not absent: role_manager() resolves to Curve's governance address 0x40907540d8a6c65c637785e8f8b742ae6b0b9968, which can assign the implementation's management roles. Ordinary deposit/share accounting and management of vault assets do not create durable crvUSD liabilities; underlying issuance remains inherited. This review concerns the canonical Ethereum vault, not bridged representations documented by Curve.",
+      "evidence": "Pinned Ethereum block 26095892 confirms a fixed EIP-1167 Yearn V3 clone over crvUSD, zero strategy debt, empty default strategy queue, and zero deposit/withdrawal limit modules and accountant. The fixed implementation cannot be changed through an EIP-1967 administrator. Vault management is not absent: role_manager() resolves to Curve's governance address 0x40907540d8a6c65c637785e8f8b742ae6b0b9968, which can assign the implementation's management roles. Ordinary deposit/share accounting and management of vault assets do not create durable crvUSD liabilities; underlying issuance remains inherited. This review concerns the canonical Ethereum vault, not bridged representations documented by Curve. Source-scoped symmetry correction authored 2026-10-21: the fixed implementation also issues accountant fee shares through _process_report. The already identified role manager can assign the implementation's management roles, including accountant management, so immutable bytecode and a zero accountant do not establish a deposit-only local share cap. This local share-dilution path is distinct from inherited underlying crvUSD issuance. Historical October 1 observations and the original review start are retained; no fresh chain read is claimed.",
       "reviewer": "Sol curation pass 2026-10-01 (CurB43scrvUSD)",
       "reviewedAt": "2026-10-01",
       "disposition": "scoreable"
