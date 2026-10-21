@@ -1121,7 +1121,7 @@ function adaptMintControl(
     materialSupplyShare: null,
     ...(scopedQuestionFresh ? { scopedQuestionFresh: true } : {}),
     ...(scopedQuestionIsCustodyOnly ? { scopedQuestionSubject: "key-custody-independence" as const } : {}),
-    keyCustody: scopedQuestionIsCustodyOnly ? "unknown" : keyCustody,
+    keyCustody,
     ...(control.keyCustodyAttestation?.kind === "hardware-wallet" && keyCustody === "unknown"
       ? { keyCustodyReviewUnavailable: true } : {}),
     modulesOrGuards: control.modulesOrGuardsStatus ?? "unknown",
