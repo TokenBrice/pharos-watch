@@ -111,6 +111,8 @@ Selected issuer/protocol payout identity and its impairment share are owned by t
 
 Static identity is not execution. Quote-time code/factory/token/decimal/fee proof, reference freshness, request cost, maturity and consumer admission still apply. Etherlink Curve and X Layer remain shadow. Recovery creates no TVL/cost/capacity, asset-wide coverage claim, fanout or additive quota; saturated cohorts defer.
 
+The reviewed identity inventory includes HOME's issuer-listed Ethereum HOME/USDC V3 pool `0xd89278702e8221555b5d7d6a202551caffb7c50b` (fee 100, both tokens six decimals). It reuses the already-active Ethereum QuoterV2 family; it does not activate a new model or admit HOME's distinct Curve metapool. Static enrollment supplies only a descriptor for an independently retained current pool. Even a successful QuoterV2 call can return negligible output; actual passing same-request capacity, fees and maturity must still be measured by the existing producer.
+
 ### Direct API Data Sources
 
 `buildDexDirectApiFetchers()` in `worker/src/cron/dex-liquidity/orchestrator-phases/direct-api.ts` owns ordered providers, circuits, chain scope and `censusScope`; adapters own endpoints/fields/fees. `DEX_DISCOVERY_PROVIDER_REGISTRY` in `shared/lib/dex-deployment-coverage.ts` owns discovery scope. Do not maintain a second provider/chain/quality roster here.
