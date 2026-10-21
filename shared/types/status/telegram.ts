@@ -304,11 +304,6 @@ export const TelegramBotStatsSchema = z.object({
   presetImpliedCoinSubscriptions: z.number().nullable().optional(),
   activePresetFollowers: z.number().optional(),
   avgSubscriptionsPerSubscribedChat: z.number(),
-  /**
-   * Retired with pending disambiguation (always 0). Still emitted for one release so a
-   * Pages build older than the Worker keeps parsing; removed in the PR E cleanup.
-   */
-  pendingDisambiguations: z.number().optional(),
   pendingDeliveries: z.number(),
   lastSubscriberActivityAt: z.number().nullable(),
   customPreferenceChats: z.number(),

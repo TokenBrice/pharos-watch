@@ -334,8 +334,6 @@ export function mapTelegramBotStats(input: {
     presetImpliedCoinSubscriptions,
     activePresetFollowers,
     avgSubscriptionsPerSubscribedChat: roundMetric(aggregate?.avg_subscriptions_per_subscribed_chat, 1),
-    // Compatibility for Pages builds that still require the retired field (removed in PR E).
-    pendingDisambiguations: 0,
     pendingDeliveries: pendingCount,
     lastSubscriberActivityAt: coerceNullableTimestamp(aggregate?.last_subscriber_activity_at),
     customPreferenceChats: coerceCount(aggregate?.custom_preference_chats),
