@@ -44,12 +44,12 @@ describe("additionalHardCapRisk gates the second charge for pillar-priced signal
     expect(trace.bindingCap?.limit).toBe(59);
   });
 
-  it("withholds the cap when a pillar-priced signal asserts no residual", () => {
+  it("withholds other pillar-priced caps when no residual is asserted", () => {
     const trace = scoreV9Input(
-      input([signal({ pricedInPillar: "control" })]),
+      input([signal({ kind: "critical-dependency", pricedInPillar: "control" })]),
       V9_CANDIDATE_POLICY_V1,
     );
-    expect(trace.caps.some((cap) => cap.kind === "signal:centralized-mint:high")).toBe(false);
+    expect(trace.caps.some((cap) => cap.kind === "signal:critical-dependency:high")).toBe(false);
     expect(trace.bindingCap).toBeNull();
   });
 
@@ -89,5 +89,34 @@ describe("additionalHardCapRisk gates the second charge for pillar-priced signal
         V9_CANDIDATE_POLICY_V1,
       ),
     ).toThrow();
+  });
+
+  it.each(["backing", "control"] as const)("caps material high credit priced in %s without a residual marker", (pricedInPillar) => {
+    const credit = signal({ kind: "speculative-credit", economicLossScope: "reserve-claim", materialSharePct: 88.5, pricedInPillar });
+    const capped = scoreV9Input(input([credit]), V9_CANDIDATE_POLICY_V1);
+    expect(capped.finalScore).toBe(59);
+    expect(capped.bindingCap?.kind).toBe("signal:speculative-credit:high");
+    expect(scoreV9Input(input([]), V9_CANDIDATE_POLICY_V1).finalScore).toBeGreaterThan(59);
+  });
+
+  it("applies the same provisional rule to high global mint authority", () => {
+    expect(scoreV9Input(input([signal({ pricedInPillar: "control" })]), V9_CANDIDATE_POLICY_V1).finalScore).toBe(59);
+  });
+
+  it("retains stricter caps and does not cap non-adverse or deployment-only credit", () => {
+    const credit = signal({ kind: "speculative-credit", economicLossScope: "reserve-claim", pricedInPillar: "backing" });
+    const stricter = signal({ kind: "active-control-incident", severity: "critical" });
+    const trace = scoreV9Input(input([credit, stricter]), V9_CANDIDATE_POLICY_V1);
+    expect(trace.bindingCap?.kind).toBe("signal:active-control-incident:critical");
+    expect(trace.finalScore).toBeLessThan(59);
+    for (const overrides of [
+      { responsibility: "issuer-undisclosed" as const },
+      { severity: "moderate" as const },
+      { economicLossScope: "deployment" as const, materialSharePct: 10, exposureKey: "deployment:probe", riskEventKey: "credit:probe" },
+      { economicLossScope: "access-only" as const },
+    ]) {
+      const result = scoreV9Input(input([{ ...credit, ...overrides }]), V9_CANDIDATE_POLICY_V1);
+      expect(result.caps.some((cap) => cap.kind.startsWith("signal:speculative-credit"))).toBe(false);
+    }
   });
 });

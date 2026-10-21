@@ -220,9 +220,9 @@ The `signalLimits` table is not a set of missing-data ceilings. Only admitted me
 | --- | --- |
 | `global-claim` and legacy-scope signals | Whole-score hard cap only with an admitted surviving D/E predicate; undefined responsibility is not measured-adverse proof |
 | Deployment-scoped signals | Proportional exposure floor, published as `exposedScore`, rather than a whole-score cap; the per-card values are live publication output from `GET /api/report-cards/v9` |
-| Pillar-priced signals without an asserted residual | Inert as a whole-score cap; a signal already priced inside a pillar cannot impose a second ceiling without an asserted `additionalHardCapRisk` residual |
+| Pillar-priced signals without an asserted residual | Inert as a whole-score cap except for the uniform v10.28 high speculative-credit/global-mint rule in the [current model contract](../report-cards.md#v10-model); other pillar-priced signals require an asserted `additionalHardCapRisk` residual |
 
-Limits are integral in published score space. Scope gating retains proportional deployment adjustment without double-charging pillar facts; pillar-priced hard caps require explicit residual risk.
+Limits are integral in published score space. Deployment scope retains proportional adjustment; outside the documented per-kind provisional rule, pillar-priced hard caps require explicit residual risk.
 
 Equal caps prefer specific observed/withheld facts over generic absence, then source priority and code-unit kind/reason order, keeping selected reason and full trace total/byte-stable.
 

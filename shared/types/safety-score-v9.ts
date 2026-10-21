@@ -208,9 +208,9 @@ const V9StructuralSignalSchema = z
      * the pillar result IS the causal account. This marker is the reviewed
      * assertion that the ceiling covers a residual the pillar does not measure,
      * so the same fact may legitimately both lower a pillar and impose a hard
-     * cap. It is required for a pillar-priced signal to reach the cap ladder
-     * (`structuralSignalNeedsHardCap`), which makes every surviving double
-     * charge explicit and reviewable instead of implicit.
+     * cap. Outside the uniform high speculative-credit/global-mint provisional
+     * rule, it is required for a pillar-priced signal to reach the cap ladder
+     * (`structuralSignalNeedsHardCap`).
      */
     additionalHardCapRisk: z
       .object({ reviewed: z.literal(true), reason: z.string().min(1) })

@@ -325,13 +325,23 @@ function scopedRiskSignal(
 }
 
 export function structuralSignalNeedsHardCap(signal: Pick<V9StructuralSignal,
-  "economicLossScope" | "responsibility" | "pricedInPillar" | "additionalHardCapRisk"
+  "kind" | "severity" | "economicLossScope" | "responsibility" | "pricedInPillar" | "additionalHardCapRisk"
 >): boolean {
   // Retained V2 signals predate explicit loss scope and keep their legacy cap.
   if (signal.economicLossScope === undefined) {
     return signal.responsibility === undefined || signal.responsibility === "measured-adverse";
   }
   if (signal.responsibility !== "measured-adverse") return false;
+  // These admitted high-severity kinds carry a provisional, non-compensable
+  // ceiling regardless of pillar pricing. Credit is emitted as reserve-claim;
+  // requiring global-claim or a Control residual marker would miss it entirely.
+  // Keep deployment/access scope gates and take all limits from signalLimits.
+  if (
+    signal.severity === "high" &&
+    ((signal.kind === "speculative-credit" &&
+      (signal.economicLossScope === "reserve-claim" || signal.economicLossScope === "global-claim")) ||
+      (signal.kind === "centralized-mint" && signal.economicLossScope === "global-claim"))
+  ) return true;
   // A signal already priced inside a pillar has its causal account there. Letting
   // it also impose a whole-asset ceiling charges one fact twice, so the second
   // charge must be an explicit reviewed assertion that the ceiling covers a
