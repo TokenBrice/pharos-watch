@@ -2,7 +2,10 @@ import { batchExecute } from "../../../lib/db";
 import { runWithOverloadRetry } from "../../../lib/d1-overload-retry";
 import { TELEGRAM_ALERT_TTL_SEC } from "../../../telegram/common/constants";
 import { logTelegramEvent } from "../../../telegram/common/log";
-import type { TelegramTargetProjectionGuard } from "./telegram-alert-job-target-outcomes";
+import {
+  reconcileTelegramAlertJobCounters,
+  type TelegramTargetProjectionGuard,
+} from "./telegram-alert-job-target-outcomes";
 
 export interface TelegramAlertTargetStatusUpdate {
   targetKey: string;
@@ -122,5 +125,44 @@ export async function reconcileExpiredTelegramAlertJobTargets(
     3,
     signal,
   );
+  await reconcileSettledTelegramFreezeJobCounters(db, nowSec, signal);
   return Number(result.meta?.changes ?? 0);
+}
+
+/**
+ * Freeze jobs are reconciled only at handoff, so target status changes made
+ * later (TTL expiry above, drain status telemetry) can leave the job `queued`
+ * forever. Once the freeze cohort is fully handed off (or expired) and no target is still
+ * planned/queued, recompute the job counters from its target rows.
+ */
+async function reconcileSettledTelegramFreezeJobCounters(
+  db: D1Database,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<void> {
+  const rows = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `SELECT job.job_id
+             FROM telegram_alert_jobs job
+             JOIN telegram_freeze_alert_events event
+               ON event.source_event_id = job.source_event_id AND event.status IN ('complete', 'expired')
+            WHERE job.alert_type = 'freeze'
+              AND job.status IN ('discovered', 'queued')
+              AND EXISTS (SELECT 1 FROM telegram_alert_job_targets target WHERE target.job_id = job.job_id)
+              AND NOT EXISTS (
+                SELECT 1 FROM telegram_alert_job_targets target
+                 WHERE target.job_id = job.job_id
+                   AND target.final_delivery_state IS NULL
+                   AND target.status IN ('planned', 'queued')
+              )
+            ORDER BY job.job_id
+            LIMIT 90`,
+        )
+        .all<{ job_id: string }>(),
+    3,
+    signal,
+  );
+  await reconcileTelegramAlertJobCounters(db, (rows.results ?? []).map((row) => row.job_id), nowSec);
 }

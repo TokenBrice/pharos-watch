@@ -10,7 +10,7 @@ import type { TelegramAlertType, TelegramMiniAppOperation, TelegramMiniAppState 
 import { useTelegramMainButton } from "./use-telegram-main-button";
 import { useTelegramBridge } from "./use-telegram-bridge";
 import { useMiniAppMutations } from "./use-mini-app-mutations";
-import { miniAppErrorMessage } from "./error-messages";
+import { miniAppErrorMessage, MiniAppRequestError } from "./error-messages";
 import { ForgottenView } from "./components/ForgottenView";
 import { PreviewState } from "./components/PreviewState";
 import { MiniAppTabs } from "./components/MiniAppTabs";
@@ -55,12 +55,12 @@ export function PharosWatchBotMiniAppClient() {
   // tracks the session fetch + the "missing launch data" terminal error after the bridge resolves.
   const [status, setStatus] = useState<MiniAppSessionStatusValue>("loading");
   const [confirmedMeta, setConfirmedMeta] = useState<{ revision: string; refreshedAtMs: number } | null>(null);
+  // Telegram never refreshes initData inside a running Mini App, so a session
+  // `stale-auth` is terminal: no refresh can succeed without a fresh launch.
+  const [sessionAuthExpired, setSessionAuthExpired] = useState(false);
   const stateRef = useRef<TelegramMiniAppState | null>(null);
   const lastHiddenAtRef = useRef<number | null>(null);
   const mainButtonInFlightRef = useRef(false);
-  // Forward-ref to `loadSession` so the mutations hook can call back for stale-auth recovery
-  // even though `loadSession` is defined later (it depends on the hook's `setMessage`).
-  const loadSessionRef = useRef<((nextInitData: string, options?: { clearMessage?: boolean }) => Promise<void>) | null>(null);
 
   const onTelegramBack = useCallback(() => {
     if (!terminalRef.current) handleTelegramBack();
@@ -73,11 +73,6 @@ export function PharosWatchBotMiniAppClient() {
     backButtonVisible: !forgotten && backButtonVisible,
     onSettings: forgotten ? undefined : onTelegramSettings,
   });
-
-  const reloadSession = useCallback(async (options?: { clearMessage?: boolean }) => {
-    const fn = loadSessionRef.current;
-    if (fn && initData) await fn(initData, options);
-  }, [initData]);
 
   const applyConfirmedSnapshot = useCallback((snapshot: TelegramMiniAppClientSnapshot) => {
     if (terminalRef.current) return;
@@ -94,16 +89,19 @@ export function PharosWatchBotMiniAppClient() {
     setForgotten(true);
   }, []);
 
+  const markSessionAuthExpired = useCallback(() => setSessionAuthExpired(true), []);
+
   const mutations = useMiniAppMutations({
     initData,
     state,
     webApp,
     onSnapshotReplaced: applyConfirmedSnapshot,
     onForgotten: enterForgottenState,
-    reloadSession,
+    authExpired: sessionAuthExpired || state?.viewer.mutationBlockReason === "stale-auth",
     messageAutoDismissActive: status === "ready",
     mutationsAllowed: status === "ready",
-    portabilityReadsAllowed: status === "ready",
+    portabilityReadsAllowed: status === "ready" && !sessionAuthExpired,
+    onSessionAuthExpired: markSessionAuthExpired,
   });
   const {
     isMutating,
@@ -114,6 +112,7 @@ export function PharosWatchBotMiniAppClient() {
     forgottenView,
     pendingUndo,
     homeScreenStatus,
+    staleAuth,
     mutate,
     performMutation,
     performPortability,
@@ -160,11 +159,11 @@ export function PharosWatchBotMiniAppClient() {
       })) {
         return;
       }
+      if (err instanceof MiniAppRequestError && err.code === "stale-auth") setSessionAuthExpired(true);
       setStatus(stateRef.current ? "stale" : "error");
       setMessage(miniAppErrorMessage(err, "session"));
     }
   }, [applyConfirmedSnapshot, setMessage]);
-  useEffect(() => { loadSessionRef.current = loadSession; }, [loadSession]);
 
   const headline = useMemo(() => {
     if (!state) return "";
@@ -218,10 +217,13 @@ export function PharosWatchBotMiniAppClient() {
     return () => { cancelled = true; };
   }, []);
 
+  // Edits expire after 5 minutes (`authExpired`), but signed reads stay valid for
+  // 24h, so only a session-read `stale-auth` stops refreshing.
+  const authExpired = sessionAuthExpired || state?.viewer.mutationBlockReason === "stale-auth" || staleAuth != null;
   const triggerRefresh = useCallback(() => {
-    if (terminalRef.current || !initData || status === "loading" || isMutating) return;
+    if (terminalRef.current || sessionAuthExpired || !initData || status === "loading" || isMutating) return;
     void loadSession(initData);
-  }, [initData, isMutating, loadSession, status]);
+  }, [initData, isMutating, loadSession, sessionAuthExpired, status]);
 
   // visibilitychange — refetch when returning after >10 min hidden
   useEffect(() => {
@@ -259,8 +261,8 @@ export function PharosWatchBotMiniAppClient() {
   }, [webApp]);
 
   // TGB-022 stale-auth recovery: Telegram never refreshes `initData` for an
-  // open Mini App, so an expired 5-minute mutation window requires a fresh
-  // launch. Deep-link back through `?startapp=` with the current panel (and
+  // open Mini App, so an expired 5-minute mutation window (or 24h session
+  // window) requires a fresh launch. Deep-link back through `?startapp=` with the current panel (and
   // coin/insight context) so the relaunch reopens where the user left off.
   // Undefined when `openTelegramLink` is unavailable so the CTA stays hidden.
   const handleStaleAuthRelaunch = useMemo(() => {
@@ -276,7 +278,10 @@ export function PharosWatchBotMiniAppClient() {
   // delegate the Telegram lifecycle (attach/detach, setParams, show/hide) to
   // the shared hook. See `use-telegram-main-button.ts` for the cleanup contract.
   const canMutate = Boolean(!forgotten && initData && status === "ready" && state?.viewer.canMutate);
-  const canReadPortability = Boolean(!forgotten && initData && status === "ready" && state?.viewer.chatId != null);
+  // Expired private sessions keep edit controls live (not greyed out); the
+  // mutations hook turns each attempt into visible unsaved intent instead of a request.
+  const controlsEnabled = canMutate || Boolean(!forgotten && authExpired && state?.viewer.chatId != null);
+  const canReadPortability = Boolean(!forgotten && initData && status === "ready" && !sessionAuthExpired && state?.viewer.chatId != null);
   const mutationControlsDisabled = isMutating || mutationRetryAfterSec > 0;
   const runMainButtonMutation = useCallback((operation: TelegramMiniAppOperation) => {
     if (!canMutate || mutationControlsDisabled || mainButtonInFlightRef.current) return;
@@ -286,7 +291,11 @@ export function PharosWatchBotMiniAppClient() {
     });
   }, [canMutate, mutationControlsDisabled, performMutation]);
 
+  const showRelaunchMainButton = Boolean(authExpired && !forgotten && handleStaleAuthRelaunch);
   const { text: mainButtonText, handler: mainButtonHandler } = useMemo<{ text: string | null; handler: (() => void) | null }>(() => {
+    if (showRelaunchMainButton && handleStaleAuthRelaunch) {
+      return { text: state?.viewer.chatId != null ? "Reopen to edit" : "Reopen Mini App", handler: handleStaleAuthRelaunch };
+    }
     if (!canMutate || mutationControlsDisabled) return { text: null, handler: null };
     if (view === "home") {
       if (state && !state.subscriber.exists) {
@@ -298,13 +307,14 @@ export function PharosWatchBotMiniAppClient() {
       }
     }
     return { text: null, handler: null };
-  }, [canMutate, state, mutationControlsDisabled, nowSec, runMainButtonMutation, view]);
+  }, [canMutate, handleStaleAuthRelaunch, showRelaunchMainButton, state, mutationControlsDisabled, nowSec, runMainButtonMutation, view]);
+  const mainButtonActive = showRelaunchMainButton || (canMutate && !mutationControlsDisabled);
   useTelegramMainButton({
     webApp,
     text: mainButtonText,
     handler: mainButtonHandler,
-    visible: Boolean(mainButtonText && mainButtonHandler && canMutate && !mutationControlsDisabled),
-    active: canMutate && !mutationControlsDisabled,
+    visible: Boolean(mainButtonText && mainButtonHandler && mainButtonActive),
+    active: mainButtonActive,
   });
 
   if (status === "preview") return <PreviewState previewName={previewName} />;
@@ -313,7 +323,6 @@ export function PharosWatchBotMiniAppClient() {
   const heading = state?.viewer.username
     ? `@${state.viewer.username}`
     : state?.viewer.firstName ?? "PharosWatchBot";
-  const showStaleAuthBanner = state?.viewer.mutationBlockReason === "stale-auth";
 
   const openPrivacy = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (webApp?.openLink) {
@@ -328,7 +337,7 @@ export function PharosWatchBotMiniAppClient() {
   };
 
   return (
-    <section className="pharos-mini-app min-h-[max(var(--telegram-viewport-height,100svh),100svh)] [overflow-wrap:anywhere] bg-[var(--telegram-bg,var(--background))] text-[var(--telegram-text,var(--foreground))]">
+    <section className="pharos-mini-app min-h-[max(var(--telegram-viewport-height,100svh),100svh)] [overflow-wrap:break-word] bg-[var(--telegram-bg,var(--background))] text-[var(--telegram-text,var(--foreground))]">
       <div className="mx-auto flex max-w-2xl flex-col px-3 pb-[calc(env(safe-area-inset-bottom)+var(--telegram-safe-area-bottom,0px)+1rem)] sm:px-4">
         <div className="sticky top-0 z-chrome -mx-3 border-b border-border/60 bg-[var(--telegram-bg,var(--background))] px-3 pb-3 pt-[calc(env(safe-area-inset-top)+var(--telegram-safe-area-top,0px)+0.5rem)] sm:-mx-4 sm:px-4">
           <header className="flex items-center justify-between gap-3 pb-2">
@@ -336,7 +345,7 @@ export function PharosWatchBotMiniAppClient() {
             <button
               type="button"
               aria-label="Refresh session"
-              disabled={!initData || status === "loading" || isMutating}
+              disabled={!initData || sessionAuthExpired || status === "loading" || isMutating}
               onClick={triggerRefresh}
               className="pharos-focus-ring inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-border/65 bg-background/60 text-foreground transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -357,10 +366,11 @@ export function PharosWatchBotMiniAppClient() {
           mutationRetryAfterSec={mutationRetryAfterSec}
           initData={initData}
           canClose={Boolean(webApp?.close)}
-          showStaleAuthBanner={showStaleAuthBanner}
+          staleAuth={authExpired ? { intent: staleAuth?.intent ?? null, sessionExpired: sessionAuthExpired } : null}
           onRefresh={triggerRefresh}
           onClose={handleClose}
-          onStaleAuthRelaunch={handleStaleAuthRelaunch}
+          // The native MainButton carries "Reopen to edit"; render it inline only without one.
+          onStaleAuthRelaunch={webApp?.MainButton ? undefined : handleStaleAuthRelaunch}
         />
 
         {state ? (
@@ -371,7 +381,7 @@ export function PharosWatchBotMiniAppClient() {
                 home={{
                   state: state,
                   nowSec,
-                  canMutate,
+                  canMutate: controlsEnabled,
                   isMutating: mutationControlsDisabled,
                   pendingOperation,
                   onMutate: mutate,
@@ -382,7 +392,7 @@ export function PharosWatchBotMiniAppClient() {
                 }}
                 watchlist={{
                   state: state,
-                  canMutate,
+                  canMutate: controlsEnabled,
                   canReadBulk: canReadPortability,
                   isMutating: mutationControlsDisabled,
                   isRequestBusy: isMutating,
@@ -403,7 +413,7 @@ export function PharosWatchBotMiniAppClient() {
                 }}
                 presets={{
                   state: state,
-                  canMutate,
+                  canMutate: controlsEnabled,
                   isMutating: mutationControlsDisabled,
                   pendingOperation,
                   onMutate: mutate,
@@ -411,7 +421,7 @@ export function PharosWatchBotMiniAppClient() {
                 }}
                 settings={{
                   state: state,
-                  canMutate,
+                  canMutate: controlsEnabled,
                   canReadPortability,
                   isMutating: mutationControlsDisabled,
                   isPortabilityRequestBusy: isMutating,

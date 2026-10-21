@@ -15,6 +15,7 @@ import {
   makeTelegramWebhookDb,
 } from "./telegram-webhook.test-support.ts";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { TELEGRAM_ADOPTION_CATALOG } from "@shared/lib/telegram-adoption-analytics";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
@@ -368,12 +369,6 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text.toLowerCase()).toContain("ticker");
   });
 
-  it("handles /subscribe validation: no types", async () => {
-    const db = makeTelegramWebhookDb([{ match: "telegram_pending_disambiguation", rows: [] }]);
-    await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe USDC"), "test-secret", "bot-token");
-
-    expect(sentMessageBody().text.toLowerCase()).toContain("alert type");
-  });
 
   it("allows non-admin group users to view /list without an admin lookup", async () => {
     const db = makeTelegramWebhookDb([
@@ -690,5 +685,38 @@ describe("handleTelegramWebhook", () => {
     };
     const callbacks = (body.reply_markup?.inline_keyboard ?? []).flat().map((b) => b.callback_data);
     expect(callbacks).toContain("manage:page:0");
+  });
+});
+
+describe("landing deep links and bare /subscribe", () => {
+  beforeEach(resetTelegramWebhookTest);
+
+  it.each(TELEGRAM_ADOPTION_CATALOG.map((entry) => entry.token))(
+    "answers /start %s with onboarding, never the generic error",
+    async (token) => {
+      const { db } = fixtures.open();
+      const response = await handleTelegramWebhook(
+        db, makeWebhookRequest(123, `/start ${token}`, "test-secret", { updateId: 1 }), "test-secret", "bot-token",
+      );
+      expect(response.status).toBe(200);
+      expect(latestSendMessageBody().text).not.toContain("Something went wrong");
+    },
+  );
+
+  it("prompts on bare /subscribe with a setup button and records outcome prompted", async () => {
+    const { sqlite, db } = fixtures.open();
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe", "test-secret", { updateId: 1 }), "test-secret", "bot-token");
+    const body = latestSendMessageBody();
+    expect(body.text).toContain("guided setup");
+    expect(JSON.stringify(body.reply_markup)).toContain("start=setup");
+    expect(sqlite.prepare("SELECT outcome, failure_class FROM telegram_usage_daily WHERE event_type = 'subscribe'").all())
+      .toEqual([{ outcome: "prompted", failure_class: "" }]);
+  });
+
+  it("defaults /subscribe <ticker> to DEWS and depeg", async () => {
+    const { sqlite, db } = fixtures.open();
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe USDC", "test-secret", { updateId: 1 }), "test-secret", "bot-token");
+    expect(sqlite.prepare("SELECT stablecoin_id, alert_dews, alert_depeg FROM telegram_subscriptions WHERE chat_id = '123'").get())
+      .toMatchObject({ stablecoin_id: "usdc-circle", alert_depeg: 1 });
   });
 });

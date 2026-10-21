@@ -320,11 +320,11 @@ async function persistAndQueueFreezeEvent(db: D1Database, event: FreezeAlert, no
         }),
         db.prepare(
           `UPDATE telegram_alert_job_targets
-              SET status = 'queued'
+              SET status = 'queued', enqueued_at = COALESCE(enqueued_at, ?)
             WHERE job_id = ? AND target_key = ? AND status = 'planned'
               AND source_event_id = ?
               AND ${matchingPendingSql}`,
-        ).bind(`telegram:${sourceEventId}:freeze`, targetKey, sourceEventId, ...matchingPendingBinds),
+        ).bind(nowSec, `telegram:${sourceEventId}:freeze`, targetKey, sourceEventId, ...matchingPendingBinds),
         db.prepare(
           `UPDATE telegram_freeze_alert_targets
               SET status = 'queued', queued_at = ?, pending_dedupe_key = ?

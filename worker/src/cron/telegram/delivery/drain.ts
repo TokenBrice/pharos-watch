@@ -566,6 +566,7 @@ export async function drainPendingQueue(
   const expiredBeforeSend = new Map<number, DeadLetterPendingRow>();
   const leaseExpiredBeforeSend = new Set<number>();
   const checkpointedAttemptedOutcomes = new Map<number, PendingOutcomeProjection>();
+  const unconfirmedTerminalIds = new Set<number>();
   const softDeadlineAtMs = Number.isFinite(options.softDeadlineAtMs)
     ? options.softDeadlineAtMs
     : null;
@@ -786,7 +787,9 @@ export async function drainPendingQueue(
           };
           waveOutcomes.push(reducePendingOutcome(result, row, claim, completedAt));
         }
-        await checkpointAttemptedPendingWave(db, waveOutcomes, completedAt, claimOwner);
+        for (const id of await checkpointAttemptedPendingWave(db, waveOutcomes, completedAt, claimOwner)) {
+          unconfirmedTerminalIds.add(id);
+        }
         for (const outcome of waveOutcomes) {
           checkpointedAttemptedOutcomes.set(outcome.row.id, outcome);
         }
@@ -874,6 +877,13 @@ export async function drainPendingQueue(
       );
     }
 
+    if (unconfirmedTerminalIds.has(result.id)) {
+      // Sent, but the terminal state did not land: neither credit nor delete
+      // the row. It stays `sending` until stale-claim reconciliation.
+      counters.executionUnknown++;
+      completedIds.add(result.id);
+      continue;
+    }
     const outcome = checkpointedOutcome ?? reducePendingOutcome(result, pendingRow, deliveryClaim, outcomeAt);
     counters[outcome.kind]++;
     completedIds.add(result.id);

@@ -91,7 +91,8 @@ describe("DEX liquidity coverage", () => {
     expect(message).not.toContain("BAD — score");
     expect(message).toContain("VALID4");
     expect(message).not.toContain("VALID5");
-    expect(message).toContain("invalid-coverage-evidence");
+    expect(message).toContain("Coverage unavailable for 1 token(s).");
+    expect(message).not.toContain("invalid-coverage-evidence");
     expect(db.getHistory()[0].sql).not.toContain("LIMIT");
   });
 });
@@ -323,7 +324,7 @@ describe("buildTopMessage", () => {
     expect(message).not.toContain("STAGED");
     canonical.rankings.forEach((row, index) => {
       const score = row.pharosYieldScore == null
-        ? `unavailable (${row.pysNullReason ?? "safety-unrated"})`
+        ? "unavailable"
         : String(Math.round(row.pharosYieldScore));
       expect(message).toContain(`${index + 1}. ${row.symbol} — ${row.apy30d.toFixed(2)}% 30d, PYS ${score}`);
     });
@@ -341,7 +342,8 @@ describe("buildTopMessage", () => {
       .run(JSON.stringify(payload), nowSec);
     const message = await buildTopMessage(db, "yield");
     expect(message).toContain("Top yields (PYS unavailable)");
-    expect(message).toContain("PYS unavailable (source-stale)");
+    expect(message).toContain("PYS unavailable,");
+    expect(message).not.toContain("source-stale");
     expect(message).not.toContain("expected model");
   });
 
@@ -374,9 +376,8 @@ describe("buildTopMessage", () => {
     expect(chainsMessage).toContain("Ethereum");
     expect(chainsMessage).toContain("health NR");
     expect(chainsMessage).not.toContain("null");
-    expect(chainsMessage).toContain(
-      "Chain health unavailable; expected model V9, v9 snapshot unavailable.",
-    );
+    expect(chainsMessage).toContain("Chain health is not available right now.");
+    expect(chainsMessage).not.toContain("V9");
 
     expect(yieldMessage).toBe("Yield rankings are temporarily unavailable.");
   });
@@ -386,7 +387,8 @@ describe("buildTopMessage", () => {
 
     const message = await buildTopMessage(db, "safety");
 
-    expect(message).toContain("Top Safety Scores (V9)");
+    expect(message).toContain("Top Safety Scores\n");
+    expect(message).not.toContain("(V9)");
     expect(message).toContain("USDC");
     expect(db.getHistory()).toEqual([]);
   });
@@ -405,13 +407,15 @@ describe("buildTopMessage", () => {
     expect(db.getHistory()).toEqual([]);
   });
 
-  it("includes canonical V9 provenance in /why without on-demand recomputation", async () => {
+  it("explains /why in plain language without internal model or generation ids", async () => {
     const db = mockD1([]);
 
     const message = await buildWhyMessage(db, "usdc-circle");
 
-    expect(message).toContain("Model: V9 · 9.0 · report-cards:v9:1");
+    expect(message).not.toContain("Model:");
+    expect(message).not.toContain("report-cards:v9:1");
     expect(message).toContain("Weakest pillars");
+    expect(message).toMatch(/- (Backing|Exit|Control): \d+ \((what backs the coin|how easily holders can redeem or sell near \$1|who can mint, freeze or change the coin)\)/);
     expect(db.getHistory()).toEqual([]);
   });
 
@@ -445,7 +449,7 @@ describe("buildTopMessage", () => {
       kind: "v9", snapshot: makeWorkerReportCardsV9Response({ cards: [card] }),
     });
     const message = await buildWhyMessage(mockD1([]), "usdc-circle");
-    expect(message).toContain("- Control: 12\n- Exit: 30");
+    expect(message).toContain("- Control: 12 (who can mint, freeze or change the coin)\n- Exit: 30 (how easily holders can redeem or sell near $1)");
     expect(message).not.toContain("- Backing:");
     expect(message).toContain("1 active score cap");
     expect(message).toContain("freeze exposure: direct");
@@ -528,10 +532,10 @@ describe("Safety Score availability explanations", () => {
     ] });
     mocks.loadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot });
     const gapMessage = await buildWhyMessage(mockD1([]), "gap");
-    expect(gapMessage).toContain("pipeline gap");
+    expect(gapMessage).toContain("Overall: not available right now");
     expect(gapMessage).not.toContain("Overall: NR");
     expect(gapMessage).not.toContain("Overall: null");
     const partialMessage = await buildWhyMessage(mockD1([]), "partial");
-    expect(partialMessage).toContain("Partial evidence: pipeline gap");
+    expect(partialMessage).toContain("Some inputs are missing, so this grade is provisional.");
   });
 });

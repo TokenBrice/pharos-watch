@@ -1,5 +1,6 @@
 import { executeAtomicBatch } from "../../../lib/db";
 import { TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX } from "../../../telegram/common/constants";
+import { logTelegramEvent } from "../../../telegram/common/log";
 import {
   prepareTelegramAlertJobCounterReconciliation,
   prepareTelegramJobTargetFinalDeliveryProjection,
@@ -72,9 +73,11 @@ export async function persistPendingTerminalOutcomes(
     state: "sent" | "execution_unknown";
     nowSec: number;
   },
-): Promise<void> {
-  if (outcomes.length === 0) return;
+): Promise<Set<number>> {
+  const unconfirmedIds = new Set<number>();
+  if (outcomes.length === 0) return unconfirmedIds;
   const statements: D1PreparedStatement[] = [];
+  const transitionIndexById = new Map<number, number>();
   const counterGuards = new Map<string, { targetKey: string }>();
   const guards = TERMINAL_GUARDS[state];
   for (const { claim, row, errorClass } of outcomes) {
@@ -93,6 +96,7 @@ export async function persistPendingTerminalOutcomes(
     const transition: PendingSendingTransition = state === "sent"
       ? { to: "sent", completedAt: nowSec }
       : { to: "execution_unknown", completedAt: nowSec, errorClass: errorClass ?? null };
+    transitionIndexById.set(row.id, statements.length);
     statements.push(preparePendingSendingTransition(db, claim, transition, { targetGuard }));
     if (identity) {
       statements.push(prepareTelegramJobTargetFinalDeliveryProjection(
@@ -112,10 +116,30 @@ export async function persistPendingTerminalOutcomes(
       finalDeliveryState: guards.finalDeliveryState,
     }));
   }
-  const changed = await executeAtomicBatch(db, statements);
-  if (changed !== statements.length) {
-    throw new Error(state === "sent"
-      ? `Telegram sent-state persistence was not confirmed (${changed}/${statements.length})`
-      : `Telegram pending ambiguity state was not confirmed (${changed}/${statements.length})`);
+  const results = await executeAtomicBatch(db, statements, { returnResults: true });
+  // The pending transition carries the owner/generation and target guards, so
+  // its own row count is the durable terminal evidence for each outcome. Rows
+  // without it stay `sending` for stale-claim reconciliation: callers must not
+  // credit or delete them.
+  for (const [id, index] of transitionIndexById) {
+    if (Number(results[index]?.meta?.changes ?? 0) === 0) unconfirmedIds.add(id);
   }
+  const changed = results.reduce((total, result) => total + Number(result?.meta?.changes ?? 0), 0);
+  if (unconfirmedIds.size > 0 || changed !== statements.length) {
+    // The batch has already committed; throwing would only abort the rest of
+    // the drain run after its sends already happened.
+    logTelegramEvent({
+      level: "warn",
+      message: state === "sent"
+        ? "Telegram sent-state persistence was not confirmed"
+        : "Telegram pending ambiguity state was not confirmed",
+      action: "persist-pending-terminal-outcomes",
+      module: "telegram-pending-drain",
+      reason: state,
+      updateCount: changed,
+      rowCount: statements.length,
+      affectedChatCount: unconfirmedIds.size,
+    });
+  }
+  return unconfirmedIds;
 }

@@ -11,6 +11,7 @@ import {
   buildStatusMessage,
   describeGlobalAlertSettings,
   describeSubscriptionSettings,
+  formatTelegramSafety,
 } from "../telegram-webhook-messages";
 import type { SubscriberRow, SubscriptionRow } from "../telegram-webhook-shared";
 import type { StatusForCoin } from "../telegram-webhook-status";
@@ -282,7 +283,8 @@ describe("buildStatusMessage supply and DEX context", () => {
     const message = buildStatusMessage("USDC", baseStatus({
       liquidity: null, liquidityUnavailableReason: "invalid-coverage-evidence",
     }));
-    expect(message).toContain("Liquidity: unavailable (invalid-coverage-evidence)");
+    expect(message).toContain("Liquidity: unavailable");
+    expect(message).not.toContain("invalid-coverage-evidence");
     expect(message).not.toContain("Liquidity: NR");
   });
 
@@ -332,7 +334,8 @@ describe("buildStatusMessage canonical safety provenance", () => {
         recordedAt: Math.floor(Date.now() / 1000),
       },
     });
-    expect(buildStatusMessage("USDC", source)).toContain("Safety: A (90) [V9 9.0]");
+    expect(buildStatusMessage("USDC", source)).toContain("Safety: A (90), ");
+    expect(buildStatusMessage("USDC", source)).not.toContain("V9");
     expect(buildCoverageMessage("USDC", source)).toContain("Safety: A (90) [V9 9.0]");
     expect(
       buildStatusMessage("USDC", baseStatus({ safetyUnavailableReason: "canonical-snapshot-unavailable" })),
@@ -354,19 +357,20 @@ describe("buildStatusMessage canonical safety provenance", () => {
     } });
     const message = buildStatusMessage("USDC", status);
     const coverage = buildCoverageMessage("USDC", status);
-    const sharedRating = message.split("\n").find((line) => line.startsWith("Safety:"))?.split("],")[0];
-    expect(coverage).toContain(`${sharedRating}]`);
+    const sharedRating = `Safety: ${formatTelegramSafety(status.safety!)}`;
+    expect(message).toContain(`${sharedRating}, `);
+    expect(coverage).toContain(`${sharedRating} [V9 10.01]`);
     expect(coverage).not.toContain("Safety: null");
     if (ratingStatus === "pipeline-gap") {
-      expect(message).toContain("Safety: Pipeline gap — Unavailable");
+      expect(message).toContain("Safety: not available right now");
       expect(message).not.toContain("Safety: NR");
       expect(message).not.toContain("Safety: null");
       expect(message).not.toContain("(0)");
     } else if (ratingStatus === "rated") {
-      expect(message).toContain("Safety: A (80) — Partial evidence: pipeline gap");
+      expect(message).toContain("Safety: A (80), some inputs missing");
     } else {
       expect(message).toContain("Safety: NR");
-      expect(message).not.toContain("Pipeline gap");
+      expect(message).not.toContain("some inputs missing");
     }
   });
 });
@@ -440,7 +444,8 @@ describe("buildStatusMessage Telegram HTML escaping", () => {
   it("discloses unavailable accepted yield rather than hiding the field", () => {
     const status = baseStatus({ yieldUnavailableReason: "yield-rankings-unavailable" });
     for (const message of [buildStatusMessage("USDC", status), buildCoverageMessage("USDC", status)]) {
-      expect(message).toContain("Yield: unavailable (yield-rankings-unavailable)");
+      expect(message).toContain("Yield: unavailable");
+      expect(message).not.toContain("yield-rankings-unavailable");
       expect(message).not.toContain("% 30d at");
     }
   });

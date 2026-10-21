@@ -1,3 +1,4 @@
+import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import { escapeHtml } from "../delivery/telegram";
 import { recordTelegramUsageEvent } from "../store/usage-analytics";
 import {
@@ -18,10 +19,32 @@ import {
   subscribableCoinCount,
 } from "./action-runner";
 
+const RECOMMENDED_SUBSCRIBE_TYPES = ["dews", "depeg"] as const;
+const SUBSCRIBE_PROMPT_MESSAGE =
+  "Tap below for guided setup, or type /subscribe dews USDC. "
+  + "Without alert types, /subscribe &lt;ticker&gt; follows DEWS and depeg alerts.";
+
 export const handleSubscribe: WebhookCommandHandler = async (ctx, args) => {
   const { db } = ctx;
   const actionContext = buildTelegramActionContext(ctx);
   const parsed = parseSubscribeArgs(args);
+  if (!args.trim()) {
+    // Menu taps send the bare command: point at guided setup instead of a usage error.
+    await ctx.replyToChatWithMarkup(SUBSCRIBE_PROMPT_MESSAGE, {
+      replyMarkup: {
+        inline_keyboard: [[{ text: "Set up alerts", url: `${TELEGRAM_BOT_URL}?start=setup` }]],
+      },
+    });
+    await recordTelegramUsageEvent(db, {
+      eventType: "subscribe",
+      actionDetail: "validation",
+      outcome: "prompted",
+    });
+    return;
+  }
+  const targetsOnly = parsed.alertTypes.size === 0 && parsed.invalidTargets.length === 0
+    && (parsed.tickers.length > 0 || parsed.presetIds.length > 0 || parsed.subscribeAll);
+  if (targetsOnly) for (const type of RECOMMENDED_SUBSCRIBE_TYPES) parsed.alertTypes.add(type);
   const validationError = validateSubscribeArgs(parsed);
   if (validationError) {
     if (parsed.invalidTargets.length > 0 && parsed.alertTypes.size > 0) {

@@ -99,7 +99,39 @@ describe("canonical V9 Telegram safety reasons", () => {
       { coin: current },
       { coin: previous },
     )[0]?.contextLine).toBe(
-      "Reason: Exit pillar fell from 70 to 41.",
+      "Reason: Exit score fell from 70 to 41. Exit measures how easily holders can redeem or sell near $1.",
     );
+  });
+
+  it("explains an upgrade that lands on a new cap by the pillar that moved", () => {
+    const previous = row({ grade: "D", score: 30, v9Explain: { bindingCap: null, reasons: [], weakestPillar: { pillar: "exit", score: 35 }, pillars: { ...pillars, exit: { ...pillars.exit, score: 35 } } } });
+    const current = row({
+      grade: "C-",
+      score: 40,
+      v9Explain: {
+        bindingCap: { kind: "parent", limit: 40, reason: "A child cannot rate above its required parent." },
+        reasons: [],
+        weakestPillar: { pillar: "exit", score: 48 },
+        pillars: { ...pillars, exit: { ...pillars.exit, score: 48 } },
+      },
+    });
+    expect(buildV9SafetyReason(current as Required<SafetySnapshot[string]>, previous as Required<SafetySnapshot[string]>)).toBe(
+      "Reason: Exit score rose from 35 to 48. Exit measures how easily holders can redeem or sell near $1.",
+    );
+  });
+
+  it("names a newly binding parent cap in plain language on a downgrade", () => {
+    const current = row({
+      grade: "D",
+      score: 30,
+      v9Explain: {
+        bindingCap: { kind: "parent", limit: 30, reason: "A child cannot rate above its required parent." },
+        reasons: [],
+        weakestPillar: { pillar: "exit", score: 70 },
+        pillars,
+      },
+    });
+    expect(buildV9SafetyReason(current as Required<SafetySnapshot[string]>, row() as Required<SafetySnapshot[string]>))
+      .toBe("Reason: Capped at the Safety Score of the coin it is built on.");
   });
 });

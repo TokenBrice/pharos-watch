@@ -39,7 +39,7 @@ import { SNOOZE_SECONDS } from "../common/constants";
 import { isValidIanaTimezone } from "../common/quiet-hours";
 import { DEFAULT_QUIET_END_HOUR, DEFAULT_QUIET_START_HOUR } from "../webhook/telegram-webhook-settings-shared";
 import { prepareCoinSettingStatements } from "../webhook/telegram-webhook-settings-mutations";
-import { buildDepegStepUpsert, buildDewsUpsert, buildSafetyUpsert, type BuiltSubscriptionUpsert } from "../store/subscriptions";
+import { buildDepegStepUpsert, buildDewsUpsert, buildSafetyUpsert, removeSubscriptions, type BuiltSubscriptionUpsert } from "../store/subscriptions";
 import { prepareSubscriberAndPresetPatchStatements } from "../store/presets";
 import { prepareUpsertSubscriberRow, prepareTelegramFirstFollowStatements, type TelegramFollowOptions } from "../store/subscribers";
 import { telegramAdoptionDimensionsForMiniApp } from "../adoption/adoption-analytics";
@@ -238,13 +238,23 @@ function importGenerationLease(): number {
   return 4_000_000_000_000_000 + value;
 }
 
-async function decodedPortableState(token: string): Promise<WatchlistTokenV2State> {
+/**
+ * Direct rows for coins that are no longer subscribable (delisted, frozen,
+ * pre-launch removed) are skipped rather than rejecting the whole token, and
+ * the chat's own rows for those coins are left untouched by the import.
+ */
+async function decodedPortableState(token: string): Promise<{ state: WatchlistTokenV2State; skippedDirectIds: Set<string> }> {
   const decoded = await decodeWatchlistToken(token);
   if (!decoded.ok || (decoded.version !== 2 && decoded.version !== 3)) throw new TelegramMiniAppMutationError("invalid-portable-token");
-  const unknownDirect = decoded.state.direct.some((row) => !isSubscribableCoin(row.stablecoinId));
   const unknownPreset = decoded.state.presets.some((row) => !TELEGRAM_PRESET_IDS.includes(row.presetId as never));
-  if (unknownDirect || unknownPreset) throw new TelegramMiniAppMutationError("invalid-portable-token");
-  return decoded.state;
+  if (unknownPreset) throw new TelegramMiniAppMutationError("invalid-portable-token");
+  const skippedDirectIds = new Set(
+    decoded.state.direct.filter((row) => !isSubscribableCoin(row.stablecoinId)).map((row) => row.stablecoinId),
+  );
+  return {
+    state: { ...decoded.state, direct: decoded.state.direct.filter((row) => !skippedDirectIds.has(row.stablecoinId)) },
+    skippedDirectIds,
+  };
 }
 
 function importFingerprint(
@@ -474,16 +484,14 @@ export async function executeTelegramMiniAppPortabilityOperation(
 ): Promise<TelegramMiniAppPortabilityResponse | null> {
   const chatId = privateChatId(auth);
   if (operation.kind === "export-watchlist") {
-    const { state } = await loadWatchlistPortableState(db, chatId, WATCHLIST_TOKEN_REGISTRY_VERSION);
+    const loaded = await loadWatchlistPortableState(db, chatId, WATCHLIST_TOKEN_REGISTRY_VERSION);
+    // Rows for coins removed from the registry cannot be encoded; export the rest.
+    const state = { ...loaded.state, direct: loaded.state.direct.filter((row) => TRACKED_META_BY_ID.has(row.stablecoinId)) };
     if (state.direct.length === 0 && state.presets.length === 0) {
       throw new TelegramMiniAppMutationError("empty-portable-state");
     }
-    let token: string;
-    try {
-      token = await encodeWatchlistTokenV3(state);
-    } catch {
-      throw new TelegramMiniAppMutationError("empty-portable-state");
-    }
+    // An encode failure is a server fault, never an empty watchlist.
+    const token = await encodeWatchlistTokenV3(state);
     return {
       contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
       catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
@@ -496,10 +504,13 @@ export async function executeTelegramMiniAppPortabilityOperation(
     };
   }
 
-  const desired = await decodedPortableState(operation.token);
+  const { state: desired, skippedDirectIds } = await decodedPortableState(operation.token);
   const current = await loadWatchlistPortableState(db, chatId, WATCHLIST_TOKEN_REGISTRY_VERSION);
   const expectedPreferenceGeneration = current.preferenceGeneration ?? 0;
-  const { preview, exactPreview } = buildPortablePreview(current.state, desired);
+  const { preview, exactPreview } = buildPortablePreview(
+    { ...current.state, direct: current.state.direct.filter((row) => !skippedDirectIds.has(row.stablecoinId)) },
+    desired,
+  );
   const fingerprint = importFingerprint(expectedPreferenceGeneration, desired, exactPreview);
 
   if (operation.kind === "preview-watchlist-import") {
@@ -762,8 +773,14 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
       await setCoin(db, chatId, username, operation, followOptions);
       return;
     case "remove-coin": {
-      assertCoin(operation.stablecoinId);
       const current = await loadWatchlistPortableState(db, chatId, WATCHLIST_TOKEN_REGISTRY_VERSION, true);
+      if (!TRACKED_META_BY_ID.has(operation.stablecoinId)) {
+        // A coin removed from the registry can still have a stored row; delete
+        // it without an undo, since it can never be followed again.
+        if (!current.directSnoozes.has(operation.stablecoinId)) throw new TelegramMiniAppMutationError("unknown-coin");
+        await removeSubscriptions(db, chatId, [operation.stablecoinId]);
+        return;
+      }
       const removed = current.state.direct.find((row) => row.stablecoinId === operation.stablecoinId);
       if (!removed) return;
       const expectedPreferenceGeneration = current.preferenceGeneration ?? 0;

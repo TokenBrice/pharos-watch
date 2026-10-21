@@ -1,6 +1,13 @@
 import { getReportCardGradeRank } from "@shared/lib/report-card-core";
 import { V9_LEGACY_RESPONSIBILITY_BY_REASON } from "@shared/lib/safety-score-v9/facts";
-import type { DewsChange, LaunchAlert, ReserveAlert, SafetyChange } from "../../../telegram/common/alerts-formatting";
+import {
+  isDewsAlertable,
+  isDewsDeescalation,
+  type DewsChange,
+  type LaunchAlert,
+  type ReserveAlert,
+  type SafetyChange,
+} from "../../../telegram/common/alerts-formatting";
 import {
   extractTopSignals,
   type DewsRow,
@@ -8,6 +15,14 @@ import {
   type SafetySnapshot,
 } from "./telegram-alert-snapshots";
 
+/**
+ * Real-time DEWS changes are escalations only: a move from an observed
+ * alertable band to a less severe one (DANGER to WARNING, WARNING to ALERT)
+ * is not sent. Direction is judged against the previously observed band, not
+ * the sticky alertable baseline: a coin that calmed below ALERT and now rises
+ * into the alertable range escalates, whatever band it reached before. The
+ * alertable baseline still dedupes a return to the same alert band.
+ */
 export function buildDewsChanges(
   rows: readonly DewsRow[],
   safeDewsAlertable: DewsSnapshot,
@@ -18,14 +33,18 @@ export function buildDewsChanges(
   for (const row of rows) {
     const oldBand = safeDewsAlertable[row.stablecoin_id];
     if (oldBand === row.band) continue;
+    const observedBand = safeDewsSnapshot[row.stablecoin_id];
+    // isDewsDeescalation is false unless both bands are threat bands; only an
+    // observed alertable band can be the source of an unsent de-escalation.
+    if (typeof observedBand === "string" && isDewsAlertable(observedBand) && isDewsDeescalation(observedBand, row.band)) continue;
     dewsChanges.push({
       stablecoinId: row.stablecoin_id,
       symbol: getSymbol(row.stablecoin_id),
       oldBand:
-        typeof oldBand === "string"
-          ? oldBand
-          : typeof safeDewsSnapshot[row.stablecoin_id] === "string"
-            ? safeDewsSnapshot[row.stablecoin_id]
+        typeof observedBand === "string"
+          ? observedBand
+          : typeof oldBand === "string"
+            ? oldBand
             : "UNKNOWN",
       newBand: row.band,
       score: row.score,

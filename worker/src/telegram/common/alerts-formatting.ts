@@ -1,6 +1,8 @@
 import { THREAT_BAND_ORDER, isDewsAlertBand, isThreatBand } from "@shared/lib/classification";
 import { MINI_APP_PAYLOAD_NAMES, formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { getPegTaxonomyByCurrency } from "@shared/lib/peg-taxonomy";
+import { DEWS_SIGNAL_LABELS } from "@shared/lib/dews-config";
+import { getReportCardGradeRank } from "@shared/lib/report-card-core";
 import { escapeHtml } from "../delivery/telegram";
 import {
   TELEGRAM_MESSAGE_CHUNK_LIMIT,
@@ -110,15 +112,27 @@ function formatContextLine(contextLine?: string): string {
   return `\n<blockquote expandable>${escaped}</blockquote>`;
 }
 
+function dewsSignalLabel(key: string): string {
+  return (DEWS_SIGNAL_LABELS as Record<string, string | undefined>)[key] ?? key;
+}
+
+function dewsTransitionPhrase(oldBand: string, newBand: string): string {
+  if (!isThreatBand(oldBand) || !isThreatBand(newBand)) return `stress is now ${newBand}`;
+  return THREAT_BAND_ORDER[newBand] > THREAT_BAND_ORDER[oldBand]
+    ? `stress rose to ${newBand}`
+    : `stress eased to ${newBand}`;
+}
+
 export function formatDewsLine(e: DewsChange): string {
-  // DEWS sub-signal values are already 0-100 integers (see SignalResult in worker/src/lib/dews.ts).
+  // DEWS sub-signal values are 0-100 stress levels (see SignalResult in worker/src/lib/dews.ts), not percentages.
   const signals = e.topSignals
     .slice(0, 2)
-    .map((s) => `${s.name} (${Math.round(s.value)}%)`)
+    .map((s) => `${dewsSignalLabel(s.name)} ${Math.round(s.value)}`)
     .join(", ");
   const glyph = dewsGlyphFor(e.newBand);
   const prefix = glyph ? `${glyph} ` : "";
-  return `${prefix}<b>${escapeHtml(e.symbol)}</b> — ${e.oldBand} → ${e.newBand} (score: ${e.score})${signals ? `\nTop signals: ${signals}` : ""}${formatContextLine(e.contextLine)}`;
+  const was = isThreatBand(e.oldBand) ? `, was ${e.oldBand}` : "";
+  return `${prefix}<b>${escapeHtml(e.symbol)}</b> ${dewsTransitionPhrase(e.oldBand, e.newBand)} (score ${e.score}${was})${signals ? `\nMain drivers: ${signals}` : ""}${formatContextLine(e.contextLine)}`;
 }
 
 function formatDurationMinutes(durationMinutes: number): string {
@@ -161,9 +175,23 @@ export function formatDepegWorseningLine(e: DepegWorsening): string {
   return `${glyph} <b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg worsening\nDeviation: ${prev}% → ${curr}% (${deltaStr})\nPrice: ${formatPrice(e.price, e.priceCurrency)} (peg: ${formatPrice(e.pegReference, e.priceCurrency, 2)})${formatContextLine(e.contextLine)}`;
 }
 
+/** Plain-language gloss for each Safety Score pillar, shared by alerts and /why. */
+export const SAFETY_PILLAR_GLOSS: Readonly<Record<string, string>> = {
+  backing: "what backs the coin",
+  exit: "how easily holders can redeem or sell near $1",
+  control: "who can mint, freeze or change the coin",
+};
+
+function safetyGradeVerb(oldGrade: string, newGrade: string): string {
+  const oldRank = getReportCardGradeRank(oldGrade);
+  const newRank = getReportCardGradeRank(newGrade);
+  if (oldRank == null || newRank == null || oldRank < 0 || newRank < 0 || oldRank === newRank) return "changed";
+  return newRank > oldRank ? "raised" : "downgraded";
+}
+
 export function formatSafetyLine(e: SafetyChange): string {
   const scores = e.oldScore != null && e.newScore != null ? `\nScore: ${e.oldScore} → ${e.newScore}` : "";
-  return `<b>${escapeHtml(e.symbol)}</b> — ${e.oldGrade} → ${e.newGrade}${scores}${formatContextLine(e.contextLine)}`;
+  return `<b>${escapeHtml(e.symbol)}</b> Safety grade ${safetyGradeVerb(e.oldGrade, e.newGrade)} to ${escapeHtml(e.newGrade)} (was ${escapeHtml(e.oldGrade)})${scores}${formatContextLine(e.contextLine)}`;
 }
 
 export interface LaunchAlert {

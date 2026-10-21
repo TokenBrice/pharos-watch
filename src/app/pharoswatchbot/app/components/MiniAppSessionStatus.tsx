@@ -3,7 +3,6 @@
 import { ExternalLink, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
-import { STALE_AUTH_READ_ONLY_COPY } from "./StatusPanel";
 import { HomeSkeleton } from "./HomeSkeleton";
 import { MiniButton } from "./MiniButton";
 
@@ -17,7 +16,11 @@ interface MiniAppSessionStatusProps {
   mutationRetryAfterSec: number;
   initData: string;
   canClose: boolean;
-  showStaleAuthBanner: boolean;
+  /**
+   * Non-null when launch auth expired for edits. When the 24h session read also
+   * expired (`sessionExpired`), it replaces every other status banner.
+   */
+  staleAuth: { intent: string | null; sessionExpired: boolean } | null;
   onRefresh: () => void;
   onClose: () => void;
   onStaleAuthRelaunch?: () => void;
@@ -31,11 +34,36 @@ export function MiniAppSessionStatus({
   mutationRetryAfterSec,
   initData,
   canClose,
-  showStaleAuthBanner,
+  staleAuth,
   onRefresh,
   onClose,
   onStaleAuthRelaunch,
 }: MiniAppSessionStatusProps) {
+  const staleAuthBanner = staleAuth ? (
+    <section role="status" aria-live="polite" className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
+      <div className="flex gap-3">
+        <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden="true" />
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-semibold text-foreground">Reopen to edit</h2>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            {hasDisplayState
+              ? "This Telegram launch has expired, so changes can't be saved. Your settings stay readable; reopen the Mini App to edit."
+              : "This Telegram launch has expired. Reopen the Mini App from PharosWatchBot to load your settings."}
+          </p>
+          {staleAuth.intent ? <p className="mt-2 text-xs font-medium text-foreground">{staleAuth.intent}</p> : null}
+          {onStaleAuthRelaunch || canClose ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {onStaleAuthRelaunch ? (
+                <MiniButton variant="secondary" onClick={onStaleAuthRelaunch}>Reopen to edit</MiniButton>
+              ) : null}
+              {canClose ? <MiniButton variant="secondary" onClick={onClose}>Close</MiniButton> : null}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  ) : null;
+  if (staleAuth?.sessionExpired) return staleAuthBanner;
   return (
     <>
       {status === "loading" && !hasDisplayState ? <HomeSkeleton /> : null}
@@ -99,24 +127,7 @@ export function MiniAppSessionStatus({
           Pharos edit limit reached. Settings unlock in {mutationRetryAfterSec} {mutationRetryAfterSec === 1 ? "second" : "seconds"}.
         </section>
       ) : null}
-      {showStaleAuthBanner ? (
-        <section className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
-          <div className="flex gap-3">
-            <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden="true" />
-            <div>
-              <h2 className="text-sm font-semibold text-foreground">{STALE_AUTH_READ_ONLY_COPY.title}</h2>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{STALE_AUTH_READ_ONLY_COPY.body}</p>
-              {onStaleAuthRelaunch ? (
-                <div className="mt-3">
-                  <MiniButton variant="secondary" onClick={onStaleAuthRelaunch}>
-                    Relaunch and keep this panel
-                  </MiniButton>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </section>
-      ) : null}
+      {staleAuthBanner}
     </>
   );
 }

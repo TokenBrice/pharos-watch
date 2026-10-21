@@ -38,11 +38,6 @@ export interface StatusPanelProps {
   onSendSample?: () => void;
 }
 
-export const STALE_AUTH_READ_ONLY_COPY = {
-  title: "Reopen Telegram to edit settings",
-  body: "This session is still readable, but edits require a fresh launch from Telegram.",
-} as const;
-
 function failureCopy(failureClass: string | null): { title: string; body: string; urgent: boolean } | null {
   if (!failureClass) return null;
   if (failureClass === "blocked" || failureClass === "forbidden") {

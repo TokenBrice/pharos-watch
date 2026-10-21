@@ -252,7 +252,7 @@ export async function checkpointAttemptedPendingWave(
   outcomes: readonly PendingOutcomeProjection[],
   completedAt: number,
   processingOwner: string,
-): Promise<void> {
+): Promise<Set<number>> {
   const sentOutcomes: Array<{ claim: PendingDeliveryClaim; row: PendingAlertRow }> = [];
   const executionUnknownOutcomes: Array<{
     claim: PendingDeliveryClaim;
@@ -286,8 +286,10 @@ export async function checkpointAttemptedPendingWave(
     }
   }
 
-  await persistPendingTerminalOutcomes(db, { outcomes: sentOutcomes, state: "sent", nowSec: completedAt });
-  await persistPendingTerminalOutcomes(db, { outcomes: executionUnknownOutcomes, state: "execution_unknown", nowSec: completedAt });
+  const unconfirmedIds = await persistPendingTerminalOutcomes(db, { outcomes: sentOutcomes, state: "sent", nowSec: completedAt });
+  for (const id of await persistPendingTerminalOutcomes(db, {
+    outcomes: executionUnknownOutcomes, state: "execution_unknown", nowSec: completedAt,
+  })) unconfirmedIds.add(id);
   // Land the durable global gate before the retry rows are written: when the
   // cache write cannot land, the per-row fallback below must carry the defer.
   let globalBackoffDurable = true;
@@ -355,4 +357,5 @@ export async function checkpointAttemptedPendingWave(
     completedAt,
     processingOwner,
   );
+  return unconfirmedIds;
 }

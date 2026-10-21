@@ -93,6 +93,15 @@ function mutationSuccessAnnouncement(operation: TelegramMiniAppOperation, state:
   }
 }
 
+function isStaleAuthError(err: unknown): boolean {
+  return err instanceof MiniAppRequestError && err.status === 401 && err.code === "stale-auth";
+}
+
+function staleAuthIntent(operation: TelegramMiniAppOperation, state: TelegramMiniAppState | null): string {
+  if (operation.kind === "forget-me") return "Data deletion was not run.";
+  return `Not saved: ${mutationSuccessAnnouncement(operation, state)}`;
+}
+
 function confirmThenFire(
   confirmFn: TelegramWebAppSdk["showConfirm"] | undefined,
   message: string,
@@ -118,14 +127,20 @@ export interface UseMiniAppMutationsArgs {
   onSnapshotReplaced: (next: TelegramMiniAppClientSnapshot) => void;
   /** Revoke the session and clear retained data after confirmed deletion. */
   onForgotten: () => void;
-  /** Reload the session (used on 401/stale-auth recovery). */
-  reloadSession: (options?: { clearMessage?: boolean }) => Promise<void>;
+  /**
+   * Telegram launch auth is known to be expired. Telegram never refreshes
+   * `initData` inside a running Mini App, so edits are kept as visible intent
+   * and never sent; only a fresh launch can save them.
+   */
+  authExpired: boolean;
   /** Whether the 6s message auto-dismiss is active. Caller passes `status === "ready"`. */
   messageAutoDismissActive: boolean;
   /** False while session state is refreshing, stale, or otherwise read-only. */
   mutationsAllowed: boolean;
   /** Signed private-session reads remain available through Telegram's 24h window. */
   portabilityReadsAllowed: boolean;
+  /** A signed read hit `stale-auth`: the 24h session window is over and no signed request can succeed. */
+  onSessionAuthExpired: () => void;
 }
 
 export interface UseMiniAppMutationsResult {
@@ -145,6 +160,11 @@ export interface UseMiniAppMutationsResult {
   pendingUndo: SubscribedCoin | null;
   /** Returned status when `checkHomeScreenStatus` probe ran. Null until then. */
   homeScreenStatus: string | null;
+  /**
+   * Non-null once a request was rejected with `stale-auth` or an edit was
+   * attempted while `authExpired`; `intent` describes the unsaved edit.
+   */
+  staleAuth: { intent: string | null } | null;
 
   /** Dispatch a mutation without changing visible values before server confirmation. */
   mutate: (operation: TelegramMiniAppOperation) => void;
@@ -192,10 +212,11 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     webApp,
     onSnapshotReplaced,
     onForgotten,
-    reloadSession,
+    authExpired,
     messageAutoDismissActive,
     mutationsAllowed,
     portabilityReadsAllowed,
+    onSessionAuthExpired,
   } = args;
   // webApp identity is stable per render, so showConfirm is safe to hoist once.
   const showConfirm = webApp?.showConfirm;
@@ -208,6 +229,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   const [forgottenView, setForgottenView] = useState(false);
   const [pendingOperation, setPendingOperation] = useState<TelegramMiniAppOperation | null>(null);
   const [mutationRetryAfterSec, setMutationRetryAfterSec] = useState(0);
+  const [staleAuth, setStaleAuth] = useState<{ intent: string | null } | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasRequestedWriteAccessRef = useRef(false);
@@ -252,7 +274,16 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   }, [mutationRetryAfterSec]);
 
   const performMutation = useCallback(async (operation: TelegramMiniAppOperation): Promise<TelegramMiniAppClientSnapshot | null> => {
-    if (terminalRef.current || requestInFlightRef.current || !initData || !mutationsAllowed || state?.viewer.canMutate !== true || mutationRetryAfterSec > 0) return null;
+    if (terminalRef.current) return null;
+    if (authExpired || staleAuth) {
+      // Resending the frozen initData is guaranteed to fail; keep the intent visible instead.
+      setStaleAuth({ intent: staleAuthIntent(operation, state) });
+      setMessage(null);
+      setAnnouncement("Change not saved. Reopen the Mini App to edit.");
+      webApp?.HapticFeedback?.notificationOccurred?.("warning");
+      return null;
+    }
+    if (requestInFlightRef.current || !initData || !mutationsAllowed || state?.viewer.canMutate !== true || mutationRetryAfterSec > 0) return null;
     requestInFlightRef.current = true;
     // Capture pre-mutation snapshot for engagement gating (T-57).
     const preSubscriberExists = state?.subscriber.exists ?? false;
@@ -324,13 +355,14 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
         setMutationRetryAfterSec((current) => Math.max(current, retryAfterSec));
         setMessage(null);
         setAnnouncement(`Pharos edit limit reached. Settings are disabled for ${retryAfterSec} ${retryAfterSec === 1 ? "second" : "seconds"}.`);
+      } else if (isStaleAuthError(err)) {
+        setStaleAuth({ intent: staleAuthIntent(operation, state) });
+        setMessage(null);
+        setAnnouncement("Change not saved. Reopen the Mini App to edit.");
       } else {
         setMessage(miniAppErrorMessage(err, "mutation"));
       }
       webApp?.HapticFeedback?.notificationOccurred?.("error");
-      if (err instanceof MiniAppRequestError && err.status === 401 && err.code === "stale-auth") {
-        await reloadSession({ clearMessage: false });
-      }
       return null;
     } finally {
       setIsMutating(false);
@@ -338,7 +370,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       setPendingOperation(null);
       webApp?.disableClosingConfirmation?.();
     }
-  }, [initData, mutationRetryAfterSec, mutationsAllowed, onForgotten, onSnapshotReplaced, reloadSession, state?.subscriber.exists, state?.viewer.canMutate, state?.viewer.chatType, webApp]);
+  }, [authExpired, initData, mutationRetryAfterSec, mutationsAllowed, onForgotten, onSnapshotReplaced, staleAuth, state, webApp]);
 
   const mutate = useCallback((operation: TelegramMiniAppOperation) => {
     void performMutation(operation);
@@ -366,7 +398,13 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
           catalogVersion: err.serverCatalogVersion,
         });
       }
-      setMessage(miniAppErrorMessage(err, "mutation"));
+      if (isStaleAuthError(err)) {
+        setStaleAuth((current) => current ?? { intent: null });
+        setMessage(null);
+        onSessionAuthExpired();
+      } else {
+        setMessage(miniAppErrorMessage(err, "mutation"));
+      }
       webApp?.HapticFeedback?.notificationOccurred?.("error");
       return null;
     } finally {
@@ -374,7 +412,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       requestInFlightRef.current = false;
       setPendingOperation(null);
     }
-  }, [initData, isMutating, portabilityReadsAllowed, state?.viewer.chatId, webApp]);
+  }, [initData, isMutating, onSessionAuthExpired, portabilityReadsAllowed, state?.viewer.chatId, webApp]);
 
   const performPortability = useCallback(async (
     operation: Extract<TelegramMiniAppPortabilityOperation, { kind: "export-watchlist" | "preview-watchlist-import" }>,
@@ -475,6 +513,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     forgottenView,
     pendingUndo,
     homeScreenStatus,
+    staleAuth,
     mutate,
     performMutation,
     performPortability,
