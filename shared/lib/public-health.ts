@@ -43,7 +43,7 @@ export function maxPublicStatus(...statuses: PublicStatusTone[]): PublicStatusTo
 export function getPublicMintBurnStatus(sync: HealthResponse["mintBurn"]["sync"]): PublicStatusTone {
   if (sync.freshnessStatus == null || sync.criticalLaneHealthy == null) return "degraded";
   if (sync.freshnessStatus === "stale") return "stale";
-  if (sync.freshnessStatus === "degraded" || !sync.criticalLaneHealthy || sync.warning != null) {
+  if (sync.lastSuccessfulSyncAt == null || sync.freshnessStatus === "degraded" || !sync.criticalLaneHealthy) {
     return "degraded";
   }
   return "healthy";

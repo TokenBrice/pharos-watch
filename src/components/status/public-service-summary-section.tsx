@@ -48,11 +48,11 @@ function ComponentRow({
         </div>
         <ComponentStatePill state={component.state} className="shrink-0" />
       </div>
-      {!operational ? (
+      {!operational || component.summary ? (
         <div className="mt-2 space-y-1 text-sm text-foreground">
           {component.summary ? <p>{component.summary}</p> : null}
           <p className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
-            {component.since != null ? (
+            {!operational && component.since != null ? (
               <span>
                 For <Timestamp epochSec={component.since} variant="duration" />
               </span>

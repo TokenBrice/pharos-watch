@@ -69,5 +69,24 @@ describe("buildTriageInbox", () => {
     expect(inbox.watch[0]).toMatchObject({ verdict: "watch", recurrence: 3 });
   });
 
+  it("watches bounded listing and mint/burn notices alongside small unwaived price gaps", () => {
+    const data = withCauses([
+      { code: "stablecoin_publication_incomplete", layer: "data-quality", severity: "info", message: "1 of 396 listings missing." },
+      { code: "mint_burn_public_degraded", layer: "availability", severity: "info", message: "Fresh healthy lane; execution notice." },
+      { code: "active_price_coverage_incomplete", layer: "data-quality", severity: "warning", message: "2 unacknowledged price gaps." },
+    ]);
+    const inbox = buildTriageInbox(normalizeStatusIssues(data.causes), data);
+    expect(inbox.act).toHaveLength(0);
+    expect(inbox.items.every((item) => item.verdict === "watch")).toBe(true);
+    expect(buildTriageHeadline(inbox, CURRENT_EVIDENCE).verdict).toBe("watch");
+  });
+
+  it.each(["stablecoin_publication_unknown", "stablecoin_publication_incomplete", "mint_burn_public_stale", "db_unhealthy"])(
+    "keeps genuine %s service impact actionable", (code) => {
+      const data = withCauses([{ code, layer: "availability", severity: "warning", message: "Service impact." }]);
+      expect(buildTriageInbox(normalizeStatusIssues(data.causes), data).act).toHaveLength(1);
+    },
+  );
+
 });
 

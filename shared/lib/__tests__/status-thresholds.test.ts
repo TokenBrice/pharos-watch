@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   FRESHNESS_RATIOS,
   getBlacklistGapStatus,
+  getStablecoinPublicationComponentStatus,
   getStablecoinPublicationImpactStatus,
   getActivePriceGapMaterialityMarketCapUsd,
   STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC,
@@ -22,6 +23,7 @@ import {
   STATUS_RESERVE_DRIFT_THRESHOLD_POINTS,
 } from "../status-thresholds";
 import { CRON_INTERVALS } from "../cron-jobs";
+import type { ActivePriceCoverageGap } from "../../types/status";
 
 it("keeps on-chain supply freshness at two Kinesis producer cycles", () => {
   expect(STATUS_ONCHAIN_FRESH_WINDOW_SEC).toBe(8 * 3600);
@@ -57,7 +59,7 @@ describe("missing-price duration bands", () => {
 
 describe("publication materiality evidence", () => {
   const now = 1_790_000_000;
-  it("reserves service degradation for billion-dollar exposure", () => {
+  it("retains billion-dollar component and price-duration materiality", () => {
     expect(STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd).toBe(1_000_000_000);
   });
   it.each([
@@ -77,13 +79,29 @@ describe("publication materiality evidence", () => {
     }, now)).toBe(60_000_000);
   });
   it.each(["unknown", "incomplete"] as const)("fails closed for %s publication without ids", (status) => {
-    expect(getStablecoinPublicationImpactStatus({ status, missingActiveIds: [] }, { missingActiveAssets: [] }, now))
+    expect(getStablecoinPublicationImpactStatus({ status, missingActiveIds: [], expectedActiveCount: 396 }, { missingActiveAssets: [] }, now))
       .toBe("degraded");
   });
   it("fails closed when a missing publication id has no coverage entry", () => {
     expect(getStablecoinPublicationImpactStatus(
-      { status: "incomplete", missingActiveIds: ["x"] }, { missingActiveAssets: [] }, now,
+      { status: "incomplete", missingActiveIds: ["x"], expectedActiveCount: 396 }, { missingActiveAssets: [] }, now,
     )).toBe("degraded");
+  });
+  it.each([
+    [1, 396, "healthy"], [3, 396, "healthy"], [4, 396, "degraded"],
+    [1, 100, "healthy"], [1, 99, "degraded"], [1, 0, "degraded"],
+  ] as const)("bounds service-wide listing impact (%s missing of %s)", (count, expectedActiveCount, expected) => {
+    const missingActiveIds = Array.from({ length: count }, (_, index) => `missing-${index}`);
+    const publication = { status: "incomplete" as const, missingActiveIds, expectedActiveCount };
+    const coverage = { missingActiveAssets: missingActiveIds.map((stablecoinId): ActivePriceCoverageGap => ({
+      stablecoinId, symbol: "MISSING", marketCapUsd: null,
+      lastKnownMarketCapUsd: 2_344_462_796.3038855, lastKnownMarketCapObservedAt: now - 7 * 86400,
+      currentPrice: null, currentSource: null, currentObservedAt: null, currentConfidence: null,
+      rejectionReason: "missing", lastAcceptedPrice: null, lastAcceptedSource: null, lastAcceptedObservedAt: null,
+      consecutiveMissingGenerations: 10, alertEligible: true,
+    })) };
+    expect(getStablecoinPublicationImpactStatus(publication, coverage, now)).toBe(expected);
+    expect(getStablecoinPublicationComponentStatus(publication, coverage, now)).toBe("degraded");
   });
 });
 

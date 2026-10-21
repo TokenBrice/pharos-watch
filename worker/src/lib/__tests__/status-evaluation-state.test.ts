@@ -625,6 +625,21 @@ describe("status cause text", () => {
     expect(causes.some((cause) => cause.code === "mint_burn_health_query_failed")).toBe(false);
   });
 
+  it("keeps a fresh healthy mint/burn execution warning as a named informational notice", () => {
+    const publicHealth = makePublicHealth();
+    publicHealth.mintBurnImpactStatus = "healthy";
+    publicHealth.mintBurnBootstrap = false;
+    publicHealth.mintBurn.sync = {
+      lastSuccessfulSyncAt: 1_699_999_970, freshnessStatus: "fresh", criticalLaneHealthy: true,
+      warning: "Critical mint/burn lane is running in degraded mode; coverage may be partial.",
+    };
+    const result = evaluateAvailabilityStatus(makeAvailabilityCauseInput(publicHealth));
+    expect(result.status).toBe("healthy");
+    expect(result.causes).toContainEqual(expect.objectContaining({
+      code: "mint_burn_public_degraded", severity: "info",
+    }));
+  });
+
   it("includes persistent stale independent feed details in degraded reserve sync causes", () => {
     const reserveComposition = makeReserveComposition({
       status: "degraded",
@@ -683,6 +698,40 @@ describe("status cause text", () => {
     }));
     expect(result.causes.some((entry) => entry.code === "reserve_cohort_slo_exceeded"))
       .toBe(completionP95Sec > STATUS_RESERVE_COHORT_SLO.maxAgeSec);
+  });
+
+  it.each([
+    [664, false, "info"],
+    [1800, false, "info"],
+    [1801, false, "warning"],
+    [null, false, "warning"],
+    [undefined, false, "warning"],
+    [664, true, "warning"],
+  ] as const)("classifies lagging cohort p95 with recent maximum %s and open breach %s as %s", (recentCompletionMaxSec, openBreach, severity) => {
+    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      reserveComposition: makeReserveComposition({
+        cohort: {
+          slotStartedAt: 1000, completedAt: openBreach ? null : 1100,
+          ageSec: openBreach ? 1801 : 100, continuationPending: openBreach,
+          completedCohorts: 42, completionP95Sec: 3691, recentCompletionMaxSec,
+        },
+      }),
+    }));
+    expect(result.causes.find((entry) => entry.code === "reserve_cohort_slo_exceeded"))
+      .toMatchObject({ severity, value: openBreach ? 1801 : 3691, threshold: 1800 });
+  });
+
+  it("keeps a recent completed-cohort breach visible even when seven-day p95 is within target", () => {
+    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      reserveComposition: makeReserveComposition({
+        cohort: {
+          slotStartedAt: 1000, completedAt: 1100, ageSec: 100, continuationPending: false,
+          completedCohorts: 42, completionP95Sec: 100, recentCompletionMaxSec: 1801,
+        },
+      }),
+    }));
+    expect(result.causes.find((entry) => entry.code === "reserve_cohort_slo_exceeded"))
+      .toMatchObject({ severity: "warning", metric: "reserveCohortRecentCompletionMaxSec", value: 1801 });
   });
 
   it("does not invent successful cohort evidence when the overview is unavailable", () => {
@@ -787,7 +836,7 @@ describe("status cause text", () => {
   it.each([
     [30_000_000, "healthy", "info"],
     [96_534_823.01, "healthy", "info"],
-    [500_000_000, "degraded", "warning"],
+    [500_000_000, "healthy", "info"],
   ] as const)("aligns publication cause and floor for retained cap %s", (cap, expectedStatus, severity) => {
     const nowSec = 1_790_000_000;
     const evaluated = evaluateStablecoinActivePriceCoverage([], ["missing"], {
@@ -799,7 +848,7 @@ describe("status cause text", () => {
       nowSec,
       dataQuality: makeDataQuality({
         stablecoinPublication: {
-          status: "incomplete", expectedActiveCount: 1, presentActiveCount: 0, waivedActiveCount: 0,
+          status: "incomplete", expectedActiveCount: 396, presentActiveCount: 395, waivedActiveCount: 0,
           missingActiveIds: ["missing"], waivedActiveIds: [], expiredWaiverIds: [], observedAt: nowSec,
         },
       }),

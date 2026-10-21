@@ -564,6 +564,13 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput
         input.publicHealth.mintBurn.sync.warning ??
           `Mint/burn public freshness is ${input.publicHealth.mintBurnImpactStatus} versus the critical-lane cadence.`,
       );
+    } else if (!input.publicHealth.mintBurnBootstrap && input.publicHealth.mintBurn.sync.warning != null) {
+      cause = makeCause(
+        "availability",
+        "mint_burn_public_degraded",
+        "info",
+        `Critical mint/burn output is fresh and the lane is healthy. Execution notice: ${input.publicHealth.mintBurn.sync.warning}`,
+      );
     }
     return ruleResult(status, cause ? [cause] : []);
   },
@@ -692,17 +699,25 @@ function evaluateReserveOperationalDiagnostics(input: DataQualityEvaluationInput
     const ageExceeded = cohort.completedAt == null && cohort.ageSec > STATUS_RESERVE_COHORT_SLO.maxAgeSec;
     const p95Exceeded = cohort.completionP95Sec != null
       && cohort.completionP95Sec > STATUS_RESERVE_COHORT_SLO.maxAgeSec;
-    if (ageExceeded || p95Exceeded) {
+    const recentExceeded = cohort.recentCompletionMaxSec != null
+      && cohort.recentCompletionMaxSec > STATUS_RESERVE_COHORT_SLO.maxAgeSec;
+    const recovered = !ageExceeded && cohort.recentCompletionMaxSec != null
+      && cohort.recentCompletionMaxSec <= STATUS_RESERVE_COHORT_SLO.maxAgeSec;
+    if (ageExceeded || p95Exceeded || recentExceeded) {
       causes.push(makeCause(
         "data-quality",
         "reserve_cohort_slo_exceeded",
-        "warning",
+        recovered ? "info" : "warning",
         `Reserve full-cohort completion exceeds the ${STATUS_RESERVE_COHORT_SLO.maxAgeSec}s SLO: `
           + (ageExceeded ? `open cohort age ${cohort.ageSec}s. ` : "")
-          + (p95Exceeded ? `Seven-day p95 ${cohort.completionP95Sec}s across ${cohort.completedCohorts} completed cohorts.` : ""),
+          + (p95Exceeded ? `Seven-day p95 ${cohort.completionP95Sec}s across ${cohort.completedCohorts} completed cohorts.` : "")
+          + (recentExceeded ? ` Recent completion maximum ${cohort.recentCompletionMaxSec}s.` : "")
+          + (recovered ? ` Recovered in the last ${STATUS_RESERVE_COHORT_SLO.recoveryWindowSec / 3600}h: all observed completed cohorts met the SLO (maximum ${cohort.recentCompletionMaxSec}s); historical breach retained.` : ""),
         {
-          metric: ageExceeded ? "reserveCohortAgeSec" : "reserveCohortCompletionP95Sec",
-          value: ageExceeded ? cohort.ageSec : cohort.completionP95Sec!,
+          metric: ageExceeded ? "reserveCohortAgeSec"
+            : p95Exceeded ? "reserveCohortCompletionP95Sec" : "reserveCohortRecentCompletionMaxSec",
+          value: ageExceeded ? cohort.ageSec
+            : p95Exceeded ? cohort.completionP95Sec! : cohort.recentCompletionMaxSec!,
           threshold: STATUS_RESERVE_COHORT_SLO.maxAgeSec,
           subjects: ["sync-live-reserves", "reserve-recovery", "sync-redemption-backstops"],
         },

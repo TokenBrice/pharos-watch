@@ -966,13 +966,13 @@ describe("live-reserves-store", () => {
         WHERE slot_started_at = 9600`).run();
       expect(await computeReserveCompositionOverview(db, 10_000, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
         cohort: { slotStartedAt: 9600, completedAt: null, ageSec: 400,
-          continuationPending: true, completedCohorts: 2, completionP95Sec: 1801 },
+          continuationPending: true, completedCohorts: 2, completionP95Sec: 1801, recentCompletionMaxSec: 1801 },
       });
       sqlite.prepare(`UPDATE worker_scheduled_checkpoints
         SET state = 'completed', completed_at = 10100 WHERE slot_started_at = 9600`).run();
       expect(await computeReserveCompositionOverview(db, 10_200, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
         cohort: { slotStartedAt: 9600, completedAt: 10100, ageSec: 500,
-          continuationPending: false, completedCohorts: 3, completionP95Sec: 1801 },
+          continuationPending: false, completedCohorts: 3, completionP95Sec: 1801, recentCompletionMaxSec: 1801 },
       });
     } finally {
       sqlite.close();
@@ -1002,7 +1002,7 @@ describe("live-reserves-store", () => {
         FROM worker_scheduled_checkpoints ORDER BY slot_started_at LIMIT 1`).run();
       expect(await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
         cohort: { slotStartedAt: latestSlot, completedAt: latestSlot + 664, ageSec: 664,
-          continuationPending: false, completedCohorts: 41, completionP95Sec: 3_691 },
+          continuationPending: false, completedCohorts: 41, completionP95Sec: 3_691, recentCompletionMaxSec: 664 },
       });
     } finally {
       sqlite.close();
@@ -1031,7 +1031,30 @@ describe("live-reserves-store", () => {
       expect(await computeReserveCompositionOverview(
         db, latestSlot + STATUS_RESERVE_COHORT_SLO.windowSec + 1, resolveScheduledSlotPolicy("fourHourlyReserveSync"),
       )).toMatchObject({
-        cohort: { completedCohorts: 0, completionP95Sec: null },
+        cohort: { completedCohorts: 0, completionP95Sec: null, recentCompletionMaxSec: null },
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("uses completion clocks for the recovery window, including long-running older roots", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const now = 1_800_000_000;
+    const oldSlot = now - STATUS_RESERVE_COHORT_SLO.windowSec - 100;
+    const oldCompletedAt = now - STATUS_RESERVE_COHORT_SLO.recoveryWindowSec;
+    try {
+      for (const [slotStartedAt, completedAt] of [[oldSlot, oldCompletedAt], [now - 1000, now - 800]]) {
+        await beginLiveReserveCheckpoint(db, { slotStartedAt, invocationId: `producer-${slotStartedAt}`, nowSec: slotStartedAt });
+        sqlite.prepare(`UPDATE worker_scheduled_checkpoints
+          SET state = 'completed', next_item_key = NULL, items_done = items_total,
+              completed_at = ? WHERE slot_started_at = ?`).run(completedAt, slotStartedAt);
+      }
+      expect(await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+        cohort: { completedCohorts: 1, completionP95Sec: 200, recentCompletionMaxSec: oldCompletedAt - oldSlot },
+      });
+      expect(await computeReserveCompositionOverview(db, now + 1, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+        cohort: { completedCohorts: 1, completionP95Sec: 200, recentCompletionMaxSec: 200 },
       });
     } finally {
       sqlite.close();

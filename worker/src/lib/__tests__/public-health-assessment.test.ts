@@ -481,8 +481,8 @@ describe("assessPublicHealth upstream provider enrichment", () => {
   it.each([
     ["small", 10_000_000, 900, 1, "healthy"],
     ["isolated PYUSDx-sized gap", 96_534_823.01, 7 * 86400, 1, "healthy"],
-    ["growth factor", MATERIAL_MARKET_CAP_USD / 2, 900, 1, "degraded"],
-    ["material", MATERIAL_MARKET_CAP_USD, 900, 1, "degraded"],
+    ["growth factor", MATERIAL_MARKET_CAP_USD / 2, 900, 1, "healthy"],
+    ["material asset-scoped", MATERIAL_MARKET_CAP_USD, 900, 1, "healthy"],
     ["no evidence", null, 900, 1, "degraded"],
     ["stale evidence", 10_000_000, STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC + 1, 1, "degraded"],
     ["margin boundary", 10_000_000, 900, STATUS_PUBLICATION_IMMATERIAL_MISSING_MARGIN, "healthy"],
@@ -816,6 +816,34 @@ describe("assessPublicHealth upstream provider enrichment", () => {
 });
 
 describe("assessPublicHealth mint/burn subquery failures", () => {
+  it("keeps fresh critical-lane output operational when the latest execution reports degraded", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+      latestRunStatus: "degraded", latestSuccessfulSyncAt: nowSec - 300,
+      publicationMetadata: makePriceCoverageMetadata(nowSec, null),
+    }), nowSec, { logPrefix: "test" });
+    expect(result.mintBurn.sync).toMatchObject({ freshnessStatus: "fresh", criticalLaneHealthy: true });
+    expect(result.mintBurn.sync.warning).not.toBeNull();
+    expect(result.mintBurnImpactStatus).toBe("healthy");
+    expect(result.overallStatus).toBe("healthy");
+  });
+
+  it.each([
+    ["degraded", API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows * 2, "stale"],
+    ["error", 300, "degraded"],
+    ["degraded", null, "stale"],
+  ] as const)("does not excuse run %s with success age %s because it has a warning", async (latestRunStatus, successAgeSec, expectedStatus) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+      latestRunStatus,
+      latestSuccessfulSyncAt: successAgeSec == null ? null : nowSec - successAgeSec,
+      publicationMetadata: makePriceCoverageMetadata(nowSec, null),
+    }), nowSec, { logPrefix: "test" });
+    expect(result.mintBurn.sync.warning).not.toBeNull();
+    expect(result.mintBurnImpactStatus).toBe(expectedStatus);
+    expect(result.overallStatus).toBe(expectedStatus);
+  });
+
   it("reads growth and repair diagnostics from the daily sentinel row", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const { sqlite, db } = fixtures.open();

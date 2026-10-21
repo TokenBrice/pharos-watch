@@ -394,13 +394,18 @@ describe("handleStatus", () => {
     expect(body.causes.availability.some((cause) => cause.code === "fx_source_degraded")).toBe(true);
   });
 
-  it("degrades availability when the critical mint/burn lane is in public degraded mode", async () => {
+  it.each([
+    ["degraded", 600, "healthy", "mint_burn_public_degraded", "info"],
+    ["degraded", API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows * 2, "stale", "mint_burn_public_stale", "critical"],
+    ["error", 600, "degraded", "mint_burn_public_degraded", "warning"],
+    ["degraded", null, "stale", "mint_burn_public_stale", "critical"],
+  ] as const)("grades mint/burn run %s with success age %s as %s", async (runStatus, successAgeSec, expectedStatus, causeCode, severity) => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
     });
     const cronRows = Object.keys(fixtureCRON_INTERVALS).map((job) =>
-      makeCronRow(job, job === "sync-mint-burn" ? "degraded" : "ok", 60),
+      makeCronRow(job, job === "sync-mint-burn" ? runStatus : "ok", 60),
     );
     const db = fixtureMockD1([{
       match: "SELECT job, item_count, metadata",
@@ -408,8 +413,8 @@ describe("handleStatus", () => {
       rows: [],
       first: { job: "mint-burn-growth-watchdog", item_count: 1234, metadata: null },
     },
-    { match: "SELECT status", matchBinds: ["sync-mint-burn"], rows: [], first: { status: "degraded" } },
-    { match: "as started_at FROM cron_runs WHERE job = ?", matchBinds: ["sync-mint-burn"], rows: [], first: { started_at: now - 600 } },
+    { match: "SELECT status", matchBinds: ["sync-mint-burn"], rows: [], first: { status: runStatus } },
+    { match: "as started_at FROM cron_runs WHERE job = ?", matchBinds: ["sync-mint-burn"], rows: [], first: { started_at: successAgeSec == null ? null : now - successAgeSec } },
     { match: "cron_runs", rows: cronRows },
     { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
     { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },], true);
@@ -418,11 +423,11 @@ describe("handleStatus", () => {
     const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       availabilityStatus: string;
-      causes: { availability: Array<{ code: string }> };
+      causes: { availability: Array<{ code: string; severity: string }> };
     };
 
-    expect(body.availabilityStatus).toBe("degraded");
-    expect(body.causes.availability.some((cause) => cause.code === "mint_burn_public_degraded")).toBe(true);
+    expect(body.availabilityStatus).toBe(expectedStatus);
+    expect(body.causes.availability.find((cause) => cause.code === causeCode)).toMatchObject({ severity });
   });
 
   it("degrades availability when three or more circuit groups are open", async () => {
