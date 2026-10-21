@@ -311,14 +311,12 @@ LIMIT 50;
 Inspect one reported update:
 
 ```sql
-SELECT update_id, received_at, processed_at, update_type, chat_id, status,
-       error_class, effect_state, intent_version, intent_kind,
-       intent_recorded_at, mutation_applied_at, effect_started_at,
-       effect_completed_at, effect_kind, effect_ordinal,
-       claim_owner, claim_generation
+SELECT update_id, received_at, processed_at, update_type, chat_id, status, error_class
 FROM telegram_processed_updates
 WHERE update_id = <update_id>;
 ```
+
+No row after a 5xx means the claim was released for Telegram's redelivery.
 
 ### Pending Command State
 
@@ -328,64 +326,30 @@ FROM telegram_pending_disambiguation
 WHERE chat_id = '<chat_id>';
 ```
 
-Use [retry diagnosis](./telegram-webhook-retry-dedupe.md#quick-diagnostic-checklist) for takeover safety and [setup state](./telegram-webhook-retry-dedupe.md#setup-state) for exact chat/type/expiry-scoped cleanup.
+Ingress no longer reads or writes these rows; see [setup state](./telegram-webhook-retry-dedupe.md#setup-state).
 
-### Webhook Status And Effects
+### Webhook Status
 
 Processed updates by status and age:
 
 ```sql
 SELECT
   status,
-  effect_state,
-  intent_kind,
   COUNT(*) AS rows,
   MIN(received_at) AS oldest_received_at,
   MAX(COALESCE(processed_at, received_at)) AS newest_activity_at,
-  SUM(CASE WHEN status = 'processing' AND received_at < ? - 300 THEN 1 ELSE 0 END) AS stale_processing
+  SUM(CASE WHEN status = 'processing' AND received_at < ? - 60 THEN 1 ELSE 0 END) AS stale_processing
 FROM telegram_processed_updates
-GROUP BY status, effect_state, intent_kind
+GROUP BY status
 ORDER BY rows DESC;
 ```
 
-Webhook effects requiring reconciliation (bounded oldest-first sample):
+Stale `processing` rows (crashed requests) and legacy `failed` rows are reclaimed by the next delivery of that `update_id` and pruned after seven days; do not delete them by hand. Handled failures are `processed` rows with an `error_class`:
 
 ```sql
-SELECT
-  update_id,
-  update_type,
-  chat_id,
-  status,
-  effect_state,
-  intent_version,
-  intent_kind,
-  mutation_applied_at,
-  effect_started_at,
-  effect_kind,
-  effect_ordinal,
-  error_class,
-  claim_owner,
-  claim_generation
+SELECT update_id, update_type, received_at, processed_at, error_class
 FROM telegram_processed_updates
-WHERE effect_state IN ('started', 'execution_unknown')
-  AND status <> 'processed'
-ORDER BY COALESCE(effect_started_at, received_at) ASC
-LIMIT 5001;
-```
-
-Never reset these rows to `planned` or delete them merely to trigger a retry. Reconcile the exact Telegram-visible effect first; ambiguous outbound effects are at-most-once by design and retained for 90 days.
-
-Recent failed webhook updates:
-
-```sql
-SELECT
-  update_id,
-  status,
-  received_at,
-  processed_at,
-  error_class
-FROM telegram_processed_updates
-WHERE status = 'failed'
+WHERE error_class IS NOT NULL
 ORDER BY COALESCE(processed_at, received_at) DESC
 LIMIT 50;
 ```

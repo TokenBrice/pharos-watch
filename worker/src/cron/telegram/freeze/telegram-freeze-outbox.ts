@@ -1,4 +1,4 @@
-import { TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
+import { TELEGRAM_ALERT_POLICY, TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 import { executeAtomicBatch } from "../../../lib/db";
 import { getCache, setCache } from "../../../lib/db-cache";
 import { parseJsonObject } from "../../../lib/json-parse";
@@ -62,6 +62,18 @@ function freezeAlertHasPossibleAudience(event: FreezeAlert, audience: FreezeAudi
   return audience.hasGlobalAudience || audience.stablecoinIds.has(event.stablecoinId);
 }
 
+/**
+ * Real-time freeze alerts: destroy events, and freeze/unfreeze events whose
+ * at-event amount is known and at least the policy threshold. An unknown
+ * amount is never treated as large (R1). Everything else is skipped and
+ * counted until the hourly batch / daily roll-up lane exists.
+ */
+export function isRealtimeFreezeAlert(event: FreezeAlert): boolean {
+  if (event.eventType === "destroy") return true;
+  return event.amountUsdAtEvent != null &&
+    event.amountUsdAtEvent >= TELEGRAM_ALERT_POLICY.freeze.realtimeMinAmountUsd;
+}
+
 function isFreezeAlert(value: unknown): value is FreezeAlert {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const candidate = value as Partial<FreezeAlert>;
@@ -87,17 +99,19 @@ export async function dispatchFreezeAlertOutbox(db: D1Database, nowSec: number):
   queued: number;
   targetCount: number;
   skippedNoAudience: number;
+  /** Below the real-time threshold (or unknown amount); batching seam for later. */
+  skippedBelowRealtimeThreshold: number;
   droppedUnparsed: number;
 }> {
   const cached = await getCache(db, FREEZE_CURSOR_KEY);
   const cursor = cached && /^\d+$/.test(cached.value) ? Number(cached.value) : null;
   const loaded = await loadFreshFreezeAlerts(db, cursor, nowSec);
   if (loaded.state === "stale") {
-    return { state: "stale", observed: 0, queued: 0, targetCount: 0, skippedNoAudience: 0, droppedUnparsed: 0 };
+    return { state: "stale", observed: 0, queued: 0, targetCount: 0, skippedNoAudience: 0, skippedBelowRealtimeThreshold: 0, droppedUnparsed: 0 };
   }
   if (loaded.state === "unseeded") {
     if (loaded.cursor != null) await setCache(db, FREEZE_CURSOR_KEY, String(loaded.cursor));
-    return { state: "seeded", observed: 0, queued: 0, targetCount: 0, skippedNoAudience: 0, droppedUnparsed: 0 };
+    return { state: "seeded", observed: 0, queued: 0, targetCount: 0, skippedNoAudience: 0, skippedBelowRealtimeThreshold: 0, droppedUnparsed: 0 };
   }
 
   const resumable = await db.prepare(
@@ -121,7 +135,12 @@ export async function dispatchFreezeAlertOutbox(db: D1Database, nowSec: number):
   }
   const audience = await loadFreezeAudienceScope(db, nowSec);
   let skippedNoAudience = 0;
+  let skippedBelowRealtimeThreshold = 0;
   for (const event of loaded.alerts) {
+    if (!isRealtimeFreezeAlert(event)) {
+      skippedBelowRealtimeThreshold += 1;
+      continue;
+    }
     if (!freezeAlertHasPossibleAudience(event, audience)) {
       skippedNoAudience += 1;
       continue;
@@ -145,6 +164,7 @@ export async function dispatchFreezeAlertOutbox(db: D1Database, nowSec: number):
     queued,
     targetCount,
     skippedNoAudience,
+    skippedBelowRealtimeThreshold,
     droppedUnparsed: loaded.droppedUnparsed ?? 0,
   };
 }
@@ -215,13 +235,16 @@ async function persistAndQueueFreezeEvent(db: D1Database, event: FreezeAlert, no
 
   const targetRows = await db.prepare(
     `SELECT target.target_key, target.chat_id, target.preference_generation,
-            s.quiet_hours_enabled, s.quiet_hours_start_utc, s.quiet_hours_end_utc, s.timezone
+            s.quiet_hours_enabled, s.quiet_hours_start_utc, s.quiet_hours_end_utc, s.timezone,
+            COALESCE(sub.alert_freeze, 0) AS direct_freeze
        FROM telegram_freeze_alert_targets target
        JOIN telegram_subscribers s ON s.chat_id = target.chat_id
+       LEFT JOIN telegram_subscriptions sub
+         ON sub.chat_id = target.chat_id AND sub.stablecoin_id = ?
       WHERE target.source_event_id = ? AND target.status = 'planned'
       ORDER BY target.target_key ASC
       LIMIT 90`,
-  ).bind(sourceEventId).all<{
+  ).bind(event.stablecoinId, sourceEventId).all<{
     target_key: string;
     chat_id: string;
     preference_generation: number;
@@ -229,13 +252,18 @@ async function persistAndQueueFreezeEvent(db: D1Database, event: FreezeAlert, no
     quiet_hours_start_utc: number | null;
     quiet_hours_end_utc: number | null;
     timezone: string | null;
+    direct_freeze: number;
   }>();
 
   let queued = 0;
   for (const target of targetRows.results ?? []) {
     const chatId = target.chat_id;
     const alerts = { ...emptyAlerts(), freeze: [event] };
-    const html = formatConsolidatedMessage(alerts);
+    // Cohort capture admits only global or direct per-coin freeze opt-ins.
+    const directFollow = Number(target.direct_freeze) === 1;
+    const html = formatConsolidatedMessage(alerts, {
+      via: { presetIds: [], watchlist: directFollow, allStablecoins: !directFollow },
+    });
     const scope = buildPendingAlertScope(alerts);
     for (const [chunkIndex, chunk] of splitMessage(html).entries()) {
       const message = {

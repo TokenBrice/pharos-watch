@@ -1,4 +1,4 @@
-import { parseTelegramAdoptionToken } from "./telegram-adoption-analytics";
+import { parseTelegramLandingToken } from "./telegram-landing-links";
 
 /**
  * Telegram Mini App deep-link payload registry.
@@ -120,7 +120,7 @@ export function parseMiniAppPayload(raw: string | null | undefined): TelegramMin
 
   const lower = trimmed.toLowerCase();
   if (lower.startsWith("pw1_")) {
-    const adoption = parseTelegramAdoptionToken(lower);
+    const adoption = parseTelegramLandingToken(lower);
     if (adoption?.destination === "miniapp_home" || adoption?.destination === "miniapp_watchlist") {
       return { kind: "adoption", destination: adoption.destination };
     }

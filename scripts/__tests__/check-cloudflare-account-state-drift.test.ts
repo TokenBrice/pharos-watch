@@ -187,7 +187,7 @@ describe("Cloudflare account-state drift comparison", () => {
         'zone.cache_level: expected "aggressive", found "basic"',
         'pages.customDomains: missing "ops.pharos.watch"',
         'pages.production.environmentVariables.SITE_API_ORIGIN.value: expected "https://site-api.pharos.watch", found "https://wrong.example"',
-        'pages.production.environmentVariables.TELEGRAM_ADOPTION_IP_HASH_SECRET.type: expected "secret_text", found "plain_text"',
+        'pages.production.environmentVariables.SELECTOR_SNAPSHOT_IP_HASH_SECRET.type: expected "secret_text", found "plain_text"',
         'pages.production.kvBindings: missing "SELECTOR_SNAPSHOTS"',
         'pages.production.environmentVariables.CF_ACCESS_TEAM_DOMAIN.type: expected "secret_text", found "plain_text"',
         'accessApplications.operator-ui.sessionDuration: expected "12h", found "24h"',

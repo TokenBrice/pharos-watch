@@ -81,7 +81,6 @@ Current origin/access binding ownership derived from `shared/lib/env-contract.ts
 | `SITE_API_ORIGIN` | - | - | required | Site-data upstream origin; production Pages hosts require `https://site-api.pharos.watch`. |
 | `SITE_API` | - | - | optional | Optional Pages service binding to stablecoin-api for /_site-data; retains the canonical site-api URL, secret and public-fetch fallback when absent. |
 | `SELECTOR_SNAPSHOT_IP_HASH_SECRET` | - | - | required | Dedicated HMAC pepper for selector-snapshot IP rate-limit and daily-quota keys; raw IP addresses are never stored. |
-| `TELEGRAM_ADOPTION_IP_HASH_SECRET` | - | - | required | Dedicated HMAC pepper for PharosWatchBot CTA telemetry per-client minute quotas; raw IP addresses are never stored. |
 <!-- ENV-CONTRACT:OPERATOR-ORIGIN-ACCESS:END -->
 
 When auditing Cloudflare bindings before deploy, query `getRuntimeEnvKeys(runtime, status)` or `getRuntimeActiveEnvKeys(runtime)` from `shared/lib/env-contract.ts`, using `worker`, `pagesOps`, or `pagesSiteData`. The proxy modules do not export eager inventory snapshots. The same binding name can be reserved on one runtime and active on another; for example `OPS_API_ORIGIN` and `CF_ACCESS_OPS_UI_AUD` are worker-reserved but Pages-active.

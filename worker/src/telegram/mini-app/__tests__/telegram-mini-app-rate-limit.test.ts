@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { pruneTelegramMiniAppMutationBurstCache } from "../../../cron/telegram/maintenance/telegram-retention-cleanup";
-import { prepareDeleteTelegramChatCacheStatements } from "../../store/telegram-webhook-store";
+import { prepareDeleteTelegramChatCacheStatements } from "../../store/subscriber-lifecycle";
 import {
   acquireTelegramMiniAppMutationBurst,
   TELEGRAM_MINI_APP_MUTATION_BURST_LIMIT,

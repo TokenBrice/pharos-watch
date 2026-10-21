@@ -1,8 +1,10 @@
 import {
   TELEGRAM_ALERT_TYPES,
+  TELEGRAM_LIVE_ALERT_TYPES,
   TELEGRAM_DEWS_BANDS,
   TELEGRAM_SAFETY_MODES,
   type TelegramAlertType,
+  type TelegramLiveAlertType,
   type TelegramDewsBand,
   type TelegramSafetyMode,
 } from "../types/status/telegram";
@@ -30,7 +32,7 @@ export function isSafetyModeCode(value: string): value is SafetyModeCode {
 /**
  * Canonical public manifest for the Telegram alert families (TGB-028).
  *
- * `TELEGRAM_ALERT_TYPES` (shared/types/status/telegram.ts) owns membership and
+ * `TELEGRAM_LIVE_ALERT_TYPES` (shared/types/status/telegram.ts) owns membership and
  * order; this manifest owns the reviewed public wording for each family. Bot
  * profile registration, the /pharoswatchbot landing page, its metadata and
  * JSON-LD all derive their family copy from here so a new or renamed family
@@ -228,7 +230,7 @@ export const ACTIVE_WATCHER_SQL_CONDITION = `${
   OR COALESCE(preset.active_preset_count, 0) > 0`;
 
 export interface TelegramAlertFamily {
-  key: TelegramAlertType;
+  key: TelegramLiveAlertType;
   /** Display heading used for the family on public reference surfaces. */
   label: string;
   /** One-word label used by the compact control surfaces (/settings rows). */
@@ -262,17 +264,9 @@ export const TELEGRAM_ALERT_FAMILIES = [
     key: "safety",
     label: "Safety Grade Changes",
     shortLabel: "Safety",
-    publicPhrase: "reasoned safety-grade shifts",
-    featureLine: "Safety grade alerts with reason lines for live score drivers",
+    publicPhrase: "severe safety-grade downgrades",
+    featureLine: "Severe safety-grade downgrade alerts (two or more notches, or into D/F, held 6 hours) with reason lines",
     persistence: TELEGRAM_ALERT_PERSISTENCE_TABLE.safety,
-  },
-  {
-    key: "launch",
-    label: "Launch Promotions",
-    shortLabel: "Launch",
-    publicPhrase: "launches",
-    featureLine: "Pre-launch stablecoin launch alerts",
-    persistence: TELEGRAM_ALERT_PERSISTENCE_TABLE.launch,
   },
   {
     key: "reserve",
@@ -287,15 +281,16 @@ export const TELEGRAM_ALERT_FAMILIES = [
     label: "Freeze and Blacklist Events",
     shortLabel: "Freeze",
     publicPhrase: "issuer freeze, unfreeze, and destroy events",
-    featureLine: "Opt-in issuer freeze, blacklist release, and destroy alerts from the verified tape",
+    featureLine: "Opt-in issuer destroy alerts and freeze or release alerts of $1M or more from the verified tape",
     persistence: TELEGRAM_ALERT_PERSISTENCE_TABLE.freeze,
   },
 ] as const satisfies readonly TelegramAlertFamily[];
 
-/** Short control-surface label per family, in canonical order. */
-export const TELEGRAM_ALERT_FAMILY_SHORT_LABELS = Object.fromEntries(
-  TELEGRAM_ALERT_FAMILIES.map((family) => [family.key, family.shortLabel]),
-) as Record<TelegramAlertType, string>;
+/** Short control-surface label per family; retired families keep a label for legacy rows. */
+export const TELEGRAM_ALERT_FAMILY_SHORT_LABELS = {
+  ...Object.fromEntries(TELEGRAM_ALERT_FAMILIES.map((family) => [family.key, family.shortLabel])),
+  launch: "Launch",
+} as Record<TelegramAlertType, string>;
 
 /** `/settings` family code → alert type. */
 export const TELEGRAM_ALERT_TYPE_BY_SETTING_CODE = Object.fromEntries(
@@ -313,4 +308,18 @@ export const TELEGRAM_ALERT_FAMILY_PHRASE_LIST = TELEGRAM_ALERT_FAMILIES.map(
   .join(", ");
 
 /** Comma-separated command tokens for `<types>` syntax help, e.g. "dews, depeg, ...". */
-export const TELEGRAM_ALERT_FAMILY_COMMAND_TOKENS = TELEGRAM_ALERT_TYPES.join(", ");
+export const TELEGRAM_ALERT_FAMILY_COMMAND_TOKENS = TELEGRAM_LIVE_ALERT_TYPES.join(", ");
+
+/** Reply when a user asks for the retired launch family (e.g. `/subscribe launch`). */
+export const TELEGRAM_LAUNCH_RETIRED_MESSAGE =
+  "Launch alerts are retired. New stablecoins Pharos starts tracking are listed in the @pharoswatch channel digest, and upcoming launches are on pharos.watch/upcoming.";
+
+/**
+ * One-time admin-broadcast notice for chats that had launch alerts on
+ * (scope `retired-launch-opt-ins`; see docs/telegram-alerts.md). Telegram HTML.
+ */
+export const TELEGRAM_LAUNCH_RETIREMENT_NOTICE_HTML = [
+  "<b>Launch alerts are retired</b>",
+  "You had launch alerts turned on. PharosWatchBot no longer sends them; your other alerts are unchanged.",
+  'New stablecoins Pharos starts tracking are listed in the <a href="https://t.me/pharoswatch">@pharoswatch</a> channel digest, and upcoming launches are on <a href="https://pharos.watch/upcoming/">pharos.watch/upcoming</a>.',
+].join("\n\n");

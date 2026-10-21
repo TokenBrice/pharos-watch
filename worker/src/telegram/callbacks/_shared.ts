@@ -14,34 +14,36 @@ import { logTelegramEvent } from "../common/log";
 import { SNOOZE_SECONDS } from "../common/constants";
 import { isSubscribableCoin } from "../store/subscription-eligibility";
 import { requireGroupAdminForCallback } from "../webhook/telegram-webhook-auth";
-import {
-  createTelegramWebhookIntent,
-  type TelegramCallbackMutationContext,
-  type TelegramMutationContext,
-} from "../webhook/telegram-webhook-effect-fence";
+import type { TelegramCallbackMutationContext } from "../webhook/telegram-webhook-shared";
 
 export { SNOOZE_SECONDS };
 
 // Allowlist of known callback action codes. Validated at the top of the
 // dispatcher so that an unknown action can never reach a D1 read/write.
-// `setup` is handled separately above. `confirm`/`cancel` are used by the
-// P0-C1 bulk-confirmation gate (action data `confirm:bulk` / `cancel:bulk`).
+// `setup` is handled separately above. `bulk`, `forget` and `pick` carry their
+// whole choice in the callback data (no stored prompt state). `why`,
+// `coverage`, `confirm`, `cancel`, `manage`, `unsub`, `select` and `tz` only
+// answer buttons still sitting in old chats.
 const CALLBACK_ACTIONS = [
   "snooze",
   "coinsnooze",
   "status",
   "depegstep",
   "safetydown",
+  "fewer",
+  "quicksub",
+  "pick",
+  "bulk",
+  "forget",
+  "help",
+  "settings",
   "why",
   "coverage",
-  "quicksub",
   "confirm",
   "cancel",
   "manage",
   "unsub",
   "select",
-  "help",
-  "settings",
   "tz",
 ] as const;
 
@@ -164,8 +166,6 @@ export async function runCallbackMutation<TValid>(context: CallbackContext, para
   invalidText?: string;
   /** Toast text when the D1 write throws. */
   failureText: string;
-  intentKind: string;
-  intentPayload: (validated: TValid) => Record<string, unknown>;
 }): Promise<void> {
   const validated = params.validate();
   if (validated == null) {
@@ -188,21 +188,7 @@ export async function runCallbackMutation<TValid>(context: CallbackContext, para
     return;
   }
   try {
-    await context.planIntent?.(createTelegramWebhookIntent(
-      params.intentKind,
-      params.intentPayload(validated),
-      "required",
-    ));
-    if (!context.wasMutationApplied) {
-      const operationStatements = context.prepareMutationAppliedStatement
-        ? [context.prepareMutationAppliedStatement()]
-        : undefined;
-      await params.write(validated, { operationStatements });
-      if (operationStatements) context.confirmAtomicMutationApplied?.();
-      // Direct callback unit invocations have no processed-update claim.
-      // Production webhook dispatch always supplies the prepared atomic marker.
-      else await context.markMutationApplied();
-    }
+    await params.write(validated, {});
   } catch {
     logTelegramEvent({
       message: params.logMessage,
@@ -245,15 +231,13 @@ export async function runReadOnlyCoinCallback(params: {
   send: (id: string, isPrivateChat: boolean) => Promise<void>;
   ackText: string;
   answerCallback: (options?: { text?: string }) => Promise<void>;
-  intentKind: string;
-} & Pick<TelegramMutationContext, "planIntent">): Promise<void> {
+}): Promise<void> {
   const { arg, parts } = params.parsed;
   if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
     await params.answerCallback({ text: "Action not recognized." });
     return;
   }
   const isPrivateChat = callbackChatType(params.cb) === "private";
-  await params.planIntent?.(createTelegramWebhookIntent(params.intentKind, { coinId: arg }));
   try {
     await params.send(arg, isPrivateChat);
   } finally {

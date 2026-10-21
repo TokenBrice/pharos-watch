@@ -28,7 +28,6 @@ import {
 } from "../../lib/auth";
 import { validateWorkerEnvContract } from "../../lib/env";
 import type { Env } from "../../lib/env";
-import { TELEGRAM_ADOPTION_API_PATH } from "../../telegram/adoption/adoption-analytics";
 import { logWorkerEvent } from "../../lib/structured-log";
 import {
   isCacheableGetRequest,
@@ -101,10 +100,6 @@ function unauthorizedResponse(): Response {
   );
 }
 
-function isTelegramAdoptionPath(url: URL): boolean {
-  return url.pathname === TELEGRAM_ADOPTION_API_PATH;
-}
-
 export function warnWorkerEnvIssuesOnce(env: Env): void {
   for (const issue of validateWorkerEnvContract(env)) {
     if (LOGGED_ENV_ISSUES.has(issue.code)) continue;
@@ -175,24 +170,11 @@ export async function evaluateAccessGate(
     if (!hasSiteProxyCredential) {
       return gateResult("site-api", errorResponse(401, "Unauthorized"));
     }
-    if (isTelegramAdoptionPath(url)) {
-      if (request.method !== "POST") {
-        return gateResult("site-api", methodNotAllowedResponse("Method not allowed", ["POST"]));
-      }
-      return siteApiAllowed();
-    }
     if (!isInternalBuildPath && !isSiteDataAllowedApiPath(url.pathname)) {
       return gateResult("site-api", notFoundResponse());
     }
     if (!isSiteDataAllowedMethod(request.method)) {
       return gateResult("site-api", methodNotAllowedResponse("Method not allowed", [SITE_DATA_ALLOWED_METHOD]));
-    }
-    return siteApiAllowed();
-  }
-
-  if (isPreviewRequest && hasSiteProxyCredential && isTelegramAdoptionPath(url)) {
-    if (request.method !== "POST") {
-      return gateResult("site-api", methodNotAllowedResponse("Method not allowed", ["POST"]));
     }
     return siteApiAllowed();
   }
@@ -214,7 +196,7 @@ export async function evaluateAccessGate(
     return gateResult("public-api", notFoundResponse());
   }
 
-  if (isTelegramAdoptionPath(url) || getPublicApiAccess(url.pathname) === "site-only") {
+  if (getPublicApiAccess(url.pathname) === "site-only") {
     return gateResult("public-api", notFoundResponse());
   }
 

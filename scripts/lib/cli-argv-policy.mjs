@@ -195,11 +195,6 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/refresh-reserve-html-fixtures.ts", "build"),
     exempt("scripts/maintenance/refresh-usdy-holdings-report.ts", "build"),
     exempt("scripts/maintenance/report-build-size.mjs", "read-only"),
-    exempt(
-      "scripts/maintenance/report-telegram-adoption.ts",
-      "build",
-      "Reads remote D1 adoption telemetry and writes a local generated-document block; no production mutation.",
-    ),
     exempt("scripts/maintenance/run-all-tests.ts", "test"),
     exempt("scripts/maintenance/run-coverage-audit.ts", "read-only"),
     exempt("scripts/maintenance/run-critical-contracts.ts", "test"),

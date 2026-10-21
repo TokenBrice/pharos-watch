@@ -64,13 +64,11 @@ function events(stablecoinIds = ["usdc-circle"]): TelegramDispatchEvents {
     depegResolved: [],
     depegWorsening: [],
     safetyChanges: [],
-    launchPromoted: [],
     reservePromoted: [],
     suppressedMethodologyChanges: 0,
     dewsIds: [...stablecoinIds],
     depegIds: [],
     safetyIds: [],
-    launchIds: [],
     reserveIds: [],
   };
 }
@@ -81,7 +79,6 @@ function baseline(stablecoinIds = ["usdc-circle"]): TelegramAlertSnapshots {
     dewsAlertable: Object.fromEntries(stablecoinIds.map((id) => [id, "ALERT"])),
     depeg: {},
     safety: null,
-    launch: [],
     reserveDispatched: [],
   };
 }
@@ -387,7 +384,7 @@ describe("Telegram alert source-event resolution", () => {
             routed: [{
               chatId: subscriber.chatId, lastActiveAt: NOW, alerts: {
                 dews: events().dewsChanges, depegTriggered: [], depegResolved: [], depegWorsening: [],
-                safety: [], launch: [], reserve: [],
+                safety: [], reserve: [],
               },
               canonicalHtml: "<b>USDC</b> entered ALERT", chunks: ["<b>USDC</b> entered ALERT"],
               disableNotification: false, alertType: "dews", sourceEventId: source.sourceEventId,

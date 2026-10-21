@@ -4,6 +4,7 @@ import { ExternalLink, Info, ShieldCheck, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   ALERT_LABELS,
+  LIVE_ALERT_TYPES,
   DEPEG_STEP_OPTIONS,
   DEWS_BAND_OPTIONS,
   PHAROS_COIN_PAGE_PREFIX,
@@ -71,7 +72,6 @@ export function CoinCard({ coin, globalAlerts, presets, canMutate, isMutating, p
   const alertTypes = coin.alertTypes as Partial<Record<TelegramAlertType, boolean>>;
   const showTune = dewsEnabled || depegEnabled || safetyEnabled || coin.depegStepBps != null;
   const untunableLabels = [
-    coin.alertTypes.launch ? "Launch" : null,
     coin.alertTypes.reserve ? "Reserve" : null,
     coin.alertTypes.freeze ? "Freeze" : null,
   ].filter((label): label is string => label != null);
@@ -118,7 +118,7 @@ export function CoinCard({ coin, globalAlerts, presets, canMutate, isMutating, p
         </MiniButton>
       </div>
       <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label={`${coin.symbol} alert types`}>
-        {(Object.keys(ALERT_LABELS) as TelegramAlertType[]).map((type) => (
+        {LIVE_ALERT_TYPES.map((type) => (
           <TogglePill
             key={type}
             label={ALERT_LABELS[type]}

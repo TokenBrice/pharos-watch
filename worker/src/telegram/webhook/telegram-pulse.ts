@@ -15,14 +15,7 @@ import {
   loadTelegramTopFollowedCoins,
   refreshTelegramLifecycleSnapshotIfStale,
 } from "../store/usage-analytics";
-import {
-  loadTelegramMiniAppDailyAggregate,
-  utcDayFromUnixSeconds,
-} from "../../lib/status/telegram-bot-stats";
-import {
-  loadTelegramFirstMutationP50,
-  refreshTelegramAdoptionRetention,
-} from "../adoption/adoption-analytics";
+import { utcDayFromUnixSeconds } from "../../lib/status/telegram-bot-stats";
 
 const TELEGRAM_PULSE_CACHE_SECONDS = 300;
 const TELEGRAM_LIFECYCLE_HISTORY_SECONDS = 900;
@@ -130,12 +123,6 @@ function sanitizePublicPulse(pulse: TelegramPulse): TelegramPulse {
     pendingDeliveries: pulse.pendingDeliveries == null
       ? pulse.pendingDeliveries
       : publicRequiredCount(pulse.pendingDeliveries, "pendingDeliveries", suppressedFields),
-    miniAppSessionsToday: pulse.miniAppSessionsToday == null
-      ? pulse.miniAppSessionsToday
-      : publicOptionalCount(pulse.miniAppSessionsToday, "miniAppSessionsToday", suppressedFields),
-    miniAppMutationsToday: pulse.miniAppMutationsToday == null
-      ? pulse.miniAppMutationsToday
-      : publicOptionalCount(pulse.miniAppMutationsToday, "miniAppMutationsToday", suppressedFields),
     privacy: {
       ...pulse.privacy,
       lowCardinalityThreshold: PUBLIC_LOW_CARDINALITY_THRESHOLD,
@@ -232,14 +219,9 @@ async function buildTelegramPulseSnapshot(
           (point) => point.date < utcDayFromUnixSeconds(nowSec),
         ),
         lifecycleHistoryUpdatedAt: reusablePulse.lifecycleHistoryUpdatedAt,
-        miniAppSessionsToday: reusablePulse.miniAppSessionsToday,
-        miniAppMutationsToday: reusablePulse.miniAppMutationsToday,
-        miniAppDeniedToday: reusablePulse.miniAppDeniedToday,
-        miniAppReplayClaimsToday: reusablePulse.miniAppReplayClaimsToday,
-        miniAppOpenToFirstMutationP50Sec: reusablePulse.miniAppOpenToFirstMutationP50Sec,
       }
     : await (async () => {
-        const [topRows, snapshotHistory, miniAppDailyAggregate, miniAppFirstMutation] = await Promise.all([
+        const [topRows, snapshotHistory] = await Promise.all([
           loadTelegramTopFollowedCoins(db, 5).catch((error) => {
             logWorkerEvent({ scope: "api", level: "warn", message: "Telegram pulse top followed coin telemetry unavailable", error });
             unavailableFields.add("topCoins");
@@ -250,21 +232,8 @@ async function buildTelegramPulseSnapshot(
             unavailableFields.add("watcherHistory");
             return { source: "snapshot" as const, points: [] };
           }),
-          loadTelegramMiniAppDailyAggregate(db, utcDayFromUnixSeconds(nowSec)).catch((error) => {
-            logWorkerEvent({ scope: "api", level: "warn", message: "Telegram pulse mini-app daily aggregate unavailable", error });
-            unavailableFields.add("miniAppDailyAggregate");
-            return null;
-          }),
-          loadTelegramFirstMutationP50(db, utcDayFromUnixSeconds(nowSec)).catch((error) => {
-            logWorkerEvent({ scope: "api", level: "warn", message: "Telegram pulse mini-app first-mutation latency unavailable", error });
-            unavailableFields.add("miniAppOpenToFirstMutationP50Sec");
-            return null;
-          }),
         ]);
         const lifecycleHistory = snapshotHistory;
-        if (miniAppFirstMutation && shouldSuppressLowCardinality(miniAppFirstMutation.sampleCount)) {
-          suppressedFields.add("miniAppOpenToFirstMutationP50Sec");
-        }
         return {
           topCoins: topRows.map(
             (row) => WORKER_TRACKED_META_BY_ID.get(row.stablecoinId)?.symbol ?? row.stablecoinId,
@@ -272,23 +241,6 @@ async function buildTelegramPulseSnapshot(
           historySource: lifecycleHistory.source,
           watcherHistory: sanitizeWatcherHistory(lifecycleHistory.points, suppressedFields),
           lifecycleHistoryUpdatedAt: latestLifecycleHistoryUpdatedAt(snapshotHistory.points),
-          miniAppSessionsToday: miniAppDailyAggregate
-            ? publicOptionalCount(miniAppDailyAggregate.sessions, "miniAppSessionsToday", suppressedFields)
-            : null,
-          miniAppMutationsToday: miniAppDailyAggregate
-            ? publicOptionalCount(miniAppDailyAggregate.mutations, "miniAppMutationsToday", suppressedFields)
-            : null,
-          // Denied/replay counts are abuse-health counters, not adoption counters.
-          miniAppDeniedToday: miniAppDailyAggregate
-            ? miniAppDailyAggregate.denied
-            : null,
-          miniAppReplayClaimsToday: miniAppDailyAggregate
-            ? miniAppDailyAggregate.replayClaimed
-            : null,
-          miniAppOpenToFirstMutationP50Sec: miniAppFirstMutation == null
-            || shouldSuppressLowCardinality(miniAppFirstMutation.sampleCount)
-            ? null
-            : miniAppFirstMutation.p50Sec,
         };
       })();
   if (reusablePulse) {
@@ -325,11 +277,6 @@ async function buildTelegramPulseSnapshot(
     pendingDeliveries: unavailableFields.has("pendingDeliveries")
       ? null
       : publicRequiredCount(currentSnapshot.pendingDeliveries, "pendingDeliveries", suppressedFields),
-    miniAppSessionsToday: heavySections.miniAppSessionsToday,
-    miniAppMutationsToday: heavySections.miniAppMutationsToday,
-    miniAppDeniedToday: heavySections.miniAppDeniedToday,
-    miniAppReplayClaimsToday: heavySections.miniAppReplayClaimsToday,
-    miniAppOpenToFirstMutationP50Sec: heavySections.miniAppOpenToFirstMutationP50Sec,
     currentSnapshotAt: currentSnapshot.snapshotAt,
     lifecycleHistoryUpdatedAt: heavySections.lifecycleHistoryUpdatedAt,
     lifecycleHistoryEverySeconds: TELEGRAM_LIFECYCLE_HISTORY_SECONDS,
@@ -397,32 +344,6 @@ export async function publishTelegramPulseSnapshotWithOutcome(
     } catch (error) {
       throwIfAborted(options.signal);
       markerError = toErrorMessage(error);
-    }
-    try {
-      throwIfAborted(options.signal);
-      const retention = await refreshTelegramAdoptionRetention(db, nowSec);
-      if (retention.mismatches.length > 0) {
-        logWorkerEvent({
-          scope: "api",
-          level: "warn",
-          message: "Telegram adoption retention cohort-evidence-mismatch",
-          metadata: {
-            outcome: "cohort-evidence-mismatch",
-            measurements: retention.mismatches.map(({ retained, ...measurement }) => ({
-              ...measurement, retainedAny: retained.any, retainedDirect: retained.direct,
-              retainedPreset: retained.preset, retainedGlobal: retained.global,
-            })),
-          },
-        });
-      }
-    } catch (error) {
-      throwIfAborted(options.signal);
-      logWorkerEvent({
-        scope: "api",
-        level: "warn",
-        message: "Telegram adoption retention refresh failed",
-        error,
-      });
     }
   }
 

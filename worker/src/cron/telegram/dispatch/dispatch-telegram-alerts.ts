@@ -41,7 +41,7 @@ import { dispatchFreezeAlertOutbox } from "../freeze/telegram-freeze-outbox";
 export type { TelegramDispatchSharedState } from "./dispatch-telegram-state";
 import type { TelegramDispatchSharedState } from "./dispatch-telegram-state";
 
-const TELEGRAM_ALERT_PROVIDER_FAMILIES = ["dews", "depeg", "safety", "launch", "reserve", "freeze"] as const;
+const TELEGRAM_ALERT_PROVIDER_FAMILIES = ["dews", "depeg", "safety", "reserve", "freeze"] as const;
 
 /**
  * A gated idle pass (eventless fast path or circuit-open) is a no-work run only
@@ -194,6 +194,7 @@ export async function dispatchTelegramAlerts(
           freezeObserved: freezeOutbox.observed,
           freezeQueued: freezeOutbox.queued,
           freezeSkippedNoAudience: freezeOutbox.skippedNoAudience,
+          freezeSkippedBelowRealtimeThreshold: freezeOutbox.skippedBelowRealtimeThreshold,
         },
         reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
         reserveAlertSourceState: snapshotState.reserveSourceAssessment.state,

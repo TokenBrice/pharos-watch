@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Anchor, Layers, Radar, Rocket, ShieldCheck, Snowflake, type LucideIcon } from "lucide-react";
 import { PharosLogo } from "@/components/pharos-logo";
 import { cn } from "@/lib/utils";
+import { TELEGRAM_PUBLIC_ALERT_SAMPLES } from "@shared/lib/telegram-alert-samples";
 import type { TelegramAlertType } from "@shared/types/status";
 import { BotSection } from "./bot-section";
 import { TELEGRAM_ALERT_EXAMPLES } from "./telegram-content";
@@ -77,6 +78,20 @@ export function AlertFamilies() {
                 <p className="mt-3 whitespace-pre-wrap font-mono text-xs leading-relaxed text-foreground [overflow-wrap:anywhere]">
                   {alert.content}
                 </p>
+                <div className="mt-3 space-y-1.5" aria-label="Buttons under the alert">
+                  {TELEGRAM_PUBLIC_ALERT_SAMPLES[alert.key].buttons.map((row) => (
+                    <div key={row.join("|")} className="flex gap-1.5">
+                      {row.map((label) => (
+                        <span
+                          key={label}
+                          className="flex-1 rounded-md border border-border/60 bg-background px-2 py-1 text-center text-xs text-foreground"
+                        >
+                          {label}
+                        </span>
+                      ))}
+                    </div>
+                  ))}
+                </div>
               </figure>
             </div>
           ))}

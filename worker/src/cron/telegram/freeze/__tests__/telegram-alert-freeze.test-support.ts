@@ -24,7 +24,7 @@ export async function createFreezeIdentityFixture() {
       stablecoin: "USDC",
       stablecoinId: "usdc-circle",
       chainName: "Ethereum",
-      amountUsdAtEvent: null,
+      amountUsdAtEvent: 1_000_000,
       sourceEventId: blacklistId,
     }), blacklistId, timestamp);
   }

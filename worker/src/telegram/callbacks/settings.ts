@@ -31,7 +31,9 @@ export async function handleSettingsInlineCallback(
   // the colon-free slug format so the action-specific split remains safe.
   const validSettingsCallback =
     (subAction === "home" && (parts.length === 2 || (parts.length === 3 && /^\d+$/.test(parts[2] ?? "")))) ||
-    ((subAction === "gt" || subAction === "q" || subAction === "o") && parts.length === 3) ||
+    ((subAction === "q" || subAction === "o") && parts.length === 3) ||
+    // `gt:<type>:<0|1>` sets a value; bare `gt:<type>` buttons from older messages only refresh.
+    (subAction === "gt" && (parts.length === 3 || parts.length === 4)) ||
     (subAction === "sc" && parts.length === 2) ||
     (subAction === "c" && parts.length === 5);
   if (!validSettingsCallback) {

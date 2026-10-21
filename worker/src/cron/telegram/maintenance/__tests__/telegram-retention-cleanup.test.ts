@@ -2,7 +2,6 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import { collectTelegramAdoptionReport } from "../../../../../../scripts/maintenance/report-telegram-adoption";
 import {
   TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT,
   runTelegramRetentionCleanup,
@@ -1104,7 +1103,7 @@ describe("telegram authoritative retention", () => {
     { sourceAgeDays: 14, targetAgeDays: 14, remaining: 1 },
     { sourceAgeDays: 0, targetAgeDays: 91, remaining: 0 },
     { sourceAgeDays: 0, targetAgeDays: 90, remaining: 1 },
-  ])("keeps delivery-window coverage unknown across source/creation prune boundaries: %j", async ({
+  ])("prunes accepted delivery targets at the source/creation boundaries: %j", async ({
     sourceAgeDays, targetAgeDays, remaining,
   }) => {
     const { sqlite, db } = createLatestSchemaSqlite();
@@ -1130,19 +1129,12 @@ describe("telegram authoritative retention", () => {
         .run(createdAt, NOW_SEC - 2 * DAY_SEC);
       sqlite.exec(`UPDATE telegram_alert_source_events
         SET status = 'complete', target_plan_state = 'delivery_open' WHERE source_event_id = 'source'`);
-      const client = {
-        queryRaw: () => "",
-        executeStatements: () => undefined,
-        query<T>(sql: string): T[] { return sqlite.prepare(sql).all() as T[]; },
-      };
-      expect(collectTelegramAdoptionReport(client, NOW_SEC).adoption.retainedAlertsSent7d).toBe(1);
+      const acceptedTargets = () => (sqlite.prepare(
+        "SELECT COUNT(*) AS n FROM telegram_alert_job_targets WHERE final_delivery_state = 'accepted'",
+      ).get() as { n: number }).n;
+      expect(acceptedTargets()).toBe(1);
       await runTelegramRetentionCleanup(db);
-      const report = collectTelegramAdoptionReport(client, NOW_SEC);
-      expect(report.adoption.retainedAlertsSent7d).toBe(remaining);
-      expect(report.adoption.retainedAlertsSent30d).toBe(remaining);
-      expect(report.adoption.alertsSent7d).toBeNull();
-      expect(report.adoption.alertsSent30d).toBeNull();
-      expect(report.adoption.alertsSent7dUnavailableReason).toBe("delivery-window-coverage-unproven");
+      expect(acceptedTargets()).toBe(remaining);
     } finally {
       clock.mockRestore();
       sqlite.close();

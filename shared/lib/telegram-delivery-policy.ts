@@ -8,6 +8,39 @@
 
 import { CRON_INTERVALS } from "./cron-jobs";
 
+/**
+ * Real-time alert detection policy (ADR-32/R5: the single authority for
+ * per-family thresholds, dwell, hysteresis and cooldowns). Moves that miss
+ * these gates are not sent live; each suppression is counted by a named
+ * reason in dispatch metadata so the daily roll-up can consume them later.
+ */
+export const TELEGRAM_ALERT_POLICY = {
+  safety: {
+    /** A downgrade of at least this many notches (C to C- is 1) is severe. */
+    severeMinGradeNotches: 2,
+    /** A downgrade landing at or below this grade is severe regardless of size. */
+    severeFloorGrade: "D",
+    /** A severe move must hold this long versus the last alerted grade. */
+    dwellSec: 6 * 60 * 60,
+    /** No second live downgrade alert for the same coin inside this window. */
+    downgradeCooldownSec: 24 * 60 * 60,
+    /** Global ("all stablecoins") safety also needs this score drop when scored. */
+    globalMinScoreDrop: 3,
+  },
+  dews: {
+    /** An escalation must appear in this many consecutive DEWS computations. */
+    escalationMinComputations: 2,
+    /** A band is left only once the score falls this far below its lower bound. */
+    exitHysteresisPoints: 5,
+    /** A coin calm (below ALERT) this long loses its alerted-band baseline. */
+    baselineResetQuietSec: 24 * 60 * 60,
+  },
+  freeze: {
+    /** Freeze/unfreeze events at or above this USD amount go live; destroy always does. */
+    realtimeMinAmountUsd: 1_000_000,
+  },
+} as const;
+
 /** Default source/queue TTL; modeled 20% headroom is not a D1 latency guarantee. */
 export const PENDING_TTL_SEC = 2 * 60 * 60;
 

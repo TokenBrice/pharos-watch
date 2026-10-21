@@ -5,7 +5,7 @@ import {
   type TelegramSubscriptionAlertColumn,
   type TelegramSubscriptionOverrideColumn,
 } from "@shared/lib/telegram-alert-families";
-import { TELEGRAM_ALERT_TYPES, type TelegramAlertType } from "@shared/types/status";
+import { TELEGRAM_ALERT_TYPES, TELEGRAM_LIVE_ALERT_TYPES, type TelegramAlertType } from "@shared/types/status";
 import { isDepegStepValue, isTelegramSafetyMode } from "@shared/types/status/telegram";
 import { isDewsAlertBand } from "@shared/lib/classification/risk";
 import type { TelegramMiniAppMutableState } from "@shared/lib/telegram-mini-app-contract";
@@ -69,7 +69,7 @@ function alertOverrideTypes(
 function shouldProjectSubscription(row: MiniAppSubscriptionRow): boolean {
   const alerts = alertTypes(row);
   const overrides = alertOverrideTypes(row);
-  return TELEGRAM_ALERT_TYPES.some((alertType) => alerts[alertType] || overrides[alertType])
+  return TELEGRAM_LIVE_ALERT_TYPES.some((alertType) => alerts[alertType] || overrides[alertType])
     || row.alert_snooze_until_ts != null;
 }
 
@@ -99,16 +99,16 @@ export async function loadTelegramMiniAppState(
       const [stateResults, diagnostics] = await Promise.all([
         db.batch([
           db.prepare(
-            `SELECT global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch, global_alert_reserve, global_alert_freeze,
+            `SELECT global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_reserve, global_alert_freeze,
                     global_depeg_worsening_bps_step, quiet_hours_enabled, quiet_hours_start_utc,
                     quiet_hours_end_utc, timezone, alert_snooze_until_ts
                FROM telegram_subscribers
               WHERE chat_id = ?`,
           ).bind(chatId),
           db.prepare(
-            `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve, alert_freeze,
+            `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_reserve, alert_freeze,
                     alert_dews_override, alert_depeg_override, alert_safety_override,
-                    alert_launch_override, alert_reserve_override, alert_freeze_override,
+                    alert_reserve_override, alert_freeze_override,
                     dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
                FROM telegram_subscriptions
               WHERE chat_id = ?

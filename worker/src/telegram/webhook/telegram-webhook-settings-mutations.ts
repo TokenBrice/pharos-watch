@@ -11,16 +11,11 @@ import {
 } from "./telegram-webhook-settings-shared";
 import { executeAtomicBatch } from "../../lib/db";
 import { assertSubscribableCoin } from "../store/subscription-eligibility";
-import {
-  loadSubscriberByChat,
-  unixNow,
-  upsertSubscriberRow,
-  type PlainAlertType,
-} from "../store/telegram-webhook-store";
+import { loadSubscriberByChat, unixNow, upsertSubscriberRow } from "../store/subscribers";
+import { type PlainAlertType } from "../store/subscriptions";
 import type { TelegramOperationBatchOptions } from "../delivery/operation-batch";
 import { prepareSettingToSubscriptions } from "../store/subscriptions";
 import type { ParsedSetCommand } from "./telegram-webhook-shared";
-import type { TelegramFollowOptions } from "../store/subscribers";
 import {
   TELEGRAM_ALERT_FAMILY_SHORT_LABELS,
   TELEGRAM_ALERT_PERSISTENCE,
@@ -85,15 +80,13 @@ export async function applyCoinSetting(
 }
 
 /** Plain on/off families, addressed by their registry setting code. */
-const PLAIN_ALERT_TYPE_BY_SETTING_CODE: Record<string, PlainAlertType | undefined> = {
-  [TELEGRAM_ALERT_PERSISTENCE.launch.settingCode]: "launch",
+const PLAIN_ALERT_TYPE_BY_SETTING_CODE: Record<string, Exclude<PlainAlertType, "launch"> | undefined> = {
   [TELEGRAM_ALERT_PERSISTENCE.reserve.settingCode]: "reserve",
   [TELEGRAM_ALERT_PERSISTENCE.freeze.settingCode]: "freeze",
 };
 
 /** `/settings` says "Freeze alerts", not the bare family short label. */
-const PLAIN_SETTING_LABELS: Record<PlainAlertType, string> = {
-  launch: TELEGRAM_ALERT_FAMILY_SHORT_LABELS.launch,
+const PLAIN_SETTING_LABELS: Record<Exclude<PlainAlertType, "launch">, string> = {
   reserve: TELEGRAM_ALERT_FAMILY_SHORT_LABELS.reserve,
   freeze: `${TELEGRAM_ALERT_FAMILY_SHORT_LABELS.freeze} alerts`,
 };
@@ -121,7 +114,6 @@ export function prepareCoinSettingStatements(
   coinId: string,
   setting: string,
   value: string,
-  options: TelegramFollowOptions = {},
 ): { description: string | null; statements: D1PreparedStatement[] } {
   assertSubscribableCoin(coinId);
   if (!normalizeCoinSetting(setting, value)) return { description: null, statements: [] };
@@ -151,6 +143,6 @@ export function prepareCoinSettingStatements(
   }
   return {
     description,
-    statements: prepareSettingToSubscriptions(db, chatId, username, [{ id: coinId }], command, options),
+    statements: prepareSettingToSubscriptions(db, chatId, username, [{ id: coinId }], command),
   };
 }

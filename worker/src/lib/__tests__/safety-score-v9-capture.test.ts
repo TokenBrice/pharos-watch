@@ -50,7 +50,9 @@ function fixture(scoringClock: number, fetchedAt = RUN - 48 * 3600 + 60, metadat
 
 beforeEach(() => vi.clearAllMocks());
 describe("V9 consumed reserve scoring-clock admission", () => {
-  it.each([[59, "current"], [60, "current"], [61, "stale"]] as const)("reassesses 47h59m evidence %s seconds later as %s", async (delta, state) => {
+  // 10.26: evidence fresh at the run's assessment is carried until the run's
+  // own output budget (8h, covered below), so 61s past its fetch budget stays current.
+  it.each([[59, "current"], [60, "current"], [61, "current"]] as const)("reassesses 47h59m evidence %s seconds later as %s", async (delta, state) => {
     fixture(RUN + delta);
     const { input } = await buildNativeSafetyScoreV9Capture(mockD1());
     expect(input.v9PublicationInputHealth.redemption).toMatchObject({ state, generationId: "redemption:actual", updatedAtSec: RUN });

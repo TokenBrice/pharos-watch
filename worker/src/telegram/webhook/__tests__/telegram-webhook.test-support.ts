@@ -200,14 +200,12 @@ const COMMAND_DB_EXTRA_TABLES: MockTableConfig[] = [
   { match: "RETURNING value", rows: [{ value: "1" }] },
 ];
 
-const LIFECYCLE_DB_EXTRA_TABLES: MockTableConfig[] = [
-  { match: "SELECT status, received_at, effect_state, claim_owner, claim_generation", rows: [], first: null },
-];
+const LIFECYCLE_DB_EXTRA_TABLES: MockTableConfig[] = [];
 const TELEGRAM_WEBHOOK_HARNESS_FALLBACKS: MockTableConfig[] = [
   { match: "INSERT INTO cache", rows: [] },
   { match: "UPDATE cache", rows: [] },
   { match: "DELETE FROM cache", rows: [] },
-  { match: "INSERT OR IGNORE INTO telegram_processed_updates", rows: [] },
+  { match: "INSERT INTO telegram_processed_updates", rows: [] },
   { match: "UPDATE telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
   { match: "DELETE FROM telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
   { match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [] },

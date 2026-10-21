@@ -13,24 +13,28 @@ import {
 } from "./use-mini-app-mutations";
 import type { TelegramWebAppSdk } from "./telegram-sdk";
 import type { TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
-import type { TelegramMiniAppPortabilityResponse } from "./types";
+import type { TelegramMiniAppBulkWatchlistResponse } from "./types";
 
 const apiMocks = vi.hoisted(() => ({
   postMiniAppSnapshot: vi.fn(),
   refreshMiniAppBundleOnce: vi.fn(),
-  postMiniAppPortability: vi.fn(),
+  postMiniAppBulkWatchlistPreview: vi.fn(),
 }));
 
 vi.mock("./mini-app-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./mini-app-api")>()),
   postMiniAppSnapshot: apiMocks.postMiniAppSnapshot,
   refreshMiniAppBundleOnce: apiMocks.refreshMiniAppBundleOnce,
-  postMiniAppPortability: apiMocks.postMiniAppPortability,
+  postMiniAppBulkWatchlistPreview: apiMocks.postMiniAppBulkWatchlistPreview,
 }));
 
 // Load the Worker boundary before timed test execution; the persisted scenarios
 // still exercise its real mutations against an isolated current-schema database.
 const persistedMutationModule = await vi.importActual("../../../../worker/src/telegram/mini-app/telegram-mini-app-mutations");
+
+const BULK_PREVIEW = {
+  kind: "preview-bulk-watchlist", addStablecoinIds: ["usdc-circle"], removeStablecoinIds: [],
+} as const satisfies Extract<TelegramMiniAppOperation, { kind: "preview-bulk-watchlist" }>;
 
 function makeSnapshot(state: TelegramMiniAppState = baseState): TelegramMiniAppClientSnapshot {
   return { state, stateRevision: "state-v1-test" };
@@ -57,7 +61,7 @@ function makeArgs(overrides: Partial<UseMiniAppMutationsArgs> = {}): UseMiniAppM
     onSessionAuthExpired: vi.fn(),
     messageAutoDismissActive: true,
     mutationsAllowed: true,
-    portabilityReadsAllowed: true,
+    signedReadsAllowed: true,
     ...overrides,
   };
 }
@@ -110,7 +114,7 @@ afterEach(() => {
   vi.useRealTimers();
   apiMocks.postMiniAppSnapshot.mockReset();
   apiMocks.refreshMiniAppBundleOnce.mockReset();
-  apiMocks.postMiniAppPortability.mockReset();
+  apiMocks.postMiniAppBulkWatchlistPreview.mockReset();
 });
 
 describe("useMiniAppMutations", () => {
@@ -119,16 +123,16 @@ describe("useMiniAppMutations", () => {
     const onForgotten = vi.fn();
     const { result } = renderHook(() => useMiniAppMutations(makeArgs({ onForgotten })));
     const capturedMutation = result.current.performMutation;
-    const capturedRead = result.current.performPortability;
+    const capturedRead = result.current.performBulkWatchlistPreview;
     await act(async () => { await result.current.performMutation({ kind: "forget-me" }); });
     expect(onForgotten).toHaveBeenCalledOnce();
     expect(result.current.forgottenView).toBe(true);
     await act(async () => {
       expect(await capturedMutation({ kind: "clear-snooze" })).toBeNull();
-      expect(await capturedRead({ kind: "export-watchlist" })).toBeNull();
+      expect(await capturedRead(BULK_PREVIEW)).toBeNull();
     });
     expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledOnce();
-    expect(apiMocks.postMiniAppPortability).not.toHaveBeenCalled();
+    expect(apiMocks.postMiniAppBulkWatchlistPreview).not.toHaveBeenCalled();
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscribers").get()).toMatchObject({ count: 0 });
   });
   it("never dispatches writes without signed data, session permission, or viewer permission", async () => {
@@ -145,35 +149,32 @@ describe("useMiniAppMutations", () => {
     expect(apiMocks.postMiniAppSnapshot).not.toHaveBeenCalled();
   });
 
-  it("allows signed export in read-only mode but requires private chat identity", async () => {
-    const exported: TelegramMiniAppPortabilityResponse = {
-      contractVersion: "3", catalogVersion: "catalog-v1",
-      result: { kind: "watchlist-export", token: "export-token", directCount: 1, presetCount: 0 },
-    };
-    apiMocks.postMiniAppPortability.mockResolvedValue(exported);
+  it("allows a signed bulk preview in read-only mode but requires private chat identity", async () => {
+    const previewed = { contractVersion: "8", catalogVersion: "catalog-v1" } as TelegramMiniAppBulkWatchlistResponse;
+    apiMocks.postMiniAppBulkWatchlistPreview.mockResolvedValue(previewed);
     const args = makeArgs({ mutationsAllowed: false, state: { ...baseState, viewer: { ...baseState.viewer, canMutate: false } } });
     const { result, rerender } = renderHook((props) => useMiniAppMutations(props), { initialProps: args });
     await act(async () => {
-      expect(await result.current.performPortability({ kind: "export-watchlist" })).toEqual(exported);
+      expect(await result.current.performBulkWatchlistPreview(BULK_PREVIEW)).toEqual(previewed);
     });
-    expect(apiMocks.postMiniAppPortability).toHaveBeenCalledWith(expect.any(String), {
-      initData: "signed-init-data", operation: { kind: "export-watchlist" },
+    expect(apiMocks.postMiniAppBulkWatchlistPreview).toHaveBeenCalledWith(expect.any(String), {
+      initData: "signed-init-data", operation: BULK_PREVIEW,
     });
     rerender({ ...args, state: { ...baseState, viewer: { ...baseState.viewer, chatId: null } } });
-    await act(async () => { expect(await result.current.performPortability({ kind: "export-watchlist" })).toBeNull(); });
-    expect(apiMocks.postMiniAppPortability).toHaveBeenCalledOnce();
+    await act(async () => { expect(await result.current.performBulkWatchlistPreview(BULK_PREVIEW)).toBeNull(); });
+    expect(apiMocks.postMiniAppBulkWatchlistPreview).toHaveBeenCalledOnce();
     expect(args.onSnapshotReplaced).not.toHaveBeenCalled();
   });
 
   it("clears a failed pending signed read without replacing confirmed state", async () => {
-    const { promise, reject: rejectRead } = Promise.withResolvers<TelegramMiniAppPortabilityResponse>();
-    apiMocks.postMiniAppPortability.mockReturnValue(promise);
+    const { promise, reject: rejectRead } = Promise.withResolvers<TelegramMiniAppBulkWatchlistResponse>();
+    apiMocks.postMiniAppBulkWatchlistPreview.mockReturnValue(promise);
     const args = makeArgs();
     const { result } = renderHook(() => useMiniAppMutations(args));
-    let read!: Promise<TelegramMiniAppPortabilityResponse | null>;
-    act(() => { read = result.current.performPortability({ kind: "export-watchlist" }); });
+    let read!: Promise<TelegramMiniAppBulkWatchlistResponse | null>;
+    act(() => { read = result.current.performBulkWatchlistPreview(BULK_PREVIEW); });
     expect(result.current.isMutating).toBe(true);
-    expect(result.current.pendingOperation).toEqual({ kind: "export-watchlist" });
+    expect(result.current.pendingOperation).toEqual(BULK_PREVIEW);
     await act(async () => { rejectRead(new Error("offline")); expect(await read).toBeNull(); });
     expect(result.current.isMutating).toBe(false);
     expect(result.current.pendingOperation).toBeNull();
@@ -276,11 +277,11 @@ describe("useMiniAppMutations", () => {
   });
 
   it("ends the session when a signed read hits stale-auth", async () => {
-    apiMocks.postMiniAppPortability.mockRejectedValueOnce(new MiniAppRequestError(401, "stale-auth"));
+    apiMocks.postMiniAppBulkWatchlistPreview.mockRejectedValueOnce(new MiniAppRequestError(401, "stale-auth"));
     const onSessionAuthExpired = vi.fn();
     const { result } = renderHook(() => useMiniAppMutations(makeArgs({ onSessionAuthExpired })));
 
-    await act(async () => { await result.current.performPortability({ kind: "export-watchlist" }); });
+    await act(async () => { await result.current.performBulkWatchlistPreview(BULK_PREVIEW); });
     expect(onSessionAuthExpired).toHaveBeenCalledOnce();
     expect(result.current.staleAuth).toEqual({ intent: null });
     expect(result.current.message).toBeNull();

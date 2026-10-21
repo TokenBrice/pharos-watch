@@ -285,6 +285,7 @@ function mergeSubscriberRows(existing: SubscriberRow, additional: SubscriberRow)
   if (additional.hasLocalOverride) return additional;
   return {
     ...existing,
+    presetIds: [...new Set([...(existing.presetIds ?? []), ...(additional.presetIds ?? [])])],
     depeg_worsening_bps_step: mergeTelegramDepegWorseningSteps(
       existing.depeg_worsening_bps_step,
       additional.depeg_worsening_bps_step,

@@ -139,7 +139,7 @@ describe("atomic Telegram subscribe intent", () => {
       await applySubscribeIntent(createFaultInjectingD1(sqlite, { batchSizes }), subscribeInput);
 
       // Both direct and preset enable kernels enlist their idempotent first-follow claims.
-      expect(batchSizes).toEqual([11]);
+      expect(batchSizes).toEqual([9]);
       expect(sqlite.prepare(`
         SELECT username, alert_dews, alert_depeg, last_active_at, preference_generation
           FROM telegram_subscribers

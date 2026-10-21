@@ -462,7 +462,7 @@ describe("dispatchTelegramAlerts", () => {
     const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
 
     expect(metadata.eventsDetected.depegWorsening).toBe(1);
-    expect(telegramDeliveryTranscript[0]?.html).toContain("worsening");
+    expect(telegramDeliveryTranscript[0]?.html).toContain("depeg deepened");
   });
 
   it("renders the active depeg peak price when a worsening event moved far past its opening price", async () => {
@@ -495,8 +495,8 @@ describe("dispatchTelegramAlerts", () => {
     const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
 
     expect(metadata.eventsDetected.depegWorsening).toBe(1);
-    expect(telegramDeliveryTranscript[0]?.html).toContain("Deviation: 38.0% → 59.4% (+21.4%)");
-    expect(telegramDeliveryTranscript[0]?.html).toContain("Price: $0.4060");
+    expect(telegramDeliveryTranscript[0]?.html).toContain("depeg deepened to 59.4% below $1.00 ($0.4060)");
+    expect(telegramDeliveryTranscript[0]?.html).toContain("Was 38.0% at the last alert");
     expect(telegramDeliveryTranscript[0]?.html).not.toContain("$0.9884");
   });
 
@@ -528,7 +528,7 @@ describe("dispatchTelegramAlerts", () => {
 
     expect(metadata).toMatchObject({ eventsDetected: { depegTriggered: 1 }, messagesSent: 1, subscribersNotified: 1 });
     expect(telegramDeliveryTranscript).toEqual([
-      expect.objectContaining({ chatId: "global-123", html: expect.stringContaining("below peg by 2.6%") }),
+      expect.objectContaining({ chatId: "global-123", html: expect.stringContaining("2.6% below $1.00") }),
     ]);
   });
 
@@ -554,15 +554,14 @@ describe("dispatchTelegramAlerts", () => {
 
     expect(metadata.eventsDetected.depegWorsening).toBe(1);
     expect(telegramDeliveryTranscript).toEqual([
-      expect.objectContaining({ chatId: "global-123", html: expect.stringContaining("worsening") }),
+      expect.objectContaining({ chatId: "global-123", html: expect.stringContaining("depeg deepened") }),
     ]);
   });
 
-  it("clears launch alert flags when deactivating a blocked subscriber", async () => {
+  it("clears retired launch alert flags when deactivating a blocked subscriber", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
     seedDispatchSnapshots(harness, { dews: { "usdc-circle": "CALM" } });
-    harness.cache("alert:launch-snapshot", [], now - 60);
     harness.seed({
       dews: [{ stablecoinId: "usdc-circle" }],
       subscribers: [{ chatId: "99999", direct: { launch: true }, global: { launch: true }, consecutiveBlockCount: 1, consecutiveBlockFirstAt: now - 60 }],
@@ -591,13 +590,6 @@ describe("dispatchTelegramAlerts", () => {
     ).toEqual({ alert_launch: 0, global_alert_launch: 0 });
     expect(harness.sqlite.prepare("SELECT alert_launch FROM telegram_subscriptions WHERE chat_id = '99999'").get())
       .toEqual({ alert_launch: 0 });
-    const attempts = telegramDeliveryTranscript.length;
-    vi.advanceTimersByTime(121_000);
-    harness.cache("alert:launch-snapshot", ["usdc-circle"], now + 61);
-    const next = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
-    expect(next.eventsDetected.launch).toBe(1);
-    expect(next.messagesSent).toBe(0);
-    expect(telegramDeliveryTranscript).toHaveLength(attempts);
   });
 
   it("does not emit a worsening alert when an active depeg flips direction (same stablecoin_id)", async () => {

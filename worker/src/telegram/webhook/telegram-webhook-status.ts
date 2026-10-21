@@ -277,3 +277,32 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
       : { status: "stable" },
   };
 }
+
+export interface ActiveDepeg {
+  stablecoinId: string;
+  direction: "above" | "below";
+  peakDeviationBps: number;
+  startedAt: number;
+}
+
+/**
+ * Open depeg events, newest first. Returns `null` when the read fails so the
+ * chat card omits the line instead of claiming nothing is off peg.
+ */
+export async function loadActiveDepegs(db: D1Database): Promise<ActiveDepeg[] | null> {
+  try {
+    const result = await db
+      .prepare(
+        "SELECT stablecoin_id, direction, peak_deviation_bps, started_at FROM depeg_events WHERE ended_at IS NULL ORDER BY started_at DESC",
+      )
+      .all<{ stablecoin_id: string; direction: "above" | "below"; peak_deviation_bps: number; started_at: number }>();
+    return (result.results ?? []).map((row) => ({
+      stablecoinId: row.stablecoin_id,
+      direction: row.direction,
+      peakDeviationBps: row.peak_deviation_bps,
+      startedAt: row.started_at,
+    }));
+  } catch {
+    return null;
+  }
+}

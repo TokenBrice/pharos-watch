@@ -1,15 +1,10 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import {
-  packWatchlistDirectState,
-  packWatchlistPresetState,
-  type WatchlistTokenDirectState,
-} from "../../mini-app/watchlist-token";
-import { prepareTelegramProcessedUpdateMutationApplied } from "../processed-updates";
+import { packWatchlistDirectState, type WatchlistDirectState } from "../../mini-app/watchlist-state";
 import { persistPendingConfirmBulk } from "../disambiguation";
 import { prepareEnsureSubscriberExists } from "../subscribers";
-import { applyWatchlistDirectPatch, applyWatchlistImportV2, loadWatchlistPortableState } from "../watchlist-import";
+import { applyWatchlistDirectPatch, loadWatchlistPortableState } from "../watchlist-import";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isSubscribableCoin } from "../subscription-eligibility";
 
@@ -20,7 +15,7 @@ function openLatestSchema(): { sqlite: DatabaseSync; db: D1Database } {
   return createLatestSchemaSqlite();
 }
 
-function direct(stablecoinId: string, alertDews: boolean): WatchlistTokenDirectState {
+function direct(stablecoinId: string, alertDews: boolean): WatchlistDirectState {
   return {
     stablecoinId,
     alertDews,
@@ -91,25 +86,6 @@ function seed(
   `).run(updateId, NOW, NOW);
 }
 
-function marker(db: D1Database, updateId = 7001): D1PreparedStatement {
-  return prepareTelegramProcessedUpdateMutationApplied(db, {
-    updateId,
-    nowSec: NOW,
-    claimOwner: "owner",
-    claimGeneration: 1,
-  });
-}
-
-function applyMutation(
-  kind: "import" | "direct",
-  db: D1Database,
-  input: Parameters<typeof applyWatchlistImportV2>[1],
-): Promise<"applied" | "stale"> {
-  return kind === "import"
-    ? applyWatchlistImportV2(db, input)
-    : applyWatchlistDirectPatch(db, { ...input, directEntriesToUpsert: input.directEntries });
-}
-
 function readState(sqlite: DatabaseSync): unknown {
   return {
     subscriber: sqlite.prepare(`
@@ -129,7 +105,7 @@ function readState(sqlite: DatabaseSync): unknown {
   };
 }
 
-describe("watchlist v2 atomic replacement", () => {
+describe("generation-fenced watchlist direct patch", () => {
   it("distinguishes an absent subscriber from a retained empty generation-zero subscriber", async () => {
     const { sqlite, db } = openLatestSchema();
     try {
@@ -222,102 +198,17 @@ describe("watchlist v2 atomic replacement", () => {
     }
   });
 
-  it("applies exact provenance atomically, preserves retained snoozes, and removes snoozes with removed rows", async () => {
-    const { sqlite, db } = openLatestSchema();
-    const desiredDirect = [direct("usdc-circle", false), direct("pyusd-paypal", true)];
-    const desiredPresets = [{
-      presetId: "usd-top25",
-      alertDews: false,
-      alertDepeg: true,
-      alertSafety: true,
-      depegWorseningBpsStep: 500 as const,
-    }];
-    const payload = { kind: "watchlist-import-v2", directEntries: desiredDirect.map(packWatchlistDirectState) };
-    const activeSnoozeUntilTs = Math.floor(Date.now() / 1000) + 100_000;
-    try {
-      seed(sqlite, payload, { activeSnoozeUntilTs });
-      const outcome = await applyWatchlistImportV2(db, {
-        chatId: "chat",
-        expectedPreferenceGeneration: 5,
-        generationLease: 4_100_000_000_000_001,
-        directEntries: desiredDirect.map(packWatchlistDirectState),
-        presetEntries: desiredPresets.map(packWatchlistPresetState),
-        directRemoveIds: ["dai-makerdao"],
-        presetRemoveIds: ["eur-top10"],
-        pendingExpiresAt: NOW + 300,
-        pendingActionPayload: JSON.stringify(payload),
-        operationStatements: [marker(db)],
-      });
-      expect(outcome).toBe("applied");
-      expect(readState(sqlite)).toEqual({
-        subscriber: {
-          preference_generation: 6,
-          quiet_hours_enabled: 1,
-          quiet_hours_start_utc: 22,
-          quiet_hours_end_utc: 6,
-          alert_snooze_until_ts: NOW + 200_000,
-        },
-        direct: [
-          {
-            stablecoin_id: "frax-frax",
-            alert_dews: 0,
-            alert_depeg: 0,
-            dews_min_band: null,
-            depeg_worsening_bps_step: null,
-            alert_snooze_until_ts: activeSnoozeUntilTs,
-          },
-          {
-            stablecoin_id: "pyusd-paypal",
-            alert_dews: 1,
-            alert_depeg: 1,
-            dews_min_band: "WARNING",
-            depeg_worsening_bps_step: 250,
-            alert_snooze_until_ts: null,
-          },
-          {
-            stablecoin_id: "usdc-circle",
-            alert_dews: 0,
-            alert_depeg: 1,
-            dews_min_band: null,
-            depeg_worsening_bps_step: 250,
-            alert_snooze_until_ts: activeSnoozeUntilTs,
-          },
-        ],
-        presets: [{
-          preset_id: "usd-top25",
-          alert_dews: 0,
-          alert_depeg: 1,
-          alert_safety: 1,
-          depeg_worsening_bps_step: 500,
-        }],
-      });
-      const portable = await loadWatchlistPortableState(db, "chat", "catalog-test");
-      expect(portable.preferenceGeneration).toBe(6);
-      expect(portable.state.direct).toEqual([desiredDirect[1], desiredDirect[0]]);
-      expect(sqlite.prepare("SELECT 1 FROM telegram_pending_disambiguation WHERE chat_id = 'chat'").get()).toBeUndefined();
-      expect(sqlite.prepare("SELECT applied_at FROM telegram_webhook_operation_mutations WHERE update_id = 7001").get()).toEqual({ applied_at: NOW });
-      // The expired snooze-only row is cleaned; the active snooze-only row remains until expiry.
-      expect(sqlite.prepare("SELECT 1 FROM telegram_subscriptions WHERE stablecoin_id = 'usdt-tether'").get()).toBeUndefined();
-    } finally {
-      sqlite.close();
-    }
-  });
-
-  it.each(["import", "direct"] as const)("creates a first-time Mini App subscriber inside the guarded batch (%s)", async (kind) => {
+  it("creates a first-time Mini App subscriber inside the guarded batch", async () => {
     const { sqlite, db } = openLatestSchema();
     const desired = [direct("usdc-circle", true)];
     try {
-      const outcome = await applyMutation(kind, db, {
+      const outcome = await applyWatchlistDirectPatch(db, {
         chatId: "mini-app-chat",
         ensureSubscriber: { username: "alice" },
         expectedPreferenceGeneration: 0,
         generationLease: 4_100_000_000_000_010,
-        directEntries: desired.map(packWatchlistDirectState),
-        presetEntries: [],
+        directEntriesToUpsert: desired.map(packWatchlistDirectState),
         directRemoveIds: [],
-        presetRemoveIds: [],
-        pendingExpiresAt: 0,
-        pendingActionPayload: "mini-app-portability-preview",
       });
       expect(outcome).toBe("applied");
       expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers WHERE chat_id = 'mini-app-chat'").get()).toEqual({ preference_generation: 1 });
@@ -327,99 +218,72 @@ describe("watchlist v2 atomic replacement", () => {
     }
   });
 
-  it.each(["import", "direct"] as const)("rejects stale preferences while keeping terminal effects domain-specific (%s)", async (kind) => {
+  it("rejects stale preferences without touching pending state", async () => {
     const { sqlite, db } = openLatestSchema();
     const desired = [direct("usdc-circle", false)];
     const payload = { kind: "watchlist-import-v2", directEntries: desired.map(packWatchlistDirectState) };
     try {
       seed(sqlite, payload);
       const before = readState(sqlite);
-      const outcome = await applyMutation(kind, db, {
+      const outcome = await applyWatchlistDirectPatch(db, {
         chatId: "chat",
         expectedPreferenceGeneration: 4,
         generationLease: 4_100_000_000_000_002,
-        directEntries: desired.map(packWatchlistDirectState),
-        presetEntries: [],
+        directEntriesToUpsert: desired.map(packWatchlistDirectState),
         directRemoveIds: ["dai-makerdao"],
-        presetRemoveIds: ["eur-top10", "usd-top25"],
-        pendingExpiresAt: NOW + 300,
-        pendingActionPayload: JSON.stringify(payload),
-        operationStatements: [marker(db)],
       });
       expect(outcome).toBe("stale");
       expect(readState(sqlite)).toEqual(before);
-      expect(sqlite.prepare("SELECT 1 FROM telegram_pending_disambiguation WHERE chat_id = 'chat'").get())
-        .toEqual(kind === "import" ? undefined : { 1: 1 });
-      expect(sqlite.prepare("SELECT applied_at FROM telegram_webhook_operation_mutations WHERE update_id = 7001").get())
-        .toEqual(kind === "import" ? { applied_at: NOW } : undefined);
+      expect(sqlite.prepare("SELECT 1 FROM telegram_pending_disambiguation WHERE chat_id = 'chat'").get()).toEqual({ 1: 1 });
     } finally {
       sqlite.close();
     }
   });
 
-  it.each(["import", "direct"] as const)("rolls every guarded write and pending deletion back when the batch tail fails (%s)", async (kind) => {
+  it("rolls every guarded write back when the batch tail fails", async () => {
     const { sqlite, db } = openLatestSchema();
     const desired = [direct("usdc-circle", false)];
     const payload = { kind: "watchlist-import-v2", directEntries: desired.map(packWatchlistDirectState) };
     try {
       seed(sqlite, payload);
       const before = readState(sqlite);
-      if (kind === "direct") sqlite.exec(`
+      sqlite.exec(`
         CREATE TRIGGER fail_generation_restore BEFORE UPDATE OF preference_generation ON telegram_subscribers
         WHEN NEW.preference_generation = 6
         BEGIN SELECT RAISE(ABORT, 'generation restore failed'); END;
       `);
-      const failure = db.prepare(`
-        INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at)
-        VALUES ('chat', ?, ?)
-      `).bind(NOW, NOW);
-      await expect(applyMutation(kind, db, {
+      await expect(applyWatchlistDirectPatch(db, {
         chatId: "chat",
         expectedPreferenceGeneration: 5,
         generationLease: 4_100_000_000_000_003,
-        directEntries: desired.map(packWatchlistDirectState),
-        presetEntries: [],
+        directEntriesToUpsert: desired.map(packWatchlistDirectState),
         directRemoveIds: ["dai-makerdao"],
-        presetRemoveIds: ["eur-top10", "usd-top25"],
-        pendingExpiresAt: NOW + 300,
-        pendingActionPayload: JSON.stringify(payload),
-        operationStatements: [failure],
       })).rejects.toThrow();
       expect(readState(sqlite)).toEqual(before);
-      expect(sqlite.prepare("SELECT 1 FROM telegram_pending_disambiguation WHERE chat_id = 'chat'").get()).toEqual({ 1: 1 });
-      expect(sqlite.prepare("SELECT 1 FROM telegram_webhook_operation_mutations WHERE update_id = 7001").get()).toBeUndefined();
     } finally {
       sqlite.close();
     }
   });
 
-  it("revalidates packed ids at confirmation before touching durable state", async () => {
+  it("revalidates packed ids before touching durable state", async () => {
     const { sqlite, db } = openLatestSchema();
-    const payload = { kind: "watchlist-import-v2", directEntries: ["retired-stablecoin~1"] };
     try {
-      seed(sqlite, payload);
+      seed(sqlite, {});
       const before = readState(sqlite);
-      await expect(applyWatchlistImportV2(db, {
+      await expect(applyWatchlistDirectPatch(db, {
         chatId: "chat",
         expectedPreferenceGeneration: 5,
         generationLease: 4_100_000_000_000_004,
-        directEntries: ["retired-stablecoin~1"],
-        presetEntries: [],
+        directEntriesToUpsert: ["retired-stablecoin~1"],
         directRemoveIds: ["dai-makerdao"],
-        presetRemoveIds: ["eur-top10", "usd-top25"],
-        pendingExpiresAt: NOW + 300,
-        pendingActionPayload: JSON.stringify(payload),
-        operationStatements: [marker(db)],
-      })).rejects.toThrow("failed confirmation validation");
+      })).rejects.toThrow("failed validation");
       expect(readState(sqlite)).toEqual(before);
-      expect(sqlite.prepare("SELECT 1 FROM telegram_pending_disambiguation WHERE chat_id = 'chat'").get()).toEqual({ 1: 1 });
-      expect(sqlite.prepare("SELECT 1 FROM telegram_webhook_operation_mutations WHERE update_id = 7001").get()).toBeUndefined();
     } finally {
       sqlite.close();
     }
   });
 
-  it("does not export expired snooze-only rows as portable intent", async () => {
+  it("does not load expired snooze-only rows as watchlist intent", async () => {
     const { sqlite, db } = openLatestSchema();
     try {
       seed(sqlite, {});

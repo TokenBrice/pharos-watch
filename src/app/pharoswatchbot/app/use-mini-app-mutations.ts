@@ -10,7 +10,6 @@ import {
 import {
   isMiniAppVersionMismatch,
   postMiniAppBulkWatchlistPreview,
-  postMiniAppPortability,
   postMiniAppSnapshot,
   refreshMiniAppBundleOnce,
   type TelegramMiniAppClientSnapshot,
@@ -22,8 +21,6 @@ import type {
   TelegramMiniAppOperation,
   TelegramMiniAppBulkWatchlistOperation,
   TelegramMiniAppBulkWatchlistResponse,
-  TelegramMiniAppPortabilityOperation,
-  TelegramMiniAppPortabilityResponse,
   TelegramMiniAppState,
 } from "./types";
 
@@ -32,18 +29,10 @@ const MUTATE_ENDPOINT = API_PATHS.telegramMiniAppMutation();
 /** Grace period during which a removed coin can be restored via the undo toast. */
 const UNDO_WINDOW_MS = 5_000;
 
-type SignedReadOperation =
-  | Extract<TelegramMiniAppPortabilityOperation, { kind: "export-watchlist" | "preview-watchlist-import" }>
-  | Extract<TelegramMiniAppBulkWatchlistOperation, { kind: "preview-bulk-watchlist" }>;
+type SignedReadOperation = Extract<TelegramMiniAppBulkWatchlistOperation, { kind: "preview-bulk-watchlist" }>;
 
 function mutationSuccessAnnouncement(operation: TelegramMiniAppOperation, state: TelegramMiniAppState | null): string {
   switch (operation.kind) {
-    case "export-watchlist":
-      return "Watchlist token ready.";
-    case "preview-watchlist-import":
-      return "Import preview ready.";
-    case "confirm-watchlist-import":
-      return "Watchlist replaced exactly as previewed.";
     case "preview-bulk-watchlist":
       return "Bulk watchlist preview ready.";
     case "confirm-bulk-watchlist":
@@ -138,7 +127,7 @@ export interface UseMiniAppMutationsArgs {
   /** False while session state is refreshing, stale, or otherwise read-only. */
   mutationsAllowed: boolean;
   /** Signed private-session reads remain available through Telegram's 24h window. */
-  portabilityReadsAllowed: boolean;
+  signedReadsAllowed: boolean;
   /** A signed read hit `stale-auth`: the 24h session window is over and no signed request can succeed. */
   onSessionAuthExpired: () => void;
 }
@@ -170,8 +159,7 @@ export interface UseMiniAppMutationsResult {
   mutate: (operation: TelegramMiniAppOperation) => void;
   /** Imperative dispatch returning the confirmed server snapshot on success. */
   performMutation: (operation: TelegramMiniAppOperation) => Promise<TelegramMiniAppClientSnapshot | null>;
-  /** Signed read-only export/import-preview request. Does not consume edit burst capacity. */
-  performPortability: (operation: Extract<TelegramMiniAppPortabilityOperation, { kind: "export-watchlist" | "preview-watchlist-import" }>) => Promise<TelegramMiniAppPortabilityResponse | null>;
+  /** Signed read-only bulk preview request. Does not consume edit burst capacity. */
   performBulkWatchlistPreview: (operation: Extract<TelegramMiniAppBulkWatchlistOperation, { kind: "preview-bulk-watchlist" }>) => Promise<TelegramMiniAppBulkWatchlistResponse | null>;
   /** Bound handler for the remove-coin flow: confirm-then-mutate + arm undo on success. */
   remove: (coin: SubscribedCoin) => void;
@@ -215,7 +203,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     authExpired,
     messageAutoDismissActive,
     mutationsAllowed,
-    portabilityReadsAllowed,
+    signedReadsAllowed,
     onSessionAuthExpired,
   } = args;
   // webApp identity is stable per render, so showConfirm is safe to hoist once.
@@ -381,7 +369,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     request: () => Promise<T>,
     successAnnouncement: string,
   ): Promise<T | null> => {
-    if (terminalRef.current || requestInFlightRef.current || !initData || !portabilityReadsAllowed || state?.viewer.chatId == null || isMutating) return null;
+    if (terminalRef.current || requestInFlightRef.current || !initData || !signedReadsAllowed || state?.viewer.chatId == null || isMutating) return null;
     requestInFlightRef.current = true;
     setIsMutating(true);
     setPendingOperation(operation);
@@ -412,15 +400,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       requestInFlightRef.current = false;
       setPendingOperation(null);
     }
-  }, [initData, isMutating, onSessionAuthExpired, portabilityReadsAllowed, state?.viewer.chatId, webApp]);
-
-  const performPortability = useCallback(async (
-    operation: Extract<TelegramMiniAppPortabilityOperation, { kind: "export-watchlist" | "preview-watchlist-import" }>,
-  ): Promise<TelegramMiniAppPortabilityResponse | null> => performSignedRead(
-    operation,
-    () => postMiniAppPortability(MUTATE_ENDPOINT, { initData, operation }),
-    operation.kind === "export-watchlist" ? "Watchlist token ready." : "Import preview ready.",
-  ), [initData, performSignedRead]);
+  }, [initData, isMutating, onSessionAuthExpired, signedReadsAllowed, state?.viewer.chatId, webApp]);
 
   const performBulkWatchlistPreview = useCallback(async (
     operation: Extract<TelegramMiniAppBulkWatchlistOperation, { kind: "preview-bulk-watchlist" }>,
@@ -516,7 +496,6 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     staleAuth,
     mutate,
     performMutation,
-    performPortability,
     performBulkWatchlistPreview,
     remove,
     undoRemove,

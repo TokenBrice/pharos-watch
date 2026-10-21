@@ -3,6 +3,14 @@ import { MINI_APP_PAYLOAD_NAMES, formatCoinPayload } from "@shared/lib/telegram-
 import { getPegTaxonomyByCurrency } from "@shared/lib/peg-taxonomy";
 import { DEWS_SIGNAL_LABELS } from "@shared/lib/dews-config";
 import { getReportCardGradeRank } from "@shared/lib/report-card-core";
+import { DEWS_BAND_CODE_BY_VALUE, TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
+import {
+  TELEGRAM_DEPEG_STEPS,
+  TELEGRAM_DEWS_BANDS,
+  isDepegStepValue,
+  type TelegramDewsBand,
+} from "@shared/types/status/telegram";
+import { TELEGRAM_PRESET_LABEL_BY_ID, type TelegramPresetId } from "@shared/lib/telegram-presets";
 import { escapeHtml } from "../delivery/telegram";
 import {
   TELEGRAM_MESSAGE_CHUNK_LIMIT,
@@ -80,17 +88,16 @@ export interface SafetyChange {
   contextLine?: string;
 }
 
+/** Chat-wide pause offered on every alert and used as the replay fallback keyboard. */
 export const SNOOZE_REPLY_MARKUP = {
   inline_keyboard: [[
-    { text: "Snooze 1h", callback_data: "snooze:1h" },
-    { text: "4h", callback_data: "snooze:4h" },
-    { text: "24h", callback_data: "snooze:24h" },
+    { text: "Pause all 4h", callback_data: "snooze:4h" },
   ]],
 } as const;
 
 // Data-tied glyphs for alert lines. These are a sanctioned exception to the
 // CLAUDE.md no-emoji rule: each glyph encodes a specific data dimension
-// (depeg direction, DEWS severity, launch promotion). Any future addition to
+// (depeg direction, DEWS severity). Any future addition to
 // this set requires a separate review — do not strip these without coordination.
 const DEPEG_DIRECTION_GLYPH = { above: "▲", below: "▼" } as const;
 const DEWS_SEVERITY_GLYPH: Record<string, string> = {
@@ -100,27 +107,44 @@ const DEWS_SEVERITY_GLYPH: Record<string, string> = {
   WARNING: "🟠",
   DANGER: "🔴",
 };
-const LAUNCH_GLYPH = "✦";
 
 function dewsGlyphFor(band: string): string {
   return DEWS_SEVERITY_GLYPH[band] ?? "";
 }
 
+function glyphPrefix(glyph: string): string {
+  return glyph ? `${glyph} ` : "";
+}
+
+/**
+ * Source-built `contextLine` strings carry a `Reason:` explanation (safety) or
+ * a `Context:` fact list (DEWS/depeg). Reasons render as one plain `Why:`
+ * line; fact lists stay in an expandable blockquote below the headline.
+ */
 function formatContextLine(contextLine?: string): string {
   if (!contextLine) return "";
-  const escaped = escapeHtml(contextLine);
-  return `\n<blockquote expandable>${escaped}</blockquote>`;
+  if (contextLine.startsWith("Reason: ")) {
+    return `\nWhy: ${escapeHtml(contextLine.slice("Reason: ".length))}`;
+  }
+  const facts = contextLine.startsWith("Context: ") ? contextLine.slice("Context: ".length) : contextLine;
+  return `\n<blockquote expandable>${escapeHtml(facts)}</blockquote>`;
 }
 
 function dewsSignalLabel(key: string): string {
   return (DEWS_SIGNAL_LABELS as Record<string, string | undefined>)[key] ?? key;
 }
 
-function dewsTransitionPhrase(oldBand: string, newBand: string): string {
-  if (!isThreatBand(oldBand) || !isThreatBand(newBand)) return `stress is now ${newBand}`;
-  return THREAT_BAND_ORDER[newBand] > THREAT_BAND_ORDER[oldBand]
-    ? `stress rose to ${newBand}`
-    : `stress eased to ${newBand}`;
+function isDewsEscalation(oldBand: string, newBand: string): boolean {
+  return !isThreatBand(oldBand) || !isThreatBand(newBand) || THREAT_BAND_ORDER[newBand] > THREAT_BAND_ORDER[oldBand];
+}
+
+function dewsHeadlinePhrase(e: DewsChange): string {
+  if (!isThreatBand(e.oldBand) || !isThreatBand(e.newBand)) {
+    return `early-warning stress is now ${e.newBand} (${e.score}/100)`;
+  }
+  return isDewsEscalation(e.oldBand, e.newBand)
+    ? `early-warning stress rose to ${e.newBand} (${e.score}/100, was ${e.oldBand})`
+    : `stress eased to ${e.newBand} (${e.score}/100, was ${e.oldBand})`;
 }
 
 export function formatDewsLine(e: DewsChange): string {
@@ -129,10 +153,7 @@ export function formatDewsLine(e: DewsChange): string {
     .slice(0, 2)
     .map((s) => `${dewsSignalLabel(s.name)} ${Math.round(s.value)}`)
     .join(", ");
-  const glyph = dewsGlyphFor(e.newBand);
-  const prefix = glyph ? `${glyph} ` : "";
-  const was = isThreatBand(e.oldBand) ? `, was ${e.oldBand}` : "";
-  return `${prefix}<b>${escapeHtml(e.symbol)}</b> ${dewsTransitionPhrase(e.oldBand, e.newBand)} (score ${e.score}${was})${signals ? `\nMain drivers: ${signals}` : ""}${formatContextLine(e.contextLine)}`;
+  return `${glyphPrefix(dewsGlyphFor(e.newBand))}<b>${escapeHtml(e.symbol)}</b> ${dewsHeadlinePhrase(e)}${signals ? `\nMain drivers: ${escapeHtml(signals)}` : ""}${formatContextLine(e.contextLine)}`;
 }
 
 function formatDurationMinutes(durationMinutes: number): string {
@@ -145,34 +166,40 @@ function formatDurationMinutes(durationMinutes: number): string {
 function formatPrice(value: number, currency = "USD", fractionDigits = 4): string {
   const normalizedCurrency = currency.trim().toUpperCase();
   const prefix = getPegTaxonomyByCurrency(normalizedCurrency)?.symbol ?? `${normalizedCurrency || currency} `;
-  return `${prefix}${value.toFixed(fractionDigits)}`;
+  return escapeHtml(`${prefix}${value.toFixed(fractionDigits)}`);
+}
+
+function formatBpsPercent(bps: number): string {
+  return `${(bps / 100).toFixed(1)}%`;
+}
+
+function depegOffsetPhrase(bps: number, direction: "above" | "below", peg: string): string {
+  return `${formatBpsPercent(bps)} ${direction} ${peg}`;
 }
 
 export function formatDepegTriggeredLine(e: DepegAlertPayload): string {
-  const pct = (e.deviationBps / 100).toFixed(1);
   const glyph = DEPEG_DIRECTION_GLYPH[e.direction];
-  const recovery = e.reopenedAfterMinutes != null
-    ? `\nRe-depegged after ${formatDurationMinutes(e.reopenedAfterMinutes)} recovery`
+  const peg = formatPrice(e.pegReference, e.priceCurrency, 2);
+  const verb = e.direction === "below" ? "lost its peg" : "broke above its peg";
+  const again = e.reopenedAfterMinutes != null
+    ? ` again, ${formatDurationMinutes(e.reopenedAfterMinutes)} after recovering`
     : "";
-  return `${glyph} <b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg by ${pct}% (${e.deviationBps} bps)\nPrice: ${formatPrice(e.price, e.priceCurrency)} (peg: ${formatPrice(e.pegReference, e.priceCurrency, 2)})${recovery}${formatContextLine(e.contextLine)}`;
+  return `${glyph} <b>${escapeHtml(e.symbol)}</b> ${verb}${again}: ${formatPrice(e.price, e.priceCurrency)}, ${depegOffsetPhrase(e.deviationBps, e.direction, peg)}${formatContextLine(e.contextLine)}`;
 }
 
 export function formatDepegResolvedLine(e: DepegResolved): string {
   const duration = formatDurationMinutes(e.durationMinutes);
-  const recoveryLine = e.recoveryPrice != null
-    ? `Recovery price: ${formatPrice(e.recoveryPrice, e.priceCurrency)}`
-    : "Recovery evidence: native peg quote";
-  return `<b>${escapeHtml(e.symbol)}</b>\nDuration: ${duration}\nPeak deviation: ${(e.peakDeviationBps / 100).toFixed(1)}%\n${recoveryLine}${formatContextLine(e.contextLine)}`;
+  const headline = e.recoveryPrice != null
+    ? `<b>${escapeHtml(e.symbol)}</b> is back on peg at ${formatPrice(e.recoveryPrice, e.priceCurrency)}`
+    : `<b>${escapeHtml(e.symbol)}</b> is back on peg`;
+  const evidence = e.recoveryPrice != null ? "" : "\nRecovery confirmed by a native peg quote";
+  return `${headline}\nOff peg for ${duration} · worst point ${formatBpsPercent(e.peakDeviationBps)} from peg${evidence}${formatContextLine(e.contextLine)}`;
 }
 
 export function formatDepegWorseningLine(e: DepegWorsening): string {
-  const prev = (e.previousDeviationBps / 100).toFixed(1);
-  const curr = (e.currentDeviationBps / 100).toFixed(1);
-  const deltaBps = e.currentDeviationBps - e.previousDeviationBps;
-  const deltaPct = (deltaBps / 100).toFixed(1);
-  const deltaStr = deltaBps >= 0 ? `+${deltaPct}%` : `${deltaPct}%`;
   const glyph = DEPEG_DIRECTION_GLYPH[e.direction];
-  return `${glyph} <b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg worsening\nDeviation: ${prev}% → ${curr}% (${deltaStr})\nPrice: ${formatPrice(e.price, e.priceCurrency)} (peg: ${formatPrice(e.pegReference, e.priceCurrency, 2)})${formatContextLine(e.contextLine)}`;
+  const peg = formatPrice(e.pegReference, e.priceCurrency, 2);
+  return `${glyph} <b>${escapeHtml(e.symbol)}</b> depeg deepened to ${depegOffsetPhrase(e.currentDeviationBps, e.direction, peg)} (${formatPrice(e.price, e.priceCurrency)})\nWas ${formatBpsPercent(e.previousDeviationBps)} at the last alert${formatContextLine(e.contextLine)}`;
 }
 
 /** Plain-language gloss for each Safety Score pillar, shared by alerts and /why. */
@@ -190,18 +217,10 @@ function safetyGradeVerb(oldGrade: string, newGrade: string): string {
 }
 
 export function formatSafetyLine(e: SafetyChange): string {
-  const scores = e.oldScore != null && e.newScore != null ? `\nScore: ${e.oldScore} → ${e.newScore}` : "";
-  return `<b>${escapeHtml(e.symbol)}</b> Safety grade ${safetyGradeVerb(e.oldGrade, e.newGrade)} to ${escapeHtml(e.newGrade)} (was ${escapeHtml(e.oldGrade)})${scores}${formatContextLine(e.contextLine)}`;
-}
-
-export interface LaunchAlert {
-  stablecoinId: string;
-  symbol: string;
-  name: string;
-}
-
-export function formatLaunchLine(e: LaunchAlert): string {
-  return `${LAUNCH_GLYPH} <b>${escapeHtml(e.symbol)}</b> — ${escapeHtml(e.name)} has launched and is now tracked by Pharos`;
+  const score = e.newScore != null
+    ? `\nOverall score ${e.newScore}${e.oldScore != null ? ` (was ${e.oldScore})` : ""}`
+    : "";
+  return `<b>${escapeHtml(e.symbol)}</b> Safety grade ${safetyGradeVerb(e.oldGrade, e.newGrade)} to ${escapeHtml(e.newGrade)} (was ${escapeHtml(e.oldGrade)})${formatContextLine(e.contextLine)}${score}`;
 }
 
 export interface ReserveAlert {
@@ -220,31 +239,31 @@ export interface FreezeAlert {
   sourceEventId: string;
 }
 
+function formatUsdAmount(amount: number): string {
+  return `$${amount.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+}
+
+function freezeHeadlinePhrase(e: FreezeAlert): string {
+  const chain = escapeHtml(e.chainName);
+  const amount = e.amountUsdAtEvent != null ? formatUsdAmount(e.amountUsdAtEvent) : null;
+  if (e.eventType === "destroy") {
+    return amount != null
+      ? `issuer destroyed ${amount} held by a frozen address on ${chain}`
+      : `issuer destroyed funds held by a frozen address on ${chain}`;
+  }
+  const verb = e.eventType === "blacklist" ? "froze" : "unfroze";
+  return `issuer ${verb} an address on ${chain}${amount != null ? ` holding ${amount}` : ""}`;
+}
+
 export function formatFreezeLine(e: FreezeAlert): string {
-  const action = e.eventType === "blacklist"
-    ? "address frozen"
-    : e.eventType === "unblacklist"
-      ? "address unfrozen"
-      : "funds destroyed";
-  const amount = e.amountUsdAtEvent != null
-    ? `\nAmount at event: $${e.amountUsdAtEvent.toLocaleString("en-US", { maximumFractionDigits: 0 })}`
-    : "";
-  return `<b>${escapeHtml(e.symbol)}</b> — ${action} on ${escapeHtml(e.chainName)}${amount}\n<a href="https://pharos.watch/freezewatch/">Source: Pharos FreezeWatch</a>`;
+  return `<b>${escapeHtml(e.symbol)}</b> ${freezeHeadlinePhrase(e)}\nRecorded by <a href="https://pharos.watch/freezewatch/">Pharos FreezeWatch</a>`;
 }
 
-export function freezeSectionHeader(events: readonly FreezeAlert[]): string {
-  const types = new Set(events.map((event) => event.eventType));
-  if (types.size === 1 && types.has("blacklist")) return "Issuer Freeze Event";
-  if (types.size === 1 && types.has("unblacklist")) return "Issuer Unfreeze Event";
-  if (types.size === 1 && types.has("destroy")) return "Issuer Destroy Event";
-  return "Issuer Freeze Activity";
-}
-
-// Reserve-drift alert (C123). Shipped glyph-less (bold header only) per the
-// sanctioned-glyph review rule in docs/telegram-alerts.md "Message Types";
-// adding a data-tied glyph requires a separate review.
+// Reserve-drift alert (C123). Shipped glyph-less per the sanctioned-glyph
+// review rule in docs/telegram-alerts.md "Message Types"; adding a data-tied
+// glyph requires a separate review.
 export function formatReserveLine(e: ReserveAlert): string {
-  return `<b>${escapeHtml(e.symbol)}</b> — ${escapeHtml(e.name)} live reserve mix has drifted from its curated profile`;
+  return `<b>${escapeHtml(e.symbol)}</b> reserves no longer match their reviewed profile\nPharos's live reserve data for ${escapeHtml(e.name)} now differs from the last reviewed mix. Details on the coin page.`;
 }
 
 export interface ConsolidatedAlerts {
@@ -253,9 +272,23 @@ export interface ConsolidatedAlerts {
   depegResolved: DepegResolved[];
   depegWorsening: DepegWorsening[];
   safety: SafetyChange[];
-  launch: LaunchAlert[];
   reserve: ReserveAlert[];
   freeze?: FreezeAlert[];
+}
+
+/**
+ * Where the recipient's follow came from, for the "Via ..." footer: preset
+ * ids (rendered with their registry labels), a direct per-coin follow, or the
+ * chat-wide all-stablecoins opt-in.
+ */
+export interface AlertVia {
+  presetIds: readonly string[];
+  watchlist: boolean;
+  allStablecoins: boolean;
+}
+
+export interface FormatConsolidatedMessageOptions {
+  via?: AlertVia | null;
 }
 
 type AlertFamilyEvent =
@@ -264,66 +297,225 @@ type AlertFamilyEvent =
   | DepegResolved
   | DepegWorsening
   | SafetyChange
-  | LaunchAlert
   | ReserveAlert
   | FreezeAlert;
 
+type AlertFamilyKey = "depeg" | "dews" | "safety" | "freeze" | "reserve";
+
 interface AlertFamilyDescriptor {
+  family: AlertFamilyKey;
   getEvents: (alerts: ConsolidatedAlerts) => readonly AlertFamilyEvent[];
-  heading: string | ((events: readonly AlertFamilyEvent[]) => string);
   format: (event: AlertFamilyEvent) => string;
+  /** One-line form used in batches of three or more events. */
+  compact: (event: AlertFamilyEvent) => string;
   severity: (event: AlertFamilyEvent) => number;
+  /** Recoveries, de-escalations and upgrades sort after every adverse event. */
+  isRecovery: (event: AlertFamilyEvent) => boolean;
+  /** Message order: depeg, DEWS escalations, safety, freeze, reserve. */
+  layoutOrder: number;
+  /** Snooze ranking order across families (ties keep this order). */
   rankOrder: number;
 }
 
-function defineAlertFamily<T extends AlertFamilyEvent>(
-  getEvents: (alerts: ConsolidatedAlerts) => readonly T[],
-  heading: string | ((events: readonly T[]) => string),
-  format: (event: T) => string,
-  severity: (event: T) => number,
-  rankOrder: number,
-): AlertFamilyDescriptor {
+function defineAlertFamily<T extends AlertFamilyEvent>(spec: {
+  family: AlertFamilyKey;
+  getEvents: (alerts: ConsolidatedAlerts) => readonly T[];
+  format: (event: T) => string;
+  compact: (event: T) => string;
+  severity: (event: T) => number;
+  isRecovery?: (event: T) => boolean;
+  layoutOrder: number;
+  rankOrder: number;
+}): AlertFamilyDescriptor {
   return {
-    getEvents,
-    heading: typeof heading === "string" ? heading : (events) => heading(events as readonly T[]),
-    format: (event) => format(event as T),
-    severity: (event) => severity(event as T),
-    rankOrder,
+    family: spec.family,
+    getEvents: spec.getEvents,
+    format: (event) => spec.format(event as T),
+    compact: (event) => spec.compact(event as T),
+    severity: (event) => spec.severity(event as T),
+    isRecovery: (event) => spec.isRecovery?.(event as T) ?? false,
+    layoutOrder: spec.layoutOrder,
+    rankOrder: spec.rankOrder,
   };
 }
 
-const ALERT_FAMILY_DESCRIPTORS: readonly AlertFamilyDescriptor[] = [
-  defineAlertFamily((alerts) => alerts.dews, "DEWS", formatDewsLine, (event) => THREAT_BAND_ORDER[event.newBand as keyof typeof THREAT_BAND_ORDER] ?? 0, 3),
-  defineAlertFamily((alerts) => alerts.depegTriggered, "Depeg Detected", formatDepegTriggeredLine, (event) => event.deviationBps, 0),
-  defineAlertFamily((alerts) => alerts.depegResolved, "Depeg Resolved", formatDepegResolvedLine, () => 0, 2),
-  defineAlertFamily((alerts) => alerts.depegWorsening ?? [], "Depeg Worsening", formatDepegWorseningLine, (event) => event.currentDeviationBps, 1),
-  defineAlertFamily((alerts) => alerts.safety, "Safety Grade Change", formatSafetyLine, (event) => {
-    return event.oldScore != null && event.newScore != null ? Math.max(0, event.oldScore - event.newScore) : 0;
-  }, 4),
-  defineAlertFamily((alerts) => alerts.launch, "Stablecoin Launched", formatLaunchLine, () => 0, 5),
-  defineAlertFamily((alerts) => alerts.reserve, "Reserve Drift", formatReserveLine, () => 0, 6),
-  defineAlertFamily((alerts) => alerts.freeze ?? [], freezeSectionHeader, formatFreezeLine, () => 0, 7),
-];
-
-/** Build a consolidated HTML message for one subscriber. */
-export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
-  const sections: string[] = [];
-
-  for (const descriptor of ALERT_FAMILY_DESCRIPTORS) {
-    const events = descriptor.getEvents(alerts);
-    if (events.length > 0) {
-      const heading = typeof descriptor.heading === "string" ? descriptor.heading : descriptor.heading(events);
-      sections.push(`<b>${heading}</b>\n${events.map(descriptor.format).join("\n\n")}`);
-    }
-  }
-
-  const body = sections.join("\n\n");
-  const singleId = getSingleAlertStablecoinId(alerts);
-  const url = singleId ? `https://pharos.watch/stablecoin/${singleId}` : "https://pharos.watch";
-  return `${body}\n\n<a href="${url}">View on Pharos</a>`;
+function symbolHtml(symbol: string): string {
+  return escapeHtml(symbol);
 }
 
-/** Max characters of a symbol shown on a compact per-coin snooze button. */
+const ALERT_FAMILY_DESCRIPTORS: readonly AlertFamilyDescriptor[] = [
+  defineAlertFamily({
+    family: "depeg",
+    getEvents: (alerts) => alerts.depegTriggered,
+    format: formatDepegTriggeredLine,
+    compact: (e) => `${DEPEG_DIRECTION_GLYPH[e.direction]} ${symbolHtml(e.symbol)} ${e.direction === "below" ? "lost its peg" : "broke above its peg"}, ${formatBpsPercent(e.deviationBps)} ${e.direction}`,
+    severity: (e) => e.deviationBps,
+    layoutOrder: 0,
+    rankOrder: 0,
+  }),
+  defineAlertFamily({
+    family: "depeg",
+    getEvents: (alerts) => alerts.depegWorsening ?? [],
+    format: formatDepegWorseningLine,
+    compact: (e) => `${DEPEG_DIRECTION_GLYPH[e.direction]} ${symbolHtml(e.symbol)} depeg deepened to ${formatBpsPercent(e.currentDeviationBps)} ${e.direction}`,
+    severity: (e) => e.currentDeviationBps,
+    layoutOrder: 1,
+    rankOrder: 1,
+  }),
+  defineAlertFamily({
+    family: "depeg",
+    getEvents: (alerts) => alerts.depegResolved,
+    format: formatDepegResolvedLine,
+    compact: (e) => `${symbolHtml(e.symbol)} back on peg after ${formatDurationMinutes(e.durationMinutes)}`,
+    severity: () => 0,
+    isRecovery: () => true,
+    layoutOrder: 2,
+    rankOrder: 2,
+  }),
+  defineAlertFamily({
+    family: "dews",
+    getEvents: (alerts) => alerts.dews,
+    format: formatDewsLine,
+    compact: (e) => `${glyphPrefix(dewsGlyphFor(e.newBand))}${symbolHtml(e.symbol)} ${isDewsEscalation(e.oldBand, e.newBand) ? "stress rose" : "stress eased"} to ${e.newBand} (${e.score}/100)`,
+    severity: (e) => THREAT_BAND_ORDER[e.newBand as keyof typeof THREAT_BAND_ORDER] ?? 0,
+    isRecovery: (e) => !isDewsEscalation(e.oldBand, e.newBand),
+    layoutOrder: 3,
+    rankOrder: 3,
+  }),
+  defineAlertFamily({
+    family: "safety",
+    getEvents: (alerts) => alerts.safety,
+    format: formatSafetyLine,
+    compact: (e) => `${symbolHtml(e.symbol)} ${safetyGradeVerb(e.oldGrade, e.newGrade)} ${escapeHtml(e.oldGrade)} → ${escapeHtml(e.newGrade)}`,
+    severity: (e) => e.oldScore != null && e.newScore != null ? Math.max(0, e.oldScore - e.newScore) : 0,
+    isRecovery: (e) => safetyGradeVerb(e.oldGrade, e.newGrade) === "raised",
+    layoutOrder: 4,
+    rankOrder: 4,
+  }),
+  defineAlertFamily({
+    family: "freeze",
+    getEvents: (alerts) => alerts.freeze ?? [],
+    format: formatFreezeLine,
+    compact: (e) => `${symbolHtml(e.symbol)} ${freezeHeadlinePhrase(e)}`,
+    severity: () => 0,
+    isRecovery: (e) => e.eventType === "unblacklist",
+    layoutOrder: 5,
+    rankOrder: 7,
+  }),
+  defineAlertFamily({
+    family: "reserve",
+    getEvents: (alerts) => alerts.reserve,
+    format: formatReserveLine,
+    compact: (e) => `${symbolHtml(e.symbol)} reserves no longer match their reviewed profile`,
+    severity: () => 0,
+    layoutOrder: 6,
+    rankOrder: 6,
+  }),
+];
+
+/** Sentence-case group labels for batches that span several families. */
+const FAMILY_GROUP_LABEL: Record<AlertFamilyKey, string> = {
+  depeg: "Depeg",
+  dews: "Early-warning stress",
+  safety: "Safety grades",
+  freeze: "Freezes",
+  reserve: "Reserves",
+};
+
+/** Family names for the provenance footer. */
+const FAMILY_FOOTER_LABEL: Record<AlertFamilyKey, string> = {
+  depeg: "depeg alerts",
+  dews: "stress alerts",
+  safety: "Safety alerts",
+  freeze: "freeze alerts",
+  reserve: "reserve alerts",
+};
+
+interface OrderedAlertEvent {
+  descriptor: AlertFamilyDescriptor;
+  event: AlertFamilyEvent;
+}
+
+/** Adverse events first by family and severity, then recoveries and upgrades. */
+function orderAlertEvents(alerts: ConsolidatedAlerts): OrderedAlertEvent[] {
+  const ordered: Array<OrderedAlertEvent & { recovery: boolean; severity: number; index: number }> = [];
+  for (const descriptor of ALERT_FAMILY_DESCRIPTORS) {
+    for (const event of descriptor.getEvents(alerts)) {
+      ordered.push({
+        descriptor,
+        event,
+        recovery: descriptor.isRecovery(event),
+        severity: descriptor.severity(event),
+        index: ordered.length,
+      });
+    }
+  }
+  return ordered
+    .sort((a, b) =>
+      Number(a.recovery) - Number(b.recovery) ||
+      a.descriptor.layoutOrder - b.descriptor.layoutOrder ||
+      b.severity - a.severity ||
+      a.index - b.index)
+    .map(({ descriptor, event }) => ({ descriptor, event }));
+}
+
+function joinWithAnd(parts: readonly string[]): string {
+  if (parts.length <= 1) return parts[0] ?? "";
+  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+}
+
+function formatViaFooter(via: AlertVia | null | undefined, families: readonly AlertFamilyKey[]): string {
+  if (!via) return "";
+  const sources = [
+    ...via.presetIds.map((id) => TELEGRAM_PRESET_LABEL_BY_ID.get(id as TelegramPresetId) ?? id),
+    ...(via.watchlist ? ["your watchlist"] : []),
+    ...(via.allStablecoins ? ["all stablecoins"] : []),
+  ];
+  if (sources.length === 0) return "";
+  const familyText = joinWithAnd(families.map((family) => FAMILY_FOOTER_LABEL[family]));
+  return `<i>Via ${escapeHtml(joinWithAnd(sources))}${familyText ? ` · ${familyText}` : ""}</i>`;
+}
+
+/** Up to this many events render with the full template; more use the compact list. */
+const FULL_TEMPLATE_MAX_EVENTS = 2;
+
+function formatCompactBatch(ordered: readonly OrderedAlertEvent[]): string {
+  const families = [...new Set(ordered.map(({ descriptor }) => descriptor.family))];
+  const headline = `<b>${ordered.length} alerts</b>, led by ${ordered[0]!.descriptor.compact(ordered[0]!.event)}`;
+  if (families.length === 1) {
+    return `${headline}\n\n${ordered.map(({ descriptor, event }) => descriptor.compact(event)).join("\n")}`;
+  }
+  const groups = families.map((family) => {
+    const lines = ordered
+      .filter(({ descriptor }) => descriptor.family === family)
+      .map(({ descriptor, event }) => descriptor.compact(event));
+    return `<b>${FAMILY_GROUP_LABEL[family]}</b>\n${lines.join("\n")}`;
+  });
+  return `${headline}\n\n${groups.join("\n\n")}`;
+}
+
+/**
+ * Build a consolidated HTML message for one subscriber. The first line is the
+ * push preview: a single-coin alert opens with its headline (coin, direction
+ * verb, key number); three or more events open with a count and the worst
+ * item, followed by a compact list grouped by family.
+ */
+export function formatConsolidatedMessage(
+  alerts: ConsolidatedAlerts,
+  options: FormatConsolidatedMessageOptions = {},
+): string {
+  const ordered = orderAlertEvents(alerts);
+  const body = ordered.length > FULL_TEMPLATE_MAX_EVENTS
+    ? formatCompactBatch(ordered)
+    : ordered.map(({ descriptor, event }) => descriptor.format(event)).join("\n\n");
+  const families = [...new Set(ordered.map(({ descriptor }) => descriptor.family))];
+  const footer = formatViaFooter(options.via, families);
+  const singleId = getSingleAlertStablecoinId(alerts);
+  const url = singleId ? `https://pharos.watch/stablecoin/${singleId}` : "https://pharos.watch";
+  return `${body}${footer ? `\n\n${footer}` : ""}\n\n<a href="${url}">View on Pharos</a>`;
+}
+
+/** Max characters of a symbol shown on a compact per-coin mute button. */
 const TOPCOIN_SNOOZE_SYMBOL_MAX = 12;
 
 export interface RankedAlertCoin {
@@ -380,90 +572,127 @@ export function getSingleAlertStablecoinId(alerts: ConsolidatedAlerts): string |
   return unique.size === 1 ? ids[0] ?? null : null;
 }
 
+/**
+ * `/settings` family code carried by `fewer:<coinId>:<code>:<value>`.
+ */
+export const FEWER_FAMILY_SETTING_CODES = {
+  depeg: TELEGRAM_ALERT_PERSISTENCE.depeg.settingCode,
+  dews: TELEGRAM_ALERT_PERSISTENCE.dews.settingCode,
+  safety: TELEGRAM_ALERT_PERSISTENCE.safety.settingCode,
+  freeze: TELEGRAM_ALERT_PERSISTENCE.freeze.settingCode,
+  reserve: TELEGRAM_ALERT_PERSISTENCE.reserve.settingCode,
+} as const satisfies Partial<Record<AlertFamilyKey, string>>;
+
+type FewerFamily = keyof typeof FEWER_FAMILY_SETTING_CODES;
+
+function isFewerFamily(family: AlertFamilyKey): family is FewerFamily {
+  return Object.prototype.hasOwnProperty.call(FEWER_FAMILY_SETTING_CODES, family);
+}
+
+/**
+ * The "Fewer like this" target: the family with the most events (ties follow
+ * message order) and its first coin in message order.
+ */
+function resolveFewerTarget(ordered: readonly OrderedAlertEvent[]): { stablecoinId: string; family: FewerFamily; code: string } | null {
+  const counts = new Map<FewerFamily, number>();
+  for (const { descriptor } of ordered) {
+    if (isFewerFamily(descriptor.family)) counts.set(descriptor.family, (counts.get(descriptor.family) ?? 0) + 1);
+  }
+  let family: FewerFamily | null = null;
+  for (const [candidate, count] of counts) {
+    if (family == null || count > counts.get(family)!) family = candidate;
+  }
+  if (family == null) return null;
+  const event = ordered.find(({ descriptor }) => descriptor.family === family)!.event;
+  return { stablecoinId: event.stablecoinId, family, code: FEWER_FAMILY_SETTING_CODES[family] };
+}
+
+/**
+ * Per-recipient tuning in effect when the alert was routed, keyed
+ * `<family>:<stablecoinId>`: the depeg worsening step or the DEWS minimum band
+ * of the row that routed the event (null = no step / default ALERT floor).
+ */
+export type FewerBaseSettings = Readonly<Record<string, number | string | null>>;
+
+/**
+ * The `/settings` value one notch quieter than `base`: depeg 100 → 250 → 500
+ * → off, with no step straight to off (any step would switch worsening alerts
+ * on); DEWS floor ALERT → WARNING → DANGER → off; other families off.
+ */
+export function nextFewerSettingValue(code: string, base: number | string | null | undefined): string {
+  if (code === TELEGRAM_ALERT_PERSISTENCE.depeg.settingCode) {
+    if (!isDepegStepValue(base)) return "0";
+    const next = TELEGRAM_DEPEG_STEPS.find((step) => step > base);
+    return next == null ? "0" : String(next);
+  }
+  if (code === TELEGRAM_ALERT_PERSISTENCE.dews.settingCode) {
+    const current = TELEGRAM_DEWS_BANDS.includes(base as TelegramDewsBand) ? base as TelegramDewsBand : TELEGRAM_DEWS_BANDS[0];
+    const next = TELEGRAM_DEWS_BANDS[TELEGRAM_DEWS_BANDS.indexOf(current) + 1];
+    return next == null ? "0" : DEWS_BAND_CODE_BY_VALUE[next];
+  }
+  return "0";
+}
+
 export interface AlertReplyMarkupOptions {
   /**
    * True when the destination chat is a private DM (Telegram convention:
    * positive numeric chat_id). Mini App `web_app` buttons are rejected by
-   * Telegram in groups/channels, so they are only appended when this is true.
+   * Telegram in groups/channels, so groups get the in-chat settings callback.
    */
   privateChat?: boolean;
+  /** Routed tuning per family/coin; the Fewer button carries its target value. */
+  fewerBase?: FewerBaseSettings;
 }
 
 type AlertInlineButton =
   | { text: string; callback_data: string }
   | { text: string; web_app: { url: string } };
 
+/**
+ * First-chunk keyboard, identical in shape for every family:
+ * [Mute SYM 24h] [Pause all 4h] / [Fewer like this] [Manage Alerts].
+ * Overflow chunks keep only the chat-wide pause. Mute targets the top-ranked
+ * coin; callback_data stays within Telegram's 64-byte limit for every tracked
+ * stablecoin id (property-tested in `telegram-alerts.test.ts`).
+ */
 export function buildAlertReplyMarkup(
   alerts: ConsolidatedAlerts,
   chunkIndex: number,
   options: AlertReplyMarkupOptions = {},
-) {
-  const stablecoinId = chunkIndex === 0 ? getSingleAlertStablecoinId(alerts) : null;
+): { inline_keyboard: AlertInlineButton[][] } {
+  const pauseAll: AlertInlineButton = { ...SNOOZE_REPLY_MARKUP.inline_keyboard[0][0] };
+  const ordered = orderAlertEvents(alerts);
+  if (chunkIndex !== 0 || ordered.length === 0) return { inline_keyboard: [[pauseAll]] };
+
+  const topCoin = rankAlertCoins(alerts)[0]!;
+  const singleId = getSingleAlertStablecoinId(alerts);
   const privateChat = options.privateChat === true;
-  if (!stablecoinId) {
-    // Multi-coin chunks keep a maximum of two keyboard rows. When the compact
-    // per-coin snooze row is absent, private first chunks can use the spare row
-    // for the watchlist Mini App entry point.
-    const hasAlerts = alerts.dews.length + alerts.depegTriggered.length + alerts.depegResolved.length + alerts.depegWorsening.length + alerts.safety.length + alerts.launch.length + alerts.reserve.length + (alerts.freeze?.length ?? 0) > 0;
+  const rows: AlertInlineButton[][] = [[
+    {
+      text: `Mute ${topCoin.symbol.slice(0, TOPCOIN_SNOOZE_SYMBOL_MAX)} 24h`,
+      callback_data: `coinsnooze:${topCoin.stablecoinId}:24h`,
+    },
+    pauseAll,
+  ]];
 
-    const rows: AlertInlineButton[][] = [];
-
-    // Compact per-coin mute (C118): on the first chunk of a multi-coin alert,
-    // surface a `Snooze <SYM> 4h` button for the top 1-2 most-severe coins so
-    // the user can silence the noisiest coin without opening settings. Reuses
-    // the existing `coinsnooze` callback (admin-gated in groups). The 64-byte
-    // callback_data limit is on `coinsnooze:<id>:4h` (id-only, already proven
-    // safe by the single-coin coinsnooze buttons); the displayed symbol is
-    // truncated independently.
-    if (chunkIndex === 0 && hasAlerts) {
-      const topCoins = rankAlertCoins(alerts).slice(0, 2);
-      if (topCoins.length > 0) {
-        rows.push(
-          topCoins.map((coin) => ({
-            text: `Snooze ${coin.symbol.slice(0, TOPCOIN_SNOOZE_SYMBOL_MAX)} 4h`,
-            callback_data: `coinsnooze:${coin.stablecoinId}:4h`,
-          })),
-        );
-      }
-    }
-
-    rows.push([...SNOOZE_REPLY_MARKUP.inline_keyboard[0]]);
-
-    if (privateChat && chunkIndex === 0 && hasAlerts && rows.length === 1) {
-      rows.push([
-        {
-          text: "Open Watchlist",
-          web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.watchlist) },
+  const secondRow: AlertInlineButton[] = [];
+  const fewer = resolveFewerTarget(ordered);
+  if (fewer) {
+    // The target value rides in the button so a retried tap sets the same
+    // value instead of stepping again.
+    const value = nextFewerSettingValue(fewer.code, options.fewerBase?.[`${fewer.family}:${fewer.stablecoinId}`]);
+    secondRow.push({ text: "Fewer like this", callback_data: `fewer:${fewer.stablecoinId}:${fewer.code}:${value}` });
+  }
+  secondRow.push(privateChat
+    ? {
+        text: "Manage Alerts",
+        web_app: {
+          url: buildTelegramMiniAppUrl(singleId ? formatCoinPayload(singleId) : MINI_APP_PAYLOAD_NAMES.watchlist),
         },
-      ]);
-    }
-
-    return rows.length > 1 ? { inline_keyboard: rows } : SNOOZE_REPLY_MARKUP;
-  }
-  // Per-coin snooze row (P1-U10): lets the user mute just this coin without
-  // touching the chat-level snooze. callback_data stays within Telegram's
-  // 64-byte limit even for the longest tracked stablecoin id; the property
-  // test in `telegram-alerts.test.ts` enforces this invariant.
-  const baseRows: AlertInlineButton[][] = [
-    [
-      { text: "Status", callback_data: `status:${stablecoinId}` },
-      { text: "Depeg 250", callback_data: `depegstep:${stablecoinId}:250` },
-      { text: "Safety", callback_data: `safetydown:${stablecoinId}` },
-    ],
-    [
-      { text: "Coin snooze 4h", callback_data: `coinsnooze:${stablecoinId}:4h` },
-      { text: "Chat snooze 4h", callback_data: "snooze:4h" },
-    ],
-  ];
-  if (privateChat) {
-    // Mini App buttons are valid only in private DMs. Keep subscriber alert
-    // keyboards capped at two rows by folding the app entry into the action row.
-    baseRows[1]?.push({
-      text: "Open app",
-      web_app: { url: buildTelegramMiniAppUrl(formatCoinPayload(stablecoinId)) },
-    });
-  }
-  return { inline_keyboard: baseRows };
+      }
+    : { text: "Manage Alerts", callback_data: singleId ? `settings:o:${singleId}` : "settings:home" });
+  rows.push(secondRow);
+  return { inline_keyboard: rows };
 }
 
 

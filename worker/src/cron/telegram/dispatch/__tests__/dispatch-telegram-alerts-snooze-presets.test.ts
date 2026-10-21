@@ -40,7 +40,6 @@ function sources(
     dews?: Record<string, string>;
     dewsAlertable?: Record<string, string>;
     depeg?: Record<string, unknown>;
-    launch?: string[];
     reserve?: unknown;
     reserveDispatched?: string[];
     reserveObserved?: Record<string, number>;
@@ -74,10 +73,12 @@ describe("dispatchTelegramAlerts", () => {
     };
     const callbackData = keyboard.inline_keyboard?.flat().map((button) => button.callback_data);
 
-    expect(callbackData).toContain("status:usdc-circle");
+    expect(callbackData).toContain("coinsnooze:usdc-circle:24h");
     expect(callbackData).toContain("snooze:4h");
-    expect(callbackData).toContain("coinsnooze:usdc-circle:4h");
+    expect(callbackData).toContain("fewer:usdc-circle:db:W");
+    expect(callbackData).not.toContain("status:usdc-circle");
     expect(keyboard.inline_keyboard?.length).toBeLessThanOrEqual(2);
+    expect(telegramDeliveryTranscript[0]?.html).toContain("<i>Via your watchlist · stress alerts</i>");
   });
 
   it("skips a chat whose alert_snooze_until_ts is in the future and reports chatsWithActiveSnooze", async () => {
@@ -366,22 +367,23 @@ describe("dispatchTelegramAlerts", () => {
     expect(readCacheValue(harness.sqlite, "telegram:dispatch-overflow-plan")).toBeNull();
   }, 90_000);
 
-  it("preserves the launch snapshot in the seed branch so the next healthy run still detects the transition (P1.7)", async () => {
+  it("never detects or sends retired launch alerts, even for legacy launch opt-ins", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
+    sources(harness, { dewsAlertable: {} });
+    // A legacy baseline that still lists a now-active coin as pre-launch.
     harness.cache("alert:launch-snapshot", ["usdc-circle"], now - 60);
-    const cycle1 = await dispatchTelegramAlerts(harness.db, "bot-token");
-    expect(JSON.parse(cycle1.metadata).snapshotSeeded).toBe(true);
-    expect(JSON.parse(readCacheValue(harness.sqlite, "alert:launch-snapshot") ?? "[]")).toContain("usdc-circle");
-    sources(harness, { launch: ["usdc-circle"], dewsAlertable: {} });
     harness.seed({
-      subscribers: [{ chatId: "555" }],
+      subscribers: [{ chatId: "555", global: { launch: true } }],
       subscriptions: [{ chatId: "555", stablecoinId: "usdc-circle", alerts: { launch: true } }],
     });
     const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
 
-    expect(metadata).toMatchObject({ eventsDetected: { launch: 1 }, subscribersNotified: 1, messagesSent: 1 });
-    expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "555" })]);
+    expect(metadata).toMatchObject({ subscribersNotified: 0, messagesSent: 0 });
+    expect(metadata.eventsDetected.launch ?? 0).toBe(0);
+    expect(telegramDeliveryTranscript).toEqual([]);
+    // The retired baseline key is left as-is (no longer read or written).
+    expect(JSON.parse(readCacheValue(harness.sqlite, "alert:launch-snapshot") ?? "[]")).toEqual(["usdc-circle"]);
   });
 
   it("does not reset the reserve baseline when the producer snapshot is corrupt", async () => {

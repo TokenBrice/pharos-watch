@@ -1,12 +1,12 @@
 import type { FaqItem } from "@/lib/faq";
-import type { TelegramAlertType } from "@shared/types/status";
+import type { TelegramLiveAlertType } from "@shared/types/status";
 import {
   TELEGRAM_ALERT_FAMILIES,
   TELEGRAM_ALERT_FAMILY_COMMAND_TOKENS,
 } from "@shared/lib/telegram-alert-families";
 import {
   TELEGRAM_COMMAND_REFERENCE,
-  type TelegramCommandVariant,
+  type TelegramCommandReferenceEntry,
 } from "@shared/lib/telegram-bot-registration";
 import { TELEGRAM_PUBLIC_ALERT_SAMPLES } from "@shared/lib/telegram-alert-samples";
 
@@ -97,10 +97,10 @@ export const MINI_APP_SCREENSHOTS = [
 // bubbles stay exactly what the bot sends (worker contract test enforced).
 // The taglines are the plain-language read of each family — jargon spelled
 // out, honest caveat included.
-const ALERT_EXAMPLE_PRESENTATION: Record<TelegramAlertType, { tagline: string }> = {
+const ALERT_EXAMPLE_PRESENTATION: Record<TelegramLiveAlertType, { tagline: string }> = {
   dews: {
     tagline:
-      "DEWS — the Depeg Early Warning System — scores stress before a peg breaks. Fires when a coin crosses into a worse band, with the two highest-stress signals named.",
+      "DEWS — the Depeg Early Warning System — scores stress before a peg breaks. Fires when a coin moves into a worse band and stays there for two readings, with the two highest-stress signals named.",
   },
   depeg: {
     tagline:
@@ -108,10 +108,7 @@ const ALERT_EXAMPLE_PRESENTATION: Record<TelegramAlertType, { tagline: string }>
   },
   safety: {
     tagline:
-      "Fires on live safety-grade shifts and names the driver on the Reason line, so you know why, not just what. Methodology re-scores never page you.",
-  },
-  launch: {
-    tagline: "Fires when a tracked pre-launch stablecoin goes live. Subscribe by ticker — presets don't cover launches.",
+      "Fires only on severe downgrades — two or more notches, or into D or F — that hold for 6 hours, at most once a day per coin, and names the driver so you know why. Upgrades and small moves never page you.",
   },
   reserve: {
     tagline:
@@ -119,7 +116,7 @@ const ALERT_EXAMPLE_PRESENTATION: Record<TelegramAlertType, { tagline: string }>
   },
   freeze: {
     tagline:
-      "Fires when the verified on-chain tape records an issuer blacklist, release, or destroy event. Opt-in, per coin.",
+      "Fires when the verified on-chain tape records an issuer destroy event, or a blacklist or release of $1M or more. Opt-in, per coin.",
   },
 };
 
@@ -130,142 +127,29 @@ export const TELEGRAM_ALERT_EXAMPLES = TELEGRAM_ALERT_FAMILIES.map((family) => (
   content: TELEGRAM_PUBLIC_ALERT_SAMPLES[family.key].message,
 }));
 
-// Public command reference. Syntax and examples derive from the shared
-// command manifest; this file owns the grouping, ordering, and the long
-// explanatory prose for each row.
-const singleCommandVariant = (command: keyof typeof TELEGRAM_COMMAND_REFERENCE): TelegramCommandVariant =>
-  TELEGRAM_COMMAND_REFERENCE[command].variants[0];
-
-const [subscribeTypes, subscribeAll, subscribeStep] = TELEGRAM_COMMAND_REFERENCE.subscribe.variants;
-const [unsubscribeTargets, unsubscribeAll] = TELEGRAM_COMMAND_REFERENCE.unsubscribe.variants;
-const [setCoin, setAll] = TELEGRAM_COMMAND_REFERENCE.set.variants;
-
-function commandRow(variant: TelegramCommandVariant, description: string) {
-  return { command: variant.syntax, description, example: variant.example };
+// Public command list. Every row derives from the shared command manifest
+// (the same source as the BotFather menus and the bot's /help), so the page
+// cannot list a command the bot does not answer.
+function commandRows(menu: "menu" | "typed"): TelegramCommandRow[] {
+  return Object.values(TELEGRAM_COMMAND_REFERENCE as Record<string, TelegramCommandReferenceEntry>)
+    .filter((entry) => (entry.menu === "typed") === (menu === "typed"))
+    .flatMap((entry) => entry.variants.map((variant) => ({
+      command: variant.syntax,
+      description: variant.help,
+      example: variant.example,
+    })));
 }
 
-export const TELEGRAM_COMMAND_GROUPS = [
-  {
-    label: "Subscribe",
-    commands: [
-      commandRow(
-        subscribeTypes,
-        "Enable alert types for one or more coins, coin-ids, or presets. <types> is comma-separated.",
-      ),
-      commandRow(
-        subscribeAll,
-        "Enable alert types across every tracked coin. safety all sends downgrades only and applies a 3-point filter when scored.",
-      ),
-      commandRow(
-        subscribeStep,
-        "Enable depeg alerts, gate them by severity, and re-alert on each worsening milestone. <value> must be 100, 250, or 500 bps.",
-      ),
-      commandRow(
-        singleCommandVariant("presets"),
-        "Browse preset watchlists (usd-top25, non-usd-top25, mcap-ge-1b, ...). Subscribing to a preset expands to its current member coins.",
-      ),
-    ],
-  },
-  {
-    label: "Unsubscribe",
-    commands: [
-      commandRow(
-        unsubscribeTargets,
-        "Remove coins by ticker, coin-id, or preset. Preset removal expands to its current member coins.",
-      ),
-      commandRow(
-        unsubscribeAll,
-        "Clear every per-coin, preset, and all-stablecoin subscription. Operational chat metadata can remain until inactive cleanup.",
-      ),
-    ],
-  },
-  {
-    label: "Tune",
-    commands: [
-      commandRow(
-        setCoin,
-        "Tune one coin. <setting> is dews <band> (WARNING/ALERT/DANGER/off), depeg on|off, depeg-step <bps> (100/250/500), safety <mode> (downgrade-only/upgrade-only/all/off), launch on|off, reserve on|off, or freeze on|off.",
-      ),
-      commandRow(
-        setAll,
-        "Global toggle for dews, depeg, safety, launch, reserve, or freeze. safety globally supports all/off only (downgrades, 3-point filter when scored). depeg-step <bps> sets the global severity gate and worsening step.",
-      ),
-      commandRow(
-        singleCommandVariant("mute"),
-        "Set quiet hours (integer hours, 0–23) interpreted in the chat's /timezone (UTC if none is set). Notifications are silenced; messages still deliver. Use alert toggles or unsubscribes for all-day silence.",
-      ),
-      commandRow(
-        singleCommandVariant("timezone"),
-        "Set the chat's IANA timezone used to resolve /mute quiet hours locally (e.g. Europe/Paris, America/New_York). Sending /timezone with no argument shows the current zone and an inline keyboard of common zones.",
-      ),
-      commandRow(
-        singleCommandVariant("settings"),
-        "Open an inline-keyboard panel for chat-level settings (quiet hours, snooze clear, global DEWS/depeg/safety/launch/reserve/freeze toggles). Add a ticker (e.g. /settings USDC) to open the per-coin panel with DEWS floor, depeg step, safety mode, launch, reserve, and freeze toggles.",
-      ),
-      commandRow(
-        singleCommandVariant("pause"),
-        "Pause all alerts indefinitely, resume with off, or apply a timed 1h, 4h, or 24h snooze.",
-      ),
-      commandRow(singleCommandVariant("unmutehours"), "Disable quiet hours."),
-      commandRow(singleCommandVariant("unsnooze"), "Clear active alert snooze immediately."),
-    ],
-  },
-  {
-    label: "Query",
-    commands: [
-      commandRow(
-        singleCommandVariant("status"),
-        "Snapshot for one coin: price with age, supply, DEWS band, safety grade, active depeg, liquidity score with TVL, and 30d yield.",
-      ),
-      commandRow(
-        singleCommandVariant("brief"),
-        "Latest market brief: peg deviations, supply shifts, liquidity changes, and what changed overnight. /market is a deprecated compatibility alias.",
-      ),
-      commandRow(
-        singleCommandVariant("sample"),
-        "Private-chat-only preview of a synthetic USDC DEWS alert so you can inspect the alert format before subscribing.",
-      ),
-      commandRow(
-        singleCommandVariant("top"),
-        "Rank current views. <view> is one of: depeg, dews, yield, liquidity, chains, safety.",
-      ),
-      commandRow(
-        singleCommandVariant("why"),
-        "Plain-language breakdown of one coin's Safety Score: top weak dimensions and contributing report-card factors.",
-      ),
-      commandRow(
-        singleCommandVariant("coverage"),
-        "List which Pharos modules cover one coin: price, DEWS, safety, liquidity, yield, mint/burn, reserves.",
-      ),
-    ],
-  },
-  {
-    label: "Meta",
-    commands: [
-      commandRow(
-        singleCommandVariant("start"),
-        "Open the guided setup flow or process a supported Telegram deep-link payload.",
-      ),
-      commandRow(
-        singleCommandVariant("list"),
-        "Audit your state: global alerts, dynamic preset follows, per-coin subscriptions with settings, quiet hours, and active snooze.",
-      ),
-      commandRow(
-        singleCommandVariant("health"),
-        "Self-diagnostic for this chat: last successful delivery, queued alerts, quiet hours, snooze, and recent failure class.",
-      ),
-      commandRow(
-        singleCommandVariant("cancel"),
-        "Cancel a pending ticker-selection prompt (when a symbol matches multiple coins).",
-      ),
-      commandRow(singleCommandVariant("help"), "Show command reference."),
-      commandRow(
-        singleCommandVariant("forget"),
-        "Private-chat-only, two-step deletion of subscriber data, alert settings, quiet hours, snooze state, live delivery diagnostics, and chat-linked delivery audit rows.",
-      ),
-    ],
-  },
-] as const;
+export interface TelegramCommandRow {
+  command: string;
+  description: string;
+  example: string | null;
+}
+
+export const TELEGRAM_COMMAND_GROUPS: ReadonlyArray<{ label: string; commands: readonly TelegramCommandRow[] }> = [
+  { label: "In the menu", commands: commandRows("menu") },
+  { label: "Typed only", commands: commandRows("typed") },
+];
 
 export const TELEGRAM_COMMAND_COUNT = TELEGRAM_COMMAND_GROUPS.reduce(
   (sum, group) => sum + group.commands.length,
@@ -274,12 +158,8 @@ export const TELEGRAM_COMMAND_COUNT = TELEGRAM_COMMAND_GROUPS.reduce(
 
 export const TELEGRAM_PARAM_LEGEND = [
   { token: "<types>", meaning: `Comma-separated: ${TELEGRAM_ALERT_FAMILY_COMMAND_TOKENS}` },
-  { token: "<targets>", meaning: "Space-separated tickers, coin-ids, or presets" },
+  { token: "<targets>", meaning: "Space-separated tickers, coin-ids, or presets such as usd-top25" },
   { token: "<ticker>", meaning: "Symbol (USDC) or coin-id (usdc-circle)" },
-  { token: "<value>", meaning: "Setting-specific; see the /set rows" },
-  { token: "<view>", meaning: "depeg, dews, yield, liquidity, chains, safety" },
-  { token: "<hour>", meaning: "Local delivery hour from 0 to 23 in the chat's confirmed /timezone" },
-  { token: "<start>-<end>", meaning: "Integer hours, 0–23 (interpreted in the chat's /timezone; UTC by default)" },
   { token: "all", meaning: "Reserved target meaning every tracked stablecoin" },
 ] as const;
 
@@ -337,8 +217,8 @@ export const TELEGRAM_FAQ: FaqItem[] = [
 ];
 
 export const TELEGRAM_COMMAND_REFERENCE_TIPS = [
-  "Tickers are case-insensitive. Use the exact Pharos coin-id (e.g. usdc-circle) when a symbol is ambiguous.",
-  "all is a reserved target for every tracked stablecoin. Launch and reserve alerts do not use preset watchlists; choose explicit tickers, coin-ids, or all.",
-  "In Telegram groups, address commands to the bot: /subscribe@PharosWatchBot dews usd-top25. Pending ticker selections only complete for the user who started them.",
-  "Typing / inside Telegram opens an inline command picker once the bot is registered.",
+  "Most settings (quiet hours, pause, per-coin tuning) live in Manage Alerts, the button next to the message box.",
+  "Tickers are case-insensitive. When a symbol matches several coins, the bot shows one button per coin.",
+  "In Telegram groups, address commands to the bot: /subscribe@PharosWatchBot usd-top25. Groups get status, list, subscribe, settings and help; changes need a group admin.",
+  "Typing / inside Telegram opens the command menu.",
 ] as const;

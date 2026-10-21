@@ -1,8 +1,6 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import {
-  buildDewsSnapshot,
-  buildDewsAlertableSnapshot,
   buildDepegSnapshot,
   filterAlertableBands,
   parseSnapshotMap,
@@ -12,7 +10,6 @@ import {
   writeSnapshots,
   SNAPSHOT_KEYS,
   SNAPSHOT_MAX_AGE_SEC,
-  type DewsRow,
   type ActiveDepegRow,
 } from "../telegram-alert-snapshots";
 import { makeAlertSafetySourceRow } from "./dispatch-telegram-events.test-support";
@@ -65,44 +62,6 @@ describe("isSnapshotMissingOrStale", () => {
   it("returns false when snapshot is fresh", () => {
     const cached = { value: "{}", updatedAt: 1000 };
     expect(isSnapshotMissingOrStale(cached, 1000 + 60)).toBe(false);
-  });
-});
-
-describe("buildDewsSnapshot", () => {
-  it("maps rows to stablecoinId → band", () => {
-    const rows: DewsRow[] = [
-      { stablecoin_id: "usdc-circle", score: 42, band: "ALERT", signals_json: null },
-      { stablecoin_id: "dai-maker", score: 10, band: "CALM", signals_json: null },
-    ];
-    expect(buildDewsSnapshot(rows)).toEqual({
-      "usdc-circle": "ALERT",
-      "dai-maker": "CALM",
-    });
-  });
-});
-
-describe("buildDewsAlertableSnapshot", () => {
-  it("only includes alertable bands and preserves previous entries", () => {
-    const rows: DewsRow[] = [
-      { stablecoin_id: "usdc-circle", score: 42, band: "ALERT", signals_json: null },
-      { stablecoin_id: "dai-maker", score: 10, band: "CALM", signals_json: null },
-    ];
-    const previous = { "old-coin": "WARNING" };
-    const result = buildDewsAlertableSnapshot(rows, previous);
-    expect(result).toEqual({
-      "old-coin": "WARNING",
-      "usdc-circle": "ALERT",
-    });
-    expect(result["dai-maker"]).toBeUndefined();
-  });
-
-  it("builds from scratch when no previous snapshot is provided", () => {
-    const rows: DewsRow[] = [
-      { stablecoin_id: "usdc-circle", score: 42, band: "WARNING", signals_json: null },
-      { stablecoin_id: "dai-maker", score: 10, band: "CALM", signals_json: null },
-    ];
-    const result = buildDewsAlertableSnapshot(rows);
-    expect(result).toEqual({ "usdc-circle": "WARNING" });
   });
 });
 
@@ -234,8 +193,8 @@ describe("writeSnapshots", () => {
     await writeSnapshots(db, {
       dews: { "usdc-circle": "CALM" },
       dewsAlertable: {},
+      dewsCandidates: { "usdc-circle": { quietSinceSec: 1776945000 } },
       depeg: {},
-      launch: ["usdc-circle"],
       reserveDispatched: null,
     });
 
@@ -245,9 +204,9 @@ describe("writeSnapshots", () => {
       SNAPSHOT_KEYS.dews,
       SNAPSHOT_KEYS.dewsAlertable,
       SNAPSHOT_KEYS.depeg,
-      SNAPSHOT_KEYS.launch,
       SNAPSHOT_KEYS.reserveDispatched,
       SNAPSHOT_KEYS.reserveObserved,
+      SNAPSHOT_KEYS.dewsCandidates,
     ]);
     expect(new Set(writes.map((entry) => entry.binds[2]))).toEqual(new Set([1776945600]));
     expect(writes.find((entry) => entry.binds[0] === SNAPSHOT_KEYS.reserveDispatched)?.binds[1]).toBe("null");
@@ -276,11 +235,10 @@ describe("writeSnapshots", () => {
         },
         snapshot: { "usdc-circle": makeAlertSafetySourceRow() },
       },
-      launch: [],
       reserveDispatched: [],
     });
 
-    expect(batchSizes).toEqual([7]);
+    expect(batchSizes).toEqual([6]);
     const keys = db
       .getHistory()
       .filter((entry) => entry.sql.includes("INSERT INTO cache"))

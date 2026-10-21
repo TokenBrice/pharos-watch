@@ -4,7 +4,6 @@ import {
   type AlertSafetySnapshotEnvelope,
   type AlertSafetySourceSnapshot,
 } from "@shared/types/status/telegram";
-import { WORKER_PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   alertSafetyIdentitiesAreComparable,
   buildAlertSafetySnapshotEnvelope,
@@ -26,18 +25,18 @@ import {
 import {
   SNAPSHOT_KEYS,
   buildDepegSnapshot,
-  buildDewsAlertableSnapshot,
-  buildDewsSnapshot,
   filterAlertableBands,
   isSnapshotMissingOrStale,
   parseSnapshotMap,
   type ActiveDepegRow,
   type DepegSnapshot,
+  type DewsCandidateSnapshot,
   type DewsRow,
   type DewsSnapshot,
   type SafetySnapshot,
 } from "../sources/telegram-alert-snapshots";
-import { holdSuppressedSafetyBaselines } from "../sources/telegram-alert-changes";
+import { isDewsAlertable } from "../../../telegram/common/alerts-formatting";
+import { holdSuppressedSafetyBaselines, planDewsAlerts, reseedSafetyBaseline } from "../sources/telegram-alert-changes";
 
 type CachedValue = { value: string; updatedAt: number } | null;
 
@@ -109,11 +108,11 @@ export interface DispatchSourceData {
   activeDepegRows: ActiveDepegRowWithEventId[];
   dewsCache: CachedValue;
   dewsAlertableCache: CachedValue;
+  dewsCandidatesCache?: CachedValue;
   depegCache: CachedValue;
   safetyCache: CachedValue;
   safetySourceAssessment?: AlertSafetySourceAssessment;
   publicationAttempt?: V9PublicationAttempt | null;
-  launchCache: CachedValue;
   /** Producer-written current drift id-set (four-hourly reserve slot). */
   reserveCache: CachedValue;
   /** Dispatch-owned baseline: the drift id-set the dispatcher last acted on. */
@@ -134,9 +133,10 @@ export interface DispatchSnapshotState {
   currentSnapshots: {
     dews: DewsSnapshot;
     dewsAlertable: DewsSnapshot;
+    dewsCandidates: DewsCandidateSnapshot;
+    dewsUnavailable: boolean;
     depeg: DepegSnapshot;
     safety: AlertSafetySnapshotEnvelope | null;
-    launch: string[];
     /**
      * Dispatch baseline written back: the producer's current drift id-set.
      * `null` means the producer snapshot was unavailable and there was no
@@ -153,6 +153,7 @@ export interface DispatchSnapshotState {
   mustSeedSnapshots: boolean;
   safeDewsSnapshot: DewsSnapshot;
   safeDewsAlertable: DewsSnapshot;
+  safeDewsCandidates: DewsCandidateSnapshot;
   safeDepegSnapshot: DepegSnapshot;
   safeSafetySnapshot: SafetySnapshot;
 }
@@ -174,11 +175,11 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     activeDepegRows,
     dewsCache,
     dewsAlertableCache,
+    dewsCandidatesCache,
     depegCache,
     safetyCache,
     safetySourceAssessment,
     publicationAttempt,
-    launchCache,
     reserveCache,
     reserveDispatchedCache,
     reserveObservedCache,
@@ -194,6 +195,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
       .then((result) => result.results ?? []),
     getCache(db, SNAPSHOT_KEYS.dews),
     getCache(db, SNAPSHOT_KEYS.dewsAlertable),
+    getCache(db, SNAPSHOT_KEYS.dewsCandidates),
     getCache(db, SNAPSHOT_KEYS.depeg),
     getCache(db, SNAPSHOT_KEYS.safety),
     // Envelope-first: the publication writer persists a thin projection, so
@@ -201,7 +203,6 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     // the persisted envelope matches the active identity.
     loadActiveAlertSafetySourceAssessment(db, snoozeNowSec),
     loadSafetyScoreV9PublicationAttempt(db),
-    getCache(db, SNAPSHOT_KEYS.launch),
     getCache(db, SNAPSHOT_KEYS.reserve),
     getCache(db, SNAPSHOT_KEYS.reserveDispatched),
     getCache(db, SNAPSHOT_KEYS.reserveObserved),
@@ -213,11 +214,11 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     activeDepegRows,
     dewsCache,
     dewsAlertableCache,
+    dewsCandidatesCache,
     depegCache,
     safetyCache,
     safetySourceAssessment,
     publicationAttempt,
-    launchCache,
     reserveCache,
     reserveDispatchedCache,
     reserveObservedCache,
@@ -228,6 +229,20 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
   const previousDewsSnapshot = parseSnapshotMap<DewsSnapshot>(sourceData.dewsCache);
   const previousDewsAlertableSnapshot =
     parseSnapshotMap<DewsSnapshot>(sourceData.dewsAlertableCache) ?? filterAlertableBands(previousDewsSnapshot);
+  const previousDewsCandidates =
+    parseSnapshotMap<DewsCandidateSnapshot>(sourceData.dewsCandidatesCache ?? null) ?? {};
+  // No DEWS rows means the read was unavailable (stale or failed), never a
+  // genuine empty set: keep the DEWS baselines and skip their write (R2).
+  const dewsAvailable = sourceData.dewsRows.length > 0;
+  // Snapshot-side replay of the event planner; identity symbols are never rendered.
+  const dewsPlan = planDewsAlerts(
+    sourceData.dewsRows,
+    previousDewsAlertableSnapshot,
+    previousDewsSnapshot ?? {},
+    previousDewsCandidates,
+    (id) => id,
+    nowSec,
+  );
   const previousDepegSnapshot = parseSnapshotMap<DepegSnapshot>(sourceData.depegCache);
   const safetySourceAssessment: AlertSafetySourceAssessment =
     sourceData.safetySourceAssessment ?? {
@@ -271,30 +286,24 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
     sourceData.safetyCache != null &&
     nowSec - sourceData.safetyCache.updatedAt >=
       CRON_INTERVALS["dispatch-telegram-alerts"] * 2;
+  const safetyIdentitiesComparable =
+    previousSafetyEnvelope?.safetyScoreIdentity != null &&
+    safetySourceAssessment.envelope?.safetyScoreIdentity != null &&
+    alertSafetyIdentitiesAreComparable(
+      previousSafetyEnvelope.safetyScoreIdentity,
+      safetySourceAssessment.envelope.safetyScoreIdentity,
+    );
   const safetySnapshotNeedsSeed =
     currentSafetySnapshot != null &&
     (previousSafetyEnvelope == null ||
       safetyBaselineContinuityLost ||
       isSnapshotMissingOrStale(sourceData.safetyCache, nowSec) ||
       previousSafetyEnvelope.generation !== (safetySourceAssessment.generation ?? "") ||
-      !previousSafetyEnvelope.safetyScoreIdentity ||
-      !safetySourceAssessment.envelope?.safetyScoreIdentity ||
-      !alertSafetyIdentitiesAreComparable(
-        previousSafetyEnvelope.safetyScoreIdentity,
-        safetySourceAssessment.envelope.safetyScoreIdentity,
-      ));
+      !safetyIdentitiesComparable);
 
   // The canonical builder persists event identity. Legacy snapshots without
   // eventId retain the stablecoin-only diff until the next baseline write.
   const currentDepegSnapshot = buildDepegSnapshot(sourceData.activeDepegRows);
-
-  // P1.7: when dews/depeg snapshots are stale we enter the seed branch and skip
-  // fan-out. If we ALSO overwrite the launch snapshot here, any pre-launch coin
-  // that flipped to active between the prior healthy run and this seed is
-  // silently absorbed. Preserve the prior launch snapshot so the next healthy
-  // run can detect the transition. When there is no parseable prior snapshot
-  // we still seed with the current pre-launch set (no transition to lose).
-  const previousLaunchIds = parseSnapshotIds(sourceData.launchCache);
 
   // Reserve-drift (C123): the four-hourly producer owns a versioned source
   // envelope. A missing, corrupt, stale, or wrong-generation source is never
@@ -318,12 +327,23 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
   const previousObserved = parsedObservedBaseline.success ? parsedObservedBaseline.data : {};
   const currentObserved = reserveSourceAssessment.envelope?.observedSince ?? {};
 
+  // An unavailable DEWS read keeps its stale clock instead of blocking depeg;
+  // the first available read after a long gap still reseeds silently.
   const mustSeedSnapshots =
-    isSnapshotMissingOrStale(sourceData.dewsCache, nowSec) ||
-    (sourceData.dewsAlertableCache != null && isSnapshotMissingOrStale(sourceData.dewsAlertableCache, nowSec)) ||
+    (dewsAvailable && (
+      isSnapshotMissingOrStale(sourceData.dewsCache, nowSec) ||
+      (sourceData.dewsAlertableCache != null && isSnapshotMissingOrStale(sourceData.dewsAlertableCache, nowSec)) ||
+      previousDewsSnapshot == null
+    )) ||
     isSnapshotMissingOrStale(sourceData.depegCache, nowSec) ||
-    previousDewsSnapshot == null ||
     previousDepegSnapshot == null;
+  // A seed run adopts current bands as already alerted and drops pending
+  // escalations, so conditions present at the seed never alert afterwards.
+  const seededDews = { observed: {} as DewsSnapshot, alertable: { ...previousDewsAlertableSnapshot } };
+  for (const row of sourceData.dewsRows) {
+    seededDews.observed[row.stablecoin_id] = row.band;
+    if (isDewsAlertable(row.band)) seededDews.alertable[row.stablecoin_id] = row.band;
+  }
   const reserveNeedsColdSeed = reserveSourceAssessment.state === "recovering" && parsedCurrentReserveDriftIds != null;
   const reserveDispatched = reserveNeedsColdSeed
     ? parsedCurrentReserveDriftIds
@@ -334,23 +354,28 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
         : parsedCurrentReserveDriftIds;
 
   const currentSnapshots = {
-    dews: buildDewsSnapshot(sourceData.dewsRows),
-    dewsAlertable: buildDewsAlertableSnapshot(sourceData.dewsRows, previousDewsAlertableSnapshot),
-    depeg: currentDepegSnapshot,
+    dews: !dewsAvailable ? (previousDewsSnapshot ?? {}) : mustSeedSnapshots ? seededDews.observed : dewsPlan.nextObserved,
+    dewsAlertable: !dewsAvailable ? previousDewsAlertableSnapshot : mustSeedSnapshots ? seededDews.alertable : dewsPlan.nextAlertable,
+    dewsCandidates: !dewsAvailable ? previousDewsCandidates : mustSeedSnapshots ? {} : dewsPlan.nextCandidates,
+    dewsUnavailable: !dewsAvailable,
+    // A seed run sends nothing, so a fresh depeg baseline stays put and a depeg
+    // that opened in this run is still detected on the next normal run.
+    depeg: mustSeedSnapshots && previousDepegSnapshot != null && !isSnapshotMissingOrStale(sourceData.depegCache, nowSec)
+      ? previousDepegSnapshot
+      : currentDepegSnapshot,
     safety:
       currentSafetySnapshot != null && safetySourceAssessment.generation != null
         ? buildAlertSafetySnapshotEnvelope(
             !safetySnapshotNeedsSeed && previousSafetySnapshot != null
-              ? holdSuppressedSafetyBaselines(currentSafetySnapshot, previousSafetySnapshot, nowSec)
-              : currentSafetySnapshot,
+              ? holdSuppressedSafetyBaselines(currentSafetySnapshot, previousSafetySnapshot, nowSec, {
+                // Seed runs send nothing: a due alert must survive to the next run.
+                deferAlerts: mustSeedSnapshots,
+              })
+              : reseedSafetyBaseline(currentSafetySnapshot, previousSafetySnapshot, safetyIdentitiesComparable),
             safetySourceAssessment.generation,
             safetySourceAssessment.envelope!.safetyScoreIdentity,
           )
         : null,
-    launch:
-      mustSeedSnapshots && previousLaunchIds != null
-        ? previousLaunchIds
-        : WORKER_PRE_LAUNCH_STABLECOINS.map((coin) => coin.id),
     reserveDispatched,
     reserveObserved: parsedCurrentReserveDriftIds == null ||
       (mustSeedSnapshots && !reserveNeedsColdSeed && previousReserveDispatchedIds != null)
@@ -389,6 +414,7 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
     mustSeedSnapshots,
     safeDewsSnapshot: previousDewsSnapshot ?? {},
     safeDewsAlertable: previousDewsAlertableSnapshot ?? {},
+    safeDewsCandidates: previousDewsCandidates,
     safeDepegSnapshot: previousDepegSnapshot ?? {},
     safeSafetySnapshot: currentSafetySnapshot != null && !safetySnapshotNeedsSeed ? (previousSafetySnapshot ?? {}) : {},
   };

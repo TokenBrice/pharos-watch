@@ -61,8 +61,6 @@ Schema-v1 outputs are `report.json`, `report.md`, `samples.ndjson`, `exceeded-me
 
 The mint/burn backfill uses `mintBurnConfigKey` directly for config selection, sync-state access, diagnostics and response keys; its key format is shared with the live pipeline.
 
-The Telegram adoption reporter publishes `alertsSent7d` / `alertsSent30d` as nullable totals with `alertsSent7dUnavailableReason` / `alertsSent30dUnavailableReason`. Current source evidence cannot prove whole-window `final_delivery_at` coverage: seven days reports `delivery-window-coverage-unproven`; thirty days reports `source-retention-shorter-than-window`. `retainedAlertsSent7d` / `retainedAlertsSent30d` count only currently retained accepted targets, including an observed empty-domain zero, never complete delivery totals. Neither row presence nor retention duration supplies missing coverage; usage-event counters are not a delivery fallback. See [Read the report](./runbooks/telegram-adoption-report.md#read-the-report).
-
 | Verification CLI | Selection contract |
 | --- | --- |
 | `lint:changed` | Repeatable `--file <path>`, `--staged`, or `--base <ref> [--head <ref>]` are exclusive selection modes. Explicit file/staged modes override PR range environment. Without flags or PR range environment, selects staged, unstaged and untracked working-tree files. Deleted paths are skipped; staged selection still reads working-tree contents. Forward ESLint options after `--`. |
@@ -170,12 +168,6 @@ Use `npm run ops:d1-insights -- --dry-run` to preview the default read-only Wran
 Supported selection options and the report schema are owned by [`capture-d1-insights.mjs`](../scripts/maintenance/capture-d1-insights.mjs); use its help instead of copying output JSON into this page.
 
 Compare captures before and after an infrastructure change by `period`, `sortBy`, `_pharos.sqlFingerprint`, and `_pharos.sourcePaths`. Keep generated reports under `agents/` unless a durable methodology or source change requires documentation.
-
-### Telegram Adoption
-
-| Script | Purpose |
-| --- | --- |
-| `scripts/maintenance/report-telegram-adoption.ts` | Read-only remote D1 reporter; refreshes the local generated adoption block in [`runbooks/telegram-adoption-report.md`](./runbooks/telegram-adoption-report.md) and prints JSON. Seven-day activity uses subscriber `last_active_at`; `configuredWatchersDaily` uses the latest lifecycle snapshot with `configuredWatchersSnapshotAt`, both nullable when absent. Delivery totals remain nullable with explicit coverage reasons and separately labelled retained-target subtotals. No activity-window substitution or production mutation; planning-cost/4.1 reporting is retired without a measured decision. |
 
 ## Routing Index
 

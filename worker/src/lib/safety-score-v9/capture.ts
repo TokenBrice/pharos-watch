@@ -273,6 +273,11 @@ export async function buildNativeSafetyScoreV9Capture(
       message: "Safety Score v9 capture quarantined redemption rows with inadmissible consumed reserve evidence",
       runId: redemptionSnapshotProvenance.runId ?? null, metadata: { quarantined } });
   }
+  if (!redemptionStale && consumedReserves?.carriedForward) {
+    logWorkerEvent({ scope: "lib", level: "info", event: "v9-capture-redemption-reserve-carried-forward",
+      message: "Safety Score v9 capture carried forward consumed reserve evidence within the redemption run budget",
+      runId: redemptionSnapshotProvenance.runId ?? null, metadata: { carriedForward: consumedReserves.carriedForward } });
+  }
   const redemptionBackstopMap = redemptionStale ? {} : Object.fromEntries(admittedRedemptionRows);
 
   const activeDepegPeakBpsById = new Map<string, number>();

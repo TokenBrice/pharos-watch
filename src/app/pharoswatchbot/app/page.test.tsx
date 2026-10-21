@@ -436,19 +436,36 @@ describe("PharosWatchBotMiniAppPage", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => ({
         contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
         catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
-        result: { kind: "watchlist-export", token: "pw2.payload.digest", directCount: 1, presetCount: 0 },
+        result: {
+          kind: "bulk-watchlist-preview",
+          expectedPreferenceGeneration: 1,
+          previewFingerprint: "preview-v1-12-deadbeef",
+          adds: ["usdt-tether"],
+          removes: [],
+          unchanged: [],
+          sourceImpact: [],
+          undo: {
+            expectedPreferenceGeneration: 2,
+            expectedFingerprint: "preview-v1-12-deadbeef",
+            restoreDirectRows: [],
+            removeStablecoinIds: ["usdt-tether"],
+          },
+        },
       }) })
       .mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ error: "expired", code: "stale-auth" }) });
-    await renderReadyMiniApp({ fetchImpl: fetchMock, launch: { initDataUnsafe: { start_param: "settings" } } });
+    await renderReadyMiniApp({ fetchImpl: fetchMock, launch: { initDataUnsafe: { start_param: "watchlist" } } });
 
-    fireEvent.click(screen.getByRole("button", { name: /Export watchlist/i }));
-    expect(await screen.findByText("pw2.payload.digest")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Search coins to add in bulk"), { target: { value: "USDT" } });
+    fireEvent.click(within(screen.getByLabelText("Coins to add")).getAllByRole("checkbox")[0]!);
+    const previewButton = () => screen.getByRole("button", { name: /^Preview 1 changes/ });
+    fireEvent.click(previewButton());
+    expect(await screen.findByText("Review exact changes")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Refresh session" })).toHaveProperty("disabled", false);
 
-    fireEvent.click(screen.getByRole("button", { name: /Export watchlist/i }));
+    fireEvent.click(previewButton());
     await waitFor(() => expect(screen.getByRole("button", { name: "Refresh session" })).toHaveProperty("disabled", true));
-    expect(screen.getByRole("button", { name: /Export watchlist/i })).toHaveProperty("disabled", true);
-    fireEvent.click(screen.getByRole("button", { name: /Export watchlist/i }));
+    expect(previewButton()).toHaveProperty("disabled", true);
+    fireEvent.click(previewButton());
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
@@ -493,8 +510,8 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(await screen.findByRole("heading", { name: "Reopen to edit" })).toBeTruthy();
     expect(screen.getByText("Not saved: Safety alerts enabled.")).toBeTruthy();
     expect(screen.getByRole("button", { name: /Safety/i }).getAttribute("aria-pressed")).toBe("false");
-    fireEvent.click(screen.getByRole("button", { name: /Launch/i }));
-    expect(await screen.findByText("Not saved: Launch alerts enabled.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Reserve/i }));
+    expect(await screen.findByText("Not saved: Reserve alerts enabled.")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -544,7 +561,9 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(safetyToggle.getAttribute("aria-pressed")).toBe("false");
     expect(safetyToggle.getAttribute("aria-busy")).toBe("true");
     expect(safetyToggle).toHaveProperty("disabled", true);
-    expect(screen.getByRole("button", { name: /Launch/i })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: /Reserve/i })).toHaveProperty("disabled", true);
+    // Launch alerts are retired: no toggle is rendered.
+    expect(screen.queryByRole("button", { name: /Launch/i })).toBeNull();
     resolveMutation({ ok: true, json: async () => nextState });
     await waitFor(() => expect(screen.getByRole("button", { name: /Safety/i }).getAttribute("aria-pressed")).toBe("true"));
     expectMutationRequest(fetchMock, { kind: "set-global", alertType: "safety", enabled: true });

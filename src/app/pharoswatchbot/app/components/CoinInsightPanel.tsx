@@ -2,7 +2,7 @@
 
 import { ExternalLink, Info } from "lucide-react";
 import { formatCoveragePayload, formatWhyPayload } from "@shared/lib/telegram-mini-app-payloads";
-import { ALERT_LABELS, PHAROS_COIN_PAGE_PREFIX } from "../constants";
+import { ALERT_LABELS, LIVE_ALERT_TYPES, PHAROS_COIN_PAGE_PREFIX } from "../constants";
 import { PHAROSWATCHBOT_BOT_URL } from "@/lib/telegram-route-constants";
 import type { TelegramWebAppSdk } from "../telegram-sdk";
 import type {
@@ -15,7 +15,7 @@ import type {
 import { MiniButton } from "./MiniButton";
 
 function formatAlertList(alertTypes: Record<TelegramAlertType, boolean>): string {
-  const enabled = (Object.keys(ALERT_LABELS) as TelegramAlertType[]).filter((type) => alertTypes[type]);
+  const enabled = LIVE_ALERT_TYPES.filter((type) => alertTypes[type]);
   if (enabled.length === 0) return "None";
   return enabled.map((type) => ALERT_LABELS[type]).join(", ");
 }

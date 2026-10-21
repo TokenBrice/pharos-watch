@@ -12,6 +12,7 @@ import {
   isDewsDeescalation,
   buildAlertReplyMarkup,
   resolveAlertLinkPreviewOptions,
+  type AlertVia,
   type ConsolidatedAlerts,
 } from "../alerts-formatting";
 
@@ -41,12 +42,12 @@ describe("formatConsolidatedMessage", () => {
       depegResolved: [],
       depegWorsening: [],
       safety: [],
-      launch: [],
       reserve: [],
     });
-    expect(msg).toContain("DEWS");
-    expect(msg).toContain("Depeg Detected");
-    expect(msg).not.toContain("Pharos Alerts");
+    expect(msg).toContain("<b>USDC</b> early-warning stress rose to ALERT (42/100, was CALM)");
+    expect(msg).toContain("▼ <b>BOLD</b> lost its peg: $0.9770, 2.3% below $1.00");
+    expect(msg).not.toContain("<b>DEWS</b>");
+    expect(msg).not.toContain("Depeg Detected");
     expect(msg).toContain("View on Pharos");
   });
 
@@ -60,15 +61,15 @@ describe("formatConsolidatedMessage", () => {
     ] });
 
     const msg = formatConsolidatedMessage(alerts);
-    expect(msg).toContain("<b>Reserve Drift</b>");
-    expect(msg).toContain("<b>USDC</b> — Circle USD Coin live reserve mix has drifted");
+    expect(msg.split("\n")[0]).toBe("<b>USDC</b> reserves no longer match their reviewed profile");
+    expect(msg).toContain("live reserve data for Circle USD Coin now differs");
     expect(msg).toContain('href="https://pharos.watch/stablecoin/usdc-circle"');
 
     const markup = buildAlertReplyMarkup(alerts, 0);
     expect(markup.inline_keyboard.flat().map((button) =>
       "callback_data" in button ? button.callback_data : undefined
     )).toEqual(
-      expect.arrayContaining(["status:usdc-circle", "coinsnooze:usdc-circle:4h"]),
+      ["coinsnooze:usdc-circle:24h", "snooze:4h", "fewer:usdc-circle:rs:0", "settings:o:usdc-circle"],
     );
   });
 
@@ -84,8 +85,7 @@ describe("formatConsolidatedMessage", () => {
         pegReference: 1,
       },
     ] }));
-    expect(msg).toContain("Depeg Worsening");
-    expect(msg).toContain("1.2% → 2.6%");
+    expect(msg).toContain("▼ <b>USDC</b> depeg deepened to 2.6% below $1.00 ($0.9740)\nWas 1.2% at the last alert");
   });
 
 });
@@ -103,15 +103,15 @@ describe("formatDewsLine", () => {
         { name: "supply", value: 48 },
       ],
     });
-    expect(line).toBe("\u{1F7E1} <b>USDT</b> stress rose to ALERT (score 42, was WATCH)\nMain drivers: Pool Balance Drift 61, Supply Velocity 48");
+    expect(line).toBe("\u{1F7E1} <b>USDT</b> early-warning stress rose to ALERT (42/100, was WATCH)\nMain drivers: Pool Balance Drift 61, Supply Velocity 48");
     expect(line).not.toContain("%");
   });
 
   it("names a de-escalation and falls back for an unknown prior band", () => {
     expect(formatDewsLine({ stablecoinId: "a", symbol: "A", oldBand: "DANGER", newBand: "WARNING", score: 60, topSignals: [] }))
-      .toBe("\u{1F7E0} <b>A</b> stress eased to WARNING (score 60, was DANGER)");
+      .toBe("\u{1F7E0} <b>A</b> stress eased to WARNING (60/100, was DANGER)");
     expect(formatDewsLine({ stablecoinId: "a", symbol: "A", oldBand: "UNKNOWN", newBand: "ALERT", score: 40, topSignals: [] }))
-      .toBe("\u{1F7E1} <b>A</b> stress is now ALERT (score 40)");
+      .toBe("\u{1F7E1} <b>A</b> early-warning stress is now ALERT (40/100)");
   });
 
   it.each([
@@ -134,27 +134,108 @@ describe("formatSafetyLine", () => {
     ["NR", "B", "changed"],
   ] as const)("states the direction of %s to %s", (oldGrade, newGrade, verb) => {
     expect(formatSafetyLine({ stablecoinId: "x", symbol: "IUSD", oldGrade, newGrade, oldScore: 39, newScore: 42 }))
-      .toBe(`<b>IUSD</b> Safety grade ${verb} to ${newGrade} (was ${oldGrade})\nScore: 39 → 42`);
+      .toBe(`<b>IUSD</b> Safety grade ${verb} to ${newGrade} (was ${oldGrade})\nOverall score 42 (was 39)`);
   });
 });
 
 describe("public alert samples", () => {
-  const plainBody = (html: string) => html.replace(/<[^>]+>/g, "").split("\n\n")[0];
+  /** Plain-text render of a Telegram HTML message as the landing bubbles show it. */
+  const toPlainSample = (html: string) => html
+    .replace(/\n\n<a href="https:\/\/([^"]+)">View on Pharos<\/a>$/, "\n\nView on Pharos: $1")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&quot;/g, "\"").replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+  const buttonRows = (alerts: ConsolidatedAlerts) => buildAlertReplyMarkup(alerts, 0, { privateChat: true })
+    .inline_keyboard.map((row) => row.map((button) => button.text));
+  const watchlist = { presetIds: [], watchlist: true, allStablecoins: false };
+  const usdTop25 = { presetIds: ["usd-top25"], watchlist: false, allStablecoins: false };
+  const fixtures: Record<keyof typeof TELEGRAM_PUBLIC_ALERT_SAMPLES, { alerts: ConsolidatedAlerts; via: AlertVia }> = {
+    dews: {
+      alerts: emptyConsolidatedAlerts({ dews: [{
+        stablecoinId: "usdt-tether", symbol: "USDT", oldBand: "ALERT", newBand: "WARNING", score: 58,
+        topSignals: [{ name: "pool", value: 71 }, { name: "supply", value: 64 }],
+      }] }),
+      via: usdTop25,
+    },
+    depeg: {
+      alerts: emptyConsolidatedAlerts({ depegTriggered: [{
+        stablecoinId: "usdc-circle", symbol: "USDC", direction: "below", deviationBps: 120, price: 0.988, pegReference: 1,
+      }] }),
+      via: usdTop25,
+    },
+    safety: {
+      alerts: emptyConsolidatedAlerts({ safety: [{
+        stablecoinId: "usdr-tangible", symbol: "USDR", oldGrade: "B", newGrade: "D", oldScore: 70, newScore: 44,
+        contextLine: "Reason: Exit score fell from 72 to 35. Exit measures how easily holders can redeem or sell near $1.",
+      }] }),
+      via: watchlist,
+    },
+    reserve: {
+      alerts: emptyConsolidatedAlerts({ reserve: [{ stablecoinId: "usdc-circle", symbol: "USDC", name: "Circle USD Coin" }] }),
+      via: watchlist,
+    },
+    freeze: {
+      alerts: emptyConsolidatedAlerts({ freeze: [{
+        stablecoinId: "usdc-circle", symbol: "USDC", eventType: "blacklist", chainName: "Ethereum",
+        amountUsdAtEvent: 1_000_000, tapeEventId: "t", sourceEventId: "s",
+      }] }),
+      via: watchlist,
+    },
+  };
 
-  it("keeps the DEWS and safety samples verbatim with formatter output", () => {
-    const dews = formatConsolidatedMessage({
-      ...emptyConsolidatedAlerts(),
-      dews: [{ stablecoinId: "usdt-tether", symbol: "USDT", oldBand: "WATCH", newBand: "ALERT", score: 42, topSignals: [{ name: "pool", value: 61 }, { name: "supply", value: 48 }] }],
-    });
-    const safety = formatConsolidatedMessage({
-      ...emptyConsolidatedAlerts(),
-      safety: [{
-        stablecoinId: "usdr-tangible", symbol: "USDR", oldGrade: "B", newGrade: "F", oldScore: 70, newScore: 39,
-        contextLine: "Reason: Active depeg peak 7546 bps capped the pre-variant Safety Score at F (39).",
-      }],
-    });
-    expect(TELEGRAM_PUBLIC_ALERT_SAMPLES.dews.message.startsWith(`${plainBody(dews)}\n\n`)).toBe(true);
-    expect(TELEGRAM_PUBLIC_ALERT_SAMPLES.safety.message.startsWith(`${plainBody(safety)}\n\n`)).toBe(true);
+  it.each(Object.keys(fixtures) as Array<keyof typeof fixtures>)("keeps the %s sample verbatim with formatter output", (key) => {
+    const { alerts, via } = fixtures[key];
+    expect(TELEGRAM_PUBLIC_ALERT_SAMPLES[key].message).toBe(toPlainSample(formatConsolidatedMessage(alerts, { via })));
+    expect(TELEGRAM_PUBLIC_ALERT_SAMPLES[key].buttons).toEqual(buttonRows(alerts));
+  });
+});
+
+describe("alert template", () => {
+  const safetyDown = (stablecoinId: string, symbol: string, oldGrade: string, newGrade: string, oldScore: number, newScore: number) =>
+    ({ stablecoinId, symbol, oldGrade, newGrade, oldScore, newScore });
+
+  it("opens a single-coin alert with its headline and ends with the provenance footer", () => {
+    const msg = formatConsolidatedMessage(emptyConsolidatedAlerts({ safety: [{
+      ...safetyDown("wm-m0", "wM", "C-", "D", 51, 44),
+      contextLine: "Reason: Control score fell from 69 to 45.",
+    }] }), { via: { presetIds: ["usd-top25", "usd-top10"], watchlist: true, allStablecoins: false } });
+    expect(msg).toBe([
+      "<b>wM</b> Safety grade downgraded to D (was C-)\nWhy: Control score fell from 69 to 45.\nOverall score 44 (was 51)",
+      "<i>Via USD Top 25, USD Top 10 and your watchlist · Safety alerts</i>",
+      '<a href="https://pharos.watch/stablecoin/wm-m0">View on Pharos</a>',
+    ].join("\n\n"));
+  });
+
+  it("omits the footer without routing provenance and escapes untrusted text", () => {
+    const msg = formatConsolidatedMessage(emptyConsolidatedAlerts({ freeze: [{
+      stablecoinId: "usdt-tether", symbol: "US<b>T", eventType: "destroy", chainName: "Tr&n",
+      amountUsdAtEvent: null, tapeEventId: "t", sourceEventId: "s",
+    }] }));
+    expect(msg).not.toContain("<i>Via");
+    expect(msg).toContain("<b>US&lt;b&gt;T</b> issuer destroyed funds held by a frozen address on Tr&amp;n");
+  });
+
+  it("stacks two events by severity and puts recoveries last", () => {
+    const msg = formatConsolidatedMessage(emptyConsolidatedAlerts({
+      depegResolved: [{ stablecoinId: "usdc-circle", symbol: "USDC", durationMinutes: 192, peakDeviationBps: 260, recoveryPrice: 0.9996 }],
+      depegTriggered: [{ stablecoinId: "usde-ethena", symbol: "USDe", direction: "below", deviationBps: 120, price: 0.988, pegReference: 1 }],
+    }));
+    const [first, second] = msg.split("\n\n");
+    expect(first).toBe("▼ <b>USDe</b> lost its peg: $0.9880, 1.2% below $1.00");
+    expect(second).toBe("<b>USDC</b> is back on peg at $0.9996\nOff peg for 3h 12m · worst point 2.6% from peg");
+  });
+
+  it("uses a count headline and compact family groups for three or more events", () => {
+    const msg = formatConsolidatedMessage(emptyConsolidatedAlerts({
+      safety: [
+        safetyDown("eurc-circle", "EURC", "A-", "A", 89, 94),
+        safetyDown("wm-m0", "wM", "C-", "D", 51, 44),
+      ],
+      dews: [{ stablecoinId: "usdt-tether", symbol: "USDT", oldBand: "WATCH", newBand: "ALERT", score: 40, topSignals: [] }],
+    }), { via: { presetIds: [], watchlist: false, allStablecoins: true } });
+    expect(msg.split("\n")[0]).toBe("<b>3 alerts</b>, led by \u{1F7E1} USDT stress rose to ALERT (40/100)");
+    expect(msg).toContain("<b>Early-warning stress</b>\n\u{1F7E1} USDT stress rose to ALERT (40/100)");
+    expect(msg).toContain("<b>Safety grades</b>\nwM downgraded C- → D\nEURC raised A- → A");
+    expect(msg).toContain("<i>Via all stablecoins · stress alerts and Safety alerts</i>");
   });
 });
 
@@ -191,7 +272,7 @@ describe("depeg direction glyphs", () => {
       reopenedAfterMinutes: 65,
     });
 
-    expect(line).toContain("Re-depegged after 1h 5m recovery");
+    expect(line).toBe("▼ <b>BOLD</b> lost its peg again, 1h 5m after recovering: $0.9770, 2.3% below $1.00");
   });
 
   it("formats native-currency event prices with the matching symbol", () => {
@@ -205,13 +286,13 @@ describe("depeg direction glyphs", () => {
       priceCurrency: "EUR",
     });
 
-    expect(line).toContain("Price: €0.9840 (peg: €1.00)");
+    expect(line).toContain("€0.9840, 1.6% below €1.00");
   });
 
   it.each([
-    ["vchf-vnx", "VCHF", "CHF", 0.98, 1, "Price: ₣0.9800 (peg: ₣1.00)"],
-    ["brl-example", "BRL", "BRL", 0.98, 1, "Price: R$0.9800 (peg: R$1.00)"],
-    ["xaut-tether", "XAUT", "GOLD", 3500, 3550, "Price: $3500.0000 (peg: $3550.00)"],
+    ["vchf-vnx", "VCHF", "CHF", 0.98, 1, "₣0.9800, 2.0% below ₣1.00"],
+    ["brl-example", "BRL", "BRL", 0.98, 1, "R$0.9800, 2.0% below R$1.00"],
+    ["xaut-tether", "XAUT", "GOLD", 3500, 3550, "$3500.0000, 2.0% below $3550.00"],
   ] as const)("uses canonical currency formatting for %s", (stablecoinId, symbol, priceCurrency, price, pegReference, expected) => {
     const line = formatDepegTriggeredLine({
       stablecoinId, symbol, direction: "below",
@@ -231,7 +312,7 @@ describe("depeg direction glyphs", () => {
       priceCurrency: "xyz",
     });
 
-    expect(line).toContain("Price: XYZ 0.9800 (peg: XYZ 1.00)");
+    expect(line).toContain("XYZ 0.9800, 2.0% below XYZ 1.00");
   });
 
 });
@@ -249,7 +330,7 @@ describe("context line blockquote (P1-U13)", () => {
       topSignals: [],
       contextLine: context,
     });
-    expect(line).toContain(`<blockquote expandable>${context}</blockquote>`);
+    expect(line).toContain(`<blockquote expandable>${context.slice("Context: ".length)}</blockquote>`);
     expect(line).not.toContain(`\n${context}\n`);
   });
 
@@ -265,7 +346,7 @@ describe("context line blockquote (P1-U13)", () => {
       contextLine: malicious,
     });
     expect(line).toContain(
-      "<blockquote expandable>Context: &lt;script&gt;alert(1)&lt;/script&gt;</blockquote>",
+      "<blockquote expandable>&lt;script&gt;alert(1)&lt;/script&gt;</blockquote>",
     );
     expect(line).not.toContain("<script>");
   });
@@ -492,6 +573,7 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
   it("keeps callback_data within 64 bytes for every tracked stablecoin id", () => {
     for (const id of TRACKED_META_BY_ID.keys()) {
       const markup = buildAlertReplyMarkup(singleCoinAlerts(id), 0);
+      expect(collectCallbackData(markup)).toContain(`settings:o:${id}`);
       for (const data of collectCallbackData(markup)) {
         expect(Buffer.byteLength(data, "utf8")).toBeLessThanOrEqual(TELEGRAM_CALLBACK_DATA_MAX_BYTES);
       }
@@ -507,37 +589,69 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
     }
   });
 
-  it("adds a compact per-coin snooze row for the top coins on the first multi-coin chunk (C118)", () => {
+  it("offers Mute top coin 24h, Pause all 4h, Fewer like this and Manage Alerts on a multi-coin first chunk", () => {
     const multiCoin: ConsolidatedAlerts = emptyConsolidatedAlerts({ dews: [
       { stablecoinId: "usdc-circle", symbol: "USDC", oldBand: "CALM", newBand: "WARNING", score: 42, topSignals: [] },
       { stablecoinId: "usdt-tether", symbol: "USDT", oldBand: "CALM", newBand: "ALERT", score: 50, topSignals: [] },
     ] });
     const markup = buildAlertReplyMarkup(multiCoin, 0, { privateChat: true });
+    expect(markup.inline_keyboard.length).toBe(2);
+    // Top coin (USDC, WARNING) ranks above USDT (ALERT).
+    expect(collectCallbackData(markup)).toEqual(["coinsnooze:usdc-circle:24h", "snooze:4h", "fewer:usdc-circle:db:W"]);
+    expect(collectButtonText(markup)).toEqual(["Mute USDC 24h", "Pause all 4h", "Fewer like this", "Manage Alerts"]);
+    expect(JSON.stringify(markup)).toContain("web_app");
+  });
+
+  it("targets Fewer at the family with the most events and uses in-chat settings in groups", () => {
+    const mixed: ConsolidatedAlerts = emptyConsolidatedAlerts({
+      depegTriggered: [{ stablecoinId: "usde-ethena", symbol: "USDe", direction: "below", deviationBps: 120, price: 0.988, pegReference: 1 }],
+      safety: [
+        { stablecoinId: "wm-m0", symbol: "wM", oldGrade: "C-", newGrade: "D", oldScore: 51, newScore: 44 },
+        { stablecoinId: "usdc-circle", symbol: "USDC", oldGrade: "A", newGrade: "B", oldScore: 88, newScore: 74 },
+      ],
+    });
+    const markup = buildAlertReplyMarkup(mixed, 0);
     const callbacks = collectCallbackData(markup);
-    expect(markup.inline_keyboard.length).toBeLessThanOrEqual(2);
-    // Top coin (USDC, WARNING) ranks above USDT (ALERT); both appear (top 2).
-    expect(callbacks).toContain("coinsnooze:usdc-circle:4h");
-    expect(callbacks).toContain("coinsnooze:usdt-tether:4h");
-    // Only the 4h per-coin snooze is offered in the compact row.
-    expect(callbacks.some((c) => c === "coinsnooze:usdc-circle:1h")).toBe(false);
-    expect(callbacks.some((c) => c === "coinsnooze:usdc-circle:24h")).toBe(false);
-    // The chat-level snooze row is preserved.
-    expect(callbacks).toContain("snooze:1h");
-    // The displayed symbol drives the button text; callback_data is id-only.
-    expect(collectButtonText(markup)).toContain("Snooze USDC 4h");
+    expect(callbacks).toContain("fewer:usdc-circle:sm:0");
+    expect(callbacks).toContain("settings:home");
     expect(JSON.stringify(markup)).not.toContain("web_app");
   });
 
-  it("omits the per-coin snooze row on overflow chunks of multi-coin alerts (C118)", () => {
+  it.each([
+    [{ "depeg:usde-ethena": 100 }, "fewer:usde-ethena:ds:250"],
+    [{ "depeg:usde-ethena": 500 }, "fewer:usde-ethena:ds:0"],
+    // No step in effect: any step would switch worsening alerts on, so off.
+    [{ "depeg:usde-ethena": null }, "fewer:usde-ethena:ds:0"],
+    [undefined, "fewer:usde-ethena:ds:0"],
+  ] as const)("carries the Fewer target value computed from the routed depeg step %j", (fewerBase, expected) => {
+    const depeg = emptyConsolidatedAlerts({
+      depegTriggered: [{ stablecoinId: "usde-ethena", symbol: "USDe", direction: "below", deviationBps: 120, price: 0.988, pegReference: 1 }],
+    });
+    expect(collectCallbackData(buildAlertReplyMarkup(depeg, 0, { fewerBase }))).toContain(expected);
+  });
+
+  it("raises the DEWS floor from the routed band in the Fewer button", () => {
+    const dews = emptyConsolidatedAlerts({ dews: [
+      { stablecoinId: "usdc-circle", symbol: "USDC", oldBand: "ALERT", newBand: "DANGER", score: 80, topSignals: [] },
+    ] });
+    expect(collectCallbackData(buildAlertReplyMarkup(dews, 0, { fewerBase: { "dews:usdc-circle": "WARNING" } })))
+      .toContain("fewer:usdc-circle:db:D");
+    expect(collectCallbackData(buildAlertReplyMarkup(dews, 0, { fewerBase: { "dews:usdc-circle": "DANGER" } })))
+      .toContain("fewer:usdc-circle:db:0");
+  });
+
+  it("keeps only the chat-wide pause on overflow chunks", () => {
     const multiCoin: ConsolidatedAlerts = emptyConsolidatedAlerts({ dews: [
       { stablecoinId: "usdc-circle", symbol: "USDC", oldBand: "CALM", newBand: "WARNING", score: 42, topSignals: [] },
       { stablecoinId: "usdt-tether", symbol: "USDT", oldBand: "CALM", newBand: "ALERT", score: 50, topSignals: [] },
     ] });
-    const markup = buildAlertReplyMarkup(multiCoin, 1);
-    const callbacks = collectCallbackData(markup);
-    expect(markup.inline_keyboard.length).toBeLessThanOrEqual(2);
-    expect(callbacks.some((c) => c.startsWith("coinsnooze:"))).toBe(false);
-    expect(callbacks).toContain("snooze:1h");
+    expect(collectCallbackData(buildAlertReplyMarkup(multiCoin, 1))).toEqual(["snooze:4h"]);
+    expect(collectCallbackData(buildAlertReplyMarkup(singleCoinAlerts("usdc-circle"), 1))).toEqual(["snooze:4h"]);
+  });
+
+  it("never emits the retired Status, Depeg 250 or Safety buttons", () => {
+    const json = JSON.stringify(buildAlertReplyMarkup(singleCoinAlerts("usdc-circle"), 0, { privateChat: true }));
+    expect(json).not.toMatch(/"(status|depegstep|safetydown):/);
   });
 
   it("keeps the multi-coin per-coin snooze callback_data within 64 bytes for the longest ids", () => {
@@ -550,8 +664,9 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
     ] });
     const markup = buildAlertReplyMarkup(multiCoin, 0);
     const callbacks = collectCallbackData(markup);
-    // Sanity: the multi-coin branch produced per-coin snooze callbacks.
+    // Sanity: the multi-coin branch produced per-coin mute and fewer callbacks.
     expect(callbacks.some((c) => c.startsWith("coinsnooze:"))).toBe(true);
+    expect(callbacks.some((c) => c.startsWith("fewer:"))).toBe(true);
     for (const data of callbacks) {
       expect(Buffer.byteLength(data, "utf8")).toBeLessThanOrEqual(TELEGRAM_CALLBACK_DATA_MAX_BYTES);
     }

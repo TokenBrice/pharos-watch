@@ -37,8 +37,12 @@ export const AlertSafetySourceRowSchema = z.object({
   partialEvidence: V9CompactPartialEvidenceSchema.nullable(),
   methodologyVersion: z.string().nullable(),
   operationallyAffected: z.boolean().optional(),
-  /** Set on a baseline row held for a suppressed availability move (unix sec). */
-  heldSinceSec: z.number().int().nonnegative().optional(),
+  /** Baseline-only: when the pending live-alert move was first seen (unix sec). */
+  pendingSinceSec: z.number().int().nonnegative().optional(),
+  /** Baseline-only: which move the pending clock is timing. */
+  pendingKind: z.enum(["severe-downgrade", "upgrade"]).optional(),
+  /** Baseline-only: the last live downgrade alert for this coin (cooldown clock). */
+  lastAlertedAtSec: z.number().int().nonnegative().optional(),
   v9Explain: AlertSafetyV9ExplainSnapshotSchema,
 }).superRefine(refineV9RatingStatusFields);
 export type AlertSafetySourceRow = z.output<typeof AlertSafetySourceRowSchema>;
@@ -159,17 +163,6 @@ const TelegramWatcherLifecycleSnapshotSchema = z.object({
   quietHoursEnabledChats: z.number(),
   pendingDeliveries: z.number(),
 });
-
-const TelegramWebhookEffectLifecycleSchema = z.object({
-  planned: z.number(),
-  started: z.number(),
-  executionUnknown: z.number(),
-  oldestPlannedAgeSec: z.number().nullable(),
-  oldestAmbiguousAgeSec: z.number().nullable(),
-  sampleLimit: z.number(),
-  lowerBound: z.boolean(),
-});
-
 
 export const TELEGRAM_DELIVERY_SLI_EVIDENCE_QUALITY_VALUES = ["complete", "partial", "empty"] as const;
 export type TelegramDeliverySliEvidenceQuality =
@@ -323,8 +316,6 @@ export const TelegramBotStatsSchema = z.object({
   estimatedDrainTimeSec: z.number().optional(),
   retryErrorClassCounts: z.record(z.string(), z.number()).optional(),
   pendingDeliveryBacklog: TelegramPendingDeliveryBacklogSchema.optional(),
-  webhookEffectUnknown: z.number().optional(),
-  webhookEffectLifecycle: TelegramWebhookEffectLifecycleSchema.optional(),
   deliverySli: TelegramDeliverySliStatusSchema,
   presetQueryFailures: z.number().optional(),
   /**
@@ -369,11 +360,6 @@ const TelegramPulseBaseSchema = z.object({
   topCoins: z.array(z.string()),
   watcherHistory: z.array(TelegramWatcherHistoryPointSchema),
   pendingDeliveries: z.number().nullable(),
-  miniAppSessionsToday: z.number().nullable().optional(),
-  miniAppMutationsToday: z.number().nullable().optional(),
-  miniAppDeniedToday: z.number().nullable().optional(),
-  miniAppReplayClaimsToday: z.number().nullable().optional(),
-  miniAppOpenToFirstMutationP50Sec: z.number().nullable().optional(),
   currentSnapshotAt: z.number().optional(),
   lifecycleHistoryUpdatedAt: z.number().nullable().optional(),
   lifecycleHistoryEverySeconds: z.number().optional(),
@@ -428,6 +414,22 @@ interface TelegramDispatchEventsDetected {
 export const TELEGRAM_ALERT_TYPES = ["dews", "depeg", "safety", "launch", "reserve", "freeze"] as const;
 /** The alert categories tracked by the Telegram dispatcher. */
 export type TelegramAlertType = (typeof TELEGRAM_ALERT_TYPES)[number];
+
+/**
+ * Families retired as per-user alerts. Their D1 columns stay (dropped in a
+ * later coordinated rollout) and keep their place in TELEGRAM_ALERT_TYPES so
+ * column order and encoded callback masks are stable, but live paths neither
+ * detect, read nor write them. Launches go to the weekly channel digest.
+ */
+export const TELEGRAM_RETIRED_ALERT_TYPES = ["launch"] as const;
+export type TelegramRetiredAlertType = (typeof TELEGRAM_RETIRED_ALERT_TYPES)[number];
+export type TelegramLiveAlertType = Exclude<TelegramAlertType, TelegramRetiredAlertType>;
+export function isTelegramRetiredAlertType(value: unknown): value is TelegramRetiredAlertType {
+  return (TELEGRAM_RETIRED_ALERT_TYPES as readonly unknown[]).includes(value);
+}
+export const TELEGRAM_LIVE_ALERT_TYPES = TELEGRAM_ALERT_TYPES.filter(
+  (type): type is TelegramLiveAlertType => !isTelegramRetiredAlertType(type),
+);
 
 export function isTelegramAlertType(value: unknown): value is TelegramAlertType {
   return (TELEGRAM_ALERT_TYPES as readonly string[]).includes(value as string);

@@ -336,6 +336,38 @@ describe("Safety Score V9 publication runner", () => {
     );
   });
 
+  it("retains the accepted grade for a one-publication band change before assessment and persistence (10.26)", async () => {
+    const accepted = makeWorkerSafetyScoreV9Publication({
+      cards: [makeWorkerV9Card({ id: "xaut-tether", score: 55 })],
+      baseInputGenerationId: fixedInput.baseInputGenerationId,
+      publicationGenerationId: "report-cards:v9:accepted",
+      publishedAtSec: fixedInput.clockSec - 30,
+    });
+    mocks.loadBaseline.mockResolvedValue(acceptedBaseline(accepted));
+    mocks.build.mockReturnValue({
+      candidate: makeWorkerSafetyScoreV9Publication({
+        cards: [makeWorkerV9Card({ id: "xaut-tether", score: 50 })],
+        baseInputGenerationId: fixedInput.baseInputGenerationId,
+        publishedAtSec: fixedInput.clockSec,
+      }),
+      compilerFactSchemaDigest: "1".repeat(64),
+      producerCapabilityDigest: "2".repeat(64),
+      quarantines: [],
+      quarantineAffectedAssetIds: [],
+      bridgeJoinDiagnostics: [],
+    });
+
+    await runSafetyScoreV9Publication({ db: {} as D1Database, fixedInput });
+
+    const held = { score: 50, grade: "C", gradeHold: { rawGrade: "C-", heldFromGenerationId: "report-cards:v9:accepted" } };
+    expect(mocks.assess).toHaveBeenCalledWith(expect.objectContaining({
+      candidate: expect.objectContaining({ cards: [expect.objectContaining(held)] }),
+    }));
+    expect(mocks.persist).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      publication: expect.objectContaining({ cards: [expect.objectContaining(held)] }),
+    }));
+  });
+
   it("holds an empty but fulfilled independent live-reserve map", async () => {
     const { assessV9Publication } = await vi.importActual<
       typeof import("../safety-score-v9/publication-assessment")

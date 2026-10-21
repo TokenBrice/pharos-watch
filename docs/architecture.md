@@ -92,7 +92,6 @@ These same-origin Pages surfaces are **not** Worker API routes. Bindings/admissi
 | `GET /admin/*`, `GET /admin-api/*`, `/api/admin/*` | Asset host gates in `functions/admin/[[path]].ts` / `functions/admin-api/[[path]].ts`; proxy in `functions/api/admin/[[path]].ts`. [Operator Origin Access](./operator-origin-access.md) owns Access/service-token requirements. |
 | `GET /safety-scores/map.json`, `GET /safety-scores/map.png`, `GET /safety-scores/map.webp` | `functions/safety-scores/map.json.ts` / `map.png.ts` / `map.webp.ts`; [Safety Score Map serving](./safety-score-map.md#serving). |
 | `GET /social-posts/:date.png`, `GET /social-posts/:date.json` | `functions/social-posts/[[path]].ts`; immutable graphic/manifest, [Daily Social Posts](./daily-social.md). |
-| `POST /pharoswatchbot-adoption` | `functions/pharoswatchbot-adoption.ts`; same-origin telemetry forwarded to internal Worker `/api/telegram-adoption`. |
 | Document middleware | `functions/_middleware.ts`; Markdown negotiation and CSP before route functions; host gates remain in per-route functions and `functions/lib/ops-asset-host-gate.ts`. |
 
 ### Static feed route handlers
@@ -189,7 +188,7 @@ Read an individual decision rather than the entire record collection: [ADR-1](#a
 - **ADR-6 — Squashed D1 baseline.** `worker/migrations/0000_baseline.sql` consolidates migrations 0001–0227 into one fresh-DB schema script. Before applying the squashed tree to an existing database, verify the exact baseline filename is already in its migration ledger; otherwise stop for a separately reviewed adoption plan. Fresh databases apply the baseline then 0228 onward. `check:migrations` rejects duplicate sequence prefixes. Squash procedure: `docs/process/d1-baseline-squash-plan.md`; lineage: `worker/migrations/MANIFEST.md`.
 #### ADR-7
 
-- **ADR-7 — Single-source route and cron metadata.** Shared endpoint descriptors in `shared/lib/api-endpoints/` own static route metadata; exact `POST /api/telegram-adoption`, an internal site-api mutation, is a ratified named exception. Route assurance is the typed registry plus tests, not a universal compile failure. Cron schedules live in `shared/lib/cron-jobs.ts`, bound to runner keys by `shared/lib/scheduled-runner-registry.ts`. `check:cron-sync` compares the duplicate-free union of `worker/wrangler.toml` and `worker/wrangler.heavy.toml` with shared schedules and dispatch, including owner placement. See Route Definition Model above.
+- **ADR-7 — Single-source route and cron metadata.** Shared endpoint descriptors in `shared/lib/api-endpoints/` own static route metadata. Route assurance is the typed registry plus tests, not a universal compile failure. Cron schedules live in `shared/lib/cron-jobs.ts`, bound to runner keys by `shared/lib/scheduled-runner-registry.ts`. `check:cron-sync` compares the duplicate-free union of `worker/wrangler.toml` and `worker/wrangler.heavy.toml` with shared schedules and dispatch, including owner placement. See Route Definition Model above.
 #### ADR-8
 
 - **ADR-8 — DefiLlama list supply keeps its USD basis; bounded supplemental gap-fill is explicit.**

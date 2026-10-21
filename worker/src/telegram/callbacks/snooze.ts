@@ -1,4 +1,5 @@
-import { setSubscriberSnooze, unixNow } from "../store/telegram-webhook-store";
+import { setSubscriberSnooze } from "../store/snooze";
+import { unixNow } from "../store/subscribers";
 import {
   callbackUsername,
   hasExactParts,
@@ -29,11 +30,9 @@ export const handleSnoozeCallback: CallbackHandler = async (context) => {
     logAction: "snooze",
     logMessage: "snooze write failed",
     successOutcome: "set",
-    intentKind: "callback:snooze",
-    intentPayload: ({ duration, untilSec }) => ({ duration, untilSec }),
     write: async ({ untilSec }, options) =>
       setSubscriberSnooze(db, chatId, callbackUsername(cb), untilSec, options),
-    successText: ({ duration }) => `Snoozed for ${duration}. Use /list to verify or tap a longer window.`,
+    successText: ({ duration }) => `All alerts paused for ${duration}. Use /list to verify.`,
     failureText: "Could not save snooze. Please try again.",
   });
 };

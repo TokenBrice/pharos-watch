@@ -33,7 +33,7 @@ import {
   safetyScoreV9SupplyAttributionExpectedAssetIds,
 } from "./supply-attribution";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
-import { parseJson } from "../json-parse";
+import { parseJson, parseJsonObject } from "../json-parse";
 
 export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY =
   "safety-score-v9:supply-attribution-generation:v1";
@@ -471,13 +471,91 @@ export type SafetyScoreV9SupplyAttributionGenerationApplication =
        * applying them would shadow observed data.
        */
       supersededAssetIds: string[];
+      /** 10.26: expected assets this generation did not admit, re-derived from the last admitted packet. */
+      carriedForwardAssetIds: string[];
     }
   | {
       status: "unavailable" | "incompatible";
       generationId: string | null;
       fixedInput: SafetyScoreV9CompilerInput;
       reason: string;
+      carriedForwardAssetIds: string[];
     };
+
+/**
+ * Last admitted wM/XAUT-style packets (10.26 bounded carry-forward). Written
+ * by the consumer after each application; re-derived against the current
+ * fixed input and admitted only inside the per-model carry window.
+ */
+export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_LAST_ADMITTED_CACHE_KEY =
+  "safety-score-v9:supply-attribution-last-admitted:v1";
+const SupplyAttributionLastAdmittedSchema = z.strictObject({
+  schemaVersion: z.literal(1),
+  generationId: GenerationIdSchema,
+  attributionById: z.record(AssetIdSchema, SafetyScoreV9SupplyAttributionSchema),
+});
+export type SafetyScoreV9SupplyAttributionLastAdmitted = z.infer<typeof SupplyAttributionLastAdmittedSchema>;
+
+export function parseSafetyScoreV9SupplyAttributionLastAdmitted(value: string): SafetyScoreV9SupplyAttributionLastAdmitted | null {
+  // Malformed carry state fails closed: nothing is carried this run.
+  const parsed = SupplyAttributionLastAdmittedSchema.safeParse(parseJsonObject(value));
+  return parsed.success ? parsed.data : null;
+}
+
+/** Only models with a bounded carry contract are retained. */
+export function buildSafetyScoreV9SupplyAttributionLastAdmitted(
+  application: SafetyScoreV9SupplyAttributionGenerationApplication,
+  previous: SafetyScoreV9SupplyAttributionLastAdmitted | null,
+): SafetyScoreV9SupplyAttributionLastAdmitted | null {
+  if (application.status !== "applied") return null;
+  const attributionById = Object.fromEntries(
+    Object.entries(application.fixedInput.safetyScoreV9SupplyAttributionById ?? {})
+      .filter(([, attribution]) =>
+        attribution.model === "reviewed-deployment-unit-partition-v1" ||
+        attribution.model === "canonical-lock-mint-group-partition-v2"),
+  );
+  // A carried packet keeps naming its original generation; an empty current
+  // application does not erase the previous admitted packets.
+  return Object.keys(attributionById).length === 0
+    ? previous
+    : { schemaVersion: 1, generationId: application.generationId, attributionById };
+}
+
+function carryForwardSupplyAttribution(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  lastAdmitted: SafetyScoreV9SupplyAttributionLastAdmitted | null | undefined,
+  applied: Readonly<SafetyScoreV9CompilerInput["safetyScoreV9SupplyAttributionById"]>,
+): { attributionById: SafetyScoreV9CompilerInput["safetyScoreV9SupplyAttributionById"]; assetIds: string[] } {
+  const attributionById: SafetyScoreV9CompilerInput["safetyScoreV9SupplyAttributionById"] = {};
+  const assetIds: string[] = [];
+  if (!lastAdmitted) return { attributionById, assetIds };
+  for (const assetId of safetyScoreV9SupplyAttributionExpectedAssetIds(fixedInput)) {
+    const prior = lastAdmitted.attributionById[assetId];
+    if (applied[assetId] || !prior) continue;
+    const aggregate = aggregateSupplyUsd(fixedInput, assetId);
+    if (aggregate === null) continue;
+    const carriedForwardFromGenerationId =
+      ("carriedForwardFromGenerationId" in prior ? prior.carriedForwardFromGenerationId : undefined) ??
+      lastAdmitted.generationId;
+    const attribution = prior.model === "reviewed-deployment-unit-partition-v1"
+      ? deriveReviewedDeploymentUnitPartition({
+          assetId, aggregateSupplyUsd: aggregate, registryFingerprint: fixedInput.registryFingerprint,
+          scoringClockSec: fixedInput.clockSec, observations: prior.deployments, carriedForwardFromGenerationId,
+        })
+      : prior.model === "canonical-lock-mint-group-partition-v2"
+        ? deriveXautRepresentationGroupSupplyAttribution({
+            aggregateSupplyUsd: aggregate, registryFingerprint: fixedInput.registryFingerprint,
+            scoringClockSec: fixedInput.clockSec, observation: prior.observation, carriedForwardFromGenerationId,
+          })
+        : null;
+    // Outside the carry window the packet is not re-derivable and the
+    // existing unavailable-materiality fallback applies.
+    if (!attribution) continue;
+    attributionById[assetId] = attribution;
+    assetIds.push(assetId);
+  }
+  return { attributionById, assetIds };
+}
 
 type SupplyAttributionGenerationCompatibilityReason =
   | "source-clock-after-fixed-input"
@@ -594,12 +672,20 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
   generation:
     | SafetyScoreV9SupplyAttributionGeneration
     | null,
+  lastAdmitted?: SafetyScoreV9SupplyAttributionLastAdmitted | null,
 ): SafetyScoreV9SupplyAttributionGenerationApplication {
+  const withCarry = (applied: SafetyScoreV9CompilerInput["safetyScoreV9SupplyAttributionById"]) => {
+    const carried = carryForwardSupplyAttribution(fixedInput, lastAdmitted, applied);
+    return {
+      fixedInput: { ...fixedInput, safetyScoreV9SupplyAttributionById: { ...applied, ...carried.attributionById } },
+      carriedForwardAssetIds: carried.assetIds,
+    };
+  };
   if (!generation) {
     return {
       status: "unavailable",
       generationId: null,
-      fixedInput: withoutSupplyAttribution(fixedInput),
+      ...(lastAdmitted ? withCarry({}) : { fixedInput: withoutSupplyAttribution(fixedInput), carriedForwardAssetIds: [] }),
       reason: "generation-missing",
     };
   }
@@ -612,7 +698,7 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
     return {
       status: "incompatible",
       generationId: generation.generationId,
-      fixedInput: withoutSupplyAttribution(fixedInput),
+      ...(lastAdmitted ? withCarry({}) : { fixedInput: withoutSupplyAttribution(fixedInput), carriedForwardAssetIds: [] }),
       reason: compatibilityReason,
     };
   }
@@ -670,10 +756,7 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
   return {
     status: "applied",
     generationId: generation.generationId,
-    fixedInput: {
-      ...fixedInput,
-      safetyScoreV9SupplyAttributionById: attributionById,
-    },
+    ...withCarry(attributionById),
     acceptedAssetIds: appliedAssetIds,
     rejectedAssetIds: [...generation.rejectedAssetIds],
     invalidAssetIds,

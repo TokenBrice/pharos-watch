@@ -6,14 +6,12 @@ import {
   TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM,
   TelegramMiniAppErrorResponseSchema,
   TelegramMiniAppBulkWatchlistResponseSchema,
-  TelegramMiniAppPortabilityResponseSchema,
   TelegramMiniAppResponseSchema,
   TelegramMiniAppSnapshotSchema,
   TelegramMiniAppStateSchema as SharedTelegramMiniAppStateSchema,
   telegramMiniAppStateRevision,
   type TelegramMiniAppMutableState,
   type TelegramMiniAppResponse,
-  type TelegramMiniAppPortabilityResponse,
   type TelegramMiniAppBulkWatchlistResponse,
   type TelegramMiniAppState,
 } from "@shared/lib/telegram-mini-app-contract";
@@ -150,14 +148,9 @@ export async function postVersionedMiniAppJson<T extends VersionedMiniAppRespons
 }
 
 /**
- * Portable watchlist reads use the same versioned, signed Mini App transport
- * as mutations but intentionally return a token or exact preview, not state.
+ * Server-side bulk selection previews use the same versioned, signed Mini App
+ * transport as mutations but intentionally return a preview, not state.
  */
-export async function postMiniAppPortability(path: string, body: unknown): Promise<TelegramMiniAppPortabilityResponse> {
-  return postVersionedMiniAppJson(path, body, TelegramMiniAppPortabilityResponseSchema);
-}
-
-/** Server-side bulk selection previews are signed reads, like portability previews. */
 export async function postMiniAppBulkWatchlistPreview(
   path: string,
   body: unknown,

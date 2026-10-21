@@ -270,7 +270,6 @@ describe("reading selectors and context modes", () => {
     ["worker/src/telegram/webhook/telegram-webhook.ts", false],
     ["worker/migrations/0268_telegram_planning_lookup_indexes.sql", false],
     ["functions/safety-scores/map.json.ts", true],
-    ["functions/pharoswatchbot-adoption.ts", false],
   ] as const)("keeps integrity ADRs primary and undemoted for %s", (file, methodology) => {
     const contract = classifyChangedFiles([file]);
     expectIntegrityObligations(contract, methodology);
@@ -387,7 +386,7 @@ describe("reading selectors and context modes", () => {
     "shared/lib/safety-score-v9/evaluate-asset.ts", "shared/lib/classification.ts",
     "functions/safety-scores/map.json.ts", "shared/data/stablecoins/coins/usdt-tether.json",
     "worker/src/telegram/webhook/telegram-webhook.ts", "worker/migrations/0268_telegram_planning_lookup_indexes.sql",
-    "scripts/maintenance/worker-evidence-report.mjs", "functions/pharoswatchbot-adoption.ts",
+    "scripts/maintenance/worker-evidence-report.mjs",
   ])("keeps the emitted check plan byte-identical across modes for %s", (file) => {
     const outputs = (["auto", "contract"] as const).map((context) => {
       const result = spawnSync(process.execPath,
@@ -566,18 +565,6 @@ describe("reading selectors and context modes", () => {
     } finally {
       families.forEach((family, index) => { family.reading = selectors[index]; });
     }
-  });
-
-  it("adds only Telegram's exceptional check to the adoption proxy plan (PR3b ownership)", () => {
-    const file = "functions/pharoswatchbot-adoption.ts";
-    const commands = buildFocusedCheckPlan([file]).checks.map((check) => check.command);
-    expect(commands).toEqual([
-      `npm run lint:changed -- --file ${file}`,
-      "npm run typecheck", "npm run check:doc-sync", "npm run check:site-csp-sync", "npm run check:stablecoin-data",
-      "npx vitest run scripts/__tests__",
-      "npx vitest run worker/src/api worker/src/cron worker/src/telegram",
-    ]);
-    expect(classifyChangedFiles([file]).mappings.map((mapping) => mapping.id)).toEqual(["validation-ci-policy", "telegram"]);
   });
 });
 

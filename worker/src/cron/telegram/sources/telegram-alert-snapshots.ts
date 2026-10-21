@@ -16,9 +16,10 @@ import type {
 export const SNAPSHOT_KEYS = {
   dews: "alert:dews-snapshot",
   dewsAlertable: "alert:dews-alertable-snapshot",
+  // Per-coin DEWS escalation persistence and quiet-window clocks.
+  dewsCandidates: "alert:dews-candidate-snapshot",
   depeg: "alert:depeg-snapshot",
   safety: "alert:safety-snapshot",
-  launch: "alert:launch-snapshot",
   // Reserve-drift snapshot. Written by the four-hourly reserve slot
   // (four-hourly-reserves.ts) as the LAUNCH-STYLE id-set of currently-drifting
   // coins; the dispatch cron only diffs prior-vs-current from this cache and
@@ -38,6 +39,17 @@ export const SNAPSHOT_MAX_AGE_SEC = DAY_SECONDS; // 24h
 // ---------- Types ----------
 
 export type DewsSnapshot = Record<string, string>;
+/**
+ * Pending escalation: distinct DEWS computations seen so far (`computedAt` is
+ * the last one counted) and the band it rose from. Calm coin: when it last
+ * went below ALERT.
+ */
+export type DewsCandidateSnapshot = Record<string, {
+  computedAt?: number;
+  computations?: number;
+  fromBand?: string;
+  quietSinceSec?: number;
+}>;
 export type DepegSnapshot = Record<string, DepegAlertPayload & { eventId?: number }>;
 export type SafetySnapshot = Record<string,
   Omit<AlertSafetySourceRow, "v9Explain"> & Partial<Pick<AlertSafetySourceRow, "v9Explain">>
@@ -48,6 +60,7 @@ export interface DewsRow {
   score: number;
   band: string;
   signals_json: string | null;
+  computed_at?: number;
 }
 
 export interface ActiveDepegRow {
@@ -87,26 +100,6 @@ export function isSnapshotMissingOrStale(
 }
 
 // ---------- Snapshot Building ----------
-
-export function buildDewsSnapshot(rows: DewsRow[]): DewsSnapshot {
-  const snapshot: DewsSnapshot = {};
-  for (const row of rows) {
-    snapshot[row.stablecoin_id] = row.band;
-  }
-  return snapshot;
-}
-
-export function buildDewsAlertableSnapshot(
-  rows: DewsRow[],
-  previous: DewsSnapshot | null = null,
-): DewsSnapshot {
-  const snapshot: DewsSnapshot = previous ? { ...previous } : {};
-  for (const row of rows) {
-    if (!isDewsAlertable(row.band)) continue;
-    snapshot[row.stablecoin_id] = row.band;
-  }
-  return snapshot;
-}
 
 export function filterAlertableBands(snapshot: DewsSnapshot | null): DewsSnapshot {
   if (!snapshot) return {};
@@ -170,9 +163,12 @@ export function isSafetyDeescalation(oldGrade: string, newGrade: string): boolea
 export interface TelegramAlertSnapshots {
   dews: DewsSnapshot;
   dewsAlertable: DewsSnapshot;
+  /** Absent on source-event baselines written before DEWS persistence. */
+  dewsCandidates?: DewsCandidateSnapshot;
+  /** The DEWS read was unavailable this run: leave all DEWS keys untouched. */
+  dewsUnavailable?: boolean;
   depeg: DepegSnapshot;
   safety?: AlertSafetySnapshotEnvelope | null;
-  launch: string[];
   reserveDispatched: string[] | null;
   reserveObserved?: Record<string, number> | null;
 }
@@ -181,14 +177,18 @@ export function buildTelegramSnapshotCacheEntries(
   snapshots: TelegramAlertSnapshots,
 ): Array<{ key: string; value: string }> {
   const writes: Array<{ key: string; value: string }> = [
-    { key: SNAPSHOT_KEYS.dews, value: JSON.stringify(snapshots.dews) },
-    { key: SNAPSHOT_KEYS.dewsAlertable, value: JSON.stringify(snapshots.dewsAlertable) },
+    ...(snapshots.dewsUnavailable ? [] : [
+      { key: SNAPSHOT_KEYS.dews, value: JSON.stringify(snapshots.dews) },
+      { key: SNAPSHOT_KEYS.dewsAlertable, value: JSON.stringify(snapshots.dewsAlertable) },
+    ]),
     { key: SNAPSHOT_KEYS.depeg, value: JSON.stringify(snapshots.depeg) },
-    { key: SNAPSHOT_KEYS.launch, value: JSON.stringify(snapshots.launch) },
     { key: SNAPSHOT_KEYS.reserveDispatched, value: JSON.stringify(snapshots.reserveDispatched) },
     { key: SNAPSHOT_KEYS.reserveObserved, value: JSON.stringify(snapshots.reserveObserved ?? null) },
   ];
 
+  if (snapshots.dewsCandidates && !snapshots.dewsUnavailable) {
+    writes.push({ key: SNAPSHOT_KEYS.dewsCandidates, value: JSON.stringify(snapshots.dewsCandidates) });
+  }
   if (snapshots.safety) {
     writes.push({ key: SNAPSHOT_KEYS.safety, value: JSON.stringify(snapshots.safety) });
   }

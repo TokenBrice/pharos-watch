@@ -144,6 +144,30 @@ describe("forgetSubscriber", () => {
     expect([...deletedTables].sort()).toEqual(chatTables.filter((table) => !retainedOnForget.has(table)));
   });
 
+  it("deletes rows in every Telegram table that names the user outside chat_id", async () => {
+    const { sqlite, db } = setupChatMigrationSqlite();
+    const userColumns = sqlite.prepare(`
+      SELECT tables.name AS table_name, columns.name AS column_name
+        FROM sqlite_master AS tables, pragma_table_info(tables.name) AS columns
+       WHERE tables.type = 'table' AND tables.name GLOB 'telegram_*' AND columns.name GLOB '*user_id'
+       ORDER BY tables.name, columns.name
+    `).all() as { table_name: string; column_name: string }[];
+    expect(userColumns).toEqual([{ table_name: "telegram_pending_disambiguation", column_name: "initiator_user_id" }]);
+    for (const chatId of ["-100", "-200"]) {
+      sqlite.prepare(`
+        INSERT INTO telegram_pending_disambiguation (
+          chat_id, alert_types, resolved_ids, ambiguous_ticker, candidates,
+          remaining_tickers, expires_at, initiator_user_id
+        ) VALUES (?, '[]', '[]', '', '[]', '[]', 9999999999, ?)
+      `).run(chatId, chatId === "-100" ? "42" : "43");
+    }
+
+    await forgetSubscriber(db, "42");
+
+    expect(sqlite.prepare("SELECT chat_id, initiator_user_id FROM telegram_pending_disambiguation").all())
+      .toEqual([{ chat_id: "-200", initiator_user_id: "43" }]);
+  });
+
   it("rolls back lifecycle deletes when an appended operation statement fails", async () => {
     const { sqlite, db } = setupChatMigrationSqlite();
     const chatId = "atomic-forget";
@@ -186,6 +210,11 @@ describe("forgetSubscriber", () => {
       `telegram:group-welcome:${chatId}`,
       `telegram:re-engagement-warned:${chatId}`,
       `telegram:mini-app-mutation-burst:${chatId}`,
+      `telegram:adoption-mini-app-session:${chatId}`,
+      `telegram:command-cooldown:${chatId}:mini-app:session`,
+      `telegram:command-cooldown:${chatId}:mini-app:stale:mini_app_mutation_denied:0123456789abcdef`,
+      `telegram:command-flood:inline:${chatId}`,
+      `telegram:command-cooldown:inline:${chatId}:/status:usdc-circle`,
     ];
     const neighboringCacheKeys = [
       "telegram:chat-send-backoff:420",
@@ -194,6 +223,9 @@ describe("forgetSubscriber", () => {
       "telegram:command-cooldown:420:/status",
       "telegram:chat-member:420:99",
       "telegram:re-engagement-warned:420",
+      "telegram:command-cooldown:420:mini-app:stale:mini_app_mutation_denied:0123456789abcdef",
+      "telegram:command-flood:inline:420",
+      "telegram:command-cooldown:inline:420:/status:usdc-circle",
     ];
     const cacheRows = [...deletedCacheKeys, ...neighboringCacheKeys];
     for (const key of cacheRows) {

@@ -18,7 +18,8 @@ import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,
 } from "../../../../test-helpers/report-cards-v9";
-import { buildDewsChanges, buildReserveTransitions, buildSafetyChanges } from "../../sources/telegram-alert-changes";
+import { TELEGRAM_ALERT_POLICY } from "@shared/lib/telegram-delivery-policy";
+import { buildReserveTransitions, buildSafetyChanges, planDewsAlerts } from "../../sources/telegram-alert-changes";
 import {
   buildDispatchSnapshotState,
   loadDewsRows,
@@ -65,7 +66,6 @@ function sourceData(
     dewsAlertableCache: cache({}),
     depegCache: cache({}),
     safetyCache: null,
-    launchCache: cache([]),
     reserveCache: reserveSource([]),
     reserveDispatchedCache: cache([]),
     ...overrides,
@@ -76,6 +76,7 @@ function safetyBaseline(
   response: ReportCardsV9CurrentResponse,
   grade: string,
   score: number,
+  pending: Record<string, unknown> = {},
 ) {
   const source = buildAlertSafetyV9SourceEnvelopeFromParts({
     cards: response.cards, safetyScoreIdentity: response.safetyScoreIdentity, publishedAt: response.updatedAt,
@@ -89,6 +90,7 @@ function safetyBaseline(
         ...source.snapshot["usdc-circle"],
         grade,
         score,
+        ...pending,
       },
     },
   });
@@ -222,9 +224,11 @@ describe("buildDispatchSnapshotState", () => {
           score: 72,
           band: "ALERT",
           signals_json: signalsJson,
+          computed_at: completedDewsAt,
         }],
         dewsCache: cache({ "usdc-circle": "CALM" }),
         dewsAlertableCache: cache({ "usdc-circle": "CALM" }),
+        dewsCandidatesCache: cache({ "usdc-circle": { computedAt: completedDewsAt - 1800, computations: 1 } }),
       }),
       nowSec,
     );
@@ -234,17 +238,52 @@ describe("buildDispatchSnapshotState", () => {
       failureReason: "v9-snapshot-unavailable",
     });
     expect(state.currentSafetySnapshot).toBeNull();
-    expect(buildDewsChanges(
+    expect(planDewsAlerts(
       sourceData().dewsRows.concat({
         stablecoin_id: "usdc-circle",
         score: 72,
         band: "ALERT",
         signals_json: signalsJson,
+        computed_at: completedDewsAt,
       }),
       state.safeDewsAlertable,
       state.safeDewsSnapshot,
+      state.safeDewsCandidates,
       () => "USDC",
-    )).toHaveLength(1);
+      nowSec,
+    ).changes).toHaveLength(1);
+    expect(state.currentSnapshots.dewsAlertable["usdc-circle"]).toBe("ALERT");
+    expect(state.currentSnapshots.dewsCandidates["usdc-circle"]).toBeUndefined();
+  });
+
+  it("holds a first-seen DEWS escalation and keeps the prior alertable band", () => {
+    const row = {
+      stablecoin_id: "usdc-circle",
+      score: 60,
+      band: "WARNING",
+      signals_json: signalsJson,
+      computed_at: completedDewsAt,
+    };
+    const state = buildDispatchSnapshotState(sourceData({
+      dewsRows: [row],
+      dewsCache: cache({ "usdc-circle": "ALERT" }),
+      dewsAlertableCache: cache({ "usdc-circle": "ALERT" }),
+    }), nowSec);
+    expect(state.safeDewsCandidates).toEqual({});
+    expect(state.currentSnapshots.dews["usdc-circle"]).toBe("WARNING");
+    expect(state.currentSnapshots.dewsAlertable["usdc-circle"]).toBe("ALERT");
+    expect(state.currentSnapshots.dewsCandidates["usdc-circle"]).toEqual({ computedAt: completedDewsAt, computations: 1, fromBand: "ALERT" });
+
+    // The persisted candidate round-trips; the next distinct computation alerts.
+    const next = buildDispatchSnapshotState(sourceData({
+      dewsRows: [{ ...row, computed_at: completedDewsAt + 1800 }],
+      dewsCache: cache(state.currentSnapshots.dews),
+      dewsAlertableCache: cache(state.currentSnapshots.dewsAlertable),
+      dewsCandidatesCache: cache(state.currentSnapshots.dewsCandidates),
+    }), nowSec + 1800);
+    expect(next.safeDewsCandidates).toEqual(state.currentSnapshots.dewsCandidates);
+    expect(next.currentSnapshots.dewsAlertable["usdc-circle"]).toBe("WARNING");
+    expect(next.currentSnapshots.dewsCandidates["usdc-circle"]).toBeUndefined();
   });
 
   it.each(["entering", "recovering"] as const)("suppresses %s pipeline-gap grade alerts", async (transition) => {
@@ -270,24 +309,150 @@ describe("buildDispatchSnapshotState", () => {
     expect(buildSafetyChanges(state.currentSafetySnapshot, state.safeSafetySnapshot, () => "USDC").changes).toEqual([]);
   });
 
+  it("adopts current DEWS bands on a reseed so an existing condition never alerts afterwards", () => {
+    const warning = { stablecoin_id: "usdc-circle", score: 60, band: "WARNING", signals_json: signalsJson, computed_at: completedDewsAt };
+    const seeded = buildDispatchSnapshotState(sourceData({
+      dewsRows: [warning],
+      dewsCache: null,
+      dewsAlertableCache: null,
+    }), nowSec);
+    expect(seeded.mustSeedSnapshots).toBe(true);
+    expect(seeded.currentSnapshots).toMatchObject({
+      dews: { "usdc-circle": "WARNING" },
+      dewsAlertable: { "usdc-circle": "WARNING" },
+      dewsCandidates: {},
+    });
+    const next = buildDispatchSnapshotState(sourceData({
+      dewsRows: [{ ...warning, computed_at: completedDewsAt + 1800 }],
+      dewsCache: cache(seeded.currentSnapshots.dews),
+      dewsAlertableCache: cache(seeded.currentSnapshots.dewsAlertable),
+      dewsCandidatesCache: cache(seeded.currentSnapshots.dewsCandidates),
+    }), nowSec + 1800);
+    expect(planDewsAlerts([{ ...warning, computed_at: completedDewsAt + 1800 }],
+      next.safeDewsAlertable, next.safeDewsSnapshot, next.safeDewsCandidates, (id) => id, nowSec + 1800).changes).toEqual([]);
+  });
+
+  it("stays silent on the first run after deploy, before the DEWS candidate key exists", () => {
+    // Production state before PR B: raw observed and alertable snapshots, no candidate key.
+    const rows = [
+      { stablecoin_id: "usdc-circle", score: 60, band: "WARNING", signals_json: signalsJson, computed_at: completedDewsAt },
+      { stablecoin_id: "usdt-tether", score: 80, band: "DANGER", signals_json: signalsJson, computed_at: completedDewsAt },
+      { stablecoin_id: "dai-makerdao", score: 40, band: "ALERT", signals_json: signalsJson, computed_at: completedDewsAt },
+    ];
+    const state = buildDispatchSnapshotState(sourceData({
+      dewsRows: rows,
+      dewsCache: cache({ "usdc-circle": "WARNING", "usdt-tether": "WARNING", "dai-makerdao": "WATCH" }),
+      dewsAlertableCache: cache({ "usdc-circle": "WARNING", "usdt-tether": "WARNING", "dai-makerdao": "DANGER" }),
+    }), nowSec);
+    expect(state.mustSeedSnapshots).toBe(false);
+    expect(state.safeDewsCandidates).toEqual({});
+    const plan = planDewsAlerts(rows, state.safeDewsAlertable, state.safeDewsSnapshot, state.safeDewsCandidates, (id) => id, nowSec);
+    expect(plan.changes).toEqual([]);
+    expect(state.currentSnapshots.dewsCandidates).toEqual(plan.nextCandidates);
+  });
+
+  it("keeps DEWS baselines and does not block depeg when the DEWS read is unavailable", () => {
+    const staleAt = nowSec - 2 * 24 * 3600;
+    const state = buildDispatchSnapshotState(sourceData({
+      dewsRows: [],
+      dewsCache: cache({ "usdc-circle": "WARNING" }, staleAt),
+      dewsAlertableCache: cache({ "usdc-circle": "WARNING" }, staleAt),
+      dewsCandidatesCache: cache({ "usdc-circle": { computedAt: 1, computations: 1, fromBand: "ALERT" } }, staleAt),
+    }), nowSec);
+    expect(state.mustSeedSnapshots).toBe(false);
+    expect(state.currentSnapshots).toMatchObject({
+      dewsUnavailable: true,
+      dews: { "usdc-circle": "WARNING" },
+      dewsAlertable: { "usdc-circle": "WARNING" },
+      dewsCandidates: { "usdc-circle": { computedAt: 1, computations: 1, fromBand: "ALERT" } },
+    });
+  });
+
+  it.each([
+    ["continuity loss (comparable identity)", false, "B"],
+    ["a methodology identity change", true, "D"],
+  ] as const)("reseeds the safety baseline across %s", async (_label, changeIdentity, expectedGrade) => {
+    const response = makeWorkerReportCardsV9Response({
+      updatedAt: nowSec - 60, asOfSec: nowSec - 120,
+      cards: [makeWorkerV9Card({ grade: "D", score: 44 })],
+    });
+    const previous = JSON.parse(safetyBaseline(response, "B", 72, {
+      pendingKind: "severe-downgrade", pendingSinceSec: nowSec - 3600, lastAlertedAtSec: nowSec - 2 * 24 * 3600,
+    }).value);
+    if (changeIdentity) previous.safetyScoreIdentity = { ...previous.safetyScoreIdentity, methodologyVersion: "10.25" };
+    // Older than two dispatch intervals: continuity is lost either way.
+    const state = buildDispatchSnapshotState(sourceData({
+      safetyCache: cache(previous, nowSec - 3600),
+      safetySourceAssessment: await safetyAssessment(response),
+    }), nowSec);
+    expect(state.safetySnapshotNeedsSeed).toBe(true);
+    const row = state.currentSnapshots.safety?.snapshot["usdc-circle"];
+    expect(row).toMatchObject({ grade: expectedGrade, lastAlertedAtSec: nowSec - 2 * 24 * 3600 });
+    expect(row?.pendingKind).toBe(changeIdentity ? undefined : "severe-downgrade");
+  });
+
+  it("defers a due safety alert and a new depeg through a seed run that sends nothing", async () => {
+    const response = makeWorkerReportCardsV9Response({
+      updatedAt: nowSec - 60, asOfSec: nowSec - 120,
+      cards: [makeWorkerV9Card({ grade: "D", score: 44 })],
+    });
+    const due = { pendingKind: "severe-downgrade", pendingSinceSec: nowSec - TELEGRAM_ALERT_POLICY.safety.dwellSec };
+    const staleAt = nowSec - 2 * 24 * 3600;
+    const depegRow = {
+      event_id: 7, stablecoin_id: "usdc-circle", symbol: "USDC", direction: "below" as const,
+      peak_deviation_bps: 150, start_price: 0.985, peak_price: 0.985, peg_reference: 1, started_at: nowSec - 120,
+    };
+    const state = buildDispatchSnapshotState(sourceData({
+      // A DEWS cache older than 24 h forces a global seed run.
+      dewsRows: [{ stablecoin_id: "usdc-circle", score: 10, band: "CALM", signals_json: signalsJson, computed_at: completedDewsAt }],
+      dewsCache: cache({}, staleAt),
+      dewsAlertableCache: cache({}, staleAt),
+      activeDepegRows: [depegRow],
+      safetySourceAssessment: await safetyAssessment(response),
+      safetyCache: safetyBaseline(response, "B", 72, due),
+    }), nowSec);
+    expect(state.mustSeedSnapshots).toBe(true);
+    expect(state.safetySnapshotNeedsSeed).toBe(false);
+    expect(state.currentSnapshots.safety?.snapshot["usdc-circle"]).toMatchObject({ grade: "B", ...due });
+    expect(state.currentSnapshots.safety?.snapshot["usdc-circle"]?.lastAlertedAtSec).toBeUndefined();
+    expect(state.currentSnapshots.depeg).toEqual({});
+
+    // The next normal run still sees both changes.
+    const next = buildDispatchSnapshotState(sourceData({
+      dewsRows: [{ stablecoin_id: "usdc-circle", score: 10, band: "CALM", signals_json: signalsJson, computed_at: completedDewsAt }],
+      dewsCache: cache(state.currentSnapshots.dews),
+      dewsAlertableCache: cache(state.currentSnapshots.dewsAlertable),
+      activeDepegRows: [depegRow],
+      depegCache: cache(state.currentSnapshots.depeg),
+      safetySourceAssessment: await safetyAssessment(response),
+      safetyCache: cache(state.currentSnapshots.safety),
+    }), nowSec + 300);
+    expect(next.mustSeedSnapshots).toBe(false);
+    expect(buildSafetyChanges(next.currentSafetySnapshot, next.safeSafetySnapshot, () => "USDC", nowSec + 300).changes).toHaveLength(1);
+    expect(next.safeDepegSnapshot).toEqual({});
+  });
+
   it("compares consecutive canonical V9 publications", async () => {
     const response = makeWorkerReportCardsV9Response({
       updatedAt: nowSec - 60,
       asOfSec: nowSec - 120,
-      cards: [makeWorkerV9Card({ grade: "A+", score: 91 })],
+      cards: [makeWorkerV9Card({ grade: "D", score: 44 })],
     });
     const state = buildDispatchSnapshotState(
       sourceData({
         safetySourceAssessment: await safetyAssessment(response),
-        safetyCache: safetyBaseline(response, "D", 44),
+        safetyCache: safetyBaseline(response, "A+", 91, {
+          pendingKind: "severe-downgrade",
+          pendingSinceSec: nowSec - TELEGRAM_ALERT_POLICY.safety.dwellSec,
+        }),
       }),
       nowSec,
     );
 
     expect(state.safetySnapshotNeedsSeed).toBe(false);
     expect(state.currentSafetySnapshot?.["usdc-circle"]).toMatchObject({
-      grade: "A+",
-      score: 91,
+      grade: "D",
+      score: 44,
     });
     expect(
       buildSafetyChanges(

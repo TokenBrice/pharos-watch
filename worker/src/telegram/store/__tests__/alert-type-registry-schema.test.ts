@@ -10,7 +10,7 @@ import { PRESET_ALERT_COLUMN } from "../../../cron/telegram/dispatch/telegram-pr
 /**
  * The alert-type registry's column names are load-bearing D1 identifiers: the
  * subscription upsert builder, the mini-app state projection, the /settings
- * surface and the portable-watchlist export all address columns through it. A
+ * surface and the bulk watchlist editor all address columns through it. A
  * typo would only surface as a runtime D1 error in production, so the registry
  * is checked against the migrated schema here.
  */

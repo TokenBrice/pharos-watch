@@ -5,13 +5,13 @@ import {
   TELEGRAM_ALERT_FAMILY_SHORT_LABELS,
   TELEGRAM_ALERT_PERSISTENCE,
 } from "@shared/lib/telegram-alert-families";
-import { TELEGRAM_ALERT_TYPES, type TelegramAlertType } from "@shared/types/status";
+import { type TelegramAlertType } from "@shared/types/status";
+import { TELEGRAM_LIVE_ALERT_TYPES } from "@shared/types/status/telegram";
 import { escapeHtml, type InlineKeyboardButton } from "../delivery/telegram";
-import { formatTelegramAge, formatTelegramIsoTimestamp } from "../common/format-age";
 import { MANAGE_PAGE_SIZE } from "../common/constants";
 import { buildTelegramMiniAppUrl } from "../common/mini-app-url";
 import type { ResolvedCoin } from "../common/alerts-parser";
-import type { TelegramPresetDefinition, TelegramPresetId } from "../common/presets";
+import type { TelegramPresetId } from "../common/presets";
 import { isQuietHoursActive } from "../common/quiet-hours";
 import { formatTelegramCompactUsd, formatTelegramSignedCompactUsd } from "../common/telegram-format";
 import type { PresetSubscriptionRow, SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
@@ -26,20 +26,17 @@ interface AlertFamilyDescriptionOptions {
   labels?: Partial<Record<TelegramAlertType, string>>;
 }
 
-const GLOBAL_SAFETY_LABEL = "Safety (downgrades; 3-point drop when scored)";
+const GLOBAL_SAFETY_LABEL = "Safety downgrades of 3+ points";
 
 function formatDepegLabel(step: number | null | undefined): string {
   return step != null ? `Depeg +${step}bps` : "Depeg";
 }
 
 export function buildNotFoundMessage(ticker: string, suggestion?: ResolvedCoin): string {
-  const lines = [`Ticker or preset "${ticker}" not found.`];
+  const lines = [`No stablecoin or preset called "${ticker}".`];
   if (suggestion) {
-    lines.push(`Did you mean ${suggestion.symbol} (${suggestion.id})?`);
+    lines.push(`Did you mean ${suggestion.symbol}?`);
   }
-  lines.push("You can also use the exact Pharos coin id when a ticker is ambiguous.");
-  lines.push("Use /presets to browse preset watchlists.");
-  lines.push("Example: /subscribe dews usd-top25");
   return escapeHtml(lines.join("\n"));
 }
 
@@ -96,7 +93,8 @@ function describeAlertFamilies(
 ): string {
   if (!source) return options.emptyLabel;
   const values = source as unknown as Record<string, unknown>;
-  const labels = TELEGRAM_ALERT_TYPES.flatMap((alertType) => {
+  // Launch is retired: a leftover launch column no longer reads as a follow.
+  const labels = TELEGRAM_LIVE_ALERT_TYPES.flatMap((alertType) => {
     const persistence = TELEGRAM_ALERT_PERSISTENCE[alertType];
     const column = options.scope === "global" ? persistence.globalColumn : persistence.subscriptionColumn;
     return values[column]
@@ -107,8 +105,7 @@ function describeAlertFamilies(
 }
 
 function formatCoinLabel(stablecoinId: string): string {
-  const coin = STABLECOIN_BY_ID.get(stablecoinId);
-  return coin ? `${coin.symbol} (${coin.id})` : stablecoinId;
+  return STABLECOIN_BY_ID.get(stablecoinId)?.symbol ?? stablecoinId;
 }
 
 function formatPresetLabelList(
@@ -156,82 +153,74 @@ export function buildSubscriptionSummaryMessage(
   return escapeHtml(lines.join("\n"));
 }
 
-export function buildGlobalAlertSummaryMessage(header: string, subscriber: SubscriberRow | null): string {
-  return escapeHtml(
-    [
-      header,
-      `All stablecoins: ${describeGlobalAlertSettings(subscriber)}`,
-      `Quiet hours: ${
-        subscriber?.quiet_hours_enabled
-          ? formatQuietHours(subscriber.quiet_hours_start_utc, subscriber.quiet_hours_end_utc, subscriber.timezone)
-          : "Off"
-      }`,
-    ].join("\n"),
-  );
+export interface ListMessageInput {
+  subscriber: SubscriberRow | null;
+  subscriptions: SubscriptionRow[];
+  presetSubscriptions: PresetSubscriptionRow[];
+  presetLabelById: ReadonlyMap<string, string>;
+  lastDeliveryAt?: number | null;
+  nowSec?: number;
 }
 
-export function buildListMessage(
-  subscriber: SubscriberRow | null,
-  subscriptions: SubscriptionRow[],
-  presetSubscriptions: PresetSubscriptionRow[] = [],
-  nowSec = Math.floor(Date.now() / 1000),
-): string {
-  if (!subscriber && subscriptions.length === 0 && presetSubscriptions.length === 0) {
-    return "No active subscriptions. Use /subscribe to get started, or try /presets for preset watchlists.";
-  }
-
-  const lines = [
-    `All stablecoins: ${describeGlobalAlertSettings(subscriber)}`,
-    `Quiet hours: ${formatQuietHoursStatus(subscriber, nowSec)}`,
-    formatSnoozeLine(subscriber?.alert_snooze_until_ts ?? null, nowSec),
-    `Dynamic presets (${presetSubscriptions.length}):`,
-  ];
-
-  if (presetSubscriptions.length === 0) {
-    lines.push("None");
-  } else {
-    for (const row of presetSubscriptions) {
-      lines.push(`- ${row.preset_id}: ${describePresetSubscriptionSettings(row)}`);
-    }
-  }
-
-  lines.push(`Coins (${subscriptions.length}):`);
-
-  if (subscriptions.length === 0) {
-    lines.push("None");
-  } else {
-    const sorted = sortSubscriptions(subscriptions);
-    for (const row of sorted) {
-      lines.push(
-        `- ${formatCoinLabel(row.stablecoin_id)}: ${describeSubscriptionSettings(row, nowSec, { perCoinTag: true })}`,
-      );
-    }
-  }
-
-  lines.push("Precedence: per-coin > preset > all-stablecoins. Explicit per-family off overrides inherited defaults.");
-  lines.push("Tip: use /presets to browse dynamic watchlists, or /unsnooze to clear alert snooze.");
-  return escapeHtml(lines.join("\n"));
+function hasActiveFamily(row: SubscriptionRow): boolean {
+  return describeAlertFamilies(row, { scope: "subscription", emptyLabel: "" }) !== "";
 }
 
-export function buildPresetCatalogMessage(definitions: TelegramPresetDefinition[]): string {
-  const pegPresets = definitions.filter((definition) => definition.category === "peg-leaders");
-  const marketCapPresets = definitions.filter((definition) => definition.category === "market-cap");
+/** True when the chat follows nothing: no preset, no active coin, no global family. */
+export function followsNothing(input: Pick<ListMessageInput, "subscriber" | "subscriptions" | "presetSubscriptions">): boolean {
+  const activePreset = input.presetSubscriptions.some((row) => row.alert_dews || row.alert_depeg || row.alert_safety);
+  return !input.subscriptions.some(hasActiveFamily) && !activePreset && describeGlobalAlertSettings(input.subscriber) === "None";
+}
+
+/** One line per follow source, in the order a user thinks about them. */
+export function describeFollows(input: ListMessageInput): string[] {
+  const lines: string[] = [];
+  for (const row of input.presetSubscriptions) {
+    const label = input.presetLabelById.get(row.preset_id) ?? row.preset_id;
+    lines.push(`<b>${escapeHtml(label)}</b> (preset, updates with market cap): ${escapeHtml(describePresetSubscriptionSettings(row))}`);
+  }
+  const sorted = sortSubscriptions(input.subscriptions);
+  const followed = sorted.filter(hasActiveFamily);
+  const muted = sorted.filter((row) => !hasActiveFamily(row));
+  const nowSec = input.nowSec ?? Math.floor(Date.now() / 1000);
+  if (followed.length > 0) {
+    const coins = followed.map((row) => `${formatCoinLabel(row.stablecoin_id)} (${describeSubscriptionSettings(row, nowSec)})`);
+    lines.push(`<b>Coins:</b> ${escapeHtml(coins.join(", "))}`);
+  }
+  if (muted.length > 0) {
+    lines.push(`<b>Muted:</b> ${escapeHtml(muted.map((row) => formatCoinLabel(row.stablecoin_id)).join(", "))}`);
+  }
+  const global = describeGlobalAlertSettings(input.subscriber);
+  if (global !== "None") lines.push(`<b>Every tracked coin:</b> ${escapeHtml(global)}`);
+  return lines;
+}
+
+/** Pause and quiet-hours state as user-facing lines; empty when neither applies. */
+export function describeDeliveryState(subscriber: SubscriberRow | null, nowSec: number): string[] {
+  const lines: string[] = [];
+  const snoozeUntil = subscriber?.alert_snooze_until_ts ?? null;
+  if (snoozeUntil != null && snoozeUntil > nowSec) {
+    lines.push(isPausedSentinel(snoozeUntil)
+      ? "Alerts are paused until you resume (/pause off)."
+      : `Alerts are paused for ${formatSnoozeDuration(snoozeUntil - nowSec)} more.`);
+  }
+  if (subscriber?.quiet_hours_enabled) {
+    lines.push(`Quiet hours ${escapeHtml(formatQuietHoursStatus(subscriber, nowSec))}`);
+  }
+  return lines;
+}
+
+export function buildListMessage(input: ListMessageInput): string {
+  const nowSec = input.nowSec ?? Math.floor(Date.now() / 1000);
   const lines = [
-    "Preset Watchlists",
-    "",
-    "Peg Leaders:",
-    ...pegPresets.map((definition) => `- ${definition.id}: ${definition.description}`),
-    "",
-    "Market Cap:",
-    ...marketCapPresets.map((definition) => `- ${definition.id}: ${definition.description}`),
-    "",
-    "Examples:",
-    "- /subscribe dews usd-top25",
-    "- /subscribe dews usd-top-25",
-    "- /subscribe safety mcap-ge-1b",
-    "- /unsubscribe eur-top10",
+    "<b>What you follow</b>",
+    ...describeFollows({ ...input, nowSec }),
+    ...describeDeliveryState(input.subscriber, nowSec),
   ];
-  return escapeHtml(lines.join("\n"));
+  if (input.lastDeliveryAt != null) {
+    lines.push(`Last alert delivered ${escapeHtml(formatElapsed(input.lastDeliveryAt, nowSec))}.`);
+  }
+  return lines.join("\n");
 }
 
 export function buildPresetUnavailableMessage(): string {
@@ -249,20 +238,14 @@ export function buildPresetSubscriptionSummaryMessage(
   },
 ): string {
   const sorted = sortSubscriptions(subscriptions);
-  const shown = sorted.slice(0, 12);
+  const count = options.presetCoinCount;
   const lines = [
-    `Preset watchlists followed: ${formatPresetLabelList(options.presetIds, options.presetLabelById)}`,
-    `Current dynamic coverage: ${options.presetCoinCount} coin${options.presetCoinCount === 1 ? "" : "s"}.`,
+    `Done. You follow ${formatPresetLabelList(options.presetIds, options.presetLabelById)} (${count} coin${count === 1 ? "" : "s"} today; the list updates with market cap).`,
   ];
   if (sorted.length > 0) {
-    lines.push(`Direct coin preferences updated (${sorted.length}):`);
-    for (const row of shown) {
-      lines.push(`- ${formatCoinLabel(row.stablecoin_id)}: ${describeSubscriptionSettings(row)}`);
-    }
-    appendTruncationLine(lines, sorted.length, shown.length);
+    lines.push(`Also updated: ${sorted.map((row) => `${formatCoinLabel(row.stablecoin_id)} (${describeSubscriptionSettings(row)})`).join(", ")}`);
   }
-  lines.push("Preset membership updates automatically; direct coin preferences stay independent.");
-  lines.push("Use /list to review both sources and per-coin settings.");
+  lines.push("See everything with /list.");
   return escapeHtml(lines.join("\n"));
 }
 
@@ -271,23 +254,18 @@ export function buildPresetUnsubscribeSummaryMessage(
   options: {
     presetIds: readonly TelegramPresetId[];
     presetLabelById: ReadonlyMap<string, string>;
-    presetCoinCount: number | null;
   },
 ): string {
   const lines = [
-    `Preset watchlists removed: ${formatPresetLabelList(options.presetIds, options.presetLabelById)}`,
-    options.presetCoinCount == null
-      ? "Stopped dynamic coverage; current membership was unavailable for preview."
-      : `Stopped dynamic coverage for ${options.presetCoinCount} current coin${options.presetCoinCount === 1 ? "" : "s"}.`,
-    "Direct coin preferences and overlapping preset follows were preserved.",
+    `Stopped following ${formatPresetLabelList(options.presetIds, options.presetLabelById)}. Coins you follow directly are unchanged.`,
   ];
   if (coins.length > 0) {
     const sortedCoins = [...coins].sort((a, b) => a.symbol.localeCompare(b.symbol) || a.id.localeCompare(b.id));
     const shownCoins = sortedCoins.slice(0, 12);
-    lines.push(`Explicitly removed direct coin preferences (${coins.length}):`, formatCoinLines(shownCoins));
+    lines.push(`Also removed (${coins.length}):`, formatCoinLines(shownCoins));
     appendTruncationLine(lines, sortedCoins.length, shownCoins.length);
   }
-  lines.push("Use /list to confirm the remaining subscriptions.");
+  lines.push("See what is left with /list.");
   return escapeHtml(lines.join("\n"));
 }
 
@@ -309,11 +287,11 @@ export function describeSubscriptionSettings(
           : "Safety",
     },
   });
-  const suppressed = TELEGRAM_ALERT_TYPES.filter((family) => {
+  const suppressed = TELEGRAM_LIVE_ALERT_TYPES.filter((family) => {
     const columns = TELEGRAM_ALERT_PERSISTENCE[family];
     return row[columns.overrideColumn] === 1 && row[columns.subscriptionColumn] !== 1;
   });
-  const fullyMuted = suppressed.length === TELEGRAM_ALERT_TYPES.length;
+  const fullyMuted = suppressed.length === TELEGRAM_LIVE_ALERT_TYPES.length;
   let base = fullyMuted
     ? options.perCoinTag ? "Muted (overrides defaults)" : "Muted"
     : description
@@ -353,7 +331,7 @@ export function describeGlobalAlertSettings(subscriber: SubscriberRow | null): s
 }
 
 function formatCoinLines(coins: ResolvedCoin[]): string {
-  return coins.map((coin) => `- ${coin.symbol} (${coin.id})`).join("\n") || "None";
+  return coins.map((coin) => `- ${coin.symbol}`).join("\n") || "None";
 }
 
 function quietHoursTimezoneLabel(timezone: string | null | undefined): string {
@@ -383,11 +361,6 @@ function formatQuietHoursStatus(subscriber: SubscriberRow | null, nowSec: number
   return `${pad(start)}:00–${pad(end)}:00 ${zone}`;
 }
 
-function formatSnoozeLine(snoozeUntilSec: number | null, nowSec: number): string {
-  if (snoozeUntilSec == null || snoozeUntilSec <= nowSec) return "Snooze: Off";
-  if (isPausedSentinel(snoozeUntilSec)) return "Paused (indefinite)";
-  return `Snoozed for ${formatSnoozeDuration(snoozeUntilSec - nowSec)}`;
-}
 
 function formatSnoozeDuration(seconds: number): string {
   return formatRelativeDurationSeconds(seconds, {
@@ -398,11 +371,8 @@ function formatSnoozeDuration(seconds: number): string {
   });
 }
 
-function formatAge(ts: number | null | undefined, nowSec = Math.floor(Date.now() / 1000)): string {
-  return formatTelegramAge(ts, nowSec);
-}
 
-function formatElapsed(ts: number | null | undefined, nowSec = Math.floor(Date.now() / 1000)): string {
+export function formatElapsed(ts: number | null | undefined, nowSec = Math.floor(Date.now() / 1000)): string {
   if (ts == null || !Number.isFinite(ts)) return "";
   const ageSec = Math.max(0, nowSec - ts);
   return formatRelativeAgeSeconds(ageSec, {
@@ -414,42 +384,23 @@ function formatElapsed(ts: number | null | undefined, nowSec = Math.floor(Date.n
   });
 }
 
-export function buildStatusDiscoveryKeyboard(
-  stablecoinId: string,
-  options: { includeMiniAppButton?: boolean; miniAppPayload?: string } = {},
-): {
-  inline_keyboard: InlineKeyboardButton[][];
-} {
-  const rows: InlineKeyboardButton[][] = [
-    [
-      { text: "Why?", callback_data: `why:${stablecoinId}` },
-      { text: "Coverage", callback_data: `coverage:${stablecoinId}` },
-      { text: "Subscribe", callback_data: `quicksub:${stablecoinId}` },
-    ],
-  ];
-  if (options.includeMiniAppButton) {
-    rows.push([
-      {
-        text: "Open in app",
-        web_app: { url: buildTelegramMiniAppUrl(options.miniAppPayload ?? formatCoinPayload(stablecoinId)) },
-      },
-    ]);
-  }
-  return { inline_keyboard: rows };
+const CALLBACK_DATA_MAX_BYTES = 64;
+
+export function fitsCallbackData(data: string): boolean {
+  return new TextEncoder().encode(data).length <= CALLBACK_DATA_MAX_BYTES;
 }
 
-/** Inline keyboard with a single `[ Manage ]` entry button, attached to /list. */
-export function buildManageEntryKeyboard(options: { includeMiniAppButton?: boolean } = {}): {
+/** The single Mini App entry label used everywhere in chat. */
+export const MANAGE_ALERTS_LABEL = "Manage Alerts";
+
+export function buildManageAlertsKeyboard(payload = "watchlist"): {
   inline_keyboard: InlineKeyboardButton[][];
 } {
-  const rows: InlineKeyboardButton[][] = [[{ text: "Manage", callback_data: "manage:page:0" }]];
-  if (options.includeMiniAppButton)
-    rows.push([{ text: "Open in app", web_app: { url: buildTelegramMiniAppUrl("watchlist") } }]);
-  return { inline_keyboard: rows };
+  return buildMiniAppOnlyKeyboard(MANAGE_ALERTS_LABEL, payload);
 }
 
 export function buildMiniAppOnlyKeyboard(
-  text = "Open control panel",
+  text = MANAGE_ALERTS_LABEL,
   payload = "watchlist",
 ): {
   inline_keyboard: InlineKeyboardButton[][];
@@ -457,58 +408,22 @@ export function buildMiniAppOnlyKeyboard(
   return { inline_keyboard: [[{ text, web_app: { url: buildTelegramMiniAppUrl(payload) } }]] };
 }
 
-/**
- * Paginated keyboard for watchlist management. Renders up to `MANAGE_PAGE_SIZE`
- * rows of `[ ❌ <SYMBOL> ]` buttons followed by a Prev/Next nav row when needed.
- * Page bounds are normalized by the shared pagination helper.
- */
-export function buildManageWatchlistKeyboard(
-  subscriptions: SubscriptionRow[],
-  page: number,
-): {
-  inline_keyboard: Array<Array<{ text: string; callback_data: string }>>;
-} {
-  const sorted = sortSubscriptions(subscriptions);
-  const pageRows = paginateChatRows(sorted, page);
-
-  const rows: Array<Array<{ text: string; callback_data: string }>> = pageRows.rows.map((row) => {
-    const coin = STABLECOIN_BY_ID.get(row.stablecoin_id);
-    const symbol = coin?.symbol ?? row.stablecoin_id;
-    return [
-      {
-        text: `❌ ${symbol}`,
-        callback_data: `unsub:${row.stablecoin_id}`,
-      },
-    ];
-  });
-
-  if (pageRows.totalPages > 1) {
-    const nav: Array<{ text: string; callback_data: string }> = [];
-    if (pageRows.page > 0) {
-      nav.push({ text: "◀ Prev", callback_data: `manage:page:${pageRows.page - 1}` });
-    }
-    if (pageRows.page < pageRows.totalPages - 1) {
-      nav.push({ text: "Next ▶", callback_data: `manage:page:${pageRows.page + 1}` });
-    }
-    if (nav.length > 0) rows.push(nav);
+/** `/status <coin>` keyboard: follow the coin, plus its Mini App page in private chats. */
+export function buildCoinStatusKeyboard(
+  stablecoinId: string,
+  symbol: string,
+  options: { includeMiniAppButton?: boolean } = {},
+): { inline_keyboard: InlineKeyboardButton[][] } | undefined {
+  const row: InlineKeyboardButton[] = [];
+  const followData = `quicksub:${stablecoinId}`;
+  if (fitsCallbackData(followData)) row.push({ text: `Follow ${symbol}`, callback_data: followData });
+  if (options.includeMiniAppButton) {
+    row.push({ text: `Manage ${symbol}`, web_app: { url: buildTelegramMiniAppUrl(formatCoinPayload(stablecoinId)) } });
   }
-
-  return { inline_keyboard: rows };
+  return row.length > 0 ? { inline_keyboard: [row] } : undefined;
 }
 
-/** Header text rendered above the manage keyboard. */
-export function buildManageWatchlistMessage(subscriptions: SubscriptionRow[], page: number): string {
-  if (subscriptions.length === 0) {
-    return escapeHtml("No coin subscriptions to manage. Use /subscribe to add some.");
-  }
-  const { page: clampedPage, totalPages } = paginateChatRows(subscriptions, page);
-  const pageLine = totalPages > 1 ? ` Page ${clampedPage + 1}/${totalPages}.` : "";
-  return escapeHtml(
-    `Manage watchlist (${subscriptions.length} coin${subscriptions.length === 1 ? "" : "s"}).${pageLine} Tap a row to remove that coin.`,
-  );
-}
-
-/** Shared availability/evidence disclosure for compact status and coverage. */
+/** Safety grade in plain words; model, version and generation ids stay on the website. */
 export function formatTelegramSafety(safety: NonNullable<StatusForCoin["safety"]>): string {
   const rating = safety.ratingStatus === "pipeline-gap"
     ? "not available right now"
@@ -516,68 +431,66 @@ export function formatTelegramSafety(safety: NonNullable<StatusForCoin["safety"]
   return `${rating}${safety.score != null ? ` (${safety.score})` : ""}${safety.ratingStatus !== "pipeline-gap" && safety.partialEvidence ? ", some inputs missing" : ""}`;
 }
 
-/** Status and coverage disclose the same accepted source evidence. */
-export function formatTelegramYield(status: StatusForCoin): string {
-  const value = status.yield;
-  if (!value) return "Yield: unavailable";
-  const provenance = value.provenance;
-  const freshness = provenance?.sourceFreshness ?? "unknown";
-  const reason = freshness === "stale" ? "source-stale"
-    : freshness === "unknown" ? "source-freshness-unknown" : null;
-  const observedAt = formatTelegramIsoTimestamp(provenance?.sourceObservedAt, "unknown");
-  const age = provenance?.sourceAgeSeconds != null ? `${provenance.sourceAgeSeconds}s` : "unknown";
-  const budget = provenance?.sourceMaxAgeSeconds != null ? `${provenance.sourceMaxAgeSeconds}s` : "unknown";
-  const pys = value.pharosYieldScore != null ? String(Math.round(value.pharosYieldScore))
-    : `unavailable (${escapeHtml(value.pysUnavailableReason ?? "pys-unavailable")})`;
-  return `Yield: ${value.apy30d.toFixed(2)}% 30d at ${escapeHtml(value.source)}, PYS ${pys}; source observed ${observedAt} (age ${age}, ${freshness}${reason ? `: ${reason}` : ""}, budget ${budget}; generation ${escapeHtml(value.generationId ?? "unknown")})`;
+function formatUpdated(ts: number | null | undefined, nowSec: number): string {
+  return ts == null || !Number.isFinite(ts) ? "update time unknown" : `updated ${formatElapsed(ts, nowSec)}`;
 }
 
-export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
-  const nowSec = Math.floor(Date.now() / 1000);
-  const priceLine =
-    s.priceUsd != null
-      ? `Price: $${s.priceUsd.toFixed(4)}${s.priceUpdatedAt ? ` (${formatAge(s.priceUpdatedAt, nowSec)})` : ""}`
-      : "Price: no recent quote";
-  const dewsLine = s.dews
-    ? `DEWS: ${s.dews.band} (score ${s.dews.score}, ${formatAge(s.dews.computedAt, nowSec)})`
-    : "DEWS: no recent signal";
-  const safetyLine = s.safety
-    ? `Safety: ${formatTelegramSafety(s.safety)}, ${formatAge(s.safety.publishedAt, nowSec)}`
+function formatYieldLine(status: StatusForCoin, nowSec: number): string | null {
+  const value = status.yield;
+  if (!value) {
+    // Coins with no yield have no line; a failed yield read says so.
+    const notYieldBearing = status.yieldUnavailableReason == null || status.yieldUnavailableReason === "yield-ranking-not-found";
+    return notYieldBearing ? null : "Yield not available right now";
+  }
+  return `Yield ${value.apy30d.toFixed(2)}% (30-day, ${escapeHtml(value.source)}), ${formatUpdated(value.provenance?.sourceObservedAt, nowSec)}`;
+}
+
+/**
+ * `/status <coin>` card. Every value names how old it is and an unavailable
+ * value says so instead of disappearing. No freshness verdict is published
+ * here; budgets and generations stay on the website and API.
+ */
+export function buildStatusMessage(symbol: string, s: StatusForCoin, nowSec = Math.floor(Date.now() / 1000)): string {
+  const name = `<b>${escapeHtml(symbol)}</b>`;
+  const price = s.priceUsd != null ? `$${s.priceUsd.toFixed(4)}` : null;
+  const headline = s.depeg.status === "active"
+    ? `${s.depeg.direction === "below" ? "▼" : "▲"} ${name} off peg (${s.depeg.direction}), peak ${(Math.abs(s.depeg.peakDeviationBps) / 100).toFixed(1)}%, since ${formatElapsed(s.depeg.startedAt, nowSec)}${price ? `. Price ${price}` : ""}`
+    : price
+      ? `${name} at ${price}, no active depeg`
+      : `${name}: no recent price, no active depeg`;
+  const safety = s.safety
+    ? `Safety grade ${formatTelegramSafety(s.safety)}`
     : s.safetyUnavailableReason
-      ? "Safety: temporarily unavailable"
-      : "Safety: not rated";
-  const depegLine =
-    s.depeg.status === "active"
-      ? `Depeg: active, ${s.depeg.direction} peg, peak ${(s.depeg.peakDeviationBps / 100).toFixed(1)}%, started ${formatElapsed(s.depeg.startedAt, nowSec)}`
-      : "Depeg: stable";
-  // Optional context keeps its producer clock: values outside their existing budget are labelled
-  // stale, and unavailable supply is stated explicitly rather than rendered as $0 or dropped.
-  const staleSuffix = (current: boolean) => (current ? "" : ", stale");
+      ? "Safety grade not available right now"
+      : "Not rated for safety";
+  const dews = s.dews
+    ? `early-warning stress ${s.dews.band} (${s.dews.score}/100)`
+    : "early-warning stress not available right now";
   const supply = formatTelegramCompactUsd(s.supplyUsd);
-  const supplyAge = s.supplyObservedAt != null ? formatAge(s.supplyObservedAt, nowSec) : "age unknown";
-  const supplyLine = supply
-    ? `Supply: ${supply} (${supplyAge}${staleSuffix(s.supplyCurrent)})`
-    : "Supply: unavailable";
+  const flow = s.flow ? formatTelegramSignedCompactUsd(s.flow.netFlowUsd) : null;
+  const supplyLine = [
+    supply ? `Supply ${supply}, ${formatUpdated(s.supplyObservedAt, nowSec)}` : "Supply not available right now",
+    flow && s.flow ? `24h net flow ${flow} (${formatUpdated(s.flow.updatedAt, nowSec)})` : null,
+  ].filter(Boolean).join(" · ");
   const liquidityTvl = formatTelegramCompactUsd(s.liquidity?.totalTvlUsd);
   const liquidityLine = s.liquidity
-    ? `Liquidity: ${s.liquidity.score ?? "NR"}${liquidityTvl ? `, TVL ${liquidityTvl}` : ""} (${formatAge(s.liquidity.updatedAt, nowSec)}${staleSuffix(s.liquidity.current)})`
+    ? `DEX liquidity ${liquidityTvl ?? "not available"}${s.liquidity.score != null ? ` (score ${s.liquidity.score}/100)` : ""}, ${formatUpdated(s.liquidity.updatedAt, nowSec)}`
     : s.liquidityUnavailableReason
-      ? "Liquidity: unavailable"
+      ? "DEX liquidity not available right now"
       : null;
-  const yieldLine = formatTelegramYield(s);
-  const flowSigned = s.flow ? formatTelegramSignedCompactUsd(s.flow.netFlowUsd) : null;
-  const flowLine = s.flow && flowSigned ? `Flow 24h: ${flowSigned} (${formatAge(s.flow.updatedAt, nowSec)}${s.flow.stale ? ", stale" : ""})` : null;
+  const clocks = [
+    s.priceUpdatedAt != null ? `price ${formatUpdated(s.priceUpdatedAt, nowSec)}` : null,
+    s.safety ? `Safety ${formatUpdated(s.safety.publishedAt, nowSec)}` : null,
+    s.dews ? `stress ${formatUpdated(s.dews.computedAt, nowSec)}` : null,
+  ].filter((part): part is string => part != null);
   const lines = [
-    `<b>${escapeHtml(symbol)}</b>`,
-    priceLine,
+    headline,
+    `${safety} · ${dews}`,
     supplyLine,
-    dewsLine,
-    safetyLine,
-    depegLine,
     liquidityLine,
-    yieldLine,
-    flowLine,
-    `<a href="https://pharos.watch/stablecoin/${s.stablecoinId}">View on Pharos</a>`,
+    formatYieldLine(s, nowSec),
+    clocks.length > 0 ? `<i>${clocks.join(" · ")}</i>` : null,
+    `<a href="https://pharos.watch/stablecoin/${encodeURIComponent(s.stablecoinId)}">Full report on Pharos</a>`,
   ].filter((line): line is string => Boolean(line));
   return lines.join("\n");
 }

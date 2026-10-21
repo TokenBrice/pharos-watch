@@ -4,7 +4,7 @@ import {
   safetyScoreV9InputIdentitiesMatch,
 } from "@shared/lib/safety-score-v9-input-identity";
 import { throwIfAborted } from "../lib/abort";
-import { getCaches, getCacheUpdatedAt } from "../lib/db-cache";
+import { getCaches, getCacheUpdatedAt, setCache } from "../lib/db-cache";
 import type {
   CronProgressReporter,
   CronResult,
@@ -27,8 +27,11 @@ import {
 } from "../lib/safety-score-v9/supply-attribution";
 import {
   applySafetyScoreV9SupplyAttributionGeneration,
+  buildSafetyScoreV9SupplyAttributionLastAdmitted,
   parseSafetyScoreV9SupplyAttributionGeneration,
+  parseSafetyScoreV9SupplyAttributionLastAdmitted,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
+  SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_LAST_ADMITTED_CACHE_KEY,
   type SafetyScoreV9SupplyAttributionGeneration,
 } from "../lib/safety-score-v9/supply-attribution-generation";
 import { loadSupplyAttributionJournalByIdV1 } from "../lib/safety-score-v9/supply-attribution-journal-store";
@@ -167,6 +170,7 @@ export async function computeSafetyScoreV9(
     NATIVE_V9_INPUT_CACHE_KEY,
     SAFETY_SCORE_V9_PEG_PROVENANCE_SEED_CACHE_KEY,
     SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
+    SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_LAST_ADMITTED_CACHE_KEY,
     SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY,
     SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY,
   ]);
@@ -345,6 +349,10 @@ export async function computeSafetyScoreV9(
       generationParseError = true;
     }
   }
+  const lastAdmittedCache = caches.get(SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_LAST_ADMITTED_CACHE_KEY);
+  const lastAdmittedSupplyAttribution = lastAdmittedCache
+    ? parseSafetyScoreV9SupplyAttributionLastAdmitted(lastAdmittedCache.value)
+    : null;
   let transferMaterialityGeneration: SafetyScoreV9TransferMaterialityGeneration | null = null;
   const transferMaterialityCache = caches.get(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY);
   if (transferMaterialityCache) {
@@ -401,7 +409,23 @@ export async function computeSafetyScoreV9(
         applySafetyScoreV9SupplyAttributionGeneration(
           seedInput,
           parsedSupplyAttributionGeneration,
+          lastAdmittedSupplyAttribution,
         );
+      const nextLastAdmitted = buildSafetyScoreV9SupplyAttributionLastAdmitted(
+        generationApplication, lastAdmittedSupplyAttribution,
+      );
+      // Carry-forward state is best effort: a failed write only means the
+      // next run has nothing to carry and keeps the existing fallback.
+      let lastAdmittedWriteFailed = false;
+      if (nextLastAdmitted !== null && nextLastAdmitted !== lastAdmittedSupplyAttribution) {
+        try {
+          await setCache(db, SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_LAST_ADMITTED_CACHE_KEY,
+            JSON.stringify(nextLastAdmitted), publicationSignal);
+        } catch {
+          throwIfAborted(publicationSignal);
+          lastAdmittedWriteFailed = true;
+        }
+      }
       supplyAttributionGenerationState = generationParseError
         ? {
             status: "incompatible",
@@ -425,11 +449,15 @@ export async function computeSafetyScoreV9(
                 generationApplication.rejectedAssetIds.length,
               invalidAssetIds:
                 generationApplication.invalidAssetIds,
+              carriedForwardAssetIds: generationApplication.carriedForwardAssetIds,
+              ...(lastAdmittedWriteFailed ? { lastAdmittedWrite: "failed" } : {}),
             }
           : {
               status: generationApplication.status,
               generationId: generationApplication.generationId,
               reason: generationApplication.reason,
+              carriedForwardAssetIds: generationApplication.carriedForwardAssetIds,
+              ...(lastAdmittedWriteFailed ? { lastAdmittedWrite: "failed" } : {}),
             };
       if (!generationParseError && pairedCaptureValid && generationApplication.status !== "applied" &&
         hasPendingAttribution(control, seedInput, Math.floor(Date.now() / 1_000))) {

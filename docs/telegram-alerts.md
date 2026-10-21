@@ -9,13 +9,11 @@ Pharos runs PharosWatchBot for opt-in stablecoin alerts and Telegram channel pos
 The main ingress, dispatch, and digest entrypoints are:
 
 - `POST /api/telegram-webhook` accepts Telegram commands, validates the shared secret from `X-Telegram-Bot-Api-Secret-Token`, and stores subscriber state in D1.
-- `worker/src/cron/telegram/dispatch/dispatch-telegram-alerts.ts` diffs the latest DEWS, active depeg, safety-grade, launch, and reserve snapshots against cached prior snapshots, and independently drains fresh immutable freeze Tape events through their dedicated cohort outbox before handing every rendered target to the shared pending transport. Freeze Tape rows with no possible active freeze audience still advance the freeze cursor but do not create durable source/target lineage, so large no-recipient blacklist batches cannot monopolize the five-minute dispatch slot.
+- `worker/src/cron/telegram/dispatch/dispatch-telegram-alerts.ts` diffs the latest DEWS, active depeg, safety-grade, and reserve snapshots against cached prior snapshots, and independently drains fresh immutable freeze Tape events through their dedicated cohort outbox before handing every rendered target to the shared pending transport. Freeze Tape rows with no possible active freeze audience still advance the freeze cursor but do not create durable source/target lineage, so large no-recipient blacklist batches cannot monopolize the five-minute dispatch slot.
 - `worker/src/cron/daily-digest.ts` posts immutable digest editions; [digest Telegram delivery](./digest-pipeline.md#telegram) owns appendices/outbox behavior.
 - [Architecture seams](./telegram-architecture.md#seam-overview) owns entrypoint/file responsibilities; this guide owns runtime behavior.
 
-See the [Telegram adoption report](./runbooks/telegram-adoption-report.md#read-the-report) for the generated snapshot and privacy-preserving funnel/retention queries.
-
-Internal adoption telemetry accepts POSTs only through the authenticated site-proxy lane (including authenticated preview traffic) or the admin lane; public API keys do not authorize this endpoint.
+The sign-up funnel (landing click beacon, `/api/telegram-adoption`, campaign/placement stage counters and retention cohorts) is retired; its tables receive no writes and drop in the coordinated schema cleanup.
 
 ## Personalized Daily Recap
 
@@ -31,19 +29,23 @@ Public route/pulse/privacy are owned by [Mini App frontend](./telegram-mini-app.
 
 ## Inline Keyboards (Callback Queries)
 
-Subscriber alert keyboards have at most two rows. Multi-coin first chunks offer coin snooze for the top one/two severe coins, then chat snooze; overflow chunks offer only chat snooze. `rankAlertCoins` deduplicates by coin and ranks maximum depeg/DEWS/safety severity; displayed symbols may truncate but callback data uses canonical IDs. Single-coin first chunks offer status/depeg/safety context plus coin/chat snooze and private-only Open app. Group coin snooze remains admin-gated.
+Subscriber alert keyboards have at most two rows. First chunks offer `[Mute {SYM} 24h] [Pause all 4h]` then `[Fewer like this] [Manage Alerts]`; overflow chunks offer only `Pause all 4h`. Mute targets the top-ranked coin (`rankAlertCoins` deduplicates by coin and ranks maximum depeg/DEWS/safety severity; displayed symbols may truncate but callback data uses canonical IDs). Manage Alerts opens the Mini App in private chats and the group settings keyboard in groups. "Fewer like this" (`fewer:<coinId>:<code>:<value>`, `callbacks/fewer.ts`) targets the family with the most events in the message and carries the per-coin value to write, one notch quieter than the tuning of the row that routed the alert (`nextFewerSettingValue`), so a repeated or retried tap sets the same value rather than stepping again. The written value is clamped to the coin's current effective setting: a stale tap never lowers a threshold the user has since raised and never re-enables a family or worsening alerts that are now off. Buttons sent before the value was carried resolve it at tap time from the strictest value currently routing that coin (direct row if it owns the family, otherwise every followed preset and the global follow). Steps: depeg step 100 → 250 → 500 → off, and with no step in effect straight to off so worsening alerts are never switched on; DEWS floor ALERT → WARNING → DANGER → off; safety/freeze/reserve off for that coin; the toast names the change and points to Manage Alerts to undo. Coin mute, Fewer and group settings remain admin-gated in groups. Old `status:`, `depegstep:` and `safetydown:` buttons in existing chats keep working but are no longer emitted.
 
-Callback data is `action:arg`, at most 64 bytes. `CALLBACK_ACTIONS` in `worker/src/telegram/callbacks/_shared.ts` and its callback registry own prefix/argument syntax; keyboard builders and allowlist change together. Namespaces cover snooze, status/why/coverage/quicksub, manage/unsubscribe, bulk/forget confirmation, selection/help, setup, timezone and settings. Unknown actions receive a visible toast, not an error.
+Callback data is `action:arg`, at most 64 bytes. `CALLBACK_ACTIONS` in `worker/src/telegram/callbacks/_shared.ts` and its callback registry own prefix/argument syntax; keyboard builders and allowlist change together. Unknown actions receive a visible toast, not an error.
 
-Settings edits the message in place with fresh-message fallback on refusal. Read-only pagination does not mutate; per-coin controls share Store semantics with `/set`. Quick-subscribe enables DEWS+depeg, adding a Mini App tuning confirmation in private chats and an admin-gated toast in groups.
+Command-driven buttons are stateless: no `telegram_pending_disambiguation` rows are read or written. `pick:st|un|su` carries a ticker and candidate index and is re-resolved on tap (`callbacks/pick.ts`). `bulk:sa|ua` (subscribe/unsubscribe all) carries a base-36 expiry, valid for 15 minutes, and `bulk:no` dismisses; `forget:yes:<expiry>` and `forget:no` do the same for `/forget` (`callbacks/confirm.ts`). `callbacks/legacy.ts` answers old `manage`, `unsub`, `tz`, `select`, `confirm` and `cancel` buttons with a short redirect, and old `why:`/`coverage:` buttons render the status card. Setup buttons are in [setup wizard](#setup-wizard).
 
-Ingress flood admission precedes action-specific D1 work. Status/why/coverage callbacks share command cooldowns and cannot bypass read limits. Registered update types derive from `shared/lib/telegram-bot-registration.ts`.
+Group settings edit the inline keyboard in place, with fresh-message fallback on refusal. Quick-subscribe enables DEWS+depeg, adding a Mini App tuning confirmation in private chats and an admin-gated toast in groups.
+
+Ingress flood admission precedes action-specific D1 work; callbacks share the per-chat flood counter with commands. Registered update types derive from `shared/lib/telegram-bot-registration.ts`.
 
 ## Status Freshness
 
-`/status` applies the same supply/DEX clocks and budgets as alert context: supply reads `Supply: <value> (<age>)`, gains `, stale` outside the stablecoins endpoint budget, and reads `Supply: unavailable` when the stablecoins publication, the asset or its current peg buckets are unavailable; DEX liquidity keeps its age and gains `, stale` outside the DEWS DEX-liquidity budget. `/coverage` marks the same stale values `(stale)`. An explicit observed zero supply remains `$0`.
+Bare `/status` is a chat card and `/status <ticker>` is a coin card; each value shows its own age and nothing carries a freshness verdict. Coin-card ages follow the `updated N ago` pattern, unavailable values say so, and model and generation identifiers are never shown.
 
-Flow freshness is a distinct **context tolerance**, not a claim about `/api/mint-burn-flows` endpoint freshness. `shared/lib/api-freshness.ts` owns `TELEGRAM_FLOW_CONTEXT_MAX_AGE_SEC` (six hours), used by both the `/status` loader and alert context. At exactly six hours flow remains eligible as context; beyond it `/status` marks it stale and alerts omit the optional flow segment. The loader exposes `flow.assessedAt` and `flow.freshBudgetSec` beside the source `updatedAt` and `stale` verdict. Endpoint freshness remains governed separately by `API_FRESHNESS_MAX_AGE_SEC`; PSI/DEWS incident canaries use the independent four-hour `CANARY_INCIDENT_MAX_AGE_SEC` policy. None of these context disclosures changes primary alert eligibility or the existing supply/DEX clocks.
+Supply and DEX liquidity are labelled by age on the coin card (`Supply: <value> (updated N ago)`); `Supply: unavailable` appears when the stablecoins publication, the asset or its current peg buckets are unavailable. An explicit observed zero supply remains `$0`. The alert context still applies its own supply/DEX budgets.
+
+Flow freshness is a distinct **context tolerance**, not a claim about `/api/mint-burn-flows` endpoint freshness. `shared/lib/api-freshness.ts` owns `TELEGRAM_FLOW_CONTEXT_MAX_AGE_SEC` (six hours), used by the `/status` loader and alert context. At exactly six hours flow remains eligible as context; beyond it alerts omit the optional flow segment. Endpoint freshness remains governed separately by `API_FRESHNESS_MAX_AGE_SEC`; PSI/DEWS incident canaries use the independent four-hour `CANARY_INCIDENT_MAX_AGE_SEC` policy. None of these context disclosures changes primary alert eligibility.
 
 ## Commands
 
@@ -53,40 +55,30 @@ The [command implementation appendix](#command-implementation-appendix) retains 
 
 `worker/src/telegram/webhook/telegram-webhook.ts` coordinates ingress; `worker/src/telegram/webhook/` owns parsing and ingress gates, `worker/src/telegram/commands/` owns command handlers, `worker/src/telegram/callbacks/` owns callback dispatch, and `worker/src/telegram/store/` owns D1 persistence.
 
-The webhook validates `X-Telegram-Bot-Api-Secret-Token` against `TELEGRAM_WEBHOOK_SECRET` or, during rotation, `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`. Invalid secrets and malformed JSON return `200 ok` without side effects. A missing bot token is acknowledged with a rate-limited configuration warning. If all D1-backed command flood checks are unavailable, ingress fails closed with the standard busy reply. Pending/setup handlers run before non-command text is acknowledged: they may clear expired rows or execute plain-text disambiguation selections; without an active flow, non-command messages have no side effects.
+The webhook validates `X-Telegram-Bot-Api-Secret-Token` against `TELEGRAM_WEBHOOK_SECRET` or, during rotation, `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`. Invalid secrets and malformed JSON return `200 ok` without side effects. A missing bot token is acknowledged with a rate-limited configuration warning. If all D1-backed command flood checks are unavailable, ingress fails closed with the standard busy reply. Non-command text has no side effects.
 
-Settings validates code/value semantics before required mutation planning; unsupported pairs receive a read-only “Unknown setting” acknowledgement.
-
-Group/supergroup commands must address the bot, e.g. `/subscribe@PharosWatchBot dews usd-top25`; unaddressed commands and those addressed to the public channel handle are ignored. Numeric disambiguation replies need no mention, but must match `initiator_user_id` when available; unrelated users' group text is ignored. Pending replies share the command/callback ingress flood cap.
+Group/supergroup commands must address the bot, e.g. `/subscribe@PharosWatchBot dews usd-top25`; unaddressed commands and those addressed to the public channel handle are ignored.
 
 Command tokens end at the first whitespace separator, including spaces, tabs and newlines. Arguments are trimmed without joining split command or bot-mention fragments; group bot-name matching remains exact.
 
 Channel-originated mutations are rejected: channel admin ownership is outside shared-chat authorization. Bot removal still clears the channel's subscriber state and lifecycle caches.
 
-While a pending selection is active, `/sample` remains available without
-clearing the pending row. `/forget` clears the pending row for the initiating
-user before showing its destructive-data confirmation prompt, so stale
-disambiguation cannot mask account deletion.
-
-`classifyTelegramCommand` in `telegram-webhook-ingress-policy.ts` is the shared command-policy authority for group authorization, local mutation, pending disposition and stored-command recovery. In numeric and bulk-confirmation flows, `/pause` keeps the pending reminder rather than escaping it. Setup-owner commands retain their separate clear-and-run behavior, while slash-prefixed ticker input still takes precedence at the awaiting-ticker step except for `/start` and `/cancel`.
+`classifyTelegramCommand` in `telegram-webhook-ingress-policy.ts` is the shared command-policy authority for group authorization and local mutation. Retired commands are routed by `commands/legacy.ts` (see [supported commands](#supported-commands)).
 
 ### Group Admin Gating
 
-Group admins alone may use `/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/pause`, `/forget`, `/unmutehours`, and `/unsnooze`. `/timezone <IANA-zone>` and `tz:<zone>` callbacks also require admin authorization; argument-free `/timezone` is read-only and omits the common-zone keyboard. The gate is a code toggle in `worker/src/telegram/webhook/telegram-webhook-ingress-policy.ts` (re-exported from `telegram-webhook.ts`), not an env binding. Mutating setup callbacks are gated; `setup:cancel` and `setup:branch:skip` are non-mutating exits requiring only wizard initiator ownership.
+Group admins alone may use `/subscribe`, `/unsubscribe`, `/pause` (and its `/unsnooze` alias) and the mutating buttons (`pick:su|un`, `bulk:sa|ua`, `setup:top25|undo`, settings toggles, snooze and per-coin buttons). Retired commands such as `/set`, `/mute` and `/timezone` only reply with a redirect, so they need no gate. `/forget` is private-only. The gate is a code toggle in `worker/src/telegram/webhook/telegram-webhook-ingress-policy.ts`, not an env binding.
 
 - **Hard (default):** refuse non-admins with command-specific copy ("Only group admins can /subscribe. Ask @Alice or Bob.") without dispatch. `getChatAdministrators` supplies up to three already-public display names plus an overflow phrase.
 - **Soft (emergency rollback):** set the code toggle to `"soft"` and redeploy; non-admins receive the same warning but the command runs.
 
-Every mutating group command/callback freshly calls `getChatMember`, including deferred numeric replies, `select:<N>` callbacks, and stored selection-intent recovery. Initiator ownership is separate and survives pending-row deletion: an admin who starts a selection cannot complete it after demotion. Role changes apply on the next delivery. Failed fresh lookups fail closed in hard mode. The five-minute `telegram:chat-member:<chat_id>:<user_id>` cache is diagnostic only; `telegram:chat-admins:<chat_id>` caches denial-copy names. Private chats remain ungated.
+Every mutating group command/callback freshly calls `getChatMember`, including `pick:` and `bulk:` taps; there is no initiator ownership, so any current admin may complete a prompt. Role changes apply on the next delivery. A lookup that fails (network, 429 or 5xx) is not treated as "not an admin": the action is refused with "Couldn't verify admin status. Please try again." A message an anonymous admin posts as the group itself (`sender_chat` is the group) counts as an admin action; a linked channel's `sender_chat` does not. The five-minute `telegram:chat-member:<chat_id>:<user_id>` cache is diagnostic only; `telegram:chat-admins:<chat_id>` caches denial-copy names. Private chats remain ungated.
 
-The shared command classifier distinguishes group-admin gating from mutation planning: `/start` deep links retain handler authorization. `/timezone` requires a group-admin check only with arguments. Pending ownership never substitutes for a fresh role check.
+The shared command classifier distinguishes group-admin gating from mutation planning: `/start` deep links retain handler authorization.
 
-The ingress flood cap is actor-aware in groups: each Telegram actor gets the
-normal 20 actions / 60 seconds allowance inside the chat, with a higher
-best-effort chat-wide ceiling as a secondary abuse guard. Private chats use the
-chat ID alone. Cooldown rows are acquired before heavy command or Mini App work;
-handler throws and transient Mini App 5xx-style failures release the cooldown
-row best-effort, while validation and permission denials keep the cooldown.
+The ingress flood cap is one 20 actions / 60 seconds counter per chat, shared
+by commands, callbacks and pending replies. Commands have no separate
+cooldowns; the Mini App keeps its own cooldown rows.
 
 Group welcome idempotency is stamped only when the audited welcome reply reports
 success; the webhook does not perform a second diagnostics read to infer whether
@@ -94,33 +86,34 @@ the send succeeded.
 
 ### Supported Commands
 
-`TELEGRAM_COMMAND_REFERENCE` in `shared/lib/telegram-bot-registration.ts` is the syntax, audience, example, alias, and help-text authority. `COMMAND_HANDLERS` in `worker/src/telegram/commands/index.ts` is the dispatch authority. Do not mirror their command roster here. Product/side-effect contracts that are not just syntax:
+`TELEGRAM_COMMAND_REFERENCE` in `shared/lib/telegram-bot-registration.ts` is the syntax, audience, example, alias, and help-text authority. `COMMAND_HANDLERS` in `worker/src/telegram/commands/index.ts` is the dispatch authority. Do not mirror their roster here. Product/side-effect contracts that are not just syntax:
 
-- `/start` opens setup (unknown/malformed payloads safely fall back); non-admin group users receive read-only start copy. `/help` derives rows from the shared manifest and private replies link to Mini App settings. `/presets` renders the canonical dynamic catalog.
-- `/sample` is a private-only synthetic USDC DEWS preview: no live read or preference mutation.
-- `/list` separates direct/local rows and presets. Direct coins expose an initiator/admin-authorized paginated Manage keyboard (five per page), editing one message in place.
-- `/status` is subscription-free and reports field freshness for price/supply/DEWS/safety/depeg/liquidity/yield; covered mint/burn coins read cached 24h flow, never recompute. Yield APY, venue, PYS and source evidence come from one matching accepted `/api/yield-rankings` row, also used by `/coverage`; missing accepted rows are unavailable, never replaced with raw `yield_data`. Retained stale/unknown yield names its source observation clock, age, freshness reason, budget and generation; unavailable PYS keeps its coin-local reason. `/why` and `/coverage` share rated/unrated/pipeline-gap disclosures in plain wording (a pipeline gap reads "not available right now"; partial evidence reads "some inputs missing"). `/status` and `/why` omit model, methodology-version and generation identifiers and machine reason codes for unavailable liquidity/yield; `/coverage` keeps the safety model and methodology version, and `/why` glosses each weakest pillar. All three share Status/Why/Coverage/Subscribe discovery and private Mini App links; quick-subscribe uses the normal group-admin gate.
-- `/brief` flags digest inputs older than 48h; deprecated `/market` shares its cooldown. `/top yield` uses served canonical PYS/order and marks per-row unavailable PYS without machine reason codes, never raw persisted scores.
-- `/health` distinguishes successful alert from reply time and reports pending-only count, failure, readiness, quiet hours and snooze; sending/sent/unknown audit rows are not queued count.
-- Bare `/subscribe` (as sent by the bot menu) replies with a "Set up alerts" button to the `?start=setup` wizard and is recorded as usage outcome `prompted`, not a failure. `/subscribe <targets>` without alert types defaults to the recommended DEWS + depeg families; an unrecognized word with no alert type still gets the unknown-alert-type error.
-- Subscribe/unsubscribe resolve direct coins and presets independently. Bulk commands resolving more than ten coins, or literal `all`, require an initiator-locked Confirm/Cancel pending intent (`confirm-bulk`, five-minute TTL). Confirm runs the stored intent; Cancel or `/cancel` clears it without preference side effects.
-- Pending Confirm/Cancel, ticker-selection and forget keyboards carry the exact pending flow's opaque identity. Replacing a preview invalidates the earlier message even for the same initiator or a current group admin. Confirmation cancellation also matches the stored payload and expiry before clearing pending state. Unbound pre-cutover buttons fail closed with rerun instructions; `/cancel` remains the explicit text escape.
-- `/set` and `/settings` share per-coin/global tuning. Their per-coin writes use the same Store statement builder, retaining override markers, preference generations and atomic operation proof; adapters keep transport validation and acknowledgements. Settings edits one message with paginated owner buttons and Back navigation; per-coin controls are local overrides, not an effective-coverage verdict. Private confirmations carry matching Mini App coin/watchlist controls.
-- Quiet hours silence notifications, not delivery, in the configured IANA timezone (unset UTC). Bare `/timezone` is read-only; private replies offer common-zone picks, groups omit them. `/unmutehours` and Settings OFF retain the saved window. Settings ON atomically preserves valid saved hours, using 22–07 only when none are valid; explicit `/mute` replaces the window.
-- `/pause` uses `alert_snooze_until_ts = 4102444800` for indefinite chat pause; timed durations use ordinary snooze. `/pause off|resume`, `/unsnooze`, and Settings Clear snooze clear it. Displays say Paused, not a huge countdown; Home offers Resume. This user control is distinct from operator [delivery pauses](./runbooks/telegram-no-delivery.md#pause).
+- **Menus.** Private menu: `/start /status /list /subscribe /settings /pause /help`. Group menu: `/status /list /subscribe /settings /help`, addressed as `/cmd@PharosWatchBot`. `/unsubscribe` and `/forget` are typed only; `/sample` is reachable as the `?start=sample` alias.
+- `/start` opens onboarding (see [setup wizard](#setup-wizard)); unknown or malformed payloads fall back safely. `/help` is short, with private and group variants.
+- `/sample` is private-only and sends the public depeg sample from `shared/lib/telegram-alert-samples.ts` with the onboarding buttons: no live read or preference mutation.
+- `/list` separates direct coins and presets and links to the Mini App for edits in private chats.
+- Bare `/status` is a chat card: alerts on or paused, quiet hours, what the chat follows, open depegs among followed coins, and the last alert delivered with its real age. If any read fails, the depeg line is omitted rather than shown as "none". `/status <ticker>` is the coin card (`buildStatusMessage` in `webhook/telegram-webhook-messages.ts`): each value shows "updated N ago", unavailable values say so, and no model or generation ids appear. Yield APY, venue, PYS and source evidence come from one matching accepted `/api/yield-rankings` row; a missing row is unavailable, never replaced with raw `yield_data`.
+- `/subscribe` and `/unsubscribe` apply unambiguous coins and presets immediately. Only the chat-wide `all` scope asks for confirmation (`bulk:sa|ua`, 15 minutes). `/subscribe <targets>` without alert types defaults to DEWS + depeg; bare `/subscribe` replies with the one-tap onboarding buttons. Ambiguous symbols show `pick:` buttons that are re-resolved on tap.
+- `/settings`: private chats get a summary and a Manage Alerts button that opens the Mini App; groups keep the inline settings keyboard.
+- `/pause` uses `alert_snooze_until_ts = 4102444800` for indefinite chat pause; timed durations use ordinary snooze. `/pause off` clears it. Displays say Paused, not a huge countdown. This is distinct from operator [delivery pauses](./runbooks/telegram-no-delivery.md#pause).
 - `/forget` is two-step and private-only: remove subscriber/direct/preset settings, diagnostics, pending work, chat-owned planning/targets/item lineage, freeze/recap state, and dead letters. Processed-update idempotency and aggregate manifests retain normal audit policy; [schema/retention](./telegram-architecture.md#d1-schema) owns the cascade.
-- Watchlist export/import is available only through [private Mini App portability](./telegram-mini-app.md#configuration-portability); command `/export` and `/import` are retired, including group portability. They are absent from dispatch, registration, `/help`, and the public command manual, with no redirect handlers. Legacy portable-import callbacks whose payload is no longer admitted return an expired/re-run response without changing preferences, pending state, or mutation proof, including stored-intent retries. The initiating user can still explicitly clear an unparseable pending row with text `/cancel`. Ordinary subscribe/unsubscribe bulk confirmations remain live; historical V1 import previews already normalized as subscribe intents retain those same ownership/admin/flow/expiry guards. No pre-deploy drain is required for this fail-closed cutover.
+- **Aliases.** `/unsnooze` runs `/pause off`; `/health` and `/subscriptions` run `/list`; `/why` and `/coverage` run `/status`.
+- **Retired commands.** `/set /mute /unmutehours /timezone /presets /top /brief /market /recap /cancel /export /import /add` answer with a one-line redirect, plus a Manage Alerts button in private chats (`commands/legacy.ts`).
+- **Unknown commands.** `replyToUnknownCommand` suggests the nearest command by edit distance. If the token is a ticker (`/usdc`), it returns that coin's status card.
+- Quiet hours silence notifications, not delivery, in the configured IANA timezone (unset UTC), and are edited in the Mini App.
 
 ### Alert Types
 
 - `dews`
 - `depeg`
 - `safety`
-- `launch`
+- `launch` (retired) — no longer detected, sent, parsed by `/subscribe` (which replies with the retirement note), or toggled in the Mini App. `alert_launch*` columns keep their data until the coordinated table cleanup; `TELEGRAM_LIVE_ALERT_TYPES` excludes the family while `TELEGRAM_ALERT_TYPES` keeps it for column order and encoded callback masks. The one-time notice text is `TELEGRAM_LAUNCH_RETIREMENT_NOTICE_HTML` in `shared/lib/telegram-alert-families.ts`, sent once through `POST /api/admin-telegram-broadcast` with `scope: "retired-launch-opt-ins"` (chats with any global or per-coin launch opt-in) following [the broadcast safety runbook](runbooks/telegram-admin-broadcast-safety.md): dry run first, then a live call with the private canary.
 - `reserve` — opt-in per-coin reserve-drift alert (C123). Fires once when a live-reserve-tracked coin's live reserve mix newly diverges from its curated profile beyond the shared `delta > 15` threshold (`isReserveDriftThresholdExceeded`), reusing the four-hourly `checkCollateralDrift` set. Transition-gated (entering-drift only) and advisory; it does not feed the Safety Score or report card.
 - `freeze` — opt-in direct or all-stablecoin issuer freeze, unfreeze, and destroy events from the immutable Tape projection. This family has no preset inheritance or tunable threshold.
 
 ### Freeze Alert Source And Cadence
+
+Only destroy events, and freeze/unfreeze events whose at-event amount is known and at least `TELEGRAM_ALERT_POLICY.freeze.realtimeMinAmountUsd` ($1M), are sent in real time (`isRealtimeFreezeAlert`). An unknown amount is never treated as large. **Freezes and unfreezes under $1M, or with an unknown amount, are currently not sent to anyone**: they advance the cursor without outbox rows and are only counted as `freezeSkippedBelowRealtimeThreshold` in the dispatch progress `countTotals`. They will be delivered once the hourly batch / daily roll-up lane ships; until then FreezeWatch on the site is the only place they appear. Freeze messages carry the same "Via" footer as other families (direct follow → your watchlist, otherwise all stablecoins).
 
 Freeze alerts retain two immutable identities: the projected `tape_events.event_id` and its source `blacklist_events.id`. New Tape projections include the canonical stablecoin id from the verified blacklist contract configuration; historical symbol-only rows are accepted only when the symbol maps to one tracked coin. Malformed, unknown, or ambiguous rows fail closed: the cursor remains immediately below the first such row so a later registry update can make it deliverable. After three consecutive observations of the same poison row, Telegram emits a structured error and skips that row before continuing, preventing one bad projection from wedging the feed.
 
@@ -134,20 +127,20 @@ The freeze outbox is intentionally separate from `telegram_alert_target_plans`, 
 
 Preset watchlists are persistent dynamic sources, never copied into direct coin rows. Canonical aliases/filters live in `shared/lib/telegram-presets.ts`; `/presets` renders that source. Dashed top-N aliases canonicalize before storage. Resolution in `worker/src/telegram/common/presets.ts` uses the strict stablecoins cache plus tracked metadata; only active assets expand into presets, and non-USD means peg currency is not USD. Command/setup resolution is preview; dispatch-time resolution is authoritative. Missing cache fails closed with retry copy, never stale/incomplete subscription.
 
-`/subscribe ... <preset>` writes only `telegram_preset_subscriptions`; `/unsubscribe <preset>` deletes only that follow and does not require successful membership preview. Mixed direct/preset mutations remain separate in one atomic intent. `/list` does not expand dynamic members. Existing rows of uncertain legacy provenance remain direct/local and are never deleted/reclassified by backfill. Presets support DEWS/depeg/safety only, with default DEWS ALERT floor and safety all-changes; no preset DEWS/safety tuning exists. Launch/reserve/freeze require explicit coins or `all`.
+`/subscribe ... <preset>` writes only `telegram_preset_subscriptions`; `/unsubscribe <preset>` deletes only that follow and does not require successful membership preview. Mixed direct/preset mutations remain separate in one atomic intent. `/list` does not expand dynamic members. Existing rows of uncertain legacy provenance remain direct/local and are never deleted/reclassified by backfill. Presets support DEWS/depeg/safety only, with default DEWS ALERT floor and live safety downgrade-only (like global); no preset DEWS/safety tuning exists. Reserve/freeze require explicit coins or `all`.
 
 Effective precedence is **per-coin > preset > all-stablecoins** per family. Direct enabled flags own local tuning. A local off suppresses inheritance only with both `alert_<family>=0` and `alert_<family>_override=1`; unmarked zeroes from partial/legacy/snooze-only rows inherit. Multiple presets retain independent rows and choose the most inclusive positive depeg step deterministically unless direct tuning wins. `/list` names individual marked-off families; only six marked-off families display “Muted (overrides defaults)”. Display labels never alter eligibility.
 
-Settings loads all six override markers: unmarked zero/missing rows show inheritance, not Off, without resolving preset membership. Controls describe local overrides, not effective coverage; launch/reserve/freeze inherit chat policy only.
+Settings loads all six override markers: unmarked zero/missing rows show inheritance, not Off, without resolving preset membership. Controls describe local overrides, not effective coverage; reserve/freeze inherit chat policy only.
 
 Tuning semantics:
 
 - DEWS per-coin floor defaults to ALERT, optionally WARNING/DANGER; safety direction is all/downgrade-only/upgrade-only.
 - Depeg steps 100/250/500 bps couple initial severity floor, resolution peak gate and worsening cadence; they are not independent controls. Preset/global steps use the same model.
-- Settings-style `depeg on` preserves a stored step; `depeg off` clears it; `depeg-step <bps>` enables depeg. `/set <target> depeg-step off` disables depeg, while `/subscribe <targets> depeg-step off` still follows depeg without a step. OFF never displays a step suffix.
+- Settings-style `depeg on` preserves a stored step; `depeg off` clears it; `depeg-step <bps>` enables depeg. The group settings keyboard (or Manage Alerts) turning depeg off disables it, while `/subscribe <targets> depeg-step off` still follows depeg without a step. OFF never displays a step suffix.
 - Global safety is downgrade-only and, when scores exist, material-only (`oldScore-newScore >= 3`); scoreless downgrades still pass. Explicit coin safety retains its own mode.
-- Safety change detection (`buildSafetyChanges`) drops two kinds of grade movement before any audience filter. First, a change where `partialEvidence` changes or an availability reason code appears or disappears between the two snapshots. The codes (`SAFETY_RUNTIME_AVAILABILITY_REASON_CODES`) are every `producer-failed` code in the V9 responsibility map plus four runtime route/materiality codes it files as `integration-missing`; reviewer-authored findings are excluded so they still alert. They are read from the persisted `v9Explain.reasonCodes`; a baseline without codes is unknown, never toggled. An availability hold lasts at most six hours (`SAFETY_AVAILABILITY_HOLD_MAX_SEC`, tracked by `heldSinceSec`): a move that persists past that alerts. A further drop during an active hold is delayed until the hold expires. `material-bridge-supply-unmatched` is never held. Second, any move of fewer than two notches (`SAFETY_ALERT_MIN_GRADE_NOTCHES`) unless it is a downgrade into D or F. A suppressed coin keeps its previous row in the persisted baseline (`holdSuppressedSafetyBaselines`), so later moves compare against the last alerted grade: a flip back is silent, and small steps that add up still alert. Suppressions are logged as `telegram_safety_changes_suppressed`.
-- Launch/reserve/freeze are on/off only. Reserve fires only for live-tracked comparable drift, entering-drift only; missing live fetches produce no “cleared” message. Four-hourly producer cadence can delay a new drift up to roughly four hours.
+- Live safety alerts follow `TELEGRAM_ALERT_POLICY.safety` (see [Alert Detection Rules](#alert-detection-rules)); a direct coin's safety mode can only narrow them further, because only severe downgrades are sent live.
+- Reserve/freeze are on/off only. Reserve fires only for live-tracked comparable drift, entering-drift only; missing live fetches produce no “cleared” message. Four-hourly producer cadence can delay a new drift up to roughly four hours.
 - Quiet hours force `disable_notification=true` using subscriber timezone (unset UTC). Start/end must differ; `0-0` is not all-day mute. Unknown runtime ICU zones fall back to UTC with a rate-limited `quietHoursTzFallback` warning. Chat and coin snoozes suppress delivery instead.
 
 ### Ticker Resolution
@@ -156,34 +149,17 @@ Ticker parsing lives in `worker/src/telegram/common/alerts-parser.ts`, built fro
 
 - Resolution is symbol-first and case-insensitive.
 - Preset aliases are matched before ticker resolution in the shared target parser.
-- Unique matches subscribe immediately.
+- Unique matches apply immediately.
 - Exact Pharos coin IDs resolve immediately and override symbol ambiguity.
-- Both active and pre-launch tracked assets are eligible for explicit ticker or ID resolution; presets still expand active coins only.
-- Ambiguous symbols create a row in `telegram_pending_disambiguation`.
-- Users reply with decimal selections such as `1`, `1,2`, or `1 2`; leading zeroes are accepted. Every token must contain digits only and resolve to a safe integer within the displayed candidate range. A malformed token (including fractions, suffixes, exponents, or signs) rejects the entire reply without changing preferences or consuming the pending selection.
-- Pending disambiguation rows expire after `5 minutes`.
-- Expired rows are swept by the `telegram-disambiguation-cleanup` job on the 5-minute Telegram cron slot once `expires_at` is older than `2 * DISAMBIGUATION_TTL_SEC` (10 min minimum) so a slow user mid-selection is not raced. The expiry scan is indexed and capped at 5,000 deletions per run; overflow is left for later ticks and surfaced via `disambiguationCleanupHasMore`. The pass emits `disambiguationRowsCleaned` in its run metadata.
-- Pending rows record the initiating Telegram user when Telegram provides `message.from.id`; in groups, only that user can complete or cancel the selection.
-- Unknown tickers return a contextual error, with a prefix-based suggestion when available.
-- Unknown preset aliases are reported through the same contextual error path, with `/presets` suggested as the discovery surface.
-- `/cancel` clears a pending selection.
-- `/help`, `/sample`, `/list`, `/presets`, `/status`, `/health`, and `/start` are not trapped behind pending disambiguation. `/forget` clears a pending selection only when it comes from the same initiating user, then runs its confirmation prompt. New mutating commands clear a pending selection only when they come from the same initiating user.
+- Both active and pre-launch tracked assets are eligible for explicit ticker or ID resolution; presets expand active coins only.
+- Ambiguous symbols reply with `pick:` buttons (ticker plus candidate index). Nothing is stored; the ticker is re-resolved when a button is tapped.
+- Unknown tickers return a contextual error, with a prefix-based suggestion when available. Unknown command tokens that are tickers (`/usdc`) open that coin's status card.
 
 ### Update Deduplication
 
-Telegram may redeliver the same `update_id`. The webhook owner/generation-claims each update, persists its normalized intent as `planned`, and atomically proves local D1 mutation before any reply. Stale `unstarted` claims reparse the inbound update; stale `planned` claims resume the stored intent instead of rereading mutable/deleted pending state. Already processed duplicates return `200 ok`; fresh in-flight duplicates return `503 retry`. A retry that finds `started` or `execution_unknown` returns `200 ok` without rerunning the operation. This deliberate at-most-once boundary prevents duplicate Telegram effects after timeouts or post-send crashes. Operators reconcile `telegramBot.webhookEffectLifecycle` and the processed-update row before any manual repair.
+Telegram may redeliver the same `update_id`. The webhook claims each id in `telegram_processed_updates`: a processed duplicate returns `200 ok` and is skipped, a fresh in-flight duplicate returns `503 retry`, and a thrown error releases the claim and returns non-2xx so Telegram's redelivery runs. A `processing` claim older than 60 seconds belongs to a crashed request and is reclaimed. Replies are not fenced: a crash between a reply and the processed marker can repeat that reply once on redelivery, which is accepted at the bot's traffic level. Mutations write explicit target values, so a redelivered update reapplies the same state. [Ingress incidents](./runbooks/telegram-webhook-retry-dedupe.md#current-dedupe-model) owns diagnosis.
 
-Invalid numeric-selection reminders cross the same durable effect-start boundary as other webhook replies before the audited send. An uncertain send or failed terminal marker cannot cause a duplicate update to resend the reminder; the pending selection remains available for a new update.
-
-Invalid Settings input needs no mutation proof; its fenced acknowledgement terminalizes once, with duplicates returning `200 ok`. Valid settings still atomically prove mutation before Bot API effects.
-
-Setup takeover resumes stored callback action/state rather than rereading former steps. Applied mutation proof skips domain writes and resumes the original prompt; a refused ownership-protected transition records no proof or success prompt. Type-toggle recovery uses the saved selection, not absent callback arguments. Intent equality/persistence share the canonical byte encoder in `worker/src/telegram/store/processed-updates.ts` (recursively sorted object keys, array order preserved); persistence alone owns version/schema/size admission.
-
-Normalized pending operations retain their original flow identity, including the source keyboard and any next prompt. Recovery verifies the callback identity before using saved candidates or payloads; a new pending row never supplies the meaning of an older message's buttons.
-
-Stored normalized command recovery uses the same command-policy classification as fresh dispatch and pending gates. Recovery eligibility does not reconstruct intent from current pending rows or broaden which saved mutations may resume.
-
-Ordinary processed-update rows are retained for 7 days. `started` and `execution_unknown` evidence is retained for 90 days. The daily `telegram-retention-cleanup` job owns capped processed-update pruning alongside the other Telegram audit and analytics retention passes; webhook requests only claim and mark update rows for idempotency.
+Processed-update rows are retained for 7 days. The daily `telegram-retention-cleanup` job owns capped processed-update pruning alongside the other Telegram audit and analytics retention passes; webhook requests only claim and mark update rows.
 
 Command, callback, setup, and settings replies use the shared audited reply helper. Successful command replies update only `last_successful_reply_at`; alert delivery senders update `last_successful_delivery_at`. This keeps `/health` able to distinguish "commands work" from "alerts have not delivered recently." Reply failures record `reply_failure` usage events and update the recent failure class for the affected chat.
 
@@ -210,6 +186,7 @@ Each dispatch run loads:
 - Prior dispatch snapshots from cache keys:
   - `alert:dews-snapshot`
   - `alert:dews-alertable-snapshot`
+  - `alert:dews-candidate-snapshot` — per-coin DEWS escalation persistence (distinct computations seen, the band it rose from) and calm-since clocks; a missing or corrupt value is an empty map
   - `alert:depeg-snapshot`
   - `alert:safety-snapshot`
   - `alert:reserve-snapshot` — four-hourly producer v2 envelope: source clock/continuity, drift IDs, per-asset `observedSince` epochs and explicit `unavailableIds`
@@ -217,7 +194,7 @@ Each dispatch run loads:
 
 When `alert:dews-alertable-snapshot` is absent (for example, immediately after deploy), the dispatcher rebuilds it from the raw DEWS snapshot so the rollout does not require a noisy cold start.
 
-DEWS and depeg dispatch snapshots older than `24 hours` are treated as stale and are reseeded before any DEWS/depeg alerts are sent. Launch promotions use a separate best-effort `alert:launch-snapshot` read later in the run; a missing or malformed launch snapshot falls back to an empty prior set and does not trigger the stale-snapshot seed gate.
+DEWS and depeg dispatch snapshots older than `24 hours` are treated as stale and are reseeded before any DEWS/depeg alerts are sent. The retired `alert:launch-snapshot` key is no longer read or written.
 
 Reserve dispatch reads the four-hourly producer without reserve-adapter connections. Expected-generation envelopes are fresh through two producer intervals (8 hours); missing/corrupt/future/stale/wrong-generation sources suppress transitions and preserve baselines. Whole-producer recovery cold-seeds without alerts. Per-asset unavailable intervals reset only that member's observation epoch, so recovery is cold-seeded even when dispatch missed the gap; continuously observed peers remain alertable. The cohort excludes single-bucket/non-independent feeds and requires curated comparators plus admitted multi-slice live mixes. A complete observed no-drift set is a genuine empty result.
 
@@ -229,9 +206,11 @@ Partial safety publications use internal attempt metadata to suppress quarantine
 
 If the raw DEWS/depeg snapshots are missing, unparsable, or older than 24 hours, or if an existing `alert:dews-alertable-snapshot` is stale:
 
-1. Current DEWS/depeg state is written back to the snapshot cache keys, along with the current launch snapshot for later best-effort launch promotion checks.
+1. Current DEWS/depeg state is written back to the snapshot cache keys.
 2. No subscriber messages are sent for that run.
 3. The cron returns metadata with `snapshotSeeded: true`.
+
+A seed run keeps a fresh depeg baseline unchanged (only a missing or stale depeg snapshot is reseeded), so a depeg that opened during the seed run alerts on the next normal run. When the safety baseline itself does not need a reseed, a coin whose safety alert is due in a seed run keeps its previous row and pending clock, so the alert fires on the next normal run instead of being absorbed.
 
 This prevents a cold start from blasting subscribers with every current condition as if it were a new event.
 
@@ -239,7 +218,7 @@ Safety-grade fan-out has its own source-cache freshness gate and seeds `alert:sa
 
 ### Eventless Fast Path
 
-When the dispatch snapshots are healthy, the live safety and reserve sources are valid, and no DEWS, depeg, safety, launch, or reserve changes are detected, the dispatcher takes an eventless fast path. The fast path refreshes the snapshot cache and returns complete cron metadata, but skips subscriber fan-out, alert-job manifests, per-chat backoff reads, and fresh delivery assembly.
+When the dispatch snapshots are healthy, the live safety and reserve sources are valid, and no DEWS, depeg, safety, or reserve changes are detected, the dispatcher takes an eventless fast path. The fast path refreshes the snapshot cache and returns complete cron metadata, but skips subscriber fan-out, alert-job manifests, per-chat backoff reads, and fresh delivery assembly.
 
 The no-work branch is not used when snapshots need seeding, the safety source is missing/corrupt/stale/wrong-generation, any alert family has an actionable change, or due/expired pending rows need queue work. A non-alertable reserve source can still use this path because its baseline is explicitly preserved or cold-seeded; the returned metadata exposes `reserveAlertSourceState`, `reserveAlertSourceAgeSeconds`, `reserveAlertSourceGeneration`, and `reserveAlertsSuppressed`. Due pending rows still drain on an otherwise eventless run; expired pending rows still run the TTL cleanup. The latest pending-capacity and safety-source assessment from dispatch are passed to the degradation watchdog and pulse snapshot sidecar in the same five-minute lane so those sidecars do not repeat the same D1 reads.
 
@@ -251,21 +230,20 @@ If the `telegram_preset_subscriptions` query throws (transient D1 failure) or `r
 
 ### Alert Detection Rules
 
-`worker/src/cron/telegram/dispatch/dispatch-telegram-alerts.ts` detects:
+`TELEGRAM_ALERT_POLICY` in `shared/lib/telegram-delivery-policy.ts` is the single authority for every live-alert threshold, dwell, hysteresis and cooldown (R5). Moves that miss a gate are not sent live; each is counted under a named reason so the daily roll-up (built with the delivery rewrite) can consume them later. `worker/src/cron/telegram/dispatch/dispatch-telegram-alerts.ts` detects:
 
-- DEWS alert-band escalations by comparing the current alertable band (`ALERT`/`WARNING`/`DANGER`) to the last alertable band snapshot, while still keeping the raw current-band snapshot for display context. De-escalations from an observed alertable band (`DANGER → WARNING`, `WARNING → ALERT`) are not sent in real time; direction is judged against the previously observed band, so a rise from `CALM`/`WATCH` into the alertable range is an escalation labelled from that observed band
+- **DEWS** (`planDewsAlerts`): escalations only. The observed band first gets exit hysteresis (`applyDewsExitHysteresis`): a coin leaves its previously observed band only when the score falls more than `exitHysteresisPoints` (5) below that band's lower bound, stepping down one band at a time; rises apply at once. An escalation must then appear in `escalationMinComputations` (2) distinct DEWS computations (`computed_at`; DEWS computes every 30 minutes, so about 30-60 minutes) before it is sent; while pending, the alertable baseline keeps the prior band and the message later states the band the coin rose from. De-escalations within the alertable range (`DANGER → WARNING`, `WARNING → ALERT`) are never sent live; a pending escalation that eases but stays above the last alerted band keeps counting rather than being absorbed. Direction is judged against the previously observed band, so a rise from `CALM`/`WATCH` into the alertable range is an escalation labelled from that band. Counters: `suppressedPendingDewsEscalations`, `suppressedDewsDeescalations`, `resetDewsBaselines` (log event `telegram_dews_changes_suppressed`). A seed run (missing or stale DEWS/depeg snapshots) adopts the current bands as already alerted and clears pending escalations, so conditions present at the seed never alert afterwards; on the first run after the candidate key is introduced the existing snapshots are used and any escalation starts its two-computation count. A run with no readable DEWS rows (stale or failed read) writes none of the three DEWS keys, and only an available read can trigger the DEWS stale-snapshot reseed, so a DEWS outage never blocks depeg alerts.
 - New active depeg events by comparing persisted event IDs in the current and prior snapshots: a replacement ID triggers a new detected event even when the coin stays active, the peak falls or stays equal, or the direction reverses
 - Depeg worsening milestones by comparing severity only within the same persisted event identity and direction
 - Depeg resolutions by checking which prior active depegs disappeared and loading their exact persisted event IDs; only rows classified as recovered emit "Depeg Resolved" — an explicit recovery close reason (`recovered-primary`, `recovered-dex`, `recovered-native`), or a legacy row with no `close_reason` but a recorded `recovery_price`. Legacy snapshots without `eventId` retain stablecoin-only trigger/worsening diffing and the latest-closed-row resolution fallback until the next baseline write.
-- Safety-grade changes by comparing the previous `alert:safety-snapshot` against the current canonical V9 publication
-- Safety-grade changes are emitted only when the live safety source cache is generation-valid; fallback-to-history no longer rewrites the alert snapshot as if it were a valid live source
-- Launch promotions by comparing the current launch snapshot to `alert:launch-snapshot`
+- **Safety** (`buildSafetyChanges`), comparing the current canonical V9 publication against `alert:safety-snapshot`, only when the live safety source cache is generation-valid. The persisted baseline row is the last *alerted* grade (`holdSuppressedSafetyBaselines`). Only a severe downgrade is sent live: at least `severeMinGradeNotches` (2) notches, or any drop landing at or below D. It must hold for `dwellSec` (6 h) against that baseline: the baseline row carries `pendingKind`/`pendingSinceSec`, the clock keeps running while the grade stays in the severe range (the message reports the latest grade) and resets when the grade returns or the move changes kind. A severe downgrade whose dwell ends within `downgradeCooldownSec` (24 h) of the coin's last live alert (`lastAlertedAtSec`) stays pending and is sent when the cooldown ends. A pipeline-gap, null-grade or operationally affected tick during a pending move keeps the last alerted row and both clocks. Minor downgrades keep the last alerted row, so small steps add up; upgrades are never sent live and become the new baseline once they hold for the dwell. Otherwise methodology-version-only regrades, pipeline gaps, null grades and operationally affected assets advance the baseline silently. A safety reseed keeps every coin's cooldown clock; when the old and new publication identities are comparable (continuity loss or source-generation change) it also keeps rows with a pending move so their dwell resumes, while an incomparable identity (model, methodology, policy or build change, such as a methodology release) takes current rows as the baseline silently (`reseedSafetyBaseline`). Counters: `suppressedPendingDwellSafetyChanges`, `suppressedMinorSafetyChanges`, `suppressedUpgradeSafetyChanges`, `suppressedCooldownSafetyChanges` (log event `telegram_safety_changes_suppressed`). Audience filtering then applies: global safety also needs `globalMinScoreDrop` (3 points) when scored; presets are downgrade-only; a direct coin's safety mode applies as stored.
 - Reserve-drift transitions by comparing the producer's current drift id-set (`alert:reserve-snapshot`) to the dispatch baseline (`alert:reserve-dispatched-snapshot`); only coins newly entering drift fire (entering-drift only)
-- Methodology-version-only safety regrades are suppressed from user alerts
+- **Freeze** real-time gate: see [Freeze Alert Source And Cadence](#freeze-alert-source-and-cadence).
+- Launch promotions are no longer detected (family retired).
 
-Safety-grade alerts attach a `Reason:` blockquote instead of the generic `Context:` blockquote used by DEWS/depeg alerts. The reason builder compares the previous and current optional `explain` snapshots and names a newly binding or changed cap first, unless the overall move is an upgrade: a cap never explains a rise. A variant-parent cap reads "Capped at the Safety Score of the coin it is built on." Otherwise it names the largest pillar movement matching the overall direction, in plain language with a pillar gloss (for example "Exit score rose from 35 to 48. Exit measures how easily holders can redeem or sell near $1."), then a new model reason, then the weakest pillar. A coin without `explain` data gets no reason line. Blacklist/freeze metadata remains display-only under the current methodology and is not used as a causal reason.
+Safety-grade alerts carry a plain "Why:" line instead of the generic context facts used by DEWS/depeg alerts. The reason builder compares the previous and current optional `explain` snapshots and names a newly binding or changed cap first, unless the overall move is an upgrade: a cap never explains a rise. A variant-parent cap reads "Capped at the Safety Score of the coin it is built on." Otherwise it names the largest pillar movement matching the overall direction, in plain language with a pillar gloss (for example "Exit score rose from 35 to 48. Exit measures how easily holders can redeem or sell near $1."), then a new model reason, then the weakest pillar. A coin without `explain` data gets no reason line. Blacklist/freeze metadata remains display-only under the current methodology and is not used as a causal reason.
 
-If the live safety source cache is missing, corrupt, stale, or from the wrong generation, DEWS/depeg/launch alerts can still continue, but safety alerts stay suppressed until a fresh publish lands and the Telegram lane reseeds its prior safety snapshot under that same generation.
+If the live safety source cache is missing, corrupt, stale, or from the wrong generation, DEWS/depeg alerts can still continue, but safety alerts stay suppressed until a fresh publish lands and the Telegram lane reseeds its prior safety snapshot under that same generation.
 
 If the reserve producer envelope is missing, corrupt, stale, future-dated, or from the wrong generation, the other alert families continue but reserve alerts stay suppressed. The `telegramSummary` object from `/api/health` and the latest dispatch cron metadata expose the reserve source state, age, generation, and suppression flag. Recovery intentionally requires two producer publications: the first cold-seeds as `recovering`, and the next continuous four-hourly publication restores `ok` without replaying transitions accumulated during the gap.
 
@@ -273,7 +251,7 @@ When the safety snapshot has to be reseeded (e.g. methodology-version flip chang
 
 If the cached safety snapshot is missing a coin, the dispatcher suppresses its grade-change alert and seeds the current value; there is no grade-history timestamp exception. Pipeline gaps, null grades, and transitions involving operationally affected assets likewise establish recovery baselines rather than organic grade movements.
 
-The separate `alert:dews-alertable-snapshot` cache key prevents duplicate same-band DEWS alerts when a coin silently dips to `WATCH` or `CALM` and then returns to the same alert band. Example: `ALERT → WATCH` produces no message and does not reset the alert dedupe baseline, so a later `WATCH → ALERT` does not resend the same `ALERT` notification. The baseline advances to every observed alertable band whether or not that move was sent, so an unsent `DANGER → WARNING` leaves `WARNING` as the baseline and a later `WARNING → DANGER` alerts again. A coin whose baseline is `DANGER` that calms to `WATCH` or `CALM` and later rises to `ALERT` or `WARNING` is sent as an escalation from the observed band (for example `CALM → WARNING`); returning to `DANGER` itself is still deduped.
+The separate `alert:dews-alertable-snapshot` cache key prevents duplicate same-band DEWS alerts when a coin silently dips to `WATCH` or `CALM` and then returns to the same alert band. Example: `ALERT → WATCH` produces no message and does not reset the alert dedupe baseline, so a later `WATCH → ALERT` does not resend the same `ALERT` notification. The baseline advances to every observed alertable band except while an escalation is pending, so an unsent `DANGER → WARNING` leaves `WARNING` as the baseline and a later confirmed `WARNING → DANGER` alerts again. Once a coin has stayed below ALERT for `baselineResetQuietSec` (24 h), its alertable baseline is cleared, so a later rise is reported from its real prior band and a return to its old band alerts again.
 
 The helper predicates `isDewsAlertable()` and `isDewsDeescalation()` live in `worker/src/telegram/common/alerts-formatting.ts`.
 
@@ -358,7 +336,7 @@ Stop rollout verification when planning is degraded, expiry debt remains, or exc
 
 ## Admin Visibility
 
-[Status dashboard Telegram metrics](./status-dashboard.md#telegram-bot-metrics) owns the field inventory and delivery-SLI interpretation; `worker/src/lib/status/telegram-bot-stats.ts` owns the projection. Acceptance means Bot API acceptance, not recipient delivery/read. Use [adoption report](./runbooks/telegram-adoption-report.md) for privacy-preserving funnel/retention queries, not a second HTTP report.
+[Status dashboard Telegram metrics](./status-dashboard.md#telegram-bot-metrics) owns the field inventory and delivery-SLI interpretation; `worker/src/lib/status/telegram-bot-stats.ts` owns the projection. Acceptance means Bot API acceptance, not recipient delivery/read. Ad hoc usage questions read `telegram_usage_daily` and the lifecycle tables directly; there is no funnel report.
 
 Public pulse/client privacy and freshness are owned by [Mini App public pulse](./telegram-mini-app.md#public-pulse-privacy-and-freshness). Lifecycle deltas use atomic transition events, not net snapshot differences; unavailable telemetry is null with explicit quality, never zero.
 
@@ -393,13 +371,8 @@ The dispatcher is protected by `CIRCUIT_SOURCE.TELEGRAM_API`.
 
 ## Message Types
 
-Formatting helpers in `worker/src/telegram/common/alerts-formatting.ts` emit:
+Formatting helpers in `worker/src/telegram/common/alerts-formatting.ts` use one template for every family. The first line is the push preview: glyph, bold symbol, a direction verb and the key number (for example "▼ **USDC** lost its peg: $0.9880, 1.2% below $1.00", "🟠 **USDT** early-warning stress rose to WARNING (58/100, was ALERT)", "**USDR** Safety grade downgraded to D (was B)", "**USDC** issuer froze an address on Ethereum holding $1,000,000"). Facts with units follow, then an optional plain "Why:" line (safety reasons), then an italic provenance footer `Via {preset labels | your watchlist | all stablecoins} · {family}` built per message (the union of sources across its events, not per coin) from the routing source of each recipient (`AlertVia`, carried on the routed chat entry; freeze derives it from the direct/global opt-in). Up to two events stack the full template in severity order with recoveries, de-escalations and upgrades last; three or more render a count headline and compact lines grouped by family. Families with no live audience no longer render (launch is retired).
 
-- DEWS band escalations ("stress rose to WARNING (score 58, was ALERT)") with the top two stress sub-signals under their `DEWS_SIGNAL_LABELS` names and unitless 0-100 values
-- Depeg-triggered messages with direction, bps deviation, and price
-- Depeg-worsening messages with previous vs current deviation
-- Depeg-resolved messages with duration, peak deviation, and recovery price
-- Safety-grade changes stating direction ("Safety grade raised to C (was D)" or "downgraded"; "changed" when either grade is unranked) and score when present
 - One contextual line when cached report-card, liquidity, or supply data is available for the affected coin. For mint/burn-tracked coins the same line also carries a `Flow24h <signed compact USD>` segment sourced from the cached per-coin 24h flow (`perCoinFlowCacheKey(id, 24)`); dispatch reads only the tracked subset of alerting coins in one bounded `Promise.all` (no recompute) and omits the segment when that flow is stale or net-zero. Rendered as an expandable Telegram blockquote (`<blockquote expandable>…</blockquote>`) so it collapses by default on mobile; requires Telegram Bot API 7.0+ (Mar 2024) — older clients render it as a regular blockquote.
 - Supply and DEX liquidity context carry their producer clocks through `worker/src/cron/telegram/sources/telegram-alert-context.ts` and are assessed with existing budgets only (`worker/src/telegram/common/context-freshness.ts`): supply uses the asset's `supplyObservedAt` bounded by the stablecoins publication time against the `/api/stablecoins` endpoint budget (`API_FRESHNESS_MAX_AGE_SEC.stablecoins`), and DEX liquidity uses the `dex_liquidity.updated_at` row clock against the DEWS DEX-liquidity budget (`DEWS_STALE_DEX_LIQUIDITY_SEC`). Boundaries are inclusive. Supply is read through `getCirculatingRawOrNull()`: missing, empty or invalid-only buckets are omitted, never rendered as `Supply $0`; an explicit observed zero renders `Supply $0`. Stale, unclocked or unavailable supply…
 
@@ -415,7 +388,6 @@ Subscriber alert messages no longer carry a top-level `Pharos Alerts` header —
 | `🟡` | DEWS `WATCH` and `ALERT` | DEWS band transition lines |
 | `🟠` | DEWS `WARNING` | DEWS band transition lines |
 | `🔴` | DEWS `DANGER` | DEWS band transition lines |
-| `✦` | Launch promotion | Newly tracked stablecoin lines |
 
 The reserve-drift family (C123) ships **glyph-less**: a `Reserve Drift` section with a bold-symbol line and no data-tied glyph. Per the rule above, adding a reserve glyph requires a separate review.
 
@@ -450,27 +422,22 @@ Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs store
 
 ## Runbooks
 
-Start read-only diagnosis at [Telegram Operator Queries](./runbooks/telegram-operator-queries.md#read-only-incident-entry); access does not grant mutation/replay authority. Choose [delivery/backlog/rate-limit/outage](./runbooks/telegram-no-delivery.md#quick-diagnostic-checklist), [ingress/retry/setup](./runbooks/telegram-webhook-retry-dedupe.md#quick-diagnostic-checklist), or [digest exact-effect recovery](./runbooks/telegram-digest-outbox.md). The generated [runbook index](./README.md#runbook-index) owns the complete roster, including auth, secrets, BotFather, presets, broadcast and adoption.
+Start read-only diagnosis at [Telegram Operator Queries](./runbooks/telegram-operator-queries.md#read-only-incident-entry); access does not grant mutation/replay authority. Choose [delivery/backlog/rate-limit/outage](./runbooks/telegram-no-delivery.md#quick-diagnostic-checklist), [ingress/retry/setup](./runbooks/telegram-webhook-retry-dedupe.md#quick-diagnostic-checklist), or [digest exact-effect recovery](./runbooks/telegram-digest-outbox.md). The generated [runbook index](./README.md#runbook-index) owns the complete roster, including auth, secrets, BotFather, presets and broadcast.
 
 ## Command Implementation Appendix
 
 ### Setup Wizard
 
-`/start` (with an empty payload or `?start=setup`) opens a two-branch inline-keyboard wizard handled in `worker/src/telegram/webhook/telegram-webhook-setup.ts`. The keyboard uses the `setup:*` callback namespace:
+Private `/start` (empty payload, `?start=setup`, or a landing token) is handled in `worker/src/telegram/webhook/telegram-webhook-setup.ts` and `callbacks/setup.ts`. Setup keeps no pending state.
 
-- `setup:branch:recommended` — confirms `dews,depeg` alerts for the `usd-top25` preset.
-- `setup:branch:custom` — toggles alert types (`setup:type-toggle:<type>`), then `setup:next` to pick a target (`setup:target:<preset|all|type>`), then `setup:confirm`.
-- `setup:branch:skip` — clears wizard state and returns a slim command-reference reply with a `/help` affordance for users who prefer typing commands.
-- `setup:target:type` opens ticker input; slash single tokens (including `/USDC` or `/help`) are consumed there. Only `/cancel` and `/start` stay command escapes.
-- `setup:cancel` — clears the wizard state for the user who started it.
+- **New private user.** One card with three buttons: Follow the top 25 USD stablecoins (`setup:top25`, follows `usd-top25` for DEWS + depeg in one tap), Choose my own coins (opens the Mini App watchlist), and Show me a sample alert (`setup:sample`). After the first tap the card is replaced by a Done message, a sample alert preview, and Manage Alerts and Undo buttons. `setup:undo` unfollows `usd-top25`; Undo is offered only if that tap added it.
+- **Returning user.** A "Welcome back" summary with Manage Alerts, Pause 24h and Help.
+- **Groups.** Admins get a one-tap follow button; non-admins get a three-line note with a DM link.
+- Old wizard buttons answer with a restart hint.
 
-Wizard state lives in `telegram_pending_disambiguation`: `action_type = "setup-step"`, `initiator_user_id`, and JSON `{ step, alertTypes, target }`, with `adoptionToken` for attributed sessions. TTL is 5 min. Fresh slash commands escape the wizard except awaiting-ticker `/TICKER` replies. Mutating `/start` and subscription links replace pending state in their own atomic mutation and single stored intent; read-only escapes clear it first.
+The first effective follow is owned by the shared Store enable mutation, not the setup reply: its idempotent `first_follow_at` milestone commits with the direct/preset/global transition. Bulk confirmation, quick-subscribe and settings use the same claim; previews, no-ops, replay and failed writes do not claim a new follow. No funnel aggregate is written.
 
-Every wizard callback appends a 16-hex `flowId` to the action shown above. State persists that identity and rotates it on each transition, so buttons from another setup or an earlier step cannot act on the current state. Callback data remains within Telegram's 1–64 UTF-8-byte limit.
-
-The first effective follow is owned by the shared Store enable mutation, not the setup reply: its idempotent milestone and daily aggregate commit with the direct/preset/global transition, retaining the wizard's attribution. Bulk confirmation/import, quick-subscribe, `/set`, and settings use the same claim; previews, no-ops, replay and failed writes do not claim a new follow. Existing active follows lacking historical milestones are left unchanged pending an [evidence-based repair](./runbooks/telegram-adoption-report.md#interpretation-rules).
-
-**Attribution.** Setup-destination tokens persist through pending state and stored intents into `bot_start`, `setup_complete` and `first_follow` campaign/placement dimensions. `pw1_landing_setup` opens the recommended DEWS+depeg `usd-top25` confirmation directly; `pw1_landing_hero` keeps the branch chooser. Generic `sub_*` links remain organic/unknown.
+**Attribution.** Setup-destination tokens persist into `bot_start`, `setup_complete` and `first_follow` campaign/placement dimensions. Generic `sub_*` links remain organic/unknown.
 
 ### /start Deep-Link Payloads
 
@@ -480,15 +447,14 @@ Supported payload schemes (lowercase, no spaces, max 64 characters, characters `
 
 | Payload | Behavior |
 |---------|----------|
-| `sub_<types>_<targets>` (e.g. `sub_depeg_usdc-circle` or `sub_dews-depeg_usd-top25`) | Translates to `/subscribe <types> <targets>` and dispatches the existing subscribe path. Both non-empty segments are required; multiple alert types are joined by `-`, so `sub_usdc` is malformed and remains read-only. Valid private-chat subscription links are classified as mutating before dispatch so the effect fence records the subscription write and confirmation reply. Group deep-links fall back to the standard onboarding reply with no mutation. |
-| `status_<id>` | Runs the existing `/status` handler against the supplied Pharos coin id. Allowed in any chat. |
-| `why_<id>` | Runs the existing `/why` handler. Allowed in any chat. |
-| `coverage_<id>` | Runs the existing `/coverage` handler. Allowed in any chat. |
-| `setup` | Opens the standard two-branch setup wizard. |
-| `pw1_landing_*` (landing adoption tokens from `TELEGRAM_ADOPTION_CATALOG`) | Open the setup wizard (`hero`/`setup` placements; `setup` pre-selects the recommended preset). Classified as mutating before dispatch; a worker regression test sends every catalog token through the webhook and requires the onboarding reply, never the generic error. |
+| `sub_<types>_<targets>` (e.g. `sub_depeg_usdc-circle` or `sub_dews-depeg_usd-top25`) | Translates to `/subscribe <types> <targets>` and dispatches the existing subscribe path. Both non-empty segments are required; multiple alert types are joined by `-`, so `sub_usdc` is malformed and remains read-only. Valid private-chat subscription links are classified as mutating before dispatch so the effect fence records the subscription write and confirmation reply. Group deep-links fall back to the onboarding reply with no mutation. |
+| `status_<id>` | Opens the status card for the supplied Pharos coin id. Allowed in any chat. |
+| `why_<id>` | Opens the same status card. Allowed in any chat. |
+| `coverage_<id>` | Opens the same status card. Allowed in any chat. |
+| `setup` | Opens onboarding. |
+| `pw1_landing_*` (tokens from `TELEGRAM_LANDING_LINK_CATALOG`) | Open the same onboarding card as `setup`, led by the one-tap "Follow the top 25 USD stablecoins" button; nothing is followed until that tap. No placement or attribution is recorded. A worker regression test sends every catalog token through the webhook. |
 | `sample` | Alias entrypoint for `/sample`: private chats receive the synthetic USDC DEWS preview; other chat types receive the private-chat-only reply without running the preview. Surfaced by the Mini App Home "Send me a sample alert" deep link. |
 | `app` / `home` | Sends a Mini App launch nudge. Private chats receive a Web App button for the home panel; groups receive a DM link because Telegram rejects `web_app` buttons outside private chats. |
-| `pw1_landing_<placement>` (allowlisted setup-destination tokens) | Records landing placement attribution; `pw1_landing_setup` preloads recommended confirmation, while `pw1_landing_hero` opens the branch chooser. Mutating, with token retained through confirmation; non-setup tokens are not matched. |
 | Unknown or malformed | Falls back to the standard `/start` reply; the user never sees an error. |
 
 Telegram only delivers `?start=` deep links in private chats, but the dispatcher still defensively checks `chat.type === "private"` before running mutating `sub_*` payloads.

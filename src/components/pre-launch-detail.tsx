@@ -121,7 +121,7 @@ function PreLaunchIdentityHeader({ coin, logoSrc }: { coin: StablecoinMeta; logo
           );
         })}
         {links.length > 0 ? <span aria-hidden="true" className="mx-1 hidden h-4 w-px bg-border/60 sm:block" /> : null}
-        <PreLaunchAlertAction coinId={coin.id} symbol={coin.symbol} />
+        <PreLaunchAlertAction description={`Pharos's Telegram channel digest lists ${coin.symbol} once Pharos starts tracking it live`} />
       </div>
     </header>
   );

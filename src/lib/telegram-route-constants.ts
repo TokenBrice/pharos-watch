@@ -3,9 +3,9 @@ import {
   TELEGRAM_START_PAYLOAD_MAX_LENGTH,
 } from "@shared/lib/telegram-mini-app-payloads";
 import {
-  telegramAdoptionEntryForPlacement,
-  type TelegramAdoptionCatalogPlacement,
-} from "@shared/lib/telegram-adoption-analytics";
+  telegramLandingEntryForPlacement,
+  type TelegramLandingPlacement,
+} from "@shared/lib/telegram-landing-links";
 import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 
 export const PHAROSWATCHBOT_BOT_URL = TELEGRAM_BOT_URL;
@@ -40,16 +40,16 @@ function buildTelegramMiniAppDeepLink(payload: string): string {
   return url.toString();
 }
 
-function buildTelegramAdoptionDeepLink(placement: TelegramAdoptionCatalogPlacement): string {
-  const entry = telegramAdoptionEntryForPlacement(placement);
+function buildTelegramLandingDeepLink(placement: TelegramLandingPlacement): string {
+  const entry = telegramLandingEntryForPlacement(placement);
   return entry.destination === "setup"
     ? buildTelegramBotStartDeepLink(entry.token)
     : buildTelegramMiniAppDeepLink(entry.token);
 }
 
 
-export const SETUP_DEEP_LINK = buildTelegramAdoptionDeepLink("hero");
-export const RECOMMENDED_SETUP_DEEP_LINK = buildTelegramAdoptionDeepLink("setup");
-export const MINI_APP_SETUP_DEEP_LINK = buildTelegramAdoptionDeepLink("miniapp_setup");
-export const MINI_APP_HOME_DEEP_LINK = buildTelegramAdoptionDeepLink("miniapp_home");
-export const MINI_APP_WATCHLIST_DEEP_LINK = buildTelegramAdoptionDeepLink("miniapp_watchlist");
+export const SETUP_DEEP_LINK = buildTelegramLandingDeepLink("hero");
+export const RECOMMENDED_SETUP_DEEP_LINK = buildTelegramLandingDeepLink("setup");
+export const MINI_APP_SETUP_DEEP_LINK = buildTelegramLandingDeepLink("miniapp_setup");
+export const MINI_APP_HOME_DEEP_LINK = buildTelegramLandingDeepLink("miniapp_home");
+export const MINI_APP_WATCHLIST_DEEP_LINK = buildTelegramLandingDeepLink("miniapp_watchlist");

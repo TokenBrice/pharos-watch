@@ -15,7 +15,6 @@ import {
   stateReadTables,
 } from "./telegram-mini-app.test-support.ts";
 import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
-import { encodeWatchlistTokenV3 } from "../watchlist-token";
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   TELEGRAM_MINI_APP_CATALOG_VERSION,
@@ -67,12 +66,7 @@ describe("handleTelegramMiniAppMutation", () => {
     }
     expect(sqlite.prepare("SELECT first_follow_at FROM telegram_subscribers WHERE chat_id = '42'").get())
       .toEqual({ first_follow_at: NOW_SEC });
-    expect(sqlite.prepare("SELECT campaign, placement, feature, count FROM telegram_adoption_daily WHERE stage = 'first_follow'").all())
-      .toEqual([{
-        campaign: "landing", placement: "miniapp_home",
-        feature: operation.kind === "follow-preset" ? "preset" : operation.kind === "set-coin" ? "direct" : "global",
-        count: 1,
-      }]);
+    expect(sqlite.prepare("SELECT count(*) AS count FROM telegram_adoption_daily").get()).toEqual({ count: 0 });
   });
 
   it("does not claim a first follow for an off-only coin patch", async () => {
@@ -82,7 +76,7 @@ describe("handleTelegramMiniAppMutation", () => {
       operation: { kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { dews: false } } },
     }), BOT_TOKEN);
     expect(response.status).toBe(200);
-    expect(sqlite.prepare("SELECT count(*) AS count FROM telegram_adoption_daily WHERE stage = 'first_follow'").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT first_follow_at FROM telegram_subscribers WHERE chat_id = '42'").get()).toEqual({ first_follow_at: null });
   });
   it.each(["5", "6"])("rejects retired contract %s before database access", async (contractVersion) => {
     const db = makeMiniAppDb();
@@ -200,13 +194,13 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(sqlite.prepare("SELECT * FROM telegram_preset_subscriptions").all()).toEqual(before);
   });
 
-  it.each(["export-watchlist", "preview-bulk-watchlist"] as const)("rejects stale v5 %s before mutation or telemetry", async (kind) => {
+  it("rejects a stale v5 bulk preview before mutation or telemetry", async () => {
     const { db, sqlite } = persistedDb();
     sqlite.prepare(`
       INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews, alert_dews_override)
       VALUES ('42', 'usdc-circle', 1, 1)
     `).run();
-    const operation = kind === "export-watchlist" ? { kind } : { kind, addStablecoinIds: ["usdt-tether"], removeStablecoinIds: [] };
+    const operation = { kind: "preview-bulk-watchlist", addStablecoinIds: ["usdt-tether"], removeStablecoinIds: [] };
     const response = await handleTelegramMiniAppMutation(db, makeVersionedMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData: await privateInitData(), operation,
     }, { contractVersion: "5" }), BOT_TOKEN);
@@ -326,43 +320,8 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(db.getHistory()).toEqual([]);
   });
 
-  it("allows a stale signed session to export without consuming mutation burst capacity", async () => {
+  it("routes a stale signed bulk preview through the read-only path without consuming burst capacity", async () => {
     const initData = await privateInitData(60 * 60);
-    const db = makeMiniAppDb(stateReadTables({
-      subscriptions: [{
-        stablecoin_id: "usdc-circle",
-        alert_dews: 1,
-        alert_depeg: 0,
-        alert_safety: 0,
-        alert_launch: 0,
-        alert_reserve: 0,
-        alert_dews_override: 1,
-        alert_depeg_override: 0,
-        alert_safety_override: 0,
-        alert_launch_override: 0,
-        alert_reserve_override: 0,
-        dews_min_band: null,
-        safety_mode: null,
-        depeg_worsening_bps_step: null,
-      }],
-    }));
-
-    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
-      initData,
-      operation: { kind: "export-watchlist" },
-    }), BOT_TOKEN);
-    const body = await readJsonResponse(response, 200) as { result?: { kind?: string; token?: string } };
-
-    expect(body.result?.kind).toBe("watchlist-export");
-    expect(body.result?.token).toMatch(/^pw3\./);
-    expect(db.getHistory().some((entry) => entry.binds.some((value) =>
-      typeof value === "string" && value.startsWith("telegram:mini-app-mutation-burst:anon:")))).toBe(false);
-    expect(historyMatches(db, "INSERT INTO telegram_usage_daily", {1:"mini_app_portability",3:"watchlist_export"})).toBe(true);
-    expect(historyMatches(db, "INSERT INTO telegram_usage_daily", {1:"mini_app_mutation",3:"watchlist_export"})).toBe(false);
-  });
-
-  it("routes a signed bulk preview through the read-only portability path", async () => {
-    const initData = await privateInitData();
     const db = makeMiniAppDb(stateReadTables());
 
     const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
@@ -374,64 +333,12 @@ describe("handleTelegramMiniAppMutation", () => {
     await expect(response.json()).resolves.toMatchObject({
       result: { kind: "bulk-watchlist-preview", adds: ["usdt-tether"], removes: [] },
     });
+    expect(db.getHistory().some((entry) => entry.binds.some((value) =>
+      typeof value === "string" && value.startsWith("telegram:mini-app-mutation-burst:")))).toBe(false);
     expect(historyMatches(db, "INSERT INTO telegram_usage_daily", {1:"mini_app_portability",3:"bulk_watchlist_preview"})).toBe(true);
   });
 
-  it("hydrates state after a confirmed signed watchlist import", async () => {
-    const initData = await privateInitData();
-    const token = await encodeWatchlistTokenV3({
-      registryVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
-      direct: [{
-        stablecoinId: "usdt-tether",
-        alertDews: true,
-        alertDepeg: true,
-        alertSafety: false,
-        alertLaunch: false,
-        alertReserve: false,
-        alertFreeze: false,
-        overrideDews: true,
-        overrideDepeg: true,
-        overrideSafety: false,
-        overrideLaunch: false,
-        overrideReserve: false,
-        overrideFreeze: false,
-        dewsMinBand: null,
-        safetyMode: null,
-        depegWorseningBpsStep: null,
-      }],
-      presets: [],
-    });
-    const { db, sqlite } = persistedDb();
-    sqlite.prepare("INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews, alert_depeg, alert_dews_override, alert_depeg_override) VALUES ('42', 'usdc-circle', 1, 1, 1, 1)").run();
-
-    const previewResponse = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
-      initData,
-      operation: { kind: "preview-watchlist-import", token },
-    }), BOT_TOKEN);
-    const preview = await previewResponse.json() as { result: { expectedPreferenceGeneration: number; previewFingerprint: string } };
-    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
-      initData,
-      operation: {
-        kind: "confirm-watchlist-import",
-        token,
-        expectedPreferenceGeneration: preview.result.expectedPreferenceGeneration,
-        previewFingerprint: preview.result.previewFingerprint,
-      },
-    }), BOT_TOKEN);
-
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({
-      viewer: { chatId: "42" },
-      subscriptions: [expect.objectContaining({ stablecoinId: "usdt-tether" })],
-    });
-    expect(sqlite.prepare("SELECT stablecoin_id, alert_dews, alert_depeg FROM telegram_subscriptions WHERE chat_id = '42'").all())
-      .toEqual([{ stablecoin_id: "usdt-tether", alert_dews: 1, alert_depeg: 1 }]);
-    expect(sqlite.prepare("SELECT event_type FROM telegram_usage_daily WHERE event_type = 'mini_app_mutation'").all()).toEqual([{ event_type: "mini_app_mutation" }]);
-    // An existing active row with missing historical evidence is not a new acquisition.
-    expect(sqlite.prepare("SELECT * FROM telegram_adoption_daily WHERE stage = 'first_follow'").all()).toEqual([]);
-  });
-
-  it("rate-limits repeated read-only portability requests with portable telemetry", async () => {
+  it("rate-limits repeated read-only bulk previews with portable telemetry", async () => {
     const initData = await privateInitData();
     const cooldownKey = "telegram:command-cooldown:42:mini-app:session";
     const db = makeMiniAppDb([
@@ -451,12 +358,12 @@ describe("handleTelegramMiniAppMutation", () => {
 
     const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
-      operation: { kind: "export-watchlist" },
+      operation: { kind: "preview-bulk-watchlist", addStablecoinIds: ["usdt-tether"], removeStablecoinIds: [] },
     }), BOT_TOKEN);
 
     expect(response.status).toBe(429);
     await expect(response.json()).resolves.toMatchObject({ code: "rate-limited", retryAfterSec: 1 });
-    expect(historyMatches(db, "INSERT INTO telegram_usage_daily", {1:"mini_app_portability",3:"watchlist_export",4:"rate_limited"})).toBe(true);
+    expect(historyMatches(db, "INSERT INTO telegram_usage_daily", {1:"mini_app_portability",3:"bulk_watchlist_preview",4:"rate_limited"})).toBe(true);
   });
 
   it("applies global alert mutations", async () => {
@@ -567,7 +474,8 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyMatches(db, "alert_dews = excluded.alert_dews", { 0: "42", 1: "usdc-circle", 2: 0, 3: null })).toBe(true);
     expect(historyMatches(db, "alert_dews = excluded.alert_dews", { 0: "42", 1: "usdc-circle", 2: 1, 3: "WARNING" })).toBe(false);
     expect(historyMatches(db, "alert_safety = excluded.alert_safety", { 0: "42", 1: "usdc-circle", 2: 1, 3: "downgrade-only" })).toBe(true);
-    expect(historyMatches(db, "alert_launch = excluded.alert_launch", { 0: "42", 1: "usdc-circle", 2: 1 })).toBe(true);
+    // Launch is retired: the legacy patch key is accepted but never written.
+    expect(historyMatches(db, "alert_launch = excluded.alert_launch", { 0: "42", 1: "usdc-circle", 2: 1 })).toBe(false);
     expect(batchSizes[0]).toBeGreaterThan(1);
   });
 
@@ -656,8 +564,7 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(sqlite.prepare("SELECT stablecoin_id FROM telegram_subscriptions WHERE chat_id = '42'").all()).toEqual([]);
     expect(sqlite.prepare("SELECT preset_id, alert_dews, alert_depeg, alert_safety FROM telegram_preset_subscriptions WHERE chat_id = '42'").all())
       .toEqual([{ preset_id: "usd-top25", alert_dews: 1, alert_depeg: 1, alert_safety: 0 }]);
-    expect(sqlite.prepare("SELECT campaign, placement, feature, count FROM telegram_adoption_daily WHERE stage = 'first_follow'").all())
-      .toEqual([{ campaign: "organic", placement: "menu", feature: "preset", count: 1 }]);
+    expect(sqlite.prepare("SELECT count(*) AS count FROM telegram_adoption_daily").get()).toEqual({ count: 0 });
   });
 
   it("keeps authenticated transient failures inside the bounded mutation budget", async () => {
@@ -744,7 +651,6 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(sqlite.prepare("SELECT stablecoin_id FROM telegram_subscriptions").all()).toEqual([{ stablecoin_id: "usdc-circle" }]);
     expect(sqlite.prepare("SELECT * FROM telegram_preset_subscriptions").all()).toEqual([]);
     expect(sqlite.prepare("SELECT * FROM telegram_usage_daily").all()).toEqual([]);
-    expect(sqlite.prepare("SELECT * FROM telegram_adoption_daily WHERE stage = 'first_follow'").all()).toEqual([]);
   });
 
   it("denies group mutations", async () => {

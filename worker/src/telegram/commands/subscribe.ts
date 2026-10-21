@@ -1,4 +1,3 @@
-import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import { escapeHtml } from "../delivery/telegram";
 import { recordTelegramUsageEvent } from "../store/usage-analytics";
 import {
@@ -7,34 +6,30 @@ import {
   validateSubscribeArgs,
 } from "../common/alerts-parser";
 import { buildNotFoundMessage } from "../webhook/telegram-webhook-messages";
-import { PENDING_OWNERSHIP_CONFLICT_MESSAGE } from "../store/telegram-webhook-store";
+import { buildOnboardingKeyboard } from "../webhook/telegram-webhook-setup";
 import type { WebhookCommandHandler } from "./context";
 import {
-  buildBulkConfirmReplyMarkup,
   buildBulkConfirmMessage,
+  buildBulkConfirmReplyMarkup,
   dedupePresetIds,
-  buildTelegramActionContext,
-  makeActionRunner,
-  persistBulkConfirmPrompt,
+  runFollowCommand,
   subscribableCoinCount,
 } from "./action-runner";
+import { unixNow } from "../store/subscribers";
 
 const RECOMMENDED_SUBSCRIBE_TYPES = ["dews", "depeg"] as const;
-const SUBSCRIBE_PROMPT_MESSAGE =
-  "Tap below for guided setup, or type /subscribe dews USDC. "
-  + "Without alert types, /subscribe &lt;ticker&gt; follows DEWS and depeg alerts.";
+const SUBSCRIBE_PROMPT_PRIVATE = "What do you want to follow? Or type tickers, e.g. /subscribe USDC USDT";
+const SUBSCRIBE_PROMPT_GROUP = "Type tickers or a preset, e.g. /subscribe@PharosWatchBot usd-top25";
 
 export const handleSubscribe: WebhookCommandHandler = async (ctx, args) => {
   const { db } = ctx;
-  const actionContext = buildTelegramActionContext(ctx);
-  const parsed = parseSubscribeArgs(args);
   if (!args.trim()) {
-    // Menu taps send the bare command: point at guided setup instead of a usage error.
-    await ctx.replyToChatWithMarkup(SUBSCRIBE_PROMPT_MESSAGE, {
-      replyMarkup: {
-        inline_keyboard: [[{ text: "Set up alerts", url: `${TELEGRAM_BOT_URL}?start=setup` }]],
-      },
-    });
+    // Menu taps send the bare command: offer the one-tap choices instead of a usage error.
+    if (ctx.chatType === "private") {
+      await ctx.replyToChatWithMarkup(escapeHtml(SUBSCRIBE_PROMPT_PRIVATE), { replyMarkup: buildOnboardingKeyboard() });
+    } else {
+      await ctx.replyToChat(escapeHtml(SUBSCRIBE_PROMPT_GROUP));
+    }
     await recordTelegramUsageEvent(db, {
       eventType: "subscribe",
       actionDetail: "validation",
@@ -42,6 +37,7 @@ export const handleSubscribe: WebhookCommandHandler = async (ctx, args) => {
     });
     return;
   }
+  const parsed = parseSubscribeArgs(args);
   const targetsOnly = parsed.alertTypes.size === 0 && parsed.invalidTargets.length === 0
     && (parsed.tickers.length > 0 || parsed.presetIds.length > 0 || parsed.subscribeAll);
   if (targetsOnly) for (const type of RECOMMENDED_SUBSCRIBE_TYPES) parsed.alertTypes.add(type);
@@ -70,45 +66,26 @@ export const handleSubscribe: WebhookCommandHandler = async (ctx, args) => {
     return;
   }
 
+  // Keep `undefined` when no depeg-step was typed so stored tuning survives.
+  const depegStep = parsed.depegWorseningBpsStep;
   if (parsed.subscribeAll) {
-    const payload = {
-      kind: "subscribe" as const,
-      alertTypes: [...parsed.alertTypes].sort(),
-      presetIds: [],
-      depegWorseningBpsStep: parsed.depegWorseningBpsStep,
-      coinIds: [],
-      subscribeAll: true,
-    };
-    const persisted = await persistBulkConfirmPrompt(actionContext, payload, {
-      requireMatchingStoredIntent: true,
-      clearPending: ctx.clearPendingOnMutation,
-    });
-    if (!persisted) {
-      await ctx.replyToChat(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
-      return;
-    }
+    // Every tracked coin is a scope jump; ask once, statelessly.
     await ctx.replyToChatWithMarkup(
       buildBulkConfirmMessage("subscribe", subscribableCoinCount(), [...parsed.alertTypes], []),
-      { replyMarkup: buildBulkConfirmReplyMarkup(persisted) },
+      {
+        replyMarkup: buildBulkConfirmReplyMarkup(
+          { kind: "subscribe", alertTypes: parsed.alertTypes, depegStep },
+          ctx.operationNowSec ?? unixNow(),
+        ),
+      },
     );
     return;
   }
 
-  const presetIds = dedupePresetIds(parsed.presetIds);
-  const runAction = makeActionRunner(
-    actionContext,
-    ctx.botToken,
-    { kind: "subscribe", alertTypes: [...parsed.alertTypes], presetIds, depegWorseningBpsStep: parsed.depegWorseningBpsStep },
-  );
-  await runAction({
-    tickers: parsed.tickers,
-    actionType: "subscribe",
-    actionPayload: {
-      alertTypes: [...parsed.alertTypes],
-      presetIds,
-      depegWorseningBpsStep: parsed.depegWorseningBpsStep,
-    },
+  await runFollowCommand(ctx, parsed.tickers, {
+    kind: "subscribe",
     alertTypes: parsed.alertTypes,
-    clearPendingOnTerminal: ctx.clearPendingOnMutation,
+    depegStep,
+    presetIds: dedupePresetIds(parsed.presetIds),
   });
 };

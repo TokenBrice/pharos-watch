@@ -21,7 +21,7 @@ import {
   paginateChatRows,
   sortSubscriptions,
 } from "./telegram-webhook-messages";
-import { unixNow } from "../store/telegram-webhook-store";
+import { unixNow } from "../store/subscribers";
 import type { SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
 import {
   TELEGRAM_DEWS_BANDS,
@@ -100,7 +100,8 @@ export function buildHomeKeyboard(subscriber: SubscriberRow | null, options: Hom
     rows.push([
       {
         text: `${labelForType(type)}: ${subscriberHasGlobal(subscriber, type) ? "ON" : "OFF"}`,
-        callback_data: `settings:gt:${type}`,
+        // The button names the target value so a redelivered tap cannot flip it back.
+        callback_data: `settings:gt:${type}:${subscriberHasGlobal(subscriber, type) ? "0" : "1"}`,
       },
     ]);
   }
@@ -121,7 +122,6 @@ export function buildCoinMessage(coinId: string, row: SubscriptionRow | null): s
     `DEWS min band: ${escapeHtml(describeDews(row))}`,
     `Safety mode: ${escapeHtml(describeSafety(row))}`,
     `Depeg step: ${escapeHtml(describeDepeg(row))}`,
-    `Launch: ${describeLocalState(row, "launch")}`,
     `Reserve: ${describeLocalState(row, "reserve")}`,
     `Freeze alerts: ${describeLocalState(row, "freeze")}`,
     "",
@@ -139,7 +139,7 @@ export function buildCoinKeyboard(
   const depegStep: number | "off" | "default" | null = row?.alert_depeg
     ? row.depeg_worsening_bps_step ?? "default"
     : isExplicitOff(row, "depeg") ? "off" : null;
-  const plainState = (type: "launch" | "reserve" | "freeze"): boolean | null =>
+  const plainState = (type: "reserve" | "freeze"): boolean | null =>
     row?.[TELEGRAM_ALERT_PERSISTENCE[type].subscriptionColumn] === 1
       ? true
       : isExplicitOff(row, type) ? false : null;
@@ -148,7 +148,6 @@ export function buildCoinKeyboard(
     buildDewsRow(coinId, dewsBand, isExplicitOff(row, "dews")),
     buildSafetyRow(coinId, safetyMode, isExplicitOff(row, "safety")),
     buildDepegRow(coinId, depegStep),
-    buildPlainAlertRow(coinId, "launch", plainState("launch"), ""),
     buildPlainAlertRow(coinId, "reserve", plainState("reserve")),
     buildPlainAlertRow(coinId, "freeze", plainState("freeze")),
     [{ text: "← Back to chat settings", callback_data: "settings:home" }],
@@ -206,7 +205,7 @@ function buildSafetyRow(coinId: string, safetyMode: string | null, explicitOff: 
 
 function buildPlainAlertRow(
   coinId: string,
-  alertType: "launch" | "reserve" | "freeze",
+  alertType: "reserve" | "freeze",
   enabled: boolean | null,
   prefix = `${TELEGRAM_ALERT_FAMILY_SHORT_LABELS[alertType]} `,
 ): Array<{ text: string; callback_data: string }> {

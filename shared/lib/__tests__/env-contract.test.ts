@@ -14,7 +14,7 @@ describe("env contract manifest", () => {
     expect(envExample).not.toContain("VAULTS_FYI_");
     expect(envExample).toContain("SITE_API_ORIGIN=https://site-api.pharos.watch");
     expect(envExample).toContain("SELECTOR_SNAPSHOT_IP_HASH_SECRET=");
-    expect(envExample).toContain("TELEGRAM_ADOPTION_IP_HASH_SECRET=");
+    expect(envExample).not.toContain("TELEGRAM_ADOPTION_IP_HASH_SECRET");
   });
 
 });

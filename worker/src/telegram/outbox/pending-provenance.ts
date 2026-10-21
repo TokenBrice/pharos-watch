@@ -155,7 +155,6 @@ export function buildPendingAlertScope(alerts: ConsolidatedAlerts): PendingAlert
   collectScopeItems(alerts.depegResolved, "depeg", items);
   collectScopeItems(alerts.depegWorsening, "depeg", items);
   collectScopeItems(alerts.safety, "safety", items);
-  collectScopeItems(alerts.launch, "launch", items);
   collectScopeItems(alerts.reserve, "reserve", items);
   collectScopeItems(alerts.freeze ?? [], "freeze", items);
   return normalizePendingAlertScope(items);

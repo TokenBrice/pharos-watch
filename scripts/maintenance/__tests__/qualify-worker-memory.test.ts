@@ -24,7 +24,7 @@ describe("Worker memory qualification harness", () => {
   it.each([
     "worker/src/api/og.tsx", "worker/src/telegram/webhook/telegram-webhook.ts",
     "worker/src/telegram/commands/start.ts", "worker/src/telegram/callbacks/confirm.ts",
-    "worker/src/telegram/mini-app/telegram-mini-app.ts", "worker/src/telegram/adoption/telegram-adoption.ts",
+    "worker/src/telegram/mini-app/telegram-mini-app.ts",
     "worker/src/telegram/admin/admin-telegram-broadcast.ts", "worker/src/telegram/webhook/telegram-ingress-abuse.ts",
     "worker/src/handlers/http/request-dispatch.ts", "worker/src/routes/public-routes.ts",
     "node_modules/satori/dist/index.js", "node_modules/@resvg/resvg-wasm/index.js",

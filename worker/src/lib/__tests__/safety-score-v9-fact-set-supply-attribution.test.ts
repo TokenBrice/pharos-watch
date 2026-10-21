@@ -257,6 +257,22 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     );
   });
 
+  it("keeps a carried-forward wM packet current through its bounded window (10.26)", () => {
+    const fixed = withWmReviewedDeploymentAttribution(wmFixedInput(), {
+      observationAgeSec: 45 * 60, carriedForwardFromGenerationId: "gen-prior",
+    });
+    const { baseline, compiled, wm } = compileWm(fixed);
+    expect(wm.supply.status.observationState).toBe("known");
+    expect(wm.gaps.map((gap) => gap.reasonCode)).not.toContain("runtime-bridge-materiality-unavailable");
+    expect(wm.evidence.find((evidence) => evidence.evidenceId === "wm-m0:chain-supply")).toMatchObject({
+      freshness: { state: "current", maxAgeSec: baseline.sources.chainSupply.maxAgeSec! + 30 * 60 },
+    });
+    const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+    expect(evaluated.scoreInput.pillars.control.reasons.map((reason) => reason.code)).not.toContain(
+      "runtime-bridge-materiality-unavailable",
+    );
+  });
+
   it("compiles one reviewed XAUt0 group control without destination supply claims", () => {
     const {
       attribution, bridgeControls, clockSec, compiled, groupRow, supplyEvidence, xaut,

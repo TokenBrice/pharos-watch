@@ -138,7 +138,6 @@ export function makeCompleteTelegramBotStatus(
       sentCleanup: 0,
     },
     retryErrorClassCounts: {},
-    webhookEffectUnknown: 0,
     deliverySli: {
       availability: "unavailable",
       quality: "unavailable",

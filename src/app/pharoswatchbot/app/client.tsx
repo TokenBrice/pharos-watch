@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { pluralizeCount } from "@shared/lib/telegram-metrics";
 import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
-import type { TelegramAlertType, TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
+import type { TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
 import { useTelegramMainButton } from "./use-telegram-main-button";
 import { useTelegramBridge } from "./use-telegram-bridge";
 import { useMiniAppMutations } from "./use-mini-app-mutations";
@@ -16,7 +16,7 @@ import { PreviewState } from "./components/PreviewState";
 import { MiniAppTabs } from "./components/MiniAppTabs";
 import { MiniAppPanelRouter } from "./components/MiniAppPanelRouter";
 import { MiniAppSessionStatus, type MiniAppSessionStatus as MiniAppSessionStatusValue } from "./components/MiniAppSessionStatus";
-import { ALERT_LABELS, RECOMMENDED_OPERATION } from "./constants";
+import { LIVE_ALERT_TYPES, RECOMMENDED_OPERATION } from "./constants";
 import { isPausedSentinel, isTelegramSnoozeActive } from "@shared/lib/telegram-delivery-policy";
 import {
   isMiniAppVersionMismatch,
@@ -100,7 +100,7 @@ export function PharosWatchBotMiniAppClient() {
     authExpired: sessionAuthExpired || state?.viewer.mutationBlockReason === "stale-auth",
     messageAutoDismissActive: status === "ready",
     mutationsAllowed: status === "ready",
-    portabilityReadsAllowed: status === "ready" && !sessionAuthExpired,
+    signedReadsAllowed: status === "ready" && !sessionAuthExpired,
     onSessionAuthExpired: markSessionAuthExpired,
   });
   const {
@@ -115,7 +115,6 @@ export function PharosWatchBotMiniAppClient() {
     staleAuth,
     mutate,
     performMutation,
-    performPortability,
     performBulkWatchlistPreview,
     remove: handleRemoveCoin,
     undoRemove: handleUndoRemove,
@@ -167,7 +166,7 @@ export function PharosWatchBotMiniAppClient() {
 
   const headline = useMemo(() => {
     if (!state) return "";
-    const activeGlobalCount = (Object.keys(ALERT_LABELS) as TelegramAlertType[]).filter((type) => state.subscriber.globalAlerts[type]).length;
+    const activeGlobalCount = LIVE_ALERT_TYPES.filter((type) => state.subscriber.globalAlerts[type]).length;
     const presetCount = state.presets.length;
     const presetClause = presetCount > 0 ? `, ${presetCount} ${pluralizeCount(presetCount, "preset")}` : "";
     const coinCount = state.subscriptions.length;
@@ -281,7 +280,7 @@ export function PharosWatchBotMiniAppClient() {
   // Expired private sessions keep edit controls live (not greyed out); the
   // mutations hook turns each attempt into visible unsaved intent instead of a request.
   const controlsEnabled = canMutate || Boolean(!forgotten && authExpired && state?.viewer.chatId != null);
-  const canReadPortability = Boolean(!forgotten && initData && status === "ready" && !sessionAuthExpired && state?.viewer.chatId != null);
+  const canReadBulk = Boolean(!forgotten && initData && status === "ready" && !sessionAuthExpired && state?.viewer.chatId != null);
   const mutationControlsDisabled = isMutating || mutationRetryAfterSec > 0;
   const runMainButtonMutation = useCallback((operation: TelegramMiniAppOperation) => {
     if (!canMutate || mutationControlsDisabled || mainButtonInFlightRef.current) return;
@@ -393,7 +392,7 @@ export function PharosWatchBotMiniAppClient() {
                 watchlist={{
                   state: state,
                   canMutate: controlsEnabled,
-                  canReadBulk: canReadPortability,
+                  canReadBulk,
                   isMutating: mutationControlsDisabled,
                   isRequestBusy: isMutating,
                   pendingOperation,
@@ -422,18 +421,13 @@ export function PharosWatchBotMiniAppClient() {
                 settings={{
                   state: state,
                   canMutate: controlsEnabled,
-                  canReadPortability,
                   isMutating: mutationControlsDisabled,
-                  isPortabilityRequestBusy: isMutating,
                   pendingOperation,
                   onMutate: mutate,
                   globalAlerts: state.subscriber.globalAlerts,
                   onUnsubscribeAll: handleUnsubscribeAll,
                   onForgetMe: handleForgetMe,
                   hasShowConfirm: Boolean(webApp?.showConfirm),
-                  onExportWatchlist: () => performPortability({ kind: "export-watchlist" }),
-                  onPreviewWatchlistImport: (token) => performPortability({ kind: "preview-watchlist-import", token }),
-                  onConfirmWatchlistImport: (operation) => performMutation(operation),
                 }}
                 coinInsight={coinInsightTarget ? {
                   state: state,

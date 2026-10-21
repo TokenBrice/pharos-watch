@@ -116,7 +116,7 @@ export function checkHeavyReachability(directory: string): boolean {
           if (
             /(?:(?:^|\/)worker\/|^)src\/(?:api\/|routes\/|handlers\/http\/|router\.[cm]?[jt]sx?$|handlers\/scheduled\/public-runners\.[cm]?[jt]s$)/.test(normalized) ||
             // Telegram HTTP seams include the HTTP-bearing telegram-pulse.ts.
-            /(?:(?:^|\/)worker\/|^)src\/telegram\/(?:webhook|commands|callbacks|mini-app|adoption|admin)\//.test(normalized) ||
+            /(?:(?:^|\/)worker\/|^)src\/telegram\/(?:webhook|commands|callbacks|mini-app|admin)\//.test(normalized) ||
             /(?:^|\/)fonts?\//.test(normalized) ||
             /\.(?:wasm|ttf|otf|woff2?)(?:$|\?)/i.test(normalized) ||
             /(?:^|\/)(?:@resvg|satori|yoga-wasm-web)(?:\/|$)/.test(normalized)

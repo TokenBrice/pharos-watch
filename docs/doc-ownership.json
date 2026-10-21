@@ -493,7 +493,6 @@
         "worker/src/telegram/commands/**",
         "worker/src/telegram/callbacks/**",
         "worker/src/telegram/mini-app/**",
-        "worker/src/telegram/adoption/**",
         "worker/src/telegram/admin/**",
         "worker/src/handlers/http/**",
         "worker/src/lib/auth.ts",
@@ -623,7 +622,6 @@
           { "path": "docs/api-reference.md", "anchor": "post-apitelegram-mini-appmutate" }
         ] },
         { "sources": ["worker/src/telegram/webhook/telegram-webhook.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "post-apitelegram-webhook" }] },
-        { "sources": ["worker/src/telegram/adoption/telegram-adoption.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "post-pharoswatchbot-adoption" }] },
         { "sources": ["worker/src/telegram/admin/**"], "required": [{ "path": "docs/api-reference-admin.md", "anchor": "post-apiadmin-telegram-broadcast" }] }
       ],
       "background": [
@@ -738,7 +736,6 @@
       "label": "Telegram ingress, commands, dispatch, and Mini App",
       "risk": "high",
       "sources": [
-        "functions/pharoswatchbot-adoption.ts",
         "worker/src/cron/telegram/**",
         "worker/src/handlers/scheduled/*telegram*.ts",
         "worker/src/telegram/**",
@@ -818,7 +815,7 @@
           ]
         },
         {
-          "sources": ["worker/src/telegram/adoption/**", "functions/pharoswatchbot-adoption.ts", "shared/lib/telegram-adoption-*.ts", "src/app/pharoswatchbot/page.tsx"],
+          "sources": ["shared/lib/telegram-landing-links.ts", "src/app/pharoswatchbot/page.tsx"],
           "local": [
             { "path": "docs/telegram-mini-app.md", "anchor": "frontend-main-page" },
             { "path": "docs/telegram-mini-app.md", "anchor": "public-pulse-privacy-and-freshness" }
@@ -840,7 +837,7 @@
           ]
         },
         {
-          "sources": ["worker/src/telegram/webhook/chat-member.ts", "worker/src/telegram/webhook/__tests__/chat-member*.ts"],
+          "sources": ["worker/src/telegram/webhook/telegram-webhook-auth.ts", "worker/src/telegram/webhook/__tests__/telegram-chat-member*.ts"],
           "local": [
             { "path": "docs/telegram-alerts.md", "anchor": "group-admin-gating" },
             { "path": "docs/telegram-architecture.md", "anchor": "7-state--persistence" }
@@ -871,7 +868,6 @@
         { "path": "docs/telegram-architecture.md", "anchor": "dispatch-implementation-appendix" },
         { "path": "docs/runbooks/telegram-no-delivery.md", "runbook": { "label": "Telegram delivery, backlog and bot-wide outages", "kind": "symptom" } },
         { "path": "docs/runbooks/telegram-admin-broadcast-safety.md", "runbook": { "label": "Telegram broadcast preflight", "kind": "procedure" } },
-        { "path": "docs/runbooks/telegram-adoption-report.md", "runbook": { "label": "Telegram adoption report queries", "kind": "reference" } },
         { "path": "docs/runbooks/telegram-digest-outbox.md", "runbook": { "label": "Telegram digest outbox recovery", "kind": "symptom" } },
         { "path": "docs/runbooks/telegram-group-admin-gating-rollback.md", "runbook": { "label": "Telegram group-admin gating rollback", "kind": "procedure" } },
         { "path": "docs/runbooks/telegram-mini-app-auth-failures.md", "runbook": { "label": "Telegram Mini App auth failures", "kind": "symptom" } },
@@ -1658,7 +1654,7 @@
           ]
         },
         {
-          "sources": ["worker/src/api/**", "worker/src/telegram/webhook/**", "worker/src/telegram/commands/**", "worker/src/telegram/callbacks/**", "worker/src/telegram/mini-app/**", "worker/src/telegram/adoption/**", "worker/src/telegram/admin/**", "worker/src/routes/**", "worker/src/router.ts", "worker/src/handlers/http/**"],
+          "sources": ["worker/src/api/**", "worker/src/telegram/webhook/**", "worker/src/telegram/commands/**", "worker/src/telegram/callbacks/**", "worker/src/telegram/mini-app/**", "worker/src/telegram/admin/**", "worker/src/routes/**", "worker/src/router.ts", "worker/src/handlers/http/**"],
           "required": [{ "path": "docs/worker-infrastructure.md", "anchor": "http-request-handling-entry" }]
         },
         {

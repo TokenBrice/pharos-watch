@@ -26,30 +26,7 @@ describe("/pause command", () => {
       { chat_id: "neighbor", alert_snooze_until_ts: 456, preference_generation: 9 },
     ]);
     const options = vi.mocked(ctx.replyToChatWithMarkup).mock.calls[0]?.[1];
-    expectMiniAppButton(buttonsFromMarkup(options?.replyMarkup), "Open in app", "snooze");
-  });
-
-  it("uses the stored timed deadline after the clock advances", async () => {
-    const { sqlite, db } = seeded();
-    vi.setSystemTime((NOW + 3600) * 1000);
-    const ctx = makeCommandContext(db, {
-      storedIntent: { version: 1, kind: "command:pause", mutation: "required", payload: { snoozeUntil: NOW + 14400 } },
-    });
-    await handlePause(ctx, "4h");
-    expect(sqlite.prepare("SELECT alert_snooze_until_ts FROM telegram_subscribers WHERE chat_id = '42'").get())
-      .toEqual({ alert_snooze_until_ts: NOW + 14400 });
-  });
-
-  it("replies on applied retries without repeating preferences or fence confirmation", async () => {
-    const { sqlite, db } = seeded();
-    const before = sqlite.prepare("SELECT * FROM telegram_subscribers ORDER BY chat_id").all();
-    const confirm = vi.fn();
-    const ctx = makeCommandContext(db, { wasMutationApplied: true, confirmAtomicMutationApplied: confirm,
-      prepareMutationAppliedStatement: () => db.prepare("DELETE FROM telegram_subscribers") });
-    for (const arg of ["", "off", "4h"]) await handlePause(ctx, arg);
-    expect(sqlite.prepare("SELECT * FROM telegram_subscribers ORDER BY chat_id").all()).toEqual(before);
-    expect(confirm).not.toHaveBeenCalled();
-    expect(ctx.replyToChatWithMarkup).toHaveBeenCalledTimes(3);
+    expectMiniAppButton(buttonsFromMarkup(options?.replyMarkup), "Manage Alerts", "snooze");
   });
 
   it("rejects unknown arguments without changing preferences", async () => {

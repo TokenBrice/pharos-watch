@@ -24,9 +24,6 @@ const TELEGRAM_PUBLIC_ENTRIES: readonly (readonly [string, readonly string[]])[]
   ["worker/src/telegram/admin/admin-telegram-broadcast.ts", [
     "worker/src/routes/admin-routes.ts",
   ]],
-  ["worker/src/telegram/adoption/telegram-adoption.ts", [
-    "worker/src/routes/messaging-routes.ts",
-  ]],
   ["worker/src/telegram/mini-app/telegram-mini-app.ts", [
     "worker/src/routes/messaging-routes.ts",
   ]],
@@ -49,9 +46,6 @@ const TELEGRAM_PUBLIC_ENTRIES: readonly (readonly [string, readonly string[]])[]
     "worker/src/cron/digest-publication-watchdog.ts", "worker/src/cron/digest/publish.ts",
     "worker/src/cron/digest/telegram-transport.ts", "worker/src/cron/digest/wrapper-style-gate.ts",
     "worker/src/cron/weekly-recap.ts", "worker/src/lib/runtime-credentials.ts", "worker/src/routes/shared.ts",
-  ]],
-  ["worker/src/telegram/adoption/adoption-analytics.ts", [
-    "worker/src/handlers/http/gates.ts", "worker/src/routes/messaging-routes.ts",
   ]],
   ["worker/src/telegram/delivery/delivery-sli.ts", [
     "worker/src/lib/status/telegram-bot-stats.ts",

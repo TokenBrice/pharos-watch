@@ -603,6 +603,8 @@ export const ReviewedDeploymentUnitPartitionSchema = z.strictObject({
   registryFingerprint: Sha256Schema,
   routeInventoryDigest: Sha256Schema,
   deployments: z.array(ReviewedDeploymentSupplyRowSchema).min(2),
+  /** 10.26: re-derived from the last admitted packet of this generation within the carry-forward window. */
+  carriedForwardFromGenerationId: z.string().min(1).optional(),
 });
 export type ReviewedDeploymentUnitPartitionV1 = z.output<typeof ReviewedDeploymentUnitPartitionSchema>;
 
@@ -642,6 +644,8 @@ export const XautRepresentationGroupSupplyAttributionV2Schema = z.strictObject({
   model: z.literal("canonical-lock-mint-group-partition-v2"),
   assetId: z.literal("xaut-tether"),
   observedAtSec: z.number().int().nonnegative(),
+  /** 10.26: re-derived from the last admitted packet of this generation within the carry-forward window. */
+  carriedForwardFromGenerationId: z.string().min(1).optional(),
   registryFingerprint: Sha256Schema,
   routeInventoryDigest: Sha256Schema,
   canonical: z.strictObject({

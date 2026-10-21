@@ -1,830 +1,246 @@
 /**
- * Two-branch setup wizard for /start onboarding.
+ * `/start` onboarding. One card, three choices, no stored wizard state:
  *
- * State lives in `telegram_pending_disambiguation` under
- * `action_type = "setup-step"` so it shares the 5-min TTL and cleanup cron
- * already in place for disambiguation flows.
+ *   setup:top25   follow the USD Top 25 preset for depeg and stress alerts
+ *   setup:undo:<mask>:<expiry>   restore the preset follow as it was before
+ *                 the tap (mask of prior families, base-36 expiry; offered
+ *                 only when the tap changed something)
+ *   setup:sample  show one sample alert
  *
- * Callback namespace: `setup:*` (see telegram-webhook-callbacks.ts).
+ * "Choose my own coins" is a Mini App button. Returning users get a short
+ * summary instead of the new-user card.
  */
 
-import { escapeHtml, type ForceReplyMarkup, type InlineKeyboardButton, type InlineKeyboardMarkup } from "../delivery/telegram";
-import { buildTelegramMiniAppUrl } from "../common/mini-app-url";
-import { recordTelegramUsageEvent } from "../store/usage-analytics";
+import { TELEGRAM_BOT_URL, TELEGRAM_BOT_USERNAME } from "@shared/lib/telegram-bot-registration";
+import { TELEGRAM_PUBLIC_ALERT_SAMPLES } from "@shared/lib/telegram-alert-samples";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
-import { parseTelegramAdoptionToken } from "@shared/lib/telegram-adoption-analytics";
-import {
-  TELEGRAM_PRESET_DEFINITIONS,
-  TELEGRAM_PRESET_IDS,
-} from "@shared/lib/telegram-presets";
-import {
-  recordTelegramFirstSetupComplete,
-  telegramAdoptionDimensionsForStart,
-} from "../adoption/adoption-analytics";
-import {
-  TELEGRAM_PRESET_LABEL_BY_ID,
-  resolveTelegramPresetTargets,
-  type TelegramPresetId,
-} from "../common/presets";
-import { resolveTicker } from "../common/alerts-parser";
-import {
-  buildNotFoundMessage,
-  buildPresetSubscriptionSummaryMessage,
-  buildPresetUnavailableMessage,
-  buildStatusAmbiguousMessage,
-  buildSubscriptionSummaryMessage,
-} from "./telegram-webhook-messages";
-import {
-  canActOnPendingOwner,
-  bindPendingKeyboard,
-  pendingFlowId,
-  SETUP_PENDING_ACTION_TYPE,
-  WIZARD_INTRO_MESSAGE,
-  type SetupWizardState,
-  type SetupWizardTarget,
-} from "./telegram-webhook-shared";
+import { escapeHtml, type InlineKeyboardButton, type InlineKeyboardMarkup } from "../delivery/telegram";
+import { buildTelegramMiniAppUrl } from "../common/mini-app-url";
+import { TELEGRAM_PRESET_LABEL_BY_ID, resolveTelegramPresetTargets, type TelegramPresetId } from "../common/presets";
+import { recordTelegramUsageEvent } from "../store/usage-analytics";
 import {
   applySubscribeIntent,
-  clearPendingDisambiguation,
-  loadPendingDisambiguation,
-  loadSubscriptionsByIds,
-  PENDING_OWNERSHIP_CONFLICT_MESSAGE,
-  persistPendingDisambiguationRow,
-  upsertGlobalAlertTypes,
-  unixNow,
-} from "../store/telegram-webhook-store";
-import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
+  applyUnsubscribeIntent,
+  loadPresetSubscriptions,
+  prepareSubscriberAndPresetPatchStatements,
+} from "../store/presets";
+import { loadSubscriberByChat, unixNow } from "../store/subscribers";
+import { loadSubscriptionRowsByChat } from "../store/subscriptions";
 import {
-  createTelegramWebhookIntent,
-  type TelegramMutationContext,
-} from "./telegram-webhook-effect-fence";
+  MANAGE_ALERTS_LABEL,
+  buildPresetUnavailableMessage,
+  describeDeliveryState,
+  describeFollows,
+  followsNothing,
+} from "./telegram-webhook-messages";
+import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
+import { executeAtomicBatch } from "../../lib/db";
+import { decodeAlertTypes, encodeAlertTypes } from "../callbacks/pick";
+import { isUnexpired } from "../callbacks/confirm";
 
-const ALERT_TYPE_ORDER = ["dews", "depeg", "safety", "launch"] as const;
-
-const ALERT_TYPE_LABELS: Record<(typeof ALERT_TYPE_ORDER)[number], string> = {
-  dews: "DEWS",
-  depeg: "Depeg",
-  safety: "Safety",
-  launch: "Launch",
-};
-
+export const RECOMMENDED_PRESET_ID: TelegramPresetId = "usd-top25";
 const RECOMMENDED_ALERT_TYPES = ["dews", "depeg"] as const;
-const RECOMMENDED_PRESET_ID: TelegramPresetId = "usd-top25";
-const SETUP_SKIP_MESSAGE = `<b>Command reference</b>
+const FOLLOW_TOP_LABEL = "Follow the top 25 USD stablecoins";
+const UNDO_TTL_SEC = 24 * 3600;
 
-Use /help for the full command list.
+const NEW_USER_MESSAGE = `<b>Pharos Watch</b>
+Stablecoin alerts from pharos.watch, sent only when something changes.
 
-Common starts:
-<code>/subscribe dews,depeg usd-top25</code>
-<code>/presets</code>
-<code>/settings</code>
-<code>/list</code>`;
+Tap below to follow the 25 largest USD stablecoins. You'll hear when one loses its peg or its stress level rises.`;
 
-const PRESET_PICKER_DEFINITIONS = [
-  ...TELEGRAM_PRESET_DEFINITIONS.filter((preset) => preset.category === "peg-leaders"),
-  ...TELEGRAM_PRESET_DEFINITIONS
-    .filter((preset) => preset.category === "market-cap")
-    .sort((a, b) => (a.minMarketCapUsd ?? 0) - (b.minMarketCapUsd ?? 0)),
-];
+const GROUP_ADMIN_MESSAGE = `<b>Pharos Watch</b>
+Turn on alerts for this group in one tap, or type /subscribe@${TELEGRAM_BOT_USERNAME} followed by tickers or a preset.`;
 
-function buildBranchKeyboard(flowId: string, options: { includeMiniAppButton?: boolean } = {}): InlineKeyboardMarkup {
+const GROUP_MEMBER_MESSAGE = `<b>Pharos Watch is in this group.</b>
+Admins can turn on alerts here, e.g. /subscribe@${TELEGRAM_BOT_USERNAME} usd-top25
+For your own alerts and quiet hours, message me privately.`;
+
+function manageAlertsButton(): InlineKeyboardButton {
+  return { text: MANAGE_ALERTS_LABEL, web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.watchlist) } };
+}
+
+/** The new-user choices. Private chats only: groups cannot open the Mini App. */
+export function buildOnboardingKeyboard(options: { includeSample?: boolean } = {}): InlineKeyboardMarkup {
   const rows: InlineKeyboardButton[][] = [
-    [{ text: "Use recommended (DEWS + Depeg, usd-top25)", callback_data: "setup:branch:recommended" }],
-    [{ text: "Custom setup", callback_data: "setup:branch:custom" }],
-    [{ text: "I'll type commands myself", callback_data: "setup:branch:skip" }],
+    [{ text: FOLLOW_TOP_LABEL, callback_data: "setup:top25" }],
+    [{ text: "Choose my own coins", web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.watchlist) } }],
   ];
-  if (options.includeMiniAppButton) {
-    // The recommended setup subscribes the user to a ~25-coin watchlist; the
-    // most useful follow-up surface is the watchlist itself, where the new
-    // coins are visible. Payload name comes from the shared registry
-    // (`@shared/lib/telegram-mini-app-payloads`) so the frontend `?startapp=`
-    // parser stays in sync — see T-31.
-    rows.push([
-      {
-        text: "Open control panel",
-        web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.watchlist) },
-      },
-    ]);
-  }
-  return bindPendingKeyboard({ inline_keyboard: rows }, flowId);
+  if (options.includeSample !== false) rows.push([{ text: "Show me a sample alert", callback_data: "setup:sample" }]);
+  return { inline_keyboard: rows };
 }
 
-function buildTypeToggleKeyboard(selected: Set<string>, flowId: string): InlineKeyboardMarkup {
-  const rows = ALERT_TYPE_ORDER.map((type) => {
-    const checked = selected.has(type) ? "✓ " : "";
-    return [{ text: `${checked}${ALERT_TYPE_LABELS[type]}`, callback_data: `setup:type-toggle:${type}` }];
-  });
-  rows.push([
-    { text: "Cancel", callback_data: "setup:cancel" },
-    { text: "Next →", callback_data: "setup:next" },
-  ]);
-  return bindPendingKeyboard({ inline_keyboard: rows }, flowId);
-}
-
-function buildTargetKeyboard(flowId: string): InlineKeyboardMarkup {
-  const rows: InlineKeyboardButton[][] = PRESET_PICKER_DEFINITIONS.map((preset) => [
-    { text: preset.label, callback_data: `setup:target:${preset.id}` },
-  ]);
-  rows.push([{ text: "All tracked coins", callback_data: "setup:target:all" }]);
-  rows.push([{ text: "Type a ticker", callback_data: "setup:target:type" }]);
-  rows.push([{ text: "Cancel", callback_data: "setup:cancel" }]);
-  return bindPendingKeyboard({ inline_keyboard: rows }, flowId);
-}
-
-function buildConfirmKeyboard(flowId: string): InlineKeyboardMarkup {
-  return bindPendingKeyboard({
-    inline_keyboard: [
-      [
-        { text: "Confirm", callback_data: "setup:confirm" },
-        { text: "Cancel", callback_data: "setup:cancel" },
-      ],
-    ],
-  }, flowId);
-}
-
-function buildTickerPromptKeyboard(flowId: string): InlineKeyboardMarkup {
-  return bindPendingKeyboard({
-    inline_keyboard: [[{ text: "Cancel", callback_data: "setup:cancel" }]],
-  }, flowId);
-}
-
-function buildForceReplyKeyboard(): ForceReplyMarkup {
-  return {
-    force_reply: true,
-    input_field_placeholder: "Type a ticker (e.g. USDC)",
-    selective: false,
-  };
-}
-
-function alertTypesSummary(alertTypes: readonly string[]): string {
-  if (alertTypes.length === 0) return "(none — choose at least one)";
-  return alertTypes
-    .map((type) => ALERT_TYPE_LABELS[type as (typeof ALERT_TYPE_ORDER)[number]] ?? type)
-    .join(", ");
-}
-
-function isAllowedAlertType(value: string): value is (typeof ALERT_TYPE_ORDER)[number] {
-  return (ALERT_TYPE_ORDER as readonly string[]).includes(value);
-}
-
-function isKnownPresetId(value: string): value is TelegramPresetId {
-  return TELEGRAM_PRESET_IDS.includes(value as TelegramPresetId);
-}
-
-async function persistSetupState(
-  db: D1Database,
-  chatId: string,
-  state: SetupWizardState,
-  operationStatements?: D1PreparedStatement[],
-): Promise<boolean> {
-  const payload = {
-    step: state.step,
-    alertTypes: state.alertTypes,
-    target: state.target,
-    flowId: state.flowId,
-    ...(state.adoptionToken ? { adoptionToken: state.adoptionToken } : {}),
-  };
-  return persistPendingDisambiguationRow(db, {
-    chatId,
-    actionType: SETUP_PENDING_ACTION_TYPE,
-    actionPayload: payload,
-    alertTypes: [],
-    resolvedIds: [],
-    ambiguousTicker: "",
-    candidates: [],
-    remainingTickers: [],
-    initiatorUserId: state.initiatorUserId,
-    operationStatements,
-  });
-}
-
-export function parseSetupState(
-  actionPayload: string | null | undefined,
-  initiatorUserId: string | null,
-): SetupWizardState | null {
-  if (!actionPayload) return null;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(actionPayload);
-  } catch {
-    return null;
-  }
-  if (!parsed || typeof parsed !== "object") return null;
-  const record = parsed as Record<string, unknown>;
-  const step = record.step;
-  if (
-    step !== "branch" &&
-    step !== "custom-types" &&
-    step !== "custom-target" &&
-    step !== "awaiting-ticker" &&
-    step !== "confirm-recommended" &&
-    step !== "confirm-custom"
-  ) {
-    return null;
-  }
-  const alertTypes = Array.isArray(record.alertTypes)
-    ? record.alertTypes.filter((value): value is string => typeof value === "string" && isAllowedAlertType(value))
-    : [];
-  let target: SetupWizardTarget | null = null;
-  if (record.target && typeof record.target === "object") {
-    const rawTarget = record.target as Record<string, unknown>;
-    if (rawTarget.kind === "preset" && typeof rawTarget.presetId === "string" && isKnownPresetId(rawTarget.presetId)) {
-      target = { kind: "preset", presetId: rawTarget.presetId };
-    } else if (rawTarget.kind === "all") {
-      target = { kind: "all" };
-    } else if (
-      rawTarget.kind === "ticker" &&
-      typeof rawTarget.coinId === "string" &&
-      typeof rawTarget.symbol === "string"
-    ) {
-      target = { kind: "ticker", coinId: rawTarget.coinId, symbol: rawTarget.symbol };
-    }
-  }
-  const adoptionToken = typeof record.adoptionToken === "string"
-    && parseTelegramAdoptionToken(record.adoptionToken)?.destination === "setup"
-    ? record.adoptionToken
-    : null;
-  return { step, alertTypes, target, initiatorUserId, adoptionToken,
-    flowId: typeof record.flowId === "string" ? record.flowId : undefined };
-}
-
-export async function sendWizardIntro(
-  db: D1Database,
-  botToken: string,
-  chatId: string,
-  initiatorUserId: string | null,
-  options: TelegramMutationContext & {
-    adoptionToken?: string | null;
-    includeMiniAppButton?: boolean;
-    clearPending?: boolean;
-  } = {},
-): Promise<void> {
-  const existingPending = await loadPendingDisambiguation(db, chatId);
-  if (
-    existingPending
-    && existingPending.expires_at > unixNow()
-    && existingPending.initiator_user_id != null
-    && initiatorUserId != null
-    && existingPending.initiator_user_id !== initiatorUserId
-  ) {
-    await options.beforeIrreversibleEffect?.("setup-reply");
-    await sendAuditedTelegramReply(db, chatId, PENDING_OWNERSHIP_CONFLICT_MESSAGE, botToken, {
-      actionDetail: "setup_conflict",
-    });
-    return;
-  }
-  const adoptionEntry = parseTelegramAdoptionToken(options.adoptionToken);
-  const recommended = adoptionEntry?.placement === "setup";
-  const preview = recommended ? await previewPresetCoins(db, RECOMMENDED_PRESET_ID) : null;
-  if (recommended && preview == null) {
-    await options.beforeIrreversibleEffect?.("setup-reply");
-    await sendAuditedTelegramReply(db, chatId, buildPresetUnavailableMessage(), botToken, { actionDetail: "setup" });
-    return;
-  }
-  const state: SetupWizardState = {
-    step: recommended ? "confirm-recommended" : "branch",
-    alertTypes: recommended ? [...RECOMMENDED_ALERT_TYPES] : [],
-    target: recommended ? { kind: "preset", presetId: RECOMMENDED_PRESET_ID } : null,
-    initiatorUserId,
-    adoptionToken: adoptionEntry?.destination === "setup" ? adoptionEntry.token : null,
-    flowId: pendingFlowId((options.storedIntent?.payload.nextState as Record<string, unknown> | undefined)?.flowId),
-  };
-  await options.planIntent?.(createTelegramWebhookIntent("command:start", {
-    stage: "setup-intro",
-    nextState: setupIntentState(state),
-    clearPending: Boolean(options.clearPending),
-  }, "required"));
-  const operationStatements = options.prepareMutationAppliedStatement
-    ? [options.prepareMutationAppliedStatement({ requirePreviousChange: true })]
-    : undefined;
-  const persisted = options.wasMutationApplied
-    ? true
-    : await persistSetupState(db, chatId, state, operationStatements);
-  if (!persisted) {
-    throw new Error(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
-  }
-  if (!options.wasMutationApplied && operationStatements) options.confirmAtomicMutationApplied?.();
-  await options.beforeIrreversibleEffect?.("setup-reply");
-  await sendAuditedTelegramReply(db, chatId, preview
-    ? escapeHtml(`You'll get DEWS and Depeg alerts for these ${preview.count} coins:\n${preview.symbolPreview}`)
-    : WIZARD_INTRO_MESSAGE, botToken, {
-    actionDetail: "setup",
-    replyMarkup: recommended ? buildConfirmKeyboard(state.flowId!) : buildBranchKeyboard(state.flowId!, options),
-  });
-}
-
-interface CallbackContext extends TelegramMutationContext {
+interface OnboardingReplyContext {
   db: D1Database;
   botToken: string;
   chatId: string;
-  actorUserId: string | null;
-  username: string | null;
-  resumedSetup?: { action: string; state: SetupWizardState };
-  flowId?: string;
-}
-
-async function recordSetupAdoptionMilestones(
-  context: CallbackContext,
-  state: SetupWizardState,
-  feature: "direct" | "preset" | "global",
-): Promise<void> {
-  const nowSec = unixNow();
-  const dimensions = telegramAdoptionDimensionsForStart(state.adoptionToken);
-  await recordTelegramFirstSetupComplete(context.db, {
-    ...dimensions,
-    chatId: context.chatId,
-    feature,
-    nowSec,
-  });
-}
-
-function setupIntentState(state: SetupWizardState): Record<string, unknown> {
-  return {
-    step: state.step,
-    alertTypes: [...state.alertTypes],
-    target: state.target,
-    flowId: state.flowId,
-    ...(state.adoptionToken ? { adoptionToken: state.adoptionToken } : {}),
-  };
-}
-
-/** Planned takeovers resume normalized state, including transitions that deleted the pending row. */
-export async function resumeStoredSetupCallback(
-  context: CallbackContext,
-  toggleArg: string,
-): Promise<{ text: string } | null> {
-  const intent = context.storedIntent;
-  if (intent?.kind !== "callback:setup") return null;
-  const action = intent.payload.action;
-  const savedState = intent.payload.nextState ?? intent.payload.previousState ?? intent.payload.state;
-  const state = parseSetupState(JSON.stringify(savedState), context.actorUserId);
-  if (typeof action !== "string" || !state) throw new Error("Invalid stored setup transition");
-  const resumedContext = { ...context, resumedSetup: { action, state } };
-  switch (action) {
-    case "branch-custom": return handleSetupBranch(resumedContext, "custom", state);
-    case "branch-recommended": return handleSetupBranch(resumedContext, "recommended", state);
-    case "branch-skip": return handleSetupBranch(resumedContext, "skip", state);
-    case "type-toggle": return handleSetupTypeToggle(resumedContext, toggleArg, state);
-    case "next": return handleSetupNext(resumedContext, state);
-    case "target-type": return handleSetupTarget(resumedContext, "type", state);
-    case "target-confirm":
-      if (!state.target) throw new Error("Invalid stored setup target");
-      return advanceToCustomConfirm(resumedContext, state, state.target);
-    case "confirm": return handleSetupConfirm(resumedContext, state);
-    case "cancel": return handleSetupCancel(resumedContext, state);
-    default: throw new Error("Invalid stored setup action");
-  }
-}
-
-function resumedNextState(context: CallbackContext, action: string): SetupWizardState | null {
-  return context.resumedSetup?.action === action ? context.resumedSetup.state : null;
-}
-
-async function persistSetupTransition(
-  context: CallbackContext,
-  action: string,
-  nextState: SetupWizardState,
-): Promise<boolean> {
-  if (!context.resumedSetup) nextState.flowId = pendingFlowId();
-  await context.planIntent?.(createTelegramWebhookIntent("callback:setup", {
-    action,
-    sourceFlowId: context.flowId ?? null,
-    nextState: setupIntentState(nextState),
-  }, "required"));
-  if (context.wasMutationApplied) return true;
-  const operationStatements = context.prepareMutationAppliedStatement
-    ? [context.prepareMutationAppliedStatement({ requirePreviousChange: true })]
-    : undefined;
-  const persisted = await persistSetupState(context.db, context.chatId, nextState, operationStatements);
-  if (persisted && operationStatements) context.confirmAtomicMutationApplied?.();
-  return persisted;
-}
-
-async function clearSetupTransition(
-  context: CallbackContext,
-  action: string,
-  state: SetupWizardState,
-): Promise<void> {
-  await context.planIntent?.(createTelegramWebhookIntent("callback:setup", {
-    action,
-    sourceFlowId: context.flowId ?? null,
-    previousState: setupIntentState(state),
-  }, "required"));
-  if (context.wasMutationApplied) return;
-  const operationStatements = context.prepareMutationAppliedStatement
-    ? [context.prepareMutationAppliedStatement()]
-    : undefined;
-  await clearPendingDisambiguation(context.db, context.chatId, { operationStatements });
-  if (operationStatements) context.confirmAtomicMutationApplied?.();
-}
-
-export async function handleSetupBranch(
-  context: CallbackContext,
-  arg: string,
-  state: SetupWizardState | null,
-): Promise<{ text: string }> {
-  if (state == null) {
-    return { text: "Setup expired. Send /start to begin again." };
-  }
-  if (!canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
-    return { text: "Only the user who started this setup can continue." };
-  }
-
-  if (arg === "recommended") {
-    await recordTelegramUsageEvent(context.db, {
-      eventType: "setup_choice",
-      sourceCategory: "wizard",
-      actionDetail: "recommended",
-      outcome: "selected",
-    });
-    return openRecommendedConfirm(context, state);
-  }
-  if (arg === "custom") {
-    await recordTelegramUsageEvent(context.db, {
-      eventType: "setup_choice",
-      sourceCategory: "wizard",
-      actionDetail: "custom",
-      outcome: "selected",
-    });
-    const nextState: SetupWizardState = resumedNextState(context, "branch-custom") ?? {
-      ...state,
-      step: "custom-types",
-      alertTypes: [...RECOMMENDED_ALERT_TYPES],
-    };
-    if (!await persistSetupTransition(context, "branch-custom", nextState)) {
-      return { text: "Setup changed. Send /start to begin again." };
-    }
-    await sendSetupReply(
-      context,
-      "Pick alert types, then tap Next.\n\n" +
-        "<b>Alert types</b>\n" +
-        "- DEWS — stress score reaches an alert band\n" +
-        "- Depeg — coin trades off peg\n" +
-        "- Safety — Safety grade changes\n" +
-        "- Launch — pre-launch coin goes live on Pharos",
-      {
-        replyMarkup: buildTypeToggleKeyboard(new Set(nextState.alertTypes), nextState.flowId!),
-      },
-    );
-    return { text: "Pick alert types." };
-  }
-  if (arg === "skip") {
-    await clearSetupTransition(context, "branch-skip", state);
-    await recordTelegramUsageEvent(context.db, {
-      eventType: "setup_choice",
-      sourceCategory: "wizard",
-      actionDetail: "skip",
-      outcome: "selected",
-    });
-    await sendSetupReply(context, SETUP_SKIP_MESSAGE);
-    return { text: "OK." };
-  }
-  return { text: "Action not recognized." };
-}
-
-async function openRecommendedConfirm(
-  context: CallbackContext,
-  state: SetupWizardState,
-): Promise<{ text: string }> {
-  const preview = await previewPresetCoins(context.db, RECOMMENDED_PRESET_ID);
-  if (preview == null) {
-    return { text: "Preset data unavailable. Try again in a moment." };
-  }
-
-  const nextState: SetupWizardState = resumedNextState(context, "branch-recommended") ?? {
-    ...state,
-    step: "confirm-recommended",
-    alertTypes: [...RECOMMENDED_ALERT_TYPES],
-    target: { kind: "preset", presetId: RECOMMENDED_PRESET_ID },
-  };
-  if (!await persistSetupTransition(context, "branch-recommended", nextState)) {
-    return { text: "Setup changed. Send /start to begin again." };
-  }
-
-  const head = `You'll get DEWS and Depeg alerts for these ${preview.count} coins:`;
-  const body = preview.symbolPreview;
-  await sendSetupReply(context, escapeHtml(`${head}\n${body}`), {
-    replyMarkup: buildConfirmKeyboard(nextState.flowId!),
-  });
-  return { text: "Review and confirm." };
-}
-
-async function previewPresetCoins(
-  db: D1Database,
-  presetId: TelegramPresetId,
-): Promise<{ count: number; symbolPreview: string } | null> {
-  const result = await resolveTelegramPresetTargets(db, [presetId]);
-  if (result.kind !== "ok") return null;
-  const coins = result.presets.flatMap((preset) => preset.coins);
-  const symbols = coins.map((coin) => coin.symbol);
-  const head = symbols.slice(0, 10).join(", ");
-  const more = coins.length > 10 ? ` ... and ${coins.length - 10} more` : "";
-  return { count: coins.length, symbolPreview: `${head}${more}` };
-}
-
-export async function handleSetupTypeToggle(
-  context: CallbackContext,
-  arg: string,
-  state: SetupWizardState | null,
-): Promise<{ text: string }> {
-  if (!state || state.step !== "custom-types") {
-    return { text: "Setup expired. Send /start to begin again." };
-  }
-  if (!canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
-    return { text: "Only the user who started this setup can continue." };
-  }
-  const resumed = resumedNextState(context, "type-toggle");
-  if (!resumed && !isAllowedAlertType(arg)) {
-    return { text: "Action not recognized." };
-  }
-  const selected = new Set((resumed ?? state).alertTypes);
-  if (!resumed) {
-    if (selected.has(arg)) selected.delete(arg);
-    else selected.add(arg);
-  }
-  const nextAlertTypes = resumed?.alertTypes ?? ALERT_TYPE_ORDER.filter((type) => selected.has(type));
-  const nextState: SetupWizardState = resumed ?? { ...state, alertTypes: nextAlertTypes };
-  if (!await persistSetupTransition(context, "type-toggle", nextState)) {
-    return { text: "Setup changed. Send /start to begin again." };
-  }
-  await sendSetupReply(
-    context,
-    `Selected: ${alertTypesSummary(nextAlertTypes)}`,
-    { replyMarkup: buildTypeToggleKeyboard(selected, nextState.flowId!) },
-  );
-  return { text: isAllowedAlertType(arg) ? ALERT_TYPE_LABELS[arg] : "Alert types updated." };
-}
-
-export async function handleSetupNext(
-  context: CallbackContext,
-  state: SetupWizardState | null,
-): Promise<{ text: string }> {
-  const resumed = resumedNextState(context, "next");
-  if (!state || (!resumed && state.step !== "custom-types")) {
-    return { text: "Setup expired. Send /start to begin again." };
-  }
-  if (!canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
-    return { text: "Only the user who started this setup can continue." };
-  }
-  if (state.alertTypes.length === 0) {
-    return { text: "Pick at least one alert type first." };
-  }
-  const nextState: SetupWizardState = resumed ?? { ...state, step: "custom-target" };
-  if (!await persistSetupTransition(context, "next", nextState)) {
-    return { text: "Setup changed. Send /start to begin again." };
-  }
-  await sendSetupReply(
-    context,
-    `Selected alerts: ${alertTypesSummary(state.alertTypes)}\nPick a target watchlist:`,
-    { replyMarkup: buildTargetKeyboard(nextState.flowId!) },
-  );
-  return { text: "Pick a target." };
-}
-
-export async function handleSetupTarget(
-  context: CallbackContext,
-  arg: string,
-  state: SetupWizardState | null,
-): Promise<{ text: string }> {
-  const resumed = resumedNextState(context, "target-type");
-  if (!state || (!resumed && state.step !== "custom-target")) {
-    return { text: "Setup expired. Send /start to begin again." };
-  }
-  if (!canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
-    return { text: "Only the user who started this setup can continue." };
-  }
-
-  if (arg === "type") {
-    const nextState: SetupWizardState = resumed ?? { ...state, step: "awaiting-ticker" };
-    if (!await persistSetupTransition(context, "target-type", nextState)) {
-      return { text: "Setup changed. Send /start to begin again." };
-    }
-    await sendSetupReply(
-      context,
-      "Reply with a ticker (e.g. USDC) or send /cancel to abort.",
-      { replyMarkup: buildTickerPromptKeyboard(nextState.flowId!) },
-    );
-    return { text: "Type a ticker." };
-  }
-
-  if (arg === "all") {
-    return advanceToCustomConfirm(context, state, { kind: "all" });
-  }
-
-  if (isKnownPresetId(arg)) {
-    return advanceToCustomConfirm(context, state, { kind: "preset", presetId: arg });
-  }
-
-  return { text: "Action not recognized." };
-}
-
-async function advanceToCustomConfirm(
-  context: CallbackContext,
-  state: SetupWizardState,
-  target: SetupWizardTarget,
-): Promise<{ text: string }> {
-  let summary: string;
-  if (target.kind === "preset") {
-    const preview = await previewPresetCoins(context.db, target.presetId as TelegramPresetId);
-    if (preview == null) {
-      return { text: "Preset data unavailable. Try again in a moment." };
-    }
-    summary = `You'll get ${alertTypesSummary(state.alertTypes)} alerts for these ${preview.count} coins:\n${preview.symbolPreview}`;
-  } else if (target.kind === "all") {
-    summary = `You'll get ${alertTypesSummary(state.alertTypes)} alerts across all tracked coins.`;
-  } else {
-    summary = `You'll get ${alertTypesSummary(state.alertTypes)} alerts for ${target.symbol}.`;
-  }
-
-  const nextState: SetupWizardState = resumedNextState(context, "target-confirm") ?? { ...state, step: "confirm-custom", target };
-  if (!await persistSetupTransition(context, "target-confirm", nextState)) {
-    return { text: "Setup changed. Send /start to begin again." };
-  }
-  await sendSetupReply(context, escapeHtml(summary), {
-    replyMarkup: buildConfirmKeyboard(nextState.flowId!),
-  });
-  return { text: "Review and confirm." };
-}
-
-export async function handleSetupTickerInput(
-  context: CallbackContext,
-  text: string,
-  state: SetupWizardState,
-): Promise<void> {
-  if (!canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
-    return;
-  }
-  const resolution = resolveTicker(text.trim());
-  if (resolution.status === "not_found") {
-    await sendSetupReply(
-      context,
-      buildNotFoundMessage(text.trim(), resolution.suggestion),
-      { replyMarkup: buildForceReplyKeyboard() },
-    );
-    return;
-  }
-  if (resolution.status === "ambiguous") {
-    await sendSetupReply(
-      context,
-      buildStatusAmbiguousMessage(text.trim(), resolution.matches),
-      { replyMarkup: buildForceReplyKeyboard() },
-    );
-    return;
-  }
-  const coin = resolution.matches[0];
-  await advanceToCustomConfirm(context, state, {
-    kind: "ticker",
-    coinId: coin.id,
-    symbol: coin.symbol,
-  });
-}
-
-export async function handleSetupConfirm(
-  context: CallbackContext,
-  state: SetupWizardState | null,
-): Promise<{ text: string }> {
-  if (!state || (state.step !== "confirm-recommended" && state.step !== "confirm-custom")) {
-    return { text: "Setup expired. Send /start to begin again." };
-  }
-  if (!canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
-    return { text: "Only the user who started this setup can continue." };
-  }
-  if (state.alertTypes.length === 0 || state.target == null) {
-    return { text: "Setup incomplete. Send /start to begin again." };
-  }
-
-  const alertTypes = new Set(state.alertTypes);
-  await context.planIntent?.(createTelegramWebhookIntent("callback:setup", {
-    action: "confirm",
-    sourceFlowId: context.flowId ?? state.flowId ?? null,
-    state: setupIntentState(state),
-  }, "required"));
-  const operationStatements = context.prepareMutationAppliedStatement
-    ? [context.prepareMutationAppliedStatement()]
-    : undefined;
-
-  if (state.target.kind === "all") {
-    if (!context.wasMutationApplied) {
-      await upsertGlobalAlertTypes(context.db, context.chatId, context.username, alertTypes, {
-        clearPending: true,
-        operationStatements,
-        adoption: telegramAdoptionDimensionsForStart(state.adoptionToken),
-      });
-      if (operationStatements) context.confirmAtomicMutationApplied?.();
-    }
-    await recordSetupAdoptionMilestones(context, state, "global");
-    await recordTelegramUsageEvent(context.db, {
-      eventType: "setup_complete",
-      sourceCategory: state.step === "confirm-recommended" ? "recommended" : "custom",
-      actionDetail: "all",
-      outcome: "success",
-    });
-    await recordTelegramUsageEvent(context.db, {
-      eventType: "global_alert_change",
-      actionDetail: "setup",
-      outcome: "opt_in",
-    });
-    await sendSetupReply(
-      context,
-      escapeHtml(`Subscribed: ${alertTypesSummary(state.alertTypes)} on all tracked coins.`),
-    );
-    return { text: "Subscribed." };
-  }
-
-  if (state.target.kind === "preset") {
-    const result = await resolveTelegramPresetTargets(context.db, [state.target.presetId as TelegramPresetId]);
-    if (result.kind !== "ok") {
-      await sendSetupReply(context, buildPresetUnavailableMessage());
-      return { text: "Preset data unavailable." };
-    }
-    const coins = result.presets.flatMap((preset) => preset.coins);
-    if (!context.wasMutationApplied) {
-      await applySubscribeIntent(context.db, {
-        chatId: context.chatId,
-        username: context.username,
-        alertTypes,
-        directStablecoinIds: [],
-        presetIds: [state.target.presetId as TelegramPresetId],
-        clearPending: true,
-        operationStatements,
-        adoption: telegramAdoptionDimensionsForStart(state.adoptionToken),
-      });
-      if (operationStatements) context.confirmAtomicMutationApplied?.();
-    }
-    await recordSetupAdoptionMilestones(context, state, "preset");
-    await recordTelegramUsageEvent(context.db, {
-      eventType: "setup_complete",
-      sourceCategory: state.step === "confirm-recommended" ? "recommended" : "custom",
-      actionDetail: "preset",
-      outcome: "success",
-    });
-    await recordTelegramUsageEvent(context.db, {
-      eventType: "preset_follow",
-      actionDetail: "setup",
-      outcome: "success",
-    });
-    await sendSetupReply(
-      context,
-      buildPresetSubscriptionSummaryMessage([], {
-        presetIds: [state.target.presetId as TelegramPresetId],
-        presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
-        presetCoinCount: coins.length,
-      }),
-    );
-    return { text: "Subscribed." };
-  }
-
-  // ticker target
-  if (!context.wasMutationApplied) {
-    await applySubscribeIntent(context.db, {
-      chatId: context.chatId,
-      username: context.username,
-      alertTypes,
-      directStablecoinIds: [state.target.coinId],
-      clearPending: true,
-      operationStatements,
-      adoption: telegramAdoptionDimensionsForStart(state.adoptionToken),
-    });
-    if (operationStatements) context.confirmAtomicMutationApplied?.();
-  }
-  await recordSetupAdoptionMilestones(context, state, "direct");
-  await recordTelegramUsageEvent(context.db, {
-    eventType: "setup_complete",
-    sourceCategory: "custom",
-    actionDetail: "ticker",
-    outcome: "success",
-  });
-  const subscriptions = await loadSubscriptionsByIds(context.db, context.chatId, [state.target.coinId]);
-  await sendSetupReply(
-    context,
-    buildSubscriptionSummaryMessage(`Subscribed for ${state.target.symbol}.`, subscriptions),
-  );
-  return { text: "Subscribed." };
-}
-
-export async function handleSetupCancel(
-  context: CallbackContext,
-  state: SetupWizardState | null,
-): Promise<{ text: string }> {
-  if (state == null) {
-    return { text: "Setup expired. Send /start to begin again." };
-  }
-  if (!canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
-    return { text: "Only the user who started this setup can cancel." };
-  }
-  await clearSetupTransition(context, "cancel", state);
-  await sendSetupReply(context, "Setup cancelled. Send /start to begin again.");
-  return { text: "Cancelled." };
+  chatType: string;
+  isGroupAdmin: boolean;
+  operationNowSec?: number;
 }
 
 async function sendSetupReply(
-  context: CallbackContext,
+  context: Pick<OnboardingReplyContext, "db" | "botToken" | "chatId">,
   message: string,
-  options: { replyMarkup?: unknown } = {},
+  replyMarkup?: unknown,
 ): Promise<void> {
-  await context.beforeIrreversibleEffect?.("setup-reply");
   await sendAuditedTelegramReply(context.db, context.chatId, message, context.botToken, {
-    ...options,
     actionDetail: "setup",
+    ...(replyMarkup ? { replyMarkup } : {}),
   });
+}
+
+/** `/start` without a coin or subscribe payload. */
+export async function sendOnboarding(context: OnboardingReplyContext): Promise<void> {
+  if (context.chatType !== "private") {
+    if (!context.isGroupAdmin) {
+      await sendSetupReply(context, GROUP_MEMBER_MESSAGE, {
+        inline_keyboard: [[{ text: "Personal alerts", url: `${TELEGRAM_BOT_URL}?start=setup` }]],
+      });
+      return;
+    }
+    await sendSetupReply(context, GROUP_ADMIN_MESSAGE, {
+      inline_keyboard: [[{ text: FOLLOW_TOP_LABEL, callback_data: "setup:top25" }]],
+    });
+    return;
+  }
+
+  const [subscriber, subscriptions, presetSubscriptions] = await Promise.all([
+    loadSubscriberByChat(context.db, context.chatId),
+    loadSubscriptionRowsByChat(context.db, context.chatId),
+    loadPresetSubscriptions(context.db, context.chatId),
+  ]);
+  if (followsNothing({ subscriber, subscriptions, presetSubscriptions })) {
+    await sendSetupReply(context, NEW_USER_MESSAGE, buildOnboardingKeyboard());
+    return;
+  }
+  const nowSec = context.operationNowSec ?? unixNow();
+  const lines = [
+    "<b>Welcome back.</b> You follow:",
+    ...describeFollows({ subscriber, subscriptions, presetSubscriptions, presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID, nowSec }),
+    ...describeDeliveryState(subscriber, nowSec),
+  ];
+  await sendSetupReply(context, lines.join("\n"), {
+    inline_keyboard: [
+      [manageAlertsButton()],
+      [{ text: "Pause 24h", callback_data: "snooze:24h" }, { text: "Help", callback_data: "help:commands" }],
+    ],
+  });
+}
+
+interface SetupCallbackContext {
+  db: D1Database;
+  botToken: string;
+  chatId: string;
+  chatType: string;
+  username: string | null;
+}
+
+/** `setup:top25`: one tap follows the recommended preset; Undo replaces a confirm step. */
+export async function handleSetupFollowTop(context: SetupCallbackContext): Promise<{ text: string }> {
+  const resolved = await resolveTelegramPresetTargets(context.db, [RECOMMENDED_PRESET_ID]);
+  if (resolved.kind !== "ok") {
+    await sendSetupReply(context, buildPresetUnavailableMessage());
+    return { text: "Try again in a moment." };
+  }
+  const existing = (await loadPresetSubscriptions(context.db, context.chatId))
+    .find((row) => row.preset_id === RECOMMENDED_PRESET_ID);
+  const alreadyFollowing = Boolean(existing?.alert_dews && existing.alert_depeg);
+  await recordTelegramUsageEvent(context.db, {
+    eventType: "setup_choice",
+    sourceCategory: "wizard",
+    actionDetail: "recommended",
+    outcome: "selected",
+  });
+  if (!alreadyFollowing) {
+    await applySubscribeIntent(context.db, {
+      chatId: context.chatId,
+      username: context.username,
+      alertTypes: new Set(RECOMMENDED_ALERT_TYPES),
+      directStablecoinIds: [],
+      presetIds: [RECOMMENDED_PRESET_ID],
+      clearPending: true,
+    });
+    await recordTelegramUsageEvent(context.db, {
+      eventType: "setup_complete",
+      sourceCategory: "recommended",
+      actionDetail: "preset",
+      outcome: "success",
+    });
+  }
+  const count = resolved.presets[0]?.coins.length ?? 0;
+  const isPrivate = context.chatType === "private";
+  const lines = [
+    alreadyFollowing
+      ? `<b>You already follow</b> the ${count} largest USD stablecoins for depeg and stress alerts.`
+      : `<b>Done.</b> You follow the ${count} largest USD stablecoins for depeg and stress alerts.`,
+    "",
+    "Here's what an alert looks like:",
+    `<blockquote>${escapeHtml(TELEGRAM_PUBLIC_ALERT_SAMPLES.depeg.message)}</blockquote>`,
+    isPrivate
+      ? `<b>${MANAGE_ALERTS_LABEL}</b> (the button by the message box) is where you add coins, set quiet hours or pause.`
+      : "Change this group's alerts with /settings.",
+    "Pharos news: @pharoswatch · Community: @pharoswatchers",
+  ];
+  const row: InlineKeyboardButton[] = isPrivate ? [manageAlertsButton()] : [];
+  if (!alreadyFollowing) {
+    const prior = new Set((["dews", "depeg", "safety"] as const).filter((type) => existing?.[`alert_${type}`] === 1));
+    const expiry = (unixNow() + UNDO_TTL_SEC).toString(36);
+    row.push({ text: "Undo", callback_data: `setup:undo:${encodeAlertTypes(prior)}:${expiry}` });
+  }
+  await sendSetupReply(context, lines.join("\n"), row.length > 0 ? { inline_keyboard: [row] } : undefined);
+  return { text: alreadyFollowing ? "Already following." : "Following." };
+}
+
+/**
+ * `setup:undo:<mask>:<expiry>`: put the USD Top 25 follow back the way it was
+ * before the one-tap setup. Mask 0 means there was no follow, so the row goes;
+ * otherwise exactly the prior families are restored. Direct coin follows stay.
+ */
+export async function handleSetupUndo(
+  context: SetupCallbackContext,
+  maskCode: string | undefined,
+  expiryCode: string | undefined,
+): Promise<{ text: string }> {
+  const prior = maskCode === "0" ? new Set<string>() : decodeAlertTypes(maskCode);
+  if (!prior || [...prior].some((type) => type !== "dews" && type !== "depeg" && type !== "safety")) {
+    return { text: "Action not recognized." };
+  }
+  if (!isUnexpired(expiryCode)) return { text: "This Undo expired. Change your alerts in Manage Alerts." };
+  if (prior.size === 0) {
+    await applyUnsubscribeIntent(context.db, {
+      chatId: context.chatId,
+      directStablecoinIds: [],
+      presetIds: [RECOMMENDED_PRESET_ID],
+    });
+  } else {
+    await executeAtomicBatch(context.db, prepareSubscriberAndPresetPatchStatements(
+      context.db, context.chatId, context.username, RECOMMENDED_PRESET_ID,
+      { dews: prior.has("dews"), depeg: prior.has("depeg"), safety: prior.has("safety") },
+      undefined,
+    ));
+  }
+  await recordTelegramUsageEvent(context.db, {
+    eventType: "preset_unfollow",
+    actionDetail: "setup_undo",
+    outcome: "success",
+  });
+  await sendSetupReply(
+    context,
+    prior.size === 0
+      ? "Undone. You no longer follow the top 25 USD stablecoins. Send /start to choose again."
+      : "Undone. Your USD Top 25 alerts are back to what they were.",
+  );
+  return { text: "Undone." };
+}
+
+/** `setup:sample`: the same sample `/sample` sends. */
+export async function handleSetupSample(
+  context: Pick<SetupCallbackContext, "db" | "botToken" | "chatId">,
+): Promise<{ text: string }> {
+  await sendSetupReply(
+    context,
+    `${escapeHtml(TELEGRAM_PUBLIC_ALERT_SAMPLES.depeg.message)}\n\n<i>This was a sample alert.</i>`,
+    buildOnboardingKeyboard({ includeSample: false }),
+  );
+  return { text: "Sample sent." };
 }

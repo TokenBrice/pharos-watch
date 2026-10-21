@@ -4,7 +4,7 @@ import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 let fetchSpy = mockFetch([], { requireMatch: true });
 
-const { getCachedChatAdministrators, formatAdministratorMentions } = await import("../chat-member");
+const { getCachedChatAdministrators, formatAdministratorMentions } = await import("../telegram-webhook-auth");
 
 describe("getCachedChatAdministrators", () => {
   beforeEach(() => {

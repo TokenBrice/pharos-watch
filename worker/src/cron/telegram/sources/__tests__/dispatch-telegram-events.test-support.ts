@@ -23,7 +23,7 @@ export function eventSources(overrides: Partial<DispatchSourceData> = {}): Dispa
   return {
     chatsWithActiveSnooze: 0, dewsRows: [], activeDepegRows: [],
     dewsCache: null, dewsAlertableCache: null, depegCache: null, safetyCache: null,
-    launchCache: null, reserveCache: null, reserveDispatchedCache: null,
+    reserveCache: null, reserveDispatchedCache: null,
     ...overrides,
   };
 }
@@ -33,7 +33,7 @@ export function eventSnapshots(overrides: Partial<DispatchSnapshotState> = {}): 
     nowSec: 1_800_000_000,
     previousDewsSnapshot: {}, previousDewsAlertableSnapshot: {}, previousDepegSnapshot: {},
     previousSafetySnapshot: null, currentSafetySnapshot: {}, safeSafetySnapshot: {},
-    safeDewsAlertable: {}, safeDewsSnapshot: {}, safeDepegSnapshot: {},
+    safeDewsAlertable: {}, safeDewsCandidates: {}, safeDewsSnapshot: {}, safeDepegSnapshot: {},
     safetySnapshotNeedsSeed: false, mustSeedSnapshots: false,
     safetySourceAssessment: {
       state: "missing", ageSeconds: null, generation: null, envelope: null,
@@ -44,7 +44,7 @@ export function eventSnapshots(overrides: Partial<DispatchSnapshotState> = {}): 
     reserveSourceAssessment: {
       state: "missing", ageSeconds: null, generation: null, envelope: null,
     },
-    currentSnapshots: { dews: {}, dewsAlertable: {}, depeg: {}, safety: null, launch: [], reserveDispatched: null },
+    currentSnapshots: { dews: {}, dewsAlertable: {}, depeg: {}, dewsCandidates: {}, dewsUnavailable: false, safety: null, reserveDispatched: null },
     previousReserveDriftIds: [], currentReserveDriftIds: [], reserveSourceUnavailable: true,
     ...overrides,
   };

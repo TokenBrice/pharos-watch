@@ -4,7 +4,6 @@ import {
   preparePreferenceGenerationBump,
   unixNow,
   prepareTelegramFirstFollowStatements,
-  type TelegramFollowOptions,
 } from "./subscribers";
 import {
   prepareRemoveSubscriptionStatements,
@@ -25,7 +24,6 @@ export interface SubscribeIntentInput {
   clearPending?: boolean;
   depegWorseningBpsStep?: 100 | 250 | 500 | null;
   operationStatements?: D1PreparedStatement[];
-  adoption?: TelegramFollowOptions["adoption"];
 }
 
 export interface UnsubscribeIntentInput {
@@ -89,11 +87,11 @@ export function prepareSubscriberAndPresetStatements(
   presetIds: readonly string[],
   directStablecoinIds: string[],
   alertTypes: Set<string>,
-  options?: { clearPending?: boolean; depegWorseningBpsStep?: 100 | 250 | 500 | null } & TelegramFollowOptions,
+  options?: { clearPending?: boolean; depegWorseningBpsStep?: 100 | 250 | 500 | null },
 ): D1PreparedStatement[] {
   return [
     ...(presetIds.length > 0 && (options?.depegWorseningBpsStep !== undefined || ["dews", "depeg", "safety"].some((type) => alertTypes.has(type)))
-      ? prepareTelegramFirstFollowStatements(db, { chatId, username, nowSec: unixNow(), feature: "preset", adoption: options?.adoption })
+      ? prepareTelegramFirstFollowStatements(db, { chatId, username, nowSec: unixNow(), feature: "preset" })
       : []),
     ...prepareSubscriberAndSubscriptionStatements(db, chatId, username, alertTypes, directStablecoinIds, options),
     ...preparePresetSubscriptionStatements(db, chatId, presetIds, alertTypes, options),
@@ -108,7 +106,6 @@ export function prepareSubscriberAndPresetPatchStatements(
   presetId: string,
   alertTypes: Partial<Record<"dews" | "depeg" | "safety", boolean>>,
   depegWorseningBpsStep: 100 | 250 | 500 | null | undefined,
-  options: TelegramFollowOptions = {},
 ): D1PreparedStatement[] {
   const now = unixNow();
   const merged = `WITH patch AS (
@@ -131,14 +128,14 @@ export function prepareSubscriberAndPresetPatchStatements(
     chatId, presetId,
   ];
   // Every statement sees the same preset until the final write. Invalid
-  // last-family removals therefore change neither domain nor adoption state.
+  // last-family removals therefore change neither domain nor first-follow state.
   return [
     db.prepare(`${merged}
       INSERT OR IGNORE INTO telegram_subscribers (chat_id, username, created_at, last_active_at)
       SELECT ?, ?, ?, ? FROM admitted
     `).bind(...binds, chatId, username, now, now),
     ...prepareTelegramFirstFollowStatements(db, {
-      chatId, username, nowSec: now, feature: "preset", adoption: options.adoption,
+      chatId, username, nowSec: now, feature: "preset",
       ensureSubscriber: false,
       guard: { sql: `EXISTS (${merged} SELECT 1 FROM admitted)`, binds },
     }),
@@ -178,7 +175,6 @@ function prepareSubscribeIntentStatements(
     {
       clearPending: input.clearPending,
       depegWorseningBpsStep: input.depegWorseningBpsStep,
-      adoption: input.adoption,
     },
   );
 }

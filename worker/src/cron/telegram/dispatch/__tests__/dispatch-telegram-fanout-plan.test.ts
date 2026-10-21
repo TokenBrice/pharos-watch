@@ -27,20 +27,19 @@ function emptyExplicitlyOffMaps(): FanoutSubscriptionInputs["perCoinExplicitlyOf
     dews: new Map(),
     depeg: new Map(),
     safety: new Map(),
-    launch: new Map(),
     reserve: new Map(),
   };
 }
 
 function fanoutInputs(overrides: Partial<FanoutSubscriptionInputs> = {}): FanoutSubscriptionInputs {
   return {
-    direct: { dews: new Map(), depeg: new Map(), safety: new Map(), launch: new Map(), reserve: new Map() },
+    direct: { dews: new Map(), depeg: new Map(), safety: new Map(), reserve: new Map() },
     preset: {
       dews: { kind: "ok", rows: new Map() },
       depeg: { kind: "ok", rows: new Map() },
       safety: { kind: "ok", rows: new Map() },
     },
-    global: { dews: [], depeg: [], safety: [], launch: [], reserve: [] },
+    global: { dews: [], depeg: [], safety: [], reserve: [] },
     perCoinSnoozeMap: new Map(),
     perCoinExplicitlyOffMaps: emptyExplicitlyOffMaps(),
     ...overrides,
@@ -54,7 +53,6 @@ function fanoutEvents(overrides: Partial<TelegramFanoutPlanEvents> = {}): Telegr
     depegResolved: [],
     depegWorsening: [],
     safetyChanges: [],
-    launchPromoted: [],
     reservePromoted: [],
     ...overrides,
   };
@@ -80,7 +78,6 @@ describe("dispatch telegram fanout planning", () => {
         dewsIds: ["dews-coin"],
         depegIds: ["depeg-coin"],
         safetyIds: ["safety-coin"],
-        launchIds: ["launch-coin"],
         reserveIds: [],
       },
       {
@@ -93,7 +90,7 @@ describe("dispatch telegram fanout planning", () => {
       NOW_SEC,
     );
 
-    for (const family of ["dews", "depeg", "safety", "launch"] as const) {
+    for (const family of ["dews", "depeg", "safety"] as const) {
       expect(inputs.direct[family].get(`${family}-coin`)?.map((row) => row.chat_id))
         .toEqual([`direct-${family}`]);
       expect(inputs.global[family].map((row) => row.chat_id)).toEqual([`global-${family}`]);
@@ -155,7 +152,7 @@ describe("dispatch telegram fanout planning", () => {
         dews: {
           kind: "ok",
           rows: new Map([
-            ["usdc-circle", [subscriber({ chat_id: "preset", last_active_at: 200 })]],
+            ["usdc-circle", [subscriber({ chat_id: "preset", last_active_at: 200, isGlobal: false, hasLocalOverride: false, presetIds: ["usd-top25"] })]],
           ]),
         },
       },
@@ -184,7 +181,13 @@ describe("dispatch telegram fanout planning", () => {
 
     expect(queue.map((entry) => entry.chatId)).toEqual(["global", "preset", "direct"]);
     expect(queue.every((entry) => entry.chunks.length === 1)).toBe(true);
-    expect(queue.every((entry) => entry.canonicalHtml.includes("<b>DEWS</b>"))).toBe(true);
+    expect(queue.every((entry) => entry.canonicalHtml.startsWith("🟠 <b>USDC</b>"))).toBe(true);
+    const footerByChat = Object.fromEntries(queue.map((entry) => [entry.chatId, entry.canonicalHtml.match(/<i>Via [^<]*<\/i>/)?.[0]]));
+    expect(footerByChat).toEqual({
+      global: "<i>Via all stablecoins · stress alerts</i>",
+      preset: "<i>Via USD Top 25 · stress alerts</i>",
+      direct: "<i>Via your watchlist · stress alerts</i>",
+    });
   });
 
   it("admits the first candidate above budget and preserves quiet-hour, escalation and lineage policy", () => {
@@ -213,7 +216,7 @@ describe("dispatch telegram fanout planning", () => {
       alertScope: [{ stablecoinId: "usdc-circle", family: "dews" }],
       disableNotification: true,
     });
-    expect(quiet.canonicalHtml).toContain("<b>DEWS</b>");
+    expect(quiet.canonicalHtml).toContain("<b>17 alerts</b>");
     expect(quiet.chunks.length).toBeGreaterThan(0);
     inputs.direct.dews.set("usdc-circle", [subscriber({ chat_id: "loud" })]);
     expect(renderTelegramSubscriberPage(args)[0].disableNotification).toBe(false);

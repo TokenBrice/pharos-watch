@@ -1,8 +1,4 @@
-import {
-  WORKER_ACTIVE_IDS,
-  WORKER_PRE_LAUNCH_STABLECOINS,
-  WORKER_TRACKED_META_BY_ID,
-} from "@shared/lib/stablecoins/worker-runtime-registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 import { crossesTelegramDepegWorseningStep } from "@shared/lib/telegram-delivery-policy";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
@@ -11,24 +7,21 @@ import { logWorkerEvent } from "../../../lib/structured-log";
 import { buildInClause, chunkArray } from "../../../lib/db";
 import { TELEGRAM_DEPEG_STEPS } from "@shared/types/status/telegram";
 import {
-  isDewsAlertable,
   type DepegAlertPayload,
   type DepegResolved,
   type DepegWorsening,
 } from "../../../telegram/common/alerts-formatting";
 import { buildAlertContextLines } from "./telegram-alert-context";
 import {
-  buildDewsChanges,
-  buildLaunchPromotions,
   buildReserveTransitions,
   buildSafetyChanges,
+  planDewsAlerts,
 } from "./telegram-alert-changes";
 import {
   addSafetyReasonLines,
   type SafetyChangeWithExplain,
 } from "./telegram-alert-safety-reasons";
 import {
-  parseSnapshotIds,
   type buildDispatchSnapshotState,
   type loadDispatchSourceData,
 } from "../dispatch/dispatch-telegram-state";
@@ -48,19 +41,17 @@ type ClosedDepegResolutionRow = {
 };
 
 export interface TelegramDispatchEvents {
-  dewsChanges: ReturnType<typeof buildDewsChanges>;
+  dewsChanges: ReturnType<typeof planDewsAlerts>["changes"];
   depegTriggered: DepegAlertPayload[];
   depegResolved: DepegResolved[];
   depegWorsening: DepegWorsening[];
   safetyChanges: SafetyChangeWithExplain[];
-  launchPromoted: ReturnType<typeof buildLaunchPromotions>;
   reservePromoted: ReturnType<typeof buildReserveTransitions>;
   suppressedMethodologyChanges: number;
   dewsIds: string[];
   depegIds: string[];
   safetyIds: string[];
   safetyScoreIdentity?: SafetyScorePublicationIdentity | null;
-  launchIds: string[];
   reserveIds: string[];
 }
 
@@ -72,7 +63,6 @@ export type TelegramFanoutPlanEvents = Pick<
   | "depegWorsening"
   | "safetyChanges"
   | "safetyScoreIdentity"
-  | "launchPromoted"
   | "reservePromoted"
 >;
 
@@ -83,7 +73,6 @@ export function summarizeTelegramDispatchEvents(events: TelegramDispatchEvents) 
     depegResolved: events.depegResolved.length,
     depegWorsening: events.depegWorsening.length,
     safety: events.safetyChanges.length,
-    launch: events.launchPromoted.length,
     reserve: events.reservePromoted.length,
   };
   return {
@@ -99,7 +88,6 @@ export function summarizeTelegramDispatchEvents(events: TelegramDispatchEvents) 
       depegResolved: transitionCounts.depegResolved,
       depegWorsening: transitionCounts.depegWorsening,
       safety: transitionCounts.safety,
-      launch: transitionCounts.launch,
       reserve: transitionCounts.reserve,
       suppressedMethodologyChanges: events.suppressedMethodologyChanges,
     },
@@ -112,7 +100,6 @@ export function activeTelegramEventFamilies(events: TelegramDispatchEvents): str
     eventsDetected.dews > 0 ? "dews" : null,
     eventsDetected.depeg > 0 ? "depeg" : null,
     eventsDetected.safety > 0 ? "safety" : null,
-    eventsDetected.launch > 0 ? "launch" : null,
     eventsDetected.reserve > 0 ? "reserve" : null,
   ].filter((family): family is string => family != null);
 }
@@ -127,7 +114,6 @@ export function toTelegramFanoutPlanEvents(
     depegWorsening: events.depegWorsening,
     safetyChanges: events.safetyChanges,
     safetyScoreIdentity: events.safetyScoreIdentity ?? null,
-    launchPromoted: events.launchPromoted,
     reservePromoted: events.reservePromoted,
   };
 }
@@ -179,17 +165,36 @@ export async function buildTelegramDispatchEvents(
     currentSafetySnapshot,
     safeDepegSnapshot,
     safeDewsAlertable,
+    safeDewsCandidates,
     safeDewsSnapshot,
     safeSafetySnapshot,
     safetySnapshotNeedsSeed,
   } = snapshotState;
 
-  const dewsChanges = buildDewsChanges(
-    dewsRows.filter((row) => isDewsAlertable(row.band)),
+  const dewsPlan = planDewsAlerts(
+    dewsRows,
     safeDewsAlertable,
     safeDewsSnapshot,
+    safeDewsCandidates,
     getSymbol,
+    snapshotState.nowSec,
   );
+  const dewsChanges = dewsPlan.changes;
+  if (dewsPlan.suppressedPendingDewsEscalations > 0 || dewsPlan.suppressedDewsDeescalations > 0 || dewsPlan.resetDewsBaselines > 0) {
+    logWorkerEvent({
+      scope: "handler",
+      job: "dispatch-telegram-alerts",
+      event: "telegram_dews_changes_suppressed",
+      level: "info",
+      message: "Suppressed DEWS band changes",
+      metadata: {
+        suppressedPendingDewsEscalations: dewsPlan.suppressedPendingDewsEscalations,
+        suppressedDewsDeescalations: dewsPlan.suppressedDewsDeescalations,
+        resetDewsBaselines: dewsPlan.resetDewsBaselines,
+        emittedDewsChanges: dewsChanges.length,
+      },
+    });
+  }
 
   const previousActiveIds = new Set(Object.keys(safeDepegSnapshot));
 
@@ -329,29 +334,27 @@ export async function buildTelegramDispatchEvents(
         : {}),
     }));
 
-  const {
-    changes: rawSafetyChanges,
-    suppressedMethodologyChanges,
-    suppressedRuntimeAvailabilityChanges,
-    suppressedMinorSafetyChanges,
-  } = !safetySnapshotNeedsSeed
+  const safetySummary = !safetySnapshotNeedsSeed
     ? buildSafetyChanges(currentSafetySnapshot, safeSafetySnapshot, getSymbol, snapshotState.nowSec)
-    : { changes: [], suppressedMethodologyChanges: 0, suppressedRuntimeAvailabilityChanges: 0, suppressedMinorSafetyChanges: 0 };
-  if (suppressedRuntimeAvailabilityChanges > 0 || suppressedMinorSafetyChanges > 0) {
+    : null;
+  const rawSafetyChanges = safetySummary?.changes ?? [];
+  const suppressedMethodologyChanges = safetySummary?.suppressedMethodologyChanges ?? 0;
+  const safetySuppression = {
+    suppressedPendingDwellSafetyChanges: safetySummary?.suppressedPendingDwellSafetyChanges ?? 0,
+    suppressedMinorSafetyChanges: safetySummary?.suppressedMinorSafetyChanges ?? 0,
+    suppressedUpgradeSafetyChanges: safetySummary?.suppressedUpgradeSafetyChanges ?? 0,
+    suppressedCooldownSafetyChanges: safetySummary?.suppressedCooldownSafetyChanges ?? 0,
+  };
+  if (Object.values(safetySuppression).some((count) => count > 0)) {
     logWorkerEvent({
       scope: "handler",
       job: "dispatch-telegram-alerts",
       event: "telegram_safety_changes_suppressed",
       level: "info",
       message: "Suppressed safety grade changes",
-      metadata: { suppressedRuntimeAvailabilityChanges, suppressedMinorSafetyChanges, emittedSafetyChanges: rawSafetyChanges.length },
+      metadata: { ...safetySuppression, emittedSafetyChanges: rawSafetyChanges.length },
     });
   }
-
-  const prevLaunchIds = new Set(parseSnapshotIds(sourceData.launchCache) ?? []);
-  const currentLaunchIds = new Set(WORKER_PRE_LAUNCH_STABLECOINS.map((c) => c.id));
-
-  const launchPromoted = buildLaunchPromotions(prevLaunchIds, currentLaunchIds, WORKER_ACTIVE_IDS, WORKER_TRACKED_META_BY_ID);
 
   // Reserve-drift (C123): diff the producer's current drift set against the
   // dispatch baseline; both come from snapshotState (the dispatch cron never
@@ -369,7 +372,6 @@ export async function buildTelegramDispatchEvents(
     ...depegWorsening.map((e) => e.stablecoinId),
   ];
   const safetyIds = rawSafetyChanges.map((c) => c.stablecoinId);
-  const launchIds = launchPromoted.map((e) => e.stablecoinId);
   const reserveIds = reservePromoted.map((e) => e.stablecoinId);
 
   const contextLines = await buildAlertContextLines(db, [...dewsIds, ...depegIds]);
@@ -396,7 +398,6 @@ export async function buildTelegramDispatchEvents(
     depegResolved,
     depegWorsening,
     safetyChanges,
-    launchPromoted,
     reservePromoted,
     suppressedMethodologyChanges,
     dewsIds,
@@ -406,7 +407,6 @@ export async function buildTelegramDispatchEvents(
       safetyIds.length > 0
         ? (snapshotState.currentSnapshots?.safety?.safetyScoreIdentity ?? null)
         : null,
-    launchIds,
     reserveIds,
   };
 }

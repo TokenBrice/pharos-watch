@@ -80,10 +80,11 @@ describe("PreLaunchDetail", () => {
     expect(document.body.textContent).not.toMatch(/\$\d/);
   });
 
-  it("keeps the exact per-asset launch command in the server-rendered alert action", () => {
+  it("points the header action at the @pharoswatch channel instead of retired launch alerts", () => {
     const document = staticDocument();
-    const trigger = document.querySelector('[aria-label^="Launch alert"]');
-    expect(trigger?.getAttribute("aria-label")).toBe("Launch alert: send /subscribe launch test-launch to @PharosWatchBot");
+    const action = document.querySelector('a[aria-label^="Follow @pharoswatch"]');
+    expect(action?.getAttribute("href")).toBe("https://t.me/pharoswatch");
+    expect(document.body.innerHTML).not.toContain("/subscribe launch");
   });
 
   it("folds activity beyond the newest five and keeps per-milestone sources", () => {

@@ -13,7 +13,6 @@ export function listTelegramAlertItemKeys(alerts: ConsolidatedAlerts): string[] 
     ...alerts.depegResolved.map((event) => itemKey("depeg-resolved", event)),
     ...alerts.depegWorsening.map((event) => itemKey("depeg-worsening", event)),
     ...alerts.safety.map((event) => itemKey("safety", event)),
-    ...alerts.launch.map((event) => itemKey("launch", event)),
     ...alerts.reserve.map((event) => itemKey("reserve", event)),
     ...(alerts.freeze ?? []).map((event) => `freeze:${event.tapeEventId}`),
   ];

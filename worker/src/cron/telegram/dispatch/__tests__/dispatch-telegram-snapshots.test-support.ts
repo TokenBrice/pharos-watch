@@ -1,7 +1,14 @@
 import { makeSafetySnapshotCache, seedActiveSafetySource } from "./dispatch-telegram-alerts.test-support";
 import type { DispatchHarness } from "./dispatch-telegram-alerts.test-support";
 
-type SafetySnapshot = Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>;
+type SafetySnapshot = Record<string, {
+  grade: string;
+  score: number | null;
+  methodologyVersion: string | null;
+  pendingKind?: "severe-downgrade" | "upgrade";
+  pendingSinceSec?: number;
+  lastAlertedAtSec?: number;
+}>;
 
 export interface DispatchSnapshotSeed {
   dews?: Record<string, string>;
@@ -9,7 +16,6 @@ export interface DispatchSnapshotSeed {
   depeg?: Record<string, unknown>;
   safety?: SafetySnapshot | string;
   safetySource?: SafetySnapshot;
-  launch?: string[];
   reserve?: unknown;
   reserveDispatched?: string[];
   reserveObserved?: Record<string, number>;
@@ -24,7 +30,6 @@ export function seedDispatchSnapshots(harness: DispatchHarness, options: Dispatc
     ? options.safety : makeSafetySnapshotCache(options.safety ?? {}).value, at);
   if (options.safetySource !== undefined) seedActiveSafetySource(harness, options.safetySource, at);
   if (options.dewsAlertable !== undefined) harness.cache("alert:dews-alertable-snapshot", options.dewsAlertable, at);
-  if (options.launch !== undefined) harness.cache("alert:launch-snapshot", options.launch, at);
   if (options.reserve !== undefined) harness.cache("alert:reserve-snapshot", options.reserve, at);
   if (options.reserveDispatched !== undefined) harness.cache("alert:reserve-dispatched-snapshot", options.reserveDispatched, at);
   if (options.reserveObserved !== undefined) harness.cache("alert:reserve-observed-snapshot", options.reserveObserved, at);

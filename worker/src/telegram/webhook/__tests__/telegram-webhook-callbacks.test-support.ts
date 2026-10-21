@@ -41,7 +41,7 @@ vi.mock("../telegram-webhook-replies", async (importOriginal) => {
   };
 });
 
-const { handleCallbackQuery } = await import("../telegram-webhook-callbacks");
+const { handleCallbackQuery } = await import("../telegram-webhook-update-dispatch");
 const { sendAuditedTelegramReply } = await import("../telegram-webhook-replies");
 const { resolveTicker } = await import("../../common/alerts-parser");
 

@@ -18,7 +18,6 @@ function emptyAlerts(overrides: Partial<ConsolidatedAlerts> = {}): ConsolidatedA
     depegResolved: [],
     depegWorsening: [],
     safety: [],
-    launch: [],
     reserve: [],
     ...overrides,
   };
@@ -130,6 +129,24 @@ describe("dispatch telegram routing helpers", () => {
     expect(alertsByChat.get("global-only")?.alerts.dews).toEqual([DEWS_WARNING]);
   });
 
+  it("records the union of follow sources per chat for the Via footer", () => {
+    const alertsByChat = new Map<string, AlertsByChatEntry>();
+    const preset = (presetIds: string[]) =>
+      subscriber({ chat_id: "mixed", isGlobal: false, hasLocalOverride: false, presetIds });
+    routeAlertEvents([DEWS_WARNING], new Map([["usdc-circle", [preset(["usd-top25"])]]]), [], alertsByChat, (alerts) => alerts.dews);
+    routeAlertEvents(
+      [{ ...DEWS_WARNING, stablecoinId: "dai-makerdao", symbol: "DAI" }],
+      new Map([["dai-makerdao", [preset(["usd-top10"]), subscriber({ chat_id: "direct" })]]]),
+      [subscriber({ chat_id: "global", isGlobal: true })],
+      alertsByChat,
+      (alerts) => alerts.dews,
+    );
+
+    expect(alertsByChat.get("mixed")?.via).toEqual({ presetIds: ["usd-top10", "usd-top25"], watchlist: false, allStablecoins: false });
+    expect(alertsByChat.get("direct")?.via).toEqual({ presetIds: [], watchlist: true, allStablecoins: false });
+    expect(alertsByChat.get("global")?.via).toEqual({ presetIds: [], watchlist: false, allStablecoins: true });
+  });
+
   it("applies per-coin off rows to preset/specific and global fan-out", () => {
     const alertsByChat = new Map<string, AlertsByChatEntry>();
     const specificRows = new Map([
@@ -184,7 +201,7 @@ describe("dispatch telegram routing helpers", () => {
     expect(queue[0].alertTypes).toEqual(["depeg", "dews"]);
     expect(expandSubscriberChunks([queue[0]])[0]).not.toHaveProperty("alertType");
     expect(queue[0].disableNotification).toBe(true);
-    expect(queue[0].canonicalHtml).toContain("<b>Depeg Detected</b>");
+    expect(queue[0].canonicalHtml).toMatch(/^▼ <b>USDC<\/b> lost its peg/);
     expect(queue[0].chunks.length).toBeGreaterThan(0);
     expect(queue[1].alertType).toBe("safety");
     expect(queue[1].disableNotification).toBe(false);
@@ -245,5 +262,28 @@ describe("dispatch telegram routing helpers", () => {
       url: "https://pharos.watch/stablecoin/usdc-circle",
     });
     expect(privateSecond.linkPreviewOptions).toBeUndefined();
+  });
+});
+
+describe("Fewer button target value", () => {
+  it("carries the next quieter value from the row that routed the event", () => {
+    const alertsByChat = new Map<string, AlertsByChatEntry>();
+    routeAlertEvents(
+      [DEPEG_TRIGGERED],
+      new Map([["usdc-circle", [subscriber({ chat_id: "1", depeg_worsening_bps_step: 100 })]]]),
+      [subscriber({ chat_id: "2", depeg_worsening_bps_step: 500, isGlobal: true })],
+      alertsByChat,
+      (alerts) => alerts.depegTriggered,
+      () => true,
+      undefined,
+      undefined,
+      "depeg",
+    );
+    const routed = formatPlannedSubscribers(planSubscriberQueue(alertsByChat), () => false);
+    const fewerByChat = Object.fromEntries(expandSubscriberChunks(routed).map((message) => [
+      message.chatId,
+      JSON.stringify(message.replyMarkup).match(/fewer:[^"]+/)?.[0],
+    ]));
+    expect(fewerByChat).toEqual({ "1": "fewer:usdc-circle:ds:250", "2": "fewer:usdc-circle:ds:0" });
   });
 });

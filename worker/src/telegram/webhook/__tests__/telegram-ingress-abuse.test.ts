@@ -14,6 +14,7 @@ import {
   evaluateTelegramIngressAbuseGate,
   recordTelegramIngressHandlerResponse,
   type TelegramIngressAbuseEnv,
+  type TelegramIngressRoute,
 } from "../telegram-ingress-abuse";
 
 const encoder = new TextEncoder();
@@ -24,11 +25,9 @@ function createLimiter(implementation: () => Promise<RateLimitOutcome> = async (
 
 function createEnv(overrides: Partial<TelegramIngressAbuseEnv> = {}): TelegramIngressAbuseEnv {
   return {
-    TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT: createLimiter(),
     TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT: createLimiter(),
     TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT: createLimiter(),
     SITE_API_SHARED_SECRET: "test-pepper",
-    TELEGRAM_WEBHOOK_SOURCE_RATE_LIMIT: createLimiter(),
     TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT: createLimiter(),
     TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT: createLimiter(),
     ...overrides,
@@ -41,6 +40,11 @@ function post(path: string, body: BodyInit | null = "{}", headers: Record<string
     headers: { "Content-Type": "application/json", ...headers },
     body,
   });
+}
+
+function limitedPolicy(policy: (typeof TELEGRAM_INGRESS_POLICIES)[TelegramIngressRoute]) {
+  if (!policy.rateLimit) throw new Error(`${policy.route} has no pre-auth limiter`);
+  return policy.rateLimit;
 }
 
 function streamedPost(path: string, chunks: string[]): Request {
@@ -102,8 +106,9 @@ describe("Telegram ingress abuse gate", () => {
       expect(result.request.headers.get("content-length")).toBeNull();
       await expect(result.request.text()).resolves.toBe("{}");
       for (const other of Object.values(TELEGRAM_INGRESS_POLICIES)) {
-        expect(env[other.binding].limit).toHaveBeenCalledTimes(other === policy ? 1 : 0);
-        expect(env[other.sourceBinding].limit).toHaveBeenCalledTimes(other === policy ? 1 : 0);
+        if (!other.rateLimit) continue;
+        expect(env[other.rateLimit.binding].limit).toHaveBeenCalledTimes(other === policy ? 1 : 0);
+        expect(env[other.rateLimit.sourceBinding].limit).toHaveBeenCalledTimes(other === policy ? 1 : 0);
       }
     }
 
@@ -141,28 +146,40 @@ describe("Telegram ingress abuse gate", () => {
       await expect(result.request.text()).resolves.toBe("{}");
     }
 
+    const { rateLimitKey } = limitedPolicy(policy);
     expect(vi.mocked(env.TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT.limit).mock.calls).toEqual([
-      [{ key: policy.rateLimitKey }],
-      [{ key: `${policy.rateLimitKey}:noncanonical-host` }],
-      [{ key: `${policy.rateLimitKey}:noncanonical-host` }],
-      [{ key: `${policy.rateLimitKey}:noncanonical-host` }],
+      [{ key: rateLimitKey }],
+      [{ key: `${rateLimitKey}:noncanonical-host` }],
+      [{ key: `${rateLimitKey}:noncanonical-host` }],
+      [{ key: `${rateLimitKey}:noncanonical-host` }],
     ]);
   });
 
-  it("rate limits alternate-host webhooks before downstream authentication", async () => {
-    const limiter = createLimiter(async () => ({ success: false }));
-    const env = createEnv({ TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT: limiter });
+  it("never charges a pre-auth limiter for the webhook, so unauthenticated floods cannot delay Telegram", async () => {
+    const env = createEnv();
     const policy = TELEGRAM_INGRESS_POLICIES.webhook;
-    const request = new Request(`https://pharos-watch-preview.workers.dev${policy.path}`, {
-      method: "POST",
-      body: "{}",
-    });
+    for (const host of ["api.pharos.watch", "pharos-watch-preview.workers.dev"]) {
+      const request = new Request(`https://${host}${policy.path}`, {
+        method: "POST",
+        body: "{}",
+      });
 
-    const result = await evaluateTelegramIngressAbuseGate(request, new URL(request.url), env);
+      const result = await evaluateTelegramIngressAbuseGate(request, new URL(request.url), env);
 
-    expect(result.response?.status).toBe(429);
+      expect(result.response).toBeNull();
+      await expect(result.request.text()).resolves.toBe("{}");
+    }
+    expect(Object.values(env).filter((value) => typeof value !== "string").every((limiter) => vi.mocked(limiter.limit).mock.calls.length === 0)).toBe(true);
+  });
+
+  it("still caps the webhook body before the handler authenticates it", async () => {
+    const policy = TELEGRAM_INGRESS_POLICIES.webhook;
+    const request = post(policy.path, "{}", { "Content-Length": String(policy.bodyLimitBytes + 1) });
+
+    const result = await evaluateTelegramIngressAbuseGate(request, new URL(request.url), createEnv());
+
+    expect(result.response?.status).toBe(413);
     expect(request.bodyUsed).toBe(false);
-    expect(limiter.limit).toHaveBeenCalledWith({ key: `${policy.rateLimitKey}:noncanonical-host` });
   });
 
   it("rejects declared body violations before spending the rate-limit or downstream auth budget", async () => {
@@ -224,7 +241,6 @@ describe("Telegram ingress abuse gate", () => {
 
     const result = await evaluateTelegramIngressAbuseGate(request, new URL(request.url), env);
 
-    expect(env.TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT.limit).toHaveBeenCalledOnce();
     expect(result.response?.status).toBe(400);
     expect(mocks.logWorkerEvent).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -239,8 +255,8 @@ describe("Telegram ingress abuse gate", () => {
     const limiter = createLimiter(async () => {
       throw new Error("binding unavailable");
     });
-    const env = createEnv({ TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT: limiter });
-    const request = post(TELEGRAM_INGRESS_POLICIES.webhook.path);
+    const env = createEnv({ TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT: limiter });
+    const request = post(TELEGRAM_INGRESS_POLICIES.mini_app_session.path);
 
     const result = await evaluateTelegramIngressAbuseGate(request, new URL(request.url), env);
 
@@ -251,7 +267,7 @@ describe("Telegram ingress abuse gate", () => {
       scope: "http",
       level: "warn",
       event: "telegram_ingress_rejection",
-      route: "webhook",
+      route: "mini_app_session",
       source: "telegram-ingress",
       status: 503,
       message: "Telegram ingress request rejected",
@@ -261,10 +277,11 @@ describe("Telegram ingress abuse gate", () => {
 
   it("reserves launch headroom and rejects requests beyond aggregate capacity", async () => {
     const policy = TELEGRAM_INGRESS_POLICIES.mini_app_session;
-    expect(policy.rateLimit).toBeGreaterThanOrEqual(800 * 2);
-    expect(TELEGRAM_INGRESS_POLICIES.mini_app_mutation.rateLimit).toBeGreaterThanOrEqual(800 * 6 * 2);
-    let used = policy.rateLimit - 2;
-    const limiter = createLimiter(async () => ({ success: ++used <= policy.rateLimit }));
+    const { rateLimit } = limitedPolicy(policy);
+    expect(rateLimit).toBeGreaterThanOrEqual(800 * 2);
+    expect(limitedPolicy(TELEGRAM_INGRESS_POLICIES.mini_app_mutation).rateLimit).toBeGreaterThanOrEqual(800 * 6 * 2);
+    let used = rateLimit - 2;
+    const limiter = createLimiter(async () => ({ success: ++used <= rateLimit }));
     const env = createEnv({ TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT: limiter });
 
     for (const status of [200, 200, 429]) {
@@ -305,11 +322,13 @@ describe("Telegram ingress checked-in bindings", () => {
     const { rawConfig } = experimental_readRawConfig({ config: "worker/wrangler.toml" });
 
     for (const policy of Object.values(TELEGRAM_INGRESS_POLICIES)) {
-      expect(rawConfig.ratelimits?.filter((binding: { name: string }) => binding.name === policy.binding)).toEqual([
-        expect.objectContaining({ simple: { limit: policy.rateLimit, period: policy.periodSec } }),
+      const rateLimit = policy.rateLimit;
+      if (!rateLimit) continue;
+      expect(rawConfig.ratelimits?.filter((binding: { name: string }) => binding.name === rateLimit.binding)).toEqual([
+        expect.objectContaining({ simple: { limit: rateLimit.rateLimit, period: rateLimit.periodSec } }),
       ]);
-      expect(rawConfig.ratelimits?.filter((binding: { name: string }) => binding.name === policy.sourceBinding)).toEqual([
-        expect.objectContaining({ simple: { limit: policy.rateLimit / 2, period: policy.periodSec } }),
+      expect(rawConfig.ratelimits?.filter((binding: { name: string }) => binding.name === rateLimit.sourceBinding)).toEqual([
+        expect.objectContaining({ simple: { limit: rateLimit.rateLimit / 2, period: rateLimit.periodSec } }),
       ]);
     }
   });

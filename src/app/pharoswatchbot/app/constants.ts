@@ -1,4 +1,5 @@
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import { TELEGRAM_LIVE_ALERT_TYPES } from "@shared/types/status/telegram";
 import type { TelegramAlertType, TelegramDepegStepBps, TelegramMiniAppOperation, TelegramSnoozeDurationToken } from "./types";
 
 export const ALERT_LABELS = {
@@ -9,6 +10,9 @@ export const ALERT_LABELS = {
   reserve: "Reserve",
   freeze: "Freeze",
 } as const satisfies Record<TelegramAlertType, string>;
+
+/** Families with toggles; retired launch alerts are neither shown nor written. */
+export const LIVE_ALERT_TYPES = TELEGRAM_LIVE_ALERT_TYPES;
 
 export const PRESET_ALERT_TYPES = ["dews", "depeg", "safety"] as const satisfies readonly TelegramAlertType[];
 

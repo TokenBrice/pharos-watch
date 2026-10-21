@@ -82,14 +82,24 @@ describe("reserve-backed redemption route clock admission", () => {
     }
   });
 
-  it("never renews source or fetch expiry when the redemption producer runs again", () => {
+  it("carries an admitted disclosure through the run budget but never past it (10.26)", () => {
     const { observation, row } = fixture();
+    // The source budget lapses one second after the run admitted it; the
+    // disclosure is carried until the run's own budget, not one second.
     row.updatedAt = sourceTimestamp + 259200 - 1;
     row.reserveInput!.freshness.assessedAt = row.updatedAt;
     row.reserveInput!.freshness.fetchedAt = row.updatedAt;
-    expect(sourceTimestamp + reserveBackedRedemptionRouteMaxAgeSec(observation, row, producerBudgetSec)).toBe(sourceTimestamp + 259200);
+    expect(sourceTimestamp + reserveBackedRedemptionRouteMaxAgeSec(observation, row, producerBudgetSec))
+      .toBe(row.updatedAt + producerBudgetSec);
+    // A run assessed after either budget lapsed cannot admit or renew it.
+    row.updatedAt = sourceTimestamp + 259200 + 1;
+    row.reserveInput!.freshness.assessedAt = row.updatedAt;
+    row.reserveInput!.freshness.fetchedAt = row.updatedAt;
+    expect(reserveBackedRedemptionRouteMaxAgeSec(observation, row, producerBudgetSec)).toBe(0);
+    row.updatedAt = sourceTimestamp + 172800 + 1;
+    row.reserveInput!.freshness.assessedAt = row.updatedAt;
     row.reserveInput!.freshness.fetchedAt = sourceTimestamp;
-    expect(sourceTimestamp + reserveBackedRedemptionRouteMaxAgeSec(observation, row, producerBudgetSec)).toBe(sourceTimestamp + 172800);
+    expect(reserveBackedRedemptionRouteMaxAgeSec(observation, row, producerBudgetSec)).toBe(0);
   });
 
   it("rejects mismatched source bindings and does not widen retained or unverified evidence", () => {

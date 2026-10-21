@@ -5,6 +5,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../../../test-helpers/report-cards-v9";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { scoreToGrade } from "@shared/lib/report-card-core";
+import { TELEGRAM_ALERT_POLICY } from "@shared/lib/telegram-delivery-policy";
 import { buildAlertSafetyV9SourceEnvelopeFromParts, ALERT_SAFETY_V9_SOURCE_GENERATION } from "../../../../lib/alert-safety-source-cache";
 import type { CronProgressUpdate } from "../../../../lib/cron-logger";
 import {
@@ -212,8 +213,22 @@ function seedActiveSafetySource(
   harness.cache("alert-safety-v9-source", caches.alertSafetySource.value, caches.alertSafetySource.updatedAt);
 }
 
+type SafetyBaselineSeedRow = {
+  grade: string;
+  score: number | null;
+  methodologyVersion: string | null;
+  pendingKind?: "severe-downgrade" | "upgrade";
+  pendingSinceSec?: number;
+  lastAlertedAtSec?: number;
+};
+
+/**
+ * Baseline rows are seeded as if a severe downgrade had already held for the
+ * full live-alert dwell, so a seeded grade drop alerts on this run. Tests that
+ * exercise the dwell itself override `pendingSinceSec`/`pendingKind`.
+ */
 function makeSafetySnapshotCache(
-  snapshot: Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>,
+  snapshot: Record<string, SafetyBaselineSeedRow>,
   generation = ALERT_SAFETY_V9_SOURCE_GENERATION,
 ) {
   return {
@@ -224,6 +239,8 @@ function makeSafetySnapshotCache(
         Object.entries(snapshot).map(([id, row]) => [
           id,
           {
+            pendingKind: "severe-downgrade",
+            pendingSinceSec: nowSec() - TELEGRAM_ALERT_POLICY.safety.dwellSec,
             ...row,
             methodologyVersion: "9.0",
             ratingStatus: row.grade === "NR" ? "not-rated" : "rated",
@@ -320,6 +337,11 @@ export interface DispatchDewsSeed {
   band?: "CALM" | "WATCH" | "ALERT" | "WARNING" | "DANGER";
   signals?: Record<string, unknown>;
   computedAt?: number;
+  /**
+   * By default a seeded row is the second DEWS computation of its band, so an
+   * escalation alerts on this run. True seeds it as the first sighting.
+   */
+  firstComputation?: boolean;
 }
 
 export interface DispatchDepegSeed {
@@ -503,14 +525,24 @@ function seedPreset(sqlite: DatabaseSync, input: DispatchPresetSeed): void {
     );
 }
 
+const DEWS_CANDIDATE_SNAPSHOT_KEY = "alert:dews-candidate-snapshot";
+
 function seedDews(sqlite: DatabaseSync, input: DispatchDewsSeed): void {
+  const computedAt = input.computedAt ?? nowSec();
+  if (input.firstComputation !== true) {
+    const existing = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(DEWS_CANDIDATE_SNAPSHOT_KEY) as
+      { value: string } | undefined;
+    const candidates = existing ? JSON.parse(existing.value) as Record<string, unknown> : {};
+    candidates[input.stablecoinId] = { computedAt: computedAt - 1800, computations: 1 };
+    seedCacheRow(sqlite, DEWS_CANDIDATE_SNAPSHOT_KEY, candidates);
+  }
   sqlite
     .prepare(
       "INSERT INTO stress_signals (stablecoin_id, computed_at, score, band, signals_json) VALUES (?, ?, ?, ?, ?)",
     )
     .run(
       input.stablecoinId,
-      input.computedAt ?? nowSec(),
+      computedAt,
       input.score ?? 42,
       input.band ?? "ALERT",
       JSON.stringify(input.signals ?? {}),

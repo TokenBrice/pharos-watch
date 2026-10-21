@@ -217,6 +217,7 @@ export function projectPresetFollowers(
         preference_generation: follower.preference_generation ?? 0,
         isGlobal: false,
         hasLocalOverride: false,
+        presetIds: [follower.preset_id],
       });
       map.set(stablecoinId, rows);
     }

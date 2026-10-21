@@ -9,7 +9,7 @@ import {
 import { V9ReasonCodeSchema } from "./safety-score-v9";
 import type { SafetyScoreV9CardRefinementInput, SafetyScoreV9CardWithDependencies } from "./safety-score-v9-public-shapes";
 import type { SafetyScoreV9SerialDependencyInput } from "./safety-score-v9-public-shapes";
-import { V9_PILLAR_WEIGHTS } from "./safety-score-v9-grade";
+import { scoreToGrade, V9_PILLAR_WEIGHTS } from "./safety-score-v9-grade";
 import { iterateEvidenceResponsibilityFacts } from "./safety-score-v9-public-evidence-facts";
 import { resolveV9EffectiveScoringWeight } from "./safety-score-v9-public-causes";
 import type { SafetyScoreV9BackingBreakdown } from "./safety-score-v9-public-breakdowns";
@@ -71,6 +71,9 @@ export function refineCard(
   ctx: { addIssue: (issue: { code: "custom"; path?: PropertyKey[]; message: string }) => void },
 ): void {
   const scoreTrace = card.scoreTrace;
+  // Causal D/F proofs belong to the computed band; a 10.26 grade hold may
+  // retain a different published letter beside the raw score.
+  const rawGrade = card.score === null ? card.grade : scoreToGrade(card.score);
   if (scoreTrace !== undefined) {
     const stages = scoreTrace.stages;
     const serialParents = card.dependencies.serial;
@@ -227,7 +230,7 @@ export function refineCard(
         if (
           match === null ||
           pillarScore === null ||
-          ((card.grade === "D" || card.grade === "F") &&
+          ((rawGrade === "D" || rawGrade === "F") &&
             pillarScore >= C_MINUS_MIN_SCORE)
         ) {
           issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 pillar attribution must name a score-bearing causal pillar");
@@ -406,13 +409,13 @@ export function refineCard(
       issue(ctx, ["scoreTrace", "evidenceResponsibility"], "A rated V9 card cannot retain critical unresolved facts");
     }
     if (
-      card.grade === "D" &&
+      rawGrade === "D" &&
       scoreTrace.adverseAttribution.items.length === 0 &&
       scoreTrace.boundedUncertaintyAttribution.items.length === 0
     ) {
       issue(ctx, ["scoreTrace", "boundedUncertaintyAttribution"], "A V9 D card requires causal measured-adverse or bounded-uncertainty attribution");
     }
-    if (card.grade === "F" && scoreTrace.adverseAttribution.items.length === 0) {
+    if (rawGrade === "F" && scoreTrace.adverseAttribution.items.length === 0) {
       issue(ctx, ["scoreTrace", "adverseAttribution"], "A V9 F card requires causal measured-adverse attribution");
     }
   }

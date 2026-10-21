@@ -19,6 +19,7 @@ import type * as NativeInputModule from "../../lib/safety-score-v9/native-input"
 const mocks = vi.hoisted(() => ({
   getCaches: vi.fn(),
   getCacheUpdatedAt: vi.fn(),
+  setCache: vi.fn(),
   loadDexGeneration: vi.fn(),
   parseFixedInput: vi.fn(),
   parsePegSeed: vi.fn(),
@@ -33,6 +34,7 @@ vi.mock("../../lib/db-cache", async (importOriginal) => ({
   ...await importOriginal<typeof import("../../lib/db-cache")>(),
   getCaches: mocks.getCaches,
   getCacheUpdatedAt: mocks.getCacheUpdatedAt,
+  setCache: mocks.setCache,
 }));
 
 vi.mock("../../lib/report-cards-snapshot", () => ({
@@ -199,6 +201,36 @@ describe("computeSafetyScoreV9", () => {
       .mockReset()
       .mockResolvedValue({});
     mocks.runPublication.mockReset();
+  });
+
+  it("passes the last admitted supply packets to application and records carried assets (10.26)", async () => {
+    const lastAdmitted = {
+      schemaVersion: 1, generationId: `safety-score-v9-supply-attribution:v1:${"b".repeat(64)}`, attributionById: {},
+    };
+    const caches = await mocks.getCaches();
+    caches.set("safety-score-v9:supply-attribution-last-admitted:v1", { value: JSON.stringify(lastAdmitted) });
+    mocks.getCaches.mockImplementation(async () => new Map(caches));
+    const carriedWm = { model: "reviewed-deployment-unit-partition-v1", carriedForwardFromGenerationId: lastAdmitted.generationId };
+    mocks.applySupplyGeneration.mockReturnValue({
+      status: "applied", generationId: `safety-score-v9-supply-attribution:v1:${"a".repeat(64)}`,
+      fixedInput: { ...fixedInput, safetyScoreV9SupplyAttributionById: { "wm-m0": carriedWm } },
+      acceptedAssetIds: [], rejectedAssetIds: ["wm-m0"], invalidAssetIds: [], supersededAssetIds: [],
+      carriedForwardAssetIds: ["wm-m0"],
+    });
+    mocks.setCache.mockReset().mockRejectedValueOnce(new Error("d1 write failed"));
+    mockPublishedPreparation();
+
+    const result = await computeSafetyScoreV9({} as D1Database);
+
+    expect(mocks.applySupplyGeneration.mock.calls[0]![2]).toEqual(lastAdmitted);
+    expect(mocks.setCache).toHaveBeenCalledWith(
+      expect.anything(), "safety-score-v9:supply-attribution-last-admitted:v1",
+      expect.stringContaining('"carriedForwardFromGenerationId"'), expect.anything(),
+    );
+    // A failed carry-state write is disclosed and never fails the publication.
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      supplyAttributionGeneration: { status: "applied", carriedForwardAssetIds: ["wm-m0"], lastAdmittedWrite: "failed" },
+    });
   });
 
   it("always retains the canonical fixed input for accepted replay", async () => {

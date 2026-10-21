@@ -82,6 +82,7 @@ function mergePresetSubscriber(existing: SubscriberRow, additional: SubscriberRo
   return {
     ...existing,
     last_active_at: Math.max(existing.last_active_at, additional.last_active_at),
+    presetIds: [...new Set([...(existing.presetIds ?? []), ...(additional.presetIds ?? [])])],
     depeg_worsening_bps_step: mergeTelegramDepegWorseningSteps(
       existing.depeg_worsening_bps_step,
       additional.depeg_worsening_bps_step,

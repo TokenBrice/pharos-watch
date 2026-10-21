@@ -1,40 +1,31 @@
 import { recordTelegramUsageEvent } from "../store/usage-analytics";
-import { buildTelegramMiniAppUrl } from "../common/mini-app-url";
-import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
-import {
-  PENDING_OWNERSHIP_CONFLICT_MESSAGE,
-  persistPendingForgetConfirm,
-} from "../store/telegram-webhook-store";
+import { unixNow } from "../store/subscribers";
 import type { WebhookCommandHandler } from "./context";
-import { createTelegramWebhookIntent } from "../webhook/telegram-webhook-effect-fence";
-import { bindPendingKeyboard, pendingFlowId, DISAMBIGUATION_TTL_SEC } from "../webhook/telegram-webhook-shared";
+import { BULK_CONFIRM_TTL_SEC } from "./action-runner";
 
 /**
- * Inline keyboard template for the `/forget` two-step confirmation. The pending
- * flow identity is appended before sending, as for bulk confirmations.
+ * `/forget` two-step confirmation. The Delete button carries its own expiry,
+ * so nothing is stored between the prompt and the tap.
  */
-const FORGET_CONFIRM_REPLY_MARKUP = {
-  inline_keyboard: [
-    [{ text: "Open control panel", web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.forget) } }],
-    [
-      { text: "Confirm", callback_data: "confirm:forget" },
-      { text: "Cancel", callback_data: "cancel:forget" },
-    ],
-  ],
-} as const;
+export function buildForgetConfirmReplyMarkup(nowSec: number) {
+  return {
+    inline_keyboard: [[
+      { text: "Delete my data", callback_data: `forget:yes:${(nowSec + BULK_CONFIRM_TTL_SEC).toString(36)}` },
+      { text: "Cancel", callback_data: "forget:no" },
+    ]],
+  };
+}
 
-const FORGET_CONFIRM_MESSAGE = [
-  "This will permanently delete your Pharos subscriber data:",
-  "- all coin and preset subscriptions",
-  "- global alert toggles and quiet hours",
-  "- delivery diagnostics and any pending alerts",
+// What survives must match prepareSubscriberPurge in store/subscriber-lifecycle.ts.
+export const FORGET_CONFIRM_MESSAGE = [
+  "This permanently deletes what Pharos Watch stores about this chat:",
+  "- your coin and preset follows, global alerts, quiet hours and pause",
+  "- queued alerts and the record of alerts sent to you",
+  "- delivery diagnostics",
   "",
-  "Pharos will retain only:",
-  "- acknowledged Telegram updates (for idempotency)",
-  "- delivery audit manifests (alert-job and dead-letter rows)",
-  "- privacy-preserving aggregate counters",
-  "",
-  "Confirm to proceed.",
+  "Pharos Watch keeps only:",
+  "- ids of messages already processed, with this chat's id, so nothing runs twice (deleted after 7 days)",
+  "- anonymous daily counts with no chat id",
 ].join("\n");
 
 export const handleForget: WebhookCommandHandler = async (ctx) => {
@@ -49,43 +40,8 @@ export const handleForget: WebhookCommandHandler = async (ctx) => {
     return;
   }
 
-  const storedExpiresAt = Number(ctx.storedIntent?.payload.expiresAt);
-  const expiresAt = Number.isFinite(storedExpiresAt)
-    ? storedExpiresAt
-    : (ctx.operationNowSec ?? Math.floor(Date.now() / 1000)) + DISAMBIGUATION_TTL_SEC;
-  const flowId = pendingFlowId(ctx.storedIntent?.payload.flowId);
-  await ctx.planIntent?.(createTelegramWebhookIntent("command:forget", {
-    stage: "forget-confirm-prompt",
-    expiresAt,
-    flowId,
-    clearPending: Boolean(ctx.clearPendingOnMutation),
-  }, "required"));
-  const actionPayload = JSON.stringify({ flowId });
-  const operationStatements = ctx.preparePendingMutationAppliedStatement
-    ? [ctx.preparePendingMutationAppliedStatement({
-        chatId: ctx.chatId,
-        actionType: "forget-confirm",
-        actionPayload,
-        expiresAt,
-      })]
-    : undefined;
-  const persisted = ctx.wasMutationApplied
-    ? true
-    : await persistPendingForgetConfirm(ctx.db, {
-        chatId: ctx.chatId,
-        initiatorUserId: ctx.actorUserId,
-        expiresAt,
-        flowId,
-        operationStatements,
-      });
-  if (!persisted) {
-    await ctx.replyToChat(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
-    return;
-  }
-  if (!ctx.wasMutationApplied && operationStatements) ctx.confirmAtomicMutationApplied?.();
-
   await ctx.replyToChatWithMarkup(FORGET_CONFIRM_MESSAGE, {
-    replyMarkup: bindPendingKeyboard(FORGET_CONFIRM_REPLY_MARKUP, flowId),
+    replyMarkup: buildForgetConfirmReplyMarkup(ctx.operationNowSec ?? unixNow()),
   });
   await recordTelegramUsageEvent(ctx.db, {
     eventType: "command_forget",

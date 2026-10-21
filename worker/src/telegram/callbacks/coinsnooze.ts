@@ -1,5 +1,6 @@
 import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { setSubscriptionSnooze, unixNow } from "../store/telegram-webhook-store";
+import { setSubscriptionSnooze } from "../store/snooze";
+import { unixNow } from "../store/subscribers";
 import {
   hasExactParts,
   isSubscribableStablecoinId,
@@ -35,8 +36,6 @@ export const handleCoinSnoozeCallback: CallbackHandler = async (context) => {
     logAction: "coinsnooze",
     logMessage: "coinsnooze write failed",
     successOutcome: "set",
-    intentKind: "callback:coinsnooze",
-    intentPayload: ({ id, duration, untilSec }) => ({ coinId: id, duration, untilSec }),
     write: async ({ id, untilSec }, options) =>
       setSubscriptionSnooze(db, chatId, id, untilSec, options),
     successText: ({ id, duration }) =>

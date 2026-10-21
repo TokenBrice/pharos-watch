@@ -16,8 +16,7 @@ type RequiredKeys<Value> = {
 it("preserves manifest-derived HTTP, scheduled and heavy ingress types", () => {
   expectTypeOf<RequiredKeys<Env>>().toEqualTypeOf<
     | "DB" | "CF_VERSION_METADATA" | "CORS_ORIGIN"
-    | "TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT" | "TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT"
-    | "TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT" | "TELEGRAM_WEBHOOK_SOURCE_RATE_LIMIT"
+    | "TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT" | "TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT"
     | "TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT" | "TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT"
     | "DONOR_KEY_CLAIM_RATE_LIMIT" | "SAFETY_GRADES_RATE_LIMIT"
   >();
@@ -25,7 +24,7 @@ it("preserves manifest-derived HTTP, scheduled and heavy ingress types", () => {
     .toEqualTypeOf<{ GITHUB_PAT?: string; FEEDBACK_IP_SALT?: string; BANXICO_TOKEN?: string }>();
   expectTypeOf<Env["DB"]>().toEqualTypeOf<D1Database>();
   expectTypeOf<Env["CF_VERSION_METADATA"]>().toEqualTypeOf<WorkerVersionMetadata>();
-  expectTypeOf<Env["TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT"]>().toEqualTypeOf<RateLimit>();
+  expectTypeOf<Env["TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT"]>().toEqualTypeOf<RateLimit>();
   expectTypeOf<Env["SAFETY_CAPTURE_ARCHIVE"]>().toEqualTypeOf<R2Bucket | undefined>();
   expectTypeOf<Env["HEAVY_EXECUTOR"]>().toEqualTypeOf<Fetcher | undefined>();
   expectTypeOf<Env["RESERVE_CONTINUATION_QUEUE"]>().toEqualTypeOf<Queue<ReserveContinuationMessage> | undefined>();

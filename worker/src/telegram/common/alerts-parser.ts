@@ -9,7 +9,8 @@ import {
 } from "@shared/types/status/telegram";
 import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../store/subscription-eligibility";
 import { isTelegramReservedTargetToken } from "@shared/lib/telegram-command-vocabulary";
-import { TELEGRAM_ALERT_TYPES } from "@shared/types/status/telegram";
+import { TELEGRAM_LIVE_ALERT_TYPES, TELEGRAM_RETIRED_ALERT_TYPES } from "@shared/types/status/telegram";
+import { TELEGRAM_LAUNCH_RETIRED_MESSAGE } from "@shared/lib/telegram-alert-families";
 
 // ---------- Types ----------
 
@@ -34,6 +35,8 @@ export interface ParsedSubscribeArgs {
   invalidTargets: string[];
   depegWorseningBpsStep?: 100 | 250 | 500 | null;
   invalidDepegWorseningBpsStep?: string;
+  /** Retired family tokens the user typed (e.g. "launch"); never subscribable. */
+  retiredAlertTypes?: string[];
 }
 
 export interface ParsedTargetArgs {
@@ -47,7 +50,10 @@ export type TickerResolutionScope = "subscribable" | "tracked";
 
 // ---------- Constants ----------
 
-const ALERT_TYPES: ReadonlySet<string> = new Set(TELEGRAM_ALERT_TYPES);
+const ALERT_TYPES: ReadonlySet<string> = new Set(TELEGRAM_LIVE_ALERT_TYPES);
+const RETIRED_ALERT_TYPES: ReadonlySet<string> = new Set(TELEGRAM_RETIRED_ALERT_TYPES);
+const ALERT_TYPE_LIST = TELEGRAM_LIVE_ALERT_TYPES.join(", ");
+
 const GLOBAL_SUBSCRIBE_TOKEN = "all";
 const DEPEG_STEP_TOKEN = "depeg-step";
 
@@ -205,6 +211,7 @@ export function parseSubscribeArgs(argsText: string): ParsedSubscribeArgs {
   const tokens = argsText.trim().split(/[\s,]+/).filter(Boolean);
   const alertTypes = new Set<string>();
   const targetTokens: string[] = [];
+  const retiredAlertTypes: string[] = [];
   let depegWorseningBpsStep: ParsedSubscribeArgs["depegWorseningBpsStep"];
   let invalidDepegWorseningBpsStep: string | undefined;
 
@@ -213,6 +220,8 @@ export function parseSubscribeArgs(argsText: string): ParsedSubscribeArgs {
     const lower = token.toLowerCase();
     if (ALERT_TYPES.has(lower)) {
       alertTypes.add(lower);
+    } else if (RETIRED_ALERT_TYPES.has(lower)) {
+      retiredAlertTypes.push(lower);
     } else if (lower === DEPEG_STEP_TOKEN) {
       alertTypes.add("depeg");
       const rawStep = tokens[i + 1];
@@ -242,6 +251,7 @@ export function parseSubscribeArgs(argsText: string): ParsedSubscribeArgs {
     invalidTargets: parsedTargets.invalidTargets,
     depegWorseningBpsStep,
     invalidDepegWorseningBpsStep,
+    ...(retiredAlertTypes.length > 0 ? { retiredAlertTypes } : {}),
   };
 }
 
@@ -265,23 +275,23 @@ export function validateSubscribeArgs(parsed: ParsedSubscribeArgs): string | nul
   if (parsed.invalidDepegWorseningBpsStep != null) {
     return "Depeg-step values: off, 100, 250, 500";
   }
+  if ((parsed.retiredAlertTypes?.length ?? 0) > 0) {
+    return TELEGRAM_LAUNCH_RETIRED_MESSAGE;
+  }
   if (parsed.invalidTargets.length > 0) {
     const unknown = parsed.invalidTargets.join(", ");
     if (parsed.alertTypes.size === 0) {
       const suggestion =
         parsed.invalidTargets.length === 1
-          ? suggestClosestToken(parsed.invalidTargets[0], ["dews", "depeg", "safety", "launch", "reserve", "freeze"])
+          ? suggestClosestToken(parsed.invalidTargets[0], TELEGRAM_LIVE_ALERT_TYPES)
           : null;
       const hint = suggestion ? ` Did you mean "${suggestion}"?` : "";
-      return `Unknown alert type: ${unknown}.${hint} Valid types: dews, depeg, safety, launch, reserve, freeze.`;
+      return `Unknown alert type: ${unknown}.${hint} Valid types: ${ALERT_TYPE_LIST}.`;
     }
     return `Unknown ticker or preset: ${unknown}. Check spelling, use the coin's symbol, or try /presets.`;
   }
   if (parsed.subscribeAll && (parsed.tickers.length > 0 || parsed.presetIds.length > 0)) {
     return 'Use either "all" or specific tickers/presets in one command, not both.';
-  }
-  if (parsed.presetIds.length > 0 && parsed.alertTypes.has("launch")) {
-    return "Preset watchlists support dews, depeg, and safety only. Use explicit tickers for launch alerts.";
   }
   if (parsed.presetIds.length > 0 && parsed.alertTypes.has("reserve")) {
     return "Preset watchlists support dews, depeg, and safety only. Use explicit tickers for reserve alerts.";
@@ -298,7 +308,7 @@ export function validateSubscribeArgs(parsed: ParsedSubscribeArgs): string | nul
     return "Specify alert types and tickers or presets. Example: /subscribe dews USDC BOLD";
   }
   if (parsed.alertTypes.size === 0) {
-    return "Specify at least one alert type: dews, depeg, safety, launch, reserve, freeze. Example: /subscribe freeze USDC";
+    return `Specify at least one alert type: ${ALERT_TYPE_LIST}. Example: /subscribe freeze USDC`;
   }
   if (parsed.tickers.length === 0 && parsed.presetIds.length === 0 && !parsed.subscribeAll) {
     return "Specify at least one ticker or preset, or use all. Example: /subscribe dews all";

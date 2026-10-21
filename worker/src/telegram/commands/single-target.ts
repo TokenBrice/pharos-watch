@@ -1,32 +1,31 @@
+import { escapeHtml } from "../delivery/telegram";
 import { resolveTicker, type ResolvedCoin } from "../common/alerts-parser";
-import {
-  buildNotFoundMessage,
-  buildStatusAmbiguousMessage,
-} from "../webhook/telegram-webhook-messages";
+import { buildNotFoundMessage } from "../webhook/telegram-webhook-messages";
+import { buildPickKeyboard } from "../callbacks/pick";
 import type { WebhookCommandContext } from "./context";
 
 /**
- * Resolves a single coin from a ticker argument. Sends the appropriate error
- * message (usage / not-found / ambiguous) and returns `null` when no single
- * coin can be selected.
+ * Resolves a single coin from a ticker argument. Not-found replies with a
+ * suggestion; an ambiguous ticker replies with one button per candidate.
+ * Returns `null` when no single coin can be selected.
  */
 export async function resolveSingleStatusTarget(
   ctx: WebhookCommandContext,
   args: string,
-  commandName: string,
 ): Promise<ResolvedCoin | null> {
   const trimmed = args.trim();
-  if (!trimmed) {
-    await ctx.replyToChat(`Usage: ${commandName} &lt;ticker&gt;`);
-    return null;
-  }
   const resolution = resolveTicker(trimmed, "tracked");
   if (resolution.status === "not_found") {
     await ctx.replyToChat(buildNotFoundMessage(trimmed, resolution.suggestion));
     return null;
   }
   if (resolution.status === "ambiguous") {
-    await ctx.replyToChat(buildStatusAmbiguousMessage(trimmed, resolution.matches, commandName));
+    const keyboard = buildPickKeyboard({ kind: "status" }, trimmed, resolution.matches);
+    if (keyboard) {
+      await ctx.replyToChatWithMarkup(`"${escapeHtml(trimmed)}" matches ${resolution.matches.length} coins. Which one?`, { replyMarkup: keyboard });
+      return null;
+    }
+    await ctx.replyToChat(`"${escapeHtml(trimmed)}" matches ${resolution.matches.length} coins. Send the exact Pharos coin id instead.`);
     return null;
   }
   return resolution.matches[0] ?? null;

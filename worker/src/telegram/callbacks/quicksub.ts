@@ -1,11 +1,10 @@
 import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { recordTelegramUsageEvent } from "../store/usage-analytics";
 import { classifyTelegramLogError, logTelegramEvent } from "../common/log";
-import { upsertSubscriberAndSubscriptions } from "../store/telegram-webhook-store";
+import { upsertSubscriberAndSubscriptions } from "../store/subscriptions";
 import { sendAuditedTelegramReply } from "../webhook/telegram-webhook-replies";
 import { buildMiniAppOnlyKeyboard } from "../webhook/telegram-webhook-messages";
 import { isGroupChatType } from "../webhook/telegram-webhook-auth";
-import { createTelegramWebhookIntent } from "../webhook/telegram-webhook-effect-fence";
 import {
   callbackChatType,
   hasExactParts,
@@ -15,8 +14,7 @@ import {
 } from "./_shared";
 
 export const handleQuickSubCallback: CallbackHandler = async ({
-  db, botToken, cb, chatId, parsed, answerCallback, beforeIrreversibleEffect,
-  planIntent, prepareMutationAppliedStatement, confirmAtomicMutationApplied, wasMutationApplied,
+  db, botToken, cb, chatId, parsed, answerCallback,
 }) => {
   const { arg, parts } = parsed;
   if (!hasExactParts(parts, 2) || !isSubscribableStablecoinId(arg)) {
@@ -35,31 +33,19 @@ export const handleQuickSubCallback: CallbackHandler = async ({
       cb,
       chatId,
       "Only group admins can subscribe.",
-      beforeIrreversibleEffect,
     ))
   ) {
     return;
   }
   const meta = TRACKED_META_BY_ID.get(arg);
   try {
-    await planIntent?.(createTelegramWebhookIntent("callback:quicksub", {
-      coinId: arg,
-      alertTypes: ["depeg", "dews"],
-    }, "required"));
-    if (!wasMutationApplied) {
-      const operationStatements = prepareMutationAppliedStatement
-        ? [prepareMutationAppliedStatement()]
-        : undefined;
-      await upsertSubscriberAndSubscriptions(
-        db,
-        chatId,
-        isGroup ? null : cb.from?.username ?? null,
-        new Set(["dews", "depeg"]),
-        [arg],
-        { operationStatements },
-      );
-      if (operationStatements) confirmAtomicMutationApplied?.();
-    }
+    await upsertSubscriberAndSubscriptions(
+      db,
+      chatId,
+      isGroup ? null : cb.from?.username ?? null,
+      new Set(["dews", "depeg"]),
+      [arg],
+    );
     await recordTelegramUsageEvent(db, {
       eventType: "subscribe",
       actionDetail: "quicksub",
@@ -75,7 +61,6 @@ export const handleQuickSubCallback: CallbackHandler = async ({
   }
   try {
     if (chatType === "private") {
-      await beforeIrreversibleEffect("quicksub-reply");
       await sendAuditedTelegramReply(
         db,
         chatId,

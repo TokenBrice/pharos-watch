@@ -1,26 +1,16 @@
-import { answerCallbackQuery } from "../delivery/telegram";
+import { handleMyChatMember } from "./telegram-webhook-group-welcome";
 import {
-  handleMyChatMember,
-  isBotRemovedTransition,
-} from "./telegram-webhook-group-welcome";
-import {
-  migrateTelegramChatId,
-  unixNow,
-} from "../store/telegram-webhook-store";
+  claimTelegramProcessedUpdate,
+  markTelegramProcessedUpdateProcessed,
+  releaseTelegramProcessedUpdate,
+} from "../store/processed-updates";
+import { unixNow } from "../store/subscribers";
+import { migrateTelegramChatId } from "../store/subscriber-lifecycle";
 import { withErrorHandler } from "../../lib/api-response";
 import { classifyTelegramLogError, logTelegramEvent } from "../common/log";
+import { isRetriableD1OverloadError } from "../../lib/d1-overload-retry";
 import { validateTelegramWebhookSecret } from "./telegram-webhook-auth";
-import {
-  TelegramWebhookEffectFence,
-  buildMutationOperations,
-  createTelegramWebhookIntent,
-  establishTelegramWebhookEffectFence,
-} from "./telegram-webhook-effect-fence";
-import {
-  resolveChatMigration,
-  resolveUpdateType,
-  type TelegramWebhookUpdateWithChatMember,
-} from "./telegram-webhook-update-normalization";
+import type { TelegramWebhookUpdate, TelegramWebhookUpdateWithChatMember } from "./telegram-webhook-shared";
 import {
   handleTelegramCallbackQueryUpdate,
   handleTelegramMessageUpdate,
@@ -55,6 +45,104 @@ function logMissingBotTokenWarning(): void {
  */
 export { TELEGRAM_GROUP_ADMIN_GATING, type TelegramGroupAdminGating } from "./telegram-webhook-ingress-policy";
 
+export function resolveUpdateType(update: TelegramWebhookUpdateWithChatMember): string {
+  if (update.callback_query) return "callback_query";
+  if (update.message) return "message";
+  if (update.my_chat_member) return "my_chat_member";
+  return "unknown";
+}
+
+export function resolveUpdateChatId(update: TelegramWebhookUpdateWithChatMember): string | null {
+  const chatId = update.message?.chat?.id
+    ?? update.callback_query?.message?.chat?.id
+    ?? update.my_chat_member?.chat?.id;
+  return typeof chatId === "number" && Number.isFinite(chatId) ? String(chatId) : null;
+}
+
+export function resolveChatMigration(message: TelegramWebhookUpdate["message"] | undefined): {
+  oldChatId: string;
+  newChatId: string;
+} | null {
+  const currentChatId = message?.chat?.id;
+  if (typeof currentChatId !== "number" || !Number.isFinite(currentChatId)) {
+    return null;
+  }
+  const migrateToChatId = message?.migrate_to_chat_id;
+  if (typeof migrateToChatId === "number" && Number.isFinite(migrateToChatId)) {
+    return {
+      oldChatId: String(currentChatId),
+      newChatId: String(migrateToChatId),
+    };
+  }
+  const migrateFromChatId = message?.migrate_from_chat_id;
+  if (typeof migrateFromChatId === "number" && Number.isFinite(migrateFromChatId)) {
+    return {
+      oldChatId: String(migrateFromChatId),
+      newChatId: String(currentChatId),
+    };
+  }
+  return null;
+}
+
+/** Routes one authenticated update; returns the processed-row error class, or throws to request redelivery. */
+async function dispatchTelegramUpdate(
+  db: D1Database,
+  botToken: string,
+  update: TelegramWebhookUpdateWithChatMember,
+  nowSec: number,
+): Promise<string | null> {
+  if (update.callback_query) {
+    return handleTelegramCallbackQueryUpdate({ db, botToken, callbackQuery: update.callback_query, nowSec });
+  }
+
+  if (update.my_chat_member) {
+    try {
+      await handleMyChatMember(db, botToken, update.my_chat_member);
+      return null;
+    } catch (err) {
+      logTelegramEvent({
+        message: "my_chat_member failed",
+        action: "my_chat_member",
+        errorClass: classifyTelegramLogError(err),
+      });
+      return "my_chat_member";
+    }
+  }
+
+  const migration = resolveChatMigration(update.message);
+  if (migration) {
+    try {
+      await migrateTelegramChatId(db, migration.oldChatId, migration.newChatId);
+    } catch (err) {
+      logTelegramEvent({
+        message: "telegram chat migration failed",
+        action: "chat-migration",
+        errorClass: classifyTelegramLogError(err),
+      });
+      // The migration batch is idempotent: a transient D1 failure gets a non-2xx
+      // so Telegram redelivers it. A deterministic failure (e.g. a constraint
+      // conflict) would fail forever and hold back later updates, so it is
+      // recorded and acked; the delivery path migrates on `migrate_to_chat_id`.
+      if (isRetriableD1OverloadError(err)) throw err;
+      return "chat-migration";
+    }
+    logTelegramEvent({
+      level: "info",
+      message: "telegram chat id migrated",
+      action: "chat-migration",
+    });
+    return null;
+  }
+
+  return handleTelegramMessageUpdate({ db, update, botToken, nowSec });
+}
+
+/**
+ * Update-id dedupe: a processed update is acked and skipped; a thrown error
+ * releases the claim so Telegram's retry is processed. Replies are not fenced,
+ * so a crash after a reply but before the processed marker can repeat that
+ * reply once on redelivery (accepted at this traffic level).
+ */
 export const handleTelegramWebhook = withErrorHandler(
   "telegram-webhook",
   async (
@@ -86,120 +174,53 @@ export const handleTelegramWebhook = withErrorHandler(
       return ok();
     }
 
-    // Unsupported updates have no work to claim or external effect to fence.
-    if (resolveUpdateType(update) === "unknown") return ok();
+    const updateType = resolveUpdateType(update);
+    // Unsupported updates have no work to claim.
+    if (updateType === "unknown") return ok();
 
     const nowSec = unixNow();
-    const claimOutcome = await establishTelegramWebhookEffectFence(db, update, nowSec);
-    if (claimOutcome.kind === "respond") {
-      return claimOutcome.response;
-    }
-    const effectFence: TelegramWebhookEffectFence | null = claimOutcome.effectFence;
-
-    const finishOk = async (errorClass: string | null = null): Promise<Response> => {
-      await effectFence?.finish(errorClass);
-      return ok();
-    };
-
-    const beforeIrreversibleEffect = async (kind: string): Promise<void> => {
-      await effectFence?.beforeIrreversibleEffect(kind);
-    };
-
-    const answerWebhookCallback = async (
-      callbackQueryId: string,
-      options?: { text?: string },
-    ): Promise<void> => {
-      await beforeIrreversibleEffect("callback-ack");
-      await answerCallbackQuery(callbackQueryId, botToken, options);
-    };
-
-    try {
-      if (update.callback_query) {
-        return await handleTelegramCallbackQueryUpdate({
-          db,
-          botToken,
-          callbackQuery: update.callback_query,
-          nowSec,
-          finishOk,
-          effectFence,
-          beforeIrreversibleEffect,
-          answerWebhookCallback,
+    const updateId = Number.isSafeInteger(update.update_id) ? update.update_id as number : null;
+    if (updateId != null) {
+      const claim = await claimTelegramProcessedUpdate(db, {
+        updateId,
+        nowSec,
+        updateType,
+        chatId: resolveUpdateChatId(update),
+      });
+      if (claim.status === "duplicate") return ok();
+      if (claim.status === "in_flight") {
+        logTelegramEvent({
+          level: "warn",
+          message: "duplicate update still in flight",
+          action: "processed-update-dedupe",
+          retryAfterSec: claim.retryAfterSec,
+        });
+        return new Response("retry", {
+          status: 503,
+          headers: { "Retry-After": String(claim.retryAfterSec) },
         });
       }
+    }
 
-      if (update.my_chat_member) {
-        const lifecycleRemoval = isBotRemovedTransition(
-          update.my_chat_member.old_chat_member?.status,
-          update.my_chat_member.new_chat_member?.status,
-        );
-        await effectFence?.plan(createTelegramWebhookIntent("member:lifecycle", {
-          oldStatus: update.my_chat_member.old_chat_member?.status ?? null,
-          newStatus: update.my_chat_member.new_chat_member?.status ?? null,
-          chatType: update.my_chat_member.chat?.type ?? null,
-          transition: lifecycleRemoval ? "removal" : "other",
-        }, lifecycleRemoval ? "required" : "none"));
-        let myChatMemberErrorClass: string | null = null;
-        try {
-          await handleMyChatMember(db, botToken, update.my_chat_member, {
-            ...buildMutationOperations(effectFence, { beforeIrreversibleEffect }),
-          });
-        } catch (err) {
-          logTelegramEvent({
-            message: "my_chat_member failed",
-            action: "my_chat_member",
-            errorClass: classifyTelegramLogError(err),
-          });
-          if (effectFence?.hasStartedEffect) throw err;
-          myChatMemberErrorClass = "my_chat_member";
-        }
-        return finishOk(myChatMemberErrorClass);
+    try {
+      const errorClass = await dispatchTelegramUpdate(db, botToken, update, nowSec);
+      if (updateId != null) {
+        await markTelegramProcessedUpdateProcessed(db, { updateId, claimedAt: nowSec, nowSec: unixNow(), errorClass });
       }
-
-      const migration = resolveChatMigration(update.message);
-      if (migration) {
-        await effectFence?.plan(createTelegramWebhookIntent("chat:migration", migration, "required"));
-        let migrationErrorClass: string | null = null;
-        try {
-          if (!effectFence?.wasMutationApplied) {
-            const operationStatements = effectFence
-              ? [effectFence.prepareMutationAppliedStatement()]
-              : [];
-            await migrateTelegramChatId(db, migration.oldChatId, migration.newChatId, { operationStatements });
-            effectFence?.confirmAtomicMutationApplied();
-          }
-          logTelegramEvent({
-            level: "info",
-            message: "telegram chat id migrated",
-            action: "chat-migration",
-          });
-        } catch (err) {
-          logTelegramEvent({
-            message: "telegram chat migration failed",
-            action: "chat-migration",
-            errorClass: classifyTelegramLogError(err),
-          });
-          migrationErrorClass = "chat-migration";
-        }
-        return finishOk(migrationErrorClass);
-      }
-
-      return await handleTelegramMessageUpdate({
-        db,
-        update,
-        botToken,
-        finishOk,
-        effectFence,
-        beforeIrreversibleEffect,
-        operationNowSec: nowSec,
-      });
     } catch (err) {
-      await effectFence?.fail(classifyWebhookError(err));
+      if (updateId != null) {
+        try {
+          await releaseTelegramProcessedUpdate(db, { updateId, claimedAt: nowSec });
+        } catch (releaseErr) {
+          logTelegramEvent({
+            message: "telegram processed-update release failed",
+            action: "processed-update-release",
+            errorClass: classifyTelegramLogError(releaseErr),
+          });
+        }
+      }
       throw err;
     }
+    return ok();
   },
 );
-
-function classifyWebhookError(err: unknown): string {
-  if (err instanceof Error && err.name) return err.name;
-  return "unknown";
-}

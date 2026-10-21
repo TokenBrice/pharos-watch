@@ -33,6 +33,7 @@ import type { V9PublicationPhaseElapsedMs, V9PublicationAbortCause, V9Publicatio
 import type { V9AssetQuarantine } from "./fact-set";
 import { persistAlertSafetyV9SourceEnvelope } from "../alert-safety-source-cache";
 import { loadSafetyScoreV9AcceptedBaselineState } from "./accepted-projection-readers";
+import { applySafetyScoreV9GradeHysteresis } from "@shared/lib/safety-score-v9/grade-hysteresis";
 import { buildSafetyScoreV9PublicationIdentity } from "../report-cards-v9-cache";
 import { logWorkerEvent } from "../structured-log";
 import type { SafetyScoreV9TransferMaterialityGeneration } from "./transfer-materiality";
@@ -530,7 +531,9 @@ export async function runSafetyScoreV9Publication(
       publishedAtSec: fixedInput.clockSec,
       transferMaterialityGeneration: input.transferMaterialityGeneration ?? null,
     });
-    const publication = pipeline.candidate;
+    // Grade hysteresis (10.26) is applied before assessment and journaling so
+    // every consumer sees the grade that will actually be published.
+    const publication = applySafetyScoreV9GradeHysteresis(pipeline.candidate, acceptedPublication);
     const coverageFloors = observationCoverageFloors(
       publication.cards.length,
       fixedInput.activeAssetIds.length,

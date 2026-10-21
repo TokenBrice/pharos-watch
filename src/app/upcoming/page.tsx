@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertsHeaderLink } from "@/components/alerts-header-link";
+import { PreLaunchAlertAction } from "@/components/pre-launch-alert-action";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ShareButton } from "@/components/share-button";
 import { JsonLdScript } from "@/components/json-ld-script";
@@ -61,10 +61,7 @@ export default function UpcomingPage() {
       header="instrument"
       headerActions={(
         <>
-          <AlertsHeaderLink
-            href="/pharoswatchbot/#getting-started"
-            description="Get a Telegram alert when a tracked stablecoin launches: send /subscribe launch all to @PharosWatchBot"
-          />
+          <PreLaunchAlertAction description="Pharos's Telegram channel digest lists the stablecoins Pharos starts tracking" />
           {/* Timeless by decision (docs/og-images.md): the route card carries no registry count. */}
           <ShareButton ogPath={API_PATHS.ogPage("upcoming")} />
         </>

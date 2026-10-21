@@ -15,7 +15,6 @@ import { SchemaValidationError } from "@/lib/api";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import {
   postMiniAppBulkWatchlistPreview,
-  postMiniAppPortability,
   postMiniAppSnapshot,
   refreshMiniAppBundleOnce,
 } from "./mini-app-api";
@@ -172,49 +171,37 @@ describe("Mini App versioned API client", () => {
   });
 
 
-  it("validates a versioned portable watchlist preview without hydrating state", async () => {
-    mockFetch([{
-      match: "/api/telegram-mini-app/mutate",
-      body: {
-        contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
-        catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
-        result: {
-          kind: "watchlist-import-preview",
-          expectedPreferenceGeneration: 1,
-          previewFingerprint: "preview-v1-12-deadbeef",
-          preview: {
-            directAdds: [], directRemoves: [], directChanges: [],
-            presetAdds: [], presetRemoves: [], presetChanges: [],
-            directBroadenedCoverage: [], directRemovedCoverage: [],
-            presetBroadenedCoverage: [], presetRemovedCoverage: [],
-          },
-        },
-      },
-    }], { requireMatch: true });
-
-    await expect(postMiniAppPortability("/api/telegram-mini-app/mutate", {
-      initData: "signed",
-      operation: { kind: "export-watchlist" },
-    })).resolves.toMatchObject({ result: { kind: "watchlist-import-preview" } });
-  });
-
   it.each([
     ["contractVersion", "worker-contract-next", "contract-version-mismatch"],
     ["catalogVersion", "worker-catalog-next", "catalog-version-mismatch"],
-  ] as const)("rejects a portable watchlist response with an incompatible %s", async (field, value, code) => {
+  ] as const)("rejects a bulk watchlist preview with an incompatible %s", async (field, value, code) => {
     mockFetch([{
       match: "/api/telegram-mini-app/mutate",
       body: {
         contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
         catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
         [field]: value,
-        result: { kind: "watchlist-export", token: "signed-export", directCount: 1, presetCount: 0 },
+        result: {
+          kind: "bulk-watchlist-preview",
+          expectedPreferenceGeneration: 1,
+          previewFingerprint: "preview-v1-12-deadbeef",
+          adds: ["usdc-circle"],
+          removes: [],
+          unchanged: [],
+          sourceImpact: [],
+          undo: {
+            expectedPreferenceGeneration: 2,
+            expectedFingerprint: "preview-v1-12-deadbeef",
+            restoreDirectRows: [],
+            removeStablecoinIds: ["usdc-circle"],
+          },
+        },
       },
     }], { requireMatch: true });
 
-    await expect(postMiniAppPortability("/api/telegram-mini-app/mutate", {
+    await expect(postMiniAppBulkWatchlistPreview("/api/telegram-mini-app/mutate", {
       initData: "signed",
-      operation: { kind: "export-watchlist" },
+      operation: { kind: "preview-bulk-watchlist", addStablecoinIds: ["usdc-circle"], removeStablecoinIds: [] },
     })).rejects.toMatchObject({ status: 409, code });
   });
 

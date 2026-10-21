@@ -36,10 +36,7 @@ function mockD1(
     ...tables,
     { match: "SELECT snapshot_at FROM telegram_watcher_lifecycle_daily WHERE day = ?", rows: [], first: null },
     { match: "FROM telegram_watcher_lifecycle_events_daily", rows: [], first: null },
-    { match: "FROM telegram_adoption_daily", rows: [] },
     { match: "FROM telegram_usage_daily", rows: [], first: null },
-    { match: "FROM telegram_adoption_retention_daily", rows: [] },
-    { match: "INSERT INTO telegram_adoption_retention_daily", rows: [] },
     { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
   ], options);
 }
@@ -58,8 +55,6 @@ describe("handleTelegramPulse", () => {
       historySource: "snapshot",
       topCoins: ["USDC"],
       pendingDeliveries: 3,
-      miniAppSessionsToday: 4,
-      miniAppMutationsToday: 2,
       updatedAt: Math.floor(Date.now() / 1000),
       updatedEverySeconds: 300,
       watcherHistory: [
@@ -91,8 +86,6 @@ describe("handleTelegramPulse", () => {
       ...cachedPulse,
       newWatchersToday: null,
       pendingDeliveries: null,
-      miniAppSessionsToday: null,
-      miniAppMutationsToday: null,
       watcherHistory: [
         {
           ...cachedPulse.watcherHistory[0],
@@ -108,8 +101,6 @@ describe("handleTelegramPulse", () => {
         exactActiveWatchers: true,
         lowCardinalityThreshold: 5,
         suppressedFields: [
-          "miniAppMutationsToday",
-          "miniAppSessionsToday",
           "newWatchersToday",
           "pendingDeliveries",
           "watcherHistory.churnedWatchers",
@@ -180,59 +171,19 @@ describe("handleTelegramPulse", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_subscribers s"))).toBe(true);
   });
 
-  it("suppresses low-cardinality Mini App usage counts but exposes abuse-health counts", async () => {
+  it("no longer publishes Mini App usage or adoption telemetry", async () => {
     const db = mockD1([
-      {
-        match: "FROM telegram_watcher_lifecycle_daily",
-        rows: [],
-      },
-      {
-        match: "FROM telegram_subscribers s",
-        first: pulseAggregate(),
-        rows: [],
-      },
-      {
-        match: "FROM telegram_preset_subscriptions",
-        rows: [],
-      },
-      {
-        match: "FROM telegram_subscriptions",
-        rows: [],
-      },
-      {
-        match: "FROM telegram_pending_alerts",
-        first: { pending_count: 0 },
-        rows: [],
-      },
-      {
-        match: "FROM telegram_usage_daily",
-        first: {
-          mini_app_sessions: 3,
-          mini_app_mutations: 4,
-          mini_app_denied: 2,
-          mini_app_replay_claimed: 1,
-        },
-        rows: [],
-      },
+      { match: "FROM telegram_watcher_lifecycle_daily", rows: [] },
+      { match: "FROM telegram_subscribers s", first: pulseAggregate(), rows: [] },
+      { match: "FROM telegram_preset_subscriptions", rows: [] },
+      { match: "FROM telegram_subscriptions", rows: [] },
+      { match: "FROM telegram_pending_alerts", first: { pending_count: 0 }, rows: [] },
     ]);
 
-    const response = await handleTelegramPulse(db);
-    const body = (await response.json()) as {
-      miniAppSessionsToday: number | null;
-      miniAppMutationsToday: number | null;
-      miniAppDeniedToday: number | null;
-      miniAppReplayClaimsToday: number | null;
-      privacy: { suppressedFields: string[] };
-    };
+    const body = await (await handleTelegramPulse(db)).json() as Record<string, unknown>;
 
-    expect(body.miniAppSessionsToday).toBeNull();
-    expect(body.miniAppMutationsToday).toBeNull();
-    expect(body.miniAppDeniedToday).toBe(2);
-    expect(body.miniAppReplayClaimsToday).toBe(1);
-    expect(body.privacy.suppressedFields).toEqual([
-      "miniAppMutationsToday",
-      "miniAppSessionsToday",
-    ]);
+    expect(Object.keys(body).filter((key) => key.startsWith("miniApp"))).toEqual([]);
+    expect(db.getHistory().some((entry) => /telegram_usage_daily|telegram_adoption_/.test(entry.sql))).toBe(false);
   });
 
   it("reports unavailable pending deliveries through quality instead of privacy suppression", async () => {
@@ -331,21 +282,6 @@ describe("handleTelegramPulse", () => {
 });
 
 describe("publishTelegramPulseSnapshot", () => {
-  it("publishes healthy pulse metrics while quarantining inconsistent retention evidence", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { db, sqlite } = persistedPulseDb();
-    const now = Math.floor(Date.parse("2026-08-20T12:00:00Z") / 1000);
-    const cohortAt = Math.floor(Date.parse("2026-08-12T12:00:00Z") / 1000);
-    sqlite.prepare(`INSERT INTO telegram_subscribers
-      (chat_id, created_at, last_active_at, first_follow_at, global_alert_depeg)
-      VALUES ('cohort', ?, ?, ?, 1)`).run(cohortAt, cohortAt, cohortAt);
-    const outcome = await publishTelegramPulseSnapshotWithOutcome(db, now);
-    expect(outcome.snapshotPublished).toBe(true);
-    expect(outcome.pulse.activeWatchers).toBe(1);
-    expect(sqlite.prepare("SELECT count(*) AS count FROM telegram_adoption_retention_daily WHERE measurement_day = '2026-08-19' AND window_days = 7").get())
-      .toEqual({ count: 0 });
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("cohort-evidence-mismatch"));
-  });
   function observePulseReads(sqlite: Parameters<typeof createSqliteD1>[0]) {
     const observed = { sql: [] as string[], pendingUnavailable: false };
     const prepare = sqlite.prepare.bind(sqlite);
@@ -373,8 +309,6 @@ describe("publishTelegramPulseSnapshot", () => {
     expect(sql).toEqual(expect.arrayContaining([
       expect.stringContaining("GROUP BY stablecoin_id"),
       expect.stringContaining("WHERE day >= ? AND day < ?"),
-      expect.stringContaining("FROM telegram_usage_daily"),
-      expect.stringContaining("stage = 'first_mutation' AND outcome = 'success'"),
     ]));
   }
 

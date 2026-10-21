@@ -3,7 +3,7 @@
  *
  * Two views:
  *   - chat-level (no ticker): quiet hours toggle, snooze clear, global alert toggles.
- *   - per-coin (ticker arg): DEWS min band, safety mode, depeg step, launch.
+ *   - per-coin (ticker arg): DEWS min band, safety mode, depeg step, reserve, freeze.
  *
  * Callback namespace is `settings:*`. Render helpers live in
  * `telegram-webhook-settings-render.ts` and D1 mutations in settings/store
@@ -26,12 +26,9 @@ import {
   buildNotFoundMessage,
   buildStatusAmbiguousMessage,
 } from "./telegram-webhook-messages";
-import {
-  clearAlertSnooze,
-  loadSubscriberByChat,
-  loadSubscriptionRowsByChat,
-  loadSubscriptionsByIds,
-} from "../store/telegram-webhook-store";
+import { clearAlertSnooze } from "../store/snooze";
+import { loadSubscriberByChat } from "../store/subscribers";
+import { loadSubscriptionRowsByChat, loadSubscriptionsByIds } from "../store/subscriptions";
 import {
   buildCoinKeyboard,
   buildCoinMessage,
@@ -44,14 +41,12 @@ import {
   setQuietHours,
   toggleGlobalAlert,
 } from "./telegram-webhook-settings-mutations";
-import {
-  isGlobalAlertType,
-  subscriberHasGlobal,
-} from "./telegram-webhook-settings-shared";
+import { isGlobalAlertType } from "./telegram-webhook-settings-shared";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
+import { TELEGRAM_ALERT_PERSISTENCE, TELEGRAM_LAUNCH_RETIRED_MESSAGE } from "@shared/lib/telegram-alert-families";
 import { isGroupChatType } from "./telegram-webhook-auth";
-import { createTelegramWebhookIntent } from "./telegram-webhook-effect-fence";
-import type { TelegramWebhookOperationIntent } from "../store/telegram-webhook-store";
+import { createTelegramWebhookIntent } from "./telegram-webhook-shared";
+import type { TelegramWebhookOperationIntent } from "../store/processed-updates";
 
 type SettingsCallbackQuery = TelegramCallbackQuery;
 
@@ -106,6 +101,8 @@ export async function handleSettingsCommand(
   await renderCoin(db, chatId, resolution.matches[0].id, botToken, { mode: "send" }, options);
 }
 
+const LAUNCH_RETIRED_TOAST = TELEGRAM_LAUNCH_RETIRED_MESSAGE;
+
 /** Dispatch a `settings:*` callback_query. */
 export async function handleSettingsCallback(
   db: D1Database,
@@ -156,30 +153,37 @@ export async function handleSettingsCallback(
     return;
   }
 
+  // Buttons already sitting in chats can still carry the retired launch family.
+  if ((subAction === "gt" && subArg.split(":")[0] === "launch") || (subAction === "c" && subArg.split(":")[1] === TELEGRAM_ALERT_PERSISTENCE.launch.settingCode)) {
+    await answer({ text: LAUNCH_RETIRED_TOAST });
+    return;
+  }
+
   if (subAction === "gt") {
-    if (!isGlobalAlertType(subArg)) {
+    const [alertType, nextCode, extra] = subArg.split(":");
+    if (!alertType || !isGlobalAlertType(alertType) || extra !== undefined) {
       await answer({ text: "Unknown alert type." });
       return;
     }
-    const storedNext = Number(effect.storedIntent?.payload.next);
-    const subscriber = storedNext === 0 || storedNext === 1
-      ? null
-      : await loadSubscriberByChat(db, chatId);
-    const next: 0 | 1 = storedNext === 0 || storedNext === 1
-      ? storedNext
-      : (subscriberHasGlobal(subscriber, subArg) ? 0 : 1);
-    const operation = await prepareMutation("callback:settings-gt", { alertType: subArg, next });
-    if (!effect.wasMutationApplied) {
-      await toggleGlobalAlert(db, chatId, username, subArg, { ...operation, next });
-      confirmMutation(operation);
+    if (nextCode === undefined) {
+      // A pre-v2 toggle button has no target value; show the current state instead of guessing.
+      await renderHome(db, chatId, botToken, target, { beforeIrreversibleEffect });
+      await answer({ text: "Settings refreshed. Tap again to change." });
+      return;
     }
+    if (nextCode !== "0" && nextCode !== "1") {
+      await answer({ text: "Action not recognized." });
+      return;
+    }
+    const next: 0 | 1 = nextCode === "1" ? 1 : 0;
+    await toggleGlobalAlert(db, chatId, username, alertType, { next });
     await recordTelegramUsageEvent(db, {
       eventType: "global_alert_change",
-      actionDetail: subArg,
-      outcome: "toggled",
+      actionDetail: alertType,
+      outcome: next ? "opt_in" : "opt_out",
     });
     await renderHome(db, chatId, botToken, target, { beforeIrreversibleEffect });
-    await answer({ text: `Updated global ${subArg}.` });
+    await answer({ text: `Global ${alertType} ${next ? "on" : "off"}.` });
     return;
   }
 

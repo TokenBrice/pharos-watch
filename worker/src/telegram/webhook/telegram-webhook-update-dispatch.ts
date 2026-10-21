@@ -1,24 +1,16 @@
-import {
-  SETUP_PENDING_ACTION_TYPE,
-  canActOnPendingOwner,
-  type TelegramWebhookUpdate,
-} from "./telegram-webhook-shared";
+import type { TelegramWebhookUpdate, TelegramWebhookUpdateWithChatMember } from "./telegram-webhook-shared";
 import { parseCommand } from "./telegram-webhook-parsing";
-import {
-  handlePendingActionBeforeDispatch,
-  handleSetupPendingBeforeDispatch,
-  resumeStoredPendingClearIntent,
-  type ParsedTelegramCommand,
-  type ReplyFn,
-} from "./telegram-webhook-pending-gate";
-import {
-  loadPendingDisambiguation,
-  unixNow,
-} from "../store/telegram-webhook-store";
 import { classifyTelegramLogError, logTelegramEvent } from "../common/log";
-import { handleCallbackQuery } from "./telegram-webhook-callbacks";
-import { resumeStoredSetupCallback } from "./telegram-webhook-setup";
-import { COMMAND_HANDLERS, type WebhookCommandContext } from "../commands";
+import {
+  CALLBACK_HANDLERS,
+  type CallbackAction,
+  type ParsedCallbackData,
+  type TelegramCallbackQuery,
+} from "../callbacks";
+import { isKnownCallbackAction, parseCallbackData } from "../callbacks/_shared";
+import { handleSetupCallback } from "../callbacks/setup";
+import { handleSettingsInlineCallback } from "../callbacks/settings";
+import { COMMAND_HANDLERS, replyToUnknownCommand, type WebhookCommandContext } from "../commands";
 import {
   isChannelChatType,
   isGroupChatType,
@@ -28,194 +20,168 @@ import {
   recordTelegramUsageEvent,
 } from "../store/usage-analytics";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
-import {
-  buildMutationOperations,
-  createTelegramWebhookIntent,
-  type TelegramWebhookEffectFence,
-} from "./telegram-webhook-effect-fence";
-import {
-  executeNormalizedPendingSelection,
-  parseStoredCommandSelectionIntent,
-  type PendingSelectionOperationContext,
-} from "../store/telegram-webhook-disambiguation-selection";
+import { answerCallbackQuery } from "../delivery/telegram";
 import {
   callbackActionDetail,
   callbackMutatesChatState,
   classifyTelegramCommand,
-  enforceCommandCooldown,
   enforceIngressFlood,
   isAddressedToPharosBot,
   logTelegramWebhookWarning,
   maybeGateNonAdminGroupActor,
   recordCommandUsage,
-  releaseCommandCooldownBestEffort,
-  resolveCallbackCooldownCommandKey,
+  type ReplyFn,
 } from "./telegram-webhook-ingress-policy";
-import type { TelegramWebhookUpdateWithChatMember } from "./telegram-webhook-update-normalization";
 
 /**
- * Intent dispatch for claimed webhook updates: route callback taps and message
- * commands through the ingress policy gates (flood, cooldown, channel/group
- * admin) and the pending-disambiguation gate into the registered handlers.
+ * Dispatch for claimed webhook updates: route callback taps and message
+ * commands through the ingress gates (flood, channel/group admin) into the
+ * registered handlers. Plain text is ignored: every multi-step flow uses
+ * stateless buttons, so no chat text state is read here. Each handler
+ * returns the error class recorded on the processed-update row (null on
+ * success); a thrown error releases the claim so Telegram redelivers.
  */
-
-function logWarn(message: string, action: string, err: unknown): void {
-  logTelegramWebhookWarning(message, action, err);
-}
-
-export type FinishOk = (errorClass?: string | null) => Promise<Response>;
-export type ReplyWithMarkupFn = (message: string, options: { replyMarkup?: unknown }) => Promise<void>;
-
-
-/**
- * Pending-gate operation context. `operationNowSec` is supplied only by the
- * gates that persist a new pending row; the stored-clear resume path reads none
- * of the timestamped members, so one builder serves both.
- */
-function buildPendingOperationContext(
-  effectFence: TelegramWebhookEffectFence | null,
-  beforeIrreversibleEffect: (kind: string) => Promise<void>,
-  operationNowSec?: number,
-): PendingSelectionOperationContext {
-  return {
-    ...buildMutationOperations(effectFence, { beforeIrreversibleEffect }),
-    ...(operationNowSec == null ? {} : { operationNowSec }),
-  };
-}
 
 export async function handleTelegramCallbackQueryUpdate(args: {
   db: D1Database;
   botToken: string;
   callbackQuery: NonNullable<TelegramWebhookUpdate["callback_query"]>;
   nowSec: number;
-  finishOk: FinishOk;
-  effectFence: TelegramWebhookEffectFence | null;
-  beforeIrreversibleEffect: (kind: string) => Promise<void>;
-  answerWebhookCallback: (callbackQueryId: string, options?: { text?: string }) => Promise<void>;
-}): Promise<Response> {
-  const {
-    db,
-    botToken,
-    callbackQuery,
-    nowSec,
-    finishOk,
-    effectFence,
-    beforeIrreversibleEffect,
-    answerWebhookCallback,
-  } = args;
-  let callbackErrorClass: string | null = null;
-  let callbackCooldownKey: string | null = null;
+}): Promise<string | null> {
+  const { db, botToken, callbackQuery, nowSec } = args;
+  const answer = (options?: { text?: string }) => answerCallbackQuery(callbackQuery.id, botToken, options);
   const callbackChatId = callbackQuery.message?.chat?.id?.toString() ?? null;
   const callbackAction = callbackActionDetail(callbackQuery.data ?? "");
   try {
     if (callbackChatId) {
       const floodAllowed = await enforceIngressFlood(db, {
         chatId: callbackChatId,
-        chatType: callbackQuery.message?.chat?.type ?? "private",
-        actorUserId: callbackQuery.from?.id != null ? String(callbackQuery.from.id) : null,
         nowSec,
         actionDetail: callbackAction,
         noticeMessage: "Too many button taps at once — please slow down for a minute.",
         reply: async (message) => {
-          await answerWebhookCallback(callbackQuery.id, { text: message });
+          await answer({ text: message });
         },
       });
-      if (!floodAllowed) return finishOk();
-
-      const callbackCooldownCommand = resolveCallbackCooldownCommandKey(callbackQuery.data ?? "");
-      if (callbackCooldownCommand) {
-        const cooldown = await enforceCommandCooldown(
-          db,
-          callbackChatId,
-          callbackCooldownCommand,
-          "callback",
-          async (message) => {
-            await answerWebhookCallback(callbackQuery.id, { text: message });
-          },
-        );
-        if (!cooldown.allowed) {
-          await recordTelegramUsageEvent(db, {
-            eventType: "command",
-            actionDetail: callbackAction,
-            outcome: cooldown.outcome,
-            failureClass: cooldown.failureClass,
-          });
-          return finishOk();
-        }
-        callbackCooldownKey = cooldown.commandKey;
-      }
+      if (!floodAllowed) return null;
     }
     if (
       callbackChatId &&
       isChannelChatType(callbackQuery.message?.chat?.type) &&
       callbackMutatesChatState(callbackQuery.data ?? "")
     ) {
-      await answerWebhookCallback(callbackQuery.id, {
-        text: "Channel-originated actions are not supported.",
-      });
+      await answer({ text: "Channel-originated actions are not supported." });
       await recordTelegramUsageEvent(db, {
         eventType: "command",
         actionDetail: callbackAction,
         outcome: "denied",
         failureClass: "channel_mutation",
       });
-      return finishOk();
+      return null;
     }
-    await handleCallbackQuery(db, botToken, callbackQuery, {
-      ...buildMutationOperations(effectFence, { beforeIrreversibleEffect }),
-    });
+    await handleCallbackQuery(db, botToken, callbackQuery);
+    return null;
   } catch (err) {
-    if (callbackChatId && callbackCooldownKey) {
-      await releaseCommandCooldownBestEffort(db, {
-        chatId: callbackChatId,
-        commandKey: callbackCooldownKey,
-        action: "callback-cooldown-release",
-        command: callbackAction,
-      });
-    }
-    if (effectFence?.hasStartedEffect) throw err;
     try {
-      await answerWebhookCallback(callbackQuery.id, {
-        text: "Action failed. Try again.",
-      });
+      await answer({ text: "Action failed. Try again." });
     } catch (ackErr) {
-      logWarn("callback_query failure ack failed", "callback_query", ackErr);
+      logTelegramWebhookWarning("callback_query failure ack failed", "callback_query", ackErr);
     }
     logTelegramEvent({
       message: "callback_query failed",
       action: "callback_query",
       errorClass: classifyTelegramLogError(err),
     });
-    callbackErrorClass = "callback_query";
+    return "callback_query";
   }
-  return finishOk(callbackErrorClass);
+}
+
+/**
+ * callback_query router for inline-keyboard taps (`action:arg`, at most 64
+ * bytes). Per-action handlers are registered in `../callbacks/index.ts`;
+ * unknown actions get a visible ack and usage telemetry before any handler
+ * touches D1.
+ */
+export async function handleCallbackQuery(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+): Promise<void> {
+  const answer = async (options?: { text?: string }): Promise<void> => {
+    await answerCallbackQuery(cb.id, botToken, options);
+  };
+  const chatId = cb.message?.chat?.id?.toString();
+  if (!chatId) {
+    await answer();
+    return;
+  }
+
+  const parsed = parseCallbackData(cb.data ?? "");
+
+  // `setup` and `settings` run through bespoke pre-dispatch paths that need
+  // earlier access to D1 (loading pending-disambiguation state) than the
+  // registry-driven path; keep them as direct calls so the registry stays a
+  // pure lookup.
+  if (parsed.action === "setup") {
+    await handleSetupCallback(db, botToken, cb, chatId, parsed);
+    return;
+  }
+
+  if (parsed.action === "settings") {
+    await handleSettingsInlineCallback(db, botToken, cb, chatId, parsed);
+    return;
+  }
+
+  // Reject unknown actions before any handler can touch D1. Per-action arg
+  // validation (isSnoozeArg, isKnownStablecoinId, ...) still runs inside the
+  // handler.
+  const action = parsed.action;
+  if (!isKnownCallbackAction(action)) {
+    await recordTelegramUsageEvent(db, {
+      eventType: "unknown_command",
+      actionDetail: `callback:${action || "unknown"}`,
+      outcome: "unknown",
+    });
+    await answer({ text: "Action not recognized." });
+    return;
+  }
+
+  const knownParsed: ParsedCallbackData<CallbackAction> = { ...parsed, action };
+  // The bespoke settings route returned before the action allowlist check.
+  const handler = CALLBACK_HANDLERS[action as Exclude<CallbackAction, "settings">];
+  await handler({
+    db,
+    botToken,
+    cb,
+    chatId,
+    parsed: knownParsed,
+    beforeIrreversibleEffect: async () => undefined,
+    answerCallback: answer,
+    markMutationApplied: async () => undefined,
+  });
 }
 
 export async function handleTelegramMessageUpdate(args: {
   db: D1Database;
   update: TelegramWebhookUpdateWithChatMember;
   botToken: string;
-  finishOk: FinishOk;
-  effectFence: TelegramWebhookEffectFence | null;
-  beforeIrreversibleEffect: (kind: string) => Promise<void>;
-  operationNowSec: number;
-}): Promise<Response> {
-  const {
-    db, update, botToken, finishOk, effectFence, beforeIrreversibleEffect, operationNowSec,
-  } = args;
+  nowSec: number;
+}): Promise<string | null> {
+  const { db, update, botToken, nowSec } = args;
   const chatId = update.message?.chat?.id?.toString();
   const text = update.message?.text?.trim();
   const username = update.message?.chat?.username ?? null;
   const actorUserId = update.message?.from?.id != null ? String(update.message.from.id) : null;
   const chatType = update.message?.chat?.type ?? "private";
-  if (!chatId || !text) return finishOk();
+  // Anonymous group admins post as the group itself; only admins can do that.
+  const postedAsGroup = update.message?.sender_chat?.id != null
+    && update.message.sender_chat.id === update.message.chat?.id;
+  if (!chatId || !text) return null;
 
   const reply: ReplyFn = async (message) => {
-    await beforeIrreversibleEffect("message-reply");
     await sendAuditedTelegramReply(db, chatId, message, botToken);
   };
-  const replyWithMarkup: ReplyWithMarkupFn = async (message, options) => {
-    await beforeIrreversibleEffect("message-reply");
+  const replyWithMarkup: WebhookCommandContext["replyToChatWithMarkup"] = async (message, options) => {
     await sendAuditedTelegramReply(db, chatId, message, botToken, options);
   };
   const commandContext: WebhookCommandContext = {
@@ -225,198 +191,31 @@ export async function handleTelegramMessageUpdate(args: {
     username,
     actorUserId,
     botToken,
-    operationNowSec,
-    ...buildMutationOperations(effectFence, {
-      beforeIrreversibleEffect,
-      mutationOperationStatements: (fence) => [
-        ...(commandContext.clearPendingOnMutation
-          ? [db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId)]
-          : []),
-        fence.prepareMutationAppliedStatement(),
-      ],
-    }),
+    operationNowSec: nowSec,
     replyToChat: reply,
     replyToChatWithMarkup: replyWithMarkup,
   };
 
-  let parsedCommand: ParsedTelegramCommand | null = null;
+  let parsedCommand: ReturnType<typeof parseCommand> | null = null;
   try {
     parsedCommand = text.startsWith("/") ? parseCommand(text) : null;
     if (parsedCommand && isGroupChatType(chatType) && !isAddressedToPharosBot(parsedCommand.botMention)) {
-      return finishOk();
+      return null;
     }
 
-    const pendingClearResume = await resumeStoredPendingClearIntent({
-      db,
-      chatId,
-      intent: effectFence?.storedIntent,
-      operation: buildPendingOperationContext(effectFence, beforeIrreversibleEffect),
-    });
-    if (pendingClearResume.handled) {
-      if (pendingClearResume.reply) await reply(pendingClearResume.reply);
-      if (pendingClearResume.continueCommand && parsedCommand) {
-        await dispatchParsedTelegramCommand({
-          db,
-          botToken,
-          chatId,
-          chatType,
-          actorUserId,
-          parsedCommand,
-          commandContext,
-          reply,
-          replyWithMarkup,
-        });
-      }
-      return finishOk();
-    }
-
-    const storedSelection = parseStoredCommandSelectionIntent(effectFence?.storedIntent);
-    if (storedSelection && !canActOnPendingOwner(storedSelection.initiatorUserId, actorUserId)) {
-      await reply("Only the user who started this pending selection can complete it.");
-      return finishOk();
-    }
-    if (storedSelection && !parsedCommand) {
-      // A recovered numeric reply has no command text. Route the immutable
-      // selection through the same fresh authorization gate as its command.
-      await dispatchParsedTelegramCommand({
-        db,
-        botToken,
-        chatId,
-        chatType,
-        actorUserId,
-        parsedCommand: { command: `/${storedSelection.actionType}`, args: "", botMention: null },
-        commandContext,
-        reply,
-        replyWithMarkup,
-        storedSelection,
-      });
-      return finishOk();
-    }
-    const resumeStoredCommand = Boolean(
-      parsedCommand
-      && COMMAND_HANDLERS[parsedCommand.command]
-      && effectFence?.storedIntent
-      && (
-        storedSelection
-        || effectFence.storedIntent.payload.stage === "bulk-confirm-prompt"
-        || effectFence.storedIntent.payload.scope === "all"
-        || (
-          classifyTelegramCommand(parsedCommand.command, parsedCommand.args).recoveryEligible
-          && effectFence.storedIntent.kind === `command:${parsedCommand.command.slice(1)}`
-          && effectFence.storedIntent.mutation === "required"
-        )
-      ),
-    );
-    if (parsedCommand && resumeStoredCommand) {
-      commandContext.clearPendingOnMutation = effectFence?.storedIntent?.payload.clearPending === true;
-      await dispatchParsedTelegramCommand({
-        db,
-        botToken,
-        chatId,
-        chatType,
-        actorUserId,
-        parsedCommand,
-        commandContext,
-        reply,
-        replyWithMarkup,
-        storedSelection,
-      });
-      return finishOk();
-    }
-
-    if (effectFence?.storedIntent?.kind === "callback:setup") {
-      await resumeStoredSetupCallback({
-        db,
-        botToken,
-        chatId,
-        actorUserId,
-        username,
-        ...buildMutationOperations(effectFence, { beforeIrreversibleEffect }),
-      }, "");
-      return finishOk();
-    }
-
-    const pendingRow = await loadPendingDisambiguation(db, chatId);
-    const pendingNotExpired = Boolean(pendingRow && unixNow() < pendingRow.expires_at);
-    const isSetupPending =
-      Boolean(pendingRow && pendingNotExpired && pendingRow.action_type === SETUP_PENDING_ACTION_TYPE);
-    let priorFloodCheckPassed = false;
-
-    if (pendingRow && pendingNotExpired) {
-      const floodAllowed = await enforceIngressFlood(db, {
-        chatId,
-        chatType,
-        actorUserId,
-        nowSec: Math.floor(Date.now() / 1000),
-        actionDetail: parsedCommand?.command ?? "pending-reply",
-        noticeMessage: "Too many Telegram actions at once — please slow down for a minute.",
-        reply,
-      });
-      priorFloodCheckPassed = floodAllowed;
-      if (!floodAllowed) return finishOk();
-    }
-
-    if (isSetupPending && pendingRow) {
-      const setupResult = await handleSetupPendingBeforeDispatch({
-        db,
-        botToken,
-        chatId,
-        actorUserId,
-        username,
-        text,
-        pendingRow,
-        parsedCommand,
-        reply,
-        operation: buildPendingOperationContext(effectFence, beforeIrreversibleEffect, operationNowSec),
-      });
-      if (setupResult === "finished") return finishOk();
-      if (setupResult === "continue-clear-pending") {
-        commandContext.clearPendingOnMutation = true;
-      }
-    }
-
-    if (!isSetupPending) {
-      const pendingResult = await handlePendingActionBeforeDispatch({
-        db,
-        botToken,
-        chatId,
-        chatType,
-        actorUserId,
-        username,
-        text,
-        pendingRow,
-        pendingNotExpired,
-        parsedCommand,
-        reply,
-        operation: buildPendingOperationContext(effectFence, beforeIrreversibleEffect, operationNowSec),
-      });
-      if (pendingResult === "finished") return finishOk();
-      if (pendingResult === "continue-clear-pending") {
-        commandContext.clearPendingOnMutation = true;
-      }
-    }
-
-    if (!parsedCommand) return finishOk();
-    if (!effectFence?.storedIntent && classifyTelegramCommand(parsedCommand.command, parsedCommand.args).mutation === "none") {
-      await effectFence?.plan(createTelegramWebhookIntent(`command:${parsedCommand.command}`, {
-        command: parsedCommand.command,
-        argsDigest: await digestWebhookIntentInput(parsedCommand.args),
-        argsLength: parsedCommand.args.length,
-      }, "none"));
-    }
+    if (!parsedCommand) return null;
     await dispatchParsedTelegramCommand({
       db,
       botToken,
       chatId,
       chatType,
       actorUserId,
+      postedAsGroup,
       parsedCommand,
       commandContext,
       reply,
-      replyWithMarkup,
-      skipFlood: priorFloodCheckPassed,
     });
-    return finishOk();
+    return null;
   } catch (err) {
     if (parsedCommand) {
       await recordCommandUsage(
@@ -432,9 +231,8 @@ export async function handleTelegramMessageUpdate(args: {
       action: "command-dispatch",
       errorClass: classifyTelegramLogError(err),
     });
-    if (effectFence?.hasStartedEffect) throw err;
     await reply("Something went wrong, please try again.");
-    return finishOk("command-dispatch");
+    return "command-dispatch";
   }
 }
 
@@ -444,12 +242,10 @@ async function dispatchParsedTelegramCommand(args: {
   chatId: string;
   chatType: string;
   actorUserId: string | null;
-  parsedCommand: ParsedTelegramCommand;
+  postedAsGroup: boolean;
+  parsedCommand: ReturnType<typeof parseCommand>;
   commandContext: WebhookCommandContext;
   reply: ReplyFn;
-  replyWithMarkup: ReplyWithMarkupFn;
-  skipFlood?: boolean;
-  storedSelection?: ReturnType<typeof parseStoredCommandSelectionIntent>;
 }): Promise<void> {
   const {
     db,
@@ -457,49 +253,38 @@ async function dispatchParsedTelegramCommand(args: {
     chatId,
     chatType,
     actorUserId,
+    postedAsGroup,
     parsedCommand,
     commandContext,
     reply,
-    replyWithMarkup,
-    skipFlood = false,
-    storedSelection,
   } = args;
   const commandStartedAtMs = Date.now();
   const policy = classifyTelegramCommand(parsedCommand.command, parsedCommand.args);
 
-  if (!skipFlood) {
-    const floodAllowed = await enforceIngressFlood(db, {
-      chatId,
-      chatType,
-      actorUserId,
-      nowSec: Math.floor(commandStartedAtMs / 1000),
-      actionDetail: parsedCommand.command,
-      noticeMessage: "Too many commands at once — please slow down for a minute.",
-      reply,
-    });
-    if (!floodAllowed) return;
-  }
+  const floodAllowed = await enforceIngressFlood(db, {
+    chatId,
+    nowSec: Math.floor(commandStartedAtMs / 1000),
+    actionDetail: parsedCommand.command,
+    noticeMessage: "Too many commands at once — please slow down for a minute.",
+    reply,
+  });
+  if (!floodAllowed) return;
 
-  if (
-    isChannelChatType(chatType) &&
-    (storedSelection || policy.requiresGroupAdmin)
-  ) {
+  if (isChannelChatType(chatType) && policy.requiresGroupAdmin) {
     await reply("Channel-originated mutations are not supported. Manage alerts from a private chat or group.");
     await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "denied", "channel_mutation");
     return;
   }
 
-  if (
-    isGroupChatType(chatType) &&
-    (storedSelection || policy.requiresGroupAdmin)
-  ) {
+  if (isGroupChatType(chatType) && policy.requiresGroupAdmin) {
     const proceed = await maybeGateNonAdminGroupActor(
       db,
       botToken,
       chatId,
       actorUserId,
-      storedSelection ? `/${storedSelection.actionType}` : parsedCommand.command,
+      parsedCommand.command,
       reply,
+      { postedAsGroup },
     );
     if (!proceed) {
       await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "denied");
@@ -507,76 +292,18 @@ async function dispatchParsedTelegramCommand(args: {
     }
   }
 
-  if (storedSelection) {
-    await executeNormalizedPendingSelection(
-      db,
-      botToken,
-      chatId,
-      commandContext.username,
-      storedSelection,
-      {
-        beforeIrreversibleEffect: commandContext.beforeIrreversibleEffect,
-        planIntent: commandContext.planIntent,
-        prepareMutationAppliedStatement: commandContext.prepareMutationAppliedStatement,
-        confirmAtomicMutationApplied: commandContext.confirmAtomicMutationApplied,
-        markMutationApplied: commandContext.markMutationApplied,
-        storedIntent: commandContext.storedIntent,
-        wasMutationApplied: commandContext.wasMutationApplied,
-      },
-    );
-    await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "ok");
-    return;
-  }
-
   const handler = COMMAND_HANDLERS[parsedCommand.command];
   if (handler) {
-    const cooldown = await enforceCommandCooldown(
-      db,
-      chatId,
-      parsedCommand.command,
-      parsedCommand.args,
-      reply,
-    );
-    if (!cooldown.allowed) {
-      await recordCommandUsage(
-        db,
-        parsedCommand.command,
-        commandStartedAtMs,
-        cooldown.outcome,
-        cooldown.failureClass,
-      );
-      return;
-    }
-    try {
-      await handler(commandContext, parsedCommand.args);
-    } catch (err) {
-      if (cooldown.commandKey) {
-        await releaseCommandCooldownBestEffort(db, {
-          chatId,
-          commandKey: cooldown.commandKey,
-          action: "command-cooldown-release",
-          command: parsedCommand.command,
-        });
-      }
-      throw err;
-    }
+    await handler(commandContext, parsedCommand.args);
     await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "ok");
     return;
   }
 
-  await replyWithMarkup("Unknown command. Try /help", {
-    replyMarkup: { inline_keyboard: [[{ text: "/help", callback_data: "help:commands" }]] },
-  });
+  await replyToUnknownCommand(commandContext, parsedCommand.command);
   await recordTelegramUsageEvent(db, {
     eventType: "unknown_command",
     actionDetail: UNKNOWN_COMMAND_ACTION_DETAIL,
     outcome: "unknown",
   });
   await recordCommandUsage(db, UNKNOWN_COMMAND_ACTION_DETAIL, commandStartedAtMs, "unknown_command");
-}
-
-async function digestWebhookIntentInput(value: string): Promise<string> {
-  const bytes = new TextEncoder().encode(value);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }

@@ -1,114 +1,97 @@
 import { TELEGRAM_BOT_USERNAME } from "@shared/lib/telegram-bot-registration";
 import { escapeHtml } from "../delivery/telegram";
-import { formatAdministratorMentions, getCachedChatAdministrators } from "./chat-member";
-import {
-  CHAT_COMMAND_FLOOD_LIMIT,
-  CHAT_COMMAND_FLOOD_WINDOW_SEC,
-  GROUP_ADMIN_DIAGNOSTIC_COOLDOWN_SEC,
-  GROUP_CHAT_COMMAND_FLOOD_LIMIT,
-} from "../common/constants";
+import { CHAT_COMMAND_FLOOD_LIMIT, CHAT_COMMAND_FLOOD_WINDOW_SEC } from "../common/constants";
 import { classifyTelegramLogError, logTelegramEvent } from "../common/log";
 import { recordTelegramUsageEvent } from "../store/usage-analytics";
-import { isGroupAdminActor, isGroupChatType } from "./telegram-webhook-auth";
-import { parseStartPayload } from "./telegram-webhook-parsing";
-import type { ReplyFn } from "./telegram-webhook-pending-gate";
 import {
-  acquireTelegramCommandCooldown,
-  recordTelegramChatCommandFlood,
-  releaseTelegramCommandCooldown,
-  unixNow,
-  type TelegramChatCommandFloodResult,
-} from "../store/telegram-webhook-store";
+  GROUP_ADMIN_UNVERIFIED_MESSAGE,
+  formatAdministratorMentions,
+  getCachedChatAdministrators,
+  resolveGroupAdminStatus,
+} from "./telegram-webhook-auth";
+import { parseStartPayload } from "./telegram-webhook-parsing";
+import { recordTelegramChatCommandFlood } from "../store/processed-updates";
+
+export type ReplyFn = (message: string) => Promise<void>;
 
 export type TelegramGroupAdminGating = "soft" | "hard";
 export const TELEGRAM_GROUP_ADMIN_GATING: { mode: TelegramGroupAdminGating } = { mode: "hard" };
 
+/**
+ * `requiresGroupAdmin` gates dispatch in groups. `mutation` records whether the
+ * command changes chat state; mutating `/start` deep links authorize inside the
+ * handler instead of here.
+ */
 export interface TelegramCommandPolicy {
   requiresGroupAdmin: boolean;
   mutation: "none" | "required";
-  pending: "passthrough" | "clear-and-run" | "remind" | "cancel";
-  setupNonOwnerPassthrough: boolean;
-  setupTickerEscape: boolean;
-  recoveryEligible: boolean;
 }
 
-const UNKNOWN_COMMAND_POLICY: Readonly<TelegramCommandPolicy> = {
-  requiresGroupAdmin: false,
-  mutation: "none",
-  pending: "remind",
-  setupNonOwnerPassthrough: false,
-  setupTickerEscape: false,
-  recoveryEligible: false,
-};
-const READ_COMMAND_POLICY: Readonly<TelegramCommandPolicy> = {
-  ...UNKNOWN_COMMAND_POLICY, pending: "passthrough", setupNonOwnerPassthrough: true,
-};
-const MUTATING_COMMAND_POLICY: Readonly<TelegramCommandPolicy> = {
-  ...UNKNOWN_COMMAND_POLICY,
-  requiresGroupAdmin: true,
-  mutation: "required",
-  pending: "clear-and-run",
-  recoveryEligible: true,
-};
-const START_READ_POLICY: Readonly<TelegramCommandPolicy> = {
-  ...READ_COMMAND_POLICY, setupTickerEscape: true, recoveryEligible: true,
-};
-const START_MUTATION_POLICY: Readonly<TelegramCommandPolicy> = {
-  ...START_READ_POLICY, mutation: "required", pending: "clear-and-run",
-};
-const TIMEZONE_READ_POLICY: Readonly<TelegramCommandPolicy> = {
-  ...UNKNOWN_COMMAND_POLICY, pending: "clear-and-run", recoveryEligible: true,
-};
+const READ_COMMAND_POLICY: Readonly<TelegramCommandPolicy> = { requiresGroupAdmin: false, mutation: "none" };
+const MUTATING_COMMAND_POLICY: Readonly<TelegramCommandPolicy> = { requiresGroupAdmin: true, mutation: "required" };
+const START_MUTATION_POLICY: Readonly<TelegramCommandPolicy> = { requiresGroupAdmin: false, mutation: "required" };
 
-// Explicit coverage is checked against COMMAND_HANDLERS, including aliases.
+// Explicit coverage is checked against COMMAND_HANDLERS, including retired
+// commands and aliases (commands/legacy.ts). An alias that forwards to a
+// mutating command keeps the mutating policy.
 export const TELEGRAM_COMMAND_POLICIES: Readonly<Record<string, Readonly<TelegramCommandPolicy>>> = {
-  "/start": START_READ_POLICY,
-  "/presets": READ_COMMAND_POLICY,
+  "/start": READ_COMMAND_POLICY,
   "/help": READ_COMMAND_POLICY,
   "/sample": READ_COMMAND_POLICY,
   "/list": READ_COMMAND_POLICY,
   "/status": READ_COMMAND_POLICY,
-  "/brief": READ_COMMAND_POLICY,
-  "/market": READ_COMMAND_POLICY,
-  "/top": READ_COMMAND_POLICY,
-  "/why": READ_COMMAND_POLICY,
-  "/coverage": READ_COMMAND_POLICY,
-  "/health": READ_COMMAND_POLICY,
   "/subscribe": MUTATING_COMMAND_POLICY,
   "/unsubscribe": MUTATING_COMMAND_POLICY,
-  "/set": MUTATING_COMMAND_POLICY,
-  "/settings": { ...UNKNOWN_COMMAND_POLICY, pending: "clear-and-run" },
-  "/mute": MUTATING_COMMAND_POLICY,
-  "/pause": { ...MUTATING_COMMAND_POLICY, pending: "remind" },
-  "/timezone": TIMEZONE_READ_POLICY,
-  "/unmutehours": MUTATING_COMMAND_POLICY,
+  "/settings": READ_COMMAND_POLICY,
+  "/pause": MUTATING_COMMAND_POLICY,
+  "/forget": MUTATING_COMMAND_POLICY,
+  // Legacy aliases.
   "/unsnooze": MUTATING_COMMAND_POLICY,
-  "/cancel": { ...UNKNOWN_COMMAND_POLICY, mutation: "required", pending: "cancel", setupTickerEscape: true },
-  "/forget": { ...MUTATING_COMMAND_POLICY, recoveryEligible: false },
+  "/health": READ_COMMAND_POLICY,
+  "/subscriptions": READ_COMMAND_POLICY,
+  "/why": READ_COMMAND_POLICY,
+  "/coverage": READ_COMMAND_POLICY,
+  // Retired commands answer with a pointer and change nothing.
+  "/set": READ_COMMAND_POLICY,
+  "/mute": READ_COMMAND_POLICY,
+  "/unmutehours": READ_COMMAND_POLICY,
+  "/timezone": READ_COMMAND_POLICY,
+  "/cancel": READ_COMMAND_POLICY,
+  "/presets": READ_COMMAND_POLICY,
+  "/top": READ_COMMAND_POLICY,
+  "/brief": READ_COMMAND_POLICY,
+  "/market": READ_COMMAND_POLICY,
+  "/recap": READ_COMMAND_POLICY,
+  "/export": READ_COMMAND_POLICY,
+  "/import": READ_COMMAND_POLICY,
+  "/add": READ_COMMAND_POLICY,
 };
 
 export function classifyTelegramCommand(command: string, args: string): Readonly<TelegramCommandPolicy> {
-  if (command === "/start") return isMutatingTelegramStartPayload(args) ? START_MUTATION_POLICY : START_READ_POLICY;
-  if (command === "/timezone") return args.trim() ? MUTATING_COMMAND_POLICY : TIMEZONE_READ_POLICY;
-  return TELEGRAM_COMMAND_POLICIES[command] ?? UNKNOWN_COMMAND_POLICY;
+  if (command === "/start" && isMutatingTelegramStartPayload(args)) return START_MUTATION_POLICY;
+  return TELEGRAM_COMMAND_POLICIES[command] ?? READ_COMMAND_POLICY;
 }
 const PHAROS_BOT_USERNAMES = new Set([TELEGRAM_BOT_USERNAME.toLowerCase()]);
-const COMMAND_COOLDOWNS_SEC: Record<string, number> = {
-  "/brief": 30,
-  "/top": 20,
-  "/why": 20,
-  "/status": 20,
-  "/coverage": 20,
-};
-const CANONICAL_COMMAND_KEYS: Record<string, string> = { "/market": "/brief" };
-
 
 function isMutatingTelegramStartPayload(args: string): boolean {
-  const kind = parseStartPayload(args).kind;
-  return kind === "setup" || kind === "none" || kind === "subscribe" || kind === "adoption";
+  const payload = parseStartPayload(args);
+  switch (payload.kind) {
+    case "none":
+    case "setup":
+    case "subscribe":
+      return true;
+    case "sample":
+    case "app":
+    case "status":
+    case "why":
+    case "coverage":
+      return false;
+    default: {
+      const unhandled: never = payload;
+      throw new Error(`Unclassified /start payload: ${JSON.stringify(unhandled)}`);
+    }
+  }
 }
-
-type FloodScope = "actor" | "chat";
 
 export function logTelegramWebhookWarning(message: string, action: string, err: unknown): void {
   logTelegramEvent({
@@ -119,62 +102,40 @@ export function logTelegramWebhookWarning(message: string, action: string, err: 
   });
 }
 
-function floodScopesForUpdate(
-  chatId: string,
-  chatType: string,
-  actorUserId: string | null,
-): Array<{ key: string; scope: FloodScope; limit: number }> {
-  if (isGroupChatType(chatType) && actorUserId) {
-    return [
-      { key: `${chatId}:actor:${actorUserId}`, scope: "actor", limit: CHAT_COMMAND_FLOOD_LIMIT },
-      { key: chatId, scope: "chat", limit: GROUP_CHAT_COMMAND_FLOOD_LIMIT },
-    ];
-  }
-  return [{ key: chatId, scope: "chat", limit: CHAT_COMMAND_FLOOD_LIMIT }];
-}
-
+/**
+ * One fixed-window counter per chat across commands, callbacks and pending
+ * text replies. A failed counter read fails closed with a busy reply.
+ */
 export async function enforceIngressFlood(
   db: D1Database,
   input: {
     chatId: string;
-    chatType: string;
-    actorUserId: string | null;
     nowSec: number;
     actionDetail: string;
     noticeMessage: string;
     reply: ReplyFn;
   },
 ): Promise<boolean> {
-  let blocked: { flood: TelegramChatCommandFloodResult; scope: FloodScope } | null = null;
-  let evaluatedScopeCount = 0;
-  for (const floodScope of floodScopesForUpdate(input.chatId, input.chatType, input.actorUserId)) {
-    try {
-      const flood = await recordTelegramChatCommandFlood(db, {
-        chatId: floodScope.key,
-        nowSec: input.nowSec,
-        windowSec: CHAT_COMMAND_FLOOD_WINDOW_SEC,
-        limit: floodScope.limit,
-      });
-      evaluatedScopeCount += 1;
-      if (!flood.allowed) {
-        blocked = { flood, scope: floodScope.scope };
-        break;
-      }
-    } catch (err) {
-      logTelegramWebhookWarning("chat command flood check failed", "command-flood", err);
-    }
-  }
-  if (!blocked && evaluatedScopeCount > 0) return true;
-  if (!blocked) {
+  let flood;
+  try {
+    flood = await recordTelegramChatCommandFlood(db, {
+      chatId: input.chatId,
+      nowSec: input.nowSec,
+      windowSec: CHAT_COMMAND_FLOOD_WINDOW_SEC,
+      limit: CHAT_COMMAND_FLOOD_LIMIT,
+    });
+  } catch (err) {
+    logTelegramWebhookWarning("chat command flood check failed", "command-flood", err);
     try {
       await input.reply("Command traffic is busy. Please try again shortly.");
-    } catch (err) {
-      logTelegramWebhookWarning("chat command flood unavailable reply failed", "command-flood", err);
+    } catch (replyErr) {
+      logTelegramWebhookWarning("chat command flood unavailable reply failed", "command-flood", replyErr);
     }
     return false;
   }
+  if (flood.allowed) return true;
 
-  if (blocked.flood.firstExceeded) {
+  if (flood.firstExceeded) {
     try {
       await input.reply(input.noticeMessage);
     } catch (err) {
@@ -186,7 +147,7 @@ export async function enforceIngressFlood(
       eventType: "command",
       actionDetail: input.actionDetail,
       outcome: "rate_limited",
-      failureClass: blocked.scope === "actor" ? "actor-flood" : "chat-flood",
+      failureClass: "chat-flood",
     });
   } catch (err) {
     logTelegramWebhookWarning("chat command flood usage record failed", "command-flood", err);
@@ -194,89 +155,30 @@ export async function enforceIngressFlood(
   return false;
 }
 
-export async function releaseCommandCooldownBestEffort(
-  db: D1Database,
-  input: { chatId: string; commandKey: string; action: string; command: string },
-): Promise<void> {
-  try {
-    await releaseTelegramCommandCooldown(db, { chatId: input.chatId, commandKey: input.commandKey });
-  } catch (err) {
-    logTelegramWebhookWarning("command cooldown release failed", input.action, err);
-  }
-}
-
-export async function enforceCommandCooldown(
-  db: D1Database,
-  chatId: string,
-  command: string,
-  args: string,
-  reply: (message: string) => Promise<void>,
-): Promise<
-  | { allowed: true; commandKey: string | null }
-  | { allowed: false; commandKey: string | null; outcome: "rate_limited" | "failure"; failureClass: string | null }
-> {
-  const commandKey = effectiveCooldownCommandKey(command, args);
-  const cooldownSec = resolveCommandCooldownSec(commandKey, args);
-  if (cooldownSec == null) return { allowed: true, commandKey: null };
-  let cooldown;
-  try {
-    cooldown = await acquireTelegramCommandCooldown(db, {
-      chatId,
-      commandKey,
-      nowSec: unixNow(),
-      cooldownSec,
-    });
-  } catch (err) {
-    logTelegramWebhookWarning("command cooldown check failed", "command-cooldown", err);
-    await reply("Command traffic is busy. Please try again shortly.");
-    return { allowed: false, commandKey, outcome: "failure", failureClass: "cooldown-store-error" };
-  }
-  if (cooldown.allowed) return { allowed: true, commandKey };
-  await reply(formatCommandCooldownMessage(commandKey, cooldown.retryAfterSec));
-  return { allowed: false, commandKey, outcome: "rate_limited", failureClass: null };
-}
-
-function effectiveCooldownCommandKey(command: string, args: string): string {
-  const commandKey = CANONICAL_COMMAND_KEYS[command] ?? command;
-  if (commandKey !== "/start") return commandKey;
-  const payload = parseStartPayload(args);
-  if (payload.kind === "status") return "/status";
-  if (payload.kind === "why") return "/why";
-  if (payload.kind === "coverage") return "/coverage";
-  return commandKey;
-}
-
-export function resolveCallbackCooldownCommandKey(data: string): string | null {
-  const action = data.split(":")[0] ?? "";
-  if (action === "status") return "/status";
-  if (action === "why") return "/why";
-  if (action === "coverage") return "/coverage";
-  return null;
-}
-
 export function callbackActionDetail(data: string): string {
   return `callback:${data.split(":")[0] || "unknown"}`;
 }
 
+const MUTATING_CALLBACK_SUBACTIONS: Readonly<Record<string, readonly string[]>> = {
+  pick: ["su", "un"],
+  bulk: ["sa", "ua"],
+  forget: ["yes"],
+  setup: ["top25", "undo"],
+};
+// Retired keyboards (tz, coverage, manage, unsub, select, why, confirm,
+// cancel) only answer with a legacy reply.
+const READ_ONLY_CALLBACK_ACTIONS = new Set([
+  "status", "help", "why", "coverage", "manage", "unsub", "select", "tz", "confirm", "cancel",
+]);
+
+/** Used to refuse channel-originated mutations before any handler runs. */
 export function callbackMutatesChatState(data: string): boolean {
-  const [action, subAction] = data.split(":");
-  if (action === "status" || action === "why" || action === "coverage" || action === "help") return false;
-  if (action === "settings" && (subAction === "home" || subAction === "o")) return false;
-  return action !== "manage";
-}
-
-function resolveCommandCooldownSec(command: string, args: string): number | null {
-  const cooldownSec = COMMAND_COOLDOWNS_SEC[command];
-  if (cooldownSec == null) return null;
-  if ((command === "/top" || command === "/why" || command === "/coverage" || command === "/status") && !args.trim()) {
-    return null;
-  }
-  return cooldownSec;
-}
-
-function formatCommandCooldownMessage(command: string, retryAfterSec: number): string {
-  const retryAfter = Math.max(1, Math.ceil(retryAfterSec));
-  return `That command is doing heavier Pharos reads. Please try ${escapeHtml(command)} again in ${retryAfter} ${retryAfter === 1 ? "second" : "seconds"}.`;
+  const [action = "", subAction = ""] = data.split(":");
+  const mutatingSubActions = MUTATING_CALLBACK_SUBACTIONS[action];
+  if (mutatingSubActions) return mutatingSubActions.includes(subAction);
+  if (READ_ONLY_CALLBACK_ACTIONS.has(action)) return false;
+  if (action === "settings") return subAction !== "home" && subAction !== "o";
+  return true;
 }
 
 export async function recordCommandUsage(
@@ -295,35 +197,31 @@ export async function recordCommandUsage(
   });
 }
 
+/**
+ * Admin gate for group-wide mutations. An anonymous admin posts as the group
+ * itself (`sender_chat` is the group), which only admins can do. A failed
+ * admin lookup asks the actor to retry instead of claiming they are not an
+ * admin.
+ */
 export async function maybeGateNonAdminGroupActor(
   db: D1Database,
   botToken: string,
   chatId: string,
   actorUserId: string | null,
   command: string,
-  reply: (message: string) => Promise<void>,
+  reply: ReplyFn,
+  options: { postedAsGroup?: boolean } = {},
 ): Promise<boolean> {
-  if (actorUserId != null && await isGroupAdminActor(botToken, chatId, actorUserId)) return true;
-
-  let cooldown;
-  try {
-    cooldown = await acquireTelegramCommandCooldown(db, {
-      chatId,
-      commandKey: "group-admin-diagnostics",
-      nowSec: unixNow(),
-      cooldownSec: GROUP_ADMIN_DIAGNOSTIC_COOLDOWN_SEC,
-    });
-  } catch (err) {
-    logTelegramWebhookWarning("group admin diagnostic cooldown check failed", "group-admin-diagnostics", err);
-    await reply("Group permission checks are busy. Please try again shortly.");
-    return false;
-  }
-  if (!cooldown.allowed) {
-    await reply(`I just checked group permissions for this chat. Please try again in ${cooldown.retryAfterSec} seconds.`);
+  if (options.postedAsGroup) return true;
+  const status = await resolveGroupAdminStatus(botToken, chatId, actorUserId);
+  if (status === "admin") return true;
+  if (status === "unknown") {
+    await reply(GROUP_ADMIN_UNVERIFIED_MESSAGE);
     await recordTelegramUsageEvent(db, {
       eventType: "group_admin_denial",
       actionDetail: command,
-      outcome: "rate_limited",
+      outcome: "failure",
+      failureClass: "admin-lookup-failed",
     });
     return false;
   }
@@ -338,7 +236,6 @@ export async function maybeGateNonAdminGroupActor(
   });
   return TELEGRAM_GROUP_ADMIN_GATING.mode !== "hard";
 }
-
 
 function formatAdminHint(admins: Awaited<ReturnType<typeof getCachedChatAdministrators>>): string {
   if (!admins || admins.length === 0) return "";

@@ -28,7 +28,10 @@ function reseal(
 }
 
 /** Attach the reviewed wM deployment-unit supply attribution to a wM capture. */
-export function withV9WmReviewedDeploymentAttribution(fixedInput: V9FixedInput) {
+export function withV9WmReviewedDeploymentAttribution(
+  fixedInput: V9FixedInput,
+  options: { observationAgeSec?: number; carriedForwardFromGenerationId?: string } = {},
+) {
   const aggregateSupplyUsd = Object.values(
     fixedInput.aggregateCirculatingById["wm-m0"]?.circulating ?? {},
   ).reduce((sum, value) => sum + value, 0);
@@ -42,7 +45,7 @@ export function withV9WmReviewedDeploymentAttribution(fixedInput: V9FixedInput) 
     ])),
     blockTimeByChain: Object.fromEntries(inventory.routes.map((route, index) => [
       route.chainId,
-      fixedInput.clockSec - 10 + index,
+      fixedInput.clockSec - (options.observationAgeSec ?? 10) + index,
     ])),
   });
   const attribution = deriveReviewedDeploymentUnitPartition({
@@ -51,6 +54,9 @@ export function withV9WmReviewedDeploymentAttribution(fixedInput: V9FixedInput) 
     registryFingerprint: fixedInput.registryFingerprint,
     scoringClockSec: fixedInput.clockSec,
     observations,
+    ...(options.carriedForwardFromGenerationId === undefined
+      ? {}
+      : { carriedForwardFromGenerationId: options.carriedForwardFromGenerationId }),
   });
   if (!attribution) throw new Error("Could not derive wM supply attribution");
   return normalizeFixedInput({

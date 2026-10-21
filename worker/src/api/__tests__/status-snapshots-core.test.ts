@@ -91,7 +91,6 @@ function fixtureMockD1(
     { match: "SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts", rows: [], first: { pending_count: 0 } },
     { match: "FROM telegram_pending_alerts", rows: [], first: null },
     { match: "FROM telegram_alert_job_targets", rows: [], first: null },
-    { match: "FROM telegram_processed_updates", rows: [], first: null },
     { match: "FROM telegram_recap_preferences", rows: [], first: null },
     { match: "FROM telegram_recap_targets", rows: [], first: null },
     { match: "FROM telegram_usage_daily", rows: [], first: null },

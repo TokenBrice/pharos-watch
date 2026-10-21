@@ -215,6 +215,68 @@ describe("dispatchTelegramAlerts", () => {
     expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "777" })]);
   });
 
+  it("holds a fresh severe safety drop for the dwell, so a one-run flip never alerts", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const harness = createDispatchHarness();
+    seedDispatchSnapshots(harness, {
+      // Baseline B with no pending move: the drop to D is first seen this run.
+      safety: { "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.09", pendingSinceSec: now } },
+      safetySource: { "usdc-circle": { grade: "D", score: 44, methodologyVersion: "7.09" } },
+    });
+    harness.seed({
+      safety: [{ stablecoinId: "usdc-circle", grade: "D", score: 44 }],
+      ...direct("12345", { safety: true }),
+    });
+    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+
+    expect(metadata).toMatchObject({ eventsDetected: { safety: 0 }, messagesSent: 0 });
+    expect(telegramDeliveryTranscript).toEqual([]);
+    const baseline = JSON.parse(readCacheValue(harness.sqlite, "alert:safety-snapshot") ?? "{}");
+    expect(baseline.snapshot["usdc-circle"]).toMatchObject({
+      grade: "B",
+      pendingKind: "severe-downgrade",
+      pendingSinceSec: now,
+    });
+  });
+
+  it("holds a settled severe drop inside the per-coin downgrade cooldown", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const harness = createDispatchHarness();
+    seedDispatchSnapshots(harness, {
+      safety: { "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.09", lastAlertedAtSec: now - 3600 } },
+      safetySource: { "usdc-circle": { grade: "D", score: 44, methodologyVersion: "7.09" } },
+    });
+    harness.seed({
+      safety: [{ stablecoinId: "usdc-circle", grade: "D", score: 44 }],
+      ...direct("12345", { safety: true }),
+    });
+    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+
+    expect(metadata).toMatchObject({ eventsDetected: { safety: 0 }, messagesSent: 0 });
+    expect(telegramDeliveryTranscript).toEqual([]);
+    // Held: the baseline keeps B, the pending clock and the cooldown clock, so
+    // the drop is sent once the cooldown ends instead of being lost.
+    const baseline = JSON.parse(readCacheValue(harness.sqlite, "alert:safety-snapshot") ?? "{}");
+    expect(baseline.snapshot["usdc-circle"]).toMatchObject({
+      grade: "B", pendingKind: "severe-downgrade", lastAlertedAtSec: now - 3600,
+    });
+  });
+
+  it("holds a first-sighting DEWS escalation until a second computation", async () => {
+    const harness = createDispatchHarness();
+    seedDispatchSnapshots(harness, { dews: { "usdc-circle": "CALM" } });
+    harness.seed({
+      dews: [{ stablecoinId: "usdc-circle", firstComputation: true }],
+      ...direct("12345", { dews: true }),
+    });
+    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+
+    expect(metadata).toMatchObject({ eventsDetected: { dews: 0 }, messagesSent: 0 });
+    expect(telegramDeliveryTranscript).toEqual([]);
+    expect(JSON.parse(readCacheValue(harness.sqlite, "alert:dews-candidate-snapshot") ?? "{}")["usdc-circle"])
+      .toMatchObject({ computations: 1 });
+  });
+
   it("suppresses minor global safety downgrades", async () => {
     const harness = createDispatchHarness();
     const safety = { "usdc-circle": { grade: "C+", score: 64, methodologyVersion: "7.09" } };

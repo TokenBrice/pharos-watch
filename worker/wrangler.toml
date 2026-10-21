@@ -112,14 +112,6 @@ dead_letter_queue = "pharos-reserve-continuation-dlq"
 
 
 [[ratelimits]]
-name = "TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT"
-namespace_id = "2026071001"
-
-  [ratelimits.simple]
-  limit = 2400
-  period = 60
-
-[[ratelimits]]
 name = "TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT"
 namespace_id = "2026071002"
 
@@ -133,14 +125,6 @@ namespace_id = "2026071003"
 
   [ratelimits.simple]
   limit = 9600
-  period = 60
-
-[[ratelimits]]
-name = "TELEGRAM_WEBHOOK_SOURCE_RATE_LIMIT"
-namespace_id = "2026090601"
-
-  [ratelimits.simple]
-  limit = 1200
   period = 60
 
 [[ratelimits]]

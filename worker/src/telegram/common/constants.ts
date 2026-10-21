@@ -94,12 +94,13 @@ export const DISAMBIGUATION_TTL_SEC = 5 * 60;
 /** Retain processed `telegram_processed_updates` rows for 7 days for replay-ack idempotency. */
 export const TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC = 7 * 24 * 60 * 60;
 
-/** Keep ambiguous webhook effects long enough for operator reconciliation. */
-export const TELEGRAM_WEBHOOK_EFFECT_UNKNOWN_RETENTION_SEC = 90 * 24 * 60 * 60;
 export const TELEGRAM_PENDING_EXECUTION_UNKNOWN_RETENTION_SEC = 90 * 24 * 60 * 60;
 
-/** A `processing` claim older than this is considered stale and can be reclaimed by another worker. */
-export const TELEGRAM_PROCESSING_STALE_SEC = 5 * 60;
+/**
+ * A `processing` claim older than this belongs to a crashed request and is
+ * reclaimed by Telegram's redelivery (a rare duplicate reply is accepted).
+ */
+export const TELEGRAM_PROCESSING_STALE_SEC = 60;
 
 // ---------- Webhook ingress tuning ----------
 
@@ -113,10 +114,6 @@ export const TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC = 24 * 60 * 60;
 /** Generous per-chat cap across commands, callbacks, and pending text replies. */
 export const CHAT_COMMAND_FLOOD_WINDOW_SEC = 60;
 export const CHAT_COMMAND_FLOOD_LIMIT = 20;
-export const GROUP_CHAT_COMMAND_FLOOD_LIMIT = CHAT_COMMAND_FLOOD_LIMIT * 4;
-
-/** Cooldown for expensive group-admin diagnostic lookups. */
-export const GROUP_ADMIN_DIAGNOSTIC_COOLDOWN_SEC = 20;
 
 // ---------- Bulk subscribe/unsubscribe confirmation gate ----------
 

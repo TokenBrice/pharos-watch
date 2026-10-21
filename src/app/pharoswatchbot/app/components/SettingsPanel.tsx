@@ -2,19 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
-import { ALERT_LABELS, DEPEG_STEP_OPTIONS } from "../constants";
+import { ALERT_LABELS, LIVE_ALERT_TYPES, DEPEG_STEP_OPTIONS } from "../constants";
 import { formatHour, formatQuietHoursRange, formatQuietHoursTimezone } from "../format";
 import type {
   TelegramAlertType,
   TelegramDepegStepBps,
   TelegramMiniAppOperation,
-  TelegramMiniAppPortabilityResponse,
   TelegramMiniAppState,
 } from "../types";
 import { MiniButton } from "./MiniButton";
 import { SegmentedControl } from "./SegmentedControl";
 import { TogglePill } from "./TogglePill";
-import { WatchlistPortabilityPanel } from "./WatchlistPortabilityPanel";
 
 const FALLBACK_TIMEZONES = ["UTC", "Europe/Paris", "America/New_York", "America/Los_Angeles", "Asia/Tokyo", "Australia/Sydney"] as const;
 const COMMON_TIMEZONES = [
@@ -381,9 +379,6 @@ function DangerZoneSection({ canMutate, isMutating, onUnsubscribeAll, onForgetMe
 export interface SettingsPanelProps {
   state: TelegramMiniAppState;
   canMutate: boolean;
-  canReadPortability: boolean;
-  /** A request is in flight. Unlike write lockout, a 429 countdown stays readable. */
-  isPortabilityRequestBusy: boolean;
   isMutating: boolean;
   pendingOperation: TelegramMiniAppOperation | null;
   onMutate: (operation: TelegramMiniAppOperation) => void;
@@ -391,12 +386,9 @@ export interface SettingsPanelProps {
   onUnsubscribeAll: () => void;
   onForgetMe: () => void;
   hasShowConfirm: boolean;
-  onExportWatchlist: () => Promise<TelegramMiniAppPortabilityResponse | null>;
-  onPreviewWatchlistImport: (token: string) => Promise<TelegramMiniAppPortabilityResponse | null>;
-  onConfirmWatchlistImport: (operation: Extract<TelegramMiniAppOperation, { kind: "confirm-watchlist-import" }>) => Promise<unknown>;
 }
 
-export function SettingsPanel({ state, canMutate, canReadPortability, isMutating, isPortabilityRequestBusy, pendingOperation, onMutate, globalAlerts, onUnsubscribeAll, onForgetMe, hasShowConfirm, onExportWatchlist, onPreviewWatchlistImport, onConfirmWatchlistImport }: SettingsPanelProps) {
+export function SettingsPanel({ state, canMutate, isMutating, pendingOperation, onMutate, globalAlerts, onUnsubscribeAll, onForgetMe, hasShowConfirm }: SettingsPanelProps) {
   const currentDepegStep = globalAlerts.depegStepBps;
 
   return (
@@ -407,7 +399,7 @@ export function SettingsPanel({ state, canMutate, canReadPortability, isMutating
           <h2 className="text-sm font-semibold text-foreground">Global alerts</h2>
         </div>
         <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Global alert types">
-          {(Object.keys(ALERT_LABELS) as TelegramAlertType[]).map((type) => (
+          {LIVE_ALERT_TYPES.map((type) => (
             <TogglePill
               key={type}
               label={ALERT_LABELS[type]}
@@ -446,17 +438,6 @@ export function SettingsPanel({ state, canMutate, canReadPortability, isMutating
       </section>
       <QuietHoursPicker state={state} canMutate={canMutate} isMutating={isMutating} pendingOperation={pendingOperation} onMutate={onMutate} />
       <TimezonePicker state={state} canMutate={canMutate} isMutating={isMutating} pendingOperation={pendingOperation} onMutate={onMutate} />
-      <WatchlistPortabilityPanel
-        state={state}
-        canMutate={canMutate}
-        canReadPortability={canReadPortability}
-        isMutating={isPortabilityRequestBusy}
-        isWriteLocked={isMutating}
-        pendingOperation={pendingOperation}
-        onExport={onExportWatchlist}
-        onPreview={onPreviewWatchlistImport}
-        onConfirm={onConfirmWatchlistImport}
-      />
       <DangerZoneSection
         canMutate={canMutate}
         isMutating={isMutating}

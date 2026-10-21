@@ -13,7 +13,7 @@ Unless noted otherwise, responses are `Content-Type: application/json`. Exceptio
 The runtime now uses three HTTP lanes:
 
 - `https://api.pharos.watch` is the external integration API. Protected public routes require `X-API-Key`.
-- `https://site-api.pharos.watch` requires `X-Pharos-Site-Proxy-Secret` for allowlisted `GET` reads, internal `GET /api/stablecoin-detail-snapshot-inputs`, and `POST /api/telegram-adoption`. The build-input read is denied through browser `/_site-data/*` and the public API host.
+- `https://site-api.pharos.watch` requires `X-Pharos-Site-Proxy-Secret` for allowlisted `GET` reads and internal `GET /api/stablecoin-detail-snapshot-inputs`. The build-input read is denied through browser `/_site-data/*` and the public API host.
 - `/_site-data/*` is the same-origin Pages Functions proxy used by browsers on `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, and subdomains of `stablecoin-dashboard.pages.dev`.
 
 Static dataset exports are served from the public website, not from the Worker API, and do not require `X-API-Key`. The Stablecoin Cemetery export is available as JSON at `https://pharos.watch/datasets/stablecoin-cemetery.json` and CSV at `https://pharos.watch/datasets/stablecoin-cemetery.csv`.
@@ -340,7 +340,7 @@ The same shared endpoint descriptors now also carry static worker dependency-hyd
 
 [Safety Score contract](./report-cards.md#api). The route remains `/api/report-cards/v9`; current body `schemaVersion` is 8, wrapping public breakdown/publication schema 7 with score trace 4. Model-family/route naming, methodology decimal and body schema are distinct identities. Persisted public v6 is unavailable until a compatible accepted publication; no legacy route-key inference or fabricated cause defaults is allowed.
 
-Each `cards[]` row publishes `ratingStatus: "rated" | "not-rated" | "pipeline-gap"`. Rated means numeric score and letter grade; not-rated means null score and `grade: "NR"` with causal withholding reasons. Pipeline-gap means null score and null grade, never NR, zero or F. At least two included pillars are needed for a Safety Score. Exactly one A/B-only excluded pillar permits a two-pillar rating; two or three give technical pipeline-gap. Pipeline-gap keeps diagnostic breakdowns and null aggregate/stages/weakest pillar, with no binding cap.
+Each `cards[]` row publishes `ratingStatus: "rated" | "not-rated" | "pipeline-gap"`. Rated means numeric score and letter grade; not-rated means null score and `grade: "NR"` with causal withholding reasons. Pipeline-gap means null score and null grade, never NR, zero or F. At least two included pillars are needed for a Safety Score. Exactly one A/B-only excluded pillar permits a two-pillar rating; two or three give technical pipeline-gap. Pipeline-gap keeps diagnostic breakdowns and null aggregate/stages/weakest pillar, with no binding cap. Since methodology 10.26 a rated card may carry optional `gradeHold: { rawGrade, heldFromGenerationId }`: its letter grade is the previously published one, retained until two consecutive publications compute the new band `rawGrade`; `score` is always raw. Compact `/api/safety-grades` rows carry the published grade.
 
 `partialEvidence` is null or `{ reasonCode: "partial-evidence-pipeline-gap", excludedPillars, excludedComponentKeys, causeGapRefs, causes }`. Pillars are `backing | exit | control`; causes are A/B only. It is non-null when an A/B gap is promoted from a pillar's exclusion inventory or from a peg/methodology constraint, wrapper-local fact or inherited parent partial exclusion. Subcomponent exclusions can leave no whole pillar excluded. The Exit inventory does not promote route-exclusive A/B facts from an unscored optional alternative: the alternative is neither primary nor diversification, has no admitted score or scored components, and excludes no route or factor component. If no primary is admitted, this exception additionally requires an independent barrier on the same route: explicitly rejected same-notional output eligibility (for a non-output gap), or diagnostic coverage with a distinct unresolved capacity/settlement factor carrying C/U proof. An A/B datum that is itself the only admission blocker remains a partial-evidence trigger. Those filtered gaps remain diagnostic in the route evidence and gap tables. A/B facts on the primary, admitted alternatives with excluded components, whole-pillar exclusions and non-route inventory gaps retain their triggers. `causeGapRefs` are sorted unique numeric indexes into the card's local-then-foreign gap table; resolve IDs with `resolveCauseGapId()` (`shared/types/safety-score-v9-public-cause-gaps.ts`). Partial does not itself mean NR; mixed components retain known/C/U/D contributions.
 
@@ -1009,7 +1009,7 @@ Yield-bearing stablecoin rankings with safety, benchmark-aware context, and opti
 ```json
 {
   "currentVersion": "8.5",
-  "methodologyVersion": "10.25"
+  "methodologyVersion": "10.26"
 }
 ```
 
@@ -1150,10 +1150,6 @@ These website-host routes are outside the public Worker API and OpenAPI catalogu
 ### `GET /selector-snapshot/:sid`
 
 Reads a Picker share artifact by its 32-character identifier after UI-caller-host, shape, and content-identifier checks. Trusted KV metadata admits server-verified snapshots; retained legacy snapshots can also be returned but are not upgraded to verified. First-read retention extension is best effort and never withholds an otherwise valid artifact.
-
-### `POST /pharoswatchbot-adoption`
-
-Forwards bounded Telegram CTA adoption events from allowlisted UI callers to the internal Worker route. It stores aggregate counters only and is not a general integration endpoint.
 
 ### `POST /selector-snapshot`
 

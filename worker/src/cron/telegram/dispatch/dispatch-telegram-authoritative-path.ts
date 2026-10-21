@@ -132,7 +132,6 @@ export async function executeAuthoritativeFanoutPath(
         dewsIds: events.dewsIds,
         depegIds: events.depegIds,
         safetyIds: events.safetyIds,
-        launchIds: events.launchIds,
         reserveIds: events.reserveIds,
       },
     });

@@ -11,10 +11,8 @@ function createRateLimit(): RateLimit {
 export function createWorkerEnv(overrides: Partial<Env> = {}): Env {
   return {
     DB: mockD1(),
-    TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT: createRateLimit(),
     TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT: createRateLimit(),
     TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT: createRateLimit(),
-    TELEGRAM_WEBHOOK_SOURCE_RATE_LIMIT: createRateLimit(),
     TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT: createRateLimit(),
     TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT: createRateLimit(),
     DONOR_KEY_CLAIM_RATE_LIMIT: createRateLimit(),

@@ -4,6 +4,7 @@ import { computeLiveReserveConfigFingerprint, getLiveReserveAdapterDefinition, g
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { sha256Hex } from "./hash";
 import { executeAtomicBatch } from "./db";
 import { LIVE_RESERVE_FRESHNESS_SEC, hasFatalReserveWarnings } from "./live-reserves/store-shared";
@@ -172,7 +173,23 @@ export type RedemptionReserveQuarantineReason = "config-mismatch" | "freshness-u
 export interface ConsumedRedemptionReserveAssessment {
   state: "fresh" | "unavailable";
   quarantined: Readonly<Record<string, RedemptionReserveQuarantineReason>>;
+  /**
+   * Safety Score 10.26 bounded carry-forward: evidence fresh at the run's own
+   * assessment but past a source/fetch budget at `now`, admitted until the
+   * run clock plus two producer intervals. Present only when non-empty.
+   */
+  carriedForward?: Readonly<Record<string, ConsumedRedemptionReserveCarry>>;
 }
+
+export interface ConsumedRedemptionReserveCarry {
+  reserveGenerationId: string;
+  assessedAtSec: number;
+  ageSec: number;
+  carriedUntilSec: number;
+}
+
+/** The redemption run's own output budget: the next scheduled run plus one retry. */
+export const CONSUMED_RESERVE_CARRY_FORWARD_SEC = CRON_INTERVALS["sync-redemption-backstops"] * 2;
 
 const UNAVAILABLE_CONSUMED_RESERVES: ConsumedRedemptionReserveAssessment = { state: "unavailable", quarantined: {} };
 
@@ -182,6 +199,15 @@ export function assessConsumedRedemptionReserves(entries: readonly RedemptionBac
   if (!parsed.success || parsed.data.runClockSec !== runClockSec) return UNAVAILABLE_CONSUMED_RESERVES;
   const census = parsed.data.consumedReserveInputs;
   const quarantined: Record<string, RedemptionReserveQuarantineReason> = {};
+  const carriedForward: Record<string, ConsumedRedemptionReserveCarry> = {};
+  const carriedUntilSec = runClockSec + CONSUMED_RESERVE_CARRY_FORWARD_SEC;
+  // Stale at the run's own assessment is never admitted; stale only at the
+  // consumer clock is carried within the run's budget, naming age and generation.
+  const admitStale = (stablecoinId: string, staleAt: (clockSec: number) => boolean, observedAtSec: number, reserveGenerationId: string) => {
+    if (!staleAt(now)) return;
+    if (staleAt(runClockSec) || now > carriedUntilSec) quarantined[stablecoinId] = "stale";
+    else carriedForward[stablecoinId] = { reserveGenerationId, assessedAtSec: runClockSec, ageSec: now - observedAtSec, carriedUntilSec };
+  };
   let consumed = 0;
   for (const entry of entries) {
     const input = entry.reserveInput;
@@ -224,13 +250,16 @@ export function assessConsumedRedemptionReserves(entries: readonly RedemptionBac
         config.scoring?.maxSourceAgeSec, getLiveReserveAdapterValidationPolicy(config.adapter)?.maxSourceAgeSec,
         LIVE_RESERVE_FRESHNESS_SEC,
       );
-      if (f.stale || now - f.fetchedAt > LIVE_RESERVE_FRESHNESS_SEC ||
-          now - capacityEvidence.sourceTimestamp > Math.min(sourceAgeBudgetSec, LIVE_RESERVE_FRESHNESS_SEC)) {
-        quarantined[entry.stablecoinId] = "stale";
-      }
+      const fetchedAt = f.fetchedAt;
+      if (f.stale) quarantined[entry.stablecoinId] = "stale";
+      else admitStale(entry.stablecoinId, (clockSec) => clockSec - fetchedAt > LIVE_RESERVE_FRESHNESS_SEC ||
+          clockSec - capacityEvidence.sourceTimestamp > Math.min(sourceAgeBudgetSec, LIVE_RESERVE_FRESHNESS_SEC),
+        capacityEvidence.sourceTimestamp, input.generationId);
     } else if (!hasScoringEligibleLiveReserveFreshness(snapshot.metadata, now)) quarantined[entry.stablecoinId] = "freshness-unverified";
-    else if (f.stale || assessReserveSnapshotFreshness(snapshot, coin, now, LIVE_RESERVE_FRESHNESS_SEC).stale) quarantined[entry.stablecoinId] = "stale";
+    else if (f.stale) quarantined[entry.stablecoinId] = "stale";
+    else admitStale(entry.stablecoinId, (clockSec) => assessReserveSnapshotFreshness(snapshot, coin, clockSec, LIVE_RESERVE_FRESHNESS_SEC).stale,
+      f.sourceTimestamp ?? f.fetchedAt, input.generationId);
   }
   if (consumed !== Object.keys(census).length) return UNAVAILABLE_CONSUMED_RESERVES;
-  return { state: "fresh", quarantined };
+  return { state: "fresh", quarantined, ...(Object.keys(carriedForward).length > 0 ? { carriedForward } : {}) };
 }

@@ -1,5 +1,21 @@
 [
   {
+    "version": "10.26",
+    "title": "Bounded carry-forward of runtime inputs and grade hysteresis",
+    "date": "2026-10-21",
+    "effectiveAt": 1792627200,
+    "summary": "A redemption disclosure admitted by its run and the last admitted wM/XAUT deployment supply attribution are carried forward for a bounded, named window instead of dropping Exit or Control to their fallback for one run, and a published letter grade changes only after two consecutive publications compute the same new band.",
+    "impact": [
+      "Grade hysteresis: when a rated card's computed band differs from both its previously published grade and the band of the previous publication's raw score, the card keeps the previously published grade and discloses gradeHold { rawGrade, heldFromGenerationId }. The numeric score, pillars, caps and dependency inputs stay raw and unclamped; children consume parent scores, never held grades. Rating-status transitions (NR, pipeline-gap) and cards without an accepted rated baseline are never held. Causal D/F proof requirements follow the raw band.",
+      "Redemption route carry-forward: a verified-source live-reserve disclosure admitted as source- and fetch-fresh by a redemption run is carried forward until that run's own budget (two producer intervals: the next scheduled refresh plus one retry) expires, keeping its original observation clock, the redemption generation and the effective budget. The same bounded rule applies to capture-time consumed-reserve admission, which previously withheld the redemption row with redemption-reserve-input-stale; carried rows are reported with their reserve generation, assessment clock, age and carry deadline. A run that assesses the disclosure as stale never admits or renews it. This removes the iUSD sawtooth in which a 6-hour source budget measured from a disclosure about 2 hours older than its fetch lapsed minutes before the next 4-hourly run, dropping Exit to its fallback for one publication.",
+      "Supply-attribution carry-forward: when a run's supply-attribution generation rejects, omits or ages out an expected reviewed-deployment (wM) or lock/mint (XAUT) packet, the last admitted packet is re-derived against the current aggregate supply and admitted for one further 30-minute consumer cycle beyond its own observation bound (wM 1800s to 3600s, XAUT 3600s to 5400s). The packet keeps its original observation clocks, names carriedForwardFromGenerationId, and its chain-supply evidence names the widened budget; compute metadata lists carriedForwardAssetIds. Beyond the window the existing unavailable-materiality fallback applies. Economic-partition packets are not carried.",
+      "Journal replay (2026-10-13 to 2026-10-21, accepted publications expanded per publication, same evaluation build, reason-code proxies): 956 raw letter-grade changes; redemption carry-forward alone leaves about 927, plus supply-attribution carry-forward about 810, plus hysteresis about 524. The largest remaining classes are continuous measured inputs (DEX depth near a band edge) and Exit stress-request sizing when an asset's circulating supply is unavailable or stale in a run (sYUSD, yBOLD, USDnr, USDsc), which is not carried forward in this release.",
+      "Pillar weights, grade bands, caps, evidence freshness budgets other than the bounded carry-forward windows, and fail-closed publication holds are unchanged. Planned activation is provisionally 2026-10-22 00:00 UTC (1792627200), following the next-UTC-midnight convention; re-date effectiveAt at release. Two-capture equivalence, the first accepted production publication and post-deploy grade-stability observation remain separate acceptance obligations; no deployment or production acceptance is claimed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.25",
     "title": "Wrapper withdrawal terms without duplicate execution-certainty charges",
     "date": "2026-10-20",
