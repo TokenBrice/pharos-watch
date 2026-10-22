@@ -186,7 +186,7 @@ NAV presentation does not consume the asset's peg-score, active-depeg, deviation
 
 `src/components/view-transitions.tsx` owns the optional row-to-dossier identity transition and reduced-motion behavior. The single identity-heading invariant survives it. `StablecoinDetailIdentityProvider` supplies module logo/ticker identity because modules may be shared out of context; an explicit symbol overrides that context.
 
-`StablecoinLogo` supplies browser-selected density candidates from rendered image diameter × DPR. Compact derivatives never serve a density above their pixel size; the original remains the high-density fallback (including the 50 CSS-pixel hero image at DPR 3), without hydration-time source swapping.
+`StablecoinLogo` supplies browser-selected density candidates from rendered image diameter × DPR. Compact derivatives never serve a density above their pixel size; the original remains the high-density fallback (including the 50 CSS-pixel hero image at DPR 3), without hydration-time source swapping. In dark mode the image sits on a light `foreground/90` plate, so dark or transparent marks stay visible; the letter fallback keeps the muted plate.
 
 ### Hero passport strip
 
