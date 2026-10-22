@@ -275,7 +275,10 @@ export function TopNav() {
         aria-label="Pharos home"
       >
         <PharosLogo size={28} className="rounded-full shadow-sm" priority />
-        <span className="pharos-display text-sm font-bold tracking-tight text-foreground">Pharos</span>
+        {/* Wordmark waits for xl: at lg the mark alone carries the brand so the
+            rail, section menus, PSI toggle and search fit 1024px (measured
+            2026-10-22 with a classic scrollbar). */}
+        <span className="pharos-display hidden text-sm font-bold tracking-tight text-foreground xl:inline">Pharos</span>
       </Link>
 
       {/* Destinations sit left of the fold; browsing sits on the right, next to
@@ -317,7 +320,7 @@ export function TopNav() {
 
       {/* Right cluster reads menus → appearance → search, flush to the edge;
           the quick rail keeps the left for direct destinations. */}
-      <div className="ml-auto flex shrink-0 items-center gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-1 xl:gap-2">
         <nav ref={sectionNavRef} aria-label="Sections" className="flex shrink-0 items-center gap-0.5">
           {TOP_MENUS.map((menu) => {
             const isActive = menu.items.some((item) => isNavItemActive(pathname, item));
@@ -391,7 +394,7 @@ export function TopNav() {
                 }}
                   onClick={() => activateMenu(menu.key)}
                   className={cn(
-                    "pharos-focus-ring inline-flex h-9 items-center gap-1 rounded-md px-3 text-sm font-medium whitespace-nowrap transition-colors",
+                    "pharos-focus-ring inline-flex h-9 items-center gap-1 rounded-md px-2 text-sm font-medium whitespace-nowrap transition-colors min-[1440px]:px-3",
                     isActive
                       ? "bg-muted/60 text-foreground"
                       : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
@@ -505,8 +508,9 @@ export function TopNav() {
           aria-label="Search"
           // Icon-only below xl: at 1024 the rail's "Stability" label already
           // spends the masthead budget, so the ⌘K hint waits for xl with the
-          // text label rather than overflowing the header.
-          className="pharos-focus-ring inline-flex h-9 w-9 items-center justify-center gap-2 rounded-lg border border-border/70 bg-muted/20 text-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground xl:w-[15rem] xl:justify-start xl:px-3 2xl:w-72"
+          // text label rather than overflowing the header. The field stays
+          // 12rem until 1440px so the labelled search still fits at 1280.
+          className="pharos-focus-ring inline-flex h-9 w-9 items-center justify-center gap-2 rounded-lg border border-border/70 bg-muted/20 text-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground xl:w-[15rem] xl:justify-start xl:px-3 xl:max-[1440px]:w-[12rem] 2xl:w-72"
         >
           <Search className="size-4 shrink-0" aria-hidden />
           <span className="hidden xl:inline">Coin or page</span>

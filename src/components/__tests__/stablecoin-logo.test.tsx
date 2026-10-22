@@ -22,4 +22,9 @@ describe("StablecoinLogo density selection", () => {
     );
     expect((container.firstElementChild as HTMLElement).style.width).toBe("56px");
   });
+
+  it("sits image logos on a light plate in dark mode", () => {
+    const { container } = render(<StablecoinLogo src="/logos/example.png" name="Dark mark" />);
+    expect((container.firstElementChild as HTMLElement).className).toContain("dark:bg-foreground/90");
+  });
 });

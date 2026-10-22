@@ -13,7 +13,7 @@ import {
 } from "./fixtures/stablecoin-detail-view-model";
 import { buildDetailMarketSnapshot, buildDetailPegPriceSnapshot, buildDetailStaleQueries } from "../stablecoin-detail-query-view-model";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
-import { deriveDataHealth } from "../data-health";
+import { deriveDataHealth, isPublicWarning } from "../data-health";
 import { DATA_HEALTH_PRESETS } from "../data-health-config";
 import { buildStablecoinDetailClientCoin } from "../stablecoin-detail-client-coin";
 import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
@@ -253,7 +253,14 @@ describe("stablecoin detail view-model builder", () => {
       .find((entry) => entry.label === "Live Reserves")!;
     expect(sourceQuery.dataUpdatedAt).toBe(sourceAt * 1000);
     expect(sourceQuery.meta).toMatchObject({ updatedAt: sourceAt, freshBudgetSec: 2 * 86400 });
-    expect(deriveDataHealth({ ...sourceQuery, label: "Live Reserves", staleTime: sourceQuery.staleTime! }, now).state).toBe("stale");
+    // 3 days against a 2-day source budget: past budget, but inside the 12x public band (ADR-42).
+    const sourceHealth = deriveDataHealth({ ...sourceQuery, label: "Live Reserves", staleTime: sourceQuery.staleTime! }, now);
+    expect(sourceHealth.state).toBe("degraded");
+    expect(isPublicWarning(sourceHealth)).toBe(false);
+    expect(deriveDataHealth({ ...sourceQuery, label: "Live Reserves", staleTime: sourceQuery.staleTime! },
+      (sourceAt + 12 * 2 * 86400) * 1000).state).toBe("degraded");
+    expect(deriveDataHealth({ ...sourceQuery, label: "Live Reserves", staleTime: sourceQuery.staleTime! },
+      (sourceAt + 12 * 2 * 86400) * 1000 + 1).state).toBe("stale");
     for (const mode of ["live-stale", "curated-fallback", "template-fallback", "unavailable"] as const) {
       params.supplemental.reserves.live = { ...live, mode, sync: { ...live.sync, stale: true } };
       const query = buildDetailStaleQueries(params.queries, params.supplemental, "usdt-tether")

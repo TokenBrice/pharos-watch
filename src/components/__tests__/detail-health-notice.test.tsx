@@ -4,6 +4,7 @@ import { render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { StaleDataBanner, type StaleQuery } from "@/components/stale-data-banner";
 import { buildDetailStaleQueries } from "@/lib/stablecoin-detail-query-view-model";
+import { deriveDataHealth, isPublicWarning } from "@/lib/data-health";
 import { makeBuildStablecoinDetailViewModelParams } from "@/lib/__tests__/fixtures/stablecoin-detail-view-model";
 
 vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => true }));
@@ -87,7 +88,13 @@ describe("detail health notice", () => {
       expect(reserves.dataUpdatedAt).not.toBe(now);
       if (mode === "live-stale") {
         expect(reserves.dataUpdatedAt).toBe(producer);
-        expect(render(<StaleDataBanner queries={[reserves]} />).container.textContent).toContain("Showing an older snapshot");
+        // 2x the 5h fetch budget is operator signal; readers see the banner only past 12x (ADR-42).
+        const { container, unmount } = render(<StaleDataBanner queries={[reserves]} />);
+        expect(container.textContent).not.toContain("Showing an older snapshot");
+        unmount();
+        const input = { ...reserves, label: "Live Reserves", staleTime: reserves.staleTime! };
+        expect(isPublicWarning(deriveDataHealth(input, now))).toBe(false);
+        expect(deriveDataHealth(input, producer + 12 * 18_000_000 + 1).state).toBe("stale");
       }
     },
   );

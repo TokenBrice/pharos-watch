@@ -27,8 +27,9 @@ export function StablecoinLogo({ src, name, size = 24 }: StablecoinLogoProps) {
   }
 
   return (
+    // Dark mode sits the image on a light plate so dark or transparent marks stay visible.
     <span
-      className="inline-flex shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/80 dark:bg-muted shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)]"
+      className="inline-flex shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/80 dark:bg-foreground/90 shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)]"
       style={{ width: size, height: size }}
     >
       <picture>

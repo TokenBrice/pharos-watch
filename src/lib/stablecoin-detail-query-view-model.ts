@@ -30,6 +30,7 @@ import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import type { ReportCardsV9DetailResponse } from "@shared/types/report-cards-v9-projections";
 import { MINT_BURN_FTQ_DEPENDENCY_KEY } from "@shared/types/mint-burn";
 import { parseDataHealthWarnings } from "@/lib/data-health";
+import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 
 const YEAR_SECONDS = 365 * DAY_SECONDS;
 const YEARLY_PERFORMANCE_ANCHOR_TOLERANCE_SECONDS = 14 * DAY_SECONDS;
@@ -207,9 +208,14 @@ function reserveStaleQuery(
       updatedAt: authority.at,
       ageSeconds: freshness.assessedAt - authority.at,
       assessedAt: freshness.assessedAt,
-      status: stale ? "stale" : sync?.status !== "ok" || sync?.uncertainWrite ? "degraded" : "fresh",
+      // An age verdict past the evidence budget is operator signal; readers see the banner only
+      // past the 12x public band (ADR-42), judged at the producer's assessment so saved HTML
+      // agrees. An invalid source clock is not an age and stays stale.
+      status: freshness.sourceFreshnessInvalid
+        || (stale && freshness.assessedAt - authority.at > FRESHNESS_RATIOS.DEGRADED * authority.budget) ? "stale"
+        : stale || sync?.status !== "ok" || sync?.uncertainWrite ? "degraded" : "fresh",
       freshBudgetSec: authority.budget,
-      degradedBudgetSec: authority.budget,
+      degradedBudgetSec: FRESHNESS_RATIOS.DEGRADED * authority.budget,
       ...(sync?.status !== "ok" || sync?.uncertainWrite ? { warning: issues } : {}),
       dependencies: { reserveEvidence: { status: stale ? "stale" : "fresh", reason: details } },
     } : {

@@ -236,6 +236,20 @@ describe("StablecoinSafetyScoreV9Card", () => {
     expect(document.body.textContent).not.toContain("dex-stale");
   });
 
+  it("shows no partial-evidence ops chip in the card header", () => {
+    const card = makeV9Card({ localCauseGaps: ["transparency"], partialEvidence: {
+      reasonCode: "partial-evidence-pipeline-gap", excludedPillars: [],
+      excludedComponentKeys: ["reserve:reviewed:transparency"], causeGapRefs: [0], causes: ["B"],
+    } });
+    const response = makeReportCardsV9Response({ cards: [card] });
+
+    render(
+      <StablecoinSafetyScoreV9Card card={card} identity={response.safetyScoreIdentity} updatedAtMs={response.updatedAt * 1000} />,
+    );
+
+    expect(screen.queryByRole("button", { name: /Partial evidence/ })).toBeNull();
+  });
+
   it("renders an NR result without manufacturing score stages", () => {
     const card = makeV9Card({
       score: null,

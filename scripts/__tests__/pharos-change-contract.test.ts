@@ -68,10 +68,10 @@ const ROUTE_FIXTURES = [
   ["src/app/yield/page.tsx", 49_506, 49_506],
   ["worker/src/cron/dex-liquidity/orchestrator.ts", 42_303, 42_303],
   ["worker/src/api/yield-history.ts", 70_417, 70_417],
-  ["shared/lib/safety-score-v9/evaluate-asset.ts", 59_863, 59_863],
-  ["shared/lib/classification.ts", 45_515, 45_515],
+  ["shared/lib/safety-score-v9/evaluate-asset.ts", 59_880, 59_880],
+  ["shared/lib/classification.ts", 45_565, 45_565],
   ["functions/safety-scores/map.json.ts", 24_468, 29_549],
-  ["shared/data/stablecoins/coins/usdt-tether.json", 45_515, 45_515],
+  ["shared/data/stablecoins/coins/usdt-tether.json", 45_565, 45_565],
   ["worker/src/telegram/webhook/telegram-webhook.ts", 46_593, 46_593],
   ["worker/migrations/0268_telegram_planning_lookup_indexes.sql", 26_618, 26_618],
 ] as const;
