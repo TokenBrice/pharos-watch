@@ -22,7 +22,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "TrueUSD has four issuer-native mintable deployments (Ethereum, BSC, Avalanche, Tron) whose controllers match the reviewed mintAuthority profile; the Polygon, Arbitrum, and Optimism deployments are canonical-bridge lock-mint representations (Polygon PoS ChildChainManager, Arbitrum L2ERC20Gateway, OP L2StandardBridge), the Fantom deployment is a legacy Multichain representation controlled by the defunct Multichain MPC EOA, and the NEAR deployment is a Rainbow Bridge factory representation.",
+    "summary": "TrueUSD has four issuer-native mintable deployments (Ethereum, BSC, Avalanche, Tron) whose controllers match the reviewed mintAuthority profile; the Polygon, Arbitrum, and Optimism deployments are canonical-bridge lock-mint representations (Polygon PoS ChildChainManager, Arbitrum L2ERC20Gateway, OP L2StandardBridge), the Fantom deployment is a legacy Multichain representation controlled by the defunct Multichain MPC EOA, and the NEAR deployment is a Rainbow Bridge factory-origin representation whose controller storage names omni.bridge.near; its complete authority and emergency semantics remain unresolved.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
     "confidence": "verified",
@@ -283,13 +283,13 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "NEAR RPC reads 2026-07-20 confirm this NEP-141 (name TrueUSD) is a Rainbow Bridge factory-minted subaccount of factory.bridge.near, which is the sole mint/burn authority on NEAR against proofs of lock in the Ethereum-side locker. A 2026-09-27 ft_total_supply read at block 217536167 returned 509.67 TUSD (ft_metadata decimals 18), not the ~510k previously recorded. The representation sits outside Moore's issued-token perimeter (Ethereum, Tron, BNB Chain, Avalanche) and is excluded from the reviewed TUSD liability scope.",
+        "reviewNote": "Historical route review 2026-07-20 identified this NEP-141 (name TrueUSD) as a Rainbow Bridge factory-origin subaccount; the factory.bridge.near-only authority claim is superseded, not renewed. Controller identity checked 2026-10-21 via https://rpc.mainnet.near.org: view_state for key STATE (prefix_base64 U1RBVEU=) pinned to block 220873626, hash 6cogfa7buBM1XzJLm1dTXQzVAfBfAiymKTitAb2Zsf9H, timestamp 2026-10-21T00:22:46.535711946Z, begins with Borsh AccountId omni.bridge.near (little-endian length 16), matching the upstream BridgeToken controller-first storage layout. Numeric/hash block headers before and after agree; get_controller is not exported (MethodNotFound). the source review's 2026-10-20 NearBlocks research records successful set_controller to omni.bridge.near at receipt block 143751728, hash F2N5wf48ZaGRccSX86usFs7bNKJaBaJoS5xVEEMxDdXP, 2025-04-08T16:22:59.1177585Z. The storage observation establishes controller identity, not a complete current mint/burn, upgrade, signing, proof-validation or caller-aware emergency-state certificate; deployed WASM/source correspondence and those authority/emergency semantics remain unresolved. Historical 2026-09-27 ft_total_supply read at block 217536167 returned 509.67 TUSD (ft_metadata decimals 18), not the ~510k previously recorded. The representation sits outside Moore's issued-token perimeter (Ethereum, Tron, BNB Chain, Avalanche) and is excluded from the reviewed TUSD liability scope. Historical route observedAt and aggregate reviewedAt remain 2026-07-20; only the controller identity is corrected by the new pin.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "near",
-        "controllerAddress": "factory.bridge.near",
+        "controllerAddress": "omni.bridge.near",
         "failureDomainKeys": [
           "protocol:rainbow-bridge",
-          "contract:near:factory.bridge.near"
+          "contract:near:omni.bridge.near"
         ],
         "observedAt": "2026-07-20",
         "sources": [
@@ -300,6 +300,18 @@
           {
             "label": "Rainbow Bridge documentation (historical source; not retrievable during October 1, 2026 review)",
             "url": "https://docs.rainbowbridge.app/"
+          },
+          {
+            "label": "NEAR mainnet RPC: pinned STATE controller read at block 220873626 (2026-10-21T00:22:46.535711946Z)",
+            "url": "https://rpc.mainnet.near.org"
+          },
+          {
+            "label": "Upstream BridgeToken source blob: controller-first Borsh layout only, not deployed-WASM correspondence",
+            "url": "https://api.github.com/repos/Near-One/rainbow-token-connector/git/blobs/d6b052824e9e762da0bef3c18dc7dabd865b6402"
+          },
+          {
+            "label": "Historical controller migration transaction (research retrieved 2026-10-20)",
+            "url": "https://api.nearblocks.io/v1/txns/C8pcbxRW22UkssmtA9qWfaHCaY3bxN6E9TfzXUHf1gQS"
           }
         ]
       }

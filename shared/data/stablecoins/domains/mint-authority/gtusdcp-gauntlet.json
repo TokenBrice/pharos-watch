@@ -102,6 +102,124 @@
       },
       {
         "chain": "ethereum",
+        "address": "0xc684c6587712e5e7bdf9fd64415f23bd2b05faec",
+        "deploymentRefs": ["ethereum:0x8c106eedad96553e64287a5a6839c3cc78afa3d0"],
+        "label": "Gauntlet USDC Prime Ethereum owner parameter authority",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 4,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0x6c8038257c618fd7d25269fc97c04de8a5b2b843",
+            "0x59520256bfd073d131da8c8f58c4eef979bc64c7",
+            "0xa3a845fcde05ea884ea033b150300f0f8bdfa01d",
+            "0x1f6da8198fe51236e279009b325f107ddce4d2b6",
+            "0x1d8e0b8f4ced9262c9ac0c0870bf8b45d74ad9d9",
+            "0xd0644e17c6ad2b34932cb6d8dc6026000da5ff2e"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "observedBlock": 26197394,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197394,
+        "failureDomainKeys": ["ethereum:0xc684c6587712e5e7bdf9fd64415f23bd2b05faec"],
+        "capDescription": "Owner-held VaultV2 parameter and allocation authority; no arbitrary share mint or mutable-bytecode power is established. Selector-specific delays are not a blanket execution delay.",
+        "evidence": "Owner relationship as of Ethereum block 26095807 on 2026-10-01 is retained from the exact deployment review. The same exact Safe's later gtUSDTp review at Ethereum block 26197394 on 2026-10-15 establishes four-of-six with no enabled modules and zero guard, superseding the earlier seven-signer roster only for the Safe configuration. It does not refresh the Ethereum USDC vault's runtime or allocation, or establish key custody, human independence or fallback noninterference.",
+        "sources": [
+          {
+            "label": "Exact Ethereum USDC Prime source and historical owner binding",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8c106eedad96553e64287a5a6839c3cc78afa3d0"
+          },
+          {
+            "label": "Same Safe configuration at Ethereum block 26197394, 2026-10-15T10:43:59Z, retained gtUSDTp review",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Exact shared Gauntlet owner Safe",
+            "url": "https://etherscan.io/address/0xc684c6587712e5e7bdf9fd64415f23bd2b05faec"
+          }
+        ]
+      },
+      {
+        "chain": "base",
+        "address": "0x5a4e19842e09000a582c20a4f524c26fb48dd4d0",
+        "deploymentRefs": ["base:0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61"],
+        "label": "Gauntlet USDC Prime Base owner parameter authority",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 4,
+        "signerCount": 7,
+        "safe": {
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 52024171,
+          "observedAt": "2026-10-01",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 52024171,
+        "failureDomainKeys": ["safe:base:0x5a4e19842e09000a582c20a4f524c26fb48dd4d0"],
+        "capDescription": "Owner parameter authority over immutable MetaMorpho. No arbitrary share mint, code replacement or exact key-custody/independence credit is inferred.",
+        "evidence": "Existing exact review as of Base block 52024171 on 2026-10-01 confirms this owner Safe, four-of-seven, no enabled modules and zero guard. This authors the previously prose-only owner inventory; it is not a new on-chain observation. Same hex address on Arbitrum remains a different chain-qualified controller.",
+        "sources": [
+          {
+            "label": "Exact Base deployment and source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61"
+          },
+          {
+            "label": "Exact Base owner Safe",
+            "url": "https://base.blockscout.com/address/0x5a4e19842e09000a582c20a4f524c26fb48dd4d0"
+          }
+        ]
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x5a4e19842e09000a582c20a4f524c26fb48dd4d0",
+        "deploymentRefs": ["arbitrum:0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed"],
+        "label": "Gauntlet USDC Prime Arbitrum owner parameter authority",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 3,
+        "signerCount": 7,
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 510584559,
+          "observedAt": "2026-10-01",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-01",
+        "observedBlock": 510584559,
+        "failureDomainKeys": ["safe:arbitrum:0x5a4e19842e09000a582c20a4f524c26fb48dd4d0"],
+        "capDescription": "Owner parameter authority over immutable MetaMorphoV1_1. No arbitrary share mint, code replacement or exact key-custody/independence credit is inferred.",
+        "evidence": "Existing exact review as of Arbitrum block 510584559 on 2026-10-01 confirms this owner Safe, three-of-seven, no enabled modules and zero guard. This authors the previously prose-only owner inventory; it does not establish a fresh configuration or common human operators with the same-address Base Safe.",
+        "sources": [
+          {
+            "label": "Exact Arbitrum deployment and source",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed"
+          },
+          {
+            "label": "Exact Arbitrum owner Safe",
+            "url": "https://arbitrum.blockscout.com/address/0x5a4e19842e09000a582c20a4f524c26fb48dd4d0"
+          }
+        ]
+      },
+      {
+        "chain": "ethereum",
         "address": "0xe982615d461dd5cd06575bbea87624fda4e3de17",
         "deploymentRefs": [
           "ethereum:0x8c106eedad96553e64287a5a6839c3cc78afa3d0"
@@ -178,9 +296,62 @@
           "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
         }
       ],
-      "evidence": "Historical inventory review at Ethereum block 25527215, Base block 48599296 and Arbitrum block 483587934 is retained in the individual controls. Re-verification on 2026-10-01 at Ethereum block 26095807, Base block 52024171 and Arbitrum block 510584559 confirms zero corrected EIP-1967 implementation, admin and beacon slots, native chain-local USDC asset(), unchanged owners, owner Safe configurations of 4-of-7, 4-of-7 and 3-of-7 respectively, and no enabled modules or guard. Exact verified sources identify Ethereum VaultV2, Base MetaMorpho and Arbitrum MetaMorphoV1_1, not three MetaMorpho V2 instances. Depositor shares require assets, but accrual can separately mint fee shares; this does not grant arbitrary privileged share issuance. At the pinned Ethereum block, underlying USDC.masterMinter() matches the inherited control; it cannot mint vault shares or replace vault bytecode. Circle's reserve examinations and supervision remain parent evidence, not a wrapper attestation or prudential regime. The May 2026 USDC report cited below is historical and is not represented as the latest report. Wrapper-level reconciliation and supervision remain not-applicable and none. D14/D29 sweep 2026-10-03: At Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), verified VaultV2 runtime matches deployment and asset() is USDC. enter() transfers required assets before createShares(); accrueInterest mints formula-limited performance and management fee shares against existing vault assets, redistributing backed claims rather than creating arbitrary unbacked issuance. Fee parameters and adapter/allocation-cap administration do not expose a free share mint or minter-registration function. Base MetaMorpho and Arbitrum MetaMorphoV1_1 verified runtimes matched at blocks 48599296 (hash 0x95fc2dfcf0c1aa77e32e9041ffa6fe96376dbac823a27c3cdec6e909af5ae0e7) and 483587934 (hash 0x6ab358e298e48ceb34e6e4f8700ecae4bf7e41c3b57ae5fa5d79789c78ba8af4), with deposit-backed minting and interest-derived fee shares. Inherited issuer controls describe parent issuance carried by the serial-claim dependency edge, not wrapper-local share minting; parent D14 risk is not charged twice.",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U10BoundedWrappersA)",
-      "reviewedAt": "2026-10-03"
+      "evidence": "Governor-inventory parity review performed 2026-10-21 using retained exact-controller evidence. Content as of 2026-10-15 for the shared Ethereum Gauntlet Safe and 2026-10-01 for the owner relationships/Base/Arbitrum or Steakhouse configurations, each separately pinned in the structured controls. No fresh runtime, current reserve report, private key custody, independent humans, execution-complete fallback or upgraded cap-semantics certificate is asserted. The original D14/cap-semantics review dates are unchanged. The following retained narrative is historical, including any then-latest report or earlier signer counts: Historical inventory review at Ethereum block 25527215, Base block 48599296 and Arbitrum block 483587934 is retained in the individual controls. Re-verification on 2026-10-01 at Ethereum block 26095807, Base block 52024171 and Arbitrum block 510584559 confirms zero corrected EIP-1967 implementation, admin and beacon slots, native chain-local USDC asset(), unchanged owners, owner Safe configurations of 4-of-7, 4-of-7 and 3-of-7 respectively, and no enabled modules or guard. Exact verified sources identify Ethereum VaultV2, Base MetaMorpho and Arbitrum MetaMorphoV1_1, not three MetaMorpho V2 instances. Depositor shares require assets, but accrual can separately mint fee shares; this does not grant arbitrary privileged share issuance. At the pinned Ethereum block, underlying USDC.masterMinter() matches the inherited control; it cannot mint vault shares or replace vault bytecode. Circle's reserve examinations and supervision remain parent evidence, not a wrapper attestation or prudential regime. The May 2026 USDC report cited below is historical and is not represented as the latest report. Wrapper-level reconciliation and supervision remain not-applicable and none. D14/D29 sweep 2026-10-03: At Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), verified VaultV2 runtime matches deployment and asset() is USDC. enter() transfers required assets before createShares(); accrueInterest mints formula-limited performance and management fee shares against existing vault assets, redistributing backed claims rather than creating arbitrary unbacked issuance. Fee parameters and adapter/allocation-cap administration do not expose a free share mint or minter-registration function. Base MetaMorpho and Arbitrum MetaMorphoV1_1 verified runtimes matched at blocks 48599296 (hash 0x95fc2dfcf0c1aa77e32e9041ffa6fe96376dbac823a27c3cdec6e909af5ae0e7) and 483587934 (hash 0x6ab358e298e48ceb34e6e4f8700ecae4bf7e41c3b57ae5fa5d79789c78ba8af4), with deposit-backed minting and interest-derived fee shares. Inherited issuer controls describe parent issuance carried by the serial-claim dependency edge, not wrapper-local share minting; parent D14 risk is not charged twice.",
+      "reviewer": "Pharos Safety Score R1 vault parity review",
+      "reviewedAt": "2026-10-21",
+      "scopedQuestions": [
+        {
+          "controlRef": "ethereum:0xc684c6587712e5e7bdf9fd64415f23bd2b05faec",
+          "subject": "key-custody-independence",
+          "question": "Which exact custody, recovery and independent-human approval boundaries apply to the Ethereum USDC Prime owner Safe? Content as of 2026-10-15 proves shared Safe configuration, not these private safeguards or fallback noninterference.",
+          "reviewedAt": "2026-10-21",
+          "reviewer": "Pharos Safety Score R1 vault parity review",
+          "sources": [
+            {
+              "label": "Exact Ethereum owner Safe",
+              "url": "https://etherscan.io/address/0xc684c6587712e5e7bdf9fd64415f23bd2b05faec"
+            },
+            {
+              "label": "Gauntlet company-level signing policy",
+              "url": "https://security.gauntlet.xyz/"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0x5a4e19842e09000a582c20a4f524c26fb48dd4d0",
+          "subject": "key-custody-independence",
+          "question": "Which exact custody, recovery and independent-human approval boundaries apply to the Base owner Safe? Content as of 2026-10-01 establishes four-of-seven and empty modules/guard, not private custody or common operators across chains.",
+          "reviewedAt": "2026-10-21",
+          "reviewer": "Pharos Safety Score R1 vault parity review",
+          "sources": [
+            {
+              "label": "Exact Base owner Safe",
+              "url": "https://base.blockscout.com/address/0x5a4e19842e09000a582c20a4f524c26fb48dd4d0"
+            },
+            {
+              "label": "Gauntlet company-level signing policy",
+              "url": "https://security.gauntlet.xyz/"
+            }
+          ]
+        },
+        {
+          "controlRef": "arbitrum:0x5a4e19842e09000a582c20a4f524c26fb48dd4d0",
+          "subject": "key-custody-independence",
+          "question": "Which exact custody, recovery and independent-human approval boundaries apply to the Arbitrum owner Safe? Content as of 2026-10-01 establishes three-of-seven and empty modules/guard, not private custody or common operators across chains.",
+          "reviewedAt": "2026-10-21",
+          "reviewer": "Pharos Safety Score R1 vault parity review",
+          "sources": [
+            {
+              "label": "Exact Arbitrum owner Safe",
+              "url": "https://arbitrum.blockscout.com/address/0x5a4e19842e09000a582c20a4f524c26fb48dd4d0"
+            },
+            {
+              "label": "Gauntlet company-level signing policy",
+              "url": "https://security.gauntlet.xyz/"
+            }
+          ]
+        }
+      ]
     }
   }
 }

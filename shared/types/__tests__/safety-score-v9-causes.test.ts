@@ -104,6 +104,21 @@ describe("cause proofs and exact authored classification admission", () => {
     ]) expect(registrySchema.safeParse({ schemaVersion: 1, entries }).success).toBe(false);
   });
 
+  it("requires replacing an older same-scope C review rather than appending a newer one", () => {
+    const older = { ...entry, cause: "C" as const, assertion: "researched-nondisclosure" as const,
+      searchedSurfaces: [entry.sources[0]!.url], rationale: "The required field remains undisclosed.",
+    };
+    const newer = { ...older, id: "refreshed-search", reviewedAt: "2026-10-04T00:01:00Z" };
+    const conflicting = V9EvidenceGapClassificationsV1Schema.safeParse({
+      schemaVersion: 1, entries: [older, newer],
+    });
+    expect(conflicting.success).toBe(false);
+    if (!conflicting.success) expect(conflicting.error.issues).toContainEqual(expect.objectContaining({
+      path: ["entries", 1, "scope"], message: "Duplicate or contradictory classification scope",
+    }));
+    expect(V9EvidenceGapClassificationsV1Schema.parse({ schemaVersion: 1, entries: [newer] }).entries).toEqual([newer]);
+  });
+
   it("binds route research across known producer generations without widening any other scope", () => {
     const routeId = "redemption:usdt-tether:offchain-issuer";
     const redemptionKeys = [

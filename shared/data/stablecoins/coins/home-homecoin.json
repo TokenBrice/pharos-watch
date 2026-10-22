@@ -39,7 +39,7 @@
       "decimals": 6
     }
   ],
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "unknown",
   "governanceQuality": "multisig",
   "proofOfReserves": {
     "type": "self-reported",

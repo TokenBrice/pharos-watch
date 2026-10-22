@@ -11,12 +11,32 @@
   "pegMechanism": "Bridge Building Inc. issues OUSD for the Open Standard programme, natively on Tempo, Ethereum, Base and Solana. Eligible businesses onboarded as Bridge Users mint and redeem at 1:1 USD with no issuer fee or artificial volume limits. Under the binding terms, any other holder can redeem directly only if eligible and onboarded as a Bridge User, with processing within two business days after compliance acceptance, subject to delays outside Bridge's reasonable control; holders have no property interest in reserve assets.",
   "mechanismArchetype": "fiat-cash",
   "proofOfReserves": {
-    "type": "real-time",
+    "type": "independent-audit",
     "url": "https://reserves.bridge.xyz/ousd",
-    "provider": "Bridge's self-reported live reserves dashboard; Open Standard announces monthly attestations, but the dashboard does not yet link an independent report",
-    "attestorTier": "self",
-    "cadence": "real-time",
-    "attestorJurisdiction": "United States"
+    "provider": "Ernst & Young LLP",
+    "attestorTier": "big4",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States",
+    "latestReport": {
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-10-01",
+      "publishedAtBasis": "signed-date-standin",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "C09 bottom-up refinement 2026-10-21; EY signed report and exact four-deployment liability scope retrieved 2026-10-20",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "EY Open USD Reserves Report, August 31, 2026; signed October 1 (retrieved 2026-10-20)",
+          "url": "https://reserves.bridge.xyz/attestations/ousd/2026/ousd_attestation_2026_08.pdf"
+        },
+        {
+          "label": "Bridge OUSD monthly attestation index (retrieved 2026-10-20)",
+          "url": "https://reserves.bridge.xyz/ousd"
+        }
+      ]
+    }
   },
   "llamaId": "443",
   "geckoId": "open-usd",

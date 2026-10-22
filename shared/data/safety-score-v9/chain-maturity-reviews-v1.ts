@@ -643,6 +643,20 @@ const AUTHORED_CHAIN_MATURITY_REVIEWS_V1 = [
       "dependency-exit": gate("pass", "The current settlement dependencies are documented, subject to the failed continuity and change-control gates.", SOURCES.movementArchitecture),
     },
   },
+  // 2026-10-22 confirmation only, not a renewed admission packet:
+  // https://monad.xyz/blog/get-started-on-monad-mainnet still dates public
+  // mainnet to 2025-11-24; 36 months cannot elapse before 2028-11-24.
+  // https://monad.xyz/blog/monad-network-uptime reports no halts only through
+  // 2026-08-30, not a 365-day history. The authored status hostname no longer
+  // resolves, and the old /consensus/monadbft URL returns 404.
+  // Current /monad-arch/consensus/{monad-bft,staking} docs establish
+  // stake-weighted >2/3 finality and a top-200 active set, but not independent
+  // control of every operator. /node-ops/announcements and upgrade instructions
+  // document signed notices and operator-installed releases, not a complete
+  // all-bypass control proof. Native L1 settlement remains distinct from token
+  // bridges listed under /developer-essentials/network-information/tokens-and-bridges.
+  // None cures the continuity failure; preserve all packet/access dates and the
+  // unchecked supporting gates rather than implying a fresh five-gate approval.
   {
     chainSlug: "monad",
     displayName: "Monad",

@@ -43,6 +43,7 @@ import { shouldRetainCurveCompositePoolIdentity } from "@shared/lib/curve-compos
 import { attachDefiLlamaV4PoolIdentities, DEFILLAMA_V4_IDENTITIES_URL } from "./defillama-v4-identity";
 import { requirePoolIdentity } from "./process-pool-admission-identity";
 import { ExpectedPoolInputError, POOL_REJECTION_POOL_ID_LIMIT, type PoolProcessingRejection } from "./process-pool-types";
+import { attachReviewedQuoterV2SourcePoolIdentities } from "./pool-identity";
 
 import { parseStrictFiniteDecimal } from "./direct-api-json";
 const PRIMARY_SOURCE_JSON_TIMEOUT_MS = 30_000;
@@ -239,6 +240,7 @@ export async function fetchDataSources(
           }
           await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, true);
           pools = compacted.pools;
+          attachReviewedQuoterV2SourcePoolIdentities(pools);
           dlYieldsAvailable = true;
           if (compacted.rejectedPoolCount > 0) {
             logWorkerEvent({

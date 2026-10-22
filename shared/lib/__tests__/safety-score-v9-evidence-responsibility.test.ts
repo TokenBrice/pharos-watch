@@ -33,7 +33,6 @@ describe("cause-aware responsibility and atomic reason identity", () => {
     const treatment = resolveV9ReasonTreatment(V9_CANDIDATE_POLICY_V1, unresolved.reasonCode, unresolved.causeProof.cause);
     expect(treatment.scoringDisposition).toBe("bounded-uncertainty");
     expect(treatment.critical).toBe(false);
-    expect(treatment.ceiling).toBeNull();
   });
 
   it("uses producer proof rather than a conflicting caller-supplied issuer label", () => {
@@ -41,7 +40,6 @@ describe("cause-aware responsibility and atomic reason identity", () => {
     expect(failed.responsibility).toBe("producer-failed");
     const treatment = resolveV9ReasonTreatment(V9_CANDIDATE_POLICY_V1, failed.reasonCode, failed.causeProof.cause);
     expect(treatment.scoringDisposition).toBe("excluded-pipeline");
-    expect(treatment.ceiling).toBeNull();
     expect(treatment.critical).toBe(false);
   });
 

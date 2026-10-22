@@ -8,7 +8,7 @@
     "governance": "centralized"
   },
   "collateral": "At the 2026-09-30 14:00 UTC snapshot, Hermetica reported $1,396,969.74 of STRCx in a $1,501,041.77 Ethereum Settlement Wallet, $472,573.22 with Copper, $0.00 with Ceffu, $8,036.50 in the Stacks Redeeming Reserve, and $100,148.12 of Reserve Fund USDC. Total reported backing was $2,081,799.60 against $1,981,448.18 USDh. The STRCx and BTC basis designs remain documented; the report does not itemize all settlement-wallet or Copper assets or establish the mechanism cutover timestamp.",
-  "pegMechanism": "Delta-neutral hedging: BTC spot long + equal BTC short perpetual futures neutralize directional exposure; mint and redeem via KYC-gated Hermetica app; DIA oracle provides reserve-backed fair value pricing on Stacks",
+  "pegMechanism": "Approved participants mint and redeem USDh against USDC or USDT through Hermetica's KYC-gated primary market. Documentation describes BTC spot and short-perpetual hedging; the September 30, 2026 reserve report also identifies substantial STRCx backing. Redemption can pause for unreliable valuation feeds, but current public disclosures do not establish the exact price-source topology.",
   "mechanismArchetype": "synthetic-delta-neutral",
   "implementationLaunchDate": "2024-09-19",
   "mechanismArchetypeReview": {
@@ -55,7 +55,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "onchain",
+  "custodyModel": "unknown",
   "governanceQuality": "single-entity",
   "proofOfReserves": {
     "type": "self-reported",

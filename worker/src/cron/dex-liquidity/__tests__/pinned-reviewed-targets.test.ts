@@ -95,15 +95,46 @@ describe("reviewed active retained-pool targets", () => {
       attachPinnedReviewedExecutionTargets(input);
       return input.metrics.get(direction.stablecoinId)!.pools[0]!.extra!.measuredExecutionTarget!;
     });
-    expect(QUOTER_V2_REVIEWED_RETAINED_POOLS).toHaveLength(8);
-    expect(targets).toHaveLength(9);
-    expect(new Set(targets.map((target) => target.targetId)).size).toBe(9);
+    expect(QUOTER_V2_REVIEWED_RETAINED_POOLS).toHaveLength(9);
+    expect(targets).toHaveLength(10);
+    expect(new Set(targets.map((target) => target.targetId)).size).toBe(10);
     expect(estimateAdmissionCohortRpcRequestBreakdown(targets)).toEqual({
-      setupRpcRequests: 12, quoteRpcRequests: 28, totalRpcRequests: 40,
+      setupRpcRequests: 12, quoteRpcRequests: 29, totalRpcRequests: 41,
     });
     // At most five ladder points, three refinements and one revert confirmation.
-    expect(targets.length * (5 + 3 + 1)).toBe(81);
+    expect(targets.length * (5 + 3 + 1)).toBe(90);
   });
+
+  it("enrolls the reviewed six-decimal HOME to USDC direction without manufacturing execution evidence", () => {
+    const direction = directions.find((row) => row.stablecoinId === "home-homecoin")!;
+    const input = fixture(direction);
+    attachPinnedReviewedExecutionTargets(input);
+    const target = input.metrics.get("home-homecoin")!.pools[0]!.extra!.measuredExecutionTarget!;
+    expect(target).toMatchObject({
+      poolId: "ethereum:0xd89278702e8221555b5d7d6a202551caffb7c50b",
+      adapterProfileId: "uniswap-v3-quoter-v2",
+      feePips: 100,
+      tokenIn: { address: "0xb8919522331c59f5c16bdfaa6a121a6e03a91f62", decimals: 6, trackedAssetId: "home-homecoin" },
+      tokenOut: { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", decimals: 6, trackedAssetId: "usdc-circle" },
+    });
+    expect(isDexMeasuredExecutionTargetScoreEligible(target)).toBe(true);
+    expect(target).not.toHaveProperty("capacityCurve");
+    expect(input.metrics.get("home-homecoin")!.pools[0]!.extra).not.toHaveProperty("measuredExecution");
+  });
+
+  it.each(["different-pool", "wrong-home-identity", "missing-usdc-price"] as const)(
+    "keeps HOME %s unresolved rather than borrowing the reviewed descriptor",
+    (refusal) => {
+      const direction = directions.find((row) => row.stablecoinId === "home-homecoin")!;
+      const input = fixture(direction);
+      const pool = input.metrics.get("home-homecoin")!.pools[0]!;
+      if (refusal === "different-pool") pool.poolId = "ethereum:0x67f9808238b92d228f3d7152b96e6f95c223d5af";
+      if (refusal === "wrong-home-identity") input.chainAddressToId.set("ethereum:0xb8919522331c59f5c16bdfaa6a121a6e03a91f62", "unrelated-asset");
+      if (refusal === "missing-usdc-price") input.stablecoinPriceById.delete("usdc-circle");
+      attachPinnedReviewedExecutionTargets(input);
+      expect(pool.extra?.measuredExecutionTarget).toBeUndefined();
+    },
+  );
 
   it.each(["missing-price", "wrong-contract", "wrong-chain", "wrong-protocol", "decayed", "synthetic"] as const)(
     "does not recover %s evidence",

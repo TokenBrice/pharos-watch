@@ -49,7 +49,9 @@ export async function observeReviewedExitExecutionRoutes(args: {
   if (reviews.length === 0) return { observations, failures };
   const request = selectV9ExitStressRequest(args.circulatingUsd, envelope);
   if (!request) return { observations, failures: reviews.map((review) => ({ modelId: review.modelId, reason: "canonical-supply-unavailable", responsibility: "producer-failed" as const })) };
-  const requests = envelope.policy.semantic.exit.stressRequest.notionalGridUsd.map((requestedNotionalUsd) => ({ requestedNotionalUsd, maxCostBps: request.maxCostBps }));
+  const requests = [...new Set([...envelope.policy.semantic.exit.stressRequest.notionalGridUsd, request.requestedNotionalUsd])]
+    .sort((left, right) => left - right)
+    .map((requestedNotionalUsd) => ({ requestedNotionalUsd, maxCostBps: request.maxCostBps }));
   const cache = !args.inputReference || !args.outputReference
     ? args.stablecoinsCache ?? (args.db ? await loadStablecoinsCache(args.db) : null)
     : null;

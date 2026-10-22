@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Cash and cash equivalents",
-      "pct": 93.4,
+      "pct": 93.48,
       "risk": "very-low",
       "assetClass": "cash",
       "issuerOrObligor": "Undisclosed U.S. banking counterparties holding Brale reserve accounts",
@@ -12,7 +12,7 @@
     },
     {
       "name": "U.S. government-backed debt",
-      "pct": 6.6,
+      "pct": 6.52,
       "risk": "very-low",
       "assetClass": "government-security",
       "issuerOrObligor": "United States government and government-backed obligors",
@@ -21,22 +21,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-29",
-    "reviewer": "GLM pre-expiry reserve refresh 2026-09-29 (#945)",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "C07 bottom-up refinement 2026-10-21",
     "confidence": "verified",
     "sources": [
       {
-        "label": "USDGLO reserve report - August 2026",
-        "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-08-2026.pdf"
+        "label": "USDGLO reserve report - September 2026 (management assertion signed October 2)",
+        "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-09-2026.pdf"
       },
       {
         "label": "Brale USDGLO transparency",
         "url": "https://brale.xyz/stablecoins/USDGLO"
       }
     ],
-    "rationale": "Brale's management assertion dated September 11, 2026 reports $1,039,730 of cash and cash equivalents and $73,461 of U.S. government-backed debt against 1,113,191 USDGLO issued at August 31, 2026; the percentages are normalized from those reported values, and the figures were re-verified against the report PDF on 2026-09-29. The report states that the reserve assets are U.S.-dollar-denominated assets held by Brale in unencumbered accounts segregated from its other accounts, but it does not identify the underlying banks, instruments, maturities, or provider allocations. Pre-expiry re-check 2026-09-29: the Brale transparency page (https://brale.xyz/stablecoins/USDGLO) still lists the August 2026 report (period end 2026-08-31, published 2026-09-11) as the newest USDGLO attestation — the 2026 PDF series stops at 08-2026 — and the page publishes no dated live composition breakdown, so no newer primary evidence exists and the composition is left unchanged rather than date-bumped. Under Brale's monthly cadence (the August report shipped 11 days after period end), the September 2026 report covering 2026-09-30 is expected in the second week of October 2026; the next review should promote it once published.",
-    "compositionBasis": "Brale USDGLO reserve report as of August 31, 2026",
-    "compositionAsOf": "2026-08-31",
+    "rationale": "Retrieved 2026-10-20. Brale's management assertion signed October 2, 2026 reports USD 923,605 cash and cash equivalents and USD 64,451 U.S. government-backed debt at September 30, 2026, 11:50pm Eastern Time, against 988,057 USDGLO issued. The two reported categories sum to USD 988,056, one dollar below the stated reserve total of USD 988,057; the report does not explain that one-dollar discrepancy. Percentages are normalized to the sum of the category amounts and rounded to two decimals. This composition update does not independently establish a shortfall or validate the reported coverage assertion. The report expressly defines issued supply across Arbitrum, Base, Celo, Ethereum, Optimism, Polygon, Stellar and VeChain and reserves in unencumbered accounts segregated from Brale's other accounts. It is an Assertion of Brale Management without an independent accountant opinion. Bank identities, underlying cash-equivalent and debt instruments, maturities, provider allocations and withdrawal terms remain undisclosed; no maturity, liquidity or custody-continuity credit is inferred.",
+    "compositionBasis": "Brale USDGLO management assertion at September 30, 2026, 11:50pm Eastern Time; category amounts normalized to their USD 988,056 sum",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The full reserve categories and amounts are reported, but underlying cash-equivalent instruments, debt instruments, banking counterparties, maturities, and provider allocations are undisclosed.",
     "knownUnknownExposurePct": 0,
@@ -44,14 +44,14 @@
       {
         "reserveIndex": 0,
         "reserveName": "Cash and cash equivalents",
-        "pct": 93.4,
+        "pct": 93.48,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The reserve is an off-chain cash and cash-equivalent category rather than another tracked stablecoin."
       },
       {
         "reserveIndex": 1,
         "reserveName": "U.S. government-backed debt",
-        "pct": 6.6,
+        "pct": 6.52,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The reserve is an off-chain government-backed debt category rather than another tracked stablecoin."
       }

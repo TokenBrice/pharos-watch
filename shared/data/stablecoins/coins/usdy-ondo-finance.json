@@ -2,7 +2,7 @@
   "id": "usdy-ondo-finance",
   "name": "Ondo US Dollar Yield",
   "symbol": "USDY",
-  "oneLiner": "USDY is Ondo's yield-bearing dollar token, backed by short-term U.S. Treasuries and bank demand deposits; non-U.S. investor permissioned.",
+  "oneLiner": "USDY is Ondo's yield-bearing secured note, backed by Treasuries, bank deposits and tokenized Treasury ETF exposure; qualifying non-U.S. investors only.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
@@ -11,7 +11,7 @@
     "navToken": true
   },
   "mechanismArchetype": "tbill",
-  "collateral": "Short-term U.S. Treasury bills and bank demand deposits",
+  "collateral": "Issuance-dependent U.S. Treasuries, bank deposits, and Ondo-tokenized iShares Short Treasury Bond ETF exposure",
   "pegMechanism": "Eligible registered holders can redeem USDY through Ondo's InstantManager for supported stablecoins at the oracle-priced value, subject to compliance, pause state, user and global limits, actual router liquidity, and user-specific fees. The issuer integration guide specifies USDC on Ethereum, USDT on BNB Chain, and pathUSD on Tempo. This on-chain route is distinct from bank-wire redemption and does not establish current same-notional capacity or an all-holder fee ceiling.",
   "llamaId": "129",
   "detailProvider": "coingecko",
@@ -24,8 +24,8 @@
     "cadence": "daily-nav",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-09-25",
-      "publishedAt": "2026-09-25",
+      "periodEnd": "2026-10-15",
+      "publishedAt": "2026-10-15",
       "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "attestation",
       "scope": "assets-and-liabilities",
@@ -34,8 +34,8 @@
       "confidence": "verified",
       "sources": [
         {
-          "label": "Ondo USDY LLC ATCAttest daily report 2026-09-25 (LLC issuance only; publication date not stated; SHA-256 0b08d651a92b9a4f55a9dcef53b983804f0d76ef177863f223051e881f759742)",
-          "url": "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/ABoF-avpNclglsNxAeWZO_k/2026/09%20September?rlkey=4icqn1z9bez725wywr30fx52a&dl=1"
+          "label": "Ondo USDY LLC ATCAttest daily report 2026-10-15 (LLC issuance only; publication date not stated; retrieved 2026-10-20; SHA-256 132296e20a7abed62bc6df3a0ae95507373504a26655afbed07680a955f0213d)",
+          "url": "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/AK-03xW6UBqCvZyI-Enizhk/2026/10%20October?rlkey=4icqn1z9bez725wywr30fx52a&dl=1"
         }
       ]
     }
@@ -56,6 +56,10 @@
     {
       "label": "Redemption Docs",
       "url": "https://docs.ondo.finance/developer-guides/usdy-instant-manager-integration"
+    },
+    {
+      "label": "USDY backing and issuer scope",
+      "url": "https://docs.ondo.finance/general-access-products/usdy/basics.md"
     }
   ],
   "jurisdiction": {

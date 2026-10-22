@@ -52,10 +52,11 @@
     "latestReport": {
       "periodEnd": "2026-08-31",
       "publishedAt": "2026-09-28",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Pharos reserve research 2026-09-30 (August examination, asset schedules and liabilities reviewed in lockstep)",
+      "reviewer": "Pharos reserve research 2026-09-30 (August examination, asset schedules and liabilities reviewed in lockstep); C12 2026-10-20: September 28 is the accountant signature date, not an independently established upload date",
       "confidence": "verified",
       "sources": [
         {

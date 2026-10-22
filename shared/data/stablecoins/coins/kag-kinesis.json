@@ -91,7 +91,12 @@
       "porFeedAddress": "0x3F0543aA057BcAeA152Fe9462Cb3ffaB305a6F8D",
       "assetLabel": "Physical silver reserves",
       "assetRisk": "very-low",
-      "reserveUnit": "XAG"
+      "reserveUnit": "XAG",
+      "liabilityScope": {
+        "basis": "not-comparable",
+        "canonicalChain": "kinesis",
+        "reason": "KMS Labs explicitly limits the physical-silver audits and on-chain reserve verification to Kinesis-native KAG; the registered Ethereum ERC-20 is a separate KMS Labs claim backed by native KAG in reserve. Native bullion quantities cannot be reconciled to this representation's totalSupply. Source: https://kmslabs.money/ and https://kmslabs.money/kms-labs-tcs/ sections 3 and 8, retrieved 2026-10-20."
+      }
     }
   },
   "launchDate": "2025-09-11",

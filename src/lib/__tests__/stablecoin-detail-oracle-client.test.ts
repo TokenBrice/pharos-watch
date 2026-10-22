@@ -385,7 +385,11 @@ describe("oracle tier ladder", () => {
     const banded = ORACLE_TIER_POLICY_BANDS.flatMap((band) => band.tiers);
     expect([...banded].sort()).toEqual([...ORACLE_RISK_TIER_VALUES].sort());
     for (const band of ORACLE_TIER_POLICY_BANDS) {
-      for (const tier of band.tiers) expect(quality[tier]).toBe(band.quality);
+      for (const tier of band.tiers) {
+        expect(band.quality).toBe(tier === "opaque-or-unknown"
+          ? V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.control.U
+          : quality[tier]);
+      }
     }
     const qualities = ORACLE_TIER_POLICY_BANDS.map((band) => band.quality);
     expect(qualities).toEqual([...new Set(qualities)].sort((a, b) => a - b));
@@ -395,17 +399,20 @@ describe("oracle tier ladder", () => {
     const ladder = resolveOracleTierLadder("single-source-or-laggy")!;
     expect(ladder.position).toBe(1);
     expect(ladder.bands).toHaveLength(ORACLE_TIER_POLICY_BANDS.length);
-    expect(ladder.tiedTierLabels).toEqual(["Privileged internal pricing", "Opaque / unknown"]);
+    expect(ladder.tiedTierLabels).toEqual(["Privileged internal pricing"]);
     expect(resolveOracleTierLadder("oracleless")!.position).toBe(ORACLE_TIER_POLICY_BANDS.length);
     expect(resolveOracleTierLadder("redundant-with-failover")!.tiedTierLabels).toEqual([]);
   });
 
-  it("lights an opaque tier on the lowest band in neutral, never in a healthy hue", () => {
+  it("gives unknown topology its own neutral U band without implying a C classification", () => {
     const ladder = resolveOracleTierLadder("opaque-or-unknown")!;
-    expect(ladder.position).toBe(1);
+    expect(ladder.position).toBe(2);
     const lit = ladder.bands.find((band) => band.key === ladder.activeKey)!;
     expect(lit.fillClass).toBe(SEVERITY_TONE_CLASS.neutral.bar);
     expect(lit.fillClass).not.toBe(SEVERITY_TONE_CLASS.ok.bar);
+    expect(lit.label).toContain("U 60; cause unavailable");
+    expect(lit.shortLabel).toBe("Unknown (U 60)");
+    expect(ladder.tiedTierLabels).toEqual([]);
   });
 
   it("draws no ladder for a value outside the published tiers", () => {

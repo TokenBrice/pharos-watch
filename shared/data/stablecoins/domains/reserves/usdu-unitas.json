@@ -100,9 +100,13 @@
       {
         "label": "HT Digital collateral sighting letter, 25 September 2026 (Solana token identity; assurance engagement remains prospective)",
         "url": "https://raw.githubusercontent.com/UnipayFI/POR/main/docs/20260925_090008_HTD_PoR_for_Unitas.pdf"
+      },
+      {
+        "label": "Accountable Unitas API retrieved 2026-10-20: BNB Smart Chain category alias and nested instrument disclosure, source timestamp 1792534562980",
+        "url": "https://cache.accountable.capital/dashboard/unitas"
       }
     ],
-    "rationale": "Re-opened 2026-08-08: Unitas Accountable dashboard reserves_split snapshot (total reserves $55,511,787.70, supply $53,052,105.13, collateralization 104.64%) exposes four venue/instrument buckets. Curated slice names mirror the adapter reserves_split identities verbatim. Weights refreshed to the 2026-08-08 capture: Solana 47.57%, Bitcoin 35.17%, Binance 15.02%, BNB Smart Chain 2.24%. The Bitcoin bucket is new since the prior review and represents BTC/WBTC on-chain collateral per Unitas docs; the three venue buckets continue to aggregate undisclosed instrument-level composition.",
+    "rationale": "Re-opened 2026-08-08: Unitas Accountable dashboard reserves_split snapshot (total reserves $55,511,787.70, supply $53,052,105.13, collateralization 104.64%) exposes four venue/instrument buckets. Curated slice names mirror the adapter reserves_split identities verbatim. Weights refreshed to the 2026-08-08 capture: Solana 47.57%, Bitcoin 35.17%, Binance 15.02%, BNB Smart Chain 2.24%. The Bitcoin bucket is new since the prior review and represents BTC/WBTC on-chain collateral per Unitas docs; the three venue buckets continue to aggregate undisclosed instrument-level composition. Source mapping review 2026-10-20: the current source uses BNB Smart Chain rather than Bnb_smartchain for the same BNB deployment category ($2,785,482.54 at source timestamp 1792534562980). The live config now maps that exact source alias to the existing sourceKey and reviewed name, retaining its conservative high-risk venue classification. The source also itemizes BNB/BUSDT and JLP/SOL/USDC leaves; the current reserves_split adapter does not flatten them. No instrument percentages, liquidity bound, current composition date or historical review start is renewed by this category-identity repair.",
     "compositionBasis": "Accountable dashboard API reserves_split venue/instrument allocation captured 2026-08-08; per-venue instrument composition undisclosed",
     "compositionAsOf": "2026-08-08",
     "scope": "full-composition",

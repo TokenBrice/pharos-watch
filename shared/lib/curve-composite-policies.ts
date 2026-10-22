@@ -8,6 +8,7 @@ import {
   CURVE_ALUSD_3CRV_METAPOOL_ADDRESS, CURVE_DOLA_FRAXBP_METAPOOL_ADDRESS,
   CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS, CURVE_EUSD_FRAXBP_METAPOOL_ADDRESS,
   CURVE_GUSD_3CRV_METAPOOL_ADDRESS, CURVE_LUSD_3CRV_METAPOOL_ADDRESS,
+  CURVE_HOME_3CRV_METAPOOL_ADDRESS,
   CURVE_MAI_AM3CRV_METAPOOL_ADDRESS,
   CURVE_MEUSD_CRV2POOL_METAPOOL_ADDRESS, CURVE_MSUSD_FRAXBP_METAPOOL_ADDRESS,
   CURVE_NXUSD_COMPOSITE_POOL_ADDRESS, CURVE_OUSD_3CRV_METAPOOL_ADDRESS,
@@ -396,6 +397,30 @@ const CURVE_ALUSD_3CRV_METAPOOL_POLICY = ethereumLegacyFactory3CrvMetapool({
   },
 });
 
+/**
+ * HOME's six-decimal metapool uses a different factory implementation from
+ * the eighteen-decimal legacy template. Runtime/factory/underlying identities
+ * were read at Ethereum 26237940, hash
+ * 0xd1752c2e6c7f7d36ebb0bd6a54e6607d45e2f7ab46797835d762e1c9af247642
+ * (2026-10-21T02:19:59Z). This enrolls diagnostics only, never scoring.
+ */
+export const CURVE_HOME_3CRV_METAPOOL_POLICY: CurveMetapoolPolicy = {
+  ...ethereumLegacyFactory3CrvMetapool({
+    stablecoinId: "home-homecoin",
+    poolAddress: CURVE_HOME_3CRV_METAPOOL_ADDRESS,
+    factoryPoolIndex: 123,
+    token: {
+      address: "0xb8919522331c59f5c16bdfaa6a121a6e03a91f62",
+      symbol: "HOME",
+      decimals: 6,
+    },
+  }),
+  expectedPoolCodeHash: "0xb03eac48901ed5f36399381b3bbbaa60db83ea38ea7b05acc2a46c42c9f6b6ce",
+  implementationAddress: "0x213be373fdff327658139c7df330817dad2d5bbe",
+  expectedImplementationCodeHash:
+    "0x86092e83f01ab6d7a368475cdf5c75f0a18352f943cdc4de65248f10d4881267",
+};
+
 function ethereumFraxBpMetapool(input: {
   stablecoinId: string;
   poolAddress: `0x${string}`;
@@ -654,6 +679,7 @@ const POLICIES: readonly CurveCompositePoolPolicy[] = [
   CURVE_DOLA_SUSDE_RATE_BEARING_POLICY,
   CURVE_USD1_METAPOOL_POLICY,
   CURVE_NXUSD_METAPOOL_POLICY,
+  CURVE_HOME_3CRV_METAPOOL_POLICY,
   ...CURVE_R3_METAPOOL_POLICIES,
 ];
 

@@ -81,7 +81,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "unknown",
   "governanceQuality": "single-entity",
   "yieldConfig": {
     "yieldSource": "Midas mRe7YIELD strategy",

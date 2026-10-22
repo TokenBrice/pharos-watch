@@ -308,16 +308,9 @@ describe("Safety Score v9 evidence-gap queue", () => {
     }];
     asset.exitRoutes[0]!.factorStatuses = { capacity: status };
     asset.controls[0]!.factorStatuses = { authority: status };
-    asset.operationalResilienceStatus = status;
-    const localFact = { status, disposition: "unresearched" as const, assessment: null, signals: [], evidenceRefIds: [] };
     asset.wrapperLocalFacts = {
       schemaVersion: 1, applicability: "wrapper", form: "pure", formDisposition: "unresearched",
       formStatus: status, formSignals: [], formEvidenceRefIds: [], evidenceRefIds: [],
-      facts: { contractMutability: localFact, custodyEscrow: localFact, strategyComplexity: localFact,
-        leverage: localFact, rehypothecationCorrelation: localFact, shareAccountingNavOracle: localFact,
-        withdrawalTerms: localFact, measuredUnwind: localFact, lossAbsorptionEmergencyControls: localFact },
-      riskTransfer: { status, disposition: "unresearched", mechanism: "unknown",
-        maximumParentLossAbsorptionPoints: 0, signals: [], evidenceRefIds: [] },
     };
     asset.economicControlReview.mint.factorStatuses = { reconciliation: status };
     asset.economicControlReview.oracle.factorStatuses = { tier: status };
@@ -359,11 +352,9 @@ describe("Safety Score v9 evidence-gap queue", () => {
       `reserve:${asset.reserveExposures[0]!.exposureKey}:assetClass`, "residual:residual", "reserve-bound:bound",
       "exit-envelope", ...asset.exitRoutes.flatMap(row => [`route:${row.routeKey}`, `route-output:${row.routeKey}`]),
       `route:${asset.exitRoutes[0]!.routeKey}:capacity`,
-      "control-envelope", "operational-resilience", ...asset.controls.map(row => `control:${row.controlKey}`),
+      "control-envelope",  ...asset.controls.map(row => `control:${row.controlKey}`),
       `control:${asset.controls[0]!.controlKey}:authority`,
-      "wrapper:form", "wrapper:contractMutability", "wrapper:custodyEscrow", "wrapper:strategyComplexity",
-      "wrapper:leverage", "wrapper:rehypothecationCorrelation", "wrapper:shareAccountingNavOracle",
-      "wrapper:withdrawalTerms", "wrapper:measuredUnwind", "wrapper:lossAbsorptionEmergencyControls", "wrapper:risk-transfer",
+      "wrapper:form",
       "economic-control:mint", "economic-control:mint:reconciliation", "economic-control:oracle",
       "economic-control:oracle:tier", "economic-control:oracle:collateral-parameter", "economic-control:bridge",
       "economic-control:bridge:tier", "economic-control:bridge:bridge:tier", "access:transfer", "access:freeze",

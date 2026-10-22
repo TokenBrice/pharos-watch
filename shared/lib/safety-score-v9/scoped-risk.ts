@@ -1,6 +1,61 @@
-import { assertScore, compareText } from "./primitives";
+import { assertScore, compareText, domainKey, uniqueSorted } from "./primitives";
+import type { V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
+import type { V9StructuralSignal } from "../../types/safety-score-v9";
+import type { V9ControlComponent } from "./control-primitives";
 
 export type V9EconomicLossScope = "access-only" | "deployment" | "reserve-claim" | "global-claim";
+
+/** Compiled authority/contributor keys identify controllers; deployment and asset labels do not. */
+export function effectiveV9ControllerKeys(
+  control: Pick<V9DeploymentControlFactV2, "authority" | "executionScopeContributors">,
+): readonly string[] {
+  if (control.executionScopeContributors !== undefined) {
+    return uniqueSorted(control.executionScopeContributors.map((contributor) => contributor.authorityKey));
+  }
+  return control.authority !== null && control.authority.model !== "none"
+    ? [control.authority.authorityKey] : [];
+}
+
+/** Shared potential authority is already priced; distinct measured slice risks remain additive. */
+export function isV9DeploymentControllerAlreadyPriced(
+  sliceControllerKeys: readonly string[],
+  pricedControllerKeys: ReadonlySet<string>,
+  measuredSliceRisk: boolean,
+): boolean {
+  return !measuredSliceRisk && sliceControllerKeys.length > 0 &&
+    sliceControllerKeys.every((key) => pricedControllerKeys.has(key));
+}
+
+/** Every binding authority component participates in Control's weakest-path price. */
+export function pricedV9ControllerKeys(
+  controls: readonly V9DeploymentControlFactV2[],
+  components: readonly V9ControlComponent[],
+): ReadonlySet<string> {
+  return new Set(components
+    .filter((component) => component.binding && component.kind === "mint" && component.score !== null)
+    .flatMap((component) => component.controlKeys)
+    .flatMap((key) => {
+      const control = controls.find((candidate) => candidate.controlKey === key);
+      return control === undefined ? [] : effectiveV9ControllerKeys(control);
+    }));
+}
+
+/** Common-mode controller domains cannot charge a root already priced by Control. */
+export function isV9SharedControllerSignalAlreadyPriced(
+  signal: V9StructuralSignal,
+  controls: readonly V9DeploymentControlFactV2[],
+  pricedControllerKeys: ReadonlySet<string>,
+): boolean {
+  return signal.kind === "critical-dependency" && signal.economicLossScope === "deployment" &&
+    signal.failureDomainKeys.length > 0 && signal.failureDomainKeys.every((key) => {
+      if (!key.startsWith("mint-control:") && !key.startsWith("upgrade-control:")) return false;
+      // Domain prefixes preserve the exact chain-qualified authority identity.
+      if (pricedControllerKeys.has(key.slice(key.indexOf(":") + 1))) return true;
+      const members = controls.filter((control) => control.failureDomains.some((domain) => domainKey(domain) === key));
+      return members.length > 0 && members.every((control) =>
+        isV9DeploymentControllerAlreadyPriced(effectiveV9ControllerKeys(control), pricedControllerKeys, false));
+    });
+}
 
 export interface V9ScopedRiskSignal {
   signalKey: string;
@@ -32,9 +87,6 @@ export interface V9ScopedRiskResolution {
   baseScore: number;
   finalScore: number;
   adjustments: readonly V9ScopedRiskAdjustment[];
-  globalCaps: readonly V9ScopedRiskSignal[];
-  reserveSignals: readonly V9ScopedRiskSignal[];
-  accessOnlySignals: readonly V9ScopedRiskSignal[];
   unresolvedDeploymentSignals: readonly V9ScopedRiskSignal[];
 }
 
@@ -153,30 +205,13 @@ export function resolveV9ScopedRisk(
 
   const signals = [...rawSignals].sort(compareSignal);
   const deploymentSignals: V9ScopedRiskSignal[] = [];
-  const globalCaps: V9ScopedRiskSignal[] = [];
-  const reserveSignals: V9ScopedRiskSignal[] = [];
-  const accessOnlySignals: V9ScopedRiskSignal[] = [];
   const unresolvedDeploymentSignals: V9ScopedRiskSignal[] = [];
 
   for (const signal of signals) {
     if (signal.failureDomainKeys.length === 0) {
       throw new Error(`Safety Score v9 scoped signal ${signal.signalKey} requires a failure domain`);
     }
-    switch (signal.economicLossScope) {
-      case "global-claim":
-        globalCaps.push(signal);
-        break;
-      case "reserve-claim":
-        reserveSignals.push(signal);
-        break;
-      case "access-only":
-        accessOnlySignals.push(signal);
-        break;
-      case "deployment": {
-        deploymentSignals.push(signal);
-        break;
-      }
-    }
+    if (signal.economicLossScope === "deployment") deploymentSignals.push(signal);
   }
 
   const coalescedDeploymentSignals = coalesceIdenticalDeploymentEvents(baseScore, deploymentSignals);
@@ -232,9 +267,6 @@ export function resolveV9ScopedRisk(
     baseScore,
     finalScore: score,
     adjustments,
-    globalCaps,
-    reserveSignals,
-    accessOnlySignals,
     unresolvedDeploymentSignals,
   };
 }

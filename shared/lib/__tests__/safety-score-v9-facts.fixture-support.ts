@@ -672,12 +672,6 @@ export function nativeWrapperLocalFactsForFixture(asset: V9AssetFactsV2) {
   if (form === null) {
     return { schemaVersion: 1 as const, applicability: "not-wrapper" as const, evidenceRefIds };
   }
-  const unavailableFact = (factKey: string) => ({
-    disposition: "integration-missing" as const,
-    assessment: null,
-    signals: [`fixture-wrapper-local-fact:${factKey}`],
-    evidenceRefIds: [],
-  });
   return {
     schemaVersion: 1 as const,
     applicability: "wrapper" as const,
@@ -685,26 +679,6 @@ export function nativeWrapperLocalFactsForFixture(asset: V9AssetFactsV2) {
     formDisposition: evidenceRefIds.length > 0 ? "reviewed" as const : "integration-missing" as const,
     formSignals: [`fixture-wrapper-form:${form}`],
     formEvidenceRefIds: evidenceRefIds,
-    facts: Object.fromEntries(
-      [
-        "contractMutability",
-        "custodyEscrow",
-        "strategyComplexity",
-        "leverage",
-        "rehypothecationCorrelation",
-        "shareAccountingNavOracle",
-        "withdrawalTerms",
-        "measuredUnwind",
-        "lossAbsorptionEmergencyControls",
-      ].map((factKey) => [factKey, unavailableFact(factKey)]),
-    ),
-    riskTransfer: {
-      disposition: "integration-missing" as const,
-      mechanism: "unknown" as const,
-      maximumParentLossAbsorptionPoints: 0,
-      signals: ["fixture-wrapper-risk-transfer"],
-      evidenceRefIds: [],
-    },
   };
 }
 
@@ -733,10 +707,6 @@ export function compileNativeV3FactSet(input: unknown) {
       const wrapperLocalFacts = wrapper.applicability === "not-wrapper" ? wrapper : {
         ...wrapper,
         ...(wrapper.formDisposition === "reviewed" ? {} : { formStatus: unresolved("wrapper:form", "backing") }),
-        facts: Object.fromEntries(Object.entries(wrapper.facts).map(([key, fact]) => [
-          key, { ...fact, disposition: "unresearched", status: unresolved(`wrapper:${key}`, "backing") },
-        ])),
-        riskTransfer: { ...wrapper.riskTransfer, disposition: "unresearched", status: unresolved("wrapper:risk-transfer", "backing") },
       };
       return {
         ...asset, gaps, wrapperLocalFacts, reserveResiduals,

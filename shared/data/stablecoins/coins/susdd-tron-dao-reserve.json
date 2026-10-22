@@ -82,9 +82,9 @@
         "expectedAssetAddress": "0x4f8e5de400de08b164e7421b3ee387f461becd1a"
       },
       "deployedExposure": {
-        "basis": "sUSDD vault holds no idle USDD at the pinned block-26083816 reads; totalAssets() is deployed through the TRON DAO Reserve Smart Allocator strategy",
+        "basis": "Exact immutable SavingsUsdd source identifies the non-idle position as a USDD savings claim recorded through UsddJoin and Pot: _mint transfers USDD, calls Join.join and Pot.join, while withdrawals reverse those accounting operations. Zero idle USDD does not establish a direct Smart Allocator or external lending allocation. Source correction reviewed 2026-10-20; original attestation start and historical balance pin are retained.",
         "reviewedAt": "2026-09-29",
-        "sourceUrl": "https://docs.usdd.io/system-architecture/smart-allocator"
+        "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xc5d6a7b61d18afa11435a889557b068bb9f29930"
       },
       "redemptionLiquidity": {
         "source": "atomic-full-backing"

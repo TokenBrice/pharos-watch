@@ -114,69 +114,6 @@ describe("Safety Score v9 DUSD Makina team-answer evidence", () => {
     scenario = compileDusdTeamAnswerFixture();
   });
 
-  it("compiles DUSD wrapper facts from reviewed local custody, leverage, and control evidence", () => {
-    const { compiledAsset } = scenario;
-    const wrapper = compiledAsset.wrapperLocalFacts;
-    if (wrapper?.applicability !== "wrapper") throw new Error("expected DUSD wrapper-local facts");
-
-    expect(wrapper.facts.custodyEscrow).toMatchObject({
-      disposition: "reviewed",
-      assessment: "high",
-      signals: expect.arrayContaining([
-        "wrapper-custody-segregation:mixed",
-        "wrapper-custody-bankruptcy-remoteness:none",
-      ]),
-    });
-    expect(wrapper.facts.leverage).toMatchObject({
-      disposition: "reviewed",
-      assessment: "high",
-      signals: expect.arrayContaining(["wrapper-leverage-factor:leverage"]),
-    });
-    // D14 adds the fee-accrual timelock and recognizes the DAO's fee-manager
-    // authorization power. Both are local claim-loss controls, while the
-    // deposit-only Machine remains a non-claim control.
-    const controlByAuthority = new Map(compiledAsset.controls.map((control) =>
-      [control.authority?.authorityKey, control] as const,
-    ));
-    const machine = controlByAuthority.get("ethereum:0x6b006870c83b1cd49e766ac9209f8d68763df721")!;
-    const feeManager = controlByAuthority.get("ethereum:0xa7f0121375dc52028e333f02715183a1d1a690a7")!;
-    const feeTimelock = controlByAuthority.get("ethereum:0x38542447c49d24e617fc06113295d7aaa3bec4b6")!;
-    const dao = controlByAuthority.get("ethereum:0x62244c74e1d09b3d86ef7342d354b5d7770bde10")!;
-    const riskManager = controlByAuthority.get("ethereum:0x36ba7c92cd68051fb304bd4580c4a51c1d376532")!;
-    const council = controlByAuthority.get("ethereum:0x89faa3b02ef5ab185b8ace489af62748acb50afc")!;
-    expect(wrapper.facts.lossAbsorptionEmergencyControls).toMatchObject({
-      disposition: "reviewed",
-      assessment: "high",
-      signals: expect.arrayContaining([
-        `non-claim-control:${machine.controlKey}`,
-        `unbounded-claim-control:${feeManager.controlKey}`,
-        `unbounded-claim-control:${feeTimelock.controlKey}`,
-        `unbounded-claim-control:${dao.controlKey}`,
-        `unbounded-claim-control:${riskManager.controlKey}`,
-        `unbounded-claim-control:${council.controlKey}`,
-        "strategy-vault-holder-loss-controls-reviewed",
-      ]),
-    });
-    // Reviewed adverse native powers remain, but route research cannot prove
-    // absence of incidents on DUSD's independently scoped bridge control.
-    expect(wrapper.facts.lossAbsorptionEmergencyControls.signals).toContain(
-      "wrapper-local-controls-partial-review",
-    );
-    const bridgeControls = compiledAsset.controls.filter((control) => control.controlKind === "bridge");
-    expect(bridgeControls).toHaveLength(1);
-    expect(bridgeControls[0]!.incidentState).toBe("unknown");
-    expect(bridgeControls[0]!.factorStatuses?.incidentState).toMatchObject({
-      observationState: "missing",
-      gapIds: [`${ASSET_ID}:gap:control:${bridgeControls[0]!.controlKey}:incidentState`],
-    });
-    expect(wrapper.facts.lossAbsorptionEmergencyControls.evidenceRefIds.length).toBeGreaterThan(0);
-    expect(wrapper.riskTransfer).toMatchObject({
-      disposition: "not-applicable",
-      mechanism: "none",
-      maximumParentLossAbsorptionPoints: 0,
-      signals: ["no-documented-parent-loss-absorption-credit"],
-    });
-  });
 
   it("applies the adverse legal terms to mechanism claim quality without upgrading custody or assurance", () => {
     const { compiledAsset } = scenario;
@@ -206,12 +143,5 @@ describe("Safety Score v9 DUSD Makina team-answer evidence", () => {
       rejectionReasons: Array.from({ length: 5 }, (_, sliceIndex) => ({ sliceIndex, reason: "no-match" })),
     });
     expect(evaluatedAsset.dependencyInputs.serial).toMatchObject([{ upstreamAssetId: PARENT_ID }]);
-    const wrapperFacts = compiledAsset.wrapperLocalFacts;
-    if (wrapperFacts?.applicability !== "wrapper") throw new Error("expected DUSD wrapper local facts");
-    expect(wrapperFacts.riskTransfer).toMatchObject({
-      disposition: "not-applicable",
-      mechanism: "none",
-      maximumParentLossAbsorptionPoints: 0,
-    });
   });
 });

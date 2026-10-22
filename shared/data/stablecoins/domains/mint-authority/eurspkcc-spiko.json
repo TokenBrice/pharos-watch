@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "eurSPKCC has issuer-native mint paths on Ethereum, Polygon, Arbitrum, Base, Starknet, and Stellar. On the four EVM deployments, Spiko's PermissionManager group 0 is a 3/6 Safe that can grant minter groups, set the two-step Minter's daily limit, and replace mint logic; the separate Spiko Minter is daily-limited to 5,000,000 eurSPKCC per chain, while the token-level mint function has no supply cap. Starknet mint requires MINTER_ROLE held by a 3/5 Argent multisig plus three single-key accounts, and Stellar mint requires MINTER held by three single-key accounts under a single-key owner. CCIP pool mint/burn is conserved bridge-route accounting and is assessed only under Bridge Risk, not as global native mint authority.",
+    "summary": "EURSPKCC has eight issuer-native registers. Existing Ethereum, Polygon, Arbitrum, Base, Starknet and Stellar control observations retain their original dates and scope. The four previously reviewed EVM ADMIN Safes can expand issuance and replace mint logic; their ordinary two-step Minter limits are raiseable. Starknet and Stellar retain their reviewed single-key and multisig powers. Newly corroborated Etherlink and Solana share identities do not establish a complete current native operator, upgrade, bypass or custody census, so those two registers carry a separate scoped question. Conserved CCIP pool mint/burn remains Bridge Risk, not global native issuance authority.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -640,6 +640,33 @@
           }
         ],
         "evidence": "Soroban ledger 63473407: get_role_member(MINTER, 0..2) = GD2ELXTH..., GBWKGT3Q..., GDUFSH23.... Horizon shows each of the three accounts has a single ed25519 signer with weight 1 and thresholds 0/0/0, none is a Stellar multisig."
+      },
+      {
+        "deploymentRefs": [
+          "etherlink:0x3868d4e336d14d38031cf680329d31e4712e11cc",
+          "solana:H99pu9fKt15asYk3Mcs8rajaRX3aYx3kDwXy6pY3n6My"
+        ],
+        "label": "EURSPKCC newly inventoried native-register operators",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "unknown",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-20",
+        "evidence": "The exact issuer API identifies Etherlink and Solana as EURSPKCC registers for FR0014010ON7. Etherlink token name, symbol and five decimals were pinned at block 56104777; Solscan independently confirms the exact Solana Token-2022 share identity and five decimals. These observations establish missing deployment identities, not the complete live role roster, per-principal custody, upgrade paths, execution reach or whole-liability census. No existing six-register control pin or process assurance is renewed.",
+        "sources": [
+          {
+            "label": "Exact issuer EURSPKCC identity and eight native registers, retrieved 2026-10-20",
+            "url": "https://public-api.spiko.io/share-classes/eurSPKCC"
+          },
+          {
+            "label": "Pinned Etherlink identity at block 56104777, 2026-10-20T22:22:24Z",
+            "url": "https://node.mainnet.etherlink.com"
+          },
+          {
+            "label": "Exact Solana fund-share name, symbol, decimals and Token-2022 program, retrieved 2026-10-20",
+            "url": "https://solscan.io/token/H99pu9fKt15asYk3Mcs8rajaRX3aYx3kDwXy6pY3n6My"
+          }
+        ]
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -649,7 +676,7 @@
       "disposition": "scoreable",
       "reviewedAt": "2026-08-16",
       "reviewer": "Codex mint-bridge-boundary migration FIX2-06",
-      "evidence": "Current native issuance review performed 2026-08-16 from the verified work-order observations. On Ethereum, Polygon, Arbitrum, and Base, token mint requirements are groups {0,2}; group 0 is the issuer admin Safe (3/6 on every EVM deployment, with no enabled modules, guard, or module guard), while group 2 contains the Spiko two-step Minter and the CCIP pool. The Minter is the native daily-limited issuer path; the CCIP pool's group-2 mint is a conserved burn-and-mint bridge return path reviewed under bridgeRouteRisk, not global native authority. Starknet at current head 13404810 has the Spiko 3/5 Argent owner and three routed single-key MINTER accounts; the latest owner read is current, while the three-member role enumeration remains the routed ledger 63473407 observation. Stellar's latest owner read is ledger 63986064 and its MINTER enumeration is the routed ledger 63473407 observation; the owner is a single-key account that can upgrade the wasm. The four EVM token proxies are UUPS with group-0 upgrade authority, Starknet class replacement is owner-gated, and Soroban wasm replacement is owner-gated. Native paths therefore remain unbounded with periodic fund accounting and prudential supervision. The CCIP pool owner EOA, remote lanes, rate limits, OffRamp/source-pool checks, and bridge common-mode facts are excluded from this native evidence and are retained in structured Bridge Risk controls.",
+      "evidence": "Current native issuance review performed 2026-08-16 from the verified work-order observations. On Ethereum, Polygon, Arbitrum, and Base, token mint requirements are groups {0,2}; group 0 is the issuer admin Safe (3/6 on every EVM deployment, with no enabled modules, guard, or module guard), while group 2 contains the Spiko two-step Minter and the CCIP pool. The Minter is the native daily-limited issuer path; the CCIP pool's group-2 mint is a conserved burn-and-mint bridge return path reviewed under bridgeRouteRisk, not global native authority. Starknet at current head 13404810 has the Spiko 3/5 Argent owner and three routed single-key MINTER accounts; the latest owner read is current, while the three-member role enumeration remains the routed ledger 63473407 observation. Stellar's latest owner read is ledger 63986064 and its MINTER enumeration is the routed ledger 63473407 observation; the owner is a single-key account that can upgrade the wasm. The four EVM token proxies are UUPS with group-0 upgrade authority, Starknet class replacement is owner-gated, and Soroban wasm replacement is owner-gated. Native paths therefore remain unbounded with periodic fund accounting and prudential supervision. The CCIP pool owner EOA, remote lanes, rate limits, OffRamp/source-pool checks, and bridge common-mode facts are excluded from this native evidence and are retained in structured Bridge Risk controls. Prudential supervision is retained on a separate affirmative three-part join, not imported from SAFO UCITS: the AMF-origin certificate dated 2025-09-05 names this exact SPIKO DIGITAL ASSETS CASH AND CARRY FUND and its manager TWENTY FIRST CAPITAL GP-11000029; the current AMF gestionnaireAssocie record confirms that manager's active GP-11000029 approval and authorized above-threshold/opted-in AIFM collective-management activities (ACT26/ACT29, data refreshed 2026-10-16 and manager last published 2026-10-18); the exact February prospectus assigns this regulated manager the fund register, order-centralization and NAV-based issuance duties. The current manager record was obtained through c79399, which is EUTBL and is used only for the common manager's current authorization; the exact SPKCC fund join comes from its own AMF certificate and prospectus. This satisfies the separately adjudicated exact issuing-entity/issuance-scope supervisory join, not a claim that SPKCC has product-level AMF approval, reserve insurance or independent financial audit assurance.",
       "sources": [
         {
           "label": "Spiko documentation",
@@ -706,9 +733,36 @@
         {
           "label": "Spiko Cash & Carry stakeholders: AMF GP-11000029, CACEIS Bank 18129 ACPR/AMF, PwC H3C 66006213, Spiko Finance CIB 19183",
           "url": "https://docs.spiko.io/documentation/product_overview/cash_and_carry/stakeholders"
+        },
+        {
+          "label": "AMF-origin exact SPIKO Digital Assets Cash and Carry Fund declaration naming GP-11000029 manager, 2025-09-05; retrieved 2026-10-20",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/AMF_product_declaration_SPKCC_FPS_EN.pdf"
+        },
+        {
+          "label": "AMF live GP-11000029 manager authorization via gestionnaireAssocie: active AIFM ACT26/collective-management ACT29; c79399 is EUTBL, not the exact SPKCC fund join; retrieved 2026-10-20",
+          "url": "https://geco.amf-france.org/back-office/funds/compartment/c79399"
         }
       ],
-      "unresolvedQuestions": []
+      "unresolvedQuestions": [],
+      "scopedQuestions": [
+        {
+          "controlRef": "EURSPKCC newly inventoried native-register operators",
+          "subject": "authority-semantics",
+          "question": "Complete the exact current Etherlink native operator and Solana mint/config/admin/upgrade census, including mutable targets, bypasses, liability reach and independent key-custody mapping. Exact share identities are verified; a generic shared issuer architecture and explorer authority label do not certify complete control reach.",
+          "reviewedAt": "2026-10-20",
+          "reviewer": "FD41 bottom-up refinement 2026-10-21",
+          "sources": [
+            {
+              "label": "Exact issuer EURSPKCC share registers",
+              "url": "https://public-api.spiko.io/share-classes/eurSPKCC"
+            },
+            {
+              "label": "Issuer immutable shared Solana minter inventory, not a complete current execution certificate",
+              "url": "https://raw.githubusercontent.com/spiko-tech/solana-contracts/afdab14fb1a59bf3abe2f263870023349a560e2e/deployments/minter-mainnet-beta.json"
+            }
+          ]
+        }
+      ]
     }
   }
 }

@@ -55,12 +55,20 @@
       {
         "label": "HyperEVM public RPC",
         "url": "https://rpc.hyperliquid.xyz/evm"
+      },
+      {
+        "label": "Hyperbeat governing terms (March 1, 2026; liquidity delays reviewed 2026-10-20)",
+        "url": "https://hyperbeat.org/terms"
+      },
+      {
+        "label": "Hyperbeat exact-vault first-layer allocations API (retrieved 2026-10-20; no liability denominator)",
+        "url": "https://api.hyperbeat.org/api/v1/vault-allocations"
       }
     ],
     "rationale": "Current issuer documentation identifies tracked hbUSDT 0x5e105266db42f78fa814322bce7f388b4c2e61eb as its automated USDT strategy vault and describes instant and two-day classic exits. The previously pinned deposit-token review at HyperEVM block 40439370 identified USDT0, not direct USDT; USDT0's current deployment registry confirms HyperEVM token 0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb. A fresh asset() probe on the depositor 0x6261f30144b259c74243d5f5d9230941186ac936 reverted at block 47265526 and does not supersede that deposit-token identity. The reserve row expresses the retained whole strategy-vault claim under D3, with an unverified USDT0 intermediary annotation; it does not quantify idle USDT0 or any constituent allocation. Canonical escrow coverage and current venue/position weights remain unreconciled.",
     "compositionBasis": "Issuer exact vault/exit documentation and USDT0 deployment registry accessed 2026-09-30, with historical deposit-token identity at HyperEVM block 40439370",
     "scope": "dependency-relationships",
-    "knownUnknownExposure": "Current strategy venues, position weights, look-through assets, custody-provider shares and USDT0 canonical escrow coverage remain unreconciled. The parent link describes settlement lineage only.",
+    "knownUnknownExposure": "Whole-book strategy weights, look-through assets, custody-provider shares and USDT0 canonical escrow coverage remain unreconciled. New first-layer issuer API research on 2026-10-20 identifies exact hbUSDT holdings valued at USD 1,452,572.43 in masterUSD, USD 148,802.37 through an hbUSDT-HL Hyperlend value proxy and USD 10 USDT0, totaling USD 1,601,384.80. Its last_scan value has no timezone and it supplies no hbUSDT supply, pending-claim or liability denominator; these are diagnostic issuer portfolio observations, not a current full-composition or financial reconciliation claim. No API percentages replace authored reserve weights, and the September relationship/composition clocks remain unchanged. The parent link describes settlement lineage only.",
     "knownUnknownExposurePct": 0,
     "compositionAsOf": "2026-09-30"
   },

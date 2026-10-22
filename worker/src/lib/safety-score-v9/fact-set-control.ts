@@ -67,16 +67,14 @@ export function buildControls(context: AssetBuildContext): {
   // Each authority's own certificate is checked; a friendly sibling's proof
   // cannot close an unreviewed contributor on the same deployment.
   const reviewedControls = review.controls.map((control) => {
-    const custodyQuestion = control.scopedQuestionFresh === true && control.scopedQuestionSubject === "key-custody-independence";
     if (!control.executionScope && !control.executionScopeContributors && !control.authority?.weightedQuorum) {
-      return custodyQuestion ? { ...control, keyCustody: "unknown" as const } : control;
+      return control;
     }
     const projections = control.executionScopeContributors
       ? control.executionScopeContributors.map((entry) => compileReviewedControlScope(entry.scope, entry.authorityKey, context.asset.assetId, context.fixedInput.clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC))
       : [compileReviewedControlScope(control.executionScope, control.authority?.authorityKey ?? "", context.asset.assetId, context.fixedInput.clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC)];
     return {
       ...control,
-      ...(custodyQuestion ? { keyCustody: "unknown" as const } : {}),
       ...(control.executionScope || control.executionScopeContributors ? {
         executionScopeComplete: control.executionScopeComplete !== false && projections.every((projection) => projection.complete),
         moduleImpact: projections.some((projection) => projection.moduleImpact === "relevant") ? "relevant" as const
@@ -147,7 +145,9 @@ export function buildControls(context: AssetBuildContext): {
         factorStatuses[factorKey] = missingLocalFact(context, {
           componentKey: `control:${control.controlKey}:${factorKey}`, reasonCode: "unresolved-control-identity",
           ownerDomain: "control", responsibility: "unresearched", policyRuleId: "v9.control.review",
-          message: `The ${factorKey} datum for independently identified control ${control.controlKey} remains unresolved.`,
+          message: factorKey === "keyCustody" && control.scopedQuestionFresh === true && control.scopedQuestionSubject === "key-custody-independence"
+            ? `Human independence or approval policy for independently identified control ${control.controlKey} remains unresolved; its admitted technical key-custody fact is retained.`
+            : `The ${factorKey} datum for independently identified control ${control.controlKey} remains unresolved.`,
           evidenceRefIds: evidenceIds,
           causeScope: { pillar: "control", componentKey: `control:${control.controlKey}`, factorKey,
             routeKey: null, exposureId: control.scope === "deployment" ? control.deploymentKey : null, requiredDatum: factorKey },
@@ -306,6 +306,16 @@ function compileEconomicFactorStatuses(
   if (review.oracle.status.applicability.state !== "not-applicable" &&
       (review.oracle.tier === null || review.oracle.tier === "opaque-or-unknown")) {
     review.oracle.factorStatuses = { tier: missingFactor("economic-control:oracle", "tier") };
+  }
+  if (review.oracle.pricingKind === "savings-rate" &&
+      !((context.asset.controlReview?.state === "reviewed-controls" ||
+          context.asset.controlReview?.state === "partially-reviewed-controls") &&
+        context.asset.controlReview.controls.some((control) => control.controlKind !== "bridge" &&
+          (control.claimImpairment !== "none" || control.economicLossScope !== "access-only")))) {
+    review.oracle.factorStatuses = {
+      ...review.oracle.factorStatuses,
+      authority: missingFactor("economic-control:oracle", "authority"),
+    };
   }
   if (review.bridge.status.applicability.state !== "not-applicable" && review.bridge.routes.length === 0) {
     review.bridge.factorStatuses = { tier: missingFactor("economic-control:bridge", "tier") };

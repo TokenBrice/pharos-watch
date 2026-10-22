@@ -17,6 +17,9 @@ const RESOLVABLE_SOURCE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".js", ".js
 const TEST_FILE_PATTERN = /\.(?:test|spec)\.[cm]?[jt]sx?$/;
 
 export const ISOLATED_NODE_TESTS = [
+  // The route's cached import must not retain this suite's evidence-free
+  // recomputer mock when canonical snapshot integration tests run afterward.
+  "functions/__tests__/selector-snapshot.test.ts",
   "scripts/__tests__/remote-d1.test.ts",
   // Its vi.mock of collectChangedFiles only applies when this file loads the
   // runner first; under isolate:false a sibling suite that already imported

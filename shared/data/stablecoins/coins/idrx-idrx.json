@@ -74,6 +74,16 @@
       "chain": "solana",
       "address": "idrxZcP8xiKkYk6XGD4uz1dxEYCWSgKDHqgjsBbwDur",
       "decimals": 2
+    },
+    {
+      "chain": "lisk",
+      "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+      "decimals": 2
+    },
+    {
+      "chain": "celo",
+      "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+      "decimals": 2
     }
   ],
   "custodyModel": "institutional-unregulated",

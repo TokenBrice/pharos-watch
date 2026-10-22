@@ -152,8 +152,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "FD15 bottom-up refinement 2026-10-21",
     "confidence": "probable",
     "sources": [
       {
@@ -163,9 +163,17 @@
       {
         "label": "GAIB AID product documentation",
         "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid"
+      },
+      {
+        "label": "GAIB current Terms of Use, entity roles and no fiduciary duties (retrieved 2026-10-20)",
+        "url": "https://docs.gaib.ai/legal/terms-of-use.md"
+      },
+      {
+        "label": "McMillan Woods Spiceflow asset-deployment report, 30 September 2026, pages 1-3 (rendered preview retrieved 2026-10-20)",
+        "url": "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/preview"
       }
     ],
-    "uncertainty": "GAIB documents the on-chain Minter and Redeemer contracts that accept USDC/USDT, but what happens to proceeds after minting, conversion into Treasuries, custodian identities, account segregation, insolvency protections, and reuse terms, is off-chain and undocumented. The June 2026 Spiceflow assurance report covers GPU-financing asset deployment, not AID reserve custody, and no AID reserve attestation is publicly retrievable.",
+    "uncertainty": "Re-opened 2026-10-20 against the AID product page, exact contract registry, current platform Terms and the linked three-page McMillan Woods report. The on-chain minter/redeemer identities are published, but no complete AID-only Treasury/stablecoin allocation, off-chain reserve custodian set, provider shares, account segregation, insolvency protection, anti-rehypothecation covenant or successor-custody mechanics is established. The report provides limited assurance on Spiceflow deployed GPU-financing assets as of 2026-09-30, not on AID reserve custody or AID liabilities. The Terms separate Good AI technology provision from Spice AI strategy control and expressly deny fiduciary duties; they do not establish regulated whole-book custody. The unsupported institutional-regulated custodyModel is withdrawn to unknown. All legal safeguards remain unknown and whole-book unknown custody exposure remains 100%.",
     "knownUnknownExposurePct": 100
   }
 }

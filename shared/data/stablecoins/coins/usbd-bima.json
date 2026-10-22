@@ -97,8 +97,12 @@
             "address": "0x59063fbe70d3b0f9312e5c89acdc476f5d2018e1",
             "decimals": 18
           },
-          "risk": "medium",
-          "priceUsd": 1
+          "priceToken": {
+            "chain": "ethereum",
+            "address": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
+          },
+          "underlyingPrice1to1": true,
+          "risk": "medium"
         },
         {
           "name": "tacBTC BIMA collateral wrapper",
@@ -108,8 +112,12 @@
             "address": "0xdc0ccad18ca645a03870676c78a81524b4655197",
             "decimals": 18
           },
-          "risk": "medium",
-          "priceUsd": 1
+          "priceToken": {
+            "chain": "ethereum",
+            "address": "0x6bf340db729d82af1f6443a0ea0d79647b1c3ddf"
+          },
+          "underlyingPrice1to1": true,
+          "risk": "medium"
         },
         {
           "name": "strBTC BIMA collateral wrapper",
@@ -119,8 +127,12 @@
             "address": "0x856db20b0c326afee3bf64770f7d8d39bf232ce0",
             "decimals": 18
           },
-          "risk": "medium",
-          "priceUsd": 1
+          "priceToken": {
+            "chain": "ethereum",
+            "address": "0xb2723d5df98689eca6a4e7321121662ddb9b3017"
+          },
+          "underlyingPrice1to1": true,
+          "risk": "medium"
         }
       ]
     }

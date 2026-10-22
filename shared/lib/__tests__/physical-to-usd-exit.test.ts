@@ -20,7 +20,7 @@ function terms(): PhysicalToUsdRoute {
 }
 function score(physical: PhysicalToUsdTrace) {
   const route = makeExitRoute({ physicalToUsd: physical, outputQuality: "stable-single",
-    routeScoreCap: "offchain-issuer", outputValueRetention: 1,
+    outputValueRetention: 1,
     modelConfidence: physical.modelConfidence,
     capacityCurve: [{ requestedNotionalUsd: 1_000_000, maxCostBps: 500,
       executableUsd: physical.rejectionReason === null ? physical.grossUsd! : 0,
@@ -69,7 +69,7 @@ describe("physical-to-USD exit", () => {
     config.fees.issuerFeeBps = 150;
     expect(score(evaluatePhysicalToUsdExit(config, reference, 1_000_000, clock)).routes[0]).toMatchObject({ included: true, components: { cost: 0 } });
   });
-  it("removes only physical KYC's institutional discount and keeps modelled coverage weaker than exact observation", () => {
+  it("charges institutional access once for both physical and ordinary KYC routes", () => {
     const ordinary = projectV9ExitEvaluationRoute(makeNormalizedExitRoute({ holderAccess: "institutional-eligible", modelConfidence: "medium" }));
     const physical = projectV9ExitEvaluationRoute(makeNormalizedExitRoute({ holderAccess: "verified-customer-neutral", modelConfidence: "medium", coverageClass: "modelled-terms-lower-bound" }));
     const evaluate = (route: typeof physical) => evaluateV9Exit({ circulatingUsd: 10_000_000, routes: [route] }, V9_CANDIDATE_POLICY_V1).routes[0]!;
@@ -77,7 +77,9 @@ describe("physical-to-USD exit", () => {
     const gated = evaluate(ordinary);
     expect(neutral.included).toBe(true);
     expect(neutral.confidenceFactor).toBe(gated.confidenceFactor);
-    expect(gated.score).toBeCloseTo(neutral.score! * 0.9, 1);
+    expect(gated.components?.access).toBe(55);
+    expect(neutral.components?.access).toBe(gated.components?.access);
+    expect(gated.score).toBe(neutral.score);
     expect(evaluate({ ...physical, coverageClass: "exact-complete" }).score).toBeGreaterThanOrEqual(neutral.score!);
     expect(evaluate({ ...physical, coverageClass: "diagnostic" })).toMatchObject({ included: false, score: null });
   });

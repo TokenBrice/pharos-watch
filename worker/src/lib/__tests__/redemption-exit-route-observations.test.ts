@@ -74,6 +74,43 @@ function build(overrides: Partial<Parameters<typeof buildRedemptionExitRouteObse
   });
 }
 
+describe("explicitly undisclosed redemption output", () => {
+  it.each(["mixed-collateral", "bluechip-collateral", "stable-single", "stable-basket", "nav"] as const)(
+    "does not infer a %s payout without an established identity", (outputAssetType) => {
+      const reviewed: RedemptionBackstopConfig = {
+        ...config, outputAssetType, unresolvedOutputDisposition: "issuer-undisclosed",
+      };
+      const observation = build({ config: reviewed })!;
+      expect(observation.output).toEqual({ kind: "unresolved-asset" });
+      expect(observation).not.toHaveProperty("outputUnitValueUsd");
+      expect(observation.output).not.toHaveProperty("currency");
+    },
+  );
+
+  it("threads non-disclosure through the documented supply-model derivation", () => {
+    const reviewed: RedemptionBackstopConfig = {
+      ...config, outputAssetType: "mixed-collateral", unresolvedOutputDisposition: "issuer-undisclosed",
+    };
+    const row = makeSupplyFullRedemption({ outputAssetType: "mixed-collateral" });
+    const observation = deriveSupplyModelExitRouteObservation(
+      row, Date.UTC(2026, 6, 13) / 1_000, undefined, reviewed,
+    );
+    expect(observation?.output).toEqual({ kind: "unresolved-asset" });
+    expect(observation).not.toHaveProperty("outputUnitValueUsd");
+  });
+
+  it("preserves the enumerated unresolved candidate identities without valuing them", () => {
+    const observation = build({ config: {
+      ...config, outputAssetType: "stable-basket", unresolvedOutputDisposition: "issuer-undisclosed",
+      unresolvedOutputAssetKeys: ["asset:issuer-selected-a", "asset:issuer-selected-b"],
+    } })!;
+    expect(observation.output).toEqual({
+      kind: "unresolved-asset", assetKeys: ["asset:issuer-selected-a", "asset:issuer-selected-b"],
+    });
+    expect(observation).not.toHaveProperty("outputUnitValueUsd");
+  });
+});
+
 describe("fresh exact single-output valuation", () => {
   it.each(["fresh", "stale", "future", "wrong-identity"] as const)(
     "admits only an exact current single-output price (%s)", (state) => {

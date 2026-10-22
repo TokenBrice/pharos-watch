@@ -129,6 +129,22 @@
       {
         "label": "Mento TroveManager source",
         "url": "https://github.com/mento-protocol/bold/blob/858ef07a497d748cdf65c602a56b4de901d4080e/contracts/src/TroveManager.sol"
+      },
+      {
+        "label": "Celo block 80633000, 2026-10-20T22:02:38Z",
+        "url": "https://celo.blockscout.com/block/80633000"
+      },
+      {
+        "label": "Current Mento oracle source and market-hours restrictions",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm/oracles-and-circuit-breakers"
+      },
+      {
+        "label": "Exact CHFm TroveManager verified source, runtime matched at block 80633000",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x4e105fef015db26320c077427bd605acead9262e"
+      },
+      {
+        "label": "Exact CHFm FXPriceFeed implementation, runtime matched at block 80633000",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x600d6c1cd754d782a403a5862571b0be75eb7ad7"
       }
     ],
     "branches": [
@@ -171,8 +187,8 @@
             "note": "The live SystemParams proxy returned MCR 110%, CCR 135%, SCR 110%, and BCR 10%; TroveManager shutdownTime was zero at finalized Celo block 72135701."
           }
         ],
-        "liquidationMechanism": "Any caller can submit Trove IDs to public batchLiquidateTroves; each active or zombie Trove with ICR below the 110% MCR is liquidated immediately, except that the implementation prevents liquidating the branch's final Trove. The Stability Pool offsets available debt and receives USDm collateral, while uncovered debt and collateral are redistributed to active Troves.",
-        "liquidationDelaySec": 0,
+        "liquidationMechanism": "At Celo block 80633000, getTroveIdsCount() returned 1. The runtime-matched TroveManager calls _closeTrove(..., Status.closedByLiquidation), which unconditionally requires more than one Trove for liquidations and reverts OnlyOneTroveLeft for this state, including after shutdown. Ordinary liquidation of the sole current Trove is therefore uncallable. Stability Pool balances do not bypass this guard.",
+        "liquidationState": "uncallable",
         "backstop": "Stability Pool 0xc415cA43aB6Ab246E64559696b8DCAcdd08A39e8 is the first backstop. It held 5,000 CHFm at finalized block 72135701; liquidation logic leaves the configured 1 CHFm minimum untouched. Debt beyond available offsets is redistributed with collateral across active Troves through DefaultPool; the branch graph and pinned implementation expose no separate insurance or reserve absorber.",
         "shutdownOrBadDebtBehavior": "Residual liquidation debt beyond the Stability Pool is assigned pro rata to active Troves, and the last Trove cannot be liquidated. If branch TCR falls below the 110% SCR, anyone can shut the branch down; the authorized watchdog can also permanently shut it after oracle failure. Shutdown stops new borrowing and interest accrual and enables urgent redemption at the last valid price, burning CHFm for USDm even against the final Trove.",
         "failureDomainKeys": [
@@ -207,6 +223,52 @@
           {
             "label": "Celo Forno RPC",
             "url": "https://forno.celo.org"
+          }
+        ]
+      }
+    ],
+    "branchKindReviews": [
+      {
+        "kind": "feed",
+        "branchIds": ["mento-chfm-usdm"],
+        "reviewedAt": "2026-10-20",
+        "reviewer": "FD32 bottom-up refinement 2026-10-21",
+        "confidence": "verified",
+        "rationale": "Pinned Celo block 80633000 (hash 0x6254260b5e4040172e1f1dde1e5f4d8eb9b2b9115e3f69fd2d314df5d04d613f; 2026-10-20T22:02:38Z) binds CHFm FXPriceFeed 0x8a94073809e9ae55626c2fd413826bf93f755a73 to rateFeedID 0x0f61ba9c30ef7caee7e5cc1f96bffcb0f52ccd64 and OracleAdapter 0xa472fbbf4b890a54381977ac392bdf82eec4383a, whose SortedOracles is 0xefb84935239dacdecf7c5ba76d8de40b077b7b33. getOracles(feed) returned the singleton 0x1b904277b22ca598ef17b38f64de5f9c29cd31bd. The feed implementation runtime matches verified source: normal reads use this path; lastValidPrice is available after permanent shutdown, not independent live failover. Only this feed kind is refreshed; sibling historical observations retain their dates.",
+        "sources": [
+          {
+            "label": "Pinned Celo block",
+            "url": "https://celo.blockscout.com/block/80633000"
+          },
+          {
+            "label": "Mento current oracle source disclosure",
+            "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm/oracles-and-circuit-breakers"
+          },
+          {
+            "label": "Runtime-matched CHFm FXPriceFeed implementation",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x600d6c1cd754d782a403a5862571b0be75eb7ad7"
+          }
+        ]
+      },
+      {
+        "kind": "liquidation",
+        "branchIds": ["mento-chfm-usdm"],
+        "reviewedAt": "2026-10-20",
+        "reviewer": "FD32 bottom-up refinement 2026-10-21",
+        "confidence": "verified",
+        "rationale": "At Celo block 80633000, CollateralRegistry 0x8530ee22a4adc37b02d1cd37fc120508663fedf8 identifies one USDm collateral and TroveManager 0x4e105fef015db26320c077427bd605acead9262e for CHFm. The manager's getTroveIdsCount() returned 1 and shutdownTime() returned 0. Its deployed runtime exactly matches verified source: _closeTrove requires more than one Trove whenever closedStatus is closedByLiquidation, regardless of shutdown. This is measured current uncallability, not a missing delay or an inferred zero-second path. Re-review on a Trove census or implementation change; no other branch kind is renewed.",
+        "sources": [
+          {
+            "label": "Pinned Celo block",
+            "url": "https://celo.blockscout.com/block/80633000"
+          },
+          {
+            "label": "Runtime-matched CHFm TroveManager and final-Trove guard",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x4e105fef015db26320c077427bd605acead9262e"
+          },
+          {
+            "label": "Runtime-matched CHFm CollateralRegistry",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8530ee22a4adc37b02d1cd37fc120508663fedf8"
           }
         ]
       }

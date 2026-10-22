@@ -3,7 +3,6 @@ import type {
   SafetyScoreV9ControlBreakdown,
   SafetyScoreV9CurrentCard,
   SafetyScoreV9ExitBreakdown,
-  SafetyScoreV9PillarAdjustment,
 } from "@shared/types";
 import { formatV9PresentationUsd as compactUsd } from "@shared/lib/format";
 import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
@@ -174,22 +173,6 @@ function costLabel(cost: number | null): string {
 }
 
 
-function adjustmentContext(
-  adjustments: readonly SafetyScoreV9PillarAdjustment[],
-): StablecoinSafetyScoreV9BreakdownMeta[] {
-  return adjustments.map((adjustment, index) => {
-    const label = adjustment.kind === "operational-resilience-credit"
-      ? "Resilience credit"
-      : adjustment.kind === "unresolved-deployment-share"
-        ? "Unresolved deployment share"
-        : "Dependency limit";
-    return {
-      key: `${adjustment.kind}-${index}`,
-      label,
-      value: `${adjustment.delta > 0 ? "+" : ""}${adjustment.delta.toFixed(1)} to ${adjustment.scoreAfter.toFixed(1)}`,
-    };
-  });
-}
 
 function parseBackingBreakdown(
   breakdown: SafetyScoreV9BackingBreakdown,
@@ -201,7 +184,7 @@ function parseBackingBreakdown(
     sectionLabel: "Backing components",
     // The group scores and weights now head their own sections, so repeating
     // them as context rows would say the same thing twice.
-    context: adjustmentContext(breakdown.adjustments),
+    context: [],
     exitHighlight: null,
     groups: backingGroups(breakdown),
     alternatives: [],
@@ -403,13 +386,6 @@ function parseExitBreakdown(
     context.push({ key: "capacity-method", label: "Capacity evidence tier", value: humanizeSafetyScoreV9Value(primaryRoute.capacityEvidenceTier) });
     context.push({ key: "raw-cost", label: "Raw same-notional cost", value: costLabel(primaryRoute.rawSameNotionalCostBps) });
   }
-  if (primaryRoute !== null && Math.abs(primaryRoute.eligibilityMultiplier - 1) >= 0.005) {
-    context.push({
-      key: "eligibility",
-      label: "Eligibility",
-      value: `${multiplierLabel(primaryRoute.eligibilityMultiplier)}x`,
-    });
-  }
   if (breakdown.stressRequest !== null) {
     context.push({
       key: "stress-request",
@@ -456,7 +432,6 @@ function parseExitBreakdown(
       value: humanizeSafetyScoreV9Value(cap),
     });
   }
-  context.push(...adjustmentContext(breakdown.adjustments));
 
   const redundancyCredit = breakdown.diversification?.bonus ?? 0;
   const exitHighlight: StablecoinSafetyScoreV9ExitHighlight | null = primaryRoute === null
@@ -578,7 +553,7 @@ function parseControlBreakdown(
       key: "method",
       label: "Pillar rule",
       value: "Lowest binding control",
-    }, ...adjustmentContext(breakdown.adjustments)],
+    }],
     exitHighlight: null,
     groups: [{ key: "control", label: null, score: null, weight: null, rows, tail: null }],
     alternatives: [],

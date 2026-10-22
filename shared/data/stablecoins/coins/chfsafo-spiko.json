@@ -12,7 +12,7 @@
     "navToken": true
   },
   "collateral": "CHF accumulation share class FR0014015LG6 of Spiko Amundi Overnight Swap Fund. Physical securities are hedged through portfolio-wide total-return swaps, with a possible unswapped money-market UCITS sleeve. CACEIS Bank is depositary; counterparty default can expose underlying security and currency risks.",
-  "pegMechanism": "CHF-denominated accumulation NAV targeting SARON + 0.50% before class fees. KYC-gated dealing uses daily fund NAV and a 15:00 Paris cutoff; subscriptions ordinarily settle on D and redemptions on D+1, subject to the relevant currency market being open. Exceptional gates, suspension and swing pricing can limit or delay exit.",
+  "pegMechanism": "CHF-denominated NAV-accreting UCITS share class with KYC-gated subscriptions and redemptions at daily fund NAV through Spiko. Orders are centralized by 15:00 Paris time; ordinary redemption settles D+1, subject to the currency market being open. The management company may cap redemptions when net requests reach 25% of sub-fund net assets; the trigger is the same for all share classes, with at most 20 valuation days of capping over three months. Unexecuted orders carry over without priority; suspension and swing pricing can also limit or delay exit.",
   "mechanismArchetype": "ucits-trs-fund",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -55,7 +55,7 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://geco.amf-france.org/back-office/document/download/429960",
-    "provider": "Issuer-filed SPIKO SICAV semiannual financial disclosure covering SAFO, not a signed audit opinion. PricewaterhouseCoopers Audit is the named statutory auditor, and the CHF product page claims four audits annually, but no corresponding SAFO financial audit opinions or current CHF all-register liability reconciliation were retrieved. The 30 June report contains no CHF share-class row.",
+    "provider": "Issuer-filed Spiko SICAV semiannual financial disclosure covering the SAFO sub-fund and its share classes, not a signed audit opinion. PricewaterhouseCoopers Audit is the named statutory auditor; no SAFO-specific financial audit opinion or complete current all-share-class/native-register reconciliation was retrieved.",
     "attestorTier": "self",
     "cadence": "semi-annual",
     "attestorJurisdiction": "France",
@@ -160,7 +160,7 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "unknown",
+  "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "launchDate": "2026-03-03",
   "yieldConfig": {

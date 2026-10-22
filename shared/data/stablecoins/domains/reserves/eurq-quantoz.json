@@ -4,7 +4,7 @@
     {
       "sourceKey": "quantoz-transparency:government-bonds",
       "name": "Government bonds (Netherlands and Germany)",
-      "pct": 66,
+      "pct": 65,
       "risk": "very-low",
       "assetClass": "government-security",
       "issuerOrObligor": "Sovereign issuers of the Netherlands and Germany",
@@ -18,7 +18,7 @@
     {
       "sourceKey": "quantoz-transparency:cash",
       "name": "Cash deposits at Tier 1 European banks",
-      "pct": 33,
+      "pct": 35,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "riskFactors": [
@@ -27,22 +27,15 @@
         "concentration"
       ],
       "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "Unclassified residual in published reserve percentages",
-      "pct": 1,
-      "risk": "high",
-      "assetClass": "other",
-      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol decision wave 2026-10-02 (DwEurq)",
+    "reviewedAt": "2026-10-21",
+    "reviewer": "NR-EURQ review 2026-10-21 of the Quantoz snapshot dated 2026-10-14",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Quantoz transparency: published snapshot 30 August 2026",
+        "label": "Quantoz transparency: published snapshot 14 October 2026",
         "url": "https://www.quantoz.com/transparency"
       },
       {
@@ -50,21 +43,12 @@
         "url": "https://www.quantoz.com/documents/eurq-wp-1.4-30-4-2026.pdf"
       }
     ],
-    "rationale": "Quantoz's snapshot published 30 August 2026 reports EURQ at 33% cash and 66% government bonds, with a 100.76% reserve ratio. The disclosed allocation totals 99%; the remaining 1% is retained as unclassified exposure, without renormalising the named categories or assuming rounding explains the discrepancy. The reserve policy identifies euro government bonds as Dutch and German. No newer dated reserve snapshot or public reserve attestation was found in the issuer's transparency page or supporting-document listings on 2 October 2026.",
-    "compositionBasis": "Quantoz EURQ published reserve snapshot dated 30 August 2026; no separate underlying balance date is disclosed",
-    "compositionAsOf": "2026-08-30",
+    "rationale": "Re-reviewed 2026-10-21 against Quantoz's transparency page, which now publishes a snapshot dated 14 October 2026 (time datetime 2026-10-14) reporting EURQ tokens in circulation of EUR 4,289,619, a 100.47% reserve ratio and a whole-number composition of 35% cash and 65% government bonds. The two published categories now total 100%, so the previous snapshot's unexplained percentage point is closed by the issuer's own figures rather than renormalised or inferred. The 30 August 2026 snapshot (33% cash, 66% bonds, 100.76%) is superseded as the current composition and is not carried forward. The reserve policy still identifies euro government bonds as Dutch and German; bank identities, bond security identifiers, country weights, maturities and independent assurance remain undisclosed.",
+    "compositionBasis": "Quantoz transparency published reserve snapshot dated 14 October 2026 (EURQ cash 35%, government bonds 65%); no separate underlying balance date is disclosed",
+    "compositionAsOf": "2026-10-14",
     "scope": "full-composition",
-    "knownUnknownExposure": "The published percentages leave 1% unclassified. Quantoz does not explain that residual or identify individual banking partners, bond security identifiers, country weights, or a maximum maturity. Liquidity horizon remains unknown for the government-bond bucket. The reported reserve ratio is issuer self-reporting, not independent assurance or a complete liability reconciliation.",
-    "knownUnknownExposurePct": 1,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 2,
-        "reserveName": "Unclassified residual in published reserve percentages",
-        "pct": 1,
-        "disposition": "insufficient-evidence",
-        "rationale": "Cash at 33% and government bonds at 66% total 99%. The source neither classifies the missing percentage point nor confirms a rounding adjustment; no favorable class or dependency is assigned to it."
-      }
-    ]
+    "knownUnknownExposure": "The published percentages are complete at 100%, but Quantoz does not identify individual banking partners, bond security identifiers, country weights or a maximum maturity, and the government-bond liquidity horizon remains unknown. The 100.47% reserve ratio and the token circulation figure are issuer self-reporting, not independent assurance or a complete reserve-to-liability reconciliation.",
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [

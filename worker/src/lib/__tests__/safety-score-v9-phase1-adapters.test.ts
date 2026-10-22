@@ -17,16 +17,6 @@ import {
 import { deriveSafetyScoreV9PegScore } from "../safety-score-v9/fact-set";
 import { hasPublishedReserveReconciliationEvidence } from "../safety-score-v9/extension";
 import { resolveV9MintControlGroupSeverity } from "@shared/lib/safety-score-v9/evaluate-set";
-import {
-  canonicalV9DependencyEdgeKey,
-  compileNativeV3FactSet,
-  coreFixture,
-  evaluateV9FactSet,
-  knownStatus,
-  SOURCE_FINGERPRINTS,
-  V9_CANDIDATE_POLICY_V1,
-  type V9AssetFactsV2,
-} from "@shared/lib/__tests__/safety-score-v9-facts.fixture-support";
 import { addReviewedStaticReserveEvidence, resolveReviewedReserveAdmission } from "../safety-score-v9/extension-reserves";
 import {
   conservativeDateEndSec,
@@ -214,43 +204,21 @@ describe("Phase 1 D2 issuer identity adapter", () => {
         [xsgdComplianceSource.genius.issuerEntity, xusdComplianceSource.genius.issuerEntity, "low"],
         [xsgdComplianceSource.genius.issuerEntity, "StraitsX Payment Services Pte. Ltd.", "high"],
       ] as const) {
-        const input = coreFixture();
         const byId = new Map<string, V9ExtensionRegistryMeta>([
           ["beta", mintMeta("beta", { genius: { issuerEntity: betaIssuer } as V9ExtensionRegistryMeta["genius"] })],
           ["gamma", mintMeta("gamma", { genius: { issuerEntity: gammaIssuer } as V9ExtensionRegistryMeta["genius"] })],
         ]);
-        for (const row of input.assets.slice(1)) {
-          const asset = row as unknown as V9AssetFactsV2;
-          asset.assetIssuerKey = resolveSafetyScoreV9AssetIssuerKey(asset.assetId, byId);
-          asset.dependencies = {
-            status: knownStatus(),
-            sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
-            source: "manual",
-            baseSource: "manual",
-            dependencyFromLive: false,
-            mappedLiveReserveWeight: null,
-            fallbackReason: null,
-            edges: [{
-              edgeKey: canonicalV9DependencyEdgeKey("mechanism", "alpha"),
-              upstreamAssetId: "alpha",
-              dependencyType: "mechanism",
-              pathKind: "serial-dependency",
-              weight: 1,
-              economicRole: "serial-claim",
-              evidenceRefIds: ["evidence:base"],
-              failureDomains: [{ kind, key: "shared:issuer-controller" }],
-            }],
-            diagnostics: { graphState: "valid", issueCodes: [], sccMemberAssetIds: [] },
-          };
-        }
-        const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
-        for (const assetId of ["beta", "gamma"]) {
-          const signal = evaluated.assets.find((asset) => asset.assetId === assetId)!
-            .scoreInput.dependencyStructuralSignals.find((candidate) =>
-              candidate.failureDomainKeys.includes(`${kind}:shared:issuer-controller`),
-            );
-          expect(signal).toMatchObject({ severity });
-        }
+        const members = ["beta", "gamma"].map(assetId => ({
+          assetId,
+          pathKey: `${kind}:shared:issuer-controller`,
+          assetIssuerKey: resolveSafetyScoreV9AssetIssuerKey(assetId, byId),
+        }));
+        // Identity classifies the shared-controller diagnostic. Serial children
+        // collapse to their root claim and must not manufacture another group.
+        expect(resolveV9MintControlGroupSeverity({
+          controllerIssuerKey: members[0]!.assetIssuerKey,
+          members,
+        })).toBe(severity);
       }
     },
   );

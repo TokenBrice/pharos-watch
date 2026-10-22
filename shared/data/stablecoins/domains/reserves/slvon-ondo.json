@@ -45,13 +45,21 @@
       {
         "label": "Ankura October 6, 2026 daily report, 8pm ET; archive member 2026/10 October/Daily Report - Ondo Stocks - 2026-10-06_20_00_ET - Ankura Attestation.pdf; aggregate reference recovered October 9 by W2L04Ondo and reviewed by W2L07Ondo, not SLVon composition",
         "url": "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&dl=1"
+      },
+      {
+        "label": "Ankura October 16, 2026 daily report, 8pm ET; pooled program report, retrieved 2026-10-20; SHA-256 970202ff05bd98789815dbf3547703adaac7724407db3928e6c91898b6cf87fd",
+        "url": "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&dl=1"
+      },
+      {
+        "label": "Ankura September 1-30, 2026 monthly reconciliation; pooled program report, retrieved 2026-10-20; SHA-256 b73f1a4b41b37112a44a4bddd783998e32c1d54a9700dc1a86279eea50637365",
+        "url": "https://www.dropbox.com/scl/fo/7rlmba8f49nvbp3xwz1of/ABv0vSjd6cIDAUTIlwm2KwA?rlkey=hokf0tffqvezfmsto25cvpovs&dl=1"
       }
     ],
     "rationale": "Re-opened 2026-08-29: Ondo's current Global Markets trust-and-transparency documentation states that tokenized stocks and ETFs are fully backed by the underlying security plus cash in transit, with daily holdings verification by Ankura Trust and custody at one or more US-registered broker-dealers. SLVon is the tokenized iShares Silver Trust (SLV) exposure. The reviewed Ondo API documentation says current price feeds are display-only and that an official oracle is still in development; no Chainlink or Chronicle NAV configuration is present for SLVon in the Pharos registry, and no current dated SLVon holdings report was retrieved from the public product page. The reserve remains one fund-share envelope because SLV shares versus cash-in-transit weights are undisclosed.",
     "compositionBasis": "Ondo SLVon product, trust and transparency, and oracle guidance",
     "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The October 2 reserve search reviewed September 29 daily and August monthly consolidated Ondo Stocks reports without SLVon-specific shares, cash, other collateral or custodial provider weights. Wave 2 recovered the October 6, 2026 8pm ET Ankura daily report from the official archive. It verifies aggregate assets $1,676,475,682.48 against obligations $1,575,625,529.70 (106.40%), including pooled securities, cash, other Ondo Stocks, USDY and USDon. It still provides no SLVon-specific allocation or liability denominator; neither its aggregate ratio nor the underlying SLV ETF's physical-silver holdings can be attributed to the SLVon wrapper. Final Terms identify the intended security and permit other collateral without dated weights. The aggregate reserve basket remains 100% unresolved; original composition, review and custody clocks are not refreshed by this aggregate reference.",
+    "knownUnknownExposure": "Re-searched the issuer product page, exact SLVon info API, Final Terms, trust-and-transparency page and both issuer-linked report archives on 2026-10-20. The latest retrieved daily member is October 16, 2026 at 8pm ET: pooled program assets $1,726,170,597.75 and liabilities $1,614,699,308.79 (106.90%). The newly retrieved September 1-30 monthly report has pooled assets $1,604,493,838.75 and liabilities $1,507,053,135.40 (106.47%). Both include Ondo Stocks, USDY, USDon, securities, cash and stablecoins without SLVon-specific assets, liabilities or custody weights. SLV-share/cash/Other Collateral allocations remain undisclosed. The API's Physical Silver 100% is the underlying ETF inventory, not wrapper reserves. Final Terms allow substitutable Other Collateral and conditional lending. Named Alpaca/BitGo roles do not establish a whole-book regulated custody tier; custodyModel is corrected to unknown. Original composition, reserve-review and custody clocks are retained; neither pooled ratio is assigned to SLVon.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -83,7 +91,7 @@
     ],
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
-    "rehypothecation": "unknown",
+    "rehypothecation": "conditional",
     "reviewedAt": "2026-07-21",
     "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli); OpenAI Codex NR-recovery review",
     "confidence": "verified",

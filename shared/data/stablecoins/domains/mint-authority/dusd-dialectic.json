@@ -8,7 +8,7 @@
     "inheritedFrom": "usdc-circle",
     "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
-    "supervision": "none",
+    "supervision": "unknown",
     "upgradeability": {
       "model": "beacon",
       "deploymentRefs": [
@@ -289,8 +289,22 @@
     ],
     "review": {
       "sources": [
-        {"label": "Verified current local mint implementation/source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6a759cae19aa25b41237089eb0bbbc4473bfb996"},
-        {"label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2", "url": "https://etherscan.io/block/26113624"},
+        {
+          "label": "Makina on-demand AUM accounting; retrieved 2026-10-20",
+          "url": "https://docs.makina.finance/concepts/architecture/machine/share-price"
+        },
+        {
+          "label": "Dialectic Meccanico Machine Terms v1.2, last revised 2026-07-31; retrieved 2026-10-20",
+          "url": "https://makina.finance/MeccanicoToS.pdf"
+        },
+        {
+          "label": "Verified current local mint implementation/source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6a759cae19aa25b41237089eb0bbbc4473bfb996"
+        },
+        {
+          "label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2",
+          "url": "https://etherscan.io/block/26113624"
+        },
         {
           "label": "Makina fees",
           "url": "https://docs.makina.finance/concepts/architecture/machine/fees"
@@ -348,7 +362,7 @@
           "url": "https://etherscan.io/block/25712315"
         }
       ],
-      "evidence": "D14/A7/A10 review 2026-10-03, pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). Machine.deposit transfers USDC, but MachineUtils.manageFees separately mints fee shares without new AUM. The restricted setFeeManager chooses their distributor, and Risk Manager Timelock setters accept unconstrained uint256 maxFixedFeeAccrualRate/maxPerfFeeAccrualRate. The shareLimit is not applied to fee minting. The deposit-cap raise alone is collateral-only, but replaceable fee calculation/distribution plus raiseable fee maxima make wrapper-local dilution economically unbounded; no bytecode upgrade is needed.",
+      "evidence": "D14/A7/A10 review 2026-10-03, pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). Machine.deposit transfers USDC, but MachineUtils.manageFees separately mints fee shares without new AUM. The restricted setFeeManager chooses their distributor, and Risk Manager Timelock setters accept unconstrained uint256 maxFixedFeeAccrualRate/maxPerfFeeAccrualRate. The shareLimit is not applied to fee minting. The deposit-cap raise alone is collateral-only, but replaceable fee calculation/distribution plus raiseable fee maxima make wrapper-local dilution economically unbounded; no bytecode upgrade is needed. On 2026-10-20, the current share-price documentation states that AUM is updated on demand, not every block, and accounting can be restricted to the Operator and designated agents.",
       "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
       "reviewedAt": "2026-10-03",
       "disposition": "scoreable"

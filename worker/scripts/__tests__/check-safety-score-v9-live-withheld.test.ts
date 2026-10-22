@@ -369,7 +369,6 @@ describe("buildLiveWithheldCounterfactualReport", () => {
         supplyAvailability: "unavailable",
         supplyUnavailableReason: "null-supply",
         fallbackTier: "none",
-        fallbackEvidenceCeiling: null,
         fallbackBindingCapKind: null,
       }),
     ]);

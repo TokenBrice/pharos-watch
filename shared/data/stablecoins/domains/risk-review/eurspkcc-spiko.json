@@ -41,8 +41,8 @@
     "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
-    "tier": "single-source-or-laggy",
-    "summary": "EURSPKCC publishes its euro-denominated fund NAV through a permissioned Spiko AggregatorV3-compatible oracle; the fund reports profit and loss daily, so this is a single administrative valuation path rather than a live liquidation feed.",
+    "tier": "standard-external",
+    "summary": "The issuer's current NAV directory identifies Ethereum RedStone feed 0x4b2c406f0dbf7624a32971277da7b4c43a7a942b for exact EURSPKCC. At block 26236727 (hash 0x1c50599154c5871ee9abf020d1ee94bc2cb1d544cc331f5bc2eceb20f3ab2adb, 2026-10-20T22:16:35Z), its implementation 0xa219348b7c00118fe143c484d79248bc74fdd3be exactly matches the verified EthereumMergedAdapterWithRoundsEurspkccNavV1 source. It authenticates three distinct signatures from five authorized RedStone signers for eurSPKCC_NAV; authorized relayers, including the manual updater, cannot bypass signature validation. Round 902 returns 1.002215 EUR at 2026-10-20T17:53:23Z with eight decimals. This establishes standard external NAV publication, not a live market-price liquidation feed, independent underlying fund valuation, immutable upgrades or robust failover. CACEIS fund accounting, daily NAV timing and legacy issuer-operated feeds remain distinct limitations.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
@@ -65,27 +65,39 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "FD41 bottom-up refinement 2026-10-21",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Spiko production deployment registry",
-        "url": "https://github.com/spiko-tech/contracts/blob/main/.cache-1.json"
+        "label": "Issuer NAV feed directory, exact EURSPKCC Ethereum RedStone endpoint, retrieved 2026-10-20",
+        "url": "https://docs.spiko.io/documentation/tokenization/nav"
       },
       {
-        "label": "Spiko oracle contract",
-        "url": "https://github.com/spiko-tech/contracts/blob/main/contracts/oracle/Oracle.sol"
+        "label": "Verified exact EURSPKCC RedStone proxy and implementation identity, retrieved 2026-10-20",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b2c406f0dbf7624a32971277da7b4c43a7a942b"
       },
       {
-        "label": "Spiko Cash & Carry product page",
-        "url": "https://www.spiko.io/spiko-cash-and-carry"
+        "label": "Verified EURSPKCC RedStone implementation and complete inherited three-of-five signature validation, runtime matched at block 26236727",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa219348b7c00118fe143c484d79248bc74fdd3be"
+      },
+      {
+        "label": "Pinned Ethereum block 26236727, 2026-10-20T22:16:35Z; feed ID, quorum, round, proxy slots and exact implementation runtime observed 2026-10-20T22:19:01Z",
+        "url": "https://etherscan.io/block/26236727"
+      },
+      {
+        "label": "Exact EURSPKCC legal/share-class identity FR0014010ON7, retrieved 2026-10-20",
+        "url": "https://public-api.spiko.io/share-classes/eurSPKCC"
+      },
+      {
+        "label": "Governing cash-and-carry prospectus dated 1 February 2026, CACEIS administration and daily NAV accounting",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_SPKCC_EN.pdf"
       }
     ]
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "EURSPKCC has six issuer-native deployments. Chainlink CCIP spans the four EVM native deployments with twelve current directed lanes, using BurnWithFromMintTokenPool 1.6.1 burn-and-mint: source pool-held EURSPKCC is burned and destination mint is admitted only after CCIP RMN, authorized OffRamp, configured source-pool, and inbound-rate-limiter validation, with per-lane rate limits and remote pool/token mappings. The pools are administered by the shared EOA 0xEd608cf38968C0ba09676843D90B33Dd59dd7375, which can update peers and rate-limit configuration; those controls are bridge-route risk, not canonical native Mint Authority. Starknet and Stellar are not CCIP routes.",
+    "summary": "EURSPKCC has eight issuer-native registers in the current exact share-class API; the previously reviewed Ethereum, Polygon, Arbitrum, Base, Starknet and Stellar evidence retains its original dates. Etherlink and Solana native share identities were independently corroborated on 2026-10-20, without certifying their complete operator, upgrade or transport inventory. The previously observed Chainlink CCIP pools span the four originally reviewed EVM native deployments with twelve directed lanes, using BurnWithFromMintTokenPool 1.6.1 conserved burn-and-mint. Those pools are administered by EOA 0xEd608cf38968C0ba09676843D90B33Dd59dd7375, which can update peers and rate-limit configuration; these are bridge-route powers, separate from native issuance. No new CCIP participation, material supply share or immutable bridge bound is inferred for Etherlink or Solana.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint-bridge-boundary migration FIX2-06",
     "confidence": "verified",
@@ -274,6 +286,67 @@
           {
             "label": "eurSPKCC contract on stellar.expert (verified 2026-07-20)",
             "url": "https://stellar.expert/explorer/public/contract/CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A"
+          }
+        ]
+      },
+      {
+        "id": "etherlink:0x3868d4e336d14d38031cf680329d31e4712e11cc",
+        "destinationChain": "etherlink",
+        "canonicalChain": "etherlink",
+        "contractAddress": "0x3868d4e336d14d38031cf680329d31e4712e11cc",
+        "protocol": "Spiko EURSPKCC issuer-native share register",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The exact issuer API joins ISIN FR0014010ON7 to this Etherlink native register. At block 56104777 (hash 0x1c27a1d476d2b72d5f6dc303b8d2484629a7cb50c8357755508d01186fa9c132, 2026-10-20T22:22:24Z), name is Spiko Digital Assets Cash and Carry Fund (EUR hedged), symbol eurSPKCC and decimals 5. totalSupply is zero at that historical pin only; this is not a circulating-supply override or future materiality proof. The governing prospectus describes native DLT share registration, not an escrow receipt. Complete native operator and cross-register transfer controls remain separate unresolved obligations.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-20",
+        "observedBlock": 56104777,
+        "sources": [
+          {
+            "label": "Exact issuer EURSPKCC share identity and eight registers, retrieved 2026-10-20",
+            "url": "https://public-api.spiko.io/share-classes/eurSPKCC"
+          },
+          {
+            "label": "Governing cash-and-carry prospectus, native DLT register terms",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_SPKCC_EN.pdf"
+          },
+          {
+            "label": "Pinned Etherlink block 56104777 token name, symbol, decimals and supply, observed 2026-10-20T22:22:32Z",
+            "url": "https://node.mainnet.etherlink.com"
+          }
+        ]
+      },
+      {
+        "id": "solana:H99pu9fKt15asYk3Mcs8rajaRX3aYx3kDwXy6pY3n6My",
+        "destinationChain": "solana",
+        "canonicalChain": "solana",
+        "contractAddress": "H99pu9fKt15asYk3Mcs8rajaRX3aYx3kDwXy6pY3n6My",
+        "protocol": "Spiko EURSPKCC issuer-native share register",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The exact issuer API joins ISIN FR0014010ON7 to this Solana share register and specifies five share decimals. Solscan independently identifies Spiko Digital Assets Cash and Carry Fund (EUR hedged), symbol eurSPKCC, five decimals and Token-2022 ownership. This establishes exact native share identity only, not a pinned current authority observation, executable/source certificate, controller independence, current supply partition or absence of a transfer rail.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-20",
+        "sources": [
+          {
+            "label": "Exact issuer EURSPKCC share identity and native registers, retrieved 2026-10-20",
+            "url": "https://public-api.spiko.io/share-classes/eurSPKCC"
+          },
+          {
+            "label": "Exact Solana EURSPKCC token metadata, name and five decimals, retrieved 2026-10-20",
+            "url": "https://solscan.io/token/H99pu9fKt15asYk3Mcs8rajaRX3aYx3kDwXy6pY3n6My"
+          },
+          {
+            "label": "Governing cash-and-carry prospectus, native DLT share registration",
+            "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_SPKCC_EN.pdf"
           }
         ]
       }

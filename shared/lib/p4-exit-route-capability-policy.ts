@@ -100,7 +100,7 @@ export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityR
     platform: "evm",
     lifecycle: "active",
     eligibleChains: ["ethereum", "polygon", "arbitrum", "celo"],
-    shadowChains: ["base", "bsc", "xlayer"],
+    shadowChains: ["base", "bsc", "xlayer", "monad"],
     eligibleDeploymentKeys: ACTIVE_QUOTER_V2_DEPLOYMENT_KEYS,
     proofKind: "evm-state-and-call-proof",
   }),

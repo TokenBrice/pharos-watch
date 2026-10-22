@@ -110,6 +110,11 @@
       "chain": "movement",
       "address": "0xde6eb2598d91fd43c432ba7f0bca56158525a74ac0841b749ce17bf984cf5642",
       "decimals": 8
+    },
+    {
+      "chain": "stellar",
+      "address": "savUSD-GBCSESJONU4FJGIRC4UTDHQFE43IL4U4I4HP5JKPKAJVNMQO76672MJJ",
+      "decimals": 7
     }
   ],
   "collateralQuality": "exotic",

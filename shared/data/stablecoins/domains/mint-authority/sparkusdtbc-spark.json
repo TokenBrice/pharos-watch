@@ -224,7 +224,7 @@
         }
       }
     ],
-    "economicCapSemantics": "collateral-gated",
+    "economicCapSemantics": "bounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {

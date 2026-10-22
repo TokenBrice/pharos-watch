@@ -67,14 +67,9 @@ describe("stablecoin V9 safety presentation", () => {
    * score, or SafetyScoreV9CurrentCardSchema rejects the fixture.
    */
   const breakdownsFixture = () => ({
-    backing: { evaluatedScore: 86, publishedScore: 88, aggregationWeight: 0.4, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], groups: [{ key: "reserves" as const, label: "Reserves", score: 86, effectiveScoringWeight: 1, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const }],
-    components: [{ key: "reserve:reserve:wsteth", label: "wstETH", source: "reserve-exposure" as const, score: 86, effectiveScoringWeight: 1, wholeAssetWeight: 1, weightedContribution: 86, observationState: "known" as const, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const }],
-    adjustments: [{
-      kind: "operational-resilience-credit" as const,
-      scoreBefore: 86,
-      scoreAfter: 88,
-      delta: 2,
-    }], },
+    backing: { evaluatedScore: 88, publishedScore: 88, aggregationWeight: 0.4, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], groups: [{ key: "reserves" as const, label: "Reserves", score: 88, effectiveScoringWeight: 1, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const }],
+    components: [{ key: "reserve:reserve:wsteth", label: "wstETH", source: "reserve-exposure" as const, score: 88, effectiveScoringWeight: 1, wholeAssetWeight: 1, weightedContribution: 88, observationState: "known" as const, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const }],
+    adjustments: [], },
     exit: { evaluatedScore: 84, publishedScore: 84, aggregationWeight: 0.35, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], stressRequest: null,
     primaryRoute: null,
     diversification: null,
@@ -200,7 +195,7 @@ describe("stablecoin V9 safety presentation", () => {
         maxCostBps: 200,
         comparisonWindowSec: 86_400,
       },
-      primaryRoute: { key: "redemption:primary", routeId: "primary", lane: "redemption", label: "Direct redemption", routeFamily: "issuer-redemption", score: 84, components: exitRouteComponents({ access: 90, settlement: 84, executionCertainty: 80, capacity: 78, outputAssetQuality: 92, cost: 81 }), confidenceFactor: 1, confidenceDimensions: { observation: { factor: 1, cause: null, causeGapRefs: [] }, model: { factor: 1, cause: null, causeGapRefs: [] }, capacityMethod: { factor: 1, cause: null, causeGapRefs: [] } }, capacityEvidenceTier: 'live-direct' as const, rawSameNotionalCostBps: null, supportedComponentCeiling: exitRouteComponents({ access: 90, settlement: 84, executionCertainty: 80, capacity: 78, outputAssetQuality: 92, cost: 81 }).reduce((sum, component) => sum + component.weightedContribution, 0), eligibilityMultiplier: 1,
+      primaryRoute: { key: "redemption:primary", routeId: "primary", lane: "redemption", label: "Direct redemption", routeFamily: "issuer-redemption", score: 84, components: exitRouteComponents({ access: 90, settlement: 84, executionCertainty: 80, capacity: 78, outputAssetQuality: 92, cost: 81 }), confidenceFactor: 1, confidenceDimensions: { observation: { factor: 1, cause: null, causeGapRefs: [] }, model: { factor: 1, cause: null, causeGapRefs: [] }, capacityMethod: { factor: 1, cause: null, causeGapRefs: [] } }, capacityEvidenceTier: 'live-direct' as const, rawSameNotionalCostBps: null, supportedComponentCeiling: exitRouteComponents({ access: 90, settlement: 84, executionCertainty: 80, capacity: 78, outputAssetQuality: 92, cost: 81 }).reduce((sum, component) => sum + component.weightedContribution, 0),
       capsApplied: [],
       capacity: {
         executableUsd: 1_000,
@@ -242,23 +237,18 @@ describe("stablecoin V9 safety presentation", () => {
       aggregationWeight: 0.4,
       sectionLabel: "Backing components",
     });
-    // Group score and weight head the section, so they are no longer repeated
-    // as context rows; only adjustments remain there.
+    // Group scores and weights head the section rather than repeating in context.
     expect(presentation.pillars[0].breakdown?.groups).toMatchObject([
       {
         key: "reserves",
         label: "Reserves",
-        score: 86,
+        score: 88,
         weight: 1,
-        rows: [{ label: "wstETH", score: 86, weight: 1, status: "Known" }],
+        rows: [{ label: "wstETH", score: 88, weight: 1, status: "Known" }],
         tail: null,
       },
     ]);
-    expect(presentation.pillars[0].breakdown?.context).toContainEqual({
-      key: "operational-resilience-credit-0",
-      label: "Resilience credit",
-      value: "+2.0 to 88.0",
-    });
+    expect(presentation.pillars[0].breakdown?.context).toEqual([]);
     expect(presentation.pillars[1].breakdown).toMatchObject({
       sectionLabel: "Primary route components — Direct redemption",
       exitHighlight: {
@@ -320,7 +310,7 @@ describe("stablecoin V9 safety presentation", () => {
         maxCostBps: 200,
         comparisonWindowSec: 300,
       },
-      primaryRoute: { key: "redemption:earn-queued", routeId: "earn-queued", lane: "redemption", label: "Queued USDC redemption", routeFamily: "protocol-redemption", score: 0, components: exitRouteComponents({ access: 100, settlement: 100, executionCertainty: 60, capacity: 0, outputAssetQuality: 100, cost: 100 }), confidenceFactor: 1, confidenceDimensions: { observation: { factor: 1, cause: null, causeGapRefs: [] }, model: { factor: 1, cause: null, causeGapRefs: [] }, capacityMethod: { factor: 1, cause: null, causeGapRefs: [] } }, capacityEvidenceTier: 'live-direct' as const, rawSameNotionalCostBps: null, supportedComponentCeiling: exitRouteComponents({ access: 100, settlement: 100, executionCertainty: 60, capacity: 0, outputAssetQuality: 100, cost: 100 }).reduce((sum, component) => sum + component.weightedContribution, 0), eligibilityMultiplier: 1,
+      primaryRoute: { key: "redemption:earn-queued", routeId: "earn-queued", lane: "redemption", label: "Queued USDC redemption", routeFamily: "protocol-redemption", score: 0, components: exitRouteComponents({ access: 100, settlement: 100, executionCertainty: 60, capacity: 0, outputAssetQuality: 100, cost: 100 }), confidenceFactor: 1, confidenceDimensions: { observation: { factor: 1, cause: null, causeGapRefs: [] }, model: { factor: 1, cause: null, causeGapRefs: [] }, capacityMethod: { factor: 1, cause: null, causeGapRefs: [] } }, capacityEvidenceTier: 'live-direct' as const, rawSameNotionalCostBps: null, supportedComponentCeiling: exitRouteComponents({ access: 100, settlement: 100, executionCertainty: 60, capacity: 0, outputAssetQuality: 100, cost: 100 }).reduce((sum, component) => sum + component.weightedContribution, 0),
       capsApplied: ["zero-executable-capacity"],
       capacity: {
         executableUsd: 0,

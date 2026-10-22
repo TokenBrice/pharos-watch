@@ -30,6 +30,7 @@ import {
   ReportCardsV9ResponseSchema,
   HistoricalReportCardsV9ResponseSchema,
   WitnessHistoricalReportCardsV9ResponseSchema,
+  HistoricalTypedReportCardsV9ResponseSchema,
 } from "@shared/types/report-cards-v9";
 import {
   PublicSnapshotEnvelopeSchema,
@@ -209,12 +210,12 @@ function validateV9ReportCards(
   // Select the recorded contract; never mutate stored bytes or use live-only
   // fields to manufacture historical identity.
   const historicalMinor = /^10\.(\d{2})$/.exec(version)?.[1];
-  const historicalSchema = reportCards.schemaVersion === 7
-    && historicalMinor !== undefined && Number(historicalMinor) <= 10
-    ? Number(historicalMinor) < 10
-      ? WitnessHistoricalReportCardsV9ResponseSchema
-      : HistoricalReportCardsV9ResponseSchema
-    : ReportCardsV9ResponseSchema;
+  const minor = historicalMinor === undefined ? null : Number(historicalMinor);
+  const historicalSchema = reportCards.schemaVersion === 7 && minor !== null && minor <= 10
+    ? minor < 10 ? WitnessHistoricalReportCardsV9ResponseSchema : HistoricalReportCardsV9ResponseSchema
+    : reportCards.schemaVersion === 8 && minor !== null && minor >= 11 && minor <= 28
+      ? HistoricalTypedReportCardsV9ResponseSchema
+      : ReportCardsV9ResponseSchema;
   const parsed = historicalSchema.safeParse(validationInput);
   if (!parsed.success) {
     return "safety-score-publication-invalid";

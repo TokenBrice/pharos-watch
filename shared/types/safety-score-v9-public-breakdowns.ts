@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { issue } from "./safety-schema-primitives";
+import methodologyPolicy from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
 import { ExitExecutionPublicCertificateSchema, ExitRouteFamilySchema, ExitRouteCapacityEvidenceTierSchema, PhysicalToUsdTraceSchema } from "./exit-route";
 import { RedemptionCapacityScoringHorizonSchema, RedemptionRouteSuspensionSchema } from "./redemption";
 import { V9ReasonCodeSchema } from "./safety-score-v9";
@@ -13,6 +14,8 @@ import {
   ScoreSchema,
 } from "./safety-score-v9-public-facts";
 import { V9CauseContributionShape, V9BreakdownCauseShape, V9ConfidenceDimensionsSchema, refineV9CauseContribution, resolveV9EffectiveScoringWeight } from "./safety-score-v9-public-causes";
+import { normalizeDeploymentId } from "./deployment-id";
+import { isV9WitnessTextReference } from "./safety-score-v9-public-witness-texts";
 
 const SafetyScoreV9PillarAdjustmentSchema = z
   .object({
@@ -53,15 +56,18 @@ function refineBreakdownAdjustments(
     evaluatedScore: number | null;
     publishedScore: number | null;
     adjustments: readonly SafetyScoreV9PillarAdjustment[];
-    aggregationDisposition?: "included" | "excluded-a-b"; aggregationWeight: number;
+    aggregationDisposition?: "included" | "excluded-a-b" | "unavailable"; aggregationWeight: number;
     causeGapRefs?: readonly number[]; limitedEvidenceCauses?: readonly string[];
   },
   ctx: z.RefinementCtx,
 ): void {
-  if (breakdown.aggregationDisposition === "excluded-a-b" && (breakdown.evaluatedScore !== null ||
-      breakdown.publishedScore !== null || breakdown.aggregationWeight !== 0 || (breakdown.causeGapRefs?.length ?? 0) === 0 ||
+  if ((breakdown.aggregationDisposition ?? "included") !== "included" && (breakdown.evaluatedScore !== null ||
+      breakdown.publishedScore !== null || breakdown.aggregationWeight !== 0 ||
       (breakdown.limitedEvidenceCauses?.length ?? 0) > 0)) {
-    ctx.addIssue({ code: "custom", message: "Excluded pillars preserve null diagnostic scores and zero aggregate weight" });
+    ctx.addIssue({ code: "custom", message: "Excluded or unavailable pillars preserve null diagnostic scores and zero aggregate weight" });
+  }
+  if (breakdown.aggregationDisposition === "excluded-a-b" && (breakdown.causeGapRefs?.length ?? 0) === 0) {
+    ctx.addIssue({ code: "custom", message: "A/B-excluded pillars require their proved causal gaps" });
   }
   if (breakdown.evaluatedScore === null && breakdown.adjustments.length > 0) {
     ctx.addIssue({ code: "custom", path: ["adjustments"], message: "Excluded diagnostic pillars cannot receive score adjustments" });
@@ -191,6 +197,8 @@ const SafetyScoreV9ExitBreakdownBaseSchema = z
         requestedNotionalUsd: z.number().finite().positive(),
         maxCostBps: z.number().finite().nonnegative(),
         comparisonWindowSec: z.number().finite().positive(),
+        supplyObservedAtSec: z.number().int().nonnegative().nullable().optional(),
+        sizingUncertaintyReason: z.enum(["missing-supply", "stale-supply", "unusable-supply"]).nullable().optional(),
       })
       .strict()
       .nullable(),
@@ -222,7 +230,6 @@ const SafetyScoreV9ExitBreakdownBaseSchema = z
         capacityEvidenceTier: ExitRouteCapacityEvidenceTierSchema,
         rawSameNotionalCostBps: z.number().finite().nonnegative().nullable(),
         supportedComponentCeiling: ScoreSchema.nullable(),
-        eligibilityMultiplier: z.number().finite().min(0).max(1),
         capsApplied: z.array(z.string().min(1)),
         capacity: z
           .object({
@@ -293,7 +300,7 @@ type ExitBreakdownRefinementInput = Omit<z.infer<typeof SafetyScoreV9ExitBreakdo
   alternatives: readonly Omit<z.infer<typeof SafetyScoreV9ExitBreakdownBaseSchema>["alternatives"][number], "routeId" | "lane">[];
 };
 
-function refineExitBreakdown(breakdown: ExitBreakdownRefinementInput, ctx: z.RefinementCtx): void {
+function refineExitBreakdown(breakdown: ExitBreakdownRefinementInput, ctx: z.RefinementCtx, recordedEligibilityMultiplier = 1): void {
     refineBreakdownAdjustments(breakdown, ctx);
     if (breakdown.primaryRoute === null) return;
     const keys = breakdown.primaryRoute.components.map((component) => component.key);
@@ -337,8 +344,7 @@ function refineExitBreakdown(breakdown: ExitBreakdownRefinementInput, ctx: z.Ref
     }
     const preCapRouteScore =
       weightedComponentScore *
-      breakdown.primaryRoute.confidenceFactor *
-      breakdown.primaryRoute.eligibilityMultiplier;
+      breakdown.primaryRoute.confidenceFactor * recordedEligibilityMultiplier;
     const routeScoreReconciles =
       breakdown.primaryRoute.capsApplied.length === 0
         ? Math.abs(breakdown.primaryRoute.score - preCapRouteScore) <= EXIT_SCORE_TOLERANCE
@@ -362,10 +368,11 @@ const SafetyScoreV9ExitBreakdownSchema = SafetyScoreV9ExitBreakdownBaseSchema.su
 /** Breakdown6 predates typed route IDs/lanes; retain its exact strict shape. */
 const SafetyScoreV9HistoricalExitBreakdownSchema = SafetyScoreV9ExitBreakdownBaseSchema.extend({
   primaryRoute: SafetyScoreV9ExitBreakdownBaseSchema.shape.primaryRoute.unwrap()
-    .omit({ routeId: true, lane: true }).nullable(),
+    .omit({ routeId: true, lane: true })
+    .extend({ eligibilityMultiplier: z.number().finite().min(0).max(1) }).nullable(),
   alternatives: z.array(SafetyScoreV9ExitBreakdownBaseSchema.shape.alternatives.element
     .omit({ routeId: true, lane: true })),
-}).superRefine(refineExitBreakdown);
+}).superRefine((breakdown, ctx) => refineExitBreakdown(breakdown, ctx, breakdown.primaryRoute?.eligibilityMultiplier ?? 1));
 export type SafetyScoreV9ExitBreakdown = z.infer<
   typeof SafetyScoreV9ExitBreakdownSchema
 >;
@@ -451,63 +458,105 @@ export const SafetyScoreV9IssuanceSummarySchema = z.object({
 }).strict();
 export type SafetyScoreV9IssuanceSummary = z.output<typeof SafetyScoreV9IssuanceSummarySchema>;
 
-const SafetyScoreV9ControlBreakdownSchema = z
-  .object({
-    ...SafetyScoreV9BreakdownPillarBaseShape,
-    method: z.literal("minimum-binding-component"),
-    issuanceSummary: SafetyScoreV9IssuanceSummarySchema.optional(),
-    components: z.array(
-      z
-        .object({
-          key: z.string().min(1),
-          label: z.string().min(1).max(160),
-          kind: z.enum(["mint", "oracle", "bridge", "inventory"]),
-          score: ScoreSchema.nullable(),
-          ...V9CauseContributionShape,
-          binding: z.boolean(),
-          posture: z.string().min(1).max(120),
-          controlDetails: z.array(z.object({
-            controlKey: z.string().min(1),
-            controlRef: V9ControlExecutionScopeObjectSchema.shape.controllerDeployment.nullable().optional(),
-            authority: V9DeploymentControlFactBaseSchema.shape.authority,
-            minimumCryptographicSignatures: z.number().int().positive().nullable(),
-            executionScopeComplete: z.boolean().nullable(),
-            moduleImpact: V9ExactControlPolicySchema.shape.moduleImpactStates.element,
-            diagnostics: z.array(z.string()),
-            // Component-local paths for split facts; unsplit controls retain their certificate/contributor census.
-            executionPaths: z.array(V9ControlExecutionScopeSchema.shape.paths.element.pick({
-              id: true, targetDeployment: true, entrypointKind: true, entrypoints: true,
-              activation: true, reach: true, capabilities: true,
-            })),
-          }).strict()).optional(),
-        })
-        .strict().superRefine((component, ctx) => {
-          refineV9CauseContribution(component, ctx);
-          if (component.score === null && component.binding) {
-            ctx.addIssue({ code: "custom", message: "Excluded control diagnostics cannot be binding" });
-          }
-        }),
-    ),
-  })
-  .strict()
-  .superRefine((breakdown, ctx) => {
-    refineBreakdownAdjustments(breakdown, ctx);
-    const keys = breakdown.components.map((component) => component.key);
-    if (!isUniqueSorted(keys)) {
-      issue(ctx, ["components"], "V9 control components must be unique and sorted");
+const SafetyScoreV9ControlDetailSchema = z.object({
+  controlKey: z.string().min(1),
+  authority: V9DeploymentControlFactBaseSchema.shape.authority,
+  minimumCryptographicSignatures: z.number().int().positive().optional().describe("Absent means unresolved"),
+  executionScopeComplete: z.boolean().optional().describe("Absent means unresolved"),
+  moduleImpact: V9ExactControlPolicySchema.shape.moduleImpactStates.element.exclude(["unresolved"]).optional().describe("Absent means unresolved"),
+  diagnostics: z.array(z.string()).min(1).optional(),
+  executionPaths: z.array(V9ControlExecutionScopeSchema.shape.paths.element.pick({
+    id: true, targetDeployment: true, entrypointKind: true, entrypoints: true,
+    activation: true, reach: true, capabilities: true,
+  })).min(1).optional(),
+}).strict();
+const SafetyScoreV9LegacyControlDetailSchema = SafetyScoreV9ControlDetailSchema.extend({
+  controlRef: V9ControlExecutionScopeObjectSchema.shape.controllerDeployment.nullable().optional(),
+  minimumCryptographicSignatures: z.number().int().positive().nullable(),
+  executionScopeComplete: z.boolean().nullable(),
+  moduleImpact: V9ExactControlPolicySchema.shape.moduleImpactStates.element,
+  diagnostics: z.array(z.string()),
+  executionPaths: z.array(SafetyScoreV9ControlDetailSchema.shape.executionPaths.unwrap().element),
+});
+const SafetyScoreV9ControlComponentSchema = z.object({
+  key: z.string().min(1), label: z.string().min(1).max(160),
+  kind: z.enum(["mint", "oracle", "bridge", "inventory"]),
+  score: ScoreSchema.nullable(), ...V9CauseContributionShape,
+  binding: z.boolean(), posture: z.string().min(1).max(120),
+  controlDetailRefs: z.array(z.number().int().nonnegative()).min(1).optional(),
+}).strict();
+const SafetyScoreV9ControlBreakdownBaseSchema = z.object({
+  ...SafetyScoreV9BreakdownPillarBaseShape,
+  method: z.literal("minimum-binding-component"),
+  issuanceSummary: SafetyScoreV9IssuanceSummarySchema.optional(),
+  controlDetails: z.array(SafetyScoreV9ControlDetailSchema).min(1).optional(),
+  components: z.array(SafetyScoreV9ControlComponentSchema),
+}).strict();
+function refineControlBreakdown(breakdown: z.infer<typeof SafetyScoreV9ControlBreakdownBaseSchema>, ctx: z.RefinementCtx) {
+  refineBreakdownAdjustments(breakdown, ctx);
+  const keys = breakdown.components.map((component) => component.key);
+  // Canonical witness tokens are checked after card-local resolution as well.
+  if (!keys.some(isV9WitnessTextReference) && !isUniqueSorted(keys)) {
+    issue(ctx, ["components"], "V9 control components must be unique and sorted");
+  }
+  for (const component of breakdown.components) {
+    refineV9CauseContribution(component, ctx);
+    if (component.score === null && component.binding) issue(ctx, ["components"], "Excluded control diagnostics cannot be binding");
+  }
+  const binding = breakdown.components.filter((component) => component.binding && component.score !== null);
+  const minimum = binding.length === 0
+    ? (breakdown.aggregationDisposition ?? "included") !== "included" ? null : V9_NEUTRAL_CONTROL_SCORE
+    : Math.min(...binding.map((component) => component.score!));
+  // Retained pre-R4 cards record the raw minimum; new cards clamp the pillar
+  // at 90 while keeping their component diagnostics unchanged.
+  if (!numbersAgree(minimum, breakdown.evaluatedScore) &&
+      !numbersAgree(minimum === null ? null : Math.min(methodologyPolicy.semantic.control.authorityLadder.immutableNoPower, minimum), breakdown.evaluatedScore)) {
+    issue(ctx, ["components"], "V9 binding controls must reconcile the raw or 90-clamped evaluated score");
+  }
+}
+const SafetyScoreV9ControlBreakdownSchema = SafetyScoreV9ControlBreakdownBaseSchema.superRefine((breakdown, ctx) => {
+  refineControlBreakdown(breakdown, ctx);
+  const details = breakdown.controlDetails ?? [];
+  const keys = details.map((detail) => detail.controlKey);
+  if (!keys.some(isV9WitnessTextReference) && !isUniqueSorted(keys)) issue(ctx, ["controlDetails"], "Control details must have unique sorted identities");
+  const used = new Uint8Array(details.length);
+  for (const component of breakdown.components) {
+    const refs = component.controlDetailRefs ?? [];
+    for (const [index, ref] of refs.entries()) {
+      if (ref >= details.length || index > 0 && refs[index - 1]! >= ref) {
+        issue(ctx, ["components"], "Control detail references must be in range, unique and sorted");
+      } else used[ref] = 1;
     }
-    const binding = breakdown.components.filter((component) => component.binding && component.score !== null);
-    const bindingScoreReconciles =
-      binding.length === 0
-        ? numbersAgree(breakdown.evaluatedScore, breakdown.aggregationDisposition === "excluded-a-b" ? null : V9_NEUTRAL_CONTROL_SCORE)
-        : numbersAgree(
-            Math.min(...binding.map((component) => component.score!)),
-            breakdown.evaluatedScore,
-          );
-    if (!bindingScoreReconciles) {
-      issue(ctx, ["components"], "V9 binding controls, or the neutral empty set, must reconcile the evaluated score");
-    }
+  }
+  if (used.some((value) => value === 0)) issue(ctx, ["controlDetails"], "Every control detail must be referenced");
+});
+const SafetyScoreV9HistoricalControlBreakdownSchema = z.union([
+  SafetyScoreV9ControlBreakdownSchema,
+  SafetyScoreV9ControlBreakdownBaseSchema.omit({ controlDetails: true }).extend({
+    components: z.array(SafetyScoreV9ControlComponentSchema.omit({ controlDetailRefs: true }).extend({
+      controlDetails: z.array(SafetyScoreV9LegacyControlDetailSchema).optional(),
+    })),
+  }).superRefine(refineControlBreakdown),
+]);
+
+/** Resolve only the requested component; shared facts stay shared on the canonical card. */
+export function resolveV9PublicControlDetails(
+  breakdown: z.infer<typeof SafetyScoreV9HistoricalControlBreakdownSchema>,
+  component: z.infer<typeof SafetyScoreV9HistoricalControlBreakdownSchema>["components"][number],
+) {
+  if ("controlDetails" in component) return component.controlDetails ?? [];
+  if (!("controlDetailRefs" in component) || !("controlDetails" in breakdown)) return [];
+  return (component.controlDetailRefs ?? []).map((ref) => {
+    const detail = breakdown.controlDetails?.[ref];
+    if (!detail) throw new Error("Control detail reference is outside the breakdown table");
+    return {
+      ...detail, controlRef: normalizeDeploymentId(detail.authority?.authorityKey ?? "") || null,
+      minimumCryptographicSignatures: detail.minimumCryptographicSignatures ?? null,
+      executionScopeComplete: detail.executionScopeComplete ?? null, moduleImpact: detail.moduleImpact ?? "unresolved",
+      diagnostics: detail.diagnostics ?? [], executionPaths: detail.executionPaths ?? [],
+    };
   });
+}
 export type SafetyScoreV9ControlBreakdown = z.infer<
   typeof SafetyScoreV9ControlBreakdownSchema
 >;
@@ -522,4 +571,102 @@ export const SafetyScoreV9BreakdownsSchema = z
 
 export const SafetyScoreV9HistoricalBreakdownsSchema = SafetyScoreV9BreakdownsSchema.extend({
   exit: SafetyScoreV9HistoricalExitBreakdownSchema,
+  control: SafetyScoreV9HistoricalControlBreakdownSchema,
 });
+
+/** Report8 before v10.29 retains typed route identity and the recorded access charge. */
+export const SafetyScoreV9HistoricalTypedBreakdownsSchema = SafetyScoreV9HistoricalBreakdownsSchema.extend({
+  exit: SafetyScoreV9HistoricalExitBreakdownSchema.safeExtend({
+    primaryRoute: SafetyScoreV9HistoricalExitBreakdownSchema.shape.primaryRoute.unwrap().extend({
+      routeId: z.string().min(1), lane: z.enum(["dex", "redemption"]),
+    }).nullable(),
+    alternatives: z.array(SafetyScoreV9HistoricalExitBreakdownSchema.shape.alternatives.element.extend({
+      routeId: z.string().min(1), lane: z.enum(["dex", "redemption"]),
+    })),
+  }),
+});
+
+type UnknownPricedComponent = Pick<SafetyScoreV9BackingBreakdown["components"][number],
+  "score" | "cause" | "scoringDisposition" | "effectiveScoringWeight">;
+type UnknownPricedBreakdowns = {
+  backing: {
+    aggregationWeight: number;
+    components: readonly (UnknownPricedComponent & {
+      source: string; factors?: readonly UnknownPricedComponent[];
+    })[];
+  };
+  exit: {
+    aggregationWeight: number;
+    evaluatedScore: number | null;
+    limitedEvidenceCauses?: readonly string[];
+    primaryRoute: { components: readonly UnknownPricedComponent[] } | null;
+  };
+  control: {
+    aggregationWeight: number;
+    components: readonly (UnknownPricedComponent & { binding: boolean; posture: string })[];
+  };
+};
+
+/** Display-only weight accounting, never an input to score aggregation. */
+export function computeV9UnknownPricedWeightShare(
+  breakdowns: UnknownPricedBreakdowns | null,
+  aggregation: {
+    effectiveScoringWeights: { backing: number; exit: number; control: number };
+    pricedUnknownPillars?: readonly { pillar: "backing" | "exit" | "control" }[];
+  } | null,
+): number {
+  if (breakdowns === null || aggregation === null) return 0;
+  const isUnknown = (component: UnknownPricedComponent): boolean =>
+    component.score !== null && (component.cause === "C" || component.cause === "U") &&
+    component.scoringDisposition === "bounded-uncertainty";
+  const unknownWeight = (component: UnknownPricedComponent): number =>
+    isUnknown(component) ? resolveV9EffectiveScoringWeight(component) : 0;
+  let share = 0;
+  for (const pillar of ["backing", "exit", "control"] as const) {
+    const weight = aggregation.effectiveScoringWeights[pillar];
+    if (aggregation.pricedUnknownPillars?.some((item) => item.pillar === pillar)) {
+      share += weight;
+      continue;
+    }
+    if (pillar === "backing") {
+      for (const component of breakdowns.backing.components) {
+        // Reserve rows blend factors; mechanism constraints already publish
+        // the controlling minimum's cause on their parent component.
+        const factors = component.source === "reserve-exposure" ? component.factors : undefined;
+        const fraction = factors?.length
+          ? factors.reduce((sum, factor) => sum + unknownWeight(factor), 0)
+          : isUnknown(component) ? 1 : 0;
+        share += weight * resolveV9EffectiveScoringWeight(component) * fraction;
+      }
+    } else if (pillar === "exit") {
+      const exit = breakdowns.exit;
+      if (exit.primaryRoute !== null) {
+        share += weight * exit.primaryRoute.components.reduce((sum, component) => sum + unknownWeight(component), 0);
+      } else if (exit.limitedEvidenceCauses?.some((cause) => cause === "C" || cause === "U")) {
+        // No-route covered-share Exit=(1-z)*50: verified pool-less supply is
+        // measured zero, not unknown-priced weight.
+        const cause = exit.limitedEvidenceCauses.includes("C") ? "C" : "U";
+        share += weight * Math.min(1, (exit.evaluatedScore ?? 0) / methodologyPolicy.semantic.unknownQuality.exit[cause]);
+      }
+    } else {
+      let minimum = Infinity;
+      let unknownMinimum = false;
+      for (const component of breakdowns.control.components) {
+        if (!component.binding || component.score === null || resolveV9EffectiveScoringWeight(component) === 0) continue;
+        // A known authority can retain a C/U reconciliation question without
+        // its measured topology being priced at an unknown constant.
+        const unknown = isUnknown(component) &&
+          (component.posture === "unknown" || component.posture === "opaque-or-unknown");
+        if (component.score < minimum) {
+          minimum = component.score;
+          unknownMinimum = unknown;
+        } else if (component.score === minimum && !unknown) {
+          // An equally restrictive measured path still binds without the gap.
+          unknownMinimum = false;
+        }
+      }
+      if (unknownMinimum) share += weight;
+    }
+  }
+  return Math.min(1, Math.max(0, share));
+}

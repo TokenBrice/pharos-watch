@@ -96,7 +96,7 @@
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
-  "governanceQuality": "dao-governance",
+  "governanceQuality": "single-entity",
   "notices": [
     {
       "type": "info",

@@ -31,7 +31,6 @@ export function makeExitRoute(overrides: Partial<V9ExitEvaluationRoute> = {}): V
       requestedNotionalUsd, maxCostBps: 200, executableUsd: requestedNotionalUsd,
       completionRatio: 1, executionCostBps: 0,
     })),
-    routeScoreCap: null,
     failureDomains: ["redemption-rail:issuer"],
     physicalResourceKeys: ["rail:issuer"],
     ...overrides,

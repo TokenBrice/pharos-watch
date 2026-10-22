@@ -158,7 +158,7 @@ describe("RedemptionBackstopCard", () => {
     }, REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS);
     card.breakdowns!.exit.primaryRoute = {
       ...primary, routeId: `redemption:${entry.stablecoinId}:${entry.routeFamily}`, lane: "redemption",
-      score: total, supportedComponentCeiling: total, confidenceFactor: 1, eligibilityMultiplier: 1,
+      score: total, supportedComponentCeiling: total, confidenceFactor: 1,
       components: primary.components.map((component) => ({ ...component, score: 100 })),
       capsApplied: [],
     };
@@ -240,7 +240,6 @@ describe("RedemptionBackstopCard", () => {
       score: 58,
       supportedComponentCeiling: 64,
       confidenceFactor: 0.9,
-      eligibilityMultiplier: 1,
       capsApplied: [],
       components: exit.primaryRoute.components.map((component) => ({
         ...component,

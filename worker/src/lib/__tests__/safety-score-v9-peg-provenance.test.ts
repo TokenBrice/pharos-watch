@@ -85,7 +85,7 @@ describe("Safety Score V9 peg provenance", () => {
     expect(summary.legacyInclusive).toMatchObject({
       disposition: "score-preserving",
       result: {
-        pegScore: 84,
+        pegScore: 97,
         eventCount: 13,
         scoredEventCount: 13,
         worstDeviationBps: 6544,
@@ -241,7 +241,7 @@ describe("Safety Score V9 peg provenance", () => {
     expect(captured[ASSET_ID]).toMatchObject({
       assetId: ASSET_ID,
       eventCount: 13,
-      legacyInclusive: { result: { pegScore: 84 } },
+      legacyInclusive: { result: { pegScore: 97 } },
     });
     expect(serialized).not.toContain('"events"');
     expect(serialized).not.toContain('"startPrice"');

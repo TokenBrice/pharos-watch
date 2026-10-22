@@ -108,9 +108,9 @@
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
-    "supervision": "none",
+    "supervision": "unknown",
     "review": {
-      "evidence": "At Berachain block 26911429, BUSD and HoneyFactory implementation slots returned 0x33260b0b0a81dbb6d23509dcdc5f321cb585f22a and 0xb587f98c81c37432067060196ac1ddaec106ed8d; correct EIP-1967 admin slots were zero. The unchanged 3/5 Safe retained DEFAULT_ADMIN_ROLE on both proxies, without enabled modules or guard. Current verified implementation sources retain factory-gated issuance and admin-authorized upgrades. The prior implementations at block 23484618 were 0x96b1a552a97da5503343d0f9ff2766c616e62905 and 0x6331f0a4e0220a14be27bd31af091f0a1ac036a1.",
+      "evidence": "At Berachain block 26911429, BUSD and HoneyFactory implementation slots returned 0x33260b0b0a81dbb6d23509dcdc5f321cb585f22a and 0xb587f98c81c37432067060196ac1ddaec106ed8d; correct EIP-1967 admin slots were zero. The unchanged 3/5 Safe retained DEFAULT_ADMIN_ROLE on both proxies, without enabled modules or guard. Current verified implementation sources retain factory-gated issuance and admin-authorized upgrades. The prior implementations at block 23484618 were 0x96b1a552a97da5503343d0f9ff2766c616e62905 and 0x6331f0a4e0220a14be27bd31af091f0a1ac036a1. The cited sources also do not positively establish absence of prudential or independent attestation supervision for the exact legal issuer, so supervision none becomes unknown. Current block 27760452, hash 0xa52c88b7b8bef36420b761fda9dad59a633ab914376e8d0c1092e746402553fa, timestamp 2026-10-20T22:33:40Z, independently reconfirms both current implementations, DEFAULT_ADMIN_ROLE on both proxies for the same Safe, and the unchanged five owners/threshold 3. Adversarial review 2026-10-21 supersedes only the preceding reconciliation withdrawal: newly retrieved full same-pin accounting joins all four registered assets, their vaults, custodyInfo addresses, actual ERC20 balances, vault totalSupply, factory-owned shares and collectedAssetFees to the complete BUSD totalSupply. At the unchanged block 27760452, net factory-owned shares excluding fee shares equal exactly 7674255.462408579428215095 BUSD, identical to token totalSupply; the four normalized net amounts are USDC.e 0.001902096000004876, BYUSD 110.920997523702236871, USDt0 27.878807635551427210 and USDe 7674116.660701324174546138. Actual asset balances are respectively 0.091419 USDC.e at custody 0x83e672c9949af428687ecc9b6a3ba74db7bb0ed0, 111.086923 BYUSD, 27.994039 USDt0 and 7674181.310311931087883746 USDe at their vaults; each covers its complete vault-share liability after the verified decimal conversion. No backing asset or token liability is omitted and no de-minimis exception is used. Verified HoneyFactory mint/redeem are atomic, with no pending claim queue: lines 595-597 mint then check actual reserves, lines 614-621 burn and redeem then check; lines 764-779 explicitly read actual balances including custody addresses. CollateralVault lines 266-302 enforce fixed decimal conversion, not an inferred NAV. The complete on-chain book is enumerable and mechanically comparable, satisfying official D33 mechanical-on-chain continuous reconciliation; this is accounting-process evidence, not independent financial assurance or an economic cap on the retained immediate upgrade root. All original review starts and authority pins remain unchanged. Primary sources https://rpc.berachain.com and https://sourcify.dev/server/v2/contract/80094/0xb587f98c81c37432067060196ac1ddaec106ed8d?fields=abi,sources retrieved 2026-10-21; raw same-pin packets retained under agents/2026-10-20-safety-refinement/audit/-honey-*.json.",
       "reviewer": "Sol curation pass 2026-10-01 (CurB02ACRDX)",
       "reviewedAt": "2026-10-01",
       "sources": [
@@ -121,6 +121,10 @@
         {
           "label": "Current HoneyFactory verified source (Sourcify)",
           "url": "https://sourcify.dev/server/v2/contract/80094/0xb587f98c81c37432067060196ac1ddaec106ed8d?fields=abi,sources"
+        },
+        {
+          "label": "Berachain pinned RPC re-verification at block 27760452 (retrieved 2026-10-20)",
+          "url": "https://rpc.berachain.com"
         }
       ]
     }

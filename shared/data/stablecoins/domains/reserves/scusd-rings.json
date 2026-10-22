@@ -68,7 +68,7 @@
         "role": "other"
       }
     ],
-    "segregation": "segregated",
+    "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "permitted",
     "reviewedAt": "2026-07-30",
@@ -84,7 +84,7 @@
         "url": "https://llamarisk.com/research/2025-03-27t21-51-19-000z"
       }
     ],
-    "uncertainty": "Trevee publishes dedicated BoringVault backing addresses and states funds are deployed across protocols. LlamaRisk notes aToken rehypothecation risk in lending strategies. Neither source publishes current chain shares, strategy shares, legal bankruptcy-remoteness terms, or a complete controller/custodian inventory.",
+    "uncertainty": "Trevee publishes dedicated BoringVault backing addresses and states funds are deployed across protocols. LlamaRisk notes aToken rehypothecation risk in lending strategies. Neither source publishes current chain shares, strategy shares, enforceable holder-benefit legal segregation or bankruptcy-remoteness terms, or a complete controller/custodian inventory. Source-scope correction verified 2026-10-20: dedicated onchain addresses establish technical separation, not legal segregation; the unsupported segregated label is withdrawn without renewing the original 2026-07-30 review or changing the permitted-rehypothecation fact.",
     "knownUnknownExposurePct": 100
   }
 }

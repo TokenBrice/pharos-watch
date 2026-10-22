@@ -3,159 +3,76 @@ import { resolveV9WrapperStrategyTier } from "../safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import type { V9ResolvedDependencyInputs } from "../safety-score-v9/dependencies";
 import type { V9AssetFactsV2 } from "../../types/safety-score-v9-facts";
-import {
-  coreFixture,
-  fullAsset,
-  minimalAsset,
-  knownStatus,
-  compileNativeV3FactSet,
-  compileV9FactSetV3,
-  evaluateV9FactSet,
-} from "./safety-score-v9-facts.fixture-support";
+import { applyV9AssetPremium } from "../safety-score-v9/formula";
+import { projectV9DependencyScore, scoreV9EvaluatedAsset } from "../safety-score-v9/score";
+import { makeV9Pillar, makeV9ProductionScoreInput } from "./safety-score-v9-score.test-support";
 
 const POLICY = V9_CANDIDATE_POLICY_V1;
 
-function asset(
-  variantKind: V9AssetFactsV2["variantKind"],
-  edges: { pathKind: string; dependencyType: string; upstreamAssetId: string }[] = [],
-  form?: "pure" | "native-staked" | "strategy-vault",
-): V9AssetFactsV2 {
+function asset(variantKind: V9AssetFactsV2["variantKind"], form?: "pure" | "native-staked" | "strategy-vault"): V9AssetFactsV2 {
   return {
     variantKind,
-    dependencies: { edges },
-    ...(form === undefined
-      ? {}
-      : {
-          wrapperLocalFacts: {
-            applicability: "wrapper",
-            form,
-          },
-        }),
+    dependencies: { edges: [{ pathKind: "serial-dependency", dependencyType: "wrapper", upstreamAssetId: "parent" }] },
+    ...(form === undefined ? {} : { wrapperLocalFacts: { applicability: "wrapper", form } }),
   } as unknown as V9AssetFactsV2;
 }
-function resolvedWithSerial(upstreamAssetIds: string[]): V9ResolvedDependencyInputs {
-  return {
-    assetId: "wrapper",
-    serial: upstreamAssetIds.map((upstreamAssetId) => ({ upstreamAssetId, score: 82, blocked: false })),
-    basket: [],
-    cycleBlocked: false,
-  };
+function resolved(): V9ResolvedDependencyInputs {
+  return { assetId: "child", serial: [{ upstreamAssetId: "parent", score: 84, blocked: false }], basket: [], cycleBlocked: false };
 }
-const wrapperSerialEdge = [{ pathKind: "serial-dependency", dependencyType: "wrapper", upstreamAssetId: "usdc-circle" }];
+function score(own: number, parent: number | null, required = true) {
+  return scoreV9EvaluatedAsset(makeV9ProductionScoreInput({
+    assetId: "child", trackRecordMonths: 120,
+    pillars: { backing: makeV9Pillar(own), exit: makeV9Pillar(own), control: makeV9Pillar(own) },
+    parent: { required, score: parent, propagatedReasons: [] },
+  }), POLICY);
+}
 
-
-describe("resolveV9WrapperStrategyTier — compiled form drives the current tier", () => {
-  it("strategy-vault (third-party aggregator) → vault", () => {
-    expect(
-      resolveV9WrapperStrategyTier(asset("strategy-vault", wrapperSerialEdge), resolvedWithSerial(["usdc-circle"])),
-    ).toBe("vault");
+describe("economic wrapper forms", () => {
+  it.each([
+    ["pure-wrapper", "pure"], ["savings-passthrough", "staked"], ["risk-absorption", "staked"], ["strategy-vault", "vault"],
+  ] as const)("classifies %s from economic function", (variant, tier) => {
+    expect(resolveV9WrapperStrategyTier(asset(variant), resolved())).toBe(tier);
   });
-  it("savings-passthrough (native savings) → staked", () => {
-    expect(
-      resolveV9WrapperStrategyTier(asset("savings-passthrough", wrapperSerialEdge), resolvedWithSerial(["usdc-circle"])),
-    ).toBe("staked");
+  it("uses admitted active strategy allocation rather than a native-staking label", () => {
+    expect(resolveV9WrapperStrategyTier(asset("risk-absorption", "strategy-vault"), resolved())).toBe("vault");
   });
-  it("risk-absorption (native staking layer) → staked", () => {
-    expect(
-      resolveV9WrapperStrategyTier(asset("risk-absorption", wrapperSerialEdge), resolvedWithSerial(["usde-ethena"])),
-    ).toBe("staked");
-  });
-  it("risk-absorption operated by a third party → vault", () => {
-    expect(
-      resolveV9WrapperStrategyTier(
-        asset("risk-absorption", wrapperSerialEdge, "strategy-vault"),
-        resolvedWithSerial(["bold-liquity"]),
-      ),
-    ).toBe("vault");
-  });
-  it("does not fabricate a wrapper tier from a serial parent alone", () => {
-    expect(resolveV9WrapperStrategyTier(asset(null), resolvedWithSerial([]))).toBeUndefined();
-    expect(resolveV9WrapperStrategyTier(asset(null), resolvedWithSerial(["usdc-circle"]))).toBeUndefined();
-  });
-  it("no variantKind, no inheritance, but a serial wrapper edge → conservative vault", () => {
-    expect(resolveV9WrapperStrategyTier(asset(null, wrapperSerialEdge), resolvedWithSerial(["usdc-circle"]))).toBe(
-      "vault",
-    );
-  });
-  it("does NOT discount a mechanism serial claim or a collateral/basket edge", () => {
-    expect(
-      resolveV9WrapperStrategyTier(
-        asset(null, [{ pathKind: "serial-dependency", dependencyType: "mechanism", upstreamAssetId: "share" }]),
-        resolvedWithSerial(["share"]),
-      ),
-    ).toBeUndefined();
-    expect(
-      resolveV9WrapperStrategyTier(
-        asset(null, [{ pathKind: "collateral-exposure", dependencyType: "collateral", upstreamAssetId: "dai-makerdao" }]),
-        { assetId: "mim", serial: [], basket: [], cycleBlocked: false },
-      ),
-    ).toBeUndefined();
-  });
-  it("returns undefined with no serial parent", () => {
-    expect(resolveV9WrapperStrategyTier(asset(null), resolvedWithSerial([]))).toBeUndefined();
+  it("does not invent a wrapper form without a wrapper dependency or variant", () => {
+    const claim = asset(null);
+    claim.dependencies.edges[0].dependencyType = "mechanism";
+    expect(resolveV9WrapperStrategyTier(claim, resolved())).toBeUndefined();
   });
 });
 
-describe("wrapper discounts propagate through the production set evaluator", () => {
-  it.each([
-    { variantKind: "pure-wrapper", form: "pure", discount: 3, limit: 76 },
-    { variantKind: "savings-passthrough", form: "native-staked", discount: 5, limit: 74 },
-    { variantKind: "strategy-vault", form: "strategy-vault", discount: 10, limit: 69 },
-  ] as const)("uses fallback only for incomplete $form facts", ({ variantKind, form, discount, limit }) => {
-    const parent = fullAsset(false) as unknown as V9AssetFactsV2;
-    parent.dependencies.edges = [];
-    parent.reserveExposures = parent.reserveExposures.filter((row) => row.trackedAssetId === null);
-    parent.reserveExposures[0].weight = 1;
-    const wrapper = minimalAsset("wrapper") as unknown as V9AssetFactsV2;
-    wrapper.dependencies.source = "variant";
-    wrapper.variantKind = variantKind;
-    wrapper.dependencies.edges = [{
-      edgeKey: "wrapper:alpha",
-      upstreamAssetId: "alpha",
-      dependencyType: "wrapper",
-      pathKind: "serial-dependency",
-      economicRole: "serial-claim",
-      weight: 1,
-      evidenceRefIds: ["evidence:base"],
-      failureDomains: [],
-    }];
-    const input = coreFixture();
-    input.assets = [parent, wrapper] as unknown as typeof input.assets;
-    input.activeAssetIds = ["alpha", "wrapper"];
-    const compiled = compileNativeV3FactSet(input);
-    const incomplete = evaluateV9FactSet(compiled, POLICY);
-    const parentScore = incomplete.assets.find((asset) => asset.assetId === "alpha")!.trace.finalScore;
-    expect(parentScore).toBe(79);
-    const incompleteWrapper = incomplete.assets.find((asset) => asset.assetId === "wrapper")!;
-    expect(incompleteWrapper.trace.wrapperParentLimit).toMatchObject({
-      form, factsComplete: false, treatment: "fallback-discount", appliedDiscount: discount, limit,
-    });
-    expect(incompleteWrapper.scoreInput.parent.score).toBe(limit);
-
-    const { v9FactSetDigest: _digest, ...completeCore } = structuredClone(compiled);
-    const completeAsset = completeCore.assets.find((asset) => asset.assetId === "wrapper")!;
-    const local = completeAsset.wrapperLocalFacts;
-    if (local.applicability !== "wrapper") throw new Error("Expected wrapper facts");
-    for (const fact of Object.values(local.facts)) {
-      fact.disposition = "reviewed";
-      fact.assessment = "none";
-      fact.evidenceRefIds = ["evidence:base"];
-      fact.status = knownStatus();
-    }
-    local.facts.custodyEscrow.assessment = "critical";
-    local.riskTransfer = {
-      disposition: "not-applicable",
-      mechanism: "none",
-      maximumParentLossAbsorptionPoints: 0,
-      signals: ["no-risk-transfer"],
-      evidenceRefIds: ["evidence:base"],
-    };
-    completeAsset.gaps = completeAsset.gaps.filter((gap) => !gap.gapId.startsWith("fixture:wrapper:"));
-    const complete = evaluateV9FactSet(compileV9FactSetV3(completeCore), POLICY);
-    const completeWrapper = complete.assets.find((asset) => asset.assetId === "wrapper")!;
-    expect(completeWrapper.scoreInput.parent.score).toBe(77);
-    expect(completeWrapper.trace.wrapperParentLimit).toMatchObject({
-      form, factsComplete: true, treatment: "local-facts", fallbackDiscount: 0, appliedDiscount: 2, limit: 77,
-    });
+describe("wrapper score assembly", () => {
+  it("limits a strong own score at the already deducted parent ceiling", () => {
+    expect(score(95, 74).finalScore).toBe(74);
+  });
+  it("does not deduct the form a second time from an independently weak own score", () => {
+    const own = score(35, null, false);
+    const child = score(35, 74);
+    expect(child.finalScore).toBe(own.finalScore);
+    expect(child.finalScore).toBe(35);
+    expect(child.bindingCap).toBeNull();
+  });
+  it("retains genuine required-parent unavailability", () => {
+    const trace = scoreV9EvaluatedAsset(makeV9ProductionScoreInput({
+      parent: {
+        required: true, score: null, ratingStatus: "not-rated",
+        propagatedReasons: [{ code: "missing-pillar-evidence", message: "Required parent has no usable pillars.", cause: "U", causeGapIds: ["gap:parent"] }],
+      },
+    }), POLICY);
+    expect(trace.finalScore).toBeNull();
+    expect(trace.ratingStatus).toBe("not-rated");
+  });
+  it("never transmits the public longevity premium to a wrapper", () => {
+    const premium = POLICY.policy.semantic.formula.assetPremiums[0];
+    const ordinary = scoreV9EvaluatedAsset(makeV9ProductionScoreInput({
+      assetId: premium.assetId, trackRecordMonths: 120,
+      pillars: { backing: makeV9Pillar(75), exit: makeV9Pillar(75), control: makeV9Pillar(75) },
+    }), POLICY);
+    const adjusted = applyV9AssetPremium(ordinary, premium, POLICY);
+    expect(adjusted.finalScore).toBe(87);
+    expect(projectV9DependencyScore(adjusted)).toBe(75);
+    expect(score(95, projectV9DependencyScore(adjusted)! - 10).finalScore).toBe(65);
   });
 });

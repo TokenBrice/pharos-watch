@@ -2,7 +2,7 @@
   "id": "btcusd-btcfi",
   "name": "Bitcoin USD",
   "symbol": "BtcUSD",
-  "oneLiner": "BtcUSD is BTCfi's overcollateralized USD stablecoin minted from BTC variants (WBTC, BTCB, cbBTC, native BTC) via Liquity-style CDP vaults.",
+  "oneLiner": "BtcUSD is BTCFi's Bifrost-native dollar stablecoin, borrowed against Bitcoin collateral through a shared lending market.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
@@ -45,11 +45,8 @@
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "custodyModel": "cex",
+  "custodyModel": "unknown",
   "governanceQuality": "single-entity",
-  "infrastructures": [
-    "liquity-v1"
-  ],
   "liveReservesConfig": {
     "adapter": "btcfi",
     "version": 1,

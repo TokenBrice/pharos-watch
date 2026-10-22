@@ -54,6 +54,23 @@ const BASE_INCIDENT = {
   },
 } as const;
 
+describe("realized holder loss admission", () => {
+  it("keeps omitted loss distinct from a positive realized loss", () => {
+    expect(V9ReviewedIncidentSchema.parse(BASE_INCIDENT).realizedHolderLossPct).toBeUndefined();
+    expect(V9ReviewedIncidentSchema.parse({
+      ...BASE_INCIDENT, realizedHolderLossPct: 2.95,
+    }).realizedHolderLossPct).toBe(2.95);
+  });
+
+  it.each([0, -1, 100.01, Infinity, NaN])("rejects invalid loss percentage %s", (realizedHolderLossPct) => {
+    expect(V9ReviewedIncidentSchema.safeParse({ ...BASE_INCIDENT, realizedHolderLossPct }).success).toBe(false);
+  });
+
+  it("accepts a fully realized loss without requiring a peg incident", () => {
+    expect(V9ReviewedIncidentSchema.safeParse({ ...BASE_INCIDENT, realizedHolderLossPct: 100 }).success).toBe(true);
+  });
+});
+
 const NEGATIVE_REVIEW = {
   reviewId: "fixture-negative-review",
   assetId: "fixture-asset",
@@ -352,13 +369,6 @@ describe("Safety Score v9 reviewed incident schema", () => {
       formSignals: ["fixture-wrapper"],
       formEvidenceRefIds: [],
       facts,
-      riskTransfer: {
-        disposition: "integration-missing",
-        mechanism: "unknown",
-        maximumParentLossAbsorptionPoints: 0,
-        signals: ["fixture-risk-transfer"],
-        evidenceRefIds: [],
-      },
     }).success).toBe(false);
   });
 });

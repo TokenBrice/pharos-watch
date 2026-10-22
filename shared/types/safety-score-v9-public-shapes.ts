@@ -1,7 +1,6 @@
-import type { z } from "zod";
-import type { SafetyScoreV9CurrentCardBaseSchema } from "./safety-score-v9-public";
+import type { SafetyScoreV9CardValidationInput } from "./safety-score-v9-public";
 
-type SafetyScoreV9ParsedCurrentCard = z.output<typeof SafetyScoreV9CurrentCardBaseSchema>;
+type SafetyScoreV9ParsedCurrentCard = SafetyScoreV9CardValidationInput;
 
 export type SafetyScoreV9CardRefinementInput = Pick<
   SafetyScoreV9ParsedCurrentCard,

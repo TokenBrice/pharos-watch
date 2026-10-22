@@ -2,7 +2,7 @@
   "id": "nwisdom-nest",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-adverse",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "nWISDOM has reviewed issuer-native local deposit/mint paths on Ethereum, Plume, and BNB Chain through NestVaultPredicateProxy and chain-local NestVault contracts. Solana is a LayerZero OFT representation: the issuer's archived integration guide routes USDC through CCTP to mint on Plume, then delivers SPL shares through OFT. Its 1-of-2 SPL authority and immediate program-admin path are preserved under Bridge Risk, not counted again as a native liability issuer. No hard aggregate native supply cap or independent whole-supply reconciliation is evidenced; the remaining native controls stay adverse.",
     "upgradeability": {
@@ -272,12 +272,12 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
-    "supervision": "none",
+    "reconciliation": "continuous",
+    "supervision": "unknown",
     "review": {
-      "evidence": "Native EVM control observations are retained at their original chain-specific blocks: Ethereum 25770023, Plume 87667298, and BNB 116342916. The 2026-10-01 boundary correction uses the issuer integration guide archived 2026-06-09, which explicitly routes Solana deposits through CCTP to a Plume nWISDOM mint before LayerZero OFT delivery. Finalized Solana slot 452347392 binds the exact SPL mint to a 1-of-2 authority with OFTStore RgP5qMfX58PBLm6EoEgCfgfWxLdVBmGTm6bYnD3kECq and external signer J9tZ5VVz9qFiz8YQ1ktvkSonXPmVmn8dXefcKgowZw3J. Pinned OFT source decodes that store to this mint and LayerZero endpoint; the external signer is also store admin and program upgrade authority. Those representation powers now belong solely to Bridge Risk. This correction does not refresh the historical native EVM observations or establish a native cap, key-custody safeguard, or independent supply reconciliation.",
-      "reviewer": "Sol curation pass 2026-10-01 (R2WNest); native EVM observations retained from Codex FIX-09",
-      "reviewedAt": "2026-10-01",
+      "evidence": "Native EVM control observations are retained at their original chain-specific blocks: Ethereum 25770023, Plume 87667298, and BNB 116342916. The 2026-10-01 boundary correction uses the issuer integration guide archived 2026-06-09, which explicitly routes Solana deposits through CCTP to a Plume nWISDOM mint before LayerZero OFT delivery. Finalized Solana slot 452347392 binds the exact SPL mint to a 1-of-2 authority with OFTStore RgP5qMfX58PBLm6EoEgCfgfWxLdVBmGTm6bYnD3kECq and external signer J9tZ5VVz9qFiz8YQ1ktvkSonXPmVmn8dXefcKgowZw3J. Pinned OFT source decodes that store to this mint and LayerZero endpoint; the external signer is also store admin and program upgrade authority. Those representation powers now belong solely to Bridge Risk. Nest family reconciliation review 2026-10-21: nWISDOM uses the same issuer-operated mechanism as its siblings - per-vault /positions, /price and /last-price-update endpoints, a supplyByChain partition summing exactly to totalSupply across Ethereum, BSC, Arc, Plasma, Plume and the Solana OFT representation, and a nest-vault-positions adapter that reconciles positions to published NAV. Read at 2026-10-21T22:16Z, the nWISDOM feed returned 24,712.19 USD of positions against a published NAV of 24,712.19 USD (1.00000x) with the latest accountant clock at 2026-10-21T21:37:11Z, so reconciliation is continuous; the nUSDR receivable exposure is an identified composition fact and does not make the denominator unreconciled. This is issuer-reported reconciliation, not independent assurance: no reserve-attestor report and no prudential supervisor is identified, so supervision is unknown and the row takes the 55 unbounded-reconciled quality rather than the 70/80 attestation gradings. The prior 'no independent supply reconciliation' finding applied the independence bar to the cadence field; independence is priced through supervision. No native cap or key-custody safeguard is established, and none is claimed here.",
+      "reviewer": "Sol curation pass 2026-10-01 (R2WNest); native EVM observations retained from Codex FIX-09; R2 Nest family reconciliation 2026-10-21",
+      "reviewedAt": "2026-10-21",
       "disposition": "scoreable",
       "sources": [
         {
@@ -315,6 +315,26 @@
         {
           "label": "Pinned Nest OFTStore source layout",
           "url": "https://raw.githubusercontent.com/plumenetwork/nest-protocol/cb190cd212ac9cc62c071efbc73387961b2e5e88/programs/oft/src/state/oft.rs"
+        },
+        {
+          "label": "Nest nWISDOM live positions and supply-by-chain API",
+          "url": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/positions"
+        },
+        {
+          "label": "Nest nWISDOM live NAV and aggregate supply API",
+          "url": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/price"
+        },
+        {
+          "label": "Nest nWISDOM accountant last-price-update API",
+          "url": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/last-price-update"
+        },
+        {
+          "label": "Nest nWISDOM vault registry (hub/spoke accountants and Solana OFT mint)",
+          "url": "https://api.nest.credit/v1/vaults/nest-wisdom-vault"
+        },
+        {
+          "label": "Nest vault operations and valuation (routine NAV updates handled by Nest operations)",
+          "url": "https://docs.nest.credit/about/vault-operations-and-valuation"
         }
       ]
     }

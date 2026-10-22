@@ -88,7 +88,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "onchain",
+  "custodyModel": "unknown",
   "governanceQuality": "multisig",
   "yieldConfig": {
     "yieldSource": "YieldFi yUSD strategies",

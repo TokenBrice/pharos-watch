@@ -36,7 +36,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "unknown",
   "governanceQuality": "single-entity",
   "yieldConfig": {
     "yieldSource": "Turkey-FX delta-neutral arbitrage (BMMF) plus DeFi protocol allocations",

@@ -8,7 +8,7 @@ import {
   type V9BackingAssetInput,
   v9StructuralSignalSharePct,
 } from "../safety-score-v9/backing-primitives";
-import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import type {
   V9AssetFactsV2,
   V9FactGapV2,
@@ -21,7 +21,7 @@ import type {
 } from "../../types/safety-score-v9-lender-book";
 import { evaluateV1019LenderBook } from "../safety-score-v9/lender-book";
 import { lenderMarketKey } from "../safety-score-v9/lender-book-registry";
-import { verifiedLiveInheritedExposures } from "../safety-score-v9/backing-inheritance";
+import { verifiedLiveInheritedExposures, verifiedLiveLenderBookExposures } from "../safety-score-v9/backing-inheritance";
 
 import { asset, exposure, knownStatus, missingMechanism } from "./safety-score-v9-backing.test-support";
 import { resolveV9EvidenceCause } from "../safety-score-v9/evidence";
@@ -55,12 +55,12 @@ function factorGap(key: string, cause: "A" | "B" | "C" | "U"): V9FactGapV3 {
 }
 
 describe("v10.01 cause-aware reserve quality", () => {
-  it("never labels USDT gold's unknown horizons unsafe, while independently unsafe known evidence still fires", () => {
+  it("keeps unknown horizons distinct from independently measured unsafe reserves", () => {
     const gold = { ...exposure({ key: "gold", weight: 1, assetClass: "other" }),
       liquidityHorizon: "unknown" as const, maturityDaysMax: null };
     const unknown = evaluateV9ReserveExposures(asset([gold]), V9_CANDIDATE_POLICY_V1);
     expect(unknown.contributions.find(row => row.componentKey === "reserve:gold")!.score).toBeCloseTo(
-      40 * 0.55 + 55 * 0.3 + 48 * 0.15, 12);
+      40 * 0.55 + 50 * 0.3 + 50 * 0.15, 12);
     expect(unknown.structuralReasons.filter(row => row.kind === "unsafe-backing")).toEqual([]);
     const measured = evaluateV9ReserveExposures(asset([{
       ...gold, assetClass: "private-credit", issuerOrObligorKey: "borrower",
@@ -71,22 +71,20 @@ describe("v10.01 cause-aware reserve quality", () => {
     }));
   });
 
-  it.each(["C", "U"] as const)("refining %s horizons to any ordinary disclosed rung cannot lower quality", (cause) => {
+  it.each(["C", "U"] as const)("prices only genuinely unknown %s factors and retains known weak class quality", (cause) => {
     const gaps = [factorGap("liquidity", cause), factorGap("maturity", cause)];
     const status = (index: number) => ({ ...knownStatus("report"), observationState: "bounded-unknown" as const,
       gapIds: [gaps[index]!.gapId] });
-    const row = { ...exposure({ key: "gold", weight: 1, assetClass: "other" }),
+    const row = { ...exposure({ key: "gold", weight: 1, assetClass: "private-credit" }),
       liquidityHorizon: "unknown" as const, maturityDaysMax: null,
-      factorStatuses: { liquidity: status(0), maturity: status(1) } };
-    const baseline = evaluateV9ReserveExposures({ ...asset([row]), gaps }, V9_CANDIDATE_POLICY_V1).score!;
-    for (const horizon of ["immediate", "one-day", "seven-days", "over-seven-days"] as const) {
-      for (const maturityDaysMax of [0, 30, 90, 365, 1000]) {
-        const result = evaluateV9ReserveExposures({ ...asset([{ ...row, liquidityHorizon: horizon, maturityDaysMax,
-          factorStatuses: { liquidity: knownStatus("liquidity"), maturity: knownStatus("maturity") } }]), gaps },
-        V9_CANDIDATE_POLICY_V1);
-        expect(result.score).toBeGreaterThanOrEqual(baseline);
-      }
-    }
+      factorStatuses: { assetClass: knownStatus("class"), liquidity: status(0), maturity: status(1) } };
+    const result = evaluateV9ReserveExposures(asset([row], gaps), V9_CANDIDATE_POLICY_V1);
+    const contribution = result.contributions.find(entry => entry.componentKey === "reserve:gold")!;
+    const unknown = unknownQuality("backing", cause);
+    expect(contribution.score).toBeCloseTo(35 * .55 + unknown * .3 + unknown * .15, 12);
+    expect(contribution.factors).toContainEqual(expect.objectContaining({
+      componentKey: "reserve:gold:assetClass", score: 35, cause: null,
+    }));
   });
 
   it.each(["A", "B"] as const)("excludes %s horizon factors without changing whole-asset exposure", (cause) => {
@@ -110,23 +108,6 @@ describe("v10.01 cause-aware reserve quality", () => {
     ]);
     expect(result.structuralReasons.filter(entry => entry.kind === "unsafe-backing")).toEqual([]);
   });
-  it("retains supplied stale classifications without converting their uncertainty into measured adversity", () => {
-    const keys = ["assetClass", "liquidity", "maturity", "obligorConcentration"] as const;
-    const gaps = keys.map(key => factorGap(key, "U"));
-    const known = exposure({ key: "gold", weight: 1 });
-    const stale = {
-      ...known, status: { ...known.status, observationState: "stale" as const, gapIds: gaps.map(gap => gap.gapId) },
-      factorStatuses: Object.fromEntries(keys.map((key, index) => [key,
-        { ...known.status, observationState: "stale" as const, gapIds: [gaps[index]!.gapId] }])),
-    };
-    const result = evaluateV9ReserveExposures(asset([stale], gaps), V9_CANDIDATE_POLICY_V1);
-    const knownResult = evaluateV9ReserveExposures(asset([known]), V9_CANDIDATE_POLICY_V1);
-    expect(result.contributions.find(row => row.componentKey === "reserve:gold")).toMatchObject({
-      score: knownResult.contributions.find(row => row.componentKey === "reserve:gold")!.score,
-      cause: "U", scoringDisposition: "bounded-uncertainty",
-    });
-    expect(result.structuralReasons.filter(row => row.kind === "unsafe-backing")).toEqual([]);
-  });
 
   it.each(["C", "U"] as const)("never invents diversification when the %s issuer census is wholly unidentified", (cause) => {
     const gap = factorGap("obligorConcentration", cause);
@@ -135,7 +116,7 @@ describe("v10.01 cause-aware reserve quality", () => {
         observationState: "bounded-unknown" as const, gapIds: [gap.gapId] } } };
     const result = evaluateV9ReserveExposures(asset([row], [gap]), V9_CANDIDATE_POLICY_V1);
     expect(result.contributions.find(entry => entry.componentKey === "reserve:concentration")).toMatchObject({
-      score: 35, cause, causeGapIds: ["gap:obligorConcentration"], scoringDisposition: "bounded-uncertainty",
+      score: unknownQuality("backing", cause), cause, causeGapIds: ["gap:obligorConcentration"], scoringDisposition: "bounded-uncertainty",
     });
     expect(result.structuralReasons.filter(entry => entry.kind === "unsafe-backing")).toEqual([]);
   });
@@ -161,7 +142,7 @@ describe("v10.01 cause-aware reserve quality", () => {
       ...asset([], [gap], status), reserveResiduals: [{ residualId: "unidentified", weight: 1, status }],
     }, V9_CANDIDATE_POLICY_V1);
     expect(result.contributions.find(row => row.componentKey === "reserve:unclassified-residual:unidentified"))
-      .toMatchObject({ score: 35, cause: "U", causeGapIds: [gap.gapId] });
+      .toMatchObject({ score: 50, cause: "U", causeGapIds: [gap.gapId] });
   });
 
   it("uses available parent quality instead of local C/U floors, but retains independently measured local danger", () => {
@@ -214,7 +195,7 @@ describe("v10.01 cause-aware reserve quality", () => {
     expect(result.contributions.find(entry => entry.componentKey === "reserve:gold")!.score).toBeCloseTo(67.08, 12);
   });
 
-  it("keeps the compiled reserve witness on inherited quality and concentration without verified live holdings", () => {
+  it("keeps missing-reserve uncertainty visible without inventing inherited holdings", () => {
     const gap: V9FactGapV3 = {
       gapId: "hbusdt-hyperbeat:gap:reserve-composition",
       reasonCode: "missing-reserve-composition",
@@ -255,13 +236,13 @@ describe("v10.01 cause-aware reserve quality", () => {
     }, V9_CANDIDATE_POLICY_V1);
     const inherited = result.contributions.filter(row => row.source !== "mechanism");
     expect(inherited.map(row => row.componentKey)).toEqual([
-      "reserve:concentration", "reserve:inherited-backing:usdt-tether",
+      "reserve:concentration", "reserve:unclassified-residual",
     ]);
     for (const row of inherited) {
       expect(V9CauseContributionSchema.parse({
         score: row.score, cause: row.cause, causeGapIds: row.causeGapIds,
         scoringDisposition: row.scoringDisposition, effectiveScoringWeight: row.effectiveScoringWeight,
-      })).toMatchObject({ score: 75, cause: "U", causeGapIds: [gap.gapId], scoringDisposition: "bounded-uncertainty" });
+      })).toMatchObject({ score: unknownQuality("backing", "U"), cause: "U", causeGapIds: [gap.gapId], scoringDisposition: "bounded-uncertainty" });
     }
     expect(result.contributions.reduce((sum, row) => sum + (row.score ?? 0) * row.effectiveScoringWeight, 0))
       .toBeCloseTo(result.score!, 12);
@@ -342,7 +323,7 @@ describe("Safety Score v9 backing exposure primitives", () => {
     expect(weak.structuralReasons).toEqual([]);
   });
 
-  it("emits a structural ceiling for material speculative credit", () => {
+  it("retains measured speculative-credit evidence without emitting a structural ceiling", () => {
     const result = evaluateV9ReserveExposures(
       asset([
         exposure({ key: "cash", weight: 0.8 }),
@@ -357,7 +338,6 @@ describe("Safety Score v9 backing exposure primitives", () => {
           kind: "speculative-credit",
           severity: "high",
           responsibility: "measured-adverse",
-          ceiling: 59,
           materialShare: 0.2,
         }),
       ]),
@@ -667,9 +647,9 @@ describe("Safety Score v9 backing exposure primitives", () => {
     const mechanismWeight = 1 - archetypePolicy.reserveWeight;
     const mechanismContributions = result.contributions.filter((entry) => entry.source === "mechanism");
 
-    expect(result).toMatchObject({ rateability: "rateable", pillarCeiling: null });
-    expect(result.score).toBeCloseTo(reserve.score! * archetypePolicy.reserveWeight + 35 * mechanismWeight, 12);
-    expect(result.score).toBeGreaterThan(35);
+    expect(result).toMatchObject({ rateability: "rateable" });
+    expect(result.score).toBeCloseTo(reserve.score! * archetypePolicy.reserveWeight + 50 * mechanismWeight, 12);
+    expect(result.score).toBeGreaterThan(50);
     expect(mechanismContributions.map((entry) => entry.componentKey)).toEqual([
       "mechanism:assurance-and-reconciliation",
       "mechanism:claim-and-segregation",
@@ -677,7 +657,7 @@ describe("Safety Score v9 backing exposure primitives", () => {
     ]);
     for (const contribution of mechanismContributions) {
       const componentKey = contribution.componentKey.replace("mechanism:", "");
-      expect(contribution.score).toBe(policy.boundedUnknownQuality);
+      expect(contribution.score).toBe(50);
       expect(contribution.observationState).toBe("missing");
       expect(contribution.evidenceRefIds).toEqual([]);
       expect(contribution.normalizedWeight * mechanismWeight).toBeCloseTo(
@@ -685,7 +665,6 @@ describe("Safety Score v9 backing exposure primitives", () => {
         12,
       );
     }
-    expect(result.unresolved).toHaveLength(3);
     expect(result.unresolved).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: "bounded-mechanism-review", treatment: "pillar" })]),
     );
@@ -725,7 +704,7 @@ describe("Safety Score v9 backing exposure primitives", () => {
     );
 
     expect(integrity).toMatchObject({ rateability: "rateable" });
-    expect(integrity.contributions.filter(row => row.source === "mechanism").every(row => row.score === 35 && row.cause === "U")).toBe(true);
+    expect(integrity.contributions.filter(row => row.source === "mechanism").every(row => row.score === 50 && row.cause === "U")).toBe(true);
     expect(integrity.unresolved).toContainEqual(expect.objectContaining({ code: "missing-pillar-evidence" }));
     expect(unresolvedArchetype).toMatchObject({ rateability: "rateable" });
     expect(unresolvedArchetype.unresolved).toContainEqual(expect.objectContaining({ code: "missing-archetype" }));
@@ -741,7 +720,7 @@ describe("Safety Score v9 backing exposure primitives", () => {
     });
     expect(scores[0]).toBeCloseTo(96.3, 8);
     expect(scores[1]).toBeCloseTo(95.1, 8);
-    expect(scores[2]).toBeCloseTo(96 * 0.55 + 98 * 0.3 + 48 * 0.15, 8);
+    expect(scores[2]).toBeCloseTo(96 * 0.55 + 98 * 0.3 + 50 * 0.15, 8);
   });
 
   it("ignores maturity for exempt cash but bounds an unknown liquidity horizon", () => {
@@ -750,14 +729,13 @@ describe("Safety Score v9 backing exposure primitives", () => {
       evaluateV9ReserveExposures(asset([{ ...cash, ...overrides }]), V9_CANDIDATE_POLICY_V1);
     expect(evaluate({ maturityDaysMax: 366 })).toEqual(evaluate({ maturityDaysMax: null }));
     expect(evaluate({ liquidityHorizon: null }).contributions.find((entry) => entry.componentKey === "reserve:cash")!.score)
-      .toBeCloseTo(98 * 0.55 + 55 * 0.3 + 100 * 0.15, 8);
+      .toBeCloseTo(98 * 0.55 + 50 * 0.3 + 100 * 0.15, 8);
     expect(evaluate({ liquidityHorizon: "immediate" }).contributions.find((entry) => entry.componentKey === "reserve:cash")!.score)
       .toBeCloseTo(98.3, 8);
   });
 });
 
 describe("Safety Score v9 wrapper backing inheritance", () => {
-  const backing = V9_CANDIDATE_POLICY_V1.policy.semantic.backing;
   const missingReserveAsset = (
     inherited: NonNullable<V9BackingAssetInput["inheritedStablecoinBacking"]>,
   ): V9BackingAssetInput => ({
@@ -782,34 +760,8 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
     inheritedStablecoinBacking: inherited,
   });
 
-  it("inherits a pure 1:1 parent's backing pillar without re-pricing the wrapper layer", () => {
-    const result = evaluateV9ReserveExposures(
-      missingReserveAsset({
-        parentAssetId: "parent",
-        parentBackingScore: 75,
-        weight: 1,
-        tier: "pure",
-        failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
-      }),
-      V9_CANDIDATE_POLICY_V1,
-    );
-    expect(result.score).toBeCloseTo(75, 6);
-    expect(result.rateability).toBe("rateable");
-    expect(result.contributions).toContainEqual(
-      expect.objectContaining({ componentKey: "reserve:inherited-backing:parent", upstreamAssetId: "parent" }),
-    );
-    expect(result.unresolved).toEqual([
-      expect.objectContaining({
-        code: "partial-reserve-review",
-        treatment: "pillar",
-        responsibility: "issuer-undisclosed",
-        cause: "C",
-        causeGapIds: ["wrapper:gap:reserve-composition"],
-      }),
-    ]);
-  });
 
-  it("preserves every explicit owner on an inherited partial reserve", () => {
+  it("preserves every explicit owner on an unavailable reserve envelope", () => {
     const base = missingReserveAsset({
       parentAssetId: "parent",
       parentBackingScore: 75,
@@ -844,7 +796,6 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
 
     expect(
       result.unresolved
-        .filter((reason) => reason.code === "partial-reserve-review")
         .map((reason) => reason.responsibility),
     ).toEqual(["issuer-undisclosed", "producer-failed"]);
   });
@@ -1005,18 +956,29 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
     expect(result.unresolved).toEqual([]);
   });
 
-  it("keeps sub-1 residual at the bounded-unknown quality", () => {
-    const result = evaluateV9ReserveExposures(
-      missingReserveAsset({
+  it.each(["C", "U"] as const)("prices a sub-1 residual by its admitted %s cause", (cause) => {
+    const input = missingReserveAsset({
         parentAssetId: "parent",
         parentBackingScore: 90,
         weight: 0.99,
         tier: "pure",
         failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
-      }),
+      });
+    const gap = { ...factorGap("reserve-composition", cause), gapId: input.reserveStatus.gapIds[0]! };
+    const result = evaluateV9ReserveExposures(
+      { ...input, gaps: [gap], reserveStatus: knownStatus("current-parent-holdings"),
+        reserveExposures: [exposure({
+          key: "parent", weight: 0.99, assetClass: "stablecoin", trackedAssetId: "parent", provenance: "live",
+        })],
+        reserveResiduals: [{ residualId: "unidentified", weight: 0.01,
+          status: { ...input.reserveStatus, gapIds: [gap.gapId] } }],
+      },
       V9_CANDIDATE_POLICY_V1,
     );
-    expect(result.score).toBeCloseTo(90 * 0.99 + backing.boundedUnknownQuality * 0.01, 6);
+    expect(result.score).toBeCloseTo(90 * 0.99 + unknownQuality("backing", cause) * 0.01, 6);
+    const residual = result.contributions.flatMap(row => row.factors ?? []).find(row => row.componentKey.includes(":residual:"))!;
+    expect(residual).toMatchObject({ score: unknownQuality("backing", cause), cause });
+    expect(residual.normalizedWeight).toBeCloseTo(0.01, 12);
   });
 
   it.each([
@@ -1038,36 +1000,29 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
           parentAssetId: "parent", parentBackingScore: 82, weight: 1, tier: "pure", failureDomains: [],
         },
       }, V9_CANDIDATE_POLICY_V1);
-      expect(result.contributions.find((entry) => entry.componentKey === "reserve:inherited-backing:parent"))
-        .toMatchObject({ score: 82, provenance: verified ? "live" : null, observationState: verified ? "known" : "bounded-unknown" });
-      expect(result.unresolved).toEqual(verified ? [] : [
-        expect.objectContaining({ code: "partial-reserve-review", treatment: "pillar" }),
-      ]);
+      const contribution = result.contributions.find(entry => entry.componentKey === "reserve:inherited-backing:parent");
+      if (verified) {
+        expect(contribution).toMatchObject({ score: 82, provenance: "live", observationState: "known" });
+      } else {
+        expect(contribution).toBeUndefined();
+      }
     }
   });
 
-  it.each([34, 35, 35.001])("uses the bounded floor unless parent quality %s exceeds it", (parentBackingScore) => {
-    const result = evaluateV9ReserveExposures(missingReserveAsset({
-      parentAssetId: "parent",
-      parentBackingScore,
-      weight: 1,
-      tier: "wrapped",
-      failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
-    }), V9_CANDIDATE_POLICY_V1);
-    expect(result.score).toBeCloseTo(Math.max(35, parentBackingScore), 6);
-    if (parentBackingScore <= 35) {
-      expect(result.contributions.map((entry) => entry.componentKey)).toEqual([
-        "reserve:unclassified-residual", "reserve:concentration",
-      ]);
-      expect(result.unresolved).toContainEqual(expect.objectContaining({
-        code: "missing-reserve-composition", pathKey: "reserve-envelope",
-      }));
-    } else {
-      expect(result.contributions).toContainEqual(expect.objectContaining({
-        componentKey: "reserve:inherited-backing:parent", score: 35.001,
-      }));
-      expect(result.unresolved).toContainEqual(expect.objectContaining({ code: "partial-reserve-review" }));
-    }
+  it.each([0, 25, 34, 35, 50])("retains weak measured parent quality %s below unknown", (parentBackingScore) => {
+    const result = evaluateV9ReserveExposures({
+      ...asset([exposure({
+        key: "parent", weight: 1, assetClass: "stablecoin", trackedAssetId: "parent", provenance: "live",
+      })]),
+      inheritedStablecoinBacking: {
+        parentAssetId: "parent", parentBackingScore, weight: 1,
+        tier: "wrapped", failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
+      },
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(result.score).toBeCloseTo(parentBackingScore, 6);
+    expect(result.contributions).toContainEqual(expect.objectContaining({
+      componentKey: "reserve:inherited-backing:parent", score: parentBackingScore,
+    }));
   });
 });
 
@@ -1099,7 +1054,7 @@ describe("v10.19 allocation-weighted Morpho lender Backing", () => {
   function book(
     claims: readonly Claim[],
     idle = "0",
-    assetId = "kpkusdcprime-kpk",
+    assetId = "synthetic-lender",
     chain = "ethereum",
     kind: LenderDeploymentObservation["kind"] = "vault-v2",
   ): V1019LenderBookFact {
@@ -1138,7 +1093,7 @@ describe("v10.19 allocation-weighted Morpho lender Backing", () => {
   function inherited(fact?: V1019LenderBookFact, parent = parentBacking): V9BackingAssetInput {
     return {
       ...asset([exposure({ key: "parent", weight: 1, assetClass: "stablecoin", trackedAssetId: "parent", provenance: "live" })]),
-      assetId: fact?.observation?.assetId ?? "kpkusdcprime-kpk",
+      assetId: fact?.observation?.assetId ?? "synthetic-lender",
       inheritedStablecoinBacking: {
         parentAssetId: "parent", parentBackingScore: parent, weight: 1, tier: "wrapped",
         failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
@@ -1147,8 +1102,8 @@ describe("v10.19 allocation-weighted Morpho lender Backing", () => {
     };
   }
   function hybridYield(): V1019LenderBookFact {
-    const fact = book(yieldClaims, "0", "kpkusdcyield-kpk");
-    const ids: Record<number, string> = { 1: "ftusd-flying-tulip", 2: "savusd-avant", 5: "usd3-3jane" };
+    const fact = book(yieldClaims, "0", "synthetic-yield-lender");
+    const ids: Record<number, string> = { 1: "synthetic-collateral-a", 2: "synthetic-collateral-b", 5: "synthetic-collateral-c" };
     fact.collaterals = fact.collaterals.map((row, index) => ids[index] === undefined ? row : ({
       ...row, trackedAssetId: ids[index]!, qualitySource: "previous-accepted-backing",
       acceptedPublicationGenerationId: "accepted:1791989210",
@@ -1161,56 +1116,101 @@ describe("v10.19 allocation-weighted Morpho lender Backing", () => {
     return result!;
   }
 
-  it.each([0, 35, 85, 100])("caps complete multi-slice reserves at both generic and book quality %s", quality => {
+  it.each([0, 35, 85, 100])("keeps same-parent lender row splits equivalent at collateral quality %s", quality => {
     const fact = book([["100", quality, "1000000000000000000", "other-unknown"]]);
     const base = inherited(fact);
     const input = { ...base, reserveExposures: [
       { ...base.reserveExposures[0]!, exposureKey: "deployed", assetClass: "protocol-position" as const, weight: .95 },
       { ...base.reserveExposures[0]!, exposureKey: "idle", weight: .05 },
     ] };
-    const { inheritedStablecoinBacking: _inherited, ...oldInput } = input;
-    const generic = evaluateV9ReserveExposures(oldInput, V9_CANDIDATE_POLICY_V1);
     const result = evaluateV9ReserveExposures(input, V9_CANDIDATE_POLICY_V1);
-    expect(result.score).toBeCloseTo(Math.min(generic.score!, arithmetic(fact).reserveQuality), 8);
-    expect(result.structuralReasons).toEqual(generic.structuralReasons);
-    expect(result.unresolved).toEqual(generic.unresolved);
+    expect(result.score).toBeCloseTo(arithmetic(fact).reserveQuality, 8);
+    expect(result.score).toBe(evaluateV9ReserveExposures(base, V9_CANDIDATE_POLICY_V1).score);
     expect(result.contributions.flatMap(row => row.factors ?? []).some(row => row.componentKey.includes(":lender-book:"))).toBe(true);
     expect(result.contributions.find(row => row.source === "reserve-exposure")!.observationState).toBe("known");
     fact.status = { ...fact.status, observationState: "missing" };
-    expect(evaluateV9ReserveExposures(input, V9_CANDIDATE_POLICY_V1).score).toBe(generic.score);
+    expect(verifiedLiveLenderBookExposures(input, input.inheritedStablecoinBacking!, V9_CANDIDATE_POLICY_V1)).toBeUndefined();
+    const { inheritedStablecoinBacking: _parentClaim, ...withoutInheritance } = input;
+    expect(evaluateV9ReserveExposures(input, V9_CANDIDATE_POLICY_V1))
+      .toEqual(evaluateV9ReserveExposures(withoutInheritance, V9_CANDIDATE_POLICY_V1));
   });
 
-  it("requires every multi-slice holding to be exact, live, known and same-parent, without extending non-lenders", () => {
+  it("requires exact live same-parent identity for every admitted split claim", () => {
     const base = inherited(book(primeClaims));
     const input = { ...base, reserveExposures: [
       { ...base.reserveExposures[0]!, exposureKey: "deployed", weight: .95 },
       { ...base.reserveExposures[0]!, exposureKey: "idle", weight: .05 },
     ] };
     const parent = input.inheritedStablecoinBacking!;
-    expect(verifiedLiveInheritedExposures(input, parent)).toBeUndefined();
-    expect(verifiedLiveInheritedExposures(input, parent, true)).toHaveLength(2);
+    expect(verifiedLiveInheritedExposures(input, parent)).toHaveLength(2);
     for (const patch of [
       { trackedAssetId: "other-parent" }, { trackedAssetId: null }, { provenance: "curated" as const },
       { status: { ...knownStatus("unknown"), observationState: "bounded-unknown" as const } },
-      { weight: .049 }, { weight: .051 },
+      { weight: .039 }, { weight: .051 },
     ]) {
       const invalid = { ...input, reserveExposures: [input.reserveExposures[0]!, { ...input.reserveExposures[1]!, ...patch }] };
-      expect(verifiedLiveInheritedExposures(invalid, parent, true)).toBeUndefined();
+      expect(verifiedLiveInheritedExposures(invalid, parent)).toBeUndefined();
       const { inheritedStablecoinBacking: _inherited, ...oldInput } = invalid;
       expect(evaluateV9ReserveExposures(invalid, V9_CANDIDATE_POLICY_V1))
         .toEqual(evaluateV9ReserveExposures(oldInput, V9_CANDIDATE_POLICY_V1));
     }
     expect(verifiedLiveInheritedExposures({
       ...input, reserveResiduals: [{ residualId: "unknown", weight: .001, status: knownStatus("residual") }],
-    }, parent, true)).toBeUndefined();
+    }, parent)).toBeUndefined();
     const withinTolerance = { ...input, reserveExposures: [
       input.reserveExposures[0]!, { ...input.reserveExposures[1]!, weight: .0500005 },
     ] };
-    expect(verifiedLiveInheritedExposures(withinTolerance, parent, true)).toHaveLength(2);
-    const nonLender = { ...input, assetId: "unadmitted-wrapper" };
-    // A manually supplied legacy inheritance candidate still takes its old
-    // bounded-witness path; the new book cannot admit a non-Morpho asset.
-    expect(evaluateV9ReserveExposures(nonLender, V9_CANDIDATE_POLICY_V1).score).toBe(parentBacking);
+    expect(verifiedLiveInheritedExposures(withinTolerance, parent)).toHaveLength(2);
+    const renamedFact = book(primeClaims, "0", "synthetic-renamed-lender");
+    expect(evaluateV9ReserveExposures(inherited(renamedFact), V9_CANDIDATE_POLICY_V1).score)
+      .toBe(evaluateV9ReserveExposures(inherited(book(primeClaims)), V9_CANDIDATE_POLICY_V1).score);
+  });
+
+  it("preserves known reserve and lender-book weights when the mechanism is unresolved", () => {
+    const fact = book([["100", 35, "1000000000000000000", "structured-credit"]]);
+    const input = inherited(fact, 90);
+    const gap = missingMechanism("archetype", "gap:archetype", "backing.required", "Unresolved mechanism").gap;
+    const reserve = evaluateV9ReserveExposures(input, V9_CANDIDATE_POLICY_V1);
+    const result = createUnavailableV9BackingResult({ ...input, gaps: [gap] },
+      unavailableReview(gap, "unresolved"), V9_CANDIDATE_POLICY_V1);
+    const reserveWeight = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.archetypes["shared-reserve"].reserveWeight;
+    expect(result.score).toBeCloseTo(reserve.score! * reserveWeight + 50 * (1 - reserveWeight), 12);
+    expect(result.contributions.filter(row => row.source !== "mechanism")
+      .reduce((sum, row) => sum + row.effectiveScoringWeight, 0)).toBeCloseTo(reserveWeight, 12);
+    expect(result.contributions.flatMap(row => row.factors ?? []).some(row => row.componentKey.includes(":lender-book:"))).toBe(true);
+    expect(result.score).toBeLessThan(50);
+  });
+
+  it("keeps a split exact parent claim equivalent without looking through a different strategy identity", () => {
+    const merged = inherited();
+    const parent = merged.reserveExposures[0]!;
+    const split = { ...merged, reserveExposures: [
+      { ...parent, exposureKey: "idle", weight: .05 },
+      { ...parent, exposureKey: "strategy", weight: .95 },
+    ] };
+    expect(evaluateV9ReserveExposures(split, V9_CANDIDATE_POLICY_V1).score)
+      .toBe(evaluateV9ReserveExposures(merged, V9_CANDIDATE_POLICY_V1).score);
+    expect(verifiedLiveInheritedExposures({ ...split, reserveExposures: [
+      split.reserveExposures[0]!, { ...split.reserveExposures[1]!, trackedAssetId: "synthetic-different-strategy" },
+    ] }, merged.inheritedStablecoinBacking!)).toBeUndefined();
+  });
+
+  it("does not inherit a lending strategy's denomination unless its row is an admitted parent-token claim", () => {
+    const direct = inherited(undefined, 90);
+    const deployed = { ...direct, reserveExposures: [{
+      ...direct.reserveExposures[0]!, assetClass: "protocol-position" as const,
+      name: "Parent-token lending strategy", riskFactors: ["credit", "smart-contract"],
+    }] };
+    const parent = direct.inheritedStablecoinBacking!;
+    expect(verifiedLiveInheritedExposures(deployed, parent)).toBeUndefined();
+    const strategyResult = evaluateV9ReserveExposures(deployed, V9_CANDIDATE_POLICY_V1);
+    expect(strategyResult.contributions.some(row => row.componentKey === "reserve:inherited-backing:parent")).toBe(false);
+    expect(strategyResult.score).toBeLessThan(parent.parentBackingScore);
+    const admittedClaim = { ...deployed, reserveExposures: [{
+      ...deployed.reserveExposures[0]!, assetClass: "stablecoin" as const,
+    }] };
+    expect(verifiedLiveInheritedExposures(admittedClaim, parent)).toHaveLength(1);
+    expect(evaluateV9ReserveExposures(admittedClaim, V9_CANDIDATE_POLICY_V1).score).toBe(parent.parentBackingScore);
   });
 
   it("reproduces the exact raw-weighted Prime counterfactual including one-raw-unit weETH", () => {
@@ -1218,16 +1218,9 @@ describe("v10.19 allocation-weighted Morpho lender Backing", () => {
     const result = arithmetic(fact);
     expect(result.deploymentQualities[0]!.bookQuality).toBeCloseTo(88.7418377232, 8);
     expect(result.reserveQuality).toBeCloseTo(80.1217131799, 8);
-    const backing = 33.5 + 0.4 * result.reserveQuality;
-    expect(backing).toBeCloseTo(65.5486852720, 8);
-    const mean = backing * 0.4 + 72 * 0.35 + 45 * 0.25;
-    const final = 45 + 20 * Math.tanh((mean - 45) / 20);
-    expect(final).toBeCloseTo(59.1631056365, 8);
-    expect(Math.round(final)).toBe(59);
     const reserve = evaluateV9ReserveExposures(inherited(fact), V9_CANDIDATE_POLICY_V1);
     expect(reserve.score).toBeCloseTo(result.reserveQuality, 8);
     const factors = reserve.contributions[0]!.factors!;
-    expect(factors).toHaveLength(9);
     expect(factors.find(row => row.componentKey.includes(fact.collaterals[6]!.marketKey))!.effectiveScoringWeight)
       .toBeGreaterThan(0);
   });
@@ -1237,12 +1230,6 @@ describe("v10.19 allocation-weighted Morpho lender Backing", () => {
     const result = arithmetic(fact);
     expect(result.deploymentQualities[0]!.bookQuality).toBeCloseTo(62.8491909074, 8);
     expect(result.reserveQuality).toBeCloseTo(56.7442029224, 8);
-    const backing = 33.5 + 0.4 * result.reserveQuality;
-    expect(backing).toBeCloseTo(56.1976811690, 8);
-    const mean = backing * 0.4 + 70.24 * 0.35 + 45 * 0.25;
-    const final = 45 + 20 * Math.tanh((mean - 45) / 20);
-    expect(final).toBeCloseTo(56.6422714607, 8);
-    expect(Math.round(final)).toBe(57);
     expect(fact.collaterals[4]!.trackedAssetId).toBeNull();
     expect(fact.collaterals[6]!.trackedAssetId).toBeNull();
   });
@@ -1250,21 +1237,16 @@ describe("v10.19 allocation-weighted Morpho lender Backing", () => {
   it("reproduces the separately labelled accepted-source fallback Yield scenario", () => {
     const fallback = book(yieldClaims.map((row, index): Claim =>
       [row[0], index === 1 || index === 2 ? 55 : index === 5 ? 35 : row[1], row[2], row[3]]),
-    "0", "kpkusdcyield-kpk");
+    "0", "synthetic-yield-lender");
     const result = arithmetic(fallback);
     expect(result.deploymentQualities[0]!.bookQuality).toBeCloseTo(57.3901489066, 8);
     expect(result.reserveQuality).toBeCloseTo(51.8154364167, 8);
-    const backing = 33.5 + 0.4 * result.reserveQuality;
-    expect(backing).toBeCloseTo(54.2261745667, 8);
-    const final = 45 + 20 * Math.tanh((backing * 0.4 + 70.24 * 0.35 + 45 * 0.25 - 45) / 20);
-    expect(final).toBeCloseTo(56.1089263260, 8);
-    expect(Math.round(final)).toBe(56);
   });
 
   it("preserves 20% idle parent inheritance and all-idle null book quality", () => {
     // Multiply claims by four and use their original sum as idle: exact 20% idle.
     const deployed = book(yieldClaims.map((row): Claim => [(BigInt(row[0]) * 4n).toString(), row[1], row[2], row[3]]),
-      "13255106628776", "kpkusdcyield-kpk");
+      "13255106628776", "synthetic-yield-lender");
     expect(arithmetic(deployed).reserveQuality).toBeCloseTo(63.4526203879, 8);
     const allIdle = book([], "100");
     expect(arithmetic(allIdle)).toMatchObject({
@@ -1385,18 +1367,17 @@ describe("v10.19 allocation-weighted Morpho lender Backing", () => {
     }));
   });
 
-  it("selects the worst of three nonfungible deployments and refuses a missing required deployment", () => {
+  it("selects the worst nonfungible deployment and refuses an unjoined incomplete book", () => {
     const facts = [
-      book([["100", 85, "860000000000000000", "btc-wrapper"]], "0", "gtusdcp-gauntlet"),
-      book([["100", 55, "860000000000000000", "principal-token"]], "0", "gtusdcp-gauntlet", "base", "metamorpho-v1"),
-      book([["100", 35, "915000000000000000", "structured-credit"]], "0", "gtusdcp-gauntlet", "arbitrum", "metamorpho-v1.1"),
+      book([["100", 85, "860000000000000000", "btc-wrapper"]], "0", "synthetic-multichain-lender"),
+      book([["100", 55, "860000000000000000", "principal-token"]], "0", "synthetic-multichain-lender", "base", "metamorpho-v1"),
+      book([["100", 35, "915000000000000000", "structured-credit"]], "0", "synthetic-multichain-lender", "arbitrum", "metamorpho-v1.1"),
     ];
     const fact = facts[0]!;
     if (fact.observation?.status !== "ok") throw new Error("fixture");
     fact.observation.deployments = facts.flatMap(row => row.observation?.status === "ok" ? row.observation.deployments : []);
     fact.collaterals = facts.flatMap(row => row.collaterals);
     const result = arithmetic(fact);
-    expect(result.deploymentQualities).toHaveLength(3);
     expect(result.reserveQuality).toBeCloseTo(parentBacking * 0.45580375, 10);
     const factors = evaluateV9ReserveExposures(inherited(fact), V9_CANDIDATE_POLICY_V1).contributions[0]!.factors!;
     expect(factors.every(row => row.componentKey.includes("arbitrum:"))).toBe(true);
@@ -1427,14 +1408,13 @@ describe("v10.19 allocation-weighted Morpho lender Backing", () => {
     expect(input.resolvedUpstreamExposures).toEqual([]);
   });
 
-  it("retains byte-equivalent non-cohort behavior without creating collateral dependencies", () => {
-    const nonLender = { ...inherited(), assetId: "ordinary-wrapper" };
-    const before = JSON.stringify(nonLender);
-    const first = evaluateV9ReserveExposures(nonLender, V9_CANDIDATE_POLICY_V1);
-    expect(JSON.stringify(evaluateV9ReserveExposures({ ...nonLender }, V9_CANDIDATE_POLICY_V1))).toBe(JSON.stringify(first));
-    expect(JSON.stringify(nonLender)).toBe(before);
-    const notAdmitted = book(primeClaims, "0", "ordinary-wrapper");
-    expect(evaluateV1019LenderBook(notAdmitted, parentBacking, V9_CANDIDATE_POLICY_V1)).toBeNull();
+  it("admits identical supported books independently of asset identity without mutating facts", () => {
+    const first = book(primeClaims, "0", "synthetic-lender-a");
+    const second = book(primeClaims, "0", "synthetic-lender-b");
+    const before = JSON.stringify(second);
+    expect(evaluateV1019LenderBook(second, parentBacking, V9_CANDIDATE_POLICY_V1))
+      .toEqual(evaluateV1019LenderBook(first, parentBacking, V9_CANDIDATE_POLICY_V1));
+    expect(JSON.stringify(second)).toBe(before);
   });
 
   it.each(["zero-nav", "unreconciled", "malformed", "invalid-quality", "invalid-lltv", "unjoined"] as const)
@@ -1450,4 +1430,21 @@ describe("v10.19 allocation-weighted Morpho lender Backing", () => {
       if (reason === "unjoined") fact.collaterals = [];
       expect(evaluateV1019LenderBook(fact, parentBacking, V9_CANDIDATE_POLICY_V1)).toBeNull();
     });
+});
+
+describe("same-parent inheritance threshold", () => {
+  it.each([.99, 1])("aggregates an exact-parent split before the %s mapped-weight threshold", weight => {
+    const parent = exposure({ key: "synthetic-parent", weight, trackedAssetId: "synthetic-parent",
+      assetClass: "stablecoin", provenance: "live" });
+    const inheritedStablecoinBacking = { parentAssetId: "synthetic-parent", parentBackingScore: 90,
+      weight, tier: "wrapped" as const, failureDomains: [] };
+    const merged = { ...asset([parent]), inheritedStablecoinBacking };
+    const split = { ...merged, reserveExposures: [
+      { ...parent, exposureKey: "synthetic-idle", weight: .05 },
+      { ...parent, exposureKey: "synthetic-strategy", weight: weight - .05 },
+    ] };
+    expect(verifiedLiveInheritedExposures(split, inheritedStablecoinBacking)).toBeDefined();
+    expect(evaluateV9ReserveExposures(split, V9_CANDIDATE_POLICY_V1).score)
+      .toBe(evaluateV9ReserveExposures(merged, V9_CANDIDATE_POLICY_V1).score);
+  });
 });

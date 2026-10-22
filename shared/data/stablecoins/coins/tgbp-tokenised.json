@@ -2,13 +2,13 @@
   "id": "tgbp-tokenised",
   "name": "Tokenised GBP",
   "symbol": "tGBP",
-  "oneLiner": "tGBP is BCP Technologies' UK-FCA-registered pound stablecoin, redeemable 1:1 against GBP reserves and short UK government paper.",
+  "oneLiner": "tGBP is BCP Technologies' pound stablecoin, redeemable 1:1 by eligible account holders and backed by GBP cash, money market funds and bonds.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GBP",
     "governance": "centralized"
   },
-  "collateral": "Held 1:1 in GBP cash, GBP money market funds, and short-term UK gilts (zero-coupon Treasury bills) at regulated UK banking partners.",
+  "collateral": "The August 31, 2026 reserve report identifies GBP cash accounts, money market funds and bonds; it does not identify the bond issuers or maturities, banks or individual funds.",
   "pegMechanism": "Direct 1:1 redemption through BCP Technologies Ltd; clients deposit GBP off-chain and receive minted tGBP on-chain; redemption burns tokens and triggers fiat withdrawal",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "317",

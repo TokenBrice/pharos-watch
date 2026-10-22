@@ -7,7 +7,6 @@ import type {
 import {
   buildV9DependencyEvaluationPlan,
   distinctV9RootLiabilityIds,
-  projectV9RoleDependencyPillarLimits,
   resolveV9DependencyInputs,
 } from "../safety-score-v9/dependencies";
 import {
@@ -18,8 +17,6 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { evaluateV9ReserveExposures } from "../safety-score-v9/backing";
 import { asset as reserveAsset, exposure } from "./safety-score-v9-backing.test-support";
 import { createV9FactGapV3 } from "../safety-score-v9/reasons";
-import { scoreV9EvaluatedAsset } from "../safety-score-v9/score";
-import { makeV9Pillar, makeV9ProductionScoreInput } from "./safety-score-v9-score.test-support";
 
 const domain = (kind: "reserve-custodian" | "mint-control", key: string) => ({ kind, key }) as const;
 
@@ -178,7 +175,7 @@ describe("buildV9DependencyEvaluationPlan", () => {
     ]);
 
     expect(resolved.find((item) => item.assetId === "serial")?.serial).toMatchObject([
-      { upstreamAssetId: "parent", score: null, blocked: true },
+      { upstreamAssetId: "parent", score: null, blocked: false, ratingStatus: "pipeline-gap", cause: "U" },
     ]);
     expect(resolved.find((item) => item.assetId === "basket")?.basket).toMatchObject([
       { upstreamAssetId: "parent", weight: 1, score: 82, boundedUnknown: false },
@@ -353,12 +350,9 @@ describe("buildV9DependencyEvaluationPlan", () => {
       inheritedDimensions: ["oracle-nav"],
       boundedUnknown: false,
     });
-    const limits = projectV9RoleDependencyPillarLimits(resolved);
-    expect(limits.exit.limit).toBeCloseTo(74.5, 10);
-    expect(limits.control.limit).toBeCloseTo(77.4, 10);
   });
 
-  it("fails an exit role closed when access is unavailable and preserves exact trace attribution", () => {
+  it("records unavailable exit access and preserves exact diagnostic attribution", () => {
     const rail = { kind: "reserve-custodian" as const, key: "bank-a" };
     const plan = buildV9DependencyEvaluationPlan({
       activeAssetIds: ["child", "parent"],
@@ -396,14 +390,10 @@ describe("buildV9DependencyEvaluationPlan", () => {
         failureDomains: [rail],
       },
     ]);
-    expect(projectV9RoleDependencyPillarLimits(resolved).exit).toMatchObject({
-      limit: 74,
-      knownLossPoints: 0,
-      unresolvedExposureShare: 0.4,
-    });
   });
 
-  it.each(["C", "U"] as const)("inherits numeric %s provenance without replacing its evaluated loss", (cause) => {
+
+  it.each(["C", "U"] as const)("retains numeric %s role provenance for diagnostics", (cause) => {
     for (const score of [25, 80]) {
       const plan = buildV9DependencyEvaluationPlan({
         activeAssetIds: ["child", "parent"],
@@ -413,143 +403,16 @@ describe("buildV9DependencyEvaluationPlan", () => {
         assetId: "parent", score: 80, backingScore: 90, controlScore: score,
         dimensionCauses: { control: cause }, causeGapIds: ["topology:missing"], limitedEvidenceCauses: [cause],
       }]).find((input) => input.assetId === "child")!;
-      expect(resolved.roleInputs![0]).toMatchObject({ score, cause, boundedUnknown: true, unavailableDimensions: [] });
-      expect(projectV9RoleDependencyPillarLimits(resolved).control).toMatchObject({
-        limit: score, knownLossPoints: 100 - score, boundedUnknownLossPoints: 0,
-        unresolvedExposureShare: 1,
-        events: [expect.objectContaining({ inheritedScore: score, causeGapIds: ["topology:missing"] })],
+      expect(resolved.roleInputs![0]).toMatchObject({
+        score, cause, boundedUnknown: true, unavailableDimensions: [],
+        causeGapIds: ["topology:missing"],
       });
     }
   });
 
-  it.each([
-    { knownWeight: 0.4, score: 0, unknownWeight: 0.5, knownLoss: 40, unknownLoss: 0, limit: 60 },
-    { knownWeight: 0.4, score: 50, unknownWeight: 0.8, knownLoss: 20, unknownLoss: 24, limit: 56 },
-  ])("charges max known/absent loss once per event: $limit", ({ knownWeight, score, unknownWeight, knownLoss, unknownLoss, limit }) => {
-    const plan = buildV9DependencyEvaluationPlan({
-      activeAssetIds: ["child", "known", "absent"],
-      assets: [asset("known"), asset("absent"), asset("child", [
-        roleEdge("known-edge", "known", "control-operator", knownWeight),
-        roleEdge("absent-edge", "absent", "control-operator", unknownWeight),
-      ])],
-    });
-    const resolved = resolveV9DependencyInputs(plan, [
-      { assetId: "known", score: 80, backingScore: 90, controlScore: score, dimensionCauses: { control: "D" } },
-      { assetId: "absent", score: null, backingScore: null, controlScore: null,
-        dimensionCauses: { control: "U" }, causeGapIds: ["absent:control"] },
-    ]).find((input) => input.assetId === "child")!;
-    resolved.roleInputs = resolved.roleInputs!.map((input) => ({
-      ...input, exposureKey: "same-slice", riskEventKey: "same-event",
-    }));
-    const projection = projectV9RoleDependencyPillarLimits(resolved).control;
-    expect(projection.limit).toBeCloseTo(limit);
-    expect(projection.knownLossPoints).toBeCloseTo(knownLoss);
-    expect(projection.boundedUnknownLossPoints).toBeCloseTo(unknownLoss);
-    expect(projection.unresolvedExposureShare).toBe(unknownWeight);
-    expect(projection.events).toHaveLength(1);
-    expect(projection.events[0]).toMatchObject({
-      inheritedScore: score, knownCause: "D", unavailableDimensions: ["control"],
-      evidenceObligations: [expect.objectContaining({ cause: "U", causeGapIds: ["absent:control"] })],
-    });
-  });
 
-  it("selects alternate same-slice events by actual max loss while retaining the unselected obligation", () => {
-    const plan = buildV9DependencyEvaluationPlan({
-      activeAssetIds: ["child", "known", "absent"],
-      assets: [asset("known"), asset("absent"), asset("child", [
-        roleEdge("known", "known", "control-operator", 0.8),
-        roleEdge("absent", "absent", "control-operator", 0.9),
-      ])],
-    });
-    const resolved = resolveV9DependencyInputs(plan, [
-      { assetId: "known", score: 80, backingScore: 90, controlScore: 0, dimensionCauses: { control: "D" } },
-      { assetId: "absent", score: null, backingScore: null, cause: "U", causeGapIds: ["absent:control"] },
-    ]).find((input) => input.assetId === "child")!;
-    resolved.roleInputs = resolved.roleInputs!.map((input) => ({ ...input, exposureKey: "same-slice" }));
-    expect(projectV9RoleDependencyPillarLimits(resolved).control).toMatchObject({
-      limit: 20, knownLossPoints: 80, boundedUnknownLossPoints: 0, unresolvedExposureShare: 0.9,
-      events: [expect.objectContaining({
-        upstreamAssetIds: ["known"], knownCause: "D",
-        evidenceObligations: [expect.objectContaining({ cause: "U", causeGapIds: ["absent:control"] })],
-      })],
-    });
-  });
 
-  it("bounds C/U role exposure numerically on both sides of the material threshold", () => {
-    const resolveUnknownExit = (weight: number) => {
-      const plan = buildV9DependencyEvaluationPlan({
-        activeAssetIds: ["child", "parent"],
-        assets: [
-          asset("parent"),
-          asset("child", [roleEdge("exit:parent", "parent", "exit-dependency", weight)]),
-        ],
-      });
-      return resolveV9DependencyInputs(plan, [
-        { assetId: "parent", score: 90, backingScore: 90, exitScore: 84 },
-      ]).find((input) => input.assetId === "child")!;
-    };
 
-    expect(
-      projectV9RoleDependencyPillarLimits(resolveUnknownExit(0.01), {
-        unresolvedMaterialityThreshold: 0.1,
-      }).exit,
-    ).toMatchObject({
-      limit: 99.35,
-      boundedUnknownLossPoints: 0.65,
-      unresolvedExposureShare: 0.01,
-      materialUnresolvedExposure: false,
-    });
-    expect(
-      projectV9RoleDependencyPillarLimits(resolveUnknownExit(0.1), {
-        unresolvedMaterialityThreshold: 0.1,
-      }).exit,
-    ).toMatchObject({
-      limit: 93.5,
-      boundedUnknownLossPoints: 6.5,
-      unresolvedExposureShare: 0.1,
-      materialUnresolvedExposure: true,
-    });
-  });
-
-  it.each(["A", "B"] as const)("does not dilute measured or C/U role losses with excluded %s exposure", (excludedCause) => {
-    for (const boundedCause of [null, "C", "U"] as const) {
-      const resolve = (includeExcluded: boolean) => {
-        const edges = [
-          roleEdge("control:adverse", "adverse", "control-operator", 1),
-          ...(boundedCause === null ? [] : [roleEdge("control:bounded", "bounded", "control-operator", 1)]),
-          ...(includeExcluded ? [roleEdge("control:excluded", "excluded", "control-operator", 1)] : []),
-        ];
-        const plan = buildV9DependencyEvaluationPlan({
-          activeAssetIds: ["child", "adverse", "bounded", "excluded"],
-          assets: [asset("child", edges), asset("adverse"), asset("bounded"), asset("excluded")],
-        });
-        const resolved = resolveV9DependencyInputs(plan, [
-          { assetId: "adverse", score: 0, backingScore: 0, controlScore: 0, dimensionCauses: { control: "D" } },
-          { assetId: "bounded", score: null, backingScore: null, controlScore: null, dimensionCauses: { control: boundedCause } },
-          { assetId: "excluded", score: null, backingScore: null, controlScore: null, dimensionCauses: { control: excludedCause } },
-        ]).find((input) => input.assetId === "child")!;
-        return projectV9RoleDependencyPillarLimits(resolved).control;
-      };
-      const baseline = resolve(false);
-      const withExcluded = resolve(true);
-      expect(withExcluded).toMatchObject({
-        limit: baseline.limit, knownLossPoints: baseline.knownLossPoints,
-        boundedUnknownLossPoints: baseline.boundedUnknownLossPoints,
-        unresolvedExposureShare: baseline.unresolvedExposureShare,
-      });
-      expect(withExcluded.events.find((event) => event.cause === excludedCause))
-        .toMatchObject({ nominalExposureShare: 1, exposureShare: 0, modeledLossPoints: null });
-      const scores = [baseline, withExcluded].map((projection) =>
-        scoreV9EvaluatedAsset(makeV9ProductionScoreInput({
-          pillars: { backing: makeV9Pillar(95), exit: makeV9Pillar(95), control: makeV9Pillar(projection.limit, {
-            adverseAttribution: [{ source: "pillar-score", path: "pillar:control:dependency:control:adverse",
-              responsibility: "measured-adverse", message: "Measured adverse control dependency." }],
-          }) },
-        }), V9_CANDIDATE_POLICY_V1),
-      );
-      expect(scores[1]).toMatchObject({ finalScore: scores[0]!.finalScore, finalGrade: scores[0]!.finalGrade });
-    }
-  });
 
   it("lets serial inheritance dominate other roles once while retaining their distinct failure domains", () => {
     const shared = domain("reserve-custodian", "bank-a");
@@ -630,121 +493,8 @@ describe("buildV9DependencyEvaluationPlan", () => {
     expect(forward.suppressedRoles).toEqual([]);
   });
 
-  it("does not use a shared provider domain as proof of one holder slice", () => {
-    const shared = domain("mint-control", "operator-a");
-    const plan = buildV9DependencyEvaluationPlan({
-      activeAssetIds: ["child", "parent"],
-      assets: [
-        asset("parent"),
-        asset("child", [
-          roleEdge("control:parent", "parent", "control-operator", 0.6, [shared]),
-          roleEdge("oracle:parent", "parent", "oracle-nav", 0.6, [shared]),
-        ]),
-      ],
-    });
-    const resolved = resolveV9DependencyInputs(plan, [
-      { assetId: "parent", score: 85, backingScore: 90, controlScore: 70, oracleNavScore: 50 },
-    ]).find((input) => input.assetId === "child")!;
-    const projection = projectV9RoleDependencyPillarLimits(resolved).control;
 
-    expect(projection).toMatchObject({
-      limit: 60,
-      knownLossPoints: 40,
-      unresolvedExposureShare: 0,
-    });
-    expect(projection.events).toEqual([
-      expect.objectContaining({
-        exposureKey: "control:parent",
-        roles: ["control-operator"],
-        edgeKeys: ["control:parent"],
-        nominalExposureShare: 0.6,
-        exposureShare: 0.5,
-        inheritedScore: 70,
-        modeledLossPoints: 15,
-        failureDomains: [shared],
-      }),
-      expect.objectContaining({
-        exposureKey: "oracle:parent",
-        roles: ["oracle-nav"],
-        edgeKeys: ["oracle:parent"],
-        nominalExposureShare: 0.6,
-        exposureShare: 0.5,
-        inheritedScore: 50,
-        modeledLossPoints: 25,
-        failureDomains: [shared],
-      }),
-    ]);
-  });
 
-  it("adds two distinct ten-percent slices that share one operator", () => {
-    const shared = domain("mint-control", "operator-a");
-    const plan = buildV9DependencyEvaluationPlan({
-      activeAssetIds: ["child", "left", "right"],
-      assets: [
-        asset("left"),
-        asset("right"),
-        asset("child", [
-          roleEdge("control:left", "left", "control-operator", 0.1, [shared]),
-          roleEdge("control:right", "right", "control-operator", 0.1, [shared]),
-        ]),
-      ],
-    });
-    const resolved = resolveV9DependencyInputs(plan, [
-      { assetId: "left", score: 0, backingScore: 0, controlScore: 0 },
-      { assetId: "right", score: 0, backingScore: 0, controlScore: 0 },
-    ]).find((input) => input.assetId === "child")!;
-    const projection = projectV9RoleDependencyPillarLimits(resolved).control;
-
-    expect(projection).toMatchObject({
-      limit: 80,
-      knownLossPoints: 20,
-      unresolvedExposureShare: 0,
-    });
-    expect(projection.events.map((event) => event.exposureKey)).toEqual([
-      "control:left",
-      "control:right",
-    ]);
-  });
-
-  it("does not charge two risk events twice when explicit identity proves one slice", () => {
-    const shared = domain("mint-control", "operator-a");
-    const plan = buildV9DependencyEvaluationPlan({
-      activeAssetIds: ["child", "left", "right"],
-      assets: [
-        asset("left"),
-        asset("right"),
-        asset("child", [
-          roleEdge("control:left", "left", "control-operator", 0.1, [shared]),
-          roleEdge("control:right", "right", "control-operator", 0.1, [shared]),
-        ]),
-      ],
-    });
-    const resolved = resolveV9DependencyInputs(plan, [
-      { assetId: "left", score: 0, backingScore: 0, controlScore: 0 },
-      { assetId: "right", score: 0, backingScore: 0, controlScore: 0 },
-    ]).find((input) => input.assetId === "child")!;
-    const sameSlice = {
-      ...resolved,
-      roleInputs: resolved.roleInputs?.map((input) => ({
-        ...input,
-        exposureKey: "deployment:shared",
-        riskEventKey: `event:${input.edgeKey}`,
-      })),
-    };
-    const projection = projectV9RoleDependencyPillarLimits(sameSlice).control;
-
-    expect(projection).toMatchObject({
-      limit: 90,
-      knownLossPoints: 10,
-      unresolvedExposureShare: 0,
-    });
-    expect(projection.events).toHaveLength(1);
-    expect(projection.events[0]).toMatchObject({
-      exposureKey: "deployment:shared",
-      nominalExposureShare: 0.1,
-      exposureShare: 0.1,
-    });
-  });
 
   it("contains non-serial role cycles to the affected dimensions instead of blocking the whole claim", () => {
     const plan = buildV9DependencyEvaluationPlan({
@@ -932,24 +682,23 @@ describe("commonModeSignalSeverity proportional materiality", () => {
   });
 
   it("normalizes DefiLlama display-name chain keys to their canonical slug before matching", () => {
-    // P1-03: hyperliquid, optimism and solana left matureChains once their unreachable and
-    // non-supporting citations put their gates in `pending`, so the display-name resolution is
-    // now proved against the slug-keyed share rather than against mature-chain membership.
     for (const [displayName, slug] of [
-      ["Hyperliquid L1", "hyperliquid"],
-      ["OP Mainnet", "optimism"],
-      ["Solana", "solana"],
+      ["Celo", "celo"],
+      ["Monad", "monad"],
     ] as const) {
       expect(materiality.matureChains).not.toContain(slug);
       expect(
         commonModeSignalSeverity({ kind: "chain", key: displayName }, context({ [slug]: 0.25 }), materiality),
       ).toBe("high");
+      expect(commonModeSignalSeverity(
+        { kind: "chain", key: displayName }, context({ [slug]: 0.05 }), materiality,
+      )).toBe("low");
     }
     expect(materiality.matureChains).toContain("ethereum");
     expect(commonModeSignalSeverity({ kind: "chain", key: "Ethereum" }, failClosed, materiality)).toBe("low");
   });
 
-  it("grades non-mature chain concentration at the 10% and 25% boundaries", () => {
+  it("grades authored chain failures at the 10% and 25% boundaries", () => {
     expect(materiality.commonModeSignal.severity).toBe("high");
     // D1 (2026-07-22): rebanded 0.05/0.1 -> 0.10/0.25, same bounded-loss rationale.
     expect(materiality.commonModeShareThreshold).toBe(0.1);
@@ -960,32 +709,32 @@ describe("commonModeSignalSeverity proportional materiality", () => {
       [0.2499, "moderate"],
       [0.25, "high"],
     ] as const) {
-      expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, context({ fantom: share }), materiality)).toBe(
+      expect(commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({ celo: share }), materiality)).toBe(
         severity,
       );
-      expect(commonModeSignalSeverity({ kind: "chain", key: "Fantom" }, context({ fantom: share }), materiality)).toBe(
+      expect(commonModeSignalSeverity({ kind: "chain", key: "Celo" }, context({ celo: share }), materiality)).toBe(
         severity,
       );
     }
     // A complete inventory bounds an absent domain by its unattributed residual.
-    expect(commonModeSignalSeverity({ kind: "chain", key: "0g" }, context({}, 0), materiality)).toBe("low");
-    expect(commonModeSignalSeverity({ kind: "chain", key: "0g" }, context({}, 0.000812), materiality)).toBe("low");
-    expect(commonModeSignalSeverity({ kind: "chain", key: "0g" }, context({}, 0.1), materiality)).toBe("moderate");
-    expect(commonModeSignalSeverity({ kind: "chain", key: "0g" }, context({}, 0.25), materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({}, 0), materiality)).toBe("low");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({}, 0.000812), materiality)).toBe("low");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({}, 0.1), materiality)).toBe("moderate");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({}, 0.25), materiality)).toBe("high");
     expect(
-      commonModeSignalSeverity({ kind: "chain", key: "0g" }, context({}, 0.000812, {}, {}, false), materiality),
+      commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({}, 0.000812, {}, {}, false), materiality),
     ).toBe("high");
     // The same residual is added to a present domain as a conservative upper bound.
     expect(
-      commonModeSignalSeverity({ kind: "chain", key: "fantom" }, context({ fantom: 0.0999 }, 0.0002), materiality),
+      commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({ celo: 0.0999 }, 0.0002), materiality),
     ).toBe("moderate");
     // Missing/nonconserved inventory remains unbounded regardless of its nominal residual.
-    expect(commonModeSignalSeverity({ kind: "chain", key: "0g" }, context({}, 0, {}, {}, false), materiality)).toBe(
+    expect(commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({}, 0, {}, {}, false), materiality)).toBe(
       "high",
     );
-    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, failClosed, materiality)).toBe("high");
-    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, context({}, 0.36), materiality)).toBe("high");
-    expect(commonModeSignalSeverity({ kind: "chain", key: "unknown-l2" }, context({}, 0.36), materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "celo" }, failClosed, materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({}, 0.36), materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "unknown-l2" }, context({}, 0.36), materiality)).toBe("low");
   });
 
   it("excludes an immaterial unrecognized-label pool from the unattributed add-on (RULED D-J)", () => {
@@ -993,8 +742,8 @@ describe("commonModeSignalSeverity proportional materiality", () => {
     // conservative add-on, so a chain is graded on its own measured share.
     expect(
       commonModeSignalSeverity(
-        { kind: "chain", key: "fantom" },
-        context({ fantom: 0.099 }, 0.099, {}, {}, true, 0.099),
+        { kind: "chain", key: "celo" },
+        context({ celo: 0.099 }, 0.099, {}, {}, true, 0.099),
         materiality,
       ),
     ).toBe("low");
@@ -1002,8 +751,8 @@ describe("commonModeSignalSeverity proportional materiality", () => {
     // share grades as before (fail-closed latency case).
     expect(
       commonModeSignalSeverity(
-        { kind: "chain", key: "fantom" },
-        context({ fantom: 0.099 }, 0.1, {}, {}, true, 0.1),
+        { kind: "chain", key: "celo" },
+        context({ celo: 0.099 }, 0.1, {}, {}, true, 0.1),
         materiality,
       ),
     ).toBe("moderate");
@@ -1011,16 +760,16 @@ describe("commonModeSignalSeverity proportional materiality", () => {
     // inflates every chain's conservative upper bound.
     expect(
       commonModeSignalSeverity(
-        { kind: "chain", key: "fantom" },
-        context({ fantom: 0.08 }, 0.16, {}, {}, true, 0.08),
+        { kind: "chain", key: "celo" },
+        context({ celo: 0.08 }, 0.16, {}, {}, true, 0.08),
         materiality,
       ),
     ).toBe("moderate");
     // A pool-free unattributed residual keeps the existing fail-closed add-on.
     expect(
       commonModeSignalSeverity(
-        { kind: "chain", key: "fantom" },
-        context({ fantom: 0.08 }, 0.08, {}, {}, true, 0),
+        { kind: "chain", key: "celo" },
+        context({ celo: 0.08 }, 0.08, {}, {}, true, 0),
         materiality,
       ),
     ).toBe("moderate");
@@ -1118,17 +867,10 @@ describe("commonModeSignalSeverity proportional materiality", () => {
     }
   });
 
-  it("prices the graduated severities inside their locked grade bands with low non-capping", () => {
-    const limits = V9_CANDIDATE_POLICY_V1.policy.semantic.structural.signalLimits["critical-dependency"];
-    expect(limits.low).toBeNull(); // "low" is diagnostic-only (no cap)
-    expect(limits.moderate).toBe(79); // top of B+ (75-79)
-    expect(limits.high).toBe(64);
-    expect(materiality.deploymentMaterialSharePct).toBe(10);
-  });
 
-  it("fails closed when unattributed supply share pushes the conservative upper bound to >=25%", () => {
+  it("prices an authored failure high when unattributed supply pushes its conservative upper bound to >=25%", () => {
     expect(
-      commonModeSignalSeverity({ kind: "chain", key: "futurenet" }, context({ futurenet: 0.2 }, 0.05), materiality),
+      commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({ celo: 0.2 }, 0.05), materiality),
     ).toBe("high");
   });
 
@@ -1189,7 +931,7 @@ describe("cause-aware reserve look-through", () => {
       expect(result.score).toBeNull();
       expect(inherited.scoringDisposition).toBe(cause === "A" ? "excluded-pipeline" : "excluded-uncurated");
     } else {
-      expect(inherited.score).toBe(35);
+      expect(inherited.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.backing[cause]);
       expect(result.score).not.toBeNull();
       expect(inherited.cause).toBe(cause);
     }

@@ -2,6 +2,8 @@ import { canonicalEvmAddress } from "../evm-address";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { isRecord } from "../type-guards";
+import { parseLiveReserveAdapterParams } from "../live-reserve-adapters";
+import type { LiveReservesConfig } from "../../types/live-reserves";
 import {
   LenderBookObservationSchema,
   type LenderBookObservation,
@@ -12,6 +14,13 @@ import {
 type ObservationPayload =
   | Omit<Extract<LenderBookObservation, { status: "ok" }>, "contentSha256" | "sourceGenerationId">
   | Omit<Extract<LenderBookObservation, { status: "unavailable" }>, "contentSha256" | "sourceGenerationId">;
+
+/** The existing direct Morpho reader, not a named asset cohort, establishes applicability. */
+export function supportsLenderBookObservation(config: Pick<LiveReservesConfig, "adapter" | "params"> | undefined): boolean {
+  if (config?.adapter !== "erc4626-single-asset") return false;
+  const source = parseLiveReserveAdapterParams("erc4626-single-asset", config.params).redemptionLiquidity?.source;
+  return source === "morpho-vault-v1" || source === "morpho-vault-v2";
+}
 
 export function resolveLenderTokenIds(
   contracts: readonly { assetId: string; chain: string; address: string }[],
@@ -104,11 +113,6 @@ export function lenderBookAdmissionReason(
   if (value.acquiredAtSec > clockSec) return "future-dated";
   if (clockSec - value.acquiredAtSec > policy.observationMaxAgeSec) return "stale";
   if (value.status === "unavailable") return value.reason;
-  const admission = policy.admittedAssets.find((asset) => asset.assetId === assetId);
-  if (!admission || admission.deployments.length !== value.deployments.length) return "identity-mismatch";
-  const observedKeys = value.deployments.map((deployment) => `${deployment.chain}:${deployment.kind}`).sort();
-  const expectedKeys = admission.deployments.map((deployment) => `${deployment.chain}:${deployment.kind}`).sort();
-  if (observedKeys.some((key, index) => key !== expectedKeys[index])) return "identity-mismatch";
   if (value.deployments.some((deployment) => deployment.pin.timestampSec > clockSec)) return "future-dated";
   if (value.deployments.some((deployment) => clockSec - deployment.pin.timestampSec > policy.observationMaxAgeSec)) return "stale";
   if (value.deployments.some((deployment) => deployment.markets.length > policy.maxMarketsPerDeployment)) return "census-limit";

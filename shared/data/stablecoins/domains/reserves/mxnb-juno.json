@@ -2,11 +2,11 @@
   "id": "mxnb-juno",
   "reserves": [
     {
-      "name": "MXN reserve bank-account balances; banks not identified in the Q2 report",
+      "name": "MXN reserve bank-account balances; banks not identified in the Q3 report",
       "pct": 100,
       "risk": "low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Reserve-account banks undisclosed in the Q2 2026 valuation report",
+      "issuerOrObligor": "Reserve-account banks undisclosed in the Q3 2026 valuation report",
       "riskFactors": [
         "counterparty",
         "liquidity",
@@ -17,10 +17,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "C08 bottom-up refinement 2026-10-21; Q3 report and composition reviewed together from the issuer-linked October 14 report",
     "confidence": "probable",
     "sources": [
+      {
+        "label": "BDO Mexico MXNB Q3 2026 valuation report, signed October 14; retrieved 2026-10-20",
+        "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q3_2026_en.pdf"
+      },
       {
         "label": "BDO Mexico MXNB Q2 2026 valuation report",
         "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q2_2026_en.pdf"
@@ -34,16 +38,16 @@
         "url": "https://assets-prod.mxnb.mx/commons/whitepaper.pdf"
       }
     ],
-    "rationale": "BDO Mexico (Castillo Miranda y Compania) Q2 2026 financial valuation as of 30 June 2026 (signed 2026-07-16): a single aggregate line 'Reserves on bank accounts' MXN 35,333,251.88 against MXN 34,828,276.31 of MXNB in circulation (surplus 504,975.57). The engagement is consultancy under IVSC standards, expressly does not confirm balances with banks, and restricts use to management; its scope paragraph still says 'as of March 31, 2026' (stale copy-paste). No bank names or instrument split are disclosed. Wave-2 review of the current issuer index, October 7 aggregate dashboard and recovered canonical whitepaper found no newer weighted portfolio: the whitepaper permits pesos, cash equivalents and short-term Mexican government securities, without category weights, institution balances or maximum tenors. The historical bank-account category retains probable confidence and its original composition and review clocks; it is not restated as current holdings.",
-    "compositionBasis": "BDO Mexico Q2 2026 valuation of MXNB reserve bank-account balances",
-    "compositionAsOf": "2026-06-30",
+    "rationale": "The newly issuer-linked BDO Mexico (Castillo Miranda y Compania) Q3 2026 financial valuation covers 30 September 2026 and is signed 14 October 2026. Its complete stated reserve category is 'Reserves on bank accounts' of MXN 52,030,245.12 against MXN 51,302,437.12 of MXNB in circulation, a MXN 727,808.00 surplus. Procedures identify Ethereum, Arbitrum, Avalanche, Polygon, Base and Arc supply. The report is addressed to EM EX EN CI, S. de R.L. de C.V.; this comparison does not establish a separate legal reserve claim against Nvio Pagos El Salvador. It remains an IVSC consultancy based on management-supplied documents, expressly does not confirm reserve balances with banks, expresses no named financial-assurance opinion and restricts use to management. Its scope paragraph still says March 31, 2026, while the title, numbered procedures, table and management assertions consistently specify September 30. No reserve-bank names, institution weights, withdrawal terms or instrument tenors are given. Retain probable confidence, unknown liquidity and unknown assuranceMethod. The retained Q2 source was June 30, signed July 16, with MXN 35,333,251.88 bank-account reserves and MXN 34,828,276.31 liabilities; it does not date the new portfolio.",
+    "compositionBasis": "BDO Mexico Q3 2026 consultancy valuation: all stated reserve assets are bank-account balances; no institution split",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The Q2 valuation report does not name the reserve banks or disclose the balance at each institution, account terms, deposit protection, or direct bank confirmation. Nvio and Hey Banco are retained historical custody leads, not institutions independently identified by the Q2 report. The issuer's transparency page provides only aggregate reserves and circulation.",
+    "knownUnknownExposure": "The Q3 valuation report does not name the reserve banks or disclose each institution's balance, account terms, deposit protection, direct bank confirmation or an assurance opinion. Nvio and Hey Banco remain historical custody leads, not institutions independently identified by this report. The current report supplies one complete stated asset category, not institution-level composition or a bank-confirmed portfolio.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "MXN reserve bank-account balances; banks not identified in the Q2 report",
+        "reserveName": "MXN reserve bank-account balances; banks not identified in the Q3 report",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The attested bank-account reserve is an off-chain fiat claim, not a tracked stablecoin dependency."

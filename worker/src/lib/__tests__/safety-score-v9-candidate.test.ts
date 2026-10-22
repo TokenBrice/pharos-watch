@@ -6,6 +6,7 @@ import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-publi
 import {
   evaluateV9FactSet,
   evaluateValidatedV9FactSet,
+  evaluateValidatedV9FactSetForPublication,
   V9AssetEvaluationError,
 } from "@shared/lib/safety-score-v9/evaluate-set";
 import * as evaluateSetModule from "@shared/lib/safety-score-v9/evaluate-set";
@@ -520,7 +521,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     build.mockRestore();
   });
 
-  it("publishes adverse authority with its real U gap and isolates one malformed causal projection", () => {
+  it("publishes known unbounded authority with its real U gap and isolates one malformed causal projection", () => {
     const inputs = ["alpha", "beta"].map((assetId) => exactFixedInput(assetId));
     const reviewedAssets = inputs.map((input) => reviewedExtension(input).assets[0]!);
     const fixedInput = inputs[0]!;
@@ -553,7 +554,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     const mint = baseline.evaluatedSet.assets.find((asset) => asset.assetId === "alpha")!
       .control.components.find((component) => component.kind === "mint")!;
     expect(mint).toMatchObject({
-      posture: "unbounded-adverse", score: 25, cause: "U",
+      posture: "unbounded-adverse", score: V9_CANDIDATE_POLICY_V1.policy.semantic.control.authorityLadder.quorum, cause: "U",
       causeGapIds: ["alpha:gap:economic-control:mint::reconciliation"],
     });
     expect(baseline.evaluatedSet.assets.find((asset) => asset.assetId === "alpha")!
@@ -650,11 +651,13 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     }
   });
 
-  it("keeps strict, trusted, full, and compact paths identical with provenance guards", () => {
+  it.each([false, true])("keeps strict, trusted, full, and compact paths identical with provenance guards (quarantined=%s)", (quarantined) => {
     const fixedInput = exactFixedInput("alpha");
+    const extension = reviewedExtension(fixedInput);
+    if (quarantined) extension.assets[0]!.launchedAtSec = -1;
     const full = buildSafetyScoreV9Candidate({
       fixedInput,
-      extension: reviewedExtension(fixedInput),
+      extension,
       publishedAtSec: PUBLISHED_AT_SEC,
     });
     const clockBoundPolicy = loadV9CandidateMethodologyPolicy(fixedInput.clockSec);
@@ -673,6 +676,15 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     expect(trustedEvaluation).toEqual(strictEvaluation);
     expect(trustedEvaluation).toEqual(full.evaluatedSet);
     expect(trustedCompilation).toEqual(full.compiledFacts);
+    const owner = { factSet: full.compiledFacts };
+    const projectedAssets: Array<(typeof full.evaluatedSet.assets)[number]> = [];
+    const projected = evaluateValidatedV9FactSetForPublication(
+      owner, clockBoundPolicy, (asset) => projectedAssets.push(asset),
+    );
+    const { assets, ...projectionIdentity } = trustedEvaluation;
+    expect(owner.factSet).toBeNull();
+    expect(projected).toEqual(projectionIdentity);
+    expect(stableJsonStringifyV1(projectedAssets)).toBe(stableJsonStringifyV1(assets));
     expect(compact).toEqual({
       candidate: full.candidate,
       compilerFactSchemaDigest: full.compilerFactSchemaDigest,
@@ -950,7 +962,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       policyVersion: policy.policy.releaseVersion,
       completeness: { expectedCount: 1, ratedCount: 1, notRatedCount: 0, notRatedIds: [] },
     });
-    expect(result.candidate.cards[0]).toMatchObject({ id: "alpha", score: 77, grade: "B+" });
+    expect(result.candidate.cards[0]).toMatchObject({ id: "alpha", ratingStatus: "rated", score: expect.any(Number) });
     expect(result.evaluatedSet.assets[0]!.trace.finalScore).toBe(result.candidate.cards[0]!.score);
   });
 

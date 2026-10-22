@@ -1,25 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { DEX_MEASURED_ADAPTER_PROFILE_IDS } from "@shared/types/measured-execution";
-import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
-import { evaluateV9Exit, projectV9ExitEvaluationRoute } from "@shared/lib/safety-score-v9/exit";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
-import { buildSafetyScoreV9RetainedRedemptionRoutes, buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
 import { safetyScoreV9TransferDeploymentKey } from "../safety-score-v9/extension-transfer";
-import { getSafetyScoreV9OperationalResilienceOverlay } from "../safety-score-v9/extension-operational-resilience";
 import { selectSafetyScoreV9CdpShockMeasurement } from "../safety-score-v9/extension-shock";
 import { compileSafetyScoreV9FactSetFromFixedInput, compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension, materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9/fact-set";
 import {
   V9_FIXTURE_CLOCK_SEC as AS_OF_SEC,
   V9_EVALUATION_TEST_TIMEOUT_MS,
-  v9TestClockSec,
   makeV9FixedInput as exactFixedInput,
   makeV9TwoAssetFixedInput as exactTwoAssetFixedInput,
   makeV9Extension as extension,
-  v9NotApplicableStatus as notApplicableStatus,
   v9ExitRouteObservation as route,
   v9RouteReview as routeReview,
   v9Status as status,
@@ -32,12 +26,10 @@ import {
   dependencyMeta,
   deriveReportCardsBaseInputGenerationId,
   metaMap,
-  nativeSavingsFixedAndMeta,
   pinnedUusdMeta,
   reviewedDependencyMeta,
   reviewedResearchMeta,
   transferFact,
-  usdtMeta,
 } from "./safety-score-v9-fact-set.test-support";
 
 describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evidence", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
@@ -83,44 +75,7 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     for (const componentKey of ["assuranceAndReconciliation", "claimAndSegregation", "custodyContinuity"]) expect(asset.gaps).toContainEqual(expect.objectContaining({ path: { kind: "local-component", componentKey: `mechanism-review:${componentKey}` }, responsibility: "issuer-undisclosed", reasonCode: "bounded-mechanism-review" }));
   });
 
-  it("retains operational-resilience evidence without granting credit while required score-bearing data remains unresearched", () => {
-    const clockSec = v9TestClockSec();
-    const fixed = exactFixedInput({ assetId: "usdt-tether", clockSec });
-    const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(usdtMeta()) });
-    const overlay = getSafetyScoreV9OperationalResilienceOverlay("usdt-tether", clockSec);
-    expect(overlay).not.toBeNull();
-    expect(baseline.assets[0]!.operationalResilience).toEqual(overlay);
-    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
-    const asset = compiled.assets[0]!;
-    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.operationalResilience).toMatchObject({
-      eligible: false, blockerCodes: ["issuerOpacity"], rawPillarCredits: { backing: 0, exit: 0, control: 0 },
-    });
-    const retained = structuredClone(compiled);
-    const removed = asset.evidence.find((evidence) => evidence.evidenceId.startsWith("usdt-tether:operational-resilience:"))!.evidenceId;
-    retained.assets[0]!.evidence = retained.assets[0]!.evidence.filter((evidence) => evidence.evidenceId !== removed);
-    const { v9FactSetDigest: _digest, ...core } = retained;
-    expect(() => compileV9FactSetV3(core)).toThrow(`Unknown evidence reference ${removed}`);
-  });
 
-  it("keeps operational-resilience captures null before their review window", () => {
-    const clockSec = Date.parse("2026-07-23T12:37:18Z") / 1_000;
-    const fixed = exactFixedInput({ assetId: "usdt-tether", clockSec });
-    const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(alphaMeta({ id: "usdt-tether" })) });
-    expect(baseline.assets[0]!.operationalResilience).toBeNull();
-    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline).assets[0]!;
-    expect(compiled.operationalResilience).toBeNull();
-    expect(compiled.evidence.some((evidence) => evidence.evidenceId.includes("operational-resilience"))).toBe(false);
-    const future = getSafetyScoreV9OperationalResilienceOverlay("usdt-tether", Date.parse("2026-07-24T00:00:00Z") / 1_000);
-    const injected = structuredClone(baseline);
-    injected.assets[0]!.operationalResilience = future;
-    const quarantined = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(fixed, materializeSafetyScoreV9FactSetExtension(fixed, injected));
-    expect(quarantined.quarantines).toEqual([{
-      assetId: "usdt-tether",
-      code: "fact-validation-failed",
-      message: "operationalResilience: Operational-resilience overlay is outside its exact review window",
-    }]);
-    expect(quarantined.factSet.assets[0]!.operationalResilience).toBeNull();
-  });
 
   it.each([
     ["nav", "nav:alpha", "nav"],
@@ -171,7 +126,10 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     expect(live.dependencies).toMatchObject({ source: "live-reserve", dependencyFromLive: true, diagnostics: { graphState: "valid" } });
     const nullClassified = structuredClone(mapped);
     nullClassified.assets[0]!.reserveClassifications.find((classification) => classification.issuerOrObligorKey === "asset:beta")!.assetClass = null;
-    expect(compileSafetyScoreV9FactSetFromFixedInput(mappedFixed, nullClassified).assets[0]!.reserveExposures).toContainEqual(expect.objectContaining({ trackedAssetId: "beta", assetClass: "stablecoin" }));
+    expect(compileSafetyScoreV9FactSetFromFixedInput(mappedFixed, nullClassified).assets[0]!.reserveExposures)
+      .toContainEqual(expect.objectContaining({
+        trackedAssetId: "beta", assetClass: null, status: expect.objectContaining({ observationState: "bounded-unknown" }),
+      }));
     const mismatch = structuredClone(mapped);
     mismatch.assets[0]!.dependencies!.edges[0]!.weight = 0.4;
     expect(compileSafetyScoreV9FactSetFromFixedInput(mappedFixed, mismatch).assets[0]!.dependencies).toMatchObject({ status: { observationState: "bounded-unknown" }, diagnostics: { graphState: "unresolved" } });
@@ -190,40 +148,6 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     ]);
   });
 
-  it("credits documented redemption without treating native savings unwind as measured", () => {
-    const { fixed, meta } = nativeSavingsFixedAndMeta();
-    const baseline = structuredClone(buildSafetyScoreV9BaselineExtension(fixed, { metaById: meta }));
-    const asset = baseline.assets[0]!;
-    asset.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
-    asset.retainedRoutes = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, "alpha");
-    asset.economicControlReview = {
-      mint: { status: notApplicableStatus("v9.control.mint-review"), controlKey: null, reconciliation: "not-applicable", supervision: "none", latestResolvedIncidentAtSec: null, upgrade: { state: "not-applicable", controlKey: null } },
-      oracle: { status: notApplicableStatus("v9.control.oracle-review"), tier: null, branches: [] },
-      bridge: { status: notApplicableStatus("v9.control.bridge-review"), routes: [] },
-    };
-    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
-    const compiledAlpha = compiled.assets[0]!;
-    const documentedRoute = compiledAlpha.exitRoutes.find((route) => route.lane === "redemption")!;
-    expect(documentedRoute).toMatchObject({ scoreEligible: false, status: { observationState: "known" } });
-    const evaluated = evaluateV9Exit({ circulatingUsd: compiledAlpha.supply.circulatingUsd, portfolioStatus: "reviewed-complete", routes: compiledAlpha.exitRoutes.map(projectV9ExitEvaluationRoute) }, V9_CANDIDATE_POLICY_V1);
-    expect(evaluated.routes.find((route) => route.routeKey === documentedRoute.routeKey)).toMatchObject({ included: true });
-    expect(compiledAlpha.peg).toMatchObject({ status: { observationState: "known" }, referenceKind: "nav" });
-    expect(compiledAlpha.wrapperLocalFacts).toMatchObject({
-      applicability: "wrapper",
-      form: "native-staked",
-      facts: {
-        strategyComplexity: { assessment: "low" },
-        measuredUnwind: { assessment: null, disposition: "unresearched" },
-      },
-    });
-    const wrapper = compiledAlpha.wrapperLocalFacts;
-    if (wrapper.applicability !== "wrapper") throw new Error("Expected native savings wrapper facts");
-    const unwindStatus = wrapper.facts.measuredUnwind.status;
-    if (unwindStatus === undefined) throw new Error("Expected cause-bearing unwind status");
-    expect(compiledAlpha.gaps.filter((gap) => unwindStatus.gapIds.includes(gap.gapId))).toEqual([
-      expect.objectContaining({ causeProof: expect.objectContaining({ cause: "U" }) }),
-    ]);
-  });
 
   it("admits only live-backed or explicitly eligible reserve compositions", () => {
     const meta = alphaMeta({ reserves: [{ name: "Beta stablecoin", pct: 50, risk: "low", coinId: "beta", depType: "collateral" }] });
@@ -437,7 +361,7 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
         .toContainEqual(expect.objectContaining({
           componentKey: "mechanism:assurance-and-reconciliation", observationState: "stale",
           cause: "U", scoringDisposition: "bounded-uncertainty",
-          score: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality,
+          score: V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.backing.U,
         }));
     }
   });

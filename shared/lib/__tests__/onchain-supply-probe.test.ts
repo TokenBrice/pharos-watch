@@ -5,6 +5,7 @@ import { resolveChainId } from "../../types/chain-identity";
 import {
   CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS,
   CURATED_AGGREGATE_ESCROW_RESIDUALS,
+  getOnchainSupplyHoldReason,
   hasRuntimeOnchainSupplyPath,
   isZephyrScannerSupplyId,
   onchainSupplyProbeFamily,
@@ -257,7 +258,7 @@ describe("curated on-chain supply paths", () => {
     { id: "witry-brix", chains: ["ethereum", "megaeth"], canonical: "ethereum" },
     { id: "brlv-crown", chains: ["base", "ethereum"], zero: ["ethereum"],
       endpoints: { base: undefined, ethereum: undefined } },
-    { id: "syzusd-yuzu", chains: ["plasma", "ethereum", "monad", "hyperevm", "sei", "pharos", "berachain", "aptos"], canonical: "plasma",
+    { id: "syzusd-yuzu", chains: ["plasma", "ethereum", "monad", "hyperevm", "sei", "pharos", "berachain", "aptos", "base"], canonical: "plasma",
       zero: ["hyperevm"],
       endpoints: { plasma: "https://rpc.plasma.to", monad: "https://rpc.monad.xyz" } },
     { id: "idrt-rupiah-token", chains: ["ethereum", "bsc", "polygon", "harmony"],
@@ -268,9 +269,6 @@ describe("curated on-chain supply paths", () => {
       endpoints: { plume: "https://rpc.plume.org" } },
     { id: "susdc-spark-v1", chains: ["ethereum", "arbitrum", "base", "optimism", "unichain"],
       zeroFlags: [true, true, true, true, true], endpoints: { unichain: "https://mainnet.unichain.org" } },
-    { id: "sfrax-frax", chains: ["ethereum", "arbitrum", "avalanche", "base", "blast", "bsc", "fraxtal", "metis", "optimism"],
-      canonical: "ethereum", zero: ["avalanche"],
-      endpoints: { blast: "https://rpc.blast.io", fraxtal: "https://rpc.frax.com", metis: "https://andromeda.metis.io/?owner=1088" } },
 
   ])("selects reviewed aggregate policy for $id", ({ id, chains, canonical, mint, zero, zeroFlags, endpoints, fallback, runtime }) => {
     const contracts = chains.map((chain, index) => ({
@@ -394,22 +392,25 @@ describe("curated on-chain supply paths", () => {
     expect(hasRuntimeOnchainSupplyPath(incompleteMeta)).toBe(false);
   });
 
-  it("conserves the native sFRAX denominator across all nine reviewed deployments", () => {
+  it("keeps sFRAX's verified Solana identity but publishes a configured economic-float refusal", () => {
     const meta = TRACKED_META_BY_ID.get("sfrax-frax")!;
-    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
-    expect(selected?.map(({ contract }) => contract.chain))
-      .toEqual(["ethereum", "arbitrum", "avalanche", "base", "blast", "bsc", "fraxtal", "metis", "optimism"]);
-    expect(selected?.map(({ contract }) => contract)).toEqual(meta.contracts);
-    expect(selected?.map(({ contract }) => contract.decimals)).toEqual(Array(9).fill(18));
-    expect(selected?.filter(({ config }) => config.allowZeroSupply).map(({ config }) => config.chain))
-      .toEqual(["avalanche"]);
-    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[meta.id]).toBe("ethereum");
+    expect(meta.contracts).toContainEqual({
+      chain: "solana", address: "DnVyztLHnDyTqL3xfPYF9Uqpgrhcxphn6e31sVAwtg6K", decimals: 9,
+    });
+    expect(meta.contracts).toHaveLength(10);
+    expect(getOnchainSupplyHoldReason(meta.id)).toBe("economic-float-unreconciled");
+    expect(selectCuratedAggregateOnchainSupplyProbeContracts(meta)).toBeNull();
+    expect(selectSingleOnchainSupplyProbeContract(meta)).toBeNull();
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[meta.id]).toBeUndefined();
     expect(CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id]).toBeUndefined();
+    // Admission means a configured unavailable-row producer, not permission to
+    // call native gross shares or prefunded representations economic float.
     expect(hasRuntimeOnchainSupplyPath(meta)).toBe(true);
-    for (const missing of meta.contracts!) {
-      expect(selectCuratedAggregateOnchainSupplyProbeContracts({
-        ...meta, contracts: meta.contracts!.filter((contract) => contract !== missing),
-      })).toBeNull();
+    for (const contract of meta.contracts!) {
+      const partial = { ...meta, contracts: [contract] };
+      expect(selectCuratedAggregateOnchainSupplyProbeContracts(partial)).toBeNull();
+      expect(selectSingleOnchainSupplyProbeContract(partial)).toBeNull();
+      expect(getOnchainSupplyHoldReason(partial.id)).toBe("economic-float-unreconciled");
     }
   });
 

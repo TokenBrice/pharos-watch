@@ -2,17 +2,9 @@ import type { MintAuthorityPosture } from "../../types/core";
 import type { V9MintPosture } from "./control-primitives";
 
 /**
- * Public band vocabulary for the published V9 mint component.
- *
- * Safety 9.1 retired the standalone Mint Authority Score, whose 80/65/50/35
- * score cutoffs were calibrated on a composite this pillar does not compute.
- * The band is therefore derived from the published *posture* rather than from
- * the component score: the posture is the classification, and the score is the
- * graded quality inside it. Deriving from the posture also keeps the band
- * stable when a bounded credit or penalty moves the score by a point or two.
- *
- * The five band keys and labels are unchanged so screener filters, CSV columns,
- * coverage buckets and saved screener URLs keep working across the cutover.
+ * Public classifications describe reviewed mint semantics, independently of the
+ * economic-authority ladder. Assurance or topology credits never redefine a
+ * mint's economic bound. Existing band keys remain the public filter vocabulary.
  */
 export type V9MintPostureBand = "hardened" | "governed" | "managed" | "concentrated" | "exposed";
 
@@ -26,8 +18,7 @@ export const V9_MINT_POSTURE_BAND_ORDER = [
   "exposed",
 ] as const satisfies readonly V9MintPostureBand[];
 
-// D29/D30/H governance process rungs reuse the governed public band;
-// filter values and screener URLs remain unchanged.
+// Governance-process descriptions share a public band, not a numeric rung.
 const POSTURE_BANDS: Record<V9MintPosture, V9MintPostureBand | null> = {
   "none-resolved": "hardened",
   "bounded-admin": "hardened",
@@ -119,8 +110,8 @@ const NO_PRIVILEGED_MINT_CHAIN_POSTURES: ReadonlySet<string> = new Set<MintAutho
 
 /**
  * Concentrated or economically unbounded minters remain fragile for DDR.
- * Reconciliation and delayed token governance refine the Safety Score rung,
- * not the economic issuance bound; active incidents remain adverse too.
+ * Reconciliation and governance describe process, not an economic issuance
+ * bound; active incidents remain adverse too.
  * These refinements must never relax a DDR verdict.
  */
 const FRAGILE_MINT_POSTURES: ReadonlySet<string> = new Set<MintAuthorityPosture>([

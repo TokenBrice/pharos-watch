@@ -14,12 +14,13 @@
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC deposited into Steakhouse's Smokehouse MetaMorpho vault, allocated across Morpho Blue lending markets that intentionally include wider and more exotic borrower collateral than Steakhouse's Prime line",
   "pegMechanism": "ERC-4626 MetaMorpho vault shares appreciate against USDC as borrower interest accrues; withdrawals redeem shares for available USDC liquidity or wait for Morpho market liquidity to return",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex mechanism review",
-    "rationale": "bbqUSDC is an immutable, deposit-only MetaMorpho ERC-4626 vault share over USDC; it does not create discretionary base-asset supply.",
+    "reviewedAt": "2026-10-21",
+    "reviewer": "Pharos Safety Score R1 vault parity review",
+    "rationale": "The exact Ethereum Smokehouse V1 receipt 0xbeefff209270748ddd194831b3fa287a5386f5bc is an immutable MetaMorpho ERC-4626 lending position, not direct fiat cash or the separate Smokehouse V2 product. Content as of 2026-10-20: C13 rechecked the exact vault and V1 contract documentation. Shares claim residual USDC-denominated lending NAV with borrower-credit, collateral and liquidity risk; fee-share accrual does not establish independent financial assurance. This sourced departure from the USDC parent establishes protocol-position identity without legal custody/repledging rights, segregation, full-book stressed liquidity or funded default recovery.",
     "sources": [
       {
         "label": "Smokehouse USDC MetaMorpho vault",

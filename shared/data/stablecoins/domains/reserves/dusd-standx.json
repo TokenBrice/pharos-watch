@@ -67,7 +67,7 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Ceffu and centralized exchange custody partners",
+        "name": "StandX custodians and centralized-exchange custody partners (not individually identified)",
         "role": "custodian"
       },
       {
@@ -95,7 +95,7 @@
         "url": "https://docs.standx.com/docs/resources/user-terms-conditions"
       }
     ],
-    "uncertainty": "StandX documents multi-signature custody solutions, exchange-diversified hedging, and custodial insurance coverage. The existing Ceffu attribution was not corroborated in the sources reopened on 2026-10-01; provider shares, account segregation, and rehypothecation terms remain undisclosed. The issuer terms expressly deny any trustee relationship, assets held on trust, and tokenholder recourse to issuer or group assets on insolvency. The bankruptcy-remoteness field was corrected from unknown to none on that basis; other custody claims retain their prior review date.",
+    "uncertainty": "StandX documents multi-signature custody solutions, exchange-diversified hedging, and custodial insurance coverage. The source review reopened the cited architecture, risks and legal terms on 2026-10-20 and removed the uncorroborated Ceffu provider attribution; the architecture names only a secure list of custodian addresses, not that provider. Provider shares, account segregation, and rehypothecation terms remain undisclosed. The issuer terms expressly deny any trustee relationship, assets held on trust, and tokenholder recourse to issuer or group assets on insolvency. The existing bankruptcyRemoteness none verdict is retained on that affirmative legal evidence. This source-scoped attribution correction does not renew the original custody review date or establish protective custody.",
     "knownUnknownExposurePct": 100
   }
 }

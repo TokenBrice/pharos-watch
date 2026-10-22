@@ -3,7 +3,7 @@ import { clampScore } from "../math";
 import { decimalSnap } from "./formula";
 import { evaluateV1019LenderBook, v1019LenderMarketQuality } from "./lender-book";
 import { lenderMarketKey } from "./lender-book-registry";
-import { resolveV9ReasonTreatment } from "./policy";
+import { unknownQuality } from "./policy";
 import { gapsForV9Ids, type V9GapIndex } from "./gap-index";
 import { canonicalDomains, canonicalUniqueBy, compareText, uniqueSorted } from "./primitives";
 import {
@@ -18,10 +18,9 @@ import {
 
 /** Minimum mapped single-parent weight for a wrapper to qualify as ~100% backed. */
 export const V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT = 0.99;
-export function verifiedLiveInheritedExposures(
+function verifiedLiveParentDenominatedExposures(
   asset: Pick<V9BackingAssetInput, "reserveStatus" | "reserveExposures" | "reserveResiduals">,
   inherited: Pick<V9InheritedStablecoinBacking, "parentAssetId">,
-  allowCompleteMultiSlice = false,
 ): readonly V9ReserveExposureFactV2[] | undefined {
   const exposures = asset.reserveExposures;
   if (
@@ -36,48 +35,63 @@ export function verifiedLiveInheritedExposures(
       !Number.isFinite(exposure.weight) || exposure.weight < 0)
   ) return undefined;
   const weight = exposures.reduce((sum, exposure) => sum + exposure.weight, 0);
-  if (exposures.length === 1) {
-    return weight >= V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT ? exposures : undefined;
-  }
-  return allowCompleteMultiSlice &&
-    Math.abs(weight - 1) <= SCORE_EPSILON &&
-    (asset.reserveResiduals ?? []).every(residual => residual.weight === 0)
+  const residualWeight = (asset.reserveResiduals ?? []).reduce((sum, residual) => sum + residual.weight, 0);
+  return weight >= V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT &&
+    weight + residualWeight <= 1 + SCORE_EPSILON ? exposures : undefined;
+}
+
+/** Only admitted parent-token claims, not parent-denominated protocol positions, inherit directly. */
+export function verifiedLiveInheritedExposures(
+  asset: Pick<V9BackingAssetInput, "reserveStatus" | "reserveExposures" | "reserveResiduals">,
+  inherited: Pick<V9InheritedStablecoinBacking, "parentAssetId">,
+): readonly V9ReserveExposureFactV2[] | undefined {
+  const exposures = verifiedLiveParentDenominatedExposures(asset, inherited);
+  return exposures !== undefined && exposures.every(exposure =>
+    exposure.assetClass === "stablecoin" &&
+    (exposure.factorStatuses?.assetClass?.observationState ?? "known") === "known" &&
+    exposure.factorStatuses?.assetClass?.applicability.state !== "unresolved")
     ? exposures : undefined;
 }
 
+/** A complete admitted lender book prices deployed claims without asserting 1:1 parent inheritance. */
+export function verifiedLiveLenderBookExposures(
+  asset: Pick<V9BackingAssetInput, "assetId" | "lenderBook" | "reserveStatus" | "reserveExposures" | "reserveResiduals">,
+  inherited: Pick<V9InheritedStablecoinBacking, "parentAssetId" | "parentBackingScore">,
+  policy: V9BackingEvaluationPolicy,
+): readonly V9ReserveExposureFactV2[] | undefined {
+  if (asset.lenderBook?.observation?.assetId !== asset.assetId ||
+    evaluateV1019LenderBook(asset.lenderBook, inherited.parentBackingScore, policy) === null) return undefined;
+  return verifiedLiveParentDenominatedExposures(asset, inherited);
+}
+
 /**
- * Reserve evaluation for a stablecoin-collateralized wrapper: the whole reserve
- * is one tracked, rated parent, so the reserve score is the parent's backing
- * pillar. Wrapper-local accounting, control, and withdrawal risk belong in the
- * wrapper's own pillars; incomplete local review is handled once by the
- * fact-aware parent limit. Concentration is intentionally NOT re-penalized —
- * the parent's backing pillar already prices its own internal diversification.
- * Non-lender inheritance still defers to the generic path at the unknown floor.
- * An admitted lender book instead retains even a very weak inherited quality:
- * generic fallback must not erase the measured allocation haircut.
+ * An admitted parent-token claim inherits parent Backing; a complete lender
+ * book instead transmits its own measured collateral risk through that parent.
+ * Deployed strategy denomination alone proves neither kind of claim.
+ * Concentration is not re-penalized on these admitted whole-book paths.
  */
 export function inheritedStablecoinReserveEvaluation(
   asset: V9BackingAssetInput,
   inherited: V9InheritedStablecoinBacking,
   policy: V9BackingEvaluationPolicy,
   gapIndex: V9GapIndex,
-): ReserveEvaluation | null {
+  liveExposures: readonly V9ReserveExposureFactV2[],
+): ReserveEvaluation {
   const backing = backingPolicy(policy);
   const weight = Math.max(0, Math.min(1, inherited.weight));
   const lenderEvaluation = asset.lenderBook === undefined || asset.lenderBook.observation?.assetId !== asset.assetId ? null
     : evaluateV1019LenderBook(asset.lenderBook, inherited.parentBackingScore, policy);
   const inheritedQuality = lenderEvaluation?.reserveQuality ?? clampScore(inherited.parentBackingScore);
-  const liveExposures = verifiedLiveInheritedExposures(asset, inherited,
-    backing.lenderCollateralBook.admittedAssets.some(row => row.assetId === asset.assetId));
   const evidenceRefIds = uniqueSorted([
     ...asset.reserveStatus.evidenceRefIds,
-    ...(liveExposures?.flatMap(exposure => exposure.status.evidenceRefIds) ?? []),
+    ...liveExposures.flatMap(exposure => exposure.status.evidenceRefIds),
     ...(asset.lenderBook?.status.evidenceRefIds ?? []),
+    ...(inherited.admittedClaimEvidenceRefIds ?? []),
   ]);
   const failureDomains = canonicalDomains(inherited.failureDomains);
   const componentKey = `reserve:inherited-backing:${inherited.parentAssetId}`;
-  const observationState = liveExposures === undefined ? "bounded-unknown" : "known";
-  const provenance = liveExposures === undefined ? null : "live";
+  const observationState = liveExposures.length > 0 ? "known" : "bounded-unknown";
+  const provenance = liveExposures.length > 0 ? "live" : "curated";
   const reserveGapAttributions = [
     ...canonicalUniqueBy(
       gapsForV9Ids(gapIndex, asset.reserveStatus.gapIds).map((gap) => ({
@@ -104,7 +118,7 @@ export function inheritedStablecoinReserveEvaluation(
     const cause = causes.includes("C") ? "C" : causes.includes("U") ? "U" : causes.includes("A") ? "A" : causes.includes("B") ? "B" : null;
     return {
       componentKey: `${componentKey}:residual:${residual.residualId}`,
-      score: cause === "A" || cause === "B" ? null : backing.boundedUnknownQuality,
+      score: cause === "A" || cause === "B" ? null : unknownQuality("backing", cause, policy.policy.semantic),
       normalizedWeight: residual.weight,
       effectiveScoringWeight: cause === "A" || cause === "B" ? 0 : residual.weight,
       cause,
@@ -115,7 +129,6 @@ export function inheritedStablecoinReserveEvaluation(
   const includedWeight = weight + residualFactors.reduce((sum, factor) => sum + factor.effectiveScoringWeight, 0);
   const score = clampScore(decimalSnap((inheritedQuality * weight +
     residualFactors.reduce((sum, factor) => sum + (factor.score ?? 0) * factor.effectiveScoringWeight, 0)) / includedWeight));
-  if (lenderEvaluation === null && score <= backing.boundedUnknownQuality + SCORE_EPSILON) return null;
   const lenderFactors: V9BackingFactorContribution[] = [];
   if (lenderEvaluation !== null && asset.lenderBook?.observation?.status === "ok") {
     const limiting = lenderEvaluation.deploymentQualities.find(row => row.reserveQuality === lenderEvaluation.reserveQuality)!;
@@ -228,26 +241,7 @@ export function inheritedStablecoinReserveEvaluation(
       },
     ],
     structuralReasons: [],
-    unresolved:
-      liveExposures === undefined
-        ? (reserveGapAttributions.length > 0
-            ? reserveGapAttributions
-            : [undefined]
-          ).map((attribution) => ({
-            code: "partial-reserve-review",
-            pathKey: componentKey,
-            gapIds: [],
-            treatment: resolveV9ReasonTreatment(policy, "partial-reserve-review", attribution?.cause ?? "U").treatment,
-            ...(attribution === undefined
-              ? {}
-              : {
-                  responsibility: attribution.responsibility,
-                  causalKey: attribution.causalKey,
-                  cause: attribution.cause,
-                  causeGapIds: attribution.causeGapIds,
-                }),
-          }))
-        : [],
+    unresolved: [],
     rateability: "rateable",
   };
 }

@@ -213,28 +213,6 @@ describe("current cause admission", () => {
     },
   );
 
-  it("retains a linked missing operational fact without manufacturing positive eligibility evidence", () => {
-    const core = currentCore();
-    const asset = core.assets[0]!;
-    asset.operationalResilience = null;
-    const gap = createV9FactGapV3({
-      gapId: "missing-operational", reasonCode: "scoped-control-question", ownerDomain: "control",
-      policyRuleId: "operational-eligibility", observationState: "missing",
-      path: { kind: "local-component", componentKey: "operational-eligibility" },
-      message: "Operational eligibility evidence is unavailable.", responsibility: "unresearched",
-    });
-    asset.operationalResilienceStatus = createV9FactStatus({
-      observationState: "missing", applicability: requiredV9Applicability("operational-eligibility"), gapIds: [gap.gapId],
-    });
-    expect(safeParseV9AssetFactsV3(asset).success).toBe(false);
-    asset.gaps.push(gap);
-    const admitted = compileV9FactSetV3(core).assets[0]!;
-    expect(admitted.operationalResilience).toBeNull();
-    expect(admitted.operationalResilienceStatus!.observationState).toBe("missing");
-    const forged = structuredClone(admitted);
-    forged.operationalResilienceStatus = knownStatus();
-    expect(safeParseV9AssetFactsV3(forged).success).toBe(false);
-  });
 
   it("retains overlapping score-eligible alternatives for portfolio allocation rather than rejecting the whole current cohort", () => {
     const core = currentCore();
@@ -413,9 +391,12 @@ describe("Safety Score v9 fact compilation and upgrades", () => {
     const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
     expect(evaluated.assets.map((asset) => asset.assetId)).toEqual(["alpha", "beta", "gamma"]);
     for (const result of evaluated.assets) {
-      expect(result.trace.ratingStatus).not.toBe("pipeline-gap");
-      expect(result.trace.partialEvidence).toBeNull();
-      expect(result.scoreInput.parent.score).not.toBe(100);
+      expect(result.trace.ratingStatus).toBe("pipeline-gap");
+      expect(result.trace.finalScore).toBeNull();
+      expect(result.trace.finalGrade).toBeNull();
+      expect(result.scoreInput.parent.score).toBeNull();
+      expect(result.scoreInput.parent.ratingStatus).toBe("pipeline-gap");
+      expect(result.trace.nrReasons).toContainEqual(expect.objectContaining({ cause: "U" }));
       expect(result.trace.nrReasons.every((reason) => reason.code !== "implementation-parent-cycle" && reason.code !== "parent-cycle")).toBe(true);
     }
   });
@@ -460,12 +441,13 @@ describe("Safety Score v9 fact compilation and upgrades", () => {
     expect(() => readCompiledV9FactSetForEvaluation(retained)).toThrow();
   });
 
-  it("fails chain attribution closed when the distribution is unavailable or the supply fact is bounded", () => {
+  it("keeps an authored chain failure unresolved when distribution is unavailable or supply is bounded", () => {
     const configureImmaterialChain = (input: ReturnType<typeof coreFixture>) => {
       for (const asset of input.assets.slice(1)) {
+        asset.supply.failureDomains = [{ kind: "chain", key: "celo" }];
         asset.supply.chainDistribution = {
           chains: [
-            { chainId: "chain:fixture", supplyUsd: 49_900, supplyShare: 0.0499 },
+            { chainId: "celo", supplyUsd: 49_900, supplyShare: 0.0499 },
             { chainId: "other", supplyUsd: 950_100, supplyShare: 0.9501 },
           ],
           unattributedSupplyUsd: 0,
@@ -477,7 +459,7 @@ describe("Safety Score v9 fact compilation and upgrades", () => {
       evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1)
         .assets.find((asset) => asset.assetId === assetId)!
         .scoreInput.dependencyStructuralSignals.find((signal) =>
-          signal.failureDomainKeys.includes("chain:chain:fixture"),
+          signal.failureDomainKeys.includes("chain:celo"),
         );
 
     const known = coreFixture();
@@ -855,7 +837,7 @@ describe("Safety Score v9 fact digest canonicalization", () => {
     zeroSupply.assets[1]!.supply.chainDistribution.chains[0]!.supplyShare = 0.01;
     expect(() => compileV9FactSetV2(zeroSupply)).toThrow("Chain supply shares must reconcile");
   });
-  it("canonicalizes the retained Hyperliquid alias and fails closed on an alias collision", () => {
+  it("canonicalizes Hyperliquid exposure and rejects ambiguous alias shares without pricing missing reviews", () => {
     const configure = (
       input: ReturnType<typeof coreFixture>,
       chains: Array<{ chainId: string; supplyUsd: number; supplyShare: number }>,
@@ -869,16 +851,17 @@ describe("Safety Score v9 fact digest canonicalization", () => {
         asset.supply.failureDomains = [{ kind: "chain", key: "hyperliquid" }];
       }
     };
-    const severity = (input: ReturnType<typeof coreFixture>) =>
+    const chainSignal = (input: ReturnType<typeof coreFixture>) =>
       evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1)
         .assets.find((asset) => asset.assetId === "beta")!
-        .scoreInput.dependencyStructuralSignals.find((signal) => signal.failureDomainKeys.includes("chain:hyperliquid"))
-        ?.severity;
+        .scoreInput.dependencyStructuralSignals.find((signal) => signal.failureDomainKeys.includes("chain:hyperliquid"));
 
     const alias = coreFixture();
     configure(alias, [{ chainId: "hyperliquid-l1", supplyUsd: 1_000_000, supplyShare: 1 }]);
-    // P1-03: hyperliquid is no longer a mature chain, so the folded 100% alias share grades high.
-    expect(severity(alias)).toBe("high");
+    expect(chainSignal(alias)).toMatchObject({
+      severity: "low", responsibility: "unresearched", materialSharePct: 100,
+      failureDomainKeys: ["chain:hyperliquid"],
+    });
 
     const collision = coreFixture();
     configure(collision, [
@@ -886,9 +869,9 @@ describe("Safety Score v9 fact digest canonicalization", () => {
       { chainId: "hyperliquid", supplyUsd: 24_900, supplyShare: 0.0249 },
       { chainId: "hyperliquid-l1", supplyUsd: 24_900, supplyShare: 0.0249 },
     ]);
-    // P1-03: with hyperliquid no longer mature, the ambiguous alias pair is visible as the
-    // fail-closed "chain inventory unavailable" verdict instead of being masked by maturity.
-    expect(severity(collision)).toBe("high");
+    const ambiguous = chainSignal(collision);
+    expect(ambiguous).toMatchObject({ severity: "low", responsibility: "unresearched" });
+    expect(ambiguous).not.toHaveProperty("materialSharePct");
   });
   it("binds semantic facts and source identities but excludes compilation time and all policy fields", () => {
     const first = compileV9FactSetV2(coreFixture());

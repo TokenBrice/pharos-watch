@@ -73,7 +73,7 @@ describe("usdai-hub adapter", () => {
         freshnessKind: "same-run-onchain",
         routeStatus: "open",
         routeStatusSource: "onchain",
-        holderEligibility: "whitelisted-primary",
+        holderEligibility: "any-holder",
       },
     });
   });

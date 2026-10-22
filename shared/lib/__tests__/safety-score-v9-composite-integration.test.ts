@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { V9ScoringInput } from "../../types/safety-score-v9";
+import type { V9ScoringInput, V9StructuralSignal } from "../../types/safety-score-v9";
 import { scoreV9Input } from "../safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { isV9SharedControllerSignalAlreadyPriced } from "../safety-score-v9/scoped-risk";
 import { makeV9ScoringInput, makeV9Signal } from "./safety-score-v9-score.test-support";
 
-const signal = makeV9Signal;
+const signal = (overrides: Partial<V9StructuralSignal> = {}) => makeV9Signal({ exposedScore: 40, ...overrides });
 
 function input(overrides: Partial<V9ScoringInput> = {}): V9ScoringInput {
   return makeV9ScoringInput({
@@ -56,7 +57,6 @@ describe("Safety Score v9 continuous composite and scoped risk integration", () 
     });
     expect(trace.aggregation!.score).toBeGreaterThan(30);
     expect(trace.aggregation!.score).toBeLessThan(trace.weightedQuality!);
-    expect(trace.caps.map((cap) => cap.kind)).not.toContain("bounded-compensability");
   });
 
   it("prices known deployment exposure proportionally instead of hard-capping the whole asset", () => {
@@ -66,15 +66,15 @@ describe("Safety Score v9 continuous composite and scoped risk integration", () 
     );
 
     expect(trace.baseAssetScore).toBe(80);
-    expect(trace.deploymentAdjustedScore).toBe(72);
-    expect(trace.finalScore).toBe(72);
+    expect(trace.deploymentAdjustedScore).toBe(60);
+    expect(trace.finalScore).toBe(60);
     expect(trace.bindingCap).toBeNull();
     expect(trace.deploymentAdjustments).toEqual([
       expect.objectContaining({
         failureDomainKey: "chain:bounded",
         exposureShare: 0.5,
-        exposedScore: 64,
-        adjustmentPoints: 8,
+        exposedScore: 40,
+        adjustmentPoints: 20,
       }),
     ]);
   });
@@ -134,7 +134,7 @@ describe("Safety Score v9 continuous composite and scoped risk integration", () 
     expect(trace.adverseAttribution).toEqual([]);
   });
 
-  it("leaves access-only risk with exit and retains global-claim caps", () => {
+  it("leaves access and global authority signals in their owning pillars, without composite caps", () => {
     const access = scoreV9Input(
       input({
         structuralSignals: [
@@ -158,8 +158,8 @@ describe("Safety Score v9 continuous composite and scoped risk integration", () 
 
     expect(access.finalScore).toBe(80);
     expect(access.caps).toEqual([]);
-    expect(global.finalScore).toBe(64);
-    expect(global.bindingCap?.kind).toBe("signal:critical-dependency:high");
+    expect(global.finalScore).toBe(80);
+    expect(global.bindingCap).toBeNull();
   });
 
   it.each([
@@ -206,5 +206,49 @@ describe("Safety Score v9 continuous composite and scoped risk integration", () 
     expect(trace.finalScore).toBe(80);
     expect(trace.caps).toEqual([]);
     expect(trace.deploymentAdjustments).toEqual([]);
+  });
+
+  it("prices only policy-admitted deployment quality without charging an already-priced root twice", () => {
+    const pricedControllers = new Set(["ethereum:root-controller"]);
+    const independent = signal({
+      exposedScore: undefined, failureDomainKeys: ["upgrade-control:ethereum:independent-controller"],
+    });
+    expect(isV9SharedControllerSignalAlreadyPriced(independent, [], pricedControllers)).toBe(false);
+    const trace = scoreV9Input(input({ structuralSignals: [independent] }), V9_CANDIDATE_POLICY_V1);
+    const exposedQuality = V9_CANDIDATE_POLICY_V1.policy.semantic.formula.deploymentExposedQuality["critical-dependency"].high;
+    const loss = (80 - exposedQuality) * 0.5;
+    expect(trace.deploymentAdjustedScore).toBe(80 - loss);
+    expect(trace.finalScore).toBe(Math.round(80 - loss));
+    expect(trace.deploymentAdjustments).toEqual([
+      expect.objectContaining({ exposedScore: exposedQuality, exposureShare: 0.5, adjustmentPoints: loss }),
+    ]);
+    expect(trace.caps).toEqual([]);
+
+    const absentPolicy = scoreV9Input(input({ structuralSignals: [
+      { ...independent, kind: "centralized-mint" },
+    ] }), V9_CANDIDATE_POLICY_V1);
+    expect(absentPolicy.finalScore).toBe(80);
+    expect(absentPolicy.deploymentAdjustments).toEqual([]);
+
+    const ownRoot = { ...independent, failureDomainKeys: ["upgrade-control:ethereum:root-controller"] };
+    const alreadyPriced = isV9SharedControllerSignalAlreadyPriced(ownRoot, [], pricedControllers);
+    expect(alreadyPriced).toBe(true);
+    const shared = scoreV9Input(input({ structuralSignals: [{
+      ...ownRoot, pricedInPillar: alreadyPriced ? "control" : undefined,
+    }] }), V9_CANDIDATE_POLICY_V1);
+    expect(shared.finalScore).toBe(80);
+    expect(shared.deploymentAdjustments).toEqual([]);
+  });
+
+  it("does not apply a second whole-score charge for shared controllers or unbounded mint power", () => {
+    const signals = [
+      signal({ kind: "centralized-mint", economicLossScope: "global-claim", pricedInPillar: "control" }),
+      signal({ kind: "critical-dependency", economicLossScope: "global-claim", failureDomainKeys: ["controller:shared"] }),
+      signal({ kind: "critical-dependency", economicLossScope: "global-claim", failureDomainKeys: ["controller:shared"] }),
+    ];
+    const trace = scoreV9Input(input({ structuralSignals: signals }), V9_CANDIDATE_POLICY_V1);
+    expect(trace.finalScore).toBe(80);
+    expect(trace.caps).toEqual([]);
+    expect(trace.structuralSignals).toEqual(signals);
   });
 });

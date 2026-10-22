@@ -205,7 +205,7 @@
         "evidence": "Creation-to-pin SetIsAllocator census contains five events. Pinned isAllocator is true for this proxy and false for predecessors 0x8a25a24ede9482c4fc0738f99611be58f1c839ab and 0xcba0c0a2a0b6bb11233ec4ea85c5bffea33e724d. The vault also grants allocator powers implicitly to owner and curator. This proxy can reallocate within enabled caps and update queues, not raise caps. Its complete event-derived RoleGranted candidates joined to pinned hasRole are active: DEFAULT_ADMIN_ROLE=Executor 0xf93b7122450a50af3e5a76e1d546e95ac1d0f579; ALLOCATOR_ROLE=0x8a25a24ede9482c4fc0738f99611be58f1c839ab and 0x8cc0cb0cfb6b7e548cfd395b833c05c346534795; FREEZER_ROLE=0x90d8c80c028b4c09c0d8dcaab9bbb057f0513431. Verified doCall/doCallWithValue use CALL, not delegatecall. Transitive executable authority through the owner Executor remains unresolved."
       }
     ],
-    "economicCapSemantics": "collateral-gated",
+    "economicCapSemantics": "bounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {

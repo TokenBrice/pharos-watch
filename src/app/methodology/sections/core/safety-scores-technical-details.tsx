@@ -1,4 +1,5 @@
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { DEPEG_SEVERITY_BPS } from "@shared/lib/depeg-config";
 import { MethodologyDetails, MethodologyFacts } from "../../methodology-shared";
 import { SafetyScoresDimensionDetails } from "./safety-scores-dimension-details";
 import { SafetyScoresScoringDetails } from "./safety-scores-scoring-details";
@@ -16,7 +17,7 @@ export function SafetyScoresTechnicalDetails() {
     .filter((ceiling) => ceiling.limit !== null)
     .map((ceiling) => `<${ceiling.maxMonthsExclusive}m → ${ceiling.limit}`)
     .join(" · ");
-  const rounding = `${formula.rounding.uncapped} uncapped · ${formula.rounding.capped} capped · ${formula.scoreDecimals} decimals`;
+  const rounding = "nearest own score; floor each ceiling once, then integer minimum";
 
   return (
     <>
@@ -24,41 +25,57 @@ export function SafetyScoresTechnicalDetails() {
         <p>
           The checked policy normally uses Backing {formula.pillarWeights.backing * 100}%, Exit{" "}
           {formula.pillarWeights.exit * 100}%, and Economic Control {formula.pillarWeights.control * 100}%.
-          Use the weights of included pillars only, renormalized to sum to one. With at least two included pillars,
-          weighted quality cannot exceed the strongest measured support, and the score receives at most bounded
-          headroom above the weakest included pillar. Exactly one excluded pillar produces a labelled two-pillar
-          partial rating; fewer than two means Pipeline gap with no aggregate or grade. Peg behavior applies with
-          exponent {formula.pegExponent}; positively evidenced method, parent, history and structural constraints
-          remain without missing-data ceilings.
+          Retain all three original weights. With at least two usable pillars, an unavailable third is priced at
+          its cause-keyed unknown quality, not omitted or renormalized. The weakest of all three priced pillars
+          sets bounded headroom above that minimum; missing-pillar pricing is uncertainty, not usable evidence.
+          Fewer than two usable pillars means Pipeline gap without an aggregate or grade. Peg behavior applies with
+          exponent {formula.pegExponent}. Five whole-score limit families remain: active depeg, known age
+          under 24 months, required parents/wrappers, realized holder loss and speculative-credit residual.
+          The broad structural-cap matrix and duplicate evidence ceilings are retired.
         </p>
         <p>
-          Since methodology v9.22 every score-bearing gate is part of the versioned policy asset
-          rather than a code literal, so the semantic digest rotates whenever one changes. That
-          covers the insufficient-evidence withhold band, its danger predicate, the attribution-based
-          F-grade admission rule, the pre-exit danger predicate, the material-bridge high-share band, and the separately named
-          evidence-expiry windows used by reviewed research, access reviews, overlays, and reserve
-          evidence. Counterfactual replay can supply a validated gate projection and observe a
-          distinct digest, so a gate change can no longer alter a published score invisibly. The
-          active values did not change when this landed: the release rotated provenance, not scores.
+          Policy owns score-bearing values and evidence-expiry budgets; the semantic digest rotates when they change.
+          Cause-keyed unknown pricing applies only to genuinely missing subfactors, never as a floor on measured
+          adverse values. LEVER-1, its hazard exception and grade-based D/F NR guards are retired. A low score,
+          open question or active incident does not withhold an otherwise evidenced rating. Publication quarantine
+          and accepted-state holds remain separate from rating availability.
+        </p>
+        <p>
+          Verified worse facts score lower than unresolved ones: proving an opaque controller is a single key lowers
+          its authority base from 60 to 50. Unknown is priced as uncertainty, not as safety. Research can lower a score.
+          The overall Economic Control pillar is clamped at 90, including non-authority paths; supervision is not
+          required above 80.
+        </p>
+        <p>
+          Provisional labels identify rated cards with more than 50% of original scoring weight priced at unknown
+          constants. They disclose uncertainty without changing the score, grade or availability. Older archives
+          without the fields remain unlabelled. Exit sizes a continuous 5% of usable supply within $1m–$25m; smaller
+          execution receipts remain lower bounds, not proof of full-request completion.
         </p>
         <p className="pharos-numeric">
-          candidate = weakestIncluded + {formula.compensabilityHeadroom} × tanh((renormalizedWeightedQuality − weakestIncluded) /{" "}
+          candidate = weakestPriced + {formula.compensabilityHeadroom} × tanh((weightedQuality − weakestPriced) /{" "}
           {formula.compensabilityHeadroom})
         </p>
         <MethodologyFacts
           facts={[
-            { label: "Pillar weights", value: "40/35/25 normally; renormalized over included pillars" },
+            { label: "Pillar weights", value: "40/35/25 across all three priced pillars; no missing-pillar renormalization" },
             { label: "Peg adjustment", value: `(pegScore / 100)^${formula.pegExponent}` },
             { label: "Active-depeg caps", value: activeDepegCaps },
             { label: "Track-record ceilings", value: trackRecordCeilings },
             { label: "Rounding", value: rounding },
             { label: "Equal-cap priority", value: formula.capTiePriority.join(" → ") },
             { label: "Grade thresholds", value: gradeThresholds },
-            { label: "Insufficient evidence", value: "C/U/D-only causal gates; A/B never NR" },
+            { label: "Rating availability", value: "At least two usable pillars; no cause, low-score or D/F NR gate" },
             { label: "Publication", value: "Global failures hold; proven local technical gaps preserve pipeline-gap status" },
+            { label: "Unknown Backing / Exit / Control (C)", value: `${semantic.unknownQuality.backing.C} / ${semantic.unknownQuality.exit.C} / ${semantic.unknownQuality.control.C}` },
+            { label: "Unknown Backing / Exit / Control (U or unclassified)", value: `${semantic.unknownQuality.backing.U} / ${semantic.unknownQuality.exit.U} / ${semantic.unknownQuality.control.U}` },
+            { label: "Exit unknown cause labels", value: "Presentation-only C/U labels; both price uncertainty at 50, never overwrite measured Exit" },
+            { label: "Wrapper form deductions", value: "Pure 3 · native-staked 5 · strategy-vault 10; applied to the premium-free parent limit" },
+            { label: "Realized holder loss", value: `≥${DEPEG_SEVERITY_BPS.severe / 100}% → ${formula.realizedHolderLoss.initialLimits.severe}; ≥${DEPEG_SEVERITY_BPS.offPeg / 100}% → ${formula.realizedHolderLoss.initialLimits.offPeg}; hold ${formula.realizedHolderLoss.holdDays} days, then linear recovery to 100 over ${formula.realizedHolderLoss.recoveryDays} days` },
+            { label: "Speculative-credit residual", value: `High admitted reserve/global-claim measured-adverse credit signal → ${formula.speculativeCreditResidualLimit}; admitted legacy unscoped proof retained; no deployment/access-only cap` },
             {
               label: "Policy provenance",
-              value: `Score-bearing gates digest-bound since v${releaseVersion}; withhold below ${formula.withhold.maxScoreExclusive}, F requires measured-adverse attribution, material-bridge share ${semantic.control.materialBridgeHighShareThreshold * 100}%`,
+              value: `Policy v${releaseVersion}; authority maximum ${semantic.control.authorityLadder.maxComponentQuality}; material-bridge share ${semantic.control.materialBridgeHighShareThreshold * 100}%`,
             },
           ]}
         />

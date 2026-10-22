@@ -11,6 +11,7 @@ import type {
 import type { V9FactGapV3 } from "../../types/safety-score-v9-facts";
 import type { V9EvidenceCause, V9ScoringDisposition } from "../../types/safety-score-v9-causes";
 import type { BridgeRouteRiskTier, OracleRiskTier } from "../../types/core";
+import type { MintAuthorityPosture } from "../../types/core";
 import type {
   V9ReasonCode,
   V9Severity,
@@ -24,7 +25,7 @@ import { sortV1005ProcessDiagnostics } from "./control-scope";
 
 export type V9MintReconciliation = V9EconomicControlReviewV2["mint"]["reconciliation"];
 export type V9MintSupervision = V9EconomicControlReviewV2["mint"]["supervision"];
-export type V9MintPosture = keyof V9MethodologySemantic["control"]["mintPostureQuality"];
+export type V9MintPosture = Exclude<MintAuthorityPosture, "none-resolved-mint">;
 export type V9OracleTier = OracleRiskTier;
 export type V9BridgeTier = BridgeRouteRiskTier;
 
@@ -39,7 +40,7 @@ export type V9MintMechanismReview = Omit<
    * Epoch second of the most recent resolved mint incident, or null when the
    * review records none. Absolute rather than an age so the fact is stable
    * between compilation cycles; the evaluator converts it against its own
-   * clock (see {@link EvaluateV9EconomicControlArgs.resolvedIncidentAgeMonths}).
+   * clock (see {@link EvaluateV9EconomicControlArgs.resolvedIncidentAgeDays}).
    */
   latestResolvedIncidentAtSec?: number | null;
 };
@@ -81,16 +82,10 @@ export interface EvaluateV9EconomicControlArgs {
   oracle: V9OracleControlReview;
   bridge: V9BridgeControlReview;
   /**
-   * Conservative measured track record (months since launch, floor). Absent →
-   * no seasoning credit (unit callers, unknown launch dates fail conservative).
+   * Exact elapsed days since the mint review's most recent resolved incident.
+   * Absent ages retain the initial cap on a recorded resolved control incident.
    */
-  trackRecordMonths?: number;
-  /**
-   * Conservative measured age (months, floor) of the mint review's most recent
-   * resolved incident. Absent → the decay ladder holds its strictest rung when
-   * a resolved incident is nonetheless recorded on the control row.
-   */
-  resolvedIncidentAgeMonths?: number;
+  resolvedIncidentAgeDays?: number;
 }
 
 export interface V9ControlComponent {
@@ -145,10 +140,6 @@ export interface V9EconomicControlResult {
   causeGapIds: readonly string[];
   limitedEvidenceCauses: readonly ("C" | "U" | "D")[];
   supportedComponentKeys: readonly string[];
-  /** Proportional unresolved-deployment pricing, before resilience and dependency adjustments. */
-  unresolvedDeploymentAdjustment?: { scoreBefore: number; scoreAfter: number };
-  /** Admitted full unresolved cohort share used by the composite ceiling band. */
-  unresolvedDeploymentShare?: number;
   state: "rated" | "not-rated";
   oracleApplicability: V9FactStatusV2["applicability"]["state"];
   components: readonly V9ControlComponent[];
@@ -161,8 +152,8 @@ export interface V9EconomicControlResult {
   failureDomains: readonly V9FailureDomainRef[];
 }
 
-/** D32 is shared by every favorable governance-process rung. */
-function isV1005VotingControlQualified(
+/** Voting ownership is proof shared by all favorable governance topology facts. */
+export function isV1005VotingControlQualified(
   voting: V1005CompiledVotingControl | undefined,
   policy: V9GovernedIssuancePolicy,
 ): boolean {
@@ -418,10 +409,7 @@ export function isKnownRequired(status: V9FactStatusV2): boolean {
 
 export function isControlEconomicallyRelevant(control: V9DeploymentControlFactV2): boolean {
   if (control.claimImpairment === "none" && control.economicLossScope === "access-only") return false;
-  if (control.controlKind !== "governance") return true;
-  return control.capabilities.some((capability) =>
-    ["mint", "upgrade", "oracle-update", "bridge-mint", "custody-transfer", "parameter-change"].includes(capability),
-  );
+  return true;
 }
 
 export function hasFreshScopedQuestion(control: V9DeploymentControlFactV2): boolean {

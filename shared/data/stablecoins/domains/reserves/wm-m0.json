@@ -46,7 +46,7 @@
     "compositionBasis": "Exact live Wrapped M single-asset row, wrapped-M implementation, and inherited M dependency",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "M0 does not publish current minter-level balances, Treasury holdings, or a dated report scoped specifically to the wM wrapper.",
+    "knownUnknownExposure": "The wrapper's immediate reserve is M. MinterGateway exposes per-minter collateral and debt accounting, but that accounting does not disclose current underlying Treasury holdings, custody-provider allocation, or a dated independent financial report scoped to all wM liabilities.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
@@ -56,8 +56,8 @@
         "role": "custodian"
       }
     ],
-    "segregation": "segregated",
-    "bankruptcyRemoteness": "structured",
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-14",
     "reviewer": "OpenAI Codex backing review",
@@ -72,7 +72,7 @@
         "url": "https://docs.m0.org/home/fundamentals/adopted-guidance/spv-operators/"
       }
     ],
-    "uncertainty": "M0 documents SPV-based collateral storage and wind-down controls, but the reviewed public material does not identify the current minter for wM or state a general rehypothecation prohibition.",
+    "uncertainty": "M0 documents eligible SPV structures and wind-down controls, but wM's immediate claim is M rather than a separate allocation to a particular Minter or SPV. The reviewed sources do not establish a complete current underlying custody chain or general rehypothecation prohibition. Source-scoped correction (2026-10-20): withdraw inherited whole-book segregation and bankruptcy-remoteness assertions to unknown and correct custodyModel to unknown. Local M/wM mechanical backing does not transfer legal protections over all off-chain M collateral to wM holders. Preserve original July14 custody and July15 composition review starts, 100% M wrapper edge and every historical source pin.",
     "knownUnknownExposurePct": 100
   }
 }

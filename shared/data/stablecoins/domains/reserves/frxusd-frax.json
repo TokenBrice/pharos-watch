@@ -207,6 +207,6 @@
         "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
       }
     ],
-    "uncertainty": "The issuer's balance sheet identifies WTGXX held in Frax Inc's BitGo Trust Account and cash in a segregated Erebor Bank FBO frxUSD Stablecoin Reserve Account. Other balances are held in on-chain redemption contracts or a Solana multisig, with underlying fund and stablecoin custody outside those contracts. Provider percentages, the BitGo legal entity and account safeguards, portfolio-wide segregation, bankruptcy remoteness, and rehypothecation restrictions are not established by these sources. The institutional-top summary is retained pending a separate review of the complete custody chain."
+    "uncertainty": "The issuer's balance sheet identifies WTGXX held in Frax Inc's BitGo Trust Account and cash in a segregated Erebor Bank FBO frxUSD Stablecoin Reserve Account. Other balances are held in on-chain redemption contracts or a Solana multisig, with underlying fund and stablecoin custody outside those contracts. Provider percentages, the BitGo legal entity and account safeguards, portfolio-wide segregation, bankruptcy remoteness, and rehypothecation restrictions are not established by these sources. Source-scoped correction (2026-10-20): withdraw institutional-top and use mixed for the evidenced heterogeneous custody chain. Named partial custodians do not establish a whole-book institutional tier. Preserve original October1 review and composition dates, reserve weights, historical provider identities and all unknown safeguards."
   }
 }

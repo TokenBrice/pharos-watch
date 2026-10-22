@@ -11,6 +11,7 @@ import {
 } from "@shared/data/safety-score-v9/chain-maturity-reviews-v1";
 import { commonModeSignalSeverity, type V9CommonModeContext } from "../safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1, loadV9MethodologyPolicy, loadV9CandidateMethodologyPolicy } from "../safety-score-v9/policy";
+import { compileNativeV3FactSet, coreFixture, evaluateV9FactSet } from "./safety-score-v9-facts.fixture-support";
 
 const EXPECTED_ADMITTED = ["base", "ethereum", "hedera"] as const;
 
@@ -164,14 +165,33 @@ describe("Safety Score v9 chain-maturity registry", () => {
     },
   );
 
-  it("retains the historical capture clock without importing future Ethereum maturity relief", () => {
+  it("keeps historical unreviewed chains diagnostic instead of inventing a failure", () => {
     const captureClockSec = Date.parse("2026-08-01T00:00:00Z") / 1000;
     const replayPolicy = loadV9CandidateMethodologyPolicy(captureClockSec);
     expect(replayPolicy.policy.semantic.materiality.matureChains).toEqual([]);
     expect(commonModeSignalSeverity(
       { kind: "chain", key: "ethereum" }, chainContext("ethereum", 1),
       replayPolicy.policy.semantic.materiality,
-    )).toBe("high");
+      new Map(resolveChainMaturityAdmissionsAt(captureClockSec).reviews.map((review) => [review.chainSlug, review])),
+    )).toBe("low");
+  });
+
+  it("retains Monad's confirmed launch-age failure without renewing its packet", () => {
+    for (const date of ["2026-10-22", "2026-10-23"]) {
+      const clock = Date.parse(`${date}T00:00:00.000Z`) / 1_000;
+      const review = chainMaturityReviewForSlug("monad", clock);
+      expect(review?.reviewedAt).toBe("2026-08-24");
+      expect(review?.nextReviewAt).toBe("2026-11-24");
+      expect(review?.state).toBe("failed");
+      expect(review?.admission).toBe("exclude");
+      expect(review?.gates.continuity.result).toBe("fail");
+      expect(review?.gates.continuity.sources[0]?.documentDate).toBe("2025-11-24");
+      expect(review?.gates.continuity.sources[0]?.verification).toMatchObject({
+        accessedAt: null,
+        reviewerOutcome: "unchecked",
+      });
+      expect(resolveChainMaturityAdmissionsAt(clock).admittedChainSlugs).not.toContain("monad");
+    }
   });
 
   it("retains TRON's unresolved finality proof and conservative exclusion at the November 24 boundary", () => {
@@ -215,7 +235,7 @@ describe("Safety Score v9 chain common-mode maturity severity", () => {
     }
   });
 
-  it("grades a non-mature chain moderate at 10%, high at 25%, and high at unknown share", () => {
+  it("grades an authored failure moderate at 10%, high at 25%, and high at unknown share", () => {
     expect(
       commonModeSignalSeverity({ kind: "chain", key: "celo" }, chainContext("celo", 0.1), materiality),
     ).toBe("moderate");
@@ -226,4 +246,58 @@ describe("Safety Score v9 chain common-mode maturity severity", () => {
       commonModeSignalSeverity({ kind: "chain", key: "celo" }, chainContext("celo", null), materiality),
     ).toBe("high");
   });
+
+  it("never charges pending, dead-link or unreviewed chains, including unknown exposure", () => {
+    for (const chain of [...EXPECTED_PENDING, "xlayer", "robinhood", "unknown-l2"]) {
+      for (const share of [0.1, 0.25, 1, null] as const) {
+        expect(commonModeSignalSeverity(
+          { kind: "chain", key: chain }, chainContext(chain, share), materiality,
+        ), `${chain}/${share}`).toBe("low");
+      }
+    }
+  });
+
+  it("retains every authored failure rather than treating missing source verification as a pass", () => {
+    for (const chain of Object.keys(EXPECTED_EXCLUDED_FAILURES)) {
+      expect(commonModeSignalSeverity(
+        { kind: "chain", key: chain }, chainContext(chain, 1), materiality,
+      ), chain).toBe("high");
+    }
+  });
+
+  it("does not import future authored failures before the review day has elapsed", () => {
+    const reviewDay = Date.parse("2026-08-24T00:00:00Z") / 1000;
+    for (const clock of [reviewDay - 1, reviewDay, reviewDay + 86400 - 1]) {
+      const reviews = new Map(resolveChainMaturityAdmissionsAt(clock).reviews.map((review) => [review.chainSlug, review]));
+      expect(commonModeSignalSeverity(
+        { kind: "chain", key: "celo" }, chainContext("celo", 1), materiality, reviews,
+      )).toBe("low");
+    }
+    const reviews = new Map(resolveChainMaturityAdmissionsAt(reviewDay + 86400).reviews.map((review) => [review.chainSlug, review]));
+    expect(commonModeSignalSeverity(
+      { kind: "chain", key: "celo" }, chainContext("celo", 1), materiality, reviews,
+    )).toBe("high");
+  });
+
+  it.each(["solana", "tron", "unreviewed-chain"])(
+    "records unresolved %s maturity as diagnostic U without a deployment charge",
+    (chain) => {
+      const core = coreFixture();
+      for (const asset of core.assets) {
+        asset.supply.failureDomains = [{ kind: "chain", key: chain }];
+        asset.supply.chainDistribution.chains = [{
+          chainId: chain, supplyUsd: asset.supply.circulatingUsd, supplyShare: 1,
+        }];
+      }
+      const evaluated = evaluateV9FactSet(compileNativeV3FactSet(core), V9_CANDIDATE_POLICY_V1);
+      for (const asset of evaluated.assets) {
+        const signal = asset.trace.structuralSignals.find((item) => item.failureDomainKeys.includes(`chain:${chain}`));
+        expect(signal).toMatchObject({
+          severity: "low", responsibility: "unresearched", materialSharePct: 100,
+        });
+        expect(signal?.reason).toContain("no authored failure, no chain charge applied");
+        expect(asset.trace.deploymentAdjustments.some((row) => row.failureDomainKey === `chain:${chain}`)).toBe(false);
+      }
+    },
+  );
 });

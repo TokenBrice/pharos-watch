@@ -651,6 +651,20 @@ export function buildReserves(context: AssetBuildContext): {
     ? componentResearchEvidence(context, "reviewed-static-reserves")
     : [];
   const reserveBoundFacts = compileSafetyScoreV9ReserveBoundFacts(context);
+  // Aggregate before testing the allowance: splitting one opaque book across
+  // several published categories cannot manufacture de-minimis treatment.
+  let publishedResidualShare = 0;
+  let measuredBookShare = 0;
+  for (const slice of slices) {
+    measuredBookShare += slice.pct / 100;
+    const published = reviewedStatic !== null ? slice.publishedResidualCategory
+      : classificationByKey.get(computeSafetyScoreV9ReserveExposureKey(slice))?.publishedResidualCategory;
+    if (published) publishedResidualShare += slice.pct / 100;
+  }
+  const publishedResidualsAreDeMinimis =
+    Math.abs(measuredBookShare - 1) <= RESERVE_DENOMINATOR_FLOAT_TOLERANCE &&
+    publishedResidualShare > 0 &&
+    publishedResidualShare <= V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.publishedResidualDeMinimisMaxShare;
 
   for (const [exposureKey, groupedSlices] of [...grouped].sort(([left], [right]) => compareText(left, right))) {
     const raw = groupedSlices[0]!;
@@ -676,7 +690,11 @@ export function buildReserves(context: AssetBuildContext): {
       : [reserveSourceEvidence(context, exposureKey, groupedSlices)];
     if (classification?.unclassifiedResidual || (reviewedStatic !== null && raw.unclassifiedResidual)) {
       const tail = missingLocalFact(context, {
-        componentKey: `reserve-residual:${exposureKey}`, reasonCode: "partial-reserve-review", ownerDomain: "backing",
+        componentKey: `reserve-residual:${exposureKey}`,
+        reasonCode: (reviewedStatic !== null ? raw.publishedResidualCategory : classification?.publishedResidualCategory) &&
+          publishedResidualsAreDeMinimis
+          ? "bounded-unknown-reserve-exposure" : "partial-reserve-review",
+        ownerDomain: "backing",
         responsibility: "unresearched", policyRuleId: "v9.backing.reserve-composition",
         message: `The measured ${raw.name.trim()} reserve remainder is unclassified.`,
         evidenceRefIds: evidenceIds, causeScope: { pillar: "backing", componentKey: "reserve-residual",
@@ -692,7 +710,8 @@ export function buildReserves(context: AssetBuildContext): {
       ? null
       : (raw.coinId ?? classification?.trackedAssetId ?? null);
     const issuerOrObligorKey = classification?.issuerOrObligorKey ?? raw.issuerOrObligor ?? null;
-    const assetClass = classification?.assetClass ?? raw.assetClass ?? (trackedAssetId ? ("stablecoin" as const) : null);
+    // A token link may describe strategy denomination, not a direct holding.
+    const assetClass = classification?.assetClass ?? raw.assetClass ?? null;
     const failureDomains = stableFailureDomains([
       ...(classification?.failureDomains ?? []),
       ...(issuerOrObligorKey ? [{ kind: "reserve-issuer" as const, key: issuerOrObligorKey }] : []),

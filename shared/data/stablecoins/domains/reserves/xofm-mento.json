@@ -26,7 +26,9 @@
       "riskFactors": [
         "counterparty",
         "custody",
-        "smart-contract"
+        "smart-contract",
+        "liquidity",
+        "legal"
       ],
       "liquidityHorizon": "immediate",
       "sourceKey": "mento:reserve:ausd"
@@ -237,6 +239,14 @@
       {
         "label": "Fixed-block representation symbols: Celo 78860375 and Monad 109288367 (2026-09-30)",
         "url": "https://forno.celo.org"
+      },
+      {
+        "label": "Agora Bermuda governing Terms of Use as of 2026-09-01, liquidity scope re-read 2026-10-20",
+        "url": "https://static.agora.finance/termsofuse.pdf"
+      },
+      {
+        "label": "Agora Instant Settlement whitelist and inventory restrictions, retrieved 2026-10-20",
+        "url": "https://docs.agora.finance/instant-settlement"
       }
     ],
     "rationale": "xofm-mento retains the shared Mento Reserve backing model. All positive holdings are refreshed from one issuer API capture. Native parents keep their canonical collateral link; Celo axlUSDC and axlEUROC and Monad USDT0 carry explicit bridge annotations with registry contracts and fixed-block symbols confirmed at Celo 78860375 and Monad 109288367. Bridge verification establishes representation identity and documented issuer lineage, not independent escrow solvency. GBPm, JPYm and CHFm remain separate USDm-collateral CDPs; no underlying basket is duplicated on those coins.",
@@ -280,9 +290,9 @@
         "role": "other"
       }
     ],
-    "segregation": "mixed",
+    "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "conditional",
+    "rehypothecation": "unknown",
     "reviewedAt": "2026-07-22",
     "reviewer": "GPT SOL-MENTO wave6",
     "confidence": "probable",
@@ -296,7 +306,7 @@
         "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
       }
     ],
-    "uncertainty": "Mento documents reserve safes, liquidity contracts, operational accounts, and approved strategies, but their live shares are mutable. Public materials do not establish legal segregation, insolvency treatment, or strategy-specific reuse limits, so no static provider allocation is inferred.",
+    "uncertainty": "Mento documents reserve safes, liquidity contracts, operational accounts, and approved strategies, but their live shares are mutable. Public materials do not establish legal segregation, insolvency treatment, or strategy-specific reuse limits, so no static provider allocation is inferred. Source-scoped correction (2026-10-20): the prior mixed segregation and conditional rehypothecation labels were not established by their own dashboard/protocol sources, whose uncertainty statement already says the legal safeguards and reuse limits are unestablished. Both are corrected to unknown without asserting either protection or its absence. The re-read issuer reserve documentation, dashboard and MGP-19 do not supply complete enforceable whole-material-book segregation/reuse terms. Original review start, custody providers and all composition evidence remain unchanged.",
     "knownUnknownExposurePct": 100
   }
 }

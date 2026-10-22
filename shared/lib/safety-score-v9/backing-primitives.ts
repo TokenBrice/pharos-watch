@@ -83,6 +83,8 @@ export interface V9InheritedStablecoinBacking {
   readonly causeGapIds?: readonly string[];
   /** Mapped weight of the single collateral/wrapper edge (≈1). */
   readonly weight: number;
+  /** Current curated evidence admitting the exact whole-parent claim, never a variant label alone. */
+  readonly admittedClaimEvidenceRefIds?: readonly string[];
   /**
    * "pure": a 1:1 holding wrapper (mint/redeem against the parent) — a thin
    * contract layer. "wrapped": an ERC-4626 vault / staked / lending / bridged
@@ -139,7 +141,6 @@ export interface V9BackingStructuralReason {
   readonly pathKey: string;
   readonly metricApplicability?: V9MechanismMetricApplicability["state"];
   readonly materialShare: number | null;
-  readonly ceiling: number;
   readonly evidenceRefIds: readonly string[];
   readonly failureDomains: readonly V9FailureDomainRef[];
 }
@@ -218,11 +219,10 @@ export interface V9BackingResult {
   readonly archetype: string;
   readonly rateability: "rateable" | "NR";
   readonly score: number | null;
-  readonly aggregationDisposition: "included" | "excluded-a-b";
+  readonly aggregationDisposition: "included" | "excluded-a-b" | "unavailable";
   readonly causeGapIds: readonly string[];
   readonly limitedEvidenceCauses: readonly V9EvidenceCause[];
   readonly supportedComponentKeys: readonly string[];
-  readonly pillarCeiling: number | null;
   readonly contributions: readonly V9EffectiveBackingContribution[];
   readonly structuralReasons: readonly V9BackingStructuralReason[];
   readonly unresolved: readonly V9BackingUnresolvedReason[];
@@ -302,14 +302,10 @@ export function backingPolicy(policy: V9BackingEvaluationPolicy): V9BackingSeman
 export function createV9BackingStructuralReason(
   policy: V9BackingEvaluationPolicy,
   signal: V9BackingSignalRule,
-  details: Omit<V9BackingStructuralReason, "kind" | "severity" | "ceiling">,
+  details: Omit<V9BackingStructuralReason, "kind" | "severity">,
 ): V9BackingStructuralReason {
   assertV9BackingPolicy(policy);
-  const ceiling = policy.policy.semantic.structural.signalLimits[signal.kind][signal.severity];
-  if (ceiling === null) {
-    throw new Error(`Safety Score v9 backing signal ${signal.kind}:${signal.severity} has no structural limit`);
-  }
-  return { ...details, kind: signal.kind, severity: signal.severity, ceiling };
+  return { ...details, kind: signal.kind, severity: signal.severity };
 }
 
 export interface ReserveEvaluation {

@@ -80,6 +80,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "Validated fact inputs and their digest are authoritative; markers only prove local admission/compilation and never bypass cohort/reference validation.",
   },
   {
+    sourcePath: "shared/lib/safety-score-v9/fact-shard.ts",
+    stateNames: ["factShardsByView"],
+    owner: "Safety Score V9 publication fact shards",
+    kind: "cache",
+    resetOrTtl: "Weak immutable-view keys; shard entries disappear with their invocation-owned views. Decoded facts use a separate invocation-local one-asset cache.",
+    durableTruth: "Fully admitted immutable asset values and the unchanged canonical fact-set digest remain authoritative; the index only reuses private compressed bytes and cannot retain prior generations.",
+  },
+  {
     sourcePath: "shared/lib/safety-score-v9/formula.ts",
     stateNames: ["validatedScoringInputs"],
     owner: "Safety Score V9 immutable scoring-input validation",

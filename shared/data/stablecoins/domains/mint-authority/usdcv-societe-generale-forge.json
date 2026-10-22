@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "USDCV is issued natively on Ethereum and Solana. Ethereum SmartCoin V4 minting is gated by the registrar EOA (0x7de0bb…da69), with no proxy admin and a technical EOA controlling UUPS upgrades; the Solana Token-2022 mint, freeze authority, permanent delegate, and metadata/update authority are all held by SG-FORGE key 5tg4qRdiXJ7XxYd6KK4UnnNvxgHJqfBUygPqZLwSnhnt.",
+    "summary": "The September 2026 white paper lists issuer-native USDCV on Ethereum, Solana and Canton. The reviewed contracts and on-chain authority observations below cover Ethereum and Solana only; no Canton contract identifier or authority is verified in this record. Ethereum SmartCoin V4 minting is gated by the registrar EOA (0x7de0bb…da69), with no proxy admin and a technical EOA controlling UUPS upgrades; the Solana Token-2022 mint, freeze authority, permanent delegate, and metadata/update authority are all held by SG-FORGE key 5tg4qRdiXJ7XxYd6KK4UnnNvxgHJqfBUygPqZLwSnhnt.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -143,12 +143,12 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
-      "evidence": "At Ethereum block 25294784: USDCV and EURCV share implementation 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b (SmartCoin V4, UUPS). Proxy admin slot zero. Immutable operators extracted from bytecode: registrar/minter EOA 0x7de0bbdfcd4a6a956f149befcca30d6b5bc5da69, operations EOA 0xc98cb9f53e20afbbeb75caf6456ed52d5d7903f6, technical/upgrade EOA 0x54124a6834af252a0f9ac7f478001aa500428955. All EOAs confirmed. On-chain model corroborates SG-FORGE issuer-backend description. At Solana slot 439713548 on 2026-08-16, the official Token-2022 mint 8smindLdDuySY6i2bStQX9o8DVhALCXCMbNxD98unx35 returned SG-FORGE key 5tg4qRdiXJ7XxYd6KK4UnnNvxgHJqfBUygPqZLwSnhnt as mintAuthority, freezeAuthority, permanentDelegate, and metadata/update authority; no separate Solana upgrade path was inferred. USDCV is therefore native on both Ethereum and Solana, with chain-specific authorities. SG-FORGE publishes issuer-reported reserve composition and valuation daily, with the latest observed snapshot dated July 11, 2026, but challenge searches found no recurring independent USDCV assets-and-liabilities reconciliation or qualifying attestor. Reconciliation is therefore unknown. SG-FORGE's issuer disclosure identifies Société Générale-FORGE as the USDCV issuer and as an ACPR-authorized Electronic Money Institution; the ACPR register is the competent prudential registry, supporting prudential supervision of the same legal entity. Economic-posture fields reviewed 2026-08-15: the registrar and no-delay technical EOA, together with the Solana mint authority, leave issuance economically unbounded, ACPR supervises SG-FORGE as EMI, and daily issuer NAV data is not an independent whole-supply assets-and-liabilities attestation.",
-      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Sol economic-posture batch 2026-08-15; Codex native-chain boundary correction 2026-08-16",
-      "reviewedAt": "2026-08-16",
+      "evidence": "At Ethereum block 25294784: USDCV and EURCV share implementation 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b (SmartCoin V4, UUPS). Proxy admin slot zero. Immutable operators extracted from bytecode: registrar/minter EOA 0x7de0bbdfcd4a6a956f149befcca30d6b5bc5da69, operations EOA 0xc98cb9f53e20afbbeb75caf6456ed52d5d7903f6, technical/upgrade EOA 0x54124a6834af252a0f9ac7f478001aa500428955. All EOAs confirmed. On-chain model corroborates SG-FORGE issuer-backend description. At Solana slot 439713548 on 2026-08-16, the official Token-2022 mint 8smindLdDuySY6i2bStQX9o8DVhALCXCMbNxD98unx35 returned SG-FORGE key 5tg4qRdiXJ7XxYd6KK4UnnNvxgHJqfBUygPqZLwSnhnt as mintAuthority, freezeAuthority, permanentDelegate, and metadata/update authority; no separate Solana upgrade path was inferred. USDCV is therefore native on both Ethereum and Solana, with chain-specific authorities. SG-FORGE publishes issuer-reported reserve composition and valuation daily, and the September 2026 white paper (v2.2, 2026-09-30) D.10 imposes a Collateral Test on every Business Day: daily custodian information, aggregate eligible collateral value compared with all outstanding USDCV at one USD per unit, with composition, value, required value and result published on the following Business Day. Reconciliation research on 2026-10-21 re-opened that white paper and the issuer dashboard. Dated dashboard readings of 26/09/2026 (12,546,441.00), 30/09/2026 (12,546,441.00), 2/10/2026 (12,546,441.00) and 21/10/2026 (14,176,206.00, BNY 77.59% / Societe Generale 22.41%) form a recurring dated series, and white paper C.2 states 12,546,441 aggregated on Ethereum, Solana and Canton as of the publication date, matching the dashboard. This establishes an issuer-operated periodic whole-supply-to-reserve procedure; it is not independent assurance, continuous intraday reconciliation or audited mint-controller operation. It is the same mechanism and the same evidence class recorded for EURCV, so the enum is periodic for both. The earlier 'no recurring reconciliation' finding conflated independence with reconciliation, which D33 forbids. Control observations are unchanged: the Ethereum registrar/operations/technical EOAs remain as observed at block 25294784 on 2026-08-16 and the Solana authorities at slot 439713548 on 2026-08-16; this revision adds reconciliation research only. SG-FORGE's issuer disclosure identifies Société Générale-FORGE as the USDCV issuer and as an ACPR-authorized Electronic Money Institution; the ACPR register is the competent prudential registry, supporting prudential supervision of the same legal entity. Economic-posture fields reviewed 2026-08-15: the registrar and no-delay technical EOA, together with the Solana mint authority, leave issuance economically unbounded, ACPR supervises SG-FORGE as EMI, and daily issuer NAV data is not an independent whole-supply assets-and-liabilities attestation.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Sol economic-posture batch 2026-08-15; Codex native-chain boundary correction 2026-08-16; R2 family-consistency reconciliation research 2026-10-21",
+      "reviewedAt": "2026-10-21",
       "sources": [
         {
           "label": "SG-FORGE CoinVertible",
@@ -177,6 +177,22 @@
         {
           "label": "ACPR financial agents register",
           "url": "https://acpr.banque-france.fr/fr/professionnels/vos-outils-et-services/consulter-les-registres/registre-des-agents-financiers-et-des-organismes-dassurance"
+        },
+        {
+          "label": "USDCV MiCA white paper v2.2, 30 September 2026: daily whole-supply Collateral Test and ledger perimeter",
+          "url": "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf"
+        },
+        {
+          "label": "SG-FORGE first-party dashboard raw archive: 26 September 2026",
+          "url": "https://web.archive.org/web/20260926040924id_/https://www.sgforge.com/product/coinvertible/"
+        },
+        {
+          "label": "SG-FORGE first-party dashboard raw archive: 30 September 2026",
+          "url": "https://web.archive.org/web/20260930114315id_/https://www.sgforge.com/product/coinvertible/"
+        },
+        {
+          "label": "SG-FORGE first-party dashboard raw archive: 2 October 2026",
+          "url": "https://web.archive.org/web/20261002200048id_/https://www.sgforge.com/product/coinvertible/"
         }
       ]
     }

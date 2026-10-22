@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Other Money Market Instrument",
-      "pct": 63.54,
+      "pct": 56.54,
       "risk": "medium",
       "assetClass": "other",
       "riskFactors": [
@@ -17,7 +17,7 @@
     },
     {
       "name": "Time Deposit",
-      "pct": 24.71,
+      "pct": 2.87,
       "risk": "low",
       "assetClass": "bank-deposit",
       "riskFactors": [
@@ -30,7 +30,7 @@
     },
     {
       "name": "Cash and Cash Equivalent",
-      "pct": 11.75,
+      "pct": 40.59,
       "risk": "low",
       "assetClass": "cash",
       "riskFactors": [
@@ -41,8 +41,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-15",
-    "reviewer": "Rev_CumiuChinaamc batch64 current-disclosure review",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "NR5 bottom-up refinement 2026-10-21",
     "confidence": "verified",
     "sources": [
       {
@@ -76,71 +76,79 @@
       {
         "label": "Issuer complete holdings workbook, October 15, 2026; 67 rows, 100.0541% reported NAV weights, blank Total NAV; SHA-256 1f8683b1e4bbe5edb89591f074b81f3a2dcd87900e47f37b2c86a60d90f67c48",
         "url": "https://www.chinaamc.com.hk/jeecg-boot/mainFund/fundQuery/getHoldingsDetail?fundID=USDDMMF&curLang=EN"
+      },
+      {
+        "label": "ChinaAMC September 30, 2026 factsheet, allocation chart page 2; retrieved October 20, 2026",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/Factsheet_USDDTMMF_20260930_EN_1792488288432.pdf"
+      },
+      {
+        "label": "Issuer publication index: September 30 English factsheet uploaded October 20, 2026",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/mainWebDailyDocument/tMainWebDailyDocument/listByFundId?fundId=USDDMMF"
       }
     ],
-    "rationale": "The issuer's August 31 factsheet page 2 gives the complete asset-class allocation: Other Money Market Instrument 63.54%, Time Deposit 24.71%, Cash and Cash Equivalent 11.75%, totaling 100.00%. These are pooled USD sub-fund category weights backing Class I and other share classes, not token supply or an independently audited Class I-only denominator. Existing June accounts and October top-ten observations remain historical corroboration, not the source of these weights. The September 14 prospectus, USD sub-fund printed page 160, prohibits purchasing instruments with remaining maturity above 397 days except Government and other Public Securities. The exception cannot apply to bank time deposits, so their governing maximum is 397 days, not the 50.85-day WAM. No maximum is assigned to the mixed Other Money Market Instrument bucket because permitted money-market fund shares and the public-security exception require constituent-level scope.",
-    "compositionBasis": "Issuer August 31, 2026 full portfolio asset-class allocation chart",
-    "compositionAsOf": "2026-08-31",
+    "rationale": "The issuer's September 30 factsheet page 2 gives the complete asset-class allocation: Other Money Market Instrument 56.54%, Time Deposit 2.87%, Cash and Cash Equivalent 40.59%, totaling 100.00% without normalization. Page 1 reports pooled USD sub-fund size of USD 567.81 million and identifies Class I USD, ISIN HK0001153516, alongside the other participating share classes. The issuer publication index lists this exact English factsheet with September 30 report date and October 20 upload. These are pooled category weights, not current token supply or an independently audited Class I-only denominator. Historical June accounts and October workbooks are not joined into this snapshot. The September 14 prospectus, USD sub-fund printed page 160, prohibits purchasing instruments with remaining maturity above 397 days except Government and other Public Securities; the exception cannot apply to bank time deposits, so their governing maximum remains 397 days. The September WAM of 38.21 days is an average, not a maximum. No maximum is assigned to the mixed Other Money Market Instrument bucket because permitted money-market fund shares and the public-security exception require constituent-level scope.",
+    "compositionBasis": "Issuer September 30, 2026 full portfolio asset-class allocation chart",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
     "observations": [
       {
-        "scopeId": "cumiu-usd-subfund-august-2026-allocation",
+        "scopeId": "cumiu-usd-subfund-september-2026-allocation",
         "liabilityBookKey": "chinaamc-usd-subfund-all-share-classes",
         "deploymentRefs": [
           "ethereum:0x85d38585c3ac08268f598282a84b7c0ddfc0d04f"
         ],
-        "reviewer": "W2R14 primary factsheet correction review",
+        "reviewer": "NR5 bottom-up refinement 2026-10-21",
         "confidence": "verified",
         "sources": [
           {
-            "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/Factsheet_USDDTMMF_20260831_EN_1789617629732.pdf",
-            "accessedAtSec": 1791071248,
-            "sha256": "f164b0559eb5562f46568c23d3f48371445f016eb501f4e92caea159cd74614d"
+            "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/Factsheet_USDDTMMF_20260930_EN_1792488288432.pdf",
+            "accessedAtSec": 1792534401,
+            "sha256": "481be902105407b6acde6cb6845bc3a4069995ff394aaf1958f16037164f9f3a"
           }
         ],
-        "reviewedAtSec": 1791071248,
-        "expiresAtSec": 1794354448,
-        "sourceGeneration": "chinaamc-usd-august-2026-factsheet:f164b0559eb5562f46568c23d3f48371445f016eb501f4e92caea159cd74614d",
-        "sourceSha256": "f164b0559eb5562f46568c23d3f48371445f016eb501f4e92caea159cd74614d",
+        "reviewedAtSec": 1792534401,
+        "expiresAtSec": 1794009600,
+        "sourceGeneration": "chinaamc-usd-september-2026-factsheet:481be902105407b6acde6cb6845bc3a4069995ff394aaf1958f16037164f9f3a",
+        "sourceSha256": "481be902105407b6acde6cb6845bc3a4069995ff394aaf1958f16037164f9f3a",
         "completeness": "complete",
         "obligations": [
           {
             "key": "whole-subfund-asset-class-allocation",
             "disposition": "included",
-            "reason": "Page 2 chart reports the full August 31 pooled USD sub-fund asset-class denominator: Time Deposit 24.71%, Other Money Market Instrument 63.54%, Cash and Cash Equivalent 11.75%, totaling 100.00% without normalization. The factsheet lists Class I USD alongside the other participating classes. This obligation covers category composition only, not constituent look-through or token-to-share financial reconciliation."
+            "reason": "Page 2 chart reports the full September 30 pooled USD sub-fund asset-class denominator: Time Deposit 2.87%, Other Money Market Instrument 56.54%, Cash and Cash Equivalent 40.59%, totaling 100.00% without normalization. Page 1 lists Class I USD alongside the other participating classes and gives same-snapshot USD 567.81 million fund size. This obligation covers category composition only, not constituent look-through, realizability, or token-to-share financial reconciliation."
           }
         ],
         "kind": "portfolio-observation",
-        "observedAtSec": 1788134400,
+        "observedAtSec": 1790726400,
         "wholeAssetDenominator": {
-          "amount": "564330000",
-          "asOfSec": 1788134400,
+          "amount": "567810000",
+          "asOfSec": 1790726400,
           "unitBasis": "USD pooled sub-fund fund size, all share classes, reported rounded to USD millions",
-          "sourceSha256": "f164b0559eb5562f46568c23d3f48371445f016eb501f4e92caea159cd74614d"
+          "sourceSha256": "481be902105407b6acde6cb6845bc3a4069995ff394aaf1958f16037164f9f3a"
         }
       }
     ],
-    "knownUnknownExposure": "August category weights are complete but do not identify the August constituents or obligors. Historical October 2 and October 9 workbooks reported 62 rows totaling 100.0497% and 63 rows totaling 100.0523% of NAV respectively; their unnamed Credit Agricole entries were 23.8501% and 7.7719%. Reopening the issuer workbook on October 15 gives C2=2026/10/15, 67 positions totaling 100.0541% of reported NAV weights, blank Total NAV, and a still-unclassified Credit Agricole entry of 0.8036%. Deposit descriptions still truncate, and the workbook gives no per-position realizability or complete gross-asset denominator. Its rounding disclaimer does not reconcile the total, so weights are not normalized or transplanted into August categories. The publication index still lists August 31 as its newest English factsheet; compositionAsOf remains August 31. June 30 unaudited accounts cover pooled gross assets of USD 603,917,339, not current token liabilities. August WAM 50.85 days is an average, not a maximum tenor. A current numerical token-to-fund liability match and exact distributor custody shares remain unavailable despite the documented periodic reconciliation process. No new financial-assurance claim is inferred.",
-    "knownUnknownExposurePct": 63.54,
+    "knownUnknownExposure": "September category weights are complete but do not identify constituent instruments or obligors within Other Money Market Instrument (56.54%). Cash and Cash Equivalent (40.59%) remains the issuer's combined category; no instant realizability or per-bank allocation is inferred. Time Deposit (2.87%) has no disclosed same-snapshot break terms. The maturity chart and WAM do not establish a stressed final-USD liquidation bound. Historical October 2, October 9 and October 15 workbooks retain their previously documented blank Total NAV and unclassified/truncated instrument limitations; their rows are not normalized or transplanted into September categories. The issuer publication index now lists September 30 as the newest English factsheet. A current numerical token-to-fund liability match and exact distributor custody shares remain unavailable despite the documented periodic reconciliation process. No new financial-assurance, custody-tier or Exit-capacity claim is inferred.",
+    "knownUnknownExposurePct": 56.54,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Other Money Market Instrument",
-        "pct": 63.54,
+        "pct": 56.54,
         "disposition": "basket-needs-split",
         "rationale": "Issuer factsheet category discloses its complete weight but not constituent instrument or obligor weights."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Time Deposit",
-        "pct": 24.71,
+        "pct": 2.87,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Off-chain sub-fund accounting asset category is not a tracked stablecoin."
       },
       {
         "reserveIndex": 2,
         "reserveName": "Cash and Cash Equivalent",
-        "pct": 11.75,
+        "pct": 40.59,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Off-chain sub-fund accounting asset category is not a tracked stablecoin."
       }

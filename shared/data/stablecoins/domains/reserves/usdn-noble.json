@@ -14,8 +14,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map review 2026-09-30",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "FD39 fixed-height immediate-claim review 2026-10-20",
     "confidence": "verified",
     "sources": [
       {
@@ -23,25 +23,37 @@
         "url": "https://docs.noble.xyz/learn/usdn/overview/"
       },
       {
-        "label": "Noble USDN architecture (accessed 2026-09-30)",
+        "label": "Noble USDN architecture (retrieved 2026-10-20)",
         "url": "https://docs.noble.xyz/learn/usdn/architecture/"
       },
       {
-        "label": "Noble Dollar collateral disclosure",
-        "url": "https://dollar.noble.xyz/how-noble-dollar-works"
+        "label": "Noble Dollar current redemption application: USDN to Ethereum wM",
+        "url": "https://dollar.noble.xyz/"
       },
       {
         "label": "M0 minting and burning",
         "url": "https://docs.m0.org/protocol/minting-burning"
       },
       {
-        "label": "Noble public REST: dollar-module stats, index, and uusdn bank supply at height 58284069 (2026-09-01T10:27:17Z)",
-        "url": "https://noble-api.polkachu.com/noble/dollar/v1/stats"
+        "label": "Noble dollar-module principal at exact height 62034705 (2026-10-20T22:19:43.787364193Z)",
+        "url": "https://api.noble.xyz/noble/dollar/v1/stats"
+      },
+      {
+        "label": "Noble M index at exact height 62034705",
+        "url": "https://api.noble.xyz/noble/dollar/v1/index"
+      },
+      {
+        "label": "Noble uusdn bank supply at exact height 62034705",
+        "url": "https://api.noble.xyz/cosmos/bank/v1beta1/supply/by_denom?denom=uusdn"
+      },
+      {
+        "label": "Noble height 62034705 block hash and timestamp",
+        "url": "https://noble-rpc.polkachu.com/block?height=62034705"
       }
     ],
-    "rationale": "USDN is the Noble representation of M0's M, not an independently issued Noble liability. Noble's architecture documentation states that because the Noble Dollar is collateralized by $M, issuance can only happen by locking $M as collateral on Ethereum through M0's Portal, with both principal and accrued yield bridged to Noble over Wormhole NTT; the exit is the reverse bridge back into $M. Verified directly on chain at Noble height 58284069 (2026-09-01T10:27:17Z): the dollar module reports total_principal 1,835,201.076317 $M and an M index of 1.093272766999, giving a present value of 2,006,375.358705, against a uusdn bank supply of 2,006,375.358704 - a 1:1 match to the last micro-unit, so every circulating USDN is covered by locked $M principal and nothing else. A USDN holder's claim therefore runs against M0's M, and M0's own Treasury and cash collateral is reviewed on the tracked m-m0 parent rather than duplicated here as a second, parallel claim.",
-    "compositionBasis": "Immediate M claim: Noble locks M on Ethereum through the M0 Portal and issues USDN on Noble; fixed-height principal, index and supply reads retain their 2026-09-01 basis. M0 API Treasury/cash output is look-through parent composition, not independent Noble custody.",
-    "compositionAsOf": "2026-09-01",
+    "rationale": "Noble's current architecture documents a representation of M0 M locked through the Ethereum Portal, not independent Treasury holdings by Noble. Fresh REST observations each requested x-cosmos-block-height 62034705 and returned grpc-metadata-x-cosmos-block-height 62034705; the corresponding noble-1 block hash is E1131206F98FCB0A3766CFD802C987D9B6A07D078EE3B846EA778B18D7DE3064, timestamp 2026-10-20T22:19:43.787364193Z. Dollar-module total_principal is 1319127445241 raw M principal units, index is 1.098221454705000000 and uusdn bank supply is 1448694061853 raw units. Principal times index is 1448694061853.861249308905 raw units, agreeing within the protocol's sub-micro-unit rounding. This establishes the current M-denominated immediate claim and local representation ledger, not independently observed Ethereum escrow sufficiency, global in-flight conservation, financial assurance or final USD liquidity. The current application returns Ethereum wM and offers a separate wM-to-USDC swap. The M0 gateway's generic Treasury/cash feed observes upstream parent collateral and is not a USDN-specific reserve composition.",
+    "compositionBasis": "Current single immediate M0 M claim identified by Noble architecture and exact-height 62034705 local principal/index/uusdn ledger; no direct Treasury allocation or independent escrow assurance inferred",
+    "compositionAsOf": "2026-10-20",
     "scope": "full-composition",
     "knownUnknownExposure": "No direct reserve asset remains unidentified: the whole claim is the tracked m-m0 parent, whose own collateral composition is reviewed on that entry.",
     "knownUnknownExposurePct": 0

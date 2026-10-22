@@ -3,17 +3,63 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { encodeResponseReadyCacheValue, getResponseReadyCacheKey } from "../../../lib/api-cache-read";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../../lib/response-ready-cache-contracts";
 import { commitReplayPriceCache, validateAndWriteStablecoinsCache } from "../cache-publication";
-import { normalizeStablecoinsPayload } from "../shared";
+import { mergeSupplementalLastKnownGood, normalizeStablecoinsPayload } from "../shared";
 import { normalizeChainCirculating } from "../phase-helpers";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getCache, getPriceCache } from "../../../lib/db-cache";
 import { makePeggedAsset } from "./_fixtures";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { StablecoinListResponseSchema } from "@shared/types/market";
 import type { PeggedAsset } from "../enrich-prices";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 
 describe("validateAndWriteStablecoinsCache", () => {
+  it.each(["main", "fallback"] as const)("withholds sFRAX current supply and retained chain quantities at %s publication", async (validationContext) => {
+    const db = fixtures.open().db;
+    const assets = [makePeggedAsset({
+      id: "sfrax-frax", name: "Staked FRAX", symbol: "sFRAX", pegType: "peggedUSD", pegMechanism: "crypto-backed", price: 1.14,
+      circulating: { peggedUSD: 64_000_000 }, circulatingPrevDay: { peggedUSD: 63_000_000 },
+      supplySource: "onchain-total-supply", supplyObservedAt: 1_777_000_000, supplyRestored: true,
+      chains: ["Ethereum", "Arbitrum"],
+      chainCirculating: { Ethereum: { current: 63_900_000 }, Arbitrum: { current: 100_000 } },
+    })];
+    const result = await validateAndWriteStablecoinsCache({
+      assets, db, syncStartSec: 1_777_000_001, validationContext,
+    }, () => ({ metadata: "blocked" }));
+    expect(result).toMatchObject({ written: true, quarantinedAssets: [] });
+    const cached = await getCache(db, "stablecoins");
+    const payload = StablecoinListResponseSchema.parse(JSON.parse(cached!.value));
+    const held = payload.peggedAssets[0]!;
+    expect(held).toMatchObject({
+      id: "sfrax-frax", circulating: {}, circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {},
+      supplySource: "onchain-supply-withheld", supplyUnavailableReason: "economic-float-unreconciled", price: 1.14,
+    });
+    expect(getCirculatingRawOrNull(held)).toBeNull();
+    expect(held.supplyObservedAt).toBeUndefined();
+    expect(held.supplyRestored).toBeUndefined();
+    expect(held.chainCirculating.Solana).toMatchObject({ chainId: "solana", current: null });
+    expect(Object.values(held.chainCirculating)).toHaveLength(10);
+    expect(Object.values(held.chainCirculating).every(({ current }) => current === null)).toBe(true);
+    // Subsequent same-run consumers must see the refusal too, not the old input.
+    expect(getCirculatingRawOrNull(assets[0])).toBeNull();
+    expect(assets[0]!.supplyUnavailableReason).toBe("economic-float-unreconciled");
+    const companion = JSON.parse((await getCache(db, getResponseReadyCacheKey("stablecoins")))!.value) as { body: string };
+    expect(JSON.parse(companion.body)).toEqual(JSON.parse(cached!.value));
+  });
+
+  it("does not resurrect a previously overstated sFRAX aggregate during supplemental carry", () => {
+    const current = makePeggedAsset({ id: "sfrax-frax", circulating: {}, chainCirculating: {} });
+    const previous = makePeggedAsset({
+      id: "sfrax-frax", circulating: { peggedUSD: 64_000_000 }, supplySource: "coingecko-fallback", supplyObservedAt: 1_777_000_000,
+    });
+    const merged = mergeSupplementalLastKnownGood([current], new Map([[previous.id, previous]]), new Set(), 1_777_000_001);
+    expect(merged.restoredCount).toBe(0);
+    expect(getCirculatingRawOrNull(merged.assets[0])).toBeNull();
+    expect(merged.assets[0]!.supplyUnavailableReason).toBe("economic-float-unreconciled");
+  });
+
   it("writes byte-identical canonical and replay-price payloads for main and fallback policies", async () => {
     const syncStartSec = 1_777_000_000;
     const fxFallbackRates = { EUR: 1.1 };

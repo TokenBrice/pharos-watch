@@ -78,6 +78,18 @@
       {
         "label": "Flare public RPC used by the configured adapter",
         "url": "https://flare-api.flare.network/ext/C/rpc"
+      },
+      {
+        "label": "Sceptre ordinary 14.5-day unstaking and claim window (retrieved 2026-10-20)",
+        "url": "https://www.sceptre.fi/post/unstaking-from-sceptre"
+      },
+      {
+        "label": "Sceptre instant unstaking uses a finite buffer (retrieved 2026-10-20)",
+        "url": "https://www.sceptre.fi/post/instant-unstaking-is-now-live-on-sceptre-for-flare"
+      },
+      {
+        "label": "Firelight current unstaking windows and phase transition (retrieved 2026-10-20)",
+        "url": "https://docs.firelight.finance/for-stakers/deployments-and-withdrawals"
       }
     ],
     "rationale": "Enosys Loans is a Liquity V2 friendly fork whose documented collateral branches are FXRP, WFLR, stXRP, and sFLR, priced by the Flare Time Series Oracle. The configured on-chain adapter's branch snapshot resolves all four live collateral rows and supplies the point-in-time weights; those weights remain dynamic and are not treated as permanent composition.",

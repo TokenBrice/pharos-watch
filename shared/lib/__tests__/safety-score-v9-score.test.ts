@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { aggregateV9SmoothBoundedHeadroom } from "../safety-score-v9/aggregation";
+import { unknownQuality } from "../safety-score-v9/policy";
 import type {
   V9AdverseAttribution,
   V9BoundedUncertaintyAttribution,
@@ -13,8 +15,8 @@ import {
   type V9ProductionScoreInput,
 } from "../safety-score-v9/score";
 import { computeV9ResultDigest, projectCompactV9ScoreTrace } from "../safety-score-v9/trace";
-import { scoreV9ResearchScenarioInput } from "../safety-score-v9-research";
-import { makeV9Pillar as pillar, makeV9ProductionScoreInput, makeV9ScoringInput } from "./safety-score-v9-score.test-support";
+import { makeV9Pillar as pillar, makeV9ProductionScoreInput } from "./safety-score-v9-score.test-support";
+import type { V9StructuralSignal } from "../../types/safety-score-v9";
 
 const DIGEST = "a".repeat(64);
 const BUILD_DIGEST = "b".repeat(64);
@@ -51,6 +53,31 @@ const ROOT_BOUNDED_UNCERTAINTY: V9BoundedUncertaintyAttribution = {
 };
 
 describe("scoreV9EvaluatedAsset", () => {
+  it.each([
+    { severity: "high" as const, exposedQuality: 64 },
+    { severity: "moderate" as const, exposedQuality: 79 },
+  ])("restores $severity shared-chain quality as proportional loss, not a cap", ({ severity, exposedQuality }) => {
+    const signal: V9StructuralSignal = {
+      kind: "critical-dependency", severity, reason: "Measured independent chain concentration.",
+      economicLossScope: "deployment", responsibility: "measured-adverse",
+      materialSharePct: 50, exposureKey: "slice:chain", riskEventKey: "chain:failure",
+      failureDomainKeys: ["chain:fixture"], evidence: [],
+    };
+    const trace = scoreV9EvaluatedAsset(input({ dependencyStructuralSignals: [signal] }), V9_CANDIDATE_POLICY_V1);
+    expect(trace.deploymentAdjustedScore).toBe(95 - (95 - exposedQuality) * 0.5);
+    expect(trace.deploymentAdjustments[0]?.exposedScore).toBe(exposedQuality);
+    expect(trace.caps).toEqual([]);
+    const measured = scoreV9EvaluatedAsset(input({
+      dependencyStructuralSignals: [{ ...signal, exposedScore: 40 }],
+    }), V9_CANDIDATE_POLICY_V1);
+    expect(measured.deploymentAdjustedScore).toBe(67.5);
+    const unresolved = scoreV9EvaluatedAsset(input({
+      dependencyStructuralSignals: [{ ...signal, materialSharePct: undefined, responsibility: "integration-missing" }],
+    }), V9_CANDIDATE_POLICY_V1);
+    expect(unresolved.deploymentAdjustedScore).toBe(95);
+    expect(unresolved.unresolvedDeploymentSignals[0]?.exposureShare).toBeNull();
+  });
+
 
   it("binds the score to fact, policy, build, clock, and source identities", () => {
     const trace = scoreV9EvaluatedAsset(input(), V9_CANDIDATE_POLICY_V1);
@@ -73,14 +100,14 @@ describe("scoreV9EvaluatedAsset", () => {
   });
   it.each(["A", "B", "C", "U"] as const)("keeps implementation-age cause %s distinct from known young history", (cause) => {
     const trace = scoreV9EvaluatedAsset(input({
-      trackRecordMonths: 0,
+      trackRecordMonths: null,
       methodologyReasons: [{
         code: "missing-implementation-date", path: "implementation:launch-date", message: "Launch date is unavailable.",
         responsibility: cause === "A" ? "producer-failed" : cause === "B" ? "public-data-uncurated" : cause === "C" ? "issuer-undisclosed" : "unresearched",
         cause, causeGapIds: ["gap:launch-date"],
       }],
     }), V9_CANDIDATE_POLICY_V1);
-    expect(trace.finalScore).toBe(cause === "A" || cause === "B" ? 95 : 79);
+    expect(trace.finalScore).toBe(95);
     expect(trace.ratingStatus).toBe("rated");
     expect(trace.partialEvidence === null).toBe(cause === "C" || cause === "U");
     expect(trace.limitingPillars).toEqual([]);
@@ -120,24 +147,6 @@ describe("scoreV9EvaluatedAsset", () => {
     expect(trace.limitingPillars).toEqual([]);
   });
 
-  it.each(["A", "B"] as const)("preserves wrapper-local partial exclusions (%s)", (cause) => {
-    const scoringDisposition = cause === "A" ? "excluded-pipeline" as const : "excluded-uncurated" as const;
-    const trace = scoreV9EvaluatedAsset(input({ parent: {
-      required: true, score: 95, propagatedReasons: [], wrapperParentLimit: {
-        schemaVersion: 1, parentScore: 95, form: "pure", treatment: "local-facts",
-        localRiskDiscount: 0, fallbackDiscount: 0, appliedDiscount: 0, limit: 95, factsComplete: false,
-        riskTransfer: { disposition: "not-applicable", mechanism: "none", requestedCredit: 0, appliedCredit: 0 },
-        missingFacts: [{ factClass: "measuredUnwind", disposition: cause === "A" ? "producer-failed" : "public-data-uncurated",
-          cause, causeGapIds: ["gap:wrapper"], scoringDisposition }],
-        adjustments: [],
-      },
-    } }), V9_CANDIDATE_POLICY_V1);
-    expect(trace.partialEvidence).toMatchObject({
-      excludedPillars: [], excludedComponentKeys: ["wrapper-local:measuredUnwind"],
-      causeGapIds: ["gap:wrapper"], causes: [cause],
-    });
-    expect(trace.limitingPillars).toEqual([]);
-  });
 
   it.each(["A", "B"] as const)("preserves inherited parent partial exclusions (%s)", (cause) => {
     const trace = scoreV9EvaluatedAsset(input({ parent: {
@@ -160,17 +169,6 @@ describe("scoreV9EvaluatedAsset", () => {
     expect(trace).toMatchObject({ ratingStatus: "rated", finalScore: 80, finalGrade: "A-", nrReasons: [] });
   });
 
-  it("bounds unclassified research nulls without inventing A/B proof or D eligibility", () => {
-    const trace = scoreV9ResearchScenarioInput(makeV9ScoringInput({
-      pillars: { backing: null, exit: 50, control: 50 },
-    }), V9_CANDIDATE_POLICY_V1, []);
-    expect(trace.diagnosticPillarScores.backing).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality);
-    expect(trace.partialEvidence).toBeNull();
-    expect(trace.limitedEvidenceCauses).toEqual(["U"]);
-    expect(trace.boundedUncertaintyAttribution).toEqual([]);
-    expect(trace.finalGrade).toBe("NR");
-    expect(trace.ratingStatus).toBe("not-rated");
-  });
   it.each(["C", "U"] as const)("accepts real %s component bounds above the whole-pillar C- threshold", (cause) => {
     const reason = {
       code: "material-reserve-slice-unstructured" as const, path: "backing:reserve:concentration:bounded-component",
@@ -189,53 +187,13 @@ describe("scoreV9EvaluatedAsset", () => {
     }));
   });
 
-  it.each([
-    { effectiveScoringWeight: 0, causeGapIds: ["gap:obligor-concentration"] },
-    { effectiveScoringWeight: 0.125, causeGapIds: [] },
-  ])("does not qualify a component without both a positive scoring weight and a witness ($effectiveScoringWeight, $causeGapIds)", ({ effectiveScoringWeight, causeGapIds }) => {
-    const reason = {
-      code: "material-reserve-slice-unstructured" as const, path: "backing:reserve:concentration:bounded-component",
-      message: "The obligor-concentration factor is unresolved.", responsibility: "unresearched" as const,
-      cause: "U" as const, causeGapIds,
-    };
-    const trace = scoreV9EvaluatedAsset(input({ trackRecordMonths: 0, pillars: {
-      backing: pillar(54.6372, { reasons: [reason], boundedComponents: [{ reason, score: 35, effectiveScoringWeight }] }),
-      exit: pillar(35), control: pillar(58),
-    } }), V9_CANDIDATE_POLICY_V1);
-    expect(trace).toMatchObject({ finalGrade: "NR", ratingStatus: "not-rated", boundedUncertaintyAttribution: [] });
-    expect(trace.nrReasons).toContainEqual(expect.objectContaining({ field: "boundedUncertaintyAttribution" }));
-  });
-
-  it.each(["higher-grade", "NR", "D-other-proof"] as const)("does not publish extra component proofs for $0 cards", (scenario) => {
-    const reason = {
-      code: "material-reserve-slice-unstructured" as const, path: "backing:reserve:concentration:bounded-component",
-      message: "The obligor-concentration factor is unresolved.", responsibility: "unresearched" as const,
-      cause: "U" as const, causeGapIds: ["gap:obligor-concentration"],
-    };
-    const ordinaryExitReason = {
-      code: "missing-same-notional-route" as const, path: "exit:missing-same-notional-route",
-      message: "An admitted route component is conservatively bounded.", responsibility: "unresearched" as const,
-      cause: "U" as const, causeGapIds: ["gap:ordinary-exit"],
-    };
-    const nrBacking = scenario === "NR" ? {
-      evidenceLevel: "limited" as const, limitedEvidenceCauses: ["U" as const], limitingCauseGapIds: ["gap:backing-inventory"],
-    } : {};
-    const nrControl = scenario === "NR" ? {
-      evidenceLevel: "limited" as const, limitedEvidenceCauses: ["U" as const], limitingCauseGapIds: ["gap:control-inventory"],
-    } : {};
-    const trace = scoreV9EvaluatedAsset(input({ trackRecordMonths: 0, pillars: {
-      backing: pillar(54.6372, { ...nrBacking, reasons: [reason], boundedComponents: [{ reason, score: 35, effectiveScoringWeight: 0.125 }] }),
-      control: pillar(scenario === "higher-grade" ? 80 : 58, nrControl),
-      exit: pillar(scenario === "higher-grade" ? 80 : 35, { reasons: scenario === "D-other-proof" ? [ordinaryExitReason] : [] }),
-    } }), V9_CANDIDATE_POLICY_V1);
-    if (scenario === "higher-grade") expect(trace.preCapScore).toBeGreaterThanOrEqual(50);
-    if (scenario === "NR") expect(trace.finalGrade).toBe("NR");
-    if (scenario === "D-other-proof") {
-      expect(trace.finalGrade).toBe("D");
-      expect(trace.boundedUncertaintyAttribution).toContainEqual(expect.objectContaining({ path: ordinaryExitReason.path }));
-    }
-    expect(trace.boundedUncertaintyAttribution.some((item) => item.path === reason.path)).toBe(false);
-    expect(trace.unresolvedFacts.some((fact) => fact.path === reason.path)).toBe(false);
+  it.each([25, 45])("publishes an evidenced low score %s without a letter-based NR guard", (score) => {
+    const trace = scoreV9EvaluatedAsset(input({
+      pillars: { backing: pillar(score), exit: pillar(score), control: pillar(score) },
+    }), V9_CANDIDATE_POLICY_V1);
+    expect(trace.ratingStatus).toBe("rated");
+    expect(trace.finalScore).toBe(score);
+    expect(trace.nrReasons).toEqual([]);
   });
 
   it("rejects conflicting owners for one public fact identity", () => {
@@ -295,7 +253,6 @@ describe("scoreV9EvaluatedAsset", () => {
       headroom: 20,
     });
     expect(trace.bindingCap).toBeNull();
-    expect(trace.caps.map((cap) => cap.kind)).not.toContain("bounded-compensability");
   });
 
   it("bounds C/U facts without legacy critical NR or missingness ceilings", () => {
@@ -578,7 +535,7 @@ describe("scoreV9EvaluatedAsset", () => {
     expect(unavailable.finalGrade).toBe("NR");
     expect(unavailable.adverseAttribution).toEqual([]);
     expect(unattributed.bindingCap?.source).toBe("parent");
-    expect(unattributed.finalGrade).toBe("NR");
+    expect(unattributed.finalGrade).toBe("D");
     expect(unattributed.adverseAttribution).toEqual([]);
     expect(unattributed.boundedUncertaintyAttribution).toEqual([]);
     expect(nonbinding).toEqual([]);
@@ -591,7 +548,7 @@ describe("scoreV9EvaluatedAsset", () => {
     ).toBe(false);
   });
 
-  it("does not let a blocked matching parent make an unattributed child rateable", () => {
+  it("does not invent attribution from a blocked matching parent", () => {
     const parents = [{
       upstreamAssetId: "blocked", score: 45, blocked: true,
       adverseAttribution: [ROOT_ADVERSE],
@@ -604,7 +561,7 @@ describe("scoreV9EvaluatedAsset", () => {
         propagatedBoundedUncertaintyAttribution: resolveV9SerialParentBoundedUncertaintyAttribution(45, parents),
       },
     }), V9_CANDIDATE_POLICY_V1);
-    expect(trace.finalGrade).toBe("NR");
+    expect(trace.finalGrade).toBe("D");
     expect(trace.adverseAttribution).toEqual([]);
     expect(trace.boundedUncertaintyAttribution).toEqual([]);
   });
@@ -644,4 +601,194 @@ describe("scoreV9EvaluatedAsset", () => {
     expect(projectCompactV9ScoreTrace(left)).toMatchObject({ assetId: "left", score: 95, grade: "A+" });
     expect(computeV9ResultDigest([left, right])).toBe(computeV9ResultDigest([right, left]));
   });
+});
+
+describe("simplified score limits", () => {
+  it.each([0, 5.99, 6, 23.99])("applies one young-implementation ceiling at %s months", (trackRecordMonths) => {
+    const trace = scoreV9EvaluatedAsset(input({ trackRecordMonths }), V9_CANDIDATE_POLICY_V1);
+    expect(trace.finalScore).toBe(84);
+    expect(trace.caps.map((cap) => cap.source)).toEqual(["track-record"]);
+  });
+  it.each([24, 27, 35.99, 36, 120, null])("has no age ceiling at %s months", (trackRecordMonths) => {
+    const trace = scoreV9EvaluatedAsset(input({ trackRecordMonths }), V9_CANDIDATE_POLICY_V1);
+    expect(trace.caps).toEqual([]);
+    expect(trace.finalScore).toBe(95);
+  });
+  it("keeps nearest-integer own rounding when a fractional ceiling is nonbinding", () => {
+    const trace = scoreV9EvaluatedAsset(input({
+      pillars: { backing: pillar(74.5), exit: pillar(74.5), control: pillar(74.5) },
+      parent: { required: true, score: 75.9, propagatedReasons: [] },
+    }), V9_CANDIDATE_POLICY_V1);
+    expect(trace.finalScore).toBe(75);
+    expect(trace.bindingCap).toBeNull();
+    expect(trace.caps[0].limit).toBe(75);
+  });
+  it("rates a three-pillar limited-evidence result and passes its computed value to a child", () => {
+    const parent = scoreV9EvaluatedAsset(input({
+      assetId: "evidenced-parent",
+      pillars: {
+        backing: pillar(49.43, { evidenceLevel: "limited", limitedEvidenceCauses: ["U"], causeGapIds: ["gap:backing"] }),
+        exit: pillar(48.82, { evidenceLevel: "limited", limitedEvidenceCauses: ["C"], causeGapIds: ["gap:exit"] }),
+        control: pillar(70),
+      },
+    }), V9_CANDIDATE_POLICY_V1);
+    expect(parent.ratingStatus).toBe("rated");
+    expect(parent.finalScore).not.toBeNull();
+    const child = scoreV9EvaluatedAsset(input({
+      assetId: "evidenced-child", parent: { required: true, score: parent.inheritableScore, propagatedReasons: [] },
+    }), V9_CANDIDATE_POLICY_V1);
+    expect(child.finalScore).toBe(parent.finalScore);
+  });
+});
+
+describe("source-bound realized holder loss", () => {
+  const occurredAt = "2024-01-01";
+  const occurredSec = Date.parse(occurredAt) / 1000;
+  const event = {
+    incidentId: "holder-loss", assetId: "loss-fixture", scope: { kind: "holder-exit" as const },
+    occurredAt, realizedHolderLossPct: 2.95,
+    primarySources: [{ label: "Executed holder haircut", url: "https://example.com/holder-loss", publishedAt: occurredAt }],
+    finding: "A mandatory withdrawal haircut reduced the whole holder claim.",
+  };
+  function lossScore(ageDays: number, events = [event]) {
+    const fixture = input({ assetId: "loss-fixture", realizedHolderLossEvents: events });
+    return scoreV9EvaluatedAsset({
+      ...fixture, identity: { ...fixture.identity, asOfSec: occurredSec + ageDays * 86_400 },
+    }, V9_CANDIDATE_POLICY_V1);
+  }
+  describe.each([
+    { lossPct: 1, initialLimit: 49 },
+    { lossPct: 25, initialLimit: 39 },
+  ])("$lossPct% realized loss", ({ lossPct, initialLimit }) => {
+    it.each([0, 1, 364, 365])("holds the first-year ceiling at day %s", (day) => {
+      const trace = lossScore(day, [{ ...event, realizedHolderLossPct: lossPct }]);
+      expect(trace.finalScore).toBe(initialLimit);
+      expect(trace.bindingCap?.source).toBe("realized-holder-loss");
+      expect(trace.adverseAttribution).toContainEqual(expect.objectContaining({
+        source: "realized-holder-loss", path: "incident:holder-loss",
+        message: expect.stringContaining(event.primarySources[0].url),
+      }));
+    });
+    it.each([365.1, 400, 547.5, 729, 730])("relaxes continuously before integer flooring at day %s", (day) => {
+      const expected = Math.floor(Math.min(100, initialLimit + (100 - initialLimit) * Math.max(0, day - 365) / 365));
+      const trace = lossScore(day, [{ ...event, realizedHolderLossPct: lossPct }]);
+      expect(trace.finalScore).toBe(Math.min(95, expected));
+      expect(trace.caps.find((cap) => cap.source === "realized-holder-loss")?.limit).toBe(expected);
+      if (day === 730) expect(trace.bindingCap).toBeNull();
+    });
+  });
+  describe.each([
+    { lossPct: 0.99, initialLimit: null },
+    { lossPct: 1, initialLimit: 49 },
+    { lossPct: 24.99, initialLimit: 49 },
+    { lossPct: 25, initialLimit: 39 },
+    { lossPct: 49, initialLimit: 39 },
+  ])("severity boundary at $lossPct% loss", ({ lossPct, initialLimit }) => {
+    it.each([0, 365, 730])("uses the correct tier at day %s", (day) => {
+      const trace = lossScore(day, [{ ...event, realizedHolderLossPct: lossPct }]);
+      const limit = initialLimit === null ? undefined : day === 730 ? 100 : initialLimit;
+      expect(trace.caps.find((cap) => cap.source === "realized-holder-loss")?.limit).toBe(limit);
+      expect(trace.finalScore).toBe(Math.min(95, limit ?? 100));
+    });
+  });
+  it("does not price a future event, sub-threshold loss, or absence of proved holder loss", () => {
+    expect(lossScore(-1).finalScore).toBe(95);
+    expect(lossScore(0, [{ ...event, realizedHolderLossPct: 0.99 }]).finalScore).toBe(95);
+    expect(lossScore(0, []).finalScore).toBe(95);
+  });
+  it("uses the minimum admitted event ceiling regardless of order or duplicate witnesses", () => {
+    const older = { ...event, incidentId: "older-loss", occurredAt: "2022-01-01" };
+    expect(lossScore(10, [older, event]).finalScore).toBe(49);
+    expect(lossScore(10, [event, older, event]).finalScore).toBe(49);
+    const severe = { ...event, incidentId: "severe-loss", realizedHolderLossPct: 49 };
+    expect(lossScore(10, [event, severe, older]).finalScore).toBe(39);
+    expect(lossScore(10, [older, severe, event, severe]).finalScore).toBe(39);
+  });
+});
+
+describe("identity-free speculative-credit residual limit", () => {
+  const signal: V9StructuralSignal = {
+    kind: "speculative-credit", severity: "high",
+    reason: "An admitted speculative-credit high signal retains its residual limit.",
+    responsibility: "measured-adverse", economicLossScope: "reserve-claim",
+    pricedInPillar: "backing", failureDomainKeys: [], evidence: [],
+  };
+  function creditScore(overrides: Partial<V9StructuralSignal> = {}, quality = 95, assetId = "credit-fixture") {
+    return scoreV9EvaluatedAsset(input({
+      assetId,
+      pillars: { backing: pillar(quality), exit: pillar(quality), control: pillar(quality) },
+      dependencyStructuralSignals: [{ ...signal, ...overrides }],
+    }), V9_CANDIDATE_POLICY_V1);
+  }
+  it.each([58, 59, 60])("caps only scores above 59, starting from %s", (quality) => {
+    const trace = creditScore({}, quality);
+    expect(trace.finalScore).toBe(Math.min(quality, 59));
+    expect(trace.caps).toContainEqual(expect.objectContaining({ source: "speculative-credit", limit: 59 }));
+    expect(trace.bindingCap?.source ?? null).toBe(quality > 59 ? "speculative-credit" : null);
+  });
+  it.each(["unrelated-one", "unrelated-two"])("does not select asset identity %s", (assetId) => {
+    const trace = creditScore({}, 95, assetId);
+    expect(trace.finalScore).toBe(59);
+    expect(trace.adverseAttribution).toContainEqual(expect.objectContaining({
+      source: "structural-signal", path: "structural:speculative-credit:high",
+    }));
+  });
+  const cases: { label: string; overrides: Partial<V9StructuralSignal>; eligible: boolean }[] = [
+    { label: "reserve claim already priced in Backing", overrides: {}, eligible: true },
+    { label: "global claim", overrides: { economicLossScope: "global-claim" }, eligible: true },
+    { label: "unpriced reserve claim", overrides: { pricedInPillar: undefined }, eligible: true },
+    { label: "legacy unscoped measured signal", overrides: { economicLossScope: undefined }, eligible: true },
+    { label: "legacy unscoped admitted signal", overrides: { economicLossScope: undefined, responsibility: undefined }, eligible: true },
+    { label: "scoped signal without adverse admission", overrides: { responsibility: undefined }, eligible: false },
+    { label: "unscoped integration gap", overrides: { economicLossScope: undefined, responsibility: "integration-missing" }, eligible: false },
+    { label: "access-only claim", overrides: { economicLossScope: "access-only" }, eligible: false },
+    { label: "deployment claim", overrides: { economicLossScope: "deployment", exposureKey: "deployment:fixture", riskEventKey: "risk:fixture" }, eligible: false },
+    { label: "moderate credit signal", overrides: { severity: "moderate" }, eligible: false },
+    { label: "critical credit signal", overrides: { severity: "critical" }, eligible: false },
+    { label: "centralized mint", overrides: { kind: "centralized-mint", economicLossScope: "global-claim" }, eligible: false },
+    { label: "unsafe backing", overrides: { kind: "unsafe-backing" }, eligible: false },
+  ];
+  it.each(cases)("preserves R1 eligibility for $label", ({ overrides, eligible }) => {
+    const trace = creditScore(overrides);
+    expect(trace.finalScore).toBe(eligible ? 59 : 95);
+    expect(trace.caps.some((cap) => cap.source === "speculative-credit")).toBe(eligible);
+  });
+});
+
+describe("genuinely unavailable pillars", () => {
+  const pillars = ["backing", "exit", "control"] as const;
+  for (let mask = 0; mask < 8; mask++) {
+    it(`uses only admitted evidence without fabricating A/B causes for availability mask ${mask}`, () => {
+      const included = pillars.filter((_, index) => (mask & (1 << index)) !== 0);
+      const evaluation = (key: typeof pillars[number]) => included.includes(key) ? pillar(90) : pillar(null, {
+        aggregationDisposition: "unavailable", supportedComponentKeys: [],
+      });
+      const trace = scoreV9EvaluatedAsset(input({
+        pillars: { backing: evaluation("backing"), exit: evaluation("exit"), control: evaluation("control") },
+      }), V9_CANDIDATE_POLICY_V1);
+      expect(trace.includedPillars).toEqual(included);
+      if (included.length === 3) expect(trace.partialEvidence).toBeNull();
+      else expect(trace.partialEvidence).toMatchObject({ excludedPillars: pillars.filter((key) => !included.includes(key)).sort(), causes: [], causeGapIds: [] });
+      expect(trace.causeGapIds).toEqual([]);
+      if (included.length < 2) {
+        expect(trace.ratingStatus).toBe("pipeline-gap");
+        expect(trace.finalScore).toBeNull();
+      } else {
+        expect(trace.ratingStatus).toBe("rated");
+        const priced = Object.fromEntries(pillars.map((key) => [
+          key, included.includes(key) ? 90 : unknownQuality(key, "U"),
+        ])) as Record<typeof pillars[number], number>;
+        expect(trace.finalScore).toBe(Math.round(aggregateV9SmoothBoundedHeadroom(
+          priced, V9_CANDIDATE_POLICY_V1.policy.semantic.formula.pillarWeights, 20, included,
+        )!.score));
+        expect(trace.diagnosticPillarScores).toEqual(Object.fromEntries(pillars.map((key) => [
+          key, included.includes(key) ? 90 : null,
+        ])));
+        expect(trace.aggregation?.pricedUnknownPillars.map((item) => item.pillar)).toEqual(
+          pillars.filter((key) => !included.includes(key)),
+        );
+        expect(trace.effectiveScoringWeights!.backing + trace.effectiveScoringWeights!.exit + trace.effectiveScoringWeights!.control).toBeCloseTo(1);
+      }
+    });
+  }
 });

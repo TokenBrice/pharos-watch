@@ -14,12 +14,13 @@
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC deposited into a Steakhouse-curated Morpho Vault V2 that aims to lend against blue-chip crypto and real-world asset collateral markets depending on market conditions",
   "pegMechanism": "ERC-4626 Morpho Vault V2 shares accrue strategy interest and realize losses against USDC; withdrawals use idle assets and the configured liquidity adapter, subject to available market liquidity",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA13BUIDL)",
-    "rationale": "The exact deployment is an immutable Morpho Vault V2 ERC-4626 share over USDC. User shares mint against deposits; interest accrual can also mint management and performance fee shares. The vault does not create discretionary USDC supply.",
+    "reviewedAt": "2026-10-21",
+    "reviewer": "Pharos Safety Score R1 vault parity review",
+    "rationale": "The exact Ethereum receipt 0xbeef088055857739c12cd3765f20b7679def0f51 is an immutable Morpho VaultV2 USDC lending position. Content as of 2026-10-20: C13 rechecked runtime and permanently abdicated local transfer gates at Ethereum block 26236622. User deposits fund proportional shares; interest and fee-share accrual alter NAV and borrower losses remain possible. The holder claim is residual code-enforced NAV redemption, not ownership of Circle reserves. This sourced departure from the fiat-cash parent establishes protocol-position identity; it grants no legal segregation, independent child assurance or guaranteed stressed cash exit.",
     "sources": [
       {
         "label": "Steakhouse Prime USDC Morpho Vault V2",

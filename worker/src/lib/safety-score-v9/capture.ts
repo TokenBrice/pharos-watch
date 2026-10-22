@@ -38,7 +38,7 @@ import { logWorkerEvent } from "../structured-log";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { captureRedemptionReserveQuarantine } from "./redemption-reserve-quarantine";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { resolveLenderTokenIds, deriveLenderBookObservationIdentity, canonicalizeLenderBookObservation } from "@shared/lib/safety-score-v9/lender-book-registry";
+import { resolveLenderTokenIds, deriveLenderBookObservationIdentity, canonicalizeLenderBookObservation, supportsLenderBookObservation } from "@shared/lib/safety-score-v9/lender-book-registry";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { LenderBookObservationSchema, LenderCollateralBackingSchema, type LenderCollateralBacking } from "@shared/types/safety-score-v9-lender-book";
 import type { LiveReserveSnapshotProvenance } from "@shared/types/safety-score-v9-reserve-scope";
@@ -124,9 +124,8 @@ export async function captureLenderCollateralBacking(
     (coin.contracts ?? []).map((contract) => ({ assetId: coin.id, chain: contract.chain, address: contract.address })),
   ));
   const requiredTokens = new Set<string>();
-  const admittedIds = new Set(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook.admittedAssets.map((row) => row.assetId));
   for (const [assetId, provenance] of provenanceMap) {
-    if (!admittedIds.has(assetId)) continue;
+    if (!supportsLenderBookObservation(ACTIVE_META_BY_ID.get(assetId)?.liveReservesConfig)) continue;
     const parsed = LenderBookObservationSchema.safeParse(canonicalizeLenderBookObservation(provenance.lenderBookObservation));
     if (!parsed.success || parsed.data.assetId !== assetId || parsed.data.status !== "ok") continue;
     for (const deployment of parsed.data.deployments) {
@@ -182,7 +181,9 @@ function captureLenderBookOutcomes(
 ): Map<string, LiveReserveSnapshotProvenance> {
   const captured = new Map(provenanceMap);
   const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook;
-  for (const { assetId } of policy.admittedAssets) {
+  for (const coin of ACTIVE_STABLECOINS) {
+    if (!supportsLenderBookObservation(coin.liveReservesConfig)) continue;
+    const assetId = coin.id;
     const provenance = captured.get(assetId);
     if (provenance?.lenderBookObservation !== undefined) continue;
     const payload = {

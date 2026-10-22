@@ -82,6 +82,11 @@
       "chain": "avalanche",
       "address": "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
       "decimals": 6
+    },
+    {
+      "chain": "xlayer",
+      "address": "0xf90e63079d97a0a1f479b2b168457f420caff6ba",
+      "decimals": 6
     }
   ],
   "collateralQuality": "native",

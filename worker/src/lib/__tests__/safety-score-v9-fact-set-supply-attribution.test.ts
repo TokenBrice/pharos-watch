@@ -2,7 +2,7 @@ import { REVIEWED_DEPLOYMENT_CATALOG } from "../../test-helpers/reviewed-deploym
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { createSupplyAttributionJournalV1 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
-import { evaluateV9ExitAssetFacts } from "@shared/lib/safety-score-v9/exit";
+import { evaluateV9ExitAssetFacts, selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import {
   V9_CANDIDATE_POLICY_V1,
@@ -677,10 +677,9 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
   });
 
   it("publishes an aggregate-only circulating quantity that intake never partitioned, and still bounds a broken producer promise", () => {
-    // sUSN shape: a reviewed multi-route bridge profile, an admitted aggregate
-    // circulating figure, and no per-chain rows at all — so no route join ever
-    // ran and none failed. The quantity is published and the exit pillar sizes
-    // a stress request from it instead of returning its bounded floor.
+    // A reviewed multi-route bridge profile can have an admitted aggregate
+    // quantity without a per-chain partition. Size from that quantity and
+    // retain the measured capacity prefix without inventing additional depth.
     const aggregateOnly = exactFixedInput({
       chainSupplyByChain: {},
       aggregateCirculating: { peggedUSD: 35_596_469.1 },
@@ -702,10 +701,17 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     expect(unpartitionedAlpha.gaps).not.toContainEqual(
       expect.objectContaining({ reasonCode: "runtime-bridge-materiality-unavailable" }),
     );
-    expect(
-      evaluateV9FactSet(unpartitioned, V9_CANDIDATE_POLICY_V1)
-        .assets[0]!.scoreInput.pillars.exit.reasons.map((reason) => reason.code),
-    ).not.toContain("missing-same-notional-route");
+    const evaluated = evaluateV9FactSet(unpartitioned, V9_CANDIDATE_POLICY_V1).assets[0]!;
+    const expectedRequest = selectV9ExitStressRequest(35_596_469.1, V9_CANDIDATE_POLICY_V1);
+    expect(evaluated.exit.stressRequest).toMatchObject(expectedRequest);
+    const measuredRoute = unpartitionedAlpha.exitRoutes.find((route) => route.lane === "dex")!;
+    const measuredCapacityUsd = Math.max(...measuredRoute.capacityCurve.map((point) => point.executableUsd));
+    expect(evaluated.exit.routes).toContainEqual(expect.objectContaining({
+      included: true, exclusionReason: null,
+      capacityPoint: expect.objectContaining({
+        requestedNotionalUsd: expectedRequest.requestedNotionalUsd, executableUsd: measuredCapacityUsd,
+      }),
+    }));
 
     // Missing a captured packet retains uncertainty but does not prove a
     // runtime A failure; cause classification requires a generation-bound attempt.
@@ -770,7 +776,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     expect(zero.selectedRouteSupplyShare).toBeNull();
     expect(zero.unknownRouteSupplyShare).toBeNull();
     expect(zero.unreviewedRouteSupplyShare).toBeNull();
-    expect(evaluateV9ExitAssetFacts(compiled.assets[0]!, V9_CANDIDATE_POLICY_V1).stressRequest).toBeNull();
+    expect(evaluateV9ExitAssetFacts(compiled.assets[0]!, V9_CANDIDATE_POLICY_V1).stressRequest?.requestedNotionalUsd).toBe(25_000_000);
   });
 
   it("ages aggregate supply against the supplemental carry-forward ceiling, not the chain-supply cron window", () => {
@@ -820,7 +826,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
 
     const expired = compile(baseMaxAgeSec + CHAIN_SUPPLY_CARRY_FORWARD_EXTRA_AGE_SEC + 1);
     expect(evidenceOf(expired).freshness.state).toBe("stale");
-    expect(evaluateV9ExitAssetFacts(expired, V9_CANDIDATE_POLICY_V1).stressRequest).toBeNull();
+    expect(evaluateV9ExitAssetFacts(expired, V9_CANDIDATE_POLICY_V1).stressRequest?.requestedNotionalUsd).toBe(25_000_000);
   });
 
   it.each(["chain", "aggregate"] as const)("attributes stale %s supply to A without refreshing or zero-filling it", (name) => {
@@ -846,7 +852,11 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     expect(evidence.observedAtSec).toBe(observedAtSec);
     expect(evidence.freshness.state).toBe("stale");
     expect(alpha.supply.circulatingUsd).toBe(4_000_000);
-    expect(evaluateV9ExitAssetFacts(alpha, V9_CANDIDATE_POLICY_V1).stressRequest).toBeNull();
+    expect(evaluateV9ExitAssetFacts(alpha, V9_CANDIDATE_POLICY_V1).stressRequest).toMatchObject({
+      requestedNotionalUsd: 25_000_000,
+      supplyObservedAtSec: observedAtSec,
+      sizingUncertaintyReason: "stale-supply",
+    });
     expect(fixed.aggregateCirculatingById.alpha!.circulating.peggedUSD).toBe(4_000_000);
   });
 
@@ -866,7 +876,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
     expect(evaluated.exit.stressRequest).toMatchObject({
       rawSupplyRequestUsd: 5_000_000,
-      requestedNotionalUsd: 10_000_000,
+      requestedNotionalUsd: 5_000_000,
     });
     expect(evaluated.stressState.exitPortfolio?.circulatingUsd).toBe(100_000_000);
     expect(evaluateV9ExitAssetFacts(asset, V9_CANDIDATE_POLICY_V1).stressRequest).toEqual(evaluated.exit.stressRequest);
@@ -877,7 +887,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
   it.each([
     { name: "unavailable", aggregateCirculating: undefined, clockSec: AS_OF_SEC },
     { name: "stale", aggregateCirculating: { peggedUSD: 4_000_000 }, clockSec: AS_OF_SEC + 7 * 86400 + 1 },
-  ])("refuses an Exit stress request when aggregate supply is $name", ({ aggregateCirculating, clockSec }) => {
+  ])("uses maximum Exit stress sizing when aggregate supply is $name", ({ aggregateCirculating, clockSec }) => {
     const reviewExtension = nullSupplyReviewExtension({ bridge: "required" });
     reviewExtension.compiledAtSec = clockSec;
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(
@@ -885,8 +895,8 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       reviewExtension,
     );
     const asset = compiled.assets[0]!;
-    expect(evaluateV9ExitAssetFacts(asset, V9_CANDIDATE_POLICY_V1).stressRequest).toBeNull();
-    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.exit.stressRequest).toBeNull();
+    expect(evaluateV9ExitAssetFacts(asset, V9_CANDIDATE_POLICY_V1).stressRequest?.requestedNotionalUsd).toBe(25_000_000);
+    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.exit.stressRequest?.requestedNotionalUsd).toBe(25_000_000);
   });
   it.each<Record<string, number>>([{}, { peggedUSD: 20 }, { peggedUSD: 120 }])(
     "preserves captured chain quantities without a reviewed economic plan (%j)",

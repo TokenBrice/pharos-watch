@@ -21,7 +21,7 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "inheritedFrom": "fxusd-f-x-protocol",
-    "summary": "fxSAVE is a strategy-vault receipt over f(x) Protocol's fxUSD savings strategy; shares are minted against deposited fxUSD and do not create base fxUSD supply, so its mint authority is inherited from fxUSD (fxusd-f-x-protocol). Wrapper upgrade is guarded by a ProxyAdmin whose owner is an AladdinDAO TimelockController with a 3-day delay.",
+    "summary": "fxSAVE is a strategy-vault receipt over f(x) Protocol's fxSP Stability Pool; shares are minted against deposited fxSP or its gauge receipts and do not create base fxUSD supply. Parent fxUSD issuance risk is inherited from fxusd-f-x-protocol, while local deposit accounting and upgrade controls remain separately reviewed. Wrapper upgrade is guarded by a ProxyAdmin whose owner is an AladdinDAO TimelockController with a 3-day delay.",
     "controls": [
       {
         "chain": "ethereum",

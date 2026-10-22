@@ -550,6 +550,23 @@ describe("fetchNestVaultPositionsReserves", () => {
     expectWarnings(result, []);
   });
 
+  it.each([
+    { positionKind: "liquid", slug: "liquid-stone", symbol: "OALS2T" },
+    { positionKind: "yield", slug: "nest-treasury-vault", symbol: "nTBILL" },
+    { positionKind: "yield", slug: "liquid-stone", symbol: "UNREVIEWED" },
+    { positionKind: "yield", slug: "unreviewed-vault", symbol: "OALS2T" },
+  ])("rejects nOPAL pending withdrawals outside the reviewed underlying: $positionKind/$slug/$symbol", async (fixture) => {
+    const token = {
+      symbol: fixture.symbol, position: { value: 100 },
+      pendingTransactions: [{ type: "PendingWithdrawal", amount: 20, price: 1, value: 20 }],
+    };
+    await expect(runNest("nopal-nest", { data: { positions: {
+      liquidAssets: fixture.positionKind === "liquid" ? [token] : [],
+      yieldAssets: fixture.positionKind === "yield" ? [{ slug: fixture.slug, tokens: [token] }] : [],
+    } } }, { data: { nav: 119 } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } }))
+      .rejects.toThrow("cannot reconcile positive nOPAL pending withdrawals");
+  });
+
   it("reconciles the saved nOPAL $60,000 dividend gap without assigning a held-asset identity", async () => {
     const fixture = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "fixtures", "nest-dividends-2026-10-18.json"), "utf8")) as {
       positions: unknown;
@@ -607,9 +624,11 @@ describe("fetchNestVaultPositionsReserves", () => {
     { label: "contradictory published NAV", dividends: 60_000, settled: 100, gross: 60_120, net: 60_119, nav: 70_000, accepted: false },
   ])("keeps dividend reconciliation fail-closed: $label", async (fixture) => {
     const network = nestNetwork("nopal-nest", { data: { positions: {
-      liquidAssets: [{ symbol: "USDC", position: { value: fixture.settled }, pendingTransactions: [
-        { type: "PendingWithdrawal", amount: 20, price: 1, value: 20 },
-      ] }], yieldAssets: [],
+      liquidAssets: [{ symbol: "USDC", position: { value: fixture.settled }, pendingTransactions: [] }],
+      yieldAssets: [{ slug: "liquid-stone", tokens: [{
+        symbol: "OALS2T", position: { value: 0 },
+        pendingTransactions: [{ type: "PendingWithdrawal", amount: 20, price: 1, value: 20 }],
+      }] }],
     } } }, { data: { nav: fixture.nav } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
     network.json!["https://api.nest.credit/v1/vaults/nest-opal-vault/calculated-price"] = { data: {
       grossCalculatedNav: fixture.gross, calculatedNav: fixture.net, claimableFees: 1,

@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "USDC",
-      "pct": 91.7,
+      "pct": 99.99999999999999,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -20,7 +20,7 @@
     },
     {
       "name": "WTGXX",
-      "pct": 8.3,
+      "pct": 9.352639691815362e-15,
       "risk": "low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "WisdomTree Treasury Money Market Digital Fund",
@@ -36,8 +36,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "FD29 bottom-up refinement 2026-10-21",
     "confidence": "verified",
     "sources": [
       {
@@ -45,12 +45,12 @@
         "url": "https://etherscan.io/address/0xcccc62962d17b8914c62d74ffb843d73b2a3cccc#readProxyContract"
       },
       {
-        "label": "Ethereum block 25540229 used for the cUSD vault snapshot",
-        "url": "https://etherscan.io/block/25540229"
+        "label": "Finalized Ethereum block 26236622, 2026-10-20T21:55:35Z",
+        "url": "https://etherscan.io/block/26236622"
       },
       {
-        "label": "Cap Vault read-method implementation pinned at commit 695c8280",
-        "url": "https://github.com/cap-labs-dev/cap-contracts/blob/695c8280b410bce1b43c9254cb214be30fe51dde/contracts/vault/Vault.sol#L173-L185"
+        "label": "Verified CapToken implementation bound by the EIP-1967 slot at block 26236622",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbdaa34082f1a1a3c32190a672bc9dd1b69791b97"
       },
       {
         "label": "Cap vault documentation",
@@ -63,11 +63,15 @@
       {
         "label": "WTGXX SEC Form N-MFP3 for June 30, 2026",
         "url": "https://www.sec.gov/Archives/edgar/data/1859001/000119312526296145/primary_doc.xml"
+      },
+      {
+        "label": "PublicNode Ethereum RPC: pinned assets(), totalSupplies(address), totalSupply(), totalBorrows(address) and token decimals at block 26236622",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "At finalized Ethereum block 25540229 (hash 0x050d9c47fab878a8bdd60775f78193c15fb10f514ba6cb80c2ba1982a4721056), the cUSD vault assets() call returned exactly USDC and WTGXX. totalSupplies() returned 55,897,897.772864 USDC and 5,092,033.265897586 WTGXX, which normalized to 91.7% and 8.3%. Their combined configured-dollar value reconciled to 99.9983% of cUSD totalSupply; both live rows therefore have exact reviewed identities and asset classes, with WTGXX intentionally retained as a reviewed non-link because its tracked candidate is quarantined.",
+    "rationale": "At finalized Ethereum block 26236622 (2026-10-20T21:55:35Z; hash 0x942fd9743fc8fc922b4b1ef4058834d2a5254ce8dba3037cf1ad33f999e80fe5), assets() enumerated exactly USDC and WTGXX. totalSupplies(address) returned 79257405740616 USDC raw units (6 decimals) and 7412659588 WTGXX raw units (18 decimals). Normalizing the adapter's configured one-dollar denomination values gives 99.99999999999999% USDC and a positive WTGXX dust share of 9.352639691815362e-15%. The denomination-accounted total is 99.9994905369% of same-pin cUSD totalSupply 79257809529917609463722439 raw units. This is a reserve-category observation, not independent financial assurance or whole-chain liability reconciliation. Of the USDC accounting balance, 55993745324696 raw units are borrowed; available cash, fractional-reserve realization and borrower recoverability are not inferred from totalSupplies. The EIP-1967 slot binds the verified implementation cited above. The earlier WTGXX classification source is retained without claiming a newly observed fund portfolio.",
     "compositionBasis": "Fixed-block Cap vault totalSupplies by accepted asset, valued at the adapter's configured one-dollar unit values and normalized across the complete assets() enumeration",
-    "compositionAsOf": "2026-07-15",
+    "compositionAsOf": "2026-10-20",
     "scope": "full-composition",
     "knownUnknownExposure": "The vault's complete assets() enumeration contains only the two identified tracked assets. Borrower and fractional-reserve strategy risk remains a mechanism-level exposure rather than an unidentified reserve slice.",
     "knownUnknownExposurePct": 0,
@@ -75,7 +79,7 @@
       {
         "reserveIndex": 1,
         "reserveName": "WTGXX",
-        "pct": 8.3,
+        "pct": 9.352639691815362e-15,
         "disposition": "untracked-exogenous-asset",
         "rationale": "wtgxx-wisdomtree is a tracked but quarantined upstream record outside the active scoring set, so the reviewed WTGXX reserve slice remains an exogenous fund-share classification and does not create a dependency edge.",
         "candidateCoinIds": [

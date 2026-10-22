@@ -86,7 +86,6 @@ function aggregateFactsReconcile(fact: V9CdpStressCoverageFact): boolean {
 }
 
 function stressFallbackReason(
-  assetId: string,
   fact: V9CdpStressCoverageFact | undefined,
   policy: V9BackingEvaluationPolicy,
   asOfSec: number,
@@ -94,9 +93,7 @@ function stressFallbackReason(
   if (fact === undefined) {
     return {
       reason:
-        assetId === "mim-abracadabra"
-          ? "no-reconciled-committed-pool-and-no-complete-family-simulator"
-          : "unsupported-family-or-missing-complete-measurement",
+        "unsupported-family-or-missing-complete-measurement",
       ageSec: null,
     };
   }
@@ -130,13 +127,12 @@ function stressFallbackReason(
 }
 
 export function selectV9CdpLiquidationCapacity(
-  assetId: string,
   review: V9CdpMechanismRiskReview | null,
   fact: V9CdpStressCoverageFact | undefined,
   policy: V9BackingEvaluationPolicy,
   asOfSec: number,
 ): V9CdpLiquidationCapacitySelection {
-  const fallback = stressFallbackReason(assetId, fact, policy, asOfSec);
+  const fallback = stressFallbackReason(fact, policy, asOfSec);
   const fallbackReason = fallback.reason === "" && review === null ? "mechanism-review-unavailable" : fallback.reason;
   if (fallbackReason === "" && fact !== undefined && fact.stressLiquidationCoverageRatio !== null) {
     return {
@@ -172,7 +168,7 @@ export function evaluateV9CdpBacking(
   const structuralReasons: V9BackingStructuralReason[] = [];
   const liquidationCapacity =
     asset.cdpLiquidationCapacitySelection ??
-    selectV9CdpLiquidationCapacity(asset.assetId, review, undefined, policy, 0);
+    selectV9CdpLiquidationCapacity(review, undefined, policy, 0);
   const cdpPolicy = backing.structural.cdp;
   // (i) PSM / 1:1-aggregator short-circuit: an evidenced not-applicable collateralization
   // metric means there is no per-token vault to under-collateralize, so no CR signal fires.

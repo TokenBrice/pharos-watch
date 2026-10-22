@@ -250,9 +250,33 @@
         {
           "label": "Ethereum observation block 25712112",
           "url": "https://eth.blockscout.com/block/25712112"
+        },
+        {
+          "label": "Accountable Tori ZK liability and complete collateral commitments, retrieved 2026-10-20",
+          "url": "https://cache.accountable.capital/dashboard/tori"
+        },
+        {
+          "label": "Tori whole-liability coverage and canonical LockRelease/BurnMint accounting, retrieved 2026-10-20",
+          "url": "https://docs.tori.finance/resources/contracts.md"
+        },
+        {
+          "label": "Tori Accountable attestation scope: AUM, composition and liability coverage, retrieved 2026-10-20",
+          "url": "https://docs.tori.finance/solution/backing.md"
+        },
+        {
+          "label": "Ethereum canonical supply and escrow pin 26236772, 2026-10-20T22:25:35Z",
+          "url": "https://eth.blockscout.com/block/26236772"
+        },
+        {
+          "label": "Monad representation supply pin 115159862, 2026-10-20T22:31:23Z",
+          "url": "https://rpc.monad.xyz"
+        },
+        {
+          "label": "Pharos representation supply pin 20783599, 2026-10-20T22:31:22Z",
+          "url": "https://api.zan.top/public/pharos-mainnet"
         }
       ],
-      "evidence": "At Ethereum block 25712112, the trUSD UUPS proxy used implementation 0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631 and minter 0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e. Complete role-event replay plus direct hasRole reads found three live ToriMinting operator EOAs. Verified source bounds their calls by signed orders, participant and custody allowlists, active USDC/USDT collateral, actual collateral transfer, and 5,000,000-trUSD global and per-asset per-block caps. The 3-of-5 Safe can grant operators and raise the contract caps; the one-day timelock can replace either the token minter or implementation, so economic cap semantics are raiseable. Accountable publishes a continuously refreshed proof-of-solvency view but is not a prudential supervisor, supporting continuous reconciliation and attestation-only supervision. Economic-posture fields reviewed 2026-08-15: the self-controlled Safe can raise live mint caps without the timelock, while Accountable continuously reconciles whole supply and provides independent attestation without prudential supervision.",
+      "evidence": "At Ethereum block 25712112, the trUSD UUPS proxy used implementation 0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631 and minter 0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e. Complete role-event replay plus direct hasRole reads found three live ToriMinting operator EOAs. Verified source bounds their calls by signed orders, participant and custody allowlists, active USDC/USDT collateral, actual collateral transfer, and 5,000,000-trUSD global and per-asset per-block caps. The 3-of-5 Safe can grant operators and raise the contract caps; the one-day timelock can replace either the token minter or implementation, so economic cap semantics are raiseable. Accountable publishes a continuously refreshed proof-of-solvency view but is not a prudential supervisor, supporting continuous reconciliation and attestation-only supervision. Economic-posture fields reviewed 2026-08-15: the self-controlled Safe can raise live mint caps without the timelock, while Accountable continuously reconciles whole supply and provides independent attestation without prudential supervision. D33 scope verification 2026-10-20 retains those process facts and the original review start: Accountable source timestamp 1792534560178 (2026-10-20T22:16:00.178Z) commits liabilities of USD 71962414.0741783 and collateral of USD 72339137.02068763310777847803; every nested_split asset leaf sums to the committed collateral total at the endpoint's published precision. Its trUSD-contract liability connector states 100% coverage on a 15-minute cadence. At Ethereum block 26236772/hash 0xc377cbc00f1a9add95ff080b64f4808d371e569b7099d162432ccb6d13bf37bc (2026-10-20T22:25:35Z), canonical totalSupply is 71962414074178325880540892 raw units at 18 decimals, agreeing with the liability commitment at its published precision. The official LockRelease escrow holds 657246744794143153877393 raw units. Monad block 115159862/hash 0x2e7c0bda1a5e73dab2572c6f676b2d404fa30392f1604bde609c9e349de2edf6 (22:31:23Z) has representation supply 657244044085051388479922, and Pharos block 20783599/hash 0x99e2bab68124cb8f1a986140bb810e55862b12f120160dd044bd804db653c32e (22:31:22Z) has 2700709091765397471; their exact sum equals escrow, with no representation added twice to canonical liabilities. The chain observations have 348 seconds of skew and postdate the Accountable observation; they corroborate the disclosed canonical accounting rather than constituting a same-block production attribution packet. Issuer docs explicitly bind Accountable attestations to total assets, liabilities and coverage. These findings retain continuous reconciliation and named independent attestation-only supervision without asserting prudential oversight, a financial audit, hedge completeness, or new supply data.",
       "reviewer": "OpenAI Codex C03 control review; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable"

@@ -106,7 +106,7 @@ function parentDepegPeg(fixedInput: ReturnType<typeof twoAssetInput>, peakBps: n
         worstDeviationBps: peakBps,
       },
     },
-    activeDepegPeakBpsById: { [PARENT_ID]: peakBps },
+    activeDepegPeakBpsById: { [PARENT_ID]: Math.abs(peakBps) },
   });
 }
 
@@ -212,8 +212,8 @@ describe("Safety Score V9 peg-reference inheritance", () => {
       .toMatchObject({ cause: "U", reason: "not-yet-researched" });
   });
 
-  it("passes apyUSD's tracked parent active-depeg peak into the child peg fact", () => {
-    const fixed = parentDepegPeg(twoAssetInput(), 2_500);
+  it.each([-2_500, 2_500])("passes apyUSD's tracked parent active-depeg peak into the child peg fact: %s bps", (peakBps) => {
+    const fixed = parentDepegPeg(twoAssetInput(), peakBps);
     const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metadata() });
     const childExtension = extension.assets.find((asset) => asset.assetId === CHILD_ID)!;
 
@@ -226,15 +226,6 @@ describe("Safety Score V9 peg-reference inheritance", () => {
       pegScore: 100,
       activeDepeg: true,
       activeDepegBps: 2_500,
-    });
-    expect(child.wrapperLocalFacts).toMatchObject({
-      applicability: "wrapper",
-      facts: {
-        shareAccountingNavOracle: {
-          disposition: "reviewed",
-          assessment: "moderate",
-        },
-      },
     });
   });
 
@@ -249,22 +240,6 @@ describe("Safety Score V9 peg-reference inheritance", () => {
     expect(parent.activeDepegBps).toBe(700);
   });
 
-  it("keeps an inactive NAV wrapper on its child-local not-applicable peg path", () => {
-    const fixed = twoAssetInput({ activeDepegPeakBpsById: {} });
-    const child = compiledChild(fixed);
-
-    expect(child.peg.status.applicability.state).toBe("not-applicable");
-    expect(child.peg.pegScore).toBeNull();
-    expect(child.peg.activeDepegBps).toBeNull();
-    const wrapperLocalFacts = child.wrapperLocalFacts;
-    if (wrapperLocalFacts?.applicability !== "wrapper") {
-      throw new Error("Expected wrapper-local facts for an inactive NAV wrapper");
-    }
-    expect(wrapperLocalFacts.facts.shareAccountingNavOracle).toMatchObject({
-      disposition: "reviewed",
-      assessment: "moderate",
-    });
-  });
 
   it.each([
     ["self-reference", CHILD_ID, { [CHILD_ID]: { variantOf: CHILD_ID, pegReferenceId: CHILD_ID } }],

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import feusdRisk from "@shared/data/stablecoins/domains/risk-review/feusd-felix.json";
 import { BridgeRouteRiskProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
 import { effectiveAuthoritySignatureRequirement } from "@shared/lib/safety-score-v9/control-scope";
-import { gradeVerifiedControlAuthority } from "@shared/lib/safety-score-v9/control-mint-grade";
+import { gradeEconomicControlAuthority } from "@shared/lib/safety-score-v9/control-mint-grade";
+import { makeReviewedMintInput } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { validateMintBridgeOwnership } from "@shared/lib/stablecoins/mint-bridge-ownership";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
@@ -21,7 +22,8 @@ function compileTransport(clockSec = CLOCK) {
     hyperevm: { current: 9_000_000, circulatingPrevDay: 9_000_000, circulatingPrevWeek: 9_000_000, circulatingPrevMonth: 9_000_000 },
     hyperliquid: { current: 1_000_000, circulatingPrevDay: 1_000_000, circulatingPrevWeek: 1_000_000, circulatingPrevMonth: 1_000_000 },
   } });
-  const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: new Map([["feusd-felix", {
+  // This transport fixture is independent of later ordinary-transfer research.
+  const extension = buildSafetyScoreV9BaselineExtension(fixed, { reviewedTransferFacts: new Map(), metaById: new Map([["feusd-felix", {
     id: "feusd-felix", bridgeRouteRisk, mechanismArchetype: "fiat-cash" as const,
     contracts: [{ chain: "hyperevm", address: "0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70", decimals: 18 }],
   }]]) });
@@ -49,8 +51,8 @@ describe("same-chain HyperCore system transport", () => {
     expect(control.claimImpairment).toBe("bounded");
     expect(control.economicLossScope).toBe("deployment");
     expect(effectiveAuthoritySignatureRequirement(control.authority)).toBeNull();
-    expect(gradeVerifiedControlAuthority(control, V9_CANDIDATE_POLICY_V1.policy.semantic))
-      .toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality);
+    expect(gradeEconomicControlAuthority(control, makeReviewedMintInput(control.controlKey), V9_CANDIDATE_POLICY_V1.policy.semantic))
+      .toBe(60);
     expect(control.failureDomains).toContainEqual({ kind: "bridge-route", key: "consensus:hyperliquid" });
   });
 

@@ -14,10 +14,7 @@ describe("DependencyContextDetails", () => {
     card.dependencies.roles = [{
       edgeKey: "exit-usdc", exposureKey: "exit", riskEventKey: "exit-event",
       upstreamAssetId: "usdc-circle", role: "exit-dependency", weight: 0.25,
-      targetPillar: "exit", propagationEventEdgeKeys: [],
-      propagationEventExposureKey: null, propagationEventRiskEventKey: null,
-      propagationEventNominalExposureShare: null, propagationEventExposureShare: null,
-      propagationEventInheritedScore: null, propagationEventModeledLossPoints: null,
+      targetPillar: "exit",
       inheritedDimensions: ["exit"], unavailableDimensions: [], score: 84,
       boundedUnknown: false, cycleBlocked: false, evidenceRefIds: [], failureDomains: [],
       ratingStatus: "rated", partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [],

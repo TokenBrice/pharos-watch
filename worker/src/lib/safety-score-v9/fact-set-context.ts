@@ -302,7 +302,11 @@ export function addGap(context: AssetBuildContext, gap: V9FactGapV3): string {
     ({ verdict }) => v9EvidenceCauseScopeKey(verdict.assetId, verdict.scope) === exactScopeKey,
   ) ?? capturedReserveFailure(context, scope, gap) ?? capturedPegSupplyFailure(context, scope, gap);
   if (captured) addEvidence(context, captured.evidence);
-  const classification = scoped[0];
+  // Reviewed missing terms are bounded uncertainty, not absent route applicability.
+  // Only a positive nondisclosure proof selects C; research backlog classifications
+  // cannot exclude this established subject. Independent runtime failures still apply.
+  const classification = gap.policyRuleId === "v9.exit.reviewed-terms" && scoped[0]?.cause !== "C"
+    ? undefined : scoped[0];
   let typedReview: unknown;
   if (scope.componentKey.startsWith("mechanism-review:") && scope.factorKey === null) {
     const componentKey = scope.componentKey.slice("mechanism-review:".length);
@@ -350,10 +354,21 @@ export function addGap(context: AssetBuildContext, gap: V9FactGapV3): string {
   for (const evidence of result.evidenceReferences) {
     if (!context.evidence.has(evidence.evidenceId)) addEvidence(context, evidence);
   }
+  // Missing/unsupported facts can retain dated history without using it as
+  // current cause proof or granting the inadmissible review any score credit.
+  let retainedHistory: V9EvidenceReferenceV2[] | null = null;
+  for (const id of gap.evidenceHistory?.evidenceRefIds ?? []) {
+    if ((retainedHistory ?? result.evidenceReferences).some((reference) => reference.evidenceId === id)) continue;
+    const reference = context.evidence.get(id);
+    if (reference) {
+      retainedHistory ??= [...result.evidenceReferences];
+      retainedHistory.push(reference);
+    }
+  }
   const resolved = createV9FactGapV3({
     ...gap, causeScope: scope, causeProof: result.causeProof, responsibility: result.responsibility,
     evidenceRefIds: result.evidenceReferences.map((reference) => reference.evidenceId),
-    evidenceHistory: { publishedBy: gap.evidenceHistory?.publishedBy ?? "unknown", references: result.evidenceReferences },
+    evidenceHistory: { publishedBy: gap.evidenceHistory?.publishedBy ?? "unknown", references: retainedHistory ?? result.evidenceReferences },
   });
   const existing = context.gaps.get(resolved.gapId);
   if (existing && stableJsonStringifyV1(existing) !== stableJsonStringifyV1(resolved)) {
@@ -684,7 +699,9 @@ export function compileRouteFactorStatuses(
     factorStatuses[factorKey] = missing || explicitlyMissing
       ? missingLocalFact(context, {
           componentKey: `exit-route:${route.routeKey}:${factorKey}`, reasonCode: "missing-same-notional-route",
-          ownerDomain: "exit", responsibility: "unresearched", policyRuleId: "v9.exit.route-factors",
+          ownerDomain: "exit", responsibility: "unresearched",
+          policyRuleId: explicitlyMissing && (factorKey === "cost" || factorKey === "settlement")
+            ? "v9.exit.reviewed-terms" : "v9.exit.route-factors",
           path: { kind: "optional-exit", routeKey: route.routeKey },
           message: `The ${factorKey} datum for route ${route.routeKey} has not been established.`,
           evidenceRefIds: route.status.evidenceRefIds,

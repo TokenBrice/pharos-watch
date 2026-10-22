@@ -1,5 +1,36 @@
 {
   "id": "slvon-ondo",
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "SLVon Final Terms appoint the issuer and Ondo Finance as calculation agents and value issuance/redemption using broker-provided SLV prices and the attributable underlying units per token. Current Ondo Stocks pricing documentation says the investor quote is calculated using proprietary methodology, inventory, order size and market conditions. The displayed underlying ETF holdings and token price do not establish an independent SLVon redemption-price oracle.",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "NR3 bottom-up refinement 2026-10-21",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "SLVon Final Terms: exact Ethereum token, calculation agents and broker-reference redemption formula; retrieved 2026-10-20",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf"
+      },
+      {
+        "label": "Ondo Stocks proprietary indicative and order-specific quote pricing; retrieved 2026-10-20",
+        "url": "https://docs.ondo.finance/ondo-stocks/token-and-quote-pricing.md"
+      }
+    ],
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-20",
+      "reviewer": "NR3 bottom-up refinement 2026-10-21",
+      "rationale": "SLVon is an issuer-valued secured tracker of SLV, not a borrower collateral/liquidation mechanism. Its issue and redemption price authority remains economically applicable even though no borrower liquidation branches exist.",
+      "sources": [
+        {
+          "label": "SLVon Final Terms: tracker, issue and redemption valuation",
+          "url": "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf"
+        }
+      ]
+    }
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [
@@ -42,9 +73,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "SLVon has issuer-native GM issuance on Ethereum, BSC, and Solana, plus a HyperEVM bridge representation. Ethereum and BSC also expose separate OndoOFT burn/mint bridge minters. Fresh pinned reads locate the unified Messenger behind each OFT, match all six reciprocal EVM peers, and enumerate the selected Endpoint V2 send/receive ULN configurations and token-specific rate limits. No SLVon-specific lockbox is proven; these remain external-validated-network lanes. Owner signer/module posture and economically complete circulating bridge materiality remain unresolved.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex bridge route boundary migration; Sol curation campaign 2026-10-09 (W4T08Nexus), route accounting only",
+    "summary": "SLVon native GM issuance and separate EVM OndoOFT/HyperEVM representation remain distinct. Existing reciprocal peers, three-DVN configurations and mutable flow limits are retained. Final 2026-10-21 pins Ethereum26238146/BSC128863032/HyperEVM49100165 enumerate every declared BridgeRegistrar role: one factory, PAUSER via a 1-of-9 Safe, UNPAUSER via a 4-of-7 Safe, and DEFAULT_ADMIN via the chain's 7200-second timelock. Each timelock has self plus a 5-of-9 admin Safe, one 4-of-7 proposer, and executor/canceller rosters consisting of the 1-of-9 Safe plus code-empty 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; none is an open zero-address role. All identified Safes have complete empty module pages and zero guards. Exact timelock source requires a queued ready operation for arbitrary CALL and self-call for delay changes; external default admins can change role membership without that queue. Registrar pause gates registration, not existing-token transfer. Separate OndoOwner root arbitrary superCall and mutable configuration persist. Native Solana source/build and proposal/bypass evidence is recorded in mintAuthority.executionScope, without asserting a complete arbitrary-CPI target envelope. Human signer/DVN custody, conserving liability materiality and remaining incident admission are separate unresolved obligations. Historical observations remain; this rewritten review is dated 2026-10-21, with no tier or durable cap credit promoted.",
+    "reviewedAt": "2026-10-21",
+    "reviewer": "NR3 final exact-source and pinned-role review",
     "confidence": "verified",
     "protocols": [
       {
@@ -79,6 +110,33 @@
         "label": "R1 2026-10-09 exact verified HyperEVM SLVon OndoOFT",
         "url": "https://hyperevmscan.io/address/0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85#code"
       },
+      {
+        "label": "NR3 2026-10-21 exact Ethereum OndoOwner privileged call source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc6d5c103a3f586e68bd475942a49d041b171c3e"
+      },
+      {
+        "label": "NR3 2026-10-21 exact Ethereum BridgeRegistrar registration authority",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x58d73026c64da97ce858766384477d2e8775e9ec"
+      },
+      {
+        "label": "NR3 2026-10-21 BSC OndoOwner verified source and pinned runtime correspondence",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x4d4e562d6882dc523b8d629d2e9df9230b699933?fields=compilation,sources,runtimeBytecode"
+      },
+      {
+        "label": "NR3 2026-10-21 BSC BridgeRegistrar verified source and pinned runtime correspondence",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x72c697d72beb419152ed457b9f1eee29c12e0ccb?fields=compilation,sources,runtimeBytecode"
+      },
+      {
+        "label": "NR3 2026-10-21 exact HyperEVM OndoOwner verified source",
+        "url": "https://hyperevmscan.io/address/0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d#code"
+      },
+      {
+        "label": "NR3 2026-10-21 exact HyperEVM BridgeRegistrar verified source",
+        "url": "https://hyperevmscan.io/address/0xe3153764ab2a0a928a59c3805503b2ac56b802a3#code"
+      },
+      {"label": "NR3 final exact Ethereum timelock source and role/delay semantics", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"},
+      {"label": "NR3 final exact BSC timelock source/runtime correspondence", "url": "https://sourcify.dev/server/v2/contract/56/0x8860bbfc7a83e4788a981f4e9f30878331413b26?fields=compilation,sources,runtimeBytecode"},
+      {"label": "NR3 final exact HyperEVM timelock source/runtime correspondence", "url": "https://hyperevmscan.io/address/0x6253fbc5bcf4f49c80745694366f05d6c7be0e83#code"},
       {
         "label": "Ondo Stocks bridge: native burn/mint on all supported EVM chains and same token amount",
         "url": "https://docs.ondo.finance/tools/ondo-bridge.md"

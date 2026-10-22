@@ -335,9 +335,21 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
         expect(result.get("cusd-cap")?.routeStatusReason).toContain("share is unquantified");
       }
       expect(result.get("gusd-gate")?.outputImpairedShare).toBe(1);
-      expect(result.get("usdn-noble")?.outputImpairedShare).toBe(1);
+      expect(result.has("usdn-noble")).toBe(false);
     },
   );
+
+  it("attributes Noble impairment to its direct wM payout, not downstream USDC", async () => {
+    const now = 1_780_000_000;
+    const db = mockD1Strict([activeDepegQuery([{
+      stablecoin_id: "wm-m0", direction: "below", started_at: now - 3600,
+    }])]);
+    const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE,
+      observations([["wm-m0", -3000]]), { metadataById: new Map(), now });
+    expect(result.get("usdn-noble")).toMatchObject({
+      routeStatus: "degraded", outputImpairedDependencyId: "wm-m0", outputImpairedShare: 1,
+    });
+  });
 
   it("publishes unknown from stale evidence and never mutates the incident", async () => {
     const db = mockD1Strict([
@@ -644,7 +656,7 @@ describe("wave2 redemption exit-route embeds", () => {
       routeFamily: "protocol-redemption",
       // The complete collateral inventory is issuer-undisclosed, so the
       // observation must not publish a partial BTC/ETH/BNB asset-key subset.
-      output: { kind: "collateral" },
+      output: { kind: "unresolved-asset" },
       evidenceKind: "onchain-contract-state",
       scoreEligible: true,
     });

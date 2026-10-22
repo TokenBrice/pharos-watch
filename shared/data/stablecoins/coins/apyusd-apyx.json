@@ -70,7 +70,7 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Apyx apyUSD vault",
@@ -106,7 +106,7 @@
   "proofOfReserves": {
     "type": "attestation",
     "url": "https://docs.apyx.fi/collateral-and-custody/third-party-attestation",
-    "provider": "Wolf & Company, P.C. monthly AICPA examination-level attestation opinions on Preference Foundation securities holdings; the August 2026 report covers assets only, not apyUSD liabilities or a reserve-to-liability reconciliation",
+    "provider": "Wolf & Company, P.C. monthly AICPA examination-level opinions on Preference Foundation securities holdings; the September 2026 report, signed October 13, covers assets only, not apyUSD liabilities or a reserve-to-liability reconciliation",
     "attestorTier": "niche",
     "cadence": "monthly",
     "attestorJurisdiction": "United States"

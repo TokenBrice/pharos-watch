@@ -27,8 +27,10 @@ const PER_COIN_SOURCE_COINS = coinsGeneratedAsset as unknown as readonly Stablec
 /** @internal Exported for the registry suspension test. */
 export function withoutSuspendedLiveReserves(stablecoin: StablecoinMeta): StablecoinMeta {
   if (!stablecoin.liveReservesConfig?.suspended) return stablecoin;
-  const { liveReservesConfig: _suspendedConfig, ...rest } = stablecoin;
-  return rest;
+  // Preserve lazy evidence getters instead of materializing them into a
+  // second isolate-lived catalog row while stripping the optional feed.
+  const { liveReservesConfig: _suspendedConfig, ...descriptors } = Object.getOwnPropertyDescriptors(stablecoin);
+  return Object.create(Object.getPrototypeOf(stablecoin), descriptors) as StablecoinMeta;
 }
 
 /**

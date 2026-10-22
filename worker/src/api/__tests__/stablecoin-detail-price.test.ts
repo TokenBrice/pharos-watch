@@ -57,6 +57,26 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("missing detail price enrichment", () => {
+  it("preserves the economic-float refusal through detail and summary despite positive provider overlays/history", async () => {
+    const result = await enrichMissingDetailPrice(makeDb({
+      id: "sfrax-frax", circulating: {}, supplySource: "onchain-supply-withheld", supplyUnavailableReason: "economic-float-unreconciled",
+    }), "sfrax-frax", makeResponse(JSON.stringify({
+      tokens, currentCirculatingUSD: { peggedUSD: 64_000_000 }, currentCirculatingPrevDayUSD: { peggedUSD: 63_000_000 },
+      currentSupplyObservedAt: NOW - 60, currentSupplyRestored: true,
+    })));
+    const body = await result.json() as Record<string, unknown>;
+    expect(body.currentSupplyUnavailableReason).toBe("economic-float-unreconciled");
+    expect(body.currentCirculatingUSD).toBeUndefined();
+    expect(body.currentCirculatingPrevDayUSD).toBeUndefined();
+    expect(body.currentSupplyObservedAt).toBeUndefined();
+    expect(body).not.toHaveProperty("currentSupplyRestored");
+    expect(body.tokens).toEqual(tokens);
+    const summary = projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(body));
+    expect(summary.circulating).toEqual({});
+    expect(summary.nativeSupply.current).toBeNull();
+    expect(summary.supplyObservedAt).toBeNull();
+  });
+
   it("publishes admitted current list supply without rewriting the older native history", async () => {
     const nativeHistory = [{ date: NOW - 86_400, totalCirculating: { peggedUSD: 454_459_687.73 } }];
     const result = await enrichMissingDetailPrice(makeDb({

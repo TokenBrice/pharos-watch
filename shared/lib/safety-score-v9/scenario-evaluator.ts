@@ -5,9 +5,8 @@
 
 import {
   scoreV9ResearchScenarioInput,
-  type V9CapTrace,
   type V9NRReason,
-  type V9ScoreTrace,
+  type V9ResearchScoreTrace,
 } from "../safety-score-v9-research";
 import type { V9EvidenceLevel, V9Grade, V9QualityPillar, V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 
@@ -62,19 +61,19 @@ export interface V9ScenarioScoreTrace {
   readonly policyId: string;
   readonly policyDigest: string;
   readonly configName: string;
-  readonly pillarContributions: V9ScoreTrace["pillarContributions"];
+  readonly pillarContributions: V9ResearchScoreTrace["pillarContributions"];
   readonly weightedQuality: number | null;
-  readonly weakestPillar: V9ScoreTrace["weakestPillar"];
+  readonly weakestPillar: V9ResearchScoreTrace["weakestPillar"];
   readonly pegMultiplier: number | null;
   readonly preCapScore: number | null;
-  readonly caps: readonly V9CapTrace[];
-  readonly bindingCap: V9CapTrace | null;
+  readonly caps: V9ResearchScoreTrace["caps"];
+  readonly bindingCap: V9ResearchScoreTrace["bindingCap"];
   readonly structuralSignals: readonly V9ScenarioStructuralSignal[];
   readonly finalScore: number | null;
   readonly finalGrade: V9Grade | null;
   readonly nrReasons: readonly V9NRReason[];
-  readonly ratingStatus: V9ScoreTrace["ratingStatus"];
-  readonly partialEvidence: V9ScoreTrace["partialEvidence"];
+  readonly ratingStatus: V9ResearchScoreTrace["ratingStatus"];
+  readonly partialEvidence: V9ResearchScoreTrace["partialEvidence"];
 }
 
 export function scoreV9GoldenScenario(

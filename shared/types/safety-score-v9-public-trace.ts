@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { issue } from "./safety-schema-primitives";
 import { isV9WitnessTextReference } from "./safety-score-v9-public-witness-texts";
+import { SafetyScoreV9HistoricalWrapperParentLimitSchema } from "./safety-score-v9-public-historical";
 import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-attribution";
 import {
   V9AssetPremiumKindSchema,
@@ -8,14 +9,7 @@ import {
   V9ReasonCodeSchema,
 } from "./safety-score-v9";
 import { V9EvidenceResponsibilitySchema } from "./safety-score-v9-fact-primitives";
-import {
-  V9_WRAPPER_LOCAL_FACT_KEYS,
-  V9WrapperFactDispositionSchema,
-  V9WrapperFormSchema,
-  V9WrapperLocalFactKeySchema,
-  V9WrapperRiskAssessmentSchema,
-  V9WrapperRiskTransferMechanismSchema,
-} from "./safety-score-v9-wrapper";
+import { V9WrapperFormSchema } from "./safety-score-v9-wrapper";
 import {
   isUniqueSorted,
   numbersAgree,
@@ -26,7 +20,7 @@ import {
   V9_BOUNDED_ATTRIBUTION_REASON_CODE_SET,
 } from "./safety-score-v9-public-facts";
 import { V9BoundedEvidenceResponsibilitySchema } from "./safety-score-v9-vocabulary";
-import { causeGapRefs, V9EvidenceCauseSchema, V9ScoringDispositionSchema } from "./safety-score-v9-public-causes";
+import { causeGapRefs, V9EvidenceCauseSchema } from "./safety-score-v9-public-causes";
 import { canonicalTextArray } from "./safety-score-v9-fact-primitives";
 import { countV9EvidenceObligations, V9PublicEvidencePathSchema, refineEvidenceFactPathPrefixes, V9PublicFactReasonCodeSchema, V9PublicFactResponsibilitySchema, resolveEvidenceFactResponsibility, V9PublicFactCauseSchema, resolveEvidenceFactCause } from "./safety-score-v9-public-evidence-facts";
 
@@ -40,6 +34,13 @@ const SafetyScoreV9AggregationTraceSchema = z
     headroom: z.number().finite().positive().max(100),
     includedPillars: canonicalTextArray(2).pipe(z.array(V9QualityPillarSchema).max(3)),
     excludedPillars: canonicalTextArray().pipe(z.array(V9QualityPillarSchema).max(1)),
+    // Optional only for historical traces predating priced unavailable pillars.
+    pricedUnknownPillars: z.array(z.object({
+      pillar: V9QualityPillarSchema,
+      score: ScoreSchema,
+      cause: z.enum(["C", "U"]),
+      causeGapRefs: causeGapRefs(),
+    }).strict()).max(1).optional(),
     effectiveScoringWeights: z.object({
       backing: z.number().finite().min(0).max(1), exit: z.number().finite().min(0).max(1),
       control: z.number().finite().min(0).max(1),
@@ -50,11 +51,16 @@ const SafetyScoreV9AggregationTraceSchema = z
   .superRefine((aggregation, ctx) => {
     if (aggregation.includedPillars.length + aggregation.excludedPillars.length !== 3 ||
         aggregation.includedPillars.some((pillar) => aggregation.excludedPillars.includes(pillar)) ||
-        !aggregation.includedPillars.includes(aggregation.weakestPillar) ||
-        aggregation.excludedPillars.some((pillar) => aggregation.effectiveScoringWeights[pillar] !== 0) ||
+        (!aggregation.includedPillars.includes(aggregation.weakestPillar) &&
+          !aggregation.pricedUnknownPillars?.some((item) => item.pillar === aggregation.weakestPillar)) ||
+        aggregation.excludedPillars.some((pillar) =>
+          aggregation.pricedUnknownPillars?.some((item) => item.pillar === pillar)
+            ? aggregation.effectiveScoringWeights[pillar] <= 0
+            : aggregation.effectiveScoringWeights[pillar] !== 0) ||
+        (aggregation.pricedUnknownPillars?.some((item) => !aggregation.excludedPillars.includes(item.pillar)) ?? false) ||
         Math.abs(Object.values(aggregation.effectiveScoringWeights).reduce((sum, weight) => sum + weight, 0) - 1) > 1e-9 ||
         !numbersAgree(aggregation.supportCeiling, aggregation.weightedPillarMean)) {
-      ctx.addIssue({ code: "custom", message: "Aggregation coverage, zero excluded weights and support ceiling must reconcile" });
+      ctx.addIssue({ code: "custom", message: "Aggregation evidence coverage, priced unknowns, weights and support ceiling must reconcile" });
     }
     if (
       aggregation.weakestScore > aggregation.weightedPillarMean + SCORE_TOLERANCE ||
@@ -112,7 +118,7 @@ const SafetyScoreV9UnresolvedDeploymentExposureSchema = z
   })
   .strict()
   .superRefine((signal, ctx) => {
-    if (!isUniqueSorted(signal.failureDomainKeys)) {
+    if (!signal.failureDomainKeys.some(isV9WitnessTextReference) && !isUniqueSorted(signal.failureDomainKeys)) {
       issue(ctx, ["failureDomainKeys"], "V9 unresolved deployment failure domains must be unique and sorted");
     }
   });
@@ -130,14 +136,14 @@ const SafetyScoreV9DeploymentRiskTraceSchema = z
       (adjustment) =>
         `${adjustment.exposureKey}\u0000${adjustment.riskEventKey}\u0000${adjustment.signalKey}`,
     );
-    if (!isUniqueSorted(adjustmentKeys)) {
+    if (!deployment.adjustments.some((row) => [row.exposureKey, row.riskEventKey, row.signalKey].some(isV9WitnessTextReference)) && !isUniqueSorted(adjustmentKeys)) {
       issue(ctx, ["adjustments"], "V9 deployment adjustments must have unique, sorted failure-domain attribution");
     }
     const unresolvedKeys = deployment.unresolvedExposures.map(
       (signal) =>
         `${signal.exposureKey}\u0000${signal.riskEventKey}\u0000${signal.failureDomainKeys.join("+")}\u0000${signal.signalKey}`,
     );
-    if (!isUniqueSorted(unresolvedKeys)) {
+    if (!deployment.unresolvedExposures.some((row) => [row.exposureKey, row.riskEventKey, row.signalKey, ...row.failureDomainKeys].some(isV9WitnessTextReference)) && !isUniqueSorted(unresolvedKeys)) {
       issue(ctx, ["unresolvedExposures"], "V9 unresolved deployment exposures must have unique, sorted exposure attribution");
     }
     const expectedTotal = deployment.adjustments.reduce(
@@ -168,8 +174,7 @@ const SafetyScoreV9AdverseAttributionItemSchema = z
       "pillar-score",
       "reason",
       "structural-signal",
-      "track-record",
-      "wrapper-local",
+      "realized-holder-loss",
     ]),
     path: z.string().min(1),
     message: z.string().min(1),
@@ -193,7 +198,7 @@ const SafetyScoreV9AdverseAttributionTraceSchema = z
 
 const SafetyScoreV9BoundedUncertaintyAttributionItemSchema = z
   .object({
-    source: z.enum(["parent-score", "reason", "wrapper-local"]),
+    source: z.enum(["parent-score", "reason"]),
     code: V9ReasonCodeSchema,
     path: z.string().min(1),
     message: z.string().min(1),
@@ -208,9 +213,6 @@ const SafetyScoreV9BoundedUncertaintyAttributionItemSchema = z
     }
     if (item.source === "parent-score" && !isV9WitnessTextReference(item.path) && !item.path.startsWith("parent:")) {
       issue(ctx, ["path"], "V9 parent bounded-uncertainty attribution requires a parent-prefixed path");
-    }
-    if (item.source === "wrapper-local" && !isV9WitnessTextReference(item.path) && !item.path.startsWith("wrapper-local:")) {
-      issue(ctx, ["path"], "V9 wrapper bounded-uncertainty attribution requires a wrapper-local path");
     }
   });
 
@@ -303,96 +305,27 @@ function evidenceResponsibilityTraceSchema(accounting: "witnesses" | "obligation
 
 const SafetyScoreV9EvidenceResponsibilityTraceSchema = evidenceResponsibilityTraceSchema("obligations");
 
-const SafetyScoreV9WrapperMissingFactClassSchema = z.union([
-  V9WrapperLocalFactKeySchema,
-  z.enum(["riskTransfer", "wrapperForm"]),
-]);
 
 const SafetyScoreV9WrapperParentLimitSchema = z
   .object({
     schemaVersion: z.literal(1),
+    parentKind: z.enum(["serial", "concentrated-collateral"]).optional(),
+    parentAssetId: z.string().min(1).optional(),
     parentScore: ScoreSchema,
     form: V9WrapperFormSchema,
-    treatment: z.enum(["local-facts", "fallback-discount", "documented-risk-transfer"]),
-    localRiskDiscount: z.number().finite().min(0).max(100),
-    fallbackDiscount: z.number().finite().min(0).max(100),
     appliedDiscount: z.number().finite().min(0).max(100),
-    riskTransfer: z
-      .object({
-        disposition: V9WrapperFactDispositionSchema,
-        mechanism: V9WrapperRiskTransferMechanismSchema,
-        requestedCredit: z.number().finite().min(0).max(100),
-        appliedCredit: z.number().finite().min(0).max(100),
-      })
-      .strict(),
     limit: ScoreSchema,
-    factsComplete: z.boolean(),
-    missingFacts: z.array(
-      z
-        .object({
-          factClass: SafetyScoreV9WrapperMissingFactClassSchema,
-          disposition: V9WrapperFactDispositionSchema.exclude(["reviewed", "not-applicable"]),
-          cause: V9EvidenceCauseSchema.nullable().optional(),
-          causeGapRefs: causeGapRefs().optional(),
-          scoringDisposition: V9ScoringDispositionSchema.optional(),
-        })
-        .strict(),
-    ),
-    adjustments: z.array(
-      z
-        .object({
-          factKey: V9WrapperLocalFactKeySchema,
-          disposition: V9WrapperFactDispositionSchema,
-          assessment: V9WrapperRiskAssessmentSchema.nullable(),
-          maximumDiscountPoints: z.number().finite().positive().max(100),
-          discountPoints: z.number().finite().min(0).max(100),
-          cause: V9EvidenceCauseSchema.nullable().optional(),
-          causeGapRefs: causeGapRefs().optional(),
-          scoringDisposition: V9ScoringDispositionSchema.optional(),
-        })
-        .strict(),
-    ),
   })
   .strict()
   .superRefine((limit, ctx) => {
-    const missingKeys = limit.missingFacts.map((fact) => `${fact.factClass}:${fact.disposition}`);
-    if (!isUniqueSorted(missingKeys)) {
-      ctx.addIssue({ code: "custom", path: ["missingFacts"], message: "V9 wrapper missing facts must be unique and sorted" });
+    const concentrated = limit.parentKind === "concentrated-collateral";
+    if (concentrated !== (limit.parentAssetId !== undefined) ||
+        (concentrated && (limit.form !== "pure" || limit.appliedDiscount !== 3))) {
+      issue(ctx, ["parentKind"], "Concentrated collateral must identify its scored parent and use the pure three-point deduction");
     }
-    const adjustmentKeys = limit.adjustments.map((adjustment) => adjustment.factKey);
-    const expectedAdjustmentKeys = [...V9_WRAPPER_LOCAL_FACT_KEYS];
-    if (JSON.stringify(adjustmentKeys) !== JSON.stringify(expectedAdjustmentKeys)) {
-      issue(ctx, ["adjustments"], "V9 wrapper adjustments must cover every local fact in canonical order");
-    }
-    const expectedLocalRiskDiscount = limit.adjustments.reduce(
-      (sum, adjustment) => sum + adjustment.discountPoints,
-      0,
-    );
-    if (!numbersAgree(limit.localRiskDiscount, expectedLocalRiskDiscount)) {
-      issue(ctx, ["localRiskDiscount"], "V9 wrapper local-risk discount must reconcile its fact adjustments");
-    }
-    if (limit.factsComplete !== (limit.missingFacts.length === 0)) {
-      issue(ctx, ["factsComplete"], "V9 wrapper completeness must exactly match its missing facts");
-    }
-    const expectedAppliedDiscount = limit.factsComplete
-      ? limit.localRiskDiscount
-      : Math.max(limit.localRiskDiscount, limit.fallbackDiscount);
-    if (!numbersAgree(limit.appliedDiscount, expectedAppliedDiscount)) {
-      issue(ctx, ["appliedDiscount"], "V9 wrapper discount must use local risk when complete and the conservative maximum when incomplete");
-    }
-    if (limit.riskTransfer.appliedCredit > limit.riskTransfer.requestedCredit + SCORE_TOLERANCE) {
-      issue(ctx, ["riskTransfer", "appliedCredit"], "V9 wrapper cannot apply more risk-transfer credit than documented");
-    }
-    const expectedLimit =
-      Math.max(0, limit.parentScore - limit.appliedDiscount) + limit.riskTransfer.appliedCredit;
+    const expectedLimit = Math.max(0, Math.floor(limit.parentScore - limit.appliedDiscount));
     if (!numbersAgree(limit.limit, expectedLimit)) {
-      issue(ctx, ["limit"], "V9 wrapper limit must apply parent risk, local discount, and documented credit exactly once");
-    }
-    if (
-      (limit.treatment === "fallback-discount") !== (!limit.factsComplete && limit.fallbackDiscount > 0) ||
-      (limit.treatment === "documented-risk-transfer") !== (limit.riskTransfer.appliedCredit > 0)
-    ) {
-      issue(ctx, ["treatment"], "V9 wrapper treatment must match applied fallback eligibility and risk-transfer credit");
+      issue(ctx, ["limit"], "Wrapper limit must apply its form deduction to the parent once");
     }
   });
 
@@ -407,14 +340,6 @@ const SafetyScoreV9ScoreAdjustmentSchema = z
     scoreAfter: ScoreSchema,
     publishedScoreBefore: ScoreSchema,
     publishedScoreAfter: ScoreSchema,
-    capRelief: z
-      .object({
-        source: z.literal("structural"),
-        kind: z.string().min(1),
-        fromLimit: ScoreSchema,
-        toLimit: ScoreSchema,
-      })
-      .strict(),
   })
   .strict()
   .superRefine((adjustment, ctx) => {
@@ -424,23 +349,14 @@ const SafetyScoreV9ScoreAdjustmentSchema = z
     if (adjustment.appliedPoints > adjustment.configuredPoints + SCORE_TOLERANCE) {
       issue(ctx, ["appliedPoints"], "V9 score adjustment cannot exceed its configured points");
     }
-    if (adjustment.capRelief.fromLimit >= adjustment.capRelief.toLimit) {
-      issue(ctx, ["capRelief"], "V9 score adjustment cap relief must increase the named limit");
-    }
     if (
       adjustment.publishedScoreBefore >
       adjustment.scoreBefore + PUBLIC_SCORE_ROUNDING_HEADROOM + SCORE_TOLERANCE
     ) {
       issue(ctx, ["publishedScoreBefore"], "V9 ordinary published score exceeds its permitted rounding headroom");
     }
-    if (adjustment.publishedScoreBefore > adjustment.capRelief.fromLimit + SCORE_TOLERANCE) {
-      issue(ctx, ["publishedScoreBefore"], "V9 ordinary published score cannot exceed the original cap limit");
-    }
     if (adjustment.publishedScoreAfter + SCORE_TOLERANCE < adjustment.publishedScoreBefore) {
       issue(ctx, ["publishedScoreAfter"], "V9 score adjustment cannot reduce the published score");
-    }
-    if (adjustment.publishedScoreAfter > adjustment.capRelief.toLimit + SCORE_TOLERANCE) {
-      issue(ctx, ["publishedScoreAfter"], "V9 score adjustment cannot publish above its relieved cap");
     }
   });
 
@@ -484,7 +400,7 @@ type SafetyScoreV9AdjustedScoreTraceCommon = z.infer<
 >;
 
 function refineScoreTraceBaseStages(
-  trace: SafetyScoreV9ScoreTraceCommon,
+  trace: Pick<SafetyScoreV9ScoreTraceCommon, "aggregation" | "stages" | "deploymentRisk">,
   ctx: z.RefinementCtx,
 ): void {
   const aggregationScore = trace.aggregation?.score ?? null;
@@ -507,7 +423,7 @@ function refineScoreTraceBaseStages(
 }
 
 function refineAdjustedScoreTrace(
-  trace: SafetyScoreV9AdjustedScoreTraceCommon,
+  trace: Pick<SafetyScoreV9AdjustedScoreTraceCommon, "aggregation" | "stages" | "deploymentRisk" | "scoreAdjustments">,
   ctx: z.RefinementCtx,
 ): void {
   refineScoreTraceBaseStages(trace, ctx);
@@ -533,9 +449,9 @@ function refineAdjustedScoreTrace(
 
 function refineBoundedUncertaintyTrace(
   trace: {
-    boundedUncertaintyAttribution: z.infer<
-      typeof SafetyScoreV9BoundedUncertaintyAttributionTraceSchema
-    >;
+    boundedUncertaintyAttribution: {
+      items: readonly (Omit<z.infer<typeof SafetyScoreV9BoundedUncertaintyAttributionItemSchema>, "source"> & { source: string })[];
+    };
     evidenceResponsibility: z.infer<
       typeof SafetyScoreV9EvidenceResponsibilityTraceSchema
     >;
@@ -576,7 +492,66 @@ export const SafetyScoreV9ScoreTraceSchema =
       refineBoundedUncertaintyTrace(trace, ctx);
     });
 
-/** Immutable pre-accounting-cutover publications counted causal witnesses. */
-export const SafetyScoreV9WitnessScoreTraceSchema = SafetyScoreV9ScoreTraceSchema.safeExtend({
-  evidenceResponsibility: evidenceResponsibilityTraceSchema("witnesses"),
+const HistoricalAdverseAttributionSchema = z.object({
+  semantics: z.literal("causal-measured-adverse-v1"),
+  items: z.array(SafetyScoreV9AdverseAttributionItemSchema.extend({
+    source: z.enum(["active-depeg", "parent-score", "peg-performance", "pillar-score", "reason", "structural-signal", "track-record", "wrapper-local"]),
+  })),
+}).strict().superRefine((attribution, ctx) => {
+  const keys = attribution.items.map(item => `${item.source}\u0000${item.path}\u0000${item.message}`);
+  if (!isUniqueSorted(keys)) issue(ctx, ["items"], "V9 adverse attribution must be unique and sorted");
 });
+const HistoricalBoundedAttributionSchema = z.object({
+  semantics: z.literal("causal-bounded-uncertainty-v1"),
+  items: z.array(z.object({
+    ...SafetyScoreV9BoundedUncertaintyAttributionItemSchema.shape,
+    source: z.enum(["parent-score", "reason", "wrapper-local"]),
+  }).strict().superRefine((item, ctx) => {
+    if (!V9_BOUNDED_ATTRIBUTION_REASON_CODE_SET.has(item.code)) {
+      issue(ctx, ["code"], "V9 bounded-uncertainty attribution requires a policy-bounded reason code");
+    }
+    if (item.source === "parent-score" && !item.path.startsWith("parent:")) {
+      issue(ctx, ["path"], "V9 parent bounded-uncertainty attribution requires a parent-prefixed path");
+    }
+  })),
+}).strict().superRefine((attribution, ctx) => {
+  const keys = attribution.items.map(item => [item.source, item.code, item.path, item.message, item.responsibility].join("\u0000"));
+  if (!isUniqueSorted(keys)) issue(ctx, ["items"], "V9 bounded-uncertainty attribution must be unique and sorted");
+});
+
+const HistoricalScoreAdjustmentSchema = SafetyScoreV9ScoreAdjustmentSchema.safeExtend({
+  capRelief: z.object({
+    source: z.literal("structural"), kind: z.string().min(1),
+    fromLimit: ScoreSchema, toLimit: ScoreSchema,
+  }).strict(),
+}).superRefine((adjustment, ctx) => {
+  if (adjustment.capRelief.fromLimit >= adjustment.capRelief.toLimit) {
+    issue(ctx, ["capRelief"], "V9 score adjustment cap relief must increase the named limit");
+  }
+  if (adjustment.publishedScoreBefore > adjustment.capRelief.fromLimit + SCORE_TOLERANCE) {
+    issue(ctx, ["publishedScoreBefore"], "V9 ordinary published score cannot exceed the original cap limit");
+  }
+  if (adjustment.publishedScoreAfter > adjustment.capRelief.toLimit + SCORE_TOLERANCE) {
+    issue(ctx, ["publishedScoreAfter"], "V9 score adjustment cannot publish above its relieved cap");
+  }
+});
+
+/** Archive-only trace retains the recorded wrapper calculation and vocabulary. */
+const HistoricalScoreTraceBaseSchema = SafetyScoreV9AdjustedScoreTraceCommonSchema.extend({
+  schemaVersion: z.literal(4),
+  scoreAdjustments: z.array(HistoricalScoreAdjustmentSchema).max(1),
+  wrapperParentLimit: SafetyScoreV9HistoricalWrapperParentLimitSchema.nullable(),
+  adverseAttribution: HistoricalAdverseAttributionSchema,
+  boundedUncertaintyAttribution: HistoricalBoundedAttributionSchema,
+  providerRowExclusions: z.array(AdmittedProviderRowExclusionSchema).min(1).optional(),
+});
+const refineHistoricalScoreTrace = (trace: z.infer<typeof HistoricalScoreTraceBaseSchema>, ctx: z.RefinementCtx): void => {
+  refineAdjustedScoreTrace(trace, ctx);
+  refineBoundedUncertaintyTrace(trace, ctx);
+};
+export const SafetyScoreV9HistoricalScoreTraceSchema = HistoricalScoreTraceBaseSchema.superRefine(refineHistoricalScoreTrace);
+
+/** Immutable pre-accounting-cutover publications counted causal witnesses. */
+export const SafetyScoreV9WitnessScoreTraceSchema = HistoricalScoreTraceBaseSchema.extend({
+  evidenceResponsibility: evidenceResponsibilityTraceSchema("witnesses"),
+}).superRefine(refineHistoricalScoreTrace);

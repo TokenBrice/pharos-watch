@@ -9,6 +9,7 @@ import {
   resolveReviewedRedemptionSettlement,
   type RedemptionBackstopConfig,
 } from "@shared/lib/redemption-backstops";
+import { fixedFee } from "@shared/lib/redemption-backstop-configs/shared";
 import type { ExitExecutionCertificate, ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
@@ -100,6 +101,18 @@ function redemptionPegFixture({
 }
 
 describe("reviewed settlement output binding", () => {
+  it("keys a venue-scoped redemption observation by venue and protocol so shared inventory dedupes", () => {
+    const row = makeSupplyFullRedemption({ stablecoinId: "usdc-circle" });
+    const observation = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), row.stablecoinId)[0]!.observation;
+    row.capacityProfile = { ...row.capacityProfile!, exitRouteObservations: [{
+      ...observation, scope: { kind: "venue", venue: "reservoir-psm", protocol: "reservoir" },
+    }] };
+    const review = buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]!;
+    // A redemption observation whose reviewed scope is a venue shares the
+    // venue/protocol physical inventory rather than inventing a new resource.
+    expect(review.physicalResourceKeys).toContain("venue:reservoir-psm:reservoir");
+  });
+
   it("deduplicates Reservoir wrappers against one shared physical PSM inventory", () => {
     const key = "ethereum:reservoir-psm:0x4809010926aec940b550d34a46a52739f996d75d";
     const routes = ["rusd-reservoir", "srusd-reservoir", "wsrusd-reservoir"].map((stablecoinId) => {
@@ -329,7 +342,7 @@ describe("same-resource Exit alternatives", () => {
       expect(result).toMatchObject({ diversificationRouteKey: null, diversificationBonus: 0 });
       expect(evaluate([...routes].reverse())).toEqual(result);
       expect(resolveV9DistinctExitCapacity(routes, result.stressRequest!, V9_CANDIDATE_POLICY_V1)
-        .valuedExecutableUsd).toBe(100_000);
+        .valuedExecutableUsd).toBe(certifiedLane === "both" ? 100_000 : 1_000_000);
       if (certifiedLane === "dex") {
         const legacy = routes.filter((route) => route.lane === "redemption");
         for (const fault of ["expired", "diagnostic"] as const) {
@@ -408,6 +421,26 @@ describe("certified execution route outputs", () => {
   });
 });
 
+describe("reviewed undisclosed output valuation", () => {
+  it.each(["mixed-collateral", "stable-single"] as const)(
+    "does not assign implicit collateral or fiat par to undisclosed %s output", (outputAssetType) => {
+      const assetId = "usdc-circle";
+      const row = makeSupplyFullRedemption({ stablecoinId: assetId, outputAssetType });
+      withRedemptionBackstopConfig(assetId, {
+        outputAssetType, outputAssets: undefined, unresolvedOutputAssetKeys: undefined,
+        unresolvedOutputDisposition: "issuer-undisclosed", reviewedAt: "2026-07-01",
+      }, () => {
+        const fixed = fixedInputStub(row);
+        const retained = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, assetId);
+        expect(retained[0]!.observation.output).toEqual({ kind: "unresolved-asset" });
+        const review = buildSafetyScoreV9RouteReviews(fixed, assetId)[0]!;
+        expect(review.output).toBeNull();
+        expect(review.unresolvedOutputResponsibility).toBe("issuer-undisclosed");
+      });
+    },
+  );
+});
+
 describe("buildSafetyScoreV9RouteReviews physical-commodity outputs", () => {
   it("admits physical verified customers without an institutional discount but labels terms capacity as modelled", () => {
     const id = "paxg-paxos";
@@ -439,12 +472,13 @@ describe("buildSafetyScoreV9RouteReviews physical-commodity outputs", () => {
       pegReference: { valueUsd: 10_000, usdPerTroyOunce: 5_000, source: "median", contributorCount: 4, asOf: NOW },
     } as ReportCardsFixedInput["pegDataById"][string];
 
-    withRedemptionBackstopConfig(id, { reviewedAt: "2026-07-13" }, () => {
+    withRedemptionBackstopConfig(id, { reviewedAt: "2026-07-13", physicalToUsd: undefined }, () => {
       expect(buildSafetyScoreV9RouteReviews(fixed, id)[0]?.output).toBeNull();
     });
 
     withRedemptionBackstopConfig(id, {
       reviewedAt: "2026-07-12",
+      physicalToUsd: undefined,
       outputAssetType: "physical-commodity-delivery",
       physicalCommodityDelivery: {
         commodity: "XAU", deliverableOuncesPerToken: 1, minimumDeliveryTokens: 1,
@@ -615,7 +649,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     });
   });
 
-  it("projects a bounded terms gap as diagnostic without mutating the frozen redemption row", () => {
+  it("retains legal entitlement diagnostics without mutating the frozen redemption row", () => {
     const row = makeSupplyFullRedemption({
       stablecoinId: "xo-exodus",
       settlementModel: "same-day",
@@ -623,6 +657,17 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     });
     const frozenRow = structuredClone(row);
     const fixedInput = fixedInputStub(row, Date.UTC(2026, 9, 7) / 1_000);
+    // Freeze the single-gap scenario independently of current XO curation.
+    withRedemptionBackstopConfig(row.stablecoinId, {
+      costModel: fixedFee(0, "Fixture same-request cost bound"),
+      v9RouteReviewTerms: {
+        scoringDisposition: "bounded-terms-gap",
+        missingScoringFields: ["settlement"],
+        reviewedAt: "2026-07-01",
+        rationale: "Fixture terms establish cost but not a completed settlement bound.",
+        docs: [{ label: "Fixture terms", url: "https://issuer.example/terms", supports: ["settlement"] }],
+      },
+    }, () => {
     const retained = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, row.stablecoinId)[0]!;
     const review = buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!;
 
@@ -645,13 +690,14 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     expect(row).toEqual(frozenRow);
     expect(row).not.toHaveProperty("v9RouteReviewTerms");
     expect(row).not.toHaveProperty("scoringDisposition");
+    });
   });
 
   it.each([
     { missingFields: ["capacity"] },
     { missingFields: ["settlement"] },
     { missingFields: ["cost"] },
-  ] as const)("projects omitted $missingFields terms as diagnostic while retaining captured terms", ({ missingFields }) => {
+  ] as const)("retains captured terms while keeping only a $missingFields capacity gap diagnostic", ({ missingFields }) => {
     const row = makeSupplyFullRedemption({ feeBps: 7 });
     const fixed = fixedInputStub(row);
     expect(buildSafetyScoreV9RouteReviews(fixed, row.stablecoinId)[0]?.coverageClass).toBe("exact-lower-bound");
@@ -669,7 +715,8 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       expect(retained).toEqual(retainedBefore);
       expect(retained).toMatchObject([{ observation: { executableUsd: 5_000_000 } }]);
       expect(reviews).toMatchObject([{
-        coverageClass: "diagnostic", settlementModel: "atomic", settlementSlaSec: 0,
+        coverageClass: missingFields.some((field) => field === "capacity") ? "diagnostic" : "exact-lower-bound",
+        settlementModel: "atomic", settlementSlaSec: 0,
       }]);
       expect([...reviews[0]!.executionCosts].sort((a, b) => a.requestedNotionalUsd - b.requestedNotionalUsd)).toEqual(
         [100_000, 1_000_000, 5_000_000, 25_000_000].map((requestedNotionalUsd) => ({
@@ -906,19 +953,19 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     expect(row).toMatchObject({ feeBps: 0, feeModelKind: "fixed-bps" });
   });
 
-  it("fails static-open live-direct evidence closed only at the v9 adapter", () => {
+  it("admits live execution without requiring an onchain status-source label", () => {
     const row = liveDirectRow("static-config");
     expect(row.capacityProfile?.exitRouteObservations?.[0]?.scoreEligible).toBe(true);
     expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]).toMatchObject({
       lane: "redemption",
-      coverageClass: "diagnostic",
+      coverageClass: "exact-lower-bound",
       modelConfidence: "high",
     });
   });
 
   it.each([
     { routeStatus: "unknown", routeStatusSource: "static-config" },
-  ] as const)("keeps positive unscored $routeStatus/$routeStatusSource capacity diagnostic", ({ routeStatus, routeStatusSource }) => {
+  ] as const)("admits positive execution despite $routeStatus/$routeStatusSource labels", ({ routeStatus, routeStatusSource }) => {
     const row = liveDirectRow(routeStatusSource);
     row.routeStatus = routeStatus;
     row.capacityProfile!.exitRouteObservations![0]!.scoreEligible = false;
@@ -948,10 +995,10 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     }, V9_CANDIDATE_POLICY_V1);
 
     expect(compiled.exitRoutes[0]!.scoreEligible).toBe(false);
-    expect(compiled.exitRoutes[0]!.coverageClass).toBe("diagnostic");
+    expect(compiled.exitRoutes[0]!.coverageClass).toBe("exact-lower-bound");
     expect(compiled.exitRoutes[0]!.capacityCurve.some((point) => point.executableUsd > 0)).toBe(true);
-    expect(result.routes[0]).toMatchObject({ included: false });
-    expect(result.score).toBeLessThanOrEqual(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(result.routes[0]).toMatchObject({ included: true });
+    expect(result.score).toBeGreaterThan(0);
     expect(result.reasons).not.toContain("no-viable-exit-path");
   });
 
@@ -1205,6 +1252,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     const review = buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!;
     expect(review.output).toBeNull();
     expect(review.unresolvedOutputResponsibility).toBe("producer-failed");
+    expect((review.physicalResourceKeys ?? []).some((key) => key.startsWith("execution-endpoint:"))).toBe(false);
   });
 
   it("admits dEURO's source-bound nine-member EUR output valuation without calling it fiat", () => {
@@ -1868,8 +1916,19 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
 });
 
 describe("buildSafetyScoreV9RetainedRoutes composed DEX exits", () => {
-  it("composes M's reviewed atomic wrap with captured wM market depth", () => {
+  it("composes a reviewed atomic wrap with captured intermediate market depth", () => {
     const fixedInput = fixedInputStub(undefined);
+    // Synthetic admitted route: current M curation no longer asserts public wrapping.
+    withRedemptionBackstopConfig("m-m0", {
+      v9ComposedDexExit: {
+        intermediateAssetId: "wm-m0",
+        conversionModel: "permissionless-atomic-wrap",
+        chain: "ethereum",
+        wrapperContract: "0x437cc33344a0B27A429f795ff6B469C72698B291",
+        reviewedAt: "2026-07-01",
+        docs: [{ label: "Fixture wrap", url: "https://issuer.example/wrap", supports: ["route", "fees", "access", "settlement"] }],
+      },
+    }, () => {
     const source: ExitRouteObservation = {
       routeId: "dex:wm-m0:uniswap-v3:wm-usdc",
       routeFamily: "dex-amm",
@@ -1947,6 +2006,7 @@ describe("buildSafetyScoreV9RetainedRoutes composed DEX exits", () => {
         ],
       }),
     ]);
+    });
   });
 });
 
@@ -2152,7 +2212,7 @@ describe("issuer stablecoin payout valuation", () => {
 describe("Theo executed eligible-cohort rail", () => {
   it.each([
     ["onchain", 5, "exact-lower-bound"],
-    ["static-config", 5, "diagnostic"],
+    ["static-config", 5, "exact-lower-bound"],
   ] as const)("projects %s openness with %s bps costs as %s", (routeStatusSource, feeBps, coverageClass) => {
     const clock = 1790748096;
     const row = makeSupplyFullRedemption({

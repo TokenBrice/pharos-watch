@@ -83,7 +83,7 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "unknown",
   "governanceQuality": "regulated-entity",
   "yieldConfig": {
     "yieldSource": "Hamilton Lane SCOPE NAV",

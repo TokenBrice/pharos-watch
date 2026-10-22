@@ -1,0 +1,1402 @@
+{
+  "schemaVersion": 1,
+  "registryId": "safety-score-v9.lender-collateral-classes.v1",
+  "reviews": [
+    {
+      "chain": "arbitrum",
+      "address": "0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f",
+      "class": "btc-wrapper",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Arbitrum WBTC exact token identity",
+          "url": "https://arbiscan.io/token/0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f"
+        },
+        {
+          "label": "WBTC native-BTC custody representation; q85 wrapper proxy, not financial assurance",
+          "url": "https://docs.wbtc.network/overview/wbtc-overview"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x5979d7b546e38e414f7e9822514be443a4800529",
+      "class": "eth-lst",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Arbitrum Lido wstETH exact token identity",
+          "url": "https://arbiscan.io/token/0x5979d7b546e38e414f7e9822514be443a4800529"
+        },
+        {
+          "label": "Lido registry binds exact Arbitrum bridged wstETH deployment",
+          "url": "https://docs.lido.fi/deployed-contracts/"
+        },
+        {
+          "label": "wstETH is a value-accruing ordinary liquid-staked ETH wrapper, not restaking",
+          "url": "https://docs.lido.fi/contracts/wsteth/"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+      "class": "native-eth",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Arbitrum WETH exact token identity",
+          "url": "https://arbiscan.io/token/0x82af49447d8a07e3bd95bd0d56f35241523fbab1"
+        },
+        {
+          "label": "Ethereum WETH documentation binds Arbitrum deployment to wrapped ETH; native-ETH price-risk proxy, not risk-free",
+          "url": "https://ethereum.org/wrapped-eth/"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xddb46999f8891663a8f2828d25298f70416d7610",
+      "class": "yield-bearing-stable",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Arbitrum sUSDS exact identity; accepted Backing takes priority when eligible",
+          "url": "https://arbiscan.io/token/0xddb46999f8891663a8f2828d25298f70416d7610"
+        },
+        {
+          "label": "Sky sUSDS ERC-4626 receipt for the USDS Sky Savings Rate, not an underlying-token identity alias",
+          "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "arc",
+      "address": "0x171a4217b86a807a64eb94757db6849fb4bdbaa0",
+      "class": "btc-wrapper",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Arc exact cirBTC token deployment",
+          "url": "https://explorer.arc.io/token/0x171A4217b86A807A64eB94757Db6849fb4bDbAA0"
+        },
+        {
+          "label": "Circle cirBTC whitepaper binds the Arc contract to native-BTC custody representation",
+          "url": "https://www.circle.com/cirbtc"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "base",
+      "address": "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22",
+      "class": "eth-lst",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Base cbETH exact token identity",
+          "url": "https://basescan.org/token/0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22"
+        },
+        {
+          "label": "Coinbase cbETH represents ordinary liquid-staked ETH, not restaked ETH",
+          "url": "https://help.coinbase.com/coinbase/coinbase-staking/staking/cbeth-intro"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "base",
+      "address": "0x311935cd80b76769bf2ecc9d8ab7635b2139cf82",
+      "class": "major-alt-l1",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Base SOL exact token identity",
+          "url": "https://basescan.org/token/0x311935cd80b76769bf2ecc9d8ab7635b2139cf82"
+        },
+        {
+          "label": "Base canonical SOL bridge token; non-ETH/BTC L1 representation proxy, not native ETH identity",
+          "url": "https://docs.base.org/base-chain/network-information/ecosystem-bridges"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "base",
+      "address": "0x4200000000000000000000000000000000000006",
+      "class": "native-eth",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Base WETH exact WETH9 token identity",
+          "url": "https://basescan.org/token/0x4200000000000000000000000000000000000006"
+        },
+        {
+          "label": "WETH wrapping and redemption of ETH; native-ETH price-risk proxy, not risk-free",
+          "url": "https://ethereum.org/wrapped-eth/"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "base",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "class": "synthetic-dollar",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Base USDe exact token identity; accepted Backing takes priority when eligible",
+          "url": "https://basescan.org/token/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        },
+        {
+          "label": "Ethena USDe delta-hedged synthetic dollar; hedging/custody strategy fallback, not a parity guarantee",
+          "url": "https://docs.ethena.fi/overview/ethena-overview"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "base",
+      "address": "0x97be14dd8f994a5364573bc035d85309e7cb34de",
+      "class": "major-alt-l1",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Base JitoSOL exact token identity",
+          "url": "https://basescan.org/token/0x97be14dd8f994a5364573bc035d85309e7cb34de"
+        },
+        {
+          "label": "JitoSOL is a SOL staking receipt; non-ETH/BTC L1 class includes its staking/representation dependency",
+          "url": "https://www.jito.network/docs/jitosol/resources/jitosol-glossary/"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "base",
+      "address": "0xb200000000000000000000451d033a5000cb479e",
+      "class": "major-alt-l1",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Base cbHYPE exact token identity",
+          "url": "https://basescan.org/token/0xb200000000000000000000451d033a5000cb479e"
+        },
+        {
+          "label": "Coinbase HYPE custody wrapper; non-ETH/BTC L1 representation proxy",
+          "url": "https://help.coinbase.com/en/coinbase/trading-and-funding/sending-or-receiving-cryptocurrency/coinbase-wrapped-btc"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "base",
+      "address": "0xb2000000000000000000008501b13360000cb2ec",
+      "class": "major-alt-l1",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Base cbZEC exact token identity",
+          "url": "https://basescan.org/token/0xb2000000000000000000008501b13360000cb2ec"
+        },
+        {
+          "label": "Coinbase ZEC custody wrapper; non-ETH/BTC L1 representation proxy",
+          "url": "https://help.coinbase.com/en/coinbase/trading-and-funding/sending-or-receiving-cryptocurrency/coinbase-wrapped-btc"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "base",
+      "address": "0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452",
+      "class": "eth-lst",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Base Lido wstETH exact token identity",
+          "url": "https://basescan.org/token/0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452"
+        },
+        {
+          "label": "Lido registry binds exact Base bridged wstETH deployment",
+          "url": "https://docs.lido.fi/deployed-contracts/"
+        },
+        {
+          "label": "wstETH is a value-accruing ordinary liquid-staked ETH wrapper, not restaking",
+          "url": "https://docs.lido.fi/contracts/wsteth/"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "base",
+      "address": "0xcb585250f852c6c6bf90434ab21a00f02833a4af",
+      "class": "major-alt-l1",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Base cbXRP exact token identity",
+          "url": "https://basescan.org/token/0xcb585250f852c6c6bf90434ab21a00f02833a4af"
+        },
+        {
+          "label": "Coinbase XRP custody wrapper; non-ETH/BTC L1 representation proxy",
+          "url": "https://help.coinbase.com/en/coinbase/trading-and-funding/sending-or-receiving-cryptocurrency/coinbase-wrapped-btc"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "base",
+      "address": "0xcbada732173e39521cdbe8bf59a6dc85a9fc7b8c",
+      "class": "major-alt-l1",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Base cbADA exact token identity",
+          "url": "https://basescan.org/token/0xcbada732173e39521cdbe8bf59a6dc85a9fc7b8c"
+        },
+        {
+          "label": "Coinbase ADA custody wrapper; non-ETH/BTC L1 representation proxy",
+          "url": "https://help.coinbase.com/en/coinbase/trading-and-funding/sending-or-receiving-cryptocurrency/coinbase-wrapped-btc"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "base",
+      "address": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+      "class": "btc-wrapper",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Base cbBTC exact token identity",
+          "url": "https://basescan.org/token/0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
+        },
+        {
+          "label": "Coinbase cbBTC BTC custody and representation wrapper",
+          "url": "https://help.coinbase.com/en/coinbase/trading-and-funding/sending-or-receiving-cryptocurrency/coinbase-wrapped-btc"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "base",
+      "address": "0xfcc9cc1209651ed8867332d6f664cf82743a2584",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Base Midas mGLO exact token identity",
+          "url": "https://basescan.org/token/0xfcc9cc1209651ed8867332d6f664cf82743a2584"
+        },
+        {
+          "label": "mGLO tracks Fasanara Global Diversified Alternative Debt; asset-backed credit exposure, not direct stable reserve ownership",
+          "url": "https://blog.midas.app/midas-in-june-2026-recap/"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "3Jane USD3 supplier credit structure; q35 fallback only, exact accepted Backing takes priority",
+          "url": "https://docs.3jane.xyz/usd3-susd3/suppliers.md"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x0990b149e915cb08e2143a5c6f669c907eddc8b0",
+      "class": "yield-bearing-stable",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Spiko API binds exact Ethereum EURSAFO contract, EUR share class and FR0014015LD3 identity; accepted Backing takes priority when eligible",
+          "url": "https://public-api.spiko.io/share-classes/eurSAFO"
+        },
+        {
+          "label": "Spiko Amundi Overnight Swap Fund accumulating EUR NAV share; stable-denominated strategy receipt, not a par-value guarantee",
+          "url": "https://docs.spiko.io/documentation/product_overview/smart_cash/funds/"
+        },
+        {
+          "label": "Explorer exact Spiko EURSAFO token identity",
+          "url": "https://eth.blockscout.com/api/v2/tokens/0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x19ebb35279a16207ec4ba82799cc64715065f7f6",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Hastra PRIME exact token identity",
+          "url": "https://etherscan.io/token/0x19ebb35279a16207ec4ba82799cc64715065f7f6"
+        },
+        {
+          "label": "Hastra PRIME staked wYLDS is backed by home-equity lending; credit recovery proxy, not direct cash reserves",
+          "url": "https://help.hastra.io/prime/what-is-prime-%28staked-wylds%29"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+      "class": "btc-wrapper",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "KPK Prime WBTC collateral context; q85 authored blue-chip plus representation/custody proxy, not curator grade",
+          "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x22ae3d9a738471f405169af055d31c687087d4c7",
+      "class": "yield-bearing-stable",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Huma PayFi Strategy Token PST exact identity",
+          "url": "https://etherscan.io/token/0x22ae3d9a738471f405169af055d31c687087d4c7"
+        },
+        {
+          "label": "Huma Classic Mode PST is a USDC-yield LP strategy receipt, not a direct stable reserve claim",
+          "url": "https://docs.huma.finance/products/huma-2.0/modes"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x232128844e5af56fd4b3f8bf97e08ab477282ab5",
+      "class": "yield-bearing-stable",
+      "reviewedAt": "2026-10-20",
+      "sources": [
+        {
+          "label": "Flying Tulip canonical production address book binds chain 1 Stable Rewards Vault to this exact ssftUSD contract",
+          "url": "https://flyingtulip.com/address-book/flying-tulip-address-book-prod.json"
+        },
+        {
+          "label": "Flying Tulip ssftUSD is the staked ftUSD receipt with rewards auto-compounded in ftUSD; strategy receipt fallback only, not a USDC identity alias or parity guarantee",
+          "url": "https://docs.flyingtulip.com/product-suite/ft-usd/"
+        },
+        {
+          "label": "Exact Ethereum Stable Staked Flying Tulip USD token identity",
+          "url": "https://eth.blockscout.com/api/v2/tokens/0x232128844e5af56fd4b3f8bf97e08ab477282ab5"
+        }
+      ],
+      "reviewer": "INFRA-LENDER bottom-up refinement 2026-10-21"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x238a700ed6165261cf8b2e544ba797bc11e466ba",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Midas mF-ONE exact identity; accepted Backing takes priority when eligible",
+          "url": "https://etherscan.io/token/0x238a700ed6165261cf8b2e544ba797bc11e466ba"
+        },
+        {
+          "label": "Midas Fasanara ONE asset-backed credit strategy, including digital-asset exposure; q35 conditional credit proxy",
+          "url": "https://midas.app/mfone"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x4614f7a56a3eb83b2ff9fa4b4b9575b28fb68644",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Wrapped FalconX exact token identity",
+          "url": "https://etherscan.io/token/0x4614f7a56a3eb83b2ff9fa4b4b9575b28fb68644"
+        },
+        {
+          "label": "3F exact wFalconX deployment wraps Pareto AA tranche in FalconX credit vault; not direct USDC reserve ownership",
+          "url": "https://docs.3f.xyz/protocol/deployments/wfalconx/"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+      "class": "synthetic-dollar",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Ethereum USDe exact identity; accepted Backing takes priority when eligible",
+          "url": "https://etherscan.io/token/0x4c9edd5852cd905f086c759e8383e09bff1e68b3"
+        },
+        {
+          "label": "Ethena USDe delta-hedged synthetic dollar; hedging/custody strategy fallback, not a parity guarantee",
+          "url": "https://docs.ethena.fi/overview/ethena-overview"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x4e72025984424e52838cf8953e2863eff036b67a",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Midas Wellington Income Opportunities mWIN exact token identity",
+          "url": "https://etherscan.io/token/0x4e72025984424e52838cf8953e2863eff036b67a"
+        },
+        {
+          "label": "Wellington mWIN credit portfolio includes CLOs, CMBS, RMBS and asset-backed securities; conditional credit recovery proxy",
+          "url": "https://blog.midas.app/introducing-mwin-bringing-institutional-credit-onchain-with-wellington-management/"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Re Protocol exact reUSD contract identity; accepted Backing takes priority when eligible",
+          "url": "https://docs.re.xyz/products/smart-contracts"
+        },
+        {
+          "label": "reUSD yield-accruing senior tranche funds licensed reinsurers; conditional senior recovery proxy, not direct stable reserve ownership",
+          "url": "https://docs.re.xyz/products/about-reusd"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x54c1ff361b402f66c13107421e6a431c3375ef24",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified FLHYon exact token identity",
+          "url": "https://etherscan.io/token/0x54c1ff361b402f66c13107421e6a431c3375ef24"
+        },
+        {
+          "label": "Ondo Franklin High Yield Corporate ETF tokenized bond-fund identity",
+          "url": "https://app.ondo.finance/assets/FLHYon"
+        },
+        {
+          "label": "Ondo tokenized securities are issuer structured notes with conditional security-interest recovery, not direct underlying ownership",
+          "url": "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x5a19fa369f2895dcd8d2cee62e4ceae58ef92bbb",
+      "class": "principal-token",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Pendle PT-sUSDE-13AUG2026 exact identity; maturity alone is not recovery proof",
+          "url": "https://etherscan.io/token/0x5a19fa369f2895dcd8d2cee62e4ceae58ef92bbb"
+        },
+        {
+          "label": "Pendle PT is a separate principal claim on the underlying yield-bearing asset, not an sUSDe identity alias",
+          "url": "https://docs.pendle.finance/pendle-v2/ProtocolMechanics/YieldTokenization/PT"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x68749665ff8d2d112fa859aa293f07a622782f38",
+      "class": "precious-metal-receipt",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Tether Gold XAUT exact identity; accepted Backing takes priority when eligible",
+          "url": "https://etherscan.io/token/0x68749665ff8d2d112fa859aa293f07a622782f38"
+        },
+        {
+          "label": "Tether Gold physical-gold custody and redemption receipt; q85 representation proxy, not an assurance opinion",
+          "url": "https://gold.tether.to/faq"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x73e0c0d45e048d25fc26fa3159b0aa04bfa4db98",
+      "class": "btc-wrapper",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Kraken kBTC exact token identity",
+          "url": "https://etherscan.io/token/0x73e0c0d45e048d25fc26fa3159b0aa04bfa4db98"
+        },
+        {
+          "label": "Kraken kBTC exact Ethereum contract and BTC custody representation",
+          "url": "https://www.kraken.com/gb/kbtc/whitepaper"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x76543ac61ba84c6feeee76c6a918127bf0ca5fd1",
+      "class": "principal-token",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified PT-siUSD loss-adjusted feed; q55 term/receipt/underlying proxy, no iUSD alias or maturity recovery assurance",
+          "url": "https://etherscan.io/address/0x29e00eb20ec0062890e53ee80fd87d208d447bf9#code"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+      "class": "eth-lst",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "KPK Prime wstETH collateral context; q85 authored ETH plus staking/receipt dependency proxy",
+          "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x7f47c3e6b2c00fc4eb4d5ae50d0ab0ab6888eb4d",
+      "class": "principal-token",
+      "reviewedAt": "2026-10-20",
+      "sources": [
+        {
+          "label": "Exact verified PendlePrincipalToken VERSION 6 deployment and decoded constructor bind PT-USD3-17DEC2026, SY 0xea3bc608f32847b97965c5e1648bdfcd4c2c40d0 and expiry 1797465600; no underlying USD3 identity alias",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7f47c3e6b2c00fc4eb4d5ae50d0ab0ab6888eb4d"
+        },
+        {
+          "label": "Pendle principal-token mechanics and maturity redemption of accounting-asset value",
+          "url": "https://docs.pendle.finance/pendle-v2/ProtocolMechanics/YieldTokenization/PT"
+        },
+        {
+          "label": "Wintermute Armitage Select exact PT-USD3-17DEC2026 USDC market 0xecabc12c73a97c766d0c6aeb4c15c635630d78158b2ac8370455a09efcc50837 at 86% LLTV",
+          "url": "https://armitage.wintermute.com/docs/vaults/select"
+        }
+      ],
+      "reviewer": "INFRA-LENDER bottom-up refinement 2026-10-21"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+      "class": "yield-bearing-stable",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Maple syrupUSDC exact identity; accepted Backing takes priority when eligible",
+          "url": "https://etherscan.io/token/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
+        },
+        {
+          "label": "Maple syrupUSDC tokenized USDC-denominated pool with lending/strategy returns, not a 1:1 stablecoin",
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x8236a87084f8b84306f72007f36f2618a5634494",
+      "class": "btc-wrapper",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Lombard LBTC exact token identity",
+          "url": "https://etherscan.io/token/0x8236a87084f8b84306f72007f36f2618a5634494"
+        },
+        {
+          "label": "Lombard LBTC represents deposited BTC with redemption and BTC-denominated yield; authored BTC representation proxy, not yield assurance",
+          "url": "https://docs.lombard.finance/use/lbtc"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x856c4efb76c1d1ae02e20ceb03a2a6a08b0b8dc3",
+      "class": "eth-yield-or-restaked",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "KPK Prime OETH collateral context; q80 authored additional yield-mechanism proxy, not a parity guarantee",
+          "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x8c1bed5b9a0928467c9b1341da1d7bd5e10b6549",
+      "class": "eth-lst",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "KPK Prime LsETH collateral context; q85 authored ETH plus staking/receipt dependency proxy",
+          "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "class": "yield-bearing-stable",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Ethena sUSDe exact identity; accepted Backing takes priority when eligible",
+          "url": "https://etherscan.io/token/0x9d39a5de30e57443bff2a8307a4256c8797a3497"
+        },
+        {
+          "label": "Staking USDe mints reward-accruing sUSDe strategy receipt, distinct from the synthetic-dollar token",
+          "url": "https://docs.ethena.fi/technical-design/staking-usde.md"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+      "class": "yield-bearing-stable",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Spiko API binds exact Ethereum EUTBL contract, EUR share class and FR001400ODL1 identity; accepted Backing takes priority when eligible",
+          "url": "https://public-api.spiko.io/share-classes/EUTBL"
+        },
+        {
+          "label": "Spiko EU T-Bills Money Market Fund EUR NAV share; stable-denominated strategy receipt, not direct cash ownership or guaranteed par redemption",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/KID_EUTBL_EN.pdf"
+        },
+        {
+          "label": "Explorer exact Spiko EUTBL token identity",
+          "url": "https://eth.blockscout.com/api/v2/tokens/0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+      "class": "yield-bearing-stable",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Sky sUSDS exact identity; accepted Backing takes priority when eligible",
+          "url": "https://etherscan.io/token/0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+        },
+        {
+          "label": "Sky sUSDS ERC-4626 receipt for the USDS Sky Savings Rate, not an underlying-token identity alias",
+          "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xae78736cd615f374d3085123a210448e74fc6393",
+      "class": "eth-lst",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "KPK Prime rETH collateral context; q85 authored ETH plus staking/receipt dependency proxy",
+          "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xb195b618ea52b77cb2a58846f452f59f8dfa9390",
+      "class": "principal-token",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Pendle PT-sUSDE-26NOV2026 exact token identity",
+          "url": "https://etherscan.io/token/0xb195b618ea52b77cb2a58846f452f59f8dfa9390"
+        },
+        {
+          "label": "Pendle principal claim; term/receipt/underlying complexity without sUSDe alias or maturity recovery assurance",
+          "url": "https://docs.pendle.finance/pendle-v2/ProtocolMechanics/YieldTokenization/PT"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xb8d89678e75a973e74698c976716308abb8a46a4",
+      "class": "yield-bearing-stable",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Avant savUSD strategy receipt; q55 fallback only, exact accepted Backing takes priority",
+          "url": "https://docs.avantprotocol.com/overview/core-tokens"
+        },
+        {
+          "label": "Avant exact savUSD contract identity",
+          "url": "https://docs.avantprotocol.com/security/contract-addresses.md"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xba96292ee7673e3b546cc90db6d97111cd9a314f",
+      "class": "principal-token",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Pendle PT-USDat-14JAN2027 exact token identity",
+          "url": "https://etherscan.io/token/0xba96292ee7673e3b546cc90db6d97111cd9a314f"
+        },
+        {
+          "label": "Pendle principal claim; term/receipt/underlying complexity without underlying-token alias",
+          "url": "https://docs.pendle.finance/pendle-v2/ProtocolMechanics/YieldTokenization/PT"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xbeef088055857739c12cd3765f20b7679def0f51",
+      "class": "yield-bearing-stable",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Morpho exact Steakhouse Prime USDC vault-share deployment and denomination; accepted Backing takes priority when eligible",
+          "url": "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-usdc"
+        },
+        {
+          "label": "Steakhouse Prime Instant Morpho lending strategy receipt, not direct USDC reserve ownership",
+          "url": "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant"
+        },
+        {
+          "label": "Explorer exact Steakhouse USDC V2 share-token identity",
+          "url": "https://eth.blockscout.com/api/v2/tokens/0xbeef088055857739c12cd3765f20b7679def0f51"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f",
+      "class": "yield-bearing-stable",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Morpho exact Steakhouse Prime EURCV vault-share deployment and denomination; accepted Backing takes priority when eligible",
+          "url": "https://app.morpho.org/ethereum/vault/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f/steakhouse-prime-eurcv"
+        },
+        {
+          "label": "Steakhouse EURCV Prime Instant Morpho lending strategy receipt, not an underlying EURCV identity alias",
+          "url": "https://app.steakhouse.financial/earn/1/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f/eurcv-prime-instant"
+        },
+        {
+          "label": "Explorer exact Steakhouse Prime EURCV share-token identity",
+          "url": "https://eth.blockscout.com/api/v2/tokens/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      "class": "native-eth",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "KPK Prime WETH collateral context; q95 authored native-asset price-risk proxy without separate collateral issuer, not risk-free",
+          "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xc26a6fa2c37b38e549a4a1807543801db684f99c",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-20",
+      "sources": [
+        {
+          "label": "Pareto canonical Ethereum FalconX credit-vault address table binds exact LP token to facility 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d; distinct from Optimism facility",
+          "url": "https://docs.pareto.credit/developers/addresses/product/credit-vaults"
+        },
+        {
+          "label": "Pareto credit-vault lending structure; USDC is settlement asset, not a USDC-equivalent collateral guarantee",
+          "url": "https://docs.pareto.credit/product/credit-vaults"
+        }
+      ],
+      "reviewer": "INFRA-LENDER bottom-up refinement 2026-10-21"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+      "class": "btc-wrapper",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "KPK Prime cbBTC collateral context; q85 authored blue-chip plus representation/custody proxy, not curator grade",
+          "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee",
+      "class": "eth-yield-or-restaked",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Ether.fi weETH restaking receipt; q80 additional yield/restaking mechanism beyond ordinary LST",
+          "url": "https://help.ether.fi/en/articles/595737-weeth"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xcd9f5907f92818bc06c9ad70217f089e190d2a32",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Royco senior/conditional claim context; q35 authored credit-recovery proxy, asset() USDC is not direct reserve ownership",
+          "url": "https://docs.royco.org/royco-overview"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xce6170ea245dc8d1f275a710a062b70f125f0110",
+      "class": "major-alt-l1",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Ethereum FXRP exact token identity",
+          "url": "https://etherscan.io/token/0xce6170ea245dc8d1f275a710a062b70f125f0110"
+        },
+        {
+          "label": "Flare FXRP XRP FAsset representation with Ethereum OFT bridge; non-ETH/BTC L1 representation proxy",
+          "url": "https://dev.flare.network/fxrp/overview"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xdbdc1ef57537e34680b898e1febd3d68c7389bcb",
+      "class": "yield-bearing-stable",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "InfiniFi siUSD receipt contract identity; q55 stable strategy receipt proxy, not exact iUSD identity or imported parity",
+          "url": "https://docs.infinifi.xyz/dev-docs/contracts"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xdc169abe56461a2e0c034da431ac2a3ebf596094",
+      "class": "principal-token",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Pendle PT-sUSDS-26NOV2026 exact token identity",
+          "url": "https://etherscan.io/token/0xdc169abe56461a2e0c034da431ac2a3ebf596094"
+        },
+        {
+          "label": "Pendle principal claim; term/receipt/underlying complexity without sUSDS alias",
+          "url": "https://docs.pendle.finance/pendle-v2/ProtocolMechanics/YieldTokenization/PT"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xecfafdc7741323a945a163ed068b5a3c43483957",
+      "class": "principal-token",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Pendle PT-reUSD-10DEC2026 exact token identity",
+          "url": "https://etherscan.io/token/0xecfafdc7741323a945a163ed068b5a3c43483957"
+        },
+        {
+          "label": "Pendle principal claim; term/receipt/underlying complexity without reUSD alias",
+          "url": "https://docs.pendle.finance/pendle-v2/ProtocolMechanics/YieldTokenization/PT"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xf65460b84c13eeb911303336ab0f9d63cc79839f",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Wildcat v-wmtUSDC exact 4626 wrapper identity",
+          "url": "https://etherscan.io/token/0xf65460b84c13eeb911303336ab0f9d63cc79839f"
+        },
+        {
+          "label": "Wildcat 4626 shares wrap a rebasing market debt token; conditional credit claim, not direct USDC reserve ownership",
+          "url": "https://docs.wildcat.finance/technical-overview/security-developer-dives/wildcat-4626-wrapper"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xf6b1117ec07684d3958cad8beb1b302bfd21103f",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Ondo TSLAon exact token identity",
+          "url": "https://etherscan.io/token/0xf6b1117ec07684d3958cad8beb1b302bfd21103f"
+        },
+        {
+          "label": "Ondo Tesla TSLAon tokenized equity-linked product identity",
+          "url": "https://app.ondo.finance/assets/TSLAon"
+        },
+        {
+          "label": "Ondo tokenized stocks are issuer structured notes/debt instruments with conditional security-interest recovery, not direct Tesla shareholder ownership",
+          "url": "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xf7d85ec4e7710f71992752eac2111312e73e9c9c",
+      "class": "yield-bearing-stable",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Flying Tulip ftUSD strategy structure; q55 fallback only, exact accepted Backing takes priority",
+          "url": "https://docs.flyingtulip.com/product-suite/ft-usd"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "monad",
+      "address": "0x0555e30da8f98308edb960aa94c0db47230d2b9c",
+      "class": "btc-wrapper",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Monad WBTC exact WBTCOFT identity",
+          "url": "https://monadscan.com/address/0x0555e30da8f98308edb960aa94c0db47230d2b9c"
+        },
+        {
+          "label": "WBTC native-BTC custody representation; q85 wrapper proxy, not financial assurance",
+          "url": "https://docs.wbtc.network/overview/wbtc-overview"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "monad",
+      "address": "0x10aeaf63194db8d453d4d85a06e5efe1dd0b5417",
+      "class": "eth-lst",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Monad Lido wstETH exact token identity",
+          "url": "https://monadscan.com/address/0x10aeaf63194db8d453d4d85a06e5efe1dd0b5417"
+        },
+        {
+          "label": "Lido wstETH value-accruing wrapper of liquid-staked ETH, not restaking",
+          "url": "https://docs.lido.fi/contracts/wsteth/"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "monad",
+      "address": "0x7cd231120a60f500887444a9baf5e1bd753a5e59",
+      "class": "yield-bearing-stable",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Monad aHYPER AccountableAsyncRedeemVault exact identity",
+          "url": "https://monadscan.com/address/0x7cd231120a60f500887444a9baf5e1bd753a5e59"
+        },
+        {
+          "label": "Hyperithm aHYPER Accountable stable-return strategy receipt, not direct USDC ownership",
+          "url": "https://vaults.hyperithm.com/"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "monad",
+      "address": "0xa08a69ab9dd3b04d0992bc7afb2c0b907bbdc147",
+      "class": "principal-token",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Monad Pendle PT Saturn USD exact PendlePrincipalToken identity",
+          "url": "https://monadscan.com/address/0xa08a69ab9dd3b04d0992bc7afb2c0b907bbdc147"
+        },
+        {
+          "label": "Pendle principal claim; term/receipt/underlying complexity without USDat alias or maturity recovery assurance",
+          "url": "https://docs.pendle.finance/pendle-v2/ProtocolMechanics/YieldTokenization/PT"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "monad",
+      "address": "0xc6de1dc0b59682be906e5bca14e385e74ee88168",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Monad aHyperBTC AccountableAsyncRedeemVault exact identity",
+          "url": "https://monadscan.com/address/0xc6de1dc0b59682be906e5bca14e385e74ee88168"
+        },
+        {
+          "label": "Accountable Hyperithm Delta Neutral cbBTC vault is an open-term CREDIT product; conditional credit-vault receipt, not a direct BTC custody wrapper",
+          "url": "https://yield.accountable.capital/"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "monad",
+      "address": "0xd18b7ec58cdf4876f6afebd3ed1730e4ce10414b",
+      "class": "btc-wrapper",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Monad Coinbase cbBTC exact token identity",
+          "url": "https://monadscan.com/address/0xd18b7ec58cdf4876f6afebd3ed1730e4ce10414b"
+        },
+        {
+          "label": "Monad cbBTC CCIP deployment of Coinbase native-BTC custody representation",
+          "url": "https://monad.xyz/blog/cbbtc-on-monad"
+        },
+        {
+          "label": "Coinbase cbBTC issuer custody and backing description",
+          "url": "https://www.coinbase.com/cbbtc"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "monad",
+      "address": "0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7",
+      "class": "yield-bearing-stable",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Monad Midas mHYPER exact identity; accepted Backing takes priority when eligible",
+          "url": "https://monadscan.com/address/0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7"
+        },
+        {
+          "label": "Midas mHYPER certificate tracks Hyperithm market-neutral stablecoin strategies; stable strategy receipt, not a dollar peg",
+          "url": "https://blog.midas.app/ledger-officially-integrates-midas-products-mtbill-mhyper-are-now-live-on-ledger-wallet/"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "monad",
+      "address": "0xee8c0e9f1bffb4eb878d8f15f368a02a35481242",
+      "class": "other-unknown",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Monad Wormhole Wrapped Ether WETH exact identity; third-party bridge receipt, and no bridge-aware collateral class or collateral bridge-control factor exists, so it stays other-unknown rather than a native-ETH proxy",
+          "url": "https://monadscan.com/address/0xee8c0e9f1bffb4eb878d8f15f368a02a35481242"
+        },
+        {
+          "label": "Wormhole wrapped token-transfer representation mechanics",
+          "url": "https://wormhole.com/docs/products/token-transfers/overview/"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "monad",
+      "address": "0xf7cf282ec810fded974f99c0163e792f432892bc",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Monad Midas mHyperBTC exact token identity",
+          "url": "https://monadscan.com/address/0xf7cf282ec810fded974f99c0163e792f432892bc"
+        },
+        {
+          "label": "mHyperBTC BTC-settled strategy certificate has no direct underlying delivery entitlement; conditional issuer-claim recovery proxy, not direct BTC custody wrapper",
+          "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/H2ejYgedQu2Yidq3Ps7m/KID_mHyperBTC.pdf"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "robinhood",
+      "address": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+      "class": "native-eth",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Explorer exact Robinhood WETH token identity; collateral address retained in reviewed block 79450688 market parameters",
+          "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0x0bd7d308f8e1639fab988df18a8011f41eacad73"
+        },
+        {
+          "label": "Robinhood official WETH deployment; wrapped native-ETH price-risk proxy, not risk-free",
+          "url": "https://docs.robinhood.com/chain/contracts/"
+        },
+        {
+          "label": "Exact reviewed USDG/WETH Morpho market identity, not a fresh allocation census",
+          "url": "https://app.morpho.org/robinhood-chain/variable/0x127353ba63e08f74d8e9ce8a1c2b41b5f89c7167135b1c09fbed34a71b4cb06b/usdg-weth"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "robinhood",
+      "address": "0x117cc2133c37b721f49de2a7a74833232b3b4c0c",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-20",
+      "sources": [
+        {
+          "label": "Robinhood official asset registry binds SPY SPDR S&P 500 ETF Trust Robinhood Token to this exact chain 4663 deployment",
+          "url": "https://api.robinhood.com/rhj/assets"
+        },
+        {
+          "label": "Current transferable Robinhood Chain Stock Tokens are RHJ-issued tokenised debt securities, not direct underlying equity ownership; structured-credit fallback only",
+          "url": "https://docs.robinhood.com/chain/stock-tokens/"
+        },
+        {
+          "label": "Current RHJ product explains collateralized issuer obligation and independent-security-agent liquidation on insolvency, distinct from Classic nontransferable derivatives",
+          "url": "https://robinhood.com/rhj/stocktokens/"
+        }
+      ],
+      "reviewer": "INFRA-LENDER bottom-up refinement 2026-10-21"
+    },
+    {
+      "chain": "robinhood",
+      "address": "0x2e0847e8910a9732eb3fb1bb4b70a580adad4fe3",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-20",
+      "sources": [
+        {
+          "label": "Robinhood official asset registry binds GOOGL Alphabet Class A Robinhood Token to this exact chain 4663 deployment",
+          "url": "https://api.robinhood.com/rhj/assets"
+        },
+        {
+          "label": "Current transferable Robinhood Chain Stock Tokens are RHJ-issued tokenised debt securities, not direct underlying equity ownership; structured-credit fallback only",
+          "url": "https://docs.robinhood.com/chain/stock-tokens/"
+        },
+        {
+          "label": "Current RHJ product explains collateralized issuer obligation and independent-security-agent liquidation on insolvency, distinct from Classic nontransferable derivatives",
+          "url": "https://robinhood.com/rhj/stocktokens/"
+        }
+      ],
+      "reviewer": "INFRA-LENDER bottom-up refinement 2026-10-21"
+    },
+    {
+      "chain": "robinhood",
+      "address": "0x322f0929c4625ed5bad873c95208d54e1c003b2d",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-20",
+      "sources": [
+        {
+          "label": "Robinhood official asset registry binds TSLA Tesla Robinhood Token to this exact chain 4663 deployment",
+          "url": "https://api.robinhood.com/rhj/assets"
+        },
+        {
+          "label": "Current transferable Robinhood Chain Stock Tokens are RHJ-issued tokenised debt securities, not direct underlying equity ownership; structured-credit fallback only",
+          "url": "https://docs.robinhood.com/chain/stock-tokens/"
+        },
+        {
+          "label": "Current RHJ product explains collateralized issuer obligation and independent-security-agent liquidation on insolvency, distinct from Classic nontransferable derivatives",
+          "url": "https://robinhood.com/rhj/stocktokens/"
+        }
+      ],
+      "reviewer": "INFRA-LENDER bottom-up refinement 2026-10-21"
+    },
+    {
+      "chain": "robinhood",
+      "address": "0x40858070814a57fdf33a613ae84fe0a8b4a874f7",
+      "class": "yield-bearing-stable",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Explorer exact Robinhood syrupUSDG identity; collateral address retained in reviewed block 79450688 market parameters; accepted Backing takes priority when eligible",
+          "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0x40858070814a57fdf33a613ae84fe0a8b4a874f7"
+        },
+        {
+          "label": "Chainlink directory binds exact Robinhood syrupUSDG deployment",
+          "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+        },
+        {
+          "label": "Maple syrupUSDG is a yield-bearing USDG-denominated lending/strategy pool claim, not a 1:1 stablecoin",
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
+        },
+        {
+          "label": "Exact reviewed USDG/syrupUSDG Morpho market identity, not a fresh allocation census",
+          "url": "https://app.morpho.org/robinhood-chain/variable/0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7/usdg-syrupusdg"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "robinhood",
+      "address": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-20",
+      "sources": [
+        {
+          "label": "Robinhood official asset registry binds SPCX Space Exploration Technologies Corp. Class A Common Stock Robinhood Token to this exact chain 4663 deployment",
+          "url": "https://api.robinhood.com/rhj/assets"
+        },
+        {
+          "label": "Current transferable Robinhood Chain Stock Tokens are RHJ-issued tokenised debt securities, not direct underlying equity ownership; structured-credit fallback only",
+          "url": "https://docs.robinhood.com/chain/stock-tokens/"
+        },
+        {
+          "label": "Current RHJ product explains collateralized issuer obligation and independent-security-agent liquidation on insolvency, distinct from Classic nontransferable derivatives",
+          "url": "https://robinhood.com/rhj/stocktokens/"
+        }
+      ],
+      "reviewer": "INFRA-LENDER bottom-up refinement 2026-10-21"
+    },
+    {
+      "chain": "robinhood",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "class": "synthetic-dollar",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Explorer exact Robinhood Ethena USDe identity; collateral address retained in reviewed block 79450688 market parameters; accepted Backing takes priority when eligible",
+          "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        },
+        {
+          "label": "Ethena USDe delta-hedged synthetic dollar; hedging/custody strategy fallback, not a parity guarantee",
+          "url": "https://docs.ethena.fi/overview/ethena-overview"
+        },
+        {
+          "label": "Exact reviewed USDG/USDe Morpho market identity, not a fresh allocation census",
+          "url": "https://app.morpho.org/robinhood-chain/variable/0xc845da65a020ddca5f132efa8fea79676d8edfdea504226a4c01e7a9e34cddd6/usdg-usde"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "robinhood",
+      "address": "0xaf3d76f1834a1d425780943c99ea8a608f8a93f9",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-20",
+      "sources": [
+        {
+          "label": "Robinhood official asset registry binds AAPL Apple Robinhood Token to this exact chain 4663 deployment",
+          "url": "https://api.robinhood.com/rhj/assets"
+        },
+        {
+          "label": "Current transferable Robinhood Chain Stock Tokens are RHJ-issued tokenised debt securities, not direct underlying equity ownership; structured-credit fallback only",
+          "url": "https://docs.robinhood.com/chain/stock-tokens/"
+        },
+        {
+          "label": "Current RHJ product explains collateralized issuer obligation and independent-security-agent liquidation on insolvency, distinct from Classic nontransferable derivatives",
+          "url": "https://robinhood.com/rhj/stocktokens/"
+        }
+      ],
+      "reviewer": "INFRA-LENDER bottom-up refinement 2026-10-21"
+    },
+    {
+      "chain": "robinhood",
+      "address": "0xde770c84fe66e063336b31737cfe9790f18c4087",
+      "class": "yield-bearing-stable",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Explorer exact Robinhood Spark Savings USDG identity; collateral address retained in reviewed block 79450688 market parameters",
+          "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0xde770c84fe66e063336b31737cfe9790f18c4087"
+        },
+        {
+          "label": "Spark spUSDG is a USDG ERC-4626 savings strategy receipt earning Spark Liquidity Layer yield on Robinhood, not direct USDG reserve ownership",
+          "url": "https://docs.spark.fi/products/spark-savings"
+        },
+        {
+          "label": "Exact reviewed USDG/spUSDG Morpho market identity, not a fresh allocation census",
+          "url": "https://app.morpho.org/robinhood-chain/variable/0x0309c02dabf0be02682af1a2bde9a457f4df0f0b6bc889cde3f948e5315e4114/usdg-spusdg"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "robinhood",
+      "address": "0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096",
+      "class": "structured-credit",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Explorer exact Robinhood Midas Fasanara Global Open mGLO identity; collateral address retained in reviewed block 79450688 market parameters",
+          "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096"
+        },
+        {
+          "label": "Midas mGLO Robinhood launch and Fasanara alternative-debt strategy backed by SME asset-backed credit; conditional credit proxy, not direct cash reserves",
+          "url": "https://blog.midas.app/midas-in-june-2026-recap/"
+        },
+        {
+          "label": "Exact reviewed USDG/mGLO Morpho market identity, not a fresh allocation census",
+          "url": "https://app.morpho.org/robinhood-chain/variable/0x1efd13a2d1dc66a2466e7c25820537028e604791f00454d9c686fdfbf70f404d/usdg-mglo"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "tempo",
+      "address": "0x20c000000000000000000000c412ec89d0c08be5",
+      "class": "btc-wrapper",
+      "reviewedAt": "2026-10-14",
+      "sources": [
+        {
+          "label": "Verified Tempo Coinbase cbBTC exact token identity",
+          "url": "https://explore.mainnet.tempo.xyz/address/0x20C000000000000000000000c412Ec89D0c08be5?tab=token"
+        },
+        {
+          "label": "Coinbase cbBTC native-BTC custody representation",
+          "url": "https://www.coinbase.com/cbbtc"
+        }
+      ],
+      "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    }
+  ]
+}

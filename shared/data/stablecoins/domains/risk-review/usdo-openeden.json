@@ -1,5 +1,60 @@
 {
   "id": "usdo-openeden",
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "USDO targets $1 and distributes yield through an issuer-set bonusMultiplier, not an independently determined token NAV. OpenEden documents daily multiplier updates at a predetermined issuer-set rate. Ethereum USDO proxy 0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe identifies verified implementation 0x87e3ba929c71c0e28fc1c817d107a888a59c523e: updateBonusMultiplier is DEFAULT_ADMIN_ROLE-gated, addBonusMultiplier is MULTIPLIER_ROLE-gated, and conversion uses shares times bonusMultiplier divided by 1e18. Neither setter checks an external NAV or reserve feed. The issuer publishes reserve NAV, liabilities and per-chain TBILL prices through its reserve-composition API. Chainlink's Base USDO Reserves feed at 0x5218ebeb96bd2bafe21f9b143f5672552629ba79 is cross-chain Proof of Reserve using issuer-self-attested wallet addresses; it is reserve monitoring, not the authority setting the USDO multiplier. ChainSecurity's March 3, 2025 code assessment independently describes the administrator's ability to reset the multiplier and the cUSDO wrapper's dependency on it. No financial reserve attestation or independent multiplier-setting authority was established by this review.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-22",
+      "reviewer": "R4-USDO primary-source NAV and oracle review",
+      "rationale": "USDO's issuer-set rebase coefficient is a top-level economic pricing authority. The reserve dashboard and Chainlink Proof of Reserve feed do not remove that authority; USDO has no borrower liquidation branches in the reviewed mechanism.",
+      "sources": [
+        {
+          "label": "OpenEden USDO Bonus Multiplier: daily updates and issuer-preset APY",
+          "url": "https://docs.openeden.com/usdo/usdo-token/bonus-multiplier"
+        },
+        {
+          "label": "Ethereum USDO verified implementation: multiplier setters and share conversion",
+          "url": "https://etherscan.io/address/0x87e3Ba929c71c0e28fC1C817D107A888A59C523e#code"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-22",
+    "reviewer": "R4-USDO primary-source NAV and oracle review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "OpenEden USDO Bonus Multiplier: daily updates and issuer-preset APY",
+        "url": "https://docs.openeden.com/usdo/usdo-token/bonus-multiplier"
+      },
+      {
+        "label": "Ethereum USDO proxy and current verified implementation, accessed 2026-10-22",
+        "url": "https://etherscan.io/address/0x8238884Ec9668Ef77B90C6dfF4D1a9F4F4823BFe#code"
+      },
+      {
+        "label": "Ethereum USDO verified implementation: multiplier setters and share conversion",
+        "url": "https://etherscan.io/address/0x87e3Ba929c71c0e28fC1C817D107A888A59C523e#code"
+      },
+      {
+        "label": "OpenEden reserve NAV and supply API, snapshot 2026-10-22T08:00:19.847Z",
+        "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
+      },
+      {
+        "label": "Chainlink USDO Reserves: cross-chain Proof of Reserve and wallet-address self-attestation, accessed 2026-10-22",
+        "url": "https://data.chain.link/feeds/base/base/usdo-por"
+      },
+      {
+        "label": "Base verified USDO Reserves EACAggregatorProxy",
+        "url": "https://basescan.org/address/0x5218Ebeb96bD2bAFe21F9b143f5672552629ba79#code"
+      },
+      {
+        "label": "ChainSecurity USDO/cUSDO code assessment, March 3, 2025, sections 2.3-2.4; not financial assurance",
+        "url": "https://reports.chainsecurity.com/OpenEden/ChainSecurity_OpenEden_USDO_Audit.pdf"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [
@@ -151,7 +206,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: full RoleGranted/RoleRevoked history (Plasma routescan) shows the sole current MINTER_ROLE/BURNER_ROLE member is the Chainlink CCIP pool 0x017566Aad2c164011b9C6552Df3EB7a8C5c11590 (typeAndVersion 'USDO BurnMintTokenPool 1.5.1'); deployer 0x414250b3ac7a46e9baa1ad6dfc41200e5329eece had its roles revoked, leaving admin EOA 0xc4109e427a149239e6c1e35bb2ecd0015b6500b8. CCIP burn/mint representation.",
+        "reviewNote": "On-chain 2026-07-20: full RoleGranted/RoleRevoked history (Plasma routescan) shows the sole current MINTER_ROLE/BURNER_ROLE member is the Chainlink CCIP pool 0x017566Aad2c164011b9C6552Df3EB7a8C5c11590 (typeAndVersion 'USDO BurnMintTokenPool 1.5.1'); deployer 0x414250b3ac7a46e9baa1ad6dfc41200e5329eece had its roles revoked, leaving admin EOA 0xc4109e427a149239e6c1e35bb2ecd0015b6500b8. CCIP burn/mint representation. Follow-up 2026-10-21: Plasma block 35601486 (2026-10-21T00:34:35Z, hash 0xba5dea1f7e2a6b75c06b492620181c55ebd382084e3d3178ed6b83475c1f48f5) confirms a distinct-chain USDO proxy with implementation 0x500d4882938020e939a5666c1b4200873da7efd3, not Kaia's implementation 0xc59d97ffd10deec45aecb09011b193e7aeac3d6b. Exact token implementation and pool runtimes match their newly recovered verified Plasmascan source bytes. Explorer creation transaction 0xdce149037483ac16308006b6bd292b46c76e768df14239607b5bbcc9999a537e at block 597133 on 2025-09-10T17:29:58Z binds this Plasma proxy to deployer 0x414250b3ac7a46e9baa1ad6dfc41200e5329eece; a public name tag is not issuer authorization. The local pool points to Ethereum USDO 0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe and pool 0x500d4882938020e939a5666c1b4200873da7efd3, but the Ethereum pool at block 26237435 returns empty remote-token and remote-pool lists for the canonical Plasma selector 9335212494177455608. Current issuer docs, FAQ, GitHub registry and Chainlink USDO directory omit Plasma. Thus local deployment/one-sided bridge configuration is established, not current reciprocal route activation or issuer-endorsed native support; do not relabel Plasma as Kaia or remove this retained route without full lifecycle/materiality evidence.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "plasma",
         "controllerAddress": "0x017566Aad2c164011b9C6552Df3EB7a8C5c11590",
@@ -168,6 +223,22 @@
           {
             "label": "Chainlink USDO CCIP directory",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDO"
+          },
+          {
+            "label": "Exact Plasma implementation verified source and runtime (retrieved 2026-10-21)",
+            "url": "https://plasmascan.to/address/0x500d4882938020e939a5666c1b4200873da7efd3#code"
+          },
+          {
+            "label": "Plasma proxy deployment origin recovered 2026-10-21",
+            "url": "https://plasmascan.to/tx/0xdce149037483ac16308006b6bd292b46c76e768df14239607b5bbcc9999a537e"
+          },
+          {
+            "label": "Canonical Plasma mainnet chain selector (retrieved 2026-10-21)",
+            "url": "https://raw.githubusercontent.com/smartcontractkit/chain-selectors/main/selectors.yml"
+          },
+          {
+            "label": "Ethereum pinned reciprocal-route read at block 26237435 (2026-10-21)",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ]
       }
@@ -406,7 +477,7 @@
             "url": "https://rpc.plasma.to"
           }
         ],
-        "evidence": "At Plasma block 30024152 on 2026-08-17 UTC, pool 0x017566aad2c164011b9c6552df3eb7a8c5c11590 owner() returned 0x414250b3ac7a46e9baa1ad6dfc41200e5329eece. The owner is separately authored for bridge administration, peer configuration, and rate-limit powers; the pool contract remains the bridge-mint holder."
+        "evidence": "At Plasma block 30024152 on 2026-08-17 UTC, pool 0x017566aad2c164011b9c6552df3eb7a8c5c11590 owner() returned 0x414250b3ac7a46e9baa1ad6dfc41200e5329eece. The owner is separately authored for bridge administration, peer configuration, and rate-limit powers; the pool contract remains the bridge-mint holder. Follow-up 2026-10-21 at Plasma block 35601486 (2026-10-21T00:34:35Z) confirms this owner, getToken() = 0x87e617c7484ade79fcd90db58beb82b057facb48, RMN proxy 0xaef7a922931848d2e731d5914f428b4e851d1ad5, router 0xcdca5d374e46a6dddab50bd2d9acb8c796ec35c3, and only Ethereum selector 5009297550715157269 in getSupportedChains(). Source recovered from this exact pool's verified Plasmascan page; pinned runtime matches the published deployed bytes exactly. The local Ethereum inbound bucket is disabled, not a zero-capacity measurement; RMN proxy returns isCursed() false and getARM() = 0x59c49c2aa45dea42a4070d736b80eb4596bcd08d. The Ethereum counterpart has no reciprocal Plasma remote token/pool at its independent October21 pin. This unresolved one-sided channel and missing issuer lifecycle disposition preclude a clean incident-state or functioning bridge claim. Original observation/review dates remain retained."
       },
       {
         "id": "usdo-plasma-token-role-admin",
@@ -486,7 +557,7 @@
             "url": "https://bscscan.com/address/0x500d4882938020e939a5666c1b4200873da7efd3"
           }
         ],
-        "evidence": "Current pool reads on 2026-08-16 identify owner 0x5eaff7af80488033bc845709806d5fae5291eb88 at Ethereum block 25770537, Base block 50064496, and BNB block 116350256. The owner is an EOA on Ethereum and its pool powers are bridge administration, peer/configuration, and rate-limit control; its native role powers remain separately represented in Mint Authority."
+        "evidence": "Current pool reads on 2026-08-16 identify owner 0x5eaff7af80488033bc845709806d5fae5291eb88 at Ethereum block 25770537, Base block 50064496, and BNB block 116350256. The owner is an EOA on Ethereum and its pool powers are bridge administration, peer/configuration, and rate-limit control; its native role powers remain separately represented in Mint Authority. Restriction reverified 2026-10-21 at Base block 52876764 (2026-10-21T00:34:35Z, hash 0xd3f154967d5978403af84699fcf219eb33d12604a005f4b71b2cd3cd1657625c): pool owner remains this address; Ethereum selector 5009297550715157269 inbound bucket is enabled with tokens 2, capacity 2 and rate 1 in raw 18-decimal USDO units. Token paused() and RMN-proxy isCursed() are false, but neither cancels this extremely restrictive exact channel. RMN proxy 0xc842c69d54f83170c42c4d556b4f6b2ca53dd3e8 points to ARM 0xb60d61905c7a665950d6688498fa5c5704765da3; exact-chain Sourcify source remains unavailable. No public issuer/provider disposition explaining this limiter was recovered in current scoped searches, so no broad negative incident assertion or whole-asset loss inference is made. Original pins and review start are not renewed."
       }
     ]
   }

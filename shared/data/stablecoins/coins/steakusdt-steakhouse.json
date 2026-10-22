@@ -14,16 +14,21 @@
   "pegReferenceId": "usdt-tether",
   "collateral": "USDT deposited into a Steakhouse-curated Morpho vault that allocates across Morpho lending markets backed by blue-chip crypto and real-world asset collateral",
   "pegMechanism": "Morpho V2 ERC-4626 shares represent a USDT strategy position. Interest and fees change assets per share, and losses can reduce the share price. Withdrawals use idle USDT first and the configured liquidity adapter for any shortfall; execution depends on available liquidity.",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-5 Safety Score V9 mechanism review",
-    "rationale": "The reviewed Steakhouse and Morpho materials support the fiat-cash classification inherited through the USDT reserve, but do not disclose current deployment-wide custody, assurance, reconciliation, or recovery terms for the strategy vault; that risk boundary remains unresolved.",
+    "reviewedAt": "2026-10-21",
+    "reviewer": "Pharos Safety Score R1 vault parity review",
+    "rationale": "The exact Ethereum receipt 0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9 is an immutable Morpho VaultV2 USDT lending position. Content as of 2026-10-20: C13 verified exact runtime, canonical USDT asset, local positive share supply and permanently abdicated share-transfer gates at Ethereum block 26236622. Interest, fees and losses affect proportional share NAV; withdrawals depend on idle USDT and available adapter liquidity. This sourced departure from the fiat-cash parent establishes protocol-position identity, not a direct Tether reserve claim, legal segregation, independent child assurance or guaranteed default recovery.",
     "sources": [
       {
         "label": "app.morpho.org",
         "url": "https://app.morpho.org/ethereum/vault/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9/steakhouse-prime-instant"
+      },
+      {
+        "label": "Exact VaultV2 source and runtime correspondence as of Ethereum block 26236622, 2026-10-20",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9?fields=abi,sources,compilation"
       },
       {
         "label": "steakhouse.financial",

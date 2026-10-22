@@ -22,18 +22,18 @@
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-11",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-02",
       "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Claude curation campaign 2026-09-21 (Resv07)",
+      "reviewer": "C07 bottom-up refinement 2026-10-21",
       "confidence": "verified",
       "sources": [
         {
-          "label": "USDGLO reserve report - August 2026 (Assertion of Brale Management)",
-          "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-08-2026.pdf"
+          "label": "USDGLO reserve report - September 2026 (Assertion of Brale Management; signed October 2)",
+          "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-09-2026.pdf"
         },
         {
           "label": "Brale USDGLO transparency",
@@ -100,6 +100,11 @@
       "chain": "stellar",
       "address": "USDGLO-GBBS25EGYQPGEZCGCFBKG4OAGFXU6DSOQBGTHELLJT3HZXZJ34HWS6XV",
       "decimals": 7
+    },
+    {
+      "chain": "vechain",
+      "address": "0x29c630cce4ddb23900f5fe66ab55e488c15b9f5e",
+      "decimals": 18
     }
   ],
   "collateralQuality": "rwa",

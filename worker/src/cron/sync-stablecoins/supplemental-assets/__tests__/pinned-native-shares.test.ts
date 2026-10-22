@@ -53,6 +53,34 @@ describe("JLTXX native-share observation", () => {
     expect(await fetchPinnedNativeShares(coin)).toBeNull();
   });
 
+  it.each(["header", "supply", "decimals", "closing-header"] as const)(
+    "withholds the complete share observation when the %s request throws",
+    async (stage) => {
+      const failure = new Error("RPC transport unavailable");
+      if (stage === "header") header.mockReset().mockRejectedValue(failure);
+      if (stage === "closing-header") header.mockReset().mockResolvedValueOnce(block).mockRejectedValueOnce(failure);
+      if (stage === "supply") uint256.mockReset().mockRejectedValue(failure);
+      if (stage === "decimals") uint256.mockReset().mockResolvedValueOnce(62_671_284_229n).mockRejectedValueOnce(failure);
+
+      await expect(fetchPinnedNativeShares(coin)).resolves.toBeNull();
+      expect(header).toHaveBeenCalledTimes(stage === "closing-header" ? 2 : 1);
+      expect(uint256).toHaveBeenCalledTimes(stage === "header" ? 0 : stage === "supply" ? 1 : 2);
+    },
+  );
+
+  it("propagates caller cancellation during a failed read instead of returning missing shares", async () => {
+    const controller = new AbortController();
+    const reason = new Error("sync cancelled");
+    uint256.mockReset().mockImplementation(async () => {
+      controller.abort(reason);
+      throw new Error("transport closed");
+    });
+
+    await expect(fetchPinnedNativeShares(coin, undefined, controller.signal)).rejects.toBe(reason);
+    expect(header).toHaveBeenCalledTimes(1);
+    expect(uint256).toHaveBeenCalledTimes(1);
+  });
+
   it.each([null, { ...block, timestamp: 0 }, { ...block, timestamp: Math.floor(Date.now() / 1000) + 3600 }, { ...block, timestamp: 1 }])(
     "withholds malformed, future or stale original block clocks (%s)", async (value) => {
       header.mockReset().mockResolvedValue(value);

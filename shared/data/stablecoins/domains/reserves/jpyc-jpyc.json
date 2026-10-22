@@ -47,7 +47,17 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "JPYC Inc. statutory funds-transfer safeguarding arrangement",
+        "name": "Tokyo Legal Affairs Bureau (statutory performance-guarantee deposit)",
+        "role": "other",
+        "jurisdiction": "Japan"
+      },
+      {
+        "name": "Japan Securities Finance Trust Bank, Ltd. (日証金信託銀行株式会社; named performance-guarantee trustee)",
+        "role": "other",
+        "jurisdiction": "Japan"
+      },
+      {
+        "name": "Japan Installment Credit Guarantee Co., Ltd. (日本割賦保証株式会社; named performance-guarantee counterparty)",
         "role": "other",
         "jurisdiction": "Japan"
       }
@@ -55,8 +65,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "FD20 bottom-up refinement 2026-10-21",
     "confidence": "probable",
     "sources": [
       {
@@ -66,8 +76,12 @@
       {
         "label": "Japan Payment Service Association performance-guarantee guidance",
         "url": "https://www.s-kessai.jp/businesses/funds_transfer/practice_deposit/"
+      },
+      {
+        "label": "JPYC funds-transfer pre-contract disclosure, revised 2026-09-24: named safeguarding counterparties and statutory weekly guarantee calculation",
+        "url": "https://jpyc.co.jp/legal/pre-contract-disclosure.pdf"
       }
     ],
-    "uncertainty": "Japanese funds-transfer rules require protection of customer liabilities through a statutory performance-guarantee deposit, eligible guarantee contract, or trust. JPYC does not disclose which method or providers it currently uses, provider shares, segregation mechanics, or rehypothecation terms."
+    "uncertainty": "The current funds-transfer pre-contract disclosure, revised 2026-09-24 and retrieved through the issuer's public service on 2026-10-20, expressly identifies a Tokyo Legal Affairs Bureau deposit, a performance-guarantee trust with Japan Securities Finance Trust Bank, and a performance-guarantee preservation contract with Japan Installment Credit Guarantee. It describes statutory protection at least equal to the maximum required guarantee amount and weekly Friday-to-Thursday liability calculations followed by safeguarding within three business days. These are disclosed legal safeguarding methods and counterparties, not a measured allocation or an independently examined recurring reserve-to-token reconciliation. Current utilization and shares among the alternative arrangements, underlying deposit/JGB holdings, whole-book segregation mechanics and rehypothecation remain unestablished; provider shares and numerical reserve composition are not inferred."
   }
 }

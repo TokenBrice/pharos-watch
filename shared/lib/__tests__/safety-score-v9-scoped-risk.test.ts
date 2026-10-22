@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { resolveV9ScopedRisk, type V9ScopedRiskSignal } from "../safety-score-v9/scoped-risk";
+import { effectiveV9ControllerKeys, isV9DeploymentControllerAlreadyPriced, isV9SharedControllerSignalAlreadyPriced, resolveV9ScopedRisk, type V9ScopedRiskSignal } from "../safety-score-v9/scoped-risk";
+import { makeDeploymentControl } from "./safety-score-v9-fixtures.test-support";
+import { compileNativeV3FactSet, coreFixture, evaluateV9FactSet, V9_CANDIDATE_POLICY_V1, type V9AssetFactsV2 } from "./safety-score-v9-facts.fixture-support";
+import type { V9StructuralSignal } from "../../types/safety-score-v9";
 
 function deployment(overrides: Partial<V9ScopedRiskSignal> = {}): V9ScopedRiskSignal {
   return {
@@ -16,6 +19,84 @@ function deployment(overrides: Partial<V9ScopedRiskSignal> = {}): V9ScopedRiskSi
 }
 
 describe("Safety Score v9 scoped risk", () => {
+  it("does not restore a common-mode controller charge for an already-priced exact root", () => {
+    const signal: V9StructuralSignal = {
+      kind: "critical-dependency", severity: "high", reason: "Shared controller.",
+      economicLossScope: "deployment", materialSharePct: 80,
+      failureDomainKeys: ["upgrade-control:ethereum:0xroot"], evidence: [],
+    };
+    const priced = new Set(["ethereum:0xroot"]);
+    expect(isV9SharedControllerSignalAlreadyPriced(signal, [], priced)).toBe(true);
+    expect(isV9SharedControllerSignalAlreadyPriced({
+      ...signal, failureDomainKeys: ["upgrade-control:ethereum:0xindependent"],
+    }, [], priced)).toBe(false);
+    expect(isV9SharedControllerSignalAlreadyPriced({
+      ...signal, failureDomainKeys: ["chain:ethereum"],
+    }, [], priced)).toBe(false);
+    expect(isV9SharedControllerSignalAlreadyPriced({
+      ...signal, kind: "active-control-incident",
+    }, [], priced)).toBe(false);
+  });
+
+  it("deduplicates exact effective roots, not slice, asset-owner or failure-domain labels", () => {
+    const root = makeDeploymentControl("root", "upgrade", {
+      deploymentKey: "deployment:root",
+      authority: { authorityKey: "controller:root", model: "eoa", threshold: null },
+    });
+    const same = makeDeploymentControl("slice", "upgrade", {
+      authority: { authorityKey: "controller:intermediate", model: "contract", threshold: null },
+      executionScopeContributors: [{ authorityKey: "controller:root" }],
+    });
+    const independent = {
+      ...same, authority: { ...same.authority!, authorityKey: "controller:independent" },
+      executionScopeContributors: [{ authorityKey: "controller:independent" }],
+    };
+    const priced = new Set(effectiveV9ControllerKeys(root));
+    expect(effectiveV9ControllerKeys(same)).toEqual(["controller:root"]);
+    expect(isV9DeploymentControllerAlreadyPriced(effectiveV9ControllerKeys(same), priced, false)).toBe(true);
+    expect(isV9DeploymentControllerAlreadyPriced(effectiveV9ControllerKeys(independent), priced, false)).toBe(false);
+    expect(isV9DeploymentControllerAlreadyPriced(effectiveV9ControllerKeys(same), priced, true)).toBe(false);
+    expect(isV9DeploymentControllerAlreadyPriced([], priced, false)).toBe(false);
+  });
+
+  it("wires same-root suppression through the evaluator while independent slice controllers still lose points", () => {
+    const evaluate = (sliceController: string, assetId = "alpha", activeSliceIncident = false) => {
+      const input = coreFixture();
+      const asset = input.assets[0]! as unknown as V9AssetFactsV2;
+      asset.assetId = assetId;
+      input.activeAssetIds = [assetId, "beta", "gamma"];
+      asset.dependencies.edges = asset.dependencies.edges.filter((edge) => edge.pathKind !== "serial-dependency");
+      const root = asset.controls.find((control) => control.controlKey === "control:admin")!;
+      root.authority = { authorityKey: "controller:root", model: "eoa", threshold: null };
+      const slice = {
+        ...root, controlKey: "control:slice", deploymentKey: "deployment:slice",
+        scope: "deployment" as const, economicLossScope: "deployment" as const, materialSupplyShare: 0.2,
+        authority: { authorityKey: sliceController, model: "eoa" as const, threshold: null },
+        incidentState: activeSliceIncident ? "active" as const : "none" as const,
+      };
+      asset.controls.push(slice);
+      asset.supply.selectedBridgeRoutes = [{
+        deploymentRouteKey: "deployment:slice", supplyUsd: 2_000_000, supplyShare: 0.2,
+        reviewState: "selected-reviewed",
+      }];
+      asset.supply.selectedRouteSupplyShare = 0.2;
+      asset.supply.unknownRouteSupplyShare = 0;
+      asset.supply.unreviewedRouteSupplyShare = 0;
+      return evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1)
+        .assets.find((evaluated) => evaluated.assetId === assetId)!;
+    };
+    const shared = evaluate("controller:root");
+    const independent = evaluate("controller:independent");
+    expect(shared.trace.deploymentAdjustments).toEqual([]);
+    expect(independent.trace.deploymentAdjustments.some((row) => row.adjustmentPoints > 0)).toBe(true);
+    expect(independent.trace.deploymentAdjustedScore).toBeLessThan(shared.trace.deploymentAdjustedScore!);
+    const measured = evaluate("controller:root", "alpha", true);
+    expect(measured.trace.deploymentAdjustments.some((row) => row.adjustmentPoints > 0)).toBe(true);
+    const renamed = evaluate("controller:root", "unrelated-asset");
+    expect(renamed.trace.deploymentAdjustments).toEqual(shared.trace.deploymentAdjustments);
+    expect(renamed.trace.finalScore).toBe(shared.trace.finalScore);
+  });
+
   it("prices a deployment failure as an average-holder adjustment", () => {
     const result = resolveV9ScopedRisk(80, [deployment()]);
     expect(result.finalScore).toBe(76);
@@ -27,10 +108,9 @@ describe("Safety Score v9 scoped risk", () => {
         exposureShare: 0.1,
       }),
     ]);
-    expect(result.globalCaps).toEqual([]);
   });
 
-  it("keeps global claim impairment in the hard-cap path", () => {
+  it("does not turn a global claim diagnostic into a deployment penalty", () => {
     const signal = deployment({
       signalKey: "mint:global",
       failureDomainKeys: ["mint-control:global"],
@@ -40,7 +120,7 @@ describe("Safety Score v9 scoped risk", () => {
     });
     const result = resolveV9ScopedRisk(90, [signal]);
     expect(result.finalScore).toBe(90);
-    expect(result.globalCaps).toEqual([signal]);
+    expect(result.adjustments).toEqual([]);
   });
 
   it("does not convert access-only or reserve-owned facts into a second composite penalty", () => {
@@ -58,8 +138,7 @@ describe("Safety Score v9 scoped risk", () => {
     });
     const result = resolveV9ScopedRisk(80, [access, reserve]);
     expect(result.finalScore).toBe(80);
-    expect(result.accessOnlySignals).toEqual([access]);
-    expect(result.reserveSignals).toEqual([reserve]);
+    expect(result.adjustments).toEqual([]);
   });
 
   it("is idempotent for repeated references to one exposure event", () => {

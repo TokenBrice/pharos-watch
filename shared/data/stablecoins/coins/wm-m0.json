@@ -39,7 +39,7 @@
   "infrastructures": [
     "m0"
   ],
-  "collateral": "Underlying M (M0 Protocol) is backed 100% by short-term U.S. Treasury bills (30 to 90 day WAM) held in bankruptcy-remote SPVs by permissioned Minters; M0 Validators independently attest collateral sufficiency on-chain before any M can be minted, and wM holds M 1:1 inside the Wrapped M Token contract",
+  "collateral": "wM's immediate backing is M held by the wrapper. Permissioned M0 Minters report eligible collateral through Validator-signed MinterGateway updates; the current aggregate does not establish a 100% Treasury allocation, portfolio WAM, or complete custody-provider partition. The native wrapper accounts for locked M against wM principal and accrued-yield liabilities; this does not create a direct holder claim on the underlying off-chain reserves.",
   "pegMechanism": "Non-rebasing M-backed ERC-20 wrapper with 1:1 principal conversion through the M0 SwapFacility. The current Ethereum WrappedMToken accepts wrap() and unwrap() only from that facility; both paths are subject to pause and account-freeze checks. Non-earning accounts retain fixed balances, while approved earning accounts can claim underlying M yield and claimExcess() directs excess reserves to the configured recipient. Unwrapping returns M, not fiat, and does not itself establish access to M0 institutional redemption.",
   "mechanismArchetype": "tbill",
   "mechanismArchetypeReview": {
@@ -151,7 +151,7 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "unknown",
   "governanceQuality": "wrapper",
   "liveReservesConfig": {
     "adapter": "m0-wrapper-underlying",

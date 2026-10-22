@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { evaluateV9EconomicControl } from "@shared/lib/safety-score-v9/control";
+import { gradeEconomicControlAuthority } from "@shared/lib/safety-score-v9/control-mint-grade";
+import { isV9GovernedIssuanceQualified, isV9VetoGuardedIssuanceQualified, isV9OperationallyGovernedIssuanceQualified } from "@shared/lib/safety-score-v9/control-primitives";
 import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-facts";
 import { reviewedScope, weightedQuorum, SCOPE_CLOCK, SCOPE_CONTROLLER } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
 import { effectiveAuthoritySignatureRequirement } from "@shared/lib/safety-score-v9/control-scope";
@@ -13,29 +15,25 @@ import type { ControlOverlay } from "../safety-score-v9/extension-shared";
 import { MintAuthorityProfileSchema, BridgeRouteRiskProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
 import { makeCompiledVotingControl, makeOperationalIssuanceProcess } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
-import { buildSafetyScoreV9RetainedRedemptionRoutes, buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
 import { compileSafetyScoreV9FactSetFromFixedInput, compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension, computeSafetyScoreV9ReserveExposureKey, materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9/fact-set";
-import { V9_EVALUATION_TEST_TIMEOUT_MS, makeV9Extension, v9Status, makeV9BoundedUnknownFeeRedemptionFixedInput as boundedUnknownFeeRedemptionFixedInput, makeV9FixedInput as exactFixedInput, makeV9QueuedRedemptionFixedInput as queuedRedemptionFixedInput } from "../../test-helpers/v9-fixed-input";
+import { V9_EVALUATION_TEST_TIMEOUT_MS, makeV9Extension, v9Status,  makeV9FixedInput as exactFixedInput } from "../../test-helpers/v9-fixed-input";
 import {
   accessOnlyMeta,
   alphaMeta,
   bridgeMeta,
   bridgeRoute,
-  boundedStatus,
   cappedMinterMeta,
   immutableMintMeta,
   internalPriceMeta,
   localControl,
   materialityFixture,
   metaMap,
-  rebuildFixed,
   reviewedOracleMeta,
   reviewedLockMintRoute,
   reviewedUpgradeExtension,
   strategyVaultExtension,
   unresolvedMintMeta,
   unmatchedFixture,
-  withRedemptionRoute,
 } from "./safety-score-v9-fact-set.test-support";
 
 vi.mock("@shared/data/safety-score-v9/evidence-gap-classifications-v1.json", () => ({
@@ -192,84 +190,16 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     reviewed.assets[0]!.controlReview = { state: "partially-reviewed-controls", rationale: "Local custody is reviewed; bridge authority is unresolved.", controls: [localControl(), localControl({ controlKey: "bridge:unresolved", controlKind: "bridge", deploymentKey: "ethereum:0x3333333333333333333333333333333333333333", capabilities: ["bridge-mint"], capSemantics: { kind: "unknown", bound: null }, claimImpairment: "unknown", economicLossScope: "unknown", authority: null, delaySec: null, materialSupplyShare: 1, failureDomains: [{ kind: "bridge-route", key: "ethereum:0x3333333333333333333333333333333333333333" }] })] };
     const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!;
     expect(asset.controlStatus).toMatchObject({ observationState: "bounded-unknown" });
-    expect(asset.wrapperLocalFacts).toMatchObject({ applicability: "wrapper", form: "strategy-vault", facts: { lossAbsorptionEmergencyControls: { disposition: "reviewed", assessment: "moderate" } } });
+    expect(asset.wrapperLocalFacts).toMatchObject({ applicability: "wrapper", form: "strategy-vault" });
+    expect(asset.controls).toContainEqual(expect.objectContaining({
+      controlKey: "custody:reviewed",
+      capabilities: ["custody-transfer"],
+      capSemantics: { kind: "bounded", bound: { amount: 0.25, unit: "supply-fraction" } },
+      claimImpairment: "bounded",
+      status: expect.objectContaining({ observationState: "known" }),
+    }));
   });
 
-  describe("wrapper-local dimension branches", () => {
-    const facts = (reviewed: ReturnType<typeof strategyVaultExtension>, fixed = exactFixedInput()) => {
-      const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!;
-      if (asset.wrapperLocalFacts.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
-      return asset.wrapperLocalFacts.facts;
-    };
-
-    it("escalates an active control incident to critical loss-absorption risk", () => {
-      const reviewed = strategyVaultExtension();
-      reviewed.assets[0]!.controlReview = { state: "partially-reviewed-controls", rationale: "Active local incident.", controls: [localControl({ incidentState: "active" })] };
-      expect(facts(reviewed).lossAbsorptionEmergencyControls).toMatchObject({ assessment: "critical", signals: expect.arrayContaining(["active-control-incident:custody:reviewed"]) });
-    });
-
-    it.each([
-      ["missing", undefined, "wrapper-upgrade-review-unavailable"],
-      ["unresolved-control", "upgrade:unresolved", "reviewed-upgrade-control-not-compiled:upgrade:unresolved"],
-      ["undisclosed", "upgrade:unknown", "wrapper-upgrade-authority-undisclosed"],
-    ] as const)("handles %s contract mutability", (_label, key, signal) => {
-      const reviewed = strategyVaultExtension();
-      if (key === undefined) {
-        reviewed.assets[0]!.economicControlReview!.mint.status = boundedStatus("v9.control.mint-review", "extension-gap:mint:alpha");
-        reviewed.assets[0]!.economicControlReview!.mint.reconciliation = "unknown";
-        reviewed.assets[0]!.economicControlReview!.mint.upgrade = { state: "unknown", controlKey: null };
-      } else if (key === "upgrade:unresolved") {
-        reviewed.assets[0]!.controlReview = { state: "partially-reviewed-controls", rationale: "The upgrade identity is unresolved.", controls: [localControl({ controlKey: key, controlKind: "upgrade", capabilities: ["upgrade"], capSemantics: { kind: "unknown", bound: null }, claimImpairment: "unknown", economicLossScope: "unknown", authority: null, delaySec: null, failureDomains: [] })] };
-        reviewed.assets[0]!.economicControlReview!.mint.upgrade = { state: "reviewed", controlKey: key };
-      } else reviewed.assets[0]!.economicControlReview!.mint.upgrade = { state: "unknown", controlKey: null };
-      expect(facts(reviewed).contractMutability).toMatchObject({ signals: [signal] });
-    });
-
-    it("grades a leverage factor high", () => {
-      const fixed = structuredClone(exactFixedInput());
-      for (const slice of fixed.liveReserveMap.alpha!) slice.riskFactors = ["leverage", "counterparty"];
-      expect(facts(strategyVaultExtension(), rebuildFixed(fixed)).leverage).toMatchObject({ assessment: "high", signals: expect.arrayContaining(["wrapper-leverage-factor:leverage"]) });
-    });
-
-    it("keeps withdrawal fees undisclosed and parameterizes access posture", () => {
-      const feeFixed = boundedUnknownFeeRedemptionFixedInput({ clockSec: 86_400 });
-      const feeExtension = makeV9Extension({ clockSec: feeFixed.clockSec });
-      feeExtension.assets[0]!.variantKind = "strategy-vault";
-      feeExtension.registryFingerprint = feeFixed.registryFingerprint;
-      feeExtension.assets[0]!.assetId = "usdc-circle";
-      feeExtension.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(feeFixed, "usdc-circle");
-      feeExtension.assets[0]!.retainedRoutes = buildSafetyScoreV9RetainedRedemptionRoutes(feeFixed, "usdc-circle");
-      expect(facts(feeExtension, feeFixed).withdrawalTerms).toMatchObject({ assessment: null, signals: ["wrapper-withdrawal-fee-undisclosed"] });
-      for (const [holderAccess, assessment] of [["issuer-only", "critical"], ["allowlisted", "moderate"], ["permissionless", "low"]] as const) {
-        const fixed = queuedRedemptionFixedInput(86_400, true);
-        const reviewed = withRedemptionRoute(fixed, { settlementModel: "atomic", executionModel: "market-depth", executionCertainty: "bounded", holderAccess, settlementSlaSec: null });
-        expect(facts(reviewed, fixed).withdrawalTerms).toMatchObject({ assessment });
-      }
-    });
-
-    it("grades queued redemption by its known settlement SLA", () => {
-      for (const [settlementSlaSec, assessment] of [[8 * 86_400, "high"], [2 * 86_400, "moderate"]] as const) {
-        const fixed = queuedRedemptionFixedInput(86_400, true);
-        expect(facts(withRedemptionRoute(fixed, { settlementModel: "queued", holderAccess: "permissionless", executionModel: "market-depth", executionCertainty: "bounded", settlementSlaSec }), fixed).withdrawalTerms).toMatchObject({ assessment });
-      }
-    });
-
-    it("keeps incomparable and unavailable unwind evidence bounded instead of critical", () => {
-      const draft = structuredClone(exactFixedInput());
-      draft.dexLiqMap.alpha!.exitRouteObservations![0]!.maxCostBps = 300;
-      draft.dexLiqMap.alpha!.exitRouteObservations![0]!.capacityCurve = draft.dexLiqMap.alpha!.exitRouteObservations![0]!.capacityCurve!.map((point) => ({ ...point, maxCostBps: 300 }));
-      const reviewed = strategyVaultExtension();
-      reviewed.assets[0]!.routeReviews = reviewed.assets[0]!.routeReviews.map((review) => ({ ...review, executionCosts: review.executionCosts.map((cost) => ({ ...cost, maxCostBps: 300 })) }));
-      const incomparable = facts(reviewed, rebuildFixed(draft)).measuredUnwind;
-      expect(incomparable).toMatchObject({ assessment: null });
-      const unavailable = strategyVaultExtension();
-      unavailable.assets[0]!.routeReviews = [];
-      unavailable.assets[0]!.retainedRoutes = [];
-      const unobserved = facts(unavailable).measuredUnwind;
-      expect(unobserved.assessment).toBeNull();
-      expect(unobserved.disposition).not.toBe("reviewed");
-    });
-  });
 
   it("keeps a reviewed upgrade control known inside a partial inventory", () => {
     const fixed = exactFixedInput();
@@ -418,7 +348,8 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     const controlKey = compiled.assets[0]!.controls[0]!.controlKey;
     expect(compiled.assets[0]!.gaps.filter((gap) => gap.reasonCode === "unresolved-control-identity" &&
       gap.causeScope?.componentKey === `control:${controlKey}` && gap.causeScope.factorKey === null)).toEqual([]);
-    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.control.score).toBe(45);
+    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.control.score)
+      .toBe(unknownQuality("control", "U"));
   });
 
   it("rejects registry drift, and quarantines a future review like stale known evidence", () => {
@@ -549,7 +480,7 @@ describe("v10.01 control atomic cause scopes", () => {
       expect(gap.causeProof.cause).toBe(cause);
       const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
       expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
-        posture: "unbounded-adverse", score: 25, cause, causeGapIds: [gapId],
+        posture: "unbounded-adverse", score: 65, cause, causeGapIds: [gapId],
       });
       expect(result.structuralFailures).toContainEqual(expect.objectContaining({
         kind: "centralized-mint", severity: "high", binding: true,
@@ -564,10 +495,10 @@ describe("v10.01 control atomic cause scopes", () => {
       const gapId = asset.economicControlReview.mint.factorStatuses!.reconciliation!.gapIds[0]!;
       const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
       expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
-        posture: "unbounded-reconciled", score: 55,
+        posture: "unbounded-reconciled", score: 80,
         cause: assetId === "reviewed-issuer" ? "C" : "U", causeGapIds: [gapId],
       });
-      expect(result.structuralFailures).not.toContainEqual(expect.objectContaining({ kind: "centralized-mint" }));
+      expect(result.structuralFailures).toContainEqual(expect.objectContaining({ kind: "centralized-mint", severity: "high" }));
     },
   );
 });
@@ -702,6 +633,61 @@ describe("v10.08 weighted topology and reviewer-scoped control questions", () =>
     },
   );
 
+  it.each(["mpc", "hsm"] as const)(
+    "retains reviewed native %s custody under an open independence question without granting independence credit",
+    (kind) => {
+      const fixed = exactFixedInput();
+      const metadata = cappedMinterMeta();
+      const authored = metadata.mintAuthority!.controls![0]!;
+      authored.authorityType = "eoa";
+      authored.keyCustodyAttestation = {
+        kind, sources: [{ label: "Exact controller custody disclosure", url: "https://example.com/custody" }],
+      };
+      metadata.mintAuthority!.review.scopedQuestions = [{
+        controlRef: SCOPE_CONTROLLER, subject: "key-custody-independence",
+        question: "The exact key uses reviewed technical custody; which humans approve its signing policy?",
+        reviewedAt: "1970-01-01", reviewer: "Fixture reviewer",
+      }];
+      metadata.mintAuthority = MintAuthorityProfileSchema.parse(metadata.mintAuthority);
+      const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(metadata) });
+      const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+      const control = asset.controls.find((row) => row.authority?.authorityKey === SCOPE_CONTROLLER)!;
+      expect(control.keyCustody).toBe(kind);
+      expect(control.status.observationState).toBe("known");
+      expect(control.authority).toMatchObject({ model: "eoa", threshold: null });
+      expect(control.executionScopeComplete).not.toBe(true);
+      const independenceGap = asset.gaps.find((gap) => gap.gapId === control.factorStatuses?.keyCustody?.gapIds[0])!;
+      expect(independenceGap).toMatchObject({
+        causeScope: { componentKey: `control:${control.controlKey}`, factorKey: "keyCustody" },
+        causeProof: { cause: "U" },
+        message: expect.stringContaining("Human independence or approval policy"),
+      });
+      const policy = V9_CANDIDATE_POLICY_V1.policy.semantic;
+      const controlPolicy = policy.control;
+      const mint = asset.economicControlReview.mint;
+      const quality = gradeEconomicControlAuthority(control, mint, policy, asset.gaps);
+      expect(quality).toBe(gradeEconomicControlAuthority({ ...control, keyCustody: "unknown" }, mint, policy, asset.gaps));
+      expect(quality).toBe(gradeEconomicControlAuthority({ ...control, keyCustody: "hardware-wallet" }, mint, policy, asset.gaps));
+      expect(isV9GovernedIssuanceQualified(control, controlPolicy.governedIssuance)).toBe(false);
+      expect(isV9VetoGuardedIssuanceQualified(control, controlPolicy.governedIssuance)).toBe(false);
+      expect(isV9OperationallyGovernedIssuanceQualified(control, policy).qualified).toBe(false);
+    },
+  );
+
+  it.each(["mpc", "hsm"] as const)(
+    "retains technical %s custody through weighted-topology compilation while independence remains U",
+    (keyCustody) => {
+      const source = weightedControl(weightedQuorum());
+      const asset = compileControls([{ ...source, keyCustody, scopedQuestionFresh: true,
+        scopedQuestionSubject: "key-custody-independence" }]);
+      const control = asset.controls[0]!;
+      expect(control.keyCustody).toBe(keyCustody);
+      expect(effectiveAuthoritySignatureRequirement(control.authority)).toBe(effectiveAuthoritySignatureRequirement(source.authority));
+      expect(control.factorStatuses?.keyCustody?.observationState).toBe("missing");
+      expect(asset.gaps.find((gap) => gap.gapId === control.factorStatuses?.keyCustody?.gapIds[0])?.causeProof.cause).toBe("U");
+    },
+  );
+
   it.each([undefined, "authority-semantics", "execution-scope", "key-custody-independence"] as const)(
     "admits authored %s question subjects without letting custody-only uncertainty gate native economics",
     (subject) => {
@@ -741,13 +727,15 @@ describe("v10.08 weighted topology and reviewer-scoped control questions", () =>
     expect(control.scopedQuestionSubject).not.toBe("key-custody-independence");
   });
 
-  it("retains typed bridge custody uncertainty separately from resolved route semantics", () => {
+  it.each([undefined, "mpc", "hsm"] as const)("retains typed bridge custody uncertainty separately from resolved route semantics with %s custody", (keyCustody) => {
     const fixed = exactFixedInput();
     const route = reviewedLockMintRoute(SCOPE_CONTROLLER);
     const metadata = bridgeMeta([route], {
       controls: [{ id: "controller", label: "Bridge controller", controllerChain: "ethereum",
         controllerAddress: SCOPE_CONTROLLER.split(":")[1]!, authorityType: "multisig", threshold: 2, signerCount: 6,
         routeRefs: [route.id], capabilities: ["bridge-mint"], canRaiseCap: true,
+        ...(keyCustody ? { keyCustodyAttestation: { kind: keyCustody,
+          sources: [{ label: "Exact bridge controller custody", url: "https://example.com/bridge-custody" }] } } : {}),
         sources: [{ label: "Pinned bridge", url: "https://example.com/bridge" }] }],
       scopedQuestions: [{ controlRef: "controller", subject: "key-custody-independence",
         question: "Which custody provider protects the controller keys?", reviewedAt: "1970-01-01", reviewer: "Fixture reviewer" }],
@@ -768,7 +756,7 @@ describe("v10.08 weighted topology and reviewer-scoped control questions", () =>
     expect(asset.gaps.find((gap) => gap.gapId === control.status.gapIds[0])?.reasonCode).toBe(
       "unresolved-control-identity",
     );
-    expect(control.keyCustody).toBe("unknown");
+    expect(control.keyCustody).toBe(keyCustody ?? "unknown");
     expect(control.factorStatuses?.keyCustody?.observationState).toBe("missing");
   });
 

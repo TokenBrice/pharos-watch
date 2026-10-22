@@ -1,309 +1,120 @@
 import { describe, expect, it } from "vitest";
-import {
-  V9WrapperFactDispositionSchema,
-  type V9ApplicableWrapperLocalFacts,
-  type V9WrapperLocalFactKey,
-  type V9WrapperRiskAssessment,
-} from "../../types/safety-score-v9-wrapper";
-import {
-  resolveV9WrapperParentLimit,
-  type V9WrapperParentLimitInput,
-} from "../safety-score-v9/wrapper-risk";
+import type { V9WrapperForm } from "../../types/safety-score-v9-wrapper";
+import type { V9AssetFactsV3, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
+import type { V9ResolvedDependencyInputs } from "../safety-score-v9/dependencies";
+import { resolveV9ParentLimitInput, type V9EvaluatedAsset } from "../safety-score-v9/evaluate-asset";
+import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { scoreV9EvaluatedAsset } from "../safety-score-v9/score";
+import { makeV9Pillar, makeV9ProductionScoreInput } from "./safety-score-v9-score.test-support";
+import { resolveV9WrapperParentLimit } from "../safety-score-v9/wrapper-risk";
 
-import { createV9FactGapV3 } from "../safety-score-v9/reasons";
-import type { V9EvidenceCauseProof } from "../../types/safety-score-v9-causes";
-const FACT_KEYS = [
-  "contractMutability",
-  "custodyEscrow",
-  "strategyComplexity",
-  "leverage",
-  "rehypothecationCorrelation",
-  "shareAccountingNavOracle",
-  "withdrawalTerms",
-  "measuredUnwind",
-  "lossAbsorptionEmergencyControls",
-] as const satisfies readonly V9WrapperLocalFactKey[];
 const DISCOUNTS = { pure: 3, "native-staked": 5, "strategy-vault": 10 } as const;
 
-function facts(
-  overrides: Partial<Record<V9WrapperLocalFactKey, V9WrapperRiskAssessment>> = {},
-  form: V9ApplicableWrapperLocalFacts["form"] = "pure",
-): V9ApplicableWrapperLocalFacts {
-  return {
-    schemaVersion: 1,
-    applicability: "wrapper",
-    form,
-    formDisposition: "reviewed",
-    formSignals: [`wrapper-form:${form}`],
-    formEvidenceRefIds: ["registry-review"],
-    facts: Object.fromEntries(
-      FACT_KEYS.map((factKey) => [
-        factKey,
-        {
-          disposition: "reviewed",
-          assessment: overrides[factKey] ?? "none",
-          signals: [`reviewed:${factKey}`],
-          evidenceRefIds: [`evidence:${factKey}`],
-        },
-      ]),
-    ) as V9ApplicableWrapperLocalFacts["facts"],
-    riskTransfer: {
-      disposition: "not-applicable",
-      mechanism: "none",
-      maximumParentLossAbsorptionPoints: 0,
-      signals: ["no-documented-parent-loss-absorption-credit"],
-      evidenceRefIds: [],
-    },
-  };
+function facts(form: V9WrapperForm) {
+  return { form };
 }
 
-function input(overrides: Partial<V9WrapperParentLimitInput> = {}): V9WrapperParentLimitInput {
-  return {
-    parentScore: 84,
-    localFacts: facts(),
-    fallbackDiscounts: DISCOUNTS,
-    ...overrides,
-  };
+function limit(parentScore: number, localFacts: { form: V9WrapperForm }) {
+  return resolveV9WrapperParentLimit({ parentScore, localFacts, formDiscounts: DISCOUNTS });
 }
 
-describe("Safety Score v9 wrapper-local risk", () => {
-  it("treats a complete pure 1:1 wrapper as pure rather than a vault", () => {
-    const result = resolveV9WrapperParentLimit(input());
-    expect(result.form).toBe("pure");
-    expect(result.factsComplete).toBe(true);
-    expect(result.fallbackDiscount).toBe(0);
-    expect(result.limit).toBe(84);
-  });
-
-  it("uses fixed form discounts only for incomplete local facts", () => {
-    const localFacts = facts({}, "strategy-vault");
-    localFacts.facts.withdrawalTerms = {
-      disposition: "issuer-undisclosed",
-      assessment: null,
-      signals: ["withdrawal-fees-undisclosed"],
-      evidenceRefIds: ["terms-review"],
-    };
-    const result = resolveV9WrapperParentLimit(input({ localFacts }));
-    expect(result.treatment).toBe("fallback-discount");
-    expect(result.fallbackDiscount).toBe(10);
-    expect(result.appliedDiscount).toBe(10);
-    expect(result.limit).toBe(74);
-    expect(result.missingFacts).toMatchObject([
-      { factClass: "withdrawalTerms", disposition: "issuer-undisclosed" },
-    ]);
-  });
-
-  it.each(["method-unsupported", "producer-failed", "issuer-undisclosed", "integration-missing", "unresearched", "public-data-uncurated"] as const)(
-    "does not convert %s unwind uncertainty into a form haircut",
-    (disposition) => {
-      const localFacts = facts({ lossAbsorptionEmergencyControls: "high" }, "strategy-vault");
-      localFacts.facts.measuredUnwind = {
-        disposition, assessment: null, signals: [], evidenceRefIds: [],
-      };
-      expect(resolveV9WrapperParentLimit(input({ localFacts }))).toMatchObject({
-        localRiskDiscount: 2.8, appliedDiscount: 2.8, fallbackDiscount: 0,
-        factsComplete: false, limit: 81.2,
-      });
-    },
-  );
-
-  it("prices known local risk without also applying the fallback", () => {
-    const result = resolveV9WrapperParentLimit(
-      input({
-        localFacts: facts({
-          contractMutability: "moderate",
-          measuredUnwind: "high",
-          strategyComplexity: "moderate",
-        }),
-      }),
-    );
-    expect(result.factsComplete).toBe(true);
-    expect(result.fallbackDiscount).toBe(0);
-    expect(result.localRiskDiscount).toBe(4.9);
-    expect(result.limit).toBe(79.1);
-  });
-
-  it("keeps integration-only unwind evidence out of root-holder loss", () => {
-    const localFacts = facts({ shareAccountingNavOracle: "moderate", measuredUnwind: "none" }, "native-staked");
-    localFacts.facts.measuredUnwind.incidentPostures = [
-      {
-        incidentId: "integration-unwind",
-        scope: { kind: "integration-only", integrationKey: "external-lending-market" },
-        assessment: "high",
-        evidenceRefIds: ["integration-postmortem"],
-      },
-    ];
-    const result = resolveV9WrapperParentLimit(input({ localFacts }));
-    expect(result.adjustments.find((adjustment) => adjustment.factKey === "measuredUnwind")).toMatchObject({
-      assessment: "none",
-      discountPoints: 0,
+describe("wrapper form parent limits", () => {
+  it.each(["pure", "native-staked", "strategy-vault"] as const)("deducts only the %s form cost", (form) => {
+    expect(limit(84, facts(form))).toMatchObject({
+      form, appliedDiscount: DISCOUNTS[form], limit: 84 - DISCOUNTS[form],
     });
   });
 
-  it("keeps an incomplete complex wrapper materially below a safe parent", () => {
-    const localFacts = facts(
-      {
-        contractMutability: "high",
-        strategyComplexity: "critical",
-        measuredUnwind: "critical",
-        lossAbsorptionEmergencyControls: "high",
-      },
-      "native-staked",
-    );
-    localFacts.facts.custodyEscrow = {
-      disposition: "issuer-undisclosed",
-      assessment: null,
-      signals: ["custody-terms-undisclosed"],
-      evidenceRefIds: ["custody-review"],
-    };
-    const result = resolveV9WrapperParentLimit(input({ parentScore: 95, localFacts }));
-    expect(result.localRiskDiscount).toBeGreaterThan(10);
-    expect(result.limit).toBeLessThan(85);
-  });
 
-  it("never exceeds the parent without documented loss absorption", () => {
-    const localFacts = facts({ contractMutability: "low" });
-    expect(resolveV9WrapperParentLimit(input({ localFacts })).limit).toBeLessThan(84);
-    expect(resolveV9WrapperParentLimit(input()).limit).toBe(84);
-  });
-
-  it("permits only bounded, reviewed risk-transfer credit", () => {
-    const localFacts = facts({ custodyEscrow: "low" });
-    localFacts.riskTransfer = {
-      disposition: "reviewed",
-      mechanism: "first-loss-capital",
-      maximumParentLossAbsorptionPoints: 4,
-      signals: ["documented-first-loss-capital"],
-      evidenceRefIds: ["first-loss-review"],
-    };
-    const result = resolveV9WrapperParentLimit(input({ localFacts }));
-    expect(result.treatment).toBe("documented-risk-transfer");
-    expect(result.riskTransfer).toMatchObject({ requestedCredit: 4, appliedCredit: 4 });
-    expect(result.limit).toBe(87.8);
-  });
-
-  it("saturates documented credit at the remaining score headroom", () => {
-    const localFacts = facts();
-    localFacts.riskTransfer = {
-      ...localFacts.riskTransfer,
-      disposition: "reviewed",
-      mechanism: "first-loss-capital",
-      maximumParentLossAbsorptionPoints: 4,
-    };
-    expect(resolveV9WrapperParentLimit(input({ parentScore: 99, localFacts }))).toMatchObject({
-      limit: 100,
-      riskTransfer: { requestedCredit: 4, appliedCredit: 1 },
-    });
-  });
-
-  it("denies requested credit when a local fact, form, or transfer review is unavailable", () => {
-    for (const missing of ["withdrawalTerms", "wrapperForm", "riskTransfer"] as const) {
-      const localFacts = facts();
-      localFacts.riskTransfer = {
-        ...localFacts.riskTransfer,
-        disposition: "reviewed",
-        mechanism: "first-loss-capital",
-        maximumParentLossAbsorptionPoints: 4,
-      };
-      if (missing === "wrapperForm") localFacts.formDisposition = "producer-failed";
-      else if (missing === "riskTransfer") localFacts.riskTransfer.disposition = "producer-failed";
-      else localFacts.facts.withdrawalTerms.disposition = "producer-failed";
-      expect(resolveV9WrapperParentLimit(input({ localFacts })), missing).toMatchObject({
-        factsComplete: false,
-        missingFacts: [{ factClass: missing, disposition: "producer-failed" }],
-        riskTransfer: { requestedCredit: 0, appliedCredit: 0 },
-      });
+  it("floors fractional parent ceilings and never exceeds the parent", () => {
+    for (const form of ["pure", "native-staked", "strategy-vault"] as const) {
+      for (const parent of [0, 2, 25, 40, 49.9, 84, 100]) {
+        const result = limit(parent, facts(form));
+        expect(result.limit).toBe(Math.max(0, Math.floor(parent - DISCOUNTS[form])));
+        expect(result.limit).toBeLessThanOrEqual(parent);
+      }
     }
   });
 
-  it("floors a parent below the local risk discount at zero", () => {
-    expect(resolveV9WrapperParentLimit(input({
-      parentScore: 1,
-      localFacts: facts({ leverage: "critical" }),
-    }))).toMatchObject({ limit: 0, localRiskDiscount: 4 });
+  it("does not lift a weak parent to a mild-risk grade floor", () => {
+    expect(limit(40, facts("strategy-vault")).limit).toBe(30);
   });
 
-  it("rejects invalid parent, fallback, and eligible credit values independently", () => {
-    for (const invalid of [-1, 101, Number.NaN, Number.POSITIVE_INFINITY]) {
-      expect(() => resolveV9WrapperParentLimit(input({ parentScore: invalid }))).toThrow();
-      expect(() => resolveV9WrapperParentLimit(input({
-        fallbackDiscounts: { ...DISCOUNTS, pure: invalid },
-      }))).toThrow();
-      const localFacts = facts();
-      localFacts.riskTransfer = {
-        ...localFacts.riskTransfer,
-        disposition: "reviewed",
-        mechanism: "first-loss-capital",
-        maximumParentLossAbsorptionPoints: invalid,
-      };
-      expect(() => resolveV9WrapperParentLimit(input({ localFacts }))).toThrow();
-    }
+  it("passes accumulated form limits through nested wrappers", () => {
+    const middle = limit(84, facts("strategy-vault"));
+    const child = limit(middle.limit, facts("pure"));
+    expect(middle.limit).toBe(74);
+    expect(child.limit).toBe(71);
   });
-
-  it("cannot improve when its serial parent score falls", () => {
-    const localFacts = facts({ measuredUnwind: "moderate" }, "native-staked");
-    const higherParent = resolveV9WrapperParentLimit(input({ parentScore: 84, localFacts })).limit;
-    const lowerParent = resolveV9WrapperParentLimit(input({ parentScore: 70, localFacts })).limit;
-    expect(lowerParent).toBeLessThan(higherParent);
-    expect(higherParent - lowerParent).toBe(14);
-  });
-
 });
 
-describe("cause-aware wrapper fallback", () => {
-  it.each(["pure", "native-staked", "strategy-vault"] as const)(
-    "retains the %s form charge for C/U custody and withdrawal gaps but excludes proven A/B", (form) => {
-      for (const factKey of ["custodyEscrow", "withdrawalTerms"] as const) {
-        for (const cause of ["A", "B", "C", "U"] as const) {
-          const localFacts = facts({ contractMutability: "high" }, form);
-          localFacts.riskTransfer = {
-            disposition: "reviewed", mechanism: "first-loss-capital",
-            maximumParentLossAbsorptionPoints: 4, signals: ["documented-first-loss-capital"],
-            evidenceRefIds: ["first-loss-review"],
-          };
-          const id = `${form}:${factKey}:${cause}`;
-          const proof: V9EvidenceCauseProof = cause === "A"
-            ? { cause, producerState: "integration-missing", sourceId: "wrapper-reader", sourceGenerationId: "captured",
-              observedAtSec: 1, rejectionCode: "reader-gap", evidenceRefIds: ["attempt"] }
-            : cause === "U" ? { cause, reason: "not-yet-researched", evidenceRefIds: [] }
-              : cause === "B" ? { cause, proofOrigin: "typed-review", classificationId: id, reviewedAt: "2026-10-01",
-                sources: [{ url: "https://wrapper.example/terms", assertion: "Exact local terms are public." }],
-                evidenceRefIds: ["review"], assertion: "required-data-public" }
-                : { cause, proofOrigin: "typed-review", classificationId: id, reviewedAt: "2026-10-01",
-                  sources: [{ url: "https://wrapper.example/terms", assertion: "Exact local terms were researched." }],
-                  evidenceRefIds: ["review"], assertion: "researched-nondisclosure", rationale: "Required local datum absent." };
-          const gap = createV9FactGapV3({ gapId: id, responsibility: "unresearched", causeProof: proof,
-            reasonCode: "unresolved-control-identity", ownerDomain: "control", policyRuleId: "wrapper-local",
-            observationState: "bounded-unknown", path: { kind: "local-component", componentKey: `wrapper-local:${factKey}` },
-            message: "Scoped wrapper local uncertainty." });
-          localFacts.facts[factKey] = { disposition: V9WrapperFactDispositionSchema.parse(gap.responsibility), assessment: null, signals: [], evidenceRefIds: [],
-            status: { applicability: { state: "required", policyRuleId: "wrapper-local", rationale: null, gapId: null },
-              observationState: "bounded-unknown", gapIds: [id], evidenceRefIds: [] } };
-          const result = resolveV9WrapperParentLimit(input({ parentScore: 58, localFacts, gaps: [gap] }));
-          const expectedDiscount = cause === "A" || cause === "B" ? 1.4 : DISCOUNTS[form];
-          expect(result.localRiskDiscount).toBe(1.4);
-          expect(result.fallbackDiscount).toBe(cause === "A" || cause === "B" ? 0 : DISCOUNTS[form]);
-          expect(result.appliedDiscount).toBe(expectedDiscount);
-          expect(result.limit).toBe(58 - expectedDiscount);
-          expect(result.riskTransfer.appliedCredit).toBe(0);
-          expect(result.factsComplete).toBe(false);
-          expect(result.missingFacts[0]!.cause).toBe(cause);
-          expect(result.adjustments.find((adjustment) => adjustment.factKey === "contractMutability")!.cause).toBeNull();
-        }
-      }
-    },
-  );
+const STATUS: V9FactStatusV2 = {
+  applicability: { state: "required", policyRuleId: "fixture", gapId: null, rationale: null },
+  observationState: "known", evidenceRefIds: ["fixture:claim"], gapIds: [],
+};
 
-  it.each(["unresearched", "integration-missing", "producer-failed", "method-unsupported", "public-data-uncurated"] as const)(
-    "does not grant withdrawal relief from an unproven %s label", (disposition) => {
-      const localFacts = facts({ contractMutability: "high" });
-      localFacts.facts.withdrawalTerms = {
-        disposition, assessment: null, signals: ["withdrawal-fees-undisclosed"], evidenceRefIds: [],
-      };
-      expect(resolveV9WrapperParentLimit(input({ parentScore: 58, localFacts }))).toMatchObject({
-        fallbackDiscount: 3, localRiskDiscount: 1.4, appliedDiscount: 3, limit: 55,
-        missingFacts: [{ factClass: "withdrawalTerms", cause: "U" }],
-      });
-    },
-  );
+function concentratedParent(weight: number, parentScore: number | null = 64, status = STATUS,
+  assetClass = "stablecoin", reserveWeight = weight) {
+  const asset = {
+    assetId: "child", dependencies: { status }, wrapperLocalFacts: { applicability: "not-applicable" },
+    reserveExposures: [{ trackedAssetId: "collateral", weight: reserveWeight, assetClass, status: STATUS }],
+  } as unknown as V9AssetFactsV3;
+  const inputs: V9ResolvedDependencyInputs = {
+    assetId: "child", serial: [], cycleBlocked: false,
+    basket: [
+      // Basket scores are Backing-only and must not become the whole-parent ceiling.
+      { upstreamAssetId: "collateral", weight, score: 95, boundedUnknown: false },
+      { upstreamAssetId: "dust", weight: 1 - weight, score: 99, boundedUnknown: false },
+    ],
+  };
+  const trace = scoreV9EvaluatedAsset(makeV9ProductionScoreInput({
+    assetId: "collateral", trackRecordMonths: 120,
+    pillars: { backing: makeV9Pillar(64), exit: makeV9Pillar(64), control: makeV9Pillar(64) },
+  }), V9_CANDIDATE_POLICY_V1);
+  trace.inheritableScore = parentScore;
+  // A public premium must not propagate through the collateral ceiling.
+  trace.finalScore = 90;
+  const evaluated = new Map([["collateral", { trace } as V9EvaluatedAsset]]);
+  return resolveV9ParentLimitInput(asset, inputs, evaluated, undefined, V9_CANDIDATE_POLICY_V1);
+}
+
+describe("near-total admitted collateral parent limits", () => {
+  it.each([0.99, 0.991, 0.99999996, 1])("caps a %s collateral share at the premium-free parent minus three", (weight) => {
+    expect(concentratedParent(weight)).toMatchObject({
+      required: true, score: 61, wrapperParentLimit: { form: "pure", appliedDiscount: 3, parentScore: 64 },
+    });
+  });
+
+  it.each([0.981, 0.989999])("does not infer a pure claim below 99%% (%s)", (weight) => {
+    expect(concentratedParent(weight)).toMatchObject({ required: false, score: null });
+  });
+
+  it("requires admitted dependency evidence", () => {
+    for (const status of [
+      { ...STATUS, observationState: "missing" as const },
+      { ...STATUS, evidenceRefIds: [] },
+      { ...STATUS, applicability: { ...STATUS.applicability, state: "unresolved" as const } },
+    ]) expect(concentratedParent(1, 64, status).required).toBe(false);
+  });
+
+  it("keeps an independently lower child score", () => {
+    const parent = concentratedParent(1);
+    const trace = scoreV9EvaluatedAsset(makeV9ProductionScoreInput({
+      trackRecordMonths: 120, parent,
+      pillars: { backing: makeV9Pillar(40), exit: makeV9Pillar(40), control: makeV9Pillar(40) },
+    }), V9_CANDIDATE_POLICY_V1);
+    expect(trace.finalScore).toBe(40);
+    expect(trace.bindingCap).toBeNull();
+  });
+
+  it("does not invent a limit for an unscored collateral card", () => {
+    expect(concentratedParent(1, null)).toMatchObject({ required: false, score: null });
+  });
+
+  it("requires direct token holdings, not a strategy denomination or composite claim", () => {
+    expect(concentratedParent(1, 64, STATUS, "protocol-position").required).toBe(false);
+    expect(concentratedParent(1, 64, STATUS, "bank-deposit").required).toBe(false);
+    expect(concentratedParent(1, 64, STATUS, "stablecoin", 0.98).required).toBe(false);
+    expect(concentratedParent(1, 64, STATUS, "fund-share").required).toBe(true);
+  });
 });

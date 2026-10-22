@@ -60,6 +60,6 @@
     "yieldSource": "ISC purchasing-power basket appreciation",
     "yieldType": "nav-appreciation"
   },
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "unknown",
   "governanceQuality": "multisig"
 }

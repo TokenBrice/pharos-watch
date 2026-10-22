@@ -33,7 +33,11 @@ describe("Safety Score v9 USDT premium production integration", () => {
       productionCapture.draft as unknown as ReportCardsFixedInputDraft,
     );
     const extension =
-      buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput, { metaById: capturedAccessMetaById });
+      buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput, {
+        metaById: capturedAccessMetaById,
+        // Freeze optional transfer overlays as well as blacklist evidence.
+        reviewedTransferFacts: new Map(),
+      });
     const facts = compileSafetyScoreV9FactSetFromNormalizedInput(
       fixedInput,
       extension,
@@ -67,14 +71,16 @@ describe("Safety Score v9 USDT premium production integration", () => {
     }
 
     const usdt = evaluatedById.get("usdt-tether")!;
-    // Tron is not a mature chain (block-production-finality pending since the 2026-09-23 re-review),
-    // so this capture's 48.9% tron slice is priced as a common-mode deployment adjustment. The
-    // longevity premium has no base-score floor, so it still applies on top of that lower base.
+    // The longevity premium is public-only. Pending TRON maturity research
+    // retains uncertainty without an authored-failure deployment charge.
     expect(usdt.trace).toMatchObject({
-      scoreAdjustments: [{ kind: "market-anchor-longevity", appliedPoints: 12 }],
-      deploymentAdjustments: [{ failureDomainKey: "chain:tron", exposedScore: 64 }],
+      scoreAdjustments: [{ kind: "market-anchor-longevity", configuredPoints: 12, appliedPoints: 12 }],
     });
-    expect(usdt.trace.inheritableScore).toBe(usdt.trace.finalScore! - 12);
+    expect(usdt.trace.deploymentAdjustments).toEqual([]);
+    // The publication maximum can truncate the visible lift; downstream claims
+    // inherit the ordinary score, not the capped published score minus 12.
+    expect(usdt.trace.inheritableScore).toBe(usdt.trace.scoreAdjustments[0]!.publishedScoreBefore);
+    expect(usdt.trace.inheritableScore).toBeLessThan(usdt.trace.finalScore!);
 
     const childFacts = factsById.get("susdt-spark")!;
     // The 2026-09-29 re-curation measured the spUSDT vault on-chain (block

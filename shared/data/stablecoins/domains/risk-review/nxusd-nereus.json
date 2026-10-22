@@ -107,7 +107,7 @@
         "id": "avalanche-debt-bearing-cauldrons",
         "label": "Avalanche debt-bearing Cauldron markets",
         "tier": "single-source-or-laggy",
-        "summary": "All 17 deployed Avalanche Cauldrons retained debt at the reviewed block and use the same immediate permissionless liquidation engine, with a complete per-market oracle and risk-parameter map below.",
+        "summary": "The 17 historically reviewed Avalanche Cauldrons retained debt at the original observation block. Their cited common-engine source requires approved liquidators; this branch is not a current exhaustive all-chain market census.",
         "collateralAssets": [
           "WAVAX",
           "WAVAX/USDT.e Trader Joe LP",
@@ -430,14 +430,14 @@
             "note": "Cauldron 0x0194eB3520b7d7eB0b014FCe6ed464Eaea0Ca765; liquidation multiplier 112.5%; nonzero totalBorrow at the observed block."
           }
         ],
-        "liquidationMechanism": "Any caller can immediately liquidate one or more users after updateExchangeRate and the Cauldron solvency check fail. The liquidator repays each selected NXUSD debt part and receives the corresponding BentoBox collateral shares using that market's liquidation multiplier; optional callback data supports atomic liquidation execution.",
+        "liquidationMechanism": "The cited CauldronV2 source, re-read 2026-10-20, requires liquidatorManager.info(msg.sender).isAllowed before liquidation. An approved liquidator updates the exchange rate, checks insolvency, repays selected NXUSD debt parts and receives corresponding BentoBox collateral shares at the market liquidation multiplier. The previous any-caller description was unsupported by that same source; no current complete deployment or approved-liquidator census is inferred.",
         "liquidationDelaySec": 0,
-        "backstop": "The reviewed deployments and Cauldron source define no Stability Pool, insurance pool, or automatic protocol-funded shortfall backstop. Liquidation depends on an external caller supplying NXUSD in exchange for seized collateral.",
+        "backstop": "The reviewed deployments and cited Cauldron source define no Stability Pool, insurance pool, or automatic protocol-funded shortfall backstop. The cited engine relies on an approved liquidator supplying NXUSD in exchange for seized collateral.",
         "shutdownOrBadDebtBehavior": "The Cauldron subtracts only the borrow parts selected and repaid by a successful liquidation. Debt that is not economically liquidated remains assigned to borrower positions and continues accruing; the reviewed source defines no global settlement or automatic write-off. The NXUSD owner Safe retains a rate-limited direct mint path, but that privilege is not an automatic bad-debt mechanism.",
         "failureDomainKeys": [
           "nereus-cauldrons",
           "nereus-oracle-no-staleness-check",
-          "nereus-external-liquidators",
+          "nereus-approved-liquidators",
           "nereus-no-automatic-backstop",
           "avalanche"
         ],

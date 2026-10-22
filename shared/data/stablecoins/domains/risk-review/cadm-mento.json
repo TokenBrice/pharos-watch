@@ -54,8 +54,8 @@
     "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
-    "tier": "single-source-or-laggy",
-    "summary": "At Celo block 78986505, CADm's Broker/BiPoolManager USDm/CADm ConstantSum exchange 0x517ccc3bcab9f35e2e24143a0c1809068efc649f740846cfb6a1c5703735c1ee uses CAD/USD feed 0x20869cf54ead821c45dfb2ab0c23d2e10fbb65a4, one ChainlinkRelayerV1 reporter 0x3a7af4e6f53ac13bc9e67cb6ed5866d855692390, and one configured Chainlink aggregator 0x2f6d6cb9e01d63e1a1873bacc5bfd4e7d4e461d1. getRates and medianRate agree on 703022290000000000000000/1e24; medianTimestamp is 1790887026. Effective report expiry and bucket reset are 360 seconds, minimumReports is 1, and spread is 0.15%. MedianDeltaBreaker is enabled at 4% with a 900-second reset cooldown; ValueDeltaBreaker is disabled. The sorted-list median of one relayer is not independent medianization or failover. Stale reports invalidate ConstantSum quotes; BreakerBox suspends execution rather than substituting a second source. This evidenced single-live-source topology retains the existing Mento single-source-or-laggy convention; it does not assert the pinned report was stale.",
+    "tier": "standard-external",
+    "summary": "At Celo block 78986505, CADm's Broker/BiPoolManager USDm/CADm ConstantSum exchange 0x517ccc3bcab9f35e2e24143a0c1809068efc649f740846cfb6a1c5703735c1ee uses CAD/USD feed 0x20869cf54ead821c45dfb2ab0c23d2e10fbb65a4, one ChainlinkRelayerV1 reporter 0x3a7af4e6f53ac13bc9e67cb6ed5866d855692390, and one configured Chainlink aggregator 0x2f6d6cb9e01d63e1a1873bacc5bfd4e7d4e461d1. getRates and medianRate agree on 703022290000000000000000/1e24; medianTimestamp is 1790887026. Effective report expiry and bucket reset are 360 seconds, minimumReports is 1, and spread is 0.15%. MedianDeltaBreaker is enabled at 4% with a 900-second reset cooldown; ValueDeltaBreaker is disabled. Stale reports invalidate ConstantSum quotes; BreakerBox suspends execution rather than substituting a second source. Pre-existing curation correction (not a release downgrade), researched 2026-10-21: the singleton reporter is an immutable, permissionless ChainlinkRelayerV1, not one discretionary data signer. At Celo 80683399 (2026-10-21T12:02:37Z; hash 0x8392666da009829bbb6ccda7f67c4d79210a4ac6eea3666a71a8f247b48d677b), getOracles/getAggregators bind that exact relay to the same CAD/USD proxy and active AccessControlledOffchainAggregator 0x7e7b88ee46c1b278a5d8eb80dfc578d115737324, which exposes ten transmitters. All relay/proxy/DON runtimes exactly match verified explorer bytecode. Verified relay code reads only the immutable feed, validates positive price and timestamp, and permits anyone to relay; verified DON code requires a positive configured threshold, distinct authorized signatures above that threshold and medianized observations. The latest round was 218 seconds old at this pin. Standard-external correctly recognizes the upstream DON; no independent-provider failover or medianized-with-delay credit is asserted. Original October1 review and historical observations are retained, not renewed.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
@@ -101,6 +101,18 @@
       {
         "label": "Verified CAD/USD ChainlinkRelayerV1; pinned runtime exact match",
         "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x3a7af4e6f53ac13bc9e67cb6ed5866d855692390"
+      },
+      {
+        "label": "Pre-existing oracle correction pin 80683399, accessed 2026-10-21",
+        "url": "https://celo.blockscout.com/block/80683399"
+      },
+      {
+        "label": "CAD/USD Chainlink proxy, runtime matched at 80683399; accessed 2026-10-21",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x2f6d6cb9e01d63e1a1873bacc5bfd4e7d4e461d1"
+      },
+      {
+        "label": "CAD/USD active OCR DON with signature threshold, runtime matched at 80683399; accessed 2026-10-21",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x7e7b88ee46c1b278a5d8eb80dfc578d115737324"
       },
       {
         "label": "Verified MedianDeltaBreaker; pinned runtime exact match",

@@ -53,6 +53,61 @@
       },
       {
         "chain": "ethereum",
+        "address": "0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd",
+        "deploymentRefs": ["ethereum:0xbeefff209270748ddd194831b3fa287a5386f5bc"],
+        "label": "Smokehouse USDC V1 Steakhouse owner parameter authority",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 5,
+        "signerCount": 10,
+        "safe": {
+          "owners": [
+            "0xc04f9610694a9e07e0d6a361bec53abeadf9cf9e",
+            "0x005398827d00c2951ffb52bd91164ef402bcf105",
+            "0x2e8c25a6f7f7f34666b998813abf97d8b617f111",
+            "0x5571a6fef340a9d26f1428684b9e893ea84b46ac",
+            "0x32e5cb1a68761a0cff88d4baa21e398422b5166e",
+            "0x21c1e5be991bf1544ca9759a601f66dc60083f7d",
+            "0x9a86713145f38cd688969c0ecc87b314b23254b2",
+            "0xbc27046213d34d4a153cf57a48c74d74239e8968",
+            "0x394e6ef80c6f4ad14a891a3987d8bd1387afa0b1",
+            "0x86bd534a95fb2cc36d526ba149464c4477315c32"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 26095798,
+          "observedAt": "2026-10-01",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-20",
+        "observedBlock": 26236622,
+        "failureDomainKeys": ["ethereum:0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd"],
+        "capDescription": "Smokehouse V1 owner-held parameter authority, not arbitrary USDC issuance or immutable-vault code replacement. Strategy allocation, fee configuration and curator powers remain local economic controls.",
+        "evidence": "Exact Smokehouse V1 owner() at Ethereum block 26236622, hash 0x942fd9743fc8fc922b4b1ef4058834d2a5254ce8dba3037cf1ad33f999e80fe5, timestamp 2026-10-20T21:55:35Z returned the full Safe address 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd; observed 2026-10-21T20:26:08.208Z through the keyless Alchemy endpoint. This replaces reliance on the earlier abbreviated owner text. The Safe's separate steakUSDC configuration snapshot at block 26095798 on 2026-10-01 records the ten-owner roster, threshold five, empty modules and zero guard; that snapshot is not refreshed by owner(). Neither proof establishes private custody, independent humans or legal protection.",
+        "sources": [
+          {
+            "label": "Exact V1 owner() pinned Ethereum 26236622, hash 0x942fd9743fc8fc922b4b1ef4058834d2a5254ce8dba3037cf1ad33f999e80fe5, content 2026-10-20T21:55:35Z; observed 2026-10-21T20:26:08.208Z",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Exact Smokehouse V1 deployment and owner inventory",
+            "url": "https://app.morpho.org/ethereum/vault/0xbeefff209270748ddd194831b3fa287a5386f5bc/smokehouse-usdc"
+          },
+          {
+            "label": "Exact Smokehouse V1 immutable source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbeefff209270748ddd194831b3fa287a5386f5bc?fields=sources,compilation"
+          },
+          {
+            "label": "Shared Steakhouse owner Safe; retained configuration as of 2026-10-01",
+            "url": "https://etherscan.io/address/0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd"
+          }
+        ]
+      },
+      {
+        "chain": "ethereum",
         "address": "0xE982615d461DD5cD06575BbeA87624fda4e3de17",
         "label": "Inherited Ethereum USDC MasterMinter",
         "role": "minter-admin",
@@ -89,6 +144,10 @@
       "disposition": "scoreable",
       "sources": [
         {
+          "label": "Exact Smokehouse V1 owner() at Ethereum block 26236622, observed 2026-10-21T20:26:08.208Z; content as of 2026-10-20T21:55:35Z",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        },
+        {
           "label": "Morpho vault page",
           "url": "https://app.morpho.org/ethereum/vault/0xbeefff209270748ddd194831b3fa287a5386f5bc/smokehouse-usdc"
         },
@@ -113,9 +172,28 @@
           "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
         }
       ],
-      "evidence": "RPC and explorer review confirmed an immutable MetaMorpho vault over USDC, deposit-only wrapper minting, and Steakhouse Safe ownership (8 owners, threshold 5, no modules returned). Durable base-asset mint authority remains with Circle USDC. Economic-control evidence reviewed 2026-07-15: the immutable MetaMorpho wrapper mints shares only against deposited USDC; base issuance inherits Circle's monthly Deloitte reserve examination. The latest available USDC report covers May 2026, and the NYDFS virtual-currency list matches Circle Internet Financial, LLC. M-2 evidence review 2026-08-08: supervision and reconciliation downgraded to the wrapper-level convention (steakusdc precedent) - the coin's issuer of record is the vault curator, which no named prudential regime supervises (jurisdiction is correspondingly empty), and the deposit-only share wrapper is not a separate issuer reserve regime. Circle's NYDFS supervision and monthly Deloitte examinations are facts of the underlying USDC, credited on usdc-circle, not of this wrapper. Economic-posture fields reviewed 2026-08-15: the immutable vault mints shares only against deposited USDC, with no local attestation or prudential regime. D14/D29 sweep 2026-10-03: At Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), verified MetaMorpho runtime matches the deployed code and asset() is USDC. deposit/mint call _deposit and the inherited ERC-4626 implementation transfers the required USDC before minting shares. _accrueFee mints only formula-computed performance fee shares against positive vault interest; owner fee/recipient and curator market-cap changes cannot select an arbitrary mint amount or authorize another share minter. These fee shares dilute existing backed claims rather than manufacture unbacked assets. Inherited issuer controls describe parent issuance carried by the serial-claim dependency edge, not wrapper-local share minting; parent D14 risk is not charged twice.",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U10BoundedWrappersA)",
-      "reviewedAt": "2026-10-03"
+      "evidence": "Governor-inventory parity review performed 2026-10-21. Exact Smokehouse V1 owner() was independently read on 2026-10-21T20:26:08.208Z at Ethereum block 26236622, hash 0x942fd9743fc8fc922b4b1ef4058834d2a5254ce8dba3037cf1ad33f999e80fe5, content as of 2026-10-20T21:55:35Z: owner=0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd. The same exact Safe configuration remains the separate historical October 1 snapshot, not newly observed signer state. No fresh runtime, current reserve report, private key custody, independent humans, execution-complete fallback or upgraded cap-semantics certificate is asserted. Original D14/cap-semantics dates remain unchanged. The following retained narrative is historical, including any then-latest report or earlier signer counts: RPC and explorer review confirmed an immutable MetaMorpho vault over USDC, deposit-only wrapper minting, and Steakhouse Safe ownership (8 owners, threshold 5, no modules returned). Durable base-asset mint authority remains with Circle USDC. Economic-control evidence reviewed 2026-07-15: the immutable MetaMorpho wrapper mints shares only against deposited USDC; base issuance inherits Circle's monthly Deloitte reserve examination. The latest available USDC report covers May 2026, and the NYDFS virtual-currency list matches Circle Internet Financial, LLC. M-2 evidence review 2026-08-08: supervision and reconciliation downgraded to the wrapper-level convention (steakusdc precedent) - the coin's issuer of record is the vault curator, which no named prudential regime supervises (jurisdiction is correspondingly empty), and the deposit-only share wrapper is not a separate issuer reserve regime. Circle's NYDFS supervision and monthly Deloitte examinations are facts of the underlying USDC, credited on usdc-circle, not of this wrapper. Economic-posture fields reviewed 2026-08-15: the immutable vault mints shares only against deposited USDC, with no local attestation or prudential regime. D14/D29 sweep 2026-10-03: At Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), verified MetaMorpho runtime matches the deployed code and asset() is USDC. deposit/mint call _deposit and the inherited ERC-4626 implementation transfers the required USDC before minting shares. _accrueFee mints only formula-computed performance fee shares against positive vault interest; owner fee/recipient and curator market-cap changes cannot select an arbitrary mint amount or authorize another share minter. These fee shares dilute existing backed claims rather than manufacture unbacked assets. Inherited issuer controls describe parent issuance carried by the serial-claim dependency edge, not wrapper-local share minting; parent D14 risk is not charged twice.",
+      "reviewer": "Pharos Safety Score R1 vault parity review",
+      "reviewedAt": "2026-10-21",
+      "scopedQuestions": [
+        {
+          "controlRef": "ethereum:0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd",
+          "subject": "key-custody-independence",
+          "question": "Which exact key-custody/recovery arrangements and independent human approval boundaries apply to the Smokehouse V1 owner Safe? Content as of 2026-10-01 establishes its shared five-of-ten controller identity, not those private safeguards.",
+          "reviewedAt": "2026-10-21",
+          "reviewer": "Pharos Safety Score R1 vault parity review",
+          "sources": [
+            {
+              "label": "Exact shared Steakhouse owner Safe",
+              "url": "https://etherscan.io/address/0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd"
+            },
+            {
+              "label": "Steakhouse vault setup and control disclosure",
+              "url": "https://www.steakhouse.financial/docs/risk-management/monitoring/vault-setup-and-controls.md"
+            }
+          ]
+        }
+      ]
     }
   }
 }

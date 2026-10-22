@@ -37,13 +37,21 @@
       {
         "label": "Current issuer report index; latest period remains June 30, 2026",
         "url": "https://tether.to/page-data/transparency/page-data.json"
+      },
+      {
+        "label": "Issuer MXNT liability-count feed, retrieved 2026-10-21; current counts are not a June 30 report-denominator reconciliation",
+        "url": "https://app.tether.to/transparency.json"
+      },
+      {
+        "label": "Incorporated Risk Disclosure Statement, rendered and read 2026-10-21: No Security means contractual redemption is not security in the holder's favour",
+        "url": "https://tether.to/en/legal/?tab=risk-disclosure-statement"
       }
     ],
-    "rationale": "The issuer report index re-opened October 15 still identifies June 30, 2026 as its latest independently assured period. BDO reconciles the aggregate fiat-token reserve pool of USD 187,751,426,411 against USD 183,641,897,215 total liabilities, including USD 183,622,105,630 token liabilities. Holder terms and the February 20 Relevant Information Document explicitly place MXNT in the same shared reserve model. No token-specific constituent weights, reserve custodians, maximum maturity or full liquidation bound are disclosed. This single basket records the shared claim without importing USDT percentages or inferring dedicated peso assets. The daily MXNT feed's equal total_assets and total_liabilities reproduce issued-token counts, not an independently valued dedicated reserve allocation.",
+    "rationale": "Round-3 source-scope review on 2026-10-21 preserves the October 15 review start and June 30 composition date. The current official report index still ends at the June 30, 2026 BDO examination signed July 31. Its report pages 1-4 define all Company assets as common reserves for fiat-denominated tokens and disclose the whole historical asset-category roster: USD 187,751,426,411 assets, USD 183,641,897,215 liabilities and USD 183,622,105,630 token liabilities. Binding terms section 4.1 and the February 20 RID pages 5 and 11 expressly include MXNT; RID section 3 says subscription funds are held or invested in a discretionary common reserve basket and the issuer's only post-sale obligation is conditional primary-market redemption. A separate peso-only allocation is therefore not inherently required, and historical pool composition is publicly disclosed. Report page 3 footnote 2 excludes authorized-but-unissued treasury tokens and Company-held issued tokens outside treasury and uses contractual redemption values net of the stated 10-basis-point fee; no MXNT currency/deployment/excluded-wallet amounts or same-checkpoint MXN-to-USD correspondence are supplied. The current issuer feed has 20,000,000 authorized Ethereum MXNT, 437,600 not issued and 19,562,400 total_liabilities, but its newer checkpoint cannot be substituted into June 30's independently examined pooled denominator, and equal total_assets does not measure independently valued reserve assets. The terms and RID establish a personal verified-customer redemption claim, not a documented reserve-property interest, insolvency waterfall or MXNT-versus-other-creditor priority. These searched primary sources publish neither a newer complete pooled report nor the missing exact claim/exclusion/priority correspondence. Current full-composition admission remains withheld for those specific external disclosure gaps, not because dedicated peso weights are required and not because all historical pool categories are unknown.",
     "compositionBasis": "June 30, 2026 aggregate independent report; shared-claim identity corroborated by issuer terms and Relevant Information Document; historical composition date unchanged",
     "compositionAsOf": "2026-06-30",
     "scope": "classification-only",
-    "knownUnknownExposure": "The report does not disclose a dedicated MXNT reserve allocation, named MXNT custodian roster, insolvency priority, or reserve-specific peso asset mix.",
+    "knownUnknownExposure": "Historical whole-pool categories and MXNT's common-reserve identity are established. What remains unestablished is a current independently dated pooled book, exact MXNT liability/excluded-wallet/currency correspondence to that book, and enforceable common-pool property or insolvency priority. The retained 100% classification-only envelope represents that unresolved admission scope, not a measured 100% opaque asset mix or a requirement for dedicated peso-only reserves.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -51,7 +59,7 @@
         "reserveName": "Shared Tether fiat-token reserve pool; MXNT allocation undisclosed",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "No token-specific constituent weights are disclosed; basket cannot create tracked dependency edges."
+        "rationale": "A common-pool claim is identified and historical categories are public, but the exact current claim, exclusions and pooled-liability correspondence remain unestablished; this contextual basket cannot create measured tracked dependency weights."
       }
     ]
   },
@@ -83,6 +91,6 @@
         "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
       }
     ],
-    "uncertainty": "The issuer's Relevant Information Document states reserves are primarily held with third parties including banks and licensed financial institutions, but provides no named whole-book MXNT custodian roster or allocation. The aggregate report and terms do not establish token-specific reserve segregation, enforceable insolvency priority, replacement continuity or a reserve-specific peso asset mix. Generic online/offline issuer-wallet disclosures do not identify the six privileged signers' key-custody policy."
+    "uncertainty": "Round-3 review on 2026-10-21: RID section 3 identifies a discretionary shared reserve basket primarily held with third parties, including banks and licensed financial institutions, and limits the issuer's post-sale obligation to conditional redemption for KYC-verified primary-market customers. The incorporated Risk Disclosure Statement's No Security paragraph expressly states that the contractual redemption right does not represent security in favour of the holder. Its Banking Risk and Counterparty Risk paragraphs disclose loss, insolvency, freezes and recovery risks, but do not establish a holder insolvency waterfall or MXNT-versus-other-creditor priority. Neither those disclosures nor the latest June 30 BDO report establishes a current named whole-pool custodian allocation or reserve-property interest. Terms section 11.17 concerns property reflected in an account wallet; it is not used as proof that every reserve account is unsegregated. No separate peso-only basket is required or inferred. Existing segregation, bankruptcy-remoteness and rehypothecation states and original review start remain unchanged."
   }
 }

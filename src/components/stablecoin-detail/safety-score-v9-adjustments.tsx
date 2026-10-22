@@ -1,12 +1,6 @@
 import { Award, ShieldCheck } from "lucide-react";
 import type { SafetyScoreV9CurrentCard } from "@shared/types";
 
-const WRAPPER_TREATMENT_LABELS: Record<string, string> = {
-  "local-facts": "after discounting the wrapper's own reviewed risks",
-  "fallback-discount": "after a standard discount because the wrapper's own risks are not fully reviewed",
-  "documented-risk-transfer": "after crediting documented risk transfer",
-};
-
 export function ScoreAdjustment({ card }: { card: SafetyScoreV9CurrentCard }) {
   const adjustment = card.scoreTrace.scoreAdjustments[0];
   if (!adjustment) return null;
@@ -46,9 +40,7 @@ export function CapSection({ card }: { card: SafetyScoreV9CurrentCard }) {
       </div>
       <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
         {wrapperLimit
-          ? `The parent asset scores ${wrapperLimit.parentScore.toFixed(0)}; this wrapper is limited to ${wrapperLimit.limit.toFixed(0)} / 100 ${
-              WRAPPER_TREATMENT_LABELS[wrapperLimit.treatment] ?? "after wrapper adjustments"
-            }.`
+          ? `The parent asset scores ${wrapperLimit.parentScore.toFixed(0)}; this wrapper is limited to ${wrapperLimit.limit.toFixed(0)} / 100 after its ${wrapperLimit.appliedDiscount.toFixed(0)}-point form deduction.`
           : `${cap.reason} Limit ${cap.limit.toFixed(0)} / 100.`}
       </p>
     </section>

@@ -26,6 +26,7 @@ import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-publi
 import { iterateEvidenceResponsibilityFacts } from "@shared/types/safety-score-v9-public-evidence-facts";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
 import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../safety-score-v9/publication-assessment";
+import { measurePublicationByteBudget } from "@shared/lib/safety-score-v9-resource-bytes";
 
 const sqlite = new DatabaseSync(process.env.PHAROS_RESOURCE_DATABASE!);
 const db = createSqliteD1(sqlite);
@@ -179,7 +180,7 @@ try {
     assert(publication.pillarFreshness, "pillar-freshness-operands-required");
     const pillarFreshnessBytes = Buffer.byteLength(`,"pillarFreshness":${JSON.stringify(publication.pillarFreshness)}`);
     assert(pillarFreshnessBytes <= 15_000, "pillar-freshness-byte-budget");
-    assert(envelope.uncompressedBytes <= 7_100_000, "synthetic-publication-byte-budget");
+    const publicationBytes = measurePublicationByteBudget(publication, envelope.uncompressedBytes);
     assert(envelope.compressedBytes < 1_350_000, "publication-compressed-byte-budget");
     assert(Buffer.byteLength(transport) > 0, "publication-stored-bytes");
     assert(enrichment.uncompressedBytes > 300_000, "replay-enrichment-size-floor");
@@ -191,6 +192,7 @@ try {
     console.log(JSON.stringify({ cards: publication.cards.length, rated: publication.completeness.ratedCount,
       generation: publication.publicationGenerationId, candidateBytes: envelope.uncompressedBytes,
       compressedBytes: envelope.compressedBytes, storedBytes: Buffer.byteLength(transport),
+      publicationBytes,
       replayCaptureUncompressedBytes: enrichment.uncompressedBytes, acceptedBaselineBytes,
       extensionAssets: extension.assets.length, researchEvidenceCount, componentEvidenceCount,
       witnessTextSavingsBytes, factVocabularySavingsBytes, witnessViewBytes, pillarFreshnessBytes,
@@ -210,7 +212,7 @@ try {
     const rawBytes = Number(JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value)).uncompressedBytes);
     const cycles = [await seedCycle(1, baseClock + 1800), await seedCycle(2, baseClock + 3600)];
     writeFileSync(process.env.PHAROS_RESOURCE_MANIFEST!, JSON.stringify({ prior, cycles, fixtureRawPublicationBytes: rawBytes,
-      productionRawPublicationBytesApprox: 8_000_000, rawPublicationGapBytesApprox: 8_000_000 - rawBytes,
+      publicationBytes: measurePublicationByteBudget(publication, rawBytes),
       reserveJournalAssets: ACTIVE_STABLECOINS.length, reserveJournalRows: ACTIVE_STABLECOINS.length + 100, supplyJournalAssets: 1 }));
   }
 } finally { sqlite.close(); }

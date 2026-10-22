@@ -54,10 +54,10 @@
     ]
   },
   "oracleRisk": {
-    "tier": "privileged-internal-pricing",
+    "tier": "standard-external",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
-    "summary": "Complete source-matched sole-adapter census at Ethereum block 26197300 (2026-10-15T10:25:11Z): nine funded borrower markets with wstETH, cbBTC, WBTC, eurSAFO, EUTBL and steakUSDC collateral. All nine market parameters and every nonzero arithmetic-oracle feed/vault input were re-read at the pin, including MetaOracle primary/backup/current selection and challenge/healing settings. Consumer pricing has no feed-age rejection in the reviewed composition; no redundant-provider, heartbeat or complete feed-admin closure credit is asserted. Internal share NAV is loan-unit accounting, separate from borrower/liquidation pricing.",
+    "summary": "Complete source-matched sole-adapter census at Ethereum block 26197300 (2026-10-15T10:25:11Z): nine funded borrower markets with wstETH, cbBTC, WBTC, eurSAFO, EUTBL and steakUSDC collateral. All nine market parameters and every nonzero arithmetic-oracle feed/vault input were re-read at that pin. Source-scoped correction. The source review rechecked 2026-10-20: the two Spiko borrower branches use externally published CACEIS NAV data through exact Chainlink NAVLink OCR2 feeds, not manually administered internal vault pricing. Ethereum block 26236622 (2026-10-20T21:55:35Z; hash 0x942fd9743fc8fc922b4b1ef4058834d2a5254ce8dba3037cf1ad33f999e80fe5) confirms both engine/oracle/feed/aggregator joins; Chainlink's primary directory independently identifies CACEIS as Fund Administrator and both exact proxies. Only those misclassified branch tiers and their aggregate are corrected. Original review start and historical pins remain. Consumer pricing still has no feed-age rejection, no independent fallback, no complete feed-admin/key-custody closure and no independent valuation/reconciliation assurance. Internal share NAV remains separate loan-unit accounting.",
     "reviewedAt": "2026-10-15",
     "reviewer": "Rev_SteakeurcvSteakhouse",
     "confidence": "verified",
@@ -97,6 +97,18 @@
       {
         "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
         "url": "https://etherscan.io/block/26197300"
+      }
+      ,{
+        "label": "Chainlink exact EURSAFO/EUTBL NAVLink proxy and OCR2 aggregator identities, CACEIS Fund Administrator; retrieved 2026-10-20",
+        "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
+      },
+      {
+        "label": "Spiko and CACEIS external NAV publication through Chainlink; published 2024-10-16, retrieved 2026-10-20",
+        "url": "https://www.spiko.io/blog/spiko-caceis-chainlink-nav-data-onchain"
+      },
+      {
+        "label": "Ethereum block 26236622: exact market parameters, immutable BASE_FEED_1 and current proxy/aggregator joins, retrieved 2026-10-20",
+        "url": "https://etherscan.io/block/26236622"
       }
     ],
     "branchApplicability": {
@@ -374,8 +386,8 @@
       {
         "id": "market-36da61bf253b8a7e07888cb96dbcde65001508159928801aeca932a5b5548119",
         "label": "eurSAFO / steakEURCV borrower market",
-        "tier": "privileged-internal-pricing",
-        "summary": "Exact engine idToMarketParams matches collateral, oracle and LLTV from the complete adapter inventory. Getter inputs are pinned; source-verified composition does not establish independent fallback, feed-admin closure or heartbeat. Matched Chainlink-oracle source has no elapsed-time round-age rejection; composite feed legs are required, not redundant failover.",
+        "tier": "standard-external",
+        "summary": "Original Ethereum block 26197300 market/oracle/feed pin is retained. Source-scoped correction. Rechecked 2026-10-20 at block 26236622: the exact market still uses oracle 0x8bb55b19f2ea18d4684b59a3b768a1926ab41409, whose BASE_FEED_1 is Chainlink EURSAFO NAV proxy 0x799fdc55150583b5baa0b47065e1c901862c95d5. Its current aggregator is verified AccessControlledOCR2Aggregator 0xe774bc668d300e3ac157e405149aaff89eed1df6; Chainlink's exact directory names CACEIS Fund Administrator as the NAV source. This is external NAV publication, not issuer-manual internal vault pricing. No independent valuation of CACEIS data, redundant provider, consumer staleness guard or complete feed-admin closure is claimed.",
         "collateralAssets": [
           "eurSAFO"
         ],
@@ -438,13 +450,25 @@
             "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
             "url": "https://etherscan.io/block/26197300"
           }
+          ,{
+            "label": "Chainlink exact EURSAFO NAV proxy/aggregator and CACEIS source, retrieved 2026-10-20",
+            "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
+          },
+          {
+            "label": "Verified EURSAFO NAV OCR2 aggregator, retrieved 2026-10-20",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe774bc668d300e3ac157e405149aaff89eed1df6"
+          },
+          {
+            "label": "Exact engine/oracle/feed and current aggregator pin, Ethereum block 26236622",
+            "url": "https://etherscan.io/block/26236622"
+          }
         ]
       },
       {
         "id": "market-aa7231d6bee28b578efe38b52e801d5d3067023853342fc06ded437d2a80ef98",
         "label": "EUTBL / steakEURCV borrower market",
-        "tier": "privileged-internal-pricing",
-        "summary": "Exact engine idToMarketParams matches collateral, oracle and LLTV from the complete adapter inventory. Getter inputs are pinned; source-verified composition does not establish independent fallback, feed-admin closure or heartbeat. Matched Chainlink-oracle source has no elapsed-time round-age rejection; composite feed legs are required, not redundant failover.",
+        "tier": "standard-external",
+        "summary": "Original Ethereum block 26197300 market/oracle/feed pin is retained. Source-scoped correction. Rechecked 2026-10-20 at block 26236622: the exact market still uses oracle 0xf071b0a62ef2a54c1dca791134421ee16c2c43d9, whose BASE_FEED_1 is Chainlink EUTBL NAV proxy 0xfd628af590c4150a9651c1f4ddd0b4f532b703ae. Its current aggregator is verified AccessControlledOCR2Aggregator 0xdaa1c6511aa051e9e83dd7ac2d65d5e41d1f6b98; Chainlink's exact directory names CACEIS Fund Administrator as the NAV source. This is external NAV publication, not issuer-manual internal vault pricing. No independent valuation of CACEIS data, redundant provider, consumer staleness guard or complete feed-admin closure is claimed.",
         "collateralAssets": [
           "EUTBL"
         ],
@@ -506,6 +530,18 @@
           {
             "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
             "url": "https://etherscan.io/block/26197300"
+          }
+          ,{
+            "label": "Chainlink exact EUTBL NAV proxy/aggregator and CACEIS source, retrieved 2026-10-20",
+            "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
+          },
+          {
+            "label": "Verified EUTBL NAV OCR2 aggregator, retrieved 2026-10-20",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdaa1c6511aa051e9e83dd7ac2d65d5e41d1f6b98"
+          },
+          {
+            "label": "Exact engine/oracle/feed and current aggregator pin, Ethereum block 26236622",
+            "url": "https://etherscan.io/block/26236622"
           }
         ]
       },

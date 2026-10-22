@@ -123,7 +123,6 @@ function buildBreakdowns(
         capacityEvidenceTier: "live-direct",
         rawSameNotionalCostBps: 0,
         supportedComponentCeiling: pillars.exit.score,
-        eligibilityMultiplier: 1,
         capsApplied: [],
       },
       diversification: null,

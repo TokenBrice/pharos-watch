@@ -1,6 +1,7 @@
 import { createV9EvidenceReference, createV9FactStatus, requiredV9Applicability } from "@shared/lib/safety-score-v9/evidence";
 import { deriveLenderBookObservationIdentity, lenderBookAdmissionReason, lenderMarketKey } from "@shared/lib/safety-score-v9/lender-book-registry";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { getLenderCollateralClassesRegistry } from "@shared/lib/safety-score-v9/lender-collateral-classes";
+import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compareText, domainDigest, uniqueSorted } from "@shared/lib/safety-score-v9/primitives";
 import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
 import type { V9EvidenceCauseScope } from "@shared/types/safety-score-v9-causes";
@@ -70,10 +71,10 @@ function acceptedSourceReason(bundle: LenderCollateralBacking | undefined, clock
 /** Compile only frozen, admitted bytes. No live registry, publication or evaluator lookup. */
 export function buildLenderBookFact(context: AssetBuildContext): V1019LenderBookFact | undefined {
   const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook;
-  if (!policy.admittedAssets.some((asset) => asset.assetId === context.asset.assetId)) return undefined;
   const provenance = context.fixedInput.liveReserveProvenanceMap[context.asset.assetId];
   const observation: LenderBookObservation | undefined = provenance?.lenderBookObservation;
   const failure = provenance?.lenderBookObservationFailure;
+  if (observation === undefined && failure === undefined && provenance?.lenderBookLatestAttemptFailure === undefined) return undefined;
   const bundle = context.fixedInput.lenderCollateralBacking;
   if (bundle && bundle.registryFingerprint !== context.fixedInput.registryFingerprint) {
     throw new Error(`Lender collateral registry fingerprint mismatch for ${context.asset.assetId}`);
@@ -143,6 +144,7 @@ export function buildLenderBookFact(context: AssetBuildContext): V1019LenderBook
     };
   }
   if (!observation || observation.status !== "ok") throw new Error("Admitted lender book must have successful deployments");
+  const classRegistry = getLenderCollateralClassesRegistry();
   const sourceReason = acceptedSourceReason(bundle, context.fixedInput.clockSec);
   const collaterals: LenderCollateralResolution[] = [];
   const gapIds: string[] = [];
@@ -152,7 +154,7 @@ export function buildLenderBookFact(context: AssetBuildContext): V1019LenderBook
       const marketKey = lenderMarketKey(deployment.chain, market.morpho, market.marketId, market.account);
       const tokenKey = `${deployment.chain}:${market.collateralToken}`;
       const classReview = market.collateralMode === "unsecured" ? undefined
-        : policy.collateralClasses.find((row) => row.chain === deployment.chain && row.address === market.collateralToken);
+        : classRegistry.get(tokenKey);
       if (classReview && Date.parse(classReview.reviewedAt) / 1000 > context.fixedInput.clockSec) {
         throw new Error(`Future lender collateral class review for ${tokenKey}`);
       }
@@ -174,7 +176,7 @@ export function buildLenderBookFact(context: AssetBuildContext): V1019LenderBook
       evidenceRefIds.push(marketEvidenceId);
       if (classReview) evidenceRefIds.push(addEvidence(context, createV9EvidenceReference({
         evidenceId: `${context.asset.assetId}:lender-collateral:${marketKey}:class:${collateralClass}`,
-        sourceId: "methodology-policy.lender-collateral-class", sourceGenerationId: V9_CANDIDATE_POLICY_V1.semanticDigest,
+        sourceId: classRegistry.registry.registryId, sourceGenerationId: classRegistry.digest,
         disposition: "published", observedAtSec: Date.parse(classReview.reviewedAt) / 1000,
         publishedAtSec: Date.parse(classReview.reviewedAt) / 1000, url: classReview.sources[0]!.url,
         contentSha256: domainDigest("safety-score-v10.19.lender-collateral-class.v1", classReview),
@@ -232,7 +234,7 @@ export function buildLenderBookFact(context: AssetBuildContext): V1019LenderBook
         gapIds.push(gapId); localGapIds.push(gapId);
       }
       collaterals.push({ marketKey, collateralClass, trackedAssetId,
-        quality: accepted?.backingScore ?? policy.classQuality[collateralClass],
+        quality: accepted?.backingScore ?? (collateralClass === "other-unknown" ? unknownQuality("backing", "U") : policy.classQuality[collateralClass]),
         qualitySource: accepted ? "previous-accepted-backing" : unknown ? "bounded-unknown" : "authored-class",
         fallbackReason: accepted ? null : fallbackReason,
         acceptedPublicationGenerationId: accepted ? bundle!.publicationGenerationId : null,

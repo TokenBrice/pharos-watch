@@ -20,7 +20,7 @@
         }
       ]
     },
-    "summary": "NECT currently mints through collateral-vault branches, with Registry admission administered by a 4-of-7 Safe and a reviewed 3-day delay. Verified source proving every admissible branch/minter remains collateral-gated could not be recovered, and arbitrary minter admission is not independently proven. Economic cap semantics are unknown; the authored authorization power conservatively derives unbounded-adverse rather than retaining an unsupported favorable bound.",
+    "summary": "NECT mints through collateral-vault branches, with Registry admission administered by a reviewed 4-of-7 Safe and three-day owner path. Verified source proving every admissible branch/minter remains collateral-gated has not been established, and arbitrary unbacked minter admission is not independently proven. Economic cap semantics remain unknown; the known administration and unresolved construction question must not be confused with a measured unbounded mint path.",
     "controls": [
       {
         "chain": "berachain",

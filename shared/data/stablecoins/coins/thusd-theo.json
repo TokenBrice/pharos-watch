@@ -33,7 +33,7 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.theo.xyz/transparency",
-    "provider": "Theo Protocol Corp issuer-operated reserve dashboard; the displayed attestations are Theo Protocol Corp (2026-06-22) and Libeara thBILL holdings (2026-06-01), with Accountable's auditor engagement in progress. Theo describes additional gold-side, clearing-FCM and Treasury-NAV corroboration, but no aggregate independent reserve report is linked.",
+    "provider": "Theo Protocol Corp issuer-operated reserve dashboard; accessed 2026-10-20, it displays a Theo Protocol Corp protocol-attestation label dated 2026-10-02 and Accountable's auditor engagement In Progress, with no report download linked. The earlier Libeara thBILL-holdings label is no longer displayed. Theo describes gold-side, clearing-FCM and Treasury-NAV corroboration, but no aggregate independent reserve report was retrieved.",
     "attestorTier": "self",
     "cadence": "real-time"
   },

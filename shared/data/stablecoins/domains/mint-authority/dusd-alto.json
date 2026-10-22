@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
-    "summary": "DUSD is a non-proxy token owned by AltoTimelockController, historically controlled by the 4-of-7 Alto Safe with a 3600-second minimum delay. Current minters have ceilings, but owner-only minter admission and ceiling changes can authorize any address without token-level collateral checks. D14 classifies root native issuance as economically unbounded, regardless of current minter collateral gates.",
+    "summary": "DUSD is a non-proxy token owned by AltoTimelockController. At Ethereum block 26236654 the timelock minimum delay is 86,400 seconds and the historically reviewed governance Safe still requires four signatures. Minters have ceilings, but owner-only minter admission and ceiling changes can authorize arbitrary addresses without token-level collateral checks. Root native issuance remains economically unbounded; the one-day multisig timelock does not establish token-governance process qualification.",
     "upgradeability": {
       "model": "immutable",
       "implementationAddresses": [
@@ -286,9 +286,10 @@
         "chain": "ethereum",
         "address": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
         "canRaiseCap": true,
-        "observedAt": "2026-07-15",
-        "observedBlock": 25540452,
-        "evidence": "At Ethereum block 25540452, DUSD.owner() = 0xfae841679dc1a93d225ecc827e4bbf3e8d703f86. Verified DUSD source restricts setMinterStatus and setMinterCeiling to onlyOwner, so this timelock can add/revoke a minter and raise or lower any token-level ceiling. Its getMinDelay() is 3600 seconds; existing RoleGranted/RoleRevoked evidence resolves the proposer/executor Safe and revocation of deployer roles.",
+        "timelockDelaySec": 86400,
+        "observedAt": "2026-10-20",
+        "observedBlock": 26236654,
+        "evidence": "At Ethereum block 26236654 (2026-10-20T22:01:59Z; hash 0xffac03d49fe6cabaf7332219851c40bf6244504508356e23231aaf404c77aedc), pinned DUSD.owner() still returns this timelock and getMinDelay() returns 86400 seconds, superseding the historical 3600-second observation. The exact verified DUSD source retains owner-only setMinterStatus and setMinterCeiling without a token-level collateral invariant. This scoped owner/delay observation does not renew the historical complete proposer/executor census, establish token voting or qualify D29.",
         "sources": [
           {
             "label": "AltoTimelockController on Etherscan",
@@ -508,7 +509,7 @@
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "Historical block 25540452 review found 11 active minters among 13 event addresses and a 3-of-5 Alto Safe. At Ethereum block 26096016 on 2026-10-01, a fresh full SetMinterStatus census returned 22 events with no next page, covering 20 unique addresses; pinned allowedMinter/minterConfig reads found 18 active and two inactive. The Safe is now 4-of-7 and holds proposer, executor and DEFAULT_ADMIN_ROLE on the token-owner timelock, with getMinDelay()=3600. Verified DUSD source restricts mint to active minters within their ceilings, and onlyOwner can change status or ceilings. Newly admitted minters are recorded as token-level capped contracts, without asserting that their underlying collateral/upgrade gates were fully reviewed. D14/D29 review on 2026-10-03 confirmed owner() remains AltoTimelockController at Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a). Verified setMinterStatus(address,bool) and setMinterCeiling(address,uint256) admit arbitrary addresses; mint(address,uint256) checks only authorization and ceiling, not posted collateral. The owner can authorize a chosen minter, raise its ceiling and cause durable unbacked supply to any recipient without upgrading. Semantics are unbounded; Safe-rooted delay is not D29 token governance. The fallback is unbounded-adverse; reconciliation remains not-applicable and supervision none.",
+      "evidence": "Historical block 25540452 review found 11 active minters among 13 event addresses and a 3-of-5 Alto Safe. At Ethereum block 26096016 on 2026-10-01, a fresh full SetMinterStatus census returned 22 events with no next page, covering 20 unique addresses; pinned allowedMinter/minterConfig reads found 18 active and two inactive. The Safe was 4-of-7 and held proposer, executor and DEFAULT_ADMIN_ROLE on the token-owner timelock, with historical getMinDelay()=3600. Verified DUSD source restricts mint to active minters within their ceilings, and onlyOwner can change status or ceilings. Newly admitted minters are recorded as token-level capped contracts, without asserting that their underlying collateral/upgrade gates were fully reviewed. D14/D29 review on 2026-10-03 confirmed owner() remains AltoTimelockController at Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a). Verified setMinterStatus(address,bool) and setMinterCeiling(address,uint256) admit arbitrary addresses; mint(address,uint256) checks only authorization and ceiling, not posted collateral. The owner can authorize a chosen minter, raise its ceiling and cause durable unbacked supply to any recipient without upgrading. Semantics are unbounded; Safe-rooted delay is not D29 token governance. The fallback is unbounded-adverse; reconciliation remains not-applicable and supervision none. The separately pinned current timelock observation supersedes only the delay scalar, now 86400 seconds.",
       "reviewer": "Sol v10.02 D14/D29 sweep (U7SafeRootedFloorA)",
       "reviewedAt": "2026-10-03",
       "sources": [

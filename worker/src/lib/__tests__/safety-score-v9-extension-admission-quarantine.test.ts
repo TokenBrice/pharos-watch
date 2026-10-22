@@ -180,7 +180,21 @@ describe("Safety Score v9 extension admission quarantine", { timeout: V9_EVALUAT
 
   it("quarantines reserve normalization failure in the dependency prepass while preserving a healthy peer", () => {
     const fixed = makeV9TwoAssetFixedInput({ omitAlphaReserve: true, clockSec: Date.parse("2026-10-09T12:00:00Z") / 1000 });
-    const healthy = alphaMeta({ id: "beta" });
+    const healthy = alphaMeta({
+      id: "beta",
+      reserves: [{
+        name: "Custodied cash", pct: 100, risk: "very-low", assetClass: "cash",
+        issuerOrObligor: "issuer:beta", riskFactors: ["custody", "counterparty"],
+        liquidityHorizon: "immediate", maturityDaysMax: 0,
+      }],
+      reserveReview: {
+        scope: "full-composition", confidence: "verified", reviewedAt: "2026-10-08",
+        compositionAsOf: "2026-10-07", reviewer: "Fixture reviewer",
+        rationale: "The fixture report enumerates the complete reserve book.",
+        compositionBasis: "Fixture reserve report", knownUnknownExposure: "None",
+        sources: [{ label: "Reserve report", url: "https://example.com/healthy-reserves" }], knownUnknownExposurePct: 0,
+      },
+    });
     const broken = alphaMeta({
       reserves: Array.from({ length: 335 }, (_, index) => ({
         name: `holding-${index}`, pct: 0.3, risk: "very-low", assetClass: "stablecoin",

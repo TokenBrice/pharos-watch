@@ -88,8 +88,16 @@
       {
         "label": "Piku documentation",
         "url": "https://docs.piku.co/piku"
+      },
+      {
+        "label": "Piku custody architecture (reopened 2026-10-20)",
+        "url": "https://docs.piku.co/piku/piku-finance/security-and-risks/risks-and-mitigations.md"
+      },
+      {
+        "label": "Piku Terms sections 4.5, 4.7 and 5.3 (last updated June 2, 2026; reopened 2026-10-20)",
+        "url": "https://docs.piku.co/piku/terms-of-use.md"
       }
     ],
-    "uncertainty": "Piku publishes no custodian identities, account structures, or insolvency terms for either the off-chain BMMF leg or the on-chain DeFi allocations. Reserve deployment into third-party strategies is the disclosed design; whether any independent custodian holds assets is not documented."
+    "uncertainty": "Source-scope correction reviewed 2026-10-20 without renewing the original custody review: Piku now names Fireblocks MPC operational infrastructure and Safe treasury architecture, so the prior blanket statement that no custody identities are disclosed is withdrawn. Those disclosures do not map current whole-book provider shares, exact wallet signing policies or every material underlying strategy custodian. Terms section 4.7 says the Platform holds legal title to USP reserves, does not provide custody services and is not a fiduciary; legal title is not an independent custody attestation or bankruptcy-remoteness instrument. The historical BMMF/operator rows are not a verified current provider census. Whole-book custodyModel is therefore unknown, with no invented provider shares or protective legal safeguards."
   }
 }

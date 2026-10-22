@@ -2,11 +2,11 @@
   "id": "dusd-standx",
   "name": "StandX DUSD",
   "symbol": "DUSD",
-  "oneLiner": "DUSD is StandX's delta-neutral dollar backed by hedged crypto positions; issuer redemption has a 7-day lock, fees, and reserve-loss exposure.",
+  "oneLiner": "DUSD is StandX's delta-neutral dollar in an announced wind-down; yield has ended and redemption requests close January 31, 2027.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
-    "yieldBearing": true
+    "yieldBearing": false
   },
   "collateral": "USDT/USDC deposits used to acquire spot crypto with matching short futures positions, held through StandX's custody layer",
   "pegMechanism": "Delta-neutral hedging on centralized exchanges; issuer redemption into USDT/USDC after a 7-day lock and protocol fees. USDT conversion is 1:1 before fees, while USDC output is calculated at redemption; adverse reserve losses reduce the quote pro rata",
@@ -81,5 +81,15 @@
       }
     }
   },
+  "marketAvailability": "legacy-or-wind-down",
+  "windDownAnnouncedAt": "2026-10-15",
+  "windDownSourceUrl": "https://x.com/StandX_Official/status/2110613283967230232",
+  "notices": [
+    {
+      "type": "info",
+      "title": "StandX wind-down: redemption deadline January 31, 2027",
+      "message": "StandX's October 15, 2026 announcement ends all yield from October 15 and closes new DUSD minting on October 20. Holders may submit DUSD redemption requests through January 31, 2027; the issuer says the current seven-day process completes by February 7. StandX also plans to remove its PancakeSwap and Raydium DUSD liquidity on January 31. This is an announced closure schedule, not evidence that current holder assets are lost or redemption is already suspended."
+    }
+  ],
   "launchDate": "2025-04-09"
 }

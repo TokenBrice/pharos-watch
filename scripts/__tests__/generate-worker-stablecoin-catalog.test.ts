@@ -45,10 +45,15 @@ describe("lossless Worker full catalog generator", () => {
       reviewedStatus: "possible", sources: [{ label: "Pinned source", url: "https://example.com/block/123" }],
       evidence: "Long evidence \u20ac ".repeat(100), reviewedAt: "2026-10-01", reviewer: "reviewer",
     };
-    const record = { id: "fixture", blacklistabilityReview: review, mintAuthority: { evidence: review.evidence, paths: [review] } };
+    const record = {
+      id: "fixture", blacklistabilityReview: review, mintAuthority: { evidence: review.evidence, paths: [review] },
+      bridgeRouteRisk: { routes: [review] }, oracleRisk: { paths: [review] }, genius: { issuerEntity: "Fixture", sources: review.sources },
+    };
     const artifact = buildWorkerStablecoinCatalog([record]);
     expect(artifact.version).toBe(2);
-    expect(JSON.parse(decode(artifact.coins[0]))).toEqual({ ...record, blacklistabilityReview: null, mintAuthority: null });
+    expect(JSON.parse(decode(artifact.coins[0]))).toEqual({
+      ...record, blacklistabilityReview: null, mintAuthority: null, bridgeRouteRisk: null, oracleRisk: null, genius: null,
+    });
     expect(restore(artifact.coins[0])).toEqual(record);
     expect(record.blacklistabilityReview.evidence).toBe(review.evidence);
     expect(artifact.maxUncompressedBytes).toBeGreaterThanOrEqual(Buffer.byteLength(review.evidence));

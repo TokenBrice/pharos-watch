@@ -30,7 +30,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
-    "summary": "USDQ is issuer-native on Ethereum, Polygon, XRPL, and Algorand, while the official LayerZero Value Transfer API currently supports bidirectional Ethereum-to-Polygon USDQ transfers through a Stargate V2 Taxi liquidity route. The route is third-party liquidity settlement around the two native USDQ deployments, not native Mint Authority. Direction-specific VTA controls preserve the TransferDelegate and LZMulticall failure domains; the USDQ-specific pool or transaction, peer/DVN/executor set, rate limits, pause and upgrade controls, and administrator identities remain unresolved.",
+    "summary": "USDQ is issuer-native on Ethereum, Polygon, XRPL, Algorand and Stellar (the exact Stellar identity was supplemented from current issuer/TOML sources on 2026-10-20 without renewing the original review or other controls). The original review identifies official LayerZero Value Transfer API bidirectional Ethereum-to-Polygon USDQ transfers through a Stargate V2 Taxi liquidity route. That route is third-party liquidity settlement around the two native USDQ deployments, not native Mint Authority. Direction-specific VTA controls preserve the TransferDelegate and LZMulticall failure domains; the USDQ-specific pool or transaction, peer/DVN/executor set, rate limits, pause and upgrade controls, and administrator identities remain unresolved.",
     "reviewedAt": "2026-08-16",
     "reviewer": "OpenAI Codex mint-bridge-boundary migration",
     "confidence": "manual-review",
@@ -191,6 +191,39 @@
           {
             "label": "Quantoz USDQ documentation",
             "url": "https://www.quantoz.com/products/eurq-usdq"
+          }
+        ]
+      },
+      {
+        "id": "stellar:USDQ-GCA6KZBWPBOEF6M2MZBTXRMKLMWRZOUCL2JFSIDT3WTDBOFIVDC4C4CE",
+        "destinationChain": "stellar",
+        "contractAddress": "USDQ-GCA6KZBWPBOEF6M2MZBTXRMKLMWRZOUCL2JFSIDT3WTDBOFIVDC4C4CE",
+        "protocol": "Quantoz native USDQ",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Supplemental identity review 2026-10-20: Quantoz's token register and issuer-controlled Stellar TOML identify live USDQ with issuer GCA6KZBWPBOEF6M2MZBTXRMKLMWRZOUCL2JFSIDT3WTDBOFIVDC4C4CE. Horizon independently returns the exact credit_alphanum4 code and issuer. This is native issuer issuance, not a third-party bridge representation. Stellar classic-asset precision is seven decimal places; TOML display_decimals=2 is presentation only. Unpinned Horizon balances and account settings are not used as supply, signing-topology, custody, incident or executable-capacity evidence. Historical sibling route and control observations retain their original pins.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-20",
+        "sources": [
+          {
+            "label": "Quantoz official token identifiers (retrieved 2026-10-20)",
+            "url": "https://www.quantoz.com/tokens/"
+          },
+          {
+            "label": "Quantoz Stellar issuer metadata (retrieved 2026-10-20)",
+            "url": "https://quantozpay.com/.well-known/stellar.toml"
+          },
+          {
+            "label": "Horizon exact USDQ asset identity (retrieved 2026-10-20; identity only)",
+            "url": "https://horizon.stellar.org/assets?asset_code=USDQ&asset_issuer=GCA6KZBWPBOEF6M2MZBTXRMKLMWRZOUCL2JFSIDT3WTDBOFIVDC4C4CE"
+          },
+          {
+            "label": "Stellar classic asset identity and seven-decimal amount precision",
+            "url": "https://developers.stellar.org/docs/learn/fundamentals/stellar-data-structures/assets"
           }
         ]
       }

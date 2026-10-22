@@ -59,10 +59,10 @@ describe("buildScoreWaterfall", () => {
         publishedScore: 60,
       },
       {
-        kind: "evidence:limited",
+        kind: "parent",
         limit: 60,
-        source: "evidence",
-        reason: "limited evidence ceiling.",
+        source: "parent",
+        reason: "The required parent limits the published score.",
         binding: true,
       },
     );
@@ -99,7 +99,6 @@ describe("buildScoreWaterfall", () => {
             scoreAfter: 83,
             publishedScoreBefore: 78,
             publishedScoreAfter: 83,
-            capRelief: { source: "structural", kind: "structural:ceiling", fromLimit: 80, toLimit: 85 },
           },
         ],
       },

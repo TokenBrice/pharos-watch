@@ -123,10 +123,22 @@
         {
           "label": "Solana USTB Token-2022 mint",
           "url": "https://explorer.solana.com/address/CCz3SGVziFeLYk2xfEstkiqJfYkjaSWb2GCABYsVcjo2"
+        },
+        {
+          "label": "Superstate security and redundant fund-ownership records (retrieved 2026-10-20)",
+          "url": "https://docs.superstate.com/investors/security.md"
+        },
+        {
+          "label": "Superstate balances API token/book-entry recordkeeping (retrieved 2026-10-20)",
+          "url": "https://docs.superstate.com/investors/api/balances-api.md"
+        },
+        {
+          "label": "Current Invesco USTB fund-share and redemption documentation (retrieved 2026-10-20)",
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb.md"
         }
       ],
-      "evidence": "USTB has independently evidenced native issuance surfaces on Ethereum and Solana. Ethereum is an upgradeable token proxy whose issuer EOA owns both token and ProxyAdmin; Solana Token-2022 has live mintAuthority EfkJFKtVcpo8sgQGWLoaYcutxNdmqed81wdCcpn7egdz in finalized slot 439721950, with the authority account owned by the System Program. The Plume proxy is separately deployed and exposes owner-only mint/bulkMint, ProxyAdmin 0xa5df717b304a50838c72cd310c8df636b1aecfa3, and the same issuer EOA owner at block 87678057, but the evidence does not establish independent local liabilities rather than bridge destination issuance. Its bridge-mint, pause, peer-configuration, admin, and upgrade powers are therefore scored under bridgeRouteRisk. The two native issuance surfaces support the retained unbounded, periodic, attestation-only posture. FreezeAuthority, permanent delegate, and default-frozen state remain outside Mint Authority.",
-      "reviewer": "Codex mint/bridge boundary migration; Claude Phase 0c continuation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial); Sol economic-posture batch 2026-08-15",
+      "evidence": "USTB has independently evidenced native issuance surfaces on Ethereum and Solana. Ethereum is an upgradeable token proxy whose issuer EOA owns both token and ProxyAdmin; Solana Token-2022 has live mintAuthority EfkJFKtVcpo8sgQGWLoaYcutxNdmqed81wdCcpn7egdz in finalized slot 439721950, with the authority account owned by the System Program. The Plume proxy is separately deployed and exposes owner-only mint/bulkMint, ProxyAdmin 0xa5df717b304a50838c72cd310c8df636b1aecfa3, and the same issuer EOA owner at block 87678057, but the evidence does not establish independent local liabilities rather than bridge destination issuance. Its bridge-mint, pause, peer-configuration, admin, and upgrade powers are therefore scored under bridgeRouteRisk. The two native issuance surfaces support the retained unbounded, periodic, attestation-only posture. FreezeAuthority, permanent delegate, and default-frozen state remain outside Mint Authority. Source-scoped correction, verified 2026-10-20; original review start 2026-08-17 and all authority pins retained. The security disclosure positively establishes overlapping ownership records at the calculation agent, internally and on-chain, and the balances API documents token, book-entry and protocol-share records by investor.",
+      "reviewer": "Codex mint/bridge boundary migration; Claude Phase 0c continuation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial); Sol economic-posture batch 2026-08-15; C30 process-only correction 2026-10-20",
       "reviewedAt": "2026-08-17"
     },
     "upgradeability": {

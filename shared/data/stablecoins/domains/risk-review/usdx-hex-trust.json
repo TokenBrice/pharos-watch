@@ -35,6 +35,41 @@
     "reviewedAt": "2026-08-28",
     "reviewer": "Codex",
     "confidence": "verified",
+    "nativeExternalTransferReviews": [
+      {
+        "id": "usdx-ethereum-flare-layerzero-oft",
+        "routeRefs": [
+          "ethereum:0xf8750b54d86be7ae9e32b4a0c826811198d63313",
+          "flare:0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-20",
+        "reviewer": "FD20 bottom-up refinement 2026-10-21",
+        "rationale": "The exact Ethereum and Flare proxies resolve to verified HexTrustUSDV2 implementations exposing LayerZero OFT burn-on-debit and mint-on-credit. Existing August 16 fixed-block observations establish reciprocal peers; a fresh Flare read at block 72586628 (2026-10-20T22:16:38Z, hash 0xb45e76fde9620c10a0c3df3c40a899f2ea7a697007671363e2d87862286e4488) confirms EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and peers(30101) equal to the exact Ethereum USDX proxy. Independent native issuer minting does not remove this external-validation transfer rail. This review establishes only that tier: current DVN/executor membership, quorum, emergency overrides, complete route loss scope and economic materiality remain separate. Songbird is not included and native mint capabilities are not duplicated.",
+        "sources": [
+          {
+            "label": "Current Flare USDX proxy and implementation identity",
+            "url": "https://flare-explorer.flare.network/api/v2/addresses/0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"
+          },
+          {
+            "label": "Verified Flare HexTrustUSDV2 OFT source",
+            "url": "https://flare-explorer.flare.network/api/v2/smart-contracts/0x35151ba1c19b31cc258787a414c93bbe77251147"
+          },
+          {
+            "label": "Current Ethereum USDX proxy and implementation identity",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0xf8750b54d86be7ae9e32b4a0c826811198d63313"
+          },
+          {
+            "label": "Verified Ethereum HexTrustUSDV2 OFT implementation ABI",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xce2d107b6046e61a651484b4ee65023d89a42d7b?fields=abi"
+          },
+          {
+            "label": "Flare official RPC: exact block 72586628 transport reads",
+            "url": "https://flare-api.flare.network/ext/C/rpc"
+          }
+        ]
+      }
+    ],
     "protocols": [
       {
         "source": "issuer",

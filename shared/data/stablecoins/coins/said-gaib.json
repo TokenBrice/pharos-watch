@@ -67,6 +67,13 @@
       }
     },
     "params": {
+      "redemptionRoute": "async-request",
+      "redemptionLock": [
+        {
+          "selector": "getCooldownPeriod()",
+          "kind": "cooldown-seconds"
+        }
+      ],
       "slice": {
         "name": "AID vault shares and AI infrastructure financing portfolio",
         "risk": "high",

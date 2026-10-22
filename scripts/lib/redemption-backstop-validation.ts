@@ -130,10 +130,11 @@ const DOC_SOURCE_SUPPORT_BASELINE = {
   sourcesWithoutSupports: 103,
   missingSupportKindCounts: {
     route: 58,
-    // Audited honest source-role corrections raised this count: RD1-01/RD1-03,
-    // RD2-07/RD2-08/RD2-09/RD2-10/RD2-11, RD3-03/RD3-04 and RD5-08.
+    // Audited honest source-role corrections: RD1-01/RD1-03, RD2-07–RD2-11,
+    // RD3-03/RD3-04, RD5-08; f0056d612 additionally withdraws capacity tags for
+    // BUCK, StandX DUSD, feUSD, inALPHA, MXNe, Noble USDN, USDon and USDv.
     // Backing, targets, inaccessible terms and other payout branches are not capacity evidence.
-    capacity: 37,
+    capacity: 45,
     fees: 126,
     access: 157,
     settlement: 167,

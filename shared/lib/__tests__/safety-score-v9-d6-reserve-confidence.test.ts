@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { V9FactStatusV2, V9ReserveExposureFactV2 } from "../../types/safety-score-v9-facts";
 import { evaluateV9ReserveExposures } from "../safety-score-v9/backing";
-import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 const knownStatus = (rule: string): V9FactStatusV2 => ({
   applicability: { state: "required", policyRuleId: rule, rationale: null, gapId: null },
@@ -83,10 +83,13 @@ describe("D6 issuer-attested reserve confidence", () => {
       }, V9_CANDIDATE_POLICY_V1);
     const independent = evaluate("independent"), attested = evaluate("issuer-attested");
     expect(independent.contributions.find(row => row.componentKey.startsWith("reserve:unclassified-residual:")))
-      .toMatchObject({ score: 35, wholeAssetWeight: 0.1, cause: "U" });
+      .toMatchObject({ score: unknownQuality("backing", "U"), wholeAssetWeight: 0.1, cause: "U" });
     for (const strength of ["issuer-attested", "static-validated", undefined] as const) {
       expect(evaluate(strength).contributions.find(row => row.componentKey.startsWith("reserve:unclassified-residual:")))
-        .toMatchObject({ score: 35 * 0.8, wholeAssetWeight: 0.1, cause: "U" });
+        .toMatchObject({
+          score: unknownQuality("backing", "U") * V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.issuerAttestedConfidenceMultiplier,
+          wholeAssetWeight: 0.1, cause: "U",
+        });
     }
     expect(independent.contributions.find(row => row.componentKey === "reserve:cash")!.score)
       .toBe(attested.contributions.find(row => row.componentKey === "reserve:cash")!.score);

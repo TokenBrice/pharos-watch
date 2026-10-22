@@ -85,6 +85,8 @@ export const ReserveSliceSchema = z.object({
   /** Producer-declared unknown quantity, not an adverse asset classification. */
   unclassifiedResidual: z.literal(true).optional(),
   residualReason: z.literal("insufficient-evidence").optional(),
+  /** Reviewed issuer-named, measured category in a complete published reserve book; never a computed coverage plug. */
+  publishedResidualCategory: z.literal(true).optional(),
 }).strict().superRefine((slice, ctx) => {
   if ((slice.unclassifiedResidual && !slice.residualReason) ||
     (slice.residualReason && !slice.unclassifiedResidual)) {
@@ -92,6 +94,13 @@ export const ReserveSliceSchema = z.object({
       code: z.ZodIssueCode.custom,
       message: "unclassified residual requires an explicit marker and reason",
       path: ["unclassifiedResidual"],
+    });
+  }
+  if (slice.publishedResidualCategory && (!slice.sourceKey || !slice.name.trim())) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "published residual categories require an exact source key and issuer category name",
+      path: ["publishedResidualCategory"],
     });
   }
   if (slice.pct === 0 && !slice.sourceKey) {

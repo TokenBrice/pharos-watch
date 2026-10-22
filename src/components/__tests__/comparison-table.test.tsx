@@ -121,6 +121,18 @@ describe("ComparisonTable", () => {
     expect(html).not.toMatch(/\bbest\b/i);
   });
 
+  it("labels unwired evidence freshness honestly in both evidence and driver rows", () => {
+    const coin = makeCoin("test", "TST");
+    coin.safetyCard = {
+      ...coin.safetyCard!,
+      evidence: { level: "limited", freshness: "unknown", reasons: [] },
+    };
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+    expect(html).toContain("Limited · Freshness not assessed");
+    expect(html).toContain("Evidence age not assessed");
+    expect(html).not.toContain("Evidence age unknown");
+  });
+
   it.each([false, true])("distinguishes whole-feed availability (%s) from an unrated coin", (available) => {
     const coin = makeCoin("usdt", "USDT");
     coin.bluechipPublicationAvailable = available;

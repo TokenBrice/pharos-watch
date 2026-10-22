@@ -17,12 +17,10 @@ import {
 } from "./dependency-types";
 import { V9PathKindSchema, V9ReasonCodeSchema, V9ReasonOwnerDomainSchema } from "./safety-score-v9";
 import { V9CdpStressCoverageFactSchema, V9MechanismRiskReviewSchema, type V9MechanismFactV1 } from "./safety-score-v9-backing";
-import { V9OperationalResilienceFactSchema } from "./safety-score-v9-operational-resilience";
-import { V9AllocationScopeFactSchema } from "./safety-score-v9-allocation";
 import { LenderBookObservationSchema, LenderCollateralResolutionSchema, LenderBookFailedAttemptSchema } from "./safety-score-v9-lender-book";
+import { V9AdmittedHolderLossEventSchema } from "./safety-score-v9-incidents";
 import {
   V9WrapperLocalFactsSchema,
-  type V9ApplicableWrapperLocalFacts,
 } from "./safety-score-v9-wrapper";
 import {
   ExitRouteConfidenceSchema,
@@ -1094,6 +1092,8 @@ const V9OracleControlReviewV2Schema = z
     status: V9FactStatusV2Schema,
     factorStatuses: V9ControlFactorStatusesSchema.optional(),
     tier: z.enum(ORACLE_RISK_TIER_VALUES).nullable(),
+    // Savings share-rate setters are economic authorities, not oracle topology.
+    pricingKind: z.literal("savings-rate").optional(),
     // Current verified topology of positively applicable paths, independent of
     // unresolved sibling inventory. It cannot describe an unreviewed sibling.
     knownPathTier: z.enum(ORACLE_RISK_TIER_VALUES).optional(),
@@ -1119,6 +1119,11 @@ const V9OracleControlReviewV2Schema = z
   })
   .strict()
   .superRefine((review, ctx) => {
+    if (review.pricingKind === "savings-rate" &&
+        (review.tier !== "privileged-internal-pricing" ||
+          review.liquidationBranchesApplicable !== false || review.branches.length > 0)) {
+      ctx.addIssue({ code: "custom", path: ["pricingKind"], message: "Savings-rate authority requires internal top-level pricing without liquidation branches" });
+    }
     if (review.knownPathTier !== undefined && !review.paths?.some((path) =>
       path.applicability.state === "required" && path.observationState === "known",
     )) {
@@ -1574,7 +1579,6 @@ const V9AssetFactsBaseFields = {
     (fact) => fact.factKey,
   ).optional(),
   cdpStressCoverage: V9CdpStressCoverageFactSchema.optional(),
-  allocationScopeFacts: canonicalArrayBy(V9AllocationScopeFactSchema, (fact) => fact.claimKey).optional(),
   lenderBook: V1019LenderBookFactSchema.optional(),
   // Retained V2 facts carry only serial/basket dependency roles. V3 overrides
   // this field with the role-aware edge contract below.
@@ -1584,6 +1588,12 @@ const V9AssetFactsBaseFields = {
   reserveBoundFacts: canonicalArrayBy(V9ReserveBoundedFactSchema, (row) => row.fact.factKey).optional(),
   reserveScopeAdmissions: z.array(ReserveScopedAdmissionSchema).optional(),
   exitStatus: V9FactStatusV2Schema,
+  // A current, aggregate-reconciled census may prove no pools for only part
+  // of the liability. The remaining share stays unknown, never the whole asset.
+  exitCoverage: z.object({
+    verifiedNoPoolsSupplyShare: z.number().finite().min(0).max(1),
+    evidenceRefIds: CanonicalStringArraySchema,
+  }).strict().optional(),
   exitRoutes: canonicalArrayBy(V9ExitRouteFactV2Schema, (route) => route.routeKey),
   controlStatus: V9FactStatusV2Schema,
   controls: canonicalArrayBy(V9DeploymentControlFactV2Schema, (control) => control.controlKey),
@@ -1592,8 +1602,7 @@ const V9AssetFactsBaseFields = {
   accessReview: V9AccessReviewV2Schema,
   peg: V9PegFactV2Schema,
   supply: V9SupplyFactV2Schema,
-  operationalResilience: V9OperationalResilienceFactSchema.nullable().optional(),
-  operationalResilienceStatus: V9FactStatusV2Schema.optional(),
+  realizedHolderLossEvents: canonicalArrayBy(V9AdmittedHolderLossEventSchema, (event) => event.incidentId).optional(),
   causeResolutionDiagnostics: z.array(V9CauseResolutionDiagnosticSchema).optional(),
   // Optional only for retained V2 compatibility. V3 requires the complete,
   // policy-independent wrapper-local contract for every asset.
@@ -1630,6 +1639,16 @@ type V9AssetFactsValidationInput = Omit<V9AssetFactsV2Object, "dependencies"> & 
 };
 
 function validateAssetFacts(asset: V9AssetFactsValidationInput, ctx: z.RefinementCtx): void {
+  if (asset.exitCoverage !== undefined && (asset.exitCoverage.evidenceRefIds.length === 0 ||
+      asset.exitCoverage.evidenceRefIds.some((id) => !asset.evidence.some((reference) =>
+        reference.evidenceId === id && reference.disposition === "observed" && reference.freshness.state === "current")))) {
+    issue(ctx, ["exitCoverage", "evidenceRefIds"], "Exit coverage requires current observed census evidence");
+  }
+  for (const [index, event] of (asset.realizedHolderLossEvents ?? []).entries()) {
+    if (event.assetId !== asset.assetId) {
+      issue(ctx, ["realizedHolderLossEvents", index, "assetId"], "Holder loss must belong to this exact asset");
+    }
+  }
   for (const [index, control] of asset.controls.entries()) {
     if (asset.issuanceFacts && control.controlKind !== "bridge" && control.issuanceFactsRef !== asset.issuanceFacts.ref) {
       ctx.addIssue({ code: "custom", path: ["controls", index, "issuanceFactsRef"], message: "Every native control must bind the asset-wide issuance facts" });
@@ -1656,14 +1675,6 @@ function validateAssetFacts(asset: V9AssetFactsValidationInput, ctx: z.Refinemen
   ] as Array<[string, string | null]>) {
     if (controlKey !== null && !controlKeys.has(controlKey)) {
       issue(ctx, ["economicControlReview"], `${label} review references unknown control ${controlKey}`);
-    }
-  }
-  for (const [index, fact] of (asset.allocationScopeFacts ?? []).entries()) {
-    const target = fact.target;
-    if (fact.admitted && fact.disposition === "inherited-parent" &&
-      (target?.kind !== "parent-claim" || !asset.dependencies.edges.some((edge) =>
-        edge.edgeKey === target.edgeKey && edge.upstreamAssetId === target.upstreamAssetId))) {
-      ctx.addIssue({ code: "custom", path: ["allocationScopeFacts", index, "target"], message: "Parent scope must match a real economic dependency" });
     }
   }
   // exitRoutes is deliberately absent: a reviewed-complete empty exit
@@ -1774,14 +1785,6 @@ export const V9AssetFactsV3Schema = V9AssetFactsV3ObjectSchema.superRefine((asse
     if (!["reviewed", "not-applicable"].includes(wrapper.formDisposition) && (!wrapper.formStatus || wrapper.formStatus.gapIds.length === 0)) {
       ctx.addIssue({ code: "custom", path: ["wrapperLocalFacts", "formStatus"], message: "Unavailable wrapper form requires its own causal status" });
     }
-    for (const [key, fact] of Object.entries(wrapper.facts)) {
-      if (!["reviewed", "not-applicable"].includes(fact.disposition) && (!fact.status || fact.status.gapIds.length === 0)) {
-        ctx.addIssue({ code: "custom", path: ["wrapperLocalFacts", "facts", key, "status"], message: "Unavailable wrapper facts require resolving causal gaps" });
-      }
-    }
-    if (!["reviewed", "not-applicable"].includes(wrapper.riskTransfer.disposition) && (!wrapper.riskTransfer.status || wrapper.riskTransfer.status.gapIds.length === 0)) {
-      ctx.addIssue({ code: "custom", path: ["wrapperLocalFacts", "riskTransfer"], message: "Unavailable risk transfer requires cause status without positive credit" });
-    }
   }
   const gapsById = new Map(asset.gaps.map((gap) => [gap.gapId, gap]));
   for (const { label, status } of factStatuses(asset)) {
@@ -1825,9 +1828,6 @@ export const V9AssetFactsV3Schema = V9AssetFactsV3ObjectSchema.superRefine((asse
     }
   }
   const { mint, oracle, bridge } = asset.economicControlReview;
-  if (asset.operationalResilience == null && asset.operationalResilienceStatus?.observationState === "known") {
-    ctx.addIssue({ code: "custom", path: ["operationalResilienceStatus"], message: "Known operational resilience requires an admitted operational fact" });
-  }
   if (mint.status.applicability.state === "required") {
     for (const [key, unknown] of [
       ["reconciliation", mint.reconciliation === "unknown"],
@@ -1975,13 +1975,10 @@ export function factStatuses(asset: V9AssetFactsBase): Array<{ label: string; st
       ...Object.entries(fact.factorStatuses ?? {}).map(([key, status]) => ({ label: `route:${fact.routeKey}:${key}`, status })),
     ]),
     { label: "control-envelope", status: asset.controlStatus },
-    ...(asset.operationalResilienceStatus ? [{ label: "operational-resilience", status: asset.operationalResilienceStatus }] : []),
     ...asset.controls.map((fact) => ({ label: `control:${fact.controlKey}`, status: fact.status })),
     ...asset.controls.flatMap((fact) => Object.entries(fact.factorStatuses ?? {}).map(([key, status]) => ({ label: `control:${fact.controlKey}:${key}`, status }))),
     ...(asset.wrapperLocalFacts?.applicability === "wrapper" ? [
       ...(asset.wrapperLocalFacts.formStatus ? [{ label: "wrapper:form", status: asset.wrapperLocalFacts.formStatus }] : []),
-      ...Object.entries(asset.wrapperLocalFacts.facts).flatMap(([key, fact]) => fact.status ? [{ label: `wrapper:${key}`, status: fact.status }] : []),
-      ...(asset.wrapperLocalFacts.riskTransfer.status ? [{ label: "wrapper:risk-transfer", status: asset.wrapperLocalFacts.riskTransfer.status }] : []),
     ] : []),
     { label: "economic-control:mint", status: asset.economicControlReview.mint.status },
     ...Object.entries(asset.economicControlReview.mint.factorStatuses ?? {}).map(([key, status]) => ({ label: `economic-control:mint:${key}`, status })),
@@ -2134,19 +2131,6 @@ function validateAssetReferences(
   for (const fact of asset.mechanismExitFacts ?? []) {
     captureRefs(`mechanism-exit:${fact.factKey}`, fact.evidenceRefIds, []);
   }
-  for (const fact of asset.allocationScopeFacts ?? []) {
-    captureRefs(`allocation-scope:${fact.claimKey}`, fact.evidenceRefIds, []);
-    if (!fact.admitted) continue;
-    for (const evidenceId of fact.evidenceRefIds) {
-      const reference = evidenceById.get(evidenceId);
-      if (reference && (reference.sourceId !== "safety-score-v9.scoped-allocation-review" ||
-        reference.sourceGenerationId !== fact.sourceGenerationId || reference.observedAtSec !== fact.observedAtSec ||
-        !fact.sources.some((source) => source.url === reference.url))) {
-        issue(ctx, ["assets", assetIndex, "allocationScopeFacts", fact.claimKey, "evidenceRefIds"],
-                  `Allocation scope evidence ${evidenceId} does not match its source/clock/generation`);
-      }
-    }
-  }
   const wrapperLocalFacts = asset.wrapperLocalFacts;
   if (wrapperLocalFacts?.applicability === "not-wrapper") {
     captureRefs("wrapper-local:not-wrapper", wrapperLocalFacts.evidenceRefIds, []);
@@ -2155,66 +2139,10 @@ function validateAssetReferences(
     if (wrapperLocalFacts.parentBackingInheritance) {
       captureRefs("wrapper-local:parentBackingInheritance", wrapperLocalFacts.parentBackingInheritance.evidenceRefIds, []);
     }
-    for (const [factKey, fact] of Object.entries(wrapperLocalFacts.facts) as Array<
-      [keyof V9ApplicableWrapperLocalFacts["facts"], V9ApplicableWrapperLocalFacts["facts"][keyof V9ApplicableWrapperLocalFacts["facts"]]]
-    >) {
-      captureRefs(`wrapper-local:${factKey}`, fact.evidenceRefIds, []);
-      for (const posture of fact.incidentPostures ?? []) {
-        captureRefs(
-          `wrapper-local:${factKey}:incident:${posture.incidentId}`,
-          posture.evidenceRefIds,
-          [],
-        );
-      }
-    }
-    captureRefs("wrapper-local:risk-transfer", wrapperLocalFacts.riskTransfer.evidenceRefIds, []);
   }
   for (const route of asset.exitRoutes) {
     captureRefs(`settlement:${route.routeKey}`, route.settlementEvidenceRefIds, []);
     if (route.output.valuation) captureRefs(`valuation:${route.routeKey}`, route.output.valuation.evidenceRefIds, []);
-  }
-  const operationalResilience = asset.operationalResilience;
-  if (operationalResilience) {
-    captureRefs(
-      "operational-resilience:live-history",
-      operationalResilience.liveHistoryEligibility.evidenceRefIds,
-      [],
-    );
-    const cumulative = operationalResilience.redemptionThroughput?.cumulativeLifetimeRedeemedSupplyRatio;
-    if (cumulative) captureRefs("operational-resilience:cumulative-redemption", cumulative.evidenceRefIds, []);
-    for (const window of operationalResilience.redemptionThroughput?.stressWindows ?? []) {
-      captureRefs(`operational-resilience:redemption:${window.episodeKey}`, window.evidenceRefIds, []);
-    }
-    for (const episode of operationalResilience.stressEpisodes) {
-      captureRefs(`operational-resilience:stress:${episode.episodeKey}`, episode.evidenceRefIds, []);
-    }
-    if (operationalResilience.reserveReconciliation) {
-      captureRefs(
-        "operational-resilience:reconciliation-history",
-        operationalResilience.reserveReconciliation.reportHistory.evidenceRefIds,
-        [],
-      );
-      captureRefs(
-        "operational-resilience:latest-assurance",
-        operationalResilience.reserveReconciliation.latestAssurance.evidenceRefIds,
-        [],
-      );
-      captureRefs(
-        "operational-resilience:reconciliation-procedures",
-        operationalResilience.reserveReconciliation.latestReconciliationProcedures.evidenceRefIds,
-        [],
-      );
-    }
-    if (operationalResilience.incidentReview.state === "reviewed") {
-      captureRefs(
-        "operational-resilience:incident-review",
-        operationalResilience.incidentReview.evidenceRefIds,
-        [],
-      );
-      for (const incident of operationalResilience.incidentReview.incidents) {
-        captureRefs(`operational-resilience:incident:${incident.incidentKey}`, incident.evidenceRefIds, []);
-      }
-    }
   }
   for (const gap of asset.gaps) {
     captureRefs(`gap:${gap.gapId}`, gap.evidenceRefIds, []);

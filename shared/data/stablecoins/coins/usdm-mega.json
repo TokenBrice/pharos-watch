@@ -57,7 +57,7 @@
       "decimals": 18
     }
   ],
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "unknown",
   "governanceQuality": "multisig",
   "dependencies": [
     {

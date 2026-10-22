@@ -190,7 +190,7 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Ceffu (off-exchange custody for strategy assets)",
+        "name": "Undisclosed custodians for managed strategy assets",
         "role": "custodian"
       },
       {
@@ -198,8 +198,8 @@
         "role": "custodian"
       }
     ],
-    "segregation": "segregated",
-    "bankruptcyRemoteness": "contractual-only",
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-20",
     "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
@@ -210,11 +210,19 @@
         "url": "https://xsylabs.mintlify.app/protocol/architecture/flows"
       },
       {
+        "label": "XSY custody-risk disclosure: OES protections are conditional on use of OES providers",
+        "url": "https://xsy-1.gitbook.io/xsy-main/risks"
+      },
+      {
+        "label": "YieldPoint governing terms, last updated May 7, 2026",
+        "url": "https://app.yieldpoint.io/terms-of-use"
+      },
+      {
         "label": "XSY Accountable reserve dashboard",
         "url": "https://accountable.xsy.fi/"
       }
     ],
-    "uncertainty": "YieldPoint documents custody via Ceffu and Copper Clearloop off-exchange settlement, which keeps strategy assets in segregated custody rather than on venue, but venue margin accounts, account terms, bankruptcy remoteness, and any reuse permissions are not disclosed.",
+    "uncertainty": "The source review reopened the cited flow and Accountable surfaces, XSY risks and current YieldPoint terms on 2026-10-20. Current first-party flow docs identify a custodian wallet without naming Ceffu; the unsupported provider attribution is removed, not treated as proof that Ceffu is absent. Copper is expressly mentioned in the OES risk disclosure and appears as a small dashboard location bucket. The issuer claims segregated bankruptcy-remote custody where OES is used but separately acknowledges assets can be held directly at exchanges without OES. Neither source partitions the entire current strategy book by provider/account or supplies the complete governing account agreements. Therefore conditional OES protections cannot establish whole-book segregation or bankruptcy remoteness; both aggregate fields are unknown, while those scoped issuer claims, counterparty risk and the original review start are preserved. Current location buckets are not custody-protection or instrument-maturity proofs.",
     "knownUnknownExposurePct": 100
   }
 }

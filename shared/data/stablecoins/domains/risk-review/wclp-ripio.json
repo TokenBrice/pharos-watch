@@ -429,11 +429,13 @@
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
+        "controllerChain": "tempo",
+        "controllerAddress": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Tempo block 43354001 (2026-10-09T15:11:33Z) confirms issuer-listed Peso Chileno / wCLP, six decimals, zero supply, currency CLP and the standard TIP-20 ISSUER_ROLE. The protocol provides local mint/burn, but Ripio's bridge deployment directory does not cover Tempo or establish this token's liability relationship to other-chain wCLP. Both the previously reviewed Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 and issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b return false for ISSUER_ROLE at this pin. Generic mint/burn capability and zero supply do not positively exclude canonical escrow or establish an independent route. The deployed token is registered; census eligibility remains withheld pending exact issuer/route binding and no-escrow proof.",
+        "reviewNote": "At Tempo block 45094963 (0xbbac3f5f063c2311872b576bbc54447dfdd3193851c69570deac93d347a121d6, 2026-10-20T22:14:39Z), exact native ABI reads identify Peso Chileno / wCLP, six decimals, currency CLP, zero supply, paused false and transferPolicyId 1. Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 holds DEFAULT_ADMIN_ROLE, although it and the issuer EOA do not hold ISSUER_ROLE or PAUSE_ROLE. The same-chain deployed Safe reports VERSION 1.4.1, threshold 4 and seven owners; DEFAULT_ADMIN_ROLE administers ISSUER_ROLE, PAUSE_ROLE and UNPAUSE_ROLE and may change the transfer policy and supply cap under the TIP-20 specification. This establishes the token administrator, not its complete execution scope, key custody, incident absence or cross-chain liability relationship. The issuer bridge directory still omits Tempo, so independent native liability versus conserved representation and canonical escrow/in-flight obligations remain unresolved. Zero supply does not remove the deployment or establish materiality. Observed 2026-10-20T22:18:34Z to 22:19:25Z.",
         "mappingVersion": "bridge-route-facts-v2",
-        "observedAt": "2026-10-09",
-        "observedBlock": 43354001,
+        "observedAt": "2026-10-20",
+        "observedBlock": 45094963,
         "sources": [
           {
             "label": "Ripio current issuer deployment roster",
@@ -448,7 +450,7 @@
             "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
           },
           {
-            "label": "Tempo pinned identity and role reads at block 43354001 (2026-10-09T15:11:33Z)",
+            "label": "Tempo pinned identity, role-admin and same-chain Safe reads at block 45094963 (2026-10-20T22:14:39Z)",
             "url": "https://api-tempo-mainnet.n.dwellir.com"
           }
         ]

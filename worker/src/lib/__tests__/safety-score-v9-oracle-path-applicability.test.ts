@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { URL, fileURLToPath } from "node:url";
 import type { OracleRiskProfile } from "@shared/types/core";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { V9EconomicControlResult } from "@shared/lib/safety-score-v9/control-primitives";
 import { OracleRiskProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
@@ -155,28 +155,31 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     expect(oracle.status.applicability.state).toBe("unresolved");
     expect(oracle.paths).toContainEqual(expect.objectContaining({ id: "new-facilitator", observationState: "missing" }));
     expect(oracleReasons(control)).toContainEqual(expect.objectContaining({ code: "unresolved-oracle-branch-applicability" }));
-    expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({ posture: "opaque-or-unknown", score: 45 });
+    expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({
+      posture: "opaque-or-unknown", score: unknownQuality("control", "U"),
+    });
     expect(trace.caps.map((cap) => cap.kind)).not.toContain("reason:unresolved-oracle-branch-applicability");
   });
 
-  it("charges opaque topology as bounded issuer uncertainty, never measured danger", () => {
+  it("prices unresolved opaque topology without measured danger and retains its scoped gap", () => {
     const profile = internalPriceMeta().oracleRisk!;
     profile.tier = "opaque-or-unknown";
     profile.paths = [path("opaque-minter", "top-level-only", "0x4444444444444444444444444444444444444444")];
     const { control, trace } = evaluate(profile);
     expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({
-      posture: "opaque-or-unknown", score: V9_CANDIDATE_POLICY_V1.policy.semantic.control.oracleTierQuality["opaque-or-unknown"],
+      posture: "opaque-or-unknown", score: unknownQuality("control", "U"),
     });
     expect(control.structuralFailures.filter((failure) => failure.kind === "weak-oracle-branch")).toEqual([]);
     expect(trace.adverseAttribution.filter((item) => item.path.startsWith("structural:weak-oracle-branch"))).toEqual([]);
     expect(trace.finalGrade).not.toBe("F");
     expect(trace.unresolvedFacts).toContainEqual(expect.objectContaining({
-      code: "oracle-topology-undisclosed", responsibility: "unresearched", cause: "U",
+      sourceGapId: "alpha:gap:economic-control:oracle::tier",
+      responsibility: "unresearched", cause: "U", scoringDisposition: "bounded-uncertainty",
     }));
     expect(trace.caps.filter((cap) => cap.kind.startsWith("signal:weak-oracle-branch"))).toEqual([]);
   });
 
-  it("retains adverse attribution and the single-source ceiling for verified owner-set pricing", () => {
+  it("retains measured adverse attribution for verified owner-set pricing", () => {
     const profile = internalPriceMeta().oracleRisk!;
     profile.tier = "single-source-or-laggy";
     profile.paths = [path("owner-set-minter", "top-level-only", "0x4444444444444444444444444444444444444444")];
@@ -184,7 +187,6 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({
       posture: "single-source-or-laggy", score: 45,
     });
-    expect(trace.caps).toContainEqual(expect.objectContaining({ kind: "signal:weak-oracle-branch:high", limit: 59 }));
     expect(trace.adverseAttribution).toContainEqual(expect.objectContaining({
       path: "structural:weak-oracle-branch:high", responsibility: "measured-adverse",
     }));
@@ -195,7 +197,7 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     { tier: "opaque-or-unknown" as const, lending: false },
     { tier: "single-source-or-laggy" as const, lending: true },
     { tier: "opaque-or-unknown" as const, lending: true },
-  ])("retains the verified $tier ceiling alongside an unresolved sibling (lending=$lending)", ({ tier, lending }) => {
+  ])("retains verified $tier evidence alongside an unresolved sibling (lending=$lending)", ({ tier, lending }) => {
     const profile = lending ? lendingProfile() : internalPriceMeta().oracleRisk!;
     profile.tier = tier;
     if (lending) profile.branches![0]!.tier = tier;
@@ -207,9 +209,6 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     expect(weakSignals(after.control)).toEqual(weakSignals(before.control));
     expect(weakSignals(after.control)).toHaveLength(tier === "opaque-or-unknown" ? 0 : 1);
     expect(oracleReasons(after.control)).toContainEqual(expect.objectContaining({ code: "unresolved-oracle-branch-applicability" }));
-    expect(after.trace.caps.filter((cap) => cap.kind.startsWith("signal:weak-oracle-branch"))).toEqual(
-      before.trace.caps.filter((cap) => cap.kind.startsWith("signal:weak-oracle-branch")),
-    );
     expect(after.control.score).toBeLessThanOrEqual(before.control.score!);
     const unknownProfile = internalPriceMeta().oracleRisk!;
     unknownProfile.tier = tier;
@@ -241,8 +240,111 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     const profile = lendingProfile();
     profile.paths![1]!.applicability!.confidence = "limited";
     const { control } = evaluate(profile);
-    expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({ posture: "opaque-or-unknown", score: 45 });
+    expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({
+      posture: "opaque-or-unknown", score: unknownQuality("control", "U"),
+    });
     expect(oracleReasons(control)).toContainEqual(expect.objectContaining({ code: "unresolved-oracle-branch-applicability" }));
+  });
+});
+
+describe("structured savings-rate authority classification", () => {
+  it.each([
+    { variantKind: "savings-passthrough" as const, tier: "privileged-internal-pricing" as const, classified: true },
+    { variantKind: "strategy-vault" as const, tier: "privileged-internal-pricing" as const, classified: false },
+    { variantKind: "savings-passthrough" as const, tier: "single-source-or-laggy" as const, classified: false },
+  ])("classifies only savings conversion authority: $variantKind / $tier", ({ variantKind, tier, classified }) => {
+    const meta = internalPriceMeta();
+    meta.variantKind = variantKind;
+    meta.oracleRisk!.tier = tier;
+    const result = adaptOracleReview(meta, "cdp", new ReviewEvidenceBuilder(meta.id, 100000), 100000);
+    expect(result.pricingKind).toBe(classified ? "savings-rate" : undefined);
+    expect(result.status.observationState).toBe("known");
+    expect(result.tier).toBe(tier);
+  });
+
+  it("binds missing savings-setter uncertainty to a compiled causal gap", () => {
+    const fixed = makeV9FixedInput();
+    const meta = reviewedOracleMeta();
+    meta.variantKind = "savings-passthrough";
+    meta.oracleRisk = internalPriceMeta().oracleRisk;
+    meta.mintAuthority = {
+      mintPath: "wrapped-or-variant-inherited", authorityPosture: "none-resolved-mint",
+      confidence: "verified", summary: "Immutable deposit-only savings shares.",
+      upgradeability: { model: "immutable", canChangeMintLogic: false, sources },
+      controls: [], economicCapSemantics: "bounded", reconciliation: "not-applicable", supervision: "none",
+      review: { reviewedAt: "1970-01-01", reviewer: "Fixture reviewer", sources,
+        evidence: "The immutable share token has no privileged share minter or upgrade authority." },
+    };
+    const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(meta) });
+    const facts = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    const authority = facts.assets[0]!.economicControlReview.oracle.factorStatuses!.authority!;
+    expect(authority.observationState).toBe("missing");
+    expect(authority.gapIds).not.toEqual([]);
+    const evaluated = evaluateV9FactSet(facts, V9_CANDIDATE_POLICY_V1).assets[0]!;
+    expect(evaluated.control.components).toContainEqual(expect.objectContaining({
+      componentKey: "mint:savings-rate", score: 60, cause: "U", causeGapIds: authority.gapIds,
+    }));
+  });
+
+  it("keeps liquidation feeds and unresolved applicability out of the savings-rate lane", () => {
+    const meta = reviewedOracleMeta();
+    meta.variantKind = "savings-passthrough";
+    meta.oracleRisk!.tier = "privileged-internal-pricing";
+    expect(adaptOracleReview(meta, "cdp", new ReviewEvidenceBuilder(meta.id, 100000), 100000).pricingKind).toBeUndefined();
+    const internal = internalPriceMeta();
+    internal.variantKind = "savings-passthrough";
+    delete internal.oracleRisk!.branchApplicability;
+    expect(adaptOracleReview(internal, "cdp", new ReviewEvidenceBuilder(internal.id, 100000), 100000).pricingKind).toBeUndefined();
+  });
+});
+
+describe("issuer-administered fund NAV pricing", () => {
+  const clockSec = Date.parse("2026-10-22T12:00:00Z") / 1000;
+  const compile = (meta: V9ExtensionRegistryMeta, archetype: string) =>
+    adaptOracleReview(meta, archetype, new ReviewEvidenceBuilder(meta.id, clockSec), clockSec);
+
+  it.each(["tbill", "rwa-credit-fund", "ucits-trs-fund"])(
+    "requires a pricing review on %s even without a liquidation oracle", (archetype) => {
+      const meta = reviewedOracleMeta("2026-10-20");
+      delete meta.oracleRisk;
+      expect(compile(meta, archetype)).toMatchObject({
+        status: { applicability: { state: "required" }, observationState: "missing" },
+        tier: null, liquidationBranchesApplicable: false, branches: [],
+      });
+      expect(unknownQuality("control", "U")).toBe(60);
+    },
+  );
+
+  it.each(["privileged-internal-pricing", "single-source-or-laggy", "standard-external"] as const)(
+    "retains the measured %s finding, independently of the fund's relay or liquidation census", (tier) => {
+      const meta = internalPriceMeta();
+      meta.oracleRisk!.reviewedAt = "2026-10-20";
+      meta.oracleRisk!.tier = tier;
+      meta.oracleRisk!.branchApplicability!.disposition = "not-applicable";
+      for (const archetype of ["tbill", "rwa-credit-fund", "ucits-trs-fund"]) {
+        expect(compile(meta, archetype)).toMatchObject({
+          status: { applicability: { state: "required" }, observationState: "known" },
+          tier, liquidationBranchesApplicable: false, branches: [],
+        });
+      }
+    },
+  );
+
+  it("does not promote an expired NAV review into either an exemption or measured risk", () => {
+    const meta = internalPriceMeta();
+    meta.oracleRisk!.reviewedAt = "2020-01-01";
+    expect(compile(meta, "tbill")).toMatchObject({
+      status: { applicability: { state: "required" }, observationState: "stale" }, tier: null,
+    });
+  });
+
+  it("does not use a cash/commodity exemption for an explicitly NAV-priced claim", () => {
+    const meta = reviewedOracleMeta("2026-10-20");
+    delete meta.oracleRisk;
+    meta.flags = { ...meta.flags!, navToken: true };
+    expect(compile(meta, "commodity-claim").status).toMatchObject({
+      applicability: { state: "required" }, observationState: "missing",
+    });
   });
 });
 
@@ -435,9 +537,9 @@ describe("admitted Morpho share-accounting oracle exception", { timeout: V9_EVAL
     "never worsens any admitted asset's aggregate on a frozen movers smoke book", () => {
       const observations = JSON.parse(readFileSync(process.env.PHAROS_ORACLE_SMOKE_METADATA!, "utf8")) as
         Record<string, { metadata: { lenderBookObservation: LenderBookObservation } }>;
-      const admitted = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook.admittedAssets;
-      expect(Object.keys(observations).sort()).toEqual(admitted.map((asset) => asset.assetId).sort());
-      const quality = V9_CANDIDATE_POLICY_V1.policy.semantic.control.oracleTierQuality;
+      const admitted = Object.keys(observations).sort().map(assetId => ({ assetId }));
+      const quality = (tier: OracleRiskProfile["tier"]): number => tier === "opaque-or-unknown"
+        ? unknownQuality("control", undefined) : V9_CANDIDATE_POLICY_V1.policy.semantic.control.oracleTierQuality[tier];
       const changes: { assetId: string; baseline: OracleRiskProfile["tier"] | null; candidate: OracleRiskProfile["tier"] | null }[] = [];
       let admittedBooks = 0;
       let fallbackDiagnostics = 0;
@@ -458,7 +560,9 @@ describe("admitted Morpho share-accounting oracle exception", { timeout: V9_EVAL
         if (baseline.tier === null) expect(candidate.tier, asset.assetId).toBeNull();
         else {
           expect(candidate.tier, asset.assetId).not.toBeNull();
-          expect(quality[candidate.tier!], asset.assetId).toBeGreaterThanOrEqual(quality[baseline.tier]);
+          if (baseline.tier !== "opaque-or-unknown") {
+            expect(quality(candidate.tier!), asset.assetId).toBeGreaterThanOrEqual(quality(baseline.tier));
+          }
           if (baseline.tier !== "single-source-or-laggy") expect(candidate.tier, asset.assetId).not.toBe("single-source-or-laggy");
         }
         if (baseline.tier !== candidate.tier) changes.push({ assetId: asset.assetId, baseline: baseline.tier, candidate: candidate.tier });

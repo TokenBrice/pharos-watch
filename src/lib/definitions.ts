@@ -226,7 +226,7 @@ export const DEFINITIONS = {
     label: "Mint Authority Score",
     short: "The Safety Score V10 mint component: how much durable, unbacked supply privileged mint paths can create.",
     detail:
-      "Higher is better. Since safety 9.1 mint risk is graded once, inside the V9 Economic Control pillar. The component starts from a derived posture (cap semantics, claim impairment, reconciliation, supervision), then applies resolved-incident age decay, a key-custody penalty that MPC or HSM attestation waives, a multisig quorum ladder, and a small Safe module modifier. Route family is deliberately not priced separately. Missing or unresolved review data stays NR and never implies safety.",
+      "Higher is better. Since safety 9.1 mint risk is graded once, inside the V9 Economic Control pillar. The component starts from a derived posture (cap semantics, claim impairment, reconciliation, supervision), then applies resolved-incident age decay, a key-custody penalty that an admitted MPC or HSM attestation under a complete, current control review waives, a multisig quorum ladder, and a small Safe module modifier. Route family is deliberately not priced separately. Missing or unresolved review data stays NR and never implies safety.",
     long:
       "The 0-100 mint component inside the Safety Score's Economic Control pillar: how much durable, unbacked supply privileged mint paths can create. Higher is better. Since methodology v9.1 mint risk is graded once, inside Economic Control; the former standalone score is retired. Missing or unresolved review data stays NR and never implies safety.",
     listed: true,

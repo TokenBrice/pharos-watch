@@ -164,7 +164,7 @@
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "permitted",
+    "rehypothecation": "unknown",
     "reviewedAt": "2026-08-29",
     "reviewer": "Kimi P2 reserve cohort rc-2; Pharos reserve research refresh",
     "confidence": "probable",
@@ -175,14 +175,22 @@
       },
       {
         "label": "Ceffu attestation of assets held for Solomon Labs as of 2026-04-01",
-        "url": "https://github.com/SolomonLabs/attestations/blob/main/ceffu/2026/2026-04-01.pdf"
+        "url": "https://raw.githubusercontent.com/SolomonLabs/attestations/e1143aa4ec9fcfb2761e516581beae92e2f23b29/ceffu/2026/2026-04-01.pdf"
       },
       {
         "label": "Solomon USDv minting (off-exchange custody and hedging)",
         "url": "https://docs.solomonlabs.org/usdv/usdv-and-susdv/minting-usdv"
+      },
+      {
+        "label": "Ceffu MirrorX: delegated trading balances while assets remain in custody",
+        "url": "https://www.ceffu.com/solutions/mirrorx"
+      },
+      {
+        "label": "Solomon legacy wind-down and off-exchange custody description",
+        "url": "https://blog.solomonlabs.org/p/winding-down-the-original-usdv"
       }
     ],
-    "uncertainty": "Provider identities are supported by the April 2026 Ceffu report and the issuer's legacy wind-down disclosure. The retained 69.2012% unknown exposure is a historical 2026-08-28 snapshot, not a current measured provider allocation. The current API and replacement documentation do not establish legacy balances, account segregation, insolvency remoteness, or provider shares. The April 2026 first-party aggregate custody attestation is not an independent supply-to-reserve audit. The retained permitted rehypothecation label is not independently established by the aggregate Ceffu report or the off-exchange mirroring description; no contrary primary evidence supports removing that adverse fact.",
+    "uncertainty": "Provider identities are supported by the April 2026 Ceffu report and the issuer's legacy wind-down disclosure. The retained 69.2012% unknown exposure is a historical 2026-08-28 snapshot, not a current measured provider allocation. The current API and replacement documentation do not establish legacy balances, account segregation, insolvency remoteness, or provider shares. The April 2026 first-party aggregate custody attestation is not an independent supply-to-reserve audit. Source-scoped correction: the cited report confirms aggregate custody only and does not grant rehypothecation rights. Ceffu describes MirrorX as 1:1 delegation while assets remain in custody; that technical description proves neither a reuse permission nor a contractual prohibition. The unsupported permitted label is corrected to unknown without renewing the original review start or changing any other custody safeguard.",
     "knownUnknownExposurePct": 69.2012
   }
 }

@@ -73,7 +73,7 @@
         "role": "custodian"
       }
     ],
-    "segregation": "segregated",
+    "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-10-01",
@@ -93,7 +93,7 @@
         "url": "https://openeden.com/news/openeden-launches-cusdo-yield-bearing-stablecoin-on-solana/"
       }
     ],
-    "uncertainty": "OpenEden names BitGo and Coinbase Prime as custodians for underlying cUSDO Treasury reserve assets. These are indirect provider relationships, not verified direct sUSD custody mandates. Provider shares, the qualified-custodian-by-fund split, QLP allocations, direct sUSD legal segregation and rehypothecation remain unresolved. OpenEden's SAC segregation is disclosed for USDO holders. Solayer describes cUSDO self-custody by QLPs, but an enforceable insolvency claim or pass-through right for sUSD holders remains unverified; bankruptcy remoteness is therefore unknown for sUSD.",
+    "uncertainty": "Source-scope correction 2026-10-20; the original 2026-10-01 review start is retained. OpenEden names BitGo and Coinbase Prime for underlying cUSDO reserve assets and describes USDO segregated accounts. Solayer's stakeholder page describes cUSDO self-custody by QLPs, while its Transparency & Security page describes program-derived market-maker vaults. These indirect provider and technical-account statements do not establish enforceable segregation of the immediate sUSD holder claim, complete direct custodian coverage, provider shares, insolvency priority or reuse rights. OpenEden's USDO safeguards cannot be promoted to sUSD holder rights; segregation, bankruptcy remoteness and rehypothecation therefore remain unknown for sUSD.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { selectCuratedAggregateOnchainSupplyProbeContracts } from "@shared/lib/onchain-supply-probe";
+import { selectCuratedAggregateOnchainSupplyProbeContracts, SFRAX_STOCK_PERIMETER } from "@shared/lib/onchain-supply-probe";
 import { MIN_VALID_ASSET_COUNT } from "../../lib/constants";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";
@@ -138,7 +138,7 @@ export async function overlayFallbackCuratedAggregateSupply(
   for (const asset of assets) {
     throwIfAborted(signal);
     const meta = ACTIVE_META_BY_ID.get(String(asset.id));
-    if (!meta || !selectCuratedAggregateOnchainSupplyProbeContracts(meta)) continue;
+    if (!meta || (!selectCuratedAggregateOnchainSupplyProbeContracts(meta) && meta.id !== SFRAX_STOCK_PERIMETER.assetId)) continue;
 
     const priceUsd = toPositiveFiniteNumber(asset.price);
     if (priceUsd == null) continue;
@@ -152,5 +152,15 @@ export async function overlayFallbackCuratedAggregateSupply(
     asset.supplyObservedAt = onChainMcap.observedAt ?? null;
     asset.chainCirculating = toPublicChainCirculating(onChainMcap.chainCirculating);
     asset.chains = Object.keys(onChainMcap.chainCirculating);
+    if (meta.id === SFRAX_STOCK_PERIMETER.assetId) {
+      asset.supplyPerimeter = onChainMcap.supplyPerimeter;
+      asset.circulatingPrevDay = null;
+      asset.circulatingPrevWeek = null;
+      asset.circulatingPrevMonth = null;
+      delete asset.supplyUnavailableReason;
+      delete asset.supplyRestored;
+      delete asset.supplyGapFill;
+      delete asset.supplyChainGuard;
+    }
   }
 }

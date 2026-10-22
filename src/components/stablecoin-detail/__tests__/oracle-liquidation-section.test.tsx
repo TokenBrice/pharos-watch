@@ -7,6 +7,7 @@ import type { ControlComponentRoles } from "@/lib/pillar-evidence-strips";
 import {
   dedupeOracleFeeds,
   ORACLE_REVIEW_COPY,
+  ORACLE_TIER_POLICY_BANDS,
   type OracleBranchClientRow,
   type OracleRiskClientSummary,
 } from "@/lib/stablecoin-detail-oracle-client";
@@ -209,7 +210,7 @@ describe("OracleLiquidationSection", () => {
     const { container } = render(<OracleLiquidationSection summary={PRICE_FEED} controlRoles={rolesWithOracle("limiting")} />);
     const spectrum = ladder(container);
     expect(spectrum?.getAttribute("aria-label")).toContain("Privileged internal pricing");
-    expect(spectrum?.getAttribute("aria-label")).toContain("band 1 of 5");
+    expect(spectrum?.getAttribute("aria-label")).toContain(`band 1 of ${ORACLE_TIER_POLICY_BANDS.length}`);
   });
 
   it("draws an empty provider list as an undisclosed source station feeding the mint / redeem quote", () => {

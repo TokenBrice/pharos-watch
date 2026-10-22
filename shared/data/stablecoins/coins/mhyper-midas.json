@@ -20,20 +20,20 @@
     "attestorTier": "self",
     "cadence": "daily-nav",
     "latestReport": {
-      "publishedAt": "2026-10-06",
+      "publishedAt": "2026-10-20",
       "publishedAtBasis": "explicit",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
-      "reviewer": "Sol curation campaign 2026-10-09 (W2L06Midas)",
+      "reviewer": "NR2 bottom-up refinement 2026-10-21",
       "confidence": "verified",
       "sources": [
         {
-          "label": "mHYPER SAVE checkpoint 483cd7f1-5e28-54ec-ba98-f4763bfa73d4, published on Ethereum 2026-10-06T11:35:35Z; 1token protocol assets and borrow liabilities at 08:00 UTC plus reported cross-chain token supply; partial reconciliation, not a financial audit",
-          "url": "https://gateway.pinata.cloud/ipfs/QmXtqUwU2JnceLPjc3oHEtzK37yYcUtfoKG6PH6nF22tbA"
+          "label": "mHYPER SAVE checkpoint b06c4713-2dab-5480-9e04-af574f0b4de4, published on Ethereum 2026-10-20T16:42:47Z; 1token snapshot October 20 13:00 UTC and reported cross-chain supply; self-verification and partial reconciliation, not a financial audit",
+          "url": "https://gateway.pinata.cloud/ipfs/QmWfFX1aA4swRRcF4BQk3JQTh6JhbSMkMJiQXRdCrBf1he"
         },
         {
-          "label": "Latest mHYPER checkpoint read at Ethereum block 26154369 (0xe37b850c5c182cdf1b868af39bcf2606d9ae52a9213e5b42a1004e99ff0269d7), 2026-10-09T10:51:35Z; observed 2026-10-09T11:39:23Z through https://api-ethereum-mainnet-erigon.n.dwellir.com",
+          "label": "Latest exact mHYPER proofId read at Ethereum block 26236714, hash 0xf003f0fe817f2301e121aad3cf421eb46e98f95d3c284288ad60f5294a183e9d, block time 2026-10-20T22:13:59Z; observed 2026-10-20T22:21:25.377Z through https://ethereum-rpc.publicnode.com; attestation hash 0x7ba14eebcf431eefd8ae37c66487558f83a42f558555ae72c72251498267a825",
           "url": "https://etherscan.io/address/0x2d6e9f608807436de5d9603b00abe3fed1bc809d"
         },
         {
@@ -101,7 +101,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "mixed",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "chainlink-nav",

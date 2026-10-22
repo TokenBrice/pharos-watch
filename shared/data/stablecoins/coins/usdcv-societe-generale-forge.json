@@ -8,7 +8,7 @@
     "governance": "centralized"
   },
   "collateral": "U.S. dollar cash deposits held 1:1 in segregated accounts at The Bank of New York Mellon SA/NV and Societe Generale; holder claims are protected from other issuer creditors under French law, and reserve composition is disclosed daily by SG-FORGE.",
-  "pegMechanism": "Direct 1:1 redemption through SG-FORGE for EEA-resident holders after KYC/AML and sanctions checks; non-EEA holders have no direct issuer redemption right, and U.S. residents are excluded.",
+  "pegMechanism": "Direct 1:1 redemption through SG-FORGE for EEA-resident holders after KYC/AML and sanctions checks; the issuer confirms receipt within five business days, and payment is due by the last business day of the month following the month controls are completed. Non-EEA holders have no direct issuer redemption right, and U.S. residents are excluded.",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "307",
   "detailProvider": "defillama",
@@ -20,7 +20,25 @@
     "attestorTier": "self",
     "cadence": "daily-nav",
     "attestorJurisdiction": "France",
-    "attestorLicense": "EMI (MiCA)"
+    "attestorLicense": "EMI (MiCA)",
+    "latestReport": {
+      "reviewReference": {
+        "date": "2026-10-21",
+        "reviewedAt": "2026-10-21",
+        "dateKind": "unspecified"
+      },
+      "assuranceMethod": "self-verification",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "R2 family-consistency research 2026-10-21: dashboard Last update 21/10/2026 shows 14,176,206.00 USDCV in circulation against USD 11,000,000.00 at BNY (77.59%) and USD 3,176,206.00 at Societe Generale (22.41%), which sum to the outstanding amount. Aggregated across Ethereum, Solana and Canton per white paper C.2.",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "SG-FORGE USDCV daily reserve and circulation disclosure: Last update 21/10/2026",
+          "url": "https://www.sgforge.com/product/coinvertible/"
+        }
+      ]
+    }
   },
   "links": [
     {

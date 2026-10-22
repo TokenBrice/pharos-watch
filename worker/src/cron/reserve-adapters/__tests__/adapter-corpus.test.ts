@@ -22,6 +22,7 @@ import { BALANCE_SHEET_ENDPOINT, BALANCE_SHEET_SAMPLE } from "./frax.test-suppor
 import { UNITED_POR_ENDPOINT, UNITED_POR_PAYLOAD } from "./united-por.test-support";
 import { ZEPHYR_ENDPOINT, ZEPHYR_CAPTURE } from "./zephyr-scanner.test-support";
 import type { AdapterResult } from "../types";
+import m0SolanaCapture from "./fixtures/m0-solana-local-2026-10-21.json";
 // Keep numeric-contract source ownership explicit alongside registered replay.
 import "../afi-proof";
 import "../blast-usdb-yield-manager";
@@ -32,6 +33,7 @@ import "../frax";
 import "../united-por";
 import "../superstate-liquidity";
 import "../zephyr-scanner";
+import "../m0-solana-wrapper";
 import { runAdapter, type AdapterNetworkRequest, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
 interface NumericAdapterCorpusCase extends AdapterCorpusCase {
@@ -83,7 +85,68 @@ function superstateNetwork(payload: unknown): AdapterNetworkSpec {
   };
 }
 
+// Replay the original finalized bank through the real registered RPC boundary.
+function m0SolanaNetwork(missingGlobal = false): AdapterNetworkSpec {
+  const addresses = m0SolanaCapture.request.params[0] as string[];
+  const captured = new Map(addresses.map((address, i) => [address, m0SolanaCapture.response.result.value[i]] as const));
+  const respond = async (request: Request) => {
+    const rpc = await request.json() as { method: string; params: unknown[] };
+    if (rpc.method === "getBlockTime") return { result: m0SolanaCapture.block.timestamp };
+    if (rpc.method !== "getMultipleAccounts") throw new Error(`Unexpected captured Solana RPC: ${rpc.method}`);
+    return {
+      result: {
+        context: m0SolanaCapture.response.result.context,
+        value: (rpc.params[0] as string[]).map((address) =>
+          missingGlobal && address === "AiiXk9Rztiv9E72Ying8byGzvxnVmyaeunysYEmvG1NU" ? null : captured.get(address) ?? null),
+      },
+    };
+  };
+  return {
+    chains: { solana: m0SolanaCapture.rpcUrl },
+    json: Object.fromEntries([
+      m0SolanaCapture.rpcUrl,
+      "https://api.mainnet-beta.solana.com",
+      "https://api.mainnet.solana.com",
+      "https://solana-rpc.publicnode.com",
+    ].map((url) => [url, respond])),
+  };
+}
+
 const NUMERIC_CORPUS_CASES: Record<string, NumericAdapterCorpusCase> = {
+  "m0-solana-wrapper": {
+    coinId: "usdk-kast",
+    nowSec: m0SolanaCapture.block.timestamp,
+    network: m0SolanaNetwork(),
+    expected: {
+      slices: [{
+        sourceKey: "m0-solana-wrapper:m-vault",
+        name: expect.any(String),
+        pct: 100,
+        risk: "low",
+        coinId: "m-m0",
+        depType: "wrapper",
+        assetClass: "stablecoin",
+      }],
+      metadata: {
+        freshnessMode: "not-applicable",
+        observedBlock: { chain: "solana", number: m0SolanaCapture.block.slot, timestamp: m0SolanaCapture.block.timestamp },
+        totalSupplyRaw: "23939622844939",
+        underlyingBalanceRaw: "22255150855475",
+        indexedUnderlyingBalanceRaw: "24441457026511",
+        underlyingMultiplier: 1.098238209448,
+        collateralizationRatio: expect.closeTo(1.0209624932198167, 12),
+        unknownExposurePct: 0,
+      },
+      warnings: [{ code: "m0-local-wrapper-scope", effect: "info", severity: "info" }],
+      absentMetadata: ["redemption"],
+    },
+    drift: {
+      label: "the identity-bound local extension global account disappears",
+      network: m0SolanaNetwork(true),
+      outcome: "error",
+      error: /global/,
+    },
+  },
   // Full proof payload moved unchanged from afi-proof.test.ts.
   "afi-proof": {
     coinId: "rwausdi-multipli",

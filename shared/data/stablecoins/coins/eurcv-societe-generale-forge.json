@@ -42,18 +42,18 @@
     "attestorTier": "self",
     "latestReport": {
       "reviewReference": {
-        "date": "2026-10-01",
-        "reviewedAt": "2026-10-01",
+        "date": "2026-10-21",
+        "reviewedAt": "2026-10-21",
         "dateKind": "unspecified"
       },
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Sol curation pass 2026-10-01 (CurA29KAU): issuer dashboard states Last update 1/10/2026, 164,388,393.02 EURCV and matching euro reserves, 100% at Societe Generale. Last-update date is retained as a review reference; no report-period end or distinct publication date is stated.",
+      "reviewer": "R2 family-consistency research 2026-10-21: dashboard Last update 21/10/2026 shows 169,091,433.55 EURCV in circulation against matching EUR reserves, 100% at Societe Generale. Aggregated across Ethereum, Solana, XRP Ledger, Stellar and Canton per white paper C.2. This is issuer self-verification, not independent assurance.",
       "confidence": "verified",
       "sources": [
         {
-          "label": "SG-FORGE EURCV daily reserve disclosure: Last update 1/10/2026",
+          "label": "SG-FORGE EURCV daily reserve and circulation disclosure: Last update 21/10/2026",
           "url": "https://www.sgforge.com/product/coinvertible/"
         }
       ]

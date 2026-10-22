@@ -60,7 +60,7 @@ export async function enrichMissingDetailPrice(
     // Reuse the already-read publication: current USD supply must match the list,
     // even when a provider's daily history is older or its own price is unavailable.
     const hasCurrentSupply = coin != null && !coin.frozen && stablecoinId !== LEGACY_SOLOMON_USDV_ID &&
-      admitSupplyBuckets(coin.circulating).status === "observed";
+      !coin.supplyUnavailableReason && admitSupplyBuckets(coin.circulating).status === "observed";
     if (hasCurrentSupply) {
       detail.currentCirculatingUSD = coin.circulating;
       detail.currentSupplyRestored = coin.supplyRestored === true;
@@ -70,12 +70,17 @@ export async function enrichMissingDetailPrice(
       detail.currentSupplyObservedAt = typeof supplyObservedAt === "number" && Number.isFinite(supplyObservedAt) &&
         supplyObservedAt > 0 && supplyObservedAt <= now ? supplyObservedAt : canonical.updatedAt;
     }
-    // A quarantined row past its carry ceiling publishes `{}`: current supply is explicitly
-    // unavailable, and provider history must not stand in for it (R1/R2).
+    // A canonical producer refusal must not be resurrected from provider history.
+    const supplyUnavailableReason = coin?.supplyUnavailableReason
+      ?? (coin?.supplyChainGuard?.status === "unavailable" ? coin.supplyChainGuard.reason : undefined);
     const supplyUnavailable = coin != null && !coin.frozen && stablecoinId !== LEGACY_SOLOMON_USDV_ID &&
-      !hasCurrentSupply && coin.supplyChainGuard?.status === "unavailable";
+      !hasCurrentSupply && supplyUnavailableReason != null;
     if (supplyUnavailable) {
-      detail.currentSupplyUnavailableReason = coin.supplyChainGuard!.reason;
+      detail.currentSupplyUnavailableReason = supplyUnavailableReason;
+      delete detail.currentCirculatingUSD;
+      delete detail.currentCirculatingPrevDayUSD;
+      delete detail.currentSupplyObservedAt;
+      delete detail.currentSupplyRestored;
     }
     if (coin?.nominalPriceReference) detail.nominalPriceReference = coin.nominalPriceReference;
     const observedAt = coin?.priceObservedAt ?? coin?.priceUpdatedAt;

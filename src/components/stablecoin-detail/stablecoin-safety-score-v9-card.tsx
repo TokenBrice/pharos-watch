@@ -6,6 +6,8 @@ import type { SafetyScoreV9CurrentCard } from "@shared/types";
 import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { PartialEvidenceChip } from "@/components/stablecoin-detail/ops-status-chip";
 import { ScoreConstructionPanel } from "@/components/stablecoin-detail/score-construction-panel";
@@ -135,6 +137,22 @@ export function StablecoinSafetyScoreV9Card({
               ) : (
                 <span className="text-sm font-medium text-muted-foreground">{card.ratingStatus === "pipeline-gap" ? "No Safety Score published" : "Not rated"}</span>
               )}
+              {card.provisional ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button type="button" className="pharos-focus-ring rounded-full" aria-label="Provisional Safety Score">
+                        <Badge variant="outline" className="rounded-full border-border/60 bg-muted/40 text-2xs font-medium text-muted-foreground">
+                          Provisional
+                        </Badge>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-left">
+                      {((card.unknownPricedWeightShare ?? 0) * 100).toFixed(1)}% of scoring weight is priced as unknown. This label does not change the score.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : null}
               <ScoreModifiers card={card} />
             </div>
             <p className="text-xs text-muted-foreground">{presentation.evidenceSummary}</p>

@@ -54,8 +54,8 @@
     "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
-    "tier": "single-source-or-laggy",
-    "summary": "At Celo block 78986505, KESm's Broker/BiPoolManager USDm/KESm ConstantSum exchange 0x89de88b8eb790de26f4649f543cb6893d93635c728ac857f0926e842fb0d298b uses KES/USD feed 0xbacee37d31b9f022ef5d232b9fd53f05a531c169, one ChainlinkRelayerV1 reporter 0x4920101408d129a1a7b33fb0eca4fb0233fd00d4, and one configured Chainlink aggregator 0x0826492a24b1dbd1d8fcb4701b38c557ce685e9d. getRates and medianRate agree on 7710992019123260000000/1e24; medianTimestamp is 1790887031. Effective report expiry and bucket reset are 360 seconds, minimumReports is 1, and spread is 1%. MedianDeltaBreaker is enabled at 4% with a 900-second reset cooldown; ValueDeltaBreaker is disabled. The sorted-list median of one relayer is not independent medianization or failover. Stale reports invalidate ConstantSum quotes; BreakerBox suspends execution rather than substituting a second source. This evidenced single-live-source topology retains the existing Mento single-source-or-laggy convention; it does not assert the pinned report was stale.",
+    "tier": "standard-external",
+    "summary": "At Celo block 78986505, KESm's Broker/BiPoolManager USDm/KESm ConstantSum exchange 0x89de88b8eb790de26f4649f543cb6893d93635c728ac857f0926e842fb0d298b uses KES/USD feed 0xbacee37d31b9f022ef5d232b9fd53f05a531c169, ChainlinkRelayerV1 0x4920101408d129a1a7b33fb0eca4fb0233fd00d4, and Chainlink proxy 0x0826492a24b1dbd1d8fcb4701b38c557ce685e9d. getRates and medianRate agree on 7710992019123260000000/1e24; medianTimestamp is 1790887031. Effective report expiry and bucket reset are 360 seconds, minimumReports is 1, and spread is 1%. MedianDeltaBreaker is enabled at 4% with a 900-second reset cooldown; ValueDeltaBreaker is disabled. Stale reports invalidate ConstantSum quotes; BreakerBox halts rather than providing independent failover. Correction 2026-10-21 at Celo block 80683399: the singleton reporter is a runtime-matched immutable contract whose permissionless relay reads and validates Chainlink latestRoundData, not an arbitrary-price signer. Its proxy resolves to runtime-matched AccessControlledOffchainAggregator 0xaf984a0a7e7072a5e03024896dca9cb129a8470f with ten registered transmitters and multi-signature report verification. The earlier single-source-or-laggy classification misread relay count as source-signing topology. Standard-external is restored under the orchestrator's source-misreading ruling; no independent-provider failover, human independence or sibling review renewal is claimed. Original pins and review dates are retained.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
@@ -105,6 +105,14 @@
       {
         "label": "Verified MedianDeltaBreaker; pinned runtime exact match",
         "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x49349f92d2b17d491e42c8fdb02d19f072f9b5d9"
+      },
+      {
+        "label": "Relayer and DON join, Celo block 80683399, 2026-10-21T12:02:37Z",
+        "url": "https://celo.blockscout.com/block/80683399"
+      },
+      {
+        "label": "KES/USD active Chainlink DON verified source; runtime matched 2026-10-21",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xaf984a0a7e7072a5e03024896dca9cb129a8470f"
       }
     ],
     "paths": [

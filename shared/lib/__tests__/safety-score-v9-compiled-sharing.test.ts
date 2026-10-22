@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { compileV9FactSetV3 } from "../safety-score-v9/compile";
+import { compileV9FactSetV3, createV9PublicationAssetCompactor } from "../safety-score-v9/compile";
 import { V9FactSetCoreV3Schema } from "../../types/safety-score-v9-facts";
+import { serializeV9FactShard } from "../safety-score-v9/fact-shard";
 
 import {
   compileNativeV3FactSet,
@@ -17,6 +18,37 @@ function currentCore() {
 }
 
 describe("immutable compiled fact sharing", () => {
+  it("compacts only admitted publication rows with one immutable decoded asset and unchanged cohort admission", () => {
+    const compiled = compileV9FactSetV3(currentCore());
+    const { v9FactSetDigest: _digest, ...core } = compiled;
+    const compact = createV9PublicationAssetCompactor();
+    expect(() => compact(structuredClone(compiled.assets[0]!))).toThrow("admitted immutable asset");
+    const assets = compiled.assets.map(compact);
+    expect(Object.isFrozen(assets[0]!)).toBe(true);
+    expect(Object.getOwnPropertyDescriptor(assets[0]!, "evidence")?.get).toBeTypeOf("function");
+    expect(Object.getOwnPropertyDescriptor(assets[0]!, "assetId")?.get).toBeUndefined();
+    const first = assets[0]!.reserveExposures;
+    expect(first[0]!.status).toBe(assets[0]!.reserveStatus);
+    expect(() => { first[0]!.status.observationState = "missing"; }).toThrow(TypeError);
+    expect(() => { assets[0]!.evidence.push(compiled.assets[0]!.evidence[0]!); }).toThrow(TypeError);
+    // Reading another asset replaces the invocation's single decoded cache.
+    void assets[1]!.reserveExposures;
+    const reloaded = assets[0]!.reserveExposures;
+    expect(reloaded === first).toBe(false);
+    expect(reloaded).toEqual(first);
+    const serialized = serializeV9FactShard(assets[0]!);
+    expect(serialized).toEqual(serializeV9FactShard(assets[0]!));
+    expect(serialized === serializeV9FactShard(assets[0]!)).toBe(false);
+    serialized.fill(0);
+    void assets[1]!.reserveExposures;
+    expect(assets[0]!.reserveExposures).toEqual(first);
+    const compacted = compileV9FactSetV3({ ...core, assets });
+    expect(compacted.v9FactSetDigest).toBe(compiled.v9FactSetDigest);
+    expect(compacted).toEqual(compiled);
+    expect(() => compileV9FactSetV3({ ...core, assets, activeAssetIds: core.activeAssetIds.slice(1) })).toThrow();
+    expect(() => compileV9FactSetV3({ ...core, assets, asOfSec: core.asOfSec - 1 })).toThrow();
+  });
+
   it("shares equal statuses without letting one consumer mutate another holding or the supplied input", () => {
     const core = currentCore();
     const supplied = core.assets[0]!;

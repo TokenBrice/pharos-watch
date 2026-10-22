@@ -41,8 +41,8 @@
     "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
-    "tier": "redundant-with-failover",
-    "summary": "sUSDe is an ERC-4626 savings wrapper over USDe and has no borrower-owned collateral positions or token-level liquidation engine. It inherits the parent USDe offchain oracle and hedging-system risk.",
+    "tier": "oracleless",
+    "summary": "Ethereum sUSDe's local share-to-USDe conversion is deterministic ERC-4626 accounting, not a redundant external feed. Verified StakedUSDe.totalAssets() returns the USDe balance minus linearly unvested rewards; inherited ERC4626 conversions use that value and totalSupply(). No external price oracle or autonomous feed failover enters this local calculation. Parent USDe's offchain RFQ pricing and hedging risks remain inherited separately; this review grants no parent pricing, bridge, cooldown, or executable-unwind relief.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
@@ -61,8 +61,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "ORCL-MAX data review",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "C23 bottom-up refinement; local accounting source review",
     "confidence": "verified",
     "sources": [
       {
@@ -76,6 +76,14 @@
       {
         "label": "Ethena hedging-system documentation",
         "url": "https://docs.ethena.fi/solution-design/hedging-system"
+      },
+      {
+        "label": "Canonical sUSDe verified StakedUSDeV2, StakedUSDe and inherited ERC4626 sources (retrieved 2026-10-20)",
+        "url": "https://etherscan.io/address/0x9d39a5de30e57443bff2a8307a4256c8797a3497#code"
+      },
+      {
+        "label": "Ethena canonical staking account and token identities (retrieved 2026-10-20)",
+        "url": "https://docs.ethena.fi/technical-design/key-addresses"
       }
     ]
   },

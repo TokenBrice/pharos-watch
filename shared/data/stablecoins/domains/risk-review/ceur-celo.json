@@ -24,14 +24,14 @@
         "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
       }
     ],
-    "sourceFreeRationale": "Explicit true: a live authorized burner (the Mento Broker) can directly burn an arbitrary holder balance, and the owner Safe can authorize further burners or operators that move holder balances without allowance. This direct freeze/blacklist-equivalent capability is distinct from the transfer-review lane and does not suppress the upstream reserve-basket exposure.",
+    "sourceFreeRationale": "Source-scoped correction (2026-10-20): the former rationale asserted that the live Broker can directly burn arbitrary holder balances. Its cited Broker.sol instead pulls tokens from msg.sender before burning the Broker's own balance; an impersonated eth_call from the Broker is not a reachable public call path. The sourced 2026-10-19 evidence below already records this correction and retains Possible because current operator/minter membership is unresolved. No proven direct holder-targeted Broker capability, current operator absence, or favorable freeze verdict is inferred. Original source pins and review start remain unchanged.",
     "evidence": "Material shares at the pinned census are Celo 84.6746%, Monad 14.7804%, and Solana 0.5413% (sub-threshold). At Celo block 80489880, EURm proxy 0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73 resolves to StableTokenV3 0x815795c30d0758a297b08cd4e0643620c974c318 and owner Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458. BurnerUpdated history to that pin: https://celo.blockscout.com/api?module=logs&action=getLogs&address=0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73&fromBlock=0&toBlock=80489880&topic0=0xf0e5abe4ab32ea692e3889b4c146fd4ddae5f17bb40ab4feba97fb67a2d4de0f; it identifies Broker, ReserveLiquidityStrategy, and NttManager proxy 0x5f8a1e50f83f53951b89fc73ead80b27045c67fd as active burners. The NttManager proxy resolves to implementation 0x3bF4C295AE1d395Ab3B9c10dD5dfbB5F8CE66CBb: https://celo.blockscout.com/api/v2/smart-contracts/0x5f8a1e50f83f53951b89fc73ead80b27045c67fd. Broker implementation 0x1B78f6acD05e7BcB00f74863bfd8a7C264143e37 is verified as Broker.sol: https://celo.blockscout.com/api/v2/smart-contracts/0x1B78f6acD05e7BcB00f74863bfd8a7C264143e37. In Broker.sol, swapIn/swapOut pass msg.sender to transferIn (L145-L177); burnStableTokens(token,amount) pulls msg.sender into Broker before safeBurn (L187-L191); transferIn likewise pulls from `from` into Broker before burning (L238-L245): https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol#L145-L191. StableTokenV3’s arbitrary-account burn is onlyBurner, while setBurner/setOperator are onlyOwner (L153-L178): https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV3.sol#L153-L183. An eth_call with `from=Broker` impersonates the contract; it does not establish a public path to burn a victim. ReserveLiquidityStrategy burns its own balance after the pool flow (L194-L202): https://github.com/mento-protocol/mento-core/blob/main/contracts/liquidityStrategies/ReserveLiquidityStrategy.sol#L194-L202. NttManager pulls from msg.sender and, in burning mode, burns amount from its own balance (L409, L429): https://github.com/mento-protocol/mento-stabletoken-ntt/blob/main/evm/src/NttManager/NttManager.sol#L404-L429. The material Monad StableTokenSpoke exposes only self-burn `burn(uint256)` (L100-L114): https://github.com/mento-protocol/mento-core/blob/main/contracts/tokens/StableTokenSpoke.sol#L100-L114. Last verified Celo minter is Broker at block 69291541 (shared/data/stablecoins/domains/mint-authority/ceur-celo.json:63); the record’s later owner snapshot is block 78936968 (:24-25, :112), but neither is a current minter-set read at block 80489880. Current OperatorUpdated/MinterUpdated history could not be retrieved: Blockscout log requests timed out or returned HTTP 429. The owner-gated `sendToPool(sender,...)` surface makes current operator membership material to ruling out Yes, so the status is Possible.",
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
-    "tier": "single-source-or-laggy",
-    "summary": "At Celo block 78986505, EURm uses 2 registered Celo V3 FPMMs. Every reviewed rateFeedID has one authorized ChainlinkRelayerV1 reporter and one current getRates entry: SortedOracles is a sorted-list median, not redundant live price failover. Effective report expiry is 360 seconds (global default 300). The axlEUROC/EURm pool 0x3aa7c431c06b10f7422e69d3e69b66807a6af696 uses feed 0x26076b9702885d475ac8c3db3bd9f250dc5a318b and relayer 0x72fa4feab8225a234325dccb79862a0ad3ca4fb9. Its two Chainlink aggregator segments multiply EUROC/USD by inverted EUR/USD; they are a composite conversion, not alternatives (maximum timestamp spread 300 seconds). ValueDeltaBreaker is enabled at 0.5%, reference 1e24 and one-second reset cooldown; MedianDelta is disabled. LP/protocol fees are 30/20 basis points. USDm/EURm uses the single-reporter EUR/USD feed 0xf4f9bbda9cd6841fcb9b1510f9269e2db42a6e3a, MedianDelta 4%/900 seconds, LP/protocol fees 15/10 basis points. FPMMs read OracleAdapter.getFXRateIfValid on quotes/swaps. Stable collateral pools use adapter 0xeb23e1339b2119c0f4a0097cb294e990c1fa6423 with always-open market-hours configuration; FX pools use 0xa472fbbf4b890a54381977ac392bdf82eec4383a with FX hours. Both reject stale medians or non-bidirectional BreakerBox modes and have no alternative live feed. Breaker cooldowns are reset waits, not price observation or liquidation delays. All pinned rates were recent and returned nonzero quotes. The tier follows the existing Mento single-source-or-laggy convention, not the former unsupported failover claim.",
+    "tier": "standard-external",
+    "summary": "At Celo block 78986505, EURm uses 2 registered Celo V3 FPMMs. Every reviewed rateFeedID has one authorized ChainlinkRelayerV1 reporter and one current getRates entry: SortedOracles is a sorted-list median, not redundant live price failover. Effective report expiry is 360 seconds (global default 300). The axlEUROC/EURm pool 0x3aa7c431c06b10f7422e69d3e69b66807a6af696 uses feed 0x26076b9702885d475ac8c3db3bd9f250dc5a318b and relayer 0x72fa4feab8225a234325dccb79862a0ad3ca4fb9. Its two Chainlink aggregator segments multiply EUROC/USD by inverted EUR/USD; they are a composite conversion, not alternatives (maximum timestamp spread 300 seconds). ValueDeltaBreaker is enabled at 0.5%, reference 1e24 and one-second reset cooldown; MedianDelta is disabled. LP/protocol fees are 30/20 basis points. USDm/EURm uses the single-reporter EUR/USD feed 0xf4f9bbda9cd6841fcb9b1510f9269e2db42a6e3a, MedianDelta 4%/900 seconds, LP/protocol fees 15/10 basis points. FPMMs read OracleAdapter.getFXRateIfValid on quotes/swaps. Stable collateral pools use adapter 0xeb23e1339b2119c0f4a0097cb294e990c1fa6423 with always-open market-hours configuration; FX pools use 0xa472fbbf4b890a54381977ac392bdf82eec4383a with FX hours. Both reject stale medians or non-bidirectional BreakerBox modes and have no alternative live feed. Breaker cooldowns are reset waits, not price observation or liquidation delays. All pinned rates were recent and returned nonzero quotes.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
@@ -193,16 +193,16 @@
         "semantics": "burn-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Pinned totalSupply() at Celo block 72770618 on 2026-07-21 returned 1,688,715.972819276070272578 cEUR. The reviewed Optics and Allbridge routes are lock-mint representations backed within this canonical supply, so they are not added again to the unique-claim denominator. After subtracting the three observed legacy representation supplies, 1,680,826.222997517070272578 cEUR, or 81.07424347% of unique claims, remains Celo-resident. At Celo latest block 75011740 on 2026-08-16, owner() for the NTT manager 0x7431419fe761e7da37587245c55a35e5a356c91b, WormholeTransceiver 0x01c9d280150f932d4a2fe11f40b0d72bffbcd339, and EURm token 0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73 returned the common 4-of-6 Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458. Official NTTConfig.sol defines nominal 500,000e18 EURm inbound and outbound limits per peer; this is not a live remaining-capacity read.",
+        "reviewNote": "Historical supply pin retained: totalSupply() at Celo block 72770618 on 2026-07-21 returned 1,688,715.972819276070272578 cEUR. Legacy Optics and Allbridge lock-mint claims were included within that canonical supply, not added again; subtracting the then-observed three legacy representations left 1,680,826.222997517070272578 cEUR (81.07424347% of then-reviewed unique claims) on Celo. Historical owner calls at block 75011740 on 2026-08-16 referenced manager 0x7431419fe761e7da37587245c55a35e5a356c91b and transceiver 0x01c9d280150f932d4a2fe11f40b0d72bffbcd339; their attribution to EURm is withdrawn. Source-scoped correction (retrieved 2026-10-20): at Celo block 80489800, hash 0xf475b7ecc1d8115a82fed72dcbb5b094e6c69b88242ffa7583995f498eaef3d4, timestamp 2026-10-19T06:15:58Z, old manager token() returns distinct token 0xc45ecf20f3cd864b32d9794d6f76814ae8892e20. Corrected manager 0x5f8a1e50f83f53951b89fc73ead80b27045c67fd returns this exact canonical EURm token from token(), is authorized by EURm.isMinter(), and owner() returns Safe 0x58099b74f4acd642da77b4b7966b4138ec5ba458. Its getTransceivers() returns 0x6467cfca82184657f32f1195f9a26b5578399479. The corrected failure-domain identity is bridge machinery, not a new independent native liability or proof of every minter, channel, bypass, incident state, current supply share, or capacity. Historical nominal 500,000e18 peer limits do not establish current remaining capacity.",
         "mappingVersion": "bridge-route-facts-v1",
         "failureDomainKeys": [
           "wormhole:ntt:eurm",
-          "contract:celo:0x7431419fe761e7da37587245c55a35e5a356c91b",
-          "contract:celo:0x01c9d280150f932d4a2fe11f40b0d72bffbcd339",
+          "contract:celo:0x5f8a1e50f83f53951b89fc73ead80b27045c67fd",
+          "contract:celo:0x6467cfca82184657f32f1195f9a26b5578399479",
           "safe:celo:0x58099b74f4acd642da77b4b7966b4138ec5ba458"
         ],
-        "observedAt": "2026-07-21",
-        "observedBlock": 72770618,
+        "observedAt": "2026-10-19",
+        "observedBlock": 80489800,
         "sources": [
           {
             "label": "Mento NTT configuration",
@@ -223,6 +223,10 @@
           {
             "label": "Safe Transaction Service - Celo migration owner",
             "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+          },
+          {
+            "label": "Pinned exact canonical EURm manager/token/authorization reads, Celo block 80489800 (2026-10-19T06:15:58Z; retrieved 2026-10-20)",
+            "url": "https://api-celo-mainnet-archive.n.dwellir.com"
           }
         ]
       },
@@ -239,18 +243,18 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "controllerChain": "monad",
-        "controllerAddress": "0x7431419fe761e7da37587245c55a35e5a356c91b",
+        "controllerAddress": "0x5f8a1e50f83f53951b89fc73ead80b27045c67fd",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Pinned totalSupply() at Monad block 89292718 on 2026-07-21 returned 384,477.868920000000000000 EURm. Against the 2,073,193.841739276070272578 unique-claim denominator, this chain:monad exposure is 18.54519636%. At Monad latest block 96586421 on 2026-08-16, owner() for NttManager 0x7431419fe761e7da37587245c55a35e5a356c91b, WormholeTransceiver 0x01c9d280150f932d4a2fe11f40b0d72bffbcd339, and EURmSpoke 0x4d502d735b4c574b487ed641ae87ceae884731c7 returned the common 4-of-6 Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458. Mento's official NTTConfig.sol defines nominal 500,000e18 EURm inbound and outbound limits per peer; this is not a live remaining-capacity read.",
+        "reviewNote": "Historical pins retained: totalSupply() at Monad block 89292718 on 2026-07-21 returned 384,477.868920000000000000 EURm, 18.54519636% of the then-reviewed 2,073,193.841739276070272578 unique claims. The 2026-08-16 block 96586421 review previously attributed manager 0x7431419fe761e7da37587245c55a35e5a356c91b and transceiver 0x01c9d280150f932d4a2fe11f40b0d72bffbcd339 to EURm; that association is withdrawn, not refreshed. Source-scoped correction (2026-10-20): at Monad block 115160726, hash 0xf380a17e75cb02e8fe67a3aeb462793f8022dc456e32e14278b458fa4f0e97e9, timestamp 2026-10-20T22:35:44Z, token() on the old manager returns JPYmSpoke 0x22f6a6752800eab67b84748fefc3cc658384af72, not EURm. token() on corrected manager 0x5f8a1e50f83f53951b89fc73ead80b27045c67fd returns this exact EURmSpoke; EURmSpoke.isMinter(corrected manager) is true. Its owner() and EURmSpoke.owner() return Safe 0x58099b74f4acd642da77b4b7966b4138ec5ba458, whose getThreshold()/getOwners() return 4/6 at the same pin. getTransceivers() returns the single address 0x6467cfca82184657f32f1195f9a26b5578399479, correcting the failure-domain identity only. This is not a complete minter, channel, upgrade, source/runtime, incident, current supply-share or remaining-capacity certificate. Historical nominal 500,000e18 limits are not current remaining capacity.",
         "mappingVersion": "bridge-route-facts-v1",
         "failureDomainKeys": [
           "wormhole:ntt:eurm",
-          "contract:monad:0x7431419fe761e7da37587245c55a35e5a356c91b",
-          "contract:monad:0x01c9d280150f932d4a2fe11f40b0d72bffbcd339",
+          "contract:monad:0x5f8a1e50f83f53951b89fc73ead80b27045c67fd",
+          "contract:monad:0x6467cfca82184657f32f1195f9a26b5578399479",
           "safe:monad:0x58099b74f4acd642da77b4b7966b4138ec5ba458"
         ],
-        "observedAt": "2026-07-21",
-        "observedBlock": 89292718,
+        "observedAt": "2026-10-20",
+        "observedBlock": 115160726,
         "sources": [
           {
             "label": "Mento contract registry (EURmSpoke)",
@@ -275,6 +279,10 @@
           {
             "label": "Safe Transaction Service - Monad migration owner",
             "url": "https://api.safe.global/tx-service/monad/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+          },
+          {
+            "label": "Pinned exact EURm and JPYm manager/token/authorization/Safe reads, Monad block 115160726 (2026-10-20T22:35:44Z; retrieved 2026-10-20)",
+            "url": "https://rpc.monad.xyz"
           }
         ]
       },

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
 
-export const RESOURCE_HARNESS_REVISION = "full-path-post-p2-v3-offline";
+export const RESOURCE_HARNESS_REVISION = "full-path-post-p2-v5-calibrated-bytes";
 export const RESOURCE_PHASES = ["module-initialized", "native-envelope-loaded", "native-inflate-decoded", "native-input-decoded", "enrichment-loaded", "accepted-baseline-row-loaded", "accepted-baseline-parsed", "accepted-baseline-ready", "extension-built", "facts-compiled", "evaluation-complete", "candidate-finalized", "gate-assessed", "replay-serialized", "store-admitted", "publication-gzip-complete", "score-index-serialized", "publication-committed", "alert-envelope-projected", "journal-complete", "archive-string-built", "archive-upload-pending", "publication-settled"] as const;
 export const GLOBAL_HEAP_BYTES = 112 * 1024 * 1024;
 export const CALIBRATION_MAX_BYTES = 110 * 1024 * 1024;

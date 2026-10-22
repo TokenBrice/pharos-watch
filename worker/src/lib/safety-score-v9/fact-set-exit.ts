@@ -2,7 +2,8 @@ import { z } from "zod";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-route-suspension";
-import type { RedemptionRouteSuspension } from "@shared/types/redemption";
+import type { RedemptionBackstopEntry, RedemptionRouteSuspension } from "@shared/types/redemption";
+import { allocationReviewClockSec as reviewAdmissionClockSec } from "@shared/types/safety-score-v9-allocation";
 import { isDexExitRouteCoverageWithinRouteBudget } from "@shared/lib/p4-exit-route-capacity";
 import { isDexExitRouteScoreEligible } from "@shared/lib/p4-exit-route-capability-policy";
 import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
@@ -20,17 +21,20 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { resolveChainId } from "@shared/types/chain-identity";
+import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { hasCompleteEligibleProviderSupply, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import { safetyScoreV9ChainSupplyObservedAtSec, safetyScoreV9ChainSupplyMaxAgeSec } from "./supply-attribution";
 import { evaluateV9Exit, isV9CreditableNonAtomicRedemption, projectV9ExitEvaluationRoute, selectV9ExitCirculatingUsd, selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
 import { loadV9CandidateMethodologyPolicy, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
-import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
+import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, resolveExitExecutionBoundPoint, validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
 import reviewedExecutionModels from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
 import { v9EvidenceResponsibilityForCauseProof } from "@shared/types/safety-score-v9-causes";
 import { findRedemptionReserveQuarantine, redemptionReserveQuarantineScope } from "./redemption-reserve-quarantine";
 import { reserveBackedRedemptionRouteMaxAgeSec } from "./redemption-route-freshness";
+import { usesPrimaryRedemptionReviewTerms } from "../redemption-exit-route-observations";
+import { hasUsableRedemptionCapacityObservation } from "./extension-routes";
 import type {
   V9AssetFactsV3,
   V9EvidenceResponsibility,
@@ -98,7 +102,11 @@ function scopeFailureDomains(
       { kind: "chain", key: scope.chain },
       {
         kind: lane === "dex" ? "dex-protocol" : "redemption-rail",
-        key: scope.protocol,
+        // A producer/model family is not a shared redemption endpoint.
+        // Match execution certificates' exact provider identity instead.
+        key: lane === "dex"
+          ? scope.protocol
+          : `provider:${canonicalExitRouteScopedKey(scope.chain, scope.contractOrPoolId)}`,
       },
     ];
   }
@@ -288,9 +296,15 @@ function buildSuspendedRoute(context: AssetBuildContext, suspension: RedemptionR
 }
 function capacityEvidenceTierForObservation(
   observation: ExitRouteObservation,
+  redemption?: RedemptionBackstopEntry,
 ): NonNullable<ExitRouteObservation["capacityEvidenceTier"]> {
   if (observation.capacityEvidenceTier && observation.capacityEvidenceTier !== "unknown") {
     return observation.capacityEvidenceTier;
+  }
+  // Older queue observations may omit the tier, but their captured method
+  // still proves proxy measurement rather than direct executable inventory.
+  if (redemption?.capacityKind === "live-queue" || redemption?.capacityKind === "live-proxy-validated") {
+    return "live-queue-proxy";
   }
   // A positive method identity is not a missing datum merely because an older
   // producer did not serialize the tier. Freshness/admission remains separate.
@@ -322,25 +336,36 @@ function buildRoute(
     rejection: z.infer<typeof RejectionSchema> | null;
     retained: boolean;
   },
+  supply: V9AssetFactsV3["supply"],
 ): V9ExitRouteFactV2 {
   const suspension = args.lane === "redemption" ? resolveReviewedRouteSuspension(
     getRedemptionBackstopConfig(context.asset.assetId), args.observation.routeId, context.fixedInput.clockSec,
   ) : undefined;
   if (suspension) return buildSuspendedRoute(context, suspension);
+  const redemption = args.lane === "redemption"
+    ? context.fixedInput.redemptionBackstopMap[context.asset.assetId] : undefined;
+  if (redemption && (redemption.routeStatus === "paused" || redemption.routeStatus === "suspended") &&
+    usesPrimaryRedemptionReviewTerms(context.asset.assetId, args.observation)) {
+    args = { ...args, disposition: "rejected", rejection: {
+      code: "redemption-route-closed", reason: "The captured primary redemption channel is closed.",
+      rejectedAtSec: context.fixedInput.clockSec,
+    } };
+  }
   const generationId =
     args.lane === "dex" ? context.fixedInput.dexGenerationId : context.fixedInput.redemptionGenerationId;
   const routeKey = canonicalV9RouteKey(args.lane, generationId, args.observation.routeId);
   const certificate = args.observation.executionCertificate;
-  const supplyUsd = getCirculatingRawOrNull(context.fixedInput.aggregateCirculatingById?.[context.asset.assetId] ?? {});
+  const supplyUsd = selectV9ExitCirculatingUsd(supply);
   const executionPolicy = args.observation.executionModelId ? executionPolicyForInput(context) : null;
   const executionRequest = executionPolicy ? selectV9ExitStressRequest(supplyUsd, executionPolicy) : null;
+  const measuredRequest = certificate && executionRequest ? resolveExitExecutionBoundPoint(certificate, executionRequest) : null;
   const executionAdmission = args.observation.executionModelId
-    ? certificate && executionPolicy && executionRequest
+    ? certificate && executionPolicy && measuredRequest
       ? admitExitExecutionCertificate({
           certificate, envelope: executionPolicy, assetId: context.asset.assetId, clockSec: context.fixedInput.clockSec,
-          inputGenerationId: exitExecutionInputGenerationId(context.asset.assetId, executionRequest, certificate.inputReference),
+          inputGenerationId: exitExecutionInputGenerationId(context.asset.assetId, measuredRequest, certificate.inputReference),
           observationGenerationId: domainDigest("safety-score-v10.exit-execution-source.v1", certificate.source),
-          request: executionRequest,
+          request: measuredRequest,
           reviews: executionReviewsForPolicy(executionPolicy),
         })
       : { state: "unavailable" as const, reason: "execution-certificate-missing", responsibility: "method-unsupported" as const }
@@ -408,7 +433,7 @@ function buildRoute(
       observationConfidence: args.observation.confidence,
       observationHistory: args.observation.observationHistory ?? null,
       evidenceKind: args.observation.evidenceKind,
-      capacityEvidenceTier: capacityEvidenceTierForObservation(args.observation),
+      capacityEvidenceTier: capacityEvidenceTierForObservation(args.observation, redemption),
       ...(args.observation.feeEvidence ? { feeEvidence: args.observation.feeEvidence } : {}),
       factorStatuses: rejectedFactorStatuses,
       coverageClass: "diagnostic",
@@ -447,7 +472,9 @@ function buildRoute(
       completionRatio: args.observation.completionRatio,
     },
   ];
-  const capacityCurve = rawCurve.map((point) => {
+  const usableCapacity = !redemption ||
+    hasUsableRedemptionCapacityObservation(redemption, args.observation, context.fixedInput.clockSec);
+  const pricedCurve = rawCurve.map((point) => {
     const cost = costByKey.get(canonicalV9ExecutionCostKey(point));
     if (!cost) throw new Error(`Missing execution cost for ${context.asset.assetId}:${routeKey}`);
     costByKey.delete(canonicalV9ExecutionCostKey(point));
@@ -462,9 +489,13 @@ function buildRoute(
     };
   });
   if (costByKey.size > 0) throw new Error(`Unmatched execution costs for ${context.asset.assetId}:${routeKey}`);
+  // Retain the original capture outside the scored fact, but do not turn a
+  // legal full-supply entitlement or an explicit capacity gap into a quote.
+  const capacityCurve = usableCapacity ? pricedCurve : [];
 
   let routeState: V9FactStatusV2["observationState"] = "known";
   if (args.disposition === "rejected") routeState = "unsupported";
+  else if (!usableCapacity) routeState = "missing";
   else if (evidence.freshness.state === "stale") routeState = "stale";
   if (executionAdmission?.state === "unavailable") routeState = "unsupported";
   const routeGapId =
@@ -473,13 +504,15 @@ function buildRoute(
       : routeGap(
           context,
           routeKey,
-          routeState === "stale" ? "stale" : "rejected",
+          routeState === "missing" ? "capacity" : routeState === "stale" ? "stale" : "rejected",
           routeState,
-          routeState === "stale" ? "missing-runtime-route-evidence" : "unsupported-same-notional-route",
-          executionAdmission?.state === "unavailable" ? executionAdmission.responsibility : routeState === "stale" ? "producer-failed" : "method-unsupported",
-          executionAdmission?.state === "unavailable" ? executionAdmission.reason : routeState === "stale"
-            ? "The retained route observation is older than the lane freshness bound."
-            : "The retained route observation was rejected by its producer or review process.",
+          routeState === "missing" || routeState === "stale" ? "missing-runtime-route-evidence" : "unsupported-same-notional-route",
+          executionAdmission?.state === "unavailable" ? executionAdmission.responsibility : routeState === "missing" ? "unresearched"
+            : routeState === "stale" ? "producer-failed" : "method-unsupported",
+          executionAdmission?.state === "unavailable" ? executionAdmission.reason : routeState === "missing"
+            ? "The documented channel has no admitted executable capacity bound; legal entitlement is diagnostic only."
+            : routeState === "stale" ? "The retained route observation is older than the lane freshness bound."
+              : "The retained route observation was rejected by its producer or review process.",
           [evidenceId],
         );
   const routeStatus = createV9FactStatus({
@@ -626,7 +659,7 @@ function buildRoute(
     executionCertainty: args.review.executionCertainty,
     modelConfidence: args.review.modelConfidence,
     observationConfidence: args.observation.confidence,
-    capacityEvidenceTier: capacityEvidenceTierForObservation(args.observation),
+    capacityEvidenceTier: capacityEvidenceTierForObservation(args.observation, redemption),
     observationHistory: args.observation.observationHistory ?? null,
     evidenceKind: args.observation.evidenceKind,
     ...(args.review.feeEvidence === null ? {} :
@@ -635,7 +668,7 @@ function buildRoute(
     ...(args.observation.physicalToUsd ? { physicalToUsd: args.observation.physicalToUsd } : {}),
     ...(args.observation.executionModelId ? { executionModelId: args.observation.executionModelId } : {}),
     ...(certificate ? { executionCertificate: certificate } : {}),
-    coverageClass: executionAdmission
+    coverageClass: !usableCapacity ? "diagnostic" : executionAdmission
       ? executionAdmission.state === "unavailable" ? "diagnostic" : executionAdmission.point.certification
       : args.review.coverageClass,
     capacityScoringHorizon: args.review.capacityScoringHorizon ?? "unknown",
@@ -654,7 +687,7 @@ function buildRoute(
     },
     scoreEligible,
     settlementBoundUnproven,
-    request: {
+    request: capacityCurve.length === 0 ? null : {
       requestedNotionalUsd: args.observation.requestedNotionalUsd,
       maxCostBps: args.observation.maxCostBps,
       settlementHorizonSec: Math.max(
@@ -734,6 +767,7 @@ function classifyUnsupportedDexSurface(
 
 export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["supply"]): {
   exitStatus: V9FactStatusV2;
+  exitCoverage?: V9AssetFactsV3["exitCoverage"];
   exitRoutes: V9ExitRouteFactV2[];
 } {
   const reviewByKey = new Map(context.asset.routeReviews.map((review) => [`${review.lane}:${review.routeId}`, review]));
@@ -789,7 +823,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
     const reviewKey = `${row.lane}:${row.observation.routeId}`;
     const review = reviewByKey.get(reviewKey);
     if (review) consumedReviews.add(reviewKey);
-    return buildRoute(context, { ...row, review });
+    return buildRoute(context, { ...row, review }, supply);
   });
   // A configured live-only rail with failed capacity telemetry still exists.
   // Preserve the producer gap so a small observed DEX route cannot turn an
@@ -846,6 +880,35 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
         path: optionalExitV9Path(routeKey), message: quarantine.evidence.rejection!.reason,
         evidenceRefIds: [evidenceId], causeScope: quarantineScope, causeProof: quarantine.verdict.proof,
       })),
+    };
+  } else if (
+    config?.reviewedAt && config.docs?.length &&
+    reviewAdmissionClockSec(config.reviewedAt) <= context.fixedInput.clockSec &&
+    !suspension && !routes.some((route) => route.lane === "redemption")
+  ) {
+    // An empty DEX census says nothing about this documented primary channel.
+    // Keep its unavailable measurement visible without synthesizing a quote,
+    // funded capacity, cost, output valuation or completion guarantee.
+    const routeId = `redemption:${context.asset.assetId}:${config.routeFamily}`;
+    const routeKey = canonicalV9RouteKey("redemption", generationId, routeId);
+    const evidenceId = addEvidence(context, createV9EvidenceReference({
+      evidenceId: `${context.asset.assetId}:redemption-configured-channel`,
+      sourceId: "safety-score-v9-redemption-configured-channel",
+      sourceGenerationId: context.extension.sources.researchOverlays.generationId,
+      disposition: "observed",
+      observedAtSec: Date.parse(config.reviewedAt) / 1_000,
+      url: config.docs[0]!.url,
+      contentSha256: domainDigest("safety-score-v9.redemption-configured-channel.v1", config),
+      maxAgeSec: context.extension.routeFreshness.documentedTermsMaxAgeSec,
+    }, context.fixedInput.clockSec));
+    unavailableRail = {
+      routeId,
+      routeFamily: config.routeFamily === "offchain-issuer" ? "issuer-redemption" : "protocol-redemption",
+      evidenceId,
+      capacityGapId: routeGap(context, routeKey, "capacity", "missing",
+        "missing-runtime-route-evidence", "unresearched",
+        "The reviewed redemption channel has no admitted same-notional capacity observation; an empty DEX census does not establish its exhaustion.",
+        [evidenceId]),
     };
   }
   if (unavailableRail) {
@@ -961,7 +1024,15 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
       supplyCoverage.verifiedNoPoolsSupplyRatio === 1 &&
       Math.abs(supplyCoverage.totalSupplyUsd - aggregateSupplyUsd) <= supplyToleranceUsd &&
       Math.abs(supplyCoverage.verifiedNoPoolsSupplyUsd - aggregateSupplyUsd) <= supplyToleranceUsd;
-    if (locallyEmptySurface) {
+    const partialVerifiedEmpty = aggregateSupplyUsd !== null && aggregateSupplyUsd > 0 &&
+      supplyCurrent && economicCensusAdmitted && supplyCoverage != null &&
+      supplyCoverage.verifiedNoPoolsSupplyRatio > 0 && supplyCoverage.verifiedNoPoolsSupplyRatio < 1 &&
+      Math.abs(supplyCoverage.totalSupplyUsd - aggregateSupplyUsd) <= supplyToleranceUsd &&
+      Math.abs(supplyCoverage.verifiedNoPoolsSupplyUsd -
+        aggregateSupplyUsd * supplyCoverage.verifiedNoPoolsSupplyRatio) <= supplyToleranceUsd &&
+      capturedChainSupplyUsd <= aggregateSupplyUsd + supplyToleranceUsd &&
+      supplyCoverage.verifiedNoPoolsSupplyUsd <= capturedChainSupplyUsd + supplyToleranceUsd;
+    if (locallyEmptySurface || partialVerifiedEmpty) {
       // Known-empty negative evidence must carry the DEX producer's observation
       // time, not the scoring clock: a stale empty surface is not a current
       // "known" zero-exit fact but a bounded-unknown/stale one (VER2-007). Fresh
@@ -985,6 +1056,9 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
           context.fixedInput.clockSec,
         ),
       );
+      const currentCoveredShare = partialVerifiedEmpty &&
+        context.evidence.get(coverageEvidenceId)!.freshness.state === "current"
+        ? supplyCoverage!.verifiedNoPoolsSupplyRatio : null;
       if (!fullSupplyVerifiedEmpty) {
         return {
           exitStatus: missingLocalFact(context, {
@@ -999,6 +1073,9 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
               "The locally empty DEX census does not establish a current exhaustive deployment census reconciled to aggregate circulating liability.",
           }).status,
           exitRoutes: [],
+          ...(currentCoveredShare !== null ? { exitCoverage: {
+            verifiedNoPoolsSupplyShare: currentCoveredShare, evidenceRefIds: [coverageEvidenceId],
+          } } : {}),
         };
       }
       const coverageStale = context.evidence.get(coverageEvidenceId)!.freshness.state === "stale";
@@ -1125,11 +1202,10 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
       portfolioStatus: dexSurfaceComplete ? "reviewed-complete" : "incomplete",
       gaps: [...context.gaps.values()],
       routes: routes.map(projectV9ExitEvaluationRoute),
-    }, policy).reasons.includes("missing-same-notional-route");
+    }, policy).primaryRouteKey === null;
   if (independentExitUnresolved) {
-    // Reuse the Exit evaluator's canonical request and materiality authority:
-    // a measured but immaterial alternative cannot close its bounded census.
-    // The closed channel's D remains separate, with no execution obligations.
+    // A closed channel says nothing about independent rails. Any admitted
+    // positive capacity is evaluated continuously, without a materiality gate.
     portfolioGapIds.push(missingLocalFact(context, {
       componentKey: "exit-independent-route-census",
       path: { kind: "local-component", componentKey: "exit-routes" },

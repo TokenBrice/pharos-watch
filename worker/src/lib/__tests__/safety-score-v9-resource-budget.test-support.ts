@@ -216,7 +216,7 @@ export async function measureV9Resource(root: string, profile: ResourceProfile, 
   const directory = options.directory ?? resolve(root, ".tmp/safety-score-v9-resource");
   rmSync(directory, { recursive: true, force: true });
   mkdirSync(directory, { recursive: true });
-  const report: ResourceReport = { schemaVersion: 1, invocationId: options.invocationId ?? randomUUID(), generatedAt: new Date().toISOString(), harnessRevision: RESOURCE_HARNESS_REVISION, phaseManifest: manifest, profile, diagnosticOnly: !options.policyPath, node: process.version, v8: process.versions.v8, platform: process.platform, arch: process.arch, productionRawPublicationBytesApprox: 8_000_000, fixtureProductionGap: "Synthetic fixture under-represents production by approximately 1 MB; neither synthetic bytes nor Node heap limits establish Workers isolate capacity.", runs: [], violations: [] };
+  const report: ResourceReport = { schemaVersion: 1, invocationId: options.invocationId ?? randomUUID(), generatedAt: new Date().toISOString(), harnessRevision: RESOURCE_HARNESS_REVISION, phaseManifest: manifest, profile, diagnosticOnly: !options.policyPath, node: process.version, v8: process.versions.v8, platform: process.platform, arch: process.arch, fixtureProductionGap: "Synthetic inputs and evidence density are not production-size replay; measured card-unit and streamed-total bytes and Node heap limits do not establish Workers isolate capacity.", runs: [], violations: [] };
   report.policy = options.policyPath ? "unqualified" : "diagnostic";
   report.declaredPhases = PHASE_MANIFESTS[manifest];
   report.complete = false;
@@ -252,6 +252,8 @@ export async function measureV9Resource(root: string, profile: ResourceProfile, 
     "worker/src/lib/__tests__/safety-score-v9-resource-fixture.test-support.ts",
     "worker/src/lib/__tests__/safety-score-v9-resource-budget.test-support.ts",
     "worker/scripts/lib/v9-resource-policy.ts",
+    "shared/lib/safety-score-v9-resource-bytes.ts",
+    "shared/lib/safety-score-v9-publication-limits.ts",
     "worker/scripts/lib/v9-resource-offline.mjs",
     "shared/test-utils/v9-resource-offline.ts",
   ].map((file) => {

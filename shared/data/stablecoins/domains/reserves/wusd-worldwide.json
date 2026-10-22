@@ -8,8 +8,7 @@
       "assetClass": "other",
       "issuerOrObligor": "Undisclosed reserve banks and United States Treasury",
       "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
-      "liquidityHorizon": "unknown",
-      "maturityDaysMax": 89
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -37,7 +36,7 @@
     "rationale": "WSPN's reserve policy limits backing to cash, cash equivalents, and Treasury bills and describes a possible 70-80% cash-equivalent and 20-30% sub-90-day Treasury allocation. Re-verified on 2026-10-01: the About WUSD disclosure and whitepaper publish policy ranges, not dated current composition, and the rendered transparency page commits to independent attestations without a dated reserve-liability report. The old FAQ renders an application 404. The previously reviewed 2024 OpenEden partnership remains historical evidence only: its BusinessWire URL timed out during this session and no current TBILL weight was verified. The single aggregate basket and 100% unknown split are retained without a composition date.",
     "compositionBasis": "WSPN reserve-management policy; current asset-class weights undisclosed",
     "scope": "full-composition",
-    "knownUnknownExposure": "The eligible reserve categories and maximum Treasury maturity are disclosed, but current category weights, instruments, banks, provider shares, and the size of the announced TBILL allocation are not public in the reviewed sources.",
+    "knownUnknownExposure": "The eligible reserve categories are disclosed, but current category weights, instruments, banks, provider shares, and the size of the announced TBILL allocation are not public in the reviewed sources. The illustrative sub-90-day Treasury allocation does not establish a maturity maximum for the full cash, cash-equivalent and Treasury basket, including money market fund units and repurchase agreements.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

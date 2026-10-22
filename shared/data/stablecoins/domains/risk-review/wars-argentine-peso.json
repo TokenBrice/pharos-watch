@@ -86,6 +86,10 @@
     ],
     "sources": [
       {
+        "label": "Ripio current bridge deployment directory; Celo, HyperEVM and Arc listed, Tempo absent (identity-only wording rechecked 2026-10-21)",
+        "url": "https://bridge.ripio.com/developers"
+      },
+      {
         "label": "Ripio official bridge UI",
         "url": "https://bridge.ripio.com/"
       },
@@ -749,7 +753,7 @@
       },
       {
         "id": "wars-celo-bridge-deposit",
-        "label": "Ripio Celo BridgeDeposit unlisted-source route",
+        "label": "Ripio Celo BridgeDeposit source controller",
         "routeRefs": [
           "ethereum:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
           "base:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
@@ -771,12 +775,12 @@
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The live but unlisted Celo BridgeDeposit is a source-side burn and destination-fulfillment route; it is not a reviewed Celo native token deployment in the catalog.",
+        "capDescription": "Celo is catalogued and listed in Ripio's current bridge directory. This BridgeDeposit burns source tokens and fulfills destination mints; the six foreign routeRefs preserve historical outbound mappings, not a newly verified current cross-chain loss scope.",
         "canRaiseCap": "unknown",
         "routeChecks": {
           "trustedPeerOrRemote": "At Celo block 75025526, routes from Celo to Ethereum, Base, World Chain, BSC, Polygon, and Gnosis were enabled. Reverse routes from each authored chain to Celo were disabled and are intentionally not inferred.",
           "caps": "Current Celo fees were 1,500 WARS to Ethereum and 15 WARS to each of the other five authored destinations.",
-          "rateLimits": "Celo uses the same LimitedMinterBridge destination adapter; the Celo native deployment remains unlisted pending catalog-owner adjudication."
+          "rateLimits": "Celo uses a LimitedMinterBridge destination adapter. Celo's catalog identity is established separately; current callable reach across the historical six foreign routeRefs remains unresolved."
         },
         "observedAt": "2026-08-16",
         "observedBlock": 75025526,
@@ -790,11 +794,11 @@
             "url": "https://forno.celo.org"
           }
         ],
-        "evidence": "The same 6,924-byte BridgeDeposit is live on Celo at block 75025526. Its current configuration enables outbound Celo routes to the six authored deployments but disables reverse ingress to Celo. This control preserves the live Celo bridge machinery without claiming the unlisted Celo token contract as an authored native route."
+        "evidence": "The 6,924-byte BridgeDeposit was observed on Celo at block 75025526 with outbound routes enabled to the six authored deployments and reverse ingress disabled. The former unlisted-Celo catalog rationale is obsolete: the current issuer bridge directory lists Celo. This identity correction preserves the historical pin and routeRefs, without renewing configuration observations or proving their current cross-chain reach."
       },
       {
         "id": "wars-celo-limited-minter-bridge",
-        "label": "Ripio Celo LimitedMinterBridge unlisted-source adapter",
+        "label": "Ripio Celo LimitedMinterBridge local destination adapter",
         "routeRefs": [
           "ethereum:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
           "base:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
@@ -816,11 +820,11 @@
         ],
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The live Celo LimitedMinterBridge is the destination bridge mint adapter for the outbound Celo routes; the Celo native token deployment itself is intentionally not catalogued yet.",
+        "capDescription": "The Celo LimitedMinterBridge is a local destination mint adapter. Celo is now catalogued and issuer-listed; presence of six foreign routeRefs does not itself prove the Celo adapter's authority over those remote token deployments.",
         "canRaiseCap": true,
         "routeChecks": {
-          "rateLimits": "The Celo adapter is the same LimitedMinterBridge implementation and supplies the destination-side daily-limited mint path for the enabled outbound Celo routes.",
-          "caps": "The Celo token's DEFAULT_ADMIN_ROLE can call updateDailyMintLimit() for the registered token, so the route limit is raiseable by the reviewed Safe-controlled admin path once Celo is admitted to the catalog.",
+          "rateLimits": "The Celo adapter implements daily-limited local destination minting. Historical outbound Celo routes require distinct destination controllers; current exact cross-chain callable reach is not established merely by sharing this implementation.",
+          "caps": "The Celo token's DEFAULT_ADMIN_ROLE can call updateDailyMintLimit() for the registered local token, so the route limit is raiseable by the reviewed Safe-controlled admin path. Catalog admission is not an economic cap.",
           "pausersAdminsUpgraders": "The Celo bridge minter role points to LimitedMinterBridge; its route-scoped pause and adapter facts remain Bridge Risk evidence."
         },
         "observedAt": "2026-08-16",
@@ -835,7 +839,7 @@
             "url": "https://forno.celo.org"
           }
         ],
-        "evidence": "At Celo block 75025526, the same LimitedMinterBridge adapter was live and served the Celo BridgeDeposit outbound route. Its bridge-mint and daily-limit facts are retained without adding an unreviewed Celo native route or reverse Celo ingress."
+        "evidence": "At Celo block 75025526, the LimitedMinterBridge adapter was live. Its local bridge-mint and daily-limit facts are retained, while current foreign-deployment reach and reverse Celo ingress remain unresolved. The former unlisted-Celo identity rationale is obsolete; no observation pin, routeRef or incident disposition is renewed by this wording correction."
       },
       {
         "id": "wars-celo-bridge-admin-safe",
@@ -882,7 +886,7 @@
         "routeChecks": {
           "trustedPeerOrRemote": "The Celo Safe is a bridge admin/fee authority for the six enabled outbound destination mappings; reverse routes from the authored chains to Celo were disabled at the observed block.",
           "caps": "The Safe-controlled Celo route charged 1,500 WARS to Ethereum and 15 WARS to each other enabled authored destination.",
-          "pausersAdminsUpgraders": "Celo bridge admin and fee control is kept separate from the unlisted Celo native token's pending catalog decision."
+          "pausersAdminsUpgraders": "Celo bridge admin and fee control remains separate from the catalogued Celo token's native mint authority; catalog identity does not establish remote token authority."
         },
         "observedAt": "2026-08-16",
         "observedBlock": 75025526,
@@ -896,7 +900,7 @@
             "url": "https://forno.celo.org"
           }
         ],
-        "evidence": "At Celo block 75025526, Safe 0x2b839174 was identified as a Celo BridgeDeposit bridge-admin/fee authority for the six enabled outbound destinations. The current native Celo token deployment and its Safe-controlled MINTER_ROLE remain an explicit unlisted catalog gap, not a bridge-only relabel."
+        "evidence": "At Celo block 75025526, Safe 0x2b839174 was identified as a Celo BridgeDeposit bridge-admin/fee authority for the six enabled outbound destinations. Celo is now catalogued and listed in the issuer bridge directory. The historical observation and six routeRefs remain unchanged pending exact current callable-reach reconciliation; this does not copy incident clearance or infer remote mint authority from the Safe's address."
       },
       {
         "id": "wars-celo-bridge-fee-eoa",

@@ -99,10 +99,10 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
+    "reconciliation": "unknown",
     "supervision": "prudential",
     "review": {
-      "evidence": "Resolved 2026-07-20 against the Sourcify-verified PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 on Ethereum: getRequirements(token, mint) = group mask {0,2}; group 0 (ADMIN) is held solely by Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (3-of-7), and six group-2 operator contracts have canCall(token, mint) = true. The ADMIN Safe can change permission assignments and UUPS mint-critical logic, so no independent on-chain economic ceiling is evidenced. GBPSAFO is an AMF-authorized UCITS sub-fund; its product record identifies recurring PwC assurance, so supply-to-fund reconciliation is recorded as periodic and supervision as prudential rather than inferred from the contract path.",
+      "evidence": "Resolved 2026-07-20 against the Sourcify-verified PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 on Ethereum: getRequirements(token, mint) = group mask {0,2}; group 0 (ADMIN) is held solely by Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (3-of-7), and six group-2 operator contracts have canCall(token, mint) = true. The ADMIN Safe can change permission assignments and UUPS mint-critical logic, so no independent on-chain economic ceiling is evidenced. GBPSAFO is an AMF-authorized UCITS sub-fund; its product record identifies recurring PwC assurance, so supply-to-fund reconciliation is recorded as periodic and supervision as prudential rather than inferred from the contract path. The 1 September 2026 SICAV prospectus, exact GBP class FR0014015LF8 and current Pound product page establish daily fund accounting, the DLT shareholder register, PwC statutory appointment and AMF UCITS supervision of SPIKO SICAV. R2 family reconciliation correction 2026-10-21: all four classes are claims on one SAFO sub-fund with the same CACEIS NAV, AMF-filed June semiannual report, statutory-auditor appointment and eight native registers. Neither daily NAV delivery, the PwC appointment nor the unaudited June filing establishes a complete current supply-to-backing comparison across all share classes and registers, so reconciliation is unknown for every class. Earlier periodic-reconciliation conclusions are withdrawn; prudential supervision and original technical observations and review clocks are retained.",
       "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
       "disposition": "scoreable",
@@ -114,6 +114,18 @@
         {
           "label": "Spiko Pound",
           "url": "https://www.spiko.io/spiko-pound"
+        },
+        {
+          "label": "Spiko SICAV prospectus, 1 September 2026, retrieved 2026-10-20: exact GBP SAFO FR0014015LF8, AMF UCITS regime, DLT register and accounting",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        {
+          "label": "AMF agreement certificate dated 23 February 2026, retrieved 2026-10-20: SPIKO SICAV SCV20240012 and exact SAFO SCV20260075 supervised UCITS sub-fund",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/SAFO_Letter_EN.pdf"
+        },
+        {
+          "label": "AMF GECO SPIKO SICAV/EUTBL register and current manager GP-11000029, retrieved 2026-10-20; exact SAFO joined by AMF certificate and GBP class by prospectus",
+          "url": "https://geco.amf-france.org/back-office/funds/compartment/c79399"
         }
       ],
       "sourceFreeRationale": "Spiko uses a custom permission-group system. Pinned reads on 2026-10-01 resolve authority() to each EVM deployment's PermissionManager and the Ethereum mint requirement to group mask 0x5. EIP-1967 implementation slots identify Ethereum implementation 0x60fcb8511db2a7b823cd0f3c6b08da456e18bff1 and Polygon implementation 0x251747f0346db8cb0a9d7938068b406c27f07bdb; the latter is an implementation address, not an external proxy admin. Correct EIP-1967 admin-slot reads are zero on these UUPS deployments and do not establish absence of upgrade authority. Non-EVM upgrade paths remain separately unverified."

@@ -50,7 +50,7 @@ export interface PegScoreResult {
   pegPct: number | null;
   /** Severity component (0-100) */
   severityScore: number;
-  /** Deviation spread penalty (0-15) — stddev of severity-weighted peak deviations across events */
+  /** Deviation spread penalty (0-15) — stddev of severity-weighted below-peg peak deviations */
   spreadPenalty: number;
   /** Total depeg events */
   eventCount: number;
@@ -208,11 +208,12 @@ export function computePegScore(
   const severityScore = Math.max(0, 100 - totalPenalty);
 
   // --- Spread penalty (deviation variance proxy) ---
-  // Coins with erratic, unpredictable depeg magnitudes get penalized.
+  // Only below-peg magnitudes enter the spread: premiums are not downside depegs.
   // stddev of |peakDeviationBps| scaled into 0-15 range.
+  const belowPegEvents = scoringEvents.filter((e) => e.peakDeviationBps <= 0);
   let spreadPenalty = 0;
-  if (scoringEvents.length >= 2) {
-    const absBpsList = scoringEvents.map((e) => {
+  if (belowPegEvents.length >= 2) {
+    const absBpsList = belowPegEvents.map((e) => {
       const v = Math.abs(e.peakDeviationBps) * eventSeverityWeight(e);
       return Number.isFinite(v) ? v : 0;
     });

@@ -27,6 +27,16 @@ describe("capabilityForPool", () => {
   });
 });
 
+describe("Monad Uniswap collection-only enrollment", () => {
+  it("collects under the active family without admitting the unratified deployment key", () => {
+    const registration = getDexExecutionCapabilityRegistration("uniswap-v3-quoter-v2")!;
+    expect(registration.shadowChains).toContain("monad");
+    expect(registration.eligibleChains).not.toContain("monad");
+    expect(registration.eligibleDeploymentKeys).not.toContain("uniswap-v3-quoter-v2:monad");
+    expect(isDexExecutionProfileAdmittedForScoring({ adapterProfileId: registration.profileId, chain: "monad" }, registration)).toBe(false);
+  });
+});
+
 describe("PKT-5 conditional activation ruling — 2026-10-14", () => {
   it.each([
     ["orca-whirlpool-exact-v1", "solana"],

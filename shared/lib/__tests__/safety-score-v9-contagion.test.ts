@@ -88,10 +88,10 @@ describe("hypothetical V9 contagion reruns", () => {
     expect(serial.rows.find((row) => row.coinId === "alpha")).toMatchObject({ scenarioScore: cFloor, scenarioRatingStatus: "rated", shortestHop: 1, changedDimensions: ["final"] });
   });
 
-  it("keeps an unattributed danger-grade serial result NR with a nullable delta", () => {
+  it("keeps an unattributed low serial score rated rather than applying a grade-based NR gate", () => {
     const result = evaluate([{ kind: "score-limit", assetId: "gamma", dimension: "final", limit: 5 }]);
-    expect(result.rows.find((row) => row.coinId === "alpha")).toMatchObject({ scenarioScore: null, scenarioGrade: "NR", scenarioRatingStatus: "not-rated", delta: null, nr: true, bindingCause: "parent" });
-    expect(result.manifest.nr).toBe(1);
+    expect(result.rows.find((row) => row.coinId === "alpha")).toMatchObject({ scenarioScore: 5, scenarioGrade: "F", scenarioRatingStatus: "rated", delta: expect.any(Number), nr: false, bindingCause: "parent" });
+    expect(result.manifest.nr).toBe(0);
   });
 
   it("applies backing limits through the backing projection, not grade midpoints", () => {
@@ -161,7 +161,10 @@ describe("hypothetical V9 contagion reruns", () => {
     });
     expect(failures).toEqual(["gamma"]);
     expect(result.assets.find((asset) => asset.assetId === "gamma")).toBeUndefined();
-    expect(result.assets.find((asset) => asset.assetId === "alpha")!.trace.finalGrade).toBe("NR");
+    expect(result.assets.find((asset) => asset.assetId === "alpha")!.trace).toMatchObject({
+      ratingStatus: "pipeline-gap", finalGrade: null, finalScore: null,
+      nrReasons: expect.arrayContaining([expect.objectContaining({ code: "missing-parent-score", cause: "U" })]),
+    });
     expect(result.assets.find((asset) => asset.assetId === "beta")!.trace.finalScore).toBe(
       baseline.assets.find((asset) => asset.assetId === "beta")!.trace.finalScore,
     );

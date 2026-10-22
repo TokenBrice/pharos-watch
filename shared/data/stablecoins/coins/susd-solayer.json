@@ -41,7 +41,7 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "unknown",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "curated-validated",

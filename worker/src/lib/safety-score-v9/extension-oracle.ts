@@ -1,5 +1,5 @@
 /** Compiles reviewed oracle inventory without assigning borrower risk to allocations. */
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
@@ -34,7 +34,8 @@ const ORACLE_BRANCH_ADAPTERS = [
 // layer's measurement. `commodity-claim` was added here at the v9.14 phase-2
 // migration — phase 1 could not have caught the omission, because its
 // zero-coin guard meant no asset ever reached this branch on the new archetype.
-const ORACLE_FREE_ARCHETYPES = new Set(["fiat-cash", "tbill", "rwa-credit-fund", "commodity-claim"]);
+const ORACLE_FREE_ARCHETYPES: Record<string, true> = { "fiat-cash": true, "commodity-claim": true };
+const ISSUER_NAV_ARCHETYPES: Record<string, true> = { tbill: true, "rwa-credit-fund": true, "ucits-trs-fund": true };
 
 // V9 oracle branch-materiality lever (owner ruling 2026-07-23). A multi-branch
 // CDP should be graded on the per-market oracle branches that carry material
@@ -54,9 +55,13 @@ function isWeakOracleTier(tier: OracleRiskTier): boolean {
 }
 
 function worstOracleTier(worst: OracleRiskTier, candidate: OracleRiskTier): OracleRiskTier {
-  const quality = V9_CANDIDATE_POLICY_V1.policy.semantic.control.oracleTierQuality;
-  return quality[candidate] < quality[worst] ||
-    (quality[candidate] === quality[worst] &&
+  const policy = V9_CANDIDATE_POLICY_V1.policy.semantic;
+  const candidateQuality = candidate === "opaque-or-unknown"
+    ? unknownQuality("control", undefined, policy) : policy.control.oracleTierQuality[candidate];
+  const worstQuality = worst === "opaque-or-unknown"
+    ? unknownQuality("control", undefined, policy) : policy.control.oracleTierQuality[worst];
+  return candidateQuality < worstQuality ||
+    (candidateQuality === worstQuality &&
       ((isWeakOracleTier(candidate) && !isWeakOracleTier(worst)) ||
         (isWeakOracleTier(candidate) === isWeakOracleTier(worst) && candidate < worst)))
     ? candidate : worst;
@@ -165,8 +170,12 @@ export function adaptOracleReview(
   lenderBook?: LenderBookObservation,
 ): NonNullable<ExtensionAsset["economicControlReview"]>["oracle"] {
   const profile: OracleRiskProfile | undefined = meta.oracleRisk;
+  // Fund valuation remains an economic pricing authority even when a relay
+  // publishes it and no liquidation consumes it. Absence of research is U,
+  // never an archetype exemption or an invented adverse topology.
+  const issuerNav = ISSUER_NAV_ARCHETYPES[archetype] === true;
   if (!profile?.reviewedAt || !profile.reviewer || !profile.confidence) {
-    if (!profile && ORACLE_FREE_ARCHETYPES.has(archetype)) {
+    if (!profile && !issuerNav && meta.flags?.navToken !== true && ORACLE_FREE_ARCHETYPES[archetype] === true) {
       return {
         status: notApplicableStatus(
           "v9.control.oracle-review",
@@ -181,7 +190,7 @@ export function adaptOracleReview(
     return {
       status: requiredStatus("v9.control.oracle-review", "missing", `oracle:${meta.id}`),
       tier: null,
-      liquidationBranchesApplicable: true,
+      liquidationBranchesApplicable: !issuerNav,
       branches: [],
     };
   }
@@ -204,7 +213,7 @@ export function adaptOracleReview(
     return {
       status: requiredStatus("v9.control.oracle-review", "stale", `oracle:${meta.id}`, evidenceKeys),
       tier: null,
-      liquidationBranchesApplicable: true,
+      liquidationBranchesApplicable: !issuerNav,
       branches: [],
     };
   }
@@ -246,7 +255,7 @@ export function adaptOracleReview(
       observationState: status.observationState,
     };
   }).sort((left, right) => left.id < right.id ? -1 : left.id > right.id ? 1 : 0);
-  if (paths?.every((path) => path.applicability.state === "not-applicable")) {
+  if (!issuerNav && paths?.every((path) => path.applicability.state === "not-applicable")) {
     return {
       status: notApplicableStatus(
         "v9.control.oracle-review",
@@ -271,7 +280,7 @@ export function adaptOracleReview(
       payload: aggregateApplicability,
       maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
     });
-    if (researchReviewObservationState(aggregateApplicability.reviewedAt, clockSec) === "stale") {
+    if (!issuerNav && researchReviewObservationState(aggregateApplicability.reviewedAt, clockSec) === "stale") {
       return {
         status: requiredStatus("v9.control.oracle-review", "stale", `oracle:${meta.id}`, applicabilityEvidenceKeys),
         tier: null,
@@ -279,7 +288,7 @@ export function adaptOracleReview(
         branches: [],
       };
     }
-    if (aggregateApplicability.disposition === "not-applicable" && profile.confidence === "verified") {
+    if (!issuerNav && aggregateApplicability.disposition === "not-applicable" && profile.confidence === "verified") {
       return {
         status: notApplicableStatus("v9.control.oracle-review", aggregateApplicability.rationale, applicabilityEvidenceKeys),
         tier: null,
@@ -317,15 +326,17 @@ export function adaptOracleReview(
   const missingPathBranch = (lendingPaths?.some((path) =>
     !path.branchId || !applicableBranches.some((branch) => branch.id === path.branchId),
   ) ?? false);
+  // The fund mechanism establishes top-level NAV applicability, not the state
+  // of any independently inventoried path. Retain those paths and their gaps.
   const topState = unresolvedPaths || missingPathBranch
     ? "bounded-unknown"
-    : paths || profile.branchApplicability?.disposition === "branches-required" ||
+    : issuerNav || paths || profile.branchApplicability?.disposition === "branches-required" ||
         profile.branchApplicability?.disposition === "top-level-only"
       ? reviewedObservationState(confidence)
       : "bounded-unknown";
-  const branchesRequired = paths
+  const branchesRequired = !issuerNav && (paths
     ? (lendingPaths?.length ?? 0) > 0
-    : profile.branchApplicability?.disposition === "branches-required" && !!profile.branches?.length;
+    : profile.branchApplicability?.disposition === "branches-required" && !!profile.branches?.length);
   const materiality: { tier: OracleRiskTier; subMaterialWeakBand?: "moderate" | "low" } =
     admittedBook
       ? morphoMateriality
@@ -411,11 +422,18 @@ export function adaptOracleReview(
           topState === "known" || topState === "bounded-unknown" ? evidenceKeys : [],
         ),
     tier: topState === "missing" ? null : materiality.tier,
+    ...(meta.variantKind === "savings-passthrough" && topState === "known" && !branchesRequired &&
+        profile.tier === "privileged-internal-pricing" &&
+        (paths ? topLevelPaths.length > 0 && topLevelPaths.every((path) => path.pricingAuthority === "internal-price")
+          : profile.branchApplicability?.disposition === "top-level-only")
+      ? { pricingKind: "savings-rate" as const }
+      : {}),
     ...(unresolvedPaths && reviewedObservationState(confidence) === "known" &&
         paths?.some((path) => path.applicability.state === "required" && path.observationState === "known")
       ? { knownPathTier: materiality.tier }
       : {}),
-    liquidationBranchesApplicable: paths ? branchesRequired : profile.branchApplicability?.disposition !== "top-level-only",
+    liquidationBranchesApplicable: !issuerNav &&
+      (paths ? branchesRequired : profile.branchApplicability?.disposition !== "top-level-only"),
     ...(materiality.subMaterialWeakBand !== undefined
       ? { subMaterialWeakBand: materiality.subMaterialWeakBand }
       : {}),

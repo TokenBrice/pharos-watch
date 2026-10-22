@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { SafetyScoreV9CurrentCard } from "./safety-score-v9-public";
+import type { SafetyScoreV9CardValidationInput } from "./safety-score-v9-public";
+import { CanonicalTextSchema } from "./safety-schema-primitives";
 
 const V9PublicWitnessTextEntrySchema = z.union([
   z.string().min(1),
@@ -7,7 +8,7 @@ const V9PublicWitnessTextEntrySchema = z.union([
 ]);
 export type V9PublicWitnessTextEntry = z.output<typeof V9PublicWitnessTextEntrySchema>;
 export const V9PublicWitnessTextTableSchema = z.array(V9PublicWitnessTextEntrySchema).min(1).describe(
-  "Card-local witness texts, unique and sorted after resolution. Each entry is a literal string or [earlierEntryRef, sliceLengthUtf16, literalRemainder]. Positive lengths append the remainder to the earlier text prefix; negative lengths prepend it to the earlier text suffix. message, path, field, label, controlKey, posture and plain-text cap/deployment/coverage reason values beginning with ~ are base-36 references into this table; resolve before display or comparison. Literal leading ~ values use the table.",
+  "Card-local witness texts, unique and sorted after resolution. Each entry is a literal string or [earlierEntryRef, sliceLengthUtf16, literalRemainder]. Positive lengths append the remainder to the earlier text prefix; negative lengths prepend it to the earlier text suffix. message, path, field, label, controlKey, posture, control-component key and plain-text cap/deployment/coverage reason values beginning with ~ are base-36 references into this table; resolve before display or comparison. Literal leading ~ values use the table.",
 );
 export interface V9PublicWitnessTextTable { witnessTexts?: readonly V9PublicWitnessTextEntry[] }
 
@@ -17,8 +18,23 @@ const WITNESS_TEXT_REFERENCE = /^~(?:0|[1-9a-z][0-9a-z]*)$/u;
 export function isV9WitnessTextReference(value: string): boolean { return value.startsWith("~"); }
 export function isV9WitnessTextField(key: string, node: object): boolean {
   return key === "message" || key === "path" || key === "field" || key === "label" || key === "controlKey" || key === "posture" ||
+    key === "key" && "posture" in node && "binding" in node ||
+    key === "signalKey" || key === "exposureKey" || key === "riskEventKey" ||
+    key === "authorityKey" && "model" in node && !("weightedQuorum" in node || "sameChainSystemTransport" in node) ||
     key === "reason" && ("limit" in node || "exposureKey" in node || "upstreamLabel" in node);
 }
+
+export function isV9WitnessTextArrayField(key: string, node: object): boolean {
+  return key === "localCauseGaps" || key === "failureDomainKeys" || key === "supportedComponentKeys" || key === "components" && "evidenceLevel" in node;
+}
+export const V9WitnessTextIdentityArraySchema = z.array(CanonicalTextSchema)
+  .superRefine((values, ctx) => {
+    const duplicate = values.find((value, index) => values.indexOf(value) !== index);
+    if (duplicate !== undefined) ctx.addIssue({ code: "custom", message: `Duplicate canonical key: ${duplicate}` });
+  })
+  .transform(values => values.some(isV9WitnessTextReference) ||
+    values.every((value, index) => index === 0 || values[index - 1]! < value)
+    ? values : [...values].sort());
 
 function decodeWitnessTextTable(card: V9PublicWitnessTextTable): string[] {
   const result: string[] = [];
@@ -61,14 +77,24 @@ export function mapV9WitnessTextFields(node: unknown, mapText: (value: string) =
   for (const key in source) {
     if (!Object.prototype.hasOwnProperty.call(source, key) || key === "witnessTexts") continue;
     const value = source[key];
-    const child = isV9WitnessTextField(key, source) && typeof value === "string" ? mapText(value) : mapV9WitnessTextFields(value, mapText);
+    let child: unknown;
+    if (isV9WitnessTextField(key, source) && typeof value === "string") child = mapText(value);
+    else if (isV9WitnessTextArrayField(key, source) && Array.isArray(value)) {
+      let mapped: unknown[] | undefined;
+      for (let index = 0; index < value.length; index++) {
+        const entry = value[index];
+        const text = typeof entry === "string" ? mapText(entry) : entry;
+        if (text !== entry) { mapped ??= value.slice(); mapped[index] = text; }
+      }
+      child = mapped ?? value;
+    } else child = mapV9WitnessTextFields(value, mapText);
     if (child !== value) { result ??= { ...source }; result[key] = child; }
   }
   return result ?? node;
 }
 
 export function resolveV9PublicWitnessText(card: V9PublicWitnessTextTable, value: string): string {
-  if (!isV9WitnessTextReference(value)) return value;
+  if (card.witnessTexts === undefined || !isV9WitnessTextReference(value)) return value;
   const table = decodeWitnessTextTable(card);
   return table[witnessTextRef(table, value)]!;
 }
@@ -100,7 +126,21 @@ export function validateV9PublicWitnessTexts(card: V9PublicWitnessTextTable): vo
 }
 
 /** Literal-only checks, including escaped strings whose first character is '~'. */
-export function validateV9ResolvedWitnessViews(card: Pick<SafetyScoreV9CurrentCard, "scoreTrace" | "pillars" | "evidence" | "accessPosture">): void {
+export function validateV9ResolvedWitnessViews(card: Pick<SafetyScoreV9CardValidationInput, "scoreTrace" | "pillars" | "evidence" | "accessPosture" | "breakdowns" | "localCauseGaps">): void {
+  const control = card.breakdowns?.control;
+  const deployment = card.scoreTrace.deploymentRisk;
+  const identities = [
+    ...Object.values(card.pillars).flatMap((pillar) => [pillar.components, pillar.supportedComponentKeys]),
+    card.localCauseGaps,
+    control?.components.map((component) => component.key) ?? [],
+    control && "controlDetails" in control ? control.controlDetails?.map((detail) => detail.controlKey) ?? [] : [],
+    deployment.adjustments.map((row) => `${row.exposureKey}\u0000${row.riskEventKey}\u0000${row.signalKey}`),
+    deployment.unresolvedExposures.map((row) => `${row.exposureKey}\u0000${row.riskEventKey}\u0000${row.failureDomainKeys.join("+")}\u0000${row.signalKey}`),
+    ...deployment.unresolvedExposures.map((row) => row.failureDomainKeys),
+  ];
+  if (identities.some((values) => values.some((value, index) => index > 0 && values[index - 1]! >= value))) {
+    throw new Error("V9 resolved witness identities must be unique and sorted");
+  }
   for (const reasons of [card.evidence.reasons, ...Object.values(card.pillars).map((pillar) => pillar.reasons), card.accessPosture.reasons]) {
     const identities = new Set<string>();
     for (const reason of reasons) {
@@ -113,7 +153,6 @@ export function validateV9ResolvedWitnessViews(card: Pick<SafetyScoreV9CurrentCa
   if (adverse.some((key, i) => i > 0 && adverse[i - 1]! >= key)) throw new Error("V9 adverse attribution must be unique and sorted");
   const bounded = card.scoreTrace.boundedUncertaintyAttribution.items.map((item) => {
     if (item.source === "parent-score" && !item.path.startsWith("parent:")) throw new Error("V9 parent bounded-uncertainty attribution requires a parent-prefixed path");
-    if (item.source === "wrapper-local" && !item.path.startsWith("wrapper-local:")) throw new Error("V9 wrapper bounded-uncertainty attribution requires a wrapper-local path");
     return [item.source, item.code, item.path, item.message, item.responsibility].join("\u0000");
   });
   if (bounded.some((key, i) => i > 0 && bounded[i - 1]! >= key)) throw new Error("V9 bounded-uncertainty attribution must be unique and sorted");

@@ -371,15 +371,14 @@ export async function fetchNestVaultPositionsReserves(
   let unrealizedDividendsUsd: number | null = null;
   let calculatedPriceUrl: string | null = null;
   if (pendingWithdrawalUsd > 0) {
-    // Pending withdrawals are admitted per reviewed vault only: nBASIS limits
-    // them to Superstate USCC redemption receivables, while nOPAL redemptions
-    // run against the vault's own credit positions (a 2026-08-28..31 window
-    // held an in-flight liquid-stone redemption across 19 consecutive
-    // snapshots), so any position is reviewable there. Either way the
-    // receivable is only admitted after the issuer's own gross and net NAV
-    // accounting below corroborates it; everything else fails closed.
+    // The generic pending-withdrawals source key is safe only while every
+    // positive receivable belongs to the reviewed underlying: OALS2T in
+    // nOPAL's liquid-stone vault, or USCC in nBASIS. NAV reconciliation proves
+    // the amount, not an interchangeable asset identity.
     const withdrawalReviewed = coin.id === "nopal-nest"
-      ? () => true
+      ? (transaction: NestPendingTransactionValue) =>
+        transaction.positionKind === "yield" && transaction.assetSlug === "liquid-stone"
+        && transaction.symbol === "OALS2T"
       : coin.id === "nbasis-nest"
         ? (transaction: NestPendingTransactionValue) =>
           transaction.positionKind === "yield" && transaction.assetSlug === "superstate-uscc"

@@ -2,13 +2,13 @@
   "id": "sofid-sofi",
   "name": "SoFiUSD",
   "symbol": "SOFID",
-  "oneLiner": "SoFiUSD is SoFi Bank's USD stablecoin, fully reserved by cash at the bank's Federal Reserve master account; minted and redeemed 1:1 via BitGo infrastructure.",
+  "oneLiner": "SoFi Bank's dollar token has cash at the Federal Reserve and a BitGo fiduciary bank account; direct issuer redemption is limited to approved customers.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "1:1 USD reserves held as cash or cash equivalents at SoFi Bank's Federal Reserve master account; reserves earn interest on reserve balances (IORB) retained by SoFi, not passed to holders",
-  "pegMechanism": "1:1 mint and redeem via BitGo infrastructure; instant conversions between dollars and SOFID",
+  "collateral": "Deloitte-examined August 31, 2026 reserves were USD cash in SoFi Bank's Federal Reserve master account and a BitGo-established fiduciary account at an unnamed commercial bank; holders receive no reserve interest",
+  "pegMechanism": "Approved SoFi customers can mint and redeem at USD par under separate agreements, including institutional access through BitGo; holder transfers alone convey no direct issuer redemption right, and fees, processing requirements and suspension conditions apply",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "sofiusd",

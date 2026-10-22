@@ -26,12 +26,14 @@ describe("wave-3 redemption handoff uptake", () => {
     expect(config.capacityModel).not.toHaveProperty("eventualCapacityModel");
   });
 
-  it("keeps HBD all-in payout cost and completed conversion settlement unquantified", () => {
+  it("bounds native HBD-to-HIVE conversion settlement without inventing all-in USD payout cost", () => {
     const config = getRedemptionBackstopConfig("hbd-hive")!;
     expect(config.costModel).toMatchObject({ kind: "dynamic-or-unclear", confidence: "formula", feeModelKind: "formula" });
     expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBeNull();
-    expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
-    expect(config.v9RouteReviewTerms?.missingScoringFields).toContain("settlement");
+    expect(config.outputAssets).toEqual(["asset:hive"]);
+    expect(config.v9RouteReviewTerms?.settlementDelaySec).toBe(302_400);
+    expect(config.v9RouteReviewTerms?.scoringDisposition).toBe("bounded-terms-gap");
+    expect(config.v9RouteReviewTerms?.missingScoringFields).toEqual(["cost"]);
   });
 
   it("keeps XGLD's XAUt collateral fee separate from physical delivery or USD par", () => {

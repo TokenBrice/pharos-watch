@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "USDC deposited via SoulPeg's mint flow on BNB Chain, automatically routed into Venus Protocol lending markets to generate yield; spUSD itself is a freely transferable ERC-20 wrapper around a soul-bound sUSDC position",
+  "collateral": "SoulPeg sUSDC receipts held by the BNB Chain SPUSD wrapper. SoulPeg describes a USDC-funded Venus strategy architecture, but the complete current underlying strategy allocation and receipt-to-USDC liquidity are not established; ordinary unwrap returns sUSDC, not USDC.",
   "pegMechanism": "SPUSD is a 1:1 transferable wrapper around SoulPeg sUSDC. The verified wrapper burns unlocked SPUSD and returns an equal amount of sUSDC in one transaction without a protocol conversion fee. The separate sUSDC-to-USDC earlyRedeem call is owner/operator-controlled and reserve-dependent; no holder-exercisable USDC completion guarantee or same-notional exit capacity is established.",
   "detailProvider": "defillama",
   "geckoId": "soulpeg-usd",

@@ -27,8 +27,9 @@ import {
 } from "./safety-score-v9-public-facts";
 import { refineCard } from "./safety-score-v9-public-internal";
 import { findSafetyScoreV9ParentAttributionIssues } from "./safety-score-v9-public-attribution";
-import { SafetyScoreV9BreakdownsSchema, SafetyScoreV9HistoricalBreakdownsSchema } from "./safety-score-v9-public-breakdowns";
-import { SafetyScoreV9ScoreTraceSchema, SafetyScoreV9WitnessScoreTraceSchema } from "./safety-score-v9-public-trace";
+import { computeV9UnknownPricedWeightShare, SafetyScoreV9BreakdownsSchema, SafetyScoreV9HistoricalBreakdownsSchema, SafetyScoreV9HistoricalTypedBreakdownsSchema } from "./safety-score-v9-public-breakdowns";
+import { SafetyScoreV9ScoreTraceSchema, SafetyScoreV9HistoricalScoreTraceSchema, SafetyScoreV9WitnessScoreTraceSchema } from "./safety-score-v9-public-trace";
+import { SafetyScoreV9HistoricalCapSchema } from "./safety-score-v9-public-historical";
 import { V9WrapperFormSchema } from "./safety-score-v9-wrapper";
 import { V9EffectiveDependenciesV3Schema } from "./safety-score-v9-facts";
 import { ReserveSliceSchema } from "./reserves";
@@ -39,6 +40,7 @@ import {
   validateV9PublicWitnessTexts,
   validateV9ResolvedWitnessViews,
   V9PublicWitnessTextTableSchema,
+  V9WitnessTextIdentityArraySchema,
 } from "./safety-score-v9-public-witness-texts";
 
 export const SafetyScoreV9DependencyProvenanceSchema = z.object({
@@ -138,6 +140,8 @@ const SafetyScoreV9BasketDependencySchema = z
     upstreamAssetId: z.string().min(1),
     weight: z.number().finite().min(0).max(1),
     score: ScoreSchema.nullable(),
+    /** Premium-free whole-card score, distinct from the Backing-only basket score. */
+    collateralParentScore: ScoreSchema.optional(),
     ...V9DependencyCauseShape,
     boundedUnknown: z.boolean(),
     dependencyType: DependencyTypeSchema.optional(),
@@ -155,13 +159,6 @@ const SafetyScoreV9RoleDependencySchema = z
     role: V9DependencyEconomicRoleSchema,
     weight: z.number().finite().min(0).max(1),
     targetPillar: z.enum(["exit", "control"]).nullable(),
-    propagationEventEdgeKeys: z.array(z.string().min(1)),
-    propagationEventExposureKey: z.string().min(1).nullable(),
-    propagationEventRiskEventKey: z.string().min(1).nullable(),
-    propagationEventNominalExposureShare: z.number().finite().min(0).max(1).nullable(),
-    propagationEventExposureShare: z.number().finite().min(0).max(1).nullable(),
-    propagationEventInheritedScore: ScoreSchema.nullable(),
-    propagationEventModeledLossPoints: ScoreSchema.nullable(),
     inheritedDimensions: z.array(z.enum(["final", "backing", "exit", "access", "control", "oracle-nav"])),
     unavailableDimensions: z.array(z.enum(["final", "backing", "exit", "access", "control", "oracle-nav"])),
     score: ScoreSchema.nullable(),
@@ -173,9 +170,6 @@ const SafetyScoreV9RoleDependencySchema = z
   })
   .strict()
   .superRefine((dependency, ctx) => {
-    if (!isUniqueSorted(dependency.propagationEventEdgeKeys)) {
-      issue(ctx, ["propagationEventEdgeKeys"], "V9 role dependency propagation event keys must be unique and sorted");
-    }
     if (!isUniqueSorted(dependency.evidenceRefIds)) {
       issue(ctx, ["evidenceRefIds"], "V9 role dependency evidence references must be unique and sorted");
     }
@@ -185,28 +179,12 @@ const SafetyScoreV9RoleDependencySchema = z
     }
   });
 
-const SafetyScoreV9RolePillarLimitSchema = z
-  .object({
-    limit: ScoreSchema.nullable(),
-    knownLossPoints: ScoreSchema,
-    boundedUnknownLossPoints: ScoreSchema,
-    unresolvedExposureShare: z.number().finite().min(0).max(1),
-    materialUnresolvedExposure: z.boolean(),
-  })
-  .strict();
 
 const SafetyScoreV9DependencySummarySchema = z
   .object({
     serial: z.array(SafetyScoreV9SerialDependencySchema),
     basket: z.array(SafetyScoreV9BasketDependencySchema),
     roles: z.array(SafetyScoreV9RoleDependencySchema).optional(),
-    rolePillarLimits: z
-      .object({
-        exit: SafetyScoreV9RolePillarLimitSchema,
-        control: SafetyScoreV9RolePillarLimitSchema,
-      })
-      .strict()
-      .optional(),
     cycleBlocked: z.boolean(),
     reasonCodes: z.array(V9ReasonCodeSchema),
   })
@@ -228,6 +206,35 @@ const SafetyScoreV9DependencySummarySchema = z
       issue(ctx, ["reasonCodes"], "V9 dependency reasons must be unique and sorted");
     }
   });
+
+/** Retained publications record the former role calculation; current cards do not emit it. */
+const SafetyScoreV9HistoricalRoleDependencySchema = SafetyScoreV9RoleDependencySchema.safeExtend({
+  propagationEventEdgeKeys: z.array(z.string().min(1)),
+  propagationEventExposureKey: z.string().min(1).nullable(),
+  propagationEventRiskEventKey: z.string().min(1).nullable(),
+  propagationEventNominalExposureShare: z.number().finite().min(0).max(1).nullable(),
+  propagationEventExposureShare: z.number().finite().min(0).max(1).nullable(),
+  propagationEventInheritedScore: ScoreSchema.nullable(),
+  propagationEventModeledLossPoints: ScoreSchema.nullable(),
+}).superRefine((dependency, ctx) => {
+  if (!isUniqueSorted(dependency.propagationEventEdgeKeys)) {
+    issue(ctx, ["propagationEventEdgeKeys"], "Historical role propagation keys must be unique and sorted");
+  }
+});
+const SafetyScoreV9HistoricalRolePillarLimitSchema = z.object({
+  limit: ScoreSchema.nullable(),
+  knownLossPoints: ScoreSchema,
+  boundedUnknownLossPoints: ScoreSchema,
+  unresolvedExposureShare: z.number().finite().min(0).max(1),
+  materialUnresolvedExposure: z.boolean(),
+}).strict();
+const SafetyScoreV9HistoricalDependencySummarySchema = SafetyScoreV9DependencySummarySchema.safeExtend({
+  roles: z.array(SafetyScoreV9HistoricalRoleDependencySchema).optional(),
+  rolePillarLimits: z.object({
+    exit: SafetyScoreV9HistoricalRolePillarLimitSchema,
+    control: SafetyScoreV9HistoricalRolePillarLimitSchema,
+  }).strict().optional(),
+});
 
 export const SafetyScoreV9EvidenceSummarySchema = z
   .object({
@@ -251,7 +258,7 @@ export type SafetyScoreV9GradeHold = z.infer<typeof SafetyScoreV9GradeHoldSchema
 
 const SafetyScoreV9CardShape = {
   id: z.string().min(1),
-  localCauseGaps: canonicalTextArray(),
+  localCauseGaps: V9WitnessTextIdentityArraySchema,
   foreignCauseGapRefs: causeGapRefs(),
   witnessTexts: V9PublicWitnessTextTableSchema.optional(),
   /**
@@ -270,6 +277,9 @@ const SafetyScoreV9CardShape = {
   score: ScoreSchema.nullable(),
   grade: V9GradeSchema.nullable(),
   gradeHold: SafetyScoreV9GradeHoldSchema.optional(),
+  /** Display-only; older archived publications omit both fields. */
+  provisional: z.literal(true).optional(),
+  unknownPricedWeightShare: z.number().finite().gt(0.5).max(1).optional(),
   ratingStatus: V9RatingStatusSchema,
   partialEvidence: V9PartialEvidenceSchema.nullable(),
   qualityScore: ScoreSchema.nullable(),
@@ -291,7 +301,11 @@ const SafetyScoreV9CardShape = {
   accessPosture: SafetyScoreV9AccessPostureSchema,
   dependencies: SafetyScoreV9DependencySummarySchema,
 } as const;
-type SafetyScoreV9CardBase = z.infer<z.ZodObject<typeof SafetyScoreV9CardShape>>;
+type HistoricalCap = z.infer<typeof SafetyScoreV9HistoricalCapSchema>;
+type SafetyScoreV9CardBase = Omit<z.infer<z.ZodObject<typeof SafetyScoreV9CardShape>>, "caps" | "bindingCap"> & {
+  caps: (z.infer<typeof SafetyScoreV9CapSchema> | HistoricalCap)[];
+  bindingCap: z.infer<typeof SafetyScoreV9CapSchema> | HistoricalCap | null;
+};
 
 function refineCardBase(
   card: SafetyScoreV9CardBase,
@@ -299,9 +313,18 @@ function refineCardBase(
 ): void {
   refineV9PublicGapReferences(card, ctx);
   refineV9RatingStatusFields(card, ctx);
-  const excludedPillars = (["backing", "exit", "control"] as const).filter((pillar) => card.pillars[pillar].aggregationDisposition === "excluded-a-b").sort();
+  const excludedPillars = (["backing", "exit", "control"] as const).filter((pillar) => (card.pillars[pillar].aggregationDisposition ?? "included") !== "included").sort();
   if (JSON.stringify(excludedPillars) !== JSON.stringify(card.partialEvidence?.excludedPillars ?? [])) {
     ctx.addIssue({ code: "custom", path: ["partialEvidence"], message: "Partial evidence must reconcile excluded pillars" });
+  }
+  const hasExcludedAB = excludedPillars.some((pillar) => card.pillars[pillar].aggregationDisposition === "excluded-a-b");
+  const hasExcludedCauses = (card.partialEvidence?.causes.length ?? 0) > 0;
+  // A/B exclusions can affect a subcomponent, constraint, or parent while
+  // leaving every pillar usable; they do not require a whole-pillar exclusion.
+  if ((hasExcludedAB && !hasExcludedCauses) ||
+      (hasExcludedCauses && ((card.partialEvidence?.causeGapRefs.length ?? 0) === 0 ||
+        (card.partialEvidence?.excludedComponentKeys.length ?? 0) === 0))) {
+    ctx.addIssue({ code: "custom", path: ["partialEvidence", "causes"], message: "A/B exclusions require partial-evidence causes, component keys, and gap references" });
   }
   if (excludedPillars.some((pillar) => card.pillars[pillar].causeGapRefs?.some((ref) => !card.partialEvidence?.causeGapRefs.includes(ref)))) {
     ctx.addIssue({ code: "custom", path: ["partialEvidence"], message: "Excluded pillar gaps must remain visible in partial evidence" });
@@ -321,7 +344,7 @@ function refineCardBase(
   } else if (card.score !== null && card.grade !== scoreToGrade(card.score)) {
     issue(ctx, ["grade"], "V9 numeric score and grade band must agree");
   }
-  if (card.ratingStatus === "rated" && Object.values(card.pillars).filter((pillar) => pillar.aggregationDisposition !== "excluded-a-b" && pillar.score !== null).length < 2) {
+  if (card.ratingStatus === "rated" && Object.values(card.pillars).filter((pillar) => (pillar.aggregationDisposition ?? "included") === "included" && pillar.score !== null).length < 2) {
     ctx.addIssue({ code: "custom", path: ["pillars"], message: "A rated result requires at least two included pillars" });
   }
   if (
@@ -366,18 +389,33 @@ export const SafetyScoreV9CurrentCardBaseSchema = z
   })
   .strict();
 
-type CardRefinementInput = Omit<z.infer<typeof SafetyScoreV9CurrentCardBaseSchema>, "breakdowns"> & {
-  breakdowns: z.infer<typeof SafetyScoreV9HistoricalBreakdownsSchema> | null;
-};
+/** Report7/breakdown6 preserve the strict recorded, pre-simplification contract. */
+const SafetyScoreV9HistoricalCardBaseSchema = SafetyScoreV9CurrentCardBaseSchema.extend({
+  caps: z.array(SafetyScoreV9HistoricalCapSchema),
+  bindingCap: SafetyScoreV9HistoricalCapSchema.nullable(),
+  scoreTrace: SafetyScoreV9HistoricalScoreTraceSchema,
+  breakdowns: SafetyScoreV9HistoricalBreakdownsSchema.nullable(),
+  dependencies: SafetyScoreV9HistoricalDependencySummarySchema,
+});
+const SafetyScoreV9HistoricalTypedCardBaseSchema = SafetyScoreV9HistoricalCardBaseSchema.extend({
+  breakdowns: SafetyScoreV9HistoricalTypedBreakdownsSchema.nullable(),
+});
+export type SafetyScoreV9CardValidationInput =
+  | z.infer<typeof SafetyScoreV9CurrentCardBaseSchema>
+  | z.infer<typeof SafetyScoreV9HistoricalCardBaseSchema>
+  | z.infer<typeof SafetyScoreV9HistoricalTypedCardBaseSchema>;
+type CardRefinementInput = SafetyScoreV9CardValidationInput;
 
-function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx, resolved = false): void {
+function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx, resolved = false, historical: false | "report7" | "report8" = false): void {
     try {
       if (resolved) validateV9ResolvedWitnessViews(card);
       else validateV9PublicWitnessTexts(card);
       if (!resolved && card.witnessTexts !== undefined) {
         card = resolveV9PublicWitnessTexts(card);
         validateV9ResolvedWitnessViews(card);
-        const semantic = SafetyScoreV9CurrentCardBaseSchema.safeParse(card);
+        const schema = historical === "report8" ? SafetyScoreV9HistoricalTypedCardBaseSchema
+          : historical === "report7" ? SafetyScoreV9HistoricalCardBaseSchema : SafetyScoreV9CurrentCardBaseSchema;
+        const semantic = schema.safeParse(card);
         if (!semantic.success) for (const issue of semantic.error.issues) {
           ctx.addIssue({ code: "custom", path: issue.path, message: issue.message });
         }
@@ -388,6 +426,14 @@ function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx, reso
     }
     refineCardBase(card, ctx);
     refineCard(card, ctx);
+    if (card.provisional !== undefined || card.unknownPricedWeightShare !== undefined) {
+      const share = computeV9UnknownPricedWeightShare(card.breakdowns, card.scoreTrace.aggregation);
+      if (card.ratingStatus !== "rated" || card.provisional !== true ||
+          card.unknownPricedWeightShare === undefined || share <= 0.5 ||
+          !numbersAgree(card.unknownPricedWeightShare, share)) {
+        issue(ctx, ["provisional"], "Provisional labels require more than half the scoring weight to be priced as unknown, with its reconciled share");
+      }
+    }
     if (card.ratingStatus === "pipeline-gap" && (card.scoreTrace.aggregation !== null ||
         Object.values(card.scoreTrace.stages).some((value) => value !== null) ||
         card.scoreTrace.scoreAdjustments.length > 0 || card.bindingCap !== null)) {
@@ -399,7 +445,9 @@ function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx, reso
     if (card.breakdowns !== null) {
       for (const pillar of ["backing", "exit", "control"] as const) {
         if ((card.breakdowns[pillar].aggregationDisposition ?? "included") !== (card.pillars[pillar].aggregationDisposition ?? "included") ||
-            !numbersAgree(card.breakdowns[pillar].aggregationWeight, card.scoreTrace.aggregation?.effectiveScoringWeights[pillar] ?? 0)) {
+            !numbersAgree(card.breakdowns[pillar].aggregationWeight,
+              (card.pillars[pillar].aggregationDisposition ?? "included") === "included"
+                ? card.scoreTrace.aggregation?.effectiveScoringWeights[pillar] ?? 0 : 0)) {
           ctx.addIssue({ code: "custom", path: ["breakdowns", pillar], message: "Diagnostic breakdown dispositions and included aggregate weights must agree" });
         }
         if (
@@ -420,14 +468,13 @@ export const SafetyScoreV9ResolvedCurrentCardSchema = SafetyScoreV9CurrentCardBa
   .superRefine((card, ctx) => refineCurrentCard(card, ctx, true));
 export type SafetyScoreV9ResolvedCurrentCard = z.infer<typeof SafetyScoreV9ResolvedCurrentCardSchema>;
 
-/** Report7/breakdown6 retain strict pre-10.11 route shapes. */
-const SafetyScoreV9HistoricalCardBaseSchema = SafetyScoreV9CurrentCardBaseSchema.extend({
-  breakdowns: SafetyScoreV9HistoricalBreakdownsSchema.nullable(),
-});
-export const SafetyScoreV9HistoricalCardSchema = SafetyScoreV9HistoricalCardBaseSchema.superRefine(refineCurrentCard);
+export const SafetyScoreV9HistoricalCardSchema = SafetyScoreV9HistoricalCardBaseSchema
+  .superRefine((card, ctx) => refineCurrentCard(card, ctx, false, "report7"));
 export const SafetyScoreV9WitnessHistoricalCardSchema = SafetyScoreV9HistoricalCardBaseSchema.extend({
   scoreTrace: SafetyScoreV9WitnessScoreTraceSchema,
-}).superRefine(refineCurrentCard);
+}).superRefine((card, ctx) => refineCurrentCard(card, ctx, false, "report7"));
+export const SafetyScoreV9HistoricalTypedCardSchema = SafetyScoreV9HistoricalTypedCardBaseSchema
+  .superRefine((card, ctx) => refineCurrentCard(card, ctx, false, "report8"));
 export type SafetyScoreV9CurrentCard = z.infer<typeof SafetyScoreV9CurrentCardSchema>;
 
 export type SafetyScoreV9Card = SafetyScoreV9CurrentCard;

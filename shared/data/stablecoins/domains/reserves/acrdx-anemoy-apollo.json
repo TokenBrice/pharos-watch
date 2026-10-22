@@ -67,6 +67,10 @@
         "name": "The Bank of New York Mellon Trust Company, N.A. (underlying Apollo fund custodian)",
         "role": "custodian"
       }
+      ,{
+        "name": "J. P. Morgan (Anemoy ACRDX feeder-fund custodian)",
+        "role": "custodian"
+      }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "structured",
@@ -87,8 +91,12 @@
         "label": "BVI FSC Anemoy Capital SPC registry",
         "url": "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited"
       }
+      ,{
+        "label": "Exact Anemoy ACRDX June 2026 factsheet: J. P. Morgan custodian, retrieved 2026-10-20",
+        "url": "https://centrifuge-files.mypinata.cloud/ipfs/bafkreigpp4zkwecojcuipjnzyclrfgzaqe6tu5vedvujw6u73c3xfwbx5m"
+      }
     ],
-    "uncertainty": "The underlying Apollo fund filing names BNY Mellon Trust as custodian, but the feeder-level custodian, provider shares, segregation terms, and rehypothecation policy are not public. The BVI segregated-portfolio structure supports structural bankruptcy separation without proving custody-level segregation.",
+    "uncertainty": "The underlying Apollo fund filing names BNY Mellon Trust as custodian. Source recovery on 2026-10-20 corrects the earlier claim that no feeder-level custodian is public: the exact June 2026 ACRDX factsheet names J. P. Morgan as custodian, Trident Trust (Cayman) as administrator and MHA Cayman as auditor. This identifies the feeder service providers, not their exact legal-account entities, allocation shares, custody-account segregation terms or rehypothecation restrictions. The BVI segregated-portfolio structure supports structural bankruptcy separation without proving custody-level segregation. Original custody review start, conservative confidence and 100% unknown safeguard scope are retained; a named auditor is not an independently obtained whole-liability financial engagement.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -20,7 +20,7 @@ function fixturePublication() {
         basket: [],
         cycleBlocked: false,
         reasonCodes: [],
-        roles: [{ edgeKey: "role-1", exposureKey: "exposure-1", riskEventKey: "event-1", upstreamAssetId: "parent", role: "exit-dependency", weight: 0.4, targetPillar: "exit", propagationEventEdgeKeys: [], propagationEventExposureKey: null, propagationEventRiskEventKey: null, propagationEventNominalExposureShare: null, propagationEventExposureShare: null, propagationEventInheritedScore: null, propagationEventModeledLossPoints: null, inheritedDimensions: [], unavailableDimensions: [], score: 80, ratingStatus: "rated", partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [], boundedUnknown: false, cycleBlocked: false, evidenceRefIds: [], failureDomains: [] }],
+        roles: [{ edgeKey: "role-1", exposureKey: "exposure-1", riskEventKey: "event-1", upstreamAssetId: "parent", role: "exit-dependency", weight: 0.4, targetPillar: "exit",        inheritedDimensions: [], unavailableDimensions: [], score: 80, ratingStatus: "rated", partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [], boundedUnknown: false, cycleBlocked: false, evidenceRefIds: [], failureDomains: [] }],
       } }),
       makeWorkerV9Card({ id: "parent", score: null, supply: undefined, sharedBookId: undefined, dependencyCoverage: undefined }),
     ],
@@ -67,10 +67,9 @@ describe("dependency graph projection", () => {
     expect(body).not.toHaveProperty("cards");
   });
 
-  it("resolves common-mode cap and deployment adjustment prices without exposing evaluator detail", () => {
+  it("resolves common-mode deployment adjustment prices without exposing evaluator detail", () => {
     const snapshot = fixturePublication();
     const card = snapshot.cards[0]!;
-    card.caps = [{ kind: "mint-control", limit: 60, binding: true, source: "structural", reason: "Reviewed control ceiling" }];
     card.scoreTrace.deploymentRisk.adjustments = [{
       signalKey: "signal-1", sourceSignalKeys: ["signal-1"], exposureKey: "exposure-1",
       riskEventKey: "event-1", failureDomainKey: "mint-control:shared",
@@ -78,12 +77,12 @@ describe("dependency graph projection", () => {
       scoreBefore: 80, scoreAfter: 72, adjustmentPoints: 8, modeledLossPoints: 8,
       reason: "Reviewed deployment adjustment",
     }];
-    snapshot.commonModeGroups![0]!.pricedEffects = [{ assetId: "child", capIndices: [0], deploymentAdjustmentIndices: [0] }];
+    snapshot.commonModeGroups![0]!.pricedEffects = [{ assetId: "child", capIndices: [], deploymentAdjustmentIndices: [0] }];
     const before = structuredClone(snapshot);
     const body = DependencyGraphResponseSchema.parse(projectDependencyGraph(snapshot));
     expect(body.commonModeGroups![0]!.pricedEffects).toEqual([{
-      assetId: "child", capIndices: [0], deploymentAdjustmentIndices: [0],
-      resolvedCaps: [{ kind: "mint-control", limit: 60, binding: true }],
+      assetId: "child", capIndices: [], deploymentAdjustmentIndices: [0],
+      resolvedCaps: [],
       resolvedAdjustments: [{ scoreBefore: 80, scoreAfter: 72, adjustmentPoints: 8 }],
     }]);
     expect(snapshot).toEqual(before);
@@ -91,27 +90,32 @@ describe("dependency graph projection", () => {
 
   it.each(["missing-card", "missing-indices"] as const)("marks %s references unresolved without inventing a price or dropping other prices", (missing) => {
     const snapshot = fixturePublication();
-    snapshot.cards[0]!.caps = [{ kind: "mint-control", limit: 60, binding: false, source: "structural", reason: "Reviewed control ceiling" }];
+    snapshot.cards[0]!.scoreTrace.deploymentRisk.adjustments = [{
+      signalKey: "signal-1", sourceSignalKeys: ["signal-1"], exposureKey: "exposure-1",
+      riskEventKey: "event-1", failureDomainKey: "mint-control:shared",
+      nominalExposureShare: 0.4, exposureShare: 0.4, exposedScore: 80,
+      scoreBefore: 80, scoreAfter: 72, adjustmentPoints: 8, modeledLossPoints: 8,
+      reason: "Reviewed deployment adjustment",
+    }];
     snapshot.commonModeGroups![0]!.pricedEffects = [
-      { assetId: "child", capIndices: [0], deploymentAdjustmentIndices: [] },
-      { assetId: "parent", capIndices: [0], deploymentAdjustmentIndices: [0] },
+      { assetId: "child", capIndices: [], deploymentAdjustmentIndices: [0] },
+      { assetId: "parent", capIndices: [], deploymentAdjustmentIndices: [0] },
     ];
     if (missing === "missing-card") snapshot.cards = snapshot.cards.filter((card) => card.id !== "parent");
     const body = DependencyGraphResponseSchema.parse(projectDependencyGraph(snapshot));
     expect(body.commonModeGroups![0]!.pricedEffects).toEqual([
-      { assetId: "child", capIndices: [0], deploymentAdjustmentIndices: [], resolvedCaps: [{ kind: "mint-control", limit: 60, binding: false }], resolvedAdjustments: [] },
-      { assetId: "parent", capIndices: [0], deploymentAdjustmentIndices: [0], resolvedCaps: [], resolvedAdjustments: [], referencesUnresolved: true },
+      { assetId: "child", capIndices: [], deploymentAdjustmentIndices: [0], resolvedCaps: [], resolvedAdjustments: [{ scoreBefore: 80, scoreAfter: 72, adjustmentPoints: 8 }] },
+      { assetId: "parent", capIndices: [], deploymentAdjustmentIndices: [0], resolvedCaps: [], resolvedAdjustments: [], referencesUnresolved: true },
     ]);
   });
 
   it("omits only unresolved entries within a partly resolved effect", () => {
     const snapshot = fixturePublication();
-    snapshot.cards[0]!.caps = [{ kind: "mint-control", limit: 60, binding: false, source: "structural", reason: "Reviewed control ceiling" }];
     snapshot.commonModeGroups![0]!.pricedEffects = [{ assetId: "child", capIndices: [0, 2], deploymentAdjustmentIndices: [1] }];
     const body = DependencyGraphResponseSchema.parse(projectDependencyGraph(snapshot));
     expect(body.commonModeGroups![0]!.pricedEffects![0]).toEqual({
       assetId: "child", capIndices: [0, 2], deploymentAdjustmentIndices: [1],
-      resolvedCaps: [{ kind: "mint-control", limit: 60, binding: false }],
+      resolvedCaps: [],
       resolvedAdjustments: [], referencesUnresolved: true,
     });
   });

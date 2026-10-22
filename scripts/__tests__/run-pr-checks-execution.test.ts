@@ -116,12 +116,14 @@ describe("isolated V9 resource execution", () => {
   });
 
   it("rejects stale faithful reports and violations even when child statuses pass", () => {
+    const correctness = { publicationBytes: { unit: "card", units: 396, largestUnitBytes: 85_123,
+      unitLimitBytes: 106_404, streamedTotalBytes: 8_158_138, streamedTotalRegressionLimitBytes: 8_250_000, streamedTotalLimitBytes: 9_200_000 } };
     const faithful = { schemaVersion: 1, invocationId: "previous-run", complete: true, diagnosticOnly: false,
       harnessRevision: RESOURCE_HARNESS_REVISION,
       profile: "compute", phaseManifest: "post-p2", violations: [], policy: "qualified", declaredPhases: [...RESOURCE_PHASES],
       appliedPolicy: { globalPostGcHeapBytes: 117440512, phaseLimitsBytes: Object.fromEntries(RESOURCE_PHASES.map(phase => [phase, 100])) },
-      runs: [{ violations: [], live: { status: 0, signal: null, reasons: [], phaseMaxima: Object.fromEntries(RESOURCE_PHASES.map(phase => [phase, { postGcHeapBytes: 90 }])) },
-        "hard-cap": { status: 0, signal: null, reasons: [] } }] };
+      runs: [{ violations: [], live: { status: 0, signal: null, reasons: [], correctness, phaseMaxima: Object.fromEntries(RESOURCE_PHASES.map(phase => [phase, { postGcHeapBytes: 90 }])) },
+        "hard-cap": { status: 0, signal: null, reasons: [], correctness } }] };
     expect(() => assertFaithfulResourceReport(faithful, "current-run")).toThrow("stale-resource-report");
     expect(() => assertFaithfulResourceReport(faithful, "previous-run")).not.toThrow();
     expect(() => assertFaithfulResourceReport({ ...faithful, violations: [{ reason: "phase-budget-exceeded" }] }, "previous-run")).toThrow();
@@ -135,6 +137,45 @@ describe("isolated V9 resource execution", () => {
     expect(() => assertFaithfulResourceReport({ ...unqualified, policy: "unqualified" }, "previous-run")).not.toThrow();
     expect(() => assertFaithfulResourceReport({ ...unqualified, policy: "qualified" }, "previous-run")).toThrow("missing-applied-resource-policy");
     expect(() => assertFaithfulResourceReport({ ...faithful, policy: "unqualified" }, "previous-run")).toThrow("unqualified-resource-policy-applied");
+    for (const mode of ["live", "hard-cap"] as const) {
+      for (const invalid of [undefined, { publicationBytes: { ...correctness.publicationBytes, largestUnitBytes: 106_405 } },
+        { publicationBytes: { ...correctness.publicationBytes, streamedTotalBytes: 8_250_001 } },
+        { publicationBytes: { ...correctness.publicationBytes, streamedTotalBytes: 9_200_001 } }]) {
+        expect(() => assertFaithfulResourceReport({ ...faithful, runs: [{ ...faithful.runs[0],
+          [mode]: { ...faithful.runs[0][mode], correctness: invalid } }] }, "previous-run")).toThrow();
+      }
+      expect(() => assertFaithfulResourceReport({ ...faithful, runs: [{ ...faithful.runs[0],
+        [mode]: { ...faithful.runs[0][mode], status: null, signal: "SIGABRT" } }] }, "previous-run")).toThrow();
+    }
+  });
+
+  it("reports separate card-unit and streamed-total metrics without replacing natural memory status", async () => {
+    const directory = mkdtempSync(`${tmpdir()}/pharos-resource-summary-`);
+    const publicationBytes = { unit: "card", units: 396, largestUnitBytes: 85_123,
+      unitLimitBytes: 106_404, streamedTotalBytes: 8_158_138, streamedTotalRegressionLimitBytes: 8_250_000, streamedTotalLimitBytes: 9_200_000 };
+    try {
+      expect(await runV9ResourceLane({ argv: [], outputDirectory: directory, resourceDirectory: directory,
+        runCommand: async (command) => {
+          if (command.args.includes("worker/scripts/measure-v9-resource.ts")) {
+            const invocationId = command.args.find((arg) => arg.startsWith("--invocation-id="))!.split("=")[1];
+            writeFileSync(resolve(directory, "report.json"), JSON.stringify({
+              schemaVersion: 1, invocationId, complete: true, diagnosticOnly: false,
+              harnessRevision: RESOURCE_HARNESS_REVISION, profile: "compute", phaseManifest: "post-p2",
+              violations: [], policy: "unqualified", declaredPhases: [...RESOURCE_PHASES],
+              runs: [{ violations: [], live: { status: 0, signal: null, reasons: [],
+                phaseMaxima: Object.fromEntries(RESOURCE_PHASES.map((phase) => [phase, { postGcHeapBytes: 90 }])),
+                correctness: { publicationBytes } },
+                "hard-cap": { status: 0, signal: null, reasons: [], correctness: { publicationBytes } } }],
+            }));
+          } else writeFileSync(resolve(directory, "vitest.json"), JSON.stringify(report([{ title: contagion, status: "passed" }])));
+          return 0;
+        } })).toBe(0);
+      const summary = readFileSync(resolve(directory, "summary.md"), "utf8");
+      expect(summary).toContain("| live | 396 | 85123 | 106404 | 8158138 | 8250000 | 9200000 |");
+      expect(summary).toContain("| hard-cap | 396 | 85123 | 106404 | 8158138 | 8250000 | 9200000 |");
+      expect(summary).toContain("Natural 128 MiB exit status: 0");
+      expect(summary).toContain('policy: **"unqualified"**');
+    } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 
   it("keeps admission covered without probes under npm test despite ambient opt-in", () => {

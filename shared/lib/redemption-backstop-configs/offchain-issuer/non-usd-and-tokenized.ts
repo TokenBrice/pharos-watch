@@ -93,7 +93,29 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       sourceRef("Loon support centre (reviewed 2026-10-03)", "https://loon.finance/support-centre/", ["fees"]),
     ],
   },
-  ...expandIds(["vgbp-vnx"], vnxGitbookBase),
+  "vgbp-vnx": {
+    ...vnxGitbookBase,
+    reviewedAt: "2026-10-20",
+    costModel: {
+      ...documentedVariableFee(
+        "VNX Global Terms Annex III(C) charges GBP 30 for a GBP SWIFT withdrawal from the platform account. The separate 3% unused-funds charge depends on cumulative account funding above USD 100,000-equivalent and less than 75% usage; Annex III(A)'s 2% conversion fee applies to a separate instructed service. Account-history, payout-rail, network and third-party charges remain scenario-dependent and unbounded.",
+        "formula",
+      ),
+      feeComponents: [{ currency: "GBP", terms: { flatAmount: 30 } }],
+    },
+    docs: [
+      ...vnxGitbookBase.docs!,
+      sourceRef(
+        "VNX Global Terms Annex III(C), GBP SWIFT fee reviewed 2026-10-20",
+        "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+        ["route", "fees", "access", "settlement"],
+      ),
+    ],
+    notes: [
+      ...vnxGitbookBase.notes!,
+      "Fee-component review, 2026-10-20: GBP 30 binds one GBP SWIFT platform-account withdrawal only. The separate 3% unused-funds charge is account-history-dependent; payout count and other applicable charges are unbound. Preserve all capacity, settlement and cost scoring gaps and the October 17 terms-gap review; no all-in fee ceiling or completed bank-credit SLA is established.",
+    ],
+  },
   "vchf-vnx": {
     ...vnxGitbookBase,
     reviewedAt: "2026-10-17",
@@ -154,6 +176,8 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       "JPYC EX states that registered users redeem 1 JPYC for JPY 1 with no redemption fee; users still pay blockchain gas when sending JPYC",
     ),
     docs: [
+      sourceRef("JPYC pre-contract disclosure revised 2026-09-24", "https://jpyc.co.jp/legal/pre-contract-disclosure.pdf", ["route", "access", "fees", "settlement"]),
+      sourceRef("JPYC funds-transfer terms", "https://jpyc.co.jp/legal/terms.pdf", ["route", "access", "fees", "settlement"]),
       sourceRef("JPYC EX", "https://ex.jpyc.co.jp/", ["route", "fees", "access", "settlement"]),
       sourceRef("JPYC launch announcement", "https://corporate.jpyc.co.jp/news/posts/jpyc-ex-launch", [
         "route",
@@ -207,6 +231,21 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
         "Rupiah Token IDRT-to-IDR withdrawal fee FAQ",
         "https://rupiahtoken.com/faq/berapa-biaya-pencairan-idrt-ke-idr",
         ["fees"],
+      ),
+      sourceRef(
+        "IDRT verified-customer withdrawal process",
+        "https://rupiahtoken.com/faq/bagaimana-cara-withdraw-idrt-yang-saya-miliki-di-rupiahtoken-com",
+        ["route", "access"],
+      ),
+      sourceRef(
+        "IDRT queue-dependent bank receipt",
+        "https://rupiahtoken.com/faq/berapa-waktu-yang-dibutuhkan-hingga-rupiah-masuk-ke-rekening-bank-saya",
+        ["settlement"],
+      ),
+      sourceRef(
+        "IDRT business hours and national-holiday closure",
+        "https://rupiahtoken.com/faq/apakah-layanan-pencairan-idrt-aktif-24-jam",
+        ["settlement"],
       ),
     ],
     notes: [
@@ -285,6 +324,8 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "europ-schuman": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    accessModel: "manual",
+    holderEligibility: "verified-customer",
     costModel: fixedFee(
       0,
       "EURØP tokens can be redeemed and exchanged for the underlying legal tender currency at any time, as described in the Right to Redemption above, without fees.",
@@ -293,6 +334,11 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       sourceRefRouteCapacity("EUROP white paper", "https://schuman.io/wp-content/uploads/2025/02/EUROP-White-Paper_1.3.pdf"),
       sourceRef("EUROP white paper v1.7", "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf", ["fees"]),
       sourceRef("Schuman reserve audits", "https://schuman.io/reserve-attestations/", ["capacity"]),
+      sourceRef(
+        "Schuman current Redemption Policy and token/platform terms (retrieved 2026-10-20)",
+        "https://schuman.io/legal-center/",
+        ["route", "access", "settlement", "fees"],
+      ),
     ],
   },
   "eurau-allunity": {
@@ -395,21 +441,6 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "m-m0": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    v9ComposedDexExit: {
-      intermediateAssetId: "wm-m0",
-      conversionModel: "permissionless-atomic-wrap",
-      chain: "ethereum",
-      wrapperContract: "0x437cc33344a0B27A429f795ff6B469C72698B291",
-      reviewedAt: "2026-07-24",
-      docs: [
-        sourceRef(
-          "M0 WrappedMToken source",
-          "https://github.com/m0-foundation/wrapped-m-token/blob/main/src/WrappedMToken.sol",
-          ["route", "fees", "access", "settlement"],
-        ),
-        sourceRef("M0 wM FAQ", "https://www.m0.org/faq", ["route", "fees", "access"]),
-      ],
-    },
     costModel: documentedVariableFee(
       "MXON's public service terms require separate written counterparty agreements, and M0's primary-market liquidity guide requires issuer onboarding; neither retrieved disclosure publishes a binding direct M institutional redemption fee or all-in cost maximum. SwapFacility no-trading-fee extension conversions and onchain minter-debt burns are different routes",
     ),
@@ -422,6 +453,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     notes: [
       "Base $M liquidity is institution-facing; most end users access M0 liquidity through branded extensions and integrations rather than direct M redemption",
       "Cost-only disclosure review observed 2026-10-10T23:34:49Z by Sol curation campaign 2026-10-11 (L31M): MXON Website Terms of Use section 2 places services under separate written agreements. The terms print Last updated: March 2026, without an exact day; no precise evidence date or fee value is inferred. This review does not refresh capacity, settlement, access configuration or the older composed-wrap checkpoint",
+      "The prior direct-wrapper composition is removed because the reviewed current WrappedMToken entrypoints are facility-only; no ordinary-holder native-M facility permission or current exact composite execution receipt was established.",
     ],
   },
   "fusd-finchain": {
@@ -718,34 +750,6 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       "Multipli documents an institution-only primary redemption rail into underlying liquidity-class assets, so the route remains a delayed issuer exit rather than an instant public stablecoin off-ramp",
     ],
   },
-  "usdn-noble": {
-    ...issuerBase,
-    ...reviewedDirectRedemptionSupplyFull,
-    outputAssets: ["usdc-circle"],
-    costModel: undisclosedReviewedFee(
-      "USDN users mint and redeem via USDC through Noble Express; public redemption fees are not disclosed",
-    ),
-    v9RouteReviewTerms: {
-      scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["capacity", "settlement", "cost"],
-      rationale:
-        "The NASD terms page is last revised 2025-02-26 but governs site use rather than a holder redemption commitment; the current USDN overview and architecture re-opened on 2026-09-04 still provide no dated issuer terms for capacity, settlement, or cost, while StableSwap has no measured bounds.",
-      reviewedAt: "2026-09-04",
-      docs: [
-        sourceRef("NASD terms (last revised 2025-02-26)", "https://dollar.noble.xyz/terms-of-use", ["route", "access"]),
-        sourceRef("Noble USDN launch", "https://noble.xyz/blog/introducing-usdn", ["route"]),
-        sourceRef("USDN overview", "https://docs.noble.xyz/learn/usdn/overview/", ["route"]),
-      ],
-    },
-    docs: [
-      sourceRefRouteCapacity("USDN overview", "https://docs.noble.xyz/learn/usdn/overview/"),
-      sourceRefRouteCapacity("USDN architecture", "https://docs.noble.xyz/learn/usdn/architecture/"),
-      sourceRef("M0 Dashboard", "https://dashboard.m0.org/", ["capacity"]),
-    ],
-    notes: [
-      "Current model scores the documented Noble Express USDC mint-and-redeem rail as eventual issuer redemption rather than a separately measured live cash buffer",
-    ],
-  },
   "aeur-anchored-coins": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
@@ -787,10 +791,22 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "eure-monerium": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: fixedFee(0, "Monerium currently states minting and burning EURe are free of charge"),
+    costModel: fixedFee(
+      0,
+      "Monerium's October 15, 2026 EURe SEPA disclosure states zero Monerium fees, but explicitly leaves third-party and onchain transaction costs outside that issuer fee",
+    ),
     docs: [
-      sourceRefRouteCapacity("EURe MiCA white paper", "https://monerium.com/whitepapers/eure-whitepaper/"),
-      sourceRef("Monerium fee schedule", "https://monerium.com/fee-schedule/", ["fees"]),
+      sourceRefRouteCapacity("EURe MiCA white paper", "https://monerium.com/whitepapers/eure-whitepaper.xhtml"),
+      sourceRef(
+        "Monerium EURe SEPA fees and third-party-cost disclosure, October 15, 2026",
+        "https://monerium.com/blog/2026/supply-and-borrow-regulated-euros-on-arbitrum-with-eure/",
+        ["route", "fees", "settlement"],
+      ),
+      sourceRef(
+        "Monerium Business Terms, sections 4 and 14",
+        "https://monerium.com/policies/business-terms-of-service/",
+        ["route", "access", "fees", "settlement"],
+      ),
     ],
   },
   "eurr-stablr": {

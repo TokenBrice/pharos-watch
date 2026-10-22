@@ -33,6 +33,10 @@
       {
         "label": "Circle 2025 annual report: SDYF financial summary and no sponsor guarantee",
         "url": "https://s206.q4cdn.com/265218871/files/doc_financials/2025/ar/CRCL_AR_2026_WO13_WKV_PR-1.pdf"
+      },
+      {
+        "label": "USYC subscription/redemption and separately configured Private Liquidity Teller; retrieved 2026-10-20",
+        "url": "https://usyc.docs.hashnote.com/overview/subscription-and-redemption"
       }
     ],
     "rationale": "Current Circle disclosures identify the fund strategy as short-term U.S. Treasury bills and reverse repurchase agreements backed by U.S. government securities, but do not publish a durable current allocation between those categories. The reviewed row therefore preserves the exact aggregate identity emitted by the Chainlink NAV adapter.",

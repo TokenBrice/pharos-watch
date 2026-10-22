@@ -6,7 +6,7 @@
       "pct": 100,
       "risk": "high",
       "assetClass": "cryptoasset",
-      "issuerOrObligor": "Freedom Dollar DAO reserve contract stakers (ZANO)",
+      "issuerOrObligor": "Freedom Dollar ZANO reserve wallet",
       "riskFactors": [
         "market",
         "liquidity",

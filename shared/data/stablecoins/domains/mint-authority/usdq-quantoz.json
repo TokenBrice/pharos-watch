@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "USDQ is issuer-minted natively on Ethereum, Polygon, XRPL, and Algorand. Ethereum and Polygon expose independent HadronToken onlyOwner mint paths; both issuer owners and both proxy admins are 3-of-5 multisigs in the 2026-10-01 pinned census. The Polygon issuer owner was historically 2-of-5. XRPL issuance is controlled by the USDQ issuer account, while Algorand ASA distribution and role replacement are controlled by issuer reserve and manager accounts. The EVM paths remain economically unbounded, and no independent whole-supply reconciliation is verified.",
+    "summary": "USDQ is issuer-minted natively on Ethereum, Polygon, XRPL, Algorand and Stellar. Ethereum and Polygon expose independent HadronToken onlyOwner mint paths; both issuer owners and both proxy admins are 3-of-5 multisigs in the 2026-10-01 pinned census. The Polygon issuer owner was historically 2-of-5. XRPL issuance is controlled by the USDQ issuer account, while Algorand ASA distribution and role replacement are controlled by issuer reserve and manager accounts. The 2026-10-20 documentary Stellar review identifies native issuer control without establishing current signing topology or custody. The EVM paths remain economically unbounded, and no independent whole-supply reconciliation is verified.",
     "controls": [
       {
         "chain": "ethereum",
@@ -194,6 +194,35 @@
           }
         ],
         "evidence": "At Algorand round 64138559, the official node/indexer returned ASA 2768603795 named Quantoz USDQ (USDQ, six decimals), with manager and creator UALFRIYMF7HTTWPGJCBEKJ2AIROCAQR57SO7ZK7LW2SFXQF6346PSDDU2M and reserve, freeze, and clawback all set to 3PJ3E3D6XI7YWMJAUX6WDCHWZ4GC2WHTAQIWJBYVJ326LM2I6NSMSLGCDY. The ASA total is fixed at 10000000000000000000 base units; the reserve account controls distribution, while the manager can replace role addresses. The manager account is standard signature type, but its off-chain signer custody is not established. Signer-model read 2026-09-01 at Algorand round 64625482 (mainnet-idx.algonode.cloud): the manager account reports sig-type \"sig\" with auth-addr null, confirming the earlier standard-signature-type finding and ruling out a multisig, logic-signature or rekeyed account. Classified issuer-backend under AUTHORITY-LADDER 9.46, matching the eurq-quantoz Algorand ASA manager row from the same issuer. Off-chain key custody for that single key remains unattested, which is what the issuer-backend rung already prices."
+      },
+      {
+        "chain": "stellar",
+        "address": "GCA6KZBWPBOEF6M2MZBTXRMKLMWRZOUCL2JFSIDT3WTDBOFIVDC4C4CE",
+        "deploymentRefs": [
+          "stellar:USDQ-GCA6KZBWPBOEF6M2MZBTXRMKLMWRZOUCL2JFSIDT3WTDBOFIVDC4C4CE"
+        ],
+        "label": "USDQ Stellar issuer account",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-20",
+        "sources": [
+          {
+            "label": "Quantoz official token identifiers (retrieved 2026-10-20)",
+            "url": "https://www.quantoz.com/tokens/"
+          },
+          {
+            "label": "Quantoz Stellar issuer metadata (retrieved 2026-10-20)",
+            "url": "https://quantozpay.com/.well-known/stellar.toml"
+          },
+          {
+            "label": "Stellar native issuer and asset semantics",
+            "url": "https://developers.stellar.org/docs/learn/fundamentals/stellar-data-structures/assets"
+          }
+        ],
+        "evidence": "Quantoz's current token register and issuer-controlled Stellar TOML identify live native USDQ issued by GCA6KZBWPBOEF6M2MZBTXRMKLMWRZOUCL2JFSIDT3WTDBOFIVDC4C4CE. Stellar classic assets are created by issuer payments and responsibility and control reside with that issuing account. This documentary identity review establishes issuer-controlled native issuance, not the account's current signers, cryptographic threshold, key custody, complete execution reach, reserve reconciliation or a measured supply share. Historical sibling control pins and the original aggregate review start are unchanged."
       }
     ],
     "economicCapSemantics": "unbounded",

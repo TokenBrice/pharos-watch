@@ -61,17 +61,12 @@ import {
   SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
 } from "./extension-mechanism";
 import {
-  getSafetyScoreV9OperationalResilienceOverlay,
-  SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST,
-} from "./extension-operational-resilience";
-import {
   addSafetyScoreV9IncidentEvidence,
   addSafetyScoreV9NegativeIncidentEvidence,
   getSafetyScoreV9NegativeIncidentReviews,
   routeSafetyScoreV9NegativeIncidentReviews,
   getSafetyScoreV9ReviewedIncidents,
   routeSafetyScoreV9ControlIncidents,
-  routeSafetyScoreV9OperationalIncidents,
   SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST,
 } from "./extension-incidents";
 import { getSafetyScoreV9WrapperAllocationReview, getSafetyScoreV9WrapperLocalReviews, SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST, SAFETY_SCORE_V9_WRAPPER_LOCAL_REVIEWS_DIGEST } from "./extension-wrapper-reviews";
@@ -1095,7 +1090,9 @@ function adaptMintControl(
       : reviewComplete && !scopedMintReachUnresolved
         ? "none"
         : "unknown";
-  const keyCustody = reviewedKeyCustody(control.keyCustodyAttestation, clockSec);
+  // Technical custody has no independent MPC/HSM clock: it cannot outlive or
+  // bypass the complete parent review that admits the control.
+  const keyCustody = reviewComplete ? reviewedKeyCustody(control.keyCustodyAttestation, clockSec) : "unknown";
   const controlKey = `mint-meta:${assetId}:${domainDigest("safety-score-v9.mint-control-key.v1", {
     chain: control.chain ?? null,
     address: control.address?.toLowerCase() ?? null,
@@ -1121,7 +1118,7 @@ function adaptMintControl(
     materialSupplyShare: null,
     ...(scopedQuestionFresh ? { scopedQuestionFresh: true } : {}),
     ...(scopedQuestionIsCustodyOnly ? { scopedQuestionSubject: "key-custody-independence" as const } : {}),
-    keyCustody: scopedQuestionIsCustodyOnly ? "unknown" : keyCustody,
+    keyCustody,
     ...(control.keyCustodyAttestation?.kind === "hardware-wallet" && keyCustody === "unknown"
       ? { keyCustodyReviewUnavailable: true } : {}),
     modulesOrGuards: control.modulesOrGuardsStatus ?? "unknown",
@@ -2349,7 +2346,6 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     registryRevision: fixedInput.registryRevision,
     incidentReviewsDigest: SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST,
     mechanismReviewOverlaysDigest: SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
-    operationalResilienceOverlaysDigest: SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST,
     wrapperAllocationReviewsDigest: SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST,
     wrapperLocalReviewsDigest: SAFETY_SCORE_V9_WRAPPER_LOCAL_REVIEWS_DIGEST,
     reserveBoundFactsDigest: SAFETY_SCORE_V9_RESERVE_BOUND_FACTS_DIGEST,
@@ -2490,7 +2486,10 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         );
         admissionPath = "componentEvidence.mechanism-risk-review";
         const mechanismOverlayEvidence = getSafetyScoreV9MechanismOverlayEvidence(assetId, archetype, clockSec);
-        if (mechanismRiskReview && mechanismOverlayEvidence) {
+        const mechanismComponentEvidence = mechanismRiskReview && mechanismOverlayEvidence
+          ? getSafetyScoreV9MechanismComponentEvidence(assetId, archetype, clockSec)
+          : null;
+        if (mechanismRiskReview && mechanismOverlayEvidence && mechanismComponentEvidence) {
           reviewEvidence.add({
             componentKeys: ["mechanism-risk-review"],
             sourceId: "safety-score-v9.mechanism-review-overlay",
@@ -2501,7 +2500,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
             payload: mechanismOverlayEvidence.payload,
             maxAgeSec: mechanismOverlayEvidence.maxAgeSec,
           });
-          for (const component of getSafetyScoreV9MechanismComponentEvidence(assetId, archetype, clockSec)) {
+          for (const component of mechanismComponentEvidence) {
             reviewEvidence.add({
               componentKeys: [`mechanism-risk-review:${component.componentKey}`],
               sourceId: `safety-score-v9.mechanism-review-overlay:${component.componentKey}`,
@@ -2545,6 +2544,13 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
             : archetype === "fiat-cash" || archetype === "commodity-claim"
               ? "assuranceAndReconciliation"
               : null;
+        const assuranceFact = mechanismRiskReview?.archetype === "tbill"
+          ? mechanismRiskReview.lossRecoveryDesign
+          : mechanismRiskReview?.archetype === "fiat-cash" || mechanismRiskReview?.archetype === "commodity-claim"
+            ? mechanismRiskReview.assuranceAndReconciliation
+            : null;
+        const hasGoverningComponentReview = assuranceFact?.status.observationState === "known"
+          && mechanismComponentEvidence?.some((component) => component.componentKey === assuranceComponent);
         if (
           mechanismRiskReview &&
           assuranceReport?.periodEnd &&
@@ -2555,7 +2561,11 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         ) {
           admissionPath = `componentEvidence.mechanism-risk-review:${assuranceComponent}`;
           reviewEvidence.add({
-            componentKeys: [`mechanism-risk-review:${assuranceComponent}`],
+            // An admitted explicit component governs its own quality and clock.
+            // Retain the separate report diagnostically, not as a second current source.
+            componentKeys: [hasGoverningComponentReview
+              ? "mechanism-risk-review-history"
+              : `mechanism-risk-review:${assuranceComponent}`],
             sourceId: "stablecoin.proof-of-reserves.latest-report",
             reviewedAt: assuranceReport.publishedAt,
             observedAt: assuranceReport.periodEnd,
@@ -2676,11 +2686,6 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         const routeReviews = buildSafetyScoreV9RouteReviews(fixedInput, assetId);
         admissionPath = "retainedRoutes";
         const retainedRoutes = buildSafetyScoreV9RetainedRoutes(fixedInput, assetId);
-        admissionPath = "operationalResilience";
-        const operationalResilience = routeSafetyScoreV9OperationalIncidents(
-          getSafetyScoreV9OperationalResilienceOverlay(assetId, clockSec),
-          reviewedIncidents,
-        );
         return admitSafetyScoreV9ExtensionAsset({
           assetId,
           assetIssuerKey,
@@ -2726,7 +2731,6 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           accessReview,
           pegReference,
           supplyReview,
-          operationalResilience,
           wrapperAllocationReview,
           wrapperLocalReviews,
           allocationScopeIdentityReview: buildAllocationScopeIdentityReview(meta, clockSec),

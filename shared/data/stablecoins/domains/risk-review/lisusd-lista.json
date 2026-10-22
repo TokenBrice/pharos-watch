@@ -84,6 +84,10 @@
       {
         "label": "Lista revenue and risk buffer",
         "url": "https://docs.bsc.lista.org/governance/velista/revenue-cost"
+      },
+      {
+        "label": "Lista CDP mechanics: permissioned auctions, retrieved 2026-10-20",
+        "url": "https://docs.bsc.lista.org/for-developer/collateral-debt-position/mechanics"
       }
     ],
     "branches": [
@@ -120,14 +124,14 @@
             "note": "Each collateral type has its own governance-set minimum collateral ratio, liquidation penalty, auction decay, reset threshold, and debt limits; published ratios vary by market and are not represented as one estimate."
           }
         ],
-        "liquidationMechanism": "When safety-adjusted collateral value falls below lisUSD debt, Lista absorbs the debt and sells collateral through a descending-price Dutch auction; any user may trigger or restart auctions for gas compensation, and a manually enabled Liquidation Zone can admit community liquidators when official bots fail on large or complex positions.",
+        "liquidationMechanism": "When safety-adjusted collateral value falls below lisUSD debt, the CDP engine sells collateral through a descending-price Dutch auction. Lista's CDP mechanics documentation, retrieved 2026-10-20, specifies auth on Clipper.take/redo and Interaction.auctionWhitelist gating for auction actions; third parties have no open keeper or buyer role. Lista Lending's separate Liquidation Zone does not establish permissionless liquidation for lisUSD CDPs.",
         "liquidationDelaySec": 0,
         "backstop": "Auction proceeds repay lisUSD debt, while Lista discloses a live lisUSD Risk Buffer Fund funded from protocol revenue to cover potential shortfalls during black-swan events.",
         "shutdownOrBadDebtBehavior": "Collateral-auction shortfalls are protocol debt exposures that may draw on the lisUSD Risk Buffer Fund. The reviewed documentation does not identify a global lisUSD shutdown or holder settlement mechanism.",
         "failureDomainKeys": [
           "lista-oracle-governance",
           "lista-auction-bots",
-          "lista-community-liquidators",
+          "lista-auction-whitelist",
           "lista-risk-buffer",
           "bsc"
         ],
@@ -141,8 +145,8 @@
             "url": "https://docs.bsc.lista.org/introduction/collateral-debt-position-lisusd/collateral/loan-liquidation"
           },
           {
-            "label": "Lista Liquidation Zone",
-            "url": "https://docs.bsc.lista.org/introduction/lista-lending/liquidation/liquidation-zone"
+            "label": "Lista CDP mechanics: permissioned auctions, retrieved 2026-10-20",
+            "url": "https://docs.bsc.lista.org/for-developer/collateral-debt-position/mechanics"
           },
           {
             "label": "Lista revenue and risk buffer",

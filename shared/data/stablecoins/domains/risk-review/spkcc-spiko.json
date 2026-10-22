@@ -46,14 +46,14 @@
   },
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "SPKCC publishes its fund NAV on-chain through a Chainlink AggregatorV3-style oracle, so valuation depends on an external feed. It is a permissioned fund share rather than a borrower CDP, and no token-level collateral liquidation path is documented.",
+    "summary": "SPKCC's administrator-calculated NAV is published on Ethereum through the issuer-listed RedStone feed 0x9e37dbf40fe5fe9320e45fe6b95b000aa05459a9. At block 26236727 (2026-10-20T22:16:35Z, hash 0x1c50599154c5871ee9abf020d1ee94bc2cb1d544cc331f5bc2eceb20f3ab2adb), its implementation 0x14449cc3185dec0421c3cb37074215f1aacb97f9 matched verified EthereumMergedAdapterWithRoundsSpkccNavV1 runtime, SPKCC_NAV feed id, eight decimals and a three-of-five authorized data-signer model. The proxy remains upgradeable through admin 0x8223a6271d1e0bda019ee55d545d7b86eff1f573; authorized updater addresses relay signed data and are not themselves the signer quorum. Issuer-operated Spiko oracle contracts on other chains are distinct deployments. Standard external tier is retained, without inferring borrower liquidation paths, immutable pricing or complete feed-administrator custody.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex external-b oracle applicability review",
-      "rationale": "Spiko documents that CACEIS calculates the fund-share NAV and that Spiko and Chainlink publish that official token price on-chain through an AggregatorV3-compatible oracle. The NAV is the price-sensitive authority for valuing the permissioned fund share. SPKCC has no borrower-owned collateral positions, so that authority is scored at the top level without collateral-liquidation branch rows.",
+      "reviewedAt": "2026-10-20",
+      "reviewer": "C26 bottom-up refinement 2026-10-21",
+      "rationale": "CACEIS calculates the fund-share NAV; the current issuer NAV registry maps the exact SPKCC Ethereum external feed separately from issuer-operated oracle deployments on other chains. Verified source and the 2026-10-20 pinned observation identify RedStone SPKCC_NAV at the exact Ethereum proxy. SPKCC is an NAV-accreting fund share without borrower-owned collateral positions, so the price-sensitive authority remains top-level-only and no collateral-liquidation branches are asserted.",
       "sources": [
         {
           "label": "Spiko Cash and Carry product page (product source; oracle architecture dated below)",
@@ -62,11 +62,15 @@
         {
           "label": "Spiko's Smart Contracts (published 2025-05-04)",
           "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        },
+        {
+          "label": "Spiko NAV registry, retrieved 2026-10-20: exact SPKCC Ethereum external feed and chain-specific Spiko feeds",
+          "url": "https://docs.spiko.io/documentation/tokenization/nav"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "C26 bottom-up refinement 2026-10-21",
     "confidence": "verified",
     "sources": [
       {
@@ -76,6 +80,22 @@
       {
         "label": "Spiko smart contracts",
         "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+      },
+      {
+        "label": "Spiko NAV registry, retrieved 2026-10-20: exact SPKCC external Ethereum feed",
+        "url": "https://docs.spiko.io/documentation/tokenization/nav"
+      },
+      {
+        "label": "Verified SPKCC Ethereum proxy source, retrieved 2026-10-20",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9e37dbf40fe5fe9320e45fe6b95b000aa05459a9"
+      },
+      {
+        "label": "Verified RedStone SPKCC_NAV implementation and three-of-five primary-prod signer code, retrieved 2026-10-20; runtime matched at block 26236727",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x14449cc3185dec0421c3cb37074215f1aacb97f9"
+      },
+      {
+        "label": "Ethereum block 26236727, 2026-10-20T22:16:35Z, Alchemy pinned feed-id, threshold, timestamp limits, round, decimals, implementation/admin slots and runtime observations",
+        "url": "https://etherscan.io/block/26236727"
       }
     ]
   },

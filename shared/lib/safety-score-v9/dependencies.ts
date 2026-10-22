@@ -10,9 +10,7 @@ import { resolveChainId } from "../../types/chain-identity";
 import { orderDependencyGraphNodes, type DependencyGraphEdge } from "../dependency-graph";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
-import { isV9MaterialShare } from "./backing-primitives";
 import { deepFreeze } from "../../types/safety-score-v9-immutable";
-import { V9_CANDIDATE_POLICY_V1 } from "./policy";
 
 const V9_DEPENDENCY_PLAN_DIGEST_DOMAIN = "safety-score-v9.dependency-plan.v2";
 
@@ -216,51 +214,9 @@ export interface V9ResolvedDependencyInputs {
    * can be upgraded explicitly; the V2 resolver always emits this field.
    */
   roleInputs?: readonly V9ResolvedRoleDependencyInput[];
-  /**
-   * The policy-materialized role projections applied by the set evaluator.
-   * Absent on retained/unit fixtures that have not passed through evaluation.
-   */
-  rolePillarProjections?: Readonly<Record<V9RoleDependencyTargetPillar, V9RoleDependencyPillarProjection>>;
   cycleBlocked: boolean;
 }
 
-export type V9RoleDependencyTargetPillar = "exit" | "control";
-
-export interface V9RoleDependencyPropagationEvent {
-  targetPillar: V9RoleDependencyTargetPillar;
-  exposureKey: string;
-  riskEventKey: string;
-  roles: readonly Exclude<V9DependencyEconomicRole, "serial-claim" | "basket-exposure">[];
-  edgeKeys: readonly string[];
-  upstreamAssetIds: readonly string[];
-  nominalExposureShare: number;
-  exposureShare: number;
-  inheritedScore: number | null;
-  cause?: V9EvidenceCause | null;
-  causeGapIds?: readonly string[];
-  knownCause: V9EvidenceCause | null;
-  evidenceObligations: readonly {
-    cause: V9EvidenceCause;
-    causeGapIds: readonly string[];
-    exposureShare: number;
-  }[];
-  modeledLossPoints: number | null;
-  boundedUnknown: boolean;
-  cycleBlocked: boolean;
-  unavailableDimensions: readonly V9DependencyScoreDimension[];
-  evidenceRefIds: readonly string[];
-  failureDomains: readonly V9FailureDomainRef[];
-}
-
-export interface V9RoleDependencyPillarProjection {
-  targetPillar: V9RoleDependencyTargetPillar;
-  limit: number | null;
-  knownLossPoints: number;
-  boundedUnknownLossPoints: number;
-  unresolvedExposureShare: number;
-  materialUnresolvedExposure: boolean;
-  events: readonly V9RoleDependencyPropagationEvent[];
-}
 
 function canonicalPlanningDomain(domain: V9FailureDomainRef): V9FailureDomainRef {
   if (domain.kind !== "chain") return domain;
@@ -716,7 +672,8 @@ export function resolveV9DependencyInput(
       inheritedDimensions: dimensions,
       unavailableDimensions,
       score: cycleBlocked || unavailableDimensions.length > 0 ? null : knownScore,
-      ratingStatus: !cycleBlocked && unavailableDimensions.length === 0 ? "rated" : result?.ratingStatus ?? "not-rated",
+      ratingStatus: !cycleBlocked && unavailableDimensions.length === 0 ? "rated"
+        : cycleBlocked ? "pipeline-gap" : result?.ratingStatus ?? "pipeline-gap",
       cause,
       causeGapIds: cycleBlocked ? [] : result?.causeGapIds ?? [],
       limitedEvidenceCauses: cycleBlocked ? ["U"] : result?.limitedEvidenceCauses ?? (unavailableDimensions.length > 0 ? ["U"] : []),
@@ -759,232 +716,3 @@ export function resolveV9DependencyInput(
   };
 }
 
-function roleTargetPillar(role: V9DependencyEconomicRole): V9RoleDependencyTargetPillar | null {
-  if (role === "exit-dependency") return "exit";
-  if (role === "control-operator" || role === "oracle-nav") return "control";
-  return null;
-}
-
-/**
- * Projects role-specific dependency results into exposure-weighted pillar
- * limits. Edge identity defines the holder slice; a shared operator, oracle, or
- * rail does not prove that separate edges cover the same holders. Multiple
- * events on one explicit slice contribute only their worst modeled loss.
- * C/U dimensions retain bounded scores at every exposure size; A/B events are
- * excluded diagnostics and cannot displace a known adverse event.
- */
-export function projectV9RoleDependencyPillarLimits(
-  resolved: V9ResolvedDependencyInputs,
-  options: { unresolvedMaterialityThreshold?: number; boundedUnknownQuality?: Readonly<Record<V9RoleDependencyTargetPillar, number>> } = {},
-): Readonly<Record<V9RoleDependencyTargetPillar, V9RoleDependencyPillarProjection>> {
-  const unresolvedMaterialityThreshold = options.unresolvedMaterialityThreshold ?? 0;
-  const boundedUnknownQuality = options.boundedUnknownQuality ?? {
-    exit: V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore,
-    control: V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality,
-  };
-  if (
-    !Number.isFinite(unresolvedMaterialityThreshold) ||
-    unresolvedMaterialityThreshold < 0 ||
-    unresolvedMaterialityThreshold > 1
-  ) {
-    throw new Error("Safety Score v9 dependency unresolved materiality threshold must be between 0 and 1");
-  }
-  const inputs = [...(resolved.roleInputs ?? [])]
-    .filter((input) => roleTargetPillar(input.role) !== null)
-    .sort(
-      (left, right) =>
-        compareText(roleTargetPillar(left.role)!, roleTargetPillar(right.role)!) ||
-        compareText(left.edgeKey, right.edgeKey) ||
-        compareText(left.upstreamAssetId, right.upstreamAssetId),
-    );
-  type EventGroup = {
-    targetPillar: V9RoleDependencyTargetPillar;
-    exposureKey: string;
-    riskEventKey: string;
-    inputs: V9ResolvedRoleDependencyInput[];
-  };
-  const eventGroups = new Map<string, EventGroup>();
-  for (const input of inputs) {
-    const targetPillar = roleTargetPillar(input.role)!;
-    const key = `${targetPillar}\u0000${input.exposureKey}\u0000${input.riskEventKey}`;
-    const group = eventGroups.get(key) ?? {
-      targetPillar,
-      exposureKey: input.exposureKey,
-      riskEventKey: input.riskEventKey,
-      inputs: [],
-    };
-    group.inputs.push(input);
-    eventGroups.set(key, group);
-  }
-
-  const dimensionOrder: readonly V9DependencyScoreDimension[] = [
-    "final",
-    "backing",
-    "exit",
-    "access",
-    "control",
-    "oracle-nav",
-  ];
-  type UnallocatedEvent = Omit<V9RoleDependencyPropagationEvent, "exposureShare"> & {
-    unknownLossPoints: number;
-    unknownExposureShare: number;
-  };
-  const eventCandidates = [...eventGroups.values()]
-    .map((group): UnallocatedEvent => {
-      const groupInputs = [...group.inputs].sort(
-        (left, right) => compareText(left.edgeKey, right.edgeKey) || compareText(left.upstreamAssetId, right.upstreamAssetId),
-      );
-      const scoreBearingInputs = groupInputs.filter((input) => input.cause !== "A" && input.cause !== "B");
-      const eligibleInputs = scoreBearingInputs.length > 0 ? scoreBearingInputs : groupInputs;
-      const knownInputs = scoreBearingInputs.filter((input) => input.score !== null);
-      const unknownInputs = scoreBearingInputs.filter((input) => input.score === null);
-      const known = [...knownInputs].sort(
-        (left, right) =>
-          right.weight * (100 - right.score!) - left.weight * (100 - left.score!) ||
-          compareText(left.edgeKey, right.edgeKey) ||
-          compareText(left.upstreamAssetId, right.upstreamAssetId),
-      )[0];
-      const unknown = [...unknownInputs].sort(
-        (left, right) => right.weight - left.weight ||
-          compareText(left.edgeKey, right.edgeKey) ||
-          compareText(left.upstreamAssetId, right.upstreamAssetId),
-      )[0];
-      const knownLoss = known === undefined ? 0 : known.weight * (100 - known.score!);
-      const unknownLoss = (unknown?.weight ?? 0) * (100 - boundedUnknownQuality[group.targetPillar]);
-      const selected = unknownLoss > knownLoss ? unknown! : known ?? unknown ?? eligibleInputs[0]!;
-      const boundedUnknown = eligibleInputs.some((input) => input.boundedUnknown || input.score === null);
-      const nominalExposureShare = boundedUnknown ? Math.max(...eligibleInputs.map((input) => input.weight)) : selected.weight;
-      const inheritedScore = known?.score ?? null;
-      return {
-        targetPillar: group.targetPillar,
-        exposureKey: group.exposureKey,
-        riskEventKey: group.riskEventKey,
-        roles: [
-          ...new Set(
-            groupInputs.map(
-              (input) =>
-                input.role as Exclude<V9DependencyEconomicRole, "serial-claim" | "basket-exposure">,
-            ),
-          ),
-        ].sort((left, right) => (ROLE_ORDER.get(left) ?? 0) - (ROLE_ORDER.get(right) ?? 0)),
-        edgeKeys: [...new Set(groupInputs.map((input) => input.edgeKey))].sort(),
-        upstreamAssetIds: [...new Set(groupInputs.map((input) => input.upstreamAssetId))].sort(),
-        nominalExposureShare,
-        inheritedScore,
-        cause: selected.cause ?? (selected.score === null ? "U" : null),
-        causeGapIds: [...new Set(groupInputs.flatMap((input) => input.causeGapIds ?? []))].sort(),
-        knownCause: known?.cause ?? null,
-        evidenceObligations: groupInputs.filter((input) => input.boundedUnknown || input.cause === "A" || input.cause === "B")
-          .map((input) => ({
-            cause: input.cause ?? "U", causeGapIds: input.causeGapIds ?? [], exposureShare: input.weight,
-          })),
-        modeledLossPoints: known === undefined ? null : knownLoss,
-        unknownLossPoints: unknownLoss,
-        unknownExposureShare: Math.max(0, ...scoreBearingInputs.filter((input) => input.boundedUnknown || input.score === null).map((input) => input.weight)),
-        boundedUnknown,
-        cycleBlocked: groupInputs.some((input) => input.cycleBlocked),
-        unavailableDimensions: dimensionOrder.filter((dimension) =>
-          groupInputs.some((input) => input.unavailableDimensions.includes(dimension)),
-        ),
-        evidenceRefIds: [...new Set(groupInputs.flatMap((input) => input.evidenceRefIds))].sort(),
-        failureDomains: canonicalPlanningDomains(groupInputs.flatMap((input) => input.failureDomains)),
-      };
-    })
-    .sort(
-      (left, right) =>
-        compareText(left.targetPillar, right.targetPillar) ||
-        compareText(left.exposureKey, right.exposureKey) ||
-        compareText(left.riskEventKey, right.riskEventKey),
-    );
-  const selectedEvents = [...new Map(
-    (["exit", "control"] as const).flatMap((targetPillar) => {
-      const byExposure = new Map<string, UnallocatedEvent[]>();
-      for (const event of eventCandidates.filter((candidate) => candidate.targetPillar === targetPillar)) {
-        byExposure.set(event.exposureKey, [...(byExposure.get(event.exposureKey) ?? []), event]);
-      }
-      return [...byExposure.entries()].map(([exposureKey, candidates]) => {
-        const selected = [...candidates].sort(
-          (left, right) =>
-            Number(left.cause === "A" || left.cause === "B") - Number(right.cause === "A" || right.cause === "B") ||
-            Math.max(right.unknownLossPoints, right.modeledLossPoints ?? 0) -
-              Math.max(left.unknownLossPoints, left.modeledLossPoints ?? 0) ||
-            Number(right.boundedUnknown) - Number(left.boundedUnknown) ||
-            compareText(left.riskEventKey, right.riskEventKey),
-        )[0]!;
-        return [`${targetPillar}\u0000${exposureKey}`, {
-          ...selected,
-          causeGapIds: [...new Set(candidates.flatMap((event) => event.causeGapIds ?? []))].sort(),
-          evidenceObligations: candidates.flatMap((event) => event.evidenceObligations),
-          unknownExposureShare: Math.max(...candidates.map((event) => event.unknownExposureShare)),
-        }] as const;
-      });
-    }),
-  ).values()];
-  const normalizationByPillar = new Map<V9RoleDependencyTargetPillar, number>();
-  for (const targetPillar of ["exit", "control"] as const) {
-    const maximumNominalShareByExposure = new Map<string, number>();
-    for (const event of eventCandidates.filter((candidate) =>
-      candidate.targetPillar === targetPillar && candidate.cause !== "A" && candidate.cause !== "B")) {
-      maximumNominalShareByExposure.set(
-        event.exposureKey,
-        Math.max(maximumNominalShareByExposure.get(event.exposureKey) ?? 0, event.nominalExposureShare),
-      );
-    }
-    const totalNominalShare = [...maximumNominalShareByExposure.values()].reduce(
-      (sum, share) => sum + share,
-      0,
-    );
-    normalizationByPillar.set(targetPillar, totalNominalShare > 1 ? 1 / totalNominalShare : 1);
-  }
-  const events = selectedEvents
-    .map((event) => {
-      const normalization = normalizationByPillar.get(event.targetPillar)!;
-      const exposureShare = event.cause === "A" || event.cause === "B"
-        ? 0
-        : event.nominalExposureShare * normalization;
-      return {
-        ...event,
-        exposureShare,
-        modeledLossPoints: event.modeledLossPoints === null ? null : event.modeledLossPoints * normalization,
-        unknownLossPoints: event.unknownLossPoints * normalization,
-        unknownExposureShare: event.unknownExposureShare * normalization,
-        evidenceObligations: event.evidenceObligations.map((obligation) => ({
-          ...obligation, exposureShare: obligation.exposureShare * normalization,
-        })),
-      };
-    })
-    .sort(
-      (left, right) =>
-        compareText(left.targetPillar, right.targetPillar) ||
-        compareText(left.exposureKey, right.exposureKey) ||
-        compareText(left.riskEventKey, right.riskEventKey),
-    );
-
-  const project = (targetPillar: V9RoleDependencyTargetPillar): V9RoleDependencyPillarProjection => {
-    const pillarEvents = events.filter((event) => event.targetPillar === targetPillar);
-    const knownLossPoints = Math.min(
-      100,
-      pillarEvents.reduce((sum, event) => sum + (event.modeledLossPoints ?? 0), 0),
-    );
-    const unresolvedExposureShare = Math.min(
-      1,
-      pillarEvents.reduce((sum, event) => sum + (event.cause !== "A" && event.cause !== "B" ? event.unknownExposureShare : 0), 0),
-    );
-    const materialUnresolvedExposure =
-      unresolvedExposureShare > 0 &&
-      isV9MaterialShare(unresolvedExposureShare, unresolvedMaterialityThreshold);
-    const boundedUnknownLossPoints = pillarEvents.reduce(
-      (sum, event) => sum + Math.max(0, event.unknownLossPoints - (event.modeledLossPoints ?? 0)), 0,
-    );
-    return {
-      targetPillar,
-      limit: Math.max(0, 100 - knownLossPoints - boundedUnknownLossPoints),
-      knownLossPoints,
-      boundedUnknownLossPoints,
-      unresolvedExposureShare,
-      materialUnresolvedExposure,
-      events: pillarEvents.map(({ unknownLossPoints: _loss, unknownExposureShare: _share, ...event }) => event),
-    };
-  };
-  return deepFreeze({ exit: project("exit"), control: project("control") });
-}

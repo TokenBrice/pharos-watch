@@ -109,6 +109,13 @@ const primeRows: MarketFixture[] = [
 });
 
 describe("Morpho NAV-accounted lender-book producer", () => {
+  it("rejects unsupported configured capability without fabricating a book", async () => {
+    const f = fixture();
+    const result = await observeMorphoLenderBook({ ...f.coin, id: "synthetic-unsupported-lender" },
+      { ...f.config, params: { ...f.config.params, redemptionLiquidity: undefined } }, new AbortController().signal);
+    expect(result).toMatchObject({ assetId: "synthetic-unsupported-lender",
+      status: "unavailable", reason: "unsupported-adapter", deployments: null });
+  });
   it("passes the existing finalized lender pin and capture clock to recent-state routing", async () => {
     const batch = vi.spyOn(evmRpc, "fetchEvmMulticall3Aggregate3AtBlock");
     expect((await observe()).result.status).toBe("ok");
@@ -348,7 +355,7 @@ describe("Morpho NAV-accounted lender-book producer", () => {
     f.rpc[`${f.vault}:adaptersLength()`] = null;
     expect((await observe(f)).result).toMatchObject({ status: "unavailable", reason: "incomplete-census" });
   });
-  it("bounds the subphase deadline and keeps ordinary denomination/redemption metadata", async () => {
+  it("omits unsupported census capabilities and bounds the supported reader deadline", async () => {
     const f = fixture();
     f.rpc[`${ADAPTER}:marketIdsLength()`] = null;
     f.rpc["paused()"] = false;
@@ -361,7 +368,6 @@ describe("Morpho NAV-accounted lender-book producer", () => {
     expect(reserve.slices).toHaveLength(1);
     expect(reserve.metadata).toMatchObject({
       totalAssetsRaw: "100", assetAddress: LOAN,
-      lenderBookObservation: { status: "unavailable", reason: "unsupported-adapter" },
       idleUnderlyingBalanceRaw: "0",
       redemptionCapacityRaw: "0",
       redemptionCapacitySource: "erc4626-idle-underlying",
@@ -372,6 +378,7 @@ describe("Morpho NAV-accounted lender-book producer", () => {
         freshnessKind: "same-run-onchain",
       },
     });
+    expect(reserve.metadata).not.toHaveProperty("lenderBookObservation");
     expect(reserve.warnings?.some(row => row.code.includes("lender-book"))).not.toBe(true);
     // Advance the wall clock while the finalized-header RPC settles; the
     // reader must reject before opening a state request under the expired pin.
@@ -421,6 +428,9 @@ describe("Morpho NAV-accounted lender-book producer", () => {
     const f = fixture();
     f.rpc["paused()"] = false;
     f.rpc["convertToAssets(uint256)"] = 100n;
+    // Keep the supported Morpho capability while limiting ordinary redemption
+    // to its independently observed idle balance.
+    f.rpc["liquidityAdapter()"] = ZERO;
     let ordinaryStarted = false;
     f.rpc["totalAssets()"] = async () => {
       if (!ordinaryStarted) {
@@ -451,9 +461,6 @@ describe("Morpho NAV-accounted lender-book producer", () => {
         request.signal.addEventListener("abort", abort, { once: true });
       });
     });
-    const params = { ...f.config.params };
-    delete params.redemptionLiquidity;
-    const config = { ...f.config, params };
     const coin = CONFIGURED_COINS.find(row => row.id === f.coin.id)!;
     const runner = createReserveAdapterRunner({
       signal: new AbortController().signal,
@@ -461,7 +468,7 @@ describe("Morpho NAV-accounted lender-book producer", () => {
       adapterTimeoutMs: limit === "attempt" ? 20_000 : 30_000,
       telemetry: createAdapterLatencyCollector(),
     });
-    const pending = runner(coin, config, getReserveAdapter("erc4626-single-asset")!,
+    const pending = runner(coin, f.config, getReserveAdapter("erc4626-single-asset")!,
       limit === "run" ? start + 20_000 : undefined);
     const resolved = vi.fn();
     void pending.then(resolved);

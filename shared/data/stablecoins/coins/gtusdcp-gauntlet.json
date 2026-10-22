@@ -14,6 +14,36 @@
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC supplied to Gauntlet-curated on-chain strategies. Ethereum uses Morpho Vault V2; Base uses MetaMorpho and Arbitrum uses MetaMorphoV1_1. Market allocations and collateral exposures are dynamic.",
   "pegMechanism": "Each ERC-4626 vault share is a claim on that exact vault's chain-local USDC assets, with an independent exchange rate affected by interest, fees and realized losses. Shares in different Prime vaults are not interchangeable; redemptions depend on the selected vault's available liquidity.",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-21",
+    "reviewer": "Pharos Safety Score R1 vault parity review",
+    "rationale": "The catalog names three independent USDC lending receipts: Ethereum VaultV2 0x8c106eedad96553e64287a5a6839c3cc78afa3d0, Base MetaMorpho 0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61 and Arbitrum MetaMorphoV1_1 0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed. Content as of 2026-10-20: C04 rechecked the Ethereum exact product and indexed block 26236794, while the existing three-chain deployment/source review remains historical. Each receipt is a local residual proportional claim on lending NAV, not a fungible cross-chain token or direct fiat-cash claim against Circle. This sourced protocol-position departure does not resolve provider/catalog liability scope, establish a three-chain consolidated denominator or imply guaranteed USDC realization.",
+    "sources": [
+      {
+        "label": "Gauntlet exact V2 products; retrieved 2026-10-20",
+        "url": "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/v2-vaults.md"
+      },
+      {
+        "label": "Exact Ethereum VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8c106eedad96553e64287a5a6839c3cc78afa3d0"
+      },
+      {
+        "label": "Exact Base MetaMorpho source",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61"
+      },
+      {
+        "label": "Exact Arbitrum MetaMorphoV1_1 source",
+        "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed"
+      },
+      {
+        "label": "Morpho lender-position liquidity limits",
+        "url": "https://docs.morpho.org/curate/concepts/liquidity.md"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "gauntlet-usdc-prime",
   "links": [

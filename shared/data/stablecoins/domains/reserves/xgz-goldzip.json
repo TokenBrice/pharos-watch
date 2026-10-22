@@ -6,7 +6,7 @@
       "pct": 100,
       "risk": "medium",
       "assetClass": "other",
-      "issuerOrObligor": "GoldZip Digital Pte. Ltd.",
+      "issuerOrObligor": "GoldZip Company Limited (BVI issuer and default operator under current terms)",
       "riskFactors": [
         "market",
         "custody",
@@ -50,9 +50,13 @@
       {
         "label": "GoldZip 5 October 2026 holder-to-bar allocation snapshot",
         "url": "https://goldzip.info/transparency/XGZ_Bar_Allocation_2026-10-05.csv"
+      },
+      {
+        "label": "GoldZip issuer-change notice dated 15 October 2026, retrieved 20 October 2026",
+        "url": "https://goldzip.info/news/notice-change-of-issuer-special-redemption-option/"
       }
     ],
-    "rationale": "The issuer's 5 October 2026 CSV maps 39,000 XGZ across 39 Heraeus bar serials, each allocated 1,000 XGZ, with Horsemart Service Limited named as vault in every row. Its 298 rows cover 260 addresses. The total matches 39,000 XGZ at Ethereum block 26198051 (2026-10-15T12:55:59Z), but matching token arithmetic is not independent verification of 39 kg of physical gold. Terms name GoldZip Digital Pte Ltd as administrator/redemption counterparty, the obligor in this slice. Clauses 4.2-4.3 deny holders proprietary interest in stored bars and pass title only on collection. Independent reserve reports, account segregation and insolvency safeguards remain unverified.",
+    "rationale": "The issuer's 5 October 2026 CSV maps 39,000 XGZ across 39 Heraeus bar serials, each allocated 1,000 XGZ, with Horsemart Service Limited named as vault in every row. Its 298 rows cover 260 addresses. The total matches 39,000 XGZ at Ethereum block 26198051 (2026-10-15T12:55:59Z), but matching token arithmetic is not independent verification of 39 kg of physical gold. Identity correction on 2026-10-20: current terms name GoldZip Company Limited (BVI 2056034) as issuer and default operator unless an operator is appointed, replacing the formerly cited Singapore administrator. Clauses 4.2-4.3 still deny holders proprietary interest in stored bars and pass title only on collection. Independent reserve reports, account segregation and insolvency safeguards remain unverified. This identity correction does not renew the October 5 composition snapshot or October 15 review start.",
     "compositionBasis": "Issuer-published holder-to-bar allocation snapshot dated 2026-10-05: 39 Heraeus 1 kg bars at Horsemart Service Limited, mapped to 39,000 XGZ; token-total reconciliation by construction, not independent physical inventory assurance",
     "compositionAsOf": "2026-10-05",
     "scope": "full-composition",
@@ -97,6 +101,10 @@
       {
         "label": "GoldZip 5 October 2026 allocation CSV names Horsemart Service Limited",
         "url": "https://goldzip.info/transparency/XGZ_Bar_Allocation_2026-10-05.csv"
+      },
+      {
+        "label": "GoldZip current BVI terms, retrieved 20 October 2026; no proprietary bar interest before collection",
+        "url": "https://goldzip.info/terms-conditions/"
       }
     ],
     "uncertainty": "The issuer's 5 October 2026 allocation CSV names Horsemart Service Limited for all 39 bar serials and Heraeus as brand; provider shares beyond that snapshot are unverified. The mapping does not confer title: terms deny token-holder proprietary interest before collection. Independent physical inventory assurance, reserve-account segregation, insolvency protection, rehypothecation restrictions and independently signed reserve-liability reconciliation remain unavailable.",

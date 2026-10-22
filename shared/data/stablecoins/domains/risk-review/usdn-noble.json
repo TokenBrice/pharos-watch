@@ -2,8 +2,29 @@
   "id": "usdn-noble",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "USDN has an existing native-bank global transfer-stop authority, not a token blacklist and not merely hypothetical chain upgradeability. Noble v11.6.0 assigns bank authority to x/authority, whose assigned owner can execute bank MsgSetSendEnabled for uusdn. Current owner REST response is noble1qq8qvaxyznt4dm64kqy0f9x67mfpu37xk8xw5u; no current uusdn SendEnabled override is returned. The source versions are pinned; the REST state is an adjacent-height observation near 61906534, not falsely claimed historical. Under the FreezeWatch decision procedure (docs/blacklist-tracker.md), a live global transfer pause is Possible and dominates parent inheritance. Generic native-L1 upgradeability alone is excluded by the same procedure; narrow yield-claim/portal pauses are not the decisive control.",
+    "sources": [
+      {
+        "label": "Noble v11.6.0 bank authority and uusdn configuration",
+        "url": "https://github.com/noble-assets/noble/blob/v11.6.0/app.yaml"
+      },
+      {
+        "label": "Noble authority owner execution handler v1.0.4",
+        "url": "https://github.com/noble-assets/authority/blob/v1.0.4/keeper/msg_server.go"
+      },
+      {
+        "label": "Noble bank authority owner",
+        "url": "https://api.noble.xyz/noble/authority/v1/owner"
+      },
+      {
+        "label": "Noble authority owner account signing topology",
+        "url": "https://api.noble.xyz/cosmos/auth/v1beta1/accounts/noble1qq8qvaxyznt4dm64kqy0f9x67mfpu37xk8xw5u"
+      },
+      {
+        "label": "Noble bank default and explicit send settings",
+        "url": "https://api.noble.xyz/cosmos/bank/v1beta1/params"
+      }
+    ],
+    "evidence": "The original 2026-10-19 review start is retained; exact-source confirmation on 2026-10-20 preserves Possible. USDN has an existing native-bank global transfer-stop authority, rather than a token blacklist or merely hypothetical chain upgradeability. Noble v11.6.0 app.yaml assigns bank authority to x/authority, whose owner-execution handler can dispatch bank MsgSetSendEnabled for uusdn. At exact Noble height 62034705, block hash E1131206F98FCB0A3766CFD802C987D9B6A07D078EE3B846EA778B18D7DE3064 (2026-10-20T22:19:43.787364193Z), requested and returned gRPC heights match: owner is noble1qq8qvaxyznt4dm64kqy0f9x67mfpu37xk8xw5u with a published 4-of-6 LegacyAminoPubKey; no uusdn SendEnabled override is returned and default_send_enabled is true. Current transfers are enabled, while that authority can disable the denomination. Under FreezeWatch, this scoped global transfer pause is Possible; no holder-selective blacklist, current pause or signer independence is asserted.",
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },

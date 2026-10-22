@@ -110,12 +110,12 @@
     ]
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
+    "tier": "single-source-or-laggy",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
-    "summary": "The sole funded cbBTC/pathUSD market and serial RedStone inputs were refreshed at Tempo block 44247051 (2026-10-15T10:43:13Z). Both feed implementations retain source-matched executable prefixes. Both feeds and the shared adapter have the same ProxyAdmin, still owned by a 2-of-3 Safe. The adapter reports quorum three; its implementation resolves to 0xe4bfe4071d363e1d4274fb8f79cb510b75913020, whose verifier returned 404. Serial base/quote pricing provides no independent failover. Adapter source correspondence, enforced upstream freshness/fallback and signer authority remain incomplete, so the opaque tier is retained.",
-    "reviewedAt": "2026-10-15",
-    "reviewer": "Rev_SenpathusdSentora batch64 primary-evidence review",
+    "summary": "Tempo block 45095255 (2026-10-20T22:17:20Z) retains one adapter and one cbBTC/pathUSD market. The shared RedStone adapter implementation, newly verified on 19 October, now has source-matched executable bytecode. It requires three of five fixed RedStone signers, validates signed packages within three minutes on update, and rejects reads 30 hours after the last update. Both serial price feeds depend on this one adapter and the same 2-of-3 Safe upgrade authority; fallback updater addresses do not supply an independent price source. The topology is therefore single-source-or-laggy, not opaque or independently redundant.",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "FD26 bottom-up refinement 2026-10-21",
     "confidence": "verified",
     "sources": [
       {
@@ -169,6 +169,14 @@
       {
         "label": "RedStone exact Tempo publisher settings reopened 2026-10-15; relayer targets only",
         "url": "https://app.redstone.finance/push-feeds"
+      },
+      {
+        "label": "Tempo adapter source verified 2026-10-19; fixed signer quorum, update timestamp validation and 30-hour read staleness",
+        "url": "https://contracts.tempo.xyz/v2/contract/4217/0xe4bfe4071d363e1d4274fb8f79cb510b75913020?fields=all"
+      },
+      {
+        "label": "Tempo block 45095255, 2026-10-20T22:17:20Z, hash 0x6faede1b8b9699074fe41505ac12b4988a8ec079d2c4ea9acc4548b4d9d46a41; complete adapter/market census, feed/proxy and Safe reads",
+        "url": "https://rpc.tempo.xyz"
       }
     ],
     "branchApplicability": {
@@ -288,8 +296,8 @@
       {
         "id": "0x75add2f66f5c81917f6fd3b9603481defc1098359515d91c652913437ada14f5",
         "label": "Morpho market 0x75add2f66f5c81917f6fd3b9603481defc1098359515d91c652913437ada14f5",
-        "tier": "opaque-or-unknown",
-        "summary": "At Tempo block 44247051 (2026-10-15T10:43:13Z; hash 0x024caf7e7fb2f3a3c7956a291666e5da42248b41fc2774e2d196605e88b4400d), BASE_FEED_1 remains RedStone cbBTC 0x6b1e20c88fe56ba3bbd488556170927c3c799084 and QUOTE_FEED_1 pathUSD 0xf5528a63c0d6e5f23fe8a4f0dac2ae7a04174753; other feed/vault inputs are zero. Proxy implementations remain 0xdaef2f322582a1bdb0f504c8a9e2a408c358142b and 0x81221489808ab42c7062a45e41eb926f398750c1, and both executable prefixes match exact Tempo verifier bytecode after compiler-metadata exclusion. Both feeds and shared adapter 0x368ee51e47a594fe1e9908b48228748a30bc7ca4 have ProxyAdmin 0xfb1267a29c0aa19daae4a483ea895862a69e4aa5, owned by 2-of-3 Safe 0x32e59ecd77eb9989d6517accdd5581e2b4ac0523. The adapter reports getUniqueSignersThreshold()=3 and implementation 0xe4bfe4071d363e1d4274fb8f79cb510b75913020; the implementation verifier returned 404. Source correspondence and exact signer/freshness/fallback rules remain unresolved.",
+        "tier": "single-source-or-laggy",
+        "summary": "At Tempo block 45095255 (2026-10-20T22:17:20Z; hash 0x6faede1b8b9699074fe41505ac12b4988a8ec079d2c4ea9acc4548b4d9d46a41), the sole adapter and market retain the cbBTC/pathUSD composite and 77% LLTV. BASE_FEED_1 is 0x6b1e20c88fe56ba3bbd488556170927c3c799084 and QUOTE_FEED_1 is 0xf5528a63c0d6e5f23fe8a4f0dac2ae7a04174753; both second feeds and vault inputs are zero. Their current implementations match verified executable prefixes. Both query adapter 0x368ee51e47a594fe1e9908b48228748a30bc7ca4, whose implementation 0xe4bfe4071d363e1d4274fb8f79cb510b75913020 now matches all 8539 executable bytes of the newly published verifier source; only the 32-byte IPFS compiler-metadata digest differs. Its source fixes five RedStone signer addresses and threshold three, restricts update callers, validates update package age, and enforces a 30-hour last-update read bound. The existing shared ProxyAdmin remains owned by 2-of-3 Safe 0x32e59ecd77eb9989d6517accdd5581e2b4ac0523. One shared price service and mutable upgrade authority remain adverse; no signer-operator independence or independent fallback is asserted.",
         "collateralAssets": [
           "0x20c000000000000000000000c412ec89d0c08be5"
         ],
@@ -302,8 +310,8 @@
             "path": "price(): collateral/loan token conversion; scale 1e36",
             "address": "0xa59e9acd8499343ae7b944df898fc20388acd245",
             "chain": "tempo",
-            "observedAt": "2026-10-15",
-            "observedBlock": 44247051
+            "observedAt": "2026-10-20",
+            "observedBlock": 45095255
           },
           {
             "provider": "RedStone cbBTC, upgradeable feed sharing adapter and 2-of-3 Safe admin",
@@ -311,8 +319,9 @@
             "address": "0x6b1e20c88fe56ba3bbd488556170927c3c799084",
             "chain": "tempo",
             "heartbeatSec": 86400,
-            "observedAt": "2026-10-15",
-            "observedBlock": 44247051
+            "stalenessBoundSec": 108000,
+            "observedAt": "2026-10-20",
+            "observedBlock": 45095255
           },
           {
             "provider": "RedStone pathUSD, upgradeable feed sharing adapter and 2-of-3 Safe admin",
@@ -320,13 +329,14 @@
             "address": "0xf5528a63c0d6e5f23fe8a4f0dac2ae7a04174753",
             "chain": "tempo",
             "heartbeatSec": 21600,
-            "observedAt": "2026-10-15",
-            "observedBlock": 44247051
+            "stalenessBoundSec": 108000,
+            "observedAt": "2026-10-20",
+            "observedBlock": 45095255
           }
         ],
-        "fallbackBehavior": "Verified composite source multiplies its serial base feeds and divides its serial quote feeds; second-feed slots are zero, and no alternative price source or freshness rejection exists in the composite. ChainlinkDataFeedLib explicitly leaves staleness checks to upstream feeds. This is not independent RedStone/Chainlink failover. Source recovery by Sol curation campaign 2026-10-09 (W2L25Rupiah), observed 2026-10-09T11:48:15.350Z through https://api-tempo-mainnet.n.dwellir.com at block 43332025, hash 0x200d10b4fa3b73ddc7b2c176d95870ca05561ca11c11e6343c83e2154b4f97c4, timestamp 2026-10-09T11:47:57Z, binds both feed implementations to the recovered TempoPriceFeeds.sol executable prefixes, excluding compiler metadata. TempoPriceFeedBase hardcodes the shared adapter; TempoCbBTCPriceFeed and TempoPathUSDPriceFeed select cbBTC and pathUSD. PriceFeedWithoutRoundsForMultiFeedAdapter.latestRoundData returns the adapter's lastValue and lastBlockTimestamp without its own age rejection or alternative source. The shared adapter's implementation source and its own freshness/fallback/signer rules remain unverified; its verifier endpoint returned 404, which is a source-recovery failure, not non-disclosure. RedStone publisher configuration observed 2026-10-09T10:36:29Z lists a 24-hour cbBTC update trigger and a 6-hour pathUSD trigger, both at 0.5% deviation. These remain relayer targets, not contract-enforced staleness bounds. Current refresh at Tempo block 44247051 reconfirms input addresses, feed implementation slots and the ProxyAdmin owner quorum. RedStone publisher settings reopened 2026-10-15 retain the same 24-hour cbBTC and 6-hour pathUSD update triggers, both at 0.5% deviation. The shared adapter source remains unavailable (404), so no enforced upstream freshness or fallback bound is inferred.",
-        "observedAt": "2026-10-15",
-        "observedBlock": 44247051,
+        "fallbackBehavior": "The composite multiplies serial base feeds and divides serial quote feeds, with no independent alternative. The exact feed implementations call MultiFeedAdapterWithoutRounds.getLastUpdateDetails, which requires a positive value and lastBlockTimestamp + 108000 > block.timestamp. Thus reads fail closed at 30 hours; the 24-hour cbBTC and 6-hour pathUSD publisher heartbeats remain relayer targets, not the enforced bound. Newly verified TempoMultiFeedAdapterWithoutRoundsV1 requires three distinct signatures from five hardcoded RedStone addresses, median aggregation, and package timestamps no older than three minutes or more than one minute ahead at update. Main, fallback, manual and Gelato updater addresses all submit the same signed-data service; they are transport alternatives, not independent oracle failover. Current implementation and executable-source correspondence were pinned at block 45095255. Shared 2-of-3 Safe upgrade authority remains; financial recovery and actual stressed liquidation capacity are not established by this review.",
+        "observedAt": "2026-10-20",
+        "observedBlock": 45095255,
         "collateralParameters": [
           {
             "asset": "0x20c000000000000000000000c412ec89d0c08be5",
@@ -401,6 +411,14 @@
           {
             "label": "RedStone exact Tempo publisher settings reopened 2026-10-15; relayer targets only",
             "url": "https://app.redstone.finance/push-feeds"
+          },
+          {
+            "label": "Newly verified exact Tempo adapter source, retrieved 2026-10-20; executable prefix matched at block 45095255",
+            "url": "https://contracts.tempo.xyz/v2/contract/4217/0xe4bfe4071d363e1d4274fb8f79cb510b75913020?fields=all"
+          },
+          {
+            "label": "Complete current adapter/market/feed/admin census at Tempo block 45095255, 2026-10-20T22:17:20Z",
+            "url": "https://rpc.tempo.xyz"
           }
         ]
       }

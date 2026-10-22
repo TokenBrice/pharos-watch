@@ -419,7 +419,7 @@ const SPIKO_FUNDS: readonly {
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
       rationale:
-        "The SICAV prospectus permits redemption caps, deferred orders, market closures and suspensions, so normal NAV/order settlement does not establish an unconditional final-bank-receipt maximum or stressed executable capacity. Investor-paid DLT transaction fees and technical wallet recovery charges leave all-in cost unbounded.",
+        "Reviewed 2026-10-20: the SICAV prospectus permits 25% sub-fund redemption gates, deferred orders without priority, market closures and suspensions. Ordinary D+1 settlement does not establish an unconditional final-bank-receipt maximum or same-notional stressed executable capacity. Zero fund exit commission excludes investor-paid DLT transfer fees (prospectus p66); Terms of Use v2.2 article 11.3.2 requires external holders to pay the transfer into the internal wallet, while article 14.3 sponsors internal-wallet costs only. No generic all-in fee ceiling is established. Existing capacity, settlement and cost gaps and the original review start are retained.",
       reviewedAt: "2026-09-04",
       docs: [
         sourceRef(
@@ -431,6 +431,11 @@ const SPIKO_FUNDS: readonly {
           "Spiko GBPSAFO KID",
           "https://cdn.spiko.finance/legal_docs/EN/KID_gbpSAFO_EN.pdf",
           ["fees", "settlement"],
+        ),
+        sourceRef(
+          "Spiko Terms of Use v2.2, June 30, 2026, articles 11.3.2 and 14.3; retrieved 2026-10-20",
+          "https://cdn.spiko.finance/legal_docs/EN/Terms_of_Use_EN.pdf",
+          ["route", "fees", "access"],
         ),
       ],
     }),
@@ -558,20 +563,21 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
   "gbpe-monerium": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
+    holderEligibility: "issuer-discretionary",
     v9RouteReviewTerms: { settlementModel: "queued" },
     costModel: undisclosedReviewedFee(
-      "Monerium fee schedule and terms govern bank-transfer redemption; public materials reviewed do not publish a single fixed GBPe redemption fee",
+      "GBPe redemption requires an additional non-EUR contract; public business terms permit fees but publish no complete applicable GBP fee ceiling",
     ),
     docs: [
       sourceRef(
         "Monerium business terms",
         "https://monerium.com/policies/business-terms-of-service/",
-        ["route", "access", "settlement"],
+        ["route", "access", "settlement", "fees"],
       ),
       sourceRefFull("Monerium financial information", "https://monerium.com/financial-information/"),
-      sourceRef("Monerium fee schedule", "https://monerium.com/fee-schedule/", ["fees"]),
+      sourceRef("Monerium GBPe knowledge base: GBP IBANs not currently offered", "https://help.monerium.com/article/12-gbpe-ibans", ["route", "access"]),
     ],
-    notes: ["Modeled as regulated e-money redemption for onboarded Monerium customers through bank-transfer rails"],
+    notes: ["GBPe is not the generally available EUR/SEPA rail: direct non-EUR redemption requires Monerium's additional contractual agreement. The public GBP IBAN channel is unavailable; bespoke contractual redemption is not declared suspended or zero-capacity."],
   },
   "qcad-stablecorp": {
     ...issuerBase,
@@ -714,14 +720,14 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     outputAssetType: "nav",
     costModel: undisclosedReviewedFee(
-      "Securitize materials describe VBILL subscription and redemption at fund NAV; public materials reviewed do not publish one fixed redemption fee",
+      "The current VBILL page publishes a 0.2% total unitary fund fee, not an all-in redemption tariff. Securitize's 2026 broker schedule separately lists conversion, outgoing-wire and variable gas charges without establishing the complete exact fund-redemption deductions.",
     ),
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
       rationale:
-        "The 2025-05-13 launch release and current Securitize VBILL page describe daily or real-time liquidity, but the 2026-09-04 re-open found no current dated governing terms for a guaranteed executable amount, maximum settlement SLA, or operative fee schedule; launch marketing is not a stress-capacity bound.",
-      reviewedAt: "2026-09-04",
+        "The fully rendered issuer product page was re-reviewed on 2026-10-20: direct fund redemptions are daily, third-party instant swaps are only potentially available, market or blockchain delays are explicit, and tokens cannot be transferred or redeemed for 72 hours after issuance. Neither that eligibility hold nor the 2pm ET liquidity cutoff is a maximum final-payout SLA. The public 0.2% unitary fee is a fund expense, not a complete holder redemption cost. The separate 2026 broker schedule has variable gas and route-dependent conversion/wire costs. No guaranteed same-notional executable amount, complete all-in cost bound or unconditional completed-settlement maximum is established; preserve all three gaps.",
+      reviewedAt: "2026-10-20",
       docs: [
         sourceRef("Securitize VBILL", "https://securitize.io/primary-market/vaneck-vbill", [
           "route",
@@ -733,6 +739,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
           "https://www.prnewswire.com/news-releases/vaneck-launches-first-tokenized-fund-vbill-on-securitize-302453863.html",
           ["route", "access", "settlement"],
         ),
+        sourceRef("Securitize broker-dealer fee schedule 2026 (not a complete VBILL redemption tariff)", "https://securitize.io/fee-schedule-table", ["fees"]),
       ],
     },
     docs: [
@@ -742,9 +749,11 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         "https://www.prnewswire.com/news-releases/vaneck-launches-first-tokenized-fund-vbill-on-securitize-302453863.html",
         ["route", "access", "settlement"],
       ),
+      sourceRef("Securitize broker-dealer fee schedule 2026", "https://securitize.io/fee-schedule-table", ["fees"]),
     ],
     notes: [
       "Modeled as qualified-investor Securitize primary-market redemption at NAV, not as secondary exchange liquidity.",
+      "Current public terms impose a 72-hour postissuance transfer/redemption hold. This is an eligibility condition, not a 72-hour settlement guarantee; potential third-party smart-contract liquidity is not funded same-notional capacity.",
     ],
   },
   "jtrsy-anemoy": {

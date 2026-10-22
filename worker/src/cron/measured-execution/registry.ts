@@ -78,6 +78,18 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
     factoryAddress: "0xafe208a311b21f13ef87e33a90049fc17a7acdec",
     expectedFactoryCodeHash: "0x5960f2f785dd273f0eeb9624f32a9f93bd1560dc1335171d22411d48296d79b3",
   },
+  // Official Uniswap Monad deployment registry; collection only.
+  // Runtime/factory linkage pinned 2026-10-21 at Monad 115358664:
+  // docs/process/dex-liquidity-appendix.md#monad-uniswap-v3-shadow-enrollment
+  {
+    adapterProfileId: "uniswap-v3-quoter-v2",
+    protocol: "uniswap-v3",
+    chain: "monad",
+    endpointAddress: "0x661e93cca42afacb172121ef892830ca3b70f08d",
+    expectedCodeHash: "0xad90650112df6d1329f20af88a7ad67de8249cae2092e2660ced24e647a9a5be",
+    factoryAddress: "0x204faca1764b154221e35c0d20abb3c525710498",
+    expectedFactoryCodeHash: "0x343475d01b14fa838452aebbc1b600ef871a46233c97effb3260bb9a2597d519",
+  },
   {
     adapterProfileId: "uniswap-v3-quoter-v2",
     protocol: "uniswap-v3",

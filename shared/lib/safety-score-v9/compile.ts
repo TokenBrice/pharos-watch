@@ -16,6 +16,7 @@ import { findV9CauseEvidenceBindingIssues, requiredV9Applicability } from "./evi
 import { V9_UNRESEARCHED_CAUSE_PROOF } from "../../types/safety-score-v9-causes";
 import { findV9ReserveBoundFactorStatusIssues } from "./reserve-bound-facts";
 import { V9_CANDIDATE_RESERVE_BOUND_POLICY } from "./reserve-bound-policy";
+import { createV9FactShardViewFactory } from "./fact-shard";
 
 const COMMON_REQUIRED_APPLICABILITY = new Map([
   "v9.control.review",
@@ -93,6 +94,23 @@ export function safeParseV9AssetFactsV3(input: unknown) {
     validatedAssetFacts.add(parsed.data);
   }
   return parsed;
+}
+
+/**
+ * Compact publication-owned rows only after full per-asset admission.
+ * Cohort/reference/clock validation and the canonical digest still read every
+ * complete value through the view; no reduced schema substitutes for admission.
+ */
+export function createV9PublicationAssetCompactor(): (asset: V9AssetFactsV3) => V9AssetFactsV3 {
+  const compact = createV9FactShardViewFactory();
+  return (asset) => {
+    if (!validatedAssetFacts.has(asset)) {
+      throw new Error("V9 publication compaction requires an admitted immutable asset");
+    }
+    const view = compact(asset);
+    validatedAssetFacts.add(view);
+    return view;
+  };
 }
 
 function sealValidatedFactSet<T extends CompiledV9FactSetV2 | CompiledV9FactSetV3>(

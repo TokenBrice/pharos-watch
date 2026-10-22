@@ -1,4 +1,4 @@
-import { compileV9FactSetV3, safeParseV9AssetFactsV3 } from "@shared/lib/safety-score-v9/compile";
+import { compileV9FactSetV3, createV9PublicationAssetCompactor, safeParseV9AssetFactsV3 } from "@shared/lib/safety-score-v9/compile";
 import { sha256HexFromUtf8Chunks } from "../hash";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
@@ -9,7 +9,6 @@ import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyChunksV1, stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
-  V9AssetFactsV3Schema,
   V9EffectiveDependenciesV3Schema,
   type CompiledV9FactSetV3,
   type V9AssetFactsV3,
@@ -19,7 +18,6 @@ import {
 } from "@shared/types/safety-score-v9-facts";
 import {
   V9WrapperLocalFactsSchema,
-  type V9WrapperLocalDimensionFact,
   type V9WrapperLocalFacts,
 } from "@shared/types/safety-score-v9-wrapper";
 import {
@@ -44,8 +42,10 @@ import {
   createRuntimeGapVerdict,
   type AssetBuildContext,
 } from "./fact-set-context";
-import { buildOperationalResilienceFact } from "./fact-set-operational-resilience";
-import { applySafetyScoreV9WrapperIncidentRoutes } from "./extension-incidents";
+import {
+  getSafetyScoreV9ReviewedIncidents,
+  projectSafetyScoreV9RealizedHolderLossEvents,
+} from "./extension-incidents";
 import {
   buildCdpStressCoverage,
   buildDependencies,
@@ -66,7 +66,6 @@ import {
   buildSupply,
 } from "./fact-set-peg-supply";
 import { buildWrapperLocalFacts, resolveWrapperForm } from "./fact-set-wrapper";
-import { buildAllocationScopeFacts } from "./fact-set-allocation";
 import { buildLenderBookFact } from "./fact-set-lender-book";
 
 export {
@@ -131,7 +130,6 @@ function buildAssetFacts(
   context: AssetBuildContext,
   dependencies: V9EffectiveDependenciesV3,
   reserves: ReturnType<typeof buildReserves>,
-  parentDeploymentKeys: ReadonlyMap<string, readonly string[]>,
 ): V9AssetFactsV3 {
   const implementation = buildImplementation(context);
   const mechanismRiskReview = buildMechanismReview(context);
@@ -144,34 +142,8 @@ function buildAssetFacts(
   const economicControlReview = buildEconomicControlReview(context);
   const accessReview = buildAccessReview(context, reserves, dependencies);
   const peg = buildPeg(context);
-  const operationalResilience = buildOperationalResilienceFact(context);
-  const operationalGap = operationalResilience === null ? context.gaps.get(`${context.asset.assetId}:gap:operational-resilience`) : undefined;
-  const operationalResilienceStatus = operationalGap ? createV9FactStatus({
-    applicability: requiredV9Applicability("v9.control.operational-resilience"),
-    observationState: operationalGap.observationState, gapIds: [operationalGap.gapId],
-    evidenceRefIds: operationalGap.evidenceRefIds,
-  }) : undefined;
   const lenderBook = buildLenderBookFact(context);
-  const allocationScopeFacts = buildAllocationScopeFacts(context, {
-    dependencies, reserveStatus: reserves.reserveStatus, reserveExposures: reserves.reserveExposures, parentDeploymentKeys,
-  });
-  const wrapperLocalFacts = applySafetyScoreV9WrapperIncidentRoutes(
-    context,
-    buildWrapperLocalFacts(context, {
-      implementation,
-      dependencies,
-      reserveStatus: reserves.reserveStatus,
-      reserveExposures: reserves.reserveExposures,
-      exitStatus: routes.exitStatus,
-      exitRoutes,
-      controlStatus: controls.controlStatus,
-      controls: controls.controls,
-      economicControlReview,
-      peg,
-      supply,
-      allocationScopeFacts,
-    }),
-  );
+  const wrapperLocalFacts = buildWrapperLocalFacts(context, { implementation, dependencies });
   const reserveScopeAdmissions = context.asset.reserveScopeAdmissions?.map(row => ({
     ...row, evidenceRefIds: row.admitted ? componentResearchEvidence(context, `reserve-scope:${row.scopeId}`) : [],
   }));
@@ -200,10 +172,11 @@ function buildAssetFacts(
     accessReview,
     peg,
     supply,
-    operationalResilience,
-    ...(operationalResilienceStatus === undefined ? {} : { operationalResilienceStatus }),
     wrapperLocalFacts,
-    allocationScopeFacts,
+    realizedHolderLossEvents: projectSafetyScoreV9RealizedHolderLossEvents(
+      getSafetyScoreV9ReviewedIncidents(context.asset.assetId, context.fixedInput.clockSec),
+      context.fixedInput.clockSec,
+    ),
     ...(context.causeResolutionDiagnostics.length === 0 ? {} : {
       causeResolutionDiagnostics: context.causeResolutionDiagnostics,
     }),
@@ -269,13 +242,6 @@ function quarantinedWrapperLocalFacts(
       evidenceRefIds: [],
     };
   }
-  const unavailableDimension = (): V9WrapperLocalDimensionFact => ({
-    disposition: "producer-failed",
-    assessment: null,
-    signals: ["asset-compilation-unavailable"],
-    evidenceRefIds: [],
-    status: unavailableStatus,
-  });
   return V9WrapperLocalFactsSchema.parse({
     schemaVersion: 1,
     applicability: "wrapper",
@@ -284,25 +250,6 @@ function quarantinedWrapperLocalFacts(
     formSignals: ["asset-compilation-unavailable"],
     formEvidenceRefIds: [],
     formStatus: unavailableStatus,
-    facts: {
-      contractMutability: unavailableDimension(),
-      custodyEscrow: unavailableDimension(),
-      strategyComplexity: unavailableDimension(),
-      leverage: unavailableDimension(),
-      rehypothecationCorrelation: unavailableDimension(),
-      shareAccountingNavOracle: unavailableDimension(),
-      withdrawalTerms: unavailableDimension(),
-      measuredUnwind: unavailableDimension(),
-      lossAbsorptionEmergencyControls: unavailableDimension(),
-    },
-    riskTransfer: {
-      disposition: "producer-failed",
-      mechanism: "unknown",
-      maximumParentLossAbsorptionPoints: 0,
-      signals: ["asset-compilation-unavailable"],
-      evidenceRefIds: [],
-      status: unavailableStatus,
-    },
   });
 }
 
@@ -347,7 +294,7 @@ function buildQuarantinedAssetFacts(
       gapIds: [gapId],
     });
   const reference = context.asset.pegReference;
-  return V9AssetFactsV3Schema.parse({
+  const parsed = safeParseV9AssetFactsV3({
     assetId: context.asset.assetId,
     assetIssuerKey: context.asset.assetIssuerKey ?? null,
     archetype: context.asset.archetype,
@@ -436,14 +383,14 @@ function buildQuarantinedAssetFacts(
       unreviewedRouteSupplyShare: null,
       failureDomains: [],
     },
-    operationalResilience: null,
-    allocationScopeFacts: [],
     wrapperLocalFacts: quarantinedWrapperLocalFacts(
       context.asset,
       dependencies,
       unavailableStatus(),
     ),
   });
+  if (!parsed.success) throw parsed.error;
+  return parsed.data;
 }
 
 type V9AssetQuarantineStage = "extension-admission" | "fact-build" | "fact-validation" | "evaluation";
@@ -508,7 +455,6 @@ function compileAssetOutcome(
   extension: SafetyScoreV9FactSetExtensionV2,
   asset: AssetExtension,
   researchPayloadSha256: string,
-  parentDeploymentKeys: ReadonlyMap<string, readonly string[]>,
 ): {
   facts: V9AssetFactsV3;
   quarantine: V9AssetQuarantine | null;
@@ -546,7 +492,7 @@ function compileAssetOutcome(
         reserves.reserveExposures,
       ),
     );
-    facts = buildAssetFacts(context, dependencies, reserves, parentDeploymentKeys);
+    facts = buildAssetFacts(context, dependencies, reserves);
   } catch (error) {
     return quarantinedAssetOutcome(
       context,
@@ -652,20 +598,18 @@ function compileSafetyScoreV9FactSetWithIsolation(
     0,
   );
   // This is the only cross-asset extension read needed by asset compilation.
-  // Preserve parent identity independently before publication releases source rows.
-  const parentDeploymentKeys = new Map(extension.assets.map((asset) => [
-    asset.assetId, asset.allocationScopeIdentityReview?.registeredDeploymentKeys ?? [],
-  ] as const));
   if (consumeExtensionAssets) materializedExtensions.delete(extension);
   const outcomes = new Array<{ facts: V9AssetFactsV3; quarantine: V9AssetQuarantine | null }>(extension.assets.length);
+  const compactAsset = consumeExtensionAssets ? createV9PublicationAssetCompactor() : null;
   for (let index = 0; index < extension.assets.length; index++) {
     const asset = extension.assets[index]!;
     const evaluationFailure = evaluationFailures.get(asset.assetId);
     const reused = evaluationFailure === undefined ? reuseAsset?.(asset, researchPayloadSha256) : undefined;
     outcomes[index] = reused !== undefined ? { facts: reused, quarantine: null }
       : evaluationFailure === undefined
-        ? compileAssetOutcome(fixedInput, extension, asset, researchPayloadSha256, parentDeploymentKeys)
+        ? compileAssetOutcome(fixedInput, extension, asset, researchPayloadSha256)
         : evaluationQuarantineOutcome(fixedInput, extension, asset, researchPayloadSha256, evaluationFailure);
+    if (compactAsset !== null) outcomes[index]!.facts = compactAsset(outcomes[index]!.facts);
     // The materializer owns this array; assets themselves remain immutable.
     // Leave indices stable until the loop ends, without copying the remaining cohort.
     if (consumeExtensionAssets) delete extension.assets[index];

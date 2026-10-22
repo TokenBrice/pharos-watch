@@ -109,7 +109,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "dTRINITY is chain-isolated by design: dUSD on Ethereum, Sonic, Katana, and Fraxtal are separately-issued non-fungible deployments, each administered by dTRINITY's own governance (1-day timelocked 3-of-5 Safes on Ethereum/Katana/Fraxtal; direct 3-of-5 Safe on Sonic). No third-party bridge controls dUSD minting anywhere.",
+    "summary": "dTRINITY is chain-isolated by design: dUSD on Ethereum, Sonic, Katana, and Fraxtal are separately-issued non-fungible deployments administered by dTRINITY's own governance. The reviewed Ethereum/Katana/Fraxtal paths use 1-day timelocked 3-of-5 Safes; Sonic's direct Safe was observed as 2-of-3 at block 81379950 on 2026-10-20. No third-party bridge controls dUSD minting. Current Sonic signing topology is sourced in the mint-authority control review; this correction does not renew the bridge route review.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
     "confidence": "verified",

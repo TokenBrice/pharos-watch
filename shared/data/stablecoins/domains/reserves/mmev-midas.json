@@ -22,8 +22,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (Lane08Midas)",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "NR2 bottom-up refinement 2026-10-21",
     "confidence": "probable",
     "sources": [
       {
@@ -55,18 +55,18 @@
         "url": "https://docs.midas.app/resources/legal-product-documentation/mmev"
       },
       {
-        "label": "Literal mMEV issuer API accessed October 9, 2026; publisher updatedAt June 18, 2026",
+        "label": "Literal mMEV issuer API retrieved October 20, 2026; publisher updatedAt June 18, 2026",
         "url": "https://api-prod.midas.app/api/transparency?token=mMEV"
       },
       {
-        "label": "Current Midas complete documentation, Asset Transparency and Risk Monitoring; accessed October 9, 2026",
+        "label": "Current Midas documentation, Asset Transparency and Risk Monitoring; retrieved October 20, 2026",
         "url": "https://docs.midas.app/llms-full.txt"
       }
     ],
     "rationale": "The September 15 mMEV transparency page explicitly identifies the same underlying strategy and wallets as mROX. Its current exposure matches the issuer API under token=mROX, while token=mMEV remains dated June 18. The fresh joint strategy reports gross assets, material borrow offsets and net equity; main positions exclude absolute deltas below $100,000 and are rounded to $1,000. The issuer-prepared September 8 report also covers mMEV and mROX jointly. Neither source establishes a complete standalone mMEV reserve allocation, and the whole joint pool must not be attributed to mMEV. Current linked final terms identify Midas Software GmbH as issuer; the strategy manager is not the token obligor.",
     "compositionBasis": "Midas mMEV product, risk, and transparency disclosures",
     "scope": "full-composition",
-    "knownUnknownExposure": "October 9 disclosure review: the literal mMEV API still has updatedAt 2026-06-18T07:06:48.270Z and the separate mROX API has updatedAt 2026-09-18T11:06:17.713Z. Current platform documentation describes periodic portfolio reporting and internal delta/margin monitoring but does not publish a fresh standalone mMEV allocation, complete signed position census or joint-pool entitlement denominator. Both API books are stale and the mROX book is not a token-specific mMEV reserve census. Preserve 100% unknown exposure and existing NAV age limits; this classification review creates no compositionAsOf and does not renew old holdings, reports or assurance.",
+    "knownUnknownExposure": "October 20 disclosure review: the literal mMEV API remains updatedAt 2026-06-18T07:06:48.270Z and the separate mROX API remains updatedAt 2026-09-18T11:06:17.713Z. The former reports gross assets $35.052 million, borrow liabilities -$24.427 million and equity $10.625 million; the latter reports $46.8142672154 million, -$37.4331802697 million and $9.3810869457 million respectively. Neither stale, filtered book supplies a current standalone mMEV economically valued allocation or joint-pool entitlement denominator. Preserve 100% unresolved look-through and no compositionAsOf. Named Fordefi infrastructure does not establish a whole-book institutional custody tier, so the scalar custodyModel is unknown; no adverse custody failure is inferred.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -87,7 +87,7 @@
       },
       {
         "name": "Fordefi mMEV strategy workspace (MPC infrastructure provider)",
-        "role": "custodian"
+        "role": "other"
       },
       {
         "name": "Current mMEV strategy manager and trading venues (complete custody allocation unverified)",
@@ -112,9 +112,13 @@
       {
         "label": "Midas mMEV product page",
         "url": "https://midas.app/mmev"
+      },
+      {
+        "label": "Fordefi Midas case study: issuer self-custody and mMEV workspaces; retrieved October 20, 2026",
+        "url": "https://www.fordefi.com/customer-stories/how-midas-brings-tokenized-investment-opportunities-on-chain-with-fordefis-defi-native-custody-2ti85"
       }
     ],
-    "uncertainty": "The dashboard names DeFi venues and signed positions, and the September 8 issuer report covers mMEV and mROX jointly. Complete wallet ownership, custody shares, reuse terms, legal segregation and token-specific allocation remain unverified. The joint report is issuer-prepared and does not provide independent custody assurance.",
+    "uncertainty": "Fordefi supplies MPC infrastructure for issuer self-custody, not an independently established legal custodian. The September 8 issuer report covers mMEV and mROX jointly. Complete current wallet ownership, underlying custody shares, reuse terms, legal segregation and token-specific allocation remain unverified; the whole-book custodyModel is unknown. The joint report is issuer-prepared and does not supply independent custody assurance. Original custody review start is retained.",
     "knownUnknownExposurePct": 100
   }
 }

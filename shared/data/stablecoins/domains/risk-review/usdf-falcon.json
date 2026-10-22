@@ -293,6 +293,39 @@
             "url": "https://xdcscan.com/address/0x33570299e0d73f07c82d005de75de54cf4582fcc#code"
           }
         ]
+      },
+      {
+        "id": "solana:9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x",
+        "destinationChain": "solana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip"
+        ],
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Identity and transfer semantics reviewed 2026-10-20. Falcon's official deployment directory identifies this Solana USDf mint; Chainlink's mainnet directory identifies the same 9-decimal Falcon USD token and BurnMint pool AHHhyt1DZTnSG5kC2Tru4otCDThVLYNihQuFsyCFjFZo, version 1.6.2. Solscan independently identifies Falcon USD (USDf), nine decimals and the SPL Token program. This is a CCIP representation, not an additional proven native issuance path. Pool-program authority, mint-authority reach, signing custody, incident state, peers, in-flight obligations and conserved current supply attribution remain unestablished by this directory review. No EVM Safe topology, rate-limit state, incident absence or zero supply is inherited.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-20",
+        "sources": [
+          {
+            "label": "Falcon official Solana USDf deployment, retrieved 2026-10-20",
+            "url": "https://docs.falcon.finance/resources/smart-contracts.md"
+          },
+          {
+            "label": "Chainlink USDf mainnet directory: Solana BurnMint pool and nine decimals, retrieved 2026-10-20",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDf"
+          },
+          {
+            "label": "Solscan exact Falcon USD mint identity and nine decimals, retrieved 2026-10-20",
+            "url": "https://solscan.io/token/9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x"
+          }
+        ]
       }
     ],
     "controls": [

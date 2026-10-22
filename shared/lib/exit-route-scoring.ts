@@ -7,8 +7,7 @@
  * - the **redemption backstop domain score** (`redemption-backstop-scoring.ts`),
  *   which measures a route against a *supply-denominator* request, and
  * - the **Safety Score V9 Exit pillar** (`safety-score-v9/exit.ts`), which
- *   measures the same route against a *stress* request snapped to the policy
- *   notional grid.
+ *   measures the same route against a continuous supply-relative *stress* request.
  *
  * The V9 methodology policy JSON (`semantic.exit`) is the versioned,
  * replay-pinned scoring source the Safety evaluator reads. The shared tables
@@ -281,15 +280,15 @@ export const EXIT_ROUTE_SCORING_TABLES = {
 const EXIT_COVERAGE_SHARE_OF_CAPACITY = 0.6;
 
 /**
- * The two exit requests the one engine answers.
+ * Requests share a sizing policy; only producer measurement requests use a grid.
  *
  * - `supply-denominator` — the redemption domain score's modeled exit size:
  *   the clamped share of circulating supply, used directly as the denominator.
- * - `stress-grid` — the V9 Exit pillar's stress request: the same clamped share,
- *   then snapped up to the reviewed notional grid so route capacity curves stay
- *   comparable across assets.
+ * - `stress` — the Exit pillar's continuous clamped share, or maximum stress
+ *   when usable supply is unavailable.
+ * - `stress-grid` — a producer measurement request snapped to the notional grid.
  */
-export type ExitRequestKind = "supply-denominator" | "stress-grid";
+export type ExitRequestKind = "supply-denominator" | "stress" | "stress-grid";
 
 export interface ExitScoringRequest {
   kind: ExitRequestKind;
@@ -324,13 +323,16 @@ export function resolveExitScoringRequest(
   circulatingUsd: number | null | undefined,
   policy: ExitRequestPolicy,
 ): ExitScoringRequest | null {
-  const rawSupplyRequestUsd = resolveExitRequestSupplyNotionalUsd(circulatingUsd, policy);
-  if (rawSupplyRequestUsd === null) return null;
-  const grid = [...policy.notionalGridUsd].sort((left, right) => left - right);
-  const requestedNotionalUsd =
-    kind === "stress-grid"
-      ? (grid.find((notional) => notional >= rawSupplyRequestUsd) ?? grid[grid.length - 1]!)
-      : rawSupplyRequestUsd;
+  const supplyRequestUsd = resolveExitRequestSupplyNotionalUsd(circulatingUsd, policy);
+  // Missing sizing evidence cannot make an executable stress request smaller.
+  // Supply-denominator callers still require an observed denominator.
+  if (supplyRequestUsd === null && kind === "supply-denominator") return null;
+  const rawSupplyRequestUsd = supplyRequestUsd ?? policy.capUsd;
+  let requestedNotionalUsd = rawSupplyRequestUsd;
+  if (kind === "stress-grid") {
+    const grid = [...policy.notionalGridUsd].sort((left, right) => left - right);
+    requestedNotionalUsd = grid.find((notional) => notional >= rawSupplyRequestUsd) ?? grid[grid.length - 1]!;
+  }
   return {
     kind,
     requestedNotionalUsd,

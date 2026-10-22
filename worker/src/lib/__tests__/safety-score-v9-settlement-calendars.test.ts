@@ -89,7 +89,7 @@ describe("business-calendar settlement consumers", () => {
       expect(config.costModel).toMatchObject({ kind: "fee-bps", feeBps: 0 });
       expect(config.v9RouteReviewTerms!.missingScoringFields).toContain("settlement");
       expect(buildSafetyScoreV9RouteReviews(fixed(row, clockSec), assetId)[0]).toMatchObject({
-        coverageClass: "diagnostic", settlementModel: "bounded-delay", settlementSlaSec: null,
+        settlementModel: "bounded-delay", settlementSlaSec: null,
       });
     },
   );
@@ -100,7 +100,7 @@ describe("business-calendar settlement consumers", () => {
     expect(buildSafetyScoreV9RouteReviews(fixed(row, clockSec), assetId)[0])
       .toMatchObject({ settlementModel: "queued", settlementSlaSec: 259200 });
   });
-  it.each(["hbd-hive", "syusd-aegis", "usp-pikudao", "avusd-avant", "savusd-avant", "hbusdt-hyperbeat", "usn-noon",
+  it.each(["syusd-aegis", "usp-pikudao", "avusd-avant", "savusd-avant", "hbusdt-hyperbeat", "usn-noon",
     "ustbl-spiko", "safo-spiko-usd", "uktbl-spiko", "gbpsafo-spiko", "eutbl-spiko", "eursafo-spiko", "spkcc-spiko", "eurspkcc-spiko"])(
     "does not promote %s processing/cooldown/conditional terms into completed settlement", (assetId) => {
       const config = getRedemptionBackstopConfig(assetId)!;
@@ -108,9 +108,27 @@ describe("business-calendar settlement consumers", () => {
         settlementModel: config.settlementModel });
       // Evaluate after the campaign's date-only October 9 reviews are admissible.
       expect(buildSafetyScoreV9RouteReviews(fixed(row, Date.parse("2026-10-10T12:00:00Z") / 1000), assetId)[0])
-        .toMatchObject({ coverageClass: "diagnostic", settlementSlaSec: null });
+        .toMatchObject({ settlementSlaSec: null });
     },
   );
+  it("distinguishes HBD's completed native HIVE bound from a processing-only cooldown", () => {
+    const assetId = "hbd-hive";
+    const config = getRedemptionBackstopConfig(assetId)!;
+    const row = makeSupplyFullRedemption({ stablecoinId: assetId, routeFamily: config.routeFamily,
+      settlementModel: config.settlementModel });
+    const now = Date.parse("2026-10-21T12:00:00Z") / 1000;
+    expect(buildSafetyScoreV9RouteReviews(fixed(row, now), assetId)[0])
+      .toMatchObject({ settlementSlaSec: 302400 });
+    withRedemptionBackstopConfig(assetId, { v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap", missingScoringFields: ["settlement"],
+      reviewedAt: "2026-10-04",
+      rationale: "Synthetic processing cooldown does not bound completed payout.",
+      docs: [{ label: "Fixture processing terms", url: "https://issuer.example/processing", supports: ["settlement"] }],
+    } }, () => {
+      expect(buildSafetyScoreV9RouteReviews(fixed(row, now), assetId)[0])
+        .toMatchObject({ settlementSlaSec: null });
+    });
+  });
   it("projects a current binding guarantee using its worst reviewed annual holiday walk", () => {
     const row = makeSupplyFullRedemption({ stablecoinId: "usdc-circle", settlementModel: "days", settlementDelaySec: undefined });
     withRedemptionBackstopConfig(row.stablecoinId, { settlementModel: "days", v9RouteReviewTerms: reviewed }, () => {

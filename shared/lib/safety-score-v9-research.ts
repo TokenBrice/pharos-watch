@@ -13,10 +13,11 @@ import {
   scoreV9Input,
   scoreV9InputWithScenarioCaps,
   type V9AttributedScenarioCap,
+  type V9ResearchScoreTrace,
   type V9ScoreTrace,
   type V9StructuralCap,
 } from "./safety-score-v9/formula";
-import { assertV9ValidatedPolicyEnvelope } from "./safety-score-v9/policy";
+import { assertV9ValidatedPolicyEnvelope, unknownQuality } from "./safety-score-v9/policy";
 import { compareText } from "./safety-score-v9/primitives";
 import { projectV9ScoringInput } from "./safety-score-v9/score";
 
@@ -26,11 +27,11 @@ export {
 } from "./safety-score-v9/policy";
 export {
   deriveV9ReserveLossSignal,
-  resolveV9StructuralCaps,
   scoreV9Input,
   type V9CapTrace,
   type V9NRReason,
   type V9ScoreTrace,
+  type V9ResearchScoreTrace,
 } from "./safety-score-v9/formula";
 
 export interface V9ResearchScenarioCap extends V9StructuralCap {
@@ -44,26 +45,30 @@ export function scoreV9ResearchScenarioInput(
   rawInput: V9ScoringInput,
   policy: V9ValidatedPolicyEnvelope,
   scenarioCaps: readonly V9ResearchScenarioCap[],
-): V9ScoreTrace {
+): V9ResearchScoreTrace {
   const attributedCaps: V9AttributedScenarioCap[] = scenarioCaps.map((cap) => ({
     ...cap,
     responsibility: "measured-adverse",
   }));
   const missingPillars = V9_QUALITY_PILLARS.filter((pillar) => rawInput.pillars[pillar] === null);
-  const unknownQuality = policy.policy.semantic.backing.boundedUnknownQuality;
   const input: V9ScoringInput = {
     ...rawInput,
     pillars: {
-      backing: rawInput.pillars.backing ?? unknownQuality,
-      exit: rawInput.pillars.exit ?? policy.policy.semantic.exit.boundedUnknownScore,
-      control: rawInput.pillars.control ?? policy.policy.semantic.control.boundedUnknownQuality,
+      backing: rawInput.pillars.backing ?? unknownQuality("backing", "U", policy.policy.semantic),
+      exit: rawInput.pillars.exit ?? unknownQuality("exit", "U", policy.policy.semantic),
+      control: rawInput.pillars.control ?? unknownQuality("control", "U", policy.policy.semantic),
     },
-    parentScore: rawInput.parentRequired && rawInput.parentScore === null ? unknownQuality : rawInput.parentScore,
+    parentScore: rawInput.parentScore,
   };
+  const missingParent = input.parentRequired && input.parentScore === null;
   return scoreV9InputWithScenarioCaps(input, policy, attributedCaps, {
-    includedPillars: V9_QUALITY_PILLARS, partialEvidence: null, parentStatus: "rated",
+    includedPillars: V9_QUALITY_PILLARS, partialEvidence: null, parentStatus: missingParent ? "not-rated" : "rated",
     limitingPillars: missingPillars.map((pillar) => ({ pillar, causes: ["U"], causeGapIds: [] })),
-  });
+  }, missingParent ? [{
+    code: "missing-parent-score", field: "parentScore",
+    message: "The scenario's required parent has no available score.",
+    responsibility: "unresearched", cause: "U", causeGapIds: [`${input.assetId}:parent`],
+  }] : []);
 }
 
 function scoringInputFromCompiled(
@@ -107,14 +112,20 @@ export function scoreCompiledAsset(
   }
   const required = input.parent?.required ?? false;
   const pipelineParent = required && parentTrace?.ratingStatus === "pipeline-gap";
-  let scoringInput = scoringInputFromCompiled(input,
-    required && parentTrace === null ? policy.policy.semantic.backing.boundedUnknownQuality : parentTrace?.finalScore ?? null,
-    policy);
+  let scoringInput = scoringInputFromCompiled(input, parentTrace?.inheritableScore ?? null, policy);
   const includedPillars = pipelineParent ? ["control"] as const : V9_QUALITY_PILLARS;
   if (pipelineParent) scoringInput = { ...scoringInput, pillars: { ...scoringInput.pillars, backing: null, exit: null } };
   const parentPartial = parentTrace?.partialEvidence;
+  const parentReasons = required && parentTrace === null ? [{
+    code: "missing-parent-score" as const,
+    field: "parent.assetId",
+    message: "The required compiled parent has no available score.",
+    responsibility: "unresearched" as const,
+    cause: "U" as const,
+    causeGapIds: [`${input.assetId}:parent:${input.parent!.assetId}`],
+  }] : parentTrace?.nrReasons ?? [];
   return scoreV9Input(
-    scoringInput, policy, parentTrace?.nrReasons ?? [], 0, false, [], [], [], [], [], [], undefined,
+    scoringInput, policy, parentReasons, [], [], [], [], undefined,
     {
       includedPillars,
       partialEvidence: pipelineParent && parentPartial ? {
@@ -125,7 +136,7 @@ export function scoreCompiledAsset(
         { pillar: "backing", causes: ["U"], causeGapIds: [] },
         { pillar: "exit", causes: ["U"], causeGapIds: [] },
       ] : [],
-      parentStatus: parentTrace?.ratingStatus ?? "rated",
+      parentStatus: parentTrace?.ratingStatus ?? (required ? "not-rated" : "rated"),
     },
   );
 }
@@ -135,7 +146,7 @@ export interface V9CompiledAssetSetResult {
   evaluatedOrder: readonly string[];
 }
 
-/** Deterministic parent-first evaluation with conservative unresolved-parent quality. */
+/** Deterministic parent-first evaluation without inventing unresolved-parent quality. */
 export function scoreCompiledAssetSet(
   rawInputs: readonly CompiledV9AssetInput[],
   policy: V9ValidatedPolicyEnvelope,

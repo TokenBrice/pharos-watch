@@ -137,9 +137,37 @@
         {
           "label": "Ethereum JSON-RPC current Safe reads",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Falcon rendered transparency report registry, retrieved 2026-10-20; newest formal assurance remains 30 April 2026",
+          "url": "https://app.falcon.finance/transparency"
+        },
+        {
+          "label": "HT Digital ISAE 3000 report: 30 April 2026 period, signed 19 June 2026, retrieved 2026-10-20",
+          "url": "https://falcon.finance/api/media/file/Final%20Falcon%20assurance%20report%20and%20opinion%20-%20signed%20final%2030%20April%202026.pdf?prefix=media"
+        },
+        {
+          "label": "HT Digital weekly collateral letter dated 19 October 2026, retrieved 2026-10-20",
+          "url": "https://falcon.finance/api/media/file/Falcon%20Letter%20-%2019%20October%202026-1.pdf?prefix=media"
+        },
+        {
+          "label": "HT Digital preceding weekly collateral letter dated 12 October 2026, retrieved 2026-10-20",
+          "url": "https://falcon.finance/api/media/file/Falcon%20Letter%20-%2012%20October%202026.pdf?prefix=media"
+        },
+        {
+          "label": "Falcon current deployment directory including Solana USDf, retrieved 2026-10-20",
+          "url": "https://docs.falcon.finance/resources/smart-contracts.md"
+        },
+        {
+          "label": "Chainlink USDf five-network token and pool inventory, retrieved 2026-10-20",
+          "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDf"
+        },
+        {
+          "label": "Solana USDf explorer authority identity; not a pinned authority or conservation certificate, retrieved 2026-10-20",
+          "url": "https://solscan.io/token/9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x"
         }
       ],
-      "evidence": "At Ethereum block 25770829 on 2026-08-16, the USDf proxy resolved to implementation 0x3adf34c09dac24e4baefb1b1df4c2992edc2b789 with ProxyAdmin 0x3ef1127fdf81b553066dae0faea58785a2aa6e14 owned by the reviewed 4-of-6 Safe. A current Ethereum read at block 25862870 on 2026-08-29 reconfirmed the same Safe's six owners, threshold 4, empty module list, and zero guard/module-guard slots. The Ethereum PreCollateralizedMinter remains the native MINTER_ROLE holder; its signed issuance path has no on-chain collateral balance check or supply cap. BSC, Base, and XDC BurnMintERC20 roles, pools, local unlimited-supply semantics, and CCIP route administration are bridge machinery and are recorded only in bridgeRouteRisk. The corrected native annotations remain partially-bounded-admin, unbounded, periodic reconciliation, and attestation-only supervision.",
+      "evidence": "At Ethereum block 25770829 on 2026-08-16, the USDf proxy resolved to implementation 0x3adf34c09dac24e4baefb1b1df4c2992edc2b789 with ProxyAdmin 0x3ef1127fdf81b553066dae0faea58785a2aa6e14 owned by the reviewed 4-of-6 Safe. A current Ethereum read at block 25862870 on 2026-08-29 reconfirmed the same Safe's six owners, threshold 4, empty module list, and zero guard/module-guard slots. The Ethereum PreCollateralizedMinter remains the native MINTER_ROLE holder; its signed issuance path has no on-chain collateral balance check or supply cap. BSC, Base, and XDC BurnMintERC20 roles, pools, local unlimited-supply semantics, and CCIP route administration are bridge machinery and are recorded only in bridgeRouteRisk. The corrected native annotations remain partially-bounded-admin, unbounded, periodic reconciliation, and attestation-only supervision. Both October 12 and October 19 weekly letters were retrieved in full and the populated issuer registry was rendered successfully. The October 19 letter identifies Ethereum USDf and compares 1727.154 million circulating units to 1837.951 million dollars of collateral; October 12 compares 1662.111 million to 1819.558 million. The rendered registry lists formal assurance periods April 30, 2026, October 31, 2025 and July 28, 2025, followed by weekly reserve letters through October 19; its footer distinguishes weekly recalculation from the formal ISAE 3000 engagement. The April 30 report explicitly verifies issued quantity against backing at that instant and expressly gives no assurance at other dates. Signature dates are not observed publication/upload dates. Historical examiner scope remains valid at its own date. Preserve the original August 29 aggregate review start, every historical block/source pin and positively established unbounded economic semantics.",
       "reviewer": "Codex Safety Score V9 data research; Sol economic-posture batch 2026-08-15; Safe-state re-review 2026-08-29",
       "reviewedAt": "2026-08-29"
     }

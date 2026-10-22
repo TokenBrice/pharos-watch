@@ -220,5 +220,48 @@
         ]
       }
     ]
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "CACEIS Fund Administration calculates daily fund NAV and Spiko publishes the exact GBP class NAV. The gbpSAFO totals and the issuer documentation identify a centrally originated fund-pricing path, not borrower-specific liquidation or a guaranteed peg. The Chainlink Ethereum feed directory contains exactly two SAFO NAVLink feeds (SAFO NAV and EURSAFO NAV) and none for gbpSAFO, and Spiko's on-chain provider table lists no SAFO class at all. This verifies privileged internal pricing; no GBP external feed, redundancy, failover or publisher signer closure is credited.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-21",
+      "reviewer": "R2 family consistency review (FAM-SPIKO)",
+      "rationale": "GBPSAFO subscriptions/redemptions use a fund NAV authority. This is a UCITS fund share, not borrower-specific liquidation collateral branches.",
+      "sources": [
+        {
+          "label": "Spiko SICAV prospectus, 1 September 2026",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        {
+          "label": "Exact GBP KID, ISIN FR0014015LF8",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/KID_gbpSAFO_EN.pdf"
+        },
+        {
+          "label": "Exact GBP share-class API identity and current NAV",
+          "url": "https://public-api.spiko.io/share-classes/gbpSAFO/totals"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-21",
+    "reviewer": "R2 family consistency review (FAM-SPIKO)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Chainlink Ethereum feed directory searched 2026-10-21: no gbpSAFO NAV feed",
+        "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
+      },
+      {
+        "label": "Spiko on-chain NAV provider table, no SAFO class listed",
+        "url": "https://docs.spiko.io/documentation/tokenization/nav"
+      },
+      {
+        "label": "Spiko daily NAV publication architecture",
+        "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+      }
+    ]
   }
 }

@@ -57,7 +57,7 @@
   "proofOfReserves": {
     "type": "attestation",
     "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
-    "provider": "Ankura Trust Company, LLC. The October 12, 2026 daily report (8pm ET), recovered from the issuer-linked archive and reviewed 2026-10-15 by Rev_GldonOndo, reports aggregate Ondo Stocks, USDY and USDon assets and obligations. It does not identify GLDon-specific GLD shares, cash or liabilities and does not establish exact-token financial assurance.",
+    "provider": "Ankura Trust Company, LLC. The October 16, 2026 daily report (8pm ET) and September 1-30, 2026 monthly report, retrieved from the issuer-linked archives on 2026-10-20, reconcile pooled Ondo Stocks, USDY and USDon assets and liabilities. Neither publishes GLDon-specific GLD shares, cash, Other Collateral, liabilities or provider weights; no exact-token financial assurance is asserted.",
     "attestorTier": "niche",
     "cadence": "daily-nav"
   },

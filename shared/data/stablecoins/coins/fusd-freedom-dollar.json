@@ -41,6 +41,11 @@
   "notices": [
     {
       "type": "warning",
+      "title": "Issuer-reported ZANO reserve coverage below one",
+      "message": "On October 20, 2026, the issuer's live reserve panel reported 0.87x coverage, about $5.49 million of ZANO reserves against 6.3 million circulating fUSD (panel timestamp 10:12:11 PM). Reserve-held, uncirculated fUSD is excluded from exogenous backing. These are issuer-reported values, not an independent reserve attestation or a measured executable redemption amount. Source: https://www.freedomdollar.com/en"
+    },
+    {
+      "type": "warning",
       "title": "September 2026 Zano incident",
       "message": "In its September 27, 2026 update, Freedom Dollar reported unauthorized fUSD created through a Zano inflation bug and several million dollars of assets exchanged for counterfeit tokens. The team said it would absorb those losses and asked users to pause all fUSD activity pending a stable patched chain. The notice did not confirm completed reimbursement or resumed services. Source reviewed by Sol curation campaign 2026-10-09 (Lane28Rupiah)."
     },

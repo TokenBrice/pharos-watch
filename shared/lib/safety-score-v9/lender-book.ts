@@ -49,8 +49,7 @@ export function evaluateV1019LenderBook(
   ) return null;
   const observation = fact.observation;
   const bookPolicy = policy.policy.semantic.backing.lenderCollateralBook;
-  const admission = bookPolicy.admittedAssets.find(row => row.assetId === observation.assetId);
-  if (!admission || observation.deployments.length !== admission.deployments.length) return null;
+  if (observation.censusScope !== "complete-nav-accounted-current-book" || observation.deployments.length === 0) return null;
   const resolutions = new Map(fact.collaterals.map(row => [row.marketKey, row]));
   if (resolutions.size !== fact.collaterals.length) return null;
   const usedMarkets = new Set<string>();
@@ -58,13 +57,12 @@ export function evaluateV1019LenderBook(
   const deploymentQualities: V1019LenderBookEvaluation["deploymentQualities"][number][] = [];
   for (const deployment of observation.deployments) {
     const deploymentKey = `${deployment.chain}:${deployment.vault}`;
-    const admissionKey = `${deployment.chain}:${deployment.kind}`;
     if (
-      usedDeployments.has(admissionKey) ||
-      !admission.deployments.some(row => row.chain === deployment.chain && row.kind === deployment.kind) ||
+      usedDeployments.has(deploymentKey) ||
+      (deployment.kind !== "vault-v2" && deployment.kind !== "metamorpho-v1" && deployment.kind !== "metamorpho-v1.1") ||
       deployment.pin.chain !== deployment.chain
     ) return null;
-    usedDeployments.add(admissionKey);
+    usedDeployments.add(deploymentKey);
     const nav = raw(deployment.totalAssetsRaw);
     const total = raw(deployment.realAssetsRaw ?? deployment.totalAssetsRaw);
     const buffer = raw(deployment.undistributedAssetsRaw ?? "0");

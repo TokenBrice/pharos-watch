@@ -8,6 +8,7 @@ import { buildSafetyScoreV9PublicationFromNormalizedInput } from "../safety-scor
 import { buildAlertSafetyV9SourceEnvelopeFromParts } from "../alert-safety-source-cache";
 import { internV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
 import { resolveV9PublicWitnessTexts, validateV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
+import { resolveCauseGapId } from "@shared/types/safety-score-v9-public-cause-gaps";
 
 const captured = vi.hoisted(() => ({ usdc: null as object | null, resolvedCards: 0 }));
 vi.mock("@shared/lib/safety-score-v9/public-witness-texts", async (importOriginal) => {
@@ -40,6 +41,27 @@ describe("card-local public witness texts", () => {
     expect(resolveV9PublicWitnessTexts(wire)).toEqual(before);
     expect(JSON.stringify(wire).length).toBeLessThan(JSON.stringify(before).length);
     expect(() => validateV9PublicWitnessTexts(wire)).not.toThrow();
+  });
+
+  it("losslessly interns shared component identities and scoped-risk keys", () => {
+    const key = "bridge:ethereum:0x1111111111111111111111111111111111111111:control:mint";
+    const input = {
+      pillar: { evidenceLevel: "medium", components: [key], supportedComponentKeys: [key] },
+      localCauseGaps: [key], foreignCauseGapRefs: [],
+      component: { key, posture: "unknown", binding: false },
+      authority: { model: "contract", authorityKey: key },
+      deployment: { signalKey: `signal:${key}`, exposureKey: key, riskEventKey: `event:${key}`, failureDomainKeys: [key] },
+    };
+    const before = structuredClone(input);
+    const wire = internV9PublicWitnessTexts(input);
+    expect(wire.pillar.components[0]).toMatch(/^~/u);
+    expect(wire.component.key).toBe(wire.pillar.components[0]);
+    expect(wire.authority.authorityKey).toBe(wire.component.key);
+    expect(wire.deployment.failureDomainKeys[0]).toBe(wire.component.key);
+    expect(resolveV9PublicWitnessTexts(wire)).toEqual(before);
+    expect(input).toEqual(before);
+    expect(resolveCauseGapId({ foreignCauseGaps: [] }, { ...wire, id: "fixture" }, 0)).toBe(`fixture:gap:${key}`);
+    expect(JSON.stringify(wire).length).toBeLessThan(JSON.stringify(before).length);
   });
 
   it("escapes reserved literal text and leaves a non-beneficial ordinary card inline", () => {
@@ -116,6 +138,12 @@ describe("card-local public witness texts", () => {
     const reordered = structuredClone(unresolved!);
     reordered.scoreTrace.boundedUncertaintyAttribution.items.reverse();
     expect(SafetyScoreV9CurrentCardSchema.safeParse(reordered).success).toBe(false);
+    const reorderedComponents = structuredClone(card!);
+    reorderedComponents.pillars.control.components.reverse();
+    expect(SafetyScoreV9CurrentCardSchema.safeParse(reorderedComponents).success).toBe(false);
+    const reorderedExposures = structuredClone(card!);
+    reorderedExposures.scoreTrace.deploymentRisk.unresolvedExposures.reverse();
+    expect(SafetyScoreV9CurrentCardSchema.safeParse(reorderedExposures).success).toBe(false);
     const parts = { cards: [card!], safetyScoreIdentity: {
       model: "v9" as const, schemaVersion: 1 as const, methodologyVersion: candidate.policyVersion,
       policyId: candidate.policy.id, policyDigest: candidate.policy.semanticDigest,

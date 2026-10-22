@@ -12,8 +12,8 @@
     "navToken": true
   },
   "collateral": "GBP share class of the Spiko Amundi Overnight Swap Fund. The September 2026 prospectus permits bonds, equities and money-market instruments hedged through total-return swaps with one or more counterparties. Its GBP objective is SONIA + 0.50% before share-class fees; BNP Paribas is identified as the initial counterparty. CACEIS Bank is the depositary.",
-  "pegMechanism": "GBP-denominated NAV-accreting UCITS share class with KYC-gated subscriptions and redemptions through Spiko. Orders are centralized by 3 p.m. Paris time; the management company may cap redemptions when net requests reach 25% of sub-fund assets, for up to 20 valuation days over three months.",
-  "mechanismArchetype": "rwa-credit-fund",
+  "pegMechanism": "GBP-denominated NAV-accreting UCITS share class with KYC-gated subscriptions and redemptions at daily fund NAV through Spiko. Orders are centralized by 15:00 Paris time; ordinary redemption settles D+1, subject to the currency market being open. The management company may cap redemptions when net requests reach 25% of sub-fund net assets; the trigger is the same for all share classes, with at most 20 valuation days of capping over three months. Unexecuted orders carry over without priority; suspension and swing pricing can also limit or delay exit.",
+  "mechanismArchetype": "ucits-trs-fund",
   "detailProvider": "coingecko",
   "geckoId": "spiko-amundi-overnight-swap-fund-gbp",
   "links": [
@@ -106,5 +106,59 @@
       }
     }
   },
-  "launchDate": "2026-03-19"
+  "launchDate": "2026-03-19",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-21",
+    "reviewer": "R2 family consistency review (FAM-SPIKO)",
+    "rationale": "Exact GBP share class FR0014015LF8 of Spiko Amundi Overnight Swap Fund, fund UUID 59c2c924-ebf8-492d-a4b0-72d72ebf61e6, is proportional UCITS portfolio ownership with portfolio-wide total-return swaps, a possible unswapped money-market UCITS sleeve and legal separation. The issuer share-class API identifies eight native registers and five share decimals; the 21 October 2026 fund inventory contains 100 physical equity rows, one cash row and eight signed swap legs under counterparty code 372039-BNP, with TRS at approximately 100% of net assets. This supports ucits-trs-fund, not direct Treasury or credit-fund backing, and it does not establish complete current NAV, collateral, netting or default-recovery reconciliation.",
+    "sources": [
+      {
+        "label": "Spiko SICAV prospectus, 1 September 2026, SAFO strategy, TRS and share-class table",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Exact GBP share-class KID, FR0014015LF8",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_gbpSAFO_EN.pdf"
+      },
+      {
+        "label": "Exact GBP native registers, five share decimals and Capitalized SONIA + 0.50% objective",
+        "url": "https://public-api.spiko.io/share-classes/gbpSAFO"
+      },
+      {
+        "label": "SAFO signed equity, swap and cash inventory valued 21 October 2026",
+        "url": "https://public-api.spiko.io/fund-assets/?fundId=59c2c924-ebf8-492d-a4b0-72d72ebf61e6"
+      },
+      {
+        "label": "AMF-hosted June 2026 SAFO semiannual report, not an audit opinion",
+        "url": "https://geco.amf-france.org/back-office/document/download/429960"
+      }
+    ]
+  },
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://geco.amf-france.org/back-office/document/download/429960",
+    "provider": "Issuer-filed Spiko SICAV semiannual financial disclosure covering the SAFO sub-fund and its share classes, not a signed audit opinion. PricewaterhouseCoopers Audit is the named statutory auditor; no SAFO-specific financial audit opinion or complete current all-share-class/native-register reconciliation was retrieved.",
+    "attestorTier": "self",
+    "cadence": "semi-annual",
+    "attestorJurisdiction": "France",
+    "latestReport": {
+      "periodEnd": "2026-06-30",
+      "assuranceMethod": "unknown",
+      "scope": "unknown",
+      "liabilityReconciliation": "unknown",
+      "reviewer": "Batch64 primary-source review (Rev_ChfsafoSpiko)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "AMF-hosted June 2026 SAFO semiannual report, not an audit opinion",
+          "url": "https://geco.amf-france.org/back-office/document/download/429960"
+        },
+        {
+          "label": "Spiko SICAV prospectus, 1 September 2026",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        }
+      ]
+    }
+  }
 }

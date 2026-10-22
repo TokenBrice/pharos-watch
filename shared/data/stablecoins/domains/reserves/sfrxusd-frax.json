@@ -42,13 +42,17 @@
       {
         "label": "Ethereum block 26083895 (2026-09-29T15:02:59Z), pinned vault identity and balance reads",
         "url": "https://etherscan.io/block/26083895"
+      },
+      {
+        "label": "Supplemental disclosure correction reviewed 2026-10-20: issuer venue-level balance-sheet export; does not renew the September 29 composition",
+        "url": "https://api.frax.finance/v2/sfrxusd/balance-sheet/latest/export"
       }
     ],
     "rationale": "Frax documents sfrxUSD as an ERC-4626-like token redeemable for frxUSD and describes its Benchmark Yield Strategy across carry-trade, DeFi AMO, and Treasury venues. At Ethereum block 26083895 (2026-09-29T15:02:59Z), vault 0xcf62f905562626cfcdd2261162a51fd02fc9c5b6 returned name Staked Frax USD, symbol sfrxUSD, and asset() 0xcacd6fd266af91b8aed52accc382b4e165586e29 (Frax USD). totalAssets() was 36,108,754.218811420290055171 frxUSD and the underlying balanceOf(vault) was zero. With no idle underlying held, the reviewed deployedExposure attestation on the live adapter config attributes the vault's full deployed share to this reviewed slice, so the producer publishes one reviewed row keyed by the frxUSD underlying address rather than a vault-addressed deployed remainder; the protocol-position classification and frxUSD wrapper dependency are retained, and this review does not establish current strategy allocations or a maximum maturity.",
     "compositionBasis": "Frax strategy documentation and aggregate vault accounting at Ethereum block 26083895; no venue-level composition refresh",
     "compositionAsOf": "2026-09-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "The frxUSD dependency and Benchmark Yield Strategy failure domain are identified at 100%, but the current venue and allocation among carry-trade, DeFi AMO, and Treasury strategies are not published.",
+    "knownUnknownExposure": "The historical aggregate review identifies the Benchmark Yield Strategy failure domain and frxUSD redemption denomination, not a complete current single-parent portfolio. The issuer now publishes a venue-level balance-sheet export, including frxUSD lending, reUSD, crvUSD and USDT positions; the previous blanket statement that allocations are unpublished was incorrect. That export has not been reconciled here to the complete economic liability/encumbrance census and establishes neither whole-book legal custody protection nor a maximum liquidation horizon. Original composition date and weights are unchanged.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

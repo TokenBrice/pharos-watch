@@ -85,8 +85,8 @@
     "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
-    "tier": "single-source-or-laggy",
-    "summary": "At Celo block 78952776 (2026-10-01), GBPm FXPriceFeed reads OracleAdapter and SortedOracles GBP/USD feed 0xf590b62f9cfcc6409075b1ecac8176fe25744b88. The feed has one authorized reporter, ChainlinkRelayerV1 0x215d3ba962597defb38da439ed4db8e8a63e409a, with one configured Chainlink aggregator 0xe76fe54dfed2ce8b4d1ac63c982dff7cfc92bf82. Emergency shutdown uses cached lastValidPrice; no independently functioning live alternative is evidenced. Existing liquidation-parameter observations retain their original dates.",
+    "tier": "standard-external",
+    "summary": "New whole-profile review 2026-10-22 corrects the previous single-source-or-laggy finding (root review 2026-07-21, topology described at block 78952776). A singleton SortedOracles reporter is not a singleton price signer: GBPm's reporter is immutable permissionless ChainlinkRelayerV1 0x215d3ba962597defb38da439ed4db8e8a63e409a. At Celo block 78952744 (2026-10-01T11:18:22Z), its configured proxy 0xe76fe54dfed2ce8b4d1ac63c982dff7cfc92bf82 resolves to AccessControlledOffchainAggregator 0x618645d07d9ba975d976de787976f84f6c4114a7 with ten transmitters. Both relayer and DON runtime bytes exactly match verified source. This is the same external DON relay mechanism graded standard-external for BRLm and JPYm, without claiming an independent-provider fallback. Existing branch, feed and liquidation observations retain their original dates; this new review admits 2026-10-23.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -109,8 +109,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex Safety Score V9 oracle review; Claude V9 evidence-gap curation",
+    "reviewedAt": "2026-10-22",
+    "reviewer": "R3 sourced sibling parity review; prior root review 2026-07-21 preserved in summary",
     "confidence": "verified",
     "sources": [
       {
@@ -132,14 +132,26 @@
       {
         "label": "Pinned Celo oracle topology at block 78952776",
         "url": "https://api-celo-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Celo block 78952744, 2026-10-01T11:18:22Z, hash 0xef6d63054c09287b7e34edff9fb371f6d39ed7f12482a7f575b17479f533e6e5",
+        "url": "https://celo.blockscout.com/block/78952744"
+      },
+      {
+        "label": "Explicit public-provider pinned oracle reads, reviewed 2026-10-22",
+        "url": "https://forno.celo.org"
+      },
+      {
+        "label": "GBP/USD Chainlink DON verified implementation, exact pinned runtime match and ten transmitters at block 78952744",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x618645d07d9ba975d976de787976f84f6c4114a7"
       }
     ],
     "branches": [
       {
         "id": "gbpm-usdm-cdp",
         "label": "GBPm/USDm CDP (Liquity v2 fork, Celo)",
-        "tier": "single-source-or-laggy",
-        "summary": "GBPm's Celo USDm-collateralized branch uses FXPriceFeed -> OracleAdapter -> SortedOracles GBP/USD. At block 78952776 the configured feed has a single Chainlink relayer and a single Chainlink aggregator, with no independent live fallback. Cached lastValidPrice serves emergency shutdown only. Previously reviewed MCR, CCR and SCR observations remain dated to their original block.",
+        "tier": "standard-external",
+        "summary": "Re-reviewed 2026-10-22: FXPriceFeed -> OracleAdapter -> SortedOracles GBP/USD consumes an external Chainlink DON through immutable permissionless ChainlinkRelayerV1, not a single price signer. At block 78952744, getOracles returned only this relayer, getAggregators bound proxy 0xe76fe54dfed2ce8b4d1ac63c982dff7cfc92bf82, and its active AccessControlledOffchainAggregator had ten transmitters. Exact deployed relayer and DON runtimes match verified source. Standard-external is consistent with BRLm/JPYm; no independent-provider failover is claimed. Cached lastValidPrice serves emergency shutdown only, and earlier branch/liquidation observations are not renewed.",
         "collateralAssets": [
           "USDm"
         ],
@@ -200,6 +212,18 @@
           {
             "label": "StabilityPoolGBPm on Celoscan",
             "url": "https://celoscan.io/address/0x06346c0fAB682dBde9f245D2D84677592E8aaa15"
+          },
+          {
+            "label": "GBPm immutable permissionless ChainlinkRelayerV1, exact runtime match at Celo block 78952744",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x215d3ba962597defb38da439ed4db8e8a63e409a"
+          },
+          {
+            "label": "GBP/USD Chainlink DON verified implementation, exact runtime match and ten transmitters at Celo block 78952744",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x618645d07d9ba975d976de787976f84f6c4114a7"
+          },
+          {
+            "label": "Celo block 78952744, 2026-10-01T11:18:22Z",
+            "url": "https://celo.blockscout.com/block/78952744"
           }
         ]
       }

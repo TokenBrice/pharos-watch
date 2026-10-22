@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
-    "summary": "USDXL's only independently native issuance surface is the HypurrFi GHO-style CDP on HyperEVM, now in wind-down: pooled new borrows are suspended and settlement targets July 15, 2026. The token's GHO AccessControl roles have no members (facilitator set and bucket caps are frozen); the only remaining mint-relevant control is the 2/2 proxy-admin Safe's upgrade power. HyperCore is excluded from Mint Authority because official HIP-1 documentation links its spot representation to HyperEVM through the system address and corresponding supply, rather than identifying an independent liability surface.",
+    "summary": "USDXL native issuance is on HyperEVM through three GHO-style facilitators. Exact block 49082619 reads on 2026-10-20 confirm the token implementation, the same two proxy-admin Safe owners and threshold two, and all three facilitator identities. The upgrade path remains economically unbounded; a historical pooled-market suspension or an old settlement target does not establish permanent cessation of issuance. HyperCore is a separately reviewed platform-linked representation, not an independently native liability surface.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -21,8 +21,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "HypurrFi / Last proxy admin Safe (upgrade authority)",
-      "observedAt": "2026-08-08",
-      "observedBlock": 42660797,
+      "observedAt": "2026-10-20",
+      "observedBlock": 49082619,
       "sources": [
         {
           "label": "USDXL token proxy on HyperEVM Blockscout",
@@ -41,8 +41,8 @@
           "url": "https://rpc.hyperliquid.xyz/evm"
         },
         {
-          "label": "HyperEVM observation block 42660797",
-          "url": "https://www.hyperevmscan.io/block/42660797"
+          "label": "HyperEVM observation block 49082619, hash 0x716b0657836892c2d86f1807aede34e0707f6be2ec345617f3202370ac7a047e, 2026-10-20T22:17:39Z",
+          "url": "https://www.hyperevmscan.io/block/49082619"
         }
       ]
     },

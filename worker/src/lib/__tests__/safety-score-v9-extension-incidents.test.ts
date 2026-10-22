@@ -1,23 +1,20 @@
 import { projectNegativeIncidentReview } from "../../../../scripts/lib/safety-score-v9-incident-runtime";
 import { describe, expect, it } from "vitest";
 import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-facts";
-import type { V9ApplicableWrapperLocalFacts } from "@shared/types/safety-score-v9-wrapper";
-import { resolveV9WrapperParentLimit } from "@shared/lib/safety-score-v9/wrapper-risk";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { V9NegativeIncidentReviewSchema, V9ReviewedIncidentSchema, v9NegativeIncidentReviewTimeSec } from "@shared/types/safety-score-v9-incidents";
 import incidentRegistry from "@shared/data/safety-score-v9/incident-reviews-v1.json";
 import {
   getSafetyScoreV9ReviewedIncidents,
+  projectSafetyScoreV9RealizedHolderLossEvents,
+  addSafetyScoreV9IncidentEvidence,
   routeSafetyScoreV9ControlIncidents,
-  routeSafetyScoreV9WrapperIncidents,
-  routeSafetyScoreV9OperationalIncidents,
   routeSafetyScoreV9NegativeIncidentReviews,
   addSafetyScoreV9NegativeIncidentEvidence,
   getSafetyScoreV9NegativeIncidentReviews,
 } from "../safety-score-v9/extension-incidents";
 import type { ControlOverlay } from "../safety-score-v9/extension-shared";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
-import { getSafetyScoreV9OperationalResilienceOverlay } from "../safety-score-v9/extension-operational-resilience";
 import { expandReviewedRegistryReferences } from "@shared/lib/safety-score-v9/reviewed-registry";
 import { V9ReviewedIncidentRegistrySchema } from "@shared/types/safety-score-v9-incidents";
 
@@ -243,69 +240,9 @@ function control(controlKey: string): ControlOverlay {
   };
 }
 
-function wrapperFacts(): V9ApplicableWrapperLocalFacts {
-  const dimension = (assessment: "none" | "moderate") => ({
-    disposition: "reviewed" as const,
-    assessment,
-    signals: ["fixture-review"],
-    evidenceRefIds: ["fixture-evidence"],
-  });
-  return {
-    schemaVersion: 1,
-    applicability: "wrapper",
-    form: "native-staked",
-    formDisposition: "reviewed",
-    formSignals: ["wrapper-form:native-staked"],
-    formEvidenceRefIds: ["fixture-evidence"],
-    facts: {
-      contractMutability: dimension("none"),
-      custodyEscrow: dimension("none"),
-      strategyComplexity: dimension("none"),
-      leverage: dimension("none"),
-      rehypothecationCorrelation: dimension("none"),
-      shareAccountingNavOracle: dimension("moderate"),
-      withdrawalTerms: dimension("none"),
-      measuredUnwind: dimension("none"),
-      lossAbsorptionEmergencyControls: dimension("none"),
-    },
-    riskTransfer: {
-      disposition: "not-applicable",
-      mechanism: "none",
-      maximumParentLossAbsorptionPoints: 0,
-      signals: ["no-risk-transfer"],
-      evidenceRefIds: [],
-    },
-  };
-}
 
 describe("Safety Score v9 domain-routed incident adapter", () => {
-  it("publishes dated vulnerability history without inventing scored incident postures", () => {
-    const reviewClock = Date.parse("2026-10-01T00:00:00Z") / 1_000;
-    const productionOverlay = getSafetyScoreV9OperationalResilienceOverlay("usdt-tether", reviewClock);
-    if (productionOverlay === null) throw new Error("Expected operational overlay fixture");
-    for (const assetId of ["usd3-reserve-protocol", "xaut-tether", "fxusd-f-x-protocol"]) {
-      expect(getSafetyScoreV9ReviewedIncidents(assetId, reviewClock - 1)).toEqual([]);
-      const incidents = getSafetyScoreV9ReviewedIncidents(assetId, reviewClock);
-      expect(incidents).toMatchObject([{
-        domain: "security-history",
-        status: "resolved",
-        realization: "no-reported-exploit",
-        posture: { treatment: "informational-only" },
-        remediation: { state: "verified" },
-      }]);
-      const baselineControl = control(`mint:${assetId}`);
-      const baselineMint = mintReview(baselineControl.controlKey);
-      const controlRoute = routeSafetyScoreV9ControlIncidents([baselineControl], baselineMint, incidents);
-      expect(controlRoute.controls).toEqual([baselineControl]);
-      expect(controlRoute.mintReview).toEqual(baselineMint);
-      const facts = wrapperFacts();
-      expect(routeSafetyScoreV9WrapperIncidents(facts, incidents, {
-        shareAccountingNavOracle: [], measuredUnwind: [],
-      })).toEqual(facts);
-      const overlay = { ...productionOverlay, assetId };
-      expect(routeSafetyScoreV9OperationalIncidents(overlay, incidents)).toEqual(overlay);
-    }
-  });
+
 
   it("routes USDp and ZSD into resolved control history without an active blocker", () => {
     const usdp = routeSafetyScoreV9ControlIncidents(
@@ -329,46 +266,6 @@ describe("Safety Score v9 domain-routed incident adapter", () => {
     );
   });
 
-  it("routes sDOLA once into wrapper facts and preserves integration-only scope", () => {
-    const incidents = getSafetyScoreV9ReviewedIncidents("sdola-inverse-finance", CLOCK_SEC);
-    const routed = routeSafetyScoreV9WrapperIncidents(wrapperFacts(), incidents, {
-      shareAccountingNavOracle: ["incident-source"],
-      measuredUnwind: ["incident-source"],
-    });
-    if (routed.applicability !== "wrapper") throw new Error("Expected wrapper facts");
-    expect(routed.facts.shareAccountingNavOracle.incidentPostures).toMatchObject([
-      {
-        incidentId: "sdola-2026-llamalend-donation-oracle",
-        scope: { kind: "integration-only", integrationKey: "llamalend-sdola-long2" },
-        assessment: "high",
-      },
-    ]);
-    expect(routed.facts.measuredUnwind.incidentPostures?.[0]).toMatchObject({
-      scope: { kind: "integration-only" },
-      assessment: "high",
-    });
-
-    const routedTwice = routeSafetyScoreV9WrapperIncidents(routed, incidents, {
-      shareAccountingNavOracle: ["incident-source"],
-      measuredUnwind: ["incident-source"],
-    });
-    expect(routedTwice).toEqual(routed);
-
-    const result = resolveV9WrapperParentLimit({
-      parentScore: 55.8,
-      localFacts: routed,
-      fallbackDiscounts: { pure: 3, "native-staked": 5, "strategy-vault": 10 },
-    });
-    expect(result.adjustments.find((fact) => fact.factKey === "shareAccountingNavOracle")).toMatchObject({
-      assessment: "high",
-      discountPoints: 1.4,
-    });
-    expect(result.adjustments.find((fact) => fact.factKey === "measuredUnwind")).toMatchObject({
-      assessment: "none",
-      discountPoints: 0,
-    });
-    expect(result.limit).toBe(54.4);
-  });
 
   it("does not route a wrapper-local incident through control", () => {
     const baselineControl = control("mint:fixture");
@@ -379,5 +276,116 @@ describe("Safety Score v9 domain-routed incident adapter", () => {
     );
     expect(routed.controls).toEqual([baselineControl]);
     expect(routed.mintReview.latestResolvedIncidentAtSec).toBeNull();
+  });
+});
+
+function holderLossIncident() {
+  return V9ReviewedIncidentSchema.parse({
+    incidentId: "fixture-realized-holder-loss",
+    assetId: "fixture-nav-vault",
+    domain: "peg",
+    kind: "holder-exit-impairment",
+    occurredAt: "2026-03-22",
+    status: "mitigated",
+    scope: { kind: "holder-exit" },
+    posture: { treatment: "peg-multiplier-only" },
+    realizedHolderLossPct: 2.95,
+    reviewedAt: "2026-10-21",
+    reviewer: "Fixture reviewer",
+    primarySources: [{
+      label: "Historical mandatory withdrawal haircut",
+      url: "https://example.com/withdrawals",
+      publishedAt: "2026-03-22",
+    }],
+    finding: "Exiting holders incurred a 2.95% haircut against their whole withdrawal claim.",
+    remediation: {
+      state: "in-progress",
+      lastVerifiedAt: "2026-06-11",
+      summary: "Initial recovery was distributed; a complete make-whole remains unproved.",
+      sources: [{
+        label: "Partial recovery distribution",
+        url: "https://example.com/recovery",
+        publishedAt: "2026-06-11",
+      }],
+    },
+  });
+}
+
+describe("Safety Score v9 admitted realized holder loss projection", () => {
+  const clockSec = Date.parse("2026-10-22T00:00:00Z") / 1_000;
+
+  it("projects a NAV holder-exit loss with the original occurrence and source witness, without peg history", () => {
+    const incident = holderLossIncident();
+    expect(projectSafetyScoreV9RealizedHolderLossEvents([incident], clockSec)).toEqual([{
+      incidentId: incident.incidentId,
+      assetId: incident.assetId,
+      scope: incident.scope,
+      occurredAt: incident.occurredAt,
+      realizedHolderLossPct: 2.95,
+      primarySources: incident.primarySources,
+      finding: incident.finding,
+    }]);
+    const evidence = new ReviewEvidenceBuilder(incident.assetId, clockSec);
+    addSafetyScoreV9IncidentEvidence(evidence, [incident]);
+    expect(evidence.finish().researchEvidence).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        sourceId: `safety-score-v9.incident-review.${incident.incidentId}`,
+        url: incident.primarySources[0]!.url,
+      }),
+    ]));
+  });
+
+  it("does not infer a holder loss from covered reserve loss, discounts, outage duration or an unsupported denominator", () => {
+    const base = holderLossIncident();
+    delete base.realizedHolderLossPct;
+    const findings = [
+      "A reserve swap lost 97% of the swapped position; treasury covered it and holder balances were unaffected.",
+      "Secondary-market trading fell 22% below target while primary redemption remained operational.",
+      "A single venue printed a 35% discount without proved global holder-claim impairment.",
+      "Market confidence produced a 13% discount while issuer redemptions continued.",
+      "Primary redemption was unavailable for 30 hours and 50 minutes; no reserve haircut was proved.",
+      "Gross protocol losses were reported, but the whole-token holder-claim denominator is unknown.",
+    ];
+    const incidents = findings.map((finding, index) => V9ReviewedIncidentSchema.parse({
+      ...base, incidentId: `fixture-unquantified-${index}`, finding,
+    }));
+    expect(projectSafetyScoreV9RealizedHolderLossEvents(incidents, clockSec)).toEqual([]);
+  });
+
+  it("preserves exact scope and explicit subthreshold losses for the policy consumer", () => {
+    const incident = V9ReviewedIncidentSchema.parse({
+      ...holderLossIncident(), domain: "operational", kind: "material-operational-outage",
+      posture: { category: "reserve", blocker: "active-material-incident" },
+      scope: { kind: "deployment", deploymentKey: "fixture-deployment", exposureShare: 0.25 },
+      realizedHolderLossPct: 0.5,
+    });
+    expect(projectSafetyScoreV9RealizedHolderLossEvents([incident], clockSec)).toMatchObject([{
+      scope: incident.scope, realizedHolderLossPct: 0.5,
+    }]);
+  });
+
+  it("treats identical evidence identically across synthetic asset identities", () => {
+    const first = holderLossIncident();
+    const second = V9ReviewedIncidentSchema.parse({ ...first, assetId: "fixture-other-nav-vault" });
+    expect(projectSafetyScoreV9RealizedHolderLossEvents([second], clockSec)).toEqual(
+      projectSafetyScoreV9RealizedHolderLossEvents([first], clockSec).map((event) => ({
+        ...event, assetId: second.assetId,
+      })),
+    );
+  });
+
+  it("does not admit future occurrence or review clocks, and never replaces the occurrence with remediation", () => {
+    const incident = holderLossIncident();
+    const reviewSec = Date.parse(`${incident.reviewedAt}T00:00:00Z`) / 1_000;
+    expect(projectSafetyScoreV9RealizedHolderLossEvents([incident],
+      Date.parse("2026-03-21T00:00:00Z") / 1_000)).toEqual([]);
+    expect(projectSafetyScoreV9RealizedHolderLossEvents([incident], reviewSec - 1)).toEqual([]);
+    expect(projectSafetyScoreV9RealizedHolderLossEvents([incident], reviewSec)).toMatchObject([{
+      occurredAt: "2026-03-22",
+    }]);
+  });
+
+  it.each([NaN, Infinity, -1])("rejects invalid scoring clock %s", (invalidClock) => {
+    expect(() => projectSafetyScoreV9RealizedHolderLossEvents([holderLossIncident()], invalidClock)).toThrow();
   });
 });

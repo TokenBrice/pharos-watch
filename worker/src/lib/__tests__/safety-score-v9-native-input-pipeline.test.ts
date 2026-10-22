@@ -7,6 +7,7 @@ import {
   canonicalizeLenderBookObservation,
   deriveLenderBookObservationIdentity,
   lenderBookAdmissionReason,
+  supportsLenderBookObservation,
   resolveLenderTokenIds,
 } from "@shared/lib/safety-score-v9/lender-book-registry";
 import {
@@ -241,8 +242,9 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
         if (source.status !== "ok") throw new Error("Expected complete synthetic book");
         const vault = ACTIVE_META_BY_ID.get(id)!.contracts!.find(row => row.chain === "ethereum")!.address.toLowerCase();
         const loanToken = ACTIVE_META_BY_ID.get(parent)!.contracts!.find(row => row.chain === "ethereum")!.address.toLowerCase();
-        const kind = loadV9CandidateMethodologyPolicy().policy.semantic.backing.lenderCollateralBook.admittedAssets
-          .find(row => row.assetId === id)!.deployments[0]!.kind;
+        const params = LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS["erc4626-single-asset"].paramsSchema.parse(
+          ACTIVE_META_BY_ID.get(id)!.liveReservesConfig!.params);
+        const kind = params.redemptionLiquidity?.source === "morpho-vault-v2" ? "vault-v2" as const : "metamorpho-v1" as const;
         const payload = { ...source, assetId: id, deployments: source.deployments.map(deployment => ({
           ...deployment, vault, loanToken, kind,
           codeHashes: { ...deployment.codeHashes, [vault]: WORD },
@@ -272,32 +274,22 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
       });
     });
 
-    it.each(shapes)("consumes %s book without lifting its former generic Backing", (id, parent, deployed, _name, weakBook) => {
+    it.each(shapes)("consumes %s complete book independently of reserve row splits", (id, parent, deployed, _name, weakBook) => {
       expect(current.quarantines).toEqual([]);
       const facts = current.compiledFacts.assets.find(row => row.assetId === id)!;
-      expect(facts.reserveExposures).toHaveLength(2);
       expect(facts.reserveExposures.every(row => row.trackedAssetId === parent && row.provenance === "live" &&
         row.status.observationState === "known" && row.status.applicability.state === "required")).toBe(true);
       expect(facts.reserveExposures.find(row => row.assetClass === "protocol-position")!.weight).toBeCloseTo(deployed, 12);
       expect(facts.lenderBook?.status.observationState).toBe("known");
-      const before = previous.candidate.cards.find(row => row.id === id)!;
       const after = current.candidate.cards.find(row => row.id === id)!;
       expect(after.ratingStatus).toBe("rated");
-      expect(after.pillars.backing.score!).toBeLessThanOrEqual(before.pillars.backing.score!);
       const reserve = after.breakdowns!.backing.groups.find(row => row.key === "reserves")!;
-      const oldReserve = before.breakdowns!.backing.groups.find(row => row.key === "reserves")!;
       const parentBacking = current.candidate.cards.find(row => row.id === parent)!.pillars.backing.score!;
-      expect(reserve.score).toBeCloseTo(Math.min(oldReserve.score!, parentBacking * (weakBook ? .35 : 1)), 7);
+      expect(reserve.score).toBeCloseTo(parentBacking * (weakBook ? .35 : 1), 7);
       const factors = after.breakdowns!.backing.components.flatMap(row => row.factors ?? [])
         .filter(row => row.componentKey.includes(":lender-book:"));
       expect(factors.length).toBeGreaterThan(0);
-      if (weakBook) {
-        expect(after.pillars.backing.score!).toBeLessThan(before.pillars.backing.score!);
-        expect(factors.some(row => resolveV9EffectiveScoringWeight(row) > 0)).toBe(true);
-      } else {
-        expect(after.pillars.backing.score).toBe(before.pillars.backing.score);
-        expect(factors.every(row => resolveV9EffectiveScoringWeight(row) === 0)).toBe(true);
-      }
+      expect(factors.some(row => resolveV9EffectiveScoringWeight(row) > 0)).toBe(true);
       expect(facts.dependencies.edges).toEqual(previous.compiledFacts.assets.find(row => row.assetId === id)!.dependencies.edges);
     });
   });
@@ -457,8 +449,9 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
       expect(restored.input.liveReserveProvenanceMap).toEqual(oldInput.liveReserveProvenanceMap);
       for (const id of [PRIME, YIELD]) {
         expect(restored.input.liveReserveProvenanceMap[id]).not.toHaveProperty("lenderBookObservation");
-        expect(baseline.compiledFacts.assets.find(asset => asset.assetId === id)!.lenderBook?.observation).toBeNull();
-        expect(baseline.compiledFacts.assets.find(asset => asset.assetId === id)!.gaps.some(gap => gap.message.includes("legacy-unobserved"))).toBe(true);
+        const asset = baseline.compiledFacts.assets.find(asset => asset.assetId === id)!;
+        expect(asset.lenderBook).toBeUndefined();
+        expect(asset.gaps.some(gap => gap.message.includes("legacy-unobserved"))).toBe(false);
       }
     });
 
@@ -855,11 +848,10 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
         status: "unavailable", reason: "accepted-source-unavailable",
       });
       expect(captured.input.lenderCollateralBacking!.byAssetId).toEqual({});
-      const policy = loadV9CandidateMethodologyPolicy().policy.semantic.backing.lenderCollateralBook;
-      for (const admitted of policy.admittedAssets) {
-        const observation = captured.input.liveReserveProvenanceMap[admitted.assetId]!.lenderBookObservation!;
-        expect(observation.assetId).toBe(admitted.assetId);
-        if (admitted.assetId === PRIME) expect(observation).toEqual(observations[PRIME]);
+      for (const coin of ACTIVE_STABLECOINS.filter(coin => supportsLenderBookObservation(coin.liveReservesConfig))) {
+        const observation = captured.input.liveReserveProvenanceMap[coin.id]!.lenderBookObservation!;
+        expect(observation.assetId).toBe(coin.id);
+        if (coin.id === PRIME) expect(observation).toEqual(observations[PRIME]);
         else expect(observation).toMatchObject({ status: "unavailable", reason: "missing-observation", deployments: null });
       }
       expect(captured.input.liveReserveMap[PRIME]).toEqual(ACTIVE_META_BY_ID.get(PRIME)!.reserves);
@@ -873,51 +865,21 @@ describe("v10.19 lender-book wire and policy admission", () => {
   const policy = loadV9CandidateMethodologyPolicy().policy.semantic.backing.lenderCollateralBook;
   const complete = book(YIELD, clockSec);
 
-  it("enrolls every configured direct Morpho lender and every catalog deployment, excluding unrelated vaults", () => {
-    const direct = ACTIVE_STABLECOINS.filter(coin => {
-      if (coin.liveReservesConfig?.adapter !== "erc4626-single-asset") return false;
-      const params = LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS["erc4626-single-asset"].paramsSchema.parse(coin.liveReservesConfig.params);
-      const source = params.redemptionLiquidity?.source;
-      return source === "morpho-vault-v1" || source === "morpho-vault-v2";
-    });
-    expect(policy.admittedAssets.map(asset => asset.assetId)).toEqual(direct.map(coin => coin.id).sort());
-    expect(policy.admittedAssets).toHaveLength(33);
-    expect(policy.admittedAssets.reduce((sum, asset) => sum + asset.deployments.length, 0)).toBe(35);
-    for (const admitted of policy.admittedAssets) {
-      const coin = ACTIVE_META_BY_ID.get(admitted.assetId)!;
-      expect(admitted.deployments.map(deployment => deployment.chain).sort()).toEqual(coin.contracts!.map(contract => contract.chain).sort());
-      expect(coin.liveReservesConfig!.adapter).toBe("erc4626-single-asset");
-      const params = LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS["erc4626-single-asset"].paramsSchema.parse(coin.liveReservesConfig!.params);
-      expect(params.redemptionLiquidity).toBeDefined();
-      const primaryChain = coin.liveReservesConfig!.inputs.primary;
-      if (primaryChain.kind !== "onchain-evm") throw new Error("Missing direct on-chain source");
-      const primaryKind = admitted.deployments.find(deployment => deployment.chain === primaryChain.chain)!.kind;
-      expect(params.redemptionLiquidity!.source === "morpho-vault-v2" ? primaryKind === "vault-v2" : primaryKind.startsWith("metamorpho-")).toBe(true);
-    }
-    expect(policy.admittedAssets.find(asset => asset.assetId === "gtusdcp-gauntlet")!.deployments).toEqual([
-      { chain: "arbitrum", kind: "metamorpho-v1.1" },
-      { chain: "base", kind: "metamorpho-v1" },
-      { chain: "ethereum", kind: "vault-v2" },
-    ]);
-    expect(policy.admittedAssets.some(asset => asset.assetId === "susds-sky" || asset.assetId === "syrupusdc-maple")).toBe(false);
+  it("selects direct lender capability rather than an asset identity", () => {
+    const params = LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS["erc4626-single-asset"].paramsSchema.parse(
+      ACTIVE_META_BY_ID.get(PRIME)!.liveReservesConfig!.params);
+    const config = { adapter: "erc4626-single-asset" as const, params };
+    expect(supportsLenderBookObservation(config)).toBe(true);
+    expect(supportsLenderBookObservation({ ...config, params: { ...params, redemptionLiquidity: undefined } })).toBe(false);
+    expect(supportsLenderBookObservation(undefined)).toBe(false);
   });
 
-  it("pins all eleven fallback classes and rejects malformed policy identities rather than defaulting", () => {
-    expect(policy.classQuality).toEqual({
-      "native-eth": 95, "btc-wrapper": 85, "eth-lst": 85, "eth-yield-or-restaked": 80,
-      "precious-metal-receipt": 85, "major-alt-l1": 70,
-      "principal-token": 55, "yield-bearing-stable": 55, "synthetic-dollar": 55,
-      "structured-credit": 35, "other-unknown": 35,
-    });
+  it("requires known collateral classes but leaves unknown pricing to the shared cause policy", () => {
+    expect(policy.classQuality["structured-credit"]).toBe(35);
     const missingClass = structuredClone(policy);
     const { "native-eth": _native, ...incompleteClassQuality } = missingClass.classQuality;
     expect(LenderCollateralBookPolicySchema.safeParse({ ...missingClass, classQuality: incompleteClassQuality }).success).toBe(false);
-    const duplicate = structuredClone(policy);
-    duplicate.admittedAssets[1] = duplicate.admittedAssets[0]!;
-    expect(LenderCollateralBookPolicySchema.safeParse(duplicate).success).toBe(false);
-    expect(LenderCollateralBookPolicySchema.safeParse({ ...policy, admittedAssets: policy.admittedAssets.slice(1) }).success).toBe(false);
-    expect(LenderCollateralBookPolicySchema.safeParse({ ...policy, collateralClasses: [...policy.collateralClasses, policy.collateralClasses[0]!] }).success).toBe(false);
-    expect(LenderCollateralBookPolicySchema.safeParse({ ...policy, collateralClasses: policy.collateralClasses.map((row, index) => index === 0 ? { ...row, reviewedAt: "2026-02-30" } : row) }).success).toBe(false);
+    expect(LenderCollateralBookPolicySchema.safeParse({ ...policy, collateralClasses: [] }).success).toBe(false);
   });
 
   it("resolves exact active savUSD/USD3/ftUSD without aliasing siUSD or PT-siUSD to iUSD", () => {

@@ -35,12 +35,14 @@ function projectV9ResolvedBackingExposure(
     exposureKey,
     upstreamAssetId: dependency.upstreamAssetId,
     score: dependency.score,
-    cause: dependency.score !== null ? knownCause : pillar?.aggregationDisposition === "excluded-a-b"
-      ? (pillar.excludedCauses?.[0] ?? "U")
-      : (knownCause ?? "U"),
-    ratingStatus: dependency.score !== null ? "rated" : upstream?.scoreInput.pillars.backing.aggregationDisposition === "excluded-a-b" ? "pipeline-gap" : "not-rated",
-    causeGapIds: upstream?.scoreInput.pillars.backing.causeGapIds ?? [],
-    limitedEvidenceCauses: upstream?.scoreInput.pillars.backing.limitedEvidenceCauses ?? ["U"],
+    cause: pillar?.aggregationDisposition === "unavailable" ? null
+      : dependency.score !== null ? knownCause : pillar?.aggregationDisposition === "excluded-a-b"
+        ? (pillar.excludedCauses?.[0] ?? null)
+        : (knownCause ?? "U"),
+    ratingStatus: dependency.score !== null ? "rated" : pillar !== undefined &&
+      (pillar.aggregationDisposition ?? "included") !== "included" ? "pipeline-gap" : "not-rated",
+    causeGapIds: pillar?.causeGapIds ?? [],
+    limitedEvidenceCauses: pillar?.limitedEvidenceCauses ?? [],
     evidenceLevel: upstream?.scoreInput.pillars.backing.evidenceLevel ?? "insufficient",
     reasonCodes: uniqueSorted(backingReasons.map((reason) => reason.code)),
     ...(reasons === undefined ? {} : { reasons }),

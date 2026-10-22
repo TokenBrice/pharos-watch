@@ -33,7 +33,7 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://aid.gaib.ai/transparency",
-    "provider": "GAIB transparency dashboard; the linked McMillan Woods (Hong Kong) CPA Limited report provides limited assurance over Spiceflow Corp's asset deployment as of 1 September 2026, not an AID reserve-to-liability reconciliation",
+    "provider": "GAIB transparency dashboard; the linked McMillan Woods (Hong Kong) CPA Limited report retrieved 2026-10-20 provides ISAE 3000 limited assurance over USD 16.8 million of Spiceflow Corp deployed assets as of 30 September 2026, signed 2 October 2026. It does not reconcile AID reserves to AID liabilities",
     "attestorTier": "self",
     "cadence": "undisclosed",
     "latestReport": {
@@ -99,7 +99,7 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "unknown",
   "governanceQuality": "single-entity",
   "launchDate": "2025-10-31"
 }

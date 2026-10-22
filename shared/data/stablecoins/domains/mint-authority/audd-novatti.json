@@ -8,6 +8,7 @@
     "controls": [
       {
         "deploymentRefs": [
+          "arc:0xdec15d98d8c16d9ca2f8cc94ba4b88fe4f259393",
           "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
           "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
           "hedera:0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
@@ -22,7 +23,21 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "evidence": "Issuer-operated mint/redeem: AUDC Pty Ltd creates and redeems AUDD supply 1:1 against custodied AUD reserves; no permissionless or user-collateralized mint route exists across its native multichain deployments."
+        "evidence": "Issuer-operated mint/redeem: AUDC Pty Ltd creates and redeems AUDD supply 1:1 against custodied AUD reserves; no permissionless or user-collateralized mint route exists across its native multichain deployments. Arc identity correction retrieved 2026-10-20: the September 30 William Buck report includes the exact Arc contract as a ninth native liability; the issuer homepage and Arc launch announcement corroborate issuer operation. The explorer identifies AUDD, six decimals and an AdminUpgradeabilityProxy, not a third-party representation. No current Arc signing topology, implementation permission census or independently immutable mint bound is inferred.",
+        "sources": [
+          {
+            "label": "AUDD September 2026 AUP, pages 3-5, including exact Arc deployment (retrieved 2026-10-20)",
+            "url": "https://www.audd.digital/wp-content/uploads/2026/10/AUDC-Agreed-upon-procedures-report-Sep26_.pdf"
+          },
+          {
+            "label": "AUDC Arc launch announcement, September 16 (retrieved 2026-10-20)",
+            "url": "https://www.audd.digital/audc-goes-live-on-arc-on-day-one-expanding-institutional-stablecoin-access-for-global-settlements-tokenised-assets-and-fx-trading/"
+          },
+          {
+            "label": "Arc AUDD exact proxy identity (retrieved 2026-10-20)",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0xdec15d98d8c16d9ca2f8cc94ba4b88fe4f259393"
+          }
+        ]
       },
       {
         "label": "AUDD Ethereum contract-native mint quorum",

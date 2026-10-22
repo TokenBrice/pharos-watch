@@ -84,7 +84,7 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "external-validated-network",
+    "tier": "issuer-native-burn-mint",
     "summary": "Spiko's cited 2025 CCIP announcement explicitly concerns EUTBL and USTBL, not EURSAFO. The EURSAFO deployments below are documented fund-share issuance routes; that source does not establish EURSAFO-specific CCIP participation. The existing adverse external-validation tier is retained pending token-specific transport and deployment-control evidence, rather than removed on the strength of an inapplicable announcement.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",

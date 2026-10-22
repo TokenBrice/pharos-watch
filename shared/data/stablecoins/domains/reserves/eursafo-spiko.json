@@ -3,11 +3,11 @@
   "reserves": [
     {
       "sourceKey": "spiko-api:eursafo:total-assets",
-      "name": "Fully collateralized overnight total-return swap exposure",
+      "name": "Spiko Amundi Overnight Swap Fund (EUR) shares",
       "pct": 100,
       "risk": "medium",
-      "assetClass": "other",
-      "issuerOrObligor": "BNP Paribas",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Spiko SICAV, SAFO sub-fund and total-return swap counterparties",
       "riskFactors": [
         "counterparty",
         "market",
@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoEur)",
+    "reviewedAt": "2026-10-21",
+    "reviewer": "R2 family consistency review (FAM-SPIKO)",
     "confidence": "verified",
     "sources": [
       {
@@ -51,13 +51,18 @@
       {
         "label": "AMF-hosted Spiko SICAV semiannual report at 30 June 2026, SAFO assets, liabilities and securities/swap inventory pages 26–43",
         "url": "https://geco.amf-france.org/back-office/document/download/429960"
+      },
+      {
+        "label": "Exact EUR share-class identity, native registers and five share decimals",
+        "url": "https://public-api.spiko.io/share-classes/eurSAFO"
       }
     ],
-    "rationale": "The producer emits the whole EURSAFO fund-share claim as one asset identity; the 100% slice describes this immediate claim rather than a measured 100% derivatives allocation. The current SAFO holdings API publishes dated equity, swap-leg and cash rows for 1 October 2026, including signed derivative market values. The AMF-hosted 30 June 2026 semiannual report independently locates the exact EUR share class, assets, liabilities and securities/swap inventory within the public filing; it is not an audit opinion. The prospectus establishes proportional UCITS portfolio ownership and portfolio-performance hedging through TRS. S&P's 29 September 2026 exact EUR share-class review identifies BNP Paribas as the sole TRS counterparty and daily swap unwind. Physical holdings and signed hedge legs must not be substituted for the existing positive-percentage reserve slices without a derivative-aware look-through method.",
-    "compositionBasis": "Single EURSAFO fund-share producer identity, with separately sourced 1 October 2026 securities, swap-leg and cash look-through, 30 June 2026 filed securities/swap inventory and 1 September 2026 prospectus",
+    "rationale": "The 100% slice identifies the immediate proportional EUR share-class claim on Spiko Amundi Overnight Swap Fund, not a measured 100% derivative allocation or a direct claim on BNP Paribas. The September 2026 prospectus establishes portfolio-wide total-return swaps at approximately 100% of net assets, with the physical securities owned by the sub-fund and held by CACEIS. The 21 October inventory publishes physical equity, cash and signed swap legs; negative derivative market values are not normalized to positive reserve weights. The class objective is Capitalized €STR + 0.50% before class fees, superseding stale product-page rate claims. Ordinary redemption settles D+1 after a 15:00 Paris cutoff, subject to the currency market being open. A uniform 25% sub-fund net-assets gate may cap redemptions for at most 20 valuation days over three months, with unexecuted orders carried over without priority; one-day records ordinary contractual liquidity, not unconditional stressed realization. Complete current collateral netting, reuse, subcustody and all-share-class/native-register financial reconciliation remain unverified. The retained S&P exact-class review is supporting context, not an independent mechanism grade or financial audit opinion. The curated composition date remains 30 June 2026 in lockstep with the separately retained historical semiannual report; the 21 October inventory is diagnostic support for the standing fund-share and signed-derivative concepts, not a new financial assurance or report-period claim.",
+    "compositionBasis": "Historical 30 June 2026 SAFO filed report and exact fund-share identity; September prospectus/KID and 21 October inventory are separately reviewed structural/diagnostic evidence, not a renewed financial-report period",
     "scope": "full-composition",
-    "knownUnknownExposure": "The current public fund-assets API discloses the physical portfolio, signed swap legs, cash, valuation day and instrument identifiers; the earlier lack of dated public holdings is resolved. The producer still emits one fund-share identity, so its zero unknown-slice percentage does not measure counterparty-default losses, derivative netting, currency conversion, encumbrance or rehypothecation. Future counterparty changes require a fresh review.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "The dated fund inventory is public and the immediate reserve identity is a proportional fund-share claim; class-specific constituent allocations are not needed to identify that claim. Complete current counterparty-by-contract collateral, enforceable netting, actual reuse and immediate subcustody allocation remain unverified; disclosure is not evidence of zero exposure.",
+    "knownUnknownExposurePct": 0,
+    "compositionAsOf": "2026-06-30"
   },
   "custodyProfile": {
     "providers": [

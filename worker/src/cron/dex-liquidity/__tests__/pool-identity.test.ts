@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  attachReviewedQuoterV2SourcePoolIdentities,
   buildDexPriceObservationIdentity,
   buildPoolIdentity,
   buildPrimaryPoolKey,
@@ -10,6 +11,65 @@ import {
   registerKnownPoolExactStablecoin,
   registerKnownPoolIdentity,
 } from "../pool-identity";
+import { QUOTER_V2_REVIEWED_SHADOW_POOLS } from "@shared/lib/measured-execution-deployment-policies";
+import type { LlamaPool } from "../types";
+
+describe("reviewed shadow QuoterV2 source aliases", () => {
+  it.each(QUOTER_V2_REVIEWED_SHADOW_POOLS)("binds only the reviewed $chain provider UUID and exact token set", (policy) => {
+    const pool = {
+      pool: policy.defillamaPoolId, chain: policy.chain, project: policy.protocol,
+      underlyingTokens: policy.poolTokens.map((token) => token.address).reverse(),
+      tvlUsd: 123_456, volumeUsd1d: 789, poolMeta: "0.01%",
+    } as LlamaPool;
+    attachReviewedQuoterV2SourcePoolIdentities([pool]);
+    expect(pool).toMatchObject({ pool: policy.poolAddress, tvlUsd: 123_456, volumeUsd1d: 789, poolMeta: "0.01%" });
+  });
+
+  it.each(["wrong-uuid", "wrong-chain", "wrong-protocol", "wrong-token", "missing-tokens", "duplicate-token"] as const)(
+    "refuses %s instead of selecting by fingerprint or symbol",
+    (refusal) => {
+      const policy = QUOTER_V2_REVIEWED_SHADOW_POOLS[0];
+      const pool = {
+        pool: policy.defillamaPoolId as string, chain: policy.chain as string, project: policy.protocol as string,
+        underlyingTokens: policy.poolTokens.map((token) => token.address as string),
+      } as LlamaPool;
+      if (refusal === "wrong-uuid") pool.pool = "unreviewed-provider-uuid";
+      if (refusal === "wrong-chain") pool.chain = "ethereum";
+      if (refusal === "wrong-protocol") pool.project = "pancakeswap";
+      if (refusal === "wrong-token") pool.underlyingTokens![0] = "0x0000000000000000000000000000000000000001";
+      if (refusal === "missing-tokens") pool.underlyingTokens = null;
+      if (refusal === "duplicate-token") pool.underlyingTokens![1] = pool.underlyingTokens![0]!;
+      const original = pool.pool;
+      attachReviewedQuoterV2SourcePoolIdentities([pool]);
+      expect(pool.pool).toBe(original);
+    },
+  );
+
+  it.each([
+    { pool: undefined },
+    { pool: 123 },
+    { chain: undefined },
+    { chain: 123 },
+    { project: undefined },
+    { project: 123 },
+    { underlyingTokens: undefined },
+    { underlyingTokens: { length: 2 } },
+    { underlyingTokens: [null, null] },
+  ])("leaves incomplete or malformed alias inputs unchanged: %j", (overrides) => {
+    const policy = QUOTER_V2_REVIEWED_SHADOW_POOLS[0];
+    const pool = {
+      pool: policy.defillamaPoolId,
+      chain: policy.chain,
+      project: policy.protocol,
+      underlyingTokens: policy.poolTokens.map((token) => token.address),
+      tvlUsd: 123_456,
+      ...overrides,
+    } as LlamaPool;
+    const original = { ...pool };
+    attachReviewedQuoterV2SourcePoolIdentities([pool]);
+    expect(pool).toEqual(original);
+  });
+});
 
 describe("pool identity dedup", () => {
   it("keeps opaque provider deployments distinct without claiming exact physical identity", () => {

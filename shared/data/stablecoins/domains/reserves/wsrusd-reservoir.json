@@ -63,7 +63,7 @@
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "none",
-    "rehypothecation": "permitted",
+    "rehypothecation": "prohibited",
     "reviewedAt": "2026-07-20",
     "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
     "confidence": "verified",
@@ -81,6 +81,6 @@
         "url": "https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract"
       }
     ],
-    "uncertainty": "wsrUSD's direct underlying asset is rUSD 0x09D4214C03D01F49544C0448DBE3A27f768F2b34. The verified Savingcoin source burns rUSD from the depositor and mints wrapper shares; withdrawal burns shares and mints rUSD to the receiver. At Ethereum block 26095801 on 2026-10-01, asset() returned that rUSD address and rUSD.balanceOf(wrapper) was zero. The wrapper therefore does not custody an idle rUSD deposit balance. Custody of the economic backing is inherited from rUSD and its protocol-controlled adapters. The existing economic-level rehypothecation and legal-safeguard annotations remain subject to upstream evidence; the Terms of Service and product documents do not identify a holder trust or bankruptcy-remoteness structure. Product documentation conditions immediate redemption on available PSM liquidity. At the same block, MANAGER Safe 0x4E8a4894275780f571AaD53122e641D9f50Ff04f remained 3-of-5, and EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 retained DEFAULT_ADMIN_ROLE."
+    "uncertainty": "wsrUSD's direct underlying asset is rUSD 0x09D4214C03D01F49544C0448DBE3A27f768F2b34. The verified Savingcoin source burns rUSD from the depositor and mints wrapper shares; withdrawal burns shares and mints rUSD to the receiver. At Ethereum block 26095801 on 2026-10-01, asset() returned that rUSD address and rUSD.balanceOf(wrapper) was zero. The wrapper therefore does not custody an idle rUSD deposit balance. The prohibited rehypothecation annotation is scoped only to reuse of deposited rUSD by this wrapper: the verified burn/mint mechanics leave no deposited parent-token pool to lend or redeploy. It is not a legal prohibition on Reservoir's upstream reserve activity. Custody and economic reuse of the backing remain inherited from rUSD and its protocol-controlled adapters and are tracked on rusd-reservoir. The legal-safeguard annotations remain subject to upstream evidence; the Terms of Service and product documents do not identify a holder trust or bankruptcy-remoteness structure. Product documentation conditions immediate redemption on available PSM liquidity. At the same block, MANAGER Safe 0x4E8a4894275780f571AaD53122e641D9f50Ff04f remained 3-of-5, and EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 retained DEFAULT_ADMIN_ROLE."
   }
 }
