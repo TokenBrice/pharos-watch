@@ -15,7 +15,7 @@ import { isDexMeasuredExecutionObservationHistoryMature } from "../../types/meas
 import { V9_NEUTRAL_CONTROL_SCORE } from "../../types/safety-score-v9-public-facts";
 import { evaluateV9AccessPosture, type V9AccessPostureResult } from "./access-posture";
 import { createUnavailableV9BackingResult } from "./archetypes/evaluation";
-import { verifiedLiveInheritedExposures, V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT } from "./backing-inheritance";
+import { verifiedLiveInheritedExposures, verifiedLiveLenderBookExposures, V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT } from "./backing-inheritance";
 import {
   v9StructuralSignalSharePct,
   type V9BackingResult,
@@ -1259,13 +1259,14 @@ function applyRoleDependencyPillarLimits(
 }
 
 /**
- * A wrapper whose admitted same-parent reserve rows cover its whole backing
- * inherits that parent's available Backing pillar. Splitting an exact parent
- * across idle and strategy rows does not change eligibility.
+ * Direct parent-token claims inherit parent Backing. A complete admitted lender
+ * book is a separate parent-denominated candidate whose collateral risk remains
+ * priced; an arbitrary strategy denomination establishes neither admission.
  */
 function resolveInheritedStablecoinBacking(
   asset: V9AssetFactsBase,
   resolved: V9ResolvedDependencyInputs,
+  envelope: V9ValidatedPolicyEnvelope,
   evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
 ): V9InheritedStablecoinBacking | undefined {
   if (asset.reserveStatus.applicability.state === "not-applicable") return undefined;
@@ -1277,6 +1278,10 @@ function resolveInheritedStablecoinBacking(
   if (resolved.serial.length + resolved.basket.length !== 1) return undefined;
   const wrapped = resolved.serial.length === 1;
   const upstreamAssetId = wrapped ? resolved.serial[0].upstreamAssetId : resolved.basket[0].upstreamAssetId;
+  const parent = evaluatedById.get(upstreamAssetId);
+  if (!parent) return undefined;
+  const parentBackingScore = projectV9EffectiveBackingPillarScore(parent);
+  if (parentBackingScore === null) return undefined;
   if (wrapped && resolved.serial[0].blocked && resolved.serial[0].ratingStatus !== "not-rated") return undefined;
   let weight: number;
   if (asset.reserveExposures.length === 0) {
@@ -1294,15 +1299,13 @@ function resolveInheritedStablecoinBacking(
         edge.dependencyType === "wrapper" &&
         edge.upstreamAssetId === upstreamAssetId,
     );
-    const exposures = verifiedLiveInheritedExposures(asset, { parentAssetId: upstreamAssetId });
+    const parentClaim = { parentAssetId: upstreamAssetId, parentBackingScore };
+    const exposures = verifiedLiveInheritedExposures(asset, parentClaim) ??
+      verifiedLiveLenderBookExposures(asset, parentClaim, envelope);
     if (!hasWrapperEdge || exposures === undefined) return undefined;
     weight = exposures.reduce((sum, exposure) => sum + exposure.weight, 0);
   }
   if (weight < V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT) return undefined;
-  const parent = evaluatedById.get(upstreamAssetId);
-  if (!parent) return undefined;
-  const parentBackingScore = projectV9EffectiveBackingPillarScore(parent);
-  if (parentBackingScore === null) return undefined;
   const parentPillar = parent.scoreInput.pillars.backing;
   const cause = parentPillar.reasons.some((reason) => reason.cause === "D")
     ? "D"
@@ -1646,7 +1649,7 @@ export function evaluateV9Asset({
           identity.asOfSec,
         )
       : undefined;
-  const inheritedStablecoinBacking = resolveInheritedStablecoinBacking(asset, resolved, evaluatedById);
+  const inheritedStablecoinBacking = resolveInheritedStablecoinBacking(asset, resolved, evaluatedById, envelope);
   const wrapperStrategyTier = resolveV9WrapperStrategyTier(asset, resolved);
   const trackRecordMonths = conservativeTrackRecordMonths(asset.implementation.launchedAtSec, identity.asOfSec);
   const dependencyStatusGaps = gapsForV9Ids(gapIndex, asset.dependencies.status.gapIds);

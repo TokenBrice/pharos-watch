@@ -18,7 +18,7 @@ import {
 
 /** Minimum mapped single-parent weight for a wrapper to qualify as ~100% backed. */
 export const V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT = 0.99;
-export function verifiedLiveInheritedExposures(
+function verifiedLiveParentDenominatedExposures(
   asset: Pick<V9BackingAssetInput, "reserveStatus" | "reserveExposures" | "reserveResiduals">,
   inherited: Pick<V9InheritedStablecoinBacking, "parentAssetId">,
 ): readonly V9ReserveExposureFactV2[] | undefined {
@@ -40,13 +40,35 @@ export function verifiedLiveInheritedExposures(
     weight + residualWeight <= 1 + SCORE_EPSILON ? exposures : undefined;
 }
 
+/** Only admitted parent-token claims, not parent-denominated protocol positions, inherit directly. */
+export function verifiedLiveInheritedExposures(
+  asset: Pick<V9BackingAssetInput, "reserveStatus" | "reserveExposures" | "reserveResiduals">,
+  inherited: Pick<V9InheritedStablecoinBacking, "parentAssetId">,
+): readonly V9ReserveExposureFactV2[] | undefined {
+  const exposures = verifiedLiveParentDenominatedExposures(asset, inherited);
+  return exposures !== undefined && exposures.every(exposure =>
+    exposure.assetClass === "stablecoin" &&
+    (exposure.factorStatuses?.assetClass?.observationState ?? "known") === "known" &&
+    exposure.factorStatuses?.assetClass?.applicability.state !== "unresolved")
+    ? exposures : undefined;
+}
+
+/** A complete admitted lender book prices deployed claims without asserting 1:1 parent inheritance. */
+export function verifiedLiveLenderBookExposures(
+  asset: Pick<V9BackingAssetInput, "assetId" | "lenderBook" | "reserveStatus" | "reserveExposures" | "reserveResiduals">,
+  inherited: Pick<V9InheritedStablecoinBacking, "parentAssetId" | "parentBackingScore">,
+  policy: V9BackingEvaluationPolicy,
+): readonly V9ReserveExposureFactV2[] | undefined {
+  if (asset.lenderBook?.observation?.assetId !== asset.assetId ||
+    evaluateV1019LenderBook(asset.lenderBook, inherited.parentBackingScore, policy) === null) return undefined;
+  return verifiedLiveParentDenominatedExposures(asset, inherited);
+}
+
 /**
- * Reserve evaluation for a stablecoin-collateralized wrapper: the whole reserve
- * is one tracked, rated parent, so the reserve score is the parent's backing
- * pillar. Wrapper-local accounting, control, and withdrawal risk belong in the
- * wrapper's own pillars; incomplete local review is handled once by the
- * fact-aware parent limit. Concentration is intentionally NOT re-penalized —
- * the parent's backing pillar already prices its own internal diversification.
+ * An admitted parent-token claim inherits parent Backing; a complete lender
+ * book instead transmits its own measured collateral risk through that parent.
+ * Deployed strategy denomination alone proves neither kind of claim.
+ * Concentration is not re-penalized on these admitted whole-book paths.
  */
 export function inheritedStablecoinReserveEvaluation(
   asset: V9BackingAssetInput,
@@ -59,7 +81,8 @@ export function inheritedStablecoinReserveEvaluation(
   const lenderEvaluation = asset.lenderBook === undefined || asset.lenderBook.observation?.assetId !== asset.assetId ? null
     : evaluateV1019LenderBook(asset.lenderBook, inherited.parentBackingScore, policy);
   const inheritedQuality = lenderEvaluation?.reserveQuality ?? clampScore(inherited.parentBackingScore);
-  const liveExposures = verifiedLiveInheritedExposures(asset, inherited);
+  const liveExposures = verifiedLiveInheritedExposures(asset, inherited) ??
+    (lenderEvaluation === null ? undefined : verifiedLiveParentDenominatedExposures(asset, inherited));
   const evidenceRefIds = uniqueSorted([
     ...asset.reserveStatus.evidenceRefIds,
     ...(liveExposures?.flatMap(exposure => exposure.status.evidenceRefIds) ?? []),

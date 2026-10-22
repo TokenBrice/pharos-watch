@@ -21,7 +21,7 @@ import type {
 } from "../../types/safety-score-v9-lender-book";
 import { evaluateV1019LenderBook } from "../safety-score-v9/lender-book";
 import { lenderMarketKey } from "../safety-score-v9/lender-book-registry";
-import { verifiedLiveInheritedExposures } from "../safety-score-v9/backing-inheritance";
+import { verifiedLiveInheritedExposures, verifiedLiveLenderBookExposures } from "../safety-score-v9/backing-inheritance";
 
 import { asset, exposure, knownStatus, missingMechanism } from "./safety-score-v9-backing.test-support";
 import { resolveV9EvidenceCause } from "../safety-score-v9/evidence";
@@ -1148,8 +1148,10 @@ describe("v10.19 allocation-weighted Morpho lender Backing", () => {
     expect(result.contributions.flatMap(row => row.factors ?? []).some(row => row.componentKey.includes(":lender-book:"))).toBe(true);
     expect(result.contributions.find(row => row.source === "reserve-exposure")!.observationState).toBe("known");
     fact.status = { ...fact.status, observationState: "missing" };
-    expect(evaluateV9ReserveExposures(input, V9_CANDIDATE_POLICY_V1).score)
-      .toBe(evaluateV9ReserveExposures(base, V9_CANDIDATE_POLICY_V1).score);
+    expect(verifiedLiveLenderBookExposures(input, input.inheritedStablecoinBacking!, V9_CANDIDATE_POLICY_V1)).toBeUndefined();
+    const { inheritedStablecoinBacking: _parentClaim, ...withoutInheritance } = input;
+    expect(evaluateV9ReserveExposures(input, V9_CANDIDATE_POLICY_V1))
+      .toEqual(evaluateV9ReserveExposures(withoutInheritance, V9_CANDIDATE_POLICY_V1));
   });
 
   it("requires exact live same-parent identity for every admitted split claim", () => {
@@ -1210,6 +1212,24 @@ describe("v10.19 allocation-weighted Morpho lender Backing", () => {
     expect(verifiedLiveInheritedExposures({ ...split, reserveExposures: [
       split.reserveExposures[0]!, { ...split.reserveExposures[1]!, trackedAssetId: "synthetic-different-strategy" },
     ] }, merged.inheritedStablecoinBacking!)).toBeUndefined();
+  });
+
+  it("does not inherit a lending strategy's denomination unless its row is an admitted parent-token claim", () => {
+    const direct = inherited(undefined, 90);
+    const deployed = { ...direct, reserveExposures: [{
+      ...direct.reserveExposures[0]!, assetClass: "protocol-position" as const,
+      name: "Parent-token lending strategy", riskFactors: ["credit", "smart-contract"],
+    }] };
+    const parent = direct.inheritedStablecoinBacking!;
+    expect(verifiedLiveInheritedExposures(deployed, parent)).toBeUndefined();
+    const strategyResult = evaluateV9ReserveExposures(deployed, V9_CANDIDATE_POLICY_V1);
+    expect(strategyResult.contributions.some(row => row.componentKey === "reserve:inherited-backing:parent")).toBe(false);
+    expect(strategyResult.score).toBeLessThan(parent.parentBackingScore);
+    const admittedClaim = { ...deployed, reserveExposures: [{
+      ...deployed.reserveExposures[0]!, assetClass: "stablecoin" as const,
+    }] };
+    expect(verifiedLiveInheritedExposures(admittedClaim, parent)).toHaveLength(1);
+    expect(evaluateV9ReserveExposures(admittedClaim, V9_CANDIDATE_POLICY_V1).score).toBe(parent.parentBackingScore);
   });
 
   it("reproduces the exact raw-weighted Prime counterfactual including one-raw-unit weETH", () => {

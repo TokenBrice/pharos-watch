@@ -10,7 +10,7 @@ import { decimalSnap } from "./formula";
 import { resolveV9ReasonTreatment, unknownQuality } from "./policy";
 import { createV9GapIndex, type V9GapIndex } from "./gap-index";
 import { canonicalDomains, canonicalUniqueBy, compareText, domainKey, uniqueSorted } from "./primitives";
-import { inheritedStablecoinReserveEvaluation, verifiedLiveInheritedExposures } from "./backing-inheritance";
+import { inheritedStablecoinReserveEvaluation, verifiedLiveInheritedExposures, verifiedLiveLenderBookExposures } from "./backing-inheritance";
 import {
   backingPolicy,
   createV9BackingStructuralReason,
@@ -881,11 +881,12 @@ export function evaluateV9ReserveExposures(
   if (asset.reserveStatus.applicability.state === "not-applicable") {
     return { score: null, contributions: [], structuralReasons: [], unresolved: [], rateability: "rateable" };
   }
-  // The admitted whole parent claim and its lender book are economic inputs;
-  // splitting that claim into idle/strategy rows must not add another haircut.
+  // Direct parent claims and complete lender books are separate admission
+  // paths. A strategy's denomination cannot supply either missing proof.
   const inherited = asset.inheritedStablecoinBacking;
   const eligible = inherited !== undefined && (asset.reserveExposures.length === 0 ||
-    verifiedLiveInheritedExposures(asset, inherited) !== undefined);
+    verifiedLiveInheritedExposures(asset, inherited) !== undefined ||
+    verifiedLiveLenderBookExposures(asset, inherited, policy) !== undefined);
   const inheritedReserve = eligible
     ? inheritedStablecoinReserveEvaluation(asset, inherited, policy, gapIndex) : null;
   return inheritedReserve ?? evaluateGenericV9ReserveExposures(asset, policy, gapIndex);
