@@ -289,8 +289,11 @@ function scopedSignalKey(signal: V9StructuralSignal): string {
   ].join(":");
 }
 
-function scopedRiskSignal(signal: V9StructuralSignal): V9ScopedRiskSignal | null {
-  if (signal.economicLossScope !== "deployment" || signal.exposedScore === undefined) return null;
+function scopedRiskSignal(signal: V9StructuralSignal, policy: V9ValidatedPolicyEnvelope): V9ScopedRiskSignal | null {
+  const deploymentQuality: Partial<Record<V9StructuralSignal["kind"], Partial<Record<V9StructuralSignal["severity"], number>>>> =
+    policy.policy.semantic.formula.deploymentExposedQuality;
+  const exposedScore = signal.exposedScore ?? deploymentQuality[signal.kind]?.[signal.severity];
+  if (signal.economicLossScope !== "deployment" || exposedScore === undefined) return null;
   const failureDomainKey =
     [...signal.failureDomainKeys].sort(compareText).join("+") ||
     `signal:${signal.kind}:${signal.reason}`;
@@ -310,7 +313,7 @@ function scopedRiskSignal(signal: V9StructuralSignal): V9ScopedRiskSignal | null
       ? [...signal.failureDomainKeys].sort(compareText)
       : [failureDomainKey],
     economicLossScope: signal.economicLossScope,
-    exposedScore: signal.exposedScore,
+    exposedScore,
     exposureShare: rawShare === null ? null : rawShare * (1 - lossAbsorption),
     reason: signal.reason,
   };
@@ -680,7 +683,7 @@ export function scoreV9Input(
       : clampScore(aggregationRaw.score * pegMultiplierRaw);
   const compositeScopedSignals = input.structuralSignals.flatMap((signal) => {
     if (signal.pricedInPillar !== undefined) return [];
-    const scoped = scopedRiskSignal(signal);
+    const scoped = scopedRiskSignal(signal, policy);
     return scoped === null ? [] : [scoped];
   });
   const scopedRisk =

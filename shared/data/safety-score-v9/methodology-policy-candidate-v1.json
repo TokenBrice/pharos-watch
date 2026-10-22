@@ -86,6 +86,11 @@
         "control": 0.25
       },
       "compensabilityHeadroom": 20,
+      "deploymentExposedQuality": {
+        "critical-dependency": { "moderate": 79, "high": 64 },
+        "material-bridge": { "moderate": 74, "high": 59 },
+        "active-control-incident": { "critical": 39 }
+      },
       "pegExponent": 0.4,
       "pegHistoryWindowSec": 94672800,
       "pegQuietHistoryFloor": 97,
@@ -110,6 +115,13 @@
           "limit": 84,
           "kind": "track-record:<24m",
           "reason": "Less than two years of known implementation history."
+        },
+        {
+          "minMonthsInclusive": 24,
+          "maxMonthsExclusive": 36,
+          "limit": 86,
+          "kind": "track-record:<36m",
+          "reason": "Less than three years of known implementation history."
         }
       ],
       "gradeThresholds": [

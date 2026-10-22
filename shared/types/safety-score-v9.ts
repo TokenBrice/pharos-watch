@@ -455,6 +455,12 @@ const V9FormulaPolicySchema = z
     // policy keys so candidate sensitivity paths remain stable, but they no
     // longer create a hard `weakest + headroom` final-score cap.
     compensabilityHeadroom: ScoreSchema,
+    // Local exposed quality for proportional deployment losses, never composite caps.
+    deploymentExposedQuality: z.object({
+      "critical-dependency": z.object({ moderate: ScoreSchema, high: ScoreSchema }).strict(),
+      "material-bridge": z.object({ moderate: ScoreSchema, high: ScoreSchema }).strict(),
+      "active-control-incident": z.object({ critical: ScoreSchema }).strict(),
+    }).strict(),
     pegExponent: z.number().finite().min(0).max(1),
     pegHistoryWindowSec: z.number().int().positive(),
     pegQuietHistoryFloor: ScoreSchema,

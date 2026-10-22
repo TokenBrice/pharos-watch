@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { effectiveV9ControllerKeys, isV9DeploymentControllerAlreadyPriced, resolveV9ScopedRisk, type V9ScopedRiskSignal } from "../safety-score-v9/scoped-risk";
+import { effectiveV9ControllerKeys, isV9DeploymentControllerAlreadyPriced, isV9SharedControllerSignalAlreadyPriced, resolveV9ScopedRisk, type V9ScopedRiskSignal } from "../safety-score-v9/scoped-risk";
 import { makeDeploymentControl } from "./safety-score-v9-fixtures.test-support";
 import { compileNativeV3FactSet, coreFixture, evaluateV9FactSet, V9_CANDIDATE_POLICY_V1, type V9AssetFactsV2 } from "./safety-score-v9-facts.fixture-support";
+import type { V9StructuralSignal } from "../../types/safety-score-v9";
 
 function deployment(overrides: Partial<V9ScopedRiskSignal> = {}): V9ScopedRiskSignal {
   return {
@@ -18,6 +19,25 @@ function deployment(overrides: Partial<V9ScopedRiskSignal> = {}): V9ScopedRiskSi
 }
 
 describe("Safety Score v9 scoped risk", () => {
+  it("does not restore a common-mode controller charge for an already-priced exact root", () => {
+    const signal: V9StructuralSignal = {
+      kind: "critical-dependency", severity: "high", reason: "Shared controller.",
+      economicLossScope: "deployment", materialSharePct: 80,
+      failureDomainKeys: ["upgrade-control:ethereum:0xroot"], evidence: [],
+    };
+    const priced = new Set(["ethereum:0xroot"]);
+    expect(isV9SharedControllerSignalAlreadyPriced(signal, [], priced)).toBe(true);
+    expect(isV9SharedControllerSignalAlreadyPriced({
+      ...signal, failureDomainKeys: ["upgrade-control:ethereum:0xindependent"],
+    }, [], priced)).toBe(false);
+    expect(isV9SharedControllerSignalAlreadyPriced({
+      ...signal, failureDomainKeys: ["chain:ethereum"],
+    }, [], priced)).toBe(false);
+    expect(isV9SharedControllerSignalAlreadyPriced({
+      ...signal, kind: "active-control-incident",
+    }, [], priced)).toBe(false);
+  });
+
   it("deduplicates exact effective roots, not slice, asset-owner or failure-domain labels", () => {
     const root = makeDeploymentControl("root", "upgrade", {
       deploymentKey: "deployment:root",

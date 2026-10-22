@@ -61,7 +61,12 @@ import {
   operationalResilienceBlockers,
 } from "./operational-market-depth";
 import { resolveV9ReasonTreatment, unknownQuality } from "./policy";
-import { effectiveV9ControllerKeys, isV9DeploymentControllerAlreadyPriced } from "./scoped-risk";
+import {
+  effectiveV9ControllerKeys,
+  isV9DeploymentControllerAlreadyPriced,
+  isV9SharedControllerSignalAlreadyPriced,
+  pricedV9ControllerKeys,
+} from "./scoped-risk";
 import {
   canonicalDomains,
   canonicalUniqueBy,
@@ -1086,13 +1091,7 @@ function controlPillar(
           .filter((component) => component.binding)
           .flatMap((component) => component.controlKeys),
       );
-      const pricedControllerKeys = new Set(result.components
-        .filter((component) => component.binding && component.kind === "mint" && component.score !== null)
-        .flatMap((component) => component.controlKeys)
-        .flatMap((key) => {
-          const control = asset.controls.find((candidate) => candidate.controlKey === key);
-          return control === undefined ? [] : effectiveV9ControllerKeys(control);
-        }));
+      const pricedControllerKeys = pricedV9ControllerKeys(asset.controls, result.components);
       return result.structuralFailures.flatMap((failure) => {
         const signal = structuralSignalFromControl(asset, failure, bindingComponentControlKeys, pricedControllerKeys, envelope);
         if (signal.economicLossScope === "deployment" && signal.responsibility === "measured-adverse") {
@@ -1266,8 +1265,8 @@ function applyRoleDependencyPillarLimits(
 function resolveInheritedStablecoinBacking(
   asset: V9AssetFactsBase,
   resolved: V9ResolvedDependencyInputs,
-  envelope: V9ValidatedPolicyEnvelope,
   evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
+  envelope: V9ValidatedPolicyEnvelope,
 ): V9InheritedStablecoinBacking | undefined {
   if (asset.reserveStatus.applicability.state === "not-applicable") return undefined;
   if (
@@ -1278,11 +1277,11 @@ function resolveInheritedStablecoinBacking(
   if (resolved.serial.length + resolved.basket.length !== 1) return undefined;
   const wrapped = resolved.serial.length === 1;
   const upstreamAssetId = wrapped ? resolved.serial[0].upstreamAssetId : resolved.basket[0].upstreamAssetId;
+  if (wrapped && resolved.serial[0].blocked && resolved.serial[0].ratingStatus !== "not-rated") return undefined;
   const parent = evaluatedById.get(upstreamAssetId);
   if (!parent) return undefined;
   const parentBackingScore = projectV9EffectiveBackingPillarScore(parent);
   if (parentBackingScore === null) return undefined;
-  if (wrapped && resolved.serial[0].blocked && resolved.serial[0].ratingStatus !== "not-rated") return undefined;
   let weight: number;
   if (asset.reserveExposures.length === 0) {
     // A reviewed curated composition or a declared variant — never a
@@ -1855,6 +1854,10 @@ export function evaluateV9Asset({
         );
   const creditedPillars = applyOperationalResilienceCredits(basePillars, operationalResilience);
   const pillars = applyRoleDependencyPillarLimits(creditedPillars, resolved, envelope);
+  const pricedControllerKeys = pricedV9ControllerKeys(asset.controls, control.components);
+  const pricedDependencySignals = dependencySignals.map((signal) =>
+    isV9SharedControllerSignalAlreadyPriced(signal, asset.controls, pricedControllerKeys)
+      ? { ...signal, pricedInPillar: "control" as const } : signal);
   const scoreInput: V9ProductionScoreInput = {
     assetId: asset.assetId,
     marketRank,
@@ -1866,7 +1869,7 @@ export function evaluateV9Asset({
     unresolvedDeploymentShare: control.unresolvedDeploymentShare,
     parent,
     dependencyReasons: dependencyReasonsInput,
-    dependencyStructuralSignals: dependencySignals,
+    dependencyStructuralSignals: pricedDependencySignals,
     methodologyReasons,
     unresolvedEvidence: unresolvedEvidenceReasons(envelope, gapIndex),
     operationalResilience,

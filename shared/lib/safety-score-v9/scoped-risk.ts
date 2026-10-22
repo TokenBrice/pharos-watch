@@ -1,5 +1,7 @@
-import { assertScore, compareText, uniqueSorted } from "./primitives";
+import { assertScore, compareText, domainKey, uniqueSorted } from "./primitives";
 import type { V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
+import type { V9StructuralSignal } from "../../types/safety-score-v9";
+import type { V9ControlComponent } from "./control-primitives";
 
 export type V9EconomicLossScope = "access-only" | "deployment" | "reserve-claim" | "global-claim";
 
@@ -22,6 +24,37 @@ export function isV9DeploymentControllerAlreadyPriced(
 ): boolean {
   return !measuredSliceRisk && sliceControllerKeys.length > 0 &&
     sliceControllerKeys.every((key) => pricedControllerKeys.has(key));
+}
+
+/** Every binding authority component participates in Control's weakest-path price. */
+export function pricedV9ControllerKeys(
+  controls: readonly V9DeploymentControlFactV2[],
+  components: readonly V9ControlComponent[],
+): ReadonlySet<string> {
+  return new Set(components
+    .filter((component) => component.binding && component.kind === "mint" && component.score !== null)
+    .flatMap((component) => component.controlKeys)
+    .flatMap((key) => {
+      const control = controls.find((candidate) => candidate.controlKey === key);
+      return control === undefined ? [] : effectiveV9ControllerKeys(control);
+    }));
+}
+
+/** Common-mode controller domains cannot charge a root already priced by Control. */
+export function isV9SharedControllerSignalAlreadyPriced(
+  signal: V9StructuralSignal,
+  controls: readonly V9DeploymentControlFactV2[],
+  pricedControllerKeys: ReadonlySet<string>,
+): boolean {
+  return signal.kind === "critical-dependency" && signal.economicLossScope === "deployment" &&
+    signal.failureDomainKeys.length > 0 && signal.failureDomainKeys.every((key) => {
+      if (!key.startsWith("mint-control:") && !key.startsWith("upgrade-control:")) return false;
+      // Domain prefixes preserve the exact chain-qualified authority identity.
+      if (pricedControllerKeys.has(key.slice(key.indexOf(":") + 1))) return true;
+      const members = controls.filter((control) => control.failureDomains.some((domain) => domainKey(domain) === key));
+      return members.length > 0 && members.every((control) =>
+        isV9DeploymentControllerAlreadyPriced(effectiveV9ControllerKeys(control), pricedControllerKeys, false));
+    });
 }
 
 export interface V9ScopedRiskSignal {

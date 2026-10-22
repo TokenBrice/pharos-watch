@@ -42,7 +42,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "d04433bda353aabac9f041c1921ed19bacce195b445797c1f3f1e816609e3e36"
+      "sha256": "8ee4a7e6cadceeff09c30484943a0b51e0469caf7767a370ca2389e570a9a78f"
     },
     {
       "path": "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
@@ -454,7 +454,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/archetypes/cdp.ts",
-      "sha256": "cfe915b77c709980eb8ed558b712f4f187a630372129375f1644c5c495dc4d04"
+      "sha256": "59354b34434c085eec5b7ea0c099d2fa9d789b3dda6c9ee234fe2e09bd3caa79"
     },
     {
       "path": "shared/lib/safety-score-v9/archetypes/evaluation.ts",
@@ -474,7 +474,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/backing-inheritance.ts",
-      "sha256": "2f4cb585858d902c338f7cac015d6e145a27b095d36187798f5811fbb7d37e71"
+      "sha256": "aaee0abb9a216b8f1d47444a9920c84c8f0319ccfa8955829676da4504e956c5"
     },
     {
       "path": "shared/lib/safety-score-v9/backing-primitives.ts",
@@ -482,7 +482,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/backing.ts",
-      "sha256": "d9cdcf63d04b2829f26486cb226a62a589f68cd0a8f5140aeacfa1983b11df92"
+      "sha256": "eedfa9cfbc08169d76cf14300e0d812a8197916c2c024166057bbbaade7789a7"
     },
     {
       "path": "shared/lib/safety-score-v9/compile.ts",
@@ -514,7 +514,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/evaluate-asset.ts",
-      "sha256": "2c14f260550a2f9cfbdd71fb3517f2818db5e443b997a8ccb2100c6ba4e0eca9"
+      "sha256": "2a51c3ddece3e268d0bf2a818a178cf88f882f4a5cf8490ea526351f016dbea2"
     },
     {
       "path": "shared/lib/safety-score-v9/evaluate-set.ts",
@@ -546,7 +546,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/formula.ts",
-      "sha256": "4ee130bfc5fba705fbfcaf008ef8c603a482a2d608c9b3e8795e92a7b65e63b3"
+      "sha256": "b770556e0f4a910b56249c95075794e69d1ca74bc66b15438a320348a8c6aa12"
     },
     {
       "path": "shared/lib/safety-score-v9/gap-index.ts",
@@ -602,11 +602,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/public-witness-texts.ts",
-      "sha256": "c56c3cced7bb2641aa7d0be82ae7bf941214e99c9169c7cf314e103df38f9304"
+      "sha256": "a421429769613212ca47bbe9481938cd4b780fcd4c1df233ee91e153fcd66951"
     },
     {
       "path": "shared/lib/safety-score-v9/public.ts",
-      "sha256": "3d899d439bc23cc92cb87690a62aefd3343be332ef1ad27336f836c22db2964e"
+      "sha256": "30f45cf29debfea52547853b333bc2f4864e257e9229b078ed96f4c1f966f513"
     },
     {
       "path": "shared/lib/safety-score-v9/reasons.ts",
@@ -638,7 +638,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/scoped-risk.ts",
-      "sha256": "a22996157d318eee9ca0e08cde00601b1428f8b6acaa41f7cbcd20d7d0bb8a59"
+      "sha256": "260fa6e699b6a6ab84320dd07bdbdc1b6663a0105379e9e966452c99a799baea"
     },
     {
       "path": "shared/lib/safety-score-v9/score.ts",
@@ -930,7 +930,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-public-breakdowns.ts",
-      "sha256": "0ad28b865ae3bc33447d6a67ac3c1d3cc84864752a7c148477030be8cc4f93c3"
+      "sha256": "23fb425f31be5751364d4aa22cc334d6449b020e276e8a01c9dd292d166189e0"
     },
     {
       "path": "shared/types/safety-score-v9-public-cause-gaps.ts",
@@ -938,7 +938,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-public-causes.ts",
-      "sha256": "f658eff142582f28cbfb911c871146ba523b2459b2044525d3bf570353352db9"
+      "sha256": "4d7920b3e9191efdae96e9098cc568aba28cb3ae948df2fba019de8235509875"
     },
     {
       "path": "shared/types/safety-score-v9-public-evidence-facts.ts",
@@ -946,7 +946,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-public-facts.ts",
-      "sha256": "384a4ad415b8a2cc1f41403b7cbbd928598ad4edee96150f7936d9c4a9582498"
+      "sha256": "8557883de39a1296d244ec6acde2cceea5742e2c6bc99789aae3060dde36a155"
     },
     {
       "path": "shared/types/safety-score-v9-public-historical.ts",
@@ -958,11 +958,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-public-trace.ts",
-      "sha256": "aad44aa6f93969676088ac8cbbaee4bc9a3d7d99b3e20e57d87528ef4472f995"
+      "sha256": "b81d2e0ead6a8ddc067fed27b31539070da8bcce888d6c5c8cf44052ae21a085"
     },
     {
       "path": "shared/types/safety-score-v9-public-witness-texts.ts",
-      "sha256": "1b1dfa9b844c703feea3026d43b7523a7fb3e60da55e97e232b092af966650f6"
+      "sha256": "301d2e0927925fe684c9729fa273d02de1a9cdcd34cf39fe55f7284e8344be6c"
     },
     {
       "path": "shared/types/safety-score-v9-public.ts",
@@ -998,7 +998,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9.ts",
-      "sha256": "7fd777d6adb7b559736253cf760772195b35d113c2a0afce505dd442e8743d7d"
+      "sha256": "bdbc7f654c706052c65d0c7e19fc43600808164cb48269456ad7c5899d59bd76"
     },
     {
       "path": "shared/types/stablecoin-meta-control-schemas.ts",
@@ -1331,7 +1331,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-21-block-26239813-shock-coverage.json.gz"
     }
   ],
-  "digest": "95daaf0f8a7e28aa74c8fee98aae2bed61bee0e20db0ef7b6a0ddadc5145b9cd"
+  "digest": "71c3052253dc919b8cc40e21641ac82445aa60ae5c2690aa34c16dcdd59b1be7"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

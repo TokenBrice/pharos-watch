@@ -53,6 +53,31 @@ const ROOT_BOUNDED_UNCERTAINTY: V9BoundedUncertaintyAttribution = {
 };
 
 describe("scoreV9EvaluatedAsset", () => {
+  it.each([
+    { severity: "high" as const, exposedQuality: 64 },
+    { severity: "moderate" as const, exposedQuality: 79 },
+  ])("restores $severity shared-chain quality as proportional loss, not a cap", ({ severity, exposedQuality }) => {
+    const signal: V9StructuralSignal = {
+      kind: "critical-dependency", severity, reason: "Measured independent chain concentration.",
+      economicLossScope: "deployment", responsibility: "measured-adverse",
+      materialSharePct: 50, exposureKey: "slice:chain", riskEventKey: "chain:failure",
+      failureDomainKeys: ["chain:fixture"], evidence: [],
+    };
+    const trace = scoreV9EvaluatedAsset(input({ dependencyStructuralSignals: [signal] }), V9_CANDIDATE_POLICY_V1);
+    expect(trace.deploymentAdjustedScore).toBe(95 - (95 - exposedQuality) * 0.5);
+    expect(trace.deploymentAdjustments[0]?.exposedScore).toBe(exposedQuality);
+    expect(trace.caps).toEqual([]);
+    const measured = scoreV9EvaluatedAsset(input({
+      dependencyStructuralSignals: [{ ...signal, exposedScore: 40 }],
+    }), V9_CANDIDATE_POLICY_V1);
+    expect(measured.deploymentAdjustedScore).toBe(67.5);
+    const unresolved = scoreV9EvaluatedAsset(input({
+      dependencyStructuralSignals: [{ ...signal, materialSharePct: undefined, responsibility: "integration-missing" }],
+    }), V9_CANDIDATE_POLICY_V1);
+    expect(unresolved.deploymentAdjustedScore).toBe(95);
+    expect(unresolved.unresolvedDeploymentSignals[0]?.exposureShare).toBeNull();
+  });
+
 
   it("binds the score to fact, policy, build, clock, and source identities", () => {
     const trace = scoreV9EvaluatedAsset(input(), V9_CANDIDATE_POLICY_V1);
@@ -600,8 +625,13 @@ describe("simplified score limits", () => {
     expect(trace.finalScore).toBe(84);
     expect(trace.caps.map((cap) => cap.source)).toEqual(["track-record"]);
   });
-  it.each([24, 36, 120, null])("has no age ceiling at %s months", (trackRecordMonths) => {
+  it.each([36, 120, null])("has no age ceiling at %s months", (trackRecordMonths) => {
     expect(scoreV9EvaluatedAsset(input({ trackRecordMonths }), V9_CANDIDATE_POLICY_V1).caps).toEqual([]);
+  });
+  it.each([24, 27, 35.99])("preserves the original under-three-year ceiling at %s months", (trackRecordMonths) => {
+    const trace = scoreV9EvaluatedAsset(input({ trackRecordMonths }), V9_CANDIDATE_POLICY_V1);
+    expect(trace.finalScore).toBe(86);
+    expect(trace.bindingCap).toMatchObject({ source: "track-record", kind: "track-record:<36m", limit: 86 });
   });
   it("keeps nearest-integer own rounding when a fractional ceiling is nonbinding", () => {
     const trace = scoreV9EvaluatedAsset(input({

@@ -14,6 +14,8 @@ Use one cause-keyed unknown helper: Backing C35/U50, Exit C35/U50, Control C50/U
 
 Deployment/bridge authority is charged once per effective controller already priced in Control: compare exact admitted controller identities, never asset IDs. A shared root does not add another controller loss. Independent slice controllers and measured slice-specific bridge, oracle or incident risk retain proportional losses.
 
+Deployment exposed quality comes from its evaluated slice when available, otherwise the small deployment-only table: critical-dependency moderate/high 79/64, material-bridge moderate/high 74/59, active-control-incident critical 39. Charge only `(base − min(base, exposedQuality)) × measuredShare`, retaining existing disjoint-slice allocation and event coalescing. Unknown shares remain unresolved diagnostics. These values do not authorize whole-score caps.
+
 
 ## v10.15 Code-Sweep Release
 
@@ -232,7 +234,7 @@ Exactly five whole-score limit families remain:
 | Family | Rule |
 | --- | --- |
 | Current active depeg | At least 10% →49; at least 25% →39 |
-| Known implementation age | Under 24 months →84; unknown date disclosed without age ceiling |
+| Known implementation age | Under 24 months →84; 24–under 36 months →86; unknown date disclosed without age ceiling |
 | Required parent / wrapper | Premium-free inheritable parent limits, with form deduction only for actual wrappers |
 | Realized holder loss | Loss ≥25%: initial 39; loss ≥1% and <25%: initial 49; hold for 365 days, then linear recovery to 100 over the next 365 |
 | Speculative-credit residual | High speculative-credit at admitted reserve/global-claim scope with measured-adverse responsibility →59; admitted legacy unscoped proof also qualifies |
