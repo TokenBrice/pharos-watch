@@ -1288,6 +1288,18 @@ describe("Safety Score v9 public projection", () => {
     expect(JSON.stringify(card)).toBe(before);
   });
 
+  it.each([25, 10])("preserves the F-range cap and headline at %s", (limit) => {
+    const policyCap = V9_CANDIDATE_POLICY_V1.policy.semantic.formula.activeDepegCaps
+      .find((candidate) => candidate.limit === limit)!;
+    const card = resolveV9PublicWitnessTexts(projectSafetyScoreV9Card(fixture(`depeg-${limit}`, {
+      score: limit, grade: "F",
+      caps: [{ ...policyCap, source: "active-depeg", binding: true }],
+    })).card);
+    expect(card.bindingCap).toMatchObject({ limit, kind: "active-depeg:f", reason: policyCap.reason });
+    expect(projectTopDriver(card)?.reason).toBe(policyCap.reason);
+    expect(projectTopDriver(card)?.reason).toContain(`to ${limit}, within the F range.`);
+  });
+
   it("humanizes public prose while preserving exact causal identities and ticker labels", () => {
     const original = {
       path: "route:redemption:generation:asset:cost",

@@ -344,7 +344,7 @@ describe("methodology registry", () => {
   });
 
   it("retains the archive-free attribution release and aligns current Safety policy identity", () => {
-    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.29");
+    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.30");
     expect(SAFETY_SCORE_POLICY.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.23")!;
     expect(release).toMatchObject({
@@ -418,7 +418,7 @@ describe("methodology registry", () => {
 
   it("retains v10.29 as the highest version at the joint release cut", () => {
     const previous = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.28")!;
-    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0]!;
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.29")!;
     expect(release).toMatchObject({
       version: "10.29", date: "2026-10-22", effectiveAt: 1_792_663_200,
       reconstructed: false, commits: [],
@@ -436,6 +436,24 @@ describe("methodology registry", () => {
     expect(impact).toMatch(/at least 25%.*39.*at least 1%.*49/);
     expect(impact).toContain("Activation: 2026-10-22 10:00 UTC (release cut; 1792663200). v10.28 and v10.29 ship together; production acceptance follows the first accepted publications.");
     expect(impact).not.toMatch(/provisional|re-date/i);
+  });
+
+  it("records v10.30's provisional activation and uniform depeg/certificate calibration", () => {
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0]!;
+    expect(release).toMatchObject({
+      version: "10.30", date: "2026-10-22", effectiveAt: 1_792_713_600,
+      reconstructed: false, commits: [],
+    });
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.29");
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.30");
+    const impact = release.impact.join(" ");
+    expect(impact).toMatch(/at least 25%.*25.*at least 50%.*10.*F range/);
+    expect(impact).toMatch(/model confidence.*0\.75 to 0\.85/);
+    expect(impact).toContain("yBOLD 70→72 and yvUSDC 65→68");
+    expect(impact).toContain("VCRED is delisted from tracking");
+    expect(impact).toContain("BD-basedollar mint authority");
+    expect(impact).toContain("radar/partial-evidence display");
+    expect(impact).toContain("Planned activation is provisionally 2026-10-23 00:00 UTC (1792713600); re-date effectiveAt at release.");
   });
 
 });

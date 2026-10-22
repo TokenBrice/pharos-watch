@@ -234,7 +234,7 @@ Exactly five whole-score limit families remain:
 
 | Family | Rule |
 | --- | --- |
-| Current active depeg | At least 10% →49; at least 25% →39 |
+| Current active depeg | Maximum absolute peak among open events: at least 10% →49 (D); at least 25% →25; at least 50% →10 (both F) |
 | Known implementation age | Under 24 months →84; the 24–under 36-month tier is removed; unknown date disclosed without age ceiling |
 | Required parent / wrapper | Premium-free inheritable parent limits, with form deduction only for actual wrappers |
 | Realized holder loss | Loss ≥25%: initial 39; loss ≥1% and <25%: initial 49; hold for 365 days, then linear recovery to 100 over the next 365 |
@@ -615,7 +615,7 @@ The sensitivity harness is permanent research-only tooling for the active model 
 
 Exit maximizes unrounded feasible singleton/independent-pair scores. Stronger route is primary; bonus=`min(10,100 − primary) × backup/100`, with exact-notional/output/cost/resource gates. Tie order: combined, primary, backup, ascending code-unit keys. Round once, no unknown floor. >64 candidates retain proved reader-limit A, never truncate. Each physical rail scores once; current execution certificates outrank models.
 
-P3: admitted live-direct/on-chain atomic execution into admitted output proves open without a status-source string; concrete closure vetoes. P4: access weight 0.20, charged once: permissionless 100, whitelist 75, institutional/API 55, manual 20, unknown 50. No whole-route holder multiplier. Medium confidence: terms 0.85, certified/on-chain 0.75; preserve distinct queue/unknown-capacity 0.75, low-confidence limits and output/delay/fee facts. P5 removes unused execution models/duplicate low-capacity gates, not admission. No unknown floor over measured zero/low.
+P3: admitted live-direct/on-chain atomic execution into admitted output proves open without a status-source string; concrete closure vetoes. P4: access weight 0.20, charged once: permissionless 100, whitelist 75, institutional/API 55, manual 20, unknown 50. No whole-route holder multiplier. Medium model confidence: documented terms 0.85, admitted exact execution certificates 0.85, other on-chain/models 0.75. Observation confidence remains 0.85; preserve distinct queue/unknown-capacity 0.75, low-confidence limits and output/delay/fee facts. Exact-certificate admission and measurement rules are unchanged. P5 removes unused execution models/duplicate low-capacity gates, not admission. No unknown floor over measured zero/low.
 
 V10 uses JavaScript code-unit order, not locale collation, for route ties, dependency paths/diagnostics, reviewed transfers, supply attribution and bounded publication reasons. Scores/grades are unchanged; route/path identities, trace ordering and digests can rotate for previously locale-collated non-ASCII/case-sensitive keys.
 

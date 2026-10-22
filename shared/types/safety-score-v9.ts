@@ -908,6 +908,7 @@ const V9ExitPolicySchema = z
         low: z.number().finite().min(0).max(1),
       })
       .strict(),
+    exactCertificateModelConfidenceFactor: z.number().finite().min(0).max(1),
     observationConfidenceFactors: z
       .object({
         high: z.number().finite().min(0).max(1),

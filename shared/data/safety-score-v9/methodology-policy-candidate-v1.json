@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.29",
+  "releaseVersion": "10.30",
   "semantic": {
     "unknownQuality": {
       "backing": { "C": 35, "U": 50 },
@@ -52,10 +52,16 @@
       "pegQuietHistoryFloor": 97,
       "activeDepegCaps": [
         {
-          "minimumBps": 2500,
-          "limit": 39,
+          "minimumBps": 5000,
+          "limit": 10,
           "kind": "active-depeg:f",
-          "reason": "An active depeg of at least 25% limits the candidate rating to the F range."
+          "reason": "An active depeg of at least 50% limits the candidate rating to 10, within the F range."
+        },
+        {
+          "minimumBps": 2500,
+          "limit": 25,
+          "kind": "active-depeg:f",
+          "reason": "An active depeg of at least 25% limits the candidate rating to 25, within the F range."
         },
         {
           "minimumBps": 1000,
@@ -816,6 +822,7 @@
         "medium": 0.75,
         "low": 0.35
       },
+      "exactCertificateModelConfidenceFactor": 0.85,
       "observationConfidenceFactors": {
         "high": 1,
         "medium": 0.85,

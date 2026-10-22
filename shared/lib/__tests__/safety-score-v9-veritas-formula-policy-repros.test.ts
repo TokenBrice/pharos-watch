@@ -91,7 +91,7 @@ function scoringInput(
   // independently, so a band-only reanchor can contradict the caps' D/F contract.
   describe("VERITAS finding VER-005: active-depeg caps can cross their locked grade bands", () => {
     it.each([
-      { thresholdGrade: "D", minScore: 36, capKind: "active-depeg:f", declaredGrade: "F" },
+      { thresholdGrade: "D", minScore: 24, capKind: "active-depeg:f", declaredGrade: "F" },
       { thresholdGrade: "C-", minScore: 44, capKind: "active-depeg:d", declaredGrade: "D" },
     ] as const)("validates $capKind against the $declaredGrade band", (fixture) => {
       const policy: V9MethodologyPolicy = structuredClone(V9_CANDIDATE_POLICY_V1.policy);

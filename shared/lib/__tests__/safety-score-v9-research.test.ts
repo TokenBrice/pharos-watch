@@ -85,14 +85,38 @@ describe("v9 research handoff contracts", () => {
         activeDepegBps: 2_500,
       }),
       V9_CANDIDATE_POLICY_V1,
-      [{ kind: "structural:f", limit: 39, reason: "Independent structural F cap." }],
+      [{ kind: "structural:f", limit: 25, reason: "Independent structural F cap." }],
     );
 
     expect(trace.bindingCap).toMatchObject({
       source: "active-depeg",
       kind: "active-depeg:f",
-      limit: 39,
+      limit: 25,
     });
+  });
+
+  it.each([
+    { activeDepegBps: 999, limit: null, grade: "A+" },
+    { activeDepegBps: 1_000, limit: 49, grade: "D" },
+    { activeDepegBps: 2_499, limit: 49, grade: "D" },
+    { activeDepegBps: 2_500, limit: 25, grade: "F" },
+    { activeDepegBps: 4_999, limit: 25, grade: "F" },
+    { activeDepegBps: 5_000, limit: 10, grade: "F" },
+    { activeDepegBps: 5_001, limit: 10, grade: "F" },
+  ])("selects the depeg severity rung at $activeDepegBps bps", ({ activeDepegBps, limit, grade }) => {
+    const trace = scoreV9Input(scoringInput("depeg-boundary", {
+      pillars: { backing: 90, exit: 90, control: 90 },
+      activeDepegBps,
+    }), V9_CANDIDATE_POLICY_V1);
+    expect(trace.finalGrade).toBe(grade);
+    if (limit === null) {
+      expect(trace.caps.some((cap) => cap.source === "active-depeg")).toBe(false);
+    } else {
+      expect(trace.finalScore).toBe(limit);
+      expect(trace.bindingCap).toMatchObject({ source: "active-depeg", limit });
+      expect(trace.bindingCap!.reason).toContain(`${grade} range`);
+      if (grade === "F") expect(trace.bindingCap!.reason).toContain(`to ${limit},`);
+    }
   });
 
   it("withholds adverse attribution when an issuer-limited required parent is not rated", () => {
