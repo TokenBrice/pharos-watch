@@ -5,6 +5,7 @@ import { makeV9Extension } from "../../test-helpers/v9-fixed-input-extensions";
 import { rebuildFixed } from "./safety-score-v9-fact-set.test-support";
 import { computeDexDeploymentSupplyCoverage } from "../report-cards-snapshot-inputs";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
+import { V9AssetFactsV3Schema } from "@shared/types/safety-score-v9-facts";
 
 const ethereum = { chain: "ethereum", address: "0x1111111111111111111111111111111111111111", decimals: 18 };
 const base = { chain: "base", address: "0x2222222222222222222222222222222222222222", decimals: 18 };
@@ -61,6 +62,68 @@ describe("exhaustive DEX exit census admission", () => {
       } else {
         expect(card.reasonCodes).not.toContain("no-viable-exit-path");
         expect(card.scoreTrace.adverseAttribution.items.some((item) => item.path.startsWith("pillar:exit"))).toBe(false);
+        if (scenario === "partial") {
+          expect(asset.exitCoverage).toMatchObject({ verifiedNoPoolsSupplyShare: 0.6 });
+          expect(card.pillars.exit.score).toBe(20);
+        } else {
+          expect(asset.exitCoverage).toBeUndefined();
+        }
+      }
+    },
+  );
+
+  it.each(["unknown", "provider-inaccessible", "stale"] as const)(
+    "retains the measured zero on 99.5% of supply with a dust %s deployment", (scenario) => {
+      const chainCirculating = { ethereum: point(99_500_000), base: point(500_000) };
+      const draft = makeV9FixedInput({ aggregateCirculating: { peggedUSD: 100_000_000 },
+        chainSupplyByChain: chainCirculating, dexOverrides: {
+          exitRouteObservations: [], exitRouteObservationCoverage: {
+            status: "unknown", capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
+            retainedPoolCount: 0, observationCount: 0, scoreEligibleObservationCount: 0,
+            scoreEligiblePoolCount: 0, unsupportedPoolCount: 0, evidenceCounts: {},
+            unsupportedReasons: { deploymentCensusUnsupportedMethod: 1 },
+          },
+        } });
+      const outcomes = [{ chain: ethereum.chain, contractAddress: ethereum.address,
+        outcome: "verified_no_pools" as const, observedAt: draft.clockSec }];
+      const coverage = computeDexDeploymentSupplyCoverage({
+        circulating: draft.aggregateCirculatingById.alpha!.circulating, chainCirculating, contracts: [ethereum, base],
+      }, outcomes, new Map(), { asOfSec: draft.clockSec, maxOutcomeAgeSec: 1800 })!;
+      if (scenario === "provider-inaccessible") {
+        coverage.providerInaccessibleSupplyUsd = coverage.unknownSupplyUsd;
+        coverage.providerInaccessibleSupplyRatio = coverage.unknownSupplyRatio;
+        coverage.unknownSupplyUsd = 0;
+        coverage.unknownSupplyRatio = 0;
+      }
+      draft.dexDeploymentSupplyCoverageById.alpha = coverage;
+      if (scenario === "stale") {
+        draft.dexLiqMap.alpha!.updatedAt = draft.clockSec - 5_000;
+        draft.dexGenerationId = `dex-liquidity-${draft.clockSec - 5_000}`;
+        draft.inputFreshness.dexLiquidity = { ...draft.inputFreshness.dexLiquidity,
+          updatedAt: draft.clockSec - 5_000, ageSeconds: 5_000 };
+      }
+      const fixed = rebuildFixed(draft);
+      const extension = makeV9Extension({ clockSec: fixed.clockSec, registryFingerprint: fixed.registryFingerprint });
+      extension.assets[0]!.routeReviews = [];
+      const result = buildSafetyScoreV9Candidate({ fixedInput: fixed, extension, publishedAtSec: fixed.clockSec });
+      expect(result.quarantines).toEqual([]);
+      const asset = result.compiledFacts.assets[0]!;
+      const card = result.candidate.cards[0]!;
+      if (scenario === "stale") {
+        expect(asset.exitCoverage).toBeUndefined();
+        expect(card.pillars.exit.score).toBe(50);
+      } else {
+        expect(asset.exitCoverage).toMatchObject({ verifiedNoPoolsSupplyShare: 0.995 });
+        expect(card.pillars.exit.score).toBe(0.25);
+        expect(V9AssetFactsV3Schema.safeParse(asset).success).toBe(true);
+        for (const invalidShare of [-0.001, 1.001, NaN]) {
+          expect(V9AssetFactsV3Schema.safeParse({ ...asset,
+            exitCoverage: { ...asset.exitCoverage, verifiedNoPoolsSupplyShare: invalidShare },
+          }).success).toBe(false);
+        }
+        expect(V9AssetFactsV3Schema.safeParse({ ...asset, exitCoverage: {
+          ...asset.exitCoverage, evidenceRefIds: ["nonexistent-census"],
+        } }).success).toBe(false);
       }
     },
   );

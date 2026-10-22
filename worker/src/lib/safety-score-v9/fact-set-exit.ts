@@ -27,7 +27,7 @@ import { safetyScoreV9ChainSupplyObservedAtSec, safetyScoreV9ChainSupplyMaxAgeSe
 import { evaluateV9Exit, isV9CreditableNonAtomicRedemption, projectV9ExitEvaluationRoute, selectV9ExitCirculatingUsd, selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
 import { loadV9CandidateMethodologyPolicy, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
-import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
+import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, resolveExitExecutionBoundPoint, validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
 import reviewedExecutionModels from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
 import { v9EvidenceResponsibilityForCauseProof } from "@shared/types/safety-score-v9-causes";
@@ -358,13 +358,14 @@ function buildRoute(
   const supplyUsd = selectV9ExitCirculatingUsd(supply);
   const executionPolicy = args.observation.executionModelId ? executionPolicyForInput(context) : null;
   const executionRequest = executionPolicy ? selectV9ExitStressRequest(supplyUsd, executionPolicy) : null;
+  const measuredRequest = certificate && executionRequest ? resolveExitExecutionBoundPoint(certificate, executionRequest) : null;
   const executionAdmission = args.observation.executionModelId
-    ? certificate && executionPolicy && executionRequest
+    ? certificate && executionPolicy && measuredRequest
       ? admitExitExecutionCertificate({
           certificate, envelope: executionPolicy, assetId: context.asset.assetId, clockSec: context.fixedInput.clockSec,
-          inputGenerationId: exitExecutionInputGenerationId(context.asset.assetId, executionRequest, certificate.inputReference),
+          inputGenerationId: exitExecutionInputGenerationId(context.asset.assetId, measuredRequest, certificate.inputReference),
           observationGenerationId: domainDigest("safety-score-v10.exit-execution-source.v1", certificate.source),
-          request: executionRequest,
+          request: measuredRequest,
           reviews: executionReviewsForPolicy(executionPolicy),
         })
       : { state: "unavailable" as const, reason: "execution-certificate-missing", responsibility: "method-unsupported" as const }
@@ -766,6 +767,7 @@ function classifyUnsupportedDexSurface(
 
 export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["supply"]): {
   exitStatus: V9FactStatusV2;
+  exitCoverage?: V9AssetFactsV3["exitCoverage"];
   exitRoutes: V9ExitRouteFactV2[];
 } {
   const reviewByKey = new Map(context.asset.routeReviews.map((review) => [`${review.lane}:${review.routeId}`, review]));
@@ -1022,7 +1024,15 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
       supplyCoverage.verifiedNoPoolsSupplyRatio === 1 &&
       Math.abs(supplyCoverage.totalSupplyUsd - aggregateSupplyUsd) <= supplyToleranceUsd &&
       Math.abs(supplyCoverage.verifiedNoPoolsSupplyUsd - aggregateSupplyUsd) <= supplyToleranceUsd;
-    if (locallyEmptySurface) {
+    const partialVerifiedEmpty = aggregateSupplyUsd !== null && aggregateSupplyUsd > 0 &&
+      supplyCurrent && economicCensusAdmitted && supplyCoverage != null &&
+      supplyCoverage.verifiedNoPoolsSupplyRatio > 0 && supplyCoverage.verifiedNoPoolsSupplyRatio < 1 &&
+      Math.abs(supplyCoverage.totalSupplyUsd - aggregateSupplyUsd) <= supplyToleranceUsd &&
+      Math.abs(supplyCoverage.verifiedNoPoolsSupplyUsd -
+        aggregateSupplyUsd * supplyCoverage.verifiedNoPoolsSupplyRatio) <= supplyToleranceUsd &&
+      capturedChainSupplyUsd <= aggregateSupplyUsd + supplyToleranceUsd &&
+      supplyCoverage.verifiedNoPoolsSupplyUsd <= capturedChainSupplyUsd + supplyToleranceUsd;
+    if (locallyEmptySurface || partialVerifiedEmpty) {
       // Known-empty negative evidence must carry the DEX producer's observation
       // time, not the scoring clock: a stale empty surface is not a current
       // "known" zero-exit fact but a bounded-unknown/stale one (VER2-007). Fresh
@@ -1046,6 +1056,9 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
           context.fixedInput.clockSec,
         ),
       );
+      const currentCoveredShare = partialVerifiedEmpty &&
+        context.evidence.get(coverageEvidenceId)!.freshness.state === "current"
+        ? supplyCoverage!.verifiedNoPoolsSupplyRatio : null;
       if (!fullSupplyVerifiedEmpty) {
         return {
           exitStatus: missingLocalFact(context, {
@@ -1060,6 +1073,9 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
               "The locally empty DEX census does not establish a current exhaustive deployment census reconciled to aggregate circulating liability.",
           }).status,
           exitRoutes: [],
+          ...(currentCoveredShare !== null ? { exitCoverage: {
+            verifiedNoPoolsSupplyShare: currentCoveredShare, evidenceRefIds: [coverageEvidenceId],
+          } } : {}),
         };
       }
       const coverageStale = context.evidence.get(coverageEvidenceId)!.freshness.state === "stale";

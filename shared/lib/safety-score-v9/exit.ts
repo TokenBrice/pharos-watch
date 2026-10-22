@@ -22,7 +22,7 @@ import { clampScore, roundTo } from "../math";
 import { assertV9ValidatedPolicyEnvelope, unknownQuality } from "./policy";
 import { resolveV9StatusCauses, v9ScoringDisposition } from "./control-primitives";
 import { compareText, domainDigest, uniqueSorted } from "./primitives";
-import { admitExitExecutionCertificate, exitExecutionInputGenerationId, resolveExitExecutionRequestPoint } from "./exit-execution";
+import { admitExitExecutionCertificate, exitExecutionInputGenerationId, resolveExitExecutionBoundPoint } from "./exit-execution";
 
 export type V9ExitAccess = RedemptionAccessModel;
 export type V9ExitSettlement = RedemptionSettlementModel;
@@ -154,9 +154,8 @@ export interface V9ExitEvaluationResult {
 }
 
 /**
- * The pillar's view of the shared exit request: the same clamped supply share
- * the redemption domain score uses as its denominator, snapped up to the policy
- * notional grid so capacity curves stay comparable across assets.
+ * The pillar uses the clamped supply share continuously. The observation grid
+ * sizes producer measurements, not the liability the holder needs to exit.
  *
  * The request policy is read from the validated envelope, not from the shared
  * constant module: the policy JSON is the versioned artifact the deterministic
@@ -167,7 +166,7 @@ export function selectV9ExitStressRequest(
   envelope: V9ValidatedPolicyEnvelope,
 ): V9ExitStressRequest {
   assertV9ValidatedPolicyEnvelope(envelope);
-  const request = resolveExitScoringRequest("stress-grid", circulatingUsd, envelope.policy.semantic.exit.stressRequest)!;
+  const request = resolveExitScoringRequest("stress", circulatingUsd, envelope.policy.semantic.exit.stressRequest)!;
   return {
     requestedNotionalUsd: request.requestedNotionalUsd,
     maxCostBps: request.maxCostBps,
@@ -215,7 +214,7 @@ export function resolveV9ExitCapacityAtRequest(
   points: readonly V9ExitCapacityPoint[],
   request: V9ExitStressRequest,
 ): V9ExitCapacityPoint | null {
-  // Legacy curves retain interpolation; certified models use exact request points before reaching this boundary.
+  // A smaller measured point remains an executable lower bound at a larger request.
   if (points.length === 0 || curveIssue(points)) return null;
   const eligibleCosts = uniqueSorted(
     points.filter((point) => point.maxCostBps <= request.maxCostBps).map((point) => String(point.maxCostBps)),
@@ -225,9 +224,6 @@ export function resolveV9ExitCapacityAtRequest(
     const costPoints = points
       .filter((point) => point.maxCostBps === maxCostBps)
       .sort((left, right) => left.requestedNotionalUsd - right.requestedNotionalUsd);
-    // A curve ending below the request does not observe capacity at the
-    // larger stress size. Keep the route unavailable rather than extrapolating.
-    if (costPoints[costPoints.length - 1]!.requestedNotionalUsd < request.requestedNotionalUsd) continue;
     const exact = costPoints.find((point) => point.requestedNotionalUsd === request.requestedNotionalUsd);
     const lower = [...costPoints].reverse().find((point) => point.requestedNotionalUsd < request.requestedNotionalUsd);
     const first = costPoints[0];
@@ -441,13 +437,14 @@ function resolveIncludedRouteCapacity(
   if (exclusionReason !== null || route.applicability === "not-applicable") {
     return { state: "excluded", exclusionReason };
   }
-  const proof = route.executionCertificate ? resolveExitExecutionRequestPoint(route.executionCertificate, request) : null;
+  const proof = route.executionCertificate ? resolveExitExecutionBoundPoint(route.executionCertificate, request) : null;
+  const certifiedPoint = proof && proof.certification !== "diagnostic"
+    ? route.capacityCurve.find((point) => point.requestedNotionalUsd === proof.requestedNotionalUsd &&
+        point.maxCostBps === proof.maxCostBps && point.executableUsd === proof.executableUsd &&
+        point.executionCostBps === proof.executionCostBps)
+    : undefined;
   const capacityPoint = route.executionModelId
-    ? proof && proof.certification !== "diagnostic"
-      ? route.capacityCurve.find((point) => point.requestedNotionalUsd === request.requestedNotionalUsd &&
-          point.maxCostBps === request.maxCostBps && point.executableUsd === proof.executableUsd &&
-          point.executionCostBps === proof.executionCostBps) ?? null
-      : null
+    ? certifiedPoint ? resolveV9ExitCapacityAtRequest([certifiedPoint], request) : null
     : resolveV9ExitCapacityAtRequest(route.capacityCurve, route.physicalToUsd
       ? { ...request, maxCostBps: envelope.policy.semantic.exit.physicalToUsd.maxCostBps }
       : request);
@@ -513,7 +510,7 @@ function supersededModeledRoutes(
   const certified = routes.filter((route) => {
     if (!route.executionModelId || !route.executionCertificate || !route.scoreEligible ||
       route.observationState !== "known" || !route.outputResolved || routeExclusionReason(route, envelope) !== null) return false;
-    const point = resolveExitExecutionRequestPoint(route.executionCertificate, request);
+    const point = resolveExitExecutionBoundPoint(route.executionCertificate, request);
     return point !== null && point.certification !== "diagnostic";
   });
   const superseded = new Set<string>();
@@ -986,7 +983,7 @@ export function resolveV9ExitSupplySizing(
 }
 
 export function evaluateV9ExitAssetFacts(
-  asset: Pick<V9AssetFactsBase, "supply" | "exitStatus" | "exitRoutes"> & Partial<Pick<V9AssetFactsBase, "evidence">> & { gaps?: readonly V9FactGapV3[] },
+  asset: Pick<V9AssetFactsBase, "supply" | "exitStatus" | "exitRoutes"> & Partial<Pick<V9AssetFactsBase, "evidence" | "exitCoverage">> & { gaps?: readonly V9FactGapV3[] },
   envelope: V9ValidatedPolicyEnvelope,
   executionContext?: { assetId: string; clockSec: number },
 ): V9ExitEvaluationResult {
@@ -996,6 +993,7 @@ export function evaluateV9ExitAssetFacts(
       ...resolveV9ExitSupplySizing(asset),
       gaps: asset.gaps,
       portfolioFactStatus: asset.exitStatus,
+      verifiedNoPoolsSupplyShare: asset.exitCoverage?.verifiedNoPoolsSupplyShare,
       portfolioStatus:
         asset.exitStatus.observationState === "known" && asset.exitStatus.applicability.state === "required"
           ? "reviewed-complete"
@@ -1027,6 +1025,7 @@ export function evaluateV9Exit(
     clockSec?: number;
     portfolioStatus?: "reviewed-complete" | "incomplete";
     portfolioFactStatus?: V9FactStatusV2;
+    verifiedNoPoolsSupplyShare?: number;
     gaps?: readonly V9FactGapV3[];
     routes: readonly V9ExitEvaluationRoute[];
   },
@@ -1052,16 +1051,18 @@ export function evaluateV9Exit(
     route = { ...route, gaps: args.gaps ?? route.gaps };
     if (!route.executionModelId) return route;
     const certificate = route.executionCertificate;
-    const admission = certificate && args.assetId !== undefined && args.clockSec !== undefined
+    const measuredRequest = certificate ? resolveExitExecutionBoundPoint(certificate, stressRequest) : null;
+    const admission = certificate && measuredRequest && args.assetId !== undefined && args.clockSec !== undefined
       ? admitExitExecutionCertificate({
           certificate, envelope, assetId: args.assetId, clockSec: args.clockSec,
-          inputGenerationId: exitExecutionInputGenerationId(args.assetId, stressRequest, certificate.inputReference),
+          inputGenerationId: exitExecutionInputGenerationId(args.assetId, measuredRequest, certificate.inputReference),
           observationGenerationId: domainDigest("safety-score-v10.exit-execution-source.v1", certificate.source),
-          request: stressRequest,
+          request: measuredRequest,
         })
       : null;
     return admission && admission.state !== "unavailable"
-      ? { ...route, coverageClass: admission.point.certification }
+      ? { ...route, coverageClass: admission.point.requestedNotionalUsd === stressRequest.requestedNotionalUsd
+          ? admission.point.certification : "exact-lower-bound" as const }
       : { ...route, scoreEligible: false };
   }).sort((left, right) => compareText(left.routeKey, right.routeKey));
   const superseded = supersededModeledRoutes(routes, stressRequest, envelope);
@@ -1124,13 +1125,16 @@ export function evaluateV9Exit(
       : (inventoryCause.cause === null || inventoryCause.excluded) && traces.every((trace) => excludedGap(trace)));
     pillarMetadata.limitedEvidenceCauses = provenEmptyInventory || pureExcludedInventory ? [] : uniqueSorted([
       ...inventoryCause.causes, ...traces.flatMap((trace) => excludedCause(trace).causes),
+      ...routes.filter((route, index) => route.applicability !== "not-applicable" && !excludedGap(traces[index]!))
+        .flatMap((route) => resolveV9StatusCauses(Object.values(route.factorStatuses ?? {}), route.gaps).causes),
       ...(inventoryCause.cause === null && traces.every((trace) => excludedCause(trace).cause === null) ? ["U"] : []),
     ]).filter((cause): cause is "C" | "U" => cause === "C" || cause === "U");
     return {
       ...pillarMetadata,
       aggregationDisposition: pureExcludedInventory ? "excluded-a-b" : "included",
       score: provenEmptyInventory ? 0 : pureExcludedInventory ? null
-        : unknownQuality("exit", pillarMetadata.limitedEvidenceCauses.includes("C") ? "C" : inventoryCause.cause, envelope.policy.semantic),
+        : roundTo((1 - (args.verifiedNoPoolsSupplyShare ?? 0)) *
+            unknownQuality("exit", pillarMetadata.limitedEvidenceCauses.includes("C") ? "C" : inventoryCause.cause, envelope.policy.semantic), 2),
       stressRequest,
       primaryRouteKey: null,
       diversificationRouteKey: null,

@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ExitExecutionCertificate, ExitExecutionModelReview, ExitExecutionRequestPoint } from "@shared/types/exit-route";
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
-import { resolveV9ExitCapacityAtRequest, selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
+import { evaluateV9Exit, resolveV9ExitCapacityAtRequest, selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
 import { admitExitExecutionCertificate, exitExecutionInputGenerationId } from "@shared/lib/safety-score-v9/exit-execution";
 import { observeReviewedExitExecutionRoutes } from "../exit-execution/runtime";
+import { makeExitRoute } from "@shared/lib/__tests__/safety-score-v9-exit.test-support";
 
 const CLOCK = 1_791_184_659;
 const VAULT = "0x0000000000000000000000000000000000000001";
@@ -49,7 +50,7 @@ const inputReference: ExitExecutionCertificate["inputReference"] = {
   unitValueUsd: 1, expectedUnitValueUsd: 1, sourceId: "observed-price", sourceGenerationId: "fixture-price", observedAtSec: CLOCK,
 };
 const outputReference = { ...inputReference, assetKey: "fixture-underlying", deployment: `ethereum:${TOKEN}` };
-const call = { assetId: "fixture-vault", circulatingUsd: 10_000_000, clockSec: CLOCK, reviews: [review], inputReference, outputReference };
+const call = { assetId: "fixture-vault", circulatingUsd: 20_000_000, clockSec: CLOCK, reviews: [review], inputReference, outputReference };
 beforeEach(() => { state.canonicalCompletion = 1; state.diagnostic = false; vi.useFakeTimers(); vi.setSystemTime(CLOCK * 1000); });
 afterEach(() => vi.useRealTimers());
 
@@ -82,5 +83,41 @@ describe("canonical ERC4626 receipt projection", () => {
     const failed = await observeReviewedExitExecutionRoutes(call);
     expect(failed.observations[0]).toMatchObject({ completionRatio: 0, scoreEligible: false, settlementBoundUnproven: true });
     expect(failed.failures).not.toEqual([]);
+  });
+
+  it("measures a continuous non-grid canonical request", async () => {
+    const result = await observeReviewedExitExecutionRoutes({ ...call, circulatingUsd: 18_500_000 });
+    expect(result.failures).toEqual([]);
+    expect(result.observations[0]).toMatchObject({
+      requestedNotionalUsd: 925_000, executableUsd: 925_000, completionRatio: 1,
+      executionCertificate: { points: [{ requestedNotionalUsd: 925_000 }] },
+    });
+  });
+
+  it("keeps an admitted measured prefix score-bearing after supply crosses the old grid boundary", async () => {
+    const observation = (await observeReviewedExitExecutionRoutes(call)).observations[0]!;
+    const certificate = observation.executionCertificate!;
+    const candidate = makeExitRoute({
+      executionModelId: certificate.modelId, executionCertificate: certificate,
+      capacityEvidenceTier: "live-direct",
+      capacityCurve: observation.capacityCurve!.map((point) => ({ ...point, executionCostBps: point.executionCostBps! })),
+    });
+    const envelope = loadV9CandidateMethodologyPolicy(CLOCK);
+    const result = evaluateV9Exit({
+      assetId: call.assetId, clockSec: CLOCK, circulatingUsd: 20_500_000, routes: [candidate],
+    }, envelope);
+    expect(result.stressRequest!.requestedNotionalUsd).toBe(1_025_000);
+    expect(result.routes[0]).toMatchObject({ included: true, capacityPoint: {
+      requestedNotionalUsd: 1_025_000, executableUsd: 1_000_000,
+    } });
+    expect(result.routes[0]!.capacityPoint!.completionRatio).toBeCloseTo(1_000_000 / 1_025_000, 2);
+    expect(result.score).toBeGreaterThan(50);
+    expect(result.limitedEvidenceCauses).toEqual([]);
+    expect(certificate.points[0]!.requestedNotionalUsd).toBe(1_000_000);
+    const stale = evaluateV9Exit({
+      assetId: call.assetId, clockSec: CLOCK + certificate.sourceMaxAgeSec + 1,
+      circulatingUsd: 20_500_000, routes: [candidate],
+    }, envelope);
+    expect(stale.routes[0]!.included).toBe(false);
   });
 });

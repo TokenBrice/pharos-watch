@@ -32,13 +32,17 @@ describe("the one exit request, two denominators", () => {
     expect(resolveExitScoringRequest("stress-grid", supply, EXIT_ROUTE_SCORING_TABLES.request))
       .toMatchObject({ rawSupplyRequestUsd: raw, requestedNotionalUsd: grid });
     expect(computeModeledExitSizeUsd(supply)).toBe(raw);
-    expect(selectV9ExitStressRequest(supply, envelope)?.requestedNotionalUsd).toBe(grid);
+    expect(selectV9ExitStressRequest(supply, envelope)?.requestedNotionalUsd).toBe(raw);
+    expect(resolveExitScoringRequest("stress", supply, EXIT_ROUTE_SCORING_TABLES.request))
+      .toMatchObject({ rawSupplyRequestUsd: raw, requestedNotionalUsd: raw });
   });
 
   it("keeps an unknown denominator unavailable while selecting maximum stress", () => {
     for (const circulatingUsd of [null, undefined, 0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
       expect(resolveExitScoringRequest("supply-denominator", circulatingUsd, EXIT_ROUTE_SCORING_TABLES.request)).toBeNull();
       expect(resolveExitScoringRequest("stress-grid", circulatingUsd, EXIT_ROUTE_SCORING_TABLES.request))
+        .toMatchObject({ requestedNotionalUsd: 25_000_000, rawSupplyRequestUsd: 25_000_000 });
+      expect(resolveExitScoringRequest("stress", circulatingUsd, EXIT_ROUTE_SCORING_TABLES.request))
         .toMatchObject({ requestedNotionalUsd: 25_000_000, rawSupplyRequestUsd: 25_000_000 });
     }
   });

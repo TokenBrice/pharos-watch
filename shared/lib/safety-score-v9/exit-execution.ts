@@ -6,7 +6,7 @@ import { stableJsonStringifyV1 } from "../stable-json";
 import reviewedModels from "../../data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import { exitRawUsd, requestedExitRawInput } from "./exit-execution-units";
 
-/** Bind model inputs and the selected exact request, not incidental supply drift within its bucket. */
+/** Bind model inputs and the exact measured request, independently of later stress sizing. */
 export function exitExecutionInputGenerationId(
   assetId: string,
   request: Pick<ExitExecutionRequestPoint, "requestedNotionalUsd" | "maxCostBps">,
@@ -38,6 +38,21 @@ export function validateExitExecutionModelReviews(input: unknown, envelope: V9Va
 
 export function resolveExitExecutionRequestPoint(certificate: ExitExecutionCertificate, request: { requestedNotionalUsd: number; maxCostBps: number }): ExitExecutionRequestPoint | null {
   return certificate.points.find((point) => point.requestedNotionalUsd === request.requestedNotionalUsd && point.maxCostBps === request.maxCostBps) ?? null;
+}
+
+/**
+ * Recover the measured request bound to this certificate's input generation.
+ * Stress-size drift does not invalidate that receipt or invent a new execution.
+ * Admission still validates the original units, costs, identity, gates and clocks.
+ */
+export function resolveExitExecutionBoundPoint(
+  certificate: ExitExecutionCertificate,
+  request: { requestedNotionalUsd: number; maxCostBps: number },
+): ExitExecutionRequestPoint | null {
+  return certificate.points.find((point) => point.maxCostBps <= request.maxCostBps &&
+    certificate.inputGenerationId === exitExecutionInputGenerationId(
+      certificate.identity.assetId, point, certificate.inputReference,
+    )) ?? null;
 }
 
 export type ExitExecutionAdmission =

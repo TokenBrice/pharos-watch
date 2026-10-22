@@ -67,10 +67,10 @@ describe("typed Exit route identity", () => {
 });
 
 describe("selectV9ExitStressRequest", () => {
-  it("snaps the supply-relative request upward to the reviewed grid", () => {
+  it("uses the continuous clamped supply-relative request instead of the observation grid", () => {
     expect(selectV9ExitStressRequest(100_000_000, V9_CANDIDATE_POLICY_V1)).toMatchObject({
       rawSupplyRequestUsd: 5_000_000,
-      requestedNotionalUsd: 10_000_000,
+      requestedNotionalUsd: 5_000_000,
       maxCostBps: 200,
     });
     expect(selectV9ExitStressRequest(100_000, V9_CANDIDATE_POLICY_V1)?.requestedNotionalUsd).toBe(100_000);
@@ -87,12 +87,28 @@ describe("selectV9ExitStressRequest", () => {
     expect(result.stressRequest?.requestedNotionalUsd).toBe(25_000_000);
     expect(result.routes[0]).toMatchObject({ included: true, capacityPoint: { requestedNotionalUsd: 25_000_000 } });
     expect(result.reasons).toContain("missing-same-notional-route");
-    const incomparable = evaluateV9Exit({
+    const lowerBound = evaluateV9Exit({
       circulatingUsd: null,
       routes: [route({ capacityCurve: route().capacityCurve.filter((point) => point.requestedNotionalUsd < 25_000_000) })],
     }, V9_CANDIDATE_POLICY_V1);
-    expect(incomparable.primaryRouteKey).toBeNull();
-    expect(incomparable.routes[0]!.capacityPoint).toBeNull();
+    expect(lowerBound.primaryRouteKey).toBe("redemption:issuer");
+    expect(lowerBound.routes[0]!.capacityPoint).toMatchObject({
+      requestedNotionalUsd: 25_000_000, executableUsd: 10_000_000, completionRatio: 0.4,
+    });
+  });
+
+  it.each([2_000_000, 20_000_000, 200_000_000])("has no request-grid cliff around %s supply", (boundary) => {
+    const candidate = route({ coverageClass: "exact-lower-bound", capacityCurve: [{
+      requestedNotionalUsd: boundary * 0.05, maxCostBps: 200,
+      executableUsd: boundary * 0.05, completionRatio: 1, executionCostBps: 0,
+    }] });
+    const below = evaluateV9Exit({ circulatingUsd: boundary - 1, routes: [candidate] }, V9_CANDIDATE_POLICY_V1);
+    const above = evaluateV9Exit({ circulatingUsd: boundary + 1, routes: [candidate] }, V9_CANDIDATE_POLICY_V1);
+    expect(above.stressRequest!.requestedNotionalUsd).toBeCloseTo((boundary + 1) * 0.05, 6);
+    expect(above.routes[0]).toMatchObject({ included: true, capacityPoint: { executableUsd: boundary * 0.05 } });
+    expect(above.routes[0]!.capacityPoint!.completionRatio).toBeCloseTo(boundary / (boundary + 1), 2);
+    expect(above.limitedEvidenceCauses).toEqual([]);
+    expect(Math.abs(above.score! - below.score!)).toBeLessThan(0.1);
   });
 });
 
@@ -158,7 +174,7 @@ describe("Exit circulating amount admission", () => {
 
   it("uses the known amount without claiming that the distribution is known", () => {
     expect(selectV9ExitStressRequest(selectV9ExitCirculatingUsd(supply), V9_CANDIDATE_POLICY_V1))
-      .toMatchObject({ rawSupplyRequestUsd: 5_000_000, requestedNotionalUsd: 10_000_000 });
+      .toMatchObject({ rawSupplyRequestUsd: 5_000_000, requestedNotionalUsd: 5_000_000 });
   });
 
   it.each(["missing", "stale", "unsupported"] as const)("refuses a numeric amount whose observation is %s", (observationState) => {
@@ -1393,6 +1409,34 @@ describe("cause-aware Exit and max-feasible portfolios", () => {
     expect(trace.components!.capacity).toBe(76);
     expect(trace.components!.outputAssetQuality).toBe(100);
     expect(trace.capsApplied.some((cap) => cap.startsWith("fee-evidence:"))).toBe(false);
+  });
+
+  it.each(["C", "U"] as const)("uses the same %s factor causes for whole-Exit pricing and publication", (cause) => {
+    const capacity = gap("U", "capacity");
+    const cost = gap(cause, "cost");
+    const result = evaluate([route({
+      observationState: "missing", status: capacity.status, capacityCurve: [],
+      factorStatuses: { capacity: capacity.status, cost: cost.status },
+      gaps: [capacity.gap, cost.gap],
+    })]);
+    expect(result.limitedEvidenceCauses).toEqual(cause === "C" ? ["C", "U"] : ["U"]);
+    expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit[cause]);
+    expect(result.causeGapIds).toEqual(["capacity", "cost"]);
+  });
+
+  it.each(["C", "U"] as const)("prices only uncovered supply at the %s unknown value", (cause) => {
+    const missing = gap(cause, "partial-census");
+    for (const coveredShare of [0, 0.6, 0.995]) {
+      const result = evaluateV9Exit({
+        circulatingUsd: 20_000_000, portfolioStatus: "incomplete",
+        portfolioFactStatus: missing.status, verifiedNoPoolsSupplyShare: coveredShare,
+        gaps: [missing.gap], routes: [],
+      }, V9_CANDIDATE_POLICY_V1);
+      expect(result.score).toBeCloseTo((1 - coveredShare) *
+        V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit[cause], 2);
+      expect(result.limitedEvidenceCauses).toEqual([cause]);
+      expect(result.reasons).not.toContain("no-viable-exit-path");
+    }
   });
 
   it("never admits A-stale history as current capacity or as a charged floor", () => {
