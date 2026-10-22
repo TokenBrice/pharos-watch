@@ -75,7 +75,9 @@ describe("V9 resource diagnostic failure modes", () => {
     const root = temporary();
     mkdirSync(join(root, "worker"));
     writeFileSync(join(root, "worker/wrangler.heavy.toml"), 'minify = true\nkeep_names = true\n[alias]\n"#pharos-full-catalog" = "./packed.ts"\n');
-    writeFileSync(join(root, "worker/packed.ts"), 'export function PackedWorkerCatalog() { return "packed-worker"; }');
+    writeFileSync(join(root, "worker/packed.ts"), 'import text from "./coins.worker-full.generated.json"; import ordinary from "./ordinary.json"; export function PackedWorkerCatalog() { return JSON.parse(text).value + ordinary.value; }');
+    writeFileSync(join(root, "worker/coins.worker-full.generated.json"), '{"value":"packed-"}');
+    writeFileSync(join(root, "worker/ordinary.json"), '{"value":"worker"}');
     const { configSha256: _configSha256, ...settings } = readHeavyProbeBuildSettings(root);
     const require = createRequire(resolve("package.json"));
     const esbuild = createRequire(require.resolve("wrangler"))("esbuild") as typeof Esbuild;

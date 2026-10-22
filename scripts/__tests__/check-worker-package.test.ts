@@ -1,8 +1,9 @@
+import { randomBytes } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { checkHeavyReachability, checkWorkerPackage } from "../ci/check-worker-package";
+import { checkHeavyReachability, checkSourceMapSizes, checkWorkerPackage, WORKER_SOURCE_MAP_GZIP_BUDGET_BYTES } from "../ci/check-worker-package";
 
 describe("check-worker-package", () => {
   let root: string;
@@ -55,6 +56,34 @@ describe("check-worker-package", () => {
     expect(checkWorkerPackage({ run })).toEqual({ status: 1 });
     expect(run).not.toHaveBeenCalled();
     expect(error).toHaveBeenCalledWith(expect.stringContaining("never emit source maps into Pages assets"));
+  });
+
+  it.each(["wrangler.toml", "wrangler.heavy.toml"])("rejects an oversized nested source map in %s", (config) => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const run = vi.fn((_command: string, args: string[]) => {
+      const result = emit(args);
+      if (args.includes(config)) {
+        writeFileSync(join(args.at(-1)!, "chunks", "oversized.js.map"),
+          randomBytes(WORKER_SOURCE_MAP_GZIP_BUDGET_BYTES + 1));
+      }
+      return result;
+    });
+    expect(checkWorkerPackage({ run })).toEqual({ status: 1 });
+    expect(run).toHaveBeenCalledTimes(config === "wrangler.toml" ? 1 : 2);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining(
+      `exceeds the ${WORKER_SOURCE_MAP_GZIP_BUDGET_BYTES}-byte gzip budget`,
+    ));
+  });
+
+  it("reports every map's gzip bytes, not its uncompressed size", () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    mkdirSync(join(root, "chunks"));
+    writeFileSync(join(root, "worker.js.map"), "{}");
+    writeFileSync(join(root, "chunks", "large.js.map"), " ".repeat(WORKER_SOURCE_MAP_GZIP_BUDGET_BYTES + 1));
+    expect(checkSourceMapSizes(root)).toBe(true);
+    expect(log).toHaveBeenCalledTimes(2);
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("worker.js.map: 22 gzip bytes (budget 13500000)"));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("large.js.map:"));
   });
 
   it.each([

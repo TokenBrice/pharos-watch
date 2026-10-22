@@ -5,7 +5,11 @@ import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import type { ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
 
 const EXPECTED_CUSTOM_DOMAINS = ["api.pharos.watch", "ops-api.pharos.watch", "site-api.pharos.watch"] as const;
-const EXPECTED_RULE_GLOBS: Record<string, string> = { CompiledWasm: "**/*.wasm", Data: "**/*.ttf" };
+const EXPECTED_RULE_GLOBS: Record<string, string> = {
+  CompiledWasm: "**/*.wasm",
+  Data: "**/*.ttf",
+  Text: "**/coins.worker-full.generated.json",
+};
 const EXPECTED_RULE_TYPES = Object.keys(EXPECTED_RULE_GLOBS).sort();
 const EXPECTED_ADDRESS_PRICE_PROVIDER_SETTING = "coingecko-onchain-address";
 const PAIRED_RUNTIME_FIELDS = [
