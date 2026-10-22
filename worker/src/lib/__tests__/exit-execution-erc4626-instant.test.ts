@@ -295,13 +295,14 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
         block: { number: 100, hash: HASH, timestamp: CLOCK },
       },
     });
+    state.liquidity = 100_000_000_000n;
     const admitted = await observeReviewedExitExecutionRoutes({
       assetId: "fixture-vault", circulatingUsd: 1_000_000, clockSec: CLOCK,
       reviews: [review], inputReference, outputReference,
     });
     expect(admitted.failures).toEqual([]);
     expect(admitted.observations[0]).toMatchObject({
-      scoreEligible: true, requestedNotionalUsd: 100_000, completionRatio: 0.09375,
+      scoreEligible: true, requestedNotionalUsd: 1_000_000, executableUsd: 93_750, completionRatio: 0.09375,
       executionCertificate: { settlement: { maximumCompletionSec: 0, scope: "executed-input-only" },
         points: [{ certification: "exact-lower-bound", canonicalAttempt: { outcome: "accepted-but-unfunded" } }] },
     });
@@ -347,7 +348,7 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     expect(result.observations).toEqual([]);
     expect(result.failures[0]).toMatchObject({
       reason: "erc4626-realized-output-inconsistent",
-      canonicalAttempt: { outcome: "inconsistent-receipt", requestedRawInput: "100000000000",
+      canonicalAttempt: { outcome: "inconsistent-receipt", requestedRawInput: "1000000000000",
         block: { number: 100, hash: HASH, timestamp: CLOCK } },
     });
   });
@@ -357,11 +358,17 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     state.reorg = false; state.feeBps = 201n;
     expect((await observeErc4626InstantExit(args)).points[0]).toMatchObject({ executableUsd: 100_000, executionCostBps: 201, certification: "diagnostic", reason: "erc4626-cost-exceeds-request", outputs: [{ rawUnits: "97990000000" }] });
   });
-  it("dispatches an admitted atomic certificate at the continuous supply-sized request", async () => {
-    const circulatingUsd = 210_000_000;
+  it.each([
+    [1, 1_000_000],
+    [19_999_999, 1_000_000],
+    [20_000_000, 1_000_000],
+    [20_000_001, 1_000_000.05],
+    [210_000_000, 10_500_000],
+    [500_000_001, 25_000_000],
+  ])("dispatches an admitted atomic certificate for supply %s at continuous request %s", async (circulatingUsd, expectedRequest) => {
     const envelope = loadV9CandidateMethodologyPolicy(CLOCK);
     const request = selectV9ExitStressRequest(circulatingUsd, envelope)!;
-    expect(request.requestedNotionalUsd).toBe(10_500_000);
+    expect(request.requestedNotionalUsd).toBe(expectedRequest);
     const result = await observeReviewedExitExecutionRoutes({ assetId: "fixture-vault", circulatingUsd, clockSec: CLOCK, reviews: [review], inputReference, outputReference, envelope });
     expect(result.failures).toEqual([]);
     const observation = result.observations[0]!;

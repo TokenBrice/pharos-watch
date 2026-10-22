@@ -755,6 +755,7 @@
         "referenceNotionalUsd": 1000000,
         "supplyRatio": 0.05,
         "floorUsd": 1000000,
+        "materialityFloorUsd": 100000,
         "capUsd": 25000000,
         "maxCostBps": 200,
         "settlementHorizonSec": 300

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { loadV9MethodologyPolicy, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import type { V9AssetFactsBase, V9FactStatusV2, V9FactGapV3 } from "../../types/safety-score-v9-facts";
 import { createV9FactGapV3 } from "../safety-score-v9/reasons";
 import {
@@ -73,8 +73,74 @@ describe("selectV9ExitStressRequest", () => {
       requestedNotionalUsd: 5_000_000,
       maxCostBps: 200,
     });
-    expect(selectV9ExitStressRequest(100_000, V9_CANDIDATE_POLICY_V1)?.requestedNotionalUsd).toBe(100_000);
+    expect(selectV9ExitStressRequest(100_000, V9_CANDIDATE_POLICY_V1)?.requestedNotionalUsd).toBe(1_000_000);
     expect(selectV9ExitStressRequest(10_000_000_000, V9_CANDIDATE_POLICY_V1)?.requestedNotionalUsd).toBe(25_000_000);
+  });
+
+  it.each([
+    [1, 1_000_000],
+    [19_999_999, 1_000_000],
+    [20_000_000, 1_000_000],
+    [20_000_001, 1_000_000.05],
+    [499_999_999, 24_999_999.95],
+    [500_000_000, 25_000_000],
+    [500_000_001, 25_000_000],
+  ])("clamps supply %s at the $1m floor and $25m maximum without snapping", (supply, expected) => {
+    const request = selectV9ExitStressRequest(supply, V9_CANDIDATE_POLICY_V1);
+    expect(request.requestedNotionalUsd).toBeCloseTo(expected, 6);
+    expect(request.rawSupplyRequestUsd).toBeCloseTo(Math.min(25_000_000, Math.max(100_000, supply * 0.05)), 6);
+  });
+
+  it("retains a smaller measured execution as a lower bound at the $1m floor", () => {
+    const result = evaluateV9Exit({
+      circulatingUsd: 125_000,
+      routes: [route({ coverageClass: "exact-lower-bound", capacityCurve: [{
+        requestedNotionalUsd: 100_000, maxCostBps: 200,
+        executableUsd: 100_000, completionRatio: 1, executionCostBps: 0,
+      }] })],
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(result.stressRequest!.requestedNotionalUsd).toBe(1_000_000);
+    expect(result.routes[0]).toMatchObject({
+      included: true,
+      capacityPoint: { requestedNotionalUsd: 1_000_000, executableUsd: 100_000, completionRatio: 0.1 },
+    });
+    expect(result.reasons).not.toContain("no-viable-exit-path");
+  });
+
+  it.each(["high", "low"] as const)("keeps thin measured depth below the stress floor measured (%s confidence)", (modelConfidence) => {
+    const candidate = route({
+      coverageClass: "exact-lower-bound", modelConfidence,
+      capacityCurve: [{
+        requestedNotionalUsd: 100_000, maxCostBps: 200,
+        executableUsd: 6_900, completionRatio: 0.069, executionCostBps: 200,
+      }],
+    });
+    const previousPolicy = structuredClone(V9_CANDIDATE_POLICY_V1.policy);
+    previousPolicy.semantic.exit.stressRequest.floorUsd = 100_000;
+    const before = evaluateV9Exit({ circulatingUsd: 125_000, routes: [candidate] }, loadV9MethodologyPolicy(previousPolicy));
+    const after = evaluateV9Exit({ circulatingUsd: 125_000, routes: [candidate] }, V9_CANDIDATE_POLICY_V1);
+    expect(after.stressRequest).toMatchObject({ requestedNotionalUsd: 1_000_000, rawSupplyRequestUsd: 100_000 });
+    expect(after.routes[0]).toMatchObject({
+      included: true, exclusionReason: null,
+      capacityPoint: { requestedNotionalUsd: 1_000_000, executableUsd: 6_900 },
+    });
+    expect(after.routes[0]!.components!.capacity).toBeLessThan(before.routes[0]!.components!.capacity!);
+    expect(after.score).toBeLessThanOrEqual(before.score!);
+    expect(after.score).toBeLessThanOrEqual(50);
+    expect(after.limitedEvidenceCauses).toEqual([]);
+    expect(after.reasons).not.toContain("missing-same-notional-route");
+  });
+
+  it.each([[999.99, false], [1_000, true]] as const)("tests thin capacity %s against the unfloored materiality boundary", (executableUsd, included) => {
+    const result = evaluateV9Exit({
+      circulatingUsd: 125_000,
+      routes: [route({ coverageClass: "exact-lower-bound", capacityCurve: [{
+        requestedNotionalUsd: 100_000, maxCostBps: 200,
+        executableUsd, completionRatio: executableUsd / 100_000, executionCostBps: 0,
+      }] })],
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(result.routes[0]!.included).toBe(included);
+    if (included) expect(result.score).toBeLessThanOrEqual(50);
   });
 
   it.each([null, 0, NaN, -1])("uses maximum stress sizing without usable supply (%s)", (supply) => {
@@ -97,7 +163,7 @@ describe("selectV9ExitStressRequest", () => {
     });
   });
 
-  it.each([2_000_000, 20_000_000, 200_000_000])("has no request-grid cliff around %s supply", (boundary) => {
+  it.each([20_000_000, 200_000_000])("has no request-grid cliff around %s supply", (boundary) => {
     const candidate = route({ coverageClass: "exact-lower-bound", capacityCurve: [{
       requestedNotionalUsd: boundary * 0.05, maxCostBps: 200,
       executableUsd: boundary * 0.05, completionRatio: 1, executionCostBps: 0,

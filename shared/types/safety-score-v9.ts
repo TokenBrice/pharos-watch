@@ -851,6 +851,7 @@ const V9ExitPolicySchema = z
         referenceNotionalUsd: z.number().finite().positive(),
         supplyRatio: z.number().finite().min(0).max(1),
         floorUsd: z.number().finite().positive(),
+        materialityFloorUsd: z.number().finite().positive(),
         capUsd: z.number().finite().positive(),
         maxCostBps: z.number().finite().nonnegative(),
         settlementHorizonSec: z.number().finite().positive(),

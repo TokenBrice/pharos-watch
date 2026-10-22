@@ -42,6 +42,7 @@ export interface V9ExitStressRequest {
   requestedNotionalUsd: number;
   maxCostBps: number;
   comparisonWindowSec: number;
+  /** Supply-relative materiality denominator, before the stress floor. */
   rawSupplyRequestUsd: number;
   supplyObservedAtSec?: number | null;
   sizingUncertaintyReason?: "missing-supply" | "stale-supply" | "unusable-supply" | null;
@@ -166,12 +167,15 @@ export function selectV9ExitStressRequest(
   envelope: V9ValidatedPolicyEnvelope,
 ): V9ExitStressRequest {
   assertV9ValidatedPolicyEnvelope(envelope);
-  const request = resolveExitScoringRequest("stress", circulatingUsd, envelope.policy.semantic.exit.stressRequest)!;
+  const policy = envelope.policy.semantic.exit.stressRequest;
+  const request = resolveExitScoringRequest("stress", circulatingUsd, policy)!;
   return {
     requestedNotionalUsd: request.requestedNotionalUsd,
     maxCostBps: request.maxCostBps,
     comparisonWindowSec: request.settlementHorizonSec,
-    rawSupplyRequestUsd: request.rawSupplyRequestUsd,
+    rawSupplyRequestUsd: circulatingUsd !== null && Number.isFinite(circulatingUsd) && circulatingUsd > 0
+      ? Math.min(policy.capUsd, Math.max(policy.materialityFloorUsd, circulatingUsd * policy.supplyRatio))
+      : policy.capUsd,
   };
 }
 
@@ -669,10 +673,11 @@ function evaluateRoute(
   const { capacityPoint, valuedExecutableUsd, costEvidence } = resolvedCapacity;
   const policy = envelope.policy.semantic.exit;
   const completionRatio = valuedExecutableUsd / request.requestedNotionalUsd;
-  // A submaterial lower bound proves neither a usable stress exit nor exhaustion.
+  // Asset-relative materiality must not erase thin measured depth when the
+  // absolute stress floor grows; coverage still uses the full stress request.
   if (!isExhaustionMeasurement(route) && !hasMaterialExitCapacity({
     executableCapacityUsd: capacityPoint.executableUsd,
-    requestedNotionalUsd: request.requestedNotionalUsd,
+    requestedNotionalUsd: request.rawSupplyRequestUsd,
   }, policy)) {
     return {
       routeKey: route.routeKey,
@@ -764,7 +769,7 @@ function evaluateRoute(
     capsApplied.push("zero-executable-capacity");
   } else if (!hasMaterialExitCapacity({
     executableCapacityUsd: capacityPoint.executableUsd,
-    requestedNotionalUsd: request.requestedNotionalUsd,
+    requestedNotionalUsd: request.rawSupplyRequestUsd,
   }, policy)) {
     score = 0;
     capsApplied.push("immaterial-executable-capacity");
