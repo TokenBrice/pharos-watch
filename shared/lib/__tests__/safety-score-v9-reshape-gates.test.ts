@@ -157,12 +157,21 @@ describe("measured adversity remains priced without structural whole-score caps"
     expect(trace.caps).toEqual(baseline.caps);
   });
 
-  it("retains a current active depeg backstop and never floors a measured zero", () => {
-    const trace = scoreV9Input(rawInput({ pillars: { backing: 65, exit: 65, control: 65 }, pegScore: 0, activeDepegBps: 3_000 }), POLICY);
-    expect(trace.finalScore).toBe(0);
-    expect(trace.finalGrade).toBe("F");
-    expect(trace.caps).toContainEqual(expect.objectContaining({ source: "active-depeg", limit: 39 }));
-  });
+  it.each([[2_500, 25], [3_000, 25], [4_999, 25], [5_000, 10], [6_000, 10]])(
+    "retains a current active depeg backstop and never floors a measured zero (%i bps → %i)",
+    (activeDepegBps, limit) => {
+      const input = rawInput({ pillars: { backing: 65, exit: 65, control: 65 }, activeDepegBps });
+      const backstop = scoreV9Input(input, POLICY);
+      expect(backstop.finalScore).toBe(limit);
+      expect(backstop.finalGrade).toBe("F");
+      expect(backstop.caps).toContainEqual(expect.objectContaining({ source: "active-depeg", limit, binding: true }));
+
+      const trace = scoreV9Input({ ...input, pegScore: 0 }, POLICY);
+      expect(trace.finalScore).toBe(0);
+      expect(trace.finalGrade).toBe("F");
+      expect(trace.caps).toContainEqual(expect.objectContaining({ source: "active-depeg", limit, binding: false }));
+    },
+  );
 });
 
 describe("authority proof does not acquire a seasoning cliff", () => {

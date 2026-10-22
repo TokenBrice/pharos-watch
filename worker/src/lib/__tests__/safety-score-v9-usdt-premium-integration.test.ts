@@ -22,7 +22,8 @@ const EXPECTED_MARKET_ORDER = [
 
 // Scoped from the recovered 2026-07-24 exact production capture so the
 // integration test retains USDT's measured Curve routes and real wrapper facts.
-// Producer epochs retain their relative ages. Access reviews are captured
+// Producer epochs retain their relative ages at the 2026-10-23 scoring clock,
+// after the live registry's 2026-10-22 oracle review. Access reviews are captured
 // separately so later catalog reviews cannot quarantine this historical input.
 // susdt-spark live rows are refreshed to the erc4626-single-asset adapter's
 // current keyed two-slice emission so the capture tracks the 2026-09-29
@@ -76,7 +77,22 @@ describe("Safety Score v9 USDT premium production integration", () => {
     expect(usdt.trace).toMatchObject({
       scoreAdjustments: [{ kind: "market-anchor-longevity", configuredPoints: 12, appliedPoints: 12 }],
     });
-    expect(usdt.trace.deploymentAdjustments).toEqual([]);
+    expect(usdt.trace.deploymentAdjustments).not.toContainEqual(
+      expect.objectContaining({ failureDomainKey: "chain:tron" }),
+    );
+    // Independently reviewed bridge representations still price their own risks.
+    expect(usdt.trace.deploymentAdjustments).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        exposureKey: "deployment-slice:bsc:0x55d398326f99059ff775485246999027b3197955",
+        exposedScore: 45,
+        riskEventKey: expect.stringContaining("deployment-event:peripheral-bridge:"),
+      }),
+      expect.objectContaining({
+        exposureKey: "deployment-slice:fantom:0x049d68029688eabf473097a2fc38ef61633a3c7a",
+        exposedScore: 25,
+        riskEventKey: expect.stringContaining("deployment-event:active-control-incident:"),
+      }),
+    ]));
     // The publication maximum can truncate the visible lift; downstream claims
     // inherit the ordinary score, not the capped published score minus 12.
     expect(usdt.trace.inheritableScore).toBe(usdt.trace.scoreAdjustments[0]!.publishedScoreBefore);

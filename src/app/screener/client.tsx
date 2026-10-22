@@ -75,7 +75,8 @@ const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "safety_score", accessor: (row) => row.safetyScore ?? "" },
   { header: "safety_rating_status", accessor: (row) => row.ratingStatus ?? "" },
   { header: "safety_partial_evidence", accessor: (row) => describePartialEvidence(row)?.gaps.map(formatPartialEvidenceGap).join(" · ") ?? "" },
-  { header: "safety_gap_causes", accessor: (row) => describePartialEvidence(row)?.summary ?? "" },
+  // Export cause labels are a stable data contract, independent of reader-facing sentence copy.
+  { header: "safety_gap_causes", accessor: (row) => row.partialEvidence?.causes.map(cause => cause === "A" ? "pipeline unavailable (A)" : "public data awaiting curation (B)").join("; ") ?? "" },
   { header: "safety_backing", accessor: (row) => row.safetyBackingScore ?? "" },
   { header: "safety_exit", accessor: (row) => row.safetyExitScore ?? "" },
   { header: "safety_control", accessor: (row) => row.safetyControlScore ?? "" },
