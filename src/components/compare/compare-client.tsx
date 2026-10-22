@@ -537,6 +537,8 @@ export function CompareClient() {
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
                         <span>
                           {stablecoinLabel({ id: card.id, symbol })}: {card.grade === null ? "Pipeline gap" : card.grade}
+                          {(["backing", "exit", "control"] as const).filter((key) => card.pillars[key].score === null)
+                            .map((key) => ` · ${key === "backing" ? "Backing" : key === "exit" ? "Exit" : "Control"} unknown`).join("")}
                         </span>
                       </div>
                     ))}

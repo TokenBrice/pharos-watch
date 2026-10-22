@@ -67,8 +67,8 @@ describe("ReportCardMiniV9 viewport radar", () => {
   });
 
   it.each([
-    ["exit", "U", 50, "Exit not yet researched (priced as unknown)", "Exit is not yet researched, so the score prices it as an unknown at 50/100."],
-    ["backing", "C", 35, "Backing undisclosed by issuer (priced as unknown)", "The issuer does not disclose Backing evidence, so the score prices it as an unknown at 35/100."],
+    ["exit", "U", 50, "Exit not yet researched", "Exit is not yet researched; the score assumes 50/100 until it is."],
+    ["backing", "C", 35, "Backing undisclosed by issuer", "The issuer does not disclose Backing evidence; the score assumes 35/100 in its place."],
   ] as const)("labels a priced-unknown %s pillar by its %s cause", (pillar, cause, score, label, summary) => {
     const priced = projectV9TableCard(makeV9Card({ id: "usdt-tether", pillars: makeV9Pillars({ backing: 60, exit: 60, control: 60 }) }));
     priced.pillars[pillar] = { score: null, aggregationDisposition: "unavailable", pricedUnknown: { cause, score } };

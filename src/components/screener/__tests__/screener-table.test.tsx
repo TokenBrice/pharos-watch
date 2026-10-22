@@ -120,7 +120,7 @@ describe("ScreenerTable desktop table", () => {
       pillars: { backing: { score: 78 }, exit: { score: null, aggregationDisposition: "unavailable", pricedUnknown: { cause, score } }, control: { score: 42 } },
     };
     const { container } = render(<ScreenerTable rows={[partial]} dataState="ready" hasActiveFilters={false} sort={makeSort()} />);
-    await waitFor(() => expect(container.textContent).toContain(`Exit ${reason} (priced as unknown)`));
+    await waitFor(() => expect(container.textContent).toContain(`Exit ${reason} (assumed ${score})`));
     expect(container.textContent).not.toContain("pipeline gap");
   });
   it("labels the safety summary badge with the projected V9 grade and score", async () => {

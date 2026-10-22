@@ -37,7 +37,9 @@ describe("SafetyScoreV9PillarRow", () => {
     { cause: "U" as const, score: 60, reason: "not yet researched" },
   ])("names a $cause priced unknown without calling it excluded", ({ cause, score, reason }) => {
     const { container } = render(<SafetyScoreV9PillarRow cardId="card" pillar={{ ...pillar(null), pricedUnknown: { cause, score } }} />);
-    expect(container.textContent).toContain(`Unknown — priced at ${score} (${reason})`);
+    expect(container.textContent).toContain("Unknown");
+    expect(container.textContent).toContain(`${reason.charAt(0).toUpperCase()}${reason.slice(1)} · assumed ${score}/100`);
+    expect(container.querySelector('[role="img"]')?.getAttribute("aria-label")).toBe(`Exit: unknown, ${reason} · assumed ${score}/100`);
     expect(container.textContent).not.toMatch(/Not scored|Excluded/);
     expect(container.querySelector('[role="img"]')?.childElementCount).toBe(0);
   });

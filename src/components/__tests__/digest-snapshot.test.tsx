@@ -73,7 +73,7 @@ describe("DigestSnapshot", () => {
       reasonCodes: [], caps: [], bindingCap: null,
     }], gradeDistribution: { C: 1 }, provenance: { ...makeReportCardsV9Response().safetyScoreIdentity, methodologyVersion: "10.0", publishedAt: 1_756_684_800 } } });
     const { container } = render(<DigestSnapshot date="2026-09-01" />);
-    expect(container.textContent).toContain(`Exit ${reason} (priced as unknown)`);
+    expect(container.textContent).toContain(`Exit ${reason} (assumed ${score})`);
     expect(container.textContent).not.toContain("pipeline gap");
   });
   it("prints rounded scores, labelled reason codes and duplicate symbols without debug syntax", () => {

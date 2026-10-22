@@ -13,7 +13,7 @@ import type {
   SafetyScorePublicationIdentity,
 } from "@shared/types";
 import { hasPlottableV9RadarPillars, type V9TableConsumerCard as V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
-import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
+import { describePartialEvidence, formatPartialEvidenceHeadline } from "@/lib/safety-score-reason-labels";
 
 const PILLAR_SR_LABELS = { backing: "Backing", exit: "Exit", control: "Economic Control" } as const;
 
@@ -58,9 +58,12 @@ export const ReportCardMiniV9 = memo(function ReportCardMiniV9({
             versionInteractive={false}
           />
           {partial !== null ? (
-            <ul role="status" className="space-y-0.5 text-center text-xs text-muted-foreground" title={partial.summary}>
-              {partial.gaps.map((gap) => <li key={gap.label}>{formatPartialEvidenceGap(gap)}</li>)}
-            </ul>
+            // One headline keeps the grid's radars near one baseline; the
+            // full gap list and the score's assumption live in the summary.
+            <p role="status" className="text-center text-xs text-muted-foreground" title={partial.summary}>
+              {formatPartialEvidenceHeadline(partial)}
+              <span className="sr-only">. {partial.summary}</span>
+            </p>
           ) : null}
 
           {hasPlottableV9RadarPillars(card) ? (
@@ -68,7 +71,7 @@ export const ReportCardMiniV9 = memo(function ReportCardMiniV9({
               <p className="sr-only">
                 {(["backing", "exit", "control"] as const).map((key) => {
                   const score = card.pillars[key].score;
-                  return `${PILLAR_SR_LABELS[key]} ${score === null ? "unknown, not plotted" : `${score}/100`}`;
+                  return `${PILLAR_SR_LABELS[key]} ${score === null ? "unknown, not plotted" : `${Math.round(score)}/100`}`;
                 }).join("; ")}.
               </p>
               <LazySection minHeight={140} rootMargin="200px">

@@ -381,6 +381,17 @@ export function formatPartialEvidenceGap(gap: PartialEvidenceGap): string {
   return gap.note === null ? gap.label : `${gap.label} (${gap.note})`;
 }
 
+/** One-line headline for compact surfaces: the decisive gap, then a count of the rest. */
+export function formatPartialEvidenceHeadline(description: PartialEvidenceDescription): string {
+  const [primary, ...rest] = description.gaps;
+  return `${primary!.label}${rest.length > 0 ? ` +${rest.length}` : ""}`;
+}
+
+/** A priced unknown's cause and the score it stands in with: "not yet researched · assumed 50/100". */
+export function formatPricedUnknown(priced: V9PricedUnknown): string {
+  return `${SAFETY_SCORE_GAP_CAUSE_LABELS[priced.cause]} · assumed ${priced.score.toFixed(0)}/100`;
+}
+
 /** Table and full cards alike; full cards add exact component keys and their priced unknowns live in the trace. */
 export interface PartialEvidenceCard {
   ratingStatus?: string | null;
@@ -399,9 +410,10 @@ export interface PartialEvidenceCard {
 }
 
 /**
- * One rule for every partial card: an unavailable pillar of a rated card is
- * priced as an unknown (issuer non-disclosure C, or not yet researched U);
- * only A/B exclusions leave evidence out, and only A is a pipeline gap.
+ * One rule for every partial card: an unavailable pillar of a rated card
+ * stands in at an assumed score (issuer non-disclosure C, or not yet
+ * researched U); only A/B exclusions leave evidence out, and only A is a
+ * pipeline gap.
  */
 export function describePartialEvidence(card: PartialEvidenceCard): PartialEvidenceDescription | null {
   const partial = card.partialEvidence;
@@ -424,13 +436,14 @@ export function describePartialEvidence(card: PartialEvidenceCard): PartialEvide
     if (pillar?.aggregationDisposition !== "unavailable" && !listedPillars.has(key)) continue;
     const priced = card.ratingStatus === "rated" && card.pillars ? readV9PricedUnknown({ ...card, pillars: card.pillars }, key) : null;
     if (priced !== null) {
-      gaps.push({ label: `${PILLAR_SHORT_LABELS[key]} ${SAFETY_SCORE_GAP_CAUSE_LABELS[priced.cause]}`, note: "priced as unknown" });
+      const assumed = priced.score.toFixed(0);
+      gaps.push({ label: `${PILLAR_SHORT_LABELS[key]} ${SAFETY_SCORE_GAP_CAUSE_LABELS[priced.cause]}`, note: `assumed ${assumed}` });
       sentences.push(priced.cause === "C"
-        ? `The issuer does not disclose ${PILLAR_LABELS[key]} evidence, so the score prices it as an unknown at ${priced.score.toFixed(0)}/100.`
-        : `${PILLAR_LABELS[key]} is not yet researched, so the score prices it as an unknown at ${priced.score.toFixed(0)}/100.`);
+        ? `The issuer does not disclose ${PILLAR_LABELS[key]} evidence; the score assumes ${assumed}/100 in its place.`
+        : `${PILLAR_LABELS[key]} is not yet researched; the score assumes ${assumed}/100 until it is.`);
     } else if (card.ratingStatus === "rated") {
-      gaps.push({ label: `${PILLAR_SHORT_LABELS[key]} unavailable`, note: "priced as unknown" });
-      sentences.push(`${PILLAR_LABELS[key]} has no usable evidence, so the score prices it as an unknown.`);
+      gaps.push({ label: `${PILLAR_SHORT_LABELS[key]} unknown`, note: null });
+      sentences.push(`${PILLAR_LABELS[key]} has no usable evidence; the score uses an assumed value in its place.`);
     } else {
       gaps.push({ label: `${PILLAR_SHORT_LABELS[key]} unavailable`, note: null });
       sentences.push(`${PILLAR_LABELS[key]} has no usable evidence.`);
@@ -448,7 +461,13 @@ export function describePartialEvidence(card: PartialEvidenceCard): PartialEvide
   const components = [...new Set((partial.excludedComponentKeys ?? [])
     .filter((key) => !listedPillars.has(key.split(":")[0] ?? ""))
     .map(describeExcludedScoreComponent))];
-  if (excludedAB.length === 0 && abCauses.length > 0) gaps.push({ label: `Partial evidence · ${abLabel}`, note: null });
+  if (excludedAB.length === 0 && abCauses.length > 0) {
+    gaps.push({
+      label: components.length === 0 ? `Partial evidence · ${abLabel}`
+        : `${components.length === 1 ? capitalize(components[0]!.replace(/^the /, "")) : `${components.length} inputs`} excluded · ${abLabel}`,
+      note: null,
+    });
+  }
   if (components.length > 0 || (excludedAB.length === 0 && abCauses.length > 0)) {
     const subject = components.length === 0 ? "Some evidence" : capitalize(listWords(components));
     sentences.push(`${subject} ${components.length > 1 ? "are" : "is"} left out of the score for now${

@@ -15,7 +15,7 @@ describe("safety score reason labels", () => {
     const pillars = { backing: { score: 80 }, exit: { score: 70 }, control: { score: 60 }, [pillar]: { score: null, aggregationDisposition: "unavailable", pricedUnknown: { cause, score } } };
     const result = describePartialEvidence({ ratingStatus: "rated", pillars,
       partialEvidence: { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: [pillar], causes: [] } })!;
-    expect(result.gaps.map(formatPartialEvidenceGap)).toEqual([`${label} (priced as unknown)`]);
+    expect(result.gaps.map(formatPartialEvidenceGap)).toEqual([`${label} (assumed ${score})`]);
     expect(result.summary).toContain(`${score}/100`);
     expect(result.summary).not.toContain("pipeline");
   });

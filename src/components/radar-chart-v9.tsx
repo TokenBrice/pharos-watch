@@ -6,7 +6,7 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import type { SafetyScorePublicationIdentity } from "@shared/types";
 import type { ReportCardsV9TableCard } from "@shared/types/report-cards-v9-projections";
 import { median } from "@shared/lib/stats";
-import { SAFETY_SCORE_GAP_CAUSE_LABELS } from "@shared/lib/classification";
+import { formatPricedUnknown } from "@/lib/safety-score-reason-labels";
 import {
   hasCompleteV9RadarPillars,
   hasPlottableV9RadarPillars,
@@ -34,11 +34,15 @@ export interface V9RadarSeries {
   card: Pick<ReportCardsV9TableCard, "id" | "ratingStatus" | "partialEvidence" | "pillars"> & Pick<V9PricedUnknownSource, "scoreTrace">;
   identity: SafetyScorePublicationIdentity;
   color: string;
+  /** Reader name for multi-series notes; falls back to the card id. */
+  symbol?: string;
 }
 
 /** A pillar some series could not measure: drawn as an "Unknown" axis, never as a point. */
 export interface V9RadarUnknownAxis {
   seriesIds: string[];
+  /** Names of the series missing this pillar when others measure it; empty when every series lacks it. */
+  missingNames: string[];
   /** Scoring assumptions behind the gap, for the axis tooltip; never plotted. */
   assumptions: string[];
 }
@@ -67,12 +71,14 @@ export function buildV9RadarDataset(
   for (const pillar of V9_PILLARS) {
     const missing = series.filter((entry) => !Number.isFinite(entry.card.pillars[pillar].score));
     if (missing.length === 0) continue;
+    const partialAxis = missing.length < series.length;
+    const names = new Map(series.map((entry) => [entry.card.id, entry.symbol ?? entry.card.id]));
     unknownAxes[V9_PILLAR_LABELS[pillar]] = {
       seriesIds: missing.map((entry) => entry.card.id),
+      missingNames: partialAxis ? missing.map((entry) => names.get(entry.card.id)!) : [],
       assumptions: missing.flatMap((entry) => {
         const priced = readV9PricedUnknown(entry.card, pillar);
-        return priced === null ? [] : [`${missing.length > 1 ? `${entry.card.id}: ` : ""}scored as an unknown at ${priced.score.toFixed(0)}/100 (${
-          SAFETY_SCORE_GAP_CAUSE_LABELS[priced.cause]})`];
+        return priced === null ? [] : [`${series.length > 1 ? `${names.get(entry.card.id)}: ` : ""}${formatPricedUnknown(priced)}`];
       }),
     };
   }
@@ -115,7 +121,9 @@ function renderAxisSpokes(unknownAxes: V9RadarDataset["unknownAxes"]) {
     return (
       <g className="text-border" aria-hidden="true">
         {(points ?? []).map((point) => {
-          const unknown = unknownAxes[String(point.name)] !== undefined;
+          // Dashed only when no series measures the axis; a pillar one coin
+          // lacks stays a solid axis for the coins that measure it.
+          const unknown = unknownAxes[String(point.name)]?.missingNames.length === 0;
           return (
             <line
               key={String(point.name)}
@@ -166,16 +174,27 @@ function UnknownAwareTick({ x, y, textAnchor, payload, unknownAxes }: {
     return <text x={x} y={y} textAnchor={textAnchor} fontSize={11} fill="currentColor" dy="0.35em">{label}</text>;
   }
   const anchor = textAnchor ?? "middle";
-  // Put the longer second line inward from either side axis. SVG overflow can
-  // still be clipped by a card ancestor, so every label must fit the chart.
-  const markerOffset = anchor === "start" ? -48 : anchor === "end" ? 0 : -26;
-  const labelY = anchor === "middle" ? Math.max(16, y ?? 0) : y;
+  const note = unknown.missingNames.length === 0 ? "Unknown" : `Unknown for ${unknown.missingNames.join(", ")}`;
+  const title = `${label}: ${note.toLowerCase()}, not plotted${unknown.assumptions.length > 0 ? ` (${unknown.assumptions.join("; ")})` : ""}`;
+  if (anchor === "middle") {
+    // The top axis keeps one line so the note never sits on the polygon apex.
+    return (
+      <text x={x} y={y} textAnchor="middle" fontSize={11} fill="currentColor" dy="0.35em">
+        <title>{title}</title>
+        {label}
+        <tspan dx={4} fontSize={10} fontStyle="italic">{note}</tspan>
+      </text>
+    );
+  }
+  // Side axes stack the note under the label, aligned to the label's inner
+  // edge so it grows toward the chart instead of past the card edge.
+  const labelWidth = label.length * 6.2;
+  const noteX = (x ?? 0) + (anchor === "start" ? labelWidth : -labelWidth);
   return (
     <g>
-      <title>{`${label}: unknown, not plotted${unknown.assumptions.length > 0 ? `. ${unknown.assumptions.join("; ")}` : ""}`}</title>
-      <text x={x} y={labelY} textAnchor={anchor} fontSize={11} fill="currentColor" dy="-0.2em">{label}</text>
-      <circle cx={(x ?? 0) + markerOffset} cy={(labelY ?? 0) + 9} r={2.5} fill="none" stroke="currentColor" strokeWidth={1} />
-      <text x={(x ?? 0) + markerOffset + 5} y={labelY} textAnchor="start" fontSize={10} fontStyle="italic" fill="currentColor" dy="1.15em">Unknown</text>
+      <title>{title}</title>
+      <text x={x} y={y} textAnchor={anchor} fontSize={11} fill="currentColor" dy="-0.2em">{label}</text>
+      <text x={noteX} y={y} textAnchor={anchor === "start" ? "end" : "start"} fontSize={10} fontStyle="italic" fill="currentColor" dy="1.15em">{note}</text>
     </g>
   );
 }
@@ -218,7 +237,8 @@ export function CompareRadarV9({
       className="w-full"
       style={{ height: size }}
       role="figure"
-      aria-label="V10 safety score pillar comparison"
+      aria-label={`V10 safety score pillar comparison${Object.entries(unknownAxes).map(([pillar, axis]) =>
+        `. ${pillar} ${axis!.missingNames.length === 0 ? "unknown" : `unknown for ${axis!.missingNames.join(", ")}`}, not plotted`).join("")}`}
     >
       {ready ? (
         <RechartsRadarChart

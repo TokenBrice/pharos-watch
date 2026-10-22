@@ -26,9 +26,8 @@ import type { StabilityIndexCurrent } from "@shared/types/stability";
 import type { ChainEnvironmentEvidence, ChainHealthFactors } from "@shared/types/chains";
 import { SAFETY_SCORE_V9_RESPONSIBILITY_LABELS } from "@/lib/safety-score-v9-labels";
 import type { V9EvidenceCause } from "@shared/types/safety-score-v9-causes";
-import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
+import { describePartialEvidence, formatPartialEvidenceGap, formatPricedUnknown } from "@/lib/safety-score-reason-labels";
 import { readV9PricedUnknown } from "@/lib/safety-score-v9-consumers";
-import { SAFETY_SCORE_GAP_CAUSE_LABELS } from "@shared/lib/classification";
 
 export interface ShowYourWorkRow {
   label: string;
@@ -99,7 +98,7 @@ export function formatReportCardV9(
   const pillarValue = (key: "backing" | "exit" | "control") => {
     const pillar = card.pillars[key];
     const priced = readV9PricedUnknown(card, key);
-    if (pillar.score === null && priced) return `Unknown — priced at ${priced.score.toFixed(0)} (${SAFETY_SCORE_GAP_CAUSE_LABELS[priced.cause]})`;
+    if (pillar.score === null && priced) return `Unknown — ${formatPricedUnknown(priced)}`;
     if (pillar.aggregationDisposition === "excluded-a-b") return partial?.gaps.map(formatPartialEvidenceGap).join(" · ") ?? "Excluded";
     return fmtNum(pillar.score, 1);
   };
