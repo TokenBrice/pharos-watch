@@ -262,7 +262,7 @@ export function adjustedResponse() {
     source: "asset-premium",
     kind: "market-anchor-longevity",
     label: "#1 & Longevity Premium",
-    configuredPoints: 14,
+    configuredPoints: 12,
     appliedPoints: 4,
     scoreBefore: 83,
     scoreAfter: 87,

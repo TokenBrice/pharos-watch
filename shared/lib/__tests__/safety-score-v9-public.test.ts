@@ -352,7 +352,7 @@ describe("Safety Score v9 public projection", () => {
     expect(card.breakdowns?.exit.limitedEvidenceCauses ?? []).toEqual([]);
     expect(card.scoreTrace.aggregation).toMatchObject({
       excludedPillars: ["exit"], effectiveScoringWeights: { backing: 0.4, exit: 0.35, control: 0.25 },
-      pricedUnknownPillars: [{ pillar: "exit", cause, score: cause === "C" ? 35 : 50 }],
+      pricedUnknownPillars: [{ pillar: "exit", cause, score: 50 }],
     });
     expect(SafetyScoreV9CurrentCardSchema.safeParse(card).success).toBe(true);
   });
@@ -1635,7 +1635,7 @@ describe("Safety Score v9 public projection", () => {
       source: "asset-premium",
       kind: "market-anchor-longevity",
       label: "#1 & Longevity Premium",
-      configuredPoints: 14,
+      configuredPoints: 12,
       appliedPoints: 4,
       scoreBefore: 83,
       scoreAfter: 87,

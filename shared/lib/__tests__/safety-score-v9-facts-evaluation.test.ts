@@ -272,7 +272,7 @@ describe("Safety Score v9 fact evaluation", () => {
     expect(evaluated.trace.finalGrade).toBe(baseline.trace.finalGrade);
   });
 
-  it("publishes exactly the C/U causes used to price whole-Exit uncertainty", () => {
+  it("preserves the published C/U causes when whole-Exit uncertainty has one price", () => {
     const { core, asset } = exitPromotionFixture();
     const candidate = asset.exitRoutes.find((route) => route.lane === "redemption")!;
     asset.exitRoutes = [candidate];
@@ -297,7 +297,7 @@ describe("Safety Score v9 fact evaluation", () => {
     exitFactorGap(asset, candidate, "C");
     const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1)
       .assets.find((row) => row.assetId === asset.assetId)!;
-    expect(evaluated.exit).toMatchObject({ score: 35, limitedEvidenceCauses: ["C", "U"] });
+    expect(evaluated.exit).toMatchObject({ score: 50, limitedEvidenceCauses: ["C", "U"] });
     expect(evaluated.scoreInput.pillars.exit.score).toBe(evaluated.exit.score);
     expect(evaluated.scoreInput.pillars.exit.limitedEvidenceCauses).toEqual(evaluated.exit.limitedEvidenceCauses);
   });

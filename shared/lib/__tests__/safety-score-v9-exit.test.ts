@@ -1394,7 +1394,7 @@ describe("cause-aware Exit and max-feasible portfolios", () => {
     expect(restricted.score).toBeLessThan(trace.score!);
   });
 
-  it.each([{ cause: "C", quality: 35 }, { cause: "U", quality: 50 }] as const)("prices only unknown $cause subfactors", ({ cause, quality }) => {
+  it.each(["C", "U"] as const)("prices unknown %s subfactors at 50 while retaining their cause", (cause) => {
     const missing = gap(cause, "gap");
     const trace = evaluate([route({ observationConfidence: "unknown", holderEligibility: "unknown",
       capacityEvidenceTier: "unknown", capacityCurve: route().capacityCurve.map((point) => ({ ...point, executionCostBps: 200 })),
@@ -1404,14 +1404,14 @@ describe("cause-aware Exit and max-feasible portfolios", () => {
     expect(trace.confidenceDimensions!.observation.factor).toBe(0.6);
     expect(trace.confidenceDimensions!.capacityMethod.factor).toBe(0.75);
     expect(trace.confidenceDimensions!.capacityMethod.cause).toBe(cause);
-    expect(trace.components!.access).toBe(quality);
-    expect(trace.components!.cost).toBe(quality);
+    expect(trace.components!.access).toBe(50);
+    expect(trace.components!.cost).toBe(50);
     expect(trace.components!.capacity).toBe(76);
     expect(trace.components!.outputAssetQuality).toBe(100);
     expect(trace.capsApplied.some((cap) => cap.startsWith("fee-evidence:"))).toBe(false);
   });
 
-  it.each(["C", "U"] as const)("uses the same %s factor causes for whole-Exit pricing and publication", (cause) => {
+  it.each(["C", "U"] as const)("preserves published %s factor causes with cause-neutral whole-Exit pricing", (cause) => {
     const capacity = gap("U", "capacity");
     const cost = gap(cause, "cost");
     const result = evaluate([route({
@@ -1420,7 +1420,7 @@ describe("cause-aware Exit and max-feasible portfolios", () => {
       gaps: [capacity.gap, cost.gap],
     })]);
     expect(result.limitedEvidenceCauses).toEqual(cause === "C" ? ["C", "U"] : ["U"]);
-    expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit[cause]);
+    expect(result.score).toBe(50);
     expect(result.causeGapIds).toEqual(["capacity", "cost"]);
   });
 

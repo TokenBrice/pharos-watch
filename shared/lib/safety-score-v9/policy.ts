@@ -327,8 +327,9 @@ export const V9_CANDIDATE_POLICY_V1 = loadV9CandidateMethodologyPolicy();
 
 /**
  * Prices only an applicable factor whose quality is unknown, not a measured value.
- * C selects non-disclosure pricing; all other causes select the research-unknown
- * price. A D gap elsewhere in the status cannot establish this factor's quality.
+ * C selects non-disclosure pricing for Backing and Control; Exit's C/U values
+ * are equal, so its cause is presentation-only. Other causes select U pricing.
+ * A D gap elsewhere in the status cannot establish this factor's quality.
  * Callers retain measured adverse values and apply A/B exclusion separately.
  */
 export function unknownQuality(

@@ -160,6 +160,12 @@ describe("MethodologyPage", () => {
     ]) expect(text).toContain(rule);
     expect(text).toContain("1% of the stress request");
     expect(text).toContain("capped at 50 before confidence");
+    expect(text).toContain("Backing 35, Exit 50 and Control 50");
+    expect(text).toContain("C/U cause label is presentation-only");
+    expect(text).toContain("USDT longevity premium returns to +12");
+    expect(text).toContain("35 / 50 / 50");
+    expect(text).toContain("50 / 50 / 60");
+    expect(text).toContain("Presentation-only C/U labels");
     expect(text).not.toContain("The ledger records 833");
     expect(text).not.toContain("open data points fell 1,280");
   });

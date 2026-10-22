@@ -6,7 +6,7 @@
   "semantic": {
     "unknownQuality": {
       "backing": { "C": 35, "U": 50 },
-      "exit": { "C": 35, "U": 50 },
+      "exit": { "C": 50, "U": 50 },
       "control": { "C": 50, "U": 60 }
     },
     "accessLookthrough": {
@@ -143,7 +143,7 @@
           "assetId": "usdt-tether",
           "kind": "market-anchor-longevity",
           "label": "#1 & Longevity Premium",
-          "points": 14,
+          "points": 12,
           "maximumPublishedScore": 87,
           "minimumTrackRecordMonths": 120,
           "requiredMarketRank": 1,

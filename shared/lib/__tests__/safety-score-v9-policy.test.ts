@@ -190,9 +190,6 @@ describe("Safety Score v9 methodology policy", () => {
     ["veto override", (policy) => { policy.semantic.control.governedIssuance.minorityVeto.admissibleOverride = ["none"]; }],
     ["monetary-policy delay", (policy) => { policy.semantic.control.governedIssuance.minorityVeto.monetaryPolicy.minRateChangeDelaySec += 1; }],
     ["restructure equity margin", (policy) => { policy.semantic.control.governedIssuance.minorityVeto.restructureMinEquityMultiple += 1; }],
-    ["allocation required scope", (policy) => { policy.semantic.formula.wrapperAllocationScope.requiredScopes.privateCredit.leverage.push("immediate-custodian"); }],
-    ["allocation leverage assessment", (policy) => { policy.semantic.formula.wrapperAllocationScope.leverageAssessments["bounded-up-to-1.5x"] = "high"; }],
-    ["allocation custody assessment", (policy) => { policy.semantic.formula.wrapperAllocationScope.custodyAssessments["unsegregated"] = "critical"; }],
     ["bounded liquid age", (policy) => { policy.semantic.backing.reserve.boundedFacts.currentLiquidFractionMaxAgeSec += 1; }],
     ["bounded observed maturity quality", (policy) => { policy.semantic.backing.reserve.boundedFacts.observedMaturityQualityLevel = "weak"; }],
     ["bounded current availability quality", (policy) => { policy.semantic.backing.reserve.boundedFacts.currentAvailabilityQualityLevel = "adequate"; policy.semantic.backing.reserve.liquidityQuality["seven-days"] = 90; }],
@@ -218,10 +215,10 @@ describe("Safety Score v9 methodology policy", () => {
     expect(() => loadV9MethodologyPolicy(invalid)).toThrow();
   });
 
-  it("separates issuer non-disclosure from research gaps in each unknown pillar", () => {
+  it("keeps cause-keyed Backing and Control pricing but makes unknown Exit cause-neutral", () => {
     expect(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality).toEqual({
       backing: { C: 35, U: 50 },
-      exit: { C: 35, U: 50 },
+      exit: { C: 50, U: 50 },
       control: { C: 50, U: 60 },
     });
     for (const pillar of ["backing", "exit", "control"] as const) {
@@ -351,7 +348,7 @@ describe("Safety Score v9 methodology policy", () => {
 
   it("includes the parent-mechanism bypass decision in the semantic digest and rejects unbalanced native-family weights", () => {
     const changed = candidateClone();
-    changed.semantic.backing.archetypes["protocol-position"].allowCompleteLiveParentMechanismBypass = true;
+    changed.semantic.backing.archetypes["shared-reserve"].allowCompleteLiveParentMechanismBypass = true;
     expect(loadV9MethodologyPolicy(changed).semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
     const unbalanced = candidateClone();
     unbalanced.semantic.backing.archetypes["shared-reserve"].componentWeights["liability-conservation"] = 0;

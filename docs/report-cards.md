@@ -53,7 +53,7 @@ Mechanism reviews enter next UTC midnight (date-only) or at their exact UTC pin,
 
 C/U provenance preserves upstream constraints: same-slice known/unknown loss=`max(K,U)`, not sum. Supported constraints survive unknown siblings; inherited Backing alone proves no wrapper.
 
-`unknownQuality(pillar,cause)` prices unknown factors/unavailable pillars on rateable cards. Backing/Exit/Control: C researched non-disclosure=35/35/50; U research/infrastructure or unclassified=50/50/60. Preserve measurements/causes/provenance; unknown reconciliation/supervision earns no credit.
+`unknownQuality(pillar,cause)` prices unknown factors/unavailable pillars on rateable cards. Backing/Exit/Control: C researched non-disclosure=35/50/50; U research/infrastructure or unclassified=50/50/60. Exit's published C/U cause is presentation-only: both price uncertainty at 50, avoiding the Exit-35 plateau revived when priced and published causes were aligned. Preserve measurements/causes/provenance; unknown reconciliation/supervision earns no credit.
 
 Whole-liability attribution (WS04-A08) and independent ordinary bridge clocks (WS04-A09) remain deferred. Current supply denominators, aggregate fallback, bridge applicability, route clocks and mint scope stand; any later clock change must preserve admitted active incidents.
 
@@ -87,7 +87,7 @@ Headlines use the actual score-matching binding Control component or selected Ex
 
 Suspension removes only its channel's credit/masked obligations, not alternatives, proving no global exhaustion/danger. Insufficient alternatives retain scoped U census proof under the admission details above.
 
-Wrapper limit=`max(0, floor(min(required parents' premium-free inheritable scores) − formDeduction))`: pure 3, native-staked 5, active strategy-allocation vault 10. Final=min(independently constrained own score, limit); unavailable parents stay unavailable. Local risks belong in pillars, not another fallback/factor-sum/floor. USDT keeps +14, max87 and eligibility; no inheritance.
+Wrapper limit=`max(0, floor(min(required parents' premium-free inheritable scores) − formDeduction))`: pure 3, native-staked 5, active strategy-allocation vault 10. Final=min(independently constrained own score, limit); unavailable parents stay unavailable. Local risks belong in pillars, not another fallback/factor-sum/floor. USDT returns to +12 after the artefact fixes, retaining max87 and eligibility; no inheritance.
 
 An admitted collateral child receives the pure-wrapper parent ceiling (premium-free parent score minus 3) only when **≥99% of admitted direct reserve rows are classified stablecoin or fund-share in that same scored parent token**. Sum qualifying same-parent rows; protocol-position denomination and composite strategy claims do not establish direct collateral eligibility. Keep any lower own score or stricter serial-parent limit; dust cannot defeat concentration, while missing/unadmitted dependencies cannot prove it. The trace identifies `parentKind: "concentrated-collateral"` and `parentAssetId`; basket `collateralParentScore` remains separate from its Backing-only score.
 

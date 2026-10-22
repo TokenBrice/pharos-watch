@@ -617,7 +617,7 @@ describe("SafetyScoreV9ResponseSchema", () => {
     }];
     higherParent.scoreTrace.boundedUncertaintyAttribution.items = [];
     expect(() => SafetyScoreV9CurrentCardSchema.parse(higherParent)).toThrow(
-      /binding minimum serial parent/,
+      /binding declared parent/,
     );
 
     const tiedParent = structuredClone(higherParent);
@@ -646,7 +646,7 @@ describe("SafetyScoreV9ResponseSchema", () => {
       .toEqual(aboveFormerThreshold.scoreTrace.adverseAttribution.items);
     aboveFormerThreshold.dependencies.serial[0]!.score = 61;
     expect(() => SafetyScoreV9CurrentCardSchema.parse(aboveFormerThreshold))
-      .toThrow(/binding minimum serial parent/);
+      .toThrow(/binding declared parent/);
 
     const unmatchedParentResponse = boundedResponse();
     unmatchedParentResponse.cards = [tiedParent];
