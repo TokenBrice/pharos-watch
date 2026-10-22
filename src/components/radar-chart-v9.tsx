@@ -166,7 +166,9 @@ function UnknownAwareTick({ x, y, textAnchor, payload, unknownAxes }: {
     return <text x={x} y={y} textAnchor={textAnchor} fontSize={11} fill="currentColor" dy="0.35em">{label}</text>;
   }
   const anchor = textAnchor ?? "middle";
-  const markerOffset = anchor === "start" ? 4 : anchor === "end" ? -50 : -26;
+  // "Unknown" is wider than a short pillar name; start-anchored labels sit at the
+  // right edge, so the hollow marker leads the word from the label's own start.
+  const markerOffset = anchor === "start" ? -5 : anchor === "end" ? -50 : -26;
   return (
     <g>
       <title>{`${label}: unknown, not plotted${unknown.assumptions.length > 0 ? `. ${unknown.assumptions.join("; ")}` : ""}`}</title>
@@ -219,6 +221,7 @@ export function CompareRadarV9({
     >
       {ready ? (
         <RechartsRadarChart
+          style={{ overflow: "visible" }}
           width={width}
           height={height}
           data={rows}
