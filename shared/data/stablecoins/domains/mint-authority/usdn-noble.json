@@ -8,8 +8,8 @@
     "inheritedFrom": "m-m0",
     "controls": [],
     "economicCapSemantics": "raiseable",
-    "reconciliation": "continuous",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -37,7 +37,7 @@
           "url": "https://docs.m0.org/protocol/m-portals"
         }
       ],
-      "evidence": "Mint/bridge boundary review completed 2026-08-16: Noble USDN is M0's M representation on Noble, not an independently collateralized Noble-native issuance rail. Noble documents that M is locked on Ethereum through M0's Portal before the Noble dollar module receives the Wormhole NTT route and mints/rebases uusdn. The inherited parent issuance rail is M0's Ethereum MinterGateway (M token minterGateway() = 0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e and gateway mToken() = 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b); M0's approved-minter path uses validator attestations, mandatory mint-delay review, collateral/debt checks, and M0 TTG-governed minter capacity. The Noble Portal proxy, its owner Safe, pauser, peers, transceiver, and Noble module owner are bridge-route controls in bridgeRouteRisk and are not local USDN Mint Authority. No numeric live M0 cap or validator quorum is claimed here.",
+      "evidence": "Mint/bridge boundary review completed 2026-08-16: Noble USDN is M0's M representation on Noble, not an independently collateralized Noble-native issuance rail. Noble documents that M is locked on Ethereum through M0's Portal before the Noble dollar module receives the Wormhole NTT route and mints/rebases uusdn. The inherited parent issuance rail is M0's Ethereum MinterGateway (M token minterGateway() = 0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e and gateway mToken() = 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b); M0's approved-minter path uses validator attestations, mandatory mint-delay review, collateral/debt checks, and M0 TTG-governed minter capacity. The Noble Portal proxy, its owner Safe, pauser, peers, transceiver, and Noble module owner are bridge-route controls in bridgeRouteRisk and are not local USDN Mint Authority. No numeric live M0 cap or validator quorum is claimed here. Source-scope correction reviewed 2026-10-22: Withdraw continuous reconciliation and attestation-only supervision from this USDN review. The cited M0 validator attestations concern parent M collateral and issuance, not independent USDN assurance. This profile explicitly records no local canonical native-liability issuance; Noble representation and Portal/module authority remain separately scoped Bridge Risk, and parent M assurance stays on the inherited dependency edge. No USDN-local assurance credit is established here. The original review start, authority and implementation observations, and all evidence clocks are unchanged.",
       "reviewer": "Codex mint-bridge-boundary migration usdn-noble",
       "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
