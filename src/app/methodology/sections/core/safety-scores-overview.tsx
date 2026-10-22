@@ -32,11 +32,11 @@ export function SafetyScoresOverview() {
       />
       <MethodologyPreconditions
         facts={[
-          { label: "Minimum data", value: "At least two included pillars for a score; scoped cause proof for exclusions" },
+          { label: "Minimum data", value: "At least two usable evidenced pillars; original weights renormalized" },
           { label: "Required sources", value: "Backing, exit, control, peg, dependency, and evidence-provenance inputs" },
           {
             label: "Failure behavior",
-            value: "Technical gaps have no score/grade; NR needs causal evidence gates; global failures hold accepted state",
+            value: "Technical gaps have no score/grade; NR requires genuine unavailability, never a low score; global failures hold accepted state",
           },
         ]}
       />
