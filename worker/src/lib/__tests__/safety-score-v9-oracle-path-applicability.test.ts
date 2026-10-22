@@ -270,7 +270,7 @@ describe("structured savings-rate authority classification", () => {
     meta.mintAuthority = {
       mintPath: "wrapped-or-variant-inherited", authorityPosture: "none-resolved-mint",
       confidence: "verified", summary: "Immutable deposit-only savings shares.",
-      upgradeability: { model: "immutable", canChangeMintLogic: false },
+      upgradeability: { model: "immutable", canChangeMintLogic: false, sources },
       controls: [], economicCapSemantics: "bounded", reconciliation: "not-applicable", supervision: "none",
       review: { reviewedAt: "1970-01-01", reviewer: "Fixture reviewer", sources,
         evidence: "The immutable share token has no privileged share minter or upgrade authority." },
