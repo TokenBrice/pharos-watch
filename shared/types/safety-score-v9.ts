@@ -156,6 +156,9 @@ const V9PillarEvidenceSchema = z
     }
   });
 
+/** Liability-share totals within this limit are rounding noise, not overlap diagnostics. */
+export const V9_AUTHORITY_SHARE_ROUNDOFF_LIMIT = 1.001;
+
 export const V9StructuralSignalKindSchema = z.enum([
   "unsafe-backing",
   "speculative-credit",
@@ -201,7 +204,7 @@ const V9StructuralSignalSchema = z
     pricedInPillar: V9QualityPillarSchema.optional(),
     failureDomainKeys: z.array(z.string().min(1)).default([]),
     evidence: z.array(V9EvidenceReferenceSchema).default([]),
-    /** Measured quality of the affected claim, never a severity-derived cap. */
+    /** Measured claim quality; authority adjustment rows expose the resolved Control counterfactual R(B_q). */
     exposedScore: ScoreSchema.optional(),
   })
   .strict()

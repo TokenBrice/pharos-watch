@@ -38,6 +38,7 @@ import { DANGER_PEG_MULTIPLIER_FLOOR } from "../../types/safety-score-v9-public-
 import { applyV9MeasuredCollateralization, evaluateV9ArchetypeBacking } from "../safety-score-v9/archetypes/evaluation";
 import { computeV9CompactResultDigest, projectCompactV9ScoreTrace } from "../safety-score-v9/trace";
 import { asset as backingAsset, exposure, knownStatus } from "./safety-score-v9-backing.test-support";
+import { V9_PUBLIC_REPRESENTATION_VERSION } from "../../types/report-cards-v9-materialization";
 
 const DIGESTS = {
   policy: "a".repeat(64),
@@ -325,6 +326,34 @@ function cap(args: Pick<V9CapTrace, "kind" | "limit" | "source" | "reason" | "bi
 }
 
 describe("Safety Score v9 public projection", () => {
+  it.each([false, true])("reconciles both Q* lanes with interned witnesses (overlap=%s)", (overlap) => {
+    expect(V9_PUBLIC_REPRESENTATION_VERSION).toBe(2);
+    const input = fixture("qstar", { score: 80, grade: "A-" });
+    const production = makeV9ProductionScoreInput({
+      assetId: "qstar",
+      pillars: {
+        backing: makeV9Pillar(92), exit: makeV9Pillar(90),
+        control: makeV9Pillar(94, { deploymentAuthorities: [
+          { deploymentKey: "a", quality: 60, share: 1, failureDomainKeys: ["upgrade-control:a"], sourceSignals: [] },
+          ...(overlap ? [{ deploymentKey: "b", quality: 70, share: 0.5, failureDomainKeys: ["upgrade-control:b"], sourceSignals: [] }] : []),
+        ] }),
+      },
+      dependencyStructuralSignals: [{
+        kind: "critical-dependency", severity: "high", reason: "Measured shared chain.",
+        economicLossScope: "deployment", responsibility: "measured-adverse",
+        materialSharePct: 50, exposedScore: 64, exposureKey: "common:chain", riskEventKey: "chain:failure",
+        failureDomainKeys: ["chain:fixture"], evidence: [],
+      }],
+    });
+    input.trace = scoreV9EvaluatedAsset(production, input.policy);
+    const { card } = projectSafetyScoreV9Card(input);
+    expect(SafetyScoreV9CurrentCardSchema.safeParse(card).success).toBe(true);
+    const resolved = resolveV9PublicWitnessTexts(card);
+    expect(resolved.scoreTrace.deploymentRisk.adjustments).toHaveLength(overlap ? 3 : 2);
+    expect(resolved.scoreTrace.deploymentRisk.adjustments.some((row) =>
+      row.signalKey.startsWith("local-authority:") && row.adjustmentPoints > 0)).toBe(true);
+  });
+
   it.each(["C", "U"] as const)("labels majority %s unknown-priced weight without changing scores or archives", (cause) => {
     const input = fixture("provisional", { score: 50, grade: "C-", qualityScore: 50, pillars: { backing: 50, exit: 50, control: 50 } });
     const unknown = { cause, causeGapIds: ["provisional:gap:unknown"], scoringDisposition: "bounded-uncertainty" as const };

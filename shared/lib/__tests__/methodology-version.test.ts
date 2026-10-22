@@ -344,7 +344,7 @@ describe("methodology registry", () => {
   });
 
   it("retains the archive-free attribution release and aligns current Safety policy identity", () => {
-    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.30");
+    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.31");
     expect(SAFETY_SCORE_POLICY.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.23")!;
     expect(release).toMatchObject({
@@ -439,7 +439,7 @@ describe("methodology registry", () => {
   });
 
   it("records v10.30's release cut and uniform depeg/certificate calibration", () => {
-    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0]!;
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.30")!;
     expect(release).toMatchObject({
       version: "10.30", date: "2026-10-22", effectiveAt: 1_792_681_200,
       reconstructed: false, commits: [],
@@ -460,7 +460,7 @@ describe("methodology registry", () => {
   });
 
   it("records v10.30's integrated replay and dated evidence corrections without claiming production acceptance", () => {
-    const impact = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0]!.impact.join(" ");
+    const impact = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.30")!.impact.join(" ");
     for (const detail of [
       "fixed-clock engine replay of production capture 2026-10-22T00:17Z against v10.29, not production acceptance",
       "15 rated-grade upgrades, 1 downgrade (dusd-dialectic C−51→D48 from privileged internal pricing) and 29 same-grade score changes",
@@ -479,6 +479,21 @@ describe("methodology registry", () => {
     ]) {
       expect(impact).toContain(detail);
     }
+  });
+
+  it("records v10.31's Q* release cut without claiming replay acceptance", () => {
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0]!;
+    expect(release).toMatchObject({
+      version: "10.31", date: "2026-10-22", effectiveAt: 1792699200, reconstructed: false, commits: [],
+    });
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.30");
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.31");
+    expect(release.impact.join(" ")).toContain("Activation: 2026-10-22 20:00 UTC (release cut; 1792699200).");
+    expect(release.impact.join(" ")).not.toMatch(/provisionally|re-date/i);
+    expect(release.impact.join(" ")).toContain("no production acceptance is claimed");
+    expect(release.impact.join(" ")).toContain("without trimming or rescaling");
+    expect(release.impact.join(" ")).toContain("movers are post-cap");
+    expect(release.impact.join(" ")).toContain("usdat 62.47→66.29 masked at 62");
   });
 
 });

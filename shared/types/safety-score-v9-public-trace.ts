@@ -4,6 +4,7 @@ import { isV9WitnessTextReference } from "./safety-score-v9-public-witness-texts
 import { SafetyScoreV9HistoricalWrapperParentLimitSchema } from "./safety-score-v9-public-historical";
 import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-attribution";
 import {
+  V9_AUTHORITY_SHARE_ROUNDOFF_LIMIT,
   V9AssetPremiumKindSchema,
   V9QualityPillarSchema,
   V9ReasonCodeSchema,
@@ -150,12 +151,22 @@ const SafetyScoreV9DeploymentRiskTraceSchema = z
       (sum, adjustment) => sum + adjustment.adjustmentPoints,
       0,
     );
-    const effectiveExposureShare = deployment.adjustments.reduce(
-      (sum, adjustment) => sum + adjustment.exposureShare,
-      0,
+    // Infrastructure and local authority are separate pricing lanes. Authority
+    // rows resolve infrastructure at both endpoints, not another holder partition
+    // competing with its shares. True authority overlap carries an explicit
+    // diagnostic and is conservatively capped at the worst global endpoint.
+    const infrastructureShare = deployment.adjustments.reduce(
+      (sum, row) => sum + (row.signalKey.startsWith("local-authority:") ? 0 : row.exposureShare), 0,
     );
-    if (effectiveExposureShare > 1 + SCORE_TOLERANCE) {
-      issue(ctx, ["adjustments"], "V9 deployment adjustment exposure shares must form a bounded holder partition");
+    const authorityRows = deployment.adjustments.filter((row) => row.signalKey.startsWith("local-authority:"));
+    const authorityShare = authorityRows.reduce((sum, row) => sum + row.exposureShare, 0);
+    const diagnosedOverlap = authorityRows.length > 0 && authorityRows.every((row) =>
+      row.reason.includes("overlapping authority slices exceed 100.1%"));
+    const unresolvedWitnesses = deployment.adjustments.some((row) =>
+      isV9WitnessTextReference(row.signalKey) || isV9WitnessTextReference(row.reason));
+    if (!unresolvedWitnesses && (infrastructureShare > 1 + SCORE_TOLERANCE ||
+      authorityShare > V9_AUTHORITY_SHARE_ROUNDOFF_LIMIT + SCORE_TOLERANCE && !diagnosedOverlap)) {
+      issue(ctx, ["adjustments"], "V9 deployment adjustment lanes must form bounded holder partitions or diagnose authority overlap");
     }
     if (
       deployment.totalAdjustmentPoints !== null &&

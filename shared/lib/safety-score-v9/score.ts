@@ -16,6 +16,7 @@ import {
   type V9AdverseAttribution,
   type V9AggregationStrategy,
   type V9BoundedUncertaintyAttribution,
+  type V9DeploymentAuthority,
   type V9NRReason,
   type V9ParentAdverseAttribution,
   type V9ParentBoundedUncertaintyAttribution,
@@ -27,6 +28,7 @@ import type { V9WrapperParentLimit } from "./wrapper-risk";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonTreatment } from "./policy";
 import { canonicalUniqueBy, compareText, parentAttributionFields, propagateParentAttribution } from "./primitives";
 import { V9_EMPTY_ARRAY } from "../../types/safety-score-v9-immutable";
+import { isV9SharedControllerSignalAlreadyPriced } from "./scoped-risk";
 import {
   canonicalizeV9PublicReasons,
   type V9PublicReason,
@@ -54,6 +56,7 @@ export interface V9PillarEvaluation {
     effectiveScoringWeight: number;
   }[];
   structuralSignals: readonly V9StructuralSignal[];
+  deploymentAuthorities?: readonly V9DeploymentAuthority[];
   adverseAttribution?: readonly V9PillarAdverseAttribution[];
 }
 
@@ -434,10 +437,13 @@ export function scoreV9EvaluatedAsset(
 ): V9ProductionScoreTrace {
   assertV9ValidatedPolicyEnvelope(envelope);
   validateIdentity(input.identity);
+  const authorities = input.pillars.control.deploymentAuthorities ?? [];
+  const authorityControllerKeys = new Set(authorities.flatMap((authority) => authority.controllerKeys ?? []));
   const structuralSignals = [
     ...PILLAR_KEYS.flatMap((pillar) => input.pillars[pillar].structuralSignals),
     ...input.dependencyStructuralSignals,
-  ];
+  ].map((signal) => isV9SharedControllerSignalAlreadyPriced(signal, [], authorityControllerKeys)
+    ? { ...signal, pricedInPillar: "control" as const } : signal);
   const includedPillars = PILLAR_KEYS.filter((pillar) => input.pillars[pillar].aggregationDisposition === "included");
   const excludedPillars = PILLAR_KEYS.filter((pillar) => !includedPillars.includes(pillar)).sort(compareText);
   const causeExcludedPillars = excludedPillars.filter((pillar) => input.pillars[pillar].aggregationDisposition === "excluded-a-b");
@@ -530,7 +536,14 @@ export function scoreV9EvaluatedAsset(
     input.parent.propagatedBoundedUncertaintyAttribution ?? [],
     pillarReasonProvenance,
     aggregationStrategy,
-    { includedPillars, partialEvidence, unavailablePillars, limitingPillars, parentStatus: input.parent.ratingStatus },
+    {
+      includedPillars, partialEvidence, unavailablePillars, limitingPillars,
+      parentStatus: input.parent.ratingStatus,
+      deploymentAuthorities: input.pillars.control.deploymentAuthorities,
+      authoritySignalIndices: new Set(authorities.flatMap((authority) =>
+        (authority.sourceSignalIndices ?? []).map((index) => index +
+          input.pillars.backing.structuralSignals.length + input.pillars.exit.structuralSignals.length))),
+    },
   );
   const premium = resolveV9AssetPremium(input, ordinaryTrace, envelope);
   const trace =

@@ -54,7 +54,6 @@ import {
 import { resolveV9ReasonTreatment } from "./policy";
 import {
   effectiveV9ControllerKeys,
-  isV9DeploymentControllerAlreadyPriced,
   isV9SharedControllerSignalAlreadyPriced,
   pricedV9ControllerKeys,
 } from "./scoped-risk";
@@ -256,7 +255,6 @@ function structuralSignalFromControl(
   asset: V9AssetFactsV3,
   failure: V9EconomicControlResult["structuralFailures"][number],
   bindingComponentControlKeys: ReadonlySet<string>,
-  pricedControllerKeys: ReadonlySet<string>,
   policy: V9ValidatedPolicyEnvelope,
 ): V9StructuralSignal {
   const controls = failure.controlKeys.flatMap((key) => {
@@ -328,13 +326,6 @@ function structuralSignalFromControl(
         : "integration-missing";
   const failureDomainKeys = failure.failureDomains.map(domainKey);
   const deploymentKeys = controls.map((control) => control.deploymentKey);
-  const measuredSliceRisk = failure.kind === "active-control-incident" ||
-    failure.kind === "material-bridge" || failure.kind === "peripheral-bridge" ||
-    failure.kind === "weak-oracle-branch";
-  const samePricedController = controls.length === failure.controlKeys.length &&
-    controls.length > 0 && controls.every((control) => isV9DeploymentControllerAlreadyPriced(
-      effectiveV9ControllerKeys(control), pricedControllerKeys, measuredSliceRisk,
-    ));
   return {
     kind: failure.kind,
     severity: failure.severity,
@@ -359,11 +350,10 @@ function structuralSignalFromControl(
       )
         ? "high"
         : "low",
-    // Preserve the evidence signal without charging an already-priced controller
-    // again. Independent bridge/oracle measurements and incidents remain scoped.
+    // Only the linked component owns pillar pricing. Shared controller identity
+    // cannot suppress a worse local path with different economic bounds.
     ...(economicLossScope === "deployment" &&
     failure.materialSharePct !== null &&
-    !samePricedController &&
     !failure.controlKeys.some((controlKey) => bindingComponentControlKeys.has(controlKey))
       ? {}
       : { pricedInPillar: "control" as const }),
@@ -1034,6 +1024,9 @@ function controlPillar(
     return [];
   };
 
+  const bindingComponentControlKeys = new Set(result.components
+    .filter((component) => component.binding).flatMap((component) => component.controlKeys));
+  const authoritySignalsByControlKey = new Map<string, V9StructuralSignal[]>();
   const pillar: V9PillarEvaluation = {
     ...pillarCauseMetadata(result, gapIndex, result.components.filter((component) =>
       component.scoringDisposition === "excluded-pipeline" || component.scoringDisposition === "excluded-uncurated",
@@ -1055,14 +1048,8 @@ function controlPillar(
       }),
     ),
     structuralSignals: (() => {
-      const bindingComponentControlKeys = new Set(
-        result.components
-          .filter((component) => component.binding)
-          .flatMap((component) => component.controlKeys),
-      );
-      const pricedControllerKeys = pricedV9ControllerKeys(asset.controls, result.components);
       return result.structuralFailures.flatMap((failure) => {
-        const signal = structuralSignalFromControl(asset, failure, bindingComponentControlKeys, pricedControllerKeys, envelope);
+        const signal = structuralSignalFromControl(asset, failure, bindingComponentControlKeys, envelope);
         if (signal.economicLossScope === "deployment" && signal.responsibility === "measured-adverse") {
           const componentKind = failure.kind === "material-bridge" || failure.kind === "peripheral-bridge"
             ? "bridge" : failure.kind === "weak-oracle-branch" ? "oracle" : "mint";
@@ -1072,12 +1059,47 @@ function controlPillar(
           );
           if (measured.length > 0) signal.exposedScore = Math.min(...measured.map((component) => component.score!));
         }
+        if (signal.economicLossScope === "deployment" &&
+          (failure.kind === "centralized-mint" || failure.kind === "active-control-incident")) {
+          for (const key of failure.controlKeys) {
+            const control = asset.controls.find((candidate) => candidate.controlKey === key);
+            if (control === undefined || control.controlKind === "bridge" || control.controlKind === "oracle" ||
+              control.materialSupplyShare === null) continue;
+            const sources = authoritySignalsByControlKey.get(key) ?? [];
+            sources.push(signal);
+            authoritySignalsByControlKey.set(key, sources);
+          }
+        }
         return failure.binding || (signal.economicLossScope === "deployment" && signal.responsibility === "measured-adverse")
           ? [signal]
           : [];
       });
     })(),
   };
+  // Authority is a graded mint/admin/upgrade component, not a bridge or oracle
+  // measurement. Include bounded postures even when no structural failure fires.
+  pillar.deploymentAuthorities = result.components.flatMap((component) => {
+    if (component.kind !== "mint" || component.score === null ||
+      component.componentKey.startsWith("mint:bridge:")) return [];
+    return component.controlKeys.flatMap((key) => {
+      const control = asset.controls.find((candidate) => candidate.controlKey === key);
+      if (control === undefined || control.controlKind === "bridge" || control.controlKind === "oracle" ||
+        control.economicLossScope !== "deployment" || control.materialSupplyShare === null) return [];
+      return [{
+        deploymentKey: control.deploymentKey,
+        quality: component.score!,
+        share: control.materialSupplyShare,
+        failureDomainKeys: component.failureDomains.map(domainKey),
+        controllerKeys: effectiveV9ControllerKeys(control),
+        sourceSignalIndices: (authoritySignalsByControlKey.get(key) ?? [])
+          .flatMap((signal) => {
+            const index = pillar.structuralSignals.indexOf(signal);
+            return index < 0 ? [] : [index];
+          }),
+        sourceSignals: authoritySignalsByControlKey.get(key) ?? [],
+      }];
+    });
+  });
   return Object.assign(pillar, reasonClassifiedEvidence(score, pillar.reasons, "strong", result.aggregationDisposition === "excluded-a-b"));
 }
 
@@ -1748,7 +1770,8 @@ export function evaluateV9Asset({
     gapIndex,
   );
   const pillars = basePillars;
-  const pricedControllerKeys = pricedV9ControllerKeys(asset.controls, control.components);
+  const pricedControllerKeys = pricedV9ControllerKeys(asset.controls, control.components,
+    pillars.control.deploymentAuthorities?.flatMap((authority) => authority.controllerKeys ?? []) ?? []);
   const pricedDependencySignals = dependencySignals.map((signal) =>
     isV9SharedControllerSignalAlreadyPriced(signal, asset.controls, pricedControllerKeys)
       ? { ...signal, pricedInPillar: "control" as const } : signal);

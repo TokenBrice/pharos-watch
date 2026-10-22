@@ -26,18 +26,19 @@ export function isV9DeploymentControllerAlreadyPriced(
     sliceControllerKeys.every((key) => pricedControllerKeys.has(key));
 }
 
-/** Every binding authority component participates in Control's weakest-path price. */
+/** Binding Control and the local-authority lane jointly own their controller roots. */
 export function pricedV9ControllerKeys(
   controls: readonly V9DeploymentControlFactV2[],
   components: readonly V9ControlComponent[],
+  authorityControllerKeys: readonly string[] = [],
 ): ReadonlySet<string> {
-  return new Set(components
+  return new Set([...authorityControllerKeys, ...components
     .filter((component) => component.binding && component.kind === "mint" && component.score !== null)
     .flatMap((component) => component.controlKeys)
     .flatMap((key) => {
       const control = controls.find((candidate) => candidate.controlKey === key);
       return control === undefined ? [] : effectiveV9ControllerKeys(control);
-    }));
+    })]);
 }
 
 /** Common-mode controller domains cannot charge a root already priced by Control. */

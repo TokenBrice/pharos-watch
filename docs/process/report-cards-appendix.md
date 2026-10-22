@@ -2,6 +2,20 @@
 
 > **Agent navigation** — Start routine changes with the [current contract](../report-cards.md); this appendix is not a second methodology or publication authority. Detailed contracts: [Morpho lender books](#morpho-lender-collateral-book-backing-v1019) · [V10 Model](#v10-model) · [Campaign admission](#campaign-admission-rules) · [Report schema](#report-schema-v8) · [Supply attribution](#supply-attribution-and-in-flight-accounting) · [Bridge accounting](#bridge-in-flight-accounting) · [Scoped evidence and Exit](#scoped-evidence-and-exit-evaluation) · [Dependency Coverage](#dependency-coverage) · [Exit Route Evidence](#exit-route-evidence) · [Canonical Publication](#canonical-publication) · [Compile memory budget](#compile-hot-path-and-its-memory-budget) · [Frontend](#frontend). Locate exact terms with `rg -n 'collateralizationMeasurement|freshness|quarantin|executionCertificate|resource-budget' docs/process/report-cards-appendix.md`.
 
+## v10.31 Exposure-weighted local authority
+
+Known-share deployment-local mint/admin/upgrade authority is non-binding, including bounded and partially bounded components and active incidents on those controls. Components are the complete input, not only unbounded-mint structural failures. `mint:bridge:*` and incidents on bridge controls remain infrastructure, not authority-priced; bridge-tier deductions and oracle behavior remain. Null-share controls retain the prior fail-closed binding.
+
+Fully supported local-only inventories use the neutral pre-authority Control baseline (90 after the pillar clamp), not missing-research U60 or null; genuine gaps retain their existing handling. Exact mint/upgrade controller roots owned by either binding Control or local-authority slices are already priced: their common-mode rows remain diagnostic. Independent chain, bridge and oracle infrastructure stays in R. Ownership uses explicit serializable Control-signal positions, not object aliases.
+
+Group paths by deployment/liability slice, choosing its worst component quality q and retaining that slice's share s once. With aggregation pillars after priced-unknown substitution, compute unrounded `B = clamp(peg × aggregation(pillars))` and `B_q` identically with resolved Control replaced by `min(C,q)`. `R(b)` is scoped-risk resolution over non-authority signals alone. The disjoint-slice mixture is `preCap = R(B) − Σ s × (R(B) − R(B_q))`. Caps, integer rounding and the USDT premium are excluded from both endpoints and applied once downstream. Dominated paths cost exactly zero without diluting infrastructure; at 100% exposure a local path equals identical global Control pricing even with infrastructure siblings.
+
+Authority shares are never rescaled or trimmed. At every total, authority loss is `min(R(B) − R(B_q_min), Σ s × (R(B) − R(B_q)))`; each slice retains its own share. Totals through 1.001 are tolerated rounding noise. Larger totals emit explicit overlapping-liability diagnostics in adjustment reasons. Split/merge invariance holds for disjoint equal-quality slices; no materiality threshold applies.
+
+Infrastructure resolver rows come first internally, followed by authority rows with sequential score stages and `exposedScore = R(B_q)`. Public projection preserves its canonical sorting; reconciliation checks infrastructure and authority lanes separately. The row reason names the local deployment, nominal supply share and quality. There is no public schema or representation-version bump. Infrastructure facts/policy qualities stay unchanged, but their allocated shares and points may move when authority leaves the normalization pool.
+
+Activation: 2026-10-22 20:00 UTC (release cut; 1792699200). Two production captures replay to identical movers; existing two-publication grade hysteresis may hold letters for one publication, and production acceptance follows the first accepted publications.
+
 ## v10.29 Simplified Model
 
 The v10.29 contract is [Report cards](../report-cards.md#v10-model); structured history separates methodology changes, factual corrections and fixed-clock engine mover attribution. It ships together with v10.28 at the 2026-10-22 10:00 UTC release cut, with both `effectiveAt` values set to 1792663200. Production acceptance follows the first accepted publications. Earlier release sections below describe their original changes, not a second scoring authority.
@@ -12,7 +26,7 @@ Use one unknown-quality helper: Backing C35/U50, Exit C50/U50, Control C50/U60; 
 
 `partialEvidence` also retains granular A/B component, constraint and inherited-parent exclusions inside an otherwise usable included pillar, with exact component keys and resolving cause references. Such exclusions do not force whole-pillar omission. A reviewed applicable subject with C/U subfactor gaps remains usable bounded evidence; only absence of usable subject/evidence makes a pillar unavailable.
 
-Deployment/bridge authority is charged once per effective controller already priced in Control: compare exact admitted controller identities, never asset IDs. A shared root does not add another controller loss. Independent slice controllers and measured slice-specific bridge, oracle or incident risk retain proportional losses.
+Historical v10.29 controller suppression is superseded for authority by v10.31 above. Shared-controller common-mode diagnostics and independent bridge/oracle measurements retain their existing rules.
 
 Deployment exposed quality comes from its evaluated slice when available, otherwise the small deployment-only table: critical-dependency moderate/high 79/64, material-bridge moderate/high 74/59, active-control-incident critical 39. Charge only `(base − min(base, exposedQuality)) × measuredShare`, retaining existing disjoint-slice allocation and event coalescing. Unknown shares remain unresolved diagnostics. These values do not authorize whole-score caps.
 
