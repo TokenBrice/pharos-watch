@@ -1,6 +1,6 @@
 {
   "generatedBy": "scripts/maintenance/build-og-editorial.mjs",
-  "methodologyVersion": "10.28",
+  "methodologyVersion": "10.29",
   "fonts": {
     "newsreader": "9e25af908d11add17f0e32bb096f119aea11da11bcc5abd7d896e620aa61081c",
     "geistMono": "a4022744c97e497a45bc1d05e68221104df6829f6cac74552e0fdb03a331c648"
@@ -10,35 +10,35 @@
       "file": "og-editorial-digest.png",
       "kicker": "Daily Digest",
       "title": "Daily Digest",
-      "svgSha256": "18b16db3c18cc784942839362a8415d1789a23edae360677831121f77a81dadc",
+      "svgSha256": "c7b2556d9e24a98d4718d7b46d41b8316ca4b75c5939a08f20ca4c04e3ec916c",
       "pngSha256": "9e903791cbaa7bf7a0264e6955e6a64fb6d631dc80b5d04585813a3cc796a494"
     },
     {
       "file": "og-editorial-depeg.png",
       "kicker": "Depeg Briefing",
       "title": "Depeg Briefing",
-      "svgSha256": "d11f21a9db80c7f27f0b4b17b919b215e71153117bcd7a881104381d124e4432",
+      "svgSha256": "e87ea29f4114b3ce52741bed66cfee6741de99f20e838c8b04973af7daea247c",
       "pngSha256": "69596897f2e92b391167141c821097d687df691f1280a3998c7170af158f1a00"
     },
     {
       "file": "og-editorial-methodology.png",
       "kicker": "Methodology",
       "title": "How Pharos grades the peg",
-      "svgSha256": "3e87f87ded7b8f7c31cb9325e57932fdcd6f4401fa4d3f88d3f935d4860888e3",
+      "svgSha256": "b43cbb23ed6e60f86bef86bce4083abb8b444cba0767257710edb51f4b183f1b",
       "pngSha256": "35abbd82af2de6d6831c5fb3fc4e063526b65c4f379b8f17225a1a9c1597dc3b"
     },
     {
       "file": "og-editorial-about.png",
       "kicker": "About",
       "title": "About Pharos",
-      "svgSha256": "e10c311a34aa4c75c7fd5a0d5ceb416c35c37c82f95f84ca8b23ee3d65a927bb",
+      "svgSha256": "ce7e33b9ce636e3c0169d729c6905ccc3765380465040a9be5e6a9f60c6365b9",
       "pngSha256": "c4a351d578f4c39c6834e3ab18881c6013db22129e30ca000b9a04ca6543edba"
     },
     {
       "file": "og-editorial-learn.png",
       "kicker": "Learn",
       "title": "Stablecoin mechanisms",
-      "svgSha256": "5c34560ad258f488000d57323615f93bcde8896476137200a120490751786331",
+      "svgSha256": "e75cf0f57fbf5a256604379744eb5cb571ab8ba67027f5245e977a33e7b43c38",
       "pngSha256": "84c1cd2c24f4c14a52777046737d117ed36823c0449388365a7eebb83eb4062e"
     }
   ]

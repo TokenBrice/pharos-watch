@@ -375,8 +375,8 @@ describe("methodology registry", () => {
       commits: [], reconstructed: false,
     });
     expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.25");
-    // Stacked local candidates share the upstream provisional cut; the highest numeric version wins.
-    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
+    // The highest numeric version wins when the shipped v10.26 and v10.27 cuts coincide.
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.27");
     expect(release.impact.join(" ")).toContain("gradeHold");
     expect(release.impact.join(" ")).toContain("no deployment or production acceptance is claimed");
   });
@@ -388,23 +388,23 @@ describe("methodology registry", () => {
       commits: [], reconstructed: false,
     });
     expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.25");
-    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.27");
     expect(release.impact.join(" ")).toContain("5400s");
     expect(release.impact.join(" ")).toContain("no deployment or production acceptance is claimed");
   });
 
-  it("records the local v10.28 evaluation-closure candidate without claiming activation", () => {
+  it("retains the joint v10.28 release cut", () => {
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.28")!;
     expect(release).toMatchObject({
-      version: "10.28", date: "2026-10-21", effectiveAt: 1_792_627_200, reconstructed: false, commits: [],
+      version: "10.28", date: "2026-10-22", effectiveAt: 1_792_663_200, reconstructed: false, commits: [],
     });
-    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
-    expect(release.summary).toMatch(/local, unreleased/i);
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.27");
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.29");
     const impact = release.impact.join(" ");
     expect(impact).toMatch(/configured redemption channel/);
     expect(impact).toMatch(/issuer-undisclosed payout/);
     expect(impact).toMatch(/provider:<chain>:<contract>/);
-    expect(release.summary).toMatch(/deferred to Release 2/);
+    expect(release.summary).toMatch(/ships together with v10\.29/);
     expect(impact).not.toMatch(/25-asset issuer-backend cohort|OWNER DECISION \/ ISOLATABLE/);
     expect(impact).toMatch(/lender-collateral-classes-v1\.json/);
     expect(impact).not.toMatch(/at least two consecutive dated reports|source-bound danger witness/);
@@ -412,31 +412,30 @@ describe("methodology registry", () => {
     expect(impact).toMatch(/wrapperMildRiskFloorGrade D/);
     expect(impact).toMatch(/Preserve admitted exact-controller MPC\/HSM technical custody/);
     expect(impact).toMatch(/Current explicit mechanism-component reviews/);
-    expect(impact).toMatch(/no deployment or production acceptance is asserted/i);
+    expect(impact).toContain("Activation: 2026-10-22 10:00 UTC (release cut; 1792663200). v10.28 and v10.29 ship together; production acceptance follows the first accepted publications.");
+    expect(impact).not.toMatch(/provisional|re-date/i);
   });
 
-  it("stacks v10.29 numerically on unshipped v10.28 at the same provisional boundary", () => {
+  it("retains v10.29 as the highest version at the joint release cut", () => {
     const previous = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.28")!;
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0]!;
     expect(release).toMatchObject({
-      version: "10.29", date: "2026-10-22", effectiveAt: previous.effectiveAt,
+      version: "10.29", date: "2026-10-22", effectiveAt: 1_792_663_200,
       reconstructed: false, commits: [],
     });
+    expect(release.effectiveAt).toBe(previous.effectiveAt);
     expect(release.version).toMatch(/^\d+\.\d{1,2}$/);
     expect(compareMethodologyVersions(release.version, previous.version)).toBeGreaterThan(0);
-    expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.25");
-    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe(release.version);
-    expect(release.summary).toMatch(/local, unreleased/i);
-    expect(release.summary).toMatch(/neither activation nor engine-replay acceptance/i);
+    expect(getMethodologyVersionAt("safety-score", 1_792_663_199)).toBe("10.27");
+    expect(getMethodologyVersionAt("safety-score", 1_792_663_200)).toBe("10.29");
     const impact = release.impact.join(" ");
     expect(impact).toMatch(/C\/U responsibility|issuer non-disclosure/);
     expect(impact).toMatch(/economic-authority ladder|weakest-effective-path ladder/);
     expect(impact).toMatch(/five cap families/);
     expect(impact).toMatch(/speculative-credit.*59/);
     expect(impact).toMatch(/at least 25%.*39.*at least 1%.*49/);
-    expect(impact).toMatch(/v10\.28 and v10\.29 ship together/);
-    expect(impact).toMatch(/both effectiveAt values set to the actual release-cut time at shipping/);
-    expect(impact).toMatch(/retained 1792627200 placeholder is not activation/i);
+    expect(impact).toContain("Activation: 2026-10-22 10:00 UTC (release cut; 1792663200). v10.28 and v10.29 ship together; production acceptance follows the first accepted publications.");
+    expect(impact).not.toMatch(/provisional|re-date/i);
   });
 
 });
