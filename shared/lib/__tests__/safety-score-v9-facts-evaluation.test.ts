@@ -1686,66 +1686,96 @@ describe("Safety Score v9 fact evaluation", () => {
     ["exact-complete", "stale"],
     ["exact-lower-bound", "known"],
     ["exact-lower-bound", "stale"],
-  ] as const)("prices small positive %s capacity continuously, retaining %s observations", (coverageClass, observationState) => {
-    const input = coreFixture();
-    const alpha = input.assets.find((asset) => asset.assetId === "alpha")! as unknown as V9AssetFactsV2;
-    const beta = input.assets.find((asset) => asset.assetId === "beta")! as unknown as V9AssetFactsV2;
-    const routeEvidence = alpha.evidence.find((evidence) => evidence.evidenceId === "evidence:route")!;
-    const measuredRoute = structuredClone(
-      alpha.exitRoutes.find((route) => route.routeId === "amm-main")!,
-    );
-    measuredRoute.coverageClass = coverageClass;
-    measuredRoute.status = { ...measuredRoute.status, observationState };
-    if (observationState === "stale") {
-      const staleEvidence = createV9EvidenceReference({
-        evidenceId: "evidence:retained-stale-exit",
-        sourceId: routeEvidence.sourceId,
-        sourceGenerationId: routeEvidence.sourceGenerationId,
-        disposition: "published",
-        observedAtSec: 600,
-        publishedAtSec: 610,
-        maxAgeSec: 100,
-      }, AS_OF_SEC);
-      beta.evidence.push(staleEvidence);
-      measuredRoute.status = { ...measuredRoute.status, evidenceRefIds: [staleEvidence.evidenceId] };
-      const gap = createV9FactGap({
-        gapId: "gap:retained-stale-exit",
-        reasonCode: "missing-runtime-route-evidence",
-        ownerDomain: "exit",
-        policyRuleId: "exit.route.freshness",
-        observationState: "stale",
-        path: { kind: "optional-exit", routeKey: measuredRoute.routeKey },
-        message: "The exhaustive measurement is retained beyond its freshness window.",
-        evidenceRefIds: measuredRoute.status.evidenceRefIds,
-      });
-      beta.gaps.push(gap);
-      measuredRoute.status = { ...measuredRoute.status, gapIds: [gap.gapId] };
+  ] as const)("retains R1 materiality and completion gates for %s capacity with %s observations", (coverageClass, observationState) => {
+    for (const scenario of [
+      { name: "submaterial prefix", supplyUsd: 1_000_000, requestUsd: 100_000, executableUsd: 1, material: false },
+      { name: "1% relative boundary", supplyUsd: 1_000_000, requestUsd: 100_000, executableUsd: 1_000, material: true },
+      { name: "below both boundaries", supplyUsd: 1_000_000_000, requestUsd: 25_000_000, executableUsd: 99_999, material: false },
+      { name: "$100k absolute boundary", supplyUsd: 1_000_000_000, requestUsd: 25_000_000, executableUsd: 100_000, material: true },
+    ]) {
+      const input = coreFixture();
+      const alpha = input.assets.find((asset) => asset.assetId === "alpha")! as unknown as V9AssetFactsV2;
+      const beta = input.assets.find((asset) => asset.assetId === "beta")! as unknown as V9AssetFactsV2;
+      beta.supply.circulatingUsd = scenario.supplyUsd;
+      for (const chain of beta.supply.chainDistribution!.chains) {
+        chain.supplyUsd = scenario.supplyUsd * chain.supplyShare;
+      }
+      const routeEvidence = alpha.evidence.find((evidence) => evidence.evidenceId === "evidence:route")!;
+      const measuredRoute = structuredClone(alpha.exitRoutes.find((route) => route.routeId === "amm-main")!);
+      measuredRoute.coverageClass = coverageClass;
+      measuredRoute.status = { ...measuredRoute.status, observationState };
+      if (observationState === "stale") {
+        const staleEvidence = createV9EvidenceReference({
+          evidenceId: "evidence:retained-stale-exit",
+          sourceId: routeEvidence.sourceId,
+          sourceGenerationId: routeEvidence.sourceGenerationId,
+          disposition: "published",
+          observedAtSec: 600,
+          publishedAtSec: 610,
+          maxAgeSec: 100,
+        }, AS_OF_SEC);
+        beta.evidence.push(staleEvidence);
+        measuredRoute.status = { ...measuredRoute.status, evidenceRefIds: [staleEvidence.evidenceId] };
+        const gap = createV9FactGap({
+          gapId: "gap:retained-stale-exit",
+          reasonCode: "missing-runtime-route-evidence",
+          ownerDomain: "exit",
+          policyRuleId: "exit.route.freshness",
+          observationState: "stale",
+          path: { kind: "optional-exit", routeKey: measuredRoute.routeKey },
+          message: "The route observation retains its original expired evidence clock.",
+          evidenceRefIds: measuredRoute.status.evidenceRefIds,
+        });
+        beta.gaps.push(gap);
+        measuredRoute.status = { ...measuredRoute.status, gapIds: [gap.gapId] };
+      }
+      measuredRoute.request = { ...measuredRoute.request!, requestedNotionalUsd: scenario.requestUsd };
+      measuredRoute.capacityCurve = [100_000, 1_000_000, 25_000_000].map((requestedNotionalUsd) => ({
+        requestedNotionalUsd,
+        maxCostBps: 200,
+        executableUsd: scenario.executableUsd,
+        completionRatio: scenario.executableUsd / requestedNotionalUsd,
+        executionCostBps: 200,
+      }));
+      beta.evidence.push(routeEvidence);
+      beta.exitStatus = knownStatus(routeEvidence.evidenceId, "exit.portfolio.reviewed");
+      beta.exitRoutes = [measuredRoute];
+      const evaluated = evaluateV9FactSet(
+        compileNativeV3FactSet(input),
+        V9_CANDIDATE_POLICY_V1,
+      ).assets.find((asset) => asset.assetId === "beta")!;
+      const trace = evaluated.exit.routes.find((route) => route.routeKey === measuredRoute.routeKey)!;
+      expect(evaluated.exit.stressRequest?.requestedNotionalUsd, scenario.name).toBe(scenario.requestUsd);
+      if (!scenario.material && coverageClass === "exact-lower-bound") {
+        expect(trace, scenario.name).toMatchObject({
+          included: false, score: null, capacityPoint: null,
+          exclusionReason: "missing-same-notional-route",
+        });
+        expect(evaluated.exit.primaryRouteKey, scenario.name).toBeNull();
+      } else if (!scenario.material) {
+        // Exhaustive submaterial measurements retain adverse zero credit;
+        // an excluded lower bound never establishes that exhaustion finding.
+        expect(trace, scenario.name).toMatchObject({
+          included: true, score: 0,
+          capsApplied: expect.arrayContaining(["immaterial-executable-capacity"]),
+        });
+        expect(evaluated.exit.score, scenario.name).toBe(0);
+      } else {
+        expect(trace.included, scenario.name).toBe(true);
+        expect(trace.score, scenario.name).toBeGreaterThan(0);
+        expect(evaluated.exit.primaryRouteKey, scenario.name).toBe(measuredRoute.routeKey);
+        expect(trace.capsApplied, scenario.name).not.toContain("immaterial-executable-capacity");
+        if (scenario.requestUsd === 25_000_000 || observationState === "stale") {
+          expect(trace.capsApplied, scenario.name).toContain("insufficient-completion:50");
+          expect(trace.score, scenario.name).toBeCloseTo(50 * trace.confidenceFactor!, 10);
+        } else {
+          expect(trace.capsApplied, scenario.name).not.toContain("insufficient-completion:50");
+        }
+      }
+      expect(evaluated.scoreInput.pillars.exit.score).toBe(evaluated.exit.score);
+      expect(evaluated.trace.finalScore).not.toBeNull();
+      expect(evaluated.trace.nrReasons).toEqual([]);
     }
-    measuredRoute.capacityCurve = measuredRoute.capacityCurve.map((point) => ({
-      ...point,
-      executableUsd: 1,
-      completionRatio: 1 / point.requestedNotionalUsd,
-      executionCostBps: point.maxCostBps,
-    }));
-    beta.evidence.push(routeEvidence);
-    beta.exitStatus = knownStatus(routeEvidence.evidenceId, "exit.portfolio.reviewed");
-    beta.exitRoutes = [measuredRoute];
-
-    const evaluated = evaluateV9FactSet(
-      compileNativeV3FactSet(input),
-      V9_CANDIDATE_POLICY_V1,
-    ).assets.find((asset) => asset.assetId === "beta")!;
-    const primaryRoute = evaluated.exit.routes.find(
-      (route) => route.routeKey === evaluated.exit.primaryRouteKey,
-    )!;
-    // Small positive measured capacity is priced continuously, not discarded
-    // by the retired 1% gate or replaced with a bounded-unknown default.
-    expect(primaryRoute.included).toBe(true);
-    expect(primaryRoute.score).toBeGreaterThan(0);
-    expect(primaryRoute.capsApplied).not.toContain("immaterial-executable-capacity");
-    expect(evaluated.scoreInput.pillars.exit.score).toBe(evaluated.exit.score);
-    expect(evaluated.trace.finalScore).not.toBeNull();
-    expect(evaluated.trace.nrReasons).toEqual([]);
   });
   it.each(["exact-complete", "exact-lower-bound"] as const)("does not attribute non-score-eligible %s redemption zero as measured exhaustion", (coverageClass) => {
     const input = coreFixture();
