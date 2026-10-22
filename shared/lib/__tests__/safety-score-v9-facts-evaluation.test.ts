@@ -1724,10 +1724,10 @@ describe("Safety Score v9 fact evaluation", () => {
     ["exact-lower-bound", "stale"],
   ] as const)("retains R1 materiality and completion gates for %s capacity with %s observations", (coverageClass, observationState) => {
     for (const scenario of [
-      { name: "submaterial prefix", supplyUsd: 1_000_000, requestUsd: 100_000, executableUsd: 1, material: false },
-      { name: "1% relative boundary", supplyUsd: 1_000_000, requestUsd: 100_000, executableUsd: 1_000, material: true },
-      { name: "below both boundaries", supplyUsd: 1_000_000_000, requestUsd: 25_000_000, executableUsd: 99_999, material: false },
-      { name: "$100k absolute boundary", supplyUsd: 1_000_000_000, requestUsd: 25_000_000, executableUsd: 100_000, material: true },
+      { name: "submaterial prefix", supplyUsd: 1_000_000, requestUsd: 1_000_000, materialityRequestUsd: 100_000, executableUsd: 1, material: false },
+      { name: "1% asset-relative boundary below stress floor", supplyUsd: 1_000_000, requestUsd: 1_000_000, materialityRequestUsd: 100_000, executableUsd: 1_000, material: true },
+      { name: "below both boundaries", supplyUsd: 1_000_000_000, requestUsd: 25_000_000, materialityRequestUsd: 25_000_000, executableUsd: 99_999, material: false },
+      { name: "$100k absolute boundary", supplyUsd: 1_000_000_000, requestUsd: 25_000_000, materialityRequestUsd: 25_000_000, executableUsd: 100_000, material: true },
     ]) {
       const input = coreFixture();
       const alpha = input.assets.find((asset) => asset.assetId === "alpha")! as unknown as V9AssetFactsV2;
@@ -1782,6 +1782,7 @@ describe("Safety Score v9 fact evaluation", () => {
       ).assets.find((asset) => asset.assetId === "beta")!;
       const trace = evaluated.exit.routes.find((route) => route.routeKey === measuredRoute.routeKey)!;
       expect(evaluated.exit.stressRequest?.requestedNotionalUsd, scenario.name).toBe(scenario.requestUsd);
+      expect(evaluated.exit.stressRequest?.rawSupplyRequestUsd, scenario.name).toBe(scenario.materialityRequestUsd);
       if (!scenario.material && coverageClass === "exact-lower-bound") {
         expect(trace, scenario.name).toMatchObject({
           included: false, score: null, capacityPoint: null,
@@ -1801,12 +1802,8 @@ describe("Safety Score v9 fact evaluation", () => {
         expect(trace.score, scenario.name).toBeGreaterThan(0);
         expect(evaluated.exit.primaryRouteKey, scenario.name).toBe(measuredRoute.routeKey);
         expect(trace.capsApplied, scenario.name).not.toContain("immaterial-executable-capacity");
-        if (scenario.requestUsd === 25_000_000 || observationState === "stale") {
-          expect(trace.capsApplied, scenario.name).toContain("insufficient-completion:50");
-          expect(trace.score, scenario.name).toBeCloseTo(50 * trace.confidenceFactor!, 10);
-        } else {
-          expect(trace.capsApplied, scenario.name).not.toContain("insufficient-completion:50");
-        }
+        expect(trace.capsApplied, scenario.name).toContain("insufficient-completion:50");
+        expect(trace.score, scenario.name).toBeCloseTo(50 * trace.confidenceFactor!, 10);
       }
       expect(evaluated.scoreInput.pillars.exit.score).toBe(evaluated.exit.score);
       expect(evaluated.trace.finalScore).not.toBeNull();

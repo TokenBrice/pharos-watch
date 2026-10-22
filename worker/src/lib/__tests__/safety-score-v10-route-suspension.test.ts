@@ -222,7 +222,7 @@ describe("reviewed exact-channel suspension", () => {
       expect(measured.capacityCurve).toEqual(expect.arrayContaining([
         expect.objectContaining({ requestedNotionalUsd: 1_000_000, executableUsd: 1_000, completionRatio: 0.001 }),
       ]));
-      expect(published.exit.stressRequest?.requestedNotionalUsd).toBe(500_000);
+      expect(published.exit.stressRequest).toMatchObject({ requestedNotionalUsd: 1_000_000, rawSupplyRequestUsd: 500_000 });
       expect(published.exit.routes.find((route) => route.routeKey === measured.routeKey)).toMatchObject({
         included: true, capacityPoint: { executableUsd: 1_000 },
       });

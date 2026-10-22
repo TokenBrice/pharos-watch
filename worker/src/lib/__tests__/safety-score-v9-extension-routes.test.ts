@@ -342,7 +342,7 @@ describe("same-resource Exit alternatives", () => {
       expect(result).toMatchObject({ diversificationRouteKey: null, diversificationBonus: 0 });
       expect(evaluate([...routes].reverse())).toEqual(result);
       expect(resolveV9DistinctExitCapacity(routes, result.stressRequest!, V9_CANDIDATE_POLICY_V1)
-        .valuedExecutableUsd).toBe(100_000);
+        .valuedExecutableUsd).toBe(certifiedLane === "both" ? 100_000 : 1_000_000);
       if (certifiedLane === "dex") {
         const legacy = routes.filter((route) => route.lane === "redemption");
         for (const fault of ["expired", "diagnostic"] as const) {

@@ -85,12 +85,12 @@ describe("canonical ERC4626 receipt projection", () => {
     expect(failed.failures).not.toEqual([]);
   });
 
-  it("measures a continuous non-grid canonical request", async () => {
-    const result = await observeReviewedExitExecutionRoutes({ ...call, circulatingUsd: 18_500_000 });
+  it.each([[18_500_000, 1_000_000], [21_500_000, 1_075_000]])("measures supply %s at its floored or continuous canonical request", async (circulatingUsd, requestedNotionalUsd) => {
+    const result = await observeReviewedExitExecutionRoutes({ ...call, circulatingUsd });
     expect(result.failures).toEqual([]);
     expect(result.observations[0]).toMatchObject({
-      requestedNotionalUsd: 925_000, executableUsd: 925_000, completionRatio: 1,
-      executionCertificate: { points: [{ requestedNotionalUsd: 925_000 }] },
+      requestedNotionalUsd, executableUsd: requestedNotionalUsd, completionRatio: 1,
+      executionCertificate: { points: [{ requestedNotionalUsd }] },
     });
   });
 
