@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { SafetyScoreV9CardValidationInput } from "./safety-score-v9-public";
+import { CanonicalTextSchema } from "./safety-schema-primitives";
 
 const V9PublicWitnessTextEntrySchema = z.union([
   z.string().min(1),
@@ -26,10 +27,14 @@ export function isV9WitnessTextField(key: string, node: object): boolean {
 export function isV9WitnessTextArrayField(key: string, node: object): boolean {
   return key === "localCauseGaps" || key === "failureDomainKeys" || key === "supportedComponentKeys" || key === "components" && "evidenceLevel" in node;
 }
-export const V9WitnessTextIdentityArraySchema = z.array(z.string().min(1)).refine(
-  (values) => values.some(isV9WitnessTextReference) || values.every((value, index) => index === 0 || values[index - 1]! < value),
-  "Witness identities must be unique and sorted after resolution",
-);
+export const V9WitnessTextIdentityArraySchema = z.array(CanonicalTextSchema)
+  .superRefine((values, ctx) => {
+    const duplicate = values.find((value, index) => values.indexOf(value) !== index);
+    if (duplicate !== undefined) ctx.addIssue({ code: "custom", message: `Duplicate canonical key: ${duplicate}` });
+  })
+  .transform(values => values.some(isV9WitnessTextReference) ||
+    values.every((value, index) => index === 0 || values[index - 1]! < value)
+    ? values : [...values].sort());
 
 function decodeWitnessTextTable(card: V9PublicWitnessTextTable): string[] {
   const result: string[] = [];

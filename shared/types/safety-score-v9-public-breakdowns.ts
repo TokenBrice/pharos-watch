@@ -475,7 +475,7 @@ const SafetyScoreV9LegacyControlDetailSchema = SafetyScoreV9ControlDetailSchema.
   executionScopeComplete: z.boolean().nullable(),
   moduleImpact: V9ExactControlPolicySchema.shape.moduleImpactStates.element,
   diagnostics: z.array(z.string()),
-  executionPaths: SafetyScoreV9ControlDetailSchema.shape.executionPaths.unwrap().min(0),
+  executionPaths: z.array(SafetyScoreV9ControlDetailSchema.shape.executionPaths.unwrap().element),
 });
 const SafetyScoreV9ControlComponentSchema = z.object({
   key: z.string().min(1), label: z.string().min(1).max(160),
