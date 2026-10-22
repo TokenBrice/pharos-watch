@@ -372,3 +372,8 @@ d2961f89365ac611e8a36dcb87313e76fb70a4aa:worker/src/cron/measured-execution/__te
 # in an admin dialog fixture; neither is a credential.
 e22e82c1a3edb5484d84fc3d32de3fef55d80f02:worker/src/cron/__tests__/sync-mint-burn-multichain.test.ts:generic-api-key:91
 abbd074ed1de1ff8c35fccc6fa3effe6b5718e78:src/components/status/__tests__/admin-action-execution-dialog.test.tsx:generic-api-key:52
+
+# Reviewed 2026-10-22: safety-score refinement curation false positives — a public
+# GitBook file-download token in a cited source URL and a public Solana token mint.
+016878f69dc37d53a9b9c4063b05e4f8092be34a:shared/data/stablecoins/domains/mint-authority/gldt-gold-dao.json:generic-api-key:118
+c76f039048dc6d2decc65d6ea8e752557fa50493:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:12194
