@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { V9ScoringInput, V9StructuralSignal } from "../../types/safety-score-v9";
 import { scoreV9Input } from "../safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { isV9SharedControllerSignalAlreadyPriced } from "../safety-score-v9/scoped-risk";
 import { makeV9ScoringInput, makeV9Signal } from "./safety-score-v9-score.test-support";
 
 const signal = (overrides: Partial<V9StructuralSignal> = {}) => makeV9Signal({ exposedScore: 40, ...overrides });
@@ -207,10 +208,36 @@ describe("Safety Score v9 continuous composite and scoped risk integration", () 
     expect(trace.deploymentAdjustments).toEqual([]);
   });
 
-  it("does not invent a deployment quality from structural severity", () => {
-    const trace = scoreV9Input(input({ structuralSignals: [signal({ exposedScore: undefined })] }), V9_CANDIDATE_POLICY_V1);
-    expect(trace.finalScore).toBe(80);
-    expect(trace.deploymentAdjustments).toEqual([]);
+  it("prices only policy-admitted deployment quality without charging an already-priced root twice", () => {
+    const pricedControllers = new Set(["ethereum:root-controller"]);
+    const independent = signal({
+      exposedScore: undefined, failureDomainKeys: ["upgrade-control:ethereum:independent-controller"],
+    });
+    expect(isV9SharedControllerSignalAlreadyPriced(independent, [], pricedControllers)).toBe(false);
+    const trace = scoreV9Input(input({ structuralSignals: [independent] }), V9_CANDIDATE_POLICY_V1);
+    const exposedQuality = V9_CANDIDATE_POLICY_V1.policy.semantic.formula.deploymentExposedQuality["critical-dependency"].high;
+    const loss = (80 - exposedQuality) * 0.5;
+    expect(trace.deploymentAdjustedScore).toBe(80 - loss);
+    expect(trace.finalScore).toBe(Math.round(80 - loss));
+    expect(trace.deploymentAdjustments).toEqual([
+      expect.objectContaining({ exposedScore: exposedQuality, exposureShare: 0.5, adjustmentPoints: loss }),
+    ]);
+    expect(trace.caps).toEqual([]);
+
+    const absentPolicy = scoreV9Input(input({ structuralSignals: [
+      { ...independent, kind: "centralized-mint" },
+    ] }), V9_CANDIDATE_POLICY_V1);
+    expect(absentPolicy.finalScore).toBe(80);
+    expect(absentPolicy.deploymentAdjustments).toEqual([]);
+
+    const ownRoot = { ...independent, failureDomainKeys: ["upgrade-control:ethereum:root-controller"] };
+    const alreadyPriced = isV9SharedControllerSignalAlreadyPriced(ownRoot, [], pricedControllers);
+    expect(alreadyPriced).toBe(true);
+    const shared = scoreV9Input(input({ structuralSignals: [{
+      ...ownRoot, pricedInPillar: alreadyPriced ? "control" : undefined,
+    }] }), V9_CANDIDATE_POLICY_V1);
+    expect(shared.finalScore).toBe(80);
+    expect(shared.deploymentAdjustments).toEqual([]);
   });
 
   it("does not apply a second whole-score charge for shared controllers or unbounded mint power", () => {

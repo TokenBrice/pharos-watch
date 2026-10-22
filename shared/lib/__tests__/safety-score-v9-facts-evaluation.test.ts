@@ -1778,7 +1778,14 @@ describe("Safety Score v9 fact evaluation", () => {
     expect(evaluated.exit.reasons).toContain("missing-same-notional-route");
     expect(evaluated.exit.reasons).not.toContain("no-viable-exit-path");
     expect(evaluated.scoreInput.pillars.exit.adverseAttribution).toEqual([]);
-    expect(evaluated.trace.adverseAttribution).toEqual([]);
+    expect(evaluated.trace.adverseAttribution).not.toContainEqual(expect.objectContaining({
+      source: "pillar-score", path: expect.stringMatching(/^pillar:exit:/),
+    }));
+    // AM12 independently prices the fixture's shared-chain concentration; it
+    // must not be mistaken for exhaustion of this non-score-eligible route.
+    expect(evaluated.trace.adverseAttribution).toContainEqual(expect.objectContaining({
+      source: "structural-signal", path: "structural:critical-dependency:high",
+    }));
     expect(evaluated.trace.finalGrade).not.toBe("F");
   });
 });
