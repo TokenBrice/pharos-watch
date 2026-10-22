@@ -14,6 +14,7 @@ import { formatDigestDateLabel } from "@/lib/digest";
 import { formatV9ReasonCodeLabel } from "@/lib/safety-score-data-coverage";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
 import { formatYieldWarningSignal } from "@/lib/yield-constants";
+import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
 /** Stored pillar scores are unrounded floats (53.239999999999995); readers get one decimal at most. */
 function formatDigestScore(score: number | null | undefined): string {
@@ -478,7 +479,9 @@ function DigestSnapshotContent({ date }: { date: string }) {
               <>
                 {inputData.safetyScores.mentionedCoins.length > 0 && (
                   <ul className="space-y-1">
-                    {inputData.safetyScores.mentionedCoins.map((coin, index, coins) => (
+                    {inputData.safetyScores.mentionedCoins.map((coin, index, coins) => {
+                      const partial = describePartialEvidence(coin);
+                      return (
                       // Symbols are not unique (several USDA coins), so the row keys by position.
                       <li key={`${coin.symbol}-${index}`} className="text-xs text-foreground/90">
                         <span className="font-medium">{coin.symbol}</span>
@@ -491,10 +494,9 @@ function DigestSnapshotContent({ date }: { date: string }) {
                           ({formatDigestScore(coin.score)}; backing {formatDigestScore(coin.pillars.backing.score)},{" "}
                           exit {formatDigestScore(coin.pillars.exit.score)}, control {formatDigestScore(coin.pillars.control.score)})
                         </span>
-                        {coin.partialEvidence ? (
-                          <span className="block text-muted-foreground">
-                            Partial evidence: pipeline gap · {coin.partialEvidence.causes.map((cause) =>
-                              cause === "A" ? "A — pipeline unavailable" : "B — public data awaiting curation").join(" · ")}
+                        {partial ? (
+                          <span className="block text-muted-foreground" title={partial.summary}>
+                            {partial.gaps.map(formatPartialEvidenceGap).join(" · ")}
                           </span>
                         ) : null}
                         {coin.bindingCap && (
@@ -508,7 +510,7 @@ function DigestSnapshotContent({ date }: { date: string }) {
                           </span>
                         )}
                       </li>
-                    ))}
+                    ); })}
                   </ul>
                 )}
                 <p className="text-xs text-muted-foreground">

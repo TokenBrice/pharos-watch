@@ -345,6 +345,32 @@ const V9PartialEvidenceSchema = z.object({
 }).strict();
 export type V9PartialEvidence = z.infer<typeof V9PartialEvidenceSchema>;
 export const V9PillarAggregationDispositionSchema = z.enum(["included", "excluded-a-b", "unavailable"]);
+
+/** Compact evidence and scoring assumptions shared by table, graph and archive surfaces. */
+export const V9EvidencePillarSchema = z.object({
+  score: ScoreSchema.nullable(),
+  aggregationDisposition: V9PillarAggregationDispositionSchema.optional(),
+  pricedUnknown: z.object({ cause: z.enum(["C", "U"]), score: ScoreSchema }).strict().optional(),
+}).strict();
+export const V9EvidencePillarsSchema = z.object({
+  backing: V9EvidencePillarSchema, exit: V9EvidencePillarSchema, control: V9EvidencePillarSchema,
+}).strict();
+export type V9EvidencePillars = z.infer<typeof V9EvidencePillarsSchema>;
+
+export function projectV9EvidencePillars(
+  pillars: V9EvidencePillars,
+  pricedUnknowns: readonly { pillar: keyof V9EvidencePillars; cause: "C" | "U"; score: number }[] = [],
+): V9EvidencePillars {
+  const project = (key: keyof V9EvidencePillars) => {
+    const priced = pricedUnknowns.find(item => item.pillar === key);
+    return {
+      score: pillars[key].score,
+      aggregationDisposition: pillars[key].aggregationDisposition,
+      ...(priced ? { pricedUnknown: { cause: priced.cause, score: priced.score } } : {}),
+    };
+  };
+  return { backing: project("backing"), exit: project("exit"), control: project("control") };
+}
 export const V9CompactPartialEvidenceSchema = V9PartialEvidenceSchema.pick({
   reasonCode: true, excludedPillars: true, causes: true,
 });

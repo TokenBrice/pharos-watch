@@ -11,6 +11,7 @@ import type { DependencyExposureResult } from "@/hooks/use-dependency-exposure-m
 import type { ExposureRootOption } from "./dependency-exposure-controls";
 import { useDependencyScenarios } from "@/hooks/use-dependency-scenarios";
 import { DependencyScenarioChange, DependencyScenarioView, selectDependencyScenario } from "./dependency-scenario-view";
+import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
 export function DependencyExposureResults({ result, publication, roots, options, inspectedId, onInspect, networkUpdated, held }: {
   result: DependencyExposureResult; publication: DependencyGraphResponse; roots: readonly string[];
@@ -45,10 +46,14 @@ export function DependencyExposureResults({ result, publication, roots, options,
     <div className="space-y-2"><h3 className="text-lg font-semibold">{result.reached} mapped dependents · direct {directUsd} · indirect {indirectUsd} (includes {overlapUsd} counted in more than one layer)</h3><p className="text-sm font-medium">Linked coins; not a loss forecast</p><p className="text-sm text-muted-foreground">Results use the full published graph and ignore Focus, Type and Limit. USD totals include known supply only; unknown values are not zero.</p></div>
     <p className="break-all text-xs text-muted-foreground">Publication {publication.publicationGenerationId} · methodology {publication.methodologyVersion} · asOfSec {publication.asOfSec} · supply clock {clocks.length ? clocks.join("; ") : "not published"}</p>
     {held && <p role="status" className="text-sm">Held publication. Results use the retained publication and its supply clock.</p>}
-    {rootCards.map(card => card && (card.ratingStatus === "pipeline-gap" || card.partialEvidence) && <p key={card.id} className="text-sm">
-      {label(card.id)} · {card.ratingStatus === "pipeline-gap" ? "Pipeline gap · fewer than two pillars available" : "Partial evidence: pipeline gap"}
-      {card.partialEvidence && ` · ${card.partialEvidence.causes.map(cause => cause === "A" ? "pipeline unavailable (A)" : "public data awaiting curation (B)").join("; ")}`}
-    </p>)}
+    {rootCards.map(card => {
+      if (!card || (card.ratingStatus !== "pipeline-gap" && !card.partialEvidence)) return null;
+      const partial = describePartialEvidence(card);
+      return <p key={card.id} className="text-sm" title={partial?.summary}>
+        {label(card.id)} · {card.ratingStatus === "pipeline-gap" && "Pipeline gap · fewer than two pillars available · "}
+        {partial?.gaps.map(formatPartialEvidenceGap).join(" · ")}
+      </p>;
+    })}
     {networkUpdated && <p role="status" className="text-sm">Network updated. Results now use the latest publication.</p>}
     {publication.nodes.some(card => card?.circulatingUsdAtEvaluation === null) && <p className="text-sm text-muted-foreground">Supply at evaluation not published for this generation</p>}
     <p className="text-sm">{Object.entries(result.bandCounts).map(([band, count]) => `${EXPOSURE_BAND_LABELS[band as keyof typeof EXPOSURE_BAND_LABELS]} ${count}`).join(" · ")}</p>
@@ -78,8 +83,9 @@ export function DependencyExposureResults({ result, publication, roots, options,
           <TableCell>{(() => {
             const node = nodeById.get(row.id);
             if (!node) return "Unavailable";
+            const partial = describePartialEvidence(node);
             return <>{node.ratingStatus === "pipeline-gap" ? "Pipeline gap · fewer than two pillars available" : node.grade}
-              {node.partialEvidence && <span className="block text-xs">{node.ratingStatus === "rated" && "Partial evidence: pipeline gap · "}{node.partialEvidence.causes.map(cause => cause === "A" ? "pipeline unavailable (A)" : "public data awaiting curation (B)").join("; ")}</span>}
+              {partial && <span className="block text-xs" title={partial.summary}>{partial.gaps.map(formatPartialEvidenceGap).join(" · ")}</span>}
             </>;
           })()}</TableCell>
           {scenarioSelection.scenario && <TableCell><DependencyScenarioChange selection={scenarioSelection} assetId={row.id} /></TableCell>}

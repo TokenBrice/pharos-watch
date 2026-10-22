@@ -12,6 +12,7 @@ import {
   type StablecoinSafetyScoreV9Component,
 } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
 import { SAFETY_SCORE_V9_EVIDENCE_LEVEL_DESCRIPTIONS } from "@/lib/safety-score-v9-labels";
+import { readV9PricedUnknown, type V9PricedUnknown } from "@/lib/safety-score-v9-consumers";
 
 const PILLARS = [
   ["backing", "Backing"],
@@ -26,6 +27,7 @@ export interface StablecoinSafetyScoreV9Presentation {
     key: "backing" | "exit" | "control";
     label: string;
     score: number | null;
+    pricedUnknown: V9PricedUnknown | null;
     evidenceSummary: string;
     evidenceDescription: string | null;
     componentCount: number;
@@ -62,6 +64,7 @@ export function buildStablecoinSafetyScoreV9Presentation(
         key,
         label,
         score: pillar.score,
+        pricedUnknown: readV9PricedUnknown(card, key),
         evidenceSummary,
         evidenceDescription: pillar.aggregationDisposition === "excluded-a-b"
           ? null

@@ -100,7 +100,7 @@ const REASON_CODE_LABELS = {
   "unreviewed-dependency-relationships": "Dependency relationships not reconciled with reserves",
   "unreviewed-oracle-profile": "Oracle setup not reviewed",
   "unreviewed-reserve-envelope": "Reserve scope not reviewed",
-  "partial-evidence-pipeline-gap": "Partial evidence: pipeline gap",
+  "partial-evidence-pipeline-gap": "Partial evidence",
   "single-pillar-pipeline-gap": "Only one pillar available — pipeline gap",
   "all-pillars-pipeline-gap": "No pillars available — pipeline gap",
   "f-without-measured-adverse": "Score below the F threshold without a measured adverse fact",

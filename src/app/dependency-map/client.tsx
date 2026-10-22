@@ -54,6 +54,7 @@ export function DependencyMapClient() {
           grade: card.grade,
           ratingStatus: card.ratingStatus,
           partialEvidence: card.partialEvidence,
+          pillars: card.pillars,
           sharedBookId: card.sharedBookId,
         };
       }),

@@ -109,6 +109,20 @@ describe("ScreenerTable mobile cards", () => {
 
 describe("ScreenerTable desktop table", () => {
 
+  it.each([
+    { cause: "C" as const, score: 35, reason: "undisclosed by issuer" },
+    { cause: "U" as const, score: 50, reason: "not yet researched" },
+  ])("renders $cause priced unknowns with cause-specific text", async ({ cause, score, reason }) => {
+    installViewportMatchMedia(1400);
+    const partial: ScreenerRow = {
+      ...row,
+      partialEvidence: { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["exit"], causes: [] },
+      pillars: { backing: { score: 78 }, exit: { score: null, aggregationDisposition: "unavailable", pricedUnknown: { cause, score } }, control: { score: 42 } },
+    };
+    const { container } = render(<ScreenerTable rows={[partial]} dataState="ready" hasActiveFilters={false} sort={makeSort()} />);
+    await waitFor(() => expect(container.textContent).toContain(`Exit ${reason} (priced as unknown)`));
+    expect(container.textContent).not.toContain("pipeline gap");
+  });
   it("labels the safety summary badge with the projected V9 grade and score", async () => {
     installViewportMatchMedia(1400);
 

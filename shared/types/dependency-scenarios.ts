@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ContagionScenarioSchema } from "./contagion";
 import { V9GradeSchema } from "./safety-score-v9";
 import { BaseInputGenerationIdSchema, Sha256Schema, ScoreSchema, UnixSecondsSchema } from "./safety-schema-primitives";
-import { V9RatingStatusSchema, V9CompactPartialEvidenceSchema, refineV9RatingStatusFields } from "./safety-score-v9-causes";
+import { V9RatingStatusSchema, V9CompactPartialEvidenceSchema, refineV9RatingStatusFields, V9EvidencePillarsSchema } from "./safety-score-v9-causes";
 
 export const DEPENDENCY_SCENARIOS_INTERVAL_MS = 86_400_000;
 export const DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC = 172_800;
@@ -23,8 +23,10 @@ export const DependencyScenarioArtifactSchema = z.object({
       assetId: z.string().min(1),
       publishedScore: ScoreSchema.nullable(), publishedGrade: V9GradeSchema.nullable(),
       publishedRatingStatus: V9RatingStatusSchema, publishedPartialEvidence: V9CompactPartialEvidenceSchema.nullable(),
+      publishedPillars: V9EvidencePillarsSchema.optional(),
       modeledScore: ScoreSchema.nullable(), modeledGrade: V9GradeSchema.nullable(),
       modeledRatingStatus: V9RatingStatusSchema, modeledPartialEvidence: V9CompactPartialEvidenceSchema.nullable(),
+      modeledPillars: V9EvidencePillarsSchema.optional(),
       deltaScore: z.number().finite().min(-100).max(100).nullable(),
       minHop: z.number().int().nonnegative().nullable(), roles: z.array(z.string().min(1)),
     }).strict()),

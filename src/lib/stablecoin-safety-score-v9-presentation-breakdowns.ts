@@ -8,7 +8,7 @@ import { formatV9PresentationUsd as compactUsd } from "@shared/lib/format";
 import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
 import { resolveV9EffectiveScoringWeight } from "@shared/types/safety-score-v9-public-causes";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
-import { describeExitRouteVenue } from "@/lib/safety-score-reason-labels";
+import { describeExitRouteVenue, describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
 export type StablecoinSafetyScoreV9Card = SafetyScoreV9CurrentCard;
 
@@ -335,10 +335,13 @@ export function exitReasonFallback(
 
 function parseExitBreakdown(
   breakdown: SafetyScoreV9ExitBreakdown,
+  card: StablecoinSafetyScoreV9Card,
 ): StablecoinSafetyScoreV9PillarBreakdown {
   const primaryRoute = breakdown.primaryRoute;
   const context: StablecoinSafetyScoreV9BreakdownMeta[] = primaryRoute === null
-    ? [{ key: "primary-route", label: "Primary route", value: breakdown.aggregationDisposition === "excluded-a-b" ? "excluded — pipeline gap / awaiting curation" : "No eligible route" }]
+    ? [{ key: "primary-route", label: "Primary route", value: breakdown.aggregationDisposition === "excluded-a-b"
+      ? describePartialEvidence(card)?.gaps.map(formatPartialEvidenceGap).join(" · ") ?? "Excluded"
+      : "No eligible route" }]
     : [];
   const bestObservedAlternative = primaryRoute === null
     ? breakdown.alternatives.find((route) => route.capacity != null)
@@ -567,6 +570,6 @@ export function pillarBreakdown(
   const breakdowns = card.breakdowns;
   if (breakdowns === null) return null;
   if (pillar === "backing") return parseBackingBreakdown(breakdowns.backing);
-  if (pillar === "exit") return parseExitBreakdown(breakdowns.exit);
+  if (pillar === "exit") return parseExitBreakdown(breakdowns.exit, card);
   return parseControlBreakdown(breakdowns.control);
 }

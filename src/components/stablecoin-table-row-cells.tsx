@@ -18,6 +18,7 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 import { BACKING_BADGE_STYLES, BACKING_LABELS_SHORT, DIRECTION_TONE_CLASSES, GOVERNANCE_BADGE_STYLES, GOVERNANCE_LABELS_SHORT, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
 import { formatBps, formatCurrency, formatPercentChange, getNetColor } from "@shared/lib/format";
 import { getSafetyGradeBadgeClassName } from "@/lib/report-card-ui";
+import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
 interface RowCellsProps {
   row: StablecoinTableRowCellProps;
@@ -81,6 +82,7 @@ function PinnedCell({ row, model }: RowCellsProps) {
 }
 
 function MobileRiskSummary({ model }: { model: StablecoinTableRowModel }) {
+  const partial = model.reportCard ? describePartialEvidence(model.reportCard) : null;
   return (
     <span
       className={`mt-1 min-w-0 items-center gap-1 ${model.isOverview ? "hidden" : "flex lg:hidden"}`}
@@ -89,7 +91,7 @@ function MobileRiskSummary({ model }: { model: StablecoinTableRowModel }) {
       {model.reportCard ? (
         <span
           className={`inline-flex h-5 min-w-5 items-center justify-center rounded border px-1 pharos-numeric text-3xs font-semibold leading-none ${getSafetyGradeBadgeClassName(model.reportCard.grade)}`}
-          title={`${model.reportCard.grade === null ? "Pipeline gap" : `Safety grade ${model.reportCard.grade}`}${model.reportCard.partialEvidence ? " · Partial evidence: pipeline gap" : ""}`}
+          title={`${model.reportCard.grade === null ? "Pipeline gap" : `Safety grade ${model.reportCard.grade}`}${partial ? ` · ${partial.summary}` : ""}`}
         >
           {model.reportCard.grade ?? "Pipeline gap"}
         </span>
@@ -98,9 +100,9 @@ function MobileRiskSummary({ model }: { model: StablecoinTableRowModel }) {
           —
         </span>
       )}
-      {model.reportCard?.partialEvidence ? (
-        <span className="text-3xs text-muted-foreground">
-          Partial evidence: pipeline gap ({model.reportCard.partialEvidence.causes.join("/")})
+      {partial ? (
+        <span className="text-3xs text-muted-foreground" title={partial.summary}>
+          {partial.gaps.map(formatPartialEvidenceGap).join(" · ")}
         </span>
       ) : null}
       <span className="inline-flex h-5 items-center rounded border border-border/60 bg-background/60 px-1.5 text-3xs text-muted-foreground">
@@ -238,6 +240,7 @@ function MarketCells({ row, model }: RowCellsProps) {
 }
 
 function RiskCells({ row, model }: RowCellsProps) {
+  const partial = model.reportCard ? describePartialEvidence(model.reportCard) : null;
   const stabilityCell = model.meta?.flags.navToken || model.pegScore === null
     ? <span className="text-muted-foreground">—</span>
     : <span className={pegScoreColor(model.pegScore)}>{model.pegScore}</span>;
@@ -258,9 +261,9 @@ function RiskCells({ row, model }: RowCellsProps) {
             >
               {model.reportCard.grade ?? "Pipeline gap"}
             </Badge>
-            {model.reportCard?.partialEvidence ? (
-              <span className="block text-3xs text-muted-foreground">
-                Partial evidence: pipeline gap ({model.reportCard.partialEvidence.causes.join("/")})
+            {partial ? (
+              <span className="block text-3xs text-muted-foreground" title={partial.summary}>
+                {partial.gaps.map(formatPartialEvidenceGap).join(" · ")}
               </span>
             ) : null}
             </>

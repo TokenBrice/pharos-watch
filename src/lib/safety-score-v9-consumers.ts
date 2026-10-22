@@ -46,7 +46,7 @@ export interface V9PricedUnknown {
 
 /** Table cards project the assumption onto the pillar; full cards keep it in the score trace. */
 export interface V9PricedUnknownSource {
-  pillars: Record<V9QualityPillar, { pricedUnknown?: V9PricedUnknown }>;
+  pillars: Record<V9QualityPillar, { score: number | null; pricedUnknown?: V9PricedUnknown }>;
   scoreTrace?: {
     aggregation: { pricedUnknownPillars?: readonly { pillar: V9QualityPillar; cause: "C" | "U"; score: number }[] } | null;
   };

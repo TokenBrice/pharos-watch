@@ -6,7 +6,7 @@ import {
   type ReportCardsV9TableResponse, type ReportCardsV9DetailResponse,
 } from "../types/report-cards-v9-projections";
 import { buildReportCardsV9DependencyGraph, type ReportCardsV9DependencyGraph } from "../types/report-cards-v9";
-import { projectV9CompactPartialEvidence } from "../types/safety-score-v9-causes";
+import { projectV9CompactPartialEvidence, projectV9EvidencePillars } from "../types/safety-score-v9-causes";
 import { resolveCommonModeEffects } from "../types/dependency-graph";
 
 function resolvedDependencyGraph(snapshot: ReportCardsV9ProjectionSource): ReportCardsV9DependencyGraph {
@@ -15,14 +15,6 @@ function resolvedDependencyGraph(snapshot: ReportCardsV9ProjectionSource): Repor
   })));
 }
 
-function projectTablePillar(card: SafetyScoreV9CurrentCard, key: "backing" | "exit" | "control"): ReportCardsV9TableCard["pillars"][typeof key] {
-  const pillar = card.pillars[key];
-  const priced = card.scoreTrace.aggregation?.pricedUnknownPillars?.find(item => item.pillar === key);
-  return {
-    score: pillar.score, aggregationDisposition: pillar.aggregationDisposition,
-    ...(priced ? { pricedUnknown: { cause: priced.cause, score: priced.score } } : {}),
-  };
-}
 
 export function projectV9TableCard(card: SafetyScoreV9CurrentCard): ReportCardsV9TableCard {
   const resolved = resolveV9PublicWitnessTexts(card);
@@ -30,11 +22,7 @@ export function projectV9TableCard(card: SafetyScoreV9CurrentCard): ReportCardsV
   return {
     id: resolved.id, score: resolved.score, grade: resolved.grade, ratingStatus: resolved.ratingStatus,
     partialEvidence: projectV9CompactPartialEvidence(resolved.partialEvidence),
-    pillars: {
-      backing: projectTablePillar(resolved, "backing"),
-      exit: projectTablePillar(resolved, "exit"),
-      control: projectTablePillar(resolved, "control"),
-    },
+    pillars: projectV9EvidencePillars(resolved.pillars, resolved.scoreTrace.aggregation?.pricedUnknownPillars),
     evidence: { level: resolved.evidence.level },
     weakestPillar: resolved.weakestPillar, bindingCap: resolved.bindingCap,
     accessPosture: { freezeExposure: resolved.accessPosture.freezeExposure },
@@ -80,6 +68,7 @@ export function projectV9Detail(
   for (const group of groups ?? []) for (const id of group.memberAssetIds) members.add(id);
   const neighborhood = snapshot.cards.filter(card => members.has(card.id)).map(card => ({
     id: card.id, grade: card.grade, partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence), sharedBookId: card.sharedBookId,
+    ratingStatus: card.ratingStatus, pillars: projectV9EvidencePillars(card.pillars, card.scoreTrace.aggregation?.pricedUnknownPillars),
   }));
   return ReportCardsV9DetailResponseSchema.parse({
     ...envelope(snapshot), projection: "detail", coinId,

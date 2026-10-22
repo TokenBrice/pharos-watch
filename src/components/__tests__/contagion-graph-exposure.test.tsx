@@ -57,7 +57,7 @@ describe("controlled exposure graph", () => {
     expect(panels).toHaveLength(2);
     for (const panel of panels) {
       expect(panel.textContent).toContain(grade === null ? "Pipeline gap" : "Grade B");
-      expect(panel.textContent).toContain("Partial evidence: pipeline gap (A)");
+      expect(panel.textContent).toContain("Exit excluded · pipeline gap");
       if (grade === null) expect(panel.textContent).not.toContain("Grade");
     }
   });

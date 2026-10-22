@@ -43,13 +43,16 @@ describe("Exposure mode", () => {
     gap.grade = null;
     gap.score = null;
     gap.partialEvidence = { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["backing", "exit"], causes: ["A"] };
+    gap.pillars!.backing = { score: null, aggregationDisposition: "excluded-a-b" };
+    gap.pillars!.exit = { score: null, aggregationDisposition: "excluded-a-b" };
     const partial = data.nodes.find(node => node.id === "unknown")!;
     partial.partialEvidence = { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["exit"], causes: ["B"] };
+    partial.pillars!.exit = { score: null, aggregationDisposition: "excluded-a-b" };
     render(<DependencyExposureResults result={computeDependencyExposure(data, roots)} publication={data} roots={roots} options={[]} inspectedId={null} onInspect={() => {}} networkUpdated={false} held={false} />);
     const table = screen.getByRole("table");
     expect(within(table).getByText(/Pipeline gap · fewer than two pillars available/)).toBeTruthy();
-    expect(within(table).getByText("pipeline unavailable (A)")).toBeTruthy();
-    expect(within(table).getByText(/Partial evidence: pipeline gap.*public data awaiting curation \(B\)/)).toBeTruthy();
+    expect(within(table).getByText("Backing and Exit excluded · pipeline gap")).toBeTruthy();
+    expect(within(table).getByText(/Exit excluded.*awaiting curation/)).toBeTruthy();
     expect(screen.getByRole("heading", { level: 3 }).textContent).toContain("$400.00 (known supply only)");
     expect(within(table).queryByText("NR")).toBeNull();
   });

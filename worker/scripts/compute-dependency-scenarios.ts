@@ -252,8 +252,10 @@ async function main(): Promise<void> {
       scenarios.push({ id, rootId, shock, assumptions, results: result.rows.filter(row => row.failure === null && (row.coinId === rootId || row.changedDimensions.length > 0)).map(row => ({
         assetId: row.coinId, publishedScore: row.baselineScore, publishedGrade: row.baselineGrade,
         publishedRatingStatus: row.baselineRatingStatus, publishedPartialEvidence: row.baselinePartialEvidence,
+        publishedPillars: row.baselinePillars,
         modeledScore: row.scenarioScore, modeledGrade: row.scenarioGrade,
         modeledRatingStatus: row.scenarioRatingStatus!, modeledPartialEvidence: row.scenarioPartialEvidence,
+        modeledPillars: row.scenarioPillars,
         deltaScore: row.delta, minHop: row.shortestHop,
         roles: [...new Set((byId.get(row.coinId)?.dependencies.roles ?? []).map(role => role.role))].sort(),
       })), failures: result.rows.filter(row => row.failure !== null).map(row => ({ assetId: row.coinId, code: row.failure! })) });

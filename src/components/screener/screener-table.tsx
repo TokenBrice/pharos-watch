@@ -38,6 +38,7 @@ import type { ScreenerRow, ScreenerSortKey } from "@/lib/screener-filters";
 import type { DataTableSortControls } from "@/components/data-table-shell";
 import type { QueryKey } from "@tanstack/react-query";
 import type { SafetyScoreV9TopDriver } from "@shared/lib/safety-score-v9/public";
+import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
 // M1: keys feeding the screener table's visible data (supply, peg, DEWS,
 // liquidity, safety grade). A background refetch of any of these surfaces the
@@ -552,6 +553,7 @@ function projectScreenerTopDriver(row: ScreenerRow): SafetyScoreV9TopDriver | nu
 }
 
 function V9Profile({ row, compact = false }: { row: ScreenerRow; compact?: boolean }) {
+  const partial = describePartialEvidence(row);
   const unavailableEvidence = row.safetyEvidence === null || row.safetyEvidence === "pipeline-gap";
   const evidenceLabel = row.safetyEvidence === null ? "Unavailable"
     : row.safetyEvidence === "pipeline-gap" ? "Pipeline gap" : SAFETY_EVIDENCE_LABELS[row.safetyEvidence];
@@ -572,8 +574,8 @@ function V9Profile({ row, compact = false }: { row: ScreenerRow; compact?: boole
       <span className={`rounded-full border px-1.5 py-0.5 text-3xs font-semibold leading-none ${evidenceClass}`}>
         {evidenceLabel}
       </span>
-      {row.partialEvidence !== null ? <span className="text-3xs text-muted-foreground">
-        Partial evidence: pipeline gap · {row.partialEvidence.causes.join("/")}
+      {partial !== null ? <span className="text-3xs text-muted-foreground" title={partial.summary}>
+        {partial.gaps.map(formatPartialEvidenceGap).join(" · ")}
       </span> : null}
     </span>
   );

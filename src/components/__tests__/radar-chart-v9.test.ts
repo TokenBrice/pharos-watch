@@ -77,6 +77,17 @@ describe("V9 radar cohorts", () => {
     expect(container.querySelectorAll("line[stroke='#10b981']")).toHaveLength(1);
     expect(container.querySelector("path[fill='#10b981']")).toBeNull();
   });
+  it.each(["backing", "exit", "control"] as const)("places the %s Unknown line inward from the side label", (pillar) => {
+    const identity = makeReportCardsV9Response().safetyScoreIdentity;
+    const card = projectV9TableCard(makeV9Card());
+    card.pillars[pillar] = { score: null, aggregationDisposition: "unavailable", pricedUnknown: { cause: "U", score: 50 } };
+    const { container } = render(createElement(CompareRadarV9, { series: [{ card, identity, color: "#10b981" }], cohortSeries: [] }));
+    const group = [...container.querySelectorAll("title")].find(title => title.textContent?.includes("unknown, not plotted"))!.parentElement!;
+    const [label, unknown] = [...group.querySelectorAll("text")];
+    expect(unknown.textContent).toBe("Unknown");
+    const offset = Number(unknown.getAttribute("x")) - Number(label.getAttribute("x"));
+    expect(offset).toBe(pillar === "exit" ? -43 : pillar === "control" ? 5 : -21);
+  });
   it("builds exactly three pillars and a same-identity cohort median", () => {
     const response = makeReportCardsV9Response();
     const series = [

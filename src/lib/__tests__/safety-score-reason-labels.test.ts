@@ -2,9 +2,30 @@ import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import {
   humanizeSafetyScoreReason,
+  describePartialEvidence,
+  formatPartialEvidenceGap,
 } from "@/lib/safety-score-reason-labels";
 
 describe("safety score reason labels", () => {
+  it.each([
+    { pillar: "backing" as const, cause: "C" as const, score: 35, label: "Backing undisclosed by issuer" },
+    { pillar: "exit" as const, cause: "U" as const, score: 50, label: "Exit not yet researched" },
+    { pillar: "control" as const, cause: "U" as const, score: 60, label: "Control not yet researched" },
+  ])("describes the priced $pillar cause without inventing a pipeline failure", ({ pillar, cause, score, label }) => {
+    const pillars = { backing: { score: 80 }, exit: { score: 70 }, control: { score: 60 }, [pillar]: { score: null, aggregationDisposition: "unavailable", pricedUnknown: { cause, score } } };
+    const result = describePartialEvidence({ ratingStatus: "rated", pillars,
+      partialEvidence: { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: [pillar], causes: [] } })!;
+    expect(result.gaps.map(formatPartialEvidenceGap)).toEqual([`${label} (priced as unknown)`]);
+    expect(result.summary).toContain(`${score}/100`);
+    expect(result.summary).not.toContain("pipeline");
+  });
+
+  it("keeps reduced cause-B projections distinct from pipeline gaps", () => {
+    const result = describePartialEvidence({ ratingStatus: "rated",
+      partialEvidence: { excludedPillars: ["exit"], causes: ["B"] } })!;
+    expect(result.gaps.map(formatPartialEvidenceGap)).toEqual(["Exit excluded · awaiting curation"]);
+    expect(result.summary).not.toContain("pipeline");
+  });
   it("handles long malformed digit runs through the public humanizer in a bounded child", () => {
     // A process timeout contains a regression in either synchronous regex;
     // this is a generous safety bound, not a machine-speed microbenchmark.

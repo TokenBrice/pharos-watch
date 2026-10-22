@@ -5,7 +5,8 @@ import type { ReportCardsV9CurrentResponse } from "./report-cards-v9";
 import type { SafetyScoreV9CurrentCard } from "./safety-score-v9-public";
 import { refineV9RatingStatusFields, V9CompactPartialEvidenceSchema } from "./safety-score-v9-causes";
 import { DependencyGraphResponseSchema } from "./dependency-graph";
-import { SafetyScoreV9PillarFreshnessSchema, refineSafetyScoreV9PillarFreshness, ScoreSchema } from "./safety-score-v9-public-facts";
+import { SafetyScoreV9PillarFreshnessSchema, refineSafetyScoreV9PillarFreshness } from "./safety-score-v9-public-facts";
+import { V9EvidencePillarsSchema } from "./safety-score-v9-causes";
 
 export type ReportCardsV9ProjectionSource = Omit<ReportCardsV9CurrentResponse, "cards"> & { cards: SafetyScoreV9CurrentCard[] };
 
@@ -19,19 +20,12 @@ const common = {
   asOfSec: envelope.asOfSec, updatedAt: envelope.updatedAt, source: envelope.source,
   completeness: envelope.completeness, publicationHealth: envelope.publicationHealth,
 };
-const tablePillar = z.object({
-  score: card.pillars.shape.backing.shape.score,
-  aggregationDisposition: card.pillars.shape.backing.shape.aggregationDisposition,
-  /** The scoring assumption for an unavailable pillar of a rated card: its cause and priced score.
-   *  Omitted for measured pillars; never a measured value. */
-  pricedUnknown: z.object({ cause: z.enum(["C", "U"]), score: ScoreSchema }).strict().optional(),
-}).strict();
 
 /** Only fields consumed by cross-asset tables, filters, exports and mini radars. */
 export const ReportCardsV9TableCardSchema = z.object({
   id: card.id, score: card.score, grade: card.grade, ratingStatus: card.ratingStatus,
   partialEvidence: V9CompactPartialEvidenceSchema.nullable(),
-  pillars: z.object({ backing: tablePillar, exit: tablePillar, control: tablePillar }).strict(),
+  pillars: V9EvidencePillarsSchema,
   evidence: z.object({ level: card.evidence.shape.level }).strict(),
   weakestPillar: card.weakestPillar, bindingCap: card.bindingCap,
   accessPosture: z.object({ freezeExposure: card.accessPosture.shape.freezeExposure }).strict(),
@@ -77,6 +71,7 @@ export type ReportCardsV9TableResponse = z.infer<typeof ReportCardsV9TableRespon
 
 export const ReportCardsV9NeighborhoodCardSchema = z.object({
   id: card.id, grade: card.grade, partialEvidence: V9CompactPartialEvidenceSchema.nullable(), sharedBookId: card.sharedBookId,
+  ratingStatus: card.ratingStatus.optional(), pillars: V9EvidencePillarsSchema.optional(),
 }).strict();
 export type ReportCardsV9NeighborhoodCard = z.infer<typeof ReportCardsV9NeighborhoodCardSchema>;
 export const ReportCardsV9DetailResponseSchema = z.object({

@@ -383,14 +383,14 @@ export function formatPartialEvidenceGap(gap: PartialEvidenceGap): string {
 
 /** Table and full cards alike; full cards add exact component keys and their priced unknowns live in the trace. */
 export interface PartialEvidenceCard {
-  ratingStatus: string;
-  partialEvidence: {
-    reasonCode: string;
+  ratingStatus?: string | null;
+  partialEvidence?: {
+    reasonCode?: string;
     excludedPillars: readonly string[];
     causes: readonly string[];
     excludedComponentKeys?: readonly string[];
   } | null;
-  pillars: Record<V9QualityPillar, {
+  pillars?: Record<V9QualityPillar, {
     score: number | null;
     aggregationDisposition?: string | null;
     pricedUnknown?: V9PricedUnknown;
@@ -405,7 +405,7 @@ export interface PartialEvidenceCard {
  */
 export function describePartialEvidence(card: PartialEvidenceCard): PartialEvidenceDescription | null {
   const partial = card.partialEvidence;
-  if (partial === null) return null;
+  if (partial == null) return null;
   const listedPillars = new Set(partial.excludedPillars);
   const abCauses = partial.causes.filter((cause): cause is "A" | "B" => cause === "A" || cause === "B");
   const abLabel = abCauses.map((cause) => SAFETY_SCORE_GAP_CAUSE_LABELS[cause]).join(", ");
@@ -415,13 +415,14 @@ export function describePartialEvidence(card: PartialEvidenceCard): PartialEvide
   const excludedAB: V9QualityPillar[] = [];
 
   for (const key of V9_PILLAR_KEYS) {
-    const pillar = card.pillars[key];
-    if (pillar.aggregationDisposition === "excluded-a-b") {
+    const pillar = card.pillars?.[key];
+    if (pillar?.aggregationDisposition === "excluded-a-b"
+      || (pillar === undefined && listedPillars.has(key) && abCauses.length > 0)) {
       excludedAB.push(key);
       continue;
     }
-    if (pillar.aggregationDisposition !== "unavailable" && !listedPillars.has(key)) continue;
-    const priced = card.ratingStatus === "rated" ? readV9PricedUnknown(card, key) : null;
+    if (pillar?.aggregationDisposition !== "unavailable" && !listedPillars.has(key)) continue;
+    const priced = card.ratingStatus === "rated" && card.pillars ? readV9PricedUnknown({ ...card, pillars: card.pillars }, key) : null;
     if (priced !== null) {
       gaps.push({ label: `${PILLAR_SHORT_LABELS[key]} ${SAFETY_SCORE_GAP_CAUSE_LABELS[priced.cause]}`, note: "priced as unknown" });
       sentences.push(priced.cause === "C"
@@ -458,5 +459,5 @@ export function describePartialEvidence(card: PartialEvidenceCard): PartialEvide
     gaps.push({ label: "Partial evidence", note: null });
     sentences.push("Some evidence is left out of the score for now.");
   }
-  return { gaps, summary: sentences.join(" "), reasonCode: partial.reasonCode };
+  return { gaps, summary: sentences.join(" "), reasonCode: partial.reasonCode ?? "partial-evidence-pipeline-gap" };
 }

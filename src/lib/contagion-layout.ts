@@ -14,6 +14,7 @@ import type { V9Grade } from "@shared/types/safety-score-v9";
 import { buildDirectHubExposures, v9DependencyEdgeScoreKnown, v9DependencyEdgeWeight } from "@shared/lib/dependency-exposure";
 import { deterministicHash } from "@/lib/layout-utils";
 import { DEFAULT_NODE_LIMIT } from "@/lib/contagion-graph-constants";
+import type { PartialEvidenceCard } from "@/lib/safety-score-reason-labels";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -33,6 +34,8 @@ export interface ContagionGraphCard {
   symbol: string;
   grade: V9Grade | null;
   partialEvidence?: { causes: readonly ("A" | "B")[]; excludedPillars: readonly string[] } | null;
+  ratingStatus?: PartialEvidenceCard["ratingStatus"];
+  pillars?: PartialEvidenceCard["pillars"];
   isDefunct?: boolean;
   sharedBookId?: string | null;
 }
@@ -42,6 +45,8 @@ export interface GraphNode extends SimulationNodeDatum {
   symbol: string;
   grade: V9Grade | null;
   partialEvidence?: ContagionGraphCard["partialEvidence"];
+  ratingStatus?: PartialEvidenceCard["ratingStatus"];
+  pillars?: PartialEvidenceCard["pillars"];
   mcap: number | null;
   r: number;
 }
@@ -306,7 +311,7 @@ export function buildGraphData(
     const card = cardMap.get(id)!;
     const mcap = mcapMap.get(id) ?? null;
     const r = mcap === null ? MIN_RADIUS : MIN_RADIUS + Math.sqrt(mcap / maxMcap) * (MAX_RADIUS - MIN_RADIUS);
-    return { id, symbol: card.symbol, grade: card.grade, partialEvidence: card.partialEvidence, mcap, r };
+    return { id, symbol: card.symbol, grade: card.grade, ratingStatus: card.ratingStatus ?? (card.grade === null ? "pipeline-gap" : "rated"), partialEvidence: card.partialEvidence, pillars: card.pillars, mcap, r };
   });
 
   const graphLinks: GraphLink[] = selectedLinks;

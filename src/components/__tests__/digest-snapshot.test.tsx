@@ -62,6 +62,20 @@ describe("DigestSnapshot", () => {
     expect(screen.getByText(`${majorLabel} distribution: A 1, B 2`)).toBeTruthy();
   });
 
+  it.each([
+    { cause: "C", score: 35, reason: "undisclosed by issuer" },
+    { cause: "U", score: 50, reason: "not yet researched" },
+  ])("describes archived $cause priced unknowns without a pipeline label", ({ cause, score, reason }) => {
+    mockSnapshot({ safetyScores: { model: "v9", mentionedCoins: [{
+      symbol: "TEST", grade: "C", score: 48, ratingStatus: "rated",
+      partialEvidence: { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["exit"], causes: [] },
+      pillars: { backing: { score: 70 }, exit: { score: null, aggregationDisposition: "unavailable", pricedUnknown: { cause, score } }, control: { score: 60 } },
+      reasonCodes: [], caps: [], bindingCap: null,
+    }], gradeDistribution: { C: 1 }, provenance: { ...makeReportCardsV9Response().safetyScoreIdentity, methodologyVersion: "10.0", publishedAt: 1_756_684_800 } } });
+    const { container } = render(<DigestSnapshot date="2026-09-01" />);
+    expect(container.textContent).toContain(`Exit ${reason} (priced as unknown)`);
+    expect(container.textContent).not.toContain("pipeline gap");
+  });
   it("prints rounded scores, labelled reason codes and duplicate symbols without debug syntax", () => {
     const { safetyScoreIdentity } = makeReportCardsV9Response();
     const coin = {

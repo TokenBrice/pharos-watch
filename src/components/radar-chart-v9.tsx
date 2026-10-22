@@ -166,15 +166,16 @@ function UnknownAwareTick({ x, y, textAnchor, payload, unknownAxes }: {
     return <text x={x} y={y} textAnchor={textAnchor} fontSize={11} fill="currentColor" dy="0.35em">{label}</text>;
   }
   const anchor = textAnchor ?? "middle";
-  // "Unknown" is wider than a short pillar name; start-anchored labels sit at the
-  // right edge, so the hollow marker leads the word from the label's own start.
-  const markerOffset = anchor === "start" ? -5 : anchor === "end" ? -50 : -26;
+  // Put the longer second line inward from either side axis. SVG overflow can
+  // still be clipped by a card ancestor, so every label must fit the chart.
+  const markerOffset = anchor === "start" ? -48 : anchor === "end" ? 0 : -26;
+  const labelY = anchor === "middle" ? Math.max(16, y ?? 0) : y;
   return (
     <g>
       <title>{`${label}: unknown, not plotted${unknown.assumptions.length > 0 ? `. ${unknown.assumptions.join("; ")}` : ""}`}</title>
-      <text x={x} y={y} textAnchor={anchor} fontSize={11} fill="currentColor" dy="-0.2em">{label}</text>
-      <circle cx={(x ?? 0) + markerOffset} cy={(y ?? 0) + 9} r={2.5} fill="none" stroke="currentColor" strokeWidth={1} />
-      <text x={(x ?? 0) + markerOffset + 5} y={y} textAnchor="start" fontSize={10} fontStyle="italic" fill="currentColor" dy="1.15em">Unknown</text>
+      <text x={x} y={labelY} textAnchor={anchor} fontSize={11} fill="currentColor" dy="-0.2em">{label}</text>
+      <circle cx={(x ?? 0) + markerOffset} cy={(labelY ?? 0) + 9} r={2.5} fill="none" stroke="currentColor" strokeWidth={1} />
+      <text x={(x ?? 0) + markerOffset + 5} y={labelY} textAnchor="start" fontSize={10} fontStyle="italic" fill="currentColor" dy="1.15em">Unknown</text>
     </g>
   );
 }

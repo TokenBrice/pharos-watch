@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
 import type { HubExposure } from "@shared/lib/dependency-exposure";
 import { graphNodeLabel } from "@/components/contagion-graph-model";
+import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
 interface ContagionGraphInsightsProps {
   inspectedNode: GraphNode | null;
@@ -122,11 +123,12 @@ export function ContagionGraphInsights({
             {inspectedNode.grade === null ? "Pipeline gap" : `Grade ${inspectedNode.grade}`}
           </span>
         </div>
-        {inspectedNode.partialEvidence ? (
-          <p className="text-2xs text-muted-foreground">
-            Partial evidence: pipeline gap ({inspectedNode.partialEvidence.causes.join("/")})
-          </p>
-        ) : null}
+        {(() => {
+          const partial = describePartialEvidence(inspectedNode);
+          return partial ? <p className="text-2xs text-muted-foreground" title={partial.summary}>
+            {partial.gaps.map(formatPartialEvidenceGap).join(" · ")}
+          </p> : null;
+        })()}
 
         <div className="flex min-w-0 items-center gap-2">
           <StablecoinLogo src={logos?.[inspectedNode.id]} name={inspectedNode.symbol} size={28} />

@@ -26,6 +26,9 @@ import type { StabilityIndexCurrent } from "@shared/types/stability";
 import type { ChainEnvironmentEvidence, ChainHealthFactors } from "@shared/types/chains";
 import { SAFETY_SCORE_V9_RESPONSIBILITY_LABELS } from "@/lib/safety-score-v9-labels";
 import type { V9EvidenceCause } from "@shared/types/safety-score-v9-causes";
+import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
+import { readV9PricedUnknown } from "@/lib/safety-score-v9-consumers";
+import { SAFETY_SCORE_GAP_CAUSE_LABELS } from "@shared/lib/classification";
 
 export interface ShowYourWorkRow {
   label: string;
@@ -92,23 +95,31 @@ export function formatReportCardV9(
 ): ShowYourWorkTable {
   const stages = card.scoreTrace.stages;
   const breakdowns = card.breakdowns;
+  const partial = describePartialEvidence(card);
+  const pillarValue = (key: "backing" | "exit" | "control") => {
+    const pillar = card.pillars[key];
+    const priced = readV9PricedUnknown(card, key);
+    if (pillar.score === null && priced) return `Unknown — priced at ${priced.score.toFixed(0)} (${SAFETY_SCORE_GAP_CAUSE_LABELS[priced.cause]})`;
+    if (pillar.aggregationDisposition === "excluded-a-b") return partial?.gaps.map(formatPartialEvidenceGap).join(" · ") ?? "Excluded";
+    return fmtNum(pillar.score, 1);
+  };
   const rows: ShowYourWorkRow[] = [
     { label: "Rating status", value: card.ratingStatus === "pipeline-gap" ? "Pipeline gap — no Safety Score published" : card.ratingStatus },
-    ...(card.partialEvidence === null ? [] : [{ label: "Evidence coverage",
-      value: `Partial evidence: pipeline gap · ${card.partialEvidence.causes.map(evidenceCauseLabel).join(" · ")}` }]),
+    ...(partial === null ? [] : [{ label: "Evidence coverage",
+      value: partial.gaps.map(formatPartialEvidenceGap).join(" · ") }]),
     {
       label: "Backing pillar",
-      value: card.pillars.backing.aggregationDisposition === "excluded-a-b" ? "excluded — pipeline gap / awaiting curation" : fmtNum(card.pillars.backing.score, 1),
+      value: pillarValue("backing"),
       weight: breakdowns === null ? undefined : fmtFractionPct(breakdowns.backing.aggregationWeight),
     },
     {
       label: "Exit pillar",
-      value: card.pillars.exit.aggregationDisposition === "excluded-a-b" ? "excluded — pipeline gap / awaiting curation" : fmtNum(card.pillars.exit.score, 1),
+      value: pillarValue("exit"),
       weight: breakdowns === null ? undefined : fmtFractionPct(breakdowns.exit.aggregationWeight),
     },
     {
       label: "Economic Control pillar",
-      value: card.pillars.control.aggregationDisposition === "excluded-a-b" ? "excluded — pipeline gap / awaiting curation" : fmtNum(card.pillars.control.score, 1),
+      value: pillarValue("control"),
       weight: breakdowns === null ? undefined : fmtFractionPct(breakdowns.control.aggregationWeight),
     },
   ];
