@@ -59,7 +59,7 @@ describe("Safety Score v9 scoped risk", () => {
     expect(isV9DeploymentControllerAlreadyPriced([], priced, false)).toBe(false);
   });
 
-  it("wires same-root suppression through the evaluator while independent slice controllers still lose points", () => {
+  it("prices a worse local power even under a root already priced globally", () => {
     const evaluate = (sliceController: string, assetId = "alpha", activeSliceIncident = false) => {
       const input = coreFixture();
       const asset = input.assets[0]! as unknown as V9AssetFactsV2;
@@ -67,7 +67,7 @@ describe("Safety Score v9 scoped risk", () => {
       input.activeAssetIds = [assetId, "beta", "gamma"];
       asset.dependencies.edges = asset.dependencies.edges.filter((edge) => edge.pathKind !== "serial-dependency");
       const root = asset.controls.find((control) => control.controlKey === "control:admin")!;
-      root.authority = { authorityKey: "controller:root", model: "eoa", threshold: null };
+      root.authority = { authorityKey: "controller:root", model: "multisig", threshold: { required: 2, total: 3 } };
       const slice = {
         ...root, controlKey: "control:slice", deploymentKey: "deployment:slice",
         scope: "deployment" as const, economicLossScope: "deployment" as const, materialSupplyShare: 0.2,
@@ -87,14 +87,59 @@ describe("Safety Score v9 scoped risk", () => {
     };
     const shared = evaluate("controller:root");
     const independent = evaluate("controller:independent");
-    expect(shared.trace.deploymentAdjustments).toEqual([]);
-    expect(independent.trace.deploymentAdjustments.some((row) => row.adjustmentPoints > 0)).toBe(true);
-    expect(independent.trace.deploymentAdjustedScore).toBeLessThan(shared.trace.deploymentAdjustedScore!);
+    expect(shared.trace.deploymentAdjustments.some((row) => row.adjustmentPoints > 0)).toBe(true);
+    expect(independent.trace.deploymentAdjustedScore).toBe(shared.trace.deploymentAdjustedScore);
+    expect(shared.trace.deploymentAdjustments.filter((row) => row.signalKey.startsWith("local-authority:"))).toHaveLength(1);
     const measured = evaluate("controller:root", "alpha", true);
     expect(measured.trace.deploymentAdjustments.some((row) => row.adjustmentPoints > 0)).toBe(true);
     const renamed = evaluate("controller:root", "unrelated-asset");
     expect(renamed.trace.deploymentAdjustments).toEqual(shared.trace.deploymentAdjustments);
     expect(renamed.trace.finalScore).toBe(shared.trace.finalScore);
+  });
+
+  it.each(["bounded", "bridge"] as const)("keeps %s pricing in its own lane through evaluation", (kind) => {
+    const input = coreFixture();
+    const asset = input.assets[0]! as unknown as V9AssetFactsV2;
+    asset.dependencies.edges = asset.dependencies.edges.filter((edge) => edge.pathKind !== "serial-dependency");
+    const root = asset.controls.find((control) => control.controlKey === "control:admin")!;
+    const local = {
+      ...root, controlKey: "control:local", deploymentKey: "deployment:local",
+      scope: "deployment" as const, economicLossScope: "deployment" as const, materialSupplyShare: 0.2,
+      controlKind: kind === "bridge" ? "bridge" as const : "upgrade" as const,
+      capabilities: kind === "bridge" ? ["bridge-mint" as const] : root.capabilities,
+      authority: { authorityKey: "controller:local", model: "eoa" as const, threshold: null },
+      capSemantics: kind === "bridge" ? { kind: "unbounded" as const, bound: null }
+        : { kind: "bounded" as const, bound: { amount: 1, unit: "supply-fraction" as const } },
+      claimImpairment: kind === "bridge" ? "unbounded" as const : "bounded" as const,
+    };
+    asset.controls.push(local);
+    asset.supply.selectedBridgeRoutes = [{
+      deploymentRouteKey: local.deploymentKey, supplyUsd: 2_000_000, supplyShare: 0.2,
+      reviewState: "selected-reviewed",
+    }];
+    asset.supply.selectedRouteSupplyShare = 0.2;
+    asset.supply.unknownRouteSupplyShare = 0;
+    asset.supply.unreviewedRouteSupplyShare = 0;
+    if (kind === "bridge") asset.economicControlReview.bridge = {
+      status: root.status, routes: [{ controlKey: local.controlKey, tier: "external-lock-mint" }],
+    };
+    const result = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1).assets[0]!;
+    const localComponents = result.control.components.filter((component) => component.controlKeys.includes(local.controlKey));
+    expect(localComponents.every((component) => !component.binding)).toBe(true);
+    const authorityRows = result.trace.deploymentAdjustments.filter((row) => row.signalKey.startsWith("local-authority:"));
+    if (kind === "bounded") {
+      expect(authorityRows).toHaveLength(1);
+      expect(authorityRows[0]?.adjustmentPoints).toBeGreaterThan(0);
+      expect(result.control.structuralFailures.some((failure) =>
+        failure.kind === "centralized-mint" && failure.controlKeys.includes(local.controlKey))).toBe(false);
+    } else {
+      expect(authorityRows).toHaveLength(0);
+      expect(localComponents.some((component) => component.componentKey.startsWith("mint:bridge:"))).toBe(true);
+      expect(result.trace.deploymentAdjustments.some((row) => row.adjustmentPoints > 0)).toBe(true);
+    }
+    const bindingScores = result.control.components.filter((component) => component.binding && component.score !== null)
+      .map((component) => component.score!);
+    expect(result.control.score).toBe(Math.min(90, ...bindingScores));
   });
 
   it("prices a deployment failure as an average-holder adjustment", () => {

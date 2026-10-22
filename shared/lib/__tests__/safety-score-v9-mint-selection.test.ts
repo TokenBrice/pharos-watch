@@ -14,7 +14,7 @@ import {
 const AUTHORITY_LADDER = V9_CANDIDATE_POLICY_V1.policy.semantic.control.authorityLadder;
 
 describe("V9 mint inventory selection", () => {
-  it("selects the worst material path, not an immaterial linked deployment", () => {
+  it("retains bounded local paths without binding the global Control pillar", () => {
     const base = control("mint:base", "mint", {
       scope: "deployment", economicLossScope: "deployment", materialSupplyShare: 0.0304,
     });
@@ -31,8 +31,9 @@ describe("V9 mint inventory selection", () => {
         facts: facts([ethereum]), mint: makeReviewedMintInput(ethereum.controlKey),
       }));
       expect(result.score).toBe(standalone.score);
-      expect(result.components.find((row) => row.kind === "mint")).toMatchObject({
-        binding: true, posture: "partially-bounded-admin", controlKeys: [ethereum.controlKey],
+      expect(result.components.filter((row) => row.kind === "mint").every((row) => !row.binding)).toBe(true);
+      expect(result.components.find((row) => row.controlKeys.includes(ethereum.controlKey))).toMatchObject({
+        binding: false, posture: "partially-bounded-admin", controlKeys: [ethereum.controlKey],
       });
     }
   });

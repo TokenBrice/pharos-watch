@@ -16,6 +16,7 @@ import {
   type V9AdverseAttribution,
   type V9AggregationStrategy,
   type V9BoundedUncertaintyAttribution,
+  type V9DeploymentAuthority,
   type V9NRReason,
   type V9ParentAdverseAttribution,
   type V9ParentBoundedUncertaintyAttribution,
@@ -54,6 +55,7 @@ export interface V9PillarEvaluation {
     effectiveScoringWeight: number;
   }[];
   structuralSignals: readonly V9StructuralSignal[];
+  deploymentAuthorities?: readonly V9DeploymentAuthority[];
   adverseAttribution?: readonly V9PillarAdverseAttribution[];
 }
 
@@ -530,7 +532,14 @@ export function scoreV9EvaluatedAsset(
     input.parent.propagatedBoundedUncertaintyAttribution ?? [],
     pillarReasonProvenance,
     aggregationStrategy,
-    { includedPillars, partialEvidence, unavailablePillars, limitingPillars, parentStatus: input.parent.ratingStatus },
+    {
+      includedPillars, partialEvidence, unavailablePillars, limitingPillars,
+      parentStatus: input.parent.ratingStatus,
+      deploymentAuthorities: input.pillars.control.deploymentAuthorities,
+      authoritySignalIndices: new Set(structuralSignals.flatMap((signal, index) =>
+        input.pillars.control.deploymentAuthorities?.some((authority) =>
+          authority.sourceSignals.includes(signal)) ? [index] : [])),
+    },
   );
   const premium = resolveV9AssetPremium(input, ordinaryTrace, envelope);
   const trace =

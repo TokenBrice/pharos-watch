@@ -131,6 +131,9 @@ export interface V9PillarReasonProvenance {
 }
 
 export interface V9ScoreCoverage {
+  deploymentAuthorities?: readonly V9DeploymentAuthority[];
+  /** Exact positions survive schema parsing without conflating bridge incidents sharing event keys. */
+  authoritySignalIndices?: ReadonlySet<number>;
   includedPillars: readonly V9QualityPillar[];
   partialEvidence: V9PartialEvidence | null;
   unavailablePillars?: readonly {
@@ -563,6 +566,97 @@ export function applyV9AssetPremium(
   };
 }
 
+/** One admitted authority component on a measured liability slice, before display collapse. */
+export interface V9DeploymentAuthority {
+  deploymentKey: string;
+  quality: number;
+  share: number;
+  failureDomainKeys: readonly string[];
+  sourceSignals: readonly V9StructuralSignal[];
+}
+
+function aggregationScoreWithPeg(score: number, pegMultiplier: number): number {
+  return clampScore(score * pegMultiplier);
+}
+
+/** Unrounded, pre-deployment, pre-cap and pre-premium counterfactual. */
+export function scoreV9WithControlReplaced(
+  pillars: V9ScoringInput["pillars"],
+  quality: number,
+  pegMultiplier: number,
+  policy: V9ValidatedPolicyEnvelope,
+  includedPillars: readonly V9QualityPillar[],
+  aggregationStrategy: V9AggregationStrategy = aggregateV9SmoothBoundedHeadroom,
+): number {
+  if (pillars.control === null) throw new Error("Local authority requires resolved aggregation Control");
+  const formula = policy.policy.semantic.formula;
+  const aggregation = aggregationStrategy(
+    { ...pillars, control: Math.min(pillars.control, quality) },
+    formula.pillarWeights, formula.compensabilityHeadroom, includedPillars,
+  );
+  if (aggregation === null) throw new Error("Local authority counterfactual returned no score");
+  return aggregationScoreWithPeg(aggregation.score, pegMultiplier);
+}
+
+/**
+ * Resolve infrastructure at both endpoints, then mix disjoint authority slices.
+ * Authority never enters infrastructure normalization. Roundoff excess (<=.001)
+ * trims the largest slice; real overlap retains own shares and caps total loss
+ * at the worst global counterfactual, with an explicit public row diagnostic.
+ */
+export function resolveV9LocalAuthorityRisk(
+  baseScore: number,
+  signals: readonly V9ScopedRiskSignal[],
+  authorities: readonly V9DeploymentAuthority[],
+  scoreWithControl: (quality: number) => number,
+): V9ScopedRiskResolution {
+  const resolved = resolveV9ScopedRisk(baseScore, signals);
+  if (authorities.length === 0) return resolved;
+  const groups = new Map<string, V9DeploymentAuthority>();
+  for (const authority of authorities) {
+    const previous = groups.get(authority.deploymentKey);
+    groups.set(authority.deploymentKey, previous === undefined ? authority : {
+      deploymentKey: authority.deploymentKey,
+      quality: Math.min(previous.quality, authority.quality),
+      share: Math.max(previous.share, authority.share),
+      failureDomainKeys: [...new Set([...previous.failureDomainKeys, ...authority.failureDomainKeys])].sort(compareText),
+      sourceSignals: [...previous.sourceSignals, ...authority.sourceSignals],
+    });
+  }
+  const slices = [...groups.values()].sort((a, b) => compareText(a.deploymentKey, b.deploymentKey));
+  const totalShare = slices.reduce((sum, slice) => sum + slice.share, 0);
+  const overlap = totalShare > 1.001;
+  let largestIndex = 0;
+  for (let i = 1; i < slices.length; i++) {
+    if (slices[i]!.share > slices[largestIndex]!.share) largestIndex = i;
+  }
+  const worstQuality = Math.min(...slices.map((slice) => slice.quality));
+  let remainingLoss = resolved.finalScore -
+    resolveV9ScopedRisk(scoreWithControl(worstQuality), signals).finalScore;
+  let score = resolved.finalScore;
+  const adjustments = [...resolved.adjustments];
+  for (const [index, slice] of slices.entries()) {
+    const share = slice.share - (!overlap && index === largestIndex ? Math.max(0, totalShare - 1) : 0);
+    const exposedScore = resolveV9ScopedRisk(scoreWithControl(slice.quality), signals).finalScore;
+    const adjustmentPoints = Math.max(0, Math.min(remainingLoss, share * (resolved.finalScore - exposedScore)));
+    const signalKey = `local-authority:${slice.deploymentKey}`;
+    const sourceSignalKeys = [...new Set([signalKey, ...slice.sourceSignals.map(scopedSignalKey)])].sort(compareText);
+    adjustments.push({
+      signalKey, sourceSignalKeys,
+      exposureKey: `deployment-slice:${slice.deploymentKey}`,
+      riskEventKey: signalKey,
+      failureDomainKey: slice.failureDomainKeys.join("+") || signalKey,
+      nominalExposureShare: slice.share, exposureShare: share, exposedScore,
+      scoreBefore: score, scoreAfter: Math.max(0, score - adjustmentPoints), adjustmentPoints,
+      reason: `Local admin on ${slice.deploymentKey} (${Number((slice.share * 100).toFixed(4))}% of supply) scores ${slice.quality}` +
+        (overlap ? "; overlapping authority slices exceed 100.1%: total charge capped at the worst global-equivalent path." : "."),
+    });
+    score = Math.max(0, score - adjustmentPoints);
+    remainingLoss = Math.max(0, remainingLoss - adjustmentPoints);
+  }
+  return { ...resolved, finalScore: score, adjustments };
+}
+
 /** Score expectation-free V9 facts under one explicit, validated policy. */
 export function scoreV9Input(
   rawInput: V9ScoringInput,
@@ -680,14 +774,20 @@ export function scoreV9Input(
   const baseAssetScoreRaw =
     aggregationRaw === null || pegMultiplierRaw === null
       ? null
-      : clampScore(aggregationRaw.score * pegMultiplierRaw);
-  const compositeScopedSignals = input.structuralSignals.flatMap((signal) => {
+      : aggregationScoreWithPeg(aggregationRaw.score, pegMultiplierRaw);
+  const deploymentAuthorities = coverage?.deploymentAuthorities ?? [];
+  const compositeScopedSignals = input.structuralSignals.flatMap((signal, index) => {
     if (signal.pricedInPillar !== undefined) return [];
+    if (coverage?.authoritySignalIndices?.has(index)) return [];
     const scoped = scopedRiskSignal(signal, policy);
     return scoped === null ? [] : [scoped];
   });
-  const scopedRisk =
-    baseAssetScoreRaw === null ? null : resolveV9ScopedRisk(baseAssetScoreRaw, compositeScopedSignals);
+  const scopedRisk = baseAssetScoreRaw === null ? null : resolveV9LocalAuthorityRisk(
+    baseAssetScoreRaw, compositeScopedSignals, deploymentAuthorities,
+    (quality) => scoreV9WithControlReplaced(
+      aggregationPillars, quality, pegMultiplierRaw!, policy, includedPillars, aggregationStrategy,
+    ),
+  );
   const preCapScoreRaw = scopedRisk?.finalScore ?? null;
 
   const capCandidates: Omit<V9CapTrace, "binding">[] = [];

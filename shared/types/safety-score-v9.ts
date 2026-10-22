@@ -201,7 +201,7 @@ const V9StructuralSignalSchema = z
     pricedInPillar: V9QualityPillarSchema.optional(),
     failureDomainKeys: z.array(z.string().min(1)).default([]),
     evidence: z.array(V9EvidenceReferenceSchema).default([]),
-    /** Measured quality of the affected claim, never a severity-derived cap. */
+    /** Measured claim quality; authority adjustment rows expose the resolved Control counterfactual R(B_q). */
     exposedScore: ScoreSchema.optional(),
   })
   .strict()

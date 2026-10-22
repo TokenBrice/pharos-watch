@@ -768,6 +768,11 @@ function normalizeControlComponents(
       ),
   );
   const scopedDeploymentControlKeys = new Set([
+    // Every known-share local authority uses the score-level mixture, including
+    // bounded powers that emit no structural failure. Null shares stay fail-closed.
+    ...controls.filter((control) => control.economicLossScope === "deployment" &&
+      control.materialSupplyShare !== null && control.controlKind !== "bridge" &&
+      control.controlKind !== "oracle").map((control) => control.controlKey),
     ...pricedDeploymentControlKeys,
     ...controls
       .filter(
