@@ -210,30 +210,30 @@ describe("computePegScore", () => {
       });
     }
 
-    it("returns spreadPenalty=0 with a single event (< 2 scored events)", () => {
-      const result = computePegScore([eventAtOffset(30, 400)] as never, start, NOW);
+    it("returns spreadPenalty=0 with a single below-peg event", () => {
+      const result = computePegScore([eventAtOffset(30, -400)] as never, start, NOW);
       expect(result.spreadPenalty).toBe(0);
     });
 
     it("returns spreadPenalty=0 when two events have equal |bps| (zero stddev)", () => {
-      const result = computePegScore([eventAtOffset(40, 300), eventAtOffset(20, 300)] as never, start, NOW);
+      const result = computePegScore([eventAtOffset(40, -300), eventAtOffset(20, -300)] as never, start, NOW);
       expect(result.spreadPenalty).toBe(0);
     });
 
     it("returns spreadPenalty>0 when two events have differing |bps|", () => {
-      const result = computePegScore([eventAtOffset(60, 100), eventAtOffset(30, 900)] as never, start, NOW);
+      const result = computePegScore([eventAtOffset(60, -100), eventAtOffset(30, -900)] as never, start, NOW);
       expect(result.spreadPenalty).toBeGreaterThan(0);
       expect(result.spreadPenalty).toBeLessThanOrEqual(15);
     });
 
     it("low-confidence half-weight changes spreadPenalty vs high-confidence same bps", () => {
       const eventsHigh = [
-        { ...eventAtOffset(60, 200), provenance: { confidenceTier: "high" } },
-        { ...eventAtOffset(30, 800), provenance: { confidenceTier: "high" } },
+        { ...eventAtOffset(60, -200), provenance: { confidenceTier: "high" } },
+        { ...eventAtOffset(30, -800), provenance: { confidenceTier: "high" } },
       ];
       const eventsLow = [
-        { ...eventAtOffset(60, 200), provenance: { confidenceTier: "low" } },
-        { ...eventAtOffset(30, 800), provenance: { confidenceTier: "high" } },
+        { ...eventAtOffset(60, -200), provenance: { confidenceTier: "low" } },
+        { ...eventAtOffset(30, -800), provenance: { confidenceTier: "high" } },
       ];
       const high = computePegScore(eventsHigh as never, start, NOW);
       const low = computePegScore(eventsLow as never, start, NOW);
@@ -243,8 +243,52 @@ describe("computePegScore", () => {
     });
 
     it("caps spreadPenalty at 15 for extreme variance", () => {
-      const result = computePegScore([eventAtOffset(80, 1), eventAtOffset(40, 100_000)] as never, start, NOW);
+      const result = computePegScore([eventAtOffset(80, -1), eventAtOffset(40, -100_000)] as never, start, NOW);
       expect(result.spreadPenalty).toBe(15);
+    });
+
+    it("excludes an above-peg spike without diluting the below-peg spread", () => {
+      const belowPeg = [eventAtOffset(60, -100), eventAtOffset(30, -900)];
+      const baseline = computePegScore(belowPeg as never, start, NOW);
+      const result = computePegScore([...belowPeg, eventAtOffset(10, 6544)] as never, start, NOW);
+
+      expect(baseline.spreadPenalty).toBeCloseTo(6);
+      expect(result.spreadPenalty).toBe(baseline.spreadPenalty);
+      // Above-peg events still enter the time, severity and diagnostic inputs.
+      expect(result.pegPct!).toBeLessThan(baseline.pegPct!);
+      expect(result.severityScore).toBeLessThan(baseline.severityScore);
+      expect(result.scoredEventCount).toBe(3);
+      expect(result.worstDeviationBps).toBe(6544);
+    });
+
+    it("keeps the maximum spread penalty for a below-peg spike", () => {
+      const result = computePegScore([
+        eventAtOffset(60, -100),
+        eventAtOffset(30, -900),
+        eventAtOffset(10, -6544),
+      ] as never, start, NOW);
+
+      expect(result.spreadPenalty).toBe(15);
+    });
+
+    it("does not treat a symmetric above/below pair as two downside observations", () => {
+      const result = computePegScore([
+        eventAtOffset(60, -6544),
+        eventAtOffset(30, 6544),
+      ] as never, start, NOW);
+
+      expect(result.spreadPenalty).toBe(0);
+      expect(result.scoredEventCount).toBe(2);
+      expect(result.severityScore).toBeLessThan(100);
+    });
+
+    it("assigns no spread penalty to an above-peg-only history", () => {
+      const result = computePegScore([
+        eventAtOffset(60, 100),
+        eventAtOffset(30, 6544),
+      ] as never, start, NOW);
+
+      expect(result.spreadPenalty).toBe(0);
     });
   });
 });
