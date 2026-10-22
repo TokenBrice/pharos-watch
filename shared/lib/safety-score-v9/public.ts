@@ -34,7 +34,6 @@ import type { V9PillarReason, V9ProductionScoreInput, V9ProductionScoreTrace } f
 import { computeV9CompactResultDigest, projectCompactV9ScoreTrace, type V9CompactScoreTrace } from "./trace";
 import { compareText, uniqueSorted } from "./primitives";
 import { effectiveAuthoritySignatureRequirement } from "./control-scope";
-import { normalizeDeploymentId } from "../../types/deployment-id";
 
 type V9PublicAccessProjectionInput = V9AccessPostureResult & {
   reasons?: readonly V9PillarReason[];
@@ -602,6 +601,26 @@ function projectControlBreakdown(
   const evaluatedScore = excluded ? null : control.score;
   const publishedScore = input.scoreInput.pillars.control.score;
   const issuanceSummary = projectIssuanceSummary(control);
+  const components = input.scoreInput.pillars.control.aggregationDisposition === "unavailable" ? [] : [...control.components];
+  const usedControlKeys = new Set(components.flatMap((component) => component.controlKeys));
+  const detailFacts = (control.controlFacts ?? []).filter((fact) => usedControlKeys.has(fact.controlKey))
+    .sort((left, right) => compareText(left.controlKey, right.controlKey));
+  const detailRefs = new Map(detailFacts.map((fact, index) => [fact.controlKey, index]));
+  const controlDetails = detailFacts.map((fact) => {
+    const signatures = effectiveAuthoritySignatureRequirement(fact.authority);
+    const executionPaths = [
+      ...(fact.executionScope?.paths.filter((path) => fact.executionPathId === undefined || path.id === fact.executionPathId) ?? []),
+      ...(fact.executionScopeContributors ?? []).flatMap((entry) => entry.scope?.paths.filter((path) => fact.executionPathId === undefined || path.id === fact.executionPathId) ?? []),
+    ].map((path) => ({ id: path.id, targetDeployment: path.targetDeployment, entrypointKind: path.entrypointKind, entrypoints: path.entrypoints, activation: path.activation, reach: path.reach, capabilities: path.capabilities }));
+    return {
+      controlKey: fact.controlKey, authority: fact.authority,
+      ...(signatures === null ? {} : { minimumCryptographicSignatures: signatures }),
+      ...(fact.executionScopeComplete == null ? {} : { executionScopeComplete: fact.executionScopeComplete }),
+      ...(fact.moduleImpact == null || fact.moduleImpact === "unresolved" ? {} : { moduleImpact: fact.moduleImpact }),
+      ...(fact.scopeDiagnostics?.length ? { diagnostics: fact.scopeDiagnostics } : {}),
+      ...(executionPaths.length ? { executionPaths } : {}),
+    };
+  });
   return {
     evaluatedScore,
     publishedScore,
@@ -609,7 +628,8 @@ function projectControlBreakdown(
     aggregationWeight: aggregationWeight(input, "control"),
     method: "minimum-binding-component",
     ...(issuanceSummary ? { issuanceSummary } : {}),
-    components: (input.scoreInput.pillars.control.aggregationDisposition === "unavailable" ? [] : [...control.components])
+    ...(controlDetails.length ? { controlDetails } : {}),
+    components: components
       .sort((left, right) => compareText(left.componentKey, right.componentKey))
       .map((component) => ({
         key: component.componentKey,
@@ -627,21 +647,12 @@ function projectControlBreakdown(
         effectiveScoringWeight: excluded ? 0 : component.effectiveScoringWeight,
         binding: !excluded && !["not-applicable", "excluded-pipeline", "excluded-uncurated"].includes(component.scoringDisposition) && component.binding,
         posture: component.posture,
-        ...(control.controlFacts ? { controlDetails: control.controlFacts
-          .filter((fact) => component.controlKeys.includes(fact.controlKey))
-          .map((fact) => ({
-            controlKey: fact.controlKey,
-            controlRef: normalizeDeploymentId(fact.authority?.authorityKey ?? "") || null,
-            authority: fact.authority,
-            minimumCryptographicSignatures: effectiveAuthoritySignatureRequirement(fact.authority),
-            executionScopeComplete: fact.executionScopeComplete ?? null,
-            moduleImpact: fact.moduleImpact ?? "unresolved",
-            diagnostics: fact.scopeDiagnostics ?? [],
-            executionPaths: [
-              ...(fact.executionScope?.paths.filter((path) => fact.executionPathId === undefined || path.id === fact.executionPathId) ?? []),
-              ...(fact.executionScopeContributors ?? []).flatMap((entry) => entry.scope?.paths.filter((path) => fact.executionPathId === undefined || path.id === fact.executionPathId) ?? []),
-            ].map((path) => ({ id: path.id, targetDeployment: path.targetDeployment, entrypointKind: path.entrypointKind, entrypoints: path.entrypoints, activation: path.activation, reach: path.reach, capabilities: path.capabilities })),
-          })) } : {}),
+        ...(component.controlKeys.some((key) => detailRefs.has(key)) ? {
+          controlDetailRefs: uniqueSorted(component.controlKeys).flatMap((key) => {
+            const ref = detailRefs.get(key);
+            return ref === undefined ? [] : [ref];
+          }),
+        } : {}),
       })),
     adjustments: projectPillarAdjustments(input, "control", evaluatedScore),
   };

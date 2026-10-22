@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { countV9EvidenceObligations, iterateEvidenceResponsibilityFacts } from "../../types/safety-score-v9-public-evidence-facts";
 import { resolveCauseGapId } from "../../types/safety-score-v9-public-cause-gaps";
 import { resolveV9PublicWitnessTexts } from "../../types/safety-score-v9-public-witness-texts";
+import { resolveV9PublicControlDetails, SafetyScoreV9HistoricalBreakdownsSchema } from "../../types/safety-score-v9-public-breakdowns";
 import {
   projectV9RoleDependencyPillarLimits,
   type V9ResolvedDependencyInputs,
@@ -922,7 +923,10 @@ describe("Safety Score v9 public projection", () => {
       authority: { authorityKey: weighted.deployment, model: "multisig", threshold: null, weightedQuorum: weighted },
     });
     input.control = { ...input.control!, components: [{ ...input.control!.components[0]!, controlKeys: [control.controlKey] }], controlFacts: [control] };
-    const details = () => SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input).card).breakdowns!.control.components[0]!.controlDetails![0]!;
+    const details = () => {
+      const control = SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input).card).breakdowns!.control;
+      return resolveV9PublicControlDetails(control, control.components[0]!)[0]!;
+    };
     expect(details().minimumCryptographicSignatures).toBe(2);
     control.authority!.weightedQuorum = { ...weighted, masterKey: "enabled" };
     expect(details().minimumCryptographicSignatures).toBe(1);
@@ -947,7 +951,10 @@ describe("Safety Score v9 public projection", () => {
         })),
         controlFacts: controls,
       };
-      return resolveV9PublicWitnessTexts(SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input).card)).breakdowns!.control.components;
+      const breakdown = resolveV9PublicWitnessTexts(SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input).card)).breakdowns!.control;
+      return breakdown.components.map((component) => ({
+        ...component, controlDetails: resolveV9PublicControlDetails(breakdown, component),
+      }));
     };
     const small = project(2);
     const large = project(40);
@@ -968,10 +975,50 @@ describe("Safety Score v9 public projection", () => {
       executionScope: scope, executionScopeContributors: [{ authorityKey: contributor.controllerDeployment, scope: contributor }],
     });
     input.control = { ...input.control!, components: [{ ...input.control!.components[0]!, controlKeys: [control.controlKey] }], controlFacts: [control] };
-    const details = SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input).card).breakdowns!.control.components[0]!.controlDetails![0]!;
+    const breakdown = SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input).card).breakdowns!.control;
+    const details = resolveV9PublicControlDetails(breakdown, breakdown.components[0]!)[0]!;
     expect(details.executionPaths.map((path) => [path.id, path.capabilities])).toEqual([
       ["issuance", ["mint"]], ["upgrade", ["upgrade"]],
     ]);
+  });
+  it("shares complete control details across semantic components and rejects invalid or unused references", () => {
+    const input = fixture("alpha", { score: 70, grade: "B" });
+    const fact = makeDeploymentControl("control:shared", "mint", { executionScope: reviewedScope() });
+    input.control = {
+      ...input.control!,
+      components: ["mint", "mint:bridge:shared"].map((componentKey) => ({
+        ...input.control!.components[0]!, componentKey, controlKeys: [fact.controlKey],
+      })),
+      controlFacts: [fact],
+    };
+    const card = resolveV9PublicWitnessTexts(SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input).card));
+    const control = card.breakdowns!.control;
+    expect(control.controlDetails).toHaveLength(1);
+    expect(control.components.map((component) => component.controlDetailRefs)).toEqual([[0], [0]]);
+    expect(resolveV9PublicControlDetails(control, control.components[0]!))
+      .toEqual(resolveV9PublicControlDetails(control, control.components[1]!));
+    const invalid = structuredClone(card);
+    invalid.breakdowns!.control.components[0]!.controlDetailRefs = [1];
+    expect(SafetyScoreV9CurrentCardSchema.safeParse(invalid).success).toBe(false);
+    const unused = structuredClone(card);
+    unused.breakdowns!.control.components.forEach((component) => { delete component.controlDetailRefs; });
+    expect(SafetyScoreV9CurrentCardSchema.safeParse(unused).success).toBe(false);
+    const duplicate = structuredClone(card);
+    duplicate.breakdowns!.control.controlDetails!.push(structuredClone(control.controlDetails![0]!));
+    duplicate.breakdowns!.control.components[1]!.controlDetailRefs = [1];
+    expect(SafetyScoreV9CurrentCardSchema.safeParse(duplicate).success).toBe(false);
+    const { controlDetails: _table, ...legacyControl } = control;
+    const { routeId: _route, lane: _lane, ...legacyRoute } = card.breakdowns!.exit.primaryRoute!;
+    const legacy = {
+      ...card.breakdowns!,
+      exit: { ...card.breakdowns!.exit, primaryRoute: { ...legacyRoute, eligibilityMultiplier: 1 } },
+      control: { ...legacyControl, components: control.components.map((component) => {
+        const { controlDetailRefs: _refs, ...fields } = component;
+        return { ...fields, controlDetails: resolveV9PublicControlDetails(control, component) };
+      }) },
+    };
+    expect(() => SafetyScoreV9HistoricalBreakdownsSchema.parse(legacy)).not.toThrow();
+    expect(SafetyScoreV9CurrentCardSchema.safeParse({ ...card, breakdowns: legacy }).success).toBe(false);
   });
   it("publishes wrapper forms only on wrapper claims, not sibling mechanism claims", () => {
     const input = fixture("dependent", {
@@ -1812,7 +1859,7 @@ describe("v10.05 published mint process evidence", () => {
       components: [{ ...input.control!.components[0]!, controlKeys: [fact.controlKey] }],
       processDiagnostics: isV9OperationallyGovernedIssuanceQualified(fact, V9_CANDIDATE_POLICY_V1.policy.semantic, issuanceFacts).diagnostics };
     const control = resolveV9PublicWitnessTexts(SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input).card)).breakdowns!.control;
-    const details = control.components[0]!.controlDetails![0]!;
+    const details = resolveV9PublicControlDetails(control, control.components[0]!)[0]!;
     expect(details.controlRef).toBe(ref);
     expect(details.diagnostics).toEqual(["runtime-unmatched:keeper-redo"]);
     expect(control.issuanceSummary?.governance?.votingControl.largestSingleControllerShareBps).toBe(6000);

@@ -1,3 +1,4 @@
+import { V9WitnessTextIdentityArraySchema } from "./safety-score-v9-public-witness-texts";
 import { z } from "zod";
 import {
   V9CapSourceSchema,
@@ -184,7 +185,7 @@ export const SafetyScoreV9PillarSchema = z
     score: ScoreSchema.nullable(),
     evidenceLevel: V9EvidenceLevelSchema,
     freshness: SafetyScoreV9EvidenceFreshnessSchema,
-    components: z.array(z.string().min(1)),
+    components: V9WitnessTextIdentityArraySchema,
     reasons: SafetyScoreV9PublicReasonListSchema,
   })
   .strict()
@@ -199,9 +200,6 @@ export const SafetyScoreV9PillarSchema = z
     if (pillar.aggregationDisposition === "unavailable" &&
         ((pillar.limitedEvidenceCauses?.length ?? 0) > 0 || pillar.supportedComponentKeys.length > 0)) {
       ctx.addIssue({ code: "custom", message: "Unavailable pillars cannot claim scoreable support or limiting C/U/D" });
-    }
-    if (!isUniqueSorted(pillar.components)) {
-      ctx.addIssue({ code: "custom", path: ["components"], message: "V9 pillar components must be unique and sorted" });
     }
   });
 

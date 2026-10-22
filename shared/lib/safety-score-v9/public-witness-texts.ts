@@ -1,5 +1,4 @@
 import {
-  isV9WitnessTextField,
   mapV9WitnessTextFields,
   type V9PublicWitnessTextEntry,
 } from "../../types/safety-score-v9-public-witness-texts";
@@ -7,17 +6,10 @@ import {
 /** Intern only where the canonical JSON is smaller; reserved leading '~' literals are always escaped. */
 export function internV9PublicWitnessTexts<T extends object>(card: T): Omit<T, "witnessTexts"> & { witnessTexts?: V9PublicWitnessTextEntry[] } {
   const counts = new Map<string, number>();
-  function collect(node: unknown): void {
-    if (Array.isArray(node)) { for (const child of node) collect(child); return; }
-    if (node === null || typeof node !== "object") return;
-    for (const key in node) {
-      if (!Object.prototype.hasOwnProperty.call(node, key)) continue;
-      const value = (node as Record<string, unknown>)[key];
-      if (isV9WitnessTextField(key, node) && typeof value === "string") counts.set(value, (counts.get(value) ?? 0) + 1);
-      else collect(value);
-    }
-  }
-  collect(card);
+  mapV9WitnessTextFields(card, (value) => {
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+    return value;
+  });
   const texts = [...counts.keys()].sort();
   // Nearest already-admitted neighbours in reverse lexical order have the
   // longest common suffix. Monotone stacks find both without pairwise scans.

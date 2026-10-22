@@ -3,6 +3,7 @@ import { z } from "zod";
 import { canonicalTextArray } from "./safety-score-v9-fact-primitives";
 import { V9_PUBLIC_EVIDENCE_FACT_COLUMNS as FACT, resolveEvidenceFactPath, type V9EvidenceFactContext } from "./safety-score-v9-public-evidence-facts";
 import type { V9PublicEvidenceFactWire } from "./safety-score-v9-public-trace";
+import { V9WitnessTextIdentityArraySchema } from "./safety-score-v9-public-witness-texts";
 import {
   V9EvidenceCauseSchema, V9ScoringDispositionSchema, V9RatingStatusSchema,
   V9PillarAggregationDispositionSchema, V9CompactPartialEvidenceSchema,
@@ -41,7 +42,7 @@ export const V9PartialEvidenceSchema = z.object({
   causes: canonicalTextArray().pipe(z.array(V9EvidenceCauseSchema.extract(["A", "B"]))),
 }).strict();
 export const V9PillarCauseShape = {
-  aggregationDisposition: V9PillarAggregationDispositionSchema.optional().describe("Defaults to included"), supportedComponentKeys: canonicalTextArray(),
+  aggregationDisposition: V9PillarAggregationDispositionSchema.optional().describe("Defaults to included"), supportedComponentKeys: V9WitnessTextIdentityArraySchema,
   causeGapRefs: causeGapRefs().optional(),
   limitedEvidenceCauses: canonicalTextArray().pipe(z.array(V9EvidenceCauseSchema.extract(["C", "U", "D"]))).optional().describe("Defaults to no limiting causes"),
 };
