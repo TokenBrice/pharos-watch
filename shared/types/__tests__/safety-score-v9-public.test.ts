@@ -8,6 +8,7 @@ import {
 } from "../safety-score-v9-public";
 import { SafetyScoreV9BreakdownsSchema } from "../safety-score-v9-public-breakdowns";
 import { SafetyScoreV9AccessPostureSchema } from "../safety-score-v9-public-facts";
+import { SafetyScoreV9HistoricalScoreTraceSchema, SafetyScoreV9ScoreTraceSchema } from "../safety-score-v9-public-trace";
 import { evaluateV9AccessLookthrough } from "../../lib/safety-score-v9/access-lookthrough";
 import { makeAccessGraph } from "../../lib/__tests__/safety-score-v9-access-lookthrough.test-support";
 
@@ -678,6 +679,21 @@ describe("SafetyScoreV9ResponseSchema", () => {
       /permitted rounding headroom/,
     );
 
+  });
+
+  it("admits recorded premium cap relief only in the archive trace contract", () => {
+    const trace = structuredClone(adjustedResponse().cards[0]!.scoreTrace);
+    const archival = {
+      ...trace,
+      scoreAdjustments: trace.scoreAdjustments.map(adjustment => ({
+        ...adjustment,
+        capRelief: { source: "structural" as const, kind: "signal:centralized-mint:low", fromLimit: 83, toLimit: 87 },
+      })),
+    };
+    expect(SafetyScoreV9HistoricalScoreTraceSchema.safeParse(archival).success).toBe(true);
+    expect(SafetyScoreV9ScoreTraceSchema.safeParse(archival).success).toBe(false);
+    archival.scoreAdjustments[0]!.capRelief.toLimit = 83;
+    expect(SafetyScoreV9HistoricalScoreTraceSchema.safeParse(archival).success).toBe(false);
   });
 
   it.each([

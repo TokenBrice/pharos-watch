@@ -3,7 +3,7 @@ import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { countV9EvidenceObligations } from "@shared/types/safety-score-v9-public-evidence-facts";
-import { ReportCardsV9ResponseSchema } from "@shared/types/report-cards-v9";
+import { HistoricalTypedReportCardsV9ResponseSchema, ReportCardsV9ResponseSchema } from "@shared/types/report-cards-v9";
 import { handleSnapshotCoin, handleSnapshotDay } from "../snapshot";
 import historicalSnapshot from "./fixtures/snapshot-2026-10-07-v10.09.json";
 
@@ -47,6 +47,28 @@ function setMethodology(envelope: typeof historicalSnapshot, version: string) {
   envelope.reportCards.methodology.version = version;
 }
 
+/** Model report8's typed route identity using the retained inline-control card bytes. */
+function historicalTypedSnapshot() {
+  const envelope = structuredClone(historicalSnapshot);
+  setMethodology(envelope, "10.28");
+  envelope.reportCards.schemaVersion = 8;
+  for (const card of envelope.reportCards.cards) {
+    const evidence = card.scoreTrace.evidenceResponsibility;
+    for (const summary of evidence.summaries) {
+      const facts = evidence.facts.filter(fact => fact[3] === summary.responsibility);
+      Object.assign(summary, countV9EvidenceObligations(facts, fact => fact[2] as number | null,
+        fact => fact[6] as number[], fact => fact[4] as boolean));
+    }
+    const exit = card.breakdowns.exit;
+    for (const route of [exit.primaryRoute, ...exit.alternatives]) {
+      if (route !== null) Object.assign(route, {
+        routeId: route.key, lane: route.routeFamily === "dex-amm" ? "dex" : "redemption",
+      });
+    }
+  }
+  return envelope;
+}
+
 describe("historical snapshot recorded safety contracts", () => {
   it("serves real-shaped 10.09/report7 bytes and ETag without upgrading counts or routes", async () => {
     const { row, payload } = snapshotRow();
@@ -81,6 +103,33 @@ describe("historical snapshot recorded safety contracts", () => {
     }
     const { row } = snapshotRow(envelope);
     expect((await handleSnapshotDay(database(row), envelope.snapshotDate)).status).toBe(200);
+  });
+
+  it("serves archived 10.28/report8 inline control details without rewriting bytes or identity", async () => {
+    const envelope = historicalTypedSnapshot();
+    expect(envelope.reportCards.cards.some(card =>
+      card.breakdowns.control.components.some(component => component.controlDetails.length > 0))).toBe(true);
+    expect(HistoricalTypedReportCardsV9ResponseSchema.safeParse(envelope.reportCards).success).toBe(true);
+    expect(ReportCardsV9ResponseSchema.safeParse(envelope.reportCards).success).toBe(false);
+    const { row, payload } = snapshotRow(envelope);
+    const day = await handleSnapshotDay(database(row), envelope.snapshotDate);
+    expect(day.status).toBe(200);
+    expect(day.headers.get("ETag")).toBe(`"${row.content_hash}"`);
+    expect(await day.text()).toBe(payload);
+    const coin = await handleSnapshotCoin(database(row), envelope.snapshotDate, "armusdcs-wintermute");
+    expect(coin.status).toBe(200);
+    expect(await coin.json()).toMatchObject({
+      safetyScoreIdentity: envelope.safetyScoreIdentity,
+      scores: { reportCard: envelope.reportCards.cards[0] },
+    });
+  });
+
+  it("does not admit legacy inline-control report8 under the current 10.29 contract", async () => {
+    const envelope = historicalTypedSnapshot();
+    setMethodology(envelope, "10.29");
+    expect(HistoricalTypedReportCardsV9ResponseSchema.safeParse(envelope.reportCards).success).toBe(false);
+    const { row } = snapshotRow(envelope);
+    expect((await handleSnapshotDay(database(row), envelope.snapshotDate)).status).toBe(500);
   });
 
   it("does not accept witness summaries under the 10.10 accounting contract", async () => {

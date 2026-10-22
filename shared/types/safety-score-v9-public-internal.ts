@@ -132,7 +132,15 @@ export function refineCard(
     }
     if ("scoreAdjustments" in scoreTrace) {
       for (const [index, adjustment] of scoreTrace.scoreAdjustments.entries()) {
-        const unchangedCaps = card.caps;
+        const relief = "capRelief" in adjustment ? adjustment.capRelief : undefined;
+        if (relief !== undefined) {
+          const relievedCaps = card.caps.filter(cap => cap.source === relief.source && cap.kind === relief.kind);
+          if (relievedCaps.length !== 1 || !numbersAgree(relievedCaps[0]!.limit, relief.toLimit)) {
+            issue(ctx, ["scoreTrace", "scoreAdjustments", index, "capRelief"], "V9 score adjustment cap relief must match exactly one current card cap");
+          }
+        }
+        const unchangedCaps = relief === undefined ? card.caps
+          : card.caps.filter(cap => cap.source !== relief.source || cap.kind !== relief.kind);
         if (
           unchangedCaps.some(
             (cap) => adjustment.publishedScoreBefore > cap.limit + SCORE_TOLERANCE,

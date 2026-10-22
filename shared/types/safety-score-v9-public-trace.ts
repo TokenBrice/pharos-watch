@@ -122,7 +122,7 @@ const SafetyScoreV9UnresolvedDeploymentExposureSchema = z
   })
   .strict()
   .superRefine((signal, ctx) => {
-    if (!isUniqueSorted(signal.failureDomainKeys)) {
+    if (!signal.failureDomainKeys.some(isV9WitnessTextReference) && !isUniqueSorted(signal.failureDomainKeys)) {
       issue(ctx, ["failureDomainKeys"], "V9 unresolved deployment failure domains must be unique and sorted");
     }
   });
@@ -140,14 +140,14 @@ const SafetyScoreV9DeploymentRiskTraceSchema = z
       (adjustment) =>
         `${adjustment.exposureKey}\u0000${adjustment.riskEventKey}\u0000${adjustment.signalKey}`,
     );
-    if (!isUniqueSorted(adjustmentKeys)) {
+    if (!deployment.adjustments.some((row) => [row.exposureKey, row.riskEventKey, row.signalKey].some(isV9WitnessTextReference)) && !isUniqueSorted(adjustmentKeys)) {
       issue(ctx, ["adjustments"], "V9 deployment adjustments must have unique, sorted failure-domain attribution");
     }
     const unresolvedKeys = deployment.unresolvedExposures.map(
       (signal) =>
         `${signal.exposureKey}\u0000${signal.riskEventKey}\u0000${signal.failureDomainKeys.join("+")}\u0000${signal.signalKey}`,
     );
-    if (!isUniqueSorted(unresolvedKeys)) {
+    if (!deployment.unresolvedExposures.some((row) => [row.exposureKey, row.riskEventKey, row.signalKey, ...row.failureDomainKeys].some(isV9WitnessTextReference)) && !isUniqueSorted(unresolvedKeys)) {
       issue(ctx, ["unresolvedExposures"], "V9 unresolved deployment exposures must have unique, sorted exposure attribution");
     }
     const expectedTotal = deployment.adjustments.reduce(
@@ -539,9 +539,27 @@ const HistoricalBoundedAttributionSchema = z.object({
   if (!isUniqueSorted(keys)) issue(ctx, ["items"], "V9 bounded-uncertainty attribution must be unique and sorted");
 });
 
+const HistoricalScoreAdjustmentSchema = SafetyScoreV9ScoreAdjustmentSchema.safeExtend({
+  capRelief: z.object({
+    source: z.literal("structural"), kind: z.string().min(1),
+    fromLimit: ScoreSchema, toLimit: ScoreSchema,
+  }).strict(),
+}).superRefine((adjustment, ctx) => {
+  if (adjustment.capRelief.fromLimit >= adjustment.capRelief.toLimit) {
+    issue(ctx, ["capRelief"], "V9 score adjustment cap relief must increase the named limit");
+  }
+  if (adjustment.publishedScoreBefore > adjustment.capRelief.fromLimit + SCORE_TOLERANCE) {
+    issue(ctx, ["publishedScoreBefore"], "V9 ordinary published score cannot exceed the original cap limit");
+  }
+  if (adjustment.publishedScoreAfter > adjustment.capRelief.toLimit + SCORE_TOLERANCE) {
+    issue(ctx, ["publishedScoreAfter"], "V9 score adjustment cannot publish above its relieved cap");
+  }
+});
+
 /** Archive-only trace retains the recorded wrapper calculation and vocabulary. */
 const HistoricalScoreTraceBaseSchema = SafetyScoreV9AdjustedScoreTraceCommonSchema.extend({
   schemaVersion: z.literal(4),
+  scoreAdjustments: z.array(HistoricalScoreAdjustmentSchema).max(1),
   wrapperParentLimit: SafetyScoreV9HistoricalWrapperParentLimitSchema.nullable(),
   adverseAttribution: HistoricalAdverseAttributionSchema,
   boundedUncertaintyAttribution: HistoricalBoundedAttributionSchema,

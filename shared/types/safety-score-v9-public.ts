@@ -27,7 +27,7 @@ import {
 } from "./safety-score-v9-public-facts";
 import { refineCard } from "./safety-score-v9-public-internal";
 import { findSafetyScoreV9ParentAttributionIssues } from "./safety-score-v9-public-attribution";
-import { SafetyScoreV9BreakdownsSchema, SafetyScoreV9HistoricalBreakdownsSchema } from "./safety-score-v9-public-breakdowns";
+import { SafetyScoreV9BreakdownsSchema, SafetyScoreV9HistoricalBreakdownsSchema, SafetyScoreV9HistoricalTypedBreakdownsSchema } from "./safety-score-v9-public-breakdowns";
 import { SafetyScoreV9ScoreTraceSchema, SafetyScoreV9HistoricalScoreTraceSchema, SafetyScoreV9WitnessScoreTraceSchema } from "./safety-score-v9-public-trace";
 import { SafetyScoreV9HistoricalCapSchema } from "./safety-score-v9-public-historical";
 import { V9WrapperFormSchema } from "./safety-score-v9-wrapper";
@@ -40,6 +40,7 @@ import {
   validateV9PublicWitnessTexts,
   validateV9ResolvedWitnessViews,
   V9PublicWitnessTextTableSchema,
+  V9WitnessTextIdentityArraySchema,
 } from "./safety-score-v9-public-witness-texts";
 
 export const SafetyScoreV9DependencyProvenanceSchema = z.object({
@@ -252,7 +253,7 @@ export type SafetyScoreV9GradeHold = z.infer<typeof SafetyScoreV9GradeHoldSchema
 
 const SafetyScoreV9CardShape = {
   id: z.string().min(1),
-  localCauseGaps: canonicalTextArray(),
+  localCauseGaps: V9WitnessTextIdentityArraySchema,
   foreignCauseGapRefs: causeGapRefs(),
   witnessTexts: V9PublicWitnessTextTableSchema.optional(),
   /**
@@ -387,19 +388,25 @@ const SafetyScoreV9HistoricalCardBaseSchema = SafetyScoreV9CurrentCardBaseSchema
   scoreTrace: SafetyScoreV9HistoricalScoreTraceSchema,
   breakdowns: SafetyScoreV9HistoricalBreakdownsSchema.nullable(),
 });
+const SafetyScoreV9HistoricalTypedCardBaseSchema = SafetyScoreV9HistoricalCardBaseSchema.extend({
+  breakdowns: SafetyScoreV9HistoricalTypedBreakdownsSchema.nullable(),
+});
 export type SafetyScoreV9CardValidationInput =
   | z.infer<typeof SafetyScoreV9CurrentCardBaseSchema>
-  | z.infer<typeof SafetyScoreV9HistoricalCardBaseSchema>;
+  | z.infer<typeof SafetyScoreV9HistoricalCardBaseSchema>
+  | z.infer<typeof SafetyScoreV9HistoricalTypedCardBaseSchema>;
 type CardRefinementInput = SafetyScoreV9CardValidationInput;
 
-function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx, resolved = false, historical = false): void {
+function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx, resolved = false, historical: false | "report7" | "report8" = false): void {
     try {
       if (resolved) validateV9ResolvedWitnessViews(card);
       else validateV9PublicWitnessTexts(card);
       if (!resolved && card.witnessTexts !== undefined) {
         card = resolveV9PublicWitnessTexts(card);
         validateV9ResolvedWitnessViews(card);
-        const semantic = (historical ? SafetyScoreV9HistoricalCardBaseSchema : SafetyScoreV9CurrentCardBaseSchema).safeParse(card);
+        const schema = historical === "report8" ? SafetyScoreV9HistoricalTypedCardBaseSchema
+          : historical === "report7" ? SafetyScoreV9HistoricalCardBaseSchema : SafetyScoreV9CurrentCardBaseSchema;
+        const semantic = schema.safeParse(card);
         if (!semantic.success) for (const issue of semantic.error.issues) {
           ctx.addIssue({ code: "custom", path: issue.path, message: issue.message });
         }
@@ -445,10 +452,12 @@ export const SafetyScoreV9ResolvedCurrentCardSchema = SafetyScoreV9CurrentCardBa
 export type SafetyScoreV9ResolvedCurrentCard = z.infer<typeof SafetyScoreV9ResolvedCurrentCardSchema>;
 
 export const SafetyScoreV9HistoricalCardSchema = SafetyScoreV9HistoricalCardBaseSchema
-  .superRefine((card, ctx) => refineCurrentCard(card, ctx, false, true));
+  .superRefine((card, ctx) => refineCurrentCard(card, ctx, false, "report7"));
 export const SafetyScoreV9WitnessHistoricalCardSchema = SafetyScoreV9HistoricalCardBaseSchema.extend({
   scoreTrace: SafetyScoreV9WitnessScoreTraceSchema,
-}).superRefine((card, ctx) => refineCurrentCard(card, ctx, false, true));
+}).superRefine((card, ctx) => refineCurrentCard(card, ctx, false, "report7"));
+export const SafetyScoreV9HistoricalTypedCardSchema = SafetyScoreV9HistoricalTypedCardBaseSchema
+  .superRefine((card, ctx) => refineCurrentCard(card, ctx, false, "report8"));
 export type SafetyScoreV9CurrentCard = z.infer<typeof SafetyScoreV9CurrentCardSchema>;
 
 export type SafetyScoreV9Card = SafetyScoreV9CurrentCard;

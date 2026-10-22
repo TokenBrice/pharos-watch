@@ -5,6 +5,7 @@ import {
   SafetyScoreV9CurrentCardSchema,
   SafetyScoreV9ResolvedCurrentCardSchema,
   SafetyScoreV9HistoricalCardSchema,
+  SafetyScoreV9HistoricalTypedCardSchema,
   SafetyScoreV9WitnessHistoricalCardSchema,
   SafetyScoreV9DependencyProvenanceSchema,
   SafetyScoreV9CommonModeGroupsSchema,
@@ -404,6 +405,18 @@ export const WitnessHistoricalReportCardsV9ResponseSchema = z.object({
   ...HistoricalReportCardsV9ResponseShape,
   cards: z.array(SafetyScoreV9WitnessHistoricalCardSchema),
 }).strict().superRefine((response, ctx) => refineReportCardsV9Response(response, ctx, true));
+
+/** Archive-only report8 before v10.29: typed routes and inline control details. */
+export const HistoricalTypedReportCardsV9ResponseSchema = z.object({
+  ...ReportCardsV9CurrentEnvelopeShape,
+  methodology: ReportCardsV9ResponseShape.methodology.extend({
+    version: z.string().regex(/^10\.(?:1[1-9]|2[0-8])$/),
+  }),
+  cards: z.array(SafetyScoreV9HistoricalTypedCardSchema),
+}).strict().superRefine((value, ctx) => {
+  refineReportCardsV9Response(value, ctx, true);
+  refineSafetyScoreV9PillarFreshness({ ...value, sourceGenerations: value.source.sourceGenerations }, ctx);
+});
 
 /**
  * Free-lane projection of the current V9 publication: one grade per coin and
