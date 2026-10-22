@@ -39,7 +39,7 @@ V10 evaluates three pillars:
 
 Control=min effective economic path (mint/upgrade, fee/accountant, allocator/curator, custody-transfer, parameters). Base: signer 50, opaque 60, quorum 65, quorum+delay 70, public governance/minority veto+delay 75, immutable/no-power 90. Credits: bound 10, reconciliation ≤15, supervision 15 or attestation 10; assurance ≤30, total ≤90. Compromise/exploitation=25, no credits. [Proof](mint-authority-scoring.md#mint-authority-entry) requires unavoidable delay/all-bypass closure.
 
-Control consumes normalized facts/admitted reviews, preserving causes, traces, canonical order, inventory and the binding minimum ([contract](process/report-cards-appendix.md#scoped-evidence-and-exit-evaluation)).
+Admitted reviews/normalized facts retain canonical order, causes, traces, inventory and minimum under the issuer/control contract below.
 
 Custody/bridge/incident/oracle/reserve credit needs exact identity, current evidence/denominator. MPC/HSM needs its own complete/current profile; custody questions retain technical credit/scoped U, never quorum/process proof ([gates](process/report-cards-appendix.md#campaign-admission-rules)).
 
@@ -49,11 +49,11 @@ Fatal warnings bar retained live-reserve Backing even under degraded allowlists;
 
 Reviewed issuer-named residuals ≤1% of a complete measured book do not alone limit Backing evidence. Keep weights/C/U/identities; no quality credit. Unmarked/incomplete/larger residuals retain gates ([standard](process/mechanism-overlay-evidence-standard.md#scoped-reports-and-bounded-observations)).
 
-Mechanism review admission: date-only→next UTC midnight; exact UTC→that instant; expiry→original start+365 days. Current admitted components govern; old reports are diagnostic, future/unadmitted facts earn nothing. [Authoring](process/mechanism-overlay-evidence-standard.md#process-requirements) requires scoped assurance, validation and intact refs.
+Mechanism reviews enter next UTC midnight (date-only) or at their exact UTC pin, expiring original start+365d. Current admitted components govern; old reports remain diagnostic, future/unadmitted facts earn nothing. [Authoring](process/mechanism-overlay-evidence-standard.md#process-requirements) requires scoped assurance, validation/intact refs.
 
-Evaluated upstream constraints survive C/U provenance: same-slice known and unresolved losses combine as `max(K,U)`, not their sum. Supported profile constraints survive unavailable sibling obligations; inherited Backing alone does not establish a wrapper.
+C/U provenance preserves upstream constraints: same-slice known/unknown loss=`max(K,U)`, not sum. Supported constraints survive unknown siblings; inherited Backing alone proves no wrapper.
 
-`unknownQuality(pillar, cause)` prices missing factors/unavailable pillars on rateable cards: researched non-disclosure C uses Backing/Exit/Control 35/35/50; research/infrastructure U or unclassified uses 50/50/60. Keep measured values, causes/provenance; unknown reconciliation/supervision earns nothing.
+`unknownQuality(pillar,cause)` prices unknown factors/unavailable pillars on rateable cards. Backing/Exit/Control: C researched non-disclosure=35/35/50; U research/infrastructure or unclassified=50/50/60. Preserve measurements/causes/provenance; unknown reconciliation/supervision earns no credit.
 
 Whole-liability attribution (WS04-A08) and independent ordinary bridge clocks (WS04-A09) remain deferred. Current supply denominators, aggregate fallback, bridge applicability, route clocks and mint scope stand; any later clock change must preserve admitted active incidents.
 
@@ -61,17 +61,17 @@ XRPL liabilities bind the validated ledger hash/true close time. Pending proof i
 
 Exit selects the best admissible singleton/independent pair. Same-resource alternatives remain selectable but gain no diversification and share at most their maximum executable capacity; stale/diagnostic rows reserve no resources.
 
-Require ≥2 usable pillars. Price missing third by `unknownQuality` (unclassified=U), retaining 40/35/25 weights. Across all three priced scores, m=min, M=weighted mean: `Q = m + 20 × tanh((M − m)/20)`. Measurements, applicable reviewed mechanisms/routes with bounded gaps and admitted claims are usable; subject-free defaults are not. Trace uncertainty separately. Keep peg exponent .4, nearest rounding, bands/hysteresis.
+Require ≥2 usable pillars; price missing third via `unknownQuality` (unclassified=U), retaining 40/35/25. Across all three priced scores, m=min, M=weighted mean: `Q = m + 20 × tanh((M − m)/20)`. Measurements, applicable reviewed mechanisms/routes with bounded gaps and admitted claims are usable; subject-free defaults are not. Trace uncertainty separately. Keep peg exponent .4, nearest rounding/bands/hysteresis.
 
-Questions/low scores/incidents never cause NR. <2 usable pillars is a pipeline gap. Required-parent technical failures, including cycles/evaluation failure, propagate causal pipeline-gap/null score/grade, never a fake score. Other parent unavailability and quarantine/accepted holds remain. Uncertainty keeps witnesses above C− too; attribution never gates letters ([history](https://pharos.watch/methodology/scoring-changelog/#scoring-v10-29)).
+Questions/low scores/incidents never cause NR; <2 usable pillars is pipeline-gap. Required-parent technical failures (cycles/evaluation included) propagate causal pipeline-gap/null score/grade, never invented scores. Other parent unavailability/quarantine/accepted holds remain. Uncertainty keeps witnesses above C− too; attribution never gates letters ([history](https://pharos.watch/methodology/scoring-changelog/#scoring-v10-29)).
 
-Five cap families: active depeg ≥10%→49/≥25%→39; known age <24m→84/24–<36m→86; parent/wrapper; realized loss; speculative-credit→59. The last retains high measured-adverse reserve/global-claim or admitted legacy-unscoped eligibility despite Backing pricing, excluding deployment/access-only scope. Unknown age is uncapped. Other structural/evidence ceilings are retired; reserve, scoped-loss, oracle/bridge and serial/role risks stay priced.
+Five caps: active depeg ≥10%→49/≥25%→39; known age <24m→84/24–<36m→86; parent/wrapper; realized loss; speculative-credit→59. Credit retains high measured-adverse reserve/global-claim or admitted legacy-unscoped eligibility despite Backing pricing, never deployment/access-only scope. Unknown age is uncapped. Retire other structural/evidence ceilings, retaining reserve/scoped-loss, oracle/bridge and serial/role pricing.
 
-Source-proved holder loss sets L=39 for ≥25%, 49 for ≥1%, otherwise no cap. For ageDays≥0, `eventLimit = min(100, L + (100 − L) × max(0, ageDays − 365) / 365)`; floor the minimum once. Hold through day 365, end at 730. Actual NAV/imposed withdrawal loss needs original dates, scope, holder-claim denominator and primary sources; discounts, slippage, gross protocol/treasury-covered losses do not qualify. Never duplicate the whole-score charge. Thresholds/periods are calibration.
+Source-proved holder loss sets L=39 for ≥25%, 49 for ≥1%, else no cap. At ageDays≥0, `eventLimit = min(100, L + (100 − L) × max(0, ageDays − 365) / 365)`; floor the minimum once. Hold through day 365, end at 730. NAV/imposed withdrawal loss needs original date, scope, holder-claim denominator/primary sources. Discounts, slippage, gross protocol/treasury-covered losses do not qualify. No duplicate charge; thresholds/periods are calibration.
 
 Exit/wrappers require exact identities, original clocks and fresh execution; incomplete measurements prove no exhaustion. [Admission details](process/report-cards-appendix.md#model-admission-details) own fee/calendar bounds, unwind/history/hash/FX gates, execution witnesses, output pricing and unavailable-price causes.
 
-Causes: A pipeline unavailable, B public uncurated, C researched non-disclosure, U unresolved, D adverse. Proven A/B pillars are `"excluded-a-b"`; evidence-free ones `"unavailable"` without fake proof. Both keep null diagnostics/`partialEvidence`; unavailable cause/gap lists may be empty. Rateable cards price missing pillars at original weights, retaining known/C/U/D components. <2 usable means pipeline-gap/null score/grade; pricing creates no evidence. Optional missing routes invent no capacity or veto.
+Causes: A pipeline unavailable, B public uncurated, C researched non-disclosure, U unresolved, D adverse. Proven A/B pillars use `"excluded-a-b"`; evidence-free ones `"unavailable"`, without invented proof. Both keep null diagnostics/`partialEvidence`; unavailable cause/gap lists may be empty. Retain known/C/U/D components and original weights. <2 usable means pipeline-gap/null score/grade; pricing creates no evidence. Optional missing routes add no capacity/veto.
 
 Do not charge deployment/bridge authority again when its exact root controller is priced in Control. Identity requires admitted facts, not asset ID. Independent controllers and measured slice failures retain proportional losses; shared roots erase no distinct measured risk.
 
@@ -79,29 +79,29 @@ Shared-chain/bridge losses are supply-proportional, never whole-score caps. Meas
 
 Public U means “Unresolved”, including researched but inconclusive evidence; machine keys/scoring are unchanged.
 
-Suspension removes only its channel's credit/masked obligations, not alternatives, and proves no global exhaustion/danger. Insufficient alternatives retain scoped U census proof ([admission](process/report-cards-appendix.md#model-admission-details)).
+Suspension removes only its channel's credit/masked obligations, not alternatives, proving no global exhaustion/danger. Insufficient alternatives retain scoped U census proof under the admission details above.
 
-Wrapper limit: `max(0, floor(min(required parents' premium-free inheritable scores) − formDeduction))`; pure 3, native-staked 5, strategy-vault 10. Active allocation receipts are strategy-vaults. Final score is min(independently constrained own score, wrapper limit); unavailable parents remain unavailable. Local risks belong in pillars, not a second fallback/factor-sum/floor. USDT receives a +14 premium, maximum 87 and unchanged eligibility, never inherited.
+Wrapper limit=`max(0, floor(min(required parents' premium-free inheritable scores) − formDeduction))`: pure 3, native-staked 5, active strategy-allocation vault 10. Final=min(independently constrained own score, limit); unavailable parents stay unavailable. Local risks belong in pillars, not another fallback/factor-sum/floor. USDT keeps +14, max87 and eligibility; no inheritance.
 
 Exit keeps clocks/exact requests. Supply sizes 5% with $100k–$25m clamp/grid; stale/missing uses $25m, retaining fresh routes. Curve/resolved output plus missing terms uses C/U subfactors, ceiling 70; absent curves leave capacity unknown. Same-rail certificates beat models. On-chain execution proves open; closure vetoes. Access once: permissionless 100, whitelist 75, institutional/API 55, manual 20, unknown C/U. Medium confidence: terms .85, certified/on-chain .75; limited queue/unknown capacity .75. Materiality: 1% of request or $100k; insufficient completion cap 50 before confidence. Continuous curves price admitted capacity; zero/low scores have no unknown floor. Research-only models stay inactive.
 
 ### Morpho lender collateral-book Backing (v10.19)
 
-Lender books require supported adapter/schema, complete census/exact identity, no allowlist. Direct inheritance: ≥99% admitted live parent-token idle/1:1 claims, not merely parent-denominated protocol/lending positions. Current evidenced curated serial/basket claims may inherit without live rows, retaining missing-composition provenance; neither inheritance nor variant labels prove wrapper applicability. Complete books separately transmit weighted collateral/LLTV risk; absent books use reserve/mechanism evidence and C/U only for missing factors. Preserve known reserves, identity/cycle checks and weighted/disclosed sub-1%-NAV oracle branches. Missing books grant no collateral/capacity.
+Books require supported adapter/schema, complete census/exact identity, no allowlist. Direct inheritance needs ≥99% live parent-token idle/1:1 claims, not merely parent-denominated positions. Current evidenced curated serial/basket claims may inherit without live rows, retaining composition gaps; inheritance/variant labels prove no wrapper. Complete books transmit weighted collateral/LLTV risk; absent books retain reserve/mechanism evidence, pricing only unknown factors by C/U. Preserve known reserves, identity/cycle checks and weighted/disclosed sub-1%-NAV oracle branches. Missing books grant no collateral/capacity.
 
 Policy owns class qualities; strict `lender-collateral-classes-v1.json` owns token identities/reviewers/dates/sources. Compilation binds registry/build digests, never symbol aliases or renewed clocks ([admission](process/report-cards-appendix.md#exact-nav-partition-and-quality-source)).
 
-For collateral quality `q`/LLTV fraction `l`, lender quality is `100 − l² × (100 − q)`. Allocation-weighted quality scales deployed parent Backing; idle retains it and the blend stays capped at parent quality ([v10.19 calibration/acceptance](https://pharos.watch/methodology/scoring-changelog/archive/v10/#scoring-v10-19)).
+For collateral quality `q`/LLTV fraction `l`, lender quality=`100 − l² × (100 − q)`. Allocation weights scale deployed parent Backing; idle retains it, blend≤parent. See [methodology history](#methodology-identity) for v10.19 calibration/acceptance.
 
 ### Report schema v8
 
-API v8 (`model: "v9"`) wraps publication v7/exact exit identity. Exclusions/partial weights and pipeline-gap/null-grade differ from NR. `ratingStatus`, `partialEvidence`, `confidenceDimensions`, `completeness.pipelineGapCount/pipelineGapIds` reconcile to cards; supply/shared-book semantics stand.
+API v8 (`model: "v9"`)/publication v7 retain exact exit identity. Exclusions/partial weights, pipeline-gap/null-grade and NR remain distinct. Cards reconcile `ratingStatus`, `partialEvidence`, `confidenceDimensions`, `completeness.pipelineGapCount/pipelineGapIds`; supply/shared-book semantics stand.
 
 Inherited-parent attribution must match referenced parents; mismatch fails schema validation at `cards`, including `safeParse`, never an escaped exception.
 
 Lossless witness interning preserves evidence; obligation counts distinguish questions from repeated witnesses. Supply/dependency/common-mode projections preserve identities/clocks ([schema details](process/report-cards-appendix.md#report-schema-v8)).
 
-Accepted private read models serve preparation/pre-compile comparison, never full-publication fallback. Seed/verify both rows before strict readers; invalid baselines block compilation, unavailable lender sources use class fallback. Recovery reverts strict readers on current head, reseeds an accepted cycle, then reapplies ([rollout](process/report-cards-appendix.md#accepted-publication-read-models)). Public API and score-index schema 2 stay unchanged.
+Seed/verify both accepted private read models before strict readers. Preparation/pre-compile uses them, never full-publication fallback. Invalid baselines block compilation; unavailable lender sources use class fallback. Recovery: revert strict readers on current head, reseed an accepted cycle, reapply ([rollout](process/report-cards-appendix.md#accepted-publication-read-models)). Public API/score-index schema 2 stay unchanged.
 
 ## Publication journal and movement attribution
 
