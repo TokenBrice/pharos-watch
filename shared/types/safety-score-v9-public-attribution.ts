@@ -1,5 +1,5 @@
 import type { SafetyScoreV9CardValidationInput } from "./safety-score-v9-public";
-import { attributedSerialParent } from "./safety-score-v9-public-internal";
+import { attributedScoredParent } from "./safety-score-v9-public-internal";
 import { resolveCauseGapId, type V9PublicCauseGapContext } from "./safety-score-v9-public-cause-gaps";
 import { resolveV9PublicWitnessTexts } from "./safety-score-v9-public-witness-texts";
 
@@ -48,6 +48,12 @@ export function findSafetyScoreV9ParentAttributionIssues(
     for (const dependency of card.dependencies.basket) {
       const upstream = cardsById.get(dependency.upstreamAssetId);
       if (!upstream) continue;
+      if (dependency.collateralParentScore !== undefined) {
+        const ordinaryScore = upstream.scoreTrace.scoreAdjustments[0]?.publishedScoreBefore ?? upstream.score;
+        if (ordinaryScore === null || Math.abs(dependency.collateralParentScore - ordinaryScore) > 1e-9) {
+          issues.push({ cardId: card.id, message: `Collateral whole-card score does not reconcile to ${dependency.upstreamAssetId}` });
+        }
+      }
       const backing = upstream.pillars.backing;
       const status = (backing.aggregationDisposition ?? "included") !== "included" ? "pipeline-gap"
         : backing.score !== null ? "rated" : "not-rated";
@@ -58,7 +64,7 @@ export function findSafetyScoreV9ParentAttributionIssues(
     // Roles carry their selected raw dimension, not unrelated whole-card status.
     for (const item of card.scoreTrace.adverseAttribution.items) {
       if (item.source !== "parent-score") continue;
-      const parent = attributedSerialParent(card, item.path, item.message);
+      const parent = attributedScoredParent(card, item.path, item.message);
       if (parent === null) continue;
       const pathPrefix = `parent:${parent.upstreamAssetId}:`;
       const messagePrefix = `Required parent ${parent.upstreamAssetId}: `;
@@ -77,7 +83,7 @@ export function findSafetyScoreV9ParentAttributionIssues(
     }
     for (const item of card.scoreTrace.boundedUncertaintyAttribution.items) {
       if (item.source !== "parent-score") continue;
-      const parent = attributedSerialParent(card, item.path, item.message);
+      const parent = attributedScoredParent(card, item.path, item.message);
       if (parent === null) continue;
       const pathPrefix = `parent:${parent.upstreamAssetId}:`;
       const messagePrefix = `Required parent ${parent.upstreamAssetId}: `;

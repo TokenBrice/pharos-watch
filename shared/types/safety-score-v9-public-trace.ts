@@ -309,6 +309,8 @@ const SafetyScoreV9EvidenceResponsibilityTraceSchema = evidenceResponsibilityTra
 const SafetyScoreV9WrapperParentLimitSchema = z
   .object({
     schemaVersion: z.literal(1),
+    parentKind: z.enum(["serial", "concentrated-collateral"]).optional(),
+    parentAssetId: z.string().min(1).optional(),
     parentScore: ScoreSchema,
     form: V9WrapperFormSchema,
     appliedDiscount: z.number().finite().min(0).max(100),
@@ -316,6 +318,11 @@ const SafetyScoreV9WrapperParentLimitSchema = z
   })
   .strict()
   .superRefine((limit, ctx) => {
+    const concentrated = limit.parentKind === "concentrated-collateral";
+    if (concentrated !== (limit.parentAssetId !== undefined) ||
+        (concentrated && (limit.form !== "pure" || limit.appliedDiscount !== 3))) {
+      issue(ctx, ["parentKind"], "Concentrated collateral must identify its scored parent and use the pure three-point deduction");
+    }
     const expectedLimit = Math.max(0, Math.floor(limit.parentScore - limit.appliedDiscount));
     if (!numbersAgree(limit.limit, expectedLimit)) {
       issue(ctx, ["limit"], "Wrapper limit must apply its form deduction to the parent once");

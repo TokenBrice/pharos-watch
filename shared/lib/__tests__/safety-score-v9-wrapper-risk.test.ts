@@ -53,9 +53,11 @@ const STATUS: V9FactStatusV2 = {
   observationState: "known", evidenceRefIds: ["fixture:claim"], gapIds: [],
 };
 
-function concentratedParent(weight: number, parentScore: number | null = 64, status = STATUS) {
+function concentratedParent(weight: number, parentScore: number | null = 64, status = STATUS,
+  assetClass = "stablecoin", reserveWeight = weight) {
   const asset = {
     assetId: "child", dependencies: { status }, wrapperLocalFacts: { applicability: "not-applicable" },
+    reserveExposures: [{ trackedAssetId: "collateral", weight: reserveWeight, assetClass, status: STATUS }],
   } as unknown as V9AssetFactsV3;
   const inputs: V9ResolvedDependencyInputs = {
     assetId: "child", serial: [], cycleBlocked: false,
@@ -105,7 +107,14 @@ describe("near-total admitted collateral parent limits", () => {
     expect(trace.bindingCap).toBeNull();
   });
 
-  it("does not invent a score for an unavailable required collateral parent", () => {
-    expect(concentratedParent(1, null)).toMatchObject({ required: true, score: null });
+  it("does not invent a limit for an unscored collateral card", () => {
+    expect(concentratedParent(1, null)).toMatchObject({ required: false, score: null });
+  });
+
+  it("requires direct token holdings, not a strategy denomination or composite claim", () => {
+    expect(concentratedParent(1, 64, STATUS, "protocol-position").required).toBe(false);
+    expect(concentratedParent(1, 64, STATUS, "bank-deposit").required).toBe(false);
+    expect(concentratedParent(1, 64, STATUS, "stablecoin", 0.98).required).toBe(false);
+    expect(concentratedParent(1, 64, STATUS, "fund-share").required).toBe(true);
   });
 });

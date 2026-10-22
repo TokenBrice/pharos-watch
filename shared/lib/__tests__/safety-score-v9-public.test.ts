@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { attributedScoredParent } from "../../types/safety-score-v9-public-internal";
 import { countV9EvidenceObligations, iterateEvidenceResponsibilityFacts } from "../../types/safety-score-v9-public-evidence-facts";
 import { resolveCauseGapId } from "../../types/safety-score-v9-public-cause-gaps";
 import { resolveV9PublicWitnessTexts } from "../../types/safety-score-v9-public-witness-texts";
@@ -1038,6 +1039,40 @@ describe("Safety Score v9 public projection", () => {
       { upstreamAssetId: "mechanism", dependencyType: "mechanism", wrapperForm: null },
       { upstreamAssetId: "wrapper", dependencyType: "wrapper", wrapperForm: "pure" },
     ]);
+  });
+
+  it("reconciles concentrated collateral separately without relaxing serial-parent validation", () => {
+    const input = fixture("concentrated", {
+      score: 64, grade: "C+",
+      caps: [cap({ kind: "parent", limit: 64, source: "parent", reason: "Collateral parent limit.", binding: true })],
+      dependency: {
+        assetId: "concentrated", serial: [], cycleBlocked: false,
+        basket: [{ upstreamAssetId: "collateral", weight: 0.99, score: 95, boundedUnknown: false }],
+      },
+    });
+    input.trace.wrapperParentLimit = {
+      schemaVersion: 1, parentKind: "concentrated-collateral", parentAssetId: "collateral",
+      parentScore: 67, form: "pure", appliedDiscount: 3, limit: 64,
+    };
+    const card = projectSafetyScoreV9Card(input).card;
+    expect(card.dependencies.basket[0]).toMatchObject({ score: 95, collateralParentScore: 67 });
+    expect(SafetyScoreV9CurrentCardSchema.safeParse(card).success).toBe(true);
+    expect(attributedScoredParent(card, "parent:collateral:incident", "Required parent collateral: incident"))
+      .toMatchObject({ upstreamAssetId: "collateral", score: 67, blocked: false });
+    expect(attributedScoredParent(card, "parent:other:incident", "Required parent other: incident")).toBeNull();
+    const mismatchedScore = structuredClone(card);
+    mismatchedScore.dependencies.basket[0]!.collateralParentScore = 68;
+    expect(attributedScoredParent(mismatchedScore, "parent:collateral:incident", "Required parent collateral: incident")).toBeNull();
+    for (const mutate of [
+      (bad: typeof card) => { bad.scoreTrace!.wrapperParentLimit!.parentKind = "serial"; delete bad.scoreTrace!.wrapperParentLimit!.parentAssetId; },
+      (bad: typeof card) => { bad.dependencies.basket[0]!.weight = 0.98; },
+      (bad: typeof card) => { bad.dependencies.basket[0]!.collateralParentScore = 68; },
+      (bad: typeof card) => { bad.scoreTrace!.wrapperParentLimit!.parentAssetId = "other"; },
+    ]) {
+      const bad = structuredClone(card);
+      mutate(bad);
+      expect(SafetyScoreV9CurrentCardSchema.safeParse(bad).success).toBe(false);
+    }
   });
 
   it("projects cap-bound, pillar-bound, and withheld top drivers from the card", () => {

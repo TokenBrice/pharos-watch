@@ -140,6 +140,8 @@ const SafetyScoreV9BasketDependencySchema = z
     upstreamAssetId: z.string().min(1),
     weight: z.number().finite().min(0).max(1),
     score: ScoreSchema.nullable(),
+    /** Premium-free whole-card score, distinct from the Backing-only basket score. */
+    collateralParentScore: ScoreSchema.optional(),
     ...V9DependencyCauseShape,
     boundedUnknown: z.boolean(),
     dependencyType: DependencyTypeSchema.optional(),

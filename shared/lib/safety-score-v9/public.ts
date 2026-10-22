@@ -748,6 +748,9 @@ function projectDependencies(input: V9PublicCardProjectionInput): V9UninternedPu
       .sort((left, right) => compareText(left.upstreamAssetId, right.upstreamAssetId))
       .map((dependency) => ({
         upstreamAssetId: dependency.upstreamAssetId, score: dependency.score, weight: dependency.weight,
+        ...(input.trace.wrapperParentLimit?.parentKind === "concentrated-collateral" &&
+            input.trace.wrapperParentLimit.parentAssetId === dependency.upstreamAssetId
+          ? { collateralParentScore: input.trace.wrapperParentLimit.parentScore } : {}),
         boundedUnknown: dependency.boundedUnknown,
         ratingStatus: dependency.ratingStatus ?? (dependency.score === null ? "not-rated" : "rated"),
         partialEvidence: projectV9CompactPartialEvidence(dependency.partialEvidence ?? null),

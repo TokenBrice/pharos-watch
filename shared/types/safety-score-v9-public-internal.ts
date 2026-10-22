@@ -8,7 +8,6 @@ import {
   SCORE_TOLERANCE,
 } from "./safety-score-v9-public-facts";
 import type { SafetyScoreV9CardRefinementInput, SafetyScoreV9CardWithDependencies } from "./safety-score-v9-public-shapes";
-import type { SafetyScoreV9SerialDependencyInput } from "./safety-score-v9-public-shapes";
 import { scoreToGrade, V9_PILLAR_WEIGHTS } from "./safety-score-v9-grade";
 import { iterateEvidenceResponsibilityFacts, refineEvidenceFactPathPrefixes } from "./safety-score-v9-public-evidence-facts";
 import { resolveV9EffectiveScoringWeight } from "./safety-score-v9-public-causes";
@@ -55,11 +54,23 @@ function matchesBoundedBackingComponent(card: SafetyScoreV9CardRefinementInput, 
       (component.factors?.some(factor => matchesContribution(factor.componentKey, factor)) ?? false)));
 }
 
-export function attributedSerialParent(
-  card: SafetyScoreV9CardWithDependencies,
+export function attributedScoredParent(
+  card: SafetyScoreV9CardWithDependencies & Pick<SafetyScoreV9CardRefinementInput, "scoreTrace">,
   path: string,
   message: string,
-): SafetyScoreV9SerialDependencyInput | null {
+): { upstreamAssetId: string; score: number | null; blocked: boolean } | null {
+  const limit = card.scoreTrace?.wrapperParentLimit;
+  if (limit && "parentKind" in limit && limit.parentKind === "concentrated-collateral") {
+    const parent = card.dependencies.basket.find((dependency) =>
+      dependency.upstreamAssetId === limit.parentAssetId && dependency.weight >= 0.99 &&
+      dependency.collateralParentScore === limit.parentScore &&
+      path.startsWith(`parent:${dependency.upstreamAssetId}:`) &&
+      message.startsWith(`Required parent ${dependency.upstreamAssetId}: `));
+    return parent ? {
+      upstreamAssetId: parent.upstreamAssetId, score: parent.collateralParentScore!,
+      blocked: card.dependencies.cycleBlocked,
+    } : null;
+  }
   const parent = [...card.dependencies.serial]
     .sort((left, right) => right.upstreamAssetId.length - left.upstreamAssetId.length)
     .find((dependency) => {
@@ -90,6 +101,16 @@ export function refineCard(
       ? Math.min(...serialParents.map((dependency) => dependency.score!))
       : null;
     const wrapperParentLimit = scoreTrace.wrapperParentLimit;
+    const concentratedLimit = wrapperParentLimit && "parentKind" in wrapperParentLimit &&
+      wrapperParentLimit.parentKind === "concentrated-collateral" ? wrapperParentLimit : null;
+    const concentratedParent = concentratedLimit
+      ? card.dependencies.basket.find((dependency) =>
+          dependency.upstreamAssetId === concentratedLimit.parentAssetId &&
+          dependency.weight >= 0.99 && dependency.collateralParentScore !== undefined)
+      : undefined;
+    const reconciledParentScore = concentratedLimit
+      ? (!card.dependencies.cycleBlocked ? concentratedParent?.collateralParentScore ?? null : null)
+      : rawParentScore;
     const parentCaps = card.caps.filter((cap) => cap.source === "parent");
     // Parent measurements may retain a fractional legacy discount in archived
     // cards; current form-only ceilings are already floored at their source.
@@ -100,27 +121,27 @@ export function refineCard(
     if (
       wrapperParentLimit !== null &&
       (
-        rawParentScore === null ||
-        !numbersAgree(wrapperParentLimit.parentScore, rawParentScore) ||
+        reconciledParentScore === null ||
+        !numbersAgree(wrapperParentLimit.parentScore, reconciledParentScore) ||
         parentCaps.length !== 1 ||
         parentCaps[0]!.kind !== "parent" ||
         !capAgreesWithWrapperLimit(parentCaps[0]!.limit, wrapperParentLimit.limit)
       )
     ) {
-      issue(ctx, ["scoreTrace", "wrapperParentLimit"], "V9 wrapper parent limit must reconcile to the resolved minimum serial parent and parent cap");
+      issue(ctx, ["scoreTrace", "wrapperParentLimit"], "V9 wrapper parent limit must reconcile to its declared serial or concentrated-collateral parent and parent cap");
     }
     if (
       card.bindingCap?.source === "parent" &&
       (
         card.bindingCap.kind !== "parent" ||
-        rawParentScore === null ||
+        reconciledParentScore === null ||
         !capAgreesWithWrapperLimit(
           card.bindingCap.limit,
-          wrapperParentLimit?.limit ?? rawParentScore,
+          wrapperParentLimit?.limit ?? reconciledParentScore!,
         )
       )
     ) {
-      issue(ctx, ["bindingCap"], "V9 binding parent cap must reconcile to the resolved minimum serial parent");
+      issue(ctx, ["bindingCap"], "V9 binding parent cap must reconcile to its declared parent");
     }
     for (const [field, legacy, explicit] of [
       ["weightedPillarMean", card.qualityScore, stages.weightedPillarMean],
@@ -191,16 +212,16 @@ export function refineCard(
         issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 active-depeg attribution requires its canonical path and a binding active-depeg cap");
       }
       if (item.source === "parent-score") {
-        const parent = attributedSerialParent(card, item.path, item.message);
+        const parent = attributedScoredParent(card, item.path, item.message);
         if (
           card.bindingCap?.source !== "parent" ||
           parent === null ||
           parent.blocked ||
           parent.score === null ||
-          rawParentScore === null ||
-          !numbersAgree(parent.score, rawParentScore)
+          reconciledParentScore === null ||
+          !numbersAgree(parent.score, reconciledParentScore)
         ) {
-          issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 parent attribution requires the binding minimum serial parent");
+          issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 parent attribution requires its binding declared parent");
         }
       }
       if (item.source === "peg-performance") {
@@ -331,16 +352,16 @@ export function refineCard(
           issue(ctx, ["scoreTrace", "boundedUncertaintyAttribution", "items"], "Direct bounded attribution must match an included pillar reason or charged backing component");
         }
       } else if (item.source === "parent-score") {
-        const parent = attributedSerialParent(card, item.path, item.message);
+        const parent = attributedScoredParent(card, item.path, item.message);
         if (
           !reconcilableCaps.some((cap) => cap.source === "parent") ||
           parent === null ||
           parent.blocked ||
           parent.score === null ||
-          rawParentScore === null ||
-          !numbersAgree(parent.score, rawParentScore)
+          reconciledParentScore === null ||
+          !numbersAgree(parent.score, reconciledParentScore)
         ) {
-          issue(ctx, ["scoreTrace", "boundedUncertaintyAttribution", "items"], "V9 parent bounded attribution requires the binding minimum serial parent");
+          issue(ctx, ["scoreTrace", "boundedUncertaintyAttribution", "items"], "V9 parent bounded attribution requires its binding declared parent");
         }
       }
     }

@@ -1398,11 +1398,12 @@ export function resolveV9ParentLimitInput(
   envelope: V9ValidatedPolicyEnvelope,
 ): V9ProductionScoreInput["parent"] {
   const serial = parentInput(asset, inputs, evaluatedById, wrapperTier, envelope);
-  const collateral = resolveV9SingleCollateralParent(asset.dependencies.status, inputs);
+  const collateral = resolveV9SingleCollateralParent(asset.dependencies.status, inputs, asset.reserveExposures);
   if (!collateral || (serial.required && serial.score === null)) return serial;
   const upstream = evaluatedById.get(collateral.upstreamAssetId);
   const trace = upstream?.trace;
   const score = trace ? projectV9DependencyScore(trace) : null;
+  if (score === null) return serial;
   const concentrated = parentInput(asset, {
     ...inputs,
     serial: [{
@@ -1416,6 +1417,13 @@ export function resolveV9ParentLimitInput(
       partialEvidence: trace?.partialEvidence ?? null,
     }],
   }, evaluatedById, "pure", envelope, true);
+  if (concentrated.wrapperParentLimit) {
+    concentrated.wrapperParentLimit = {
+      ...concentrated.wrapperParentLimit,
+      parentKind: "concentrated-collateral",
+      parentAssetId: collateral.upstreamAssetId,
+    };
+  }
   return !serial.required || concentrated.score === null ||
     (serial.score !== null && concentrated.score < serial.score) ? concentrated : serial;
 }
