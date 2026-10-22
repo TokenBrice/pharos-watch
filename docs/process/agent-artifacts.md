@@ -20,11 +20,27 @@ Use existing feature/route docs for behavior, structured methodology changelogs 
 
 Before deleting an artifact, find references in verified docs, tests, source comments and user-facing changelogs. Migrate needed durable content and retarget/remove those references. Do not commit new planning archives or calibration snapshots; reviewed methodology belongs in its owner and structured changelog, evidence in scratch. Ignored files are not automatically disposable.
 
+**Clean up after yourself.** Before reporting a task done, the agent that created scratch deletes its own bulky intermediates: replay and capture JSON, D1/SQLite copies, heap snapshots, large logs, copied checkouts and `worktree-files`, and its own git worktrees (`git worktree remove`). Keep only the closure summary and the small evidence an open gate or `ops:followup` issue still names; if a large file must outlive the task, say so in the summary with its safe-to-remove condition. This authority covers only files you created in this task, never another agent's or session's scratch.
+
 ## Campaign Index And Handoff
 
 Bounded fixes/reviews need authorized implementation, focused validation and a concise outcome, not a scratch directory or ledger. For substantial cross-session/coordinated work, use `agents/<YYYY-MM-DD>-<slug>/` and leave a discoverable closure summary: goal/invariants, owner, current status, source/plan authority, every task's complete/deferred/superseded/blocked outcome with reason, actual changed files, exercised checks and CI/deploy/operational evidence, durable destinations, next action/owner and retention (review date/event plus safe-to-remove condition and required owner confirmation).
 
 A campaign README, per-artifact rows (path/kind/owner/status/dates/source/destination/retention), task ledgers, dispatch packets and `outputs/`/`evidence/` folders are optional tools, not required templates. Use them only when they improve handoff; record exact scope, exclusions, dependencies and acceptance where a delegate needs them. Reconcile every existing task ID, including deferred/superseded work. Retain useful evidence through its recorded gate; never infer deletion authority from age or ignore status.
+
+### Follow-up issues
+
+Open loops that outlive scratch go in GitHub issues, which are public: write them as if published, with no row-level D1 data, chat IDs, partner or commercial detail, security gaps (use a private advisory) or credentials. Labels: `ops:followup` (a dated or event-gated check), `ops:decision` (blocked on an owner call), `ops:campaign` (tracking issue for multi-PR work); plain defects keep `bug`. Use a milestone only when a campaign spans several PRs. The body must stand alone after `agents/` is cleaned:
+
+```
+Due: YYYY-MM-DD          (optional; read by .github/workflows/ops-followups.yml)
+Origin: PR #N / commit / ADR-N
+Check: exact query, command or URL that answers it
+Done when: closing condition
+Evidence: agents/<path> (local, may be gone)
+```
+
+Close with the PR (`Closes #N`) or a comment naming the evidence; distill durable truth into its owning doc first. Do not duplicate CI-failure issues or user intake.
 
 ## Pinned On-Chain Evidence
 

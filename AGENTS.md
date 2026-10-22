@@ -25,7 +25,7 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 - No canonical formatter: match nearby style, no formatting-only churn, `git diff --check` clean (`docs/testing.md#source-formatting-policy`).
 - Credentials: check the ignored root `.env.local` and the documented source before reporting one missing; names only, never values. Worker secrets stay Wrangler-managed.
 - Runtime: mise shims read `.nvmrc`; first run `mise settings add idiomatic_version_file_enable_tools node`, then `mise install`. `check:pr` requires the exact `.nvmrc` Node and npm 11.x.
-- Scratch lives in ignored `agents/`; durable guidance in `docs/` (`docs/process/agent-artifacts.md`).
+- Scratch lives in ignored `agents/`; delete bulky intermediates you created when done. Durable guidance in `docs/` (`docs/process/agent-artifacts.md`).
 - Update the owning doc for behavior, API, pipeline, methodology, or data-source changes (new sources also update the about page). Methodology changes update the four targets listed in [ADR-3](docs/architecture.md#adr-3); do not record release targets in ADR-3; versions increase numerically with at most two decimal digits (`v9.46` → `v9.47` or `v10.0`; never `v9.461`, never `v5.10`).
 
 ## Hard rules
