@@ -363,10 +363,10 @@ describe("Safety Score v9 archetype backing adapters", () => {
     }));
   });
 
-  it("retains protocol-position local risk under complete live parent backing, while legacy inheritance stays unchanged", () => {
+  it("retains protocol-position mechanism risk while admitted parent claims use the configured bypass", () => {
     const inheritedAsset: V9BackingAssetInput = {
       ...asset(),
-      reserveExposures: [{ ...reserveExposure("dai"), weight: 1, provenance: "live", trackedAssetId: "dai-makerdao" }],
+      reserveExposures: [{ ...reserveExposure("dai"), weight: 1, provenance: "live", trackedAssetId: "dai-makerdao", assetClass: "stablecoin" }],
       inheritedStablecoinBacking: {
         parentAssetId: "dai-makerdao", parentBackingScore: 90, weight: 1, tier: "wrapped", failureDomains: [],
       },
@@ -389,9 +389,9 @@ describe("Safety Score v9 archetype backing adapters", () => {
       componentKey: "mechanism:encumbrance-and-allocation", effectiveWeight: 0.1, observationState: "bounded-unknown",
     }));
     expect(local.score!).toBeLessThan(90);
-    const legacy = evaluateV9Backing(inheritedAsset, reviews.algorithmic, V9_CANDIDATE_POLICY_V1);
-    expect(legacy.score).toBe(90);
-    expect(legacy.contributions.some((row) => row.source === "mechanism")).toBe(false);
+    const directClaim = evaluateV9Backing(inheritedAsset, reviews.algorithmic, V9_CANDIDATE_POLICY_V1);
+    expect(directClaim.score).toBe(90);
+    expect(directClaim.contributions.some((row) => row.source === "mechanism")).toBe(false);
   });
 
   it("rejects not-applicable residuals instead of reallocating their charge to healthy components", () => {
@@ -548,6 +548,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
         weight: 1,
         provenance: "live",
         trackedAssetId: upstream.assetId,
+        assetClass: "stablecoin",
       }],
       inheritedStablecoinBacking: {
         parentAssetId: upstream.assetId,
@@ -602,6 +603,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
         weight: 1,
         provenance: "live",
         trackedAssetId: "usdc-circle",
+        assetClass: "stablecoin",
       }],
       inheritedStablecoinBacking: {
         parentAssetId: "usdc-circle",

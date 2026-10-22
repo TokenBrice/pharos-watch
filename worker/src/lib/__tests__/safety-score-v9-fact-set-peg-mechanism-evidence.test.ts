@@ -171,7 +171,10 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     expect(live.dependencies).toMatchObject({ source: "live-reserve", dependencyFromLive: true, diagnostics: { graphState: "valid" } });
     const nullClassified = structuredClone(mapped);
     nullClassified.assets[0]!.reserveClassifications.find((classification) => classification.issuerOrObligorKey === "asset:beta")!.assetClass = null;
-    expect(compileSafetyScoreV9FactSetFromFixedInput(mappedFixed, nullClassified).assets[0]!.reserveExposures).toContainEqual(expect.objectContaining({ trackedAssetId: "beta", assetClass: "stablecoin" }));
+    expect(compileSafetyScoreV9FactSetFromFixedInput(mappedFixed, nullClassified).assets[0]!.reserveExposures)
+      .toContainEqual(expect.objectContaining({
+        trackedAssetId: "beta", assetClass: null, status: { observationState: "bounded-unknown" },
+      }));
     const mismatch = structuredClone(mapped);
     mismatch.assets[0]!.dependencies!.edges[0]!.weight = 0.4;
     expect(compileSafetyScoreV9FactSetFromFixedInput(mappedFixed, mismatch).assets[0]!.dependencies).toMatchObject({ status: { observationState: "bounded-unknown" }, diagnostics: { graphState: "unresolved" } });

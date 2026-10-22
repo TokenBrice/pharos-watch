@@ -195,7 +195,7 @@ describe("v10.01 cause-aware reserve quality", () => {
     expect(result.contributions.find(entry => entry.componentKey === "reserve:gold")!.score).toBeCloseTo(67.08, 12);
   });
 
-  it("keeps the compiled reserve witness on inherited quality and concentration without verified live holdings", () => {
+  it("keeps missing-reserve uncertainty visible without inventing inherited holdings", () => {
     const gap: V9FactGapV3 = {
       gapId: "hbusdt-hyperbeat:gap:reserve-composition",
       reasonCode: "missing-reserve-composition",
@@ -236,13 +236,13 @@ describe("v10.01 cause-aware reserve quality", () => {
     }, V9_CANDIDATE_POLICY_V1);
     const inherited = result.contributions.filter(row => row.source !== "mechanism");
     expect(inherited.map(row => row.componentKey)).toEqual([
-      "reserve:concentration", "reserve:inherited-backing:usdt-tether",
+      "reserve:concentration", "reserve:unclassified-residual",
     ]);
     for (const row of inherited) {
       expect(V9CauseContributionSchema.parse({
         score: row.score, cause: row.cause, causeGapIds: row.causeGapIds,
         scoringDisposition: row.scoringDisposition, effectiveScoringWeight: row.effectiveScoringWeight,
-      })).toMatchObject({ score: 75, cause: "U", causeGapIds: [gap.gapId], scoringDisposition: "bounded-uncertainty" });
+      })).toMatchObject({ score: unknownQuality("backing", "U"), cause: "U", causeGapIds: [gap.gapId], scoringDisposition: "bounded-uncertainty" });
     }
     expect(result.contributions.reduce((sum, row) => sum + (row.score ?? 0) * row.effectiveScoringWeight, 0))
       .toBeCloseTo(result.score!, 12);
@@ -760,34 +760,8 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
     inheritedStablecoinBacking: inherited,
   });
 
-  it("inherits a pure 1:1 parent's backing pillar without re-pricing the wrapper layer", () => {
-    const result = evaluateV9ReserveExposures(
-      missingReserveAsset({
-        parentAssetId: "parent",
-        parentBackingScore: 75,
-        weight: 1,
-        tier: "pure",
-        failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
-      }),
-      V9_CANDIDATE_POLICY_V1,
-    );
-    expect(result.score).toBeCloseTo(75, 6);
-    expect(result.rateability).toBe("rateable");
-    expect(result.contributions).toContainEqual(
-      expect.objectContaining({ componentKey: "reserve:inherited-backing:parent", upstreamAssetId: "parent" }),
-    );
-    expect(result.unresolved).toEqual([
-      expect.objectContaining({
-        code: "partial-reserve-review",
-        treatment: "pillar",
-        responsibility: "issuer-undisclosed",
-        cause: "C",
-        causeGapIds: ["wrapper:gap:reserve-composition"],
-      }),
-    ]);
-  });
 
-  it("preserves every explicit owner on an inherited partial reserve", () => {
+  it("preserves every explicit owner on an unavailable reserve envelope", () => {
     const base = missingReserveAsset({
       parentAssetId: "parent",
       parentBackingScore: 75,
@@ -822,7 +796,6 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
 
     expect(
       result.unresolved
-        .filter((reason) => reason.code === "partial-reserve-review")
         .map((reason) => reason.responsibility),
     ).toEqual(["issuer-undisclosed", "producer-failed"]);
   });
@@ -993,7 +966,13 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
       });
     const gap = { ...factorGap("reserve-composition", cause), gapId: input.reserveStatus.gapIds[0]! };
     const result = evaluateV9ReserveExposures(
-      { ...input, gaps: [gap] },
+      { ...input, gaps: [gap], reserveStatus: knownStatus("current-parent-holdings"),
+        reserveExposures: [exposure({
+          key: "parent", weight: 0.99, assetClass: "stablecoin", trackedAssetId: "parent", provenance: "live",
+        })],
+        reserveResiduals: [{ residualId: "unidentified", weight: 0.01,
+          status: { ...input.reserveStatus, gapIds: [gap.gapId] } }],
+      },
       V9_CANDIDATE_POLICY_V1,
     );
     expect(result.score).toBeCloseTo(90 * 0.99 + unknownQuality("backing", cause) * 0.01, 6);
@@ -1031,13 +1010,15 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
   });
 
   it.each([0, 25, 34, 35, 50])("retains weak measured parent quality %s below unknown", (parentBackingScore) => {
-    const result = evaluateV9ReserveExposures(missingReserveAsset({
-      parentAssetId: "parent",
-      parentBackingScore,
-      weight: 1,
-      tier: "wrapped",
-      failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
-    }), V9_CANDIDATE_POLICY_V1);
+    const result = evaluateV9ReserveExposures({
+      ...asset([exposure({
+        key: "parent", weight: 1, assetClass: "stablecoin", trackedAssetId: "parent", provenance: "live",
+      })]),
+      inheritedStablecoinBacking: {
+        parentAssetId: "parent", parentBackingScore, weight: 1,
+        tier: "wrapped", failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
+      },
+    }, V9_CANDIDATE_POLICY_V1);
     expect(result.score).toBeCloseTo(parentBackingScore, 6);
     expect(result.contributions).toContainEqual(expect.objectContaining({
       componentKey: "reserve:inherited-backing:parent", score: parentBackingScore,

@@ -994,8 +994,11 @@ describe("Safety Score v9 fact evaluation", () => {
     expect(child.trace.partialEvidence?.causes).toContain("A");
     expect(child.trace.partialEvidence?.causeGapIds).toContain(producerGap.gapId);
   });
-  it("inherits verified live wrapper backing monotonically without escaping the parent cap", () => {
-    const evaluateWithParentQuality = (quality: "adequate" | "strong", parentWeight = 1) => {
+  it("inherits admitted parent claims monotonically but prices parent-denominated strategies independently", () => {
+    const evaluateWithParentQuality = (
+      quality: "adequate" | "strong", parentWeight = 1,
+      exposureClass: "stablecoin" | "protocol-position" = "stablecoin",
+    ) => {
       const input = coreFixture();
       const child = input.assets[1]! as unknown as V9AssetFactsV2;
       const parent = input.assets[2]! as unknown as V9AssetFactsV2;
@@ -1013,7 +1016,7 @@ describe("Safety Score v9 fact evaluation", () => {
           name: "Parent stablecoin",
           weight: parentWeight,
           trackedAssetId: parent.assetId,
-          assetClass: "protocol-position",
+          assetClass: exposureClass,
           issuerOrObligorKey: "asset:parent",
           riskFactors: ["counterparty"],
           liquidityHorizon: "immediate",
@@ -1069,6 +1072,7 @@ describe("Safety Score v9 fact evaluation", () => {
     const adequate = evaluateWithParentQuality("adequate");
     const strong = evaluateWithParentQuality("strong");
     const belowThreshold = evaluateWithParentQuality("strong", 0.98);
+    const strategy = evaluateWithParentQuality("strong", 1, "protocol-position");
     for (const result of [adequate, strong]) {
       expect(result.child.backing.score).toBeCloseTo(result.parent.backing.score!, 12);
       expect(result.child.backing.contributions).toContainEqual(
@@ -1088,6 +1092,10 @@ describe("Safety Score v9 fact evaluation", () => {
       ),
     ).toBe(false);
     expect(belowThreshold.child.backing.contributions.some((entry) => entry.source === "mechanism")).toBe(true);
+    expect(strategy.child.backing.contributions.some(entry =>
+      entry.componentKey.startsWith("reserve:inherited-backing:"))).toBe(false);
+    expect(strategy.child.backing.contributions.some(entry => entry.source === "mechanism")).toBe(true);
+    expect(strategy.child.backing.score!).toBeLessThan(strategy.parent.backing.score!);
   });
   it("deduplicates transitive physical-resource overlap in the capacity resolver", () => {
     const alpha = coreFixture().assets[0]! as unknown as V9AssetFactsV2;

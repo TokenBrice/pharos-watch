@@ -884,12 +884,13 @@ export function evaluateV9ReserveExposures(
   // Direct parent claims and complete lender books are separate admission
   // paths. A strategy's denomination cannot supply either missing proof.
   const inherited = asset.inheritedStablecoinBacking;
-  const eligible = inherited !== undefined && (asset.reserveExposures.length === 0 ||
-    verifiedLiveInheritedExposures(asset, inherited) !== undefined ||
-    verifiedLiveLenderBookExposures(asset, inherited, policy) !== undefined);
-  const inheritedReserve = eligible
-    ? inheritedStablecoinReserveEvaluation(asset, inherited, policy, gapIndex) : null;
-  return inheritedReserve ?? evaluateGenericV9ReserveExposures(asset, policy, gapIndex);
+  const exposures = inherited === undefined ? undefined
+    : verifiedLiveInheritedExposures(asset, inherited) ??
+      verifiedLiveLenderBookExposures(asset, inherited, policy);
+  if (inherited !== undefined && exposures !== undefined) {
+    return inheritedStablecoinReserveEvaluation(asset, inherited, policy, gapIndex, exposures);
+  }
+  return evaluateGenericV9ReserveExposures(asset, policy, gapIndex);
 }
 
 function evaluateGenericV9ReserveExposures(

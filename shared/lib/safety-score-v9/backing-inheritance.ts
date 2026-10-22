@@ -3,7 +3,7 @@ import { clampScore } from "../math";
 import { decimalSnap } from "./formula";
 import { evaluateV1019LenderBook, v1019LenderMarketQuality } from "./lender-book";
 import { lenderMarketKey } from "./lender-book-registry";
-import { resolveV9ReasonTreatment, unknownQuality } from "./policy";
+import { unknownQuality } from "./policy";
 import { gapsForV9Ids, type V9GapIndex } from "./gap-index";
 import { canonicalDomains, canonicalUniqueBy, compareText, uniqueSorted } from "./primitives";
 import {
@@ -75,23 +75,22 @@ export function inheritedStablecoinReserveEvaluation(
   inherited: V9InheritedStablecoinBacking,
   policy: V9BackingEvaluationPolicy,
   gapIndex: V9GapIndex,
-): ReserveEvaluation | null {
+  liveExposures: readonly V9ReserveExposureFactV2[],
+): ReserveEvaluation {
   const backing = backingPolicy(policy);
   const weight = Math.max(0, Math.min(1, inherited.weight));
   const lenderEvaluation = asset.lenderBook === undefined || asset.lenderBook.observation?.assetId !== asset.assetId ? null
     : evaluateV1019LenderBook(asset.lenderBook, inherited.parentBackingScore, policy);
   const inheritedQuality = lenderEvaluation?.reserveQuality ?? clampScore(inherited.parentBackingScore);
-  const liveExposures = verifiedLiveInheritedExposures(asset, inherited) ??
-    (lenderEvaluation === null ? undefined : verifiedLiveParentDenominatedExposures(asset, inherited));
   const evidenceRefIds = uniqueSorted([
     ...asset.reserveStatus.evidenceRefIds,
-    ...(liveExposures?.flatMap(exposure => exposure.status.evidenceRefIds) ?? []),
+    ...liveExposures.flatMap(exposure => exposure.status.evidenceRefIds),
     ...(asset.lenderBook?.status.evidenceRefIds ?? []),
   ]);
   const failureDomains = canonicalDomains(inherited.failureDomains);
   const componentKey = `reserve:inherited-backing:${inherited.parentAssetId}`;
-  const observationState = liveExposures === undefined ? "bounded-unknown" : "known";
-  const provenance = liveExposures === undefined ? null : "live";
+  const observationState = "known";
+  const provenance = "live";
   const reserveGapAttributions = [
     ...canonicalUniqueBy(
       gapsForV9Ids(gapIndex, asset.reserveStatus.gapIds).map((gap) => ({
@@ -241,26 +240,7 @@ export function inheritedStablecoinReserveEvaluation(
       },
     ],
     structuralReasons: [],
-    unresolved:
-      liveExposures === undefined
-        ? (reserveGapAttributions.length > 0
-            ? reserveGapAttributions
-            : [undefined]
-          ).map((attribution) => ({
-            code: "partial-reserve-review",
-            pathKey: componentKey,
-            gapIds: [],
-            treatment: resolveV9ReasonTreatment(policy, "partial-reserve-review", attribution?.cause ?? "U").treatment,
-            ...(attribution === undefined
-              ? {}
-              : {
-                  responsibility: attribution.responsibility,
-                  causalKey: attribution.causalKey,
-                  cause: attribution.cause,
-                  causeGapIds: attribution.causeGapIds,
-                }),
-          }))
-        : [],
+    unresolved: [],
     rateability: "rateable",
   };
 }
