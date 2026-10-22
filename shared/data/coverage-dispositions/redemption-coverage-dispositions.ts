@@ -403,18 +403,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceUrls: ["https://uusd.ai/", "https://github.com/uusdai/uusd"],
     allowedRouteFamilyIfProven: null,
   }),
-  reviewedOn("2026-10-07", {
-    id: "vcred-vcred",
-    disposition: "needs-research",
-    reasonCode: "route-status-unverified",
-    blocker:
-      "vCred's current site labels the token staking product as coming soon and publishes no redeem or withdraw terms.",
-    rationale: "The staking product still says Coming soon; a Hemi token identity or vault NAV flag cannot establish launched withdrawal mechanics or a numeric redemption bound.",
-    evidenceNeeded:
-      "Live vault contracts and official deposit, redeem, cooldown, fee, capacity, and status documentation.",
-    evidenceUrls: ["https://vcred.trade/"],
-    allowedRouteFamilyIfProven: null,
-  }),
   reviewedOn("2026-10-01", {
     id: "zeusd-zoth",
     disposition: "hard-reject",

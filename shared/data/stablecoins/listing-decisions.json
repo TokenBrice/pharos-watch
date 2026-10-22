@@ -381,7 +381,7 @@
     "money-defi-money": "core-stablecoin",
     "cdxusd-cod3x": "core-stablecoin",
     "cdp-enosys": "core-stablecoin",
-    "vcred-vcred": "stable-value-investment",
+    "vcred-vcred": "excluded",
     "susd-hedgecore": "core-stablecoin",
     "iusd-indigo-protocol": "core-stablecoin",
     "luausd-lumi-finance": "cash-equivalent",

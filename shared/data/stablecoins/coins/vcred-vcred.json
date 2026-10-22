@@ -2,6 +2,15 @@
   "id": "vcred-vcred",
   "name": "VCRED",
   "symbol": "VCRED",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-10-22",
+    "reason": "Owner-approved scope delisting: no substantiated stable-value claim or collateral/reserve evidence; owner minting only. No admissible price since 2026-09-07: CoinGecko stale, no tickers; only material pool ~$16k, below $50k floor. Not a death finding.",
+    "source": {
+      "label": "Verified Hemi VCRED contract source",
+      "url": "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1"
+    }
+  },
   "oneLiner": "VCRED's Hemi source declares a USD peg, but backing and redemption are unverified; its linked website describes an AI/perp-vault access product.",
   "flags": {
     "backing": "crypto-backed",
@@ -31,26 +40,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "unknown",
   "governanceQuality": "multisig",
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "vcred-vcred",
-    "display": {
-      "url": "https://vcred.trade/",
-      "label": "vCRED"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "hemi",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "rpcUrl": "https://rpc.hemi.network/rpc"
-    }
-  },
   "implementationLaunchDate": "2025-05-19",
   "mechanismArchetypeReview": {
     "disposition": "unresolved",
@@ -76,7 +65,7 @@
     {
       "type": "warning",
       "title": "Identity and stablecoin mechanism unresolved",
-      "message": "Reviewed 2026-10-02 UTC: the exact Hemi contract source declares a USD peg but contains no redemption payout or collateral mechanism. The linked website describes a portfolio-access token and AI/perp vaults without an exact-contract identity join. The credit-fund archetype and onchain-custody claim have been withdrawn; this is not a delisting decision."
+      "message": "The 2026-10-02 exact-token review found a declared USD peg but no redemption payout or collateral mechanism, while the linked website described portfolio access without an exact-contract identity join. On 2026-10-22, the owner approved scope delisting because a substantiated stable-value holder claim and collateral/reserve evidence remained unestablished. The profile and prior research are retained read-only; this is not a cemetery or death entry."
     }
   ]
 }

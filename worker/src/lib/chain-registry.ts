@@ -221,8 +221,8 @@ function publicRegistryEndpoints(...urls: readonly (string | undefined)[]): RpcE
 // `arc` is public-only for the Dwellir provider-parity observation lane
 // (`observe-rpc-provider-parity`), which compares Dwellir against the chain's
 // first registry operator.
-// `hemi` is public-only for vcred-vcred's reviewed on-chain circulating-supply
-// probe over its single tracked Hemi deployment.
+// Hemi retains public-only RPC capability for historical contract research;
+// registry capability does not authorize collection for delisted assets.
 const PUBLIC_ONLY_EVM_CHAINS = ["tempo", "plasma", "plume", "monad", "mantle", "morph-l2", "abcore", "xlayer", "sonic", "etherlink", "arc", "hemi", "robinhood"] as const;
 const PUBLIC_ONLY_OTHER_CHAINS = ["movement"] as const;
 const SOLANA_PUBLIC_RPC_CHAIN_ID = "solana";

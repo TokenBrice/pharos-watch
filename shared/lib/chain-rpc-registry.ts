@@ -56,9 +56,8 @@ export const PUBLIC_RPC_URLS: Readonly<Record<string, string>> = {
   // Arc (Circle's L1) — required by the Dwellir provider-parity observation
   // lane, which reads the chain's first registry operator as its baseline.
   arc: "https://rpc.mainnet.arc.io",
-  // Hemi — required by vcred-vcred's reviewed on-chain circulating-supply probe
-  // (its only tracked deployment). Same reviewed public endpoint as the coin's
-  // liveReservesConfig; dRPC serves as an independent second operator below.
+  // Hemi — retained for read-only historical contract research after VCRED's
+  // scope delisting; dRPC remains an independent second operator below.
   hemi: "https://rpc.hemi.network/rpc",
 };
 
