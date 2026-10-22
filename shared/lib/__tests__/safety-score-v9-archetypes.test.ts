@@ -813,7 +813,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
 
     expect(result.rateability).toBe("rateable");
     expect(result.unresolved).toContainEqual(expect.objectContaining({
-      code: "critical-unresolved", treatment: "pillar", cause: "U",
+      code: "critical-unresolved", treatment: "diagnostic", cause: "U",
     }));
     expect(result.contributions.find(row => row.componentKey === "mechanism:claim-and-segregation")!.score).toBe(unknownQuality("backing", "U"));
   });

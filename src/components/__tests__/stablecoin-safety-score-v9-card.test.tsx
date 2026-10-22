@@ -42,7 +42,7 @@ describe("StablecoinSafetyScoreV9Card", () => {
     const bindingCap = {
       kind: "track-record",
       limit: 84,
-      source: "structural" as const,
+      source: "track-record" as const,
       reason: "Less than two years of implementation history.",
       binding: true,
     };
@@ -126,7 +126,7 @@ describe("StablecoinSafetyScoreV9Card", () => {
         { key: "capacity", label: "Capacity", score: 78, weight: 0.25, effectiveScoringWeight: 0.25, weightedContribution: 19.5, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
         { key: "outputAssetQuality", label: "Output asset quality", score: 92, weight: 0.15, effectiveScoringWeight: 0.15, weightedContribution: 13.8, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
         { key: "cost", label: "Cost", score: 81, weight: 0.1, effectiveScoringWeight: 0.1, weightedContribution: 8.1, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
-      ].reduce((sum, component) => sum + component.weightedContribution, 0), eligibilityMultiplier: 1,
+      ].reduce((sum, component) => sum + component.weightedContribution, 0),
       capsApplied: [], },
       diversification: null,
       alternatives: [{ key: "dex:curve", routeId: "curve", lane: "dex", label: "Curve liquidity", routeFamily: "dex-amm", score: 77, included: true, exclusionReason: null, confidenceDimensions: null, capacityEvidenceTier: 'unknown' as const, rawSameNotionalCostBps: null, }],

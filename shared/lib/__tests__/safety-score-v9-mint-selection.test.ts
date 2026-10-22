@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { evaluateV9EconomicControl } from "../safety-score-v9/control";
+import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import {
   makeDeploymentControl as control,
   makeEconomicControlArgs as args,
@@ -9,6 +10,8 @@ import {
   makeOperationalIssuanceProcess,
   makeCompiledVotingControl,
 } from "./safety-score-v9-fixtures.test-support";
+
+const AUTHORITY_LADDER = V9_CANDIDATE_POLICY_V1.policy.semantic.control.authorityLadder;
 
 describe("V9 mint inventory selection", () => {
   it("selects the worst material path, not an immaterial linked deployment", () => {
@@ -73,15 +76,27 @@ describe("V9 mint inventory selection", () => {
     const evaluate = (controls: typeof minter[]) => evaluateV9EconomicControl(args({
       facts: facts(controls), mint: makeReviewedMintInput(minter.controlKey),
     }));
-    expect(evaluate([minter, bridge]).components.find((row) => row.kind === "mint"))
-      .toEqual(evaluate([minter]).components.find((row) => row.kind === "mint"));
-    expect(evaluate([minter, bridge]).score).toBe(evaluate([minter]).score);
+    const standalone = evaluate([minter]);
+    const combined = evaluate([minter, bridge]);
+    expect(combined.components.find((row) => row.componentKey === "mint"))
+      .toEqual(standalone.components.find((row) => row.componentKey === "mint"));
+    expect(combined.components).toContainEqual(expect.objectContaining({
+      componentKey: `mint:bridge:${bridge.controlKey}`, controlKeys: [bridge.controlKey], binding: true,
+    }));
+    expect(combined.score).toBe(standalone.score);
+    const unilateralBridge = { ...bridge,
+      authority: { authorityKey: "bridge:unilateral", model: "eoa" as const, threshold: null },
+    };
+    const weakerBridge = evaluate([minter, unilateralBridge]);
+    expect(weakerBridge.components.find((row) => row.componentKey === "mint"))
+      .toEqual(standalone.components.find((row) => row.componentKey === "mint"));
+    expect(weakerBridge.score).toBe(AUTHORITY_LADDER.singleSigner);
   });
 });
 
-describe("H mint inventory selection", () => {
+describe("economic authority inventory selection", () => {
   it.each(["not-applicable", "none", "unknown", "internal-ledger"] as const)(
-    "does not let a qualified 55/60/70 native row hide an adverse path with %s reconciliation", (reconciliation) => {
+    "keeps the weakest effective native topology with %s reconciliation", (reconciliation) => {
       const ref = "ethereum:0x1234567890123456789012345678901234567890";
       const operational = control("mint:operational", "mint", {
         authority: { authorityKey: ref, model: "governance", threshold: null },
@@ -101,18 +116,20 @@ describe("H mint inventory selection", () => {
       const discretionary = { ...operational, controlKey: "mint:council", issuanceProcess: undefined, issuanceGovernance: undefined };
       const bridge = control("bridge:external", "bridge", { capabilities: ["mint", "bridge-mint"],
         capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded" });
-      for (const [qualified, posture, score] of [
-        [operational, "unbounded-operationally-governed", 55],
-        [governed, "unbounded-governed", 60],
-        [vetoGuarded, "unbounded-veto-guarded", 70],
+      for (const [qualified, score] of [
+        [operational, AUTHORITY_LADDER.opaqueController],
+        [governed, AUTHORITY_LADDER.governanceTimelock],
+        [vetoGuarded, AUTHORITY_LADDER.governanceTimelock],
       ] as const) {
         const mint = makeReviewedMintInput(qualified.controlKey, { reconciliation, supervision: "none" });
         const positive = evaluateV9EconomicControl(args({ facts: facts([qualified, bridge]), mint }));
-        expect(positive.components.find((component) => component.kind === "mint")).toMatchObject({ posture, score });
+        expect(positive.components.find((component) => component.componentKey === "mint")).toMatchObject({
+          score, controlKeys: [qualified.controlKey],
+        });
         for (const controls of [[qualified, discretionary, bridge], [bridge, discretionary, qualified]]) {
           const result = evaluateV9EconomicControl(args({ facts: facts(controls), mint }));
           expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
-            posture: "unbounded-adverse", score: 25, controlKeys: [discretionary.controlKey],
+            score: AUTHORITY_LADDER.opaqueController, controlKeys: [discretionary.controlKey],
           });
           expect(result.structuralFailures).toContainEqual(expect.objectContaining({
             kind: "centralized-mint", severity: "high", controlKeys: [discretionary.controlKey],
@@ -122,7 +139,7 @@ describe("H mint inventory selection", () => {
     },
   );
 
-  it("keeps adverse native ties canonical and prefers binding global rows over deployment-local ties", () => {
+  it("keeps unbounded native ties canonical and prefers binding global rows over deployment-local ties", () => {
     const first = control("mint:a", "mint", {
       capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
     });
@@ -134,7 +151,7 @@ describe("H mint inventory selection", () => {
         mint: makeReviewedMintInput(second.controlKey, { reconciliation: "unknown", supervision: "none" }),
       }));
       expect(result.components.find((component) => component.componentKey === "mint")).toMatchObject({
-        posture: "unbounded-adverse", score: 25, binding: true, controlKeys: [first.controlKey],
+        score: AUTHORITY_LADDER.quorum, binding: true, controlKeys: [first.controlKey],
       });
       expect(result.components).toContainEqual(expect.objectContaining({
         componentKey: `mint:deployment:${local.controlKey}`, binding: false, controlKeys: [local.controlKey],

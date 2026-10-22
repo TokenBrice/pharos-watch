@@ -40,6 +40,9 @@ function roleCohort(role: V9DependencyEconomicRole, nonBinding = false, unknownT
     control.capSemantics = { kind: "unbounded", bound: null };
     control.claimImpairment = "unbounded";
     control.authority = { authorityKey: `issuer:${asset.assetId}`, model: "eoa", threshold: null };
+    // Unbounded potential power alone is not a realized authority failure.
+    // This cohort deliberately exercises the active-compromise rung.
+    control.incidentState = "active";
     asset.controls = [control];
     asset.economicControlReview.mint = { status: knownStatus(), controlKey: control.controlKey,
       reconciliation: "none", supervision: "none", latestResolvedIncidentAtSec: null,

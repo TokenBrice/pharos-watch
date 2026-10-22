@@ -355,6 +355,7 @@ describe("unresolved deployment share pricing", () => {
     expect(compromised.control.score).toBe(healthy.control.score);
     const global = scenario("active", true).result;
     expect(global.control.score).toBeLessThan(healthy.control.score!);
-    expect(global.trace.caps).toContainEqual(expect.objectContaining({ kind: "signal:active-control-incident:critical" }));
+    expect(global.control.score).toBe(25);
+    expect(global.trace.caps).not.toContainEqual(expect.objectContaining({ kind: "signal:active-control-incident:critical" }));
   });
 });

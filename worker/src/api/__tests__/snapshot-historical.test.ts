@@ -118,4 +118,18 @@ describe("historical snapshot recorded safety contracts", () => {
     const corrupt = snapshotRow(badScore);
     expect((await handleSnapshotDay(database(corrupt.row), badScore.snapshotDate)).status).toBe(500);
   });
+
+  it.each(["wrapper-discount", "route-eligibility"] as const)("validates recorded %s arithmetic without applying the simplified live model", async mutation => {
+    const envelope = structuredClone(historicalSnapshot);
+    const card = envelope.reportCards.cards[0]!;
+    if (mutation === "wrapper-discount") {
+      if (card.scoreTrace.wrapperParentLimit === null) throw new Error("Historical wrapper fixture is required");
+      card.scoreTrace.wrapperParentLimit.localRiskDiscount += 1;
+    } else {
+      if (card.breakdowns.exit.primaryRoute === null) throw new Error("Historical route fixture is required");
+      card.breakdowns.exit.primaryRoute.eligibilityMultiplier = 0;
+    }
+    const { row } = snapshotRow(envelope);
+    expect((await handleSnapshotDay(database(row), envelope.snapshotDate)).status).toBe(500);
+  });
 });

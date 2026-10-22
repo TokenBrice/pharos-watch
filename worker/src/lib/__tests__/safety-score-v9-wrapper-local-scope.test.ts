@@ -560,14 +560,12 @@ const unknownConfigurationControl = () => localControl({
 });
 
 describe("wrapper-local loss absorption and custody scope", () => {
-  it("prices known risk-absorption controls at the moderate holder-loss floor without parent credit", () => {
+  it("retains known risk-absorption controls as evidence without parent credit", () => {
     const fixture = wrapperFixture("risk-absorption");
     fixture.wrapper.controlReview = { state: "reviewed-controls", controls: [slashingControl()] };
     const { facts, card } = compile(fixture);
     expect(facts.facts.lossAbsorptionEmergencyControls).toMatchObject({ disposition: "reviewed", assessment: "moderate" });
     expect(facts.facts.lossAbsorptionEmergencyControls.signals).toContain("wrapper-holder-bears-protocol-loss-absorption");
-    expect(card.trace.wrapperParentLimit).toMatchObject({ riskTransfer: { requestedCredit: 0, appliedCredit: 0 } });
-    expect(card.trace.wrapperParentLimit?.adjustments).toContainEqual(expect.objectContaining({ factKey: "lossAbsorptionEmergencyControls", assessment: "moderate", discountPoints: 1.4 }));
     expect(card.trace.wrapperParentLimit!.limit).toBeLessThanOrEqual(card.trace.wrapperParentLimit!.parentScore);
   });
 
@@ -607,9 +605,6 @@ describe("wrapper-local loss absorption and custody scope", () => {
       fixture.wrapper.controlReview = { state: "reviewed-controls", controls: [inherited] };
       const parentOnly = compile(fixture);
       expect(parentOnly.facts.facts.lossAbsorptionEmergencyControls.assessment).toBeNull();
-      expect(parentOnly.card.trace.wrapperParentLimit?.adjustments).not.toContainEqual(
-        expect.objectContaining({ factKey: "lossAbsorptionEmergencyControls", discountPoints: 2.8 }),
-      );
 
       fixture.wrapper.controlReview.controls.push(localControl({
         controlKey: "wrapper:emergency",
@@ -623,9 +618,7 @@ describe("wrapper-local loss absorption and custody scope", () => {
       });
       expect(local.facts.facts.lossAbsorptionEmergencyControls.signals).toContain("unbounded-claim-control:wrapper:emergency");
       expect(local.facts.facts.lossAbsorptionEmergencyControls.signals).not.toContain("unbounded-claim-control:parent:gateway");
-      expect(local.card.trace.wrapperParentLimit?.adjustments).toContainEqual(
-        expect.objectContaining({ factKey: "lossAbsorptionEmergencyControls", discountPoints: 2.8 }),
-      );
+      expect(local.card.trace.wrapperParentLimit?.appliedDiscount).toBe(parentOnly.card.trace.wrapperParentLimit?.appliedDiscount);
     },
   );
 
@@ -646,9 +639,7 @@ describe("wrapper-local loss absorption and custody scope", () => {
       }));
       expect(facts.facts.measuredUnwind.assessment).toBeNull();
       expect(facts.facts.measuredUnwind.disposition).not.toBe("reviewed");
-      expect(card.trace.wrapperParentLimit?.adjustments).not.toContainEqual(
-        expect.objectContaining({ factKey: "measuredUnwind", assessment: "moderate" }),
-      );
+      expect(card.trace.wrapperParentLimit?.missingFacts).toContainEqual(expect.objectContaining({ factClass: "measuredUnwind" }));
     },
   );
 
@@ -672,7 +663,7 @@ describe("wrapper-local loss absorption and custody scope", () => {
     });
   });
 
-  it("retains the charge for a genuinely observed exact-complete partial unwind", () => {
+  it("retains a genuinely observed exact-complete partial unwind as evidence", () => {
     const fixture = wrapperFixture("strategy-vault");
     const { facts, card } = compile(fixture, (route) => ({
       ...route, scoreEligible: true, coverageClass: "exact-complete",
@@ -681,9 +672,7 @@ describe("wrapper-local loss absorption and custody scope", () => {
       })),
     }));
     expect(facts.facts.measuredUnwind).toMatchObject({ disposition: "reviewed", assessment: "moderate" });
-    expect(card.trace.wrapperParentLimit?.adjustments).toContainEqual(
-      expect.objectContaining({ factKey: "measuredUnwind", assessment: "moderate", discountPoints: 1.75 }),
-    );
+    expect(card.trace.wrapperParentLimit?.missingFacts).not.toContainEqual(expect.objectContaining({ factClass: "measuredUnwind" }));
   });
 
   it.each(["same-terms", "queued-terms"] as const)(
@@ -803,11 +792,9 @@ describe("wrapper-local loss absorption and custody scope", () => {
     expect(facts.facts.withdrawalTerms).toMatchObject({ disposition: "reviewed", assessment: "high" });
     expect(card.exit.routes.find((route) => route.routeKey === redemption.routeKey)).toMatchObject({
       included: true, exclusionReason: null, feeEvidence: "disclosed-unquantified",
-      components: { cost: V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedCostScore },
+      components: { cost: V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit.U },
     });
-    expect(card.trace.wrapperParentLimit?.adjustments).not.toContainEqual(
-      expect.objectContaining({ factKey: "withdrawalTerms", disposition: "issuer-undisclosed" }),
-    );
+    expect(card.trace.wrapperParentLimit?.missingFacts).not.toContainEqual(expect.objectContaining({ factClass: "withdrawalTerms", disposition: "issuer-undisclosed" }));
   });
 
   it.each(["discretionary", "queued"] as const)(
@@ -835,8 +822,6 @@ describe("wrapper-local loss absorption and custody scope", () => {
       });
       const before = quantified.card.trace.wrapperParentLimit!;
       const after = unquantified.card.trace.wrapperParentLimit!;
-      expect(after.adjustments.find((adjustment) => adjustment.factKey === "withdrawalTerms"))
-        .toEqual(before.adjustments.find((adjustment) => adjustment.factKey === "withdrawalTerms"));
       expect(after.appliedDiscount).toBe(before.appliedDiscount);
       expect(after.limit).toBe(before.limit);
     },
@@ -874,7 +859,6 @@ describe("wrapper-local loss absorption and custody scope", () => {
     fixture.wrapper.wrapperCustodyReview!.knownUnknownExposureShare = 0;
     const after = compile(fixture);
     expect(before.facts.facts.strategyComplexity).toMatchObject({ disposition: "reviewed", assessment: "moderate" });
-    expect(before.card.trace.wrapperParentLimit?.adjustments).toContainEqual(expect.objectContaining({ factKey: "strategyComplexity", assessment: "moderate", discountPoints: 0.7 }));
     expect(before.card.trace.wrapperParentLimit?.parentScore).toBe(after.card.trace.wrapperParentLimit?.parentScore);
     expect(before.card.trace.wrapperParentLimit?.limit).toBe(after.card.trace.wrapperParentLimit?.limit);
     expect(before.card.trace.wrapperParentLimit!.limit).toBeLessThanOrEqual(before.card.trace.wrapperParentLimit!.parentScore);
@@ -897,7 +881,7 @@ describe("wrapper-local loss absorption and custody scope", () => {
       }
       const { facts, card } = compile(fixture);
       expect(facts.facts.strategyComplexity).toMatchObject({ disposition: "reviewed", assessment: "high" });
-      expect(card.trace.wrapperParentLimit?.adjustments).toContainEqual(expect.objectContaining({ factKey: "strategyComplexity", assessment: "high", discountPoints: 1.4 }));
+      expect(card.trace.wrapperParentLimit?.appliedDiscount).toBe(10);
     },
   );
   it("carries the reviewed catalog inheritance boundary and its source evidence into published wrapper facts", () => {
@@ -936,11 +920,7 @@ describe("wrapper-local loss absorption and custody scope", () => {
     const external = compile(fixture);
     expect(privileged.facts.facts.shareAccountingNavOracle).toMatchObject({ disposition: "reviewed", assessment: "high" });
     expect(external.facts.facts.shareAccountingNavOracle).toMatchObject({ disposition: "reviewed", assessment: "moderate" });
-    const privilegedDiscount = privileged.card.trace.wrapperParentLimit!.adjustments
-      .find((adjustment) => adjustment.factKey === "shareAccountingNavOracle")!.discountPoints;
-    const externalDiscount = external.card.trace.wrapperParentLimit!.adjustments
-      .find((adjustment) => adjustment.factKey === "shareAccountingNavOracle")!.discountPoints;
-    expect(privilegedDiscount).toBeGreaterThan(externalDiscount);
+    expect(privileged.card.trace.wrapperParentLimit?.appliedDiscount).toBe(external.card.trace.wrapperParentLimit?.appliedDiscount);
   });
 
   it.each(["complete-custody", "current-allocation"] as const)(
@@ -984,7 +964,8 @@ describe("wrapper-local loss absorption and custody scope", () => {
         factClass: "custodyEscrow", disposition: "unresearched", cause: "U",
         causeGapIds: ["alpha:gap:wrapper-local:custodyEscrow"],
       }));
-      expect(card.trace.wrapperParentLimit!.treatment).toBe("fallback-discount");
+      expect(card.trace.wrapperParentLimit!.appliedDiscount)
+        .toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.formula.wrapperStrategyCap.staked);
     },
   );
 });

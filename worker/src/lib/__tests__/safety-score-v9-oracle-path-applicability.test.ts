@@ -161,7 +161,7 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     expect(trace.caps.map((cap) => cap.kind)).not.toContain("reason:unresolved-oracle-branch-applicability");
   });
 
-  it("charges opaque topology as bounded issuer uncertainty, never measured danger", () => {
+  it("prices unresolved opaque topology without measured danger and retains its scoped gap", () => {
     const profile = internalPriceMeta().oracleRisk!;
     profile.tier = "opaque-or-unknown";
     profile.paths = [path("opaque-minter", "top-level-only", "0x4444444444444444444444444444444444444444")];
@@ -173,7 +173,8 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     expect(trace.adverseAttribution.filter((item) => item.path.startsWith("structural:weak-oracle-branch"))).toEqual([]);
     expect(trace.finalGrade).not.toBe("F");
     expect(trace.unresolvedFacts).toContainEqual(expect.objectContaining({
-      code: "oracle-topology-undisclosed", responsibility: "unresearched", cause: "U",
+      sourceGapId: "alpha:gap:economic-control:oracle::tier",
+      responsibility: "unresearched", cause: "U", scoringDisposition: "bounded-uncertainty",
     }));
     expect(trace.caps.filter((cap) => cap.kind.startsWith("signal:weak-oracle-branch"))).toEqual([]);
   });
@@ -436,10 +437,8 @@ describe("admitted Morpho share-accounting oracle exception", { timeout: V9_EVAL
       const observations = JSON.parse(readFileSync(process.env.PHAROS_ORACLE_SMOKE_METADATA!, "utf8")) as
         Record<string, { metadata: { lenderBookObservation: LenderBookObservation } }>;
       const admitted = Object.keys(observations).sort().map(assetId => ({ assetId }));
-      const quality = {
-        ...V9_CANDIDATE_POLICY_V1.policy.semantic.control.oracleTierQuality,
-        "opaque-or-unknown": unknownQuality("control", "U"),
-      };
+      const quality = (tier: OracleRiskProfile["tier"]): number => tier === "opaque-or-unknown"
+        ? unknownQuality("control", undefined) : V9_CANDIDATE_POLICY_V1.policy.semantic.control.oracleTierQuality[tier];
       const changes: { assetId: string; baseline: OracleRiskProfile["tier"] | null; candidate: OracleRiskProfile["tier"] | null }[] = [];
       let admittedBooks = 0;
       let fallbackDiagnostics = 0;
@@ -461,7 +460,7 @@ describe("admitted Morpho share-accounting oracle exception", { timeout: V9_EVAL
         else {
           expect(candidate.tier, asset.assetId).not.toBeNull();
           if (baseline.tier !== "opaque-or-unknown") {
-            expect(quality[candidate.tier!], asset.assetId).toBeGreaterThanOrEqual(quality[baseline.tier]);
+            expect(quality(candidate.tier!), asset.assetId).toBeGreaterThanOrEqual(quality(baseline.tier));
           }
           if (baseline.tier !== "single-source-or-laggy") expect(candidate.tier, asset.assetId).not.toBe("single-source-or-laggy");
         }

@@ -192,7 +192,7 @@ describe("Safety Score v9 methodology policy", () => {
     ["allocation leverage assessment", (policy) => { policy.semantic.formula.wrapperAllocationScope.leverageAssessments["bounded-up-to-1.5x"] = "high"; }],
     ["allocation custody assessment", (policy) => { policy.semantic.formula.wrapperAllocationScope.custodyAssessments["unsegregated"] = "critical"; }],
     ["bounded liquid age", (policy) => { policy.semantic.backing.reserve.boundedFacts.currentLiquidFractionMaxAgeSec += 1; }],
-    ["bounded observed maturity quality", (policy) => { policy.semantic.backing.reserve.boundedFacts.observedMaturityQualityLevel = "adequate"; }],
+    ["bounded observed maturity quality", (policy) => { policy.semantic.backing.reserve.boundedFacts.observedMaturityQualityLevel = "weak"; }],
     ["bounded current availability quality", (policy) => { policy.semantic.backing.reserve.boundedFacts.currentAvailabilityQualityLevel = "adequate"; policy.semantic.backing.reserve.liquidityQuality["seven-days"] = 90; }],
   ];
   const evidenceExpiry = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry;
@@ -421,9 +421,9 @@ describe("Safety Score v9 methodology policy", () => {
     expect(() => assertV9UnresolvedFactsMatchPolicy(forgedPolicy, [])).toThrow(/loadV9MethodologyPolicy/);
   });
 
-  it("keeps exactly the four whole-score ceiling families", () => {
+  it("keeps exactly the five whole-score ceiling families", () => {
     expect(new Set(V9_CANDIDATE_POLICY_V1.policy.semantic.formula.capTiePriority)).toEqual(
-      new Set(["active-depeg", "parent", "track-record", "realized-holder-loss"]),
+      new Set(["active-depeg", "parent", "track-record", "realized-holder-loss", "speculative-credit"]),
     );
   });
 });

@@ -984,18 +984,23 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
     expect(result.unresolved).toEqual([]);
   });
 
-  it("keeps sub-1 residual at the bounded-unknown quality", () => {
-    const result = evaluateV9ReserveExposures(
-      missingReserveAsset({
+  it.each(["C", "U"] as const)("prices a sub-1 residual by its admitted %s cause", (cause) => {
+    const input = missingReserveAsset({
         parentAssetId: "parent",
         parentBackingScore: 90,
         weight: 0.99,
         tier: "pure",
         failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
-      }),
+      });
+    const gap = { ...factorGap("reserve-composition", cause), gapId: input.reserveStatus.gapIds[0]! };
+    const result = evaluateV9ReserveExposures(
+      { ...input, gaps: [gap] },
       V9_CANDIDATE_POLICY_V1,
     );
-    expect(result.score).toBeCloseTo(90 * 0.99 + 50 * 0.01, 6);
+    expect(result.score).toBeCloseTo(90 * 0.99 + unknownQuality("backing", cause) * 0.01, 6);
+    const residual = result.contributions.flatMap(row => row.factors ?? []).find(row => row.componentKey.includes(":residual:"))!;
+    expect(residual).toMatchObject({ score: unknownQuality("backing", cause), cause });
+    expect(residual.normalizedWeight).toBeCloseTo(0.01, 12);
   });
 
   it.each([

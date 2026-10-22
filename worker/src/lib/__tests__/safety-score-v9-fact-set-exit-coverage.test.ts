@@ -79,9 +79,25 @@ describe("route compiler policy reuse", () => {
 describe("route evidence independent of sizing and status labels", () => {
   it("uses maximum stress with stale supply while preserving original evidence clocks", () => {
     const draft = structuredClone(queuedRedemptionFixedInput());
-    const supplyObservedAt = draft.clockSec - 100_000;
-    draft.aggregateCirculatingById.alpha!.observedAtSec = supplyObservedAt;
-    const observation = draft.redemptionBackstopMap.alpha!.capacityProfile!.exitRouteObservations![0]!;
+    const supplyObservedAt = draft.aggregateCirculatingById.alpha!.observedAtSec!;
+    draft.clockSec += 100_000;
+    draft.inputFreshness.dexLiquidity.ageSeconds =
+      draft.clockSec - draft.inputFreshness.dexLiquidity.updatedAt!;
+    draft.inputFreshness.dexLiquidity.stale = true;
+    draft.liquidityStale = true;
+    const row = draft.redemptionBackstopMap.alpha!;
+    row.updatedAt = draft.clockSec;
+    row.sourceTimestamp = draft.clockSec;
+    draft.inputFreshness.redemptionBackstops = {
+      updatedAt: draft.clockSec, ageSeconds: 0, stale: false,
+    };
+    const observation = row.capacityProfile!.exitRouteObservations![0]!;
+    observation.observedAt = draft.clockSec;
+    observation.freshnessSeconds = 0;
+    observation.capacityCurve!.push({
+      requestedNotionalUsd: 25_000_000, maxCostBps: 200,
+      executableUsd: 1_000_000, completionRatio: 0.04,
+    });
     const routeObservedAt = observation.observedAt;
     const fixed = rebuildFixed(draft);
     const reviewed = extension({ clockSec: fixed.clockSec, registryFingerprint: fixed.registryFingerprint });
@@ -97,6 +113,7 @@ describe("route evidence independent of sizing and status labels", () => {
     expect(selectV9ExitCirculatingUsd(supply)).toBeNull();
     expect(result.stressRequest?.requestedNotionalUsd).toBe(25_000_000);
     const route = built.exitRoutes.find((candidate) => candidate.lane === "redemption")!;
+    expect(result.routes.find((candidate) => candidate.routeKey === route.routeKey)?.included).toBe(true);
     expect(context.evidence.get(route.status.evidenceRefIds[0]!)?.observedAtSec).toBe(routeObservedAt);
     expect(fixed.aggregateCirculatingById.alpha!.observedAtSec).toBe(supplyObservedAt);
   });
@@ -206,9 +223,13 @@ describe("configured redemption channel census", () => {
           circulatingUsd: 10_000_000, portfolioFactStatus: compiled.exitStatus,
           gaps: [...context.gaps.values()], routes: compiled.exitRoutes.map(projectV9ExitEvaluationRoute),
         }, V9_CANDIDATE_POLICY_V1);
-        expect(evaluated.score).toBe(50);
-        expect(evaluated.reasons).toContain("missing-same-notional-route");
-        expect(evaluated.reasons).not.toContain("no-viable-exit-path");
+        expect(evaluated.score).toBe(scenario === "measured-zero-dex" ? 0 : 50);
+        if (scenario === "measured-zero-dex") {
+          expect(evaluated.reasons).toContain("no-viable-exit-path");
+        } else {
+          expect(evaluated.reasons).toContain("missing-same-notional-route");
+          expect(evaluated.reasons).not.toContain("no-viable-exit-path");
+        }
         expect(evaluated.routes.find((route) => route.routeKey === channel.routeKey)).toMatchObject({
           included: false, capacityPoint: null,
         });
@@ -297,7 +318,7 @@ describe("explicit route factor gaps and source chronology", () => {
     { factor: "cost", nonCanonical: false }, { factor: "cost", nonCanonical: true },
     { factor: "settlement", nonCanonical: false }, { factor: "settlement", nonCanonical: true },
     { factor: "capacity", nonCanonical: false }, { factor: "capacity", nonCanonical: true },
-  ] as const)("retains numeric $factor diagnostics without clearing its consumer gap (noncanonical: $nonCanonical)", ({ factor, nonCanonical }) => {
+  ] as const)("preserves the $factor gap and captured diagnostics (noncanonical: $nonCanonical)", ({ factor, nonCanonical }) => {
     const assetId = "usdc-circle";
     const row = makeSupplyFullRedemption({ stablecoinId: assetId, feeBps: 7 });
     if (nonCanonical) {
@@ -315,6 +336,7 @@ describe("explicit route factor gaps and source chronology", () => {
     draft.redemptionGenerationId = "redemption:explicit-missing-factors";
     draft.inputFreshness.redemptionBackstops = { updatedAt: draft.clockSec, ageSeconds: 0, stale: false };
     const fixed = rebuildFixed(draft);
+    const capturedCapacity = structuredClone(fixed.redemptionBackstopMap[assetId]!.capacityProfile);
     withRedemptionBackstopConfig(assetId, { v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap", missingScoringFields: [factor], reviewedAt: "2026-07-01",
       rationale: "The exact completion, cost or capacity bound has not been established.",
@@ -326,13 +348,20 @@ describe("explicit route factor gaps and source chronology", () => {
       const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
       const asset = compiled.assets[0]!;
       const route = asset.exitRoutes.find((candidate) => candidate.lane === "redemption")!;
-      expect(route.coverageClass).toBe("exact-lower-bound");
-      expect(route.capacityCurve.some((point) => point.executionCostBps === 7)).toBe(true);
+      if (factor === "capacity") {
+        expect(route).toMatchObject({
+          coverageClass: "diagnostic", status: { observationState: "missing" },
+          request: null, capacityCurve: [], scoreEligible: false,
+        });
+      } else {
+        expect(route.coverageClass).toBe("exact-lower-bound");
+        expect(route.capacityCurve.some((point) => point.executionCostBps === 7)).toBe(true);
+      }
+      expect(fixed.redemptionBackstopMap[assetId]!.capacityProfile).toEqual(capturedCapacity);
       expect(route.settlementSlaSec).toBe(0);
       expect(route.factorStatuses[factor]!.observationState).toBe("missing");
       const gap = asset.gaps.find((candidate) => route.factorStatuses[factor]!.gapIds.includes(candidate.gapId))!;
       expect(gap.causeScope).toMatchObject({ routeKey: route.routeKey, factorKey: factor, requiredDatum: factor });
-      expect(gap.gapId).toBe(`${assetId}:gap:exit-route:${route.routeKey}:${factor}`);
       if (factor === "cost" || factor === "settlement") {
         expect(gap.policyRuleId).toBe("v9.exit.reviewed-terms");
         expect(["C", "U"]).toContain(gap.causeProof.cause);
@@ -632,20 +661,22 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       settlementModel: "queued",
     });
 
-    // Unproven settlement remains a bounded C/U Exit floor; it is no longer a
-    // final-score named ceiling.
+    // A usable curve remains score-bearing; only its unproven settlement
+    // subfactor is unknown, and bounded recovery cannot exceed 70.
     const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
-    expect(evaluated.exit.score).toBe(50);
-    expect(evaluated.exit.reasons).toContain("unproven-settlement-bound");
+    expect(evaluated.exit.score).toBeGreaterThan(0);
+    expect(evaluated.exit.score).toBeLessThanOrEqual(70);
+    expect(evaluated.exit.routes.find((route) => route.routeKey === redemption.routeKey)).toMatchObject({
+      included: true, components: { settlement: 50 },
+    });
     expect(evaluated.exit.reasons).not.toContain("no-viable-exit-path");
     const settlementGapIds = redemption.factorStatuses!.settlement!.gapIds;
     expect(settlementGapIds).toHaveLength(1);
-    const reason = evaluated.scoreInput.pillars.exit.reasons.find(
-      (entry) => entry.code === "unproven-settlement-bound",
-    )!;
-    expect(reason.causeGapIds).toEqual(settlementGapIds);
-    expect(reason.sourceGapId).toBe(settlementGapIds[0]);
-    expect(reason.cause).toBe("U");
+    const trace = evaluated.exit.routes.find((route) => route.routeKey === redemption.routeKey)!;
+    expect(trace.factorContributions?.settlement).toMatchObject({
+      score: 50, causeGapIds: settlementGapIds, cause: "U",
+      scoringDisposition: "bounded-uncertainty",
+    });
   });
 
   it("withdraws producer eligibility when the v9 review has an unbounded settlement queue", () => {
@@ -1294,7 +1325,7 @@ describe("compiled Control causal minimum regressions", () => {
       const gap = asset.gaps.find((gap) => status.gapIds.includes(gap.gapId))!;
       expect(gap.causeScope).toMatchObject({ pillar: "control", componentKey: "economic-control:mint",
         factorKey: "reconciliation", requiredDatum: "reconciliation" });
-      expect(mint).toMatchObject({ score: 25, cause: "U", causeGapIds: [gap.gapId], scoringDisposition: "bounded-uncertainty" });
+      expect(mint).toMatchObject({ score: 50, cause: "U", causeGapIds: [gap.gapId], scoringDisposition: "bounded-uncertainty" });
     } else {
       expect(mint).toMatchObject({ cause: null, scoringDisposition: "included" });
     }

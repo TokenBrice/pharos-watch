@@ -207,10 +207,10 @@ describe("V9 safety consumer projections", () => {
 
   it("preserves evidence, weakest-pillar, binding-cap, and mint summaries in table rows", () => {
     const bindingCap = {
-      kind: "reason:missing-mint-authority",
+      kind: "parent",
       limit: 80,
-      source: "evidence" as const,
-      reason: "Mint control evidence is incomplete.",
+      source: "parent" as const,
+      reason: "The required parent limits the published score.",
       binding: true,
     };
     const card = makeV9Card({
@@ -218,8 +218,12 @@ describe("V9 safety consumer projections", () => {
       evidence: { level: "insufficient", freshness: "stale", reasons: [] },
       caps: [bindingCap],
       bindingCap,
+      dependencies: {
+        serial: [{ upstreamAssetId: "required-parent", score: 80, blocked: false, ratingStatus: "rated", partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [] }],
+        basket: [], cycleBlocked: false, reasonCodes: [],
+      },
     });
-    const response = makeReportCardsV9Response({ cards: [card] });
+    const response = makeReportCardsV9Response({ cards: [card, makeV9Card({ id: "required-parent" })] });
     const rows = buildV9SafetyTableRows(response, response.safetyScoreIdentity);
 
     expect(rows.status).toBe("available");

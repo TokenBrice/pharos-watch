@@ -102,7 +102,7 @@ describe("diagnostic report scope monotonicity", () => {
     const known = fragments.find(row => row.componentKey.endsWith(":trust:august"))!;
     const residual = fragments.find(row => row.componentKey.endsWith(":trust:august:unknown"))!;
     const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing;
-    expect([known.score, residual.score, residual.observationState]).toEqual([policy.componentQuality.strong, policy.boundedUnknownQuality, "bounded-unknown"]);
+    expect([known.score, residual.score, residual.observationState]).toEqual([policy.componentQuality.strong, V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.backing.U, "bounded-unknown"]);
     expect(known.normalizedWeight / residual.normalizedWeight).toBeCloseTo(1 / 3);
     expect(after.result.score!).toBeLessThan(backing(report).result.score!);
     expect(resolveReviewedReserveAdmission({ meta: meta(withBookJoin()), clockSec, liveReserveRows: [], fixedInput: input(partition) }).projected).toBeNull();

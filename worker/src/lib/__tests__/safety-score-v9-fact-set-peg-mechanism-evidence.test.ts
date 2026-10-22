@@ -437,7 +437,7 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
         .toContainEqual(expect.objectContaining({
           componentKey: "mechanism:assurance-and-reconciliation", observationState: "stale",
           cause: "U", scoringDisposition: "bounded-uncertainty",
-          score: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality,
+          score: V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.backing.U,
         }));
     }
   });

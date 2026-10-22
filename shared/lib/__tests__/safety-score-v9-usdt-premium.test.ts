@@ -74,9 +74,9 @@ function healthyInput(): V9ProductionScoreInput {
       sourceGenerations: { dex: "dex:1", reserves: "reserves:1" },
     },
     pillars: {
-      backing: pillar(95),
-      exit: pillar(95),
-      control: pillar(95, {
+      backing: pillar(75),
+      exit: pillar(75),
+      control: pillar(75, {
         structuralSignals: [signal("centralized-mint", "low")],
       }),
     },
@@ -94,36 +94,26 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
 
     expect(trace).toMatchObject({
       finalScore: 87,
-      inheritableScore: 83,
+      inheritableScore: 75,
       finalGrade: "A+",
-      preCapScore: 100,
-      bindingCap: {
-        source: "structural",
-        kind: "signal:centralized-mint:low",
-        limit: 87,
-      },
+      preCapScore: 87,
+      bindingCap: null,
       scoreAdjustments: [{
         source: "asset-premium",
         kind: "market-anchor-longevity",
         label: "#1 & Longevity Premium",
         configuredPoints: 12,
-        appliedPoints: 5,
-        scoreBefore: 95,
-        scoreAfter: 100,
-        publishedScoreBefore: 83,
+        appliedPoints: 12,
+        scoreBefore: 75,
+        scoreAfter: 87,
+        publishedScoreBefore: 75,
         publishedScoreAfter: 87,
-        capRelief: {
-          source: "structural",
-          kind: "signal:centralized-mint:low",
-          fromLimit: 83,
-          toLimit: 87,
-        },
       }],
     });
-    expect(projectV9DependencyScore(trace)).toBe(83);
+    expect(projectV9DependencyScore(trace)).toBe(75);
   });
 
-  it("handles the production rounding boundary while binding only the relieved cap", () => {
+  it("preserves own-score rounding while applying the premium without cap relief", () => {
     const input = healthyInput();
     input.pillars = {
       backing: pillar(74.7481),
@@ -144,18 +134,8 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
     });
     expect(trace.inheritableScore).toBe(83);
     expect(trace.finalScore).toBe(87);
-    expect(trace.bindingCap).toMatchObject({
-      source: "structural",
-      kind: "signal:centralized-mint:low",
-      limit: 87,
-    });
-    expect(trace.caps).toEqual([
-      expect.objectContaining({
-        kind: "signal:centralized-mint:low",
-        limit: 87,
-        binding: true,
-      }),
-    ]);
+    expect(trace.bindingCap).toBeNull();
+    expect(trace.caps).toEqual([]);
   });
 
   it("binds both the adjustment and non-inheritable score to the result identity", () => {
@@ -206,7 +186,7 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
         blockerCodes: ["issuerOpacity", "activeDepeg"],
       };
     }],
-    ["a different asset", (input: V9ProductionScoreInput) => { input.assetId = "usdc-circle"; }],
+    ["a different asset", (input: V9ProductionScoreInput) => { input.assetId = "non-premium-fixture"; }],
   ])("withholds the premium for %s", (_name, mutate) => {
     const input = healthyInput();
     mutate(input);
@@ -216,27 +196,19 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
     expect(trace.inheritableScore).toBe(trace.finalScore);
   });
 
-  it("keeps a competing structural cap fully binding", () => {
+  it("cannot bypass a realized holder-loss ceiling", () => {
     const input = healthyInput();
-    input.pillars.control = pillar(95, {
-      structuralSignals: [
-        signal("centralized-mint", "low"),
-        signal("unsafe-backing", "low"),
-      ],
-    });
+    input.identity.asOfSec = Date.parse("2026-02-01") / 1000;
+    input.realizedHolderLossEvents = [{
+      incidentId: "premium-holder-loss", assetId: input.assetId, scope: { kind: "holder-exit" },
+      occurredAt: "2026-01-01", realizedHolderLossPct: 2,
+      primarySources: [{ label: "Holder haircut", url: "https://example.com/haircut", publishedAt: "2026-01-01" }],
+      finding: "A mandatory holder haircut was executed.",
+    }];
     const trace = scoreV9EvaluatedAsset(input, V9_CANDIDATE_POLICY_V1);
-
     expect(trace.scoreAdjustments).toEqual([]);
-    expect(trace.bindingCap?.kind).toBe("signal:centralized-mint:low");
-    expect(trace.caps).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          kind: "signal:unsafe-backing:low",
-          limit: 84,
-          binding: false,
-        }),
-      ]),
-    );
+    expect(trace.bindingCap?.source).toBe("realized-holder-loss");
+    expect(trace.finalScore).toBe(49);
   });
 
   it("lifts the current production-shaped healthy B+ base to the A+ floor", () => {
@@ -296,7 +268,6 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
       V9_CANDIDATE_POLICY_V1.policy,
     ) as V9MethodologyPolicy;
     invalid.semantic.formula.assetPremiums[0]!.maximumPublishedScore = 86;
-    invalid.semantic.formula.assetPremiums[0]!.capRelief.toLimit = 86;
 
     expect(V9MethodologyPolicySchema.safeParse(invalid).success).toBe(false);
   });
@@ -310,13 +281,4 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
     expect(V9MethodologyPolicySchema.safeParse(invalid).success).toBe(false);
   });
 
-  it("requires cap relief to name an exact registered structural signal", () => {
-    const invalid = structuredClone(
-      V9_CANDIDATE_POLICY_V1.policy,
-    ) as V9MethodologyPolicy;
-    invalid.semantic.formula.assetPremiums[0]!.capRelief.kind =
-      "signal:centralized-mint:low:ignored";
-
-    expect(V9MethodologyPolicySchema.safeParse(invalid).success).toBe(false);
-  });
 });

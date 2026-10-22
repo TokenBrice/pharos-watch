@@ -307,10 +307,10 @@ describe("useFreezeWatchPageController", () => {
 
   it("projects the V9 score into the freezewatch drilldown row, not the legacy weighted-pillar mean", () => {
     const bindingCap = {
-      kind: "reason:missing-mint-authority",
+      kind: "parent",
       limit: 61,
-      source: "evidence" as const,
-      reason: "Mint control evidence caps the published score.",
+      source: "parent" as const,
+      reason: "The required parent limits the published score.",
       binding: true,
     };
     // The legacy weighted-pillar mean (qualityScore 88) and the V9 post-cap
@@ -326,6 +326,10 @@ describe("useFreezeWatchPageController", () => {
           pillars: makeV9Pillars({ backing: 86, exit: 88, control: 90 }),
           caps: [bindingCap],
           bindingCap,
+          dependencies: {
+            serial: [{ upstreamAssetId: "required-parent", score: 61, blocked: false, ratingStatus: "rated", partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [] }],
+            basket: [], cycleBlocked: false, reasonCodes: [],
+          },
         }),
       ],
     });
@@ -340,7 +344,7 @@ describe("useFreezeWatchPageController", () => {
     expect(row?.pillars.exit.score).toBe(88);
     expect(row?.pillars.control.score).toBe(90);
     expect(row?.weakestPillar).toEqual({ pillar: "backing", score: 86 });
-    expect(row?.bindingCapReason).toBe("Mint control evidence caps the published score.");
+    expect(row?.bindingCapReason).toBe(bindingCap.reason);
   });
 
   it("threads support-query failures into the page error and exposes the support retry", () => {

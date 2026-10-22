@@ -2,7 +2,7 @@ import { REVIEWED_DEPLOYMENT_CATALOG } from "../../test-helpers/reviewed-deploym
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { createSupplyAttributionJournalV1 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
-import { evaluateV9ExitAssetFacts } from "@shared/lib/safety-score-v9/exit";
+import { evaluateV9ExitAssetFacts, selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import {
   V9_CANDIDATE_POLICY_V1,
@@ -677,10 +677,9 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
   });
 
   it("publishes an aggregate-only circulating quantity that intake never partitioned, and still bounds a broken producer promise", () => {
-    // sUSN shape: a reviewed multi-route bridge profile, an admitted aggregate
-    // circulating figure, and no per-chain rows at all — so no route join ever
-    // ran and none failed. The quantity is published and the exit pillar sizes
-    // a stress request from it instead of returning its bounded floor.
+    // A reviewed multi-route bridge profile can have an admitted aggregate
+    // quantity without a per-chain partition. Size from that quantity, but
+    // do not fabricate a comparable route point when its capacity curve ends.
     const aggregateOnly = exactFixedInput({
       chainSupplyByChain: {},
       aggregateCirculating: { peggedUSD: 35_596_469.1 },
@@ -702,10 +701,12 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     expect(unpartitionedAlpha.gaps).not.toContainEqual(
       expect.objectContaining({ reasonCode: "runtime-bridge-materiality-unavailable" }),
     );
-    expect(
-      evaluateV9FactSet(unpartitioned, V9_CANDIDATE_POLICY_V1)
-        .assets[0]!.scoreInput.pillars.exit.reasons.map((reason) => reason.code),
-    ).not.toContain("missing-same-notional-route");
+    const evaluated = evaluateV9FactSet(unpartitioned, V9_CANDIDATE_POLICY_V1).assets[0]!;
+    const expectedRequest = selectV9ExitStressRequest(35_596_469.1, V9_CANDIDATE_POLICY_V1);
+    expect(evaluated.exit.stressRequest).toMatchObject(expectedRequest);
+    expect(evaluated.exit.routes).toContainEqual(expect.objectContaining({
+      included: false, capacityPoint: null, exclusionReason: "incomparable-route-requests",
+    }));
 
     // Missing a captured packet retains uncertainty but does not prove a
     // runtime A failure; cause classification requires a generation-bound attempt.

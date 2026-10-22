@@ -413,9 +413,12 @@ describe("Safety Score v9 fact compilation and upgrades", () => {
     const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
     expect(evaluated.assets.map((asset) => asset.assetId)).toEqual(["alpha", "beta", "gamma"]);
     for (const result of evaluated.assets) {
-      expect(result.trace.ratingStatus).not.toBe("pipeline-gap");
-      expect(result.trace.partialEvidence).toBeNull();
-      expect(result.scoreInput.parent.score).not.toBe(100);
+      expect(result.trace.ratingStatus).toBe("pipeline-gap");
+      expect(result.trace.finalScore).toBeNull();
+      expect(result.trace.finalGrade).toBeNull();
+      expect(result.scoreInput.parent.score).toBeNull();
+      expect(result.scoreInput.parent.ratingStatus).toBe("pipeline-gap");
+      expect(result.trace.nrReasons).toContainEqual(expect.objectContaining({ cause: "U" }));
       expect(result.trace.nrReasons.every((reason) => reason.code !== "implementation-parent-cycle" && reason.code !== "parent-cycle")).toBe(true);
     }
   });

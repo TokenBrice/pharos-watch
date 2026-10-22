@@ -99,7 +99,7 @@ describe("reviewed exact-channel suspension", () => {
       const asset = compile(fixed);
       const result = evaluate(asset);
       expect(result.primaryRouteKey).toBeNull();
-      expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+      expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit.U);
       expect(result.reasons).toEqual(["missing-same-notional-route"]);
       expect(result.reasons).not.toContain("no-viable-exit-path");
       expect(result.routes[0]).toMatchObject({ included: false, capacityPoint: null, routeSuspension: suspension });
@@ -184,14 +184,19 @@ describe("reviewed exact-channel suspension", () => {
     const compiled = makeSet(dexCapacityUsd !== undefined, dexCapacityUsd);
     const asset = compiled.assets[0]!;
     const censusId = `${assetId}:gap:exit-independent-route-census`;
-    expect(asset.gaps.find((gap) => gap.gapId === censusId)).toMatchObject({
-      causeProof: { cause: "U" }, observationState: "bounded-unknown",
-      path: { kind: "local-component", componentKey: "exit-routes" },
-      causeScope: { pillar: "exit", componentKey: "exit-routes", factorKey: null,
-        routeKey: null, exposureId: null, requiredDatum: "independent-route-census" },
-    });
-    expect(asset.exitStatus.gapIds).toContain(censusId);
-    expect(asset.exitStatus.observationState).toBe("bounded-unknown");
+    if (dexCapacityUsd === undefined) {
+      expect(asset.gaps.find((gap) => gap.gapId === censusId)).toMatchObject({
+        causeProof: { cause: "U" }, observationState: "bounded-unknown",
+        path: { kind: "local-component", componentKey: "exit-routes" },
+        causeScope: { pillar: "exit", componentKey: "exit-routes", factorKey: null,
+          routeKey: null, exposureId: null, requiredDatum: "independent-route-census" },
+      });
+      expect(asset.exitStatus.gapIds).toContain(censusId);
+      expect(asset.exitStatus.observationState).toBe("bounded-unknown");
+    } else {
+      expect(asset.gaps.some((gap) => gap.gapId === censusId)).toBe(false);
+      expect(asset.exitStatus.gapIds).not.toContain(censusId);
+    }
     const withdrawn = asset.exitRoutes.find((route) => route.routeSuspension)!;
     expect(withdrawn).toMatchObject({ scoreEligible: false, request: null, capacityCurve: [], factorStatuses: {} });
     expect(asset.gaps.filter((gap) => gap.causeScope?.routeKey === withdrawn.routeKey)).toEqual([
@@ -199,15 +204,17 @@ describe("reviewed exact-channel suspension", () => {
         causeScope: expect.objectContaining({ factorKey: "suspended" }) }),
     ]);
     const published = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
-    expect(published.scoreInput.pillars.exit).toMatchObject({
-      evidenceLevel: "limited", limitedEvidenceCauses: ["U"], limitingCauseGapIds: [censusId],
-    });
-    expect(published.scoreInput.pillars.exit.reasons).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: "missing-same-notional-route", cause: "U", causeGapIds: [censusId] }),
-    ]));
-    expect(published.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    if (dexCapacityUsd === undefined) {
+      // The reviewed channel establishes the applicable Exit subject, while
+      // its suspension does not establish exhaustion of independent rails.
+      expect(published.scoreInput.pillars.exit.evidenceLevel).toBe("limited");
+      expect(published.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit.U);
+    } else {
+      expect(published.exit.score).toBeGreaterThan(0);
+      expect(published.scoreInput.pillars.exit.limitingCauseGapIds ?? []).not.toContain(censusId);
+    }
     expect(published.exit.reasons).not.toContain("no-viable-exit-path");
-    expect(published.scoreInput.pillars.backing.evidenceLevel).toBe("limited");
+    expect(published.scoreInput.pillars.backing.evidenceLevel).toBe("insufficient");
     if (dexCapacityUsd !== undefined) {
       const measured = asset.exitRoutes.find((route) => route.lane === "dex")!;
       expect(measured.scoreEligible).toBe(true);
@@ -217,14 +224,14 @@ describe("reviewed exact-channel suspension", () => {
       ]));
       expect(published.exit.stressRequest?.requestedNotionalUsd).toBe(1_000_000);
       expect(published.exit.routes.find((route) => route.routeKey === measured.routeKey)).toMatchObject({
-        included: true, score: 0, capacityPoint: { executableUsd: 1_000 },
-        capsApplied: expect.arrayContaining(["immaterial-executable-capacity"]),
+        included: true, capacityPoint: { executableUsd: 1_000 },
       });
+      expect(published.exit.routes.find((route) => route.routeKey === measured.routeKey)!.score).toBeGreaterThan(0);
+      expect(published.exit.routes.find((route) => route.routeKey === measured.routeKey)!.capsApplied)
+        .not.toContain("immaterial-executable-capacity");
     }
     if (!adverseMint) {
       expect(published.trace.adverseAttribution).toEqual([]);
-      expect(published.trace.finalGrade).toBe("NR");
-      expect(published.trace.finalScore).toBeNull();
     } else {
       expect(published.trace.adverseAttribution).toEqual([
         expect.objectContaining({ source: "structural-signal", responsibility: "measured-adverse",
@@ -255,12 +262,12 @@ describe("reviewed exact-channel suspension", () => {
       expect(asset.gaps.find((gap) => gap.gapId === `${ID}:gap:exit-independent-route-census`))
         .toMatchObject({ causeProof: { cause: "U" } });
       const published = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
-      expect(published.exit.stressRequest).toBeNull();
+      expect(published.exit.stressRequest?.requestedNotionalUsd).toBe(25_000_000);
       expect(published.exit.reasons).toContain("missing-same-notional-route");
     });
   });
 
-  it("cannot turn an immaterial DEX measurement plus a suspended channel into whole-token adverse F", () => {
+  it("scores a small positive DEX measurement continuously beside a suspended channel", () => {
     const base = makeV9FixedInput({ assetId: ID, clockSec: CLOCK });
     const dex = base.dexLiqMap[ID]!;
     const observations = dex.exitRouteObservations!.map((observation) => ({
@@ -276,7 +283,10 @@ describe("reviewed exact-channel suspension", () => {
       expect(published.trace.finalGrade).not.toBe("F");
       expect(published.trace.adverseAttribution).toEqual([]);
       expect(published.exit.reasons).not.toContain("no-viable-exit-path");
-      expect(published.exit.routes.find((route) => !route.routeSuspension)).toMatchObject({ score: 0, included: true });
+      const measured = published.exit.routes.find((route) => !route.routeSuspension)!;
+      expect(measured).toMatchObject({ included: true, capacityPoint: { executableUsd: 999.9 } });
+      expect(measured.score).toBeGreaterThan(0);
+      expect(measured.capsApplied).not.toContain("immaterial-executable-capacity");
     });
   });
 

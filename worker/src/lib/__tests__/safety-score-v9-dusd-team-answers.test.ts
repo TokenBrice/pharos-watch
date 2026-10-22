@@ -170,12 +170,6 @@ describe("Safety Score v9 DUSD Makina team-answer evidence", () => {
       gapIds: [`${ASSET_ID}:gap:control:${bridgeControls[0]!.controlKey}:incidentState`],
     });
     expect(wrapper.facts.lossAbsorptionEmergencyControls.evidenceRefIds.length).toBeGreaterThan(0);
-    expect(wrapper.riskTransfer).toMatchObject({
-      disposition: "not-applicable",
-      mechanism: "none",
-      maximumParentLossAbsorptionPoints: 0,
-      signals: ["no-documented-parent-loss-absorption-credit"],
-    });
   });
 
   it("applies the adverse legal terms to mechanism claim quality without upgrading custody or assurance", () => {
@@ -206,12 +200,5 @@ describe("Safety Score v9 DUSD Makina team-answer evidence", () => {
       rejectionReasons: Array.from({ length: 5 }, (_, sliceIndex) => ({ sliceIndex, reason: "no-match" })),
     });
     expect(evaluatedAsset.dependencyInputs.serial).toMatchObject([{ upstreamAssetId: PARENT_ID }]);
-    const wrapperFacts = compiledAsset.wrapperLocalFacts;
-    if (wrapperFacts?.applicability !== "wrapper") throw new Error("expected DUSD wrapper local facts");
-    expect(wrapperFacts.riskTransfer).toMatchObject({
-      disposition: "not-applicable",
-      mechanism: "none",
-      maximumParentLossAbsorptionPoints: 0,
-    });
   });
 });

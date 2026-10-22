@@ -62,7 +62,7 @@ async function resolve(id: string, supply: number | null = supplyUsd, clockSec =
   return { config, capacity, row };
 }
 
-function assertConsumerGaps(row: RedemptionBackstopEntry, clockSec = now, capacityState: "known" | "missing" = "missing") {
+function assertConsumerGaps(row: RedemptionBackstopEntry, clockSec = now) {
   const assetId = row.stablecoinId;
   const draft = makeV9FixedInput({ assetId, clockSec });
   draft.redemptionBackstopMap = { [assetId]: row };
@@ -77,11 +77,17 @@ function assertConsumerGaps(row: RedemptionBackstopEntry, clockSec = now, capaci
   const redemptionRoutes = asset.exitRoutes.filter((route) => route.lane === "redemption");
   expect(redemptionRoutes).toHaveLength(1);
   for (const factor of ["capacity", "settlement", "cost"] as const) {
-    expect(redemptionRoutes[0]!.factorStatuses[factor]?.observationState).toBe(factor === "capacity" ? capacityState : "missing");
+    expect(redemptionRoutes[0]!.factorStatuses[factor]?.observationState).toBe("missing");
   }
+  expect(redemptionRoutes[0]!.capacityCurve).toEqual([]);
+  expect(redemptionRoutes[0]!.request).toBeNull();
+  expect(redemptionRoutes[0]).toMatchObject({
+    status: { observationState: "missing" }, coverageClass: "diagnostic", scoreEligible: false,
+  });
   const evaluated = evaluateV9Exit({
     circulatingUsd: asset.supply.circulatingUsd,
     routes: redemptionRoutes.map(projectV9ExitEvaluationRoute),
+    gaps: asset.gaps,
   }, V9_CANDIDATE_POLICY_V1);
   expect(evaluated.primaryRouteKey).toBeNull();
   expect(evaluated.diversificationRouteKey).toBeNull();
@@ -229,11 +235,11 @@ describe("RD2 legal entitlement remains eventual diagnostic evidence", () => {
     expect(retained).toHaveLength(1);
     expect(retained[0]!.observation).toMatchObject({ routeFamily: "eventual-redemption", scoreEligible: false });
     expect(buildSafetyScoreV9RouteReviews(fixedInput(row, clockSec), id)).toMatchObject([
-      { coverageClass: "diagnostic", capacityScoringHorizon: "eventual", holderAccess, settlementSlaSec: null },
+      { capacityScoringHorizon: "eventual", holderAccess, settlementSlaSec: null },
     ]);
-    // USDSM now has a sourced eventual entitlement; that closes its capacity
-    // terms gap, never same-notional execution, completed settlement or all-in cost.
-    assertConsumerGaps(row, clockSec, id === "usdsm-stable-mint" ? "known" : "missing");
+    // A sourced eventual entitlement is not executable capacity at the
+    // stress request; its synthetic supply-sized curve remains uncredited.
+    assertConsumerGaps(row, clockSec);
     for (const routeStatus of ["suspended", "unknown"] as const) {
       expect(deriveSupplyModelExitRouteObservation({ ...row, routeStatus }, clockSec)).toBeNull();
     }
@@ -288,7 +294,7 @@ describe("RD2 issuer-fee and output boundaries", () => {
     const { config, observation, reviews } = await captured("pyusdx-moonpay");
     expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBe(0);
     expect(observation).toMatchObject({ scoreEligible: false, output: { kind: "tracked-stablecoin", trackedAssetIds: ["pyusd-paypal"] } });
-    expect(reviews).toMatchObject([{ holderAccess: "allowlisted", coverageClass: "diagnostic", settlementSlaSec: null }]);
+    expect(reviews).toMatchObject([{ holderAccess: "allowlisted", settlementSlaSec: null }]);
   });
 
   it("does not turn GLDY's secondary-source fee or secondary liquidity into a funded USD redemption", async () => {
@@ -298,7 +304,7 @@ describe("RD2 issuer-fee and output boundaries", () => {
       scoreEligible: false,
       output: { kind: "unresolved-asset", assetKeys: ["fiat:USD", "stablecoin:identity-unspecified", "physical:XAU"] },
     });
-    expect(reviews).toMatchObject([{ coverageClass: "diagnostic", settlementSlaSec: null }]);
+    expect(reviews).toMatchObject([{ settlementSlaSec: null }]);
   });
 
   it("keeps GLDon's instant alternatives separate from the standard USDC/USDT investor put", async () => {
@@ -308,7 +314,7 @@ describe("RD2 issuer-fee and output boundaries", () => {
     expect(resolveReviewedRedemptionSettlementDelay(config.v9RouteReviewTerms, now)).toBeUndefined();
     expect(observation).toMatchObject({ scoreEligible: false, output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdon-ondo"] } });
     expect(observation.output).not.toHaveProperty("basketWeights");
-    expect(reviews).toMatchObject([{ holderAccess: "institutional-eligible", coverageClass: "diagnostic", minRedeemUsd: 1 }]);
+    expect(reviews).toMatchObject([{ holderAccess: "institutional-eligible", minRedeemUsd: 1 }]);
   });
 
   it("keeps ChinaAMC's single Redemption Charge distinct from an all-in distributor cost bound", () => {
@@ -331,7 +337,7 @@ describe("RD2 issuer-fee and output boundaries", () => {
     expect(observation).toMatchObject({
       scoreEligible: false, output: { kind: "physical-commodity-delivery", assetKeys: ["commodity:xau"], sameNotionalEligible: false },
     });
-    expect(reviews).toMatchObject([{ coverageClass: "diagnostic", settlementSlaSec: null }]);
+    expect(reviews).toMatchObject([{ settlementSlaSec: null }]);
     expect(resolveFeeModelKind(config.costModel)).toBe("documented-variable");
     expect(config.capacityModel).toEqual({ kind: "unquantified" });
     expect(config.physicalToUsd).toBeUndefined();

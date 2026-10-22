@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import {
   expandOverlayReview,
@@ -45,11 +45,10 @@ describe("Safety Score V9 evidence-only mechanism curation", () => {
     expectNonScoring(overlay, ["custodyContinuity"]);
   });
 
-  it("leaves score and grade unchanged when mechanism evidence becomes unavailable", () => {
-    // One real fiat-cash asset, scored twice on the same exact-publication
-    // input: once with its curated all-unavailable mechanism overlay, and once
-    // with the same overlay withdrawn so the mechanism review stays unreviewed.
-    // The overlay only adjudicates the gap; it must not move the score or grade.
+  it("prices reviewed issuer nondisclosure below an unresearched applicable mechanism", () => {
+    // The same exact-publication input differs only in the reviewed cause:
+    // issuer nondisclosure is C, while withdrawing the review leaves U.
+    // AM1 prices the unknown subfactors, not the known reserve book.
     const clockSec = Date.parse("2026-08-09T00:00:00Z") / 1_000;
     const fixed = makeV9FixedInput({ assetId: "uusd-anything-labs", clockSec });
     const meta = structuredClone(ACTIVE_META_BY_ID.get("uusd-anything-labs")!);
@@ -66,14 +65,20 @@ describe("Safety Score V9 evidence-only mechanism curation", () => {
     const curated = evaluateV9FactSet(curatedCompiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
     const unreviewed = evaluateV9FactSet(unreviewedCompiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
 
-    expect(curated.trace.finalScore).toBe(unreviewed.trace.finalScore);
-    expect(curated.trace.finalGrade).toBe(unreviewed.trace.finalGrade);
+    expect(curated.trace.finalScore!).toBeLessThan(unreviewed.trace.finalScore!);
     expect(curated.trace.finalGrade).not.toBe("NR");
+    expect(unreviewed.trace.finalGrade).not.toBe("NR");
+    for (const [result, cause] of [[curated, "C"], [unreviewed, "U"]] as const) {
+      const mechanismRows = result.backing.contributions.filter(row => row.source === "mechanism");
+      expect(mechanismRows.length).toBeGreaterThan(0);
+      for (const row of mechanismRows) expect(row).toMatchObject({
+        score: unknownQuality("backing", cause), cause, scoringDisposition: "bounded-uncertainty",
+      });
+    }
+    expect(curated.backing.contributions.filter(row => row.source !== "mechanism"))
+      .toEqual(unreviewed.backing.contributions.filter(row => row.source !== "mechanism"));
 
-    // The evidence-availability field really differs, so the equality above
-    // cannot pass vacuously: the curated overlay keeps a reviewed (bounded)
-    // review whose gaps carry the issuer-undisclosed disposition, while the
-    // withdrawn overlay leaves the mechanism review absent.
+    // The reviewed and withdrawn evidence states must genuinely differ.
     expect(curatedCompiled.assets[0]!.mechanismRiskReview.review).not.toBeNull();
     expect(unreviewedCompiled.assets[0]!.mechanismRiskReview.review).toBeNull();
     expect(curatedCompiled.assets[0]!.mechanismRiskReview.status.observationState).toBe("bounded-unknown");

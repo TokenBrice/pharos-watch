@@ -250,10 +250,12 @@ export function adjustedResponse() {
   const adjusted = currentResponse();
   const card = adjusted.cards[0]!;
   card.score = 87;
-  card.grade = "A";
+  card.grade = "A+";
   card.pegAdjustedScore = 87;
   card.caps = [];
   card.bindingCap = null;
+  card.scoreTrace.stages.baseAssetScore = 83;
+  card.scoreTrace.stages.deploymentAdjustedScore = 83;
   card.scoreTrace.stages.preCapScore = 87;
   card.scoreTrace.stages.publishedScore = 87;
   card.scoreTrace.scoreAdjustments = [{

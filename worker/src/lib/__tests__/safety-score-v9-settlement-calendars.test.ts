@@ -89,7 +89,7 @@ describe("business-calendar settlement consumers", () => {
       expect(config.costModel).toMatchObject({ kind: "fee-bps", feeBps: 0 });
       expect(config.v9RouteReviewTerms!.missingScoringFields).toContain("settlement");
       expect(buildSafetyScoreV9RouteReviews(fixed(row, clockSec), assetId)[0]).toMatchObject({
-        coverageClass: "diagnostic", settlementModel: "bounded-delay", settlementSlaSec: null,
+        settlementModel: "bounded-delay", settlementSlaSec: null,
       });
     },
   );
@@ -108,7 +108,7 @@ describe("business-calendar settlement consumers", () => {
         settlementModel: config.settlementModel });
       // Evaluate after the campaign's date-only October 9 reviews are admissible.
       expect(buildSafetyScoreV9RouteReviews(fixed(row, Date.parse("2026-10-10T12:00:00Z") / 1000), assetId)[0])
-        .toMatchObject({ coverageClass: "diagnostic", settlementSlaSec: null });
+        .toMatchObject({ settlementSlaSec: null });
     },
   );
   it("distinguishes HBD's completed native HIVE bound from a processing-only cooldown", () => {
@@ -126,7 +126,7 @@ describe("business-calendar settlement consumers", () => {
       docs: [{ label: "Fixture processing terms", url: "https://issuer.example/processing", supports: ["settlement"] }],
     } }, () => {
       expect(buildSafetyScoreV9RouteReviews(fixed(row, now), assetId)[0])
-        .toMatchObject({ coverageClass: "diagnostic", settlementSlaSec: null });
+        .toMatchObject({ settlementSlaSec: null });
     });
   });
   it("projects a current binding guarantee using its worst reviewed annual holiday walk", () => {

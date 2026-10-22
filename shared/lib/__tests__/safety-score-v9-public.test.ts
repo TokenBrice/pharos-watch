@@ -24,7 +24,6 @@ import {
   SafetyScoreV9EvidenceSummarySchema,
   SafetyScoreV9PillarSchema,
 } from "../../types/safety-score-v9-public";
-import { V9_WRAPPER_LOCAL_FACT_KEYS } from "../../types/safety-score-v9-wrapper";
 import { makeDeploymentControl, makeCompiledVotingControl, makeOperationalIssuanceProcess } from "./safety-score-v9-fixtures.test-support";
 import { reviewedScope, weightedQuorum } from "./safety-score-v9-control-scope.test-support";
 import supplyAttributionReviews from "../../data/safety-score-v9/supply-attribution-reviews-v1.json";
@@ -32,7 +31,7 @@ import { ReviewedProviderRowExclusionSchema } from "../../types/safety-score-v9-
 import { isV9OperationallyGovernedIssuanceQualified } from "../safety-score-v9/control-primitives";
 import type { V1005ProcessDiagnostic } from "../../types/safety-score-v9-facts";
 import { scoreV9EvaluatedAsset } from "../safety-score-v9/score";
-import { makeV9ProductionScoreInput } from "./safety-score-v9-score.test-support";
+import { makeV9Pillar, makeV9ProductionScoreInput } from "./safety-score-v9-score.test-support";
 import { V9EvidenceResponsibilitySchema, V9_PUBLIC_EVIDENCE_RESPONSIBILITIES } from "../../types/safety-score-v9-vocabulary";
 import { DANGER_PEG_MULTIPLIER_FLOOR } from "../../types/safety-score-v9-public-facts";
 import { applyV9MeasuredCollateralization, evaluateV9ArchetypeBacking } from "../safety-score-v9/archetypes/evaluation";
@@ -140,6 +139,7 @@ function fixture(assetId: string, options: FixtureOptions): V9PublicCardProjecti
             weakestScore: pillars.exit!,
             headroom: 45,
             includedPillars, excludedPillars, effectiveScoringWeights: weights,
+            pricedUnknownPillars: [],
             supportCeiling: (["backing", "exit", "control"] as const).reduce(
               (sum, pillar) => sum + (pillars[pillar] ?? 0) * weights[pillar], 0,
             ),
@@ -256,7 +256,7 @@ function fixture(assetId: string, options: FixtureOptions): V9PublicCardProjecti
               ...knownCause,
               confidenceDimensions: { observation: neutralConfidence, model: neutralConfidence, capacityMethod: neutralConfidence },
               capacityEvidenceTier: "live-direct",
-              eligibilityMultiplier: 1, rawSameNotionalCostBps: 0, supportedComponentCeiling: pillars.exit,
+              rawSameNotionalCostBps: 0, supportedComponentCeiling: pillars.exit,
               factorContributions: Object.fromEntries(Object.entries(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.componentWeights).map(
                 ([key, weight]) => [key, { ...knownCause, score: pillars.exit, effectiveScoringWeight: weight }],
               )),
@@ -325,6 +325,39 @@ function cap(args: Pick<V9CapTrace, "kind" | "limit" | "source" | "reason" | "bi
 }
 
 describe("Safety Score v9 public projection", () => {
+  it.each(["C", "U"] as const)("publishes a priced %s unknown without fabricating pillar evidence", (cause) => {
+    const scoreInput = makeV9ProductionScoreInput({
+      assetId: "priced-unknown",
+      pillars: {
+        backing: makeV9Pillar(92), control: makeV9Pillar(94),
+        exit: makeV9Pillar(null, {
+          aggregationDisposition: "unavailable", supportedComponentKeys: [],
+          causeGapIds: ["gap:exit"], limitedEvidenceCauses: [cause],
+        }),
+      },
+    });
+    const trace = scoreV9EvaluatedAsset(scoreInput, V9_CANDIDATE_POLICY_V1);
+    const projection = fixture("priced-unknown", {
+      score: trace.finalScore, grade: trace.finalGrade, pillars: { backing: 92, exit: null, control: 94 },
+      qualityScore: trace.weightedQuality, pegAdjustedScore: trace.preCapScore,
+    });
+    projection.trace = trace;
+    projection.scoreInput = scoreInput;
+    const { card } = projectSafetyScoreV9Card(projection);
+    expect(card.pillars.exit.score).toBeNull();
+    expect(card.pillars.exit.supportedComponentKeys).toEqual([]);
+    expect(card.pillars.exit.limitedEvidenceCauses ?? []).toEqual([]);
+    expect(card.breakdowns?.exit).toMatchObject({
+      evaluatedScore: null, publishedScore: null, aggregationWeight: 0,
+    });
+    expect(card.breakdowns?.exit.limitedEvidenceCauses ?? []).toEqual([]);
+    expect(card.scoreTrace.aggregation).toMatchObject({
+      excludedPillars: ["exit"], effectiveScoringWeights: { backing: 0.4, exit: 0.35, control: 0.25 },
+      pricedUnknownPillars: [{ pillar: "exit", cause, score: cause === "C" ? 35 : 50 }],
+    });
+    expect(SafetyScoreV9CurrentCardSchema.safeParse(card).success).toBe(true);
+  });
+
   it("rehydrates admitted card shards without losing public evidence or optional fields", () => {
     const inputs = ["beta", "alpha"].map((id) => fixture(id, { score: 91.8, grade: "A+" }));
     inputs[0]!.display = { ...inputs[0]!.display, labels: { ...inputs[0]!.display?.labels, "control:mint": "Mint \u2014 public evidence" } };
@@ -509,6 +542,26 @@ describe("Safety Score v9 public projection", () => {
     const missingAlternative = structuredClone(card) as unknown as typeof legacy;
     delete missingAlternative.breakdowns.exit.alternatives[0]!.routeId;
     expect(SafetyScoreV9CurrentCardSchema.safeParse(missingAlternative).success).toBe(false);
+  });
+
+  it("publishes original stale supply provenance separately from the stress request", () => {
+    const input = fixture("sizing-provenance", { score: 91.8, grade: "A+" });
+    input.exit = {
+      ...input.exit!,
+      stressRequest: {
+        ...input.exit!.stressRequest!,
+        requestedNotionalUsd: 25_000_000,
+        supplyObservedAtSec: 1_700_000_000,
+        sizingUncertaintyReason: "stale-supply",
+      },
+    };
+    const card = projectSafetyScoreV9Card(input).card;
+    expect(card.breakdowns!.exit.stressRequest).toMatchObject({
+      requestedNotionalUsd: 25_000_000,
+      supplyObservedAtSec: 1_700_000_000,
+      sizingUncertaintyReason: "stale-supply",
+    });
+    expect(SafetyScoreV9CurrentCardSchema.safeParse(card).success).toBe(true);
   });
 
   it.each([
@@ -697,6 +750,25 @@ describe("Safety Score v9 public projection", () => {
     expect(card.breakdowns?.control.components[0]?.score).toBe(94);
     expect(SafetyScoreV9CurrentCardSchema.safeParse({ ...card, grade: "NR" }).success).toBe(false);
   });
+  it.each([false, true])("projects unavailable pillars with optional diagnostic gaps (%s)", (withDiagnostic) => {
+    const input = fixture("unavailable", {
+      score: null, grade: null, pillars: { backing: null, exit: null, control: 94 },
+    });
+    Object.assign(input.trace.partialEvidence!, {
+      causes: [], causeGapIds: [], excludedComponentKeys: [],
+    });
+    for (const pillar of ["backing", "exit"] as const) {
+      Object.assign(input.scoreInput.pillars[pillar], {
+        aggregationDisposition: "unavailable",
+        causeGapIds: withDiagnostic ? [`unavailable:gap:${pillar}`] : [],
+      });
+    }
+    const card = projectSafetyScoreV9Card(input).card;
+    expect(card.ratingStatus).toBe("pipeline-gap");
+    expect(card.partialEvidence?.causes).toEqual([]);
+    expect(card.partialEvidence?.causeGapRefs).toHaveLength(withDiagnostic ? 2 : 0);
+  });
+
 
   it("retains local diagnostics alongside inherited A gaps in an excluded wrapper pillar", () => {
     const input = fixture("srusd-reservoir", {
@@ -908,21 +980,16 @@ describe("Safety Score v9 public projection", () => {
       dependency: {
         assetId: "dependent", basket: [], cycleBlocked: false,
         serial: [
-          { upstreamAssetId: "mechanism", score: 64, blocked: false },
-          { upstreamAssetId: "wrapper", score: 64, blocked: false },
+          { upstreamAssetId: "mechanism", score: 67, blocked: false },
+          { upstreamAssetId: "wrapper", score: 67, blocked: false },
         ],
       },
     });
     input.dependencyTypes = new Map([["serial:mechanism", "mechanism"], ["serial:wrapper", "wrapper"]]);
     input.trace.wrapperParentLimit = {
-      schemaVersion: 1, parentScore: 64, form: "pure", treatment: "local-facts",
-      localRiskDiscount: 0, fallbackDiscount: 0, appliedDiscount: 0, limit: 64,
-      riskTransfer: { disposition: "not-applicable", mechanism: "none", requestedCredit: 0, appliedCredit: 0 },
+      schemaVersion: 1, parentScore: 67, form: "pure",
+      appliedDiscount: 3, limit: 64,
       factsComplete: true, missingFacts: [],
-      adjustments: V9_WRAPPER_LOCAL_FACT_KEYS.map((factKey) => ({
-        factKey, disposition: "not-applicable", assessment: null, maximumDiscountPoints: 1, discountPoints: 0,
-        cause: null, causeGapIds: [], scoringDisposition: "not-applicable",
-      })),
     };
     expect(projectSafetyScoreV9Card(input).card.dependencies.serial).toMatchObject([
       { upstreamAssetId: "mechanism", dependencyType: "mechanism", wrapperForm: null },
@@ -932,21 +999,21 @@ describe("Safety Score v9 public projection", () => {
 
   it("projects cap-bound, pillar-bound, and withheld top drivers from the card", () => {
     const capBound = projectSafetyScoreV9Card(fixture("cap-bound", {
-      score: 64,
-      grade: "C+",
+      score: 49,
+      grade: "D",
       caps: [cap({
-        kind: "signal:material-bridge:high",
-        limit: 64,
-        source: "structural",
-        reason: "A material bridge binds.",
+        kind: "active-depeg:d",
+        limit: 49,
+        source: "active-depeg",
+        reason: "A current severe depeg binds.",
         binding: true,
       })],
     })).card;
     expect(projectTopDriver(capBound)).toEqual({
       kind: "cap-bound",
-      label: "signal:material-bridge:high",
-      value: 64,
-      reason: "A material bridge binds.",
+      label: "active-depeg:d",
+      value: 49,
+      reason: "A current severe depeg binds.",
       evidenceFreshness: "current",
     });
 
@@ -990,7 +1057,7 @@ describe("Safety Score v9 public projection", () => {
     expect(JSON.stringify(withWeakest)).toBe(before);
   });
 
-  it.each(Object.keys(V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureQuality))(
+  it.each(["bounded-admin", "immutable-no-mint", "unknown"])(
     "explains a binding %s mint posture even with no reason codes",
     (posture) => {
       const card = resolveV9PublicWitnessTexts(projectSafetyScoreV9Card(fixture("mint-headline", {
@@ -1003,7 +1070,6 @@ describe("Safety Score v9 public projection", () => {
       expect(driver).toMatchObject({ kind: "pillar-bound", label: "control", value: 94 });
       expect(driver?.reason).toBeTruthy();
       expect(driver?.reason).not.toBe(posture);
-      if (posture === "unbounded-adverse") expect(driver?.reason).toContain("no qualifying governance, reconciliation, or supervisory process is evidenced");
       if (posture === "unknown") expect(driver?.reason).toBe("The mint authority posture remains unresolved.");
     },
   );
@@ -1026,21 +1092,21 @@ describe("Safety Score v9 public projection", () => {
   it("publishes rated, NR and pipeline-gap cards with disjoint completeness counts", () => {
     const complete = fixture("complete", { score: 91.8, grade: "A+" });
     const capped = fixture("capped", {
-      score: 64,
-      grade: "C+",
+      score: 49,
+      grade: "D",
       caps: [
         cap({
-          kind: "bounded-compensability",
-          limit: 98,
-          source: "bounded-compensability",
-          reason: "Weakest-pillar headroom.",
+          kind: "track-record:under-24-months",
+          limit: 84,
+          source: "track-record",
+          reason: "Implementation age is under 24 months.",
           binding: false,
         }),
         cap({
-          kind: "signal:material-bridge:high",
-          limit: 64,
-          source: "structural",
-          reason: "A material bridge binds.",
+          kind: "active-depeg:d",
+          limit: 49,
+          source: "active-depeg",
+          reason: "A current severe depeg binds.",
           binding: true,
         }),
       ],
@@ -1105,7 +1171,6 @@ describe("Safety Score v9 public projection", () => {
           key: "redemption:fixture",
           label: "Protocol redemption",
           confidenceFactor: 1,
-          eligibilityMultiplier: 1,
         },
       },
       control: {
@@ -1113,7 +1178,7 @@ describe("Safety Score v9 public projection", () => {
         method: "minimum-binding-component",
       },
     });
-    expect(response.cards[0]?.bindingCap?.kind).toBe("signal:material-bridge:high");
+    expect(response.cards[0]?.bindingCap?.kind).toBe("active-depeg:d");
     expect(response.cards[2]?.dependencies.serial[0]?.upstreamAssetId).toBe("upstream");
     expect(response.cards[2]?.bindingCap?.source).toBe("parent");
     expect(response.cards[3]?.nrReasons).toEqual([
@@ -1412,47 +1477,34 @@ describe("Safety Score v9 public projection", () => {
   });
 
   it("projects the native USDT premium as an explicit score stage", () => {
-    const cap: V9CapTrace = {
-      source: "structural",
-      kind: "signal:centralized-mint:low",
-      limit: 87,
-      reason: "Eligible USDT market-anchor cap relief.",
-      binding: true,
-    };
     const input = fixture("usdt-tether", {
       score: 87,
       grade: "A+",
       pillars: { backing: 95, exit: 95, control: 95 },
       qualityScore: 95,
-      pegAdjustedScore: 99,
-      caps: [cap],
+      pegAdjustedScore: 87,
+      caps: [],
     });
-    input.trace.baseAssetScore = 95;
-    input.trace.deploymentAdjustedScore = 95;
+    input.trace.baseAssetScore = 83;
+    input.trace.deploymentAdjustedScore = 83;
     input.trace.inheritableScore = 83;
     input.trace.scoreAdjustments = [{
       source: "asset-premium",
       kind: "market-anchor-longevity",
       label: "#1 & Longevity Premium",
-      configuredPoints: 4,
+      configuredPoints: 12,
       appliedPoints: 4,
-      scoreBefore: 95,
-      scoreAfter: 99,
+      scoreBefore: 83,
+      scoreAfter: 87,
       publishedScoreBefore: 83,
       publishedScoreAfter: 87,
-      capRelief: {
-        source: "structural",
-        kind: "signal:centralized-mint:low",
-        fromLimit: 83,
-        toLimit: 87,
-      },
     }];
 
     const card = projectSafetyScoreV9Card(input).card;
 
     expect(card.scoreTrace.stages).toMatchObject({
-      deploymentAdjustedScore: 95,
-      preCapScore: 99,
+      deploymentAdjustedScore: 83,
+      preCapScore: 87,
       publishedScore: 87,
     });
     expect(card.scoreTrace.scoreAdjustments).toEqual(input.trace.scoreAdjustments);
@@ -1477,8 +1529,6 @@ describe("Safety Score v9 public projection", () => {
       const input = fixture(assetId, {
         score: 59, grade: "C", qualityScore: 74.55,
         pillars: { backing: 92, exit: 90, control: 25 },
-        caps: [cap({ source: "structural", kind: "signal:centralized-mint:high", limit: 59,
-          reason: "Known economically unbounded issuer mint authority.", binding: true })],
       });
       input.trace.weakestPillar = { pillar: "control", score: 25 };
       input.trace.aggregation = { ...input.trace.aggregation!, weakestPillar: "control", weakestScore: 25 };
@@ -1676,10 +1726,10 @@ describe("Safety Score v9 public projection", () => {
 
 describe("Safety Score v9 public NR cap suppression", () => {
   const materialityCap = cap({
-    source: "evidence",
-    kind: "reason:runtime-bridge-materiality-unavailable",
-    limit: 55,
-    reason: "Bridge materiality is unavailable.",
+    source: "active-depeg",
+    kind: "active-depeg:d",
+    limit: 49,
+    reason: "A current severe depeg binds.",
     binding: true,
   });
   const notRated = () =>
@@ -1707,20 +1757,20 @@ describe("Safety Score v9 public NR cap suppression", () => {
   });
 
   it("keeps the rated binding cap unchanged", () => {
-    const nonBindingCap = cap({ ...materialityCap, kind: "reason:missing-peg-input", limit: 69, binding: false });
+    const nonBindingCap = cap({ source: "track-record", kind: "track-record:under-24-months", limit: 84, reason: "Recent implementation.", binding: false });
     const card = projectSafetyScoreV9Card(fixture("rated", { score: 91.8, grade: "A+", caps: [nonBindingCap, materialityCap] }),).card;
 
     expect(card.score).not.toBeNull();
     expect(card.caps).toEqual([
-      expect.objectContaining({ kind: nonBindingCap.kind, source: nonBindingCap.source, limit: 69, binding: false }),
+      expect.objectContaining({ kind: nonBindingCap.kind, source: nonBindingCap.source, limit: 84, binding: false }),
       expect.objectContaining({
         kind: materialityCap.kind,
         source: materialityCap.source,
-        limit: 55,
+        limit: 49,
         binding: true,
       }),
     ]);
-    expect(card.bindingCap).toMatchObject({ kind: materialityCap.kind, limit: 55, binding: true });
+    expect(card.bindingCap).toMatchObject({ kind: materialityCap.kind, limit: 49, binding: true });
   });
 
   it("rejects hand-built NR cards with a binding cap or binding candidate", () => {

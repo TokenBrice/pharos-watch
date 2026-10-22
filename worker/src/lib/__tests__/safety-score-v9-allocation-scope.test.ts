@@ -110,7 +110,7 @@ describe("dimension-scoped allocation consumer boundaries", () => {
     }
   });
 
-  it("gives complete contract-only leverage relief but prices a complete adverse contract statement", () => {
+  it("retains complete benign and adverse contract leverage evidence without a second wrapper charge", () => {
     const benign = fixture();
     const relief = compile(benign);
     expect(wrapperFacts(relief).facts.leverage).toMatchObject({ disposition: "reviewed", assessment: "none" });
@@ -119,8 +119,7 @@ describe("dimension-scoped allocation consumer boundaries", () => {
     adverse.claim.statement = "unbounded-or-above-2x";
     const penalty = compile(adverse);
     expect(wrapperFacts(penalty).facts.leverage).toMatchObject({ disposition: "reviewed", assessment: "critical" });
-    expect(penalty.card.trace.wrapperParentLimit?.adjustments).toContainEqual(expect.objectContaining({ factKey: "leverage", discountPoints: 4 }));
-    expect(penalty.card.trace.wrapperParentLimit!.limit).toBeLessThanOrEqual(relief.card.trace.wrapperParentLimit!.limit);
+    expect(penalty.card.trace.wrapperParentLimit!.limit).toBe(relief.card.trace.wrapperParentLimit!.limit);
   });
   it("does not let native receipt structural absence hide complete proved local borrowing", () => {
     const benign = fixture();
@@ -131,7 +130,6 @@ describe("dimension-scoped allocation consumer boundaries", () => {
     adverse.claim.statement = "unbounded-or-above-2x";
     const result = compile(adverse);
     expect(wrapperFacts(result).facts.leverage).toMatchObject({ disposition: "reviewed", assessment: "critical" });
-    expect(result.card.trace.wrapperParentLimit?.adjustments).toContainEqual(expect.objectContaining({ factKey: "leverage", discountPoints: 4 }));
   });
   it("does not turn no contract borrowing into no entity leverage or A3 parent-only complexity relief", () => {
     const input = fixture(true);
@@ -161,7 +159,6 @@ describe("dimension-scoped allocation consumer boundaries", () => {
     input.asset.wrapperAllocationReview.claims.push(legalBorrowing(input, "borrower-spv", "no-borrowing-surface"), legalBorrowing(input, "lender-of-record", "unbounded-or-above-2x"));
     const result = compile(input);
     expect(wrapperFacts(result).facts.leverage).toMatchObject({ disposition: "reviewed", assessment: "critical" });
-    expect(result.card.trace.wrapperParentLimit?.adjustments).toContainEqual(expect.objectContaining({ factKey: "leverage", assessment: "critical", discountPoints: 4 }));
     expect(wrapperFacts(result).facts.custodyEscrow.disposition).toBe("unresearched");
   });
   it("preserves known adverse reserve leverage when complete scoped evidence says no local borrowing", () => {
@@ -172,7 +169,6 @@ describe("dimension-scoped allocation consumer boundaries", () => {
     input.fixed = rebuildFixed(input.fixed);
     const result = compile(input);
     expect(wrapperFacts(result).facts.leverage).toMatchObject({ disposition: "reviewed", assessment: "high" });
-    expect(result.card.trace.wrapperParentLimit?.adjustments).toContainEqual(expect.objectContaining({ factKey: "leverage", assessment: "high" }));
   });
   it("retains conditional escrow identity with null allocation without improving custody or reuse", () => {
     const input = fixture(true);

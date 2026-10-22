@@ -94,12 +94,8 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
       .find((asset) => asset.assetId === "alpha")!.trace.wrapperParentLimit!;
     const afterLimit = evaluateV9FactSet(afterSet, V9_CANDIDATE_POLICY_V1).assets
       .find((asset) => asset.assetId === "alpha")!.trace.wrapperParentLimit!;
-    expect(afterLimit.adjustments).toContainEqual(expect.objectContaining({
-      factKey: "withdrawalTerms", assessment: "critical", discountPoints: 3, scoringDisposition: "included",
-    }));
-    expect(afterLimit.localRiskDiscount).toBeGreaterThan(beforeLimit.localRiskDiscount);
     expect(afterLimit.missingFacts.some((fact) => fact.factClass === "withdrawalTerms")).toBe(false);
-    expect(afterLimit.limit).toBeLessThanOrEqual(beforeLimit.limit);
+    expect(afterLimit.limit).toBe(beforeLimit.limit);
   });
 
   it.each(["accounting", "holder-entitlement"] as const)("rejects a %s review whose identity names a different holder instrument", (kind) => {
@@ -460,7 +456,7 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
         const gap = asset.gaps.find((gap) => gap.gapId === facts[factKey].status?.gapIds[0])!;
         expect(gap.causeProof.cause).toBe("U");
         expect(limit.missingFacts).toContainEqual(expect.objectContaining({ factClass: factKey, cause: "U" }));
-        expect(limit.fallbackDiscount).toBe(10);
+        expect(limit.appliedDiscount).toBe(10);
       }
     }
   });
@@ -514,7 +510,6 @@ describe("v10.01 wrapper scoped causes", () => {
     expect(gap.causeProof.cause).toBe("A");
     expect(facts.facts.custodyEscrow.assessment).toBeNull();
     expect(facts.facts.rehypothecationCorrelation).toMatchObject({ disposition: "reviewed", assessment: "high" });
-    expect(facts.riskTransfer.maximumParentLossAbsorptionPoints).toBe(0);
     expect(asset.dependencies.edges[0]!.upstreamAssetId).toBe("beta");
   });
 });

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ReserveSlice } from "@shared/types/reserves";
 import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { evaluateV9ReserveExposures } from "@shared/lib/safety-score-v9/backing";
 import { SCORE_EPSILON } from "@shared/lib/safety-score-v9/backing-primitives";
 import {
@@ -359,7 +359,7 @@ describe("reviewed live unknown residuals", () => {
     expect(residuals).toHaveLength(1);
     expect(residuals[0]).toMatchObject({
       normalizedWeight: 0.37, observationState: "bounded-unknown",
-      score: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality,
+      score: V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.backing.U,
       failureDomains: [],
     });
     expect(result.unresolved).toContainEqual(expect.objectContaining({
@@ -378,7 +378,7 @@ describe("reviewed live unknown residuals", () => {
     expect(result.contributions.filter(row => row.componentKey.startsWith("reserve:unclassified-residual:"))).toEqual([
       expect.objectContaining({
         normalizedWeight: 1, observationState: "bounded-unknown",
-        score: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality,
+        score: V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.backing.U,
       }),
     ]);
     expect(result.structuralReasons).toEqual([]);
@@ -644,9 +644,10 @@ describe("reviewed curated reserve admission", () => {
         const tails = result.contributions.filter(row => row.componentKey.startsWith("reserve:unclassified-residual:"));
         expect(tails.reduce((sum, row) => sum + row.wholeAssetWeight!, 0)).toBeCloseTo(residualPct / 100, 12);
         for (const tail of tails) expect(tail).toMatchObject({
-          score: 35 * 0.8, cause: "U", scoringDisposition: "bounded-uncertainty", failureDomains: [],
+          score: unknownQuality("backing", "U") * V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.issuerAttestedConfidenceMultiplier,
+          cause: "U", scoringDisposition: "bounded-uncertainty", failureDomains: [],
         });
-        if (residualPct === 100) expect(result.score).toBeLessThanOrEqual(35);
+        if (residualPct === 100) expect(result.score).toBeLessThanOrEqual(unknownQuality("backing", "U"));
       }
       for (const prudential of [false, true]) {
         const meta = attestedResidualMeta(residualPct, prudential);

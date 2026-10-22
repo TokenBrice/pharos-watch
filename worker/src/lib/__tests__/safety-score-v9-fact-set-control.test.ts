@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { evaluateV9EconomicControl } from "@shared/lib/safety-score-v9/control";
 import { gradeEconomicControlAuthority } from "@shared/lib/safety-score-v9/control-mint-grade";
 import { isV9GovernedIssuanceQualified, isV9VetoGuardedIssuanceQualified, isV9OperationallyGovernedIssuanceQualified } from "@shared/lib/safety-score-v9/control-primitives";
@@ -420,7 +420,8 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     const controlKey = compiled.assets[0]!.controls[0]!.controlKey;
     expect(compiled.assets[0]!.gaps.filter((gap) => gap.reasonCode === "unresolved-control-identity" &&
       gap.causeScope?.componentKey === `control:${controlKey}` && gap.causeScope.factorKey === null)).toEqual([]);
-    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.control.score).toBe(45);
+    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.control.score)
+      .toBe(unknownQuality("control", "U"));
   });
 
   it("rejects registry drift, and quarantines a future review like stale known evidence", () => {

@@ -1,5 +1,6 @@
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { gradeEconomicControlAuthority } from "@shared/lib/safety-score-v9/control-mint-grade";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { MintAuthorityProfile } from "@shared/types/core";
@@ -363,7 +364,13 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
   it("adds independently reviewed reconciliation and prudential assurance without exceeding immutable quality", () => {
     const input = fixedInput();
     const extension = buildSafetyScoreV9BaselineExtension(input, {
-      metaById: metaWith(AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE),
+      metaById: metaWith({
+        ...AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE,
+        upgradeability: {
+          model: "immutable", canChangeMintLogic: false,
+          sources: [{ label: "Verified immutable implementation", url: "https://example.com/immutable-implementation" }],
+        },
+      }),
     });
     const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
     const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1);
@@ -642,12 +649,25 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       expect(upgradeControls).not.toHaveLength(0);
       expect(localMintControls).toHaveLength(profile.controls?.length ?? 0);
       const selectedUpgradeControlKey = asset.economicControlReview!.mint.upgrade.controlKey!;
-      expect(
-        evaluatedById.get(assetId)!.control.components.find((component) => component.kind === "mint"),
-      ).toMatchObject({
-        posture: "none-resolved",
-        controlKeys: expect.arrayContaining([shareControl!.controlKey, selectedUpgradeControlKey]),
-      });
+      const mintComponent = evaluatedById.get(assetId)!.control.components.find((component) =>
+        component.kind === "mint" && component.binding,
+      )!;
+      expect(mintComponent.controlKeys).toHaveLength(1);
+      // Any effective local path may be weakest, not necessarily the upgrade
+      // anchor: parameter/accountant paths compete in the same ladder.
+      expect(localMintControls.map((control) => control.controlKey)).toContain(mintComponent.controlKeys[0]);
+      const compiledAsset = compiled.assets.find((candidate) => candidate.assetId === assetId)!;
+      for (const upgrade of upgradeControls) {
+        const compiledControl = compiledAsset.controls.find((control) => control.controlKey === upgrade.controlKey);
+        expect(compiledControl).toBeDefined();
+        expect(mintComponent.score).toBeLessThanOrEqual(gradeEconomicControlAuthority(
+          compiledControl!, compiledAsset.economicControlReview.mint,
+          V9_CANDIDATE_POLICY_V1.policy.semantic, compiledAsset.gaps, compiledAsset.issuanceFacts, assetId,
+        ));
+      }
+      expect(mintComponent.controlKeys).not.toContain(shareControl!.controlKey);
+      expect(mintComponent.posture).not.toBe("none-resolved");
+      expect(upgradeControls.map((control) => control.controlKey)).toContain(selectedUpgradeControlKey);
       expect(evaluatedById.get(assetId)!.control.reasons.map((reason) => reason.code)).not.toContain(
         "missing-mint-authority",
       );

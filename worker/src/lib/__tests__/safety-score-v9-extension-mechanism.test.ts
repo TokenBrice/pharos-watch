@@ -104,7 +104,7 @@ describe("buildSafetyScoreV9MechanismReview", () => {
         review!, V9_CANDIDATE_POLICY_V1,
       );
       expect(result.contributions.filter((row) => row.source === "mechanism").every(
-        (row) => row.score === V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality && row.effectiveWeight > 0,
+        (row) => row.score === V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.backing.U && row.effectiveWeight > 0,
       )).toBe(true);
     },
   );
@@ -311,7 +311,7 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(buildSafetyScoreV9MechanismReview(fixedInputStub(), boldMeta, "fiat-cash")).toBeNull();
   });
 
-  it("keeps LUSD's measured liquidation capacity and unsafe-backing ceiling outside control changes", () => {
+  it("keeps LUSD's measured liquidation capacity and unsafe-backing signal outside control changes", () => {
     const review = buildSafetyScoreV9MechanismReview(fixedInputStub(), { id: "lusd-liquity" } as MechanismMeta, "cdp");
     if (review?.archetype !== "cdp") throw new Error("expected the curated LUSD CDP overlay");
     expect(review.liquidationCapacityRatio).toBe(0.278);
@@ -319,7 +319,6 @@ describe("buildSafetyScoreV9MechanismReview", () => {
       kind: "unsafe-backing",
       severity: "high",
     });
-    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.structural.signalLimits["unsafe-backing"].high).toBe(59);
   });
 
   it("compiles USDD's collateral surplus without erasing its market-funded and shared-deficit constraints", () => {
@@ -624,7 +623,7 @@ describe("buildSafetyScoreV9MechanismReview", () => {
       });
       expect(result.contributions.find((row) => row.componentKey === `mechanism:${component}`)).toMatchObject({
         observationState: "bounded-unknown",
-        score: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality,
+        score: V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.backing.U,
         evidenceRefIds: [`extension-evidence:mechanism:${component}`],
       });
       expect(result.contributions.find((row) => row.componentKey === `mechanism:${component}`)!.effectiveWeight).toBeGreaterThan(0);

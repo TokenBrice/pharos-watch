@@ -178,7 +178,7 @@ describe("buildV9DependencyEvaluationPlan", () => {
     ]);
 
     expect(resolved.find((item) => item.assetId === "serial")?.serial).toMatchObject([
-      { upstreamAssetId: "parent", score: null, blocked: true },
+      { upstreamAssetId: "parent", score: null, blocked: false, ratingStatus: "pipeline-gap", cause: "U" },
     ]);
     expect(resolved.find((item) => item.assetId === "basket")?.basket).toMatchObject([
       { upstreamAssetId: "parent", weight: 1, score: 82, boundedUnknown: false },
@@ -397,11 +397,30 @@ describe("buildV9DependencyEvaluationPlan", () => {
       },
     ]);
     expect(projectV9RoleDependencyPillarLimits(resolved).exit).toMatchObject({
-      limit: 74,
+      limit: 80,
       knownLossPoints: 0,
       unresolvedExposureShare: 0.4,
     });
   });
+  it.each([
+    { role: "exit-dependency" as const, pillar: "exit" as const, issuerLimit: 35, researchLimit: 50 },
+    { role: "control-operator" as const, pillar: "control" as const, issuerLimit: 50, researchLimit: 60 },
+  ])("prices unresolved $pillar dependencies from their admitted cause, not a caller override", ({ role, pillar, issuerLimit, researchLimit }) => {
+    const plan = buildV9DependencyEvaluationPlan({
+      activeAssetIds: ["child", "parent"],
+      assets: [asset("parent"), asset("child", [roleEdge("unresolved", "parent", role, 1)])],
+    });
+    const resolved = resolveV9DependencyInputs(plan, [
+      { assetId: "parent", score: null, backingScore: null, exitScore: null, controlScore: null, accessScore: null },
+    ]).find((input) => input.assetId === "child")!;
+    for (const [cause, limit] of [["C", issuerLimit], ["U", researchLimit]] as const) {
+      const causeBound = { ...resolved, roleInputs: resolved.roleInputs!.map((input) => ({
+        ...input, cause, causeGapIds: [`parent:${pillar}:${cause}`],
+      })) };
+      expect(projectV9RoleDependencyPillarLimits(causeBound)[pillar].limit).toBe(limit);
+    }
+  });
+
 
   it.each(["C", "U"] as const)("inherits numeric %s provenance without replacing its evaluated loss", (cause) => {
     for (const score of [25, 80]) {
@@ -424,7 +443,7 @@ describe("buildV9DependencyEvaluationPlan", () => {
 
   it.each([
     { knownWeight: 0.4, score: 0, unknownWeight: 0.5, knownLoss: 40, unknownLoss: 0, limit: 60 },
-    { knownWeight: 0.4, score: 50, unknownWeight: 0.8, knownLoss: 20, unknownLoss: 24, limit: 56 },
+    { knownWeight: 0.4, score: 50, unknownWeight: 0.8, knownLoss: 20, unknownLoss: 12, limit: 68 },
   ])("charges max known/absent loss once per event: $limit", ({ knownWeight, score, unknownWeight, knownLoss, unknownLoss, limit }) => {
     const plan = buildV9DependencyEvaluationPlan({
       activeAssetIds: ["child", "known", "absent"],
@@ -494,8 +513,8 @@ describe("buildV9DependencyEvaluationPlan", () => {
         unresolvedMaterialityThreshold: 0.1,
       }).exit,
     ).toMatchObject({
-      limit: 99.35,
-      boundedUnknownLossPoints: 0.65,
+      limit: 99.5,
+      boundedUnknownLossPoints: 0.5,
       unresolvedExposureShare: 0.01,
       materialUnresolvedExposure: false,
     });
@@ -504,8 +523,8 @@ describe("buildV9DependencyEvaluationPlan", () => {
         unresolvedMaterialityThreshold: 0.1,
       }).exit,
     ).toMatchObject({
-      limit: 93.5,
-      boundedUnknownLossPoints: 6.5,
+      limit: 95,
+      boundedUnknownLossPoints: 5,
       unresolvedExposureShare: 0.1,
       materialUnresolvedExposure: true,
     });
@@ -1118,13 +1137,6 @@ describe("commonModeSignalSeverity proportional materiality", () => {
     }
   });
 
-  it("prices the graduated severities inside their locked grade bands with low non-capping", () => {
-    const limits = V9_CANDIDATE_POLICY_V1.policy.semantic.structural.signalLimits["critical-dependency"];
-    expect(limits.low).toBeNull(); // "low" is diagnostic-only (no cap)
-    expect(limits.moderate).toBe(79); // top of B+ (75-79)
-    expect(limits.high).toBe(64);
-    expect(materiality.deploymentMaterialSharePct).toBe(10);
-  });
 
   it("fails closed when unattributed supply share pushes the conservative upper bound to >=25%", () => {
     expect(
@@ -1189,7 +1201,7 @@ describe("cause-aware reserve look-through", () => {
       expect(result.score).toBeNull();
       expect(inherited.scoringDisposition).toBe(cause === "A" ? "excluded-pipeline" : "excluded-uncurated");
     } else {
-      expect(inherited.score).toBe(35);
+      expect(inherited.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.backing[cause]);
       expect(result.score).not.toBeNull();
       expect(inherited.cause).toBe(cause);
     }

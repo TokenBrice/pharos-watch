@@ -698,13 +698,6 @@ export function nativeWrapperLocalFactsForFixture(asset: V9AssetFactsV2) {
         "lossAbsorptionEmergencyControls",
       ].map((factKey) => [factKey, unavailableFact(factKey)]),
     ),
-    riskTransfer: {
-      disposition: "integration-missing" as const,
-      mechanism: "unknown" as const,
-      maximumParentLossAbsorptionPoints: 0,
-      signals: ["fixture-wrapper-risk-transfer"],
-      evidenceRefIds: [],
-    },
   };
 }
 
@@ -736,7 +729,6 @@ export function compileNativeV3FactSet(input: unknown) {
         facts: Object.fromEntries(Object.entries(wrapper.facts).map(([key, fact]) => [
           key, { ...fact, disposition: "unresearched", status: unresolved(`wrapper:${key}`, "backing") },
         ])),
-        riskTransfer: { ...wrapper.riskTransfer, disposition: "unresearched", status: unresolved("wrapper:risk-transfer", "backing") },
       };
       return {
         ...asset, gaps, wrapperLocalFacts, reserveResiduals,

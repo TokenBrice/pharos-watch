@@ -469,20 +469,23 @@ describe("Safety Score v9 real-donor A+ fixture", { timeout: 30_000 }, () => {
       observedAtSec: redemptionReview.output!.valuation!.observedAtSec,
     });
 
-    expect(card).toMatchObject({ id: COMPOSITE_ID, score: 88, grade: "A+", evidence: { level: "strong" } });
+    expect(card).toMatchObject({ id: COMPOSITE_ID, grade: "A+", evidence: { level: "strong" } });
     expect(evaluated).toMatchObject({
       exit: { score: 79.44 },
-      control: { score: 95 },
+      control: { score: V9_CANDIDATE_POLICY_V1.policy.semantic.control.authorityLadder.maxComponentQuality },
       trace: {
         pegMultiplier: 1,
         bindingCap: null,
       },
     });
     expect(card.pillars).toMatchObject({
-      backing: { evidenceLevel: "strong", reasons: [] },
+      backing: { evidenceLevel: "strong" },
       exit: { score: 79.44, evidenceLevel: "strong", reasons: [] },
-      control: { score: 95, evidenceLevel: "strong", reasons: [] },
+      control: { score: V9_CANDIDATE_POLICY_V1.policy.semantic.control.authorityLadder.maxComponentQuality, evidenceLevel: "strong", reasons: [] },
     });
+    expect(card.pillars.backing.reasons).toContainEqual(expect.objectContaining({
+      code: "material-reserve-slice-unstructured", cause: "U",
+    }));
     expect(card.nrReasons).toEqual([]);
     expect(card.evidence).toMatchObject({ level: "strong", reasons: [] });
     expect(card.caps).toEqual([]);

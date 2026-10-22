@@ -225,14 +225,6 @@ describe("Compact public cause contracts", () => {
         card.scoreTrace.evidenceResponsibility.facts[0]![5] = "C";
         card.scoreTrace.evidenceResponsibility.facts[0]![3] = "issuer-undisclosed";
       },
-      card => {
-        const row = card.breakdowns!.backing.components[0]!;
-        (factor ? row.factors![0]! : row).score = 50;
-        if (!factor) {
-          row.weightedContribution = 25;
-          Object.assign(card.breakdowns!.backing.components[1]!, { score: 70, weightedContribution: 35 });
-        }
-      },
       ...(["A", "B"] as const).map(cause => (card: SafetyScoreV9CurrentCard) => {
         const row = card.breakdowns!.backing.components[0]!;
         Object.assign(factor ? row.factors![0]! : row, {
@@ -275,6 +267,8 @@ describe("Compact public cause contracts", () => {
     evidence.factPathPrefixes = ["backing:mechanism"];
     evidence.facts[0]![1] = [0];
     evidence.facts[0]![2] = null;
+    response.cards[0]!.pillars.backing.reasons[0]!.path = "backing:mechanism:cause:0";
+    response.cards[0]!.scoreTrace.boundedUncertaintyAttribution.items[0]!.path = "backing:mechanism:cause:0";
     const decoded = SafetyScoreV9CurrentResponseSchema.parse(JSON.parse(JSON.stringify(response)));
     expect([...iterateEvidenceResponsibilityFacts(decoded.cards[0]!.scoreTrace.evidenceResponsibility)]).toEqual([[
       "bounded-mechanism-review", "backing:mechanism:cause:0", null, "unresearched", false, "U", [0],
@@ -463,6 +457,37 @@ describe("SafetyScoreV9ResponseSchema", () => {
     expect(card.scoreTrace.adverseAttribution.items).toEqual([]);
   });
 
+  it.each([45, 35])("accepts an evidenced low score %s without a grade-based attribution gate", score => {
+    const response = boundedResponse();
+    const card = response.cards[0]!;
+    card.score = score;
+    card.grade = score === 45 ? "D" : "F";
+    card.scoreTrace.stages.publishedScore = score;
+    card.scoreTrace.boundedUncertaintyAttribution.items = [];
+    expect(SafetyScoreV9CurrentResponseSchema.parse(response).cards[0]!.score).toBe(score);
+  });
+
+  it("retains owned bounded uncertainty above the former low-grade threshold", () => {
+    const response = boundedResponse();
+    const card = response.cards[0]!;
+    for (const pillar of Object.values(card.pillars)) pillar.score = 60;
+    card.score = 60;
+    card.grade = "C+";
+    card.qualityScore = 60;
+    card.pegAdjustedScore = 60;
+    card.weakestPillar = { pillar: "backing", score: 60 };
+    card.breakdowns = breakdowns(60, 60, 60);
+    Object.assign(card.scoreTrace.aggregation!, {
+      score: 60, weightedPillarMean: 60, weakestScore: 60, supportCeiling: 60,
+    });
+    Object.assign(card.scoreTrace.stages, {
+      weightedPillarMean: 60, aggregatedQualityScore: 60, baseAssetScore: 60,
+      deploymentAdjustedScore: 60, preCapScore: 60, publishedScore: 60,
+    });
+    expect(SafetyScoreV9CurrentResponseSchema.parse(response).cards[0]!.scoreTrace.boundedUncertaintyAttribution.items)
+      .toEqual(card.scoreTrace.boundedUncertaintyAttribution.items);
+  });
+
   it.each([
     { name: "unownedBoundedTrace", error: /bounded-uncertainty attribution must reconcile/, mutate: (card: ReturnType<typeof boundedResponse>["cards"][number]) => {
       card.scoreTrace.evidenceResponsibility.totalFactCount = 0;
@@ -493,14 +518,6 @@ describe("SafetyScoreV9ResponseSchema", () => {
         source: "peg-performance",
         path: "peg:historical-performance",
         message: "Measured peg multiplier is 0.1.",
-        responsibility: "measured-adverse",
-      }];
-    } },
-    { name: "impossibleTrackRecord", error: /cannot authorize measured-adverse attribution/, mutate: (card: ReturnType<typeof boundedResponse>["cards"][number]) => {
-      card.scoreTrace.adverseAttribution.items = [{
-        source: "track-record",
-        path: "track-record:<6m",
-        message: "Track record is short.",
         responsibility: "measured-adverse",
       }];
     } },
@@ -542,14 +559,6 @@ describe("SafetyScoreV9ResponseSchema", () => {
         reasonCodes: ["bounded-mechanism-review"],
       };
     } },
-    { name: "unattributedD", error: /D card requires causal measured-adverse or bounded-uncertainty attribution/, mutate: (card: ReturnType<typeof boundedResponse>["cards"][number]) => {
-      card.scoreTrace.boundedUncertaintyAttribution.items = [];
-    } },
-    { name: "unattributedDanger", error: /F card requires causal measured-adverse attribution/, mutate: (card: ReturnType<typeof boundedResponse>["cards"][number]) => {
-      card.score = 35;
-      card.grade = "F";
-      card.scoreTrace.stages.publishedScore = 35;
-    } },
     { name: "forgedGrade", error: /numeric score and grade band must agree/, mutate: (card: ReturnType<typeof boundedResponse>["cards"][number]) => {
       card.grade = "C-";
     } },
@@ -560,6 +569,25 @@ describe("SafetyScoreV9ResponseSchema", () => {
     const invalid = boundedResponse();
     mutate(invalid.cards[0]!);
     expect(SafetyScoreV9CurrentResponseSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it.each([
+    ["adverseAttribution", "track-record"],
+    ["adverseAttribution", "wrapper-local"],
+    ["boundedUncertaintyAttribution", "wrapper-local"],
+  ] as const)("rejects retired %s source %s", (attribution, source) => {
+    const invalid = boundedResponse();
+    const trace = invalid.cards[0]!.scoreTrace;
+    const item = attribution === "adverseAttribution"
+      ? { source, path: "retired:attribution", message: "Retired source.", responsibility: "measured-adverse" }
+      : { ...trace.boundedUncertaintyAttribution.items[0]!, source };
+    Object.assign(trace[attribution], { items: [item] });
+    const result = SafetyScoreV9CurrentResponseSchema.safeParse(invalid);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.map((issue) => issue.path))
+        .toContainEqual(["cards", 0, "scoreTrace", attribution, "items", 0, "source"]);
+    }
   });
 
   it("requires attribution to a binding minimum serial parent, including ties and cycles", () => {
@@ -588,12 +616,36 @@ describe("SafetyScoreV9ResponseSchema", () => {
     }];
     higherParent.scoreTrace.boundedUncertaintyAttribution.items = [];
     expect(() => SafetyScoreV9CurrentCardSchema.parse(higherParent)).toThrow(
-      /binding low minimum serial parent/,
+      /binding minimum serial parent/,
     );
 
     const tiedParent = structuredClone(higherParent);
     tiedParent.dependencies.serial[0]!.score = 40;
     expect(SafetyScoreV9CurrentCardSchema.parse(tiedParent).grade).toBe("D");
+
+    const aboveFormerThreshold = structuredClone(tiedParent);
+    aboveFormerThreshold.score = 60;
+    aboveFormerThreshold.grade = "C+";
+    aboveFormerThreshold.qualityScore = 70;
+    aboveFormerThreshold.pegAdjustedScore = 70;
+    aboveFormerThreshold.weakestPillar = { pillar: "backing", score: 70 };
+    aboveFormerThreshold.caps[0]!.limit = 60;
+    aboveFormerThreshold.bindingCap = aboveFormerThreshold.caps[0]!;
+    for (const parent of aboveFormerThreshold.dependencies.serial) parent.score = 60;
+    for (const pillar of Object.values(aboveFormerThreshold.pillars)) pillar.score = 70;
+    aboveFormerThreshold.breakdowns = breakdowns(70, 70, 70);
+    Object.assign(aboveFormerThreshold.scoreTrace.aggregation!, {
+      score: 70, weightedPillarMean: 70, weakestScore: 70, supportCeiling: 70,
+    });
+    Object.assign(aboveFormerThreshold.scoreTrace.stages, {
+      weightedPillarMean: 70, aggregatedQualityScore: 70, baseAssetScore: 70,
+      deploymentAdjustedScore: 70, preCapScore: 70, publishedScore: 60,
+    });
+    expect(SafetyScoreV9CurrentCardSchema.parse(aboveFormerThreshold).scoreTrace.adverseAttribution.items)
+      .toEqual(aboveFormerThreshold.scoreTrace.adverseAttribution.items);
+    aboveFormerThreshold.dependencies.serial[0]!.score = 61;
+    expect(() => SafetyScoreV9CurrentCardSchema.parse(aboveFormerThreshold))
+      .toThrow(/binding minimum serial parent/);
 
     const unmatchedParentResponse = boundedResponse();
     unmatchedParentResponse.cards = [tiedParent];
@@ -699,6 +751,27 @@ describe("SafetyScoreV9ResponseSchema", () => {
     expect(card.pillars.exit.aggregationDisposition).toBe("excluded-a-b");
     expect(card.partialEvidence).toMatchObject({ excludedPillars: ["backing", "exit"], causes: ["B"], causeGapRefs: [0] });
     expect(card.localCauseGaps).toEqual(["exit"]);
+  });
+
+  it("retains granular A/B exclusions without excluding usable pillars", () => {
+    const response = partialResponse([]);
+    const card = response.cards[0]!;
+    card.localCauseGaps = ["implementation-date"];
+    card.partialEvidence = {
+      reasonCode: "partial-evidence-pipeline-gap",
+      excludedPillars: [],
+      excludedComponentKeys: ["methodology:implementation-date"],
+      causeGapRefs: [0],
+      causes: ["A"],
+    };
+    card.reasonCodes.push("partial-evidence-pipeline-gap");
+    card.reasonCodes.sort();
+    const parsed = SafetyScoreV9CurrentResponseSchema.parse(response).cards[0]!;
+    expect(parsed.ratingStatus).toBe("rated");
+    expect(parsed.partialEvidence?.excludedPillars).toEqual([]);
+    expect(Object.values(parsed.pillars).every((pillar) => pillar.score !== null)).toBe(true);
+    card.partialEvidence.excludedComponentKeys = [];
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(false);
   });
 
   it("rejects a numeric unavailable default, nonzero excluded weight, or invented A/B availability cause", () => {

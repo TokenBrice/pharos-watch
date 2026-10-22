@@ -1007,7 +1007,11 @@ describe("Safety Score v9 economic control", () => {
     );
 
     expect(result.reasons).toEqual([]);
-    expect(result).toMatchObject({ score: 100, state: "rated" });
+    expect(result).toMatchObject({
+      score: SEMANTIC_POLICY.control.authorityLadder.immutableNoPower,
+      state: "rated",
+    });
+    expect(result.components.find((component) => component.kind === "bridge")).toMatchObject({ binding: false });
   });
 
   it("releases the known null-share bridge route materiality reason when the partition proves it subthreshold", () => {

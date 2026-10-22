@@ -181,43 +181,9 @@ function scoringInput(
         }];
         const trace = scoreV9Input(input, V9_CANDIDATE_POLICY_V1);
         expect(trace.finalGrade, `${entry.code}/${cause}`).not.toBe("NR");
-        expect(trace.caps.filter((cap) => cap.source === "evidence" && cap.kind !== "reason:missing-implementation-date" && cap.kind !== "reason:minimum-track-record"), `${entry.code}/${cause}`).toEqual([]);
+        expect(trace.caps, `${entry.code}/${cause}`).toEqual([]);
       }
     });
 
-    it("never lowers a score when a bounded ceiling reason is resolved", () => {
-      const ceilingReasons = V9_CANDIDATE_POLICY_V1.policy.reasonRegistry.filter(
-        (entry) =>
-          entry.defaultTreatment === "ceiling" &&
-          (
-            V9_LEGACY_RESPONSIBILITY_BY_REASON[entry.code] === "issuer-undisclosed" ||
-            V9_LEGACY_RESPONSIBILITY_BY_REASON[entry.code] === "measured-adverse"
-          ),
-      );
-      const baselines = Array.from({ length: 101 }, (_, score) => {
-        const input = boundedInput({ backing: score, exit: score, control: score });
-        return { input, trace: scoreV9Input(input, V9_CANDIDATE_POLICY_V1) };
-      });
-
-      for (const entry of ceilingReasons) {
-        const resolved = resolveV9ReasonTreatment(V9_CANDIDATE_POLICY_V1, entry.code, "D");
-        for (let score = 0; score <= 100; score += 1) {
-          const { input: completeInput, trace: complete } = baselines[score];
-          const input: V9ScoringInput = { ...completeInput, unresolved: [
-            ...completeInput.unresolved,
-            {
-              code: entry.code,
-              reason: "VERITAS bounded evidence.",
-              critical: resolved.critical,
-              responsibility: V9_LEGACY_RESPONSIBILITY_BY_REASON[entry.code],
-              cause: "D",
-            },
-          ] };
-
-          const bounded = scoreV9Input(input, V9_CANDIDATE_POLICY_V1);
-          expect(complete.finalScore!, `${entry.code} at ${score}`).toBeGreaterThanOrEqual(bounded.finalScore!);
-        }
-      }
-    });
   });
 }

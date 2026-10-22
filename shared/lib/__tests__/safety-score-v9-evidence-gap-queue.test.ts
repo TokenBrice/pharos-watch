@@ -316,8 +316,6 @@ describe("Safety Score v9 evidence-gap queue", () => {
       facts: { contractMutability: localFact, custodyEscrow: localFact, strategyComplexity: localFact,
         leverage: localFact, rehypothecationCorrelation: localFact, shareAccountingNavOracle: localFact,
         withdrawalTerms: localFact, measuredUnwind: localFact, lossAbsorptionEmergencyControls: localFact },
-      riskTransfer: { status, disposition: "unresearched", mechanism: "unknown",
-        maximumParentLossAbsorptionPoints: 0, signals: [], evidenceRefIds: [] },
     };
     asset.economicControlReview.mint.factorStatuses = { reconciliation: status };
     asset.economicControlReview.oracle.factorStatuses = { tier: status };
@@ -363,7 +361,7 @@ describe("Safety Score v9 evidence-gap queue", () => {
       `control:${asset.controls[0]!.controlKey}:authority`,
       "wrapper:form", "wrapper:contractMutability", "wrapper:custodyEscrow", "wrapper:strategyComplexity",
       "wrapper:leverage", "wrapper:rehypothecationCorrelation", "wrapper:shareAccountingNavOracle",
-      "wrapper:withdrawalTerms", "wrapper:measuredUnwind", "wrapper:lossAbsorptionEmergencyControls", "wrapper:risk-transfer",
+      "wrapper:withdrawalTerms", "wrapper:measuredUnwind", "wrapper:lossAbsorptionEmergencyControls",
       "economic-control:mint", "economic-control:mint:reconciliation", "economic-control:oracle",
       "economic-control:oracle:tier", "economic-control:oracle:collateral-parameter", "economic-control:bridge",
       "economic-control:bridge:tier", "economic-control:bridge:bridge:tier", "access:transfer", "access:freeze",

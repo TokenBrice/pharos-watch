@@ -25,6 +25,7 @@ import { bridgeControl, bridgeSupplyRow, commonDomainFixture, staleBridgeStatus,
 import { resolveV9EvidenceCause } from "../safety-score-v9/evidence";
 import { CompiledV9FactSetV3Schema } from "../../types/safety-score-v9-facts";
 import { buildV9EvidenceGapQueue } from "../safety-score-v9/evidence-gap-queue";
+import { unknownQuality } from "../safety-score-v9/policy";
 import * as backingArchetypes from "../safety-score-v9/archetypes";
 
 function mutableNativeFactSet() {
@@ -121,6 +122,91 @@ function exitPromotionFixture() {
 }
 
 describe("Safety Score v9 fact evaluation", () => {
+  it.each([
+    { absent: ["exit"], included: ["backing", "control"], ratingStatus: "rated" },
+    { absent: ["control"], included: ["backing", "exit"], ratingStatus: "rated" },
+    { absent: ["exit", "control"], included: ["backing"], ratingStatus: "pipeline-gap" },
+  ] as const)("does not count evidence-free $absent subjects toward rating availability", ({ absent, included, ratingStatus }) => {
+    const { core, asset } = exitPromotionFixture();
+    if (absent.some((pillar) => pillar === "exit")) {
+      const gap = createV9FactGapV3({
+        gapId: "alpha:no-exit-subject", reasonCode: "missing-runtime-route-evidence", ownerDomain: "exit",
+        policyRuleId: "exit.routes.review", observationState: "missing", responsibility: "unresearched",
+        path: { kind: "local-component", componentKey: "exit-routes" },
+        message: "No reviewed route inventory or admitted route establishes an Exit subject.",
+      });
+      asset.gaps.push(gap);
+      asset.exitStatus = createV9FactStatus({
+        applicability: requiredV9Applicability(gap.policyRuleId), observationState: "missing",
+        gapIds: [gap.gapId], evidenceRefIds: [],
+      });
+      asset.exitRoutes = [];
+      asset.evidence = asset.evidence.filter((ref) => ref.evidenceId !== "evidence:route");
+    }
+    if (absent.some((pillar) => pillar === "control")) {
+      asset.gaps = asset.gaps.filter((gap) => gap.ownerDomain !== "control");
+      const emptyControlAsset = core.assets.find((row) => row.assetId === "beta")!;
+      asset.controls = [];
+      asset.accessReview = structuredClone(emptyControlAsset.accessReview);
+      asset.economicControlReview = structuredClone(emptyControlAsset.economicControlReview);
+      for (const [componentKey, reasonCode] of [
+        ["inventory", "unresolved-control-identity"],
+        ["mint", "missing-mint-authority"],
+        ["oracle", "missing-oracle-profile"],
+        ["bridge", "missing-bridge-routes"],
+      ] as const) {
+        const gap = createV9FactGapV3({
+          gapId: `alpha:no-control-subject:${componentKey}`, reasonCode, ownerDomain: "control",
+          policyRuleId: `control.${componentKey}.review`, observationState: "missing", responsibility: "unresearched",
+          path: { kind: "local-component", componentKey: `economic-control:${componentKey}` },
+          message: "No admitted authority or mechanism review establishes this Control subject.",
+        });
+        asset.gaps.push(gap);
+        const status = createV9FactStatus({
+          applicability: requiredV9Applicability(gap.policyRuleId), observationState: "missing",
+          gapIds: [gap.gapId], evidenceRefIds: [],
+        });
+        if (componentKey === "inventory") asset.controlStatus = status;
+        else {
+          const review = asset.economicControlReview[componentKey];
+          review.status = status;
+          if (componentKey === "mint") asset.economicControlReview.mint.factorStatuses = { reconciliation: status, supervision: status };
+          else if (componentKey === "oracle") asset.economicControlReview.oracle.factorStatuses = { tier: status };
+          else asset.economicControlReview.bridge.factorStatuses = { tier: status };
+        }
+      }
+    }
+    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets
+      .find((row) => row.assetId === asset.assetId)!;
+    for (const pillar of absent) {
+      // A subject-free default does not become admitted evidence. AM10 prices
+      // the unavailable pillar separately without altering its null diagnostic.
+      expect(evaluated[pillar].score).toEqual(expect.any(Number));
+      expect(evaluated.scoreInput.pillars[pillar]).toMatchObject({
+        score: null, aggregationDisposition: "unavailable", supportedComponentKeys: [],
+      });
+      expect(evaluated.trace.includedPillars).not.toContain(pillar);
+    }
+    expect(evaluated.trace.includedPillars).toEqual(expect.arrayContaining(included));
+    expect(evaluated.trace.includedPillars).toHaveLength(included.length);
+    expect(evaluated.trace.ratingStatus).toBe(ratingStatus);
+    if (ratingStatus === "rated") {
+      expect(evaluated.trace.finalScore).not.toBeNull();
+      const weights = V9_CANDIDATE_POLICY_V1.policy.semantic.formula.pillarWeights;
+      expect(evaluated.trace.effectiveScoringWeights).toEqual(weights);
+      for (const pillar of absent) {
+        expect(evaluated.trace.aggregation?.pricedUnknownPillars).toContainEqual(
+          expect.objectContaining({ pillar, cause: "U", score: unknownQuality(pillar, "U") }),
+        );
+        expect(evaluated.trace.diagnosticPillarScores[pillar]).toBeNull();
+      }
+    } else {
+      expect(evaluated.trace).toMatchObject({
+        finalScore: null, finalGrade: null, aggregation: null, effectiveScoringWeights: null,
+      });
+    }
+  });
+
   it.each(["A", "B"] as const)("publishes no partial flag for a diagnostic-only optional Exit factor (%s)", (cause) => {
     const { core, asset } = exitPromotionFixture();
     const primary = asset.exitRoutes.find((route) => route.lane === "dex")!;
@@ -167,7 +253,7 @@ describe("Safety Score v9 fact evaluation", () => {
     const baseline = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
     const gap = exitFactorGap(asset, alternative, cause);
     const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
-    expect(evaluated.exit).toMatchObject({ primaryRouteKey: null, diversificationRouteKey: null, score: 35 });
+    expect(evaluated.exit).toMatchObject({ primaryRouteKey: null, diversificationRouteKey: null, score: unknownQuality("exit", "U") });
     expect(evaluated.exit.routes.every((route) => !route.included && route.score === null && route.components === null)).toBe(true);
     expect(evaluated.scoreInput.pillars.exit.causeGapIds).toEqual(expect.arrayContaining([gap.gapId, capacityGap.gapId]));
     expect(evaluated.trace.partialEvidence).toBeNull();
@@ -293,7 +379,7 @@ describe("Safety Score v9 fact evaluation", () => {
     });
     expect(evaluated.trace.finalGrade).not.toBe("NR");
   });
-  it("keeps an USDSM-shaped limited mint review NR after independent control questions close", () => {
+  it("rates an USDSM-shaped limited mint review after independent control questions close", () => {
     const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
     const asset = core.assets.find((row) => row.assetId === "alpha")!;
     asset.dependencies.edges = [];
@@ -348,12 +434,9 @@ describe("Safety Score v9 fact evaluation", () => {
     }));
     expect(evaluated.scoreInput.pillars.backing.evidenceLevel).toBe("limited");
     expect(evaluated.scoreInput.pillars.exit.evidenceLevel).toBe("adequate");
-    expect(evaluated.trace.finalGrade).toBe("NR");
-    expect(evaluated.trace.finalScore).toBeNull();
-    expect(evaluated.trace.nrReasons).toContainEqual(expect.objectContaining({
-      code: "insufficient-evidence", contributingPillars: ["backing", "control"],
-      causeGapIds: expect.arrayContaining([reserveGap.gapId, mintGap.gapId]),
-    }));
+    expect(evaluated.trace.ratingStatus).toBe("rated");
+    expect(evaluated.trace.finalScore).toEqual(expect.any(Number));
+    expect(evaluated.trace.nrReasons).toEqual([]);
   });
   it.each(["C", "U"] as const)("joins issuer reconciliation questions only to their exact aggregate factor (%s)", (cause) => {
     const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
@@ -399,13 +482,15 @@ describe("Safety Score v9 fact evaluation", () => {
     });
     asset.mechanismExitFacts = [{ factKey: "physical-redemption", disposition: "supported", quality: "limited", evidenceRefIds: ["evidence:base"] }];
     const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
-    expect(evaluated.exit.score).toBe(35);
+    expect(evaluated.exit.score).toBe(unknownQuality("exit", "U", V9_CANDIDATE_POLICY_V1.policy.semantic));
+    expect(evaluated.scoreInput.pillars.exit.aggregationDisposition).toBe("included");
+    expect(evaluated.scoreInput.pillars.exit.score).toBe(evaluated.exit.score);
     expect(evaluated.trace.boundedUncertaintyAttribution).toContainEqual(expect.objectContaining({
       cause: "U", code: "missing-same-notional-route", causeGapIds: [gap.gapId],
     }));
     expect(evaluated.trace.nrReasons.some((reason) => reason.field === "boundedUncertaintyAttribution")).toBe(false);
   });
-  it("joins compiled runtime-route U evidence to the native missing-same-notional reason without borrowing another surface", () => {
+  it("keeps a missing runtime-route subject unavailable without borrowing another surface", () => {
     const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
     const asset = core.assets.find((row) => row.assetId === "alpha")!;
     const gap = createV9FactGapV3({
@@ -429,15 +514,12 @@ describe("Safety Score v9 fact evaluation", () => {
     asset.mechanismExitFacts = [];
     const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
     expect(evaluated.scoreInput.pillars.exit).toMatchObject({
-      score: 35, evidenceLevel: "limited", limitedEvidenceCauses: ["U"], limitingCauseGapIds: [gap.gapId],
+      score: null, evidenceLevel: "insufficient", aggregationDisposition: "unavailable",
+      limitedEvidenceCauses: [], limitingCauseGapIds: [],
     });
-    expect(evaluated.scoreInput.pillars.exit.reasons).toContainEqual(expect.objectContaining({
-      code: "missing-same-notional-route", cause: "U", causeGapIds: [gap.gapId],
-    }));
-    expect(evaluated.trace.boundedUncertaintyAttribution).toContainEqual(expect.objectContaining({
-      code: "missing-same-notional-route", cause: "U", causeGapIds: [gap.gapId],
-    }));
-    expect(evaluated.trace.boundedUncertaintyAttribution.flatMap((row) => row.causeGapIds ?? [])).not.toContain(decoy.gapId);
+    expect(evaluated.trace.includedPillars).not.toContain("exit");
+    expect(evaluated.trace.boundedUncertaintyAttribution.flatMap((row) => row.causeGapIds ?? []))
+      .not.toContain(decoy.gapId);
   });
   it.each([
     { label: "in-range", cashWeights: [0.5, 0.1, 0.013], betaWeight: 0.118, remainderWeight: 0.269, clamped: false },
@@ -652,7 +734,7 @@ describe("Safety Score v9 fact evaluation", () => {
     };
     const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1)
       .assets.find((row) => row.assetId === asset.assetId)!;
-    const oracleScore = V9_CANDIDATE_POLICY_V1.policy.semantic.control.oracleTierQuality["opaque-or-unknown"];
+    const oracleScore = unknownQuality("control", cause, V9_CANDIDATE_POLICY_V1.policy.semantic);
     expect(evaluated.control.components.find((component) => component.kind === "oracle")).toMatchObject({
       score: oracleScore, cause, causeGapIds: [gap.gapId],
     });
@@ -1332,11 +1414,8 @@ describe("Safety Score v9 fact evaluation", () => {
         responsibility: "measured-adverse",
         evidenceConfidence: "high",
       });
-      expect(asset(degraded, assetId).trace.caps).toContainEqual(
-        expect.objectContaining({
-          kind: "signal:critical-dependency:high",
-          limit: 64,
-        }),
+      expect(asset(degraded, assetId).trace.caps).not.toContainEqual(
+        expect.objectContaining({ kind: "signal:critical-dependency:high" }),
       );
       expect(asset(degraded, assetId).trace.finalScore).toBeLessThanOrEqual(asset(allKnown, assetId).trace.finalScore!);
       expect(signal(degraded, assetId)?.reason).toContain("remain");
@@ -1599,7 +1678,7 @@ describe("Safety Score v9 fact evaluation", () => {
     ["exact-complete", "stale"],
     ["exact-lower-bound", "known"],
     ["exact-lower-bound", "stale"],
-  ] as const)("requires exhaustive coverage to attribute immaterial %s capacity, retaining %s observations", (coverageClass, observationState) => {
+  ] as const)("prices small positive %s capacity continuously, retaining %s observations", (coverageClass, observationState) => {
     const input = coreFixture();
     const alpha = input.assets.find((asset) => asset.assetId === "alpha")! as unknown as V9AssetFactsV2;
     const beta = input.assets.find((asset) => asset.assetId === "beta")! as unknown as V9AssetFactsV2;
@@ -1648,41 +1727,17 @@ describe("Safety Score v9 fact evaluation", () => {
       compileNativeV3FactSet(input),
       V9_CANDIDATE_POLICY_V1,
     ).assets.find((asset) => asset.assetId === "beta")!;
-    if (coverageClass === "exact-lower-bound") {
-      expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
-      expect(evaluated.exit.reasons).toContain("missing-same-notional-route");
-      expect(evaluated.exit.reasons).not.toContain("no-viable-exit-path");
-      expect(evaluated.scoreInput.pillars.exit.adverseAttribution).toEqual([]);
-      expect(evaluated.trace.adverseAttribution).toEqual([]);
-      expect(evaluated.trace.finalGrade).not.toBe("F");
-      return;
-    }
     const primaryRoute = evaluated.exit.routes.find(
       (route) => route.routeKey === evaluated.exit.primaryRouteKey,
     )!;
-
-    expect(primaryRoute.capsApplied).toContain("immaterial-executable-capacity");
-    expect(evaluated.scoreInput.pillars.exit).toMatchObject({
-      score: 0,
-      adverseAttribution: [
-        {
-          source: "pillar-score",
-          path: `pillar:exit:route:${measuredRoute.routeKey}:capacity`,
-          responsibility: "measured-adverse",
-        },
-      ],
-    });
-    expect(evaluated.trace.finalGrade).toBe("F");
+    // Small positive measured capacity is priced continuously, not discarded
+    // by the retired 1% gate or replaced with a bounded-unknown default.
+    expect(primaryRoute.included).toBe(true);
+    expect(primaryRoute.score).toBeGreaterThan(0);
+    expect(primaryRoute.capsApplied).not.toContain("immaterial-executable-capacity");
+    expect(evaluated.scoreInput.pillars.exit.score).toBe(evaluated.exit.score);
     expect(evaluated.trace.finalScore).not.toBeNull();
-    expect(evaluated.trace.nrReasons).not.toContainEqual(
-      expect.objectContaining({ field: "adverseAttribution" }),
-    );
-    expect(evaluated.trace.adverseAttribution).toContainEqual(
-      expect.objectContaining({
-        source: "pillar-score",
-        path: `pillar:exit:route:${measuredRoute.routeKey}:capacity`,
-      }),
-    );
+    expect(evaluated.trace.nrReasons).toEqual([]);
   });
   it.each(["exact-complete", "exact-lower-bound"] as const)("does not attribute non-score-eligible %s redemption zero as measured exhaustion", (coverageClass) => {
     const input = coreFixture();
@@ -1711,7 +1766,7 @@ describe("Safety Score v9 fact evaluation", () => {
       compileNativeV3FactSet(input),
       V9_CANDIDATE_POLICY_V1,
     ).assets.find((asset) => asset.assetId === "beta")!;
-    expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit.U);
     expect(evaluated.exit.reasons).toContain("missing-same-notional-route");
     expect(evaluated.exit.reasons).not.toContain("no-viable-exit-path");
     expect(evaluated.scoreInput.pillars.exit.adverseAttribution).toEqual([]);

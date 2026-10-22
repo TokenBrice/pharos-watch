@@ -104,7 +104,7 @@ describe("VERITAS-II finding stale known-empty DEX coverage is treated as curren
     // This retained provider census is not aggregate-reconciled/exhaustive;
     // stale local emptiness cannot promote it to a global observed-empty book.
     expect(asset.exitStatus.observationState).toBe("bounded-unknown");
-    expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit.U);
     } finally {
       configFixture.mockRestore();
     }
@@ -133,7 +133,7 @@ describe("VERITAS-II finding a diagnostic redemption route completes unknown DEX
     expect(asset.exitRoutes).toHaveLength(1);
     expect(asset.exitRoutes[0]!.scoreEligible).toBe(false);
     expect(asset.exitStatus.observationState).toBe("bounded-unknown");
-    expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit.U);
     expect(evaluated.exit.reasons).toContain("missing-same-notional-route");
     expect(evaluated.scoreInput.pillars.exit.adverseAttribution).toEqual([]);
     expect(evaluated.exit.reasons).not.toContain("no-viable-exit-path");
@@ -249,7 +249,7 @@ describe("VERITAS-II finding named rows evade same-issuer speculative-credit mat
     expect(scoreBacking(direct)).toMatchObject({ finalScore: 59, finalGrade: "C" });
     expect(split.score).toBe(direct.score);
     expect(split.structuralReasons).toContainEqual(
-      expect.objectContaining({ kind: "speculative-credit", severity: "high", materialShare: 0.12, ceiling: 59 }),
+      expect.objectContaining({ kind: "speculative-credit", severity: "high", materialShare: 0.12 }),
     );
     expect(scoreBacking(split).finalScore).toBeLessThanOrEqual(scoreBacking(direct).finalScore!);
   });
@@ -291,6 +291,6 @@ describe("VERITAS-II finding exact threshold disagrees on dependency treatment a
     expect(trace.finalGrade).not.toBe("NR");
     expect(trace.finalGrade).not.toBe("F");
     expect(trace.adverseAttribution).toEqual([]);
-    expect(trace.caps.filter((cap) => cap.source === "evidence")).toEqual([]);
+    expect(trace.caps).toEqual([]);
   });
 });

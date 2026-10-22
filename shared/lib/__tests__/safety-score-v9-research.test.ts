@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { CompiledV9AssetInput } from "@shared/types/safety-score-v9";
 import {
   V9_CANDIDATE_POLICY_V1,
-  resolveV9StructuralCaps,
   scoreCompiledAsset,
   scoreCompiledAssetSet,
   scoreV9ResearchScenarioInput,
@@ -49,7 +48,7 @@ function compiled(assetId: string, parentId?: string): CompiledV9AssetInput {
 
 describe("v9 research handoff contracts", () => {
 
-  it("renormalizes a proven pipeline-only exit gap over the two measured pillars", () => {
+  it("prices a proven pipeline-only exit gap without presenting it as measured evidence", () => {
     const input = makeV9ProductionScoreInput({
       pillars: {
         backing: makeV9Pillar(90),
@@ -67,9 +66,16 @@ describe("v9 research handoff contracts", () => {
     });
     const trace = scoreV9EvaluatedAsset(input, V9_CANDIDATE_POLICY_V1);
     expect(trace.ratingStatus).toBe("rated");
-    expect(trace.finalScore).toBe(81);
+    const measuredUnknown = scoreV9EvaluatedAsset({
+      ...input, pillars: { ...input.pillars, exit: makeV9Pillar(50) },
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(trace.finalScore).toBe(measuredUnknown.finalScore);
+    expect(trace.diagnosticPillarScores.exit).toBeNull();
+    expect(trace.aggregation?.pricedUnknownPillars).toEqual([
+      { pillar: "exit", cause: "U", score: 50, causeGapIds: ["exit:producer-gap"] },
+    ]);
     expect(trace.partialEvidence).toMatchObject({ excludedPillars: ["exit"], causes: ["A"] });
-    expect(trace.effectiveScoringWeights).toEqual({ backing: 0.4 / 0.65, control: 0.25 / 0.65, exit: 0 });
+    expect(trace.effectiveScoringWeights).toEqual({ backing: 0.4, control: 0.25, exit: 0.35 });
   });
 
   it("gives an active depeg precedence over an equal structural cap", () => {
@@ -159,7 +165,7 @@ describe("v9 research handoff contracts", () => {
     expect(trace.nrReasons).toEqual([]);
   });
 
-  it("resolves fact-shaped signals to caps outside compiled metadata", () => {
+  it("keeps fact-shaped structural signals diagnostic rather than whole-score caps", () => {
     const input = compiled("unsafe");
     input.structuralSignals = [
       {
@@ -178,10 +184,10 @@ describe("v9 research handoff contracts", () => {
         evidence: [],
       },
     ];
-    expect(resolveV9StructuralCaps(input.structuralSignals, V9_CANDIDATE_POLICY_V1)).toEqual([
-      expect.objectContaining({ kind: "signal:unsafe-backing:critical", limit: 39 }),
-    ]);
-    expect(scoreCompiledAsset(input, V9_CANDIDATE_POLICY_V1).bindingCap?.kind).toBe("signal:unsafe-backing:critical");
+    const baseline = scoreCompiledAsset(compiled("baseline"), V9_CANDIDATE_POLICY_V1);
+    const trace = scoreCompiledAsset(input, V9_CANDIDATE_POLICY_V1);
+    expect(trace.finalScore).toBe(baseline.finalScore);
+    expect(trace.caps).toEqual(baseline.caps);
   });
 
   it("evaluates parents deterministically regardless of input order", () => {
@@ -237,7 +243,7 @@ describe("v9 research handoff contracts", () => {
     expect(result.traces.every((trace) => trace.adverseAttribution.length === 0)).toBe(true);
   });
 
-  it("keeps structural caps diagnostic when cyclic parent uncertainty prevents a rating", () => {
+  it("retains structural diagnostics without a retired whole-score cap during cyclic parent uncertainty", () => {
     const capped = compiled("a", "b");
     capped.structuralSignals = [{
       kind: "unsafe-backing",
@@ -249,7 +255,8 @@ describe("v9 research handoff contracts", () => {
 
     const result = scoreCompiledAssetSet([capped, compiled("b", "a")], V9_CANDIDATE_POLICY_V1);
     const trace = result.traces.find((candidate) => candidate.assetId === "a");
-    expect(trace?.caps).toContainEqual(expect.objectContaining({ kind: "signal:unsafe-backing:critical" }));
+    expect(trace?.caps).toEqual([]);
+    expect(trace?.structuralSignals).toEqual(capped.structuralSignals);
     expect(trace?.ratingStatus).toBe("not-rated");
     expect(trace?.finalScore).toBeNull();
     expect(trace?.adverseAttribution).toEqual([]);

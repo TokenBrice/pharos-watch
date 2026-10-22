@@ -866,14 +866,18 @@ describe("v10.05 source-bound operational and voting compilation", () => {
     expect(MintAuthorityProfileSchema.safeParse({ ...positive, governedIssuance: { ...positive.governedIssuance!, decisionRule: "minority-veto", veto: { quorumBps: 200, entrypoints: ["0x12345678"], override: "none", evidence: "A minority window is a veto and not affirmative operational token governance. It does not certify rule H." } } }).success).toBe(false);
   });
 
-  it("keeps GHO's chosen-recipient Council mint at 25 with no operational grant", () => {
+  it("prices GHO's unexploited Council authority without an operational grant or compromise rung", () => {
     const profile = MintAuthorityProfileSchema.parse(ghoSidecar.mintAuthority);
     const { asset, process } = compile(profile, "gho-aave", [], {
       ...ACTIVE_META_BY_ID.get("gho-aave")!, blacklistabilityReview: undefined,
     });
     expect(process).toBeUndefined();
     const result = evaluateV9EconomicControl(makeEconomicControlArgs({ facts: asset, mint: asset.economicControlReview.mint }));
-    expect(result.components.filter((component) => component.kind === "mint").map((component) => ({ score: component.score }))).toEqual(expect.arrayContaining([expect.objectContaining({ score: 25 })]));
+    const mintComponents = result.components.filter((component) => component.kind === "mint");
+    expect(mintComponents.length).toBeGreaterThan(0);
+    expect(mintComponents.every((component) => component.score !== null &&
+      component.score >= V9_CANDIDATE_POLICY_V1.policy.semantic.control.authorityLadder.singleSigner)).toBe(true);
+    expect(mintComponents.some((component) => component.score === V9_CANDIDATE_POLICY_V1.policy.semantic.control.authorityLadder.compromised)).toBe(false);
   });
 
   it("uses one full authoritative Vat book for DAI and USDS without duplicate conversion claims", () => {

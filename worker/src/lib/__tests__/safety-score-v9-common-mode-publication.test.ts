@@ -7,7 +7,6 @@ import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v
 import { SafetyScoreV9CommonModeGroupsSchema } from "@shared/types/safety-score-v9-public";
 import { projectSafetyScoreV9CommonModeGroups } from "@shared/lib/safety-score-v9/public";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { structuralSignalNeedsHardCap } from "@shared/lib/safety-score-v9/formula";
 import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 import { capturedAccessMetaById } from "./safety-score-v9-capture.test-support";
 
@@ -50,23 +49,13 @@ describe("V9 common-mode publication", () => {
     for (const group of report.commonModeGroups!) {
       const expectedPricedAssetIds = group.memberAssetIds.filter((assetId) => {
         const trace = pipeline.evaluatedSet.assets.find((asset) => asset.assetId === assetId)!.trace;
-        return trace.structuralSignals.some((signal) => signal.failureDomainKeys.includes(group.id) &&
-          structuralSignalNeedsHardCap(signal) &&
-          trace.caps.some((cap) => cap.source === "structural" && cap.kind === `signal:${signal.kind}:${signal.severity}`)) ||
-          trace.deploymentAdjustments.some((adjustment) => adjustment.failureDomainKey === group.id);
+        return trace.deploymentAdjustments.some((adjustment) => adjustment.failureDomainKey === group.id);
       });
       expect((group.pricedEffects ?? []).map((effect) => effect.assetId)).toEqual(expectedPricedAssetIds);
       for (const effect of group.pricedEffects ?? []) {
         const card = resolveV9PublicWitnessTexts(report.cards.find((asset) => asset.id === effect.assetId)!);
-        expect(effect.capIndices.length > 0 || effect.deploymentAdjustmentIndices.length > 0).toBe(true);
-        for (const index of effect.capIndices) {
-          expect(card.caps[index]).toMatchObject({ source: "structural" });
-          const cap = card.caps[index];
-          const trace = pipeline.evaluatedSet.assets.find((asset) => asset.assetId === effect.assetId)!.trace;
-          expect(trace.structuralSignals.some((signal) =>
-            signal.failureDomainKeys.includes(group.id) && signal.reason === cap.reason) ||
-            (cap.kind === "signal:common-mode-oracle" && cap.reason.endsWith(`share ${group.id}.`))).toBe(true);
-        }
+        expect(effect.capIndices).toEqual([]);
+        expect(effect.deploymentAdjustmentIndices.length).toBeGreaterThan(0);
         for (const index of effect.deploymentAdjustmentIndices) {
           expect(card.scoreTrace.deploymentRisk.adjustments[index].failureDomainKey).toBe(group.id);
         }
@@ -74,9 +63,8 @@ describe("V9 common-mode publication", () => {
     }
   });
 
-  it("preserves exact priced-effect references for interned and resolved cap reasons", () => {
+  it("preserves exact priced-effect references across interned and resolved public cards", () => {
     const { pipeline, report } = replay();
-    expect(pipeline.candidate.cards.some((card) => card.caps.some((cap) => cap.reason.startsWith("~")))).toBe(true);
     const results = pipeline.evaluatedSet.assets.map((asset) => ({ ...asset, policy: V9_CANDIDATE_POLICY_V1 }));
     const expected = projectSafetyScoreV9CommonModeGroups(
       pipeline.evaluatedSet.dependencyPlan.commonModeGroups, results,
@@ -88,39 +76,6 @@ describe("V9 common-mode publication", () => {
     expect(report.commonModeGroups).toEqual(expected);
   });
 
-  it("marks and warns about price references lost after cap copy changes without holding publication", () => {
-    const { pipeline, report } = replay();
-    const cards = report.cards.map((card) => structuredClone(resolveV9PublicWitnessTexts(card)));
-    for (const card of cards) {
-      for (const cap of card.caps) if (cap.source === "structural") cap.reason = "Updated presentation wording.";
-      if (card.bindingCap?.source === "structural") card.bindingCap.reason = "Updated presentation wording.";
-    }
-    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
-    try {
-      const groups = projectSafetyScoreV9CommonModeGroups(
-        pipeline.evaluatedSet.dependencyPlan.commonModeGroups,
-        pipeline.evaluatedSet.assets.map((asset) => ({ ...asset, policy: V9_CANDIDATE_POLICY_V1 })),
-        cards,
-      );
-      const expectedIncompleteIds = pipeline.evaluatedSet.dependencyPlan.commonModeGroups.filter((group) => {
-        const memberIds = [...new Set(group.members.map((member) => member.assetId))];
-        const id = `${group.failureDomain.kind}:${group.failureDomain.key}`;
-        return memberIds.length >= 2 && memberIds.some((assetId) => {
-          const trace = pipeline.evaluatedSet.assets.find((asset) => asset.assetId === assetId)!.trace;
-          return trace.structuralSignals.some((signal) => signal.failureDomainKeys.includes(id) &&
-            structuralSignalNeedsHardCap(signal) &&
-            trace.caps.some((cap) => cap.source === "structural" && cap.kind === `signal:${signal.kind}:${signal.severity}`)) &&
-            !trace.deploymentAdjustments.some((adjustment) => adjustment.failureDomainKey === id);
-        });
-      }).map((group) => `${group.failureDomain.kind}:${group.failureDomain.key}`);
-      expect(expectedIncompleteIds).toContain("mint-control:ethereum:0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828");
-      expect(groups.filter((group) => group.pricedEffectsIncomplete).map((group) => group.id)).toEqual(expectedIncompleteIds);
-      expect(warning.mock.calls.map(([, details]) => details.groupId)).toEqual(expectedIncompleteIds);
-      expect(ReportCardsV9CurrentResponseSchema.parse({ ...report, cards, commonModeGroups: groups }).commonModeGroups).toEqual(groups);
-    } finally {
-      warning.mockRestore();
-    }
-  });
 
   it("parses the real candidate to public mapper path with typed wrapper provenance", () => {
     const { pipeline, report } = replay();

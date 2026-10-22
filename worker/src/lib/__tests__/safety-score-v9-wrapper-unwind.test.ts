@@ -60,7 +60,7 @@ describe("wrapper unwind certificate completion floors", () => {
     const result = compileUnwind(completion, { extraRoute: true });
     expect(result.unwind).toMatchObject({ disposition: "reviewed", assessment: "none" });
     expect(result.gaps.some((gap) => gap.gapId === "alpha:gap:wrapper-local:measuredUnwind")).toBe(false);
-    expect(result.card.trace.wrapperParentLimit?.adjustments).toContainEqual(expect.objectContaining({ factKey: "measuredUnwind", assessment: "none", discountPoints: 0 }));
+    expect(result.card.trace.wrapperParentLimit?.missingFacts).not.toContainEqual(expect.objectContaining({ factClass: "measuredUnwind" }));
   });
   it.each([0, 0.4, 0.8, 0.94999])("never turns incomplete execution %s into adverse/exhaustive unwind", (completion) => {
     expect(compileUnwind(completion).unwind.assessment).toBeNull();

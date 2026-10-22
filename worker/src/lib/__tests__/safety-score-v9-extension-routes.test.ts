@@ -472,12 +472,13 @@ describe("buildSafetyScoreV9RouteReviews physical-commodity outputs", () => {
       pegReference: { valueUsd: 10_000, usdPerTroyOunce: 5_000, source: "median", contributorCount: 4, asOf: NOW },
     } as ReportCardsFixedInput["pegDataById"][string];
 
-    withRedemptionBackstopConfig(id, { reviewedAt: "2026-07-13" }, () => {
+    withRedemptionBackstopConfig(id, { reviewedAt: "2026-07-13", physicalToUsd: undefined }, () => {
       expect(buildSafetyScoreV9RouteReviews(fixed, id)[0]?.output).toBeNull();
     });
 
     withRedemptionBackstopConfig(id, {
       reviewedAt: "2026-07-12",
+      physicalToUsd: undefined,
       outputAssetType: "physical-commodity-delivery",
       physicalCommodityDelivery: {
         commodity: "XAU", deliverableOuncesPerToken: 1, minimumDeliveryTokens: 1,
@@ -648,7 +649,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     });
   });
 
-  it("projects a bounded terms gap as diagnostic without mutating the frozen redemption row", () => {
+  it("retains legal entitlement diagnostics without mutating the frozen redemption row", () => {
     const row = makeSupplyFullRedemption({
       stablecoinId: "xo-exodus",
       settlementModel: "same-day",
@@ -696,7 +697,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     { missingFields: ["capacity"] },
     { missingFields: ["settlement"] },
     { missingFields: ["cost"] },
-  ] as const)("projects omitted $missingFields terms as diagnostic while retaining captured terms", ({ missingFields }) => {
+  ] as const)("retains captured terms while keeping only a $missingFields capacity gap diagnostic", ({ missingFields }) => {
     const row = makeSupplyFullRedemption({ feeBps: 7 });
     const fixed = fixedInputStub(row);
     expect(buildSafetyScoreV9RouteReviews(fixed, row.stablecoinId)[0]?.coverageClass).toBe("exact-lower-bound");
@@ -714,7 +715,8 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       expect(retained).toEqual(retainedBefore);
       expect(retained).toMatchObject([{ observation: { executableUsd: 5_000_000 } }]);
       expect(reviews).toMatchObject([{
-        coverageClass: "diagnostic", settlementModel: "atomic", settlementSlaSec: 0,
+        coverageClass: missingFields.some((field) => field === "capacity") ? "diagnostic" : "exact-lower-bound",
+        settlementModel: "atomic", settlementSlaSec: 0,
       }]);
       expect([...reviews[0]!.executionCosts].sort((a, b) => a.requestedNotionalUsd - b.requestedNotionalUsd)).toEqual(
         [100_000, 1_000_000, 5_000_000, 25_000_000].map((requestedNotionalUsd) => ({
@@ -951,19 +953,19 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     expect(row).toMatchObject({ feeBps: 0, feeModelKind: "fixed-bps" });
   });
 
-  it("fails static-open live-direct evidence closed only at the v9 adapter", () => {
+  it("admits live execution without requiring an onchain status-source label", () => {
     const row = liveDirectRow("static-config");
     expect(row.capacityProfile?.exitRouteObservations?.[0]?.scoreEligible).toBe(true);
     expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]).toMatchObject({
       lane: "redemption",
-      coverageClass: "diagnostic",
+      coverageClass: "exact-lower-bound",
       modelConfidence: "high",
     });
   });
 
   it.each([
     { routeStatus: "unknown", routeStatusSource: "static-config" },
-  ] as const)("keeps positive unscored $routeStatus/$routeStatusSource capacity diagnostic", ({ routeStatus, routeStatusSource }) => {
+  ] as const)("admits positive execution despite $routeStatus/$routeStatusSource labels", ({ routeStatus, routeStatusSource }) => {
     const row = liveDirectRow(routeStatusSource);
     row.routeStatus = routeStatus;
     row.capacityProfile!.exitRouteObservations![0]!.scoreEligible = false;
@@ -993,10 +995,10 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     }, V9_CANDIDATE_POLICY_V1);
 
     expect(compiled.exitRoutes[0]!.scoreEligible).toBe(false);
-    expect(compiled.exitRoutes[0]!.coverageClass).toBe("diagnostic");
+    expect(compiled.exitRoutes[0]!.coverageClass).toBe("exact-lower-bound");
     expect(compiled.exitRoutes[0]!.capacityCurve.some((point) => point.executableUsd > 0)).toBe(true);
-    expect(result.routes[0]).toMatchObject({ included: false });
-    expect(result.score).toBeLessThanOrEqual(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(result.routes[0]).toMatchObject({ included: true });
+    expect(result.score).toBeGreaterThan(0);
     expect(result.reasons).not.toContain("no-viable-exit-path");
   });
 
@@ -1250,6 +1252,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     const review = buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!;
     expect(review.output).toBeNull();
     expect(review.unresolvedOutputResponsibility).toBe("producer-failed");
+    expect((review.physicalResourceKeys ?? []).some((key) => key.startsWith("execution-endpoint:"))).toBe(false);
   });
 
   it("admits dEURO's source-bound nine-member EUR output valuation without calling it fiat", () => {
@@ -2209,7 +2212,7 @@ describe("issuer stablecoin payout valuation", () => {
 describe("Theo executed eligible-cohort rail", () => {
   it.each([
     ["onchain", 5, "exact-lower-bound"],
-    ["static-config", 5, "diagnostic"],
+    ["static-config", 5, "exact-lower-bound"],
   ] as const)("projects %s openness with %s bps costs as %s", (routeStatusSource, feeBps, coverageClass) => {
     const clock = 1790748096;
     const row = makeSupplyFullRedemption({

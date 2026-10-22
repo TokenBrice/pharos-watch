@@ -6,7 +6,6 @@ import { evaluateV9Exit, type V9ExitEvaluationRoute } from "../safety-score-v9/e
 import {
   V9_CANDIDATE_POLICY_V1,
   deriveV9ReserveLossSignal,
-  resolveV9StructuralCaps,
   scoreCompiledAssetSet,
   scoreV9Input,
 } from "../safety-score-v9-research";
@@ -65,7 +64,6 @@ function evaluationRoute(observation: ExitRouteObservation): V9ExitEvaluationRou
         executionCostBps: 0,
       },
     ],
-    routeScoreCap: null,
     failureDomains: [...observation.commonModeKeys],
     physicalResourceKeys: [...observation.commonModeKeys],
   };
@@ -98,12 +96,6 @@ function scoreSignals(structuralSignals: readonly V9StructuralSignal[], override
   );
 }
 
-function minimumCap(signals: readonly V9StructuralSignal[]): number {
-  return Math.min(
-    ...resolveV9StructuralCaps(signals, V9_CANDIDATE_POLICY_V1).map((cap) => cap.limit),
-    Number.POSITIVE_INFINITY,
-  );
-}
 
 const compiledInput = (assetId: string, pillarScore: number, parent: CompiledV9AssetInput["parent"] = null) =>
   makeCompiledV9AssetInput({ assetId, pillarScore, parent, sourceKey: "matched" });
@@ -133,16 +125,17 @@ function executeInvariant(invariant: MatchedV9Invariant): void {
     case "reserve-loss": {
       const before = scoreSignals([deriveV9ReserveLossSignal(invariant.before, V9_CANDIDATE_POLICY_V1)]);
       const after = scoreSignals([deriveV9ReserveLossSignal(invariant.after, V9_CANDIDATE_POLICY_V1)]);
-      expect(after.finalScore!, invariant.id).toBeLessThan(before.finalScore ?? 0);
+      expect(after.finalScore, invariant.id).toBe(before.finalScore);
       expect(after.structuralSignals[0]?.materialSharePct, invariant.id).toBeGreaterThan(
         before.structuralSignals[0]?.materialSharePct ?? 0,
       );
       return;
     }
     case "structural-signals": {
-      const before = minimumCap(invariant.before);
-      const after = minimumCap(invariant.after);
-      expect(after, invariant.id).toBeLessThan(before);
+      const before = scoreSignals(invariant.before);
+      const after = scoreSignals(invariant.after);
+      expect(after.finalScore, invariant.id).toBe(before.finalScore);
+      expect(after.structuralSignals, invariant.id).toEqual(invariant.after);
       return;
     }
     case "scoring-facts": {
@@ -153,11 +146,10 @@ function executeInvariant(invariant: MatchedV9Invariant): void {
       const weak = score(invariant.variants.weak);
       const unavailable = score(invariant.variants.unavailable);
       expect(strong.finalScore, invariant.id).toBe(absent.finalScore);
-      expect(weak.finalScore!, invariant.id).toBeLessThan(strong.finalScore ?? 0);
-      // An integration-owned unavailable dependency stays rateable under its
-      // configured bounded-evidence ceiling.
+      expect(weak.finalScore, invariant.id).toBe(strong.finalScore);
+      // Diagnostics alone do not invent a second dependency ceiling.
       expect(unavailable.finalGrade, invariant.id).not.toBe("NR");
-      expect(unavailable.finalScore!, invariant.id).toBeLessThanOrEqual(weak.finalScore!);
+      expect(unavailable.finalScore, invariant.id).toBe(weak.finalScore);
       expect(unavailable.unresolvedFacts, invariant.id).toContainEqual(
         expect.objectContaining({
           code: "material-dependency-unavailable",
@@ -180,7 +172,7 @@ function executeInvariant(invariant: MatchedV9Invariant): void {
       expect(bounded.finalScore!, invariant.id).toBeGreaterThanOrEqual(noncritical.finalScore ?? 0);
       expect(noncritical.finalGrade, invariant.id).not.toBe("NR");
       expect(critical.finalGrade, invariant.id).not.toBe("NR");
-      expect(critical.caps.filter((cap) => cap.source === "evidence"), invariant.id).toEqual([]);
+      expect(critical.caps, invariant.id).toEqual(noncritical.caps);
       return;
     }
     case "parent-graph": {
@@ -199,7 +191,7 @@ function executeInvariant(invariant: MatchedV9Invariant): void {
 
       const missingParent = scoreCompiledAssetSet([child], V9_CANDIDATE_POLICY_V1).traces[0]!;
       expect(missingParent.finalGrade, invariant.id).toBe("NR");
-      expect(missingParent.nrReasons, invariant.id).toContainEqual(expect.objectContaining({ code: "f-without-measured-adverse", cause: "U" }));
+      expect(missingParent.nrReasons, invariant.id).toContainEqual(expect.objectContaining({ code: "missing-parent-score", cause: "U" }));
       return;
     }
   }

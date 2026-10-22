@@ -344,7 +344,7 @@ describe("methodology registry", () => {
   });
 
   it("retains the archive-free attribution release and aligns current Safety policy identity", () => {
-    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.28");
+    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.29");
     expect(SAFETY_SCORE_POLICY.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.23")!;
     expect(release).toMatchObject({
@@ -375,8 +375,8 @@ describe("methodology registry", () => {
       commits: [], reconstructed: false,
     });
     expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.25");
-    // The local v10.28 candidate shares the upstream 10.26/10.27 provisional cut.
-    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.28");
+    // Stacked local candidates share the upstream provisional cut; the highest numeric version wins.
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
     expect(release.impact.join(" ")).toContain("gradeHold");
     expect(release.impact.join(" ")).toContain("no deployment or production acceptance is claimed");
   });
@@ -388,7 +388,7 @@ describe("methodology registry", () => {
       commits: [], reconstructed: false,
     });
     expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.25");
-    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.28");
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
     expect(release.impact.join(" ")).toContain("5400s");
     expect(release.impact.join(" ")).toContain("no deployment or production acceptance is claimed");
   });
@@ -398,7 +398,7 @@ describe("methodology registry", () => {
     expect(release).toMatchObject({
       version: "10.28", date: "2026-10-21", effectiveAt: 1_792_627_200, reconstructed: false, commits: [],
     });
-    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.28");
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
     expect(release.summary).toMatch(/local, unreleased/i);
     const impact = release.impact.join(" ");
     expect(impact).toMatch(/configured redemption channel/);
@@ -411,10 +411,30 @@ describe("methodology registry", () => {
     expect(impact).toMatch(/aggregate share is at most 1%/);
     expect(impact).toMatch(/wrapperMildRiskFloorGrade D/);
     expect(impact).toMatch(/Preserve admitted exact-controller MPC\/HSM technical custody/);
-    expect(SAFETY_SCORE_POLICY.semantic.formula.danger).not.toHaveProperty("requireSourceBoundDangerWitness");
-    expect(SAFETY_SCORE_POLICY.semantic.formula.wrapperMildRiskFloorGrade).toBe("D");
     expect(impact).toMatch(/Current explicit mechanism-component reviews/);
     expect(impact).toMatch(/no deployment or production acceptance is asserted/i);
+  });
+
+  it("stacks v10.29 numerically on unshipped v10.28 at the same provisional boundary", () => {
+    const previous = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.28")!;
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0]!;
+    expect(release).toMatchObject({
+      version: "10.29", date: "2026-10-22", effectiveAt: previous.effectiveAt,
+      reconstructed: false, commits: [],
+    });
+    expect(release.version).toMatch(/^\d+\.\d{1,2}$/);
+    expect(compareMethodologyVersions(release.version, previous.version)).toBeGreaterThan(0);
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.25");
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe(release.version);
+    expect(release.summary).toMatch(/local, unreleased/i);
+    expect(release.summary).toMatch(/neither activation nor engine-replay acceptance/i);
+    const impact = release.impact.join(" ");
+    expect(impact).toMatch(/C\/U responsibility|issuer non-disclosure/);
+    expect(impact).toMatch(/economic-authority ladder|weakest-effective-path ladder/);
+    expect(impact).toMatch(/five cap families/);
+    expect(impact).toMatch(/speculative-credit.*59/);
+    expect(impact).toMatch(/at least 25%.*39.*at least 1%.*49/);
+    expect(impact).toMatch(/equal to unshipped v10\.28/);
   });
 
 });

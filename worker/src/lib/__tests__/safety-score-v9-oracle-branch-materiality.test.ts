@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { OracleRiskBranch, OracleRiskProfile, OracleRiskTier } from "@shared/types/core";
 import type { LenderBookObservation, LenderMarketObservation } from "@shared/types/safety-score-v9-lender-book";
 import { deriveMorphoOracleBranchMateriality, deriveOracleBranchMateriality } from "../safety-score-v9/extension-oracle";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { lenderOracleBranchKey } from "@shared/lib/safety-score-v9/lender-book-registry";
 
 function branch(id: string, tier: OracleRiskTier, debtSharePct?: number): OracleRiskBranch {
@@ -370,18 +370,20 @@ describe("Morpho lender NAV branch materiality", () => {
   });
 
   it("can only improve or retain the pre-v10.19 worst reviewed quality across all tier pairs", () => {
-    const quality = V9_CANDIDATE_POLICY_V1.policy.semantic.control.oracleTierQuality;
-    const tiers = Object.keys(quality) as OracleRiskTier[];
+    const policy = V9_CANDIDATE_POLICY_V1.policy.semantic;
+    const quality = (tier: OracleRiskTier): number => tier === "opaque-or-unknown"
+      ? unknownQuality("control", undefined, policy) : policy.control.oracleTierQuality[tier];
+    const tiers = [...Object.keys(policy.control.oracleTierQuality), "opaque-or-unknown"] as OracleRiskTier[];
     for (const first of tiers) {
       for (const second of tiers) {
         const branches = morphoBranches();
         branches[0]!.tier = first;
         branches[1]!.tier = second;
-        const baseline = quality[first] <= quality[second] ? first : second;
+        const baseline = quality(first) <= quality(second) ? first : second;
         for (const amount of ["0", "999", "1000", "1001"]) {
           const book = lenderBook([lenderClaim("a", "50000"), lenderClaim("b", amount)]);
           const result = deriveMorphoOracleBranchMateriality(branches, baseline, book, borrowerPaths(branches));
-          expect(quality[result.tier], `${first}/${second} at ${amount}`).toBeGreaterThanOrEqual(quality[baseline]);
+          expect(quality(result.tier), `${first}/${second} at ${amount}`).toBeGreaterThanOrEqual(quality(baseline));
           book.deployments[0]!.markets.push(lenderClaim("c", "1"));
           expect(deriveMorphoOracleBranchMateriality(branches, baseline, book, borrowerPaths(branches)))
             .toEqual({ tier: baseline, missingBranch: true });

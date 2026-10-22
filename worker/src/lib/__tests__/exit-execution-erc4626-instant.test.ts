@@ -458,6 +458,10 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     const compileAt = (circulatingUsd: number, clockSec = CLOCK) => {
       const draft = structuredClone(makeV9FixedInput({
         assetId: "fixture-vault", clockSec, aggregateCirculating: { peggedUSD: circulatingUsd },
+        chainSupplyByChain: { ethereum: {
+          current: circulatingUsd, circulatingPrevDay: circulatingUsd,
+          circulatingPrevWeek: circulatingUsd, circulatingPrevMonth: circulatingUsd,
+        } },
         includeDexObservations: false, includeDexCoverage: false,
       }));
       draft.redemptionGenerationId = "redemption:fixture-certified";

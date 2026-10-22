@@ -895,7 +895,11 @@ describe("v10.19 frozen lender-book fact admission", () => {
   }
 
   function context(observation?: LenderBookObservation, bundle?: LenderCollateralBacking, scoringClockSec = clockSec): AssetBuildContext {
-    const fixed = makeV9FixedInput({ assetId, clockSec: scoringClockSec });
+    const fixed = makeV9FixedInput({ assetId, clockSec: scoringClockSec, reserves: [{
+      name: "Parent-denominated lender assets", pct: 100, risk: "low", coinId: "usdc-circle",
+      depType: "collateral", assetClass: "stablecoin", issuerOrObligor: "asset:usdc-circle",
+      liquidityHorizon: "immediate",
+    }] });
     const result = factBuilderContext(fixed, makeV9Extension({ assetId, clockSec: scoringClockSec, registryFingerprint: fixed.registryFingerprint }));
     return { ...result, fixedInput: { ...result.fixedInput,
       liveReserveProvenanceMap: { [assetId]: { source: "onchain", fetchedAt: clockSec - 100,
@@ -904,7 +908,7 @@ describe("v10.19 frozen lender-book fact admission", () => {
     } };
   }
 
-  it("omits the lane for non-cohort assets", () => {
+  it("omits the lane without an admitted observation or supported adapter", () => {
     expect(buildLenderBookFact(factBuilderContext())).toBeUndefined();
   });
 
@@ -1037,8 +1041,10 @@ describe("v10.19 frozen lender-book fact admission", () => {
       expect(readFailedDb.getHistory().every(entry => !entry.sql.includes("INSERT INTO"))).toBe(true);
       for (const age of [100, budget, budget + 1]) {
         const baseContext = context(good, undefined, measured.acquiredAtSec + age);
+        // Ordinary reserves refresh independently; the retained lender book
+        // keeps its original acquisition clock and eight-hour expiry.
         const ctx = { ...baseContext, fixedInput: { ...baseContext.fixedInput,
-          liveReserveProvenanceMap: { [assetId]: provenance } } };
+          liveReserveProvenanceMap: { [assetId]: { ...provenance, fetchedAt: baseContext.fixedInput.clockSec } } } };
         const fact = buildLenderBookFact(ctx)!;
         expect(V1019LenderBookFactSchema.safeParse(fact).success).toBe(true);
         expect(fact.observation).toEqual(good);
@@ -1307,7 +1313,8 @@ describe("v10.19 frozen lender-book fact admission", () => {
           tier: "wrapped", failureDomains: [],
         },
       }, V9_CANDIDATE_POLICY_V1);
-      expect(evaluated.score).toBeCloseTo(80.0154, 8);
+      const expected = evaluateV1019LenderBook(fact, 90, V9_CANDIDATE_POLICY_V1)!.reserveQuality;
+      expect(evaluated.score).toBeCloseTo(expected, 8);
       const factors = evaluated.contributions[0]!.factors!;
       expect(factors.find((factor) => factor.componentKey.endsWith(":accepted-source"))).toMatchObject({
         score: null, normalizedWeight: 0, effectiveScoringWeight: 0, cause: "A",

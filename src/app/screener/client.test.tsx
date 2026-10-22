@@ -364,10 +364,10 @@ describe("ScreenerClient freshness notices", () => {
 
   it("projects the V9 score into the screener row, not the legacy weighted-pillar mean", () => {
     const bindingCap = {
-      kind: "reason:missing-mint-authority",
+      kind: "parent",
       limit: 61,
-      source: "evidence" as const,
-      reason: "Mint control evidence caps the published score.",
+      source: "parent" as const,
+      reason: "The required parent limits the published score.",
       binding: true,
     };
     // The legacy weighted-pillar mean (qualityScore 88) and the V9 post-cap
@@ -383,6 +383,10 @@ describe("ScreenerClient freshness notices", () => {
           pillars: makeV9Pillars({ backing: 86, exit: 88, control: 90 }),
           caps: [bindingCap],
           bindingCap,
+          dependencies: {
+            serial: [{ upstreamAssetId: "required-parent", score: 61, blocked: false, ratingStatus: "rated", partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [] }],
+            basket: [], cycleBlocked: false, reasonCodes: [],
+          },
           evidence: { level: "insufficient", freshness: "stale", reasons: [] },
         }),
       ],
@@ -418,7 +422,7 @@ describe("ScreenerClient freshness notices", () => {
       safetyEvidence: "limited",
       safetyWeakestPillar: "backing",
       safetyWeakestScore: 86,
-      safetyBindingCapReason: "Mint control evidence caps the published score.",
+      safetyBindingCapReason: bindingCap.reason,
     }));
   });
   it("preserves technical null grades, excluded pillars and causes in rows and exports", () => {

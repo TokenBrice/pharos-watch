@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { evaluateV9Backing } from "../safety-score-v9/archetypes";
-import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import type { V9FiatCashMechanismRiskReview, V9MechanismFactV1 } from "../../types/safety-score-v9-backing";
 import { asset, exposure, knownStatus } from "./safety-score-v9-backing.test-support";
 
@@ -22,7 +22,10 @@ it("partial verified assurance cannot worsen unknown; unknown remainder keeps it
   const fragments = after.contributions.filter(row => row.componentKey.includes(":scope:"));
   const covered = fragments.find(row => row.componentKey.endsWith(":trust"))!;
   const remainder = fragments.find(row => row.componentKey.endsWith(":remainder"))!;
-  expect([covered.score, covered.observationState, remainder.score, remainder.observationState]).toEqual([87, "known", 35, "bounded-unknown"]);
+  expect(covered).toMatchObject({ score: 87, observationState: "known" });
+  expect(remainder).toMatchObject({
+    score: unknownQuality("backing", "U"), observationState: "bounded-unknown", cause: "U",
+  });
   expect(covered.normalizedWeight / remainder.normalizedWeight).toBeCloseTo(1 / 3);
   expect(score(partial, true).score).toBe(after.score);
 });

@@ -15,7 +15,7 @@ describe("show-your-work formatters", () => {
       bindingCap: {
         kind: "track-record:<24m",
         limit: 84,
-        source: "structural",
+        source: "track-record",
         reason: "Less than two years of implementation history.",
         binding: true,
       },
@@ -68,7 +68,7 @@ describe("show-your-work formatters", () => {
           { key: "capacity", label: "Capacity", score: 96, weight: 0.25, effectiveScoringWeight: 0.25, weightedContribution: 24, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
           { key: "outputAssetQuality", label: "Output asset quality", score: 80, weight: 0.15, effectiveScoringWeight: 0.15, weightedContribution: 12, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
           { key: "cost", label: "Cost", score: 80, weight: 0.1, effectiveScoringWeight: 0.1, weightedContribution: 8, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
-        ].reduce((sum, component) => sum + component.weightedContribution, 0), eligibilityMultiplier: 1,
+        ].reduce((sum, component) => sum + component.weightedContribution, 0),
         capsApplied: ["route-cap:measured-depth"], },
         diversification: {
           routeKey: "route:redemption",

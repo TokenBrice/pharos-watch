@@ -155,11 +155,23 @@ describe("MethodologyPage", () => {
     for (const rule of [
       "120-second skew and 30-minute age limits", "Exactly 1%", "inclusive eight-hour book budget",
       "within one hour", "L = 100 − t × (100 − q)", "including HBD",
-      "next UTC midnight", "two or three are excluded", "Physical GOLD/SILVER delivery",
-      "code-unit order", "500 bps (200 bps", "86,400-second allowance",
+      "next UTC midnight", "Two usable pillars permit a rating", "Physical GOLD/SILVER delivery",
+      "code-unit order", "Measured capacity contributes through continuous coverage", "86,400-second allowance",
     ]) expect(text).toContain(rule);
     expect(text).not.toContain("The ledger records 833");
     expect(text).not.toContain("open data points fell 1,280");
+  });
+
+  it("explains evidence availability and the simplified cap families without retired NR guards", () => {
+    const text = methodologyDocument().querySelector("#safety-scores-methodology")!.textContent;
+    for (const rule of [
+      "Fewer than two usable pillars are a technical Pipeline gap", "LEVER-1", "D/F evidence guards are retired",
+      "never an open question or low score", "five whole-score limit families",
+      "speculative-credit residual limit (59)", "at least 25% limits the score to 39",
+      "at least 1% but below 25% limits it to 49",
+      "not dropped or renormalized", "original weights", "pricing a missing pillar does not make it usable evidence",
+    ]) expect(text).toContain(rule);
+    expect(text).not.toContain("two or three are excluded");
   });
 
   it("preserves pricing table identities and wrapper versus issuer-conversion distinctions", () => {

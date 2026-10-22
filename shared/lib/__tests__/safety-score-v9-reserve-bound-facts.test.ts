@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ReserveBoundedFactSchema, type ReserveBoundedFact, type V9ReserveBoundedFact } from "../../types/reserve-bounded-facts";
 import { reserveBoundTermDays, evaluateV9ReserveEligibilityEnvelope, resolveV9ReserveFactorBounds } from "../safety-score-v9/reserve-bound-facts";
 import { evaluateV9ReserveExposures } from "../safety-score-v9/backing";
-import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { asset, exposure, knownStatus } from "./safety-score-v9-backing.test-support";
 import type { V9FactGapV3 } from "../../types/safety-score-v9-facts";
 const clock = 1790849876;
@@ -19,7 +19,7 @@ describe("bounded reserve facts", () => {
     const original = baseline.contributions.find((row) => row.source === "reserve-exposure")!;
     const improved = bounded.contributions.find((row) => row.source === "reserve-exposure")!;
     const weights = policy.reserve.factorWeights;
-    expect(improved.score! - original.score!).toBeCloseTo(0.5 * (policy.componentQuality.limited - policy.reserve.liquidityQuality.unknown) * weights.liquidity / (weights.assetQuality + weights.liquidity + weights.maturity));
+    expect(improved.score! - original.score!).toBeCloseTo(0.5 * (policy.componentQuality.limited - unknownQuality("backing", "U")) * weights.liquidity / (weights.assetQuality + weights.liquidity + weights.maturity));
     expect(improved.failureDomains).toEqual(original.failureDomains);
     expect(bounded.contributions.find((row) => row.source === "reserve-concentration")).toEqual(baseline.contributions.find((row) => row.source === "reserve-concentration"));
     expect(improved.evidenceRefIds).toContain("evidence:bound");
@@ -45,7 +45,7 @@ describe("bounded reserve facts", () => {
     expect(factor).toMatchObject({ score: 60, normalizedWeight: 0.15, cause: null });
     expect(omitted).toMatchObject({ score: null, normalizedWeight: 0.15, effectiveScoringWeight: 0, cause: "A" });
     expect(factor.effectiveScoringWeight).toBeCloseTo(0.15 / 0.85, 12);
-    expect(contribution.score).toBeCloseTo((policy.reserve.assetClassQuality["government-security"] * 0.55 + 60 * 0.15 + 48 * 0.15) / 0.85, 12);
+    expect(contribution.score).toBeCloseTo((policy.reserve.assetClassQuality["government-security"] * 0.55 + 60 * 0.15 + unknownQuality("backing", "U") * 0.15) / 0.85, 12);
     expect(result.structuralReasons.filter(entry => entry.kind === "unsafe-backing")).toEqual([]);
   });
   it("retains the actual covered grade for positive dust instead of cancelling it against the unknown baseline", () => {
@@ -97,7 +97,8 @@ describe("bounded reserve facts", () => {
     const envelope = ReserveBoundedFactSchema.parse({ ...base, kind: "eligibility-envelope", scope: { kind: "reserve-envelope" }, legallyBinding: true, exhaustive: true, allocations: [{ assetClass: "cash", minShare: 0.2, maxShare: 1, maximumTerm: null }, { assetClass: "bank-deposit", minShare: 0, maxShare: 0.8, maximumTerm: null }] });
     const result = evaluateV9ReserveEligibilityEnvelope([compiled(envelope)], policy, clock)!;
     const weights = policy.reserve.factorWeights, total = weights.assetQuality + weights.liquidity + weights.maturity;
-    const expected = (0.2 * (policy.reserve.assetClassQuality.cash * weights.assetQuality + policy.reserve.liquidityQuality.unknown * weights.liquidity + 100 * weights.maturity) + 0.8 * (policy.reserve.assetClassQuality["bank-deposit"] * weights.assetQuality + policy.reserve.liquidityQuality.unknown * weights.liquidity + policy.reserve.maturityUnknownQuality * weights.maturity)) / total;
+    const unknown = unknownQuality("backing", "U");
+    const expected = (0.2 * (policy.reserve.assetClassQuality.cash * weights.assetQuality + unknown * weights.liquidity + 100 * weights.maturity) + 0.8 * (policy.reserve.assetClassQuality["bank-deposit"] * weights.assetQuality + unknown * weights.liquidity + unknown * weights.maturity)) / total;
     expect(result.quality).toBeCloseTo(expected);
     expect(evaluateV9ReserveEligibilityEnvelope([compiled({ ...envelope, exhaustive: false } as ReserveBoundedFact)], policy, clock)).toBeNull();
     expect(ReserveBoundedFactSchema.safeParse({ ...envelope, allocations: [{ assetClass: "cash", minShare: 0.6, maxShare: 0.5, maximumTerm: null }] }).success).toBe(false);

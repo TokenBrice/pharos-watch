@@ -71,14 +71,16 @@ describe("Safety Score v9 USDT premium production integration", () => {
     }
 
     const usdt = evaluatedById.get("usdt-tether")!;
-    // Tron is not a mature chain (block-production-finality pending since the 2026-09-23 re-review),
-    // so this capture's 48.9% tron slice is priced as a common-mode deployment adjustment. The
-    // longevity premium has no base-score floor, so it still applies on top of that lower base.
+    // The longevity premium is public-only; structural correlation no longer
+    // selects a second whole-score ceiling or a cap-derived deployment score.
     expect(usdt.trace).toMatchObject({
       scoreAdjustments: [{ kind: "market-anchor-longevity", appliedPoints: 12 }],
-      deploymentAdjustments: [{ failureDomainKey: "chain:tron", exposedScore: 64 }],
+      deploymentAdjustments: [],
     });
-    expect(usdt.trace.inheritableScore).toBe(usdt.trace.finalScore! - 12);
+    // The publication maximum can truncate the visible lift; downstream claims
+    // inherit the ordinary score, not the capped published score minus 12.
+    expect(usdt.trace.inheritableScore).toBe(usdt.trace.scoreAdjustments[0]!.publishedScoreBefore);
+    expect(usdt.trace.inheritableScore).toBeLessThan(usdt.trace.finalScore!);
 
     const childFacts = factsById.get("susdt-spark")!;
     // The 2026-09-29 re-curation measured the spUSDT vault on-chain (block

@@ -354,19 +354,16 @@ describe("Safety Score v9 CDP shock-coverage selection", () => {
     });
   });
 
-  it("forces MIM through the evaluator-visible legacy guard without adding evidence", () => {
+  it("uses the same evidence-free fallback regardless of the asset identity", () => {
     const selection = selectV9CdpLiquidationCapacity(
-      "mim-abracadabra",
-      null,
-      undefined,
-      V9_CANDIDATE_POLICY_V1,
-      AS_OF_SEC,
+      "mim-abracadabra", null, undefined, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
     );
-    expect(selection).toEqual({
+    expect(selection).toEqual(selectV9CdpLiquidationCapacity(
+      "synthetic-unreviewed-cdp", null, undefined, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
+    ));
+    expect(selection).toMatchObject({
       selectedPath: "legacyLCR",
       coverageRatio: null,
-      reason: "Selected legacyLCR fallback: no-reconciled-committed-pool-and-no-complete-family-simulator.",
-      fallbackReason: "no-reconciled-committed-pool-and-no-complete-family-simulator",
       measurementAgeSec: null,
       selectedEvidenceRefIds: [],
       stressEvidenceRefIds: [],

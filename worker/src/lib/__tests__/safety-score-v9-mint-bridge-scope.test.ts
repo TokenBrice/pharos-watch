@@ -35,6 +35,7 @@ import {
   v9TestClockSec,
 } from "../../test-helpers/v9-fixed-input";
 
+const AUTHORITY_LADDER = V9_CANDIDATE_POLICY_V1.policy.semantic.control.authorityLadder;
 const SOURCE = { label: "Fixture review", url: "https://example.com/review" };
 const ARBITRUM_ROUTE = "arbitrum:0x2222222222222222222222222222222222222222";
 const BASE_ROUTE = "base:0x3333333333333333333333333333333333333333";
@@ -575,7 +576,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     });
     const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
     expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
-      binding: true, posture: "unbounded-adverse", score: 25,
+      binding: true, posture: "unbounded-adverse", score: AUTHORITY_LADDER.opaqueController,
     });
     expect(result.structuralFailures).toContainEqual(expect.objectContaining({
       kind: "centralized-mint", binding: true, materialSharePct: null,
@@ -601,12 +602,12 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
         .toEqual(["raiseable", "unbounded"]);
       const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
       expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
-        binding: true, posture: "unbounded-adverse", score: 25,
+        binding: true, posture: "unbounded-adverse", score: AUTHORITY_LADDER.opaqueController,
       });
     }
   });
 
-  it("prices the worst same-address native Safe rather than its first deployment", () => {
+  it("prices verified native Safe quorums equally with independently reviewed assurance", () => {
     const routes = [route(BASE_ROUTE), route(ETHEREUM_ROUTE), route(ARBITRUM_ROUTE)];
     const metadata = meta("fixture-split-native-safe", {
       mintAuthority: mintProfile({
@@ -630,11 +631,17 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       if (reverse) input.mintAuthority!.controls!.reverse();
       const asset = compileFixture(input, { chainSupplyByChain: partition }).compiled.assets[0]!;
       const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
-      const weak = asset.controls.find((control) => control.authority?.threshold?.required === 2)!;
-      expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
-        binding: true, controlKeys: [weak.controlKey],
+      const nativeMintKeys = asset.controls.filter((control) => control.capabilities.includes("mint"))
+        .map((control) => control.controlKey);
+      const mintComponent = result.components.find((component) => component.kind === "mint")!;
+      expect(mintComponent).toMatchObject({
+        binding: true,
+        score: Math.min(AUTHORITY_LADDER.maxComponentQuality,
+          AUTHORITY_LADDER.quorum + AUTHORITY_LADDER.reconciliationCredit + AUTHORITY_LADDER.attestationCredit),
       });
-      expect(result.score).toBeLessThan(70);
+      expect(mintComponent.controlKeys).toHaveLength(1);
+      expect(nativeMintKeys).toContain(mintComponent.controlKeys[0]);
+      expect(result.score).toBe(mintComponent.score);
     }
   });
 
@@ -1683,7 +1690,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.scoreInput.pillars.control.evidenceLevel).toBe("limited");
   });
 
-  it("does not soften a single authority's established adverse mint path when unknown reach is added", () => {
+  it("does not soften a single authority's established unbounded mint path when unknown reach is added", () => {
     const metadata = scopedMintReachMeta({ unknownReach: false });
     const profile = metadata.mintAuthority!;
     profile.controls = [profile.controls![0]!];
@@ -1700,7 +1707,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     const beforeResult = evaluateV9EconomicControl({ facts: before, ...before.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
     const afterResult = evaluateV9EconomicControl({ facts: after, ...after.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
     expect(afterResult.components.find((component) => component.kind === "mint")).toMatchObject({
-      binding: true, posture: "unbounded-adverse", score: 25,
+      binding: true, posture: "unbounded-adverse", score: AUTHORITY_LADDER.opaqueController,
       controlKeys: [after.controls[0]!.controlKey],
     });
     expect(afterResult.components).toEqual(beforeResult.components);
@@ -2314,8 +2321,15 @@ describe("native external-validation transfer tiers", () => {
     expect(asset.gaps.some((gap) => gap.reasonCode === "unresolved-control-identity")).toBe(true);
     expect(metadata.bridgeRouteRisk!.routes![0]!.issuanceModel).toBe("native-issuance");
     const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
-    expect(result.components.some((component) =>
-      component.kind === "bridge" && component.posture === "external-validated-network")).toBe(false);
+    expect(result.components).toContainEqual(expect.objectContaining({
+      kind: "bridge", posture: "external-validated-network",
+    }));
+    expect(result.components).toContainEqual(expect.objectContaining({
+      componentKey: `mint:bridge:${control.controlKey}`,
+      binding: true, score: AUTHORITY_LADDER.opaqueController,
+      controlKeys: [control.controlKey],
+    }));
+    expect(result.score).toBeLessThanOrEqual(AUTHORITY_LADDER.opaqueController);
     expect(result.reasons.map((reason) => reason.code)).toContain("selected-bridge-route-unresolved");
   });
 

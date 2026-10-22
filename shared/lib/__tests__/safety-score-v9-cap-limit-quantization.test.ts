@@ -4,13 +4,7 @@ import { scoreV9Input } from "../safety-score-v9/formula";
 import type { V9ScoringInput } from "../../types/safety-score-v9";
 import { makeV9ScoringInput } from "./safety-score-v9-score.test-support";
 
-/**
- * A cap limit is a PUBLISHED ceiling, so it must live in the published score
- * space. Wrapper-local parent limits are the only production source of
- * fractional limits, and a fractional limit combined with the capped-score floor
- * lets a sub-point remainder decide a whole grade band: asusdf-astherus resolved
- * a 49.55 parent limit against a D/C- boundary at 50.
- */
+/** Published ceilings are integers; own scores retain nearest rounding. */
 function input(overrides: Partial<V9ScoringInput> = {}): V9ScoringInput {
   return makeV9ScoringInput({
     assetId: "quantization-probe",
@@ -43,7 +37,7 @@ describe("V9 cap limits are quantized into the published score space", () => {
     }
   });
 
-  it("emits no non-integral cap limit at scoreDecimals 0", () => {
+  it("emits only integer ceilings", () => {
     const trace = scoreV9Input(
       input({
         parentRequired: true,
@@ -65,8 +59,7 @@ describe("V9 cap limits are quantized into the published score space", () => {
   });
 
   it("keeps the published score unchanged when flooring a fractional limit", () => {
-    // min(preCapScore, 49.55) floors to 49; min(preCapScore, 49) also floors to
-    // 49, so re-quantizing the limit must not move the published score.
+    // A fractional and already-floored parent ceiling constrain identically.
     const fractional = scoreV9Input(
       input({ parentRequired: true, parentScore: 49.55 }),
       V9_CANDIDATE_POLICY_V1,
