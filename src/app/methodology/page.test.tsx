@@ -156,8 +156,10 @@ describe("MethodologyPage", () => {
       "120-second skew and 30-minute age limits", "Exactly 1%", "inclusive eight-hour book budget",
       "within one hour", "L = 100 − t × (100 − q)", "including HBD",
       "next UTC midnight", "Two usable pillars permit a rating", "Physical GOLD/SILVER delivery",
-      "code-unit order", "Measured capacity contributes through continuous coverage", "86,400-second allowance",
+      "code-unit order", "capacity materiality gates", "86,400-second allowance",
     ]) expect(text).toContain(rule);
+    expect(text).toContain("1% of the stress request");
+    expect(text).toContain("capped at 50 before confidence");
     expect(text).not.toContain("The ledger records 833");
     expect(text).not.toContain("open data points fell 1,280");
   });
