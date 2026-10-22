@@ -14,11 +14,13 @@ import { iterateEvidenceResponsibilityFacts, refineEvidenceFactPathPrefixes } fr
 import { resolveV9EffectiveScoringWeight } from "./safety-score-v9-public-causes";
 import type { SafetyScoreV9BackingBreakdown } from "./safety-score-v9-public-breakdowns";
 import type { V9QualityPillar } from "./safety-score-v9";
+import type { SafetyScoreV9HistoricalScoreTraceSchema } from "./safety-score-v9-public-trace";
 const EVIDENCE_FACT_PATH = ["scoreTrace", "evidenceResponsibility"] as const;
 
 type BoundedAttributionItem = SafetyScoreV9CardRefinementInput["scoreTrace"]["boundedUncertaintyAttribution"]["items"][number];
 type BoundedBackingContribution = Pick<SafetyScoreV9BackingBreakdown["components"][number],
   "score" | "cause" | "causeGapRefs" | "scoringDisposition" | "effectiveScoringWeight">;
+type HistoricalScoreAdjustment = z.output<typeof SafetyScoreV9HistoricalScoreTraceSchema>["scoreAdjustments"][number];
 
 function matchesBoundedBackingComponent(card: SafetyScoreV9CardRefinementInput, item: BoundedAttributionItem): boolean {
   const backing = card.breakdowns?.backing;
@@ -132,7 +134,8 @@ export function refineCard(
     }
     if ("scoreAdjustments" in scoreTrace) {
       for (const [index, adjustment] of scoreTrace.scoreAdjustments.entries()) {
-        const relief = "capRelief" in adjustment ? adjustment.capRelief : undefined;
+        // Both arrays are schema-admitted; iteration exposes their common live shape.
+        const relief = (adjustment as Partial<HistoricalScoreAdjustment>).capRelief;
         if (relief !== undefined) {
           const relievedCaps = card.caps.filter(cap => cap.source === relief.source && cap.kind === relief.kind);
           if (relievedCaps.length !== 1 || !numbersAgree(relievedCaps[0]!.limit, relief.toLimit)) {
