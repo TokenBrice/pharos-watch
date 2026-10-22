@@ -206,6 +206,10 @@ Use the registry's embedded work-type definition for instructions, completion cr
 recommended skill, cautions and touchpoints. Its source is `V9_MISSING_DATA_WORK_TYPES` in
 `scripts/lib/safety-score-v9-missing-data-work-types.ts`; there is no second roster here.
 
+Unsupported `mechanism-review:*` component gaps (`missing-pillar-evidence`) route to
+the same `MECHANISM_REVIEW` work type as bounded mechanism gaps, including nested
+constraints and newly registered archetype components; they need no per-key work type.
+
 For a new work type, read its embedded definition and emitting code before deciding;
 do not infer a resolution from its name. Resolution mode describes the work shape,
 not the outcome: curation needs reviewed source evidence, runtime work needs a fresh

@@ -9,6 +9,7 @@ import {
 } from "@shared/lib/__tests__/safety-score-v9-facts.fixture-support";
 import { internV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
 import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
+import { V9_MECHANISM_FIELDS } from "@shared/lib/safety-score-v9/mechanism-fields";
 import {
   makeReportCardsV9Card,
   makeReportCardsV9Pillars,
@@ -21,6 +22,10 @@ import {
   classifyV9ScoreProjectionWorkType,
   mechanismOverlayAdmissionWarnings,
 } from "../maintenance/generate-safety-score-v9-missing-data-registry";
+import {
+  descriptorForReason,
+  workTypeForDescriptor,
+} from "../lib/safety-score-v9-missing-data-work-types";
 
 const SHARED_EXIT_MESSAGE = "Comparable exit route evidence is missing for the reviewed settlement window of this fixture.";
 
@@ -131,6 +136,30 @@ function generateExitProjectionFixture(
 }
 
 describe("Safety Score v9 missing-data work routing", () => {
+  it.each([...new Set(Object.values(V9_MECHANISM_FIELDS).flatMap(({ components }) =>
+    components.map(([, field]) => field),
+  ))])("routes missing and bounded mechanism evidence for %s to the mechanism work type", (field) => {
+    const path = { kind: "local-component" as const, componentKey: `mechanism-review:${field}` };
+    for (const reason of ["missing-pillar-evidence", "bounded-mechanism-review"]) {
+      const descriptor = descriptorForReason(reason, path);
+      expect(workTypeForDescriptor(descriptor)).toBe("MECHANISM_REVIEW");
+      expect(descriptor.defaultResolutionMode).toBe("issuer-or-onchain-evidence");
+      expect(descriptor.context(minimalAsset("mechanism-fixture"))).toMatchObject({
+        componentKey: field,
+      });
+    }
+  });
+
+  it("routes missing nested mechanism constraints without weakening unknown-component failures", () => {
+    const descriptor = descriptorForReason("missing-pillar-evidence", {
+      kind: "local-component", componentKey: "mechanism-review:fundClaimAndSeniority:legal-claim",
+    });
+    expect(workTypeForDescriptor(descriptor)).toBe("MECHANISM_REVIEW");
+    expect(() => descriptorForReason("missing-pillar-evidence", {
+      kind: "local-component", componentKey: "unregistered-component",
+    })).toThrow(/Missing agent work-type definition/);
+  });
+
   it.each([false, true])("reconciles rated, economic NR and pipeline-gap census (gap-only=%s)", (gapOnly) => {
     const cards = [
       ...(gapOnly ? [] : [

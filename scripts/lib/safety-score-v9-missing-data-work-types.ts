@@ -534,6 +534,7 @@ export function descriptorForReason(reason: string, path?: GapPath): WorkTypeDes
     if (path.componentKey === "chain-supply") descriptor = V9_MISSING_DATA_WORK_TYPES.CHAIN_SUPPLY;
     if (path.componentKey === "asset-compilation") descriptor = V9_MISSING_DATA_WORK_TYPES.ASSET_COMPILATION;
     if (path.componentKey.startsWith("access:")) descriptor = V9_MISSING_DATA_WORK_TYPES.ACCESS_REVIEW;
+    if (path.componentKey.startsWith("mechanism-review:")) descriptor = V9_MISSING_DATA_WORK_TYPES.MECHANISM_REVIEW;
   }
   if (!descriptor) throw new Error(`Missing agent work-type definition for ${reason} at ${JSON.stringify(path)}`);
   return path ? { ...descriptor, context: contextForPath(path) } : descriptor;
