@@ -11,7 +11,7 @@ import {
   type SafetyScoreV9CurrentCard,
   type SafetyScoreV9CommonModeGroups,
 } from "../../types/safety-score-v9-public";
-import type { SafetyScoreV9PillarAdjustment, SafetyScoreV9IssuanceSummary } from "../../types/safety-score-v9-public-breakdowns";
+import type { SafetyScoreV9IssuanceSummary } from "../../types/safety-score-v9-public-breakdowns";
 import type {
   V9EvidenceLevel,
   V9QualityPillar,
@@ -34,6 +34,7 @@ import type { V9PillarReason, V9ProductionScoreInput, V9ProductionScoreTrace } f
 import { computeV9CompactResultDigest, projectCompactV9ScoreTrace, type V9CompactScoreTrace } from "./trace";
 import { compareText, uniqueSorted } from "./primitives";
 import { effectiveAuthoritySignatureRequirement } from "./control-scope";
+import { readableV9PublicText, readableV9PublicWitnesses } from "./public-witness-texts";
 
 type V9PublicAccessProjectionInput = V9AccessPostureResult & {
   reasons?: readonly V9PillarReason[];
@@ -63,7 +64,7 @@ export interface V9PublicCardProjectionInput {
     | "diversificationBonus"
     | "routes"
   >;
-  control?: Pick<V9EconomicControlResult, "score" | "components" | "controlFacts" | "unresolvedDeploymentAdjustment" | "processDiagnostics" | "issuanceFacts">;
+  control?: Pick<V9EconomicControlResult, "score" | "components" | "controlFacts" | "processDiagnostics" | "issuanceFacts">;
   display?: {
     labels?: Readonly<Record<string, string>>;
     exitHolderEligibility?: Readonly<Record<string, V9ExitHolderEligibility>>;
@@ -183,54 +184,6 @@ function pillarCauseFields(input: V9PublicCardProjectionInput, pillar: V9Quality
   };
 }
 
-function projectPillarAdjustments(
-  input: V9PublicCardProjectionInput,
-  pillar: V9QualityPillar,
-  evaluatedScore: number | null,
-): SafetyScoreV9PillarAdjustment[] {
-  const adjustments: SafetyScoreV9PillarAdjustment[] = [];
-  if (evaluatedScore === null || input.trace.ratingStatus === "pipeline-gap") return adjustments;
-  let score = evaluatedScore;
-  const unresolvedDeploymentAdjustment = pillar === "control"
-    ? input.control?.unresolvedDeploymentAdjustment
-    : undefined;
-  if (unresolvedDeploymentAdjustment !== undefined) {
-    adjustments.push({
-      kind: "unresolved-deployment-share",
-      ...unresolvedDeploymentAdjustment,
-      delta: unresolvedDeploymentAdjustment.scoreAfter - unresolvedDeploymentAdjustment.scoreBefore,
-    });
-    score = unresolvedDeploymentAdjustment.scoreAfter;
-  }
-  const configuredCredit = input.trace.operationalResilience?.pillarCredits[pillar] ?? 0;
-  const creditedScore = Math.min(100, score + configuredCredit);
-  if (creditedScore > score) {
-    adjustments.push({
-      kind: "operational-resilience-credit",
-      scoreBefore: score,
-      scoreAfter: creditedScore,
-      delta: creditedScore - score,
-    });
-    score = creditedScore;
-  }
-  const publishedScore = input.scoreInput.pillars[pillar].score;
-  if (publishedScore === null) {
-    throw new Error(`Safety Score v9 ${input.trace.assetId} rated breakdown has a missing ${pillar} pillar`);
-  }
-  if (publishedScore < score) {
-    adjustments.push({
-      kind: "dependency-limit",
-      scoreBefore: score,
-      scoreAfter: publishedScore,
-      delta: publishedScore - score,
-    });
-  } else if (publishedScore > score) {
-    throw new Error(
-      `Safety Score v9 ${input.trace.assetId} ${pillar} pillar has an unexplained positive adjustment`,
-    );
-  }
-  return adjustments;
-}
 
 function projectBackingBreakdown(
   input: V9PublicCardProjectionInput,
@@ -311,7 +264,7 @@ function projectBackingBreakdown(
     aggregationWeight: aggregationWeight(input, "backing"),
     groups,
     components,
-    adjustments: projectPillarAdjustments(input, "backing", evaluatedScore),
+    adjustments: [],
   };
 }
 
@@ -462,7 +415,7 @@ function projectExitBreakdown(
             bonus: exit.diversificationBonus,
           },
     alternatives,
-    adjustments: projectPillarAdjustments(input, "exit", evaluatedScore),
+    adjustments: [],
   };
 }
 
@@ -638,7 +591,9 @@ function projectControlBreakdown(
             ? "Privileged internal pricing"
             : component.kind === "oracle" && component.posture === "oracleless"
               ? "Oracleless design"
-              : component.kind === "inventory" ? "Control inventory" : publicLabel(input, component.componentKey),
+              : component.kind === "inventory" ? "Control inventory"
+                : input.display?.labels?.[component.componentKey] ??
+                  (component.kind === "mint" ? "Mint authority" : component.kind === "oracle" ? "Price oracle" : "Bridge authority"),
         kind: component.kind,
         score: component.score,
         cause: component.cause,
@@ -654,7 +609,7 @@ function projectControlBreakdown(
           }),
         } : {}),
       })),
-    adjustments: projectPillarAdjustments(input, "control", evaluatedScore),
+    adjustments: [],
   };
 }
 
@@ -774,17 +729,6 @@ function projectDependencies(input: V9PublicCardProjectionInput): V9UninternedPu
     if (role === "control-operator" || role === "oracle-nav") return "control";
     return null;
   };
-  const projections = input.dependencyInputs.rolePillarProjections;
-  const publicProjection = (pillar: "exit" | "control") => {
-    const projection = projections![pillar];
-    return {
-      limit: projection.limit,
-      knownLossPoints: projection.knownLossPoints,
-      boundedUnknownLossPoints: projection.boundedUnknownLossPoints,
-      unresolvedExposureShare: projection.unresolvedExposureShare,
-      materialUnresolvedExposure: projection.materialUnresolvedExposure,
-    };
-  };
   return {
     serial: [...input.dependencyInputs.serial]
       .sort((left, right) => compareText(left.upstreamAssetId, right.upstreamAssetId))
@@ -824,12 +768,6 @@ function projectDependencies(input: V9PublicCardProjectionInput): V9UninternedPu
       )
       .map((dependency) => {
         const pillar = targetPillar(dependency.role);
-        const event =
-          pillar === null
-            ? undefined
-            : projections?.[pillar].events.find((candidate) =>
-                candidate.edgeKeys.includes(dependency.edgeKey),
-              );
         return {
           edgeKey: dependency.edgeKey,
           exposureKey: dependency.exposureKey,
@@ -838,13 +776,6 @@ function projectDependencies(input: V9PublicCardProjectionInput): V9UninternedPu
           role: dependency.role,
           weight: dependency.weight,
           targetPillar: pillar,
-          propagationEventEdgeKeys: [...(event?.edgeKeys ?? [])],
-          propagationEventExposureKey: event?.exposureKey ?? null,
-          propagationEventRiskEventKey: event?.riskEventKey ?? null,
-          propagationEventNominalExposureShare: event?.nominalExposureShare ?? null,
-          propagationEventExposureShare: event?.exposureShare ?? null,
-          propagationEventInheritedScore: event?.inheritedScore ?? null,
-          propagationEventModeledLossPoints: event?.modeledLossPoints ?? null,
           inheritedDimensions: [...dependency.inheritedDimensions],
           unavailableDimensions: [...dependency.unavailableDimensions],
           score: dependency.score,
@@ -862,14 +793,6 @@ function projectDependencies(input: V9PublicCardProjectionInput): V9UninternedPu
           ),
         };
       }),
-    ...(projections === undefined
-      ? {}
-      : {
-          rolePillarLimits: {
-            exit: publicProjection("exit"),
-            control: publicProjection("control"),
-          },
-        }),
     cycleBlocked: input.dependencyInputs.cycleBlocked,
     reasonCodes: uniqueSorted(input.scoreInput.dependencyReasons.map((reason) => reason.code)),
   };
@@ -1012,14 +935,29 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): V9UninternedPubl
     },
     adverseAttribution: {
       semantics: "causal-measured-adverse-v1",
-      items: [...trace.adverseAttribution]
+      items: trace.adverseAttribution.filter((attribution) => {
+        if (!attribution.path.includes("structural:active-control-incident:")) return true;
+        // A parent limit already explains inherited risk. Do not headline an
+        // incident without a material, directly attributed loss on this card.
+        if (attribution.source === "parent-score") return false;
+        const loss = trace.deploymentAdjustments
+          .filter((adjustment) => adjustment.sourceSignalKeys.some((key) => key.startsWith("signal:active-control-incident:")))
+          .reduce((sum, adjustment) => sum + adjustment.adjustmentPoints, 0);
+        return loss >= 0.5 || input.control?.components.some((component) =>
+          component.binding && component.posture === "compromised") === true;
+      })
         .sort(
           (left, right) =>
             compareText(left.source, right.source) ||
             compareText(left.path, right.path) ||
             compareText(left.message, right.message),
         )
-        .map((attribution) => ({ ...attribution })),
+        .map((attribution) => ({
+          ...attribution,
+          message: attribution.path.startsWith("structural:active-control-incident:") &&
+            !input.control?.components.some((component) => component.binding && component.posture === "compromised")
+            ? `Deployment-scoped incident: ${attribution.message}` : attribution.message,
+        })),
     },
     boundedUncertaintyAttribution: {
       semantics: "causal-bounded-uncertainty-v1",
@@ -1048,10 +986,7 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): V9UninternedPubl
     wrapperParentLimit:
       trace.wrapperParentLimit === null
         ? null
-        : {
-            ...trace.wrapperParentLimit,
-            missingFacts: trace.wrapperParentLimit.missingFacts.map((fact) => ({ ...fact, causeGapIds: uniqueSorted(fact.causeGapIds) })),
-          },
+        : { ...trace.wrapperParentLimit },
   };
 }
 
@@ -1099,7 +1034,7 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
     binding: isRateable && cap.binding,
   }));
   const bindingCap = isRateable ? (caps.find((cap) => cap.binding) ?? null) : null;
-  return internV9PublicCauseGaps({
+  return internV9PublicCauseGaps(readableV9PublicWitnesses({
     id: input.trace.assetId,
     supply: input.supply ?? { circulatingUsdAtEvaluation: null, asOfSec: null, generationId: null },
     ...(input.sharedBookId == null ? {} : { sharedBookId: input.sharedBookId }),
@@ -1138,7 +1073,7 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
     dependencies: projectDependencies(input),
     scoreTrace: projectScoreTrace(input),
     breakdowns: projectBreakdowns(input),
-  });
+  }));
 }
 
 // The single-card seam carries the same root gap authority as production.
@@ -1156,8 +1091,8 @@ const MINT_HEADLINE_REASONS: Readonly<Record<V9MintPosture, string>> = {
   "unbounded-reconciled": "Mint authority is economically unbounded, with qualifying reconciliation or prudential supervision.",
   "unbounded-governed": "Mint authority is economically unbounded but subject to qualifying delayed governance.",
   "unbounded-veto-guarded": "Mint authority is economically unbounded but subject to a qualifying public minority-veto window.",
-  "unbounded-operationally-governed": "Mint authority is economically unbounded within qualifying governed operational envelopes.",
-  "unbounded-adverse": "Economically effective mint authority is unbounded, and no qualifying governance, reconciliation, or supervisory process is evidenced.",
+  "unbounded-operationally-governed": "Mint authority is economically unbounded; its operational process is reviewed separately.",
+  "unbounded-adverse": "Economically effective mint authority is unbounded.",
   compromised: "Mint authority is under an active incident.",
   unknown: "The mint authority posture remains unresolved.",
 };
@@ -1166,20 +1101,28 @@ function weakestPillarHeadline(
   card: SafetyScoreV9CurrentCard,
   weakest: NonNullable<SafetyScoreV9CurrentCard["weakestPillar"]>,
 ): string {
-  // A binding mint posture explains authority even when no evidence-gap badge
-  // is emitted. Never borrow a nonbinding mint component's posture.
+  const scoreLabel = String(Math.round(weakest.score * 10) / 10);
   if (weakest.pillar === "control") {
-    const mint = card.breakdowns?.control.components.find((component) =>
-      component.kind === "mint" && component.binding && component.score === weakest.score);
-    if (mint && Object.prototype.hasOwnProperty.call(MINT_HEADLINE_REASONS, mint.posture)) {
-      return MINT_HEADLINE_REASONS[mint.posture as V9MintPosture];
+    const binding = card.breakdowns?.control.components.find((component) =>
+      component.binding && component.score === weakest.score);
+    if (binding) {
+      if (binding.kind === "mint" && Object.prototype.hasOwnProperty.call(MINT_HEADLINE_REASONS, binding.posture)) {
+        return MINT_HEADLINE_REASONS[binding.posture as V9MintPosture];
+      }
+      return `${readableV9PublicText(binding.label)} limits Economic Control to ${scoreLabel}/100.`;
     }
   }
-  const reason = card.pillars[weakest.pillar].reasons[0]?.message;
-  if (reason) return reason;
+  const reasons = card.pillars[weakest.pillar].reasons;
+  // Exit reasons must belong to the credited route, not an unused alternative.
+  const primary = weakest.pillar === "exit" ? card.breakdowns?.exit.primaryRoute?.key : null;
+  const reason = primary
+    ? reasons.find((item) => item.path?.includes(primary))
+    : weakest.pillar !== "control" ? reasons[0] : undefined;
+  if (reason) return readableV9PublicText(reason.message);
   const label = weakest.pillar === "control" ? "Economic Control" : weakest.pillar === "backing" ? "Backing" : "Exit";
-  return `${label} is the weakest pillar at ${weakest.score}/100.`;
+  return `${label} is the weakest pillar at ${scoreLabel}/100.`;
 }
+
 
 /**
  * Projects the existing public card into the one-line driver used by list

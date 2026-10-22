@@ -67,14 +67,9 @@ describe("stablecoin V9 safety presentation", () => {
    * score, or SafetyScoreV9CurrentCardSchema rejects the fixture.
    */
   const breakdownsFixture = () => ({
-    backing: { evaluatedScore: 86, publishedScore: 88, aggregationWeight: 0.4, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], groups: [{ key: "reserves" as const, label: "Reserves", score: 86, effectiveScoringWeight: 1, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const }],
-    components: [{ key: "reserve:reserve:wsteth", label: "wstETH", source: "reserve-exposure" as const, score: 86, effectiveScoringWeight: 1, wholeAssetWeight: 1, weightedContribution: 86, observationState: "known" as const, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const }],
-    adjustments: [{
-      kind: "operational-resilience-credit" as const,
-      scoreBefore: 86,
-      scoreAfter: 88,
-      delta: 2,
-    }], },
+    backing: { evaluatedScore: 88, publishedScore: 88, aggregationWeight: 0.4, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], groups: [{ key: "reserves" as const, label: "Reserves", score: 88, effectiveScoringWeight: 1, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const }],
+    components: [{ key: "reserve:reserve:wsteth", label: "wstETH", source: "reserve-exposure" as const, score: 88, effectiveScoringWeight: 1, wholeAssetWeight: 1, weightedContribution: 88, observationState: "known" as const, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const }],
+    adjustments: [], },
     exit: { evaluatedScore: 84, publishedScore: 84, aggregationWeight: 0.35, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], stressRequest: null,
     primaryRoute: null,
     diversification: null,
@@ -242,23 +237,18 @@ describe("stablecoin V9 safety presentation", () => {
       aggregationWeight: 0.4,
       sectionLabel: "Backing components",
     });
-    // Group score and weight head the section, so they are no longer repeated
-    // as context rows; only adjustments remain there.
+    // Group scores and weights head the section rather than repeating in context.
     expect(presentation.pillars[0].breakdown?.groups).toMatchObject([
       {
         key: "reserves",
         label: "Reserves",
-        score: 86,
+        score: 88,
         weight: 1,
-        rows: [{ label: "wstETH", score: 86, weight: 1, status: "Known" }],
+        rows: [{ label: "wstETH", score: 88, weight: 1, status: "Known" }],
         tail: null,
       },
     ]);
-    expect(presentation.pillars[0].breakdown?.context).toContainEqual({
-      key: "operational-resilience-credit-0",
-      label: "Resilience credit",
-      value: "+2.0 to 88.0",
-    });
+    expect(presentation.pillars[0].breakdown?.context).toEqual([]);
     expect(presentation.pillars[1].breakdown).toMatchObject({
       sectionLabel: "Primary route components — Direct redemption",
       exitHighlight: {

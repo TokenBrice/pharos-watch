@@ -246,7 +246,7 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
         { key: "control-pillar", label: "Control pillar", numeric: true, render: (coin) => formatScore100(coin.safetyCard?.pillars.control.score) },
         { key: "weakest-pillar", label: "Weakest pillar", render: (coin) => coin.safetyCard?.weakestPillar ? `${humanizeSafetyScoreV9Value(coin.safetyCard.weakestPillar.pillar)} · ${formatScore(coin.safetyCard.weakestPillar.score, { trimInteger: true })}` : NULL_VALUE },
         { key: "binding-cap", label: "Binding cap", render: (coin) => coin.safetyCard ? (coin.safetyCard.bindingCap ? `${humanizeSafetyScoreV9Value(coin.safetyCard.bindingCap.kind)} · ${coin.safetyCard.bindingCap.limit}` : "None") : NULL_VALUE },
-        { key: "evidence", label: "Evidence", render: (coin) => coin.safetyCard ? `${humanizeSafetyScoreV9Value(coin.safetyCard.evidence.level)} · ${humanizeSafetyScoreV9Value(coin.safetyCard.evidence.freshness)}` : NULL_VALUE },
+        { key: "evidence", label: "Evidence", render: (coin) => coin.safetyCard ? `${humanizeSafetyScoreV9Value(coin.safetyCard.evidence.level)} · ${coin.safetyCard.evidence.freshness === "unknown" ? "Freshness not assessed" : humanizeSafetyScoreV9Value(coin.safetyCard.evidence.freshness)}` : NULL_VALUE },
         {
           key: "top-driver",
           label: "Top driver",

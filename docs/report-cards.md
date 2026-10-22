@@ -63,9 +63,11 @@ Exit selects the best admissible singleton/independent pair. Same-resource alter
 
 Require ≥2 usable pillars; price missing third via `unknownQuality` (unclassified=U), retaining 40/35/25. Across all three priced scores, m=min, M=weighted mean: `Q = m + 20 × tanh((M − m)/20)`. Measurements, applicable reviewed mechanisms/routes with bounded gaps and admitted claims are usable; subject-free defaults are not. Trace uncertainty separately. Keep peg exponent .4, nearest rounding/bands/hysteresis.
 
+Raw grade bands use the rounded own score: **A+ 87–100; A 83–86; A− 80–82; B+ 75–79; B 70–74; B− 65–69; C+ 60–64; C 55–59; C− 50–54; D 40–49; F 0–39**. The policy's `formula.gradeThresholds` owns these cutoffs. Two-consecutive-publication hysteresis can hold a prior letter; `gradeHold` identifies the current raw band without holding the numeric score. NR and pipeline gaps have no numeric band.
+
 Questions/low scores/incidents never cause NR; <2 usable pillars is pipeline-gap. Required-parent technical failures (cycles/evaluation included) propagate causal pipeline-gap/null score/grade, never invented scores. Other parent unavailability/quarantine/accepted holds remain. Uncertainty keeps witnesses above C− too; attribution never gates letters ([history](https://pharos.watch/methodology/scoring-changelog/#scoring-v10-29)).
 
-Five caps: active depeg ≥10%→49/≥25%→39; known age <24m→84/24–<36m→86; parent/wrapper; realized loss; speculative-credit→59. Credit retains high measured-adverse reserve/global-claim or admitted legacy-unscoped eligibility despite Backing pricing, never deployment/access-only scope. Unknown age is uncapped. Retire other structural/evidence ceilings, retaining reserve/scoped-loss, oracle/bridge and serial/role pricing.
+Five caps: active depeg ≥10%→49/≥25%→39; known age <24m→84/24–<36m→86; parent/wrapper; realized loss; speculative-credit→59. Credit retains high measured-adverse reserve/global-claim or admitted legacy-unscoped eligibility despite Backing pricing, never deployment/access-only scope. Unknown age is uncapped. Retire other structural/evidence ceilings, retaining reserve/scoped-loss and oracle/bridge pricing; separate numeric role-pillar limits, operational-resilience credits and the unresolved-deployment-share Control adjustment are removed.
 
 Source-proved holder loss sets L=39 for ≥25%, 49 for ≥1%, else no cap. At ageDays≥0, `eventLimit = min(100, L + (100 − L) × max(0, ageDays − 365) / 365)`; floor the minimum once. Hold through day 365, end at 730. NAV/imposed withdrawal loss needs original date, scope, holder-claim denominator/primary sources. Discounts, slippage, gross protocol/treasury-covered losses do not qualify. No duplicate charge; thresholds/periods are calibration.
 
@@ -77,13 +79,23 @@ Do not charge deployment/bridge authority again when its exact root controller i
 
 Shared-chain/bridge losses are supply-proportional, never whole-score caps. Measured exposed quality wins; otherwise deployment-only policy uses shared-dependency moderate/high 79/64, material-bridge 74/59 and active-control-incident critical 39. Unknown shares are unresolved, not zero/full exposure. Same-root deduplication preserves distinct measured risks.
 
+Shared-chain maturity charges require a date-admitted authored failing gate. Pending, unreviewed/missing, expired-passing or dead/non-supporting citation reviews remain Pharos-side **U diagnostics**, retaining measured exposure but adding no synthetic scored gap or chain charge. Authored failures retain proportional losses. There is no new below-5% deployment floor.
+
 Public U means “Unresolved”, including researched but inconclusive evidence; machine keys/scoring are unchanged.
+
+Headlines use the actual score-matching binding Control component or selected Exit route, not an unrelated first gap. Display prose humanizes factors/routes and rounds long score fractions without changing machine identities or scoring precision. Public active deployment-incident attribution requires at least **0.5 directly attributed score points**, unless a compromised authority itself binds Control. Detailed slice losses remain; inherited risk is described by the parent limit rather than an unquantified incident claim. Unwired aggregate freshness is labelled **not assessed**; publication time is never evidence time.
 
 Suspension removes only its channel's credit/masked obligations, not alternatives, proving no global exhaustion/danger. Insufficient alternatives retain scoped U census proof under the admission details above.
 
 Wrapper limit=`max(0, floor(min(required parents' premium-free inheritable scores) − formDeduction))`: pure 3, native-staked 5, active strategy-allocation vault 10. Final=min(independently constrained own score, limit); unavailable parents stay unavailable. Local risks belong in pillars, not another fallback/factor-sum/floor. USDT keeps +14, max87 and eligibility; no inheritance.
 
-Exit keeps clocks/exact requests. Supply sizes 5% with $100k–$25m clamp/grid; stale/missing uses $25m, retaining fresh routes. Curve/resolved output plus missing terms uses C/U subfactors, ceiling 70; absent curves leave capacity unknown. Same-rail certificates beat models. On-chain execution proves open; closure vetoes. Access once: permissionless 100, whitelist 75, institutional/API 55, manual 20, unknown C/U. Medium confidence: terms .85, certified/on-chain .75; limited queue/unknown capacity .75. Materiality: 1% of request or $100k; insufficient completion cap 50 before confidence. Continuous curves price admitted capacity; zero/low scores have no unknown floor. Research-only models stay inactive.
+An admitted collateral child with **≥99% in one parent** also receives the pure-wrapper parent ceiling (premium-free parent score minus 3), summing qualifying same-parent rows. Keep any lower own score or stricter serial-parent limit; dust cannot defeat concentration, while missing/unadmitted dependencies cannot prove it.
+
+Exit keeps original clocks. Known supply sizes a continuous 5% request clamped to $100k–$25m; stale/missing supply uses $25m. Valid smaller measurements remain conservative capacity lower bounds relative to that request, not invented full execution or exhaustion. Curve/resolved output plus missing terms uses C/U subfactors, ceiling 70; absent curves leave capacity unknown. Same-rail certificates beat models. Execution can prove open; closure vetoes. Access once: permissionless 100, whitelist 75, institutional/API 55, manual 20, unknown C/U. Medium confidence: terms .85, certified/on-chain .75; limited queue/unknown capacity .75. Materiality: 1% of request or $100k; insufficient-completion cap 50 before confidence. Measured zero/low scores have no unknown floor.
+
+**AM17:** all routes excluded as immaterial plus applicable C/U rail gaps means unknown Exit, not fabricated exhaustion. The published cause set is the scorer's priced cause set, including relevant factor gaps. For no-route censuses, a current aggregate-reconciled verified-no-pools share `z` remains measured zero: `Exit = (1 − z) × unknownQuality(Exit, cause)`; only uncovered supply is unknown. Unsupported-chain dust cannot replace measured zero with whole-pillar U50.
+
+Peg spread uses only non-positive signed peak deviations; exclude above-peg events rather than zero-filling them, so premiums neither create nor dilute downside spread. Other peg terms retain their treatment.
 
 ### Morpho lender collateral-book Backing (v10.19)
 

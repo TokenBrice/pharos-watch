@@ -25,12 +25,12 @@ export function SafetyScoresTechnicalDetails() {
         <p>
           The checked policy normally uses Backing {formula.pillarWeights.backing * 100}%, Exit{" "}
           {formula.pillarWeights.exit * 100}%, and Economic Control {formula.pillarWeights.control * 100}%.
-          Use the weights of included pillars only, renormalized to sum to one. With at least two included pillars,
-          weighted quality cannot exceed the strongest measured support, and the score receives at most bounded
-          headroom above the weakest included pillar. Exactly one excluded pillar produces a labelled two-pillar
-          partial rating; fewer than two means Pipeline gap with no aggregate or grade. Peg behavior applies with
+          Retain all three original weights. With at least two usable pillars, an unavailable third is priced at
+          its cause-keyed unknown quality, not omitted or renormalized. The weakest of all three priced pillars
+          sets bounded headroom above that minimum; missing-pillar pricing is uncertainty, not usable evidence.
+          Fewer than two usable pillars means Pipeline gap without an aggregate or grade. Peg behavior applies with
           exponent {formula.pegExponent}. Five whole-score limit families remain: active depeg, known age
-          under 24 months, required parents/wrappers, realized holder loss and speculative-credit residual.
+          under 24 and under 36 months, required parents/wrappers, realized holder loss and speculative-credit residual.
           The broad structural-cap matrix and duplicate evidence ceilings are retired.
         </p>
         <p>
@@ -41,12 +41,12 @@ export function SafetyScoresTechnicalDetails() {
           and accepted-state holds remain separate from rating availability.
         </p>
         <p className="pharos-numeric">
-          candidate = weakestIncluded + {formula.compensabilityHeadroom} × tanh((renormalizedWeightedQuality − weakestIncluded) /{" "}
+          candidate = weakestPriced + {formula.compensabilityHeadroom} × tanh((weightedQuality − weakestPriced) /{" "}
           {formula.compensabilityHeadroom})
         </p>
         <MethodologyFacts
           facts={[
-            { label: "Pillar weights", value: "40/35/25 normally; renormalized over included pillars" },
+            { label: "Pillar weights", value: "40/35/25 across all three priced pillars; no missing-pillar renormalization" },
             { label: "Peg adjustment", value: `(pegScore / 100)^${formula.pegExponent}` },
             { label: "Active-depeg caps", value: activeDepegCaps },
             { label: "Track-record ceilings", value: trackRecordCeilings },

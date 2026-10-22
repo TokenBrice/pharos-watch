@@ -9,11 +9,7 @@ import {
   V9ReasonCodeSchema,
 } from "./safety-score-v9";
 import { V9EvidenceResponsibilitySchema } from "./safety-score-v9-fact-primitives";
-import {
-  V9WrapperFactDispositionSchema,
-  V9WrapperFormSchema,
-  V9WrapperLocalFactKeySchema,
-} from "./safety-score-v9-wrapper";
+import { V9WrapperFormSchema } from "./safety-score-v9-wrapper";
 import {
   isUniqueSorted,
   numbersAgree,
@@ -309,10 +305,6 @@ function evidenceResponsibilityTraceSchema(accounting: "witnesses" | "obligation
 
 const SafetyScoreV9EvidenceResponsibilityTraceSchema = evidenceResponsibilityTraceSchema("obligations");
 
-const SafetyScoreV9WrapperMissingFactClassSchema = z.union([
-  V9WrapperLocalFactKeySchema,
-  z.literal("wrapperForm"),
-]);
 
 const SafetyScoreV9WrapperParentLimitSchema = z
   .object({
@@ -321,28 +313,9 @@ const SafetyScoreV9WrapperParentLimitSchema = z
     form: V9WrapperFormSchema,
     appliedDiscount: z.number().finite().min(0).max(100),
     limit: ScoreSchema,
-    factsComplete: z.boolean(),
-    missingFacts: z.array(
-      z
-        .object({
-          factClass: SafetyScoreV9WrapperMissingFactClassSchema,
-          disposition: V9WrapperFactDispositionSchema.exclude(["reviewed", "not-applicable"]),
-          cause: V9EvidenceCauseSchema.nullable().optional(),
-          causeGapRefs: causeGapRefs().optional(),
-          scoringDisposition: V9ScoringDispositionSchema.optional(),
-        })
-        .strict(),
-    ),
   })
   .strict()
   .superRefine((limit, ctx) => {
-    const missingKeys = limit.missingFacts.map((fact) => `${fact.factClass}:${fact.disposition}`);
-    if (!isUniqueSorted(missingKeys)) {
-      ctx.addIssue({ code: "custom", path: ["missingFacts"], message: "V9 wrapper missing facts must be unique and sorted" });
-    }
-    if (limit.factsComplete !== (limit.missingFacts.length === 0)) {
-      issue(ctx, ["factsComplete"], "V9 wrapper completeness must exactly match its missing facts");
-    }
     const expectedLimit = Math.max(0, Math.floor(limit.parentScore - limit.appliedDiscount));
     if (!numbersAgree(limit.limit, expectedLimit)) {
       issue(ctx, ["limit"], "Wrapper limit must apply its form deduction to the parent once");

@@ -3,6 +3,55 @@ import {
   type V9PublicWitnessTextEntry,
 } from "../../types/safety-score-v9-public-witness-texts";
 
+const PUBLIC_FACTOR_LABELS: Readonly<Record<string, string>> = {
+  assuranceAndReconciliation: "assurance and reconciliation",
+  liquidityHorizon: "reserve liquidity horizon",
+  maturityDaysMax: "maximum reserve maturity",
+  incidentState: "incident status",
+  authorityIdentity: "authority identity",
+  economicLossScope: "economic loss scope",
+  materialSupplyShare: "share of circulating supply",
+  claimImpairment: "holder-claim impairment",
+  outputAssetQuality: "payout asset quality",
+  executionCertainty: "execution certainty",
+};
+
+/** Rewrite prose only. Exact paths, keys, source identities and numbers stay machine-readable. */
+export function readableV9PublicText(text: string): string {
+  return text
+    .replace(/\broute ([a-z][^\s,;]*:[^\s,;]+)/gi, (_match, key: string) =>
+      `route ${key.startsWith("dex:") ? "(DEX trading)" : "(redemption)"}`)
+    .replace(/\bindependently identified control [^\s,;]+:[^\s,;]+/g, "reviewed control")
+    .replace(/\b[a-z][a-zA-Z]*[A-Z][a-zA-Z]*\b(?= (?:factor|input|datum)\b)/g, (field) =>
+      PUBLIC_FACTOR_LABELS[field] ?? field.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase())
+    .replace(/\b\d+\.\d{7,}\b/g, (value) => String(Math.round(Number(value) * 100) / 100));
+}
+
+/** Copy-on-write public prose projection; never rewrite interned identity fields. */
+export function readableV9PublicWitnesses<T extends object>(node: T): T {
+  function visit(value: unknown): unknown {
+    if (Array.isArray(value)) {
+      let result: unknown[] | undefined;
+      value.forEach((entry, index) => {
+        const next = visit(entry);
+        if (next !== entry) { result ??= value.slice(); result[index] = next; }
+      });
+      return result ?? value;
+    }
+    if (value === null || typeof value !== "object") return value;
+    const source = value as Record<string, unknown>;
+    let result: Record<string, unknown> | undefined;
+    for (const key of Object.keys(source)) {
+      const current = source[key];
+      const next = typeof current === "string" && (key === "message" || key === "reason" || key === "label")
+        ? readableV9PublicText(current) : visit(current);
+      if (next !== current) { result ??= { ...source }; result[key] = next; }
+    }
+    return result ?? value;
+  }
+  return visit(node) as T;
+}
+
 /** Intern only where the canonical JSON is smaller; reserved leading '~' literals are always escaped. */
 export function internV9PublicWitnessTexts<T extends object>(card: T): Omit<T, "witnessTexts"> & { witnessTexts?: V9PublicWitnessTextEntry[] } {
   const counts = new Map<string, number>();

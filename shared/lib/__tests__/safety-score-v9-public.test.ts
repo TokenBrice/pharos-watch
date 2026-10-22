@@ -3,10 +3,8 @@ import { countV9EvidenceObligations, iterateEvidenceResponsibilityFacts } from "
 import { resolveCauseGapId } from "../../types/safety-score-v9-public-cause-gaps";
 import { resolveV9PublicWitnessTexts } from "../../types/safety-score-v9-public-witness-texts";
 import { resolveV9PublicControlDetails, SafetyScoreV9HistoricalBreakdownsSchema } from "../../types/safety-score-v9-public-breakdowns";
-import {
-  projectV9RoleDependencyPillarLimits,
-  type V9ResolvedDependencyInputs,
-} from "../safety-score-v9/dependencies";
+import type { V9ResolvedDependencyInputs } from "../safety-score-v9/dependencies";
+import { readableV9PublicText, readableV9PublicWitnesses } from "../safety-score-v9/public-witness-texts";
 import type { V9CapTrace, V9NRReason } from "../safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import type { V9PublicCardProjectionInput } from "../safety-score-v9/public";
@@ -168,7 +166,6 @@ function fixture(assetId: string, options: FixtureOptions): V9PublicCardProjecti
     evaluationBuildDigest: DIGESTS.build,
     asOfSec: 1_000,
     sourceGenerations: { dex: "dex:g1", registry: "registry:g1" },
-    operationalResilience: null,
     wrapperParentLimit: null,
   };
   const dependencyInputs = options.dependency ?? { assetId, serial: [], basket: [], cycleBlocked: false };
@@ -1036,7 +1033,6 @@ describe("Safety Score v9 public projection", () => {
     input.trace.wrapperParentLimit = {
       schemaVersion: 1, parentScore: 67, form: "pure",
       appliedDiscount: 3, limit: 64,
-      factsComplete: true, missingFacts: [],
     };
     expect(projectSafetyScoreV9Card(input).card.dependencies.serial).toMatchObject([
       { upstreamAssetId: "mechanism", dependencyType: "mechanism", wrapperForm: null },
@@ -1091,7 +1087,7 @@ describe("Safety Score v9 public projection", () => {
     });
   });
 
-  it.each(["backing", "exit", "control"] as const)("uses the existing %s pillar reason without borrowing another pillar", (pillar) => {
+  it.each(["backing", "exit"] as const)("uses the existing %s pillar reason without borrowing another pillar", (pillar) => {
     const input = fixture("pillar-reason", { score: 91.8, grade: "A+" });
     input.scoreInput.pillars[pillar].reasons = [{
       code: "missing-pillar-evidence", message: "The scoped evidence remains unresolved.",
@@ -1121,19 +1117,61 @@ describe("Safety Score v9 public projection", () => {
     },
   );
 
-  it("does not use a nonbinding, differently scored, or unfamiliar mint posture as the headline", () => {
+  it("does not use a nonbinding or differently scored mint posture as the headline", () => {
     const card = resolveV9PublicWitnessTexts(projectSafetyScoreV9Card(fixture("nonbinding-mint", {
       score: 91.8, grade: "A+",
     })).card);
     card.weakestPillar = { pillar: "control", score: card.pillars.control.score! };
     const mint = card.breakdowns!.control.components[0]!;
-    for (const change of [{ binding: false }, { score: 93 }, { posture: "unrecognized" }]) {
+    for (const change of [{ binding: false }, { score: 93 }]) {
       const changed = {
         ...card,
         breakdowns: { ...card.breakdowns!, control: { ...card.breakdowns!.control, components: [{ ...mint, ...change }] } },
       };
       expect(projectTopDriver(changed)?.reason).toBe("Economic Control is the weakest pillar at 94/100.");
     }
+  });
+
+  it("names the binding oracle instead of an unrelated Control gap", () => {
+    const card = resolveV9PublicWitnessTexts(projectSafetyScoreV9Card(fixture("binding-oracle", {
+      score: 57, grade: "C",
+    })).card);
+    card.weakestPillar = { pillar: "control", score: 45 };
+    card.pillars.control.reasons = [{
+      code: "unresolved-control-identity", path: "control:mint", message: "A controller identity remains unresolved.",
+    }];
+    card.breakdowns!.control.components = [{
+      ...card.breakdowns!.control.components[0]!, kind: "oracle", score: 45,
+      label: "Privileged internal pricing", posture: "privileged-internal-pricing", binding: true,
+    }];
+    expect(projectTopDriver(card)?.reason).toBe("Privileged internal pricing limits Economic Control to 45/100.");
+  });
+
+  it("rounds a fallback headline without rounding the scoring operands", () => {
+    const card = projectSafetyScoreV9Card(fixture("fractional-headline", { score: 80, grade: "A-" })).card;
+    card.weakestPillar = { pillar: "control", score: 79.9999891613885 };
+    const before = JSON.stringify(card);
+    expect(projectTopDriver(card)?.reason).toBe("Economic Control is the weakest pillar at 80/100.");
+    expect(JSON.stringify(card)).toBe(before);
+  });
+
+  it("humanizes public prose while preserving exact causal identities and ticker labels", () => {
+    const original = {
+      path: "route:redemption:generation:asset:cost",
+      key: "assuranceAndReconciliation",
+      label: "frxUSD",
+      message: "The assuranceAndReconciliation input is unavailable; score 79.9999891613885.",
+      reason: "The cost datum for route redemption:generation:asset:redeem has not been established.",
+    };
+    const readable = readableV9PublicWitnesses(original);
+    expect(readable.path).toBe(original.path);
+    expect(readable.key).toBe(original.key);
+    expect(readable.label).toBe("frxUSD");
+    expect(readable.message).toBe("The assurance and reconciliation input is unavailable; score 80.");
+    expect(readable.reason).toBe("The cost datum for route (redemption) has not been established.");
+    expect(readableV9PublicText("The maturityDaysMax factor and incidentState datum remain unresolved."))
+      .toBe("The maximum reserve maturity factor and incident status datum remain unresolved.");
+    expect(original.message).toContain("assuranceAndReconciliation");
   });
 
   it("publishes rated, NR and pipeline-gap cards with disjoint completeness counts", () => {
@@ -1249,7 +1287,7 @@ describe("Safety Score v9 public projection", () => {
     );
   });
 
-  it("publishes the applied role limit with its exact evidence and failure domains", () => {
+  it("retains role evidence and failure domains without retired numeric role limits", () => {
     const unresolved: V9ResolvedDependencyInputs = {
       assetId: "role-dependent",
       serial: [],
@@ -1275,21 +1313,15 @@ describe("Safety Score v9 public projection", () => {
       ],
       cycleBlocked: false,
     };
-    const dependency: V9ResolvedDependencyInputs = {
-      ...unresolved,
-      rolePillarProjections: projectV9RoleDependencyPillarLimits(unresolved, {
-        unresolvedMaterialityThreshold: 0.1,
-      }),
-    };
 
     const card = projectSafetyScoreV9Card((() => {
       const input = fixture("role-dependent", {
       score: 90,
       grade: "A+",
-      pillars: { backing: 92, exit: 90, control: 88 },
-      qualityScore: 90.3,
-      pegAdjustedScore: 90.3,
-      dependency,
+      pillars: { backing: 92, exit: 90, control: 94 },
+      qualityScore: 91.8,
+      pegAdjustedScore: 91.8,
+      dependency: unresolved,
       });
       input.control = {
         score: 94,
@@ -1313,28 +1345,12 @@ describe("Safety Score v9 public projection", () => {
         exposureKey: "control-operator:mechanism:operator",
         riskEventKey: "dependency-event:mint-control:operator:shared",
         targetPillar: "control",
-        propagationEventEdgeKeys: ["control-operator:mechanism:operator"],
-        propagationEventExposureKey: "control-operator:mechanism:operator",
-        propagationEventRiskEventKey: "dependency-event:mint-control:operator:shared",
-        propagationEventNominalExposureShare: 0.5,
-        propagationEventExposureShare: 0.5,
-        propagationEventInheritedScore: 76,
-        propagationEventModeledLossPoints: 12,
         evidenceRefIds: ["evidence:operator-review"],
         failureDomains: [{ kind: "mint-control", key: "operator:shared" }],
       }),
     ]);
-    expect(card.dependencies.rolePillarLimits?.control).toMatchObject({
-      limit: 88,
-      knownLossPoints: 12,
-      unresolvedExposureShare: 0,
-    });
-    expect(card.breakdowns?.control.adjustments).toEqual([{
-      kind: "dependency-limit",
-      scoreBefore: 94,
-      scoreAfter: 88,
-      delta: -6,
-    }]);
+    expect(card.dependencies).not.toHaveProperty("rolePillarLimits");
+    expect(card.breakdowns?.control.adjustments).toEqual([]);
   });
 
 
@@ -1437,6 +1453,51 @@ describe("Safety Score v9 public projection", () => {
     expect(resolveCauseGapId(projection, card, fact[2]!)).toBe("asset:gap:governance");
     expect(fact[6].map((ref) => resolveCauseGapId(projection, card, ref))).toEqual(["asset:gap:governance"]);
     expect(card.reasonCodes).toEqual(["historical-critical-input", "unresolved-control-identity"]);
+  });
+
+  it.each([0, 0.021, 0.158, 0.4999, 0.5, 1])(
+    "shows deployment incident attribution only from half a score point (%s points)",
+    (loss) => {
+      const input = fixture("incident-materiality", { score: 90, grade: "A+" });
+      const signalKey = "signal:active-control-incident:critical:legacy-bridge";
+      input.trace.deploymentAdjustedScore = 91.8 - loss;
+      input.trace.preCapScore = 91.8 - loss;
+      input.trace.deploymentAdjustments = [{
+        signalKey, sourceSignalKeys: [signalKey], exposureKey: "deployment:legacy-bridge",
+        riskEventKey: "incident:legacy-bridge", failureDomainKey: "legacy-bridge",
+        nominalExposureShare: 0.02, exposureShare: 0.02, exposedScore: 91.8 - loss / 0.02,
+        scoreBefore: 91.8, scoreAfter: 91.8 - loss, adjustmentPoints: loss,
+        reason: "A legacy bridge deployment is impaired.",
+      }];
+      input.trace.adverseAttribution = [{
+        source: "structural-signal", path: "structural:active-control-incident:critical",
+        message: "An active compromise incident affects a deployment.", responsibility: "measured-adverse",
+      }];
+      const before = JSON.stringify(input.trace);
+      const card = resolveV9PublicWitnessTexts(projectSafetyScoreV9Card(input).card);
+      expect(card.scoreTrace.adverseAttribution.items).toHaveLength(loss >= 0.5 ? 1 : 0);
+      if (loss >= 0.5) expect(card.scoreTrace.adverseAttribution.items[0]!.message).toMatch(/^Deployment-scoped incident:/);
+      expect(card.score).toBe(input.trace.finalScore);
+      expect(card.scoreTrace.deploymentRisk.adjustments[0]!.adjustmentPoints).toBe(loss);
+      expect(JSON.stringify(input.trace)).toBe(before);
+    },
+  );
+
+  it("keeps a directly binding compromised authority incident without a deployment loss", () => {
+    const input = fixture("compromised-authority", {
+      score: 39, grade: "F", pillars: { backing: 92, exit: 90, control: 25 },
+      qualityScore: 74.55, pegAdjustedScore: 74.55,
+    });
+    input.trace.weakestPillar = { pillar: "control", score: 25 };
+    input.trace.aggregation!.weakestPillar = "control";
+    input.trace.aggregation!.weakestScore = 25;
+    input.control!.components[0]!.posture = "compromised";
+    input.trace.adverseAttribution = [{
+      source: "structural-signal", path: "structural:active-control-incident:critical",
+      message: "The economic authority is compromised.", responsibility: "measured-adverse",
+    }];
+    const card = projectSafetyScoreV9Card(input).card;
+    expect(card.scoreTrace.adverseAttribution.items).toHaveLength(1);
   });
 
   it("attributes exposure-weighted deployment loss and causal adverse evidence", () => {

@@ -9,7 +9,7 @@ const CHIP_CLASS =
 const EVIDENCE_AGE_LABELS: Record<SafetyScoreV9TopDriver["evidenceFreshness"], string> = {
   current: "current",
   stale: "stale",
-  unknown: "unknown",
+  unknown: "not assessed",
 };
 
 export interface SafetyScoreTopDriverProps {

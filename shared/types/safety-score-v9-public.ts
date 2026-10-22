@@ -157,13 +157,6 @@ const SafetyScoreV9RoleDependencySchema = z
     role: V9DependencyEconomicRoleSchema,
     weight: z.number().finite().min(0).max(1),
     targetPillar: z.enum(["exit", "control"]).nullable(),
-    propagationEventEdgeKeys: z.array(z.string().min(1)),
-    propagationEventExposureKey: z.string().min(1).nullable(),
-    propagationEventRiskEventKey: z.string().min(1).nullable(),
-    propagationEventNominalExposureShare: z.number().finite().min(0).max(1).nullable(),
-    propagationEventExposureShare: z.number().finite().min(0).max(1).nullable(),
-    propagationEventInheritedScore: ScoreSchema.nullable(),
-    propagationEventModeledLossPoints: ScoreSchema.nullable(),
     inheritedDimensions: z.array(z.enum(["final", "backing", "exit", "access", "control", "oracle-nav"])),
     unavailableDimensions: z.array(z.enum(["final", "backing", "exit", "access", "control", "oracle-nav"])),
     score: ScoreSchema.nullable(),
@@ -175,9 +168,6 @@ const SafetyScoreV9RoleDependencySchema = z
   })
   .strict()
   .superRefine((dependency, ctx) => {
-    if (!isUniqueSorted(dependency.propagationEventEdgeKeys)) {
-      issue(ctx, ["propagationEventEdgeKeys"], "V9 role dependency propagation event keys must be unique and sorted");
-    }
     if (!isUniqueSorted(dependency.evidenceRefIds)) {
       issue(ctx, ["evidenceRefIds"], "V9 role dependency evidence references must be unique and sorted");
     }
@@ -187,28 +177,12 @@ const SafetyScoreV9RoleDependencySchema = z
     }
   });
 
-const SafetyScoreV9RolePillarLimitSchema = z
-  .object({
-    limit: ScoreSchema.nullable(),
-    knownLossPoints: ScoreSchema,
-    boundedUnknownLossPoints: ScoreSchema,
-    unresolvedExposureShare: z.number().finite().min(0).max(1),
-    materialUnresolvedExposure: z.boolean(),
-  })
-  .strict();
 
 const SafetyScoreV9DependencySummarySchema = z
   .object({
     serial: z.array(SafetyScoreV9SerialDependencySchema),
     basket: z.array(SafetyScoreV9BasketDependencySchema),
     roles: z.array(SafetyScoreV9RoleDependencySchema).optional(),
-    rolePillarLimits: z
-      .object({
-        exit: SafetyScoreV9RolePillarLimitSchema,
-        control: SafetyScoreV9RolePillarLimitSchema,
-      })
-      .strict()
-      .optional(),
     cycleBlocked: z.boolean(),
     reasonCodes: z.array(V9ReasonCodeSchema),
   })
@@ -230,6 +204,35 @@ const SafetyScoreV9DependencySummarySchema = z
       issue(ctx, ["reasonCodes"], "V9 dependency reasons must be unique and sorted");
     }
   });
+
+/** Retained publications record the former role calculation; current cards do not emit it. */
+const SafetyScoreV9HistoricalRoleDependencySchema = SafetyScoreV9RoleDependencySchema.safeExtend({
+  propagationEventEdgeKeys: z.array(z.string().min(1)),
+  propagationEventExposureKey: z.string().min(1).nullable(),
+  propagationEventRiskEventKey: z.string().min(1).nullable(),
+  propagationEventNominalExposureShare: z.number().finite().min(0).max(1).nullable(),
+  propagationEventExposureShare: z.number().finite().min(0).max(1).nullable(),
+  propagationEventInheritedScore: ScoreSchema.nullable(),
+  propagationEventModeledLossPoints: ScoreSchema.nullable(),
+}).superRefine((dependency, ctx) => {
+  if (!isUniqueSorted(dependency.propagationEventEdgeKeys)) {
+    issue(ctx, ["propagationEventEdgeKeys"], "Historical role propagation keys must be unique and sorted");
+  }
+});
+const SafetyScoreV9HistoricalRolePillarLimitSchema = z.object({
+  limit: ScoreSchema.nullable(),
+  knownLossPoints: ScoreSchema,
+  boundedUnknownLossPoints: ScoreSchema,
+  unresolvedExposureShare: z.number().finite().min(0).max(1),
+  materialUnresolvedExposure: z.boolean(),
+}).strict();
+const SafetyScoreV9HistoricalDependencySummarySchema = SafetyScoreV9DependencySummarySchema.safeExtend({
+  roles: z.array(SafetyScoreV9HistoricalRoleDependencySchema).optional(),
+  rolePillarLimits: z.object({
+    exit: SafetyScoreV9HistoricalRolePillarLimitSchema,
+    control: SafetyScoreV9HistoricalRolePillarLimitSchema,
+  }).strict().optional(),
+});
 
 export const SafetyScoreV9EvidenceSummarySchema = z
   .object({
@@ -387,6 +390,7 @@ const SafetyScoreV9HistoricalCardBaseSchema = SafetyScoreV9CurrentCardBaseSchema
   bindingCap: SafetyScoreV9HistoricalCapSchema.nullable(),
   scoreTrace: SafetyScoreV9HistoricalScoreTraceSchema,
   breakdowns: SafetyScoreV9HistoricalBreakdownsSchema.nullable(),
+  dependencies: SafetyScoreV9HistoricalDependencySummarySchema,
 });
 const SafetyScoreV9HistoricalTypedCardBaseSchema = SafetyScoreV9HistoricalCardBaseSchema.extend({
   breakdowns: SafetyScoreV9HistoricalTypedBreakdownsSchema.nullable(),

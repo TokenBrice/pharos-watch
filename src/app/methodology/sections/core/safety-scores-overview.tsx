@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SAFETY_SCORES_SECTION_CONTENT } from "@/lib/methodology-content";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import {
   METHODOLOGY_LINK_CLASS,
   MethodologyDetails,
@@ -30,9 +31,15 @@ export function SafetyScoresOverview() {
           { label: "Publication state", value: "Current or held; never V8 fallback" },
         ]}
       />
+      <MethodologyFacts
+        facts={V9_CANDIDATE_POLICY_V1.policy.semantic.formula.gradeThresholds.map((threshold, index, bands) => ({
+          label: threshold.grade,
+          value: `${threshold.minScore}–${index === 0 ? 100 : bands[index - 1]!.minScore - 1}`,
+        }))}
+      />
       <MethodologyPreconditions
         facts={[
-          { label: "Minimum data", value: "At least two usable evidenced pillars; original weights renormalized" },
+          { label: "Minimum data", value: "At least two usable evidenced pillars; price an unavailable third at C/U with original weights" },
           { label: "Required sources", value: "Backing, exit, control, peg, dependency, and evidence-provenance inputs" },
           {
             label: "Failure behavior",
