@@ -151,7 +151,7 @@ export const EXIT_ROUTE_SCORING_TABLES = {
     notionalGridUsd: [100_000, 1_000_000, 10_000_000, 25_000_000],
     referenceNotionalUsd: 1_000_000,
     supplyRatio: 0.05,
-    floorUsd: 1_000_000,
+    floorUsd: 100_000,
     capUsd: 25_000_000,
     maxCostBps: 200,
     settlementHorizonSec: 300,

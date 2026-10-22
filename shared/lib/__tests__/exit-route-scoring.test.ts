@@ -20,19 +20,19 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 
 const envelope = V9_CANDIDATE_POLICY_V1;
 
-describe("the one exit request, two denominators", () => {
+describe("caller-owned exit request floors", () => {
   it.each([
-    [1_000, 1_000_000, 1_000_000],
-    [120_000_000, 6_000_000, 10_000_000],
-    [900_000_000, 25_000_000, 25_000_000],
-  ])("resolves supply %s to the reviewed request and smallest qualifying grid point", (supply, raw, grid) => {
+    [1_000, 100_000, 100_000, 1_000_000],
+    [120_000_000, 6_000_000, 10_000_000, 6_000_000],
+    [900_000_000, 25_000_000, 25_000_000, 25_000_000],
+  ])("resolves supply %s with separate standalone and Safety stress floors", (supply, raw, grid, safetyStress) => {
     expect(resolveExitRequestSupplyNotionalUsd(supply, EXIT_ROUTE_SCORING_TABLES.request)).toBe(raw);
     expect(resolveExitScoringRequest("supply-denominator", supply, EXIT_ROUTE_SCORING_TABLES.request))
       .toMatchObject({ rawSupplyRequestUsd: raw, requestedNotionalUsd: raw });
     expect(resolveExitScoringRequest("stress-grid", supply, EXIT_ROUTE_SCORING_TABLES.request))
       .toMatchObject({ rawSupplyRequestUsd: raw, requestedNotionalUsd: grid });
     expect(computeModeledExitSizeUsd(supply)).toBe(raw);
-    expect(selectV9ExitStressRequest(supply, envelope)?.requestedNotionalUsd).toBe(raw);
+    expect(selectV9ExitStressRequest(supply, envelope)?.requestedNotionalUsd).toBe(safetyStress);
     expect(resolveExitScoringRequest("stress", supply, EXIT_ROUTE_SCORING_TABLES.request))
       .toMatchObject({ rawSupplyRequestUsd: raw, requestedNotionalUsd: raw });
   });
