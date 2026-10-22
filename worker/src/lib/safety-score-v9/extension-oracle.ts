@@ -34,7 +34,8 @@ const ORACLE_BRANCH_ADAPTERS = [
 // layer's measurement. `commodity-claim` was added here at the v9.14 phase-2
 // migration — phase 1 could not have caught the omission, because its
 // zero-coin guard meant no asset ever reached this branch on the new archetype.
-const ORACLE_FREE_ARCHETYPES = new Set(["fiat-cash", "tbill", "rwa-credit-fund", "commodity-claim"]);
+const ORACLE_FREE_ARCHETYPES: Record<string, true> = { "fiat-cash": true, "commodity-claim": true };
+const ISSUER_NAV_ARCHETYPES: Record<string, true> = { tbill: true, "rwa-credit-fund": true, "ucits-trs-fund": true };
 
 // V9 oracle branch-materiality lever (owner ruling 2026-07-23). A multi-branch
 // CDP should be graded on the per-market oracle branches that carry material
@@ -169,8 +170,12 @@ export function adaptOracleReview(
   lenderBook?: LenderBookObservation,
 ): NonNullable<ExtensionAsset["economicControlReview"]>["oracle"] {
   const profile: OracleRiskProfile | undefined = meta.oracleRisk;
+  // Fund valuation remains an economic pricing authority even when a relay
+  // publishes it and no liquidation consumes it. Absence of research is U,
+  // never an archetype exemption or an invented adverse topology.
+  const issuerNav = ISSUER_NAV_ARCHETYPES[archetype] === true;
   if (!profile?.reviewedAt || !profile.reviewer || !profile.confidence) {
-    if (!profile && ORACLE_FREE_ARCHETYPES.has(archetype)) {
+    if (!profile && !issuerNav && meta.flags?.navToken !== true && ORACLE_FREE_ARCHETYPES[archetype] === true) {
       return {
         status: notApplicableStatus(
           "v9.control.oracle-review",
@@ -185,7 +190,7 @@ export function adaptOracleReview(
     return {
       status: requiredStatus("v9.control.oracle-review", "missing", `oracle:${meta.id}`),
       tier: null,
-      liquidationBranchesApplicable: true,
+      liquidationBranchesApplicable: !issuerNav,
       branches: [],
     };
   }
@@ -208,7 +213,15 @@ export function adaptOracleReview(
     return {
       status: requiredStatus("v9.control.oracle-review", "stale", `oracle:${meta.id}`, evidenceKeys),
       tier: null,
-      liquidationBranchesApplicable: true,
+      liquidationBranchesApplicable: !issuerNav,
+      branches: [],
+    };
+  }
+  if (issuerNav) {
+    return {
+      status: requiredStatus("v9.control.oracle-review", reviewedObservationState(confidence), `oracle:${meta.id}`, evidenceKeys),
+      tier: profile.tier,
+      liquidationBranchesApplicable: false,
       branches: [],
     };
   }
@@ -415,6 +428,12 @@ export function adaptOracleReview(
           topState === "known" || topState === "bounded-unknown" ? evidenceKeys : [],
         ),
     tier: topState === "missing" ? null : materiality.tier,
+    ...(meta.variantKind === "savings-passthrough" && topState === "known" && !branchesRequired &&
+        profile.tier === "privileged-internal-pricing" &&
+        (paths ? topLevelPaths.length > 0 && topLevelPaths.every((path) => path.pricingAuthority === "internal-price")
+          : profile.branchApplicability?.disposition === "top-level-only")
+      ? { pricingKind: "savings-rate" as const }
+      : {}),
     ...(unresolvedPaths && reviewedObservationState(confidence) === "known" &&
         paths?.some((path) => path.applicability.state === "required" && path.observationState === "known")
       ? { knownPathTier: materiality.tier }

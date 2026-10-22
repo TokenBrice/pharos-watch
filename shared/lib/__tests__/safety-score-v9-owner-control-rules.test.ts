@@ -19,6 +19,70 @@ describe("owner Control rules", () => {
     });
   });
 
+  it("prices a reviewed savings-rate setter once on the authority ladder, not at oracle 45", () => {
+    const ref = "authority:savings-governor";
+    const setter = control("mint:savings-rate", "mint", {
+      authority: { authorityKey: ref, model: "contract", threshold: null },
+      capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+      issuanceGovernance: {
+        coverage: "complete", incompleteReasons: [], governorAuthorityKey: ref,
+        decisionRule: "affirmative-vote", minUnavoidableDelaySec: 172800,
+        votingPower: "past-block-checkpoint", vetoQuorumBps: null, vetoOverride: null,
+        enumerable: true, nonGovernorUnboundedPathKeys: [],
+        votingControl: makeCompiledVotingControl(), diagnostics: [],
+      },
+    });
+    const mint = makeReviewedMintInput(setter.controlKey);
+    const oracle = {
+      status: requiredKnown("savings-rate"), tier: "privileged-internal-pricing" as const,
+      pricingKind: "savings-rate" as const, liquidationBranchesApplicable: false, branches: [],
+    };
+    const result = evaluateV9EconomicControl(args({ facts: facts([setter]), mint, oracle }));
+    expect(result).toMatchObject({ score: 75, oracleApplicability: "not-applicable" });
+    expect(result.components.filter((row) => row.kind === "oracle")).toEqual([]);
+    expect(result.components.filter((row) => row.kind === "mint")).toEqual([
+      expect.objectContaining({ score: 75, controlKeys: [setter.controlKey] }),
+    ]);
+    expect(evaluateV9EconomicControl(args({ facts: facts([{ ...setter, issuanceGovernance: undefined }]),
+      mint, oracle })).score).toBe(60);
+    expect(evaluateV9EconomicControl(args({ facts: facts([{ ...setter, issuanceGovernance: {
+      ...setter.issuanceGovernance!, minUnavoidableDelaySec: 0, nonGovernorUnboundedPathKeys: ["bypass"],
+    } }]), mint, oracle })).score).toBe(60);
+  });
+
+  it("does not infer immutable savings-rate authority from an absent setter review", () => {
+    const result = evaluateV9EconomicControl(args({ oracle: {
+      status: requiredKnown("savings-rate"), tier: "privileged-internal-pricing",
+      pricingKind: "savings-rate", liquidationBranchesApplicable: false, branches: [],
+    } }));
+    expect(result).toMatchObject({ score: 60, oracleApplicability: "not-applicable" });
+    expect(result.components).toContainEqual(expect.objectContaining({
+      componentKey: "mint:savings-rate", kind: "mint", score: 60, cause: "U",
+    }));
+    expect(result.components.some((row) => row.kind === "oracle")).toBe(false);
+  });
+
+  it("retains the oracle gap when a savings-rate classification is not currently admitted", () => {
+    const result = evaluateV9EconomicControl(args({ oracle: {
+      status: boundedUnknown("savings-rate"), tier: "privileged-internal-pricing",
+      pricingKind: "savings-rate", liquidationBranchesApplicable: false, branches: [],
+    } }));
+    expect(result.oracleApplicability).toBe("required");
+    expect(result.components).toContainEqual(expect.objectContaining({ kind: "oracle", score: 60, cause: "U" }));
+  });
+
+  it.each(["contract", "governance"] as const)(
+    "does not infer governance credit from a %s authority label or recorded delay", (model) => {
+      const row = control("mint:unproved-governor", "mint", {
+        authority: { authorityKey: "authority:unproved", model, threshold: null },
+        delaySec: 172800,
+        capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
+      });
+      expect(evaluateV9EconomicControl(args({ facts: facts([row]),
+        mint: makeReviewedMintInput(row.controlKey) })).score).toBe(60);
+    },
+  );
+
 
   it.each(["prudential", "none"] as const)(
     "separates a disclosed internal mint ledger from reserve assurance under %s supervision", (supervision) => {

@@ -247,6 +247,83 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
   });
 });
 
+describe("structured savings-rate authority classification", () => {
+  it.each([
+    { variantKind: "savings-passthrough" as const, tier: "privileged-internal-pricing" as const, classified: true },
+    { variantKind: "strategy-vault" as const, tier: "privileged-internal-pricing" as const, classified: false },
+    { variantKind: "savings-passthrough" as const, tier: "single-source-or-laggy" as const, classified: false },
+  ])("classifies only savings conversion authority: $variantKind / $tier", ({ variantKind, tier, classified }) => {
+    const meta = internalPriceMeta();
+    meta.variantKind = variantKind;
+    meta.oracleRisk!.tier = tier;
+    const result = adaptOracleReview(meta, "cdp", new ReviewEvidenceBuilder(meta.id, 100000), 100000);
+    expect(result.pricingKind).toBe(classified ? "savings-rate" : undefined);
+    expect(result.status.observationState).toBe("known");
+    expect(result.tier).toBe(tier);
+  });
+
+  it("keeps liquidation feeds and unresolved applicability out of the savings-rate lane", () => {
+    const meta = reviewedOracleMeta();
+    meta.variantKind = "savings-passthrough";
+    meta.oracleRisk!.tier = "privileged-internal-pricing";
+    expect(adaptOracleReview(meta, "cdp", new ReviewEvidenceBuilder(meta.id, 100000), 100000).pricingKind).toBeUndefined();
+    const internal = internalPriceMeta();
+    internal.variantKind = "savings-passthrough";
+    delete internal.oracleRisk!.branchApplicability;
+    expect(adaptOracleReview(internal, "cdp", new ReviewEvidenceBuilder(internal.id, 100000), 100000).pricingKind).toBeUndefined();
+  });
+});
+
+describe("issuer-administered fund NAV pricing", () => {
+  const clockSec = Date.parse("2026-10-22T12:00:00Z") / 1000;
+  const compile = (meta: V9ExtensionRegistryMeta, archetype: string) =>
+    adaptOracleReview(meta, archetype, new ReviewEvidenceBuilder(meta.id, clockSec), clockSec);
+
+  it.each(["tbill", "rwa-credit-fund", "ucits-trs-fund"])(
+    "requires a pricing review on %s even without a liquidation oracle", (archetype) => {
+      const meta = reviewedOracleMeta("2026-10-20");
+      delete meta.oracleRisk;
+      expect(compile(meta, archetype)).toMatchObject({
+        status: { applicability: { state: "required" }, observationState: "missing" },
+        tier: null, liquidationBranchesApplicable: false, branches: [],
+      });
+      expect(unknownQuality("control", "U")).toBe(60);
+    },
+  );
+
+  it.each(["privileged-internal-pricing", "single-source-or-laggy", "standard-external"] as const)(
+    "retains the measured %s finding, independently of the fund's relay or liquidation census", (tier) => {
+      const meta = internalPriceMeta();
+      meta.oracleRisk!.reviewedAt = "2026-10-20";
+      meta.oracleRisk!.tier = tier;
+      meta.oracleRisk!.branchApplicability!.disposition = "not-applicable";
+      for (const archetype of ["tbill", "rwa-credit-fund", "ucits-trs-fund"]) {
+        expect(compile(meta, archetype)).toMatchObject({
+          status: { applicability: { state: "required" }, observationState: "known" },
+          tier, liquidationBranchesApplicable: false, branches: [],
+        });
+      }
+    },
+  );
+
+  it("does not promote an expired NAV review into either an exemption or measured risk", () => {
+    const meta = internalPriceMeta();
+    meta.oracleRisk!.reviewedAt = "2020-01-01";
+    expect(compile(meta, "tbill")).toMatchObject({
+      status: { applicability: { state: "required" }, observationState: "stale" }, tier: null,
+    });
+  });
+
+  it("does not use a cash/commodity exemption for an explicitly NAV-priced claim", () => {
+    const meta = reviewedOracleMeta("2026-10-20");
+    delete meta.oracleRisk;
+    meta.flags = { ...meta.flags!, navToken: true };
+    expect(compile(meta, "commodity-claim").status).toMatchObject({
+      applicability: { state: "required" }, observationState: "missing",
+    });
+  });
+});
+
 const lenderAssetId = "kpkusdcprime-kpk";
 const lenderRoot = "0x3333333333333333333333333333333333333333";
 const lenderCore = "0x1111111111111111111111111111111111111111";

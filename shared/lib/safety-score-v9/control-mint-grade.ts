@@ -10,18 +10,19 @@ import {
 import { economicControlExecutionPaths, effectiveAuthoritySignatureRequirement } from "./control-scope";
 import { unknownQuality } from "./policy";
 
-/** Historical authority failures retain their existing bounded recovery treatment. */
+/** Resolved failures share the realized-holder-loss clock; active failures do not decay. */
 export function applyResolvedControlIncidentHistory(
   score: number,
   control: V9DeploymentControlFactV2 | null,
-  ageMonths: number | undefined,
-  policy: V9MethodologySemantic["control"],
+  ageDays: number | undefined,
+  policy: V9MethodologySemantic,
 ): number {
-  if (control?.incidentState === "active") return policy.authorityLadder.compromised;
-  if (control?.incidentState !== "resolved" && (control !== null || ageMonths === undefined)) return score;
-  const { resolvedIncidentQualityCaps: caps, resolvedIncidentDecayMinMonths: tiers } = policy.resolvedIncidentHistory;
-  const limit = ageMonths !== undefined && ageMonths >= tiers.dated ? caps.dated
-    : ageMonths !== undefined && ageMonths >= tiers.aging ? caps.aging : caps.recent;
+  if (control?.incidentState === "active") return policy.control.authorityLadder.compromised;
+  if (control?.incidentState !== "resolved" && (control !== null || ageDays === undefined)) return score;
+  const initialLimit = policy.control.resolvedIncidentHistory.initialLimit;
+  const { holdDays, recoveryDays } = policy.formula.realizedHolderLoss;
+  const limit = Math.min(100, initialLimit +
+    (100 - initialLimit) * Math.max(0, (ageDays ?? 0) - holdDays) / recoveryDays);
   return Math.min(score, limit);
 }
 

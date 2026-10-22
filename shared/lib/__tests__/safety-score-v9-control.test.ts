@@ -1730,14 +1730,23 @@ describe("independent authority proofs and incident recovery", () => {
     } }, mint, SEMANTIC_POLICY)).toBe(60);
   });
 
-  it("retains bounded recovery of a resolved authority failure without seasoning credits", () => {
+  it.each([
+    [undefined, 55], [0, 55], [365, 55], [365.5, 55 + 45 * 0.5 / 365],
+    [547.5, 77.5], [730, 90], [2555, 90],
+  ] as const)("relaxes resolved authority history on the loss clock at day %s", (ageDays, expected) => {
     const row = control("authority:history", "mint", { incidentState: "resolved" });
     const mint = makeReviewedMintInput(row.controlKey, { reconciliation: "continuous", supervision: "prudential" });
-    const recent = evaluateV9EconomicControl(args({ facts: facts([row]), mint, resolvedIncidentAgeMonths: 0 }));
-    const old = evaluateV9EconomicControl(args({ facts: facts([row]), mint, resolvedIncidentAgeMonths: 60 }));
-    expect(recent.score).toBe(55);
-    expect(old.score).toBe(85);
-    expect(evaluateV9EconomicControl(args({ facts: facts([{ ...row, incidentState: "active" }]), mint,
-      resolvedIncidentAgeMonths: 60 })).score).toBe(25);
+    const result = evaluateV9EconomicControl(args({ facts: facts([row]), mint,
+      ...(ageDays === undefined ? {} : { resolvedIncidentAgeDays: ageDays }) }));
+    expect(result.score).toBeCloseTo(expected);
+  });
+
+  it("never decays an active compromise or improves an independently weaker authority", () => {
+    const row = control("authority:history", "mint", { incidentState: "active" });
+    const mint = makeReviewedMintInput(row.controlKey);
+    expect(evaluateV9EconomicControl(args({ facts: facts([row]), mint,
+      resolvedIncidentAgeDays: 2555 })).score).toBe(25);
+    expect(evaluateV9EconomicControl(args({ facts: facts([{ ...row, incidentState: "resolved" }]), mint,
+      resolvedIncidentAgeDays: 730 })).score).toBe(65);
   });
 });
