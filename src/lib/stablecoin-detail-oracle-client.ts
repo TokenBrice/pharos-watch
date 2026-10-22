@@ -1,4 +1,5 @@
 import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
+import methodologyPolicy from "@shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
 import type { OracleRiskConfidence, OracleRiskRole, OracleRiskTier, StablecoinLink, StablecoinMeta } from "@shared/types";
 import { CHAIN_META, normalizeChainId } from "@shared/types/chain-identity";
 import { SEVERITY_TONE_CLASS, type SeverityTone } from "@/lib/severity-tone";
@@ -152,17 +153,17 @@ const TIER_SHORT_LABELS: Record<OracleRiskTier, string> = {
 };
 
 /**
- * Oracle tiers in the published `oracleTierQuality` order (V9 methodology
- * policy `control.oracleTierQuality`), weakest band first so the ladder reads
- * "right = safer". Tiers the policy scores alike share one band. Pinned to the
- * policy by test: change one and the pin fails.
+ * Known tiers use the policy table; unresolved topology has its own neutral
+ * band at the U price because this client projection carries no gap cause.
  */
+const oracleTierQuality = methodologyPolicy.semantic.control.oracleTierQuality;
 export const ORACLE_TIER_POLICY_BANDS: readonly { quality: number; tiers: readonly OracleRiskTier[] }[] = [
-  { quality: 45, tiers: ["privileged-internal-pricing", "single-source-or-laggy", "opaque-or-unknown"] },
-  { quality: 70, tiers: ["standard-external"] },
-  { quality: 80, tiers: ["medianized-with-delay"] },
-  { quality: 90, tiers: ["redundant-with-failover"] },
-  { quality: 95, tiers: ["oracleless"] },
+  { quality: oracleTierQuality["single-source-or-laggy"], tiers: ["privileged-internal-pricing", "single-source-or-laggy"] },
+  { quality: methodologyPolicy.semantic.unknownQuality.control.U, tiers: ["opaque-or-unknown"] },
+  { quality: oracleTierQuality["standard-external"], tiers: ["standard-external"] },
+  { quality: oracleTierQuality["medianized-with-delay"], tiers: ["medianized-with-delay"] },
+  { quality: oracleTierQuality["redundant-with-failover"], tiers: ["redundant-with-failover"] },
+  { quality: oracleTierQuality.oracleless, tiers: ["oracleless"] },
 ];
 
 export interface OracleTierLadderBand {
@@ -210,7 +211,10 @@ export function resolveOracleTierLadder(tier: string): OracleTierLadder | null {
     const [first, ...tied] = band.tiers;
     let label: string;
     let shortLabel: string;
-    if (active) {
+    if (first === "opaque-or-unknown") {
+      label = `${TIER_LABELS[first]} (U ${band.quality}; cause unavailable)`;
+      shortLabel = `Unknown (U ${band.quality})`;
+    } else if (active) {
       label = TIER_LABELS[tier];
       shortLabel = TIER_SHORT_LABELS[tier];
     } else if (tied.length === 0) {

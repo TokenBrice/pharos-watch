@@ -403,13 +403,6 @@ function parseExitBreakdown(
     context.push({ key: "capacity-method", label: "Capacity evidence tier", value: humanizeSafetyScoreV9Value(primaryRoute.capacityEvidenceTier) });
     context.push({ key: "raw-cost", label: "Raw same-notional cost", value: costLabel(primaryRoute.rawSameNotionalCostBps) });
   }
-  if (primaryRoute !== null && Math.abs(primaryRoute.eligibilityMultiplier - 1) >= 0.005) {
-    context.push({
-      key: "eligibility",
-      label: "Eligibility",
-      value: `${multiplierLabel(primaryRoute.eligibilityMultiplier)}x`,
-    });
-  }
   if (breakdown.stressRequest !== null) {
     context.push({
       key: "stress-request",

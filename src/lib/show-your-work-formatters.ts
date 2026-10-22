@@ -187,10 +187,6 @@ export function formatReportCardV9(
           label: "Exit route · confidence factor",
           value: `${primaryRoute.confidenceFactor.toFixed(3)}x`,
         },
-        {
-          label: "Exit route · eligibility multiplier",
-          value: `${primaryRoute.eligibilityMultiplier.toFixed(3)}x`,
-        },
       );
       for (const [dimension, confidence] of Object.entries(primaryRoute.confidenceDimensions)) {
         rows.push({ label: `Exit confidence · ${dimension}`,
@@ -291,7 +287,7 @@ export function formatReportCardV9(
     formula:
       breakdowns === null
         ? "included pillars → bounded-headroom aggregation → peg multiplier → deployment adjustment → policy score adjustment → caps → published score"
-        : "Backing = weighted effective components; Exit = selected weighted route × confidence × eligibility, then caps and diversification; Economic Control = minimum included binding component; excluded A/B components have zero effective weight; included pillars with renormalized weights → bounded-headroom aggregation → peg multiplier → deployment adjustment → policy score adjustment → caps → published score",
+        : "Backing = weighted effective components; Exit = selected weighted route × confidence, then caps and diversification; Economic Control = minimum included binding component; excluded A/B components have zero effective weight; included pillars with renormalized weights → bounded-headroom aggregation → peg multiplier → deployment adjustment → policy score adjustment → caps → published score",
     topic: "safetyScore",
     versionLabel: methodologyVersion,
   };

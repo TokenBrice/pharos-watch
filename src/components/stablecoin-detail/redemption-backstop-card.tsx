@@ -223,7 +223,7 @@ function exitCapClause(capsApplied: readonly string[], stressSize: string, notio
  * Why the Exit pillar's score for this same route differs from the standalone
  * route score: the single largest published effect pushing in the direction
  * of the difference. Exit re-scores the six components at its stress size,
- * multiplies by evidence confidence and holder eligibility, then caps; the
+ * multiplies by evidence confidence, then caps; the
  * standalone score carries its own caps.
  */
 function exitDivergenceClause(
@@ -237,7 +237,6 @@ function exitDivergenceClause(
   const direction = Math.sign(exitScore - routeScore);
   const ceiling = route.supportedComponentCeiling ?? exitScore;
   const confidence = route.confidenceFactor;
-  const eligibility = route.eligibilityMultiplier;
   const candidates: { effect: number; clause: string }[] = [];
 
   for (const component of route.components) {
@@ -258,14 +257,8 @@ function exitDivergenceClause(
       clause: `a ${formatFactor(confidence)} evidence-confidence factor applies`,
     });
   }
-  if (eligibility < 1) {
-    candidates.push({
-      effect: ceiling * confidence * (eligibility - 1),
-      clause: `a ${formatFactor(eligibility)} holder-eligibility factor applies`,
-    });
-  }
   const capClause = exitCapClause(route.capsApplied, stressSize, notional);
-  if (capClause) candidates.push({ effect: exitScore - ceiling * confidence * eligibility, clause: capClause });
+  if (capClause) candidates.push({ effect: exitScore - ceiling * confidence, clause: capClause });
 
   const standaloneCaps = entry.capsApplied ?? [];
   const routeCap = standaloneCaps.find((cap) => cap.endsWith("-cap"));
