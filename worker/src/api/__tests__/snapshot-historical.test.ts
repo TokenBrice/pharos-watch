@@ -47,7 +47,7 @@ function setMethodology(envelope: typeof historicalSnapshot, version: string) {
   envelope.reportCards.methodology.version = version;
 }
 
-/** Model report8's typed route identity using the retained inline-control card bytes. */
+/** Modeled 10.28 archive: retain recorded inline controls, add distinct fixture-only typed route IDs. */
 function historicalTypedSnapshot() {
   const envelope = structuredClone(historicalSnapshot);
   setMethodology(envelope, "10.28");
@@ -60,9 +60,9 @@ function historicalTypedSnapshot() {
         fact => fact[6] as number[], fact => fact[4] as boolean));
     }
     const exit = card.breakdowns.exit;
-    for (const route of [exit.primaryRoute, ...exit.alternatives]) {
+    for (const [index, route] of [exit.primaryRoute, ...exit.alternatives].entries()) {
       if (route !== null) Object.assign(route, {
-        routeId: route.key, lane: route.routeFamily === "dex-amm" ? "dex" : "redemption",
+        routeId: `fixture:archive:${card.id}:route:${index}`, lane: route.routeFamily === "dex-amm" ? "dex" : "redemption",
       });
     }
   }
@@ -105,7 +105,7 @@ describe("historical snapshot recorded safety contracts", () => {
     expect((await handleSnapshotDay(database(row), envelope.snapshotDate)).status).toBe(200);
   });
 
-  it("serves archived 10.28/report8 inline control details without rewriting bytes or identity", async () => {
+  it("serves a modeled 10.28/report8 archive with inline control details without rewriting bytes or identity", async () => {
     const envelope = historicalTypedSnapshot();
     expect(envelope.reportCards.cards.some(card =>
       card.breakdowns.control.components.some(component => component.controlDetails.length > 0))).toBe(true);
