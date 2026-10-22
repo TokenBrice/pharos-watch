@@ -8,32 +8,44 @@
       "risk": "medium",
       "coinId": "yusd-aegis",
       "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aegis sYUSD ERC-4626 vault 0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64; native settlement asset YUSD",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "counterparty"
+      ],
       "liquidityHorizon": "seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-07",
-    "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_4)",
+    "reviewedAt": "2026-10-22",
+    "reviewer": "Pharos RESEARCH-BACKING primary-source review",
     "confidence": "verified",
+    "compositionAsOf": "2026-10-22",
+    "scope": "full-composition",
+    "knownUnknownExposurePct": 0,
     "sources": [
-      {"label": "Dwellir pinned Ethereum block 26088256, 2026-09-30T05:38:47Z: asset YUSD and cooldownDuration 604800; observed 2026-10-07T14:39:30.915Z", "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"},
-      {"label": "Verified sYUSD implementation: cooldownShares, unstake and sYUSDSilo.withdraw transfer native YUSD", "url": "https://sourcify.dev/server/v2/contract/1/0xb0c63bb1667b6e9215aee562af2957739b2676fe?fields=sources"},
-      {"label": "Ethereum asset() and cooldownDuration() at block 26088256 (2026-09-30)", "url": "https://ethereum-rpc.publicnode.com"},
       {
-        "label": "Aegis sYUSD documentation",
-        "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+        "label": "Pinned sYUSD asset, totalAssets, YUSD balance, cooldown and implementation; observed 2026-10-22T13:08:17.385Z and 13:09:06.359Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
-        "label": "Aegis proof of reserve",
-        "url": "https://aegis.accountable.capital/"
+        "label": "Ethereum block 26248000, hash 0xa0e29bc4e36526c9587442208ab78842dc095171147ad5f454f39a3fc7573703, 2026-10-22T11:57:35Z",
+        "url": "https://etherscan.io/block/26248000"
+      },
+      {
+        "label": "Verified active sYUSD implementation and silo governing source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xb0c63bb1667b6e9215aee562af2957739b2676fe?fields=sources"
+      },
+      {
+        "label": "Issuer correction: cooldown starts at unstaking, not staking (24 June 2025)",
+        "url": "https://paragraph.com/@aegis-im-2/aegis-protocol-update-1"
       }
     ],
-    "rationale": "At Ethereum block 26088256 (2026-09-30T05:38:47Z), independently re-read on 2026-10-07T14:39:30.915Z, asset() on tracked sYUSD vault 0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64 returned tracked YUSD 0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a and cooldownDuration() returned 604800 seconds. Verified contracts/sYUSD.sol cooldownShares redeems shares into the cooldown silo; unstake calls silo.withdraw after cooldownEnd, and contracts/sYUSDSilo.sol withdraw transfers _YUSD to the receiver. The conservative seven-days horizon therefore measures wrapper-local realization in the holder claim's native settlement asset, YUSD, not fiat. Under the 2026-10-07 owner ruling, this supersedes the earlier gap classification's demand for final-fiat realization: YUSD's fiat realizability and strategy risk are inherited through the existing YUSD parent dependency rather than asserted or scored twice here. CompositionAsOf and historical weights are unchanged; this classification-only review does not certify a new reserve denominator.",
-    "compositionBasis": "Exact Ethereum vault asset() and cooldownDuration() reads at block 26088256",
-    "compositionAsOf": "2026-09-30",
-    "scope": "classification-only",
-    "knownUnknownExposure": "The linked YUSD backing is disclosed; dynamic reward accrual is not modeled as a separate reserve slice.",
-    "knownUnknownExposurePct": 0
+    "rationale": "Genuine new whole-direct-reserve review on 2026-10-22; prior classification-only review was 2026-10-07 and its 2026-09-30 block is historical. At Ethereum block 26248000, hash 0xa0e29bc4e36526c9587442208ab78842dc095171147ad5f454f39a3fc7573703, 2026-10-22T11:57:35Z, the active implementation remains 0xb0c63bb1667b6e9215aee562af2957739b2676fe, asset() is YUSD 0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a, cooldownDuration is 604800 seconds, and totalAssets equals the native YUSD balance exactly at 11483489489716643491412671 raw units. The governing ERC-4626/silo code holds YUSD, burns shares into a YUSD cooldown claim, and allows unstake after cooldownEnd; it imposes no fixed maturity of shares. The reserve is a protocol staking claim, not a directly owned BTC hedge or bank deposit. Seven-days describes the wrapper-local ordinary native-YUSD cooldown route, not a hard fiat-settlement maximum; fee-bearing immediate paths and mutable parameters are not newly credited. All YUSD parent synthetic, custody and margin/liquidation constraints remain upstream.",
+    "compositionBasis": "Single native YUSD asset and complete ERC-4626 native asset accounting, with current cooldown and active implementation pinned at block 26248000",
+    "knownUnknownExposure": "No unidentified direct native reserve asset; YUSD parent backing/hedging risk remains on yusd-aegis, and current statutory segregation, default recovery and final-fiat realization are not established."
   },
   "custodyProfile": {
     "providers": [

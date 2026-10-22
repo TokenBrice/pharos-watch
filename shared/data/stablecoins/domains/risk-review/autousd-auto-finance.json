@@ -1,5 +1,39 @@
 {
   "id": "autousd-auto-finance",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "role": "coin-price-feed",
+    "summary": "autoUSD ERC4626 share value uses cached Autopool asset accounting. The protocol supports safe offchain-source prices, onchain spot pricing and midpoint reporting, with RootPriceOracle token/pool mappings configurable by ORACLE_MANAGER and debt reporting role-gated. The active autoUSD destination inventory, deployed feed mappings/providers, updater membership and report freshness were not established. Generic Chainlink, RedStone or Tellor support is not proof of live provider independence. The terminal oracle classification remains unresolved research, not issuer non-disclosure.",
+    "reviewedAt": "2026-10-22",
+    "reviewer": "Pharos v10.30 oracle/control primary-source research",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Exact autoUSD proxy and implementation mapping",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa7569a44f348d3d70d8ad5889e50f78e33d80d35"
+      },
+      {
+        "label": "Verified AutopoolETH implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfb2ebdedc38a7d19080e44ab1d621bc9afad0695"
+      },
+      {
+        "label": "Auto Finance pricing architecture",
+        "url": "https://docs.auto.finance/developer-docs/contracts-overview/autopool-eth-contracts-overview/autopool-contracts-and-systems/pricing"
+      },
+      {
+        "label": "Auto Finance reporting and valuation",
+        "url": "https://docs.auto.finance/developer-docs/contracts-overview/autopool-eth-contracts-overview/autopool-contracts-and-systems/autopools"
+      },
+      {
+        "label": "Verified RootPriceOracle mapping and permission controls",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x61f8be7fd721e80c0249829eae6f0daf21bc2cac"
+      },
+      {
+        "label": "Auto Finance contract registry",
+        "url": "https://docs.auto.finance/developer-docs/contracts-overview/contract-addresses"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [

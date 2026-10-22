@@ -1,5 +1,44 @@
 {
   "id": "apyusd-apyx",
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "Canonical apyUSD share conversion uses ERC4626 totalAssets, defined in the verified ApyUSD implementation as the apxUSD vault balance plus vesting.vestedAmount(). The AccessManager-restricted setVesting function can replace that price-relevant accounting dependency; _authorizeUpgrade is also restricted by the AccessManager. Issuer documentation describes offchain preferred-share and Treasury revenue converted into apxUSD and distributed on a configurable vesting schedule. No independent external price-feed quorum verifies the contributed vested amount. This is privileged internal share pricing, not oracle-free immutable asset-balance accounting. Underlying apxUSD reserve risk and destination bridge controls remain separate.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-22",
+      "reviewer": "Pharos v10.30 oracle/control primary-source research",
+      "rationale": "The reviewed price authority computes apyUSD-to-apxUSD share conversion. It is not a borrower-collateral liquidation oracle; replacement of the vesting accounting dependency affects top-level vault NAV.",
+      "sources": [
+        {
+          "label": "Verified deployed ApyUSD implementation: totalAssets, setVesting and _authorizeUpgrade",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfd616567ecc1607f61073951a1e822f7315bb112"
+        },
+        {
+          "label": "Issuer yield-distribution and configurable vesting methodology",
+          "url": "https://docs.apyx.fi/solution-overview/apyusd-yield-distribution.md"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-22",
+    "reviewer": "Pharos v10.30 oracle/control primary-source research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Ethereum canonical apyUSD proxy and explorer-resolved implementation, retrieved 2026-10-22",
+        "url": "https://etherscan.io/address/0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a#code"
+      },
+      {
+        "label": "Verified deployed ApyUSD implementation: totalAssets, setVesting and _authorizeUpgrade",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfd616567ecc1607f61073951a1e822f7315bb112"
+      },
+      {
+        "label": "Issuer yield-distribution and configurable vesting methodology",
+        "url": "https://docs.apyx.fi/solution-overview/apyusd-yield-distribution.md"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

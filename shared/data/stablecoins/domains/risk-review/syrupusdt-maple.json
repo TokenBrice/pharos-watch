@@ -1,5 +1,56 @@
 {
   "id": "syrupusdt-maple",
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "syrupUSDT share value uses Maple Pool accounting, not independent market-price discovery. The Pool computes convertToAssets from totalAssets and totalSupply, while convertToExitAssets additionally deducts manager-reported unrealizedLosses. The PoolManager aggregates strategy AUM and losses, and Maple documents Pool Delegate and Governor impairment authority. Pyth and Chainlink exchange-rate feeds publish ERC4626-derived values for integrators; they do not independently determine the underlying pool's economic share value. Existing manager upgrade authority and bridge exposures remain separate.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-22",
+      "reviewer": "Pharos v10.30 oracle/control primary-source research",
+      "rationale": "The reviewed authority changes top-level pool share and redemption valuation through strategy-loss accounting. LoanManager collateral-price and liquidation oracles are underlying loan exposures, not separate syrupUSDT top-level valuation branches.",
+      "sources": [
+        {
+          "label": "Maple pool accounting and impairment authority",
+          "url": "https://docs.maple.finance/technical-resources/pools/accounting/pool-accounting.md"
+        },
+        {
+          "label": "Verified exact syrupUSDT MaplePool",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d"
+        },
+        {
+          "label": "Maple LoanManager collateral-oracle scope",
+          "url": "https://docs.maple.finance/technical-resources/singletons/oracles.md"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-22",
+    "reviewer": "Pharos v10.30 oracle/control primary-source research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Verified exact syrupUSDT MaplePool",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d"
+      },
+      {
+        "label": "Verified MaplePoolManager implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+      },
+      {
+        "label": "Maple pool accounting and impairment authority",
+        "url": "https://docs.maple.finance/technical-resources/pools/accounting/pool-accounting.md"
+      },
+      {
+        "label": "Maple Ethereum integration pricing and Pyth feed",
+        "url": "https://docs.maple.finance/integrate/ethereum-mainnet/asset-integration.md"
+      },
+      {
+        "label": "Maple crosschain exchange-rate feeds and token admins",
+        "url": "https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain.md"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [

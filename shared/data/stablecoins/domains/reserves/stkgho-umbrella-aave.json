@@ -8,41 +8,45 @@
       "risk": "high",
       "coinId": "gho-aave",
       "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave Umbrella StakeToken 0x4f827a63755855cdf3e8f3bcd20265c833f15033; native settlement asset GHO",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "counterparty",
+        "market"
+      ],
       "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W1R87 exact Umbrella liquidity review",
+    "reviewedAt": "2026-10-22",
+    "reviewer": "Pharos RESEARCH-BACKING primary-source review",
     "confidence": "verified",
+    "compositionAsOf": "2026-10-22",
+    "scope": "full-composition",
+    "knownUnknownExposurePct": 0,
     "sources": [
       {
-        "label": "Aave Umbrella staking documentation",
-        "url": "https://aave.com/help/umbrella/umbrella"
+        "label": "Pinned exact Umbrella stkGHO asset, totalAssets, GHO balance, pause, cooldown, window and implementation; observed 2026-10-22T13:08:17.385Z and 13:09:06.359Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
-        "label": "stkGHO verified proxy and ERC-4626 asset observation at Ethereum block 26095800",
-        "url": "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033#readContract"
+        "label": "Ethereum block 26248000, hash 0xa0e29bc4e36526c9587442208ab78842dc095171147ad5f454f39a3fc7573703, 2026-10-22T11:57:35Z",
+        "url": "https://etherscan.io/block/26248000"
       },
       {
-        "label": "Verified deployed stkGHO implementation and asset-accounting restrictions",
+        "label": "Verified active Umbrella StakeToken implementation and slashing/withdrawal code",
         "url": "https://sourcify.dev/server/v2/contract/1/0x75e8ac0c063b6966e2a9954adedf39bde9370197?fields=sources,abi"
       },
       {
-        "label": "Verified deployed Umbrella implementation and deficit-slashing controls",
-        "url": "https://sourcify.dev/server/v2/contract/1/0x929e21d24d3f2a529621adc248d227012b72646d?fields=sources,abi"
-      },
-      {
-        "label": "Aave Umbrella unstaking: 20-day cooldown and two-day window",
+        "label": "Aave Umbrella architecture, slashing and cooldown documentation",
         "url": "https://www.aave.com/docs/aave-v3/umbrella"
       }
     ],
-    "rationale": "The single-asset GHO wrapper was re-confirmed at Ethereum block 26098749: asset() is canonical GHO, and its GHO balance exactly equals totalAssets(). The deployed implementation has deposit/withdrawal accounting and no borrowing or external lending strategy; underlying-token rescue is limited to balance minus accounted assets and maxRescue(GHO) is zero. The vault owner is Umbrella 0xd400fc38ed4732893174325693a63c30ee3881a8, whose GHO slashing configuration covers the Ethereum Core Pool only. Staked principal is loss-absorption capital: automated deficit slashing can reduce redeemable value. The 100% slice describes underlying identity, not absence of loss risk. W1R87 reviewed the official unstaking terms on 2026-10-03: withdrawal requires a 20-day cooldown followed by a two-day withdrawal window; funds remain slashable and a missed window requires restarting cooldown. The whole staked position therefore has an over-seven-days liquidity horizon, not immediate liquidity or a guaranteed maximum final settlement time. Existing composition and pinned observations are preserved, not refreshed.",
-    "compositionBasis": "Standing single-asset ERC-4626 wrapper structure, confirmed by pinned asset() at Ethereum block 26095800",
-    "compositionAsOf": "2026-10-01",
-    "scope": "full-composition",
-    "knownUnknownExposure": "The wrapper's GHO identity is verified; GHO's own backing and controls remain parent exposure. Future deficits can reduce redeemable assets through automated slashing.",
-    "knownUnknownExposurePct": 0
+    "rationale": "Genuine new whole-direct-reserve review on 2026-10-22; prior reserve review was 2026-10-03 with original composition date 2026-10-01. At Ethereum block 26248000, hash 0xa0e29bc4e36526c9587442208ab78842dc095171147ad5f454f39a3fc7573703, 2026-10-22T11:57:35Z, exact Umbrella stkGHO 0x4f827a63755855cdf3e8f3bcd20265c833f15033 has active implementation 0x75e8ac0c063b6966e2a9954adedf39bde9370197, asset canonical GHO 0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f, and totalAssets equals GHO balance exactly at 1258969506509040500072200 raw units. paused() is false, getCooldown() is 1728000 seconds and getUnstakeWindow() is 172800 seconds. StakeToken is an open-ended ERC-4626 loss-absorption position. Automatic deficit slashing can reduce assets and the exchange rate, including while a holder cools down. The 20-day cooldown and two-day withdrawal window are not the investment maturity and do not remove slashability or guarantee redemption value. Missed windows require a new cooldown; the over-seven-days horizon and high legacy risk remain. This is not legacy stkGHO 0x1a88df1cfe15af22b3c4c783d4e6f7f9e0c1885d and not non-slashable sGHO.",
+    "compositionBasis": "Exact Umbrella stkGHO single native GHO asset and complete StakeToken accounting at Ethereum block 26248000",
+    "knownUnknownExposure": "No unidentified direct native reserve asset. Parent GHO risk, automatic slashing, governance changes, pause and cooldown constraints remain; no finite maturity or unconditional recovery claim is established."
   },
   "custodyProfile": {
     "providers": [

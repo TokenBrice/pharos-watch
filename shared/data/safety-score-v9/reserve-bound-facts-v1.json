@@ -1,6 +1,64 @@
 {
   "schemaVersion": 1,
   "assets": {
+    "syusd-aegis": [
+      {
+        "factKey": "syusd-aegis:native-staking-claim:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:8cc906906fee2a579214a119"
+        },
+        "asOfSec": 1792670255,
+        "publisher": "Aegis sYUSD verified active implementation",
+        "sourceUrls": [
+          "https://sourcify.dev/server/v2/contract/1/0xb0c63bb1667b6e9215aee562af2957739b2676fe?fields=sources",
+          "https://etherscan.io/block/26248000",
+          "https://api-ethereum-mainnet.n.dwellir.com"
+        ],
+        "assertion": "At Ethereum block 26248000, sYUSD proxy 0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64 delegates to verified implementation 0xb0c63bb1667b6e9215aee562af2957739b2676fe, holds YUSD 0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a, and has a 604800-second cooldown. contracts/sYUSD.sol and contracts/sYUSDSilo.sol define reusable ERC-4626 deposit/redeem and holder-initiated cooldown/unstake claims, with no scheduled fixed maturity or share expiry. The full native-YUSD staking-share exposure is open-ended. A cooldown after an owner elects to exit, and the implementation bound MAX_COOLDOWN_DURATION of 90 days, are withdrawal mechanics, not a contractual maximum investment maturity. No parent YUSD hedge, perpetual, credit, fiat realization or stress duration is resolved by this fact.",
+        "contentDigest": "a29b5dfe23fd46cf6d0133a3d9883121fc46207e61c75636d389dfa76e33bf18",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-22",
+          "reviewer": "Pharos RESEARCH-BACKING primary-source review",
+          "confidence": "high"
+        },
+        "claimId": "sYUSD native YUSD staking shares / Ethereum 0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+        "conclusion": "open-ended",
+        "governingInstrument": "Verified active contracts/sYUSD.sol and contracts/sYUSDSilo.sol, ERC-4626 share/totalAssets/cooldownShares/unstake/native transfer provisions; active implementation and asset identity pinned at block 26248000",
+        "allInScope": true
+      }
+    ],
+    "stkgho-umbrella-aave": [
+      {
+        "factKey": "stkgho-umbrella-aave:native-staking-claim:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:e55d393b7d6a06cd3b4c3421"
+        },
+        "asOfSec": 1792670255,
+        "publisher": "Aave Umbrella verified active StakeToken implementation",
+        "sourceUrls": [
+          "https://sourcify.dev/server/v2/contract/1/0x75e8ac0c063b6966e2a9954adedf39bde9370197?fields=sources,abi",
+          "https://etherscan.io/block/26248000",
+          "https://api-ethereum-mainnet.n.dwellir.com"
+        ],
+        "assertion": "At Ethereum block 26248000, exact Umbrella stkGHO proxy 0x4f827a63755855cdf3e8f3bcd20265c833f15033 delegates to 0x75e8ac0c063b6966e2a9954adedf39bde9370197 and its native asset is canonical GHO. Verified StakeToken, UmbrellaStakeToken and ERC4626StakeTokenUpgradeable define a reusable open-ended ERC-4626 loss-absorption claim, with holder-initiated cooldown rather than scheduled investment maturity. Current getCooldown is 1728000 seconds and getUnstakeWindow is 172800 seconds; these are not maturity maxima. Automated slashing reduces assets and share exchange value; pause, slashing and missed-window/restart risks remain. The fact covers the full direct native GHO staking-share exposure and does not establish any maturity limit for GHO backing or any guaranteed settlement value.",
+        "contentDigest": "00129c86fb9a6e24736b497fabc748df8f8951a0387112b48324de0fde934605",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-22",
+          "reviewer": "Pharos RESEARCH-BACKING primary-source review",
+          "confidence": "high"
+        },
+        "claimId": "Umbrella stkGHO native GHO staking shares / Ethereum 0x4f827a63755855cdf3e8f3bcd20265c833f15033",
+        "conclusion": "open-ended",
+        "governingInstrument": "Verified active lib/aave-umbrella/src/contracts/stakeToken/{StakeToken.sol,UmbrellaStakeToken.sol,extension/ERC4626StakeTokenUpgradeable.sol}, ERC-4626 accounting, holder-initiated cooldown and slashing provisions; active proxy/asset/configuration pinned at block 26248000",
+        "allInScope": true
+      }
+    ],
     "jpysc-sbi-startale": [
       {
         "factKey": "jpysc-sbi-startale:reserve:5457d74b7925413de5ebb346:statutory-jgb-maturity-maximum",

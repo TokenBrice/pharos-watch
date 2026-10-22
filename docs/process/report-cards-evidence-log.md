@@ -6,6 +6,12 @@ These records preserve review dates, scope limits and operator observations form
 
 The existing wrapper allocation/local-review schemas carry scoped rationale and observations, not a free-standing historical-ruling field. Per-asset measurement summaries are capture manifests, not review-note sidecars. These records therefore stay here rather than adding fields or unrelated history to score-bearing JSON.
 
+## Vault Oracle And Backing Reviews — 2026-10-22
+
+The primary-source vault review records privileged internal share-pricing paths for spUSDT, syrupUSDT, apyUSD, DUSD and hbUSDT, replacing local oracle U60 with measured45 when admitted. sUSDai, autoUSD, USD3 and USDN retain researched unresolved oracle profiles. New whole-direct-reserve reviews cover sUSDat, sYUSD, Umbrella stkGHO, Yearn v3 USDC and USDN; only Yearn's accounted idle USDC slice receives immediate native-asset liquidity. Independently dated sYUSD/stkGHO maturity facts describe open-ended staking claims, not cooldown length or immediate liquidity.
+
+Equivalent existing EUTBL claim/NAV component reviews remain unchanged rather than duplicated. Custody, bridge, parent, incident, legal recovery and existing C/adverse constraints are not renewed or cleared. Date-only evidence keeps its admission clock; generated local inputs and schema/test checks are not captured-clock replay or production acceptance.
+
 ## Dependency Rulings
 
 Current owner: [Dependency Coverage](report-cards-appendix.md#dependency-coverage).

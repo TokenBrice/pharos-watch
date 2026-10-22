@@ -1,5 +1,35 @@
 {
   "id": "usdn-noble",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "role": "coin-price-feed",
+    "summary": "Noble USDN uses an M0-sourced yield index, not an identified USD spot-price quote. The dollar module's strictly increasing index determines principal-to-present-amount accounting and claimable yield, minting the supply difference into the Yield module; the portal authenticates index payloads through a Wormhole VAA and configured peer. This establishes yield accounting, but not a complete current local price-authority, source-peer or upgrade topology, nor an oracleless exemption. Upstream M0 collateral valuation remains inherited parent risk rather than a separately invented USDN-local price setter. Terminal local oracle classification remains unresolved research.",
+    "reviewedAt": "2026-10-22",
+    "reviewer": "Pharos v10.30 oracle/control primary-source research",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Noble USDN architecture and M0-sourced yield index",
+        "url": "https://docs.noble.xyz/learn/usdn/architecture/"
+      },
+      {
+        "label": "Noble v11.6.0 dollar-module dependency pin",
+        "url": "https://raw.githubusercontent.com/noble-assets/noble/v11.6.0/go.mod"
+      },
+      {
+        "label": "Noble dollar v2.3.0 UpdateIndex and Yield-module mint",
+        "url": "https://raw.githubusercontent.com/noble-assets/dollar/v2.3.0/keeper/msg_server.go"
+      },
+      {
+        "label": "Noble dollar v2.3.0 principal/yield conversion and authenticated portal payload",
+        "url": "https://raw.githubusercontent.com/noble-assets/dollar/v2.3.0/keeper/keeper.go"
+      },
+      {
+        "label": "Noble dollar v2.3.0 portal control methods",
+        "url": "https://raw.githubusercontent.com/noble-assets/dollar/v2.3.0/keeper/msg_server_portal.go"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [
