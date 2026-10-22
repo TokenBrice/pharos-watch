@@ -222,7 +222,13 @@ describe("VERITAS finding VER-006: zero-route completeness is compiled as missin
       });
       const evaluated = pipeline.evaluatedSet.assets[0]!;
       expect(pipeline.compiledFacts.assets[0]!.exitStatus.observationState).toBe("bounded-unknown");
-      expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit.U);
+      const covered = remainder === "uncatalogued-chain" || remainder === "unsupported-chain";
+      expect(evaluated.exit.score).toBe((covered ? 0.1 : 1) *
+        V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit.U);
+      expect(pipeline.compiledFacts.assets[0]!.exitCoverage?.verifiedNoPoolsSupplyShare)
+        .toBe(covered ? 0.9 : undefined);
+      expect(evaluated.exit.primaryRouteKey).toBeNull();
+      expect(evaluated.exit.limitedEvidenceCauses).toEqual(["U"]);
       expect(evaluated.exit.reasons).not.toContain("no-viable-exit-path");
       expect(evaluated.scoreInput.pillars.exit.reasons.every((reason) =>
         reason.responsibility !== "measured-adverse")).toBe(true);

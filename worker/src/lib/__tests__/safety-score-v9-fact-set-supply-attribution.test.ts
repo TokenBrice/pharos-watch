@@ -678,8 +678,8 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
 
   it("publishes an aggregate-only circulating quantity that intake never partitioned, and still bounds a broken producer promise", () => {
     // A reviewed multi-route bridge profile can have an admitted aggregate
-    // quantity without a per-chain partition. Size from that quantity, but
-    // do not fabricate a comparable route point when its capacity curve ends.
+    // quantity without a per-chain partition. Size from that quantity and
+    // retain the measured capacity prefix without inventing additional depth.
     const aggregateOnly = exactFixedInput({
       chainSupplyByChain: {},
       aggregateCirculating: { peggedUSD: 35_596_469.1 },
@@ -704,8 +704,13 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     const evaluated = evaluateV9FactSet(unpartitioned, V9_CANDIDATE_POLICY_V1).assets[0]!;
     const expectedRequest = selectV9ExitStressRequest(35_596_469.1, V9_CANDIDATE_POLICY_V1);
     expect(evaluated.exit.stressRequest).toMatchObject(expectedRequest);
+    const measuredRoute = unpartitionedAlpha.exitRoutes.find((route) => route.lane === "dex")!;
+    const measuredCapacityUsd = Math.max(...measuredRoute.capacityCurve.map((point) => point.executableUsd));
     expect(evaluated.exit.routes).toContainEqual(expect.objectContaining({
-      included: false, capacityPoint: null, exclusionReason: "incomparable-route-requests",
+      included: true, exclusionReason: null,
+      capacityPoint: expect.objectContaining({
+        requestedNotionalUsd: expectedRequest.requestedNotionalUsd, executableUsd: measuredCapacityUsd,
+      }),
     }));
 
     // Missing a captured packet retains uncertainty but does not prove a
@@ -871,7 +876,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
     expect(evaluated.exit.stressRequest).toMatchObject({
       rawSupplyRequestUsd: 5_000_000,
-      requestedNotionalUsd: 10_000_000,
+      requestedNotionalUsd: 5_000_000,
     });
     expect(evaluated.stressState.exitPortfolio?.circulatingUsd).toBe(100_000_000);
     expect(evaluateV9ExitAssetFacts(asset, V9_CANDIDATE_POLICY_V1).stressRequest).toEqual(evaluated.exit.stressRequest);

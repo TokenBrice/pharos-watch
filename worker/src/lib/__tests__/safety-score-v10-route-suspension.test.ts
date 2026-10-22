@@ -143,8 +143,8 @@ describe("reviewed exact-channel suspension", () => {
         } : {}),
       });
       if (executableUsd !== undefined) {
-        // Frozen VNXAU shape: one admitted DEX lower-bound route moves only
-        // $1,000 against the $1M canonical request; the issuer rail is closed.
+        // A $1,000 admitted DEX observation remains submaterial against the
+        // continuous $500k stress request; the issuer rail is closed.
         const dex = fixed.dexLiqMap[assetId]!;
         const observations = dex.exitRouteObservations!.map((observation) => ({
           ...observation, executableUsd, completionRatio: executableUsd / observation.requestedNotionalUsd,
@@ -222,7 +222,7 @@ describe("reviewed exact-channel suspension", () => {
       expect(measured.capacityCurve).toEqual(expect.arrayContaining([
         expect.objectContaining({ requestedNotionalUsd: 1_000_000, executableUsd: 1_000, completionRatio: 0.001 }),
       ]));
-      expect(published.exit.stressRequest?.requestedNotionalUsd).toBe(1_000_000);
+      expect(published.exit.stressRequest?.requestedNotionalUsd).toBe(500_000);
       expect(published.exit.routes.find((route) => route.routeKey === measured.routeKey)).toMatchObject({
         included: true, capacityPoint: { executableUsd: 1_000 },
       });
@@ -256,17 +256,20 @@ describe("reviewed exact-channel suspension", () => {
     });
   });
 
-  it("cannot clear the census using a raw aggregate when admitted supply cannot size the request", () => {
+  it("retains measured capacity at maximum stress without promoting stale supply sizing", () => {
     const fixed = makeV9FixedInput({ assetId: ID, clockSec: CLOCK,
       supplyObservedAtSec: CLOCK - 8 * 86400 });
     withRedemptionBackstopConfig(ID, { routeStatus: "suspended", routeSuspension: suspension }, () => {
       const compiled = compileSet(fixed);
       const asset = compiled.assets[0]!;
       expect(asset.supply.status.observationState).toBe("stale");
-      expect(asset.gaps.find((gap) => gap.gapId === `${ID}:gap:exit-independent-route-census`))
-        .toMatchObject({ causeProof: { cause: "U" } });
+      expect(asset.gaps.some((gap) => gap.gapId === `${ID}:gap:exit-independent-route-census`)).toBe(false);
       const published = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
       expect(published.exit.stressRequest?.requestedNotionalUsd).toBe(25_000_000);
+      expect(published.exit.stressRequest?.sizingUncertaintyReason).toBe("stale-supply");
+      expect(published.exit.routes).toContainEqual(expect.objectContaining({
+        included: true, capacityPoint: expect.objectContaining({ requestedNotionalUsd: 25_000_000 }),
+      }));
       expect(published.exit.reasons).toContain("missing-same-notional-route");
     });
   });

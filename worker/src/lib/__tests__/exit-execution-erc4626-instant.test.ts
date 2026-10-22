@@ -5,7 +5,7 @@ import type { ExitExecutionCertificate, ExitExecutionModelReview } from "@shared
 import { observeErc4626InstantExit } from "../exit-execution/erc4626-instant";
 import { observeReviewedExitExecutionRoutes } from "../exit-execution/runtime";
 import { evaluateV9Exit, projectV9ExitEvaluationRoute, selectV9ExitStressRequest, resolveV9ExitCapacityAtRequest } from "@shared/lib/safety-score-v9/exit";
-import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest } from "@shared/lib/safety-score-v9/exit-execution";
+import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, resolveExitExecutionBoundPoint } from "@shared/lib/safety-score-v9/exit-execution";
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { getRedemptionBackstopConfig, validateRedemptionOutputIdentity } from "@shared/lib/redemption-backstops";
 import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
@@ -357,11 +357,11 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     state.reorg = false; state.feeBps = 201n;
     expect((await observeErc4626InstantExit(args)).points[0]).toMatchObject({ executableUsd: 100_000, executionCostBps: 201, certification: "diagnostic", reason: "erc4626-cost-exceeds-request", outputs: [{ rawUnits: "97990000000" }] });
   });
-  it("dispatches an admitted atomic certificate at the canonical supply-sized grid request", async () => {
+  it("dispatches an admitted atomic certificate at the continuous supply-sized request", async () => {
     const circulatingUsd = 210_000_000;
     const envelope = loadV9CandidateMethodologyPolicy(CLOCK);
     const request = selectV9ExitStressRequest(circulatingUsd, envelope)!;
-    expect(request.requestedNotionalUsd).toBe(25_000_000);
+    expect(request.requestedNotionalUsd).toBe(10_500_000);
     const result = await observeReviewedExitExecutionRoutes({ assetId: "fixture-vault", circulatingUsd, clockSec: CLOCK, reviews: [review], inputReference, outputReference, envelope });
     expect(result.failures).toEqual([]);
     const observation = result.observations[0]!;
@@ -422,7 +422,7 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
       observations: [], failures: [{ reason: "erc4626-asset-identity-mismatch" }],
     });
   });
-  it("keeps fresh measured execution admitted across supply drift only while the canonical request stays unchanged", async () => {
+  it("retains the generation-bound measured receipt across continuous stress-size drift", async () => {
     const envelope = loadV9CandidateMethodologyPolicy(CLOCK);
     const producerSupply = 210_000_000;
     const produced = await observeReviewedExitExecutionRoutes({
@@ -431,7 +431,7 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     });
     const certificate = produced.observations[0]!.executionCertificate!;
     const admitAt = (circulatingUsd: number, clockSec = CLOCK) => {
-      const request = selectV9ExitStressRequest(circulatingUsd, envelope)!;
+      const request = resolveExitExecutionBoundPoint(certificate, selectV9ExitStressRequest(circulatingUsd, envelope))!;
       return admitExitExecutionCertificate({
         certificate, envelope, assetId: "fixture-vault", clockSec, request, reviews: [review],
         inputGenerationId: exitExecutionInputGenerationId("fixture-vault", request, certificate.inputReference),
@@ -443,11 +443,16 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     expect(admitAt(211_000_000)).toMatchObject({ state: "observed", point: { certification: "exact-complete" } });
     const changedRequest = selectV9ExitStressRequest(200_000_000, envelope)!;
     expect(certificate.points.some(point => point.requestedNotionalUsd === changedRequest.requestedNotionalUsd)).toBe(false);
-    expect(admitAt(200_000_000)).toMatchObject({ state: "unavailable", reason: "execution-generation-mismatch" });
+    expect(admitAt(200_000_000)).toMatchObject({ state: "observed", point: { requestedNotionalUsd: 10_500_000 } });
+    expect(admitExitExecutionCertificate({
+      certificate, envelope, assetId: "fixture-vault", clockSec: CLOCK, request: changedRequest, reviews: [review],
+      inputGenerationId: exitExecutionInputGenerationId("fixture-vault", changedRequest, certificate.inputReference),
+      observationGenerationId: certificate.observationGenerationId,
+    })).toMatchObject({ state: "unavailable", reason: "execution-generation-mismatch" });
     expect(admitAt(211_000_000, CLOCK + certificate.sourceMaxAgeSec)).toMatchObject({ state: "observed" });
     expect(admitAt(211_000_000, CLOCK + certificate.sourceMaxAgeSec + 1)).toMatchObject({ state: "unavailable", reason: "execution-source-stale" });
   });
-  it("re-admits the producer certificate at both fact compilation and Exit evaluation using the consumer's current request", async () => {
+  it("re-admits the original measured receipt at compilation and scores its lower bound against current stress", async () => {
     const envelope = loadV9CandidateMethodologyPolicy(CLOCK);
     const produced = await observeReviewedExitExecutionRoutes({
       assetId: "fixture-vault", circulatingUsd: 210_000_000, clockSec: CLOCK,
@@ -489,10 +494,16 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
       assetId: "fixture-vault", clockSec, circulatingUsd, routes: [projectV9ExitEvaluationRoute(route)],
     }, envelope);
     expect(evaluateAt(212_000_000).routes[0]!.included).toBe(true);
-    expect(evaluateAt(200_000_000).routes[0]!.included).toBe(false);
+    expect(evaluateAt(200_000_000).routes[0]).toMatchObject({ included: true, capacityPoint: {
+      requestedNotionalUsd: 10_000_000, executableUsd: 10_000_000, completionRatio: 1,
+    } });
+    expect(evaluateAt(212_000_000).routes[0]!.capacityPoint).toMatchObject({
+      requestedNotionalUsd: 10_600_000, executableUsd: 10_500_000,
+    });
+    expect(compileAt(200_000_000).exitRoutes.find(route => route.routeId === observation.routeId))
+      .toMatchObject({ scoreEligible: true, status: { observationState: "known" } });
     expect(evaluateAt(212_000_000, CLOCK + certificate.sourceMaxAgeSec + 1).routes[0]!.included).toBe(false);
     for (const scenario of [
-      { supply: 200_000_000, clockSec: CLOCK, reason: "execution-generation-mismatch" },
       { supply: 211_000_000, clockSec: CLOCK + certificate.sourceMaxAgeSec + 1, reason: "execution-source-stale" },
     ]) {
       const rejectedAsset = compileAt(scenario.supply, scenario.clockSec);
