@@ -26,7 +26,7 @@ describe("compact score consumer equivalence", () => {
     { key: "backing" as const, cause: "C" as const, score: 35 },
     { key: "exit" as const, cause: "U" as const, score: 50 },
     { key: "control" as const, cause: "U" as const, score: 60 },
-  ])("stages $key assumption readers without changing table or neighborhood bytes", ({ key, cause, score }) => {
+  ])("emits the $key assumption in table and neighborhood projections", ({ key, cause, score }) => {
     const card = makeV9Card({ pillars: makeV9Pillars({ backing: 80, exit: 82, control: 84, [key]: score }) });
     card.pillars[key].score = null;
     card.pillars[key].aggregationDisposition = "unavailable";
@@ -53,13 +53,10 @@ describe("compact score consumer equivalence", () => {
     const expected = { score: null, aggregationDisposition: "unavailable" as const, pricedUnknown: { cause, score } };
     const table = projectV9Table(full);
     const detail = projectV9Detail(full, card.id);
-    expect(table.cards[0]!.pillars[key]).toEqual({ score: null, aggregationDisposition: "unavailable" });
-    for (const pillar of Object.values(table.cards[0]!.pillars)) {
-      expect(pillar).not.toHaveProperty("pricedUnknown");
-    }
-    expect(detail.neighborhood[0]).not.toHaveProperty("ratingStatus");
-    expect(detail.neighborhood[0]).not.toHaveProperty("pillars");
-    // Readers ship first: strict schemas already admit the later producer bytes.
+    expect(table.cards[0]!.pillars[key]).toEqual(expected);
+    expect(detail.neighborhood[0]!.ratingStatus).toBe(card.ratingStatus);
+    expect(detail.neighborhood[0]!.pillars![key]).toEqual(expected);
+    // Both deployed readers now admit the producer additions.
     table.cards[0]!.pillars[key] = expected;
     expect(ReportCardsV9TableResponseSchema.parse(table).cards[0]!.pillars[key]).toEqual(expected);
     detail.neighborhood[0]!.ratingStatus = card.ratingStatus;
