@@ -71,6 +71,11 @@ fallthrough = true
 type = "CompiledWasm"
 globs = ["**/*.wasm"]
 fallthrough = true
+
+[[rules]]
+type = "Text"
+globs = ["**/coins.worker-full.generated.json"]
+fallthrough = true
 `;
 
 describe("check-worker-wrangler-config", () => {
@@ -211,6 +216,8 @@ describe("check-worker-wrangler-config", () => {
       toml.replace('globs = ["**/*.wasm"]', ""),
       toml.replace('globs = ["**/*.ttf"]', "globs = []"),
       toml.replace('globs = ["**/*.wasm"]', 'globs = ["**/*.wasm", "**/*.ttf"]'),
+      toml.replace('globs = ["**/coins.worker-full.generated.json"]', ""),
+      toml.replace('globs = ["**/coins.worker-full.generated.json"]', 'globs = ["**/*.json"]'),
     ]) {
       const report = evaluateWorkerWranglerConfig(mutation, { workerRole });
       expect(report.failed).toBe(true);
@@ -218,6 +225,15 @@ describe("check-worker-wrangler-config", () => {
     }
     expect(evaluateWorkerWranglerConfig(toml.replace('globs = ["**/*.ttf"]', "globs = [\n'**/*.ttf',\n]"), { workerRole }))
       .toEqual({ failed: false, issues: [] });
+  });
+  it.each(["public", "heavy"] as const)("requires the packed catalog as a separate Text module on %s", (workerRole) => {
+    const toml = workerRole === "public" ? VALID_CONFIG : readFileSync("worker/wrangler.heavy.toml", "utf8");
+    for (const mutation of [
+      toml.replace('type = "Text"', 'type = "Data"'),
+      toml.replace(/\[\[rules\]\]\ntype = "Text"\nglobs = \["\*\*\/coins\.worker-full\.generated\.json"\]\nfallthrough = true\n/, ""),
+    ]) {
+      expect(evaluateWorkerWranglerConfig(mutation, { workerRole }).failed).toBe(true);
+    }
   });
   it("accepts the project-tape rollback flag without removing the binding", () => {
     expect(evaluateWorkerWranglerConfig(VALID_CONFIG.replace(

@@ -120,6 +120,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      // Match Wrangler's Text module without a runtime-specific loader branch.
+      "@shared/data/stablecoins/coins.worker-full.generated.json":
+        `${path.resolve(__dirname, "shared/data/stablecoins/coins.worker-full.generated.json")}?raw`,
       "@": path.resolve(__dirname, "src"),
       "@shared": path.resolve(__dirname, "shared"),
       "@data": path.resolve(__dirname, "data"),

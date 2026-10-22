@@ -40,6 +40,15 @@ export function readHeavyProbeBuildSettings(root: string) {
     configSha256: createHash("sha256").update(source).digest("hex"),
     minify: booleanSetting("minify"), keepNames: booleanSetting("keep_names"),
     alias: { "#pharos-full-catalog": resolve(dirname(path), aliasValue) },
+    // Mirror Wrangler's narrow Text rule; other JSON stays parsed by esbuild.
+    plugins: [{
+      name: "packed-catalog-text",
+      setup(build) {
+        build.onLoad({ filter: /[/\\]coins\.worker-full\.generated\.json$/ }, ({ path }) => ({
+          contents: readFileSync(path, "utf8"), loader: "text",
+        }));
+      },
+    } satisfies Plugin],
     platform: "browser" as const, conditions: ["workerd", "worker", "browser"], target: "es2024",
     mainFields: ["browser", "module", "main"],
   };
@@ -151,7 +160,7 @@ export async function buildResourceProbe(root: string, directory: string, mode: 
     outfile, bundle: true, metafile: true, format: "esm", ...buildSettings,
     external: ["node:*"], tsconfig: resolve(root, "tsconfig.json"), logLevel: "silent",
     banner: { js: `globalThis.__zod_globalConfig = { jitless: true };\n${mode === "live" ? OBSERVER_BANNER : ""}` },
-    plugins: mode === "live" ? [instrumentation(root)] : [],
+    plugins: [...buildSettings.plugins, ...(mode === "live" ? [instrumentation(root)] : [])],
   } as BuildOptions);
   const metafile = result.metafile!;
   const loader = relative(root, settings.alias["#pharos-full-catalog"]);

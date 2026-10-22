@@ -1,6 +1,6 @@
 import { Buffer } from "node:buffer";
 import { gunzipSync } from "fflate";
-import packedAsset from "@shared/data/stablecoins/coins.worker-full.generated.json";
+import packedAssetText from "@shared/data/stablecoins/coins.worker-full.generated.json";
 import type { StablecoinMeta } from "@shared/types/core";
 
 // Workers' ambient Buffer declaration is untyped; retain the native byte decoder.
@@ -109,4 +109,6 @@ export function decodeWorkerStablecoinCatalog(asset: PackedCatalog): readonly St
   });
 }
 
-export default decodeWorkerStablecoinCatalog(packedAsset);
+// Parse once at initialization; the temporary manifest and base64 strings can be
+// collected after decoding. Only the imported module text remains retained.
+export default decodeWorkerStablecoinCatalog(JSON.parse(packedAssetText));

@@ -28,6 +28,11 @@ upload_source_maps = true
 [alias]
 "#pharos-full-catalog" = "./src/lib/full-stablecoin-catalog.ts"
 
+[[rules]]
+type = "Text"
+globs = ["**/coins.worker-full.generated.json"]
+fallthrough = true
+
 [limits]
 cpu_ms = 300000
 
@@ -44,7 +49,7 @@ invocation_logs = true
 - `global_fetch_strictly_public` keeps custom-domain self-fetches on the public edge; production canaries depend on it.
 - Public sampling is `0.1`, Heavy `1`; both retain invocation logs. Public preview URLs are diagnostic, outside the release gate; Heavy has no public routing or preview URL.
 - Minification preserves diagnostic names. Bundle-size reduction/local workerd success is not Cloudflare peak-memory acceptance.
-- Both roles upload private source maps (`upload_source_maps = true`), so retained stack traces resolve to original file/line. Cloudflare keeps the map for Workers Logs and never serves it; dry-run bundle artifacts stay in `.cache/release-check/`, and `npm run check:worker-package` fails when a `.map` appears under the public Pages artifact (`out/`).
+- Both roles upload private JS/TS source maps (`upload_source_maps = true`) for original file/line stack traces. The packed catalog ships separately as a Text module, not map source content. Cloudflare never serves these maps; dry-run artifacts stay in `.cache/release-check/`. `check:worker-package` reports every map's gzip size, enforces a 13,500,000-byte budget, and rejects maps under public Pages assets (`out/`).
 
 
 Use `logCronRun()` for terminal outcomes, `recordCronFailure()` for non-fatal exceptions, `logCronEvent()` for durable non-terminal events, and `logWorkerEvent()` for structured route logs. [Logging and privacy details](process/worker-infrastructure-appendix.md#logging-and-privacy-details) owns bounded metadata, price-corroboration telemetry, Telegram privacy, recursive credential redaction and retention. Provider URLs must be redacted before logging; invocation logs containing Telegram Bot API URLs remain secret.

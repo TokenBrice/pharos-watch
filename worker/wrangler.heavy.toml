@@ -31,6 +31,12 @@ type = "CompiledWasm"
 globs = ["**/*.wasm"]
 fallthrough = true
 
+# Keep the packed payload out of JavaScript and its private source map.
+[[rules]]
+type = "Text"
+globs = ["**/coins.worker-full.generated.json"]
+fallthrough = true
+
 [limits]
 cpu_ms = 300000
 

@@ -146,6 +146,15 @@ export async function qualifyWorkerMemory(argv) {
       minify: required("root", "minify") === "true", keepNames: required("root", "keep_names") === "true",
       alias: { "#pharos-full-catalog": resolve(root, "worker", alias) }, tsconfig: resolve(root, "tsconfig.json"),
       banner: { js: "globalThis.__zod_globalConfig = { jitless: true };" },
+      // Match the deployed Text module rather than esbuild's JSON object loader.
+      plugins: [{
+        name: "packed-catalog-text",
+        setup(build) {
+          build.onLoad({ filter: /[/\\]coins\.worker-full\.generated\.json$/ }, ({ path }) => ({
+            contents: readFileSync(path, "utf8"), loader: "text",
+          }));
+        },
+      }],
     });
     writeFileSync(resolve(directory, "probe.metafile.json"), JSON.stringify(built.metafile));
     assertQualificationHeavyGraph(Object.keys(built.metafile.inputs));

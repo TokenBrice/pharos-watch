@@ -3,9 +3,13 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { gzipSync } from "node:zlib";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const PAGES_ARTIFACT_DIRECTORY = "out";
+// Local gzip 14.32e6 bytes passed, but 14.87e6 was rejected as 15275KB:
+// Cloudflare's effective limit lies between those observations. Leave headroom.
+export const WORKER_SOURCE_MAP_GZIP_BUDGET_BYTES = 13.5e6;
 
 interface WorkerPackageRunResult {
   status?: number | null;
@@ -27,6 +31,19 @@ function findSourceMaps(directory: string): string[] {
     }
   }
   return maps;
+}
+
+export function checkSourceMapSizes(directory: string): boolean {
+  let valid = true;
+  for (const path of findSourceMaps(directory)) {
+    const bytes = gzipSync(readFileSync(path)).byteLength;
+    console.log(`Worker source map ${path}: ${bytes} gzip bytes (budget ${WORKER_SOURCE_MAP_GZIP_BUDGET_BYTES}).`);
+    if (bytes > WORKER_SOURCE_MAP_GZIP_BUDGET_BYTES) {
+      console.error(`Worker source map ${path} exceeds the ${WORKER_SOURCE_MAP_GZIP_BUDGET_BYTES}-byte gzip budget.`);
+      valid = false;
+    }
+  }
+  return valid;
 }
 
 /**
@@ -148,6 +165,7 @@ export function checkWorkerPackage({ run = spawnSync }: WorkerPackageOptions = {
       { cwd: resolve(repoRoot, "worker"), stdio: "inherit" },
     );
     if (result.error || result.status !== 0) return { status: result.status ?? 1 };
+    if (!checkSourceMapSizes(outputDirectory)) return { status: 1 };
     if (!checkLatin1Scripts(outputDirectory)) return { status: 1 };
     if (role === "heavy" && !checkHeavyReachability(outputDirectory)) return { status: 1 };
   }
