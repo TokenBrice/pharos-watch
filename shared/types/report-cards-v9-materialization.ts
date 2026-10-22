@@ -3,7 +3,7 @@ import { SafetyScoreV9PublicationIdentitySchema } from "./safety-score-publicati
 import { Sha256Schema } from "./safety-schema-primitives";
 
 // Independent of the compressed canonical publication's raw-size budget.
-export const V9_PUBLIC_REPRESENTATION_VERSION = 1;
+export const V9_PUBLIC_REPRESENTATION_VERSION = 2;
 export const V9_PUBLIC_FRAGMENT_MAX_BYTES = 256 * 1024;
 export const V9_PUBLIC_REPRESENTATION_MAX_BYTES = 16 * 1024 * 1024;
 export const V9_PUBLIC_REPRESENTATION_MAX_FRAGMENTS = 128;
