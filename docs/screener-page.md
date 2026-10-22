@@ -38,6 +38,8 @@ Only the active responsive layout mounts. Available results render in 50-row pag
 
 `TableExportMenu` exports the complete filtered, sorted set, never just the displayed page. Preserve identity/classification, supply, score, pillar/evidence/cap, rating/partial-cause, custody/control and mint fields. Mint is the published Safety Score component through V9-named consumers, not a separate authority. CSV headers `mint_authority`, `mint_authority_score`, `mint_authority_score_band` differ intentionally from title-case directory exports; URL band keys remain stable. Stamp Safety Score provenance, including the mint component.
 
+`safety_gap_causes` retains stable cause labels across CSV, NDJSON and Markdown: `pipeline unavailable (A)` and `public data awaiting curation (B)`, joined with `; ` for multiple causes. Reader-facing partial-evidence sentences may change independently; they do not replace these exported values.
+
 Exports join mixed producer generations, not one atomic snapshot. All five live feeds contribute columns, so each source's `meta.updatedAt` is exported in `sourceGenerations`; absent producer clocks remain null (human-readable `unknown`). Scalar `asOfISO` uses the oldest producer generation only when every participating clock is known; otherwise it is `unknown`. Browser receipt and download times never replace producer evidence. [Table exports](./exports.md#export-contract) owns this conservative mixed-source convention.
 
 ## Picker Handoff

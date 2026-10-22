@@ -7,6 +7,7 @@ import { SafetyScoreReasonList } from "@/components/stablecoin-detail/safety-sco
 import { SAFETY_BREAKDOWN_ROW_TONE_TEXT_CLASSES } from "@shared/lib/classification";
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
+import { formatPricedUnknown } from "@/lib/safety-score-reason-labels";
 import type { StablecoinSafetyScoreV9Presentation } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { cn } from "@/lib/utils";
 import { FigureLeadText } from "./figure-lead-text";
@@ -344,6 +345,11 @@ export function SafetyScoreV9PillarRow({
   const hasDetails = pillar.breakdown !== null || pillar.componentCount > 0 || pillar.reasons.length > 0;
   const scoreGrade = pillar.score === null ? null : scoreToGrade(pillar.score);
   const gradeMetadata = getSafetyGradeMetadata(scoreGrade);
+  // A priced unknown keeps the score column's shape ("Unknown" where a measured
+  // pillar reads "35 / 100") and names its cause and stand-in score beneath the
+  // label, so the assumption is never drawn or graded like a measurement.
+  const pricedNote = pillar.pricedUnknown ? formatPricedUnknown(pillar.pricedUnknown) : null;
+  const unknownNote = pricedNote ? `${pricedNote.charAt(0).toUpperCase()}${pricedNote.slice(1)}` : null;
   return (
     <div className="py-2">
       <button
@@ -365,6 +371,9 @@ export function SafetyScoreV9PillarRow({
             >
               {pillar.evidenceSummary}
             </span>
+            {unknownNote ? (
+              <span className="mt-1 block text-2xs text-foreground/85">{unknownNote}</span>
+            ) : null}
             {pillar.breakdown?.exitHighlight ? (
               <span className="mt-1 block text-2xs text-foreground/85">
                 Best exit: {pillar.breakdown.exitHighlight.venueLabel}
@@ -375,15 +384,18 @@ export function SafetyScoreV9PillarRow({
               </span>
             ) : null}
           </span>
-          <span className="whitespace-nowrap font-mono text-sm font-semibold tabular-nums text-foreground">
-            {pillar.score === null ? "Not scored" : `${pillar.score.toFixed(0)} / 100`}
+          <span className={cn(
+            "whitespace-nowrap font-mono text-sm font-semibold tabular-nums",
+            unknownNote ? "text-muted-foreground" : "text-foreground",
+          )}>
+            {pillar.score === null ? unknownNote ? "Unknown" : "Not scored" : `${pillar.score.toFixed(0)} / 100`}
           </span>
-          <ScorePill
+          {unknownNote === null ? <ScorePill
             label={scoreGrade === null ? "Excluded" : scoreGrade}
             toneClass={gradeMetadata.pillClassName}
             title="Pillar score band"
             className="min-w-9 justify-center text-3xs font-semibold"
-          />
+          /> : null}
           <ChevronDown
             className={cn(
               "h-4 w-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none",
@@ -405,7 +417,7 @@ export function SafetyScoreV9PillarRow({
       <span
         role="img"
         aria-label={pillar.score === null
-          ? `${pillar.label}: score unavailable`
+          ? `${pillar.label}: ${pricedNote ? `unknown, ${pricedNote}` : "score unavailable"}`
           : `${pillar.label}: ${pillar.score.toFixed(0)} out of 100`}
         className={cn("block h-2.5 min-w-0 flex-1", pillar.score === null ? UNAVAILABLE_TRACK_CLASS : TRACK_CLASS)}
       >

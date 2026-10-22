@@ -63,7 +63,8 @@ describe("StablecoinTableRowCells peg deviation", () => {
       density: row.density, variant: "default",
     });
     const html = renderToStaticMarkup(<table><tbody><tr><StablecoinTableRowCells row={row} model={model} /></tr></tbody></table>);
-    expect(html).toContain("Partial evidence: pipeline gap");
+    expect(html).toContain(card.grade === null ? "pipeline gap" : "awaiting curation");
+    expect(html).not.toContain("Partial evidence: pipeline gap");
     if (card.grade === null) {
       expect(html).toContain("Pipeline gap");
       expect(html).not.toContain("Safety grade NR");

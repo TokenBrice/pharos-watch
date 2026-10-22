@@ -10,7 +10,7 @@ describe("ScoreConstructionPanel", () => {
   it("names the excluded pillar without manufacturing score stages", () => {
     const card = makeReportCardsV9PipelineGapCard("control", "B");
     const { container } = render(<ScoreConstructionPanel card={card} />);
-    expect(container.textContent).toContain("The backing pillar, the exit pillar are left out of the score");
+    expect(container.textContent).toContain("Backing and Exit are left out of the score for now (public data awaiting curation).");
     expect(container.textContent).not.toContain("NR");
   });
   it("renders distinct adverse and uncertainty attribution messages", () => {

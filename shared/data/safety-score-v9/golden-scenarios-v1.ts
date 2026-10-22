@@ -521,7 +521,7 @@ export const GOLDEN_SCENARIOS: Scenario[] = [
     expected: {
       allowedGrades: ["F"],
       minScore: 0,
-      maxScore: 39,
+      maxScore: 25,
       expectedBindingCapKind: "active-depeg:f",
       expectedRated: true,
     },

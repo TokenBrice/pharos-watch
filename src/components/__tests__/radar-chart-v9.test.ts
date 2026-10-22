@@ -7,6 +7,7 @@ import { CompareRadarV9, buildV9RadarDataset } from "@/components/radar-chart-v9
 import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import type { SafetyScoreV9Card } from "@shared/types";
+import { projectV9TableCard } from "@shared/lib/report-cards-v9-projections";
 import type * as Recharts from "recharts";
 
 const radiusAxis = vi.hoisted(() => vi.fn());
@@ -47,12 +48,86 @@ describe("V9 radar cohorts", () => {
     });
   });
 
-  it("does not plot excluded pillars or surviving diagnostics as zero scores", () => {
+  it("keeps a rated card's missing pillar as an unplotted Unknown axis and still rejects pipeline gaps", () => {
     const identity = makeReportCardsV9Response().safetyScoreIdentity;
-    for (const card of [makeReportCardsV9PartialCard("exit", "B"), makeReportCardsV9PipelineGapCard("control", "A")]) {
-      expect(buildV9RadarDataset([{ card, identity, color: "#123456" }]))
-        .toEqual({ status: "unavailable", reason: "card-unavailable" });
+    const partial = makeReportCardsV9PartialCard("exit", "B");
+    const result = buildV9RadarDataset([{ card: partial, identity, color: "#123456" }]);
+    if (result.status !== "available") throw new Error("Expected a plottable partial card");
+    expect(result.value.rows.find((row) => row.pillar === "Exit")?.[partial.id]).toBeNull();
+    expect(result.value.unknownAxes).toEqual({ Exit: { seriesIds: [partial.id], missingNames: [], assumptions: [] } });
+    expect(buildV9RadarDataset([{ card: makeReportCardsV9PipelineGapCard("control", "A"), identity, color: "#123456" }]))
+      .toEqual({ status: "unavailable", reason: "card-unavailable" });
+  });
+
+  it("renders phase-1 comparisons without inventing the missing pillar's assumption", () => {
+    const identity = makeReportCardsV9Response().safetyScoreIdentity;
+    const partial = projectV9TableCard(makeV9Card({ id: "uusd" }));
+    partial.pillars.exit = { score: null, aggregationDisposition: "unavailable" };
+    const complete = projectV9TableCard(makeV9Card({ id: "usdc" }));
+    const series = [
+      { card: partial, identity, color: "#10b981", symbol: "UUSD" },
+      { card: complete, identity, color: "#3b82f6", symbol: "USDC" },
+    ];
+    expect(buildV9RadarDataset(series, [])).toMatchObject({
+      status: "available", value: { unknownAxes: { Exit: { assumptions: [], missingNames: ["UUSD"] } } },
+    });
+    const { container } = render(createElement(CompareRadarV9, { series, cohortSeries: [] }));
+    expect(container.textContent).toContain("Unknown for UUSD");
+    expect(container.textContent).not.toMatch(/assumed \d|not yet researched|undisclosed/);
+    expect(container.querySelectorAll("circle[fill='#10b981']")).toHaveLength(2);
+    expect(container.querySelector("line[stroke-dasharray]")).toBeNull();
+  });
+
+  it("names a priced unknown's scoring assumption without plotting it", () => {
+    const identity = makeReportCardsV9Response().safetyScoreIdentity;
+    const card = projectV9TableCard(makeV9Card({ id: "uusd", pillars: makeV9Pillars({ backing: 35, exit: 50, control: 60 }) }));
+    card.pillars.exit = { score: null, aggregationDisposition: "unavailable", pricedUnknown: { cause: "U", score: 50 } };
+    const result = buildV9RadarDataset([{ card, identity, color: "#10b981" }]);
+    if (result.status !== "available") throw new Error("Expected a plottable priced-unknown card");
+    expect(result.value.unknownAxes.Exit).toEqual({
+      seriesIds: ["uusd"], missingNames: [], assumptions: ["not yet researched · assumed 50/100"],
+    });
+    const { container } = render(createElement(CompareRadarV9, { series: [{ card, identity, color: "#10b981" }], cohortSeries: [], size: 300 }));
+    expect(container.textContent).toContain("Unknown");
+    expect([...container.querySelectorAll("title")].map((title) => title.textContent).join(" "))
+      .toContain("Exit: unknown, not plotted (not yet researched · assumed 50/100)");
+    expect(container.querySelector("[role='figure']")?.getAttribute("aria-label")).toBe("V10 safety score pillar comparison. Exit unknown, not plotted");
+    // Two measured pillars: one open segment and two dots, no filled polygon through the missing axis.
+    expect(container.querySelectorAll("circle[fill='#10b981']")).toHaveLength(2);
+    expect(container.querySelectorAll("line[stroke='#10b981']")).toHaveLength(1);
+    expect(container.querySelector("path[fill='#10b981']")).toBeNull();
+  });
+  it.each(["backing", "exit", "control"] as const)("keeps the %s Unknown note clear of the apex and inside the chart", (pillar) => {
+    const identity = makeReportCardsV9Response().safetyScoreIdentity;
+    const card = projectV9TableCard(makeV9Card());
+    card.pillars[pillar] = { score: null, aggregationDisposition: "unavailable", pricedUnknown: { cause: "U", score: 50 } };
+    const { container } = render(createElement(CompareRadarV9, { series: [{ card, identity, color: "#10b981" }], cohortSeries: [] }));
+    const owner = [...container.querySelectorAll("title")].find(title => title.textContent?.includes("unknown, not plotted"))!.parentElement!;
+    if (pillar === "backing") {
+      // Top axis: one line, label and note in the same text run.
+      expect(owner.tagName.toLowerCase()).toBe("text");
+      expect(owner.querySelector("tspan")?.textContent).toBe("Unknown");
+      return;
     }
+    const [label, note] = [...owner.querySelectorAll("text")];
+    expect(note!.textContent).toBe("Unknown");
+    // The note aligns to the label's inner edge, growing toward the chart centre.
+    expect(note!.getAttribute("text-anchor")).toBe(pillar === "exit" ? "end" : "start");
+    const offset = Number(note!.getAttribute("x")) - Number(label!.getAttribute("x"));
+    expect(offset).toBeCloseTo(pillar === "exit" ? 4 * 6.2 : -7 * 6.2);
+  });
+  it("names the coin a shared axis is unknown for and keeps that spoke solid", () => {
+    const identity = makeReportCardsV9Response().safetyScoreIdentity;
+    const uusd = projectV9TableCard(makeV9Card({ id: "uusd" }));
+    uusd.pillars.exit = { score: null, aggregationDisposition: "unavailable", pricedUnknown: { cause: "U", score: 50 } };
+    const usdc = projectV9TableCard(makeV9Card({ id: "usdc" }));
+    const series = [{ card: uusd, identity, color: "#10b981", symbol: "UUSD" }, { card: usdc, identity, color: "#3b82f6", symbol: "USDC" }];
+    const result = buildV9RadarDataset(series, []);
+    if (result.status !== "available") throw new Error("Expected a plottable comparison");
+    expect(result.value.unknownAxes.Exit).toEqual({ seriesIds: ["uusd"], missingNames: ["UUSD"], assumptions: ["UUSD: not yet researched · assumed 50/100"] });
+    const { container } = render(createElement(CompareRadarV9, { series, cohortSeries: [] }));
+    expect(container.textContent).toContain("Unknown for UUSD");
+    expect(container.querySelector("line[stroke-dasharray]")).toBeNull();
   });
   it("builds exactly three pillars and a same-identity cohort median", () => {
     const response = makeReportCardsV9Response();
@@ -101,12 +176,15 @@ describe("V9 radar cohorts", () => {
     ])).toEqual({ status: "unavailable", reason: "identity-mismatch" });
   });
 
-  it("rejects null displayed pillars and suppresses incomplete cohort medians", () => {
+  it("suppresses incomplete cohort medians and rejects a displayed card with fewer than two pillars", () => {
     const identity = makeReportCardsV9Response().safetyScoreIdentity;
     const displayed = { card: makeV9Card(), identity, color: "#123456" };
     const missing = { ...displayed, card: makeV9Card() };
     missing.card.pillars.backing.score = null;
-    expect(buildV9RadarDataset([missing])).toEqual({ status: "unavailable", reason: "card-unavailable" });
+    const sparse = { ...displayed, card: makeV9Card() };
+    sparse.card.pillars.backing.score = null;
+    sparse.card.pillars.exit.score = null;
+    expect(buildV9RadarDataset([sparse])).toEqual({ status: "unavailable", reason: "card-unavailable" });
     const result = buildV9RadarDataset([displayed], [missing, missing, missing]);
     expect(result).toMatchObject({ status: "available", value: { cohortMedians: null } });
     if (result.status !== "available") throw new Error("Expected available displayed card");

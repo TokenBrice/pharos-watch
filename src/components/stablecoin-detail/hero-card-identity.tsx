@@ -98,6 +98,7 @@ export function SafetyGradeHero({
   );
 }
 
+
 export function HeroVariantChip({
   variantParent,
   variantChipClass,

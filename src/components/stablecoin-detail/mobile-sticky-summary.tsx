@@ -103,6 +103,7 @@ export function MobileStickySummary({
           versionVariant="tooltip-only"
         />
       ) : null}
+
     </div>
   );
 }

@@ -3,12 +3,13 @@ import { projectV9Table, projectV9Detail } from "@shared/lib/report-cards-v9-pro
 import { ReportCardsV9DetailResponseSchema, ReportCardsV9TableResponseSchema } from "@shared/types/report-cards-v9-projections";
 import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
-import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import { buildV9SafetyTableRows, buildV9PortfolioProjection } from "../safety-score-v9-consumers";
 import { buildV9RadarDataset } from "@/components/radar-chart-v9";
 import { buildV9GradeCounts, buildV9PillarAverages, buildV9HeadlineStats, filterAndSortV9Cards } from "@/app/safety-scores/v9-view-model";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "../api-query-descriptors";
 import { buildDetailDependencyContext } from "@/components/stablecoin-detail/dependency-context-model";
+import { projectDependencyGraph } from "@shared/types/dependency-graph";
 
 function cohort() {
   return makeReportCardsV9Response({ cards: [
@@ -21,6 +22,51 @@ function cohort() {
 }
 
 describe("compact score consumer equivalence", () => {
+  it.each([
+    { key: "backing" as const, cause: "C" as const, score: 35 },
+    { key: "exit" as const, cause: "U" as const, score: 50 },
+    { key: "control" as const, cause: "U" as const, score: 60 },
+  ])("stages $key assumption readers without changing table or neighborhood bytes", ({ key, cause, score }) => {
+    const card = makeV9Card({ pillars: makeV9Pillars({ backing: 80, exit: 82, control: 84, [key]: score }) });
+    card.pillars[key].score = null;
+    card.pillars[key].aggregationDisposition = "unavailable";
+    card.pillars[key].supportedComponentKeys = [];
+    card.pillars[key].limitedEvidenceCauses = [];
+    card.scoreTrace.aggregation!.pricedUnknownPillars = [{ pillar: key, cause, score, causeGapRefs: [] }];
+    card.scoreTrace.aggregation!.includedPillars = card.scoreTrace.aggregation!.includedPillars.filter(pillar => pillar !== key);
+    card.scoreTrace.aggregation!.excludedPillars = [key];
+    Object.assign(card.breakdowns![key], {
+      aggregationDisposition: "unavailable", aggregationWeight: 0, evaluatedScore: null, publishedScore: null,
+    });
+    if (key === "backing") {
+      card.breakdowns!.backing.groups = [];
+      card.breakdowns!.backing.components = [];
+    } else if (key === "exit") {
+      card.breakdowns!.exit.primaryRoute = null;
+      card.breakdowns!.exit.diversification = null;
+      card.breakdowns!.exit.alternatives = [];
+    } else {
+      card.breakdowns!.control.components = [];
+    }
+    card.partialEvidence = { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: [key], causes: [], excludedComponentKeys: [], causeGapRefs: [] };
+    const full = makeReportCardsV9Response({ cards: [card] });
+    const expected = { score: null, aggregationDisposition: "unavailable" as const, pricedUnknown: { cause, score } };
+    const table = projectV9Table(full);
+    const detail = projectV9Detail(full, card.id);
+    expect(table.cards[0]!.pillars[key]).toEqual({ score: null, aggregationDisposition: "unavailable" });
+    for (const pillar of Object.values(table.cards[0]!.pillars)) {
+      expect(pillar).not.toHaveProperty("pricedUnknown");
+    }
+    expect(detail.neighborhood[0]).not.toHaveProperty("ratingStatus");
+    expect(detail.neighborhood[0]).not.toHaveProperty("pillars");
+    // Readers ship first: strict schemas already admit the later producer bytes.
+    table.cards[0]!.pillars[key] = expected;
+    expect(ReportCardsV9TableResponseSchema.parse(table).cards[0]!.pillars[key]).toEqual(expected);
+    detail.neighborhood[0]!.ratingStatus = card.ratingStatus;
+    detail.neighborhood[0]!.pillars = table.cards[0]!.pillars;
+    expect(ReportCardsV9DetailResponseSchema.parse(detail).neighborhood[0]!.pillars![key]).toEqual(expected);
+    expect(projectDependencyGraph(full).nodes[0]!.pillars![key]).toEqual(expected);
+  });
   it("preserves table cells, NR/partial/gap states, radars, aggregates, sorting and full-set counts", () => {
     const full = cohort();
     expect(ReportCardsV9CurrentResponseSchema.safeParse(full).success).toBe(true);

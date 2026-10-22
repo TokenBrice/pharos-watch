@@ -12,7 +12,10 @@ import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-regist
 import type {
   SafetyScorePublicationIdentity,
 } from "@shared/types";
-import { hasCompleteV9RadarPillars, type V9TableConsumerCard as V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
+import { hasPlottableV9RadarPillars, type V9TableConsumerCard as V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
+import { describePartialEvidence, formatPartialEvidenceHeadline } from "@/lib/safety-score-reason-labels";
+
+const PILLAR_SR_LABELS = { backing: "Backing", exit: "Exit", control: "Economic Control" } as const;
 
 export const ReportCardMiniV9 = memo(function ReportCardMiniV9({
   card,
@@ -28,6 +31,7 @@ export const ReportCardMiniV9 = memo(function ReportCardMiniV9({
   const meta = CLIENT_TRACKED_META_BY_ID.get(card.id);
   const name = meta?.name ?? card.id;
   const symbol = meta?.symbol ?? card.id;
+  const partial = describePartialEvidence(card);
 
   return (
     <Link
@@ -53,22 +57,22 @@ export const ReportCardMiniV9 = memo(function ReportCardMiniV9({
             versionVariant="tooltip-only"
             versionInteractive={false}
           />
-          {card.partialEvidence !== null ? (
-            <p
-              role="status"
-              className="text-center text-xs text-muted-foreground"
-              title={`${card.partialEvidence.causes.map((cause) =>
-                cause === "A" ? "A — pipeline unavailable" : "B — public data awaiting curation").join(" · ")}${
-                card.partialEvidence.excludedPillars.length > 0 ? ` · Excluded: ${card.partialEvidence.excludedPillars.join(", ")}` : ""}`}
-            >
-              Partial evidence · pipeline gap
+          {partial !== null ? (
+            // One headline keeps the grid's radars near one baseline; the
+            // full gap list and the score's assumption live in the summary.
+            <p role="status" className="text-center text-xs text-muted-foreground" title={partial.summary}>
+              {formatPartialEvidenceHeadline(partial)}
+              <span className="sr-only">. {partial.summary}</span>
             </p>
           ) : null}
 
-          {hasCompleteV9RadarPillars(card) ? (
+          {hasPlottableV9RadarPillars(card) ? (
             <div className="w-full max-w-[11rem]">
               <p className="sr-only">
-                Backing {card.pillars.backing.score}/100; Exit {card.pillars.exit.score}/100; Economic Control {card.pillars.control.score}/100.
+                {(["backing", "exit", "control"] as const).map((key) => {
+                  const score = card.pillars[key].score;
+                  return `${PILLAR_SR_LABELS[key]} ${score === null ? "unknown, not plotted" : `${Math.round(score)}/100`}`;
+                }).join("; ")}.
               </p>
               <LazySection minHeight={140} rootMargin="200px">
                 <CompareRadarV9

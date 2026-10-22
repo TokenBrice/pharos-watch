@@ -38,6 +38,7 @@ import type { ScreenerRow, ScreenerSortKey } from "@/lib/screener-filters";
 import type { DataTableSortControls } from "@/components/data-table-shell";
 import type { QueryKey } from "@tanstack/react-query";
 import type { SafetyScoreV9TopDriver } from "@shared/lib/safety-score-v9/public";
+import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
 // M1: keys feeding the screener table's visible data (supply, peg, DEWS,
 // liquidity, safety grade). A background refetch of any of these surfaces the
@@ -540,10 +541,13 @@ function projectScreenerTopDriver(row: ScreenerRow): SafetyScoreV9TopDriver | nu
     };
   }
   if (row.safetyWeakestPillar !== null && row.safetyWeakestScore !== null) {
+    // A weakest pillar that is only assumed (no measured score) names the
+    // pillar without its stand-in value, which would read as a measurement.
+    const measured = { backing: row.safetyBackingScore, exit: row.safetyExitScore, control: row.safetyControlScore }[row.safetyWeakestPillar];
     return {
       kind: "pillar-bound",
       label: row.safetyWeakestPillar,
-      value: row.safetyWeakestScore,
+      value: measured == null ? null : row.safetyWeakestScore,
       reason: null,
       evidenceFreshness,
     };
@@ -552,6 +556,7 @@ function projectScreenerTopDriver(row: ScreenerRow): SafetyScoreV9TopDriver | nu
 }
 
 function V9Profile({ row, compact = false }: { row: ScreenerRow; compact?: boolean }) {
+  const partial = describePartialEvidence(row);
   const unavailableEvidence = row.safetyEvidence === null || row.safetyEvidence === "pipeline-gap";
   const evidenceLabel = row.safetyEvidence === null ? "Unavailable"
     : row.safetyEvidence === "pipeline-gap" ? "Pipeline gap" : SAFETY_EVIDENCE_LABELS[row.safetyEvidence];
@@ -572,8 +577,8 @@ function V9Profile({ row, compact = false }: { row: ScreenerRow; compact?: boole
       <span className={`rounded-full border px-1.5 py-0.5 text-3xs font-semibold leading-none ${evidenceClass}`}>
         {evidenceLabel}
       </span>
-      {row.partialEvidence !== null ? <span className="text-3xs text-muted-foreground">
-        Partial evidence: pipeline gap · {row.partialEvidence.causes.join("/")}
+      {partial !== null ? <span className="text-3xs text-muted-foreground" title={partial.summary}>
+        {partial.gaps.map(formatPartialEvidenceGap).join(" · ")}
       </span> : null}
     </span>
   );
@@ -589,8 +594,8 @@ function PillarReading({
   weakest: boolean;
 }) {
   return (
-    <span className={weakest ? "font-bold text-state-warn-bright" : "text-foreground"}>
-      <span className="text-muted-foreground">{label}</span>{value == null ? "—" : Math.round(value)}
+    <span className={weakest ? "font-bold text-state-warn-bright" : "text-foreground"} title={value == null ? `${{ B: "Backing", E: "Exit", C: "Economic Control" }[label]} unknown` : undefined}>
+      <span className="text-muted-foreground">{label}</span>{value == null ? "?" : Math.round(value)}
     </span>
   );
 }

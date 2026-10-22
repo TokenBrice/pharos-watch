@@ -7,6 +7,7 @@ import type {
   SafetyScoreV9Card,
   SafetyScoreV9CurrentCard,
   V9Grade,
+  V9QualityPillar,
 } from "@shared/types";
 import { getV9GradeRiskBucket, type V9GradeRiskBucket } from "@shared/lib/safety-grade-buckets";
 import type { PublishedMintComponent } from "@/lib/mint-authority-display";
@@ -24,6 +25,39 @@ export function hasCompleteV9RadarPillars(card: Pick<ReportCardsV9TableCard, "ra
     && Number.isFinite(card.pillars.backing.score)
     && Number.isFinite(card.pillars.exit.score)
     && Number.isFinite(card.pillars.control.score);
+}
+
+export const V9_PILLAR_KEYS: readonly V9QualityPillar[] = ["backing", "exit", "control"];
+
+/**
+ * A rated card can be drawn on the pillar radar with its measured pillars
+ * only; a missing pillar stays an "Unknown" axis, never an imputed point.
+ */
+export function hasPlottableV9RadarPillars(card: Pick<ReportCardsV9TableCard, "ratingStatus" | "pillars">): boolean {
+  return card.ratingStatus === "rated"
+    && V9_PILLAR_KEYS.filter((key) => Number.isFinite(card.pillars[key].score)).length >= 2;
+}
+
+/** The score's assumption for a pillar it could not measure: cause and priced score. */
+export interface V9PricedUnknown {
+  cause: "C" | "U";
+  score: number;
+}
+
+/** Table cards project the assumption onto the pillar; full cards keep it in the score trace. */
+export interface V9PricedUnknownSource {
+  pillars: Record<V9QualityPillar, { score: number | null; pricedUnknown?: V9PricedUnknown }>;
+  scoreTrace?: {
+    aggregation: { pricedUnknownPillars?: readonly { pillar: V9QualityPillar; cause: "C" | "U"; score: number }[] } | null;
+  };
+}
+
+export function readV9PricedUnknown(card: V9PricedUnknownSource, pillar: V9QualityPillar): V9PricedUnknown | null {
+  if (card.scoreTrace !== undefined) {
+    const priced = card.scoreTrace.aggregation?.pricedUnknownPillars?.find((item) => item.pillar === pillar);
+    return priced === undefined ? null : { cause: priced.cause, score: priced.score };
+  }
+  return card.pillars[pillar].pricedUnknown ?? null;
 }
 
 export type V9ConsumerUnavailableReason =

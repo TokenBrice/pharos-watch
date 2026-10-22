@@ -186,7 +186,10 @@ describe("PortfolioClient URL sync", () => {
     expect(screen.getByText("Known-only weighted V10 safety subtotal")).toBeTruthy();
     expect(screen.getByText("exit · known-only subtotal").parentElement?.textContent).toContain("60/100");
     expect(screen.getByText("exit · known-only subtotal").parentElement?.textContent).toContain("100 USD of 400 USD");
-    expect(screen.getByText(/public data awaiting curation \(B\)/)).toBeTruthy();
+    const curationGap = screen.getByText("Exit excluded · awaiting curation");
+    expect(curationGap.getAttribute("title")).toBe(
+      "Exit is left out of the score for now (public data awaiting curation); the measured pillars carry the weight.",
+    );
     expect(screen.queryByText("15/100")).toBeNull();
   });
 

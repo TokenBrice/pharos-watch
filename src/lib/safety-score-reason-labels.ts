@@ -1,5 +1,8 @@
+import { SAFETY_SCORE_GAP_CAUSE_LABELS } from "@shared/lib/classification";
+import type { V9QualityPillar } from "@shared/types";
 import { normalizeChain, prettifyProtocol } from "@/lib/dex-display-constants";
 import { describeFailureDomain } from "@/lib/failure-domain-labels";
+import { readV9PricedUnknown, V9_PILLAR_KEYS, type V9PricedUnknown } from "@/lib/safety-score-v9-consumers";
 
 /**
  * Reader label for a scored exit route. DEX routes arrive labelled with
@@ -329,6 +332,7 @@ export function groupSafetyScoreReasons(messages: readonly string[]): SafetyScor
  */
 function describeExcludedScoreComponent(key: string): string {
   if (key === "dependency:parent") return "the parent asset's score";
+  if (key.startsWith("peg:")) return "the peg input";
   if (key.startsWith("wrapper-local:")) return `wrapper ${describeEvidenceDatum(key.slice("wrapper-local:".length))}`;
   if (key.startsWith("mechanism:")) return `${slugWords(key.slice("mechanism:".length))} review`;
   if (key.startsWith("reserve:")) return `reserve ${slugWords(key.slice("reserve:".length))}`;
@@ -351,35 +355,128 @@ const PARTIAL_EVIDENCE_CAUSE_LABELS: Record<string, string> = {
   B: "public data awaiting curation",
 };
 
+const PILLAR_SHORT_LABELS: Record<V9QualityPillar, string> = { backing: "Backing", exit: "Exit", control: "Control" };
+const PILLAR_LABELS: Record<V9QualityPillar, string> = { backing: "Backing", exit: "Exit", control: "Economic Control" };
+
+function listWords(words: readonly string[]): string {
+  return words.length <= 1 ? words.join("") : `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
+}
+
+/** One missing pillar or component: what and why (`label`), plus the score's treatment (`note`). */
+export interface PartialEvidenceGap {
+  label: string;
+  note: string | null;
+}
+
 export interface PartialEvidenceDescription {
-  /** One plain sentence naming what is excluded and why. */
+  /** Most decisive first. */
+  gaps: PartialEvidenceGap[];
+  /** Plain sentences naming what is missing, why, and the score's assumption. */
   summary: string;
   /** Machine-readable reason code (data-integrity R3/R4). */
   reasonCode: string;
 }
 
-export function describePartialEvidence(partial: {
-  reasonCode: string;
-  excludedPillars: readonly string[];
-  excludedComponentKeys: readonly string[];
-  causes: readonly string[];
-}): PartialEvidenceDescription {
-  // Component keys under an excluded pillar (`backing:reviewed`) restate the
-  // pillar, so only components of included pillars are named separately.
-  const excludedPillars = new Set(partial.excludedPillars);
-  const excluded = [
-    ...partial.excludedPillars.map((pillar) => `the ${pillar} pillar`),
-    ...new Set(partial.excludedComponentKeys
-      .filter((key) => !excludedPillars.has(key.split(":")[0] ?? ""))
-      .map(describeExcludedScoreComponent)),
-  ];
-  const causes = partial.causes.map((cause) => PARTIAL_EVIDENCE_CAUSE_LABELS[cause] ?? "evidence unavailable");
-  const subject = excluded.length === 0 ? "Some evidence" : capitalize(excluded.join(", "));
-  const verb = excluded.length > 1 ? "are" : "is";
-  return {
-    summary: `${subject} ${verb} left out of the score for now (${causes.join("; ")}); the remaining inputs carry ${
-      excluded.length > 1 ? "their" : "its"
-    } weight.`,
-    reasonCode: partial.reasonCode,
-  };
+export function formatPartialEvidenceGap(gap: PartialEvidenceGap): string {
+  return gap.note === null ? gap.label : `${gap.label} (${gap.note})`;
+}
+
+/** One-line headline for compact surfaces: the decisive gap, then a count of the rest. */
+export function formatPartialEvidenceHeadline(description: PartialEvidenceDescription): string {
+  const [primary, ...rest] = description.gaps;
+  return `${primary!.label}${rest.length > 0 ? ` +${rest.length}` : ""}`;
+}
+
+/** A priced unknown's cause and the score it stands in with: "not yet researched · assumed 50/100". */
+export function formatPricedUnknown(priced: V9PricedUnknown): string {
+  return `${SAFETY_SCORE_GAP_CAUSE_LABELS[priced.cause]} · assumed ${priced.score.toFixed(0)}/100`;
+}
+
+/** Table and full cards alike; full cards add exact component keys and their priced unknowns live in the trace. */
+export interface PartialEvidenceCard {
+  ratingStatus?: string | null;
+  partialEvidence?: {
+    reasonCode?: string;
+    excludedPillars: readonly string[];
+    causes: readonly string[];
+    excludedComponentKeys?: readonly string[];
+  } | null;
+  pillars?: Record<V9QualityPillar, {
+    score: number | null;
+    aggregationDisposition?: string | null;
+    pricedUnknown?: V9PricedUnknown;
+  }>;
+  scoreTrace?: Parameters<typeof readV9PricedUnknown>[0]["scoreTrace"];
+}
+
+/**
+ * One rule for every partial card: an unavailable pillar of a rated card
+ * stands in at an assumed score (issuer non-disclosure C, or not yet
+ * researched U); only A/B exclusions leave evidence out, and only A is a
+ * pipeline gap.
+ */
+export function describePartialEvidence(card: PartialEvidenceCard): PartialEvidenceDescription | null {
+  const partial = card.partialEvidence;
+  if (partial == null) return null;
+  const listedPillars = new Set(partial.excludedPillars);
+  const abCauses = partial.causes.filter((cause): cause is "A" | "B" => cause === "A" || cause === "B");
+  const abLabel = abCauses.map((cause) => SAFETY_SCORE_GAP_CAUSE_LABELS[cause]).join(", ");
+  const abReason = abCauses.map((cause) => PARTIAL_EVIDENCE_CAUSE_LABELS[cause]).join("; ");
+  const gaps: PartialEvidenceGap[] = [];
+  const sentences: string[] = [];
+  const excludedAB: V9QualityPillar[] = [];
+
+  for (const key of V9_PILLAR_KEYS) {
+    const pillar = card.pillars?.[key];
+    if (pillar?.aggregationDisposition === "excluded-a-b"
+      || (pillar === undefined && listedPillars.has(key) && abCauses.length > 0)) {
+      excludedAB.push(key);
+      continue;
+    }
+    if (pillar?.aggregationDisposition !== "unavailable" && !listedPillars.has(key)) continue;
+    const priced = card.ratingStatus === "rated" && card.pillars ? readV9PricedUnknown({ ...card, pillars: card.pillars }, key) : null;
+    if (priced !== null) {
+      const assumed = priced.score.toFixed(0);
+      gaps.push({ label: `${PILLAR_SHORT_LABELS[key]} ${SAFETY_SCORE_GAP_CAUSE_LABELS[priced.cause]}`, note: `assumed ${assumed}` });
+      sentences.push(priced.cause === "C"
+        ? `The issuer does not disclose ${PILLAR_LABELS[key]} evidence; the score assumes ${assumed}/100 in its place.`
+        : `${PILLAR_LABELS[key]} is not yet researched; the score assumes ${assumed}/100 until it is.`);
+    } else if (card.ratingStatus === "rated") {
+      gaps.push({ label: `${PILLAR_SHORT_LABELS[key]} unknown`, note: null });
+      sentences.push(`${PILLAR_LABELS[key]} has no usable evidence; the score uses an assumed value in its place.`);
+    } else {
+      gaps.push({ label: `${PILLAR_SHORT_LABELS[key]} unavailable`, note: null });
+      sentences.push(`${PILLAR_LABELS[key]} has no usable evidence.`);
+    }
+  }
+
+  if (excludedAB.length > 0) {
+    gaps.push({ label: `${listWords(excludedAB.map((key) => PILLAR_SHORT_LABELS[key]))} excluded · ${abLabel || "evidence unavailable"}`, note: null });
+    sentences.push(`${listWords(excludedAB.map((key) => PILLAR_LABELS[key]))} ${excludedAB.length > 1 ? "are" : "is"} left out of the score for now${
+      abReason ? ` (${abReason})` : ""}${card.ratingStatus === "rated" ? "; the measured pillars carry the weight" : ""}.`);
+  }
+
+  // Component keys under a missing pillar (`backing:reviewed`) restate it, so
+  // only components of measured pillars are named separately.
+  const components = [...new Set((partial.excludedComponentKeys ?? [])
+    .filter((key) => !listedPillars.has(key.split(":")[0] ?? ""))
+    .map(describeExcludedScoreComponent))];
+  if (excludedAB.length === 0 && abCauses.length > 0) {
+    gaps.push({
+      label: components.length === 0 ? `Partial evidence · ${abLabel}`
+        : `${components.length === 1 ? capitalize(components[0]!.replace(/^the /, "")) : `${components.length} inputs`} excluded · ${abLabel}`,
+      note: null,
+    });
+  }
+  if (components.length > 0 || (excludedAB.length === 0 && abCauses.length > 0)) {
+    const subject = components.length === 0 ? "Some evidence" : capitalize(listWords(components));
+    sentences.push(`${subject} ${components.length > 1 ? "are" : "is"} left out of the score for now${
+      abReason ? ` (${abReason})` : ""}; the remaining inputs carry ${components.length > 1 ? "their" : "its"} weight.`);
+  }
+
+  if (gaps.length === 0) {
+    gaps.push({ label: "Partial evidence", note: null });
+    sentences.push("Some evidence is left out of the score for now.");
+  }
+  return { gaps, summary: sentences.join(" "), reasonCode: partial.reasonCode ?? "partial-evidence-pipeline-gap" };
 }

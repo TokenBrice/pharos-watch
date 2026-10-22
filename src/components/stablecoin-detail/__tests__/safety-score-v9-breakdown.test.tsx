@@ -13,6 +13,7 @@ function pillar(score: number | null): Pillar {
     key: "exit",
     label: "Exit",
     score,
+    pricedUnknown: null,
     evidenceSummary: "Reviewed coverage",
     evidenceDescription: null,
     componentCount: 0,
@@ -28,6 +29,19 @@ describe("SafetyScoreV9PillarRow", () => {
     const bar = screen.getByRole("img", { name: /^Exit:/ });
     expect(bar.getAttribute("aria-label")).toMatch(/unavailable/);
     expect(bar.childElementCount).toBe(0);
+  });
+
+  it.each([
+    { cause: "C" as const, score: 35, reason: "undisclosed by issuer" },
+    { cause: "U" as const, score: 50, reason: "not yet researched" },
+    { cause: "U" as const, score: 60, reason: "not yet researched" },
+  ])("names a $cause priced unknown without calling it excluded", ({ cause, score, reason }) => {
+    const { container } = render(<SafetyScoreV9PillarRow cardId="card" pillar={{ ...pillar(null), pricedUnknown: { cause, score } }} />);
+    expect(container.textContent).toContain("Unknown");
+    expect(container.textContent).toContain(`${reason.charAt(0).toUpperCase()}${reason.slice(1)} · assumed ${score}/100`);
+    expect(container.querySelector('[role="img"]')?.getAttribute("aria-label")).toBe(`Exit: unknown, ${reason} · assumed ${score}/100`);
+    expect(container.textContent).not.toMatch(/Not scored|Excluded/);
+    expect(container.querySelector('[role="img"]')?.childElementCount).toBe(0);
   });
 
   it("fills a scored pillar's bar and names its score", () => {

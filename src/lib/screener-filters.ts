@@ -265,6 +265,7 @@ export interface ScreenerRow {
   safetyScore: number | null;
   ratingStatus: ReportCardsV9TableCard["ratingStatus"] | null;
   partialEvidence: ReportCardsV9TableCard["partialEvidence"];
+  pillars?: ReportCardsV9TableCard["pillars"];
   safetyBackingScore: number | null;
   safetyExitScore: number | null;
   safetyControlScore: number | null;

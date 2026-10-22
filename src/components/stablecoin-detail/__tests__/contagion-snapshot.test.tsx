@@ -3,6 +3,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { projectV9Detail } from "@shared/lib/report-cards-v9-projections";
 
 const useReportCardsV9Mock = vi.hoisted(() => vi.fn());
 const useStablecoinsMock = vi.hoisted(() => vi.fn());
@@ -13,7 +14,7 @@ vi.mock("@/hooks/use-near-viewport", () => ({ useNearViewport: useNearViewportMo
 vi.mock("@/hooks/api-hooks", () => ({
   useReportCardsV9Detail: () => {
     const query = useReportCardsV9Mock();
-    return { ...query, data: query.data ? { ...query.data, neighborhood: query.data.cards } : undefined };
+    return { ...query, data: query.data ? { ...query.data, neighborhood: query.data.neighborhood ?? query.data.cards } : undefined };
   },
 }));
 
@@ -97,6 +98,23 @@ describe("ContagionSnapshot", () => {
       dataUpdatedAt: 1,
       refetch: vi.fn(),
     });
+  });
+
+  it("renders phase-1 neighborhoods without optional rating status or pillars", () => {
+    const detail = projectV9Detail(makeDependencyResponse(), "usdc-circle");
+    detail.neighborhood = detail.neighborhood.map(({ id, grade, partialEvidence, sharedBookId }) => ({
+      id, grade, partialEvidence, sharedBookId,
+    }));
+    useReportCardsV9Mock.mockReturnValue({ data: detail, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
+    render(<ContagionSnapshot stablecoinId="usdc-circle" />);
+    const graph = screen.getByTestId("contagion-graph");
+    expect(graph.getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
+    const cards = JSON.parse(graph.getAttribute("data-cards")!) as Array<Record<string, unknown>>;
+    expect(cards).toHaveLength(2);
+    for (const card of cards) {
+      expect(card).not.toHaveProperty("ratingStatus");
+      expect(card).not.toHaveProperty("pillars");
+    }
   });
 
   it.each(["B", null] as const)("preserves %s partial evidence in the detail graph projection", (grade) => {

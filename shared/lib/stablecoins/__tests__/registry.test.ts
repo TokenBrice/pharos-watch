@@ -20,6 +20,7 @@ import {
   isReadableStablecoinMeta,
 } from "../status";
 import { FROZEN_SNAPSHOTS_BY_ID } from "../frozen-snapshots";
+import { getListingClass } from "../listing-governance";
 
 describe("registry universes", () => {
   it("ACTIVE = status === 'active'", () => {
@@ -53,6 +54,28 @@ describe("registry universes", () => {
       expect(ACTIVE_IDS.has(id)).toBe(false);
       expect(READABLE_IDS.has(id)).toBe(true);
     }
+  });
+
+  it("preserves VCRED as a readable scope delisting, not a frozen or live instrument", () => {
+    const coin = DELISTED_STABLECOINS.find((entry) => entry.id === "vcred-vcred");
+    expect(coin).toMatchObject({
+      status: "delisted",
+      listingStatusReview: {
+        changedAt: "2026-10-22",
+        source: {
+          url: "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
+        },
+      },
+      mechanismArchetypeReview: { disposition: "unresolved", reviewedAt: "2026-10-02" },
+    });
+    expect(getListingClass("vcred-vcred")).toBe("excluded");
+    expect(ACTIVE_IDS.has("vcred-vcred")).toBe(false);
+    expect(READABLE_IDS.has("vcred-vcred")).toBe(true);
+    expect(FROZEN_IDS.has("vcred-vcred")).toBe(false);
+    expect(FROZEN_SNAPSHOTS_BY_ID.has("vcred-vcred")).toBe(false);
+    expect(coin?.liveReservesConfig).toBeUndefined();
+    expect(coin?.frozenAt).toBeUndefined();
+    expect(coin?.obituary).toBeUndefined();
   });
 
   it("FROZEN = status === 'frozen'", () => {

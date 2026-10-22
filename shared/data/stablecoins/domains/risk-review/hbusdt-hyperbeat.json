@@ -1,5 +1,64 @@
 {
   "id": "hbusdt-hyperbeat",
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "The deployed hbUSDT share-conversion Pricer exposes an authorized updateExchangeRate(uint96) path; a successful direct rate update is recorded on August3,2026. The Depositor uses a replaceable Pricer. Hyperbeat separately publishes a RedStone HBUSDT_FUNDAMENTAL feed, but current feed-specific signer/provider topology and any wiring from RedStone into the share-conversion Pricer were not established. No redundancy or failover is inferred. This tier follows the demonstrated internally written share rate, not a claim that RedStone itself is issuer-controlled. Current updater membership, upstream NAV inputs and incident history remain unresolved.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-22",
+      "reviewer": "Pharos v10.30 oracle/control primary-source research",
+      "rationale": "The reviewed binding path is the hbUSDT share-conversion rate used by its Depositor, not a separately established borrower-liquidation branch. The publicly listed external fundamental feed is not assumed to be a vault input or failover.",
+      "sources": [
+        {
+          "label": "Verified deployed hbUSDT share-conversion Pricer",
+          "url": "https://hyperevmscan.io/address/0x3636a26ec1d512c5ecff42f7adaa5ce7964c6579#code"
+        },
+        {
+          "label": "Actual August3,2026 Pricer exchange-rate update",
+          "url": "https://hyperevmscan.io/tx/0xa3e8ff37f8ebf61d706dd62a0489aee52072dec5bc949e8211bf205253657353"
+        },
+        {
+          "label": "Hyperbeat Depositor with Pricer pointer and setter",
+          "url": "https://hyperevmscan.io/address/0x6261f30144b259c74243d5f5d9230941186ac936#code"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-22",
+    "reviewer": "Pharos v10.30 oracle/control primary-source research",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Verified deployed hbUSDT share-conversion Pricer",
+        "url": "https://hyperevmscan.io/address/0x3636a26ec1d512c5ecff42f7adaa5ce7964c6579#code"
+      },
+      {
+        "label": "Actual August3,2026 Pricer exchange-rate update",
+        "url": "https://hyperevmscan.io/tx/0xa3e8ff37f8ebf61d706dd62a0489aee52072dec5bc949e8211bf205253657353"
+      },
+      {
+        "label": "Hyperbeat Depositor with Pricer pointer and setter",
+        "url": "https://hyperevmscan.io/address/0x6261f30144b259c74243d5f5d9230941186ac936#code"
+      },
+      {
+        "label": "Hyperbeat published oracle mappings",
+        "url": "https://docs.hyperbeat.org/resources/oracles.md"
+      },
+      {
+        "label": "RedStone hbUSDT fundamental feed; UI provider count is not a live-signature census",
+        "url": "https://app.redstone.finance/push-feeds/hbUSDT_FUNDAMENTAL/hyperevmMultiFeed"
+      },
+      {
+        "label": "RedStone hbUSDT feed implementation",
+        "url": "https://hyperevmscan.io/address/0xa90e0136cb598e1cef28dc54932c17033b54538c#code"
+      },
+      {
+        "label": "RedStone signed-data adapter proxy",
+        "url": "https://hyperevmscan.io/address/0x24c8964338deb5204b096039147b8e8c3aea42cc#code"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

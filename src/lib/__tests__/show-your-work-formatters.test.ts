@@ -10,6 +10,16 @@ import {
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 
 describe("show-your-work formatters", () => {
+  it("describes a priced null pillar without calling it excluded or a pipeline gap", () => {
+    const card = makeV9Card();
+    card.pillars.exit.score = null;
+    card.pillars.exit.aggregationDisposition = "unavailable";
+    card.scoreTrace.aggregation!.pricedUnknownPillars = [{ pillar: "exit", cause: "U", score: 50, causeGapRefs: [] }];
+    card.partialEvidence = { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["exit"], causes: [], excludedComponentKeys: [], causeGapRefs: [] };
+    const table = formatReportCardV9(card, "10.29");
+    expect(table.rows.find(row => row.label === "Exit pillar")?.value).toBe("Unknown — not yet researched · assumed 50/100");
+    expect(table.rows.find(row => row.label === "Evidence coverage")?.value).toBe("Exit not yet researched (assumed 50)");
+  });
   it("formats V9 score stages without routing through V8 raw inputs", () => {
     const card = makeV9Card({
       bindingCap: {

@@ -728,7 +728,11 @@ describe("evaluateV9Exit", () => {
     expect(measuredScores.every((score, index) => index === 0 || score <= measuredScores[index - 1]!)).toBe(true);
   });
 
-  it("prices admitted measured certificate cost monotonically through the exact request budget", () => {
+  it.each([
+    { modelConfidence: "medium", modelFactor: 0.85, confidenceFactor: 0.85 },
+    { modelConfidence: "high", modelFactor: 1, confidenceFactor: 0.85 },
+    { modelConfidence: "low", modelFactor: 0.35, confidenceFactor: 0.35 },
+  ] as const)("prices admitted certificate cost monotonically with $modelConfidence model confidence", ({ modelConfidence, modelFactor, confidenceFactor }) => {
     const review = validateExitExecutionModelReviews(executionReviews, V9_CANDIDATE_POLICY_V1)
       .find((entry) => entry.identity.assetId === "susds-sky")!;
     const clockSec = Math.ceil(Date.parse(review.reviewedAt) / 1000);
@@ -772,6 +776,7 @@ describe("evaluateV9Exit", () => {
         circulatingUsd: 2_000_000, assetId: review.identity.assetId, clockSec,
         routes: [route({
           executionModelId: certificate.modelId, executionCertificate: certificate,
+          modelConfidence, observationConfidence: "medium",
           coverageClass: point.certification,
           capacityCurve: [{
             requestedNotionalUsd: point.requestedNotionalUsd, maxCostBps: point.maxCostBps,
@@ -782,12 +787,26 @@ describe("evaluateV9Exit", () => {
       expect(result.primaryRouteKey).toBe("redemption:issuer");
       expect(result.diversificationBonus).toBe(0);
       expect(result.routes.find((entry) => entry.routeKey === "modeled:duplicate")!.included).toBe(false);
+      const primary = result.routes.find((entry) => entry.routeKey === "redemption:issuer")!;
+      expect(primary.confidenceDimensions!.model.factor).toBe(modelFactor);
+      expect(primary.confidenceDimensions!.observation.factor).toBe(0.85);
+      expect(primary.confidenceFactor).toBe(confidenceFactor);
       return result.routes.find((entry) => entry.routeKey === "redemption:issuer")!;
     });
     // Components round to two decimals; factor contributions retain the formula.
     expect(traces[0]!.factorContributions!.cost!.score).toBeCloseTo(0.005, 6);
     expect(traces[1]!.components!.cost).toBe(0);
     expect(traces[1]!.score).toBeLessThanOrEqual(traces[0]!.score!);
+  });
+
+  it("retains non-certificate on-chain medium model confidence at 0.75", () => {
+    const result = evaluateV9Exit({
+      circulatingUsd: 20_000_000,
+      routes: [route({ modelConfidence: "medium", observationConfidence: "medium" })],
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(result.routes[0]!.confidenceDimensions!.model.factor).toBe(0.75);
+    expect(result.routes[0]!.confidenceDimensions!.observation.factor).toBe(0.85);
+    expect(result.routes[0]!.confidenceFactor).toBe(0.75);
   });
 
   it("floors a zero-capacity route to zero instead of letting an undisclosed cost carry it", () => {

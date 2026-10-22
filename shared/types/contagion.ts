@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { V9GradeSchema } from "./safety-score-v9";
-import { V9RatingStatusSchema, V9CompactPartialEvidenceSchema, refineV9RatingStatusFields } from "./safety-score-v9-causes";
+import { V9RatingStatusSchema, V9CompactPartialEvidenceSchema, refineV9RatingStatusFields, V9EvidencePillarsSchema } from "./safety-score-v9-causes";
 
 /** Explicit experiment assumptions, not parameters of the scoring policy.
  * Duration does not fabricate historical peg performance or a collateral haircut.
@@ -27,8 +27,10 @@ export const ContagionResultSchema = z.object({
   rows: z.array(z.object({
     coinId: z.string(), baselineScore: z.number().nullable(), baselineGrade: V9GradeSchema.nullable(),
     baselineRatingStatus: V9RatingStatusSchema, baselinePartialEvidence: V9CompactPartialEvidenceSchema.nullable(),
+    baselinePillars: V9EvidencePillarsSchema.optional(),
     scenarioScore: z.number().nullable(), scenarioGrade: V9GradeSchema.nullable(),
     scenarioRatingStatus: V9RatingStatusSchema.nullable(), scenarioPartialEvidence: V9CompactPartialEvidenceSchema.nullable(),
+    scenarioPillars: V9EvidencePillarsSchema.optional(),
     delta: z.number().nullable(), shortestHop: z.number().int().nullable(),
     changedDimensions: z.array(z.enum(["final", "backing", "exit", "control"])), bindingCause: z.string().nullable(), nr: z.boolean(), failure: z.string().nullable(),
   }).superRefine((row, ctx) => {

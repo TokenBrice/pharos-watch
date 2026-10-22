@@ -44,6 +44,15 @@ function health(sqlite: DatabaseSync, value: V9PublicationHealth) {
 }
 
 describe("generation-bound compact Safety Scores", () => {
+  it("retains representation version 1 while phase-1 producer bytes are unchanged", async () => {
+    const { sqlite } = await seed();
+    const manifests = sqlite.prepare(
+      "SELECT manifest FROM safety_score_public_manifests UNION ALL SELECT manifest FROM safety_score_site_manifests",
+    ).all();
+    expect(manifests).toHaveLength(6);
+    for (const row of manifests) expect(JSON.parse(row.manifest as string).version).toBe(1);
+  });
+
   it("matches admitted full cards across rated, NR, partial and pipeline-gap states", async () => {
     const { db } = await seed();
     const source = await loadActiveSafetyScoreSource(db);

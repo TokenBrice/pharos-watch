@@ -6,7 +6,7 @@ import type { V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import { compileV9FactSetV3 } from "./compile";
 import { evaluateValidatedV9FactSet, projectV9EffectiveBackingPillarScore, type V9EvaluatedAsset } from "./evaluate-set";
 
-import { projectV9CompactPartialEvidence } from "../../types/safety-score-v9-causes";
+import { projectV9CompactPartialEvidence, projectV9EvidencePillars, type V9EvidencePillars } from "../../types/safety-score-v9-causes";
 import { stableJsonStringifyV1 } from "../stable-json";
 export interface V9ContagionInput {
   /** Raw schema-4 compiler core, never a serialized compiled fact set. */
@@ -29,6 +29,7 @@ interface PreparedV9ContagionBaseline {
       dimensions: { final: number | null; backing: number | null; exit: number | null; control: number | null };
       ratingStatus: V9ContagionScenarioResult["rows"][number]["baselineRatingStatus"];
       partialEvidence: V9ContagionScenarioResult["rows"][number]["baselinePartialEvidence"];
+      pillars: V9EvidencePillars;
     }>;
   };
 }
@@ -64,6 +65,7 @@ function prepareV9ContagionBaseline(input: V9ContagionInput): PreparedV9Contagio
         grade: asset.trace.finalGrade, dimensions: dimensions(asset),
         ratingStatus: asset.trace.ratingStatus,
         partialEvidence: projectV9CompactPartialEvidence(asset.trace.partialEvidence),
+        pillars: projectV9EvidencePillars(asset.scoreInput.pillars, asset.trace.aggregation?.pricedUnknownPillars),
       })),
     };
   })();
@@ -203,9 +205,11 @@ function evaluatePreparedV9ContagionScenario(
     return {
       coinId: before.assetId, baselineScore: before.score, baselineGrade: before.grade,
       baselineRatingStatus: before.ratingStatus, baselinePartialEvidence: before.partialEvidence,
+      baselinePillars: before.pillars,
       scenarioScore: score, scenarioGrade: current ? current.trace.finalGrade : null,
       scenarioRatingStatus: current?.trace.ratingStatus ?? null,
       scenarioPartialEvidence: partialEvidence,
+      ...(current ? { scenarioPillars: projectV9EvidencePillars(current.scoreInput.pillars, current.trace.aggregation?.pricedUnknownPillars) } : {}),
       delta: score === null || before.score === null ? null : score - before.score,
       shortestHop: hops.get(before.assetId) ?? null, changedDimensions,
       bindingCause: failures.get(before.assetId) ?? current?.trace.bindingCap?.kind ?? null,

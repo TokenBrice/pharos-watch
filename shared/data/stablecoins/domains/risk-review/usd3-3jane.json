@@ -1,5 +1,39 @@
 {
   "id": "usd3-3jane",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "role": "coin-price-feed",
+    "summary": "USD3 nav values idle USDC plus waUSDC shares converted at their ERC4626 rate, with suppliedWaUSDC derived from MorphoCredit expected supply assets. report is externally callable without a role modifier; syncTrancheShare is keeper-gated. No direct external price feed is called in nav, but the complete live market parameters, markdown/impairment authority and waUSDC input protection were not established. Generic issuer statements about Chainlink redundancy or TWAP guards do not prove their wiring to USD3 NAV, and deterministic internal accounting alone does not prove discretionary privileged pricing. Terminal oracle classification remains unresolved research.",
+    "reviewedAt": "2026-10-22",
+    "reviewer": "Pharos v10.30 oracle/control primary-source research",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Verified deployed USD3 implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd1f1c3f485063712873285bf4ef25ab068f13893"
+      },
+      {
+        "label": "USD3 proxy and implementation mapping",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc"
+      },
+      {
+        "label": "MorphoCredit proxy and implementation mapping",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xde6e08ac208088cc62812ba30608d852c6b0ecbc"
+      },
+      {
+        "label": "MarkdownController source, live USD3 ownership/wiring not established",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf0eae71092f3c9411a9eab8f81e7d91d29726214"
+      },
+      {
+        "label": "3Jane general supplier risks",
+        "url": "https://docs.3jane.xyz/risks.md"
+      },
+      {
+        "label": "3Jane deployed addresses and permissions",
+        "url": "https://docs.3jane.xyz/developers/addresses.md"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [

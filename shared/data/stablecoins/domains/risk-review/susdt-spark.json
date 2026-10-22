@@ -1,5 +1,44 @@
 {
   "id": "susdt-spark",
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "spUSDT share value is calculated from Spark's internal chi/VSR accumulator, not an external price feed: convertToAssets(shares) equals shares times nowChi divided by RAY. SETTER_ROLE sets VSR within bounds controlled by DEFAULT_ADMIN_ROLE; the default admin can also change those bounds, grant or revoke roles and authorize UUPS upgrades. The share-price path is a privileged internal rate rather than an independent measure of realized strategy yield. Ethereum, Arbitrum and X Layer native vault authority and the USDT or USDT0 backing exposures remain independently applicable.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-22",
+      "reviewer": "Pharos v10.30 oracle/control primary-source research",
+      "rationale": "The savings wrapper has a rate-accumulated top-level share-conversion path. SLL strategy deployments are backing and liquidity exposures, not separate borrower-collateral liquidation branches of this vault.",
+      "sources": [
+        {
+          "label": "Spark Vaults V2 formula, deployments, rate bounds and roles",
+          "url": "https://docs.spark.finance/dev/savings/spark-vaults-v2"
+        },
+        {
+          "label": "Verified Ethereum SparkVault implementation",
+          "url": "https://eth.blockscout.com/address/0x1b992302652a92611dcd5090d1cb388c6377f455?tab=contract"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-22",
+    "reviewer": "Pharos v10.30 oracle/control primary-source research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spark Vaults V2 formula, deployments, rate bounds and roles",
+        "url": "https://docs.spark.finance/dev/savings/spark-vaults-v2"
+      },
+      {
+        "label": "Verified Ethereum SparkVault implementation",
+        "url": "https://eth.blockscout.com/address/0x1b992302652a92611dcd5090d1cb388c6377f455?tab=contract"
+      },
+      {
+        "label": "Spark Savings USDT strategy and risk architecture",
+        "url": "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [

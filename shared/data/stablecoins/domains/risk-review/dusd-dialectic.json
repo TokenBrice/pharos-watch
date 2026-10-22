@@ -1,5 +1,64 @@
 {
   "id": "dusd-dialectic",
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "DUSD holder-facing value is Machine accounting-token AUM per share. AUM includes position valuations and Oracle Registry-priced balances; updates write cached AUM under accounting authorization, with an exceptional Security Council price-change-guard path. Makina's January20,2026 postmortem reports manipulated MIM-3CRV valuation propagating into AUM and the DUSD exchange rate, causing external Curve LP losses while Machine funds were not compromised. V1.1 restricts accounting and limits time-based share-price changes. The current per-token providers, routes and accounting-agent census remain unpinned; Chainlink-compatible interfaces alone do not establish independent sources.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-22",
+      "reviewer": "Pharos v10.30 oracle/control primary-source research",
+      "rationale": "The reviewed path is the holder-facing Machine NAV/share price, including privileged cached-AUM updates and their guard exception. Strategy inputs are not independently established DUSD-owned borrower-liquidation branches.",
+      "sources": [
+        {
+          "label": "Makina Machine share-price methodology",
+          "url": "https://docs.makina.finance/concepts/architecture/machine/share-price"
+        },
+        {
+          "label": "Verified Machine implementation: accounting authorization and price-change guard",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6a759cae19aa25b41237089eb0bbbc4473bfb996"
+        },
+        {
+          "label": "Makina January20,2026 incident postmortem",
+          "url": "https://makinafi.substack.com/p/post-mortem-january-20th-2026-incident"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-22",
+    "reviewer": "Pharos v10.30 oracle/control primary-source research",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Exact DUSD Machine proxy and beacon identity",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6b006870c83b1cd49e766ac9209f8d68763df721"
+      },
+      {
+        "label": "Verified deployed Machine implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6a759cae19aa25b41237089eb0bbbc4473bfb996"
+      },
+      {
+        "label": "Makina Oracle Registry routes",
+        "url": "https://docs.makina.finance/concepts/architecture/pricing-oracles"
+      },
+      {
+        "label": "Makina accounting permissions and scopes",
+        "url": "https://docs.makina.finance/concepts/governance/permissions-and-scopes"
+      },
+      {
+        "label": "Makina upgrade controls",
+        "url": "https://docs.makina.finance/concepts/governance/protocol-upgrades"
+      },
+      {
+        "label": "Makina January20,2026 incident postmortem",
+        "url": "https://makinafi.substack.com/p/post-mortem-january-20th-2026-incident"
+      },
+      {
+        "label": "Makina hardening and reactivation notice",
+        "url": "https://makinafi.substack.com/p/makina-protocol-upgrade-and-re-activation"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

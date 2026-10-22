@@ -125,8 +125,8 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -175,7 +175,7 @@
           "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
         }
       ],
-      "evidence": "Canonical-chain review at Ethereum block 25770356 on 2026-08-16: the USDnr proxy 0xd48e565561416de59da1050ed70b8d75e8ef28f9 resolves to implementation 0x1028a0e146d2915c509c8e019e0e5c66d3d22ae0 and ProxyAdmin 0x9ffe615c92635e5b36de004dd78a94c51aa04256. The ProxyAdmin owner is the single EOA 0xc07F0b4556E0cc1bFd8A076a98d43E79ACD3Cd33 with empty bytecode, so the canonical wrapper's mint logic can be replaced immediately. The Ethereum MinterGateway remains immutable and its approved-minter, validator-attestation, mint-delay, and collateral/debt checks bound the underlying M route; SwapFacility remains a 1:1 wrapper with a 259200-second timelocked upgrade path. Fluent's local token, SwapFacility, Portal, Hyperlane, Mailbox, and ISM controls are representations/transfer-rail machinery and are intentionally excluded from Mint Authority. The route remains continuously reconciled through M0's underlying attestations, without product-specific prudential supervision.",
+      "evidence": "Canonical-chain review at Ethereum block 25770356 on 2026-08-16: the USDnr proxy 0xd48e565561416de59da1050ed70b8d75e8ef28f9 resolves to implementation 0x1028a0e146d2915c509c8e019e0e5c66d3d22ae0 and ProxyAdmin 0x9ffe615c92635e5b36de004dd78a94c51aa04256. The ProxyAdmin owner is the single EOA 0xc07F0b4556E0cc1bFd8A076a98d43E79ACD3Cd33 with empty bytecode, so the canonical wrapper's mint logic can be replaced immediately. The Ethereum MinterGateway remains immutable and its approved-minter, validator-attestation, mint-delay, and collateral/debt checks bound the underlying M route; SwapFacility remains a 1:1 wrapper with a 259200-second timelocked upgrade path. Fluent's local token, SwapFacility, Portal, Hyperlane, Mailbox, and ISM controls are representations/transfer-rail machinery and are intentionally excluded from Mint Authority. The route remains continuously reconciled through M0's underlying attestations, without product-specific prudential supervision. Source-scope correction reviewed 2026-10-22: Withdraw continuous reconciliation and attestation-only supervision from this USDnr authority review. The narrative expressly relies on M0's underlying attestations, which concern parent M collateral and issuance rather than the USDnr wrapper's complete liabilities, held M or immediate EOA upgrade authority. The cited MinterGateway and SwapFacility materials establish no USDnr-specific whole-book reconciliation or independent examiner engagement. The original review start, authority and implementation observations, and all evidence clocks are unchanged.",
       "reviewer": "Claude Phase 0c continuation; Claude Safety Score V9 curation lane (upgrade-authority resolution, 2026-07-21); Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-16"
     }

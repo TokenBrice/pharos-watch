@@ -174,7 +174,7 @@ Bluechip publication availability is separate from per-coin membership. A pendin
 
 It also derives live peg references with `derivePegRates(...)` for commodity/non-USD normalization in displayed prices.
 
-The safety radar baseline counts only rated cards with all three plotted pillars. Peg/mechanism cohorts below three usable members fall back to all usable rated cards; the displayed count and median use this same population. NR, pipeline-gap, and incomplete-pillar cards contribute neither counts nor scores. Fewer than three usable cards suppresses the median.
+The safety radar baseline counts only rated cards with all three plotted pillars. Peg/mechanism cohorts below three usable members fall back to all usable rated cards; the displayed count and median use this same population. NR, pipeline-gap, and incomplete-pillar cards contribute neither counts nor scores. Fewer than three usable cards suppresses the median. A selected rated card missing one pillar is still drawn: its measured pillars plot as open segments, and the missing axis is a dashed "Unknown" spoke whose tooltip names the scoring assumption; the imputed value is never plotted.
 
 The live-flow cards and comparison table both preserve an explicitly observed zero 24-hour net as `$0.00`, including inactive windows. Unavailable or partial valuation remains unavailable; the independent 30-day pressure rating may still be `NR`.
 

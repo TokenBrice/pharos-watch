@@ -13,6 +13,7 @@ import {
   V9RatingStatusSchema, V9CompactPartialEvidenceSchema, refineV9RatingStatusFields,
   projectV9CompactPartialEvidence,
 } from "./safety-score-v9-causes";
+import { V9EvidencePillarsSchema, projectV9EvidencePillars } from "./safety-score-v9-causes";
 
 export const DEPENDENCY_GRAPH_RESPONSE_SCHEMA_VERSION = 2;
 
@@ -21,6 +22,7 @@ export const DependencyGraphNodeSchema = z.object({
   grade: V9GradeSchema.nullable(),
   ratingStatus: V9RatingStatusSchema,
   partialEvidence: V9CompactPartialEvidenceSchema.nullable(),
+  pillars: V9EvidencePillarsSchema.optional(),
   score: z.number().finite().min(0).max(100).nullable(),
   circulatingUsdAtEvaluation: z.number().finite().nonnegative().nullable(),
   supplyAsOfSec: z.number().int().nonnegative().nullable(),
@@ -143,6 +145,7 @@ export function projectDependencyGraph(snapshot: ReportCardsV9CurrentResponse): 
       score: card.score,
       ratingStatus: card.ratingStatus,
       partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence),
+      pillars: projectV9EvidencePillars(card.pillars, card.scoreTrace.aggregation?.pricedUnknownPillars),
       circulatingUsdAtEvaluation: card.supply?.circulatingUsdAtEvaluation ?? null,
       supplyAsOfSec: card.supply?.asOfSec ?? null,
       sharedBookId: card.sharedBookId ?? null,

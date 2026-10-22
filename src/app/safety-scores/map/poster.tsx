@@ -88,7 +88,7 @@ export function SafetyMapPoster() {
       </figure>
       <p className="text-xs text-muted-foreground">
         Pipeline gap assets have no score or grade and are not placed in A–F bands. Rated partial cards remain mapped;
-        see “Partial evidence: pipeline gap” and the pipeline unavailable (A) or public data awaiting curation (B) reason on the Safety Scores page.
+        see each card’s cause-specific evidence labels on the Safety Scores page for excluded inputs and priced unknowns.
       </p>
       <a
         href={POSTER_PATH}

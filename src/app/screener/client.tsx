@@ -44,6 +44,7 @@ import { GOVERNANCE_LABELS, PEG_METADATA, getMechanismArchetypeLabel } from "@sh
 import type { PegSummaryCoin, StablecoinData } from "@shared/types";
 import { buildPegSummaryCoinMap } from "@/lib/stablecoin-lookups";
 import type { TablePaginationProps } from "@/components/table-pagination";
+import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
 // Curated classification is immutable for the lifetime of the client bundle.
 const SCREENABLE_COINS = CLIENT_TRACKED_STABLECOINS
@@ -73,7 +74,8 @@ const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "safety_grade", accessor: (row) => row.safetyGrade ?? "" },
   { header: "safety_score", accessor: (row) => row.safetyScore ?? "" },
   { header: "safety_rating_status", accessor: (row) => row.ratingStatus ?? "" },
-  { header: "safety_partial_evidence", accessor: (row) => row.partialEvidence ? "Partial evidence: pipeline gap" : "" },
+  { header: "safety_partial_evidence", accessor: (row) => describePartialEvidence(row)?.gaps.map(formatPartialEvidenceGap).join(" · ") ?? "" },
+  // Export cause labels are a stable data contract, independent of reader-facing sentence copy.
   { header: "safety_gap_causes", accessor: (row) => row.partialEvidence?.causes.map(cause => cause === "A" ? "pipeline unavailable (A)" : "public data awaiting curation (B)").join("; ") ?? "" },
   { header: "safety_backing", accessor: (row) => row.safetyBackingScore ?? "" },
   { header: "safety_exit", accessor: (row) => row.safetyExitScore ?? "" },
@@ -225,6 +227,7 @@ export function ScreenerClient() {
         safetyScore: safety?.score ?? null,
         ratingStatus: safety?.ratingStatus ?? null,
         partialEvidence: safety?.partialEvidence ?? null,
+        pillars: safety?.pillars,
         safetyBackingScore: safety?.pillars.backing.score ?? null,
         safetyExitScore: safety?.pillars.exit.score ?? null,
         safetyControlScore: safety?.pillars.control.score ?? null,

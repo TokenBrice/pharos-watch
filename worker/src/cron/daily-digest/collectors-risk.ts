@@ -1,4 +1,4 @@
-import { projectV9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
+import { projectV9CompactPartialEvidence, projectV9EvidencePillars } from "@shared/types/safety-score-v9-causes";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
@@ -80,7 +80,10 @@ export async function collectSafetyScores(
 
     const allGrades: CanonicalSafetyGradeRow[] = source.snapshot.cards
       .filter((card) => ctx.trackedStablecoinIds.has(card.id))
-      .flatMap((card) => card.ratingStatus === "pipeline-gap" || card.grade === null ? [] : [{
+      .flatMap((card) => {
+        if (card.ratingStatus === "pipeline-gap" || card.grade === null) return [];
+        const pillars = projectV9EvidencePillars(card.pillars, card.scoreTrace.aggregation?.pricedUnknownPillars);
+        return [{
         id: card.id,
         symbol: ctx.stablecoinAssetById.get(card.id)?.symbol ?? card.id,
         grade: card.grade,
@@ -88,14 +91,14 @@ export async function collectSafetyScores(
         ratingStatus: card.ratingStatus,
         partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence),
         pillars: {
-          backing: projectV9Pillar(card.pillars.backing),
-          exit: projectV9Pillar(card.pillars.exit),
-          control: projectV9Pillar(card.pillars.control),
+          backing: { ...projectV9Pillar(card.pillars.backing), ...pillars.backing },
+          exit: { ...projectV9Pillar(card.pillars.exit), ...pillars.exit },
+          control: { ...projectV9Pillar(card.pillars.control), ...pillars.control },
         },
         reasonCodes: [...card.reasonCodes],
         caps: card.caps.map(projectV9Cap),
         bindingCap: card.bindingCap ? projectV9Cap(card.bindingCap) : null,
-      }]);
+      }]; });
 
     const mentionedCoinGrades = allGrades.filter((grade) => mentionedSymbols.has(grade.symbol));
     const reportCoins = [...mentionedCoinGrades];

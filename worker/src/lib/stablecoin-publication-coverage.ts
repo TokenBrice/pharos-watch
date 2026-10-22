@@ -264,24 +264,6 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     expiresAt: Date.UTC(2026, 9, 24) / 1000,
   },
   {
-    stablecoinId: "vcred-vcred",
-    owner: "ops",
-    reason:
-      "Re-reviewed 2026-10-19 07:21 UTC using the October 19 source captures: CoinGecko vcred remains dated 2026-09-07 12:00:40 UTC with no tickers. The exact Hemi token 0x71881974e96152643c74a8e0214b877cfb2a0aa1 is live: the explorer records an October 19 transfer into Sushi V3 VCRED/MAX 0xe6a3c3d7b04e835c62858c4d4c8f33d87b1237c4; GT reports $16,658.99 liquidity and $11.64/24h there, while other returned pools hold under $91. All fail the $50K liquidity floor, and MAX also needs a trusted output dependency. An empty exact Hemi DexScreener response does not prove no trading or create an unsupported runtime lane. Owner mint/burn functions and the site's coming-soon AI/perp portfolio access do not bind this exact token to a stable-value holder claim, NAV or redemption. Preserve the unresolved mechanism/class hold and active missing price; resolve issuer identity, holder rights and exit semantics or a sourced listing disposition by October 25 23:45 UTC, without extending the deadline or inventing a shutdown.",
-    sources: [
-      "https://api.coingecko.com/api/v3/simple/price?ids=vcred&vs_currencies=usd&include_last_updated_at=true",
-      "https://api.coingecko.com/api/v3/coins/vcred/tickers",
-      "https://coins.llama.fi/prices/current/coingecko:vcred",
-      "https://api.dexscreener.com/token-pairs/v1/hemi/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
-      "https://api.geckoterminal.com/api/v2/networks/hemi/tokens/0x71881974e96152643c74a8e0214b877cfb2a0aa1/pools",
-      "https://explorer.hemi.xyz/api/v2/tokens/0x71881974e96152643c74a8e0214b877cfb2a0aa1/transfers",
-      "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1",
-      "https://vcred.trade/",
-    ],
-    reviewedAt: Date.UTC(2026, 9, 19, 7, 21, 45) / 1000,
-    expiresAt: Date.UTC(2026, 9, 25, 23, 45) / 1000,
-  },
-  {
     stablecoinId: "bnusd-balanced",
     owner: "ops",
     reason:

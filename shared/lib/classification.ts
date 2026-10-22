@@ -427,6 +427,18 @@ export const SAFETY_EVIDENCE_BADGE_CLASSES = {
   nr: "border-border/60 bg-muted/30 text-muted-foreground",
 } as const;
 
+/**
+ * Why a Safety Score pillar or component is missing from a card, by evidence
+ * cause. C and U are priced as unknowns in the score; A and B are left out.
+ * Only A is a Pharos pipeline gap.
+ */
+export const SAFETY_SCORE_GAP_CAUSE_LABELS = {
+  C: "undisclosed by issuer",
+  U: "not yet researched",
+  A: "pipeline gap",
+  B: "awaiting curation",
+} as const;
+
 export type MintPressureBand =
   | "no-activity"
   | "burn-dominated"

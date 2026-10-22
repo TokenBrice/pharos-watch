@@ -788,9 +788,11 @@ function evaluateRoute(
     observation: confidenceDimension("observationConfidence", Math.min(
       policy.observationConfidenceFactors[route.observationConfidence], staleObservationFactor(route, envelope))),
     model: confidenceDimension("executionConfidence",
-      route.evidenceKind === "documented-terms" && route.modelConfidence === "medium"
-        ? policy.observationConfidenceFactors.medium
-        : policy.modeledConfidenceFactors[route.modelConfidence === "unknown" ? "low" : route.modelConfidence]),
+      route.executionModelId && route.executionCertificate && route.modelConfidence === "medium"
+        ? policy.exactCertificateModelConfidenceFactor
+        : route.evidenceKind === "documented-terms" && route.modelConfidence === "medium"
+          ? policy.observationConfidenceFactors.medium
+          : policy.modeledConfidenceFactors[route.modelConfidence === "unknown" ? "low" : route.modelConfidence]),
     capacityMethod: confidenceDimension("capacityEvidenceTier",
       route.capacityEvidenceTier === "live-queue-proxy" || route.capacityEvidenceTier === undefined ||
         route.capacityEvidenceTier === "unknown" ? policy.limitedCapacityConfidenceFactor : 1),

@@ -49,10 +49,11 @@ function WaterfallStep({ step }: { step: ScoreWaterfallStep }) {
 export function ScoreConstructionPanel({ card }: { card: ConstructionCard }) {
   const steps = buildScoreWaterfall(card);
   const { adverseMessages, boundedGroups } = buildSafetyScoreV9Attribution(card);
-  const coverageNotice = card.partialEvidence === null ? null : (
+  const partialDescription = describePartialEvidence(card);
+  const coverageNotice = partialDescription === null ? null : (
     <p className="text-xs text-muted-foreground">
       {card.ratingStatus === "pipeline-gap" ? "No Safety Score is published yet. " : ""}
-      {describePartialEvidence(card.partialEvidence).summary}
+      {partialDescription.summary}
     </p>
   );
   if (steps.length === 0 && adverseMessages.length === 0 && boundedGroups.length === 0 && coverageNotice === null) return null;

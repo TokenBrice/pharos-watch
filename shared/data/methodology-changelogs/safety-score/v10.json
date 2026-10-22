@@ -1,5 +1,26 @@
 [
   {
+    "version": "10.30",
+    "title": "Active-depeg severity ladder and exact-certificate Exit confidence",
+    "date": "2026-10-22",
+    "effectiveAt": 1792681200,
+    "summary": "Safety Score v10.30 deepens the uniform active-depeg severity ladder and raises model confidence only for admitted exact execution certificates. It also records dated vault-pricing, reserve and wrapper-assurance corrections, the score-neutral BD-basedollar refresh, VCRED delisting, partial-evidence display improvements and a tooling-only worklist fix. Observation confidence, execution admission and measurement rules, non-certificate models and other scoring rules remain unchanged; fixed-clock replay is not production acceptance.",
+    "impact": [
+      "Methodology — active depegs at least 10% retain the score limit of 49 (D); at least 25% now limits the score to 25 and at least 50% limits it to 10, both within the F range. Select severity from the maximum absolute peak among open events, not current spot deviation or closed events. In the fixed-clock replay, msUSD moves 25→10, USDA-avalon 39→25 and USDX-kava 39→25; pmUSD is capped at 10 (18→10).",
+      "Methodology — raise medium model confidence for admitted exact on-chain same-notional redemption execution certificates from 0.75 to 0.85; observation confidence stays 0.85. Preserve exact identity, original clocks, request/cost/output admission, measured capacity, completion, settlement and queue limitations. Non-certificate model confidence is unchanged. Fixed-clock replay examples include yBOLD 70→72, yvUSDC 65→68 and gtUSDC 66→69; these are replayed effects, not production acceptance.",
+      "Tracking — VCRED is delisted from tracking: no admissible price source since 2026-09-07 and no reserve evidence; not a death/cemetery entry.",
+      "Evidence refresh — BD-basedollar mint authority is refreshed for its sourced SaferSafes timelock and effective authority paths; this is a factual evidence update, not asset-specific methodology or renewed older review dates. The refresh is score-neutral because Control remains 60, bound by the token-contract row.",
+      "Public explanation — radar/partial-evidence display distinguishes unassessed or excluded pillars from assessed risk, preserving partial-evidence provenance without inventing numeric axes or changing scores.",
+      "Vault research — the 2026-10-22 review establishes privileged internal pricing for strategy/NAV vault share pricing at syrupUSDT, hbUSDT and DUSD (Control 60→45). spUSDT's chi/VSR accumulator is a savings-rate setter under the existing rule; its oracle profile does not price. Reserve envelopes were refreshed for Saturn sUSDat, sYUSD, Umbrella stkGHO, Yearn USDC and Noble USDN, with open-ended maturity facts for sYUSD and stkGHO. Exit research found no admissible new execution models.",
+      "Assurance correction — unsupported parent-only reconciliation/supervision credits were withdrawn from 12 wrapper admin reviews: apyUSD, ctUSD, cUSDO, iUSD, mUSD, pUSD, sUSN, sYUSD, USDN, USDnr, USDSC and wM. spUSDT's inherited Tether credits were also withdrawn (Control 90→65, score 64→60, still C+). Original review clocks are retained; the corrections are dated 2026-10-22.",
+      "Worklist fix — The missing-data worklist routes all mechanism-review components; this is tooling only, with no score effect.",
+      "Mover counts — fixed-clock engine replay of production capture 2026-10-22T00:17Z against v10.29, not production acceptance: 15 rated-grade upgrades, 1 downgrade (dusd-dialectic C−51→D48 from privileged internal pricing) and 29 same-grade score changes. Resulting rated distribution: A+ 1, A 8, A− 4, B+ 7, B 12, B− 30, C+ 74, C 75, C− 75, D 86, F 22. The replay excluded the VCRED delisting, which removes one NR card.",
+      "Activation: 2026-10-22 15:00 UTC (release cut; 1792681200). Production acceptance follows the first accepted publications."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.29",
     "title": "Simplified evidence pricing, economic authority and holder-loss limits",
     "date": "2026-10-22",

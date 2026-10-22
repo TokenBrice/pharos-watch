@@ -34,6 +34,7 @@ import {
 } from "@shared/lib/supply";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SafetyScoreTopDriver } from "@/components/safety-score-top-driver";
+import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 import {
   TableBody,
   TableCell,
@@ -185,7 +186,8 @@ function safetyGradeLabel(coin: ComparisonCoinEntry): ReactNode {
   if (!card) return NULL_VALUE;
   if (card.ratingStatus === "pipeline-gap") return "Pipeline gap — no Safety Score published";
   const label = card.score == null ? card.grade : `${card.grade} · ${formatScore(card.score, { trimInteger: true })}`;
-  return card.partialEvidence === null ? label : `${label} · Partial evidence: pipeline gap (${card.partialEvidence.causes.join("/")})`;
+  const partial = describePartialEvidence(card);
+  return partial === null ? label : <span title={partial.summary}>{label} · {partial.gaps.map(formatPartialEvidenceGap).join(" · ")}</span>;
 }
 
 function buildSections(pegRates: Record<string, number>): ComparisonSection[] {

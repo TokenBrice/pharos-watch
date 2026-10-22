@@ -2,9 +2,25 @@
   "id": "yvusdc-yearn",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "name": "Yearn v3 USDC Vault idle underlying",
+      "pct": 0.18889620679174352,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle USDC held idle in Yearn v3 vault 0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
       "sourceKey": "erc4626-single-asset:ethereum:0xbe53a109b494e5c9f97b9cd39fe969be68bf6204:deployed",
       "name": "USDC routed through Yearn v3 strategy allocator",
-      "pct": 100,
+      "pct": 99.81110379320826,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "wrapper",
@@ -21,25 +37,38 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-10-22",
+    "reviewer": "Pharos RESEARCH-BACKING primary-source review",
     "confidence": "verified",
+    "compositionAsOf": "2026-10-22",
+    "scope": "full-composition",
+    "knownUnknownExposurePct": 0,
+    "compositionSource": "live-adapter",
     "sources": [
       {
-        "label": "Yearn v3 vault",
-        "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"
+        "label": "Pinned complete idle/debt/asset accounting and withdrawal-limit-module observations; observed 2026-10-22T13:08:17.385Z, 13:09:06.359Z and 13:10:57.623Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
-        "label": "Yearn v3 vault documentation",
-        "url": "https://docs.yearn.fi/getting-started/products/yvaults/v3"
+        "label": "Ethereum block 26248000, hash 0xa0e29bc4e36526c9587442208ab78842dc095171147ad5f454f39a3fc7573703, 2026-10-22T11:57:35Z",
+        "url": "https://etherscan.io/block/26248000"
+      },
+      {
+        "label": "Exact Yearn minimal proxy binds immutable implementation 0x1ab62413e0cf2ebeb73da7d40c70e7202ae14467",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"
+      },
+      {
+        "label": "Verified exact implementation: totalIdle, totalDebt, _redeem idle-first and optional withdrawal-limit-module gate",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1ab62413e0cf2ebeb73da7d40c70e7202ae14467"
+      },
+      {
+        "label": "Yearn V3 vault accounting and role/strategy semantics",
+        "url": "https://docs.yearn.fi/developers/smart-contracts/V3/VaultV3"
       }
     ],
-    "rationale": "The Yearn v3 vault is an ERC-4626 share over USDC and routes that USDC through its strategy allocator. The existing 100% direct USDC envelope is retained; changing strategy allocations are not decomposed into fixed authored percentages.",
-    "compositionBasis": "Exact live ERC-4626 single-asset row and Yearn v3 USDC vault disclosures",
-    "compositionAsOf": "2026-07-15",
-    "scope": "full-composition",
-    "knownUnknownExposure": "No unlinked direct reserve asset remains. Current strategy weights and legal custody safeguards are not fixed by the reviewed public sources.",
-    "knownUnknownExposurePct": 0
+    "rationale": "Genuine new whole-direct-reserve review on 2026-10-22; prior reserve envelope was reviewed 2026-07-15. At Ethereum block 26248000, hash 0xa0e29bc4e36526c9587442208ab78842dc095171147ad5f454f39a3fc7573703, 2026-10-22T11:57:35Z, asset is canonical USDC; totalAssets is 18530290952105 raw USDC units, totalIdle is 35003016716 and totalDebt is 18495287935389. Idle plus debt reconciles exactly to totalAssets. Actual USDC balance is 35070037696, sufficient to cover the full accounted idle reserve; excess unsolicited balance is not added to NAV weights. withdraw_limit_module is zero. The exact implementation services redemptions from accounted idle before touching strategies. Only the idle USDC slice is classified immediate in its native asset. Changing strategy allocations remain one aggregate deployed protocol claim with unknown liquidity horizon; no new strategy-wide liquidity, solvency, custody, finite maturity or recovery credit is asserted. Known accountant/mint authority and all deployed-strategy C constraints remain. Source keys and names match the existing erc4626-single-asset idle/deployed producer contract.",
+    "compositionBasis": "Complete native ERC-4626 accounted book at block 26248000: totalIdle plus totalDebt equals totalAssets; live adapter owns ongoing weights",
+    "knownUnknownExposure": "No unidentified direct native reserve asset. Deployed strategy liquidity and legal/custody safeguards are not established by this idle-accounting review; those larger C/known constraints remain unchanged."
   },
   "custodyProfile": {
     "providers": [

@@ -24,6 +24,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
+import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
 // ---------------------------------------------------------------------------
 // PortfolioClient
@@ -159,8 +160,8 @@ export function PortfolioClient() {
                 Portfolio aggregate only; this is not an asset safety grade.
               </p>
               {v9Projection.value.partialEvidence && <p className="mt-2 text-xs text-muted-foreground">
-                Partial evidence: pipeline gap. Known-only score covers {v9Projection.value.coverageUsd.score} USD of {v9Projection.value.coverageUsd.total} USD;
-                unavailable holdings and pillars are excluded, not scored as zero.
+                Partial evidence. Known-only score covers {v9Projection.value.coverageUsd.score} USD of {v9Projection.value.coverageUsd.total} USD;
+                unavailable holdings and pillar readings are excluded from these subtotals, not scored as zero. Rated holding scores retain any priced-unknown assumptions described below.
               </p>}
             </div>
             <dl className="grid gap-3 sm:grid-cols-3">
@@ -202,15 +203,15 @@ export function PortfolioClient() {
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
               {heldCards.map((card) => {
                 const meta = CLIENT_TRACKED_META_BY_ID.get(card.id);
+                const partial = describePartialEvidence(card);
                 return (
                   <Link key={card.id} href={buildStablecoinUrl(card.id)} className="pharos-card-shell p-3">
                     <p className="truncate text-sm font-medium">{meta?.symbol ?? card.id}</p>
                     {card.ratingStatus === "pipeline-gap" || card.grade === null
                       ? <p className="mt-2 text-sm">Pipeline gap · {card.reasonCodes.includes("all-pillars-pipeline-gap") ? "all pillars unavailable" : "fewer than two pillars available"}</p>
                       : <SafetyGradeBadge grade={card.grade} score={card.score} showScore size="sm" className="mt-2" />}
-                    {card.partialEvidence && <p className="mt-2 text-xs text-muted-foreground">
-                      {card.ratingStatus === "rated" && "Partial evidence: pipeline gap · "}
-                      {card.partialEvidence.causes.map(cause => cause === "A" ? "pipeline unavailable (A)" : "public data awaiting curation (B)").join("; ")}
+                    {partial && <p className="mt-2 text-xs text-muted-foreground" title={partial.summary}>
+                      {partial.gaps.map(formatPartialEvidenceGap).join(" · ")}
                     </p>}
                   </Link>
                 );

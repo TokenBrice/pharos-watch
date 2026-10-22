@@ -1,4 +1,4 @@
-import { V9RatingStatusSchema, V9CompactPartialEvidenceSchema } from "./safety-score-v9-causes";
+import { V9RatingStatusSchema, V9CompactPartialEvidenceSchema, V9EvidencePillarSchema } from "./safety-score-v9-causes";
 import { z } from "zod";
 import { DigestSafetyMapUtcDateSchema, type DigestSafetyMapCapture } from "./digest-safety-map-contract";
 import type { DepegDirection } from "./market";
@@ -57,6 +57,8 @@ export type DigestSafetyContext = z.output<typeof DigestSafetyContextSchema>;
 const DigestV9SafetyPillarSchema = z
   .object({
     score: z.number().nullable(),
+    aggregationDisposition: V9EvidencePillarSchema.shape.aggregationDisposition,
+    pricedUnknown: V9EvidencePillarSchema.shape.pricedUnknown,
     evidenceLevel: z.string(),
     freshness: z.string(),
     reasons: z.array(z.object({ code: z.string(), message: z.string() }).passthrough()),

@@ -4,12 +4,15 @@ import type { V9Grade } from "@shared/types/safety-score-v9";
 import { DEPENDENCY_TYPE_PRESENTATION, graphNodeLabel } from "@/components/contagion-graph-model";
 import type { ResolvedLink } from "@/components/contagion-graph-graph";
 import type { ContagionGraphCard } from "@/lib/contagion-layout";
+import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
 interface TooltipNode {
   id: string;
   symbol: string;
   grade: V9Grade | null;
   partialEvidence?: ContagionGraphCard["partialEvidence"];
+  ratingStatus?: ContagionGraphCard["ratingStatus"];
+  pillars?: ContagionGraphCard["pillars"];
   mcap: number | null;
   r: number;
 }
@@ -68,7 +71,8 @@ export function buildTooltipAnnouncement({
   if (activeHoveredId) {
     const node = nodeMap.get(activeHoveredId);
     if (!node) return "";
-    return `${graphNodeLabel(node)}, ${node.grade === null ? "Pipeline gap" : `Grade ${node.grade}`}${node.partialEvidence ? `, Partial evidence: pipeline gap (${node.partialEvidence.causes.join("/")})` : ""}, ${node.mcap === null ? "mcap n/a" : `market cap ${formatCurrency(node.mcap)}`}`;
+    const partial = describePartialEvidence(node);
+    return `${graphNodeLabel(node)}, ${node.grade === null ? "Pipeline gap" : `Grade ${node.grade}`}${partial ? `, ${partial.gaps.map(formatPartialEvidenceGap).join("; ")}` : ""}, ${node.mcap === null ? "mcap n/a" : `market cap ${formatCurrency(node.mcap)}`}`;
   }
 
   return "";
@@ -87,12 +91,14 @@ export function buildNodeTooltipElement({
   const position = positions.get(activeHoveredId);
   if (!node || !position) return null;
   const label = graphNodeLabel(node);
-  const tooltipWidth = Math.max(node.partialEvidence ? 280 : 125, label.length * 7 + 16);
+  const partial = describePartialEvidence(node);
+  const evidenceLines = partial?.gaps.map(formatPartialEvidenceGap) ?? [];
+  const tooltipWidth = Math.max(125, label.length * 7 + 16, ...evidenceLines.map(line => line.length * 5.5 + 16));
   const tx = Math.min(position.x + node.r + 8, width - tooltipWidth - pad);
   const ty = Math.max(pad, position.y - 20);
   return (
     <g pointerEvents="none">
-      <rect x={tx} y={ty} width={tooltipWidth} height={node.partialEvidence ? 68 : 52} rx={6}
+      <rect x={tx} y={ty} width={tooltipWidth} height={52 + evidenceLines.length * 14} rx={6}
         fill="var(--color-card, #f8f9fa)" stroke="var(--color-border, #e2e5e9)" strokeWidth={1} />
       <text x={tx + 8} y={ty + 18} fill="currentColor" fontSize={12} fontWeight={600}>
         {label}
@@ -103,11 +109,11 @@ export function buildNodeTooltipElement({
       <text x={tx + 8} y={ty + 46} fill="currentColor" fontSize={10} opacity={0.7} fontFamily="var(--font-mono, monospace)">
         {node.mcap === null ? "mcap n/a" : formatCurrency(node.mcap)}
       </text>
-      {node.partialEvidence ? (
-        <text x={tx + 8} y={ty + 60} fill="currentColor" fontSize={10}>
-          Partial evidence: pipeline gap ({node.partialEvidence.causes.join("/")})
+      {evidenceLines.map((line, index) => (
+        <text key={line} x={tx + 8} y={ty + 60 + index * 14} fill="currentColor" fontSize={10}>
+          {line}
         </text>
-      ) : null}
+      ))}
     </g>
   );
 }

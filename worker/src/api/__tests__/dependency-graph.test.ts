@@ -59,10 +59,15 @@ describe("dependency graph projection", () => {
     const body = DependencyGraphResponseSchema.parse(await response.json());
     expect(body).toMatchObject({ publicationGenerationId: snapshot.safetyScoreIdentity.publicationGenerationId, methodologyVersion: snapshot.methodology.version, asOfSec: snapshot.asOfSec, updatedAt: snapshot.updatedAt });
     expect(body.commonModeGroups).toEqual(snapshot.commonModeGroups);
-    expect(body.nodes).toEqual([
+    expect(body.nodes.map(({ pillars: _pillars, ...node }) => node)).toEqual([
       { id: "child", grade: snapshot.cards[0]!.grade, ratingStatus: "rated", partialEvidence: null, score: 80, circulatingUsdAtEvaluation: 0, supplyAsOfSec: 100, sharedBookId: "book-1", roles: [{ upstreamAssetId: "parent", economicRole: "exit-dependency", weight: 0.4 }], dependencyCoverageCount: 0 },
       { id: "parent", grade: "NR", ratingStatus: "not-rated", partialEvidence: null, score: null, circulatingUsdAtEvaluation: null, supplyAsOfSec: null, sharedBookId: null, roles: [], dependencyCoverageCount: null },
     ]);
+    expect(body.nodes[0]!.pillars).toMatchObject({
+      backing: { score: snapshot.cards[0]!.pillars.backing.score },
+      exit: { score: snapshot.cards[0]!.pillars.exit.score },
+      control: { score: snapshot.cards[0]!.pillars.control.score },
+    });
     expect(body.edges).toEqual(snapshot.dependencyGraph.edges);
     expect(body).not.toHaveProperty("cards");
   });
