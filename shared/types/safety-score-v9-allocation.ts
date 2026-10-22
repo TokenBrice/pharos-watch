@@ -118,36 +118,5 @@ export type SafetyScoreV9WrapperAllocationReview = z.output<typeof SafetyScoreV9
 export type V9ScopedAllocationClaim = z.output<typeof V9ScopedAllocationClaimSchema>;
 export type V9AllocationScopeIdentityReview = z.output<typeof V9AllocationScopeIdentityReviewSchema>;
 
-export const V9AllocationScopeFactSchema = z.object({
-  ...ClaimFields, admitted: z.boolean(), assessment: V9WrapperRiskAssessmentSchema.nullable(),
-  disposition: z.enum(["reviewed", "not-applicable", "issuer-undisclosed", "inherited-parent", "integration-missing"]),
-  target: V9AllocationTargetSchema.nullable(), coverage: V9AllocationCoverageSchema.nullable(),
-  statement: ClaimFields.statement.nullable(), reviewedAt: ClaimFields.reviewedAt.nullable(),
-  observedAtSec: UnixSecondsSchema.nullable(), expiresAtSec: UnixSecondsSchema.nullable(),
-  sources: z.array(SourceSchema), observations: z.array(ClaimFields.observations.element),
-  rejectionReason: z.enum(["future-observation", "expired", "identity-unmatched", "reserve-leg-unmatched", "reserve-coverage-unestablished", "parent-claim-unmatched", "evidence-unbound", "required-scope-unresolved", "overlapping-scope"]).nullable(),
-  evidenceRefIds: z.array(CanonicalTextSchema), maxAgeSec: z.number().positive(), sourceGenerationId: CanonicalTextSchema,
-}).strict().superRefine((fact, ctx) => {
-  if (fact.admitted && (fact.rejectionReason !== null || fact.target === null || fact.evidenceRefIds.length === 0)) {
-    ctx.addIssue({ code: "custom", message: "Admitted scope requires target, evidence and no rejection" });
-  }
-  if (!fact.admitted && (fact.rejectionReason === null || fact.assessment !== null)) {
-    ctx.addIssue({ code: "custom", message: "Rejected scope requires reason and cannot carry a risk assessment" });
-  }
-});
-export type V9AllocationScopeFact = z.output<typeof V9AllocationScopeFactSchema>;
 
 // Exact enum-keyed records reject omitted or extra assessment categories.
-const RequiredLayersSchema = canonicalArrayBy(V9AllocationLayerSchema, (layer) => layer, 1);
-const RequiredDimensions = z.object({
-  custodyEscrow: RequiredLayersSchema,
-  leverage: RequiredLayersSchema,
-  rehypothecationCorrelation: RequiredLayersSchema,
-}).strict();
-export const V9WrapperAllocationScopePolicySchema = z.object({
-  completenessMode: z.literal("all-required-scopes"), aggregation: z.literal("worst-risk"), parentLegalInheritance: z.literal("adverse-only"), contractIdentity: z.literal("exact-chain-deployment-implementation"),
-  requiredScopes: z.object({ contractOnly: RequiredDimensions, mixedInstitutional: RequiredDimensions, privateCredit: RequiredDimensions }).strict(),
-  leverageAssessments: z.record(V9AllocationLeverageSchema, V9WrapperRiskAssessmentSchema),
-  reuseAssessments: z.record(V9AllocationReuseSchema, V9WrapperRiskAssessmentSchema),
-  custodyAssessments: z.record(V9AllocationCustodyStatementSchema, V9WrapperRiskAssessmentSchema),
-}).strict();

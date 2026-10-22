@@ -297,6 +297,13 @@ const reviews: { [A in V9MechanismRiskReview["archetype"]]: Extract<V9MechanismR
 };
 
 describe("Safety Score v9 archetype backing adapters", () => {
+  it("shares one policy and custody component for reserve and protocol-position claims", () => {
+    const { reserveCustody, ...review } = reviews["shared-reserve"];
+    const reserve = evaluateV9Backing(asset(), { ...review, reserveCustody }, V9_CANDIDATE_POLICY_V1);
+    const position = evaluateV9Backing(asset(), { ...review, archetype: "protocol-position", positionCustody: reserveCustody }, V9_CANDIDATE_POLICY_V1);
+    expect(position.score).toBe(reserve.score);
+    expect(position.contributions).toEqual(reserve.contributions);
+  });
   it.each(["ucits-trs-fund", "shared-reserve", "protocol-position"] as const)(
     "prices unvalued residuals in %s and grants credit only to evidenced conservation",
     (archetype) => {
@@ -310,7 +317,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
       };
       const bounded = evaluateV9Backing(asset(), { ...base, [field]: unknown }, V9_CANDIDATE_POLICY_V1);
       const proved = evaluateV9Backing(asset(), base, V9_CANDIDATE_POLICY_V1);
-      const weight = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.archetypes[archetype].componentWeights[key]!;
+      const weight = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.archetypes[archetype === "protocol-position" ? "shared-reserve" : archetype].componentWeights[key]!;
       const quality = V9_CANDIDATE_POLICY_V1.policy.semantic.backing;
       expect(bounded.contributions).toContainEqual(expect.objectContaining({
         componentKey: `mechanism:${key}`,
@@ -758,7 +765,7 @@ describe("Safety Score v9 archetype backing adapters", () => {
     const input = { ...asset(), assetId: "synthetic-unsupported-mechanism" };
     const reserve = evaluateV9ReserveExposures(input, V9_CANDIDATE_POLICY_V1);
     const result = evaluateV9Backing(input, { archetype: "new-design" }, V9_CANDIDATE_POLICY_V1);
-    const reserveWeight = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.archetypes["protocol-position"].reserveWeight;
+    const reserveWeight = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.archetypes["shared-reserve"].reserveWeight;
     expect(result).toMatchObject({ rateability: "rateable", limitedEvidenceCauses: ["U"] });
     expect(result.score).toBeCloseTo(reserve.score! * reserveWeight + unknownQuality("backing", "U") * (1 - reserveWeight), 12);
     expect(result.contributions.filter(row => row.source !== "mechanism")

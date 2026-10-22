@@ -1,11 +1,9 @@
 import { z } from "zod";
 import {
   canonicalTextArray,
-  compareText,
   V9WrapperRiskAssessmentSchema,
   V9FactStatusV2Schema,
 } from "./safety-score-v9-fact-primitives";
-import { V9IncidentScopeSchema } from "./safety-score-v9-incidents";
 import { issue, CanonicalTextSchema } from "./safety-schema-primitives";
 
 export const V9WrapperFormSchema = z.enum(["pure", "native-staked", "strategy-vault"]);
@@ -27,14 +25,6 @@ export type V9WrapperRiskAssessment =
   z.infer<typeof V9WrapperRiskAssessmentSchema>;
 
 
-const V9WrapperIncidentPostureSchema = z
-  .object({
-    incidentId: CanonicalTextSchema,
-    scope: V9IncidentScopeSchema,
-    assessment: V9WrapperRiskAssessmentSchema,
-    evidenceRefIds: canonicalTextArray(1, "value"),
-  })
-  .strict();
 
 export const V9_WRAPPER_LOCAL_FACT_KEYS = [
   "contractMutability",
@@ -50,59 +40,6 @@ export const V9_WRAPPER_LOCAL_FACT_KEYS = [
 export const V9WrapperLocalFactKeySchema = z.enum(V9_WRAPPER_LOCAL_FACT_KEYS);
 export type V9WrapperLocalFactKey = z.infer<typeof V9WrapperLocalFactKeySchema>;
 
-const V9WrapperLocalDimensionFactSchema = z
-  .object({
-    disposition: V9WrapperFactDispositionSchema,
-    assessment: V9WrapperRiskAssessmentSchema.nullable(),
-    signals: canonicalTextArray(1, "value"),
-    evidenceRefIds: canonicalTextArray(0, "value"),
-    status: V9FactStatusV2Schema.optional(),
-    incidentPostures: z
-      .array(V9WrapperIncidentPostureSchema)
-      .superRefine((postures, ctx) => {
-        const duplicate = postures.find(
-          (posture, index) =>
-            postures.findIndex((candidate) => candidate.incidentId === posture.incidentId) !== index,
-        );
-        if (duplicate !== undefined) {
-          issue(ctx, undefined, `Duplicate wrapper incident posture: ${duplicate.incidentId}`);
-        }
-      })
-      .transform((postures) =>
-        [...postures].sort((left, right) => compareText(left.incidentId, right.incidentId)),
-      )
-      .optional(),
-  })
-  .strict()
-  .superRefine((fact, ctx) => {
-    if (fact.disposition === "reviewed") {
-      if (fact.assessment === null) {
-        ctx.addIssue({ code: "custom", path: ["assessment"], message: "Reviewed wrapper facts require an assessment" });
-      }
-      if (fact.evidenceRefIds.length === 0) {
-        ctx.addIssue({ code: "custom", path: ["evidenceRefIds"], message: "Reviewed wrapper facts require evidence" });
-      }
-      return;
-    }
-    if (fact.assessment !== null) {
-      issue(ctx, ["assessment"], "Unavailable or not-applicable wrapper facts cannot claim a risk assessment");
-    }
-  });
-export type V9WrapperLocalDimensionFact = z.infer<typeof V9WrapperLocalDimensionFactSchema>;
-
-const V9WrapperLocalDimensionsSchema = z
-  .object({
-    contractMutability: V9WrapperLocalDimensionFactSchema,
-    custodyEscrow: V9WrapperLocalDimensionFactSchema,
-    strategyComplexity: V9WrapperLocalDimensionFactSchema,
-    leverage: V9WrapperLocalDimensionFactSchema,
-    rehypothecationCorrelation: V9WrapperLocalDimensionFactSchema,
-    shareAccountingNavOracle: V9WrapperLocalDimensionFactSchema,
-    withdrawalTerms: V9WrapperLocalDimensionFactSchema,
-    measuredUnwind: V9WrapperLocalDimensionFactSchema,
-    lossAbsorptionEmergencyControls: V9WrapperLocalDimensionFactSchema,
-  })
-  .strict();
 
 
 const V9NotWrapperLocalFactsSchema = z
@@ -129,7 +66,6 @@ const V9ApplicableWrapperLocalFactsSchema = z
       reason: z.literal("mixed-strategy-without-measured-parent-claim"),
       evidenceRefIds: canonicalTextArray(1, "value"),
     }).strict().optional(),
-    facts: V9WrapperLocalDimensionsSchema,
   })
   .strict()
   .superRefine((facts, ctx) => {

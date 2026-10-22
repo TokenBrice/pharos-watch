@@ -187,7 +187,7 @@ function evaluateV9ArchetypeBackingInternal(
 ): V9BackingResult {
   const backing = backingPolicy(policy);
   const gapIndex = input.asset.gapIndex ?? createV9GapIndex(input.asset.gaps);
-  const archetypePolicy = backing.archetypes[input.archetype];
+  const archetypePolicy = backing.archetypes[input.archetype === "protocol-position" ? "shared-reserve" : input.archetype];
   const expectedKeys = Object.keys(archetypePolicy.componentWeights).sort(compareText);
   const actualKeys = input.components.map((component) => component.componentKey).sort(compareText);
   if (JSON.stringify(actualKeys) !== JSON.stringify(expectedKeys)) {
@@ -446,7 +446,7 @@ export function createUnavailableV9BackingResult(
     }
     const quality = unknownQuality("backing", attribution.cause, policy.policy.semantic);
     const reserveWeight = hasReserveSubject && reserve.score !== null
-      ? backingPolicy(policy).archetypes["protocol-position"].reserveWeight : 0;
+      ? backingPolicy(policy).archetypes["shared-reserve"].reserveWeight : 0;
     const mechanismWeight = 1 - reserveWeight;
     const bounded = [normalizeV9BackingContribution({
       componentKey: "mechanism:archetype", source: "mechanism", score: quality,
@@ -467,7 +467,9 @@ export function createUnavailableV9BackingResult(
     });
   }
 
-  const archetypePolicy = backingPolicy(policy).archetypes[unavailableReview.archetype];
+  const archetypePolicy = backingPolicy(policy).archetypes[
+    unavailableReview.archetype === "protocol-position" ? "shared-reserve" : unavailableReview.archetype
+  ];
   const components = Object.keys(archetypePolicy.componentWeights).map((componentKey) => ({
     componentKey,
     fact: {

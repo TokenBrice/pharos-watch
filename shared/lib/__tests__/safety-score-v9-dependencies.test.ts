@@ -7,7 +7,6 @@ import type {
 import {
   buildV9DependencyEvaluationPlan,
   distinctV9RootLiabilityIds,
-  projectV9RoleDependencyPillarLimits,
   resolveV9DependencyInputs,
 } from "../safety-score-v9/dependencies";
 import {

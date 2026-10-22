@@ -37,7 +37,7 @@ export const V9_MECHANISM_FIELDS = {
   },
   "protocol-position": {
     components: [["holder-claim", "holderClaim"], ["liability-conservation", "liabilityConservation"],
-      ["position-custody", "positionCustody"], ["encumbrance-and-allocation", "encumbranceAndAllocation"],
+      ["reserve-custody", "positionCustody"], ["encumbrance-and-allocation", "encumbranceAndAllocation"],
       ["default-recovery", "defaultRecovery"]], metrics: [],
   },
   cdp: {
