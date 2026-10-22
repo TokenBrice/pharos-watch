@@ -1,24 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { DEX_MEASURED_ADAPTER_PROFILE_IDS } from "@shared/types/measured-execution";
-import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
-import { evaluateV9Exit, projectV9ExitEvaluationRoute } from "@shared/lib/safety-score-v9/exit";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
-import { buildSafetyScoreV9RetainedRedemptionRoutes, buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
 import { safetyScoreV9TransferDeploymentKey } from "../safety-score-v9/extension-transfer";
 import { selectSafetyScoreV9CdpShockMeasurement } from "../safety-score-v9/extension-shock";
 import { compileSafetyScoreV9FactSetFromFixedInput, compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension, materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9/fact-set";
 import {
   V9_FIXTURE_CLOCK_SEC as AS_OF_SEC,
   V9_EVALUATION_TEST_TIMEOUT_MS,
-  v9TestClockSec,
   makeV9FixedInput as exactFixedInput,
   makeV9TwoAssetFixedInput as exactTwoAssetFixedInput,
   makeV9Extension as extension,
-  v9NotApplicableStatus as notApplicableStatus,
   v9ExitRouteObservation as route,
   v9RouteReview as routeReview,
   v9Status as status,
@@ -31,12 +26,10 @@ import {
   dependencyMeta,
   deriveReportCardsBaseInputGenerationId,
   metaMap,
-  nativeSavingsFixedAndMeta,
   pinnedUusdMeta,
   reviewedDependencyMeta,
   reviewedResearchMeta,
   transferFact,
-  usdtMeta,
 } from "./safety-score-v9-fact-set.test-support";
 
 describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evidence", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { CanonicalChainIdSchema, CanonicalTextSchema, FractionSchema, UnixSecondsSchema } from "./safety-score-v9-fact-input-primitives";
-import { canonicalArrayBy, V9WrapperRiskAssessmentSchema } from "./safety-score-v9-fact-primitives";
 import { StrictIsoDateSchema } from "./safety-schema-primitives";
 import { V9WrapperLocalFactKeySchema } from "./safety-score-v9-wrapper";
 

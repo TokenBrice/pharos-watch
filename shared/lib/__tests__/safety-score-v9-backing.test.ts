@@ -1173,7 +1173,7 @@ describe("v10.19 allocation-weighted Morpho lender Backing", () => {
     const reserve = evaluateV9ReserveExposures(input, V9_CANDIDATE_POLICY_V1);
     const result = createUnavailableV9BackingResult({ ...input, gaps: [gap] },
       unavailableReview(gap, "unresolved"), V9_CANDIDATE_POLICY_V1);
-    const reserveWeight = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.archetypes["protocol-position"].reserveWeight;
+    const reserveWeight = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.archetypes["shared-reserve"].reserveWeight;
     expect(result.score).toBeCloseTo(reserve.score! * reserveWeight + 50 * (1 - reserveWeight), 12);
     expect(result.contributions.filter(row => row.source !== "mechanism")
       .reduce((sum, row) => sum + row.effectiveScoringWeight, 0)).toBeCloseTo(reserveWeight, 12);

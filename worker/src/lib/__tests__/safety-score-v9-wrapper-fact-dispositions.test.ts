@@ -13,52 +13,9 @@ import {
 import { normalizeFixedInput } from "../report-cards-fixed-input";
 import wrapperLocalReviews from "@shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json";
 import { SafetyScoreV9WrapperLocalReviewSchema } from "@shared/types/safety-score-v9-wrapper-local-review";
-import wsrusdReserves from "@shared/data/stablecoins/domains/reserves/wsrusd-reservoir.json";
-import asusdfReserves from "@shared/data/stablecoins/domains/reserves/asusdf-astherus.json";
 
-function fixedInputWithTrackedParent() {
-  return makeV9TwoAssetFixedInput();
-}
 
-function wrapperExtension(
-  fixed: ReturnType<typeof fixedInputWithTrackedParent>,
-  variantKind: "pure-wrapper" | "savings-passthrough" | "strategy-vault",
-  includeParentEdge = true,
-) {
-  const extension = makeV9RoleExtension(fixed, {});
-  const parentEdge: V9ExtensionDependencyEdge = {
-    upstreamAssetId: "beta",
-    dependencyType: "wrapper",
-    weight: 1,
-    economicRole: "serial-claim",
-    failureDomains: [],
-  };
-  const asset = extension.assets.find((candidate) => candidate.assetId === "alpha")!;
-  asset.variantKind = variantKind;
-  asset.dependencies = {
-    source: includeParentEdge ? "variant" : "none",
-    baseSource: "none",
-    dependencyFromLive: false,
-    mappedLiveReserveWeight: null,
-    fallbackReason: null,
-    edges: includeParentEdge ? [parentEdge] : [],
-    diagnostics: { graphState: "valid", issueCodes: [], sccMemberAssetIds: [] },
-  };
-  return extension;
-}
 
-function wrapperFacts(
-  variantKind: "pure-wrapper" | "savings-passthrough" | "strategy-vault",
-) {
-  const fixed = fixedInputWithTrackedParent();
-  const extension = wrapperExtension(fixed, variantKind);
-  const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
-  const asset = compiled.assets[0]!;
-  if (asset.wrapperLocalFacts?.applicability !== "wrapper") {
-    throw new Error("Expected wrapper-local facts");
-  }
-  return { fixed, extension, asset, facts: asset.wrapperLocalFacts };
-}
 
 describe("Safety Score V9 wrapper fact dispositions", () => {
 

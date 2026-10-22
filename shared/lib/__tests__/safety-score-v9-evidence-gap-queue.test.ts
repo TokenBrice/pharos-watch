@@ -308,7 +308,6 @@ describe("Safety Score v9 evidence-gap queue", () => {
     }];
     asset.exitRoutes[0]!.factorStatuses = { capacity: status };
     asset.controls[0]!.factorStatuses = { authority: status };
-    const localFact = { status, disposition: "unresearched" as const, assessment: null, signals: [], evidenceRefIds: [] };
     asset.wrapperLocalFacts = {
       schemaVersion: 1, applicability: "wrapper", form: "pure", formDisposition: "unresearched",
       formStatus: status, formSignals: [], formEvidenceRefIds: [], evidenceRefIds: [],

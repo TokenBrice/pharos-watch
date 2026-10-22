@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import stkGhoAuthority from "@shared/data/stablecoins/domains/mint-authority/stkgho-umbrella-aave.json";
 import lorenzoMeta from "@shared/data/stablecoins/coins/susd1plus-lorenzo.json";
 import { ParentBackingInheritanceSchema } from "@shared/types/stablecoin-meta-primitives";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
@@ -11,7 +10,7 @@ import { createAssetBuildContext } from "../safety-score-v9/fact-set-context";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import { buildWrapperLocalFacts } from "../safety-score-v9/fact-set-wrapper";
 import { makeV9RoleExtension, makeV9TwoAssetFixedInput,  v9Status } from "../../test-helpers/v9-fixed-input";
-import { alphaMeta, localControl, metaMap, rebuildFixed, type FixedInput } from "./safety-score-v9-fact-set.test-support";
+import { alphaMeta,  metaMap, rebuildFixed, type FixedInput } from "./safety-score-v9-fact-set.test-support";
 import { SafetyScoreV9WrapperLocalReviewSchema } from "@shared/types/safety-score-v9-wrapper-local-review";
 
 interface WrapperFixture {
@@ -128,8 +127,6 @@ function publishedLocalFixture(kind: "published-accounting" | "published-emergen
 describe("non-pure source-bound wrapper local facts", () => {
 
 
-  for (const kind of ["published-accounting", "published-emergency-controls", "published-withdrawal-terms"] as const) {
-  }
 
 
   it("rejects unsourced terms, impossible bounds, and unpinned mutable-root claims", () => {
@@ -152,24 +149,7 @@ describe("non-pure source-bound wrapper local facts", () => {
 
 });
 
-const slashingControl = () => localControl({
-  controlKey: "umbrella:slashing",
-  controlKind: "governance",
-  capabilities: ["parameter-change"],
-  capSemantics: { kind: "not-applicable", bound: null },
-  claimImpairment: "bounded",
-  economicLossScope: "reserve-claim",
-});
 
-const unknownConfigurationControl = () => localControl({
-  controlKey: "umbrella:unknown-configuration-authority",
-  controlKind: "governance",
-  capabilities: ["parameter-change"],
-  capSemantics: { kind: "not-applicable", bound: null },
-  claimImpairment: "bounded",
-  economicLossScope: "reserve-claim",
-  authority: null,
-});
 
 describe("wrapper-local loss absorption and custody scope", () => {
 

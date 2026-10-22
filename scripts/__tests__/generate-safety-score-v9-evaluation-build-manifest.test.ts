@@ -187,7 +187,6 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     "shared/lib/math.ts",
     "shared/lib/business-calendars.ts",
     "shared/lib/safety-score-v9/gap-index.ts",
-    "shared/lib/safety-score-v9/operational-market-depth.ts",
     "shared/lib/safety-score-v9/unavailability-roots.ts",
     "shared/data/safety-score-v9/chain-maturity-reviews-v1.ts",
     CANDIDATE_ENTRY,

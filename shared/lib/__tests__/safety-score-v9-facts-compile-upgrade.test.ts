@@ -837,7 +837,7 @@ describe("Safety Score v9 fact digest canonicalization", () => {
     zeroSupply.assets[1]!.supply.chainDistribution.chains[0]!.supplyShare = 0.01;
     expect(() => compileV9FactSetV2(zeroSupply)).toThrow("Chain supply shares must reconcile");
   });
-  it("canonicalizes the retained Hyperliquid alias and fails closed on an alias collision", () => {
+  it("canonicalizes Hyperliquid exposure and rejects ambiguous alias shares without pricing missing reviews", () => {
     const configure = (
       input: ReturnType<typeof coreFixture>,
       chains: Array<{ chainId: string; supplyUsd: number; supplyShare: number }>,
@@ -851,16 +851,17 @@ describe("Safety Score v9 fact digest canonicalization", () => {
         asset.supply.failureDomains = [{ kind: "chain", key: "hyperliquid" }];
       }
     };
-    const severity = (input: ReturnType<typeof coreFixture>) =>
+    const chainSignal = (input: ReturnType<typeof coreFixture>) =>
       evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1)
         .assets.find((asset) => asset.assetId === "beta")!
-        .scoreInput.dependencyStructuralSignals.find((signal) => signal.failureDomainKeys.includes("chain:hyperliquid"))
-        ?.severity;
+        .scoreInput.dependencyStructuralSignals.find((signal) => signal.failureDomainKeys.includes("chain:hyperliquid"));
 
     const alias = coreFixture();
     configure(alias, [{ chainId: "hyperliquid-l1", supplyUsd: 1_000_000, supplyShare: 1 }]);
-    // P1-03: hyperliquid is no longer a mature chain, so the folded 100% alias share grades high.
-    expect(severity(alias)).toBe("high");
+    expect(chainSignal(alias)).toMatchObject({
+      severity: "low", responsibility: "unresearched", materialSharePct: 100,
+      failureDomainKeys: ["chain:hyperliquid"],
+    });
 
     const collision = coreFixture();
     configure(collision, [
@@ -868,9 +869,9 @@ describe("Safety Score v9 fact digest canonicalization", () => {
       { chainId: "hyperliquid", supplyUsd: 24_900, supplyShare: 0.0249 },
       { chainId: "hyperliquid-l1", supplyUsd: 24_900, supplyShare: 0.0249 },
     ]);
-    // P1-03: with hyperliquid no longer mature, the ambiguous alias pair is visible as the
-    // fail-closed "chain inventory unavailable" verdict instead of being masked by maturity.
-    expect(severity(collision)).toBe("high");
+    const ambiguous = chainSignal(collision);
+    expect(ambiguous).toMatchObject({ severity: "low", responsibility: "unresearched" });
+    expect(ambiguous).not.toHaveProperty("materialSharePct");
   });
   it("binds semantic facts and source identities but excludes compilation time and all policy fields", () => {
     const first = compileV9FactSetV2(coreFixture());

@@ -20,7 +20,7 @@ import {
   V9_BOUNDED_ATTRIBUTION_REASON_CODE_SET,
 } from "./safety-score-v9-public-facts";
 import { V9BoundedEvidenceResponsibilitySchema } from "./safety-score-v9-vocabulary";
-import { causeGapRefs, V9EvidenceCauseSchema, V9ScoringDispositionSchema } from "./safety-score-v9-public-causes";
+import { causeGapRefs, V9EvidenceCauseSchema } from "./safety-score-v9-public-causes";
 import { canonicalTextArray } from "./safety-score-v9-fact-primitives";
 import { countV9EvidenceObligations, V9PublicEvidencePathSchema, refineEvidenceFactPathPrefixes, V9PublicFactReasonCodeSchema, V9PublicFactResponsibilitySchema, resolveEvidenceFactResponsibility, V9PublicFactCauseSchema, resolveEvidenceFactCause } from "./safety-score-v9-public-evidence-facts";
 

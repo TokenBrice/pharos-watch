@@ -4,7 +4,7 @@ import {
   V9WrapperRiskAssessmentSchema,
   V9FactStatusV2Schema,
 } from "./safety-score-v9-fact-primitives";
-import { issue, CanonicalTextSchema } from "./safety-schema-primitives";
+import { issue } from "./safety-schema-primitives";
 
 export const V9WrapperFormSchema = z.enum(["pure", "native-staked", "strategy-vault"]);
 export type V9WrapperForm = z.infer<typeof V9WrapperFormSchema>;

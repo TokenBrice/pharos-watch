@@ -21,7 +21,6 @@ import { LenderBookObservationSchema, LenderCollateralResolutionSchema, LenderBo
 import { V9AdmittedHolderLossEventSchema } from "./safety-score-v9-incidents";
 import {
   V9WrapperLocalFactsSchema,
-  type V9ApplicableWrapperLocalFacts,
 } from "./safety-score-v9-wrapper";
 import {
   ExitRouteConfidenceSchema,

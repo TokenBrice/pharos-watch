@@ -672,12 +672,6 @@ export function nativeWrapperLocalFactsForFixture(asset: V9AssetFactsV2) {
   if (form === null) {
     return { schemaVersion: 1 as const, applicability: "not-wrapper" as const, evidenceRefIds };
   }
-  const unavailableFact = (factKey: string) => ({
-    disposition: "integration-missing" as const,
-    assessment: null,
-    signals: [`fixture-wrapper-local-fact:${factKey}`],
-    evidenceRefIds: [],
-  });
   return {
     schemaVersion: 1 as const,
     applicability: "wrapper" as const,

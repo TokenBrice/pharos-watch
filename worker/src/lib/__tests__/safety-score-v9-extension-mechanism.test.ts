@@ -76,7 +76,8 @@ describe("buildSafetyScoreV9MechanismReview", () => {
       expect(descriptorFields.slice().sort()).toEqual(schemaFields.sort());
       expect(new Set(descriptorFields).size).toBe(descriptorFields.length);
       for (const [key, field] of fields.components) {
-        expect(key).toBe(field.replace(/[A-Z]/g, char => `-${char.toLowerCase()}`));
+        const canonicalField = field === "positionCustody" ? "reserveCustody" : field;
+        expect(key).toBe(canonicalField.replace(/[A-Z]/g, char => `-${char.toLowerCase()}`));
       }
     }
   });

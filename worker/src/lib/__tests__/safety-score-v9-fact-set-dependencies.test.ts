@@ -168,14 +168,14 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
     expect(compiled.assets[0]!.exitRoutes[0]).toMatchObject({ modelConfidence: "low" });
   });
 
-  it("propagates post-role exit scores through three hops and never improves after adding an unmitigated role", () => {
+  it("keeps three-hop exit roles diagnostic without changing downstream pillars", () => {
     const evaluateChain = (gammaCompletionRatio: number) => {
       const fixed = exactThreeAssetFixedInput(gammaCompletionRatio);
       const profiled = roleExtension(fixed, {
         alpha: [extensionRoleEdge("beta", "exit-dependency")],
         beta: [extensionRoleEdge("gamma", "exit-dependency")],
       });
-      // This fixture tests capacity propagation, not unavailable settlement.
+      // This fixture tests local capacity and role diagnostics, not unavailable settlement.
       // Atomic execution still needs an independently bounded completion time.
       for (const asset of profiled.assets) {
         for (const review of asset.routeReviews) review.settlementSlaSec = 300;
@@ -197,8 +197,12 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
       set.assets.find((asset) => asset.assetId === assetId)!.scoreInput.pillars.exit.score!;
 
     expect(exitScore(weaker, "gamma")).toBeLessThan(exitScore(stronger, "gamma"));
-    expect(exitScore(weaker, "beta")).toBeLessThan(exitScore(stronger, "beta"));
-    expect(exitScore(weaker, "alpha")).toBeLessThan(exitScore(stronger, "alpha"));
+    expect(exitScore(weaker, "beta")).toBe(exitScore(stronger, "beta"));
+    expect(exitScore(weaker, "alpha")).toBe(exitScore(stronger, "alpha"));
+    const strongerRole = stronger.assets.find((asset) => asset.assetId === "beta")!.dependencyInputs.roleInputs![0]!;
+    const weakerRole = weaker.assets.find((asset) => asset.assetId === "beta")!.dependencyInputs.roleInputs![0]!;
+    expect(weakerRole).toMatchObject({ role: "exit-dependency", upstreamAssetId: "gamma", inheritedDimensions: ["exit", "access"] });
+    expect(weakerRole.score!).toBeLessThan(strongerRole.score!);
 
     const fixed = exactThreeAssetFixedInput(0.05);
     const withoutAddedRole = evaluateV9FactSet(
@@ -220,10 +224,12 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
       ),
       V9_CANDIDATE_POLICY_V1,
     );
-    expect(exitScore(withAddedRole, "alpha")).toBeLessThanOrEqual(exitScore(withoutAddedRole, "alpha"));
+    expect(exitScore(withAddedRole, "alpha")).toBe(exitScore(withoutAddedRole, "alpha"));
+    expect(withAddedRole.assets.find((asset) => asset.assetId === "alpha")!.dependencyInputs.roleInputs!
+      .map((role) => role.upstreamAssetId).sort()).toEqual(["beta", "gamma"]);
   });
 
-  it("propagates the effective oracle role subdimension through three hops", () => {
+  it("retains direct oracle role diagnostics without propagating them into downstream pillars", () => {
     const evaluateOracleChain = (tier: "redundant-with-failover" | "single-source-or-laggy") => {
       const fixed = exactThreeAssetFixedInput();
       const profiled = roleExtension(fixed, {
@@ -250,11 +256,15 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
       set.assets.find((asset) => asset.assetId === assetId)!.scoreInput.pillars.control.score!;
 
     expect(controlScore(weaker, "gamma")).toBeLessThan(controlScore(stronger, "gamma"));
-    expect(controlScore(weaker, "beta")).toBeLessThan(controlScore(stronger, "beta"));
-    expect(controlScore(weaker, "alpha")).toBeLessThan(controlScore(stronger, "alpha"));
+    expect(controlScore(weaker, "beta")).toBe(controlScore(stronger, "beta"));
+    expect(controlScore(weaker, "alpha")).toBe(controlScore(stronger, "alpha"));
+    const strongerRole = stronger.assets.find((asset) => asset.assetId === "beta")!.dependencyInputs.roleInputs![0]!;
+    const weakerRole = weaker.assets.find((asset) => asset.assetId === "beta")!.dependencyInputs.roleInputs![0]!;
+    expect(weakerRole).toMatchObject({ role: "oracle-nav", upstreamAssetId: "gamma", inheritedDimensions: ["oracle-nav"] });
+    expect(weakerRole.score!).toBeLessThan(strongerRole.score!);
   });
 
-  it("contains a sub-material exit/control SCC to its role pillars without a serial-cycle NR reason", () => {
+  it("keeps an exit/control SCC diagnostic without a serial-cycle NR reason", () => {
     const fixed = exactThreeAssetFixedInput();
     const profiled = roleExtension(fixed, {
       alpha: [extensionRoleEdge("beta", "exit-dependency", 0.01)],
@@ -288,20 +298,6 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
         expect.objectContaining({ cycleBlocked: true, boundedUnknown: true, score: null }),
       ]);
     }
-    const alpha = evaluated.assets.find((asset) => asset.assetId === "alpha")!;
-    const beta = evaluated.assets.find((asset) => asset.assetId === "beta")!;
-    expect(alpha.scoreInput.pillars.exit.reasons.map((reason) => reason.code)).toContain(
-      "nonmaterial-dependency-unavailable",
-    );
-    expect(alpha.scoreInput.pillars.control.reasons.map((reason) => reason.code)).not.toContain(
-      "nonmaterial-dependency-unavailable",
-    );
-    expect(beta.scoreInput.pillars.control.reasons.map((reason) => reason.code)).toContain(
-      "nonmaterial-dependency-unavailable",
-    );
-    expect(beta.scoreInput.pillars.exit.reasons.map((reason) => reason.code)).not.toContain(
-      "nonmaterial-dependency-unavailable",
-    );
   });
 
   it("rejects wrapper relationships that use a non-serial economic role", () => {

@@ -51,7 +51,7 @@ import {
   decimalSnap,
   type V9PillarAdverseAttribution,
 } from "./formula";
-import { resolveV9ReasonTreatment, unknownQuality } from "./policy";
+import { resolveV9ReasonTreatment } from "./policy";
 import {
   effectiveV9ControllerKeys,
   isV9DeploymentControllerAlreadyPriced,

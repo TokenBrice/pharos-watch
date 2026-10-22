@@ -4,7 +4,6 @@ import type { BridgeRouteDeployment } from "@shared/types/core";
 import usdatRisk from "@shared/data/stablecoins/domains/risk-review/usdat-saturn.json";
 import xgldRisk from "@shared/data/stablecoins/domains/risk-review/xgld-unitas.json";
 import type { V9AllocationScopeIdentityReview } from "@shared/types/safety-score-v9-allocation";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import { createAssetBuildContext } from "../safety-score-v9/fact-set-context";
@@ -17,7 +16,6 @@ const CLOCK = Date.parse("2026-10-02T00:00:00Z") / 1_000;
 const NATIVE_ADDRESS = "0x1111111111111111111111111111111111111111";
 const BRIDGE_ADDRESS = "0x3333333333333333333333333333333333333333";
 const SOURCE = { label: "Exact representation code", url: "https://example.com/bridge-code" };
-const maxAgeSec = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec;
 
 function fixture(changeRoute?: (route: BridgeRouteDeployment) => void | false, proxy = false) {
   const fixed = makeV9TwoAssetFixedInput({ clockSec: CLOCK });

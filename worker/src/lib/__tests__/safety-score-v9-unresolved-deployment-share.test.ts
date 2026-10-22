@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { computeV9FactSetDigest } from "@shared/lib/safety-score-v9/facts";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { projectSafetyScoreV9Card } from "@shared/lib/safety-score-v9/public";
 import type { V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import { materialityFixture } from "./safety-score-v9-fact-set.test-support";

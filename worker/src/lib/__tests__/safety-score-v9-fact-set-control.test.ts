@@ -15,29 +15,25 @@ import type { ControlOverlay } from "../safety-score-v9/extension-shared";
 import { MintAuthorityProfileSchema, BridgeRouteRiskProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
 import { makeCompiledVotingControl, makeOperationalIssuanceProcess } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
-import { buildSafetyScoreV9RetainedRedemptionRoutes, buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
 import { compileSafetyScoreV9FactSetFromFixedInput, compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension, computeSafetyScoreV9ReserveExposureKey, materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9/fact-set";
-import { V9_EVALUATION_TEST_TIMEOUT_MS, makeV9Extension, v9Status, makeV9BoundedUnknownFeeRedemptionFixedInput as boundedUnknownFeeRedemptionFixedInput, makeV9FixedInput as exactFixedInput, makeV9QueuedRedemptionFixedInput as queuedRedemptionFixedInput } from "../../test-helpers/v9-fixed-input";
+import { V9_EVALUATION_TEST_TIMEOUT_MS, makeV9Extension, v9Status,  makeV9FixedInput as exactFixedInput } from "../../test-helpers/v9-fixed-input";
 import {
   accessOnlyMeta,
   alphaMeta,
   bridgeMeta,
   bridgeRoute,
-  boundedStatus,
   cappedMinterMeta,
   immutableMintMeta,
   internalPriceMeta,
   localControl,
   materialityFixture,
   metaMap,
-  rebuildFixed,
   reviewedOracleMeta,
   reviewedLockMintRoute,
   reviewedUpgradeExtension,
   strategyVaultExtension,
   unresolvedMintMeta,
   unmatchedFixture,
-  withRedemptionRoute,
 } from "./safety-score-v9-fact-set.test-support";
 
 vi.mock("@shared/data/safety-score-v9/evidence-gap-classifications-v1.json", () => ({
@@ -194,7 +190,14 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     reviewed.assets[0]!.controlReview = { state: "partially-reviewed-controls", rationale: "Local custody is reviewed; bridge authority is unresolved.", controls: [localControl(), localControl({ controlKey: "bridge:unresolved", controlKind: "bridge", deploymentKey: "ethereum:0x3333333333333333333333333333333333333333", capabilities: ["bridge-mint"], capSemantics: { kind: "unknown", bound: null }, claimImpairment: "unknown", economicLossScope: "unknown", authority: null, delaySec: null, materialSupplyShare: 1, failureDomains: [{ kind: "bridge-route", key: "ethereum:0x3333333333333333333333333333333333333333" }] })] };
     const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!;
     expect(asset.controlStatus).toMatchObject({ observationState: "bounded-unknown" });
-    expect(asset.wrapperLocalFacts).toMatchObject({ applicability: "wrapper", form: "strategy-vault", facts: { lossAbsorptionEmergencyControls: { disposition: "reviewed", assessment: "moderate" } } });
+    expect(asset.wrapperLocalFacts).toMatchObject({ applicability: "wrapper", form: "strategy-vault" });
+    expect(asset.controls).toContainEqual(expect.objectContaining({
+      controlKey: "custody:reviewed",
+      capabilities: ["custody-transfer"],
+      capSemantics: { kind: "bounded", bound: { amount: 0.25, unit: "supply-fraction" } },
+      claimImpairment: "bounded",
+      status: expect.objectContaining({ observationState: "known" }),
+    }));
   });
 
 
