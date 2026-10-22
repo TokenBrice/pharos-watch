@@ -354,6 +354,21 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
     expect(exposure.weight).toBe(1);
   });
 
+  it("does not promote an unclassified parent-denominated strategy to a direct stablecoin holding", () => {
+    const strategy = compileSingleReserve({ coinId: "usdc-circle", depType: "wrapper" });
+    expect(strategy.reserveExposures[0]).toMatchObject({
+      trackedAssetId: "usdc-circle", assetClass: null,
+      status: { observationState: "bounded-unknown" },
+    });
+    const directClaim = compileSingleReserve({
+      coinId: "usdc-circle", depType: "wrapper", assetClass: "stablecoin",
+    });
+    expect(directClaim.reserveExposures[0]).toMatchObject({
+      trackedAssetId: "usdc-circle", assetClass: "stablecoin",
+      status: { observationState: "known" },
+    });
+  });
+
   it.each(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.maturityNotApplicableClasses)(
     "publishes maturity as not-applicable, not a researchable gap, for admitted %s reserves", (assetClass) => {
       const asset = compileSingleReserve({ assetClass, liquidityHorizon: "immediate" });

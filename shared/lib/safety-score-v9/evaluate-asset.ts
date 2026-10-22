@@ -1274,36 +1274,24 @@ function resolveInheritedStablecoinBacking(
     asset.wrapperLocalFacts.parentBackingInheritance?.state === "withheld"
   ) return undefined;
   if (resolved.cycleBlocked) return undefined;
-  if (resolved.serial.length + resolved.basket.length !== 1) return undefined;
-  const wrapped = resolved.serial.length === 1;
-  const upstreamAssetId = wrapped ? resolved.serial[0].upstreamAssetId : resolved.basket[0].upstreamAssetId;
-  if (wrapped && resolved.serial[0].blocked && resolved.serial[0].ratingStatus !== "not-rated") return undefined;
+  if (resolved.serial.length !== 1 || resolved.basket.length !== 0) return undefined;
+  const upstreamAssetId = resolved.serial[0].upstreamAssetId;
+  if (resolved.serial[0].blocked && resolved.serial[0].ratingStatus !== "not-rated") return undefined;
   const parent = evaluatedById.get(upstreamAssetId);
   if (!parent) return undefined;
   const parentBackingScore = projectV9EffectiveBackingPillarScore(parent);
   if (parentBackingScore === null) return undefined;
-  let weight: number;
-  if (asset.reserveExposures.length === 0) {
-    // A reviewed curated composition or a declared variant — never a
-    // manual-only dependency guess or an unmapped live envelope.
-    if (asset.dependencies.source !== "variant" && asset.dependencies.baseSource !== "curated-reserve") {
-      return undefined;
-    }
-    weight = wrapped ? 1 : resolved.basket[0].weight;
-  } else {
-    if (!wrapped) return undefined;
-    const hasWrapperEdge = asset.dependencies.edges.some(
-      (edge) =>
-        edge.pathKind === "serial-dependency" &&
-        edge.dependencyType === "wrapper" &&
-        edge.upstreamAssetId === upstreamAssetId,
-    );
-    const parentClaim = { parentAssetId: upstreamAssetId, parentBackingScore };
-    const exposures = verifiedLiveInheritedExposures(asset, parentClaim) ??
-      verifiedLiveLenderBookExposures(asset, parentClaim, envelope);
-    if (!hasWrapperEdge || exposures === undefined) return undefined;
-    weight = exposures.reduce((sum, exposure) => sum + exposure.weight, 0);
-  }
+  // A variant label is a relationship, not evidence of current parent holdings.
+  const hasWrapperEdge = asset.dependencies.edges.some(
+    edge => edge.pathKind === "serial-dependency" &&
+      edge.dependencyType === "wrapper" && edge.upstreamAssetId === upstreamAssetId,
+  );
+  if (!hasWrapperEdge) return undefined;
+  const parentClaim = { parentAssetId: upstreamAssetId, parentBackingScore };
+  const exposures = verifiedLiveInheritedExposures(asset, parentClaim) ??
+    verifiedLiveLenderBookExposures(asset, parentClaim, envelope);
+  if (exposures === undefined) return undefined;
+  const weight = exposures.reduce((sum, exposure) => sum + exposure.weight, 0);
   if (weight < V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT) return undefined;
   const parentPillar = parent.scoreInput.pillars.backing;
   const cause = parentPillar.reasons.some((reason) => reason.cause === "D")
@@ -1316,7 +1304,7 @@ function resolveInheritedStablecoinBacking(
     causeGapIds: parentPillar.causeGapIds.filter((id) => !parentPillar.excludedCauseGapIds?.includes(id)),
     collateralizationApplications: parent.backing.collateralizationApplications,
     weight: Math.min(1, weight),
-    tier: wrapped ? "wrapped" : "pure",
+    tier: "wrapped",
     failureDomains: canonicalDomains([
       ...parent.backing.failureDomains,
       { kind: "reserve-issuer", key: `asset:${upstreamAssetId}` },

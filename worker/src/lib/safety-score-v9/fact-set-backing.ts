@@ -710,7 +710,8 @@ export function buildReserves(context: AssetBuildContext): {
       ? null
       : (raw.coinId ?? classification?.trackedAssetId ?? null);
     const issuerOrObligorKey = classification?.issuerOrObligorKey ?? raw.issuerOrObligor ?? null;
-    const assetClass = classification?.assetClass ?? raw.assetClass ?? (trackedAssetId ? ("stablecoin" as const) : null);
+    // A token link may describe strategy denomination, not a direct holding.
+    const assetClass = classification?.assetClass ?? raw.assetClass ?? null;
     const failureDomains = stableFailureDomains([
       ...(classification?.failureDomains ?? []),
       ...(issuerOrObligorKey ? [{ kind: "reserve-issuer" as const, key: issuerOrObligorKey }] : []),
