@@ -449,11 +449,35 @@ describe("methodology registry", () => {
     const impact = release.impact.join(" ");
     expect(impact).toMatch(/at least 25%.*25.*at least 50%.*10.*F range/);
     expect(impact).toMatch(/model confidence.*0\.75 to 0\.85/);
-    expect(impact).toContain("yBOLD 70→72 and yvUSDC 65→68");
+    for (const example of ["yBOLD 70→72", "yvUSDC 65→68", "gtUSDC 66→69"]) {
+      expect(impact).toContain(example);
+    }
     expect(impact).toContain("VCRED is delisted from tracking");
     expect(impact).toContain("BD-basedollar mint authority");
     expect(impact).toContain("radar/partial-evidence display");
     expect(impact).toContain("Planned activation is provisionally 2026-10-23 00:00 UTC (1792713600); re-date effectiveAt at release.");
+  });
+
+  it("records v10.30's integrated replay and dated evidence corrections without claiming production acceptance", () => {
+    const impact = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0]!.impact.join(" ");
+    for (const detail of [
+      "fixed-clock engine replay of production capture 2026-10-22T00:17Z against v10.29, not production acceptance",
+      "15 rated-grade upgrades, 1 downgrade (dusd-dialectic C−51→D48 from privileged internal pricing) and 29 same-grade score changes",
+      "A+ 1, A 8, A− 4, B+ 7, B 12, B− 30, C+ 74, C 75, C− 75, D 86, F 22",
+      "The replay excluded the VCRED delisting, which removes one NR card",
+      "pmUSD is capped at 10 (18→10)",
+      "syrupUSDT, hbUSDT and DUSD (Control 60→45)",
+      "spUSDT's chi/VSR accumulator is a savings-rate setter under the existing rule; its oracle profile does not price",
+      "open-ended maturity facts for sYUSD and stkGHO",
+      "Exit research found no admissible new execution models",
+      "apyUSD, ctUSD, cUSDO, iUSD, mUSD, pUSD, sUSN, sYUSD, USDN, USDnr, USDSC and wM",
+      "spUSDT's inherited Tether credits were also withdrawn (Control 90→65, score 64→60, still C+)",
+      "Original review clocks are retained; the corrections are dated 2026-10-22",
+      "score-neutral because Control remains 60, bound by the token-contract row",
+      "The missing-data worklist routes all mechanism-review components; this is tooling only, with no score effect",
+    ]) {
+      expect(impact).toContain(detail);
+    }
   });
 
 });
