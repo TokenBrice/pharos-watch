@@ -20,6 +20,18 @@ describe("safety score reason labels", () => {
     expect(result.summary).not.toContain("pipeline");
   });
 
+  it("describes phase-1 table and neighborhood gaps without inventing a cause or score", () => {
+    const partialEvidence = { excludedPillars: ["exit"], causes: [] };
+    const table = describePartialEvidence({ ratingStatus: "rated", partialEvidence,
+      pillars: { backing: { score: 80 }, exit: { score: null, aggregationDisposition: "unavailable" }, control: { score: 70 } } })!;
+    expect(table.gaps.map(formatPartialEvidenceGap)).toEqual(["Exit unknown"]);
+    expect(table.summary).toBe("Exit has no usable evidence; the score uses an assumed value in its place.");
+    const neighborhood = describePartialEvidence({ partialEvidence })!;
+    expect(neighborhood.gaps.map(formatPartialEvidenceGap)).toEqual(["Exit unavailable"]);
+    expect(neighborhood.summary).toBe("Exit has no usable evidence.");
+    expect(`${table.summary} ${neighborhood.summary}`).not.toMatch(/\d|pipeline|not yet researched|undisclosed/);
+  });
+
   it("keeps reduced cause-B projections distinct from pipeline gaps", () => {
     const result = describePartialEvidence({ ratingStatus: "rated",
       partialEvidence: { excludedPillars: ["exit"], causes: ["B"] } })!;

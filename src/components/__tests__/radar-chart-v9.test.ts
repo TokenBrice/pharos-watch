@@ -59,6 +59,25 @@ describe("V9 radar cohorts", () => {
       .toEqual({ status: "unavailable", reason: "card-unavailable" });
   });
 
+  it("renders phase-1 comparisons without inventing the missing pillar's assumption", () => {
+    const identity = makeReportCardsV9Response().safetyScoreIdentity;
+    const partial = projectV9TableCard(makeV9Card({ id: "uusd" }));
+    partial.pillars.exit = { score: null, aggregationDisposition: "unavailable" };
+    const complete = projectV9TableCard(makeV9Card({ id: "usdc" }));
+    const series = [
+      { card: partial, identity, color: "#10b981", symbol: "UUSD" },
+      { card: complete, identity, color: "#3b82f6", symbol: "USDC" },
+    ];
+    expect(buildV9RadarDataset(series, [])).toMatchObject({
+      status: "available", value: { unknownAxes: { Exit: { assumptions: [], missingNames: ["UUSD"] } } },
+    });
+    const { container } = render(createElement(CompareRadarV9, { series, cohortSeries: [] }));
+    expect(container.textContent).toContain("Unknown for UUSD");
+    expect(container.textContent).not.toMatch(/assumed \d|not yet researched|undisclosed/);
+    expect(container.querySelectorAll("circle[fill='#10b981']")).toHaveLength(2);
+    expect(container.querySelector("line[stroke-dasharray]")).toBeNull();
+  });
+
   it("names a priced unknown's scoring assumption without plotting it", () => {
     const identity = makeReportCardsV9Response().safetyScoreIdentity;
     const card = projectV9TableCard(makeV9Card({ id: "uusd", pillars: makeV9Pillars({ backing: 35, exit: 50, control: 60 }) }));

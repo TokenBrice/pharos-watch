@@ -6,7 +6,7 @@ import {
   type ReportCardsV9TableResponse, type ReportCardsV9DetailResponse,
 } from "../types/report-cards-v9-projections";
 import { buildReportCardsV9DependencyGraph, type ReportCardsV9DependencyGraph } from "../types/report-cards-v9";
-import { projectV9CompactPartialEvidence, projectV9EvidencePillars } from "../types/safety-score-v9-causes";
+import { projectV9CompactPartialEvidence } from "../types/safety-score-v9-causes";
 import { resolveCommonModeEffects } from "../types/dependency-graph";
 
 function resolvedDependencyGraph(snapshot: ReportCardsV9ProjectionSource): ReportCardsV9DependencyGraph {
@@ -15,14 +15,17 @@ function resolvedDependencyGraph(snapshot: ReportCardsV9ProjectionSource): Repor
   })));
 }
 
-
 export function projectV9TableCard(card: SafetyScoreV9CurrentCard): ReportCardsV9TableCard {
   const resolved = resolveV9PublicWitnessTexts(card);
   const component = resolved.breakdowns?.control.components.find(row => row.kind === "mint");
   return {
     id: resolved.id, score: resolved.score, grade: resolved.grade, ratingStatus: resolved.ratingStatus,
     partialEvidence: projectV9CompactPartialEvidence(resolved.partialEvidence),
-    pillars: projectV9EvidencePillars(resolved.pillars, resolved.scoreTrace.aggregation?.pricedUnknownPillars),
+    pillars: {
+      backing: { score: resolved.pillars.backing.score, aggregationDisposition: resolved.pillars.backing.aggregationDisposition },
+      exit: { score: resolved.pillars.exit.score, aggregationDisposition: resolved.pillars.exit.aggregationDisposition },
+      control: { score: resolved.pillars.control.score, aggregationDisposition: resolved.pillars.control.aggregationDisposition },
+    },
     evidence: { level: resolved.evidence.level },
     weakestPillar: resolved.weakestPillar, bindingCap: resolved.bindingCap,
     accessPosture: { freezeExposure: resolved.accessPosture.freezeExposure },
@@ -68,7 +71,6 @@ export function projectV9Detail(
   for (const group of groups ?? []) for (const id of group.memberAssetIds) members.add(id);
   const neighborhood = snapshot.cards.filter(card => members.has(card.id)).map(card => ({
     id: card.id, grade: card.grade, partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence), sharedBookId: card.sharedBookId,
-    ratingStatus: card.ratingStatus, pillars: projectV9EvidencePillars(card.pillars, card.scoreTrace.aggregation?.pricedUnknownPillars),
   }));
   return ReportCardsV9DetailResponseSchema.parse({
     ...envelope(snapshot), projection: "detail", coinId,

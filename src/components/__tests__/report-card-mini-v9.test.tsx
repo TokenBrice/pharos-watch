@@ -66,6 +66,16 @@ describe("ReportCardMiniV9 viewport radar", () => {
     expect(html).not.toContain("Pillar radar unavailable");
   });
 
+  it("renders phase-1 missing assumptions as unknown without a numeric stand-in", () => {
+    const partial = projectV9TableCard(makeV9Card({ id: "usdt-tether" }));
+    partial.pillars.exit = { score: null, aggregationDisposition: "unavailable" };
+    partial.partialEvidence = { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["exit"], causes: [] };
+    const html = renderToStaticMarkup(<ReportCardMiniV9 card={partial} identity={identity} />);
+    expect(html).toContain("Exit unknown");
+    expect(html).toContain("Exit has no usable evidence; the score uses an assumed value in its place.");
+    expect(html).not.toMatch(/assumed \d|pipeline gap|not yet researched|undisclosed by issuer|Pillar radar unavailable/);
+  });
+
   it.each([
     ["exit", "U", 50, "Exit not yet researched", "Exit is not yet researched; the score assumes 50/100 until it is."],
     ["backing", "C", 35, "Backing undisclosed by issuer", "The issuer does not disclose Backing evidence; the score assumes 35/100 in its place."],
