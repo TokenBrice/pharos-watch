@@ -1267,7 +1267,6 @@ function resolveInheritedStablecoinBacking(
   asset: V9AssetFactsBase,
   resolved: V9ResolvedDependencyInputs,
   evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
-  envelope: V9ValidatedPolicyEnvelope,
 ): V9InheritedStablecoinBacking | undefined {
   if (asset.reserveStatus.applicability.state === "not-applicable") return undefined;
   if (
@@ -1641,14 +1640,13 @@ export function evaluateV9Asset({
   const liquidationCapacitySelection =
     asset.archetype === "cdp"
       ? selectV9CdpLiquidationCapacity(
-          asset.assetId,
           cdpReview,
           asset.cdpStressCoverage,
           envelope,
           identity.asOfSec,
         )
       : undefined;
-  const inheritedStablecoinBacking = resolveInheritedStablecoinBacking(asset, resolved, evaluatedById, envelope);
+  const inheritedStablecoinBacking = resolveInheritedStablecoinBacking(asset, resolved, evaluatedById);
   const wrapperStrategyTier = resolveV9WrapperStrategyTier(asset, resolved);
   const trackRecordMonths = conservativeTrackRecordMonths(asset.implementation.launchedAtSec, identity.asOfSec);
   const dependencyStatusGaps = gapsForV9Ids(gapIndex, asset.dependencies.status.gapIds);

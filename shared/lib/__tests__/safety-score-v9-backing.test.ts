@@ -736,7 +736,6 @@ describe("Safety Score v9 backing exposure primitives", () => {
 });
 
 describe("Safety Score v9 wrapper backing inheritance", () => {
-  const backing = V9_CANDIDATE_POLICY_V1.policy.semantic.backing;
   const missingReserveAsset = (
     inherited: NonNullable<V9BackingAssetInput["inheritedStablecoinBacking"]>,
   ): V9BackingAssetInput => ({

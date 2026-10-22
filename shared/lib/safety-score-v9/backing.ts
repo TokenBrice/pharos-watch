@@ -305,7 +305,6 @@ function canonicalUpstreamBackingReasons(
 }
 
 function projectResolvedUpstreamReserveExposure(params: {
-  backing: V9BackingSemanticPolicy;
   policy: V9BackingEvaluationPolicy;
   upstream: V9ResolvedUpstreamExposure;
   pathKey: string;
@@ -314,7 +313,6 @@ function projectResolvedUpstreamReserveExposure(params: {
   materialityThreshold: number;
 }): { score: number | null; unresolved: V9BackingUnresolvedReason[] } {
   const {
-    backing,
     policy,
     upstream,
     pathKey,
@@ -595,7 +593,6 @@ function appendReserveExposureEvaluation(params: {
       exposure.status.evidenceRefIds.length > 0 &&
       classification.adverseSupportScore * confidenceMultiplier <= backing.structural.unsafeExposureQuality;
     const upstreamProjection = projectResolvedUpstreamReserveExposure({
-      backing,
       policy,
       upstream,
       pathKey,
@@ -880,7 +877,6 @@ export function evaluateV9ReserveExposures(
   asset: V9BackingAssetInput,
   policy: V9BackingEvaluationPolicy,
 ): ReserveEvaluation {
-  const backing = backingPolicy(policy);
   const gapIndex = asset.gapIndex ?? createV9GapIndex(asset.gaps);
   if (asset.reserveStatus.applicability.state === "not-applicable") {
     return { score: null, contributions: [], structuralReasons: [], unresolved: [], rateability: "rateable" };

@@ -10,7 +10,6 @@ import type {
   V9MethodologyPolicy,
   V9ScoringInput,
 } from "@shared/types/safety-score-v9";
-import { V9_LEGACY_RESPONSIBILITY_BY_REASON } from "../safety-score-v9/facts";
 import { scoreV9Input } from "../safety-score-v9/formula";
 import {
   V9_CANDIDATE_POLICY_V1,

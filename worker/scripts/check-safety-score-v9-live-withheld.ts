@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
 import { REPORT_CARD_GRADE_RANK } from "@shared/lib/report-card-core";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { V9Grade } from "@shared/types/safety-score-v9";
 import { V9AssetEvaluationError } from "@shared/lib/safety-score-v9/evaluate-set";

@@ -135,7 +135,6 @@ function backingAsset(selection: ReturnType<typeof selectV9CdpLiquidationCapacit
 describe("Safety Score v9 CDP shock-coverage selection", () => {
   it("uses only a complete current stress measurement and exposes its evidence path", () => {
     const selected = selectV9CdpLiquidationCapacity(
-      "test-cdp",
       review(),
       stressFact(0.5),
       V9_CANDIDATE_POLICY_V1,
@@ -151,14 +150,12 @@ describe("Safety Score v9 CDP shock-coverage selection", () => {
 
   it("applies the 0.499/0.5 boundary to the existing unsafe-backing high signal", () => {
     const below = selectV9CdpLiquidationCapacity(
-      "test-cdp",
       review(),
       stressFact(0.499),
       V9_CANDIDATE_POLICY_V1,
       AS_OF_SEC,
     );
     const boundary = selectV9CdpLiquidationCapacity(
-      "test-cdp",
       review(),
       stressFact(0.5),
       V9_CANDIDATE_POLICY_V1,
@@ -184,14 +181,12 @@ describe("Safety Score v9 CDP shock-coverage selection", () => {
     const maxAgeSec =
       V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp.stressMeasurementFreshness.maxAgeSec;
     const incomplete = selectV9CdpLiquidationCapacity(
-      "test-cdp",
       legacyReview,
       incompleteFact(),
       V9_CANDIDATE_POLICY_V1,
       AS_OF_SEC,
     );
     const boundary = selectV9CdpLiquidationCapacity(
-      "test-cdp",
       legacyReview,
       stressFact(0.9, AS_OF_SEC - maxAgeSec),
       V9_CANDIDATE_POLICY_V1,
@@ -199,7 +194,6 @@ describe("Safety Score v9 CDP shock-coverage selection", () => {
     );
     const staleFact = stressFact(0.9, AS_OF_SEC - maxAgeSec - 1);
     const stale = selectV9CdpLiquidationCapacity(
-      "test-cdp",
       legacyReview,
       staleFact,
       V9_CANDIDATE_POLICY_V1,
@@ -230,7 +224,7 @@ describe("Safety Score v9 CDP shock-coverage selection", () => {
   it("requires both replay success and the attestation independently", () => {
     for (const mutation of [{ exactReplayPassed: false }, { replayVerification: null }]) {
       const selection = selectV9CdpLiquidationCapacity(
-        "test-cdp", review(), { ...stressFact(0.9), ...mutation }, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
+        review(), { ...stressFact(0.9), ...mutation }, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
       );
       expect(selection).toMatchObject({
         selectedPath: "legacyLCR",
@@ -245,7 +239,7 @@ describe("Safety Score v9 CDP shock-coverage selection", () => {
   it("accepts the publication timestamp but rejects one second in the future", () => {
     for (const delta of [0, 1]) {
       const selection = selectV9CdpLiquidationCapacity(
-        "test-cdp", review(), stressFact(0.9, AS_OF_SEC + delta), V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
+        review(), stressFact(0.9, AS_OF_SEC + delta), V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
       );
       expect(selection).toMatchObject({
         selectedPath: delta === 0 ? "stress-measurement" : "legacyLCR",
@@ -264,7 +258,7 @@ describe("Safety Score v9 CDP shock-coverage selection", () => {
     ];
     for (const [mutation, fallbackReason] of mutations) {
       expect(selectV9CdpLiquidationCapacity(
-        "test-cdp", review(), { ...stressFact(0.9), ...mutation }, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
+        review(), { ...stressFact(0.9), ...mutation }, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
       )).toMatchObject({
         selectedPath: "legacyLCR", coverageRatio: 0.25, fallbackReason,
         stressEvidenceRefIds: ["evidence:stress"],
@@ -279,7 +273,7 @@ describe("Safety Score v9 CDP shock-coverage selection", () => {
       { branchIndex: 1, stressLiquidatableDebt: "600", stressPoolOffsetDebt: "400", stressLiquidationCoverageRatio: 0.666666666666 },
     ];
     expect(selectV9CdpLiquidationCapacity(
-      "test-cdp", review(), fact, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
+      review(), fact, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
     )).toMatchObject({ selectedPath: "stress-measurement", coverageRatio: 0.5, fallbackReason: null });
     const mutations: ((value: V9CdpStressCoverageFact) => void)[] = [
       (value) => { value.stressLiquidatableDebt = "1001"; },
@@ -291,7 +285,7 @@ describe("Safety Score v9 CDP shock-coverage selection", () => {
       const inconsistent = structuredClone(fact);
       mutate(inconsistent);
       expect(selectV9CdpLiquidationCapacity(
-        "test-cdp", review(), inconsistent, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
+        review(), inconsistent, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
       )).toMatchObject({
         selectedPath: "legacyLCR", coverageRatio: 0.25,
         fallbackReason: "stress-measurement-incomplete-or-inconsistent",
@@ -312,7 +306,7 @@ describe("Safety Score v9 CDP shock-coverage selection", () => {
       }];
       const valid = offset === "0" && ratio === 1;
       expect(selectV9CdpLiquidationCapacity(
-        "test-cdp", review(), fact, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
+        review(), fact, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
       )).toMatchObject({
         selectedPath: valid ? "stress-measurement" : "legacyLCR",
         coverageRatio: valid ? 1 : 0.25,
@@ -325,7 +319,6 @@ describe("Safety Score v9 CDP shock-coverage selection", () => {
   it("keeps the current-CR critical signal unchanged when stress coverage passes", () => {
     const criticalReview = review({ collateralizationRatio: 0.99, liquidationCapacityRatio: 0.1 });
     const selection = selectV9CdpLiquidationCapacity(
-      "test-cdp",
       criticalReview,
       stressFact(1),
       V9_CANDIDATE_POLICY_V1,
@@ -346,7 +339,7 @@ describe("Safety Score v9 CDP shock-coverage selection", () => {
 
   it("does not select stress coverage without the mechanism review needed to evaluate it", () => {
     expect(
-      selectV9CdpLiquidationCapacity("unreviewed-cdp", null, stressFact(0.499), V9_CANDIDATE_POLICY_V1, AS_OF_SEC),
+      selectV9CdpLiquidationCapacity(null, stressFact(0.499), V9_CANDIDATE_POLICY_V1, AS_OF_SEC),
     ).toMatchObject({
       selectedPath: "legacyLCR",
       coverageRatio: null,
@@ -354,13 +347,10 @@ describe("Safety Score v9 CDP shock-coverage selection", () => {
     });
   });
 
-  it("uses the same evidence-free fallback regardless of the asset identity", () => {
+  it("uses an evidence-free fallback when no mechanism review or stress measurement exists", () => {
     const selection = selectV9CdpLiquidationCapacity(
-      "mim-abracadabra", null, undefined, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
+      null, undefined, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
     );
-    expect(selection).toEqual(selectV9CdpLiquidationCapacity(
-      "synthetic-unreviewed-cdp", null, undefined, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
-    ));
     expect(selection).toMatchObject({
       selectedPath: "legacyLCR",
       coverageRatio: null,
