@@ -262,6 +262,30 @@ describe("structured savings-rate authority classification", () => {
     expect(result.tier).toBe(tier);
   });
 
+  it("binds missing savings-setter uncertainty to a compiled causal gap", () => {
+    const fixed = makeV9FixedInput();
+    const meta = reviewedOracleMeta();
+    meta.variantKind = "savings-passthrough";
+    meta.oracleRisk = internalPriceMeta().oracleRisk;
+    meta.mintAuthority = {
+      mintPath: "wrapped-or-variant-inherited", authorityPosture: "none-resolved-mint",
+      confidence: "verified", summary: "Immutable deposit-only savings shares.",
+      upgradeability: { model: "immutable", canChangeMintLogic: false },
+      controls: [], economicCapSemantics: "bounded", reconciliation: "not-applicable", supervision: "none",
+      review: { reviewedAt: "1970-01-01", reviewer: "Fixture reviewer", sources,
+        evidence: "The immutable share token has no privileged share minter or upgrade authority." },
+    };
+    const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(meta) });
+    const facts = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    const authority = facts.assets[0]!.economicControlReview.oracle.factorStatuses!.authority!;
+    expect(authority.observationState).toBe("missing");
+    expect(authority.gapIds).not.toEqual([]);
+    const evaluated = evaluateV9FactSet(facts, V9_CANDIDATE_POLICY_V1).assets[0]!;
+    expect(evaluated.control.components).toContainEqual(expect.objectContaining({
+      componentKey: "mint:savings-rate", score: 60, cause: "U", causeGapIds: authority.gapIds,
+    }));
+  });
+
   it("keeps liquidation feeds and unresolved applicability out of the savings-rate lane", () => {
     const meta = reviewedOracleMeta();
     meta.variantKind = "savings-passthrough";

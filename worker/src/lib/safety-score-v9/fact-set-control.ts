@@ -307,6 +307,16 @@ function compileEconomicFactorStatuses(
       (review.oracle.tier === null || review.oracle.tier === "opaque-or-unknown")) {
     review.oracle.factorStatuses = { tier: missingFactor("economic-control:oracle", "tier") };
   }
+  if (review.oracle.pricingKind === "savings-rate" &&
+      !((context.asset.controlReview?.state === "reviewed-controls" ||
+          context.asset.controlReview?.state === "partially-reviewed-controls") &&
+        context.asset.controlReview.controls.some((control) => control.controlKind !== "bridge" &&
+          (control.claimImpairment !== "none" || control.economicLossScope !== "access-only")))) {
+    review.oracle.factorStatuses = {
+      ...review.oracle.factorStatuses,
+      authority: missingFactor("economic-control:oracle", "authority"),
+    };
+  }
   if (review.bridge.status.applicability.state !== "not-applicable" && review.bridge.routes.length === 0) {
     review.bridge.factorStatuses = { tier: missingFactor("economic-control:bridge", "tier") };
   }
