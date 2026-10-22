@@ -11,7 +11,7 @@ import {
   type SafetyScoreV9CurrentCard,
   type SafetyScoreV9CommonModeGroups,
 } from "../../types/safety-score-v9-public";
-import type { SafetyScoreV9IssuanceSummary } from "../../types/safety-score-v9-public-breakdowns";
+import { computeV9UnknownPricedWeightShare, type SafetyScoreV9IssuanceSummary } from "../../types/safety-score-v9-public-breakdowns";
 import type {
   V9EvidenceLevel,
   V9QualityPillar,
@@ -1037,6 +1037,9 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
     binding: isRateable && cap.binding,
   }));
   const bindingCap = isRateable ? (caps.find((cap) => cap.binding) ?? null) : null;
+  const breakdowns = projectBreakdowns(input);
+  const unknownPricedWeightShare = isRateable
+    ? computeV9UnknownPricedWeightShare(breakdowns, input.trace.aggregation) : 0;
   return internV9PublicCauseGaps(readableV9PublicWitnesses({
     id: input.trace.assetId,
     supply: input.supply ?? { circulatingUsdAtEvaluation: null, asOfSec: null, generationId: null },
@@ -1047,6 +1050,7 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
       : { backingFromLiveReserves: input.backingFromLiveReserves }),
     score: input.trace.finalScore,
     grade: input.trace.finalGrade,
+    ...(unknownPricedWeightShare > 0.5 ? { provisional: true as const, unknownPricedWeightShare } : {}),
     ratingStatus: input.trace.ratingStatus,
     partialEvidence: projectPartialEvidence(input),
     qualityScore: input.trace.weightedQuality,
@@ -1075,7 +1079,7 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
     },
     dependencies: projectDependencies(input),
     scoreTrace: projectScoreTrace(input),
-    breakdowns: projectBreakdowns(input),
+    breakdowns,
   }));
 }
 

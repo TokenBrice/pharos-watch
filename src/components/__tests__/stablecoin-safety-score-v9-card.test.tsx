@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { SafetyScoreV9CurrentCardSchema } from "@shared/types/safety-score-v9-public";
 import { StablecoinSafetyScoreV9Card } from "@/components/stablecoin-detail/stablecoin-safety-score-v9-card";
 
@@ -13,6 +13,27 @@ import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fix
 const EXIT_WEAKEST_PILLARS = makeV9Pillars({ backing: 88, exit: 84, control: 86 });
 
 describe("StablecoinSafetyScoreV9Card", () => {
+  it("shows a display-only provisional badge beside the grade with a keyboard-accessible explanation", async () => {
+    vi.stubGlobal("ResizeObserver", class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    });
+    const card = makeV9Card({ provisional: true, unknownPricedWeightShare: 0.65 });
+    const response = makeReportCardsV9Response();
+    const { rerender } = render(
+      <StablecoinSafetyScoreV9Card card={card} identity={response.safetyScoreIdentity} updatedAtMs={null} />,
+    );
+    const badge = screen.getByRole("button", { name: "Provisional Safety Score" });
+    expect(badge.parentElement?.textContent).toContain(card.grade);
+    fireEvent.focus(badge);
+    expect((await screen.findByRole("tooltip")).textContent).toContain("65.0% of scoring weight is priced as unknown. This label does not change the score.");
+    rerender(
+      <StablecoinSafetyScoreV9Card card={makeV9Card()} identity={response.safetyScoreIdentity} updatedAtMs={null} />,
+    );
+    expect(screen.queryByRole("button", { name: "Provisional Safety Score" })).toBeNull();
+  });
+
 
   it.each([
     { name: "links every pillar when the page does not say which boards render", anchors: undefined, linked: ["Backing", "Exit", "Economic Control"] },

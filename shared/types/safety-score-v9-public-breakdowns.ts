@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { issue } from "./safety-schema-primitives";
+import methodologyPolicy from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
 import { ExitExecutionPublicCertificateSchema, ExitRouteFamilySchema, ExitRouteCapacityEvidenceTierSchema, PhysicalToUsdTraceSchema } from "./exit-route";
 import { RedemptionCapacityScoringHorizonSchema, RedemptionRouteSuspensionSchema } from "./redemption";
 import { V9ReasonCodeSchema } from "./safety-score-v9";
@@ -503,10 +504,14 @@ function refineControlBreakdown(breakdown: z.infer<typeof SafetyScoreV9ControlBr
     if (component.score === null && component.binding) issue(ctx, ["components"], "Excluded control diagnostics cannot be binding");
   }
   const binding = breakdown.components.filter((component) => component.binding && component.score !== null);
-  if (!numbersAgree(binding.length === 0
+  const minimum = binding.length === 0
     ? (breakdown.aggregationDisposition ?? "included") !== "included" ? null : V9_NEUTRAL_CONTROL_SCORE
-    : Math.min(...binding.map((component) => component.score!)), breakdown.evaluatedScore)) {
-    issue(ctx, ["components"], "V9 binding controls, or the neutral empty set, must reconcile the evaluated score");
+    : Math.min(...binding.map((component) => component.score!));
+  // Retained pre-R4 cards record the raw minimum; new cards clamp the pillar
+  // at 90 while keeping their component diagnostics unchanged.
+  if (!numbersAgree(minimum, breakdown.evaluatedScore) &&
+      !numbersAgree(minimum === null ? null : Math.min(methodologyPolicy.semantic.control.authorityLadder.immutableNoPower, minimum), breakdown.evaluatedScore)) {
+    issue(ctx, ["components"], "V9 binding controls must reconcile the raw or 90-clamped evaluated score");
   }
 }
 const SafetyScoreV9ControlBreakdownSchema = SafetyScoreV9ControlBreakdownBaseSchema.superRefine((breakdown, ctx) => {
@@ -580,3 +585,88 @@ export const SafetyScoreV9HistoricalTypedBreakdownsSchema = SafetyScoreV9Histori
     })),
   }),
 });
+
+type UnknownPricedComponent = Pick<SafetyScoreV9BackingBreakdown["components"][number],
+  "score" | "cause" | "scoringDisposition" | "effectiveScoringWeight">;
+type UnknownPricedBreakdowns = {
+  backing: {
+    aggregationWeight: number;
+    components: readonly (UnknownPricedComponent & {
+      source: string; factors?: readonly UnknownPricedComponent[];
+    })[];
+  };
+  exit: {
+    aggregationWeight: number;
+    evaluatedScore: number | null;
+    limitedEvidenceCauses?: readonly string[];
+    primaryRoute: { components: readonly UnknownPricedComponent[] } | null;
+  };
+  control: {
+    aggregationWeight: number;
+    components: readonly (UnknownPricedComponent & { binding: boolean; posture: string })[];
+  };
+};
+
+/** Display-only weight accounting, never an input to score aggregation. */
+export function computeV9UnknownPricedWeightShare(
+  breakdowns: UnknownPricedBreakdowns | null,
+  aggregation: {
+    effectiveScoringWeights: { backing: number; exit: number; control: number };
+    pricedUnknownPillars?: readonly { pillar: "backing" | "exit" | "control" }[];
+  } | null,
+): number {
+  if (breakdowns === null || aggregation === null) return 0;
+  const isUnknown = (component: UnknownPricedComponent): boolean =>
+    component.score !== null && (component.cause === "C" || component.cause === "U") &&
+    component.scoringDisposition === "bounded-uncertainty";
+  const unknownWeight = (component: UnknownPricedComponent): number =>
+    isUnknown(component) ? resolveV9EffectiveScoringWeight(component) : 0;
+  let share = 0;
+  for (const pillar of ["backing", "exit", "control"] as const) {
+    const weight = aggregation.effectiveScoringWeights[pillar];
+    if (aggregation.pricedUnknownPillars?.some((item) => item.pillar === pillar)) {
+      share += weight;
+      continue;
+    }
+    if (pillar === "backing") {
+      for (const component of breakdowns.backing.components) {
+        // Reserve rows blend factors; mechanism constraints already publish
+        // the controlling minimum's cause on their parent component.
+        const factors = component.source === "reserve-exposure" ? component.factors : undefined;
+        const fraction = factors?.length
+          ? factors.reduce((sum, factor) => sum + unknownWeight(factor), 0)
+          : isUnknown(component) ? 1 : 0;
+        share += weight * resolveV9EffectiveScoringWeight(component) * fraction;
+      }
+    } else if (pillar === "exit") {
+      const exit = breakdowns.exit;
+      if (exit.primaryRoute !== null) {
+        share += weight * exit.primaryRoute.components.reduce((sum, component) => sum + unknownWeight(component), 0);
+      } else if (exit.limitedEvidenceCauses?.some((cause) => cause === "C" || cause === "U")) {
+        // No-route covered-share Exit=(1-z)*50: verified pool-less supply is
+        // measured zero, not unknown-priced weight.
+        const cause = exit.limitedEvidenceCauses.includes("C") ? "C" : "U";
+        share += weight * Math.min(1, (exit.evaluatedScore ?? 0) / methodologyPolicy.semantic.unknownQuality.exit[cause]);
+      }
+    } else {
+      let minimum = Infinity;
+      let unknownMinimum = false;
+      for (const component of breakdowns.control.components) {
+        if (!component.binding || component.score === null || resolveV9EffectiveScoringWeight(component) === 0) continue;
+        // A known authority can retain a C/U reconciliation question without
+        // its measured topology being priced at an unknown constant.
+        const unknown = isUnknown(component) &&
+          (component.posture === "unknown" || component.posture === "opaque-or-unknown");
+        if (component.score < minimum) {
+          minimum = component.score;
+          unknownMinimum = unknown;
+        } else if (component.score === minimum && !unknown) {
+          // An equally restrictive measured path still binds without the gap.
+          unknownMinimum = false;
+        }
+      }
+      if (unknownMinimum) share += weight;
+    }
+  }
+  return Math.min(1, Math.max(0, share));
+}

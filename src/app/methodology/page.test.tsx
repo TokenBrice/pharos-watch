@@ -36,6 +36,19 @@ function tableCells(root: HTMLElement, testId: string) {
 }
 
 describe("MethodologyPage", () => {
+  it("discloses provisional uncertainty, single-key repricing and the final R4 calibration rules", () => {
+    const section = methodologyDocument().querySelector("#safety-scores-methodology")!;
+    const text = section.textContent!;
+    expect(text).toContain("Verified worse facts score lower than unresolved ones");
+    expect(text).toContain("Unknown is priced as uncertainty, not as safety");
+    expect(text).toContain("more than 50% of its original scoring weight");
+    expect(text).toContain("The label changes no score, grade or availability");
+    expect(text).toContain("clamped to $1m–$25m");
+    expect(text).toContain("overall Control pillar at 90");
+    expect(text).toContain("24-to-under-36-month tier at 86 is removed");
+    expect(text).toContain("Published letter grades use two-consecutive-publication hysteresis");
+  });
+
 
   it("renders every section anchor that methodology context deep-links to", () => {
     const html = renderToStaticMarkup(<MethodologyPage />);
@@ -158,8 +171,8 @@ describe("MethodologyPage", () => {
       "next UTC midnight", "Two usable pillars permit a rating", "Physical GOLD/SILVER delivery",
       "code-unit order", "capacity materiality gates", "86,400-second allowance",
     ]) expect(text).toContain(rule);
-    expect(text).toContain("1% of the stress request");
-    expect(text).toContain("capped at 50 before confidence");
+    expect(text).toContain("1% of the actual stress request");
+    expect(text).toContain("caps a material route at 50 before confidence");
     expect(text).toContain("Backing 35, Exit 50 and Control 50");
     expect(text).toContain("C/U cause label is presentation-only");
     expect(text).toContain("USDT longevity premium returns to +12");

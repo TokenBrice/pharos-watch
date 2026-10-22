@@ -27,7 +27,7 @@ import {
 } from "./safety-score-v9-public-facts";
 import { refineCard } from "./safety-score-v9-public-internal";
 import { findSafetyScoreV9ParentAttributionIssues } from "./safety-score-v9-public-attribution";
-import { SafetyScoreV9BreakdownsSchema, SafetyScoreV9HistoricalBreakdownsSchema, SafetyScoreV9HistoricalTypedBreakdownsSchema } from "./safety-score-v9-public-breakdowns";
+import { computeV9UnknownPricedWeightShare, SafetyScoreV9BreakdownsSchema, SafetyScoreV9HistoricalBreakdownsSchema, SafetyScoreV9HistoricalTypedBreakdownsSchema } from "./safety-score-v9-public-breakdowns";
 import { SafetyScoreV9ScoreTraceSchema, SafetyScoreV9HistoricalScoreTraceSchema, SafetyScoreV9WitnessScoreTraceSchema } from "./safety-score-v9-public-trace";
 import { SafetyScoreV9HistoricalCapSchema } from "./safety-score-v9-public-historical";
 import { V9WrapperFormSchema } from "./safety-score-v9-wrapper";
@@ -277,6 +277,9 @@ const SafetyScoreV9CardShape = {
   score: ScoreSchema.nullable(),
   grade: V9GradeSchema.nullable(),
   gradeHold: SafetyScoreV9GradeHoldSchema.optional(),
+  /** Display-only; older archived publications omit both fields. */
+  provisional: z.literal(true).optional(),
+  unknownPricedWeightShare: z.number().finite().gt(0.5).max(1).optional(),
   ratingStatus: V9RatingStatusSchema,
   partialEvidence: V9PartialEvidenceSchema.nullable(),
   qualityScore: ScoreSchema.nullable(),
@@ -423,6 +426,14 @@ function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx, reso
     }
     refineCardBase(card, ctx);
     refineCard(card, ctx);
+    if (card.provisional !== undefined || card.unknownPricedWeightShare !== undefined) {
+      const share = computeV9UnknownPricedWeightShare(card.breakdowns, card.scoreTrace.aggregation);
+      if (card.ratingStatus !== "rated" || card.provisional !== true ||
+          card.unknownPricedWeightShare === undefined || share <= 0.5 ||
+          !numbersAgree(card.unknownPricedWeightShare, share)) {
+        issue(ctx, ["provisional"], "Provisional labels require more than half the scoring weight to be priced as unknown, with its reconciled share");
+      }
+    }
     if (card.ratingStatus === "pipeline-gap" && (card.scoreTrace.aggregation !== null ||
         Object.values(card.scoreTrace.stages).some((value) => value !== null) ||
         card.scoreTrace.scoreAdjustments.length > 0 || card.bindingCap !== null)) {

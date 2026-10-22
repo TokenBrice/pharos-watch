@@ -4,7 +4,7 @@
 
 ## v10.29 Simplified Model
 
-The local, unreleased v10.29 contract is [Report cards](../report-cards.md#v10-model); structured history separates methodology changes, factual corrections and pending engine mover attribution. `effectiveAt` remains 1792627200, shared with unshipped v10.28 until the owner chooses a ship date, not activation or acceptance. Earlier release sections below describe their original changes, not a second scoring authority.
+The local, unreleased v10.29 contract is [Report cards](../report-cards.md#v10-model); structured history separates methodology changes, factual corrections and pending engine mover attribution. It ships with unshipped v10.28; the release cut sets both `effectiveAt` values to the actual cut time. The retained 1792627200 placeholder is not activation or acceptance. Earlier release sections below describe their original changes, not a second scoring authority.
 
 Use one unknown-quality helper: Backing C35/U50, Exit C50/U50, Control C50/U60; unclassified selects U, and Exit's published C/U cause is presentation-only. Replace only the genuinely unknown subfactor, retaining known weighted components and measured adversity. C/U provenance survives. Rate usable measured evidence, an admitted applicable mechanism/route with bounded missing subfactors or an admitted upstream claim; an ungrounded numeric default is not evidence. Two usable pillars permit a rating, with any unavailable third priced at its unknown constant and original pillar weights retained; fewer are technical pipeline gaps. LEVER-1, hazard escape, cause-selected NR and D/F witness gates are retired. A genuinely unavailable required parent still prevents rating; quarantine and accepted-publication holds remain.
 
@@ -207,7 +207,7 @@ The [reviewer-scoped question contract](../mint-authority-scoring.md#a-reviewer-
 
 The semantic policy digest binds unknown pricing, authority ladder, Exit rules, retained caps, bridge-materiality and evidence-expiry values. LEVER-1/withhold/danger escape and D/F attribution gates are deleted, not merely disabled. Grade thresholds derive from policy; source/cause witnesses remain explanatory rather than score-to-NR switches.
 
-Oracle applicability remains distinct from quality: current reviewed non-price-sensitive paths emit no component; known oracleless/neutral empty-control sets retain 95. Privileged internal mint/redemption/NAV pricing and measured weak topology retain 45 without structural caps. Genuinely unknown factors use Control C50/U60; A/B exclusions never fabricate neutral 95. Exact source witnesses remain mandatory.
+Oracle applicability remains distinct from quality: current reviewed non-price-sensitive paths emit no component; known oracleless/native/neutral empty-control diagnostics can retain raw95, but the overall Control pillar is clamped at90. Privileged internal mint/redemption/NAV pricing and measured weak topology retain45 without structural caps. Genuinely unknown factors use Control C50/U60; A/B exclusions never fabricate neutral quality. Exact source witnesses remain mandatory.
 
 Pre-9.17 oracle reviews retain reviewed top-level mint/redemption/NAV/exchange-rate authority without fabricated liquidation branches. Price-insensitive mechanisms remain not-applicable; unresolved applicability stays bounded. Verified adverse oracle facts retain measured components, not whole-score structural ceilings.
 Aggregate oracle applicability is independently admitted from its own reviewed date, primary sources and content-bound generation under the reviewed-research age budget. Refreshing the parent profile cannot renew an expired exemption: stale applicability stays unresolved for scoring, future chronology rejects asset-locally, and only a current verified exemption removes the oracle component. Explicit path reviews retain precedence.
@@ -235,7 +235,7 @@ Exactly five whole-score limit families remain:
 | Family | Rule |
 | --- | --- |
 | Current active depeg | At least 10% →49; at least 25% →39 |
-| Known implementation age | Under 24 months →84; 24–under 36 months →86; unknown date disclosed without age ceiling |
+| Known implementation age | Under 24 months →84; the 24–under 36-month tier is removed; unknown date disclosed without age ceiling |
 | Required parent / wrapper | Premium-free inheritable parent limits, with form deduction only for actual wrappers |
 | Realized holder loss | Loss ≥25%: initial 39; loss ≥1% and <25%: initial 49; hold for 365 days, then linear recovery to 100 over the next 365 |
 | Speculative-credit residual | High speculative-credit at admitted reserve/global-claim scope with measured-adverse responsibility →59; admitted legacy unscoped proof also qualifies |
@@ -248,7 +248,7 @@ Round the own score to nearest integer; floor each ceiling once at its source an
 
 LEVER-1, its measured-danger escape, cause-selected whole-card NR, D-attribution and F-without-adverse gates are removed. No letter, low score, curated authority enum, incident or missing subfactor creates NR. Keep genuine required-parent unavailability and technical pipeline gaps distinct. Causal gap/source witnesses survive for attribution, never as rating permission.
 
-The [authority evidence contract](../mint-authority-scoring.md#mint-authority-entry) owns root versus deployment scope, resolving C/U references and asset-local failure for malformed required evidence. The authority component maximum 90 is a component bound, not an additional whole-score cap family.
+The [authority evidence contract](../mint-authority-scoring.md#mint-authority-entry) owns root versus deployment scope, resolving C/U references and asset-local failure for malformed required evidence. Both authority components and the overall Control pillar are limited to 90; raw non-authority component diagnostics may exceed it. Neither is an additional whole-score cap family.
 
 Chain maturity requires five dated gates, not inferred age: 36 months continuous production; 365-day liveness; permissionless participation or ≥21 independent producers/finality members, no unilateral halt/finalization and documented economic security; no unilateral instant change (L2 Stage ≥1 and ≥7-day holder exit); documented bridge/data-availability dependencies with holder exit. Citations record document date, assertion, independent access time, reviewer outcome and reachability. Default access date is `VERIFICATION_ACCESSED_AT`, also policy default clock; per-URL `REVERIFIED_SOURCE_ACCESSED_AT` does not move either. Unreachable/non-supporting citations stay `pending`. Captured clock enforces cadence and numeric `nextReviewAt`. `CHAIN_MATURITY_REVIEWS_V1` in `shared/data/safety-score-v9/chain-maturity-reviews-v1.ts` owns admitted set/rationales, projected as `matureChains`; do not duplicate its roster.
 
@@ -541,7 +541,7 @@ The retained production `cron_runs.metadata.latencySummary.assets` for job `sync
 
 ## Scoped Evidence And Exit Evaluation
 
-Control canonically retains normalized mint/oracle/bridge causes and the binding minimum without caller mutation. Effective upgrades/accountants/allocators compete on the authority ladder. Known age caps: <24m 84; 24–<36m 86. Distinct resolved failures use original-date Control 55 through day 365, relaxing to 100 by 730; unknown dates retain 55, active incidents 25. No permanent history ceiling or duplicate holder-loss charge. Exit retains capacity/settlement/request horizons and confidence, not queue/offchain caps or diagnostic horizon winners.
+Control canonically retains normalized mint/oracle/bridge causes and the binding minimum without caller mutation, clamping the overall pillar at 90 while preserving raw component diagnostics. Effective upgrades/accountants/allocators compete on the authority ladder. Known age cap: <24m 84; no 24–<36m tier. Distinct resolved failures use original-date Control 55 through day 365, relaxing to 100 by 730; unknown dates retain 55, active incidents 25. No permanent history ceiling or duplicate holder-loss charge. Exit retains capacity/settlement/request horizons and confidence, not queue/offchain caps or diagnostic horizon winners.
 
 Producer overlays share dependency fields/role checks, bridge-supply rows and peg-reference kinds with facts; compilation retains evidence/path/envelope validation. Optional fields gain no defaults. Scoped proof owns gap responsibility, never observation labels/wrapper fallbacks. Peg provenance/fixed-input admission compare the same nine score fields, excluding summary/result metadata.
 
@@ -697,7 +697,9 @@ Reserve attribution/precision corrections are recorded in [v9.97 structured hist
 
 ## Exit Route Evidence
 
-P1: known circulating supply sizes a continuous 5% stress request clamped to $100k–$25m, even if bridge partition is unresolved. Measurement grids do not snap the scored denominator. Stale/unavailable supply uses $25m for routes and operational depth without renewing clocks. A valid smaller-notional measurement remains a conservative executable lower bound: completion is measured capacity divided by the current stress request, never assumed full execution or exhaustion. Missing comparable measurements stay unavailable, not zero.
+P1: known circulating supply sizes a continuous 5% stress request clamped to $1m–$25m, even if bridge partition is unresolved. The request is never below $1m; observation grids can retain smaller points and do not snap the scored denominator. Stale/unavailable supply uses $25m for routes and operational depth without renewing clocks. A valid smaller-notional measurement remains a conservative executable lower bound: completion is measured capacity divided by the current stress request, never assumed full execution or exhaustion. Missing comparable measurements stay unavailable, not zero.
+
+Route materiality keeps its separate asset-relative denominator: 5% of usable supply clamped to $100k–$25m (`stressRequest.materialityFloorUsd` retains $100k). A route qualifies at either 1% of this amount in raw executable capacity or $100k absolute capacity. The $1m stress floor changes scored coverage, not materiality admission: measured thin depth must not vanish into U50 solely because stress grows. Missing/stale supply uses $25m for both. The below-1% valued-completion cap of50 still uses the actual stress request.
 
 Measured exhaustion requires admitted exact-complete evidence for the actual request and full relevant route surface, not legal terms, estimates or a lower-bound prefix. Retain positive smaller executions and their original clocks; never relabel completion or infer a cause from a numeric fact status. Missing subfactors use C/U only on a reviewed applicable subject; a bare default is not usable evidence. There is no collective evidence-withhold gate or bounded-gap floor. Producer observations and same-input admission, not code/review edits, close actual execution gaps.
 

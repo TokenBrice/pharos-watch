@@ -30,7 +30,7 @@ export function SafetyScoresTechnicalDetails() {
           sets bounded headroom above that minimum; missing-pillar pricing is uncertainty, not usable evidence.
           Fewer than two usable pillars means Pipeline gap without an aggregate or grade. Peg behavior applies with
           exponent {formula.pegExponent}. Five whole-score limit families remain: active depeg, known age
-          under 24 and under 36 months, required parents/wrappers, realized holder loss and speculative-credit residual.
+          under 24 months, required parents/wrappers, realized holder loss and speculative-credit residual.
           The broad structural-cap matrix and duplicate evidence ceilings are retired.
         </p>
         <p>
@@ -39,6 +39,18 @@ export function SafetyScoresTechnicalDetails() {
           adverse values. LEVER-1, its hazard exception and grade-based D/F NR guards are retired. A low score,
           open question or active incident does not withhold an otherwise evidenced rating. Publication quarantine
           and accepted-state holds remain separate from rating availability.
+        </p>
+        <p>
+          Verified worse facts score lower than unresolved ones: proving an opaque controller is a single key lowers
+          its authority base from 60 to 50. Unknown is priced as uncertainty, not as safety. Research can lower a score.
+          The overall Economic Control pillar is clamped at 90, including non-authority paths; supervision is not
+          required above 80.
+        </p>
+        <p>
+          Provisional labels identify rated cards with more than 50% of original scoring weight priced at unknown
+          constants. They disclose uncertainty without changing the score, grade or availability. Older archives
+          without the fields remain unlabelled. Exit sizes a continuous 5% of usable supply within $1m–$25m; smaller
+          execution receipts remain lower bounds, not proof of full-request completion.
         </p>
         <p className="pharos-numeric">
           candidate = weakestPriced + {formula.compensabilityHeadroom} × tanh((weightedQuality − weakestPriced) /{" "}

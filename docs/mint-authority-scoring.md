@@ -127,7 +127,11 @@ Add 10 only for an enforceable economic bound preserved by **all** relevant bypa
 
 Add at most 15 for continuous/periodic external reserve-to-liability reconciliation, and 15 for prudential supervision **or** 10 for attestation-only supervision, never both. Maximum assurance credit is 30; each independently curated datum adds at most 15. Clamp once after topology, bound and assurance at `control.authorityLadder.maxComponentQuality` **90**, the immutable-no-power level (AM7). `none`, `unknown`, `not-applicable` and unsupported internal-ledger assertions earn zero assurance. A reserve NAV feed does not establish authorization or an enforceable mint bound; legal supervision is not immunity.
 
+The overall Economic Control pillar is also clamped at **90**, including non-authority-only components; their raw diagnostics remain visible. Scores above 80 do not require supervision when independently evidenced topology, bounds and assurance earn them.
+
 For a genuinely missing factor use the sole `unknownQuality(pillar,cause)` helper: Control C50 for researched issuer non-disclosure, U60 for Pharos research/infrastructure uncertainty or unclassified gaps. Preserve measured known components. Opaque potential authority is not exploitation. An admitted active economic control incident, compromised/exploited authority or source-proved realized unbacked mint stays **25**, with no bound/assurance uplift.
+
+Verified worse facts score lower than unresolved ones: proving that an opaque controller is a single key lowers its base **60→50**. Unknown is priced as uncertainty, not as safety; resolving evidence can lower a score.
 
 Resolved authority failures use an initial component limit **55** through elapsed day **365**, then relax linearly to **100** at day **730**: `min(100, 55 + 45 × max(0, ageDays − 365) / 365)`. Use the original incident date and exact elapsed days, not month tiers; an unknown incident date retains 55. Active incidents never decay. The former permanent 70/85 history tiers are removed; retain only distinct authority-failure treatment without duplicating a whole-score holder-loss charge.
 

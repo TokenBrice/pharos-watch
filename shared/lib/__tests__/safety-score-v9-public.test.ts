@@ -3,7 +3,7 @@ import { attributedScoredParent } from "../../types/safety-score-v9-public-inter
 import { countV9EvidenceObligations, iterateEvidenceResponsibilityFacts } from "../../types/safety-score-v9-public-evidence-facts";
 import { resolveCauseGapId } from "../../types/safety-score-v9-public-cause-gaps";
 import { resolveV9PublicWitnessTexts } from "../../types/safety-score-v9-public-witness-texts";
-import { resolveV9PublicControlDetails, SafetyScoreV9HistoricalBreakdownsSchema } from "../../types/safety-score-v9-public-breakdowns";
+import { computeV9UnknownPricedWeightShare, resolveV9PublicControlDetails, SafetyScoreV9BreakdownsSchema, SafetyScoreV9HistoricalBreakdownsSchema } from "../../types/safety-score-v9-public-breakdowns";
 import type { V9ResolvedDependencyInputs } from "../safety-score-v9/dependencies";
 import { readableV9PublicText, readableV9PublicWitnesses } from "../safety-score-v9/public-witness-texts";
 import type { V9CapTrace, V9NRReason } from "../safety-score-v9/formula";
@@ -22,6 +22,7 @@ import {
   SafetyScoreV9CurrentCardSchema,
   SafetyScoreV9CurrentResponseSchema,
   SafetyScoreV9EvidenceSummarySchema,
+  SafetyScoreV9HistoricalTypedCardSchema,
   SafetyScoreV9PillarSchema,
 } from "../../types/safety-score-v9-public";
 import { makeDeploymentControl, makeCompiledVotingControl, makeOperationalIssuanceProcess } from "./safety-score-v9-fixtures.test-support";
@@ -324,6 +325,103 @@ function cap(args: Pick<V9CapTrace, "kind" | "limit" | "source" | "reason" | "bi
 }
 
 describe("Safety Score v9 public projection", () => {
+  it.each(["C", "U"] as const)("labels majority %s unknown-priced weight without changing scores or archives", (cause) => {
+    const input = fixture("provisional", { score: 50, grade: "C-", qualityScore: 50, pillars: { backing: 50, exit: 50, control: 50 } });
+    const unknown = { cause, causeGapIds: ["provisional:gap:unknown"], scoringDisposition: "bounded-uncertainty" as const };
+    input.backing = { ...input.backing!, contributions: input.backing!.contributions.map((component) => ({ ...component, ...unknown })) };
+    input.control = { ...input.control!, components: input.control!.components.map((component) => ({ ...component, ...unknown, posture: "unknown" })) };
+    const before = JSON.stringify(input.trace);
+    const { card } = projectSafetyScoreV9Card(input);
+    expect(card.provisional).toBe(true);
+    expect(card.unknownPricedWeightShare).toBeCloseTo(0.65);
+    expect(card.score).toBe(input.trace.finalScore);
+    expect(card.grade).toBe(input.trace.finalGrade);
+    expect(JSON.stringify(input.trace)).toBe(before);
+    expect(SafetyScoreV9CurrentCardSchema.safeParse({ ...card, unknownPricedWeightShare: 0.75 }).success).toBe(false);
+    expect(SafetyScoreV9CurrentCardSchema.safeParse({ ...card, provisional: undefined }).success).toBe(false);
+    const { provisional: _label, unknownPricedWeightShare: _share, ...archived } = card;
+    expect(SafetyScoreV9CurrentCardSchema.safeParse(archived).success).toBe(true);
+    const legacy = SafetyScoreV9HistoricalTypedCardSchema.safeParse({
+      ...archived, breakdowns: {
+        ...archived.breakdowns!, exit: {
+          ...archived.breakdowns!.exit,
+          primaryRoute: { ...archived.breakdowns!.exit.primaryRoute!, eligibilityMultiplier: 1 },
+        },
+      },
+    });
+    expect(legacy.success).toBe(true);
+  });
+
+  it("uses a strict majority and weights only unknown reserve subfactors, not their whole mixed row", () => {
+    const input = fixture("mixed", { score: 50, grade: "C-", qualityScore: 50, pillars: { backing: 50, exit: 50, control: 50 } });
+    const unknown = { cause: "U" as const, causeGapIds: ["mixed:gap:unknown"], scoringDisposition: "bounded-uncertainty" as const };
+    input.backing = { ...input.backing!, contributions: input.backing!.contributions.map((component) => ({
+      ...component, ...unknown, factors: [
+        { componentKey: "unknown", score: 50, normalizedWeight: 0.625, effectiveScoringWeight: 0.625, ...unknown },
+        { componentKey: "known", score: 50, normalizedWeight: 0.375, ...knownCause, effectiveScoringWeight: 0.375 },
+      ],
+    })) };
+    input.control = { ...input.control!, components: input.control!.components.map((component) => ({ ...component, ...unknown, posture: "unknown" })) };
+    expect(projectSafetyScoreV9Card(input).card.provisional).toBeUndefined();
+    input.backing = { ...input.backing!, contributions: input.backing!.contributions.map((component) => ({
+      ...component, factors: component.factors!.map((factor, index) => ({
+        ...factor, normalizedWeight: index === 0 ? 0.626 : 0.374, effectiveScoringWeight: index === 0 ? 0.626 : 0.374,
+      })),
+    })) };
+    expect(projectSafetyScoreV9Card(input).card.unknownPricedWeightShare).toBeCloseTo(0.5004);
+  });
+
+  it("counts only controlling mechanism and Control unknowns, excluding measured adversity and known ties", () => {
+    const { card } = projectSafetyScoreV9Card(fixture("accounting", { score: 50, grade: "C-", qualityScore: 50, pillars: { backing: 50, exit: 50, control: 50 } }));
+    const breakdowns = card.breakdowns!;
+    const unknown = { cause: "U" as const, scoringDisposition: "bounded-uncertainty" as const };
+    const component = breakdowns.backing.components[0]!;
+    Object.assign(component, unknown, { source: "mechanism", factors: [
+      { score: 50, effectiveScoringWeight: 1, ...unknown },
+      { score: 90, effectiveScoringWeight: 1, cause: null, scoringDisposition: "included" },
+    ] });
+    Object.assign(breakdowns.control.components[0]!, unknown, { posture: "unknown" });
+    const aggregation = card.scoreTrace.aggregation!;
+    expect(computeV9UnknownPricedWeightShare(breakdowns, aggregation)).toBeCloseTo(0.65);
+    breakdowns.control.components[0]!.posture = "unbounded-adverse";
+    expect(computeV9UnknownPricedWeightShare(breakdowns, aggregation)).toBeCloseTo(0.4);
+    breakdowns.control.components[0]!.posture = "unknown";
+    breakdowns.control.components.push({ ...breakdowns.control.components[0]!, cause: null, scoringDisposition: "included" });
+    expect(computeV9UnknownPricedWeightShare(breakdowns, aggregation)).toBeCloseTo(0.4);
+    Object.assign(component, { cause: "D", scoringDisposition: "measured-adverse" });
+    expect(computeV9UnknownPricedWeightShare(breakdowns, aggregation)).toBe(0);
+  });
+
+  it("accounts for unavailable pillars, selected Exit factors and only uncovered no-route supply", () => {
+    const { card } = projectSafetyScoreV9Card(fixture("exit-accounting", { score: 50, grade: "C-", qualityScore: 50, pillars: { backing: 50, exit: 50, control: 50 } }));
+    const breakdowns = card.breakdowns!;
+    const aggregation = card.scoreTrace.aggregation!;
+    Object.assign(breakdowns.exit.primaryRoute!.components[0]!, { cause: "C", scoringDisposition: "bounded-uncertainty" });
+    expect(computeV9UnknownPricedWeightShare(breakdowns, aggregation)).toBeCloseTo(0.35 * breakdowns.exit.primaryRoute!.components[0]!.effectiveScoringWeight!);
+    aggregation.pricedUnknownPillars = [{ pillar: "backing", cause: "U", score: 50, causeGapRefs: [] }];
+    expect(computeV9UnknownPricedWeightShare(breakdowns, aggregation)).toBeGreaterThan(0.4);
+    breakdowns.exit.primaryRoute = null;
+    breakdowns.exit.limitedEvidenceCauses = ["U"];
+    breakdowns.exit.evaluatedScore = 25;
+    expect(computeV9UnknownPricedWeightShare(breakdowns, aggregation)).toBeCloseTo(0.575);
+    breakdowns.exit.evaluatedScore = 0;
+    expect(computeV9UnknownPricedWeightShare(breakdowns, aggregation)).toBeCloseTo(0.4);
+    expect(computeV9UnknownPricedWeightShare(null, aggregation)).toBe(0);
+    expect(computeV9UnknownPricedWeightShare(breakdowns, null)).toBe(0);
+  });
+
+  it("admits overall Control90 with unchanged raw components and retained pre-clamp cards", () => {
+    const raw = projectSafetyScoreV9Card(fixture("control-clamp", { score: 92, grade: "A+", qualityScore: 92.05, pillars: { backing: 92, exit: 90, control: 95 } })).card;
+    expect(SafetyScoreV9BreakdownsSchema.safeParse(raw.breakdowns).success).toBe(true);
+    const clamped = structuredClone(raw.breakdowns!);
+    clamped.control.evaluatedScore = 90;
+    clamped.control.publishedScore = 90;
+    expect(SafetyScoreV9BreakdownsSchema.safeParse(clamped).success).toBe(true);
+    clamped.control.evaluatedScore = 89;
+    clamped.control.publishedScore = 89;
+    expect(SafetyScoreV9BreakdownsSchema.safeParse(clamped).success).toBe(false);
+  });
+
   it.each(["C", "U"] as const)("publishes a priced %s unknown without fabricating pillar evidence", (cause) => {
     const scoreInput = makeV9ProductionScoreInput({
       assetId: "priced-unknown",

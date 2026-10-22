@@ -437,7 +437,7 @@ describe("SafetyScoreV9ResponseSchema", () => {
     const invalidControl = currentResponse();
     invalidControl.cards[0]!.breakdowns!.control.components[0]!.binding = false;
     expect(() => SafetyScoreV9CurrentResponseSchema.parse(invalidControl)).toThrow(
-      /binding controls, or the neutral empty set, must reconcile/,
+      /binding controls must reconcile the raw or 90-clamped evaluated score/,
     );
   });
 
