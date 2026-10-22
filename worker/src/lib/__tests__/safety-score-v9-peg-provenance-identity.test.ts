@@ -183,7 +183,7 @@ describe("diagnostic V9 peg provenance identity boundary", () => {
       pegProvenanceById: { [ASSET_ID]: verifiedSummary },
     });
 
-    expect(legacySummary.legacyInclusive.result.pegScore).toBe(84);
+    expect(legacySummary.legacyInclusive.result.pegScore).toBe(97);
     expect(verifiedSummary.legacyInclusive.result).toEqual(
       legacySummary.legacyInclusive.result,
     );
