@@ -203,8 +203,6 @@ describe("ReservesSection", () => {
     expect(container.textContent?.split(SUMMARY.compositionBasis!).length).toBe(2);
     // The count in the fold's name covers notes and sources.
     expect(provenance[0]!.querySelector("summary")?.textContent).toMatch(/\b3\b/);
-    // The disclosure ids the page deep-links to survive.
-    expect(container.querySelector("details#reserve-feed-status")).not.toBeNull();
   });
 
   describe("liquid ≤ 1 day fact", () => {
@@ -301,15 +299,12 @@ describe("ReservesSection", () => {
   });
 
   describe("reserve feed", () => {
-    it("turns a stale validation error into one amber header chip with the detail in a disclosure", () => {
+    it("keeps a source-age-only stale feed out of the reader header (operator signal, ADR-42)", () => {
       const { container } = renderSection({ reserves: STALE_USDC });
-      const chip = screen.getByRole("button", { name: "Reserve feed stale · last report 24 Sep · 7-day budget" });
-      expect(chip.innerHTML).toContain("state-warn");
+      expect(screen.queryByRole("button", { name: /Reserve feed stale/ })).toBeNull();
+      expect(container.querySelector("details#reserve-feed-status")).toBeNull();
       expect(container.textContent).not.toMatch(/Validation failed|1066290|604800/);
       expect(container.textContent).not.toContain("RESERVE EVIDENCE");
-      const status = within(container.querySelector("details#reserve-feed-status") as HTMLElement);
-      expect(status.getByText("Reason: source-age")).toBeDefined();
-      expect(status.getByText("Source age: 12.3 days (budget 7 days)")).toBeDefined();
     });
 
     it("shows the source-type chip and keeps the provenance sentence out of the visible summary", () => {
@@ -336,8 +331,10 @@ describe("ReservesSection", () => {
 
     it("retries from the Feed status disclosure after a failed first fetch and keeps the reviewed visual", () => {
       const onRetry = vi.fn();
-      renderSection({ reserves: null, reserveFetchError: new Error("boom"), onRetry });
+      const { container } = renderSection({ reserves: null, reserveFetchError: new Error("boom"), onRetry });
       expect(screen.getByRole("button", { name: "Live reserve feed unavailable" })).toBeDefined();
+      // The disclosure id the chip deep-links to survives.
+      expect(container.querySelector("details#reserve-feed-status")).not.toBeNull();
       expect(screen.getByRole("figure").getAttribute("aria-label")).toContain("U.S. Treasury bills 80%");
       fireEvent.click(screen.getByRole("button", { name: "Retry", hidden: true }));
       expect(onRetry).toHaveBeenCalledTimes(1);

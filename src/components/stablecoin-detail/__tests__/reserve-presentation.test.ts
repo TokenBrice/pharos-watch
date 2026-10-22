@@ -286,7 +286,7 @@ describe("buildReserveFeedStatus", () => {
     }
   });
 
-  it("a validation error that only reports source age becomes a stale chip naming date and budget in days", () => {
+  it("a validation error that only reports source age is operator signal, not a reader chip", () => {
     const status = buildReserveFeedStatus(
       makeReserves({
         mode: "live-stale",
@@ -302,15 +302,10 @@ describe("buildReserveFeedStatus", () => {
       }),
       null,
     );
-    expect(status?.label).toBe("Reserve feed stale · last report 24 Sep · 7-day budget");
-    expect(status?.reason).toBe("source-age");
-    expect(status?.tone).toBe("watch");
-    const detail = status?.rows.join(" ") ?? "";
-    expect(detail).toContain("Source age: 12.3 days (budget 7 days)");
-    expect(detail).not.toMatch(/1066290|604800|Validation failed/);
+    expect(status).toBeNull();
   });
 
-  it("prefers the published freshness verdict over parsing the warning text", () => {
+  it("keeps a published source-age freshness verdict out of the reader chip", () => {
     const status = buildReserveFeedStatus(
       makeReserves({
         mode: "live-stale",
@@ -329,7 +324,7 @@ describe("buildReserveFeedStatus", () => {
       }),
       null,
     );
-    expect(status?.label).toBe("Reserve feed stale · last report 20 Sep · 4-day budget");
+    expect(status).toBeNull();
   });
 
   it("never-attempted live adapter → neutral pending chip, not degraded", () => {
@@ -451,9 +446,7 @@ describe("dated reserve disclosures", () => {
     const totals = formatReserveSnapshotLabel(reserves);
     expect(totals).toContain(`Source as of 2026-09-26${stale} · Checked 2026-09-27 12:14 UTC`);
     expect(totals).not.toContain("2026-06-30");
-    const ageStatus = buildReserveFeedStatus(reserves, null);
-    expect(ageStatus?.rows).toContain(totals);
-    expect(ageStatus?.rows.join(" ")).not.toContain("2026-06-30");
+    expect(buildReserveFeedStatus(reserves, null)).toBeNull();
   });
 
   it.each(["live", "live-stale"] as const)("withholds an undated XAUT reviewed-config composition clock in %s mode", (mode) => {
@@ -509,10 +502,7 @@ describe("dated reserve disclosures", () => {
     });
     const footnote = buildReserveFootnoteModel(reserves, true, "rwa backed");
     expect(footnote?.text).toContain("Report as of 2026-06-30 · Stale · Checked");
-    const status = buildReserveFeedStatus(reserves, null);
-    expect(status?.label).toBe("Reserve feed stale · last report 30 Jun · 46.3-day budget");
-    expect(status?.reason).toBe("source-age");
-    expect(status?.rows.join(" ")).not.toContain("5775332");
+    expect(buildReserveFeedStatus(reserves, null)).toBeNull();
     expect(buildReserveFeedStatus({ ...reserves, sync: { ...reserves.sync!, status: "error", lastError: "HTTP 503" } }, null))
       .toBeNull();
   });

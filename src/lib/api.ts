@@ -5,6 +5,7 @@ import {
   ApiDependencyMetaSchema,
   ApiMetaEnvelopeSchema,
   ApiMetaWarningOnlySchema,
+  SAFETY_SCORE_PUBLICATION_AGE_REASON,
   type ApiDependencyMeta,
   type ApiMetaEnvelope,
 } from "@pharos/contracts/api-meta";
@@ -358,7 +359,12 @@ export async function apiFetchWithMeta<T>(
   const ageHeader = res.headers.get("X-Data-Age");
   const updatedAtHeader = res.headers.get("X-Data-Updated-At");
   const freshnessHeader = res.headers.get("X-Data-Freshness");
-  const headerStatus = freshnessHeader === "stale" || freshnessHeader === "degraded" ? freshnessHeader : "fresh";
+  // A Safety Score consumer fail-close (1h) is not reader staleness: with a known clock it floors
+  // `degraded`, and reader health ages the publication against its own band (ADR-42).
+  const headerStatus = freshnessHeader === "stale"
+    && res.headers.get("X-Data-Freshness-Reason") === SAFETY_SCORE_PUBLICATION_AGE_REASON
+    ? "degraded"
+    : freshnessHeader === "stale" || freshnessHeader === "degraded" ? freshnessHeader : "fresh";
   const unknownClockMeta = (): ApiMeta => ({
     updatedAt: null,
     ageSeconds: null,

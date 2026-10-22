@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { SAFETY_SCORE_PUBLICATION_AGE_REASON } from "@pharos/contracts/api-meta";
 import { cloneResponse, createJsonResponse } from "@shared/lib/http-response";
 import { addFreshnessHeaders } from "./api-freshness-headers";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
@@ -248,7 +249,7 @@ export function safetyScoreSnapshotHeaders(
   return {
     ...headers,
     "X-Data-Freshness": "stale",
-    "X-Data-Freshness-Reason": future ? "future-timestamp" : "safety-score-publication-age",
+    "X-Data-Freshness-Reason": future ? "future-timestamp" : SAFETY_SCORE_PUBLICATION_AGE_REASON,
     Warning: headers.Warning ?? `110 - "Safety Score publication is ${future ? "future-dated" : "stale"} (consumer budget ${SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC}s)"`,
   };
 }
