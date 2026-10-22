@@ -44,7 +44,11 @@ import {
   type AssetBuildContext,
 } from "./fact-set-context";
 import { buildOperationalResilienceFact } from "./fact-set-operational-resilience";
-import { applySafetyScoreV9WrapperIncidentRoutes } from "./extension-incidents";
+import {
+  applySafetyScoreV9WrapperIncidentRoutes,
+  getSafetyScoreV9ReviewedIncidents,
+  projectSafetyScoreV9RealizedHolderLossEvents,
+} from "./extension-incidents";
 import {
   buildCdpStressCoverage,
   buildDependencies,
@@ -202,6 +206,10 @@ function buildAssetFacts(
     operationalResilience,
     ...(operationalResilienceStatus === undefined ? {} : { operationalResilienceStatus }),
     wrapperLocalFacts,
+    realizedHolderLossEvents: projectSafetyScoreV9RealizedHolderLossEvents(
+      getSafetyScoreV9ReviewedIncidents(context.asset.assetId, context.fixedInput.clockSec),
+      context.fixedInput.clockSec,
+    ),
     allocationScopeFacts,
     ...(context.causeResolutionDiagnostics.length === 0 ? {} : {
       causeResolutionDiagnostics: context.causeResolutionDiagnostics,
@@ -293,14 +301,6 @@ function quarantinedWrapperLocalFacts(
       withdrawalTerms: unavailableDimension(),
       measuredUnwind: unavailableDimension(),
       lossAbsorptionEmergencyControls: unavailableDimension(),
-    },
-    riskTransfer: {
-      disposition: "producer-failed",
-      mechanism: "unknown",
-      maximumParentLossAbsorptionPoints: 0,
-      signals: ["asset-compilation-unavailable"],
-      evidenceRefIds: [],
-      status: unavailableStatus,
     },
   });
 }

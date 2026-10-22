@@ -297,7 +297,7 @@ type ExitBreakdownRefinementInput = Omit<z.infer<typeof SafetyScoreV9ExitBreakdo
   alternatives: readonly Omit<z.infer<typeof SafetyScoreV9ExitBreakdownBaseSchema>["alternatives"][number], "routeId" | "lane">[];
 };
 
-function refineExitBreakdown(breakdown: ExitBreakdownRefinementInput, ctx: z.RefinementCtx): void {
+function refineExitBreakdown(breakdown: ExitBreakdownRefinementInput, ctx: z.RefinementCtx, recordedEligibilityMultiplier = 1): void {
     refineBreakdownAdjustments(breakdown, ctx);
     if (breakdown.primaryRoute === null) return;
     const keys = breakdown.primaryRoute.components.map((component) => component.key);
@@ -341,7 +341,7 @@ function refineExitBreakdown(breakdown: ExitBreakdownRefinementInput, ctx: z.Ref
     }
     const preCapRouteScore =
       weightedComponentScore *
-      breakdown.primaryRoute.confidenceFactor;
+      breakdown.primaryRoute.confidenceFactor * recordedEligibilityMultiplier;
     const routeScoreReconciles =
       breakdown.primaryRoute.capsApplied.length === 0
         ? Math.abs(breakdown.primaryRoute.score - preCapRouteScore) <= EXIT_SCORE_TOLERANCE
@@ -365,10 +365,11 @@ const SafetyScoreV9ExitBreakdownSchema = SafetyScoreV9ExitBreakdownBaseSchema.su
 /** Breakdown6 predates typed route IDs/lanes; retain its exact strict shape. */
 const SafetyScoreV9HistoricalExitBreakdownSchema = SafetyScoreV9ExitBreakdownBaseSchema.extend({
   primaryRoute: SafetyScoreV9ExitBreakdownBaseSchema.shape.primaryRoute.unwrap()
-    .omit({ routeId: true, lane: true }).nullable(),
+    .omit({ routeId: true, lane: true })
+    .extend({ eligibilityMultiplier: z.number().finite().min(0).max(1) }).nullable(),
   alternatives: z.array(SafetyScoreV9ExitBreakdownBaseSchema.shape.alternatives.element
     .omit({ routeId: true, lane: true })),
-}).superRefine(refineExitBreakdown);
+}).superRefine((breakdown, ctx) => refineExitBreakdown(breakdown, ctx, breakdown.primaryRoute?.eligibilityMultiplier ?? 1));
 export type SafetyScoreV9ExitBreakdown = z.infer<
   typeof SafetyScoreV9ExitBreakdownSchema
 >;

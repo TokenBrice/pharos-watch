@@ -169,7 +169,6 @@ export function applyV9MeasuredCollateralization(
         responsibility: "measured-adverse",
         pathKey: "mechanism:collateralization-ratio",
         materialShare: 1 - ratio,
-        ceiling: score,
         evidenceRefIds,
         failureDomains: [],
       },

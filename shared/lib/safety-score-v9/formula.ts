@@ -17,19 +17,23 @@ import {
   aggregateV9SmoothBoundedHeadroom,
   type V9AggregationStrategy,
   type V9WeakestPathAggregationTrace,
+  type V9PricedUnknownPillar,
 } from "./aggregation";
 import {
   assertV9ReasonCodesRegistered,
   assertV9UnresolvedFactsMatchPolicy,
   assertV9ValidatedPolicyEnvelope,
   resolveV9ReasonTreatment,
+  unknownQuality,
 } from "./policy";
 import {
   resolveV9ScopedRisk,
   type V9ScopedRiskAdjustment,
+  type V9ScopedRiskResolution,
   type V9ScopedRiskSignal,
 } from "./scoped-risk";
 import { clampScore } from "../math";
+import { DEPEG_SEVERITY_BPS } from "../depeg-config";
 import { canonicalUniqueBy, compareText } from "./primitives";
 import { deepFreeze } from "../../types/safety-score-v9-immutable";
 
@@ -72,20 +76,20 @@ export interface V9NRReason {
   causalKey?: string;
 }
 
-export interface V9CapTrace extends V9StructuralCap {
-  source: V9CapSource;
+export interface V9CapTrace<S extends V9CapSource | "structural" = V9CapSource> extends V9StructuralCap {
+  source: S;
   binding: boolean;
 }
 
 export interface V9AdverseAttribution {
   source:
+    | "realized-holder-loss"
     | "active-depeg"
     | "parent-score"
     | "peg-performance"
     | "pillar-score"
     | "reason"
-    | "structural-signal"
-    | "wrapper-local";
+    | "structural-signal";
   path: string;
   message: string;
   responsibility: "measured-adverse";
@@ -105,7 +109,7 @@ export type V9BoundedUncertaintyResponsibility = Exclude<
 >;
 
 export interface V9BoundedUncertaintyAttribution {
-  source: "parent-score" | "reason" | "wrapper-local";
+  source: "parent-score" | "reason";
   code: V9ReasonCode;
   path: string;
   message: string;
@@ -129,6 +133,11 @@ export interface V9PillarReasonProvenance {
 export interface V9ScoreCoverage {
   includedPillars: readonly V9QualityPillar[];
   partialEvidence: V9PartialEvidence | null;
+  unavailablePillars?: readonly {
+    pillar: V9QualityPillar;
+    causes: readonly V9EvidenceCause[];
+    causeGapIds: readonly string[];
+  }[];
   limitingPillars: readonly {
     pillar: V9QualityPillar;
     causes: readonly V9EvidenceCause[];
@@ -182,6 +191,12 @@ export interface V9ScoreTrace {
   propagatedParentReasons: readonly V9NRReason[];
 }
 
+/** Arbitrary caps remain confined to the offline research adapter. */
+export type V9ResearchScoreTrace = Omit<V9ScoreTrace, "caps" | "bindingCap"> & {
+  caps: readonly V9CapTrace<V9CapSource | "structural">[];
+  bindingCap: V9CapTrace<V9CapSource | "structural"> | null;
+};
+
 export interface V9ScoreAdjustmentTrace {
   source: "asset-premium";
   kind: V9AssetPremiumKind;
@@ -192,12 +207,6 @@ export interface V9ScoreAdjustmentTrace {
   scoreAfter: number;
   publishedScoreBefore: number;
   publishedScoreAfter: number;
-  capRelief: {
-    source: "structural";
-    kind: string;
-    fromLimit: number;
-    toLimit: number;
-  };
 }
 
 const SCORE_MAX = 100;
@@ -267,19 +276,6 @@ function gradeForScore(score: number, policy: V9ValidatedPolicyEnvelope): V9Grad
   return policy.policy.semantic.formula.gradeThresholds.find((threshold) => score >= threshold.minScore)?.grade ?? "F";
 }
 
-function signalLimit(signal: V9StructuralSignal, policy: V9ValidatedPolicyEnvelope): number | null {
-  // An unreviewed upgrade path is an evidence disposition, not an observed
-  // exploitability or control event. V3 carries its owner as an explicit gap,
-  // which can still bind through the issuer-evidence ceiling or withhold to NR.
-  if (signal.kind === "unreviewed-upgrade") return null;
-  if (
-    signal.kind === "material-bridge" &&
-    (signal.materialSharePct ?? 100) < policy.policy.semantic.materiality.deploymentMaterialSharePct
-  ) {
-    return null;
-  }
-  return policy.policy.semantic.structural.signalLimits[signal.kind][signal.severity];
-}
 
 function scopedSignalKey(signal: V9StructuralSignal): string {
   const domains = [...signal.failureDomainKeys].sort(compareText);
@@ -293,12 +289,8 @@ function scopedSignalKey(signal: V9StructuralSignal): string {
   ].join(":");
 }
 
-function scopedRiskSignal(
-  signal: V9StructuralSignal,
-  policy: V9ValidatedPolicyEnvelope,
-): V9ScopedRiskSignal | null {
-  const limit = signalLimit(signal, policy);
-  if (signal.economicLossScope === undefined || limit === null) return null;
+function scopedRiskSignal(signal: V9StructuralSignal): V9ScopedRiskSignal | null {
+  if (signal.economicLossScope !== "deployment" || signal.exposedScore === undefined) return null;
   const failureDomainKey =
     [...signal.failureDomainKeys].sort(compareText).join("+") ||
     `signal:${signal.kind}:${signal.reason}`;
@@ -318,106 +310,42 @@ function scopedRiskSignal(
       ? [...signal.failureDomainKeys].sort(compareText)
       : [failureDomainKey],
     economicLossScope: signal.economicLossScope,
-    exposedScore: limit,
+    exposedScore: signal.exposedScore,
     exposureShare: rawShare === null ? null : rawShare * (1 - lossAbsorption),
     reason: signal.reason,
   };
 }
 
-export function structuralSignalNeedsHardCap(signal: Pick<V9StructuralSignal,
-  "kind" | "severity" | "economicLossScope" | "responsibility" | "pricedInPillar" | "additionalHardCapRisk"
->): boolean {
-  // Retained V2 signals predate explicit loss scope and keep their legacy cap.
+function speculativeCreditNeedsResidualCap(signal: V9StructuralSignal): boolean {
+  if (signal.kind !== "speculative-credit" || signal.severity !== "high") return false;
+  // Preserve R1 admission for legacy unscoped signals without widening scoped facts.
   if (signal.economicLossScope === undefined) {
     return signal.responsibility === undefined || signal.responsibility === "measured-adverse";
   }
-  if (signal.responsibility !== "measured-adverse") return false;
-  // These admitted high-severity kinds carry a provisional, non-compensable
-  // ceiling regardless of pillar pricing. Credit is emitted as reserve-claim;
-  // requiring global-claim or a Control residual marker would miss it entirely.
-  // Keep deployment/access scope gates and take all limits from signalLimits.
-  if (
-    signal.severity === "high" &&
-    ((signal.kind === "speculative-credit" &&
-      (signal.economicLossScope === "reserve-claim" || signal.economicLossScope === "global-claim")) ||
-      (signal.kind === "centralized-mint" && signal.economicLossScope === "global-claim"))
-  ) return true;
-  // A signal already priced inside a pillar has its causal account there. Letting
-  // it also impose a whole-asset ceiling charges one fact twice, so the second
-  // charge must be an explicit reviewed assertion that the ceiling covers a
-  // residual the pillar cannot express. Without the marker a pillar-priced signal
-  // shapes its pillar and stops there.
-  if (signal.pricedInPillar !== undefined && signal.additionalHardCapRisk === undefined) {
-    return false;
-  }
-  // Reserve and access facts are already owned by backing/exit. A reserve
-  // condition that can impair the whole claim must be emitted as global-claim;
-  // treating every reserve slice as global charges the same exposure twice.
-  if (
-    signal.economicLossScope === "access-only" ||
-    signal.economicLossScope === "reserve-claim"
-  ) {
-    return false;
-  }
-  if (signal.economicLossScope === "global-claim") return true;
-  // Deployment facts belong to the scoped-risk resolver. Known exposure is
-  // priced proportionally; unknown exposure remains an explicit evidence
-  // limitation and must not be promoted to a whole-asset adverse cap.
-  return false;
+  return signal.responsibility === "measured-adverse" &&
+    (signal.economicLossScope === "reserve-claim" || signal.economicLossScope === "global-claim");
 }
+
 
 function structuralSignalAffectedScore(
   signal: V9StructuralSignal,
-  allSignals: readonly V9StructuralSignal[],
-  scopedRisk: ReturnType<typeof resolveV9ScopedRisk> | null,
-  bindingCap: Omit<V9CapTrace, "binding"> | null,
-  policy: V9ValidatedPolicyEnvelope,
+  scopedRisk: V9ScopedRiskResolution | null,
+  bindingCap: V9CapTrace | null,
 ): boolean {
-  // Structural presence alone is not causal proof. Producers must identify the
-  // underlying fact as known adverse; missing/stale/unsupported evidence can
-  // still shape the latent score, but cannot justify a public D/F claim.
   if (signal.responsibility !== "measured-adverse") return false;
-  // A measured signal explicitly owned by a pillar is already part of that
-  // pillar's quality result, so no second composite adjustment/cap is required
-  // to establish causality.
+  if (bindingCap?.source === "speculative-credit" && speculativeCreditNeedsResidualCap(signal)) return true;
   if (signal.pricedInPillar !== undefined) return true;
-
   const scopedKey = scopedSignalKey(signal);
-  if (
-    scopedRisk?.adjustments.some(
-      (adjustment) =>
-        adjustment.adjustmentPoints > 0 &&
-        adjustment.sourceSignalKeys.includes(scopedKey),
-    )
-  ) {
-    return true;
-  }
-
-  if (bindingCap?.source !== "structural") return false;
-  if (bindingCap.kind === `signal:${signal.kind}:${signal.severity}`) return true;
-  if (bindingCap.kind !== "signal:common-mode-oracle" || signal.kind !== "weak-oracle-branch") {
-    return false;
-  }
-
-  const oracleDomains = new Map<string, number>();
-  for (const candidate of allSignals.filter(
-    (item) => item.kind === "weak-oracle-branch" && item.responsibility === "measured-adverse",
-  )) {
-    for (const domain of new Set(candidate.failureDomainKeys)) {
-      oracleDomains.set(domain, (oracleDomains.get(domain) ?? 0) + 1);
-    }
-  }
-  return signal.failureDomainKeys.some(
-    (domain) =>
-      (oracleDomains.get(domain) ?? 0) >=
-      policy.policy.semantic.materiality.commonModeOracleMinBranches,
-  );
+  return scopedRisk?.adjustments.some(
+    (adjustment) =>
+      adjustment.adjustmentPoints > 0 &&
+      adjustment.sourceSignalKeys.includes(scopedKey),
+  ) ?? false;
 }
 
 function unresolvedFactAffectedScore(
   fact: V9UnresolvedFact,
   pillars: V9ScoringInput["pillars"],
-  bindingCap: Omit<V9CapTrace, "binding"> | null,
   policy: V9ValidatedPolicyEnvelope,
 ): boolean {
   if (fact.responsibility !== "measured-adverse") return false;
@@ -433,31 +361,13 @@ function unresolvedFactAffectedScore(
   ) {
     return false;
   }
-  if (resolved.critical || resolved.reason.defaultTreatment === "pillar") return true;
-  return (
-    resolved.ceiling !== null &&
-    bindingCap?.source === "evidence" &&
-    bindingCap.kind === resolved.ceiling.kind &&
-    bindingCap.limit === resolved.ceiling.limit
-  );
+  return resolved.reason.defaultTreatment === "pillar";
 }
 
-/** The C- floor is the lowest still-rated grade boundary; bounded-uncertainty
- * attribution and the wrapper parent gate both compare against it. */
-export function v9CMinusFloor(policy: V9ValidatedPolicyEnvelope): number {
-  const floor =
-    policy.policy.semantic.formula.gradeThresholds.find((threshold) => threshold.grade === "C-")
-      ?.minScore;
-  if (floor === undefined) {
-    throw new Error("Safety Score v9 policy has no C- grade threshold");
-  }
-  return floor;
-}
 
 function boundedUncertaintyForFact(
   fact: V9UnresolvedFact,
   pillars: V9ScoringInput["pillars"],
-  bindingCap: Omit<V9CapTrace, "binding"> | null,
   policy: V9ValidatedPolicyEnvelope,
   pillarReasonProvenance: readonly V9PillarReasonProvenance[],
 ): V9BoundedUncertaintyAttribution | null {
@@ -472,7 +382,6 @@ function boundedUncertaintyForFact(
   if (cause !== "C" && cause !== "U") return null;
   const resolved = resolveV9ReasonTreatment(policy, fact.code, cause);
   if (resolved.critical || resolved.treatment === "diagnostic") return null;
-  const cMinusFloor = v9CMinusFloor(policy);
   const pillarReasonAffectedScore = pillarReasonProvenance.some(
     (candidate) =>
       candidate.fact.code === fact.code &&
@@ -480,18 +389,9 @@ function boundedUncertaintyForFact(
       candidate.fact.reason === fact.reason &&
       candidate.fact.responsibility === fact.responsibility &&
       pillars[candidate.pillar] !== null &&
-      (pillars[candidate.pillar]! < cMinusFloor ||
-        (candidate.componentScore !== undefined && candidate.componentScore < cMinusFloor &&
-          (candidate.effectiveScoringWeight ?? 0) > 0)),
+      (candidate.componentScore === undefined || (candidate.effectiveScoringWeight ?? 0) > 0),
   );
-  const ceilingAffectedScore =
-    resolved.treatment === "ceiling" &&
-    resolved.ceiling !== null &&
-    bindingCap?.source === "evidence" &&
-    bindingCap.kind === resolved.ceiling.kind &&
-    bindingCap.limit === resolved.ceiling.limit &&
-    bindingCap.reason === fact.reason;
-  if (!pillarReasonAffectedScore && !ceilingAffectedScore) return null;
+  if (!pillarReasonAffectedScore) return null;
   const causeGapIds = fact.causeGapIds ?? (fact.sourceGapId == null ? [] : [fact.sourceGapId]);
   if (causeGapIds.length === 0) return null;
   return {
@@ -582,216 +482,28 @@ export function deriveV9ReserveLossSignal(
   };
 }
 
-/** Resolve fact-shaped structural signals to methodology ceilings. */
-export function resolveV9StructuralCaps(
-  signals: readonly V9StructuralSignal[],
-  policy: V9ValidatedPolicyEnvelope,
-): V9StructuralCap[] {
-  assertV9ValidatedPolicyEnvelope(policy);
-  const sorted = [...signals].sort(
-    (left, right) =>
-      compareText(left.kind, right.kind) ||
-      compareText(left.reason, right.reason) ||
-      (left.materialSharePct ?? -1) - (right.materialSharePct ?? -1),
-  );
-  const caps = sorted.flatMap((signal) => {
-    const limit = signalLimit(signal, policy);
-    return limit === null ? [] : [{ kind: `signal:${signal.kind}:${signal.severity}`, limit, reason: signal.reason }];
-  });
-  const oracleDomainCounts = new Map<string, number>();
-  for (const signal of sorted.filter((item) => item.kind === "weak-oracle-branch")) {
-    for (const key of new Set(signal.failureDomainKeys)) {
-      oracleDomainCounts.set(key, (oracleDomainCounts.get(key) ?? 0) + 1);
-    }
-  }
-  for (const [failureDomain, count] of [...oracleDomainCounts].sort(([left], [right]) =>
-    compareText(left, right),
-  )) {
-    if (count < policy.policy.semantic.materiality.commonModeOracleMinBranches) continue;
-    caps.push({
-      kind: "signal:common-mode-oracle",
-      limit: policy.policy.semantic.structural.commonModeOracleLimit,
-      reason: `${count} weak oracle branches share ${failureDomain}.`,
-    });
-  }
-  return caps;
-}
 
-function v9PillarBoundedUnknownFloor(pillar: V9QualityPillar, policy: V9ValidatedPolicyEnvelope): number {
-  const semantic = policy.policy.semantic;
-  return pillar === "backing"
-    ? semantic.backing.boundedUnknownQuality
-    : pillar === "exit"
-      ? semantic.exit.boundedUnknownScore
-      : semantic.control.boundedUnknownQuality;
-}
 
-function anyPillarBelowFloor(
-  pillars: V9ScoringInput["pillars"],
-  policy: V9ValidatedPolicyEnvelope,
-): boolean {
-  return V9_QUALITY_PILLARS.some((pillar) => {
-    const score = pillars[pillar];
-    if (score === null) return false;
-    return score < v9PillarBoundedUnknownFloor(pillar, policy);
-  });
-}
-
-export interface V9DangerSignalInput {
-  pillars: V9ScoringInput["pillars"];
-  structuralSignals: readonly V9StructuralSignal[];
-  pegMultiplier: number | null;
-  activeDepegBps: number | null;
-  parentRequired: boolean;
-  parentScore: number | null;
-  unresolvedCodes: readonly V9ReasonCode[];
-}
-
-/**
- * Withholding danger predicate: measured adverse facts keep low scores rated
- * instead of withholding them for evidence gaps. F admission separately
- * requires causal measured-adverse attribution.
- */
-export function hasV9DangerSignal(
-  input: V9DangerSignalInput,
-  policy: V9ValidatedPolicyEnvelope,
-): boolean {
-  assertV9ValidatedPolicyEnvelope(policy);
-  const gates = policy.policy.semantic.formula.danger;
-  // (1) A fired signal:*:critical structural cap — presence, not bindingness.
-  const measuredStructuralSignals = input.structuralSignals.filter(
-    (signal) => signal.responsibility === "measured-adverse",
-  );
-  const firedCriticalSignal = resolveV9StructuralCaps(measuredStructuralSignals, policy).some(
-    (cap) => cap.kind.startsWith("signal:") && cap.kind.endsWith(":critical"),
-  );
-  // (2) Active depeg in any band.
-  const activeDepeg =
-    input.activeDepegBps !== null &&
-    input.activeDepegBps > gates.activeDepegMinimumBpsExclusive;
-  // (3) A required, rated parent imposes a parent cap.
-  const parentCap = input.parentRequired && input.parentScore !== null;
-  // (4) Centralized mint at the withhold policy's admitted severities.
-  const centralizedMint = measuredStructuralSignals.some(
-    (signal) =>
-      signal.kind === "centralized-mint" &&
-      gates.withholdCentralizedMintSeverities.includes(signal.severity),
-  );
-  // (5) Measured peg history below the withhold danger floor.
-  const measuredPeg = typeof input.pegMultiplier === "number" && input.pegMultiplier < gates.withholdPegMultiplierFloor;
-  // (6) Any pillar strictly below its bounded-unknown floor.
-  const subFloorPillar = anyPillarBelowFloor(input.pillars, policy);
-  // (7) A registry-classified unsupported-design reason.
-  const unsupportedDesign = input.unresolvedCodes.some(
-    (code) => resolveV9ReasonTreatment(policy, code, "D").reason.auditClassification === "unsupported-design",
-  );
-  // (8) An active control-compromise incident, at ANY severity — a live incident
-  // is danger even if its signal is graded below critical, so it is never
-  // withheld-to-NR or D-floored as a mere evidence gap.
-  const activeControlIncident = measuredStructuralSignals.some(
-    (signal) => signal.kind === "active-control-incident",
-  );
-  return (
-    firedCriticalSignal ||
-    activeDepeg ||
-    parentCap ||
-    centralizedMint ||
-    measuredPeg ||
-    subFloorPillar ||
-    unsupportedDesign ||
-    activeControlIncident
-  );
-}
-
-export interface V9PreExitDangerInput {
-  structuralSignals: readonly V9StructuralSignal[];
-  pegScore: number | null;
-  pegApplicable: boolean;
-  activeDepegBps: number | null;
-}
-
-/**
- * The pre-exit subset of the danger predicate, used to withhold the SIM-EXIT-L2
- * undisclosed-fee exit credit from an asset already held down by a non-exit
- * adverse fact (owner ruling 2026-07-23). Deliberately a strict subset of
- * `hasV9DangerSignal`: it keeps the active-depeg, sub-0.9 measured-peg,
- * fired-`signal:*:critical`-cap and active-control-incident clauses, and drops
- * every clause that exit credit can itself move — the sub-floor-pillar,
- * parent-cap, and unsupported-design clauses — so the exit lever can never feed
- * back into the gate that governs it. Centralized mint uses the pre-exit policy
- * threshold (critical only), not `>= high`: a concentrated-but-verified mint is
- * already priced in-pillar (control 25 + the high@59 cap), so withholding a
- * measured exit route for it would double-count a fact the score already carries
- * and would wrongly floor an otherwise-creditable measured exit (e.g. the Nest
- * RWA coins, which carry centralized-mint:high yet have no other pre-exit
- * danger and are owner-ruled to keep their measured sub-floor exits).
- */
-export function hasV9PreExitDangerSignal(input: V9PreExitDangerInput, policy: V9ValidatedPolicyEnvelope): boolean {
-  assertV9ValidatedPolicyEnvelope(policy);
-  const gates = policy.policy.semantic.formula.danger;
-  const measuredStructuralSignals = input.structuralSignals.filter(
-    (signal) => signal.responsibility === "measured-adverse",
-  );
-  const firedCriticalSignal = resolveV9StructuralCaps(measuredStructuralSignals, policy).some(
-    (cap) => cap.kind.startsWith("signal:") && cap.kind.endsWith(":critical"),
-  );
-  const activeDepeg =
-    input.activeDepegBps !== null &&
-    input.activeDepegBps > gates.activeDepegMinimumBpsExclusive;
-  const centralizedMint = measuredStructuralSignals.some(
-    (signal) =>
-      signal.kind === "centralized-mint" &&
-      gates.preExitCentralizedMintSeverities.includes(signal.severity),
-  );
-  // Mirrors the formula's `pegMultiplierRaw` for the danger check: an unverified
-  // or not-applicable peg reads as par (1), never as a measured-peg danger.
-  const pegMultiplier =
-    input.pegApplicable && input.pegScore !== null
-      ? input.pegScore === 0
-        ? 0
-        : (input.pegScore / 100) ** policy.policy.semantic.formula.pegExponent
-      : 1;
-  const measuredPeg = pegMultiplier < gates.preExitPegMultiplierFloor;
-  const activeControlIncident = measuredStructuralSignals.some((signal) => signal.kind === "active-control-incident");
-  return firedCriticalSignal || activeDepeg || centralizedMint || measuredPeg || activeControlIncident;
-}
-
-function capPriority(source: V9CapTrace["source"], policy: V9ValidatedPolicyEnvelope): number {
-  const priority = policy.policy.semantic.formula.capTiePriority.indexOf(source);
+function capPriority(source: V9CapSource | "structural", policy: V9ValidatedPolicyEnvelope): number {
+  const priority = source === "structural" ? -1 : policy.policy.semantic.formula.capTiePriority.indexOf(source);
   return priority === -1 ? policy.policy.semantic.formula.capTiePriority.length : priority;
 }
 
-// Generic absence reasons are less informative than a specific observed or
-// withheld fact at the same source and limit. Keep this semantic precedence
-// explicit; code-unit kind and reason comparisons below remain the total,
-// locale-independent fallback for replay-stable publication.
-const GENERIC_ABSENCE_CAP_KINDS = new Set<string>([
-  "reason:missing-applicable-peg",
-]);
-
-function capReasonPrecedence(kind: string): number {
-  return GENERIC_ABSENCE_CAP_KINDS.has(kind) ? 1 : 0;
-}
 
 function compareCapCandidates(
-  left: Omit<V9CapTrace, "binding">,
-  right: Omit<V9CapTrace, "binding">,
+  left: Omit<V9CapTrace<V9CapSource | "structural">, "binding">,
+  right: Omit<V9CapTrace<V9CapSource | "structural">, "binding">,
   policy: V9ValidatedPolicyEnvelope,
 ): number {
   return (
     left.limit - right.limit ||
     capPriority(left.source, policy) - capPriority(right.source, policy) ||
-    capReasonPrecedence(left.kind) - capReasonPrecedence(right.kind) ||
     compareText(left.kind, right.kind) ||
     compareText(left.reason, right.reason)
   );
 }
 
-/**
- * Apply one explicit asset premium after the ordinary score has established
- * eligibility. The adjustment remains pre-cap, and only its named cap relief
- * changes; every other candidate cap is recomputed unchanged.
- */
+/** Apply a public-only premium without changing any methodology ceiling. */
 export function applyV9AssetPremium(
   trace: V9ScoreTrace,
   premium: V9AssetPremiumPolicy,
@@ -809,38 +521,17 @@ export function applyV9AssetPremium(
   if (trace.scoreAdjustments.length > 0) {
     throw new Error(`Safety Score v9 ${trace.assetId} already has a score adjustment`);
   }
-  const matchingCap = trace.caps.find(
-    (cap) =>
-      cap.source === premium.capRelief.source &&
-      cap.kind === premium.capRelief.kind &&
-      cap.limit === premium.capRelief.fromLimit,
-  );
-  if (!matchingCap) {
-    throw new Error(
-      `Safety Score v9 ${trace.assetId} premium cannot resolve cap ${premium.capRelief.kind}`,
-    );
-  }
-
   const adjustedPreCapRaw = clampScore(trace.preCapScore + premium.points);
   const appliedPoints = roundTo(adjustedPreCapRaw - trace.preCapScore, 4);
   if (appliedPoints <= 0) return trace;
 
-  const adjustedCandidates = trace.caps.map<Omit<V9CapTrace, "binding">>((cap) => ({
-    source: cap.source,
-    kind: cap.kind,
-    limit: cap === matchingCap ? premium.capRelief.toLimit : cap.limit,
-    reason: cap.reason,
-  }));
-  const formula = policy.policy.semantic.formula;
-  const quantizedUncapped = roundTo(adjustedPreCapRaw, formula.scoreDecimals);
+  const adjustedCandidates = trace.caps.map<Omit<V9CapTrace, "binding">>(({ binding: _binding, ...cap }) => cap);
+  const quantizedUncapped = roundTo(adjustedPreCapRaw, 0);
   const bindingCandidate =
     [...adjustedCandidates]
-      .filter((cap) => floorTo(cap.limit, formula.scoreDecimals) < quantizedUncapped)
-      .sort((left, right) => compareCapCandidates(left, right, policy))[0] ?? null;
-  const rawFinal = Math.min(adjustedPreCapRaw, bindingCandidate?.limit ?? SCORE_MAX);
-  const finalScore = bindingCandidate
-    ? floorTo(rawFinal, formula.scoreDecimals)
-    : roundTo(rawFinal, formula.scoreDecimals);
+      .sort((left, right) => compareCapCandidates(left, right, policy))
+      .find((cap) => cap.limit < quantizedUncapped) ?? null;
+  const finalScore = Math.min(quantizedUncapped, premium.maximumPublishedScore, bindingCandidate?.limit ?? SCORE_MAX);
   const caps = adjustedCandidates.map<V9CapTrace>((cap) => ({
     ...cap,
     binding: cap === bindingCandidate,
@@ -861,7 +552,6 @@ export function applyV9AssetPremium(
       scoreAfter,
       publishedScoreBefore,
       publishedScoreAfter: finalScore,
-      capRelief: { ...premium.capRelief },
     }],
     caps,
     bindingCap: bindingCandidate ? { ...bindingCandidate, binding: true } : null,
@@ -870,20 +560,15 @@ export function applyV9AssetPremium(
   };
 }
 
-function scoreV9InputWithCaps(
+/** Score expectation-free V9 facts under one explicit, validated policy. */
+export function scoreV9Input(
   rawInput: V9ScoringInput,
   policy: V9ValidatedPolicyEnvelope,
-  scenarioCaps: readonly V9AttributedScenarioCap[],
   propagatedParentReasons: readonly V9NRReason[] = [],
-  limitedPillarCount = 0,
-  backingLimited = false,
   propagatedParentAdverseAttribution: readonly V9ParentAdverseAttribution[] = [],
   measuredPillarAdverseAttribution: readonly V9PillarAdverseAttribution[] = [],
   propagatedParentBoundedUncertaintyAttribution:
     readonly V9ParentBoundedUncertaintyAttribution[] = [],
-  wrapperLocalAdverseAttribution: readonly V9AdverseAttribution[] = [],
-  wrapperLocalBoundedUncertaintyAttribution:
-    readonly V9BoundedUncertaintyAttribution[] = [],
   pillarReasonProvenance: readonly V9PillarReasonProvenance[] = [],
   aggregationStrategy: V9AggregationStrategy = aggregateV9SmoothBoundedHeadroom,
   coverage?: V9ScoreCoverage,
@@ -893,12 +578,15 @@ function scoreV9InputWithCaps(
   assertV9UnresolvedFactsMatchPolicy(policy, input.unresolved);
   const formula = policy.policy.semantic.formula;
   const nrReasons: V9NRReason[] = [];
-  const reasonCeilings: Omit<V9CapTrace, "binding">[] = [];
   const pillarContributions: V9ScoreTrace["pillarContributions"][number][] = [];
 
-  const includedPillars = coverage?.includedPillars ?? V9_QUALITY_PILLARS;
+  const includedPillars = coverage?.includedPillars ??
+    V9_QUALITY_PILLARS.filter((pillar) => input.pillars[pillar] !== null);
   const excludedPillars = V9_QUALITY_PILLARS.filter((pillar) => !includedPillars.includes(pillar));
-  const pipelineGap = includedPillars.length < 2;
+  const pillarPipelineGap = includedPillars.length < 2;
+  const parentPipelineGap = input.parentRequired && input.parentScore === null &&
+    coverage?.parentStatus !== "not-rated";
+  const pipelineGap = pillarPipelineGap || parentPipelineGap;
   const limitingPillars: V9ScoreCoverage["limitingPillars"][number][] = [];
   const diagnosticLimitedCauses = new Set<V9EvidenceCause>();
   for (const item of coverage?.limitingPillars ?? []) {
@@ -911,25 +599,40 @@ function scoreV9InputWithCaps(
     }
     if (hasLimitingCause && item.causeGapIds.length > 0) limitingPillars.push(item);
   }
-  limitedPillarCount = limitingPillars.length;
-  backingLimited = limitingPillars.some((item) => item.pillar === "backing");
-  const includedWeight = includedPillars.reduce((sum, pillar) => sum + formula.pillarWeights[pillar], 0);
-  for (const pillar of includedPillars) {
-    const score = input.pillars[pillar];
+  const pricedUnknownPillars: V9PricedUnknownPillar[] = pipelineGap ? [] : excludedPillars.map((pillar) => {
+    const unavailable = coverage?.unavailablePillars?.find((item) => item.pillar === pillar);
+    const cause = unavailable?.causes.includes("C") ? "C" as const : "U" as const;
+    return {
+      pillar, cause, score: unknownQuality(pillar, cause, policy.policy.semantic),
+      causeGapIds: unavailable?.causeGapIds ?? [],
+    };
+  });
+  const aggregationPillars = { ...input.pillars };
+  for (const unknown of pricedUnknownPillars) aggregationPillars[unknown.pillar] = unknown.score;
+  for (const pillar of pipelineGap ? includedPillars : V9_QUALITY_PILLARS) {
+    const score = aggregationPillars[pillar];
     if (score === null) {
       throw new Error(`Safety Score v9 included ${pillar} pillar is missing its bounded score`);
     }
     if (!pipelineGap) {
-      const weight = formula.pillarWeights[pillar] / includedWeight;
+      const weight = formula.pillarWeights[pillar];
       pillarContributions.push({ pillar, score, weight, weightedContribution: roundTo(score * weight, 4) });
     }
   }
-  if (pipelineGap) {
+  if (pillarPipelineGap) {
     nrReasons.push({
       code: includedPillars.length === 0 ? "all-pillars-pipeline-gap" : "single-pillar-pipeline-gap",
+      cause: "U",
       message: "Fewer than two supported pillars are available; no Safety Score is published.",
       causeGapIds: coverage?.partialEvidence?.causeGapIds ?? [],
     });
+  }
+  if (parentPipelineGap) {
+    nrReasons.push(...(propagatedParentReasons.length > 0 ? propagatedParentReasons : [{
+      code: "missing-parent-score" as const, cause: "U" as const,
+      message: "A required parent has a technical pipeline gap; no child score is published.",
+      causeGapIds: coverage?.partialEvidence?.causeGapIds ?? [],
+    }]));
   }
   // Missing peg evidence is diagnostic, not a second generic cap beside its
   // cause-bearing producer reason. This neutral multiplier does not claim par.
@@ -950,22 +653,10 @@ function scoreV9InputWithCaps(
       compareText(left.path ?? "", right.path ?? "") ||
       compareText(left.reason, right.reason),
   );
-  if (!pipelineGap) for (const fact of unresolvedFacts) {
-    const cause = fact.cause ?? "U";
-    const resolved = resolveV9ReasonTreatment(policy, fact.code, cause);
-    if (resolved.critical && cause === "D") {
-      nrReasons.push({
-        code: fact.code, field: fact.path, message: fact.reason,
-        responsibility: fact.responsibility, cause, causeGapIds: fact.causeGapIds ?? [],
-      });
-    } else if (resolved.ceiling !== null) {
-      reasonCeilings.push({ source: "evidence", ...resolved.ceiling, reason: fact.reason });
-    }
-  }
 
   const aggregationHeadroom = pipelineGap ? null : formula.compensabilityHeadroom;
   const aggregationRaw = pipelineGap ? null : aggregationStrategy(
-    input.pillars, formula.pillarWeights, formula.compensabilityHeadroom, includedPillars,
+    aggregationPillars, formula.pillarWeights, formula.compensabilityHeadroom, includedPillars,
   );
   if (!pipelineGap && aggregationRaw === null) {
     throw new Error("Safety Score v9 eligible aggregation returned no score");
@@ -989,7 +680,7 @@ function scoreV9InputWithCaps(
       : clampScore(aggregationRaw.score * pegMultiplierRaw);
   const compositeScopedSignals = input.structuralSignals.flatMap((signal) => {
     if (signal.pricedInPillar !== undefined) return [];
-    const scoped = scopedRiskSignal(signal, policy);
+    const scoped = scopedRiskSignal(signal);
     return scoped === null ? [] : [scoped];
   });
   const scopedRisk =
@@ -997,22 +688,14 @@ function scoreV9InputWithCaps(
   const preCapScoreRaw = scopedRisk?.finalScore ?? null;
 
   const capCandidates: Omit<V9CapTrace, "binding">[] = [];
-  capCandidates.push(...reasonCeilings);
-  const trackRecordBand = formula.trackRecordCeilings.find(
-    (band) =>
-      input.trackRecordMonths >= band.minMonthsInclusive &&
-      (band.maxMonthsExclusive === null || input.trackRecordMonths < band.maxMonthsExclusive),
+  const trackRecordBand = input.trackRecordMonths === null ? undefined : formula.trackRecordCeilings.find(
+    (band) => input.trackRecordMonths! >= band.minMonthsInclusive &&
+      (band.maxMonthsExclusive === null || input.trackRecordMonths! < band.maxMonthsExclusive),
   );
-  if (!trackRecordBand) throw new Error(`No track-record ceiling covers ${input.trackRecordMonths} months`);
-  const excludedUnknownAge = input.unresolved.some((fact) =>
-    fact.code === "missing-implementation-date" && (fact.cause === "A" || fact.cause === "B"),
-  );
-  if (trackRecordBand.limit !== null && !excludedUnknownAge) {
+  if (trackRecordBand?.limit != null) {
     capCandidates.push({
-      source: "track-record",
-      kind: trackRecordBand.kind,
-      limit: trackRecordBand.limit,
-      reason: trackRecordBand.reason,
+      source: "track-record", kind: trackRecordBand.kind,
+      limit: trackRecordBand.limit, reason: trackRecordBand.reason,
     });
   }
   if (input.activeDepegBps !== null) {
@@ -1036,32 +719,37 @@ function scoreV9InputWithCaps(
       reason: "A child cannot rate above its required parent.",
     });
   }
-  for (const cap of resolveV9StructuralCaps(input.structuralSignals.filter(structuralSignalNeedsHardCap), policy)) {
-    capCandidates.push({ source: "structural", ...cap });
+  for (const signal of input.structuralSignals) {
+    if (!speculativeCreditNeedsResidualCap(signal)) continue;
+    capCandidates.push({
+      source: "speculative-credit", kind: "signal:speculative-credit:high",
+      limit: formula.speculativeCreditResidualLimit, reason: signal.reason,
+    });
   }
-  for (const {
-    responsibility: _responsibility,
-    pricedInPillar: _pricedInPillar,
-    ...cap
-  } of scenarioCaps) {
-    capCandidates.push({ source: "structural", ...cap });
+  for (const event of input.realizedHolderLossEvents ?? []) {
+    const lossBps = event.realizedHolderLossPct * 100;
+    const lossPolicy = formula.realizedHolderLoss;
+    const initialLimit = lossBps >= DEPEG_SEVERITY_BPS.severe
+      ? lossPolicy.initialLimits.severe
+      : lossBps >= DEPEG_SEVERITY_BPS.offPeg
+        ? lossPolicy.initialLimits.offPeg
+        : null;
+    if (initialLimit === null) continue;
+    if (input.asOfSec === undefined) throw new Error("Realized holder loss requires a scoring clock");
+    const ageDays = (input.asOfSec - Date.parse(event.occurredAt) / 1000) / 86_400;
+    if (ageDays < 0) continue;
+    const limit = Math.min(SCORE_MAX, initialLimit +
+      (SCORE_MAX - initialLimit) * Math.max(0, ageDays - lossPolicy.holdDays) / lossPolicy.recoveryDays);
+    capCandidates.push({
+      source: "realized-holder-loss", kind: `realized-holder-loss:${event.incidentId}`,
+      limit, reason: event.finding,
+    });
   }
 
-  // A cap limit is a PUBLISHED ceiling, so it must live in the published score
-  // space. Wrapper-local parent limits are the only source of fractional limits
-  // (wrapper-risk sums assessment multipliers such as 0.7 x 3 = 2.1), and a
-  // fractional limit combined with the capped-score floor at :1123-1128 lets a
-  // sub-point remainder decide a whole grade band: asusdf-astherus resolved a
-  // 49.55 parent limit, floored to 49 (D) where the D/C- boundary sits at 50.
-  //
-  // Flooring every limit here — one funnel, before dedup and selection — keeps
-  // the ceiling honest (floor never raises a limit, so no cap can be breached),
-  // makes the dedup key collapse candidates that publish identically, and
-  // removes the mixed-quantizer hazard because every limit is now integral in
-  // the same space as the score it constrains.
+  // Every ceiling enters published integer score space once, before selection.
   const normalizedCandidates = capCandidates.map((cap) => ({
     ...cap,
-    limit: floorTo(cap.limit, formula.scoreDecimals),
+    limit: floorTo(cap.limit, 0),
   }));
 
   // Identical (source, kind, limit) candidates collapse to one trace row; the
@@ -1076,7 +764,7 @@ function scoreV9InputWithCaps(
   // Caps bind in the QUANTIZED score space: a cap constrains the published
   // score whenever the rounded uncapped score would exceed the floored cap
   // limit, even if the raw score sits below the fractional limit (VER-001).
-  const quantizedUncapped = preCapScoreRaw === null ? null : roundTo(preCapScoreRaw, formula.scoreDecimals);
+  const quantizedUncapped = preCapScoreRaw === null ? null : roundTo(preCapScoreRaw, 0);
   // canonicalUniqueBy already returns candidates ordered by compareCapCandidates
   // with this policy, so the first candidate under the quantized score is the
   // binding one without re-sorting the filtered view.
@@ -1084,75 +772,27 @@ function scoreV9InputWithCaps(
     preCapScoreRaw === null || quantizedUncapped === null
       ? null
       : (dedupedCandidates.find(
-          (cap) => floorTo(cap.limit, formula.scoreDecimals) < quantizedUncapped,
+          (cap) => cap.limit < quantizedUncapped,
         ) ?? null);
   const caps = dedupedCandidates.map<V9CapTrace>((cap) => ({ ...cap, binding: cap === bindingCandidate }));
   const rateable = nrReasons.length === 0 && preCapScoreRaw !== null;
-  const rawFinal = rateable ? Math.min(preCapScoreRaw!, bindingCandidate?.limit ?? SCORE_MAX) : null;
-  const baseFinalScore =
-    rawFinal === null
-      ? null
-      : bindingCandidate
-        ? floorTo(rawFinal, formula.scoreDecimals)
-        : roundTo(rawFinal, formula.scoreDecimals);
-
-  // Reshape gates (Levers 1 & 2) read danger through per-gate lenses (D1):
-  // the withhold gate keeps the full predicate (measured-adverse is never
-  // NR-withheld), the F-gate narrows to hard danger (F stays danger-only).
-  const dangerSignalInput = {
-    pillars: input.pillars,
-    structuralSignals: input.structuralSignals,
-    pegMultiplier: pegMultiplierRaw,
-    activeDepegBps: input.activeDepegBps,
-    parentRequired: input.parentRequired,
-    parentScore: input.parentScore,
-    unresolvedCodes: input.unresolved
-      .filter((fact) => fact.responsibility === "measured-adverse")
-      .map((fact) => fact.code),
-  };
-  const withholdDangerPresent = hasV9DangerSignal(dangerSignalInput, policy);
-  const { danger, withhold } = policy.policy.semantic.formula;
-
-  const effectiveNrReasons = [...nrReasons];
-  let finalScore = baseFinalScore;
+  const finalScore = rateable
+    ? Math.min(quantizedUncapped!, bindingCandidate?.limit ?? SCORE_MAX)
+    : null;
   const finalCaps: readonly V9CapTrace[] = caps;
   const finalBindingCap: V9CapTrace | null = bindingCandidate ? { ...bindingCandidate, binding: true } : null;
-
-  // LEVER 1 — widen the insufficient-evidence withhold. Evaluated BEFORE Lever 2:
-  // a withheld asset returns NR (finalScore null) and never reaches the gate.
-  // The withhold requires the BACKING pillar itself to be unverifiable: an asset
-  // with strong/adequate backing is assessable (a low exit/control score is a
-  // real partial rating), so only genuinely-opaque assets (backing limited too)
-  // are withheld — this keeps strong-backing majors from ever going NR.
-  if (
-    finalScore !== null &&
-    limitedPillarCount >= withhold.minimumLimitedPillarCount &&
-    (!withhold.requiresLimitedBacking || backingLimited) &&
-    !withholdDangerPresent &&
-    finalScore < withhold.maxScoreExclusive
-  ) {
-    effectiveNrReasons.push({
-      code: "insufficient-evidence",
-      field: "evidenceLevel",
-      message: "Critical evidence is insufficient for a Safety Score rating.",
-      causeGapIds: [...new Set(limitingPillars.flatMap((item) => item.causeGapIds))].sort(compareText),
-      contributingPillars: limitingPillars.map((item) => item.pillar),
-      cause: limitingPillars.some((item) => item.causes.includes("C")) ? "C"
-        : limitingPillars.some((item) => item.causes.includes("U")) ? "U" : "D",
-    });
-    finalScore = null;
-  }
+  const { danger } = formula;
 
   // The public card suppresses every binding assertion on an NR outcome
   // (`projectSafetyScoreV9Card` publishes `bindingCap: null`), and the card
   // schema requires cap-causal attribution to reconcile to that published
   // binding cap. Attribute against the cap the card will actually publish, so
-  // an NR trace never claims an active-depeg, parent, or evidence-ceiling cause.
-  const publishedBindingCap = finalScore === null ? null : bindingCandidate;
+  // an unavailable trace never claims a binding whole-score cause.
+  const publishedBindingCap: V9CapTrace | null = finalScore === null ? null : finalBindingCap;
   const adverseAttribution = canonicalAdverseAttribution([
     ...measuredPillarAdverseAttribution,
     ...unresolvedFacts.flatMap<V9AdverseAttribution>((fact) =>
-      unresolvedFactAffectedScore(fact, input.pillars, publishedBindingCap, policy)
+      unresolvedFactAffectedScore(fact, input.pillars, policy)
         ? [{
             source: "reason",
             path: fact.path ?? `reason:${fact.code}`,
@@ -1162,9 +802,7 @@ function scoreV9InputWithCaps(
         : [],
     ),
     ...input.structuralSignals.flatMap<V9AdverseAttribution>((signal) =>
-      signal.severity === "low" ||
-      signalLimit(signal, policy) === null ||
-      !structuralSignalAffectedScore(signal, input.structuralSignals, scopedRisk, publishedBindingCap, policy)
+      !structuralSignalAffectedScore(signal, scopedRisk, publishedBindingCap)
         ? []
         : [{
             source: "structural-signal",
@@ -1173,27 +811,19 @@ function scoreV9InputWithCaps(
             responsibility: "measured-adverse",
           }],
     ),
-    ...scenarioCaps.flatMap<V9AdverseAttribution>((cap) =>
-      (cap.pricedInPillar !== undefined ||
-        (publishedBindingCap?.source === "structural" &&
-          publishedBindingCap.kind === cap.kind &&
-          publishedBindingCap.limit === cap.limit))
+    ...(input.realizedHolderLossEvents ?? []).flatMap<V9AdverseAttribution>((event) =>
+      publishedBindingCap?.source === "realized-holder-loss" &&
+      publishedBindingCap.kind === `realized-holder-loss:${event.incidentId}`
         ? [{
-            source: "structural-signal",
-            path:
-              cap.pricedInPillar === undefined
-                ? `scenario-cap:${cap.kind}`
-                : `scenario-pillar:${cap.pricedInPillar}:${cap.kind}`,
-            message: cap.reason,
-            responsibility: cap.responsibility,
+            source: "realized-holder-loss",
+            path: `incident:${event.incidentId}`,
+            message: `${event.finding} Sources: ${event.primarySources.map((source) => source.url).join(", ")}`,
+            responsibility: "measured-adverse",
           }]
         : [],
     ),
     ...(publishedBindingCap?.source === "parent"
       ? propagatedParentAdverseAttribution
-      : []),
-    ...(publishedBindingCap?.source === "parent"
-      ? wrapperLocalAdverseAttribution
       : []),
     ...(publishedBindingCap?.source === "active-depeg"
       ? [{
@@ -1214,63 +844,24 @@ function scoreV9InputWithCaps(
       : []),
   ]);
   const boundedUncertaintyAttribution = canonicalBoundedUncertaintyAttribution([
-    ...unresolvedFacts.flatMap((fact) => {
+    ...(aggregationRaw === null ? [] : unresolvedFacts.flatMap((fact) => {
       const attribution = boundedUncertaintyForFact(
         fact,
         input.pillars,
-        publishedBindingCap,
         policy,
         pillarReasonProvenance,
       );
       return attribution === null ? [] : [attribution];
-    }),
+    })),
     ...(publishedBindingCap?.source === "parent"
       ? propagatedParentBoundedUncertaintyAttribution
       : []),
-    ...(publishedBindingCap?.source === "parent"
-      ? wrapperLocalBoundedUncertaintyAttribution
-      : []),
   ]);
 
-  // A low public grade needs a causal account. D may be measured weakness or a
-  // provisional result shaped by explicit policy-bounded uncertainty. F remains
-  // danger-only and therefore always requires measured-adverse attribution.
-  const attributedGrade =
-    finalScore === null ? null : gradeForScore(finalScore, policy);
-  if (
-    finalScore !== null &&
-    attributedGrade === "D" &&
-    adverseAttribution.length === 0 &&
-    boundedUncertaintyAttribution.length === 0
-  ) {
-    effectiveNrReasons.push({
-      code: "insufficient-evidence",
-      field: "boundedUncertaintyAttribution",
-      message: "A D rating requires causal measured-adverse or bounded-uncertainty attribution.",
-      responsibility: "method-unsupported",
-      cause: "U",
-    });
-    finalScore = null;
-  } else if (
-    finalScore !== null &&
-    attributedGrade !== null &&
-    attributedGrade !== "NR" &&
-    danger.dangerOnlyGrades.includes(attributedGrade) &&
-    adverseAttribution.length === 0
-  ) {
-    effectiveNrReasons.push({
-      code: "f-without-measured-adverse",
-      field: "adverseAttribution",
-      message: "Score below the F threshold without a measured adverse fact",
-      cause: limitingPillars.find((item) => item.causes.includes("C")) ? "C" : "U",
-      causeGapIds: [...new Set(limitingPillars.flatMap((item) => item.causeGapIds))].sort(compareText),
-    });
-    finalScore = null;
-  }
 
   assertV9ReasonCodesRegistered(
     policy,
-    effectiveNrReasons.map((reason) => reason.code),
+    nrReasons.map((reason) => reason.code),
   );
 
   return {
@@ -1299,6 +890,7 @@ function scoreV9InputWithCaps(
         ? null
         : {
             ...aggregationRaw,
+            pricedUnknownPillars,
             score: roundTo(aggregationRaw.score, 4),
             weightedQuality: roundTo(aggregationRaw.weightedQuality, 4),
             weakestScore: roundTo(aggregationRaw.weakestScore, 4),
@@ -1326,46 +918,11 @@ function scoreV9InputWithCaps(
     adverseAttribution,
     boundedUncertaintyAttribution,
     unresolvedFacts,
-    nrReasons: effectiveNrReasons,
+    nrReasons,
     propagatedParentReasons,
   };
 }
 
-/** Score expectation-free V9 facts under one explicit, validated policy. */
-export function scoreV9Input(
-  rawInput: V9ScoringInput,
-  policy: V9ValidatedPolicyEnvelope,
-  propagatedParentReasons: readonly V9NRReason[] = [],
-  limitedPillarCount = 0,
-  backingLimited = false,
-  propagatedParentAdverseAttribution: readonly V9ParentAdverseAttribution[] = [],
-  measuredPillarAdverseAttribution: readonly V9PillarAdverseAttribution[] = [],
-  propagatedParentBoundedUncertaintyAttribution:
-    readonly V9ParentBoundedUncertaintyAttribution[] = [],
-  wrapperLocalAdverseAttribution: readonly V9AdverseAttribution[] = [],
-  wrapperLocalBoundedUncertaintyAttribution:
-    readonly V9BoundedUncertaintyAttribution[] = [],
-  pillarReasonProvenance: readonly V9PillarReasonProvenance[] = [],
-  aggregationStrategy: V9AggregationStrategy = aggregateV9SmoothBoundedHeadroom,
-  coverage?: V9ScoreCoverage,
-): V9ScoreTrace {
-  return scoreV9InputWithCaps(
-    rawInput,
-    policy,
-    [],
-    propagatedParentReasons,
-    limitedPillarCount,
-    backingLimited,
-    propagatedParentAdverseAttribution,
-    measuredPillarAdverseAttribution,
-    propagatedParentBoundedUncertaintyAttribution,
-    wrapperLocalAdverseAttribution,
-    wrapperLocalBoundedUncertaintyAttribution,
-    pillarReasonProvenance,
-    aggregationStrategy,
-    coverage,
-  );
-}
 
 /** @internal Golden-corpus adapter; arbitrary caps are not accepted by production scoring input. */
 export function scoreV9InputWithScenarioCaps(
@@ -1373,6 +930,33 @@ export function scoreV9InputWithScenarioCaps(
   policy: V9ValidatedPolicyEnvelope,
   scenarioCaps: readonly V9AttributedScenarioCap[],
   coverage?: V9ScoreCoverage,
-): V9ScoreTrace {
-  return scoreV9InputWithCaps(rawInput, policy, scenarioCaps, [], 0, false, [], [], [], [], [], [], undefined, coverage);
+  propagatedParentReasons: readonly V9NRReason[] = [],
+): V9ResearchScoreTrace {
+  const trace = scoreV9Input(rawInput, policy, propagatedParentReasons, [], [], [], [], undefined, coverage);
+  const candidates: V9ResearchScoreTrace["caps"][number][] = [
+    ...trace.caps,
+    ...scenarioCaps.map((cap) => ({
+      source: "structural" as const, kind: cap.kind, reason: cap.reason,
+      limit: floorTo(cap.limit, 0), binding: false,
+    })),
+  ];
+  candidates.sort((left, right) => compareCapCandidates(left, right, policy));
+  const uncapped = trace.preCapScore === null ? null : roundTo(trace.preCapScore, 0);
+  const bindingCap = uncapped === null ? null : candidates.find((cap) => cap.limit < uncapped) ?? null;
+  const finalScore = trace.finalScore === null ? null : Math.min(trace.finalScore, bindingCap?.limit ?? SCORE_MAX);
+  return {
+    ...trace,
+    caps: candidates.map((cap) => ({ ...cap, binding: cap === bindingCap })),
+    bindingCap: bindingCap === null ? null : { ...bindingCap, binding: true },
+    finalScore, inheritableScore: finalScore,
+    finalGrade: finalScore === null ? trace.finalGrade : gradeForScore(finalScore, policy),
+    adverseAttribution: canonicalAdverseAttribution([
+      ...trace.adverseAttribution,
+      ...scenarioCaps.flatMap<V9AdverseAttribution>((cap) =>
+        cap.pricedInPillar !== undefined || bindingCap?.source === "structural" && bindingCap.kind === cap.kind
+          ? [{ source: "structural-signal", path: `scenario-cap:${cap.kind}`, message: cap.reason, responsibility: cap.responsibility }]
+          : [],
+      ),
+    ]),
+  };
 }

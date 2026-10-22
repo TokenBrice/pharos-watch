@@ -28,7 +28,8 @@ import {
 import { refineCard } from "./safety-score-v9-public-internal";
 import { findSafetyScoreV9ParentAttributionIssues } from "./safety-score-v9-public-attribution";
 import { SafetyScoreV9BreakdownsSchema, SafetyScoreV9HistoricalBreakdownsSchema } from "./safety-score-v9-public-breakdowns";
-import { SafetyScoreV9ScoreTraceSchema, SafetyScoreV9WitnessScoreTraceSchema } from "./safety-score-v9-public-trace";
+import { SafetyScoreV9ScoreTraceSchema, SafetyScoreV9HistoricalScoreTraceSchema, SafetyScoreV9WitnessScoreTraceSchema } from "./safety-score-v9-public-trace";
+import { SafetyScoreV9HistoricalCapSchema } from "./safety-score-v9-public-historical";
 import { V9WrapperFormSchema } from "./safety-score-v9-wrapper";
 import { V9EffectiveDependenciesV3Schema } from "./safety-score-v9-facts";
 import { ReserveSliceSchema } from "./reserves";
@@ -291,7 +292,11 @@ const SafetyScoreV9CardShape = {
   accessPosture: SafetyScoreV9AccessPostureSchema,
   dependencies: SafetyScoreV9DependencySummarySchema,
 } as const;
-type SafetyScoreV9CardBase = z.infer<z.ZodObject<typeof SafetyScoreV9CardShape>>;
+type HistoricalCap = z.infer<typeof SafetyScoreV9HistoricalCapSchema>;
+type SafetyScoreV9CardBase = Omit<z.infer<z.ZodObject<typeof SafetyScoreV9CardShape>>, "caps" | "bindingCap"> & {
+  caps: (z.infer<typeof SafetyScoreV9CapSchema> | HistoricalCap)[];
+  bindingCap: z.infer<typeof SafetyScoreV9CapSchema> | HistoricalCap | null;
+};
 
 function refineCardBase(
   card: SafetyScoreV9CardBase,
@@ -304,8 +309,13 @@ function refineCardBase(
     ctx.addIssue({ code: "custom", path: ["partialEvidence"], message: "Partial evidence must reconcile excluded pillars" });
   }
   const hasExcludedAB = excludedPillars.some((pillar) => card.pillars[pillar].aggregationDisposition === "excluded-a-b");
-  if (hasExcludedAB !== ((card.partialEvidence?.causes.length ?? 0) > 0)) {
-    ctx.addIssue({ code: "custom", path: ["partialEvidence", "causes"], message: "Only proved A/B exclusions may carry partial-evidence causes" });
+  const hasExcludedCauses = (card.partialEvidence?.causes.length ?? 0) > 0;
+  // A/B exclusions can affect a subcomponent, constraint, or parent while
+  // leaving every pillar usable; they do not require a whole-pillar exclusion.
+  if ((hasExcludedAB && !hasExcludedCauses) ||
+      (hasExcludedCauses && ((card.partialEvidence?.causeGapRefs.length ?? 0) === 0 ||
+        (card.partialEvidence?.excludedComponentKeys.length ?? 0) === 0))) {
+    ctx.addIssue({ code: "custom", path: ["partialEvidence", "causes"], message: "A/B exclusions require partial-evidence causes, component keys, and gap references" });
   }
   if (excludedPillars.some((pillar) => card.pillars[pillar].causeGapRefs?.some((ref) => !card.partialEvidence?.causeGapRefs.includes(ref)))) {
     ctx.addIssue({ code: "custom", path: ["partialEvidence"], message: "Excluded pillar gaps must remain visible in partial evidence" });
@@ -370,18 +380,26 @@ export const SafetyScoreV9CurrentCardBaseSchema = z
   })
   .strict();
 
-type CardRefinementInput = Omit<z.infer<typeof SafetyScoreV9CurrentCardBaseSchema>, "breakdowns"> & {
-  breakdowns: z.infer<typeof SafetyScoreV9HistoricalBreakdownsSchema> | null;
-};
+/** Report7/breakdown6 preserve the strict recorded, pre-simplification contract. */
+const SafetyScoreV9HistoricalCardBaseSchema = SafetyScoreV9CurrentCardBaseSchema.extend({
+  caps: z.array(SafetyScoreV9HistoricalCapSchema),
+  bindingCap: SafetyScoreV9HistoricalCapSchema.nullable(),
+  scoreTrace: SafetyScoreV9HistoricalScoreTraceSchema,
+  breakdowns: SafetyScoreV9HistoricalBreakdownsSchema.nullable(),
+});
+export type SafetyScoreV9CardValidationInput =
+  | z.infer<typeof SafetyScoreV9CurrentCardBaseSchema>
+  | z.infer<typeof SafetyScoreV9HistoricalCardBaseSchema>;
+type CardRefinementInput = SafetyScoreV9CardValidationInput;
 
-function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx, resolved = false): void {
+function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx, resolved = false, historical = false): void {
     try {
       if (resolved) validateV9ResolvedWitnessViews(card);
       else validateV9PublicWitnessTexts(card);
       if (!resolved && card.witnessTexts !== undefined) {
         card = resolveV9PublicWitnessTexts(card);
         validateV9ResolvedWitnessViews(card);
-        const semantic = SafetyScoreV9CurrentCardBaseSchema.safeParse(card);
+        const semantic = (historical ? SafetyScoreV9HistoricalCardBaseSchema : SafetyScoreV9CurrentCardBaseSchema).safeParse(card);
         if (!semantic.success) for (const issue of semantic.error.issues) {
           ctx.addIssue({ code: "custom", path: issue.path, message: issue.message });
         }
@@ -403,7 +421,9 @@ function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx, reso
     if (card.breakdowns !== null) {
       for (const pillar of ["backing", "exit", "control"] as const) {
         if ((card.breakdowns[pillar].aggregationDisposition ?? "included") !== (card.pillars[pillar].aggregationDisposition ?? "included") ||
-            !numbersAgree(card.breakdowns[pillar].aggregationWeight, card.scoreTrace.aggregation?.effectiveScoringWeights[pillar] ?? 0)) {
+            !numbersAgree(card.breakdowns[pillar].aggregationWeight,
+              (card.pillars[pillar].aggregationDisposition ?? "included") === "included"
+                ? card.scoreTrace.aggregation?.effectiveScoringWeights[pillar] ?? 0 : 0)) {
           ctx.addIssue({ code: "custom", path: ["breakdowns", pillar], message: "Diagnostic breakdown dispositions and included aggregate weights must agree" });
         }
         if (
@@ -424,14 +444,11 @@ export const SafetyScoreV9ResolvedCurrentCardSchema = SafetyScoreV9CurrentCardBa
   .superRefine((card, ctx) => refineCurrentCard(card, ctx, true));
 export type SafetyScoreV9ResolvedCurrentCard = z.infer<typeof SafetyScoreV9ResolvedCurrentCardSchema>;
 
-/** Report7/breakdown6 retain strict pre-10.11 route shapes. */
-const SafetyScoreV9HistoricalCardBaseSchema = SafetyScoreV9CurrentCardBaseSchema.extend({
-  breakdowns: SafetyScoreV9HistoricalBreakdownsSchema.nullable(),
-});
-export const SafetyScoreV9HistoricalCardSchema = SafetyScoreV9HistoricalCardBaseSchema.superRefine(refineCurrentCard);
+export const SafetyScoreV9HistoricalCardSchema = SafetyScoreV9HistoricalCardBaseSchema
+  .superRefine((card, ctx) => refineCurrentCard(card, ctx, false, true));
 export const SafetyScoreV9WitnessHistoricalCardSchema = SafetyScoreV9HistoricalCardBaseSchema.extend({
   scoreTrace: SafetyScoreV9WitnessScoreTraceSchema,
-}).superRefine(refineCurrentCard);
+}).superRefine((card, ctx) => refineCurrentCard(card, ctx, false, true));
 export type SafetyScoreV9CurrentCard = z.infer<typeof SafetyScoreV9CurrentCardSchema>;
 
 export type SafetyScoreV9Card = SafetyScoreV9CurrentCard;

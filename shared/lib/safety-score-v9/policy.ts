@@ -9,6 +9,8 @@ import {
   type V9FactDisposition,
   type V9MethodologyPolicy,
   type V9MethodologySemanticPayload,
+  type V9MethodologySemantic,
+  type V9QualityPillar,
   type V9ReasonCode,
   type V9ReasonRegistryEntry,
   type V9UnresolvedFact,
@@ -75,11 +77,6 @@ function policyWithRegistryMatureChains(
 }
 
 function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayload {
-  const {
-    withhold: _withhold,
-    danger: _danger,
-    ...formulaSemantics
-  } = policy.semantic.formula;
   const { evidenceExpiry: _evidenceExpiry, ...evidenceSemantics } = policy.semantic.evidence;
   const {
     materialBridgeHighShareThreshold: _materialBridgeHighShareThreshold,
@@ -90,7 +87,7 @@ function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayl
     semantic: {
       ...policy.semantic,
       formula: {
-        ...formulaSemantics,
+        ...policy.semantic.formula,
         assetPremiums: [...policy.semantic.formula.assetPremiums].sort(
           (left, right) =>
             compareText(left.assetId, right.assetId) ||
@@ -198,17 +195,6 @@ function computeV9PolicySemanticDigest(
   policy: V9MethodologyPolicy,
 ): string {
   const canonicalGates = {
-    withhold: policy.semantic.formula.withhold,
-    danger: {
-      ...policy.semantic.formula.danger,
-      withholdCentralizedMintSeverities: uniqueSorted(
-        policy.semantic.formula.danger.withholdCentralizedMintSeverities,
-      ),
-      preExitCentralizedMintSeverities: uniqueSorted(
-        policy.semantic.formula.danger.preExitCentralizedMintSeverities,
-      ),
-      dangerOnlyGrades: uniqueSorted(policy.semantic.formula.danger.dangerOnlyGrades),
-    },
     control: {
       materialBridgeHighShareThreshold: policy.semantic.control.materialBridgeHighShareThreshold,
     },
@@ -285,7 +271,6 @@ export interface V9ResolvedReasonTreatment {
   readonly cause: V9EvidenceCause | null;
   readonly scoringDisposition: V9ScoringDisposition;
   readonly critical: boolean;
-  readonly ceiling: { readonly kind: string; readonly limit: number } | null;
 }
 
 /** Sole treatment seam. Missing-data causes never directly withhold or impose removed caps. */
@@ -299,24 +284,21 @@ export function resolveV9ReasonTreatment(
   if (!reason) throw new Error(`Safety Score v9 policy does not register reason ${code}`);
   const excluded = cause === "A" || cause === "B";
   const bounded = cause === "C" || cause === "U";
-  const minimumTrackRecord = reason.ceilingRule?.source === "minimum-track-record" && !excluded;
-  const treatment = excluded ? "diagnostic"
-    : minimumTrackRecord ? "ceiling"
-      : bounded && reason.defaultTreatment !== "diagnostic" ? "pillar"
-        : reason.defaultTreatment === "NR" && cause !== "D" ? "diagnostic" : reason.defaultTreatment;
+  // Reason registries describe responsibility and pillar treatment; rating
+  // availability is decided solely from usable pillar and required-parent evidence.
+  const treatment = excluded || reason.defaultTreatment === "NR"
+    ? "diagnostic"
+    : bounded && reason.defaultTreatment !== "diagnostic" ? "pillar" : reason.defaultTreatment;
   const dispositionClass = excluded ? "optional-unsupported"
-    : bounded && !minimumTrackRecord && treatment !== "diagnostic" ? "missing-bounded-exposure"
+    : bounded && treatment !== "diagnostic" ? "missing-bounded-exposure"
       : reason.defaultFactClass;
   const disposition = envelope.policy.semantic.evidence.dispositions.find((entry) => entry.factClass === dispositionClass);
   if (!disposition) throw new Error(`Safety Score v9 policy does not dispose ${dispositionClass}`);
-  const minimumBand = minimumTrackRecord ? envelope.policy.semantic.formula.trackRecordCeilings[0] : undefined;
-  const ceiling = minimumBand?.limit != null ? { kind: `reason:${code}`, limit: minimumBand.limit } : null;
   return {
     reason, disposition, treatment, cause,
     scoringDisposition: cause === "A" ? "excluded-pipeline" : cause === "B" ? "excluded-uncurated"
       : bounded ? "bounded-uncertainty" : cause === "D" ? "measured-adverse" : "included",
-    critical: cause === "D" && treatment === "NR",
-    ceiling,
+    critical: false,
   };
 }
 
@@ -342,3 +324,13 @@ export function loadV9CandidateMethodologyPolicy(
 }
 
 export const V9_CANDIDATE_POLICY_V1 = loadV9CandidateMethodologyPolicy();
+
+/** The sole cause-dependent price of an applicable but unknown pillar factor. */
+export function unknownQuality(
+  pillar: V9QualityPillar,
+  cause: V9EvidenceCause | null | undefined,
+  semantic: Pick<V9MethodologySemantic, "unknownQuality"> = V9_CANDIDATE_POLICY_V1.policy.semantic,
+): number {
+  if (cause === "D") throw new Error("Measured adverse evidence cannot use an unknown quality");
+  return semantic.unknownQuality[pillar][cause === "C" ? "C" : "U"];
+}

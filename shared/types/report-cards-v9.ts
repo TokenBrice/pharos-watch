@@ -10,6 +10,7 @@ import {
   SafetyScoreV9CommonModeGroupsSchema,
   findSafetyScoreV9ParentAttributionIssues,
   type SafetyScoreV9CurrentCard,
+  type SafetyScoreV9CardValidationInput,
 } from "./safety-score-v9-public";
 import { V9GradeSchema, V9ReasonCodeSchema } from "./safety-score-v9";
 import { compareText, canonicalTextArray } from "./safety-score-v9-fact-primitives";
@@ -278,13 +279,14 @@ function refineReportCardsV9Response(
     asOfSec: number;
     updatedAt: number;
     completeness: z.infer<typeof SafetyScoreV9CompletenessSchema>;
-    cards: readonly Omit<SafetyScoreV9CurrentCard, "breakdowns">[];
+    cards: readonly Omit<SafetyScoreV9CardValidationInput, "breakdowns">[];
     foreignCauseGaps: readonly string[];
     schemaVersion?: number;
     commonModeGroups?: z.infer<typeof SafetyScoreV9CommonModeGroupsSchema>;
     dependencyGraph: ReportCardsV9DependencyGraph;
   },
   ctx: z.RefinementCtx,
+  historical = false,
 ): void {
   refineV9PublicGapContext(response, ctx);
   const cardsById = new Map(response.cards.map((card) => [card.id, card]));
@@ -294,11 +296,9 @@ function refineReportCardsV9Response(
     }
     group.pricedEffects?.forEach((effect, effectIndex) => {
       const card = cardsById.get(effect.assetId);
-      if (!card || effect.capIndices.some((index) => {
-        const cap = card.caps[index];
-        return !cap || cap.source !== "structural";
-      }) || effect.deploymentAdjustmentIndices.some((index) =>
-        card.scoreTrace.deploymentRisk.adjustments[index]?.failureDomainKey !== group.id)) {
+      if (!card || effect.capIndices.some(index => !historical || card.caps[index]?.source !== "structural") ||
+          effect.deploymentAdjustmentIndices.some((index) =>
+            card.scoreTrace.deploymentRisk.adjustments[index]?.failureDomainKey !== group.id)) {
         ctx.addIssue({ code: "custom", path: ["commonModeGroups", groupIndex, "pricedEffects", effectIndex], message: "Common-mode effects must reference existing priced card effects" });
       }
     });
@@ -399,11 +399,11 @@ const HistoricalReportCardsV9ResponseShape = {
 export const HistoricalReportCardsV9ResponseSchema = z.object({
   ...HistoricalReportCardsV9ResponseShape,
   cards: z.array(SafetyScoreV9HistoricalCardSchema),
-}).strict().superRefine(refineReportCardsV9Response);
+}).strict().superRefine((response, ctx) => refineReportCardsV9Response(response, ctx, true));
 export const WitnessHistoricalReportCardsV9ResponseSchema = z.object({
   ...HistoricalReportCardsV9ResponseShape,
   cards: z.array(SafetyScoreV9WitnessHistoricalCardSchema),
-}).strict().superRefine(refineReportCardsV9Response);
+}).strict().superRefine((response, ctx) => refineReportCardsV9Response(response, ctx, true));
 
 /**
  * Free-lane projection of the current V9 publication: one grade per coin and

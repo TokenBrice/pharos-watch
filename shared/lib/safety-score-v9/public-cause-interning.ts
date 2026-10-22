@@ -109,7 +109,9 @@ export function internV9PublicCauseGaps(card: V9UninternedPublicCard): V9Interne
       }
       if (key === "causeGapIds" && Array.isArray(value)) {
         result ??= { ...source }; delete result[key];
-        if (value.length > 0) result.causeGapRefs = value.map((id) => reference(id as string)).sort(compareRefs);
+        if (value.length > 0 || source.reasonCode === "partial-evidence-pipeline-gap") {
+          result.causeGapRefs = value.map((id) => reference(id as string)).sort(compareRefs);
+        }
       } else if (key === "sourceGapId") {
         result ??= { ...source }; delete result[key];
         result.sourceGapRef = value === null ? null : reference(value as string);

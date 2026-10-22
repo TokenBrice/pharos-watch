@@ -38,8 +38,6 @@ const DEFAULT_PARAMETER_PATHS = [
   "semantic.formula.compensabilityHeadroom",
   "semantic.formula.pegExponent",
   "semantic.formula.trackRecordCeilings[0].limit",
-  "semantic.formula.trackRecordCeilings[1].limit",
-  "semantic.formula.trackRecordCeilings[2].limit",
 ] as const;
 
 const MAX_ABSOLUTE_DELTA = 1_000_000_000;
@@ -293,9 +291,6 @@ function mutateNumericPolicyParameter(
     for (const premium of policy.semantic.formula.assetPremiums) {
       if (premium.maximumPublishedScore === baselineAPlus) {
         premium.maximumPublishedScore = aPlusFloor;
-      }
-      if (premium.capRelief.toLimit === baselineAPlus) {
-        premium.capRelief.toLimit = aPlusFloor;
       }
       premium.points = Math.max(premium.points, aPlusFloor - aFloor);
     }

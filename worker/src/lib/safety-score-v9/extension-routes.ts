@@ -716,10 +716,27 @@ function redemptionExecutionCertainty(
   return "discretionary";
 }
 
+/** Legal eventual entitlement is not an observed executable capacity bound. */
+export function hasUsableRedemptionCapacityObservation(
+  entry: RedemptionBackstopEntry,
+  observation: ExitRouteObservation,
+  clockSec: number,
+): boolean {
+  if (observation.evidenceKind !== "documented-terms") return true;
+  if (observation.routeFamily === "eventual-redemption" && entry.capacitySemantics === "eventual-only") return false;
+  const terms = getRedemptionBackstopConfig(entry.stablecoinId)?.v9RouteReviewTerms;
+  return !(usesPrimaryRedemptionReviewTerms(entry.stablecoinId, observation) &&
+    terms?.scoringDisposition === "bounded-terms-gap" &&
+    terms.missingScoringFields?.includes("capacity") &&
+    terms.reviewedAt !== undefined && reviewAdmissionClockSec(terms.reviewedAt) <= clockSec);
+}
+
 function redemptionCoverageClass(
   entry: RedemptionBackstopEntry,
   observation: ExitRouteObservation,
+  clockSec: number,
 ): RouteReview["coverageClass"] {
+  if (!hasUsableRedemptionCapacityObservation(entry, observation, clockSec)) return "diagnostic";
   const requiresExecutableEvidence = entry.sourceMode === "dynamic" &&
     (entry.capacityKind === "live-direct" || entry.capacityKind === "live-direct-bounded") &&
     (entry.settlementModel === "atomic" || entry.settlementModel === "immediate");
@@ -739,7 +756,9 @@ function primaryRedemptionResourceKeys(
   clockSec: number,
 ): string[] {
   if (!usesPrimaryRedemptionReviewTerms(assetId, observation) || observation.scope.kind !== "protocol") return [];
-  const outputs = resolvedExitRouteOutputAssetKeys(observation.output).slice().sort(compareText);
+  const outputAssetKeys = resolvedExitRouteOutputAssetKeys(observation.output);
+  if (outputAssetKeys === null) return [];
+  const outputs = outputAssetKeys.slice().sort(compareText);
   return executionModelReviews.reviews.flatMap((review) =>
     review.modelId === "erc4626-instant" && review.producer.kind === "erc4626-instant" &&
       review.identity.assetId === assetId && review.identity.endpoint === review.identity.deployment &&
@@ -990,7 +1009,7 @@ function buildRedemptionRouteReview(
     executionModel: redemptionExecutionModel(entry),
     executionCertainty: redemptionExecutionCertainty(entry, modelConfidence),
     modelConfidence,
-    coverageClass: routeSuspension ? "diagnostic" : redemptionCoverageClass(entry, observation),
+    coverageClass: routeSuspension ? "diagnostic" : redemptionCoverageClass(entry, observation, fixedInput.clockSec),
     capacityScoringHorizon: entry.capacityProfile?.scoringHorizon ?? "unknown",
     ...redemptionSettlement(reviewedTerms.settlementModel, reviewedTerms.settlementDelaySec),
     ...(reviewedTerms.settlementDelaySec !== undefined &&

@@ -360,7 +360,8 @@ function evaluateMintPhase(context: ControlEvaluationContext): void {
     );
     const binding = controlBinding(control, provenNullShareDeploymentBound(facts, control));
     components.push({
-      componentKey: "mint", kind: "mint", posture, score, binding,
+      componentKey: control.controlKind === "bridge" ? `mint:bridge:${control.controlKey}` : "mint",
+      kind: "mint", posture, score, binding,
       controlKeys: [control.controlKey], failureDomains: canonicalDomains(control.failureDomains),
     });
     if (control.controlKind !== "bridge" && isUnboundedMintPosture(posture)) {
@@ -820,7 +821,9 @@ function normalizeControlComponents(
       priced.controlKeys.every((controlKey) => scopedDeploymentControlKeys.has(controlKey))
         ? { ...priced, binding: false }
         : priced;
-    if (normalized.kind !== "mint") {
+    // Bridge authority competes with the pillar, not with native mint
+    // attribution; its separately admitted route tier remains independent.
+    if (normalized.kind !== "mint" || normalized.componentKey.startsWith("mint:bridge:")) {
       normalizedComponents.push(normalized);
       continue;
     }

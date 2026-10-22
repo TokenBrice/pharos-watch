@@ -12,7 +12,7 @@ import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { isV9MaterialShare } from "./backing-primitives";
 import { deepFreeze } from "../../types/safety-score-v9-immutable";
-import { V9_CANDIDATE_POLICY_V1 } from "./policy";
+import { unknownQuality } from "./policy";
 
 const V9_DEPENDENCY_PLAN_DIGEST_DOMAIN = "safety-score-v9.dependency-plan.v2";
 
@@ -716,7 +716,8 @@ export function resolveV9DependencyInput(
       inheritedDimensions: dimensions,
       unavailableDimensions,
       score: cycleBlocked || unavailableDimensions.length > 0 ? null : knownScore,
-      ratingStatus: !cycleBlocked && unavailableDimensions.length === 0 ? "rated" : result?.ratingStatus ?? "not-rated",
+      ratingStatus: !cycleBlocked && unavailableDimensions.length === 0 ? "rated"
+        : cycleBlocked ? "pipeline-gap" : result?.ratingStatus ?? "pipeline-gap",
       cause,
       causeGapIds: cycleBlocked ? [] : result?.causeGapIds ?? [],
       limitedEvidenceCauses: cycleBlocked ? ["U"] : result?.limitedEvidenceCauses ?? (unavailableDimensions.length > 0 ? ["U"] : []),
@@ -775,13 +776,11 @@ function roleTargetPillar(role: V9DependencyEconomicRole): V9RoleDependencyTarge
  */
 export function projectV9RoleDependencyPillarLimits(
   resolved: V9ResolvedDependencyInputs,
-  options: { unresolvedMaterialityThreshold?: number; boundedUnknownQuality?: Readonly<Record<V9RoleDependencyTargetPillar, number>> } = {},
+  options: { unresolvedMaterialityThreshold?: number } = {},
 ): Readonly<Record<V9RoleDependencyTargetPillar, V9RoleDependencyPillarProjection>> {
   const unresolvedMaterialityThreshold = options.unresolvedMaterialityThreshold ?? 0;
-  const boundedUnknownQuality = options.boundedUnknownQuality ?? {
-    exit: V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore,
-    control: V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality,
-  };
+  const unknownScore = (pillar: V9RoleDependencyTargetPillar, input: V9ResolvedRoleDependencyInput) =>
+    unknownQuality(pillar, input.cause === "C" ? "C" : "U");
   if (
     !Number.isFinite(unresolvedMaterialityThreshold) ||
     unresolvedMaterialityThreshold < 0 ||
@@ -845,12 +844,13 @@ export function projectV9RoleDependencyPillarLimits(
           compareText(left.upstreamAssetId, right.upstreamAssetId),
       )[0];
       const unknown = [...unknownInputs].sort(
-        (left, right) => right.weight - left.weight ||
+        (left, right) => right.weight * (100 - unknownScore(group.targetPillar, right)) -
+          left.weight * (100 - unknownScore(group.targetPillar, left)) ||
           compareText(left.edgeKey, right.edgeKey) ||
           compareText(left.upstreamAssetId, right.upstreamAssetId),
       )[0];
       const knownLoss = known === undefined ? 0 : known.weight * (100 - known.score!);
-      const unknownLoss = (unknown?.weight ?? 0) * (100 - boundedUnknownQuality[group.targetPillar]);
+      const unknownLoss = unknown === undefined ? 0 : unknown.weight * (100 - unknownScore(group.targetPillar, unknown));
       const selected = unknownLoss > knownLoss ? unknown! : known ?? unknown ?? eligibleInputs[0]!;
       const boundedUnknown = eligibleInputs.some((input) => input.boundedUnknown || input.score === null);
       const nominalExposureShare = boundedUnknown ? Math.max(...eligibleInputs.map((input) => input.weight)) : selected.weight;

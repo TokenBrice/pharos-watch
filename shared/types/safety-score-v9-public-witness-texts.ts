@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { SafetyScoreV9CurrentCard } from "./safety-score-v9-public";
+import type { SafetyScoreV9CardValidationInput } from "./safety-score-v9-public";
 
 const V9PublicWitnessTextEntrySchema = z.union([
   z.string().min(1),
@@ -100,7 +100,7 @@ export function validateV9PublicWitnessTexts(card: V9PublicWitnessTextTable): vo
 }
 
 /** Literal-only checks, including escaped strings whose first character is '~'. */
-export function validateV9ResolvedWitnessViews(card: Pick<SafetyScoreV9CurrentCard, "scoreTrace" | "pillars" | "evidence" | "accessPosture">): void {
+export function validateV9ResolvedWitnessViews(card: Pick<SafetyScoreV9CardValidationInput, "scoreTrace" | "pillars" | "evidence" | "accessPosture">): void {
   for (const reasons of [card.evidence.reasons, ...Object.values(card.pillars).map((pillar) => pillar.reasons), card.accessPosture.reasons]) {
     const identities = new Set<string>();
     for (const reason of reasons) {
@@ -113,7 +113,6 @@ export function validateV9ResolvedWitnessViews(card: Pick<SafetyScoreV9CurrentCa
   if (adverse.some((key, i) => i > 0 && adverse[i - 1]! >= key)) throw new Error("V9 adverse attribution must be unique and sorted");
   const bounded = card.scoreTrace.boundedUncertaintyAttribution.items.map((item) => {
     if (item.source === "parent-score" && !item.path.startsWith("parent:")) throw new Error("V9 parent bounded-uncertainty attribution requires a parent-prefixed path");
-    if (item.source === "wrapper-local" && !item.path.startsWith("wrapper-local:")) throw new Error("V9 wrapper bounded-uncertainty attribution requires a wrapper-local path");
     return [item.source, item.code, item.path, item.message, item.responsibility].join("\u0000");
   });
   if (bounded.some((key, i) => i > 0 && bounded[i - 1]! >= key)) throw new Error("V9 bounded-uncertainty attribution must be unique and sorted");

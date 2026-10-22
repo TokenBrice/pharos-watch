@@ -1274,7 +1274,6 @@ function evaluateV9FactSetRead(
       rolePillarProjections: projectV9RoleDependencyPillarLimits(unresolved, {
         unresolvedMaterialityThreshold:
           envelope.policy.semantic.backing.structural.materialExposureShare,
-        boundedUnknownQuality: { exit: envelope.policy.semantic.exit.boundedUnknownScore, control: envelope.policy.semantic.control.boundedUnknownQuality },
       }),
     };
 
@@ -1334,6 +1333,7 @@ function evaluateV9FactSetRead(
         upstreamResultsById.set(assetId, {
           assetId, score: null, backingScore: null, exitScore: null,
           accessScore: null, controlScore: null, oracleNavScore: null,
+          ratingStatus: "pipeline-gap", cause: "U", limitedEvidenceCauses: ["U"],
         });
         unavailabilityRootsById.set(assetId, [assetId]);
         continue;

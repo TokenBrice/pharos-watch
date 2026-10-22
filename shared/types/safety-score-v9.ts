@@ -315,6 +315,7 @@ export const V9CapSourceSchema = z.enum([
   "parent",
   "track-record",
   "realized-holder-loss",
+  "speculative-credit",
 ]);
 export type V9CapSource = z.infer<typeof V9CapSourceSchema>;
 
@@ -486,11 +487,11 @@ const V9FormulaPolicySchema = z
     capTiePriority: z.array(V9CapSourceSchema),
     rounding: z.object({ uncapped: z.literal("nearest") }).strict(),
     realizedHolderLoss: z.object({
-      minimumLossPct: z.number().finite().positive().max(100),
-      initialLimit: ScoreSchema,
+      initialLimits: z.object({ severe: ScoreSchema, offPeg: ScoreSchema }).strict(),
       holdDays: z.number().finite().positive(),
       recoveryDays: z.number().finite().positive(),
     }).strict(),
+    speculativeCreditResidualLimit: ScoreSchema,
     // Wrapper-strategy parent cap: points shaved off a required parent's cap so a
     // yield/vault wrapper rates meaningfully below its underlying, tiered by the
     // wrapper's form. `pure` = a 1:1 pass-through; `staked` = a native savings /

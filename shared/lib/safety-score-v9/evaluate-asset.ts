@@ -25,7 +25,7 @@ import {
 import { evaluateV9Backing } from "./archetypes";
 import { selectV9CdpLiquidationCapacity } from "./archetypes/cdp";
 import { evaluateV9EconomicControl } from "./control";
-import { unresolvedDeploymentCohort } from "./control-bridge-join";
+import { providerRowExclusionShares, unresolvedDeploymentCohort } from "./control-bridge-join";
 import { deriveV9MintPosture, resolveV9StatusCauses, type V9EconomicControlResult } from "./control-primitives";
 import { isUnboundedMintPosture } from "./mint-posture";
 import {
@@ -37,7 +37,7 @@ import {
 import {
   evaluateV9Exit,
   projectV9ExitEvaluationRoute,
-  selectV9ExitCirculatingUsd,
+  resolveV9ExitSupplySizing,
   type V9ExitEvaluationResult,
 } from "./exit";
 import {
@@ -52,8 +52,6 @@ import {
 } from "./gap-index";
 import {
   decimalSnap,
-  hasV9PreExitDangerSignal,
-  v9CMinusFloor,
   type V9PillarAdverseAttribution,
 } from "./formula";
 import { evaluateV9OperationalResilience, type V9OperationalResilienceResult } from "./operational-resilience";
@@ -62,7 +60,8 @@ import {
   measuredOperationalMarketDepth,
   operationalResilienceBlockers,
 } from "./operational-market-depth";
-import { resolveV9ReasonTreatment } from "./policy";
+import { resolveV9ReasonTreatment, unknownQuality } from "./policy";
+import { effectiveV9ControllerKeys, isV9DeploymentControllerAlreadyPriced } from "./scoped-risk";
 import {
   canonicalDomains,
   canonicalUniqueBy,
@@ -260,6 +259,7 @@ function structuralSignalFromControl(
   asset: V9AssetFactsV3,
   failure: V9EconomicControlResult["structuralFailures"][number],
   bindingComponentControlKeys: ReadonlySet<string>,
+  pricedControllerKeys: ReadonlySet<string>,
   policy: V9ValidatedPolicyEnvelope,
 ): V9StructuralSignal {
   const controls = failure.controlKeys.flatMap((key) => {
@@ -331,6 +331,13 @@ function structuralSignalFromControl(
         : "integration-missing";
   const failureDomainKeys = failure.failureDomains.map(domainKey);
   const deploymentKeys = controls.map((control) => control.deploymentKey);
+  const measuredSliceRisk = failure.kind === "active-control-incident" ||
+    failure.kind === "material-bridge" || failure.kind === "peripheral-bridge" ||
+    failure.kind === "weak-oracle-branch";
+  const samePricedController = controls.length === failure.controlKeys.length &&
+    controls.length > 0 && controls.every((control) => isV9DeploymentControllerAlreadyPriced(
+      effectiveV9ControllerKeys(control), pricedControllerKeys, measuredSliceRisk,
+    ));
   return {
     kind: failure.kind,
     severity: failure.severity,
@@ -355,35 +362,14 @@ function structuralSignalFromControl(
       )
         ? "high"
         : "low",
-    // A deployment-scoped failure with a known share is normally priced by
-    // proportional deployment risk, so it carries no pillar marker. But when a
-    // still-binding control component covers the same controls, the fact IS
-    // priced in the pillar: dropping the marker there left the adverse pillar
-    // score with no causal attribution, and the D/F gates then withheld an
-    // otherwise unchanged card as NR.
+    // Preserve the evidence signal without charging an already-priced controller
+    // again. Independent bridge/oracle measurements and incidents remain scoped.
     ...(economicLossScope === "deployment" &&
     failure.materialSharePct !== null &&
+    !samePricedController &&
     !failure.controlKeys.some((controlKey) => bindingComponentControlKeys.has(controlKey))
       ? {}
       : { pricedInPillar: "control" as const }),
-    // A control failure that can impair the whole claim is priced twice today:
-    // once inside the control pillar, and again as a hard ceiling. The pillar is
-    // compensable by construction, so a strong backing and exit result can lift
-    // an asset with an unbounded mint well above the ceiling; the cap asserts the
-    // residual that compensation cannot reach. That residual is real, but it has
-    // never been stated per asset, so `structuralSignalNeedsHardCap` now requires
-    // it explicitly and this marker grandfathers the existing global-claim
-    // control ceilings unchanged while recording that each one is still owed a
-    // review. Dropping a marker is the deliberate act that releases its cap.
-    ...(economicLossScope === "global-claim" && responsibility === "measured-adverse"
-      ? {
-          additionalHardCapRisk: {
-            reviewed: true as const,
-            reason:
-              "Provisional: a global-claim control failure is compensable inside the control pillar but not at the whole-asset level. Grandfathered pending per-asset review of the residual.",
-          },
-        }
-      : {}),
     failureDomainKeys,
     evidence: [],
   };
@@ -402,7 +388,7 @@ function pillarCauseMetadata(
     aggregationDisposition: result.aggregationDisposition,
     causeGapIds: result.causeGapIds,
     limitedEvidenceCauses: result.limitedEvidenceCauses,
-    supportedComponentKeys: result.aggregationDisposition === "excluded-a-b" ? [] : result.supportedComponentKeys,
+    supportedComponentKeys: result.aggregationDisposition !== "included" ? [] : result.supportedComponentKeys,
     excludedComponentKeys: uniqueSorted(excludedComponentKeys),
     excludedCauseGapIds: uniqueSorted([
       ...excludedGaps.map((gap) => gap.gapId),
@@ -616,7 +602,7 @@ function backingPillar(
   // Source-gap deduplication must not replace an already-valid pillar witness
   // with an optional component witness that publication may later omit.
   const qualifiedPillarGapIds = new Set<string>();
-  if (result.score !== null && result.score < v9CMinusFloor(envelope)) {
+  if (result.score !== null) {
     for (const reason of reasons) {
       if (reason.sourceGapId == null || (reason.cause !== "C" && reason.cause !== "U")) continue;
       const treatment = resolveV9ReasonTreatment(envelope, reason.code, reason.cause);
@@ -629,8 +615,7 @@ function backingPillar(
     parentWeight = 1,
   ) => {
     const weight = component.effectiveScoringWeight * parentWeight;
-    if (component.scoringDisposition !== "bounded-uncertainty" || component.score === null ||
-      component.score >= v9CMinusFloor(envelope) || weight <= 0) return;
+    if (component.scoringDisposition !== "bounded-uncertainty" || component.score === null || weight <= 0) return;
     for (const gap of gapsForV9Ids(gapIndex, component.causeGapIds)) {
       if (gap.ownerDomain !== "backing" || (gap.causeProof.cause !== "C" && gap.causeProof.cause !== "U")) continue;
       if (qualifiedPillarGapIds.has(gap.gapId)) continue;
@@ -653,7 +638,7 @@ function backingPillar(
       ...(row.factors ?? []).filter((factor) => factor.scoringDisposition === "excluded-pipeline" || factor.scoringDisposition === "excluded-uncurated").map((factor) => factor.componentKey),
     ]), result.contributions),
     score: result.score,
-    ...reasonClassifiedEvidence(result.score, evidenceReasons, "strong", result.aggregationDisposition === "excluded-a-b"),
+    ...reasonClassifiedEvidence(result.score, evidenceReasons, "strong", result.aggregationDisposition !== "included"),
     reasons: canonicalReasons([...reasons, ...boundedComponents.map((component) => component.reason)]),
     boundedComponents,
     structuralSignals: result.structuralReasons.map((reason) => structuralSignalFromBacking(result.assetId, reason)),
@@ -941,12 +926,24 @@ function controlPillar(
   const canPriceProportionally = cohort.share !== null && cohort.share < fullCeilingShare;
   const pricedControlKeys = canPriceProportionally ? cohort.controlKeys : new Set<string>();
   if (canPriceProportionally && cohort.share! > 0) result.unresolvedDeploymentShare = cohort.share!;
-  const score = result.score === null
-    ? null
-    : decimalSnap(
-        result.score - Math.max(0, result.score - envelope.policy.semantic.control.boundedUnknownQuality) *
-          (canPriceProportionally ? cohort.share! : 0),
-      );
+  let nondisclosedShare = 0;
+  if (canPriceProportionally) {
+    const nondisclosedDeployments = new Set(unresolvedDeploymentControls.filter((control) =>
+      resolveV9StatusCauses([control.status], asset.gaps).cause === "C").map((control) => control.deploymentKey));
+    const exclusions = providerRowExclusionShares(asset.assetId, asset.supply);
+    for (const row of asset.supply.selectedBridgeRoutes) {
+      if (nondisclosedDeployments.has(row.deploymentRouteKey)) {
+        nondisclosedShare += Math.max(0, row.supplyShare - (exclusions.byDeployment.get(row.deploymentRouteKey) ?? 0));
+      }
+    }
+    nondisclosedShare = Math.min(cohort.share!, nondisclosedShare);
+  }
+  const score = result.score === null ? null : decimalSnap(
+    result.score -
+      Math.max(0, result.score - unknownQuality("control", "C", envelope.policy.semantic)) * nondisclosedShare -
+      Math.max(0, result.score - unknownQuality("control", "U", envelope.policy.semantic)) *
+        (canPriceProportionally ? cohort.share! - nondisclosedShare : 0),
+  );
   const scoreBearingReasons = [
     ...result.reasons.filter(
       (reason) => reason.controlKey === null || !pricedControlKeys.has(reason.controlKey),
@@ -1089,8 +1086,24 @@ function controlPillar(
           .filter((component) => component.binding)
           .flatMap((component) => component.controlKeys),
       );
+      const pricedControllerKeys = new Set(result.components
+        .filter((component) => component.binding && component.kind === "mint" && component.score !== null)
+        .flatMap((component) => component.controlKeys)
+        .flatMap((key) => {
+          const control = asset.controls.find((candidate) => candidate.controlKey === key);
+          return control === undefined ? [] : effectiveV9ControllerKeys(control);
+        }));
       return result.structuralFailures.flatMap((failure) => {
-        const signal = structuralSignalFromControl(asset, failure, bindingComponentControlKeys, envelope);
+        const signal = structuralSignalFromControl(asset, failure, bindingComponentControlKeys, pricedControllerKeys, envelope);
+        if (signal.economicLossScope === "deployment" && signal.responsibility === "measured-adverse") {
+          const componentKind = failure.kind === "material-bridge" || failure.kind === "peripheral-bridge"
+            ? "bridge" : failure.kind === "weak-oracle-branch" ? "oracle" : "mint";
+          const measured = result.components.filter((component) =>
+            component.kind === componentKind && component.score !== null &&
+            component.controlKeys.some((key) => failure.controlKeys.includes(key)),
+          );
+          if (measured.length > 0) signal.exposedScore = Math.min(...measured.map((component) => component.score!));
+        }
         return failure.binding || (signal.economicLossScope === "deployment" && signal.responsibility === "measured-adverse")
           ? [signal]
           : [];
@@ -1173,7 +1186,6 @@ export function upstreamOracleNavProjection(
     {
       unresolvedMaterialityThreshold:
         envelope.policy.semantic.backing.structural.materialExposureShare,
-      boundedUnknownQuality: { exit: envelope.policy.semantic.exit.boundedUnknownScore, control: envelope.policy.semantic.control.boundedUnknownQuality },
     },
   ).control;
   const score = projection.limit === null || localScore === null
@@ -1247,11 +1259,9 @@ function applyRoleDependencyPillarLimits(
 }
 
 /**
- * A wrapper whose whole backing is one ~100% tracked parent inherits that
- * parent's available backing pillar even when another dimension withholds its whole rating.
- * Missing reserve envelopes retain the reviewed curated/variant path. Present
- * envelopes require a verified live sole parent; only admitted lender assets may
- * aggregate complete same-parent slices (their old generic quality remains a cap).
+ * A wrapper whose admitted same-parent reserve rows cover its whole backing
+ * inherits that parent's available Backing pillar. Splitting an exact parent
+ * across idle and strategy rows does not change eligibility.
  */
 function resolveInheritedStablecoinBacking(
   asset: V9AssetFactsBase,
@@ -1285,8 +1295,7 @@ function resolveInheritedStablecoinBacking(
         edge.dependencyType === "wrapper" &&
         edge.upstreamAssetId === upstreamAssetId,
     );
-    const exposures = verifiedLiveInheritedExposures(asset, { parentAssetId: upstreamAssetId },
-      envelope.policy.semantic.backing.lenderCollateralBook.admittedAssets.some(row => row.assetId === asset.assetId));
+    const exposures = verifiedLiveInheritedExposures(asset, { parentAssetId: upstreamAssetId });
     if (!hasWrapperEdge || exposures === undefined) return undefined;
     weight = exposures.reduce((sum, exposure) => sum + exposure.weight, 0);
   }
@@ -1496,11 +1505,10 @@ function parentInput(
   const required = inputs.serial.length > 0 || inputs.cycleBlocked;
   const unavailableParents = inputs.serial.filter((dependency) => dependency.score === null);
   const parentPipelineGap = unavailableParents.some((dependency) =>
-    dependency.ratingStatus === "pipeline-gap" && (dependency.cause === "A" || dependency.cause === "B"),
+    dependency.ratingStatus === "pipeline-gap",
   );
-  const parentStatus = parentPipelineGap ? "pipeline-gap" as const
-    : unavailableParents.some((dependency) => dependency.ratingStatus === "not-rated" &&
-      (evaluatedById.get(dependency.upstreamAssetId)?.trace.nrReasons.length ?? 0) > 0) ? "not-rated" as const : "rated" as const;
+  const parentStatus = parentPipelineGap || inputs.cycleBlocked ? "pipeline-gap" as const
+    : unavailableParents.length > 0 ? "not-rated" as const : "rated" as const;
   const parentPartials = inputs.serial.flatMap((dependency) => dependency.partialEvidence ? [dependency.partialEvidence] : []);
   const partialEvidence: V9ProductionScoreInput["parent"]["partialEvidence"] = parentPartials.length === 0 ? null : {
     reasonCode: "partial-evidence-pipeline-gap",
@@ -1516,11 +1524,18 @@ function parentInput(
   );
   const rawScore =
     !required || inputs.cycleBlocked || availableScores.length !== inputs.serial.length
-      ? required && parentStatus === "rated" ? envelope.policy.semantic.backing.boundedUnknownQuality : null
+      ? null
       : Math.min(...availableScores);
   const propagatedReasons = inputs.serial.flatMap((dependency) => {
     const upstream = evaluatedById.get(dependency.upstreamAssetId);
-    return (upstream?.trace.nrReasons ?? []).map((reason) => ({
+    const reasons: V9ProductionScoreInput["parent"]["propagatedReasons"] =
+      upstream?.trace.nrReasons.length ? upstream.trace.nrReasons : dependency.score !== null ? [] : [{
+        code: "missing-parent-score",
+        message: `The required parent ${dependency.upstreamAssetId} is unavailable.`,
+        cause: dependency.cause ?? "U",
+        causeGapIds: dependency.causeGapIds ?? [],
+      }];
+    return reasons.map((reason) => ({
       ...reason,
       cause: reason.cause ?? "U",
       causalKey:
@@ -1571,26 +1586,16 @@ function parentInput(
     );
   }
   const fallback = envelope.policy.semantic.formula.wrapperStrategyCap;
-  const floorGrade = envelope.policy.semantic.formula.wrapperMildRiskFloorGrade;
-  const minimumNonDangerScore = envelope.policy.semantic.formula.gradeThresholds.find(
-    (threshold) => threshold.grade === floorGrade,
-  )?.minScore;
-  if (minimumNonDangerScore === undefined) {
-    throw new Error(`Safety Score v9 policy has no ${floorGrade} wrapper grade floor`);
-  }
   const wrapperLimit = resolveV9WrapperParentLimit({
     parentScore: rawScore,
-    minimumNonDangerScore,
     localFacts: asset.wrapperLocalFacts,
     gaps: asset.gaps,
-    fallbackDiscounts: {
+    formDiscounts: {
       pure: fallback.pure,
       "native-staked": fallback.staked,
       "strategy-vault": fallback.vault,
     },
   });
-  const cMinusFloor = v9CMinusFloor(envelope);
-  const parentItselfExplainsLowGrade = rawScore < cMinusFloor;
   return {
     required,
     score: decimalSnap(wrapperLimit.limit),
@@ -1599,12 +1604,8 @@ function parentInput(
     limitedEvidenceCauses: parentLimitedCauses,
     partialEvidence,
     propagatedReasons,
-    propagatedAdverseAttribution:
-      parentItselfExplainsLowGrade ? propagatedAdverseAttribution : [],
-    propagatedBoundedUncertaintyAttribution:
-      parentItselfExplainsLowGrade
-        ? propagatedBoundedUncertaintyAttribution
-        : [],
+    propagatedAdverseAttribution,
+    propagatedBoundedUncertaintyAttribution,
     wrapperParentLimit: wrapperLimit,
   };
 }
@@ -1693,7 +1694,6 @@ export function evaluateV9Asset({
   const control = evaluateV9EconomicControl({
     facts: asset,
     ...asset.economicControlReview,
-    trackRecordMonths,
     ...(() => {
       const ageMonths = conservativeResolvedIncidentAgeMonths(
         asset.economicControlReview.mint.latestResolvedIncidentAtSec,
@@ -1742,29 +1742,12 @@ export function evaluateV9Asset({
       scoreAfter: controlPillarEvaluation.score,
     };
   }
-  // The exit pillar's SIM-EXIT-L2 undisclosed-fee credit is withheld from an
-  // asset already held down by a non-exit adverse fact. The gate reads the same
-  // structural-signal set the scorer assembles (backing + control + dependency;
-  // the exit pillar itself contributes none) plus the measured peg, so the exit
-  // credit never feeds back into the pre-exit gate that governs it.
-  const preExitDangerHeld = hasV9PreExitDangerSignal(
-    {
-      structuralSignals: [
-        ...backingPillarEvaluation.structuralSignals,
-        ...controlPillarEvaluation.structuralSignals,
-        ...dependencySignals,
-      ],
-      pegScore: peg.score,
-      pegApplicable: peg.applicable,
-      activeDepegBps: peg.activeDepegBps,
-    },
-    envelope,
-  );
   // One projection of the exit routes (and the circulating supply / portfolio
   // status derived beside them) serves both the exit evaluation and the
   // retained stress state; evaluateV9Exit copies before sorting, so the shared
   // array is never mutated downstream.
-  const exitCirculatingUsd = selectV9ExitCirculatingUsd(asset.supply);
+  const exitSupplySizing = resolveV9ExitSupplySizing(asset);
+  const exitCirculatingUsd = exitSupplySizing.circulatingUsd;
   const exitPortfolioStatus =
     asset.exitStatus.observationState === "known" && asset.exitStatus.applicability.state === "required"
       ? "reviewed-complete"
@@ -1774,12 +1757,11 @@ export function evaluateV9Asset({
     {
       assetId: asset.assetId,
       clockSec: identity.asOfSec,
-      circulatingUsd: exitCirculatingUsd,
+      ...exitSupplySizing,
       portfolioStatus: exitPortfolioStatus,
       portfolioFactStatus: asset.exitStatus,
       gaps: asset.gaps,
       routes: projectedExitRoutes,
-      preExitDangerHeld,
     },
     envelope,
   );
@@ -1793,11 +1775,27 @@ export function evaluateV9Asset({
     ),
     control: controlPillarEvaluation,
   };
+  // A default price is not evidence that an economic subject was reviewed.
+  const hasExitSubject = asset.exitStatus.evidenceRefIds.length > 0 ||
+    asset.exitRoutes.some((route) => route.status.evidenceRefIds.length > 0) ||
+    (asset.mechanismExitFacts?.some((fact) => fact.evidenceRefIds.length > 0) ?? false);
+  const hasControlSubject = asset.controls.some((control) => control.status.evidenceRefIds.length > 0) ||
+    Object.values(asset.economicControlReview).some((review) => review.status.evidenceRefIds.length > 0);
+  for (const [pillar, hasSubject] of [["exit", hasExitSubject], ["control", hasControlSubject]] as const) {
+    if (!hasSubject && basePillars[pillar].aggregationDisposition === "included") {
+      basePillars[pillar] = {
+        ...basePillars[pillar], score: null, aggregationDisposition: "unavailable",
+        evidenceLevel: "insufficient", supportedComponentKeys: [], limitedEvidenceCauses: [],
+        limitingCauseGapIds: [],
+      };
+    }
+  }
   const parent = parentInput(asset, resolved, evaluatedById, wrapperStrategyTier, envelope);
   if (parent.ratingStatus === "pipeline-gap") {
     for (const pillar of ["backing", "exit"] as const) {
       basePillars[pillar] = {
-        ...basePillars[pillar], score: null, aggregationDisposition: "excluded-a-b",
+        ...basePillars[pillar], score: null,
+        aggregationDisposition: (parent.partialEvidence?.causes.length ?? 0) > 0 ? "excluded-a-b" : "unavailable",
         supportedComponentKeys: [], limitedEvidenceCauses: [],
         causeGapIds: parent.causeGapIds ?? [],
         excludedCauseGapIds: parent.causeGapIds ?? [],
@@ -1862,7 +1860,8 @@ export function evaluateV9Asset({
     identity,
     pillars,
     peg,
-    trackRecordMonths,
+    trackRecordMonths: asset.implementation.launchedAtSec === null ? null : trackRecordMonths,
+    realizedHolderLossEvents: asset.realizedHolderLossEvents ?? [],
     unresolvedDeploymentShare: control.unresolvedDeploymentShare,
     parent,
     dependencyReasons: dependencyReasonsInput,

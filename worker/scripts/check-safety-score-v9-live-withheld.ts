@@ -120,7 +120,6 @@ export interface LiveWithheldRow {
   fallbackScore: number | null;
   fallbackGrade: V9Grade;
   fallbackTier: FallbackTier;
-  fallbackEvidenceCeiling: number | null;
   fallbackBindingCapKind: string | null;
 }
 
@@ -172,7 +171,6 @@ const ShardResultSchema = z.object({
       fallbackScore: z.number().finite().nullable(),
       fallbackGrade: V9GradeSchema,
       fallbackTier: z.enum(["static", "audited-fallback", "curated-fallback", "none"]),
-      fallbackEvidenceCeiling: z.number().finite().nullable(),
       fallbackBindingCapKind: z.string().nullable(),
     })),
   }),
@@ -246,16 +244,9 @@ function cardForAsset(cards: readonly ReplayCard[], assetId: string): ReplayCard
 
 function fallbackTier(
   admitted: SafetyScoreV9CandidatePipelineResult["extension"]["assets"][number]["reviewedStaticReserveRows"],
-): { tier: FallbackTier; evidenceCeiling: number | null } {
-  if (admitted == null) return { tier: "none", evidenceCeiling: null };
-  const evidenceCeiling =
-    admitted.evidenceClass === "independent"
-      ? null
-      : V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.ceilings.adequate;
-  return {
-    tier: admitted.provenance === "audited-fallback" ? "audited-fallback" : admitted.provenance === "curated-fallback" ? "curated-fallback" : "static",
-    evidenceCeiling,
-  };
+): FallbackTier {
+  if (admitted == null) return "none";
+  return admitted.provenance === "audited-fallback" ? "audited-fallback" : admitted.provenance === "curated-fallback" ? "curated-fallback" : "static";
 }
 
 function withLiveReserveWithheld(
@@ -488,8 +479,7 @@ export function buildLiveWithheldCounterfactualReport(
       liveGrade,
       fallbackScore: fallbackCard.score,
       fallbackGrade,
-      fallbackTier: admission.tier,
-      fallbackEvidenceCeiling: admission.evidenceCeiling,
+      fallbackTier: admission,
       fallbackBindingCapKind: fallbackCard.bindingCap?.kind ?? null,
     });
   }
@@ -524,13 +514,13 @@ export function renderLiveWithheldCounterfactualReport(report: LiveWithheldRepor
     ] : []),
     rows.length === 0
       ? "No assessed eligible strict grade downgrades. Excluded assets are not a healthy-feed claim."
-      : "| Asset | Supply (USD) | Live | If producer silent | Fallback tier | Evidence ceiling | Counterfactual binding cap |",
+      : "| Asset | Supply (USD) | Live | If producer silent | Fallback tier | Counterfactual binding cap |",
   ];
   if (rows.length > 0) {
-    lines.push("|---|---:|---|---|---|---:|---|");
+    lines.push("|---|---:|---|---|---|---|");
     for (const row of rows) {
       lines.push(
-        `| ${row.assetId} | ${row.supplyUsd === null ? `unknown (${row.supplyUnavailableReason})` : Math.round(row.supplyUsd).toLocaleString("en-US")} | ${displayScore(row.liveScore)} / ${row.liveGrade} | ${displayScore(row.fallbackScore)} / ${row.fallbackGrade} | ${row.fallbackTier} | ${row.fallbackEvidenceCeiling ?? "none"} | ${row.fallbackBindingCapKind ?? "none"} |`,
+        `| ${row.assetId} | ${row.supplyUsd === null ? `unknown (${row.supplyUnavailableReason})` : Math.round(row.supplyUsd).toLocaleString("en-US")} | ${displayScore(row.liveScore)} / ${row.liveGrade} | ${displayScore(row.fallbackScore)} / ${row.fallbackGrade} | ${row.fallbackTier} | ${row.fallbackBindingCapKind ?? "none"} |`,
       );
     }
   }

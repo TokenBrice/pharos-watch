@@ -158,14 +158,14 @@
           "minScore": 0
         }
       ],
-      "capTiePriority": ["active-depeg", "realized-holder-loss", "parent", "track-record"],
+      "capTiePriority": ["active-depeg", "realized-holder-loss", "parent", "speculative-credit", "track-record"],
       "rounding": { "uncapped": "nearest" },
       "realizedHolderLoss": {
-        "minimumLossPct": 1,
-        "initialLimit": 49,
+        "initialLimits": { "severe": 39, "offPeg": 49 },
         "holdDays": 365,
         "recoveryDays": 365
       },
+      "speculativeCreditResidualLimit": 59,
       "wrapperStrategyCap": {
         "pure": 3,
         "staked": 5,
@@ -910,7 +910,7 @@
       "accessScores": {
         "permissionless-onchain": 100,
         "whitelisted-onchain": 75,
-        "issuer-api": 40,
+        "issuer-api": 55,
         "manual": 20
       },
       "settlementScores": {

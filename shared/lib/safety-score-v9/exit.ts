@@ -223,6 +223,9 @@ export function resolveV9ExitCapacityAtRequest(
     const costPoints = points
       .filter((point) => point.maxCostBps === maxCostBps)
       .sort((left, right) => left.requestedNotionalUsd - right.requestedNotionalUsd);
+    // A curve ending below the request does not observe capacity at the
+    // larger stress size. Keep the route unavailable rather than extrapolating.
+    if (costPoints[costPoints.length - 1]!.requestedNotionalUsd < request.requestedNotionalUsd) continue;
     const exact = costPoints.find((point) => point.requestedNotionalUsd === request.requestedNotionalUsd);
     const lower = [...costPoints].reverse().find((point) => point.requestedNotionalUsd < request.requestedNotionalUsd);
     const first = costPoints[0];
@@ -326,10 +329,9 @@ export interface V9CreditableNonAtomicRedemptionInput {
  * coverage, at least one enumerated failure domain, and a documented,
  * live-reserve, or on-chain redemption evidence kind. This gate decides only
  * *eligibility* for discounted positive credit. Its capacity is a lower bound,
- * not a measurement of exhaustion: zero or immaterial discounted capacity
- * leaves missing same-notional evidence rather than measured adversity. A
- * route whose settlement completion bound is unproven likewise stays a
- * bounded evidence gap, excluded from scoring and retained diagnostically.
+ * not an exhaustion measurement: modeled zero remains a gap, while every
+ * positive capacity is priced continuously. Missing fee or settlement terms
+ * are separately admitted with unknown subfactors and a bounded-recovery ceiling.
  */
 /**
  * A route output is resolved when it is both observed and valued. Two surfaces

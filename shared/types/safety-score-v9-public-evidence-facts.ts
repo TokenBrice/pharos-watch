@@ -94,7 +94,7 @@ export function countV9EvidenceObligations<T, Ref extends string | number>(
   for (const critical of sources.values()) if (critical) criticalFactCount++;
   return { factCount, criticalFactCount };
 }
-export function refineEvidenceFactPathPrefixes(evidence: V9EvidenceFactContext, ctx: Pick<z.RefinementCtx, "addIssue">): boolean {
+export function refineEvidenceFactPathPrefixes(evidence: V9EvidenceFactContext, ctx: Pick<z.RefinementCtx, "addIssue">, pathPrefix?: readonly PropertyKey[]): boolean {
   const used = new Uint8Array(evidence.factPathPrefixes?.length ?? 0);
   let valid = true;
   for (let index = 0; index < evidence.facts.length; index++) {
@@ -103,12 +103,12 @@ export function refineEvidenceFactPathPrefixes(evidence: V9EvidenceFactContext, 
     if (ref === undefined) continue;
     if (!Number.isInteger(ref) || ref < 0 || ref >= used.length) {
       valid = false;
-      ctx.addIssue({ code: "custom", path: ["facts", index, 1], message: "Fact path prefix reference is outside its table" });
+      ctx.addIssue({ code: "custom", path: [...(pathPrefix ?? []), "facts", index, 1], message: "Fact path prefix reference is outside its table" });
     } else used[ref] = 1;
   }
   if (used.some((value) => value === 0)) {
     valid = false;
-    ctx.addIssue({ code: "custom", path: ["factPathPrefixes"], message: "Every fact path prefix must be referenced" });
+    ctx.addIssue({ code: "custom", path: [...(pathPrefix ?? []), "factPathPrefixes"], message: "Every fact path prefix must be referenced" });
   }
   return valid;
 }

@@ -16,6 +16,7 @@ import {
   type V9ReviewedIncident,
   type V9WrapperLocalIncident,
 } from "@shared/types/safety-score-v9-incidents";
+import type { V9AdmittedHolderLossEvent } from "@shared/types/safety-score-v9-incidents";
 import type { SafetyScoreV9OperationalResilienceOverlay } from "@shared/types/safety-score-v9-operational-resilience-overlays";
 import {
   V9WrapperLocalFactsSchema,
@@ -157,6 +158,31 @@ export function getSafetyScoreV9ReviewedIncidents(
       isoDateSec(incident.occurredAt) <= clockSec &&
       isoDateSec(incident.reviewedAt) <= clockSec,
   );
+}
+
+/** Projects admitted holder-claim losses without inferring loss from incident prose or peg history. */
+export function projectSafetyScoreV9RealizedHolderLossEvents(
+  incidents: readonly V9ReviewedIncident[],
+  clockSec: number,
+): V9AdmittedHolderLossEvent[] {
+  if (!Number.isFinite(clockSec) || clockSec < 0) {
+    throw new Error("Safety Score v9 incident-review clock must be finite and non-negative");
+  }
+  const events: V9AdmittedHolderLossEvent[] = [];
+  for (const incident of incidents) {
+    if (incident.domain === "security-history" || incident.realizedHolderLossPct === undefined ||
+        isoDateSec(incident.occurredAt) > clockSec || isoDateSec(incident.reviewedAt) > clockSec) continue;
+    events.push({
+      incidentId: incident.incidentId,
+      assetId: incident.assetId,
+      scope: incident.scope,
+      occurredAt: incident.occurredAt,
+      realizedHolderLossPct: incident.realizedHolderLossPct,
+      primarySources: incident.primarySources,
+      finding: incident.finding,
+    });
+  }
+  return events;
 }
 
 function incidentComponentKeys(incident: V9ReviewedIncident): readonly string[] {

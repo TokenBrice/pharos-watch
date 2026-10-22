@@ -1,9 +1,9 @@
-import type { SafetyScoreV9CurrentCard } from "./safety-score-v9-public";
+import type { SafetyScoreV9CardValidationInput } from "./safety-score-v9-public";
 import { attributedSerialParent } from "./safety-score-v9-public-internal";
 import { resolveCauseGapId, type V9PublicCauseGapContext } from "./safety-score-v9-public-cause-gaps";
 import { resolveV9PublicWitnessTexts } from "./safety-score-v9-public-witness-texts";
 
-type AttributionCard = Omit<SafetyScoreV9CurrentCard, "breakdowns">;
+type AttributionCard = Omit<SafetyScoreV9CardValidationInput, "breakdowns">;
 
 export interface SafetyScoreV9ParentAttributionIssue {
   cardId: string;

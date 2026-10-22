@@ -30,7 +30,6 @@ import type { V9BackingResult } from "./backing-primitives";
 import type { V9EconomicControlResult, V9MintPosture } from "./control-primitives";
 import type { V9CommonModeGroup, V9ResolvedDependencyInputs } from "./dependencies";
 import type { V9ExitEvaluationResult, V9ExitHolderEligibility } from "./exit";
-import { structuralSignalNeedsHardCap } from "./formula";
 import type { V9PillarReason, V9ProductionScoreInput, V9ProductionScoreTrace } from "./score";
 import { computeV9CompactResultDigest, projectCompactV9ScoreTrace, type V9CompactScoreTrace } from "./trace";
 import { compareText, uniqueSorted } from "./primitives";
@@ -107,7 +106,7 @@ export interface V9CommonModeProjectionResult {
   trace: Pick<V9ProductionScoreTrace, "assetId" | "caps" | "deploymentAdjustments"> & {
     structuralSignals: readonly Pick<V9ProductionScoreTrace["structuralSignals"][number],
       "kind" | "severity" | "reason" | "failureDomainKeys" |
-      "economicLossScope" | "responsibility" | "pricedInPillar" | "additionalHardCapRisk">[];
+      "economicLossScope" | "responsibility" | "pricedInPillar">[];
   };
 }
 
@@ -168,7 +167,7 @@ function routeLabel(
 }
 
 function aggregationWeight(input: V9PublicCardProjectionInput, pillar: V9QualityPillar): number {
-  return input.scoreInput.pillars[pillar].aggregationDisposition === "excluded-a-b"
+  return input.scoreInput.pillars[pillar].aggregationDisposition !== "included"
     ? 0 : input.trace.effectiveScoringWeights?.[pillar] ?? 0;
 }
 
@@ -177,9 +176,11 @@ function pillarCauseFields(input: V9PublicCardProjectionInput, pillar: V9Quality
   return {
     aggregationDisposition: evaluation.aggregationDisposition,
     causeGapIds: uniqueSorted(evaluation.causeGapIds),
-    limitedEvidenceCauses: uniqueSorted(evaluation.limitedEvidenceCauses.filter(
-      (cause): cause is "C" | "U" | "D" => cause === "C" || cause === "U" || cause === "D",
-    )),
+    limitedEvidenceCauses: evaluation.aggregationDisposition === "included"
+      ? uniqueSorted(evaluation.limitedEvidenceCauses.filter(
+          (cause): cause is "C" | "U" | "D" => cause === "C" || cause === "U" || cause === "D",
+        ))
+      : [],
   };
 }
 
@@ -239,7 +240,7 @@ function projectBackingBreakdown(
   if (backing === undefined) {
     throw new Error(`Safety Score v9 ${input.trace.assetId} lacks a backing evaluation`);
   }
-  const excluded = input.scoreInput.pillars.backing.aggregationDisposition === "excluded-a-b";
+  const excluded = input.scoreInput.pillars.backing.aggregationDisposition !== "included";
   const evaluatedScore = excluded ? null : backing.score;
   const reserveGroupWeight = backing.contributions
     .filter((contribution) => contribution.source !== "mechanism")
@@ -247,7 +248,7 @@ function projectBackingBreakdown(
   const mechanismGroupWeight = backing.contributions
     .filter((contribution) => contribution.source === "mechanism")
     .reduce((sum, contribution) => sum + (excluded ? 0 : contribution.effectiveWeight), 0);
-  const components = [...backing.contributions]
+  const components = (input.scoreInput.pillars.backing.aggregationDisposition === "unavailable" ? [] : [...backing.contributions])
     .sort((left, right) => compareText(left.componentKey, right.componentKey))
     .map((contribution) => {
       const weight = excluded ? 0 : contribution.effectiveWeight;
@@ -322,7 +323,7 @@ function projectExitBreakdown(
   if (exit === undefined) {
     throw new Error(`Safety Score v9 ${input.trace.assetId} lacks an exit evaluation`);
   }
-  const excluded = input.scoreInput.pillars.exit.aggregationDisposition === "excluded-a-b";
+  const excluded = input.scoreInput.pillars.exit.aggregationDisposition !== "included";
   const evaluatedScore = excluded ? null : exit.score;
   const policy = input.policy.policy.semantic.exit;
   const primary = exit.routes.find((route) => route.routeKey === exit.primaryRouteKey) ?? null;
@@ -412,6 +413,8 @@ function projectExitBreakdown(
             requestedNotionalUsd: exit.stressRequest.requestedNotionalUsd,
             maxCostBps: exit.stressRequest.maxCostBps,
             comparisonWindowSec: exit.stressRequest.comparisonWindowSec,
+            supplyObservedAtSec: exit.stressRequest.supplyObservedAtSec ?? null,
+            sizingUncertaintyReason: exit.stressRequest.sizingUncertaintyReason ?? null,
           },
     primaryRoute:
       completePrimary === null
@@ -432,7 +435,6 @@ function projectExitBreakdown(
             capacityEvidenceTier: completePrimary.capacityEvidenceTier,
             rawSameNotionalCostBps: completePrimary.rawSameNotionalCostBps,
             supportedComponentCeiling: completePrimary.supportedComponentCeiling,
-            eligibilityMultiplier: completePrimary.eligibilityMultiplier,
             capsApplied: uniqueSorted(completePrimary.capsApplied),
             capacity:
               completePrimary.capacityPoint === null
@@ -596,7 +598,7 @@ function projectControlBreakdown(
   if (control === undefined) {
     throw new Error(`Safety Score v9 ${input.trace.assetId} lacks a control evaluation`);
   }
-  const excluded = input.scoreInput.pillars.control.aggregationDisposition === "excluded-a-b";
+  const excluded = input.scoreInput.pillars.control.aggregationDisposition !== "included";
   const evaluatedScore = excluded ? null : control.score;
   const publishedScore = input.scoreInput.pillars.control.score;
   const issuanceSummary = projectIssuanceSummary(control);
@@ -607,7 +609,7 @@ function projectControlBreakdown(
     aggregationWeight: aggregationWeight(input, "control"),
     method: "minimum-binding-component",
     ...(issuanceSummary ? { issuanceSummary } : {}),
-    components: [...control.components]
+    components: (input.scoreInput.pillars.control.aggregationDisposition === "unavailable" ? [] : [...control.components])
       .sort((left, right) => compareText(left.componentKey, right.componentKey))
       .map((component) => ({
         key: component.componentKey,
@@ -738,7 +740,8 @@ function projectPillars(input: V9PublicCardProjectionInput): V9UninternedPublicC
     if (input.trace.ratingStatus !== "pipeline-gap" && evaluation.score !== null && contribution !== evaluation.score) {
       throw new Error(`Safety Score v9 ${input.trace.assetId} ${pillar} pillar does not match its score trace`);
     }
-    if (evaluation.score === null && contribution !== undefined) {
+    const pricedUnknown = input.trace.aggregation?.pricedUnknownPillars.find((item) => item.pillar === pillar);
+    if (evaluation.score === null && contribution !== undefined && contribution !== pricedUnknown?.score) {
       throw new Error(`Safety Score v9 ${input.trace.assetId} ${pillar} trace contains a missing pillar`);
     }
     return {
@@ -974,6 +977,9 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): V9UninternedPubl
             headroom: trace.aggregation.headroom,
             includedPillars: [...trace.aggregation.includedPillars],
             excludedPillars: [...trace.aggregation.excludedPillars],
+            pricedUnknownPillars: trace.aggregation.pricedUnknownPillars.map((item) => ({
+              ...item, causeGapIds: uniqueSorted(item.causeGapIds),
+            })),
             effectiveScoringWeights: { ...trace.aggregation.effectiveScoringWeights },
             supportCeiling: trace.aggregation.supportCeiling,
           },
@@ -1027,18 +1033,13 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): V9UninternedPubl
       facts: responsibilityFacts,
       summaries: responsibilitySummaries,
     },
-    scoreAdjustments: trace.scoreAdjustments.map((adjustment) => ({
-      ...adjustment,
-      capRelief: { ...adjustment.capRelief },
-    })),
+    scoreAdjustments: trace.scoreAdjustments.map((adjustment) => ({ ...adjustment })),
     wrapperParentLimit:
       trace.wrapperParentLimit === null
         ? null
         : {
             ...trace.wrapperParentLimit,
             missingFacts: trace.wrapperParentLimit.missingFacts.map((fact) => ({ ...fact, causeGapIds: uniqueSorted(fact.causeGapIds) })),
-            adjustments: trace.wrapperParentLimit.adjustments.map((adjustment) => ({ ...adjustment, causeGapIds: uniqueSorted(adjustment.causeGapIds) })),
-            riskTransfer: { ...trace.wrapperParentLimit.riskTransfer },
           },
   };
 }
@@ -1060,13 +1061,13 @@ function allPublicReasonCodes(input: V9PublicCardProjectionInput): V9ReasonCode[
 function projectPartialEvidence(input: V9PublicCardProjectionInput): V9UninternedPublicCard["partialEvidence"] {
   const partial = input.trace.partialEvidence;
   if (partial === null) return null;
-  // A/B triggers the exclusion, but the whole excluded pillar also retains
-  // diagnostic C/U/D roots. Keep those visible without changing their causes
-  // or feeding them back into scoring and parent-exclusion propagation.
+  // Every excluded pillar retains its diagnostic roots, including evidence-free
+  // pillars with C/U gaps. Visibility does not turn those gaps into A/B causes
+  // or feed them back into scoring and parent-exclusion propagation.
   let missingGapIds: string[] | undefined;
   for (const pillar of PILLARS) {
     const evaluation = input.scoreInput.pillars[pillar];
-    if (evaluation.aggregationDisposition !== "excluded-a-b") continue;
+    if (evaluation.aggregationDisposition === "included") continue;
     for (const id of evaluation.causeGapIds) {
       if (!partial.causeGapIds.includes(id)) (missingGapIds ??= []).push(id);
     }
@@ -1247,7 +1248,6 @@ export function projectSafetyScoreV9CommonModeGroups(
 ): SafetyScoreV9CommonModeGroups {
   const resultById = new Map(results.map((result) => [result.trace.assetId, result]));
   const cardById = new Map(cards.map((card) => [card.id, card]));
-  const resolvedCapsById = new Map<string, SafetyScoreV9CurrentCard["caps"]>();
   return groups.flatMap((group) => {
     const id = `${group.failureDomain.kind}:${group.failureDomain.key}`;
     const memberAssetIds = uniqueSorted(group.members.map((member) => member.assetId));
@@ -1256,29 +1256,15 @@ export function projectSafetyScoreV9CommonModeGroups(
     const pricedEffects = memberAssetIds.flatMap((assetId) => {
       const trace = resultById.get(assetId)?.trace;
       const card = cardById.get(assetId);
-      let resolvedCaps = resolvedCapsById.get(assetId);
-      if (resolvedCaps === undefined && card !== undefined) {
-        resolvedCaps = resolveV9PublicWitnessTexts({ caps: card.caps, witnessTexts: card.witnessTexts }).caps;
-        resolvedCapsById.set(assetId, resolvedCaps);
-      }
       if (!trace || !card) throw new Error(`Common-mode member ${assetId} has no evaluated public card`);
-      const signals = trace.structuralSignals.filter((signal) => signal.failureDomainKeys.includes(id));
-      const capIndices = resolvedCaps!.flatMap((cap, index) =>
-        cap.source === "structural" && (signals.some((signal) => signal.reason === cap.reason) ||
-          (cap.kind === "signal:common-mode-oracle" && cap.reason.endsWith(`share ${id}.`))) ? [index] : []);
+      const capIndices: number[] = [];
       const deploymentAdjustmentIndices = card.scoreTrace.deploymentRisk.adjustments.flatMap(
         (adjustment, index) => adjustment.failureDomainKey === id ? [index] : [],
       );
-      // The evaluator's emitted cap/adjustment census is authoritative. Merely
-      // present signals can be diagnostic or already priced solely in a pillar.
-      // additionalHardCapRisk explicitly prices a residual beyond that pillar.
-      const expectedCap = signals.some((signal) =>
-        structuralSignalNeedsHardCap(signal) &&
-        trace.caps.some((cap) => cap.source === "structural" &&
-          (cap.kind === `signal:${signal.kind}:${signal.severity}` ||
-            (cap.kind === "signal:common-mode-oracle" && signal.kind === "weak-oracle-branch"))));
+      // Structural correlations remain disclosed; only measured deployment
+      // adjustments contribute a priced common-mode effect.
       const expectedAdjustment = trace.deploymentAdjustments.some((adjustment) => adjustment.failureDomainKey === id);
-      if ((expectedCap || expectedAdjustment) && capIndices.length === 0 && deploymentAdjustmentIndices.length === 0) {
+      if (expectedAdjustment && deploymentAdjustmentIndices.length === 0) {
         unjoinedAssetIds.push(assetId);
       }
       return capIndices.length || deploymentAdjustmentIndices.length
@@ -1370,7 +1356,7 @@ export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjecto
           kind: signal.kind, severity: signal.severity, reason: signal.reason,
           failureDomainKeys: signal.failureDomainKeys,
           economicLossScope: signal.economicLossScope, responsibility: signal.responsibility,
-          pricedInPillar: signal.pricedInPillar, additionalHardCapRisk: signal.additionalHardCapRisk,
+          pricedInPillar: signal.pricedInPillar,
         })),
         caps: trace.caps,
         deploymentAdjustments: trace.deploymentAdjustments,

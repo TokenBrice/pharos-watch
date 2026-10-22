@@ -1,6 +1,28 @@
-import { assertScore, compareText } from "./primitives";
+import { assertScore, compareText, uniqueSorted } from "./primitives";
+import type { V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
 
 export type V9EconomicLossScope = "access-only" | "deployment" | "reserve-claim" | "global-claim";
+
+/** Compiled authority/contributor keys identify controllers; deployment and asset labels do not. */
+export function effectiveV9ControllerKeys(
+  control: Pick<V9DeploymentControlFactV2, "authority" | "executionScopeContributors">,
+): readonly string[] {
+  if (control.executionScopeContributors !== undefined) {
+    return uniqueSorted(control.executionScopeContributors.map((contributor) => contributor.authorityKey));
+  }
+  return control.authority !== null && control.authority.model !== "none"
+    ? [control.authority.authorityKey] : [];
+}
+
+/** Shared potential authority is already priced; distinct measured slice risks remain additive. */
+export function isV9DeploymentControllerAlreadyPriced(
+  sliceControllerKeys: readonly string[],
+  pricedControllerKeys: ReadonlySet<string>,
+  measuredSliceRisk: boolean,
+): boolean {
+  return !measuredSliceRisk && sliceControllerKeys.length > 0 &&
+    sliceControllerKeys.every((key) => pricedControllerKeys.has(key));
+}
 
 export interface V9ScopedRiskSignal {
   signalKey: string;
@@ -32,9 +54,6 @@ export interface V9ScopedRiskResolution {
   baseScore: number;
   finalScore: number;
   adjustments: readonly V9ScopedRiskAdjustment[];
-  globalCaps: readonly V9ScopedRiskSignal[];
-  reserveSignals: readonly V9ScopedRiskSignal[];
-  accessOnlySignals: readonly V9ScopedRiskSignal[];
   unresolvedDeploymentSignals: readonly V9ScopedRiskSignal[];
 }
 
@@ -153,30 +172,13 @@ export function resolveV9ScopedRisk(
 
   const signals = [...rawSignals].sort(compareSignal);
   const deploymentSignals: V9ScopedRiskSignal[] = [];
-  const globalCaps: V9ScopedRiskSignal[] = [];
-  const reserveSignals: V9ScopedRiskSignal[] = [];
-  const accessOnlySignals: V9ScopedRiskSignal[] = [];
   const unresolvedDeploymentSignals: V9ScopedRiskSignal[] = [];
 
   for (const signal of signals) {
     if (signal.failureDomainKeys.length === 0) {
       throw new Error(`Safety Score v9 scoped signal ${signal.signalKey} requires a failure domain`);
     }
-    switch (signal.economicLossScope) {
-      case "global-claim":
-        globalCaps.push(signal);
-        break;
-      case "reserve-claim":
-        reserveSignals.push(signal);
-        break;
-      case "access-only":
-        accessOnlySignals.push(signal);
-        break;
-      case "deployment": {
-        deploymentSignals.push(signal);
-        break;
-      }
-    }
+    if (signal.economicLossScope === "deployment") deploymentSignals.push(signal);
   }
 
   const coalescedDeploymentSignals = coalesceIdenticalDeploymentEvents(baseScore, deploymentSignals);
@@ -232,9 +234,6 @@ export function resolveV9ScopedRisk(
     baseScore,
     finalScore: score,
     adjustments,
-    globalCaps,
-    reserveSignals,
-    accessOnlySignals,
     unresolvedDeploymentSignals,
   };
 }

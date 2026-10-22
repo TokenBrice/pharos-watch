@@ -1,5 +1,5 @@
 /** Compiles reviewed oracle inventory without assigning borrower risk to allocations. */
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
@@ -54,9 +54,13 @@ function isWeakOracleTier(tier: OracleRiskTier): boolean {
 }
 
 function worstOracleTier(worst: OracleRiskTier, candidate: OracleRiskTier): OracleRiskTier {
-  const quality = V9_CANDIDATE_POLICY_V1.policy.semantic.control.oracleTierQuality;
-  return quality[candidate] < quality[worst] ||
-    (quality[candidate] === quality[worst] &&
+  const policy = V9_CANDIDATE_POLICY_V1.policy.semantic;
+  const candidateQuality = candidate === "opaque-or-unknown"
+    ? unknownQuality("control", undefined, policy) : policy.control.oracleTierQuality[candidate];
+  const worstQuality = worst === "opaque-or-unknown"
+    ? unknownQuality("control", undefined, policy) : policy.control.oracleTierQuality[worst];
+  return candidateQuality < worstQuality ||
+    (candidateQuality === worstQuality &&
       ((isWeakOracleTier(candidate) && !isWeakOracleTier(worst)) ||
         (isWeakOracleTier(candidate) === isWeakOracleTier(worst) && candidate < worst)))
     ? candidate : worst;

@@ -3,6 +3,13 @@ import type { V9QualityPillar } from "../../types/safety-score-v9";
 export type V9AggregationPillars = Readonly<Record<V9QualityPillar, number | null>>;
 export type V9AggregationWeights = Readonly<Record<V9QualityPillar, number>>;
 
+export interface V9PricedUnknownPillar {
+  pillar: V9QualityPillar;
+  score: number;
+  cause: "C" | "U";
+  causeGapIds: readonly string[];
+}
+
 export interface V9WeakestPathAggregationTrace {
   method: "smooth-bounded-headroom";
   score: number;
@@ -12,6 +19,7 @@ export interface V9WeakestPathAggregationTrace {
   includedPillars: readonly V9QualityPillar[];
   excludedPillars: readonly V9QualityPillar[];
   effectiveScoringWeights: V9AggregationWeights;
+  pricedUnknownPillars: readonly V9PricedUnknownPillar[];
   supportCeiling: number;
 }
 
@@ -25,7 +33,7 @@ export type V9AggregationStrategy = (
 const PILLARS: readonly V9QualityPillar[] = ["backing", "exit", "control"];
 const WEIGHT_TOLERANCE = 0.000001;
 
-/** Original policy weights are renormalized over the explicitly included set. */
+/** Availability is evidence-based; every priced pillar retains its original weight. */
 export function aggregateV9SmoothBoundedHeadroom(
   pillars: V9AggregationPillars,
   weights: V9AggregationWeights,
@@ -49,19 +57,18 @@ export function aggregateV9SmoothBoundedHeadroom(
     throw new Error("Safety Score v9 aggregation requires a unique included pillar set");
   }
   const included = PILLARS.filter((pillar) => includedPillars.includes(pillar));
-  for (const pillar of included) {
+  if (included.length < 2) return null;
+  for (const pillar of PILLARS) {
     const score = pillars[pillar];
     if (score === null || !Number.isFinite(score) || score < 0 || score > 100) {
-      throw new Error(`Safety Score v9 included ${pillar} pillar must be between 0 and 100`);
+      throw new Error(`Safety Score v9 included or priced-unknown ${pillar} pillar must be between 0 and 100`);
     }
   }
-  if (included.length < 2) return null;
-  const includedWeight = included.reduce((sum, pillar) => sum + weights[pillar], 0);
   const effectiveScoringWeights = { backing: 0, exit: 0, control: 0 };
   let weightedQuality = 0;
-  let weakestPillar = included[0]!;
-  for (const pillar of included) {
-    const weight = weights[pillar] / includedWeight;
+  let weakestPillar = PILLARS[0]!;
+  for (const pillar of PILLARS) {
+    const weight = weights[pillar];
     effectiveScoringWeights[pillar] = weight;
     weightedQuality += pillars[pillar]! * weight;
     if (pillars[pillar]! < pillars[weakestPillar]!) weakestPillar = pillar;
@@ -75,6 +82,7 @@ export function aggregateV9SmoothBoundedHeadroom(
     weakestScore,
     includedPillars: included,
     excludedPillars: PILLARS.filter((pillar) => !included.includes(pillar)),
+    pricedUnknownPillars: [],
     effectiveScoringWeights,
     supportCeiling: weightedQuality,
   };

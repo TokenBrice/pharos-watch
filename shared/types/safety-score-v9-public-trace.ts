@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { issue } from "./safety-schema-primitives";
 import { isV9WitnessTextReference } from "./safety-score-v9-public-witness-texts";
+import { SafetyScoreV9HistoricalWrapperParentLimitSchema } from "./safety-score-v9-public-historical";
 import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-attribution";
 import {
   V9AssetPremiumKindSchema,
@@ -37,6 +38,13 @@ const SafetyScoreV9AggregationTraceSchema = z
     headroom: z.number().finite().positive().max(100),
     includedPillars: canonicalTextArray(2).pipe(z.array(V9QualityPillarSchema).max(3)),
     excludedPillars: canonicalTextArray().pipe(z.array(V9QualityPillarSchema).max(1)),
+    // Optional only for historical traces predating priced unavailable pillars.
+    pricedUnknownPillars: z.array(z.object({
+      pillar: V9QualityPillarSchema,
+      score: ScoreSchema,
+      cause: z.enum(["C", "U"]),
+      causeGapRefs: causeGapRefs(),
+    }).strict()).max(1).optional(),
     effectiveScoringWeights: z.object({
       backing: z.number().finite().min(0).max(1), exit: z.number().finite().min(0).max(1),
       control: z.number().finite().min(0).max(1),
@@ -47,11 +55,16 @@ const SafetyScoreV9AggregationTraceSchema = z
   .superRefine((aggregation, ctx) => {
     if (aggregation.includedPillars.length + aggregation.excludedPillars.length !== 3 ||
         aggregation.includedPillars.some((pillar) => aggregation.excludedPillars.includes(pillar)) ||
-        !aggregation.includedPillars.includes(aggregation.weakestPillar) ||
-        aggregation.excludedPillars.some((pillar) => aggregation.effectiveScoringWeights[pillar] !== 0) ||
+        (!aggregation.includedPillars.includes(aggregation.weakestPillar) &&
+          !aggregation.pricedUnknownPillars?.some((item) => item.pillar === aggregation.weakestPillar)) ||
+        aggregation.excludedPillars.some((pillar) =>
+          aggregation.pricedUnknownPillars?.some((item) => item.pillar === pillar)
+            ? aggregation.effectiveScoringWeights[pillar] <= 0
+            : aggregation.effectiveScoringWeights[pillar] !== 0) ||
+        (aggregation.pricedUnknownPillars?.some((item) => !aggregation.excludedPillars.includes(item.pillar)) ?? false) ||
         Math.abs(Object.values(aggregation.effectiveScoringWeights).reduce((sum, weight) => sum + weight, 0) - 1) > 1e-9 ||
         !numbersAgree(aggregation.supportCeiling, aggregation.weightedPillarMean)) {
-      ctx.addIssue({ code: "custom", message: "Aggregation coverage, zero excluded weights and support ceiling must reconcile" });
+      ctx.addIssue({ code: "custom", message: "Aggregation evidence coverage, priced unknowns, weights and support ceiling must reconcile" });
     }
     if (
       aggregation.weakestScore > aggregation.weightedPillarMean + SCORE_TOLERANCE ||
@@ -165,7 +178,6 @@ const SafetyScoreV9AdverseAttributionItemSchema = z
       "pillar-score",
       "reason",
       "structural-signal",
-      "track-record",
       "realized-holder-loss",
     ]),
     path: z.string().min(1),
@@ -408,7 +420,7 @@ type SafetyScoreV9AdjustedScoreTraceCommon = z.infer<
 >;
 
 function refineScoreTraceBaseStages(
-  trace: SafetyScoreV9ScoreTraceCommon,
+  trace: Pick<SafetyScoreV9ScoreTraceCommon, "aggregation" | "stages" | "deploymentRisk">,
   ctx: z.RefinementCtx,
 ): void {
   const aggregationScore = trace.aggregation?.score ?? null;
@@ -431,7 +443,7 @@ function refineScoreTraceBaseStages(
 }
 
 function refineAdjustedScoreTrace(
-  trace: SafetyScoreV9AdjustedScoreTraceCommon,
+  trace: Pick<SafetyScoreV9AdjustedScoreTraceCommon, "aggregation" | "stages" | "deploymentRisk" | "scoreAdjustments">,
   ctx: z.RefinementCtx,
 ): void {
   refineScoreTraceBaseStages(trace, ctx);
@@ -457,9 +469,9 @@ function refineAdjustedScoreTrace(
 
 function refineBoundedUncertaintyTrace(
   trace: {
-    boundedUncertaintyAttribution: z.infer<
-      typeof SafetyScoreV9BoundedUncertaintyAttributionTraceSchema
-    >;
+    boundedUncertaintyAttribution: {
+      items: readonly (Omit<z.infer<typeof SafetyScoreV9BoundedUncertaintyAttributionItemSchema>, "source"> & { source: string })[];
+    };
     evidenceResponsibility: z.infer<
       typeof SafetyScoreV9EvidenceResponsibilityTraceSchema
     >;
@@ -500,7 +512,48 @@ export const SafetyScoreV9ScoreTraceSchema =
       refineBoundedUncertaintyTrace(trace, ctx);
     });
 
-/** Immutable pre-accounting-cutover publications counted causal witnesses. */
-export const SafetyScoreV9WitnessScoreTraceSchema = SafetyScoreV9ScoreTraceSchema.safeExtend({
-  evidenceResponsibility: evidenceResponsibilityTraceSchema("witnesses"),
+const HistoricalAdverseAttributionSchema = z.object({
+  semantics: z.literal("causal-measured-adverse-v1"),
+  items: z.array(SafetyScoreV9AdverseAttributionItemSchema.extend({
+    source: z.enum(["active-depeg", "parent-score", "peg-performance", "pillar-score", "reason", "structural-signal", "track-record", "wrapper-local"]),
+  })),
+}).strict().superRefine((attribution, ctx) => {
+  const keys = attribution.items.map(item => `${item.source}\u0000${item.path}\u0000${item.message}`);
+  if (!isUniqueSorted(keys)) issue(ctx, ["items"], "V9 adverse attribution must be unique and sorted");
 });
+const HistoricalBoundedAttributionSchema = z.object({
+  semantics: z.literal("causal-bounded-uncertainty-v1"),
+  items: z.array(z.object({
+    ...SafetyScoreV9BoundedUncertaintyAttributionItemSchema.shape,
+    source: z.enum(["parent-score", "reason", "wrapper-local"]),
+  }).strict().superRefine((item, ctx) => {
+    if (!V9_BOUNDED_ATTRIBUTION_REASON_CODE_SET.has(item.code)) {
+      issue(ctx, ["code"], "V9 bounded-uncertainty attribution requires a policy-bounded reason code");
+    }
+    if (item.source === "parent-score" && !item.path.startsWith("parent:")) {
+      issue(ctx, ["path"], "V9 parent bounded-uncertainty attribution requires a parent-prefixed path");
+    }
+  })),
+}).strict().superRefine((attribution, ctx) => {
+  const keys = attribution.items.map(item => [item.source, item.code, item.path, item.message, item.responsibility].join("\u0000"));
+  if (!isUniqueSorted(keys)) issue(ctx, ["items"], "V9 bounded-uncertainty attribution must be unique and sorted");
+});
+
+/** Archive-only trace retains the recorded wrapper calculation and vocabulary. */
+const HistoricalScoreTraceBaseSchema = SafetyScoreV9AdjustedScoreTraceCommonSchema.extend({
+  schemaVersion: z.literal(4),
+  wrapperParentLimit: SafetyScoreV9HistoricalWrapperParentLimitSchema.nullable(),
+  adverseAttribution: HistoricalAdverseAttributionSchema,
+  boundedUncertaintyAttribution: HistoricalBoundedAttributionSchema,
+  providerRowExclusions: z.array(AdmittedProviderRowExclusionSchema).min(1).optional(),
+});
+const refineHistoricalScoreTrace = (trace: z.infer<typeof HistoricalScoreTraceBaseSchema>, ctx: z.RefinementCtx): void => {
+  refineAdjustedScoreTrace(trace, ctx);
+  refineBoundedUncertaintyTrace(trace, ctx);
+};
+export const SafetyScoreV9HistoricalScoreTraceSchema = HistoricalScoreTraceBaseSchema.superRefine(refineHistoricalScoreTrace);
+
+/** Immutable pre-accounting-cutover publications counted causal witnesses. */
+export const SafetyScoreV9WitnessScoreTraceSchema = HistoricalScoreTraceBaseSchema.extend({
+  evidenceResponsibility: evidenceResponsibilityTraceSchema("witnesses"),
+}).superRefine(refineHistoricalScoreTrace);

@@ -1,4 +1,5 @@
 import { issue } from "./safety-schema-primitives";
+import type { z } from "zod";
 import {
   C_MINUS_MIN_SCORE,
   DANGER_PEG_MULTIPLIER_FLOOR,
@@ -6,13 +7,14 @@ import {
   roundAttributionValue,
   SCORE_TOLERANCE,
 } from "./safety-score-v9-public-facts";
-import { V9ReasonCodeSchema } from "./safety-score-v9";
 import type { SafetyScoreV9CardRefinementInput, SafetyScoreV9CardWithDependencies } from "./safety-score-v9-public-shapes";
 import type { SafetyScoreV9SerialDependencyInput } from "./safety-score-v9-public-shapes";
 import { scoreToGrade, V9_PILLAR_WEIGHTS } from "./safety-score-v9-grade";
-import { iterateEvidenceResponsibilityFacts } from "./safety-score-v9-public-evidence-facts";
+import { iterateEvidenceResponsibilityFacts, refineEvidenceFactPathPrefixes } from "./safety-score-v9-public-evidence-facts";
 import { resolveV9EffectiveScoringWeight } from "./safety-score-v9-public-causes";
 import type { SafetyScoreV9BackingBreakdown } from "./safety-score-v9-public-breakdowns";
+import type { V9QualityPillar } from "./safety-score-v9";
+const EVIDENCE_FACT_PATH = ["scoreTrace", "evidenceResponsibility"] as const;
 
 type BoundedAttributionItem = SafetyScoreV9CardRefinementInput["scoreTrace"]["boundedUncertaintyAttribution"]["items"][number];
 type BoundedBackingContribution = Pick<SafetyScoreV9BackingBreakdown["components"][number],
@@ -38,7 +40,7 @@ function matchesBoundedBackingComponent(card: SafetyScoreV9CardRefinementInput, 
   }
   if (!matchesCausalFact) return false;
   const matchesContribution = (key: string, contribution: BoundedBackingContribution): boolean =>
-    contribution.score !== null && contribution.score < C_MINUS_MIN_SCORE &&
+    contribution.score !== null &&
     contribution.scoringDisposition === "bounded-uncertainty" && (contribution.cause === "C" || contribution.cause === "U") &&
     resolveV9EffectiveScoringWeight(contribution) > 0 &&
     item.causeGapRefs.every(ref => contribution.causeGapRefs?.includes(ref)) &&
@@ -68,13 +70,14 @@ export function attributedSerialParent(
 
 export function refineCard(
   card: SafetyScoreV9CardRefinementInput,
-  ctx: { addIssue: (issue: { code: "custom"; path?: PropertyKey[]; message: string }) => void },
+  ctx: Pick<z.RefinementCtx, "addIssue">,
 ): void {
   const scoreTrace = card.scoreTrace;
   // Causal D/F proofs belong to the computed band; a 10.26 grade hold may
   // retain a different published letter beside the raw score.
   const rawGrade = card.score === null ? card.grade : scoreToGrade(card.score);
   if (scoreTrace !== undefined) {
+    if (!refineEvidenceFactPathPrefixes(scoreTrace.evidenceResponsibility, ctx, EVIDENCE_FACT_PATH)) return;
     const stages = scoreTrace.stages;
     const serialParents = card.dependencies.serial;
     const serialParentsResolved =
@@ -86,13 +89,8 @@ export function refineCard(
       : null;
     const wrapperParentLimit = scoreTrace.wrapperParentLimit;
     const parentCaps = card.caps.filter((cap) => cap.source === "parent");
-    // A wrapper parent limit is the exact MEASUREMENT: parent score minus the
-    // summed local-risk discount plus documented credit, verified to the point
-    // in SafetyScoreV9WrapperParentLimitSchema. A published cap limit is that
-    // measurement quantized into the published score space, floored so a
-    // ceiling can never be raised by rounding. The two therefore agree up to
-    // one quantization step, not exactly: a 5.45-point discount off a parent of
-    // 55 measures 49.55 and publishes a ceiling of 49.
+    // Parent measurements may retain a fractional legacy discount in archived
+    // cards; current form-only ceilings are already floored at their source.
     const capAgreesWithWrapperLimit = (capLimit: number, measuredLimit: number): boolean =>
       numbersAgree(capLimit, measuredLimit) ||
       (capLimit <= measuredLimit + SCORE_TOLERANCE && measuredLimit - capLimit < 1);
@@ -158,14 +156,20 @@ export function refineCard(
     if (scoreTrace.aggregation !== null) {
       const aggregation = scoreTrace.aggregation;
       const included = (["backing", "exit", "control"] as const).filter((pillar) => (card.pillars[pillar].aggregationDisposition ?? "included") === "included").sort();
-      const weightSum = included.reduce((sum, pillar) => sum + V9_PILLAR_WEIGHTS[pillar], 0);
-      const mean = included.reduce((sum, pillar) => sum + (card.pillars[pillar].score ?? 0) * aggregation.effectiveScoringWeights[pillar], 0);
+      const pricedUnknowns = aggregation.pricedUnknownPillars;
+      const scoringPillars: readonly V9QualityPillar[] = pricedUnknowns === undefined ? included : ["backing", "exit", "control"];
+      const weightSum = scoringPillars.reduce<number>((sum, pillar) => sum + V9_PILLAR_WEIGHTS[pillar], 0);
+      const price = (pillar: V9QualityPillar): number | null =>
+        pricedUnknowns?.find((item) => item.pillar === pillar)?.score ?? card.pillars[pillar].score;
+      const mean = scoringPillars.reduce<number>((sum, pillar) => sum + (price(pillar) ?? 0) * aggregation.effectiveScoringWeights[pillar], 0);
       if (JSON.stringify(included) !== JSON.stringify(aggregation.includedPillars) ||
-          included.some((pillar) => card.pillars[pillar].score === null ||
+          scoringPillars.some((pillar) => price(pillar) === null ||
             Math.abs(aggregation.effectiveScoringWeights[pillar] - V9_PILLAR_WEIGHTS[pillar] / weightSum) > 1e-9) ||
-          aggregation.excludedPillars.some((pillar) => aggregation.effectiveScoringWeights[pillar] !== 0) ||
+          aggregation.excludedPillars.some((pillar) => pricedUnknowns === undefined
+            ? aggregation.effectiveScoringWeights[pillar] !== 0
+            : card.pillars[pillar].score !== null || !pricedUnknowns.some((item) => item.pillar === pillar)) ||
           !numbersAgree(mean, aggregation.supportCeiling)) {
-        ctx.addIssue({ code: "custom", path: ["scoreTrace", "aggregation"], message: "Aggregation must use the included pillars and renormalized policy weights only" });
+        ctx.addIssue({ code: "custom", path: ["scoreTrace", "aggregation"], message: "Aggregation must reconcile usable evidence, explicitly priced unknowns and policy weights" });
       }
     }
     for (const item of scoreTrace.adverseAttribution.items) {
@@ -182,11 +186,10 @@ export function refineCard(
           parent === null ||
           parent.blocked ||
           parent.score === null ||
-          parent.score >= C_MINUS_MIN_SCORE ||
           rawParentScore === null ||
           !numbersAgree(parent.score, rawParentScore)
         ) {
-          issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 parent attribution requires the binding low minimum serial parent");
+          issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 parent attribution requires the binding minimum serial parent");
         }
       }
       if (item.source === "peg-performance") {
@@ -223,7 +226,7 @@ export function refineCard(
         }
       }
       if (item.source === "reason") {
-        const matchingPillarReasonCodes = Object.values(card.pillars).flatMap(
+        const matchingReasonCodes = Object.values(card.pillars).flatMap(
           (pillar) =>
             pillar.score !== null && pillar.score < C_MINUS_MIN_SCORE
               ? pillar.reasons
@@ -235,22 +238,8 @@ export function refineCard(
                   .map((reason) => reason.code)
               : [],
         );
-        const bindingReasonCode =
-          card.bindingCap?.source === "evidence" &&
-          card.bindingCap.kind.startsWith("reason:") &&
-          card.bindingCap.reason === item.message
-            ? V9ReasonCodeSchema.safeParse(
-                card.bindingCap.kind.slice("reason:".length),
-              )
-            : null;
-        const matchingReasonCodes = [
-          ...new Set([
-            ...matchingPillarReasonCodes,
-            ...(bindingReasonCode?.success ? [bindingReasonCode.data] : []),
-          ]),
-        ];
         if (matchingReasonCodes.length === 0) {
-          issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 reason attribution must match a low pillar reason or binding evidence cap");
+          issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 reason attribution must match a low pillar reason");
         }
         let hasMeasuredReasonFact = false;
         for (const fact of iterateEvidenceResponsibilityFacts(scoreTrace.evidenceResponsibility)) {
@@ -293,9 +282,6 @@ export function refineCard(
       ) {
         issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 structural attribution requires a canonical structural or scenario path");
       }
-      if (item.source === "track-record") {
-        issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 track-record ceilings cannot authorize measured-adverse attribution");
-      }
       if (item.source === "realized-holder-loss" &&
           (card.bindingCap?.source !== "realized-holder-loss" || !item.path.startsWith("incident:"))) {
         issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "Holder-loss attribution requires its incident witness and binding loss cap");
@@ -310,9 +296,11 @@ export function refineCard(
       card.score === null ? card.caps : card.bindingCap === null ? [] : [card.bindingCap];
     for (const item of scoreTrace.boundedUncertaintyAttribution.items) {
       if (item.source === "reason") {
-        const matchesPillarReason = Object.values(card.pillars).some((pillar) =>
+        const matchesPillarReason = !/:bounded-component:cause:\d+$/u.test(item.path) &&
+          Object.entries(card.pillars).some(([key, pillar]) =>
           pillar.score !== null &&
-          pillar.score < C_MINUS_MIN_SCORE &&
+          (pillar.aggregationDisposition ?? "included") === "included" &&
+          (scoreTrace.aggregation?.effectiveScoringWeights[key as keyof typeof card.pillars] ?? 0) > 0 &&
           pillar.reasons.some(
             (reason) =>
               reason.code === item.code &&
@@ -320,8 +308,16 @@ export function refineCard(
               reason.message === item.message,
           ),
         );
-        if (!matchesPillarReason && !matchesBoundedBackingComponent(card, item)) {
-          issue(ctx, ["scoreTrace", "boundedUncertaintyAttribution", "items"], "Direct bounded attribution must match a low pillar reason or charged backing component");
+        let matchesOwnedFact = false;
+        for (const fact of iterateEvidenceResponsibilityFacts(scoreTrace.evidenceResponsibility)) {
+          if (fact[0] === item.code && fact[1] === item.path && fact[3] === item.responsibility &&
+              fact[5] === item.cause && item.causeGapRefs.every(ref => fact[6].includes(ref))) {
+            matchesOwnedFact = true;
+            break;
+          }
+        }
+        if (!(matchesPillarReason && matchesOwnedFact) && !matchesBoundedBackingComponent(card, item)) {
+          issue(ctx, ["scoreTrace", "boundedUncertaintyAttribution", "items"], "Direct bounded attribution must match an included pillar reason or charged backing component");
         }
       } else if (item.source === "parent-score") {
         const parent = attributedSerialParent(card, item.path, item.message);
@@ -330,11 +326,10 @@ export function refineCard(
           parent === null ||
           parent.blocked ||
           parent.score === null ||
-          parent.score >= C_MINUS_MIN_SCORE ||
           rawParentScore === null ||
           !numbersAgree(parent.score, rawParentScore)
         ) {
-          issue(ctx, ["scoreTrace", "boundedUncertaintyAttribution", "items"], "V9 parent bounded attribution requires the binding low minimum serial parent");
+          issue(ctx, ["scoreTrace", "boundedUncertaintyAttribution", "items"], "V9 parent bounded attribution requires the binding minimum serial parent");
         }
       }
     }

@@ -224,6 +224,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/types/safety-score-v9-public-causes.ts",
   "shared/types/safety-score-v9-public-evidence-facts.ts",
   "shared/types/safety-score-v9-public-facts.ts",
+  "shared/types/safety-score-v9-public-historical.ts",
   "shared/types/safety-score-v9-public-internal.ts",
   "shared/types/safety-score-v9-public-trace.ts",
   "shared/types/safety-score-v9-public-witness-texts.ts",

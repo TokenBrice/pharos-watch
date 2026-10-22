@@ -1167,13 +1167,6 @@ export function buildWrapperLocalFacts(
       measuredUnwind,
       lossAbsorptionEmergencyControls,
     },
-    riskTransfer: {
-      disposition: "not-applicable",
-      mechanism: "none",
-      maximumParentLossAbsorptionPoints: 0,
-      signals: ["no-documented-parent-loss-absorption-credit"],
-      evidenceRefIds: [],
-    },
   };
   for (const [factorKey, fact] of Object.entries(facts.facts)) {
     if (fact.disposition === "reviewed" || fact.disposition === "not-applicable") continue;

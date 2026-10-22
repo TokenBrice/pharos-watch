@@ -299,7 +299,6 @@ function cardScoreProjection(card: SafetyScoreV9Card) {
     aggregateReasonCodes: card.reasonCodes,
     nrReasons: card.nrReasons,
     evidence: card.evidence,
-    evidenceCaps: card.caps.filter((cap) => cap.source === "evidence"),
     bindingCap: card.bindingCap,
   };
 }
