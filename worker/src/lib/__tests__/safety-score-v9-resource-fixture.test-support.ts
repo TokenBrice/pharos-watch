@@ -27,6 +27,7 @@ import { iterateEvidenceResponsibilityFacts } from "@shared/types/safety-score-v
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
 import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../safety-score-v9/publication-assessment";
 import { measurePublicationByteBudget } from "@shared/lib/safety-score-v9-resource-bytes";
+import { SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES } from "@shared/lib/safety-score-v9-publication-limits";
 
 const sqlite = new DatabaseSync(process.env.PHAROS_RESOURCE_DATABASE!);
 const db = createSqliteD1(sqlite);
@@ -181,7 +182,7 @@ try {
     const pillarFreshnessBytes = Buffer.byteLength(`,"pillarFreshness":${JSON.stringify(publication.pillarFreshness)}`);
     assert(pillarFreshnessBytes <= 15_000, "pillar-freshness-byte-budget");
     const publicationBytes = measurePublicationByteBudget(publication, envelope.uncompressedBytes);
-    assert(envelope.compressedBytes < 1_350_000, "publication-compressed-byte-budget");
+    assert(envelope.compressedBytes <= SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES, "publication-compressed-byte-budget");
     assert(Buffer.byteLength(transport) > 0, "publication-stored-bytes");
     assert(enrichment.uncompressedBytes > 300_000, "replay-enrichment-size-floor");
     assert(acceptedBaselineBytes < 500_000, "accepted-baseline-byte-budget");

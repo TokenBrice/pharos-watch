@@ -1,5 +1,10 @@
 import { bytesToBase64 } from "@shared/lib/base64";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import {
+  SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES,
+  SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES,
+  SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
+} from "@shared/lib/safety-score-v9-publication-limits";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
@@ -12,6 +17,8 @@ import {
   admitAndSerializeSafetyScoreV9Publication,
   parseSafetyScoreV9Publication,
   publicationIdentityFromStorageEnvelope,
+  SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES,
+  SafetyScoreV9StorageMetadataSchema,
   serializeSafetyScoreV9Publication,
 } from "../safety-score-v9/publication-codec";
 
@@ -32,6 +39,21 @@ function authenticatedBytes(envelope: Record<string, unknown>, payload: Buffer) 
     compressedBytes: compressed.byteLength,
     payload: bytesToBase64(new Uint8Array(compressed)),
   });
+}
+
+function compressionBudgetPublication(entropyBytes: number): SafetyScoreV9CurrentResponse {
+  const publication = makeWorkerSafetyScoreV9Publication();
+  // Deterministic high-entropy content exercises real gzip and admission.
+  const entropy = Buffer.alloc(entropyBytes);
+  let state = 0x12345678;
+  for (let index = 0; index < entropy.length; index++) {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    entropy[index] = state >>> 24;
+  }
+  publication.sourceGenerations.compressedBudgetFixture = entropy.toString("base64");
+  return publication;
 }
 
 describe("Safety Score V9 publication codec", () => {
@@ -121,14 +143,58 @@ describe("Safety Score V9 publication codec", () => {
   it("enforces declared size limits at the exact boundary and one byte beyond", async () => {
     const envelope = JSON.parse(await serializeSafetyScoreV9Publication(makeWorkerSafetyScoreV9Publication()));
     for (const [field, limit, mismatch, exceeded] of [
-      ["compressedBytes", 1_350_000, /compressed byte length mismatch/, /exceeds 1350000 compressed bytes/],
-      ["uncompressedBytes", 9_200_000, /payload length mismatch/, /exceeds 9200000 uncompressed bytes/],
+      ["compressedBytes", SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES, /compressed byte length mismatch/, `exceeds ${SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES} compressed bytes`],
+      ["uncompressedBytes", SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES, /payload length mismatch/, `exceeds ${SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES} uncompressed bytes`],
     ] as const) {
       await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({ ...envelope, [field]: limit }))).rejects.toThrow(mismatch);
       await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({ ...envelope, [field]: limit + 1 }))).rejects.toThrow(exceeded);
     }
     await expect(parseSafetyScoreV9Publication(" ".repeat(1_900_000))).rejects.toThrow(/Malformed.*JSON/);
     await expect(parseSafetyScoreV9Publication(" ".repeat(1_900_001))).rejects.toThrow(/exceeds 1900000 stored bytes/);
+  });
+
+  it("fits a maximum compressed payload and real codec envelope within stored and D1 limits", async () => {
+    const envelope = JSON.parse(await serializeSafetyScoreV9Publication(makeWorkerSafetyScoreV9Publication()));
+    // Base64 expansion depends only on byte length, not gzip contents. Keep the
+    // real codec's identity/fields and maximize both declared size digit counts.
+    const payload = bytesToBase64(new Uint8Array(SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES));
+    const maximumEnvelope = {
+      ...envelope,
+      compressedBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES,
+      uncompressedBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
+      payload,
+    };
+    const { payload: _payload, ...metadata } = maximumEnvelope;
+    expect(SafetyScoreV9StorageMetadataSchema.safeParse(metadata).success).toBe(true);
+    expect(SafetyScoreV9StorageMetadataSchema.safeParse({
+      ...metadata, compressedBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES + 1,
+    }).success).toBe(false);
+    const base64Bytes = Math.ceil(SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES / 3) * 4;
+    expect(Buffer.byteLength(payload, "utf8")).toBe(base64Bytes);
+    const storedBytes = Buffer.byteLength(stableJsonStringifyV1(maximumEnvelope), "utf8");
+    const envelopeOverheadBytes = storedBytes - base64Bytes;
+    expect(envelopeOverheadBytes).toBeGreaterThan(0);
+    expect(storedBytes).toBeLessThanOrEqual(SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES);
+    expect(storedBytes).toBeLessThanOrEqual(2_000_000);
+  });
+
+  it("reads a real compressed publication between 1.36 MB and the expanded read ceiling", async () => {
+    const envelope = JSON.parse(await serializeSafetyScoreV9Publication(makeWorkerSafetyScoreV9Publication()));
+    const publication = compressionBudgetPublication(1_360_000);
+    const stored = authenticatedBytes(envelope, Buffer.from(stableJsonStringifyV1(publication)));
+    const { compressedBytes } = JSON.parse(stored);
+    expect(compressedBytes).toBeGreaterThanOrEqual(1_360_000);
+    expect(compressedBytes).toBeLessThanOrEqual(SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES);
+    await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(publication);
+  });
+
+  it("rejects real gzip output above the independent writer ceiling", async () => {
+    const publication = compressionBudgetPublication(SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES);
+    const raw = Buffer.from(stableJsonStringifyV1(publication));
+    expect(gzipSync(raw).byteLength).toBeGreaterThan(SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES);
+    await expect(admitAndSerializeSafetyScoreV9Publication(publication)).rejects.toThrow(
+      `compressed byte limit; maximum is ${SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES}`,
+    );
   });
 
   it("round-trips the raw byte ceiling and rejects one additional byte on write", async () => {

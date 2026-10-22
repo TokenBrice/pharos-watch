@@ -14,7 +14,11 @@ import { throwIfAborted } from "../abort";
 import { gunzipBytesBounded, gzipCanonicalJson } from "../canonical-json-gzip";
 import { sha256Hex } from "../hash";
 import { parseJson } from "../json-parse";
-import { SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES } from "@shared/lib/safety-score-v9-publication-limits";
+import {
+  SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES,
+  SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES,
+  SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
+} from "@shared/lib/safety-score-v9-publication-limits";
 
 const PUBLICATION_STORAGE_KIND = "safety-score-v9-publication";
 const STORAGE_SCHEMA_VERSION = 1;
@@ -25,7 +29,6 @@ export const SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY = "report-cards:v9:acc
 export const SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY = "report-cards:v9:accepted-replay-base:v1";
 
 export const SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES = 1_900_000;
-const SAFETY_SCORE_V9_PUBLICATION_MAX_COMPRESSED_BYTES = 1_350_000;
 
 export class SafetyScoreV9SchemaCutoverPendingError extends Error {
   readonly code = "publication-schema-cutover-pending";
@@ -66,7 +69,7 @@ const StorageEnvelopeSchema = z
 
 export const SafetyScoreV9StorageMetadataSchema = StorageEnvelopeSchema.omit({ payload: true }).extend({
   uncompressedBytes: z.number().int().positive().max(SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES),
-  compressedBytes: z.number().int().positive().max(SAFETY_SCORE_V9_PUBLICATION_MAX_COMPRESSED_BYTES),
+  compressedBytes: z.number().int().positive().max(SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES),
 });
 
 type CacheIdentity = z.infer<typeof CacheIdentitySchema>;
@@ -234,7 +237,7 @@ export async function admitAndSerializeSafetyScoreV9Publication(
   const compressed = await gzipCanonicalJson(stableJsonStringifyChunksV1(publication), {
     label: "Safety Score v9 publication",
     maximumCompressedBytes:
-      SAFETY_SCORE_V9_PUBLICATION_MAX_COMPRESSED_BYTES,
+      SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES,
     maximumUncompressedBytes:
       SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
     signal,
@@ -310,10 +313,10 @@ export async function parseSafetyScoreV9Publication(
   }
   if (
     storage.compressedBytes >
-    SAFETY_SCORE_V9_PUBLICATION_MAX_COMPRESSED_BYTES
+    SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES
   ) {
     throw new Error(
-      `Safety Score v9 publication exceeds ${SAFETY_SCORE_V9_PUBLICATION_MAX_COMPRESSED_BYTES} compressed bytes`,
+      `Safety Score v9 publication exceeds ${SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES} compressed bytes`,
     );
   }
   const compressed = decodeCanonicalBase64(
@@ -329,7 +332,7 @@ export async function parseSafetyScoreV9Publication(
     compressed,
     {
       label: "Safety Score v9 publication",
-      maximumCompressedBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_COMPRESSED_BYTES,
+      maximumCompressedBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES,
       maximumUncompressedBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
       expectedUncompressedBytes: storage.uncompressedBytes,
       signal,
