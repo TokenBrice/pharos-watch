@@ -609,13 +609,10 @@ describe("simplified score limits", () => {
     expect(trace.finalScore).toBe(84);
     expect(trace.caps.map((cap) => cap.source)).toEqual(["track-record"]);
   });
-  it.each([36, 120, null])("has no age ceiling at %s months", (trackRecordMonths) => {
-    expect(scoreV9EvaluatedAsset(input({ trackRecordMonths }), V9_CANDIDATE_POLICY_V1).caps).toEqual([]);
-  });
-  it.each([24, 27, 35.99])("preserves the original under-three-year ceiling at %s months", (trackRecordMonths) => {
+  it.each([24, 27, 35.99, 36, 120, null])("has no age ceiling at %s months", (trackRecordMonths) => {
     const trace = scoreV9EvaluatedAsset(input({ trackRecordMonths }), V9_CANDIDATE_POLICY_V1);
-    expect(trace.finalScore).toBe(86);
-    expect(trace.bindingCap).toMatchObject({ source: "track-record", kind: "track-record:<36m", limit: 86 });
+    expect(trace.caps).toEqual([]);
+    expect(trace.finalScore).toBe(95);
   });
   it("keeps nearest-integer own rounding when a fractional ceiling is nonbinding", () => {
     const trace = scoreV9EvaluatedAsset(input({

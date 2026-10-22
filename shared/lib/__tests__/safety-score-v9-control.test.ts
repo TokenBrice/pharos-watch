@@ -254,6 +254,25 @@ function chainLabelPoolResult(
 }
 
 describe("Safety Score v9 economic control", () => {
+  it("caps the whole pillar at immutable quality even with only higher-scoring non-authority components", () => {
+    const deploymentMint = control("mint:deployment", "mint", {
+      scope: "deployment", economicLossScope: "deployment", materialSupplyShare: 0.01,
+    });
+    const result = evaluateV9EconomicControl(args({
+      facts: facts([deploymentMint]),
+      mint: boundedMint(deploymentMint.controlKey),
+    }));
+    expect(result.components).toContainEqual(expect.objectContaining({
+      componentKey: "bridge:native",
+      score: 95,
+      binding: true,
+    }));
+    expect(result.components.filter((component) => component.binding).every((component) =>
+      component.kind !== "mint" && component.score !== null && component.score > 90)).toBe(true);
+    expect(result.score).toBe(90);
+    expect(result.state).toBe("rated");
+  });
+
   it("canonically evaluates shuffled facts and reviews without mutating its input", () => {
     const mintControl = control("mint:z", "mint");
     const bridges = ["z", "a"].map((key) => control(`bridge:${key}`, "bridge", {

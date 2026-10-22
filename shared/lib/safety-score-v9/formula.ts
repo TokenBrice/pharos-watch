@@ -691,14 +691,11 @@ export function scoreV9Input(
   const preCapScoreRaw = scopedRisk?.finalScore ?? null;
 
   const capCandidates: Omit<V9CapTrace, "binding">[] = [];
-  const trackRecordBand = input.trackRecordMonths === null ? undefined : formula.trackRecordCeilings.find(
-    (band) => input.trackRecordMonths! >= band.minMonthsInclusive &&
-      (band.maxMonthsExclusive === null || input.trackRecordMonths! < band.maxMonthsExclusive),
-  );
-  if (trackRecordBand?.limit != null) {
+  const [trackRecordCeiling] = formula.trackRecordCeilings;
+  if (input.trackRecordMonths !== null && input.trackRecordMonths < trackRecordCeiling.maxMonthsExclusive) {
     capCandidates.push({
-      source: "track-record", kind: trackRecordBand.kind,
-      limit: trackRecordBand.limit, reason: trackRecordBand.reason,
+      source: "track-record", kind: trackRecordCeiling.kind,
+      limit: trackRecordCeiling.limit, reason: trackRecordCeiling.reason,
     });
   }
   if (input.activeDepegBps !== null) {

@@ -191,8 +191,9 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   const score = critical
     ? null
     : bindingScores.length > 0
-      ? Math.min(...bindingScores)
-      : neutralWithoutBindingControls ? V9_NEUTRAL_CONTROL_SCORE : null;
+      ? Math.min(policy.control.authorityLadder.immutableNoPower, ...bindingScores)
+      : neutralWithoutBindingControls
+        ? Math.min(policy.control.authorityLadder.immutableNoPower, V9_NEUTRAL_CONTROL_SCORE) : null;
 
   const excluded = normalizedComponents.filter((component) => component.score === null);
   const aggregationDisposition = score === null && excluded.length > 0 &&

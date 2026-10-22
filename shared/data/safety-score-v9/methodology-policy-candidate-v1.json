@@ -71,13 +71,6 @@
           "limit": 84,
           "kind": "track-record:<24m",
           "reason": "Less than two years of known implementation history."
-        },
-        {
-          "minMonthsInclusive": 24,
-          "maxMonthsExclusive": 36,
-          "limit": 86,
-          "kind": "track-record:<36m",
-          "reason": "Less than three years of known implementation history."
         }
       ],
       "gradeThresholds": [
@@ -761,7 +754,7 @@
         ],
         "referenceNotionalUsd": 1000000,
         "supplyRatio": 0.05,
-        "floorUsd": 100000,
+        "floorUsd": 1000000,
         "capUsd": 25000000,
         "maxCostBps": 200,
         "settlementHorizonSec": 300

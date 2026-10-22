@@ -369,6 +369,16 @@ describe("Safety Score v9 methodology policy", () => {
     trackBands.semantic.formula.trackRecordCeilings[0]!.minMonthsInclusive = 1;
     expect(() => loadV9MethodologyPolicy(trackBands)).toThrow();
 
+    const extraAgeTier = candidateClone();
+    extraAgeTier.semantic.formula.trackRecordCeilings.push({
+      minMonthsInclusive: 24,
+      maxMonthsExclusive: 36,
+      limit: 86,
+      kind: "track-record:<36m",
+      reason: "Removed age tier.",
+    });
+    expect(() => loadV9MethodologyPolicy(extraAgeTier)).toThrow();
+
     const grades = candidateClone();
     grades.semantic.formula.gradeThresholds.reverse();
     expect(() => loadV9MethodologyPolicy(grades)).toThrow(/every rated grade/i);

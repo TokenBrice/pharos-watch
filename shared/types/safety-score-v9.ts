@@ -471,19 +471,15 @@ const V9FormulaPolicySchema = z
           .strict(),
       )
       .min(1),
-    trackRecordCeilings: z
-      .array(
-        z
-          .object({
-            minMonthsInclusive: z.number().finite().nonnegative(),
-            maxMonthsExclusive: z.number().finite().positive().nullable(),
-            limit: ScoreSchema.nullable(),
-            kind: z.string().min(1),
-            reason: z.string().min(1),
-          })
-          .strict(),
-      )
-      .min(1),
+    trackRecordCeilings: z.tuple([
+      z.object({
+        minMonthsInclusive: z.literal(0),
+        maxMonthsExclusive: z.number().finite().positive(),
+        limit: ScoreSchema,
+        kind: z.string().min(1),
+        reason: z.string().min(1),
+      }).strict(),
+    ]),
     gradeThresholds: z.array(z.object({ grade: V9GradeSchema.exclude(["NR"]), minScore: ScoreSchema }).strict()),
     capTiePriority: z.array(V9CapSourceSchema),
     realizedHolderLoss: z.object({
@@ -1222,27 +1218,6 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
     }
   });
 
-  const trackBands = formula.trackRecordCeilings;
-  if (trackBands[0]?.minMonthsInclusive !== 0) {
-    issue(ctx, ["semantic", "formula", "trackRecordCeilings", 0], "Track-record bands must start at zero");
-  }
-  trackBands.forEach((band, index) => {
-    const next = trackBands[index + 1];
-    if (next && band.maxMonthsExclusive !== next.minMonthsInclusive) {
-      issue(
-              ctx,
-              ["semantic", "formula", "trackRecordCeilings", index, "maxMonthsExclusive"],
-              "Track-record bands must be contiguous and non-overlapping",
-            );
-    }
-    if (band.maxMonthsExclusive !== null && band.maxMonthsExclusive <= band.minMonthsInclusive) {
-      issue(
-              ctx,
-              ["semantic", "formula", "trackRecordCeilings", index],
-              "Track-record band must have positive width",
-            );
-    }
-  });
 
   formula.activeDepegCaps.forEach((cap, index) => {
     const previous = formula.activeDepegCaps[index - 1];
