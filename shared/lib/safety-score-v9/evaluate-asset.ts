@@ -76,9 +76,11 @@ import {
 } from "./primitives";
 import {
   resolveV9WrapperParentLimit,
+  resolveV9SingleCollateralParent,
   type V9WrapperForm,
 } from "./wrapper-risk";
 import {
+  projectV9DependencyScore,
   resolveV9SerialParentAdverseAttribution,
   resolveV9SerialParentBoundedUncertaintyAttribution,
   scoreV9EvaluatedAsset,
@@ -1502,12 +1504,44 @@ function pegInput(
   };
 }
 
+/** Apply the ordinary serial ceiling and any admitted near-total collateral ceiling. */
+export function resolveV9ParentLimitInput(
+  asset: V9AssetFactsV3,
+  inputs: V9ResolvedDependencyInputs,
+  evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
+  wrapperTier: V9WrapperStrategyTier | undefined,
+  envelope: V9ValidatedPolicyEnvelope,
+): V9ProductionScoreInput["parent"] {
+  const serial = parentInput(asset, inputs, evaluatedById, wrapperTier, envelope);
+  const collateral = resolveV9SingleCollateralParent(asset.dependencies.status, inputs);
+  if (!collateral || (serial.required && serial.score === null)) return serial;
+  const upstream = evaluatedById.get(collateral.upstreamAssetId);
+  const trace = upstream?.trace;
+  const score = trace ? projectV9DependencyScore(trace) : null;
+  const concentrated = parentInput(asset, {
+    ...inputs,
+    serial: [{
+      upstreamAssetId: collateral.upstreamAssetId,
+      score,
+      blocked: false,
+      ratingStatus: trace?.ratingStatus ?? "pipeline-gap",
+      cause: collateral.cause,
+      causeGapIds: trace?.causeGapIds ?? collateral.causeGapIds,
+      limitedEvidenceCauses: trace?.limitedEvidenceCauses ?? collateral.limitedEvidenceCauses,
+      partialEvidence: trace?.partialEvidence ?? null,
+    }],
+  }, evaluatedById, "pure", envelope, true);
+  return !serial.required || concentrated.score === null ||
+    (serial.score !== null && concentrated.score < serial.score) ? concentrated : serial;
+}
+
 function parentInput(
   asset: V9AssetFactsV3,
   inputs: V9ResolvedDependencyInputs,
   evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
   wrapperTier: V9WrapperStrategyTier | undefined,
   envelope: V9ValidatedPolicyEnvelope,
+  collateralClaim = false,
 ): V9ProductionScoreInput["parent"] {
   const required = inputs.serial.length > 0 || inputs.cycleBlocked;
   const unavailableParents = inputs.serial.filter((dependency) => dependency.score === null);
@@ -1584,10 +1618,11 @@ function parentInput(
   }
   const expectedForm: V9WrapperForm =
     wrapperTier === "pure" ? "pure" : wrapperTier === "staked" ? "native-staked" : "strategy-vault";
-  if (asset.wrapperLocalFacts.applicability !== "wrapper") {
+  if (!collateralClaim && asset.wrapperLocalFacts.applicability !== "wrapper") {
     throw new Error(`Safety Score v9 ${asset.assetId} wrapper parent lacks wrapper-local facts`);
   }
-  if (asset.wrapperLocalFacts.form !== expectedForm) {
+  if (!collateralClaim && asset.wrapperLocalFacts.applicability === "wrapper" &&
+      asset.wrapperLocalFacts.form !== expectedForm) {
     throw new Error(
       `Safety Score v9 ${asset.assetId} wrapper form ${asset.wrapperLocalFacts.form} disagrees with ${expectedForm}`,
     );
@@ -1595,8 +1630,7 @@ function parentInput(
   const fallback = envelope.policy.semantic.formula.wrapperStrategyCap;
   const wrapperLimit = resolveV9WrapperParentLimit({
     parentScore: rawScore,
-    localFacts: asset.wrapperLocalFacts,
-    gaps: asset.gaps,
+    localFacts: { form: expectedForm },
     formDiscounts: {
       pure: fallback.pure,
       "native-staked": fallback.staked,
@@ -1796,7 +1830,7 @@ export function evaluateV9Asset({
       };
     }
   }
-  const parent = parentInput(asset, resolved, evaluatedById, wrapperStrategyTier, envelope);
+  const parent = resolveV9ParentLimitInput(asset, resolved, evaluatedById, wrapperStrategyTier, envelope);
   if (parent.ratingStatus === "pipeline-gap") {
     for (const pillar of ["backing", "exit"] as const) {
       basePillars[pillar] = {
