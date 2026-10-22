@@ -4,6 +4,7 @@ import { isV9WitnessTextReference } from "./safety-score-v9-public-witness-texts
 import { SafetyScoreV9HistoricalWrapperParentLimitSchema } from "./safety-score-v9-public-historical";
 import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-attribution";
 import {
+  V9_AUTHORITY_SHARE_ROUNDOFF_LIMIT,
   V9AssetPremiumKindSchema,
   V9QualityPillarSchema,
   V9ReasonCodeSchema,
@@ -164,7 +165,7 @@ const SafetyScoreV9DeploymentRiskTraceSchema = z
     const unresolvedWitnesses = deployment.adjustments.some((row) =>
       isV9WitnessTextReference(row.signalKey) || isV9WitnessTextReference(row.reason));
     if (!unresolvedWitnesses && (infrastructureShare > 1 + SCORE_TOLERANCE ||
-      authorityShare > 1 + SCORE_TOLERANCE && !diagnosedOverlap)) {
+      authorityShare > V9_AUTHORITY_SHARE_ROUNDOFF_LIMIT + SCORE_TOLERANCE && !diagnosedOverlap)) {
       issue(ctx, ["adjustments"], "V9 deployment adjustment lanes must form bounded holder partitions or diagnose authority overlap");
     }
     if (

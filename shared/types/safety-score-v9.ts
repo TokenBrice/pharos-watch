@@ -156,6 +156,9 @@ const V9PillarEvidenceSchema = z
     }
   });
 
+/** Liability-share totals within this limit are rounding noise, not overlap diagnostics. */
+export const V9_AUTHORITY_SHARE_ROUNDOFF_LIMIT = 1.001;
+
 export const V9StructuralSignalKindSchema = z.enum([
   "unsafe-backing",
   "speculative-credit",

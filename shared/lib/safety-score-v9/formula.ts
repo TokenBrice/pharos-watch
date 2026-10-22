@@ -1,4 +1,5 @@
 import {
+  V9_AUTHORITY_SHARE_ROUNDOFF_LIMIT,
   V9ScoringInputSchema,
   type V9AssetPremiumKind,
   type V9AssetPremiumPolicy,
@@ -572,6 +573,9 @@ export interface V9DeploymentAuthority {
   quality: number;
   share: number;
   failureDomainKeys: readonly string[];
+  controllerKeys?: readonly string[];
+  /** Positions in the Control pillar's structuralSignals, stable through JSON serialization. */
+  sourceSignalIndices?: readonly number[];
   sourceSignals: readonly V9StructuralSignal[];
 }
 
@@ -600,9 +604,9 @@ export function scoreV9WithControlReplaced(
 
 /**
  * Resolve infrastructure at both endpoints, then mix disjoint authority slices.
- * Authority never enters infrastructure normalization. Roundoff excess (<=.001)
- * trims the largest slice; real overlap retains own shares and caps total loss
- * at the worst global counterfactual, with an explicit public row diagnostic.
+ * Authority never enters infrastructure normalization. Every slice retains its
+ * own share; total loss is capped at the worst global counterfactual. Only real
+ * overlap beyond rounding tolerance emits a public row diagnostic.
  */
 export function resolveV9LocalAuthorityRisk(
   baseScore: number,
@@ -621,22 +625,20 @@ export function resolveV9LocalAuthorityRisk(
       share: Math.max(previous.share, authority.share),
       failureDomainKeys: [...new Set([...previous.failureDomainKeys, ...authority.failureDomainKeys])].sort(compareText),
       sourceSignals: [...previous.sourceSignals, ...authority.sourceSignals],
+      controllerKeys: [...new Set([...(previous.controllerKeys ?? []), ...(authority.controllerKeys ?? [])])].sort(compareText),
+      sourceSignalIndices: [...new Set([...(previous.sourceSignalIndices ?? []), ...(authority.sourceSignalIndices ?? [])])].sort((a, b) => a - b),
     });
   }
   const slices = [...groups.values()].sort((a, b) => compareText(a.deploymentKey, b.deploymentKey));
   const totalShare = slices.reduce((sum, slice) => sum + slice.share, 0);
-  const overlap = totalShare > 1.001;
-  let largestIndex = 0;
-  for (let i = 1; i < slices.length; i++) {
-    if (slices[i]!.share > slices[largestIndex]!.share) largestIndex = i;
-  }
+  const overlap = totalShare > V9_AUTHORITY_SHARE_ROUNDOFF_LIMIT;
   const worstQuality = Math.min(...slices.map((slice) => slice.quality));
   let remainingLoss = resolved.finalScore -
     resolveV9ScopedRisk(scoreWithControl(worstQuality), signals).finalScore;
   let score = resolved.finalScore;
   const adjustments = [...resolved.adjustments];
-  for (const [index, slice] of slices.entries()) {
-    const share = slice.share - (!overlap && index === largestIndex ? Math.max(0, totalShare - 1) : 0);
+  for (const slice of slices) {
+    const share = slice.share;
     const exposedScore = resolveV9ScopedRisk(scoreWithControl(slice.quality), signals).finalScore;
     const adjustmentPoints = Math.max(0, Math.min(remainingLoss, share * (resolved.finalScore - exposedScore)));
     const signalKey = `local-authority:${slice.deploymentKey}`;

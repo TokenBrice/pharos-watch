@@ -186,8 +186,13 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   const bindingScores = normalizedComponents
     .filter((component) => component.binding && component.score !== null)
     .map((component) => component.score!);
-  const neutralWithoutBindingControls =
-    normalizedComponents.length === 0 && args.oracle.status.applicability.state === "not-applicable";
+  const neutralWithoutBindingControls = args.oracle.status.applicability.state === "not-applicable" &&
+    (normalizedComponents.length === 0 || normalizedComponents.every((component) =>
+      !component.binding && component.score !== null && component.effectiveScoringWeight > 0 &&
+      component.controlKeys.length > 0 && component.controlKeys.every((key) => {
+        const control = controlsByKey.get(key);
+        return control?.economicLossScope === "deployment" && control.materialSupplyShare !== null;
+      })));
   const score = critical
     ? null
     : bindingScores.length > 0

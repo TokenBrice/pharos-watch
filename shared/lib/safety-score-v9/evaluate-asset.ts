@@ -53,6 +53,7 @@ import {
 } from "./formula";
 import { resolveV9ReasonTreatment } from "./policy";
 import {
+  effectiveV9ControllerKeys,
   isV9SharedControllerSignalAlreadyPriced,
   pricedV9ControllerKeys,
 } from "./scoped-risk";
@@ -1089,6 +1090,12 @@ function controlPillar(
         quality: component.score!,
         share: control.materialSupplyShare,
         failureDomainKeys: component.failureDomains.map(domainKey),
+        controllerKeys: effectiveV9ControllerKeys(control),
+        sourceSignalIndices: (authoritySignalsByControlKey.get(key) ?? [])
+          .flatMap((signal) => {
+            const index = pillar.structuralSignals.indexOf(signal);
+            return index < 0 ? [] : [index];
+          }),
         sourceSignals: authoritySignalsByControlKey.get(key) ?? [],
       }];
     });
@@ -1763,7 +1770,8 @@ export function evaluateV9Asset({
     gapIndex,
   );
   const pillars = basePillars;
-  const pricedControllerKeys = pricedV9ControllerKeys(asset.controls, control.components);
+  const pricedControllerKeys = pricedV9ControllerKeys(asset.controls, control.components,
+    pillars.control.deploymentAuthorities?.flatMap((authority) => authority.controllerKeys ?? []) ?? []);
   const pricedDependencySignals = dependencySignals.map((signal) =>
     isV9SharedControllerSignalAlreadyPriced(signal, asset.controls, pricedControllerKeys)
       ? { ...signal, pricedInPillar: "control" as const } : signal);

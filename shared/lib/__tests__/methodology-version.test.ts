@@ -490,7 +490,9 @@ describe("methodology registry", () => {
     expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.31");
     expect(release.impact.join(" ")).toContain("Planned activation is provisionally 2026-10-24 00:00 UTC (1792800000); re-date effectiveAt at release.");
     expect(release.impact.join(" ")).toContain("no production acceptance is claimed");
-    expect(release.impact.join(" ")).toContain("no rescaling");
+    expect(release.impact.join(" ")).toContain("without trimming or rescaling");
+    expect(release.impact.join(" ")).toContain("movers are post-cap");
+    expect(release.impact.join(" ")).toContain("usdat 62.47→66.29 masked at 62");
   });
 
 });

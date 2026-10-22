@@ -23,6 +23,48 @@ function resolve(paths: readonly V9DeploymentAuthority[], signals: readonly V9Sc
 }
 
 describe("Q* resolved local authority mixture", () => {
+  it.each([60, 90])("owns same-controller common mode once at quality %s", (quality) => {
+    const common = makeV9Signal({ failureDomainKeys: ["upgrade-control:ethereum:root"], materialSharePct: 100 });
+    const local = makeV9ProductionScoreInput({ pillars: {
+      backing: pillar(90), exit: pillar(90), control: pillar(90, { deploymentAuthorities: [{
+        ...authority(quality, 1), controllerKeys: ["ethereum:root"],
+      }] }),
+    }, dependencyStructuralSignals: [common] });
+    const global = makeV9ProductionScoreInput({ pillars: {
+      backing: pillar(90), exit: pillar(90), control: pillar(quality),
+    }, dependencyStructuralSignals: [{ ...common, pricedInPillar: "control" }] });
+    const result = scoreV9EvaluatedAsset(local, policy);
+    expect(result.preCapScore).toBe(scoreV9EvaluatedAsset(global, policy).preCapScore);
+    expect(result.deploymentAdjustments).toHaveLength(1);
+    if (quality === 90) expect(result.deploymentAdjustments[0]?.adjustmentPoints).toBe(0);
+    expect(scoreV9EvaluatedAsset(JSON.parse(JSON.stringify(local)), policy)).toEqual(result);
+    for (const failureDomainKeys of [["bridge:ethereum:root"], ["oracle-feed:ethereum:root"], ["chain:ethereum"]]) {
+      const infrastructure = scoreV9EvaluatedAsset({ ...local,
+        dependencyStructuralSignals: [{ ...common, failureDomainKeys }],
+      }, policy);
+      expect(infrastructure.deploymentAdjustments.some((row) => !row.signalKey.startsWith("local-authority:"))).toBe(true);
+    }
+  });
+
+  it("restores the spUSDT-shaped shared-authority result to B−65", () => {
+    const paths = [authority(60, 0.9891405992022939, "ethereum"), authority(60, 0.010665186661165968, "xlayer")]
+      .map((path) => ({ ...path, controllerKeys: [`${path.deploymentKey}:root`] }));
+    const input = makeV9ProductionScoreInput({
+      pillars: { backing: pillar(54.603525414216364), exit: pillar(82.22),
+        control: pillar(65, { deploymentAuthorities: paths }) },
+      peg: { applicable: false, score: null, activeDepegBps: null, reasons: [] },
+      dependencyStructuralSignals: paths.map((path) => makeV9Signal({
+        failureDomainKeys: [`upgrade-control:${path.controllerKeys[0]}`],
+        materialSharePct: path.share * 100,
+      })),
+    });
+    const result = scoreV9EvaluatedAsset(input, policy);
+    expect(result.finalScore).toBe(65);
+    expect(result.finalGrade).toBe("B-");
+    expect(result.preCapScore).toBeCloseTo(64.6253, 3);
+    expect(result.deploymentAdjustments.every((row) => row.signalKey.startsWith("local-authority:"))).toBe(true);
+  });
+
   it.each([{ signals: [] }, { signals: [sibling] }])("is monotone over share and quality with sibling pool $signals", ({ signals }) => {
     for (const q of [90, 75, 70, 65, 25]) {
       let previous = Infinity;
@@ -75,10 +117,22 @@ describe("Q* resolved local authority mixture", () => {
     }
   });
 
-  it("trims only roundoff from the largest slice deterministically", () => {
-    const result = resolve([authority(50, 0.6, "a"), authority(60, 0.4001, "b")]);
-    expect(result.adjustments.map((row) => row.exposureShare)).toEqual([0.5999, 0.4001]);
-    expect(result.finalScore).toBe(resolve([authority(60, 0.4001, "b"), authority(50, 0.6, "a")]).finalScore);
+  it("never raises raw or published scores across roundoff integer boundaries", () => {
+    const values = { backing: 93.237, exit: 90, control: 90 };
+    const initial = scoreV9WithControlReplaced(values, 90, 1, policy, included);
+    const calculate = (share: number, free = false) => resolveV9LocalAuthorityRisk(initial, [], [
+      authority(25, 0.6, "a"), authority(60, share, "b"),
+      ...(free ? [authority(100, 0.001, "c")] : []),
+    ], (q) => scoreV9WithControlReplaced(values, q, 1, policy, included));
+    const baseline = calculate(0.4);
+    expect(Math.round(baseline.finalScore)).toBe(57);
+    for (const share of [0.4001, 0.4005, 0.401, 0.4011]) {
+      const result = calculate(share);
+      expect(result.finalScore).toBeLessThanOrEqual(baseline.finalScore);
+      expect(Math.round(result.finalScore)).toBeLessThanOrEqual(57);
+      expect(result.adjustments[1]?.exposureShare).toBe(share);
+    }
+    expect(calculate(0.4, true).finalScore).toBe(baseline.finalScore);
   });
 
   it("never dilutes an adverse slice when adding real overlap, and emits a diagnostic", () => {
@@ -139,13 +193,14 @@ describe("Q* resolved local authority mixture", () => {
     const signal = makeV9Signal({ kind: "centralized-mint", exposedScore: 50, materialSharePct: 20 });
     const input = makeV9ProductionScoreInput({ pillars: {
       backing: pillar(90), exit: pillar(90), control: pillar(90, {
-        structuralSignals: [signal], deploymentAuthorities: [{ ...authority(50, 0.2), sourceSignals: [signal] }],
+        structuralSignals: [signal], deploymentAuthorities: [{ ...authority(50, 0.2), sourceSignals: [signal], sourceSignalIndices: [0] }],
       }),
     } });
     const trace = scoreV9EvaluatedAsset(input, policy);
     expect(trace.deploymentAdjustments).toHaveLength(1);
     expect(trace.deploymentAdjustments[0]?.signalKey).toMatch(/^local-authority:/);
     expect(trace.deploymentAdjustments[0]?.adjustmentPoints).toBeGreaterThan(0);
+    expect(scoreV9EvaluatedAsset(JSON.parse(JSON.stringify(input)), policy)).toEqual(trace);
   });
   it("keeps a bridge incident in infrastructure even when its event identity matches local authority", () => {
     const signal = makeV9Signal({ kind: "active-control-incident", exposedScore: 25, materialSharePct: 20 });
@@ -153,7 +208,7 @@ describe("Q* resolved local authority mixture", () => {
     const input = makeV9ProductionScoreInput({ pillars: {
       backing: pillar(90), exit: pillar(90), control: pillar(90, {
         structuralSignals: [signal, bridgeIncident],
-        deploymentAuthorities: [{ ...authority(25, 0.2), sourceSignals: [signal] }],
+        deploymentAuthorities: [{ ...authority(25, 0.2), sourceSignals: [signal], sourceSignalIndices: [0] }],
       }),
     } });
     const trace = scoreV9EvaluatedAsset(input, policy);
@@ -161,6 +216,7 @@ describe("Q* resolved local authority mixture", () => {
     expect(trace.deploymentAdjustments[0]?.signalKey).toMatch(/^signal:active-control-incident:/);
     expect(trace.deploymentAdjustments[0]?.exposedScore).toBe(25);
     expect(trace.deploymentAdjustments[1]?.signalKey).toMatch(/^local-authority:/);
+    expect(scoreV9EvaluatedAsset(JSON.parse(JSON.stringify(input)), policy)).toEqual(trace);
   });
 
   it("pins infrastructure allocation independently of local-authority exposure", () => {

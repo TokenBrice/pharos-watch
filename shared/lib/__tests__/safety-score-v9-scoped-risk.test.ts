@@ -3,6 +3,8 @@ import { effectiveV9ControllerKeys, isV9DeploymentControllerAlreadyPriced, isV9S
 import { makeDeploymentControl } from "./safety-score-v9-fixtures.test-support";
 import { compileNativeV3FactSet, coreFixture, evaluateV9FactSet, V9_CANDIDATE_POLICY_V1, type V9AssetFactsV2 } from "./safety-score-v9-facts.fixture-support";
 import type { V9StructuralSignal } from "../../types/safety-score-v9";
+import { projectSafetyScoreV9Card } from "../safety-score-v9/public";
+import { SafetyScoreV9CurrentCardSchema } from "../../types/safety-score-v9-public";
 
 function deployment(overrides: Partial<V9ScopedRiskSignal> = {}): V9ScopedRiskSignal {
   return {
@@ -140,6 +142,44 @@ describe("Safety Score v9 scoped risk", () => {
     const bindingScores = result.control.components.filter((component) => component.binding && component.score !== null)
       .map((component) => component.score!);
     expect(result.control.score).toBe(Math.min(90, ...bindingScores));
+  });
+
+  it.each([0.8, 1])("rates a fully reviewed local-only Control inventory (native share %s)", (nativeShare) => {
+    const input = coreFixture();
+    const asset = input.assets[0]! as unknown as V9AssetFactsV2;
+    asset.dependencies.edges = asset.dependencies.edges.filter((edge) => edge.pathKind !== "serial-dependency");
+    const root = asset.controls.find((control) => control.controlKey === "control:admin")!;
+    for (const control of asset.controls) {
+      if (control.controlKey !== "control:admin" && control.controlKey !== "control:minter") continue;
+      control.scope = "deployment";
+      control.economicLossScope = "deployment";
+      control.materialSupplyShare = nativeShare;
+    }
+    const bridge = { ...root, controlKey: "control:bridge", deploymentKey: "deployment:bridge",
+      controlKind: "bridge" as const, scope: "deployment" as const, economicLossScope: "deployment" as const,
+      materialSupplyShare: 1 - nativeShare, capabilities: ["bridge-mint" as const],
+      capSemantics: { kind: "unbounded" as const, bound: null }, claimImpairment: "unbounded" as const,
+    };
+    asset.controls.push(bridge);
+    asset.economicControlReview.bridge = {
+      status: root.status, routes: [{ controlKey: bridge.controlKey, tier: "external-lock-mint" }],
+    };
+    asset.supply.selectedBridgeRoutes = [
+      { deploymentRouteKey: root.deploymentKey, supplyUsd: 10_000_000 * nativeShare, supplyShare: nativeShare, reviewState: "selected-reviewed" },
+      { deploymentRouteKey: bridge.deploymentKey, supplyUsd: 10_000_000 * (1 - nativeShare), supplyShare: 1 - nativeShare, reviewState: "selected-reviewed" },
+    ];
+    asset.supply.selectedRouteSupplyShare = 1;
+    asset.supply.unknownRouteSupplyShare = 0;
+    asset.supply.unreviewedRouteSupplyShare = 0;
+    const result = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1).assets[0]!;
+    expect(result.control.score).toBe(90);
+    expect(result.control.components.every((component) => !component.binding)).toBe(true);
+    expect(result.trace.finalScore).not.toBeNull();
+    const { card } = projectSafetyScoreV9Card({ ...result, policy: V9_CANDIDATE_POLICY_V1,
+      display: { exitHolderEligibility: Object.fromEntries(result.exit.routes.map((route) =>
+        [route.routeKey, "any-holder" as const])) },
+    });
+    expect(SafetyScoreV9CurrentCardSchema.safeParse(card).success).toBe(true);
   });
 
   it("prices a deployment failure as an average-holder adjustment", () => {
