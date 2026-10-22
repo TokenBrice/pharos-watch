@@ -47,6 +47,8 @@ describe("MethodologyPage", () => {
     expect(text).toContain("overall Control pillar at 90");
     expect(text).toContain("24-to-under-36-month tier at 86 is removed");
     expect(text).toContain("Published letter grades use two-consecutive-publication hysteresis");
+    expect(text).toContain("Date-only oracle-profile (oracleRisk) and incident reviews admit from 00:00Z on their review date");
+    expect(text).toContain("Mechanism overlays, chain-maturity reviews, reserve-bound facts, typed classification evidence and MPC attestations admit after the reviewed UTC day");
   });
 
 
