@@ -217,14 +217,6 @@ export function adaptOracleReview(
       branches: [],
     };
   }
-  if (issuerNav) {
-    return {
-      status: requiredStatus("v9.control.oracle-review", reviewedObservationState(confidence), `oracle:${meta.id}`, evidenceKeys),
-      tier: profile.tier,
-      liquidationBranchesApplicable: false,
-      branches: [],
-    };
-  }
   // Explicit paths take precedence over the aggregate inventory disposition.
   // A new/unreviewed facilitator cannot inherit another path's exemption.
   const paths = profile.paths?.map((path) => {
@@ -263,7 +255,7 @@ export function adaptOracleReview(
       observationState: status.observationState,
     };
   }).sort((left, right) => left.id < right.id ? -1 : left.id > right.id ? 1 : 0);
-  if (paths?.every((path) => path.applicability.state === "not-applicable")) {
+  if (!issuerNav && paths?.every((path) => path.applicability.state === "not-applicable")) {
     return {
       status: notApplicableStatus(
         "v9.control.oracle-review",
@@ -288,7 +280,7 @@ export function adaptOracleReview(
       payload: aggregateApplicability,
       maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
     });
-    if (researchReviewObservationState(aggregateApplicability.reviewedAt, clockSec) === "stale") {
+    if (!issuerNav && researchReviewObservationState(aggregateApplicability.reviewedAt, clockSec) === "stale") {
       return {
         status: requiredStatus("v9.control.oracle-review", "stale", `oracle:${meta.id}`, applicabilityEvidenceKeys),
         tier: null,
@@ -296,7 +288,7 @@ export function adaptOracleReview(
         branches: [],
       };
     }
-    if (aggregateApplicability.disposition === "not-applicable" && profile.confidence === "verified") {
+    if (!issuerNav && aggregateApplicability.disposition === "not-applicable" && profile.confidence === "verified") {
       return {
         status: notApplicableStatus("v9.control.oracle-review", aggregateApplicability.rationale, applicabilityEvidenceKeys),
         tier: null,
@@ -334,15 +326,17 @@ export function adaptOracleReview(
   const missingPathBranch = (lendingPaths?.some((path) =>
     !path.branchId || !applicableBranches.some((branch) => branch.id === path.branchId),
   ) ?? false);
+  // The fund mechanism establishes top-level NAV applicability, not the state
+  // of any independently inventoried path. Retain those paths and their gaps.
   const topState = unresolvedPaths || missingPathBranch
     ? "bounded-unknown"
-    : paths || profile.branchApplicability?.disposition === "branches-required" ||
+    : issuerNav || paths || profile.branchApplicability?.disposition === "branches-required" ||
         profile.branchApplicability?.disposition === "top-level-only"
       ? reviewedObservationState(confidence)
       : "bounded-unknown";
-  const branchesRequired = paths
+  const branchesRequired = !issuerNav && (paths
     ? (lendingPaths?.length ?? 0) > 0
-    : profile.branchApplicability?.disposition === "branches-required" && !!profile.branches?.length;
+    : profile.branchApplicability?.disposition === "branches-required" && !!profile.branches?.length);
   const materiality: { tier: OracleRiskTier; subMaterialWeakBand?: "moderate" | "low" } =
     admittedBook
       ? morphoMateriality
@@ -438,7 +432,8 @@ export function adaptOracleReview(
         paths?.some((path) => path.applicability.state === "required" && path.observationState === "known")
       ? { knownPathTier: materiality.tier }
       : {}),
-    liquidationBranchesApplicable: paths ? branchesRequired : profile.branchApplicability?.disposition !== "top-level-only",
+    liquidationBranchesApplicable: !issuerNav &&
+      (paths ? branchesRequired : profile.branchApplicability?.disposition !== "top-level-only"),
     ...(materiality.subMaterialWeakBand !== undefined
       ? { subMaterialWeakBand: materiality.subMaterialWeakBand }
       : {}),
