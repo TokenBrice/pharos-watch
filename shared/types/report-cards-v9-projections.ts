@@ -5,7 +5,7 @@ import type { ReportCardsV9CurrentResponse } from "./report-cards-v9";
 import type { SafetyScoreV9CurrentCard } from "./safety-score-v9-public";
 import { refineV9RatingStatusFields, V9CompactPartialEvidenceSchema } from "./safety-score-v9-causes";
 import { DependencyGraphResponseSchema } from "./dependency-graph";
-import { SafetyScoreV9PillarFreshnessSchema, refineSafetyScoreV9PillarFreshness } from "./safety-score-v9-public-facts";
+import { SafetyScoreV9PillarFreshnessSchema, refineSafetyScoreV9PillarFreshness, ScoreSchema } from "./safety-score-v9-public-facts";
 
 export type ReportCardsV9ProjectionSource = Omit<ReportCardsV9CurrentResponse, "cards"> & { cards: SafetyScoreV9CurrentCard[] };
 
@@ -22,6 +22,9 @@ const common = {
 const tablePillar = z.object({
   score: card.pillars.shape.backing.shape.score,
   aggregationDisposition: card.pillars.shape.backing.shape.aggregationDisposition,
+  /** The scoring assumption for an unavailable pillar of a rated card: its cause and priced score.
+   *  Omitted for measured pillars; never a measured value. */
+  pricedUnknown: z.object({ cause: z.enum(["C", "U"]), score: ScoreSchema }).strict().optional(),
 }).strict();
 
 /** Only fields consumed by cross-asset tables, filters, exports and mini radars. */
@@ -34,7 +37,16 @@ export const ReportCardsV9TableCardSchema = z.object({
   accessPosture: z.object({ freezeExposure: card.accessPosture.shape.freezeExposure }).strict(),
   nrReasons: card.nrReasons, reasonCodes: card.reasonCodes,
   mint: z.object({ score: z.number().finite().min(0).max(100), posture: z.string().nullable() }).strict().nullable(),
-}).strict().superRefine(refineV9RatingStatusFields);
+}).strict().superRefine((value, ctx) => {
+  refineV9RatingStatusFields(value, ctx);
+  for (const key of ["backing", "exit", "control"] as const) {
+    const pillar = value.pillars[key];
+    if (pillar.pricedUnknown !== undefined &&
+        (value.ratingStatus !== "rated" || pillar.score !== null || pillar.aggregationDisposition !== "unavailable")) {
+      ctx.addIssue({ code: "custom", path: ["pillars", key, "pricedUnknown"], message: "Only an unavailable pillar of a rated card carries a priced unknown" });
+    }
+  }
+});
 export type ReportCardsV9TableCard = z.infer<typeof ReportCardsV9TableCardSchema>;
 
 function refineEnvelope(value: z.infer<z.ZodObject<typeof common>>, ctx: z.RefinementCtx) {

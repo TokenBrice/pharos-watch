@@ -104,9 +104,7 @@ export function MobileStickySummary({
           versionVariant="tooltip-only"
         />
       ) : null}
-      {reportCard?.partialEvidence ? (
-        <PartialEvidenceChip partialEvidence={reportCard.partialEvidence} className="text-3xs" />
-      ) : null}
+      {reportCard ? <PartialEvidenceChip card={reportCard} className="text-3xs" /> : null}
     </div>
   );
 }

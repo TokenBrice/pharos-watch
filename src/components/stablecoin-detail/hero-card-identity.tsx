@@ -105,7 +105,7 @@ export function SafetyGradeHero({
 export function SafetyPartialEvidenceNote({ reportCard }: { reportCard: V9ConsumerCard | null }) {
   return (
     <div className="mt-1 min-h-7">
-      {reportCard?.partialEvidence ? <PartialEvidenceChip partialEvidence={reportCard.partialEvidence} /> : null}
+      {reportCard ? <PartialEvidenceChip card={reportCard} /> : null}
     </div>
   );
 }

@@ -15,6 +15,15 @@ function resolvedDependencyGraph(snapshot: ReportCardsV9ProjectionSource): Repor
   })));
 }
 
+function projectTablePillar(card: SafetyScoreV9CurrentCard, key: "backing" | "exit" | "control"): ReportCardsV9TableCard["pillars"][typeof key] {
+  const pillar = card.pillars[key];
+  const priced = card.scoreTrace.aggregation?.pricedUnknownPillars?.find(item => item.pillar === key);
+  return {
+    score: pillar.score, aggregationDisposition: pillar.aggregationDisposition,
+    ...(priced ? { pricedUnknown: { cause: priced.cause, score: priced.score } } : {}),
+  };
+}
+
 export function projectV9TableCard(card: SafetyScoreV9CurrentCard): ReportCardsV9TableCard {
   const resolved = resolveV9PublicWitnessTexts(card);
   const component = resolved.breakdowns?.control.components.find(row => row.kind === "mint");
@@ -22,9 +31,9 @@ export function projectV9TableCard(card: SafetyScoreV9CurrentCard): ReportCardsV
     id: resolved.id, score: resolved.score, grade: resolved.grade, ratingStatus: resolved.ratingStatus,
     partialEvidence: projectV9CompactPartialEvidence(resolved.partialEvidence),
     pillars: {
-      backing: { score: resolved.pillars.backing.score, aggregationDisposition: resolved.pillars.backing.aggregationDisposition },
-      exit: { score: resolved.pillars.exit.score, aggregationDisposition: resolved.pillars.exit.aggregationDisposition },
-      control: { score: resolved.pillars.control.score, aggregationDisposition: resolved.pillars.control.aggregationDisposition },
+      backing: projectTablePillar(resolved, "backing"),
+      exit: projectTablePillar(resolved, "exit"),
+      control: projectTablePillar(resolved, "control"),
     },
     evidence: { level: resolved.evidence.level },
     weakestPillar: resolved.weakestPillar, bindingCap: resolved.bindingCap,
