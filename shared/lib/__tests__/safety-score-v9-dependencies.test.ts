@@ -951,24 +951,23 @@ describe("commonModeSignalSeverity proportional materiality", () => {
   });
 
   it("normalizes DefiLlama display-name chain keys to their canonical slug before matching", () => {
-    // P1-03: hyperliquid, optimism and solana left matureChains once their unreachable and
-    // non-supporting citations put their gates in `pending`, so the display-name resolution is
-    // now proved against the slug-keyed share rather than against mature-chain membership.
     for (const [displayName, slug] of [
-      ["Hyperliquid L1", "hyperliquid"],
-      ["OP Mainnet", "optimism"],
-      ["Solana", "solana"],
+      ["Celo", "celo"],
+      ["Monad", "monad"],
     ] as const) {
       expect(materiality.matureChains).not.toContain(slug);
       expect(
         commonModeSignalSeverity({ kind: "chain", key: displayName }, context({ [slug]: 0.25 }), materiality),
       ).toBe("high");
+      expect(commonModeSignalSeverity(
+        { kind: "chain", key: displayName }, context({ [slug]: 0.05 }), materiality,
+      )).toBe("low");
     }
     expect(materiality.matureChains).toContain("ethereum");
     expect(commonModeSignalSeverity({ kind: "chain", key: "Ethereum" }, failClosed, materiality)).toBe("low");
   });
 
-  it("grades non-mature chain concentration at the 10% and 25% boundaries", () => {
+  it("grades authored chain failures at the 10% and 25% boundaries", () => {
     expect(materiality.commonModeSignal.severity).toBe("high");
     // D1 (2026-07-22): rebanded 0.05/0.1 -> 0.10/0.25, same bounded-loss rationale.
     expect(materiality.commonModeShareThreshold).toBe(0.1);
@@ -979,32 +978,32 @@ describe("commonModeSignalSeverity proportional materiality", () => {
       [0.2499, "moderate"],
       [0.25, "high"],
     ] as const) {
-      expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, context({ fantom: share }), materiality)).toBe(
+      expect(commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({ celo: share }), materiality)).toBe(
         severity,
       );
-      expect(commonModeSignalSeverity({ kind: "chain", key: "Fantom" }, context({ fantom: share }), materiality)).toBe(
+      expect(commonModeSignalSeverity({ kind: "chain", key: "Celo" }, context({ celo: share }), materiality)).toBe(
         severity,
       );
     }
     // A complete inventory bounds an absent domain by its unattributed residual.
-    expect(commonModeSignalSeverity({ kind: "chain", key: "0g" }, context({}, 0), materiality)).toBe("low");
-    expect(commonModeSignalSeverity({ kind: "chain", key: "0g" }, context({}, 0.000812), materiality)).toBe("low");
-    expect(commonModeSignalSeverity({ kind: "chain", key: "0g" }, context({}, 0.1), materiality)).toBe("moderate");
-    expect(commonModeSignalSeverity({ kind: "chain", key: "0g" }, context({}, 0.25), materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({}, 0), materiality)).toBe("low");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({}, 0.000812), materiality)).toBe("low");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({}, 0.1), materiality)).toBe("moderate");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({}, 0.25), materiality)).toBe("high");
     expect(
-      commonModeSignalSeverity({ kind: "chain", key: "0g" }, context({}, 0.000812, {}, {}, false), materiality),
+      commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({}, 0.000812, {}, {}, false), materiality),
     ).toBe("high");
     // The same residual is added to a present domain as a conservative upper bound.
     expect(
-      commonModeSignalSeverity({ kind: "chain", key: "fantom" }, context({ fantom: 0.0999 }, 0.0002), materiality),
+      commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({ celo: 0.0999 }, 0.0002), materiality),
     ).toBe("moderate");
     // Missing/nonconserved inventory remains unbounded regardless of its nominal residual.
-    expect(commonModeSignalSeverity({ kind: "chain", key: "0g" }, context({}, 0, {}, {}, false), materiality)).toBe(
+    expect(commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({}, 0, {}, {}, false), materiality)).toBe(
       "high",
     );
-    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, failClosed, materiality)).toBe("high");
-    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, context({}, 0.36), materiality)).toBe("high");
-    expect(commonModeSignalSeverity({ kind: "chain", key: "unknown-l2" }, context({}, 0.36), materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "celo" }, failClosed, materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({}, 0.36), materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "unknown-l2" }, context({}, 0.36), materiality)).toBe("low");
   });
 
   it("excludes an immaterial unrecognized-label pool from the unattributed add-on (RULED D-J)", () => {
@@ -1012,8 +1011,8 @@ describe("commonModeSignalSeverity proportional materiality", () => {
     // conservative add-on, so a chain is graded on its own measured share.
     expect(
       commonModeSignalSeverity(
-        { kind: "chain", key: "fantom" },
-        context({ fantom: 0.099 }, 0.099, {}, {}, true, 0.099),
+        { kind: "chain", key: "celo" },
+        context({ celo: 0.099 }, 0.099, {}, {}, true, 0.099),
         materiality,
       ),
     ).toBe("low");
@@ -1021,8 +1020,8 @@ describe("commonModeSignalSeverity proportional materiality", () => {
     // share grades as before (fail-closed latency case).
     expect(
       commonModeSignalSeverity(
-        { kind: "chain", key: "fantom" },
-        context({ fantom: 0.099 }, 0.1, {}, {}, true, 0.1),
+        { kind: "chain", key: "celo" },
+        context({ celo: 0.099 }, 0.1, {}, {}, true, 0.1),
         materiality,
       ),
     ).toBe("moderate");
@@ -1030,16 +1029,16 @@ describe("commonModeSignalSeverity proportional materiality", () => {
     // inflates every chain's conservative upper bound.
     expect(
       commonModeSignalSeverity(
-        { kind: "chain", key: "fantom" },
-        context({ fantom: 0.08 }, 0.16, {}, {}, true, 0.08),
+        { kind: "chain", key: "celo" },
+        context({ celo: 0.08 }, 0.16, {}, {}, true, 0.08),
         materiality,
       ),
     ).toBe("moderate");
     // A pool-free unattributed residual keeps the existing fail-closed add-on.
     expect(
       commonModeSignalSeverity(
-        { kind: "chain", key: "fantom" },
-        context({ fantom: 0.08 }, 0.08, {}, {}, true, 0),
+        { kind: "chain", key: "celo" },
+        context({ celo: 0.08 }, 0.08, {}, {}, true, 0),
         materiality,
       ),
     ).toBe("moderate");
@@ -1138,9 +1137,9 @@ describe("commonModeSignalSeverity proportional materiality", () => {
   });
 
 
-  it("fails closed when unattributed supply share pushes the conservative upper bound to >=25%", () => {
+  it("prices an authored failure high when unattributed supply pushes its conservative upper bound to >=25%", () => {
     expect(
-      commonModeSignalSeverity({ kind: "chain", key: "futurenet" }, context({ futurenet: 0.2 }, 0.05), materiality),
+      commonModeSignalSeverity({ kind: "chain", key: "celo" }, context({ celo: 0.2 }, 0.05), materiality),
     ).toBe("high");
   });
 

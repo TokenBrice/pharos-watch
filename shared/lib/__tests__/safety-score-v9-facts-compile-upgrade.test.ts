@@ -463,12 +463,13 @@ describe("Safety Score v9 fact compilation and upgrades", () => {
     expect(() => readCompiledV9FactSetForEvaluation(retained)).toThrow();
   });
 
-  it("fails chain attribution closed when the distribution is unavailable or the supply fact is bounded", () => {
+  it("keeps an authored chain failure unresolved when distribution is unavailable or supply is bounded", () => {
     const configureImmaterialChain = (input: ReturnType<typeof coreFixture>) => {
       for (const asset of input.assets.slice(1)) {
+        asset.supply.failureDomains = [{ kind: "chain", key: "celo" }];
         asset.supply.chainDistribution = {
           chains: [
-            { chainId: "chain:fixture", supplyUsd: 49_900, supplyShare: 0.0499 },
+            { chainId: "celo", supplyUsd: 49_900, supplyShare: 0.0499 },
             { chainId: "other", supplyUsd: 950_100, supplyShare: 0.9501 },
           ],
           unattributedSupplyUsd: 0,
@@ -480,7 +481,7 @@ describe("Safety Score v9 fact compilation and upgrades", () => {
       evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1)
         .assets.find((asset) => asset.assetId === assetId)!
         .scoreInput.dependencyStructuralSignals.find((signal) =>
-          signal.failureDomainKeys.includes("chain:chain:fixture"),
+          signal.failureDomainKeys.includes("chain:celo"),
         );
 
     const known = coreFixture();

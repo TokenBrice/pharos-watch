@@ -1811,11 +1811,6 @@ describe("Safety Score v9 fact evaluation", () => {
     expect(evaluated.trace.adverseAttribution).not.toContainEqual(expect.objectContaining({
       source: "pillar-score", path: expect.stringMatching(/^pillar:exit:/),
     }));
-    // AM12 independently prices the fixture's shared-chain concentration; it
-    // must not be mistaken for exhaustion of this non-score-eligible route.
-    expect(evaluated.trace.adverseAttribution).toContainEqual(expect.objectContaining({
-      source: "structural-signal", path: "structural:critical-dependency:high",
-    }));
     expect(evaluated.trace.finalGrade).not.toBe("F");
   });
 });

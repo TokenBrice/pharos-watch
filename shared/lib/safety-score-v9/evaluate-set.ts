@@ -1,4 +1,8 @@
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "../../data/safety-score-v9/evaluation-build-manifest-v1";
+import {
+  resolveChainMaturityAdmissionsAt,
+  type ResolvedChainMaturityReview,
+} from "../../data/safety-score-v9/chain-maturity-reviews-v1";
 import type {
   CompiledV9FactSetV3,
   V9AssetFactsBase,
@@ -69,6 +73,9 @@ export {
 export type { V9EvaluatedAsset };
 
 const V9_EVALUATED_SET_DIGEST_DOMAIN = "safety-score-v9.evaluated-set.v2";
+const DEFAULT_CHAIN_MATURITY_REVIEWS = new Map(
+  resolveChainMaturityAdmissionsAt().reviews.map((review) => [review.chainSlug, review]),
+);
 
 export interface V9EvaluatedSet {
   schemaVersion: 1;
@@ -722,10 +729,10 @@ function buildCommonModeContext(
 
 /**
  * Grades proportional common-mode domains from reviewed asset-local exposure.
- * Mature ecosystem domains are diagnostic; otherwise proven exposure below 10%
- * is diagnostic, 10%-<25% is moderate, and >=25% or unknown is high. Control
- * domains enter this path only after their deployment reach and complete
- * liability share are proved; unresolved control reach remains fail-closed.
+ * Only authored chain-maturity failures can charge chain exposure. Mature and
+ * unresolved chains are diagnostic. Other chargeable domains below 10% are
+ * diagnostic, 10%-<25% moderate, and >=25% or unknown high. Control domains
+ * require proved deployment reach and liability share.
  */
 function venueFamilyKey(key: string): string {
   return key.toLowerCase().replace(/-v\d+$/u, "");
@@ -756,6 +763,7 @@ export function deploymentControlDomainSeverity(
 interface V9CommonModeShareInfo {
   share: number | null;
   mature: boolean;
+  chainMaturityUnresolved?: boolean;
 }
 
 // Factored out of commonModeSignalSeverity so the reason-text builder in
@@ -766,6 +774,7 @@ function commonModeShareForDomain(
   failureDomain: V9FailureDomainRef,
   context: V9CommonModeContext,
   materiality: V9ValidatedPolicyEnvelope["policy"]["semantic"]["materiality"],
+  chainReviews: ReadonlyMap<string, ResolvedChainMaturityReview> = DEFAULT_CHAIN_MATURITY_REVIEWS,
 ): V9CommonModeShareInfo | null {
   switch (failureDomain.kind) {
     case "chain": {
@@ -782,7 +791,14 @@ function commonModeShareForDomain(
       const share = context.supplyExposure.complete
         ? clampShare((context.supplyExposure.shareBySlug.get(chainId) ?? 0) + unattributedAddon)
         : null;
-      return { share, mature: materiality.matureChains.includes(chainId) };
+      const review = chainReviews.get(chainId);
+      const reviewAvailable = review !== undefined &&
+        review.evaluationClockSec >= Date.parse(`${review.reviewedAt}T00:00:00.000Z`) / 1000 + 86400;
+      // A failed gate is authored adverse evidence; citation demotion, pending
+      // research and absent reviews are not findings about chain risk.
+      const authoredFailure = reviewAvailable && review.state === "failed";
+      const mature = reviewAvailable && review.state === "admitted";
+      return { share, mature, chainMaturityUnresolved: !authoredFailure && !mature };
     }
     case "dex-protocol":
       return {
@@ -809,14 +825,16 @@ export function commonModeSignalSeverity(
   failureDomain: V9FailureDomainRef,
   context: V9CommonModeContext,
   materiality: V9ValidatedPolicyEnvelope["policy"]["semantic"]["materiality"],
+  chainReviews: ReadonlyMap<string, ResolvedChainMaturityReview> = DEFAULT_CHAIN_MATURITY_REVIEWS,
 ): V9Severity {
   if (failureDomain.kind === "reserve-issuer") {
     // Single-obligor exposure is already priced by backing concentration;
     // keep the signal diagnostic (non-capping) to avoid double-counting.
     return "low";
   }
-  const shareInfo = commonModeShareForDomain(failureDomain, context, materiality);
+  const shareInfo = commonModeShareForDomain(failureDomain, context, materiality, chainReviews);
   if (!shareInfo) return materiality.commonModeSignal.severity;
+  if (shareInfo.chainMaturityUnresolved) return "low";
   return proportionalCommonModeSeverity(shareInfo.share, shareInfo.mature, materiality);
 }
 
@@ -882,6 +900,10 @@ function commonModeSignalsByAsset(
   assetsById: ReadonlyMap<string, V9PlanningFacts>,
 ): Map<string, readonly V9StructuralSignal[]> {
   const materiality = envelope.policy.semantic.materiality;
+  const chainReviews = new Map(
+    resolveChainMaturityAdmissionsAt(resolveV9PolicyChainMaturityIdentity(envelope).evaluationClockSec)
+      .reviews.map((review) => [review.chainSlug, review]),
+  );
   const contextByAsset = new Map<string, V9CommonModeContext>();
   const contextFor = (assetId: string): V9CommonModeContext => {
     const cached = contextByAsset.get(assetId);
@@ -1028,16 +1050,16 @@ function commonModeSignalsByAsset(
         ? "low"
         : localControlShare !== null
           ? deploymentControlDomainSeverity(controlDomainScope, materiality)
-          : (mintControlSeverity ?? commonModeSignalSeverity(group.failureDomain, context, materiality));
+          : (mintControlSeverity ?? commonModeSignalSeverity(group.failureDomain, context, materiality, chainReviews));
       // Proportional chain, DEX, bridge, and proven deployment-local control
       // domains carry a per-asset measured share. All unresolved control scope
       // keeps the existing group-first, fail-closed phrasing below.
-      const shareInfo =
+      const shareInfo: V9CommonModeShareInfo | null =
         parentControlled || controllerOwned || sameIssuerControl
           ? null
           : localControlShare !== null
             ? { share: localControlShare, mature: false }
-            : commonModeShareForDomain(group.failureDomain, context, materiality);
+            : commonModeShareForDomain(group.failureDomain, context, materiality, chainReviews);
       const shareUnavailable = severity === "high" && shareInfo !== null && shareInfo.share === null;
       const qualifier = parentControlled || controllerOwned
         ? assetId === mintControlAssessment?.controllerAssetId
@@ -1045,25 +1067,30 @@ function commonModeSignalsByAsset(
           : "own required parent's controller, priced by the parent cap, diagnostic only"
         : sameIssuerControl
           ? "same-issuer controller, diagnostic only"
-          : localControlShare !== null
-            ? commonModeReasonQualifier(group.failureDomain.kind, severity, materiality, false)
-            : commonModeReasonQualifier(group.failureDomain.kind, severity, materiality, shareUnavailable);
+          : shareInfo?.chainMaturityUnresolved
+            ? "chain maturity unresolved (pending, unreviewed or unavailable supporting citations); no authored failure, no chain charge applied"
+            : localControlShare !== null
+              ? commonModeReasonQualifier(group.failureDomain.kind, severity, materiality, false)
+              : commonModeReasonQualifier(group.failureDomain.kind, severity, materiality, shareUnavailable);
       // A measured asset-local exposure owns its reason. Cohort counts and
       // peer evidence quality must not alter it when another asset is quarantined.
-      const ownShare = severity !== "low" && shareInfo !== null ? shareInfo.share : null;
+      const ownShare = shareInfo !== null && (severity !== "low" || shareInfo.chainMaturityUnresolved)
+        ? shareInfo.share : null;
       // Evidence ownership is local to the receiving asset. A reviewed
       // bounded-unknown member is still adverse — an unverified critical
       // control cannot make a shared failure domain safer — while a truly
       // missing/stale/unresolved member remains integration-owned.
       const responsibility: V9EvidenceResponsibility =
-        shareInfo !== null
-          ? shareInfo.share === null
-            ? "integration-missing"
-            : "measured-adverse"
-          : ownMemberFactsReviewed &&
-              (mintControlAssessment === null || mintControlAssessment.identitiesKnown)
-            ? "measured-adverse"
-            : "integration-missing";
+        shareInfo?.chainMaturityUnresolved
+          ? "unresearched"
+          : shareInfo !== null
+            ? shareInfo.share === null
+              ? "integration-missing"
+              : "measured-adverse"
+            : ownMemberFactsReviewed &&
+                (mintControlAssessment === null || mintControlAssessment.identitiesKnown)
+              ? "measured-adverse"
+              : "integration-missing";
       let reason: string;
       if (ownShare !== null) {
         reason = `This asset's own reviewed share is ${formatCommonModeSharePct(ownShare)} at ${key}, ${qualifier}.`;
