@@ -11,6 +11,8 @@ import type {
 import type { RedemptionRouteSuspension } from "../../types/redemption";
 import {
   blendExitCapacityComponent,
+  firstPositiveExitBreakpointValue,
+  hasMaterialExitCapacity,
   interpolateExitBreakpointScore,
   resolveExitDelayBandMultiplier,
   resolveExitScoringRequest,
@@ -329,8 +331,8 @@ export interface V9CreditableNonAtomicRedemptionInput {
  * coverage, at least one enumerated failure domain, and a documented,
  * live-reserve, or on-chain redemption evidence kind. This gate decides only
  * *eligibility* for discounted positive credit. Its capacity is a lower bound,
- * not an exhaustion measurement: modeled zero remains a gap, while every
- * positive capacity is priced continuously. Missing fee or settlement terms
+ * not an exhaustion measurement: modeled zero and submaterial lower bounds
+ * remain gaps. Missing fee or settlement terms
  * are separately admitted with unknown subfactors and a bounded-recovery ceiling.
  */
 /**
@@ -670,6 +672,23 @@ function evaluateRoute(
   const { capacityPoint, valuedExecutableUsd, costEvidence } = resolvedCapacity;
   const policy = envelope.policy.semantic.exit;
   const completionRatio = valuedExecutableUsd / request.requestedNotionalUsd;
+  // A submaterial lower bound proves neither a usable stress exit nor exhaustion.
+  if (!isExhaustionMeasurement(route) && !hasMaterialExitCapacity({
+    executableCapacityUsd: capacityPoint.executableUsd,
+    requestedNotionalUsd: request.requestedNotionalUsd,
+  }, policy)) {
+    return {
+      routeKey: route.routeKey,
+      ...attribution,
+      score: null,
+      included: false,
+      exclusionReason: "missing-same-notional-route",
+      capacityPoint: null,
+      components: null,
+      confidenceFactor: null,
+      capsApplied: [],
+    };
+  }
   const coverageScore = interpolateExitBreakpointScore(completionRatio, policy.coverageRatioBreakpoints);
   const absoluteScore = interpolateExitBreakpointScore(valuedExecutableUsd, policy.absoluteCapacityBreakpoints);
   const settlementCause = routeCause(route, "settlement");
@@ -741,11 +760,23 @@ function evaluateRoute(
   }
   let score = totalWeight > 0 ? weightedScore / totalWeight : 0;
   const capsApplied: string[] = [...constraintMultipliers];
-  // Only an admitted measured zero establishes exhaustion. Small positive
-  // capacity is priced continuously by the coverage and absolute ladders.
+  // Retain the shipped materiality calibration: exhaustive submaterial
+  // measurements remain visible at zero; non-exhaustive bounds were excluded.
   if (valuedExecutableUsd === 0) {
     score = 0;
     capsApplied.push("zero-executable-capacity");
+  } else if (!hasMaterialExitCapacity({
+    executableCapacityUsd: capacityPoint.executableUsd,
+    requestedNotionalUsd: request.requestedNotionalUsd,
+  }, policy)) {
+    score = 0;
+    capsApplied.push("immaterial-executable-capacity");
+  } else {
+    const firstPositiveCoverage = firstPositiveExitBreakpointValue(policy.coverageRatioBreakpoints);
+    if (firstPositiveCoverage > 0 && completionRatio < firstPositiveCoverage && score > 50) {
+      score = 50;
+      capsApplied.push("insufficient-completion:50");
+    }
   }
   const confidenceDimension = (key: "observationConfidence" | "executionConfidence" | "capacityEvidenceTier", value: number) => {
     const causal = routeCause(route, key);

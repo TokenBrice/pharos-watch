@@ -8,7 +8,7 @@ const point = (executableUsd: number) => ({ requestedNotionalUsd: 1_000_000, max
   executableUsd, completionRatio: executableUsd / 1_000_000, executionCostBps: 0 });
 
 describe("Exit exhaustion requires an exhaustive measurement", () => {
-  it.each([0])("does not infer exhaustion from a $%s exact lower bound", (executableUsd) => {
+  it.each([0, 667.62])("does not infer exhaustion from a $%s exact lower bound", (executableUsd) => {
     const result = evaluateV9Exit({ circulatingUsd: 20_000_000, portfolioStatus: "reviewed-complete",
       routes: [makeExitRoute({ coverageClass: "exact-lower-bound", capacityCurve: [point(executableUsd)] })],
     }, policy);
@@ -28,9 +28,9 @@ describe("Exit exhaustion requires an exhaustive measurement", () => {
     expect(result.reasons).not.toContain("no-viable-exit-path");
   });
 
-  it("keeps an exact-complete zero measurement adverse", () => {
+  it.each([0, 667.62])("keeps a $%s exact-complete measurement adverse", (executableUsd) => {
     const result = evaluateV9Exit({ circulatingUsd: 20_000_000, portfolioStatus: "reviewed-complete",
-      routes: [makeExitRoute({ capacityCurve: [point(0)] })],
+      routes: [makeExitRoute({ capacityCurve: [point(executableUsd)] })],
     }, policy);
     expect(result.score).toBe(0);
     expect(result.reasons).toContain("no-viable-exit-path");
@@ -64,13 +64,15 @@ describe("Exit exhaustion requires an exhaustive measurement", () => {
     expect(result.routes[0]!.capacityPoint!.executableUsd).toBe(1_000_000);
   });
 
-  it("retains positive lower-bound capacity when valuing output", () => {
+  it("keeps the raw-capacity materiality boundary when valuing lower-bound credit", () => {
     const result = evaluateV9Exit({ circulatingUsd: 20_000_000, portfolioStatus: "reviewed-complete",
       routes: [makeExitRoute({ coverageClass: "exact-lower-bound", outputValueRetention: 0.9999,
         capacityCurve: [point(10_000)] })],
     }, policy);
     expect(result.routes[0]).toMatchObject({ included: true, capacityPoint: { executableUsd: 9_999 } });
-    expect(result.score).toBeGreaterThan(50);
+    expect(result.score).toBeGreaterThan(0);
+    expect(result.score).toBeLessThan(50);
+    expect(result.routes[0]!.capsApplied).toContain("insufficient-completion:50");
   });
 
   it("keeps weak positive lower-bound credit below unknown without discarding its executable prefix", () => {

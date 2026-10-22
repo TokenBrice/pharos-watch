@@ -45,10 +45,10 @@ describe("typed Exit route identity", () => {
     { name: "included", overrides: {}, included: true },
     { name: "excluded capacity", overrides: { scoreEligible: false, evidenceKind: "unsupported", capacityCurve: [] }, included: false },
     { name: "incomparable request", overrides: { capacityCurve: [] }, included: false },
-    { name: "small positive lower bound", overrides: {
+    { name: "immaterial lower bound", overrides: {
       coverageClass: "exact-lower-bound",
       capacityCurve: [{ requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 1, completionRatio: 0.000001, executionCostBps: 0 }],
-    }, included: true },
+    }, included: false },
   ] satisfies { name: string; overrides: Partial<V9ExitEvaluationRoute>; included: boolean }[])(
     "retains exact identity for $name",
     ({ overrides, included }) => {
@@ -374,7 +374,7 @@ describe("evaluateV9Exit", () => {
     });
   });
 
-  it("scores a small positive reviewed lower bound without claiming exhaustion", () => {
+  it("does not treat an immaterial reserve lower bound as exhaustion", () => {
     const immaterialQueue = route({
       routeKey: "redemption:autousd-operator-queue",
       routeFamily: "protocol-redemption",
@@ -393,10 +393,13 @@ describe("evaluateV9Exit", () => {
       V9_CANDIDATE_POLICY_V1,
     );
 
-    expect(result.score).toBeGreaterThan(0);
-    expect(result.primaryRouteKey).toBe(immaterialQueue.routeKey);
+    expect(result.score).toBe(50);
+    expect(result.primaryRouteKey).toBeNull();
+    expect(result.reasons).toContain("missing-same-notional-route");
     expect(result.reasons).not.toContain("no-viable-exit-path");
-    expect(result.routes[0]).toMatchObject({ included: true, capacityPoint: { executableUsd: 1_000 } });
+    expect(result.routes[0]).toMatchObject({
+      included: false, score: null, exclusionReason: "missing-same-notional-route",
+    });
   });
 
 
@@ -747,17 +750,59 @@ describe("evaluateV9Exit", () => {
     expect(trace?.capsApplied).toContain("zero-executable-capacity");
   });
 
-  it("prices small positive capacity continuously rather than through binary gates", () => {
-    const results = [1, 13.93, 99_999, 100_000, 100_001].map((executableUsd) => evaluateV9Exit({
-      circulatingUsd: 1_000_000_000,
-      routes: [route({ capacityCurve: [{
-        requestedNotionalUsd: 25_000_000, maxCostBps: 200, executableUsd,
-        completionRatio: executableUsd / 25_000_000, executionCostBps: 125,
-      }] })],
-    }, V9_CANDIDATE_POLICY_V1));
-    expect(results.every((result) => result.routes[0]!.included && result.score! > 0)).toBe(true);
-    expect(results.every((result, index) => index === 0 || result.score! >= results[index - 1]!.score!)).toBe(true);
-    expect(results[3]!.routes[0]!.score! - results[2]!.routes[0]!.score!).toBeLessThan(0.01);
+  it("floors a route that fills a vanishing fraction of the stress request", () => {
+    const shoulder = (executableUsd: number) =>
+      route({
+        routeKey: "dex:thin-depth",
+        lane: "dex",
+        routeFamily: "dex-amm",
+        evidenceKind: "measured-executable-depth",
+        capacityCurve: [{
+          requestedNotionalUsd: 25_000_000,
+          maxCostBps: 200,
+          executableUsd,
+          completionRatio: executableUsd / 25_000_000,
+          executionCostBps: 200,
+        }],
+      });
+    const evaluate = (executableUsd: number) =>
+      evaluateV9Exit({ circulatingUsd: 1_000_000_000, routes: [shoulder(executableUsd)] }, V9_CANDIDATE_POLICY_V1)
+        .routes.find((entry) => entry.routeKey === "dex:thin-depth");
+    const immaterial = evaluate(13.93);
+    expect(immaterial?.included).toBe(true);
+    expect(immaterial?.score).toBe(0);
+    expect(immaterial?.capsApplied).toContain("immaterial-executable-capacity");
+    const exit = V9_CANDIDATE_POLICY_V1.policy.semantic.exit;
+    const absoluteFloor = exit.absoluteCapacityBreakpoints.find(
+      (point) => point.value > 0 && point.score > 0,
+    )!.value;
+    expect(absoluteFloor).toBe(100_000);
+    const material = evaluate(absoluteFloor);
+    expect(material?.score).toBeGreaterThan(0);
+    expect(material?.score).toBeLessThanOrEqual(50);
+    expect(material?.capsApplied).toContain("insufficient-completion:50");
+    expect(material?.capsApplied).not.toContain("immaterial-executable-capacity");
+  });
+
+  it("tests materiality before output-value retention", () => {
+    const evaluate = (executableUsd: number, outputValueRetention: number) =>
+      evaluateV9Exit({
+        circulatingUsd: 1_000_000_000,
+        routes: [route({
+          routeKey: "dex:retained-output", lane: "dex", routeFamily: "dex-amm",
+          evidenceKind: "measured-executable-depth", outputValueRetention,
+          capacityCurve: [{
+            requestedNotionalUsd: 25_000_000, maxCostBps: 200, executableUsd,
+            completionRatio: executableUsd / 25_000_000, executionCostBps: 125,
+          }],
+        })],
+      }, V9_CANDIDATE_POLICY_V1).routes[0];
+    expect(evaluate(100_000, 0.9999)).toMatchObject({
+      capsApplied: expect.arrayContaining(["insufficient-completion:50"]),
+    });
+    expect(evaluate(100_000, 0.9999)?.capsApplied).not.toContain("immaterial-executable-capacity");
+    expect(evaluate(99_999, 1)).toMatchObject({ score: 0, capsApplied: ["immaterial-executable-capacity"] });
+    expect(evaluate(100_000, 0)).toMatchObject({ score: 0, capsApplied: ["zero-executable-capacity"] });
   });
 
   it("does not award a diversification benefit off a zero-capacity independent route", () => {
@@ -922,7 +967,7 @@ describe("reliable non-atomic redemption credit", () => {
     expect(result.score).toBe(50);
   });
 
-  it.each([0])("does not let a complete inventory turn documented $%i capacity into an exhaustion measurement", (executableUsd) => {
+  it.each([0, 1_000])("does not let a complete inventory turn documented $%i capacity into an exhaustion measurement", (executableUsd) => {
     const candidate = redemptionRoute({
       capacityCurve: [{
         requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd,

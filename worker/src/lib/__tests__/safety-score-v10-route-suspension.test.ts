@@ -210,10 +210,10 @@ describe("reviewed exact-channel suspension", () => {
       expect(published.scoreInput.pillars.exit.evidenceLevel).toBe("limited");
       expect(published.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit.U);
     } else {
-      expect(published.exit.score).toBeGreaterThan(0);
+      expect(published.exit.score).toBe(0);
       expect(published.scoreInput.pillars.exit.limitingCauseGapIds ?? []).not.toContain(censusId);
     }
-    expect(published.exit.reasons).not.toContain("no-viable-exit-path");
+    expect(published.exit.reasons.includes("no-viable-exit-path")).toBe(dexCapacityUsd !== undefined);
     expect(published.scoreInput.pillars.backing.evidenceLevel).toBe("insufficient");
     if (dexCapacityUsd !== undefined) {
       const measured = asset.exitRoutes.find((route) => route.lane === "dex")!;
@@ -226,11 +226,15 @@ describe("reviewed exact-channel suspension", () => {
       expect(published.exit.routes.find((route) => route.routeKey === measured.routeKey)).toMatchObject({
         included: true, capacityPoint: { executableUsd: 1_000 },
       });
-      expect(published.exit.routes.find((route) => route.routeKey === measured.routeKey)!.score).toBeGreaterThan(0);
+      expect(published.exit.routes.find((route) => route.routeKey === measured.routeKey)!.score).toBe(0);
       expect(published.exit.routes.find((route) => route.routeKey === measured.routeKey)!.capsApplied)
-        .not.toContain("immaterial-executable-capacity");
+        .toContain("immaterial-executable-capacity");
     }
-    if (!adverseMint) {
+    if (dexCapacityUsd !== undefined) {
+      expect(published.trace.adverseAttribution).toContainEqual(expect.objectContaining({
+        source: "pillar-score", responsibility: "measured-adverse",
+      }));
+    } else if (!adverseMint) {
       expect(published.trace.adverseAttribution).toEqual([]);
     } else {
       expect(published.trace.adverseAttribution).toEqual([
@@ -267,7 +271,7 @@ describe("reviewed exact-channel suspension", () => {
     });
   });
 
-  it("scores a small positive DEX measurement continuously beside a suspended channel", () => {
+  it("retains an exhaustive immaterial DEX measurement at zero beside a suspended channel", () => {
     const base = makeV9FixedInput({ assetId: ID, clockSec: CLOCK });
     const dex = base.dexLiqMap[ID]!;
     const observations = dex.exitRouteObservations!.map((observation) => ({
@@ -280,13 +284,14 @@ describe("reviewed exact-channel suspension", () => {
     withRedemptionBackstopConfig(ID, { routeStatus: "suspended", routeSuspension: suspension }, () => {
       const compiled = compileSet(fixed);
       const published = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
-      expect(published.trace.finalGrade).not.toBe("F");
-      expect(published.trace.adverseAttribution).toEqual([]);
-      expect(published.exit.reasons).not.toContain("no-viable-exit-path");
+      expect(published.trace.adverseAttribution).toContainEqual(expect.objectContaining({
+        source: "pillar-score", responsibility: "measured-adverse",
+      }));
+      expect(published.exit.reasons).toContain("no-viable-exit-path");
       const measured = published.exit.routes.find((route) => !route.routeSuspension)!;
       expect(measured).toMatchObject({ included: true, capacityPoint: { executableUsd: 999.9 } });
-      expect(measured.score).toBeGreaterThan(0);
-      expect(measured.capsApplied).not.toContain("immaterial-executable-capacity");
+      expect(measured.score).toBe(0);
+      expect(measured.capsApplied).toContain("immaterial-executable-capacity");
     });
   });
 

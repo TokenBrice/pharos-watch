@@ -799,7 +799,7 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
   });
 
   it.each(["exact-lower-bound", "exact-complete"] as const)(
-    "scores small positive %s execution evidence without a binary exclusion",
+    "retains R1 materiality semantics for small %s execution evidence",
     (coverageClass) => {
       const draft = structuredClone(exactFixedInput());
       const observation = draft.dexLiqMap.alpha!.exitRouteObservations![0]!;
@@ -828,9 +828,22 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
         portfolioFactStatus: asset.exitStatus,
         routes: [projectV9ExitEvaluationRoute(route)],
       }, V9_CANDIDATE_POLICY_V1);
-      expect(result.routes[0]).toMatchObject({ included: true, capacityPoint: { executableUsd: 13 } });
-      expect(result.score).toBeGreaterThan(0);
-      expect(result.reasons).not.toContain("no-viable-exit-path");
+      if (coverageClass === "exact-complete") {
+        expect(result.routes[0]).toMatchObject({
+          included: true, score: 0, capacityPoint: { executableUsd: 13 },
+          capsApplied: ["immaterial-executable-capacity"],
+        });
+        expect(result.score).toBe(0);
+        expect(result.reasons).toContain("no-viable-exit-path");
+      } else {
+        expect(result.routes[0]).toMatchObject({
+          included: false, score: null, capacityPoint: null,
+          exclusionReason: "missing-same-notional-route",
+        });
+        expect(result.primaryRouteKey).toBeNull();
+        expect(result.score).toBe(50);
+        expect(result.reasons).not.toContain("no-viable-exit-path");
+      }
     },
   );
 
