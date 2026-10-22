@@ -176,6 +176,24 @@ describe("Safety Score v9 chain-maturity registry", () => {
     )).toBe("low");
   });
 
+  it("retains Monad's confirmed launch-age failure without renewing its packet", () => {
+    for (const date of ["2026-10-22", "2026-10-23"]) {
+      const clock = Date.parse(`${date}T00:00:00.000Z`) / 1_000;
+      const review = chainMaturityReviewForSlug("monad", clock);
+      expect(review?.reviewedAt).toBe("2026-08-24");
+      expect(review?.nextReviewAt).toBe("2026-11-24");
+      expect(review?.state).toBe("failed");
+      expect(review?.admission).toBe("exclude");
+      expect(review?.gates.continuity.result).toBe("fail");
+      expect(review?.gates.continuity.sources[0]?.documentDate).toBe("2025-11-24");
+      expect(review?.gates.continuity.sources[0]?.verification).toMatchObject({
+        accessedAt: null,
+        reviewerOutcome: "unchecked",
+      });
+      expect(resolveChainMaturityAdmissionsAt(clock).admittedChainSlugs).not.toContain("monad");
+    }
+  });
+
   it("retains TRON's unresolved finality proof and conservative exclusion at the November 24 boundary", () => {
     const deadline = Date.parse("2026-11-24T00:00:00.000Z") / 1_000;
     for (const clock of [deadline - 1, deadline, deadline + 1]) {
