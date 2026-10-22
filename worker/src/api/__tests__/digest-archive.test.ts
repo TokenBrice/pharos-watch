@@ -79,6 +79,10 @@ it.each(["?cursor=1.2.3.4.5", "?history=all&cursor=bad", "?history=all&cursor=1.
 it.each([false, true])("matches raw-input archive output and diagnostics with bounded D1 bytes (history=%s)", async (completeHistory) => {
   const sqlite = new DatabaseSync(":memory:");
   const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  // Both handler calls derive X-Data-Age from the wall clock; freeze Date so a
+  // second boundary between them cannot make the comparison flake.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-22T12:00:00Z"));
   try {
     sqlite.exec(`CREATE TABLE daily_digest (
       digest_text TEXT NOT NULL, digest_title TEXT, generated_at INTEGER NOT NULL,
@@ -203,6 +207,7 @@ it.each([false, true])("matches raw-input archive output and diagnostics with bo
     expect(projectedBytes).toBeLessThan(1_000_000);
     expect(JSON.stringify(projectedRows)).not.toContain(unused);
   } finally {
+    vi.useRealTimers();
     warn.mockRestore();
     sqlite.close();
   }
