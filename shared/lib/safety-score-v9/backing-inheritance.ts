@@ -86,11 +86,12 @@ export function inheritedStablecoinReserveEvaluation(
     ...asset.reserveStatus.evidenceRefIds,
     ...liveExposures.flatMap(exposure => exposure.status.evidenceRefIds),
     ...(asset.lenderBook?.status.evidenceRefIds ?? []),
+    ...(inherited.admittedClaimEvidenceRefIds ?? []),
   ]);
   const failureDomains = canonicalDomains(inherited.failureDomains);
   const componentKey = `reserve:inherited-backing:${inherited.parentAssetId}`;
-  const observationState = "known";
-  const provenance = "live";
+  const observationState = liveExposures.length > 0 ? "known" : "bounded-unknown";
+  const provenance = liveExposures.length > 0 ? "live" : "curated";
   const reserveGapAttributions = [
     ...canonicalUniqueBy(
       gapsForV9Ids(gapIndex, asset.reserveStatus.gapIds).map((gap) => ({

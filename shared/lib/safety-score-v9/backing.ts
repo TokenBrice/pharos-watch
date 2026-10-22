@@ -10,7 +10,7 @@ import { decimalSnap } from "./formula";
 import { resolveV9ReasonTreatment, unknownQuality } from "./policy";
 import { createV9GapIndex, type V9GapIndex } from "./gap-index";
 import { canonicalDomains, canonicalUniqueBy, compareText, domainKey, uniqueSorted } from "./primitives";
-import { inheritedStablecoinReserveEvaluation, verifiedLiveInheritedExposures, verifiedLiveLenderBookExposures } from "./backing-inheritance";
+import { inheritedStablecoinReserveEvaluation, verifiedLiveInheritedExposures, verifiedLiveLenderBookExposures, V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT } from "./backing-inheritance";
 import {
   backingPolicy,
   createV9BackingStructuralReason,
@@ -887,6 +887,11 @@ export function evaluateV9ReserveExposures(
   const exposures = inherited === undefined ? undefined
     : verifiedLiveInheritedExposures(asset, inherited) ??
       verifiedLiveLenderBookExposures(asset, inherited, policy);
+  if (inherited !== undefined && asset.reserveExposures.length === 0 &&
+    (inherited.admittedClaimEvidenceRefIds?.length ?? 0) > 0 &&
+    inherited.weight >= V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT && inherited.weight <= 1) {
+    return inheritedStablecoinReserveEvaluation(asset, inherited, policy, gapIndex, []);
+  }
   if (inherited !== undefined && exposures !== undefined) {
     return inheritedStablecoinReserveEvaluation(asset, inherited, policy, gapIndex, exposures);
   }

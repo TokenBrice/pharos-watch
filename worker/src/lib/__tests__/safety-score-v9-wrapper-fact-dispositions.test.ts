@@ -144,7 +144,18 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
   });
 
   it("withholds reviewed mixed-book backing for any asset ID while preserving other wrappers' inheritance, caps, peg and supply", () => {
-    const fixed = makeV9CohortFixedInput(["susd1plus-lorenzo"]);
+    const original = makeV9CohortFixedInput(["susd1plus-lorenzo"]);
+    const parentHolding = {
+      name: "Admitted parent token claim", pct: 100, risk: "low" as const,
+      coinId: "alpha", depType: "wrapper" as const, assetClass: "stablecoin" as const,
+      issuerOrObligor: "asset:alpha", liquidityHorizon: "immediate" as const,
+    };
+    const fixed = normalizeFixedInput({
+      ...original, baseInputGenerationId: undefined,
+      liveReserveMap: {
+        ...original.liveReserveMap, beta: [parentHolding], "susd1plus-lorenzo": [parentHolding],
+      },
+    });
     const edge: V9ExtensionDependencyEdge = {
       upstreamAssetId: "alpha",
       dependencyType: "wrapper",
@@ -194,7 +205,15 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
 
   it.each(["serial-claim", "basket-exposure"] as const)(
     "inherits %s Backing without fabricating wrapper applicability", (economicRole) => {
-      const fixed = makeV9TwoAssetFixedInput({ omitAlphaReserve: true });
+      const original = makeV9TwoAssetFixedInput({ omitAlphaReserve: true });
+      const fixed = economicRole === "serial-claim" ? original : normalizeFixedInput({
+        ...original, baseInputGenerationId: undefined,
+        liveReserveMap: { ...original.liveReserveMap, alpha: [{
+          name: "Admitted basket parent holding", pct: 100, risk: "low", coinId: "beta",
+          depType: "collateral", assetClass: "stablecoin", issuerOrObligor: "asset:beta",
+          liquidityHorizon: "immediate",
+        }] },
+      });
       const extension = makeV9RoleExtension(fixed, {
         alpha: [{
           upstreamAssetId: "beta", dependencyType: economicRole === "serial-claim" ? "mechanism" : "collateral",
@@ -208,18 +227,28 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
       const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
       const facts = compiled.assets.find((asset) => asset.assetId === "alpha")!;
       expect(facts.wrapperLocalFacts.applicability).not.toBe("wrapper");
-      expect(facts.reserveExposures).toHaveLength(0);
+      expect(facts.reserveExposures).toHaveLength(economicRole === "serial-claim" ? 0 : 1);
       const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1);
       const child = evaluated.assets.find((asset) => asset.assetId === "alpha")!;
       const parent = evaluated.assets.find((asset) => asset.assetId === "beta")!;
       expect(child.trace.wrapperParentLimit).toBeNull();
       expect(child.backing.contributions).toContainEqual(expect.objectContaining({ upstreamAssetId: "beta" }));
+      expect(child.backing.contributions.find(entry => entry.upstreamAssetId === "beta")!.evidenceRefIds)
+        .toEqual(expect.arrayContaining(facts.dependencies.status.evidenceRefIds));
+      expect(child.backing.contributions.some(entry => entry.source === "mechanism")).toBe(true);
       if (economicRole === "serial-claim") {
         expect(child.trace.finalScore!).toBeLessThanOrEqual(parent.trace.inheritableScore!);
         expect(child.dependencyInputs.serial).toContainEqual(expect.objectContaining({
           upstreamAssetId: "beta", score: parent.trace.inheritableScore,
         }));
       }
+      // A variant label alone must not recreate this positive curated witness.
+      alpha.dependencies!.source = "variant";
+      const labelOnly = evaluateV9FactSet(
+        compileSafetyScoreV9FactSetFromFixedInput(fixed, extension), V9_CANDIDATE_POLICY_V1,
+      ).assets.find(asset => asset.assetId === "alpha")!;
+      expect(labelOnly.backing.contributions.some(entry =>
+        entry.componentKey.startsWith("reserve:inherited-backing:"))).toBe(false);
     },
   );
 

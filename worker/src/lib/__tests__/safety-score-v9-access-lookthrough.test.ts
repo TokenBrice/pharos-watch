@@ -11,6 +11,7 @@ import { admitSafetyScoreV9ExtensionAsset, computeSafetyScoreV9ReserveExposureKe
 import { buildV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-gap-queue";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { resolveCauseGapId } from "@shared/types/safety-score-v9-public-cause-gaps";
+import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 
 function compiledGraph(clockSec: number, reviewedAt: string) {
   return buildSafetyScoreV9AccessClaimGraph({ assetId: "alpha", clockSec, generationId: "fixture-generation", evidence: new ReviewEvidenceBuilder("alpha", clockSec), review: makeAccessReview("alpha", reviewedAt) })!;
@@ -66,7 +67,8 @@ describe("access claim graph compiler", () => {
     extension.assets[0]!.componentEvidence.push(...built.componentEvidence);
     const after = buildSafetyScoreV9Candidate({ fixedInput: fixed, extension, publishedAtSec: fixed.clockSec });
     expect(before.quarantines).toEqual([]); expect(after.quarantines).toEqual([]);
-    const old = before.candidate.cards[0]!, card = after.candidate.cards[0]!;
+    const old = resolveV9PublicWitnessTexts(before.candidate.cards[0]!);
+    const card = resolveV9PublicWitnessTexts(after.candidate.cards[0]!);
     expect(old.score).not.toBeNull();
     expect(card.score).toBe(old.score);
     for (const pillar of ["backing", "exit", "control"] as const) {

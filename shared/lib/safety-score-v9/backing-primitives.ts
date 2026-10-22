@@ -83,6 +83,8 @@ export interface V9InheritedStablecoinBacking {
   readonly causeGapIds?: readonly string[];
   /** Mapped weight of the single collateral/wrapper edge (≈1). */
   readonly weight: number;
+  /** Current curated evidence admitting the exact whole-parent claim, never a variant label alone. */
+  readonly admittedClaimEvidenceRefIds?: readonly string[];
   /**
    * "pure": a 1:1 holding wrapper (mint/redeem against the parent) — a thin
    * contract layer. "wrapped": an ERC-4626 vault / staked / lending / bridged
