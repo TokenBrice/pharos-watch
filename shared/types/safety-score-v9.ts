@@ -151,9 +151,6 @@ const V9PillarEvidenceSchema = z
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (value.score === null && !value.unresolved.some((fact) => fact.critical)) {
-      issue(ctx, ["unresolved"], "A missing pillar score requires a critical unresolved reason");
-    }
     if (value.score !== null && value.evidence.length === 0) {
       issue(ctx, ["evidence"], "A scored pillar requires at least one evidence reference");
     }
@@ -491,7 +488,6 @@ const V9FormulaPolicySchema = z
       .min(1),
     gradeThresholds: z.array(z.object({ grade: V9GradeSchema.exclude(["NR"]), minScore: ScoreSchema }).strict()),
     capTiePriority: z.array(V9CapSourceSchema),
-    rounding: z.object({ uncapped: z.literal("nearest") }).strict(),
     realizedHolderLoss: z.object({
       initialLimits: z.object({ severe: ScoreSchema, offPeg: ScoreSchema }).strict(),
       holdDays: z.number().finite().positive(),
@@ -511,7 +507,6 @@ const V9FormulaPolicySchema = z
     danger: z
       .object({
         adverseAttributionPegMultiplierFloor: z.number().finite().min(0).max(1),
-        activeDepegMinimumBpsExclusive: z.number().finite().nonnegative(),
       })
       .strict(),
   })

@@ -221,7 +221,6 @@ export interface V9BackingResult {
   readonly causeGapIds: readonly string[];
   readonly limitedEvidenceCauses: readonly V9EvidenceCause[];
   readonly supportedComponentKeys: readonly string[];
-  readonly pillarCeiling: number | null;
   readonly contributions: readonly V9EffectiveBackingContribution[];
   readonly structuralReasons: readonly V9BackingStructuralReason[];
   readonly unresolved: readonly V9BackingUnresolvedReason[];

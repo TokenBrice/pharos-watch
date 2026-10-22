@@ -71,14 +71,18 @@ describe("Safety Score v9 USDT premium production integration", () => {
     }
 
     const usdt = evaluatedById.get("usdt-tether")!;
-    // The longevity premium is public-only; structural correlation no longer
-    // selects a second whole-score ceiling or a cap-derived deployment score.
+    // The longevity premium is public-only. The independently measured TRON
+    // deployment exposure remains proportionally priced before that premium.
     expect(usdt.trace).toMatchObject({
-      scoreAdjustments: [{ kind: "market-anchor-longevity", appliedPoints: 12 }],
-      deploymentAdjustments: [],
+      scoreAdjustments: [{ kind: "market-anchor-longevity", configuredPoints: 14, appliedPoints: 14 }],
+      deploymentAdjustments: [{ failureDomainKey: "chain:tron", exposedScore: 64 }],
     });
+    const [deployment] = usdt.trace.deploymentAdjustments;
+    expect(deployment!.adjustmentPoints).toBeCloseTo(
+      (deployment!.scoreBefore - deployment!.exposedScore) * deployment!.exposureShare, 4,
+    );
     // The publication maximum can truncate the visible lift; downstream claims
-    // inherit the ordinary score, not the capped published score minus 12.
+    // inherit the ordinary score, not the capped published score minus 14.
     expect(usdt.trace.inheritableScore).toBe(usdt.trace.scoreAdjustments[0]!.publishedScoreBefore);
     expect(usdt.trace.inheritableScore).toBeLessThan(usdt.trace.finalScore!);
 

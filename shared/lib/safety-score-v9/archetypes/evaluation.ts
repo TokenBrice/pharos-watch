@@ -136,7 +136,6 @@ export function applyV9MeasuredCollateralization(
   return finalizeBackingResult({
     ...result,
     score,
-    pillarCeiling: Math.min(result.pillarCeiling ?? score, score),
     collateralizationApplications: [
       ...(result.collateralizationApplications ?? []),
       {
@@ -232,7 +231,6 @@ function evaluateV9ArchetypeBackingInternal(
       rateability: reserve.rateability,
       score: reserve.score,
       ...(inheritedApplications === undefined ? {} : { collateralizationApplications: inheritedApplications }),
-      pillarCeiling: null,
       contributions: effectiveBackingContributions(
         reserve.contributions,
         1,
@@ -270,7 +268,7 @@ function evaluateV9ArchetypeBackingInternal(
         const adverse = measured && constraint.quality === "failed";
         const score = attribution.cause === "A" || attribution.cause === "B" ? null
           : measured ? backing.componentQuality[constraint.quality!]
-            : unknownQuality("backing", attribution.cause === "D" ? null : attribution.cause, policy.policy.semantic);
+            : unknownQuality("backing", attribution.cause, policy.policy.semantic);
         const factorPath = `${pathKey}:factor:${constraint.factKey}`;
         if (!measured) {
           unresolved.push(...gapReasons(gapIndex, constraint.status.gapIds, factorPath,
@@ -326,7 +324,7 @@ function evaluateV9ArchetypeBackingInternal(
       const measured = fragment.status.observationState === "known" && fragment.status.applicability.state === "required" &&
         fragment.status.evidenceRefIds.length > 0 && fragment.quality !== null;
       const tier = measured ? backing.componentQuality[fragment.quality!]
-        : unknownQuality("backing", attribution.cause === "D" ? null : attribution.cause, policy.policy.semantic);
+        : unknownQuality("backing", attribution.cause, policy.policy.semantic);
       const seasoned = fullyAssured && component.componentKey === "assurance-and-reconciliation" &&
         (fragment.quality === "strong" || fragment.quality === "adequate") &&
         input.asset.trackRecordMonths !== undefined && input.asset.trackRecordMonths >= backing.assuranceSeasonedCredit.minMonths;
@@ -375,14 +373,12 @@ function evaluateV9ArchetypeBackingInternal(
   const score = rateability === "NR" || combinedWeight <= SCORE_EPSILON ? null : clampScore(
     ((reserve.score ?? 0) * activeReserveWeight + mechanismWeightedScore * activeMechanismWeight) / combinedWeight,
   );
-  const pillarCeiling = null;
   return finalizeBackingResult({
     assetId: input.asset.assetId,
     archetype: input.archetype,
     rateability,
     score,
     ...(inheritedApplications === undefined ? {} : { collateralizationApplications: inheritedApplications }),
-    pillarCeiling,
     contributions: effectiveBackingContributions(
       contributions,
       combinedWeight > SCORE_EPSILON ? activeReserveWeight / combinedWeight : 0,
@@ -437,17 +433,17 @@ export function createUnavailableV9BackingResult(
   const hasMechanismSubject = hasReserveSubject || unavailableReview.mechanismRiskReview.status.evidenceRefIds.length > 0;
   if (!hasMechanismSubject) {
     return finalizeBackingResult({ ...shared, rateability: "rateable", score: null,
-      pillarCeiling: null, contributions: [] });
+      contributions: [] });
   }
   if (unavailableReview.archetype === "unresolved") {
     const reserve = evaluateV9ReserveExposures(asset, policy);
     const attribution = v9BackingStatusCause(unavailableReview.mechanismRiskReview.status, gapIndex, true);
     if (attribution.cause === "A" || attribution.cause === "B") {
       return finalizeBackingResult({ ...shared, rateability: "rateable", score: reserve.score,
-        pillarCeiling: null, contributions: effectiveBackingContributions(reserve.contributions, 1, 0,
+        contributions: effectiveBackingContributions(reserve.contributions, 1, 0,
           backingPolicy(policy).reserve.concentrationWeight), unresolved: [...unresolved, ...reserve.unresolved] });
     }
-    const quality = unknownQuality("backing", attribution.cause === "D" ? null : attribution.cause, policy.policy.semantic);
+    const quality = unknownQuality("backing", attribution.cause, policy.policy.semantic);
     const reserveWeight = hasReserveSubject && reserve.score !== null
       ? backingPolicy(policy).archetypes["protocol-position"].reserveWeight : 0;
     const mechanismWeight = 1 - reserveWeight;
@@ -461,7 +457,6 @@ export function createUnavailableV9BackingResult(
     return finalizeBackingResult({
       ...shared, rateability: "rateable",
       score: (reserve.score ?? 0) * reserveWeight + quality * mechanismWeight,
-      pillarCeiling: null,
       contributions: effectiveBackingContributions([...reserve.contributions, ...bounded],
         reserveWeight, mechanismWeight, backingPolicy(policy).reserve.concentrationWeight),
       structuralReasons: reserve.structuralReasons,

@@ -69,7 +69,7 @@ function boundedUnknownReserveEvaluation(
 ): ReserveEvaluation {
   const backing = backingPolicy(policy);
   const cause = v9BackingStatusCause(asset.reserveStatus, asset.gapIndex ?? createV9GapIndex(asset.gaps)).cause;
-  const unknown = unknownQuality("backing", cause === "D" ? null : cause, policy.policy.semantic);
+  const unknown = unknownQuality("backing", cause, policy.policy.semantic);
   const bounded = evaluateV9ReserveEligibilityEnvelope(asset.reserveBoundFacts ?? [], backing, asset.asOfSec ?? 0, unknown);
   const quality = bounded?.quality ?? unknown;
   const evidenceRefIds = uniqueSorted([...asset.reserveStatus.evidenceRefIds, ...(bounded?.evidenceRefIds ?? [])]);
@@ -172,7 +172,7 @@ function scoreV9ReserveExposureClassification(
     (missingClass || !backing.reserve.maturityNotApplicableClasses.some(value => value === exposure.assetClass));
   const factorUnknown = (status: typeof exposure.status) => {
     const cause = v9BackingStatusCause(status, index, true).cause;
-    return unknownQuality("backing", cause === "D" ? null : cause, policy.policy.semantic);
+    return unknownQuality("backing", cause, policy.policy.semantic);
   };
   const classUnknown = factorUnknown(classStatus);
   const liquidityUnknown = factorUnknown(liquidityStatus);
@@ -321,7 +321,7 @@ function projectResolvedUpstreamReserveExposure(params: {
     materialityThreshold,
   } = params;
   const cause = upstream.cause ?? "U";
-  const upstreamScore = upstream.score ?? unknownQuality("backing", cause === "D" ? null : cause, policy.policy.semantic);
+  const upstreamScore = upstream.score ?? unknownQuality("backing", cause, policy.policy.semantic);
   const score = upstream.score === null && (cause === "A" || cause === "B")
     ? null : Math.min(knownFactorBound, upstreamScore);
   // For an UNAVAILABLE upstream backing owns the availability decision: drop
@@ -586,7 +586,7 @@ function appendReserveExposureEvaluation(params: {
   let cause = rowCause.cause ?? classificationCause ?? null;
   let causeGapIds = uniqueSorted([...rowCause.causeGapIds, ...classification.causeGapIds]);
   let excluded = (rowCause.cause === "A" || rowCause.cause === "B") || classification.score === null;
-  let score = (classification.score ?? unknownQuality("backing", cause === "D" ? null : cause, policy.policy.semantic)) * confidenceMultiplier;
+  let score = (classification.score ?? unknownQuality("backing", cause, policy.policy.semantic)) * confidenceMultiplier;
 
   if (upstream) {
     const knownLocalAdverse = exposure.status.observationState === "known" &&
@@ -614,7 +614,7 @@ function appendReserveExposureEvaluation(params: {
     causeGapIds = uniqueSorted([...causeGapIds, ...(upstream.causeGapIds ?? [])]);
     unresolved.push(...upstreamProjection.unresolved);
   } else if (exposure.trackedAssetId !== null && !seriallyResolvedUpstreamAssetIds.has(exposure.trackedAssetId)) {
-    score = Math.min(score, unknownQuality("backing", cause === "D" ? null : cause, policy.policy.semantic));
+    score = Math.min(score, unknownQuality("backing", cause, policy.policy.semantic));
     unresolved.push(
       ...projectUnresolvedTrackedReserveExposure({
         asset,
@@ -841,11 +841,11 @@ function appendReserveConcentrationContribution(params: {
     includedShare += row.normalizedWeight;
     if (unknown) {
       boundedShare += row.normalizedWeight;
-      boundedQuality += row.normalizedWeight * unknownQuality("backing", attribution.cause === "D" ? null : attribution.cause, policy.policy.semantic);
+      boundedQuality += row.normalizedWeight * unknownQuality("backing", attribution.cause, policy.policy.semantic);
     }
     if (exposure === undefined) {
       unidentifiedShare += row.normalizedWeight;
-      unidentifiedQuality += row.normalizedWeight * unknownQuality("backing", attribution.cause === "D" ? null : attribution.cause, policy.policy.semantic);
+      unidentifiedQuality += row.normalizedWeight * unknownQuality("backing", attribution.cause, policy.policy.semantic);
     }
   }
   // An empty issuer/custodian census proves no diversification. Keep the

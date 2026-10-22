@@ -317,16 +317,12 @@ function normalizeReasonList(
 
 function scoreBearingReasons(
   input: V9ProductionScoreInput,
-  envelope: V9ValidatedPolicyEnvelope,
 ): V9PillarReason[] {
   return [
     ...PILLAR_KEYS.flatMap((pillar) => input.pillars[pillar].reasons),
     ...input.peg.reasons,
     ...input.dependencyReasons,
     ...(input.methodologyReasons ?? []),
-    ...(input.unresolvedEvidence ?? []).filter(
-      (reason) => resolveV9ReasonTreatment(envelope, reason.code, reason.cause ?? "U").critical,
-    ),
   ];
 }
 
@@ -519,7 +515,7 @@ export function scoreV9EvaluatedAsset(
     reasonCode: "partial-evidence-pipeline-gap", excludedPillars, excludedComponentKeys,
     causeGapIds: excludedCauseGapIds, causes: excludedCauses,
   };
-  const baseScoreBearingReasons = scoreBearingReasons(input, envelope);
+  const baseScoreBearingReasons = scoreBearingReasons(input);
   const normalizedReasons = new WeakMap<V9PillarReason, V9UnresolvedFact>();
   const normalizedScoreBearingReasons = normalizeReasonList(baseScoreBearingReasons, envelope, normalizedReasons);
   const pillarReasonProvenance: V9PillarReasonProvenance[] = PILLAR_KEYS.flatMap((pillar) => [

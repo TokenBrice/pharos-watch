@@ -587,7 +587,6 @@ describe("Safety Score v9 archetype backing adapters", () => {
       },
     }, V9_CANDIDATE_POLICY_V1);
     expect(local.score).toBeCloseTo(parent.score! * 0.8, 8);
-    expect(local.pillarCeiling).toBeCloseTo(parent.score! * 0.8, 8);
     expect(local.collateralizationApplications).toContainEqual(expect.objectContaining({
       measurementId: "measurement:wrapper-local-census",
       appliedByAssetId: "wrapper",
@@ -624,7 +623,6 @@ describe("Safety Score v9 archetype backing adapters", () => {
     }, V9_CANDIDATE_POLICY_V1);
     expect(baseline.score).toBe(90);
     expect(result.score).toBeCloseTo(57.6, 8);
-    expect(result.pillarCeiling).toBeCloseTo(57.6, 8);
     expect(result.structuralReasons).toContainEqual(expect.objectContaining({
       pathKey: "mechanism:collateralization-ratio",
       responsibility: "measured-adverse",
@@ -653,7 +651,6 @@ describe("Safety Score v9 archetype backing adapters", () => {
     }, V9_CANDIDATE_POLICY_V1);
     expect(result.rateability).toBe("rateable");
     expect(result.score).toBe(0);
-    expect(result.pillarCeiling).toBe(0);
     expect(result.limitedEvidenceCauses).toEqual(["D"]);
     expect(result.supportedComponentKeys).toEqual(["mechanism:uncovered-liability"]);
   });
@@ -1008,7 +1005,6 @@ describe("Safety Score v9 archetype backing adapters", () => {
         severity: "critical",
       }),
     );
-    expect(result.pillarCeiling).toBeNull();
   });
 
   it("does not require an issuer for direct non-obligor collateral", () => {
@@ -1038,7 +1034,6 @@ describe("Safety Score v9 CDP collateralization bands (Lever 4)", () => {
     const result = evaluateV9Backing(asset(), { ...cdpBase, collateralizationRatio: 1.03 }, V9_CANDIDATE_POLICY_V1);
     expect(collateralizationReason(result)).toMatchObject({ kind: "unsafe-backing", severity: "high" });
     expect(result.structuralReasons.some((reason) => reason.severity === "critical")).toBe(false);
-    expect(result.pillarCeiling).toBeNull();
   });
 
   it("keeps a moderate rung in [1.05, 1.10) so there is no critical->nothing cliff", () => {
@@ -1075,7 +1070,6 @@ describe("Safety Score v9 CDP collateralization bands (Lever 4)", () => {
       kind: "unsafe-backing",
       severity: "critical",
     });
-    expect(result.pillarCeiling).toBeNull();
   });
 
   it("escalates a thin CDP with observed material bad debt to critical via the CR predicate only", () => {

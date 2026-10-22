@@ -509,11 +509,9 @@ function evaluateOraclePhase(context: ControlEvaluationContext): void {
           failureDomains,
         });
       }
-      // Weak market branches below the deployment-materiality threshold do not
-      // drive the material-only tier above, but stay visible as one non-binding
-      // diagnostic (5-10% -> moderate@74 ceiling, <5% -> low). It carries a
-      // single synthetic failure domain so it never trips the common-mode
-      // multi-branch oracle cap, and its ceiling sits above a healthy composite.
+      // Weak market branches below the deployment-materiality threshold stay
+      // visible as a diagnostic without changing the material-only tier above.
+      // Their synthetic failure domain preserves the aggregate branch identity.
       if (oracle.subMaterialWeakBand !== undefined) {
         addStructuralFailure({
           kind: "weak-oracle-branch",

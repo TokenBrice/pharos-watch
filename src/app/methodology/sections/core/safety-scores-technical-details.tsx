@@ -17,7 +17,7 @@ export function SafetyScoresTechnicalDetails() {
     .filter((ceiling) => ceiling.limit !== null)
     .map((ceiling) => `<${ceiling.maxMonthsExclusive}m → ${ceiling.limit}`)
     .join(" · ");
-  const rounding = `${formula.rounding.uncapped} own score; floor each ceiling once, then integer minimum`;
+  const rounding = "nearest own score; floor each ceiling once, then integer minimum";
 
   return (
     <>

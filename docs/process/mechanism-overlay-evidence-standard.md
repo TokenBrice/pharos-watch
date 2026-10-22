@@ -229,7 +229,7 @@ bounded, not a new unsupported-family blocker.
 The claim component is serial: a missing or unsupported exact claim cannot earn a rating.
 A documented operational claim can be limited while enforceable legal priority is unknown;
 it is not a statutory fiat claim or proof of segregation. Every unproved component remains
-a required fact with null quality priced at `semantic.backing.boundedUnknownQuality`.
+a required fact with null quality priced by `unknownQuality("backing", cause)` (C35/U50).
 Unvalued circular positions, residual modules, contingent derivatives and unknown liabilities
 are charged in conservation/NAV and allocation/collateral components; absence never becomes
 zero economic exposure. Issuer nondisclosure keeps `issuer-undisclosed` attribution and its

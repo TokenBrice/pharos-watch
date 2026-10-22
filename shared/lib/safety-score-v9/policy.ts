@@ -325,12 +325,16 @@ export function loadV9CandidateMethodologyPolicy(
 
 export const V9_CANDIDATE_POLICY_V1 = loadV9CandidateMethodologyPolicy();
 
-/** The sole cause-dependent price of an applicable but unknown pillar factor. */
+/**
+ * Prices only an applicable factor whose quality is unknown, not a measured value.
+ * C selects non-disclosure pricing; all other causes select the research-unknown
+ * price. A D gap elsewhere in the status cannot establish this factor's quality.
+ * Callers retain measured adverse values and apply A/B exclusion separately.
+ */
 export function unknownQuality(
   pillar: V9QualityPillar,
   cause: V9EvidenceCause | null | undefined,
   semantic: Pick<V9MethodologySemantic, "unknownQuality"> = V9_CANDIDATE_POLICY_V1.policy.semantic,
 ): number {
-  if (cause === "D") throw new Error("Measured adverse evidence cannot use an unknown quality");
   return semantic.unknownQuality[pillar][cause === "C" ? "C" : "U"];
 }

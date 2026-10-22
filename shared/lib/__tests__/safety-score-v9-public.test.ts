@@ -1539,7 +1539,7 @@ describe("Safety Score v9 public projection", () => {
       source: "asset-premium",
       kind: "market-anchor-longevity",
       label: "#1 & Longevity Premium",
-      configuredPoints: 12,
+      configuredPoints: 14,
       appliedPoints: 4,
       scoreBefore: 83,
       scoreAfter: 87,

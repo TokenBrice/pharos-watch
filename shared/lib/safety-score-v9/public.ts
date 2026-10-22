@@ -1268,7 +1268,6 @@ export function projectSafetyScoreV9CommonModeGroups(
       const trace = resultById.get(assetId)?.trace;
       const card = cardById.get(assetId);
       if (!trace || !card) throw new Error(`Common-mode member ${assetId} has no evaluated public card`);
-      const capIndices: number[] = [];
       const deploymentAdjustmentIndices = card.scoreTrace.deploymentRisk.adjustments.flatMap(
         (adjustment, index) => adjustment.failureDomainKey === id ? [index] : [],
       );
@@ -1278,8 +1277,8 @@ export function projectSafetyScoreV9CommonModeGroups(
       if (expectedAdjustment && deploymentAdjustmentIndices.length === 0) {
         unjoinedAssetIds.push(assetId);
       }
-      return capIndices.length || deploymentAdjustmentIndices.length
-        ? [{ assetId, capIndices, deploymentAdjustmentIndices }]
+      return deploymentAdjustmentIndices.length
+        ? [{ assetId, capIndices: [], deploymentAdjustmentIndices }]
         : [];
     });
     if (unjoinedAssetIds.length > 0) {

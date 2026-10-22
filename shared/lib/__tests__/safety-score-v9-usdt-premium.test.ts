@@ -96,21 +96,38 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
       finalScore: 87,
       inheritableScore: 75,
       finalGrade: "A+",
-      preCapScore: 87,
+      preCapScore: 89,
       bindingCap: null,
       scoreAdjustments: [{
         source: "asset-premium",
         kind: "market-anchor-longevity",
         label: "#1 & Longevity Premium",
-        configuredPoints: 12,
-        appliedPoints: 12,
+        configuredPoints: 14,
+        appliedPoints: 14,
         scoreBefore: 75,
-        scoreAfter: 87,
+        scoreAfter: 89,
         publishedScoreBefore: 75,
         publishedScoreAfter: 87,
       }],
     });
     expect(projectV9DependencyScore(trace)).toBe(75);
+  });
+
+  it("keeps the sanctioned asset in its owner-approved A band under stricter reserve pricing", () => {
+    const input = healthyInput();
+    input.pillars = {
+      backing: pillar(56, { evidenceLevel: "limited" }),
+      exit: pillar(75),
+      control: pillar(75),
+    };
+    const trace = scoreV9EvaluatedAsset(input, V9_CANDIDATE_POLICY_V1);
+    expect(trace).toMatchObject({
+      finalScore: 80, finalGrade: "A-", inheritableScore: 66,
+      scoreAdjustments: [{ configuredPoints: 14, appliedPoints: 14, publishedScoreBefore: 66 }],
+    });
+    expect(projectV9DependencyScore(trace)).toBe(66);
+    const ordinary = scoreV9EvaluatedAsset({ ...input, assetId: "non-premium-fixture" }, V9_CANDIDATE_POLICY_V1);
+    expect(ordinary).toMatchObject({ finalScore: 66, scoreAdjustments: [] });
   });
 
   it("preserves own-score rounding while applying the premium without cap relief", () => {
@@ -128,7 +145,7 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
 
     expect(trace.scoreAdjustments[0]).toMatchObject({
       scoreBefore: 82.5364,
-      scoreAfter: 94.5364,
+      scoreAfter: 96.5364,
       publishedScoreBefore: 83,
       publishedScoreAfter: 87,
     });
@@ -229,8 +246,8 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
       inheritableScore: 76,
       finalGrade: "A+",
       scoreAdjustments: [{
-        configuredPoints: 12,
-        appliedPoints: 12,
+        configuredPoints: 14,
+        appliedPoints: 14,
         publishedScoreBefore: 76,
         publishedScoreAfter: 87,
       }],
@@ -257,9 +274,9 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
     const trace = scoreV9EvaluatedAsset(input, V9_CANDIDATE_POLICY_V1);
     const [adjustment] = trace.scoreAdjustments;
 
-    expect(adjustment).toMatchObject({ kind: "market-anchor-longevity", appliedPoints: 12 });
+    expect(adjustment).toMatchObject({ kind: "market-anchor-longevity", configuredPoints: 14, appliedPoints: 14 });
     expect(adjustment!.publishedScoreBefore).toBeLessThan(75);
-    expect(trace.finalScore).toBe(adjustment!.publishedScoreBefore + 12);
+    expect(trace.finalScore).toBe(Math.min(adjustment!.publishedScoreBefore + 14, 87));
     expect(trace.inheritableScore).toBe(adjustment!.publishedScoreBefore);
   });
 

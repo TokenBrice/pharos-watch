@@ -647,7 +647,7 @@ describe("Safety Score v9 backing exposure primitives", () => {
     const mechanismWeight = 1 - archetypePolicy.reserveWeight;
     const mechanismContributions = result.contributions.filter((entry) => entry.source === "mechanism");
 
-    expect(result).toMatchObject({ rateability: "rateable", pillarCeiling: null });
+    expect(result).toMatchObject({ rateability: "rateable" });
     expect(result.score).toBeCloseTo(reserve.score! * archetypePolicy.reserveWeight + 50 * mechanismWeight, 12);
     expect(result.score).toBeGreaterThan(50);
     expect(mechanismContributions.map((entry) => entry.componentKey)).toEqual([

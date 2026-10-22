@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import candidatePolicyAsset from "@shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
 import {
+  CompiledV9AssetInputSchema,
   V9_REASON_CODES,
   V9UnresolvedFactSchema,
   type V9MethodologyPolicy,
@@ -13,6 +14,7 @@ import {
   assertV9ValidatedPolicyEnvelope,
   loadV9MethodologyPolicy,
   resolveV9ReasonTreatment,
+  unknownQuality,
 } from "../safety-score-v9/policy";
 import type { V9EvidenceCause } from "../../types/safety-score-v9-causes";
 
@@ -227,6 +229,31 @@ describe("Safety Score v9 methodology policy", () => {
       invalid.semantic.unknownQuality[pillar].U = Number.NaN;
       expect(() => loadV9MethodologyPolicy(invalid)).toThrow();
     }
+  });
+
+  it.each(["backing", "exit", "control"] as const)(
+    "prices an unknown %s factor consistently even when its status includes an adverse gap",
+    (pillar) => {
+      const quality = V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality[pillar];
+      expect(unknownQuality(pillar, "C")).toBe(quality.C);
+      for (const cause of ["A", "B", "U", "D", null, undefined] as const) {
+        expect(unknownQuality(pillar, cause)).toBe(quality.U);
+      }
+    },
+  );
+
+  it("admits a missing pillar without inventing critical unresolved evidence", () => {
+    const unresolved = [{
+      code: "missing-pillar-evidence" as const, reason: "No usable pillar evidence.",
+      cause: "U" as const, critical: false, responsibility: "unresearched" as const,
+    }];
+    const schema = CompiledV9AssetInputSchema.shape.pillars.shape.backing;
+    for (const facts of [[], unresolved]) {
+      expect(schema.parse({ score: null, evidenceLevel: "insufficient", evidence: [], unresolved: facts }).score).toBeNull();
+      expect(() => assertV9UnresolvedFactsMatchPolicy(V9_CANDIDATE_POLICY_V1, facts)).not.toThrow();
+    }
+    expect(() => schema.parse({ score: 80, evidenceLevel: "strong", evidence: [], unresolved: [] }))
+      .toThrow(/at least one evidence reference/);
   });
 
   it("requires the active measured-compromise rung independently of unknown controller quality", () => {

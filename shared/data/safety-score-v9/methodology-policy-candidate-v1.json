@@ -171,7 +171,6 @@
         }
       ],
       "capTiePriority": ["active-depeg", "realized-holder-loss", "parent", "speculative-credit", "track-record"],
-      "rounding": { "uncapped": "nearest" },
       "realizedHolderLoss": {
         "initialLimits": { "severe": 39, "offPeg": 49 },
         "holdDays": 365,
@@ -188,7 +187,7 @@
           "assetId": "usdt-tether",
           "kind": "market-anchor-longevity",
           "label": "#1 & Longevity Premium",
-          "points": 12,
+          "points": 14,
           "maximumPublishedScore": 87,
           "minimumTrackRecordMonths": 120,
           "requiredMarketRank": 1,
@@ -197,8 +196,7 @@
         }
       ],
       "danger": {
-        "adverseAttributionPegMultiplierFloor": 0.9,
-        "activeDepegMinimumBpsExclusive": 0
+        "adverseAttributionPegMultiplierFloor": 0.9
       }
     },
     "evidence": {
