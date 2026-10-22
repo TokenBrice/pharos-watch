@@ -2,8 +2,8 @@
   {
     "version": "10.31",
     "title": "Exposure-weighted local authority",
-    "date": "2026-10-24",
-    "effectiveAt": 1792800000,
+    "date": "2026-10-22",
+    "effectiveAt": 1792699200,
     "summary": "Safety Score v10.31 prices known-share deployment-local authority through a resolved mixture of the same aggregation and peg pipeline used for global Control. There is no materiality threshold; the Control pillar retains global paths, while local authority is disclosed in deployment adjustments.",
     "impact": [
       "Methodology — preCap = R(B) − Σ s_i × (R(B) − R(B_q_i)). B uses priced-unknown aggregation pillars and the peg multiplier; B_q replaces resolved Control C with min(C, q). Neither endpoint includes caps, rounding or the USDT premium. R resolves non-authority deployment signals only.",
@@ -12,7 +12,7 @@
       "Attribution — dominated authority paths cost zero naturally, while worse local powers remain priced even under a shared root. Exact mint/upgrade common-mode controller rows owned by the local-authority lane are diagnostic, not a second charge; independent bridge, oracle and chain infrastructure remains priced. Fully supported local-only inventories use neutral pre-authority Control90; genuine gaps keep their handling. Authority ownership survives serialized score-input round trips. Authority rows follow infrastructure rows with resolved counterfactual exposed scores; infrastructure allocations may change as authority leaves their normalization pool.",
       "Activation evidence — fixed-clock engine replays of two production captures (2026-10-22T17:19Z and 19:18Z, 395 assets each, zero quarantines) against v10.30 give identical movers: 10 score movers, all up, 7 rated-grade upgrades, 0 downgrades. fxUSD C+60→B−68, DOC C+60→B−68, sUSDC-v1 C+60→B−65, spUSDT C+60→B−65, eUSD C+63→B−65, fxSAVE C−50→C58 (through its fxUSD parent), vCHF C55→C58, eEarn C−53→C56 (a bounded local minter no longer binds Control; Control 50→60), BTCUSD D46→D48 and USDCV A−80→A−81; no production acceptance is claimed. Material bounded local powers that previously bound Control now use exposure-weighted pricing. Existing two-publication grade hysteresis may hold a prior letter on the first accepted publication; review gradeHold and provisional labels alongside scores, dependencies and the post-deploy first-cycle check.",
       "Mover disclosure — listed score/grade movers are post-cap outcomes, not a complete pre-cap movement census. Both captures also show cap-masked pre-cap changes: musd −0.36; usdat 62.47→66.29 masked at 62, with its parent cap becoming binding; syusd +0.67 and usdnr +0.013. Capped children can change pre-cap stages or cap binding without changing their published score or letter.",
-      "Planned activation is provisionally 2026-10-24 00:00 UTC (1792800000); re-date effectiveAt at release."
+      "Activation: 2026-10-22 20:00 UTC (release cut; 1792699200). Production acceptance follows the first accepted publications."
     ],
     "commits": [],
     "reconstructed": false

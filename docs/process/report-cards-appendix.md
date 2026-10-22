@@ -14,7 +14,7 @@ Authority shares are never rescaled or trimmed. At every total, authority loss i
 
 Infrastructure resolver rows come first internally, followed by authority rows with sequential score stages and `exposedScore = R(B_q)`. Public projection preserves its canonical sorting; reconciliation checks infrastructure and authority lanes separately. The row reason names the local deployment, nominal supply share and quality. There is no public schema or representation-version bump. Infrastructure facts/policy qualities stay unchanged, but their allocated shares and points may move when authority leaves the normalization pool.
 
-Planned activation is provisionally 2026-10-24 00:00 UTC (1792800000); re-date effectiveAt at release. The orchestrator owns locked two-capture replay, mover attribution and activation gates. Existing two-publication grade hysteresis and provisional labels require review; local implementation is not production acceptance.
+Activation: 2026-10-22 20:00 UTC (release cut; 1792699200). Two production captures replay to identical movers; existing two-publication grade hysteresis may hold letters for one publication, and production acceptance follows the first accepted publications.
 
 ## v10.29 Simplified Model
 

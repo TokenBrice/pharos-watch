@@ -481,14 +481,15 @@ describe("methodology registry", () => {
     }
   });
 
-  it("records v10.31's provisional Q* activation without claiming replay acceptance", () => {
+  it("records v10.31's Q* release cut without claiming replay acceptance", () => {
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0]!;
     expect(release).toMatchObject({
-      version: "10.31", date: "2026-10-24", effectiveAt: 1792800000, reconstructed: false, commits: [],
+      version: "10.31", date: "2026-10-22", effectiveAt: 1792699200, reconstructed: false, commits: [],
     });
     expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.30");
     expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.31");
-    expect(release.impact.join(" ")).toContain("Planned activation is provisionally 2026-10-24 00:00 UTC (1792800000); re-date effectiveAt at release.");
+    expect(release.impact.join(" ")).toContain("Activation: 2026-10-22 20:00 UTC (release cut; 1792699200).");
+    expect(release.impact.join(" ")).not.toMatch(/provisionally|re-date/i);
     expect(release.impact.join(" ")).toContain("no production acceptance is claimed");
     expect(release.impact.join(" ")).toContain("without trimming or rescaling");
     expect(release.impact.join(" ")).toContain("movers are post-cap");
