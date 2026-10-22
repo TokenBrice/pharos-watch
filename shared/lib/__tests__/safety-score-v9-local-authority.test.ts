@@ -35,8 +35,7 @@ describe("Q* resolved local authority mixture", () => {
     }, dependencyStructuralSignals: [{ ...common, pricedInPillar: "control" }] });
     const result = scoreV9EvaluatedAsset(local, policy);
     expect(result.preCapScore).toBe(scoreV9EvaluatedAsset(global, policy).preCapScore);
-    expect(result.deploymentAdjustments).toHaveLength(1);
-    if (quality === 90) expect(result.deploymentAdjustments[0]?.adjustmentPoints).toBe(0);
+    expect(result.deploymentAdjustments).toHaveLength(quality === 90 ? 0 : 1);
     expect(scoreV9EvaluatedAsset(JSON.parse(JSON.stringify(local)), policy)).toEqual(result);
     for (const failureDomainKeys of [["bridge:ethereum:root"], ["oracle-feed:ethereum:root"], ["chain:ethereum"]]) {
       const infrastructure = scoreV9EvaluatedAsset({ ...local,
@@ -89,14 +88,20 @@ describe("Q* resolved local authority mixture", () => {
     expect(resolve([authority(60, 1)], signals).finalScore).toBe(global.finalScore);
   });
 
-  it("charges dominated paths exactly zero without diluting sibling deductions (CE1)", () => {
+  it("omits dominated authority rows without diluting sibling deductions (CE1)", () => {
     const baseline = resolve([], [sibling]);
     for (const share of [0, 0.05, 0.0999, 0.1, 1]) {
       const result = resolve([authority(75, share)], [sibling]);
       expect(result.finalScore).toBe(baseline.finalScore);
-      expect(result.adjustments[0]).toEqual(baseline.adjustments[0]);
-      expect(result.adjustments[1]?.adjustmentPoints).toBe(0);
+      expect(result.adjustments).toEqual(baseline.adjustments);
     }
+  });
+
+  it("omits zero-share authority rows while retaining every positive modeled loss", () => {
+    expect(resolve([authority(25, 0)]).adjustments).toHaveLength(0);
+    const positive = resolve([authority(25, Number.EPSILON)]);
+    expect(positive.adjustments).toHaveLength(1);
+    expect(positive.adjustments[0]?.adjustmentPoints).toBeGreaterThan(0);
   });
 
   it("groups controls on one slice at worst quality and preserves split/merge invariance", () => {

@@ -641,6 +641,9 @@ export function resolveV9LocalAuthorityRisk(
     const share = slice.share;
     const exposedScore = resolveV9ScopedRisk(scoreWithControl(slice.quality), signals).finalScore;
     const adjustmentPoints = Math.max(0, Math.min(remainingLoss, share * (resolved.finalScore - exposedScore)));
+    // Dominated/zero-share paths are already disclosed by Control components.
+    // Retain overlap diagnostics even when the global-equivalent loss is exhausted.
+    if (adjustmentPoints === 0 && !overlap) continue;
     const signalKey = `local-authority:${slice.deploymentKey}`;
     const sourceSignalKeys = [...new Set([signalKey, ...slice.sourceSignals.map(scopedSignalKey)])].sort(compareText);
     adjustments.push({
@@ -650,7 +653,7 @@ export function resolveV9LocalAuthorityRisk(
       failureDomainKey: slice.failureDomainKeys.join("+") || signalKey,
       nominalExposureShare: slice.share, exposureShare: share, exposedScore,
       scoreBefore: score, scoreAfter: Math.max(0, score - adjustmentPoints), adjustmentPoints,
-      reason: `Local admin on ${slice.deploymentKey} (${Number((slice.share * 100).toFixed(4))}% of supply) scores ${slice.quality}` +
+      reason: `Local admin quality ${slice.quality}` +
         (overlap ? "; overlapping authority slices exceed 100.1%: total charge capped at the worst global-equivalent path." : "."),
     });
     score = Math.max(0, score - adjustmentPoints);
