@@ -3,6 +3,13 @@ import { z } from "zod";
 const FRESHNESS_STATUS_VALUES = ["fresh", "degraded", "stale"] as const;
 export const FreshnessStatusSchema = z.enum(FRESHNESS_STATUS_VALUES);
 
+/**
+ * `X-Data-Freshness-Reason` for a Safety Score publication past the V9 consumer budget (one missed
+ * publication). It is the scoring fail-close verdict behind `X-Safety-Score-Status: stale`, not a
+ * reader staleness claim: reader health ages that publication against its own band (ADR-42).
+ */
+export const SAFETY_SCORE_PUBLICATION_AGE_REASON = "safety-score-publication-age";
+
 /** Effective age bands and the wall clock at which a freshness verdict was assessed. */
 export const FreshnessAssessmentSchema = z.object({
   assessedAt: z.number(),

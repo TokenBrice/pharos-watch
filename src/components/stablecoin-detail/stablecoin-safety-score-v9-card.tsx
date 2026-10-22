@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
-import { PartialEvidenceChip } from "@/components/stablecoin-detail/ops-status-chip";
 import { ScoreConstructionPanel } from "@/components/stablecoin-detail/score-construction-panel";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
@@ -114,7 +113,7 @@ export function StablecoinSafetyScoreV9Card({
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           {/* No coin prefix: the dossier hero and rail already name the coin. */}
           <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Safety Score</StablecoinModuleTitle>
-          <PartialEvidenceChip card={card} />
+
         </div>
         <HeaderActions updatedAtMs={updatedAtMs} />
       </CardHeader>

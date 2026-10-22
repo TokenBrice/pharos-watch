@@ -58,9 +58,6 @@ export interface ReserveCompositionSlice {
   role?: string | null;
 }
 
-const SECONDS_PER_DAY = 86_400;
-const SECONDS_PER_HOUR = 3_600;
-
 function isNetworkFetchError(error: unknown): boolean {
   return error instanceof TypeError
     && /failed to fetch|networkerror|load failed|network request failed/i.test(error.message);
@@ -333,36 +330,6 @@ export function buildReserveSourceChip(reserves: ReserveResult | null): ReserveS
   };
 }
 
-function formatDuration(seconds: number): string {
-  if (seconds >= SECONDS_PER_DAY) {
-    const days = Math.round((seconds / SECONDS_PER_DAY) * 10) / 10;
-    return `${days} ${days === 1 ? "day" : "days"}`;
-  }
-  if (seconds >= SECONDS_PER_HOUR) return `${Math.round((seconds / SECONDS_PER_HOUR) * 10) / 10} h`;
-  return `${Math.round(seconds / 60)} min`;
-}
-
-function formatBudget(seconds: number): string {
-  if (seconds >= SECONDS_PER_DAY) {
-    const days = Math.round((seconds / SECONDS_PER_DAY) * 10) / 10;
-    return `${days}-day budget`;
-  }
-  return `${Math.max(1, Math.round(seconds / SECONDS_PER_HOUR))}-hour budget`;
-}
-
-/** Date of the evidence the feed last collected: attested report date first, else the source timestamp. */
-function reserveEvidenceDate(reserves: ReserveResult): number | null {
-  const assurance = reserves.metadata?.details?.assurance;
-  const reportDate = assurance && typeof assurance === "object" && "reportDate" in assurance
-    && typeof assurance.reportDate === "string" ? Date.parse(assurance.reportDate) : Number.NaN;
-  if (Number.isFinite(reportDate)) return reportDate;
-  const sourceTimestamp = reserves.sync?.freshness?.sourceTimestamp ?? reserves.metadata?.sourceTimestamp;
-  return typeof sourceTimestamp === "number" && Number.isFinite(sourceTimestamp) ? sourceTimestamp * 1000 : null;
-}
-
-/** A stale-source-age diagnostic, as the adapter validators and the sync warning both word it. */
-const SOURCE_AGE_DIAGNOSTIC = /source timestamp is (\d+)s old.*?\(max (\d+)s\)/i;
-
 function buildSyncFeedStatus(reserves: ReserveResult): ReserveFeedStatusModel | null {
   const sync = reserves.sync;
   if (!sync || (sync.status === "ok" && !sync.uncertainWrite)) return null;
@@ -378,53 +345,16 @@ function buildSyncFeedStatus(reserves: ReserveResult): ReserveFeedStatusModel | 
     };
   }
 
-  const diagnostics = [...(sync.lastError ? [sync.lastError] : []), ...(sync.warnings ?? [])];
-  const ageDiagnostics = diagnostics.map((text) => SOURCE_AGE_DIAGNOSTIC.exec(text));
-  const isAgeOnly = (sync.status === "degraded" || sync.status === "error")
-    && !sync.uncertainWrite
-    && diagnostics.length > 0
-    && ageDiagnostics.every((match) => match != null);
-
-  if (isAgeOnly) {
-    const ageMatch = ageDiagnostics.find((match) => match != null) ?? null;
-    const budgetSec = sync.freshness?.sourceAgeBudgetSec ?? (ageMatch ? Number(ageMatch[2]) : null);
-    const ageSec = sync.freshness?.sourceAgeSec ?? (ageMatch ? Number(ageMatch[1]) : null);
-    const evidenceDate = reserveEvidenceDate(reserves);
-    const label = [
-      "Reserve feed stale",
-      // en-US month abbreviation: en-GB spells September "Sept".
-      ...(evidenceDate != null
-        ? [`last report ${new Date(evidenceDate).getUTCDate()} ${new Date(evidenceDate).toLocaleDateString("en-US", { month: "short", timeZone: "UTC" })}`]
-        : []),
-      ...(budgetSec != null ? [formatBudget(budgetSec)] : []),
-    ].join(" · ");
-    const rows = [
-      "Reason: source-age",
-      ...(ageSec != null && budgetSec != null
-        ? [`Source age: ${formatDuration(ageSec)} (budget ${formatDuration(budgetSec)})`]
-        : []),
-      "The latest collected disclosure is older than this source’s accepted reporting window.",
-      formatReserveSnapshotLabel(reserves),
-    ];
-    return {
-      label,
-      tone: "watch",
-      reason: "source-age",
-      summary: "The latest collected disclosure is older than this source’s accepted reporting window.",
-      rows,
-      retryable: false,
-    };
-  }
-
-  // Other sync faults over a served live book (partial reads, uncertain writes, adapter errors) are
-  // operator signal (Telegram, /status); unreadable constituents stay marked at the value itself.
+  // Other sync faults over a served live book (source age past its budget, partial reads, uncertain
+  // writes, adapter errors) are operator signal (Telegram, /status); unreadable constituents and
+  // out-of-window evidence stay marked at the value itself.
   return null;
 }
 
 /**
  * The reserve feed's ops state as one amber/neutral header chip plus disclosure
  * rows: a failed fetch first (it is the freshest signal), else the sync state.
- * Never carries raw adapter error text; ages read in days.
+ * Never carries raw adapter error text.
  */
 export function buildReserveFeedStatus(
   reserves: ReserveResult | null,

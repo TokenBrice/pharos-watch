@@ -1,0 +1,40 @@
+name: Ops Follow-up Reminders
+
+# Comments once a week on open `ops:followup` issues whose `Due: YYYY-MM-DD` line has passed,
+# so the issue author gets a GitHub notification (docs/process/agent-artifacts.md#follow-up-issues).
+
+on:
+  schedule:
+    - cron: "30 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Comment on overdue follow-ups
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          marker='<!-- ops-followup-overdue -->'
+          today=$(date -u +%F)
+          recent=$(date -u -d '6 days ago' +%FT%TZ)
+          gh issue list --label ops:followup --state open --limit 200 --json number,body,comments \
+            | jq -r --arg today "$today" --arg recent "$recent" --arg marker "$marker" '
+                .[]
+                | ((.body // "") | capture("(?m)^Due:\\s*(?<due>\\d{4}-\\d{2}-\\d{2})") | .due) as $due
+                | select($due != null and $due <= $today)
+                | select([.comments[] | select((.body | contains($marker)) and .createdAt >= $recent)] | length == 0)
+                | "\(.number) \($due)"' \
+            | while read -r number due; do
+                gh issue comment "$number" --body "$marker
+          Overdue since $due. Run the **Check**, then close this issue or move its \`Due:\` line."
+                echo "Reminded #$number (due $due)"
+              done

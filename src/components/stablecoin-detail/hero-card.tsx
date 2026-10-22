@@ -26,7 +26,7 @@ import {
   type HeroSectionBaseProps,
   type HeroTertiaryMetricConfig,
 } from "./hero-card-sections";
-import { HeroVariantChip, SafetyGradeHero, SafetyPartialEvidenceNote } from "./hero-card-identity";
+import { HeroVariantChip, SafetyGradeHero } from "./hero-card-identity";
 import { HeroPassportStrip } from "./hero-passport-strip";
 import { linkIconFor } from "./link-icon";
 
@@ -161,9 +161,6 @@ export function HeroIdentityHeader({
           <div className="ml-auto shrink-0 self-stretch lg:hidden">
             <SafetyGradeHero reportCard={reportCard} read={gradeRead} mobile />
           </div>
-        </div>
-        <div className="lg:hidden">
-          <SafetyPartialEvidenceNote reportCard={reportCard} />
         </div>
         {coin.oneLiner ? (
           <p className="mt-2 max-w-none text-pretty text-sm leading-relaxed text-muted-foreground">{coin.oneLiner}</p>

@@ -17,6 +17,11 @@ import {
   resolveApiBase,
   SchemaValidationError,
 } from "../api";
+import { SAFETY_SCORE_PUBLICATION_AGE_REASON } from "@pharos/contracts/api-meta";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
+import { deriveDataHealth, isPublicWarning } from "../data-health";
+import { DATA_HEALTH_PRESETS } from "../data-health-config";
 
 /** Minimal schema-valid live-reserve payload; override only the field under test. */
 function reserveBody(overrides: Record<string, unknown> = {}) {
@@ -662,6 +667,30 @@ describe("api contract validation policy", () => {
     });
     const result = await apiFetchWithMeta("/api/stablecoin/usdt-tether", z.object({ ok: z.boolean() }));
     expect(result.meta).toMatchObject({ updatedAt, ageSeconds: 7500, status: "stale", warning: '110 - "Response is stale"' });
+  });
+
+  it("reads the Safety Score consumer fail-close as degraded, aged against the Report Cards band", async () => {
+    const nowMs = Date.parse("2026-10-22T12:00:00.000Z");
+    vi.setSystemTime(new Date(nowMs));
+    const response = (ageSec: number, reason: string) => mockJsonOnce({ ok: true }, 200, {
+      "X-Data-Updated-At": String(nowMs / 1000 - ageSec), "X-Data-Age": String(ageSec),
+      "X-Data-Freshness": "stale", "X-Data-Freshness-Reason": reason, "X-Safety-Score-Status": "stale",
+      Warning: '110 - "Safety Score publication is stale (consumer budget 3600s)"',
+    });
+    const health = async (ageSec: number, reason = SAFETY_SCORE_PUBLICATION_AGE_REASON) => {
+      response(ageSec, reason);
+      const { meta } = await apiFetchWithMeta("/api/report-cards/v9-detail?stablecoin=paxg-paxos", z.object({ ok: z.boolean() }));
+      return deriveDataHealth({ ...DATA_HEALTH_PRESETS.reportCards, dataUpdatedAt: nowMs, hasData: true, meta }, nowMs);
+    };
+    const bandSec = FRESHNESS_RATIOS.DEGRADED * API_FRESHNESS_MAX_AGE_SEC.reportCards;
+    for (const ageSec of [3_660, 3 * 3_600, bandSec]) {
+      const entry = await health(ageSec);
+      expect(entry.state).toBe("degraded");
+      expect(isPublicWarning(entry)).toBe(false);
+    }
+    expect(isPublicWarning(await health(bandSec + 1))).toBe(true);
+    // Any other server stale reason keeps its floor.
+    expect((await health(3_660, "future-timestamp")).state).toBe("stale");
   });
 
   it.each(["", "unavailable", "invalid", "-1"])("does not replace invalid absolute producer clock %s with receipt time", async (updatedAt) => {

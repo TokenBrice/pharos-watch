@@ -117,7 +117,8 @@ describe("data-health hydration", () => {
   });
 
   it("hydrates settled stale reserves without turning a new request receipt into a generation", async () => {
-    vi.spyOn(Date, "now").mockReturnValue(savedAt + 72 * 3600_000);
+    // Past the 12x public band of the 48h fetch budget (ADR-42).
+    vi.spyOn(Date, "now").mockReturnValue(savedAt + 600 * 3600_000);
     const params = makeBuildStablecoinDetailViewModelParams({ supplemental: { reserves: {
       enabled: true, dataUpdatedAt: Date.now(),
       live: {
@@ -127,7 +128,7 @@ describe("data-health hydration", () => {
           freshness: {
             stale: true, staleReasons: ["fetch-age"], assessedAt: Date.now() / 1000,
             fetchedAt: savedAt / 1000, attemptId: "original-reserve-generation",
-            fetchAgeSec: 72 * 3600, fetchBudgetSec: 48 * 3600, freshnessMode: "not-applicable",
+            fetchAgeSec: 600 * 3600, fetchBudgetSec: 48 * 3600, freshnessMode: "not-applicable",
             sourceFreshnessInvalid: false, sourceTimestamp: null, sourceAgeSec: null,
             sourceAgeBudgetSec: null, sourceAgeBudgetCap: null,
           },

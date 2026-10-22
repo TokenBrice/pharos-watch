@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { PartialEvidenceChip } from "@/components/stablecoin-detail/ops-status-chip";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import type { Infrastructure } from "@shared/types";
@@ -78,9 +77,7 @@ export function SafetyGradeHero({
   }
 
   // The grade block never shrinks and sits beside the identity column, so it
-  // carries only the grade and score; the partial-evidence note renders full
-  // width below (SafetyPartialEvidenceNote). Inline, the note's width squeezed
-  // the mobile coin name until it broke one letter per line.
+  // carries only the grade and score.
   return (
     <div className={trackClass} data-safety-grade-track>
       <ScoreBadgeWrapper topic="safetyScore" variant="tooltip-only">
@@ -101,14 +98,6 @@ export function SafetyGradeHero({
   );
 }
 
-/** Partial-evidence qualifier for the hero grade: an amber chip, detail on tap. */
-export function SafetyPartialEvidenceNote({ reportCard }: { reportCard: V9ConsumerCard | null }) {
-  return (
-    <div className="mt-1 min-h-7">
-      {reportCard ? <PartialEvidenceChip card={reportCard} /> : null}
-    </div>
-  );
-}
 
 export function HeroVariantChip({
   variantParent,
