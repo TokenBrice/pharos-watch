@@ -6,7 +6,7 @@ import { BRIDGE_ROUTE_RISK_TIER_VALUES, ORACLE_RISK_TIER_VALUES } from "./core";
 import { issue, ScoreSchema } from "./safety-schema-primitives";
 import { V9SupplyAttributionPolicySchema } from "./safety-score-v9-supply-attribution";
 import { ExitExecutionModelPolicySchema } from "./exit-route";
-import { V9WrapperAllocationScopePolicySchema } from "./safety-score-v9-allocation";
+
 import { V9ExactControlPolicySchema } from "./safety-score-v9-control-scope";
 import { V9AccessLookthroughPolicySchema } from "./safety-score-v9-access-lookthrough";
 import { ReserveScopePolicySchema } from "./safety-score-v9-reserve-scope";
@@ -297,7 +297,6 @@ export const V9ScoringInputSchema = z
     trackRecordMonths: z.number().finite().nonnegative().nullable(),
     asOfSec: z.number().int().nonnegative().optional(),
     realizedHolderLossEvents: z.array(V9AdmittedHolderLossEventSchema).optional(),
-    unresolvedDeploymentShare: z.number().finite().min(0).max(1).optional(),
     activeDepegBps: z.number().finite().nonnegative().nullable(),
     parentRequired: z.boolean(),
     parentScore: ScoreSchema.nullable(),
@@ -440,7 +439,6 @@ export type V9AssetPremiumPolicy = z.infer<typeof V9AssetPremiumPolicySchema>;
 
 const V9FormulaPolicySchema = z
   .object({
-    wrapperAllocationScope: V9WrapperAllocationScopePolicySchema,
     pillarWeights: z
       .object({
         backing: z.number().finite().min(0).max(1),
@@ -747,7 +745,6 @@ const V9BackingPolicySchema = z
         "rwa-credit-fund": V9BackingArchetypePolicySchema,
         "ucits-trs-fund": V9BackingArchetypePolicySchema,
         "shared-reserve": V9BackingArchetypePolicySchema,
-        "protocol-position": V9BackingArchetypePolicySchema,
       })
       .strict(),
   })
@@ -838,29 +835,11 @@ const V9ControlPolicySchema = z
       }),
     resolvedIncidentHistory: z
       .object({
-        // A resolved mint incident caps the mint component; the cap relaxes with
-        // the incident's age but never reaches the clean-record ladder. Active
-        // incidents keep the untouched critical `active-control-incident` path.
-        resolvedIncidentQualityCaps: z
-          .object({ recent: ScoreSchema, aging: ScoreSchema, dated: ScoreSchema })
-          .strict(),
-        resolvedIncidentDecayMinMonths: z
-          .object({
-            aging: z.number().int().positive(),
-            dated: z.number().int().positive(),
-          })
-          .strict(),
+        // Resolved incidents share formula.realizedHolderLoss's hold/recovery clock.
+        // Active incidents retain the compromised authority rung without credits.
+        initialLimit: ScoreSchema,
       })
-      .strict()
-      .superRefine((signals, ctx) => {
-        const caps = signals.resolvedIncidentQualityCaps;
-        if (!(caps.recent <= caps.aging && caps.aging <= caps.dated)) {
-          issue(ctx, ["resolvedIncidentQualityCaps"], "Resolved-incident caps must relax monotonically with incident age");
-        }
-        if (signals.resolvedIncidentDecayMinMonths.aging >= signals.resolvedIncidentDecayMinMonths.dated) {
-          issue(ctx, ["resolvedIncidentDecayMinMonths"], "The dated incident tier must begin after the aging tier");
-        }
-      }),
+      .strict(),
     oracleTierQuality: exactEnumScoreMapSchema(ORACLE_RISK_TIER_VALUES.filter((tier) => tier !== "opaque-or-unknown")),
     bridgeTierQuality: exactEnumScoreMapSchema(BRIDGE_ROUTE_RISK_TIER_VALUES.filter((tier) => tier !== "opaque-or-unknown")),
     materialBridgeHighShareThreshold: z.number().finite().min(0).max(1),
@@ -995,7 +974,6 @@ const V9MaterialityPolicySchema = z
     deploymentMaterialSharePct: z.number().finite().min(0).max(100),
     haltedChainMinStallSec: z.number().int().positive(),
     nativeInventoryUnmatchedDustShareMax: z.number().finite().min(0).max(1),
-    unresolvedDeploymentBlendStartSharePct: z.number().finite().min(0).max(100),
     unresolvedDeploymentFullCeilingSharePct: z.number().finite().min(0).max(100),
     commonControlMinAssets: z.number().int().positive(),
     commonControlMinPaths: z.number().int().positive(),
@@ -1016,63 +994,12 @@ const V9MaterialityPolicySchema = z
   })
   .strict()
   .superRefine((materiality, ctx) => {
-    if (materiality.unresolvedDeploymentBlendStartSharePct >= materiality.unresolvedDeploymentFullCeilingSharePct) {
-      issue(ctx, ["unresolvedDeploymentFullCeilingSharePct"], "Unresolved-deployment full-ceiling share must exceed the blend-start share");
-    }
     if (materiality.commonModeShareThreshold >= materiality.commonModeHighShareThreshold) {
       issue(ctx, ["commonModeHighShareThreshold"], "Common-mode high-share threshold must exceed the diagnostic-share threshold");
     }
   });
 
 
-const V9OperationalResiliencePolicySchema = z
-  .object({
-    minimumLiveHistoryMonths: z.number().int().nonnegative(),
-    maximumCredit: z
-      .object({
-        backing: ScoreSchema,
-        exit: ScoreSchema,
-        control: ScoreSchema,
-      })
-      .strict(),
-    confidenceMultipliers: z
-      .object({
-        "issuer-reported": z.number().finite().min(0).max(1),
-        "independent-assurance": z.number().finite().min(0).max(1),
-        audited: z.number().finite().min(0).max(1),
-        measured: z.number().finite().min(0).max(1),
-      })
-      .strict(),
-    redemption: z
-      .object({
-        minimumCumulativeSupplyRatio: z.number().finite().nonnegative(),
-        minimumPeakStressSupplyRatio: z.number().finite().nonnegative(),
-        cumulativeCredit: ScoreSchema,
-        stressCredit: ScoreSchema,
-      })
-      .strict(),
-    marketDepth: z
-      .object({
-        minimumCompleteCycles: z.number().int().positive(),
-        minimumCompletionRatio: z.number().finite().min(0).max(1),
-        credit: ScoreSchema,
-      })
-      .strict(),
-    stressEpisodes: z
-      .object({
-        minimumEpisodes: z.number().int().positive(),
-        maximumRecoverySec: z.number().int().positive(),
-        credit: ScoreSchema,
-      })
-      .strict(),
-    reconciliation: z
-      .object({
-        minimumHistoryMonths: z.number().int().positive(),
-        credit: ScoreSchema,
-      })
-      .strict(),
-  })
-  .strict();
 
 const V9HistoricalValidationPolicySchema = z
   .object({
@@ -1116,7 +1043,6 @@ const V9MethodologySemanticSchema = z
     backing: V9BackingPolicySchema,
     exit: V9ExitPolicySchema,
     control: V9ControlPolicySchema,
-    operationalResilience: V9OperationalResiliencePolicySchema,
     historicalValidation: V9HistoricalValidationPolicySchema,
     decisions: V9DecisionPolicySchema,
     accessPostureVocabulary: z

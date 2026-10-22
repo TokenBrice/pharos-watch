@@ -1,7 +1,6 @@
 import { projectNegativeIncidentReview } from "../../../../scripts/lib/safety-score-v9-incident-runtime";
 import { describe, expect, it } from "vitest";
 import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-facts";
-import type { V9ApplicableWrapperLocalFacts } from "@shared/types/safety-score-v9-wrapper";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { V9NegativeIncidentReviewSchema, V9ReviewedIncidentSchema, v9NegativeIncidentReviewTimeSec } from "@shared/types/safety-score-v9-incidents";
 import incidentRegistry from "@shared/data/safety-score-v9/incident-reviews-v1.json";
@@ -10,18 +9,14 @@ import {
   projectSafetyScoreV9RealizedHolderLossEvents,
   addSafetyScoreV9IncidentEvidence,
   routeSafetyScoreV9ControlIncidents,
-  routeSafetyScoreV9WrapperIncidents,
-  routeSafetyScoreV9OperationalIncidents,
   routeSafetyScoreV9NegativeIncidentReviews,
   addSafetyScoreV9NegativeIncidentEvidence,
   getSafetyScoreV9NegativeIncidentReviews,
 } from "../safety-score-v9/extension-incidents";
 import type { ControlOverlay } from "../safety-score-v9/extension-shared";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
-import { getSafetyScoreV9OperationalResilienceOverlay } from "../safety-score-v9/extension-operational-resilience";
 import { expandReviewedRegistryReferences } from "@shared/lib/safety-score-v9/reviewed-registry";
 import { V9ReviewedIncidentRegistrySchema } from "@shared/types/safety-score-v9-incidents";
-import { SafetyScoreV9OperationalResilienceOverlaySchema } from "@shared/types/safety-score-v9-operational-resilience-overlays";
 
 const CLOCK_SEC = Date.parse("2026-08-24T23:59:59.000Z") / 1_000;
 
@@ -245,96 +240,9 @@ function control(controlKey: string): ControlOverlay {
   };
 }
 
-function wrapperFacts(): V9ApplicableWrapperLocalFacts {
-  const dimension = (assessment: "none" | "moderate") => ({
-    disposition: "reviewed" as const,
-    assessment,
-    signals: ["fixture-review"],
-    evidenceRefIds: ["fixture-evidence"],
-  });
-  return {
-    schemaVersion: 1,
-    applicability: "wrapper",
-    form: "native-staked",
-    formDisposition: "reviewed",
-    formSignals: ["wrapper-form:native-staked"],
-    formEvidenceRefIds: ["fixture-evidence"],
-    facts: {
-      contractMutability: dimension("none"),
-      custodyEscrow: dimension("none"),
-      strategyComplexity: dimension("none"),
-      leverage: dimension("none"),
-      rehypothecationCorrelation: dimension("none"),
-      shareAccountingNavOracle: dimension("moderate"),
-      withdrawalTerms: dimension("none"),
-      measuredUnwind: dimension("none"),
-      lossAbsorptionEmergencyControls: dimension("none"),
-    },
-  };
-}
 
 describe("Safety Score v9 domain-routed incident adapter", () => {
-  it("keeps resolved operational windows source-bound and covered by the latest contributing review", () => {
-    const overlayClock = Date.parse("2026-10-01T00:00:00Z") / 1_000;
-    const incidentClock = Date.parse("2026-10-22T00:00:00Z") / 1_000;
-    const productionOverlay = getSafetyScoreV9OperationalResilienceOverlay("usdt-tether", overlayClock);
-    if (productionOverlay === null) throw new Error("Expected operational overlay fixture");
-    for (const [assetId, windowEnd] of [
-      ["honey-berachain", "2025-11-04"],
-      ["yousd-yield-optimizer", "2026-01-14"],
-    ] as const) {
-      const incident = getSafetyScoreV9ReviewedIncidents(assetId, incidentClock)
-        .find((row) => row.domain === "operational");
-      if (incident === undefined) throw new Error("Expected resolved operational incident fixture");
-      for (const reviewedAt of [productionOverlay.reviewedAt, "2026-10-22T00:00:00.000Z"]) {
-        const routed = routeSafetyScoreV9OperationalIncidents({
-          ...productionOverlay,
-          assetId,
-          reviewedAt,
-          incidentReview: { state: "not-reviewed" },
-        }, [incident]);
-        expect(routed).toMatchObject({
-          reviewedAt: reviewedAt === productionOverlay.reviewedAt ? "2026-10-21T00:00:00.000Z" : reviewedAt,
-          incidentReview: {
-            state: "reviewed",
-            windowStart: incident.occurredAt,
-            windowEnd,
-            incidents: [{ incidentKey: incident.incidentId, resolvedAt: windowEnd }],
-          },
-        });
-        expect(SafetyScoreV9OperationalResilienceOverlaySchema.safeParse(routed).success).toBe(true);
-        expect(routed?.expiresAt).toBe(productionOverlay.expiresAt);
-      }
-    }
-  });
 
-  it("publishes dated vulnerability history without inventing scored incident postures", () => {
-    const reviewClock = Date.parse("2026-10-01T00:00:00Z") / 1_000;
-    const productionOverlay = getSafetyScoreV9OperationalResilienceOverlay("usdt-tether", reviewClock);
-    if (productionOverlay === null) throw new Error("Expected operational overlay fixture");
-    for (const assetId of ["usd3-reserve-protocol", "xaut-tether", "fxusd-f-x-protocol"]) {
-      expect(getSafetyScoreV9ReviewedIncidents(assetId, reviewClock - 1)).toEqual([]);
-      const incidents = getSafetyScoreV9ReviewedIncidents(assetId, reviewClock);
-      expect(incidents).toMatchObject([{
-        domain: "security-history",
-        status: "resolved",
-        realization: "no-reported-exploit",
-        posture: { treatment: "informational-only" },
-        remediation: { state: "verified" },
-      }]);
-      const baselineControl = control(`mint:${assetId}`);
-      const baselineMint = mintReview(baselineControl.controlKey);
-      const controlRoute = routeSafetyScoreV9ControlIncidents([baselineControl], baselineMint, incidents);
-      expect(controlRoute.controls).toEqual([baselineControl]);
-      expect(controlRoute.mintReview).toEqual(baselineMint);
-      const facts = wrapperFacts();
-      expect(routeSafetyScoreV9WrapperIncidents(facts, incidents, {
-        shareAccountingNavOracle: [], measuredUnwind: [],
-      })).toEqual(facts);
-      const overlay = { ...productionOverlay, assetId };
-      expect(routeSafetyScoreV9OperationalIncidents(overlay, incidents)).toEqual(overlay);
-    }
-  });
 
   it("routes USDp and ZSD into resolved control history without an active blocker", () => {
     const usdp = routeSafetyScoreV9ControlIncidents(
@@ -358,31 +266,6 @@ describe("Safety Score v9 domain-routed incident adapter", () => {
     );
   });
 
-  it("routes sDOLA once into wrapper facts and preserves integration-only scope", () => {
-    const incidents = getSafetyScoreV9ReviewedIncidents("sdola-inverse-finance", CLOCK_SEC);
-    const routed = routeSafetyScoreV9WrapperIncidents(wrapperFacts(), incidents, {
-      shareAccountingNavOracle: ["incident-source"],
-      measuredUnwind: ["incident-source"],
-    });
-    if (routed.applicability !== "wrapper") throw new Error("Expected wrapper facts");
-    expect(routed.facts.shareAccountingNavOracle.incidentPostures).toMatchObject([
-      {
-        incidentId: "sdola-2026-llamalend-donation-oracle",
-        scope: { kind: "integration-only", integrationKey: "llamalend-sdola-long2" },
-        assessment: "high",
-      },
-    ]);
-    expect(routed.facts.measuredUnwind.incidentPostures?.[0]).toMatchObject({
-      scope: { kind: "integration-only" },
-      assessment: "high",
-    });
-
-    const routedTwice = routeSafetyScoreV9WrapperIncidents(routed, incidents, {
-      shareAccountingNavOracle: ["incident-source"],
-      measuredUnwind: ["incident-source"],
-    });
-    expect(routedTwice).toEqual(routed);
-  });
 
   it("does not route a wrapper-local incident through control", () => {
     const baselineControl = control("mint:fixture");

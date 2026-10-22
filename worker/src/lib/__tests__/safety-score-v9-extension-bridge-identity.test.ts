@@ -95,26 +95,7 @@ describe("reviewed bridge representation allocation identity", () => {
     });
   });
 
-  it("retains current exact source-bound bridge roots for immutable mutability and fixed-face accounting", () => {
-    const input = fixture();
-    expect(BridgeRouteRiskProfileSchema.safeParse(input.meta.bridgeRouteRisk).success).toBe(true);
-    expect(input.wrapper.allocationScopeIdentityReview!.deployments).toHaveLength(2);
-    const { facts, context } = input.build();
-    expect(facts.facts.contractMutability).toMatchObject({ disposition: "reviewed", assessment: "none" });
-    expect(facts.facts.contractMutability.evidenceRefIds).toHaveLength(2);
-    expect(facts.facts.shareAccountingNavOracle).toMatchObject({ disposition: "reviewed", assessment: "none" });
-    const bridgeEvidence = facts.facts.contractMutability.evidenceRefIds.map((id) => context.evidence.get(id)!)
-      .find((evidence) => evidence.url === SOURCE.url);
-    expect(bridgeEvidence).toMatchObject({ url: SOURCE.url, observedAtSec: CLOCK - 100, freshness: { state: "current", maxAgeSec } });
-  });
 
-  it("admits a reviewed proxy representation only for exact fixed-face accounting, not immutable-root credit", () => {
-    const input = fixture(undefined, true);
-    expect(input.wrapper.allocationScopeIdentityReview!.deployments[1]).toMatchObject({ codeKind: "proxy",
-      implementation: "0x4444444444444444444444444444444444444444" });
-    expect(input.build().facts.facts.contractMutability).toMatchObject({ disposition: "unresearched", assessment: null });
-    expect(input.build().facts.facts.shareAccountingNavOracle).toMatchObject({ disposition: "reviewed", assessment: "none" });
-  });
 
   it("quarantines a route ID that contradicts its destination deployment", () => {
     const input = fixture((route) => { route.id = `arbitrum:${BRIDGE_ADDRESS}`; });
@@ -125,41 +106,5 @@ describe("reviewed bridge representation allocation identity", () => {
     expect(input.wrapper.allocationScopeIdentityReview).toBeUndefined();
   });
 
-  it.each(["stale-route", "missing-route", "stale-identity", "future-route", "future-identity", "unknown-route",
-    "missing-identity", "missing-block", "unbound-source", "wrong-chain", "wrong-address", "wrong-block"] as const)(
-    "blocks incomplete exhaustive review for %s without changing native identity", (fault) => {
-      const input = fixture((route) => {
-        switch (fault) {
-          case "stale-route": route.observedAt = new Date((CLOCK - maxAgeSec - 1) * 1_000).toISOString(); break;
-          case "missing-route": return false;
-          case "stale-identity": route.deploymentIdentity!.observedAtSec = CLOCK - maxAgeSec - 1; break;
-          case "future-route": route.observedAt = "2026-10-02"; break;
-          case "future-identity": route.deploymentIdentity!.observedAtSec = CLOCK + 1; break;
-          case "unknown-route": route.reviewDisposition = "unresolved"; break;
-          case "missing-identity": delete route.deploymentIdentity; break;
-          case "missing-block": delete route.observedBlock; break;
-          case "unbound-source": route.deploymentIdentity!.sourceUrl = "https://example.com/unbound"; break;
-          case "wrong-chain": route.deploymentIdentity!.chain = "arbitrum"; break;
-          case "wrong-address": route.deploymentIdentity!.address = NATIVE_ADDRESS; break;
-          case "wrong-block": route.deploymentIdentity!.block = 999; break;
-        }
-      });
-      expect(input.wrapper.allocationScopeIdentityReview).toMatchObject({ registeredDeploymentKeys: [
-        `base:${BRIDGE_ADDRESS}`, `ethereum:${NATIVE_ADDRESS}`,
-      ], deployments: [{ codeKind: "immutable", chain: "ethereum", address: NATIVE_ADDRESS, block: 123, observedAtSec: CLOCK }] });
-      expect(input.wrapper.allocationScopeIdentityReview!.deployments).toHaveLength(1);
-      const { facts } = input.build();
-      expect(facts.facts.contractMutability).toMatchObject({ disposition: "unresearched", assessment: null });
-      expect(facts.facts.shareAccountingNavOracle).toMatchObject({ disposition: "unresearched", assessment: null });
-    },
-  );
 
-  it("admits the existing reviewed-research budget inclusively", () => {
-    const input = fixture((route) => {
-      route.observedAt = new Date((CLOCK - maxAgeSec) * 1_000).toISOString();
-      route.deploymentIdentity!.observedAtSec = CLOCK - maxAgeSec;
-    });
-    expect(input.wrapper.allocationScopeIdentityReview!.deployments).toHaveLength(2);
-    expect(input.build().facts.facts.contractMutability.assessment).toBe("none");
-  });
 });

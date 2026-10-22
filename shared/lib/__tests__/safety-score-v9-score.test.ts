@@ -147,22 +147,6 @@ describe("scoreV9EvaluatedAsset", () => {
     expect(trace.limitingPillars).toEqual([]);
   });
 
-  it.each(["A", "B"] as const)("preserves wrapper-local partial exclusions (%s)", (cause) => {
-    const scoringDisposition = cause === "A" ? "excluded-pipeline" as const : "excluded-uncurated" as const;
-    const trace = scoreV9EvaluatedAsset(input({ parent: {
-      required: true, score: 95, propagatedReasons: [], wrapperParentLimit: {
-        schemaVersion: 1, parentScore: 98, form: "pure",
-        appliedDiscount: 3, limit: 95, factsComplete: false,
-        missingFacts: [{ factClass: "measuredUnwind", disposition: cause === "A" ? "producer-failed" : "public-data-uncurated",
-          cause, causeGapIds: ["gap:wrapper"], scoringDisposition }],
-      },
-    } }), V9_CANDIDATE_POLICY_V1);
-    expect(trace.partialEvidence).toMatchObject({
-      excludedPillars: [], excludedComponentKeys: ["wrapper-local:measuredUnwind"],
-      causeGapIds: ["gap:wrapper"], causes: [cause],
-    });
-    expect(trace.limitingPillars).toEqual([]);
-  });
 
   it.each(["A", "B"] as const)("preserves inherited parent partial exclusions (%s)", (cause) => {
     const trace = scoreV9EvaluatedAsset(input({ parent: {

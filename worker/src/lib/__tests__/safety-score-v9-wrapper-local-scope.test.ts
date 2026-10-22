@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { MintAuthorityProfile } from "@shared/types";
 import stkGhoAuthority from "@shared/data/stablecoins/domains/mint-authority/stkgho-umbrella-aave.json";
 import lorenzoMeta from "@shared/data/stablecoins/coins/susd1plus-lorenzo.json";
 import { ParentBackingInheritanceSchema } from "@shared/types/stablecoin-meta-primitives";
@@ -11,10 +10,7 @@ import type { AssetExtension, SafetyScoreV9FactSetExtensionV2 } from "../safety-
 import { createAssetBuildContext } from "../safety-score-v9/fact-set-context";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import { buildWrapperLocalFacts } from "../safety-score-v9/fact-set-wrapper";
-import type { V9ExitRouteFactV2 } from "@shared/types/safety-score-v9-facts";
-import { computeV9FactSetDigest } from "@shared/lib/safety-score-v9/facts";
-import { buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
-import { makeV9RoleExtension, makeV9TwoAssetFixedInput, makeV9QueuedRedemptionFixedInput, v9Status } from "../../test-helpers/v9-fixed-input";
+import { makeV9RoleExtension, makeV9TwoAssetFixedInput,  v9Status } from "../../test-helpers/v9-fixed-input";
 import { alphaMeta, localControl, metaMap, rebuildFixed, type FixedInput } from "./safety-score-v9-fact-set.test-support";
 import { SafetyScoreV9WrapperLocalReviewSchema } from "@shared/types/safety-score-v9-wrapper-local-review";
 
@@ -48,56 +44,7 @@ function wrapperFixture(variantKind: "strategy-vault" | "risk-absorption" | "sav
   return { fixed, extension, wrapper };
 }
 
-function compile(fixture: WrapperFixture, unwindRoute?: (route: V9ExitRouteFactV2) => V9ExitRouteFactV2 | V9ExitRouteFactV2[]) {
-  let factSet = structuredClone(compileSafetyScoreV9FactSetFromFixedInput(fixture.fixed, fixture.extension));
-  const asset = factSet.assets.find((candidate) => candidate.assetId === "alpha")!;
-  if (unwindRoute) {
-    const route = unwindRoute(structuredClone(asset.exitRoutes[0]!));
-    const context = createAssetBuildContext(normalizeSafetyScoreV9CompilerInput(fixture.fixed), fixture.extension, fixture.wrapper, "a".repeat(64));
-    asset.wrapperLocalFacts = buildWrapperLocalFacts(
-      context,
-      { ...asset, exitRoutes: Array.isArray(route) ? route : [route] },
-    );
-    asset.gaps = [
-      ...asset.gaps.filter((gap) => !gap.gapId.startsWith("alpha:gap:wrapper-local:")),
-      ...context.gaps.values(),
-    ].sort((left, right) => left.gapId.localeCompare(right.gapId));
-    asset.evidence = [...new Map([
-      ...asset.evidence.map((evidence) => [evidence.evidenceId, evidence] as const),
-      ...context.evidence,
-    ]).values()].sort((left, right) => left.evidenceId.localeCompare(right.evidenceId));
-    factSet = { ...factSet, v9FactSetDigest: computeV9FactSetDigest(factSet) };
-  }
-  if (asset.wrapperLocalFacts.applicability !== "wrapper") throw new Error("Expected wrapper facts");
-  const evaluated = evaluateV9FactSet(factSet, V9_CANDIDATE_POLICY_V1);
-  return { asset, facts: asset.wrapperLocalFacts, card: evaluated.assets.find((candidate) => candidate.assetId === "alpha")! };
-}
 
-function directAllocationFixture() {
-  const fixture = wrapperFixture("strategy-vault");
-  fixture.wrapper.wrapperCustodyReview = {
-    custodyModel: "institutional-unregulated",
-    providers: [{ providerKey: "parent-custody-undisclosed", role: "custodian", shareFraction: null }],
-    segregation: "unknown",
-    bankruptcyRemoteness: "unknown",
-    rehypothecation: "unknown",
-    knownUnknownExposureShare: 1,
-  };
-  fixture.wrapper.wrapperAllocationReview = {
-    assetId: "alpha",
-    reviewedAt: "2026-10-01",
-    expiresAt: "2026-11-01",
-    reviewer: "fixture",
-    custody: "fully-onchain-no-offchain-custodian",
-    scopeKind: "whole-allocation",
-    localLeverage: "no-borrowing-surface",
-    capitalReuse: "none",
-    rationale: "The wrapper holds only its tracked parent token; custody uncertainty belongs upstream.",
-    observations: [{ chain: "ethereum", address: "0x1111111111111111111111111111111111111111", function: "asset()/totalAssets()/balanceOf(wrapper)", value: "parent; assets=balance", block: 1 }],
-    sources: [{ label: "Fixture source", url: "https://example.com/direct-allocation" }],
-  };
-  return fixture;
-}
 
 function immutableRootFixture() {
   const fixture = wrapperFixture("strategy-vault");
@@ -126,102 +73,6 @@ function immutableRootFixture() {
   return { ...fixture, asset, build };
 }
 
-describe("independent immutable wrapper roots", () => {
-  it("admits current exhaustive root identity without changing aggregate mint or any other local dimension", () => {
-    const fixture = immutableRootFixture();
-    const review = fixture.wrapper.allocationScopeIdentityReview!;
-    delete fixture.wrapper.allocationScopeIdentityReview;
-    const before = fixture.build();
-    fixture.wrapper.allocationScopeIdentityReview = review;
-    const mintBefore = structuredClone(fixture.asset.economicControlReview.mint);
-    const { context, facts } = fixture.build();
-    expect(facts.facts.contractMutability).toMatchObject({
-      disposition: "reviewed", assessment: "none",
-    });
-    expect(context.gaps.has("alpha:gap:wrapper-local:contractMutability")).toBe(false);
-    const { contractMutability: _before, ...otherBefore } = before.facts.facts;
-    const { contractMutability: _after, ...otherAfter } = facts.facts;
-    expect(otherAfter).toEqual(otherBefore);
-    expect(fixture.asset.economicControlReview.mint).toEqual(mintBefore);
-    const evidence = context.evidence.get(facts.facts.contractMutability.evidenceRefIds[0]!)!;
-    expect(evidence).toMatchObject({
-      sourceId: "safety-score-v9.wrapper-immutable-root-identity",
-      sourceGenerationId: fixture.extension.sources.researchOverlays.generationId,
-      observedAtSec: review.deployments[0]!.observedAtSec,
-      url: review.deployments[0]!.sourceUrl,
-      freshness: {
-        state: "current",
-        maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec,
-      },
-    });
-    expect(evidence.contentSha256).toMatch(/^[0-9a-f]{64}$/);
-  });
-
-  it.each([
-    "missing", "empty", "stale", "future", "partial", "proxy", "changed-implementation",
-    "unmatched-roster", "duplicate-roster", "duplicate-deployment", "wrong-asset", "missing-source",
-  ] as const)("does not admit %s identity despite an immutable aggregate enum", (rejection) => {
-    const fixture = immutableRootFixture();
-    const review = fixture.wrapper.allocationScopeIdentityReview!;
-    const deployment = review.deployments[0]!;
-    const maxAgeSec = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec;
-    switch (rejection) {
-      case "missing": delete fixture.wrapper.allocationScopeIdentityReview; break;
-      case "empty": review.registeredDeploymentKeys = []; review.deployments = []; break;
-      case "stale": deployment.observedAtSec = fixture.fixed.clockSec - maxAgeSec - 1; break;
-      case "future": deployment.observedAtSec = fixture.fixed.clockSec + 1; break;
-      case "partial": review.registeredDeploymentKeys.push(`base:${deployment.address}`); break;
-      case "proxy":
-      case "changed-implementation":
-        review.deployments[0] = {
-          ...deployment, codeKind: "proxy",
-          implementation: rejection === "proxy" ? deployment.address : "0x2222222222222222222222222222222222222222",
-        };
-        break;
-      case "unmatched-roster": review.registeredDeploymentKeys[0] = `base:${deployment.address}`; break;
-      case "duplicate-roster": review.registeredDeploymentKeys.push(review.registeredDeploymentKeys[0]!); break;
-      case "duplicate-deployment": review.deployments.push({ ...deployment }); break;
-      case "wrong-asset": review.assetId = "beta"; break;
-      case "missing-source": deployment.sourceUrl = ""; break;
-    }
-    const { context, facts } = fixture.build();
-    expect(facts.facts.contractMutability).toMatchObject({ disposition: "unresearched", assessment: null });
-    expect(context.gaps.has("alpha:gap:wrapper-local:contractMutability")).toBe(true);
-    expect([...context.evidence.values()].some((evidence) =>
-      evidence.sourceId === "safety-score-v9.wrapper-immutable-root-identity")).toBe(false);
-  });
-
-  it("uses the policy freshness budget inclusively and admits every exact immutable deployment", () => {
-    const fixture = immutableRootFixture();
-    const review = fixture.wrapper.allocationScopeIdentityReview!;
-    const deployment = review.deployments[0]!;
-    deployment.observedAtSec = fixture.fixed.clockSec -
-      V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec;
-    review.registeredDeploymentKeys.push(`base:${deployment.address}`);
-    review.deployments.push({ ...deployment, chain: "base", block: 456 });
-    const { facts } = fixture.build();
-    expect(facts.facts.contractMutability).toMatchObject({ disposition: "reviewed", assessment: "none" });
-    expect(facts.facts.contractMutability.evidenceRefIds).toHaveLength(2);
-  });
-
-  it("does not override a changed aggregate upgrade implementation with retained immutable identity", () => {
-    const fixture = immutableRootFixture();
-    fixture.asset.economicControlReview.mint.upgrade = { state: "reviewed", controlKey: "changed:upgrade" };
-    expect(fixture.build().facts.facts.contractMutability.assessment).toBeNull();
-  });
-
-  it("leaves the existing known-aggregate upgrade path unchanged", () => {
-    const fixture = immutableRootFixture();
-    delete fixture.wrapper.allocationScopeIdentityReview;
-    fixture.asset.economicControlReview.mint.status = v9Status();
-    const { context, facts } = fixture.build();
-    expect(facts.facts.contractMutability).toMatchObject({
-      disposition: "reviewed", assessment: "none", signals: ["wrapper-upgrade-state:immutable"],
-    });
-    expect([...context.evidence.values()].some((evidence) =>
-      evidence.sourceId === "safety-score-v9.wrapper-immutable-root-identity")).toBe(false);
-  });
-});
 
 function independentLocalFixture(kind: "accounting" | "holder-entitlement") {
   const fixture = immutableRootFixture();
@@ -246,89 +97,6 @@ function independentLocalFixture(kind: "accounting" | "holder-entitlement") {
   return fixture;
 }
 
-describe("independent wrapper accounting and holder entitlement", () => {
-  it.each(["accounting", "holder-entitlement"] as const)("admits one exact current %s review without changing other facts", (kind) => {
-    const fixture = independentLocalFixture(kind);
-    const reviews = fixture.wrapper.wrapperLocalReviews!;
-    delete fixture.wrapper.wrapperLocalReviews;
-    const before = fixture.build();
-    fixture.wrapper.wrapperLocalReviews = reviews;
-    const borrowerBefore = structuredClone(fixture.asset.economicControlReview);
-    const { facts, context } = fixture.build();
-    const key = kind === "accounting" ? "shareAccountingNavOracle" : "withdrawalTerms";
-    expect(facts.facts[key]).toMatchObject({
-      disposition: "reviewed", assessment: kind === "accounting" ? "moderate" : "critical",
-    });
-    expect(context.gaps.has(`alpha:gap:wrapper-local:${key}`)).toBe(false);
-    for (const other of Object.keys(facts.facts) as (keyof typeof facts.facts)[]) {
-      if (other !== key) expect(facts.facts[other]).toEqual(before.facts.facts[other]);
-    }
-    expect(fixture.asset.economicControlReview).toEqual(borrowerBefore);
-    expect(fixture.asset.exitRoutes).toEqual([]);
-    expect(facts.form).toBe("strategy-vault");
-    const evidence = context.evidence.get(facts.facts[key].evidenceRefIds[0]!)!;
-    expect(evidence).toMatchObject({
-      sourceId: "safety-score-v9.wrapper-local-review",
-      sourceGenerationId: fixture.extension.sources.researchOverlays.generationId,
-      observedAtSec: reviews[0]!.observedAtSec,
-      freshness: { state: "current", maxAgeSec: 200 },
-    });
-  });
-
-  it("admits independently reviewed fixed-face accounting without claiming a NAV oracle", () => {
-    const fixture = independentLocalFixture("accounting");
-    const review = fixture.wrapper.wrapperLocalReviews![0]!;
-    if (review.kind !== "accounting") throw new Error("Expected accounting review");
-    review.mechanism = "fixed-face-accounting";
-    expect(fixture.build().facts.facts.shareAccountingNavOracle).toMatchObject({
-      disposition: "reviewed", assessment: "none", signals: expect.arrayContaining(["wrapper-local-accounting:fixed-face-accounting"]),
-    });
-  });
-
-  it("binds current proxy implementation identity and rejects a changed implementation", () => {
-    const fixture = independentLocalFixture("accounting");
-    const review = fixture.wrapper.wrapperLocalReviews![0]!;
-    if (review.kind !== "accounting") throw new Error("Expected pinned accounting review");
-    const deployment = {
-      ...review.identity.deployments[0]!, codeKind: "proxy" as const,
-      implementation: "0x2222222222222222222222222222222222222222",
-    };
-    review.identity.deployments = [deployment];
-    fixture.wrapper.allocationScopeIdentityReview!.deployments = [structuredClone(deployment)];
-    expect(fixture.build().facts.facts.shareAccountingNavOracle).toMatchObject({ disposition: "reviewed", assessment: "moderate" });
-    const retained = fixture.wrapper.allocationScopeIdentityReview!.deployments[0]!;
-    if (retained.codeKind !== "proxy") throw new Error("Expected proxy identity");
-    retained.implementation = "0x3333333333333333333333333333333333333333";
-    expect(fixture.build().facts.facts.shareAccountingNavOracle).toMatchObject({ disposition: "unresearched", assessment: null });
-  });
-
-  for (const kind of ["accounting", "holder-entitlement"] as const) {
-    it.each(["expired", "future-review", "future-observation", "stale-pin", "wrong-asset", "wrong-address",
-      "partial-roster", "changed-implementation", "duplicate-kind", "missing-identity"] as const)(
-      `rejects ${kind} %s without converting missing proof into a known fact`, (rejection) => {
-        const fixture = independentLocalFixture(kind);
-        const review = fixture.wrapper.wrapperLocalReviews![0]!;
-        if (review.kind !== kind) throw new Error("Expected matching pinned local review");
-        const root = review.identity.deployments[0]!;
-        if (rejection === "expired") review.expiresAtSec = fixture.fixed.clockSec;
-        if (rejection === "future-review") review.reviewedAt = new Date((fixture.fixed.clockSec + 1) * 1_000).toISOString();
-        if (rejection === "future-observation") review.observedAtSec = fixture.fixed.clockSec + 1;
-        if (rejection === "stale-pin") root.observedAtSec = fixture.fixed.clockSec -
-          V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec - 1;
-        if (rejection === "wrong-asset") review.assetId = "beta";
-        if (rejection === "wrong-address") root.address = "0x2222222222222222222222222222222222222222";
-        if (rejection === "partial-roster") fixture.wrapper.allocationScopeIdentityReview!.registeredDeploymentKeys.push("ethereum:missing");
-        if (rejection === "changed-implementation") review.identity.deployments[0] = {
-          ...root, codeKind: "proxy", implementation: "0x2222222222222222222222222222222222222222",
-        };
-        if (rejection === "duplicate-kind") fixture.wrapper.wrapperLocalReviews!.push(structuredClone(review));
-        if (rejection === "missing-identity") delete fixture.wrapper.allocationScopeIdentityReview;
-        const key = kind === "accounting" ? "shareAccountingNavOracle" : "withdrawalTerms";
-        expect(fixture.build().facts.facts[key]).toMatchObject({ disposition: "unresearched", assessment: null });
-      },
-    );
-  }
-});
 
 function publishedLocalFixture(kind: "published-accounting" | "published-emergency-controls" | "published-withdrawal-terms") {
   const fixture = independentLocalFixture("accounting");
@@ -355,154 +123,14 @@ function publishedLocalFixture(kind: "published-accounting" | "published-emergen
   return fixture;
 }
 
-function immediateParentTermsFixture() {
-  const fixture = publishedLocalFixture("published-withdrawal-terms");
-  fixture.wrapper.variantKind = "savings-passthrough";
-  const review = fixture.wrapper.wrapperLocalReviews![0]!;
-  if (review.kind !== "published-withdrawal-terms") throw new Error("Expected terms");
-  const term = review.terms[0]!;
-  Object.assign(term, {
-    holderAccess: "permissionless", executionModel: "atomic", cooldownSec: 0,
-    fee: { kind: "fixed-bps", bps: 0 }, prerequisites: ["parent-output-only; cash-realization-is-downstream"],
-  });
-  return { ...fixture, review, term };
-}
 
-describe("direct serial wrapper local withdrawal settlement", () => {
-  it.each([
-    ["savings-passthrough", "atomic"],
-    ["savings-passthrough", "deterministic"],
-    ["pure-wrapper", "atomic"],
-    ["pure-wrapper", "deterministic"],
-  ] as const)("prices %s %s fee-free parent output locally without U fallback", (variantKind, executionModel) => {
-    const fixture = immediateParentTermsFixture();
-    fixture.wrapper.variantKind = variantKind;
-    fixture.term.executionModel = executionModel;
-    const before = structuredClone(fixture.asset);
-    const { facts, context } = fixture.build();
-    expect(facts.facts.withdrawalTerms).toMatchObject({ disposition: "reviewed", assessment: "moderate" });
-    expect(facts.facts.withdrawalTerms.signals).toEqual(expect.arrayContaining([
-      "wrapper-withdrawal-settlement-bound-sec:unproven",
-      "wrapper-withdrawal-fee:fixed-bps:0",
-      "wrapper-withdrawal-prerequisite:parent-output-only; cash-realization-is-downstream",
-    ]));
-    expect(context.gaps.has("alpha:gap:wrapper-local:withdrawalTerms")).toBe(false);
-    expect(fixture.asset.dependencies.edges).toContainEqual(expect.objectContaining({
-      pathKind: "serial-dependency", dependencyType: "wrapper", upstreamAssetId: "beta",
-    }));
-    expect(facts.facts.measuredUnwind.assessment).toBeNull();
-    expect(fixture.asset).toEqual(before);
-  });
-
-  it.each([
-    "local-fee", "formula-fee", "undisclosed-fee", "local-delay", "unknown-delay",
-    "queued", "unknown-execution", "strategy-vault", "risk-absorption",
-    "missing-parent", "different-output", "mixed-outputs",
-  ] as const)("keeps the null-bound high assessment for %s", (restriction) => {
-    const fixture = immediateParentTermsFixture();
-    switch (restriction) {
-      case "local-fee": fixture.term.fee = { kind: "fixed-bps", bps: 1 }; break;
-      case "formula-fee": fixture.term.fee = { kind: "formula", description: "Mutable local redemption fee" }; break;
-      case "undisclosed-fee": fixture.term.fee = { kind: "undisclosed" }; break;
-      case "local-delay": fixture.term.cooldownSec = 1; break;
-      case "unknown-delay": fixture.term.cooldownSec = null; break;
-      case "queued": fixture.term.executionModel = "queued"; break;
-      case "unknown-execution": fixture.term.executionModel = "unknown"; break;
-      case "strategy-vault": fixture.wrapper.variantKind = "strategy-vault"; break;
-      case "risk-absorption": fixture.wrapper.variantKind = "risk-absorption"; break;
-      case "missing-parent": fixture.asset.dependencies.edges = []; break;
-      case "different-output": fixture.term.outputAssetIds = ["gamma"]; break;
-      case "mixed-outputs": fixture.term.outputAssetIds = ["beta", "gamma"]; break;
-    }
-    expect(fixture.build().facts.facts.withdrawalTerms).toMatchObject({ disposition: "reviewed", assessment: "high" });
-  });
-
-  it.each(["issuer-only", "discretionary"] as const)("retains critical %s restrictions", (restriction) => {
-    const fixture = immediateParentTermsFixture();
-    if (restriction === "issuer-only") fixture.term.holderAccess = "issuer-only";
-    else fixture.term.executionModel = "discretionary";
-    expect(fixture.build().facts.facts.withdrawalTerms.assessment).toBe("critical");
-  });
-
-  it("retains the worst restriction across documented routes", () => {
-    const fixture = immediateParentTermsFixture();
-    fixture.review.terms.push({ ...fixture.term, routeKey: "queued-alternative", executionModel: "queued" });
-    expect(fixture.build().facts.facts.withdrawalTerms.assessment).toBe("high");
-  });
-
-  it("does not erase independently observed local queue restrictions", () => {
-    const fixture = immediateParentTermsFixture();
-    const routeFixture = wrapperFixture("savings-passthrough");
-    const route = compileSafetyScoreV9FactSetFromFixedInput(routeFixture.fixed, routeFixture.extension)
-      .assets.find((asset) => asset.assetId === "alpha")!.exitRoutes[0]!;
-    fixture.asset.exitRoutes = [{
-      ...route, lane: "redemption", status: v9Status(),
-      holderAccess: "permissionless", executionModel: "queued",
-      settlementModel: "queued", settlementSlaSec: 604_801,
-    }];
-    expect(fixture.build().facts.facts.withdrawalTerms.assessment).toBe("high");
-  });
-});
 
 describe("non-pure source-bound wrapper local facts", () => {
-  it.each([
-    ["published-accounting", "shareAccountingNavOracle", "moderate"],
-    ["published-emergency-controls", "lossAbsorptionEmergencyControls", "high"],
-    ["published-withdrawal-terms", "withdrawalTerms", "high"],
-  ] as const)("admits %s without claiming mint, oracle, or capacity evidence", (kind, factor, assessment) => {
-    const fixture = publishedLocalFixture(kind);
-    const original = structuredClone(fixture.asset);
-    const { facts, context } = fixture.build();
-    expect(facts.form).toBe("strategy-vault");
-    expect(facts.facts[factor]).toMatchObject({ disposition: "reviewed", assessment });
-    expect(context.gaps.has(`alpha:gap:wrapper-local:${factor}`)).toBe(false);
-    expect(fixture.asset).toEqual(original);
-    expect(facts.facts.measuredUnwind.assessment).toBeNull();
-    expect(fixture.asset.exitRoutes).toEqual([]);
-    expect(fixture.asset.economicControlReview.oracle.tier).toBeNull();
-    if (kind === "published-withdrawal-terms") {
-      expect(facts.facts.withdrawalTerms.signals).toContain("wrapper-withdrawal-settlement-bound-sec:unproven");
-    }
-  });
 
-  it.each(["strategy-vault", "savings-passthrough", "application-receipt"] as const)(
-    "admits fixed-face accounting for %s without a NAV peg", (instrument) => {
-      const fixture = publishedLocalFixture("published-accounting");
-      if (instrument === "application-receipt") delete fixture.wrapper.variantKind;
-      else fixture.wrapper.variantKind = instrument;
-      const { facts } = fixture.build();
-      expect(facts.facts.shareAccountingNavOracle).toMatchObject({ disposition: "reviewed", assessment: "moderate" });
-      expect(fixture.asset.peg.status.observationState).not.toBe("known");
-      expect(facts.facts.measuredUnwind.assessment).toBeNull();
-    },
-  );
 
   for (const kind of ["published-accounting", "published-emergency-controls", "published-withdrawal-terms"] as const) {
-    it.each(["expired", "future", "wrong-asset", "wrong-deployment", "duplicate", "missing-roster"] as const)(
-      `rejects ${kind} %s`, (fault) => {
-        const fixture = publishedLocalFixture(kind);
-        const review = fixture.wrapper.wrapperLocalReviews![0]!;
-        if (fault === "expired") review.expiresAtSec = fixture.fixed.clockSec;
-        if (fault === "future") review.reviewedAt = new Date((fixture.fixed.clockSec + 1) * 1000).toISOString();
-        if (fault === "wrong-asset") review.assetId = "beta";
-        if (fault === "wrong-deployment") review.identity.deployments[0]!.address = "0x2222222222222222222222222222222222222222";
-        if (fault === "duplicate") fixture.wrapper.wrapperLocalReviews!.push(structuredClone(review));
-        if (fault === "missing-roster") delete fixture.wrapper.allocationScopeIdentityReview;
-        const factor = kind === "published-accounting" ? "shareAccountingNavOracle"
-          : kind === "published-emergency-controls" ? "lossAbsorptionEmergencyControls" : "withdrawalTerms";
-        expect(fixture.build().facts.facts[factor].assessment).toBeNull();
-      });
   }
 
-  it("retains all documented alternative outputs and treats cooldown as eligibility only", () => {
-    const fixture = publishedLocalFixture("published-withdrawal-terms");
-    const review = fixture.wrapper.wrapperLocalReviews![0]!;
-    if (review.kind !== "published-withdrawal-terms") throw new Error("Expected terms");
-    review.terms.push({ ...review.terms[0]!, routeKey: "alternative", outputAssetIds: ["gamma"],
-      cooldownSec: 0, settlementBoundSec: 0, executionModel: "atomic" });
-    expect(fixture.build().facts.facts.withdrawalTerms.assessment).toBe("high");
-    expect(fixture.asset.exitRoutes).toEqual([]);
-  });
 
   it("rejects unsourced terms, impossible bounds, and unpinned mutable-root claims", () => {
     const fixture = publishedLocalFixture("published-withdrawal-terms");
@@ -522,22 +150,6 @@ describe("non-pure source-bound wrapper local facts", () => {
     }).success).toBe(false);
   });
 
-  it("admits a pinned upgradeable root independently of incomplete aggregate mint", () => {
-    const fixture = independentLocalFixture("accounting");
-    const review = fixture.wrapper.wrapperLocalReviews![0]!;
-    if (review.kind !== "accounting") throw new Error("Expected accounting fixture");
-    const { kind: _kind, mechanism: _mechanism, ...fields } = review;
-    const deployment = { ...fields.identity.deployments[0]!, codeKind: "proxy" as const,
-      implementation: "0x2222222222222222222222222222222222222222" };
-    fields.identity.deployments = [deployment];
-    fixture.wrapper.allocationScopeIdentityReview!.deployments = [structuredClone(deployment)];
-    fixture.wrapper.wrapperLocalReviews = [SafetyScoreV9WrapperLocalReviewSchema.parse({
-      ...fields, kind: "contract-mutability", mutability: "upgradeable-root", minimumPublicDelaySec: null,
-    })];
-    const mint = structuredClone(fixture.asset.economicControlReview.mint);
-    expect(fixture.build().facts.facts.contractMutability).toMatchObject({ disposition: "reviewed", assessment: "high" });
-    expect(fixture.asset.economicControlReview.mint).toEqual(mint);
-  });
 });
 
 const slashingControl = () => localControl({
@@ -560,330 +172,21 @@ const unknownConfigurationControl = () => localControl({
 });
 
 describe("wrapper-local loss absorption and custody scope", () => {
-  it("retains known risk-absorption controls as evidence without parent credit", () => {
-    const fixture = wrapperFixture("risk-absorption");
-    fixture.wrapper.controlReview = { state: "reviewed-controls", controls: [slashingControl()] };
-    const { facts, card } = compile(fixture);
-    expect(facts.facts.lossAbsorptionEmergencyControls).toMatchObject({ disposition: "reviewed", assessment: "moderate" });
-    expect(facts.facts.lossAbsorptionEmergencyControls.signals).toContain("wrapper-holder-bears-protocol-loss-absorption");
-    expect(card.trace.wrapperParentLimit!.limit).toBeLessThanOrEqual(card.trace.wrapperParentLimit!.parentScore);
-  });
 
-  it("keeps the worst local control and unknown configuration authority gap", () => {
-    const fixture = wrapperFixture("risk-absorption");
-    fixture.wrapper.controlReview = {
-      state: "partially-reviewed-controls",
-      rationale: "Slashing is reviewed; configuration authority is unresolved.",
-      controls: [slashingControl(), unknownConfigurationControl(), localControl({ controlKey: "umbrella:upgrade", controlKind: "upgrade", capabilities: ["upgrade"], claimImpairment: "unbounded", economicLossScope: "global-claim" })],
-    };
-    const { asset, facts, card } = compile(fixture);
-    expect(facts.facts.lossAbsorptionEmergencyControls).toMatchObject({ disposition: "reviewed", assessment: "high" });
-    expect(asset.gaps).toContainEqual(expect.objectContaining({ reasonCode: "unresolved-control-identity", path: { kind: "local-component", componentKey: "control:umbrella:unknown-configuration-authority" } }));
-    expect(card.control.reasons).toContainEqual(expect.objectContaining({ code: "unresolved-control-identity", path: expect.stringContaining("umbrella:unknown-configuration-authority") }));
-  });
 
-  it("does not let bridge-only inventory establish local loss controls", () => {
-    const fixture = wrapperFixture("risk-absorption");
-    fixture.wrapper.controlReview = { state: "reviewed-controls", controls: [localControl({ controlKind: "bridge" })] };
-    expect(compile(fixture).facts.facts.lossAbsorptionEmergencyControls).toMatchObject({ disposition: "unresearched", assessment: null });
-  });
 
-  it.each(["controller-owner", "inherited-domain"] as const)(
-    "does not double-charge a parent emergency control attributed by %s",
-    (attribution) => {
-      const fixture = wrapperFixture("strategy-vault");
-      const inherited = localControl({
-        controlKey: "parent:gateway",
-        controlKind: "mint",
-        capabilities: ["mint"],
-        claimImpairment: "unbounded",
-        economicLossScope: "global-claim",
-        ...(attribution === "controller-owner"
-          ? { controllerAssetId: "beta" }
-          : { failureDomains: [{ kind: "mint-control", key: "asset:beta" }] }),
-      });
-      fixture.wrapper.controlReview = { state: "reviewed-controls", controls: [inherited] };
-      const parentOnly = compile(fixture);
-      expect(parentOnly.facts.facts.lossAbsorptionEmergencyControls.assessment).toBeNull();
 
-      fixture.wrapper.controlReview.controls.push(localControl({
-        controlKey: "wrapper:emergency",
-        controlKind: "governance",
-        claimImpairment: "unbounded",
-        economicLossScope: "global-claim",
-      }));
-      const local = compile(fixture);
-      expect(local.facts.facts.lossAbsorptionEmergencyControls).toMatchObject({
-        disposition: "reviewed", assessment: "high",
-      });
-      expect(local.facts.facts.lossAbsorptionEmergencyControls.signals).toContain("unbounded-claim-control:wrapper:emergency");
-      expect(local.facts.facts.lossAbsorptionEmergencyControls.signals).not.toContain("unbounded-claim-control:parent:gateway");
-      expect(local.card.trace.wrapperParentLimit?.appliedDiscount).toBe(parentOnly.card.trace.wrapperParentLimit?.appliedDiscount);
-    },
-  );
 
-  it.each(["noneligible", "documented-model", "lower-bound"] as const)(
-    "keeps %s partial unwind capacity uncertain instead of measured adverse",
-    (observation) => {
-      const fixture = wrapperFixture("strategy-vault");
-      const { facts, card } = compile(fixture, (route) => ({
-        ...route,
-        ...(observation === "documented-model"
-          ? { lane: "redemption", routeFamily: "issuer-redemption", evidenceKind: "documented-terms" }
-          : {}),
-        scoreEligible: observation !== "noneligible",
-        coverageClass: observation === "lower-bound" ? "exact-lower-bound" : "exact-complete",
-        capacityCurve: route.capacityCurve.map((point) => ({
-          ...point, executableUsd: point.requestedNotionalUsd * 0.5228, completionRatio: 0.5228,
-        })),
-      }));
-      expect(facts.facts.measuredUnwind.assessment).toBeNull();
-      expect(facts.facts.measuredUnwind.disposition).not.toBe("reviewed");
-      expect(card.trace.wrapperParentLimit?.missingFacts).toContainEqual(expect.objectContaining({ factClass: "measuredUnwind" }));
-    },
-  );
 
-  it("does not mistake a thin observed market for whole-wrapper exhaustion while another route is modeled", () => {
-    const fixture = wrapperFixture("strategy-vault");
-    const { facts } = compile(fixture, (route) => [
-      {
-        ...route, scoreEligible: true, coverageClass: "exact-complete",
-        capacityCurve: route.capacityCurve.map((point) => ({
-          ...point, executableUsd: point.requestedNotionalUsd * 0.1, completionRatio: 0.1,
-        })),
-      },
-      {
-        ...route, routeKey: "redemption:modeled", lane: "redemption",
-        routeFamily: "issuer-redemption", evidenceKind: "documented-terms",
-        scoreEligible: false, coverageClass: "modelled-terms-lower-bound",
-      },
-    ]);
-    expect(facts.facts.measuredUnwind).toMatchObject({
-      disposition: "unresearched", assessment: null,
-    });
-  });
 
-  it("retains a genuinely observed exact-complete partial unwind as evidence", () => {
-    const fixture = wrapperFixture("strategy-vault");
-    const { facts, card } = compile(fixture, (route) => ({
-      ...route, scoreEligible: true, coverageClass: "exact-complete",
-      capacityCurve: route.capacityCurve.map((point) => ({
-        ...point, executableUsd: point.requestedNotionalUsd * 0.5228, completionRatio: 0.5228,
-      })),
-    }));
-    expect(facts.facts.measuredUnwind).toMatchObject({ disposition: "reviewed", assessment: "moderate" });
-    expect(card.trace.wrapperParentLimit?.missingFacts).not.toContainEqual(expect.objectContaining({ factClass: "measuredUnwind" }));
-  });
 
-  it.each(["same-terms", "queued-terms"] as const)(
-    "canonicalizes shared withdrawal signals across distinct redemption routes (%s)",
-    (terms) => {
-      const fixture = wrapperFixture("strategy-vault");
-      const routesWithTerms = (route: V9ExitRouteFactV2): V9ExitRouteFactV2[] => {
-        const first: V9ExitRouteFactV2 = {
-          ...route,
-          routeKey: "redemption:fixture:execution:instant",
-          lane: "redemption",
-          routeFamily: "issuer-redemption",
-          status: { ...route.status, observationState: "known" },
-          holderAccess: "permissionless",
-          executionModel: "atomic",
-          executionCertainty: "guaranteed",
-          settlementModel: "atomic",
-          settlementSlaSec: null,
-        };
-        return [
-          first,
-          {
-            ...first,
-            routeKey: "redemption:fixture:protocol:terms",
-            scoreEligible: false,
-            ...(terms === "queued-terms" ? {
-              executionModel: "queued" as const,
-              settlementModel: "queued" as const,
-              settlementSlaSec: 14 * 86_400,
-            } : {}),
-          },
-        ];
-      };
-      const forward = compile(fixture, routesWithTerms);
-      const reversed = compile(fixture, (route) => routesWithTerms(route).reverse());
-      expect(forward.facts.facts.withdrawalTerms).toEqual(reversed.facts.facts.withdrawalTerms);
-      expect(forward.facts.facts.withdrawalTerms).toMatchObject({
-        disposition: "reviewed",
-        assessment: terms === "queued-terms" ? "high" : "low",
-        signals: [
-          "wrapper-withdrawal-access:permissionless",
-          "wrapper-withdrawal-execution:atomic",
-          ...(terms === "queued-terms" ? ["wrapper-withdrawal-execution:queued"] : []),
-          "wrapper-withdrawal-settlement:atomic:atomic",
-          ...(terms === "queued-terms" ? ["wrapper-withdrawal-settlement:queued:1209600"] : []),
-        ],
-      });
-    },
-  );
 
-  it.each(["guaranteed", "bounded", "conditional", "discretionary"] as const)(
-    "does not price measurement certainty %s as a holder withdrawal restriction",
-    (executionCertainty) => {
-      const fixture = wrapperFixture("strategy-vault");
-      const terms = (route: V9ExitRouteFactV2): V9ExitRouteFactV2 => ({
-        ...route, lane: "redemption", routeFamily: "protocol-redemption",
-        holderAccess: "permissionless", executionModel: "deterministic",
-        settlementModel: "atomic", settlementSlaSec: 0,
-        executionCertainty,
-      });
-      const current = compile(fixture, terms);
-      const bounded = compile(fixture, (route) => ({ ...terms(route), executionCertainty: "bounded" }));
-      expect(current.facts.facts.withdrawalTerms).toMatchObject({ disposition: "reviewed", assessment: "low" });
-      expect(current.facts.facts.withdrawalTerms).toEqual(bounded.facts.facts.withdrawalTerms);
-      expect(current.card.trace.wrapperParentLimit).toEqual(bounded.card.trace.wrapperParentLimit);
-    },
-  );
 
-  it("does not improve a CUSDO-shaped parent cap when a conditional execution measurement expires", () => {
-    const fixture = wrapperFixture("strategy-vault");
-    const legacyTerms = (route: V9ExitRouteFactV2): V9ExitRouteFactV2 => ({
-      ...route, routeKey: "redemption:cusdo:published-terms", lane: "redemption",
-      routeFamily: "protocol-redemption", evidenceKind: "documented-terms",
-      holderAccess: "permissionless", executionModel: "deterministic", executionCertainty: "bounded",
-      settlementModel: "atomic", settlementSlaSec: 0,
-    });
-    const fresh = compile(fixture, (route) => [
-      legacyTerms(route),
-      { ...legacyTerms(route), routeKey: "redemption:cusdo:execution",
-        evidenceKind: "onchain-contract-state", executionCertainty: "conditional" },
-    ]);
-    // Price-stale admission removes the exact measurement, not the independent
-    // permissionless, deterministic withdrawal terms that remain current.
-    const expired = compile(fixture, legacyTerms);
-    expect(fresh.facts.facts.withdrawalTerms).toEqual(expired.facts.facts.withdrawalTerms);
-    expect(expired.facts.facts.withdrawalTerms).toMatchObject({ disposition: "reviewed", assessment: "low" });
-    const before = fresh.card.trace.wrapperParentLimit!;
-    const after = expired.card.trace.wrapperParentLimit!;
-    expect(after.parentScore).toBe(before.parentScore);
-    expect(after.appliedDiscount).toBe(before.appliedDiscount);
-    expect(after.limit).toBe(before.limit);
-  });
 
-  it("keeps a published but unquantified formula fee bounded, not issuer-undisclosed or cost-admitted", () => {
-    const fixture = wrapperFixture("strategy-vault");
-    const entry = structuredClone(makeV9QueuedRedemptionFixedInput().redemptionBackstopMap.alpha!);
-    entry.feeConfidence = "formula";
-    entry.feeModelKind = "formula";
-    entry.feeBps = null;
-    entry.feeDescription = "Early redemption fee declines linearly from 3.5% to 0.1%.";
-    const observation = entry.capacityProfile!.exitRouteObservations![0]!;
-    observation.feeEvidence = "undisclosed-reviewed";
-    observation.scoreEligible = false;
-    observation.observedAt = fixture.fixed.clockSec - 60;
-    entry.updatedAt = observation.observedAt;
-    fixture.fixed.redemptionBackstopMap.alpha = entry;
-    fixture.fixed.redemptionGenerationId = "redemption:fixture";
-    fixture.fixed.redemptionStale = false;
-    fixture.fixed.inputFreshness.redemptionBackstops = {
-      updatedAt: observation.observedAt, ageSeconds: 60, stale: false,
-    };
-    fixture.fixed = rebuildFixed(fixture.fixed);
-    fixture.wrapper.routeReviews = buildSafetyScoreV9RouteReviews(fixture.fixed, "alpha");
-    const { asset, facts, card } = compile(fixture);
-    const redemption = asset.exitRoutes.find((route) => route.lane === "redemption")!;
-    expect(redemption).toMatchObject({ feeEvidence: "disclosed-unquantified", scoreEligible: false });
-    expect(facts.facts.withdrawalTerms).toMatchObject({ disposition: "reviewed", assessment: "high" });
-    expect(card.exit.routes.find((route) => route.routeKey === redemption.routeKey)).toMatchObject({
-      included: true, exclusionReason: null, feeEvidence: "disclosed-unquantified",
-      components: { cost: V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit.U },
-    });
-    expect(card.trace.wrapperParentLimit?.missingFacts).not.toContainEqual(expect.objectContaining({ factClass: "withdrawalTerms", disposition: "issuer-undisclosed" }));
-  });
 
-  it.each(["discretionary", "queued"] as const)(
-    "keeps known %s withdrawal restrictions charged when only formula fee quantification is missing",
-    (restriction) => {
-      const fixture = wrapperFixture("savings-passthrough");
-      fixture.wrapper.variantKind = "pure-wrapper";
-      const routeWithTerms = (route: V9ExitRouteFactV2): V9ExitRouteFactV2 => ({
-        ...route,
-        lane: "redemption", routeFamily: "issuer-redemption",
-        evidenceKind: "documented-terms", scoreEligible: false,
-        holderAccess: restriction === "discretionary" ? "issuer-only" : "permissionless",
-        executionModel: restriction,
-        executionCertainty: restriction === "discretionary" ? "discretionary" : "bounded",
-        settlementModel: restriction === "queued" ? "queued" : "atomic",
-        settlementSlaSec: restriction === "queued" ? 14 * 86_400 : null,
-      });
-      const quantified = compile(fixture, routeWithTerms);
-      const unquantified = compile(fixture, (route) => ({
-        ...routeWithTerms(route), feeEvidence: "disclosed-unquantified",
-      }));
-      const assessment = restriction === "discretionary" ? "critical" : "high";
-      expect(unquantified.facts.facts.withdrawalTerms).toMatchObject({
-        disposition: "reviewed", assessment,
-      });
-      const before = quantified.card.trace.wrapperParentLimit!;
-      const after = unquantified.card.trace.wrapperParentLimit!;
-      expect(after.appliedDiscount).toBe(before.appliedDiscount);
-      expect(after.limit).toBe(before.limit);
-    },
-  );
 
-  it("keeps savings receipts outside local loss absorption", () => {
-    const fixture = wrapperFixture("savings-passthrough");
-    fixture.wrapper.controlReview = { state: "reviewed-controls", controls: [slashingControl()] };
-    expect(compile(fixture).facts.facts.lossAbsorptionEmergencyControls).toMatchObject({ disposition: "not-applicable", assessment: null });
-  });
 
-  it("retains the addressed stkGHO slashing owner and reviewed role holders through existing control intake", () => {
-    const fixture = wrapperFixture("risk-absorption");
-    const profile = structuredClone(stkGhoAuthority.mintAuthority) as MintAuthorityProfile;
-    profile.inheritedFrom = "beta";
-    profile.review.reviewedAt = "2026-10-01";
-    const baseline = buildSafetyScoreV9BaselineExtension(fixture.fixed, {
-      metaById: metaMap(
-        alphaMeta({ variantKind: "risk-absorption", variantOf: "beta", mintAuthority: profile }),
-        alphaMeta({ id: "beta" }),
-      ),
-    });
-    fixture.wrapper.controlReview = baseline.assets.find((asset) => asset.assetId === "alpha")!.controlReview;
-    const { asset, facts } = compile(fixture);
-    const owner = asset.controls.find((control) => control.authority?.authorityKey === "ethereum:0xd400fc38ed4732893174325693a63c30ee3881a8")!;
-    expect(owner.capabilities).not.toContain("mint");
-    expect(facts.facts.lossAbsorptionEmergencyControls).toMatchObject({ disposition: "reviewed" });
-    expect(["moderate", "high", "critical"]).toContain(facts.facts.lossAbsorptionEmergencyControls.assessment);
-    expect(asset.gaps).not.toContainEqual(expect.objectContaining({ reasonCode: "unresolved-control-identity" }));
-  });
 
-  it("does not duplicate upstream-only custody uncertainty in a reviewed direct single-parent allocation", () => {
-    const fixture = directAllocationFixture();
-    const before = compile(fixture);
-    fixture.wrapper.wrapperCustodyReview!.knownUnknownExposureShare = 0;
-    const after = compile(fixture);
-    expect(before.facts.facts.strategyComplexity).toMatchObject({ disposition: "reviewed", assessment: "moderate" });
-    expect(before.card.trace.wrapperParentLimit?.parentScore).toBe(after.card.trace.wrapperParentLimit?.parentScore);
-    expect(before.card.trace.wrapperParentLimit?.limit).toBe(after.card.trace.wrapperParentLimit?.limit);
-    expect(before.card.trace.wrapperParentLimit!.limit).toBeLessThanOrEqual(before.card.trace.wrapperParentLimit!.parentScore);
-  });
-
-  it.each(["absent", "expired", "future", "local-reuse", "mixed-book", "local-private-credit"] as const)(
-    "keeps local complexity high with %s direct-parent scope proof",
-    (scenario) => {
-      const fixture = directAllocationFixture();
-      const allocationReview = fixture.wrapper.wrapperAllocationReview;
-      if (allocationReview?.scopeKind !== "whole-allocation") throw new Error("Expected whole-allocation review");
-      if (scenario === "absent") fixture.wrapper.wrapperAllocationReview = null;
-      else if (scenario === "expired") allocationReview.expiresAt = "2026-10-02";
-      else if (scenario === "future") allocationReview.reviewedAt = "2026-10-03";
-      else if (scenario === "local-reuse") allocationReview.capitalReuse = "multi-strategy-reuse";
-      else {
-        fixture.fixed.liveReserveMap.alpha![0]!.coinId = undefined;
-        fixture.fixed.liveReserveMap.alpha![0]!.assetClass = scenario === "local-private-credit" ? "private-credit" : "cash";
-        fixture.fixed = rebuildFixed(fixture.fixed);
-      }
-      const { facts, card } = compile(fixture);
-      expect(facts.facts.strategyComplexity).toMatchObject({ disposition: "reviewed", assessment: "high" });
-      expect(card.trace.wrapperParentLimit?.appliedDiscount).toBe(10);
-    },
-  );
   it("carries the reviewed catalog inheritance boundary and its source evidence into published wrapper facts", () => {
     const fixture = wrapperFixture("strategy-vault");
     const review = ParentBackingInheritanceSchema.parse(lorenzoMeta.parentBackingInheritance);
@@ -909,63 +212,6 @@ describe("wrapper-local loss absorption and custody scope", () => {
       .toBe(false);
   });
 
-  it("keeps privileged NAV pricing locally high risk while giving standard external pricing only moderate risk", () => {
-    const fixture = wrapperFixture("savings-passthrough");
-    fixture.wrapper.pegReference = { referenceKind: "nav", referenceKey: "share-nav", failureDomains: [] };
-    const oracle = fixture.wrapper.economicControlReview!.oracle;
-    oracle.status = v9Status("known", "v9.control.oracle-review");
-    oracle.tier = "privileged-internal-pricing";
-    const privileged = compile(fixture);
-    oracle.tier = "standard-external";
-    const external = compile(fixture);
-    expect(privileged.facts.facts.shareAccountingNavOracle).toMatchObject({ disposition: "reviewed", assessment: "high" });
-    expect(external.facts.facts.shareAccountingNavOracle).toMatchObject({ disposition: "reviewed", assessment: "moderate" });
-    expect(privileged.card.trace.wrapperParentLimit?.appliedDiscount).toBe(external.card.trace.wrapperParentLimit?.appliedDiscount);
-  });
 
-  it.each(["complete-custody", "current-allocation"] as const)(
-    "scopes corroborated direct onchain custody upstream with %s",
-    (scenario) => {
-      const fixture = directAllocationFixture();
-      fixture.wrapper.variantKind = "savings-passthrough";
-      fixture.wrapper.wrapperCustodyReview!.custodyModel = "onchain";
-      if (scenario === "complete-custody") {
-        fixture.wrapper.wrapperAllocationReview = null;
-        fixture.wrapper.wrapperCustodyReview!.segregation = "segregated";
-        fixture.wrapper.wrapperCustodyReview!.bankruptcyRemoteness = "structured";
-        fixture.wrapper.wrapperCustodyReview!.knownUnknownExposureShare = 0;
-        fixture.wrapper.wrapperCustodyReview!.rehypothecation = "prohibited";
-      }
-      expect(compile(fixture).facts.facts.custodyEscrow).toMatchObject({ disposition: "not-applicable", assessment: null });
-    },
-  );
 
-  it.each(["absent-allocation", "expired-allocation", "future-allocation", "unknown-share", "unknown-segregation", "unknown-bankruptcy"] as const)(
-    "keeps direct onchain custody conservative with %s corroboration",
-    (scenario) => {
-      const fixture = directAllocationFixture();
-      const allocationReview = fixture.wrapper.wrapperAllocationReview;
-      if (allocationReview?.scopeKind !== "whole-allocation") throw new Error("Expected whole-allocation review");
-      fixture.wrapper.variantKind = "savings-passthrough";
-      fixture.wrapper.wrapperCustodyReview!.custodyModel = "onchain";
-      if (scenario === "expired-allocation") allocationReview.expiresAt = "2026-10-02";
-      else if (scenario === "future-allocation") allocationReview.reviewedAt = "2026-10-03";
-      else {
-        fixture.wrapper.wrapperAllocationReview = null;
-        if (scenario !== "absent-allocation") {
-          fixture.wrapper.wrapperCustodyReview!.segregation = scenario === "unknown-segregation" ? "unknown" : "segregated";
-          fixture.wrapper.wrapperCustodyReview!.bankruptcyRemoteness = scenario === "unknown-bankruptcy" ? "unknown" : "structured";
-          fixture.wrapper.wrapperCustodyReview!.knownUnknownExposureShare = scenario === "unknown-share" ? null : 0;
-        }
-      }
-      const { facts, card } = compile(fixture);
-      expect(facts.facts.custodyEscrow).toMatchObject({ disposition: "unresearched", assessment: null });
-      expect(card.trace.wrapperParentLimit!.missingFacts).toContainEqual(expect.objectContaining({
-        factClass: "custodyEscrow", disposition: "unresearched", cause: "U",
-        causeGapIds: ["alpha:gap:wrapper-local:custodyEscrow"],
-      }));
-      expect(card.trace.wrapperParentLimit!.appliedDiscount)
-        .toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.formula.wrapperStrategyCap.staked);
-    },
-  );
 });

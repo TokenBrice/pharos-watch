@@ -685,19 +685,6 @@ export function nativeWrapperLocalFactsForFixture(asset: V9AssetFactsV2) {
     formDisposition: evidenceRefIds.length > 0 ? "reviewed" as const : "integration-missing" as const,
     formSignals: [`fixture-wrapper-form:${form}`],
     formEvidenceRefIds: evidenceRefIds,
-    facts: Object.fromEntries(
-      [
-        "contractMutability",
-        "custodyEscrow",
-        "strategyComplexity",
-        "leverage",
-        "rehypothecationCorrelation",
-        "shareAccountingNavOracle",
-        "withdrawalTerms",
-        "measuredUnwind",
-        "lossAbsorptionEmergencyControls",
-      ].map((factKey) => [factKey, unavailableFact(factKey)]),
-    ),
   };
 }
 
@@ -726,9 +713,6 @@ export function compileNativeV3FactSet(input: unknown) {
       const wrapperLocalFacts = wrapper.applicability === "not-wrapper" ? wrapper : {
         ...wrapper,
         ...(wrapper.formDisposition === "reviewed" ? {} : { formStatus: unresolved("wrapper:form", "backing") }),
-        facts: Object.fromEntries(Object.entries(wrapper.facts).map(([key, fact]) => [
-          key, { ...fact, disposition: "unresearched", status: unresolved(`wrapper:${key}`, "backing") },
-        ])),
       };
       return {
         ...asset, gaps, wrapperLocalFacts, reserveResiduals,

@@ -23,7 +23,6 @@ import {
   type V9PillarReasonProvenance,
   type V9ScoreTrace,
 } from "./formula";
-import type { V9OperationalResilienceResult } from "./operational-resilience";
 import type { V9WrapperParentLimit } from "./wrapper-risk";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonTreatment } from "./policy";
 import { canonicalUniqueBy, compareText, parentAttributionFields, propagateParentAttribution } from "./primitives";
@@ -84,7 +83,6 @@ export interface V9ProductionScoreInput {
   };
   trackRecordMonths: number | null;
   realizedHolderLossEvents?: readonly V9AdmittedHolderLossEvent[];
-  unresolvedDeploymentShare?: number;
   parent: {
     required: boolean;
     score: number | null;
@@ -102,7 +100,6 @@ export interface V9ProductionScoreInput {
   dependencyStructuralSignals: readonly V9StructuralSignal[];
   methodologyReasons?: readonly V9PillarReason[];
   unresolvedEvidence?: readonly V9PillarReason[];
-  operationalResilience?: V9OperationalResilienceResult | null;
 }
 
 export interface V9ProductionScoreTrace extends V9ScoreTrace {
@@ -111,7 +108,6 @@ export interface V9ProductionScoreTrace extends V9ScoreTrace {
   evaluationBuildDigest: string;
   asOfSec: number;
   sourceGenerations: Readonly<Record<string, string>>;
-  operationalResilience: V9OperationalResilienceResult | null;
   wrapperParentLimit: V9WrapperParentLimit | null;
 }
 
@@ -243,7 +239,6 @@ type V9ScoringInputSource = {
   readonly trackRecordMonths: number | null;
   readonly realizedHolderLossEvents?: readonly V9AdmittedHolderLossEvent[];
   readonly identity?: Pick<V9ProductionScoreIdentity, "asOfSec">;
-  readonly unresolvedDeploymentShare?: number;
 };
 
 function worstEvidenceLevel(
@@ -279,7 +274,6 @@ export function projectV9ScoringInput(
     realizedHolderLossEvents: input.realizedHolderLossEvents,
     asOfSec: input.identity?.asOfSec,
     activeDepegBps: input.peg.activeDepegBps,
-    unresolvedDeploymentShare: input.unresolvedDeploymentShare,
     ...projection,
   });
 }
@@ -429,16 +423,6 @@ function resolveV9AssetPremium(
   ) {
     return null;
   }
-  // Longevity is rewarded despite evidence gaps (issuer opacity), never over an
-  // operational danger blocker; an unobserved resilience result withholds it.
-  const resilience = input.operationalResilience;
-  if (
-    resilience === null ||
-    resilience === undefined ||
-    resilience.blockerCodes.some((code) => code !== "issuerOpacity")
-  ) {
-    return null;
-  }
   return premium;
 }
 
@@ -487,15 +471,10 @@ export function scoreV9EvaluatedAsset(
       componentKey: reason.path,
     }] : [];
   });
-  const excludedWrapperFacts = input.parent.wrapperParentLimit?.missingFacts.flatMap((fact) =>
-    fact.cause === "A" || fact.cause === "B" ? [{
-      cause: fact.cause, causeGapIds: fact.causeGapIds, componentKey: `wrapper-local:${fact.factClass}`,
-    }] : [],
-  ) ?? [];
   const parentExclusions = input.parent.partialEvidence?.causes.map((cause) => ({
     cause, causeGapIds: input.parent.partialEvidence!.causeGapIds, componentKey: "dependency:parent",
   })) ?? [];
-  const exclusions = [...excludedConstraints, ...excludedWrapperFacts, ...parentExclusions];
+  const exclusions = [...excludedConstraints, ...parentExclusions];
   const excludedCauseGapIds = [...new Set([
     ...PILLAR_KEYS.flatMap((pillar) => input.pillars[pillar].excludedCauseGapIds ?? []),
     ...exclusions.flatMap((item) => item.causeGapIds),
@@ -565,7 +544,6 @@ export function scoreV9EvaluatedAsset(
   return {
     ...trace,
     boundedUncertaintyAttribution,
-    operationalResilience: input.operationalResilience ?? null,
     wrapperParentLimit: input.parent.wrapperParentLimit ?? null,
     unresolvedFacts: reconcileBoundedAttributionFacts(
       normalizeReasonList(

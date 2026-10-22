@@ -26,7 +26,6 @@ import {
   buildV9DependencyEvaluationPlan,
   createV9DependencyResolutionContext,
   distinctV9RootLiabilityIds,
-  projectV9RoleDependencyPillarLimits,
   resolveV9DependencyInput,
   type V9CommonModeMember,
   type V9DependencyEvaluationPlan,
@@ -1161,7 +1160,7 @@ function commonModeSignalsByAsset(
   );
 }
 
-interface V9AssetDigestPayload extends Pick<V9EvaluatedAsset, "compactTrace" | "dependencyInputs" | "access" | "operationalResilience"> {
+interface V9AssetDigestPayload extends Pick<V9EvaluatedAsset, "compactTrace" | "dependencyInputs" | "access"> {
   wrapperParentLimit: V9EvaluatedAsset["trace"]["wrapperParentLimit"];
 }
 
@@ -1170,7 +1169,6 @@ function evaluatedAssetDigestPayload(asset: V9EvaluatedAsset): V9AssetDigestPayl
     compactTrace: asset.compactTrace,
     dependencyInputs: asset.dependencyInputs,
     access: asset.access,
-    operationalResilience: asset.operationalResilience,
     wrapperParentLimit: asset.trace.wrapperParentLimit,
   };
 }
@@ -1295,14 +1293,7 @@ function evaluateV9FactSetRead(
     factShards?.delete(assetId);
     if (!asset) throw new Error(`Safety Score v9 dependency plan references missing asset ${assetId}`);
     try {
-    const unresolved = resolveV9DependencyInput(dependencyResolutionContext, assetId, upstreamResultsById);
-    const resolved: V9ResolvedDependencyInputs = {
-      ...unresolved,
-      rolePillarProjections: projectV9RoleDependencyPillarLimits(unresolved, {
-        unresolvedMaterialityThreshold:
-          envelope.policy.semantic.backing.structural.materialExposureShare,
-      }),
-    };
+    const resolved = resolveV9DependencyInput(dependencyResolutionContext, assetId, upstreamResultsById);
 
     const { evaluatedAsset, unavailabilityRoots } = evaluateV9Asset({
       asset,
@@ -1325,7 +1316,7 @@ function evaluateV9FactSetRead(
       ? evaluatedAsset.trace.partialEvidence?.causes[0] ?? "U"
       : evaluatedAsset.trace.limitedEvidenceCauses[0] ?? semanticNrCauses[0]
         ?? (evaluatedAsset.trace.adverseAttribution.length > 0 ? "D" : null);
-    const oracleNavProjection = upstreamOracleNavProjection(evaluatedAsset, envelope);
+    const oracleNavProjection = upstreamOracleNavProjection(evaluatedAsset);
     const upstream: V9UpstreamResult = {
       assetId: evaluatedAsset.assetId,
       score: projectV9DependencyScore(evaluatedAsset.trace),

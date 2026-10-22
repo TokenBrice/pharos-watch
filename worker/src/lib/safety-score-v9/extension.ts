@@ -61,17 +61,12 @@ import {
   SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
 } from "./extension-mechanism";
 import {
-  getSafetyScoreV9OperationalResilienceOverlay,
-  SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST,
-} from "./extension-operational-resilience";
-import {
   addSafetyScoreV9IncidentEvidence,
   addSafetyScoreV9NegativeIncidentEvidence,
   getSafetyScoreV9NegativeIncidentReviews,
   routeSafetyScoreV9NegativeIncidentReviews,
   getSafetyScoreV9ReviewedIncidents,
   routeSafetyScoreV9ControlIncidents,
-  routeSafetyScoreV9OperationalIncidents,
   SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST,
 } from "./extension-incidents";
 import { getSafetyScoreV9WrapperAllocationReview, getSafetyScoreV9WrapperLocalReviews, SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST, SAFETY_SCORE_V9_WRAPPER_LOCAL_REVIEWS_DIGEST } from "./extension-wrapper-reviews";
@@ -2351,7 +2346,6 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     registryRevision: fixedInput.registryRevision,
     incidentReviewsDigest: SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST,
     mechanismReviewOverlaysDigest: SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
-    operationalResilienceOverlaysDigest: SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST,
     wrapperAllocationReviewsDigest: SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST,
     wrapperLocalReviewsDigest: SAFETY_SCORE_V9_WRAPPER_LOCAL_REVIEWS_DIGEST,
     reserveBoundFactsDigest: SAFETY_SCORE_V9_RESERVE_BOUND_FACTS_DIGEST,
@@ -2692,11 +2686,6 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         const routeReviews = buildSafetyScoreV9RouteReviews(fixedInput, assetId);
         admissionPath = "retainedRoutes";
         const retainedRoutes = buildSafetyScoreV9RetainedRoutes(fixedInput, assetId);
-        admissionPath = "operationalResilience";
-        const operationalResilience = routeSafetyScoreV9OperationalIncidents(
-          getSafetyScoreV9OperationalResilienceOverlay(assetId, clockSec),
-          reviewedIncidents,
-        );
         return admitSafetyScoreV9ExtensionAsset({
           assetId,
           assetIssuerKey,
@@ -2742,7 +2731,6 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           accessReview,
           pegReference,
           supplyReview,
-          operationalResilience,
           wrapperAllocationReview,
           wrapperLocalReviews,
           allocationScopeIdentityReview: buildAllocationScopeIdentityReview(meta, clockSec),

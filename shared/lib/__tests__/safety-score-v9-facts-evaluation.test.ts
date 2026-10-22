@@ -72,7 +72,7 @@ function certifyGap(asset: V9AssetFactsV3, gap: V9AssetFactsV3["gaps"][number], 
     causeBinding: { assetId: asset.assetId, scope, adverseFactId: null, producerState: "producer-failed", rejectionCode: "fixture-reader-failure" },
   }, AS_OF_SEC));
 }
-function exitFactorGap(asset: V9AssetFactsV3, route: V9AssetFactsV3["exitRoutes"][number], cause: "A" | "B", factorKey: "cost" | "settlement" | "observationConfidence" = "cost") {
+function exitFactorGap(asset: V9AssetFactsV3, route: V9AssetFactsV3["exitRoutes"][number], cause: "A" | "B" | "C", factorKey: "cost" | "settlement" | "observationConfidence" = "cost") {
   const gap = createV9FactGapV3({
     gapId: `alpha:gap:${route.routeKey}:${factorKey}`, reasonCode: "missing-same-notional-route", ownerDomain: "exit",
     policyRuleId: "v9.exit.route-factors", observationState: "missing",
@@ -90,10 +90,16 @@ function exitFactorGap(asset: V9AssetFactsV3, route: V9AssetFactsV3["exitRoutes"
       assetId: asset.assetId, scope, asOfSec: AS_OF_SEC,
       sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId, evidenceReferences: asset.evidence,
       classification: { id: `classification:${gap.gapId}`, assetId: asset.assetId, scope,
-        cause, assertion: "required-data-public", reviewedAt, reviewer: "fixture-reviewer",
+        ...(cause === "C" ? {
+          cause, assertion: "researched-nondisclosure" as const,
+          searchedSurfaces: ["https://issuer.example/route-evidence"],
+          rationale: "The required route datum is not disclosed on the reviewed surface.",
+        } : { cause, assertion: "required-data-public" as const }),
+        reviewedAt, reviewer: "fixture-reviewer",
         sources: [{ url: "https://issuer.example/route-evidence", observedAt: reviewedAt, datumAsOf: null,
-          location: `Route ${factorKey} evidence`, excerpt: `The route ${factorKey} datum is published.`,
-          assertion: `The required route ${factorKey} datum is public but uncurated.` }] },
+          location: `Route ${factorKey} evidence`,
+          excerpt: cause === "C" ? "The issuer does not publish a current execution-cost bound." : `The route ${factorKey} datum is published.`,
+          assertion: cause === "C" ? "The required route datum is undisclosed." : `The required route ${factorKey} datum is public but uncurated.` }] },
     });
     gap.causeProof = resolved.causeProof;
     gap.evidenceRefIds = resolved.causeProof.evidenceRefIds;
@@ -264,6 +270,36 @@ describe("Safety Score v9 fact evaluation", () => {
     expect(evaluated.trace.nrReasons).toEqual(baseline.trace.nrReasons);
     expect(evaluated.trace.finalScore).toBe(baseline.trace.finalScore);
     expect(evaluated.trace.finalGrade).toBe(baseline.trace.finalGrade);
+  });
+
+  it("publishes exactly the C/U causes used to price whole-Exit uncertainty", () => {
+    const { core, asset } = exitPromotionFixture();
+    const candidate = asset.exitRoutes.find((route) => route.lane === "redemption")!;
+    asset.exitRoutes = [candidate];
+    candidate.scoreEligible = false;
+    candidate.coverageClass = "diagnostic";
+    const capacityGap = createV9FactGapV3({
+      gapId: "alpha:gap:exit:capacity", reasonCode: "missing-same-notional-route", ownerDomain: "exit",
+      policyRuleId: "v9.exit.route-factors", observationState: "missing",
+      path: { kind: "optional-exit", routeKey: candidate.routeKey },
+      causeScope: { pillar: "exit", componentKey: "exit-route", factorKey: "capacity",
+        routeKey: candidate.routeKey, exposureId: null, requiredDatum: "capacity" },
+      message: "Executable capacity has not been researched.", responsibility: "unresearched",
+    });
+    asset.gaps.push(capacityGap);
+    candidate.factorStatuses = { capacity: createV9FactStatus({
+      applicability: requiredV9Applicability(capacityGap.policyRuleId), observationState: "missing",
+      gapIds: [capacityGap.gapId], evidenceRefIds: [],
+    }) };
+    candidate.status = candidate.factorStatuses.capacity!;
+    candidate.capacityCurve = [];
+    candidate.request = null;
+    exitFactorGap(asset, candidate, "C");
+    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1)
+      .assets.find((row) => row.assetId === asset.assetId)!;
+    expect(evaluated.exit).toMatchObject({ score: 35, limitedEvidenceCauses: ["C", "U"] });
+    expect(evaluated.scoreInput.pillars.exit.score).toBe(evaluated.exit.score);
+    expect(evaluated.scoreInput.pillars.exit.limitedEvidenceCauses).toEqual(evaluated.exit.limitedEvidenceCauses);
   });
 
   it.each(["A", "B"] as const)("retains a no-primary admission gap without an independent blocker (%s)", (cause) => {

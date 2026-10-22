@@ -40,7 +40,7 @@ export type V9MintMechanismReview = Omit<
    * Epoch second of the most recent resolved mint incident, or null when the
    * review records none. Absolute rather than an age so the fact is stable
    * between compilation cycles; the evaluator converts it against its own
-   * clock (see {@link EvaluateV9EconomicControlArgs.resolvedIncidentAgeMonths}).
+   * clock (see {@link EvaluateV9EconomicControlArgs.resolvedIncidentAgeDays}).
    */
   latestResolvedIncidentAtSec?: number | null;
 };
@@ -82,11 +82,10 @@ export interface EvaluateV9EconomicControlArgs {
   oracle: V9OracleControlReview;
   bridge: V9BridgeControlReview;
   /**
-   * Conservative measured age (months, floor) of the mint review's most recent
-   * resolved incident. Absent → the decay ladder holds its strictest rung when
-   * a resolved incident is nonetheless recorded on the control row.
+   * Exact elapsed days since the mint review's most recent resolved incident.
+   * Absent ages retain the initial cap on a recorded resolved control incident.
    */
-  resolvedIncidentAgeMonths?: number;
+  resolvedIncidentAgeDays?: number;
 }
 
 export interface V9ControlComponent {
@@ -141,10 +140,6 @@ export interface V9EconomicControlResult {
   causeGapIds: readonly string[];
   limitedEvidenceCauses: readonly ("C" | "U" | "D")[];
   supportedComponentKeys: readonly string[];
-  /** Proportional unresolved-deployment pricing, before resilience and dependency adjustments. */
-  unresolvedDeploymentAdjustment?: { scoreBefore: number; scoreAfter: number };
-  /** Admitted full unresolved cohort share used by the composite ceiling band. */
-  unresolvedDeploymentShare?: number;
   state: "rated" | "not-rated";
   oracleApplicability: V9FactStatusV2["applicability"]["state"];
   components: readonly V9ControlComponent[];

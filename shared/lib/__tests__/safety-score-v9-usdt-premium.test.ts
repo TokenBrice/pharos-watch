@@ -4,7 +4,6 @@ import {
   type V9MethodologyPolicy,
   type V9StructuralSignal,
 } from "../../types/safety-score-v9";
-import type { V9OperationalResilienceResult } from "../safety-score-v9/operational-resilience";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import {
   projectV9DependencyScore,
@@ -28,41 +27,6 @@ function signal(
   };
 }
 
-function operationalResilience(): V9OperationalResilienceResult {
-  return {
-    eligible: true,
-    eligibility: {
-      requiredLiveHistoryMonths: 84,
-      documentedLiveHistoryMonths: 141,
-      confidence: "audited",
-      evidenceRefIds: ["history:usdt"],
-      satisfied: true,
-    },
-    rawPillarCredits: { backing: 1, exit: 1, control: 0 },
-    pillarCredits: { backing: 1, exit: 1, control: 0 },
-    contributions: [
-      {
-        component: "stress-redemption",
-        pillar: "exit",
-        basePoints: 1,
-        confidence: "audited",
-        confidenceMultiplier: 1,
-        points: 1,
-        evidenceRefIds: ["redemption:usdt"],
-      },
-      {
-        component: "reserve-reconciliation",
-        pillar: "backing",
-        basePoints: 1,
-        confidence: "audited",
-        confidenceMultiplier: 1,
-        points: 1,
-        evidenceRefIds: ["reserves:usdt"],
-      },
-    ],
-    blockerCodes: [],
-  };
-}
 
 function healthyInput(): V9ProductionScoreInput {
   const input = makeV9ProductionScoreInput();
@@ -81,7 +45,6 @@ function healthyInput(): V9ProductionScoreInput {
       }),
     },
     trackRecordMonths: 141,
-    operationalResilience: operationalResilience(),
   });
 }
 
@@ -192,17 +155,6 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
     ["a serial parent", (input: V9ProductionScoreInput) => {
       input.parent = { required: true, score: 83, propagatedReasons: [] };
     }],
-    ["an unobserved operational resilience result", (input: V9ProductionScoreInput) => {
-      input.operationalResilience = null;
-    }],
-    ["an operational danger blocker beside issuer opacity", (input: V9ProductionScoreInput) => {
-      input.operationalResilience = {
-        ...operationalResilience(),
-        eligible: false,
-        contributions: [],
-        blockerCodes: ["issuerOpacity", "activeDepeg"],
-      };
-    }],
     ["a different asset", (input: V9ProductionScoreInput) => { input.assetId = "non-premium-fixture"; }],
   ])("withholds the premium for %s", (_name, mutate) => {
     const input = healthyInput();
@@ -263,12 +215,6 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
         evidenceLevel: "limited",
         structuralSignals: [signal("centralized-mint", "low")],
       }),
-    };
-    input.operationalResilience = {
-      ...operationalResilience(),
-      eligible: false,
-      contributions: [],
-      blockerCodes: ["issuerOpacity"],
     };
 
     const trace = scoreV9EvaluatedAsset(input, V9_CANDIDATE_POLICY_V1);

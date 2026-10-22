@@ -20,7 +20,7 @@ function fixturePublication() {
         basket: [],
         cycleBlocked: false,
         reasonCodes: [],
-        roles: [{ edgeKey: "role-1", exposureKey: "exposure-1", riskEventKey: "event-1", upstreamAssetId: "parent", role: "exit-dependency", weight: 0.4, targetPillar: "exit", propagationEventEdgeKeys: [], propagationEventExposureKey: null, propagationEventRiskEventKey: null, propagationEventNominalExposureShare: null, propagationEventExposureShare: null, propagationEventInheritedScore: null, propagationEventModeledLossPoints: null, inheritedDimensions: [], unavailableDimensions: [], score: 80, ratingStatus: "rated", partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [], boundedUnknown: false, cycleBlocked: false, evidenceRefIds: [], failureDomains: [] }],
+        roles: [{ edgeKey: "role-1", exposureKey: "exposure-1", riskEventKey: "event-1", upstreamAssetId: "parent", role: "exit-dependency", weight: 0.4, targetPillar: "exit",        inheritedDimensions: [], unavailableDimensions: [], score: 80, ratingStatus: "rated", partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [], boundedUnknown: false, cycleBlocked: false, evidenceRefIds: [], failureDomains: [] }],
       } }),
       makeWorkerV9Card({ id: "parent", score: null, supply: undefined, sharedBookId: undefined, dependencyCoverage: undefined }),
     ],

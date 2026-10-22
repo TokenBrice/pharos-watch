@@ -209,7 +209,8 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     supportedComponentKeys: normalizedComponents.filter((component) =>
       component.score !== null && component.effectiveScoringWeight > 0).map((component) => component.componentKey),
     state: score === null ? "not-rated" : "rated",
-    oracleApplicability: args.oracle.status.applicability.state,
+    oracleApplicability: args.oracle.pricingKind === "savings-rate" && isKnownRequired(args.oracle.status)
+      ? "not-applicable" : args.oracle.status.applicability.state,
     components: normalizedComponents,
     controlFacts: controls,
     processDiagnostics,
@@ -356,7 +357,7 @@ function evaluateMintPhase(context: ControlEvaluationContext): void {
     const posture = deriveV9MintPosture(control, mint, false, policy, facts.issuanceFacts);
     const score = applyResolvedControlIncidentHistory(
       gradeEconomicControlAuthority(control, mint, policy, facts.gaps, facts.issuanceFacts, facts.assetId),
-      control, args.resolvedIncidentAgeMonths, policy.control,
+      control, args.resolvedIncidentAgeDays, policy,
     );
     const binding = controlBinding(control, provenNullShareDeploymentBound(facts, control));
     components.push({
@@ -388,7 +389,7 @@ function evaluateMintPhase(context: ControlEvaluationContext): void {
       components.push({
         componentKey: "mint", kind: "mint", posture: "none-resolved",
         score: applyResolvedControlIncidentHistory(policy.control.authorityLadder.immutableNoPower,
-          null, args.resolvedIncidentAgeMonths, policy.control),
+          null, args.resolvedIncidentAgeDays, policy),
         binding: true, controlKeys: [], failureDomains: [],
       });
     } else if (isKnownRequired(mint.status)) {
@@ -400,6 +401,21 @@ function evaluateMintPhase(context: ControlEvaluationContext): void {
 function evaluateOraclePhase(context: ControlEvaluationContext): void {
   const { args, policy, facts, controlsByKey, components, addReason, addStructuralFailure } = context;
   const oracle = args.oracle;
+  if (oracle.pricingKind === "savings-rate" && isKnownRequired(oracle.status)) {
+    // Conversion accrual is an authority path, already priced by evaluateMintPhase
+    // from the compiled controller inventory. The rate label proves no topology.
+    // In particular, no reviewed setter must not become an immutable/no-power 90.
+    if (!facts.controls.some((control) => control.controlKind !== "bridge" &&
+        control.status.applicability.state !== "not-applicable" && isControlEconomicallyRelevant(control))) {
+      addReason("missing-mint-authority", "local-component", "mint:savings-rate");
+      components.push({
+        componentKey: "mint:savings-rate", kind: "mint", posture: "unknown",
+        score: unknownQuality("control", "U", policy), binding: true,
+        controlKeys: [], failureDomains: [], causeStatuses: [oracle.status, oracle.factorStatuses?.authority],
+      });
+    }
+    return;
+  }
   const retainedOracleTier = oracle.status.applicability.state === "unresolved" &&
     oracle.paths?.some((path) => path.applicability.state === "required" && path.observationState === "known")
     ? oracle.knownPathTier ?? null

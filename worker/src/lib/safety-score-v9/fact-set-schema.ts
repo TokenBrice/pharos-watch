@@ -32,7 +32,6 @@ import {
   V9CdpStressCoverageFactSchema,
   V9MechanismRiskReviewSchema,
 } from "@shared/types/safety-score-v9-backing";
-import { SafetyScoreV9OperationalResilienceOverlaySchema } from "@shared/types/safety-score-v9-operational-resilience-overlays";
 import {
   DexExitRouteObservationSchema,
   ExitRouteObservationSchema,
@@ -399,7 +398,6 @@ const AssetExtensionSchema = z
     accessReview: V9AccessReviewV2Schema.nullable(),
     pegReference: PegReferenceSchema.nullable(),
     supplyReview: SupplyReviewSchema.nullable(),
-    operationalResilience: SafetyScoreV9OperationalResilienceOverlaySchema.nullable().optional(),
     // Optional only for retained extension-v2 compatibility. The current
     // baseline producer emits the reviewed registry projection when available.
     wrapperCustodyReview: WrapperCustodyReviewSchema.nullable().optional(),
@@ -440,17 +438,6 @@ const AssetExtensionSchema = z
         ctx.addIssue({ code: "custom", path: ["wrapperLocalReviews", index, "assetId"], message: "Local review must match extension asset" });
       }
     }
-    if (
-      asset.operationalResilience !== undefined &&
-      asset.operationalResilience !== null &&
-      asset.operationalResilience.assetId !== asset.assetId
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["operationalResilience", "assetId"],
-        message: "Operational-resilience overlay assetId must match its extension asset",
-      });
-    }
     if (asset.cdpStressCoverage !== undefined && asset.archetype !== "cdp") {
       ctx.addIssue({
         code: "custom",
@@ -482,16 +469,6 @@ interface AssetClockIssue {
 /** Point-in-time admission checks of one asset against the extension clock. */
 function assetExtensionClockIssues(asset: AdmittedAssetExtension, compiledAtSec: number): AssetClockIssue[] {
   const issues: AssetClockIssue[] = [];
-  if (asset.operationalResilience !== undefined && asset.operationalResilience !== null) {
-    const reviewedAtSec = Date.parse(asset.operationalResilience.reviewedAt) / 1_000;
-    const expiresAtSec = Date.parse(asset.operationalResilience.expiresAt) / 1_000;
-    if (!(reviewedAtSec <= compiledAtSec && compiledAtSec < expiresAtSec)) {
-      issues.push({
-        path: ["operationalResilience"],
-        message: "Operational-resilience overlay is outside its exact review window",
-      });
-    }
-  }
   for (let evidenceIndex = 0; evidenceIndex < asset.researchEvidence.length; evidenceIndex += 1) {
     const evidence = asset.researchEvidence[evidenceIndex]!;
     if (evidence.observedAtSec > compiledAtSec) {

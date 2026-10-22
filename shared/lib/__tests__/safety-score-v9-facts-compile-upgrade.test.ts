@@ -213,28 +213,6 @@ describe("current cause admission", () => {
     },
   );
 
-  it("retains a linked missing operational fact without manufacturing positive eligibility evidence", () => {
-    const core = currentCore();
-    const asset = core.assets[0]!;
-    asset.operationalResilience = null;
-    const gap = createV9FactGapV3({
-      gapId: "missing-operational", reasonCode: "scoped-control-question", ownerDomain: "control",
-      policyRuleId: "operational-eligibility", observationState: "missing",
-      path: { kind: "local-component", componentKey: "operational-eligibility" },
-      message: "Operational eligibility evidence is unavailable.", responsibility: "unresearched",
-    });
-    asset.operationalResilienceStatus = createV9FactStatus({
-      observationState: "missing", applicability: requiredV9Applicability("operational-eligibility"), gapIds: [gap.gapId],
-    });
-    expect(safeParseV9AssetFactsV3(asset).success).toBe(false);
-    asset.gaps.push(gap);
-    const admitted = compileV9FactSetV3(core).assets[0]!;
-    expect(admitted.operationalResilience).toBeNull();
-    expect(admitted.operationalResilienceStatus!.observationState).toBe("missing");
-    const forged = structuredClone(admitted);
-    forged.operationalResilienceStatus = knownStatus();
-    expect(safeParseV9AssetFactsV3(forged).success).toBe(false);
-  });
 
   it("retains overlapping score-eligible alternatives for portfolio allocation rather than rejecting the whole current cohort", () => {
     const core = currentCore();
