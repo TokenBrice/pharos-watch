@@ -434,7 +434,9 @@ describe("methodology registry", () => {
     expect(impact).toMatch(/five cap families/);
     expect(impact).toMatch(/speculative-credit.*59/);
     expect(impact).toMatch(/at least 25%.*39.*at least 1%.*49/);
-    expect(impact).toMatch(/equal to unshipped v10\.28/);
+    expect(impact).toMatch(/v10\.28 and v10\.29 ship together/);
+    expect(impact).toMatch(/both effectiveAt values set to the actual release-cut time at shipping/);
+    expect(impact).toMatch(/retained 1792627200 placeholder is not activation/i);
   });
 
 });
