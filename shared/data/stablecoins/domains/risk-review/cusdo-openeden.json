@@ -1,5 +1,68 @@
 {
   "id": "cusdo-openeden",
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "cUSDO is the non-rebasing ERC-4626 wrapper of rebasing USDO, not a separately valued fund share. OpenEden's integration guide values cUSDO through convertToAssets, and its cUSDO documentation states that USDO and cUSDO accrue the same interest. Ethereum cUSDO proxy 0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0 identifies verified implementation 0xb9413a34f68072a362b6a58f46c6af36c4e5d890, which initializes ERC4626 with USDO and inherits the asset-balance share conversion without an independent price oracle. The underlying USDO implementation lets DEFAULT_ADMIN_ROLE reset bonusMultiplier and MULTIPLIER_ROLE increase it without consulting an external NAV or reserve feed. Thus cUSDO's published conversion rate transmits privileged issuer-set USDO pricing rather than removing it. Chainlink's Base USDO Reserves feed is cross-chain Proof of Reserve over issuer-self-attested wallet addresses, not an independent cUSDO NAV setter. ChainSecurity's March 3, 2025 code assessment corroborates the multiplier and wrapper design; it is not a financial reserve attestation.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-22",
+      "reviewer": "R4-USDO primary-source NAV and oracle review",
+      "rationale": "cUSDO's ERC-4626 conversion expresses a claim on USDO whose rebase multiplier is issuer-controlled. This is top-level share pricing, not borrower liquidation collateral pricing or an oracle-free exemption.",
+      "sources": [
+        {
+          "label": "OpenEden cUSDO integration guide: convertToAssets dollar valuation",
+          "url": "https://docs.openeden.com/usdo/developers/integration-guide"
+        },
+        {
+          "label": "Ethereum verified cUSDO implementation and inherited ERC4626Upgradeable source",
+          "url": "https://etherscan.io/address/0xB9413a34f68072a362B6a58F46c6AF36C4e5d890#code"
+        },
+        {
+          "label": "OpenEden USDO Bonus Multiplier: issuer-preset rebase rate",
+          "url": "https://docs.openeden.com/usdo/usdo-token/bonus-multiplier"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-22",
+    "reviewer": "R4-USDO primary-source NAV and oracle review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "OpenEden cUSDO token: USDO wrapper and identical accrued interest",
+        "url": "https://docs.openeden.com/usdo/cusdo-token"
+      },
+      {
+        "label": "OpenEden cUSDO integration guide: convertToAssets dollar valuation",
+        "url": "https://docs.openeden.com/usdo/developers/integration-guide"
+      },
+      {
+        "label": "Ethereum cUSDO proxy and current verified implementation, accessed 2026-10-22",
+        "url": "https://etherscan.io/address/0xaD55aebc9b8c03FC43cd9f62260391c13c23e7c0#code"
+      },
+      {
+        "label": "Ethereum verified cUSDO implementation and inherited ERC4626Upgradeable source",
+        "url": "https://etherscan.io/address/0xB9413a34f68072a362B6a58F46c6AF36C4e5d890#code"
+      },
+      {
+        "label": "OpenEden USDO Bonus Multiplier: issuer-preset rebase rate",
+        "url": "https://docs.openeden.com/usdo/usdo-token/bonus-multiplier"
+      },
+      {
+        "label": "Ethereum verified USDO implementation: DEFAULT_ADMIN_ROLE and MULTIPLIER_ROLE setters",
+        "url": "https://etherscan.io/address/0x87e3Ba929c71c0e28fC1C817D107A888A59C523e#code"
+      },
+      {
+        "label": "Chainlink USDO Reserves: cross-chain Proof of Reserve, not cUSDO price authority",
+        "url": "https://data.chain.link/feeds/base/base/usdo-por"
+      },
+      {
+        "label": "ChainSecurity USDO/cUSDO code assessment, March 3, 2025, sections 2.3-2.4; not financial assurance",
+        "url": "https://reports.chainsecurity.com/OpenEden/ChainSecurity_OpenEden_USDO_Audit.pdf"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

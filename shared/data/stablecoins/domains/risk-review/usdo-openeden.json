@@ -1,5 +1,60 @@
 {
   "id": "usdo-openeden",
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "USDO targets $1 and distributes yield through an issuer-set bonusMultiplier, not an independently determined token NAV. OpenEden documents daily multiplier updates at a predetermined issuer-set rate. Ethereum USDO proxy 0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe identifies verified implementation 0x87e3ba929c71c0e28fc1c817d107a888a59c523e: updateBonusMultiplier is DEFAULT_ADMIN_ROLE-gated, addBonusMultiplier is MULTIPLIER_ROLE-gated, and conversion uses shares times bonusMultiplier divided by 1e18. Neither setter checks an external NAV or reserve feed. The issuer publishes reserve NAV, liabilities and per-chain TBILL prices through its reserve-composition API. Chainlink's Base USDO Reserves feed at 0x5218ebeb96bd2bafe21f9b143f5672552629ba79 is cross-chain Proof of Reserve using issuer-self-attested wallet addresses; it is reserve monitoring, not the authority setting the USDO multiplier. ChainSecurity's March 3, 2025 code assessment independently describes the administrator's ability to reset the multiplier and the cUSDO wrapper's dependency on it. No financial reserve attestation or independent multiplier-setting authority was established by this review.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-22",
+      "reviewer": "R4-USDO primary-source NAV and oracle review",
+      "rationale": "USDO's issuer-set rebase coefficient is a top-level economic pricing authority. The reserve dashboard and Chainlink Proof of Reserve feed do not remove that authority; USDO has no borrower liquidation branches in the reviewed mechanism.",
+      "sources": [
+        {
+          "label": "OpenEden USDO Bonus Multiplier: daily updates and issuer-preset APY",
+          "url": "https://docs.openeden.com/usdo/usdo-token/bonus-multiplier"
+        },
+        {
+          "label": "Ethereum USDO verified implementation: multiplier setters and share conversion",
+          "url": "https://etherscan.io/address/0x87e3Ba929c71c0e28fC1C817D107A888A59C523e#code"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-22",
+    "reviewer": "R4-USDO primary-source NAV and oracle review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "OpenEden USDO Bonus Multiplier: daily updates and issuer-preset APY",
+        "url": "https://docs.openeden.com/usdo/usdo-token/bonus-multiplier"
+      },
+      {
+        "label": "Ethereum USDO proxy and current verified implementation, accessed 2026-10-22",
+        "url": "https://etherscan.io/address/0x8238884Ec9668Ef77B90C6dfF4D1a9F4F4823BFe#code"
+      },
+      {
+        "label": "Ethereum USDO verified implementation: multiplier setters and share conversion",
+        "url": "https://etherscan.io/address/0x87e3Ba929c71c0e28fC1C817D107A888A59C523e#code"
+      },
+      {
+        "label": "OpenEden reserve NAV and supply API, snapshot 2026-10-22T08:00:19.847Z",
+        "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
+      },
+      {
+        "label": "Chainlink USDO Reserves: cross-chain Proof of Reserve and wallet-address self-attestation, accessed 2026-10-22",
+        "url": "https://data.chain.link/feeds/base/base/usdo-por"
+      },
+      {
+        "label": "Base verified USDO Reserves EACAggregatorProxy",
+        "url": "https://basescan.org/address/0x5218Ebeb96bD2bAFe21F9b143f5672552629ba79#code"
+      },
+      {
+        "label": "ChainSecurity USDO/cUSDO code assessment, March 3, 2025, sections 2.3-2.4; not financial assurance",
+        "url": "https://reports.chainsecurity.com/OpenEden/ChainSecurity_OpenEden_USDO_Audit.pdf"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [
