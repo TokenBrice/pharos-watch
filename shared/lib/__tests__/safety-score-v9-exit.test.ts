@@ -1417,6 +1417,50 @@ describe("cause-aware Exit and max-feasible portfolios", () => {
     expect(result.score).toBe(0);
     expect(result.reasons).toContain("no-viable-exit-path");
   });
+
+  it.each(["C", "U"] as const)("prices an unavailable %s rail when only immaterial DEX measurements remain", (cause) => {
+    const missing = gap(cause, "unavailable-rail");
+    const tiny = route({
+      routeKey: "dex:immaterial", lane: "dex", routeFamily: "dex-amm",
+      evidenceKind: "measured-executable-depth",
+      capacityCurve: route().capacityCurve.map((point) => ({
+        ...point, executableUsd: 1, completionRatio: 1 / point.requestedNotionalUsd,
+      })),
+    });
+    const unavailable = route({
+      routeKey: "redemption:unavailable", observationState: "missing", status: missing.status,
+      factorStatuses: { capacity: missing.status }, gaps: [missing.gap], capacityCurve: [],
+    });
+    for (const routes of [[tiny, unavailable], [unavailable, tiny]]) {
+      const result = evaluate(routes);
+      expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit[cause]);
+      expect(result.primaryRouteKey).toBeNull();
+      expect(result.supportedComponentKeys).toEqual([]);
+      expect(result.limitedEvidenceCauses).toEqual([cause]);
+      expect(result.causeGapIds).toContain(missing.gap.gapId);
+      expect(result.reasons).toContain("missing-same-notional-route");
+      expect(result.reasons).not.toContain("no-viable-exit-path");
+      expect(result.routes.find((candidate) => candidate.routeKey === tiny.routeKey)).toMatchObject({
+        score: 0, capsApplied: ["immaterial-executable-capacity"],
+      });
+    }
+    const measuredZero = evaluate([{
+      ...tiny, capacityCurve: tiny.capacityCurve.map((point) => ({ ...point, executableUsd: 0, completionRatio: 0 })),
+    }, unavailable]);
+    expect(measuredZero.score).toBe(0);
+    expect(measuredZero.reasons).toContain("no-viable-exit-path");
+  });
+
+  it.each(["C", "U"] as const)("does not turn a bounded %s empty census into measured exhaustion", (cause) => {
+    const missing = gap(cause, "unavailable-census");
+    const result = evaluateV9Exit({
+      circulatingUsd: 20_000_000, portfolioStatus: "reviewed-complete",
+      portfolioFactStatus: missing.status, gaps: [missing.gap], routes: [],
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit[cause]);
+    expect(result.limitedEvidenceCauses).toEqual([cause]);
+    expect(result.reasons).not.toContain("no-viable-exit-path");
+  });
 });
 
 describe("bounded settlement subfactors", () => {

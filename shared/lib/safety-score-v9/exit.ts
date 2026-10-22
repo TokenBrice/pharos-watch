@@ -1072,7 +1072,7 @@ export function evaluateV9Exit(
       supportedComponentCeiling: null, exclusionReason: null,
     };
   });
-  const evaluated = traces
+  let evaluated = traces
     .flatMap((trace, index) => (trace.score === null ? [] : [{ trace, route: routes[index]!, score: trace.score }]))
     .sort((left, right) => right.score - left.score || compareText(left.route.routeKey, right.route.routeKey));
   const diagnosticReasons = traces.flatMap((trace) => (trace.exclusionReason ? [trace.exclusionReason] : []));
@@ -1088,6 +1088,21 @@ export function evaluateV9Exit(
         : routeCause(route, "capacity").cause !== null ? routeCause(route, "capacity") : routeCause(route);
   };
   const excludedGap = (trace: V9ExitRouteTrace) => excludedCause(trace).excluded;
+  // A route-local materiality zero does not prove whole-asset exhaustion
+  // while another applicable rail or the inventory still has bounded gaps.
+  // Reuse the no-usable-route path, not a floor on an actual measured zero.
+  if (evaluated.length > 0 &&
+    evaluated.every((candidate) => candidate.trace.capsApplied.includes("immaterial-executable-capacity")) &&
+    (inventoryCause.cause === "C" || inventoryCause.cause === "U" ||
+      traces.some((trace, index) => {
+        if (trace.included || trace.exclusionReason === null ||
+          routes[index]!.applicability === "not-applicable" || routes[index]!.routeSuspension) return false;
+        const causal = excludedCause(trace);
+        return !causal.excluded && causal.cause !== "D";
+      }))) {
+    evaluated = [];
+    pillarMetadata.supportedComponentKeys = [];
+  }
   if (evaluated.length === 0) {
     const hasBoundedMissingRoute = diagnosticReasons.includes("missing-same-notional-route") ||
       routes.some((route) => route.routeSuspension !== undefined ||
@@ -1095,7 +1110,8 @@ export function evaluateV9Exit(
           !isExhaustionMeasurement(route))) ||
       diagnosticReasons.some((reason) => reason !== "unproven-settlement-bound");
     const hasUnprovenSettlementBound = diagnosticReasons.includes("unproven-settlement-bound");
-    const provenEmptyInventory = args.portfolioStatus === "reviewed-complete" && routes.length === 0;
+    const provenEmptyInventory = args.portfolioStatus === "reviewed-complete" && routes.length === 0 &&
+      !inventoryCause.excluded && inventoryCause.cause !== "C" && inventoryCause.cause !== "U";
     // A reviewed census proving no routes exist is adverse. A non-empty
     // inventory whose routes were excluded or unmeasured is missing evidence,
     // not proof of exhaustion; admitted exhaustive zeros remain included.
