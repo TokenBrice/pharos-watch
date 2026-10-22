@@ -4176,10 +4176,32 @@
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
-          "quality": "limited"
+          "quality": "adequate",
+          "review": {
+            "reviewedAt": "2026-10-22",
+            "reviewer": "R3 sourced sibling parity review",
+            "rationale": "Re-read the 1 September 2026 SICAV prospectus, sections 2 and 3.1.1: EUTBL is a tokenized UCITS share with proportional ownership of its sub-fund assets, not a separate unsecured issuer IOU. The same filed share-register and ownership terms support UKTBL's adequate claim grade. Distinct sovereign holdings and dealing calendars are not homogenized. The original 2026-07-27 review and other component clocks are retained.",
+            "sources": [
+              {
+                "label": "Spiko SICAV prospectus published 1 September 2026, shared tokenized share-register and ownership terms",
+                "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+              }
+            ]
+          }
         },
         "navValuation": {
-          "quality": "limited"
+          "quality": "adequate",
+          "review": {
+            "reviewedAt": "2026-10-22",
+            "reviewer": "R3 sourced sibling parity review",
+            "rationale": "The 1 September 2026 filed prospectus names CACEIS Fund Administration as accounting administrator and requires daily EUTBL NAV calculation, except French market holidays/closures, under its valuation rules. This independently administered daily NAV supports the same adequate valuation grade as UKTBL; it is not a current itemized reserve reconciliation or strong assurance claim.",
+            "sources": [
+              {
+                "label": "Spiko SICAV prospectus published 1 September 2026, CACEIS administration and EUTBL daily NAV",
+                "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+              }
+            ]
+          }
         },
         "durationAndLiquidity": {
           "quality": "adequate"
@@ -4696,10 +4718,32 @@
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
-          "quality": "limited"
+          "quality": "adequate",
+          "review": {
+            "reviewedAt": "2026-10-22",
+            "reviewer": "R3 sourced sibling parity review",
+            "rationale": "Re-read the 1 September 2026 SICAV prospectus, sections 2 and 3.1.1: USTBL is a tokenized UCITS share with proportional ownership of its sub-fund assets. The same filed share-register and ownership terms support UKTBL's adequate claim grade. The US, EU and UK products are different sovereign sub-funds of one SICAV, not identical portfolios. The original 2026-07-27 review and other component clocks are retained.",
+            "sources": [
+              {
+                "label": "Spiko SICAV prospectus published 1 September 2026, shared tokenized share-register and ownership terms",
+                "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+              }
+            ]
+          }
         },
         "navValuation": {
-          "quality": "limited"
+          "quality": "adequate",
+          "review": {
+            "reviewedAt": "2026-10-22",
+            "reviewer": "R3 sourced sibling parity review",
+            "rationale": "The 1 September 2026 filed prospectus names CACEIS Fund Administration as accounting administrator and requires daily USTBL NAV calculation, except French/US market holidays/closures, under its valuation rules. This independently administered daily NAV supports the same adequate valuation grade as UKTBL; it does not establish current itemized reserve reconciliation.",
+            "sources": [
+              {
+                "label": "Spiko SICAV prospectus published 1 September 2026, CACEIS administration and USTBL daily NAV",
+                "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+              }
+            ]
+          }
         },
         "durationAndLiquidity": {
           "quality": "adequate"
@@ -17429,7 +17473,20 @@
       },
       "components": {
         "creditQuality": {
-          "quality": "adequate"
+          "applicability": "unavailable",
+          "rationale": "IAUon's Final Terms permit Other Collateral in addition to or instead of IAU shares and cash, plus pooled Additional Collateral. The primary disclosure provides no current whole-token collateral mix or obligor allocation. Physical gold in the tracked ETF cannot establish the credit quality of every asset securing the token, consistently with GLDon and SLVon.",
+          "sourceUrl": "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
+          "review": {
+            "reviewedAt": "2026-10-22",
+            "reviewer": "R3 sourced sibling parity review",
+            "rationale": "New source-scoped credit-quality review supersedes the adequate claim from 2026-07-27 only for this component. Re-read Final Terms section 3: Standard, substitutable Other and pooled Additional Collateral are permitted, without a current whole-book allocation. No measured credit-quality grade can be assigned from the underlying gold ETF alone; no other metric or component is renewed.",
+            "sources": [
+              {
+                "label": "IAUon binding Final Terms, section 3 collateral permissions",
+                "url": "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf"
+              }
+            ]
+          }
         },
         "seniority": {
           "quality": "adequate"
@@ -21341,16 +21398,76 @@
           "quality": "adequate"
         },
         "valuationCadence": {
-          "quality": "limited"
+          "quality": "adequate",
+          "review": {
+            "reviewedAt": "2026-10-22",
+            "reviewer": "R3 sourced sibling parity review",
+            "rationale": "The common FMA-approved Base Prospectus sections 5.9.9 and 5.10.7 impose business-day collateral reporting and independent Ankura verification. GLDon's Final Terms appoint the same Verification Agent as IAUon/SLVon. This supports adequate platform valuation cadence, not a current GLDon-specific reserve reconciliation. The original 2026-10-03 metric pin and unrelated components are unchanged.",
+            "sources": [
+              {
+                "label": "Ondo Base Prospectus dated 11 November 2025, reporting and verification covenants",
+                "url": "https://cdn.sanity.io/files/8k2tqa6n/production/ae1f1ca8ce2c2197a45b563e3e9add041924a249.pdf"
+              },
+              {
+                "label": "GLDon Final Terms dated 26 March 2026, Ankura Verification Agent",
+                "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf"
+              }
+            ]
+          }
         },
         "maturityAndLiquidity": {
-          "quality": "limited"
+          "quality": "adequate",
+          "review": {
+            "reviewedAt": "2026-10-22",
+            "reviewer": "R3 sourced sibling parity review",
+            "rationale": "GLDon's filed Final Terms provide the same open-ended investor put and issuer redemption framework as IAUon/SLVon under the common Base Prospectus. The sourced contractual liquidity design supports the same adequate component grade, not guaranteed instant all-holder execution, a zero-day whole-book WAM or measured stressed capacity.",
+            "sources": [
+              {
+                "label": "GLDon Final Terms dated 26 March 2026, open-ended investor put and redemption calculation",
+                "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf"
+              },
+              {
+                "label": "Ondo Base Prospectus dated 11 November 2025, section 4.4.4 redemption process",
+                "url": "https://cdn.sanity.io/files/8k2tqa6n/production/ae1f1ca8ce2c2197a45b563e3e9add041924a249.pdf"
+              }
+            ]
+          }
         },
         "custody": {
-          "quality": "limited"
+          "quality": "adequate",
+          "review": {
+            "reviewedAt": "2026-10-22",
+            "reviewer": "R3 sourced sibling parity review",
+            "rationale": "GLDon's Final Terms name Alpaca Securities and BitGo Trust as custodians, matching IAUon/SLVon. The common filed Base Prospectus sections 4.2.2-4.2.3 and 5.10 document custody and Security Agent account-control agreements. Adequate grades this common legal custody design, not current collateral balances, token-specific reconciliation or custody of physical gold for token holders.",
+            "sources": [
+              {
+                "label": "GLDon Final Terms dated 26 March 2026, named custodians",
+                "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf"
+              },
+              {
+                "label": "Ondo Base Prospectus dated 11 November 2025, custody and account-control agreements",
+                "url": "https://cdn.sanity.io/files/8k2tqa6n/production/ae1f1ca8ce2c2197a45b563e3e9add041924a249.pdf"
+              }
+            ]
+          }
         },
         "recovery": {
-          "quality": "limited"
+          "quality": "adequate",
+          "review": {
+            "reviewedAt": "2026-10-22",
+            "reviewer": "R3 sourced sibling parity review",
+            "rationale": "GLDon's Final Terms appoint Ankura Trust as Security Agent, with the same common Base Prospectus collateral realization, account control, limited recourse and pro-rata Additional Collateral terms as IAUon/SLVon. These filed recovery mechanics support adequate design, not guaranteed full repayment, an independent current liability reconciliation or direct gold delivery.",
+            "sources": [
+              {
+                "label": "GLDon Final Terms dated 26 March 2026, Ankura Security Agent and collateral terms",
+                "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf"
+              },
+              {
+                "label": "Ondo Base Prospectus dated 11 November 2025, sections 4.4.5 and 5.10 secured recovery",
+                "url": "https://cdn.sanity.io/files/8k2tqa6n/production/ae1f1ca8ce2c2197a45b563e3e9add041924a249.pdf"
+              }
+            ]
+          }
         }
       },
       "notes": "Mirrors the IAUon/SLVon rwa-credit-fund investment family with exact GLDon identity-bound Final Terms. Terms identify an open-ended debt security, limited-recourse issuer claim, investor put right, Alpaca and BitGo custody, and Ankura security agent; the prospectus and issuer disclosure provide the contractual claim and reporting structure. Daily reporting establishes a 1-day valuation cadence, not exact GLDon-specific net reserve reconciliation. Current share/cash/Other Collateral weights and aggregate-report liability attribution remain unavailable. Public $1 operational minimum and USDC swapper dependency differ from the Final Terms 0.01-USDC subscription minimum; no all-holder cash or physical-gold delivery route is assumed. Reopened program disclosures confirm additional collateral above full backing and the Ondo Foundation/Flux guarantee. These commitments and named regulated custody do not establish a GLDon-specific measured reserve mix or independent financial reconciliation."
