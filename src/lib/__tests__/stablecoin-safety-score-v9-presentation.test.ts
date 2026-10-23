@@ -288,15 +288,14 @@ describe("stablecoin V9 safety presentation", () => {
       },
       { key: "selected-route-scope", label: "Chain / pool", value: "tron / pool-1" },
     ]));
-    // The producer emits control components alphabetically, so the binding row
-    // is listed last in the fixture on purpose: the pillar that scores on the
-    // lowest binding control must lead with it regardless of producer order.
-    // One loose bridge is below the composite threshold, so it stays a row.
-    expect(presentation.pillars[2].breakdown?.groups[0].rows.map((row) => row.key))
-      .toEqual(["mint", "oracle", "abstract"]);
-    expect(presentation.pillars[2].breakdown?.groups[0].rows[0]).toMatchObject({
-      label: "Mint authority",
-    });
+    // The producer emits control components alphabetically: the limiting row
+    // must lead regardless of producer order, then the diagnostics cheapest
+    // first. A minimum has no weights, so none is invented for display.
+    const controlRows = presentation.pillars[2].breakdown!.groups[0].rows;
+    expect(controlRows.map((row) => [row.key, row.role, row.weight])).toEqual([
+      ["mint", "limiting", null], ["abstract", "diagnostic", null], ["oracle", "diagnostic", null],
+    ]);
+    expect(controlRows[0]).toMatchObject({ label: "Mint authority" });
   });
 
   it("keeps measured zero capacity, confidence, and its binding cap visible", () => {
@@ -363,62 +362,132 @@ describe("stablecoin V9 safety presentation", () => {
     expect(JSON.stringify(exit)).not.toContain("no confidence");
   });
 
-  it("rolls loose bridges into one composite carrying the cohort's worst score", () => {
-    const card = makeV9Card({ pillars: BREAKDOWN_PILLARS });
+  /** A published control component with the fields every fixture repeats. */
+  const controlRow = (
+    key: string, label: string, kind: "mint" | "oracle" | "bridge", score: number, binding: boolean, posture = "unbounded-reconciled",
+  ) => ({ key, label, kind, score, binding, posture, effectiveScoringWeight: binding ? 1 : 0, cause: null, causeGapRefs: [], scoringDisposition: "included" as const });
+  /** One bridged deployment: its bridge route and the authority minting its token there, over one control. */
+  const bridgedDeployment = (chain: string, address: string, route: number, mint: number, binding = false, mintPosture = "unbounded-reconciled") => {
+    const controlKey = `bridge-meta:usdc-circle:${chain}${address.slice(2, 6)}`;
+    const name = chain.charAt(0).toUpperCase() + chain.slice(1);
+    return [
+      controlRow(`bridge:${chain}:${address}:${controlKey}`, `${name} bridge`, "bridge", route, binding, "external-lock-mint"),
+      controlRow(`mint:bridge:${controlKey}`, `${name} bridged-token mint`, "mint", mint, binding, mintPosture),
+    ];
+  };
+  const controlPresentation = (components: ReturnType<typeof controlRow>[], score: number) => {
+    const card = makeV9Card({ pillars: makeV9Pillars({ backing: 88, exit: 84, control: score }) });
     card.breakdowns = {
       ...breakdownsFixture(),
       control: {
-        ...breakdownsFixture().control,
-        // Producer order is alphabetical by key, which the schema enforces.
-        components: [
-          { key: "abstract", label: "Abstract bridge", kind: "bridge" as const, score: 65, binding: false, posture: "distributed" as const, effectiveScoringWeight: 0, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
-          { key: "boba", label: "Boba bridge", kind: "bridge" as const, score: 85, binding: false, posture: "distributed" as const, effectiveScoringWeight: 0, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
-          { key: "bsc", label: "Bsc bridge", kind: "bridge" as const, score: 86, binding: true, posture: "distributed" as const, effectiveScoringWeight: 1, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
-          { key: "flow", label: "Flow bridge", kind: "bridge" as const, score: 50, binding: false, posture: "distributed" as const, effectiveScoringWeight: 0, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
-          { key: "mint", label: "Mint authority", kind: "mint" as const, score: 90, binding: true, posture: "concentrated" as const, effectiveScoringWeight: 1, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
-        ],
+        ...breakdownsFixture().control, evaluatedScore: score, publishedScore: score,
+        components: [...components].sort((left, right) => (left.key < right.key ? -1 : 1)),
       },
     };
+    return buildStablecoinSafetyScoreV9Presentation(SafetyScoreV9CurrentCardSchema.parse(card)).pillars[2].breakdown!;
+  };
 
-    const rows = buildStablecoinSafetyScoreV9Presentation(
-      SafetyScoreV9CurrentCardSchema.parse(card),
-    ).pillars[2].breakdown!.groups[0].rows;
-
-    // A bridge is the lowest binding control on 37 assets, so a binding bridge
-    // stays a top-level row instead of disappearing into the composite. Binding
-    // rows lead cheapest-first, so the row that sets the score is read first.
-    expect(rows.map((row) => row.key)).toEqual(["bsc", "mint", "bridge-composite"]);
-    const composite = rows[2];
-    // Worst, not mean: the pillar rule is a minimum and an average would flatter it.
-    expect(composite.score).toBe(50);
-    expect(composite.status).toBe("3 bridge components");
-    expect(composite.detail).toBe("Worst of 3 · range 50–85 · not binding");
-    expect(composite.children.map((child) => child.key)).toEqual(["flow", "abstract", "boba"]);
+  it("folds a wide asset's deployment inputs behind the limiting row, one row per deployment", () => {
+    // usdc-circle's production shape: one native limiting control and dozens
+    // of diagnostic bridged deployments, each published as a route + mint pair.
+    const breakdown = controlPresentation([
+      controlRow("mint", "X Layer upgrade authority", "mint", 80, true),
+      ...bridgedDeployment("fantom", "0x04068da6c83afcfa0e13ba15a6696662335d5b75", 45, 25, false, "compromised"),
+      ...bridgedDeployment("taiko", "0x07d83526730c7438048d55a4fc0b850e2aab6f0b", 85, 55),
+      ...bridgedDeployment("boba", "0x66a2a913e447d6b4bf33efbec43aaef87890fbbc", 85, 90),
+      // A token mint whose route the producer did not select stays its own row.
+      controlRow("mint:bridge:bridge-meta:usdc-circle:nibiru", "Nibiru bridged-token mint", "mint", 90, false),
+    ], 80);
+    const rows = breakdown.groups[0].rows;
+    expect(rows.map((row) => [row.label, row.score, row.role])).toEqual([
+      ["X Layer upgrade authority", 80, "limiting"],
+      // Worst, not mean: the pillar rule is a minimum and an average would flatter it.
+      ["Deployments (4)", 25, "diagnostic"],
+    ]);
+    expect(rows[1].detail).toBe("Range 25–90 · weakest Fantom 25, Taiko 55");
+    expect(rows[1].children.map((child) => [child.label, child.score, child.detail])).toEqual([
+      ["Fantom", 25, "Bridge route 45 · Bridged-token mint 25 (compromised)"],
+      ["Taiko", 55, "Bridge route 85 · Bridged-token mint 55"],
+      ["Boba", 85, "Bridge route 85 · Bridged-token mint 90"],
+      ["Nibiru bridged-token mint", 90, null],
+    ]);
+    expect(breakdown.context.map((item) => item.label)).toEqual(["Pillar rule"]);
+    // v10.31 prices bridge routes, incidents and local authority, never a bridged-token mint's own score.
+    expect(breakdown.note).toBe(
+      "Diagnostic inputs sit outside the minimum. Deployment risk can still charge bridge routes, control incidents and deployment-local authority by their share of supply.",
+    );
   });
 
-  it("counts two same-chain bridge deployments as components, never as chains", () => {
-    const card = makeV9Card({ pillars: BREAKDOWN_PILLARS });
-    card.breakdowns = {
-      ...breakdownsFixture(),
-      control: {
-        ...breakdownsFixture().control,
-        components: [
-          { key: "bridge:base:canonical", label: "Base canonical bridge", kind: "bridge", score: 85, binding: false, posture: "distributed", effectiveScoringWeight: 0, cause: null, causeGapRefs: [], scoringDisposition: "included" },
-          { key: "bridge:base:oft", label: "Base OFT bridge", kind: "bridge", score: 65, binding: false, posture: "distributed", effectiveScoringWeight: 0, cause: null, causeGapRefs: [], scoringDisposition: "included" },
-          { key: "mint", label: "Mint authority", kind: "mint", score: 86, binding: true, posture: "concentrated", effectiveScoringWeight: 1, cause: null, causeGapRefs: [], scoringDisposition: "included" },
-        ],
-      },
-    };
-    const rows = buildStablecoinSafetyScoreV9Presentation(
-      SafetyScoreV9CurrentCardSchema.parse(card),
-    ).pillars[2].breakdown!.groups[0].rows;
-    const composite = rows.find((row) => row.key === "bridge-composite")!;
-    expect(composite).toMatchObject({
-      label: "Bridge components", status: "2 bridge components", score: 65,
-      detail: "Worst of 2 · range 65–85 · not binding",
+  it("never folds away a deployment that sets the score, and folds a large tie at the minimum", () => {
+    // A bridge is the lowest eligible control on dozens of assets.
+    const single = controlPresentation([
+      controlRow("mint", "Ethereum mint authority", "mint", 90, true),
+      ...bridgedDeployment("bsc", "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d", 50, 85, true),
+    ], 50).groups[0].rows;
+    expect(single.map((row) => [row.label, row.score, row.role])).toEqual([
+      ["BSC", 50, "limiting"], ["Ethereum mint authority", 90, "eligible"],
+    ]);
+
+    // sfrxusd-frax: 33 bridged-token mints tie the oracle at the minimum.
+    const tie = controlPresentation([
+      controlRow("oracle", "Oracle design", "oracle", 60, true),
+      ...["aptos", "arbitrum", "base", "bsc"].map((chain) =>
+        controlRow(`mint:bridge:bridge-meta:sfrxusd-frax:${chain}`, `${chain} bridged-token mint`, "mint", 60, true)),
+    ], 60).groups[0].rows;
+    // Asset-level inputs lead a tie: they name the whole asset.
+    expect(tie.map((row) => [row.label, row.role, row.detail])).toEqual([
+      ["Oracle design", "limiting", null],
+      ["Deployments (4)", "limiting", "All 4 at 60"],
+    ]);
+  });
+
+  it("keeps three tied limiting deployments as rows and folds only a larger tie", () => {
+    const tie = (count: number) => controlPresentation(
+      ["aptos", "arbitrum", "base", "bsc"].slice(0, count).map((chain) =>
+        controlRow(`mint:bridge:bridge-meta:sfrxusd-frax:${chain}`, `${chain} bridged-token mint`, "mint", 60, true)),
+      60,
+    ).groups[0].rows.map((row) => row.key);
+    expect(tie(3)).toHaveLength(3);
+    expect(tie(4)).toEqual(["deployments:limiting"]);
+  });
+
+  it("pairs a Sui deployment through its control key and names an off-registry pair as a deployment", () => {
+    const sui = "sui:0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC";
+    const rows = controlPresentation([
+      controlRow("mint", "Native mint authority", "mint", 80, true),
+      controlRow(`bridge:${sui}:bridge-meta:usdc-circle:sui`, "Sui bridge", "bridge", 65, false, "external-lock-mint"),
+      controlRow("mint:bridge:bridge-meta:usdc-circle:sui", "Sui bridged-token mint", "mint", 90, false),
+      controlRow("bridge:representation-group:xaut:bridge-meta:xaut:group", "Bridge authority", "bridge", 45, false, "external-lock-mint"),
+      controlRow("mint:bridge:bridge-meta:xaut:group", "Bridged-token mint", "mint", 90, false),
+    ], 80).groups[0].rows;
+    expect(rows.map((row) => [row.label, row.score, row.detail])).toEqual([
+      ["Native mint authority", 80, null],
+      ["Bridged deployment", 45, "Bridge route 45 · Bridged-token mint 90"],
+      ["Sui", 65, "Bridge route 65 · Bridged-token mint 90"],
+    ]);
+  });
+
+  it("folds unscored deployment inputs without inventing a score", () => {
+    const unscored = (chain: string) => ({
+      ...controlRow(`mint:bridge:bridge-meta:alpha:${chain}`, `${chain} bridged-token mint`, "mint", 0, false),
+      score: null, scoringDisposition: "not-applicable" as const,
     });
-    expect(composite.children.map((child) => child.key)).toEqual(["bridge:base:oft", "bridge:base:canonical"]);
-    expect(JSON.stringify(composite)).not.toContain("2 chains");
+    const rows = controlPresentation([
+      controlRow("mint", "Native mint authority", "mint", 86, true),
+      ...["aptos", "base", "bsc"].map(unscored),
+    ] as ReturnType<typeof controlRow>[], 86).groups[0].rows;
+    expect(rows.at(-1)).toMatchObject({ key: "deployments:excluded", score: null, detail: "3 not scored", label: "Unscored deployments (3)" });
+  });
+
+  it("counts deployment inputs rather than chains and keeps same-chain deployments apart", () => {
+    const rows = controlPresentation([
+      controlRow("mint", "Ethereum mint authority", "mint", 86, true),
+      ...bridgedDeployment("base", "0xaaaa00000000000000000000000000000000aaaa", 85, 90),
+      ...bridgedDeployment("base", "0xbbbb00000000000000000000000000000000bbbb", 65, 90),
+      // Two diagnostics fold nothing: a composite of two saves no height.
+    ], 86).groups[0].rows;
+    expect(rows.map((row) => row.label)).toEqual(["Ethereum mint authority", "Base · 0xbbbb…bbbb", "Base · 0xaaaa…aaaa"]);
+    expect(JSON.stringify(rows)).not.toContain("chains");
   });
 
 });

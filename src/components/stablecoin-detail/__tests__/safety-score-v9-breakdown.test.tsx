@@ -79,6 +79,47 @@ describe("SafetyScoreV9PillarRow", () => {
     expect(bar.childElementCount).toBe(1);
   });
 
+  it("tags Control inputs by role, shows no weights, and fades diagnostics without hiding them", () => {
+    const row = (overrides: Partial<NonNullable<Pillar["breakdown"]>["groups"][number]["rows"][number]>) => ({
+      key: "mint", label: "X Layer upgrade authority", score: 80, weight: null, status: null,
+      tone: "neutral" as const, detail: null, children: [], role: "limiting" as const, ...overrides,
+    });
+    const control: Pillar = {
+      ...pillar(80), key: "control", label: "Economic Control",
+      breakdown: {
+        aggregationWeight: 0.25, evaluatedScore: 80, publishedScore: 80, sectionLabel: "Control inputs",
+        context: [{ key: "method", label: "Pillar rule", value: "Lowest eligible input" }],
+        exitHighlight: null, alternatives: [], note: "Diagnostic inputs sit outside the minimum.",
+        groups: [{ key: "control", label: null, score: null, weight: null, tail: null, rows: [
+          row({}),
+          row({
+            key: "deployments:diagnostic", label: "Deployments (2)", score: 25, tone: "critical",
+            role: "diagnostic", detail: "Range 25–90 · weakest Fantom 25",
+            children: [row({ key: "fantom", label: "Fantom", score: 25, tone: "critical", role: "diagnostic" }), row({ key: "boba", label: "Boba", score: 90, role: "diagnostic" })],
+          }),
+        ] }],
+      },
+    };
+    const { container } = render(<SafetyScoreV9PillarRow cardId="card" pillar={control} />);
+    fireEvent.click(screen.getByRole("button", { name: /Economic Control/ }));
+    expect(container.querySelectorAll('[data-control-role="limiting"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-control-role="diagnostic"]')).toHaveLength(1);
+    expect(container.textContent).not.toContain("100%");
+    expect(container.textContent).toContain("Diagnostic inputs sit outside the minimum.");
+    const diagnosticBar = screen.getByRole("img", { name: /^Deployments \(2\)/ });
+    expect(diagnosticBar.className).toContain("border-dashed");
+    expect(diagnosticBar.firstElementChild?.getAttribute("style")).toContain("25%");
+    // The diagnostic number is muted so it never out-shouts the limiting 80.
+    expect(screen.getByText("25").className).toContain("text-muted-foreground");
+    const toggle = screen.getByRole("button", { name: /2 members of Deployments \(2\)/ });
+    expect(toggle.getAttribute("aria-controls")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /weakest Fantom 25/ }));
+    expect(screen.getByRole("img", { name: /^Fantom: 25 out of 100/ })).toBeTruthy();
+    // Fold members inherit the fold's role tag rather than repeating it.
+    expect(container.querySelectorAll('[data-control-role="diagnostic"]')).toHaveLength(1);
+    expect(document.getElementById(toggle.getAttribute("aria-controls")!)).toBeTruthy();
+  });
+
   it.each([
     { visibility: undefined, linked: true },
     { visibility: "none" as const, linked: false },
