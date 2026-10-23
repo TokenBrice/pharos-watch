@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import {
-  getCache, getPriceCache, prepareCacheUpsert, readCacheWithPolicy, savePriceCache,
+  getCache, getPriceCache, prepareCacheUpsert, PRICE_CACHE_SYNCED_AT_REFRESH_SEC, readCacheWithPolicy, savePriceCache,
   setCacheIfAbsent, setCacheIfNewer, setCachesAt, type CachePolicy,
 } from "../db-cache";
 
@@ -318,5 +318,37 @@ describe("savePriceCache", () => {
       observedAt: 1799999999, observedAtMode: null, syncedAt: 1800000100,
       agreeSources: [], consensusSources: [],
     });
+  });
+
+  it("skips identical rewrites until synced_at is one refresh interval old, never delaying a new observation", async () => {
+    const { sqlite, db } = fixtures.open();
+    const row = {
+      id: "usdy-ondo", price: 1.12, source: "protocol-redeem", confidence: "single-source" as const,
+      observedAt: 1800000000, observedAtMode: "upstream" as const, agreeSources: ["protocol-redeem"],
+    };
+    const syncedAt = () => sqlite.prepare("SELECT synced_at FROM price_cache").get();
+    const changes = () => (sqlite.prepare("SELECT total_changes() AS n").get() as { n: number }).n;
+    await savePriceCache(db, [{ ...row, syncedAt: 1800000100 }]);
+
+    let before = changes();
+    await savePriceCache(db, [{ ...row, syncedAt: 1800000100 + PRICE_CACHE_SYNCED_AT_REFRESH_SEC - 1 }]);
+    expect(changes()).toBe(before);
+    expect(syncedAt()).toEqual({ synced_at: 1800000100 });
+
+    await savePriceCache(db, [{ ...row, syncedAt: 1800000100 + PRICE_CACHE_SYNCED_AT_REFRESH_SEC }]);
+    expect(syncedAt()).toEqual({ synced_at: 1800000100 + PRICE_CACHE_SYNCED_AT_REFRESH_SEC });
+
+    // Same price but a newer observation is a freshness change and always lands.
+    before = changes();
+    await savePriceCache(db, [{ ...row, observedAt: 1800000900, syncedAt: 1800000100 + PRICE_CACHE_SYNCED_AT_REFRESH_SEC + 900 }]);
+    expect(changes()).toBe(before + 1);
+    expect((await getPriceCache(db)).get("usdy-ondo")).toMatchObject({ price: 1.12, observedAt: 1800000900, updatedAt: 1800000900 });
+
+    // Without an upstream clock, updated_at is the sync time, so the row always refreshes.
+    await savePriceCache(db, [{ ...row, observedAt: null, syncedAt: 1800005000 }]);
+    before = changes();
+    await savePriceCache(db, [{ ...row, observedAt: null, syncedAt: 1800005900 }]);
+    expect(changes()).toBe(before + 1);
+    expect((await getPriceCache(db)).get("usdy-ondo")).toMatchObject({ updatedAt: 1800005900, syncedAt: 1800005900 });
   });
 });

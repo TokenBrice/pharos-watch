@@ -346,6 +346,14 @@ function resolvePriceCacheUpdatedAt(e: PriceCacheWriteEntry, now: number): numbe
   return e.observedAt <= syncedAt ? e.observedAt : syncedAt;
 }
 
+/**
+ * A row identical to the stored one, including its observation clock
+ * (`observed_at`/`updated_at`), only advances `synced_at`. No freshness verdict
+ * reads `synced_at`, so such no-op rewrites are skipped until the stored
+ * `synced_at` is this old, which bounds its lag and the conflict-guard window.
+ */
+export const PRICE_CACHE_SYNCED_AT_REFRESH_SEC = 60 * 60;
+
 export async function savePriceCache(db: D1Database, entries: PriceCacheWriteEntry[]): Promise<void> {
   if (entries.length === 0) return;
   const now = Math.floor(Date.now() / 1000);
@@ -364,7 +372,18 @@ export async function savePriceCache(db: D1Database, entries: PriceCacheWriteEnt
            synced_at = excluded.synced_at,
            agree_sources_json = excluded.agree_sources_json,
            consensus_sources_json = excluded.consensus_sources_json
-         WHERE COALESCE(excluded.synced_at, 0) >= COALESCE(price_cache.synced_at, 0)`,
+         WHERE COALESCE(excluded.synced_at, 0) >= COALESCE(price_cache.synced_at, 0)
+           AND NOT (
+             price_cache.price IS excluded.price
+             AND price_cache.updated_at IS excluded.updated_at
+             AND price_cache.source IS excluded.source
+             AND price_cache.confidence IS excluded.confidence
+             AND price_cache.observed_at IS excluded.observed_at
+             AND price_cache.observed_at_mode IS excluded.observed_at_mode
+             AND price_cache.agree_sources_json IS excluded.agree_sources_json
+             AND price_cache.consensus_sources_json IS excluded.consensus_sources_json
+             AND excluded.synced_at - COALESCE(price_cache.synced_at, 0) < ?
+           )`,
       )
       .bind(
         e.id,
@@ -377,6 +396,7 @@ export async function savePriceCache(db: D1Database, entries: PriceCacheWriteEnt
         e.syncedAt ?? now,
         JSON.stringify(e.agreeSources ?? []),
         JSON.stringify(e.consensusSources ?? []),
+        PRICE_CACHE_SYNCED_AT_REFRESH_SEC,
       ),
   );
   await batchExecute(db, stmts);
