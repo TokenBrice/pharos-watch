@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { STATUS_BLACKLIST_THRESHOLDS, STATUS_MISSING_PRICE_THRESHOLDS, STATUS_RESERVE_COHORT_SLO } from "@shared/lib/status-thresholds";
-import { getCircuitImpactStatus, getPublicSafetyScoreStatus, PUBLIC_CIRCUIT_IMPACT_QUORUM, PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER } from "@shared/lib/public-health";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { getCircuitImpactStatus, getPublicProducerGraceBudget, getPublicSafetyScoreStatus, PUBLIC_CIRCUIT_IMPACT_QUORUM, PUBLIC_PRODUCER_INTERVAL_SEC } from "@shared/lib/public-health";
 import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
 import type { StatusCause, StatusResponse } from "@shared/types/status";
 import type { ReserveFeedReview } from "@shared/types/live-reserves";
@@ -112,11 +111,12 @@ describe("status evaluation policy", () => {
     else expect(cause).toMatchObject({ threshold: PUBLIC_CIRCUIT_IMPACT_QUORUM, value: 3 });
   });
 
+  const safetyBudget = getPublicProducerGraceBudget(PUBLIC_PRODUCER_INTERVAL_SEC.safetyScores);
   it.each([
-    [API_FRESHNESS_MAX_AGE_SEC.reportCards, "healthy"],
-    [API_FRESHNESS_MAX_AGE_SEC.reportCards + 1, "degraded"],
-    [API_FRESHNESS_MAX_AGE_SEC.reportCards * PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER, "degraded"],
-    [API_FRESHNESS_MAX_AGE_SEC.reportCards * PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER + 1, "stale"],
+    [safetyBudget.delayedAfterSec, "healthy"],
+    [safetyBudget.delayedAfterSec + 1, "degraded"],
+    [safetyBudget.degradedAfterSec, "degraded"],
+    [safetyBudget.degradedAfterSec + 1, "stale"],
   ] as const)("uses the public Safety floor at accepted age %i (%s)", (ageSec, expected) => {
     const now = Math.floor(Date.now() / 1000);
     const publication = {
@@ -134,7 +134,7 @@ describe("status evaluation policy", () => {
       expect(cause).toMatchObject({ severity: expected === "stale" ? "critical" : "warning", layer: "availability" });
       expect(cause?.message).toContain(publication.acceptedPublicationGenerationId!);
       expect(cause?.message).toContain(`at ${publication.acceptedAtSec}`);
-      expect(cause?.message).toContain(`freshness budget ${API_FRESHNESS_MAX_AGE_SEC.reportCards}s`);
+      expect(cause?.message).toContain(`public budget delayed >${safetyBudget.delayedAfterSec}s, degraded >${safetyBudget.degradedAfterSec}s`);
     }
   });
 
@@ -479,14 +479,14 @@ describe("status cause text", () => {
   it("emits a warning cache cause when an override-tightened cache breaches its degraded band below the global threshold", () => {
     const causes = evaluateAvailabilityStatus(makeAvailabilityCauseInput(
       makePublicHealth("healthy", {
-        // yield-data override bands are 2x/4x, so 2.1x degrades it even though
+        // yield-data override bands are 3x/6x, so 3.1x degrades it even though
         // the global 8x band is untouched. A non-overridden cache at the same
-        // 2.1x ratio stays healthy, proving per-key override resolution.
+        // 3.1x ratio stays healthy, proving per-key override resolution.
         caches: {
-          "yield-data": { ageSeconds: 7_560, maxAge: 3_600, healthy: false },
-          stablecoins: { ageSeconds: 7_560, maxAge: 3_600, healthy: true },
+          "yield-data": { ageSeconds: 11_160, maxAge: 3_600, healthy: false },
+          stablecoins: { ageSeconds: 11_160, maxAge: 3_600, healthy: true },
         },
-        worstCacheRatio: 2.1,
+        worstCacheRatio: 3.1,
       }),
     )).causes;
 
@@ -495,7 +495,7 @@ describe("status cause text", () => {
         code: "cache_ratio_degraded",
         severity: "warning",
         message: expect.stringContaining("yield-data"),
-        threshold: 2,
+        threshold: 3,
       }),
     );
     expect(causes.some((cause) => cause.code === "cache_ratio_stale")).toBe(false);
@@ -525,9 +525,9 @@ describe("status cause text", () => {
     const causes = evaluateAvailabilityStatus(makeAvailabilityCauseInput(
       makePublicHealth("healthy", {
         caches: {
-          "yield-data": { ageSeconds: 14_760, maxAge: 3_600, healthy: false },
+          "yield-data": { ageSeconds: 22_000, maxAge: 3_600, healthy: false },
         },
-        worstCacheRatio: 4.1,
+        worstCacheRatio: 6.1,
       }),
     )).causes;
 
@@ -536,7 +536,7 @@ describe("status cause text", () => {
         code: "cache_ratio_stale",
         severity: "critical",
         message: expect.stringContaining("yield-data"),
-        threshold: 4,
+        threshold: 6,
       }),
     );
   });
@@ -924,25 +924,31 @@ describe("status cause text", () => {
   });
 
   it.each([
-    [19, "not degrading public status.", false],
-    [20, "public status is degraded by the service-wide breadth threshold.", true],
-  ] as const)("words %s first-generation price misses of 396 by the breadth verdict", (count, wording, breadth) => {
+    [19, 2, null, false],
+    // Single-generation misses do not count toward breadth (2026-10-23 hysteresis).
+    [20, 1, "not degrading public status.", false],
+    [20, 2, null, true],
+  ] as const)("words %s price misses of 396 at generation %s by the breadth verdict", (count, generations, wording, breadth) => {
     const nowSec = 1_790_000_000;
     const ids = Array.from({ length: 396 }, (_, index) => `asset-${index}`);
     const priced = ids.slice(count).map((id) => ({ id, price: 1, priceSource: "coingecko" }));
-    const evaluated = evaluateStablecoinActivePriceCoverage(priced, ids, { nowSec });
-    expect(evaluated.alertEligibleIds).toEqual([]);
+    const first = evaluateStablecoinActivePriceCoverage(priced, ids, { nowSec: nowSec - 900 });
+    const evaluated = generations === 1 ? first : evaluateStablecoinActivePriceCoverage(priced, ids, {
+      nowSec, previousCoverage: first,
+    });
+    expect(evaluated.missingActiveAssets.every((asset) => asset.consecutiveMissingGenerations === generations)).toBe(true);
     const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
       nowSec,
       activePriceCoverage: { ...evaluated, status: "incomplete", observedAt: nowSec },
     }));
     const cause = result.causes.find((entry) => entry.code === "active_price_coverage_incomplete");
-    expect(cause).toMatchObject({ severity: "info" });
-    expect(cause?.message.endsWith(wording)).toBe(true);
+    // Second-generation gaps are alert-eligible, so the incomplete cause escalates to a named warning.
+    expect(cause).toMatchObject({ severity: generations === 1 ? "info" : "warning" });
+    if (wording) expect(cause?.message.endsWith(wording)).toBe(true);
     expect(result.causes.some((entry) => entry.code === "active_price_coverage_breadth_degraded")).toBe(breadth);
     if (breadth) {
       expect(result.causes.find((entry) => entry.code === "active_price_coverage_breadth_degraded")?.message)
-        .toContain(`${count} of 396 active assets (0 persistent, 0 under review, ${count} recent)`);
+        .toContain(`${count} of 396 active assets (${count} persistent, 0 under review, 0 recent); ${count} persisted 2+ generations`);
     }
   });
 

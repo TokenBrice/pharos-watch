@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  countActivePriceBreadthGaps,
   FRESHNESS_RATIOS,
   getBlacklistGapStatus,
   getStablecoinPublicationImpactStatus,
@@ -16,7 +17,9 @@ import {
   getMissingPriceTileSeverity,
   hasReserveScoreInputHold,
   isReserveDriftThresholdExceeded,
+  STATUS_ACTIVE_PRICE_BREADTH_MIN_GENERATIONS,
   STATUS_CACHE_RATIO_OVERRIDES,
+  STATUS_PUBLIC_PRODUCER_GRACE_RATIOS,
   STATUS_CACHE_RATIO_THRESHOLDS,
   STATUS_MISSING_PRICE_THRESHOLDS,
   STATUS_ONCHAIN_FRESH_WINDOW_SEC,
@@ -63,7 +66,34 @@ describe("missing-price duration bands", () => {
   ] as const)("grades %s price coverage with %s unavailable of 396 by cohort breadth", (status, missingPriceCount, expected) => {
     expect(getActivePriceCoverageBreadthStatus({
       status, expectedActiveCount: status === "unknown" ? null : 396, missingPriceCount,
+      missingActiveAssets: Array.from({ length: missingPriceCount ?? 0 }, (_, index) => breadthGap(`gap-${index}`, 2)),
     })).toBe(expected);
+  });
+
+  function breadthGap(stablecoinId: string, consecutiveMissingGenerations: number | null) {
+    return { stablecoinId, consecutiveMissingGenerations };
+  }
+
+  it("counts only gaps that persisted two generations (unknown streaks fail closed) and not publication-missing assets", () => {
+    const coverage = {
+      status: "incomplete" as const, expectedActiveCount: 396, missingPriceCount: 30,
+      missingActiveAssets: [
+        ...Array.from({ length: 12 }, (_, index) => breadthGap(`transient-${index}`, 1)),
+        ...Array.from({ length: 15 }, (_, index) => breadthGap(`persistent-${index}`, 2 + index)),
+        breadthGap("unknown-streak", null),
+        breadthGap("unpublished-a", 9), breadthGap("unpublished-b", 9),
+      ],
+    };
+    expect(STATUS_ACTIVE_PRICE_BREADTH_MIN_GENERATIONS).toBe(2);
+    expect(countActivePriceBreadthGaps(coverage, ["unpublished-a", "unpublished-b"])).toBe(16);
+    expect(getActivePriceCoverageBreadthStatus(coverage, ["unpublished-a", "unpublished-b"])).toBe("healthy");
+    // Without the publication exclusion the same gaps are 18; four more persistent gaps reach 20.
+    expect(countActivePriceBreadthGaps(coverage)).toBe(18);
+    expect(getActivePriceCoverageBreadthStatus({
+      ...coverage,
+      missingActiveAssets: [...coverage.missingActiveAssets, ...["a", "b"].map((id) => breadthGap(id, 2))],
+    })).toBe("degraded");
+    expect(countActivePriceBreadthGaps({ ...coverage, missingPriceCount: null })).toBeNull();
   });
 });
 
@@ -143,13 +173,14 @@ describe("per-cache availability ratio overrides", () => {
     expect(getCacheRatioThresholds("stablecoins")).toEqual(STATUS_CACHE_RATIO_THRESHOLDS);
   });
 
-  it("tightens yield-data to 2x degraded / 4x stale (two missed hourly publishes)", () => {
-    expect(STATUS_CACHE_RATIO_OVERRIDES["yield-data"]).toEqual({ degraded: 2.0, stale: 4.0 });
-    expect(getCacheRatioThresholds("yield-data")).toEqual({ degraded: 2.0, stale: 4.0 });
+  it("grades yield-data by the public producer grace rule (3x degraded / 6x stale)", () => {
+    expect(STATUS_PUBLIC_PRODUCER_GRACE_RATIOS).toEqual({ delayed: 3, degraded: 6 });
+    expect(STATUS_CACHE_RATIO_OVERRIDES["yield-data"]).toEqual({ degraded: 3, stale: 6 });
+    expect(getCacheRatioThresholds("yield-data")).toEqual({ degraded: 3, stale: 6 });
   });
 
   it("flips the yield-data healthy boolean at the degraded band while others keep the not-stale ceiling", () => {
-    expect(getCacheHealthyMaxRatio("yield-data")).toBe(2.0);
+    expect(getCacheHealthyMaxRatio("yield-data")).toBe(3);
     expect(getCacheHealthyMaxRatio("stablecoins")).toBe(FRESHNESS_RATIOS.DEGRADED);
     expect(getCacheHealthyMaxRatio()).toBe(FRESHNESS_RATIOS.DEGRADED);
   });

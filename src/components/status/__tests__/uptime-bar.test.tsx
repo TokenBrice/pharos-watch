@@ -21,6 +21,14 @@ describe("UptimeBar", () => {
     );
   });
 
+  it("keeps a sub-hour blip in the tooltip without colouring the day", () => {
+    const { container } = render(
+      <UptimeBar cells={[{ date: "2026-10-22", state: "operational", brief: "degraded" }]} label="Stablecoin data" />,
+    );
+    expect(container.querySelector('[title="2026-10-22: Operational (briefly degraded, under 1 h)"]')?.className)
+      .toContain(PUBLIC_COMPONENT_STATE_TONE.operational.bar);
+  });
+
   it("never counts no-data days as operational", () => {
     expect(summarizeDayCells([{ date: "a", state: "no-data" }, { date: "b", state: "no-data" }])).toBe("2d no data");
   });

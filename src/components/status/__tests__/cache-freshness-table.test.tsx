@@ -46,7 +46,7 @@ describe("CacheFreshnessTable", () => {
 
   it("uses the yield-data override for its band and threshold labels", () => {
     const yieldCache: CacheStatus = {
-      ageSeconds: 10_800,
+      ageSeconds: 14_400,
       maxAge: 3_600,
       healthy: false,
       producerJob: "sync-yield-data",
@@ -60,10 +60,10 @@ describe("CacheFreshnessTable", () => {
     const row = screen.getByText("yield-data").closest("tr");
     expect(row).not.toBeNull();
     expect(within(row as HTMLTableRowElement).getByText("Delayed")).toBeTruthy();
-    expect(within(row as HTMLTableRowElement).getByText("warning after 2h")).toBeTruthy();
+    expect(within(row as HTMLTableRowElement).getByText("warning after 3h")).toBeTruthy();
     expect(within(row as HTMLTableRowElement).queryByText("warning after 8h")).toBeNull();
     expect(
-      within(row as HTMLTableRowElement).getByText("Delayed >2.00x · degraded >4.00x · outage >8.00x"),
+      within(row as HTMLTableRowElement).getByText("Delayed >3.00x · degraded >6.00x · outage >12.00x"),
     ).toBeTruthy();
   });
 
