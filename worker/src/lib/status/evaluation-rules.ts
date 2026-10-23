@@ -19,7 +19,7 @@ import type { StatusHealthValue } from "@shared/types/status/core";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import { maxStatus, SEVERITY } from "../status-reliability-shared";
 import type { OnchainDataQualityAssessment } from "./onchain-data-quality";
-import type { CronFindingJobs } from "./cron-health";
+import { SCHEDULED_DELIVERY_LAG_SIGNAL, type CronFindingJobs, type ScheduledDeliveryLagSummary } from "./cron-health";
 import { getSourceFailureMessage } from "./section-errors";
 
 
@@ -134,6 +134,8 @@ export interface AvailabilityEvaluationInput {
   cronLeaseQueryFailed: boolean;
   /** Job ids behind each count; optional so fixtures without them keep count-only messages. */
   cronFindingJobs?: Partial<CronFindingJobs>;
+  /** Ops-only platform delivery lag; optional so fixtures without it emit no lag cause. */
+  scheduledDeliveryLag?: ScheduledDeliveryLagSummary;
 }
 
 export interface DataQualityEvaluationInput {
@@ -373,7 +375,7 @@ type WatchCronErrorsInput = Pick<
 >;
 type WatchTailInput = Pick<
   AvailabilityEvaluationInput,
-  "watchUnhealthyCrons" | "degradedCronRuns" | "cronFindingJobs"
+  "watchUnhealthyCrons" | "degradedCronRuns" | "cronFindingJobs" | "scheduledDeliveryLag"
 >;
 
 function evaluateCronDiagnosticQueries(input: CronDiagnosticsInput): Partial<StatusRuleEvaluation> | null {
@@ -404,6 +406,22 @@ function evaluateWatchTailDiagnostics(input: WatchTailInput): Partial<StatusRule
     const named = withJobs(`${input.degradedCronRuns} cron job(s) have fresh degraded terminal attempts reporting incomplete required work.`, input.cronFindingJobs?.degraded);
     causes.push(makeCause("availability", "degraded_cron_warning", "info", named.message, { metric: "degradedCrons", value: input.degradedCronRuns, threshold: 1, subjects: named.subjects }));
   }
+  // Platform delivery lag is an operator signal, never a status or public impact:
+  // late starts are already graded by the producers' own freshness budgets.
+  const lag = input.scheduledDeliveryLag;
+  const { windowSec, lateAfterSec, warnAtLateSlots } = SCHEDULED_DELIVERY_LAG_SIGNAL;
+  if (lag?.queryFailed) {
+    causes.push(makeCause("availability", "scheduled_delivery_lag_query_failed", "info", "Scheduled slot delivery-lag query failed; late-start counts are unknown, not zero."));
+  } else if (lag?.lateSlots != null && lag.lateSlots >= warnAtLateSlots) {
+    causes.push(makeCause(
+      "availability",
+      "scheduled_delivery_lag_elevated",
+      "warning",
+      `${lag.lateSlots} of ${lag.startedSlots} scheduled slot(s) started in the last ${windowSec / 60} min began more than ${lateAfterSec}s after their slot time `
+        + `(warning at ${warnAtLateSlots}; maximum lag ${lag.maxLagSec}s). Platform delivery is late; see the cron delivery runbook.`,
+      { metric: "scheduledSlotsStartedLate", value: lag.lateSlots, threshold: warnAtLateSlots },
+    ));
+  }
   return ruleResult("healthy", causes);
 }
 
@@ -422,6 +440,8 @@ const CRON_DERIVED_AVAILABILITY_CAUSE_CODES = [
   "watch_cron_error_runs",
   "watch_unhealthy_crons_present",
   "degraded_cron_warning",
+  "scheduled_delivery_lag_query_failed",
+  "scheduled_delivery_lag_elevated",
 ] as const;
 
 export type CronDerivedAvailabilityCauseInputs = CronDiagnosticsInput & WatchCronErrorsInput & WatchTailInput;
@@ -973,6 +993,7 @@ const RUNBOOK_BY_CODE: Record<string, string> = {
   scheduler_liveness_unavailable: `${RUNBOOK_BASE}/cron-delivery-stall.md`,
   heavy_scheduled_delivery_stalled: `${RUNBOOK_BASE}/cron-delivery-stall.md`,
   heavy_scheduler_liveness_unavailable: `${RUNBOOK_BASE}/cron-delivery-stall.md`,
+  scheduled_delivery_lag_elevated: `${RUNBOOK_BASE}/cron-delivery-stall.md`,
   db_unhealthy: `${RUNBOOK_BASE}/db-connectivity.md`,
   data_quality_skipped_db_unhealthy: `${RUNBOOK_BASE}/db-connectivity.md`,
   stablecoins_cache_unavailable: `${RUNBOOK_BASE}/stablecoins-cache.md`,

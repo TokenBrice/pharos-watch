@@ -11,6 +11,7 @@ const mockD1 = createMockD1Preset([
   { match: "FROM cron_run_progress", rows: [] },
   { match: "FROM cache", rows: [] },
   { match: "WHERE state = 'running'", rows: [] },
+  { match: "AS started_slots", rows: [{ started_slots: 0, late_slots: 0, max_lag_sec: null }] },
 ]);
 
 interface SeedRun {
@@ -93,6 +94,37 @@ describe("loadCronHealth optional reads", () => {
     } finally {
       warn.mockRestore();
     }
+  });
+});
+
+describe("loadCronHealth scheduled delivery lag", () => {
+  const NOW = 1_775_890_000;
+
+  it("counts slots that started in the trailing hour more than five minutes after their slot time", async () => {
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare(`INSERT INTO cron_slot_executions
+        (slot_key, slot_started_at, state, execution_owner, started_at, updated_at) VALUES (?, ?, 'finished', 'owner', ?, ?)`);
+      insert.run("quarterHourly", NOW - 3_000, NOW - 3_000 + 300, NOW);
+      insert.run("hourlyYieldSync", NOW - 2_400, NOW - 2_400 + 301, NOW);
+      insert.run("statusSelfCheckOffset", NOW - 6_000, NOW - 1_800, NOW);
+      insert.run("fiveMinuteTelegramAlerts", NOW - 7_000, NOW - 4_000, NOW);
+      const snapshot = await loadCronHealth(db, NOW);
+      expect(snapshot.scheduledDeliveryLag).toEqual({ startedSlots: 3, lateSlots: 2, maxLagSec: 4_200, queryFailed: false });
+    } finally { sqlite.close(); }
+  });
+
+  it("keeps an unreadable lag window unknown instead of zero", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const db = mockD1([
+        { match: "AS started_slots", rows: [], throwError: new Error("lag-read-failed") },
+        { match: CRON_HISTORY_MATCH, rows: seedWithOverrides(NOW, []) },
+      ]);
+      const snapshot = await loadCronHealth(db, NOW);
+      expect(snapshot.scheduledDeliveryLag).toEqual({ startedSlots: null, lateSlots: null, maxLagSec: null, queryFailed: true });
+      expect(snapshot.scheduledSlots.queryFailed).toBe(false);
+    } finally { warn.mockRestore(); }
   });
 });
 
