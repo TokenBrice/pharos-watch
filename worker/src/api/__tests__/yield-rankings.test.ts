@@ -489,12 +489,26 @@ describe("handleYieldRankings", () => {
     expect(body.rankings[0]?.provenance?.safetyScoreIdentity).toEqual(currentSafetyIdentity);
   });
 
-  it("serves the coherent publish-time safety snapshot instead of blanking on a compact identity mismatch", async () => {
+  it("hydrates live safety when only the evaluation-build digest rotated", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
     const db = makeCacheDb(v748RankingsPayload, updatedAt);
     loadActiveSafetyScoreIndexMock.mockResolvedValueOnce(makeIndexSource(new Map([["usdc-circle", { score: 88, grade: "A" }]]), {
       ...v9Identity("report-cards:v9:other"),
       evaluationBuildDigest: "c".repeat(64),
+    }, updatedAt));
+
+    const body = await readJsonResponse(await handleYieldRankings(db), 200) as YieldRankingsResponse;
+
+    expect(body.rankings[0]).toMatchObject({ safetyScore: 88, safetyGrade: "A" });
+    expect(body.provenance?.liveSafetyHydration).toMatchObject({ kind: "ok", reason: null });
+  });
+
+  it("serves the coherent publish-time safety snapshot instead of blanking on a compact identity mismatch", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const db = makeCacheDb(v748RankingsPayload, updatedAt);
+    loadActiveSafetyScoreIndexMock.mockResolvedValueOnce(makeIndexSource(new Map([["usdc-circle", { score: 88, grade: "A" }]]), {
+      ...v9Identity("report-cards:v9:other"),
+      policyDigest: "9".repeat(64),
     }, updatedAt));
 
     const res = await handleYieldRankings(db);

@@ -85,7 +85,7 @@ The `alternatives_json` ledger is intentionally compact and bounded to 4 KB per 
 
 ## Safety Identity Mismatch
 
-`/yield/` showing every row as Safety NR — blank scatter chart, `—` hero PYS, zeroed risk-tolerance bands — while APYs still populate is the *safety hydration* failure mode, not a rankings-cache failure. The read path hydrates safety from the live V9 publication only when the identity stamped into the `yield-rankings` cache is evaluator-compatible with it (`safetyScorePublicationIdentitiesAreComparable`). Every scoring deploy rotates the evaluation-build digest, so a mismatch window is expected after each rollout until the next hourly `sync-yield-data` publish.
+`/yield/` showing every row as Safety NR — blank scatter chart, `—` hero PYS, zeroed risk-tolerance bands — while APYs still populate is the *safety hydration* failure mode, not a rankings-cache failure. The read path hydrates safety from the live V9 publication only when the identity stamped into the `yield-rankings` cache shares its scoring contract (`safetyScorePublicationIdentitiesShareScoringContract`). Hydration recomputes every safety-derived field from the live cards, so an evaluation-build digest rotation alone keeps live hydration and raises no warning; a methodology, policy or schema change opens a mismatch window until the next hourly `sync-yield-data` publish.
 
 An incompatible or unavailable live publication can use publish-time safety (`yield-safety-hydration-stale`, `provenance.liveSafetyHydration.fallback: "publish-time-snapshot"`) only within the [original-clock failure contract](../yield-intelligence.md#failure-semantics). Missing safety time is not renewed from cache time. Fallback alone emits no HTTP Warning; publication aging still does above two hours.
 `provenance.liveSafetyHydration.reason` joins every applicable reason, including the upstream snapshot's own cause. Fallback coverage does not count `cached-publish` safety merely because a stored score exists; qualifying non-default `opportunity-safety` rows still count under `countRowSafetyCoverage`.
@@ -109,7 +109,7 @@ SELECT json_extract(value, '$.identity') AS live
 FROM cache WHERE key = 'report-cards:v9';
 ```
 
-Comparability requires equal model, schema version, methodology version, `evaluationBuildDigest`, `policyId`, and `policyDigest`; input/publication generation IDs may differ. `safetyIdentityChangedBeforePublish` records a mid-run incompatible identity change; that run publishes and the next compatible run re-aligns.
+Yield compatibility requires equal model, schema version, methodology version, `policyId`, and `policyDigest`; `evaluationBuildDigest` and input/publication generation IDs may differ. Series consumers (history, alerts, weekly recap) keep the stricter `safetyScorePublicationIdentitiesAreComparable`, which also binds `evaluationBuildDigest`. `safetyIdentityChangedBeforePublish` records a mid-run incompatible identity change; that run publishes and the next compatible run re-aligns.
 
 ## Common Causes
 

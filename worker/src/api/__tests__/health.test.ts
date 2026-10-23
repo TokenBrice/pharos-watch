@@ -910,7 +910,7 @@ describe("handleHealth", () => {
     });
   }
 
-  function publicationEnvelopeIdentityJson(evaluationBuildDigest: string): string {
+  function publicationEnvelopeIdentityJson(evaluationBuildDigest: string, policyDigest = "c".repeat(64)): string {
     return JSON.stringify({
       candidateId: `safety-score-v9:v1:${"e".repeat(64)}`,
       policyVersion: "9.28",
@@ -918,7 +918,7 @@ describe("handleHealth", () => {
       baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
       factSetDigest: "1".repeat(64),
       policyId: "safety-score-v9",
-      policyDigest: "c".repeat(64),
+      policyDigest,
       evaluationBuildDigest,
       resultDigest: "2".repeat(64),
     });
@@ -991,7 +991,7 @@ describe("handleHealth", () => {
         {
           match: "publication_identity",
           rows: [],
-          first: { publication_identity: publicationEnvelopeIdentityJson("d".repeat(64)) },
+          first: { publication_identity: publicationEnvelopeIdentityJson("d".repeat(64), "9".repeat(64)) },
         },
       ],
     });
@@ -1001,6 +1001,30 @@ describe("handleHealth", () => {
 
     expect(body.status).toBe("healthy");
     expect(body.warnings).toContain("yield-safety-publish-time-fallback:safety-identity-mismatch");
+  });
+
+  it("raises no yield safety warning when only the evaluation-build digest rotated", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = makeHealthyHealthDb(now, {
+      extras: [
+        yieldHealthEntry(now),
+        {
+          match: "stamped_identity",
+          rows: [],
+          first: { updated_at: now - 1800, stamped_identity: stampedYieldIdentityJson("a".repeat(64)), safety_published_at: now - 3600 },
+        },
+        {
+          match: "publication_identity",
+          rows: [],
+          first: { publication_identity: publicationEnvelopeIdentityJson("d".repeat(64)) },
+        },
+      ],
+    });
+
+    const body = (await (await handleHealth(db)).json()) as { status: string; warnings: string[] };
+
+    expect(body.status).toBe("healthy");
+    expect(body.warnings.filter((warning) => warning.startsWith("yield-safety-"))).toEqual([]);
   });
 
   it.each([25 * 3600, null, -60])("fails closed for unavailable stamped safety age %s despite a recent yield cache", async (safetyAge) => {
@@ -1052,7 +1076,7 @@ describe("handleHealth", () => {
         {
           match: "publication_identity",
           rows: [],
-          first: { publication_identity: publicationEnvelopeIdentityJson("d".repeat(64)) },
+          first: { publication_identity: publicationEnvelopeIdentityJson("d".repeat(64), "9".repeat(64)) },
         },
       ],
     });

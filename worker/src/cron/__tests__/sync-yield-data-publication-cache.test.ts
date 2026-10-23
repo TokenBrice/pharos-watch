@@ -156,6 +156,7 @@ describe("syncYieldData", () => {
     currentSafetyIdentity.mockResolvedValue({
       kind: "v9",
       safetyScoreIdentity: testSafetyScoreIdentity({
+        policyDigest: "f".repeat(64),
         evaluationBuildDigest: "d".repeat(64),
         baseInputGenerationId: `report-cards-input:v1:${"e".repeat(64)}`,
         publicationGenerationId: "report-cards:v9:new-build",
