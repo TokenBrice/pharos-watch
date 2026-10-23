@@ -6,6 +6,10 @@ import { createNativeSafetyScoreV9FullRegistryInput } from "./fixtures/safety-sc
 
 afterEach(() => { vi.useRealTimers(); });
 
+// Two full-registry compiles exceed the 20 s default on hosted runners; match
+// the native-input pipeline suite's V9 evaluation budget.
+const V9_EVALUATION_TEST_TIMEOUT_MS = 240_000;
+
 // The publisher admits a capture that lags the live stablecoins cache by up to
 // SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC. Every evidence age (peg and
 // chainSupply at 2 x 900 s included) is measured against the capture's frozen
@@ -26,5 +30,5 @@ describe("Safety Score V9 compile clock", () => {
     const late = compileAt(fixedInput.updatedAt + SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC);
 
     expect(late === onTime).toBe(true);
-  });
+  }, V9_EVALUATION_TEST_TIMEOUT_MS);
 });
