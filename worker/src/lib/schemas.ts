@@ -155,6 +155,8 @@ const DexSubgraphFailuresSchema = z.array(z.object({
   phase: z.enum(["broad", "exact"]),
   reason: z.enum(["body-over-cap", "http", "graphql", "malformed-response"]),
   timedOut: z.boolean(),
+  isolatedPoolIdCount: z.number().int().nonnegative().optional(),
+  isolatedPoolIds: z.array(z.string()).max(5).optional(),
 })).max(32);
 
 /** Dex liquidity cron metadata shape */

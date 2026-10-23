@@ -39,6 +39,12 @@ export interface SubgraphChainFailure {
   reason: SubgraphFailureReason;
   /** The per-chain `SUBGRAPH_PER_CHAIN_TIMEOUT_MS` budget expired. */
   timedOut: boolean;
+  /**
+   * Set when a bisected exact batch isolated pools that fail alone: only those
+   * were excluded and the chain did not fail. `isolatedPoolIds` is a sample.
+   */
+  isolatedPoolIdCount?: number;
+  isolatedPoolIds?: string[];
 }
 
 /** Lookups plus the chains whose source did not answer this run. */

@@ -212,6 +212,17 @@ export const UNISWAP_V4_SUBGRAPHS: Record<string, string> = {
 export const UNISWAP_V4_POOL_PAGE_SIZE = 1000;
 export const UNISWAP_V4_POOL_MAX_PAGES = 5;
 
+/**
+ * Extra exact-pool requests per run for bisecting batches that fail with a
+ * GraphQL data error. Isolating one bad pool in a 100-id batch costs 14
+ * sequential requests (two per halving, depth log2(100) rounded up), so the
+ * cap covers about two bad pools; anything beyond still fails the chain.
+ */
+export const UNISWAP_V4_EXACT_BISECT_MAX_REQUESTS = 32;
+
+/** Isolated bad pool ids named in `subgraphFailures` (the count is always complete). */
+export const UNISWAP_V4_EXACT_ISOLATED_ID_SAMPLE = 5;
+
 export const buildUniswapV4PoolQuery = (skip: number, chain: string): string => `{
   pools(
     first: ${UNISWAP_V4_POOL_PAGE_SIZE},

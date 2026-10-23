@@ -19,6 +19,8 @@ import {
   UNIV3_SUBGRAPHS,
   UNISWAP_V4_POOL_MAX_PAGES,
   UNISWAP_V4_POOL_PAGE_SIZE,
+  UNISWAP_V4_EXACT_BISECT_MAX_REQUESTS,
+  UNISWAP_V4_EXACT_ISOLATED_ID_SAMPLE,
   UNISWAP_V4_SUBGRAPHS,
   UNISWAP_V4_SOURCE_PROVENANCE,
   UNIV3_POOL_MIN_TVL_USD,
@@ -416,6 +418,7 @@ export async function fetchUniswapV4Data(
 
   // Exact requests start only after the broad family has drained. Every batch
   // uses the existing bounded, body-consuming transport before the next opens.
+  let exactBisectRequestsLeft = UNISWAP_V4_EXACT_BISECT_MAX_REQUESTS;
   for (const [chain, subgraphId] of Object.entries(UNISWAP_V4_SUBGRAPHS)) {
     const poolIds = [...new Set(exactPoolIdsByChain.get(chain) ?? [])];
     if (poolIds.length === 0) continue;
@@ -434,8 +437,7 @@ export async function fetchUniswapV4Data(
     const conflicted = new Set<string>();
     const timeout = AbortSignal.timeout(SUBGRAPH_PER_CHAIN_TIMEOUT_MS);
     const combinedSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
-    for (let offset = 0; offset < poolIds.length; offset += 100) {
-      const batch = poolIds.slice(offset, offset + 100);
+    const fetchExactBatch = async (batch: string[]) => {
       const batchIds = new Set(batch);
       let timedOut = false;
       const fetched = await fetchSubgraphEntities<UniswapV4SubgraphPool>({
@@ -490,12 +492,66 @@ export async function fetchUniswapV4Data(
         timedOut = timeout.aborted || (error instanceof Error && error.name === "TimeoutError");
         return { failed: true, failureReason: "http" as const };
       });
+      return { ...fetched, timedOut: timedOut || timeout.aborted };
+    };
+    type ExactBatchResult = Awaited<ReturnType<typeof fetchExactBatch>>;
+    for (let offset = 0; offset < poolIds.length; offset += 100) {
+      const batch = poolIds.slice(offset, offset + 100);
+      let fetched: ExactBatchResult = await fetchExactBatch(batch);
+      // A GraphQL data error (e.g. a pool whose token entity resolves null)
+      // voids the whole batch. Bisect it sequentially, one request at a time,
+      // to exclude only the pools that still fail alone. Halving bounds the
+      // depth at log2(batch size); the per-run request cap and the chain
+      // deadline bound the rest. Single-pool failures count as isolated only
+      // when another part of the batch answered, so a source-wide error still
+      // fails the chain.
+      if (fetched.failed && fetched.failureReason === "graphql" && !fetched.timedOut) {
+        const isolated: string[] = [];
+        const answeredParts: string[][] = [];
+        let unresolved = null as ExactBatchResult | null;
+        const bisect = async (part: string[]): Promise<void> => {
+          if (part.length === 1) { isolated.push(part[0]!); return; }
+          const half = Math.ceil(part.length / 2);
+          for (const sub of [part.slice(0, half), part.slice(half)]) {
+            if (unresolved) return;
+            if (exactBisectRequestsLeft <= 0) { unresolved = fetched; return; }
+            exactBisectRequestsLeft--;
+            const subFetched = await fetchExactBatch(sub);
+            if (!subFetched.failed) answeredParts.push(sub);
+            else if (subFetched.failureReason !== "graphql" || subFetched.timedOut) unresolved = subFetched;
+            else await bisect(sub);
+          }
+        };
+        await bisect(batch);
+        for (const part of answeredParts) for (const id of part) answered.add(id);
+        const stillFailed = unresolved as ExactBatchResult | null;
+        if (stillFailed || answeredParts.length === 0) {
+          if (stillFailed) fetched = stillFailed;
+        } else {
+          result.chainFailures.push({
+            chain, phase: "exact", reason: "graphql", timedOut: false,
+            isolatedPoolIdCount: isolated.length,
+            isolatedPoolIds: isolated.slice(0, UNISWAP_V4_EXACT_ISOLATED_ID_SAMPLE),
+          });
+          logWorkerEvent({
+            scope: "handler", level: "warn", event: "uniswap-v4-exact-pools-isolated",
+            message: "Uniswap V4 exact batch bisected; excluded pools that fail alone", job: "sync-dex-liquidity",
+            source: "uniswap-v4-subgraph",
+            metadata: {
+              chain, batchOffset: offset, batchSize: batch.length,
+              isolatedPoolIdCount: isolated.length,
+              isolatedPoolIds: isolated.slice(0, UNISWAP_V4_EXACT_ISOLATED_ID_SAMPLE),
+            },
+          });
+          continue;
+        }
+      }
       if (fetched.failed) {
         if (!result.failedChains.includes(chain)) result.failedChains.push(chain);
         result.failedChainReasons[chain] = fetched.failureReason ?? "http";
         result.chainFailures.push({
           chain, phase: "exact", reason: result.failedChainReasons[chain],
-          timedOut: timedOut || timeout.aborted,
+          timedOut: fetched.timedOut,
         });
         logWorkerEvent({
           scope: "handler", level: "warn", event: "uniswap-v4-exact-source-failed",
@@ -503,7 +559,7 @@ export async function fetchUniswapV4Data(
           source: "uniswap-v4-subgraph",
           metadata: {
             chain, failureReason: result.failedChainReasons[chain],
-            timedOut: timedOut || timeout.aborted,
+            timedOut: fetched.timedOut,
             batchOffset: offset, batchSize: batch.length, requestedPoolCount: poolIds.length,
           },
         });
