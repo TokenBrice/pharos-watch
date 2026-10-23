@@ -35,7 +35,7 @@ import {
 } from "../../lib/reserve-producer-priority";
 import { resolveLiveReserveSyncBudgetConfig } from "../../cron/sync-live-reserves-config";
 import type { CronLeaseRunResult } from "../../lib/cron-lease-primitives";
-import type { ScheduledExecutionFence } from "../../lib/scheduled-slot-fence";
+import type { ScheduledExecutionFence, ScheduledSlotCatchUpRequest } from "../../lib/scheduled-slot-fence";
 
 /**
  * Contract C: each scheduled runtime starts without Dwellir and admits routing
@@ -110,6 +110,8 @@ export interface ScheduledRuntimeContext {
   recoveryCheckpoint?: ScheduledRecoveryCheckpoint;
   pendingReserveContinuation?: ReserveContinuationMessage;
   reserveQueueMetadata?: Record<string, string | number>;
+  /** Set only for a Queue-executed catch-up of this missed slot. */
+  catchUp?: ScheduledSlotCatchUpRequest;
   mintBurnDisabledIds: string[];
   mintBurnDisabledSymbols: string[];
   coingeckoApiKey: string | null;
@@ -199,6 +201,7 @@ export interface ScheduledRuntimeInit {
   jobAttemptNo?: number;
   producerKind?: string;
   recoveryCheckpoint?: ScheduledRecoveryCheckpoint;
+  catchUp?: ScheduledSlotCatchUpRequest;
 }
 
 export function createScheduledRuntimeContext(
@@ -237,6 +240,7 @@ export function createScheduledRuntimeContext(
     producerKind,
     fetchBudget,
     ...(scheduled.recoveryCheckpoint ? { recoveryCheckpoint: scheduled.recoveryCheckpoint } : {}),
+    ...(scheduled.catchUp ? { catchUp: scheduled.catchUp } : {}),
     mintBurnDisabledIds,
     mintBurnDisabledSymbols,
     coingeckoApiKey,
@@ -282,6 +286,7 @@ export function createScheduledRuntimeContext(
               attemptNo: jobAttemptNo,
               producerKind,
               ...(runtime.reserveQueueMetadata ? { reserveQueue: runtime.reserveQueueMetadata } : {}),
+              ...(runtime.catchUp ? { catchUp: runtime.catchUp } : {}),
             };
             const reserveFamily = job === "sync-live-reserves" || job === "reserve-recovery" || scheduled.recoveryCheckpoint != null;
             const leaseOwner = reserveFamily

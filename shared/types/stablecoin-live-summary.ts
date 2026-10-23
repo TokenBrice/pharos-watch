@@ -24,6 +24,8 @@ export const StablecoinLiveSummarySchema = z.object({
   agreeSources: z.array(z.string()).optional(),
   supplyObservedAt: z.number().nullable(),
   supplyRestored: z.boolean().optional(),
+  /** Chains excluded (unavailable) from a partial-coverage current supply. */
+  supplyExcludedChains: z.array(z.string()).min(1).optional(),
   circulating: StablecoinDetailPegBucketsSchema,
   circulatingPrevDay: StablecoinDetailPegBucketsSchema,
   circulatingPrevWeek: StablecoinDetailPegBucketsSchema,

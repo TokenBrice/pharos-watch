@@ -17,6 +17,9 @@ const worker = {
 
   async queue(batch: MessageBatch<unknown>, env: Env, ctx: ExecutionContext): Promise<void> {
     const eventEntryMs = Date.now();
+    // One-shot missed-slot catch-ups share the public Queue with reserve hints.
+    const { isSlotCatchUpBatch, handleSlotCatchUpBatch } = await import("./handlers/slot-catch-up");
+    if (isSlotCatchUpBatch(batch)) return handleSlotCatchUpBatch(batch, env, ctx, eventEntryMs);
     // Keep the reserve/consumer graph out of HTTP and unrelated scheduled events.
     const { handleReserveContinuationBatch } = await import("./handlers/reserve-continuation");
     return handleReserveContinuationBatch(batch, env, ctx, eventEntryMs);
