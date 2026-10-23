@@ -1,6 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
+    # The root lockfile owns every npm workspace, including worker/.
     directory: "/"
     schedule:
       interval: "weekly"
@@ -21,34 +22,22 @@ updates:
       - dependency-name: "typescript"
         update-types:
           - "version-update:semver-major"
-      # Satori >=0.33 breaks the workerd loader; 0.60 also removes yoga.wasm.
+      - dependency-name: "vitest"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "@vitest/coverage-v8"
+        update-types:
+          - "version-update:semver-major"
+      # Satori >=0.33 needs a reviewed Worker renderer migration.
       # Reopen upgrades after the production OG runtime test passes.
       - dependency-name: "satori"
         versions:
-          - ">= 0.33.0, <= 0.60.0"
+          - ">= 0.33.0"
     groups:
-      minor-and-patch:
-        update-types:
-          - "minor"
-          - "patch"
-  - package-ecosystem: "npm"
-    directory: "/worker"
-    # Worker types float freely now that the root carries no copy.
-    schedule:
-      interval: "weekly"
-    cooldown:
-      default-days: 7
-    open-pull-requests-limit: 1
-    rebase-strategy: "disabled"
-    ignore:
-      - dependency-name: "typescript"
-        update-types:
-          - "version-update:semver-major"
-      # See the root entry: newer Satori needs a reviewed Worker migration.
-      - dependency-name: "satori"
-        versions:
-          - ">= 0.33.0, <= 0.60.0"
-    groups:
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
       minor-and-patch:
         update-types:
           - "minor"

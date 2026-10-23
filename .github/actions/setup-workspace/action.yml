@@ -62,14 +62,14 @@ runs:
   using: composite
   steps:
     - if: ${{ inputs.cache-npm == 'true' }}
-      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
         node-version: ${{ inputs.node-version }}
         cache: npm
         cache-dependency-path: package-lock.json
 
     - if: ${{ inputs.cache-npm != 'true' }}
-      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
         node-version: ${{ inputs.node-version }}
 
@@ -127,7 +127,7 @@ runs:
         echo "name=${WORKSPACE_ARTIFACT_NAME}" >> "$GITHUB_OUTPUT"
 
     - if: ${{ inputs.workspace-artifact == 'restore' }}
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
         name: ${{ steps.workspace-artifact-name.outputs.name }}
         path: ${{ runner.temp }}/pharos-workspace
@@ -186,7 +186,7 @@ runs:
         tar -I 'zstd -T0 -3' -cf "${RUNNER_TEMP}/pharos-workspace/workspace.tar.zst" "${paths[@]}"
 
     - if: ${{ inputs.workspace-artifact == 'publish' }}
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: ${{ steps.workspace-artifact-name.outputs.name }}
         path: ${{ runner.temp }}/pharos-workspace/workspace.tar.zst
