@@ -12,8 +12,9 @@ vi.mock("../subgraph-source-families", () => ({
 
 import { fetchSubgraphEnrichmentPhase } from "../orchestrator-phases/subgraph-enrichment";
 import { UNIV3_SUBGRAPHS } from "../constants";
-import { buildUniV3ExecutionCandidateKey } from "../../measured-execution/inventory";
-import type { UniV3ExecutionCandidate } from "../../measured-execution/candidate-types";
+import { buildUniswapV4ExecutionCandidateKey, buildUniV3ExecutionCandidateKey } from "../../measured-execution/inventory";
+import type { UniswapV4ExecutionCandidate, UniV3ExecutionCandidate } from "../../measured-execution/candidate-types";
+import { computeUniswapV4PoolId, UNISWAP_V4_HOOK_FREE_ADDRESS } from "../../measured-execution/uniswap-v4";
 import type { PriceValidationReferences } from "../../../lib/price-validation";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -37,6 +38,21 @@ const ETH_POOL: UniV3ExecutionCandidate = {
   tokens: [{ address: EURC, symbol: "EURC", decimals: 6 }, { address: USDC, symbol: "USDC", decimals: 6 }],
 };
 const ETH_KEY = buildUniV3ExecutionCandidateKey("ethereum", [EURC, USDC], 500)!;
+const V4_POOL: UniswapV4ExecutionCandidate = {
+  chain: "ethereum",
+  poolId: computeUniswapV4PoolId({
+    currency0: EURC, currency1: USDC, feePips: 500, tickSpacing: 10, hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+  }),
+  hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+  feePips: 500,
+  tickSpacing: 10,
+  activeLiquidity: "1000000",
+  tvlUsd: 2_500_000,
+  token0Price: 1.08,
+  token1Price: 0.925,
+  tokens: [{ address: EURC, symbol: "EURC", decimals: 6 }, { address: USDC, symbol: "USDC", decimals: 6 }],
+};
+const V4_KEY = buildUniswapV4ExecutionCandidateKey("ethereum", [EURC, USDC], 500)!;
 
 function runPhase(db: D1Database, graphApiKey: string | null = "graph-key") {
   return fetchSubgraphEnrichmentPhase({
@@ -62,16 +78,19 @@ function uniV3Result(failedChains: string[], candidates: UniV3ExecutionCandidate
     uniV3PriceObs: new Map(),
     uniV3ExecutionCandidates,
     failedChains,
+    chainFailures: [],
   };
 }
 
-const V4_CLEAN = { uniswapV4ExecutionCandidates: new Map(), failedChains: [] };
+const V4_CLEAN = {
+  uniswapV4ExecutionCandidates: new Map(), failedChains: [], chainFailures: [], exactAnsweredPoolIdsByChain: new Map(),
+};
 
 describe("subgraph enrichment phase", () => {
   it("names the chains whose subgraph did not answer", async () => {
     fetchUniV3DataMock.mockResolvedValue(uniV3Result(["base", "celo"]));
     fetchUniswapV4DataMock.mockResolvedValue({
-      uniswapV4ExecutionCandidates: new Map(),
+      ...V4_CLEAN,
       failedChains: ["bsc"],
     });
 
@@ -135,5 +154,47 @@ describe("subgraph enrichment phase", () => {
     const result = await runPhase(makeNoopD1(), null);
 
     expect(result.uniV3CandidateCarryForward).toEqual([]);
+    expect(result.uniswapV4CandidateCarryForward).toEqual([]);
+  });
+
+  it("records each failed chain's reason and timeout flag by source family", async () => {
+    fetchUniV3DataMock.mockResolvedValue({
+      ...uniV3Result(["ethereum"]),
+      chainFailures: [{ chain: "ethereum", phase: "broad", reason: "http", timedOut: true }],
+    });
+    fetchUniswapV4DataMock.mockResolvedValue({
+      ...V4_CLEAN,
+      failedChains: ["ethereum"],
+      chainFailures: [
+        { chain: "ethereum", phase: "broad", reason: "http", timedOut: true },
+        { chain: "ethereum", phase: "exact", reason: "graphql", timedOut: false },
+      ],
+    });
+
+    const result = await runPhase(fixtures.open().db);
+
+    expect(result.subgraphFailures).toEqual([
+      { source: "univ3-subgraph", chain: "ethereum", phase: "broad", reason: "http", timedOut: true },
+      { source: "uniswap-v4-subgraph", chain: "ethereum", phase: "broad", reason: "http", timedOut: true },
+      { source: "uniswap-v4-subgraph", chain: "ethereum", phase: "exact", reason: "graphql", timedOut: false },
+    ]);
+  });
+
+  it("carries Uniswap V4 candidates into a failed chain and keeps the source failed", async () => {
+    const { db } = fixtures.open();
+    fetchUniV3DataMock.mockResolvedValue(uniV3Result([]));
+    fetchUniswapV4DataMock.mockResolvedValueOnce({
+      ...V4_CLEAN, uniswapV4ExecutionCandidates: new Map([[V4_KEY, [V4_POOL]]]),
+    });
+    await runPhase(db);
+
+    fetchUniswapV4DataMock.mockResolvedValueOnce({ ...V4_CLEAN, failedChains: ["ethereum"] });
+    const result = await runPhase(db);
+
+    expect(result.failedSources).toEqual(["uniswap-v4-subgraph:ethereum"]);
+    expect(result.uniswapV4ExecutionCandidates.get(V4_KEY)).toEqual([{ ...V4_POOL, carriedFromSnapshot: true }]);
+    expect(result.uniswapV4CandidateCarryForward).toContainEqual({
+      chain: "ethereum", outcome: "carried", fetchedAt: NOW, ageSec: 0, candidates: 1, added: 1,
+    });
   });
 });

@@ -283,6 +283,8 @@ function* iterateScoringStageRecords(
     failedSources: sourceState.failedSources,
     degradedSources: sourceState.degradedSources,
     uniV3CandidateCarryForward: sourceState.uniV3CandidateCarryForward,
+    uniswapV4CandidateCarryForward: sourceState.uniswapV4CandidateCarryForward,
+    subgraphFailures: sourceState.subgraphFailures,
     criticalSourceFailures: sourceState.criticalSourceFailures,
     fallbackSignals: sourceState.fallbackSignals,
     directApiSourceSummary: sourceState.directApiSourceSummary,

@@ -33,8 +33,11 @@ const phaseFixtures = vi.hoisted(() => {
         uniV3PriceObs: new Map(),
         uniV3ExecutionCandidates: new Map(),
         failedChains: [],
+        chainFailures: [],
       },
-      uniswapV4: { uniswapV4ExecutionCandidates: new Map(), failedChains: [] },
+      uniswapV4: {
+        uniswapV4ExecutionCandidates: new Map(), failedChains: [], chainFailures: [], exactAnsweredPoolIdsByChain: new Map(),
+      },
       primary: {
         pools: [],
         rawPoolCount: 0,
@@ -828,7 +831,10 @@ describe("dex liquidity scoring stage cycle", () => {
   });
 
   it("reports failed optional stage sources as findings without failing successful staging", async () => {
-    phaseFixtures.reset({ uniswapV4: { uniswapV4ExecutionCandidates: new Map(), failedChains: ["ethereum", "arbitrum"] } });
+    phaseFixtures.reset({ uniswapV4: {
+      uniswapV4ExecutionCandidates: new Map(), failedChains: ["ethereum", "arbitrum"], chainFailures: [],
+      exactAnsweredPoolIdsByChain: new Map(),
+    } });
     const result = await stageDexLiquidityScoring(db, "graph-key");
     expect(result.status).toBe("ok");
     expect(getCronQualityReasons(JSON.parse(result.metadata ?? "{}"))).toEqual([
@@ -1044,6 +1050,7 @@ describe("dex liquidity scoring stage cycle", () => {
       uniV3ExecutionCandidates,
       failedChains: [],
       failedChainReasons: {},
+      chainFailures: [],
     });
     vi.mocked(mergeStagedPools).mockImplementationOnce(
       async (_db, _metrics, _known, _now, _trackedDeployments, _references, confirmation) => {

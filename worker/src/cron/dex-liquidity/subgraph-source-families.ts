@@ -352,8 +352,14 @@ export async function fetchUniswapV4Data(
   graphApiKey: string | null,
   exactPoolIdsByChain: ReadonlyMap<string, readonly string[]>,
   signal?: AbortSignal,
-): Promise<SubgraphFamilyResult<UniswapV4Lookups>> {
-  const result = await runSubgraphFamily<UniswapV4SubgraphPool, UniswapV4Lookups>({
+): Promise<SubgraphFamilyResult<UniswapV4Lookups> & {
+  /**
+   * Exact pool ids whose batch the subgraph answered this run (present or
+   * absent). A last-known-good snapshot never overrides these answers.
+   */
+  exactAnsweredPoolIdsByChain: Map<string, Set<string>>;
+}> {
+  const family = await runSubgraphFamily<UniswapV4SubgraphPool, UniswapV4Lookups>({
     graphApiKey,
     signal,
     subgraphs: UNISWAP_V4_SUBGRAPHS,
@@ -394,6 +400,7 @@ export async function fetchUniswapV4Data(
     buildFinalSummary: (lookups) =>
       `[dex-liquidity] Collected ${lookups.uniswapV4ExecutionCandidates.size} Uniswap V4 execution candidate keys`,
   });
+  const result = { ...family, exactAnsweredPoolIdsByChain: new Map<string, Set<string>>() };
   if (!graphApiKey) return result;
   for (const [chain, source] of Object.entries(UNISWAP_V4_SOURCE_PROVENANCE)) {
     logWorkerEvent({
@@ -421,6 +428,8 @@ export async function fetchUniswapV4Data(
       if (remaining.length) result.uniswapV4ExecutionCandidates.set(key, remaining);
       else result.uniswapV4ExecutionCandidates.delete(key);
     }
+    const answered = new Set<string>();
+    result.exactAnsweredPoolIdsByChain.set(chain, answered);
     const seen = new Map<string, UniswapV4ExecutionCandidate>();
     const conflicted = new Set<string>();
     const timeout = AbortSignal.timeout(SUBGRAPH_PER_CHAIN_TIMEOUT_MS);
@@ -484,6 +493,10 @@ export async function fetchUniswapV4Data(
       if (fetched.failed) {
         if (!result.failedChains.includes(chain)) result.failedChains.push(chain);
         result.failedChainReasons[chain] = fetched.failureReason ?? "http";
+        result.chainFailures.push({
+          chain, phase: "exact", reason: result.failedChainReasons[chain],
+          timedOut: timedOut || timeout.aborted,
+        });
         logWorkerEvent({
           scope: "handler", level: "warn", event: "uniswap-v4-exact-source-failed",
           message: "Uniswap V4 exact identity source failed", job: "sync-dex-liquidity",
@@ -496,6 +509,7 @@ export async function fetchUniswapV4Data(
         });
         break;
       }
+      for (const id of batch) answered.add(id);
     }
     for (const candidate of seen.values()) {
       const key = buildUniswapV4ExecutionCandidateKey(

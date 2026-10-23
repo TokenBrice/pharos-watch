@@ -340,6 +340,15 @@ export const SUBGRAPH_FAMILY_MAX_CONCURRENCY = 5;
 export const UNIV3_CANDIDATE_SNAPSHOT_MAX_AGE_SEC = 7 * 24 * 3600;
 
 /**
+ * Longest a chain's last successfully fetched Uniswap V4 execution-candidate
+ * set may stand in for the subgraph when it does not answer this run. Same
+ * reasoning and width as `UNIV3_CANDIDATE_SNAPSHOT_MAX_AGE_SEC`: pool identity
+ * (pool id, currencies, fee, tick spacing, hook) is immutable, and depth is
+ * quoted live against every target.
+ */
+export const UNISWAP_V4_CANDIDATE_SNAPSHOT_MAX_AGE_SEC = 7 * 24 * 3600;
+
+/**
  * Confidence weight for DEX price observations by source family.
  * Scales TVL weight in the TVL-weighted median to down-weight less reliable
  * source families without trusting protocol labels supplied by fallback feeds.

@@ -134,7 +134,7 @@ const DexTargetEnrichmentTelemetrySchema = z.array(z.object({
   dropReasons: z.record(z.string(), z.number()),
 })).max(64);
 
-/** Per-chain Uni V3 execution-candidate snapshot decisions made by the source stage. */
+/** Per-chain Uni V3 / Uniswap V4 execution-candidate snapshot decisions made by the source stage. */
 const DexUniV3CandidateCarryForwardSchema = z.array(z.discriminatedUnion("outcome", [
   z.object({ chain: z.string(), outcome: z.literal("persisted"), candidates: z.number() }),
   z.object({ chain: z.string(), outcome: z.literal("persist-failed"), candidates: z.number(), error: z.string() }),
@@ -147,6 +147,15 @@ const DexUniV3CandidateCarryForwardSchema = z.array(z.discriminatedUnion("outcom
     reason: z.enum(["missing", "stale", "invalid", "read-failed"]),
   }),
 ])).max(16);
+
+/** Per-chain subgraph read failures recorded by the source stage. */
+const DexSubgraphFailuresSchema = z.array(z.object({
+  source: z.enum(["univ3-subgraph", "uniswap-v4-subgraph"]),
+  chain: z.string(),
+  phase: z.enum(["broad", "exact"]),
+  reason: z.enum(["body-over-cap", "http", "graphql", "malformed-response"]),
+  timedOut: z.boolean(),
+})).max(32);
 
 /** Dex liquidity cron metadata shape */
 export const DexLiquidityCronMetadataSchema = z.object({
@@ -162,6 +171,8 @@ export const DexLiquidityCronMetadataSchema = z.object({
   targetEnrichmentGroupsOmitted: z.number().optional(),
   graphApiKeyConfigured: z.boolean().nullable().optional(),
   uniV3CandidateCarryForward: DexUniV3CandidateCarryForwardSchema.optional(),
+  uniswapV4CandidateCarryForward: DexUniV3CandidateCarryForwardSchema.optional(),
+  subgraphFailures: DexSubgraphFailuresSchema.optional(),
   registryEvaluation: z.object({
     evaluatedAtSec: z.number().int().nonnegative(),
     basis: z.literal("registry-read-consumed"),
@@ -340,6 +351,7 @@ export const DexLiquidityCronMetadataSchema = z.object({
     enrichment: DexTargetEnrichmentTelemetrySchema.optional(),
     enrichmentGroupsOmitted: z.number().optional(),
     uniV3CandidateCarryForward: DexUniV3CandidateCarryForwardSchema.optional(),
+    uniswapV4CandidateCarryForward: DexUniV3CandidateCarryForwardSchema.optional(),
   }).optional(),
   exitRouteSelection: z.object({
     baselineAvailable: z.boolean(),

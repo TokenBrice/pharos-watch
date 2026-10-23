@@ -194,6 +194,10 @@ describe("subgraph source families", () => {
       poolId: THUSD_POOL.id, tvlUsd: -222031.942086, activeLiquidity: "1215742317323",
     })]);
     expect(result.failedChains).toEqual([]);
+    // Absent and invalid answers are current evidence a snapshot must not override.
+    expect(result.exactAnsweredPoolIdsByChain.get("ethereum")).toEqual(
+      new Set([THUSD_POOL.id, malformed.id, changed.id, conflicting.id, missing.id]),
+    );
   });
 
   it.each(["ethereum", "polygon"])("consumes each %s exact response before requesting the next bounded batch", async (chain) => {
@@ -312,6 +316,8 @@ describe("subgraph source families", () => {
       chain: "ethereum", failureReason: "graphql", timedOut: false,
       batchOffset: 0, batchSize: 1, requestedPoolCount: 1,
     });
+    expect(result.chainFailures).toEqual([{ chain: "ethereum", phase: "exact", reason: "graphql", timedOut: false }]);
+    expect(result.exactAnsweredPoolIdsByChain.get("ethereum")).toEqual(new Set());
     expect([...result.uniswapV4ExecutionCandidates.values()].flat()
       .some((candidate) => candidate.chain === "ethereum" && candidate.poolId === THUSD_POOL.id)).toBe(false);
   });
@@ -335,8 +341,22 @@ describe("subgraph source families", () => {
       .filter((event) => event.event === "uniswap-v4-exact-source-failed");
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0].metadata).toMatchObject({ chain: "ethereum", failureReason: "http", timedOut: true });
+    expect(result.chainFailures).toEqual([{ chain: "ethereum", phase: "exact", reason: "http", timedOut: true }]);
     expect(JSON.stringify(diagnostics)).not.toContain("private-key");
     expect(JSON.stringify(diagnostics)).not.toContain("https://");
+  });
+
+  it("records a broad listing timeout with its machine-readable reason and flag", async () => {
+    const createTimeout = AbortSignal.timeout.bind(AbortSignal);
+    let timeoutCount = 0;
+    vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) =>
+      ++timeoutCount === 1
+        ? AbortSignal.abort(new DOMException("Listing timed out", "TimeoutError"))
+        : createTimeout(milliseconds));
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ data: { pools: [] } }))));
+    const result = await fetchUniswapV4Data("graph-key", new Map());
+    expect(result.failedChains).toEqual(["ethereum"]);
+    expect(result.chainFailures).toEqual([{ chain: "ethereum", phase: "broad", reason: "http", timedOut: true }]);
   });
 
   it("paginates the Uni V3 query by embedding the skip offset and page size", () => {

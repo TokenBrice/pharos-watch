@@ -2,7 +2,7 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { rethrowIfAborted } from "../../../lib/abort";
 import type { PriceValidationReferences } from "../../../lib/price-validation";
-import { UNIV3_SUBGRAPHS } from "../constants";
+import { UNISWAP_V4_SUBGRAPHS, UNIV3_SUBGRAPHS } from "../constants";
 import {
   fetchUniswapV4Data,
   fetchUniV3Data,
@@ -17,6 +17,16 @@ import {
   reconcileUniV3CandidateSnapshots,
   type UniV3CandidateCarryForwardTelemetry,
 } from "../univ3-candidate-snapshot";
+import {
+  reconcileUniswapV4CandidateSnapshots,
+  type UniswapV4CandidateCarryForwardTelemetry,
+} from "../uniswap-v4-candidate-snapshot";
+import type { SubgraphChainFailure } from "../subgraph-family-runner";
+
+/** One failed subgraph chain read, named by its `failedSources` family. */
+export type SubgraphFailureTelemetry = Array<SubgraphChainFailure & {
+  source: "univ3-subgraph" | "uniswap-v4-subgraph";
+}>;
 
 export interface SubgraphEnrichmentPhaseResult {
   uniV3PoolFees: Map<string, number>;
@@ -26,6 +36,10 @@ export interface SubgraphEnrichmentPhaseResult {
   uniswapV4ExecutionCandidates: UniswapV4Lookups["uniswapV4ExecutionCandidates"];
   /** Per-chain snapshot decisions; empty without a Graph key (the family is off, not failed). */
   uniV3CandidateCarryForward: UniV3CandidateCarryForwardTelemetry;
+  /** Same decisions for Uniswap V4; empty without a Graph key. */
+  uniswapV4CandidateCarryForward: UniswapV4CandidateCarryForwardTelemetry;
+  /** Why each `univ3-subgraph:<chain>` / `uniswap-v4-subgraph:<chain>` failed. */
+  subgraphFailures: SubgraphFailureTelemetry;
 }
 
 export async function fetchSubgraphEnrichmentPhase(params: {
@@ -39,6 +53,7 @@ export async function fetchSubgraphEnrichmentPhase(params: {
   validationReferences: PriceValidationReferences;
 }): Promise<SubgraphEnrichmentPhaseResult & { failedSources: string[] }> {
   const failedSources: string[] = [];
+  const subgraphFailures: SubgraphFailureTelemetry = [];
 
   let uniV3PoolFees = new Map<string, number>();
   let uniV3SymbolFees = new Map<string, number>();
@@ -59,6 +74,7 @@ export async function fetchSubgraphEnrichmentPhase(params: {
     uniV3PriceObs = uniV3Data.uniV3PriceObs;
     uniV3ExecutionCandidates = uniV3Data.uniV3ExecutionCandidates;
     uniV3FailedChains = new Set(uniV3Data.failedChains);
+    subgraphFailures.push(...uniV3Data.chainFailures.map((failure) => ({ source: "univ3-subgraph" as const, ...failure })));
     failedSources.push(
       ...uniV3Data.failedChains.map((chain) => `univ3-subgraph:${chain}`),
     );
@@ -82,6 +98,9 @@ export async function fetchSubgraphEnrichmentPhase(params: {
 
   let uniswapV4ExecutionCandidates:
     UniswapV4Lookups["uniswapV4ExecutionCandidates"] = new Map();
+  const uniswapV4Chains = Object.keys(UNISWAP_V4_SUBGRAPHS);
+  let uniswapV4FailedChains = new Set<string>(uniswapV4Chains);
+  let exactAnsweredPoolIdsByChain: ReadonlyMap<string, ReadonlySet<string>> = new Map();
   try {
     const uniswapV4Data = await fetchUniswapV4Data(
       params.graphApiKey,
@@ -90,6 +109,9 @@ export async function fetchSubgraphEnrichmentPhase(params: {
     );
     uniswapV4ExecutionCandidates =
       uniswapV4Data.uniswapV4ExecutionCandidates;
+    uniswapV4FailedChains = new Set(uniswapV4Data.failedChains);
+    exactAnsweredPoolIdsByChain = uniswapV4Data.exactAnsweredPoolIdsByChain;
+    subgraphFailures.push(...uniswapV4Data.chainFailures.map((failure) => ({ source: "uniswap-v4-subgraph" as const, ...failure })));
     failedSources.push(
       ...uniswapV4Data.failedChains.map(
         (chain) => `uniswap-v4-subgraph:${chain}`,
@@ -104,6 +126,18 @@ export async function fetchSubgraphEnrichmentPhase(params: {
     }));
     failedSources.push("uniswap-v4-subgraph");
   }
+  // As for Uni V3, a carried chain keeps `uniswap-v4-subgraph:<chain>` failed.
+  const uniswapV4CandidateCarryForward = params.graphApiKey
+    ? await reconcileUniswapV4CandidateSnapshots({
+        db: params.db,
+        nowSec: params.nowSec,
+        chains: uniswapV4Chains,
+        failedChains: uniswapV4FailedChains,
+        candidates: uniswapV4ExecutionCandidates,
+        exactAnsweredPoolIdsByChain,
+        signal: params.signal,
+      })
+    : [];
 
   return {
     uniV3PoolFees,
@@ -112,6 +146,8 @@ export async function fetchSubgraphEnrichmentPhase(params: {
     uniV3ExecutionCandidates,
     uniswapV4ExecutionCandidates,
     uniV3CandidateCarryForward,
+    uniswapV4CandidateCarryForward,
+    subgraphFailures,
     failedSources,
   };
 }

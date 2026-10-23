@@ -276,6 +276,8 @@ export async function stageDexLiquidityScoring(
       failedSources: scoringSourceState.failedSources,
       degradedSources: scoringSourceState.degradedSources ?? [],
       uniV3CandidateCarryForward: scoringSourceState.uniV3CandidateCarryForward ?? [],
+      uniswapV4CandidateCarryForward: scoringSourceState.uniswapV4CandidateCarryForward ?? [],
+      subgraphFailures: scoringSourceState.subgraphFailures ?? [],
       fallbackSignals: scoringSourceState.fallbackSignals,
       poolRejections: poolState.poolRejections,
       poolRejectionMateriality: {
@@ -462,6 +464,8 @@ function buildDexLiquidityScoringSourceState(
     fallbackSignals: sourceState.fallbackSignals,
     degradedSources: sourceState.directApiPhase.degradedSources,
     uniV3CandidateCarryForward: sourceState.subgraphEnrichment.uniV3CandidateCarryForward,
+    uniswapV4CandidateCarryForward: sourceState.subgraphEnrichment.uniswapV4CandidateCarryForward,
+    subgraphFailures: sourceState.subgraphEnrichment.subgraphFailures,
     directApiSourceSummary: {
       circuitEvents: sourceState.directApiPhase.circuitEvents,
       sourceWarnings: sourceState.directApiPhase.sourceWarnings,
@@ -692,6 +696,8 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
       providerFamilies: ["uniswap-v3", "uniswap-v4"],
       failedSources: subgraphEnrichment.failedSources,
       uniV3CandidateCarryForward: subgraphEnrichment.uniV3CandidateCarryForward,
+      uniswapV4CandidateCarryForward: subgraphEnrichment.uniswapV4CandidateCarryForward,
+      subgraphFailures: subgraphEnrichment.subgraphFailures,
     },
     counts: {
       uniV3PriceObservations: subgraphEnrichment.uniV3PriceObs.size, uniswapV4ExecutionCandidateKeys: subgraphEnrichment.uniswapV4ExecutionCandidates.size,
@@ -1053,6 +1059,7 @@ async function scoreDexLiquidityPoolState(
   funnel.enrichment = boundTelemetryEntries(poolState.targetEnrichment ?? [], 64, 8_192);
   funnel.enrichmentGroupsOmitted = (poolState.targetEnrichment?.length ?? 0) - funnel.enrichment.length;
   funnel.uniV3CandidateCarryForward = sourceState.uniV3CandidateCarryForward ?? [];
+  funnel.uniswapV4CandidateCarryForward = sourceState.uniswapV4CandidateCarryForward ?? [];
   for (const group of funnel.groups) {
     group.enriched = (poolState.targetEnrichment ?? []).filter((entry) => entry.adapterProfileId === group.adapterProfileId && entry.chain === group.chain)
       .reduce((sum, entry) => sum + entry.enriched, 0);

@@ -464,6 +464,8 @@ export function buildUniswapV4MeasuredExecutionTarget(input: {
     !Number.isFinite(input.retainedTvlUsd) ||
     input.retainedTvlUsd <= 0 ||
     (input.identityMatch === "token-fee" && (
+      // A carried TVL is a past measurement; it cannot prove a current match.
+      input.candidate.carriedFromSnapshot ||
       input.candidate.tvlUsd <= 0 ||
       Math.abs(input.candidate.tvlUsd / input.retainedTvlUsd - 1) >
         UNISWAP_V4_TARGET_MAX_TVL_RELATIVE_DRIFT
@@ -568,6 +570,7 @@ export function buildUniswapV4MeasuredExecutionTarget(input: {
     feePips: input.candidate.feePips,
     tickSpacing: input.candidate.tickSpacing,
     hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+    ...(input.candidate.carriedFromSnapshot ? { carriedFromSnapshot: true as const } : {}),
     retainedTvlUsd: input.retainedTvlUsd,
     retainedPoolPriceUsd: inputPrice,
     capturedAt: input.capturedAt,
