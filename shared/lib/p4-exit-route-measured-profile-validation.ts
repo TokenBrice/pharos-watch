@@ -102,7 +102,9 @@ export function validateMeasuredExecutionProfile(
     profile.adapterProfileId === "aerodrome-slipstream-quoter-v2"
       ? profileProtocolKey === "aerodrome-slipstream" &&
         (projectKey === "aerodrome" || projectKey === "aerodrome-slipstream")
-      : profileProtocolKey === projectKey;
+      : profile.adapterProfileId === "aero-slipstream-metaquoter"
+        ? profileProtocolKey === "aero-slipstream" && (projectKey === "aero" || projectKey === "aero-slipstream")
+        : profileProtocolKey === projectKey;
   if (
     canonicalExitRouteChain(profile.chain) !== canonicalExitRouteChain(context.pool.chain) ||
     !protocolMatches

@@ -11,7 +11,7 @@ import {
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
-import { getDexMeasuredExecutionDeployment, isTickSpacingQuoterV2Profile } from "./registry";
+import { getDexMeasuredExecutionDeployment, isMetaquoterProfile, isTickSpacingQuoterV2Profile } from "./registry";
 import { canonicalEvmAddress, decodeAddressResult as decodeEvmAddressResult } from "./evm-codecs";
 import { MAX_UINT256, usdToRawAmount } from "./fixed-point";
 import {
@@ -27,6 +27,10 @@ const QUOTER_V2_ABI = parseAbi([
 ]);
 const SLIPSTREAM_QUOTER_V2_ABI = parseAbi([
   "function quoteExactInputSingle((address tokenIn,address tokenOut,uint256 amountIn,int24 tickSpacing,uint160 sqrtPriceLimitX96) params) returns (uint256 amountOut,uint160 sqrtPriceX96After,uint32 initializedTicksCrossed,uint256 gasEstimate)",
+]);
+// Aero Metaquoter: pool-addressed, three return words (no gas estimate).
+const METAQUOTER_ABI = parseAbi([
+  "function quoteExactInputSingleV3(address pool,address tokenIn,uint256 amountIn,uint160 sqrtPriceLimitX96) returns (uint256 amountOut,uint160 sqrtPriceX96After,uint32 initializedTicksCrossed)",
 ]);
 const V3_FACTORY_ABI = parseAbi([
   "function getPool(address tokenA,address tokenB,uint24 fee) view returns (address pool)",
@@ -64,6 +68,15 @@ function hasAdapterParameter(target: DexMeasuredExecutionTarget): boolean {
 }
 
 export function encodeQuoterV2ExactInputSingle(target: DexMeasuredExecutionTarget, amountInRaw: bigint): `0x${string}` {
+  if (isMetaquoterProfile(target.adapterProfileId)) {
+    const pool = targetPoolAddress(target);
+    if (!pool) throw new Error(`Measured target ${target.targetId} has no pool address`);
+    return encodeFunctionData({
+      abi: METAQUOTER_ABI,
+      functionName: "quoteExactInputSingleV3",
+      args: [pool, target.tokenIn.address as `0x${string}`, amountInRaw, 0n],
+    });
+  }
   if (isTickSpacingQuoterV2Profile(target.adapterProfileId)) {
     if (target.tickSpacing == null) throw new Error(`Measured target ${target.targetId} has no tick spacing`);
     return encodeFunctionData({
@@ -118,15 +131,31 @@ function encodeRequest(request: QuoterV2Request, index: number): EncodedQuoterV2
 }
 
 
+/** Decodes either quoter result shape; the Metaquoter omits `gasEstimate`. */
+function decodeQuoteResult(
+  adapterProfileId: string,
+  data: `0x${string}`,
+): readonly [bigint, bigint, number, bigint | undefined] {
+  if (isMetaquoterProfile(adapterProfileId)) {
+    const [amountOut, sqrtPriceX96After, ticksCrossed] = decodeFunctionResult({
+      abi: METAQUOTER_ABI,
+      functionName: "quoteExactInputSingleV3",
+      data,
+    }) as readonly [bigint, bigint, number];
+    return [amountOut, sqrtPriceX96After, ticksCrossed, undefined];
+  }
+  return decodeFunctionResult({
+    abi: QUOTER_V2_ABI,
+    functionName: "quoteExactInputSingle",
+    data,
+  }) as readonly [bigint, bigint, number, bigint];
+}
+
 function decodePoint(request: EncodedQuoterV2Request, result: EvmMulticall3Result): DexMeasuredRawQuotePoint | null {
   if (!result.success || result.returnData === "0x") return null;
   try {
-    const decoded = decodeFunctionResult({
-      abi: QUOTER_V2_ABI,
-      functionName: "quoteExactInputSingle",
-      data: result.returnData,
-    }) as readonly [bigint, bigint, number, bigint];
-    const [amountOutRaw, sqrtPriceX96After, initializedTicksCrossed, gasEstimate] = decoded;
+    const [amountOutRaw, sqrtPriceX96After, initializedTicksCrossed, gasEstimate] =
+      decodeQuoteResult(request.target.adapterProfileId, result.returnData);
     return materializeEvmQuotePoint({
       amountInRaw: request.amountInRaw,
       amountOutRaw,
@@ -137,7 +166,7 @@ function decodePoint(request: EncodedQuoterV2Request, result: EvmMulticall3Resul
       adapterMetadata: {
         sqrtPriceX96After: sqrtPriceX96After.toString(),
         initializedTicksCrossed: Number(initializedTicksCrossed),
-        gasEstimate: gasEstimate.toString(),
+        ...(gasEstimate != null ? { gasEstimate: gasEstimate.toString() } : {}),
       },
     });
   } catch {
@@ -384,33 +413,46 @@ export function validateQuoterV2ProfileProof(profile: DexMeasuredExecutionProfil
     if (!decodedPool || !expectedPool || decodedPool !== binding.resolvedPoolAddress || decodedPool !== expectedPool)
       issues.add("factory-pool-binding-mismatch");
   }
+  const metaquoter = isMetaquoterProfile(profile.adapterProfileId);
   for (const point of profile.quoteProof) {
     try {
-      const slipstream = isTickSpacingQuoterV2Profile(profile.adapterProfileId);
-      const decodedCall = decodeFunctionData({
-        abi: slipstream ? SLIPSTREAM_QUOTER_V2_ABI : QUOTER_V2_ABI,
-        data: point.callData as `0x${string}`,
-      });
-      if (decodedCall.functionName !== "quoteExactInputSingle") {
-        issues.add("wrong-function-selector");
-        continue;
+      if (metaquoter) {
+        const decodedCall = decodeFunctionData({ abi: METAQUOTER_ABI, data: point.callData as `0x${string}` });
+        const [pool, tokenIn, amountIn, sqrtPriceLimitX96] = decodedCall.args as readonly [string, string, bigint, bigint];
+        if (
+          pool.toLowerCase() !== targetPoolAddress(profile) ||
+          tokenIn.toLowerCase() !== profile.tokenIn.address ||
+          amountIn.toString() !== point.amountInRaw ||
+          sqrtPriceLimitX96 !== 0n
+        )
+          issues.add("call-data-mismatch");
+      } else {
+        const slipstream = isTickSpacingQuoterV2Profile(profile.adapterProfileId);
+        const decodedCall = decodeFunctionData({
+          abi: slipstream ? SLIPSTREAM_QUOTER_V2_ABI : QUOTER_V2_ABI,
+          data: point.callData as `0x${string}`,
+        });
+        if (decodedCall.functionName !== "quoteExactInputSingle") {
+          issues.add("wrong-function-selector");
+          continue;
+        }
+        const params = decodedCall.args[0] as {
+          tokenIn: string;
+          tokenOut: string;
+          amountIn: bigint;
+          fee?: number;
+          tickSpacing?: number;
+          sqrtPriceLimitX96: bigint;
+        };
+        if (
+          params.tokenIn.toLowerCase() !== profile.tokenIn.address ||
+          params.tokenOut.toLowerCase() !== profile.tokenOut.address ||
+          params.amountIn.toString() !== point.amountInRaw ||
+          (slipstream ? params.tickSpacing !== profile.tickSpacing : params.fee !== profile.feePips) ||
+          params.sqrtPriceLimitX96 !== 0n
+        )
+          issues.add("call-data-mismatch");
       }
-      const params = decodedCall.args[0] as {
-        tokenIn: string;
-        tokenOut: string;
-        amountIn: bigint;
-        fee?: number;
-        tickSpacing?: number;
-        sqrtPriceLimitX96: bigint;
-      };
-      if (
-        params.tokenIn.toLowerCase() !== profile.tokenIn.address ||
-        params.tokenOut.toLowerCase() !== profile.tokenOut.address ||
-        params.amountIn.toString() !== point.amountInRaw ||
-        (slipstream ? params.tickSpacing !== profile.tickSpacing : params.fee !== profile.feePips) ||
-        params.sqrtPriceLimitX96 !== 0n
-      )
-        issues.add("call-data-mismatch");
 
       if (point.reverted) {
         if (
@@ -420,21 +462,13 @@ export function validateQuoterV2ProfileProof(profile: DexMeasuredExecutionProfil
           point.passesCostBound
         ) issues.add("invalid-revert-proof");
         try {
-          decodeFunctionResult({
-            abi: QUOTER_V2_ABI,
-            functionName: "quoteExactInputSingle",
-            data: point.returnData as `0x${string}`,
-          });
+          decodeQuoteResult(profile.adapterProfileId, point.returnData as `0x${string}`);
           issues.add("revert-data-decodes-as-success");
         } catch {
-          // Revert data must not decode as a successful QuoterV2 result.
+          // Revert data must not decode as a successful quoter result.
         }
       } else {
-        const decodedResult = decodeFunctionResult({
-          abi: QUOTER_V2_ABI,
-          functionName: "quoteExactInputSingle",
-          data: point.returnData as `0x${string}`,
-        }) as readonly [bigint, bigint, number, bigint];
+        const decodedResult = decodeQuoteResult(profile.adapterProfileId, point.returnData as `0x${string}`);
         if (decodedResult[0].toString() !== point.amountOutRaw) issues.add("return-data-mismatch");
       }
     } catch {

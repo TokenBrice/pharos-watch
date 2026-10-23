@@ -51,6 +51,7 @@ export function measuredPoolProfileIds(pool: LiquidityMetrics["topPools"][number
     else if (protocol === "aerodrome" && pool.poolType.startsWith("aerodrome-slipstream")) profiles.add("aerodrome-slipstream-quoter-v2");
     else if (protocol === "hyperswap-v3") profiles.add("hyperswap-v3-quoter-v2");
     else if (protocol === "kodiak-v3") profiles.add("kodiak-v3-quoter-v2");
+    else if (protocol === "aero" && pool.poolType.startsWith("aero-slipstream")) profiles.add("aero-slipstream-metaquoter");
   }
   return [...profiles];
 }
