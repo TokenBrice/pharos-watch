@@ -91,7 +91,7 @@ import {
   createYieldProgressReporter,
 } from "../yield-progress";
 import {
-  safetyScorePublicationIdentitiesAreComparable,
+  safetyScorePublicationIdentitiesShareScoringContract,
 } from "@shared/lib/safety-score-publication";
 import {
   loadActiveSafetyScoreIdentity,
@@ -1412,7 +1412,7 @@ export async function runYieldCoordinatorPersistStage(
     if (
       currentSafetySource.kind === "v9" &&
       currentSafetyIdentity &&
-      !safetyScorePublicationIdentitiesAreComparable(loadedSafetyIdentity, currentSafetyIdentity)
+      !safetyScorePublicationIdentitiesShareScoringContract(loadedSafetyIdentity, currentSafetyIdentity)
     ) {
       // The run still publishes: its results are coherent under the identity it
       // loaded, and the read path serves them as a publish-time snapshot until

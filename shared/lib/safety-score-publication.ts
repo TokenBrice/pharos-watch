@@ -59,3 +59,19 @@ export function safetyScorePublicationIdentitiesAreComparable(
   if (left.model === "v8" || right.model === "v8") return left.model === right.model;
   return left.policyId === right.policyId && left.policyDigest === right.policyDigest;
 }
+
+/**
+ * Request-time yield hydration recomputes every safety-derived field from the
+ * live cards, so it needs only the scoring contract (model, schema,
+ * methodology, policy) to match. An evaluator-build rotation alone does not
+ * change that contract; series comparisons keep the stricter check above.
+ */
+export function safetyScorePublicationIdentitiesShareScoringContract(
+  left: SafetyScorePublicationIdentityContract,
+  right: SafetyScorePublicationIdentityContract,
+): boolean {
+  return safetyScorePublicationIdentitiesAreComparable(
+    left,
+    { ...right, evaluationBuildDigest: left.evaluationBuildDigest },
+  );
+}

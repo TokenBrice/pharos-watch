@@ -6,6 +6,7 @@ import type {
 import {
   type SafetyScorePublicationIdentityContract,
   safetyScorePublicationIdentitiesAreComparable,
+  safetyScorePublicationIdentitiesShareScoringContract,
   safetyScorePublicationIdentitiesMatch,
 } from "../safety-score-publication";
 
@@ -111,6 +112,17 @@ describe("Safety Score publication identity comparisons", () => {
         v9Identity({ policyId: "safety-score-v9-other-policy" }),
       ),
     ).toBe(false);
+  });
+
+  it("shares a scoring contract across evaluator-build rotations but not policy or methodology changes", () => {
+    const identity = v9Identity();
+    const rotated = v9Identity({ evaluationBuildDigest: digest("f"), publicationGenerationId: "report-cards:v9:101" });
+
+    expect(safetyScorePublicationIdentitiesAreComparable(identity, rotated)).toBe(false);
+    expect(safetyScorePublicationIdentitiesShareScoringContract(identity, rotated)).toBe(true);
+    expect(safetyScorePublicationIdentitiesShareScoringContract(identity, v9Identity({ policyDigest: digest("f") }))).toBe(false);
+    expect(safetyScorePublicationIdentitiesShareScoringContract(identity, v9Identity({ methodologyVersion: "0.0" }))).toBe(false);
+    expect(safetyScorePublicationIdentitiesShareScoringContract(v8Identity(), v9Identity())).toBe(false);
   });
 
   it("never compares identities across model boundaries", () => {

@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
-import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
+import { safetyScorePublicationIdentitiesShareScoringContract } from "@shared/lib/safety-score-publication";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { isYieldSafetyFallbackWithinWindow, YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safety-fallback";
 import {
@@ -529,7 +529,7 @@ function hasCompatibleSafetyIdentity(
   const published = payload.provenance?.safetySnapshot.safetyScoreIdentity;
   return (
     published != null &&
-    safetyScorePublicationIdentitiesAreComparable(published, identity)
+    safetyScorePublicationIdentitiesShareScoringContract(published, identity)
   );
 }
 
