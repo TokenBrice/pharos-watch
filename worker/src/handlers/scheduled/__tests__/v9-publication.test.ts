@@ -128,6 +128,20 @@ describe("V9 publication scheduling", () => {
     );
   });
 
+  it.each([["on", true], ["off", false], ["ON", false]] as const)("defers public materialization only for literal %s", async (mode, expected) => {
+    const { scheduledRuntime } = compilingRuntime();
+    (scheduledRuntime.env as { SAFETY_V9_DEFERRED_MATERIALIZATION?: string }).SAFETY_V9_DEFERRED_MATERIALIZATION = mode;
+    await runV9PublicationSlot(scheduledRuntime);
+    expect(mocks.computeSafetyScoreV9.mock.calls[0]![3]).toMatchObject({ deferPublicMaterialization: expected });
+  });
+
+  it.each([["on", true], ["off", false], ["ON", false]] as const)("shards publication writes only for literal %s", async (mode, expected) => {
+    const { scheduledRuntime } = compilingRuntime();
+    (scheduledRuntime.env as { SAFETY_V9_CHUNKED_PUBLICATION_WRITES?: string }).SAFETY_V9_CHUNKED_PUBLICATION_WRITES = mode;
+    await runV9PublicationSlot(scheduledRuntime);
+    expect(mocks.computeSafetyScoreV9.mock.calls[0]![3]).toMatchObject({ chunkedPublicationWrites: expected });
+  });
+
   it("runs only the canonical compiler with the original slot identity", async () => {
     const { scheduledRuntime } = compilingRuntime();
     expect(await runV9PublicationSlot(scheduledRuntime)).toBe(published);
@@ -136,6 +150,8 @@ describe("V9 publication scheduling", () => {
       workerMetadata: scheduledRuntime.env.CF_VERSION_METADATA,
       captureArchiveBucket: scheduledRuntime.env.SAFETY_CAPTURE_ARCHIVE,
       captureArchiveContext: scheduledRuntime.ctx,
+      deferPublicMaterialization: false,
+      chunkedPublicationWrites: false,
       executionWindow: { slotStartedAtSec: scheduledRuntime.slotStartedAt, deadlineMs: 1_980_000, minimumRemainingMs: 25_000 },
     });
   });

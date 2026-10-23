@@ -12,8 +12,9 @@ import { V9_PUBLIC_FRAGMENT_MAX_BYTES } from "@shared/types/report-cards-v9-mate
 import { D1_BATCH_SIZE } from "../../lib/constants";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
-import { currentInput } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
+import { currentInput, persistAndMaterialize } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
 import { persistSafetyScoreV9Publication } from "../../lib/safety-score-v9/publication-store";
+import { materializeV9AcceptedPublication, V9_PUBLIC_MATERIALIZATION_CACHE_KEY } from "../../lib/report-cards-v9-materialization";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-health";
 import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import { handleReportCardsV9Table, handleReportCardsV9Detail } from "../report-cards-v9-projections";
@@ -34,7 +35,7 @@ async function seed() {
     makeReportCardsV9Card({ id: "usdt-tether", score: null, grade: "NR",
       nrReasons: [{ code: "unresolved-control-identity", message: "Control identity unresolved", field: null, origin: "asset" }] }),
   ] });
-  await persistSafetyScoreV9Publication(db, currentInput(publication));
+  await persistAndMaterialize(db, currentInput(publication));
   return { sqlite, db, publication };
 }
 const detailUrl = (id = "usdc-circle") => new URL(`https://example.com/api/report-cards/v9-detail?stablecoin=${id}`);
@@ -176,18 +177,27 @@ describe("generation-bound compact Safety Scores", () => {
     expect(await (await handleReportCardsV9Detail(db, detailUrl())).json()).toMatchObject({ reason: "v9-public-representation-key-mismatch" });
   });
 
-  it("rolls back the full publication when a required compact write fails", async () => {
-    const { db, sqlite } = await seed();
-    const before = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
+  it("keeps acceptance and the previous selected generation when a required compact write fails", async () => {
+    const { db, sqlite, publication } = await seed();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(140_000);
+    const table = await (await handleReportCardsV9Table(db)).json() as object;
+    const detail = await (await handleReportCardsV9Detail(db, detailUrl())).json() as object;
     sqlite.exec("CREATE TRIGGER refuse_site BEFORE INSERT ON safety_score_site_fragments BEGIN SELECT RAISE(ABORT, 'site write failed'); END");
     const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
-    await expect(persistSafetyScoreV9Publication(db, currentInput(next))).rejects.toThrow();
-    expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(before);
+    const persisted = await persistSafetyScoreV9Publication(db, { ...currentInput(next), deferPublicMaterialization: true });
+    expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex)!.updated_at).toBe(130);
+    await expect(materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!)).rejects.toThrow();
+    const lagHealth = { ...currentInput(next).publicationHealth,
+      acceptedPublicationGenerationId: publication.publicationGenerationId, acceptedAtSec: publication.publishedAtSec };
+    expect(await (await handleReportCardsV9Table(db)).json()).toEqual({ ...table, publicationHealth: lagHealth });
+    expect(await (await handleReportCardsV9Detail(db, detailUrl())).json()).toEqual({ ...detail, publicationHealth: lagHealth });
   });
 
   it.each([1, 397])("coalesces %i cards within staging caps while preserving accepted reads", async cardCount => {
     const { db, sqlite, publication } = await seed();
-    const before = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(140_000);
     const cards = Array.from({ length: cardCount }, (_, index) => makeReportCardsV9Card({
       id: index === 0 ? "usdc-circle" : `v9-staging-coin-${String(index).padStart(3, "0")}`,
       evidence: { level: "adequate", freshness: "current", reasons: [{
@@ -254,8 +264,11 @@ describe("generation-bound compact Safety Scores", () => {
         }
         try {
           const result = await db.batch<T>(statements);
-          if (staging) {
-            expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(before);
+          const selection = writes.some(({ values }) => values[0] === V9_PUBLIC_MATERIALIZATION_CACHE_KEY);
+          if (staging || !selection) {
+            // Acceptance commits first; readers keep the previous whole generation until selection.
+            expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.updated_at)
+              .toBe(next.publishedAtSec);
             expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_site_manifests WHERE generation_id = ? AND retired_at IS NULL")
               .get(next.publicationGenerationId)!.n).toBe(0);
             for (const response of [
@@ -263,7 +276,7 @@ describe("generation-bound compact Safety Scores", () => {
               await handleReportCardsV9Detail(db, detailUrl()),
             ]) {
               expect(response.status).toBe(200);
-              expect(await response.json()).toMatchObject({ updatedAt: publication.publishedAtSec });
+              expect(await response.json()).toMatchObject({ updatedAt: publication.publishedAtSec, publicationHealth: { status: "current" } });
             }
           } else {
             expect(sqlite.prepare("SELECT generation_id FROM safety_score_public_manifests WHERE retired_at IS NULL").all())
@@ -275,7 +288,7 @@ describe("generation-bound compact Safety Scores", () => {
         } finally { inFlight--; }
       },
     };
-    await persistSafetyScoreV9Publication(observedDb, currentInput(next));
+    await persistAndMaterialize(observedDb, currentInput(next));
     expect(stagedBatches).toBeGreaterThan(1);
     expect(stagedBatches).toBeLessThanOrEqual(cardCount === 1 ? 6 : 40);
     expect(manifestInserts).toEqual(new Map(["full", ...expectedSiteKeys].map(key => [key, 1])));
@@ -290,9 +303,11 @@ describe("generation-bound compact Safety Scores", () => {
     await full.body?.cancel();
   });
 
-  it.each(["public", "site"])("rolls back acceptance if one staged %s fragment disappears before the pointer switch", async surface => {
-    const { db, sqlite } = await seed();
-    const before = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
+  it.each(["public", "site"])("refuses selection if one staged %s fragment disappears before the pointer switch", async surface => {
+    const { db, sqlite, publication } = await seed();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(140_000);
+    const marker = sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY);
     const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
     let removed = false;
     const racedDb = {
@@ -311,10 +326,13 @@ describe("generation-bound compact Safety Scores", () => {
         return db.batch<T>(statements);
       },
     } as D1Database;
-    await expect(persistSafetyScoreV9Publication(racedDb, currentInput(next))).rejects.toThrow();
+    await expect(persistAndMaterialize(racedDb, currentInput(next))).rejects.toThrow();
     expect(removed).toBe(true);
-    expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(before);
-    expect((await handleReportCardsV9Table(db)).status).toBe(200);
+    expect(sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY)).toEqual(marker);
+    expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.updated_at).toBe(130);
+    const table = await handleReportCardsV9Table(db);
+    expect(table.status).toBe(200);
+    expect(await table.json()).toMatchObject({ updatedAt: publication.publishedAtSec });
   });
 
   it("validates the selected coin parameter before reading storage", async () => {

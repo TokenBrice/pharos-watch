@@ -21,7 +21,8 @@ export async function loadSafetyPublicationSize(db: D1Database): Promise<SafetyP
   try {
     row = await db
       .prepare(
-        "SELECT LENGTH(CAST(value AS BLOB)) AS stored_bytes, json_extract(value, '$.compressedBytes') AS compressed_bytes FROM cache WHERE key = ?",
+        // A sharded envelope records its single-row-equivalent stored size.
+        "SELECT COALESCE(json_extract(value, '$.payloadChunks.storedBytes'), LENGTH(CAST(value AS BLOB))) AS stored_bytes, json_extract(value, '$.compressedBytes') AS compressed_bytes FROM cache WHERE key = ?",
       )
       .bind(SAFETY_SCORE_V9_CACHE_KEYS.publication)
       .first<{ stored_bytes: unknown; compressed_bytes: unknown }>();

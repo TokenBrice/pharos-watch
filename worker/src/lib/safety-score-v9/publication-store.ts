@@ -5,7 +5,6 @@ import {
 } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import { throwIfAborted } from "../abort";
-import { getCache } from "../db-cache";
 import { executeAtomicBatch } from "../db";
 import { logWorkerEvent } from "../structured-log";
 import {
@@ -20,9 +19,20 @@ import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-scor
 import { SafetyScoreIndexSchema } from "@shared/types/safety-score-index";
 import { projectV9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
 import type { SafetyScoreCaptureArchiveCacheRows } from "@shared/types/safety-score-capture-archive";
-import { stageV9PublicMaterialization, v9StagedPublicMaterializationStatements, type V9StagedPublicMaterialization } from "../report-cards-v9-materialization";
+import {
+  stageV9PublicMaterialization,
+  v9StagedPublicMaterializationStatements,
+  type V9AcceptedPublicMaterializationSource,
+  type V9StagedPublicMaterialization,
+} from "../report-cards-v9-materialization";
 import { SAFETY_SCORE_V9_CACHE_KEYS, loadSafetyScoreV9PublicationHealth } from "./publication-health";
 import { V9PublicationAttemptSchema, loadSafetyScoreV9FailedPublicationAttempt, type V9PublicationAttempt } from "./publication-attempts";
+import {
+  loadSafetyScoreV9PublicationStoredRow,
+  safetyScoreV9PublicationChunkCleanupStatement,
+  shardSafetyScoreV9PublicationStoredValue,
+  shardedSafetyScoreV9PublicationChunkStatements,
+} from "./publication-chunks";
 
 class SafetyScoreV9PublicationConflictError extends Error {
   constructor(message: string) {
@@ -35,7 +45,7 @@ export async function loadSafetyScoreV9Publication(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<SafetyScoreV9CurrentResponse | null> {
-  const row = await getCache(db, SAFETY_SCORE_V9_CACHE_KEYS.publication, signal);
+  const row = await loadSafetyScoreV9PublicationStoredRow(db, signal);
   if (!row) return null;
   return parseSafetyScoreV9Publication(row.value, signal);
 }
@@ -102,6 +112,28 @@ export interface PersistSafetyScoreV9PublicationInput {
   publicationAttempt: V9PublicationAttempt;
   publicationClockSec: number;
   signal?: AbortSignal;
+  /** Filled with sub-phase wall time: pre-commit admission/reads versus the atomic write. */
+  timing?: SafetyScoreV9PersistTiming;
+  /**
+   * Leave public representations to `materializeV9AcceptedPublication` after
+   * acceptance. Otherwise they are staged first and selected in the acceptance
+   * batch, which every reader version tolerates.
+   */
+  deferPublicMaterialization?: boolean;
+  /** Store the payload in content-addressed chunk rows; only once every reader accepts sharded envelopes. */
+  chunkedPublicationWrites?: boolean;
+}
+
+export interface SafetyScoreV9PersistTiming {
+  persistPrepare: number | null;
+  persistCommit: number | null;
+}
+
+export interface PersistSafetyScoreV9PublicationResult {
+  /** Exact committed transports for the capture archive, when replay retention was written. */
+  captureArchiveCacheRows: SafetyScoreCaptureArchiveCacheRows | null;
+  /** Source for the deferred public materialization; null when none is pending. */
+  acceptedMaterialization: V9AcceptedPublicMaterializationSource | null;
 }
 
 export interface PersistSafetyScoreV9PublicationAttemptInput {
@@ -191,7 +223,8 @@ export async function persistSafetyScoreV9PublicationAttempt(
 export async function persistSafetyScoreV9Publication(
   db: D1Database,
   input: PersistSafetyScoreV9PublicationInput,
-): Promise<SafetyScoreCaptureArchiveCacheRows | null> {
+): Promise<PersistSafetyScoreV9PublicationResult> {
+  const prepareStartedAtMs = Date.now();
   throwIfAborted(input.signal);
   if ((input.publicationReplayCaptureValue !== undefined) !== (input.publicationReplayBaseValue !== undefined)) {
     throw new Error("Accepted replay retention requires both base and delta or neither");
@@ -223,7 +256,9 @@ export async function persistSafetyScoreV9Publication(
   let publicationValue: string | null = null;
   let scoreIndexValue: string | null = null;
   let acceptedProjections: { baseline: string; lender: string } | null = null;
-  let publicMaterialization: V9StagedPublicMaterialization | null = null;
+  let acceptedMaterialization: V9AcceptedPublicMaterializationSource | null = null;
+  let stagedMaterialization: V9StagedPublicMaterialization | null = null;
+  let publicationPayloadSha256: string | null = null;
   if (health.status === "current") {
     if (input.publication === undefined) {
       throw new Error(
@@ -246,7 +281,13 @@ export async function persistSafetyScoreV9Publication(
       );
     }
     publicationValue = stored;
-    publicMaterialization = await stageV9PublicMaterialization(db, publication, health, JSON.parse(stored).payloadSha256, input.signal);
+    const payloadSha256: string = JSON.parse(stored).payloadSha256;
+    publicationPayloadSha256 = payloadSha256;
+    if (input.deferPublicMaterialization) {
+      acceptedMaterialization = { publication, health, payloadSha256 };
+    } else {
+      stagedMaterialization = await stageV9PublicMaterialization(db, publication, health, payloadSha256, input.signal);
+    }
     if (!input.buildAcceptedProjections) {
       throw new Error("Accepted Safety Score v9 publication requires projection builders");
     }
@@ -353,10 +394,20 @@ export async function persistSafetyScoreV9Publication(
   );
   const statements: D1PreparedStatement[] = [];
   if (publicationValue !== null) {
+    let canonicalValue = publicationValue;
+    if (input.chunkedPublicationWrites) {
+      const sharded = shardSafetyScoreV9PublicationStoredValue(publicationValue);
+      canonicalValue = sharded.envelope;
+      statements.push(...shardedSafetyScoreV9PublicationChunkStatements(
+        db, sharded, publicationPayloadSha256!, input.publicationClockSec,
+      ));
+    } else {
+      statements.push(safetyScoreV9PublicationChunkCleanupStatement(db));
+    }
     statements.push(
       cacheStatement.bind(
         SAFETY_SCORE_V9_CACHE_KEYS.publication,
-        publicationValue,
+        canonicalValue,
         input.publicationClockSec,
       ),
     );
@@ -375,7 +426,9 @@ export async function persistSafetyScoreV9Publication(
       acceptedProjections!.lender,
       input.publicationClockSec,
     ));
-    statements.push(...v9StagedPublicMaterializationStatements(db, publicMaterialization!));
+    if (stagedMaterialization !== null) {
+      statements.push(...v9StagedPublicMaterializationStatements(db, stagedMaterialization));
+    }
     if (input.publicationReplayCaptureValue !== undefined) {
       statements.push(cacheStatement.bind(
         SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
@@ -461,7 +514,13 @@ export async function persistSafetyScoreV9Publication(
       input.publicationClockSec,
     ),
   );
-  await executeAtomicBatch(db, statements, { signal: input.signal });
+  if (input.timing) input.timing.persistPrepare = Date.now() - prepareStartedAtMs;
+  const commitStartedAtMs = Date.now();
+  try {
+    await executeAtomicBatch(db, statements, { signal: input.signal });
+  } finally {
+    if (input.timing) input.timing.persistCommit = Date.now() - commitStartedAtMs;
+  }
   throwIfAborted(input.signal);
   if (acceptedProjections !== null) {
     logWorkerEvent({
@@ -476,14 +535,18 @@ export async function persistSafetyScoreV9Publication(
   }
   // Return references to the exact committed transports, never re-encode or
   // re-read live cache rows which a later accepted generation could overwrite.
+  // A sharded publication is archived as its single-row-equivalent value.
   if (publicationValue === null || input.publicationReplayBaseValue === undefined ||
-      input.publicationReplayCaptureValue === undefined) return null;
+      input.publicationReplayCaptureValue === undefined) return { captureArchiveCacheRows: null, acceptedMaterialization };
   return {
-    base: { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY,
-      value: input.publicationReplayBaseValue, updatedAt: input.publicationClockSec },
-    delta: { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
-      value: input.publicationReplayCaptureValue, updatedAt: input.publicationClockSec },
-    cards: { key: SAFETY_SCORE_V9_CACHE_KEYS.publication,
-      value: publicationValue, updatedAt: input.publicationClockSec },
+    captureArchiveCacheRows: {
+      base: { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY,
+        value: input.publicationReplayBaseValue, updatedAt: input.publicationClockSec },
+      delta: { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
+        value: input.publicationReplayCaptureValue, updatedAt: input.publicationClockSec },
+      cards: { key: SAFETY_SCORE_V9_CACHE_KEYS.publication,
+        value: publicationValue, updatedAt: input.publicationClockSec },
+    },
+    acceptedMaterialization,
   };
 }

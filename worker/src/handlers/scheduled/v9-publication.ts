@@ -30,7 +30,10 @@ export function buildV9PublicationSlotGroups(
                   reportProgress,
                   { workerMetadata: runtime.env.CF_VERSION_METADATA, executionWindow,
                     captureArchiveBucket: runtime.env.SAFETY_CAPTURE_ARCHIVE,
-                    captureArchiveContext: runtime.ctx },
+                    captureArchiveContext: runtime.ctx,
+                    // Phase 2 of the persist split; only literal "on" defers.
+                    deferPublicMaterialization: runtime.env.SAFETY_V9_DEFERRED_MATERIALIZATION === "on",
+                    chunkedPublicationWrites: runtime.env.SAFETY_V9_CHUNKED_PUBLICATION_WRITES === "on" },
                 ),
             ),
         ),

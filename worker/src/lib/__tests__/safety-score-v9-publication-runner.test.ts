@@ -7,6 +7,7 @@ import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import * as fixedInputCodec from "../report-cards-fixed-input-cache-codec";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
+import { materializeV9AcceptedPublication } from "../report-cards-v9-materialization";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../safety-score-v9/publication-codec";
 import type * as PublicationStore from "../safety-score-v9/publication-store";
 import * as publicationHealth from "../safety-score-v9/publication-health";
@@ -784,7 +785,7 @@ describe("Safety Score V9 publication runner", () => {
   it.each([
     { latencyMs: 400, expected: "published" },
     { latencyMs: 20_000, expected: "failed" },
-  ] as const)("keeps real 397-card staging $expected with $latencyMs ms D1 latency inside the inherited lane", async ({ latencyMs, expected }) => {
+  ] as const)("without deferral, keeps real 397-card staging $expected with $latencyMs ms D1 latency inside the inherited lane", async ({ latencyMs, expected }) => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const prior = makeWorkerSafetyScoreV9Publication({
@@ -890,6 +891,123 @@ describe("Safety Score V9 publication runner", () => {
             outcome: "failed", failure: { stage: "publication-write",
               abortCause: { source: "publication-deadline", name: "TimeoutError" } },
           });
+        }
+      } finally { clock.mockRestore(); timeout.mockRestore(); }
+    } finally { sqlite.close(); }
+  });
+
+  it.each([
+    { latencyMs: 400, expected: "materialized" },
+    { latencyMs: 20_000, expected: "failed" },
+  ] as const)("accepts before real 397-card staging, which is $expected with $latencyMs ms D1 latency inside the inherited lane", async ({ latencyMs, expected }) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const prior = makeWorkerSafetyScoreV9Publication({
+      publishedAtSec: fixedInput.clockSec - 100, publicationGenerationId: "report-cards:v9:prior",
+    });
+    const candidate = makeWorkerSafetyScoreV9Publication({
+      baseInputGenerationId: fixedInput.baseInputGenerationId, publishedAtSec: fixedInput.clockSec,
+      publicationGenerationId: "report-cards:v9:large-cohort",
+      cards: Array.from({ length: 397 }, (_, index) => makeWorkerV9Card({
+        id: index === 0 ? "usdc-circle" : `v9-staging-coin-${String(index).padStart(3, "0")}`,
+        evidence: { level: "adequate", freshness: "current", reasons: [{
+          code: "unresolved-control-identity", message: "\u00e9".repeat(6_000), path: "control:incidentState",
+        }] },
+      })),
+    });
+    const start = Date.now();
+    let elapsedMs = 0;
+    let stagingCalls = 0;
+    const deadline = new AbortController();
+    const stagingStatements = new WeakSet<D1PreparedStatement>();
+    const delayedDb: D1Database = {
+      ...db,
+      prepare: (sql: string) => {
+        const statement = db.prepare(sql);
+        if (sql.startsWith("INSERT OR IGNORE INTO safety_score_")) {
+          const bind = statement.bind.bind(statement);
+          statement.bind = (...values: unknown[]) => {
+            const bound = bind(...values);
+            stagingStatements.add(bound);
+            return bound;
+          };
+        }
+        return statement;
+      },
+      batch: async <T = unknown>(statements: D1PreparedStatement[]) => {
+        const result = await db.batch<T>(statements);
+        if (statements.every(statement => stagingStatements.has(statement))) {
+          stagingCalls++;
+          // Model elapsed I/O and its real abort signal without sleeping for
+          // three minutes. A completed staged write still cannot select itself.
+          elapsedMs += latencyMs;
+          if (elapsedMs >= getSafetyScoreV9PublicationBudgetMs(start, start + 180_000)) {
+            deadline.abort(new DOMException("Staging exhausted the publication window", "TimeoutError"));
+          }
+        }
+        return result;
+      },
+    };
+    try {
+      const persistedPrior = await store.persistSafetyScoreV9Publication(db, { ...currentInput(prior), deferPublicMaterialization: true });
+      await materializeV9AcceptedPublication(db, persistedPrior.acceptedMaterialization!);
+      const acceptedRows = sqlite.prepare(`SELECT key, value, updated_at FROM cache
+        WHERE key IN (?, ?, ?, ?, ?) ORDER BY key`);
+      const acceptedKeys = [
+        publicationHealth.SAFETY_SCORE_V9_CACHE_KEYS.publication,
+        publicationHealth.SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex,
+        publicationHealth.SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
+        publicationHealth.SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline,
+        publicationHealth.SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral,
+      ];
+      const before = acceptedRows.all(...acceptedKeys);
+      mocks.loadBaseline.mockResolvedValue(acceptedBaseline(prior));
+      mocks.build.mockImplementationOnce(() => {
+        elapsedMs = 16_000;
+        return { candidate, quarantines: [], quarantineAffectedAssetIds: [], bridgeJoinDiagnostics: [] };
+      });
+      mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
+      mocks.persistAttempt.mockImplementation(store.persistSafetyScoreV9PublicationAttempt);
+      const clock = vi.spyOn(Date, "now").mockImplementation(() => start + elapsedMs);
+      const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValueOnce(deadline.signal);
+      try {
+        const result = await runSafetyScoreV9Publication({
+          db: delayedDb, fixedInput, nowSec: fixedInput.clockSec, publicationDeadlineMs: start + 180_000,
+          deferPublicMaterialization: true,
+        });
+        expect(timeout).toHaveBeenNthCalledWith(1, 165_000);
+        expect(stagingCalls).toBeGreaterThan(0);
+        // Acceptance no longer waits on staging: slow staging cannot fail the publication.
+        expect(result.status).toBe("published");
+        if (result.status !== "published") throw new Error("expected published");
+        expect(acceptedRows.all(...acceptedKeys)).not.toEqual(before);
+        expect((await store.loadSafetyScoreV9PublicationIdentityEnvelope(db))?.publicationGenerationId)
+          .toBe(candidate.publicationGenerationId);
+        expect(result.subphaseElapsedMs.materializeStage).toBeGreaterThan(0);
+        expect(result.subphaseElapsedMs.persistCommit).toEqual(expect.any(Number));
+        expect(mocks.persistAttempt).not.toHaveBeenCalled();
+        if (expected === "materialized") {
+          expect(stagingCalls).toBeLessThanOrEqual(40);
+          expect(elapsedMs).toBeLessThan(165_000);
+          expect(result).toMatchObject({
+            publicationGenerationId: candidate.publicationGenerationId, abortCause: null, warnings: [],
+            publicMaterialization: { status: "materialized", publicationGenerationId: candidate.publicationGenerationId, siteRepresentationCount: 398 },
+          });
+          expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_site_manifests WHERE generation_id = ? AND retired_at IS NULL")
+            .get(candidate.publicationGenerationId)!.n).toBe(398);
+        } else {
+          expect(result).toMatchObject({
+            abortCause: { source: "publication-deadline", name: "TimeoutError" },
+            warnings: expect.arrayContaining(["public-materialization-failed", "publication-committed-before-abort"]),
+            publicMaterialization: { status: "failed", publicationGenerationId: candidate.publicationGenerationId, attempts: 1 },
+            postCommitFailure: null,
+            journal: { status: "written" },
+          });
+          // Readers keep the prior whole generation; the accepted one is not selected.
+          expect(sqlite.prepare("SELECT generation_id FROM safety_score_public_manifests WHERE retired_at IS NULL").all())
+            .toEqual([{ generation_id: prior.publicationGenerationId }]);
+          expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_site_manifests WHERE generation_id = ? AND retired_at IS NULL")
+            .get(candidate.publicationGenerationId)!.n).toBe(0);
         }
       } finally { clock.mockRestore(); timeout.mockRestore(); }
     } finally { sqlite.close(); }
@@ -1013,6 +1131,7 @@ describe("Safety Score V9 publication runner", () => {
       });
       expect(result).toMatchObject({
         status: "published", warnings: ["publication-committed-before-abort"],
+        publicMaterialization: { status: "skipped", reason: "post-commit-interrupted" },
         postCommitFailure: { stage: "archive", message: "archive cancelled" },
         abortCause: { source: "caller", name: "AbortError" },
         phaseElapsedMs: { journal: expect.any(Number), archive: expect.any(Number) },

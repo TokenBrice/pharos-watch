@@ -39,7 +39,7 @@ const CONSUMER_METADATA_KEYS: Readonly<Record<string, boolean>> = Object.fromEnt
   "activePriceCoverage", "activePublicationCoverage", "missingActiveState", "coverageOutcomeCounts", "persistence",
   "publicationStats", "apiErrorConfigs",
   "adapterTelemetryProgress",
-  "publicationAbortCause", "publicationPhaseElapsedMs", "publicationPhaseTimingBasis",
+  "publicationAbortCause", "publicationPhaseElapsedMs", "publicationSubphaseElapsedMs", "publicMaterialization", "publicationPhaseTimingBasis",
   "executorMode", "executorColo", "executorColoSource", "cfPlacement", "executorWorkerVersion", "executionGeneration",
   "reserveQueue", "reserveQueueHandoff",
 ].map((key) => [key, true]));

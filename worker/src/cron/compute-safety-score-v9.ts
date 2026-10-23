@@ -168,7 +168,10 @@ export async function computeSafetyScoreV9(
   db: D1Database,
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
-  options: { captureArchiveBucket?: R2Bucket; captureArchiveContext?: ExecutionContext; workerMetadata?: V9WorkerProvenance; executionWindow?: V9ExecutionWindow } = {},
+  options: {
+    captureArchiveBucket?: R2Bucket; captureArchiveContext?: ExecutionContext; workerMetadata?: V9WorkerProvenance;
+    executionWindow?: V9ExecutionWindow; deferPublicMaterialization?: boolean; chunkedPublicationWrites?: boolean;
+  } = {},
 ): Promise<CronResult> {
   throwIfAborted(signal);
   const catalogAdmission = assessSafetyScoreV9ResourceBudget({
@@ -419,6 +422,8 @@ export async function computeSafetyScoreV9(
     db,
     captureArchiveBucket: options.captureArchiveBucket,
     captureArchiveContext: options.captureArchiveContext,
+    deferPublicMaterialization: options.deferPublicMaterialization,
+    chunkedPublicationWrites: options.chunkedPublicationWrites,
     publicationDeadlineMs: options.executionWindow?.deadlineMs,
     fixedInput: v9SeedInput,
     fixedInputCacheValue,
@@ -613,6 +618,8 @@ export async function computeSafetyScoreV9(
       // Top-level scalar maps survive the bounded >64 KiB compactor, which
       // deliberately does not retain objects nested inside publication.
       publicationPhaseElapsedMs: publication.phaseElapsedMs,
+      publicationSubphaseElapsedMs: publication.subphaseElapsedMs,
+      ...(publication.status === "published" ? { publicMaterialization: publication.publicMaterialization } : {}),
       publicationPhaseTimingBasis: publication.phaseTimingBasis,
       publicationAbortCause: publication.abortCause,
       ...(publication.status !== "failed" ? { publicationPostCommitFailure: publication.postCommitFailure } : {}),
