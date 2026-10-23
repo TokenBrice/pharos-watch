@@ -96,8 +96,8 @@ describe("sampled Worker memory correlation", () => {
   it("normalizes scheduled time and maps compiler candidates without confirming execution", async () => {
     const report = await capture([adaptive()]);
     const row = report.exceededMemory.groups[0]!.adaptive;
-    const result = joinScheduledMemory([row], [{ ...scheduled, cron: "52 * * * *", scheduledDatetime: "2026-10-14T00:52:37Z" }], "heavy")[0]!;
-    expect(result.lane).toMatchObject({ expectedJob: "compute-safety-score-v9", jobBasis: "registry-plan", executionConfirmed: false, slotStartedAt: Date.parse("2026-10-14T00:52:00Z") / 1000 });
+    const result = joinScheduledMemory([row], [{ ...scheduled, cron: "22 * * * *", scheduledDatetime: "2026-10-14T00:22:37Z" }], "heavy")[0]!;
+    expect(result.lane).toMatchObject({ expectedJob: "compute-safety-score-v9", jobBasis: "registry-plan", executionConfirmed: false, slotStartedAt: Date.parse("2026-10-14T00:22:00Z") / 1000 });
     expect(joinScheduledMemory([row], [{ ...scheduled, cron: "unknown" }], "heavy")[0]?.correlation).toBe("registry-unmapped");
     expect(joinScheduledMemory([row], [{ ...scheduled, cron: "10 * * * *" }], "heavy")[0]?.correlation).toBe("registry-owner-mismatch");
   });
