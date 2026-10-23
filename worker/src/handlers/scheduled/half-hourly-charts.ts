@@ -1,7 +1,7 @@
 /**
  * Half-hourly charts trigger (physical 16 * * * * and 46 * * * * aliases):
  *   sync-dex-liquidity (0 normally, 5 during source recovery) → cron-sentinel turnover source (0)
- *   → prepare-safety-score-v9-input (3)
+ *   → prepare-safety-score-v9-input (3; hourly at :16, or :46 after a late publication)
  *   sync-stablecoin-charts (1), failure-independent and serial
  * Both ticks use one exact source-slot consume/reuse decision. A new accepted
  * publication, not the calendar minute, drives turnover. Heavy has Graph
@@ -16,9 +16,15 @@ import { DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON } from "../../cron/dex-liquid
 import {
   DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC,
   isDailyDexShadowTargetPublicationSlot,
+  isDexLiquidityPublicationSlot,
 } from "@shared/lib/cron-cadences";
 import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
 import { prepareSafetyScoreV9Input } from "../../cron/prepare-safety-score-v9-input";
+import { IncidentProjectionUnavailableError } from "../../lib/depeg-event-projection";
+import { derivePegAnalyticsSnapshot } from "../../lib/peg-analytics";
+import { publishPegAnalyticsCache } from "../../lib/peg-analytics-cache";
+import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import type { StablecoinData } from "@shared/types/market";
 import { runCronSentinel } from "../../cron/cron-sentinel";
 import { syncStablecoinCharts } from "../../cron/sync-stablecoin-charts";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
@@ -141,6 +147,26 @@ async function recoverLastAcceptedDexPublication(
   }
 }
 
+async function refreshPegAnalyticsCache(db: D1Database): Promise<boolean> {
+  const stablecoins = await loadStablecoinsCache(db, { mode: "strict" });
+  if (stablecoins.kind !== "ok") return false;
+  const { peggedAssets, fxFallbackRates } = stablecoins.payload as {
+    peggedAssets: StablecoinData[];
+    fxFallbackRates?: Record<string, number>;
+  };
+  try {
+    return await publishPegAnalyticsCache(db, await derivePegAnalyticsSnapshot(db, {
+      peggedAssets,
+      fxFallbackRates,
+      methodologyAsOf: stablecoins.updatedAt,
+      includeNavTokens: true,
+    }));
+  } catch (error) {
+    if (error instanceof IncidentProjectionUnavailableError) return false;
+    throw error;
+  }
+}
+
 export function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext) {
   let dexPublication: DexPublication | null = null;
   return bindScheduledSlotPlan("halfHourlyChartsOffset", {
@@ -203,6 +229,25 @@ export function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext
       },
       "prepare-safety-score-v9-input": async (signal) => {
         const publication = dexPublication;
+        // The hourly :22 publisher consumes one input per hour. The :46 tick
+        // prepares only when it published the hour's late stage itself, but
+        // still refreshes the peg-analytics cache whose 30-minute read budget
+        // otherwise forces peg-summary onto its direct-compute fallback.
+        if (
+          !isDexLiquidityPublicationSlot(runtime.slotStartedAt)
+          && !((publication?.status === "ok" || publication?.status === "degraded")
+            && publication.generationId !== null && !publication.skipped)
+        ) {
+          return {
+            status: "skipped_neutral" as const,
+            itemCount: 0,
+            metadata: JSON.stringify({
+              reason: "v9-input-hourly-cadence",
+              pegAnalyticsPublished: await refreshPegAnalyticsCache(runtime.db),
+            }),
+            productivity: { productive: false, reason: "v9-input-hourly-cadence" },
+          };
+        }
         const isExactCadenceReuse =
           publication?.status === "skipped_neutral"
           && publication.generationId !== null

@@ -2,7 +2,7 @@ import { CRON_SCHEDULE_CADENCES } from "./cron-cadences";
 import { DAY_SECONDS } from "./time-constants";
 
 export const SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC =
-  30 * 60;
+  60 * 60;
 export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC =
   30 * 60;
 
@@ -11,7 +11,6 @@ export const REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY = 3;
 
 export type CronGroupKey =
   | "quarter-hourly"
-  | "one-minute"
   | "five-minute"
   | "half-hourly"
   | "hourly"
@@ -51,9 +50,9 @@ export const CRON_SCHEDULE_DEFINITIONS = {
     ...CRON_SCHEDULE_CADENCES.quarterHourly,
   },
   // A packet must precede the scoring clock: capture/completion clocks after
-  // that clock are never admitted. The :08/:38 opportunities normally provide
-  // the :22/:52 publications with an older packet that can be re-derived.
-  // Fresh :16/:46 preparation also requests the following :23/:53 opportunity;
+  // that clock are never admitted. The :08 opportunity normally provides the
+  // :22 publication with an older packet that can be re-derived.
+  // Fresh :16 preparation also requests the following :23 opportunity;
   // compilation may report bounded attribution-pending without applying packets
   // while that exact-source request remains unexpired. Keep this grid unchanged.
   // Paired hourly physical triggers preserve the :08/:23/:38/:53 grid above while
@@ -79,14 +78,13 @@ export const CRON_SCHEDULE_DEFINITIONS = {
     triggerSchedules: ["13 * * * *", "28 * * * *", "43 * * * *", "58 * * * *"],
     ...CRON_SCHEDULE_CADENCES.depegResolverOffset,
   },
-  // The one-shot V9 publication writer needs the same hourly Cron CPU class as
-  // the other CPU-heavy sub-hourly lanes. Keeping the logical comma expression
-  // preserves its :22/:52 cadence and slot identity, while the two hourly
-  // aliases prevent platform termination in Cloudflare's 30-second class.
+  // The one-shot V9 publication writer needs the hourly Cron CPU class; a single
+  // hourly expression qualifies directly. :22 keeps the six-minute gap after
+  // the :16 input preparation; a prepare that misses it is still admitted on
+  // the next slot within SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC.
   v9PublicationOffset: {
     cpuPlacement: "hourly-physical-required",
-    schedule: "22,52 * * * *",
-    triggerSchedules: ["22 * * * *", "52 * * * *"],
+    schedule: "22 * * * *",
     ...CRON_SCHEDULE_CADENCES.v9PublicationOffset,
   },
   // Paired hourly physical triggers for the hourly Cron CPU class. status-self-check
@@ -107,16 +105,14 @@ export const CRON_SCHEDULE_DEFINITIONS = {
     triggerSchedules: ["4 * * * *", "34 * * * *"],
     ...CRON_SCHEDULE_CADENCES.halfHourlyMintBurnCritical,
   },
-  twoHourlyDexDiscovery: { cpuPlacement: "sub-hourly-allowed", schedule: "6 */2 * * *", ...CRON_SCHEDULE_CADENCES.twoHourlyDexDiscovery },
+  twoHourlyDexDiscovery: { cpuPlacement: "sub-hourly-allowed", schedule: "6 */6 * * *", ...CRON_SCHEDULE_CADENCES.twoHourlyDexDiscovery },
   // Keep the minute-long extended scan clear of the DEX/V9 publication chain.
-  // The logical cadence remains half-hourly, but each physical trigger is an
-  // hourly expression so Cloudflare grants the hourly Cron CPU class. The
-  // combined sub-hourly expression repeatedly exhausted its 30-second CPU
-  // class and was reconciled as platform-abandoned in production on 2026-09-01.
+  // One hourly expression receives Cloudflare's hourly Cron CPU class. The
+  // former combined sub-hourly expression repeatedly exhausted its 30-second
+  // CPU class and was reconciled as platform-abandoned on 2026-09-01.
   halfHourlyMintBurnExtended: {
     cpuPlacement: "hourly-physical-required",
-    schedule: "18,48 * * * *",
-    triggerSchedules: ["18 * * * *", "48 * * * *"],
+    schedule: "18 * * * *",
     ...CRON_SCHEDULE_CADENCES.halfHourlyMintBurnExtended,
   },
   halfHourlyMeasuredExecution: {
@@ -155,11 +151,11 @@ export const CRON_SCHEDULE_DEFINITIONS = {
   // (":28,:58" or ":24,:54") gets the invocation killed mid `source-resolution`.
   // Recombining this into a sub-hourly expression requires the paired-trigger
   // form used by halfHourlyChartsOffset, which needs a physical
-  // trigger beyond the reviewed budget. :55 also leaves two full settling
-  // minutes after the :52 V9 publication (recent production maximum: 56s), so
-  // normal yield runs finish before the active safety identity rolls over.
+  // trigger beyond the reviewed budget. Even-hour :55 runs follow that hour's
+  // :10 DEX source stage whose pools they read and stay clear of the :22 V9
+  // publication, so the active safety identity does not roll over mid-run.
   // See docs/yield-intelligence-operations.md.
-  hourlyYieldSync: { cpuPlacement: "sub-hourly-allowed", schedule: "55 * * * *", ...CRON_SCHEDULE_CADENCES.hourlyYieldSync },
+  hourlyYieldSync: { cpuPlacement: "sub-hourly-allowed", schedule: "55 */2 * * *", ...CRON_SCHEDULE_CADENCES.hourlyYieldSync },
   fourHourlyYieldSupplemental: {
     cpuPlacement: "sub-hourly-allowed",
     schedule: "25 */4 * * *",
@@ -172,7 +168,7 @@ export const CRON_SCHEDULE_DEFINITIONS = {
   },
   fiveMinuteReserveRecovery: {
     cpuPlacement: "sub-hourly-allowed",
-    schedule: "* * * * *",
+    schedule: "1,6,11,16,21,26,31,36,41,46,51,56 * * * *",
     ...CRON_SCHEDULE_CADENCES.fiveMinuteReserveRecovery,
   },
   digestTriggerPoll: { cpuPlacement: "sub-hourly-allowed", schedule: "*/5 * * * *", ...CRON_SCHEDULE_CADENCES.digestTriggerPoll },
@@ -224,6 +220,11 @@ export const CRON_CONNECTION_BUDGET = {
  * dated note here, not a new ADR. The binding constraints remain the
  * fetch-capable-entry and per-trigger connection limits below, plus
  * Cloudflare's 250-Cron-Triggers-per-account platform ceiling.
+ *
+ * Dated note (2026-10-23, WS8 slower non-price cadences): hourly V9
+ * publication and hourly extended mint/burn retire the `:52` and `:48`
+ * aliases, moving the physical count from 43 to 41. Slowing reserve recovery,
+ * DEX discovery and yield changes expressions, not their count.
  */
 export const CRON_GROWTH_HEADROOM_POLICY = {
   maxPhysicalTriggersBeforeRebalance: 43,
@@ -355,36 +356,32 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
     description: "Core ingestion, FX rates, and cache-dependent supply snapshots on the shared 15-minute lane.",
   },
   {
-    key: "one-minute",
-    title: "1-minute slot",
-    badge: "~1 min",
-    description: "Reserve cohort recovery with independently fenced continuation invocations.",
-  },
-  {
     key: "five-minute",
     title: "5-minute slot",
     badge: "~5 min",
-    description: "Telegram alert dispatch with a dedicated connection pool and pending-queue drain.",
+    description:
+      "Telegram alert dispatch with a dedicated connection pool, plus reserve cohort recovery with independently fenced continuation invocations.",
   },
   {
     key: "half-hourly",
     title: "30-minute slot",
     badge: "~30 min",
     description:
-      "Dedicated DEX and chart lanes, decoupled DEWS/PSI publication, plus isolated mint/burn critical and extended triggers.",
+      "Dedicated DEX chart and measured-execution lanes, decoupled DEWS/PSI publication, and the isolated mint/burn critical trigger.",
   },
   {
     key: "hourly",
     title: "Hourly slot",
     badge: "~1h",
-    description: "Dedicated core yield publication lane after DEX scoring has refreshed its inputs.",
+    description:
+      "DEX source stage and scoring, Safety Score V9 input/publication, plus the isolated mint/burn extended trigger.",
   },
   {
     key: "multi-hourly",
     title: "Multi-hour slot",
     badge: "2-6h",
     description:
-      "Isolated slower lanes: 2-hour DEX discovery, 4-hour reserve/redemption/Kinesis and supplemental yield, plus 6-hour critical blacklist sync.",
+      "Isolated slower lanes: 2-hour core yield publication, 4-hour reserve/redemption/Kinesis and supplemental yield, plus 6-hour DEX discovery and critical blacklist sync.",
   },
   {
     key: "daily",
@@ -463,7 +460,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
   {
     job: "reserve-recovery",
     label: "Reserve recovery",
-    group: "one-minute",
+    group: "five-minute",
     scheduleKey: "fiveMinuteReserveRecovery",
     triggerMode: "isolated",
     statusImpact: "critical",
@@ -549,7 +546,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
   {
     job: "sync-mint-burn-extended",
     label: "Mint/burn extended",
-    group: "half-hourly",
+    group: "hourly",
     scheduleKey: "halfHourlyMintBurnExtended",
     triggerMode: "isolated",
     maxConnections: 1, // Sequential Alchemy eth_getLogs + eth_getBlockByNumber calls
@@ -592,7 +589,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
   {
     job: "sync-yield-data",
     label: "Yield sync",
-    group: "hourly",
+    group: "multi-hourly",
     scheduleKey: "hourlyYieldSync",
     triggerMode: "isolated",
     // Stale rankings are public-critical (`yieldData` criticality in the
@@ -645,7 +642,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
   {
     job: "compute-safety-score-v9",
     label: "V9 publication compiler",
-    group: "quarter-hourly",
+    group: "hourly",
     intervalSec: SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
     scheduleKey: "v9PublicationOffset",
     triggerMode: "isolated",
@@ -655,8 +652,9 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
   {
     job: "prepare-safety-score-v9-input",
     label: "V9 compiler input",
-    group: "half-hourly",
-    intervalSec: 30 * 60,
+    group: "hourly",
+    // Prepares only on the :16 DEX publication tick; :46 reuse ticks skip.
+    intervalSec: SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
     scheduleKey: "halfHourlyChartsOffset",
     triggerMode: "shared",
     maxConnections: 3, // Transfer materiality observes up to three chains after the exact input is built.
@@ -792,7 +790,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     // separates admin-watch from public-critical).
     job: "observe-rpc-provider-parity",
     label: "RPC provider parity",
-    group: "hourly",
+    group: "multi-hourly",
     scheduleKey: "hourlyYieldSync",
     triggerMode: "shared",
     statusImpact: "watch",

@@ -88,8 +88,8 @@ export const CACHE_FRESHNESS_LANES = {
     producerIntervalSec: CRON_INTERVALS["sync-yield-data"],
     endpointMaxAgeSec: CRON_INTERVALS["sync-yield-data"],
     availabilityMaxAgeSec: CRON_INTERVALS["sync-yield-data"],
-    endpointBudgetReason: "Yield publication runs after each V9 publication slot.",
-    availabilityBudgetReason: "Matches the post-V9 yield publication cadence.",
+    endpointBudgetReason: "Yield publication runs every two hours, after the DEX source stage it reads.",
+    availabilityBudgetReason: "Matches the two-hour yield publication cadence.",
     freshnessSentinelKey: "freshness:yield-data",
   },
   dews: {
@@ -240,7 +240,7 @@ export const DATA_SURFACE_DESCRIPTORS = {
     producerJob: "compute-safety-score-v9",
     producerIntervalSec: CRON_INTERVALS["compute-safety-score-v9"],
     // 2x the publication cadence: the endpoint budget tolerates one missed
-    // 30-minute publication, matching the V9 consumer fail-close basis
+    // hourly publication, matching the V9 consumer fail-close basis
     // (worker/src/lib/safety-score-v9/consumer-freshness.ts).
     endpointMaxAgeSec: 2 * CRON_INTERVALS["compute-safety-score-v9"],
     dependencyCriticality: "critical",

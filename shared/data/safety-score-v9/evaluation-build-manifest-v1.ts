@@ -134,11 +134,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/cron-cadences.ts",
-      "sha256": "bbbfe7371136ca89d406dfad0680b1b5361ff975ce2354efede06f3df18246f8"
+      "sha256": "0fa7c2365a1551dfcbabd1c9cf1dd2ed17b308241f5600fedec604eed057e4f1"
     },
     {
       "path": "shared/lib/cron-jobs.ts",
-      "sha256": "ad41433e59cada465b1d13d42935bc3ea86d52dd8ae55cd7c823fd893758a087"
+      "sha256": "96e014d659c0584370ef1611a8eafa21501478fce1fb90025b73c67011dc9d75"
     },
     {
       "path": "shared/lib/curve-composite-identities.ts",
@@ -150,7 +150,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/data-surface-descriptors.ts",
-      "sha256": "9fa287126d3774371cf516b4f3e1b9733a7b5ce6031524fa1e6cbd6bfb0e949c"
+      "sha256": "6b9d8cd24646138915634b4a9bb09e94867f267f1208cc68c389a14dc3b4a51d"
     },
     {
       "path": "shared/lib/depeg-audit.ts",
@@ -1299,7 +1299,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-21-block-26239813-shock-coverage.json.gz"
     }
   ],
-  "digest": "592ad9a32d1fa0d8bbc22a6284054f73cf6de41e9ecd03b6429b7a98a44a03f7"
+  "digest": "3f46cf15d5e9d9bcd47e2947a5b1253a3f86467263a76aee1181c02335a141a5"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

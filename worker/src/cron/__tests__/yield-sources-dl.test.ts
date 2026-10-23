@@ -81,10 +81,10 @@ describe("loadDlStablecoinPools", () => {
   });
 
   it("accepts the freshness-contract boundary and fetches one second beyond it", async () => {
-    // B10/D12 — the DL cache bound is derived from the same 3x-hourly contract that
-    // evaluation.ts uses to null a DL row's PYS as `source-stale`.
+    // B10/D12 — the DL cache bound is derived from the same three-sync-interval
+    // contract that evaluation.ts uses to null a DL row's PYS as `source-stale`.
     const maxAgeSec = STALE_THRESHOLD_MS / 1000;
-    expect(maxAgeSec).toBe(180 * 60);
+    expect(maxAgeSec).toBe(360 * 60);
 
     for (const age of [maxAgeSec, maxAgeSec + 1]) {
       vi.mocked(getCache).mockResolvedValue({

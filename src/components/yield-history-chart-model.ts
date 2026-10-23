@@ -11,6 +11,7 @@ import { formatChartDate, formatDecimal } from "@shared/lib/format";
 import { YIELD_HISTORY_MAX_DAYS, YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";
 import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_SURFACE_DESCRIPTORS } from "@shared/lib/data-surface-descriptors";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import type { YieldHistoryPoint } from "@shared/types";
 
 export const BRAND_ACCENT = "oklch(0.72 0.14 248)";
@@ -354,8 +355,10 @@ function mergeHistorySeries(
       rows.set(date, row);
     }
   });
-  // Retention is hourly for 30 days, then daily. Insert only genuinely
-  // missing cadence buckets; normal cron timestamp jitter is not a gap.
+  // Raw rows follow the yield publication cadence for 30 days, then daily.
+  // Insert only genuinely missing cadence buckets; normal cron timestamp
+  // jitter is not a gap.
+  const rawCadenceMs = CRON_SCHEDULE_CADENCES.hourlyYieldSync.intervalSec * 1000;
   const hourlyCutoff = nowMs === null ? null : nowMs - YIELD_HISTORY_RAW_DAYS * DAY_MS;
   for (const dates of seriesDates) {
     if (hourlyCutoff === null) break;
@@ -363,7 +366,7 @@ function mergeHistorySeries(
       let cursor = dates[i - 1];
       const next = dates[i];
       while (cursor < next) {
-        const cadence = cursor < hourlyCutoff ? DAY_MS : 3_600_000;
+        const cadence = cursor < hourlyCutoff ? DAY_MS : rawCadenceMs;
         const missing = (Math.floor(cursor / cadence) + 1) * cadence;
         if (Math.floor(next / cadence) <= Math.floor(missing / cadence)) break;
         if (!rows.has(missing)) rows.set(missing, emptyChartPoint(missing));

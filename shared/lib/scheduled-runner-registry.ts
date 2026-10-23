@@ -160,6 +160,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     taskPolicies: {
       "sync-dex-liquidity": { timeoutMs: 13 * 60_000, leaseOptions: LONG_RUNNING_LEASE_OPTIONS },
       "cron-sentinel": { ...SENTINEL_TASK_POLICY, due: "dex-publication" },
+      "prepare-safety-score-v9-input": { due: "dex-publication" },
     },
   },
   dewsPsiOffset: {
@@ -176,7 +177,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     // the previous generation before this slot's rows landed. Kinesis supply
     // reads no reserve output and keeps running beside the head. A head the
     // slot fence abandons delays the watchdog instead of losing it: the
-    // one-minute reserve-recovery lane replays the abandoned checkpoint in
+    // five-minute reserve-recovery lane replays the abandoned checkpoint in
     // chain order (chain prerequisites are derived from this plan).
     // Declared peak max(reserve 2, redemption 3, sentinel 1) + Kinesis 1 = 4/6.
     jobChains: [
@@ -198,7 +199,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     // jobs' budgets.
     //
     // `observe-rpc-provider-parity` is a second, independent chain: it shares
-    // the one invocation per hour the yield publication already pays for, is
+    // the one invocation per two hours the yield publication already pays for, is
     // strictly serial (one connection), and reads no yield output, so it must
     // neither delay the publication nor inherit its chain's stop-on-failure.
     // Declared peak: max(3, 1, 2) + 1 = 4/6, including catch-up Royco fanout.

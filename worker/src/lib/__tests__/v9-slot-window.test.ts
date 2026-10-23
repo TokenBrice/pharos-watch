@@ -150,10 +150,11 @@ describe("runV9AfterCoreWithinWindow", () => {
       return { db: makeNoopD1({ prepare: vi.fn(() => ({ bind })) }), bind };
     }
 
-    it.each([null, { state: "running" }])("yields to a late :52 publication that has not finished (%o)", async (publication) => {
-      // 2026-10-23 09:53 incident: the :52 trigger arrived at 09:53:38, after
-      // attribution's :53 start had claimed the shared memory lane.
-      const scheduledTimeMs = Date.parse("2026-10-23T09:53:00Z");
+    it.each([null, { state: "running" }])("yields to a late :22 publication that has not finished (%o)", async (publication) => {
+      // 2026-10-23 09:53 incident (then a :52 publication): a late publication
+      // trigger can arrive after attribution's next start claimed the shared
+      // memory lane. Publication is now hourly at :22, shared with :23.
+      const scheduledTimeMs = Date.parse("2026-10-23T09:23:00Z");
       vi.useFakeTimers();
       vi.setSystemTime(scheduledTimeMs + 1_000);
       const fixture = dbWithPublicationSlot(publication);
@@ -163,19 +164,19 @@ describe("runV9AfterCoreWithinWindow", () => {
 
       expect(result).toMatchObject({ status: "skipped_neutral", productivity: { reason: "v9-publication-priority" } });
       expect(JSON.parse(result.metadata!)).toMatchObject({
-        publicationSlotStartedAt: Date.parse("2026-10-23T09:52:00Z") / 1_000,
+        publicationSlotStartedAt: Date.parse("2026-10-23T09:22:00Z") / 1_000,
         publicationSlotState: publication?.state ?? null,
-        publicationDeadlineMs: Date.parse("2026-10-23T09:55:00Z"),
+        publicationDeadlineMs: Date.parse("2026-10-23T09:25:00Z"),
       });
-      expect(fixture.bind).toHaveBeenCalledWith(Date.parse("2026-10-23T09:52:00Z") / 1_000);
+      expect(fixture.bind).toHaveBeenCalledWith(Date.parse("2026-10-23T09:22:00Z") / 1_000);
       expect(leaseMocks.runCronWithLease).not.toHaveBeenCalled();
       expect(run).not.toHaveBeenCalled();
     });
 
     it("lets the late publisher claim the lane at the same instant", async () => {
-      const publicationScheduledMs = Date.parse("2026-10-23T09:52:00Z");
+      const publicationScheduledMs = Date.parse("2026-10-23T09:22:00Z");
       vi.useFakeTimers();
-      vi.setSystemTime(Date.parse("2026-10-23T09:53:01Z"));
+      vi.setSystemTime(Date.parse("2026-10-23T09:23:01Z"));
       const attribution = dbWithPublicationSlot(null);
       const publisher = dbWithCoreSlot(okCore);
       // Exclusive lane: whichever caller claims first holds it until it returns.
@@ -195,7 +196,7 @@ describe("runV9AfterCoreWithinWindow", () => {
       const publisherRun = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
 
       const [attributionResult, publisherResult] = await Promise.all([
-        runV9AfterCoreWithinWindow(attributionOptions(attribution.db, Date.parse("2026-10-23T09:53:00Z")), attributionRun),
+        runV9AfterCoreWithinWindow(attributionOptions(attribution.db, Date.parse("2026-10-23T09:23:00Z")), attributionRun),
         runV9AfterCoreWithinWindow(
           options(publisher.db, publicationScheduledMs, V9_EXECUTION_WINDOW_POLICY.publication),
           publisherRun,
@@ -209,7 +210,7 @@ describe("runV9AfterCoreWithinWindow", () => {
     });
 
     it("runs once this window's publication slot has finished", async () => {
-      const scheduledTimeMs = Date.parse("2026-10-23T09:53:00Z");
+      const scheduledTimeMs = Date.parse("2026-10-23T09:23:00Z");
       vi.useFakeTimers();
       vi.setSystemTime(scheduledTimeMs + 1_000);
       const fixture = dbWithPublicationSlot({ state: "finished" });
@@ -223,8 +224,9 @@ describe("runV9AfterCoreWithinWindow", () => {
 
     it("runs after the publication window closed or when no publication shares the core window", async () => {
       for (const [scheduled, now] of [
-        ["2026-10-23T09:53:00Z", "2026-10-23T09:55:00Z"],
+        ["2026-10-23T09:23:00Z", "2026-10-23T09:25:00Z"],
         ["2026-10-23T09:38:00Z", "2026-10-23T09:38:01Z"],
+        ["2026-10-23T09:53:00Z", "2026-10-23T09:53:01Z"],
       ] as const) {
         vi.useFakeTimers();
         vi.setSystemTime(Date.parse(now));
@@ -240,7 +242,7 @@ describe("runV9AfterCoreWithinWindow", () => {
     });
 
     it("fails closed without suppressing publication when the slot ledger is unreadable", async () => {
-      const scheduledTimeMs = Date.parse("2026-10-23T09:53:00Z");
+      const scheduledTimeMs = Date.parse("2026-10-23T09:23:00Z");
       vi.useFakeTimers();
       vi.setSystemTime(scheduledTimeMs + 1_000);
       const first = vi.fn().mockRejectedValueOnce(new Error("D1 unavailable"));

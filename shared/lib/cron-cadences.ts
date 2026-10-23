@@ -13,28 +13,32 @@ import { DAY_SECONDS } from "./time-constants";
  * Editing a value here is a real evidence-freshness change and *should* rotate
  * the Safety Score v9 evaluation-build digest. Editing a cron expression, label,
  * or connection budget in `cron-jobs.ts` must not.
+ *
+ * Keys are durable slot identities (`cron_slot_executions.slot_key`), so a lane
+ * keeps its key when its cadence changes: `hourlyYieldSync` runs every two
+ * hours, `halfHourlyMintBurnExtended` hourly and `twoHourlyDexDiscovery` every
+ * six.
  */
 export const CRON_SCHEDULE_CADENCES = {
   quarterHourly: { intervalSec: 900, offsetSec: 0 },
   v9SupplyAttributionOffset: { intervalSec: 900, offsetSec: 8 * 60 },
   depegResolverOffset: { intervalSec: 900, offsetSec: 13 * 60 },
-  v9PublicationOffset: { intervalSec: 1800, offsetSec: 22 * 60 },
+  v9PublicationOffset: { intervalSec: 3600, offsetSec: 22 * 60 },
   statusSelfCheckOffset: { intervalSec: 900, offsetSec: 9 * 60 },
   sixHourlyBlacklist: { intervalSec: 6 * 3600, offsetSec: 3 * 60 },
   halfHourlyMintBurnCritical: { intervalSec: 1800, offsetSec: 4 * 60 },
-  twoHourlyDexDiscovery: { intervalSec: 2 * 3600, offsetSec: 6 * 60 },
-  halfHourlyMintBurnExtended: { intervalSec: 1800, offsetSec: 18 * 60 },
+  twoHourlyDexDiscovery: { intervalSec: 6 * 3600, offsetSec: 6 * 60 },
+  halfHourlyMintBurnExtended: { intervalSec: 3600, offsetSec: 18 * 60 },
   halfHourlyMeasuredExecution: { intervalSec: 1800, offsetSec: 0 },
   halfHourlyMeasuredExecutionSupplemental: { intervalSec: 1800, offsetSec: 15 * 60 },
   halfHourlyOffset: { intervalSec: 3600, offsetSec: 10 * 60 },
   halfHourlyChartsOffset: { intervalSec: 1800, offsetSec: 16 * 60 },
   dewsPsiOffset: { intervalSec: 1800, offsetSec: 26 * 60 },
   fourHourlyReserveSync: { intervalSec: 4 * 3600, offsetSec: 11 * 60 },
-  hourlyYieldSync: { intervalSec: 3600, offsetSec: 55 * 60 },
+  hourlyYieldSync: { intervalSec: 2 * 3600, offsetSec: 55 * 60 },
   fourHourlyYieldSupplemental: { intervalSec: 4 * 3600, offsetSec: 25 * 60 },
   fiveMinuteTelegramAlerts: { intervalSec: 300, offsetSec: 2 * 60 },
-  // Historical durable identity; recovery now polls each minute.
-  fiveMinuteReserveRecovery: { intervalSec: 60, offsetSec: 0 },
+  fiveMinuteReserveRecovery: { intervalSec: 300, offsetSec: 60 },
   digestTriggerPoll: { intervalSec: 300, offsetSec: 0 },
   daily0300Utc: { intervalSec: DAY_SECONDS, offsetSec: 3 * 3600 },
   daily0800Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 },
@@ -43,8 +47,9 @@ export const CRON_SCHEDULE_CADENCES = {
   monthlyYieldAudit: { intervalSec: 30 * 86400, offsetSec: 6 * 3600 },
 } as const;
 
-// Config/prerequisite recovery retains the original :01/:06/... opportunities.
-export const RESERVE_CONFIG_RECOVERY_CADENCE = { intervalSec: 300, offsetSec: 60 } as const;
+// Config/prerequisite recovery keeps the original :01/:06/... opportunities,
+// which are again every reserve-recovery slot.
+export const RESERVE_CONFIG_RECOVERY_CADENCE = CRON_SCHEDULE_CADENCES.fiveMinuteReserveRecovery;
 
 export function isReserveConfigRecoverySlot(slotStartedAtSec: number): boolean {
   const { intervalSec, offsetSec } = RESERVE_CONFIG_RECOVERY_CADENCE;

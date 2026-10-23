@@ -13,9 +13,9 @@ import { STALE_SLOT_ERROR } from "../scheduled-slot-reconciliation";
 import { createDeferredPromise } from "./deferred.test-support";
 
 const fixtures = createLatestSchemaFixtureTracker();
-// 2027-01-14T10:00:00Z: a quarter-hour and a :00 boundary.
-const QUARTER_SLOT = 1_799_920_800;
-// The hourly yield slot at 09:55 for the same hour.
+// 2027-01-14T11:00:00Z: a quarter-hour and a :00 boundary.
+const QUARTER_SLOT = 1_799_924_400;
+// The two-hourly yield slot at 10:55, five minutes earlier.
 const YIELD_SLOT = QUARTER_SLOT - 5 * 60;
 
 function createQueue() {
@@ -74,8 +74,8 @@ describe("one-shot scheduled slot catch-up", () => {
     expect(resolveSlotCatchUpCandidate("quarterHourly", QUARTER_SLOT + 780)).toBeNull();
     expect(resolveSlotCatchUpCandidate("hourlyYieldSync", YIELD_SLOT + 300)).toBeNull();
     expect(resolveSlotCatchUpCandidate("hourlyYieldSync", YIELD_SLOT + 600)).toBe(YIELD_SLOT);
-    expect(resolveSlotCatchUpCandidate("hourlyYieldSync", YIELD_SLOT + 45 * 60)).toBe(YIELD_SLOT);
-    expect(resolveSlotCatchUpCandidate("hourlyYieldSync", YIELD_SLOT + 46 * 60)).toBeNull();
+    expect(resolveSlotCatchUpCandidate("hourlyYieldSync", YIELD_SLOT + 105 * 60)).toBe(YIELD_SLOT);
+    expect(resolveSlotCatchUpCandidate("hourlyYieldSync", YIELD_SLOT + 106 * 60)).toBeNull();
     expect(isSlotCatchUpWithinWindow("statusSelfCheckOffset", QUARTER_SLOT, QUARTER_SLOT + 600)).toBe(false);
   });
 

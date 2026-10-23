@@ -115,7 +115,7 @@ describe("scheduled runner contract", () => {
     ]);
     expect(listScheduledExpressionsForWorker("heavy").sort()).toEqual([
       "8 * * * *", "23 * * * *", "38 * * * *", "53 * * * *",
-      "16 * * * *", "46 * * * *", "22 * * * *", "52 * * * *",
+      "16 * * * *", "46 * * * *", "22 * * * *",
     ].sort());
     for (const role of ["public", "heavy"] as const) {
       for (const expression of listScheduledExpressionsForWorker(role)) {
@@ -123,7 +123,7 @@ describe("scheduled runner contract", () => {
       }
     }
     expect(getScheduledWorkerRoleForExpression("11 */4 * * *")).toBe("public");
-    expect(getScheduledWorkerRoleForExpression("* * * * *")).toBe("public");
+    expect(getScheduledWorkerRoleForExpression("1,6,11,16,21,26,31,36,41,46,51,56 * * * *")).toBe("public");
     expect(() => getScheduledWorkerRoleForExpression("unknown")).toThrow("Unknown");
   });
 

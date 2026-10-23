@@ -503,14 +503,14 @@ describe("handleYieldHistory", () => {
       updatedAt,
       ageSeconds: 1_700,
       status: "fresh",
-      freshBudgetSec: 7_200,
-      degradedBudgetSec: 14_400,
+      freshBudgetSec: 14_400,
+      degradedBudgetSec: 28_800,
       reason: null,
     });
   });
 
   it.each([
-    [7199, "fresh"], [7200, "fresh"], [7201, "degraded"], [14400, "degraded"], [14401, "stale"],
+    [14399, "fresh"], [14400, "fresh"], [14401, "degraded"], [28800, "degraded"], [28801, "stale"],
   ] as const)("aligns history body and HTTP freshness at age %s", async (age, status) => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-28T12:00:00Z"));
@@ -529,7 +529,7 @@ describe("handleYieldHistory", () => {
       expect(response.headers.get("Warning")).toMatch(/^110 /);
     }
     // The verdict is inclusive, but at its boundary no cache runway remains.
-    if (age >= 7200) {
+    if (age >= 14400) {
       expect(response.headers.get("Cache-Control")).toBe("no-store");
     } else {
       expect(response.headers.get("Cache-Control")).toContain("s-maxage=1");
@@ -1020,7 +1020,7 @@ describe("handleYieldHistory", () => {
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(body._meta).toMatchObject({
       status: "stale", reason: "publication-cutoff-unavailable", assessedAt: nowSec,
-      freshBudgetSec: 7200, degradedBudgetSec: 14400,
+      freshBudgetSec: 14400, degradedBudgetSec: 28800,
     });
 
     const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history h"));

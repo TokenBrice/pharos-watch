@@ -150,9 +150,10 @@ const ATTEMPT_METADATA_SAMPLE_LIMIT = 6;
  *
  * MB-1 (2026-10-18): the extended roster is 129 configs and the 200-request
  * global budget lets a run attempt only 39–44 of them, so a pass needs
- * ceil(129/39) = 4 run intervals; the observed start-to-finish span was ~96 min.
- * Four intervals (120 min) keeps ~25 % margin over that measurement, including
- * the ~132 s/run slowdown regime, without reverting to a per-config clock.
+ * ceil(129/39) = 4 run intervals; the observed start-to-finish span was ~96 min
+ * at 30-minute runs. Four intervals keeps ~25 % margin over that measurement at
+ * either cadence (240 min once the lane became hourly, ~192 min expected),
+ * including the ~132 s/run slowdown regime, without a per-config clock.
  */
 const EXTENDED_PASS_INTERVALS = 4;
 export const MINT_BURN_EXTENDED_COVERAGE_WINDOW_SEC =
