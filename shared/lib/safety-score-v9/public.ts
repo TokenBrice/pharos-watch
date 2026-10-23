@@ -1027,6 +1027,34 @@ function projectPartialEvidence(input: V9PublicCardProjectionInput): V9Uninterne
   };
 }
 
+function projectLocalAuthorityExposure(input: V9PublicCardProjectionInput): SafetyScoreV9CurrentCard["localAuthorityExposure"] {
+  if (input.trace.ratingStatus !== "rated") return undefined;
+  const qualities = new Map<string, number>();
+  for (const authority of input.scoreInput.pillars.control.deploymentAuthorities ?? []) {
+    qualities.set(authority.deploymentKey, Math.min(qualities.get(authority.deploymentKey) ?? authority.quality, authority.quality));
+  }
+  const priced = input.trace.deploymentAdjustments.flatMap((row) => {
+    if (!row.signalKey.startsWith("local-authority:") || row.adjustmentPoints <= 0) return [];
+    const key = row.signalKey.slice("local-authority:".length);
+    const quality = qualities.get(key);
+    if (quality === undefined || row.exposureShare <= 0) return [];
+    return [{ key, quality, share: row.exposureShare, loss: row.adjustmentPoints }];
+  }).sort((a, b) => b.loss - a.loss || compareText(a.key, b.key));
+  if (priced.length === 0) return undefined;
+  const coveredShare = priced.reduce((sum, row) => sum + row.share, 0);
+  return {
+    worstQuality: Math.min(...priced.map(row => row.quality)),
+    coveredShare: coveredShare > 1 ? null : coveredShare,
+    slices: priced.slice(0, 3).map(({ key, quality, share }) => {
+      const [chain, identity] = key.split(":");
+      const label = input.display?.labels?.[key] ??
+        `${humanizeLabel(chain!)} deployment${identity ? ` (${identity.slice(0, 6)}...${identity.slice(-4)})` : ""}`;
+      return { deploymentLabel: label.slice(0, 120), share, quality };
+    }),
+    moreCount: Math.max(0, priced.length - 3),
+  };
+}
+
 function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): V9InternedPublicCardDraft {
   const isRateable = input.trace.finalScore !== null;
   const caps = input.trace.caps.map((cap) => ({
@@ -1040,6 +1068,7 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
   const breakdowns = projectBreakdowns(input);
   const unknownPricedWeightShare = isRateable
     ? computeV9UnknownPricedWeightShare(breakdowns, input.trace.aggregation) : 0;
+  const localAuthorityExposure = projectLocalAuthorityExposure(input);
   return internV9PublicCauseGaps(readableV9PublicWitnesses({
     id: input.trace.assetId,
     supply: input.supply ?? { circulatingUsdAtEvaluation: null, asOfSec: null, generationId: null },
@@ -1051,6 +1080,7 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
     score: input.trace.finalScore,
     grade: input.trace.finalGrade,
     ...(unknownPricedWeightShare > 0.5 ? { provisional: true as const, unknownPricedWeightShare } : {}),
+    ...(localAuthorityExposure === undefined ? {} : { localAuthorityExposure }),
     ratingStatus: input.trace.ratingStatus,
     partialEvidence: projectPartialEvidence(input),
     qualityScore: input.trace.weightedQuality,

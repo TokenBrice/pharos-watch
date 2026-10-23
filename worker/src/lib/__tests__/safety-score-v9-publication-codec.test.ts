@@ -38,8 +38,9 @@ async function authenticatedPayload(
 
 function authenticatedBytes(envelope: Record<string, unknown>, payload: Buffer) {
   const compressed = gzipSync(payload);
+  const { packedBytes: _packedBytes, ...legacyEnvelope } = envelope;
   return stableJsonStringifyV1({
-    ...envelope,
+    ...legacyEnvelope, storageSchemaVersion: 1, encoding: "gzip-base64",
     payloadSha256: createHash("sha256").update(payload).digest("hex"),
     uncompressedBytes: payload.byteLength,
     compressedBytes: compressed.byteLength,
@@ -72,7 +73,7 @@ describe("Safety Score V9 publication codec", () => {
       expect((await parseSafetyScoreV9Publication(stored)).cards[0]!.localAuthorityExposure).toEqual(exposure);
     }
   });
-  it("keeps the phase-one writer legacy while explicitly round-tripping dictionary bytes", async () => {
+  it("emits dictionary storage while retaining byte-identical legacy decoding", async () => {
     const first = makeWorkerSafetyScoreV9Publication().cards[0]!;
     first.sharedBookId = "Repeated long evidence identité \\u0000 \"quoted\" \u{10400}".repeat(4);
     const second = structuredClone(first);
@@ -82,7 +83,7 @@ describe("Safety Score V9 publication codec", () => {
     const canonical = Buffer.from(stableJsonStringifyV1(publication));
     const legacy = await serializeSafetyScoreV9PublicationWithEncoding(publication, "legacy");
     const dictionary = await serializeSafetyScoreV9PublicationWithEncoding(publication, "dictionary");
-    expect(await serializeSafetyScoreV9Publication(publication)).toBe(legacy);
+    expect(await serializeSafetyScoreV9Publication(publication)).toBe(dictionary);
     const old = JSON.parse(legacy), packed = JSON.parse(dictionary);
     expect(packed).toMatchObject({
       storageSchemaVersion: 2, encoding: "gzip-json-dictionary-base64-v1",
@@ -159,7 +160,7 @@ describe("Safety Score V9 publication codec", () => {
   });
   it("encodes the same canonical envelope while reusing only frozen schema-equal cards", async () => {
     const publication = deepFreeze(makeWorkerSafetyScoreV9Publication());
-    const { publication: admitted, stored } = await admitAndSerializeSafetyScoreV9Publication(publication);
+    const { publication: admitted, stored } = await admitAndSerializeSafetyScoreV9Publication(publication, undefined, "legacy");
     expect(admitted.cards[0]).toBe(publication.cards[0]);
     expect(Object.isFrozen(admitted)).toBe(true);
     expect(Object.isFrozen(admitted.cards)).toBe(true);
@@ -230,7 +231,7 @@ describe("Safety Score V9 publication codec", () => {
   });
 
   it("rejects independent compressed and inflated length corruption", async () => {
-    const envelope = JSON.parse(await serializeSafetyScoreV9Publication(makeWorkerSafetyScoreV9Publication()));
+    const envelope = JSON.parse(await serializeSafetyScoreV9PublicationWithEncoding(makeWorkerSafetyScoreV9Publication(), "legacy"));
     for (const [changes, error] of [
       [{ compressedBytes: envelope.compressedBytes + 1 }, /compressed byte length mismatch/],
       [{ uncompressedBytes: envelope.uncompressedBytes + 1 }, /payload length mismatch/],
@@ -241,7 +242,7 @@ describe("Safety Score V9 publication codec", () => {
   });
 
   it("enforces declared size limits at the exact boundary and one byte beyond", async () => {
-    const envelope = JSON.parse(await serializeSafetyScoreV9Publication(makeWorkerSafetyScoreV9Publication()));
+    const envelope = JSON.parse(await serializeSafetyScoreV9PublicationWithEncoding(makeWorkerSafetyScoreV9Publication(), "legacy"));
     for (const [field, limit, mismatch, exceeded] of [
       ["compressedBytes", SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES, /compressed byte length mismatch/, `exceeds ${SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES} compressed bytes`],
       ["uncompressedBytes", SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES, /payload length mismatch/, `exceeds ${SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES} uncompressed bytes`],
@@ -320,9 +321,9 @@ describe("Safety Score V9 publication codec", () => {
     const stored = await serializeSafetyScoreV9Publication(publication);
 
     expect(JSON.parse(stored)).toMatchObject({
-      storageSchemaVersion: 1,
+      storageSchemaVersion: 2,
       kind: "safety-score-v9-publication",
-      encoding: "gzip-base64",
+      encoding: "gzip-json-dictionary-base64-v1",
     });
     await expect(
       parseSafetyScoreV9Publication(stored),
