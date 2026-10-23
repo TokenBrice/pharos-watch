@@ -246,7 +246,7 @@ Pages smoke preserves unrelated `STATIC_EXPORT_*` overrides, but its selected ho
 
 API smoke validates the complete redemption response with `RedemptionBackstopsResponseSchema`, including score/resolution coherence. A small wire adapter retains map-key identity, explicit status/eligibility fields and nonempty provider, methodology and source labels; it does not mirror the schema vocabulary.
 
-`ops:cron-delivery` reads Cloudflare scheduled-invocation ground truth; see [cron delivery stall](./runbooks/cron-delivery-stall.md).
+`ops:cron-delivery` reads Cloudflare scheduled-invocation analytics and D1 slot start lag (`--source all|analytics|d1`); see [cron delivery stall](./runbooks/cron-delivery-stall.md).
 
 ### Worker Incident Evidence And Status Profile
 

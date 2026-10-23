@@ -100,6 +100,20 @@ describe("hourly corroboration before the next publication", () => {
     }));
   });
 
+  it("does not hold the canary and the sentinel behind a slow self-check", async () => {
+    // A platform-cancelled invocation dies inside the self-check; observers
+    // queued behind it would never start. They must finish while it runs.
+    let observersDoneBeforeSelfCheck = false;
+    mocks.runStatusSelfCheck.mockImplementationOnce(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      observersDoneBeforeSelfCheck = mocks.runDataInvariantCanary.mock.calls.length === 1
+        && mocks.runCronSentinel.mock.calls.length === 1;
+      return { status: "ok", itemCount: 1 };
+    });
+    await runStatusSelfCheckSlot(runtime([]));
+    expect(observersDoneBeforeSelfCheck).toBe(true);
+  });
+
   it("keeps a failed DEX refresh degraded when broad collection succeeds", async () => {
     mocks.runPriceDexRefresh.mockResolvedValueOnce(dexRefreshSummary({ cohortSize: 1, attemptedBatches: 1,
       missingQuotes: 1, errorClasses: ["http-error"] }));

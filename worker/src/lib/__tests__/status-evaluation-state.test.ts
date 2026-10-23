@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { STATUS_BLACKLIST_THRESHOLDS, STATUS_MISSING_PRICE_THRESHOLDS, STATUS_RESERVE_COHORT_SLO } from "@shared/lib/status-thresholds";
 import { getCircuitImpactStatus, getPublicProducerGraceBudget, getPublicSafetyScoreStatus, PUBLIC_CIRCUIT_IMPACT_QUORUM, PUBLIC_PRODUCER_INTERVAL_SEC } from "@shared/lib/public-health";
+import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
 import type { StatusCause, StatusResponse } from "@shared/types/status";
 import type { ReserveFeedReview } from "@shared/types/live-reserves";
 import type { PublicHealthAssessment } from "../public-health-assessment";
@@ -169,6 +170,34 @@ describe("status evaluation policy", () => {
       code: "degraded_cron_warning", value: 6, severity: "info",
       message: "6 cron job(s) have fresh degraded terminal attempts reporting incomplete required work. Jobs: compute-safety-score-v9.",
     }));
+  });
+
+  it.each([
+    [9, null],
+    [10, "warning"],
+  ] as const)("raises the ops-only delivery-lag cause at ten late slots without changing status (%i late)", (lateSlots, severity) => {
+    const result = evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({
+      scheduledDeliveryLag: { startedSlots: 40, lateSlots, maxLagSec: 2_340, queryFailed: false },
+    }));
+    expect(result.status).toBe("healthy");
+    const cause = result.causes.find((entry) => entry.code === "scheduled_delivery_lag_elevated");
+    if (severity == null) {
+      expect(cause).toBeUndefined();
+      return;
+    }
+    expect(cause).toMatchObject({ severity, value: lateSlots, threshold: 10 });
+    expect(cause?.message).toContain("last 60 min");
+    expect(cause?.message).toContain("more than 300s");
+    expect(transitionHasPublicImpact([cause!])).toBe(false);
+  });
+
+  it("reports an unreadable delivery-lag window as unknown, not as zero late slots", () => {
+    const result = evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({
+      scheduledDeliveryLag: { startedSlots: null, lateSlots: null, maxLagSec: null, queryFailed: true },
+    }));
+    expect(result.status).toBe("healthy");
+    expect(result.causes).toContainEqual(expect.objectContaining({ code: "scheduled_delivery_lag_query_failed", severity: "info" }));
+    expect(result.causes.some((entry) => entry.code === "scheduled_delivery_lag_elevated")).toBe(false);
   });
 
   it.each([
