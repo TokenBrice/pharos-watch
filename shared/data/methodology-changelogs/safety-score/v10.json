@@ -1,5 +1,21 @@
 [
   {
+    "version": "10.32",
+    "title": "Hourly publication cadence",
+    "date": "2026-10-23",
+    "effectiveAt": 1792713600,
+    "summary": "Safety Score v10.32 publishes once an hour at :22 instead of every 30 minutes; budgets defined as multiples of the publication or preparation cadence scale with it, while score arithmetic, grade thresholds, pillar weights and evidence-age policy constants are unchanged.",
+    "impact": [
+      "Cadence — compute-safety-score-v9 runs hourly at :22 and its fixed input is prepared hourly on the :16 DEX publication tick; the :46 tick prepares only after publishing a late DEX stage.",
+      "Derived bounds — the accepted-publication freshness bound (2 × the publication cadence) moves from 3,600 to 7,200 seconds. It governs endpoint staleness (X-Safety-Score-Freshness-Budget), consumer fail-close, and the evaluator's lenderCollateralBacking freshness, so previous accepted collateral scores are admitted for up to two hours. A capture lagging the live stablecoins cache is admitted for one missed hourly prepare (4,500 s instead of 2,700 s), and the supply-attribution source input for one preparation cycle (3,600 s instead of 1,800 s). Scores still use the capture's frozen clock.",
+      "Unchanged — supply-attribution observation age (1,800 s) and its 10.26 carry-forward (+1,800 s) keep their values; the carry-forward is now shorter than one hourly cycle, so a missed attribution run reaches the unavailable-materiality fallback one cycle sooner. DEX, measured-history, live-reserve and chain-supply windows are unchanged.",
+      "Effect — scores can differ from v10.31 only where an input is admitted under the longer lender-collateral bound or a lagging capture; no replay or mover census is claimed.",
+      "Released 2026-10-23 (effectiveAt 1792713600) after slot catch-up and cadence-scaled status grading were live."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.31",
     "title": "Exposure-weighted local authority",
     "date": "2026-10-22",

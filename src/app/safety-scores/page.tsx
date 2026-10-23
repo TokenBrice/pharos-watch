@@ -35,7 +35,7 @@ const FAQ_ITEMS = [
   {
     question: "How often do safety grades change?",
     answer:
-      "Pharos evaluates safety grades every 30 minutes. If an update cannot be verified, the last verified ratings remain visible with their publication time and an update notice.",
+      "Pharos evaluates safety grades every hour. If an update cannot be verified, the last verified ratings remain visible with their publication time and an update notice.",
   },
   {
     question: "What should I do with this information?",

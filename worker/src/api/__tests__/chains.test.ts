@@ -167,7 +167,7 @@ describe("handleChains", () => {
       dependencies: {
         reportCards: {
           status: "fresh",
-          freshBudgetSec: 3_600,
+          freshBudgetSec: 7_200,
           generationId: "report-cards:v9:1",
         },
       },
@@ -274,7 +274,7 @@ describe("handleChains", () => {
         reportCards: {
           status: "unavailable",
           reason: "v9-snapshot-unavailable",
-          freshBudgetSec: 3_600,
+          freshBudgetSec: 7_200,
           generationId: null,
         },
       },
@@ -309,7 +309,7 @@ describe("handleChains", () => {
     expect(body._meta.dependencies.reportCards).toMatchObject({
       status,
       reason,
-      freshBudgetSec: 3_600,
+      freshBudgetSec: 7_200,
       generationId: "report-cards:v9:1",
     });
     expect(response.headers.get("Cache-Control")).toBe("no-store");

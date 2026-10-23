@@ -264,7 +264,7 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   const main = syncTask
     ? runScheduledSlotGroups(runtime, SLOT_LABEL, [[{ ...reserveAdapterGroup, tasks: [syncTask] }]])
     : Promise.resolve(buildScheduledSlotSummary([]));
-  // The independent one-minute lane declares 3/6, unlike the regular 4/6
+  // The independent five-minute lane declares 3/6, unlike the regular 4/6
   // producer slot. Keep the independent child, but never overlap its fetch.
   if (runtime.recoveryCheckpoint) await main;
   const [mainSummary, kinesisSummary] = await Promise.all([

@@ -484,7 +484,7 @@ export function YieldScatterPlot({
       <div className="flex flex-col items-center justify-center h-[500px] text-sm text-muted-foreground">
         <p>No scatter data available (safety scores required)</p>
         <p className="mt-1 text-xs text-muted-foreground/70">
-          Safety scores refresh hourly with the yield publication.
+          Safety scores refresh with each yield publication.
         </p>
         {unscoredNote ? <p className="mt-1 text-xs">{unscoredNote}</p> : null}
       </div>

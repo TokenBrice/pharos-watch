@@ -48,8 +48,10 @@ const RPC_PARITY_REQUEST_TIMEOUT_MS = 8_000;
 /**
  * A normal full pass took 40-65 seconds in the measured eight-day sample;
  * the four-minute cap bounds slow-run blowups, not normal full-pass capacity.
- * Each hourly run selects one fixed-cap slice of a deterministic three-hour
- * rotation. Selection is not observation: deadline-skipped chains stay explicit.
+ * Each run selects one fixed-cap slice of a deterministic three-hour rotation
+ * keyed by UTC hour. Runs are two-hourly; 2 and 3 are coprime, so any three
+ * consecutive runs still select every slice. Selection is not observation:
+ * deadline-skipped chains stay explicit.
  */
 export const RPC_PARITY_RUN_BUDGET_MS = 4 * 60_000;
 export const RPC_PARITY_ROTATION_HOURS = 3;

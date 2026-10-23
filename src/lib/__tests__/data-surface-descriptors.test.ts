@@ -48,15 +48,15 @@ const EXPECTED_SURFACE_POLICY: Record<string, Record<string, unknown>> = {
     queryKey: ["yield-rankings"],
     summaryApiPath: "/api/yield-rankings?projection=summary",
     summaryQueryKey: ["yield-rankings", "summary"],
-    producerIntervalSec: 3600,
-    endpointMaxAgeSec: 3600,
+    producerIntervalSec: 7200,
+    endpointMaxAgeSec: 7200,
     producerJob: "sync-yield-data",
     cacheKey: "yield-data",
     dependencyCriticality: "critical",
   },
   yieldHistory: {
-    producerIntervalSec: 3600,
-    endpointMaxAgeSec: 3600,
+    producerIntervalSec: 7200,
+    endpointMaxAgeSec: 7200,
     producerJob: "sync-yield-data",
     cacheKey: "yield-data",
     dependencyCriticality: "critical",
@@ -74,8 +74,8 @@ const EXPECTED_SURFACE_POLICY: Record<string, Record<string, unknown>> = {
   reportCards: {
     apiPath: "/api/report-cards/v9",
     queryKey: ["report-cards", "v9"],
-    producerIntervalSec: 1800,
-    endpointMaxAgeSec: 3_600,
+    producerIntervalSec: 3600,
+    endpointMaxAgeSec: 7_200,
     producerJob: "compute-safety-score-v9",
     dependencyCriticality: "critical",
   },
@@ -126,7 +126,7 @@ describe("data surface descriptors", () => {
 
     expect(withSource.path).toBe("/api/yield-history?stablecoin=usdc&days=365&mode=source&sourceKey=aave-v3");
     expect(withSource.queryKey).toEqual(["yield-history", "usdc", 365, "source", "aave-v3"]);
-    expect(withSource.producerIntervalMs).toBe(3_600_000);
+    expect(withSource.producerIntervalMs).toBe(7_200_000);
 
     // Distinct arguments must not collide in the React Query cache.
     expect(otherSource.queryKey).not.toEqual(withSource.queryKey);
@@ -163,9 +163,9 @@ describe("data surface descriptors", () => {
     expect(CACHE_FRESHNESS_LANES_BY_KEY.yieldData).toMatchObject({
       cacheKey: "yield-data",
       producerJob: "sync-yield-data",
-      producerIntervalSec: 3600,
-      endpointMaxAgeSec: 3600,
-      availabilityMaxAgeSec: 3600,
+      producerIntervalSec: 7200,
+      endpointMaxAgeSec: 7200,
+      availabilityMaxAgeSec: 7200,
       freshnessSentinelKey: "freshness:yield-data",
     });
     expect(CACHE_FRESHNESS_LANES_BY_KEY.dews).toMatchObject({
@@ -197,9 +197,9 @@ describe("data surface descriptors", () => {
     }).toEqual({
       stablecoins: { label: "Prices", staleTime: 600_000 },
       dexLiquidity: { label: "Liquidity", staleTime: 14_400_000 },
-      yieldRankings: { label: "Yield Rankings", staleTime: 3_600_000 },
+      yieldRankings: { label: "Yield Rankings", staleTime: 7_200_000 },
       stressSignals: { label: "DEWS", staleTime: 1_800_000 },
-      reportCards: { label: "Report Cards", staleTime: 3_600_000 },
+      reportCards: { label: "Report Cards", staleTime: 7_200_000 },
     });
   });
 

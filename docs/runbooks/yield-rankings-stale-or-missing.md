@@ -123,7 +123,7 @@ Yield compatibility requires equal model, schema version, methodology version, `
 
 ## Remediation
 
-- If `sync-yield-data` is stale but not leased, wait for the next `55 * * * *` run if the last failure was transient.
+- If `sync-yield-data` is stale but not leased, wait for the next two-hourly `55 */2 * * *` run if the last failure was transient.
 - If the cron is repeatedly `skipped_locked`, confirm the lease is stale, then clear it per [`lease-and-breaker-recovery.md`](./lease-and-breaker-recovery.md), job `sync-yield-data`.
 - If metadata shows `reason: "previous-yield-rankings-cache-invalid"` or publication guard failure, do not delete the cache blindly. Preserve the last good payload for rollback/debugging and identify whether the failure came from payload schema, severe shrink, duplicate ranking IDs, or a generation `failure_reason`.
 - For `metadata.reason: "safety-snapshot-unavailable:<reason>"`, inspect upstream `report-cards:v9`, `report-cards:v9:publication-health`, and producer runs. Yield defers until accepted evidence is usable. `safety-snapshot-held` in `metadata.quality.advisoryReasons` instead means publication used the accepted generation inside its budget; actual sparse coverage is a separate quality finding.
