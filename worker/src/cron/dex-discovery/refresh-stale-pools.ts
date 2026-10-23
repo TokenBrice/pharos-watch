@@ -4,7 +4,7 @@ import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared
 import type { ContractDeployment } from "@shared/types/core";
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { CG_CHAIN_MAP } from "../../lib/chain-registry";
-import { AERO_CHAINS } from "../dex-liquidity/fetch-aero";
+import { AERO_CHAINS } from "../dex-liquidity/aero-deployments";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import {
   CG_ONCHAIN_MULTI_POOL_MAX_ADDRESSES,
