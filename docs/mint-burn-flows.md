@@ -424,7 +424,7 @@ Pre-aggregated stablecoin/chain/hour buckets store counted mint and burn volume,
 
 ### mint_burn_sync_state (baseline `0000_baseline.sql`)
 
-This table owns the monotonic last-processed block for each chain/contract configuration. Cron and backfill ingestion share it, and partial backfills must never regress the stored frontier.
+This table owns the monotonic last-processed block for each chain/contract configuration. Cron and backfill ingestion share it, and partial backfills must never regress the stored frontier. `upsertMintBurnSyncState()` commits the cursor (with its scan-coverage merge) through `runWithOverloadRetry()`: the monotonic cursor and the coverage merge/compact converge on the same interval, so replaying a commit whose `Network connection lost` response hid a successful write is idempotent.
 
 ### mint_burn_config_deferral (baseline `0000_baseline.sql`; originally migration 0096)
 
