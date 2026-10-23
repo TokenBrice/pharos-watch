@@ -18,6 +18,7 @@ import { assertSlotDeadline, createSlotDeadline, SCHEDULED_SLOT_CONTROLLED_ERROR
 import { retainUntilDeadline, settleAfterAbort } from "./cron-abort-settlement";
 import { resolveScheduledSlotPolicy, scheduledSlotSilenceSql } from "./scheduled-slot-policy";
 import type { ScheduledSlotPolicy } from "./scheduled-slot-policy";
+import type { SlotCatchUpTrigger } from "@shared/types/slot-catch-up";
 
 interface ExecutionFenceIdentity {
   readonly scheduleKey: string;
@@ -43,6 +44,25 @@ export interface ScheduledSlotExecutionOptions {
   workerVersion?: string | null;
   workerRole?: ScheduledWorkerRole;
   waitUntil?: (work: Promise<unknown>) => void;
+  /** Queue-executed one-shot catch-up of this missed slot; never a scheduled delivery. */
+  catchUp?: ScheduledSlotCatchUpRequest;
+}
+
+export interface ScheduledSlotCatchUpRequest {
+  trigger: SlotCatchUpTrigger;
+  armedAt: number;
+  armedByInvocationId: string;
+}
+
+/** Persisted on the slot row and every terminal rewrite of it. */
+export interface ScheduledSlotCatchUpMarker extends ScheduledSlotCatchUpRequest {
+  claimedAt: number;
+  recoveredFrom?: {
+    resultStatus: string | null;
+    error: string | null;
+    executionGeneration: number;
+    finishedAt: number | null;
+  };
 }
 
 export interface ScheduledSlotExecutionResult {
@@ -86,7 +106,10 @@ interface StaleSlotTakeoverSummary {
 }
 
 type ScheduledSlotClaimResult =
-  | { status: "claimed"; executionGeneration: number; staleSlotTakeover?: StaleSlotTakeoverSummary }
+  | {
+    status: "claimed"; executionGeneration: number; staleSlotTakeover?: StaleSlotTakeoverSummary;
+    catchUp?: ScheduledSlotCatchUpMarker;
+  }
   | { status: "duplicate" }
   | { status: "running" };
 
@@ -216,6 +239,11 @@ async function finishStaleScheduledSlotExecution(
                 AND progress.job IN (${childJobs.map(() => "?").join(", ")})
            )`
       : "";
+  const staleMetadata = JSON.stringify({
+    error: STALE_SLOT_ERROR,
+    staleSlotReconciliation: reconciliation,
+    slotPolicy: resolveScheduledSlotPolicy(slot.slot_key),
+  });
   const result = await runWithOverloadRetry(() =>
     db
       .prepare(
@@ -224,7 +252,8 @@ async function finishStaleScheduledSlotExecution(
              result_status = 'error',
              finished_at = ?,
              updated_at = ?,
-             metadata = ?
+             metadata = CASE WHEN json_valid(metadata) AND json_type(metadata, '$.catchUp') = 'object'
+               THEN json_set(?, '$.catchUp', json(json_extract(metadata, '$.catchUp'))) ELSE ? END
          WHERE slot_key = ?
            AND slot_started_at = ?
            AND state = 'reconciling'
@@ -237,11 +266,8 @@ async function finishStaleScheduledSlotExecution(
       .bind(
         nowSec,
         nowSec,
-        JSON.stringify({
-          error: STALE_SLOT_ERROR,
-          staleSlotReconciliation: reconciliation,
-          slotPolicy: resolveScheduledSlotPolicy(slot.slot_key),
-        }),
+        staleMetadata,
+        staleMetadata,
         slot.slot_key,
         slot.slot_started_at,
         reconciliationOwner,
@@ -555,6 +581,112 @@ async function claimScheduledSlotExecution(
   return { status: "running" };
 }
 
+/**
+ * Claim a missed slot for a Queue catch-up. A never-delivered slot is inserted
+ * exactly as a scheduled claim would; only the stale-slot reconciler's
+ * platform-abandoned terminal is reopened, once, at the next generation. A live
+ * or finished original therefore wins, and a late original delivery after this
+ * claim sees running/finished and is deduplicated by the ordinary slot fence.
+ */
+async function claimCatchUpSlotExecution(
+  db: D1Database,
+  slotKey: string,
+  slotStartedAt: number,
+  owner: string,
+  invocationId: string | null,
+  workerVersion: string | null,
+  request: ScheduledSlotCatchUpRequest,
+  checkpoint: () => void,
+): Promise<ScheduledSlotClaimResult> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  checkpoint();
+  const marker: ScheduledSlotCatchUpMarker = { ...request, claimedAt: nowSec };
+  const inserted = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `INSERT OR IGNORE INTO cron_slot_executions
+           (slot_key, slot_started_at, state, result_status, execution_owner, execution_generation,
+            invocation_id, worker_version, started_at, finished_at, updated_at, metadata)
+         VALUES (?, ?, 'running', NULL, ?, 1, ?, ?, ?, NULL, ?, ?)`,
+      )
+      .bind(slotKey, slotStartedAt, owner, invocationId, workerVersion, nowSec, nowSec,
+        JSON.stringify({ catchUp: marker }))
+      .run(),
+  );
+  checkpoint();
+  if ((inserted.meta.changes ?? 0) > 0) return { status: "claimed", executionGeneration: 1, catchUp: marker };
+
+  const existing = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT state, result_status, execution_generation, finished_at,
+                CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.error') END AS error,
+                CASE WHEN json_valid(metadata) THEN json_type(metadata, '$.catchUp') END AS catch_up_type
+           FROM cron_slot_executions
+          WHERE slot_key = ? AND slot_started_at = ?`,
+      )
+      .bind(slotKey, slotStartedAt)
+      .first<{
+        state: string; result_status: string | null; execution_generation: number; finished_at: number | null;
+        error: string | null; catch_up_type: string | null;
+      }>(),
+  );
+  checkpoint();
+  if (!existing || existing.state !== "finished") return { status: "running" };
+  if (existing.result_status !== "error" || existing.error !== STALE_SLOT_ERROR || existing.catch_up_type != null) {
+    return { status: "duplicate" };
+  }
+  const reopenedMarker: ScheduledSlotCatchUpMarker = {
+    ...marker,
+    recoveredFrom: {
+      resultStatus: existing.result_status,
+      error: existing.error,
+      executionGeneration: existing.execution_generation,
+      finishedAt: existing.finished_at,
+    },
+  };
+  const reopened = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `UPDATE cron_slot_executions
+            SET state = 'running',
+                result_status = NULL,
+                execution_owner = ?,
+                execution_generation = execution_generation + 1,
+                invocation_id = ?,
+                worker_version = ?,
+                started_at = ?,
+                finished_at = NULL,
+                updated_at = ?,
+                metadata = ?
+          WHERE slot_key = ?
+            AND slot_started_at = ?
+            AND state = 'finished'
+            AND result_status = 'error'
+            AND execution_generation = ?
+            AND json_valid(metadata)
+            AND json_extract(metadata, '$.error') = ?
+            AND json_type(metadata, '$.catchUp') IS NULL`,
+      )
+      .bind(owner, invocationId, workerVersion, nowSec, nowSec, JSON.stringify({ catchUp: reopenedMarker }),
+        slotKey, slotStartedAt, existing.execution_generation, STALE_SLOT_ERROR)
+      .run(),
+  );
+  checkpoint();
+  if ((reopened.meta.changes ?? 0) > 0) {
+    return { status: "claimed", executionGeneration: existing.execution_generation + 1, catchUp: reopenedMarker };
+  }
+  // A transport retry can replay a committed CAS and report zero changes.
+  const current = await getScheduledSlotExecution(db, slotKey, slotStartedAt);
+  checkpoint();
+  return current?.state === "running"
+    && current.execution_owner === owner
+    && current.execution_generation === existing.execution_generation + 1
+    && current.invocation_id === invocationId
+    ? { status: "claimed", executionGeneration: existing.execution_generation + 1, catchUp: reopenedMarker }
+    : { status: current?.state === "finished" ? "duplicate" : "running" };
+}
+
 async function touchScheduledSlotExecution(
   db: D1Database,
   slotKey: string,
@@ -661,15 +793,20 @@ async function runScheduledSlotLifecycle(
   const policy = resolveScheduledSlotPolicy(slotKey);
   const heartbeatSec = Math.max(15, opts.heartbeatSec ?? policy.heartbeatSec);
   checkpoint();
-  const claimResult = await claimScheduledSlotExecution(
-    db,
-    slotKey,
-    opts.slotStartedAt,
-    owner,
-    opts.invocationId ?? owner,
-    opts.workerVersion ?? null,
-    checkpoint,
-  );
+  const claimResult = opts.catchUp
+    ? await claimCatchUpSlotExecution(
+      db, slotKey, opts.slotStartedAt, owner, opts.invocationId ?? owner, opts.workerVersion ?? null,
+      opts.catchUp, checkpoint,
+    )
+    : await claimScheduledSlotExecution(
+      db,
+      slotKey,
+      opts.slotStartedAt,
+      owner,
+      opts.invocationId ?? owner,
+      opts.workerVersion ?? null,
+      checkpoint,
+    );
   checkpoint();
 
   if (claimResult.status === "duplicate") {
@@ -689,6 +826,7 @@ async function runScheduledSlotLifecycle(
     };
   }
   const staleSlotTakeover = "staleSlotTakeover" in claimResult ? claimResult.staleSlotTakeover : undefined;
+  const catchUp = claimResult.catchUp;
   const executionGeneration = claimResult.executionGeneration;
   onAdmitted();
   const executionFence: ScheduledExecutionFence = Object.freeze({
@@ -769,6 +907,7 @@ async function runScheduledSlotLifecycle(
     const slotMetadata = {
       ...attachSlotRuntimeMetadata(metadata, heartbeatFailures, staleSlotTakeover),
       slotPolicy: policy, ...(opts.deadline ? { slotDeadlineMs: opts.deadline.platformDeadlineMs } : {}),
+      ...(catchUp ? { catchUp } : {}),
     };
     const resultStatus =
       metadata && metadata.jobsErrored > 0
@@ -821,6 +960,7 @@ async function runScheduledSlotLifecycle(
           error: toErrorMessage(err),
           ...(heartbeatFailures > 0 ? { slotHeartbeatFailures: heartbeatFailures } : {}),
           ...(staleSlotTakeover ? { staleSlotTakeover } : {}),
+          ...(catchUp ? { catchUp } : {}),
         }),
       );
       if (!finished) {
@@ -868,18 +1008,20 @@ export async function runScheduledSlotWithFence(
       // Also handles a claim/marker that committed after the caller timed out.
       // Never terminate an executing child: its ledger and lease remain the
       // recovery authority until it settles or the shared stale policy fires.
+      const failedMetadata = JSON.stringify({ reason: "scheduled-slot-failed", error: toErrorMessage(error),
+        disposition: admitted ? "claimed-failed" : "delivered-not-admitted",
+        invocationId: opts.invocationId ?? owner, slotDeadlineMs: deadline.platformDeadlineMs });
       await runWithOverloadRetry(() => db.prepare(
         `UPDATE cron_slot_executions
             SET state = 'finished', result_status = 'error', finished_at = ?, updated_at = ?,
-                execution_generation = execution_generation + 1, metadata = ?
+                execution_generation = execution_generation + 1,
+                metadata = CASE WHEN json_valid(metadata) AND json_type(metadata, '$.catchUp') = 'object'
+                  THEN json_set(?, '$.catchUp', json(json_extract(metadata, '$.catchUp'))) ELSE ? END
           WHERE slot_key = ? AND slot_started_at = ? AND execution_owner = ? AND state = 'running'
             AND NOT EXISTS (SELECT 1 FROM scheduled_child_attempts
               WHERE execution_schedule_key = cron_slot_executions.slot_key
                 AND execution_slot_started_at = cron_slot_executions.slot_started_at AND terminal_token IS NULL)`,
-      ).bind(Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000),
-        JSON.stringify({ reason: "scheduled-slot-failed", error: toErrorMessage(error),
-          disposition: admitted ? "claimed-failed" : "delivered-not-admitted",
-          invocationId: opts.invocationId ?? owner, slotDeadlineMs: deadline.platformDeadlineMs }),
+      ).bind(Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000), failedMetadata, failedMetadata,
         slotKey, opts.slotStartedAt, owner).run()).catch((cleanupError: unknown) => {
           logWorkerEventArgs("lib", "warn", "[cron-slot] Fenced late-result cleanup failed:", cleanupError);
         });

@@ -91,6 +91,8 @@ export const StablecoinDetailResponseSchema = z.object({
   currentSupplyObservedAt: z.number().finite().positive().optional(),
   /** Canonical carry-forward provenance for the admitted current supply overlay. */
   currentSupplyRestored: z.boolean().optional(),
+  /** Canonical partial coverage: chain labels excluded (unavailable) from the admitted current supply. */
+  currentSupplyExcludedChains: z.array(z.string()).min(1).optional(),
   /**
    * Canonical producer refusal: consumers must not substitute the provider's
    * dated history for current unavailable supply.
@@ -156,6 +158,11 @@ export const SupplyChainGuardProvenanceSchema = z.object({
   reason: z.literal("supply-chain-dropout"),
   status: z.enum(["repaired", "quarantined", "unavailable", "chains-unavailable"]),
   quarantinedSince: z.number().int().nonnegative().optional(),
+  /**
+   * Past the carry ceiling, a minority-share material quarantine publishes the observed remainder with
+   * `status: "chains-unavailable"`: the published aggregate excludes the unavailable chains.
+   */
+  partialCoverage: z.literal(true).optional(),
   /**
    * Same-run supply gain on this asset's healthy chains large enough to explain the drop (e.g. a bridge
    * representation reattributed to its source). Attribution is ambiguous, so repairs are withheld and a

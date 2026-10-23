@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import type { Env, HeavyEnv, ScheduledEnv, WorkerEnvIssue, WorkerVersionMetadata } from "../env";
 import type { ReserveContinuationMessage } from "@shared/types/reserve-continuation";
+import type { SlotCatchUpMessage } from "@shared/types/slot-catch-up";
 import {
   parseDwellirRoutingDisabledChains,
   resolveDdrRepairTaskRunnerConfig,
@@ -27,7 +28,7 @@ it("preserves manifest-derived HTTP, scheduled and heavy ingress types", () => {
   expectTypeOf<Env["TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT"]>().toEqualTypeOf<RateLimit>();
   expectTypeOf<Env["SAFETY_CAPTURE_ARCHIVE"]>().toEqualTypeOf<R2Bucket | undefined>();
   expectTypeOf<Env["HEAVY_EXECUTOR"]>().toEqualTypeOf<Fetcher | undefined>();
-  expectTypeOf<Env["RESERVE_CONTINUATION_QUEUE"]>().toEqualTypeOf<Queue<ReserveContinuationMessage> | undefined>();
+  expectTypeOf<Env["RESERVE_CONTINUATION_QUEUE"]>().toEqualTypeOf<Queue<ReserveContinuationMessage | SlotCatchUpMessage> | undefined>();
   expectTypeOf<RequiredKeys<ScheduledEnv>>().toEqualTypeOf<"DB" | "CF_VERSION_METADATA">();
   expectTypeOf<Extract<keyof ScheduledEnv, "CORS_ORIGIN" | "SAFETY_GRADES_RATE_LIMIT">>().toEqualTypeOf<never>();
   expectTypeOf<RequiredKeys<HeavyEnv>>().toEqualTypeOf<"DB" | "CF_VERSION_METADATA" | "SAFETY_CAPTURE_ARCHIVE">();
