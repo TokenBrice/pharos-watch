@@ -60,6 +60,12 @@ crons = [
   "52 * * * *",
 ]
 
+[vars]
+# Safety Score V9 persist split, phase 2. `on` commits acceptance before staging
+# public fragments; flip only after every public reader tolerates unselected
+# staged rows (shipped with the reader in the same release as this flag).
+SAFETY_V9_DEFERRED_MATERIALIZATION = "off"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "stablecoin-db"

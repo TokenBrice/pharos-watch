@@ -19,7 +19,12 @@ import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-scor
 import { SafetyScoreIndexSchema } from "@shared/types/safety-score-index";
 import { projectV9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
 import type { SafetyScoreCaptureArchiveCacheRows } from "@shared/types/safety-score-capture-archive";
-import type { V9AcceptedPublicMaterializationSource } from "../report-cards-v9-materialization";
+import {
+  stageV9PublicMaterialization,
+  v9StagedPublicMaterializationStatements,
+  type V9AcceptedPublicMaterializationSource,
+  type V9StagedPublicMaterialization,
+} from "../report-cards-v9-materialization";
 import { SAFETY_SCORE_V9_CACHE_KEYS, loadSafetyScoreV9PublicationHealth } from "./publication-health";
 import { V9PublicationAttemptSchema, loadSafetyScoreV9FailedPublicationAttempt, type V9PublicationAttempt } from "./publication-attempts";
 import {
@@ -110,6 +115,12 @@ export interface PersistSafetyScoreV9PublicationInput {
   signal?: AbortSignal;
   /** Filled with sub-phase wall time: pre-commit admission/reads versus the atomic write. */
   timing?: SafetyScoreV9PersistTiming;
+  /**
+   * Leave public representations to `materializeV9AcceptedPublication` after
+   * acceptance. Otherwise they are staged first and selected in the acceptance
+   * batch, which every reader version tolerates.
+   */
+  deferPublicMaterialization?: boolean;
 }
 
 export interface SafetyScoreV9PersistTiming {
@@ -120,7 +131,7 @@ export interface SafetyScoreV9PersistTiming {
 export interface PersistSafetyScoreV9PublicationResult {
   /** Exact committed transports for the capture archive, when replay retention was written. */
   captureArchiveCacheRows: SafetyScoreCaptureArchiveCacheRows | null;
-  /** Source for the post-acceptance public materialization of a newly accepted generation. */
+  /** Source for the deferred public materialization; null when none is pending. */
   acceptedMaterialization: V9AcceptedPublicMaterializationSource | null;
 }
 
@@ -245,6 +256,7 @@ export async function persistSafetyScoreV9Publication(
   let scoreIndexValue: string | null = null;
   let acceptedProjections: { baseline: string; lender: string } | null = null;
   let acceptedMaterialization: V9AcceptedPublicMaterializationSource | null = null;
+  let stagedMaterialization: V9StagedPublicMaterialization | null = null;
   if (health.status === "current") {
     if (input.publication === undefined) {
       throw new Error(
@@ -267,9 +279,12 @@ export async function persistSafetyScoreV9Publication(
       );
     }
     publicationValue = stored;
-    // Public representations are materialized after acceptance; see
-    // materializeV9AcceptedPublication.
-    acceptedMaterialization = { publication, health, payloadSha256: JSON.parse(stored).payloadSha256 };
+    const payloadSha256: string = JSON.parse(stored).payloadSha256;
+    if (input.deferPublicMaterialization) {
+      acceptedMaterialization = { publication, health, payloadSha256 };
+    } else {
+      stagedMaterialization = await stageV9PublicMaterialization(db, publication, health, payloadSha256, input.signal);
+    }
     if (!input.buildAcceptedProjections) {
       throw new Error("Accepted Safety Score v9 publication requires projection builders");
     }
@@ -408,6 +423,9 @@ export async function persistSafetyScoreV9Publication(
       acceptedProjections!.lender,
       input.publicationClockSec,
     ));
+    if (stagedMaterialization !== null) {
+      statements.push(...v9StagedPublicMaterializationStatements(db, stagedMaterialization));
+    }
     if (input.publicationReplayCaptureValue !== undefined) {
       statements.push(cacheStatement.bind(
         SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,

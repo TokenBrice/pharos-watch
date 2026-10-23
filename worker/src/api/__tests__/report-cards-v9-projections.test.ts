@@ -185,7 +185,7 @@ describe("generation-bound compact Safety Scores", () => {
     const detail = await (await handleReportCardsV9Detail(db, detailUrl())).json() as object;
     sqlite.exec("CREATE TRIGGER refuse_site BEFORE INSERT ON safety_score_site_fragments BEGIN SELECT RAISE(ABORT, 'site write failed'); END");
     const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
-    const persisted = await persistSafetyScoreV9Publication(db, currentInput(next));
+    const persisted = await persistSafetyScoreV9Publication(db, { ...currentInput(next), deferPublicMaterialization: true });
     expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex)!.updated_at).toBe(130);
     await expect(materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!)).rejects.toThrow();
     const lagHealth = { ...currentInput(next).publicationHealth,

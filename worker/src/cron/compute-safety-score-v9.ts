@@ -167,7 +167,10 @@ export async function computeSafetyScoreV9(
   db: D1Database,
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
-  options: { captureArchiveBucket?: R2Bucket; captureArchiveContext?: ExecutionContext; workerMetadata?: V9WorkerProvenance; executionWindow?: V9ExecutionWindow } = {},
+  options: {
+    captureArchiveBucket?: R2Bucket; captureArchiveContext?: ExecutionContext; workerMetadata?: V9WorkerProvenance;
+    executionWindow?: V9ExecutionWindow; deferPublicMaterialization?: boolean;
+  } = {},
 ): Promise<CronResult> {
   throwIfAborted(signal);
   const catalogAdmission = assessSafetyScoreV9ResourceBudget({
@@ -418,6 +421,7 @@ export async function computeSafetyScoreV9(
     db,
     captureArchiveBucket: options.captureArchiveBucket,
     captureArchiveContext: options.captureArchiveContext,
+    deferPublicMaterialization: options.deferPublicMaterialization,
     publicationDeadlineMs: options.executionWindow?.deadlineMs,
     fixedInput: v9SeedInput,
     fixedInputCacheValue,
