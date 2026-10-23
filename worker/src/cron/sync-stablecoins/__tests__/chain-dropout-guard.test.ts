@@ -305,51 +305,51 @@ describe("chain dropout guard", () => {
         [hyperevmKey]: {
           assetId: "usdg-paxos", chainLabel: "HyperEVM", chainId: "hyperevm", baselineUsd,
           baselineObservedAt: quarantinedSince - 5 * DAY, baselineSource: "state", quarantinedSince,
-          ambiguousSince: quarantinedSince, heldTotalUsd: 90_000_000 + baselineUsd,
+          ambiguousSince: quarantinedSince, heldTotalUsd: 95_000_000 + baselineUsd,
         },
       } };
       const asset: PeggedAsset = {
-        ...usdg(), supplyObservedAt: now - 600, circulating: { peggedUSD: 90_000_000 },
-        chains: ["Ethereum"], chainCirculating: { Ethereum: { current: 90_000_000, circulatingPrevDay: 90_000_000 } },
+        ...usdg(), supplyObservedAt: now - 600, circulating: { peggedUSD: 95_000_000 },
+        chains: ["Ethereum"], chainCirculating: { Ethereum: { current: 95_000_000, circulatingPrevDay: 95_000_000 } },
       };
       return { now, quarantinedSince, state, asset };
     }
 
     it("publishes the observed remainder as partial coverage, keeping the chain unavailable and quarantined", async () => {
-      // 10% of the vetted whole-asset total: the inclusive share bound.
-      const { now, quarantinedSince, state, asset } = setup(10_000_000, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC + 1);
+      // 5% of the vetted whole-asset total: the inclusive share bound.
+      const { now, quarantinedSince, state, asset } = setup(5_000_000, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC + 1);
       const result = await guardChainDropouts({ assets: [asset], now, state });
-      expect(getCirculatingRawOrNull(asset)).toBe(90_000_000);
+      expect(getCirculatingRawOrNull(asset)).toBe(95_000_000);
       expect(asset.supplyRestored).toBeUndefined();
       expect(asset.supplyObservedAt).toBe(now - 600);
       expect(asset.chainCirculating!.HyperEVM.current).toBeNull();
       expect(SupplyChainGuardProvenanceSchema.parse(asset.supplyChainGuard)).toMatchObject({
         status: "chains-unavailable", partialCoverage: true, quarantinedSince,
-        chains: [{ chainId: "hyperevm", listCurrentUsd: null, baselineUsd: 10_000_000, resolution: "unavailable" }],
+        chains: [{ chainId: "hyperevm", listCurrentUsd: null, baselineUsd: 5_000_000, resolution: "unavailable" }],
       });
       // Admin alerting continues: still quarantined, never accepted by elapsed time.
       expect(result).toMatchObject({ quarantinedAssetIds: ["usdg-paxos"], unavailableAssetIds: [] });
-      expect(result.state.pairs[hyperevmKey]).toMatchObject({ quarantinedSince, baselineUsd: 10_000_000 });
+      expect(result.state.pairs[hyperevmKey]).toMatchObject({ quarantinedSince, baselineUsd: 5_000_000 });
 
       // An unreadable state rebuilds the quarantine from the partial publication with its original clock.
-      const next = setup(10_000_000, 0).asset;
+      const next = setup(5_000_000, 0).asset;
       const recovered = await guardChainDropouts({
         assets: [next], now: now + 900, state: { version: 1, pairs: {} }, stateReadFailed: true,
         previousAssetsById: new Map([["usdg-paxos", asset]]),
       });
       expect(next.supplyChainGuard).toMatchObject({ status: "chains-unavailable", partialCoverage: true, quarantinedSince });
-      expect(recovered.state.pairs[hyperevmKey]).toMatchObject({ quarantinedSince, baselineUsd: 10_000_000 });
+      expect(recovered.state.pairs[hyperevmKey]).toMatchObject({ quarantinedSince, baselineUsd: 5_000_000 });
     });
 
     it("keeps carrying the vetted hold inside the carry ceiling", async () => {
-      const { now, state, asset } = setup(10_000_000, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1);
+      const { now, state, asset } = setup(5_000_000, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1);
       await guardChainDropouts({ assets: [asset], now, state });
       expect(getCirculatingRawOrNull(asset)).toBe(100_000_000);
       expect(asset).toMatchObject({ supplyRestored: true, supplyChainGuard: { status: "quarantined" } });
     });
 
     it("keeps a larger-share dropout unavailable past the carry ceiling", async () => {
-      const { now, state, asset } = setup(10_100_000, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC + 1);
+      const { now, state, asset } = setup(5_100_000, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC + 1);
       const result = await guardChainDropouts({ assets: [asset], now, state });
       expect(getCirculatingRawOrNull(asset)).toBeNull();
       expect(asset).toMatchObject({ supplyRestored: true, supplyChainGuard: { status: "unavailable" } });

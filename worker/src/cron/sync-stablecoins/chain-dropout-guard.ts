@@ -26,7 +26,7 @@ export const CHAIN_DROPOUT_POLICY = {
   quarantineDeficitRatio: 0.02,
   // Past the carry ceiling, a deficit at most this share of the vetted whole-asset total publishes
   // the observed remainder as explicit partial coverage; a larger share keeps supply unavailable.
-  partialCoverageMaxDeficitRatio: 0.1,
+  partialCoverageMaxDeficitRatio: 0.05,
   chartMaxAgeSec: 48 * 3600,
   chartRefetchSec: 3600,
   maxHistoryFetches: 8,
