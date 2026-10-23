@@ -55,7 +55,7 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
   defineRegistryErc4626NavVault({ id: "savusd-avant", parentId: AVUSD_AVANT_ID, chain: "avalanche" }),
   defineRegistryErc4626NavVault({ id: "susn-noon", parentId: USN_NOON_ID, chain: ETHEREUM_CHAIN }),
   // RPC resolved via public-rpc-registry ("plasma" entry) — no inline override needed
-  defineRegistryErc4626NavVault({ id: "syzusd-yuzu", parentId: YZUSD_YUZU_ID, chain: "plasma" }),
+  defineRegistryErc4626NavVault({ id: "syzusd-yuzu", parentId: YZUSD_YUZU_ID, chain: "plasma", allowFreshReplaySafeSingleSourceParent: true }),
   defineRegistryErc4626NavVault({ id: "stkgho-umbrella-aave", parentId: GHO_AAVE_ID, chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "syusd-aegis", parentId: YUSD_AEGIS_ID, chain: ETHEREUM_CHAIN, allowFreshNonReplaySafeParent: true, allowFreshReplaySafeSingleSourceParent: true }),
   defineRegistryErc4626NavVault({ id: "sbold-k3-capital", parentId: "bold-liquity", chain: ETHEREUM_CHAIN, allowFreshNonReplaySafeParent: true }),
