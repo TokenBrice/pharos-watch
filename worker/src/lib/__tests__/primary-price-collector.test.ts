@@ -142,6 +142,18 @@ describe("buildPrimarySourceCandidates", () => {
     });
   });
 
+  it("promotes an Aero protocol lane as aero-dex when a hard CEX source agrees", () => {
+    const collected = makeCollected({
+      binancePrice: 1.0,
+      binanceObservedAt: 1_700_000_000,
+      protocolSources: [{ protocol: "aero", price: 1.0, tvl: 500_000, updatedAt: 1_700_000_000, chain: "base" }],
+    });
+    const { sources, dexCandidateTelemetry } =
+      buildPrimarySourceCandidates({ id: "dusd-test", symbol: "DUSD" }, collected, { nowSec: 1_700_000_030 });
+    expect(sources.map((s) => s.source)).toEqual(["binance", "aero-dex"]);
+    expect(dexCandidateTelemetry).toMatchObject([{ sourceKey: "aero-dex", status: "accepted" }]);
+  });
+
   it("admits mapped Uniswap DEX protocol lanes and withholds the aggregate", () => {
     const collected = makeCollected({
       binancePrice: 1.0,
