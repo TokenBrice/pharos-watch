@@ -131,6 +131,22 @@ function encodeRequest(request: QuoterV2Request, index: number): EncodedQuoterV2
 }
 
 
+// Slipstream TickMath bounds; a zero price limit maps to the directional extreme.
+const SLIPSTREAM_MIN_SQRT_RATIO = 4_295_128_739n;
+const SLIPSTREAM_MAX_SQRT_RATIO = 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342n;
+
+/**
+ * The Metaquoter reports output without proving the full input was consumed.
+ * A swap that stopped at the directional price extreme ran out of liquidity,
+ * so its output is a partial fill, never full executable capacity.
+ */
+export function isMetaquoterPartialFill(tokenIn: string, tokenOut: string, sqrtPriceX96After: bigint): boolean {
+  const zeroForOne = BigInt(tokenIn) < BigInt(tokenOut);
+  return zeroForOne
+    ? sqrtPriceX96After <= SLIPSTREAM_MIN_SQRT_RATIO + 1n
+    : sqrtPriceX96After >= SLIPSTREAM_MAX_SQRT_RATIO - 1n;
+}
+
 /** Decodes either quoter result shape; the Metaquoter omits `gasEstimate`. */
 function decodeQuoteResult(
   adapterProfileId: string,
@@ -156,6 +172,10 @@ function decodePoint(request: EncodedQuoterV2Request, result: EvmMulticall3Resul
   try {
     const [amountOutRaw, sqrtPriceX96After, initializedTicksCrossed, gasEstimate] =
       decodeQuoteResult(request.target.adapterProfileId, result.returnData);
+    if (
+      isMetaquoterProfile(request.target.adapterProfileId) &&
+      isMetaquoterPartialFill(request.target.tokenIn.address, request.target.tokenOut.address, sqrtPriceX96After)
+    ) return null;
     return materializeEvmQuotePoint({
       amountInRaw: request.amountInRaw,
       amountOutRaw,
@@ -470,6 +490,8 @@ export function validateQuoterV2ProfileProof(profile: DexMeasuredExecutionProfil
       } else {
         const decodedResult = decodeQuoteResult(profile.adapterProfileId, point.returnData as `0x${string}`);
         if (decodedResult[0].toString() !== point.amountOutRaw) issues.add("return-data-mismatch");
+        if (metaquoter && isMetaquoterPartialFill(profile.tokenIn.address, profile.tokenOut.address, decodedResult[1]))
+          issues.add("partial-fill");
       }
     } catch {
       issues.add("abi-decode-failed");

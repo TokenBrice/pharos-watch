@@ -67,9 +67,10 @@ export async function enrichQuoterV2ExecutionTargets(input: {
         : protocol === "pancakeswap" ? "pancakeswap-v3-quoter-v2"
         : protocol === "aerodrome" ? "aerodrome-slipstream-quoter-v2"
         : protocol === "hyperswap-v3" ? "hyperswap-v3-quoter-v2"
-        : protocol === "kodiak-v3" ? "kodiak-v3-quoter-v2"
-        // Aero basic (stable/volatile) pools are not CL; only Slipstream rows probe.
-        : protocol === "aero" && pool.poolType.startsWith("aero-slipstream") ? "aero-slipstream-metaquoter" : null;
+        // Aero's Metaquoter profile is registered but not routed here: attached
+        // shadow targets gate their pools (`activation-pending`/`quote-missing`)
+        // and would enter the active exit-route coverage denominator (#1630).
+        : protocol === "kodiak-v3" ? "kodiak-v3-quoter-v2" : null;
       if (!adapterProfileId) continue;
       const chain = canonicalExitRouteChain(pool.chain);
       if (!getDexMeasuredExecutionDeployment(adapterProfileId, chain)) continue;

@@ -18,6 +18,7 @@ import {
 import { getDexExecutionCapabilityRegistration } from "@shared/lib/p4-exit-route-capability-policy";
 import {
   encodeQuoterV2ExactInputSingle,
+  isMetaquoterPartialFill,
   encodeV3FactoryGetPool,
   quoteQuoterV2Requests,
   resolveQuoterV2PoolBindings,
@@ -166,5 +167,18 @@ describe("Aero Slipstream Metaquoter shadow profile", () => {
       1_000_000_000n,
     ).toLowerCase();
     expect(validateQuoterV2ProfileProof(tampered)).toContain("call-data-mismatch");
+  });
+});
+
+describe("Metaquoter partial fills", () => {
+  const low = "0x0000000000000000000000000000000000000001";
+  const high = "0x0000000000000000000000000000000000000002";
+  it("treats a swap stopped at the directional price extreme as liquidity exhaustion", () => {
+    expect(isMetaquoterPartialFill(low, high, 4_295_128_740n)).toBe(true);
+    expect(isMetaquoterPartialFill(high, low, 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_341n)).toBe(true);
+  });
+  it("accepts an in-range final price in either direction", () => {
+    expect(isMetaquoterPartialFill(low, high, 1n << 96n)).toBe(false);
+    expect(isMetaquoterPartialFill(high, low, 1n << 96n)).toBe(false);
   });
 });
