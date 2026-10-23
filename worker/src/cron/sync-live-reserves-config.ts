@@ -8,7 +8,7 @@ export interface LiveReserveSyncBudgetConfig {
 }
 
 // Wall and CPU are independent: the four-hour producer has 300s CPU, while
-// one-minute continuation polls have 30s. The measured 24.2s/330-coin head
+// five-minute continuation polls have 30s. The measured 24.2s/330-coin head
 // gives ~74ms/coin; reserve 150ms/coin (2x) and 10s for setup/finalization.
 // The measured sustainable wall cost is 485s/330 = 1.47s/coin. Admission
 // additionally tracks this invocation's observed cost; neither is a CPU timer.

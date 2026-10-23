@@ -1629,19 +1629,19 @@ describe("handleYieldRankings", () => {
     expect(fresh.rankings[0].provenance?.sourceFreshness).toBe("fresh");
     expect(fresh.rankings[0].pharosYieldScore).not.toBeNull();
 
-    vi.setSystemTime((publishedAt + 2 * 3600 + 1) * 1000);
+    vi.setSystemTime((publishedAt + 4 * 3600 + 1) * 1000);
     const aging = await readJsonResponse(await handleYieldRankings(db), 200) as YieldRankingsResponse;
     expect(aging.rankings[0].warningSignals).toContain("aging");
     expect(aging.rankings[0].pharosYieldScore).not.toBeNull();
-    expect(aging.rankings[0].provenance?.sourceAgeSeconds).toBe(2 * 3600 + 1);
+    expect(aging.rankings[0].provenance?.sourceAgeSeconds).toBe(4 * 3600 + 1);
 
-    vi.setSystemTime((publishedAt + 3 * 3600 + 1) * 1000);
+    vi.setSystemTime((publishedAt + 6 * 3600 + 1) * 1000);
     const stale = await readJsonResponse(await handleYieldRankings(db), 200) as YieldRankingsResponse;
     expect(stale.rankings[0]).toMatchObject({
       pharosYieldScore: null,
       pysNullReason: "source-stale",
       warningSignals: expect.arrayContaining(["data-stale"]),
-      provenance: expect.objectContaining({ sourceFreshness: "stale", sourceMaxAgeSeconds: 3 * 3600 }),
+      provenance: expect.objectContaining({ sourceFreshness: "stale", sourceMaxAgeSeconds: 6 * 3600 }),
     });
   });
 
@@ -1657,9 +1657,9 @@ describe("handleYieldRankings", () => {
       })],
     };
     const db = makeCacheDb(payload, publishedAt);
-    vi.setSystemTime((publishedAt + 2 * 3600 + 1) * 1000);
+    vi.setSystemTime((publishedAt + 5 * 3600 + 1) * 1000);
     const body = await readJsonResponse(await handleYieldRankings(db), 200) as YieldRankingsResponse;
-    expect(body.rankings[0].sourceRisk?.sourceAgeSeconds).toBe(3 * 3600 + 1);
+    expect(body.rankings[0].sourceRisk?.sourceAgeSeconds).toBe(6 * 3600 + 1);
     expect(body.rankings[0].pysNullReason).toBe("source-stale");
   });
 
@@ -1808,7 +1808,7 @@ describe("handleYieldRankings", () => {
     expect(expired.provenance?.liveSafetyHydration?.fallback).toBeUndefined();
   });
 
-  it.each([0, 3 * 3600 + 1, 6 * 3600 + 1])("serves matching strict freshness contracts at age %s", async (age) => {
+  it.each([0, 6 * 3600 + 1, 12 * 3600 + 1])("serves matching strict freshness contracts at age %s", async (age) => {
     const publishedAt = Math.floor(Date.now() / 1000);
     const db = makeCacheDb(v748RankingsPayload, publishedAt);
     vi.setSystemTime((publishedAt + age) * 1000);
@@ -1821,12 +1821,12 @@ describe("handleYieldRankings", () => {
       updatedAt: publishedAt,
       ageSeconds: age,
       assessedAt: publishedAt + age,
-      freshBudgetSec: 3 * 3600,
-      degradedBudgetSec: 6 * 3600,
-      status: age === 0 ? "fresh" : age > 6 * 3600 ? "stale" : "degraded",
+      freshBudgetSec: 6 * 3600,
+      degradedBudgetSec: 12 * 3600,
+      status: age === 0 ? "fresh" : age > 12 * 3600 ? "stale" : "degraded",
     });
     for (const response of [fullResponse, summaryResponse]) {
-      if (age > 3 * 3600) {
+      if (age > 6 * 3600) {
         expect(full._meta?.reason).toBe("yield-publication-age");
         expect(response.headers.get("Cache-Control")).toBe("no-store");
         expect(response.headers.get("Warning")).toContain("110");

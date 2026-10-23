@@ -64,6 +64,8 @@ import type { DEWSResult } from "../../lib/dews";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { computeAndStoreDEWS } from "../../lib/dews/service";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { resolveCronTimeoutBudget } from "../../lib/cron-timeouts";
+import { DEWS_YIELD_RANKINGS_RETENTION_BUDGET_SEC } from "../../lib/dews/source-state/budgets";
 import { DEWS_STABLECOINS_FRESHNESS_BUDGET_SEC } from "../../lib/dews/input-assembly";
 import { buildHistoryKey } from "../yield-sync/history";
 import { buildYieldRankingsPayloadFromEvaluatedSources } from "../yield-sync/publication";
@@ -1099,21 +1101,39 @@ describe("computeAndStoreDEWS", () => {
   });
 
   it.each([
-    [54, false],
-    [601, true],
-  ])("allows producer runtime before declaring rankings stale (%s seconds past cadence)", async (overdueSec, stale) => {
+    [CRON_INTERVALS["sync-yield-data"] + 54, false],
+    // A late yield run within the retention budget keeps DEWS publishing.
+    [2 * CRON_INTERVALS["sync-yield-data"], false],
+    [DEWS_YIELD_RANKINGS_RETENTION_BUDGET_SEC + 1, true],
+  ])("holds the cohort only once rankings exceed the last-good retention budget (age %s s)", async (ageSec, stale) => {
     const nowSec = Math.floor(Date.now() / 1000);
+    const producerBudgetSec = CRON_INTERVALS["sync-yield-data"]
+      + resolveCronTimeoutBudget("sync-yield-data").configuredTimeoutMs / 1000;
     const db = makeDb([], {
       yieldRankingsPayload: { rankings: [{ id: "usdt-tether", sourceRisk: { rewardShare: 0.9 } }] },
-      yieldRankingsUpdatedAt: nowSec - CRON_INTERVALS["sync-yield-data"] - overdueSec,
+      yieldRankingsUpdatedAt: nowSec - ageSec,
     });
 
     const result = await computeAndStoreDEWS(db);
 
     const metadata = JSON.parse(result.metadata ?? "{}") as {
+      reason: string;
       sourceFailures: Array<{ source: string; reason: string }>;
+      dependencies: { yieldRankings: { generationId: string | null; ageSeconds: number | null; reason: string | null } };
     };
     expect(metadata.sourceFailures.some((failure) => failure.source === "yield-rankings-freshness")).toBe(stale);
+    expect(metadata.reason).toBe(stale ? "dews-cohort-dependency-unavailable" : "dews-generation-published");
+    expect(metadata.dependencies.yieldRankings).toMatchObject({
+      generationId: `yield-rankings:${nowSec - ageSec}`,
+      reason: stale ? "stale-generation" : ageSec > producerBudgetSec ? "retained-last-good" : null,
+    });
+    expect(metadata.dependencies.yieldRankings.ageSeconds).toBeGreaterThanOrEqual(ageSec);
+    // Per-asset provenance: the yield age is named only while the generation is admitted.
+    expect(computeDEWS).toHaveBeenCalledWith(expect.objectContaining({
+      stablecoinId: "usdt-tether",
+      sourceAges: expect.objectContaining({ yieldRankings: stale ? null : expect.any(Number) }),
+      staleFlags: expect.objectContaining({ yieldRankings: !stale && ageSec > producerBudgetSec }),
+    }));
     expect(computeDEWS).toHaveBeenCalledWith(expect.objectContaining({
       stablecoinId: "usdt-tether",
       yieldSourceRisk: expect.objectContaining({ rewardShare: 0.9 }),

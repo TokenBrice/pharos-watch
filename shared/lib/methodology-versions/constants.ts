@@ -12,7 +12,7 @@ export const CHAIN_HEALTH_METHODOLOGY_VERSION = "1.7";
 export const CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL = methodologyLabel(CHAIN_HEALTH_METHODOLOGY_VERSION);
 export const CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH = "/methodology/chain-health-changelog/";
 
-export const DEPEG_DEWS_METHODOLOGY_VERSION = "6.37";
+export const DEPEG_DEWS_METHODOLOGY_VERSION = "6.38";
 export const DEPEG_DEWS_METHODOLOGY_VERSION_LABEL = methodologyLabel(DEPEG_DEWS_METHODOLOGY_VERSION);
 export const DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH = "/methodology/depeg-changelog/";
 
@@ -49,6 +49,6 @@ export const PSI_METHODOLOGY_VERSION = "3.67";
 export const PSI_METHODOLOGY_VERSION_LABEL = methodologyLabel(PSI_METHODOLOGY_VERSION);
 export const PSI_METHODOLOGY_CHANGELOG_PATH = "/methodology/stability-index-changelog/";
 
-export const YIELD_METHODOLOGY_VERSION = "8.5";
+export const YIELD_METHODOLOGY_VERSION = "8.51";
 export const YIELD_METHODOLOGY_VERSION_LABEL = methodologyLabel(YIELD_METHODOLOGY_VERSION);
 export const YIELD_METHODOLOGY_CHANGELOG_PATH = "/methodology/yield-changelog/";

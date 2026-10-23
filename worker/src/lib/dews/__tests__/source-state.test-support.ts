@@ -19,5 +19,6 @@ export function emptyDewsDependencyDiagnostics(): DewsSourceState["dependencyDia
       latestPublishedAt: null,
       latestPublishedAgeSec: null,
     },
+    yieldRankings: { generationId: null, updatedAt: null, ageSeconds: null, freshnessBudgetSec: 10800, reason: "missing" },
   };
 }

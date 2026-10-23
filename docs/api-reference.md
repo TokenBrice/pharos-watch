@@ -173,7 +173,7 @@ Event feeds (`events`, `depeg-events`, `blacklist`, `mint-burn-events`) derive f
 
 For uncounted offset pages, `total` is a conservative observed lower bound and `totalExact` is false. A nonempty offset page establishes the offset plus its observed rows (and any lookahead row); an empty page establishes only zero, even at offset 50,000. Uncounted cursor continuations report only their observed page/lookahead bound. Blacklist defaults to uncounted pages; use `includeTotal=true` for an exact filtered count.
 
-Yield routes override the generic 8x/12x runway: `GET /api/yield-rankings` (full and summary) and `GET /api/yield-history` use the shared `yield-data` bands: `fresh` through 10,800 seconds (3x the hourly producer interval), `degraded` through 21,600 seconds (6x), then `stale`. Both non-fresh states return `Cache-Control: no-store`; age-based verdicts emit HTTP `Warning: 110`, while yield-history timestamps beyond the future allowance emit `199`. Their `_meta` includes required `assessedAt` (response-time Unix seconds), `freshBudgetSec`, `degradedBudgetSec`, and nullable `reason` alongside `updatedAt`, `ageSeconds`, and `status`. Non-fresh publication age names `yield-publication-age`. History freshness measures the authoritative publication cutoff, not the last point in a requested historical window; unavailable authority is stale with `publication-cutoff-unavailable`.
+Yield routes override the generic 8x/12x runway: `GET /api/yield-rankings` (full and summary) and `GET /api/yield-history` use the shared `yield-data` bands: `fresh` through 21,600 seconds (3x the two-hour producer interval), `degraded` through 43,200 seconds (6x), then `stale`. Both non-fresh states return `Cache-Control: no-store`; age-based verdicts emit HTTP `Warning: 110`, while yield-history timestamps beyond the future allowance emit `199`. Their `_meta` includes required `assessedAt` (response-time Unix seconds), `freshBudgetSec`, `degradedBudgetSec`, and nullable `reason` alongside `updatedAt`, `ageSeconds`, and `status`. Non-fresh publication age names `yield-publication-age`. History freshness measures the authoritative publication cutoff, not the last point in a requested historical window; unavailable authority is stale with `publication-cutoff-unavailable`.
 
 **Yield wire contract:** Full and summary rankings and history publish the expanded evidence directly.
 
@@ -195,7 +195,7 @@ Yield history may include a top-level `warning` explaining publication-cutoff fa
 | `GET /api/events`                | 600           | `worker/src/api/events.ts`                   |
 | `GET /api/bluechip-ratings`      | <!-- GENERATED-START: api-meta-bluechip-ratings-max-age -->43200<!-- GENERATED-END: api-meta-bluechip-ratings-max-age -->         | `createCacheHandler`                         |
 | `GET /api/usds-status`           | <!-- GENERATED-START: api-meta-usds-status-max-age -->86400<!-- GENERATED-END: api-meta-usds-status-max-age -->         | `createCacheHandler`                         |
-| `GET /api/yield-rankings`        | <!-- GENERATED-START: api-meta-yield-rankings-max-age -->3600<!-- GENERATED-END: api-meta-yield-rankings-max-age -->          | Manual injection after live safety hydration |
+| `GET /api/yield-rankings`        | <!-- GENERATED-START: api-meta-yield-rankings-max-age -->7200<!-- GENERATED-END: api-meta-yield-rankings-max-age -->          | Manual injection after live safety hydration |
 
 The resolver and resolver-review routes instead use domain `_meta` (`computedAt`, `expiresAt`, `degraded`, and diagnostics), not the generic shape above. Their HTTP freshness headers are assessed from the served snapshot's `computedAt`.
 
@@ -358,7 +358,7 @@ The standalone redemption contract is described in [Redemption Backstops](./rede
 
 ### Free grades
 
-`/api/safety-grades` returns compact Safety Score availability rows from the same accepted publication, without an API key. The changed response adds `schemaVersion: 1`; each `grades[]` row carries `id`, nullable `score`, nullable `grade`, `ratingStatus` and nullable compact `partialEvidence`. Compact partial metadata contains only `reasonCode`, `excludedPillars` and A/B `causes`, not full component/gap lists. Rated rows have a numeric score and letter grade; not-rated rows have null score and `"NR"`; pipeline-gap rows have null score and null grade. A partial rated result can omit one pillar. Technical availability is not an NR grade, a zero score or a historical downgrade. `methodologyVersion`, `asOfSec`, `updatedAt` and `publicationStatus` describe the same snapshot as the full cards. `X-Safety-Score-Status` is `current`, `held`, or `stale` once the publication exceeds `X-Safety-Score-Freshness-Budget` (3,600 seconds); see [Safety Score contract](./report-cards.md#api).
+`/api/safety-grades` returns compact Safety Score availability rows from the same accepted publication, without an API key. The changed response adds `schemaVersion: 1`; each `grades[]` row carries `id`, nullable `score`, nullable `grade`, `ratingStatus` and nullable compact `partialEvidence`. Compact partial metadata contains only `reasonCode`, `excludedPillars` and A/B `causes`, not full component/gap lists. Rated rows have a numeric score and letter grade; not-rated rows have null score and `"NR"`; pipeline-gap rows have null score and null grade. A partial rated result can omit one pillar. Technical availability is not an NR grade, a zero score or a historical downgrade. `methodologyVersion`, `asOfSec`, `updatedAt` and `publicationStatus` describe the same snapshot as the full cards. `X-Safety-Score-Status` is `current`, `held`, or `stale` once the publication exceeds `X-Safety-Score-Freshness-Budget` (7,200 seconds); see [Safety Score contract](./report-cards.md#api).
 
 ### Dependency graph
 
@@ -632,7 +632,7 @@ Historical and active depeg incidents with constituent threshold-crossing counts
 
 ```json
 {
-  "currentVersion": "6.37"
+  "currentVersion": "6.38"
 }
 ```
 
@@ -670,7 +670,7 @@ Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggr
 
 ```json
 {
-  "currentVersion": "6.37"
+  "currentVersion": "6.38"
 }
 ```
 
@@ -830,9 +830,9 @@ No-key availability canary for the public API host; it is not the operator statu
       "producerIntervalSec": 3600
     },
     "yield-data": {
-      "maxAge": 3600,
-      "endpointMaxAge": 3600,
-      "producerIntervalSec": 3600
+      "maxAge": 7200,
+      "endpointMaxAge": 7200,
+      "producerIntervalSec": 7200
     },
     "dews": {
       "maxAge": 1800,
@@ -1008,8 +1008,8 @@ Yield-bearing stablecoin rankings with safety, benchmark-aware context, and opti
 
 ```json
 {
-  "currentVersion": "8.5",
-  "methodologyVersion": "10.31"
+  "currentVersion": "8.51",
+  "methodologyVersion": "10.32"
 }
 ```
 
@@ -1027,7 +1027,7 @@ Machine-readable source-list manifest for every yield-bearing asset, including a
 
 ```json
 {
-  "methodologyVersion": "v8.5"
+  "methodologyVersion": "v8.51"
 }
 ```
 
@@ -1045,8 +1045,8 @@ Historical yield observations for a stablecoin, with optional publication/source
 
 ```json
 {
-  "currentVersion": "8.5",
-  "methodologyVersion": "8.5"
+  "currentVersion": "8.51",
+  "methodologyVersion": "8.51"
 }
 ```
 
@@ -1086,8 +1086,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.37",
-  "methodologyVersion": "6.37"
+  "currentVersion": "6.38",
+  "methodologyVersion": "6.38"
 }
 ```
 

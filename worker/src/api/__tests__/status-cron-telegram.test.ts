@@ -72,9 +72,9 @@ describe("handleStatus", () => {
     expect(syncStablecoins).toHaveProperty("healthy");
     expect(syncStablecoins).toHaveProperty("expectedIntervalSec");
     expect(body.crons["sync-blacklist"]?.expectedIntervalSec).toBe(6 * 3600);
-    expect(body.crons["sync-dex-discovery"]?.expectedIntervalSec).toBe(2 * 3600);
+    expect(body.crons["sync-dex-discovery"]?.expectedIntervalSec).toBe(6 * 3600);
     expect(body.crons["sync-live-reserves"]?.expectedIntervalSec).toBe(4 * 3600);
-    expect(body.crons["sync-yield-data"]?.expectedIntervalSec).toBe(3600);
+    expect(body.crons["sync-yield-data"]?.expectedIntervalSec).toBe(2 * 3600);
     expect(body.crons["sync-yield-supplemental"]?.expectedIntervalSec).toBe(4 * 3600);
     expect(body.crons["prune-status-probe-runs"]?.expectedIntervalSec).toBe(86400);
     expect(body.crons).not.toHaveProperty("compute-safety-score-v9-workflow");

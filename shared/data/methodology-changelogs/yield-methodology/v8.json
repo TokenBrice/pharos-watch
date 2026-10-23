@@ -1,5 +1,20 @@
 [
   {
+    "version": "8.51",
+    "title": "Two-hour core publication",
+    "date": "2026-10-23",
+    "effectiveAt": 1792713600,
+    "summary": "Core yield rankings publish every two hours instead of hourly; freshness rules defined in producer intervals keep their multiples, so their values double.",
+    "impact": [
+      "Core source families are data-stale after 3 sync-yield-data intervals (6 hours instead of 3) and aging at the midpoint (4 hours instead of 2). The DefiLlama pool cache and PYS source-stale nulling use the same 6-hour bound.",
+      "API freshness for yield rankings and history follows the producer grace rule on the two-hour interval (fresh through 21,600 seconds, degraded through 43,200 seconds); history charts bucket missing points on the publication cadence.",
+      "PYS weights, sanity bounds, benchmarks, supplemental (4-hour), price-derived, rate-derived and anchor budgets are unchanged. Rows can stay fresh longer between publications; no replay result is claimed.",
+      "Released 2026-10-23 (effectiveAt 1792713600) with the two-hour cadence."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "8.5",
     "title": "Native-reference returns and anchor-only availability",
     "date": "2026-10-20",

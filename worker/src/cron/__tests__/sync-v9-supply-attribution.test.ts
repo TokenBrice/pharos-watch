@@ -8,6 +8,7 @@ import { createDwellirNativeCapability } from "../../lib/dwellir-native";
 import {
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
   serializeSafetyScoreV9SupplyAttributionSource,
+  SOURCE_FIXED_INPUT_MAX_AGE_SEC,
   type SafetyScoreV9SupplyAttributionSource,
 } from "../../lib/safety-score-v9/supply-attribution-source";
 import {
@@ -414,7 +415,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
     const { sqlite, db } = openDb();
     try {
       const fixedInput = xautSourceFixture();
-      vi.setSystemTime((fixedInput.clockSec + 30 * 60 + 1) * 1_000);
+      vi.setSystemTime((fixedInput.clockSec + SOURCE_FIXED_INPUT_MAX_AGE_SEC + 1) * 1_000);
       insertSourceInput(sqlite, fixedInput);
 
       const result = await syncSafetyScoreV9SupplyAttribution(
@@ -433,7 +434,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
       expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
         stage: "source-fixed-input",
         reason: "source-fixed-input-stale",
-        ageSec: 30 * 60 + 1,
+        ageSec: SOURCE_FIXED_INPUT_MAX_AGE_SEC + 1,
       });
       expect(mocks.capture).not.toHaveBeenCalled();
     } finally {

@@ -40,7 +40,7 @@ Measured-target FX withdrawal is an intentional admission change. Before candida
 
 ## Why the replay is a fair test
 
-`prepare-safety-score-v9-input` writes the publication-exact compiler input to the private D1 cache row `report-cards:fixed-input:exact` in the logical `16,46` slot (a 30-minute producer cycle). `compute-safety-score-v9` reads that row at `22,52` and publishes `report-cards:v9`.
+`prepare-safety-score-v9-input` writes the publication-exact compiler input to the private D1 cache row `report-cards:fixed-input:exact` on the hourly `:16` tick of the `16,46` charts slot (a one-hour producer cycle). `compute-safety-score-v9` reads that row at `:22` and publishes `report-cards:v9`.
 
 Two properties make the replay equal to production:
 
@@ -448,7 +448,7 @@ Choose the branch by the reviewed release contract. A neutral release retains th
 
 ### Neutral release: pre-cutover comparison
 
-1. Wait for the first complete producer pair after the cutover Worker version is live: `prepare-safety-score-v9-input` (`16,46`) followed by `compute-safety-score-v9` (`22,52`).
+1. Wait for the first complete producer pair after the cutover Worker version is live: `prepare-safety-score-v9-input` (hourly `:16`) followed by `compute-safety-score-v9` (`:22`).
 2. Export the accepted post-cutover capture, including enrichment (step a, `--accepted-cache-export`), and fetch its publication:
 
    ```sh
@@ -483,7 +483,7 @@ Expect bit-identical numbers. An empty diff means the code now live republished 
 
 Do not compare the live publication with pre-cutover code using `--assert-empty`: reviewed methodology changes are expected to move numbers. That does not relax the empty-diff requirement between the **exact deployed code** and its accepted live publication.
 
-1. Retain the first complete producer pair starting after actual Worker activation: `prepare-safety-score-v9-input` (`16,46`), then `compute-safety-score-v9` (`22,52`). Record their Worker version, execution outcomes, and generation/publication metadata. Require the first accepted publication from that pair; a held, skipped, deferred, or failed cycle is not acceptance, and a later success does not erase it.
+1. Retain the first complete producer pair starting after actual Worker activation: `prepare-safety-score-v9-input` (hourly `:16`), then `compute-safety-score-v9` (`:22`). Record their Worker version, execution outcomes, and generation/publication metadata. Require the first accepted publication from that pair; a held, skipped, deferred, or failed cycle is not acceptance, and a later success does not erase it.
 2. At the exact deployed tree, export the accepted publication and its retained **base plus compute-time enrichment delta**, not the mutable prepare-time capture from step (a):
 
    ```sh

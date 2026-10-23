@@ -314,8 +314,8 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
       holdReasonCodes: ["dex-stale", "coverage-floor-failed"],
     });
     store.values.set(WATCHDOG_KEYS.safetySourceSince, {
-      value: String(nowSec - 4000),
-      updatedAt: nowSec - 4000,
+      value: String(nowSec - 8000),
+      updatedAt: nowSec - 8000,
     });
 
     const result = await runTelegramDegradationWatchdog(makeDb({ pendingCount: 0 }));
@@ -328,7 +328,7 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
       holdReasonCodes: ["dex-stale", "coverage-floor-failed"],
     });
     expect(meta.safetySource.detail).toBe(
-      `state=corrupt, sustainedSec=4000, heldSinceSec=${nowSec - 7200}, holdAgeSec=7200, holdReasonCodes=dex-stale|coverage-floor-failed`,
+      `state=corrupt, sustainedSec=8000, heldSinceSec=${nowSec - 7200}, holdAgeSec=7200, holdReasonCodes=dex-stale|coverage-floor-failed`,
     );
   });
 
@@ -344,8 +344,8 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
       failureReason: "v9-snapshot-unavailable",
     });
     store.values.set(WATCHDOG_KEYS.safetySourceSince, {
-      value: String(nowSec - 4000), // > 2 * 900 = 1800
-      updatedAt: nowSec - 4000,
+      value: String(nowSec - 8000), // > 2 * 3600 = 7200
+      updatedAt: nowSec - 8000,
     });
     const db = makeDb({ pendingCount: 0 });
 
@@ -390,8 +390,8 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
     store.values.set(WATCHDOG_KEYS.safetySourceSince, {
-      value: String(nowSec - 4000),
-      updatedAt: nowSec - 4000,
+      value: String(nowSec - 8000),
+      updatedAt: nowSec - 8000,
     });
     const db = makeDb({ pendingCount: 0 });
 
@@ -409,7 +409,7 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
   it("preserves an already-flagged held episode without rewriting its onset", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
-    const episodeSince = nowSec - 4000;
+    const episodeSince = nowSec - 8000;
     const assessment = {
       ...safetyDiagnostics(),
       state: "corrupt" as const,
@@ -452,8 +452,8 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
       envelope: null,
       ...(phase === "recovered" ? {} : { failureReason: "v9-snapshot-invalid" }),
     };
-    if (phase !== "newly-tripped") store.values.set(WATCHDOG_KEYS.safetySourceSince, { value: String(nowSec - 4_000), updatedAt: nowSec - 4_000 });
-    if (phase === "pending-masked") store.values.set(WATCHDOG_KEYS.pendingSince, { value: String(nowSec - 4_000), updatedAt: nowSec - 4_000 });
+    if (phase !== "newly-tripped") store.values.set(WATCHDOG_KEYS.safetySourceSince, { value: String(nowSec - 8_000), updatedAt: nowSec - 8_000 });
+    if (phase === "pending-masked") store.values.set(WATCHDOG_KEYS.pendingSince, { value: String(nowSec - 8_000), updatedAt: nowSec - 8_000 });
     const result = await runTelegramDegradationWatchdog(makeDb({ pendingCount: phase === "pending-masked" ? PENDING_BACKLOG_THRESHOLD + 1 : 0 }), undefined, { safetySourceAssessment: assessment });
     const meta = JSON.parse(result.metadata ?? "{}");
     expect(meta.safetySource).toMatchObject({
@@ -471,7 +471,7 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
       expect(result.metadata).toContain("v9-snapshot-invalid");
     }
     if (phase === "recovered") expect(store.values.has(WATCHDOG_KEYS.safetySourceSince)).toBe(false);
-    else expect(store.values.get(WATCHDOG_KEYS.safetySourceSince)?.value).toBe(String(nowSec - (phase === "newly-tripped" ? 0 : 4_000)));
+    else expect(store.values.get(WATCHDOG_KEYS.safetySourceSince)?.value).toBe(String(nowSec - (phase === "newly-tripped" ? 0 : 8_000)));
   });
 });
 

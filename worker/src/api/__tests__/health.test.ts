@@ -382,13 +382,13 @@ describe("handleHealth", () => {
     }
   });
   describe("read-time freshness sentinel re-read", () => {
-    const yieldInterval = 3_600;
+    const yieldInterval = 7_200;
     async function delayedYieldSnapshot(now: number, statusExcludingCacheFreshness?: HealthResponse["status"]) {
       const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
       publicHealth.timestamp = now - 60;
       publicHealth.assessedAt = now - 60;
       publicHealth.status = "degraded";
-      // Past 3x the hourly producer: Delayed in the stored projection.
+      // Past 3x the two-hour producer: Delayed in the stored projection.
       publicHealth.caches["yield-data"] = {
         ...publicHealth.caches["yield-data"], ageSeconds: 3 * yieldInterval + 600,
         publishedAt: now - 60 - 3 * yieldInterval - 600, healthy: false,

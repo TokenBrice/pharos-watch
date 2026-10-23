@@ -344,7 +344,7 @@ describe("methodology registry", () => {
   });
 
   it("retains the archive-free attribution release and aligns current Safety policy identity", () => {
-    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.31");
+    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.32");
     expect(SAFETY_SCORE_POLICY.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.23")!;
     expect(release).toMatchObject({
@@ -482,7 +482,7 @@ describe("methodology registry", () => {
   });
 
   it("records v10.31's Q* release cut without claiming replay acceptance", () => {
-    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0]!;
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.31")!;
     expect(release).toMatchObject({
       version: "10.31", date: "2026-10-22", effectiveAt: 1792699200, reconstructed: false, commits: [],
     });
@@ -537,4 +537,17 @@ describe("liquidity TVL-basis break list", () => {
     expect(liquidityTvlBasisEpoch("6.95")).toBe(liquidityTvlBasisEpoch("6.94"));
     expect(liquidityTvlBasisEpoch("6.95")).toBeLessThan(liquidityTvlBasisEpoch("6.96"));
   });
+  it("records v10.32's hourly-cadence activation and its derived bounds", () => {
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0]!;
+    expect(release).toMatchObject({
+      version: "10.32", date: "2026-10-23", effectiveAt: 1792713600, reconstructed: false, commits: [],
+    });
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.31");
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.32");
+    const impact = release.impact.join(" ");
+    expect(impact).toContain("from 3,600 to 7,200 seconds");
+    expect(impact).toContain("lenderCollateralBacking");
+    expect(impact).toContain("Released 2026-10-23 (effectiveAt 1792713600)");
+  });
+
 });

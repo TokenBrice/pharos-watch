@@ -104,6 +104,8 @@ export async function loadDewsSourceState(ctx: HydrationContext): Promise<DewsSo
     yieldWarnings: warnings.result.yieldWarnings,
     yieldSourceRisk: rankings.result.yieldSourceRisk,
     yieldRankChangeAttribution: rankings.result.yieldRankChangeAttribution,
+    yieldRankingsAgeSec: rankings.result.yieldRankingsAgeSec,
+    yieldRankingsRetained: rankings.result.yieldRankingsRetained,
     latestPsiScore: psi.result.latestPsiScore,
     sourceCoverage: {
       dexLiquidity: liq.result.totalRows,
@@ -127,6 +129,7 @@ export async function loadDewsSourceState(ctx: HydrationContext): Promise<DewsSo
     dependencyDiagnostics: {
       dexLiquidity: liq.result.dependencyDiagnostics,
       psi: psi.result.dependencyDiagnostics,
+      yieldRankings: rankings.result.dependencyDiagnostics,
     },
   };
 }

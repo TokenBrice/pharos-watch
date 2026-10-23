@@ -73,7 +73,7 @@ export const STALE_POOL_REFRESH_POLICY = {
    * (not returned, untracked legs, or refused by admission) waits this long
    * before its next attempt, doubling per consecutive miss up to
    * `backoffMaxSec`, so a dead or permanently rejected pool stops spending a
-   * request slot and a `failed` count on every two-hour run.
+   * request slot and a `failed` count on every discovery run.
    */
   backoffBaseSec: 3 * CRON_INTERVALS["sync-dex-discovery"],
   /** Retry ceiling: a pool refused for days is still re-read every four days until it leaves the horizon. */

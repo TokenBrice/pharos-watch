@@ -106,6 +106,8 @@ export function PegScoreDewsOverview() {
             market evidence when the primary is missing or nominal. Neither missing leg is a measured calm zero.
             The foundational stablecoins snapshot must fit its producer cadence plus runtime freshness budget; a stale,
             missing-clock, or invalid-clock snapshot holds the accepted generation without refreshing its timestamp.
+            A late Yield Intelligence rankings generation is retained as last-good evidence for up to three yield
+            producer intervals, with its generation and age recorded; beyond that it holds the generation.
             Malformed core persisted inputs quarantine the affected asset before scoring and contagion, while healthy
             peers publish an exact admitted generation. Its latest row is removed without rewriting sparse or daily
             history; optional unreadable pool detail only makes that component unavailable. Whole-source failures still

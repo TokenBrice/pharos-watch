@@ -1,4 +1,5 @@
 import { sortedRecord } from "@shared/lib/compare";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { BaseInputGenerationIdSchema, Sha256Schema } from "@shared/types/safety-schema-primitives";
 import { z } from "zod";
@@ -9,7 +10,8 @@ import { SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS } from "./supply-attributi
 export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY =
   "safety-score-v9:supply-attribution-source:v1";
 
-export const SOURCE_FIXED_INPUT_MAX_AGE_SEC = 30 * 60;
+/** One input-preparation cycle: every attribution run between two prepares can read the latest input. */
+export const SOURCE_FIXED_INPUT_MAX_AGE_SEC = CRON_INTERVALS["prepare-safety-score-v9-input"];
 
 const SafetyScoreV9SupplyAttributionSourceSchema = z
   .object({
