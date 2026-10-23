@@ -1,3 +1,4 @@
+import { runWithOverloadRetry } from "../d1-overload-retry";
 import { batchExecute, buildInClause } from "../db";
 import type { MintBurnContractConfig } from "../mint-burn-contracts";
 import type { MintBurnSyncStateMode } from "./types";
@@ -88,19 +89,21 @@ export async function upsertMintBurnSyncState(
            END`,
       )
       .bind(configKey, lastBlock);
-    if (proof) {
-      await db.batch([cursor, ...mintBurnScanCoverageStatements(db, proof)]);
-    } else {
-      await cursor.run();
-    }
+    // The cursor is monotonic and the coverage merge/compact converge on the
+    // same interval, so replaying a commit whose outcome was lost is safe.
+    const batch = proof ? [cursor, ...mintBurnScanCoverageStatements(db, proof)] : null;
+    await runWithOverloadRetry(async () => {
+      if (batch) await db.batch(batch);
+      else await cursor.run();
+    });
     return;
   }
 
-  await db
+  const set = db
     .prepare(
       `INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)
        ON CONFLICT(config_key) DO UPDATE SET last_block = excluded.last_block`,
     )
-    .bind(configKey, lastBlock)
-    .run();
+    .bind(configKey, lastBlock);
+  await runWithOverloadRetry(() => set.run());
 }
