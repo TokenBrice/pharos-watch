@@ -22,6 +22,22 @@ function cohort() {
 }
 
 describe("compact score consumer equivalence", () => {
+  it("accepts optional local exposure in full, table and detail readers without table emission", () => {
+    const full = cohort();
+    const exposure = { worstQuality: 60, coveredShare: 0.99,
+      slices: [{ deploymentLabel: "Ethereum vault", share: 0.99, quality: 60 }], moreCount: 0 };
+    full.cards[0]!.localAuthorityExposure = exposure;
+    expect(ReportCardsV9CurrentResponseSchema.parse(full).cards[0]!.localAuthorityExposure).toEqual(exposure);
+    const table = projectV9Table(full);
+    expect(table.cards[0]).not.toHaveProperty("localAuthorityExposure");
+    table.cards[0]!.localAuthorityExposure = exposure;
+    expect(ReportCardsV9TableResponseSchema.parse(table).cards[0]!.localAuthorityExposure).toEqual(exposure);
+    expect(ReportCardsV9DetailResponseSchema.parse(projectV9Detail(full, full.cards[0]!.id))
+      .cards[0]!.localAuthorityExposure).toEqual(exposure);
+    expect(ReportCardsV9TableResponseSchema.safeParse({ ...table,
+      cards: table.cards.map((card, i) => i === 0 ? { ...card, localAuthorityExposure: { ...exposure, slices: Array(4).fill(exposure.slices[0]) } } : card),
+    }).success).toBe(false);
+  });
   it.each([
     { key: "backing" as const, cause: "C" as const, score: 35 },
     { key: "exit" as const, cause: "U" as const, score: 50 },

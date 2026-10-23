@@ -57,6 +57,15 @@ function compressionBudgetPublication(entropyBytes: number): SafetyScoreV9Curren
 }
 
 describe("Safety Score V9 publication codec", () => {
+  it("reads optional local authority exposure through canonical and compressed storage", async () => {
+    const publication = makeWorkerSafetyScoreV9Publication();
+    const exposure = { worstQuality: 60, coveredShare: 0.99,
+      slices: [{ deploymentLabel: "Ethereum vault", share: 0.99, quality: 60 }], moreCount: 0 };
+    publication.cards[0]!.localAuthorityExposure = exposure;
+    for (const stored of [stableJsonStringifyV1(publication), await serializeSafetyScoreV9Publication(publication)]) {
+      expect((await parseSafetyScoreV9Publication(stored)).cards[0]!.localAuthorityExposure).toEqual(exposure);
+    }
+  });
   it("encodes the same canonical envelope while reusing only frozen schema-equal cards", async () => {
     const publication = deepFreeze(makeWorkerSafetyScoreV9Publication());
     const { publication: admitted, stored } = await admitAndSerializeSafetyScoreV9Publication(publication);
