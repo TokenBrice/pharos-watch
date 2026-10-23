@@ -105,6 +105,10 @@ export function evaluateWorkerWranglerConfig(
     expectValue("placement", "region", '"aws:eu-central-1"');
     if (placement.length !== 1) issues.push("Heavy placement must declare only the reviewed region hint.");
     if (services.length > 0) issues.push("Heavy must not declare an executor service binding.");
+    const deferredMaterialization = values.get(assignmentKey("vars", "SAFETY_V9_DEFERRED_MATERIALIZATION"));
+    if (deferredMaterialization !== '"on"' && deferredMaterialization !== '"off"') {
+      issues.push('Heavy SAFETY_V9_DEFERRED_MATERIALIZATION must be "on" or "off".');
+    }
   }
   if (role === "heavy") {
     expectValue("root", "workers_dev", "false");

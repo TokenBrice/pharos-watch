@@ -387,6 +387,27 @@ describe("materialized V9 response", () => {
     expect((await handleReportCardsV9(db)).status).toBe(503);
   });
 
+  it("without deferral, atomically rolls back canonical acceptance when required fragments cannot be written", async () => {
+    const { db, sqlite } = await seed();
+    const before = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
+    const manifests = sqlite.prepare("SELECT * FROM safety_score_public_manifests").all();
+    sqlite.exec("CREATE TRIGGER refuse_fragment BEFORE INSERT ON safety_score_public_fragments BEGIN SELECT RAISE(ABORT, 'fragment failed'); END");
+    const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
+    await expect(persistSafetyScoreV9Publication(db, currentInput(next))).rejects.toThrow();
+    expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(before);
+    expect(sqlite.prepare("SELECT * FROM safety_score_public_manifests").all()).toEqual(manifests);
+  });
+
+  it("without deferral, selects the staged generation inside the acceptance batch", async () => {
+    const { db, sqlite } = await seed();
+    const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
+    expect((await persistSafetyScoreV9Publication(db, currentInput(next))).acceptedMaterialization).toBeNull();
+    expect(readManifest(sqlite).safetyScoreIdentity.publicationGenerationId).toBe(next.publicationGenerationId);
+    expect(JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY)!.value as string))
+      .toMatchObject({ publicationGenerationId: next.publicationGenerationId });
+    expect(await (await handleReportCardsV9(db)).json()).toMatchObject({ updatedAt: next.publishedAtSec });
+  });
+
   it("keeps acceptance and serves the previous whole generation when required fragments cannot be written", async () => {
     const { db, sqlite, publication } = await seed();
     const expected = await (await handleReportCardsV9(db)).json() as object;
@@ -395,7 +416,7 @@ describe("materialized V9 response", () => {
     expect(JSON.parse(marker!.value as string)).toMatchObject({ publicationGenerationId: publication.publicationGenerationId });
     sqlite.exec("CREATE TRIGGER refuse_fragment BEFORE INSERT ON safety_score_public_fragments BEGIN SELECT RAISE(ABORT, 'fragment failed'); END");
     const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
-    const persisted = await persistSafetyScoreV9Publication(db, currentInput(next));
+    const persisted = await persistSafetyScoreV9Publication(db, { ...currentInput(next), deferPublicMaterialization: true });
     await expect(materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!)).rejects.toThrow();
     expect(sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY)).toEqual(marker);
     expect(sqlite.prepare("SELECT * FROM safety_score_public_manifests").all()).toEqual(manifests);
@@ -433,8 +454,8 @@ describe("materialized V9 response", () => {
     const { db, sqlite, publication } = await seed();
     const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
     const third = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 150, publicationGenerationId: "report-cards:v9:third" });
-    const persisted = await persistSafetyScoreV9Publication(db, currentInput(next));
-    await persistSafetyScoreV9Publication(db, currentInput(third));
+    const persisted = await persistSafetyScoreV9Publication(db, { ...currentInput(next), deferPublicMaterialization: true });
+    await persistSafetyScoreV9Publication(db, { ...currentInput(third), deferPublicMaterialization: true });
     expect(await materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!))
       .toEqual({ status: "superseded", publicationGenerationId: next.publicationGenerationId });
     expect(sqlite.prepare("SELECT generation_id FROM safety_score_public_manifests WHERE retired_at IS NULL").all())

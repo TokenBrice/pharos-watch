@@ -79,6 +79,12 @@ export interface RunSafetyScoreV9PublicationInput {
   db: D1Database;
   captureArchiveBucket?: R2Bucket;
   captureArchiveContext?: ExecutionContext;
+  /**
+   * Commit acceptance before materializing public representations. Off keeps
+   * staging and selection inside the acceptance batch until every public
+   * reader tolerates unselected staged rows (SAFETY_V9_DEFERRED_MATERIALIZATION).
+   */
+  deferPublicMaterialization?: boolean;
   publicationDeadlineMs?: number;
   fixedInput: unknown;
   /** Original compressed prepare-time envelope; retained without re-serialization. */
@@ -766,6 +772,7 @@ export async function runSafetyScoreV9Publication(
       publicationClockSec: fixedInput.clockSec,
       signal: publicationSignal,
       timing: subphaseElapsedMs,
+      deferPublicMaterialization: input.deferPublicMaterialization,
     });
     committed = true;
     finishPhase();

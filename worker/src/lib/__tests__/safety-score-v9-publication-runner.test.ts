@@ -783,6 +783,120 @@ describe("Safety Score V9 publication runner", () => {
   });
 
   it.each([
+    { latencyMs: 400, expected: "published" },
+    { latencyMs: 20_000, expected: "failed" },
+  ] as const)("without deferral, keeps real 397-card staging $expected with $latencyMs ms D1 latency inside the inherited lane", async ({ latencyMs, expected }) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const prior = makeWorkerSafetyScoreV9Publication({
+      publishedAtSec: fixedInput.clockSec - 100, publicationGenerationId: "report-cards:v9:prior",
+    });
+    const candidate = makeWorkerSafetyScoreV9Publication({
+      baseInputGenerationId: fixedInput.baseInputGenerationId, publishedAtSec: fixedInput.clockSec,
+      publicationGenerationId: "report-cards:v9:large-cohort",
+      cards: Array.from({ length: 397 }, (_, index) => makeWorkerV9Card({
+        id: index === 0 ? "usdc-circle" : `v9-staging-coin-${String(index).padStart(3, "0")}`,
+        evidence: { level: "adequate", freshness: "current", reasons: [{
+          code: "unresolved-control-identity", message: "\u00e9".repeat(6_000), path: "control:incidentState",
+        }] },
+      })),
+    });
+    const start = Date.now();
+    let elapsedMs = 0;
+    let stagingCalls = 0;
+    const deadline = new AbortController();
+    const stagingStatements = new WeakSet<D1PreparedStatement>();
+    const delayedDb: D1Database = {
+      ...db,
+      prepare: (sql: string) => {
+        const statement = db.prepare(sql);
+        if (sql.startsWith("INSERT OR IGNORE INTO safety_score_")) {
+          const bind = statement.bind.bind(statement);
+          statement.bind = (...values: unknown[]) => {
+            const bound = bind(...values);
+            stagingStatements.add(bound);
+            return bound;
+          };
+        }
+        return statement;
+      },
+      batch: async <T = unknown>(statements: D1PreparedStatement[]) => {
+        const result = await db.batch<T>(statements);
+        if (statements.every(statement => stagingStatements.has(statement))) {
+          stagingCalls++;
+          // Model elapsed I/O and its real abort signal without sleeping for
+          // three minutes. A completed staged write still cannot select itself.
+          elapsedMs += latencyMs;
+          if (elapsedMs >= getSafetyScoreV9PublicationBudgetMs(start, start + 180_000)) {
+            deadline.abort(new DOMException("Staging exhausted the publication window", "TimeoutError"));
+          }
+        }
+        return result;
+      },
+    };
+    try {
+      await store.persistSafetyScoreV9Publication(db, currentInput(prior));
+      const acceptedRows = sqlite.prepare(`SELECT key, value, updated_at FROM cache
+        WHERE key IN (?, ?, ?, ?, ?) ORDER BY key`);
+      const acceptedKeys = [
+        publicationHealth.SAFETY_SCORE_V9_CACHE_KEYS.publication,
+        publicationHealth.SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex,
+        publicationHealth.SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
+        publicationHealth.SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline,
+        publicationHealth.SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral,
+      ];
+      const before = acceptedRows.all(...acceptedKeys);
+      mocks.loadBaseline.mockResolvedValue(acceptedBaseline(prior));
+      mocks.build.mockImplementationOnce(() => {
+        elapsedMs = 16_000;
+        return { candidate, quarantines: [], quarantineAffectedAssetIds: [], bridgeJoinDiagnostics: [] };
+      });
+      mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
+      mocks.persistAttempt.mockImplementation(store.persistSafetyScoreV9PublicationAttempt);
+      const clock = vi.spyOn(Date, "now").mockImplementation(() => start + elapsedMs);
+      const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValueOnce(deadline.signal);
+      try {
+        const result = await runSafetyScoreV9Publication({
+          db: delayedDb, fixedInput, nowSec: fixedInput.clockSec, publicationDeadlineMs: start + 180_000,
+        });
+        expect(timeout).toHaveBeenNthCalledWith(1, 165_000);
+        expect(stagingCalls).toBeGreaterThan(0);
+        expect(result.status).toBe(expected);
+        if (expected === "published") {
+          expect(stagingCalls).toBeLessThanOrEqual(40);
+          expect(elapsedMs).toBeLessThan(165_000);
+          expect(result).toMatchObject({
+            publicationGenerationId: candidate.publicationGenerationId, abortCause: null,
+            phaseElapsedMs: { persist: expect.any(Number) },
+          });
+          expect(result.phaseElapsedMs.persist).toBeGreaterThan(0);
+          expect(result.phaseElapsedMs.persist)
+            .toBeLessThanOrEqual(getSafetyScoreV9PublicationBudgetMs(start, start + 180_000));
+          expect((await store.loadSafetyScoreV9PublicationIdentityEnvelope(db))?.publicationGenerationId)
+            .toBe(candidate.publicationGenerationId);
+          expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_site_manifests WHERE generation_id = ? AND retired_at IS NULL")
+            .get(candidate.publicationGenerationId)!.n).toBe(398);
+        } else {
+          expect(result).toMatchObject({
+            stage: "publication-write",
+            abortCause: { source: "publication-deadline", name: "TimeoutError" },
+            journal: { status: "skipped", reason: "publication-failed" },
+          });
+          expect(acceptedRows.all(...acceptedKeys)).toEqual(before);
+          expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_public_manifests WHERE generation_id = ? AND retired_at IS NULL")
+            .get(candidate.publicationGenerationId)!.n).toBe(0);
+          expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_site_manifests WHERE generation_id = ? AND retired_at IS NULL")
+            .get(candidate.publicationGenerationId)!.n).toBe(0);
+          expect(await publicationAttempts.loadSafetyScoreV9FailedPublicationAttempt(db)).toMatchObject({
+            outcome: "failed", failure: { stage: "publication-write",
+              abortCause: { source: "publication-deadline", name: "TimeoutError" } },
+          });
+        }
+      } finally { clock.mockRestore(); timeout.mockRestore(); }
+    } finally { sqlite.close(); }
+  });
+
+  it.each([
     { latencyMs: 400, expected: "materialized" },
     { latencyMs: 20_000, expected: "failed" },
   ] as const)("accepts before real 397-card staging, which is $expected with $latencyMs ms D1 latency inside the inherited lane", async ({ latencyMs, expected }) => {
@@ -835,7 +949,7 @@ describe("Safety Score V9 publication runner", () => {
       },
     };
     try {
-      const persistedPrior = await store.persistSafetyScoreV9Publication(db, currentInput(prior));
+      const persistedPrior = await store.persistSafetyScoreV9Publication(db, { ...currentInput(prior), deferPublicMaterialization: true });
       await materializeV9AcceptedPublication(db, persistedPrior.acceptedMaterialization!);
       const acceptedRows = sqlite.prepare(`SELECT key, value, updated_at FROM cache
         WHERE key IN (?, ?, ?, ?, ?) ORDER BY key`);
@@ -859,6 +973,7 @@ describe("Safety Score V9 publication runner", () => {
       try {
         const result = await runSafetyScoreV9Publication({
           db: delayedDb, fixedInput, nowSec: fixedInput.clockSec, publicationDeadlineMs: start + 180_000,
+          deferPublicMaterialization: true,
         });
         expect(timeout).toHaveBeenNthCalledWith(1, 165_000);
         expect(stagingCalls).toBeGreaterThan(0);

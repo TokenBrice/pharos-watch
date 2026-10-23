@@ -30,9 +30,9 @@ export function currentInput(publication: SafetyScoreV9CurrentResponse): Publica
   };
 }
 
-/** Production order: atomic acceptance, then the post-acceptance public materialization. */
+/** Deferred order (SAFETY_V9_DEFERRED_MATERIALIZATION=on): atomic acceptance, then public materialization. */
 export async function persistAndMaterialize(db: D1Database, input: PublicationWrite) {
-  const persisted = await persistSafetyScoreV9Publication(db, input);
+  const persisted = await persistSafetyScoreV9Publication(db, { ...input, deferPublicMaterialization: true });
   if (persisted.acceptedMaterialization !== null) {
     await materializeV9AcceptedPublication(db, persisted.acceptedMaterialization, input.signal);
   }

@@ -162,11 +162,12 @@ export async function stageV9PublicMaterialization(
 
 /**
  * Select only a fully staged generation, and only while it is still the
- * accepted canonical generation. The guard writes the small materialization
+ * accepted canonical generation (also valid after the canonical write inside
+ * the acceptance batch, for non-deferred acceptance). The guard writes the small materialization
  * marker naming the selected generation; a failed predicate becomes a NOT NULL
  * violation so D1 rolls the whole selection back.
  */
-function v9StagedPublicMaterializationStatements(
+export function v9StagedPublicMaterializationStatements(
   db: D1Database, staged: V9StagedPublicMaterialization,
 ): D1PreparedStatement[] {
   const m = staged.manifest;
