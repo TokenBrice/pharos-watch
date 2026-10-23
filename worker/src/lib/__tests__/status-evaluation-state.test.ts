@@ -701,13 +701,13 @@ describe("status cause text", () => {
   });
 
   it.each([
-    [664, false, "info"],
-    [1800, false, "info"],
-    [1801, false, "warning"],
-    [null, false, "warning"],
-    [undefined, false, "warning"],
-    [664, true, "warning"],
-  ] as const)("classifies lagging cohort p95 with recent maximum %s and open breach %s as %s", (recentCompletionMaxSec, openBreach, severity) => {
+    [664, false, null],
+    [1800, false, null],
+    [1801, false, { metric: "reserveCohortRecentCompletionMaxSec", value: 1801 }],
+    [null, false, { metric: "reserveCohortCompletionP95Sec", value: 3691 }],
+    [undefined, false, { metric: "reserveCohortCompletionP95Sec", value: 3691 }],
+    [664, true, { metric: "reserveCohortAgeSec", value: 1801 }],
+  ] as const)("grades lagging cohort p95 on the 24h window: recent maximum %s, open breach %s", (recentCompletionMaxSec, openBreach, expected) => {
     const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
       reserveComposition: makeReserveComposition({
         cohort: {
@@ -717,8 +717,14 @@ describe("status cause text", () => {
         },
       }),
     }));
-    expect(result.causes.find((entry) => entry.code === "reserve_cohort_slo_exceeded"))
-      .toMatchObject({ severity, value: openBreach ? 1801 : 3691, threshold: 1800 });
+    const cause = result.causes.find((entry) => entry.code === "reserve_cohort_slo_exceeded");
+    if (expected == null) {
+      // A fixed incident stays in the seven-day p95 trend but no longer fires.
+      expect(cause).toBeUndefined();
+      return;
+    }
+    expect(cause).toMatchObject({ severity: "warning", ...expected, threshold: 1800 });
+    expect(cause?.message).toContain("Seven-day p95 3691s across 42 completed cohorts (trend).");
   });
 
   it("keeps a recent completed-cohort breach visible even when seven-day p95 is within target", () => {
