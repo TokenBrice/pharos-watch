@@ -256,6 +256,7 @@ describe("curated on-chain supply paths", () => {
     { id: "syrupusdc-maple", chains: ["ethereum", "base", "arbitrum", "solana", "ink", "monad", "robinhood", "tempo", "arc"],
       canonical: "ethereum", mint: "AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj", endpoints: { monad: "https://rpc.monad.xyz" } },
     { id: "witry-brix", chains: ["ethereum", "megaeth"], canonical: "ethereum" },
+    { id: "usd3-reserve-protocol", chains: ["ethereum", "base"], canonical: "ethereum" },
     { id: "brlv-crown", chains: ["base", "ethereum"], zero: ["ethereum"],
       endpoints: { base: undefined, ethereum: undefined } },
     { id: "syzusd-yuzu", chains: ["plasma", "ethereum", "monad", "hyperevm", "sei", "pharos", "berachain", "aptos", "base"], canonical: "plasma",

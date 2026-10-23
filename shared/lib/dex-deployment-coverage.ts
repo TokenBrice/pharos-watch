@@ -432,10 +432,10 @@ export interface DexCoverageWaiver {
  * and `uusd-youves`/tezos when the TzKT census was; keeping them would publish
  * "no provider supports this chain" beside a census row naming one.
  */
-// Reviewed 2026-10-06; Secret and Rise remain outside the discovery-provider registry.
+// Reviewed 2026-10-06; Secret remains outside the discovery-provider registry.
+// `usdr-rise`/rise was removed when CoinGecko onchain/GeckoTerminal registered RISE.
 const EXCLUSIVE_UNSUPPORTED_STABLECOINS = [
   ["silk-shade-protocol", "secret"],
-  ["usdr-rise", "rise"],
 ] as const;
 
 const COVERAGE_WAIVER_EXPIRY_SEC = Date.UTC(2026, 9, 31) / 1000;

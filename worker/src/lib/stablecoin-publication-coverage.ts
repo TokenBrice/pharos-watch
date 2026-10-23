@@ -379,6 +379,38 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     reviewedAt: Date.UTC(2026, 8, 28) / 1000,
     expiresAt: Date.UTC(2026, 9, 25) / 1000,
   },
+  {
+    stablecoinId: "usdfc-secured-finance",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-10-23 06:36 UTC: CoinGecko usdfc remains dated 2026-10-14 18:27:04 UTC ($0.950358, $4,568 daily volume) with zero tickers, beyond the unchanged freshness budget. DefiLlama list asset 248 has a null price and the coins API returns no quote for filecoin:0x80b98d3aa09ffff255c3ba4a241111ff1262f045. Exact-contract DexScreener returns no pairs. GeckoTerminal/CoinGecko Onchain report $105,709 total reserves but a null token price, so the address lane rejects it as missing-quote. The SushiSwap v3 USDFC/WFIL pool ($180,520 reserves) passes the $50K pool floor but shows zero 24h volume, and pricing it needs an exact-pool adapter plus a reviewed FIL/USD dependency that do not exist. Keep USDFC missing, preserve all admission gates, and have ops establish an admissible observed market or re-review within seven days. Trove redemption at $1 of oracle-valued FIL is not an observed price.",
+    sources: [
+      "https://api.coingecko.com/api/v3/simple/price?ids=usdfc&vs_currencies=usd&include_24hr_vol=true&include_last_updated_at=true",
+      "https://api.coingecko.com/api/v3/coins/usdfc/tickers",
+      "https://stablecoins.llama.fi/stablecoins?includePrices=true",
+      "https://coins.llama.fi/prices/current/filecoin:0x80b98d3aa09ffff255c3ba4a241111ff1262f045",
+      "https://api.dexscreener.com/token-pairs/v1/filecoin/0x80b98d3aa09ffff255c3ba4a241111ff1262f045",
+      "https://api.geckoterminal.com/api/v2/networks/filecoin/tokens/0x80b98d3aa09ffff255c3ba4a241111ff1262f045/pools",
+      "https://api.geckoterminal.com/api/v2/networks/filecoin/tokens/0x80b98d3aa09ffff255c3ba4a241111ff1262f045",
+    ],
+    reviewedAt: Date.UTC(2026, 9, 23, 6, 36) / 1000,
+    expiresAt: Date.UTC(2026, 9, 30, 6, 36) / 1000,
+  },
+  {
+    stablecoinId: "bd-basedollar",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-10-23 06:36 UTC: the reviewed Aerodrome stable pool 0xffdf1e3160b60c2e499fa25e51b5c192b9b15e3b holds 11,888.87 BD and 7,803.40 USDC (reserves equal balances), so the unchanged 10,000-USDC inventory floor rejects it (aerodrome-exact:inventory); last accepted mark was $0.97747 at 2026-10-22 18:16:18 UTC. DexScreener and GeckoTerminal report $19,487-$19,546 liquidity for that pool (BD $0.9827-$0.9878), below the $50K per-pool floor; every Uniswap v4 BD pool holds under $200. DefiLlama list asset 434 has a null price and the coins API returns nothing for base:0x252d36f435582ecb01686448d21e8c9ea0b2ca65; BD has no CoinGecko listing. Keep BD missing, preserve the adapter inventory floor and all admission gates, and have ops re-review within seven days or once pool USDC inventory recovers. Liquity redemption value is not an observed price.",
+    sources: [
+      "https://mainnet.base.org",
+      "https://api.dexscreener.com/token-pairs/v1/base/0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
+      "https://api.geckoterminal.com/api/v2/networks/base/tokens/0x252d36f435582ecb01686448d21e8c9ea0b2ca65/pools",
+      "https://coins.llama.fi/prices/current/base:0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
+      "https://stablecoins.llama.fi/stablecoins?includePrices=true",
+    ],
+    reviewedAt: Date.UTC(2026, 9, 23, 6, 36) / 1000,
+    expiresAt: Date.UTC(2026, 9, 30, 6, 36) / 1000,
+  },
 ];
 
 export interface ResolvedStablecoinPriceGapReviews {

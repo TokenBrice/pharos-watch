@@ -728,6 +728,24 @@ describe("authoritative-price-sources", () => {
     });
   });
 
+  it("prices syzUSD from its Plasma vault NAV and a fresh single-source yzUSD parent without upgrading trust", async () => {
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${1_090_290_000_000_000_000n.toString(16).padStart(64, "0")}`);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const observedAt = nowSec - 60;
+    const overrides = await fetchLiveOverrides([
+      unpricedChild("syzusd-yuzu"),
+      freshParent("yzusd-yuzu", 0.9985, "coingecko", {
+        nowSec, priceConfidence: "single-source", priceObservedAt: observedAt,
+        priceUpdatedAt: observedAt,
+      }),
+    ]);
+    expect(overrides.get("syzusd-yuzu")).toMatchObject({
+      price: expect.closeTo(1.09029 * 0.9985, 8),
+      source: "coingecko", confidence: "single-source", observedAt,
+      metadata: { inheritedFrom: "yzusd-yuzu", parentConfidence: "single-source", parentReplaySafe: true },
+    });
+  });
+
   it.each([
     { priceSource: "coingecko", priceConfidence: "fallback" as const },
     { priceSource: "dexscreener", priceConfidence: "single-source" as const },
