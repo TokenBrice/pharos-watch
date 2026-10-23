@@ -17,6 +17,7 @@ export function buildV9SupplyAttributionSlotGroups(runtime: ScheduledRuntimeCont
             ...V9_EXECUTION_WINDOW_POLICY.supplyAttribution,
             lane: "sync-v9-supply-attribution",
             currentSlotKey: runtime.scheduleKey,
+            yieldToV9Publication: true,
           },
           (windowSignal, window) =>
             import("../../cron/sync-v9-supply-attribution").then(

@@ -132,6 +132,127 @@ describe("runV9AfterCoreWithinWindow", () => {
     );
   });
 
+  describe("publication priority over supply attribution", () => {
+    const attributionOptions = (db: D1Database, scheduledTimeMs: number) => ({
+      ...options(db, scheduledTimeMs, V9_EXECUTION_WINDOW_POLICY.supplyAttribution),
+      lane: "sync-v9-supply-attribution",
+      currentSlotKey: "v9SupplyAttributionOffset",
+      yieldToV9Publication: true,
+    });
+    const okCore = { state: "finished", result_status: "ok", worker_version: "worker-v2" };
+
+    function dbWithPublicationSlot(publication: { state: string } | null) {
+      const first = vi.fn()
+        .mockResolvedValueOnce(publication)
+        .mockResolvedValueOnce(okCore)
+        .mockResolvedValue(null);
+      const bind = vi.fn(() => ({ first }));
+      return { db: makeNoopD1({ prepare: vi.fn(() => ({ bind })) }), bind };
+    }
+
+    it.each([null, { state: "running" }])("yields to a late :52 publication that has not finished (%o)", async (publication) => {
+      // 2026-10-23 09:53 incident: the :52 trigger arrived at 09:53:38, after
+      // attribution's :53 start had claimed the shared memory lane.
+      const scheduledTimeMs = Date.parse("2026-10-23T09:53:00Z");
+      vi.useFakeTimers();
+      vi.setSystemTime(scheduledTimeMs + 1_000);
+      const fixture = dbWithPublicationSlot(publication);
+      const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+
+      const result = await runV9AfterCoreWithinWindow(attributionOptions(fixture.db, scheduledTimeMs), run);
+
+      expect(result).toMatchObject({ status: "skipped_neutral", productivity: { reason: "v9-publication-priority" } });
+      expect(JSON.parse(result.metadata!)).toMatchObject({
+        publicationSlotStartedAt: Date.parse("2026-10-23T09:52:00Z") / 1_000,
+        publicationSlotState: publication?.state ?? null,
+        publicationDeadlineMs: Date.parse("2026-10-23T09:55:00Z"),
+      });
+      expect(fixture.bind).toHaveBeenCalledWith(Date.parse("2026-10-23T09:52:00Z") / 1_000);
+      expect(leaseMocks.runCronWithLease).not.toHaveBeenCalled();
+      expect(run).not.toHaveBeenCalled();
+    });
+
+    it("lets the late publisher claim the lane at the same instant", async () => {
+      const publicationScheduledMs = Date.parse("2026-10-23T09:52:00Z");
+      vi.useFakeTimers();
+      vi.setSystemTime(Date.parse("2026-10-23T09:53:01Z"));
+      const attribution = dbWithPublicationSlot(null);
+      const publisher = dbWithCoreSlot(okCore);
+      // Exclusive lane: whichever caller claims first holds it until it returns.
+      let held = false;
+      leaseMocks.runCronWithLease.mockImplementation(async (
+        _db: D1Database, _job: string, run: (input: { signal: AbortSignal }) => Promise<unknown>,
+      ) => {
+        if (held) return { status: "skipped_locked" };
+        held = true;
+        try {
+          return { status: "ok", result: await run({ signal: new AbortController().signal }) };
+        } finally {
+          held = false;
+        }
+      });
+      const attributionRun = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+      const publisherRun = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+
+      const [attributionResult, publisherResult] = await Promise.all([
+        runV9AfterCoreWithinWindow(attributionOptions(attribution.db, Date.parse("2026-10-23T09:53:00Z")), attributionRun),
+        runV9AfterCoreWithinWindow(
+          options(publisher.db, publicationScheduledMs, V9_EXECUTION_WINDOW_POLICY.publication),
+          publisherRun,
+        ),
+      ]);
+
+      expect(attributionResult.productivity?.reason).toBe("v9-publication-priority");
+      expect(publisherResult.status).toBe("ok");
+      expect(publisherRun).toHaveBeenCalledOnce();
+      expect(attributionRun).not.toHaveBeenCalled();
+    });
+
+    it("runs once this window's publication slot has finished", async () => {
+      const scheduledTimeMs = Date.parse("2026-10-23T09:53:00Z");
+      vi.useFakeTimers();
+      vi.setSystemTime(scheduledTimeMs + 1_000);
+      const fixture = dbWithPublicationSlot({ state: "finished" });
+      const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+
+      const result = await runV9AfterCoreWithinWindow(attributionOptions(fixture.db, scheduledTimeMs), run);
+
+      expect(result.status).toBe("ok");
+      expect(run).toHaveBeenCalledOnce();
+    });
+
+    it("runs after the publication window closed or when no publication shares the core window", async () => {
+      for (const [scheduled, now] of [
+        ["2026-10-23T09:53:00Z", "2026-10-23T09:55:00Z"],
+        ["2026-10-23T09:38:00Z", "2026-10-23T09:38:01Z"],
+      ] as const) {
+        vi.useFakeTimers();
+        vi.setSystemTime(Date.parse(now));
+        const fixture = dbWithCoreSlot(okCore);
+        const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+
+        const result = await runV9AfterCoreWithinWindow(attributionOptions(fixture.db, Date.parse(scheduled)), run);
+
+        expect(result.status).toBe("ok");
+        expect(fixture.bind).not.toHaveBeenCalledWith(Date.parse("2026-10-23T09:52:00Z") / 1_000);
+        expect(fixture.bind).not.toHaveBeenCalledWith(Date.parse("2026-10-23T09:22:00Z") / 1_000);
+      }
+    });
+
+    it("fails closed without suppressing publication when the slot ledger is unreadable", async () => {
+      const scheduledTimeMs = Date.parse("2026-10-23T09:53:00Z");
+      vi.useFakeTimers();
+      vi.setSystemTime(scheduledTimeMs + 1_000);
+      const first = vi.fn().mockRejectedValueOnce(new Error("D1 unavailable"));
+      const db = makeNoopD1({ prepare: vi.fn(() => ({ bind: vi.fn(() => ({ first })) })) });
+
+      const result = await runV9AfterCoreWithinWindow(attributionOptions(db, scheduledTimeMs), vi.fn());
+
+      expect(result).toMatchObject({ status: "degraded", productivity: { reason: "v9-publication-priority-unknown" } });
+      expect(leaseMocks.runCronWithLease).not.toHaveBeenCalled();
+    });
+  });
+
   it("retains the :25 publication boundary and lease tail ahead of :28 DDR", async () => {
     const scheduledTimeMs = Date.parse("2026-07-26T12:22:00Z");
     vi.useFakeTimers();
