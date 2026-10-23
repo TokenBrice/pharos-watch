@@ -19,15 +19,12 @@ const createMigratedDb = fixtures.open;
 
 /**
  * Seeds one stale `cron_slot_executions` row with a dead child progress row
- * and optional version markers. Defaults reproduce the zero-duration shape;
- * the offset options reproduce a mid-run death (2026-09-23 sync-yield-data,
- * `duration_ms` 1000 while progress advanced past the start).
+ * and an optional verified active-version marker for the public owner.
  */
 function seedStaleSlotWithDeadChild(
   sqlite: DatabaseSync,
   nowSec: number,
   options: {
-    firstSeenAt: number | null;
     activatedAt: number | null;
     /** Seconds after slot_started_at; all three default to the zero-duration shape. */
     progressStartedOffset?: number;
@@ -66,19 +63,7 @@ function seedStaleSlotWithDeadChild(
     options.progressWorkerVersion == null ? null : JSON.stringify({ workerVersion: options.progressWorkerVersion }),
     slotStartedAt,
   );
-  if (options.firstSeenAt != null) {
-    sqlite.prepare(
-      `INSERT INTO cache (key, value, updated_at)
-       VALUES ('worker-version-first-seen:${NEW_WORKER_VERSION}', ?, ?)`,
-    ).run(JSON.stringify({ workerVersion: NEW_WORKER_VERSION, firstSeenAt: options.firstSeenAt }), options.firstSeenAt);
-  }
-  if (options.activatedAt != null) {
-    sqlite.prepare(
-      `INSERT INTO cache (key, value, updated_at)
-       VALUES ('worker-version-activated:${NEW_WORKER_VERSION}', ?, ?)`,
-    ).run(JSON.stringify({ workerVersion: NEW_WORKER_VERSION, activatedAt: options.activatedAt }), options.activatedAt);
-  }
-  const activation = options.activatedAt ?? options.firstSeenAt;
+  const activation = options.activatedAt;
   if (activation != null) {
     sqlite.prepare("INSERT INTO cache (key,value,updated_at) VALUES ('worker-active-version:public',?,?)")
       .run(JSON.stringify({ worker: "public", scriptName: "stablecoin-api",
@@ -834,51 +819,20 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     ).get()).toEqual({ status: "error", error: "scheduled slot abandoned; child execution unknown [stale-slot-reconciled]", degraded_reason: "stale-slot-reconciled" });
   });
 
-  it("classifies a correlated zero-duration child as neutral only with an in-window activation marker", async () => {
-    const { sqlite, db } = createMigratedDb();
-    const nowSec = 1_772_004_000;
-    const slotStartedAt = seedStaleSlotWithDeadChild(sqlite, nowSec, {
-      firstSeenAt: nowSec - 3_600 + 5,
-      activatedAt: nowSec - 3_600 - 60,
-    });
-
-    const summary = await sweepStaleScheduledSlotExecutions(db, {
-      nowSec,
-      slotKey: "halfHourlyMeasuredExecution",
-    });
-
-    expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 1 });
-    expect(sqlite.prepare(
-      `SELECT status, error, degraded_reason
-         FROM cron_runs
-        WHERE job = 'sync-cl-exit-depth'`,
-    ).get()).toEqual({ status: "skipped_neutral", error: null, degraded_reason: "stale-slot-reconciled" });
-    const runRow = sqlite.prepare(
-      `SELECT metadata
-         FROM cron_runs
-        WHERE job = 'sync-cl-exit-depth'`,
-    ).get() as { metadata: string } | undefined;
-    expect(JSON.parse(String(runRow?.metadata ?? "{}"))).toMatchObject({
-      failureCategory: "platform-interrupted",
-      childDisposition: "interrupted-by-deploy",
-      interruptedByWorkerVersionChange: true,
-      reconciledByWorkerVersionFirstSeenAt: slotStartedAt + 5,
-      reconciledByWorkerVersionActivatedAt: slotStartedAt - 60,
-    });
-  });
-
   it.each([
-    ["has an activation marker 45 seconds after the child death", 45, 5],
-    ["dies after the 120-second isolate-drain window", -121, 5],
-    ["has only the diagnostic first-seen marker", null, 5],
-    ["has neither marker", null, null],
-  ] as const)("keeps a correlated zero-duration child abandoned when it %s", async (_reason, activationDelaySec, firstSeenDelaySec) => {
+    ["zero-duration child dies inside the old deploy activation window", 0, 0, 0, -60],
+    ["mid-run child dies 30 seconds after a deploy activation", 8, 9, 9, -21],
+  ] as const)("records version drift as forensic evidence but keeps the %s abandoned", async (
+    _shape, progressStartedOffset, progressUpdatedOffset, slotUpdatedOffset, activationOffset,
+  ) => {
     const { sqlite, db } = createMigratedDb();
     const nowSec = 1_772_004_000;
     const slotStartedAt = nowSec - 3_600;
     seedStaleSlotWithDeadChild(sqlite, nowSec, {
-      firstSeenAt: firstSeenDelaySec == null ? null : slotStartedAt + firstSeenDelaySec,
-      activatedAt: activationDelaySec == null ? null : slotStartedAt + activationDelaySec,
+      activatedAt: slotStartedAt + activationOffset,
+      progressStartedOffset,
+      progressUpdatedOffset,
+      slotUpdatedOffset,
     });
 
     const summary = await sweepStaleScheduledSlotExecutions(db, {
@@ -887,216 +841,33 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     });
 
     expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 1 });
-    expect(sqlite.prepare(
-      `SELECT status, error
-         FROM cron_runs
-        WHERE job = 'sync-cl-exit-depth'`,
-    ).get()).toEqual({
-      status: "error",
-      error: "scheduled slot heartbeat stale; child job progress abandoned [stale-slot-reconciled]",
-    });
-    const runRow = sqlite.prepare(
-      `SELECT metadata
-         FROM cron_runs
-        WHERE job = 'sync-cl-exit-depth'`,
-    ).get() as { metadata: string } | undefined;
-    expect(JSON.parse(String(runRow?.metadata ?? "{}"))).toMatchObject({
+    const run = sqlite.prepare(
+      "SELECT status, error, duration_ms, metadata FROM cron_runs WHERE job = 'sync-cl-exit-depth'",
+    ).get() as { status: string; error: string | null; duration_ms: number; metadata: string };
+    expect(run.status).toBe("error");
+    expect(run.error).toBe("scheduled slot heartbeat stale; child job progress abandoned [stale-slot-reconciled]");
+    expect(run.duration_ms).toBe((progressUpdatedOffset - progressStartedOffset) * 1_000);
+    const metadata = JSON.parse(run.metadata);
+    expect(metadata).toMatchObject({
       failureCategory: "platform-abandoned",
       childDisposition: "abandoned",
-      interruptedByWorkerVersionChange: false,
-      reconciledByWorkerVersionFirstSeenAt:
-        firstSeenDelaySec == null ? null : slotStartedAt + firstSeenDelaySec,
-      reconciledByWorkerVersionActivatedAt:
-        activationDelaySec == null ? null : slotStartedAt + activationDelaySec,
-    });
-  });
-
-  it.each([
-    ["blacklist 06:03 deploy before the first slot heartbeat", 11, 55, 29, "skipped_neutral"],
-    ["child progress leads the slot by exactly one heartbeat interval", 11, 71, 29, "skipped_neutral"],
-    ["child progress leads the slot by more than one heartbeat interval", 11, 72, 29, "error"],
-    ["slot heartbeat follows child progress by exactly one long-run coalesce plus skew", 100, 55, 29, "skipped_neutral"],
-    ["slot heartbeat follows child progress by more than one long-run coalesce plus skew", 101, 55, 29, "error"],
-    ["latest life evidence precedes activation by exactly 15 seconds", 11, 55, 70, "skipped_neutral"],
-    ["latest life evidence precedes the activation window", 11, 55, 71, "error"],
-  ] as const)("attributes deploy interruption directionally: %s", async (_shape, slotOffset, progressOffset, activationOffset, expectedStatus) => {
-    const { sqlite, db } = createMigratedDb();
-    const nowSec = 1_790_835_073;
-    const slotStartedAt = nowSec - 3_600;
-    seedStaleSlotWithDeadChild(sqlite, nowSec, {
-      firstSeenAt: slotStartedAt + activationOffset + 5,
-      activatedAt: slotStartedAt + activationOffset,
-      progressStartedOffset: 11,
-      progressUpdatedOffset: progressOffset,
-      slotUpdatedOffset: slotOffset,
-    });
-
-    await sweepStaleScheduledSlotExecutions(db, {
-      nowSec,
-      slotKey: "halfHourlyMeasuredExecution",
-    });
-    const run = sqlite.prepare(
-      "SELECT status, error, duration_ms, metadata, degraded_reason FROM cron_runs WHERE job = 'sync-cl-exit-depth'",
-    ).get() as { status: string; error: string | null; duration_ms: number; metadata: string; degraded_reason: string };
-    const interrupted = expectedStatus === "skipped_neutral";
-    expect(run.status).toBe(expectedStatus);
-    expect(run.error).toBe(interrupted ? null : "scheduled slot heartbeat stale; child job progress abandoned [stale-slot-reconciled]");
-    expect(run.degraded_reason).toBe(JSON.parse(run.metadata).reason);
-    expect(run.duration_ms).toBe((progressOffset - 11) * 1_000);
-    expect(JSON.parse(run.metadata)).toMatchObject({
-      failureCategory: interrupted ? "platform-interrupted" : "platform-abandoned",
-      childDisposition: interrupted ? "interrupted-by-deploy" : "abandoned",
-      interruptedByWorkerVersionChange: interrupted,
-      progressUpdatedAt: slotStartedAt + progressOffset,
-      reconciledByWorkerVersionActivatedAt: slotStartedAt + activationOffset,
-    });
-    const outcome = sqlite.prepare(
-      "SELECT outcome FROM worker_producer_history WHERE job = 'sync-cl-exit-depth' AND slot_started_at = ?",
-    ).get(slotStartedAt);
-    expect(outcome).toEqual({ outcome: interrupted ? "skipped_neutral" : "abandoned" });
-  });
-
-  it("classifies a mid-run deploy eviction as neutral (2026-09-23 sync-yield-data shape)", async () => {
-    const { sqlite, db } = createMigratedDb();
-    const nowSec = 1_772_004_000;
-    const slotStartedAt = nowSec - 3_600;
-    const progressStartedAt = slotStartedAt + 8;
-    const progressUpdatedAt = slotStartedAt + 9;
-    sqlite.prepare(
-      `INSERT INTO cron_slot_executions (
-       slot_key, slot_started_at, state, result_status, execution_owner,
-       started_at, finished_at, updated_at, metadata, execution_generation,
-       invocation_id, worker_version
-     ) VALUES ('hourlyYieldSync', ?, 'running', NULL, 'slot-owner', ?, NULL, ?, NULL, 1,
-               'old-invocation', 'worker-old')`,
-    ).run(slotStartedAt, slotStartedAt, progressUpdatedAt);
-    sqlite.prepare(
-      `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
-       VALUES ('sync-yield-data', 'child-owner', ?, ?, ?)`,
-    ).run(nowSec - 60, progressUpdatedAt, progressUpdatedAt);
-    const insertProgress = sqlite.prepare(
-      `INSERT INTO cron_run_progress (
-       job, started_at, updated_at, stage, items_done, items_total,
-       message, lease_owner, metadata, slot_started_at
-     ) VALUES (?, ?, ?, 'lease-acquired', 0, NULL, 'Lease acquired', 'child-owner', NULL, ?)`,
-    );
-    for (const job of ["sync-yield-supplemental", "fetch-tbill-rate", "sync-yield-data"]) {
-      insertProgress.run(job, progressStartedAt, progressUpdatedAt, slotStartedAt);
-    }
-    // The replacing version activated 30 seconds before the old isolate died.
-    sqlite.prepare(
-      `INSERT INTO cache (key, value, updated_at)
-       VALUES ('worker-version-activated:${NEW_WORKER_VERSION}', ?, ?)`,
-    ).run(JSON.stringify({ workerVersion: NEW_WORKER_VERSION, activatedAt: progressUpdatedAt - 30 }), progressUpdatedAt - 30);
-    sqlite.prepare("INSERT INTO cache (key,value,updated_at) VALUES ('worker-active-version:public',?,?)")
-      .run(JSON.stringify({ worker: "public", scriptName: "stablecoin-api",
-        workerVersion: NEW_WORKER_VERSION, activatedAt: progressUpdatedAt - 30 }), progressUpdatedAt - 30);
-
-    const summary = await sweepStaleScheduledSlotExecutions(db, {
-      nowSec,
-      slotKey: "hourlyYieldSync",
-    });
-
-    // Three children wrote progress; the legacy parity child has unknown execution.
-    expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 4, notStartedCronRuns: 0 });
-    const yieldRun = sqlite.prepare(
-      `SELECT status, error, duration_ms, metadata
-         FROM cron_runs
-        WHERE job = 'sync-yield-data'`,
-    ).get() as { status: string; error: string | null; duration_ms: number; metadata: string };
-    // One second of progress was written before the eviction: a zero-duration
-    // child was never required, only a slot heartbeat that stopped with it.
-    expect(yieldRun.status).toBe("skipped_neutral");
-    expect(yieldRun.error).toBeNull();
-    expect(yieldRun.duration_ms).toBe(1_000);
-    expect(JSON.parse(yieldRun.metadata)).toMatchObject({
-      failureCategory: "platform-interrupted",
-      childDisposition: "interrupted-by-deploy",
-      interruptedByWorkerVersionChange: true,
-      progressStage: "lease-acquired",
-      progressUpdatedAt,
-      activeDurationMs: 1_000,
       slotWorkerVersion: "worker-old",
       reconciledByWorkerVersion: NEW_WORKER_VERSION,
-      reconciledByWorkerVersionActivatedAt: progressUpdatedAt - 30,
     });
+    expect(metadata).not.toHaveProperty("interruptedByWorkerVersionChange");
+    expect(sqlite.prepare(
+      "SELECT outcome FROM worker_producer_history WHERE job = 'sync-cl-exit-depth' AND slot_started_at = ?",
+    ).get(slotStartedAt)).toEqual({ outcome: "abandoned" });
   });
 
   it.each([
-    ["the activation marker fires 121 seconds after the death", 121],
-    ["the activation marker fires 121 seconds before the death", -121],
-    ["no activation marker exists", null],
-  ] as const)("keeps a mid-run child abandoned when %s", async (_reason, activationOffsetSec) => {
+    ["falls back to the dying invocation's progress metadata version", "worker-old", "worker-old"],
+    ["records null when no version evidence survives", undefined, null],
+  ] as const)("with a NULL slot worker_version, %s", async (_name, progressWorkerVersion, expectedSlotWorkerVersion) => {
     const { sqlite, db } = createMigratedDb();
     const nowSec = 1_772_004_000;
     const progressUpdatedAt = nowSec - 3_600 + 9;
     seedStaleSlotWithDeadChild(sqlite, nowSec, {
-      firstSeenAt: progressUpdatedAt + 5,
-      activatedAt: activationOffsetSec == null ? null : progressUpdatedAt + activationOffsetSec,
-      progressStartedOffset: 8,
-      progressUpdatedOffset: 9,
-      slotUpdatedOffset: 9,
-    });
-
-    const summary = await sweepStaleScheduledSlotExecutions(db, {
-      nowSec,
-      slotKey: "halfHourlyMeasuredExecution",
-    });
-
-    expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 1 });
-    const runRow = sqlite.prepare(
-      `SELECT status, error, metadata
-         FROM cron_runs
-        WHERE job = 'sync-cl-exit-depth'`,
-    ).get() as { status: string; error: string | null; metadata: string };
-    expect(runRow.status).toBe("error");
-    expect(runRow.error).toBe("scheduled slot heartbeat stale; child job progress abandoned [stale-slot-reconciled]");
-    // Drift exists, so the marker evidence is recorded even though the death
-    // falls outside the activation window and stays abandoned.
-    expect(JSON.parse(runRow.metadata)).toMatchObject({
-      failureCategory: "platform-abandoned",
-      childDisposition: "abandoned",
-      interruptedByWorkerVersionChange: false,
-      activeDurationMs: 1_000,
-      reconciledByWorkerVersionFirstSeenAt: progressUpdatedAt + 5,
-      reconciledByWorkerVersionActivatedAt:
-        activationOffsetSec == null ? null : progressUpdatedAt + activationOffsetSec,
-    });
-  });
-
-  it.each([
-    {
-      name: "falls back to the dying invocation's progress metadata version",
-      progressWorkerVersion: "worker-old",
-      expectedStatus: "skipped_neutral",
-      expectedSlotWorkerVersion: "worker-old",
-      activationRecorded: true,
-    },
-    {
-      name: "stays abandoned when no version evidence survives",
-      progressWorkerVersion: undefined,
-      expectedStatus: "error",
-      expectedSlotWorkerVersion: null,
-      activationRecorded: false,
-    },
-    {
-      name: "stays abandoned when the progress version matches the reconciler",
-      progressWorkerVersion: NEW_WORKER_VERSION,
-      expectedStatus: "error",
-      expectedSlotWorkerVersion: NEW_WORKER_VERSION,
-      activationRecorded: false,
-    },
-  ])("with a NULL slot worker_version, $name", async ({
-    progressWorkerVersion,
-    expectedStatus,
-    expectedSlotWorkerVersion,
-    activationRecorded,
-  }) => {
-    const { sqlite, db } = createMigratedDb();
-    const nowSec = 1_772_004_000;
-    const progressUpdatedAt = nowSec - 3_600 + 9;
-    seedStaleSlotWithDeadChild(sqlite, nowSec, {
-      firstSeenAt: null,
       activatedAt: progressUpdatedAt - 30,
       progressStartedOffset: 8,
       progressUpdatedOffset: 9,
@@ -1105,40 +876,26 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       progressWorkerVersion,
     });
 
-    const summary = await sweepStaleScheduledSlotExecutions(db, {
+    await sweepStaleScheduledSlotExecutions(db, {
       nowSec,
       slotKey: "halfHourlyMeasuredExecution",
     });
 
-    expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 1 });
     const runRow = sqlite.prepare(
-      `SELECT status, error, metadata
-         FROM cron_runs
-        WHERE job = 'sync-cl-exit-depth'`,
-    ).get() as { status: string; error: string | null; metadata: string };
-    expect(runRow.status).toBe(expectedStatus);
-    expect(runRow.error).toBe(
-      expectedStatus === "error" ? "scheduled slot heartbeat stale; child job progress abandoned [stale-slot-reconciled]" : null,
-    );
-    expect(JSON.parse(runRow.metadata)).toMatchObject({
-      interruptedByWorkerVersionChange: expectedStatus === "skipped_neutral",
-      slotWorkerVersion: expectedSlotWorkerVersion,
-      reconciledByWorkerVersionActivatedAt: activationRecorded ? progressUpdatedAt - 30 : null,
-    });
+      "SELECT status, metadata FROM cron_runs WHERE job = 'sync-cl-exit-depth'",
+    ).get() as { status: string; metadata: string };
+    expect(runRow.status).toBe("error");
+    expect(JSON.parse(runRow.metadata)).toMatchObject({ slotWorkerVersion: expectedSlotWorkerVersion });
   });
+
   it.each(["missing", "wrong-script", "late", "verified"] as const)(
     "resolves a public slot owner independently of the heavy caller: %s marker",
     async (evidence) => {
       const { sqlite, db } = createMigratedDb();
       const nowSec = 1_772_004_000;
-      const slotStartedAt = seedStaleSlotWithDeadChild(sqlite, nowSec, { firstSeenAt: null, activatedAt: null });
+      const slotStartedAt = seedStaleSlotWithDeadChild(sqlite, nowSec, { activatedAt: null });
       const publicVersion = "12345678-1234-1234-1234-123456789abc";
-      const heavyVersion = "abcdefab-1234-1234-1234-123456789abc";
       const activation = evidence === "late" ? nowSec + 1 : slotStartedAt - 60;
-      for (const version of [publicVersion, heavyVersion]) {
-        sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-          .run(`worker-version-activated:${version}`, JSON.stringify({ workerVersion: version, activatedAt: activation }), activation);
-      }
       if (evidence !== "missing") {
         sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
           .run("worker-active-version:public", JSON.stringify({
@@ -1152,7 +909,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
         nowSec, slotKey: "halfHourlyMeasuredExecution",
       });
       const row = sqlite.prepare("SELECT status, metadata FROM cron_runs WHERE job = 'sync-cl-exit-depth'").get()!;
-      expect(row.status).toBe(evidence === "verified" ? "skipped_neutral" : "error");
+      expect(row.status).toBe("error");
       expect(JSON.parse(String(row.metadata)).reconciledByWorkerVersion)
         .toBe(evidence === "verified" ? publicVersion : null);
     },
@@ -1165,7 +922,7 @@ describe("bounded abandonment progress evidence", () => {
   it("preserves last resource observation and adds only reconciliation platform evidence", async () => {
     const { sqlite, db } = createMigratedDb();
     const nowSec = 1_772_004_000;
-    seedStaleSlotWithDeadChild(sqlite, nowSec, { firstSeenAt: null, activatedAt: null });
+    seedStaleSlotWithDeadChild(sqlite, nowSec, { activatedAt: null });
     const pressure = buildResourcePressure({ phase: "decode", observedAt: nowSec - 1200, intakeBytes: 100, cacheBytes: 800 });
     sqlite.prepare("UPDATE cron_run_progress SET metadata = ?").run(JSON.stringify({ resourcePressure: pressure }));
     await sweepStaleScheduledSlotExecutions(db, { nowSec, slotKey: "halfHourlyMeasuredExecution" });
@@ -1192,7 +949,7 @@ describe("bounded abandonment progress evidence", () => {
   ])("retains only bounded evidence for $name metadata and remains idempotent", async ({ metadata, status, name }) => {
     const { sqlite, db } = createMigratedDb();
     const nowSec = 1_772_004_000;
-    seedStaleSlotWithDeadChild(sqlite, nowSec, { firstSeenAt: null, activatedAt: null });
+    seedStaleSlotWithDeadChild(sqlite, nowSec, { activatedAt: null });
     sqlite.prepare("UPDATE cron_run_progress SET items_done = 261, items_total = 278, metadata = ?").run(metadata);
     const options = { nowSec, slotKey: "halfHourlyMeasuredExecution" };
     await sweepStaleScheduledSlotExecutions(db, options);
@@ -1220,7 +977,7 @@ describe("bounded abandonment progress evidence", () => {
   it("does not snapshot or clear a child whose matching lease is still heartbeating", async () => {
     const { sqlite, db } = createMigratedDb();
     const nowSec = 1_772_004_000;
-    seedStaleSlotWithDeadChild(sqlite, nowSec, { firstSeenAt: null, activatedAt: null });
+    seedStaleSlotWithDeadChild(sqlite, nowSec, { activatedAt: null });
     sqlite.prepare("UPDATE cron_leases SET heartbeat_at = ?, lease_until = ?, updated_at = ?").run(nowSec, nowSec + 600, nowSec);
     sqlite.prepare("UPDATE cron_run_progress SET metadata = ?").run(JSON.stringify({ currentCoinId: "usdnr-nerona" }));
     sqlite.prepare("UPDATE cron_slot_executions SET started_at=?").run(nowSec - 600);

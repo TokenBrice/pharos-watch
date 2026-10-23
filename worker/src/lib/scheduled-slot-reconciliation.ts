@@ -12,16 +12,11 @@ import {
 } from "./scheduled-child-terminal";
 import { resolveScheduledSlotPolicy } from "./scheduled-slot-policy";
 import { cronEventCacheKey, logCronEvent, resolveCronDegradedReason } from "./cron-logger";
-import { CRON_PROGRESS_LONG_RUN_COALESCE_MS } from "./cron-timeouts";
 import type { SchedulerChildDisposition as ScheduledChildTerminalDisposition } from "@shared/types/status/cron";
 import { ResourcePressureSchema, type CronResultStatus } from "@shared/types/status/cron";
 import { parseJsonObject } from "./json-parse";
 import { stripSensitive } from "./safe-error-message";
-import {
-  getActiveWorkerVersionMarker,
-  getWorkerVersionActivatedAt,
-  getWorkerVersionFirstSeenAt,
-} from "./worker-version-first-seen";
+import { getActiveWorkerVersionMarker } from "./worker-version-first-seen";
 import { buildResourcePressure } from "./cron-resource-pressure";
 import { MAX_PERSISTED_CRON_METADATA_BYTES } from "./cron-metadata-persistence";
 
@@ -161,18 +156,6 @@ export function getExpectedJobsForScheduledSlot(slotKey: string): readonly strin
   const plan = SCHEDULED_SLOT_PLANS[slotKey as CronScheduleKey];
   return plan ? flattenScheduledSlotPlanJobs(plan) : [];
 }
-
-// A dead child's second-resolution heartbeat may appear up to 15 seconds
-// before Cloudflare's deployment timestamp because of clock/write skew. Once
-// activated, Cloudflare may take up to two minutes to recycle an old isolate.
-const DEPLOY_INTERRUPTION_DEATH_CLOCK_SKEW_SEC = 15;
-// Child progress may lead the slot's last heartbeat by one fence interval,
-// including an eviction before the first tick. A long run's last durable
-// progress may trail its death by one coalesce interval, so only a slot
-// heartbeat newer than that plus clock/write skew disproves that they stopped together.
-export const DEPLOY_INTERRUPTION_HEARTBEAT_ALIGNMENT_SEC =
-  CRON_PROGRESS_LONG_RUN_COALESCE_MS / 1000 + DEPLOY_INTERRUPTION_DEATH_CLOCK_SKEW_SEC;
-const DEPLOY_INTERRUPTION_ISOLATE_DRAIN_SEC = 120;
 
 export async function hasActiveChildLeaseForScheduledSlot(
   db: D1Database,
@@ -315,23 +298,10 @@ async function insertSyntheticStaleCronRun(
   const startedAt = progress.started_at || slot.started_at || slot.slot_started_at;
   const activeDurationMs = Math.max(0, progress.updated_at - startedAt) * 1000;
   const reconciliationDelayMs = Math.max(0, nowSec - progress.updated_at) * 1000;
-  // Progress timestamps are second-resolution. Child progress can advance
-  // between slot ticks, but a slot heartbeat after the child's last progress
-  // (beyond clock/write skew) proves the isolate survived the child failure.
-  // Missing or ambiguous timestamps remain abandoned.
-  const slotHeartbeatStoppedWithChild =
-    Number.isSafeInteger(slot.updated_at)
-    && slot.updated_at > 0
-    && Number.isSafeInteger(progress.updated_at)
-    && progress.updated_at > 0
-    && slot.updated_at <= nowSec - resolveScheduledSlotPolicy(slot.slot_key).childSilenceSec
-    && slot.updated_at - progress.updated_at <= DEPLOY_INTERRUPTION_HEARTBEAT_ALIGNMENT_SEC
-    && progress.updated_at - slot.updated_at <= resolveScheduledSlotPolicy(slot.slot_key).heartbeatSec;
-  // `cron_slot_executions.worker_version` is the direct drift evidence, but a
-  // stale-takeover row can be NULL (older claims, transplanted rows). The
+  // `cron_slot_executions.worker_version` is the forensic version evidence, but
+  // a stale-takeover row can be NULL (older claims, transplanted rows). The
   // dying invocation stamps its own `workerVersion` into every progress write
-  // (`handlers/scheduled/context.ts` slotMeta), so that copy is the fallback
-  // before declaring the versions never drifted.
+  // (`handlers/scheduled/context.ts` slotMeta), so that copy is the fallback.
   let progressWorkerVersion: string | null = null;
   if (progress.metadata) {
     try {
@@ -345,47 +315,11 @@ async function insertSyntheticStaleCronRun(
     }
   }
   const slotWorkerVersion = slot.worker_version?.trim() || progressWorkerVersion;
-  const currentWorkerVersion = reconcilerWorkerVersion?.trim() || null;
-  const hasWorkerVersionDrift =
-    slotWorkerVersion != null
-    && currentWorkerVersion != null
-    && slotWorkerVersion !== currentWorkerVersion;
-  // A deploy eviction kills the isolate at an arbitrary point in the child's
-  // life. Requiring zero progress (progress.updated_at === startedAt) matched
-  // only children killed inside their first second, so every mid-run eviction
-  // was misclassified as an in-place kill (2026-09-23 sync-yield-data@17:55,
-  // duration_ms 1000). The directional heartbeat alignment above allows one
-  // unsent slot tick; a later slot heartbeat still disproves co-death.
-  const correlatedDeathWithVersionDrift = hasWorkerVersionDrift && slotHeartbeatStoppedWithChild;
-  // First-seen is retained as forensic evidence only. The deploy workflow's
-  // activation marker is the classification boundary because it is written
-  // at version activation rather than at the first scheduled execution.
-  // Read both markers whenever drift exists so an out-of-window death keeps
-  // the activation evidence that proves it was not the deploy's eviction.
-  const reconcilerWorkerVersionFirstSeenAt = hasWorkerVersionDrift
-    ? await getWorkerVersionFirstSeenAt(db, currentWorkerVersion)
-    : null;
-  checkpoint?.();
-  const reconcilerWorkerVersionActivatedAt = hasWorkerVersionDrift
-    ? await getWorkerVersionActivatedAt(db, currentWorkerVersion)
-    : null;
-  checkpoint?.();
-  // Bound death by the latest durable life evidence. An older slot timestamp
-  // can legitimately precede activation when eviction happens between ticks.
-  // The latest timestamp must lie within 15 seconds before activation through
-  // 120 seconds after; any other death stays abandoned.
-  const latestLifeAt = Math.max(slot.updated_at, progress.updated_at);
-  const deathWithinActivationWindow =
-    reconcilerWorkerVersionActivatedAt != null
-    && latestLifeAt >= reconcilerWorkerVersionActivatedAt - DEPLOY_INTERRUPTION_DEATH_CLOCK_SKEW_SEC
-    && latestLifeAt <= reconcilerWorkerVersionActivatedAt + DEPLOY_INTERRUPTION_ISOLATE_DRAIN_SEC
-    && reconcilerWorkerVersionActivatedAt <= nowSec;
-  const interruptedByWorkerDeploy = correlatedDeathWithVersionDrift && deathWithinActivationWindow;
   const progressSnapshot = snapshotAbandonedProgress(progress);
   const pressure = ResourcePressureSchema.safeParse(progressSnapshot.resourcePressure);
   const resourcePressure = buildResourcePressure({
     ...(pressure.success ? pressure.data : { phase: progress.stage ?? "not-measured", observedAt: progress.updated_at }),
-    platformOutcome: interruptedByWorkerDeploy ? "platform-interrupted" : "platform-abandoned",
+    platformOutcome: "platform-abandoned",
     platformOutcomeSource: "slot-reconciliation",
   });
   return insertSyntheticCronRun(
@@ -396,14 +330,13 @@ async function insertSyntheticStaleCronRun(
       ...(progress.attempt ? { identity: identityForAttempt(progress.attempt) } : {}),
       startedAt,
       durationMs: activeDurationMs,
-      status: interruptedByWorkerDeploy ? "skipped_neutral" : "error",
-      error: interruptedByWorkerDeploy ? null : "scheduled slot heartbeat stale; child job progress abandoned",
+      status: "error",
+      error: "scheduled slot heartbeat stale; child job progress abandoned",
       itemCount: null,
       metadata: JSON.stringify({
         reason: "stale-slot-reconciled",
-        failureCategory: interruptedByWorkerDeploy ? "platform-interrupted" : "platform-abandoned",
-        childDisposition: interruptedByWorkerDeploy ? "interrupted-by-deploy" : "abandoned",
-        interruptedByWorkerVersionChange: interruptedByWorkerDeploy,
+        failureCategory: "platform-abandoned",
+        childDisposition: "abandoned",
         slotKey: slot.slot_key,
         parentIncidentId: `scheduled-slot:${slot.slot_key}:${slot.slot_started_at}:${slot.invocation_id ?? slot.execution_owner}`,
         slotStartedAt: slot.slot_started_at,
@@ -420,18 +353,16 @@ async function insertSyntheticStaleCronRun(
         reconciliationDelayMs,
         // Dead isolate's version: the slot row when present, otherwise the
         // dying invocation's own progress-metadata copy (the worker_version
-        // column keeps the raw slot value). Version drift can support deploy
-        // interruption; an in-place abandonment does not prove OOM or CPU exhaustion.
+        // column keeps the raw slot value). Version drift is forensic only;
+        // an in-place abandonment does not prove OOM or CPU exhaustion.
         slotWorkerVersion: slotWorkerVersion,
         reconciledByWorkerVersion: reconcilerWorkerVersion ?? null,
-        reconciledByWorkerVersionFirstSeenAt: reconcilerWorkerVersionFirstSeenAt,
-        reconciledByWorkerVersionActivatedAt: reconcilerWorkerVersionActivatedAt,
       }),
-      outcome: interruptedByWorkerDeploy ? "skipped_neutral" : "abandoned",
+      outcome: "abandoned",
       // Preserve the last durable child heartbeat as the logical terminal time.
       // Reconciliation time stays in metadata and must not outrank a newer run.
       completedAt: progress.updated_at,
-      productivityReason: interruptedByWorkerDeploy ? "platform-interrupted-by-deploy" : "platform-abandoned",
+      productivityReason: "platform-abandoned",
     },
     fence,
     checkpoint,

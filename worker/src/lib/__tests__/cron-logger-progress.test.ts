@@ -6,7 +6,6 @@ import {
   CRON_PROGRESS_LONG_RUN_COALESCE_MS,
   PROGRESS_TELEMETRY_SKIP_JOBS,
 } from "../cron-timeouts";
-import { DEPLOY_INTERRUPTION_HEARTBEAT_ALIGNMENT_SEC } from "../scheduled-slot-reconciliation";
 import { resolveScheduledSlotPolicy } from "../scheduled-slot-policy";
 import { CRON_IN_FLIGHT_STALE_FLOOR_SEC } from "../status/cron-health";
 import { CRON_SCHEDULE_DEFINITIONS } from "@shared/lib/cron-jobs";
@@ -62,11 +61,8 @@ describe("cron progress telemetry", () => {
     ]);
   });
 
-  it("keeps liveness and stale-slot thresholds above the long-run coalesce interval", () => {
+  it("keeps liveness and stale-slot thresholds at least 5x the long-run coalesce interval", () => {
     const coalesceSec = CRON_PROGRESS_LONG_RUN_COALESCE_MS / 1000;
-    // A long run's last durable progress trails its death by at most one
-    // coalesce interval; deploy attribution still needs clock/write skew on top.
-    expect(DEPLOY_INTERRUPTION_HEARTBEAT_ALIGNMENT_SEC).toBeGreaterThanOrEqual(coalesceSec + 15);
     // Status marks leased progress stale only after this floor: keep >= 5x margin.
     expect(CRON_IN_FLIGHT_STALE_FLOOR_SEC).toBeGreaterThanOrEqual(5 * coalesceSec);
     for (const slotKey of Object.keys(CRON_SCHEDULE_DEFINITIONS)) {
