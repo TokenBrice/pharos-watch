@@ -326,8 +326,34 @@ function cap(args: Pick<V9CapTrace, "kind" | "limit" | "source" | "reason" | "bi
 }
 
 describe("Safety Score v9 public projection", () => {
+  it("emits bounded exposure from structured priced authorities, with full-set totals and no score mutation", () => {
+    const input = fixture("exposure", { score: 80, grade: "A-", pillars: { backing: 92, exit: 90, control: 90 } });
+    const authorities = [0.4, 0.3, 0.2, 0.09, 0].map((share, i) => ({
+      deploymentKey: `chain:deployment-${i}`, quality: 60, share,
+      failureDomainKeys: [`upgrade-control:${i}`], sourceSignals: [],
+    }));
+    const production = makeV9ProductionScoreInput({ assetId: "exposure", pillars: {
+      backing: makeV9Pillar(92), exit: makeV9Pillar(90),
+      control: makeV9Pillar(90, { deploymentAuthorities: authorities }),
+    } });
+    input.scoreInput = production;
+    input.trace = scoreV9EvaluatedAsset(production, input.policy);
+    const before = JSON.stringify(input.trace);
+    const { card } = projectSafetyScoreV9Card(input);
+    expect(card.localAuthorityExposure).toMatchObject({
+      worstQuality: 60, moreCount: 1,
+      slices: [0.4, 0.3, 0.2].map(share => ({ share, quality: 60 })),
+    });
+    expect(card.localAuthorityExposure!.coveredShare).toBeCloseTo(0.99, 12);
+    expect(card.localAuthorityExposure!.slices).toHaveLength(3);
+    expect(card.pillars.control.score).toBe(90);
+    expect(JSON.stringify(input.trace)).toBe(before);
+    production.pillars.control.deploymentAuthorities = authorities.map(row => ({ ...row, quality: 90 }));
+    input.trace = scoreV9EvaluatedAsset(production, input.policy);
+    expect(projectSafetyScoreV9Card(input).card).not.toHaveProperty("localAuthorityExposure");
+  });
   it.each([false, true])("reconciles both Q* lanes with interned witnesses (overlap=%s)", (overlap) => {
-    expect(V9_PUBLIC_REPRESENTATION_VERSION).toBe(2);
+    expect(V9_PUBLIC_REPRESENTATION_VERSION).toBe(3);
     const input = fixture("qstar", { score: 80, grade: "A-" });
     const production = makeV9ProductionScoreInput({
       assetId: "qstar",

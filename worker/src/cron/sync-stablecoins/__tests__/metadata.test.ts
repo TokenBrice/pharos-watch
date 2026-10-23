@@ -251,6 +251,44 @@ describe("stablecoins pricing metadata", () => {
     } : undefined);
   });
 
+  it("names the degrading publication gap as the quality driver ahead of an informational quarantine", () => {
+    const missingCount = Math.ceil(ACTIVE_STABLECOINS.length * 0.01);
+    const assets: PeggedAsset[] = ACTIVE_STABLECOINS.slice(missingCount).map((asset) => ({
+      id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko",
+      circulating: { peggedUSD: 1 },
+    }));
+    const result = buildStablecoinsSyncResult({
+      ...syncInput(assets),
+      supplyChainGuard: {
+        flagged: 1, repaired: 0, quarantinedAssetIds: ["asset-0"], unavailableAssetIds: [],
+        historyFetches: 1, stateReadFailed: false,
+      },
+    });
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata!);
+    expect(metadata.reason).toBe("stablecoin-publication-gap-elevated");
+    expect(metadata.quality).toEqual({
+      reason: "stablecoin-publication-gap-elevated",
+      reasons: ["stablecoin-publication-gap-elevated", "supply-chain-dropout-quarantine"],
+      quarantinedAssetCount: 1, unavailableAssetCount: 0,
+    });
+  });
+
+  it.each([
+    [{ depegErrorCount: 1 }, "depeg-pipeline-errors"],
+    [{ stalenessCheckFailed: true }, "price-staleness-check-failed"],
+  ] as const)("names every degraded driver in reason and quality (%o)", (override, reason) => {
+    const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((asset) => ({
+      id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko",
+      circulating: { peggedUSD: 1 },
+    }));
+    const result = buildStablecoinsSyncResult({ ...syncInput(assets), ...override });
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata!);
+    expect(metadata.reason).toBe(reason);
+    expect(metadata.quality).toEqual({ reason });
+  });
+
   it.each([Infinity, 1])("retains supply quality findings through metadata compaction (budget=%s)", (budget) => {
     const { guard } = allMissingSizeGuardFixture();
     const quality = {
