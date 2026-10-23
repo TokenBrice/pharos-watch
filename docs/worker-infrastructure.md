@@ -95,7 +95,7 @@ Completed informational `skipped` findings are intentional non-measurements: the
 
 **Deployed-override gate (2026-10-08):** status-only/no-paging policy is approved, but the complete inventory of deployed Workers/environments, dashboard/config/secret overrides and private tooling has not been recorded. Until that inventory intentionally migrates every selection to `status` or `off`, `shadow` (hidden collection/unconditional-success policy) and `alert` (stronger terminal-error policy, not an alert sender) remain accepted. After inventory closure, remove those branches and normalize obsolete selections to `off`; never remap retained historical modes into current evidence. No paging activation is planned.
 
-Reserve recovery: `WORKER_RESERVE_RECOVERY_MODE` defaults to `off`; checked-in config uses `recover`. Checkpoints are always written. The one-minute `3/6` lane retains historical key `fiveMinuteReserveRecovery`, claims compatible suffixes, and keeps config recovery on its original five-minute opportunities under the reserve lease. Redemption's three-worker pool sets the replay peak. [Deploy-time configuration recovery](process/live-reserves-appendix.md#deploy-time-configuration-recovery) owns targeting, one-opportunity consumption and acceptance.
+Reserve recovery: `WORKER_RESERVE_RECOVERY_MODE` defaults to `off`; checked-in config uses `recover`. Checkpoints are always written. The five-minute `3/6` lane `fiveMinuteReserveRecovery` (`:01/:06/…/:56`) claims compatible suffixes and, when none is claimed, runs config recovery on the same opportunity under the reserve lease. Redemption's three-worker pool sets the replay peak. [Deploy-time configuration recovery](process/live-reserves-appendix.md#deploy-time-configuration-recovery) owns targeting, one-opportunity consumption and acceptance.
 
 ### Project-tape placed-fetch canary
 
@@ -165,22 +165,22 @@ Interval / offset are logical-slot seconds, not job freshness or delivery eviden
 | `quarterHourly` | `*/15 * * * *` | 900 / 0 | `0 * * * *`<br>`15 * * * *`<br>`30 * * * *`<br>`45 * * * *` | public |
 | `v9SupplyAttributionOffset` | `8,23,38,53 * * * *` | 900 / 480 | `8 * * * *`<br>`23 * * * *`<br>`38 * * * *`<br>`53 * * * *` | heavy |
 | `depegResolverOffset` | `13,28,43,58 * * * *` | 900 / 780 | `13 * * * *`<br>`28 * * * *`<br>`43 * * * *`<br>`58 * * * *` | public |
-| `v9PublicationOffset` | `22,52 * * * *` | 1800 / 1320 | `22 * * * *`<br>`52 * * * *` | heavy |
+| `v9PublicationOffset` | `22 * * * *` | 3600 / 1320 | `22 * * * *` | heavy |
 | `statusSelfCheckOffset` | `9,24,39,54 * * * *` | 900 / 540 | `9 * * * *`<br>`24 * * * *`<br>`39 * * * *`<br>`54 * * * *` | public |
 | `sixHourlyBlacklist` | `3 */6 * * *` | 21600 / 180 | `3 */6 * * *` | public |
 | `halfHourlyMintBurnCritical` | `4,34 * * * *` | 1800 / 240 | `4 * * * *`<br>`34 * * * *` | public |
-| `twoHourlyDexDiscovery` | `6 */2 * * *` | 7200 / 360 | `6 */2 * * *` | public |
-| `halfHourlyMintBurnExtended` | `18,48 * * * *` | 1800 / 1080 | `18 * * * *`<br>`48 * * * *` | public |
+| `twoHourlyDexDiscovery` | `6 */6 * * *` | 21600 / 360 | `6 */6 * * *` | public |
+| `halfHourlyMintBurnExtended` | `18 * * * *` | 3600 / 1080 | `18 * * * *` | public |
 | `halfHourlyMeasuredExecution` | `0,30 * * * *` | 1800 / 0 | `5 * * * *`<br>`35 * * * *` | public |
 | `halfHourlyMeasuredExecutionSupplemental` | `15,45 * * * *` | 1800 / 900 | `20 * * * *`<br>`50 * * * *` | public |
 | `halfHourlyOffset` | `10 * * * *` | 3600 / 600 | `10 * * * *` | public |
 | `halfHourlyChartsOffset` | `16,46 * * * *` | 1800 / 960 | `16 * * * *`<br>`46 * * * *` | heavy |
 | `dewsPsiOffset` | `26,56 * * * *` | 1800 / 1560 | `26,56 * * * *` | public |
 | `fourHourlyReserveSync` | `11 */4 * * *` | 14400 / 660 | `11 */4 * * *` | public |
-| `hourlyYieldSync` | `55 * * * *` | 3600 / 3300 | `55 * * * *` | public |
+| `hourlyYieldSync` | `55 */2 * * *` | 7200 / 3300 | `55 */2 * * *` | public |
 | `fourHourlyYieldSupplemental` | `25 */4 * * *` | 14400 / 1500 | `25 */4 * * *` | public |
 | `fiveMinuteTelegramAlerts` | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` | 300 / 120 | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` | public |
-| `fiveMinuteReserveRecovery` | `* * * * *` | 60 / 0 | `* * * * *` | public |
+| `fiveMinuteReserveRecovery` | `1,6,11,16,21,26,31,36,41,46,51,56 * * * *` | 300 / 60 | `1,6,11,16,21,26,31,36,41,46,51,56 * * * *` | public |
 | `digestTriggerPoll` | `*/5 * * * *` | 300 / 0 | `*/5 * * * *` | public |
 | `daily0300Utc` | `0 3 * * *` | 86400 / 10800 | `3 3 * * *` | public |
 | `daily0800Utc` | `0 8 * * *` | 86400 / 28800 | `0 8 * * *` | public |
@@ -194,7 +194,7 @@ Cron expressions are source-owned by the two Wrangler configs. Logical schedule 
 
 Slot execution uses ordered stages of serial task chains: chains within a stage run concurrently, and every chain settles before the next stage starts. Canonical bindings derive one stage directly from `plan.jobChains`. Manual reserve stages retain checkpoint filtering and await the reserve head before Kinesis during recovery; Telegram retains its serial critical lane before registration. Chain stop predicates retain not-started terminal records for blocked successors.
 
-Scheduler consumers read producer cadence directly from `CRON_SCHEDULE_CADENCES`: daily snapshot catch-up uses `daily0800Utc.offsetSec`, manual digest retry backoff uses `digestTriggerPoll.intervalSec`, and hourly yield catch-up uses `fourHourlyYieldSupplemental.intervalSec`. The staleness watchdog uses `CRON_RUNS_RETENTION_SEC` from `shared/lib/retention-policy.ts` to exclude producers whose observation threshold outlives retained history. These authorities do not replace independently reviewed freshness policies such as DEX evidence windows.
+Scheduler consumers read producer cadence directly from `CRON_SCHEDULE_CADENCES`: daily snapshot catch-up uses `daily0800Utc.offsetSec`, manual digest retry backoff uses `digestTriggerPoll.intervalSec`, and the two-hourly yield lane's supplemental catch-up uses `fourHourlyYieldSupplemental.intervalSec`. The staleness watchdog uses `CRON_RUNS_RETENTION_SEC` from `shared/lib/retention-policy.ts` to exclude producers whose observation threshold outlives retained history. These authorities do not replace independently reviewed freshness policies such as DEX evidence windows.
 
 Regenerate the schedule inventory and the appendix's [executable-task topology/new-job checklist](process/worker-infrastructure-appendix.md#scheduled-task-topology) with `node --import tsx scripts/maintenance/generate-cron-doc-view.ts`; use `--check` for read-only freshness or select `cron-doc-view` through `check:generated-artifacts`. The generator validates source/Wrangler agreement before writing. `ScheduledTaskDescriptor` in `shared/lib/scheduled-runner-registry.ts` carries configured timeouts, lease overrides and due policies from the existing slot inputs; `worker/src/lib/cron-timeouts.ts` only projects job caps and clips them to the inherited deadline, and the scheduled context consumes descriptor lease options. Implementation names `hourly-dex-source.ts` and `four-hourly-reserves.ts` reflect actual cadence; the durable `halfHourlyOffset` and `fourHourlyReserveSync` schedule keys are unchanged. CPU-class rationale, fencing and incident interpretation remain authored contracts, not inferred from generated tables.
 

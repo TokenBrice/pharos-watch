@@ -244,7 +244,7 @@ describe("getDatasetFreshness", () => {
     const freshness = await getDatasetFreshness(mockD1([]));
     expect(freshness.safetyGrades).toBe(updatedAt);
     expect(freshness.unavailableReasons?.safetyGrades).toBeUndefined();
-    expect(getDatasetCadenceSec("safetyGrades")).toBe(1800);
+    expect(getDatasetCadenceSec("safetyGrades")).toBe(3600);
   });
 
   it.each([

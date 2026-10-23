@@ -60,12 +60,16 @@ import {
 } from "../../stress-signals-current-rows";
 import { classifyFreshness } from "../../status/freshness-oracle";
 
-import { DEWS_PSI_FRESHNESS_BUDGET_SEC, DEWS_STALE_DEX_LIQUIDITY_SEC } from "./budgets";
+import {
+  DEWS_PSI_FRESHNESS_BUDGET_SEC,
+  DEWS_STALE_DEX_LIQUIDITY_SEC,
+  DEWS_YIELD_RANKINGS_RETENTION_BUDGET_SEC,
+} from "./budgets";
 import { assessFreshnessTimestamp } from "../../api-freshness-age";
 const DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC = 2 * 3600;
 const DEWS_STALE_MINT_BURN_SEC = DAY_SECONDS;
-// DEWS can overlap the next hourly producer while it is still publishing.
-const DEWS_STALE_YIELD_RANKINGS_SEC = CRON_INTERVALS["sync-yield-data"]
+// DEWS can overlap the next yield producer while it is still publishing.
+const DEWS_FRESH_YIELD_RANKINGS_SEC = CRON_INTERVALS["sync-yield-data"]
   + resolveCronTimeoutBudget("sync-yield-data").configuredTimeoutMs / 1000;
 const DEWS_DEX_PRICE_TRUST_POLICY = getDexTrustPolicy("depeg");
 
@@ -694,11 +698,22 @@ export async function hydrateYieldWarnings(ctx: HydrationContext): Promise<Yield
 export interface YieldRankingsHydration {
   yieldSourceRisk: Map<string, YieldSourceRisk>;
   yieldRankChangeAttribution: Map<string, YieldRankChangeAttribution>;
+  /** Age of the admitted rankings generation; null when none was admitted. */
+  yieldRankingsAgeSec: number | null;
+  /** True when the admitted generation is a retained last-good one past the producer budget. */
+  yieldRankingsRetained: boolean;
+  dependencyDiagnostics: StablecoinsDependencyDiagnostics;
 }
 
 export async function hydrateYieldRankingsCache(ctx: HydrationContext): Promise<YieldRankingsHydration> {
   const yieldSourceRisk = new Map<string, YieldSourceRisk>();
   const yieldRankChangeAttribution = new Map<string, YieldRankChangeAttribution>();
+  const diagnostics: StablecoinsDependencyDiagnostics = {
+    generationId: null, updatedAt: null, ageSeconds: null,
+    freshnessBudgetSec: DEWS_YIELD_RANKINGS_RETENTION_BUDGET_SEC, reason: "missing",
+  };
+  let yieldRankingsAgeSec: number | null = null;
+  let yieldRankingsRetained = false;
   try {
     const rankingsCache = await ctx.db
       .prepare("SELECT /* pharos:dews:yield-rankings-cache */ value, updated_at FROM cache WHERE key = ?")
@@ -716,30 +731,41 @@ export async function hydrateYieldRankingsCache(ctx: HydrationContext): Promise<
       },
     });
     if (decoded.ok) {
-      // Retain readable evidence for diagnostics, but hold publication whenever
-      // its generation clock is inadmissible or beyond the producer budget.
+      // A generation past the producer budget is retained as last-good evidence
+      // within the retention budget. Beyond it, or with an inadmissible clock,
+      // readable evidence stays for diagnostics but publication is held.
       const rankingsFreshness = classifyFreshness(
         {
           job: "sync-yield-data",
           lastSuccessAt: rankingsCache?.updated_at ?? null,
           lastRunAt: rankingsCache?.updated_at ?? null,
-          expectedIntervalSec: DEWS_STALE_YIELD_RANKINGS_SEC,
+          expectedIntervalSec: DEWS_FRESH_YIELD_RANKINGS_SEC,
           lastStatus: "ok",
         },
         {
-          watchAt: { absoluteSec: DEWS_STALE_YIELD_RANKINGS_SEC },
-          staleAt: { absoluteSec: DEWS_STALE_YIELD_RANKINGS_SEC },
+          watchAt: { absoluteSec: DEWS_FRESH_YIELD_RANKINGS_SEC },
+          staleAt: { absoluteSec: DEWS_YIELD_RANKINGS_RETENTION_BUDGET_SEC },
         },
         ctx.nowSec,
         { readAtSec: Math.floor(Date.now() / 1000) },
       );
-      if (rankingsFreshness.state !== "fresh") {
+      const updatedAt = rankingsCache?.updated_at;
+      diagnostics.updatedAt = typeof updatedAt === "number" && Number.isFinite(updatedAt) ? updatedAt : null;
+      diagnostics.generationId = diagnostics.updatedAt == null ? null : `yield-rankings:${diagnostics.updatedAt}`;
+      diagnostics.ageSeconds = rankingsFreshness.ageSec;
+      diagnostics.reason = rankingsFreshness.timestampReason
+        ?? (rankingsFreshness.state === "stale" ? "stale-generation"
+          : rankingsFreshness.state === "watch" ? "retained-last-good" : null);
+      if (rankingsFreshness.state === "stale") {
         ctx.registerSourceFailure(
           "yield-rankings-freshness",
           rankingsFreshness.timestampReason != null
             ? `yield-rankings ${rankingsFreshness.timestampReason}`
-            : `yield-rankings age ${rankingsFreshness.ageSec}s exceeds ${DEWS_STALE_YIELD_RANKINGS_SEC}s`,
+            : `yield-rankings age ${rankingsFreshness.ageSec}s exceeds ${DEWS_YIELD_RANKINGS_RETENTION_BUDGET_SEC}s`,
         );
+      } else {
+        yieldRankingsAgeSec = rankingsFreshness.ageSec;
+        yieldRankingsRetained = rankingsFreshness.state === "watch";
       }
       for (const ranking of decoded.payload) {
         const row = getObject(ranking);
@@ -753,6 +779,7 @@ export async function hydrateYieldRankingsCache(ctx: HydrationContext): Promise<
         if (rankChangeAttribution) yieldRankChangeAttribution.set(stablecoinId, rankChangeAttribution);
       }
     } else if (rankingsCache?.value != null) {
+      diagnostics.reason = decoded.reason;
       ctx.registerMalformedPersistedInput({
         source: "yield-rankings",
         context: "cache.yield-rankings",
@@ -764,8 +791,15 @@ export async function hydrateYieldRankingsCache(ctx: HydrationContext): Promise<
     }
   } catch (error) {
     ctx.registerSourceFailure("yield-rankings", error);
+    diagnostics.reason = "read-failed";
   }
-  return { yieldSourceRisk, yieldRankChangeAttribution };
+  return {
+    yieldSourceRisk,
+    yieldRankChangeAttribution,
+    yieldRankingsAgeSec,
+    yieldRankingsRetained,
+    dependencyDiagnostics: diagnostics,
+  };
 }
 
 export async function hydrateLatestPsiScore(ctx: HydrationContext): Promise<{

@@ -39,13 +39,14 @@ describe("cron job schedule metadata", () => {
     });
   });
 
-  it("retains the durable reserve identity with one-minute polls and five-minute config opportunities", () => {
+  it("retains the durable reserve identity on five-minute polls that are all config opportunities", () => {
+    const schedule = "1,6,11,16,21,26,31,36,41,46,51,56 * * * *";
     expect(CRON_SCHEDULE_DEFINITIONS.fiveMinuteReserveRecovery).toEqual({
-      schedule: "* * * * *", intervalSec: 60, offsetSec: 0, cpuPlacement: "sub-hourly-allowed",
+      schedule, intervalSec: 300, offsetSec: 60, cpuPlacement: "sub-hourly-allowed",
     });
-    expect(CRON_TRIGGER_SCHEDULES.fiveMinuteReserveRecovery).toEqual(["* * * * *"]);
+    expect(CRON_TRIGGER_SCHEDULES.fiveMinuteReserveRecovery).toEqual([schedule]);
     expect(CRON_JOB_DEFINITIONS.find((job) => job.job === "reserve-recovery")).toMatchObject({
-      intervalSec: 60, group: "one-minute", scheduleKey: "fiveMinuteReserveRecovery",
+      intervalSec: 300, group: "five-minute", scheduleKey: "fiveMinuteReserveRecovery",
     });
     expect(V9_EVIDENCE_PRODUCER_INTERVAL_SEC["sync-live-reserves"]).toBe(14400);
     expect(Array.from({ length: 60 }, (_, minute) => minute)
@@ -54,7 +55,7 @@ describe("cron job schedule metadata", () => {
     expect(isReserveConfigRecoverySlot(Number.NaN)).toBe(false);
     expect(isReserveConfigRecoverySlot(61)).toBe(false);
     expect(getCronSlotStartedAtForSchedule("fiveMinuteReserveRecovery", Date.parse("2026-10-19T04:22:44Z")))
-      .toBe(Date.parse("2026-10-19T04:22:00Z") / 1000);
+      .toBe(Date.parse("2026-10-19T04:21:00Z") / 1000);
   });
 
   it("accounts for optional concurrent D1 telemetry without changing status aliases or the later peak", () => {
@@ -125,10 +126,10 @@ describe("cron job schedule metadata", () => {
     expect(CRON_SCHEDULES.quarterHourly).toBe("*/15 * * * *");
     expect(CRON_SCHEDULES.v9SupplyAttributionOffset).toBe("8,23,38,53 * * * *");
     expect(CRON_SCHEDULES.depegResolverOffset).toBe("13,28,43,58 * * * *");
-    expect(CRON_SCHEDULES.v9PublicationOffset).toBe("22,52 * * * *");
+    expect(CRON_SCHEDULES.v9PublicationOffset).toBe("22 * * * *");
     expect(CRON_SCHEDULES.statusSelfCheckOffset).toBe("9,24,39,54 * * * *");
     expect(CRON_SCHEDULES.halfHourlyMintBurnCritical).toBe("4,34 * * * *");
-    expect(CRON_SCHEDULES.halfHourlyMintBurnExtended).toBe("18,48 * * * *");
+    expect(CRON_SCHEDULES.halfHourlyMintBurnExtended).toBe("18 * * * *");
 
     expect(CRON_SCHEDULES.halfHourlyMeasuredExecution).toBe("0,30 * * * *");
     expect(CRON_SCHEDULES.halfHourlyMeasuredExecutionSupplemental).toBe("15,45 * * * *");
@@ -143,7 +144,7 @@ describe("cron job schedule metadata", () => {
       ["quarterHourly", "45", "03"],
       ["v9SupplyAttributionOffset", "53", "04"],
       ["depegResolverOffset", "58", "04"],
-      ["v9PublicationOffset", "52", "04"],
+      ["v9PublicationOffset", "22", "04"],
       ["statusSelfCheckOffset", "24", "07"],
     ] as const) {
       expect(getCronSlotStartedAtForSchedule(key, Date.parse(`2026-08-21T19:${minute}:${second}Z`)))
@@ -151,7 +152,7 @@ describe("cron job schedule metadata", () => {
     }
 
     const physicalTriggers = Object.values(CRON_TRIGGER_SCHEDULES).flat();
-    expect(physicalTriggers).toHaveLength(43);
+    expect(physicalTriggers).toHaveLength(41);
     expect(CRON_GROWTH_HEADROOM_POLICY.maxPhysicalTriggersBeforeRebalance).toBe(43);
   });
 
@@ -295,8 +296,8 @@ describe("cron job schedule metadata", () => {
     // A deliberately conservative ten-minute yield budget must finish well
     // before the next V9 writer can rotate the active safety identity.
     expect(nextV9Minute - yieldMinute).toBeGreaterThan(10);
-    expect(CRON_SCHEDULES.hourlyYieldSync).toBe("55 * * * *");
-    expect(CRON_TRIGGER_SCHEDULES.hourlyYieldSync).toEqual(["55 * * * *"]);
+    expect(CRON_SCHEDULES.hourlyYieldSync).toBe("55 */2 * * *");
+    expect(CRON_TRIGGER_SCHEDULES.hourlyYieldSync).toEqual(["55 */2 * * *"]);
     expect(minuteOf(CRON_SCHEDULES.fourHourlyYieldSupplemental)).not.toBe(yieldMinute);
   });
 });

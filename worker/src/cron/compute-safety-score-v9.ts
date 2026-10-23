@@ -55,10 +55,11 @@ import type { V9ExecutionWindow } from "../lib/v9-slot-window";
 import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
 import { assessSafetyScoreV9ResourceBudget } from "../lib/safety-score-v9/resource-budget";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 /**
- * Prepare (`halfHourlyChartsOffset`) and this publisher (`v9PublicationOffset`)
- * run on separate lanes, so a late, abandoned or missing prepare leaves the
+ * Prepare (hourly, on the `halfHourlyChartsOffset` :16 tick) and this publisher
+ * (`v9PublicationOffset`, :22) run on separate lanes, so a late, abandoned or missing prepare leaves the
  * previous cycle's capture in place while `sync-stablecoins` keeps advancing.
  * Strict equality with the latest generation refused every such slot. A
  * capture that lags the live cache is still admitted while its own stablecoins
@@ -67,7 +68,7 @@ import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
  * publication. Older or ahead-of-live captures are refused.
  */
 export const SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC =
-  CRON_SCHEDULE_CADENCES.halfHourlyChartsOffset.intervalSec +
+  CRON_INTERVALS["prepare-safety-score-v9-input"] +
   CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec;
 
 /**

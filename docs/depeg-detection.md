@@ -6,7 +6,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 runs every 15 minute
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.37`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.38`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
@@ -138,7 +138,7 @@ Both calls are in `worker/src/cron/sync-stablecoins/post-enrichment.ts` (invoked
 
 Each stage returns `completed` or a typed `held` result. Reaching `MAX_OPEN_DEPEG_EVENTS` in a bounded open-event read returns `held` with `depeg-open-event-limit-reached`; initial detection and confirmation holds leave event/pending mutations untouched, while the later orphan-cleanup guard skips only its own mutations. A hold is not a thrown error and does not increment `depegErrorCount`. On both main and fallback publication paths, it sets sync `status = "degraded"`, `metadata.reason` and `depegHeldReason` to that reason, and `depegPipelineSucceeded` / `capabilities.depegPipeline` to false. Stablecoin cache publication remains independent. DDR therefore defers forecast locks with `depeg-pipeline-unhealthy`, rather than treating a fulfilled capacity-limited stage as healthy.
 
-The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), which builds shared `eventsByCoin` and `pegDataById` maps. The half-hourly, DEX-publication-triggered `prepare-safety-score-v9-input` job is the only writer of the producer-published `peg-analytics` D1 cache row and the exact V9 peg-provenance seed. `/api/peg-summary` accepts the analytics row for up to 30 minutes (one producer interval) and falls back to direct compute on a miss or stale/invalid row. `GET /api/report-cards/v9` reads only the separately accepted canonical V9 publication.
+The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), which builds shared `eventsByCoin` and `pegDataById` maps. The charts lane writes the producer-published `peg-analytics` D1 cache row every 30 minutes: the hourly, DEX-publication-triggered `prepare-safety-score-v9-input` job at `:16` (also the only writer of the exact V9 peg-provenance seed) and the same job's standalone refresh when it skips preparation at `:46`. `/api/peg-summary` accepts the analytics row for up to 30 minutes (one producer interval) and falls back to direct compute on a miss or stale/invalid row. `GET /api/report-cards/v9` reads only the separately accepted canonical V9 publication.
 
 Current peg-summary observations are rederived from the latest stablecoins snapshot through `deriveCurrentPegObservationMap`, not from a numeric price plus an older cached analytics reference. Nominal or missing primary observations publish `currentPriceUnavailable: true` and `currentDeviationBps: null`; they are excluded from observed at-peg counts. Historical analytics fields remain attached to their accepted generation. If canonical incident projections cannot be read during a fallback recompute, the endpoint retains an available accepted analytics snapshot with `incident-projection-read-failed` and `no-store`, or returns explicit `503` when none exists.
 
