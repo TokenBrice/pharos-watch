@@ -1,14 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import { isPausedSentinel, isTelegramSnoozeActive } from "@shared/lib/telegram-delivery-policy";
 import type { MiniAppPrimaryAction, MiniAppScreenProps, TelegramMiniAppState } from "./types";
 import { useTelegramMainButton } from "./use-telegram-main-button";
 import { useTelegramBridge } from "./use-telegram-bridge";
 import { useMiniAppMutations } from "./use-mini-app-mutations";
-import { miniAppErrorMessage, MiniAppRequestError } from "./error-messages";
+import { useMiniAppSessionLoader } from "./use-mini-app-session-loader";
 import { hasAnyCoverage } from "./format";
 import { PrimaryActionContext } from "./primary-action";
 import { ForgottenView } from "./components/ForgottenView";
@@ -21,15 +20,9 @@ import { CoinScreen } from "./components/CoinScreen";
 import { AddCoinsScreen } from "./components/AddCoinsScreen";
 import { AddGroupScreen, GroupScreen } from "./components/GroupScreens";
 import { SettingsScreen } from "./components/SettingsScreen";
-import {
-  isMiniAppVersionMismatch,
-  postMiniAppSnapshot,
-  refreshMiniAppBundleOnce,
-  type TelegramMiniAppClientSnapshot,
-} from "./mini-app-api";
+import type { TelegramMiniAppClientSnapshot } from "./mini-app-api";
 import { relaunchPayloadForScreen, useMiniAppView } from "./use-mini-app-view";
 
-const SESSION_ENDPOINT = API_PATHS.telegramMiniAppSession();
 /** Bot DM deep link that triggers the synthetic `/sample` alert (the Mini App cannot call the Bot API). */
 const BOT_DM_SAMPLE_LINK = `${TELEGRAM_BOT_URL}?start=sample`;
 /** When the tab returns to visible after being hidden longer than this, refetch the session to avoid stale state. */
@@ -49,8 +42,8 @@ export function PharosWatchBotMiniAppClient() {
   const { screen, depth, initializeFromStartParam, push, back, showSettings } = useMiniAppView();
   // Session network status. The bridge hook owns the Telegram probe lifecycle; this state only
   // tracks the session fetch + the "missing launch data" terminal error after the bridge resolves.
-  const [status, setStatus] = useState<MiniAppSessionStatusValue>("loading");
-  const [sessionMessage, setSessionMessage] = useState<string | null>(null);
+  const [sessionStatus, setSessionStatus] = useState<MiniAppSessionStatusValue>("loading");
+  const [loadMessage, setLoadMessage] = useState<string | null>(null);
   const [refreshedAtMs, setRefreshedAtMs] = useState<number | null>(null);
   // Telegram never refreshes initData inside a running Mini App, so a session
   // `stale-auth` is terminal: no refresh can succeed without a fresh launch.
@@ -71,6 +64,14 @@ export function PharosWatchBotMiniAppClient() {
     backButtonVisible: !forgotten && depth > 1,
     onSettings: forgotten ? undefined : onTelegramSettings,
   });
+  const status: MiniAppSessionStatusValue = bridgeStatus === "preview"
+    ? "preview"
+    : bridgeStatus === "missing"
+      ? "error"
+      : sessionStatus;
+  const sessionMessage = bridgeStatus === "missing"
+    ? "Telegram didn't pass your launch details. Close and reopen from PharosWatchBot."
+    : loadMessage;
 
   const applyConfirmedSnapshot = useCallback((snapshot: TelegramMiniAppClientSnapshot) => {
     if (terminalRef.current) return;
@@ -138,45 +139,21 @@ export function PharosWatchBotMiniAppClient() {
     return () => window.clearTimeout(timer);
   }, [state]);
 
-  const loadSession = useCallback(async (nextInitData: string) => {
-    if (terminalRef.current) return;
-    setStatus("loading");
-    try {
-      const snapshot = await postMiniAppSnapshot(SESSION_ENDPOINT, { initData: nextInitData });
-      if (terminalRef.current) return;
-      applyConfirmedSnapshot(snapshot);
-      setStatus("ready");
-      setSessionMessage(null);
-    } catch (err) {
-      if (terminalRef.current) return;
-      if (isMiniAppVersionMismatch(err) && refreshMiniAppBundleOnce({
-        contractVersion: err.serverContractVersion,
-        catalogVersion: err.serverCatalogVersion,
-      })) {
-        return;
-      }
-      if (err instanceof MiniAppRequestError && err.code === "stale-auth") setSessionAuthExpired(true);
-      setStatus(stateRef.current ? "stale" : "error");
-      setSessionMessage(miniAppErrorMessage(err, "session"));
-    }
-  }, [applyConfirmedSnapshot]);
+  const loadSession = useMiniAppSessionLoader({
+    terminalRef,
+    stateRef,
+    applyConfirmedSnapshot,
+    setStatus: setSessionStatus,
+    setSessionMessage: setLoadMessage,
+    setSessionAuthExpired,
+  });
 
-  // Translate bridge resolution into our session-level status and kick off the initial fetch.
-  // Runs once per bridge-status transition; downstream session reloads go through `loadSession`.
+  // Kick off the initial fetch once the bridge resolves; downstream session reloads go through `loadSession`.
+  // Preview and missing-launch-data outcomes are derived above, not stored.
   useEffect(() => {
     if (bridgeStatus === "loading") return;
     initializeFromStartParam(startParam);
-    if (bridgeStatus === "preview") {
-      setStatus("preview");
-      return;
-    }
-    if (bridgeStatus === "missing") {
-      setStatus("error");
-      setSessionMessage("Telegram didn't pass your launch details. Close and reopen from PharosWatchBot.");
-      return;
-    }
-    // bridgeStatus === "ready"
-    if (initData) void loadSession(initData);
+    if (bridgeStatus === "ready" && initData) void loadSession(initData);
   }, [bridgeStatus, initData, initializeFromStartParam, loadSession, startParam]);
 
   // Eruda debug toggle (?debug=eruda) — dev-only; the production short-circuit and
@@ -208,9 +185,9 @@ export function PharosWatchBotMiniAppClient() {
   // 24h, so only a session-read `stale-auth` stops refreshing.
   const authExpired = sessionAuthExpired || state?.viewer.mutationBlockReason === "stale-auth" || staleAuth != null;
   const triggerRefresh = useCallback(() => {
-    if (terminalRef.current || sessionAuthExpired || !initData || status === "loading" || isMutating) return;
+    if (forgotten || sessionAuthExpired || !initData || status === "loading" || isMutating) return;
     void loadSession(initData);
-  }, [initData, isMutating, loadSession, sessionAuthExpired, status]);
+  }, [forgotten, initData, isMutating, loadSession, sessionAuthExpired, status]);
 
   // visibilitychange — refetch when returning after >10 min hidden
   useEffect(() => {
@@ -284,7 +261,7 @@ export function PharosWatchBotMiniAppClient() {
         ? { text: state?.viewer.chatId != null ? "Reopen to edit" : "Reopen Mini App", onClick: handleStaleAuthRelaunch }
         : null;
     }
-    if ((status === "error" || status === "stale") && initData) return { text: "Try again", onClick: triggerRefresh };
+    if ((status === "error" || status === "stale") && initData) return { text: "Try again", onClick: () => triggerRefresh() };
     if (!canMutate || !state) return null;
     if (screen.name === "home" && !newUser) {
       const failure = state.health.recentFailureClass;

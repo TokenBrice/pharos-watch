@@ -121,7 +121,6 @@ export function useTimelineFeedInteractions({
     if (prev != null && loadedCount > prev) {
       const delta = loadedCount - prev;
       const ofTotal = total != null ? ` ${loadedCount} of ${total} shown.` : "";
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- the aria-live text is derived from the committed page count delta.
       setLoadAnnouncementState({
         filterSignature,
         message: `Loaded ${delta} more event${delta === 1 ? "" : "s"}.${ofTotal}`,

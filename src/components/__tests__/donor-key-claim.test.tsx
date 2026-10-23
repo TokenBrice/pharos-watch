@@ -131,4 +131,14 @@ describe("DonorKeyClaim failure details", () => {
     expect(alert.textContent).toContain("2026-09-06");
     expect(screen.queryByText(token)).toBeNull();
   });
+
+  it("shows the wallet hand-off after a claim attempt without a wallet and drops it once one injects", async () => {
+    render(<DonorKeyClaim />);
+    expect(screen.queryByText("Open in MetaMask")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Claim supporter key" }));
+    expect(screen.getByText("Open in MetaMask")).toBeTruthy();
+    vi.stubGlobal("ethereum", { request: vi.fn() });
+    act(() => { window.dispatchEvent(new Event("ethereum#initialized")); });
+    expect(screen.queryByText("Open in MetaMask")).toBeNull();
+  });
 });
