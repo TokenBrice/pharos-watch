@@ -135,7 +135,7 @@ describe("handleYieldRankings summary projection", () => {
       ],
       _meta: {
         updatedAt: UPDATED_AT, ageSeconds: 60, status: "fresh",
-        assessedAt: UPDATED_AT + 60, freshBudgetSec: 7200, degradedBudgetSec: 14400,
+        assessedAt: UPDATED_AT + 60, freshBudgetSec: 10800, degradedBudgetSec: 21600,
       },
     });
     // B36: the lane, the role, the bounded alternate list and the dependency

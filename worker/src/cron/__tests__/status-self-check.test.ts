@@ -412,7 +412,7 @@ describe("runStatusSelfCheck", () => {
     });
     expect(computeRawStatusMock).toHaveBeenCalledWith(expect.anything(), expect.any(Number));
     expect(writeStatusPublicHealthSnapshotMock).toHaveBeenCalledExactlyOnceWith(
-      expect.anything(), expect.any(Number), expect.objectContaining({ status: expect.any(String) }),
+      expect.anything(), expect.any(Number), expect.objectContaining({ status: expect.any(String) }), expect.any(String),
     );
     expect(firstSnapshotWrite[3]).not.toHaveProperty("publicHealth");
     expect(firstSnapshotWrite[3]?.supplements).toBeDefined();

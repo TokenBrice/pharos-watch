@@ -61,7 +61,7 @@ afterEach(() => {
 });
 
 describe("public verdict", () => {
-  it("renders held Safety Scores as a separate degraded row", () => {
+  it("renders in-budget held Safety Scores as an operational notice row", () => {
     const health = makeHealthyHealthResponse();
     health.safetyScorePublication = {
       ...health.safetyScorePublication!, status: "held",
@@ -70,8 +70,9 @@ describe("public verdict", () => {
     };
     mockHealth(health);
     render(<StatusClient faqItems={[]} />);
-    expect(screen.getByRole("heading", { name: "Degraded: Safety Scores" })).toBeTruthy();
-    expect(within(screen.getByTestId("public-component-safety-scores")).getByText("Degraded")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Systems operational with notices" })).toBeTruthy();
+    expect(within(screen.getByTestId("public-component-safety-scores")).getByText("Operational")).toBeTruthy();
+    expect(within(screen.getByTestId("public-component-safety-scores")).getByText(/Ratings are held at the last verified snapshot/)).toBeTruthy();
     expect(within(screen.getByTestId("public-component-risk-signals")).getByText("Operational")).toBeTruthy();
   });
 

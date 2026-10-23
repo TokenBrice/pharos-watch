@@ -105,7 +105,7 @@ function buildDashboardNotices({
     const divergence = healthDiffersFromStatus ? `Public /api/health differs from /api/status (${status}). ` : "";
     const reasons = healthData.warnings.map((warning) => getPublicHealthWarningPresentation(warning, healthData).detail);
     const sync = healthData.mintBurn.sync;
-    if (getPublicMintBurnStatus(sync) !== "healthy" || sync.warning != null || (healthData.mintBurn.majorStaleCount != null && healthData.mintBurn.majorStaleCount > 0)) {
+    if (getPublicMintBurnStatus(sync, timestamp) !== "healthy" || sync.warning != null || (healthData.mintBurn.majorStaleCount != null && healthData.mintBurn.majorStaleCount > 0)) {
       if (sync.warning) reasons.push(sync.warning);
       if (sync.lastSuccessfulSyncAt != null) reasons.push(`Last successful mint/burn sync ${formatElapsedSeconds(Math.max(0, timestamp - sync.lastSuccessfulSyncAt))} ago.`);
       if (healthData.mintBurn.majorStaleCount != null && healthData.mintBurn.majorStaleCount > 0 && healthData.mintBurn.staleMajorSymbols != null) reasons.push(`Impacted majors: ${healthData.mintBurn.staleMajorSymbols.join(", ")}.`);

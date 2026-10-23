@@ -5,8 +5,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
 import { computeRawStatus } from "../../lib/status-evaluation";
 import { assessPublicHealth, buildPublicHealthResponse } from "../../lib/public-health-assessment";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER } from "@shared/lib/public-health";
+import { getPublicProducerGraceBudget, PUBLIC_PRODUCER_INTERVAL_SEC } from "@shared/lib/public-health";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { StatusResponseSchema } from "@shared/types/status";
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
@@ -111,10 +110,10 @@ describe("handleStatus", () => {
   it.each(["fresh", "boundary", "stale", "outage", "held", "missing-accepted", "missing", "read-failed", "future"] as const)(
     "shares the public Safety floor and named cause through raw admin status (%s)", async (kind) => {
       const now = Math.floor(Date.now() / 1000);
-      const budget = API_FRESHNESS_MAX_AGE_SEC.reportCards;
-      const acceptedAge = kind === "boundary" ? budget
-        : kind === "stale" ? budget + 1
-        : kind === "outage" ? budget * PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER + 1
+      const budget = getPublicProducerGraceBudget(PUBLIC_PRODUCER_INTERVAL_SEC.safetyScores);
+      const acceptedAge = kind === "boundary" ? budget.delayedAfterSec
+        : kind === "stale" ? budget.delayedAfterSec + 1
+        : kind === "outage" ? budget.outageAfterSec + 1
         : kind === "future" ? -3600 : 60;
       const held = kind === "held" || kind === "missing-accepted";
       const publication: V9PublicationHealth = {
@@ -157,18 +156,19 @@ describe("handleStatus", () => {
         request: fixtureMakeApiRequest("/api/status?refresh=live", { adminKey: "secret-key" }),
       });
       const body = StatusResponseSchema.parse(await readJsonResponse(res, 200));
-      const expectedStatus = kind === "fresh" || kind === "boundary" ? "healthy"
+      // A hold with in-budget accepted scores is an info notice, never an availability floor.
+      const expectedStatus = kind === "fresh" || kind === "boundary" || kind === "held" ? "healthy"
         : kind === "outage" ? "stale" : "degraded";
       expect(assessment.safetyScoreImpactStatus).toBe(expectedStatus);
       expect(body.availabilityStatus, JSON.stringify(body.causes.availability)).toBe(expectedStatus);
       expect(body.rawOverallStatus).toBe(expectedStatus);
       const safetyCauses = body.causes.availability.filter((cause) => cause.code.startsWith("safety_score_publication_"));
       if (expectedStatus === "healthy") {
-        expect(safetyCauses).toEqual([]);
+        expect(safetyCauses).toEqual(kind === "held"
+          ? [expect.objectContaining({ code: "safety_score_publication_held", severity: "info" })] : []);
         expect(publicHealth.components?.find((component) => component.id === "safety-scores")?.state).toBe("operational");
       } else {
         const expectedCode = kind === "missing-accepted" ? "safety_score_publication_missing"
-          : kind === "held" ? "safety_score_publication_held"
           : kind === "stale" || kind === "outage" ? "safety_score_publication_stale"
           : "safety_score_publication_unavailable";
         expect(safetyCauses).toEqual([expect.objectContaining({
@@ -176,7 +176,7 @@ describe("handleStatus", () => {
         })]);
         expect(body.causes.overall).toContainEqual(safetyCauses[0]);
         expect(publicHealth.components?.find((component) => component.id === "safety-scores")?.state)
-          .toBe(kind === "outage" ? "outage" : "degraded");
+          .toBe(kind === "outage" ? "outage" : kind === "stale" ? "delayed" : "degraded");
       }
       if (kind === "read-failed") expect(safetyCauses[0]?.message).toContain("safety-score-publication-read-failed");
       if (kind === "held") expect(safetyCauses[0]?.message).toContain("redemption-stale");
@@ -396,8 +396,10 @@ describe("handleStatus", () => {
 
   it.each([
     ["degraded", 600, "healthy", "mint_burn_public_degraded", "info"],
-    ["degraded", API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows * 2, "stale", "mint_burn_public_stale", "critical"],
-    ["error", 600, "degraded", "mint_burn_public_degraded", "warning"],
+    ["degraded", getPublicProducerGraceBudget(PUBLIC_PRODUCER_INTERVAL_SEC.mintBurn).delayedAfterSec + 1, "degraded", "mint_burn_public_degraded", "warning"],
+    ["degraded", getPublicProducerGraceBudget(PUBLIC_PRODUCER_INTERVAL_SEC.mintBurn).degradedAfterSec + 1, "stale", "mint_burn_public_stale", "critical"],
+    // A failed run inside budget is a notice; failures surface through success age.
+    ["error", 600, "healthy", "mint_burn_public_degraded", "info"],
     ["degraded", null, "stale", "mint_burn_public_stale", "critical"],
   ] as const)("grades mint/burn run %s with success age %s as %s", async (runStatus, successAgeSec, expectedStatus, causeCode, severity) => {
     const now = Math.floor(Date.now() / 1000);

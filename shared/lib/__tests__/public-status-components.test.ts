@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { API_FRESHNESS_MAX_AGE_SEC } from "../api-freshness";
+import { CRON_INTERVALS } from "../cron-jobs";
 import { makeHealthyHealthResponse } from "../../test-utils/health-fixtures";
 import {
   buildPublicHeadline,
@@ -8,7 +8,7 @@ import {
   PUBLIC_CACHE_COMPONENT,
   PUBLIC_STATUS_CACHE_REGISTRY_KEYS,
 } from "../public-status-components";
-import { getPublicMintBurnStatus } from "../public-health";
+import { countPublicImpactOpenCircuits, getPublicMintBurnStatus, getPublicProducerGraceBudget } from "../public-health";
 import { getStablecoinPublicationImpactStatus } from "../status-thresholds";
 import { PUBLIC_COMPONENT_LABEL } from "../classification/operational-status";
 import { PUBLIC_STATUS_COMPONENT_IDS, type HealthResponse } from "../../types/status";
@@ -84,22 +84,24 @@ describe("public status components", () => {
   });
 
   it.each([
-    [30, false, "degraded", "mint-burn-run-failed"],
-    [5401, true, "degraded", "mint-burn-sync:stale"],
-    [10801, true, "outage", "mint-burn-sync:outage"],
-  ] as const)("keeps mint/burn critical outcomes and age grace independent (%ss, healthy=%s)", (age, criticalLaneHealthy, state, reason) => {
+    [30, false, "operational", "mint-burn-run-failed"],
+    [5400, true, "operational", null],
+    [5401, true, "delayed", "mint-burn-sync:delayed"],
+    [10801, true, "degraded", "mint-burn-sync:stale"],
+    [21601, true, "outage", "mint-burn-sync:outage"],
+  ] as const)("grades mint/burn by success age on the producer grace rule; run outcomes are notices (%ss, healthy=%s)", (age, criticalLaneHealthy, state, reason) => {
     const health = makeHealthyHealthResponse();
     health.mintBurn.sync = { ...health.mintBurn.sync, lastSuccessfulSyncAt: NOW - age,
       freshnessStatus: age > 5400 ? "stale" : "fresh", criticalLaneHealthy };
     health.blacklist = { ...health.blacklist, missingAmounts: 200, missingRatio: 0.2 };
-    expect(component(health, "mint-burn")).toMatchObject({ state, reasons: expect.arrayContaining([reason]) });
+    expect(component(health, "mint-burn")).toMatchObject({ state, reasons: reason == null ? [] : expect.arrayContaining([reason]) });
     expect(component(health, "blacklist")).toMatchObject({ state: "degraded", reasons: ["blacklist-amounts-missing"] });
   });
 
   it("keeps a USYC-sized ($2.4B) missing listing and a week-old price gap as operational notices", () => {
     const health = assetScopedHealth();
     expect(getStablecoinPublicationImpactStatus(health.stablecoinPublication!)).toBe("healthy");
-    expect(getPublicMintBurnStatus(health.mintBurn.sync)).toBe("healthy");
+    expect(getPublicMintBurnStatus(health.mintBurn.sync, health.timestamp)).toBe("healthy");
     const projection = projectPublicStatus(health);
     expect(projection.headline).toMatchObject({
       state: "operational", title: "Systems operational with notices", affected: ["stablecoin-data", "mint-burn"],
@@ -117,7 +119,8 @@ describe("public status components", () => {
   it.each([
     [4, "operational", "operational", ["publication-incomplete:asset-scoped", "price-coverage-incomplete:asset-scoped"]],
     [19, "operational", "operational", ["publication-incomplete:asset-scoped", "price-coverage-incomplete:asset-scoped"]],
-    [20, "degraded", "degraded", ["publication-incomplete", "price-coverage-breadth"]],
+    // Unpublished assets count once, as publication gaps, never again as price breadth.
+    [20, "degraded", "degraded", ["publication-incomplete", "price-coverage-incomplete:asset-scoped"]],
   ] as const)("projects %s immaterial listing and price gaps of 396 by cohort breadth", (count, componentState, headlineState, reasons) => {
     const health = assetScopedHealth();
     const assets = Array.from({ length: count }, (_, index) => ({
@@ -176,7 +179,7 @@ describe("public status components", () => {
   );
 
 
-  it("degrades held Safety Scores with their machine reason without changing Risk signals", () => {
+  it("keeps held Safety Scores with accepted, in-budget scores as a notice with their machine reason", () => {
     const health = makeHealthyHealthResponse();
     health.safetyScorePublication = {
       ...health.safetyScorePublication!,
@@ -186,10 +189,10 @@ describe("public status components", () => {
       reasons: [{ code: "redemption-stale" }],
     };
     expect(component(health, "safety-scores")).toMatchObject({
-      state: "degraded",
+      state: "operational",
       reasons: ["safety-score-publication-held", "safety-score-publication-held:redemption-stale"],
-      ageSeconds: 30,
     });
+    expect(projectPublicStatus(health).headline).toMatchObject({ state: "operational", affected: ["safety-scores"] });
     expect(component(health, "safety-scores").summary).toContain(
       `Ratings are held at the last verified snapshot since ${new Date((NOW - 60) * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC`,
     );
@@ -198,29 +201,36 @@ describe("public status components", () => {
       .every((item) => item.state === "operational")).toBe(true);
   });
 
-  it("uses the accepted score clock and existing budget, with the standard outage grace", () => {
+  it("grades the accepted score clock on the producer grace rule: delayed 3x, degraded 6x, outage 12x", () => {
     const health = makeHealthyHealthResponse();
-    const budget = API_FRESHNESS_MAX_AGE_SEC.reportCards;
-    health.safetyScorePublication = { ...health.safetyScorePublication!, acceptedAtSec: NOW - budget, attemptedAtSec: NOW };
-    expect(component(health, "safety-scores").state).toBe("operational");
-    health.safetyScorePublication.acceptedAtSec -= 1;
-    expect(component(health, "safety-scores")).toMatchObject({
-      state: "degraded", reasons: ["safety-score-publication:stale"],
-      budget: { delayedAfterSec: budget, degradedAfterSec: budget, outageAfterSec: budget * 2 },
+    const interval = CRON_INTERVALS["compute-safety-score-v9"];
+    const budget = { delayedAfterSec: 3 * interval, degradedAfterSec: 6 * interval, outageAfterSec: 12 * interval };
+    expect(getPublicProducerGraceBudget(interval)).toEqual(budget);
+    const at = (age: number, status: "accepted" | "held" = "accepted") => {
+      health.safetyScorePublication = { ...health.safetyScorePublication!, status, acceptedAtSec: NOW - age, attemptedAtSec: NOW };
+      return component(health, "safety-scores");
+    };
+    expect(at(budget.delayedAfterSec).state).toBe("operational");
+    expect(at(budget.delayedAfterSec + 1)).toMatchObject({ state: "delayed", reasons: ["safety-score-publication:delayed"], budget });
+    expect(at(budget.degradedAfterSec + 1)).toMatchObject({ state: "degraded", reasons: ["safety-score-publication:stale"] });
+    expect(at(budget.outageAfterSec)).toMatchObject({ state: "degraded" });
+    // A genuine outage still surfaces, held or not.
+    expect(at(budget.outageAfterSec + 1)).toMatchObject({ state: "outage", reasons: ["safety-score-publication:outage"] });
+    expect(at(budget.outageAfterSec + 1, "held")).toMatchObject({
+      state: "outage", reasons: expect.arrayContaining(["safety-score-publication:outage", "safety-score-publication-held"]),
     });
-    health.safetyScorePublication.acceptedAtSec = NOW - budget * 2 - 1;
-    expect(component(health, "safety-scores").state).toBe("outage");
   });
 
   it("grades publication ages at response time without renewing the assessment clock", () => {
     const health = makeHealthyHealthResponse();
     health.assessedAt = NOW;
     health.timestamp = NOW + 60;
+    const delayedAfterSec = 3 * CRON_INTERVALS["compute-safety-score-v9"];
     health.safetyScorePublication = {
-      ...health.safetyScorePublication!, acceptedAtSec: NOW - API_FRESHNESS_MAX_AGE_SEC.reportCards,
+      ...health.safetyScorePublication!, acceptedAtSec: NOW - delayedAfterSec,
     };
     expect(component(health, "safety-scores")).toMatchObject({
-      state: "degraded", ageSeconds: API_FRESHNESS_MAX_AGE_SEC.reportCards + 60,
+      state: "delayed", ageSeconds: delayedAfterSec + 60,
     });
     expect(health.assessedAt).toBe(NOW);
   });
@@ -301,6 +311,19 @@ describe("public status components", () => {
     expect(component(health, "data-refresh").reasons).toContain("scheduler:unavailable:slot-start-query-failed");
   });
 
+  it("counts open circuits per upstream provider before the public quorum", () => {
+    const health = makeHealthyHealthResponse();
+    const open = { state: "open" as const, consecutiveFailures: 3, lastFailureAt: NOW, lastSuccessAt: null, openedAt: NOW };
+    health.circuits = { "dexscreener-prices": open, "dexscreener-prices-refresh": open, "coingecko-prices": open };
+    expect(countPublicImpactOpenCircuits(health.circuits)).toBe(2);
+    expect(component(health, "data-refresh").state).toBe("operational");
+    health.circuits["defillama-coins"] = open;
+    expect(component(health, "data-refresh")).toMatchObject({
+      state: "degraded",
+      reasons: ["upstream-circuits-open:3:coingecko-prices,defillama-coins,dexscreener-prices,dexscreener-prices-refresh"],
+    });
+  });
+
   it("does not let operational listing and price notices explain a degraded raw verdict", () => {
     const health = assetScopedHealth();
     health.status = "degraded";
@@ -332,7 +355,7 @@ describe("public status components", () => {
     expect(component(health, "website-api")).toMatchObject({ state: "degraded", reasons: ["d1-capacity-warning"] });
   });
 
-  it("reports a degraded mint/burn run as degraded even while its sync is only delayed", () => {
+  it("keeps a partial mint/burn run inside budget a notice, never public orange", () => {
     const health = makeHealthyHealthResponse();
     health.mintBurn = {
       ...health.mintBurn,
@@ -343,7 +366,9 @@ describe("public status components", () => {
         warning: "Critical mint/burn lane is running in degraded mode; coverage may be partial.",
       },
     };
-    expect(component(health, "mint-burn")).toMatchObject({ state: "degraded", reasons: ["mint-burn-sync:delayed", "mint-burn-run-degraded"] });
+    expect(component(health, "mint-burn")).toMatchObject({ state: "operational", reasons: ["mint-burn-run-degraded"] });
+    health.mintBurn.sync.lastSuccessfulSyncAt = health.timestamp - 6_000;
+    expect(component(health, "mint-burn")).toMatchObject({ state: "delayed", reasons: ["mint-burn-sync:delayed", "mint-burn-run-degraded"] });
   });
 
   it("carries since forward only while the state is unchanged", () => {

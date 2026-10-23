@@ -14,7 +14,7 @@ const STATUS_FAQ_ITEMS = [
   {
     question: "What does System Status monitor?",
     answer:
-      "System Status shows each public Pharos component, such as the website and API, stablecoin prices, charts, Safety Scores, risk signals and event feeds, with its current state and 30 days of history. Safety Scores are degraded when publication is held or the last accepted scores exceed their freshness budget. History before a component began being monitored is unknown, not operational.",
+      "System Status shows each public Pharos component, such as the website and API, stablecoin prices, charts, Safety Scores, risk signals and event feeds, with its current state and 30 days of history. A day is coloured only when a problem lasted an hour or more that day, or any outage occurred; shorter blips are listed in the day's tooltip. Safety Scores are graded by the age of the last accepted scores; a held publication is shown as a notice while those scores stay inside their freshness budget. History before a component began being monitored is unknown, not operational.",
   },
   {
     question: "Why can status differ from a single endpoint response?",
