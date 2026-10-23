@@ -61,6 +61,7 @@ invocation_logs = true
 ADDRESS_PRICE_PROVIDERS_ENABLED = "coingecko-onchain-address"
 PROJECT_TAPE_PLACED_EXECUTOR = "on"
 WORKER_RESERVE_QUEUE_MODE = "on"
+WORKER_SLOT_CATCH_UP_MODE = "on"
 
 [[rules]]
 type = "Data"
@@ -83,6 +84,9 @@ describe("check-worker-wrangler-config", () => {
     expect(evaluateWorkerWranglerConfig(VALID_CONFIG.replace(
       'WORKER_RESERVE_QUEUE_MODE = "on"', 'WORKER_RESERVE_QUEUE_MODE = "off"',
     )).failed).toBe(false);
+    expect(evaluateWorkerWranglerConfig(VALID_CONFIG.replace(
+      'WORKER_SLOT_CATCH_UP_MODE = "on"', 'WORKER_SLOT_CATCH_UP_MODE = "off"',
+    )).failed).toBe(false);
     for (const [before, after] of [
       ["max_batch_size = 1", "max_batch_size = 2"],
       ["max_batch_timeout = 0", "max_batch_timeout = 1"],
@@ -90,6 +94,7 @@ describe("check-worker-wrangler-config", () => {
       ["max_retries = 3", "max_retries = 100"],
       ["retry_delay = 60", "retry_delay = 0"],
       ['WORKER_RESERVE_QUEUE_MODE = "on"', 'WORKER_RESERVE_QUEUE_MODE = "maybe"'],
+      ['WORKER_SLOT_CATCH_UP_MODE = "on"', 'WORKER_SLOT_CATCH_UP_MODE = "maybe"'],
       ['binding = "RESERVE_CONTINUATION_QUEUE"', 'binding = "OTHER"'],
       ['dead_letter_queue = "pharos-reserve-continuation-dlq"', 'dead_letter_queue = "other"'],
     ]) expect(evaluateWorkerWranglerConfig(VALID_CONFIG.replace(before, after)).failed).toBe(true);
