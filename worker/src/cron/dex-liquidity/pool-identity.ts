@@ -168,6 +168,9 @@ function resolvePoolShapeFamily(poolType?: string | null, protocol?: string | nu
   // knows it from the factory. Keep direct stable pools in the same generic
   // family so one physical pool dedupes across all three (unique match only).
   if (normalized === "aero-stable") return "generic";
+  // Aero Slipstream rows (direct `aero-slipstream-<fee>`, DefiLlama
+  // `aero-slipstream`) are concentrated liquidity, never the basic family.
+  if (normalized.startsWith("aero-slipstream")) return "concentrated";
   if (normalized.includes("orderbook")) return "orderbook";
   if (normalized.includes("weighted")) {
     // DL Balancer V3 rows often omit the stable subtype in `project`, so the

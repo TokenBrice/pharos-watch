@@ -119,6 +119,29 @@ describe("refreshStaleRegistryPools", () => {
     expect(rows).not.toContainEqual(expect.objectContaining({ pool_id: `base:${b(3)}`, source: "cg_onchain" }));
   });
 
+  it("refreshes direct Aero rows on CoinGecko networks and leaves Arc unsupported", async () => {
+    const { db } = fixtures.open();
+    const a = (index: number) => addr("ae", index);
+    await seed(db, [
+      { poolId: `base:${a(1)}`, chain: "base", source: "direct_api", poolType: "aero-slipstream-1bp", tvlUsd: 20_000_000, refreshedAt: NOW - HOUR },
+      { poolId: `base:${a(2)}`, chain: "base", source: "direct_api", poolType: "aero-stable", tvlUsd: 30_000_000, refreshedAt: NOW - HOUR },
+      { poolId: `arc:${a(3)}`, chain: "arc", source: "direct_api", poolType: "aero-volatile", tvlUsd: 40_000_000, refreshedAt: NOW - HOUR },
+    ]);
+    const deps = makeDeps(async (_network, addresses) => ({
+      transportOk: true,
+      schemaDegraded: false,
+      pools: addresses.map((address) => usdcPool("base", address, { dex: "aero-slipstream-base" })),
+    }));
+
+    await refreshStaleRegistryPools({
+      db, cgApiKey: "key", stablecoins: STABLECOINS, nowSec: NOW, deadlineMs: Date.now() + 60_000, dependencies: deps,
+    });
+
+    expect(deps.fetchCgPoolsByAddressesWithStatus.mock.calls.map(([network, addresses]) => [network, addresses])).toEqual([
+      ["base", [a(2), a(1)]],
+    ]);
+  });
+
   it("writes only admitted rows, reports each refusal by reason, and backs refused pools off", async () => {
     const { sqlite, db } = fixtures.open();
     const q = (index: number) => addr("cc", index);

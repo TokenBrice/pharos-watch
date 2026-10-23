@@ -527,6 +527,21 @@ describe("Aero basic pool identity", () => {
     expect(getIdentityDedupReason(defillama, known, incomingCounts(), { allowOptionalWildcard: true })).not.toBeNull();
   });
 
+  it("keeps a Slipstream pool of the same pair out of the basic-pool match", () => {
+    const known = createKnownPoolIdentityIndex();
+    registerKnownPoolIdentity(known, direct("aero-stable", "0x11cc6f32930c20e3cfb01fc35bd37ed20d3ed82f"));
+    registerKnownPoolIdentity(known, buildPoolIdentity({
+      chain: "base", protocol: "aero-slipstream", poolAddressOrId: "0xd448990883e3bf9cdd8ebca368a3ecf9d629aaf7",
+      tokenAddresses: tokens, poolType: "aero-slipstream-1bp", feeTierBps: 1, isStable: true,
+    }));
+    const slipstreamDl = buildPoolIdentity({
+      chain: "base", protocol: "aero-slipstream", poolAddressOrId: "7b4c-uuid", tokenAddresses: tokens,
+      poolType: "aero-slipstream-5bp", isStable: true,
+    });
+    expect(slipstreamDl.derivedMatchKey).not.toBe(defillama.derivedMatchKey);
+    expect(getIdentityDedupReason(defillama, known, incomingCounts())).not.toBeNull();
+  });
+
   it("does not collapse when a stable and a volatile pool share the pair", () => {
     const known = createKnownPoolIdentityIndex();
     registerKnownPoolIdentity(known, direct("aero-stable", "0x11cc6f32930c20e3cfb01fc35bd37ed20d3ed82f"));

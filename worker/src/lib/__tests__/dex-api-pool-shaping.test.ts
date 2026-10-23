@@ -88,6 +88,9 @@ describe("isPreferredDirectApiPool", () => {
       tvlUsd: 150_000_000,
       volume24hUsd: 0,
     }))).toBe(true);
+    for (const source of ["aero-slipstream", "aero-basic"] as const) {
+      expect(isPreferredDirectApiPool(makeDirectPool({ source, tvlUsd: 150_000_000, volume24hUsd: null }))).toBe(true);
+    }
   });
 
   it("keeps zero-volume non-Slipstream pools out of preferred duplicate suppression", () => {

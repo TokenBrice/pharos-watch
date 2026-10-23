@@ -11,7 +11,7 @@ import {
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { buildChainAddressKey } from "./token-resolution";
 import { classifyClPoolType, normalizeFeeRateFromBps } from "./direct-source-helpers";
-import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
+import { DIRECT_API_PROVIDER_TIMEOUT_MS, DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
 import {
   captureClSourcePools,
   decodeStagedMulticallResult,
@@ -60,9 +60,18 @@ export const AERO_DEPLOYMENTS: readonly {
 
 export const AERO_CHAINS: readonly string[] = AERO_DEPLOYMENTS.map((deployment) => deployment.chain);
 
-/** Fail closed instead of silently truncating a factory that outgrew the reviewed read shape. */
+/**
+ * Per-run read bound. A larger factory reads its oldest pools (where the
+ * long-lived liquidity sits) and reports the chain degraded with a named
+ * `pool-count-cap` reason instead of truncating silently (#1630).
+ */
 const MAX_POOLS_PER_FACTORY = 5_000;
 const MULTICALL_BATCH_SIZE = 150;
+/**
+ * Serial chain reads stop with headroom before the outer provider timeout, so
+ * a slow late chain degrades by name instead of discarding earlier chains.
+ */
+const AERO_RUN_BUDGET_MS = DIRECT_API_PROVIDER_TIMEOUT_MS - 15_000;
 
 const FACTORY_ABI = parseAbi([
   "function allPoolsLength() view returns (uint256)",
@@ -121,6 +130,7 @@ async function readFactoryPools(
   factories: readonly `0x${string}`[],
   block: number,
   options: EvmRpcOptions,
+  warnings: string[],
 ): Promise<{ factory: `0x${string}`; pool: `0x${string}` }[]> {
   const counts = await multicallAtBlock(chain, factories.map((factory, index) => ({
     label: `count-${index}`,
@@ -131,8 +141,9 @@ async function readFactoryPools(
   factories.forEach((factory, index) => {
     const count = decodeStagedMulticallResult<bigint>(counts.get(`count-${index}`), FACTORY_ABI, "allPoolsLength");
     if (count == null) throw new Error(`pool-count-unavailable:${factory}`);
-    if (count > BigInt(MAX_POOLS_PER_FACTORY)) throw new Error(`pool-count-cap:${factory}:${count}`);
-    for (let i = 0; i < Number(count); i++) {
+    if (count > BigInt(MAX_POOLS_PER_FACTORY)) warnings.push(`pool-count-cap:${factory}:${count}`);
+    const readCount = count > BigInt(MAX_POOLS_PER_FACTORY) ? MAX_POOLS_PER_FACTORY : Number(count);
+    for (let i = 0; i < readCount; i++) {
       calls.push({
         label: `${factory}-${i}`,
         target: factory,
@@ -178,12 +189,13 @@ export function aeroBaseFeeBps(feePips: number | null): number | null {
 async function fetchAeroSlipstreamChain(
   input: AeroFetchInput,
   deployment: (typeof AERO_DEPLOYMENTS)[number],
+  warnings: string[],
 ): Promise<DexApiPool[]> {
   const { chain } = deployment;
   const options = rpcOptions(input);
   const block = await fetchEvmBlockNumber(chain, options);
   if (block == null) throw new Error("block-unavailable");
-  const listed = await readFactoryPools(chain, deployment.clFactories, block, options);
+  const listed = await readFactoryPools(chain, deployment.clFactories, block, options, warnings);
   if (listed.length === 0) return [];
 
   const tokenState = await multicallAtBlock(chain, listed.flatMap(({ pool }) => (["token0", "token1"] as const).map((fn) => ({
@@ -191,13 +203,17 @@ async function fetchAeroSlipstreamChain(
     target: pool,
     callData: encodeFunctionData({ abi: POOL_ABI, functionName: fn }),
   }))), block, options, "pool-tokens");
+  const tokens = new Map(listed.map(({ pool }) => [pool, (["token0", "token1"] as const).map((fn) =>
+    canonicalEvmAddress(decodeStagedMulticallResult<string>(tokenState.get(`${pool}-${fn}`), POOL_ABI, fn)))]));
+  // An unreadable pool is missing evidence, not a proven non-stablecoin pool.
+  const unreadable = [...tokens.values()].filter((pair) => pair.some((token) => token == null)).length;
+  if (unreadable > 0) warnings.push(`pool-tokens-unreadable:${unreadable}`);
   const pools: DexApiPool[] = [];
   for (const factory of deployment.clFactories) {
     throwIfAborted(input.signal);
-    const candidates = listed.filter((row) => row.factory === factory && (
-      isTracked(input, chain, canonicalEvmAddress(decodeStagedMulticallResult<string>(tokenState.get(`${row.pool}-token0`), POOL_ABI, "token0"))) ||
-      isTracked(input, chain, canonicalEvmAddress(decodeStagedMulticallResult<string>(tokenState.get(`${row.pool}-token1`), POOL_ABI, "token1")))
-    )).map((row) => ({ poolAddress: row.pool }));
+    const candidates = listed.filter((row) => row.factory === factory &&
+      tokens.get(row.pool)!.some((token) => isTracked(input, chain, token)),
+    ).map((row) => ({ poolAddress: row.pool }));
     if (candidates.length === 0) continue;
 
     // Factory binding, exact getPool membership, balances and sqrt price are
@@ -251,13 +267,14 @@ async function fetchAeroSlipstreamChain(
 async function fetchAeroBasicChain(
   input: AeroFetchInput,
   deployment: (typeof AERO_DEPLOYMENTS)[number],
+  warnings: string[],
 ): Promise<DexApiPool[]> {
   const { chain } = deployment;
   const options = rpcOptions(input);
   const block = await fetchEvmBlockNumber(chain, options);
   if (block == null) throw new Error("block-unavailable");
   const stableFactories = new Set<string>(deployment.stableFactories);
-  const listed = await readFactoryPools(chain, [...deployment.stableFactories, ...deployment.volatileFactories], block, options);
+  const listed = await readFactoryPools(chain, [...deployment.stableFactories, ...deployment.volatileFactories], block, options, warnings);
   if (listed.length === 0) return [];
 
   const state = await multicallAtBlock(chain, listed.flatMap(({ pool }) => (["factory", "metadata"] as const).map((fn) => ({
@@ -265,14 +282,19 @@ async function fetchAeroBasicChain(
     target: pool,
     callData: encodeFunctionData({ abi: POOL_ABI, functionName: fn }),
   }))), block, options, "pool-state");
+  let unreadable = 0;
   const decoded = listed.flatMap((row) => {
     const factory = canonicalEvmAddress(decodeStagedMulticallResult<string>(state.get(`${row.pool}-factory`), POOL_ABI, "factory"));
     const meta = decodeStagedMulticallResult<readonly [bigint, bigint, bigint, bigint, string, string]>(
       state.get(`${row.pool}-metadata`), POOL_ABI, "metadata",
     );
-    const token0 = canonicalEvmAddress(meta?.[4]);
-    const token1 = canonicalEvmAddress(meta?.[5]);
-    if (!meta || factory !== row.factory || !token0 || !token1 || token0 === token1) return [];
+    if (!meta || factory == null) {
+      unreadable++;
+      return [];
+    }
+    const token0 = canonicalEvmAddress(meta[4]);
+    const token1 = canonicalEvmAddress(meta[5]);
+    if (factory !== row.factory || !token0 || !token1 || token0 === token1) return [];
     if (!isTracked(input, chain, token0) && !isTracked(input, chain, token1)) return [];
     // metadata() returns decimals as 10**decimals multipliers.
     const decimals = [meta[0], meta[1]].map((multiplier) => {
@@ -285,6 +307,8 @@ async function fetchAeroBasicChain(
       reserve0: rawAmountToDecimal(meta[2], decimals[0]), reserve1: rawAmountToDecimal(meta[3], decimals[1]),
     }];
   });
+  // An unreadable pool is missing evidence, not a proven non-stablecoin pool.
+  if (unreadable > 0) warnings.push(`pool-state-unreadable:${unreadable}`);
   if (decoded.length === 0) return [];
 
   const membership = await multicallAtBlock(chain, decoded.map((row) => ({
@@ -295,15 +319,22 @@ async function fetchAeroBasicChain(
   const symbols = await readSymbols(chain, decoded.flatMap((row) => [row.token0, row.token1]), block, options);
 
   const pools: DexApiPool[] = [];
+  let membershipUnreadable = 0;
   for (const row of decoded) {
-    if (canonicalEvmAddress(decodeStagedMulticallResult<string>(membership.get(row.pool), FACTORY_ABI, "getPool")) !== row.pool) continue;
-    if (!(row.reserve0 > 0) || !(row.reserve1 > 0)) continue;
+    const member = canonicalEvmAddress(decodeStagedMulticallResult<string>(membership.get(row.pool), FACTORY_ABI, "getPool"));
+    if (member == null) {
+      membershipUnreadable++;
+      continue;
+    }
+    if (member !== row.pool) continue;
+    // Explicit zero reserves are observations; only the ratio needs both sides.
+    if (!(row.reserve0 >= 0) || !(row.reserve1 >= 0)) continue;
     const stable = stableFactories.has(row.factory);
     let price0 = trackedPrice(input, chain, row.token0);
     let price1 = trackedPrice(input, chain, row.token1);
     // x*y=k marginal price is the reserve ratio; stable-curve pools have no
     // such closed form, so they need both sides independently priced.
-    const spot = stable ? null : row.reserve1 / row.reserve0;
+    const spot = !stable && row.reserve0 > 0 && row.reserve1 > 0 ? row.reserve1 / row.reserve0 : null;
     if (price0 == null && price1 != null && spot != null) price0 = spot * price1;
     if (price1 == null && price0 != null && spot != null) price1 = price0 / spot;
     if (price0 == null || price1 == null) continue;
@@ -328,6 +359,7 @@ async function fetchAeroBasicChain(
       balances: [row.reserve0, row.reserve1],
     });
   }
+  if (membershipUnreadable > 0) warnings.push(`pool-membership-unreadable:${membershipUnreadable}`);
   return pools;
 }
 
@@ -339,13 +371,27 @@ async function fetchAeroPools(
   const errors: string[] = [];
   // Chains are read serially so the adapter never holds more than one RPC
   // connection open at a time.
+  const deadline = Date.now() + AERO_RUN_BUDGET_MS;
   for (const deployment of AERO_DEPLOYMENTS) {
     throwIfAborted(input.signal);
-    try {
-      pools.push(...await (source === "aero-slipstream" ? fetchAeroSlipstreamChain : fetchAeroBasicChain)(input, deployment));
-    } catch (error) {
-      if (input.signal?.aborted) throw error;
-      const message = `${deployment.chain}:${toErrorMessage(error)}`;
+    const warnings: string[] = [];
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) {
+      warnings.push("run-budget-exhausted");
+    } else {
+      const budget = AbortSignal.timeout(remainingMs);
+      const signal = input.signal ? AbortSignal.any([input.signal, budget]) : budget;
+      try {
+        pools.push(...await (source === "aero-slipstream" ? fetchAeroSlipstreamChain : fetchAeroBasicChain)(
+          { ...input, signal }, deployment, warnings,
+        ));
+      } catch (error) {
+        if (input.signal?.aborted) throw error;
+        warnings.push(budget.aborted ? "run-budget-exhausted" : toErrorMessage(error));
+      }
+    }
+    for (const warning of warnings) {
+      const message = `${deployment.chain}:${warning}`;
       errors.push(message);
       logWorkerEventArgs("handler", "warn", `[fetch-aero] ${source}`, message);
     }

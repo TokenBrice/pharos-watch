@@ -106,12 +106,15 @@ describe("fetchAeroSlipstreamPools", () => {
     expect(result.errors).toEqual(AERO_CHAINS.filter((chain) => chain !== "base").map((chain) => `${chain}:block-unavailable`));
   });
 
-  it("fails the chain closed when a factory outgrows the reviewed read shape", async () => {
-    mockBase((label) => (label.startsWith("count-") ? uint(5_001) : null));
+  it("reads only the oldest bounded pools of an oversized factory and names the degradation", async () => {
+    mockBase((label, target) => (label.startsWith("count-") ? uint(target === CL_FACTORY ? 5_001 : 0) : null));
     const result = await fetchAeroSlipstreamPools({ chainAddressToId, trackedStablecoinPrices });
-    expect(result.pools).toEqual([]);
-    expect(result.ok).toBe(false);
-    expect(result.errors[0]).toMatch(/^base:pool-count-cap:/);
+    const listCalls = vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mock.calls
+      .flatMap(([, calls]) => calls).filter((call) => call.label.startsWith(`${CL_FACTORY}-`));
+    expect(listCalls).toHaveLength(5_000);
+    expect(listCalls[listCalls.length - 1]!.label).toBe(`${CL_FACTORY}-4999`);
+    expect(result.degraded).toBe(true);
+    expect(result.errors[0]).toBe(`base:pool-count-cap:${CL_FACTORY}:5001`);
   });
 });
 
@@ -162,6 +165,34 @@ describe("fetchAeroBasicPools", () => {
     });
     const result = await fetchAeroBasicPools({ chainAddressToId, trackedStablecoinPrices });
     expect(result.pools.map((pool) => pool.poolAddress)).toEqual([VOLATILE_POOL]);
+  });
+
+  it("keeps an explicit zero-sided stable pool when both sides are independently priced", async () => {
+    mockBasic({
+      [`${STABLE_POOL}-metadata`]: encode("uint256,uint256,uint256,uint256,address,address", [10n ** 6n, 10n ** 6n, 500_000n * 10n ** 6n, 0n, USDC, USDT]),
+    });
+    const result = await fetchAeroBasicPools({ chainAddressToId, trackedStablecoinPrices });
+    expect(result.pools.find((pool) => pool.poolAddress === STABLE_POOL)).toMatchObject({ balances: [500_000, 0], tvlUsd: 500_000 });
+  });
+
+  it("reports unreadable pool state as named degradation instead of clean absence", async () => {
+    mockBasic({ [`${VOLATILE_POOL}-metadata`]: null });
+    const result = await fetchAeroBasicPools({ chainAddressToId, trackedStablecoinPrices });
+    expect(result.pools.map((pool) => pool.poolAddress)).toEqual([STABLE_POOL]);
+    expect(result.errors).toContain("base:pool-state-unreadable:1");
+    expect(result.degraded).toBe(true);
+  });
+});
+
+describe("Aero run budget", () => {
+  it("stops before the provider timeout and names each skipped chain", async () => {
+    mockBase((label) => (label.startsWith("count-") ? uint(0) : null));
+    const now = vi.spyOn(Date, "now");
+    now.mockReturnValueOnce(0).mockReturnValue(10 * 60_000);
+    const result = await fetchAeroSlipstreamPools({ chainAddressToId, trackedStablecoinPrices });
+    now.mockRestore();
+    expect(result.errors).toEqual(AERO_CHAINS.map((chain) => `${chain}:run-budget-exhausted`));
+    expect(vi.mocked(fetchEvmBlockNumber)).not.toHaveBeenCalled();
   });
 });
 
