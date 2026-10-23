@@ -115,6 +115,28 @@ describe("durable finalized mint/burn scan coverage", () => {
     expect(segments(sqlite)).toEqual([]);
   });
 
+  it("retries a lost D1 connection by replaying the committed cursor and coverage idempotently", async () => {
+    const { sqlite, db } = fixtures.open();
+    await commit(db, proof(100, 110, end - 2 * day, end - day));
+    let batches = 0;
+    const flaky = new Proxy(db, {
+      get(target, prop, receiver) {
+        if (prop !== "batch") return Reflect.get(target, prop, receiver);
+        return async (statements: D1PreparedStatement[]) => {
+          const result = await target.batch(statements);
+          // The first commit lands but its outcome is lost, as in production.
+          if (++batches === 1) throw new Error("D1_ERROR: Network connection lost.; cause: Network connection lost.");
+          return result;
+        };
+      },
+    });
+    await commit(flaky, proof(111, 120, end - day, end));
+    expect(batches).toBe(2);
+    expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state").get()).toEqual({ last_block: 120 });
+    expect(segments(sqlite)).toEqual([{ from_block: 100, to_block: 120,
+      from_timestamp: end - 2 * day, to_timestamp: end }]);
+  });
+
   it.each([1, 7, 30, 90])("requires exact closed %i-day UTC boundaries on every config and chain", async (days) => {
     const { sqlite, db } = fixtures.open();
     const other = makeMintBurnConfig({ chain: { chainId: "arbitrum" } });
