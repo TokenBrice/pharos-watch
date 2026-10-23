@@ -1,4 +1,5 @@
 import type { ReserveContinuationMessage } from "@shared/types/reserve-continuation";
+import type { SlotCatchUpMessage } from "@shared/types/slot-catch-up";
 import type { RuntimeEnv } from "@shared/lib/env-contract";
 import { DWELLIR_CHAINS } from "@shared/lib/dwellir-chains";
 import { DWELLIR_NATIVE_ENDPOINTS } from "@shared/lib/dwellir-native-endpoints";
@@ -17,7 +18,7 @@ interface WorkerBindingValues {
   WorkerVersionMetadata: WorkerVersionMetadata;
   R2Bucket: R2Bucket;
   Fetcher: Fetcher;
-  "Queue<ReserveContinuationMessage>": Queue<ReserveContinuationMessage>;
+  "Queue<ReserveContinuationMessage>": Queue<ReserveContinuationMessage | SlotCatchUpMessage>;
 }
 
 export type Env = RuntimeEnv<"worker", WorkerBindingValues>;

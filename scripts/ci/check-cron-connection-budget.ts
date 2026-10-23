@@ -8,6 +8,7 @@ import {
   RESERVE_CONTINUATION_CONNECTION_BUDGET,
 } from "@shared/lib/cron-jobs";
 import { SCHEDULED_SLOT_PLANS, type ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
+import { SLOT_CATCH_UP_SCHEDULE_KEYS } from "@shared/lib/scheduled-slot-catch-up-policy";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { evaluateCronScheduleSync, parseWranglerCronTriggers, printCronScheduleSyncReport } from "./check-cron-schedule-sync";
 import type {
@@ -191,7 +192,16 @@ export function evaluateCronConnectionBudget(input: {
     surface: queueBudget.surface, worker: queueBudget.worker,
     totalConnections: Math.max(queueBudget.maxConnections, queueBudget.postSettlementSendConnections),
     postSettlementSendConnections: queueBudget.postSettlementSendConnections,
-  }];
+  },
+  // A slot catch-up runs the lane's own runner as its own single-message
+  // Queue invocation, so it inherits exactly that lane's declared peak.
+  ...SLOT_CATCH_UP_SCHEDULE_KEYS.flatMap((scheduleKey) => {
+    const lane = triggerReports.find((report) => report.scheduleKey === scheduleKey);
+    return lane ? [{
+      surface: `slot-catch-up:${scheduleKey}`, worker: lane.worker,
+      totalConnections: lane.totalConnections, postSettlementSendConnections: 0,
+    }] : [];
+  })];
   failed ||= nonCronReports.some((surface) => surface.totalConnections >= budget.failAt);
 
   return {
