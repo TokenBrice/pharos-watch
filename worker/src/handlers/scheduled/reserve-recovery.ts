@@ -15,6 +15,7 @@ import { createCronResult } from "../../lib/cron-result";
 import type { CronMetadataRecord } from "../../lib/cron-result";
 import {
   getReserveProducerPriority,
+  resolveReserveProducerAdmission,
   RESERVE_RECOVERY_CLAIM_SEC,
   type ReserveProducerPriority,
 } from "../../lib/reserve-producer-priority";
@@ -41,7 +42,7 @@ function priorityPollReason(priority: ReserveProducerPriority): string {
   return priority.condition === "producer-slot-live" ? "producer-slot-live" : priority.reason;
 }
 
-function createReserveRecoveryResult(
+function createReserveRecoveryResultBase(
   result: Omit<CronResult, "metadata"> & { metadata: CronMetadataRecord },
 ): CronResult {
   if (result.status == null || result.status === "ok") {
@@ -65,7 +66,10 @@ async function runReserveRecovery(
     });
   }
   await reconcileReserveContinuations(runtime.db, signal);
-  const priority = await getReserveProducerPriority(runtime.db);
+  const { priority, currentSlot } = await resolveReserveProducerAdmission(runtime.db);
+  // A never-delivered reserve slot has no producer to protect; say so on every outcome.
+  const createReserveRecoveryResult = (result: Parameters<typeof createReserveRecoveryResultBase>[0]) =>
+    createReserveRecoveryResultBase(currentSlot ? { ...result, metadata: { ...result.metadata, currentSlot } } : result);
   if (priority) return createCronResult({
     status: priorityPollStatus(priority), itemCount: 0,
     metadata: { mode, reason: priorityPollReason(priority), producerPriority: { ...priority }, attemptedCount: 0, checkpointsClaimed: 0 },

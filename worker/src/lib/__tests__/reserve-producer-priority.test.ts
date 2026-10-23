@@ -7,7 +7,9 @@ import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { getReserveRecoveryConflictSlotKeys, RESERVE_RECOVERY_CONFLICT_SLOT_KEYS, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import {
   getReserveProducerPriority,
+  RESERVE_SLOT_NEVER_DELIVERED_GRACE_SEC,
   reserveRecoveryAdmissionSql,
+  resolveReserveProducerAdmission,
 } from "../reserve-producer-priority";
 import { runCronWithLease } from "../cron-lease-primitives";
 import { beginLiveReserveCheckpoint, claimNextLiveReserveCheckpointRecovery } from "../scheduled-recovery-checkpoint";
@@ -55,10 +57,9 @@ describe("reserve recovery admission", () => {
     });
   });
 
-  it.each(["missing", "running", "reconciling", "null-finished-at"])("protects an unfinished due producer even during next-slot lookahead: %s", async (state) => {
+  it.each(["running", "reconciling", "null-finished-at"])("protects an unfinished due producer even during next-slot lookahead: %s", async (state) => {
     const fixture = admittedFixture();
-    if (state === "missing") fixture.sqlite.prepare("DELETE FROM cron_slot_executions").run();
-    else if (state === "null-finished-at") fixture.sqlite.prepare("UPDATE cron_slot_executions SET finished_at = NULL").run();
+    if (state === "null-finished-at") fixture.sqlite.prepare("UPDATE cron_slot_executions SET finished_at = NULL").run();
     else fixture.sqlite.prepare("UPDATE cron_slot_executions SET state = ?").run(state);
     expect(await getReserveProducerPriority(fixture.db)).toMatchObject({
       reason: "producer-slot-priority", condition: "current-slot-unfinished", slotStartedAt: fixture.current,
@@ -126,15 +127,57 @@ describe("reserve recovery admission", () => {
     fixture.sqlite.prepare(`INSERT INTO cron_run_progress (job, started_at, updated_at, lease_owner, metadata)
       VALUES ('sync-live-reserves', ?, ?, 'unrelated-child', ?)`)
       .run(fixture.now, fixture.now, JSON.stringify({ scheduleKey: "fourHourlyReserveSync", slotStartedAt: fixture.current }));
-    for (const observedAt of [fixture.now, fixture.current + resolveScheduledSlotPolicy("fourHourlyReserveSync").hardDeadSec,
-      Date.parse("2026-10-13T19:47:00Z") / 1000]) {
-      vi.setSystemTime(observedAt * 1000);
-      expect(await getReserveProducerPriority(fixture.db)).toMatchObject({
-        reason: "producer-slot-priority", condition: "current-slot-unfinished", slotStartedAt: 1791907860,
-      });
+    // Inside the never-delivered grace the missing row still wins; unrelated
+    // progress is never proof of life. Past it the slot was never delivered.
+    vi.setSystemTime(fixture.now * 1000);
+    expect(await getReserveProducerPriority(fixture.db)).toMatchObject({
+      reason: "producer-slot-priority", condition: "current-slot-unfinished", slotStartedAt: 1791907860,
+    });
+    const admission = reserveRecoveryAdmissionSql();
+    expect(fixture.sqlite.prepare(`SELECT (${admission.sql}) AS admitted`).get(...admission.binds)).toEqual({ admitted: 0 });
+    vi.setSystemTime((fixture.current + resolveScheduledSlotPolicy("fourHourlyReserveSync").hardDeadSec) * 1000);
+    await expect(resolveReserveProducerAdmission(fixture.db)).resolves.toEqual({
+      priority: null,
+      currentSlot: { reason: "current-slot-never-delivered", slotStartedAt: 1791907860, graceSec: RESERVE_SLOT_NEVER_DELIVERED_GRACE_SEC },
+    });
+    expect(fixture.sqlite.prepare(`SELECT (${admission.sql}) AS admitted`).get(...admission.binds)).toEqual({ admitted: 1 });
+  });
+
+  it("proceeds past a never-delivered current slot only after its cadence-derived grace, and yields to a late original", async () => {
+    const fixture = admittedFixture();
+    expect(RESERVE_SLOT_NEVER_DELIVERED_GRACE_SEC).toBe(10 * 60);
+    fixture.sqlite.prepare("DELETE FROM cron_slot_executions").run();
+    const admitted = () => {
       const admission = reserveRecoveryAdmissionSql();
-      expect(fixture.sqlite.prepare(`SELECT (${admission.sql}) AS admitted`).get(...admission.binds)).toEqual({ admitted: 0 });
-    }
+      return (fixture.sqlite.prepare(`SELECT (${admission.sql}) AS admitted`).get(...admission.binds) as { admitted: number }).admitted;
+    };
+
+    // Within grace: delivery may still be in flight.
+    vi.setSystemTime((fixture.current + RESERVE_SLOT_NEVER_DELIVERED_GRACE_SEC - 1) * 1000);
+    expect(await getReserveProducerPriority(fixture.db)).toMatchObject({ condition: "current-slot-unfinished" });
+    expect(admitted()).toBe(0);
+
+    // Past grace with no row: recovery proceeds and says why.
+    vi.setSystemTime((fixture.current + RESERVE_SLOT_NEVER_DELIVERED_GRACE_SEC) * 1000);
+    await expect(resolveReserveProducerAdmission(fixture.db)).resolves.toMatchObject({
+      priority: null, currentSlot: { reason: "current-slot-never-delivered", slotStartedAt: fixture.current },
+    });
+    expect(admitted()).toBe(1);
+
+    // Upcoming-slot protection still applies to a never-delivered slot.
+    vi.setSystemTime((fixture.current + CRON_SCHEDULE_CADENCES.fourHourlyReserveSync.intervalSec - 60) * 1000);
+    expect(await getReserveProducerPriority(fixture.db)).toMatchObject({ condition: "next-slot-lookahead" });
+    expect(admitted()).toBe(0);
+
+    // A late original claims its row and wins every fence from then on.
+    const lateAt = fixture.current + RESERVE_SLOT_NEVER_DELIVERED_GRACE_SEC + 120;
+    vi.setSystemTime(lateAt * 1000);
+    fixture.sqlite.prepare(`INSERT INTO cron_slot_executions
+      (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, updated_at)
+      VALUES ('fourHourlyReserveSync', ?, 'running', 'late-original', 1, ?, ?)`)
+      .run(fixture.current, lateAt, lateAt);
+    expect(await getReserveProducerPriority(fixture.db)).toMatchObject({ condition: "producer-slot-live" });
+    expect(admitted()).toBe(0);
   });
 
   it.each(["degraded", "error"])("releases producer priority after a finished %s slot", async (status) => {

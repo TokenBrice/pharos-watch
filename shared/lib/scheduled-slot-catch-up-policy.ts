@@ -21,7 +21,7 @@ export interface SlotCatchUpPolicy {
 const SLOT_CATCH_UP_GRACE_CAP_SEC = 10 * 60;
 const SLOT_CATCH_UP_NEXT_SLOT_MARGIN_CAP_SEC = 15 * 60;
 
-function deriveSlotCatchUpPolicy(scheduleKey: CronScheduleKey): SlotCatchUpPolicy {
+export function deriveSlotCatchUpPolicy(scheduleKey: CronScheduleKey): SlotCatchUpPolicy {
   const { intervalSec } = CRON_SCHEDULE_CADENCES[scheduleKey];
   return {
     graceSec: Math.min(Math.floor(intervalSec * 2 / 5), SLOT_CATCH_UP_GRACE_CAP_SEC),
