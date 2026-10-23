@@ -22,6 +22,7 @@ import {
   buildSupplySnapshotCompletionMarker,
   preflightSupplySnapshot,
   SNAPSHOT_SUPPLY_LAST_WRITE_KEY,
+  UPSTREAM_PUBLICATION_GAP_QUALITY_REASON,
 } from "../lib/supply-snapshot-completion";
 import {
   STABLECOIN_PUBLICATION_WAIVERS,
@@ -192,6 +193,19 @@ export async function snapshotSupply(
       missingActiveIds: publicationCoverage.missingActiveIds.slice(0, 20),
     },
   };
+  const qualityFindings = (restoredOnly: readonly string[] = []): CronMetadataRecord => {
+    const reasons = [
+      ...(publicationGapBand === "elevated" ? [UPSTREAM_PUBLICATION_GAP_QUALITY_REASON] : []),
+      ...(restoredOnly.length > 0 ? ["snapshot_written_restored_skipped"] : []),
+    ];
+    return reasons.length === 0 ? {} : {
+      quality: {
+        reason: reasons[0],
+        ...(reasons.length > 1 ? { reasons } : {}),
+        ...(restoredOnly.length > 0 ? { restoredOnlyIds: restoredOnly } : {}),
+      },
+    };
+  };
   const recoveredSinceLastWrite = lastWrite?.snapshotDate === snapshotDate
     ? [...validSnapshotIds].filter(
       (id) => requiredActiveIdSet.has(id) && !(lastWrite.ownedRowIds ?? []).includes(id),
@@ -214,13 +228,10 @@ export async function snapshotSupply(
       });
       return createCronResult({
         ...result,
-        ...(publicationGapBand !== "none" ? {
-          status: publicationGapBand === "elevated" ? "degraded" as const : "ok" as const,
-        } : {}),
         metadata: {
           ...JSON.parse(result.metadata ?? "{}"),
-          ...(publicationGapBand === "elevated" ? { reason: "publication_gap_elevated" } : {}),
           ...publicationGap,
+          ...qualityFindings(),
         },
       });
     }
@@ -243,14 +254,11 @@ export async function snapshotSupply(
       const shareFailure = await publishShareHistory(db, nowSec, repairedPriceRows, signal);
       if (shareFailure) return shareFailure;
       return createCronResult({
-        ...(publicationGapBand !== "none" ? {
-          status: publicationGapBand === "elevated" ? "degraded" as const : "ok" as const,
-        } : {}),
         itemCount: repairedPriceRows,
         metadata: {
           reason: repairedPriceRows > 0 ? "repaired_missing_prices_today" : "already_written_today",
-          ...(publicationGapBand === "elevated" ? { reason: "publication_gap_elevated" } : {}),
           ...publicationGap,
+          ...qualityFindings(),
           snapshotDate,
           repairedPriceRows,
         },
@@ -351,24 +359,13 @@ export async function snapshotSupply(
 
   logWorkerEventArgs("handler", "info", `[snapshot-supply] Inserted ${snapshotRows.length} rows for date ${formatIsoDate(snapshotDate)}`);
   if (restoredOnlyIds.length > 0 || publicationGapBand !== "none") {
-    const metadata: CronMetadataRecord = {
-      writtenRows: snapshotRows.length,
-      ...publicationGap,
-      ...(restoredOnlyIds.length > 0 ? {
-        quality: {
-          reason: "snapshot_written_restored_skipped",
-          restoredOnlyIds,
-        },
-      } : {}),
-    };
-    return createCronResult(publicationGapBand === "elevated" ? {
-      status: "degraded",
+    return createCronResult({
       itemCount: snapshotRows.length,
-      metadata: { ...metadata, reason: "publication_gap_elevated" },
-    } : {
-      ...(publicationGapBand === "routine" ? { status: "ok" as const } : {}),
-      itemCount: snapshotRows.length,
-      metadata,
+      metadata: {
+        writtenRows: snapshotRows.length,
+        ...publicationGap,
+        ...qualityFindings(restoredOnlyIds),
+      },
     });
   }
   return { itemCount: snapshotRows.length };

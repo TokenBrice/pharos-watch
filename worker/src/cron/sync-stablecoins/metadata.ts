@@ -537,13 +537,8 @@ export function buildStablecoinsSyncResult(input: {
   });
   const supplyQuarantined = (input.supplyChainGuard?.quarantinedAssetIds.length ?? 0) > 0
     || (input.supplyChainGuard?.unavailableAssetIds.length ?? 0) > 0;
-  const status: CronResult["status"] =
-    input.depegErrorCount > 0
-      || input.depegHeldReason != null
-      || input.stalenessCheckFailed
-      || publicationGapDegradesRun(publicationGap)
-      ? "degraded"
-      : "ok";
+  const degradedReason = resolveSyncDegradedReason(input, publicationGap);
+  const status: CronResult["status"] = degradedReason ? "degraded" : "ok";
 
   const metadata: Record<string, unknown> = {
     rowsRead: input.rawAssetCount,
@@ -582,8 +577,8 @@ export function buildStablecoinsSyncResult(input: {
       ),
     },
     activePublicationCoverage: publicationCoverage,
-    ...(publicationGapDegradesRun(publicationGap) ? { reason: `stablecoin-publication-gap-${publicationGap}` } : {}),
-    ...(input.depegHeldReason ? { reason: input.depegHeldReason, depegHeldReason: input.depegHeldReason } : {}),
+    ...(degradedReason ? { reason: degradedReason } : {}),
+    ...(input.depegHeldReason ? { depegHeldReason: input.depegHeldReason } : {}),
     activePriceCoverage,
     priceSourceAttemptLedger,
     upstreamFetchOk: input.upstreamFetchOk ?? true,
@@ -607,13 +602,22 @@ export function buildStablecoinsSyncResult(input: {
       historyFetches: guard.historyFetches,
       stateReadFailed: guard.stateReadFailed,
     };
-    if (supplyQuarantined) {
-      metadata.quality = {
-        reason: "supply-chain-dropout-quarantine",
-        quarantinedAssetCount: guard.quarantinedAssetIds.length,
-        unavailableAssetCount: guard.unavailableAssetIds.length,
-      };
-    }
+  }
+  // R4: the status driver leads the findings; quarantine stays an
+  // informational finding that never degrades a completed publication (ADR-35).
+  const qualityReasons = [
+    ...(degradedReason ? [degradedReason] : []),
+    ...(supplyQuarantined ? ["supply-chain-dropout-quarantine"] : []),
+  ];
+  if (qualityReasons.length > 0) {
+    metadata.quality = {
+      reason: qualityReasons[0],
+      ...(qualityReasons.length > 1 ? { reasons: qualityReasons } : {}),
+      ...(supplyQuarantined ? {
+        quarantinedAssetCount: input.supplyChainGuard!.quarantinedAssetIds.length,
+        unavailableAssetCount: input.supplyChainGuard!.unavailableAssetIds.length,
+      } : {}),
+    };
   }
   if (input.stalenessWarning) metadata.stalenessWarning = true;
   if (input.stalenessCheckFailureReason) {
@@ -711,14 +715,10 @@ export function buildFallbackStablecoinsSyncResult(input: {
     authoritativeOverrideStats: input.authoritativeOverrideStats,
   }));
 
+  const degradedReason = resolveSyncDegradedReason(input, publicationGap);
+
   return {
-    status:
-      input.depegErrorCount > 0
-        || input.depegHeldReason != null
-        || input.stalenessCheckFailed
-        || publicationGapDegradesRun(publicationGap)
-        ? "degraded"
-        : "ok",
+    status: degradedReason ? "degraded" : "ok",
     itemCount: input.assets.length,
     metadata: buildSyncMetadata({
       rowsRead: input.assets.length,
@@ -741,7 +741,8 @@ export function buildFallbackStablecoinsSyncResult(input: {
       priceStaleness: input.stalenessSummary,
       stalenessCheckFailed: input.stalenessCheckFailed,
       stalenessCheckFailureReason: input.stalenessCheckFailureReason,
-      ...(input.depegHeldReason ? { reason: input.depegHeldReason, depegHeldReason: input.depegHeldReason } : {}),
+      ...(degradedReason ? { reason: degradedReason, quality: { reason: degradedReason } } : {}),
+      ...(input.depegHeldReason ? { depegHeldReason: input.depegHeldReason } : {}),
       upstreamFetchOk: false,
       payloadAccepted: true,
       cacheWriteSucceeded: true,
@@ -763,6 +764,19 @@ export function buildFallbackStablecoinsSyncResult(input: {
 
 function publicationGapDegradesRun(gap: StablecoinPublicationGapBand): boolean {
   return gap === "elevated" || gap === "systemic";
+}
+
+// One machine-readable driver per degraded run, in the precedence the run's
+// top-level `reason` has always used (a depeg hold outranks a publication gap).
+function resolveSyncDegradedReason(
+  input: { depegHeldReason?: DepegHoldReason; depegErrorCount: number; stalenessCheckFailed: boolean },
+  publicationGap: StablecoinPublicationGapBand,
+): string | null {
+  if (input.depegHeldReason) return input.depegHeldReason;
+  if (publicationGapDegradesRun(publicationGap)) return `stablecoin-publication-gap-${publicationGap}`;
+  if (input.depegErrorCount > 0) return "depeg-pipeline-errors";
+  if (input.stalenessCheckFailed) return "price-staleness-check-failed";
+  return null;
 }
 
 export function buildBlockedInvalidPayloadResult(input: CachePublicationMetadataBase & {

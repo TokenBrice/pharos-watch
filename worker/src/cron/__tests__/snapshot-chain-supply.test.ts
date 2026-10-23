@@ -198,7 +198,7 @@ describe("snapshotChainSupply", () => {
         expect(result.itemCount).toBe(12);
         expect(JSON.parse(result.metadata!)).toMatchObject({
           reason: "chain_observations_partially_deferred",
-          quality: "partial",
+          quality: { coverage: "partial" },
           restoredOnlyIds: ["hbd-hive", "mxne-real-mxn", "pgold-pleasing"],
           deferredChains: {
             apechain: ["pgold-pleasing"], arbitrum: ["pgold-pleasing"],
@@ -451,11 +451,14 @@ describe("snapshotChainSupply", () => {
   });
 
   it.each([
-    { missingCount: 1, band: "routine", status: "ok" },
-    { missingCount: 4, band: "elevated", status: "degraded" },
+    { missingCount: 1, band: "routine" },
+    { missingCount: 4, band: "elevated" },
   ])("defers only known chains for a $band absence and admits them after recovery", async ({
-    missingCount, band, status,
+    missingCount, band,
   }) => {
+    // The inherited upstream band is a finding, never this job's own failure.
+    const status = "ok";
+    const gapReason = band === "elevated" ? { reason: "upstream_publication_gap_elevated" } : {};
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
       const nowSec = Math.floor(Date.now() / 1000);
@@ -473,7 +476,8 @@ describe("snapshotChainSupply", () => {
       expect(JSON.parse(first.metadata!)).toMatchObject({
         publicationGap: { band, missingActiveCount: missingCount },
         deferredChains: { ethereum: ["missing-coin"], bsc: ["missing-coin"] },
-        ...(band === "elevated" ? { reason: "publication_gap_elevated" } : {}),
+        reason: "chain_observations_partially_deferred",
+        quality: { coverage: "partial", ...gapReason },
       });
       expect(sqlite.prepare("SELECT chain_id, total_usd FROM chain_supply_history").all())
         .toEqual([{ chain_id: "citrea", total_usd: 10 }]);
@@ -492,6 +496,9 @@ describe("snapshotChainSupply", () => {
       const retry = await snapshotChainSupply(db, undefined, { ...options, nowSec: nowSec + 60 });
       expect(retry.status).toBe(status);
       expect(retry.itemCount).toBe(0);
+      expect(JSON.parse(retry.metadata!)).toMatchObject({
+        reason: "already_written_today", quality: { coverage: "partial", ...gapReason },
+      });
       expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
         .get("snapshot-chain-supply:last-write")).toEqual(saved);
       payload.peggedAssets.push(makeSnapshotAsset({

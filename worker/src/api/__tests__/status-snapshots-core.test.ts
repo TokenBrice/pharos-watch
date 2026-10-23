@@ -59,6 +59,7 @@ function fixtureMockD1(
       publication: [
     { match: "WHERE key IN", rows: [] },
     { match: "FROM worker_producer_heads", rows: [] },
+    { match: "json_extract(value, '$.compressedBytes')", rows: [], first: null },
     { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
     { match: "SELECT updated_at FROM cache WHERE key = ?", rows: [], first: null },
     { match: "SELECT value FROM cache WHERE key = ?", rows: [], first: null },
