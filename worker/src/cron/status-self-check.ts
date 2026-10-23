@@ -180,6 +180,14 @@ function buildLatencySummary(probes: ProbeResult[]): ProbeLatencySummary {
   };
 }
 
+// One cold probe is noise, not a slow plane: latency bands judge the
+// second-slowest connectivity sample, so a breach needs two slow probes
+// (or the only sample when just one ran).
+function judgedProbeLatencyMs(probes: ProbeResult[]): number {
+  const latencies = probes.map((probe) => probe.latencyMs).sort((a, b) => b - a);
+  return latencies[Math.min(1, latencies.length - 1)] ?? 0;
+}
+
 function computeProbeStats(probes: ProbeResult[]): ProbeStats {
   const connectivityProbes = probes.filter((probe) => !probe.error?.startsWith("reported-"));
   const passCount = connectivityProbes.filter((probe) => probe.ok).length;
@@ -189,7 +197,7 @@ function computeProbeStats(probes: ProbeResult[]): ProbeStats {
     (worst, probe) => (probe.semanticStatus ? maxProbeStatus(worst, probe.semanticStatus) : worst),
     "healthy",
   );
-  const transportStatus = classifyProbeStatus(connectivityProbes.length, failCount, latencySummary.p95Ms);
+  const transportStatus = classifyProbeStatus(connectivityProbes.length, failCount, judgedProbeLatencyMs(connectivityProbes));
   return {
     connectivityProbes,
     passCount,
@@ -308,12 +316,12 @@ export function selectStatusProbePathsForRun(
   };
 }
 
-export function classifyProbeStatus(sampleCount: number, failCount: number, p95LatencyMs: number): StatusHealthValue {
+export function classifyProbeStatus(sampleCount: number, failCount: number, latencyMs: number): StatusHealthValue {
   if (sampleCount === 0) return "stale";
   const { healthyMaxFailCount, healthyP95MaxMs, degradedMaxFailRatio, degradedP95MaxMs } = STATUS_PROBE_THRESHOLDS;
-  if (failCount <= healthyMaxFailCount && p95LatencyMs <= healthyP95MaxMs) return "healthy";
+  if (failCount <= healthyMaxFailCount && latencyMs <= healthyP95MaxMs) return "healthy";
   const degradedFailCap = Math.max(healthyMaxFailCount, Math.floor(sampleCount * degradedMaxFailRatio));
-  if (failCount <= degradedFailCap && p95LatencyMs <= degradedP95MaxMs) return "degraded";
+  if (failCount <= degradedFailCap && latencyMs <= degradedP95MaxMs) return "degraded";
   return "stale";
 }
 
@@ -836,7 +844,6 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
       failedOutputs: [...failedOutputs],
       evidenceReadFailures,
       ...(reason ? { reason } : {}),
-      ...(semanticStatus != null && semanticStatus !== "healthy" ? { quality: { reason: `probe-plane-${semanticStatus}` } } : {}),
       ...(semanticStatus == null ? { semanticStatusReason: "probe-semantic-evidence-unavailable" } : {}),
       sampleCount,
       passCount,
