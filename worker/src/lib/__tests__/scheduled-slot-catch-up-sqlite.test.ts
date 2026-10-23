@@ -3,10 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { SlotCatchUpMessage } from "@shared/types/slot-catch-up";
 import {
-  armDueSlotCatchUps,
   isSlotCatchUpWithinWindow,
   resolveSlotCatchUpCandidate,
-} from "../scheduled-slot-catch-up";
+  resolveSlotCatchUpDeadlineMs,
+} from "@shared/lib/scheduled-slot-catch-up-policy";
+import { armDueSlotCatchUps } from "../scheduled-slot-catch-up";
 import { runScheduledSlotWithFence, sweepStaleScheduledSlotExecutions } from "../scheduled-slot-fence";
 import { STALE_SLOT_ERROR } from "../scheduled-slot-reconciliation";
 import { createDeferredPromise } from "./deferred.test-support";
@@ -76,6 +77,15 @@ describe("one-shot scheduled slot catch-up", () => {
     expect(resolveSlotCatchUpCandidate("hourlyYieldSync", YIELD_SLOT + 45 * 60)).toBe(YIELD_SLOT);
     expect(resolveSlotCatchUpCandidate("hourlyYieldSync", YIELD_SLOT + 46 * 60)).toBeNull();
     expect(isSlotCatchUpWithinWindow("statusSelfCheckOffset", QUARTER_SLOT, QUARTER_SLOT + 600)).toBe(false);
+  });
+
+  it("bounds a catch-up by the lane's longest task timeout and its next natural slot", () => {
+    // quarterHourly: the :15 natural slot cuts the run short.
+    expect(resolveSlotCatchUpDeadlineMs("quarterHourly", QUARTER_SLOT, (QUARTER_SLOT + 600) * 1000))
+      .toBe((QUARTER_SLOT + 900) * 1000);
+    // hourlyYieldSync: the 12-minute supplemental task timeout is the lane bound.
+    expect(resolveSlotCatchUpDeadlineMs("hourlyYieldSync", YIELD_SLOT, (YIELD_SLOT + 600) * 1000))
+      .toBe((YIELD_SLOT + 600 + 12 * 60) * 1000);
   });
 
   it("arms one catch-up for a never-delivered slot after its grace, and only once", async () => {

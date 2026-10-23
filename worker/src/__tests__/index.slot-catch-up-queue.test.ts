@@ -41,6 +41,7 @@ describe("slot catch-up Queue consumer", () => {
     expect(state.scheduled).toHaveBeenCalledExactlyOnceWith(
       { cron: "55 * * * *", scheduledTime: SLOT * 1000 }, env, ctx, "public", expect.any(Object), (SLOT + 610) * 1000,
       { trigger: "abandoned", armedAt: SLOT + 600, armedByInvocationId: "digest-poll" },
+      (SLOT + 610 + 12 * 60) * 1000,
     );
   });
 

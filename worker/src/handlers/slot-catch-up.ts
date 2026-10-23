@@ -1,8 +1,12 @@
 import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
-import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { SLOT_CATCH_UP_MESSAGE_KIND, SlotCatchUpMessageSchema } from "@shared/types/slot-catch-up";
 import type { Env } from "../lib/env";
-import { getSlotCatchUpPolicy, isSlotCatchUpWithinWindow } from "../lib/scheduled-slot-catch-up";
+import {
+  getSlotCatchUpPolicy,
+  isSlotCatchUpWithinWindow,
+  resolveSlotCatchUpDeadlineMs,
+  type SlotCatchUpScheduleKey,
+} from "@shared/lib/scheduled-slot-catch-up-policy";
 import { logWorkerEvent } from "../lib/structured-log";
 
 export function isSlotCatchUpBatch(batch: MessageBatch<unknown>): boolean {
@@ -35,7 +39,7 @@ export async function handleSlotCatchUpBatch(
       metadata: { ...metadata, reason: "slot-catch-up-window-closed" } });
     return;
   }
-  const scheduleKey = message.scheduleKey as CronScheduleKey;
+  const scheduleKey = message.scheduleKey as SlotCatchUpScheduleKey;
   const [{ handleScheduledEvent }, { PUBLIC_SLOT_RUNNER_LOADERS }] = await Promise.all([
     import("./scheduled"),
     import("./scheduled/public-runners"),
@@ -47,7 +51,7 @@ export async function handleSlotCatchUpBatch(
   try {
     await handleScheduledEvent(event, env, ctx, "public", PUBLIC_SLOT_RUNNER_LOADERS, eventEntryMs, {
       trigger: message.trigger, armedAt: message.armedAt, armedByInvocationId: message.armedByInvocationId,
-    });
+    }, resolveSlotCatchUpDeadlineMs(scheduleKey, message.slotStartedAt, eventEntryMs));
   } catch (error) {
     // Child and slot terminals are already durable; nothing is retried here.
     logWorkerEvent({ scope: "handler", level: "warn", event: "scheduled-slot-catch-up", status: "error",

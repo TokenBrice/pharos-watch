@@ -8,6 +8,7 @@ import { waitForV9MemoryLaneRelease } from "../lib/v9-slot-window";
 import { recordScheduledWorkerVersionFirstSeen } from "../lib/worker-version-first-seen";
 import { settleAfterAbort } from "../lib/cron-abort-settlement";
 import { sendReserveContinuation } from "../lib/reserve-continuation-send";
+import { createSlotDeadline, SCHEDULED_SLOT_JOB_BUDGET_MS } from "../lib/cron-timeouts";
 
 import { createScheduledRuntimeContext } from "./scheduled/context";
 
@@ -38,6 +39,8 @@ export async function handleScheduledEvent(
   runnerLoaders: Partial<Record<CronScheduleKey, SlotRunnerLoader>>,
   slotBudgetStartedAtMs: number,
   catchUp?: ScheduledSlotCatchUpRequest,
+  /** Controlled deadline for a catch-up; never later than an ordinary delivery's. */
+  catchUpDeadlineMs?: number,
 ): Promise<void> {
   const slotPlan = SCHEDULED_SLOT_PLANS_BY_SCHEDULE[event.cron];
   if (!slotPlan) {
@@ -70,6 +73,10 @@ export async function handleScheduledEvent(
     slotStartedAt,
     slotBudgetStartedAtMs,
     ...(catchUp ? { catchUp } : {}),
+    ...(catchUpDeadlineMs != null ? {
+      deadline: createSlotDeadline(slotBudgetStartedAtMs,
+        Math.min(catchUpDeadlineMs, slotBudgetStartedAtMs + SCHEDULED_SLOT_JOB_BUDGET_MS)),
+    } : {}),
   });
   // A Queue catch-up is not scheduler delivery evidence for version attribution.
   if (!catchUp) {
