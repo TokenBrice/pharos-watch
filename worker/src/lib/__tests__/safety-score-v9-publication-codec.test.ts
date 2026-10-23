@@ -20,7 +20,13 @@ import {
   SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES,
   SafetyScoreV9StorageMetadataSchema,
   serializeSafetyScoreV9Publication,
+  serializeSafetyScoreV9PublicationWithEncoding,
 } from "../safety-score-v9/publication-codec";
+import {
+  decodePublicationDictionary, encodePublicationDictionary,
+  PUBLICATION_DICTIONARY_MAX_ENTRIES, PUBLICATION_DICTIONARY_MAX_ENTRY_BYTES, PUBLICATION_DICTIONARY_MAX_PACKED_BYTES,
+  PUBLICATION_DICTIONARY_MAX_TABLE_BYTES,
+} from "../safety-score-v9/publication-dictionary";
 
 async function authenticatedPayload(
   publication: SafetyScoreV9CurrentResponse,
@@ -65,6 +71,89 @@ describe("Safety Score V9 publication codec", () => {
     for (const stored of [stableJsonStringifyV1(publication), await serializeSafetyScoreV9Publication(publication)]) {
       expect((await parseSafetyScoreV9Publication(stored)).cards[0]!.localAuthorityExposure).toEqual(exposure);
     }
+  });
+  it("keeps the phase-one writer legacy while explicitly round-tripping dictionary bytes", async () => {
+    const first = makeWorkerSafetyScoreV9Publication().cards[0]!;
+    first.sharedBookId = "Repeated long evidence identité \\u0000 \"quoted\" \u{10400}".repeat(4);
+    const second = structuredClone(first);
+    second.id = "usdt-tether";
+    const publication = makeWorkerSafetyScoreV9Publication({ cards: [first, second] });
+    publication.sourceGenerations.marker = "\u00000";
+    const canonical = Buffer.from(stableJsonStringifyV1(publication));
+    const legacy = await serializeSafetyScoreV9PublicationWithEncoding(publication, "legacy");
+    const dictionary = await serializeSafetyScoreV9PublicationWithEncoding(publication, "dictionary");
+    expect(await serializeSafetyScoreV9Publication(publication)).toBe(legacy);
+    const old = JSON.parse(legacy), packed = JSON.parse(dictionary);
+    expect(packed).toMatchObject({
+      storageSchemaVersion: 2, encoding: "gzip-json-dictionary-base64-v1",
+      payloadSha256: old.payloadSha256, uncompressedBytes: canonical.byteLength,
+    });
+    expect(packed.packedBytes).toBeLessThan(canonical.byteLength);
+    const { payload: _payload, ...metadata } = packed;
+    expect(SafetyScoreV9StorageMetadataSchema.safeParse(metadata).success).toBe(true);
+    expect(SafetyScoreV9StorageMetadataSchema.safeParse({ ...metadata, storageSchemaVersion: 1 }).success).toBe(false);
+    expect(SafetyScoreV9StorageMetadataSchema.safeParse({ ...metadata, packedBytes: undefined }).success).toBe(false);
+    expect(SafetyScoreV9StorageMetadataSchema.safeParse({ ...metadata, packedBytes: PUBLICATION_DICTIONARY_MAX_PACKED_BYTES + 1 }).success).toBe(false);
+    const decoded = await parseSafetyScoreV9Publication(dictionary);
+    expect(Buffer.from(stableJsonStringifyV1(decoded))).toEqual(canonical);
+    expect(decoded.cards[0]).not.toBe(decoded.cards[1]);
+    await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({
+      ...packed, payloadSha256: "f".repeat(64),
+    }))).rejects.toThrow(/checksum mismatch/);
+    await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({
+      ...packed, packedBytes: packed.packedBytes - 1,
+    }))).rejects.toThrow(/declared uncompressed byte length/);
+    const noncanonical = Buffer.from(JSON.stringify(publication));
+    const transport = gzipSync(Buffer.concat([Buffer.from("[]\n"), noncanonical]));
+    await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({
+      ...packed, payload: bytesToBase64(transport), compressedBytes: transport.length,
+      packedBytes: noncanonical.length + 3, uncompressedBytes: noncanonical.length,
+      payloadSha256: createHash("sha256").update(noncanonical).digest("hex"),
+    }))).rejects.toThrow(/not canonical/);
+  });
+
+  it("restores a synthetic large cohort exactly, including escaped markers, keys and token boundaries", () => {
+    const repeated = "Long shared évidence \u{10400} \"quoted\" \u0000 \\".repeat(200);
+    const value = {
+      cards: Array.from({ length: 300 }, (_, index) => ({ id: index, a: repeated, b: repeated })),
+      ["\u00000"]: ["\u00000", "\u0000\u00001", ["@s", 0], "\u0000x"],
+      huge: "x".repeat(70_000), escaped: ["\u0000".repeat(8), "\u0000".repeat(8)],
+    };
+    const encoded = encodePublicationDictionary(value);
+    const canonical = Buffer.from(stableJsonStringifyV1(value));
+    const packed = [...encoded.chunks].join("");
+    expect(Buffer.from(decodePublicationDictionary(Buffer.from(packed), canonical.byteLength))).toEqual(canonical);
+    expect(encoded.contentSha256).toBe(createHash("sha256").update(canonical).digest("hex"));
+    expect(Buffer.byteLength(packed)).toBeLessThan(canonical.byteLength / 2);
+  });
+
+  it("rejects nested non-string table entries before canonical traversal", () => {
+    const nested = `${"[".repeat(5_000)}0${"]".repeat(5_000)}`;
+    expect(() => decodePublicationDictionary(Buffer.from(`[${nested}]\n{}`), 2))
+      .toThrow("Invalid publication dictionary entry");
+  });
+
+  it.each([
+    ["not-a-table", 2],
+    ["{}\n{}", 2],
+    ['[1]\n{}', 2],
+    [`${JSON.stringify(["x".repeat(32), "x".repeat(32)])}\n{}`, 2],
+    [`${JSON.stringify(["x".repeat(PUBLICATION_DICTIONARY_MAX_ENTRY_BYTES)])}\n{}`, 2],
+    [`${JSON.stringify(Array(PUBLICATION_DICTIONARY_MAX_ENTRIES + 1).fill("x".repeat(32)))}\n{}`, 2],
+    [`${" ".repeat(PUBLICATION_DICTIONARY_MAX_TABLE_BYTES + 1)}\n{}`, 2],
+    ['[]\n\u00000\u0000', 3],
+    ['[]\n\u0000-1\u0000', 3],
+    ['[]\n\u000001\u0000', 3],
+    ['[]\n\u00000', 3],
+    ['[]\n\u0000\u0000', 3],
+    ['[ ]\n{}', 2],
+    [`${JSON.stringify(["x".repeat(32)])}\n[\u00000\u0000,\u00000\u0000]`, 4],
+    ['[]\n{}', 1],
+    ['[]\n{}', 3],
+    ['[]\n"unterminated', 20],
+    ['[]\n{}', 9_200_001],
+  ])("rejects hostile dictionary %s", (packed, length) => {
+    expect(() => decodePublicationDictionary(Buffer.from(String(packed)), Number(length))).toThrow();
   });
   it("encodes the same canonical envelope while reusing only frozen schema-equal cards", async () => {
     const publication = deepFreeze(makeWorkerSafetyScoreV9Publication());
@@ -206,16 +295,16 @@ describe("Safety Score V9 publication codec", () => {
     );
   });
 
-  it("round-trips the raw byte ceiling and rejects one additional byte on write", async () => {
+  it.each(["legacy", "dictionary"] as const)("round-trips the raw byte ceiling and rejects one additional byte on write (%s)", async encoding => {
     const publication = makeWorkerSafetyScoreV9Publication();
     publication.sourceGenerations.byteBudgetFixture = "";
     const initialBytes = Buffer.byteLength(stableJsonStringifyV1(publication), "utf8");
     publication.sourceGenerations.byteBudgetFixture = "x".repeat(9_200_000 - initialBytes);
-    const stored = await serializeSafetyScoreV9Publication(publication);
+    const stored = await serializeSafetyScoreV9PublicationWithEncoding(publication, encoding);
     expect(JSON.parse(stored).uncompressedBytes).toBe(9_200_000);
     await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(publication);
     publication.sourceGenerations.byteBudgetFixture += "x";
-    await expect(serializeSafetyScoreV9Publication(publication)).rejects.toThrow(/uncompressed byte limit; maximum is 9200000/);
+    await expect(serializeSafetyScoreV9PublicationWithEncoding(publication, encoding)).rejects.toThrow(/uncompressed byte limit; maximum is 9200000/);
   });
 
   it("rejects invalid UTF-8 with authenticated transport metadata", async () => {

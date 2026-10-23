@@ -152,7 +152,7 @@ export async function archiveSafetyScoreCapture(input: {
       evaluationBuildDigest: publication.evaluationBuildDigest,
       ...input.cacheRows,
     };
-    // Values are already gzip-base64 envelopes. Never inflate or re-encode them.
+    // Values are already versioned compressed envelopes. Never inflate or re-encode them.
     const value = JSON.stringify(object);
     const objectBytes = Buffer.byteLength(value, "utf8");
     bytes = objectBytes;
