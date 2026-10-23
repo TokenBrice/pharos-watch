@@ -9,6 +9,15 @@ import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
 import { resolveV9EffectiveScoringWeight } from "@shared/types/safety-score-v9-public-causes";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
 import { describeExitRouteVenue, describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
+import { resolveControlComponentRoles } from "@/lib/pillar-evidence-strips";
+import type { ControlComponentRole } from "@shared/lib/classification";
+import {
+  isV9BridgeRouteComponentFor,
+  isV9DeploymentControlComponentKey,
+  v9BridgeMintControlKey,
+  v9BridgeRouteDeploymentKey,
+  v9ControlChainLabel,
+} from "@shared/lib/safety-score-v9/control-component-keys";
 
 export type StablecoinSafetyScoreV9Card = SafetyScoreV9CurrentCard;
 
@@ -25,8 +34,6 @@ const CRITICAL_BELOW_SCORE = 40;
 const TAIL_WEIGHT_FLOOR = 0.02;
 /** Folding one or two rows saves no height, so a tail needs at least this many. */
 const MIN_TAIL_ROWS = 3;
-/** A composite of one is just the row itself. */
-const MIN_COMPOSITE_ROWS = 2;
 
 export type StablecoinSafetyScoreV9RowTone = "neutral" | "warn" | "critical";
 
@@ -48,6 +55,8 @@ export interface StablecoinSafetyScoreV9BreakdownRow {
   detail: string | null;
   /** Members folded into this row; a composite expands to show them. */
   children: StablecoinSafetyScoreV9BreakdownRow[];
+  /** Economic Control only: how the input relates to the pillar minimum. */
+  role: ControlComponentRole | null;
 }
 
 export interface StablecoinSafetyScoreV9BreakdownGroup {
@@ -69,6 +78,7 @@ function makeRow(row: {
   status?: string | null;
   detail?: string | null;
   children?: StablecoinSafetyScoreV9BreakdownRow[];
+  role?: ControlComponentRole | null;
 }): StablecoinSafetyScoreV9BreakdownRow {
   return {
     key: row.key,
@@ -79,6 +89,7 @@ function makeRow(row: {
     tone: scoreTone(row.score),
     detail: row.detail ?? null,
     children: row.children ?? [],
+    role: row.role ?? null,
   };
 }
 
@@ -144,6 +155,8 @@ export interface StablecoinSafetyScoreV9PillarBreakdown {
   sectionLabel: string;
   context: StablecoinSafetyScoreV9BreakdownMeta[];
   exitHighlight: StablecoinSafetyScoreV9ExitHighlight | null;
+  /** One sentence read before the rows, for a rule too long for the context grid. */
+  note: string | null;
   /** One entry when the pillar has no sub-structure; labelled groups otherwise. */
   groups: StablecoinSafetyScoreV9BreakdownGroup[];
   alternatives: StablecoinSafetyScoreV9Alternative[];
@@ -186,6 +199,7 @@ function parseBackingBreakdown(
     // them as context rows would say the same thing twice.
     context: [],
     exitHighlight: null,
+    note: null,
     groups: backingGroups(breakdown),
     alternatives: [],
   };
@@ -465,6 +479,7 @@ function parseExitBreakdown(
       : `Primary route components — ${primaryRoute.label}`,
     context,
     exitHighlight,
+    note: null,
     // The route's components are few and already ordered meaningfully, so exit
     // keeps a single unlabelled group and its producer order.
     groups: [{
@@ -499,65 +514,203 @@ function parseExitBreakdown(
   };
 }
 
-function parseControlBreakdown(
-  breakdown: SafetyScoreV9ControlBreakdown,
-): StablecoinSafetyScoreV9PillarBreakdown {
-  const toRow = (component: SafetyScoreV9ControlBreakdown["components"][number]) => makeRow({
-    key: component.key,
-    label: component.kind === "mint" ? "Mint authority" : component.label,
-    score: component.score,
-    weight: resolveV9EffectiveScoringWeight(component),
-    status: causeLabel(component.cause) ?? (component.binding ? "Binding" : "Diagnostic"),
-  });
+type ControlComponent = SafetyScoreV9ControlBreakdown["components"][number];
 
-  // The pillar scores on the lowest binding control, so binding rows lead,
-  // cheapest first: the row that sets the score is always the first one read.
-  const binding = breakdown.components.filter((component) => component.binding);
-  const rows = [...binding]
-    .sort((left, right) => (left.score ?? Infinity) - (right.score ?? Infinity))
-    .map(toRow);
+/** Strongest claim first: a group of parts takes the role its most binding part holds. */
+const ROLE_ORDER: readonly ControlComponentRole[] = ["limiting", "eligible", "diagnostic", "excluded"];
 
-  // Non-binding bridges are the bulk of the noise — 48 of usdc-circle's 50
-  // rows. They roll into one composite carrying the cohort's worst score,
-  // because the pillar rule is a minimum and an average would flatter it. Any
-  // binding bridge stays above as its own row; on 37 assets a bridge is the
-  // lowest binding control and must never be folded away.
-  const loose = breakdown.components.filter((component) => !component.binding);
-  const looseBridges = loose.filter((component) => component.kind === "bridge" && component.score !== null);
-  const otherLoose = loose.filter((component) => component.kind !== "bridge" || component.score === null);
-  rows.push(...otherLoose.map(toRow));
+/** Tied score-setting deployments stay visible as rows up to this count; a larger tie folds. */
+const MAX_UNFOLDED_LIMITING_DEPLOYMENTS = 3;
 
-  if (looseBridges.length >= MIN_COMPOSITE_ROWS) {
-    const scores = looseBridges.flatMap((component) => component.score === null ? [] : [component.score]);
-    const worst = Math.min(...scores);
-    const best = Math.max(...scores);
-    rows.push(makeRow({
-      key: "bridge-composite",
-      label: "Bridge components",
-      score: worst,
-      status: `${looseBridges.length} bridge components`,
-      detail: worst === best
-        ? `All ${looseBridges.length} at ${worst.toFixed(0)} · not binding`
-        : `Worst of ${looseBridges.length} · range ${worst.toFixed(0)}–${best.toFixed(0)} · not binding`,
-      children: [...looseBridges]
-        .sort((left, right) => (left.score ?? Infinity) - (right.score ?? Infinity))
-        .map(toRow),
-    }));
-  } else {
-    rows.push(...looseBridges.map(toRow));
+/** The row's role tag names limiting and diagnostic cohorts; the others say it in the label. */
+const DEPLOYMENT_FOLD_LABELS: Record<ControlComponentRole, string> = {
+  limiting: "Deployments",
+  eligible: "Eligible deployments",
+  diagnostic: "Deployments",
+  excluded: "Unscored deployments",
+};
+
+interface ControlEntry {
+  row: StablecoinSafetyScoreV9BreakdownRow;
+  role: ControlComponentRole;
+  deployment: boolean;
+}
+
+/** Cheapest first; at a score tie asset-level inputs lead, since they name the whole asset. */
+function compareControlEntries(left: ControlEntry, right: ControlEntry): number {
+  return (left.row.score ?? Infinity) - (right.row.score ?? Infinity) ||
+    Number(left.deployment) - Number(right.deployment) ||
+    left.row.label.localeCompare(right.row.label);
+}
+
+function shortDeploymentAddress(deploymentKey: string): string {
+  const address = deploymentKey.slice(deploymentKey.indexOf(":") + 1);
+  return address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address;
+}
+
+/**
+ * One bridged deployment publishes two components over the same control: its
+ * bridge-tier route and the authority that mints its token there. They read
+ * as one deployment row scored on the weaker part, both parts named beneath.
+ * Unpaired parts keep their own producer label.
+ */
+function deploymentEntries(
+  components: readonly ControlComponent[],
+  roleByKey: ReadonlyMap<string, ControlComponentRole>,
+): ControlEntry[] {
+  const routes = components.filter((component) => component.kind === "bridge");
+  const paired = new Set<string>();
+  const entries: { parts: ControlComponent[]; deploymentKey: string | null }[] = [];
+  for (const component of components) {
+    const controlKey = v9BridgeMintControlKey(component.key);
+    const route = controlKey === null
+      ? undefined
+      : routes.find((candidate) => !paired.has(candidate.key) && isV9BridgeRouteComponentFor(candidate.key, controlKey));
+    if (controlKey === null || route === undefined) continue;
+    paired.add(component.key).add(route.key);
+    entries.push({ parts: [route, component], deploymentKey: v9BridgeRouteDeploymentKey(route.key, controlKey) });
+  }
+  for (const component of components) {
+    if (!paired.has(component.key)) entries.push({ parts: [component], deploymentKey: null });
   }
 
+  const chainOf = (deploymentKey: string | null) =>
+    deploymentKey === null ? null : v9ControlChainLabel(deploymentKey);
+  const chainCounts = new Map<string, number>();
+  for (const entry of entries) {
+    const chain = entry.parts.length > 1 ? chainOf(entry.deploymentKey) : null;
+    if (chain !== null) chainCounts.set(chain, (chainCounts.get(chain) ?? 0) + 1);
+  }
+
+  return entries.map(({ parts, deploymentKey }) => {
+    const roles = parts.map((part) => roleByKey.get(part.key) ?? "excluded");
+    const role = ROLE_ORDER.find((candidate) => roles.includes(candidate))!;
+    // Score from the parts that hold the row's role, so a diagnostic part can
+    // never lower an eligible deployment's bar.
+    const scores = parts.flatMap((part, index) =>
+      roles[index] === role && part.score !== null ? [part.score] : []);
+    const chain = parts.length > 1 ? chainOf(deploymentKey) : null;
+    // A pair off the chain registry still reads as a deployment, not as its
+    // route's generic fallback label.
+    const label = parts.length === 1
+      ? parts[0]!.label
+      : chain === null
+        ? "Bridged deployment"
+        : (chainCounts.get(chain) ?? 0) > 1 ? `${chain} · ${shortDeploymentAddress(deploymentKey!)}` : chain;
+    const causes = [...new Set(parts.flatMap((part) => causeLabel(part.cause) ?? []))];
+    return {
+      role,
+      deployment: true,
+      row: makeRow({
+        key: parts.map((part) => part.key).join("|"),
+        label,
+        score: scores.length === 0 ? null : Math.min(...scores),
+        role,
+        status: causes.length === 0 ? null : causes.join(" · "),
+        detail: parts.length > 1
+          ? parts.map((part) => `${part.kind === "bridge" ? "Bridge route" : "Bridged-token mint"} ${
+            part.score === null ? "—" : part.score.toFixed(0)}${part.posture === "compromised" ? " (compromised)" : ""}`).join(" · ")
+          : null,
+      }),
+    };
+  });
+}
+
+function foldSummary(rows: readonly StablecoinSafetyScoreV9BreakdownRow[]): string {
+  const scores = rows.flatMap((row) => row.score === null ? [] : [row.score]);
+  if (scores.length === 0) return `${rows.length} not scored`;
+  const worst = Math.min(...scores);
+  const best = Math.max(...scores);
+  if (worst === best && scores.length === rows.length) return `All ${rows.length} at ${worst.toFixed(0)}`;
+  // Rows arrive cheapest first, so the first weak rows are the weakest.
+  const weak = rows.filter((row) => row.score !== null && row.score < WARN_BELOW_SCORE);
+  const named = weak.slice(0, 2).map((row) => `${row.label} ${row.score!.toFixed(0)}`);
+  const weakLine = weak.length === 0
+    ? ""
+    : weak.length > named.length
+      ? ` · ${weak.length} weak (under ${WARN_BELOW_SCORE}) · weakest ${named.join(", ")}`
+      : ` · weakest ${named.join(", ")}`;
+  return `Range ${worst.toFixed(0)}–${best.toFixed(0)}${weakLine}`;
+}
+
+/**
+ * Economic Control scores the lowest eligible input, so the breakdown leads
+ * with the limiting inputs and orders the rest by role. Asset-level inputs are
+ * always rows. Deployment inputs (bridge routes, bridged-token mints and local
+ * mints) number up to a hundred on the widest assets: each role's cohort folds
+ * into one worst-score row once it has three members, except that up to three
+ * limiting deployments stay rows so the input that sets the score is never
+ * hidden. Worst, not mean: the pillar rule is a minimum.
+ */
+function parseControlBreakdown(
+  card: StablecoinSafetyScoreV9Card,
+  breakdown: SafetyScoreV9ControlBreakdown,
+): StablecoinSafetyScoreV9PillarBreakdown {
+  const roleByKey = new Map(
+    (resolveControlComponentRoles(card)?.components ?? []).map((component) => [component.key, component.role]),
+  );
+  const assetEntries: ControlEntry[] = breakdown.components
+    .filter((component) => !isV9DeploymentControlComponentKey(component.key))
+    .map((component) => {
+      const role = roleByKey.get(component.key) ?? "excluded";
+      return {
+        role,
+        deployment: false,
+        row: makeRow({
+          key: component.key,
+          label: component.label,
+          score: component.score,
+          role,
+          status: causeLabel(component.cause),
+        }),
+      };
+    });
+  const deployments = deploymentEntries(
+    breakdown.components.filter((component) => isV9DeploymentControlComponentKey(component.key)),
+    roleByKey,
+  );
+
+  const rows: StablecoinSafetyScoreV9BreakdownRow[] = [];
+  for (const role of ROLE_ORDER) {
+    const assets = assetEntries.filter((entry) => entry.role === role);
+    const cohort = deployments.filter((entry) => entry.role === role).sort(compareControlEntries);
+    const foldAt = role === "limiting" ? MAX_UNFOLDED_LIMITING_DEPLOYMENTS + 1 : MIN_TAIL_ROWS;
+    const entries: ControlEntry[] = [...assets];
+    if (cohort.length >= foldAt) {
+      const children = cohort.map((entry) => entry.row);
+      const scores = children.flatMap((row) => row.score === null ? [] : [row.score]);
+      entries.push({
+        role,
+        deployment: true,
+        row: makeRow({
+          key: `deployments:${role}`,
+          label: `${DEPLOYMENT_FOLD_LABELS[role]} (${children.length})`,
+          score: scores.length === 0 ? null : Math.min(...scores),
+          role,
+          detail: foldSummary(children),
+          children,
+        }),
+      });
+    } else {
+      entries.push(...cohort);
+    }
+    rows.push(...entries.sort(compareControlEntries).map((entry) => entry.row));
+  }
+
+  const hasDiagnostics = [...assetEntries, ...deployments].some((entry) => entry.role === "diagnostic");
   return {
     aggregationWeight: breakdown.aggregationWeight,
     evaluatedScore: breakdown.evaluatedScore,
     publishedScore: breakdown.publishedScore,
-    sectionLabel: "Control components",
-    context: [{
-      key: "method",
-      label: "Pillar rule",
-      value: "Lowest binding control",
-    }],
+    sectionLabel: "Control inputs",
+    context: [{ key: "method", label: "Pillar rule", value: "Lowest eligible input" }],
     exitHighlight: null,
+    // v10.31: deployment-local authority, bridge-route tiers and control
+    // incidents leave the minimum but are priced by supply share in
+    // deployment risk; a bridged-token mint's own score is not authority-priced.
+    note: hasDiagnostics
+      ? "Diagnostic inputs sit outside the minimum. Deployment risk can still charge bridge routes, control incidents and deployment-local authority by their share of supply."
+      : null,
     groups: [{ key: "control", label: null, score: null, weight: null, rows, tail: null }],
     alternatives: [],
   };
@@ -571,5 +724,5 @@ export function pillarBreakdown(
   if (breakdowns === null) return null;
   if (pillar === "backing") return parseBackingBreakdown(breakdowns.backing);
   if (pillar === "exit") return parseExitBreakdown(breakdowns.exit, card);
-  return parseControlBreakdown(breakdowns.control);
+  return parseControlBreakdown(card, breakdowns.control);
 }

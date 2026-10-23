@@ -180,9 +180,11 @@ describe("StablecoinSafetyScoreV9Card", () => {
     expect(screen.getByText("Evaluator to published")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /Economic Control/ }));
-    expect(screen.getByText("Control components")).toBeTruthy();
-    expect(screen.getByText("Binding")).toBeTruthy();
+    expect(screen.getByText("Control inputs")).toBeTruthy();
+    // Roles use the shared Control role grammar, never local "Binding" copy.
+    expect(screen.getByText("Limiting")).toBeTruthy();
     expect(screen.getByText("Diagnostic")).toBeTruthy();
+    expect(screen.queryByText("Binding")).toBeNull();
     expect(screen.queryByText("Scored inputs")).toBeNull();
   });
 

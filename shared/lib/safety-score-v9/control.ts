@@ -13,6 +13,7 @@ import {
 import { v9StructuralSignalSharePct } from "./backing-primitives";
 import { canonicalDomains, compareText, domainKey, uniqueSorted } from "./primitives";
 import { isUnboundedMintPosture } from "./mint-posture";
+import { v9BridgeMintComponentKey, v9BridgeMintControlKey, v9BridgeRouteComponentKey, v9DeploymentMintComponentKey } from "./control-component-keys";
 import {
   controlFallbackKind,
   evaluateV9SubthresholdUnresolvedBridgeJoins,
@@ -367,7 +368,7 @@ function evaluateMintPhase(context: ControlEvaluationContext): void {
     );
     const binding = controlBinding(control, provenNullShareDeploymentBound(facts, control));
     components.push({
-      componentKey: control.controlKind === "bridge" ? `mint:bridge:${control.controlKey}` : "mint",
+      componentKey: control.controlKind === "bridge" ? v9BridgeMintComponentKey(control.controlKey) : "mint",
       kind: "mint", posture, score, binding,
       controlKeys: [control.controlKey], failureDomains: canonicalDomains(control.failureDomains),
     });
@@ -667,7 +668,7 @@ function evaluateBridgePhase(context: ControlEvaluationContext): void {
         addReason("material-bridge-supply-unmatched", "deployment-control", "bridge:supply", route.controlKey);
       }
       components.push({
-        componentKey: `bridge:${control.deploymentKey}:${control.controlKey}`,
+        componentKey: v9BridgeRouteComponentKey(control.deploymentKey, control.controlKey),
         kind: "bridge",
         posture: route.tier,
         score: route.tier === "opaque-or-unknown"
@@ -848,7 +849,7 @@ function normalizeControlComponents(
         : priced;
     // Bridge authority competes with the pillar, not with native mint
     // attribution; its separately admitted route tier remains independent.
-    if (normalized.kind !== "mint" || normalized.componentKey.startsWith("mint:bridge:")) {
+    if (normalized.kind !== "mint" || v9BridgeMintControlKey(normalized.componentKey) !== null) {
       normalizedComponents.push(normalized);
       continue;
     }
@@ -868,7 +869,7 @@ function normalizeControlComponents(
   for (const component of scopedMintComponents) {
     if (component !== worstMint) normalizedComponents.push({
       ...component,
-      componentKey: `mint:deployment:${component.controlKeys.join("+")}`,
+      componentKey: v9DeploymentMintComponentKey(component.controlKeys),
     });
   }
   if (worstBindingMint !== null && worstBindingMint !== worstMint) {

@@ -18,7 +18,7 @@ import type {
   V9ReasonCode,
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
-import type { V1005ProcessDiagnostic, V1005AssetIssuanceFacts } from "../../types/safety-score-v9-facts";
+import type { V1005ProcessDiagnostic, V1005AssetIssuanceFacts, V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
 import { projectV9CompactPartialEvidence } from "../../types/safety-score-v9-causes";
 import { projectExitExecutionCertificate } from "./exit-execution";
 import { V9_PUBLIC_EVIDENCE_RESPONSIBILITIES as RESPONSIBILITIES } from "../../types/safety-score-v9-vocabulary";
@@ -34,6 +34,7 @@ import type { V9PillarReason, V9ProductionScoreInput, V9ProductionScoreTrace } f
 import { computeV9CompactResultDigest, projectCompactV9ScoreTrace, type V9CompactScoreTrace } from "./trace";
 import { compareText, uniqueSorted } from "./primitives";
 import { effectiveAuthoritySignatureRequirement } from "./control-scope";
+import { v9BridgeMintControlKey, v9ControlChainLabel } from "./control-component-keys";
 import { readableV9PublicText, readableV9PublicWitnesses } from "./public-witness-texts";
 
 type V9PublicAccessProjectionInput = V9AccessPostureResult & {
@@ -543,6 +544,85 @@ function projectIssuanceSummary(control: NonNullable<V9PublicCardProjectionInput
   };
 }
 
+const CONTROL_AUTHORITY_NOUNS: Readonly<Record<V9DeploymentControlFactV2["controlKind"], string>> = {
+  mint: "mint authority",
+  upgrade: "upgrade authority",
+  custody: "custody authority",
+  freeze: "freeze authority",
+  governance: "governance authority",
+  oracle: "oracle authority",
+  bridge: "bridged-token mint",
+};
+
+/**
+ * `mint` and `mint:binding` are the scorer's pick among the binding native
+ * paths; tied paths are dropped, so naming the pick's chain or role would name
+ * one arbitrary tie-winner (USDC ties four single-signer EOAs at 80).
+ */
+const NATIVE_MINT_LABEL = "Native mint authority";
+
+/**
+ * Names a row that stands for exactly one control after the fact that scored
+ * it, so a multi-chain asset reads "Taiko bridged-token mint" or "Solana
+ * upgrade authority" instead of fifty identical "Mint authority" rows. A
+ * global control carries an `asset:` deployment key, so its chain comes from
+ * its authority.
+ */
+function controlFactLabel(
+  component: V9EconomicControlResult["components"][number],
+  fact: V9DeploymentControlFactV2,
+): string | null {
+  if (component.kind === "bridge") {
+    const chain = v9ControlChainLabel(fact.deploymentKey);
+    return chain === null ? null : `${chain} bridge`;
+  }
+  if (component.kind !== "mint") return null;
+  if (component.binding && (component.componentKey === "mint" || component.componentKey === "mint:binding")) {
+    return NATIVE_MINT_LABEL;
+  }
+  const chain = v9ControlChainLabel(fact.deploymentKey) ??
+    (fact.authority === null ? null : v9ControlChainLabel(fact.authority.authorityKey));
+  const noun = v9BridgeMintControlKey(component.componentKey) !== null
+    ? CONTROL_AUTHORITY_NOUNS.bridge
+    : CONTROL_AUTHORITY_NOUNS[fact.controlKind];
+  return chain === null ? `${noun.charAt(0).toUpperCase()}${noun.slice(1)}` : `${chain} ${noun}`;
+}
+
+function shortKeyTail(key: string): string | null {
+  const tail = key.slice(key.indexOf(":") + 1);
+  if (tail.length === 0 || tail === key) return null;
+  return tail.length > 12 ? `${tail.slice(0, 6)}…${tail.slice(-4)}` : tail;
+}
+
+/**
+ * Rows sharing a label within one card get the first identity that tells the
+ * whole group apart: the execution path (one controller split into reviewed
+ * paths), then the authority, then the deployment.
+ */
+function disambiguateControlLabels(
+  labels: readonly string[],
+  facts: readonly (V9DeploymentControlFactV2 | undefined)[],
+): string[] {
+  const groups = new Map<string, number[]>();
+  labels.forEach((label, index) => groups.set(label, [...(groups.get(label) ?? []), index]));
+  const result = [...labels];
+  const identities: ((fact: V9DeploymentControlFactV2) => string | null)[] = [
+    (fact) => fact.executionPathId?.replace(/[_-]+/g, " ") ?? null,
+    (fact) => fact.authority === null ? null : shortKeyTail(fact.authority.authorityKey),
+    (fact) => shortKeyTail(fact.deploymentKey),
+  ];
+  for (const [label, indices] of groups) {
+    if (indices.length < 2 || indices.some((index) => facts[index] === undefined)) continue;
+    for (const identity of identities) {
+      const suffixes = indices.map((index) => identity(facts[index]!));
+      if (suffixes.some((suffix) => suffix === null) || new Set(suffixes).size !== suffixes.length) continue;
+      indices.forEach((index, position) => { result[index] = `${label} · ${suffixes[position]}`; });
+      break;
+    }
+  }
+  return result;
+}
+
 function projectControlBreakdown(
   input: V9PublicCardProjectionInput,
 ): NonNullable<V9UninternedPublicCard["breakdowns"]>["control"] {
@@ -559,6 +639,19 @@ function projectControlBreakdown(
   const detailFacts = (control.controlFacts ?? []).filter((fact) => usedControlKeys.has(fact.controlKey))
     .sort((left, right) => compareText(left.controlKey, right.controlKey));
   const detailRefs = new Map(detailFacts.map((fact, index) => [fact.controlKey, index]));
+  const factsByKey = new Map(detailFacts.map((fact) => [fact.controlKey, fact]));
+  const sortedComponents = components.sort((left, right) => compareText(left.componentKey, right.componentKey));
+  const singleFacts = sortedComponents.map((component) =>
+    component.controlKeys.length === 1 ? factsByKey.get(component.controlKeys[0]!) : undefined);
+  const componentLabels = disambiguateControlLabels(sortedComponents.map((component, index) =>
+    component.kind === "oracle" && component.posture === "privileged-internal-pricing"
+      ? "Privileged internal pricing"
+      : component.kind === "oracle" && component.posture === "oracleless"
+        ? "Oracleless design"
+        : component.kind === "inventory" ? "Control inventory"
+          : (singleFacts[index] === undefined ? null : controlFactLabel(component, singleFacts[index]!)) ??
+            input.display?.labels?.[component.componentKey] ??
+            (component.kind === "mint" ? "Mint authority" : component.kind === "oracle" ? "Price oracle" : "Bridge authority")), singleFacts);
   const controlDetails = detailFacts.map((fact) => {
     const signatures = effectiveAuthoritySignatureRequirement(fact.authority);
     const executionPaths = [
@@ -582,18 +675,9 @@ function projectControlBreakdown(
     method: "minimum-binding-component",
     ...(issuanceSummary ? { issuanceSummary } : {}),
     ...(controlDetails.length ? { controlDetails } : {}),
-    components: components
-      .sort((left, right) => compareText(left.componentKey, right.componentKey))
-      .map((component) => ({
+    components: sortedComponents.map((component, index) => ({
         key: component.componentKey,
-        label:
-          component.kind === "oracle" && component.posture === "privileged-internal-pricing"
-            ? "Privileged internal pricing"
-            : component.kind === "oracle" && component.posture === "oracleless"
-              ? "Oracleless design"
-              : component.kind === "inventory" ? "Control inventory"
-                : input.display?.labels?.[component.componentKey] ??
-                  (component.kind === "mint" ? "Mint authority" : component.kind === "oracle" ? "Price oracle" : "Bridge authority"),
+        label: componentLabels[index]!,
         kind: component.kind,
         score: component.score,
         cause: component.cause,
