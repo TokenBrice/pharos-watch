@@ -116,11 +116,14 @@ export interface DewsSourceState {
   yieldWarnings: Map<string, string[]>;
   yieldSourceRisk: Map<string, YieldSourceRisk>;
   yieldRankChangeAttribution: Map<string, YieldRankChangeAttribution>;
+  yieldRankingsAgeSec: number | null;
+  yieldRankingsRetained: boolean;
   latestPsiScore: number | null;
   sourceCoverage: Record<string, number>;
   dependencyDiagnostics: {
     dexLiquidity: DexLiquidityDependencyDiagnostics;
     psi: StablecoinsDependencyDiagnostics;
+    yieldRankings: StablecoinsDependencyDiagnostics;
   };
 }
 
