@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
 import { z } from "zod";
 import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, SCHEDULED_TASK_DESCRIPTORS } from "../../shared/lib/scheduled-runner-registry";
-import { getCronSlotStartedAtForSchedule } from "../../shared/lib/cron-jobs";
+import { getCronSlotStartedAtForTrigger } from "../../shared/lib/cron-jobs";
 import { assertCliUsage, parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { buildScheduledInvocationQuery } from "./cron-delivery.mjs";
 
@@ -184,7 +184,7 @@ export function joinScheduledMemory(adaptiveRows: AdaptiveRow[], scheduledRows: 
       else if (plan.worker !== role) correlation = "registry-owner-mismatch";
       else lane = {
         cron: scheduled.cron, scheduledDatetime: scheduled.scheduledDatetime, scheduleKey: plan.scheduleKey,
-        slotStartedAt: getCronSlotStartedAtForSchedule(plan.scheduleKey, Date.parse(scheduled.scheduledDatetime)),
+        slotStartedAt: getCronSlotStartedAtForTrigger(plan.scheduleKey, scheduled.cron, Date.parse(scheduled.scheduledDatetime)),
         mappingBasis: "collector-registry", candidateJobChains: plan.jobChains,
         budgetOnlyJobs: plan.budgetOnlyJobs ?? [], expectedJob: plan.jobChains.length === 1 && plan.jobChains[0]?.length === 1 ? plan.jobChains[0][0]! : null,
         jobBasis: "registry-plan", executionConfirmed: false,

@@ -82,9 +82,13 @@ export const CRON_SCHEDULE_DEFINITIONS = {
   // hourly expression qualifies directly. :22 keeps the six-minute gap after
   // the :16 input preparation; a prepare that misses it is still admitted on
   // the next slot within SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC.
+  // The :52 alias is a conditional second chance with its own fenced slot (see
+  // V9_PUBLICATION_SECOND_CHANCE): Cloudflare can drop a delivery outright, and
+  // the heavy Worker has no Queue catch-up.
   v9PublicationOffset: {
     cpuPlacement: "hourly-physical-required",
     schedule: "22 * * * *",
+    triggerSchedules: ["22 * * * *", "52 * * * *"],
     ...CRON_SCHEDULE_CADENCES.v9PublicationOffset,
   },
   // Paired hourly physical triggers for the hourly Cron CPU class. status-self-check
@@ -225,6 +229,11 @@ export const CRON_CONNECTION_BUDGET = {
  * publication and hourly extended mint/burn retire the `:52` and `:48`
  * aliases, moving the physical count from 43 to 41. Slowing reserve recovery,
  * DEX discovery and yield changes expressions, not their count.
+ *
+ * Dated note (2026-10-23, #1614): a dropped `:22` delivery cost the hourly V9
+ * publication about two hours, so the `:52` alias returns as a conditional
+ * second chance that skips neutrally once the hour has an accepted
+ * publication. Zero connections; the physical count moves from 41 to 42.
  */
 export const CRON_GROWTH_HEADROOM_POLICY = {
   maxPhysicalTriggersBeforeRebalance: 43,
@@ -653,7 +662,8 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     job: "prepare-safety-score-v9-input",
     label: "V9 compiler input",
     group: "hourly",
-    // Prepares only on the :16 DEX publication tick; :46 reuse ticks skip.
+    // Prepares on the :16 DEX publication tick; :46 ticks skip unless they
+    // published a late stage or the hour's :16 capture never committed.
     intervalSec: SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
     scheduleKey: "halfHourlyChartsOffset",
     triggerMode: "shared",
@@ -993,6 +1003,40 @@ function normalizeCronSlotStartedAt(timestampSec: number, intervalSec: number, o
 
   const shifted = timestampSec - offsetSec;
   return Math.floor(shifted / intervalSec) * intervalSec + offsetSec;
+}
+
+/**
+ * The hourly V9 publication's `:52` trigger publishes only when no publication
+ * was accepted since the top of its hour (the `:22` slot was missed, abandoned,
+ * skipped, held or failed). It claims its own `:52` slot, so a finished failed
+ * `:22` row cannot deduplicate it and its delivery lag is measured from :52.
+ * The logical cadence (and every pinned evidence budget) stays hourly.
+ */
+export const V9_PUBLICATION_SECOND_CHANCE = {
+  scheduleKey: "v9PublicationOffset",
+  trigger: "52 * * * *",
+  offsetSec: CRON_SCHEDULE_CADENCES.v9PublicationOffset.offsetSec + 30 * 60,
+} as const;
+
+export function isV9PublicationSecondChanceTrigger(cron: string | null | undefined): boolean {
+  return cron === V9_PUBLICATION_SECOND_CHANCE.trigger;
+}
+
+/** Slot identity for one physical delivery; only a second-chance alias differs from the logical slot. */
+export function getCronSlotStartedAtForTrigger(
+  scheduleKey: CronScheduleKey,
+  cron: string,
+  scheduledTimeMs?: number | null,
+): number {
+  if (scheduleKey !== V9_PUBLICATION_SECOND_CHANCE.scheduleKey || !isV9PublicationSecondChanceTrigger(cron)) {
+    return getCronSlotStartedAtForSchedule(scheduleKey, scheduledTimeMs);
+  }
+  const rawTimestampSec = Number.isFinite(scheduledTimeMs)
+    ? Math.floor(Number(scheduledTimeMs) / 1000)
+    : Math.floor(Date.now() / 1000);
+  return normalizeCronSlotStartedAt(
+    rawTimestampSec, CRON_SCHEDULE_DEFINITIONS[scheduleKey].intervalSec, V9_PUBLICATION_SECOND_CHANCE.offsetSec,
+  );
 }
 
 export function getCronSlotStartedAtForSchedule(

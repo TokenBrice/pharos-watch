@@ -19,10 +19,12 @@ import {
   runV9AfterCoreWithinWindow,
   V9_MEMORY_LANE_LEASE_KEY,
   V9_EXECUTION_WINDOW_POLICY,
+  V9_PUBLICATION_HEALTH_CACHE_KEY,
   getV9ExecutionDeadlineMs,
   waitForV9MemoryLaneRelease,
   type V9ExecutionWindow,
 } from "../v9-slot-window";
+import { SAFETY_SCORE_V9_CACHE_KEYS } from "../safety-score-v9/publication-health";
 
 interface CoreSlotFixture {
   state: string;
@@ -226,7 +228,7 @@ describe("runV9AfterCoreWithinWindow", () => {
       for (const [scheduled, now] of [
         ["2026-10-23T09:23:00Z", "2026-10-23T09:25:00Z"],
         ["2026-10-23T09:38:00Z", "2026-10-23T09:38:01Z"],
-        ["2026-10-23T09:53:00Z", "2026-10-23T09:53:01Z"],
+        ["2026-10-23T09:53:00Z", "2026-10-23T09:55:00Z"],
       ] as const) {
         vi.useFakeTimers();
         vi.setSystemTime(Date.parse(now));
@@ -241,6 +243,38 @@ describe("runV9AfterCoreWithinWindow", () => {
       }
     });
 
+    it("yields at :53 to the :52 second chance only while its hour has no accepted publication", async () => {
+      const scheduledTimeMs = Date.parse("2026-10-23T09:53:00Z");
+      vi.useFakeTimers();
+      vi.setSystemTime(scheduledTimeMs + 1_000);
+      const lastHour = { accepted_at: Date.parse("2026-10-23T08:46:00Z") / 1_000 };
+      const first = vi.fn().mockResolvedValueOnce(lastHour).mockResolvedValueOnce(null).mockResolvedValue(null);
+      const bind = vi.fn(() => ({ first }));
+      const db = makeNoopD1({ prepare: vi.fn(() => ({ bind })) });
+      const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+
+      const result = await runV9AfterCoreWithinWindow(attributionOptions(db, scheduledTimeMs), run);
+
+      expect(result).toMatchObject({ status: "skipped_neutral", productivity: { reason: "v9-publication-priority" } });
+      expect(JSON.parse(result.metadata!)).toMatchObject({
+        publicationSlotStartedAt: Date.parse("2026-10-23T09:52:00Z") / 1_000,
+        publicationDeadlineMs: Date.parse("2026-10-23T09:55:00Z"),
+      });
+      expect(run).not.toHaveBeenCalled();
+
+      // Once :22 was accepted the :52 run will skip, so attribution keeps its slot.
+      const accepted = vi.fn()
+        .mockResolvedValueOnce({ accepted_at: Date.parse("2026-10-23T09:16:30Z") / 1_000 })
+        .mockResolvedValueOnce(okCore)
+        .mockResolvedValue(null);
+      const acceptedBind = vi.fn(() => ({ first: accepted }));
+      const acceptedResult = await runV9AfterCoreWithinWindow(
+        attributionOptions(makeNoopD1({ prepare: vi.fn(() => ({ bind: acceptedBind })) }), scheduledTimeMs), run,
+      );
+      expect(acceptedResult.status).toBe("ok");
+      expect(acceptedBind).not.toHaveBeenCalledWith(Date.parse("2026-10-23T09:52:00Z") / 1_000);
+    });
+
     it("fails closed without suppressing publication when the slot ledger is unreadable", async () => {
       const scheduledTimeMs = Date.parse("2026-10-23T09:23:00Z");
       vi.useFakeTimers();
@@ -252,6 +286,78 @@ describe("runV9AfterCoreWithinWindow", () => {
 
       expect(result).toMatchObject({ status: "degraded", productivity: { reason: "v9-publication-priority-unknown" } });
       expect(leaseMocks.runCronWithLease).not.toHaveBeenCalled();
+    });
+  });
+
+  describe(":52 second chance", () => {
+    const secondChanceMs = Date.parse("2026-10-23T16:52:00Z");
+    const secondChanceOptions = (db: D1Database) => ({
+      ...options(db, secondChanceMs, V9_EXECUTION_WINDOW_POLICY.publication),
+      v9PublicationSecondChance: true,
+    });
+    const okCore = { state: "finished", result_status: "ok", worker_version: "worker-v2" };
+
+    function dbWithHealth(health: { accepted_at: number | null } | null | Error) {
+      const first = vi.fn();
+      if (health instanceof Error) first.mockRejectedValueOnce(health);
+      else first.mockResolvedValueOnce(health);
+      first.mockResolvedValueOnce(okCore).mockResolvedValue(null);
+      const bind = vi.fn(() => ({ first }));
+      return { db: makeNoopD1({ prepare: vi.fn(() => ({ bind })) }), bind };
+    }
+
+    it("reads the publication-health cache identity", () => {
+      expect(V9_PUBLICATION_HEALTH_CACHE_KEY).toBe(SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth);
+    });
+
+    it("skips neutrally once the hour's :22 publication was accepted", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(secondChanceMs + 1_000);
+      const acceptedAtSec = Date.parse("2026-10-23T16:16:40Z") / 1_000;
+      const fixture = dbWithHealth({ accepted_at: acceptedAtSec });
+      const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+
+      const result = await runV9AfterCoreWithinWindow(secondChanceOptions(fixture.db), run);
+
+      expect(result).toMatchObject({
+        status: "skipped_neutral",
+        productivity: { productive: false, reason: "v9-publication-hourly-already-accepted" },
+      });
+      expect(JSON.parse(result.metadata!)).toMatchObject({ acceptedAtSec });
+      expect(fixture.bind).toHaveBeenCalledWith(V9_PUBLICATION_HEALTH_CACHE_KEY);
+      expect(leaseMocks.runCronWithLease).not.toHaveBeenCalled();
+      expect(run).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      // 2026-10-23: Cloudflare never delivered 16:22; the last acceptance was 14:19.
+      ["missed or failed", { accepted_at: Date.parse("2026-10-23T14:19:00Z") / 1_000 }],
+      ["held with no acceptance yet", { accepted_at: null }],
+      ["never recorded", null],
+    ] as const)("publishes when the :22 slot was %s", async (_label, health) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(secondChanceMs + 1_000);
+      const fixture = dbWithHealth(health);
+      const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+
+      const result = await runV9AfterCoreWithinWindow(secondChanceOptions(fixture.db), run);
+
+      expect(result.status).toBe("ok");
+      expect(run).toHaveBeenCalledOnce();
+      expect(fixture.bind).toHaveBeenCalledWith(Date.parse("2026-10-23T16:45:00Z") / 1_000);
+    });
+
+    it("degrades without publishing when acceptance evidence is unreadable", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(secondChanceMs + 1_000);
+      const fixture = dbWithHealth(new Error("D1 unavailable"));
+      const run = vi.fn();
+
+      const result = await runV9AfterCoreWithinWindow(secondChanceOptions(fixture.db), run);
+
+      expect(result).toMatchObject({ status: "degraded", productivity: { reason: "v9-publication-second-chance-unknown" } });
+      expect(leaseMocks.runCronWithLease).not.toHaveBeenCalled();
+      expect(run).not.toHaveBeenCalled();
     });
   });
 

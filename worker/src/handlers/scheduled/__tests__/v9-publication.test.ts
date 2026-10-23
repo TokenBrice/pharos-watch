@@ -48,7 +48,7 @@ function capturingRuntime(): { scheduledRuntime: ScheduledRuntimeContext; insert
       }),
     }),
     env: {} as ScheduledRuntimeContext["env"],
-    cron: "22,52 * * * *",
+    cron: "22 * * * *",
     scheduleKey: "v9PublicationOffset",
     scheduledTimeMs: 1_800_000,
     slotStartedAt: 1_800,
@@ -61,7 +61,7 @@ function runtime(): ScheduledRuntimeContext {
   return makeScheduledRuntime({
     db: {} as D1Database,
     env: {} as ScheduledRuntimeContext["env"],
-    cron: "22,52 * * * *",
+    cron: "22 * * * *",
     scheduleKey: "v9PublicationOffset",
     scheduledTimeMs: 1_800_000,
     slotStartedAt: 1_800,
@@ -127,6 +127,19 @@ describe("V9 publication scheduling", () => {
       expect.any(Function),
     );
   });
+
+  it.each([["22 * * * *", false], ["52 * * * *", true]] as const)(
+    "marks only the %s delivery as the conditional second chance",
+    async (cron, expected) => {
+      const scheduledRuntime = runtime();
+      scheduledRuntime.cron = cron;
+      await runV9PublicationSlot(scheduledRuntime);
+      expect(mocks.runV9AfterCoreWithinWindow).toHaveBeenCalledWith(
+        expect.objectContaining({ v9PublicationSecondChance: expected }),
+        expect.any(Function),
+      );
+    },
+  );
 
   it.each([["on", true], ["off", false], ["ON", false]] as const)("defers public materialization only for literal %s", async (mode, expected) => {
     const { scheduledRuntime } = compilingRuntime();

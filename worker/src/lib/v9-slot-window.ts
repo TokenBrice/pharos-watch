@@ -1,4 +1,8 @@
-import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
+import {
+  getCronSlotStartedAtForSchedule,
+  getCronSlotStartedAtForTrigger,
+  V9_PUBLICATION_SECOND_CHANCE,
+} from "@shared/lib/cron-jobs";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { sleepWithSignal } from "./abort";
 import {
@@ -38,6 +42,8 @@ export interface V9SlotWindowOptions {
   currentSlotKey: string;
   /** Skip neutrally while this core window's V9 publication slot is still due. */
   yieldToV9Publication?: boolean;
+  /** The :52 second chance: skip neutrally once this hour has an accepted publication. */
+  v9PublicationSecondChance?: boolean;
 }
 
 export interface V9ExecutionWindow {
@@ -163,24 +169,63 @@ export async function loadMatchingCoreStablecoinsPublishedAt(
   return row?.published_at ?? null;
 }
 
+// Mirrors SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth without loading the publication codec graph.
+export const V9_PUBLICATION_HEALTH_CACHE_KEY = "report-cards:v9:publication-health";
+
+/**
+ * Accepted clock of a publication accepted since the top of this second-chance
+ * slot's hour, or null. Accepted clocks are scoring clocks, never later than
+ * the run that published them, so every earlier hour's publication (including
+ * the previous :52) falls before the boundary. A :22 run that could only admit
+ * a previous-hour capture is therefore retried with the fresher :46 capture.
+ * Read failures throw; callers must not treat them as "nothing accepted".
+ */
+export async function loadV9PublicationHourAcceptedAtSec(
+  db: D1Database,
+  secondChanceSlotStartedAt: number,
+  signal?: AbortSignal,
+): Promise<number | null> {
+  const hourStartedAt = secondChanceSlotStartedAt - V9_PUBLICATION_SECOND_CHANCE.offsetSec;
+  const row = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT json_extract(value, '$.acceptedAtSec') AS accepted_at
+           FROM cache
+          WHERE key = ?`,
+      )
+      .bind(V9_PUBLICATION_HEALTH_CACHE_KEY)
+      .first<{ accepted_at: number | null }>(),
+    3, signal);
+  const acceptedAtSec = row?.accepted_at;
+  return typeof acceptedAtSec === "number" && acceptedAtSec >= hourStartedAt ? acceptedAtSec : null;
+}
+
 /**
  * The publisher and supply attribution share one memory lane, and a late
  * publication trigger (:22/:52) can land on attribution's :23/:53 start; the
  * first to claim the lease wins and the other skips. Losing an attribution run
  * costs one 15-minute refresh, losing a publication costs a public Safety
  * Score slot, so attribution yields while this core window's publication slot
- * has no finished row and its execution window is still open.
+ * has no finished row and its execution window is still open. The :52 second
+ * chance counts only while its hour still lacks an accepted publication.
  */
 async function loadDueV9PublicationSlot(
   db: D1Database,
   scheduledTimeMs: number,
   coreSlotStartedAt: number,
 ): Promise<{ slotStartedAt: number; state: string | null; deadlineMs: number } | null> {
-  const slotStartedAt = getCronSlotStartedAtForSchedule("v9PublicationOffset", scheduledTimeMs);
+  let slotStartedAt = getCronSlotStartedAtForSchedule("v9PublicationOffset", scheduledTimeMs);
+  const secondChance = slotStartedAt < coreSlotStartedAt;
+  if (secondChance) {
+    slotStartedAt = getCronSlotStartedAtForTrigger(
+      "v9PublicationOffset", V9_PUBLICATION_SECOND_CHANCE.trigger, scheduledTimeMs,
+    );
+  }
   const deadlineMs = getV9ExecutionDeadlineMs(
     slotStartedAt * 1_000, V9_EXECUTION_WINDOW_POLICY.publication.deadlineOffsetMs,
   );
   if (slotStartedAt < coreSlotStartedAt || Date.now() >= deadlineMs) return null;
+  if (secondChance && await loadV9PublicationHourAcceptedAtSec(db, slotStartedAt) != null) return null;
   const row = await runWithOverloadRetry(() =>
     db
       .prepare(
@@ -250,6 +295,27 @@ export async function runV9AfterCoreWithinWindow(
     });
   }
   const workerVersion = options.workerVersion;
+
+  if (options.v9PublicationSecondChance) {
+    let acceptedAtSec: number | null;
+    try {
+      acceptedAtSec = await loadV9PublicationHourAcceptedAtSec(options.db, options.slotStartedAt, options.signal);
+    } catch (error) {
+      if (options.signal?.aborted) throw error;
+      return degradedAdmission("v9-publication-second-chance-unknown", {
+        lane: options.lane,
+        coreSlotStartedAt,
+        code: error instanceof Error ? error.name : "Error",
+      });
+    }
+    if (acceptedAtSec != null) {
+      return neutralSkip("v9-publication-hourly-already-accepted", {
+        lane: options.lane,
+        coreSlotStartedAt,
+        acceptedAtSec,
+      });
+    }
+  }
 
   if (options.yieldToV9Publication) {
     let duePublication: Awaited<ReturnType<typeof loadDueV9PublicationSlot>>;

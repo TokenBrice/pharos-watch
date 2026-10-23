@@ -3,7 +3,7 @@ import {
   CRON_JOB_DEFINITIONS,
   CRON_SCHEDULES,
   CRON_TRIGGER_SCHEDULES,
-  getCronSlotStartedAtForSchedule,
+  getCronSlotStartedAtForTrigger,
   SHARED_SCHEDULED_JOB_IDENTITIES,
   type CronScheduleExpression,
   type CronScheduleKey,
@@ -364,7 +364,7 @@ function getScheduledDispatchOffsetSec(scheduleKey: CronScheduleKey): number {
       throw new Error(`Cannot derive dispatch offset for ${scheduleKey} alias "${expression}"`);
     }
     const firedAtSec = DISPATCH_OFFSET_REFERENCE_SEC + (hour === "*" ? 0 : Number(hour)) * 3600 + Number(minute) * 60;
-    return firedAtSec - getCronSlotStartedAtForSchedule(scheduleKey, firedAtSec * 1000);
+    return firedAtSec - getCronSlotStartedAtForTrigger(scheduleKey, expression, firedAtSec * 1000);
   }));
 }
 

@@ -1,7 +1,8 @@
 /**
  * Half-hourly charts trigger (physical 16 * * * * and 46 * * * * aliases):
  *   sync-dex-liquidity (0 normally, 5 during source recovery) → cron-sentinel turnover source (0)
- *   → prepare-safety-score-v9-input (3; hourly at :16, or :46 after a late publication)
+ *   → prepare-safety-score-v9-input (3; hourly at :16, or :46 after a late publication
+ *     or when the hour's :16 capture never committed, for the :52 second chance)
  *   sync-stablecoin-charts (1), failure-independent and serial
  * Both ticks use one exact source-slot consume/reuse decision. A new accepted
  * publication, not the calendar minute, drives turnover. Heavy has Graph
@@ -14,12 +15,14 @@
 import { consumeDexLiquidityScoringStage } from "../../cron/dex-liquidity/orchestrator";
 import { DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON } from "../../cron/dex-liquidity/lifecycle/source-slot";
 import {
+  CRON_SCHEDULE_CADENCES,
   DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC,
   isDailyDexShadowTargetPublicationSlot,
   isDexLiquidityPublicationSlot,
 } from "@shared/lib/cron-cadences";
 import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
 import { prepareSafetyScoreV9Input } from "../../cron/prepare-safety-score-v9-input";
+import { SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY } from "../../lib/safety-score-v9/capture-control";
 import { IncidentProjectionUnavailableError } from "../../lib/depeg-event-projection";
 import { derivePegAnalyticsSnapshot } from "../../lib/peg-analytics";
 import { publishPegAnalyticsCache } from "../../lib/peg-analytics-cache";
@@ -147,6 +150,28 @@ async function recoverLastAcceptedDexPublication(
   }
 }
 
+/**
+ * Whether the hour's :16 preparation committed a capture. The capture-control
+ * row is written in the same transaction as the input, stamped with its commit
+ * wall clock. An unreadable row re-prepares: extra work, never a public claim.
+ */
+async function loadHourlyV9CaptureState(
+  db: D1Database,
+  slotStartedAt: number,
+): Promise<"committed" | "missing" | "unreadable"> {
+  const hourlySlotStartedAt = slotStartedAt - CRON_SCHEDULE_CADENCES.halfHourlyChartsOffset.intervalSec;
+  try {
+    const row = await runWithOverloadRetry(() =>
+      db.prepare("SELECT updated_at FROM cache WHERE key = ?")
+        .bind(SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY)
+        .first<{ updated_at: number }>(),
+    );
+    return row != null && row.updated_at >= hourlySlotStartedAt ? "committed" : "missing";
+  } catch {
+    return "unreadable";
+  }
+}
+
 async function refreshPegAnalyticsCache(db: D1Database): Promise<boolean> {
   const stablecoins = await loadStablecoinsCache(db, { mode: "strict" });
   if (stablecoins.kind !== "ok") return false;
@@ -230,14 +255,18 @@ export function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext
       "prepare-safety-score-v9-input": async (signal) => {
         const publication = dexPublication;
         // The hourly :22 publisher consumes one input per hour. The :46 tick
-        // prepares only when it published the hour's late stage itself, but
-        // still refreshes the peg-analytics cache whose 30-minute read budget
-        // otherwise forces peg-summary onto its direct-compute fallback.
-        if (
+        // prepares only when it published the hour's late stage itself or the
+        // :16 capture never committed (so the :52 second chance gets a fresh
+        // one), but still refreshes the peg-analytics cache whose 30-minute
+        // read budget otherwise forces peg-summary onto its direct-compute
+        // fallback.
+        const hourlyCaptureState =
           !isDexLiquidityPublicationSlot(runtime.slotStartedAt)
           && !((publication?.status === "ok" || publication?.status === "degraded")
             && publication.generationId !== null && !publication.skipped)
-        ) {
+            ? await loadHourlyV9CaptureState(runtime.db, runtime.slotStartedAt)
+            : null;
+        if (hourlyCaptureState === "committed") {
           return {
             status: "skipped_neutral" as const,
             itemCount: 0,
@@ -308,20 +337,23 @@ export function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext
           runtime.dwellirNative,
           getCronSlotStartedAtForSchedule("quarterHourly", runtime.slotStartedAt * 1_000),
         );
-        if (recovery === null) {
+        if (recovery === null && hourlyCaptureState === null) {
           return result;
         }
         return {
           ...result,
           metadata: JSON.stringify({
             ...parseObjectMetadata(result.metadata),
-            dexPublicationRecovery: {
-              upstreamJob: "sync-dex-liquidity",
-              upstreamStatus: publication.status,
-              reusedGenerationId: recovery.generationId,
-              publicationAgeSec: recovery.publicationAgeSec,
-              budgetSec: recovery.budgetSec,
-            },
+            ...(hourlyCaptureState === null ? {} : { hourlyCaptureRecovery: hourlyCaptureState }),
+            ...(recovery === null ? {} : {
+              dexPublicationRecovery: {
+                upstreamJob: "sync-dex-liquidity",
+                upstreamStatus: publication.status,
+                reusedGenerationId: recovery.generationId,
+                publicationAgeSec: recovery.publicationAgeSec,
+                budgetSec: recovery.budgetSec,
+              },
+            }),
           }),
         };
       },

@@ -11,8 +11,10 @@ import {
   SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC,
   getCronSlotStartedAtForSchedule,
+  getCronSlotStartedAtForTrigger,
   isProvenSatisfiedNeutralSkipReason,
 } from "../cron-jobs";
+import { SCHEDULED_SLOT_DISPATCH_OFFSET_SEC } from "../scheduled-runner-registry";
 import { isReserveConfigRecoverySlot, V9_EVIDENCE_PRODUCER_INTERVAL_SEC } from "../cron-cadences";
 
 function isHourlyCpuTrigger(schedule: string): boolean {
@@ -151,8 +153,18 @@ describe("cron job schedule metadata", () => {
         .toBe(Date.parse(`2026-08-21T19:${minute}:00Z`) / 1000);
     }
 
+    // The :52 V9 second chance claims its own slot; :22 keeps the logical one.
+    expect(CRON_TRIGGER_SCHEDULES.v9PublicationOffset).toEqual(["22 * * * *", "52 * * * *"]);
+    expect(getCronSlotStartedAtForTrigger("v9PublicationOffset", "22 * * * *", Date.parse("2026-10-23T16:22:04Z")))
+      .toBe(Date.parse("2026-10-23T16:22:00Z") / 1000);
+    expect(getCronSlotStartedAtForTrigger("v9PublicationOffset", "52 * * * *", Date.parse("2026-10-23T16:52:04Z")))
+      .toBe(Date.parse("2026-10-23T16:52:00Z") / 1000);
+    expect(getCronSlotStartedAtForSchedule("v9PublicationOffset", Date.parse("2026-10-23T16:52:04Z")))
+      .toBe(Date.parse("2026-10-23T16:22:00Z") / 1000);
+    expect(SCHEDULED_SLOT_DISPATCH_OFFSET_SEC.v9PublicationOffset).toBe(0);
+
     const physicalTriggers = Object.values(CRON_TRIGGER_SCHEDULES).flat();
-    expect(physicalTriggers).toHaveLength(41);
+    expect(physicalTriggers).toHaveLength(42);
     expect(CRON_GROWTH_HEADROOM_POLICY.maxPhysicalTriggersBeforeRebalance).toBe(43);
   });
 

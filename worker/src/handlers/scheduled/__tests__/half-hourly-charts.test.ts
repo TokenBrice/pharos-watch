@@ -79,6 +79,20 @@ function dexPublicationDb(updatedAt: number): D1Database {
   });
 }
 
+// The :46 gate reads only the capture-control row's commit clock.
+function captureControlDb(updatedAt: number | null | Error): D1Database {
+  return makeNoopD1({
+    prepare: () => ({
+      bind: () => ({
+        first: async () => {
+          if (updatedAt instanceof Error) throw updatedAt;
+          return updatedAt === null ? null : { updated_at: updatedAt };
+        },
+      }),
+    }),
+  });
+}
+
 function captureJobResults(scheduledRuntime: ScheduledRuntimeContext) {
   const results = new Map<string, CronResult>();
   scheduledRuntime.runLeasedCron = vi.fn(async (job: string, fn: (signal: AbortSignal, reportProgress: CronProgressReporter) => Promise<CronResult>) => {
@@ -376,7 +390,8 @@ describe("half-hourly charts scheduling", () => {
   });
 
   it("reuses the exact accepted generation at :46 without re-preparing the hourly V9 input", async () => {
-    const scheduledRuntime = runtime();
+    // The hour's :16 (960) preparation committed its capture.
+    const scheduledRuntime = runtime(captureControlDb(1_000));
     scheduledRuntime.slotStartedAt = 2_760; // 1970-01-01 00:46 UTC
     const results = captureJobResults(scheduledRuntime);
 
@@ -412,6 +427,35 @@ describe("half-hourly charts scheduling", () => {
       reason: "upstream-dex-publication-unavailable",
       upstreamStatus: "skipped_neutral",
       upstreamSkippedReason: "liquidity-cadence-reuse",
+    });
+  });
+
+  it.each([
+    ["missing", 960 - 1_800],
+    ["missing", null],
+    ["unreadable", new Error("D1_ERROR: internal error")],
+  ] as const)("re-prepares at :46 when the hour's :16 capture is %s", async (state, updatedAt) => {
+    const scheduledRuntime = runtime(captureControlDb(updatedAt));
+    scheduledRuntime.slotStartedAt = 2_760;
+    const results = captureJobResults(scheduledRuntime);
+    mocks.prepareSafetyScoreV9Input.mockResolvedValue({
+      status: "ok", itemCount: 1, metadata: JSON.stringify({ dexGenerationId: "dex-liquidity-current" }),
+    });
+
+    await runHalfHourlyChartsSlot(scheduledRuntime);
+
+    expect(mocks.prepareSafetyScoreV9Input).toHaveBeenCalledWith(
+      scheduledRuntime.db,
+      expect.any(AbortSignal),
+      "dex-liquidity-current",
+      scheduledRuntime.chainRpcs,
+      scheduledRuntime.env.CF_VERSION_METADATA,
+      scheduledRuntime.deadline,
+      scheduledRuntime.dwellirNative,
+      2_700,
+    );
+    expect(jobMetadata(results, "prepare-safety-score-v9-input")).toEqual({
+      dexGenerationId: "dex-liquidity-current", hourlyCaptureRecovery: state,
     });
   });
 
