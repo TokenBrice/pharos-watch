@@ -61,6 +61,12 @@ export const PROGRESS_TELEMETRY_SKIP_JOBS: Readonly<Record<string, true>> = {
   "cron-sentinel": true,
 };
 
+// Past its first minute a run's same-stage progress row is liveness evidence,
+// not fine-grained telemetry; stage changes still persist immediately. Status
+// and slot-reconciliation thresholds derive from or exceed this interval.
+export const CRON_PROGRESS_LONG_RUN_AFTER_MS = 60_000;
+export const CRON_PROGRESS_LONG_RUN_COALESCE_MS = 30_000;
+
 export function shouldSkipCronProgress(job: string): boolean {
   return PROGRESS_TELEMETRY_SKIP_JOBS[job] === true
     || job.startsWith("prune-")

@@ -915,8 +915,8 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     ["blacklist 06:03 deploy before the first slot heartbeat", 11, 55, 29, "skipped_neutral"],
     ["child progress leads the slot by exactly one heartbeat interval", 11, 71, 29, "skipped_neutral"],
     ["child progress leads the slot by more than one heartbeat interval", 11, 72, 29, "error"],
-    ["slot heartbeat follows child progress by exactly 15 seconds", 70, 55, 29, "skipped_neutral"],
-    ["slot heartbeat follows child progress by more than 15 seconds", 71, 55, 29, "error"],
+    ["slot heartbeat follows child progress by exactly one long-run coalesce plus skew", 100, 55, 29, "skipped_neutral"],
+    ["slot heartbeat follows child progress by more than one long-run coalesce plus skew", 101, 55, 29, "error"],
     ["latest life evidence precedes activation by exactly 15 seconds", 11, 55, 70, "skipped_neutral"],
     ["latest life evidence precedes the activation window", 11, 55, 71, "error"],
   ] as const)("attributes deploy interruption directionally: %s", async (_shape, slotOffset, progressOffset, activationOffset, expectedStatus) => {

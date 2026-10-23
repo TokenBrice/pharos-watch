@@ -12,6 +12,7 @@ import {
 } from "./scheduled-child-terminal";
 import { resolveScheduledSlotPolicy } from "./scheduled-slot-policy";
 import { cronEventCacheKey, logCronEvent, resolveCronDegradedReason } from "./cron-logger";
+import { CRON_PROGRESS_LONG_RUN_COALESCE_MS } from "./cron-timeouts";
 import type { SchedulerChildDisposition as ScheduledChildTerminalDisposition } from "@shared/types/status/cron";
 import { ResourcePressureSchema, type CronResultStatus } from "@shared/types/status/cron";
 import { parseJsonObject } from "./json-parse";
@@ -161,14 +162,16 @@ export function getExpectedJobsForScheduledSlot(slotKey: string): readonly strin
   return plan ? flattenScheduledSlotPlanJobs(plan) : [];
 }
 
-// Child progress may lead the slot's last heartbeat by one fence interval,
-// including an eviction before the first tick. A slot heartbeat more than
-// 15 seconds newer than the child still disproves that they stopped together.
-const DEPLOY_INTERRUPTION_HEARTBEAT_ALIGNMENT_SEC = 15;
 // A dead child's second-resolution heartbeat may appear up to 15 seconds
 // before Cloudflare's deployment timestamp because of clock/write skew. Once
 // activated, Cloudflare may take up to two minutes to recycle an old isolate.
 const DEPLOY_INTERRUPTION_DEATH_CLOCK_SKEW_SEC = 15;
+// Child progress may lead the slot's last heartbeat by one fence interval,
+// including an eviction before the first tick. A long run's last durable
+// progress may trail its death by one coalesce interval, so only a slot
+// heartbeat newer than that plus clock/write skew disproves that they stopped together.
+export const DEPLOY_INTERRUPTION_HEARTBEAT_ALIGNMENT_SEC =
+  CRON_PROGRESS_LONG_RUN_COALESCE_MS / 1000 + DEPLOY_INTERRUPTION_DEATH_CLOCK_SKEW_SEC;
 const DEPLOY_INTERRUPTION_ISOLATE_DRAIN_SEC = 120;
 
 export async function hasActiveChildLeaseForScheduledSlot(
