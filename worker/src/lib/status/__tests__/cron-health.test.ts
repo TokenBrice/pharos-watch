@@ -100,7 +100,7 @@ describe("loadCronHealth optional reads", () => {
 describe("loadCronHealth scheduled delivery lag", () => {
   const NOW = 1_775_890_000;
 
-  it("counts slots that started in the trailing hour more than five minutes after their slot time", async () => {
+  it("counts slots that started in the trailing hour more than five minutes after their planned dispatch", async () => {
     const { db, sqlite } = createLatestSchemaSqlite();
     try {
       const insert = sqlite.prepare(`INSERT INTO cron_slot_executions
@@ -109,8 +109,12 @@ describe("loadCronHealth scheduled delivery lag", () => {
       insert.run("hourlyYieldSync", NOW - 2_400, NOW - 2_400 + 301, NOW);
       insert.run("statusSelfCheckOffset", NOW - 6_000, NOW - 1_800, NOW);
       insert.run("fiveMinuteTelegramAlerts", NOW - 7_000, NOW - 4_000, NOW);
+      // :00/:30 slots dispatched at :05/:35 by design: on time at +300s plus a
+      // 200s delivery delay; late only beyond the five-minute planned offset.
+      insert.run("halfHourlyMeasuredExecution", NOW - 1_800, NOW - 1_800 + 500, NOW);
+      insert.run("halfHourlyMeasuredExecutionSupplemental", NOW - 900, NOW - 900 + 601, NOW);
       const snapshot = await loadCronHealth(db, NOW);
-      expect(snapshot.scheduledDeliveryLag).toEqual({ startedSlots: 3, lateSlots: 2, maxLagSec: 4_200, queryFailed: false });
+      expect(snapshot.scheduledDeliveryLag).toEqual({ startedSlots: 5, lateSlots: 3, maxLagSec: 4_200, queryFailed: false });
     } finally { sqlite.close(); }
   });
 

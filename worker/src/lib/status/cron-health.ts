@@ -10,6 +10,7 @@ import {
   CONDITIONALLY_ADMITTED_SCHEDULED_TASKS,
   flattenScheduledSlotPlanJobs,
   isConditionallyAdmittedScheduledTask,
+  SCHEDULED_SLOT_DISPATCH_OFFSET_SEC,
   SCHEDULED_SLOT_PLANS,
 } from "@shared/lib/scheduled-runner-registry";
 import { CronRunStatusSchema } from "@shared/types/status";
@@ -58,8 +59,9 @@ export interface CronHealthSnapshot {
 
 /**
  * Ops-only platform delivery-lag signal: admin causes only, never public health.
- * A slot is late when its actual start trails its scheduled slot clock by more
- * than `lateAfterSec`; the signal counts slots that started inside the trailing
+ * A slot is late when its actual start trails its planned dispatch time (slot
+ * clock plus the lane's registry-derived dispatch offset) by more than
+ * `lateAfterSec`; the signal counts slots that started inside the trailing
  * `windowSec` and warns at `warnAtLateSlots`.
  */
 export const SCHEDULED_DELIVERY_LAG_SIGNAL = {
@@ -594,17 +596,33 @@ interface ScheduledDeliveryLagRow {
   max_lag_sec: number | null;
 }
 
+// Planned dispatch offsets (for example :05 triggers for :00 slots) are not
+// late delivery; lag is measured from each lane's own dispatch time.
+const DISPATCH_OFFSET_ENTRIES = Object.entries(SCHEDULED_SLOT_DISPATCH_OFFSET_SEC).filter(([, offsetSec]) => offsetSec > 0);
+const DISPATCH_OFFSET_SQL = DISPATCH_OFFSET_ENTRIES.length > 0
+  ? `CASE slot_key ${DISPATCH_OFFSET_ENTRIES.map(() => "WHEN ? THEN ?").join(" ")} ELSE 0 END`
+  : "0";
+
 async function fetchScheduledDeliveryLag(db: D1Database, now: number): Promise<ScheduledDeliveryLagSummary> {
   const result = await readOptionalCronRows(
     () => db
       .prepare(
-        `SELECT COUNT(*) AS started_slots,
-                SUM(CASE WHEN started_at - slot_started_at > ? THEN 1 ELSE 0 END) AS late_slots,
-                MAX(started_at - slot_started_at) AS max_lag_sec
-           FROM cron_slot_executions
-           WHERE started_at > ? AND started_at <= ?`,
+        `WITH slot_lag AS (
+           SELECT started_at - slot_started_at - ${DISPATCH_OFFSET_SQL} AS lag_sec
+             FROM cron_slot_executions
+             WHERE started_at > ? AND started_at <= ?
+         )
+         SELECT COUNT(*) AS started_slots,
+                SUM(CASE WHEN lag_sec > ? THEN 1 ELSE 0 END) AS late_slots,
+                MAX(lag_sec) AS max_lag_sec
+           FROM slot_lag`,
       )
-      .bind(SCHEDULED_DELIVERY_LAG_SIGNAL.lateAfterSec, now - SCHEDULED_DELIVERY_LAG_SIGNAL.windowSec, now)
+      .bind(
+        ...DISPATCH_OFFSET_ENTRIES.flat(),
+        now - SCHEDULED_DELIVERY_LAG_SIGNAL.windowSec,
+        now,
+        SCHEDULED_DELIVERY_LAG_SIGNAL.lateAfterSec,
+      )
       .all<ScheduledDeliveryLagRow>(),
     { event: "cron_slot_delivery_lag_unavailable", source: "cron_slot_executions", message: "Scheduled slot delivery lag unavailable" },
   );

@@ -4,7 +4,7 @@ import { createD1Client } from "../lib/remote-d1.ts";
 const USAGE = `Usage: npm run ops:cron-delivery -- [--minutes 120] [--source all|analytics|d1] [--raw]
 Reads scheduled delivery evidence (no mutations):
   analytics: Cloudflare GraphQL workersInvocationsScheduled for one script.
-  d1: remote D1 cron_slot_executions start lag (started_at - slot_started_at) for both Worker roles.
+  d1: remote D1 cron_slot_executions start lag past each lane's planned dispatch for both Worker roles.
 Analytics requires CLOUDFLARE_API_TOKEN or CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN with Analytics read permission.
 Optional: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_WORKER_NAME (default stablecoin-api). D1 uses Wrangler auth.
 --minutes: integer 1..1440; --source: default all; --raw: emit JSON; -h/--help: show help.`;
@@ -66,8 +66,11 @@ export async function readCronDelivery({ minutes = 120, token, accountId = "a8e4
 /**
  * Actual slot starts from D1. A slot appears only once its invocation claimed
  * it, so a never-delivered slot is absent here too: absence is not success.
+ * `dispatchOffsets` (registry SCHEDULED_SLOT_DISPATCH_OFFSET_SEC) removes planned
+ * trigger delays such as :05 dispatch of a :00 slot before judging lateness.
  */
-export function readSlotDeliveryLag({ minutes = 120, now = new Date(), query = (sql) => createD1Client("stablecoin-db").query(sql) }) {
+export function readSlotDeliveryLag({ minutes = 120, now = new Date(), dispatchOffsets, query = (sql) => createD1Client("stablecoin-db").query(sql) }) {
+  if (!dispatchOffsets || typeof dispatchOffsets !== "object") throw new Error("Scheduled dispatch offsets are required");
   const toSec = Math.floor(now.getTime() / 1000);
   const fromSec = toSec - minutes * 60;
   const rows = query(`SELECT slot_key, slot_started_at, started_at, started_at - slot_started_at AS lag_sec, state, result_status
@@ -83,10 +86,14 @@ export function readSlotDeliveryLag({ minutes = 120, now = new Date(), query = (
       throw new Error("D1 slot row malformed");
     }
   }
-  const late = rows.filter((row) => row.lag_sec > LATE_START_SEC);
+  const lagRows = rows.map((row) => {
+    const dispatchOffsetSec = dispatchOffsets[row.slot_key] ?? 0;
+    return { ...row, dispatch_offset_sec: dispatchOffsetSec, delivery_lag_sec: row.lag_sec - dispatchOffsetSec };
+  });
+  const late = lagRows.filter((row) => row.delivery_lag_sec > LATE_START_SEC);
   return {
-    from: new Date(fromSec * 1000).toISOString(), to: new Date(toSec * 1000).toISOString(), rows,
-    lateSlots: late.length, maxLagSec: rows.length > 0 ? Math.max(...rows.map((row) => row.lag_sec)) : null,
+    from: new Date(fromSec * 1000).toISOString(), to: new Date(toSec * 1000).toISOString(), rows: lagRows,
+    lateSlots: late.length, maxLagSec: lagRows.length > 0 ? Math.max(...lagRows.map((row) => row.delivery_lag_sec)) : null,
   };
 }
 
@@ -100,9 +107,9 @@ function printSlotLag(result) {
   console.log(`d1 slots=${result.rows.length} late(>${LATE_START_SEC}s)=${result.lateSlots} maxLag=${result.maxLagSec ?? "n/a"}s window=${result.from}..${result.to}`);
   if (result.rows.length === 0) console.log("No slot starts in this window; absence is not a success claim.");
   for (const row of result.rows) {
-    if (row.lag_sec > LATE_START_SEC) {
+    if (row.delivery_lag_sec > LATE_START_SEC) {
       console.log(new Date(row.slot_started_at * 1000).toISOString(), new Date(row.started_at * 1000).toISOString(),
-        `${row.lag_sec}s`, row.slot_key, row.state, row.result_status ?? "");
+        `${row.delivery_lag_sec}s`, row.slot_key, row.state, row.result_status ?? "");
     }
   }
 }
@@ -116,7 +123,11 @@ runDirectCli(import.meta.url, async () => {
       accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
       scriptName: process.env.CLOUDFLARE_WORKER_NAME,
     }),
-    d1: () => readSlotDeliveryLag(args),
+    d1: async () => {
+      // Loaded only for D1 evidence: the registry is TypeScript (npm script runs node --import tsx).
+      const { SCHEDULED_SLOT_DISPATCH_OFFSET_SEC } = await import("../../shared/lib/scheduled-runner-registry.ts");
+      return readSlotDeliveryLag({ ...args, dispatchOffsets: SCHEDULED_SLOT_DISPATCH_OFFSET_SEC });
+    },
   };
   const printers = { analytics: printAnalytics, d1: printSlotLag };
   const sources = args.source === "all" ? ["analytics", "d1"] : [args.source];
