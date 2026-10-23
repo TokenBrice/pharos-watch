@@ -212,7 +212,7 @@ describe("buildCacheStatuses sentinel validation", () => {
     const { caches } = await buildCacheStatuses(freshnessDb({ cacheRows: [row], tableAge: 60 }), now);
     expect(caches["yield-data"]).toMatchObject({ healthy: false, generationId: null, sentinelValidationReason: "generation-mismatch" });
   });
-  it.each([14400, 14401, 28800, 28801])("preserves generation and yield freshness bands at %s seconds", async (age) => {
+  it.each([21600, 21601, 43200, 43201])("preserves generation and yield freshness bands at %s seconds", async (age) => {
     const now = 1_800_000_000;
     const { caches } = await buildCacheStatuses(freshnessDb({
       cacheRows: [sentinelRow("yield-data", now - age, { generationId: "yield-winner" })],
@@ -220,10 +220,10 @@ describe("buildCacheStatuses sentinel validation", () => {
     }), now);
     expect(caches["yield-data"]).toMatchObject({
       generationId: "yield-winner", publishedAt: now - age, ageSeconds: age,
-      maxAge: 7200, healthyMaxAge: 14400, healthy: age <= 14400,
+      maxAge: 7200, healthyMaxAge: 21600, healthy: age <= 21600,
     });
     expect(buildFreshnessMeta(now - age, 7200, "yield-data", { assessedAt: now }).status)
-      .toBe(age <= 14400 ? "fresh" : age <= 28800 ? "degraded" : "stale");
+      .toBe(age <= 21600 ? "fresh" : age <= 43200 ? "degraded" : "stale");
   });
 
   it.each(["legacy", "table", "cron"] as const)("preserves the publication clock without inventing identity for %s evidence", async (source) => {
@@ -374,9 +374,9 @@ describe("buildCacheStatuses sentinel validation", () => {
           ageSeconds: 600, degraded: false, degradedReason: null, streakDegradedRuns: 0,
           healthy: true, generationId: "retained-clean", publishedAt: now - 600,
         });
-        const aged = await buildCacheStatuses(db, now + 16_000);
+        const aged = await buildCacheStatuses(db, now + 22_000);
         expect(aged.caches["yield-data"]).toMatchObject({
-          ageSeconds: 16_600, degraded: false, healthy: false, publishedAt: now - 600,
+          ageSeconds: 22_600, degraded: false, healthy: false, publishedAt: now - 600,
         });
         const advanced = sentinelRow("yield-data", now - 60, { generationId: "new-unconfirmed" });
         sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?").run(advanced.value, advanced.updated_at, advanced.key);
@@ -616,7 +616,7 @@ describe("buildCacheStatuses sentinel validation", () => {
     expect(statusFloor).toBe("healthy");
   });
 
-  it("degrades yield-data past 2x its hourly budget while other caches stay fresh", async () => {
+  it("degrades yield-data past 3x its hourly budget while other caches stay fresh", async () => {
     const now = 1_800_000_000;
     const db = mockD1([
       {
@@ -628,8 +628,8 @@ describe("buildCacheStatuses sentinel validation", () => {
           ...fxRatesCacheRows(now - 60),
           cacheRow("bluechip-ratings", now - 60),
           sentinelRow("dex-liquidity", now - 120),
-          // ~2.06x the two-hour budget: two missed publishes -> public-unhealthy.
-          sentinelRow("yield-data", now - 14_800),
+          // ~3.06x the two-hour budget: a third missed publish -> public-unhealthy.
+          sentinelRow("yield-data", now - 22_000),
           sentinelRow("dews", now - 240),
         ],
       },
@@ -638,7 +638,7 @@ describe("buildCacheStatuses sentinel validation", () => {
 
     const { caches, statusFloor } = await buildCacheStatuses(db, now);
 
-    expect(caches["yield-data"]).toMatchObject({ ageSeconds: 14_800, healthy: false });
+    expect(caches["yield-data"]).toMatchObject({ ageSeconds: 22_000, healthy: false });
     expect(statusFloor).toBe("degraded");
   });
 
@@ -728,9 +728,9 @@ describe("buildCacheStatuses sentinel validation", () => {
           ...fxRatesCacheRows(now - 60),
           cacheRow("bluechip-ratings", now - 60),
           sentinelRow("dex-liquidity", now - 120),
-          // ~5.5x the two-hour budget: past the yield-data override stale
-          // ceiling (4x), so the per-cache override escalates the floor.
-          sentinelRow("yield-data", now - 40_000),
+          // ~6.9x the two-hour budget: past the yield-data override stale
+          // ceiling (6x), so the per-cache override escalates the floor.
+          sentinelRow("yield-data", now - 50_000),
           sentinelRow("dews", now - 240),
         ],
       },
@@ -739,7 +739,7 @@ describe("buildCacheStatuses sentinel validation", () => {
 
     const { caches, statusFloor } = await buildCacheStatuses(db, now);
 
-    expect(caches["yield-data"]).toMatchObject({ ageSeconds: 40_000, healthy: false });
+    expect(caches["yield-data"]).toMatchObject({ ageSeconds: 50_000, healthy: false });
     expect(statusFloor).toBe("stale");
   });
 
@@ -1047,8 +1047,8 @@ describe("buildCacheStatuses", () => {
           ...fxRatesCacheRows(now - 60),
           cacheRow("bluechip-ratings", now - 60),
           sentinelRow("dex-liquidity", now - 120),
-          // ~2.06x the two-hour budget: two missed publishes, past the override ceiling.
-          sentinelRow("yield-data", now - 14_800),
+          // ~3.06x the two-hour budget: past the override ceiling.
+          sentinelRow("yield-data", now - 22_000),
           // The captured /api/health shape: 1.93x the DEWS budget, still inside its band.
           sentinelRow("dews", now - 3_473),
         ],
@@ -1056,7 +1056,7 @@ describe("buildCacheStatuses", () => {
       { match: "GROUP BY job", rows: [
         { job: "compute-dews", started_at: now - 3_473, degraded_runs_since_ok: 0 },
         { job: "sync-dex-liquidity", started_at: now - 120, degraded_runs_since_ok: 0 },
-        { job: "sync-yield-data", started_at: now - 14_800, degraded_runs_since_ok: 0 },
+        { job: "sync-yield-data", started_at: now - 22_000, degraded_runs_since_ok: 0 },
       ] },
     ]);
 
@@ -1070,10 +1070,10 @@ describe("buildCacheStatuses", () => {
       healthy: true,
     });
     expect(caches["yield-data"]).toMatchObject({
-      ageSeconds: 14_800,
+      ageSeconds: 22_000,
       maxAge: 7_200,
-      healthyMaxRatio: 2,
-      healthyMaxAge: 14_400,
+      healthyMaxRatio: 3,
+      healthyMaxAge: 21_600,
       healthy: false,
     });
 

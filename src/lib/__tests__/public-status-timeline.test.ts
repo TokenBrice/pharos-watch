@@ -186,6 +186,67 @@ describe("buildComponentDayCells", () => {
     expect(cells.yield.map(({ state }) => state)).toEqual(["outage", "outage", "operational"]);
   });
 
+  it("colours a day only for states held 60 minutes cumulatively, keeping shorter blips as brief", () => {
+    const yieldDelayed = [{ id: "yield" as const, state: "delayed" as const, reasons: ["cache:yield-data:delayed"] }];
+    const cells = buildComponentDayCells({
+      transitions: [
+        // Two days ago: a single 15-minute degraded evaluation.
+        row(1, TODAY - 2 * DAY + 3600, [{ id: "stablecoin-data", state: "degraded", reasons: ["price-coverage-breadth"] }]),
+        row(2, TODAY - 2 * DAY + 4500, []),
+        // Yesterday: two 30-minute delayed stretches add up to 60 minutes.
+        row(3, TODAY - DAY + 3600, yieldDelayed),
+        row(4, TODAY - DAY + 5400, []),
+        row(5, TODAY - DAY + 7200, yieldDelayed),
+        row(6, TODAY - DAY + 9000, []),
+      ],
+      liveComponents: live(), liveObservedAt: NOW,
+      boundary: { at: TODAY - 10 * DAY, components: [] },
+      publicHistoryStartedAt: TODAY - 10 * DAY,
+      componentHistoryStartedAt: Object.fromEntries(PUBLIC_STATUS_COMPONENT_IDS.map((id) => [id, TODAY - 10 * DAY])),
+      nowSec: NOW, days: 3,
+    });
+    expect(cells["stablecoin-data"]).toEqual([
+      { date: "2026-10-11", state: "operational", brief: "degraded" },
+      { date: "2026-10-12", state: "operational" },
+      { date: "2026-10-13", state: "operational" },
+    ]);
+    expect(cells.yield.map(({ state }) => state)).toEqual(["operational", "delayed", "operational"]);
+  });
+
+  it("counts worse states toward a milder band and colours any outage, however short", () => {
+    const cells = buildComponentDayCells({
+      transitions: [
+        // 40 min delayed then 25 min degraded: 65 min at delayed-or-worse.
+        row(1, TODAY - DAY + 3600, [{ id: "yield", state: "delayed", reasons: [] }]),
+        row(2, TODAY - DAY + 6000, [{ id: "yield", state: "degraded", reasons: [] }]),
+        row(3, TODAY - DAY + 7500, []),
+        // A 15-minute database outage still colours today.
+        row(4, TODAY + 3600, PUBLIC_STATUS_COMPONENT_IDS.map((id) => ({ id, state: "outage" as const, reasons: ["db-unavailable"] }))),
+        row(5, TODAY + 4500, []),
+      ],
+      liveComponents: live(), liveObservedAt: NOW,
+      boundary: { at: TODAY - 10 * DAY, components: [] },
+      publicHistoryStartedAt: TODAY - 10 * DAY,
+      componentHistoryStartedAt: Object.fromEntries(PUBLIC_STATUS_COMPONENT_IDS.map((id) => [id, TODAY - 10 * DAY])),
+      nowSec: NOW, days: 2,
+    });
+    expect(cells.yield).toEqual([
+      { date: "2026-10-12", state: "delayed", brief: "degraded" },
+      { date: "2026-10-13", state: "outage" },
+    ]);
+    expect(cells.charts.map(({ state }) => state)).toEqual(["operational", "outage"]);
+  });
+
+  it("keeps a live non-outage blip brief when persisted history covers the day", () => {
+    const cells = buildComponentDayCells({
+      transitions: [], boundary: { at: TODAY - 40 * DAY, components: [] },
+      liveComponents: live({ yield: "degraded" }), liveObservedAt: NOW,
+      publicHistoryStartedAt: TODAY - 40 * DAY, componentHistoryStartedAt: { yield: TODAY - 40 * DAY },
+      nowSec: NOW, days: 1,
+    });
+    expect(cells.yield).toEqual([{ date: "2026-10-13", state: "operational", brief: "degraded" }]);
+  });
+
   it.each([undefined, NOW + 1, TODAY - 1, NaN])("does not renew live evidence from a missing, future or old clock (%s)", (liveObservedAt) => {
     const cells = buildComponentDayCells({
       transitions: [], liveComponents: live({ yield: "outage" }), liveObservedAt,

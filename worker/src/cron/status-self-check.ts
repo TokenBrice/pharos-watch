@@ -804,7 +804,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   if (!publicStatus.persistenceSucceeded) failedOutputs.add("status_state:public");
   const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(db, now, raw, { supplements });
   const publicHealthSnapshotPersistenceSucceeded = await writeStatusPublicHealthSnapshot(db, now,
-    { ...publicHealthBody, ...publicStatus.projection });
+    { ...publicHealthBody, ...publicStatus.projection }, publicHealthAssessment.statusExcludingCacheFreshness);
   const discrepancyObserved = hasDivergence(effectiveStatus, probeSummary, now);
 
   const discrepancyState = await updateDiscrepancyObservation(db, now, discrepancyObserved, hasProbeFailure,

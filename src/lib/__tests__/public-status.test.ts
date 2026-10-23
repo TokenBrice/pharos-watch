@@ -150,14 +150,16 @@ describe("public status helpers", () => {
     });
   });
 
-  it("degrades mint/burn status when the critical writer lane is unhealthy despite fresh sync age", () => {
+  it("grades mint/burn by success age only, so a failed run inside budget stays healthy", () => {
     const sync = {
       ...BASE_HEALTH.mintBurn.sync,
+      lastSuccessfulSyncAt: BASE_HEALTH.timestamp - 60,
       criticalLaneHealthy: false,
       warning: "Critical mint/burn lane last run errored; cached or partial data may be served.",
     };
 
-    expect(getPublicMintBurnStatus(sync)).toBe("degraded");
+    expect(getPublicMintBurnStatus(sync, BASE_HEALTH.timestamp)).toBe("healthy");
+    expect(getPublicMintBurnStatus({ ...sync, criticalLaneHealthy: null }, BASE_HEALTH.timestamp)).toBe("degraded");
   });
 
   it("keeps dedicated outages scoped while shared source families degrade availability", () => {
@@ -231,13 +233,17 @@ describe("getPublicDivergenceNotice", () => {
 });
 
 describe("getPublicMintBurnStatus — additional fixtures", () => {
-  it("stale when freshnessStatus is stale regardless of critical lane", () => {
+  it("grades the success age past 3x/6x the producer interval, whatever the worker freshness band says", () => {
     const sync = {
       ...BASE_HEALTH.mintBurn.sync,
       freshnessStatus: "stale" as const,
       criticalLaneHealthy: false,
     };
-    expect(getPublicMintBurnStatus(sync)).toBe("stale");
+    const at = (age: number) => getPublicMintBurnStatus({ ...sync, lastSuccessfulSyncAt: BASE_HEALTH.timestamp - age }, BASE_HEALTH.timestamp);
+    expect(at(5_400)).toBe("healthy");
+    expect(at(5_401)).toBe("degraded");
+    expect(at(10_801)).toBe("stale");
+    expect(getPublicMintBurnStatus({ ...sync, lastSuccessfulSyncAt: null }, BASE_HEALTH.timestamp)).toBe("stale");
   });
 });
 

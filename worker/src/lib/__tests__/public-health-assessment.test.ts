@@ -13,7 +13,7 @@ import { EXPECTED_FX_PEG_KEYS } from "../fx-config";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -258,14 +258,14 @@ describe("assessPublicHealth Safety Score publication", () => {
   const scoreComponent = (result: PublicHealthAssessment) =>
     buildPublicHealthResponse(result, now).components!.find((component) => component.id === "safety-scores")!;
 
-  it("grades held publication even without a yield safety identity", async () => {
+  it("names a held publication as a notice graded by accepted age, even without a yield safety identity", async () => {
     const result = await assessPublicHealth(makeMintBurnAssessmentDb(now, {
       safetyScorePublication: { ...current, status: "held", attemptedAtSec: now, heldSinceSec: now - 30, reasons: [{ code: "redemption-stale" }] },
     }), now);
-    expect(scoreComponent(result)).toMatchObject({ state: "degraded" });
+    expect(scoreComponent(result)).toMatchObject({ state: "operational" });
     expect(scoreComponent(result).reasons).toContain("safety-score-publication-held:redemption-stale");
-    expect(result.overallStatus).not.toBe("healthy");
-    expect(result.safetyScoreImpactStatus).toBe("degraded");
+    expect(result.warnings).toContain("safety-score-publication-held");
+    expect(result.safetyScoreImpactStatus).toBe("healthy");
   });
 
   it("keeps fresh accepted publication operational", async () => {
@@ -276,9 +276,9 @@ describe("assessPublicHealth Safety Score publication", () => {
 
   it("grades accepted age, not a newer attempted publication clock", async () => {
     const result = await assessPublicHealth(makeMintBurnAssessmentDb(now, {
-      safetyScorePublication: { ...current, acceptedAtSec: now - API_FRESHNESS_MAX_AGE_SEC.reportCards - 1, attemptedAtSec: now },
+      safetyScorePublication: { ...current, acceptedAtSec: now - 3 * CRON_INTERVALS["compute-safety-score-v9"] - 1, attemptedAtSec: now },
     }), now);
-    expect(scoreComponent(result)).toMatchObject({ state: "degraded", reasons: ["safety-score-publication:stale"] });
+    expect(scoreComponent(result)).toMatchObject({ state: "delayed", reasons: ["safety-score-publication:delayed"] });
     expect(result.safetyScoreImpactStatus).toBe("degraded");
   });
 
@@ -862,10 +862,10 @@ describe("assessPublicHealth mint/burn subquery failures", () => {
   });
 
   it.each([
-    ["degraded", API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows * 2, "stale"],
-    ["error", 300, "degraded"],
+    ["degraded", 6 * CRON_INTERVALS["sync-mint-burn"] + 1, "stale"],
+    ["error", 3 * CRON_INTERVALS["sync-mint-burn"] + 1, "degraded"],
     ["degraded", null, "stale"],
-  ] as const)("does not excuse run %s with success age %s because it has a warning", async (latestRunStatus, successAgeSec, expectedStatus) => {
+  ] as const)("grades run %s with success age %s by age, warning or not", async (latestRunStatus, successAgeSec, expectedStatus) => {
     const nowSec = Math.floor(Date.now() / 1000);
     const result = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
       latestRunStatus,

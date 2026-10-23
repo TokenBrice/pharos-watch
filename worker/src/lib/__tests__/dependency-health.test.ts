@@ -130,8 +130,8 @@ describe("buildDependencyHealth", () => {
   );
 
   it.each([
-    { ageSeconds: 2 * 3_600 + 1, expectedStatus: "degraded" },
-    { ageSeconds: 4 * 3_600 + 1, expectedStatus: "stale" },
+    { ageSeconds: 3 * 3_600 + 1, expectedStatus: "degraded" },
+    { ageSeconds: 6 * 3_600 + 1, expectedStatus: "stale" },
   ] as const)(
     "honors the yield cache override at $ageSeconds seconds",
     ({ ageSeconds, expectedStatus }) => {
@@ -190,7 +190,7 @@ describe("buildDependencyHealth", () => {
       publicationHealth: null,
       caches: {
         "yield-data": cache({
-          ageSeconds: 2 * 3_600 + 1,
+          ageSeconds: 3 * 3_600 + 1,
           maxAge: 3_600,
           healthy: false,
           degraded: true,
@@ -206,7 +206,7 @@ describe("buildDependencyHealth", () => {
     });
 
     expect(dependencyHealth.dependencies["yield-rankings"].reason).toBe(
-      "Freshness age 7201s is outside the healthy budget.",
+      "Freshness age 10801s is outside the healthy budget.",
     );
   });
 

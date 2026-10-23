@@ -1,16 +1,17 @@
-import { CACHE_AVAILABILITY_MAX_AGE_SEC, API_FRESHNESS_MAX_AGE_SEC } from "./api-freshness";
+import { CACHE_AVAILABILITY_MAX_AGE_SEC } from "./api-freshness";
 import { getCacheFreshnessRatio, getCacheImpactStatus } from "./cache-health";
 import { PUBLIC_COMPONENT_LABEL } from "./classification/operational-status";
 import {
   countPublicImpactOpenCircuits,
   getCircuitImpactStatus,
-  getPublicMintBurnStatus,
+  getPublicProducerGraceBudget,
   isPublicImpactCircuitKey,
-  MINT_BURN_PUBLIC_FRESHNESS_DEGRADED_RATIO,
   PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER,
+  PUBLIC_PRODUCER_INTERVAL_SEC,
 } from "./public-health";
 import { formatRelativeAgeSeconds } from "./relative-time";
 import {
+  countActivePriceBreadthGaps,
   getActivePriceCoverageBreadthStatus,
   getBlacklistGapStatus,
   getCacheRatioThresholds,
@@ -33,11 +34,13 @@ import {
  * inputs onto reader-facing components and derives the headline from those
  * components instead of from the worst raw input:
  *
- * - age-graded inputs (cache ages, scheduler delivery, mint/burn sync) are
- *   `delayed` past their first band, `degraded` past their stale band, and an
- *   `outage` only once the age reaches PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER
- *   times the stale band (the stale state has persisted for a further full
- *   budget). Every age verdict carries its budget (R3).
+ * - age-graded inputs (cache ages, scheduler delivery, mint/burn sync, Safety
+ *   Score publication) are `delayed` past their first band, `degraded` past
+ *   their stale band, and an `outage` only once the age reaches
+ *   PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER times the stale band (the stale
+ *   state has persisted for a further full budget). Yield, Safety Scores and
+ *   mint/burn use the producer grace rule (3×/6×/12× the producer interval).
+ *   Every age verdict carries its budget (R3).
  * - quality and coverage inputs are `degraded` at most: the data is served,
  *   some of it is incomplete.
  * - unreadable evidence is `degraded` with a named reason, never operational (R2).
@@ -251,10 +254,10 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
         summary: "Live price coverage cannot be verified right now.",
         reason: "price-coverage-unknown",
       });
-    } else if (getActivePriceCoverageBreadthStatus(coverage) !== "healthy") {
+    } else if (getActivePriceCoverageBreadthStatus(coverage, publication?.missingActiveIds) !== "healthy") {
       add("stablecoin-data", {
         state: "degraded",
-        summary: `${coverage.missingPriceCount} of ${coverage.expectedActiveCount} tracked stablecoins have no live price.`,
+        summary: `${countActivePriceBreadthGaps(coverage, publication?.missingActiveIds) ?? "Many"} of ${coverage.expectedActiveCount} tracked stablecoins have no live price.`,
         reason: "price-coverage-breadth",
       });
     } else if (coverage.status === "incomplete") {
@@ -274,7 +277,7 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
       reason: health.safetyScorePublicationUnavailableReason ?? "safety-score-publication-unavailable",
     });
   } else {
-    const budget = buildBudget(API_FRESHNESS_MAX_AGE_SEC.reportCards, API_FRESHNESS_MAX_AGE_SEC.reportCards);
+    const budget = getPublicProducerGraceBudget(PUBLIC_PRODUCER_INTERVAL_SEC.safetyScores);
     const ageSeconds = safety.acceptedAtSec == null ? null : Math.max(0, health.timestamp - safety.acceptedAtSec);
     if (ageSeconds == null) {
       add("safety-scores", {
@@ -288,11 +291,12 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
     }
     if (safety.status === "held") {
       // Ratings-held disclosure lives here only; rating surfaces no longer carry a notice.
+      // A hold is a notice: the accepted scores' age alone grades the component.
       const heldSince = safety.heldSinceSec != null
         ? ` since ${new Date(safety.heldSinceSec * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC`
         : "";
       add("safety-scores", {
-        state: "degraded",
+        state: "operational",
         summary: `Ratings are held at the last verified snapshot${heldSince} while required inputs recover. The last accepted scores are still served when available.`,
         reason: "safety-score-publication-held",
         ageSeconds,
@@ -300,7 +304,7 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
       });
       for (const reason of safety.reasons) {
         add("safety-scores", {
-          state: "degraded",
+          state: "operational",
           summary: "Safety Score publication is held while required inputs recover.",
           reason: `safety-score-publication-held:${reason.code}`,
           ageSeconds,
@@ -322,37 +326,30 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
     });
   }
 
+  // Graded by success age only; the worker's run-level freshness band is not
+  // a second public authority (R5). Partial or failed runs are notices.
   const mintBurnSync = health.mintBurn.sync;
-  const mintBurnStatus = getPublicMintBurnStatus(mintBurnSync);
-  if (mintBurnStatus !== "healthy") {
-    const budgetSec = API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows;
-    const ageSeconds = mintBurnSync.lastSuccessfulSyncAt == null
-      ? null
-      : Math.max(0, health.timestamp - mintBurnSync.lastSuccessfulSyncAt);
-    const aged = ageSeconds == null
-      ? null
-      : gradeAge("Mint and burn events", ageSeconds,
-        buildBudget(budgetSec, budgetSec * MINT_BURN_PUBLIC_FRESHNESS_DEGRADED_RATIO), "mint-burn-sync");
-    if (aged) add("mint-burn", aged);
-    if (mintBurnSync.freshnessStatus == null || mintBurnSync.criticalLaneHealthy == null || ageSeconds == null) {
+  const mintBurnAgeSeconds = mintBurnSync.lastSuccessfulSyncAt == null
+    ? null
+    : Math.max(0, health.timestamp - mintBurnSync.lastSuccessfulSyncAt);
+  if (mintBurnSync.freshnessStatus == null || mintBurnSync.criticalLaneHealthy == null || mintBurnAgeSeconds == null) {
+    add("mint-burn", {
+      state: "degraded",
+      summary: "Mint and burn sync evidence is unavailable.",
+      reason: health.mintBurn.unavailableReason ?? "mint-burn-evidence-unavailable",
+    });
+  } else {
+    add("mint-burn", gradeAge("Mint and burn events", mintBurnAgeSeconds,
+      getPublicProducerGraceBudget(PUBLIC_PRODUCER_INTERVAL_SEC.mintBurn), "mint-burn-sync"));
+    if (!mintBurnSync.criticalLaneHealthy || (mintBurnSync.warning != null && !isMintBurnFreshnessWarning(mintBurnSync.warning))) {
       add("mint-burn", {
-        state: "degraded",
-        summary: "Mint and burn sync evidence is unavailable.",
-        reason: health.mintBurn.unavailableReason ?? "mint-burn-evidence-unavailable",
-      });
-    } else if (!mintBurnSync.criticalLaneHealthy || (mintBurnSync.warning != null && !isMintBurnFreshnessWarning(mintBurnSync.warning))) {
-      add("mint-burn", {
-        state: "degraded",
-        summary: "The latest mint and burn update was partial. Recent events may be incomplete.",
+        state: "operational",
+        summary: mintBurnSync.criticalLaneHealthy
+          ? "Critical mint and burn data is fresh. The latest run reported an execution notice."
+          : "The latest mint and burn run failed. The last successful update is still served.",
         reason: mintBurnSync.criticalLaneHealthy ? "mint-burn-run-degraded" : "mint-burn-run-failed",
       });
     }
-  } else if (mintBurnSync.warning != null) {
-    add("mint-burn", {
-      state: "operational",
-      summary: "Critical mint and burn data is fresh. The latest run reported an execution notice.",
-      reason: "mint-burn-run-degraded",
-    });
   }
 
   const blacklistStatus = getBlacklistGapStatus({ missingRatio: health.blacklist.missingRatio });
@@ -415,7 +412,7 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
       state: "degraded",
       summary: openCircuits == null
         ? "Upstream source health cannot be read right now."
-        : `${openCircuits} upstream data sources are paused after repeated failures. Affected data keeps its last good value.`,
+        : `${openCircuits} upstream data providers are paused after repeated failures. Affected data keeps its last good value.`,
       reason: openCircuits == null ? `circuits-unavailable:${health.circuitsUnavailableReason ?? "unknown"}`
         : `upstream-circuits-open:${openCircuits}:${sources.join(",")}`,
     });

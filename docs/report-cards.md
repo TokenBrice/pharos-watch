@@ -10,7 +10,7 @@ The public grade-distribution total is labeled **assets**, since its A/B/C/D/F/N
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v10`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.31`<!-- GENERATED-END: methodology-version-safety-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.32`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public breakdown/publication schema v7, API wrapper v8 and score trace v4; retained older publications require explicit historical dispatch or refusal, never fabricated causes or route identity
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - **Evaluation build:** `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST` in `shared/data/safety-score-v9/evaluation-build-manifest-v1.ts` binds the offline candidate runtime import graph: captured fixed-input normalization, extension construction, fact-set compilation, evaluation and projection, including executable admission schemas, reviewed score-input data and full-catalog bytes/decoder. Edits anywhere in that evaluation-time closure rotate replay/publication identity. Capture-only network observers/producers and build-time generators are outside it; exact-input/fact digests bind their admitted output. Capture binding and runtime identity consumers are unchanged.
@@ -40,6 +40,8 @@ V10 evaluates three pillars:
 Control=min binding economic path, overall≤90 (including non-authority). [Authority ladder/proof](mint-authority-scoring.md#mint-authority-entry): signer50, opaque60, quorum65, delay70, governance/veto+delay75, no-power90; bound+10, reconciliation≤15, supervision15/attestation10, assurance≤30, component≤90. Compromise25/no credits; >80 needs no supervision.
 
 v10.31: known-share local authority, including bounded powers/incidents, is non-binding and priced without thresholds by the [resolved mixture](process/report-cards-appendix.md#v1031-exposure-weighted-local-authority). Null-share binding, bridges and oracles retain prior treatment.
+
+v10.32: publication is hourly at `:22`; bounds defined as two publication cycles (endpoint/consumer freshness and the `lenderCollateralBacking` previous-publication bound) move from 3,600 to 7,200 s, and the lagging-capture budget to 4,500 s. Arithmetic, thresholds and evidence-age policy constants are unchanged; activation is provisional until the cadence release.
 
 Admitted facts retain canonical order, causes, traces and inventory under the control contract below.
 

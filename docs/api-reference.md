@@ -173,7 +173,7 @@ Event feeds (`events`, `depeg-events`, `blacklist`, `mint-burn-events`) derive f
 
 For uncounted offset pages, `total` is a conservative observed lower bound and `totalExact` is false. A nonempty offset page establishes the offset plus its observed rows (and any lookahead row); an empty page establishes only zero, even at offset 50,000. Uncounted cursor continuations report only their observed page/lookahead bound. Blacklist defaults to uncounted pages; use `includeTotal=true` for an exact filtered count.
 
-Yield routes override the generic 8x/12x runway: `GET /api/yield-rankings` (full and summary) and `GET /api/yield-history` use the shared `yield-data` bands: `fresh` through 14,400 seconds (2x the two-hour producer interval), `degraded` through 28,800 seconds (4x), then `stale`. Both non-fresh states return `Cache-Control: no-store`; age-based verdicts emit HTTP `Warning: 110`, while yield-history timestamps beyond the future allowance emit `199`. Their `_meta` includes required `assessedAt` (response-time Unix seconds), `freshBudgetSec`, `degradedBudgetSec`, and nullable `reason` alongside `updatedAt`, `ageSeconds`, and `status`. Non-fresh publication age names `yield-publication-age`. History freshness measures the authoritative publication cutoff, not the last point in a requested historical window; unavailable authority is stale with `publication-cutoff-unavailable`.
+Yield routes override the generic 8x/12x runway: `GET /api/yield-rankings` (full and summary) and `GET /api/yield-history` use the shared `yield-data` bands: `fresh` through 21,600 seconds (3x the two-hour producer interval), `degraded` through 43,200 seconds (6x), then `stale`. Both non-fresh states return `Cache-Control: no-store`; age-based verdicts emit HTTP `Warning: 110`, while yield-history timestamps beyond the future allowance emit `199`. Their `_meta` includes required `assessedAt` (response-time Unix seconds), `freshBudgetSec`, `degradedBudgetSec`, and nullable `reason` alongside `updatedAt`, `ageSeconds`, and `status`. Non-fresh publication age names `yield-publication-age`. History freshness measures the authoritative publication cutoff, not the last point in a requested historical window; unavailable authority is stale with `publication-cutoff-unavailable`.
 
 **Yield wire contract:** Full and summary rankings and history publish the expanded evidence directly.
 
@@ -1008,8 +1008,8 @@ Yield-bearing stablecoin rankings with safety, benchmark-aware context, and opti
 
 ```json
 {
-  "currentVersion": "8.5",
-  "methodologyVersion": "10.31"
+  "currentVersion": "8.51",
+  "methodologyVersion": "10.32"
 }
 ```
 
@@ -1027,7 +1027,7 @@ Machine-readable source-list manifest for every yield-bearing asset, including a
 
 ```json
 {
-  "methodologyVersion": "v8.5"
+  "methodologyVersion": "v8.51"
 }
 ```
 
@@ -1045,8 +1045,8 @@ Historical yield observations for a stablecoin, with optional publication/source
 
 ```json
 {
-  "currentVersion": "8.5",
-  "methodologyVersion": "8.5"
+  "currentVersion": "8.51",
+  "methodologyVersion": "8.51"
 }
 ```
 

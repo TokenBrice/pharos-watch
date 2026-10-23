@@ -904,13 +904,13 @@ describe("loadYieldHealthSummary", () => {
     expect(summary.benchmarkRegistry.status).toBe("degraded");
   });
 
-  it("classifies ranking freshness on the public yield-data 2x/4x bands", async () => {
+  it("classifies ranking freshness on the public yield-data 3x/6x producer grace bands", async () => {
     const interval = CRON_INTERVALS["sync-yield-data"];
     const cases: Array<[number, string]> = [
-      [interval * 2, "healthy"],
-      [interval * 2 + 60, "degraded"],
-      [interval * 4, "degraded"],
-      [interval * 4 + 60, "stale"],
+      [interval * 3, "healthy"],
+      [interval * 3 + 60, "degraded"],
+      [interval * 6, "degraded"],
+      [interval * 6 + 60, "stale"],
     ];
     for (const [ageSec, expected] of cases) {
       const summary = await loadYieldHealthSummary(

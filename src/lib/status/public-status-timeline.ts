@@ -16,6 +16,13 @@ import {
  */
 
 const DAY_SEC = 86_400;
+/**
+ * Owner rule (2026-10-23): a day takes a non-operational state only when the
+ * component held that state or worse for this long, cumulatively, that day.
+ * An outage of any length always colours the day; shorter blips stay in
+ * `brief` for the tooltip.
+ */
+export const DAY_STATE_MIN_HELD_SEC = 3_600;
 const STATE_RANK = Object.fromEntries(PUBLIC_COMPONENT_STATES.map((state, index) => [state, index])) as Record<
   PublicComponentState,
   number
@@ -49,6 +56,8 @@ export interface ComponentDayCell {
   /** UTC calendar day, YYYY-MM-DD. */
   date: string;
   state: ComponentDayState;
+  /** Worst state held that day for less than `DAY_STATE_MIN_HELD_SEC`, when worse than `state`. */
+  brief?: PublicComponentState;
 }
 
 interface Segment {
@@ -81,9 +90,32 @@ function buildSegments(
 }
 
 /**
+ * Fold one day's observations: the worst state held (with anything worse) for
+ * `DAY_STATE_MIN_HELD_SEC` cumulatively, or any outage. `point` is the live
+ * projection, a zero-length observation: it colours an outage, or the whole
+ * cell when no persisted segment covers the day.
+ */
+function foldDay(
+  heldSec: ReadonlyMap<PublicComponentState, number>,
+  point: PublicComponentState | null,
+): { state: PublicComponentState; brief?: PublicComponentState } {
+  let state: PublicComponentState = "operational";
+  let seen: PublicComponentState = point ?? "operational";
+  let atLeast = 0;
+  for (const candidate of [...PUBLIC_COMPONENT_STATES].reverse()) {
+    if (candidate === "operational") break;
+    atLeast += heldSec.get(candidate) ?? 0;
+    if (atLeast > 0) seen = worse(seen, candidate);
+    if (state === "operational" && (atLeast >= DAY_STATE_MIN_HELD_SEC || (candidate === "outage" && atLeast > 0))) state = candidate;
+  }
+  if (point === "outage" || (point != null && heldSec.size === 0)) state = worse(state, point);
+  return STATE_RANK[seen] > STATE_RANK[state] ? { state, brief: seen } : { state };
+}
+
+/**
  * Per-component daily cells for the last `days` UTC days (oldest first). Each
- * cell is the worst state the component held during that day; today also
- * includes the live projection.
+ * cell is the worst state the component held for `DAY_STATE_MIN_HELD_SEC` that
+ * day (any outage counts); today also includes the live projection.
  */
 export function buildComponentDayCells({
   transitions,
@@ -121,21 +153,26 @@ export function buildComponentDayCells({
     const date = new Date(dayStart * 1000).toISOString().slice(0, 10);
     for (const id of PUBLIC_STATUS_COMPONENT_IDS) {
       const monitoredSince = componentHistoryStartedAt?.[id] ?? null;
-      const active: ReadonlyMap<PublicStatusComponentId, PublicComponentState>[] = [];
+      // Seconds held per state inside the observed part of the day.
+      const heldSec = new Map<PublicComponentState, number>();
       if (monitoredSince != null && monitoredSince < dayEnd) {
+        const observedStart = Math.max(dayStart, monitoredSince, publicHistoryStartedAt ?? Infinity);
         for (const segment of segments) {
-          if (segment.snapshot && segment.start < dayEnd
-            && segment.end > Math.max(dayStart, monitoredSince, publicHistoryStartedAt ?? Infinity)) {
-            active.push(segment.snapshot);
+          if (segment.snapshot && segment.start < dayEnd && segment.end > observedStart) {
+            const state = segment.snapshot.get(id) ?? "operational";
+            const held = Math.min(segment.end, dayEnd) - Math.max(segment.start, observedStart);
+            heldSec.set(state, (heldSec.get(state) ?? 0) + Math.max(0, held));
           }
         }
       }
-      if (dayStart === todayStart && live && liveObservedAt != null
-        && Number.isFinite(liveObservedAt) && liveObservedAt >= todayStart && liveObservedAt <= nowSec) active.push(live);
-      const state: ComponentDayState = active.length === 0
-        ? "no-data"
-        : active.reduce<PublicComponentState>((lead, snapshot) => worse(lead, snapshot.get(id) ?? "operational"), "operational");
-      result[id].push({ date, state });
+      const point = dayStart === todayStart && live && liveObservedAt != null
+        && Number.isFinite(liveObservedAt) && liveObservedAt >= todayStart && liveObservedAt <= nowSec
+        ? live.get(id) ?? "operational" : null;
+      if (heldSec.size === 0 && point == null) {
+        result[id].push({ date, state: "no-data" });
+        continue;
+      }
+      result[id].push({ date, ...foldDay(heldSec, point) });
     }
   }
   return result;

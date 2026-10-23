@@ -377,6 +377,83 @@ describe("handleHealth", () => {
       db.assertAllMatchesUsed();
     }
   });
+  describe("read-time freshness sentinel re-read", () => {
+    const yieldInterval = 7_200;
+    async function delayedYieldSnapshot(now: number, statusExcludingCacheFreshness?: HealthResponse["status"]) {
+      const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+      publicHealth.timestamp = now - 60;
+      publicHealth.assessedAt = now - 60;
+      publicHealth.status = "degraded";
+      // Past 3x the two-hour producer: Delayed in the stored projection.
+      publicHealth.caches["yield-data"] = {
+        ...publicHealth.caches["yield-data"], ageSeconds: 3 * yieldInterval + 600,
+        publishedAt: now - 60 - 3 * yieldInterval - 600, healthy: false,
+      };
+      return {
+        key: STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY,
+        updated_at: now - 60,
+        value: JSON.stringify({
+          version: 1, producedAt: now - 60, publicHealth,
+          ...(statusExcludingCacheFreshness ? { statusExcludingCacheFreshness } : {}),
+        }),
+      };
+    }
+    function sentinelDb(now: number, row: Record<string, unknown>, sentinel: MockTableConfig) {
+      return buildStatusD1Scenario({ sections: [], overrides: [
+        { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY], rows: [], first: row },
+        sentinel,
+        { match: "GROUP BY job", rows: [{ job: "sync-yield-data", started_at: now - 30, generation_id: "recovered-generation", degraded_runs_since_ok: 0 }], allowUnused: true },
+      ] });
+    }
+    const recoveredSentinel = (now: number): MockTableConfig => ({
+      match: "cache WHERE key IN",
+      rows: [{
+        key: "freshness:yield-data", updated_at: now - 30, observed_at: now,
+        value: JSON.stringify({ updatedAt: now - 30, source: "sync-yield-data", publishStatus: "ok", generationId: "recovered-generation" }),
+        served_generation_id: "recovered-generation",
+      }],
+    });
+
+    it("clears Delayed at once when the producer has published since the snapshot", async () => {
+      vi.spyOn(Date, "now").mockReturnValue(Date.now());
+      const now = Math.floor(Date.now() / 1000);
+      const db = sentinelDb(now, await delayedYieldSnapshot(now, "healthy"), recoveredSentinel(now));
+      const body = await (await handleHealth(db)).json() as HealthResponse;
+      expect(body.caches["yield-data"]).toMatchObject({ ageSeconds: 30, publishedAt: now - 30, healthy: true });
+      expect(body.status).toBe("healthy");
+      expect(body.components!.find((item) => item.id === "yield")).toMatchObject({ state: "operational", reasons: [] });
+      expect(body.components!.find((item) => item.id === "website-api")!.state).toBe("operational");
+    });
+
+    it("keeps a genuinely late producer Delayed and never re-reads healthy lanes", async () => {
+      vi.spyOn(Date, "now").mockReturnValue(Date.now());
+      const now = Math.floor(Date.now() / 1000);
+      const stillLate = recoveredSentinel(now);
+      const lateAt = now - 3 * yieldInterval - 660;
+      stillLate.rows = [{ ...stillLate.rows![0], updated_at: lateAt,
+        value: JSON.stringify({ updatedAt: lateAt, source: "sync-yield-data", publishStatus: "ok", generationId: "recovered-generation" }) }];
+      const db = sentinelDb(now, await delayedYieldSnapshot(now, "healthy"), stillLate);
+      const body = await (await handleHealth(db)).json() as HealthResponse;
+      expect(body.status).toBe("degraded");
+      expect(body.components!.find((item) => item.id === "yield")!.state).toBe("delayed");
+      const sentinelReads = db.getHistory().filter((entry) => entry.sql.includes("FROM cache WHERE key IN"));
+      expect(sentinelReads.map((entry) => entry.binds)).toEqual([["freshness:yield-data"]]);
+    });
+
+    it.each(["legacy snapshot", "read failure"] as const)("fails closed to the stored ages on a %s", async (kind) => {
+      vi.spyOn(Date, "now").mockReturnValue(Date.now());
+      const now = Math.floor(Date.now() / 1000);
+      const sentinel = recoveredSentinel(now);
+      if (kind === "read failure") sentinel.throwError = new Error("sentinel read failed");
+      if (kind === "legacy snapshot") sentinel.allowUnused = true;
+      const db = sentinelDb(now, await delayedYieldSnapshot(now, kind === "legacy snapshot" ? undefined : "healthy"), sentinel);
+      const body = await (await handleHealth(db)).json() as HealthResponse;
+      expect(body.status).toBe("degraded");
+      expect(body.caches["yield-data"].ageSeconds).toBe(3 * yieldInterval + 660);
+      expect(body.components!.find((item) => item.id === "yield")!.state).toBe("delayed");
+    });
+  });
+
   it.each([false, true])("retains independent raw and quality blockers (rejected clock: %s)", async (rejectedClock) => {
     vi.spyOn(Date, "now").mockReturnValue(Date.now());
     const now = Math.floor(Date.now() / 1000);
@@ -863,7 +940,7 @@ describe("handleHealth", () => {
   it.each([
     [3600, 3600, "healthy"], [86400, 86400, "healthy"],
     [86401, 3600, "degraded"], [3600, 86401, "degraded"],
-  ] as const)("keeps yield held-clock verdict %s/%s at %s while Safety Scores are degraded", async (yieldAge, safetyAge, status) => {
+  ] as const)("keeps yield held-clock verdict %s/%s at %s while in-budget Safety Scores are held (notice)", async (yieldAge, safetyAge, status) => {
     // Fixture creation must not advance an inclusive 86400-second clock to 86401.
     vi.spyOn(Date, "now").mockReturnValue(Date.now());
     const now = Math.floor(Date.now() / 1000);
@@ -876,8 +953,10 @@ describe("handleHealth", () => {
       yieldHealthEntry(now, true, identity.publicationGenerationId),
     ] });
     const body = await (await handleHealth(db)).json() as HealthResponse;
-    expect(body.status).toBe("degraded");
-    expect(body.components!.find((component) => component.id === "safety-scores")).toMatchObject({ state: "degraded" });
+    expect(body.status).toBe(status);
+    expect(body.components!.find((component) => component.id === "safety-scores")).toMatchObject({
+      state: "operational", reasons: expect.arrayContaining(["safety-score-publication-held"]),
+    });
     expect(body.components!.find((component) => component.id === "yield")!.state).toBe(status === "healthy" ? "operational" : "degraded");
     expect(body.warnings).toContain(status === "healthy"
       ? "yield-safety-publish-time-fallback:safety-snapshot-held"

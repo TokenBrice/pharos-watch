@@ -91,7 +91,7 @@ const ENV_BINDING_DEFINITIONS = [
   {
     key: "WORKER_SLOT_CATCH_UP_MODE",
     valueType: "string",
-    description: "Literal on lets the five-minute digest poll arm one-shot missed-slot catch-ups on the public Queue; off (checked in) or missing disables arming and consumes catch-up hints neutrally.",
+    description: "Literal on lets the five-minute digest poll arm one-shot missed-slot catch-ups on the public Queue; checked in on; off or missing disables arming and consumes catch-up hints neutrally.",
     runtimes: { worker: { status: "optional" } },
   },
   {
