@@ -54,6 +54,21 @@ import type { SafetyScoreV9CaptureControl } from "@shared/types/safety-score-v9-
 import type { V9ExecutionWindow } from "../lib/v9-slot-window";
 import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
 import { assessSafetyScoreV9ResourceBudget } from "../lib/safety-score-v9/resource-budget";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
+
+/**
+ * Prepare (`halfHourlyChartsOffset`) and this publisher (`v9PublicationOffset`)
+ * run on separate lanes, so a late, abandoned or missing prepare leaves the
+ * previous cycle's capture in place while `sync-stablecoins` keeps advancing.
+ * Strict equality with the latest generation refused every such slot. A
+ * capture that lags the live cache is still admitted while its own stablecoins
+ * generation is at most one prepare cycle plus one stablecoins interval old —
+ * exactly one missed prepare — which is fresher than holding the last accepted
+ * publication. Older or ahead-of-live captures are refused.
+ */
+export const SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC =
+  CRON_SCHEDULE_CADENCES.halfHourlyChartsOffset.intervalSec +
+  CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec;
 
 /**
  * A held attempt is only attributable if the numbers it was decided on reach
@@ -239,10 +254,25 @@ export async function computeSafetyScoreV9(
   if (latestStablecoinsUpdatedAt === null) {
     return unavailable("latest-stablecoins-generation-unavailable");
   }
-  if (fixedInput.updatedAt !== latestStablecoinsUpdatedAt) {
+  const stablecoinsCapture = {
+    verdict: fixedInput.updatedAt === latestStablecoinsUpdatedAt ? "current" : "lagging-within-budget",
+    capturedStablecoinsUpdatedAt: fixedInput.updatedAt,
+    latestStablecoinsUpdatedAt,
+    captureAgeSec: Math.floor(Date.now() / 1_000) - fixedInput.updatedAt,
+    captureMaxAgeSec: SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC,
+  };
+  if (fixedInput.updatedAt > latestStablecoinsUpdatedAt) {
     return unavailable("stablecoins-generation-mismatch", {
       fixedInputStablecoinsUpdatedAt: fixedInput.updatedAt,
       latestStablecoinsUpdatedAt,
+    });
+  }
+  if (
+    stablecoinsCapture.verdict !== "current" &&
+    stablecoinsCapture.captureAgeSec > SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC
+  ) {
+    return unavailable("stablecoins-capture-out-of-budget", {
+      stablecoinsCapture: { ...stablecoinsCapture, verdict: "out-of-budget" },
     });
   }
   let latestDexGenerationId: string;
@@ -569,6 +599,7 @@ export async function computeSafetyScoreV9(
         : {}),
       sourceGenerationId: fixedInput.sourceGeneration,
       baseInputGenerationId: fixedInput.baseInputGenerationId,
+      stablecoinsCapture,
       pegProvenance: {
         status: "applied",
         assetCount: Object.keys(

@@ -5,7 +5,7 @@ import {
   STATUS_YIELD_HEALTH_THRESHOLDS,
   YIELD_BENCHMARK_SCORE_TTL_SEC,
 } from "@shared/lib/status-thresholds";
-import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
+import { safetyScorePublicationIdentitiesShareScoringContract } from "@shared/lib/safety-score-publication";
 import { SafetyScorePublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import { isYieldSafetyFallbackWithinWindow, YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safety-fallback";
 import {
@@ -847,7 +847,7 @@ async function buildLiveSafetyHydration(
   const liveWithinBudget = active.kind === "v9"
     && isYieldSafetyFallbackWithinWindow(now, active.snapshot.updatedAt, now);
   if (active.kind === "v9" && liveWithinBudget && stamped.success
-    && safetyScorePublicationIdentitiesAreComparable(stamped.data, active.snapshot.safetyScoreIdentity)) {
+    && safetyScorePublicationIdentitiesShareScoringContract(stamped.data, active.snapshot.safetyScoreIdentity)) {
     return { ...base, safetyPublishedAt: active.snapshot.updatedAt, safetyAgeSec: ageSeconds(now, active.snapshot.updatedAt),
       status: "healthy", reason: null, fallback: null };
   }
