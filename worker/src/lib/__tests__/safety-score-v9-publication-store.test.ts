@@ -509,12 +509,11 @@ describe("Safety Score V9 publication store", () => {
       const { sqlite, db } = database();
       const publication = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 100 });
       await persistSafetyScoreV9Publication(db, currentInput(publication));
-      const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?")
-        .get(SAFETY_SCORE_V9_CACHE_KEYS.publication) as { value: string };
+      const legacyEnvelope = JSON.parse(await serializeSafetyScoreV9PublicationWithEncoding(publication, "legacy"));
       const payload = Buffer.from(stableJsonStringifyV1({ ...publication, schemaVersion: 6 }));
       const compressed = gzipSync(payload);
       const legacyPublication = stableJsonStringifyV1({
-        ...JSON.parse(row.value),
+        ...legacyEnvelope,
         payloadSha256: createHash("sha256").update(payload).digest("hex"),
         uncompressedBytes: payload.byteLength,
         compressedBytes: compressed.byteLength,
