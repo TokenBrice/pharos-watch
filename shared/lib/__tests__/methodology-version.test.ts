@@ -537,17 +537,17 @@ describe("liquidity TVL-basis break list", () => {
     expect(liquidityTvlBasisEpoch("6.95")).toBe(liquidityTvlBasisEpoch("6.94"));
     expect(liquidityTvlBasisEpoch("6.95")).toBeLessThan(liquidityTvlBasisEpoch("6.96"));
   });
-  it("records v10.32's provisional hourly-cadence activation and its derived bounds", () => {
+  it("records v10.32's hourly-cadence activation and its derived bounds", () => {
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0]!;
     expect(release).toMatchObject({
-      version: "10.32", date: "2026-10-23", effectiveAt: 1792886400, reconstructed: false, commits: [],
+      version: "10.32", date: "2026-10-23", effectiveAt: 1792713600, reconstructed: false, commits: [],
     });
     expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.31");
     expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.32");
     const impact = release.impact.join(" ");
     expect(impact).toContain("from 3,600 to 7,200 seconds");
     expect(impact).toContain("lenderCollateralBacking");
-    expect(impact).toContain("re-date effectiveAt at release");
+    expect(impact).toContain("Released 2026-10-23 (effectiveAt 1792713600)");
   });
 
 });
