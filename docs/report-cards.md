@@ -121,6 +121,10 @@ Lossless witness interning preserves evidence; obligation counts distinguish que
 
 Seed/verify both accepted private read models before strict readers. Preparation/pre-compile uses them, never full-publication fallback. Invalid baselines block compilation; unavailable lender sources use class fallback. Recovery: revert strict readers on current head, reseed an accepted cycle, reapply ([rollout](process/report-cards-appendix.md#accepted-publication-read-models)). Public API/score-index schema 2 stay unchanged.
 
+## Local authority exposure display
+
+Rated cards may carry a display-only `localAuthorityExposure` summary beside Control: the weakest priced local quality and covered supply share, with up to three deployments by modeled loss and an omitted count. It is already priced in the score, not in the Control number, and is **not** a score-equivalent pillar. Older cards omit it; readers show no note rather than infer exposure from reason text. Only the stablecoin dossier shows it: a one-line note under the unchanged Control row, with the deployment list in that row's expanded details. The Safety Scores grid, mini radars and compare radar never show it.
+
 ## Publication journal and movement attribution
 
 The non-fatal post-persistence journal retains compact card movements and accepted/held attempts, not a second scoring authority. [Journal implementation](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/report-cards-appendix.md#publication-journal-implementation) owns fields, lineage, ordering and failure metadata; quote refreshes/re-keying alone are not score movements.

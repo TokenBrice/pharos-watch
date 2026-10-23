@@ -92,6 +92,29 @@ async function assertServedEquivalent(db: D1Database) {
 }
 
 describe("materialized V9 response", () => {
+  it.each(["legacy", "dictionary"] as const)("serves identical warm and repaired public bytes from %s storage", async encoding => {
+    const { sqlite, db, publication } = await seed();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(publication.publishedAtSec * 1000);
+    const before = await handleReportCardsV9(db);
+    const body = await before.text();
+    const etag = before.headers.get("ETag");
+    const stored = await publicationCodec.serializeSafetyScoreV9PublicationWithEncoding(publication, encoding);
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(stored, SAFETY_SCORE_V9_CACHE_KEYS.publication);
+    const decode = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
+    const warm = await handleReportCardsV9(db);
+    expect(warm.status).toBe(200);
+    expect(await warm.text()).toBe(body);
+    expect(warm.headers.get("ETag")).toBe(etag);
+    expect(decode).not.toHaveBeenCalled();
+    sqlite.exec("DELETE FROM safety_score_public_manifests; DELETE FROM safety_score_public_fragments;");
+    const repaired = await handleReportCardsV9(db);
+    expect(repaired.status).toBe(200);
+    expect(await repaired.text()).toBe(body);
+    expect(repaired.headers.get("ETag")).toBe(etag);
+    expect(decode).toHaveBeenCalled();
+  });
+
   it("negotiates compact freshness without changing cards, accepted storage or the old strict wire", async () => {
     const { sqlite, db } = database();
     const publication = makeWorkerSafetyScoreV9Publication();

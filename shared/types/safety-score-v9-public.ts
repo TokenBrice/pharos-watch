@@ -256,6 +256,19 @@ export const SafetyScoreV9GradeHoldSchema = z.object({
 }).strict();
 export type SafetyScoreV9GradeHold = z.infer<typeof SafetyScoreV9GradeHoldSchema>;
 
+/** Display-only local authority exposure, not an effective Control pillar. */
+export const V9LocalAuthorityExposureSchema = z.object({
+  worstQuality: ScoreSchema,
+  coveredShare: z.number().finite().positive().max(1).nullable(),
+  slices: z.array(z.object({
+    deploymentLabel: z.string().min(1).max(120),
+    share: z.number().finite().positive().max(1),
+    quality: ScoreSchema,
+  }).strict()).min(1).max(3),
+  moreCount: z.number().int().nonnegative(),
+}).strict();
+export type V9LocalAuthorityExposure = z.infer<typeof V9LocalAuthorityExposureSchema>;
+
 const SafetyScoreV9CardShape = {
   id: z.string().min(1),
   localCauseGaps: V9WitnessTextIdentityArraySchema,
@@ -280,6 +293,7 @@ const SafetyScoreV9CardShape = {
   /** Display-only; older archived publications omit both fields. */
   provisional: z.literal(true).optional(),
   unknownPricedWeightShare: z.number().finite().gt(0.5).max(1).optional(),
+  localAuthorityExposure: V9LocalAuthorityExposureSchema.optional(),
   ratingStatus: V9RatingStatusSchema,
   partialEvidence: V9PartialEvidenceSchema.nullable(),
   qualityScore: ScoreSchema.nullable(),
@@ -313,6 +327,9 @@ function refineCardBase(
 ): void {
   refineV9PublicGapReferences(card, ctx);
   refineV9RatingStatusFields(card, ctx);
+  if (card.localAuthorityExposure !== undefined && card.ratingStatus !== "rated") {
+    ctx.addIssue({ code: "custom", path: ["localAuthorityExposure"], message: "Local authority exposure is only shown on rated cards" });
+  }
   const excludedPillars = (["backing", "exit", "control"] as const).filter((pillar) => (card.pillars[pillar].aggregationDisposition ?? "included") !== "included").sort();
   if (JSON.stringify(excludedPillars) !== JSON.stringify(card.partialEvidence?.excludedPillars ?? [])) {
     ctx.addIssue({ code: "custom", path: ["partialEvidence"], message: "Partial evidence must reconcile excluded pillars" });

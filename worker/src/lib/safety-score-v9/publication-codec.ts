@@ -12,8 +12,9 @@ import { deepFreeze } from "@shared/types/safety-score-v9-immutable";
 import { z } from "zod";
 import { throwIfAborted } from "../abort";
 import { gunzipBytesBounded, gzipCanonicalJson } from "../canonical-json-gzip";
-import { sha256Hex } from "../hash";
+import { sha256Hex, sha256HexFromUtf8Chunks } from "../hash";
 import { parseJson } from "../json-parse";
+import { decodePublicationDictionary, encodePublicationDictionary, PUBLICATION_DICTIONARY_MAX_PACKED_BYTES } from "./publication-dictionary";
 import {
   SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES,
   SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES,
@@ -54,23 +55,32 @@ const CacheIdentitySchema = z
   })
   .strict();
 
-const StorageEnvelopeSchema = z
-  .object({
-    storageSchemaVersion: z.literal(STORAGE_SCHEMA_VERSION),
-    kind: z.literal(PUBLICATION_STORAGE_KIND),
-    encoding: z.literal("gzip-base64"),
-    identity: CacheIdentitySchema,
-    payloadSha256: Sha256Schema,
-    uncompressedBytes: z.number().int().positive(),
-    compressedBytes: z.number().int().positive(),
-    payload: z.string().min(1),
-  })
-  .strict();
-
-export const SafetyScoreV9StorageMetadataSchema = StorageEnvelopeSchema.omit({ payload: true }).extend({
+const LegacyStorageEnvelopeSchema = z.object({
+  storageSchemaVersion: z.literal(STORAGE_SCHEMA_VERSION),
+  kind: z.literal(PUBLICATION_STORAGE_KIND),
+  encoding: z.literal("gzip-base64"),
+  identity: CacheIdentitySchema,
+  payloadSha256: Sha256Schema,
+  uncompressedBytes: z.number().int().positive(),
+  compressedBytes: z.number().int().positive(),
+  payload: z.string().min(1),
+}).strict();
+const DictionaryStorageEnvelopeSchema = LegacyStorageEnvelopeSchema.extend({
+  storageSchemaVersion: z.literal(2),
+  encoding: z.literal("gzip-json-dictionary-base64-v1"),
+  packedBytes: z.number().int().positive().max(PUBLICATION_DICTIONARY_MAX_PACKED_BYTES),
+});
+const StorageEnvelopeSchema = z.discriminatedUnion("storageSchemaVersion", [
+  LegacyStorageEnvelopeSchema, DictionaryStorageEnvelopeSchema,
+]);
+const metadataLimits = {
   uncompressedBytes: z.number().int().positive().max(SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES),
   compressedBytes: z.number().int().positive().max(SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES),
-});
+};
+export const SafetyScoreV9StorageMetadataSchema = z.discriminatedUnion("storageSchemaVersion", [
+  LegacyStorageEnvelopeSchema.omit({ payload: true }).extend(metadataLimits),
+  DictionaryStorageEnvelopeSchema.omit({ payload: true }).extend(metadataLimits),
+]);
 
 type CacheIdentity = z.infer<typeof CacheIdentitySchema>;
 
@@ -231,25 +241,27 @@ function compressedStorageCandidate(value: unknown): boolean {
 export async function admitAndSerializeSafetyScoreV9Publication(
   value: SafetyScoreV9CurrentResponse,
   signal?: AbortSignal,
+  encoding: "legacy" | "dictionary" = "legacy",
 ): Promise<{ publication: Readonly<SafetyScoreV9CurrentResponse>; stored: string }> {
   throwIfAborted(signal);
   const publication = deepFreeze(admitPublicationPayload({ ...value, cards: [...value.cards] }, true));
-  const compressed = await gzipCanonicalJson(stableJsonStringifyChunksV1(publication), {
+  const dictionary = encoding === "dictionary" ? encodePublicationDictionary(publication, signal) : undefined;
+  const compressed = await gzipCanonicalJson(dictionary?.chunks ?? stableJsonStringifyChunksV1(publication), {
     label: "Safety Score v9 publication",
     maximumCompressedBytes:
       SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES,
-    maximumUncompressedBytes:
-      SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
+    maximumUncompressedBytes: dictionary ? PUBLICATION_DICTIONARY_MAX_PACKED_BYTES : SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
     signal,
   });
   const stored = stableJsonStringifyV1(
     StorageEnvelopeSchema.parse({
-      storageSchemaVersion: STORAGE_SCHEMA_VERSION,
+      storageSchemaVersion: dictionary ? 2 : STORAGE_SCHEMA_VERSION,
       kind: PUBLICATION_STORAGE_KIND,
-      encoding: "gzip-base64",
+      encoding: dictionary ? "gzip-json-dictionary-base64-v1" : "gzip-base64",
+      ...(dictionary ? { packedBytes: compressed.uncompressedBytes } : {}),
       identity: publicationIdentity(publication),
-      payloadSha256: compressed.contentSha256,
-      uncompressedBytes: compressed.uncompressedBytes,
+      payloadSha256: dictionary?.contentSha256 ?? compressed.contentSha256,
+      uncompressedBytes: dictionary?.uncompressedBytes ?? compressed.uncompressedBytes,
       compressedBytes: compressed.compressed.byteLength,
       payload: bytesToBase64(compressed.compressed),
     }),
@@ -269,6 +281,15 @@ export async function serializeSafetyScoreV9Publication(
   signal?: AbortSignal,
 ): Promise<string> {
   return (await admitAndSerializeSafetyScoreV9Publication(value, signal)).stored;
+}
+
+/** Explicit encoder for qualification and historical-format fixtures. */
+export async function serializeSafetyScoreV9PublicationWithEncoding(
+  value: SafetyScoreV9CurrentResponse,
+  encoding: "legacy" | "dictionary",
+  signal?: AbortSignal,
+): Promise<string> {
+  return (await admitAndSerializeSafetyScoreV9Publication(value, signal, encoding)).stored;
 }
 
 export async function parseSafetyScoreV9Publication(
@@ -328,20 +349,18 @@ export async function parseSafetyScoreV9Publication(
       "Safety Score v9 publication compressed byte length mismatch",
     );
   }
-  const uncompressed = await gunzipBytesBounded(
+  let uncompressed = await gunzipBytesBounded(
     compressed,
     {
       label: "Safety Score v9 publication",
       maximumCompressedBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES,
-      maximumUncompressedBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
-      expectedUncompressedBytes: storage.uncompressedBytes,
+      maximumUncompressedBytes: storage.storageSchemaVersion === 2 ? PUBLICATION_DICTIONARY_MAX_PACKED_BYTES : SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
+      expectedUncompressedBytes: storage.storageSchemaVersion === 2 ? storage.packedBytes : storage.uncompressedBytes,
       signal,
     },
   );
-  if (uncompressed.byteLength !== storage.uncompressedBytes) {
-    throw new Error(
-      "Safety Score v9 publication uncompressed byte length mismatch",
-    );
+  if (storage.storageSchemaVersion === 2) {
+    uncompressed = decodePublicationDictionary(uncompressed, storage.uncompressedBytes, signal);
   }
   let canonical: string;
   try {
@@ -360,6 +379,10 @@ export async function parseSafetyScoreV9Publication(
   const payload = parseJson(canonical);
   canonical = "";
   if (!payload.ok) throw new Error(`Malformed Safety Score v9 publication JSON: ${payload.message}`);
+  if (storage.storageSchemaVersion === 2 &&
+      sha256HexFromUtf8Chunks(stableJsonStringifyChunksV1(payload.value)) !== storage.payloadSha256) {
+    throw new Error("Safety Score v9 publication dictionary JSON is not canonical");
+  }
   const publication = admitPublicationPayload(payload.value);
   if (
     stableJsonStringifyV1(publicationIdentity(publication)) !==

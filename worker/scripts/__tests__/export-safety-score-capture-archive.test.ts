@@ -14,7 +14,7 @@ import { makeV9FixedInput, v9TestClockSec } from "../../src/test-helpers/v9-fixe
 import { makeWorkerSafetyScoreV9Publication } from "../../src/test-helpers/report-cards-v9";
 import { buildReportCardsFixedInputCacheEntry } from "../../src/test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9PublicationReplayCapture } from "../../src/lib/safety-score-v9/publication-replay-capture";
-import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, serializeSafetyScoreV9Publication } from "../../src/lib/safety-score-v9/publication-codec";
+import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, serializeSafetyScoreV9Publication, serializeSafetyScoreV9PublicationWithEncoding } from "../../src/lib/safety-score-v9/publication-codec";
 import type { SafetyScoreCaptureArchiveObject } from "@shared/types/safety-score-capture-archive";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -37,7 +37,7 @@ function insertCronRun(
     .run(PUBLICATION_PRODUCER_JOB, run.startedAt, 1_000, run.status ?? "ok", run.metadata, run.productive ?? 1);
 }
 
-async function archiveFixture() {
+async function archiveFixture(encoding?: "legacy" | "dictionary") {
   const base = makeV9FixedInput({ assetId: "wm-m0", clockSec: CLOCK });
   const publication = makeWorkerSafetyScoreV9Publication({
     baseInputGenerationId: base.baseInputGenerationId, publishedAtSec: CLOCK,
@@ -51,7 +51,7 @@ async function archiveFixture() {
     evaluationBuildDigest: publication.evaluationBuildDigest,
     base: { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, value: baseEntry.value, updatedAt: CLOCK },
     delta: { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, value: delta.value, updatedAt: CLOCK },
-    cards: { key: "report-cards:v9", value: await serializeSafetyScoreV9Publication(publication), updatedAt: CLOCK },
+    cards: { key: "report-cards:v9", value: encoding ? await serializeSafetyScoreV9PublicationWithEncoding(publication, encoding) : await serializeSafetyScoreV9Publication(publication), updatedAt: CLOCK },
   };
   const bytes = Buffer.from(JSON.stringify(object));
   const row = indexRow({ methodology_version: object.methodologyVersion, policy_digest: object.policyDigest,
@@ -63,8 +63,8 @@ async function archiveFixture() {
 afterEach(() => vi.restoreAllMocks());
 
 describe("Safety Score capture archive export", () => {
-  it("round-trips exact rows through the capture CLI parser and full envelope restoration, including offline export", async () => {
-    const fixture = await archiveFixture();
+  it.each(["legacy", "dictionary"] as const)("round-trips exact %s rows through the capture CLI parser and full envelope restoration, including offline export", async encoding => {
+    const fixture = await archiveFixture(encoding);
     const dir = mkdtempSync(resolve(tmpdir(), "pharos-archive-export-"));
     vi.spyOn(process.stdout, "write").mockReturnValue(true);
     try {

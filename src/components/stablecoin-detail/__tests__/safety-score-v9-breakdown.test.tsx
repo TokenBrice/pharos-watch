@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { StablecoinSafetyScoreV9Presentation } from "@/lib/stablecoin-safety-score-v9-presentation";
 
 import { SafetyScoreV9PillarRow } from "../safety-score-v9-breakdown";
@@ -24,6 +24,34 @@ function pillar(score: number | null): Pillar {
 }
 
 describe("SafetyScoreV9PillarRow", () => {
+  it("discloses priced local exposure under Control without replacing its pillar score", () => {
+    const control = { ...pillar(90), key: "control" as const, label: "Economic Control" };
+    const { container, rerender } = render(<SafetyScoreV9PillarRow cardId="card" pillar={{
+      ...control,
+      localAuthorityExposure: { worstQuality: 60, coveredShare: 0.99,
+        slices: [{ deploymentLabel: "Ethereum vault", share: 0.99, quality: 60 }], moreCount: 0 },
+    }} />);
+    expect(container.textContent).toContain(
+      "Local admins: 60 on 99% of supply, priced in the score rather than this Control number.",
+    );
+    expect(container.textContent).toContain("90 / 100");
+    expect(container.querySelector('[role="img"]')?.getAttribute("aria-label")).toContain("90 out of 100");
+    rerender(<SafetyScoreV9PillarRow cardId="card" pillar={{
+      ...control,
+      localAuthorityExposure: { worstQuality: 60, coveredShare: null, slices: [
+        { deploymentLabel: "Arbitrum vault", share: 0.64, quality: 60 },
+        { deploymentLabel: "Base vault", share: 0.012, quality: 75 },
+      ], moreCount: 2 },
+    }} />);
+    expect(container.textContent).toContain("Local admins: as low as 60 across overlapping deployments");
+    expect(container.textContent).not.toContain("Arbitrum vault");
+    fireEvent.click(screen.getByRole("button", { expanded: false }));
+    const items = [...container.querySelectorAll("li")].map((item) => item.textContent);
+    expect(items).toEqual(["Arbitrum vault60 on 64%", "Base vault75 on 1.2%"]);
+    expect(container.textContent).toContain("+2 more deployments");
+    rerender(<SafetyScoreV9PillarRow cardId="card" pillar={control} />);
+    expect(container.textContent).not.toContain("Local admins");
+  });
   it("draws an unscored pillar as an unavailable track, never an empty bar that reads as zero", () => {
     render(<SafetyScoreV9PillarRow cardId="card" pillar={pillar(null)} />);
     const bar = screen.getByRole("img", { name: /^Exit:/ });

@@ -28,6 +28,7 @@ export interface StablecoinSafetyScoreV9Presentation {
     label: string;
     score: number | null;
     pricedUnknown: V9PricedUnknown | null;
+    localAuthorityExposure?: SafetyScoreV9CurrentCard["localAuthorityExposure"];
     evidenceSummary: string;
     evidenceDescription: string | null;
     componentCount: number;
@@ -65,6 +66,8 @@ export function buildStablecoinSafetyScoreV9Presentation(
         label,
         score: pillar.score,
         pricedUnknown: readV9PricedUnknown(card, key),
+        ...(key === "control" && card.localAuthorityExposure !== undefined
+          ? { localAuthorityExposure: card.localAuthorityExposure } : {}),
         evidenceSummary,
         evidenceDescription: pillar.aggregationDisposition === "excluded-a-b"
           ? null

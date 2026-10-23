@@ -17,6 +17,7 @@ import { currentInput } from "./safety-score-v9-publication-store.test-support";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { bytesToBase64 } from "@shared/lib/base64";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../safety-score-v9/publication-codec";
+import { serializeSafetyScoreV9PublicationWithEncoding } from "../safety-score-v9/publication-codec";
 import { handleReportCardsV9 } from "../../api/report-cards-v9";
 import {
   buildSafetyScoreV9AcceptedProjections,
@@ -41,6 +42,18 @@ afterEach(() => {
 });
 
 describe("Safety Score V9 publication store", () => {
+  it.each(["legacy", "dictionary"] as const)("reads %s accepted rows through full, identity and prior-publication readers", async encoding => {
+    const { sqlite, db } = database();
+    const publication = makeWorkerSafetyScoreV9Publication();
+    await persistSafetyScoreV9Publication(db, currentInput(publication));
+    const stored = await serializeSafetyScoreV9PublicationWithEncoding(publication, encoding);
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(stored, SAFETY_SCORE_V9_CACHE_KEYS.publication);
+    expect(await loadSafetyScoreV9Publication(db)).toEqual(publication);
+    expect(await loadSafetyScoreV9PublicationIdentityEnvelope(db)).not.toBeNull();
+    expect(await loadSafetyScoreV9AcceptedBaselineState(db)).toMatchObject({ kind: "accepted" });
+    expect(await loadSafetyScoreV9LenderCollateralState(db)).toMatchObject({ kind: "accepted" });
+  });
+
   describe.each([
     ["baseline", SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, loadSafetyScoreV9AcceptedBaselineState],
     ["lender", SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral, loadSafetyScoreV9LenderCollateralState],

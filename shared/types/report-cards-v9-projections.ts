@@ -26,6 +26,7 @@ export const ReportCardsV9TableCardSchema = z.object({
   id: card.id, score: card.score, grade: card.grade, ratingStatus: card.ratingStatus,
   partialEvidence: V9CompactPartialEvidenceSchema.nullable(),
   pillars: V9EvidencePillarsSchema,
+  localAuthorityExposure: card.localAuthorityExposure,
   evidence: z.object({ level: card.evidence.shape.level }).strict(),
   weakestPillar: card.weakestPillar, bindingCap: card.bindingCap,
   accessPosture: z.object({ freezeExposure: card.accessPosture.shape.freezeExposure }).strict(),
@@ -33,6 +34,9 @@ export const ReportCardsV9TableCardSchema = z.object({
   mint: z.object({ score: z.number().finite().min(0).max(100), posture: z.string().nullable() }).strict().nullable(),
 }).strict().superRefine((value, ctx) => {
   refineV9RatingStatusFields(value, ctx);
+  if (value.localAuthorityExposure !== undefined && value.ratingStatus !== "rated") {
+    ctx.addIssue({ code: "custom", path: ["localAuthorityExposure"], message: "Local authority exposure is only shown on rated cards" });
+  }
   for (const key of ["backing", "exit", "control"] as const) {
     const pillar = value.pillars[key];
     if (pillar.pricedUnknown !== undefined &&

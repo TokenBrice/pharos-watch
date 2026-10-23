@@ -1,8 +1,30 @@
 import { SAFETY_SCORE_GAP_CAUSE_LABELS } from "@shared/lib/classification";
 import type { V9QualityPillar } from "@shared/types";
+import type { V9LocalAuthorityExposure } from "@shared/types/safety-score-v9-public";
 import { normalizeChain, prettifyProtocol } from "@/lib/dex-display-constants";
 import { describeFailureDomain } from "@/lib/failure-domain-labels";
 import { readV9PricedUnknown, V9_PILLAR_KEYS, type V9PricedUnknown } from "@/lib/safety-score-v9-consumers";
+
+export function formatLocalAuthorityShare(share: number): string {
+  const percent = share * 100;
+  if (percent < 0.1) return "<0.1%";
+  // Avoid implying full coverage when a small unexposed remainder exists.
+  if (percent < 100 && percent >= 99.5) return ">99%";
+  return `${Number(percent.toFixed(percent < 10 ? 1 : 0))}%`;
+}
+
+/**
+ * Display-only summary beside the unchanged Control number. The score prices
+ * each deployment's exposure separately, so this never states an effective
+ * Control value; "as low as" stays unless every priced slice is shown at the
+ * same quality.
+ */
+export function formatLocalAuthorityExposure(exposure: V9LocalAuthorityExposure): string {
+  const uniform = exposure.moreCount === 0 && exposure.slices.every((slice) => slice.quality === exposure.worstQuality);
+  const coverage = exposure.coveredShare === null ? "across overlapping deployments"
+    : `on ${formatLocalAuthorityShare(exposure.coveredShare)} of supply`;
+  return `Local admins: ${uniform ? "" : "as low as "}${Number(exposure.worstQuality.toFixed(1))} ${coverage}, priced in the score rather than this Control number.`;
+}
 
 /**
  * Reader label for a scored exit route. DEX routes arrive labelled with

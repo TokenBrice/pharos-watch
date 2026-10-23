@@ -7,7 +7,7 @@ import { SafetyScoreReasonList } from "@/components/stablecoin-detail/safety-sco
 import { SAFETY_BREAKDOWN_ROW_TONE_TEXT_CLASSES } from "@shared/lib/classification";
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
-import { formatPricedUnknown } from "@/lib/safety-score-reason-labels";
+import { formatLocalAuthorityExposure, formatLocalAuthorityShare, formatPricedUnknown } from "@/lib/safety-score-reason-labels";
 import type { StablecoinSafetyScoreV9Presentation } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { cn } from "@/lib/utils";
 import { FigureLeadText } from "./figure-lead-text";
@@ -342,7 +342,8 @@ export function SafetyScoreV9PillarRow({
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
   const open = userOpen ?? false;
   const detailsId = useId();
-  const hasDetails = pillar.breakdown !== null || pillar.componentCount > 0 || pillar.reasons.length > 0;
+  const exposure = pillar.key === "control" ? pillar.localAuthorityExposure ?? null : null;
+  const hasDetails = pillar.breakdown !== null || pillar.componentCount > 0 || pillar.reasons.length > 0 || exposure !== null;
   const scoreGrade = pillar.score === null ? null : scoreToGrade(pillar.score);
   const gradeMetadata = getSafetyGradeMetadata(scoreGrade);
   // A priced unknown keeps the score column's shape ("Unknown" where a measured
@@ -373,6 +374,9 @@ export function SafetyScoreV9PillarRow({
             </span>
             {unknownNote ? (
               <span className="mt-1 block text-2xs text-foreground/85">{unknownNote}</span>
+            ) : null}
+            {exposure ? (
+              <span className="mt-1 block text-2xs text-foreground/85">{formatLocalAuthorityExposure(exposure)}</span>
             ) : null}
             {pillar.breakdown?.exitHighlight ? (
               <span className="mt-1 block text-2xs text-foreground/85">
@@ -447,6 +451,27 @@ export function SafetyScoreV9PillarRow({
           className="pb-2 pl-3 pr-1 pt-1 text-xs leading-relaxed text-muted-foreground"
           data-pillar={cardId}
         >
+          {exposure ? (
+            <div className="mb-3">
+              <p className="pharos-label">Local admins by priced loss</p>
+              <ul>
+                {exposure.slices.map((slice) => (
+                  <li
+                    key={slice.deploymentLabel}
+                    className="flex min-w-0 items-baseline justify-between gap-3 border-b border-border/30 py-1 last:border-b-0"
+                  >
+                    <span className="min-w-0 break-words">{slice.deploymentLabel}</span>
+                    <span className="shrink-0 font-mono tabular-nums">
+                      {Number(slice.quality.toFixed(1))} on {formatLocalAuthorityShare(slice.share)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {exposure.moreCount > 0 ? (
+                <p>+{exposure.moreCount} more {exposure.moreCount === 1 ? "deployment" : "deployments"}</p>
+              ) : null}
+            </div>
+          ) : null}
           {pillar.breakdown !== null ? (
             <PillarBreakdownDetails breakdown={pillar.breakdown} />
           ) : (
