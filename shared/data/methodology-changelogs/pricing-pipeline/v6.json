@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.56",
+    "title": "Aero DEX source and BD's Aero pool",
+    "date": "2026-10-23",
+    "effectiveAt": 1792713600,
+    "summary": "Aero, the 2026-10-22 merger of Aerodrome and Velodrome, joins the protocol DEX sources as `aero-dex`, and BD's reviewed exact-pool fallback moves from the legacy Aerodrome pool to its Aero stable pool. Thresholds and weights are unchanged.",
+    "impact": [
+      "`aero-dex` is a soft DEX source with the same weight and 75-minute trust window as the Aerodrome and Velodrome Slipstream sources. It can be promoted into primary consensus and joins the protocol families eligible for pool challenges. Its pool prices come only from Aero pool state: a tracked token's market reference is never re-emitted as an Aero price.",
+      "BD's `aerodrome-exact` fallback now reads the Aero BD/USDC stable pool `0x11cc6f32930c20e3cfb01fc35bd37ed20d3ed82f`. It quotes with total-fee sells and rejects the route when the factory's effective fee, read at the pinned reserves for both quoted notionals, exceeds 200 bps or flags the swap as toxic. Inventory floors, the 5% depth agreement, five-minute freshness, fallback confidence and the never-overwrite rule are unchanged. The source key stays `aerodrome-exact` for history; its label reads Aero.",
+      "The legacy pool had fallen below the 10,000-USDC inventory floor after Aerodrome emissions ended, leaving BD unpriced; the Aero pool held about twice its reserves when reviewed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.55",
     "title": "Partial coverage after a long minority-chain quarantine",
     "date": "2026-10-23",

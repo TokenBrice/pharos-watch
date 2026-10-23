@@ -25,6 +25,7 @@ const SOURCE_LABELS: Record<string, string> = {
   "dex:uniswap": "Uniswap DEX",
   "dex:aerodrome": "Aerodrome DEX",
   "dex:velodrome": "Velodrome DEX",
+  "dex:aero": "Aero DEX",
   "dex:balancer": "Balancer DEX",
   "pool:curve:geckoterminal": "Curve pool",
 };

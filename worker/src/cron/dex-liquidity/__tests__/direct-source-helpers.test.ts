@@ -28,6 +28,7 @@ describe("classifyClPoolType", () => {
       ...([1, 5, 30, 100] as const).flatMap((fee) => [
         classifyClPoolType("aerodrome-slipstream", fee),
         classifyClPoolType("velodrome-slipstream", fee),
+        classifyClPoolType("aero-slipstream", fee),
       ]),
     ];
     for (const bucket of feeBearingBuckets) {
@@ -35,6 +36,10 @@ describe("classifyClPoolType", () => {
     }
     expect(QUALITY_MULTIPLIERS["aerodrome-slipstream-100bp"]).toBe(0.4);
     expect(QUALITY_MULTIPLIERS["velodrome-slipstream-100bp"]).toBe(0.4);
+    expect(QUALITY_MULTIPLIERS["aero-slipstream-100bp"]).toBe(0.4);
+    expect(classifyClPoolType("aero-slipstream", 200)).toBe("aero-slipstream-100bp");
+    expect(QUALITY_MULTIPLIERS["aero-stable"]).toBe(0.85);
+    expect(QUALITY_MULTIPLIERS["aero-volatile"]).toBe(0.4);
   });
 
   it("publishes the neutral bucket instead of a fabricated tier for an unknown fee", () => {

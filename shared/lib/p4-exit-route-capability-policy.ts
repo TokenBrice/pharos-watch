@@ -137,6 +137,16 @@ export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityR
     eligibleChains: [chain],
     proofKind: "evm-state-and-call-proof",
   })),
+  // Aero Slipstream V3 via the pool-addressed Metaquoter: collection only.
+  capabilityRegistration({
+    profileId: "aero-slipstream-metaquoter",
+    capabilityId: "measured-adapter-shadow",
+    adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.quoterV2,
+    platform: "evm",
+    lifecycle: "shadow",
+    eligibleChains: ["base", "ethereum", "optimism", "arbitrum", "robinhood", "arc"],
+    proofKind: "evm-state-and-call-proof",
+  }),
   capabilityRegistration({
     profileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
     capabilityId: "uniswap-v4-hook-free-measured-exact",

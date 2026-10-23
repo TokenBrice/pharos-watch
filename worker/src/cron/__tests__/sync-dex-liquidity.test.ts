@@ -253,6 +253,11 @@ vi.mock("../dex-liquidity/fetch-pancakeswap", () => ({
 vi.mock("../dex-liquidity/fetch-slipstream", () => ({
   fetchSlipstreamPools: vi.fn(async () => makeDirectApiResult()),
 }));
+vi.mock("../dex-liquidity/fetch-aero", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../dex-liquidity/fetch-aero")>()),
+  fetchAeroSlipstreamPools: vi.fn(async () => makeDirectApiResult()),
+  fetchAeroBasicPools: vi.fn(async () => makeDirectApiResult()),
+}));
 vi.mock("../dex-liquidity/fetch-uniswap-v3-bsc", () => ({
   fetchUniswapV3BscShadowPools: vi.fn(async () => makeDirectApiResult()),
 }));

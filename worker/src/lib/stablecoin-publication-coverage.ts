@@ -397,21 +397,6 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     expiresAt: Date.UTC(2026, 9, 30, 6, 36) / 1000,
   },
   {
-    stablecoinId: "bd-basedollar",
-    owner: "ops",
-    reason:
-      "Reviewed 2026-10-23 06:36 UTC: the reviewed Aerodrome stable pool 0xffdf1e3160b60c2e499fa25e51b5c192b9b15e3b holds 11,888.87 BD and 7,803.40 USDC (reserves equal balances), so the unchanged 10,000-USDC inventory floor rejects it (aerodrome-exact:inventory); last accepted mark was $0.97747 at 2026-10-22 18:16:18 UTC. DexScreener and GeckoTerminal report $19,487-$19,546 liquidity for that pool (BD $0.9827-$0.9878), below the $50K per-pool floor; every Uniswap v4 BD pool holds under $200. DefiLlama list asset 434 has a null price and the coins API returns nothing for base:0x252d36f435582ecb01686448d21e8c9ea0b2ca65; BD has no CoinGecko listing. Keep BD missing, preserve the adapter inventory floor and all admission gates, and have ops re-review within seven days or once pool USDC inventory recovers. Liquity redemption value is not an observed price.",
-    sources: [
-      "https://mainnet.base.org",
-      "https://api.dexscreener.com/token-pairs/v1/base/0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
-      "https://api.geckoterminal.com/api/v2/networks/base/tokens/0x252d36f435582ecb01686448d21e8c9ea0b2ca65/pools",
-      "https://coins.llama.fi/prices/current/base:0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
-      "https://stablecoins.llama.fi/stablecoins?includePrices=true",
-    ],
-    reviewedAt: Date.UTC(2026, 9, 23, 6, 36) / 1000,
-    expiresAt: Date.UTC(2026, 9, 30, 6, 36) / 1000,
-  },
-  {
     stablecoinId: "idrt-rupiah-token",
     owner: "ops",
     reason:

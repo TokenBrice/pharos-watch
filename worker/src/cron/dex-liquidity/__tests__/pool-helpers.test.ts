@@ -30,6 +30,23 @@ describe("classifyPoolType ordering", () => {
     expect(classifyPoolType("velodrome-slipstream")).toBe("velodrome-slipstream-5bp");
     expect(classifyPoolType("aerodrome")).toBe("aerodrome-volatile");
   });
+
+  it("classifies Aero listings without falling into the Aerodrome or generic branches", () => {
+    expect(classifyPoolType("aero-slipstream")).toBe("aero-slipstream-5bp");
+    expect(classifyPoolType("aero-slipstream-ethereum")).toBe("aero-slipstream-5bp");
+    expect(classifyPoolType("aero-basic")).toBe("aero-volatile");
+  });
+});
+
+describe("normalizeProtocol Aero", () => {
+  it("groups DefiLlama, GeckoTerminal and DexScreener Aero ids without capturing Aerodrome or lookalikes", () => {
+    for (const id of ["aero", "aero-slipstream", "aero-basic", "aero-slipstream-ethereum", "Aero Slipstream"]) {
+      expect(normalizeProtocol(id)).toBe("aero");
+    }
+    expect(normalizeProtocol("aerodrome-slipstream")).toBe("aerodrome");
+    expect(normalizeProtocol("iaero-protocol")).toBe("iaero-protocol");
+    expect(normalizeProtocol("aerostrategy")).toBe("aerostrategy");
+  });
 });
 
 describe("computePoolQualityContribution", () => {

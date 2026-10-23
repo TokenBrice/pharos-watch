@@ -445,6 +445,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       "worker/src/cron/dex-liquidity/fetch-raydium.ts",
       "worker/src/cron/dex-liquidity/fetch-orca.ts",
       "worker/src/cron/dex-liquidity/fetch-slipstream.ts",
+      "worker/src/cron/dex-liquidity/fetch-aero.ts",
       "worker/src/cron/dex-liquidity/orchestrator-phases/direct-api.ts",
     ],
     tests: [
@@ -469,6 +470,8 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
         "CIRCUIT_SOURCE.ORCA_API",
         "CIRCUIT_SOURCE.AERODROME_SLIPSTREAM_API",
         "CIRCUIT_SOURCE.VELODROME_SLIPSTREAM_API",
+        "CIRCUIT_SOURCE.AERO_SLIPSTREAM_API",
+        "CIRCUIT_SOURCE.AERO_BASIC_API",
       ],
     },
     requiredMarkers: [

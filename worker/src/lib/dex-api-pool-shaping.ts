@@ -82,7 +82,8 @@ export function isPreferredDirectApiPool(
   if (!isEligibleDirectApiPool(pool, minTvlUsd)) return false;
   if (pool.volume24hUsd != null && Number.isFinite(pool.volume24hUsd) && pool.volume24hUsd > 0) return true;
   if (pool.tokens.some((token) => token.priceUsdDependency != null)) return true;
-  return pool.source === "aerodrome-slipstream" || pool.source === "velodrome-slipstream";
+  return pool.source === "aerodrome-slipstream" || pool.source === "velodrome-slipstream" ||
+    pool.source === "aero-slipstream" || pool.source === "aero-basic";
 }
 
 function toPositiveFiniteNumberOrNull(value: number | null | undefined): number | null {

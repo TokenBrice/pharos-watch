@@ -492,3 +492,60 @@ describe("buildPoolIdentity isStableHint", () => {
     expect(identity.derivedMatchKey).toContain("|weighted|");
   });
 });
+
+describe("Aero basic pool identity", () => {
+  const tokens = ["0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", "0xfde4c96c8593536e31f229ea8f37b2ada2699bb2"];
+  const direct = (poolType: string, poolAddressOrId: string) => buildPoolIdentity({
+    chain: "base", protocol: "aero-basic", poolAddressOrId, tokenAddresses: tokens, poolType, isStable: true,
+  });
+  // DefiLlama `aero-basic` rows have no subtype and always classify volatile.
+  const defillama = buildPoolIdentity({
+    chain: "base", protocol: "aero-basic", poolAddressOrId: "6a3b2c1d-uuid", tokenAddresses: [...tokens].reverse(),
+    poolType: "aero-volatile", isStable: true,
+  });
+
+  const incomingCounts = () => {
+    const counts = countPoolIdentityKeys([defillama]);
+    return {
+      derived: counts.derived.get(defillama.derivedMatchKey!) ?? 0,
+      wildcard: counts.wildcard.get(defillama.optionalWildcardKey!) ?? 0,
+    };
+  };
+
+  it("dedupes a DefiLlama row against the unique direct stable-factory pool", () => {
+    const known = createKnownPoolIdentityIndex();
+    registerKnownPoolIdentity(known, direct("aero-stable", "0x11cc6f32930c20e3cfb01fc35bd37ed20d3ed82f"));
+    expect(getIdentityDedupReason(defillama, known, incomingCounts())).not.toBeNull();
+  });
+
+  it("keeps DefiLlama and DexScreener observations of one pool deduping without direct rows", () => {
+    const known = createKnownPoolIdentityIndex();
+    registerKnownPoolIdentity(known, buildPoolIdentity({
+      chain: "base", protocol: "aero", poolAddressOrId: "0x11cc6f32930c20e3cfb01fc35bd37ed20d3ed82f",
+      tokenAddresses: tokens, poolType: "ds-amm", isStable: null,
+    }));
+    expect(getIdentityDedupReason(defillama, known, incomingCounts(), { allowOptionalWildcard: true })).not.toBeNull();
+  });
+
+  it("keeps a Slipstream pool of the same pair out of the basic-pool match", () => {
+    const known = createKnownPoolIdentityIndex();
+    registerKnownPoolIdentity(known, direct("aero-stable", "0x11cc6f32930c20e3cfb01fc35bd37ed20d3ed82f"));
+    registerKnownPoolIdentity(known, buildPoolIdentity({
+      chain: "base", protocol: "aero-slipstream", poolAddressOrId: "0xd448990883e3bf9cdd8ebca368a3ecf9d629aaf7",
+      tokenAddresses: tokens, poolType: "aero-slipstream-1bp", feeTierBps: 1, isStable: true,
+    }));
+    const slipstreamDl = buildPoolIdentity({
+      chain: "base", protocol: "aero-slipstream", poolAddressOrId: "7b4c-uuid", tokenAddresses: tokens,
+      poolType: "aero-slipstream-5bp", isStable: true,
+    });
+    expect(slipstreamDl.derivedMatchKey).not.toBe(defillama.derivedMatchKey);
+    expect(getIdentityDedupReason(defillama, known, incomingCounts())).not.toBeNull();
+  });
+
+  it("does not collapse when a stable and a volatile pool share the pair", () => {
+    const known = createKnownPoolIdentityIndex();
+    registerKnownPoolIdentity(known, direct("aero-stable", "0x11cc6f32930c20e3cfb01fc35bd37ed20d3ed82f"));
+    registerKnownPoolIdentity(known, direct("aero-volatile", "0x00000000000000000000000000000000000000b2"));
+    expect(getIdentityDedupReason(defillama, known, incomingCounts())).toBeNull();
+  });
+});

@@ -49,6 +49,15 @@ export const QUALITY_MULTIPLIERS: Record<string, number> = {
   // through to the generic 0.3x bucket.
   "aerodrome-slipstream-100bp": 0.4,
   "velodrome-slipstream-100bp": 0.4,
+  // Aero (merged Aerodrome/Velodrome) Slipstream V3 and basic pools keep the
+  // Aerodrome tiers; the bucket is the tick spacing's base fee, not the hook's
+  // dynamic per-swap fee.
+  "aero-slipstream-1bp": 1.1,
+  "aero-slipstream-5bp": 0.85,
+  "aero-slipstream-30bp": 0.4,
+  "aero-slipstream-100bp": 0.4,
+  "aero-stable": 0.85,
+  "aero-volatile": 0.4,
   "fluid-dex": 0.85,
   "raydium-clmm": 0.85,
   "raydium-amm": 0.4,
@@ -67,6 +76,7 @@ export const GT_DEX_QUALITY: [string, number][] = [
   ["velodrome", 0.7],
   ["velodrome-slipstream", 0.7],
   ["aerodrome-slipstream", 0.7],
+  ["aero-slipstream", 0.7],
   ["meteora", 0.7],
   ["pancakeswap-v3", 0.5],
   ["pancakeswap", 0.5],

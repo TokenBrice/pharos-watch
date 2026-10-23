@@ -17,9 +17,12 @@ export interface DexMeasuredExecutionDeployment {
     | "pancakeswap-v3-quoter-v2"
     | "aerodrome-slipstream-quoter-v2"
     | "hyperswap-v3-quoter-v2"
-    | "kodiak-v3-quoter-v2";
-  protocol: "uniswap-v3" | "pancakeswap" | "aerodrome-slipstream" | "hyperswap-v3" | "kodiak-v3";
-  chain: "ethereum" | "arbitrum" | "base" | "polygon" | "bsc" | "celo" | "xlayer" | "hyperevm" | "berachain" | "monad";
+    | "kodiak-v3-quoter-v2"
+    | "aero-slipstream-metaquoter";
+  protocol: "uniswap-v3" | "pancakeswap" | "aerodrome-slipstream" | "hyperswap-v3" | "kodiak-v3" | "aero-slipstream";
+  chain:
+    | "ethereum" | "arbitrum" | "base" | "polygon" | "bsc" | "celo" | "xlayer" | "hyperevm" | "berachain" | "monad"
+    | "optimism" | "robinhood" | "arc";
   endpointAddress: `0x${string}`;
   expectedCodeHash: `0x${string}`;
   factoryAddress: `0x${string}`;
@@ -175,6 +178,63 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
     factoryAddress: "0xd84cbf0b02636e7f53db9e5e45a616e05d710990",
     expectedFactoryCodeHash: "0x890bf10c470ed585d15232302989f948304f2b2dac33807ed242746faab9eac3",
   },
+  // Aero (dromos-labs/metadex-slipstream-public deployment-addresses/cl-*.json);
+  // collection only. Runtime pins 2026-10-23 at base 52996232, ethereum 26257261, optimism 158591517, arbitrum 517619170, robinhood 96164301, arc 27499592:
+  // docs/process/dex-liquidity-appendix.md#aero-slipstream-metaquoter-shadow-enrollment-2026-10-23
+  {
+    adapterProfileId: "aero-slipstream-metaquoter",
+    protocol: "aero-slipstream",
+    chain: "base",
+    endpointAddress: "0x1ddfec5058180c207f55bb77d95acdd0d8227868",
+    expectedCodeHash: "0x8f9a9051a4509af163d400db3221d612d37656bb07753d71dfe78bf2016259b0",
+    factoryAddress: "0x9cb220581b91b0c83223012fe69688b92ad07a76",
+    expectedFactoryCodeHash: "0x6c09090837ace0aefe6bfa24a3bc772d13a9775b7e3109c9fece534a0ce053a6",
+  },
+  {
+    adapterProfileId: "aero-slipstream-metaquoter",
+    protocol: "aero-slipstream",
+    chain: "ethereum",
+    endpointAddress: "0x1ddfec5058180c207f55bb77d95acdd0d8227868",
+    expectedCodeHash: "0xc5dbfcdb4f63bd38fcc4b08dcc619c508ba24521cc689e1e409824ae592f8774",
+    factoryAddress: "0xf4fd2e6c5b60c5b365cd1b96dd6245e6d60414c2",
+    expectedFactoryCodeHash: "0x3e53af145d8106d91fad73c6dbbbfe3229c5aa96aab1e18a4bf49a705c773ef5",
+  },
+  {
+    adapterProfileId: "aero-slipstream-metaquoter",
+    protocol: "aero-slipstream",
+    chain: "optimism",
+    endpointAddress: "0x1ddfec5058180c207f55bb77d95acdd0d8227868",
+    expectedCodeHash: "0x711e97d5880c2f8db7b33e5a83db08d2f1de4753b2fbb99a22d16484a825926b",
+    factoryAddress: "0xfeab42d90055db3a0616249f76b6002d72266778",
+    expectedFactoryCodeHash: "0x68e96345f7fdc80c927fd25a04f6f5846cdd00173f031eae7517722a67103c7a",
+  },
+  {
+    adapterProfileId: "aero-slipstream-metaquoter",
+    protocol: "aero-slipstream",
+    chain: "arbitrum",
+    endpointAddress: "0x1ddfec5058180c207f55bb77d95acdd0d8227868",
+    expectedCodeHash: "0x439eef0a6e5161206328a5947518b7b51d9d6c3e99473bb3b6c0e1ddb08b4a11",
+    factoryAddress: "0x88a60ee77392577c355c0acb2a8d476d5a4ec03a",
+    expectedFactoryCodeHash: "0x4cb82764ba4fd4a80c986952190a6052747a816a6dc5c7be3fc3a7a7b1bd0af4",
+  },
+  {
+    adapterProfileId: "aero-slipstream-metaquoter",
+    protocol: "aero-slipstream",
+    chain: "robinhood",
+    endpointAddress: "0x1ddfec5058180c207f55bb77d95acdd0d8227868",
+    expectedCodeHash: "0xc5dbfcdb4f63bd38fcc4b08dcc619c508ba24521cc689e1e409824ae592f8774",
+    factoryAddress: "0xc63d7338c178e805c544b8f897066bd3bbcbe136",
+    expectedFactoryCodeHash: "0x3e53af145d8106d91fad73c6dbbbfe3229c5aa96aab1e18a4bf49a705c773ef5",
+  },
+  {
+    adapterProfileId: "aero-slipstream-metaquoter",
+    protocol: "aero-slipstream",
+    chain: "arc",
+    endpointAddress: "0x1ddfec5058180c207f55bb77d95acdd0d8227868",
+    expectedCodeHash: "0x3350f0a36527b7cf341caef29258e314f148c04cbaf8dfdfaf3940ab2a6fba30",
+    factoryAddress: "0x7f83235643181e440433400a027618cd50879751",
+    expectedFactoryCodeHash: "0xa1e59904fa067e5c6dd0fb484a46a61a49eb583dac80777bb51c9544d551af77",
+  },
 ] as const;
 
 
@@ -203,7 +263,12 @@ export function getDexMeasuredExecutionDeployment(
 
 /** Reviewed Slipstream-compatible tuples key identity by int24 tick spacing. */
 export function isTickSpacingQuoterV2Profile(adapterProfileId: string): boolean {
-  return adapterProfileId === "aerodrome-slipstream-quoter-v2";
+  return adapterProfileId === "aerodrome-slipstream-quoter-v2" || isMetaquoterProfile(adapterProfileId);
+}
+
+/** Aero's Metaquoter quotes by pool address; factory membership still keys by tick spacing. */
+export function isMetaquoterProfile(adapterProfileId: string): boolean {
+  return adapterProfileId === "aero-slipstream-metaquoter";
 }
 
 export async function verifyDexMeasuredExecutionDeployment(input: {

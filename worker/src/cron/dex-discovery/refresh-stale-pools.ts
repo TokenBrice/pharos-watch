@@ -4,6 +4,7 @@ import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared
 import type { ContractDeployment } from "@shared/types/core";
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { CG_CHAIN_MAP } from "../../lib/chain-registry";
+import { AERO_CHAINS } from "../dex-liquidity/aero-deployments";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import {
   CG_ONCHAIN_MULTI_POOL_MAX_ADDRESSES,
@@ -41,7 +42,7 @@ import {
  * Stale-first registry refresh. Coin-cohort discovery revisits most footprints
  * weekly, so a retained CoinGecko-onchain row outlives its 24h volume reading
  * long before its coin is crawled again, and the Sugar-backed Aerodrome and
- * Velodrome Slipstream rows carry no 24h volume at all. This pass re-reads those
+ * Velodrome Slipstream rows and factory-read Aero rows carry no 24h volume. This pass re-reads those
  * exact pools by address through CoinGecko's `/pools/multi` endpoint (same
  * provider, key, circuit and pacing as the discovery CG stage) and writes fresh
  * `cg_onchain` rows through the crawl's own admission policy and upsert path.
@@ -143,6 +144,8 @@ interface StalePoolRefreshBackoffEntry {
 const SLIPSTREAM_REFRESH_SCOPES = [
   { chain: "base", poolTypePrefix: "aerodrome-slipstream" },
   { chain: "optimism", poolTypePrefix: "velodrome-slipstream" },
+  // Aero Slipstream and basic pools (`aero-slipstream-*`, `aero-stable`, `aero-volatile`).
+  ...AERO_CHAINS.map((chain) => ({ chain, poolTypePrefix: "aero-" })),
 ] as const;
 
 const SLIPSTREAM_SCOPE_SQL = SLIPSTREAM_REFRESH_SCOPES
