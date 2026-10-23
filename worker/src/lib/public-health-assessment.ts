@@ -752,14 +752,14 @@ export async function assessPublicHealth(
   const degradedQualityCaches = Object.entries(cachesWithProvider)
     .filter(([, cache]) => cache.degraded === true)
     .map(([key, cache]) => `${key}:${cache.degradedReason ?? "unknown"}`);
-  // Rule R2: unreadable quality evidence is unknown, never clean. It degrades
-  // the quality verdict and is named with its machine-readable reason (R4)
-  // instead of letting a fresh sentinel publish a clean assessment.
+  // Rule R2: unreadable quality evidence is unknown, never clean: the cache's
+  // `healthy` flag stays false and the warning below names it (R4). It is an
+  // evidence-plane fault, not a service impact (2026-10-23): the age bands
+  // still grade the served generation, so it does not floor public status.
   const unknownQualityCaches = Object.entries(cachesWithProvider)
     .filter(([, cache]) => cache.degraded === null)
     .map(([key, cache]) => `${key}:${cache.degradedReason ?? "unknown"}`);
-  const cacheQualityImpactStatus: HealthResponse["status"] =
-    degradedQualityCaches.length > 0 || unknownQualityCaches.length > 0 ? "degraded" : "healthy";
+  const cacheQualityImpactStatus: HealthResponse["status"] = degradedQualityCaches.length > 0 ? "degraded" : "healthy";
   if (degradedQualityCaches.length > 0) {
     warnings.push(`cache-quality-degraded: ${degradedQualityCaches.join(", ")}`);
   }
@@ -802,6 +802,12 @@ export async function assessPublicHealth(
     : d1CapacityResult.assessment
       ? getD1CapacityImpactStatus(d1CapacityResult.assessment.thresholdState)
       : "degraded";
+  // Unreadable capacity evidence keeps degrading the admin floor above and is
+  // named in warnings, but it is an evidence-plane fault, not a public service
+  // impact: only measured warning/critical capacity floors public status.
+  const d1CapacityPublicImpactStatus = d1CapacityResult.assessment && !d1CapacityResult.error
+    ? getD1CapacityImpactStatus(d1CapacityResult.assessment.thresholdState)
+    : "healthy";
   if (d1CapacityResult.reason) {
     warnings.push(`d1-capacity-${d1CapacityResult.reason}`);
   } else if (d1CapacityResult.assessment?.thresholdState !== "normal" && d1CapacityResult.assessment) {
@@ -869,7 +875,7 @@ export async function assessPublicHealth(
     mintBurnResult.mintBurnImpactStatus,
     circuitImpactStatus,
     blacklistImpactStatus,
-    d1CapacityImpactStatus,
+    d1CapacityPublicImpactStatus,
     stablecoinPublicationImpactStatus,
     activePriceCoverageImpactStatus,
     yieldSafetyAvailability.impactStatus,
