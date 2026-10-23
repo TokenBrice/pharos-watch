@@ -13,8 +13,9 @@ import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { V9_PUBLIC_READ_GRACE_SEC, V9_PUBLIC_FRAGMENT_MAX_BYTES } from "@shared/types/report-cards-v9-materialization";
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
-import { currentInput } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
+import { currentInput, persistAndMaterialize } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
 import { persistSafetyScoreV9Publication } from "../../lib/safety-score-v9/publication-store";
+import { materializeV9AcceptedPublication, V9_PUBLIC_MATERIALIZATION_CACHE_KEY } from "../../lib/report-cards-v9-materialization";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-health";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
 import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
@@ -56,7 +57,7 @@ async function seedCohort() {
     return card;
   });
   const publication = makeWorkerSafetyScoreV9Publication({ cards });
-  await persistSafetyScoreV9Publication(db, currentInput(publication));
+  await persistAndMaterialize(db, currentInput(publication));
   return { sqlite, db, publication };
 }
 
@@ -71,7 +72,7 @@ afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); for (const sqlite of
 async function seed() {
   const { sqlite, db } = database();
   const publication = makeWorkerSafetyScoreV9Publication();
-  await persistSafetyScoreV9Publication(db, currentInput(publication));
+  await persistAndMaterialize(db, currentInput(publication));
   return { sqlite, db, publication };
 }
 
@@ -127,7 +128,7 @@ describe("materialized V9 response", () => {
       card.pillars.control.freshness = "unknown";
       card.evidence.freshness = "stale";
     }
-    await persistSafetyScoreV9Publication(db, currentInput(publication));
+    await persistAndMaterialize(db, currentInput(publication));
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(publication.publishedAtSec * 1000);
     const stored = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value;
@@ -254,7 +255,7 @@ describe("materialized V9 response", () => {
       makeReportCardsV9PartialCard("exit", "A", { id: "c-partial" }),
       makeReportCardsV9PipelineGapCard("control", "B", { id: "d-gap" }),
     ];
-    await persistSafetyScoreV9Publication(db, currentInput(makeWorkerSafetyScoreV9Publication({ cards })));
+    await persistAndMaterialize(db, currentInput(makeWorkerSafetyScoreV9Publication({ cards })));
     await assertServedEquivalent(db);
   });
 
@@ -264,7 +265,7 @@ describe("materialized V9 response", () => {
     const text = "\uD83D\uDE80".repeat(180_000);
     publication.cards[0]!.witnessTexts = [text];
     publication.cards[0]!.evidence.reasons = [{ code: "unresolved-control-identity", message: "~0", path: "control:incidentState" }];
-    await persistSafetyScoreV9Publication(db, currentInput(publication));
+    await persistAndMaterialize(db, currentInput(publication));
     expect(readManifest(sqlite).fragments.length).toBeGreaterThan(1);
     await assertServedEquivalent(db);
     const body = ReportCardsV9CurrentResponseSchema.parse(await (await handleReportCardsV9(db)).json());
@@ -386,15 +387,58 @@ describe("materialized V9 response", () => {
     expect((await handleReportCardsV9(db)).status).toBe(503);
   });
 
-  it("atomically rolls back canonical acceptance when required fragments cannot be written", async () => {
-    const { db, sqlite } = await seed();
-    const before = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
+  it("keeps acceptance and serves the previous whole generation when required fragments cannot be written", async () => {
+    const { db, sqlite, publication } = await seed();
+    const expected = await (await handleReportCardsV9(db)).json() as object;
     const manifests = sqlite.prepare("SELECT * FROM safety_score_public_manifests").all();
+    const marker = sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY);
+    expect(JSON.parse(marker!.value as string)).toMatchObject({ publicationGenerationId: publication.publicationGenerationId });
     sqlite.exec("CREATE TRIGGER refuse_fragment BEFORE INSERT ON safety_score_public_fragments BEGIN SELECT RAISE(ABORT, 'fragment failed'); END");
     const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
-    await expect(persistSafetyScoreV9Publication(db, currentInput(next))).rejects.toThrow();
-    expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(before);
+    const persisted = await persistSafetyScoreV9Publication(db, currentInput(next));
+    await expect(materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!)).rejects.toThrow();
+    expect(sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY)).toEqual(marker);
     expect(sqlite.prepare("SELECT * FROM safety_score_public_manifests").all()).toEqual(manifests);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    // Within the lag budget the previous generation is still the newest public snapshot.
+    vi.setSystemTime((next.publishedAtSec + 60) * 1000);
+    const lagging = await handleReportCardsV9(db);
+    expect(lagging.status).toBe(200);
+    expect(lagging.headers.get("X-Safety-Score-Generation")).toBe(publication.publicationGenerationId);
+    expect(await lagging.json()).toEqual({ ...expected, publicationHealth: {
+      ...currentInput(next).publicationHealth,
+      acceptedPublicationGenerationId: publication.publicationGenerationId, acceptedAtSec: publication.publishedAtSec,
+    } });
+    // Past it, a failed request repair serves the lagging generation as held, never as current.
+    vi.setSystemTime((next.publishedAtSec + 3_600) * 1000);
+    expect(await (await handleReportCardsV9(db)).json()).toMatchObject({
+      updatedAt: publication.publishedAtSec,
+      safetyScoreIdentity: { publicationGenerationId: publication.publicationGenerationId },
+      publicationHealth: { status: "held", acceptedPublicationGenerationId: publication.publicationGenerationId },
+    });
+    sqlite.exec("DROP TRIGGER refuse_fragment");
+    // Once writes recover, request repair reaches the accepted generation without the publisher.
+    expect(await (await handleReportCardsV9(db)).json()).toMatchObject({
+      updatedAt: next.publishedAtSec, publicationHealth: currentInput(next).publicationHealth,
+    });
+    await materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!);
+    expect(JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY)!.value as string))
+      .toMatchObject({ publicationGenerationId: next.publicationGenerationId, publishedAtSec: next.publishedAtSec });
+    expect(await (await handleReportCardsV9(db)).json()).toMatchObject({
+      updatedAt: next.publishedAtSec, publicationHealth: currentInput(next).publicationHealth,
+    });
+  });
+
+  it("does not select a materialization whose generation is no longer accepted", async () => {
+    const { db, sqlite, publication } = await seed();
+    const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
+    const third = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 150, publicationGenerationId: "report-cards:v9:third" });
+    const persisted = await persistSafetyScoreV9Publication(db, currentInput(next));
+    await persistSafetyScoreV9Publication(db, currentInput(third));
+    expect(await materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!))
+      .toEqual({ status: "superseded", publicationGenerationId: next.publicationGenerationId });
+    expect(sqlite.prepare("SELECT generation_id FROM safety_score_public_manifests WHERE retired_at IS NULL").all())
+      .toEqual([{ generation_id: publication.publicationGenerationId }]);
   });
 
   it("does not collide on a reused result digest and protects replaced bytes for in-flight grace", async () => {
@@ -402,19 +446,19 @@ describe("materialized V9 response", () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_000_000);
     const next = makeWorkerSafetyScoreV9Publication({ resultDigest: publication.resultDigest, publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
-    await persistSafetyScoreV9Publication(db, currentInput(next));
+    await persistAndMaterialize(db, currentInput(next));
     expect(await (await handleReportCardsV9(db)).json()).toMatchObject({ updatedAt: 130, safetyScoreIdentity: { publicationGenerationId: next.publicationGenerationId } });
     expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_public_manifests").get()!.n).toBe(2);
     vi.setSystemTime((1000 + V9_PUBLIC_READ_GRACE_SEC + 1) * 1000);
     const third = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 150, publicationGenerationId: "report-cards:v9:third" });
-    await persistSafetyScoreV9Publication(db, currentInput(third));
+    await persistAndMaterialize(db, currentInput(third));
     expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_public_manifests WHERE generation_id = ?").get(publication.publicationGenerationId)!.n).toBe(0);
   });
 
   it("never advances representation selection on a stale accepted writer", async () => {
     const { db, sqlite, publication } = await seed();
     const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
-    await persistSafetyScoreV9Publication(db, currentInput(next));
+    await persistAndMaterialize(db, currentInput(next));
     await expect(persistSafetyScoreV9Publication(db, currentInput(publication))).rejects.toThrow();
     expect(readManifest(sqlite).safetyScoreIdentity.publicationGenerationId).toBe(next.publicationGenerationId);
   });
@@ -433,7 +477,7 @@ describe("materialized V9 response", () => {
       provenance: { source: "live-reserve", evidenceAsOf: "2026-10-11",
         intermediary: { kind: "bridge", label: "~0", verified: true } },
     }];
-    await persistSafetyScoreV9Publication(db, currentInput(publication));
+    await persistAndMaterialize(db, currentInput(publication));
     const response = await handleReportCardsV9(db);
     expect(response.status).toBe(200);
     const body = ReportCardsV9CurrentResponseSchema.parse(await response.json());
@@ -454,14 +498,17 @@ describe("materialized V9 response", () => {
     const oldRows = sqlite.prepare("SELECT key, value, updated_at FROM cache").all();
     const expected = ReportCardsV9CurrentResponseSchema.parse(await (await handleReportCardsV9(db)).json());
     const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
-    await persistSafetyScoreV9Publication(db, currentInput(next));
+    await persistAndMaterialize(db, currentInput(next));
     const nextRows = sqlite.prepare("SELECT key, value, updated_at FROM cache").all();
+    const selection = sqlite.prepare("UPDATE safety_score_public_manifests SET retired_at = CASE WHEN generation_id = ? THEN NULL ELSE 1 END");
     for (const row of oldRows) sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?").run(row.value, row.updated_at, row.key);
+    selection.run(publication.publicationGenerationId);
     let raced = false;
     const reader = createSqliteD1(sqlite, { onAll(sql) {
       if (!raced && sql.includes("FROM safety_score_public_fragments")) {
         raced = true;
         for (const row of nextRows) sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?").run(row.value, row.updated_at, row.key);
+        selection.run(next.publicationGenerationId);
       }
     } });
     expect(await (await handleReportCardsV9(reader)).json()).toEqual(expected);
@@ -550,7 +597,7 @@ describe("materialized V9 response", () => {
     const { db, sqlite, publication } = await seed();
     const oldRows = sqlite.prepare("SELECT key, value, updated_at FROM cache").all();
     const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
-    await persistSafetyScoreV9Publication(db, currentInput(next));
+    await persistAndMaterialize(db, currentInput(next));
     const nextRows = sqlite.prepare("SELECT key, value, updated_at FROM cache").all();
     sqlite.prepare("DELETE FROM safety_score_public_manifests WHERE generation_id = ?").run(publication.publicationGenerationId);
     for (const row of oldRows) sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?").run(row.value, row.updated_at, row.key);

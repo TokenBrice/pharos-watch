@@ -20,7 +20,7 @@ import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-scor
 import { SafetyScoreIndexSchema } from "@shared/types/safety-score-index";
 import { projectV9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
 import type { SafetyScoreCaptureArchiveCacheRows } from "@shared/types/safety-score-capture-archive";
-import { stageV9PublicMaterialization, v9StagedPublicMaterializationStatements, type V9StagedPublicMaterialization } from "../report-cards-v9-materialization";
+import type { V9AcceptedPublicMaterializationSource } from "../report-cards-v9-materialization";
 import { SAFETY_SCORE_V9_CACHE_KEYS, loadSafetyScoreV9PublicationHealth } from "./publication-health";
 import { V9PublicationAttemptSchema, loadSafetyScoreV9FailedPublicationAttempt, type V9PublicationAttempt } from "./publication-attempts";
 
@@ -102,6 +102,20 @@ export interface PersistSafetyScoreV9PublicationInput {
   publicationAttempt: V9PublicationAttempt;
   publicationClockSec: number;
   signal?: AbortSignal;
+  /** Filled with sub-phase wall time: pre-commit admission/reads versus the atomic write. */
+  timing?: SafetyScoreV9PersistTiming;
+}
+
+export interface SafetyScoreV9PersistTiming {
+  persistPrepare: number | null;
+  persistCommit: number | null;
+}
+
+export interface PersistSafetyScoreV9PublicationResult {
+  /** Exact committed transports for the capture archive, when replay retention was written. */
+  captureArchiveCacheRows: SafetyScoreCaptureArchiveCacheRows | null;
+  /** Source for the post-acceptance public materialization of a newly accepted generation. */
+  acceptedMaterialization: V9AcceptedPublicMaterializationSource | null;
 }
 
 export interface PersistSafetyScoreV9PublicationAttemptInput {
@@ -191,7 +205,8 @@ export async function persistSafetyScoreV9PublicationAttempt(
 export async function persistSafetyScoreV9Publication(
   db: D1Database,
   input: PersistSafetyScoreV9PublicationInput,
-): Promise<SafetyScoreCaptureArchiveCacheRows | null> {
+): Promise<PersistSafetyScoreV9PublicationResult> {
+  const prepareStartedAtMs = Date.now();
   throwIfAborted(input.signal);
   if ((input.publicationReplayCaptureValue !== undefined) !== (input.publicationReplayBaseValue !== undefined)) {
     throw new Error("Accepted replay retention requires both base and delta or neither");
@@ -223,7 +238,7 @@ export async function persistSafetyScoreV9Publication(
   let publicationValue: string | null = null;
   let scoreIndexValue: string | null = null;
   let acceptedProjections: { baseline: string; lender: string } | null = null;
-  let publicMaterialization: V9StagedPublicMaterialization | null = null;
+  let acceptedMaterialization: V9AcceptedPublicMaterializationSource | null = null;
   if (health.status === "current") {
     if (input.publication === undefined) {
       throw new Error(
@@ -246,7 +261,9 @@ export async function persistSafetyScoreV9Publication(
       );
     }
     publicationValue = stored;
-    publicMaterialization = await stageV9PublicMaterialization(db, publication, health, JSON.parse(stored).payloadSha256, input.signal);
+    // Public representations are materialized after acceptance; see
+    // materializeV9AcceptedPublication.
+    acceptedMaterialization = { publication, health, payloadSha256: JSON.parse(stored).payloadSha256 };
     if (!input.buildAcceptedProjections) {
       throw new Error("Accepted Safety Score v9 publication requires projection builders");
     }
@@ -375,7 +392,6 @@ export async function persistSafetyScoreV9Publication(
       acceptedProjections!.lender,
       input.publicationClockSec,
     ));
-    statements.push(...v9StagedPublicMaterializationStatements(db, publicMaterialization!));
     if (input.publicationReplayCaptureValue !== undefined) {
       statements.push(cacheStatement.bind(
         SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
@@ -461,7 +477,13 @@ export async function persistSafetyScoreV9Publication(
       input.publicationClockSec,
     ),
   );
-  await executeAtomicBatch(db, statements, { signal: input.signal });
+  if (input.timing) input.timing.persistPrepare = Date.now() - prepareStartedAtMs;
+  const commitStartedAtMs = Date.now();
+  try {
+    await executeAtomicBatch(db, statements, { signal: input.signal });
+  } finally {
+    if (input.timing) input.timing.persistCommit = Date.now() - commitStartedAtMs;
+  }
   throwIfAborted(input.signal);
   if (acceptedProjections !== null) {
     logWorkerEvent({
@@ -477,13 +499,16 @@ export async function persistSafetyScoreV9Publication(
   // Return references to the exact committed transports, never re-encode or
   // re-read live cache rows which a later accepted generation could overwrite.
   if (publicationValue === null || input.publicationReplayBaseValue === undefined ||
-      input.publicationReplayCaptureValue === undefined) return null;
+      input.publicationReplayCaptureValue === undefined) return { captureArchiveCacheRows: null, acceptedMaterialization };
   return {
-    base: { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY,
-      value: input.publicationReplayBaseValue, updatedAt: input.publicationClockSec },
-    delta: { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
-      value: input.publicationReplayCaptureValue, updatedAt: input.publicationClockSec },
-    cards: { key: SAFETY_SCORE_V9_CACHE_KEYS.publication,
-      value: publicationValue, updatedAt: input.publicationClockSec },
+    captureArchiveCacheRows: {
+      base: { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY,
+        value: input.publicationReplayBaseValue, updatedAt: input.publicationClockSec },
+      delta: { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
+        value: input.publicationReplayCaptureValue, updatedAt: input.publicationClockSec },
+      cards: { key: SAFETY_SCORE_V9_CACHE_KEYS.publication,
+        value: publicationValue, updatedAt: input.publicationClockSec },
+    },
+    acceptedMaterialization,
   };
 }

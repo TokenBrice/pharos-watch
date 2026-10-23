@@ -284,6 +284,7 @@ describe("computeSafetyScoreV9", () => {
         abortCause: { source: "caller", name: "TimeoutError", message: "slot expired" },
         phaseElapsedMs: { enrichment: 10, baselineLoad: 20, compile: 165_000, assess: null,
           serialize: null, persist: null, journal: null, archive: null },
+        subphaseElapsedMs: { persistPrepare: null, persistCommit: null, materializeStage: null, materializeSelect: null },
         phaseTimingBasis: "workers-io-boundary-attributed",
         journal: { status: "skipped", reason: "publication-failed", rows: 0 },
         captureArchive: { status: "skipped", reason: "publication-failed" },
@@ -306,6 +307,7 @@ describe("computeSafetyScoreV9", () => {
       publication: { stage: "compile" },
       publicationAbortCause: { source: "caller", name: "TimeoutError" },
       publicationPhaseElapsedMs: { compile: 165_000, persist: null },
+      publicationSubphaseElapsedMs: { persistPrepare: null, persistCommit: null },
       publicationPhaseTimingBasis: "workers-io-boundary-attributed",
     });
   });

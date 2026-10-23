@@ -612,6 +612,8 @@ export async function computeSafetyScoreV9(
       // Top-level scalar maps survive the bounded >64 KiB compactor, which
       // deliberately does not retain objects nested inside publication.
       publicationPhaseElapsedMs: publication.phaseElapsedMs,
+      publicationSubphaseElapsedMs: publication.subphaseElapsedMs,
+      ...(publication.status === "published" ? { publicMaterialization: publication.publicMaterialization } : {}),
       publicationPhaseTimingBasis: publication.phaseTimingBasis,
       publicationAbortCause: publication.abortCause,
       ...(publication.status !== "failed" ? { publicationPostCommitFailure: publication.postCommitFailure } : {}),

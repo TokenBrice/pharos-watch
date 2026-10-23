@@ -107,7 +107,7 @@ The public driver retains the original deadline, generation, lease and terminal 
 
 ### V9 public response materialization
 
-The accepted publication commits immutable, generation-bound public fragments atomically with its canonical marker; request health remains live. [Materialization, rollout and qualification](./process/worker-infrastructure-appendix.md#v9-public-response-materialization) owns admission, integrity, retirement and missing-artifact repair.
+Acceptance commits first; a follow-up step stages immutable, generation-bound public fragments and selects them atomically while that generation is still accepted. Readers serve the previously selected whole generation meanwhile; request health remains live. [Materialization, rollout and qualification](./process/worker-infrastructure-appendix.md#v9-public-response-materialization) owns admission, integrity, retirement and missing-artifact repair.
 
 ## Module Initialization
 

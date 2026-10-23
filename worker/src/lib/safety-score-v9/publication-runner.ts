@@ -42,6 +42,7 @@ import type { AcceptedProjectionUnavailableReason } from "./accepted-projections
 import { journalSafetyScorePublication, type SafetyScoreJournalResult } from "./publication-journal";
 import { archiveSafetyScoreCapture, type SafetyScoreCaptureArchiveResult } from "./capture-archive";
 import { buildSafetyScoreV9AcceptedProjections } from "./accepted-projections";
+import { materializeV9AcceptedPublication, type V9AcceptedPublicMaterializationSource, type V9PublicMaterializationResult } from "../report-cards-v9-materialization";
 
 // Only non-scheduled callers use this bounded fallback.
 const SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS = 2 * 60_000;
@@ -56,6 +57,23 @@ const SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX =
 type SafetyScoreV9PublicationFailureStage = Exclude<
   NonNullable<V9PublicationAttempt["failure"]>["stage"], "aborted"
 >;
+
+/**
+ * Run-metadata-only sub-phase wall time (not persisted in attempt records):
+ * persist splits admission/reads from the atomic acceptance write; materialize
+ * splits representation staging writes from the selecting transaction.
+ */
+export interface SafetyScoreV9PublicationSubphaseElapsedMs {
+  persistPrepare: number | null;
+  persistCommit: number | null;
+  materializeStage: number | null;
+  materializeSelect: number | null;
+}
+
+export type SafetyScoreV9PublicMaterializationRunResult =
+  | V9PublicMaterializationResult
+  | { status: "failed"; publicationGenerationId: string; attempts: number; code: string; message: string }
+  | { status: "skipped"; reason: "post-commit-interrupted" };
 
 export interface RunSafetyScoreV9PublicationInput {
   db: D1Database;
@@ -99,6 +117,7 @@ export type SafetyScoreV9PublicationRunResult = (
       bridgeJoinDiagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[];
       journal: SafetyScoreJournalResult;
       captureArchive: SafetyScoreCaptureArchiveResult;
+      publicMaterialization: SafetyScoreV9PublicMaterializationRunResult;
       warnings: string[];
       postCommitFailure: { stage: SafetyScoreV9PublicationFailureStage; code: string; message: string } | null;
     }
@@ -131,6 +150,7 @@ export type SafetyScoreV9PublicationRunResult = (
       captureArchive: SafetyScoreCaptureArchiveResult;
     }) & {
       phaseElapsedMs: V9PublicationPhaseElapsedMs;
+      subphaseElapsedMs: SafetyScoreV9PublicationSubphaseElapsedMs;
       phaseTimingBasis: "workers-io-boundary-attributed";
       abortCause: V9PublicationAbortCause | null;
     };
@@ -432,6 +452,38 @@ function logPublicationGenerationDeltas(
   });
 }
 
+/**
+ * Best-effort post-acceptance materialization. Acceptance is already durable;
+ * a failure leaves readers on the previously selected generation and is retried
+ * once in-run, then by the next accepted publication or a reader repair after
+ * the lag budget.
+ */
+async function materializeAcceptedPublication(
+  db: D1Database,
+  source: V9AcceptedPublicMaterializationSource,
+  signal: AbortSignal,
+  timing: SafetyScoreV9PublicationSubphaseElapsedMs,
+): Promise<SafetyScoreV9PublicMaterializationRunResult> {
+  const maxAttempts = 2;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await materializeV9AcceptedPublication(db, source, signal, timing);
+    } catch (error) {
+      if (attempt < maxAttempts && !signal.aborted) continue;
+      const failure = safeFailure(error, "publication-write");
+      logWorkerEvent({
+        scope: "lib", level: "warn", event: "safety_score_v9_public_materialization_failed",
+        job: "compute-safety-score-v9", message: "Accepted publication retained; public representations not yet materialized",
+        metadata: { publicationGenerationId: source.publication.publicationGenerationId, attempts: attempt, ...failure },
+      });
+      return {
+        status: "failed", publicationGenerationId: source.publication.publicationGenerationId,
+        attempts: attempt, code: failure.code.replace("publication-write", "public-materialization"), message: failure.message,
+      };
+    }
+  }
+}
+
 export async function runSafetyScoreV9Publication(
   input: RunSafetyScoreV9PublicationInput,
 ): Promise<SafetyScoreV9PublicationRunResult> {
@@ -448,6 +500,9 @@ export async function runSafetyScoreV9Publication(
   const phaseElapsedMs: V9PublicationPhaseElapsedMs = {
     enrichment: null, baselineLoad: null, compile: null, assess: null,
     serialize: null, persist: null, journal: null, archive: null,
+  };
+  const subphaseElapsedMs: SafetyScoreV9PublicationSubphaseElapsedMs = {
+    persistPrepare: null, persistCommit: null, materializeStage: null, materializeSelect: null,
   };
   let activePhase: keyof V9PublicationPhaseElapsedMs | null = null;
   let phaseStartedAtMs = startedAtMs;
@@ -590,6 +645,7 @@ export async function runSafetyScoreV9Publication(
         }),
         publicationClockSec: fixedInput.clockSec,
         signal: publicationSignal,
+        timing: subphaseElapsedMs,
       });
       let journal: SafetyScoreJournalResult = { status: "skipped", reason: "post-commit-interrupted", rows: 0 };
       let postCommitFailure: { stage: SafetyScoreV9PublicationFailureStage; code: string; message: string } | null = null;
@@ -620,6 +676,7 @@ export async function runSafetyScoreV9Publication(
         status: "held",
         attemptId,
         phaseElapsedMs,
+        subphaseElapsedMs,
         phaseTimingBasis: "workers-io-boundary-attributed",
         abortCause: cause,
         warnings: postCommitFailure === null ? [] : ["held-state-committed-before-journal-failure"],
@@ -677,10 +734,11 @@ export async function runSafetyScoreV9Publication(
       bridgeJoinDiagnostics: pipeline.bridgeJoinDiagnostics ?? [],
       journal: { status: "skipped", reason: "post-commit-interrupted", rows: 0 },
       captureArchive: { status: "skipped", reason: "post-commit-interrupted" },
-      warnings: [], postCommitFailure: null, phaseElapsedMs, abortCause: null,
+      publicMaterialization: { status: "skipped", reason: "post-commit-interrupted" },
+      warnings: [], postCommitFailure: null, phaseElapsedMs, subphaseElapsedMs, abortCause: null,
       phaseTimingBasis: "workers-io-boundary-attributed",
     };
-    const acceptedCacheRows = await persistSafetyScoreV9Publication(input.db, {
+    const persisted = await persistSafetyScoreV9Publication(input.db, {
       publication,
       buildAcceptedProjections: buildSafetyScoreV9AcceptedProjections,
       publicationReplayCaptureValue: replayCaptureValue,
@@ -707,6 +765,7 @@ export async function runSafetyScoreV9Publication(
       }),
       publicationClockSec: fixedInput.clockSec,
       signal: publicationSignal,
+      timing: subphaseElapsedMs,
     });
     committed = true;
     finishPhase();
@@ -747,15 +806,26 @@ export async function runSafetyScoreV9Publication(
     beginPhase("archive", "archive");
     const captureArchive = await archiveSafetyScoreCapture({
       db: input.db, bucket: input.captureArchiveBucket, publication,
-      cacheRows: acceptedCacheRows, signal: publicationSignal,
+      cacheRows: persisted.captureArchiveCacheRows, signal: publicationSignal,
       deadlineMs: publicationDeadlineMs, ctx: input.captureArchiveContext,
     });
     finishPhase();
     pendingPublished.captureArchive = captureArchive;
+    // An interrupted run leaves materialization to the next accepted run or a
+    // reader repair; the previously selected generation stays served meanwhile.
+    if (persisted.acceptedMaterialization !== null && !publicationSignal.aborted) {
+      pendingPublished.publicMaterialization = await materializeAcceptedPublication(
+        input.db, persisted.acceptedMaterialization, publicationSignal, subphaseElapsedMs,
+      );
+      if (pendingPublished.publicMaterialization.status === "failed") {
+        pendingPublished.warnings.push("public-materialization-failed");
+      }
+    }
     pendingPublished.abortCause = abortCause();
     if (pendingPublished.abortCause !== null) {
       pendingPublished.warnings.push("publication-committed-before-abort");
-      pendingPublished.postCommitFailure = {
+      // A materialization interrupted by the abort already reports its own failure.
+      if (pendingPublished.publicMaterialization.status !== "failed") pendingPublished.postCommitFailure = {
         stage, ...safeFailure(publicationSignal.reason ?? new DOMException("Publication deadline exhausted", "TimeoutError"), stage),
       };
       logWorkerEvent({
@@ -817,6 +887,7 @@ export async function runSafetyScoreV9Publication(
       attemptId,
       stage,
       phaseElapsedMs,
+      subphaseElapsedMs,
       phaseTimingBasis: "workers-io-boundary-attributed",
       abortCause: cause,
       journal: { status: "skipped", reason: "publication-failed", rows: 0 },

@@ -23,6 +23,7 @@ import type { ReportCardsV9ProjectionSource, ReportCardsV9TableResponse, ReportC
 import { acquireCronLease, releaseCronLease } from "./cron-lease-primitives";
 import { loadActiveSafetyScoreIndex } from "./safety-score-index";
 import { throwIfAborted } from "./abort";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 
 type SiteMaterialization = { key: string; artifact: V9PublicMaterialization };
 
@@ -43,6 +44,15 @@ export class V9PublicMaterializationUnavailableError extends Error {
 }
 const unavailable = (reason: string): never => { throw new V9PublicMaterializationUnavailableError(reason); };
 const V9_MATERIALIZATION_REPAIR_LEASE_SEC = 60;
+/** Marker naming the generation whose public representations are selected. */
+export const V9_PUBLIC_MATERIALIZATION_CACHE_KEY = "report-cards:v9:public-materialization";
+/**
+ * Acceptance commits before the public representations are materialized. For
+ * one publication cadence readers keep serving the previously selected
+ * generation as that generation's accepted snapshot; afterwards the lagging
+ * generation is served as held, never as current.
+ */
+const V9_PUBLIC_MATERIALIZATION_LAG_BUDGET_SEC = CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec;
 // Read budget only: staging retains its independent four-fragment write envelope.
 const V9_PUBLIC_FRAGMENT_READ_MAX_BYTES = 4 * 1024 * 1024;
 
@@ -150,15 +160,28 @@ export async function stageV9PublicMaterialization(
   return { manifest, siteCount };
 }
 
-/** Select only a fully staged generation inside the canonical acceptance fence. */
-export function v9StagedPublicMaterializationStatements(
+/**
+ * Select only a fully staged generation, and only while it is still the
+ * accepted canonical generation. The guard writes the small materialization
+ * marker naming the selected generation; a failed predicate becomes a NOT NULL
+ * violation so D1 rolls the whole selection back.
+ */
+function v9StagedPublicMaterializationStatements(
   db: D1Database, staged: V9StagedPublicMaterialization,
 ): D1PreparedStatement[] {
   const m = staged.manifest;
   const identity = [m.safetyScoreIdentity.publicationGenerationId, m.version, m.payloadSha256];
   const now = Math.floor(Date.now() / 1000);
-  const statements = [db.prepare(`UPDATE cache SET value = CASE WHEN
-    (SELECT count(*) FROM safety_score_public_manifests
+  const marker = stableJsonStringifyV1({
+    schemaVersion: 1, publicationGenerationId: m.safetyScoreIdentity.publicationGenerationId,
+    projectionVersion: m.version, payloadSha256: m.payloadSha256, publishedAtSec: m.publishedAtSec,
+    siteRepresentationCount: staged.siteCount, materializedAtSec: now,
+  });
+  const statements = [db.prepare(`INSERT INTO cache (key, value, updated_at) VALUES (?, CASE WHEN
+    EXISTS (SELECT 1 FROM cache WHERE key = ? AND updated_at = ?
+      AND json_extract(value, '$.identity.publicationGenerationId') = ?
+      AND json_extract(value, '$.payloadSha256') = ?)
+    AND (SELECT count(*) FROM safety_score_public_manifests
       WHERE generation_id = ? AND projection_version = ? AND payload_sha256 = ?) = 1
     AND (SELECT count(*) FROM safety_score_public_fragments
       WHERE generation_id = ? AND projection_version = ? AND payload_sha256 = ?) = ?
@@ -170,8 +193,11 @@ export function v9StagedPublicMaterializationStatements(
         WHERE f.generation_id = m.generation_id AND f.projection_version = m.projection_version
           AND f.payload_sha256 = m.payload_sha256 AND f.representation_key = m.representation_key)
         != json_array_length(m.manifest, '$.fragments'))
-    THEN value ELSE NULL END WHERE key = ?`)
-    .bind(...identity, ...identity, m.fragments.length, ...identity, staged.siteCount, ...identity, SAFETY_SCORE_V9_CACHE_KEYS.publication)];
+    THEN ? ELSE NULL END, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`)
+    .bind(V9_PUBLIC_MATERIALIZATION_CACHE_KEY, SAFETY_SCORE_V9_CACHE_KEYS.publication, m.publishedAtSec,
+      m.safetyScoreIdentity.publicationGenerationId, m.payloadSha256,
+      ...identity, ...identity, m.fragments.length, ...identity, staged.siteCount, ...identity, marker, now)];
   for (const table of ["safety_score_public_manifests", "safety_score_site_manifests"] as const) {
     // SAFETY: Table identifiers come only from the fixed literal list above.
     statements.push(db.prepare(`UPDATE ${table} SET retired_at = CASE
@@ -184,6 +210,57 @@ export function v9StagedPublicMaterializationStatements(
       .bind(now - V9_PUBLIC_READ_GRACE_SEC, m.safetyScoreIdentity.publicationGenerationId));
   }
   return statements;
+}
+
+export interface V9AcceptedPublicMaterializationSource {
+  publication: SafetyScoreV9CurrentResponse;
+  health: V9PublicationHealth;
+  payloadSha256: string;
+}
+
+export interface V9PublicMaterializationTiming {
+  materializeStage: number | null;
+  materializeSelect: number | null;
+}
+
+export type V9PublicMaterializationResult =
+  | { status: "materialized"; publicationGenerationId: string; siteRepresentationCount: number }
+  | { status: "superseded"; publicationGenerationId: string };
+
+/**
+ * Post-acceptance follow-up: stage every representation of an already accepted
+ * generation, then select it atomically. Staging is idempotent (immutable
+ * generation-keyed rows), so a retry repeats safely; until selection, readers
+ * keep serving the previously selected generation.
+ */
+export async function materializeV9AcceptedPublication(
+  db: D1Database,
+  source: V9AcceptedPublicMaterializationSource,
+  signal?: AbortSignal,
+  timing?: V9PublicMaterializationTiming,
+): Promise<V9PublicMaterializationResult> {
+  const generationId = source.publication.publicationGenerationId;
+  let startedAtMs = Date.now();
+  let staged: V9StagedPublicMaterialization;
+  try {
+    staged = await stageV9PublicMaterialization(db, source.publication, source.health, source.payloadSha256, signal);
+  } finally {
+    if (timing) timing.materializeStage = Date.now() - startedAtMs;
+  }
+  startedAtMs = Date.now();
+  try {
+    await executeAtomicBatch(db, v9StagedPublicMaterializationStatements(db, staged), { signal });
+  } catch (error) {
+    throwIfAborted(signal);
+    const canonical = await db.prepare(`SELECT json_extract(value, '$.identity.publicationGenerationId') AS generation_id
+      FROM cache WHERE key = ?`).bind(SAFETY_SCORE_V9_CACHE_KEYS.publication).first<{ generation_id: string | null }>();
+    if (canonical !== null && canonical.generation_id !== generationId) return { status: "superseded", publicationGenerationId: generationId };
+    throw error;
+  } finally {
+    if (timing) timing.materializeSelect = Date.now() - startedAtMs;
+  }
+  throwIfAborted(signal);
+  return { status: "materialized", publicationGenerationId: generationId, siteRepresentationCount: staged.siteCount };
 }
 
 function buildMaterialization(
@@ -260,53 +337,50 @@ function buildMaterialization(
   return { manifest, fragments };
 }
 
-/** Call inside the SAME fenced transaction that accepts the canonical row. */
-export function v9PublicMaterializationStatements(db: D1Database, artifact: V9PublicMaterialization): D1PreparedStatement[] {
+/**
+ * Request-repair write for the canonical representation. Clears unselected rows
+ * an interrupted publisher left for the same identity, so the repaired bytes are
+ * never mixed with staged ones. Selection of other generations is left to the
+ * publisher, which retires them only when it selects a complete generation.
+ */
+function v9PublicMaterializationStatements(db: D1Database, artifact: V9PublicMaterialization): D1PreparedStatement[] {
   const m = artifact.manifest;
   const now = Math.floor(Date.now() / 1000);
+  const identity = [m.safetyScoreIdentity.publicationGenerationId, m.version, m.payloadSha256];
   return [
+    db.prepare(`DELETE FROM safety_score_public_manifests
+      WHERE generation_id = ? AND projection_version = ? AND payload_sha256 = ? AND retired_at IS NOT NULL`).bind(...identity),
     db.prepare(`INSERT OR IGNORE INTO safety_score_public_manifests
       (generation_id, projection_version, payload_sha256, manifest, created_at)
-      VALUES (?, ?, ?, ?, ?)`).bind(m.safetyScoreIdentity.publicationGenerationId, m.version, m.payloadSha256, stableJsonStringifyV1(m), now),
+      VALUES (?, ?, ?, ?, ?)`).bind(...identity, stableJsonStringifyV1(m), now),
     ...prepareMultiRowInsertStatements(db, `INSERT OR IGNORE INTO safety_score_public_fragments
-      (generation_id, projection_version, payload_sha256, ordinal, body)`, artifact.fragments.map((body, ordinal) => [m.safetyScoreIdentity.publicationGenerationId, m.version, m.payloadSha256, ordinal, body])),
-    // Retire only after selection changed; creation time alone cannot protect a
-    // reader of a long-held generation during its first replacement.
-    db.prepare(`UPDATE safety_score_public_manifests SET retired_at = ?
-      WHERE retired_at IS NULL AND (generation_id != ? OR projection_version != ? OR payload_sha256 != ?)`)
-      .bind(now, m.safetyScoreIdentity.publicationGenerationId, m.version, m.payloadSha256),
-    db.prepare(`DELETE FROM safety_score_public_manifests WHERE retired_at < ?
-      AND generation_id != ?`).bind(now - V9_PUBLIC_READ_GRACE_SEC, m.safetyScoreIdentity.publicationGenerationId),
+      (generation_id, projection_version, payload_sha256, ordinal, body)`, artifact.fragments.map((body, ordinal) => [...identity, ordinal, body])),
   ];
 }
 
 function siteMaterializationStatements(db: D1Database, representations: SiteMaterialization[]): D1PreparedStatement[] {
   const now = Math.floor(Date.now() / 1000);
   // Repair writes only the requested representation.
+  const statements: D1PreparedStatement[] = [];
   const manifestRows: (string | number)[][] = [];
   const fragmentRows: (string | number)[][] = [];
   for (const { key, artifact } of representations) {
     const m = artifact.manifest;
+    statements.push(db.prepare(`DELETE FROM safety_score_site_manifests WHERE generation_id = ? AND projection_version = ?
+      AND payload_sha256 = ? AND representation_key = ? AND retired_at IS NOT NULL`)
+      .bind(m.safetyScoreIdentity.publicationGenerationId, m.version, m.payloadSha256, key));
     manifestRows.push([m.safetyScoreIdentity.publicationGenerationId, m.version, m.payloadSha256, key, stableJsonStringifyV1(m), now]);
     for (let ordinal = 0; ordinal < artifact.fragments.length; ordinal++) {
       fragmentRows.push([m.safetyScoreIdentity.publicationGenerationId, m.version, m.payloadSha256, key, ordinal, artifact.fragments[ordinal]!]);
     }
   }
-  const statements = [
+  return [
+    ...statements,
     ...prepareMultiRowInsertStatements(db, `INSERT OR IGNORE INTO safety_score_site_manifests
       (generation_id, projection_version, payload_sha256, representation_key, manifest, created_at)`, manifestRows),
     ...prepareMultiRowInsertStatements(db, `INSERT OR IGNORE INTO safety_score_site_fragments
       (generation_id, projection_version, payload_sha256, representation_key, ordinal, body)`, fragmentRows),
   ];
-  const first = representations[0]?.artifact.manifest;
-  if (first) {
-    statements.push(db.prepare(`UPDATE safety_score_site_manifests SET retired_at = ?
-      WHERE retired_at IS NULL AND (generation_id != ? OR projection_version != ? OR payload_sha256 != ?)`)
-      .bind(now, first.safetyScoreIdentity.publicationGenerationId, first.version, first.payloadSha256));
-    statements.push(db.prepare(`DELETE FROM safety_score_site_manifests WHERE retired_at < ? AND generation_id != ?`)
-      .bind(now - V9_PUBLIC_READ_GRACE_SEC, first.safetyScoreIdentity.publicationGenerationId));
-  }
-  return statements;
 }
 
 type Selection = {
@@ -335,8 +409,25 @@ async function selectRepresentation(db: D1Database, representationKey?: string):
     LEFT JOIN cache h ON h.key = ?
     LEFT JOIN ${manifests} m ON m.generation_id = json_extract(p.value, '$.identity.publicationGenerationId')
       AND m.payload_sha256 = json_extract(p.value, '$.payloadSha256') AND m.projection_version = ?
-      ${representationKey ? "AND m.representation_key = ?" : ""}
+      ${representationKey ? "AND m.representation_key = ?" : ""} AND m.retired_at IS NULL
     WHERE p.key = ?`).bind(...bindings).first<Selection>();
+}
+
+/** The newest still-selected representation of a generation accepted before the canonical one. */
+async function selectLaggingRepresentation(
+  db: D1Database, canonicalGenerationId: string, canonicalPublishedAtSec: number, representationKey?: string,
+): Promise<{ manifest: string; fragment_count: number } | null> {
+  const bindings: (string | number)[] = [V9_PUBLIC_REPRESENTATION_VERSION, canonicalGenerationId, canonicalPublishedAtSec];
+  if (representationKey) bindings.push(representationKey);
+  // SAFETY: Table identifiers and the optional clause come only from closed literal branches; all data values are bound.
+  return db.prepare(`SELECT m.manifest AS manifest, (SELECT count(*) FROM ${representationKey ? "safety_score_site_fragments" : "safety_score_public_fragments"} f
+      WHERE f.generation_id = m.generation_id AND f.projection_version = m.projection_version
+        AND f.payload_sha256 = m.payload_sha256 ${representationKey ? "AND f.representation_key = m.representation_key" : ""}) AS fragment_count
+    FROM ${representationKey ? "safety_score_site_manifests" : "safety_score_public_manifests"} m
+    WHERE m.retired_at IS NULL AND m.projection_version = ? AND m.generation_id != ?
+      AND json_extract(m.manifest, '$.publishedAtSec') < ?
+      ${representationKey ? "AND m.representation_key = ?" : ""}
+    ORDER BY m.created_at DESC LIMIT 1`).bind(...bindings).first<{ manifest: string; fragment_count: number }>();
 }
 
 function admitSelection(row: Selection) {
@@ -428,27 +519,52 @@ export async function loadV9PublicMaterializedResponse(db: D1Database, represent
   try {
     let row = await selectRepresentation(db, representationKey);
     if (!row) return unavailable("v9-snapshot-unavailable");
-    admitSelection(row);
+    let lagging: { manifest: string; fragment_count: number } | null = null;
+    let withinLagBudget = false;
     if (row.manifest == null) {
-      // Cold rollout repairs only this key, with durable pre-build admission.
-      await repairMissingRepresentation(db, row, representationKey);
-      row = await selectRepresentation(db, representationKey);
-      if (!row || row.manifest == null) return unavailable("v9-public-materialization-missing");
+      const canonical = admitSelection(row);
+      withinLagBudget = Math.floor(Date.now() / 1000) - row.publication_updated_at <= V9_PUBLIC_MATERIALIZATION_LAG_BUDGET_SEC;
+      // Acceptance commits before materialization: keep serving the previously
+      // selected generation instead of a torn or partially staged one.
+      lagging = await selectLaggingRepresentation(db, canonical.identity.publicationGenerationId, row.publication_updated_at, representationKey);
+      if (lagging === null || !withinLagBudget) {
+        // Cold rollout, a key absent from the previous generation, or a
+        // publisher that did not finish within the lag budget. Repair is safe
+        // beside publisher staging: it replaces unselected rows of the key
+        // atomically, and staging never overwrites existing rows.
+        try {
+          await repairMissingRepresentation(db, row, representationKey);
+        } catch (error) {
+          // A contended or failed repair keeps serving the lagging generation as held.
+          if (lagging === null) throw error;
+        }
+        const repaired = await selectRepresentation(db, representationKey);
+        if (repaired?.manifest != null) {
+          row = repaired;
+          lagging = null;
+        } else if (lagging === null) return unavailable("v9-public-materialization-missing");
+      }
     }
     const { metadata, identity, health } = admitSelection(row);
+    const manifestText = lagging?.manifest ?? row.manifest!;
+    const fragmentCount = lagging?.fragment_count ?? row.fragment_count;
     let manifest;
     try {
-      manifest = V9PublicRepresentationManifestSchema.parse(JSON.parse(row.manifest));
-      if (stableJsonStringifyV1(manifest) !== row.manifest) return unavailable("v9-public-manifest-invalid");
+      manifest = V9PublicRepresentationManifestSchema.parse(JSON.parse(manifestText));
+      if (stableJsonStringifyV1(manifest) !== manifestText) return unavailable("v9-public-manifest-invalid");
     } catch { return unavailable("v9-public-manifest-invalid"); }
     if (manifest.representationKey !== representationKey) return unavailable("v9-public-representation-key-mismatch");
-    if (!safetyScorePublicationIdentitiesMatch(identity, manifest.safetyScoreIdentity)
+    if (lagging !== null) {
+      if (manifest.safetyScoreIdentity.publicationGenerationId === identity.publicationGenerationId
+        || manifest.publishedAtSec >= row.publication_updated_at) return unavailable("v9-public-manifest-publication-mismatch");
+    } else if (!safetyScorePublicationIdentitiesMatch(identity, manifest.safetyScoreIdentity)
       || manifest.payloadSha256 !== metadata.payloadSha256
       || manifest.resultDigest !== metadata.identity.resultDigest
       || manifest.candidateId !== metadata.identity.candidateId
       || manifest.factSetDigest !== metadata.identity.factSetDigest
       || manifest.publishedAtSec !== row.publication_updated_at) return unavailable("v9-public-manifest-publication-mismatch");
-    if (row.fragment_count !== manifest.fragments.length) return unavailable("v9-public-fragments-count-invalid");
+    const servedGenerationId = manifest.safetyScoreIdentity.publicationGenerationId;
+    if (fragmentCount !== manifest.fragments.length) return unavailable("v9-public-fragments-count-invalid");
     const fragments: string[] = [];
     const encoder = new TextEncoder();
     const hash = createHash("sha256");
@@ -462,7 +578,7 @@ export async function loadV9PublicMaterializedResponse(db: D1Database, represent
           readBytes + manifest.fragments[end]!.bytes <= V9_PUBLIC_FRAGMENT_READ_MAX_BYTES) {
         readBytes += manifest.fragments[end++]!.bytes;
       }
-      const bindings: (string | number)[] = [identity.publicationGenerationId, manifest.version, manifest.payloadSha256];
+      const bindings: (string | number)[] = [servedGenerationId, manifest.version, manifest.payloadSha256];
       if (representationKey) bindings.push(representationKey);
       bindings.push(offset, end);
       // SAFETY: The table and optional clause are chosen from fixed literals; representationKey and all other values are bound.
@@ -483,7 +599,14 @@ export async function loadV9PublicMaterializedResponse(db: D1Database, represent
       offset = end;
     }
     if (bytes !== manifest.bytes || hash.digest("hex") !== manifest.sha256) return unavailable("v9-public-body-integrity-invalid");
-    const publicationHealth = resolveSafetyScoreV9EffectivePublicationHealth({ publicationGenerationId: identity.publicationGenerationId, publishedAtSec: manifest.publishedAtSec }, health);
+    const served = { publicationGenerationId: servedGenerationId, publishedAtSec: manifest.publishedAtSec };
+    // Within the lag budget the previous generation is still the newest public
+    // snapshot, so it carries the accepted health re-anchored to itself.
+    const publicationHealth = lagging !== null && withinLagBudget &&
+        health.acceptedPublicationGenerationId === identity.publicationGenerationId &&
+        health.acceptedAtSec === row.publication_updated_at
+      ? { ...health, acceptedPublicationGenerationId: served.publicationGenerationId, acceptedAtSec: served.publishedAtSec }
+      : resolveSafetyScoreV9EffectivePublicationHealth(served, health);
     let position = -1;
     const body = new ReadableStream<Uint8Array>({
       pull(controller) {
@@ -494,7 +617,7 @@ export async function loadV9PublicMaterializedResponse(db: D1Database, represent
       cancel() { fragments.length = 0; },
     });
     return { body, updatedAt: manifest.publishedAtSec, publicationHealth,
-      representationIdentity: { version: manifest.version, generationId: identity.publicationGenerationId, sha256: manifest.sha256 } };
+      representationIdentity: { version: manifest.version, generationId: servedGenerationId, sha256: manifest.sha256 } };
   } catch (error) {
     if (error instanceof V9PublicMaterializationUnavailableError) throw error;
     if (error instanceof Error && error.message.includes("publication-schema-cutover-pending")) return unavailable("publication-schema-cutover-pending");
