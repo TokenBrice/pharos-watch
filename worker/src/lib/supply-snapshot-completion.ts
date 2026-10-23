@@ -20,6 +20,9 @@ import type { CronResult } from "./cron-logger";
 export const SNAPSHOT_SUPPLY_LAST_WRITE_KEY = "snapshot-supply:last-write";
 export const SNAPSHOT_CHAIN_SUPPLY_LAST_WRITE_KEY = "snapshot-chain-supply:last-write";
 const SUPPLY_SNAPSHOT_COVERAGE_VERSION = 2;
+// sync-stablecoins owns the degraded verdict for an elevated publication gap;
+// snapshot jobs that complete their own work record it as a finding only.
+export const UPSTREAM_PUBLICATION_GAP_QUALITY_REASON = "upstream_publication_gap_elevated";
 
 const SHA_256_HEX_PATTERN = /^[0-9a-f]{64}$/;
 
