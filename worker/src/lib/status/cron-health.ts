@@ -10,6 +10,7 @@ import {
   CONDITIONALLY_ADMITTED_SCHEDULED_TASKS,
   flattenScheduledSlotPlanJobs,
   isConditionallyAdmittedScheduledTask,
+  SCHEDULED_SLOT_DISPATCH_OFFSET_SEC,
   SCHEDULED_SLOT_PLANS,
 } from "@shared/lib/scheduled-runner-registry";
 import { CronRunStatusSchema } from "@shared/types/status";
@@ -53,6 +54,28 @@ export interface CronHealthSnapshot {
   cronLeaseQueryFailed: boolean;
   scheduledSlotEventMarkerQueryFailed: boolean;
   scheduledSlots: ScheduledSlotHealthSummary;
+  scheduledDeliveryLag: ScheduledDeliveryLagSummary;
+}
+
+/**
+ * Ops-only platform delivery-lag signal: admin causes only, never public health.
+ * A slot is late when its actual start trails its planned dispatch time (slot
+ * clock plus the lane's registry-derived dispatch offset) by more than
+ * `lateAfterSec`; the signal counts slots that started inside the trailing
+ * `windowSec` and warns at `warnAtLateSlots`.
+ */
+export const SCHEDULED_DELIVERY_LAG_SIGNAL = {
+  windowSec: 3_600,
+  lateAfterSec: 5 * 60,
+  warnAtLateSlots: 10,
+} as const;
+
+export interface ScheduledDeliveryLagSummary {
+  /** Null when the read failed: unknown, not zero late slots. */
+  startedSlots: number | null;
+  lateSlots: number | null;
+  maxLagSec: number | null;
+  queryFailed: boolean;
 }
 
 export interface ScheduledSlotHealthSummary {
@@ -567,6 +590,54 @@ function summarizeRunningCronSlots(
   };
 }
 
+interface ScheduledDeliveryLagRow {
+  started_slots: number | null;
+  late_slots: number | null;
+  max_lag_sec: number | null;
+}
+
+// Planned dispatch offsets (for example :05 triggers for :00 slots) are not
+// late delivery; lag is measured from each lane's own dispatch time.
+const DISPATCH_OFFSET_ENTRIES = Object.entries(SCHEDULED_SLOT_DISPATCH_OFFSET_SEC).filter(([, offsetSec]) => offsetSec > 0);
+const DISPATCH_OFFSET_SQL = DISPATCH_OFFSET_ENTRIES.length > 0
+  ? `CASE slot_key ${DISPATCH_OFFSET_ENTRIES.map(() => "WHEN ? THEN ?").join(" ")} ELSE 0 END`
+  : "0";
+
+async function fetchScheduledDeliveryLag(db: D1Database, now: number): Promise<ScheduledDeliveryLagSummary> {
+  const result = await readOptionalCronRows(
+    () => db
+      .prepare(
+        `WITH slot_lag AS (
+           SELECT started_at - slot_started_at - ${DISPATCH_OFFSET_SQL} AS lag_sec
+             FROM cron_slot_executions
+             WHERE started_at > ? AND started_at <= ?
+         )
+         SELECT COUNT(*) AS started_slots,
+                SUM(CASE WHEN lag_sec > ? THEN 1 ELSE 0 END) AS late_slots,
+                MAX(lag_sec) AS max_lag_sec
+           FROM slot_lag`,
+      )
+      .bind(
+        ...DISPATCH_OFFSET_ENTRIES.flat(),
+        now - SCHEDULED_DELIVERY_LAG_SIGNAL.windowSec,
+        now,
+        SCHEDULED_DELIVERY_LAG_SIGNAL.lateAfterSec,
+      )
+      .all<ScheduledDeliveryLagRow>(),
+    { event: "cron_slot_delivery_lag_unavailable", source: "cron_slot_executions", message: "Scheduled slot delivery lag unavailable" },
+  );
+  const row = result.rows[0];
+  if (result.failed || !row || !Number.isFinite(row.started_slots)) {
+    return { startedSlots: null, lateSlots: null, maxLagSec: null, queryFailed: true };
+  }
+  return {
+    startedSlots: row.started_slots!,
+    lateSlots: row.late_slots ?? 0,
+    maxLagSec: row.max_lag_sec,
+    queryFailed: false,
+  };
+}
+
 export interface LoadCronHealthOptions {
   /** Restrict history/lease/progress reads and records to these canonical jobs (per-job detail). */
   jobs?: readonly string[];
@@ -592,12 +663,13 @@ export async function loadCronHealth(
   // dependency is purely an in-memory post-fetch step, so only the raw fetches
   // run in parallel; the dependent processing below preserves the original
   // ordering. This collapses ~13 sequential D1 awaits into one parallel wave.
-  const [historyResult, leaseResult, progressResult, slotEventResult, runningSlotResult] = await Promise.all([
+  const [historyResult, leaseResult, progressResult, slotEventResult, runningSlotResult, scheduledDeliveryLag] = await Promise.all([
     fetchCronHistoryRows(db, cronJobs, now),
     fetchCronLeaseRows(db, cronJobInClause),
     fetchCronProgressRows(db, cronJobInClause),
     fetchCronSlotEventRows(db, eventKeyInClause),
     fetchRunningCronSlotRows(db, now),
+    fetchScheduledDeliveryLag(db, progressReadNow),
   ]);
   const scheduledSlotEventMarkerQueryFailed = slotEventResult.failed;
   const scheduledSlots = summarizeRunningCronSlots(runningSlotResult.rows, now, runningSlotResult.failed);
@@ -944,5 +1016,6 @@ export async function loadCronHealth(
     cronLeaseQueryFailed,
     scheduledSlotEventMarkerQueryFailed,
     scheduledSlots,
+    scheduledDeliveryLag,
   };
 }
