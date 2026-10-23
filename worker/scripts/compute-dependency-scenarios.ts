@@ -19,6 +19,7 @@ import { assertCliUsage, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfReq
 import { parseSafetyScoreV9PublicationReplayCacheRows, parseSafetyScoreV9PublicationReplayCapture } from "../src/lib/safety-score-v9/publication-replay-capture";
 import { parseSafetyScoreV9Publication, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../src/lib/safety-score-v9/publication-codec";
 import { parseSafetyScoreV9PublicationHealthCache, SAFETY_SCORE_V9_CACHE_KEYS } from "../src/lib/safety-score-v9/publication-health";
+import { reassembleSafetyScoreV9PublicationFromCacheRows, SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_RANGE } from "../src/lib/safety-score-v9/publication-chunks";
 import { projectSafetyScoreV9PublicationToPublicSnapshot } from "../src/lib/report-cards-v9-cache";
 import { parseSafetyScoreV9TransferMaterialityGeneration } from "../src/lib/safety-score-v9/transfer-materiality";
 import { parseActiveWorkerVersionMarker } from "../src/lib/worker-version-first-seen";
@@ -94,13 +95,14 @@ async function main(): Promise<void> {
   if (values.mode !== "publish") rmSync(stampPath, { force: true });
   if (values.mode === "plan") {
     // Read one snapshot so HTTP caching or a concurrent publication cannot split generations.
-    const raw = JSON.parse(remote("--command", `SELECT key, value, updated_at FROM cache WHERE key IN ('${SAFETY_SCORE_V9_CACHE_KEYS.publication}', '${SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth}', '${SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY}', '${SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY}')`));
+    const [chunkStart, chunkEnd] = SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_RANGE;
+    const raw = JSON.parse(remote("--command", `SELECT key, value, updated_at FROM cache WHERE key IN ('${SAFETY_SCORE_V9_CACHE_KEYS.publication}', '${SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth}', '${SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY}', '${SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY}') OR (key >= '${chunkStart}' AND key < '${chunkEnd}')`));
     const replayRows = parseSafetyScoreV9PublicationReplayCacheRows(raw);
     const rows: Array<{ key: string; value: string; updated_at: number }> = raw[0].results;
     const publicationRow = rows.find(row => row.key === SAFETY_SCORE_V9_CACHE_KEYS.publication);
     const healthRow = rows.find(row => row.key === SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth);
     if (!publicationRow || !healthRow) throw new Error("accepted-publication-snapshot-unavailable");
-    const publication = await parseSafetyScoreV9Publication(publicationRow.value);
+    const publication = await parseSafetyScoreV9Publication(reassembleSafetyScoreV9PublicationFromCacheRows(publicationRow.value, rows));
     if (publicationRow.updated_at !== publication.publishedAtSec || replayRows.retainedAtSec !== publication.publishedAtSec) {
       throw new Error("accepted-publication-replay-retention-clock-mismatch");
     }

@@ -17,7 +17,7 @@ import { SAFETY_SCORE_V9_CACHE_KEYS, parseSafetyScoreV9PublicationHealthCache, r
 import { D1_MAX_BOUND_PARAMETERS, executeAtomicBatch, prepareMultiRowInsertStatements } from "./db";
 import { D1_BATCH_SIZE } from "./constants";
 import { sha256HexFromUtf8Chunks } from "./hash";
-import { getCache } from "./db-cache";
+import { loadSafetyScoreV9PublicationStoredRow } from "./safety-score-v9/publication-chunks";
 import { projectV9Table, projectV9Detail } from "@shared/lib/report-cards-v9-projections";
 import type { ReportCardsV9ProjectionSource, ReportCardsV9TableResponse, ReportCardsV9DetailResponse } from "@shared/types/report-cards-v9-projections";
 import { acquireCronLease, releaseCronLease } from "./cron-lease-primitives";
@@ -398,10 +398,12 @@ async function selectRepresentation(db: D1Database, representationKey?: string):
   if (representationKey) bindings.push(representationKey);
   bindings.push(SAFETY_SCORE_V9_CACHE_KEYS.publication);
   // SAFETY: Table identifiers and optional clauses come only from the closed literal branches above/below; all data values are bound.
+  // A sharded envelope carries `payloadChunks` (its digest is checked when the
+  // payload itself is read) and records the single-row-equivalent stored bytes.
   return db.prepare(`SELECT json_remove(p.value, '$.payload') AS metadata,
-    json_type(p.value, '$.payload') AS payload_type,
-    length(json_extract(p.value, '$.payload')) AS payload_length,
-    length(CAST(p.value AS BLOB)) AS stored_bytes,
+    coalesce(json_type(p.value, '$.payload'), CASE WHEN json_type(p.value, '$.payloadChunks') = 'object' THEN 'chunks' END) AS payload_type,
+    coalesce(length(json_extract(p.value, '$.payload')), json_extract(p.value, '$.payloadChunks.payloadBytes')) AS payload_length,
+    coalesce(json_extract(p.value, '$.payloadChunks.storedBytes'), length(CAST(p.value AS BLOB))) AS stored_bytes,
     p.updated_at AS publication_updated_at, h.value AS health, h.updated_at AS health_updated_at,
     m.manifest AS manifest, (SELECT count(*) FROM ${fragments} f
       WHERE f.generation_id = m.generation_id AND f.projection_version = m.projection_version
@@ -442,7 +444,7 @@ function admitSelection(row: Selection) {
     if (error instanceof V9PublicMaterializationUnavailableError) throw error;
     return unavailable("v9-public-canonical-marker-invalid");
   }
-  if (row.payload_type !== "text" || row.payload_length == null || row.payload_length <= 0 ||
+  if ((row.payload_type !== "text" && row.payload_type !== "chunks") || row.payload_length == null || row.payload_length <= 0 ||
       row.stored_bytes > SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES) return unavailable("v9-public-canonical-marker-invalid");
   const identity = publicationIdentityFromStorageEnvelope(metadata.identity);
   if (!identity) return unavailable("v9-public-canonical-marker-invalid");
@@ -481,7 +483,7 @@ async function repairMissingRepresentation(db: D1Database, selected: Selection, 
     if (!current || current.publication_updated_at !== selected.publication_updated_at
       || current.metadata !== selected.metadata) return unavailable("v9-public-backfill-raced");
     if (current.manifest !== null) return;
-    const source = await getCache(db, SAFETY_SCORE_V9_CACHE_KEYS.publication);
+    const source = await loadSafetyScoreV9PublicationStoredRow(db);
     if (!source || source.updatedAt !== selected.publication_updated_at) return unavailable("v9-public-backfill-raced");
     const stored = JSON.parse(source.value);
     const storedIdentity = publicationIdentityFromStorageEnvelope(stored.identity);

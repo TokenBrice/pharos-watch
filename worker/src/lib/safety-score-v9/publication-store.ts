@@ -5,7 +5,6 @@ import {
 } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import { throwIfAborted } from "../abort";
-import { getCache } from "../db-cache";
 import { executeAtomicBatch } from "../db";
 import { logWorkerEvent } from "../structured-log";
 import {
@@ -23,6 +22,13 @@ import type { SafetyScoreCaptureArchiveCacheRows } from "@shared/types/safety-sc
 import type { V9AcceptedPublicMaterializationSource } from "../report-cards-v9-materialization";
 import { SAFETY_SCORE_V9_CACHE_KEYS, loadSafetyScoreV9PublicationHealth } from "./publication-health";
 import { V9PublicationAttemptSchema, loadSafetyScoreV9FailedPublicationAttempt, type V9PublicationAttempt } from "./publication-attempts";
+import {
+  SAFETY_SCORE_V9_PUBLICATION_CHUNKED_WRITES,
+  loadSafetyScoreV9PublicationStoredRow,
+  safetyScoreV9PublicationChunkCleanupStatement,
+  shardSafetyScoreV9PublicationStoredValue,
+  shardedSafetyScoreV9PublicationChunkStatements,
+} from "./publication-chunks";
 
 class SafetyScoreV9PublicationConflictError extends Error {
   constructor(message: string) {
@@ -35,7 +41,7 @@ export async function loadSafetyScoreV9Publication(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<SafetyScoreV9CurrentResponse | null> {
-  const row = await getCache(db, SAFETY_SCORE_V9_CACHE_KEYS.publication, signal);
+  const row = await loadSafetyScoreV9PublicationStoredRow(db, signal);
   if (!row) return null;
   return parseSafetyScoreV9Publication(row.value, signal);
 }
@@ -370,10 +376,20 @@ export async function persistSafetyScoreV9Publication(
   );
   const statements: D1PreparedStatement[] = [];
   if (publicationValue !== null) {
+    let canonicalValue = publicationValue;
+    if (SAFETY_SCORE_V9_PUBLICATION_CHUNKED_WRITES) {
+      const sharded = shardSafetyScoreV9PublicationStoredValue(publicationValue);
+      canonicalValue = sharded.envelope;
+      statements.push(...shardedSafetyScoreV9PublicationChunkStatements(
+        db, sharded, acceptedMaterialization!.payloadSha256, input.publicationClockSec,
+      ));
+    } else {
+      statements.push(safetyScoreV9PublicationChunkCleanupStatement(db));
+    }
     statements.push(
       cacheStatement.bind(
         SAFETY_SCORE_V9_CACHE_KEYS.publication,
-        publicationValue,
+        canonicalValue,
         input.publicationClockSec,
       ),
     );
@@ -498,6 +514,7 @@ export async function persistSafetyScoreV9Publication(
   }
   // Return references to the exact committed transports, never re-encode or
   // re-read live cache rows which a later accepted generation could overwrite.
+  // A sharded publication is archived as its single-row-equivalent value.
   if (publicationValue === null || input.publicationReplayBaseValue === undefined ||
       input.publicationReplayCaptureValue === undefined) return { captureArchiveCacheRows: null, acceptedMaterialization };
   return {
