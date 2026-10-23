@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { hydrateDexLiquidity, hydrateDexLiquidityHistory, hydrateLatestPsiScore, hydrateMintBurn, hydrateYieldRankingsCache } from "../source-state/hydration";
-import { DEWS_PSI_FRESHNESS_BUDGET_SEC } from "../source-state/budgets";
+import { DEWS_PSI_FRESHNESS_BUDGET_SEC, DEWS_YIELD_RANKINGS_RETENTION_BUDGET_SEC } from "../source-state/budgets";
 import { computeDEWS } from "../../dews";
 import { makeDewsInput } from "../../__tests__/dews.test-support";
 import { makeDexLiquidityRow } from "../../../test-helpers/__shared/fixtures";
@@ -53,7 +53,9 @@ describe("DEWS hydration timestamp admission", () => {
   it.each([
     ["valid", RUN_AT, 0, null],
     ["inclusive budget", RUN_AT - YIELD_BUDGET_SEC, 0, null],
-    ["stale", RUN_AT - YIELD_BUDGET_SEC - 1, 0, "exceeds"],
+    ["retained last-good", RUN_AT - YIELD_BUDGET_SEC - 1, 0, null],
+    ["inclusive retention budget", RUN_AT - DEWS_YIELD_RANKINGS_RETENTION_BUDGET_SEC, 0, null],
+    ["stale", RUN_AT - DEWS_YIELD_RANKINGS_RETENTION_BUDGET_SEC - 1, 0, "exceeds"],
     ["run/read overlap", RUN_AT + 120, 120, null],
     ["inclusive read skew", RUN_AT + 180, 120, null],
     ["beyond read skew", RUN_AT + 181, 120, "future-timestamp"],
@@ -84,6 +86,31 @@ describe("DEWS hydration timestamp admission", () => {
       expect(registerSourceFailure).toHaveBeenCalledTimes(1);
       expect(registerSourceFailure).toHaveBeenCalledWith("yield-rankings-freshness", expect.stringContaining(reason));
     }
+  });
+
+  it.each([
+    ["fresh", RUN_AT - YIELD_BUDGET_SEC, YIELD_BUDGET_SEC, false, null],
+    ["retained", RUN_AT - YIELD_BUDGET_SEC - 1, YIELD_BUDGET_SEC + 1, true, "retained-last-good"],
+    ["stale", RUN_AT - DEWS_YIELD_RANKINGS_RETENTION_BUDGET_SEC - 1, null, false, "stale-generation"],
+  ] as const)("names the %s yield-rankings generation, age and retention budget", async (_label, updatedAt, ageSec, retained, reason) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(RUN_AT * 1000);
+    const hydrated = await hydrateYieldRankingsCache({
+      db: mockD1([{ match: "pharos:dews:yield-rankings-cache", rows: [], first: {
+        updated_at: updatedAt,
+        value: JSON.stringify({ rankings: [{ id: "usdt-tether", sourceRisk: { rewardShare: 0.9 } }] }),
+      } }]),
+      nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
+    });
+    expect(hydrated.yieldRankingsAgeSec).toBe(ageSec);
+    expect(hydrated.yieldRankingsRetained).toBe(retained);
+    expect(hydrated.dependencyDiagnostics).toEqual({
+      generationId: `yield-rankings:${updatedAt}`,
+      updatedAt,
+      ageSeconds: RUN_AT - updatedAt,
+      freshnessBudgetSec: DEWS_YIELD_RANKINGS_RETENTION_BUDGET_SEC,
+      reason,
+    });
   });
 
   it.each([

@@ -9,8 +9,8 @@ const state = vi.hoisted(() => ({
 vi.mock("../handlers/scheduled", () => ({ handleScheduledEvent: state.scheduled }));
 vi.mock("../handlers/reserve-continuation", () => ({ handleReserveContinuationBatch: state.reserve }));
 
-// 2027-01-14T09:55:00Z hourly yield slot, delivered ten minutes later.
-const SLOT = 1_799_920_500;
+// 2027-01-14T08:55:00Z two-hourly yield slot, delivered ten minutes later.
+const SLOT = 1_799_916_900;
 
 function batchOf(body: unknown) {
   const message = { id: "m1", attempts: 1, timestamp: new Date(), body, ack: vi.fn(), retry: vi.fn() };
@@ -39,7 +39,7 @@ describe("slot catch-up Queue consumer", () => {
     expect(batch.ackAll).toHaveBeenCalledTimes(1);
     expect(state.reserve).not.toHaveBeenCalled();
     expect(state.scheduled).toHaveBeenCalledExactlyOnceWith(
-      { cron: "55 * * * *", scheduledTime: SLOT * 1000 }, env, ctx, "public", expect.any(Object), (SLOT + 610) * 1000,
+      { cron: "55 */2 * * *", scheduledTime: SLOT * 1000 }, env, ctx, "public", expect.any(Object), (SLOT + 610) * 1000,
       { trigger: "abandoned", armedAt: SLOT + 600, armedByInvocationId: "digest-poll" },
       (SLOT + 610 + 12 * 60) * 1000,
     );
@@ -47,7 +47,7 @@ describe("slot catch-up Queue consumer", () => {
 
   it.each([
     ["mode off", { ...message }, { WORKER_SLOT_CATCH_UP_MODE: "off" } as Env, SLOT + 610],
-    ["next natural slot imminent", { ...message }, env, SLOT + 46 * 60],
+    ["next natural slot imminent", { ...message }, env, SLOT + 106 * 60],
     ["lane not opted in", { ...message, scheduleKey: "statusSelfCheckOffset" }, env, SLOT + 610],
     ["malformed hint", { ...message, extra: true }, env, SLOT + 610],
   ])("acknowledges without running when %s", async (_label, body, runtimeEnv, nowSec) => {

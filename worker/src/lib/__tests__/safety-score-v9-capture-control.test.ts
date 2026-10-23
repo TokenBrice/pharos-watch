@@ -7,6 +7,7 @@ import {
   parseSafetyScoreV9CaptureControl, prepareAttributionSettlement, requestRecapture,
   SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY,
 } from "../safety-score-v9/capture-control";
+import { SOURCE_FIXED_INPUT_MAX_AGE_SEC } from "../safety-score-v9/supply-attribution-source";
 import { prepareCacheUpsert } from "../db-cache";
 import { batchExecute } from "../d1-primitives";
 
@@ -44,12 +45,13 @@ describe("V9 prepare-owned capture control", () => {
 
   it("expires at deadline equality and never extends the source budget", () => {
     const tuple = capture();
-    const control = buildSafetyScoreV9CaptureControl(tuple, tuple.clockSec + 1_700);
+    const maxAgeSec = SOURCE_FIXED_INPUT_MAX_AGE_SEC;
+    const control = buildSafetyScoreV9CaptureControl(tuple, tuple.clockSec + maxAgeSec - 100);
     const source = { ...tuple, activeAssetIds: [], aggregateCirculatingById: {}, chainCirculatingById: {} };
-    expect(control.attribution.pendingUntilSec).toBe(tuple.clockSec + 1_800);
-    expect(hasPendingAttribution(control, source, tuple.clockSec + 1_799)).toBe(true);
-    expect(hasPendingAttribution(control, source, tuple.clockSec + 1_800)).toBe(false);
-    expect(hasPendingAttribution(control, { ...source, clockSec: source.clockSec + 1 }, tuple.clockSec + 1_799)).toBe(false);
+    expect(control.attribution.pendingUntilSec).toBe(tuple.clockSec + maxAgeSec);
+    expect(hasPendingAttribution(control, source, tuple.clockSec + maxAgeSec - 1)).toBe(true);
+    expect(hasPendingAttribution(control, source, tuple.clockSec + maxAgeSec)).toBe(false);
+    expect(hasPendingAttribution(control, { ...source, clockSec: source.clockSec + 1 }, tuple.clockSec + maxAgeSec - 1)).toBe(false);
   });
 
   it("rolls every capture row back if the sidecar transaction fails", async () => {

@@ -35,7 +35,7 @@ const SLOW_NAV_SOURCE_KEYS = new Set([
  *
  * | class                          | cadence | aging | stale |
  * |--------------------------------|---------|-------|-------|
- * | hourly families (`sync-yield-data`) | 1h | 2h    | 3h    |
+ * | core families (`sync-yield-data`) | 2h | 4h    | 6h    |
  * | supplemental families          | 4h      | 5h    | 6h    |
  * | price-derived daily snapshot   | 24h     | 27h   | 30h   |
  * | rate-derived daily benchmark   | 24h     | 30h   | 36h   |
@@ -43,7 +43,8 @@ const SLOW_NAV_SOURCE_KEYS = new Set([
  *
  * `aging` is the midpoint between a class cadence and its stale bound
  * ("missed its refresh slot, not yet stale"), which is exactly 2x the producer
- * cadence for the default hourly class. Measured before this change: all 30
+ * cadence for the default core class (publication moved hourly -> 2h on
+ * 2026-10-23; both bounds scale with `CRON_INTERVALS`). Measured before this change: all 30
  * price-derived rows sat at 23.9h and every rate-derived row at 15.9h while all
  * read `fresh`, so a dead daily feed stayed silently fresh for up to 36-48h.
  * Narrowed 2026-09-12: price-derived 36h -> 30h (1.25 daily cadences),

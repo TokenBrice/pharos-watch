@@ -14,8 +14,9 @@ export interface SlotCatchUpPolicy {
  * public Queue consumer (configured 300 s CPU), never a sub-hourly cron lane:
  * these runners are measured to exceed Cloudflare's 30-second sub-hourly class.
  * Windows are chosen so the five-minute digest poll arms quarterHourly only at
- * T+10 (off the :05 measured-execution collision) and hourlyYieldSync between
- * T+10 and T+45.
+ * T+10 (off the :05 measured-execution collision) and the two-hourly
+ * hourlyYieldSync between T+10 and T+105, at least 15 minutes before its next
+ * natural slot.
  */
 export const SLOT_CATCH_UP_POLICIES = {
   quarterHourly: { graceSec: 6 * 60, nextSlotMarginSec: 3 * 60 },

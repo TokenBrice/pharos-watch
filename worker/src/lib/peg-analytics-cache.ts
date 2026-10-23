@@ -11,7 +11,8 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 
 const PEG_ANALYTICS_CACHE_KEY = "peg-analytics";
 
-// Published by the quarter-hourly report-cards pass; 2x producer cadence.
+// Published every 30 minutes on the charts lane: by V9 input preparation at
+// :16 and standalone at :46.
 const PEG_ANALYTICS_CACHE_MAX_AGE_MS = 30 * 60 * 1000;
 
 export interface PegAnalyticsCachePayload {

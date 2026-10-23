@@ -171,7 +171,9 @@ describe("refreshStaleRegistryPools", () => {
       misses: 2, at: NOW + STALE_POOL_REFRESH_POLICY.backoffBaseSec - HOUR, reason: "incoherentPrice",
     });
     expect(Object.keys(backoff)).toHaveLength(5);
-    await expect(run(NOW + 2 * STALE_POOL_REFRESH_POLICY.backoffBaseSec)).resolves.toMatchObject({ requests: 0, backedOff: 5 });
+    // Two backoff bases later the refused pools are still backed off; the one
+    // request re-reads the admitted pool, due again past `dueAgeSec`.
+    await expect(run(NOW + 2 * STALE_POOL_REFRESH_POLICY.backoffBaseSec)).resolves.toMatchObject({ requests: 1, backedOff: 5 });
   });
 
   it("retries a backed-off pool at once when another writer refreshed it after the miss, and never backs off transport failures", async () => {

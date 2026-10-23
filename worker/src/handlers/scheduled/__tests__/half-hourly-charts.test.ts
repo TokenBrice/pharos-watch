@@ -9,6 +9,9 @@ const mocks = vi.hoisted(() => ({
   runCronSentinel: vi.fn(),
   prepareSafetyScoreV9Input: vi.fn(),
   syncStablecoinCharts: vi.fn(),
+  loadStablecoinsCache: vi.fn(),
+  derivePegAnalyticsSnapshot: vi.fn(),
+  publishPegAnalyticsCache: vi.fn(),
 }));
 
 vi.mock("../../../cron/dex-liquidity/orchestrator", () => ({
@@ -22,6 +25,15 @@ vi.mock("../../../cron/cron-sentinel", () => ({
 }));
 vi.mock("../../../cron/sync-stablecoin-charts", () => ({
   syncStablecoinCharts: mocks.syncStablecoinCharts,
+}));
+vi.mock("../../../lib/stablecoins-cache", () => ({
+  loadStablecoinsCache: mocks.loadStablecoinsCache,
+}));
+vi.mock("../../../lib/peg-analytics", () => ({
+  derivePegAnalyticsSnapshot: mocks.derivePegAnalyticsSnapshot,
+}));
+vi.mock("../../../lib/peg-analytics-cache", () => ({
+  publishPegAnalyticsCache: mocks.publishPegAnalyticsCache,
 }));
 
 import type { CronProgressReporter, CronResult } from "../../../lib/cron-logger";
@@ -96,6 +108,11 @@ function producerRunningResult(): CronResult {
 describe("half-hourly charts scheduling", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.loadStablecoinsCache.mockResolvedValue({
+      kind: "ok", updatedAt: 900, payload: { peggedAssets: [], fxFallbackRates: {} },
+    });
+    mocks.derivePegAnalyticsSnapshot.mockResolvedValue({ nowSec: 900, allEvents: [], pegDataById: new Map() });
+    mocks.publishPegAnalyticsCache.mockResolvedValue(true);
     mocks.consumeDexLiquidityScoringStage.mockResolvedValue({
       status: "skipped_neutral",
       itemCount: 0,
@@ -358,7 +375,7 @@ describe("half-hourly charts scheduling", () => {
     });
   });
 
-  it("uses the shared consume decision to reuse the exact accepted generation at :46", async () => {
+  it("reuses the exact accepted generation at :46 without re-preparing the hourly V9 input", async () => {
     const scheduledRuntime = runtime();
     scheduledRuntime.slotStartedAt = 2_760; // 1970-01-01 00:46 UTC
     const results = captureJobResults(scheduledRuntime);
@@ -381,16 +398,15 @@ describe("half-hourly charts scheduling", () => {
         },
       },
     );
-    expect(mocks.prepareSafetyScoreV9Input).toHaveBeenCalledWith(
-      scheduledRuntime.db,
-      expect.any(AbortSignal),
-      "dex-liquidity-current",
-      scheduledRuntime.chainRpcs,
-      scheduledRuntime.env.CF_VERSION_METADATA,
-      scheduledRuntime.deadline,
-      scheduledRuntime.dwellirNative,
-      2_700,
-    );
+    expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+    // The skipped preparation still keeps the 30-minute peg-analytics cache fresh.
+    expect(mocks.derivePegAnalyticsSnapshot).toHaveBeenCalledWith(scheduledRuntime.db, {
+      peggedAssets: [], fxFallbackRates: {}, methodologyAsOf: 900, includeNavTokens: true,
+    });
+    expect(mocks.publishPegAnalyticsCache).toHaveBeenCalledOnce();
+    expect(jobMetadata(results, "prepare-safety-score-v9-input")).toEqual({
+      reason: "v9-input-hourly-cadence", pegAnalyticsPublished: true,
+    });
     expect(mocks.runCronSentinel).not.toHaveBeenCalled();
     expect(jobMetadata(results, "cron-sentinel")).toMatchObject({
       reason: "upstream-dex-publication-unavailable",
