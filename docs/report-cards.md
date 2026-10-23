@@ -41,8 +41,6 @@ Control=min binding economic path, overall≤90 (including non-authority). [Auth
 
 v10.31: known-share local authority, including bounded powers/incidents, is non-binding and priced without thresholds by the [resolved mixture](process/report-cards-appendix.md#v1031-exposure-weighted-local-authority). Null-share binding, bridges and oracles retain prior treatment.
 
-v10.32: publication is hourly at `:22`; bounds defined as two publication cycles (endpoint/consumer freshness and the `lenderCollateralBacking` previous-publication bound) move from 3,600 to 7,200 s, and the lagging-capture budget to 4,500 s. Arithmetic, thresholds and evidence-age policy constants are unchanged; activation is provisional until the cadence release.
-
 Admitted facts retain canonical order, causes, traces and inventory under the control contract below.
 
 Custody/bridge/incident/oracle/reserve credit requires exact identity and current evidence/denominator. MPC/HSM needs its own complete/current profile; custody gaps retain technical credit/scoped U, not quorum proof ([gates](process/report-cards-appendix.md#campaign-admission-rules)).
@@ -154,13 +152,13 @@ Archive tooling (`worker/scripts/export-safety-score-capture-archive.ts`) lists 
 
 Coalesce generation-bound reads; verify integrity/live health before `200`. Missing/invalid evidence returns reason-bearing `503 no-store`; valid health identity/time mismatches serve held accepted bytes. Never rescore or fall back to V8; retired unversioned/preview routes return `404`.
 
-`X-Safety-Score-Status` is `current`, or `held` for last accepted ratings/clock served `no-store`. Non-held publications older than 7200s (one missed hourly publication) or future at any skew instead emit status `stale`, `X-Data-Freshness: stale`, `X-Data-Freshness-Reason` (`safety-score-publication-age`/`future-timestamp`), `Warning: 110` and `no-store`; body `publicationHealth`/`publicationStatus` remain producer health. Every response includes `X-Safety-Score-Freshness-Budget`/`X-Safety-Score-Generation`. Current shared/browser TTL plus `stale-while-revalidate` cannot exceed remaining budget. This covers `/api/report-cards/v9`, site projections, `/api/safety-grades` and `/api/dependency-graph/v1`.
+`X-Safety-Score-Status` is `current`, or `held` for last accepted ratings/clock served `no-store`. Non-held publications older than 7200s (one missed publication) or future at any skew instead emit status `stale`, `X-Data-Freshness: stale`, `X-Data-Freshness-Reason` (`safety-score-publication-age`/`future-timestamp`), `Warning: 110` and `no-store`; body `publicationHealth`/`publicationStatus` remain producer health. Every response includes `X-Safety-Score-Freshness-Budget`/`X-Safety-Score-Generation`. Current shared/browser TTL plus `stale-while-revalidate` cannot exceed remaining budget. This covers `/api/report-cards/v9`, site projections, `/api/safety-grades` and `/api/dependency-graph/v1`.
 
 [Materialization admission and rollout](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/worker-infrastructure-appendix.md#v9-public-response-materialization) owns wire resolution, live-health re-admission, atomic storage, repair, retirement and qualification.
 
 Site-only [compact list/detail representations](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/report-cards-appendix.md#compact-website-representations) preserve the full report and free-grades contracts.
 
-Endpoint freshness uses 2x `compute-safety-score-v9` (7200 s), tolerating one missed hourly publication, matching consumer fail-close. `worker/src/lib/safety-score-v9/consumer-freshness.ts` rejects non-finite or future `updatedAt` (and non-finite `now`); no clock-skew allowance or alternate consumer budget is introduced.
+Endpoint freshness uses 2x `compute-safety-score-v9` (7200 s), tolerating one missed publication, matching consumer fail-close. `worker/src/lib/safety-score-v9/consumer-freshness.ts` rejects non-finite or future `updatedAt` (and non-finite `now`); no clock-skew allowance or alternate consumer budget is introduced.
 
 The response carries V9 identity/source digests, methodology/policy identity, active-set completeness, current/held health, native three-pillar cards with nullable excluded diagnostics and status-aware breakdowns, per-card `backingFromLiveReserves`, the serial/basket dependency graph and accepted `updatedAt`.
 

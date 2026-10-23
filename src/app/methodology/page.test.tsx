@@ -169,7 +169,7 @@ describe("MethodologyPage", () => {
     const text = methodologyDocument().querySelector("#safety-scores-methodology")!.textContent;
     for (const rule of [
       "120-second skew and 30-minute age limits", "Exactly 1%", "inclusive eight-hour book budget",
-      "within one hour", "L = 100 − t × (100 − q)", "including HBD",
+      "within two hours", "L = 100 − t × (100 − q)", "including HBD",
       "next UTC midnight", "Two usable pillars permit a rating", "Physical GOLD/SILVER delivery",
       "code-unit order", "capacity materiality gates", "86,400-second allowance",
     ]) expect(text).toContain(rule);
