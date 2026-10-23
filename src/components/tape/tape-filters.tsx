@@ -91,9 +91,11 @@ const COMBOBOX_TRIGGER =
 // itself when the timer fires.
 function DebouncedSearchInput({ value, onCommit }: { value: string; onCommit: (v: string) => void }) {
   const [local, setLocal] = useState(value);
-  useEffect(() => {
+  const [syncedValue, setSyncedValue] = useState(value);
+  if (syncedValue !== value) {
+    setSyncedValue(value);
     setLocal(value);
-  }, [value]);
+  }
   useEffect(() => {
     if (local === value) return;
     const id = setTimeout(() => onCommit(local), 200);

@@ -77,7 +77,12 @@ const EMPTY_STATE_CHIPS: { label: string; href: string }[] = [
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [rawSelectedIndex, setSelectedIndex] = useState(0);
+  const [selectionQuery, setSelectionQuery] = useState(query);
+  if (selectionQuery !== query) {
+    setSelectionQuery(query);
+    setSelectedIndex(0);
+  }
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
@@ -201,13 +206,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   // ── Clamp selected index when results change ──────────────────────────
 
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [query]);
-
-  useEffect(() => {
-    setSelectedIndex((current) => clampCommandPaletteSelectedIndex(current, flatResults.length));
-  }, [flatResults.length]);
+  const selectedIndex = clampCommandPaletteSelectedIndex(rawSelectedIndex, flatResults.length);
 
   // Single selection path for keyboard Enter and pointer clicks: fires the
   // bounded `palette_selected` payload, then dispatches. Raw query text is
@@ -267,15 +266,11 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     if (e.key === "ArrowDown") {
       e.preventDefault();
       if (flatResults.length === 0) return;
-      setSelectedIndex((prev) =>
-        prev < flatResults.length - 1 ? prev + 1 : 0
-      );
+      setSelectedIndex(selectedIndex < flatResults.length - 1 ? selectedIndex + 1 : 0);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       if (flatResults.length === 0) return;
-      setSelectedIndex((prev) =>
-        prev > 0 ? prev - 1 : flatResults.length - 1
-      );
+      setSelectedIndex(selectedIndex > 0 ? selectedIndex - 1 : flatResults.length - 1);
     } else if (e.key === "Enter") {
       if (flatResults[selectedIndex]) {
         e.preventDefault();

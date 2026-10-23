@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckIcon, DownloadIcon, Share2Icon, XIcon } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -183,16 +183,20 @@ export function YieldCompareDrawer({
   onOpenChange,
   rows,
   logos,
-  updatedAt = Math.floor(Date.now() / 1000),
+  updatedAt: updatedAtProp,
   methodologyLabel = "Pharos Yield Score current",
 }: YieldCompareDrawerProps) {
   const { ids, toggle } = useYieldCompareSelection();
+  const [openedAt] = useState(() => Math.floor(Date.now() / 1000));
+  const updatedAt = updatedAtProp ?? openedAt;
   const [shareStatus, setShareStatus] = useState<"shared" | "copied" | "failed" | null>(null);
   // A stale Shared/copied/failed state must never survive a different
   // selection or a reopen: reset on ids change and whenever the drawer opens.
-  useEffect(() => {
+  const [shareContext, setShareContext] = useState({ ids, open });
+  if (shareContext.ids !== ids || shareContext.open !== open) {
+    setShareContext({ ids, open });
     setShareStatus(null);
-  }, [ids, open]);
+  }
   const rowsById = useMemo(() => new Map(rows.map((row) => [row.id, row] as const)), [rows]);
   const columns: CompareColumn[] = useMemo(
     () => ids.map((id) => ({ id, row: rowsById.get(id) ?? null })),
