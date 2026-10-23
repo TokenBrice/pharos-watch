@@ -4,14 +4,16 @@ import {
   STATUS_RESERVE_COMPOSITION_THRESHOLDS,
   STATUS_RESERVE_COHORT_SLO,
   STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC,
+  STATUS_ACTIVE_PRICE_BREADTH_MIN_GENERATIONS,
+  countActivePriceBreadthGaps,
   getActiveAssetServiceBreadthThreshold,
   getActivePriceCoverageBreadthStatus,
   getCacheRatioThresholds,
   getStablecoinPublicationImpactStatus,
 } from "@shared/lib/status-thresholds";
 import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
-import { PUBLIC_CIRCUIT_IMPACT_QUORUM } from "@shared/lib/public-health";
-import { API_FRESHNESS_MAX_AGE_SEC, CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
+import { getPublicProducerGraceBudget, PUBLIC_CIRCUIT_IMPACT_QUORUM, PUBLIC_PRODUCER_INTERVAL_SEC } from "@shared/lib/public-health";
+import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { D1_QUOTA_THRESHOLDS } from "@shared/lib/d1-capacity";
 import { formatPercentFromRatio } from "@shared/lib/format";
 import type { DataQuality, D1QuotaAssessment, D1QuotaMetric, StatusCause, StatusResponse } from "@shared/types/status";
@@ -511,8 +513,16 @@ export function evaluateSchedulerLiveness(scheduler: PublicHealthAssessment["sch
 
 function evaluateSafetyScoreStatus(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
   const status = input.publicHealth.safetyScoreImpactStatus;
-  if (status === "healthy") return null;
   const publication = input.publicHealth.safetyScorePublication;
+  const budget = getPublicProducerGraceBudget(PUBLIC_PRODUCER_INTERVAL_SEC.safetyScores);
+  if (status === "healthy") {
+    // A hold with in-budget accepted scores is an operator notice, not an availability floor.
+    if (publication?.status !== "held") return null;
+    return ruleResult(status, [makeCause(
+      "availability", "safety_score_publication_held", "info",
+      `Safety Score publication is held while required inputs recover (${publication.reasons.map((entry) => entry.code).join(", ") || "safety-score-publication-held"}); the accepted generation ${publication.acceptedPublicationGenerationId ?? "unknown"} is inside its public budget (delayed >${budget.delayedAfterSec}s).`,
+    )]);
+  }
   const unavailableReason = input.publicHealth.safetyScorePublicationUnavailableReason;
   const code = unavailableReason || !publication
     ? "safety_score_publication_unavailable"
@@ -530,7 +540,7 @@ function evaluateSafetyScoreStatus(input: AvailabilityEvaluationInput): Partial<
         : "The accepted Safety Score publication is past its public freshness budget.";
   const accepted = publication?.acceptedAtSec == null
     ? ""
-    : ` Last accepted generation ${publication.acceptedPublicationGenerationId ?? "unknown"} at ${publication.acceptedAtSec}; freshness budget ${API_FRESHNESS_MAX_AGE_SEC.reportCards}s.`;
+    : ` Last accepted generation ${publication.acceptedPublicationGenerationId ?? "unknown"} at ${publication.acceptedAtSec}; public budget delayed >${budget.delayedAfterSec}s, degraded >${budget.degradedAfterSec}s.`;
   return ruleResult(status, [makeCause(
     "availability", code, status === "stale" ? "critical" : "warning", `${reason}${accepted}`,
   )]);
@@ -607,7 +617,7 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput
         "availability",
         "mint_burn_public_degraded",
         "info",
-        `Critical mint/burn output is fresh and the lane is healthy. Execution notice: ${input.publicHealth.mintBurn.sync.warning}`,
+        `Critical mint/burn output is inside its public budget. Execution notice: ${input.publicHealth.mintBurn.sync.warning}`,
       );
     }
     return ruleResult(status, cause ? [cause] : []);
@@ -823,7 +833,8 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
           ? ` ${reviewed.length} acknowledged gap(s) under review: ${reviewed.join("; ")}.`
           : "";
         const baseMessage = `Live prices are missing for ${coverage.missingPriceCount ?? "an unknown number of"} active asset(s).${acknowledgement}`;
-        const breadthDegraded = getActivePriceCoverageBreadthStatus(coverage) !== "healthy";
+        const publicationMissingIds = input.dataQuality.stablecoinPublication?.missingActiveIds ?? [];
+        const breadthDegraded = getActivePriceCoverageBreadthStatus(coverage, publicationMissingIds) !== "healthy";
         const notAlerting = reviewed.length > 0
           ? " Every missing gap is either acknowledged under review or below the alert-eligible persistence threshold"
           : " No gap has reached the alert-eligible persistence threshold";
@@ -855,7 +866,7 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
             "data-quality",
             "active_price_coverage_breadth_degraded",
             "warning",
-            `Live prices are unavailable for ${coverage.missingPriceCount ?? "an unknown number of"} of ${coverage.expectedActiveCount ?? "an unknown number of"} active assets${breakdown}, reaching the service-wide breadth threshold${threshold == null ? "" : ` (${threshold})`}.`,
+            `Live prices are unavailable for ${coverage.missingPriceCount ?? "an unknown number of"} of ${coverage.expectedActiveCount ?? "an unknown number of"} active assets${breakdown}; ${countActivePriceBreadthGaps(coverage, publicationMissingIds) ?? "an unknown number"} persisted ${STATUS_ACTIVE_PRICE_BREADTH_MIN_GENERATIONS}+ generations outside publication gaps, reaching the service-wide breadth threshold${threshold == null ? "" : ` (${threshold})`}.`,
             { metric: "missingActivePrices", value: coverage.missingPriceCount ?? undefined, threshold: threshold ?? undefined },
           ));
         }

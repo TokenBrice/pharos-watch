@@ -96,6 +96,11 @@ const EMPTY_MINT_BURN_HEALTH: HealthResponse["mintBurn"] = {
 export interface PublicHealthAssessment {
   dbHealthy: boolean;
   overallStatus: HealthResponse["status"];
+  /**
+   * `overallStatus` without the cache-age floor, so a stored snapshot can
+   * re-grade cache freshness at read time without losing the other floors.
+   */
+  statusExcludingCacheFreshness: HealthResponse["status"];
   warnings: string[];
   caches: HealthResponse["caches"];
   cacheImpactStatus: HealthResponse["status"];
@@ -436,7 +441,7 @@ async function loadMintBurnHealth(
 
     return {
       mintBurn,
-      mintBurnImpactStatus: mintBurnQueryError ? "degraded" : getPublicMintBurnStatus(sync),
+      mintBurnImpactStatus: mintBurnQueryError ? "degraded" : getPublicMintBurnStatus(sync, now),
       mintBurnQueryError,
       mintBurnLastRunStatus: latestRun?.status ?? null,
       mintBurnBootstrap:
@@ -586,6 +591,7 @@ export async function assessPublicHealth(
     return {
       dbHealthy: false,
       overallStatus: "stale",
+      statusExcludingCacheFreshness: "stale",
       warnings,
       caches: {},
       cacheImpactStatus: "stale",
@@ -829,7 +835,7 @@ export async function assessPublicHealth(
   const criticalDurationIds = getCriticalDurationActivePriceGapIds(activePriceCoverage);
   const activePriceCoverageImpactStatus: HealthResponse["status"] =
     activePriceCoverage.status === "unknown"
-      || getActivePriceCoverageBreadthStatus(activePriceCoverage) !== "healthy"
+      || getActivePriceCoverageBreadthStatus(activePriceCoverage, stablecoinPublication.missingActiveIds) !== "healthy"
       ? "degraded"
       : "healthy";
   if (activePriceCoverage.status === "unknown") {
@@ -858,8 +864,7 @@ export async function assessPublicHealth(
     if (error) warnings.push(error);
   }
 
-  const overallStatus = maxPublicStatus(
-    cacheImpactStatus,
+  const statusExcludingCacheFreshness = maxPublicStatus(
     cacheQualityImpactStatus,
     mintBurnResult.mintBurnImpactStatus,
     circuitImpactStatus,
@@ -871,10 +876,12 @@ export async function assessPublicHealth(
     safetyScoreImpactStatus,
     schedulerLivenessImpactStatus,
   );
+  const overallStatus = maxPublicStatus(cacheImpactStatus, statusExcludingCacheFreshness);
 
   return {
     dbHealthy: true,
     overallStatus,
+    statusExcludingCacheFreshness,
     warnings,
     caches: cachesWithProvider,
     cacheImpactStatus,

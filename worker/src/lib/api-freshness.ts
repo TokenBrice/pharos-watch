@@ -438,6 +438,8 @@ async function resolveSentinelBackedFreshness(params: {
 export async function buildCacheStatuses(
   db: D1Database,
   now: number,
+  /** Restrict the read to these cache keys (e.g. a bounded sentinel re-read); default is every lane. */
+  options: { keys?: readonly string[] } = {},
 ): Promise<{
   caches: Record<string, CacheStatus>;
   worstRatio: number;
@@ -446,11 +448,14 @@ export async function buildCacheStatuses(
   statusFloor: "healthy" | "degraded" | "stale";
   warnings: string[];
 }> {
-  const sentinelBackedCacheKeys = listFreshnessSentinelBackedCacheKeys();
+  const includeKey = (key: string) => options.keys == null || options.keys.includes(key);
+  const sentinelBackedCacheKeys = listFreshnessSentinelBackedCacheKeys().filter(includeKey);
   const sentinelBackedCacheKeySet = new Set<string>(sentinelBackedCacheKeys);
-  const sentinelCacheKeys = listFreshnessSentinelCacheKeys();
+  const sentinelCacheKeys = options.keys == null
+    ? listFreshnessSentinelCacheKeys()
+    : sentinelBackedCacheKeys.map((key) => getFreshnessSentinelCacheKey(key));
   const cacheOnlyKeys = Object.keys(CACHE_FRESHNESS_THRESHOLDS).filter(
-    (key) => !sentinelBackedCacheKeySet.has(key),
+    (key) => !sentinelBackedCacheKeySet.has(key) && includeKey(key),
   );
   const fxMetaKey = getFxRatesMetaKey();
   const cacheLookupKeys = Array.from(
@@ -517,6 +522,7 @@ export async function buildCacheStatuses(
   const cronHistory = await readProducerCronHistory(db, sentinelBackedCacheKeys);
 
   for (const [key, maxAge] of Object.entries(CACHE_FRESHNESS_THRESHOLDS)) {
+    if (!includeKey(key)) continue;
     let ageSeconds: number | null;
     let generationId: string | null = null;
     let publishedAt: number | null = null;

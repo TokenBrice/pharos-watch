@@ -6,6 +6,34 @@ import { advancePublicHealthSnapshot, loadStatusPublicHealthSnapshot } from "../
 import { loadSchedulerLiveness, schedulerLivenessImpactStatus, schedulerLivenessWarnings } from "../lib/status/scheduler-liveness";
 import { maxPublicStatus } from "@shared/lib/public-health";
 import { projectPublicStatus } from "@shared/lib/public-status-components";
+import { getCacheFreshnessStatus } from "@shared/lib/cache-health";
+import { buildCacheStatuses } from "../lib/api-freshness";
+import { listFreshnessSentinelBackedCacheKeys } from "../lib/freshness-sentinels";
+import { logWorkerEvent } from "../lib/structured-log";
+
+/**
+ * Re-read only the freshness sentinels of lanes the stored snapshot already
+ * grades late, so a producer that published since the snapshot clears at
+ * once. Bounded (sentinel lanes, only when late) and fail-closed: any read
+ * failure keeps the stored snapshot's ages.
+ */
+async function readRecoveredSentinelCaches(db: D1Database, now: number, health: HealthResponse) {
+  const keys = listFreshnessSentinelBackedCacheKeys().filter((key) => {
+    const cache = health.caches[key];
+    return cache != null && getCacheFreshnessStatus(cache, key) !== "healthy";
+  });
+  if (keys.length === 0) return null;
+  try {
+    const current = await buildCacheStatuses(db, now, { keys });
+    return current.failures.length === 0 ? current.caches : null;
+  } catch (error) {
+    logWorkerEvent({
+      scope: "status", level: "warn", event: "health_sentinel_reread_failed", route: "health",
+      message: "Freshness sentinel re-read failed; serving the stored snapshot ages.", error,
+    });
+    return null;
+  }
+}
 
 export const handleHealth = async (db: D1Database): Promise<Response> => {
   const now = Math.floor(Date.now() / 1000);
@@ -21,7 +49,14 @@ export const handleHealth = async (db: D1Database): Promise<Response> => {
         warning === "scheduled_delivery_stalled" || warning === "scheduler_liveness_unavailable"
         || warning === "heavy_scheduled_delivery_stalled" || warning === "heavy_scheduler_liveness_unavailable"));
   if (cachedHealth != null && !cachedSchedulerUnhealthy) {
-    const agedHealth = advancePublicHealthSnapshot(cachedHealth, now);
+    const statusExcludingCacheFreshness = snapshot.kind === "fresh" ? snapshot.payload.statusExcludingCacheFreshness : undefined;
+    const advanced = advancePublicHealthSnapshot(cachedHealth, now);
+    const currentCaches = statusExcludingCacheFreshness != null
+      ? await readRecoveredSentinelCaches(db, now, advanced)
+      : null;
+    const agedHealth = currentCaches
+      ? advancePublicHealthSnapshot(cachedHealth, now, { statusExcludingCacheFreshness, currentCaches })
+      : advanced;
     const status = maxPublicStatus(agedHealth.status,
       schedulerLivenessImpactStatus(schedulerLiveness));
     const body: HealthResponse = {

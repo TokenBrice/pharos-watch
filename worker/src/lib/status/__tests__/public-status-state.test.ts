@@ -1,3 +1,4 @@
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { afterEach, describe, expect, it } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
@@ -38,7 +39,7 @@ describe("reconcilePublicStatusState", () => {
     expect(history.transitions[0].components).toEqual([]);
   });
 
-  it("persists held and recovered Safety Scores in the public transition stream", async () => {
+  it("keeps an in-budget Safety Score hold out of the transition stream, then records its age outage", async () => {
     const { db } = fixtures.open();
     const health = makeHealthyHealthResponse();
     await reconcilePublicStatusState(db, NOW, health);
@@ -47,12 +48,16 @@ describe("reconcilePublicStatusState", () => {
       attemptedAtSec: health.timestamp, heldSinceSec: health.timestamp - 10,
       reasons: [{ code: "redemption-stale" }],
     };
-    await reconcilePublicStatusState(db, NOW + 900, health);
-    await reconcilePublicStatusState(db, NOW + 1800, makeHealthyHealthResponse());
+    const held = await reconcilePublicStatusState(db, NOW + 900, health);
+    expect(held.projection.headline).toMatchObject({ state: "operational", affected: ["safety-scores"] });
+    expect((await listPublicStatusTransitions(db, 50, NOW - 1)).transitions).toHaveLength(1);
+    health.safetyScorePublication.acceptedAtSec = health.timestamp - 12 * CRON_INTERVALS["compute-safety-score-v9"] - 1;
+    await reconcilePublicStatusState(db, NOW + 1800, health);
+    await reconcilePublicStatusState(db, NOW + 2700, makeHealthyHealthResponse());
     const history = await listPublicStatusTransitions(db, 50, NOW - 1);
     expect(history.transitions[1]).toMatchObject({
-      source: "public", transitionType: "degrade", headline: { state: "degraded" },
-      components: [{ id: "safety-scores", state: "degraded", reasons: ["safety-score-publication-held", "safety-score-publication-held:redemption-stale"] }],
+      source: "public", transitionType: "degrade", headline: { state: "partial-outage" },
+      components: [{ id: "safety-scores", state: "outage", reasons: expect.arrayContaining(["safety-score-publication:outage", "safety-score-publication-held"]) }],
     });
     expect(history.transitions[0]).toMatchObject({ transitionType: "recover", components: [] });
   });

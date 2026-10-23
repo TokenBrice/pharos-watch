@@ -171,16 +171,50 @@ function exceedsPublicationServiceBreadth(
 }
 
 /**
+ * Consecutive missing `sync-stablecoins` generations before an unpriced asset
+ * counts toward price-coverage breadth (2026-10-23). Single-generation fetch
+ * misses (5 of 12 gaps in the 2026-10-23 sample) flapped breadth across its
+ * threshold every hour; a gap that persists into a second generation counts.
+ */
+export const STATUS_ACTIVE_PRICE_BREADTH_MIN_GENERATIONS = 2;
+
+/**
+ * Unpriced active assets that count toward breadth: gaps that persisted for
+ * `STATUS_ACTIVE_PRICE_BREADTH_MIN_GENERATIONS`, or whose streak or detail
+ * row is unknown (fail closed). Assets missing from the publication itself are excluded:
+ * publication coverage already reports them (`publication-incomplete`), so one
+ * gap is not counted twice. Null when the count is unavailable.
+ */
+type ActivePriceBreadthCoverage = Pick<ActivePriceCoverageHealth, "status" | "expectedActiveCount" | "missingPriceCount"> & {
+  missingActiveAssets: readonly Pick<ActivePriceCoverageGap, "stablecoinId" | "consecutiveMissingGenerations">[];
+};
+
+export function countActivePriceBreadthGaps(
+  coverage: Pick<ActivePriceBreadthCoverage, "missingPriceCount" | "missingActiveAssets">,
+  publicationMissingIds: readonly string[] = [],
+): number | null {
+  if (coverage.missingPriceCount == null) return null;
+  const publicationMissing = new Set(publicationMissingIds);
+  const withoutDetail = Math.max(0, coverage.missingPriceCount - coverage.missingActiveAssets.length);
+  return withoutDetail + coverage.missingActiveAssets.filter((asset) => !publicationMissing.has(asset.stablecoinId)
+    && (asset.consecutiveMissingGenerations == null
+      || asset.consecutiveMissingGenerations >= STATUS_ACTIVE_PRICE_BREADTH_MIN_GENERATIONS)).length;
+}
+
+/**
  * Unavailable live prices (every missing active price, reviewed or not: each is
- * unavailable to readers) degrade the service at the shared breadth threshold.
- * Unknown coverage has its own fail-closed path; only an incomplete payload is
- * graded here, and missing counts fail closed.
+ * unavailable to readers) degrade the service at the shared breadth threshold,
+ * counted by `countActivePriceBreadthGaps`. Unknown coverage has its own
+ * fail-closed path; only an incomplete payload is graded here, and missing
+ * counts fail closed.
  */
 export function getActivePriceCoverageBreadthStatus(
-  coverage: Pick<ActivePriceCoverageHealth, "status" | "expectedActiveCount" | "missingPriceCount">,
+  coverage: ActivePriceBreadthCoverage,
+  publicationMissingIds: readonly string[] = [],
 ): StatusHealthValue {
   if (coverage.status !== "incomplete") return "healthy";
-  return reachesActiveAssetServiceBreadth(coverage.missingPriceCount, coverage.expectedActiveCount) ? "degraded" : "healthy";
+  return reachesActiveAssetServiceBreadth(countActivePriceBreadthGaps(coverage, publicationMissingIds), coverage.expectedActiveCount)
+    ? "degraded" : "healthy";
 }
 
 /** Producer evidence window for an absent row's retained market cap. The cap is
@@ -243,6 +277,20 @@ export function getCriticalDurationActivePriceGapIds(
     .map((asset) => asset.stablecoinId);
 }
 
+// --- Public producer grace (owner rule 2026-10-23) ---
+/**
+ * One public grace rule for producer-graded components (yield, Safety Scores,
+ * mint/burn): age is graded against the producer interval, `delayed` past 3×,
+ * `degraded` past 6×, and an outage past 12× (the degraded band times
+ * `PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER`). Two missed runs stay
+ * operational. Every verdict publishes its budget (R3); this is the single
+ * authority for those multiples (R5).
+ */
+export const STATUS_PUBLIC_PRODUCER_GRACE_RATIOS = {
+  delayed: 3,
+  degraded: 6,
+} as const;
+
 // --- Cache ratio thresholds (availability status) ---
 /** Age/interval ratio bands for cached endpoint availability. Distinct from FRESHNESS_RATIOS: applied at the endpoint-availability layer, not the per-record freshness layer. */
 export const STATUS_CACHE_RATIO_THRESHOLDS = {
@@ -255,15 +303,21 @@ export const STATUS_CACHE_RATIO_THRESHOLDS = {
  * Tightens the default 8×/12× tolerance for caches whose slow stale window would
  * otherwise under-report real user impact on the public status surface.
  *
- * `yield-data`: hourly producer (`sync-yield-data`, 3600s availability budget).
- * Under the global bands a lane can serve ~8h-stale rankings while public health
- * still reads "healthy", even though the admin endpoint-budget lane already flags
- * it at 1×. Ruling R3 (2026-07-19) tightens it to degrade after two missed hourly
- * publishes (2×) and go stale after four (4×); one missed publish stays healthy.
- * See docs/architecture.md ADR-9 and docs/status-dashboard.md.
+ * `yield-data`: hourly producer (`sync-yield-data`, 3600s availability budget,
+ * equal to the producer interval). Under the global bands a lane can serve
+ * ~8h-stale rankings while public health still reads "healthy", even though the
+ * admin endpoint-budget lane already flags it at 1×. Since 2026-10-23 it follows
+ * the one public producer grace rule (`STATUS_PUBLIC_PRODUCER_GRACE_RATIOS`):
+ * public-unhealthy (Delayed) past 3× and stale (Degraded) past 6×, so a single
+ * missed or abandoned hourly run stays healthy. The 2026-07-19 2×/4× bands let
+ * one abandoned run read Delayed. See docs/architecture.md ADR-9 and
+ * docs/status-dashboard.md.
  */
 export const STATUS_CACHE_RATIO_OVERRIDES: Record<string, { degraded: number; stale: number }> = {
-  "yield-data": { degraded: 2.0, stale: 4.0 },
+  "yield-data": {
+    degraded: STATUS_PUBLIC_PRODUCER_GRACE_RATIOS.delayed,
+    stale: STATUS_PUBLIC_PRODUCER_GRACE_RATIOS.degraded,
+  },
 };
 
 /** Resolve the availability ratio bands for a cache key, applying any per-cache override. */
