@@ -13,6 +13,8 @@ import {
   CronTimeoutError,
 } from "./cron-lease-primitives";
 import {
+  CRON_PROGRESS_LONG_RUN_AFTER_MS,
+  CRON_PROGRESS_LONG_RUN_COALESCE_MS,
   getCronTimeoutBudgetMetadata,
   resolveCronTimeoutBudget,
   shouldSkipCronProgress,
@@ -513,7 +515,9 @@ export async function logCronRun(
     if (
       !stageChanged
       && lastProgressWriteAtMs != null
-      && nowMs - lastProgressWriteAtMs < CRON_PROGRESS_COALESCE_MS
+      && nowMs - lastProgressWriteAtMs < (nowMs - startMs >= CRON_PROGRESS_LONG_RUN_AFTER_MS
+        ? CRON_PROGRESS_LONG_RUN_COALESCE_MS
+        : CRON_PROGRESS_COALESCE_MS)
     ) {
       return progressWriteTail;
     }

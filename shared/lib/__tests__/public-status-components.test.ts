@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { CRON_INTERVALS } from "../cron-jobs";
 import { makeHealthyHealthResponse } from "../../test-utils/health-fixtures";
 import {
+  applyPublicStatusHysteresis,
   buildPublicHeadline,
+  holdPublicStatusAtReadTime,
   headlineToStatusLevel,
   projectPublicStatus,
   PUBLIC_CACHE_COMPONENT,
@@ -345,6 +347,61 @@ describe("public status components", () => {
       state: "degraded", reasons: ["unattributed-public-health:degraded"],
     });
     expect(projectPublicStatus(health).headline.state).toBe("degraded");
+  });
+
+  it.each(["d1-capacity-future-clock", "d1-capacity-missing", "d1-capacity-query-failed"])(
+    "keeps the %s evidence-plane fault a named unknown-capacity notice, never orange", (warning) => {
+      const health = makeHealthyHealthResponse();
+      health.warnings = [warning];
+      expect(component(health, "website-api")).toMatchObject({
+        state: "operational", reasons: [warning], summary: expect.stringContaining("capacity is unknown"),
+      });
+      expect(projectPublicStatus(health).headline).toMatchObject({ state: "operational", affected: ["website-api"] });
+    },
+  );
+
+  it("keeps unknown cache quality a notice while the age bands still grade real staleness", () => {
+    const health = makeHealthyHealthResponse();
+    health.caches = { "dex-liquidity": { ...cache(60, 3600), healthy: false, degraded: null, degradedReason: "producer-history-unreadable" } };
+    expect(component(health, "liquidity")).toMatchObject({
+      state: "operational", reasons: ["cache:dex-liquidity:quality-unknown"], summary: expect.stringContaining("unknown"),
+    });
+    health.caches["dex-liquidity"] = { ...health.caches["dex-liquidity"], ageSeconds: 3600 * 13 };
+    expect(component(health, "liquidity")).toMatchObject({
+      state: "degraded", reasons: expect.arrayContaining(["cache:dex-liquidity:stale", "cache:dex-liquidity:quality-unknown"]),
+    });
+  });
+
+  it("publishes a change only after two agreeing evaluations, bypassing on outage", () => {
+    const late = makeHealthyHealthResponse();
+    late.caches = { "stablecoin-charts": cache(3600 * 9, 3600) };
+    const raw = projectPublicStatus(late);
+    const published = new Map(projectPublicStatus(makeHealthyHealthResponse()).components
+      .map((item) => [item.id, { ...item, pending: null }]));
+    const first = applyPublicStatusHysteresis(raw, published, NOW);
+    expect(first.projection.components.find((item) => item.id === "charts")!.state).toBe("operational");
+    expect(first.pending.charts).toEqual({ state: "delayed", count: 1, firstSeenAt: NOW });
+    const withPending = new Map(first.projection.components.map((item) => [item.id, { ...item, pending: first.pending[item.id] ?? null }]));
+    const second = applyPublicStatusHysteresis(raw, withPending, NOW + 900);
+    expect(second.projection.components.find((item) => item.id === "charts")).toMatchObject({ state: "delayed", since: NOW });
+    expect(second.projection.headline.state).toBe("delayed");
+
+    late.caches = { "stablecoin-charts": cache(3600 * 25, 3600) };
+    const outage = applyPublicStatusHysteresis(projectPublicStatus(late), published, NOW);
+    expect(outage.projection.components.find((item) => item.id === "charts")).toMatchObject({ state: "outage", since: NOW });
+  });
+
+  it("holds unconfirmed read-time worsening but clears a read-time recovery at once", () => {
+    const healthy = projectPublicStatus(makeHealthyHealthResponse());
+    const late = makeHealthyHealthResponse();
+    late.caches = { "stablecoin-charts": cache(3600 * 9, 3600) };
+    const delayed = projectPublicStatus(late);
+    // Snapshot published operational and its own inputs agreed: a read-time crossing is held.
+    expect(holdPublicStatusAtReadTime(delayed, healthy.components, healthy).headline.state).toBe("operational");
+    // Snapshot published delayed from its inputs; a producer published since: clear now.
+    expect(holdPublicStatusAtReadTime(healthy, delayed.components, delayed).headline.state).toBe("operational");
+    // Snapshot still confirming a clear (raw already operational): keep the published state.
+    expect(holdPublicStatusAtReadTime(healthy, delayed.components, healthy).headline.state).toBe("delayed");
   });
 
   it("keeps a D1 watch capacity state operational, matching the worker verdict", () => {

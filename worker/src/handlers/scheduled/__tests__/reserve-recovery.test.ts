@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   createRuntime: vi.fn(),
   configRecovery: vi.fn(),
   priority: vi.fn(),
+  catchUpDetection: vi.fn(),
   reserveSlotInitialized: false,
   configRecoveryInitialized: false,
 }));
@@ -31,6 +32,9 @@ vi.mock("../../../lib/reserve-continuation-reconciliation", () => ({
 }));
 vi.mock("../../../lib/scheduled-slot-fence", () => ({
   sweepStaleScheduledSlotExecutions: mocks.sweep,
+}));
+vi.mock("../../../lib/scheduled-slot-catch-up", () => ({
+  runSlotCatchUpDetection: mocks.catchUpDetection,
 }));
 vi.mock("../four-hourly-reserves", () => {
   mocks.reserveSlotInitialized = true;
@@ -240,6 +244,19 @@ describe("reserve recovery mode", () => {
     value.dwellirNative = capability;
     await runFiveMinuteReserveRecoverySlot(value);
     expect(mocks.configRecovery.mock.calls[0]?.[2]?.dwellirNative).toBe(capability);
+  });
+
+  it("runs bounded catch-up detection before reserve work, even when reserve recovery is off", async () => {
+    const order: string[] = [];
+    mocks.catchUpDetection.mockImplementation(async () => { order.push("detect"); });
+    const value = runtime("off");
+    vi.mocked(value.runLeasedCron).mockImplementationOnce(async () => { order.push("reserve"); });
+    await runFiveMinuteReserveRecoverySlot(value);
+
+    expect(order).toEqual(["detect", "reserve"]);
+    expect(mocks.catchUpDetection).toHaveBeenCalledExactlyOnceWith(value.env, {
+      host: "minute-lane", invocationId: "recovery-poll", signal: expect.any(AbortSignal), reconcileStale: true,
+    });
   });
 
   it("does not run the global sweep on disabled reserve polls", async () => {

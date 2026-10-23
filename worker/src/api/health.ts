@@ -5,7 +5,7 @@ import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-prof
 import { advancePublicHealthSnapshot, loadStatusPublicHealthSnapshot } from "../lib/status/public-health-snapshot";
 import { loadSchedulerLiveness, schedulerLivenessImpactStatus, schedulerLivenessWarnings } from "../lib/status/scheduler-liveness";
 import { maxPublicStatus } from "@shared/lib/public-health";
-import { projectPublicStatus } from "@shared/lib/public-status-components";
+import { holdPublicStatusAtReadTime, projectPublicStatus } from "@shared/lib/public-status-components";
 import { getCacheFreshnessStatus } from "@shared/lib/cache-health";
 import { buildCacheStatuses } from "../lib/api-freshness";
 import { listFreshnessSentinelBackedCacheKeys } from "../lib/freshness-sentinels";
@@ -68,9 +68,15 @@ export const handleHealth = async (db: D1Database): Promise<Response> => {
     };
     // Re-project over advancing cache ages and the live scheduler overlay;
     // persisted `since` survives only for components whose state did not change.
+    // The snapshot's components are already published through hysteresis, so a
+    // read-time change honours it (outage and read-time recovery excepted).
     const since = Object.fromEntries((cachedHealth.components ?? [])
       .map((component) => [component.id, { state: component.state, since: component.since }]));
-    return jsonResponse({ ...body, ...projectPublicStatus(body, since) },
+    const live = projectPublicStatus(body, since);
+    const projection = cachedHealth.components
+      ? holdPublicStatusAtReadTime(live, cachedHealth.components, projectPublicStatus(cachedHealth))
+      : live;
+    return jsonResponse({ ...body, ...projection },
       { headers: { "Cache-Control": CACHE_PROFILES.realtime } });
   }
 

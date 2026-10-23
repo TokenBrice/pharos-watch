@@ -46,7 +46,7 @@ import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS, SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS } from "../../lib/cron-timeouts";
 import { runSafetyMapProducerKick } from "../../cron/safety-map-producer-kick";
 import { sweepStaleScheduledSlotExecutions } from "../../lib/scheduled-slot-fence";
-import { armDueSlotCatchUps } from "../../lib/scheduled-slot-catch-up";
+import { runSlotCatchUpDetection } from "../../lib/scheduled-slot-catch-up";
 import { retainUntilDeadline, settleAfterAbort } from "../../lib/cron-abort-settlement";
 
 export const DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY = "digest:last-trigger-result";
@@ -457,23 +457,6 @@ async function finishSkippedDigestTriggerPoll(
 }
 
 
-/** Zero-fetch, after the sweep: a just-reconciled abandonment is armed in the same poll. */
-async function armSlotCatchUpsAfterSweep(runtime: ScheduledRuntimeContext): Promise<void> {
-  try {
-    const armed = await armDueSlotCatchUps(runtime.env, {
-      invocationId: runtime.invocationId ?? `scheduled:digestTriggerPoll:${runtime.slotStartedAt}`,
-      signal: runtime.slotSignal,
-    });
-    if (armed.length > 0) {
-      logWorkerEvent({ scope: "handler", level: "info", event: "scheduled-slot-catch-up-armed",
-        message: "Armed one-shot catch-ups for missed scheduled slots", metadata: { armed } });
-    }
-  } catch (error) {
-    logWorkerEvent({ scope: "handler", level: "warn", event: "scheduled-slot-catch-up-arm-failed",
-      message: "Missed-slot catch-up detection did not complete", metadata: { reason: "slot-catch-up-arm-failed" }, error });
-  }
-}
-
 export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext) {
   const startedMs = Date.now();
   // DB-only control-plane stage, independent of reserve replay/admission.
@@ -501,7 +484,12 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
       message: "Global stale-slot sweep completed", metadata: { ...sweepOutcome.value } });
   }
   runtime.slotSignal?.throwIfAborted();
-  await armSlotCatchUpsAfterSweep(runtime);
+  // Zero-fetch, after the sweep: a just-reconciled abandonment is armed in the same poll.
+  await runSlotCatchUpDetection(runtime.env, {
+    host: "digest-poll",
+    invocationId: runtime.invocationId ?? `scheduled:digestTriggerPoll:${runtime.slotStartedAt}`,
+    signal: runtime.slotSignal,
+  });
   runtime.slotSignal?.throwIfAborted();
   await runTelegramDigestOutboxDrain(runtime);
   await runSafetyMapProducerKickSurface(runtime);
