@@ -269,7 +269,7 @@ gh workflow run "Rebuild Pages" --repo TokenBrice/pharos-watch --ref main
 
 ## Dependency Refresh Cadence
 
-Use dependency maintenance as a dedicated routine, not as incidental churn inside larger refactors.
+Use dependency maintenance as a dedicated routine. Dependabot updates all npm workspaces through the root lockfile; Vitest and its exact-peer coverage package stay grouped. Review shared composite-action pins alongside workflow pins, since Dependabot does not discover those copies.
 
 1. First full week of each month:
    - land one bounded patch/minor refresh tranche from the root lockfile
@@ -285,7 +285,8 @@ Use dependency maintenance as a dedicated routine, not as incidental churn insid
 Current explicitly deferred major cohort:
 
 - `eslint@10` and `typescript@6` — deferred until review on **2026-12-15**; [immutable review record](https://github.com/TokenBrice/pharos-watch/blob/e4e09b34e3b43baadd656471b973c686b34c1c27/docs/deployment-process.md#dependency-refresh-cadence).
-- `satori@0.33.0–0.60.0` — blocked: the HarfBuzz loader breaks workerd (vercel/satori#796), and 0.60 removes the `satori/yoga.wasm` export used by the renderer. Keep 0.32.0 until a reviewed migration passes `scripts/__tests__/og-worker-runtime.test.ts`; Dependabot ignores the reviewed incompatible range.
+- `vitest@5` and `@vitest/coverage-v8@5` — defer to a dedicated harness/coverage migration, reviewed by **2026-12-15**. The patched 4.1.12 pair remains supported here; v5 changes mock defaults and coverage glob matching. Require full-suite, resource and measured critical-coverage validation before adopting both together.
+- `satori>=0.33.0` — blocked pending a reviewed Worker renderer migration: HarfBuzz breaks workerd (vercel/satori#796), and 0.60/0.62 omit the required `satori/yoga.wasm` export. Keep 0.32.0 until the production OG runtime test passes; Dependabot ignores the incompatible line.
 
 The root `fflate` override pins Satori’s transitive dependency to patched `0.7.5` for [GHSA-px8p-9vwx-vf98](https://github.com/advisories/GHSA-px8p-9vwx-vf98). Keep it until Satori releases a compatible dependency update; the Worker OG renderer uses Satori for font decoding and rendering.
 
