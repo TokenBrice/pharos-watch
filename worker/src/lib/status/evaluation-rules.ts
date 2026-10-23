@@ -698,27 +698,31 @@ function evaluateReserveOperationalDiagnostics(input: DataQualityEvaluationInput
   const cohort = reserve.cohort;
   if (cohort) {
     const ageExceeded = cohort.completedAt == null && cohort.ageSec > STATUS_RESERVE_COHORT_SLO.maxAgeSec;
-    const p95Exceeded = cohort.completionP95Sec != null
-      && cohort.completionP95Sec > STATUS_RESERVE_COHORT_SLO.maxAgeSec;
     const recentExceeded = cohort.recentCompletionMaxSec != null
       && cohort.recentCompletionMaxSec > STATUS_RESERVE_COHORT_SLO.maxAgeSec;
-    const recovered = !ageExceeded && cohort.recentCompletionMaxSec != null
-      && cohort.recentCompletionMaxSec <= STATUS_RESERVE_COHORT_SLO.maxAgeSec;
-    if (ageExceeded || p95Exceeded || recentExceeded) {
+    // The verdict window is the trailing recoveryWindowSec of completions. The
+    // seven-day p95 is trend detail; it grades only when that window holds no
+    // completion evidence, because absent evidence cannot prove recovery.
+    const p95Exceeded = cohort.recentCompletionMaxSec == null && cohort.completionP95Sec != null
+      && cohort.completionP95Sec > STATUS_RESERVE_COHORT_SLO.maxAgeSec;
+    const verdictWindowHours = STATUS_RESERVE_COHORT_SLO.recoveryWindowSec / 3600;
+    if (ageExceeded || recentExceeded || p95Exceeded) {
       causes.push(makeCause(
         "data-quality",
         "reserve_cohort_slo_exceeded",
-        recovered ? "info" : "warning",
+        "warning",
         `Reserve full-cohort completion exceeds the ${STATUS_RESERVE_COHORT_SLO.maxAgeSec}s SLO: `
           + (ageExceeded ? `open cohort age ${cohort.ageSec}s. ` : "")
-          + (p95Exceeded ? `Seven-day p95 ${cohort.completionP95Sec}s across ${cohort.completedCohorts} completed cohorts.` : "")
-          + (recentExceeded ? ` Recent completion maximum ${cohort.recentCompletionMaxSec}s.` : "")
-          + (recovered ? ` Recovered in the last ${STATUS_RESERVE_COHORT_SLO.recoveryWindowSec / 3600}h: all observed completed cohorts met the SLO (maximum ${cohort.recentCompletionMaxSec}s); historical breach retained.` : ""),
+          + (recentExceeded ? `Completion maximum ${cohort.recentCompletionMaxSec}s in the last ${verdictWindowHours}h. ` : "")
+          + (p95Exceeded ? `No completed cohort in the last ${verdictWindowHours}h to show recovery. ` : "")
+          + (cohort.completionP95Sec != null
+            ? `Seven-day p95 ${cohort.completionP95Sec}s across ${cohort.completedCohorts} completed cohorts (trend).`
+            : ""),
         {
           metric: ageExceeded ? "reserveCohortAgeSec"
-            : p95Exceeded ? "reserveCohortCompletionP95Sec" : "reserveCohortRecentCompletionMaxSec",
+            : recentExceeded ? "reserveCohortRecentCompletionMaxSec" : "reserveCohortCompletionP95Sec",
           value: ageExceeded ? cohort.ageSec
-            : p95Exceeded ? cohort.completionP95Sec! : cohort.recentCompletionMaxSec!,
+            : recentExceeded ? cohort.recentCompletionMaxSec! : cohort.completionP95Sec!,
           threshold: STATUS_RESERVE_COHORT_SLO.maxAgeSec,
           subjects: ["sync-live-reserves", "reserve-recovery", "sync-redemption-backstops"],
         },
