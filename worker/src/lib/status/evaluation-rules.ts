@@ -21,6 +21,7 @@ import { maxStatus, SEVERITY } from "../status-reliability-shared";
 import type { OnchainDataQualityAssessment } from "./onchain-data-quality";
 import type { CronFindingJobs } from "./cron-health";
 import { getSourceFailureMessage } from "./section-errors";
+import { SAFETY_PUBLICATION_SIZE_HEADROOM_WARN_RATIO, type SafetyPublicationSizeObservation } from "./safety-publication-size";
 
 
 // Dataset-level publication budget for the DEX liquidity cache (one missed
@@ -337,6 +338,42 @@ export function mergeD1QuotaCauses(
     ...causes.filter((cause) => !isD1QuotaCause(cause)),
     ...evaluateD1QuotaCauses(quota),
   ];
+}
+
+/**
+ * Safety Score publication size headroom is ops-only, like D1 quota: it warns
+ * before a write cap rejects the next publication and never changes a status.
+ * The tighter of the stored-row and compressed-write ratios names the metric.
+ */
+export function evaluateSafetyPublicationSizeCauses(
+  observation: SafetyPublicationSizeObservation | null | undefined,
+): StatusCause[] {
+  if (!observation || observation.kind === "absent") return [];
+  if (observation.kind === "unavailable") {
+    return [makeCause(
+      "availability", "safety_score_publication_size_unavailable", "info",
+      `Safety Score publication size headroom could not be measured (${observation.reason}).`,
+    )];
+  }
+  const stored = observation.storedBytes / observation.storedCapBytes;
+  const compressed = observation.compressedBytes / observation.compressedCapBytes;
+  const ratio = Math.max(stored, compressed);
+  if (ratio <= SAFETY_PUBLICATION_SIZE_HEADROOM_WARN_RATIO) return [];
+  const storedTighter = stored >= compressed;
+  return [makeCause(
+    "availability", "safety_score_publication_size_headroom_low", "warning",
+    `Accepted Safety Score publication uses ${formatPercentFromRatio(stored, 1)} of the ${observation.storedCapBytes}-byte stored cap `
+      + `(${observation.storedBytes} bytes) and ${formatPercentFromRatio(compressed, 1)} of the ${observation.compressedCapBytes}-byte `
+      + `compressed write cap (${observation.compressedBytes} bytes); warning above ${formatPercentFromRatio(SAFETY_PUBLICATION_SIZE_HEADROOM_WARN_RATIO, 1)}. `
+      + "Ops-only capacity signal; public health is unaffected.",
+    {
+      metric: storedTighter ? "safetyScorePublicationStoredBytes" : "safetyScorePublicationCompressedBytes",
+      value: storedTighter ? observation.storedBytes : observation.compressedBytes,
+      threshold: Math.floor((storedTighter ? observation.storedCapBytes : observation.compressedCapBytes)
+        * SAFETY_PUBLICATION_SIZE_HEADROOM_WARN_RATIO),
+      subjects: ["compute-safety-score-v9"],
+    },
+  )];
 }
 
 function evaluateD1Status(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
