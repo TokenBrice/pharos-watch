@@ -74,6 +74,7 @@ The mint/burn backfill uses `mintBurnConfigKey` directly for config selection, s
 
 [`safety-score-movement-ledger.ts`](../worker/scripts/safety-score-movement-ledger.ts) reads the [publication journal](./report-cards.md#publication-journal-and-movement-attribution) with remote D1 `SELECT`s only, never production writes or file imports. Run its `--help` from the root for UTC half-open window, output and database options. Review weekly while the 120-day window and pre-window baselines remain retained; malformed query envelopes fail, never become empty evidence.
 Movement classification and capture-gap limitations are in the [Safety evidence CLI appendix](#safety-evidence-cli-details); retained observations never replace frozen-input replay or certify a complete archive.
+Markdown table cells escape backslashes before pipes and flatten newlines; the companion JSON retains the original values.
 
 
 ### Safety Score historical capture archive
