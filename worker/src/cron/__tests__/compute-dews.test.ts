@@ -645,8 +645,9 @@ describe("computeAndStoreDEWS", () => {
     expect(result.status).toBeUndefined();
     expect(result.itemCount).toBe(1);
     expect(writeFreshnessSentinel).toHaveBeenCalledTimes(1);
-    expect(writeFreshnessSentinel).toHaveBeenCalledWith(db, "dews", Math.floor(Date.now() / 1000), `dews:${Math.floor(Date.now() / 1000)}`, undefined);
+    expect(writeFreshnessSentinel).toHaveBeenCalledWith(expect.anything(), "dews", Math.floor(Date.now() / 1000), `dews:${Math.floor(Date.now() / 1000)}`, undefined);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
+      d1Cost?: { rowsWritten: number; coverage: string; reasons: string[] };
       freshnessSentinelPublished: boolean;
       publicationPointerWritten: boolean;
       publishedGeneration: number | null;
@@ -658,6 +659,7 @@ describe("computeAndStoreDEWS", () => {
     expect(metadata.publishedGeneration).toBe(Math.floor(Date.now() / 1000));
     expect(metadata.currentGenerationRows).toBe(1);
     expect(metadata.latestGenerationRows).toBe(1);
+    expect(metadata.d1Cost?.reasons).toContain("outer-cron-lifecycle-excluded");
   });
 
   it("does not publish the DEWS freshness sentinel for zero-result runs", async () => {
