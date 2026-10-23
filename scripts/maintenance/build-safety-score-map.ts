@@ -44,7 +44,7 @@ import { firefox, type Page } from "playwright";
 import sharp from "sharp";
 import type { ZodType } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import { API_FRESHNESS_MAX_AGE_SEC, isFreshnessWarningHeader } from "@shared/lib/api-freshness";
+import { API_FRESHNESS_MAX_AGE_SEC, isFreshnessWarningHeader, STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { GRADE_RADAR_COLORS } from "@shared/lib/classification";
 import { detailSnapshotSourceUpdatedAt, parseDetailSnapshotSourceClock } from "@shared/lib/detail-snapshot-inputs";
 import { formatSafetyMapUsd as formatUsdCompact, formatScore } from "@shared/lib/format";
@@ -412,7 +412,10 @@ function readMapTransportFreshness(headers: Headers): MapTransportFreshness {
 
 function assessMapSupplyFreshness(transport: MapTransportFreshness, assessedAtSec: number): MapSupplyFreshness {
   const ageSec = transport.sourceUpdatedAtSec === null ? null : assessedAtSec - transport.sourceUpdatedAtSec;
-  const maxAgeSec = API_FRESHNESS_MAX_AGE_SEC.stablecoins;
+  // Producer-cadence admission (2x `sync-stablecoins`), like the PSI gate: the 600s
+  // endpoint advisory budget is shorter than the 900s producer interval, so it
+  // rejected ordinary between-write ages and any single missed cycle.
+  const maxAgeSec = STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC;
   const staleWarning = transport.sourceHeaders.Warning !== null && isFreshnessWarningHeader(transport.sourceHeaders.Warning);
   const status = staleWarning ? "stale"
     : ageSec === null ? "unavailable" : ageSec < 0 ? "future" : ageSec >= maxAgeSec ? "stale" : "fresh";

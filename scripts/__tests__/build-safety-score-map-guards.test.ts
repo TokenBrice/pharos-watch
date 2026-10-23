@@ -278,6 +278,7 @@ describe("safety-score map — independent supply freshness", () => {
     ["absolute source", () => ({ "X-Data-Updated-At": String(nowSec() - 60), "X-Data-Age": "9999", Age: "120" })],
     ["origin and edge ages", () => ({ Date: new Date().toUTCString(), "X-Data-Age": "60", Age: "120" })],
     ["origin age without edge residence", () => ({ Date: new Date().toUTCString(), "X-Data-Age": "60" })],
+    ["one missed producer cycle", () => ({ "X-Data-Updated-At": String(nowSec() - 1115) })],
   ] satisfies Array<[string, () => Record<string, string>]>)("admits fresh %s independently of held, aged ratings", async (_label, headers) => {
     const run = await runGenerator({ ...universe(), asOfSec: nowSec() - 49 * HOUR }, {
       supplyHeaders: headers(), publicationStatus: "held", stopBeforeRender: true,
@@ -288,7 +289,7 @@ describe("safety-score map — independent supply freshness", () => {
   it.each([
     ["stale Warning", () => ({ Date: new Date().toUTCString(), "X-Data-Age": "0", Warning: '110 pharos "Response is stale"' }), "stale: stale-warning"],
     ["future origin", () => ({ Date: new Date((nowSec() + HOUR) * 1000).toUTCString(), "X-Data-Age": "0" }), "future: future-source-clock"],
-    ["edge residence", () => ({ Date: new Date().toUTCString(), "X-Data-Age": "60", Age: "600" }), "stale: source-too-old"],
+    ["edge residence", () => ({ Date: new Date().toUTCString(), "X-Data-Age": "60", Age: "1800" }), "stale: source-too-old"],
     ["missing source", () => ({}), "unavailable: missing-source-provenance"],
     ["missing origin date", () => ({ "X-Data-Age": "0" }), "unavailable: missing-source-provenance"],
     ["malformed origin date", () => ({ Date: "", "X-Data-Age": "0" }), "unavailable: invalid-date"],
