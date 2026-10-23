@@ -6,6 +6,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeReportCardsV9Card, makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC } from "../../lib/api-freshness-age";
 import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9";
 import { ReportCardsV9DetailResponseSchema } from "@shared/types/report-cards-v9-projections";
@@ -431,7 +432,7 @@ describe("materialized V9 response", () => {
       acceptedPublicationGenerationId: publication.publicationGenerationId, acceptedAtSec: publication.publishedAtSec,
     } });
     // Past it, a failed request repair serves the lagging generation as held, never as current.
-    vi.setSystemTime((next.publishedAtSec + 3_600) * 1000);
+    vi.setSystemTime((next.publishedAtSec + CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec + 1) * 1000);
     expect(await (await handleReportCardsV9(db)).json()).toMatchObject({
       updatedAt: publication.publishedAtSec,
       safetyScoreIdentity: { publicationGenerationId: publication.publicationGenerationId },
