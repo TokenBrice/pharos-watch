@@ -34,7 +34,7 @@
     ]
   },
   "llamaId": "339",
-  "detailProvider": "defillama",
+  "detailProvider": "coingecko",
   "geckoId": "re-protocol-reusd",
   "proofOfReserves": {
     "type": "real-time",

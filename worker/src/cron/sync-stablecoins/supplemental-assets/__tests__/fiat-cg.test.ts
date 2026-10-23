@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../../../test-helpers/cron";
 import type * as FetchRetry from "../../../../lib/fetch-retry";
 import usdy from "@shared/data/stablecoins/coins/usdy-ondo-finance.json";
+import usyc from "@shared/data/stablecoins/coins/usyc-hashnote.json";
+import reusd from "@shared/data/stablecoins/coins/reusd-re-protocol.json";
+import usp from "@shared/data/stablecoins/coins/usp-pikudao.json";
 
 const fetchWithRetryMock = vi.fn();
 const probeTrackedTokenSupplyMock = vi.fn();
@@ -76,6 +79,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
       flags: { pegCurrency: "USD", backing: "crypto-backed", governance: "decentralized", yieldBearing: true, navToken: true },
     },
     { ...usdy, flags: { ...usdy.flags, pegCurrency: "USD" } },
+    ...[usyc, reusd, usp].map((meta) => ({ ...meta, flags: { ...meta.flags, pegCurrency: "USD" } })),
   ],
 }));
 
@@ -143,6 +147,32 @@ describe("fetchFiatCoinGeckoTokens", () => {
     });
     // The shared fixture still probes unpriced plain-par ftUSD, never USDY.
     expect(probeTrackedTokenSupplyMock.mock.calls.map(([meta]) => meta.id)).toEqual(["ftusd-flying-tulip"]);
+  });
+
+  it.each([
+    [usyc.id, usyc.geckoId, 1.14, 2_388_281_169.538671],
+    [reusd.id, reusd.geckoId, 1.11, 351_324_232.3378745],
+    [usp.id, usp.geckoId, 1.15, 4_855_649.434067997],
+  ])("publishes DefiLlama-delisted %s from its CoinGecko supplemental source", async (id, geckoId, price, marketCap) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    fetchWithRetryMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ coins: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await fetchFiatCoinGeckoTokens({
+      [geckoId!]: { usd: price, usd_market_cap: marketCap, last_updated_at: nowSec },
+    });
+
+    expect(result.find((asset) => asset.id === id)).toMatchObject({
+      id,
+      price,
+      priceSource: "coingecko",
+      priceObservedAt: nowSec,
+      circulating: { peggedUSD: expect.any(Number) },
+    });
   });
 
   it("does not invent USDY supply or par when its current market observations are unavailable", async () => {
