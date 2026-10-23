@@ -1,3 +1,4 @@
+import { isV9PublicationSecondChanceTrigger } from "@shared/lib/cron-jobs";
 import { runV9AfterCoreWithinWindow, V9_EXECUTION_WINDOW_POLICY } from "../../lib/v9-slot-window";
 import type { ScheduledRuntimeContext } from "./context";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
@@ -20,6 +21,7 @@ export function buildV9PublicationSlotGroups(
             ...V9_EXECUTION_WINDOW_POLICY.publication,
             lane: "compute-safety-score-v9",
             currentSlotKey: runtime.scheduleKey,
+            v9PublicationSecondChance: isV9PublicationSecondChanceTrigger(runtime.cron),
           },
           (windowSignal, executionWindow) =>
             import("../../cron/compute-safety-score-v9").then(

@@ -1,5 +1,5 @@
 import { logWorkerEvent, logWorkerEventArgs } from "../lib/structured-log";
-import { getCronSlotStartedAtForSchedule, type CronScheduleKey } from "@shared/lib/cron-jobs";
+import { getCronSlotStartedAtForTrigger, type CronScheduleKey } from "@shared/lib/cron-jobs";
 import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
 import type { ScheduledEnv } from "../lib/env";
 import { runScheduledSlotWithFence, type ScheduledSlotCatchUpRequest } from "../lib/scheduled-slot-fence";
@@ -73,7 +73,7 @@ export async function handleScheduledEvent(
   if (!loadRunner) throw buildUnknownScheduleError(event.cron);
   const scheduledTimeMs = typeof event.scheduledTime === "number" ? event.scheduledTime : null;
   const scheduleKey = slotPlan.scheduleKey;
-  const slotStartedAt = getCronSlotStartedAtForSchedule(scheduleKey, scheduledTimeMs);
+  const slotStartedAt = getCronSlotStartedAtForTrigger(scheduleKey, event.cron, scheduledTimeMs);
   const runtime = createScheduledRuntimeContext(env, ctx, {
     cron: event.cron,
     scheduleKey,

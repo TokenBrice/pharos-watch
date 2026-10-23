@@ -108,14 +108,14 @@ describe("scheduled runner contract", () => {
       (entry) => entry.job === "sync-dex-liquidity" && entry.scheduleKey === "halfHourlyChartsOffset",
     )).toMatchObject({ maxConnections: 5 });
   });
-  it("owns only the three revised heavy plans without adding expressions", () => {
+  it("owns only the three revised heavy plans and their expressions", () => {
     expect(Object.values(SCHEDULED_SLOT_PLANS).filter((plan) => plan.worker === "heavy")
       .map((plan) => plan.scheduleKey).sort()).toEqual([
       "halfHourlyChartsOffset", "v9PublicationOffset", "v9SupplyAttributionOffset",
     ]);
     expect(listScheduledExpressionsForWorker("heavy").sort()).toEqual([
       "8 * * * *", "23 * * * *", "38 * * * *", "53 * * * *",
-      "16 * * * *", "46 * * * *", "22 * * * *",
+      "16 * * * *", "46 * * * *", "22 * * * *", "52 * * * *",
     ].sort());
     for (const role of ["public", "heavy"] as const) {
       for (const expression of listScheduledExpressionsForWorker(role)) {
