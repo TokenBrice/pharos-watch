@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   createRuntime: vi.fn(),
   configRecovery: vi.fn(),
   priority: vi.fn(),
+  currentSlot: null as null | { reason: "current-slot-never-delivered"; slotStartedAt: number; graceSec: number },
   catchUpDetection: vi.fn(),
   reserveSlotInitialized: false,
   configRecoveryInitialized: false,
@@ -50,6 +51,9 @@ vi.mock("../../../cron/reserve-recovery-config", () => {
 vi.mock("../../../lib/reserve-producer-priority", async (importOriginal) => ({
   ...await importOriginal(),
   getReserveProducerPriority: mocks.priority,
+  resolveReserveProducerAdmission: async (...args: unknown[]) => ({
+    priority: await mocks.priority(...args), currentSlot: mocks.currentSlot,
+  }),
 }));
 
 import { runFiveMinuteReserveRecoverySlot } from "../reserve-recovery";
@@ -96,6 +100,7 @@ describe("reserve recovery mode", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     latestLeasedResult = undefined;
+    mocks.currentSlot = null;
     mocks.configRecovery.mockResolvedValue({ attempted: [], healed: [], failed: [] });
     mocks.sweep.mockResolvedValue({ slotsReconciled: 0 });
     mocks.prepare.mockResolvedValue({ inspection: EMPTY_INSPECTION, prepared: [] });
@@ -133,6 +138,17 @@ describe("reserve recovery mode", () => {
     expect(mocks.configRecoveryInitialized).toBe(true);
     expect(mocks.reserveSlotInitialized).toBe(false);
     expect(mocks.runReserveSlot).not.toHaveBeenCalled();
+  });
+
+  it("replays past a never-delivered current reserve slot and records why", async () => {
+    mocks.currentSlot = { reason: "current-slot-never-delivered", slotStartedAt: 900, graceSec: 600 };
+    mocks.claim.mockResolvedValue({ disposition: "claimed", checkpoint: makeLiveReserveCheckpoint() });
+    await runFiveMinuteReserveRecoverySlot(runtime("recover"));
+    expect(mocks.runReserveSlot).toHaveBeenCalledTimes(1);
+    expect(JSON.parse((latestLeasedResult as { metadata?: string }).metadata ?? "{}")).toMatchObject({
+      disposition: "recovery-executed",
+      currentSlot: { reason: "current-slot-never-delivered", slotStartedAt: 900, graceSec: 600 },
+    });
   });
 
   it.each([0, 2, 3, 4, 5, 7, 8, 9, 10])("keeps config recovery off intervening minute %s", async (minute) => {

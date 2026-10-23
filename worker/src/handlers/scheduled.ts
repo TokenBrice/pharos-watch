@@ -44,9 +44,18 @@ export async function handleScheduledEvent(
 ): Promise<void> {
   const slotPlan = SCHEDULED_SLOT_PLANS_BY_SCHEDULE[event.cron];
   if (!slotPlan) {
-    const error = buildUnknownScheduleError(event.cron);
-    logWorkerEventArgs("handler", "error", error.message);
-    throw error;
+    // Cloudflare keeps delivering a removed expression while trigger changes
+    // propagate (~13 min after #1608). Nothing owns it, so skip neutrally; a
+    // warn that persists past propagation is genuine config drift.
+    logWorkerEvent({
+      scope: "handler",
+      level: "warn",
+      event: "scheduled-trigger-unknown",
+      message: "Skipping scheduled trigger with no slot plan",
+      status: "skipped_neutral",
+      metadata: { status: "skipped_neutral", reason: "scheduled-trigger-unknown", workerRole, cron: event.cron },
+    });
+    return;
   }
   if (slotPlan.worker !== workerRole) {
     logWorkerEvent({

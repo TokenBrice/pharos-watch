@@ -116,7 +116,7 @@ Shared public-health floor: `worker/src/lib/public-health-assessment.ts`, backed
 
 The assessment's existing `safetyScoreImpactStatus` floors raw admin availability and overall; effective status retains hysteresis. Sole authority `getPublicSafetyScoreStatus()` grades accepted-publication age, never attempt age, on the producer grace rule; a hold alone is an info `safety_score_publication_held` cause with its reason codes. Warning/critical causes `safety_score_publication_unavailable`, `_missing` and `_stale` retain generation identity, clock and budget.
 
-Publication size headroom is ops-only. On each admin `/api/status` read, `loadSafetyPublicationSize()` (`worker/src/lib/status/safety-publication-size.ts`) reads the accepted `report-cards:v9` row's stored UTF-8 bytes and its admitted `compressedBytes` without decoding the payload; `evaluateSafetyPublicationSizeCauses()` compares them with the writer's own caps (`SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES`, `SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES`). Strictly above 85% (`SAFETY_PUBLICATION_SIZE_HEADROOM_WARN_RATIO`) of either cap opens warning `safety_score_publication_size_headroom_low`, whose metric names the tighter cap; an unreadable size opens info `safety_score_publication_size_unavailable` with a machine-readable reason, and an absent row adds nothing (the missing-publication cause owns that). Like the D1 quota causes, these join only the admin availability cause list, are outside the public-impact allowlist and never change a status.
+Publication size headroom is ops-only. On each admin `/api/status` read, `loadSafetyPublicationSize()` (`worker/src/lib/status/safety-publication-size.ts`) reads the accepted `report-cards:v9` row's stored UTF-8 bytes (a sharded envelope's recorded single-row-equivalent `payloadChunks.storedBytes`) and its admitted `compressedBytes` without decoding the payload; `evaluateSafetyPublicationSizeCauses()` compares them with the writer's own caps (`SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES`, `SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES`). Strictly above 85% (`SAFETY_PUBLICATION_SIZE_HEADROOM_WARN_RATIO`) of either cap opens warning `safety_score_publication_size_headroom_low`, whose metric names the tighter cap; an unreadable size opens info `safety_score_publication_size_unavailable` with a machine-readable reason, and an absent row adds nothing (the missing-publication cause owns that). Like the D1 quota causes, these join only the admin availability cause list, are outside the public-impact allowlist and never change a status.
 
 `PUBLIC_CIRCUIT_IMPACT_QUORUM` in `shared/lib/public-health.ts` is the sole source-wide circuit quorum
 authority (3 upstream providers), shared by public grading and admin cause thresholds. Public circuit reasons retain the full
@@ -311,7 +311,9 @@ clock, has a non-future heartbeat within `resolveScheduledSlotPolicy("fourHourly
 and remains younger than that policy's `hardDeadSec`. Nested `producerPriority.reason` retains the work-admission
 reason `producer-slot-priority`; `producerPriority.condition` distinguishes `producer-slot-live` from
 `current-slot-unfinished`. This completed protected poll proves no reserve publication and never relaxes
-recovery mutation admission. A missing slot claim, unreadable producer evidence, non-running unfinished slot,
+recovery mutation admission. A current slot with no row past `RESERVE_SLOT_NEVER_DELIVERED_GRACE_SEC` (its
+catch-up grace) no longer defers recovery (`currentSlot.reason = "current-slot-never-delivered"`); a late row restores protection.
+A missing slot claim within that grace, unreadable producer evidence, non-running unfinished slot,
 stale/future heartbeat, or hard-dead slot cannot renew availability; a valid finished slot, including a finished
 error, continues through the existing recovery path.
 Subject to a successful history read, cron availability is healthy when:

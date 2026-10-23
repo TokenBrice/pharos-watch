@@ -10,21 +10,48 @@ export interface SlotCatchUpPolicy {
 }
 
 /**
+ * Windows derive from the lane's cadence I: grace = min(2I/5, 10 min) and
+ * next-slot margin = min(I/5, 15 min), which keeps the reviewed quarterHourly
+ * (6/3 min) and two-hourly yield (10/15 min) windows.
+ * The 10-minute grace cap covers the observed delivery lag plus the six-minute
+ * long-runner slot silence; the 15-minute margin cap exceeds every catch-up
+ * lane's task timeout (at most 13 minutes), so a lane of 75 minutes or longer
+ * admits its full timeout before its next natural slot.
+ */
+const SLOT_CATCH_UP_GRACE_CAP_SEC = 10 * 60;
+const SLOT_CATCH_UP_NEXT_SLOT_MARGIN_CAP_SEC = 15 * 60;
+
+export function deriveSlotCatchUpPolicy(scheduleKey: CronScheduleKey): SlotCatchUpPolicy {
+  const { intervalSec } = CRON_SCHEDULE_CADENCES[scheduleKey];
+  return {
+    graceSec: Math.min(Math.floor(intervalSec * 2 / 5), SLOT_CATCH_UP_GRACE_CAP_SEC),
+    nextSlotMarginSec: Math.min(Math.floor(intervalSec / 5), SLOT_CATCH_UP_NEXT_SLOT_MARGIN_CAP_SEC),
+  };
+}
+
+/**
  * Opt-in lanes for the one-shot missed-slot catch-up. The executor is the
  * public Queue consumer (configured 300 s CPU), never a sub-hourly cron lane:
  * these runners are measured to exceed Cloudflare's 30-second sub-hourly class.
- * Windows are chosen so the five-minute digest poll arms quarterHourly only at
- * T+10 (off the :05 measured-execution collision) and the two-hourly
- * hourlyYieldSync between T+10 and T+105, at least 15 minutes before its next
- * natural slot.
+ * `fourHourlyReserveSync` is deliberately absent: the five-minute
+ * reserve-recovery lane already sweeps its abandoned slot and replays the
+ * checkpoint under the same slot identity, so a catch-up reopen would race it.
+ * Heavy-Worker lanes are absent because the heavy Worker has no Queue.
  */
-export const SLOT_CATCH_UP_POLICIES = {
-  quarterHourly: { graceSec: 6 * 60, nextSlotMarginSec: 3 * 60 },
-  hourlyYieldSync: { graceSec: 10 * 60, nextSlotMarginSec: 15 * 60 },
-} as const satisfies Partial<Record<CronScheduleKey, SlotCatchUpPolicy>>;
+const SLOT_CATCH_UP_LANES = [
+  "quarterHourly",
+  "halfHourlyMintBurnCritical",
+  "dewsPsiOffset",
+  "hourlyYieldSync",
+  "twoHourlyDexDiscovery",
+] as const satisfies readonly CronScheduleKey[];
 
-export type SlotCatchUpScheduleKey = keyof typeof SLOT_CATCH_UP_POLICIES;
-export const SLOT_CATCH_UP_SCHEDULE_KEYS = Object.keys(SLOT_CATCH_UP_POLICIES) as SlotCatchUpScheduleKey[];
+export type SlotCatchUpScheduleKey = (typeof SLOT_CATCH_UP_LANES)[number];
+export const SLOT_CATCH_UP_POLICIES: Readonly<Record<SlotCatchUpScheduleKey, SlotCatchUpPolicy>> = Object.freeze(
+  Object.fromEntries(SLOT_CATCH_UP_LANES.map((scheduleKey) => [scheduleKey, deriveSlotCatchUpPolicy(scheduleKey)])) as
+    Record<SlotCatchUpScheduleKey, SlotCatchUpPolicy>,
+);
+export const SLOT_CATCH_UP_SCHEDULE_KEYS: readonly SlotCatchUpScheduleKey[] = SLOT_CATCH_UP_LANES;
 
 for (const scheduleKey of SLOT_CATCH_UP_SCHEDULE_KEYS) {
   // The only consumer is the public Worker's Queue handler.

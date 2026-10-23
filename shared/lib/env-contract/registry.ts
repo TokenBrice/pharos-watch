@@ -77,6 +77,18 @@ const ENV_BINDING_DEFINITIONS = [
     runtimes: { worker: { status: "optional" } },
   },
   {
+    key: "SAFETY_V9_DEFERRED_MATERIALIZATION",
+    valueType: "string",
+    description: "Heavy-only Safety Score V9 persist split, checked in off: literal on commits acceptance before staging public fragments; off or missing stages and selects them inside the acceptance batch. Enable only after every public reader tolerates unselected staged rows.",
+    runtimes: { worker: { status: "optional" } },
+  },
+  {
+    key: "SAFETY_V9_CHUNKED_PUBLICATION_WRITES",
+    valueType: "string",
+    description: "Heavy-only Safety Score V9 canonical storage, checked in off: literal on writes the payload as content-addressed chunk rows behind a small envelope; off or missing writes the single row and removes stale chunks. Enable only after every reader accepts sharded envelopes.",
+    runtimes: { worker: { status: "optional" } },
+  },
+  {
     key: "RESERVE_CONTINUATION_QUEUE",
     valueType: "Queue<ReserveContinuationMessage>",
     description: "Public-only bounded reserve continuation/tail and one-shot slot catch-up wakeup Queue; D1 checkpoint, slot and event fences remain execution authority.",

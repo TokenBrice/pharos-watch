@@ -73,9 +73,17 @@ const DictionaryStorageEnvelopeSchema = LegacyStorageEnvelopeSchema.extend({
 const StorageEnvelopeSchema = z.discriminatedUnion("storageSchemaVersion", [
   LegacyStorageEnvelopeSchema, DictionaryStorageEnvelopeSchema,
 ]);
+/** Sharded-envelope payload descriptor; see `publication-chunks.ts`. */
+export const SafetyScoreV9PublicationPayloadChunksSchema = z.object({
+  count: z.number().int().positive().max(64),
+  payloadBytes: z.number().int().positive(),
+  payloadSha256: Sha256Schema,
+  storedBytes: z.number().int().positive(),
+}).strict();
 const metadataLimits = {
   uncompressedBytes: z.number().int().positive().max(SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES),
   compressedBytes: z.number().int().positive().max(SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES),
+  payloadChunks: SafetyScoreV9PublicationPayloadChunksSchema.optional(),
 };
 export const SafetyScoreV9StorageMetadataSchema = z.discriminatedUnion("storageSchemaVersion", [
   LegacyStorageEnvelopeSchema.omit({ payload: true }).extend(metadataLimits),

@@ -19,6 +19,7 @@ import { bytesToBase64 } from "@shared/lib/base64";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../safety-score-v9/publication-codec";
 import { serializeSafetyScoreV9PublicationWithEncoding } from "../safety-score-v9/publication-codec";
 import { handleReportCardsV9 } from "../../api/report-cards-v9";
+import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY } from "../report-cards-v9-materialization";
 import {
   buildSafetyScoreV9AcceptedProjections,
   parseSafetyScoreV9AcceptedBaselineProjection,
@@ -683,6 +684,7 @@ describe("Safety Score V9 publication store", () => {
       SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt,
       SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
       SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex,
+      V9_PUBLIC_MATERIALIZATION_CACHE_KEY,
     ].sort());
     const projectionRows = sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key IN (?, ?) ORDER BY key")
       .all(SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral);

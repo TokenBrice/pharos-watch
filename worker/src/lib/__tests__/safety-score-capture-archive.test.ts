@@ -48,7 +48,7 @@ describe("accepted Safety capture archive", () => {
     vi.setSystemTime(new Date("2026-10-08T12:00:00Z"));
     const { sqlite, db } = fixtures.open();
     const publication = makeWorkerSafetyScoreV9Publication();
-    const cacheRows = await persistSafetyScoreV9Publication(db, {
+    const { captureArchiveCacheRows: cacheRows } = await persistSafetyScoreV9Publication(db, {
       ...currentInput(publication), publicationReplayBaseValue: ' {"base":"é"} ',
       publicationReplayCaptureValue: '{"delta":"雪"}\n',
     });
