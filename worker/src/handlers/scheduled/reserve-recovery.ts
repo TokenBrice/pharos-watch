@@ -20,6 +20,7 @@ import {
 } from "../../lib/reserve-producer-priority";
 import { resolveScheduledSlotPolicy } from "../../lib/scheduled-slot-policy";
 import { reconcileReserveContinuations } from "../../lib/reserve-continuation-reconciliation";
+import { runSlotCatchUpDetection } from "../../lib/scheduled-slot-catch-up";
 
 type ReserveRecoveryMode = "off" | "recover";
 
@@ -228,7 +229,22 @@ async function runReserveRecovery(
   });
 }
 
+// The digest poll suffers the same delivery lag as the lanes it watches; this
+// lane is the most reliably delivered. Bounded, zero-fetch and usually one
+// indexed read, so it fits the 30-second CPU class ahead of reserve work.
+const MINUTE_LANE_CATCH_UP_DETECTION_MS = 15_000;
+
 export async function runFiveMinuteReserveRecoverySlot(runtime: ScheduledRuntimeContext) {
+  await runSlotCatchUpDetection(runtime.env, {
+    host: "minute-lane",
+    invocationId: runtime.invocationId ?? `scheduled:fiveMinuteReserveRecovery:${runtime.slotStartedAt}`,
+    signal: AbortSignal.any([
+      AbortSignal.timeout(MINUTE_LANE_CATCH_UP_DETECTION_MS),
+      ...(runtime.slotSignal ? [runtime.slotSignal] : []),
+    ]),
+    reconcileStale: true,
+  });
+  runtime.slotSignal?.throwIfAborted();
   return runSingleScheduledJob(runtime, "isolated reserve recovery slot", {
     job: "reserve-recovery",
     errorMessage: "[reserve-recovery] Recovery poll failed:",
