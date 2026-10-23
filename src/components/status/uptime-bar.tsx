@@ -1,5 +1,5 @@
 import { PUBLIC_COMPONENT_STATE_TONE } from "@shared/lib/classification";
-import type { ComponentDayCell, ComponentDayState } from "@/lib/status/public-status-timeline";
+import { DAY_STATE_MIN_HELD_SEC, type ComponentDayCell, type ComponentDayState } from "@/lib/status/public-status-timeline";
 import { cn } from "@/lib/utils";
 
 const NO_DATA = { label: "No data", bar: "bg-muted" } as const;
@@ -19,7 +19,13 @@ export function summarizeDayCells(cells: readonly ComponentDayCell[]): string {
     .join(" · ");
 }
 
-/** Daily bar for one public component; each cell is the worst state held that UTC day. */
+/** "2026-10-22: Operational (briefly degraded, under 1 h)": blips below the day threshold stay readable. */
+export function describeDayCell(cell: ComponentDayCell): string {
+  const brief = cell.brief ? ` (briefly ${PUBLIC_COMPONENT_STATE_TONE[cell.brief].label.toLowerCase()}, under ${DAY_STATE_MIN_HELD_SEC / 3600} h)` : "";
+  return `${cell.date}: ${cellTone(cell.state).label}${brief}`;
+}
+
+/** Daily bar for one public component; each cell is the worst state held for at least 1 h that UTC day (any outage counts). */
 export function UptimeBar({ cells, label }: { cells: readonly ComponentDayCell[]; label: string }) {
   return (
     <div className="flex h-5 items-stretch gap-px" role="img" aria-label={`${label}, last ${cells.length} days: ${summarizeDayCells(cells)}`}>
@@ -27,7 +33,7 @@ export function UptimeBar({ cells, label }: { cells: readonly ComponentDayCell[]
         <div
           key={cell.date}
           className={cn("min-w-0 flex-1 rounded-[1px]", cellTone(cell.state).bar)}
-          title={`${cell.date}: ${cellTone(cell.state).label}`}
+          title={describeDayCell(cell)}
         />
       ))}
     </div>
