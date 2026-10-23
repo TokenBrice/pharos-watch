@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  applyPublicStatusHysteresis,
   getPublicComponentStateRank,
   headlineToStatusLevel,
   projectPublicStatus,
@@ -10,6 +11,7 @@ import {
 import {
   PUBLIC_COMPONENT_STATES,
   PUBLIC_STATUS_COMPONENT_IDS,
+  PublicComponentBudgetSchema,
   PublicStatusHeadlineSchema,
   PublicStatusTransitionComponentSchema,
   type HealthResponse,
@@ -33,11 +35,22 @@ import {
  */
 const PUBLIC_STATUS_SCOPE = "public";
 
+// `summary`, `ageSeconds`, `budget` and `pending` are additive (2026-10-23
+// hysteresis): a held state republishes its own copy, and `pending` carries an
+// unconfirmed raw change between evaluations.
 const PersistedComponentSchema = z.object({
   id: z.enum(PUBLIC_STATUS_COMPONENT_IDS),
   state: z.enum(PUBLIC_COMPONENT_STATES),
   since: z.number().nullable(),
   reasons: z.array(z.string()),
+  summary: z.string().optional(),
+  ageSeconds: z.number().nonnegative().nullable().optional(),
+  budget: PublicComponentBudgetSchema.nullable().optional(),
+  pending: z.object({
+    state: z.enum(PUBLIC_COMPONENT_STATES),
+    count: z.number().int().positive(),
+    firstSeenAt: z.number(),
+  }).nullable().optional(),
 });
 
 // Tolerant read: a component id or state this release does not know (added or
@@ -80,9 +93,11 @@ function causeIdentity(reasons: readonly string[]): string {
 }
 
 /**
- * Project the public health payload, carry each component's `since` forward,
- * and persist a public transition whenever any component or the headline
- * changes. A failed state read still returns a projection, without `since`.
+ * Project the public health payload, publish it through transition
+ * hysteresis (`applyPublicStatusHysteresis`), carry each component's `since`
+ * forward, and persist a public transition whenever any published component or
+ * the headline changes. A failed state read still returns the raw projection,
+ * without `since`.
  */
 export async function reconcilePublicStatusState(
   db: D1Database,
@@ -90,10 +105,12 @@ export async function reconcilePublicStatusState(
   health: HealthResponse,
   onIssue?: StatusPersistenceIssueReporter,
 ): Promise<PublicStatusReconciliation> {
-  let row: (Pick<StatusStateRow, "current_status" | "last_changed_at" | "causes_json"> & { history_started_at?: number | null }) | null;
+  let row: (Pick<StatusStateRow, "current_status" | "last_changed_at" | "causes_json"
+    | "consecutive_healthy" | "consecutive_degraded" | "consecutive_stale"> & { history_started_at?: number | null }) | null;
   try {
     row = await db
       .prepare(`SELECT current_status, last_changed_at, causes_json,
+        consecutive_healthy, consecutive_degraded, consecutive_stale,
         CASE WHEN CASE WHEN json_valid(causes_json)
           THEN json_type(causes_json, '$.componentHistoryStartedAt') = 'object' ELSE 0 END THEN NULL
           ELSE (SELECT MIN(created_at) FROM status_transitions WHERE scope = 'public') END AS history_started_at
@@ -111,18 +128,30 @@ export async function reconcilePublicStatusState(
   const sinceMap: PublicComponentSinceMap = Object.fromEntries(
     [...previousById].map(([id, component]) => [id, { state: component.state, since: component.since }]),
   );
-  const projection = projectPublicStatus(health, sinceMap);
-  const componentHistoryStartedAt = Object.fromEntries(projection.components.map((component) => [
+  const raw = projectPublicStatus(health, sinceMap);
+  const componentHistoryStartedAt = Object.fromEntries(raw.components.map((component) => [
     component.id,
     previous?.componentHistoryStartedAt?.[component.id]
       ?? (previousById.has(component.id) ? row?.history_started_at ?? now : now),
   ]));
   // A state change observed now starts now. An unchanged state keeps its
   // persisted start, which stays null when it was first seen at initialization.
-  for (const component of projection.components) {
+  for (const component of raw.components) {
     const prior = previousById.get(component.id);
     if (prior && prior.state !== component.state) component.since = now;
   }
+  const { projection, pending } = previous == null
+    ? { projection: raw, pending: {} as ReturnType<typeof applyPublicStatusHysteresis>["pending"] }
+    : applyPublicStatusHysteresis(raw, previousById, now);
+  // `consecutive_*` count consecutive evaluations of the raw (pre-hysteresis)
+  // headline level, so operators can see a change that is still confirming.
+  const rawLevel = headlineToStatusLevel(raw.headline.state);
+  const streak = (level: typeof rawLevel, count: number | null | undefined) => rawLevel === level ? (count ?? 0) + 1 : 0;
+  const consecutive = {
+    healthy: streak("healthy", row?.consecutive_healthy),
+    degraded: streak("degraded", row?.consecutive_degraded),
+    stale: streak("stale", row?.consecutive_stale),
+  };
 
   const causesChanged = previous != null && projection.components.some((component) =>
     causeIdentity(component.reasons) !== causeIdentity(previousById.get(component.id)?.reasons ?? []));
@@ -150,6 +179,8 @@ export async function reconcilePublicStatusState(
     componentHistoryStartedAt,
     components: projection.components.map((component) => ({
       id: component.id, state: component.state, since: component.since, reasons: component.reasons,
+      summary: component.summary, ageSeconds: component.ageSeconds, budget: component.budget,
+      pending: pending[component.id] ?? null,
     })),
   });
   const transitionJson = JSON.stringify({
@@ -164,12 +195,15 @@ export async function reconcilePublicStatusState(
       `INSERT INTO status_state
        (scope, current_status, raw_status, last_evaluated_at, last_changed_at,
         consecutive_healthy, consecutive_degraded, consecutive_stale, confidence, causes_json, updated_at)
-       VALUES (?, ?, ?, ?, ?, 0, 0, 0, 1, ?, ?)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
        ON CONFLICT(scope) DO UPDATE SET
          current_status = excluded.current_status,
          raw_status = excluded.raw_status,
          last_evaluated_at = excluded.last_evaluated_at,
          last_changed_at = excluded.last_changed_at,
+         consecutive_healthy = excluded.consecutive_healthy,
+         consecutive_degraded = excluded.consecutive_degraded,
+         consecutive_stale = excluded.consecutive_stale,
          causes_json = excluded.causes_json,
          updated_at = excluded.updated_at
        WHERE status_state.updated_at <= excluded.updated_at`,
@@ -179,6 +213,9 @@ export async function reconcilePublicStatusState(
       health.status,
       now,
       changed ? now : row?.last_changed_at ?? now,
+      consecutive.healthy,
+      consecutive.degraded,
+      consecutive.stale,
       stateJson,
       now,
     ),
