@@ -217,7 +217,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19",
     "@types/topojson-client": "3.1.5",
-    "@vitest/coverage-v8": "^4.1.12",
+    "@vitest/coverage-v8": "^5.0.5",
     "beasties": "0.5.5",
     "d3-geo": "3.1.1",
     "esbuild": "0.28.2",
