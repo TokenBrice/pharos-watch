@@ -1,3 +1,4 @@
+import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { sleepWithSignal } from "./abort";
 import {
@@ -35,6 +36,8 @@ export interface V9SlotWindowOptions {
   minimumRemainingMs: number;
   lane: string;
   currentSlotKey: string;
+  /** Skip neutrally while this core window's V9 publication slot is still due. */
+  yieldToV9Publication?: boolean;
 }
 
 export interface V9ExecutionWindow {
@@ -161,6 +164,39 @@ export async function loadMatchingCoreStablecoinsPublishedAt(
 }
 
 /**
+ * The publisher and supply attribution share one memory lane, and a late
+ * publication trigger (:22/:52) can land on attribution's :23/:53 start; the
+ * first to claim the lease wins and the other skips. Losing an attribution run
+ * costs one 15-minute refresh, losing a publication costs a public Safety
+ * Score slot, so attribution yields while this core window's publication slot
+ * has no finished row and its execution window is still open.
+ */
+async function loadDueV9PublicationSlot(
+  db: D1Database,
+  scheduledTimeMs: number,
+  coreSlotStartedAt: number,
+): Promise<{ slotStartedAt: number; state: string | null; deadlineMs: number } | null> {
+  const slotStartedAt = getCronSlotStartedAtForSchedule("v9PublicationOffset", scheduledTimeMs);
+  const deadlineMs = getV9ExecutionDeadlineMs(
+    slotStartedAt * 1_000, V9_EXECUTION_WINDOW_POLICY.publication.deadlineOffsetMs,
+  );
+  if (slotStartedAt < coreSlotStartedAt || Date.now() >= deadlineMs) return null;
+  const row = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT state
+           FROM cron_slot_executions
+          WHERE slot_key = 'v9PublicationOffset'
+            AND slot_started_at = ?`,
+      )
+      .bind(slotStartedAt)
+      .first<{ state: string }>(),
+  );
+  if (row?.state === "finished") return null;
+  return { slotStartedAt, state: row?.state ?? null, deadlineMs };
+}
+
+/**
  * Keeps later scheduled triggers from loading their runner graphs while a
  * memory-intensive V9 slot owns the shared Worker heap lane.
  */
@@ -214,6 +250,28 @@ export async function runV9AfterCoreWithinWindow(
     });
   }
   const workerVersion = options.workerVersion;
+
+  if (options.yieldToV9Publication) {
+    let duePublication: Awaited<ReturnType<typeof loadDueV9PublicationSlot>>;
+    try {
+      duePublication = await loadDueV9PublicationSlot(options.db, scheduledTimeMs, coreSlotStartedAt);
+    } catch (error) {
+      return degradedAdmission("v9-publication-priority-unknown", {
+        lane: options.lane,
+        coreSlotStartedAt,
+        code: error instanceof Error ? error.name : "Error",
+      });
+    }
+    if (duePublication) {
+      return neutralSkip("v9-publication-priority", {
+        lane: options.lane,
+        coreSlotStartedAt,
+        publicationSlotStartedAt: duePublication.slotStartedAt,
+        publicationSlotState: duePublication.state,
+        publicationDeadlineMs: duePublication.deadlineMs,
+      });
+    }
+  }
 
   const timeout = createTimeoutSignal({
     timeoutMs: initialRemainingMs,
