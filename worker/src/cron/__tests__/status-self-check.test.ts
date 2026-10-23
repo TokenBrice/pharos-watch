@@ -245,7 +245,7 @@ describe("runStatusSelfCheck", () => {
     ["degraded", STATUS_PROBE_THRESHOLDS.healthyP95MaxMs + 1],
     ["degraded", STATUS_PROBE_THRESHOLDS.degradedP95MaxMs],
     ["stale", STATUS_PROBE_THRESHOLDS.degradedP95MaxMs + 1],
-  ] as const)("classifies twenty-sample nearest-rank p95 as %s at %sms", async (status, p95Ms) => {
+  ] as const)("classifies the second-slowest of twenty samples as %s at %sms", async (status, p95Ms) => {
     adminProbePaths.splice(0);
     publicProbePaths.splice(0, publicProbePaths.length, "/api/health", ...Array.from({ length: 48 }, (_, i) => `/api/fixture-${i}`));
     vi.resetModules();
@@ -266,6 +266,28 @@ describe("runStatusSelfCheck", () => {
     expect(result.status).toBe(status === "healthy" ? "ok" : "degraded");
     expect(metadata.reason).toBe(status === "healthy" ? undefined : "probe-latency-exceeded");
     expect(metadata.outputPublishedAt).toBe(1_777_000_000);
+  });
+
+  it("does not let one cold probe mark the transport plane slow", async () => {
+    adminProbePaths.splice(0);
+    publicProbePaths.splice(0, publicProbePaths.length, "/api/health", ...Array.from({ length: 45 }, (_, i) => `/api/fixture-${i}`));
+    vi.resetModules();
+    // Nineteen samples: nearest-rank p95 is the maximum, so one cold probe used to decide it.
+    const { runStatusSelfCheck: run } = await import("../status-self-check");
+    vi.useFakeTimers();
+    vi.setSystemTime(1_777_000_000_000);
+    const durations = [...Array<number>(18).fill(10), STATUS_PROBE_THRESHOLDS.degradedP95MaxMs + 100];
+    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => {
+      vi.setSystemTime(Date.now() + durations.shift()!);
+      return buildProbeResponse(input, "healthy", init);
+    });
+    const result = await run({} as D1Database);
+    const metadata = JSON.parse(result.metadata!);
+    expect(durations).toHaveLength(0);
+    expect(metadata).toMatchObject({ sampleCount: 19, failCount: 0, transportStatus: "healthy" });
+    expect(metadata.latencySummary.maxMs).toBe(STATUS_PROBE_THRESHOLDS.degradedP95MaxMs + 100);
+    expect(result.status).toBe("ok");
+    expect(metadata.reason).toBeUndefined();
   });
 
   it("keeps execution failure ahead of latency when failed probes are slow", async () => {
@@ -308,7 +330,7 @@ describe("runStatusSelfCheck", () => {
     expect(JSON.parse(result.metadata!)).toMatchObject({
       sampleCount: 1, passCount: 0, failCount: 0, p95LatencyMs: 0,
       transportStatus: "stale", semanticStatus: "degraded",
-      quality: { reason: "probe-plane-degraded" }, reason: "probe-execution-failed",
+      reason: "probe-execution-failed",
     });
   });
 
@@ -484,7 +506,8 @@ describe("runStatusSelfCheck", () => {
     // "reported-degraded" is excluded from connectivity failCount but still flows through semanticProbeStatus
     expect(result.status).toBe("ok");
     expect(metadata.reason).toBeUndefined();
-    expect(metadata.quality).toEqual({ reason: "probe-plane-degraded" });
+    // The /api/health mirror is not re-raised as a separate self-check quality cause.
+    expect(metadata.quality).toBeUndefined();
     expect(metadata.transportStatus).toBe("healthy");
     expect(metadata.semanticStatus).toBe("degraded");
     expect(metadata.probeStatus).toBe("degraded");
