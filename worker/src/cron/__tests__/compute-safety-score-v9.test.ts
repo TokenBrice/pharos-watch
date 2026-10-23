@@ -396,6 +396,8 @@ describe("computeSafetyScoreV9", () => {
       },
     });
     expect(mocks.runPublication).toHaveBeenCalledOnce();
+    // The evaluator scores against the capture's frozen clock, not compute time.
+    expect(mocks.runPublication.mock.calls[0]![0].fixedInput.clockSec).toBe(fixedInput.clockSec);
   });
 
   it("refuses a lagging capture whose stablecoin generation is past the named budget", async () => {
