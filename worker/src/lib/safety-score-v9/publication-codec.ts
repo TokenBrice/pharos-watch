@@ -241,7 +241,7 @@ function compressedStorageCandidate(value: unknown): boolean {
 export async function admitAndSerializeSafetyScoreV9Publication(
   value: SafetyScoreV9CurrentResponse,
   signal?: AbortSignal,
-  encoding: "legacy" | "dictionary" = "legacy",
+  encoding: "legacy" | "dictionary" = "dictionary",
 ): Promise<{ publication: Readonly<SafetyScoreV9CurrentResponse>; stored: string }> {
   throwIfAborted(signal);
   const publication = deepFreeze(admitPublicationPayload({ ...value, cards: [...value.cards] }, true));
