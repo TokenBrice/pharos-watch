@@ -711,28 +711,36 @@ describe("snapshotSupply", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("snapshot-supply:last-write"))).toBe(false);
   });
 
-  it("combines elevated publication gaps with restored-only exclusions", async () => {
+  it("records an inherited elevated publication gap alongside restored-only exclusions without degrading", async () => {
     const ids = Array.from({ length: 100 }, (_, index) => `coin-${index}`);
     const assets = ids.slice(0, -2).map((id, index) => makeSnapshotAsset({ id, supplyRestored: index === 0 }));
     const db = mockD1({
       stablecoins: { assets: { peggedAssets: assets }, updatedAt: Math.floor(Date.now() / 1000) },
     });
     const result = await snapshotSupply(db, undefined, { requiredActiveIds: ids, snapshotEligibleIds: ids });
-    expect(result.status).toBe("degraded");
+    expect(result.status ?? "ok").toBe("ok");
     expect(result.itemCount).toBe(97);
-    expect(JSON.parse(result.metadata!)).toMatchObject({
-      reason: "publication_gap_elevated",
+    const metadata = JSON.parse(result.metadata!);
+    expect(metadata.reason).toBeUndefined();
+    expect(metadata).toMatchObject({
       publicationGap: { band: "elevated", missingActiveCount: 2, missingActiveIds: ["coin-98", "coin-99"] },
-      quality: { reason: "snapshot_written_restored_skipped", restoredOnlyIds: ["coin-0"] },
+      quality: {
+        reason: "upstream_publication_gap_elevated",
+        reasons: ["upstream_publication_gap_elevated", "snapshot_written_restored_skipped"],
+        restoredOnlyIds: ["coin-0"],
+      },
     });
   });
 
   it.each([
-    { expectedCount: 396, missingCount: 1, band: "routine", status: "ok" },
-    { expectedCount: 396, missingCount: 4, band: "elevated", status: "degraded" },
+    { expectedCount: 396, missingCount: 1, band: "routine" },
+    { expectedCount: 396, missingCount: 4, band: "elevated" },
   ])("writes a $band publication gap, skips unchanged reruns and rewrites on recovery", async ({
-    expectedCount, missingCount, band, status,
+    expectedCount, missingCount, band,
   }) => {
+    // The inherited upstream band is a finding, never this job's own failure.
+    const status = "ok";
+    const gapQuality = band === "elevated" ? { quality: { reason: "upstream_publication_gap_elevated" } } : {};
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
       const nowSec = Math.floor(Date.now() / 1000);
@@ -743,11 +751,11 @@ describe("snapshotSupply", () => {
       put.run("stablecoins", JSON.stringify(payload), nowSec);
       const options = { nowSec, requiredActiveIds: requiredIds, snapshotEligibleIds: requiredIds };
       const first = await snapshotSupply(db, undefined, options);
-      expect(first.status).toBe(status);
+      expect(first.status ?? "ok").toBe(status);
       expect(first.itemCount).toBe(expectedCount - missingCount);
       expect(JSON.parse(first.metadata!)).toMatchObject({
         publicationGap: { band, missingActiveCount: missingCount, missingActiveIds: missingIds },
-        ...(band === "elevated" ? { reason: "publication_gap_elevated" } : {}),
+        ...gapQuality,
       });
       const readMarker = () => sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
         .get("snapshot-supply:last-write")!;
@@ -762,16 +770,18 @@ describe("snapshotSupply", () => {
       put.run("stablecoins", JSON.stringify(payload), nowSec + 60);
       const retry = await snapshotSupply(db, undefined, { ...options, nowSec: nowSec + 60 });
       expect(retry.itemCount).toBe(0);
-      expect(retry.status).toBe(status);
+      expect(retry.status ?? "ok").toBe(status);
+      expect(JSON.parse(retry.metadata!)).toMatchObject({ reason: "already_written_today", ...gapQuality });
       expect(readMarker()).toEqual(marker);
       expect(sqlite.prepare("SELECT circulating_usd FROM supply_history WHERE stablecoin_id = 'coin-0'").get())
         .toEqual({ circulating_usd: 100 });
       const freshnessRetry = await snapshotSupply(db, undefined, {
         ...options, nowSec: nowSec + 60, minStablecoinsCacheUpdatedAtSec: nowSec + 61,
       });
-      expect(freshnessRetry.status).toBe(status);
+      expect(freshnessRetry.status ?? "ok").toBe(status);
       expect(JSON.parse(freshnessRetry.metadata!)).toMatchObject({
-        reason: band === "elevated" ? "publication_gap_elevated" : "already_written_today_before_freshness_gate",
+        reason: "already_written_today_before_freshness_gate",
+        ...gapQuality,
       });
       payload.peggedAssets.push(makeSnapshotAsset({ id: missingIds[0], circulating: { peggedUSD: 50 } }));
       put.run("stablecoins", JSON.stringify(payload), nowSec + 120);

@@ -18,6 +18,7 @@ import {
   buildSupplySnapshotCompletionMarker,
   preflightSupplySnapshot,
   SNAPSHOT_CHAIN_SUPPLY_LAST_WRITE_KEY,
+  UPSTREAM_PUBLICATION_GAP_QUALITY_REASON,
 } from "../lib/supply-snapshot-completion";
 
 // Skip once the stablecoins cache has missed two producer intervals
@@ -177,6 +178,10 @@ export async function snapshotChainSupply(
     }
   }
   const deferredChainIds = [...deferredChains.keys()].sort();
+  const quality = {
+    coverage: deferredChainIds.length > 0 ? "partial" : "complete",
+    ...(publicationGapBand === "elevated" ? { reason: UPSTREAM_PUBLICATION_GAP_QUALITY_REASON } : {}),
+  };
   const observationMetadata = {
     restoredOnlyIds: [...restoredOnlyIds].sort(),
     staleSupplyIds: [...staleSupplyIds].sort(),
@@ -205,12 +210,12 @@ export async function snapshotChainSupply(
     && !recoveredSinceLastWrite
   ) {
     return createCronResult({
-      status: publicationGapBand === "elevated" ? "degraded" : "ok",
+      status: "ok",
       itemCount: 0,
       metadata: {
-        reason: publicationGapBand === "elevated" ? "publication_gap_elevated" : "already_written_today",
+        reason: "already_written_today",
         snapshotDate,
-        quality: deferredChainIds.length > 0 ? "partial" : "complete",
+        quality,
         ...publicationGap,
         ...observationMetadata,
       },
@@ -273,19 +278,14 @@ export async function snapshotChainSupply(
   }
 
   logWorkerEventArgs("handler", "info", `[snapshot-chain-supply] Inserted ${chainRows.length} rows for ${formatIsoDate(snapshotDate)}`);
-  const metadata: CronMetadataRecord = {
-    quality: deferredChainIds.length > 0 ? "partial" : "complete",
-    ...(deferredChainIds.length > 0 ? { reason: "chain_observations_partially_deferred" } : {}),
-    ...publicationGap,
-    ...observationMetadata,
-  };
-  return createCronResult(publicationGapBand === "elevated" ? {
-    status: "degraded",
-    itemCount: chainRows.length,
-    metadata: { ...metadata, reason: "publication_gap_elevated" },
-  } : {
+  return createCronResult({
     status: "ok",
     itemCount: chainRows.length,
-    metadata,
+    metadata: {
+      quality,
+      ...(deferredChainIds.length > 0 ? { reason: "chain_observations_partially_deferred" } : {}),
+      ...publicationGap,
+      ...observationMetadata,
+    },
   });
 }

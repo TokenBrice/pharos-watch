@@ -182,6 +182,7 @@ const STATUS_D1_SECTIONS: Record<StatusD1Section, MockTableConfig[]> = {
   live: [],
   publication: [
     { match: "FROM worker_producer_heads", rows: [] },
+    { match: "json_extract(value, '$.compressedBytes')", rows: [], first: null },
   ],
   derived: [
     { match: "pharos:status-derived:mint-burn-24h", rows: [] },

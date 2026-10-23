@@ -15,7 +15,13 @@ import { loadCronHealth } from "../lib/status/cron-health";
 import { summarizeCronStatuses } from "../lib/status/cron-status-summary";
 import { applyCronHealthSectionErrors } from "../lib/status/evaluation-context";
 import { synthesizeOverallCauses } from "../lib/status/evaluation-causes";
-import { evaluateSchedulerLiveness, mergeD1QuotaCauses, rebuildCronDerivedAvailabilityCauses } from "../lib/status/evaluation-rules";
+import {
+  evaluateSafetyPublicationSizeCauses,
+  evaluateSchedulerLiveness,
+  mergeD1QuotaCauses,
+  rebuildCronDerivedAvailabilityCauses,
+} from "../lib/status/evaluation-rules";
+import { loadSafetyPublicationSize } from "../lib/status/safety-publication-size";
 import { buildStatusSummary } from "../lib/status/summary";
 import {
   loadStatusRawSnapshot,
@@ -314,6 +320,7 @@ export function handleStatus({
         supplements,
         producerHistory,
         workerVersions,
+        safetyPublicationSize,
       ] = await Promise.all([
         getLatestStatusProbe(db, (issue) => probeIssues.push(issue)),
         getDiscrepancyStreak(db, (issue) => discrepancyIssues.push(issue)),
@@ -328,14 +335,19 @@ export function handleStatus({
         ),
         loadProducerHeadStatuses(db),
         loadWorkerVersions(db),
+        loadSafetyPublicationSize(db),
       ]);
       persistenceIssues.push(...probeIssues, ...discrepancyIssues, ...timelineIssues);
       // D1 billing-quota floors are ops-only: they join the admin cause lists
       // here, after the usage supplement is known, and never change a status.
-      const availabilityCauses = mergeD1QuotaCauses(
-        raw.causes.availability,
-        supplements.d1Usage?.quota ?? null,
-      );
+      // Safety Score publication size headroom joins the same ops-only list.
+      const availabilityCauses = [
+        ...mergeD1QuotaCauses(
+          raw.causes.availability,
+          supplements.d1Usage?.quota ?? null,
+        ),
+        ...evaluateSafetyPublicationSizeCauses(safetyPublicationSize),
+      ];
       const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak);
       const statusStateError = summarizeStatusPersistenceIssues(persistenceIssues);
       const snapshotErrorSection = statusSnapshotSectionError(snapshotFallbackReason, snapshotError);
