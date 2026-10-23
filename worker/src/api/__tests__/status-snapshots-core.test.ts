@@ -418,6 +418,7 @@ describe("handleStatus", () => {
     // `summary`, and the cron-derived availability causes; mock a successful
     // (empty) read so the scenarios exercise their intended tuples.
     const liveCronHistoryRead = { match: "cron_runs", rows: [] };
+    const liveDeliveryLagRead = { match: "AS started_slots", rows: [{ started_slots: 0, late_slots: 0, max_lag_sec: null }] };
     const scenarios = [
       {
         name: "healthy",
@@ -463,6 +464,7 @@ describe("handleStatus", () => {
           rows: [makeRawStatusSnapshotRow(now, 60, scenario.raw)],
         },
         liveCronHistoryRead,
+        liveDeliveryLagRead,
         ...scenario.tables,
       ]);
       const response = await handleStatus({ db, trustedAdmin: true, request: fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" }) });

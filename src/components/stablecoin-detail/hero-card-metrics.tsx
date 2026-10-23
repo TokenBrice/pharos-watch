@@ -73,8 +73,11 @@ function formatSupplyRestoredAsOf(coinData?: Pick<DetailQuote, "supplyRestored" 
     : null;
 }
 
-function SupplyRestoredNotice({ coinData, className }: { coinData?: Pick<DetailQuote, "supplyRestored" | "supplyObservedAt">; className: string }) {
-  if (coinData?.supplyRestored !== true) return null;
+function SupplyRestoredNotice({ coinData, className }: { coinData?: Pick<DetailQuote, "supplyRestored" | "supplyObservedAt" | "supplyExcludedChains">; className: string }) {
+  if (coinData?.supplyRestored !== true) {
+    const excluded = coinData?.supplyExcludedChains;
+    return excluded?.length ? <p className={className}>Partial supply · excludes {excluded.join(", ")}</p> : null;
+  }
   const supplyRestoredAsOf = formatSupplyRestoredAsOf(coinData);
   return <p className={className}>Stale supply{supplyRestoredAsOf ? ` · as of ${supplyRestoredAsOf}` : ""}</p>;
 }
@@ -174,7 +177,7 @@ export function HeroPriceMetric({
 interface HeroMarketCapMetricProps {
   variant: HeroMetricVariant;
   coin: StablecoinMeta;
-  coinData?: Pick<DetailQuote, "supplyRestored" | "supplyObservedAt">;
+  coinData?: Pick<DetailQuote, "supplyRestored" | "supplyObservedAt" | "supplyExcludedChains">;
   mcap: number | null;
   safePrevDay: number | null;
   prevDayTrendClass: string;
@@ -295,7 +298,7 @@ interface HeroMarketMetricGridProps extends HeroPriceMetricProps {
   variant: HeroMetricVariant;
   market: HeroCardViewModel["market"];
   tertiaryMetric?: HeroTertiaryMetricConfig;
-  coinData: HeroPriceMetricProps["coinData"] & Pick<DetailQuote, "supplyRestored" | "supplyObservedAt">;
+  coinData: HeroPriceMetricProps["coinData"] & Pick<DetailQuote, "supplyRestored" | "supplyObservedAt" | "supplyExcludedChains">;
 }
 
 export function HeroMarketMetricGrid({

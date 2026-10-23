@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { CronScheduleKey } from "@shared/lib/cron-jobs";
-import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
+import { CRON_SCHEDULE_DEFINITIONS, getCronSlotStartedAtForSchedule, type CronScheduleKey } from "@shared/lib/cron-jobs";
+import { SCHEDULED_SLOT_DISPATCH_OFFSET_SEC, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { ScheduledRuntimeContext } from "../context";
 import type { ScheduledSlotSummary } from "../slot-summary";
@@ -110,4 +110,21 @@ describe("scheduled slot registry", () => {
       expect(plannedOutcomes.filter((job) => job.outcome === "error")).toEqual([]);
     },
   );
+});
+
+describe("planned dispatch offsets", () => {
+  it("derives the delayed physical triggers from the registry instead of treating them as late", () => {
+    expect(SCHEDULED_SLOT_DISPATCH_OFFSET_SEC.halfHourlyMeasuredExecution).toBe(300);
+    expect(SCHEDULED_SLOT_DISPATCH_OFFSET_SEC.halfHourlyMeasuredExecutionSupplemental).toBe(300);
+    expect(SCHEDULED_SLOT_DISPATCH_OFFSET_SEC.daily0300Utc).toBe(180);
+    expect(SCHEDULED_SLOT_DISPATCH_OFFSET_SEC.statusSelfCheckOffset).toBe(0);
+  });
+
+  it.each(Object.keys(SCHEDULED_SLOT_PLANS) as CronScheduleKey[])("keeps %s dispatch inside its own logical slot", (key) => {
+    const offsetSec = SCHEDULED_SLOT_DISPATCH_OFFSET_SEC[key];
+    const slotSec = getCronSlotStartedAtForSchedule(key, Date.UTC(2026, 9, 23, 12));
+    expect(offsetSec).toBeGreaterThanOrEqual(0);
+    expect(offsetSec).toBeLessThan(CRON_SCHEDULE_DEFINITIONS[key].intervalSec);
+    expect(getCronSlotStartedAtForSchedule(key, (slotSec + offsetSec) * 1000)).toBe(slotSec);
+  });
 });

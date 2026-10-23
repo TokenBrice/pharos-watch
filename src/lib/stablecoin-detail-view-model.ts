@@ -54,6 +54,7 @@ export function buildStablecoinDetailViewModel({
     nominalPriceReference: summaryData.nominalPriceReference,
     supplyObservedAt: summaryData.supplyObservedAt,
     supplyRestored: summaryData.supplyRestored,
+    supplyExcludedChains: summaryData.supplyExcludedChains,
     pegType: `pegged${coin.flags.pegCurrency}`,
     chains: [...new Set(coin.contracts?.map((contract) => contract.chain) ?? [])],
   };

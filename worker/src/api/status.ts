@@ -204,6 +204,7 @@ async function resolveRawStatusForResponse(
       cronHistoryQueryFailed: cronHealth.cronHistoryQueryFailed,
       cronProgressQueryFailed: cronHealth.cronProgressQueryFailed,
       cronLeaseQueryFailed: cronHealth.cronLeaseQueryFailed,
+      scheduledDeliveryLag: cronHealth.scheduledDeliveryLag,
     }), ...scheduler.causes];
     const sectionErrors = { ...snapshot.raw.sectionErrors };
     delete sectionErrors.schedulerLiveness;

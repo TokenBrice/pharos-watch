@@ -25,6 +25,7 @@ export function makeCronHealth(
     cronProgressQueryFailed: false,
     cronLeaseQueryFailed: false,
     scheduledSlotEventMarkerQueryFailed: false,
+    scheduledDeliveryLag: { startedSlots: 0, lateSlots: 0, maxLagSec: null, queryFailed: false },
     ...overrides,
     scheduledSlots: {
       runningSlots: 0,

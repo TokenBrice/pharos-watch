@@ -3,6 +3,7 @@ import {
   CRON_JOB_DEFINITIONS,
   CRON_SCHEDULES,
   CRON_TRIGGER_SCHEDULES,
+  getCronSlotStartedAtForSchedule,
   SHARED_SCHEDULED_JOB_IDENTITIES,
   type CronScheduleExpression,
   type CronScheduleKey,
@@ -102,11 +103,14 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
   },
   statusSelfCheckOffset: {
     worker: "public",
-    jobChains: [[
-      "status-self-check",
-      "data-invariant-canary",
-      "cron-sentinel",
-    ]],
+    // Two chains: neither observer reads the self-check's output, so a
+    // self-check that fails or is abandoned mid-run must not leave the canary
+    // and the sentinel not_started. Declared peak 2 + max(0, 1) = 3/6 beside
+    // the serial budget-only collection (4) that follows the slot groups.
+    jobChains: [
+      ["status-self-check"],
+      ["data-invariant-canary", "cron-sentinel"],
+    ],
     budgetOnlyJobs: ["price-corroboration"],
     taskPolicies: { "cron-sentinel": SENTINEL_TASK_POLICY },
   },
@@ -337,6 +341,36 @@ function indexScheduledSlotPlansByTriggerSchedule(
 
 export const SCHEDULED_SLOT_PLANS_BY_SCHEDULE: Readonly<Record<string, ScheduledSlotPlan>> = Object.freeze(
   indexScheduledSlotPlansByTriggerSchedule(SCHEDULED_SLOT_PLANS),
+);
+
+// A Monday 00:00 UTC reference: every single-minute physical alias maps back
+// to its logical slot from here without crossing a day or week boundary.
+const DISPATCH_OFFSET_REFERENCE_SEC = Date.UTC(2026, 0, 5) / 1000;
+
+/**
+ * Seconds a lane's physical trigger deliberately fires after its logical slot
+ * clock (`slot_started_at`), derived from its trigger aliases and the runtime
+ * slot mapping. halfHourlyMeasuredExecution keeps :00/:30 slots but fires at
+ * :05/:35, so delivery-lag evidence must subtract this before calling a start
+ * late. Lanes whose physical expressions are their logical schedule return 0.
+ */
+function getScheduledDispatchOffsetSec(scheduleKey: CronScheduleKey): number {
+  const triggers = CRON_TRIGGER_SCHEDULES[scheduleKey];
+  if (triggers.length === 1 && triggers[0] === CRON_SCHEDULES[scheduleKey]) return 0;
+  return Math.max(0, ...triggers.map((expression) => {
+    const [minute, hour] = expression.split(" ");
+    if (!/^\d+$/.test(minute) || !/^(\*|\d+)$/.test(hour)) {
+      throw new Error(`Cannot derive dispatch offset for ${scheduleKey} alias "${expression}"`);
+    }
+    const firedAtSec = DISPATCH_OFFSET_REFERENCE_SEC + (hour === "*" ? 0 : Number(hour)) * 3600 + Number(minute) * 60;
+    return firedAtSec - getCronSlotStartedAtForSchedule(scheduleKey, firedAtSec * 1000);
+  }));
+}
+
+export const SCHEDULED_SLOT_DISPATCH_OFFSET_SEC: Readonly<Record<CronScheduleKey, number>> = Object.freeze(
+  Object.fromEntries(
+    (Object.keys(SCHEDULED_SLOT_PLANS) as CronScheduleKey[]).map((key) => [key, getScheduledDispatchOffsetSec(key)]),
+  ) as Record<CronScheduleKey, number>,
 );
 
 export function getScheduledWorkerRoleForExpression(expression: string): ScheduledWorkerRole {

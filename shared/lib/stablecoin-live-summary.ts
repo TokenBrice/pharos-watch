@@ -89,6 +89,7 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): 
     agreeSources: detail.agreeSources,
     supplyObservedAt,
     ...(supplyUnavailable || (hasCurrentSupply && detail.currentSupplyRestored === true) ? { supplyRestored: true } : {}),
+    ...(hasCurrentSupply && detail.currentSupplyExcludedChains?.length ? { supplyExcludedChains: detail.currentSupplyExcludedChains } : {}),
     circulating,
     circulatingPrevDay: hasCurrentSupply ? admittedDetailBuckets(detail.currentCirculatingPrevDayUSD)
       : latestDate == null ? {} : detailBucketsAt(detail, latestDate - 86_400, "totalCirculatingUSD"),
