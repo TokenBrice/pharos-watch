@@ -582,18 +582,23 @@ describe("worker.scheduled", () => {
     await heavyWorker.scheduled({ cron: "16 * * * *" } as ScheduledEvent, env, makeExecutionContext().ctx);
     expect(waitForV9MemoryLaneRelease).toHaveBeenCalledTimes(1);
   });
-  it("throws loudly when a scheduled trigger is unmapped", async () => {
+  it("skips an unmapped trigger neutrally with a structured warn and no slot claim", async () => {
     const { ctx } = makeExecutionContext();
     const env = makeScheduledEnv();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
+    // A removed expression Cloudflare still delivers during trigger propagation.
     await expect(
       worker.scheduled(
-        { cron: "1 2 3 4 5" } as ScheduledEvent,
+        { cron: "* * * * *" } as ScheduledEvent,
         env,
         ctx,
       ),
-    ).rejects.toThrow("[cron-slot] Unknown scheduled trigger: 1 2 3 4 5");
+    ).resolves.toBeUndefined();
     expect(cronMocks.runScheduledSlotWithFence).not.toHaveBeenCalled();
+    const logged = warn.mock.calls.map((args) => String(args[0])).join("\n");
+    expect(logged).toContain("scheduled-trigger-unknown");
+    expect(logged).toContain("* * * * *");
   });
 
   it("derives slot identity from scheduledTime and threads it through slot fencing and cron logging", async () => {
