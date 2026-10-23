@@ -696,8 +696,11 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // 2026-08-19: Ethereum 262,732,021.385906 (asset=USDC, totalAssets
   // 271,160,715.325800, convertToAssets(1e6)=1.032081) + Avalanche
   // 11,720,796.241001 (asset=0xb97e…8a6e, totalAssets 12,024,527.957899)
-  // = 274,452,817.626907. Ethereum balanceOf(self)=0.
-  "susdc-spark": [{ chain: "ethereum" }, { chain: "avalanche" }],
+  // = 274,452,817.626907. Ethereum balanceOf(self)=0. X Layer is the same
+  // local "Spark Savings USDC" vault shape (asset=0xb6ce…3061); verified
+  // 2026-10-23: totalSupply 92,646,552.847606, totalAssets 92,926,672.078548.
+  // Every registered contract must be probed, so this leg is required.
+  "susdc-spark": [{ chain: "ethereum" }, { chain: "avalanche" }, supplyProbeChain("xlayer")],
   // spUSDT is a per-chain Spark ERC-4626 (USDT on Ethereum, USDT0 on Arbitrum
   // and X Layer). USDT0 is collateral, not a bridged spUSDT representation.
   // Verified 2026-08-19: Ethereum 364,164,245.855785 (totalAssets
@@ -828,7 +831,9 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("aptos"),
     // Reciprocal Plasma/Base pool identity reviewed 2026-10-20. This is a
     // represented-stock census leg, not bridge-control or in-flight clearance.
-    { chain: "base" },
+    // totalSupply() read 0 on 2026-10-23; a zero leg is an observed zero, not
+    // a failed read, so it must not void the whole partition.
+    { chain: "base", allowZeroSupply: true },
   ],
   // IDRT is minted natively on Ethereum, BSC and Polygon: each is a
   // non-upgradeable Ownable ERC-20 whose owner() is the same PT Rupiah Token

@@ -259,7 +259,7 @@ describe("curated on-chain supply paths", () => {
     { id: "brlv-crown", chains: ["base", "ethereum"], zero: ["ethereum"],
       endpoints: { base: undefined, ethereum: undefined } },
     { id: "syzusd-yuzu", chains: ["plasma", "ethereum", "monad", "hyperevm", "sei", "pharos", "berachain", "aptos", "base"], canonical: "plasma",
-      zero: ["hyperevm"],
+      zero: ["hyperevm", "base"],
       endpoints: { plasma: "https://rpc.plasma.to", monad: "https://rpc.monad.xyz" } },
     { id: "idrt-rupiah-token", chains: ["ethereum", "bsc", "polygon", "harmony"],
       zero: ["harmony"], endpoints: { harmony: "https://api.harmony.one" },
@@ -525,7 +525,7 @@ describe("hasRuntimeOnchainSupplyPath", () => {
 });
 
 
-it.each(["mre7yield-midas", "cusdo-openeden", "syzusd-yuzu", "syrupusdc-maple", "susdt-spark", "susds-sky", "sdai-sky"])("covers every supply-reviewed deployment for %s and rejects a missing leg", (id) => {
+it.each(["mre7yield-midas", "cusdo-openeden", "syzusd-yuzu", "susdc-spark", "syrupusdc-maple", "susdt-spark", "susds-sky", "sdai-sky"])("covers every supply-reviewed deployment for %s and rejects a missing leg", (id) => {
   const meta = TRACKED_META_BY_ID.get(id)!;
   const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta)!;
   expect(selected.map(({ contract }) => `${contract.chain}:${contract.address}`).sort()).toEqual(
