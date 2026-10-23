@@ -322,6 +322,12 @@ describe("HeroCard", () => {
       .not.toContain("Stale supply");
   });
 
+  it("labels partial-coverage market cap with the excluded chains", () => {
+    expect(renderHero({ coinData: { supplyExcludedChains: ["HyperEVM"] } }))
+      .toContain("Partial supply · excludes HyperEVM");
+    expect(renderHero({ coinData: { supplyRestored: false } })).not.toContain("Partial supply");
+  });
+
   it("renders unavailable market cap and supply without a false zero in static markup", () => {
     const html = renderHero({
       coinData: { circulating: {}, circulatingPrevDay: {} },
