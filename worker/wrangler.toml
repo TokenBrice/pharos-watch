@@ -183,3 +183,8 @@ PROJECT_TAPE_PLACED_EXECUTOR = "on"
 WORKER_RESERVE_RECOVERY_MODE = "recover"
 # Roll back latency acceleration with off; retain cron, ledger and Queue resources.
 WORKER_RESERVE_QUEUE_MODE = "on"
+# `on` lets the five-minute digest poll arm one-shot catch-ups for missed or
+# platform-abandoned opt-in slots, executed by the reserve Queue consumer under
+# the missed slot's own fence. `off` stops arming; natural slots are unchanged.
+# Checked in off; enabled in a separate reviewed change.
+WORKER_SLOT_CATCH_UP_MODE = "off"
