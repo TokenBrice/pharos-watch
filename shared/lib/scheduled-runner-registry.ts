@@ -102,11 +102,14 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
   },
   statusSelfCheckOffset: {
     worker: "public",
-    jobChains: [[
-      "status-self-check",
-      "data-invariant-canary",
-      "cron-sentinel",
-    ]],
+    // Two chains: neither observer reads the self-check's output, so a
+    // self-check that fails or is abandoned mid-run must not leave the canary
+    // and the sentinel not_started. Declared peak 2 + max(0, 1) = 3/6 beside
+    // the serial budget-only collection (4) that follows the slot groups.
+    jobChains: [
+      ["status-self-check"],
+      ["data-invariant-canary", "cron-sentinel"],
+    ],
     budgetOnlyJobs: ["price-corroboration"],
     taskPolicies: { "cron-sentinel": SENTINEL_TASK_POLICY },
   },
