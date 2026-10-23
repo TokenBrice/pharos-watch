@@ -802,11 +802,19 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
         // warning above stays admin-only. Gap duration only names assets.
         if (breadthDegraded) {
           const threshold = getActiveAssetServiceBreadthThreshold(coverage.expectedActiveCount);
+          // Split the total so it reconciles with the persistent-gap count the
+          // admin and public price-coverage notices name.
+          const recentCount = coverage.missingPriceCount == null
+            ? null
+            : coverage.missingPriceCount - alertIds.length - reviewed.length;
+          const breakdown = recentCount == null || recentCount < 0
+            ? ""
+            : ` (${alertIds.length} persistent, ${reviewed.length} under review, ${recentCount} recent)`;
           causes.push(makeCause(
             "data-quality",
             "active_price_coverage_breadth_degraded",
             "warning",
-            `Live prices are unavailable for ${coverage.missingPriceCount ?? "an unknown number of"} of ${coverage.expectedActiveCount ?? "an unknown number of"} active assets, reaching the service-wide breadth threshold${threshold == null ? "" : ` (${threshold})`}.`,
+            `Live prices are unavailable for ${coverage.missingPriceCount ?? "an unknown number of"} of ${coverage.expectedActiveCount ?? "an unknown number of"} active assets${breakdown}, reaching the service-wide breadth threshold${threshold == null ? "" : ` (${threshold})`}.`,
             { metric: "missingActivePrices", value: coverage.missingPriceCount ?? undefined, threshold: threshold ?? undefined },
           ));
         }

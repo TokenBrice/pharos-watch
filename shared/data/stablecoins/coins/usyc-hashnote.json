@@ -14,7 +14,7 @@
   "pegMechanism": "Subscription and redemption via USDC at NAV-based token price; redemptions below instant redemption capacity settle in one block, while larger redemptions settle T+0 or T+1",
   "mechanismArchetype": "tbill",
   "llamaId": "237",
-  "detailProvider": "defillama",
+  "detailProvider": "coingecko",
   "geckoId": "hashnote-usyc",
   "links": [
     {

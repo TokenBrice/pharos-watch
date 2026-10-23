@@ -8,6 +8,7 @@ import { isTrustedDexPriceRow } from "../../lib/depeg-trust-policy";
 import { computePriceConsensus } from "../../lib/price-consensus";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import {
   buildPrimarySourceCandidates,
   type DlListQuote,
@@ -35,17 +36,39 @@ function isPrimaryPublicationDexAggregateEligible(
 }
 
 /**
+ * Later same-run readers (authoritative parent checks) validate the composite
+ * clock after consensus; this margin keeps a co-leg admitted at `nowSec` fresh
+ * through the rest of the run.
+ */
+const DEX_CO_LEG_RUN_LATENCY_MARGIN_SEC = 180;
+
+/**
  * Consensus stamps a cluster with its oldest agreeing leg's clock. The DEX
  * aggregate is published hourly and stays eligible for 75 minutes, so as an
  * extra leg it would pin fresh CEX/oracle agreement to the previous DEX run
  * and age the composite past the 30-minute primary budget. That stale clock
  * made the next DEX run reject its own quote legs (USDC, USDT, ...), drop their
- * DEX rows, and flip back an hour later. Beside other legs it therefore joins
- * only while it fits the primary budget; as the sole leg it keeps its own
- * freshness window and publishes as single-source.
+ * DEX rows, and flip back an hour later. Composite freshness also holds every
+ * part to its own registry window against that one clock, so a 15-30 minute
+ * DEX leg beside 15-minute CoinGecko/DefiLlama legs failed every
+ * authoritative child's parent check once an hour. Beside other legs it
+ * therefore joins only while it fits the primary budget and the strictest
+ * co-leg window; as the sole leg it keeps its own freshness window and
+ * publishes as single-source.
  */
-function isDexAggregateWithinPrimaryBudget(row: DexPriceRow, nowSec: number): boolean {
-  return nowSec - row.updated_at <= DEPEG_PRIMARY_PRICE_MAX_AGE_SEC;
+function isDexAggregateWithinCoLegBudget(
+  row: DexPriceRow,
+  coLegSources: readonly { source: string }[],
+  nowSec: number,
+): boolean {
+  let maxAgeSec = DEPEG_PRIMARY_PRICE_MAX_AGE_SEC;
+  for (const { source } of coLegSources) {
+    const sourceMaxAgeSec = getPricingSourceRegistryEntry(source)?.maxTrustedAgeSec;
+    if (sourceMaxAgeSec != null && sourceMaxAgeSec > 0) {
+      maxAgeSec = Math.min(maxAgeSec, sourceMaxAgeSec - DEX_CO_LEG_RUN_LATENCY_MARGIN_SEC);
+    }
+  }
+  return nowSec - row.updated_at <= maxAgeSec;
 }
 
 export function buildPrimaryConsensusResults(params: {
@@ -106,13 +129,13 @@ export function buildPrimaryConsensusResults(params: {
     const dexRow = params.dexRows.get(asset.id);
     const eligibleDexAggregate =
       dexRow && isPrimaryPublicationDexAggregateEligible(asset.id, dexRow, params.nowSec) ? dexRow : undefined;
-    if (eligibleDexAggregate && isDexAggregateWithinPrimaryBudget(eligibleDexAggregate, params.nowSec)) {
-      collectedQuotes.dexAggregateQuote = eligibleDexAggregate;
-    }
-
     const sourceBuildOptions = { divergenceThresholdBps: DIVERGENCE_THRESHOLD_BPS, nowSec: params.nowSec };
     let sourceBuild = buildPrimarySourceCandidates(asset, collectedQuotes, sourceBuildOptions);
-    if (sourceBuild.sources.length === 0 && eligibleDexAggregate && !collectedQuotes.dexAggregateQuote) {
+    if (
+      eligibleDexAggregate &&
+      (sourceBuild.sources.length === 0 ||
+        isDexAggregateWithinCoLegBudget(eligibleDexAggregate, sourceBuild.sources, params.nowSec))
+    ) {
       collectedQuotes.dexAggregateQuote = eligibleDexAggregate;
       sourceBuild = buildPrimarySourceCandidates(asset, collectedQuotes, sourceBuildOptions);
     }

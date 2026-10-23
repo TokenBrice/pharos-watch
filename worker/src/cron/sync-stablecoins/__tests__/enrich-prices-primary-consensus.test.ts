@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildPrimaryConsensusResults } from "../enrich-prices-primary-consensus";
+import { validateCompositePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
 import {
   createEmptyPrimaryConsensusQuoteMaps,
   type PrimaryDexPriceSources,
@@ -37,9 +38,15 @@ describe("buildPrimaryConsensusResults", () => {
     const nowSec = 1_790_629_276;
     const usdc: PeggedAsset = { id: "usdc-circle", name: "USD Coin", symbol: "USDC", pegType: "peggedUSD" };
 
-    function build(input: { dexAgeSec: number; withIndependentLegs: boolean }): PrimaryPriceResult | undefined {
+    function build(input: { dexAgeSec: number; withIndependentLegs: boolean; aggregatorLegsOnly?: boolean }): PrimaryPriceResult | undefined {
       const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
-      if (input.withIndependentLegs) {
+      if (input.aggregatorLegsOnly) {
+        usdc.geckoId = "usd-coin";
+        quoteMaps.cgQuotes.set("usd-coin", { price: 0.9999, observedAt: nowSec - 30, observedAtMode: "upstream" });
+      } else {
+        delete usdc.geckoId;
+      }
+      if (input.withIndependentLegs && !input.aggregatorLegsOnly) {
         quoteMaps.krakenPrices.set("USDC", 0.9999);
         quoteMaps.krakenObservedAt = nowSec - 60;
         quoteMaps.redstonePrices.set("usdc-circle", {
@@ -85,11 +92,28 @@ describe("buildPrimaryConsensusResults", () => {
       expect(result?.observedAt).toBe(nowSec - 60);
     });
 
-    it("admits a DEX aggregate inside the primary budget as an agreeing leg", () => {
-      const result = build({ dexAgeSec: 1_800, withIndependentLegs: true });
+    it("admits a DEX aggregate inside the strictest co-leg window as an agreeing leg", () => {
+      const result = build({ dexAgeSec: 100, withIndependentLegs: true });
 
       expect(result?.agreeSources).toContain("dex-promoted");
-      expect(result?.observedAt).toBe(nowSec - 1_800);
+      expect(result?.observedAt).toBe(nowSec - 100);
+    });
+
+    it("keeps a DEX aggregate past a co-leg's window from failing the composite's freshness", () => {
+      // 20 minutes old: inside the 30-minute primary budget, outside CoinGecko's
+      // 15-minute window, so admitting it stamped USDC stale for every
+      // authoritative child priced from it.
+      const result = build({ dexAgeSec: 1_200, withIndependentLegs: true, aggregatorLegsOnly: true });
+
+      expect(result?.candidateSources).not.toContain("dex-promoted");
+      expect(result?.observedAt).toBe(nowSec - 30);
+      expect(validateCompositePricingSourceFreshness({
+        source: result!.source,
+        observedAt: result!.observedAt,
+        observedAtMode: result!.observedAtMode,
+        nowSec,
+        requireObservedAt: true,
+      }).accepted).toBe(true);
     });
 
     it("keeps an older DEX aggregate as the sole leg with its own clock", () => {

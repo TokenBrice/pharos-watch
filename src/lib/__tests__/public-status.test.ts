@@ -84,7 +84,7 @@ describe("public status helpers", () => {
     };
 
     const presentation = getPublicHealthWarningPresentation(health.warnings[0]!, health);
-    expect(presentation.detail).toContain("NXUSD");
+    expect(presentation.detail).toContain("unavailable for 2 active assets, including 1 persistent gap: NXUSD.");
     expect(presentation.detail).not.toContain("TUSD");
   });
 

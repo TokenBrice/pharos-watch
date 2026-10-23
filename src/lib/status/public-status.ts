@@ -35,16 +35,16 @@ function getActivePriceAssetLabels(
   return [...new Set(labels)];
 }
 
-function formatAffectedAssets(count: number, labels: readonly string[]): string {
+function formatAffectedAssets(count: number, labels: readonly string[], noun = "active asset"): string {
   const effectiveCount = Math.max(count, labels.length);
   const visibleLabels = labels.slice(0, 6);
   const hiddenCount = Math.max(0, effectiveCount - visibleLabels.length);
   const displayLabels = hiddenCount > 0 ? [...visibleLabels, `${hiddenCount} more`] : visibleLabels;
   const countLabel = effectiveCount === 1
-    ? "1 active asset"
+    ? `1 ${noun}`
     : effectiveCount > 1
-      ? `${effectiveCount} active assets`
-      : "active assets";
+      ? `${effectiveCount} ${noun}s`
+      : `${noun}s`;
   return displayLabels.length > 0 ? `${countLabel}: ${formatProseList(displayLabels)}` : countLabel;
 }
 
@@ -55,7 +55,12 @@ export function getActivePriceCoverageImpactDetail(coverage: ActivePriceCoverage
   }
   const ids = coverage.alertEligibleIds.filter((id) => !acknowledgedIds.has(id));
   const labels = getActivePriceAssetLabels(coverage, ids);
-  const affectedAssets = formatAffectedAssets(ids.length, labels);
+  // Name the persistent gaps, but count every unavailable price so this
+  // matches `missingPriceCount` and the worker's breadth cause.
+  const missingCount = coverage.missingPriceCount ?? 0;
+  const affectedAssets = missingCount > Math.max(ids.length, labels.length)
+    ? `${missingCount} active assets, including ${formatAffectedAssets(ids.length, labels, "persistent gap")}`
+    : formatAffectedAssets(ids.length, labels);
   return `Live prices are unavailable for ${affectedAssets}. Stablecoin listings and price-dependent analytics may be incomplete until coverage recovers.`;
 }
 
