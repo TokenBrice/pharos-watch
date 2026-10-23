@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.38",
+    "title": "Late yield rankings retained within a named budget",
+    "date": "2026-10-23",
+    "effectiveAt": 1792800000,
+    "summary": "DEWS keeps publishing with the last-good yield-rankings generation for up to three yield producer intervals instead of withholding the whole cohort as soon as one yield run is late.",
+    "impact": [
+      "The retention budget is three times the sync-yield-data cadence, derived from the cron interval so a cadence change moves it automatically. Within the producer interval plus runtime the generation is fresh; past that and within the retention budget it is retained last-good evidence.",
+      "Run metadata names the yield-rankings generation, its age, the retention budget and a machine-readable reason (`retained-last-good`); each asset with structured yield evidence records the generation age in `sourceAges.yieldRankings` and a retained flag in `staleFlags.yieldRankings`.",
+      "Beyond the retention budget, or with a missing, invalid or beyond-skew clock, publication is still withheld under `yield-rankings-freshness` with `dews-cohort-dependency-unavailable`. Signal curves, weights, the Yield Anomaly increments and other input admission gates are unchanged.",
+      "Planned activation is provisionally 2026-10-24 00:00 UTC (1792800000), following the next-UTC-midnight convention; re-date effectiveAt at release. No DEWS score replay is claimed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.37",
     "title": "Mint/burn inputs share the published flow watermark",
     "date": "2026-10-20",

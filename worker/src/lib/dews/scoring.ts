@@ -146,6 +146,9 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     const prev = prevSnapshot?.signals;
     const mintBurn = sourceState.mintBurnMap.get(meta.id);
     const mintBurnAgeSec = sourceState.mintBurnAgeSecById.get(meta.id) ?? null;
+    const yieldSourceRisk = sourceState.yieldSourceRisk.get(meta.id) ?? null;
+    const yieldRankChangeAttribution = sourceState.yieldRankChangeAttribution.get(meta.id) ?? null;
+    const hasYieldRankingEvidence = yieldSourceRisk != null || yieldRankChangeAttribution != null;
 
     const hasBlacklistTracking = BLACKLIST_TRACKED_ID_SET.has(meta.id);
     const blacklistCounts = hasBlacklistTracking ? sourceState.blacklistCounts.get(meta.id) : undefined;
@@ -213,8 +216,8 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       flowValuation24h: mintBurn?.valuation24h ?? null,
       flowBurnBaselineValuation: mintBurn?.burnBaselineValuation ?? null,
       yieldWarnings: sourceState.yieldWarnings.get(meta.id) ?? [],
-      yieldSourceRisk: sourceState.yieldSourceRisk.get(meta.id) ?? null,
-      yieldRankChangeAttribution: sourceState.yieldRankChangeAttribution.get(meta.id) ?? null,
+      yieldSourceRisk,
+      yieldRankChangeAttribution,
       psiScore: sourceState.latestPsiScore,
       prevPoolValue: prev?.pool?.value,
       prevPoolAvailable: prev?.pool?.available === true,
@@ -227,12 +230,14 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
         dexPrice: sourceState.dexPriceAgeSecById.get(meta.id) ?? null,
         previousSignals: prevSnapshot?.ageSec ?? null,
         mintBurn: mintBurnAgeSec,
+        yieldRankings: hasYieldRankingEvidence ? sourceState.yieldRankingsAgeSec : null,
       },
       staleFlags: {
         dexLiquidity: sourceState.dexLiqStaleIds.has(meta.id),
         dexPrice: sourceState.dexPriceStaleIds.has(meta.id),
         previousSignals: sourceState.prevSignalStaleIds.has(meta.id),
         mintBurn: sourceState.mintBurnStaleIds.has(meta.id),
+        yieldRankings: hasYieldRankingEvidence && sourceState.yieldRankingsRetained,
         pegReference: !pegReferenceTrusted,
       },
     };
