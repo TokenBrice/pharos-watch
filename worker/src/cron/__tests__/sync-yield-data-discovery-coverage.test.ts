@@ -62,7 +62,7 @@ describe("syncYieldData", () => {
     );
     expect(supplementalRow).toBeDefined();
     expect(vi.mocked(getCaches)).toHaveBeenCalledWith(
-      db,
+      expect.anything(),
       expect.arrayContaining(["yield:supplemental-sources:v1:morpho", "yield:supplemental-sources:v1:beefy"]),
     );
   });
@@ -910,7 +910,10 @@ describe("syncYieldData", () => {
       expect(result.itemCount).toBe(0);
       expect(result.status).toBe("degraded");
       expect(result.productivity).toEqual({ productive: false, reason: "no-yield-bearing-coins" });
-      expect(JSON.parse(result.metadata ?? "{}")).toEqual({ reason: "no-yield-bearing-coins" });
+      expect(JSON.parse(result.metadata ?? "{}")).toEqual({
+        reason: "no-yield-bearing-coins",
+        d1Cost: expect.objectContaining({ rowsWritten: expect.any(Number) }),
+      });
       expect(shouldAttemptFetch).not.toHaveBeenCalled();
       expect(batchExecute).not.toHaveBeenCalled();
     } finally {

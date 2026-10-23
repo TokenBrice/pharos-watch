@@ -52,9 +52,12 @@ describe("reconcilePublicStatusState", () => {
     expect(held.projection.headline).toMatchObject({ state: "operational", affected: ["safety-scores"] });
     expect((await listPublicStatusTransitions(db, 50, NOW - 1)).transitions).toHaveLength(1);
     health.safetyScorePublication.acceptedAtSec = health.timestamp - 12 * CRON_INTERVALS["compute-safety-score-v9"] - 1;
+    // An age outage bypasses hysteresis on entry; clearing still needs two evaluations.
     await reconcilePublicStatusState(db, NOW + 1800, health);
     await reconcilePublicStatusState(db, NOW + 2700, makeHealthyHealthResponse());
+    await reconcilePublicStatusState(db, NOW + 3600, makeHealthyHealthResponse());
     const history = await listPublicStatusTransitions(db, 50, NOW - 1);
+    expect(history.transitions.map(({ at }) => at)).toEqual([NOW + 3600, NOW + 1800, NOW]);
     expect(history.transitions[1]).toMatchObject({
       source: "public", transitionType: "degrade", headline: { state: "partial-outage" },
       components: [{ id: "safety-scores", state: "outage", reasons: expect.arrayContaining(["safety-score-publication:outage", "safety-score-publication-held"]) }],
@@ -73,21 +76,32 @@ describe("reconcilePublicStatusState", () => {
     const unchanged = await reconcilePublicStatusState(db, NOW + 900, makeHealthyHealthResponse());
     expect(unchanged.projection.components.every((component) => component.since == null)).toBe(true);
 
-    const degraded = await reconcilePublicStatusState(db, NOW + 1800, lateCharts());
+    // First late evaluation is held (hysteresis); the second confirms it with the first-seen `since`.
+    const pending = await reconcilePublicStatusState(db, NOW + 1800, lateCharts());
+    expect(pending.projection.headline.state).toBe("operational");
+    expect(pending.projection.components.find((component) => component.id === "charts")!.state).toBe("operational");
+    const counters = await db.prepare("SELECT consecutive_healthy, consecutive_degraded FROM status_state WHERE scope = 'public'")
+      .first<{ consecutive_healthy: number; consecutive_degraded: number }>();
+    expect(counters).toEqual({ consecutive_healthy: 0, consecutive_degraded: 1 });
+
+    const degraded = await reconcilePublicStatusState(db, NOW + 2700, lateCharts());
     expect(degraded.projection.headline.state).toBe("delayed");
     expect(degraded.projection.components.find((component) => component.id === "charts")!.since).toBe(NOW + 1800);
 
-    const held = await reconcilePublicStatusState(db, NOW + 2700, lateCharts());
+    const held = await reconcilePublicStatusState(db, NOW + 3600, lateCharts());
     expect(held.projection.components.find((component) => component.id === "charts")!.since).toBe(NOW + 1800);
 
-    await reconcilePublicStatusState(db, NOW + 3600, makeHealthyHealthResponse());
+    // Clearing also needs two evaluations.
+    const clearing = await reconcilePublicStatusState(db, NOW + 4500, makeHealthyHealthResponse());
+    expect(clearing.projection.components.find((component) => component.id === "charts")!.state).toBe("delayed");
+    await reconcilePublicStatusState(db, NOW + 5400, makeHealthyHealthResponse());
 
     const history = await listPublicStatusTransitions(db, 50, NOW - 1);
     expect(history.startedAt).toBe(NOW);
     expect(history.hasMore).toBe(false);
     expect(history.transitions.map(({ transitionType, to, at }) => ({ transitionType, to, at }))).toEqual([
-      { transitionType: "recover", to: "healthy", at: NOW + 3600 },
-      { transitionType: "degrade", to: "degraded", at: NOW + 1800 },
+      { transitionType: "recover", to: "healthy", at: NOW + 5400 },
+      { transitionType: "degrade", to: "degraded", at: NOW + 2700 },
       { transitionType: "init", to: "healthy", at: NOW },
     ]);
     expect(history.transitions[1]).toMatchObject({
@@ -98,6 +112,36 @@ describe("reconcilePublicStatusState", () => {
 
     // Operator history never sees public rows.
     expect(await listRecentStatusTransitions(db, 50, { from: NOW - 1 })).toEqual([]);
+  });
+
+  it("drops one-evaluation flaps and lets a database outage bypass hysteresis", async () => {
+    const { db } = fixtures.open();
+    await reconcilePublicStatusState(db, NOW, makeHealthyHealthResponse());
+    // A single late evaluation between healthy ones never reaches the transition log.
+    await reconcilePublicStatusState(db, NOW + 900, lateCharts());
+    await reconcilePublicStatusState(db, NOW + 1800, makeHealthyHealthResponse());
+    expect((await listPublicStatusTransitions(db, 50, NOW - 1)).transitions).toHaveLength(1);
+    // A direction change restarts the streak: degraded-then-clear is not two degraded evaluations.
+    await reconcilePublicStatusState(db, NOW + 2700, lateCharts());
+    await reconcilePublicStatusState(db, NOW + 3600, makeHealthyHealthResponse());
+    await reconcilePublicStatusState(db, NOW + 4500, lateCharts());
+    expect((await listPublicStatusTransitions(db, 50, NOW - 1)).transitions).toHaveLength(1);
+
+    const down = { ...makeHealthyHealthResponse(), status: "stale" as const, warnings: ["db-unhealthy"] };
+    const outage = await reconcilePublicStatusState(db, NOW + 5400, down);
+    expect(outage.projection.headline.state).toBe("major-outage");
+    expect(outage.projection.components.every((component) => component.state === "outage" && component.since === NOW + 5400)).toBe(true);
+  });
+
+  it("publishes at once when a legacy record cannot be held faithfully", async () => {
+    const { db } = fixtures.open();
+    await reconcilePublicStatusState(db, NOW, makeHealthyHealthResponse());
+    const row = await db.prepare("SELECT causes_json FROM status_state WHERE scope = 'public'").first<{ causes_json: string }>();
+    const stored = JSON.parse(row!.causes_json) as { components: Record<string, unknown>[] };
+    for (const component of stored.components) delete component.summary;
+    await db.prepare("UPDATE status_state SET causes_json = ? WHERE scope = 'public'").bind(JSON.stringify(stored)).run();
+    const next = await reconcilePublicStatusState(db, NOW + 900, lateCharts());
+    expect(next.projection.components.find((component) => component.id === "charts")).toMatchObject({ state: "delayed", since: NOW + 900 });
   });
 
   it("records changed breaker identities once without heartbeat or ordering noise", async () => {
@@ -149,7 +193,9 @@ describe("reconcilePublicStatusState", () => {
     const { db } = fixtures.open();
     await reconcilePublicStatusState(db, NOW, makeHealthyHealthResponse());
     await reconcilePublicStatusState(db, NOW + 900, lateCharts());
-    await reconcilePublicStatusState(db, NOW + 1800, makeHealthyHealthResponse());
+    await reconcilePublicStatusState(db, NOW + 1800, lateCharts());
+    await reconcilePublicStatusState(db, NOW + 2700, makeHealthyHealthResponse());
+    await reconcilePublicStatusState(db, NOW + 3600, makeHealthyHealthResponse());
     const page = await listPublicStatusTransitions(db, 2, NOW - 1);
     expect(page.transitions).toHaveLength(2);
     expect(page.hasMore).toBe(true);

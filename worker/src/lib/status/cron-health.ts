@@ -91,6 +91,8 @@ const CRON_HISTORY_ROWS_PER_JOB = 10;
 // Upper bound on one attempt's duration (scheduled invocations stop well within an hour).
 const CRON_OUTPUT_LOOKBACK_DURATION_SLACK_SEC = 3_600;
 const NEUTRAL_CRON_RUN_STATUS = "skipped_neutral";
+/** Minimum progress age before a leased in-flight run reads stale. */
+export const CRON_IN_FLIGHT_STALE_FLOOR_SEC = 300;
 // D1's compound SELECT term limit is lower than upstream SQLite's default.
 // Each per-job branch here contributes two SELECT terms because it wraps a
 // latest-N subquery, so keep batches to five jobs or fewer.
@@ -857,7 +859,7 @@ export async function loadCronHealth(
     const progressUpdatedAt = inFlight ? assessFreshnessTimestamp(progressReadNow, inFlight.updatedAt) : null;
     const progressTimestampReason = progressStartedAt?.reason ?? progressUpdatedAt?.reason ?? null;
     const inFlightFresh = inFlight != null && progressTimestampReason == null
-      && progressUpdatedAt?.ageSeconds != null && progressUpdatedAt.ageSeconds <= Math.max(300, interval);
+      && progressUpdatedAt?.ageSeconds != null && progressUpdatedAt.ageSeconds <= Math.max(CRON_IN_FLIGHT_STALE_FLOOR_SEC, interval);
     const isFresh = isFreshCronRun(lastRun, now, interval);
     const requiredRuns = runs.filter((run) => run.status !== NEUTRAL_CRON_RUN_STATUS);
     const latestRequiredRun = requiredRuns[0] ?? null;
