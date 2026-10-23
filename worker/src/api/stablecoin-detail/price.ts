@@ -20,9 +20,10 @@ export async function enrichMissingDetailPrice(
     const detail = await response.clone().json() as Record<string, unknown> | null;
     if (!detail || typeof detail !== "object" || Array.isArray(detail)) return response;
     // Only the admitted canonical publication can set restoration or unavailability provenance.
-    if ("currentSupplyRestored" in detail || "currentSupplyUnavailableReason" in detail) {
+    if ("currentSupplyRestored" in detail || "currentSupplyUnavailableReason" in detail || "currentSupplyExcludedChains" in detail) {
       delete detail.currentSupplyRestored;
       delete detail.currentSupplyUnavailableReason;
+      delete detail.currentSupplyExcludedChains;
       const headers = new Headers(response.headers);
       headers.delete("Content-Length");
       response = new Response(JSON.stringify(detail), { status: response.status, statusText: response.statusText, headers });
@@ -64,6 +65,10 @@ export async function enrichMissingDetailPrice(
     if (hasCurrentSupply) {
       detail.currentCirculatingUSD = coin.circulating;
       detail.currentSupplyRestored = coin.supplyRestored === true;
+      if (coin.supplyChainGuard?.partialCoverage === true) {
+        detail.currentSupplyExcludedChains = coin.supplyChainGuard.chains
+          .filter((chain) => chain.resolution === "unavailable").map((chain) => chain.chainLabel);
+      }
       detail.currentCirculatingPrevDayUSD = admitSupplyBuckets(coin.circulatingPrevDay).status === "observed"
         ? coin.circulatingPrevDay : {};
       const supplyObservedAt = coin.supplyObservedAt;

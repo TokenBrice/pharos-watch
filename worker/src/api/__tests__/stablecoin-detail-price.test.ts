@@ -285,6 +285,27 @@ describe("missing detail price enrichment", () => {
       expect(summary.nativeSupply.current).toBeNull();
     });
 
+    it("names excluded chains for partial coverage and ignores provider-supplied copies", async () => {
+      const partial = {
+        circulating: { peggedUSD: 97_500_000 }, supplyObservedAt: NOW - 60, supplySource: "defillama",
+        supplyChainGuard: { ...expiredQuarantine.supplyChainGuard, status: "chains-unavailable", partialCoverage: true, chains: [{
+          chainId: "hyperevm", chainLabel: "HyperEVM", listCurrentUsd: null, baselineUsd: 3_749_116,
+          baselineObservedAt: quarantinedSince, baselineSource: "state", resolution: "unavailable",
+        }] },
+      };
+      const result = await enrichMissingDetailPrice(makeDb(partial), "usdt-tether", makeResponse());
+      const body = await result.json() as Record<string, unknown>;
+      expect(body.currentSupplyExcludedChains).toEqual(["HyperEVM"]);
+      expect(body.currentSupplyRestored).toBe(false);
+      const summary = projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(body));
+      expect(summary).toMatchObject({ circulating: { peggedUSD: 97_500_000 }, supplyExcludedChains: ["HyperEVM"] });
+      expect(summary.supplyRestored).toBeUndefined();
+
+      const forged = await enrichMissingDetailPrice(makeDb({ circulating: { peggedUSD: 100 } }), "usdt-tether",
+        makeResponse(JSON.stringify({ tokens, currentSupplyExcludedChains: ["Ethereum"] })));
+      expect(await forged.json()).not.toHaveProperty("currentSupplyExcludedChains");
+    });
+
     it("ignores a provider-supplied unavailability marker when canonical supply is observed", async () => {
       const result = await enrichMissingDetailPrice(makeDb({ circulating: { peggedUSD: 100 } }), "usdt-tether",
         makeResponse(JSON.stringify({ tokens, currentSupplyUnavailableReason: "supply-chain-dropout" })));

@@ -45,7 +45,7 @@ export interface DetailSupplyHistoryInput extends DetailQueryResource<SupplyHist
 export type DetailQuote = Pick<StablecoinLiveSummary,
   "price" | "priceSource" | "priceConfidence" | "priceUpdatedAt" | "priceObservedAt"
   | "priceObservedAtMode" | "priceSyncedAt" | "nominalPriceReference" | "supplyRestored"
-> & Partial<Pick<StablecoinLiveSummary, "supplyObservedAt">> & { pegType: string; chains: string[] };
+> & Partial<Pick<StablecoinLiveSummary, "supplyObservedAt" | "supplyExcludedChains">> & { pegType: string; chains: string[] };
 
 export interface StablecoinDetailViewModelQueryInputs {
   supplyHistory: DetailSupplyHistoryInput;

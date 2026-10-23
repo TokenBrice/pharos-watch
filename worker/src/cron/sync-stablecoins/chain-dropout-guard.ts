@@ -24,6 +24,9 @@ export const CHAIN_DROPOUT_POLICY = {
   minBaselineUsd: 1_000_000,
   collapseRatio: 0.5,
   quarantineDeficitRatio: 0.02,
+  // Past the carry ceiling, a deficit at most this share of the vetted whole-asset total publishes
+  // the observed remainder as explicit partial coverage; a larger share keeps supply unavailable.
+  partialCoverageMaxDeficitRatio: 0.1,
   chartMaxAgeSec: 48 * 3600,
   chartRefetchSec: 3600,
   maxHistoryFetches: 8,
@@ -537,10 +540,17 @@ export async function guardChainDropouts(input: {
     let quarantinedSince: number | undefined;
     if (material) {
       quarantinedSince = Math.min(...unrepaired.map((candidate) => candidate.state.quarantinedSince!));
-      asset.supplyRestored = true;
       result.quarantinedAssetIds.push(String(asset.id));
+    }
+    const carryExpired = quarantinedSince != null && now - quarantinedSince > SUPPLEMENTAL_RESTORE_MAX_AGE_SEC;
+    // A minority-share chain still quarantined past the carry ceiling no longer blanks the asset: the
+    // observed remainder publishes with its own clock, the chains stay null and quarantined, and provenance
+    // names the partial coverage. Nothing is carried or added, so reattributed supply cannot double count.
+    const partialCoverage = carryExpired && deficit <= CHAIN_DROPOUT_POLICY.partialCoverageMaxDeficitRatio * (aggregate + deficit);
+    if (material && !partialCoverage) {
+      asset.supplyRestored = true;
       asset.supplyObservedAt = Math.min(...unrepaired.map((candidate) => candidate.evidence.baselineObservedAt));
-      if (now - quarantinedSince > SUPPLEMENTAL_RESTORE_MAX_AGE_SEC || (ambiguous && heldTotal == null)) {
+      if (carryExpired || (ambiguous && heldTotal == null)) {
         asset.circulating = {};
         status = "unavailable";
         result.unavailableAssetIds.push(String(asset.id));
@@ -566,6 +576,7 @@ export async function guardChainDropouts(input: {
     asset.supplyChainGuard = {
       reason: "supply-chain-dropout", status,
       ...(quarantinedSince != null ? { quarantinedSince } : {}),
+      ...(partialCoverage ? { partialCoverage: true as const } : {}),
       ...(ambiguous ? { concurrentGainUsd: gains } : {}),
       chains: affected.map((candidate) => candidate.evidence),
     };
