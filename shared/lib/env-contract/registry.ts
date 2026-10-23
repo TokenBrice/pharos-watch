@@ -79,13 +79,19 @@ const ENV_BINDING_DEFINITIONS = [
   {
     key: "RESERVE_CONTINUATION_QUEUE",
     valueType: "Queue<ReserveContinuationMessage>",
-    description: "Public-only bounded reserve continuation/tail wakeup Queue; D1 checkpoint and event fences remain execution authority.",
+    description: "Public-only bounded reserve continuation/tail and one-shot slot catch-up wakeup Queue; D1 checkpoint, slot and event fences remain execution authority.",
     runtimes: { worker: { status: "optional" } },
   },
   {
     key: "WORKER_RESERVE_QUEUE_MODE",
     valueType: "string",
     description: "Literal on enables reserve Queue wakeups; off or missing disables sending and consumes hints neutrally while minute cron recovery remains active.",
+    runtimes: { worker: { status: "optional" } },
+  },
+  {
+    key: "WORKER_SLOT_CATCH_UP_MODE",
+    valueType: "string",
+    description: "Literal on lets the five-minute digest poll arm one-shot missed-slot catch-ups on the public Queue; off (checked in) or missing disables arming and consumes catch-up hints neutrally.",
     runtimes: { worker: { status: "optional" } },
   },
   {
