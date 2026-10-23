@@ -20,7 +20,7 @@ export const DDR_METHODOLOGY_VERSION = "4.9";
 export const DDR_METHODOLOGY_VERSION_LABEL = methodologyLabel(DDR_METHODOLOGY_VERSION);
 export const DDR_METHODOLOGY_CHANGELOG_PATH = "/methodology/depeg-resolver-changelog/";
 
-export const LIQUIDITY_METHODOLOGY_VERSION = "6.97";
+export const LIQUIDITY_METHODOLOGY_VERSION = "6.98";
 export const LIQUIDITY_METHODOLOGY_VERSION_LABEL = methodologyLabel(LIQUIDITY_METHODOLOGY_VERSION);
 export const LIQUIDITY_METHODOLOGY_CHANGELOG_PATH = "/methodology/liquidity-score-changelog/";
 

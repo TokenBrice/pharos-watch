@@ -499,6 +499,8 @@ describe("runDirectApiFetchPhase", () => {
       ["Aerodrome Slipstream", "aerodrome-slipstream-api", "bounded-sample"],
       ["Uniswap V3 BSC shadow", "uniswap-v3-bsc-shadow", "bounded-sample"],
       ["Velodrome Slipstream", "velodrome-slipstream-api", "bounded-sample"],
+      ["Aero Slipstream", "aero-slipstream-api", "bounded-sample"],
+      ["Aero Basic", "aero-basic-api", "bounded-sample"],
     ]);
 
     // Slipstream and CLMM adapters emit a `source` that differs from their
@@ -513,7 +515,11 @@ describe("runDirectApiFetchPhase", () => {
       "raydium:solana",
       "orca:solana",
       "uniswap-v3-shadow:bsc",
+      "aero-slipstream:base",
+      "aero-slipstream:robinhood",
+      "aero-basic:arc",
     ]));
+    expect(attempted).not.toContain("aero-slipstream:ink");
     // The BSC subgraph is not fetched; claiming it would zero its telemetry
     // every run and let the census veto staged BSC Pancake pools.
     expect(attempted).not.toContain("pancakeswap:bsc");

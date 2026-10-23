@@ -16,7 +16,7 @@ export function normalizeFeeRateFromBps(feeBps: number | null | undefined): numb
 }
 
 export function classifyClPoolType(
-  protocol: "pancakeswap" | "aerodrome-slipstream" | "velodrome-slipstream",
+  protocol: "pancakeswap" | "aerodrome-slipstream" | "velodrome-slipstream" | "aero-slipstream",
   feeBps: number | null | undefined,
 ): string {
   const prefix = protocol === "pancakeswap" ? "pancakeswap-v3" : protocol;

@@ -20,6 +20,9 @@ export function normalizeProtocol(project: string): string {
   if (p.includes("meteora")) return "meteora";
   if (p.includes("balancer")) return "balancer";
   if (p.includes("aerodrome")) return "aerodrome";
+  // Aero (Aerodrome + Velodrome merger, 2026-10-22): DefiLlama `aero-slipstream`
+  // / `aero-basic`, GeckoTerminal `aero-slipstream-<chain>`, DexScreener `aero`.
+  if (p === "aero" || /^aero\s*(slipstream|basic)/.test(p)) return "aero";
   if (p.includes("velodrome")) return "velodrome";
   if (p.includes("pancakeswap") || p.includes("pcsv")) return "pancakeswap";
   if (p.includes("sushiswap") || p === "sushi") return "sushiswap";

@@ -29,6 +29,7 @@ import { fetchOrcaPools } from "../fetch-orca";
 import { fetchMeteoraPools } from "../fetch-meteora";
 import { fetchPancakeSwapPools } from "../fetch-pancakeswap";
 import { fetchSlipstreamPools } from "../fetch-slipstream";
+import { AERO_CHAINS, fetchAeroBasicPools, fetchAeroSlipstreamPools } from "../fetch-aero";
 import { fetchUniswapV3BscShadowPools } from "../fetch-uniswap-v3-bsc";
 import { mergeGtPools } from "../fetch-crawlers";
 import { normalizeProtocol, parsePoolSymbols } from "../pool-helpers";
@@ -414,6 +415,39 @@ export function buildDexDirectApiFetchers(params: {
           params.chainRpcs,
           params.db,
         ),
+    },
+    {
+      name: "Aero Slipstream",
+      circuitKey: CIRCUIT_SOURCE.AERO_SLIPSTREAM_API,
+      normalizedProtocol: "aero",
+      poolSource: "aero-slipstream",
+      supportedChains: [...AERO_CHAINS],
+      // Factory enumeration is complete, but pools without a tracked token, a
+      // positive balance or a derivable USD price are dropped, as for Sugar.
+      censusScope: "bounded-sample",
+      fn: (signal) =>
+        fetchAeroSlipstreamPools({
+          chainAddressToId: params.chainAddressToId,
+          trackedStablecoinPrices: params.stablecoinPriceById,
+          signal,
+          chainRpcs: params.chainRpcs,
+        }),
+    },
+    {
+      name: "Aero Basic",
+      circuitKey: CIRCUIT_SOURCE.AERO_BASIC_API,
+      normalizedProtocol: "aero",
+      poolSource: "aero-basic",
+      supportedChains: [...AERO_CHAINS],
+      // Stable-curve pools need both sides tracked, so omissions are not absence.
+      censusScope: "bounded-sample",
+      fn: (signal) =>
+        fetchAeroBasicPools({
+          chainAddressToId: params.chainAddressToId,
+          trackedStablecoinPrices: params.stablecoinPriceById,
+          signal,
+          chainRpcs: params.chainRpcs,
+        }),
     },
   ];
   return adapters;

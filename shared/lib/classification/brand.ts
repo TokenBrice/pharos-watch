@@ -12,6 +12,7 @@ export const DEX_PROTOCOL_SWATCH_CLASSES: Readonly<Record<string, string>> = {
   balancer: "bg-violet-500",
   aerodrome: "bg-sky-500",
   velodrome: "bg-red-500",
+  aero: "bg-blue-600",
   pancakeswap: "bg-amber-500",
   sushiswap: "bg-indigo-500",
   "trader-joe": "bg-orange-500",

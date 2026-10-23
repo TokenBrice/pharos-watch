@@ -196,7 +196,7 @@ export function PricingPipelineMethodologySection({
                 ["Curve on-chain", "3", "On-chain", <>StableSwap implied prices via explicit direct, one-hop, and opt-in chained-hop <code className="text-xs">get_dy()</code> routes</>],
                 ["Curve oracle", "3", "On-chain", <>Additional primary-consensus voice for <code className="text-xs">crvusd-curve</code></>],
                 ["DEX pools", "1", "On-chain", "Aggregate DEX voice, withheld only when an overlapping protocol-level DEX bridge lane is admitted; the reviewed VUSD route may enter primary publication at the existing $250K UI floor while remaining soft and non-depeg-authoritative"],
-                ["Protocol DEX APIs", "2-3", "On-chain / pool-state API", "Primary-consensus protocol promotion currently supports Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream when the protocol lane survives registry, TVL, freshness, and corroboration gates."],
+                ["Protocol DEX APIs", "2-3", "On-chain / pool-state API", "Primary-consensus protocol promotion currently supports Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, Velodrome Slipstream, and Aero when the protocol lane survives registry, TVL, freshness, and corroboration gates."],
                 ["GeckoTerminal", "1", "On-chain", <>Pool-level cross-check for weak CG / DL-list soft-source outcomes (&ge;$10K TVL)</>],
                 ...PRICING_SOURCE_REGISTRY
                   .filter(({ key }) => addressProviderAvailability.some((provider) => provider.key === key && provider.enabled))

@@ -9,7 +9,8 @@ export function LiquidityPoolMatchingDetails() {
       <div className="space-y-3">
         <p>
           Dedicated protocol-native sources (Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap V3, Aerodrome
-          Slipstream, and Velodrome Slipstream) are treated as primary-grade inputs and enter scoring before staged or
+          Slipstream, Velodrome Slipstream, and Aero Slipstream and basic pools) are treated as primary-grade inputs and
+          enter scoring before staged or
           fallback discovery sources are merged.
         </p>
         <p>
@@ -41,7 +42,7 @@ export function LiquidityPoolMatchingDetails() {
         </p>
         <p>
           Direct-source precedence is also measurement-aware. A protocol-native pool normally replaces an overlapping
-          DeFiLlama row only when it carries a positive measured 24h volume reading; Aerodrome and Velodrome Slipstream
+          DeFiLlama row only when it carries a positive measured 24h volume reading; Aerodrome, Velodrome and Aero
           pools, whose on-chain pool-state rows publish no trailing volume, and pools whose tokens carry a reviewed
           price dependency are explicit exceptions that take precedence without volume. When several registry lanes
           observed the same pool, the reading that counts is the most trusted lane refreshed within 24 hours, else the
@@ -68,7 +69,9 @@ export function LiquidityPoolMatchingDetails() {
           Balancer weighted pools are normalized against target token weights before the balance ratio is computed. Fluid
           reads reserves and fee detail from the official DexReservesResolver on Ethereum, Arbitrum, Base, and Polygon,
           while Aerodrome and Velodrome Slipstream read pool state from the on-chain Sugar view contracts on Base and
-          Optimism.
+          Optimism. Aero, which publishes no Sugar view, is enumerated straight from its factories on Base, Ethereum,
+          OP Mainnet, Arbitrum, Robinhood Chain, and Arc; each pool must prove factory membership at one pinned block,
+          and stable-curve pools are admitted only when both tokens are independently priced.
           Curve requires complete USD-valued balances and Fluid both reserve halves. Incomplete evidence remains
           unmeasured with neutral balance weighting; complete zero-sided balances remain measured zero.
           Provider numbers must be complete finite decimals, not numeric prefixes, and Orca balance normalization

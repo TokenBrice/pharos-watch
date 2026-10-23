@@ -85,6 +85,8 @@ export function classifyPoolType(project: string, poolMeta?: string | null): str
   const proj = project.toLowerCase();
   if (proj.includes("aerodrome-slipstream")) return "aerodrome-slipstream-5bp";
   if (proj.includes("velodrome-slipstream")) return "velodrome-slipstream-5bp";
+  if (proj.startsWith("aero-slipstream")) return "aero-slipstream-5bp";
+  if (proj.startsWith("aero-basic")) return "aero-volatile"; // no stable/volatile label upstream, as for Aerodrome classic
   if (proj.includes("curve")) return "curve-stableswap"; // refined later via registryId
   if (proj.includes("fluid")) return "fluid-dex";
   if (proj.includes("meteora")) return "meteora-dlmm";

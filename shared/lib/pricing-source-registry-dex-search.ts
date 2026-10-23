@@ -16,8 +16,9 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
     key: "aerodrome-exact",
-    label: "Aerodrome exact-pool quote",
-    shortLabel: "Aerodrome exact",
+    // Key kept for history continuity; the reviewed BD pool moved to Aero on 2026-10-23.
+    label: "Aero exact-pool quote",
+    shortLabel: "Aero exact",
     depegSourceFamily: "dex:aerodrome",
     maxTrustedAgeSec: 5 * 60,
     defaultWeight: 1,
@@ -179,6 +180,14 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     label: "Velodrome Slipstream",
     shortLabel: "Velodrome",
     depegSourceFamily: "dex:velodrome-slipstream",
+    maxTrustedAgeSec: 75 * 60,
+    defaultWeight: 2,
+  }),
+  definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
+    key: "aero-dex",
+    label: "Aero",
+    shortLabel: "Aero",
+    depegSourceFamily: "dex:aero",
     maxTrustedAgeSec: 75 * 60,
     defaultWeight: 2,
   }),

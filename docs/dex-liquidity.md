@@ -5,7 +5,7 @@
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-liquidity-score -->`v6.97`<!-- GENERATED-END: methodology-version-liquidity-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-liquidity-score -->`v6.98`<!-- GENERATED-END: methodology-version-liquidity-score -->
 - **TVL-basis breaks:** a liquidity release that changes how retained TVL is measured (not just weighting or volume admission) must also append its version to `LIQUIDITY_TVL_BASIS_BREAK_VERSIONS` in `shared/lib/dex-liquidity-evidence.ts`, which is append-only. The 30-day stability series never mix epochs across a listed break (see Basis homogeneity under Durability Sub-Component Weights); the source owns the current break list.
 - **TVL trend comparability:** public 24-hour/7-day changes and DEWS/DDR TVL evidence compare the stored current and historical `methodology_version` through `liquidityTvlBasisEpoch`. Cross-epoch baselines are skipped, not interpreted as market moves; same-epoch minor releases remain comparable. Explicit legacy identities belong to epoch 0, but an omitted version projection cannot establish comparability. This is TVL-measurement identity, not exact liquidity-score formula identity, and does not suppress independently available scores or volume.
 
@@ -75,9 +75,16 @@ External source construction runs hourly at `:10`. Both `:16` and `:46` use the 
 | Velodrome Slipstream 1bp   | 1.1x       | protocol contains `velodrome-slipstream` + fee tier <= 1 bp |
 | Velodrome Slipstream 5bp   | 0.85x      | protocol contains `velodrome-slipstream` + fee tier <= 5 bp |
 | Velodrome Slipstream 30bp+ | 0.4x       | protocol contains `velodrome-slipstream` + fee tier > 5 bp  |
+| Aero Slipstream 1bp        | 1.1x       | `aero-slipstream` + tick-spacing base fee <= 1 bp           |
+| Aero Slipstream 5bp        | 0.85x      | `aero-slipstream` + tick-spacing base fee <= 5 bp           |
+| Aero Slipstream 30bp+      | 0.4x       | `aero-slipstream` + tick-spacing base fee > 5 bp            |
+| Aero Stable                | 0.85x      | direct source, stable-pool factory only                     |
+| Aero Volatile              | 0.4x       | direct volatile-pool factory, or DefiLlama `aero-basic`     |
 | Generic AMM                | 0.3x       | fallback                                                    |
 
 Direct concentrated-liquidity fetchers (PancakeSwap V3, Aerodrome/Velodrome Slipstream) derive their `-1bp`/`-5bp`/`-25bp`/`-30bp`/`-100bp` bucket from the fee the source actually decoded. When the upstream fee is absent or out of range — a missing or malformed subgraph `feeTier`, a Sugar `pool_fee` outside `[1, 10000]` bps — the row keeps `feeRate: null` and publishes the neutral `<protocol>-unknown-fee` bucket (`CL_UNKNOWN_FEE_BUCKET` in `worker/src/cron/dex-liquidity/direct-source-helpers.ts`) instead of a fabricated tier, so the bucket never contradicts the row's own null fee. That bucket carries no tier multiplier and falls through to the generic 0.3x weight; pool-shape family and measured-execution targeting are unchanged.
+
+Aero (aero.xyz, the 2026-10-22 merger of Aerodrome and Velodrome) publishes no Sugar view. `worker/src/cron/dex-liquidity/fetch-aero.ts` enumerates its reviewed factories on Base, Ethereum, OP Mainnet, Arbitrum, Robinhood Chain and Arc (Arc includes the pre-merger Aero Lite factories). Ink is omitted while the reviewed Worker RPC profile has no Ink endpoint. Slipstream V3 pools set fees per swap through a hook, so the tier is the factory's `tickSpacingToFee` base fee, not `fee()`. Concentrated-liquidity pools reuse the pinned-block factory-binding and `getPool` capture; basic pools prove factory, `metadata()` decimals and `getPool` membership. Volatile basic pools derive an untracked side from the reserve ratio, while stable-curve pools need both sides tracked. Both sources are `bounded-sample`, publish no volume (the CoinGecko onchain stale-pool refresh covers their exact ids) and run serially inside the existing direct-API phase. DefiLlama `aero-slipstream`/`aero-basic`, GeckoTerminal `aero-slipstream-<chain>` and DexScreener `aero` normalize to protocol `aero`, and DefiLlama `aero-basic` rows share one basic-pool identity family with direct stable/volatile rows (unique matches only); this population change makes Liquidity 6.98 a TVL-basis break. Direct rows set `priceUsd` only on untracked sides, so tracked references never become Aero price evidence. Legacy Aerodrome/Velodrome Sugar sources stay active while their liquidity drains (retirement tracked in #1630).
 
 ### Pool Quality Adjustments
 

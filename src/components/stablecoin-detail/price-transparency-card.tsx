@@ -125,6 +125,7 @@ const SOURCE_LOGO_PATHS: Record<string, string> = {
   "pancakeswap-dex": PROTOCOL_LOGOS.pancakeswap,
   "aerodrome-dex": PROTOCOL_LOGOS.aerodrome,
   "velodrome-dex": PROTOCOL_LOGOS.velodrome,
+  "aero-dex": PROTOCOL_LOGOS.aero,
   jupiter: "/price-sources/jupiter.png",
   coinmarketcap: "/price-sources/coinmarketcap.svg",
   "dexscreener-exact": "/price-sources/dexscreener.png",
