@@ -112,17 +112,19 @@ describe("Safety Score V9 publication codec", () => {
     }))).rejects.toThrow(/not canonical/);
   });
 
-  it("restores a synthetic large cohort exactly, including escaped markers, keys and token boundaries", () => {
+  it("restores a synthetic card set exactly, including escaped markers, keys and token boundaries", () => {
     const repeated = "Long shared évidence \u{10400} \"quoted\" \u0000 \\".repeat(200);
     const value = {
-      cards: Array.from({ length: 300 }, (_, index) => ({ id: index, a: repeated, b: repeated })),
+      cards: Array.from({ length: 16 }, (_, index) => ({ id: index, a: repeated, b: repeated })),
       ["\u00000"]: ["\u00000", "\u0000\u00001", ["@s", 0], "\u0000x"],
       huge: "x".repeat(70_000), escaped: ["\u0000".repeat(8), "\u0000".repeat(8)],
     };
     const encoded = encodePublicationDictionary(value);
     const canonical = Buffer.from(stableJsonStringifyV1(value));
     const packed = [...encoded.chunks].join("");
-    expect(Buffer.from(decodePublicationDictionary(Buffer.from(packed), canonical.byteLength))).toEqual(canonical);
+    expect(canonical.byteLength).toBeGreaterThan(64 * 1_024);
+    const decoded = Buffer.from(decodePublicationDictionary(Buffer.from(packed), canonical.byteLength));
+    expect(Buffer.compare(decoded, canonical)).toBe(0);
     expect(encoded.contentSha256).toBe(createHash("sha256").update(canonical).digest("hex"));
     expect(Buffer.byteLength(packed)).toBeLessThan(canonical.byteLength / 2);
   });

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-21",
+  "generatedAt": "2026-10-23",
   "files": {
     "functions/lib/pages-proxy-harness.ts": 100,
     "functions/lib/proxy-paths.ts": 100,
@@ -250,6 +250,7 @@
     "worker/src/lib/safety-score-v9/publication-assessment.ts": 98.7,
     "worker/src/lib/safety-score-v9/publication-attempts.ts": 82.2,
     "worker/src/lib/safety-score-v9/publication-codec.ts": 94.9,
+    "worker/src/lib/safety-score-v9/publication-dictionary.ts": 100,
     "worker/src/lib/safety-score-v9/publication-health.ts": 100,
     "worker/src/lib/safety-score-v9/publication-journal.ts": 93.3,
     "worker/src/lib/safety-score-v9/publication-replay-capture.ts": 100,
