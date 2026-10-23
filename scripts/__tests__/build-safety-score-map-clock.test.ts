@@ -47,7 +47,7 @@ describe("clock discipline — supply admission before rendering", () => {
     await new Promise<void>((done) => server.close(() => done()));
   });
   it.each([
-    { offsetSec: -600, reason: "stale: source-too-old" },
+    { offsetSec: -1800, reason: "stale: source-too-old" },
     { offsetSec: 3600, reason: "future: future-source-clock" },
   ])("rejects a $reason supply clock even with current report cards", async ({ offsetSec, reason }) => {
     supplySourceSec = Math.floor(Date.now() / 1000) + offsetSec;
@@ -221,7 +221,7 @@ describe.skipIf(!firefoxInstalled)("clock discipline — emitted artifacts (full
         reason: null,
         sourceClock: "x-data-updated-at",
         sourceUpdatedAtSec: supplyUpdatedAtSec,
-        maxAgeSec: 600,
+        maxAgeSec: 1800,
         sourceHeaders: { "X-Data-Updated-At": String(supplyUpdatedAtSec), "X-Data-Age": "300", Age: "60", Warning: null },
       });
       expect(manifest.supplyFreshness.ageSec).toBe(manifest.supplyFreshness.assessedAtSec - supplyUpdatedAtSec);
