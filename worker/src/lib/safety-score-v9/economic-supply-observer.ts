@@ -1,6 +1,6 @@
 import { decodeAbiParameters, encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector, toHex } from "viem/utils";
 import { CHAIN_META } from "@shared/types/chain-identity";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { supplyAttributionPinMaxAgeSec, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
@@ -132,6 +132,8 @@ export async function observeCurveLzPending(input: {
   chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal;
   clockSec: number;
   checkpoint?: CurveLzPendingCheckpoint; db?: D1Database;
+  /** Reviewed pin window for the caller's coherent pin set (`supplyAttributionPinMaxAgeSec`). */
+  pinMaxAgeSec?: number;
 }): Promise<
   | { status: "accepted"; amount: string; proof: NonNullable<EconomicSupplyObservation["curvePendingProof"]>; responseSha256: string; checkpoint: CurveLzPendingCheckpoint }
   | { status: "rejected"; reason: string; checkpoint?: CurveLzPendingCheckpoint }
@@ -168,7 +170,7 @@ export async function observeCurveLzPending(input: {
       pinOptions.set(side.chainId, { observedHeadBlock: finalized.number,
         recentStatePin: {
           chainId: side.chainId, header: pin, finalized, observedAtSec: input.clockSec,
-          maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec,
+          maxAgeSec: input.pinMaxAgeSec ?? V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec,
         },
       });
       for (const cursor of [cp.directions[i]!.sent, cp.directions[1 - i]!.received]) {
@@ -400,6 +402,7 @@ async function readReviewedPendingProof(
   source: PendingProtocolRead, id: string, deploymentKey: string, liability: boolean,
   headers: Map<string, EvmBlockHeader>,
   input: Pick<Parameters<typeof observeReviewedEconomicDeploymentPartitionInternal>[0], "scoringClockSec" | "chainRpcs" | "signal" | "db" | "onDiagnostic" | "onPhase">,
+  pinMaxAgeSec: number,
 ): Promise<PendingProofAttempt> {
   const project = (
     header: EvmBlockHeader, result: { amount: string; responseSha256: string },
@@ -409,7 +412,7 @@ async function readReviewedPendingProof(
     anchor: String(header.number), anchorHash: header.hash, responseSha256: result.responseSha256, ...proof,
   } });
   if (source.kind === "evm-ccip-pending") {
-    const result = await observeCcipPending({ source, headers, clockSec: input.scoringClockSec,
+    const result = await observeCcipPending({ source, headers, clockSec: input.scoringClockSec, pinMaxAgeSec,
       chainRpcs: input.chainRpcs, signal: input.signal, db: input.db, onDiagnostic: input.onDiagnostic, onPhase: input.onPhase });
     if (result.status !== "accepted") return result;
     const header = headers.get(source.chainId);
@@ -420,7 +423,7 @@ async function readReviewedPendingProof(
     ? [headers.get(source.chainId), headers.get(source.l2ChainId)]
     : source.sides.map(side => headers.get(side.chainId));
   if (pins.some(pin => pin === undefined)) return { status: "rejected", reason: "pin-missing" };
-  const options = { headers: pins as EvmBlockHeader[], clockSec: input.scoringClockSec,
+  const options = { headers: pins as EvmBlockHeader[], clockSec: input.scoringClockSec, pinMaxAgeSec,
     chainRpcs: input.chainRpcs, signal: input.signal, db: input.db };
   if (source.kind === "evm-curve-lz-pending") {
     const result = await observeCurveLzPending({ source, ...options });
@@ -474,6 +477,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
     const inventory = buildReviewedEconomicDeploymentInventory(input.assetId);
     const plan = REVIEWED_ECONOMIC_SUPPLY_PLANS.get(input.assetId);
     if (!inventory || !plan) return { status: "rejected", rejectionCode: "route-inventory-unavailable", failedRouteId: null };
+    const pinMaxAgeSec = supplyAttributionPinMaxAgeSec(plan.deployments.map(row => row.chainId));
     const aggregate = input.fixedInput.aggregateCirculatingById[input.assetId];
     const aggregateUsd = getCirculatingRawOrNull(aggregate ?? {});
     if (aggregateUsd === null || aggregate?.observedAtSec == null) return { status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: null };
@@ -501,8 +505,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
     const statePin = (chainId: string): RecentFinalizedRpcPin | undefined => {
       const header = headers.get(chainId), finalized = finalizedHeaders.get(chainId);
       return header && finalized ? { chainId, header, finalized,
-        observedAtSec: input.scoringClockSec,
-        maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec,
+        observedAtSec: input.scoringClockSec, maxAgeSec: pinMaxAgeSec,
       } : undefined;
     };
     const cosmosPins = new Map<string, CosmosBankPin>();
@@ -563,8 +566,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
         // A valid but stale finalized tag is not usable evidence. Let the RPC
         // reader try the next endpoint before one lagging provider sets the
         // oldest pin (and forces every otherwise-fresh chain backward).
-        const minTimestampSec = captureFreshnessClock() -
-          V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
+        const minTimestampSec = captureFreshnessClock() - pinMaxAgeSec;
         let finalized = finalizedChains.has(row.chainId) || preferFinalized
           ? await fetchEvmBlockHeader(row.chainId, "finalized", {
             ...options, minTimestampSec,
@@ -606,15 +608,14 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       }
       // Reserve the rest of this admitted child window, not a wider freshness
       // policy. Near-expiry pins reject before quantities/history are collected.
-      const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
       const freshnessClock = captureFreshnessClock();
       for (const [chainId, header] of headers) {
-        if (freshnessClock - header.timestamp > policy.observationMaxAgeSec) {
+        if (freshnessClock - header.timestamp > pinMaxAgeSec) {
           failedRouteId = `anchor:${chainId}:capture-freshness-window-insufficient`;
           emitSupplyAttributionDiagnostic(input.onDiagnostic, { observer: "economic-deployment", sourceId: input.assetId,
             chainId, phase: "pinning", method: "capture-window", hardEvidenceFailure: true,
             failurePredicate: "capture-freshness-window-insufficient", pinObservedAtSec: header.timestamp,
-            operands: { freshnessClock, maxAgeSec: policy.observationMaxAgeSec } });
+            operands: { freshnessClock, maxAgeSec: pinMaxAgeSec } });
           return false;
         }
       }
@@ -668,8 +669,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       const finalized = await fetchEvmBlockHeader(source.chainId, "finalized", { ...options, minBlockNumber: header.number });
       if (!finalized || finalized.number < header.number) return null;
       const stateOptions: EvmRpcOptions = { ...options, observedHeadBlock: finalized.number, recentStatePin: {
-        chainId: source.chainId, header, finalized, observedAtSec: input.scoringClockSec,
-        maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec,
+        chainId: source.chainId, header, finalized, observedAtSec: input.scoringClockSec, maxAgeSec: pinMaxAgeSec,
       } };
       // EIP-1898 binds every state read to the exact already-observed escrow
       // block hash. Unsupported hash-pinned reads reject; no latest fallback.
@@ -779,7 +779,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
           pending = await readPendingState(escrow.inFlightSource, escrow);
         } else {
           const result = await readReviewedPendingProof(escrow.inFlightSource, `in-flight:${escrow.id}`,
-            escrow.canonicalDeploymentKey, false, headers, input);
+            escrow.canonicalDeploymentKey, false, headers, input, pinMaxAgeSec);
           if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable",
             failedRouteId: `${escrow.inFlightSource.kind === "evm-layerzero-oft-pending" ? `in-flight:${escrow.id}` : escrow.id}:${result.reason}` };
           pending = result.observation;
@@ -801,7 +801,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
         if (source.kind !== "evm-layerzero-oft-pending" && source.kind !== "evm-ccip-pending") {
           return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "in-flight:liability:unsupported-read" };
         }
-        const result = await readReviewedPendingProof(source, "in-flight:liability", plan.deployments[0]!.deploymentKey, true, headers, input);
+        const result = await readReviewedPendingProof(source, "in-flight:liability", plan.deployments[0]!.deploymentKey, true, headers, input, pinMaxAgeSec);
         if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `in-flight:liability:${result.reason}` };
         inFlight.push(result.observation);
       } else {
@@ -822,7 +822,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
     input.onPhase?.("derive");
     const finalClockSec = currentCaptureClock();
     const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
-    const stale = [...observations, ...inFlight].find(row => finalClockSec - row.observedAtSec > policy.observationMaxAgeSec);
+    const stale = [...observations, ...inFlight].find(row => finalClockSec - row.observedAtSec > pinMaxAgeSec);
     if (stale || finalClockSec - referencePrice.observedAtSec > policy.referencePriceMaxAgeSec ||
       conversions.some(row => finalClockSec - row.observedAtSec > policy.observationMaxAgeSec)) {
       return { status: "rejected", rejectionCode: "deployment-observation-skew",

@@ -50,9 +50,14 @@ export const V9SupplyAttributionPolicySchema = z.strictObject({
   referencePriceMaxAgeSec: z.number().int().positive(), postClockMaxSkewSec: z.number().int().nonnegative(),
   conservationAbsoluteToleranceUsd: z.number().finite().positive(), conservationRelativeTolerance: z.number().finite().positive(),
   reviewMaxAgeDays: z.number().int().positive(),
+  /** Reviewed finalized-head lag allowance per chain, added once to an asset's pin window. */
+  finalityMarginSecByChainId: z.record(CanonicalChainIdSchema, z.number().int().positive()),
 }).superRefine((value, ctx) => {
   for (const key of ["amountBases", "accountingFamilies", "holdingKinds", "inFlightTreatments"] as const) {
     if (new Set(value[key]).size !== value[key].length || value[key].length !== vocabulary[key].length) ctx.addIssue({ code: "custom", path: [key], message: "Supply vocabulary must include each policy value exactly once" });
+  }
+  for (const [chainId, marginSec] of Object.entries(value.finalityMarginSecByChainId)) {
+    if (marginSec > value.observationMaxAgeSec) ctx.addIssue({ code: "custom", path: ["finalityMarginSecByChainId", chainId], message: "Finality margin must stay within the base observation window" });
   }
 });
 // eslint-disable-next-line security/detect-unsafe-regex -- anchored canonical decimal over a 128-character cap; groups cannot overlap.

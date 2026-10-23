@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   computeRippleState,
   computeVisibleGraph,
@@ -45,6 +45,8 @@ interface UseContagionGraphModelOptions {
   onUseAsExposureRoot?: (coinId: string) => void;
   hubExposures?: readonly DependencyHubExposure[];
 }
+
+const subscribeToNothing = () => () => {};
 
 const FOCUS_NEIGHBOR_RADIUS_X = 240;
 const SMALL_LINK_SHARE_THRESHOLD = 0.001;
@@ -234,11 +236,11 @@ export function useContagionGraphModel({
   const [showSmallLinks, setShowSmallLinks] = useState(false);
 
   const [urlReady, setUrlReady] = useState(false);
-  const urlInitialized = useRef(false);
-  useEffect(() => {
-    if (!syncUrlState || urlInitialized.current || !cards.length) return;
-    urlInitialized.current = true;
-    const params = new URLSearchParams(window.location.search);
+  // Browser URL state is read only after hydration (null on the server and during hydration),
+  // preserving static export markup; the one-shot init below runs in render, not an effect.
+  const locationSearch = useSyncExternalStore(subscribeToNothing, () => window.location.search, () => null);
+  if (syncUrlState && !urlReady && locationSearch !== null && cards.length) {
+    const params = new URLSearchParams(locationSearch);
     const focus = params.get("focus");
     const trace = params.get("trace");
     const type = params.get("type");
@@ -246,8 +248,6 @@ export function useContagionGraphModel({
     const validTrace = (id: string | null): id is string =>
       Boolean(id && (CLIENT_TRACKED_META_BY_ID.has(id) || cards.some((card) => card.id === id)));
     const root = validTrace(focus) ? focus : validTrace(trace) ? trace : null;
-    // Browser URL state is read only after hydration, preserving static export.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Read browser URL state once after hydration so static-export markup stays identical on the server and first client render.
     setFocusMode(validTrace(focus) ? "neighborhood" : focus === "hub" || focus === "neighborhood" ? focus : "all");
     setSelectedNeighborhoodId(root);
     if (type === "all" || type === "collateral" || type === "wrapper") setEdgeTypeFilter(type);
@@ -255,7 +255,7 @@ export function useContagionGraphModel({
     if (parsedLimit !== undefined) setNodeLimit(parsedLimit);
     else if (root) setNodeLimit("all");
     setUrlReady(true);
-  }, [syncUrlState, cards, dependencyEdges]);
+  }
 
   useEffect(() => {
     if (!syncUrlState || !urlReady) return;

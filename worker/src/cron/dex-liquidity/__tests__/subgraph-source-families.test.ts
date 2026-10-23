@@ -4,6 +4,7 @@ import {
   fetchUniV3Data,
 } from "../subgraph-source-families";
 import {
+  UNISWAP_V4_EXACT_BISECT_MAX_REQUESTS,
   UNISWAP_V4_SUBGRAPHS,
   UNISWAP_V4_SOURCE_PROVENANCE,
   buildUniswapV4PoolQuery,
@@ -194,6 +195,10 @@ describe("subgraph source families", () => {
       poolId: THUSD_POOL.id, tvlUsd: -222031.942086, activeLiquidity: "1215742317323",
     })]);
     expect(result.failedChains).toEqual([]);
+    // Absent and invalid answers are current evidence a snapshot must not override.
+    expect(result.exactAnsweredPoolIdsByChain.get("ethereum")).toEqual(
+      new Set([THUSD_POOL.id, malformed.id, changed.id, conflicting.id, missing.id]),
+    );
   });
 
   it.each(["ethereum", "polygon"])("consumes each %s exact response before requesting the next bounded batch", async (chain) => {
@@ -312,6 +317,8 @@ describe("subgraph source families", () => {
       chain: "ethereum", failureReason: "graphql", timedOut: false,
       batchOffset: 0, batchSize: 1, requestedPoolCount: 1,
     });
+    expect(result.chainFailures).toEqual([{ chain: "ethereum", phase: "exact", reason: "graphql", timedOut: false }]);
+    expect(result.exactAnsweredPoolIdsByChain.get("ethereum")).toEqual(new Set());
     expect([...result.uniswapV4ExecutionCandidates.values()].flat()
       .some((candidate) => candidate.chain === "ethereum" && candidate.poolId === THUSD_POOL.id)).toBe(false);
   });
@@ -335,8 +342,89 @@ describe("subgraph source families", () => {
       .filter((event) => event.event === "uniswap-v4-exact-source-failed");
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0].metadata).toMatchObject({ chain: "ethereum", failureReason: "http", timedOut: true });
+    expect(result.chainFailures).toEqual([{ chain: "ethereum", phase: "exact", reason: "http", timedOut: true }]);
     expect(JSON.stringify(diagnostics)).not.toContain("private-key");
     expect(JSON.stringify(diagnostics)).not.toContain("https://");
+  });
+
+  describe("exact batch bisection", () => {
+    const ids = Array.from({ length: 100 }, (_, index) => `0x${(index + 1).toString(16).padStart(64, "0")}`);
+    function mockExact(isBad: (query: string) => boolean) {
+      const exactQueries: string[] = [];
+      mockFetch([{
+        match: "gateway.thegraph.com/api/graph-key/subgraphs/id/",
+        respond: async (request) => {
+          const { query } = await request.json() as { query: string };
+          if (!query.includes("id_in")) return { body: { data: { pools: [] } } };
+          exactQueries.push(query);
+          return isBad(query)
+            ? { body: { data: null, errors: [{ message: "Null value resolved for non-null field `token1`" }] } }
+            : { body: { data: { pools: [] } } };
+        },
+      }], { requireMatch: true });
+      return exactQueries;
+    }
+
+    it("isolates one bad pool in a batch of 100 and answers the other 99", async () => {
+      const bad = ids[37]!;
+      const exactQueries = mockExact((query) => query.includes(bad));
+      const result = await fetchUniswapV4Data("graph-key", new Map([["ethereum", ids]]));
+      expect(result.failedChains).toEqual([]);
+      const answered = result.exactAnsweredPoolIdsByChain.get("ethereum")!;
+      expect(answered.size).toBe(99);
+      expect(answered.has(bad)).toBe(false);
+      expect(result.chainFailures).toEqual([{
+        chain: "ethereum", phase: "exact", reason: "graphql", timedOut: false,
+        isolatedPoolIdCount: 1, isolatedPoolIds: [bad],
+      }]);
+      // One full batch plus two requests per halving, depth at most log2(100).
+      expect(exactQueries.length).toBeLessThanOrEqual(1 + 2 * Math.ceil(Math.log2(100)));
+    });
+
+    it("stops at the per-run request cap and fails the chain", async () => {
+      const bad = new Set(ids.filter((_, index) => index % 10 === 0));
+      const exactQueries = mockExact((query) => [...bad].some((id) => query.includes(id)));
+      const result = await fetchUniswapV4Data("graph-key", new Map([["ethereum", ids]]));
+      expect(exactQueries).toHaveLength(1 + UNISWAP_V4_EXACT_BISECT_MAX_REQUESTS);
+      expect(result.failedChains).toEqual(["ethereum"]);
+      expect(result.chainFailures).toEqual([{ chain: "ethereum", phase: "exact", reason: "graphql", timedOut: false }]);
+      for (const id of bad) expect(result.exactAnsweredPoolIdsByChain.get("ethereum")!.has(id)).toBe(false);
+    });
+
+    it("fails the chain without excluding pools when every part errors", async () => {
+      mockExact(() => true);
+      const result = await fetchUniswapV4Data("graph-key", new Map([["ethereum", ids]]));
+      expect(result.failedChains).toEqual(["ethereum"]);
+      expect(result.chainFailures.some((failure) => failure.isolatedPoolIdCount != null)).toBe(false);
+      expect(result.exactAnsweredPoolIdsByChain.get("ethereum")!.size).toBe(0);
+    });
+
+    it("does not bisect a timed-out batch", async () => {
+      const createTimeout = AbortSignal.timeout.bind(AbortSignal);
+      let timeoutCount = 0;
+      vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) =>
+        ++timeoutCount > Object.keys(UNISWAP_V4_SUBGRAPHS).length
+          ? AbortSignal.abort(new DOMException("Exact lookup timed out", "TimeoutError"))
+          : createTimeout(milliseconds));
+      const exactQueries = mockExact(() => false);
+      const result = await fetchUniswapV4Data("graph-key", new Map([["ethereum", ids]]));
+      expect(exactQueries).toHaveLength(0);
+      expect(result.failedChains).toEqual(["ethereum"]);
+      expect(result.chainFailures).toEqual([{ chain: "ethereum", phase: "exact", reason: "http", timedOut: true }]);
+    });
+  });
+
+  it("records a broad listing timeout with its machine-readable reason and flag", async () => {
+    const createTimeout = AbortSignal.timeout.bind(AbortSignal);
+    let timeoutCount = 0;
+    vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) =>
+      ++timeoutCount === 1
+        ? AbortSignal.abort(new DOMException("Listing timed out", "TimeoutError"))
+        : createTimeout(milliseconds));
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ data: { pools: [] } }))));
+    const result = await fetchUniswapV4Data("graph-key", new Map());
+    expect(result.failedChains).toEqual(["ethereum"]);
+    expect(result.chainFailures).toEqual([{ chain: "ethereum", phase: "broad", reason: "http", timedOut: true }]);
   });
 
   it("paginates the Uni V3 query by embedding the skip offset and page size", () => {

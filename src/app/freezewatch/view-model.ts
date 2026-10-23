@@ -122,9 +122,11 @@ export function useFreezeWatchPageController() {
   const [searchInput, setSearchInput] = useState(() => searchQuery);
   const searchSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
+  const [syncedSearchQuery, setSyncedSearchQuery] = useState(searchQuery);
+  if (syncedSearchQuery !== searchQuery) {
+    setSyncedSearchQuery(searchQuery);
     setSearchInput(searchQuery);
-  }, [searchQuery]);
+  }
 
   useEffect(
     () => () => {
@@ -149,9 +151,6 @@ export function useFreezeWatchPageController() {
     [navigation, ledgerKey],
   );
   const page = activeNavigation.index + 1;
-  useEffect(() => {
-    if (navigation.key !== ledgerKey) setNavigation({ key: ledgerKey, cursors: [undefined], index: 0 });
-  }, [ledgerKey, navigation.key]);
   const {
     data: pageData,
     isLoading: pageQueryLoading,
@@ -312,7 +311,8 @@ export function useFreezeWatchPageController() {
   const rangeStart = events.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const rangeEnd = events.length === 0 ? 0 : (page - 1) * PAGE_SIZE + events.length;
   const canPreviousPage = activeNavigation.index > 0 && !pageLoading;
-  const canNextPage = !pageLoading && !!pageData?.nextCursor;
+  const nextCursor = pageData?.nextCursor;
+  const canNextPage = !pageLoading && !!nextCursor;
 
   const handlePreviousPage = useCallback(() => {
     if (!canPreviousPage) return;
@@ -320,14 +320,14 @@ export function useFreezeWatchPageController() {
   }, [activeNavigation, canPreviousPage]);
 
   const handleNextPage = useCallback(() => {
-    if (!canNextPage || !pageData?.nextCursor) return;
+    if (!canNextPage || !nextCursor) return;
     const nextIndex = activeNavigation.index + 1;
     setNavigation({
       key: ledgerKey,
-      cursors: [...activeNavigation.cursors.slice(0, nextIndex), pageData.nextCursor],
+      cursors: [...activeNavigation.cursors.slice(0, nextIndex), nextCursor],
       index: nextIndex,
     });
-  }, [activeNavigation, canNextPage, ledgerKey, pageData?.nextCursor]);
+  }, [activeNavigation, canNextPage, ledgerKey, nextCursor]);
 
   const refetchSupport = useCallback(() => {
     void refetchStablecoins();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { KeyRound, Loader2 } from "lucide-react";
 import { DONOR_API_KEY_MIN_USD, DONOR_KEY_CLAIM_MAX_AGE_SEC } from "@shared/lib/ops-limits";
 import {
@@ -208,28 +208,30 @@ function useIssuedTokenControls(token: string | null, issuing: boolean) {
   };
 }
 
+function readProviderMissing(): boolean {
+  return readProvider() === null;
+}
+
+// Some wallets inject after load and announce it with this event.
+function subscribeToProviderInjection(onChange: () => void): () => void {
+  window.addEventListener("ethereum#initialized", onChange, { once: true });
+  return () => window.removeEventListener("ethereum#initialized", onChange);
+}
+
 export function DonorKeyClaim() {
   const [status, setStatus] = useState<ClaimStatus>("idle");
   const [note, setNote] = useState<string | null>(null);
   const [failure, setFailure] = useState<ClaimFailure | null>(null);
   const [siweMessage, setSiweMessage] = useState<string | null>(null);
   const [issued, setIssued] = useState<DonorKeyClaimResponse | null>(null);
-  const [providerMissing, setProviderMissing] = useState(false);
+  // Wallet injection only exists in the browser, so the server and hydration
+  // snapshot is "not missing" and the markup stays identical.
+  const providerMissing = useSyncExternalStore(subscribeToProviderInjection, readProviderMissing, () => false);
   const [walletFocusRequest, setWalletFocusRequest] = useState(0);
   const walletLinkRef = useRef<HTMLAnchorElement | null>(null);
   const { copied: pageLinkCopied, copy: copyPageLink } = useCopyToClipboard(1800);
   const controls = useIssuedTokenControls(issued?.token ?? null, status === "submitting");
   const { retainIssuedToken } = controls;
-
-  useEffect(() => {
-    // Wallet injection only exists in the browser, so detection waits for
-    // mount and the server and hydration markup stay identical.
-    setProviderMissing(readProvider() === null);
-    // Some wallets inject after load and announce it with this event.
-    const recheck = () => setProviderMissing(readProvider() === null);
-    window.addEventListener("ethereum#initialized", recheck, { once: true });
-    return () => window.removeEventListener("ethereum#initialized", recheck);
-  }, []);
 
   useEffect(() => {
     if (providerMissing && walletFocusRequest > 0) walletLinkRef.current?.focus();
@@ -238,7 +240,6 @@ export function DonorKeyClaim() {
   const handleClaim = useCallback(async () => {
     const provider = readProvider();
     if (!provider) {
-      setProviderMissing(true);
       setWalletFocusRequest((request) => request + 1);
       return;
     }

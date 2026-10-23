@@ -9,6 +9,8 @@ import type { DataSources, DexPriceObs, SourcePoolGraph } from "./types";
 import type { PoolProcessingRejection } from "./process-pool-types";
 import type { TargetEnrichmentTelemetry } from "./route-telemetry";
 import type { UniV3CandidateCarryForwardTelemetry } from "./univ3-candidate-snapshot";
+import type { UniswapV4CandidateCarryForwardTelemetry } from "./uniswap-v4-candidate-snapshot";
+import type { SubgraphFailureTelemetry } from "./orchestrator-phases/subgraph-enrichment";
 
 export interface DexLiquidityDirectApiSourceSummary {
   circuitEvents: DirectApiFetchPhaseResult["circuitEvents"];
@@ -44,6 +46,10 @@ export interface DexLiquidityScoringSourceState {
    * before this key existed still decode.
    */
   uniV3CandidateCarryForward?: UniV3CandidateCarryForwardTelemetry;
+  /** Same decisions for Uniswap V4; optional for older stage headers. */
+  uniswapV4CandidateCarryForward?: UniswapV4CandidateCarryForwardTelemetry;
+  /** Per-chain subgraph failure reason and timeout flag; optional for older stage headers. */
+  subgraphFailures?: SubgraphFailureTelemetry;
   directApiSourceSummary: DexLiquidityDirectApiSourceSummary;
 }
 

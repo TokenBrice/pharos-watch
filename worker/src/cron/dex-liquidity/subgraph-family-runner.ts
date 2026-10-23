@@ -31,6 +31,22 @@ interface RunSubgraphFamilyParams<TEntity, TLookups> {
   buildFinalSummary: (lookups: TLookups) => string;
 }
 
+/** One chain's failed read, persisted in stage metadata (ADR-31). */
+export interface SubgraphChainFailure {
+  chain: string;
+  /** `broad` is the family listing; `exact` is a follow-up exact-id read. */
+  phase: "broad" | "exact";
+  reason: SubgraphFailureReason;
+  /** The per-chain `SUBGRAPH_PER_CHAIN_TIMEOUT_MS` budget expired. */
+  timedOut: boolean;
+  /**
+   * Set when a bisected exact batch isolated pools that fail alone: only those
+   * were excluded and the chain did not fail. `isolatedPoolIds` is a sample.
+   */
+  isolatedPoolIdCount?: number;
+  isolatedPoolIds?: string[];
+}
+
 /** Lookups plus the chains whose source did not answer this run. */
 export type SubgraphFamilyResult<TLookups> = TLookups & {
   failedChains: string[];
@@ -40,6 +56,7 @@ export type SubgraphFamilyResult<TLookups> = TLookups & {
    * label and is logged with the family summary.
    */
   failedChainReasons: Record<string, SubgraphFailureReason>;
+  chainFailures: SubgraphChainFailure[];
 };
 
 export async function runSubgraphFamily<TEntity, TLookups extends object>(
@@ -48,12 +65,13 @@ export async function runSubgraphFamily<TEntity, TLookups extends object>(
   const lookups = params.createLookups();
   const failedChains: string[] = [];
   const failedChainReasons: Record<string, SubgraphFailureReason> = {};
+  const chainFailures: SubgraphChainFailure[] = [];
 
   if (!params.graphApiKey) {
     if (params.missingApiKeyMessage) {
       logWorkerEventArgs("handler", "info", params.missingApiKeyMessage);
     }
-    return { ...lookups, failedChains, failedChainReasons };
+    return { ...lookups, failedChains, failedChainReasons, chainFailures };
   }
 
   const subgraphs = Object.entries(params.subgraphs);
@@ -61,8 +79,8 @@ export async function runSubgraphFamily<TEntity, TLookups extends object>(
     subgraphs,
     params.maxConcurrency ?? SUBGRAPH_FAMILY_MAX_CONCURRENCY,
     async ([chain, subgraphId]) => {
+      const perChainTimeout = AbortSignal.timeout(SUBGRAPH_PER_CHAIN_TIMEOUT_MS);
       try {
-        const perChainTimeout = AbortSignal.timeout(SUBGRAPH_PER_CHAIN_TIMEOUT_MS);
         const combinedSignal = params.signal
           ? AbortSignal.any([params.signal, perChainTimeout])
           : perChainTimeout;
@@ -74,6 +92,9 @@ export async function runSubgraphFamily<TEntity, TLookups extends object>(
         if (result.failed) {
           failedChains.push(chain);
           failedChainReasons[chain] = result.failureReason ?? "http";
+          chainFailures.push({
+            chain, phase: "broad", reason: failedChainReasons[chain], timedOut: perChainTimeout.aborted,
+          });
         }
         if (result.shouldLogIndex && params.buildChainSummary) {
           logWorkerEventArgs("handler", "info", params.buildChainSummary(chain, result));
@@ -82,6 +103,10 @@ export async function runSubgraphFamily<TEntity, TLookups extends object>(
         if (params.signal?.aborted) throw error;
         failedChains.push(chain);
         failedChainReasons[chain] = "http";
+        chainFailures.push({
+          chain, phase: "broad", reason: "http",
+          timedOut: perChainTimeout.aborted || (error instanceof Error && error.name === "TimeoutError"),
+        });
         logWorkerEventArgs("handler", "warn", `[dex-liquidity] ${params.familyLabel} ${chain} failed (non-fatal):`, error);
       }
     },
@@ -92,5 +117,5 @@ export async function runSubgraphFamily<TEntity, TLookups extends object>(
     logWorkerEventArgs("handler", "warn", `[dex-liquidity] ${params.familyLabel} failed chains:`, failedChainReasons);
   }
   logWorkerEventArgs("handler", "info", params.buildFinalSummary(lookups));
-  return { ...lookups, failedChains, failedChainReasons };
+  return { ...lookups, failedChains, failedChainReasons, chainFailures };
 }

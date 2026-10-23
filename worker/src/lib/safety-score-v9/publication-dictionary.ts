@@ -85,10 +85,13 @@ export function encodePublicationDictionary(value: unknown, signal?: AbortSignal
   const dictionary: string[] = [];
   const references = new Map<string, string>();
   let tableBytes = 2;
-  for (const [token, count] of [...counts].sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)) {
+  for (const [slice, count] of [...counts].sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)) {
     if (count < 2 || dictionary.length >= PUBLICATION_DICTIONARY_MAX_ENTRIES) continue;
-    const bytes = encoder.encode(token).byteLength;
+    const bytes = encoder.encode(slice).byteLength;
     if (bytes > PUBLICATION_DICTIONARY_MAX_ENTRY_BYTES || tableBytes + bytes + 1 > PUBLICATION_DICTIONARY_MAX_TABLE_BYTES) continue;
+    // Tokens are V8 slices that pin their whole stringifier chunk; retain an
+    // exact flat copy so the table does not keep the canonical JSON alive.
+    const token = JSON.parse(JSON.stringify(slice)) as string;
     references.set(token, `\u0000${dictionary.length}\u0000`);
     dictionary.push(token);
     tableBytes += bytes + 1;
