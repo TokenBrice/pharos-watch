@@ -190,6 +190,8 @@ export async function observeCcipPending(input: {
   source: CcipPendingRead; headers: ReadonlyMap<string, EvmBlockHeader>; clockSec: number;
   chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal; db?: D1Database;
   checkpoint?: CcipPendingCheckpoint;
+  /** Reviewed pin window for the caller's coherent pin set (`supplyAttributionPinMaxAgeSec`). */
+  pinMaxAgeSec?: number;
   onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
   onPhase?: (phase: SupplyAttributionPhase) => void;
 }): Promise<
@@ -209,18 +211,19 @@ export async function observeCcipPending(input: {
     const checkpointVersion = input.source.lanes.some(lane => lane.sourceStartWitness) ? 3 : 2;
     const cacheKey = `safety-score-v9:ccip-pending:v1:${sourceDigest}`;
     const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+    const pinMaxAgeSec = input.pinMaxAgeSec ?? policy.observationMaxAgeSec;
     const chains = [...new Set(input.source.lanes.flatMap(lane => [lane.source.chainId, lane.destination.chainId]))];
     for (const chain of chains) {
       const pin = input.headers.get(chain);
       context = { chainId: chain, pinObservedAtSec: pin?.timestamp ?? null, method: "eth_getBlockByNumber", phase: "pin-authentication", operands: { scoringClockSec: input.clockSec, pinNumber: pin?.number ?? null } };
-      if (!pin || !Number.isSafeInteger(input.clockSec) || pin.timestamp > input.clockSec || input.clockSec - pin.timestamp > policy.observationMaxAgeSec) fail("pin-stale-or-future");
+      if (!pin || !Number.isSafeInteger(input.clockSec) || pin.timestamp > input.clockSec || input.clockSec - pin.timestamp > pinMaxAgeSec) fail("pin-stale-or-future");
       const finalized = await fetchEvmBlockHeader(chain, "finalized", { ...options, minBlockNumber: pin.number });
       const canonical = await fetchEvmBlockHeader(chain, pin.number, { ...options, observedHeadBlock: finalized?.number });
       context = { ...context, finalizedLagBlocks: finalized ? Math.max(0, pin.number - finalized.number) : null, operands: { scoringClockSec: input.clockSec, pinNumber: pin.number, finalizedNumber: finalized?.number ?? null, finalizedObservedAtSec: finalized?.timestamp ?? null } };
       emit({});
       if (!finalized || finalized.number < pin.number || !canonical || canonical.hash !== pin.hash || canonical.timestamp !== pin.timestamp) fail("pin-not-finalized");
       recentPins.set(chain, { chainId: chain, header: pin, finalized,
-        observedAtSec: input.clockSec, maxAgeSec: policy.observationMaxAgeSec });
+        observedAtSec: input.clockSec, maxAgeSec: pinMaxAgeSec });
     }
     if (Math.max(...chains.map(chain => input.headers.get(chain)!.timestamp)) - Math.min(...chains.map(chain => input.headers.get(chain)!.timestamp)) > policy.observationMaxSkewSec) fail("pin-skew");
     const cached = input.db && !input.checkpoint ? await getCache(input.db, cacheKey, input.signal) : null;

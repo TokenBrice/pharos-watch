@@ -1,6 +1,6 @@
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { supplyAttributionPinMaxAgeSec, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { V9_EVIDENCE_PRODUCER_INTERVAL_SEC } from "@shared/lib/cron-cadences";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import { XAUT_ASSET_ID, XAUT_SUPPLY_ATTRIBUTION_CARRY_FORWARD_MAX_AGE_SEC, XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC } from "./xaut-supply-attribution-contract";
@@ -103,7 +103,7 @@ export function safetyScoreV9ChainSupplyMaxAgeSec(
   // otherwise the generic chain-supply window would immediately contradict
   // the per-asset admission contract.
   if (attribution?.model === "reviewed-economic-deployment-partition-v1") {
-    return V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
+    return supplyAttributionPinMaxAgeSec(attribution.deployments.map((row) => row.chainId));
   }
   if (assetId === XAUT_ASSET_ID && attribution?.model === "canonical-lock-mint-group-partition-v2") {
     return attribution.carriedForwardFromGenerationId === undefined

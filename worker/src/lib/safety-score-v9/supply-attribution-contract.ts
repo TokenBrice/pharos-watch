@@ -5,7 +5,7 @@ import { WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC } from "@shared/lib/safety-sco
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { supplyAttributionPinMaxAgeSec, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import reviewedEconomicSupplyPlans from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import type { BridgeRouteRiskProfile, StablecoinMeta } from "@shared/types/core";
@@ -1098,6 +1098,7 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
 }): ReviewedEconomicDeploymentPartition | null {
   const inventory = buildReviewedEconomicDeploymentInventory(input.plan.assetId, input.plan, input.meta);
   const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+  const pinMaxAgeSec = supplyAttributionPinMaxAgeSec(input.plan.deployments.map(row => row.chainId));
   const current = (clock: number, budget: number) => Number.isInteger(clock) && clock <= input.clockSec && input.clockSec - clock <= budget;
   const rejected = (failurePredicate: string, operands?: SupplyAttributionAttemptDiagnostic["operands"], laneId: string | null = null): null => {
     emitSupplyAttributionDiagnostic(input.onDiagnostic, { observer: "economic-deployment", sourceId: input.plan.sourceId, laneId, phase: "partition-derivation", method: "exact-unit-reconciliation", hardEvidenceFailure: true, failurePredicate, ...(operands ? { operands } : {}) });
@@ -1150,7 +1151,7 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
   const convert = (key: string, observation: EconomicSupplyObservation): EconomicFraction | null => {
     const row = input.plan.deployments.find(row => row.deploymentKey === key);
     if (!row || observation.deploymentKey !== key) return rejected("observation-deployment-identity", { expected: key, actual: observation.deploymentKey }, observation.id);
-    if (!current(observation.observedAtSec, policy.observationMaxAgeSec)) return rejected("deployment-observation-current", { observedAtSec: observation.observedAtSec, clockSec: input.clockSec, maxAgeSec: policy.observationMaxAgeSec }, observation.id);
+    if (!current(observation.observedAtSec, pinMaxAgeSec)) return rejected("deployment-observation-current", { observedAtSec: observation.observedAtSec, clockSec: input.clockSec, maxAgeSec: pinMaxAgeSec }, observation.id);
     if (!apiObservationIds.has(observation.id)) {
       const evmState = row.read.kind === "evm-total-supply" || row.read.kind === "evm-balance" ||
         (row.holdingKind === "native-gas" && observation.id !== row.deploymentKey);

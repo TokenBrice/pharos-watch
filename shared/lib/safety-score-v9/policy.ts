@@ -326,6 +326,19 @@ export function loadV9CandidateMethodologyPolicy(
 export const V9_CANDIDATE_POLICY_V1 = loadV9CandidateMethodologyPolicy();
 
 /**
+ * One pin window for every chain a reviewed supply partition aligns together:
+ * the base observation window plus the largest reviewed finalized-head lag
+ * margin among those chains. A coherent pin set inherits its oldest chain's
+ * age, so the margin is per asset, never per individual pin.
+ */
+export function supplyAttributionPinMaxAgeSec(chainIds: Iterable<string>): number {
+  const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+  let marginSec = 0;
+  for (const chainId of chainIds) marginSec = Math.max(marginSec, policy.finalityMarginSecByChainId[chainId] ?? 0);
+  return policy.observationMaxAgeSec + marginSec;
+}
+
+/**
  * Prices only an applicable factor whose quality is unknown, not a measured value.
  * C selects non-disclosure pricing for Backing and Control; Exit's C/U values
  * are equal, so its cause is presentation-only. Other causes select U pricing.

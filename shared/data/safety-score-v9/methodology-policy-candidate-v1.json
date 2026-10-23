@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.32",
+  "releaseVersion": "10.33",
   "semantic": {
     "unknownQuality": {
       "backing": { "C": 35, "U": 50 },
@@ -33,7 +33,13 @@
       "postClockMaxSkewSec": 120,
       "conservationAbsoluteToleranceUsd": 0.000001,
       "conservationRelativeTolerance": 1e-12,
-      "reviewMaxAgeDays": 365
+      "reviewMaxAgeDays": 365,
+      "finalityMarginSecByChainId": {
+        "arbitrum": 600,
+        "base": 600,
+        "optimism": 900,
+        "megaeth": 1500
+      }
     },
     "formula": {
       "pillarWeights": {
