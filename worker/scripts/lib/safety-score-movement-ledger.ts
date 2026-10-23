@@ -112,7 +112,7 @@ export function buildSafetyScoreMovementLedger(rows: readonly SafetyScoreMovemen
 }
 
 export function renderSafetyScoreMovementMarkdown(movements: readonly SafetyScoreMovement[], missingBaselineCoinIds: readonly string[]): string {
-  const cell = (value: unknown) => String(value ?? "unavailable").replace(/\|/g, "\\|").replace(/\n/g, " ");
+  const cell = (value: unknown) => String(value ?? "unavailable").replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\r\n?|\n/g, " ");
   return [
     "# Safety Score movement ledger", "",
     "Labels describe evidence: release = non-comparable identity (not proof of release-only causation); data pillar = largest observed absolute pillar delta; operational = changed partial-evidence/pipeline-gap state or unexplained movement adjacent to a hold. Persistent partial evidence and hold adjacency remain context, not an override of included-pillar, peg or cap changes. Secondary deltas and both endpoints remain in JSON. Peg/cap-only movements and unattributed edges are explicit, never fabricated pillar deltas.", "",

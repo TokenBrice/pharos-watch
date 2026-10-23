@@ -35,6 +35,25 @@ function card(score: number, backing: number, exit: number, control: number): Sa
 }
 
 describe("safety score movement ledger", () => {
+  it.each([
+    ["plain", "plain"],
+    [String.raw`left\|right`, String.raw`left\\\|right`],
+    [String.raw`left\\|right|tail`, String.raw`left\\\\\|right\|tail`],
+    ["line one\nline two", "line one line two"],
+    ["line one\rline two", "line one line two"],
+    ["line one\r\nline two", "line one line two"],
+  ])("keeps report values in their Markdown cells: %s", (value, escaped) => {
+    const before = row("usdc-circle", "g1", 100, identityA, card(70, 80, 75, 70), 70);
+    const movement = classifySafetyScoreMovement(before, row(value, value, 200, identityA, card(72, 80, 77, 70), 72), [value]);
+    const markdown = renderSafetyScoreMovementMarkdown([movement], []);
+    const reportRow = markdown.split("\n").find((line) => line.startsWith("| 1970-"));
+    expect(reportRow).toContain(` | ${escaped} | 70`);
+    expect(reportRow).toContain(` | ${escaped} | ${escaped} |`);
+    expect(movement.coinId).toBe(value);
+    expect(movement.generationId).toBe(value);
+    expect(movement.adjacentHoldReasonCodes).toEqual([value]);
+  });
+
   it("rejects failed, unknown and extra-statement reads before writing a movement report", () => {
     const dir = mkdtempSync(join(tmpdir(), "movement-ledger-envelope-"));
     const prefix = join(dir, "ledger");

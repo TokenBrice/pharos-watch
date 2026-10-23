@@ -285,11 +285,9 @@ Use dependency maintenance as a dedicated routine, not as incidental churn insid
 Current explicitly deferred major cohort:
 
 - `eslint@10` and `typescript@6` — deferred until review on **2026-12-15**; [immutable review record](https://github.com/TokenBrice/pharos-watch/blob/e4e09b34e3b43baadd656471b973c686b34c1c27/docs/deployment-process.md#dependency-refresh-cadence).
-- `satori@0.33.x` — blocked, not deferred: 0.33 hard-imports `harfbuzzjs`, whose loader reads `self.location`/`__filename` to fetch `hb.wasm` and throws in workerd on the first OG render (`scripts/__tests__/og-worker-runtime.test.ts` returns 500; vercel/satori#796). Dependabot ignores the range; re-test when upstream ships a workerd-compatible loader.
+- `satori@0.33.0–0.60.0` — blocked: the HarfBuzz loader breaks workerd (vercel/satori#796), and 0.60 removes the `satori/yoga.wasm` export used by the renderer. Keep 0.32.0 until a reviewed migration passes `scripts/__tests__/og-worker-runtime.test.ts`; Dependabot ignores the reviewed incompatible range.
 
 The root `fflate` override pins Satori’s transitive dependency to patched `0.7.5` for [GHSA-px8p-9vwx-vf98](https://github.com/advisories/GHSA-px8p-9vwx-vf98). Keep it until Satori releases a compatible dependency update; the Worker OG renderer uses Satori for font decoding and rendering.
-
-The root `miniflare` → `undici` override pins Wrangler’s Miniflare, which declares an exact `undici` version, to patched `7.29.1` for [GHSA-w293-vg96-wgc3](https://github.com/advisories/GHSA-w293-vg96-wgc3) and the five lower-severity `undici` advisories fixed in the same release. It is scoped to Miniflare so jsdom keeps resolving its declared `undici` 8 range instead of being forced onto the 7.x line. Remove it when the pinned Wrangler moves to 4.145.0 or later, whose Miniflare already depends on `undici` 7.29.1 (`npm ls undici` then shows no `overridden` marker).
 
 Risk-accepted transitive advisories live in `scripts/ci/dependency-audit-exceptions.json`; the weekly verifier rejects malformed, expired, or widened entries. Read that registry for active exceptions; this section owns the review rationale.
 
