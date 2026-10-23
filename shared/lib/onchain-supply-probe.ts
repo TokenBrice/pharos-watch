@@ -565,6 +565,12 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "ethereum" },
     supplyProbeChain("berachain"),
   ],
+  // USD3 (Reserve RToken) is canonical on Ethereum; Base 0xefb9…2677 is an
+  // OptimismMintableERC20 (remoteToken = Ethereum USD3, bridge 0x4200…0010).
+  // Verified 2026-10-23: Ethereum 1,557,829.462801 (block 26253570) includes
+  // the L1StandardBridge 0x3154…2c35 escrow of 14,930.115493, matching Base
+  // 14,928.115493 (block 52974011) + 2.0, so reallocate rather than sum.
+  "usd3-reserve-protocol": [{ chain: "ethereum" }, { chain: "base" }],
   // PGOLD is issuer-native on Arbitrum, which is the conserved global total:
   // its Chainlink CCIP LockRelease pool 0x5b5CE779709360A6B6906b79CAc5029A5B7CCdc4
   // escrows exactly the Ethereum + Pharos burn/mint supply (1,110.0 verified
@@ -910,6 +916,7 @@ export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, 
   "syrupusdt-maple": "ethereum",
   "syrupusdc-maple": "ethereum",
   "srusd-reservoir": "ethereum",
+  "usd3-reserve-protocol": "ethereum",
   "pgold-pleasing": "arbitrum",
   "syzusd-yuzu": "plasma",
 };

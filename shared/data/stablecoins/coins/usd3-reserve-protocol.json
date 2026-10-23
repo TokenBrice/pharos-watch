@@ -1,7 +1,7 @@
 {
   "id": "usd3-reserve-protocol",
   "llamaId": "178",
-  "detailProvider": "defillama",
+  "detailProvider": "coingecko",
   "name": "Web 3 Dollar",
   "symbol": "USD3",
   "oneLiner": "USD3 is a Reserve Protocol RToken/DTF backed by yield-bearing USDC and USDS wrappers (Aave, Compound, Steakhouse, Sky savings), governed by RSR stakers.",

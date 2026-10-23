@@ -5,6 +5,7 @@ import usdy from "@shared/data/stablecoins/coins/usdy-ondo-finance.json";
 import usyc from "@shared/data/stablecoins/coins/usyc-hashnote.json";
 import reusd from "@shared/data/stablecoins/coins/reusd-re-protocol.json";
 import usp from "@shared/data/stablecoins/coins/usp-pikudao.json";
+import usd3 from "@shared/data/stablecoins/coins/usd3-reserve-protocol.json";
 
 const fetchWithRetryMock = vi.fn();
 const probeTrackedTokenSupplyMock = vi.fn();
@@ -79,7 +80,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
       flags: { pegCurrency: "USD", backing: "crypto-backed", governance: "decentralized", yieldBearing: true, navToken: true },
     },
     { ...usdy, flags: { ...usdy.flags, pegCurrency: "USD" } },
-    ...[usyc, reusd, usp].map((meta) => ({ ...meta, flags: { ...meta.flags, pegCurrency: "USD" } })),
+    ...[usyc, reusd, usp, usd3].map((meta) => ({ ...meta, flags: { ...meta.flags, pegCurrency: "USD" } })),
   ],
 }));
 
@@ -281,6 +282,36 @@ describe("fetchFiatCoinGeckoTokens", () => {
       },
     });
     expect(probeTrackedTokenSupplyMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("publishes DefiLlama-delisted USD3 from its Ethereum-canonical roster when the CoinGecko cap is stale", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    fetchWithRetryMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ coins: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) => {
+      if (input.chain === "ethereum") return 1_557_829_462_801_000_000_000_000n;
+      if (input.chain === "base") return 14_928_115_493_000_000_000_000n;
+      return null;
+    });
+
+    const result = await fetchFiatCoinGeckoTokens({
+      "web-3-dollar": { usd: 1.12, usd_market_cap: 1_761_714.26, last_updated_at: nowSec - 25 * 60 * 60 },
+    });
+    const row = result.find((asset) => asset.id === "usd3-reserve-protocol");
+
+    expect(row).toMatchObject({
+      price: 1.12,
+      priceSource: "coingecko-low-volume",
+      supplySource: "onchain-total-supply",
+    });
+    // USD values: Base is reallocated out of the Ethereum total, not summed.
+    expect(row?.circulating?.peggedUSD).toBeCloseTo(1_557_829.462801 * 1.12, 4);
+    expect(row?.chainCirculating?.Ethereum?.current).toBeCloseTo((1_557_829.462801 - 14_928.115493) * 1.12, 4);
+    expect(row?.chainCirculating?.Base?.current).toBeCloseTo(14_928.115493 * 1.12, 4);
   });
 
   it.each([0n, null])("requires FIUSD's complete native stock despite a fresh positive CG cap (Arbitrum=%s)", async (arbitrumSupply) => {

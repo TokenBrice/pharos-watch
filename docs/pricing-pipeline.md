@@ -108,7 +108,7 @@ Kraken's curated `SOFIDUSD` market supplies SoFiUSD's hard-market quote through 
 
 Frontier Stable Token quotes the curated Kraken `FRNTUSD` bid/ask market in that batch; missing responses stay unavailable.
 
-USDY uses `detailProvider: "coingecko"` so its supplemental lane admits a fresh CoinGecko price and market cap without a live DefiLlama row; an admitted row's primary supply still wins. USYC, reUSD and USP follow the same route after DefiLlama dropped them from its stablecoin list on 2026-10-14.
+USDY uses `detailProvider: "coingecko"` so its supplemental lane admits a fresh CoinGecko price and market cap without a live DefiLlama row; an admitted row's primary supply still wins. USYC, reUSD, USP and USD3 (on-chain roster supply) follow it after DefiLlama's 2026-10-14 delisting.
 
 ### Nominal-reference recovery boundary
 
