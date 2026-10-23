@@ -2,7 +2,7 @@ import { logWorkerEvent, logWorkerEventArgs } from "../lib/structured-log";
 import { getCronSlotStartedAtForSchedule, type CronScheduleKey } from "@shared/lib/cron-jobs";
 import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
 import type { ScheduledEnv } from "../lib/env";
-import { runScheduledSlotWithFence } from "../lib/scheduled-slot-fence";
+import { runScheduledSlotWithFence, type ScheduledSlotCatchUpRequest } from "../lib/scheduled-slot-fence";
 import type { SlotRunnerLoader } from "./scheduled/runner-types";
 import { waitForV9MemoryLaneRelease } from "../lib/v9-slot-window";
 import { recordScheduledWorkerVersionFirstSeen } from "../lib/worker-version-first-seen";
@@ -37,6 +37,7 @@ export async function handleScheduledEvent(
   workerRole: ScheduledWorkerRole,
   runnerLoaders: Partial<Record<CronScheduleKey, SlotRunnerLoader>>,
   slotBudgetStartedAtMs: number,
+  catchUp?: ScheduledSlotCatchUpRequest,
 ): Promise<void> {
   const slotPlan = SCHEDULED_SLOT_PLANS_BY_SCHEDULE[event.cron];
   if (!slotPlan) {
@@ -68,17 +69,21 @@ export async function handleScheduledEvent(
     scheduledTimeMs,
     slotStartedAt,
     slotBudgetStartedAtMs,
+    ...(catchUp ? { catchUp } : {}),
   });
-  // Version attribution is telemetry, not admission. A stalled write must not
-  // consume the only opportunity to claim and run this delivery.
-  const versionStamp = recordScheduledWorkerVersionFirstSeen(
-    env.DB, runtime.workerVersion, Math.floor(slotBudgetStartedAtMs / 1000),
-  ).catch((error) => {
-    logWorkerEventArgs("handler", "warn", "[cron-slot] Failed to record worker version first-seen time:", error);
-  });
-  ctx.waitUntil(settleAfterAbort(() => versionStamp,
-    AbortSignal.timeout(runtime.deadline.remainingMs()),
-    { platformDeadlineMs: runtime.deadline.platformDeadlineMs }));
+  // A Queue catch-up is not scheduler delivery evidence for version attribution.
+  if (!catchUp) {
+    // Version attribution is telemetry, not admission. A stalled write must not
+    // consume the only opportunity to claim and run this delivery.
+    const versionStamp = recordScheduledWorkerVersionFirstSeen(
+      env.DB, runtime.workerVersion, Math.floor(slotBudgetStartedAtMs / 1000),
+    ).catch((error) => {
+      logWorkerEventArgs("handler", "warn", "[cron-slot] Failed to record worker version first-seen time:", error);
+    });
+    ctx.waitUntil(settleAfterAbort(() => versionStamp,
+      AbortSignal.timeout(runtime.deadline.remainingMs()),
+      { platformDeadlineMs: runtime.deadline.platformDeadlineMs }));
+  }
 
   let slotResult;
   try {
@@ -116,6 +121,7 @@ export async function handleScheduledEvent(
         workerRole,
         deadline: runtime.deadline,
         waitUntil: (work) => ctx.waitUntil(work),
+        ...(catchUp ? { catchUp } : {}),
       },
     );
   } catch (error) {

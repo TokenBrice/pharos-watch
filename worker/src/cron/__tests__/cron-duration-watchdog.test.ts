@@ -370,6 +370,10 @@ describe("runCronDurationWatchdog", () => {
         notStartedCronRuns: 1,
       },
     }));
+    // A catch-up reopened and completed this abandoned slot; it still counts.
+    insertSlot.run("halfHourlyOffset", NOW_SEC - 3, NOW_SEC - 3, NOW_SEC - 3, "ok", JSON.stringify({
+      catchUp: { trigger: "abandoned", recoveredFrom: { resultStatus: "error", error: STALE_SLOT_ERROR } },
+    }));
 
     const result = await runCronDurationWatchdog(createSqliteD1(sqlite));
     const metadata = JSON.parse(String(result.metadata));
@@ -378,7 +382,7 @@ describe("runCronDurationWatchdog", () => {
     expect(metadata.slotStats).toEqual(expect.arrayContaining([
       expect.objectContaining({
         scheduleKey: "halfHourlyOffset",
-        abandonedSlots: 4,
+        abandonedSlots: 5,
         notStartedSlots: 1,
       }),
     ]));

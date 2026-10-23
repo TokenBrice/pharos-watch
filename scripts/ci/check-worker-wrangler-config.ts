@@ -85,6 +85,8 @@ export function evaluateWorkerWranglerConfig(
     if (queueAssignments.length !== 9) issues.push("Public must declare exactly the bounded reserve Queue producer/consumer.");
     const queueMode = values.get(assignmentKey("vars", "WORKER_RESERVE_QUEUE_MODE"));
     if (queueMode !== '"on"' && queueMode !== '"off"') issues.push('Public WORKER_RESERVE_QUEUE_MODE must be "on" or "off".');
+    const catchUpMode = values.get(assignmentKey("vars", "WORKER_SLOT_CATCH_UP_MODE"));
+    if (catchUpMode !== '"on"' && catchUpMode !== '"off"') issues.push('Public WORKER_SLOT_CATCH_UP_MODE must be "on" or "off".');
   } else if (queueAssignments.length > 0) issues.push("Heavy must not declare Queue bindings or consumers.");
   const services = assignments.filter(({ section }) => section === "services");
   const placement = assignments.filter(({ section }) => section === "placement");
