@@ -12,7 +12,7 @@ import { transferMaterialScopeFromEconomicDeploymentPartition } from "../safety-
 import { resolveSafetyScoreV9ReviewedTransferFact } from "../safety-score-v9/extension-transfer";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import type * as SupplyAttributionContract from "../safety-score-v9/supply-attribution-contract";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { supplyAttributionPinMaxAgeSec, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { chainRpcs } from "./safety-score-v9-supply-observation.test-support";
 import { createSupplyAttributionJournalV1 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { sha256Hex } from "@shared/lib/sha256";
@@ -30,6 +30,7 @@ import { safetyScoreV9TransferDeploymentKey } from "@shared/types/safety-score-v
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 
 const CLOCK = 1790850000;
+const BASE_FINALITY_MARGIN_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.finalityMarginSecByChainId.base!;
 const CANONICAL = `ethereum:0x${"1".repeat(40)}`;
 const REMOTE = `base:0x${"2".repeat(40)}`;
 const pendingSource = { sourceId: "pending", url: "https://issuer.example/pending", amountPath: ["amount"], observedAtPath: ["observedAt"], generationPath: ["generation"] };
@@ -369,9 +370,20 @@ describe("reviewed economic supply accounting", () => {
     input.observations.pop();
     expect(deriveReviewedEconomicDeploymentPartition(input)).toBeNull();
   });
-  it.each([1800, 1801])("admits observations through the exact %s-second age boundary", age => {
+  // The fixture's Base deployment widens the asset's pin window by Base's reviewed finality margin.
+  it.each([1800 + BASE_FINALITY_MARGIN_SEC, 1801 + BASE_FINALITY_MARGIN_SEC])("admits observations through the exact %s-second age boundary", age => {
     const input = fixture(); input.observations.forEach(row => row.observedAtSec = CLOCK - age); input.inFlight.forEach(row => row.observedAtSec = CLOCK - age);
-    expect(deriveReviewedEconomicDeploymentPartition(input) === null).toBe(age > 1800);
+    expect(deriveReviewedEconomicDeploymentPartition(input) === null).toBe(age > 1800 + BASE_FINALITY_MARGIN_SEC);
+  });
+  it("adds only the largest reviewed finality margin, once, to an asset's pin window", () => {
+    const margins = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.finalityMarginSecByChainId;
+    expect(supplyAttributionPinMaxAgeSec(["ethereum", "polygon"])).toBe(1800);
+    expect(supplyAttributionPinMaxAgeSec(["ethereum", "base"])).toBe(1800 + BASE_FINALITY_MARGIN_SEC);
+    expect(supplyAttributionPinMaxAgeSec(["ethereum", "arbitrum", "base", "optimism"]))
+      .toBe(1800 + Math.max(margins.arbitrum!, margins.base!, margins.optimism!));
+    // sdola's reviewed rollup census (Ethereum, Arbitrum, Base, Optimism, Berachain) shares one widened window.
+    const sdola = supplyAttributionPinMaxAgeSec(REVIEWED_ECONOMIC_SUPPLY_PLANS.get("sdola-inverse-finance")!.deployments.map(row => row.chainId));
+    expect(sdola).toBe(1800 + Math.max(margins.arbitrum!, margins.base!, margins.optimism!));
   });
   it.each([120, 121])("enforces the %s-second cross-observation skew boundary", skew => {
     const input = fixture(); input.observations[1]!.observedAtSec -= skew;
@@ -518,7 +530,7 @@ describe("economic materiality consumers", () => {
         ethereum: { current: 80 }, base: { current: 19 }, "unmatched-economic:alpha": { current: 1 },
       });
       expect(safetyScoreV9ChainSupplyMaxAgeSec(captured, "alpha", null)).toBe(
-        V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec,
+        V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec + BASE_FINALITY_MARGIN_SEC,
       );
     } finally {
       vi.doUnmock("../safety-score-v9/supply-attribution-contract");
@@ -701,7 +713,7 @@ describe("economic capture handoff", () => {
     await withEconomicHandoff(input, ({ consumer, generation, apply }) => {
       expect(apply(consumer, generation)).toMatchObject({ status: "applied", acceptedAssetIds: ["alpha"] });
       expect(apply({ ...consumer, clockSec: CLOCK + 299 }, generation)).toMatchObject({ status: "incompatible", reason: "capture-clock-after-consumer" });
-      consumer.clockSec = CLOCK + 2100;
+      consumer.clockSec = CLOCK + 2100 + BASE_FINALITY_MARGIN_SEC;
       consumer.aggregateCirculatingById.alpha!.observedAtSec = consumer.clockSec;
       consumer.navPriceById!.alpha!.observedAtSec = consumer.clockSec;
       expect(apply(consumer, generation)).toMatchObject({ status: "applied", acceptedAssetIds: [], invalidAssetIds: ["alpha"] });

@@ -344,7 +344,7 @@ describe("methodology registry", () => {
   });
 
   it("retains the archive-free attribution release and aligns current Safety policy identity", () => {
-    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.31");
+    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.32");
     expect(SAFETY_SCORE_POLICY.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.23")!;
     expect(release).toMatchObject({
@@ -482,7 +482,7 @@ describe("methodology registry", () => {
   });
 
   it("records v10.31's Q* release cut without claiming replay acceptance", () => {
-    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0]!;
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.31")!;
     expect(release).toMatchObject({
       version: "10.31", date: "2026-10-22", effectiveAt: 1792699200, reconstructed: false, commits: [],
     });
@@ -494,6 +494,17 @@ describe("methodology registry", () => {
     expect(release.impact.join(" ")).toContain("without trimming or rescaling");
     expect(release.impact.join(" ")).toContain("movers are post-cap");
     expect(release.impact.join(" ")).toContain("usdat 62.47→66.29 masked at 62");
+  });
+
+  it("discloses reviewed supply-attribution finality margins at the next Safety release boundary", () => {
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0]!;
+    expect(release).toMatchObject({
+      version: "10.32", date: "2026-10-23", effectiveAt: 1_792_800_000, reconstructed: false, commits: [],
+    });
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.31");
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.32");
+    expect(release.impact.join(" ")).toContain("finalityMarginSecByChainId");
+    expect(release.impact.join(" ")).toContain("no deployment or production acceptance is claimed");
   });
 
 });

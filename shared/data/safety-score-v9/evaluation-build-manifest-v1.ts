@@ -42,7 +42,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "5c7360c7209b28eeddaf528343fe425d3f6511eb16aa6c37577de24d2eeb0599"
+      "sha256": "3602fd4a58a0779a0b7a9b31c03b414956b50cccfea2b47516dd3756e1ee74ce"
     },
     {
       "path": "shared/data/safety-score-v9/reserve-bound-facts-v1.json",
@@ -574,7 +574,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/policy.ts",
-      "sha256": "33c906e61f13983ee2a581b4ef5dd5ed6e9418d3411dee8af03791dde381a8e5"
+      "sha256": "c1128d656c437c8258ace701d9153bfe98fcef11c0e617c989d2c9f2d72979ba"
     },
     {
       "path": "shared/lib/safety-score-v9/primitives.ts",
@@ -958,7 +958,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-supply-attribution.ts",
-      "sha256": "e5f82c22d511c3fc8505563d11eef0a14f372d48fadeb43ef1583bbbc1562150"
+      "sha256": "03510679601f0bd30a03859f51feb63fa0ba034051b4d849f4a0b7d759059d7e"
     },
     {
       "path": "shared/types/safety-score-v9-transfer-overlays.ts",
@@ -1254,7 +1254,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-contract.ts",
-      "sha256": "672a1be28b0f21fd2d692f6bb2ccaed710c801e4d376b82e2b5a2b44b164c51d"
+      "sha256": "bd3eb189e013f383ff72f6323d506b7158dc1d85f4092b00763c15546c49ad86"
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-diagnostics.ts",
@@ -1262,7 +1262,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution.ts",
-      "sha256": "5ccc60c28b75bd37cd11186cd39fb3df5fa8877bf6ed37ebccb2d899125b15f2"
+      "sha256": "91404b86f9723fe5ef9ecacc14d33b61b621105d37de80d037779b6b81adbed9"
     },
     {
       "path": "worker/src/lib/safety-score-v9/transfer-materiality.ts",
@@ -1299,7 +1299,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-21-block-26239813-shock-coverage.json.gz"
     }
   ],
-  "digest": "926f60818fca232e01ff97ed958cc98c7202e8e1aa1e68694b6a16025df81826"
+  "digest": "6c23f10ed194a9c2539e623a354b9f937674055eb9360e812a2e6be8e979a7c7"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

@@ -106,6 +106,8 @@ export async function observeL2MessengerPending(input: {
   /** Original capture clock, never renewed by a state read. */
   clockSec: number;
   checkpoint?: L2MessengerPendingCheckpoint;
+  /** Reviewed pin window for the caller's coherent pin set (`supplyAttributionPinMaxAgeSec`). */
+  pinMaxAgeSec?: number;
   onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
 }): Promise<
   | { status: "accepted"; amount: string; proof: L2MessengerPendingProof; responseSha256: string; checkpoint: L2MessengerPendingCheckpoint }
@@ -143,7 +145,7 @@ export async function observeL2MessengerPending(input: {
       pinOptions.set(chains[i]!, { ...options, observedHeadBlock: finalized.number,
         recentStatePin: {
           chainId: chains[i]!, header: pin, finalized, observedAtSec: input.clockSec,
-          maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec,
+          maxAgeSec: input.pinMaxAgeSec ?? V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec,
         },
       });
       const contracts = source.contracts.filter(row => row.chainId === chains[i]);

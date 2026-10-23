@@ -1,5 +1,20 @@
 [
   {
+    "version": "10.32",
+    "title": "Reviewed finality margins for supply-attribution pins",
+    "date": "2026-10-23",
+    "effectiveAt": 1792800000,
+    "summary": "Reviewed economic supply partitions whose deployments include a chain with a reviewed finalized-head lag margin get one widened pin window: the 1800s observation age limit plus the largest margin among the asset's chains. Rollup finalized heads trail Ethereum's, so the coherent pin set of an Arbitrum, Base or Optimism partition was rejected by construction near the 1800s limit.",
+    "impact": [
+      "Policy: supplyAttribution.finalityMarginSecByChainId sets Arbitrum 600s, Base 600s and Optimism 900s; every other chain has no margin. The effective pin window of a reviewed economic partition is observationMaxAgeSec plus the largest margin among its deployment chains, added once per asset because alignment ages every pin in the set to the oldest one. A margin cannot exceed the base window.",
+      "The same window binds capture pin admission (finalized-head freshness, the reserved capture-window check, recent-pin RPC routing), the CCIP, LayerZero OFT, Curve and canonical-messenger pending observers, final capture ageing, partition derivation (deployment-observation-current) and Score's chain-supply evidence budget for the accepted packet. Aggregate, reference-price and conversion budgets, the 120s skew limit, finality requirements, canonical hashes and full conservation are unchanged.",
+      "Evidence: finalized-head lag sampled every ~20s for 30 minutes on 2026-10-23 was Ethereum 770-1152s, Arbitrum 826-1273s, Base 913-1536s and Optimism 894-1646s; the largest same-instant excess over Ethereum was 423s, 424s and 828s. Each margin is that excess rounded up to the next 300s, which leaves each rollup at least the capture headroom Ethereum-only partitions already have. In production, sdola-inverse-finance's anchors were rejected with capture-freshness-window-insufficient (Arbitrum and Ethereum anchors aligned to the oldest rollup pin) in four of its 2026-10-23 journal attempts.",
+      "sdola-inverse-finance also fails on asset-timeout, CCIP history-incomplete and its Base route in other runs; this release addresses only the pin-age rejection. No fixed-clock replay is claimed. Replays of accepted captures can differ only where an accepted packet on a margin chain aged past 1800s by the scoring clock; new movers follow only from newly admitted packets. Planned activation is provisionally 2026-10-24 00:00 UTC (1792800000); re-date effectiveAt at release. Equivalence on accepted captures, the first accepted publication and attribution acceptance remain separate obligations; no deployment or production acceptance is claimed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.31",
     "title": "Exposure-weighted local authority",
     "date": "2026-10-22",

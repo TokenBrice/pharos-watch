@@ -14,12 +14,14 @@ import { admissionCodeForSupplyAttributionRejection, computeSupplyAttributionJou
 import { emitSupplyAttributionDiagnostic } from "../safety-score-v9/supply-attribution-diagnostics";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { createDwellirNativeCapability } from "../dwellir-native";
 import { DWELLIR_NATIVE_ENDPOINTS } from "@shared/lib/dwellir-native-endpoints";
 
 import { expectRecentPinRouting } from "../../test-helpers/recent-pin-routing";
 const CLOCK = 1790850000;
 const HASH: `0x${string}` = `0x${"a".repeat(64)}`;
+const BASE_FINALITY_MARGIN_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.finalityMarginSecByChainId.base!;
 const OWNER = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 const MINT = "So11111111111111111111111111111111111111112";
 const apiSource = (sourceId: string) => ({ sourceId, url: `https://issuer.example/${sourceId}`, amountPath: ["data", "amount"], observedAtPath: ["data", "observedAt"], generationPath: ["data", "generation"] });
@@ -188,7 +190,7 @@ describe("reviewed economic supply observation", () => {
     "aligns divergent safe heads without weakening admission: %s", async scenario => {
       const f = fixture(), first = f.plan.deployments[0]!;
       f.plan.deployments.push({ ...first, deploymentKey: `base:${first.address}`, chainId: "base" });
-      const oldest = CLOCK - (scenario === "stale oldest pin" ? 1801 : 300);
+      const oldest = CLOCK - (scenario === "stale oldest pin" ? 1801 + BASE_FINALITY_MARGIN_SEC : 300);
       const target = oldest + 120;
       vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (chain, number) => {
         const height = number === "finalized" ? 100 : number;
@@ -406,9 +408,9 @@ describe("reviewed economic supply observation", () => {
     expect(result.attribution.inFlight[0]).toMatchObject({ id: "in-flight:liability", amount: "1000000" });
   });
 
-  function pendingFixture(pendingAmount = 1000000n, escrowAmount = 20000000n) {
+  function pendingFixture(pendingAmount = 1000000n, escrowAmount = 20000000n, receiptChainId = "base") {
     const f = fixture(), canonical = f.plan.deployments[0]!;
-    const receipt = { ...canonical, deploymentKey: `base:0x${"2".repeat(40)}`, chainId: "base", address: `0x${"2".repeat(40)}` };
+    const receipt = { ...canonical, deploymentKey: `${receiptChainId}:0x${"2".repeat(40)}`, chainId: receiptChainId, address: `0x${"2".repeat(40)}` };
     f.plan.deployments.push(receipt);
     f.plan.accountingFamily = "lock-mint";
     const messageId = `0x${"f".repeat(64)}`;
@@ -437,7 +439,7 @@ describe("reviewed economic supply observation", () => {
   });
   it("requires mandatory finalized heads to remain fresh through the admitted capture window", async () => {
     vi.spyOn(Date, "now").mockReturnValue(CLOCK * 1000);
-    const f = pendingFixture();
+    const f = pendingFixture(undefined, undefined, "polygon");
     const result = await observeReviewedEconomicDeploymentPartitionAttempt({
       ...f, assetDeadlineMs: CLOCK * 1000 + 30_000,
     });
@@ -445,9 +447,37 @@ describe("reviewed economic supply observation", () => {
     expect(evmRpc.fetchEvmBlockHeader).toHaveBeenCalledWith("ethereum", "finalized",
       { chainRpcs: f.chainRpcs, signal: undefined, minTimestampSec: CLOCK + 30 - 1800 });
   });
-  it("rejects mandatory pins before quantities when the reserved capture window would expire them", async () => {
+  it("widens the whole coherent pin set by its largest reviewed finality margin", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(CLOCK * 1000);
+    const f = pendingFixture();
+    // A pin captured by the previous run's finalized heads is ~1806 s old once the reserve is added.
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+      ({ number: number === "finalized" ? 100 : number, timestamp: CLOCK - 1776, hash: HASH }));
+    const result = await observeReviewedEconomicDeploymentPartitionAttempt({
+      ...f, assetDeadlineMs: CLOCK * 1000 + 30_000,
+    });
+    expect(result.status).toBe("accepted");
+    expect(evmRpc.fetchEvmBlockHeader).toHaveBeenCalledWith("ethereum", "finalized",
+      { chainRpcs: f.chainRpcs, signal: undefined, minTimestampSec: CLOCK + 30 - 1800 - BASE_FINALITY_MARGIN_SEC });
+  });
+  it("rejects a margin-chain pin set beyond the base window plus its finality margin", async () => {
     vi.spyOn(Date, "now").mockReturnValue(CLOCK * 1000);
     const f = pendingFixture(), onDiagnostic = vi.fn();
+    const pinAgeSec = 1800 + BASE_FINALITY_MARGIN_SEC - 20;
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+      ({ number: number === "finalized" ? 100 : number, timestamp: CLOCK - pinAgeSec, hash: HASH }));
+    expect(await observeReviewedEconomicDeploymentPartitionAttempt({
+      ...f, onDiagnostic, assetDeadlineMs: CLOCK * 1000 + 30_000,
+    })).toEqual({ status: "rejected", rejectionCode: "deployment-state-unavailable",
+      failedRouteId: "anchor:ethereum:capture-freshness-window-insufficient" });
+    expect(onDiagnostic).toHaveBeenCalledWith(expect.objectContaining({
+      failurePredicate: "capture-freshness-window-insufficient",
+      operands: { freshnessClock: CLOCK + 30, maxAgeSec: 1800 + BASE_FINALITY_MARGIN_SEC } }));
+    expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
+  });
+  it("rejects mandatory pins before quantities when the reserved capture window would expire them", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(CLOCK * 1000);
+    const f = pendingFixture(undefined, undefined, "polygon"), onDiagnostic = vi.fn();
     vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
       ({ number: number === "finalized" ? 100 : number, timestamp: CLOCK - 1790, hash: HASH }));
     expect(await observeReviewedEconomicDeploymentPartitionAttempt({
@@ -477,7 +507,7 @@ describe("reviewed economic supply observation", () => {
     expect(options.recentStatePin).toEqual({ chainId: "ethereum",
       header: { number: 100, timestamp: CLOCK - 60, hash: HASH },
       finalized: { number: 100, timestamp: CLOCK - 60, hash: HASH },
-      observedAtSec: CLOCK, maxAgeSec: 1800 });
+      observedAtSec: CLOCK, maxAgeSec: 1800 + BASE_FINALITY_MARGIN_SEC });
     expect(options.observedHeadBlock).toBe(100);
     for (const [, , stateOptions] of vi.mocked(evmRpc.fetchEvmRpcBatch).mock.calls) {
       expect(stateOptions?.recentStatePin?.observedAtSec).toBe(CLOCK);

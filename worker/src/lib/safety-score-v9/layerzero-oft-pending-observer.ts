@@ -65,6 +65,8 @@ export async function observeLayerZeroOftPending(input: {
   /** Retain the caller's original capture clock, never a renewed read clock. */
   clockSec: number;
   checkpoint?: LayerZeroOftPendingCheckpoint;
+  /** Reviewed pin window for the caller's coherent pin set (`supplyAttributionPinMaxAgeSec`). */
+  pinMaxAgeSec?: number;
   onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
   onPhase?: (phase: SupplyAttributionPhase) => void;
 }): Promise<
@@ -190,7 +192,7 @@ export async function observeLayerZeroOftPending(input: {
       pinOptions.set(side.chainId, { ...options, observedHeadBlock: finalized.number,
         recentStatePin: {
           chainId: side.chainId, header: pin, finalized, observedAtSec: input.clockSec,
-          maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec,
+          maxAgeSec: input.pinMaxAgeSec ?? V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec,
         },
       });
       // Transport exact current-pin authentication in bounded batches, retaining
