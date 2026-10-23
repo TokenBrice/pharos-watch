@@ -249,6 +249,7 @@
     "worker/src/lib/safety-score-v9/peg-provenance.ts": 85,
     "worker/src/lib/safety-score-v9/publication-assessment.ts": 98.7,
     "worker/src/lib/safety-score-v9/publication-attempts.ts": 82.2,
+    "worker/src/lib/safety-score-v9/publication-chunks.ts": 94.1,
     "worker/src/lib/safety-score-v9/publication-codec.ts": 94.9,
     "worker/src/lib/safety-score-v9/publication-dictionary.ts": 100,
     "worker/src/lib/safety-score-v9/publication-health.ts": 100,
