@@ -212,6 +212,17 @@ export const UNISWAP_V4_SUBGRAPHS: Record<string, string> = {
 export const UNISWAP_V4_POOL_PAGE_SIZE = 1000;
 export const UNISWAP_V4_POOL_MAX_PAGES = 5;
 
+/**
+ * Extra exact-pool requests per run for bisecting batches that fail with a
+ * GraphQL data error. Isolating one bad pool in a 100-id batch costs 14
+ * sequential requests (two per halving, depth log2(100) rounded up), so the
+ * cap covers about two bad pools; anything beyond still fails the chain.
+ */
+export const UNISWAP_V4_EXACT_BISECT_MAX_REQUESTS = 32;
+
+/** Isolated bad pool ids named in `subgraphFailures` (the count is always complete). */
+export const UNISWAP_V4_EXACT_ISOLATED_ID_SAMPLE = 5;
+
 export const buildUniswapV4PoolQuery = (skip: number, chain: string): string => `{
   pools(
     first: ${UNISWAP_V4_POOL_PAGE_SIZE},
@@ -338,6 +349,15 @@ export const SUBGRAPH_FAMILY_MAX_CONCURRENCY = 5;
  * 14-day `dex_pool_registry` horizon at half the width.
  */
 export const UNIV3_CANDIDATE_SNAPSHOT_MAX_AGE_SEC = 7 * 24 * 3600;
+
+/**
+ * Longest a chain's last successfully fetched Uniswap V4 execution-candidate
+ * set may stand in for the subgraph when it does not answer this run. Same
+ * reasoning and width as `UNIV3_CANDIDATE_SNAPSHOT_MAX_AGE_SEC`: pool identity
+ * (pool id, currencies, fee, tick spacing, hook) is immutable, and depth is
+ * quoted live against every target.
+ */
+export const UNISWAP_V4_CANDIDATE_SNAPSHOT_MAX_AGE_SEC = 7 * 24 * 3600;
 
 /**
  * Confidence weight for DEX price observations by source family.

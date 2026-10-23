@@ -45,6 +45,8 @@ export interface UniswapV4ExecutionCandidate {
   tvlUsd: number;
   token0Price: number;
   token1Price: number;
+  /** Snapshot identity only: its stored TVL and spot cannot supply current evidence. */
+  carriedFromSnapshot?: true;
   tokens: readonly [
     { address: string; symbol: string; decimals: number },
     { address: string; symbol: string; decimals: number },
