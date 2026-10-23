@@ -212,6 +212,7 @@ export async function computeRawStatus(
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
     cronLeaseQueryFailed,
+    scheduledDeliveryLag: cronHealth.scheduledDeliveryLag,
   });
   const dataQualityEvaluation = evaluateDataQualityStatus({
     nowSec: now,

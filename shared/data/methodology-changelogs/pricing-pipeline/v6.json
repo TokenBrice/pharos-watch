@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.55",
+    "title": "Partial coverage after a long minority-chain quarantine",
+    "date": "2026-10-23",
+    "effectiveAt": 1792713600,
+    "summary": "A material chain-dropout quarantine still unresolved after the seven-day carry no longer blanks the whole asset when the quarantined deficit is a minority share. The observed remainder publishes as explicit partial coverage instead.",
+    "impact": [
+      "Past `SUPPLEMENTAL_RESTORE_MAX_AGE_SEC`, an unrepaired deficit of at most 5% (`partialCoverageMaxDeficitRatio`) of the vetted whole-asset total publishes the observed DefiLlama aggregate plus any admitted repairs, under its own list clock and without `supplyRestored`. The asset carries `supplyChainGuard.status = \"chains-unavailable\"`, `partialCoverage: true` and the original `quarantinedSince`. Each excluded chain stays `current: null` with `resolution: \"unavailable\"`.",
+      "Nothing is carried or added, so supply reattributed to a healthy chain cannot double count. A larger deficit still publishes unavailable supply. The pair stays quarantined: it releases only through list recovery, on-chain corroboration, complete reviewed replacement or dated review. Run metadata keeps listing the asset under quarantined IDs.",
+      "`GET /api/stablecoin/:id` names the excluded chain labels in `currentSupplyExcludedChains`, accepted only from the canonical publication. The live summary exposes them as `supplyExcludedChains`, and the detail hero labels market cap \"Partial supply · excludes …\".",
+      "Motivating case: frxUSD's omitted HyperEVM row ($3.75M baseline, about 3.7% of the asset) blanked frxUSD supply from 2026-10-22 15:30 UTC. Historical aggregates and other assets are unchanged."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.54",
     "title": "Source-scoped weights and original price clocks",
     "date": "2026-10-20",

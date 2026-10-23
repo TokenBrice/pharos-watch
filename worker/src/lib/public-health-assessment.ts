@@ -15,7 +15,7 @@ import {
 } from "@shared/lib/public-health";
 import { CACHE_UPSTREAM_PROVIDER } from "@shared/lib/status-metadata";
 import { projectPublicStatus } from "@shared/lib/public-status-components";
-import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
+import { safetyScorePublicationIdentitiesShareScoringContract } from "@shared/lib/safety-score-publication";
 import { SafetyScorePublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import { isYieldSafetyFallbackWithinWindow } from "@shared/lib/yield-safety-fallback";
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
@@ -542,7 +542,7 @@ async function assessYieldSafetyAvailability(
     }
     const held = health.status === "held";
     const liveWithinBudget = isYieldSafetyFallbackWithinWindow(now, health.acceptedAtSec, now);
-    if (!held && live && liveWithinBudget && safetyScorePublicationIdentitiesAreComparable(stamped, live)) {
+    if (!held && live && liveWithinBudget && safetyScorePublicationIdentitiesShareScoringContract(stamped, live)) {
       return { impactStatus: "healthy", warning: null };
     }
     const reason = held ? "safety-snapshot-held"

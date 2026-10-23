@@ -421,6 +421,8 @@ export async function runCronDurationWatchdog(
                  THEN COALESCE(CAST(json_extract(metadata, '$.staleSlotReconciliation.notStartedCronRuns') AS INTEGER), 0)
                  ELSE 0 END AS not_started_runs,
                CASE
+                 -- A slot reopened by catch-up keeps its abandonment in catchUp.recoveredFrom.
+                 WHEN json_valid(metadata) AND json_extract(metadata, '$.catchUp.recoveredFrom.error') = ? THEN 1
                  WHEN result_status IN ('error', 'degraded') AND json_valid(metadata) THEN
                    CASE WHEN json_extract(metadata, '$.error') = ? THEN 1 ELSE 0 END
                  ELSE 0
@@ -430,7 +432,7 @@ export async function runCronDurationWatchdog(
            )
            GROUP BY slot_key`,
         )
-        .bind(STALE_SLOT_ERROR, sinceSec)
+        .bind(STALE_SLOT_ERROR, STALE_SLOT_ERROR, sinceSec)
         .all<SlotStatsRow>(),
     3,
     signal,

@@ -19,8 +19,9 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `HEAVY_EXECUTOR` | `Fetcher` | optional | - | - | Public-only HTTP service binding to stablecoin-heavy's private default fetch handler for the project-tape placement canary. |
 | `HEAVY_EXECUTOR_SHARED_SECRET` | `string` | optional | - | - | Matching Wrangler-managed secret on public and heavy authenticating the private placed executor; required when the project-tape canary is on. |
 | `PROJECT_TAPE_PLACED_EXECUTOR` | `string` | optional | - | - | Project-tape-only placed-fetch canary, checked-in on; only literal on or off is accepted. Missing/invalid modes warn and use in-process execution for future slots without a transport retry. |
-| `RESERVE_CONTINUATION_QUEUE` | `Queue<ReserveContinuationMessage>` | optional | - | - | Public-only bounded reserve continuation/tail wakeup Queue; D1 checkpoint and event fences remain execution authority. |
+| `RESERVE_CONTINUATION_QUEUE` | `Queue<ReserveContinuationMessage>` | optional | - | - | Public-only bounded reserve continuation/tail and one-shot slot catch-up wakeup Queue; D1 checkpoint, slot and event fences remain execution authority. |
 | `WORKER_RESERVE_QUEUE_MODE` | `string` | optional | - | - | Literal on enables reserve Queue wakeups; off or missing disables sending and consumes hints neutrally while minute cron recovery remains active. |
+| `WORKER_SLOT_CATCH_UP_MODE` | `string` | optional | - | - | Literal on lets the five-minute digest poll arm one-shot missed-slot catch-ups on the public Queue; off (checked in) or missing disables arming and consumes catch-up hints neutrally. |
 | `TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT` | `RateLimit` | required | - | - | Cloudflare pre-authentication rate limiter for Telegram Mini App session requests. |
 | `TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT` | `RateLimit` | required | - | - | Cloudflare pre-authentication rate limiter for Telegram Mini App mutation requests. |
 | `TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT` | `RateLimit` | required | - | - | Cloudflare per-source pre-authentication rate limiter for Telegram Mini App session requests. |
@@ -579,8 +580,8 @@ Chain/task positions below are one-based. Separate chains run independently; tas
 | `depegResolverOffset` | `compute-depeg-resolver` | chain 1, task 1 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
 | `v9PublicationOffset` | `compute-safety-score-v9` | chain 1, task 1 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
 | `statusSelfCheckOffset` | `status-self-check` | chain 1, task 1 | scheduled-job | 2 | 300 | TTL-derived defaults | every occurrence |
-| `statusSelfCheckOffset` | `data-invariant-canary` | chain 1, task 2 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
-| `statusSelfCheckOffset` | `cron-sentinel` | chain 1, task 3 | scheduled-job | 1 | 780 | TTL-derived defaults | every occurrence |
+| `statusSelfCheckOffset` | `data-invariant-canary` | chain 2, task 1 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `statusSelfCheckOffset` | `cron-sentinel` | chain 2, task 2 | scheduled-job | 1 | 780 | TTL-derived defaults | every occurrence |
 | `statusSelfCheckOffset` | `price-corroboration` | side stage, task 1 | budget-only | 4 | 300 | not leased by the scheduled wrapper | every occurrence |
 | `sixHourlyBlacklist` | `sync-blacklist` | chain 1, task 1 | scheduled-job | 1 | 720 | 30 / 3 | every occurrence |
 | `halfHourlyMintBurnCritical` | `sync-mint-burn` | chain 1, task 1 | scheduled-job | 1 | 600 | 30 / 3 | every occurrence |

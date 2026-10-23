@@ -13,6 +13,10 @@ describe("check-cron-connection-budget", () => {
   it("declares Queue recovery separately with serial send and unchanged cron peaks", () => {
     expect(reviewedReport.nonCronReports).toEqual([{
       surface: "reserve-continuation", worker: "public", totalConnections: 3, postSettlementSendConnections: 1,
+    }, {
+      surface: "slot-catch-up:quarterHourly", worker: "public", totalConnections: 4, postSettlementSendConnections: 0,
+    }, {
+      surface: "slot-catch-up:hourlyYieldSync", worker: "public", totalConnections: 4, postSettlementSendConnections: 0,
     }]);
     expect(reviewedReport.triggerReports.find((entry) => entry.scheduleKey === "fourHourlyReserveSync")?.totalConnections).toBe(4);
     expect(reviewedReport.triggerReports.find((entry) => entry.scheduleKey === "fiveMinuteReserveRecovery")?.totalConnections).toBe(3);
