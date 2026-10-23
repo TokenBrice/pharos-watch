@@ -16,7 +16,13 @@ describe("check-cron-connection-budget", () => {
     }, {
       surface: "slot-catch-up:quarterHourly", worker: "public", totalConnections: 4, postSettlementSendConnections: 0,
     }, {
+      surface: "slot-catch-up:halfHourlyMintBurnCritical", worker: "public", totalConnections: 1, postSettlementSendConnections: 0,
+    }, {
+      surface: "slot-catch-up:dewsPsiOffset", worker: "public", totalConnections: 1, postSettlementSendConnections: 0,
+    }, {
       surface: "slot-catch-up:hourlyYieldSync", worker: "public", totalConnections: 4, postSettlementSendConnections: 0,
+    }, {
+      surface: "slot-catch-up:twoHourlyDexDiscovery", worker: "public", totalConnections: 2, postSettlementSendConnections: 0,
     }]);
     expect(reviewedReport.triggerReports.find((entry) => entry.scheduleKey === "fourHourlyReserveSync")?.totalConnections).toBe(4);
     expect(reviewedReport.triggerReports.find((entry) => entry.scheduleKey === "fiveMinuteReserveRecovery")?.totalConnections).toBe(3);

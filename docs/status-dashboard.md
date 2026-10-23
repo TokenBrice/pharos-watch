@@ -311,7 +311,10 @@ clock, has a non-future heartbeat within `resolveScheduledSlotPolicy("fourHourly
 and remains younger than that policy's `hardDeadSec`. Nested `producerPriority.reason` retains the work-admission
 reason `producer-slot-priority`; `producerPriority.condition` distinguishes `producer-slot-live` from
 `current-slot-unfinished`. This completed protected poll proves no reserve publication and never relaxes
-recovery mutation admission. A missing slot claim, unreadable producer evidence, non-running unfinished slot,
+recovery mutation admission. A current slot with no row past `RESERVE_SLOT_NEVER_DELIVERED_GRACE_SEC` (10 minutes,
+the missed-slot catch-up grace for its cadence) was never delivered, so it no longer defers recovery; the poll
+records `currentSlot.reason = "current-slot-never-delivered"` and a late original's row restores protection.
+A missing slot claim within that grace, unreadable producer evidence, non-running unfinished slot,
 stale/future heartbeat, or hard-dead slot cannot renew availability; a valid finished slot, including a finished
 error, continues through the existing recovery path.
 Subject to a successful history read, cron availability is healthy when:

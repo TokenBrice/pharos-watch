@@ -46,6 +46,25 @@ describe("slot catch-up Queue consumer", () => {
   });
 
   it.each([
+    // [lane, slot, dispatched trigger, lane timeout in minutes]; the slot comes
+    // from scheduledTime, so a paired hourly lane always dispatches its first alias.
+    ["halfHourlyMintBurnCritical", SLOT + 39 * 60, "4 * * * *", 10],
+    ["dewsPsiOffset", SLOT + 31 * 60, "26,56 * * * *", 5],
+    ["twoHourlyDexDiscovery", SLOT - 2 * 3600 - 49 * 60, "6 */6 * * *", 13],
+  ] as const)("runs an armed %s slot bounded by its lane timeout", async (scheduleKey, slot, cron, timeoutMin) => {
+    const entryMs = (slot + 600) * 1000;
+    vi.spyOn(Date, "now").mockReturnValue(entryMs);
+    const batch = batchOf({ ...message, scheduleKey, slotStartedAt: slot, armedAt: slot + 600 });
+    await worker.queue(batch, env, ctx);
+    expect(batch.ackAll).toHaveBeenCalledTimes(1);
+    expect(state.scheduled).toHaveBeenCalledExactlyOnceWith(
+      { cron, scheduledTime: slot * 1000 }, env, ctx, "public", expect.any(Object), entryMs,
+      { trigger: "abandoned", armedAt: slot + 600, armedByInvocationId: "digest-poll" },
+      entryMs + timeoutMin * 60_000,
+    );
+  });
+
+  it.each([
     ["mode off", { ...message }, { WORKER_SLOT_CATCH_UP_MODE: "off" } as Env, SLOT + 610],
     ["next natural slot imminent", { ...message }, env, SLOT + 106 * 60],
     ["lane not opted in", { ...message, scheduleKey: "statusSelfCheckOffset" }, env, SLOT + 610],
