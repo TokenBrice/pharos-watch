@@ -10,7 +10,7 @@ The public grade-distribution total is labeled **assets**, since its A/B/C/D/F/N
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v10`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.32`<!-- GENERATED-END: methodology-version-safety-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.33`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public breakdown/publication schema v7, API wrapper v8 and score trace v4; retained older publications require explicit historical dispatch or refusal, never fabricated causes or route identity
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - **Evaluation build:** `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST` in `shared/data/safety-score-v9/evaluation-build-manifest-v1.ts` binds the offline candidate runtime import graph: captured fixed-input normalization, extension construction, fact-set compilation, evaluation and projection, including executable admission schemas, reviewed score-input data and full-catalog bytes/decoder. Edits anywhere in that evaluation-time closure rotate replay/publication identity. Capture-only network observers/producers and build-time generators are outside it; exact-input/fact digests bind their admitted output. Capture binding and runtime identity consumers are unchanged.
@@ -152,13 +152,13 @@ Archive tooling (`worker/scripts/export-safety-score-capture-archive.ts`) lists 
 
 Coalesce generation-bound reads; verify integrity/live health before `200`. Missing/invalid evidence returns reason-bearing `503 no-store`; valid health identity/time mismatches serve held accepted bytes. Never rescore or fall back to V8; retired unversioned/preview routes return `404`.
 
-`X-Safety-Score-Status` is `current`, or `held` for last accepted ratings/clock served `no-store`. Non-held publications older than 3600s (one missed 30-minute publication) or future at any skew instead emit status `stale`, `X-Data-Freshness: stale`, `X-Data-Freshness-Reason` (`safety-score-publication-age`/`future-timestamp`), `Warning: 110` and `no-store`; body `publicationHealth`/`publicationStatus` remain producer health. Every response includes `X-Safety-Score-Freshness-Budget`/`X-Safety-Score-Generation`. Current shared/browser TTL plus `stale-while-revalidate` cannot exceed remaining budget. This covers `/api/report-cards/v9`, site projections, `/api/safety-grades` and `/api/dependency-graph/v1`.
+`X-Safety-Score-Status` is `current`, or `held` for last accepted ratings/clock served `no-store`. Non-held publications older than 7200s (one missed publication) or future at any skew instead emit status `stale`, `X-Data-Freshness: stale`, `X-Data-Freshness-Reason` (`safety-score-publication-age`/`future-timestamp`), `Warning: 110` and `no-store`; body `publicationHealth`/`publicationStatus` remain producer health. Every response includes `X-Safety-Score-Freshness-Budget`/`X-Safety-Score-Generation`. Current shared/browser TTL plus `stale-while-revalidate` cannot exceed remaining budget. This covers `/api/report-cards/v9`, site projections, `/api/safety-grades` and `/api/dependency-graph/v1`.
 
 [Materialization admission and rollout](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/worker-infrastructure-appendix.md#v9-public-response-materialization) owns wire resolution, live-health re-admission, atomic storage, repair, retirement and qualification.
 
 Site-only [compact list/detail representations](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/report-cards-appendix.md#compact-website-representations) preserve the full report and free-grades contracts.
 
-Endpoint freshness uses 2x `compute-safety-score-v9` (3600 s), tolerating one missed 30-minute publication, matching consumer fail-close. `worker/src/lib/safety-score-v9/consumer-freshness.ts` rejects non-finite or future `updatedAt` (and non-finite `now`); no clock-skew allowance or alternate consumer budget is introduced.
+Endpoint freshness uses 2x `compute-safety-score-v9` (7200 s), tolerating one missed publication, matching consumer fail-close. `worker/src/lib/safety-score-v9/consumer-freshness.ts` rejects non-finite or future `updatedAt` (and non-finite `now`); no clock-skew allowance or alternate consumer budget is introduced.
 
 The response carries V9 identity/source digests, methodology/policy identity, active-set completeness, current/held health, native three-pillar cards with nullable excluded diagnostics and status-aware breakdowns, per-card `backingFromLiveReserves`, the serial/basket dependency graph and accepted `updatedAt`.
 

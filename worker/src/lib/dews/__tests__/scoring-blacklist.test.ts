@@ -39,6 +39,8 @@ function createSourceState(): DewsSourceState {
     yieldWarnings: new Map(),
     yieldSourceRisk: new Map(),
     yieldRankChangeAttribution: new Map(),
+    yieldRankingsAgeSec: null,
+    yieldRankingsRetained: false,
     latestPsiScore: null,
     sourceCoverage: {},
     dependencyDiagnostics: emptyDewsDependencyDiagnostics(),

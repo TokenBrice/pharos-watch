@@ -411,6 +411,22 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     reviewedAt: Date.UTC(2026, 9, 23, 6, 36) / 1000,
     expiresAt: Date.UTC(2026, 9, 30, 6, 36) / 1000,
   },
+  {
+    stablecoinId: "idrt-rupiah-token",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-10-23 13:57 UTC: CoinGecko rupiah-token ($0.00005421) is dated 2026-10-16 13:09:29 UTC, so it crossed the seven-day freshness budget at about 13:50 UTC today; no live quote has been published since. DefiLlama coins API returns nothing for the Ethereum, BSC or Polygon contracts or coingecko:rupiah-token. Every IDRT DEX pool is thin: GeckoTerminal/DexScreener show the largest Ethereum pool (IDRT/USDC) at about $731 reserves, BSC under $900 and Polygon under $1,900, all far below the $50K per-pool floor, with prices scattered between $0.00003 and $0.00007. Keep IDRT missing, preserve all admission gates, and have ops re-review within seven days or once CoinGecko refreshes.",
+    sources: [
+      "https://api.coingecko.com/api/v3/simple/price?ids=rupiah-token&vs_currencies=usd&include_last_updated_at=true",
+      "https://coins.llama.fi/prices/current/coingecko:rupiah-token,ethereum:0x998ffe1e43facffb941dc337dd0468d52ba5b48a,bsc:0x66207e39bb77e6b99aab56795c7c340c08520d83,polygon:0x554cd6bdd03214b10aafa3e0d4d42de0c5d2937b",
+      "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x998ffe1e43facffb941dc337dd0468d52ba5b48a/pools",
+      "https://api.geckoterminal.com/api/v2/networks/bsc/tokens/0x66207e39bb77e6b99aab56795c7c340c08520d83/pools",
+      "https://api.geckoterminal.com/api/v2/networks/polygon_pos/tokens/0x554cd6bdd03214b10aafa3e0d4d42de0c5d2937b/pools",
+      "https://api.dexscreener.com/latest/dex/search?q=IDRT",
+    ],
+    reviewedAt: Date.UTC(2026, 9, 23, 13, 57) / 1000,
+    expiresAt: Date.UTC(2026, 9, 30, 13, 57) / 1000,
+  },
 ];
 
 export interface ResolvedStablecoinPriceGapReviews {

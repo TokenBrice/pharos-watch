@@ -1091,4 +1091,16 @@ describe("reviewed XGLD, srUSD and wiTRY OFT supply plans", () => {
     input.observations.splice(2, 1);
     expect(deriveReviewedEconomicDeploymentPartition(input)).toBeNull();
   });
+
+  it.each([2010, 1800 + 1500, 1801 + 1500])("ages wiTRY's MegaETH-bound pin set %s seconds under the reviewed 1500 s margin", age => {
+    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.finalityMarginSecByChainId.megaeth).toBe(1500);
+    const input = cohortFixture("witry-brix");
+    expect(supplyAttributionPinMaxAgeSec(input.plan.deployments.map(row => row.chainId))).toBe(1800 + 1500);
+    const pending = input.inFlight[0]!, proof = pending.layerZeroOftPendingProof!;
+    input.observations.forEach(row => row.observedAtSec = input.clockSec - age);
+    proof.pins.forEach(pin => pin.observedAtSec = input.clockSec - age);
+    pending.observedAtSec = input.clockSec - age;
+    pending.responseSha256 = sha256Hex(stableJsonStringifyV1({ proof, amount: pending.amount }));
+    expect(deriveReviewedEconomicDeploymentPartition(input) === null).toBe(age > 1800 + 1500);
+  });
 });

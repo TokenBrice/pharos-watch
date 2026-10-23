@@ -226,15 +226,16 @@ describe("YieldHistoryChart", () => {
     expect(screen.queryByText(/Global TVL-weighted median/)).toBeNull();
   });
 
-  it("preserves hourly gaps and alternate-only timestamps", () => {
-    const start = Math.floor(Date.now() / 3_600_000) * 3_600_000 - 5 * 3_600_000;
+  it("preserves publication-cadence gaps and alternate-only timestamps", () => {
+    const cadenceMs = 2 * 3_600_000;
+    const start = Math.floor(Date.now() / cadenceMs) * cadenceMs - 5 * cadenceMs;
     const makePoint = (date: number, apy: number) => ({
       date, apy, apyBase: apy, apyReward: 0, sourceTvlUsd: null, warningSignals: [],
     });
     useYieldHistoryMock.mockImplementation((_id, options) => ({
       data: { history: options.sourceKey === "alternate"
-        ? [makePoint(start + 3_600_000, 8)]
-        : [makePoint(start, 2), makePoint(start + 3 * 3_600_000, 3)] },
+        ? [makePoint(start + cadenceMs, 8)]
+        : [makePoint(start, 2), makePoint(start + 3 * cadenceMs, 3)] },
       isLoading: false, error: null,
     }));
     const { result } = renderHook(() => useYieldHistoryChartModel({
@@ -242,9 +243,11 @@ describe("YieldHistoryChart", () => {
       externalSourceKeys: ["primary", "alternate"],
     }));
     const rows = result.current.mergedChartData;
-    expect(rows.find((point) => point.date === start + 3_600_000)).toMatchObject({ apy: null, apy_overlay_0: 8 });
-    expect(rows.find((point) => point.date === start + 2 * 3_600_000)).toMatchObject({ apy: null, apyBase: null, apyReward: null, apy_overlay_0: null });
-    expect(rows.find((point) => point.date === start + 3 * 3_600_000)?.apy).toBe(3);
+    expect(rows.find((point) => point.date === start + cadenceMs)).toMatchObject({ apy: null, apy_overlay_0: 8 });
+    expect(rows.find((point) => point.date === start + 2 * cadenceMs)).toMatchObject({ apy: null, apyBase: null, apyReward: null, apy_overlay_0: null });
+    expect(rows.find((point) => point.date === start + 3 * cadenceMs)?.apy).toBe(3);
+    // Rows inside one publication bucket are not a gap.
+    expect(rows.some((point) => point.date === start + 3_600_000)).toBe(false);
   });
 
   it("uses daily missing buckets outside hourly retention", () => {

@@ -41,6 +41,7 @@ import {
 } from "../safety-score-v9/native-input";
 import { buildNativeSafetyScoreV9Capture, captureLenderCollateralBacking } from "../safety-score-v9/capture";
 import * as acceptedProjectionReaders from "../safety-score-v9/accepted-projection-readers";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../safety-score-v9/consumer-freshness";
 import * as lenderRegistry from "@shared/lib/safety-score-v9/lender-book-registry";
 import {
   buildSafetyScoreV9PublicationReplayCapture,
@@ -137,7 +138,7 @@ function acceptedBundle(input: NativeSafetyScoreV9Input): LenderCollateralBackin
   return {
     schemaVersion: 1, status: "ok", reason: null, publicationGenerationId: "report-cards:v9:v1:" + "b".repeat(64),
     publishedAtSec: input.clockSec - 1, policyDigest: "c".repeat(64), evaluationBuildDigest: "d".repeat(64),
-    registryFingerprint: input.registryFingerprint, maxAgeSec: 3600,
+    registryFingerprint: input.registryFingerprint, maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
     tokenToAssetId: { [`ethereum:${SAVUSD}`]: "savusd-avant", [`ethereum:${FTUSD}`]: "ftusd-flying-tulip" },
     byAssetId: {
       "savusd-avant": { assetId: "savusd-avant", backingScore: 52.5, cardSha256: "e".repeat(64), sourceCause: null, sourceGapIds: [] },
@@ -517,7 +518,7 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
         schemaVersion: 1, status: "ok", reason: null,
         publicationGenerationId: previous.publicationGenerationId, publishedAtSec: previous.publishedAtSec,
         policyDigest: previous.policy.semanticDigest, evaluationBuildDigest: previous.evaluationBuildDigest,
-        registryFingerprint: input.registryFingerprint, maxAgeSec: 3600, tokenToAssetId: captured.tokenToAssetId,
+        registryFingerprint: input.registryFingerprint, maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC, tokenToAssetId: captured.tokenToAssetId,
         byAssetId: Object.fromEntries(Object.entries(byAssetId).sort(([a], [b]) => compareCodeUnits(a, b))),
       });
       expect(captured).toEqual(oracle);
@@ -606,7 +607,7 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
       const sourceRead = vi.spyOn(acceptedProjectionReaders, "loadSafetyScoreV9LenderCollateralState");
       let clock = input.clockSec + 1;
       if (scenario === "held") Object.assign(health, { status: "held", heldSinceSec: previous.publishedAtSec, reasons: [{ code: "dex-stale" }] });
-      if (scenario === "stale") clock = input.clockSec + 3601;
+      if (scenario === "stale") clock = input.clockSec + SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC + 1;
       if (scenario === "future-publication") {
         previous.publishedAtSec = clock + 1;
         health.acceptedAtSec = previous.publishedAtSec;
@@ -646,10 +647,10 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
           acceptedAtSec: previous.publishedAtSec, attemptedAtSec: previous.publishedAtSec, heldSinceSec: null, reasons: [],
         },
       });
-      const captured = await captureLenderCollateralBacking(mockD1(), new Map([[YIELD, frozen.liveReserveProvenanceMap[YIELD]!]]), input.registryFingerprint, input.clockSec + 3600);
+      const captured = await captureLenderCollateralBacking(mockD1(), new Map([[YIELD, frozen.liveReserveProvenanceMap[YIELD]!]]), input.registryFingerprint, input.clockSec + SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC);
       expect(captured.status).toBe("ok");
       expect(captured.publishedAtSec).toBe(previous.publishedAtSec);
-      expect(captured.maxAgeSec).toBe(3600);
+      expect(captured.maxAgeSec).toBe(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC);
     });
 
     it("resolves a newly referenced token from the complete accepted collateral inventory", async () => {

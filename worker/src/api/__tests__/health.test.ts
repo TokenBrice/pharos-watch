@@ -3,6 +3,7 @@ import { afterEach, describe, it, expect, vi } from "vitest";
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
 import type { MockTableConfig } from "@shared/test-utils/mock-d1";
 import { handleHealth } from "../health";
+import { projectPublicStatus } from "@shared/lib/public-status-components";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { buildStatusD1Scenario, cleanupStatusTest } from "./status.test-support";
 import { STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY } from "../../lib/status/public-health-snapshot";
@@ -27,11 +28,12 @@ type HealthDbOptions = {
   producerCronError?: unknown;
 };
 
+/** The self-check writes components projected from the snapshot's own inputs. */
 function makePublicHealthSnapshotRow(now: number, publicHealth: HealthResponse) {
   return {
     key: STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY,
     updated_at: now - 60,
-    value: JSON.stringify({ version: 1, producedAt: now - 60, publicHealth }),
+    value: JSON.stringify({ version: 1, producedAt: now - 60, publicHealth: { ...publicHealth, ...projectPublicStatus(publicHealth) } }),
   };
 }
 
@@ -337,9 +339,11 @@ describe("handleHealth", () => {
     db.assertAllMatchesUsed();
     vi.useRealTimers();
   });
+  // A read-time crossing into a worse state is held at the snapshot's published
+  // state until the self-check confirms it (hysteresis); an outage bypasses.
   it.each([
-    [4800, "healthy", "degraded", "delayed", true],
-    [7200, "degraded", "stale", "degraded", false],
+    [4800, "healthy", "degraded", "operational", true],
+    [7200, "degraded", "stale", "delayed", false],
     [14400, "stale", "stale", "outage", false],
   ] as const)("ages cached evidence across the %ss band within snapshot TTL", async (band, before, after, state, healthy) => {
     vi.spyOn(Date, "now").mockReturnValue(Date.now());
@@ -371,20 +375,20 @@ describe("handleHealth", () => {
         });
       }
       expect(body.components!.find((item) => item.id === "stablecoin-data")).toMatchObject({
-        state, ageSeconds: band + 30, since: null,
+        state, ageSeconds: state === "outage" ? band + 30 : state === "operational" ? null : band - 30, since: null,
       });
       expect(body.schedulerLiveness?.observedAt).toBe(now);
       db.assertAllMatchesUsed();
     }
   });
   describe("read-time freshness sentinel re-read", () => {
-    const yieldInterval = 3_600;
+    const yieldInterval = 7_200;
     async function delayedYieldSnapshot(now: number, statusExcludingCacheFreshness?: HealthResponse["status"]) {
       const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
       publicHealth.timestamp = now - 60;
       publicHealth.assessedAt = now - 60;
       publicHealth.status = "degraded";
-      // Past 3x the hourly producer: Delayed in the stored projection.
+      // Past 3x the two-hour producer: Delayed in the stored projection.
       publicHealth.caches["yield-data"] = {
         ...publicHealth.caches["yield-data"], ageSeconds: 3 * yieldInterval + 600,
         publishedAt: now - 60 - 3 * yieldInterval - 600, healthy: false,
@@ -393,7 +397,7 @@ describe("handleHealth", () => {
         key: STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY,
         updated_at: now - 60,
         value: JSON.stringify({
-          version: 1, producedAt: now - 60, publicHealth,
+          version: 1, producedAt: now - 60, publicHealth: { ...publicHealth, ...projectPublicStatus(publicHealth) },
           ...(statusExcludingCacheFreshness ? { statusExcludingCacheFreshness } : {}),
         }),
       };
@@ -737,8 +741,12 @@ describe("handleHealth", () => {
         first,
       }] });
       const body = await (await handleHealth(db)).json() as HealthResponse;
-      expect(body.status).toBe("degraded");
+      // Evidence-plane fault: named and unknown, never healthy evidence, but not a public service impact.
+      expect(body.status).toBe("healthy");
       expect(body.warnings).toContain(`d1-capacity-${reason}`);
+      expect(body.components!.find((component) => component.id === "website-api")).toMatchObject({
+        state: "operational", reasons: [`d1-capacity-${reason}`], summary: expect.stringContaining("capacity is unknown"),
+      });
       expect(body).not.toHaveProperty("d1Capacity");
       expect(JSON.stringify(body)).not.toContain("databaseSizeBytes");
     },
@@ -1189,7 +1197,7 @@ describe("handleHealth", () => {
     );
   });
 
-  it("cannot stay overall healthy without a warning when producer history is unreadable", async () => {
+  it("names unreadable producer history as unknown quality with a warning, never clean", async () => {
     const now = Math.floor(Date.now() / 1000);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
@@ -1210,7 +1218,8 @@ describe("handleHealth", () => {
         }>;
       };
 
-      expect(body.status).toBe("degraded");
+      // Unknown quality stays unknown (never clean) but is an evidence-plane notice, not a public floor.
+      expect(body.status).toBe("healthy");
       expect(body.caches["yield-data"]).toMatchObject({
         freshnessSource: "freshness-sentinel",
         degraded: null,

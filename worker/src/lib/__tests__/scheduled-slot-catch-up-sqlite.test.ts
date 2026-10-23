@@ -13,9 +13,9 @@ import { STALE_SLOT_ERROR } from "../scheduled-slot-reconciliation";
 import { createDeferredPromise } from "./deferred.test-support";
 
 const fixtures = createLatestSchemaFixtureTracker();
-// 2027-01-14T10:00:00Z: a quarter-hour and a :00 boundary.
-const QUARTER_SLOT = 1_799_920_800;
-// The hourly yield slot at 09:55 for the same hour.
+// 2027-01-14T11:00:00Z: a quarter-hour and a :00 boundary.
+const QUARTER_SLOT = 1_799_924_400;
+// The two-hourly yield slot at 10:55, five minutes earlier.
 const YIELD_SLOT = QUARTER_SLOT - 5 * 60;
 
 function createQueue() {
@@ -74,8 +74,8 @@ describe("one-shot scheduled slot catch-up", () => {
     expect(resolveSlotCatchUpCandidate("quarterHourly", QUARTER_SLOT + 780)).toBeNull();
     expect(resolveSlotCatchUpCandidate("hourlyYieldSync", YIELD_SLOT + 300)).toBeNull();
     expect(resolveSlotCatchUpCandidate("hourlyYieldSync", YIELD_SLOT + 600)).toBe(YIELD_SLOT);
-    expect(resolveSlotCatchUpCandidate("hourlyYieldSync", YIELD_SLOT + 45 * 60)).toBe(YIELD_SLOT);
-    expect(resolveSlotCatchUpCandidate("hourlyYieldSync", YIELD_SLOT + 46 * 60)).toBeNull();
+    expect(resolveSlotCatchUpCandidate("hourlyYieldSync", YIELD_SLOT + 105 * 60)).toBe(YIELD_SLOT);
+    expect(resolveSlotCatchUpCandidate("hourlyYieldSync", YIELD_SLOT + 106 * 60)).toBeNull();
     expect(isSlotCatchUpWithinWindow("statusSelfCheckOffset", QUARTER_SLOT, QUARTER_SLOT + 600)).toBe(false);
   });
 
@@ -133,6 +133,63 @@ describe("one-shot scheduled slot catch-up", () => {
     await expect(arm(db, queue, nowSec)).resolves.toEqual([expect.objectContaining({
       scheduleKey: "hourlyYieldSync", trigger: "abandoned", disposition: "sent" })]);
     expect(sent).toHaveLength(1);
+  });
+
+  it("lets the minute lane reconcile and arm a stale due slot before a late digest poll", async () => {
+    const { sqlite, db } = fixtures.open();
+    const { queue, sent } = createQueue();
+    // 2026-10-23 12:30 shape: sync-stablecoins died; the poll that would sweep it ran late.
+    seedStaleRunningSlot(sqlite, "quarterHourly", QUARTER_SLOT);
+    seedFinishedSlot(sqlite, "hourlyYieldSync", YIELD_SLOT);
+    const nowSec = QUARTER_SLOT + 420;
+
+    // Without reconcileStale (digest host) a still-running row is left to the global sweep.
+    await expect(arm(db, queue, nowSec)).resolves.toEqual([]);
+    expect(slotRow(sqlite, "quarterHourly", QUARTER_SLOT)?.state).toBe("running");
+
+    await expect(armDueSlotCatchUps(
+      { DB: db, RESERVE_CONTINUATION_QUEUE: queue, WORKER_SLOT_CATCH_UP_MODE: "on" } as never,
+      { invocationId: "minute-lane", nowSec, reconcileStale: true },
+    )).resolves.toEqual([{ scheduleKey: "quarterHourly", slotStartedAt: QUARTER_SLOT,
+      trigger: "abandoned", disposition: "sent" }]);
+    expect(slotRow(sqlite, "quarterHourly", QUARTER_SLOT)).toMatchObject({
+      state: "finished", result_status: "error", metadata: { error: STALE_SLOT_ERROR } });
+    expect(sent).toHaveLength(1);
+  });
+
+  it("arms once when the minute lane and the digest poll detect concurrently", async () => {
+    const { sqlite, db } = fixtures.open();
+    const { queue, sent } = createQueue();
+    // quarterHourly@10:00 never delivered; hourlyYieldSync@09:55 died and is still running.
+    seedStaleRunningSlot(sqlite, "hourlyYieldSync", YIELD_SLOT);
+    const env = { DB: db, RESERVE_CONTINUATION_QUEUE: queue, WORKER_SLOT_CATCH_UP_MODE: "on" } as never;
+    const nowSec = QUARTER_SLOT + 600;
+    const detect = (host: string, reconcileStale: boolean, at = nowSec) =>
+      armDueSlotCatchUps(env, { invocationId: host, nowSec: at, reconcileStale });
+
+    await Promise.all([
+      detect("minute-lane-a", true), detect("minute-lane-b", true), detect("digest-poll", false),
+    ]);
+    await Promise.all([detect("minute-lane-c", true, nowSec + 60), detect("digest-poll-2", false, nowSec + 60)]);
+
+    expect(sent.map(({ scheduleKey, trigger }) => `${scheduleKey}:${trigger}`).sort())
+      .toEqual(["hourlyYieldSync:abandoned", "quarterHourly:never-delivered"]);
+    expect(slotRow(sqlite, "hourlyYieldSync", YIELD_SLOT)?.metadata?.error).toBe(STALE_SLOT_ERROR);
+  });
+
+  it("touches no D1 outside every lane's window and one read once armed", async () => {
+    const { sqlite, db } = fixtures.open();
+    const { queue } = createQueue();
+    const prepare = vi.spyOn(db, "prepare");
+    // :03 after the hour: yield's window has not opened and quarterHourly's is closed.
+    await expect(arm(db, queue, QUARTER_SLOT + 180)).resolves.toEqual([]);
+    expect(prepare).not.toHaveBeenCalled();
+
+    seedFinishedSlot(sqlite, "hourlyYieldSync", YIELD_SLOT);
+    await arm(db, queue, QUARTER_SLOT + 600);
+    prepare.mockClear();
+    await expect(arm(db, queue, QUARTER_SLOT + 660)).resolves.toEqual([]);
+    expect(prepare).toHaveBeenCalledTimes(1);
   });
 
   it("runs a never-delivered slot once and deduplicates the late original", async () => {

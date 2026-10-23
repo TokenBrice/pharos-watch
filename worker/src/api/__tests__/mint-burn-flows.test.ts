@@ -561,7 +561,7 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body.updatedAt).toBe(cachedBody.updatedAt);
     expect(body._meta?.updatedAt).toBe(cachedBody.sync.lastSuccessfulSyncAt);
     expect(body._meta?.dependencies?.flightToQuality).toMatchObject({
-      status: "fresh", reason: null, updatedAt: now, freshBudgetSec: 3600,
+      status: "fresh", reason: null, updatedAt: now, freshBudgetSec: 7200,
       generationId: snapshot.safetyScoreIdentity.publicationGenerationId,
     });
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM mint_burn_hourly"))).toBe(false);
@@ -919,7 +919,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const now = Math.floor(Date.now() / 1000);
     mockFtqPublication(now);
     // The observed flow clock stays inside its served 8h availability budget;
-    // Safety Score classification has its own independent 1h budget.
+    // Safety Score classification has its own independent 2h budget.
     const seventyFiveMinutesAgo = now - 75 * 60;
     const cache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
@@ -1024,7 +1024,7 @@ describe("handleMintBurnFlows contract tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2026-10-19T23:00:00Z"));
       const now = Math.floor(Date.now() / 1000);
-      const snapshot = mockFtqPublication(reason === "source-stale" ? now - 3601 : now);
+      const snapshot = mockFtqPublication(reason === "source-stale" ? now - 7201 : now);
       if (reason === "publication-held") {
         vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue({
           kind: "held", reason: "v9-publication-held", detail: "held for test", snapshot,
@@ -1058,7 +1058,7 @@ describe("handleMintBurnFlows contract tests", () => {
         expect(body._meta).toMatchObject({
           status: "fresh", updatedAt: now - 120, freshBudgetSec: 28800,
           dependencies: { flightToQuality: {
-            reason, freshBudgetSec: 3600,
+            reason, freshBudgetSec: 7200,
             status: reason === "source-stale" ? "stale" : "unavailable",
             updatedAt: reason === "source-stale" || reason === "publication-held" ? snapshot.updatedAt : null,
             generationId: reason === "source-stale" || reason === "publication-held"
@@ -1066,7 +1066,7 @@ describe("handleMintBurnFlows contract tests", () => {
           } },
         });
         expect(body.sync?.classificationWarning).toContain("Safety Score");
-        expect(body.sync?.classificationWarning).toContain("1h");
+        expect(body.sync?.classificationWarning).toContain("2h");
       }
       expect(reread).toEqual(materialized);
       expect(cached.headers.get("Warning")).toBe(fresh.headers.get("Warning"));
@@ -1081,7 +1081,7 @@ describe("handleMintBurnFlows contract tests", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-10-19T23:00:00Z"));
     const now = Math.floor(Date.now() / 1000);
-    const snapshot = mockFtqPublication(now - 3600);
+    const snapshot = mockFtqPublication(now - 7200);
     const cachedBody = makeValidCachedAggregateFixture(now, snapshot.safetyScoreIdentity);
     const db = mintBurnScenario({
       nowSec: now,
@@ -1099,7 +1099,7 @@ describe("handleMintBurnFlows contract tests", () => {
       flightToQuality: null, flightIntensity: null,
     });
     expect(body._meta?.dependencies?.flightToQuality).toMatchObject({
-      updatedAt: snapshot.updatedAt, ageSeconds: 3601, freshBudgetSec: 3600,
+      updatedAt: snapshot.updatedAt, ageSeconds: 7201, freshBudgetSec: 7200,
       generationId: snapshot.safetyScoreIdentity.publicationGenerationId,
     });
     expect(body._meta?.updatedAt).toBe(cachedBody.sync.lastSuccessfulSyncAt);

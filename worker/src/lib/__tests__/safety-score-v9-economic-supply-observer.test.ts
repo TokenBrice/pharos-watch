@@ -22,6 +22,7 @@ import { expectRecentPinRouting } from "../../test-helpers/recent-pin-routing";
 const CLOCK = 1790850000;
 const HASH: `0x${string}` = `0x${"a".repeat(64)}`;
 const BASE_FINALITY_MARGIN_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.finalityMarginSecByChainId.base!;
+const MEGAETH_FINALITY_MARGIN_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.finalityMarginSecByChainId.megaeth!;
 const OWNER = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 const MINT = "So11111111111111111111111111111111111111112";
 const apiSource = (sourceId: string) => ({ sourceId, url: `https://issuer.example/${sourceId}`, amountPath: ["data", "amount"], observedAtPath: ["data", "observedAt"], generationPath: ["data", "generation"] });
@@ -474,6 +475,24 @@ describe("reviewed economic supply observation", () => {
       failurePredicate: "capture-freshness-window-insufficient",
       operands: { freshnessClock: CLOCK + 30, maxAgeSec: 1800 + BASE_FINALITY_MARGIN_SEC } }));
     expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
+  });
+  it.each([
+    ["admits", 2010],
+    ["rejects", 1800 + MEGAETH_FINALITY_MARGIN_SEC - 20],
+  ] as const)("%s a MegaETH finalized pin set %s seconds old under its reviewed margin", async (verdict, pinAgeSec) => {
+    vi.spyOn(Date, "now").mockReturnValue(CLOCK * 1000);
+    // witry-brix's MegaETH finalized head trailed by ~2010 s; the reserved 30 s capture window still has to fit.
+    const f = pendingFixture(undefined, undefined, "megaeth");
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+      ({ number: number === "finalized" ? 100 : number, timestamp: CLOCK - pinAgeSec, hash: HASH }));
+    const result = await observeReviewedEconomicDeploymentPartitionAttempt({
+      ...f, assetDeadlineMs: CLOCK * 1000 + 30_000,
+    });
+    if (verdict === "admits") expect(result.status).toBe("accepted");
+    else expect(result).toEqual({ status: "rejected", rejectionCode: "deployment-state-unavailable",
+      failedRouteId: "anchor:ethereum:capture-freshness-window-insufficient" });
+    expect(evmRpc.fetchEvmBlockHeader).toHaveBeenCalledWith("ethereum", "finalized",
+      { chainRpcs: f.chainRpcs, signal: undefined, minTimestampSec: CLOCK + 30 - 1800 - MEGAETH_FINALITY_MARGIN_SEC });
   });
   it("rejects mandatory pins before quantities when the reserved capture window would expire them", async () => {
     vi.spyOn(Date, "now").mockReturnValue(CLOCK * 1000);

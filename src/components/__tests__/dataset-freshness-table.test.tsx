@@ -53,7 +53,7 @@ describe("DatasetFreshnessTable", () => {
     expect(bandForAge(null)).toBe("unavailable");
   });
 
-  it("binds the live Safety publication to its half-hourly producer, not the daily history writer", () => {
+  it("binds the live Safety publication to its hourly producer, not the daily history writer", () => {
     const keys = Object.keys(FRESHNESS);
     expect(Object.keys(STATUS_DATASET_FRESHNESS).sort()).toEqual(keys.sort());
     for (const descriptor of Object.values(STATUS_DATASET_FRESHNESS)) {
@@ -62,15 +62,15 @@ describe("DatasetFreshnessTable", () => {
         expect(getCronJobMeta(owner)).toBeDefined();
       }
     }
-    expect(getDatasetCadenceSec("safetyGrades")).toBe(1800);
+    expect(getDatasetCadenceSec("safetyGrades")).toBe(3600);
     expect(STATUS_DATASET_FRESHNESS.safetyGrades.owners).toEqual(["compute-safety-score-v9"]);
     expect(getCronJobMeta("snapshot-safety-grade-history")?.intervalSec).toBe(86400);
     const { container } = render(<DatasetFreshnessTable nowSeconds={NOW}
       datasetFreshness={{ ...FRESHNESS, safetyGrades: NOW - 2 * 86400 }} />);
     const row = within(container).getByText("Safety Score publication").closest("tr")!;
     expect(within(row).getByText("late")).toBeTruthy();
-    expect(row.cells[3].textContent).toBe("30m");
-    expect(row.cells[4].textContent).toBe("1h");
+    expect(row.cells[3].textContent).toBe("1h");
+    expect(row.cells[4].textContent).toBe("2h");
     expect(row.cells[5].textContent).toBe(getCronJobMeta("compute-safety-score-v9")?.label);
   });
 

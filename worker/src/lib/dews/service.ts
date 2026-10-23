@@ -26,6 +26,7 @@ import { logWorkerEventArgs } from "../structured-log";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { throwIfAborted } from "../abort";
 import type { CronProgressReporter, CronResult } from "../cron-logger";
+import { createD1CostTracker, withD1CostMetadata } from "../d1-cost";
 import { logMalformedJsonPath } from "../json-decode-observability";
 import { assembleDewsScoringInput } from "./input-assembly";
 import { buildDewsScoringResult } from "./scoring";
@@ -66,6 +67,15 @@ import type {
  *   containing rowsRead, rowsWritten, sourceCoverage, and sourceFailures.
  */
 export async function computeAndStoreDEWS(
+  db: D1Database,
+  signal?: AbortSignal,
+  reportProgress?: CronProgressReporter,
+): Promise<CronResult> {
+  const d1Cost = createD1CostTracker(db, ["outer-cron-lifecycle-excluded"]);
+  return withD1CostMetadata(await computeAndStoreDEWSWithDb(d1Cost.db, signal, reportProgress), d1Cost);
+}
+
+async function computeAndStoreDEWSWithDb(
   db: D1Database,
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,

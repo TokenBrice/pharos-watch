@@ -131,7 +131,8 @@ describe("syncYieldData", () => {
     const safetyCall = safetyCalls[safetyCalls.length - 1];
 
     expect(stablecoinsReads).toHaveLength(1);
-    expect(safetyCall?.[0]).toBe(db);
+    // Both reads share the run's D1-cost-tracked binding.
+    expect(safetyCall?.[0]).toBe(stablecoinsReads[0]?.[0]);
   });
 
   it("publishes coherent results when the safety identity changes before publish", async () => {

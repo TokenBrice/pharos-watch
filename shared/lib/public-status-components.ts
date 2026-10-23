@@ -174,9 +174,11 @@ function cacheFindings(key: string, cache: HealthResponse["caches"][string]): Co
       reason: `cache:${key}:quality:${cache.degradedReason ?? "unknown"}`,
     });
   } else if (cache.degraded === null) {
+    // Evidence-plane fault: quality is unknown, not clean (R2), but the age
+    // bands still grade the served data, so this is a notice, not orange.
     findings.push({
-      state: "degraded",
-      summary: `${subject}: input quality for the latest update could not be read.`,
+      state: "operational",
+      summary: `${subject}: input quality for the latest update could not be read, so it is unknown.`,
       reason: `cache:${key}:quality-unknown`,
     });
   }
@@ -215,15 +217,18 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
   }
 
   // `d1-capacity-watch` is informational (the worker scores it healthy); only
-  // warning/critical states and unreadable capacity evidence degrade (ADR-32).
+  // warning/critical capacity degrades (ADR-32). Unreadable or invalid-clock
+  // capacity evidence is an evidence-plane fault: a named notice, never
+  // healthy evidence and never public orange (R2; 2026-10-23).
   const d1Warning = hasWarning(health, (warning) =>
     warning.startsWith("d1-capacity-") && warning !== "d1-capacity-watch" && warning !== "d1-capacity-normal");
   if (d1Warning) {
+    const capacityPressure = d1Warning === "d1-capacity-critical" || d1Warning === "d1-capacity-warning";
     add("website-api", {
-      state: "degraded",
-      summary: d1Warning === "d1-capacity-critical" || d1Warning === "d1-capacity-warning"
+      state: capacityPressure ? "degraded" : "operational",
+      summary: capacityPressure
         ? "Database storage is close to its limit. Reads continue; some writes may be deferred."
-        : "Database capacity evidence is unavailable.",
+        : "Database capacity evidence is unavailable, so capacity is unknown. Reads and writes are unaffected.",
       reason: d1Warning,
     });
   }
@@ -506,6 +511,90 @@ export function projectPublicStatus(
     };
   });
 
+  return { headline: buildPublicHeadline(components), components };
+}
+
+/**
+ * Public transition hysteresis (WS1.2, 2026-10-23): a component's published
+ * state changes only after this many consecutive evaluations agree on a
+ * change in the same direction, entering or clearing. An outage (database
+ * sentinel failure or age past the outage band) bypasses it on entry.
+ */
+export const PUBLIC_STATUS_HYSTERESIS_EVALUATIONS = 2;
+
+/** A raw state change waiting for confirmation: latest raw state, streak length, first-seen time. */
+export interface PublicComponentPending {
+  state: PublicComponentState;
+  count: number;
+  firstSeenAt: number;
+}
+
+/** The previously published component plus its unconfirmed raw change. */
+export type PublicComponentPublished = Pick<PublicStatusComponent, "state" | "since" | "reasons">
+  & Partial<Pick<PublicStatusComponent, "summary" | "ageSeconds" | "budget">>
+  & { pending?: PublicComponentPending | null };
+
+function direction(from: PublicComponentState, to: PublicComponentState): number {
+  return Math.sign(STATE_RANK[to] - STATE_RANK[from]);
+}
+
+/**
+ * Publish a raw projection through hysteresis. Unchanged, newly enrolled and
+ * outage components publish at once; any other change is held at the prior
+ * published state until it repeats in the same direction, then publishes with
+ * `since` at the streak's first observation. A prior record without a summary
+ * (written before hysteresis) cannot be held faithfully and publishes at once.
+ */
+export function applyPublicStatusHysteresis(
+  raw: PublicStatusProjection,
+  previous: ReadonlyMap<PublicStatusComponentId, PublicComponentPublished>,
+  now: number,
+): { projection: PublicStatusProjection; pending: Partial<Record<PublicStatusComponentId, PublicComponentPending>> } {
+  const pending: Partial<Record<PublicStatusComponentId, PublicComponentPending>> = {};
+  const components = raw.components.map((component): PublicStatusComponent => {
+    const prior = previous.get(component.id);
+    if (!prior || prior.state === component.state) return component;
+    if (component.state === "outage") return { ...component, since: now };
+    const dir = direction(prior.state, component.state);
+    const streak = prior.pending && direction(prior.state, prior.pending.state) === dir ? prior.pending : null;
+    const next = { state: component.state, count: (streak?.count ?? 0) + 1, firstSeenAt: streak?.firstSeenAt ?? now };
+    if (next.count >= PUBLIC_STATUS_HYSTERESIS_EVALUATIONS) return { ...component, since: next.firstSeenAt };
+    if (prior.summary === undefined) return { ...component, since: now };
+    pending[component.id] = next;
+    return {
+      id: component.id,
+      state: prior.state,
+      summary: prior.summary,
+      reasons: prior.reasons,
+      ageSeconds: prior.ageSeconds ?? null,
+      budget: prior.budget ?? null,
+      since: prior.since,
+    };
+  });
+  return { projection: { headline: buildPublicHeadline(components), components }, pending };
+}
+
+/**
+ * Read-time hold for `/api/health`: a live re-projection may not publish a
+ * worse, unconfirmed state ahead of the persisted hysteresis (outage excepted),
+ * and may not clear a state the snapshot is still confirming. A recovery that
+ * appears only at read time (a producer published since the snapshot) clears
+ * at once: clearing on fresh data is honest.
+ */
+export function holdPublicStatusAtReadTime(
+  live: PublicStatusProjection,
+  published: readonly PublicStatusComponent[],
+  rawAtSnapshot: PublicStatusProjection,
+): PublicStatusProjection {
+  const publishedById = new Map(published.map((component) => [component.id, component]));
+  const rawById = new Map(rawAtSnapshot.components.map((component) => [component.id, component.state]));
+  const components = live.components.map((component) => {
+    const snap = publishedById.get(component.id);
+    if (!snap || snap.state === component.state || component.state === "outage") return component;
+    const worse = STATE_RANK[component.state] > STATE_RANK[snap.state];
+    const snapshotHeld = rawById.get(component.id) !== snap.state;
+    return worse || snapshotHeld ? snap : component;
+  });
   return { headline: buildPublicHeadline(components), components };
 }
 

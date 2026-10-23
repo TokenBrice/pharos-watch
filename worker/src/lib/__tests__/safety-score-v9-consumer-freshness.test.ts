@@ -17,7 +17,7 @@ describe("Safety Score V9 consumer freshness", () => {
   };
 
   it("allows exactly one missed producer refresh", () => {
-    expect(SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC).toBe(30 * 60);
+    expect(SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC).toBe(60 * 60);
     expect(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC).toBe(
       2 * SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
     );

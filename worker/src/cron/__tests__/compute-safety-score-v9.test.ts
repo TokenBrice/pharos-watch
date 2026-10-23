@@ -379,20 +379,21 @@ describe("computeSafetyScoreV9", () => {
   it("publishes a lagging capture whose own stablecoin generation is within the named budget", async () => {
     vi.useFakeTimers();
     vi.setSystemTime((fixedInput.updatedAt + SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC) * 1_000);
-    mocks.getCacheUpdatedAt.mockResolvedValueOnce(fixedInput.updatedAt + 1_800);
+    mocks.getCacheUpdatedAt.mockResolvedValueOnce(fixedInput.updatedAt + 3_600);
     mockPublishedPreparation();
 
     const result = await computeSafetyScoreV9({} as D1Database);
 
-    expect(SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC).toBe(2_700);
+    // One missed hourly prepare plus one stablecoins interval.
+    expect(SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC).toBe(4_500);
     expect(result.status).toBe("ok");
     expect(JSON.parse(result.metadata!)).toMatchObject({
       stablecoinsCapture: {
         verdict: "lagging-within-budget",
         capturedStablecoinsUpdatedAt: fixedInput.updatedAt,
-        latestStablecoinsUpdatedAt: fixedInput.updatedAt + 1_800,
-        captureAgeSec: 2_700,
-        captureMaxAgeSec: 2_700,
+        latestStablecoinsUpdatedAt: fixedInput.updatedAt + 3_600,
+        captureAgeSec: 4_500,
+        captureMaxAgeSec: 4_500,
       },
     });
     expect(mocks.runPublication).toHaveBeenCalledOnce();
@@ -422,8 +423,8 @@ describe("computeSafetyScoreV9", () => {
         verdict: "out-of-budget",
         capturedStablecoinsUpdatedAt: fixedInput.updatedAt,
         latestStablecoinsUpdatedAt: fixedInput.updatedAt + 900,
-        captureAgeSec: 2_701,
-        captureMaxAgeSec: 2_700,
+        captureAgeSec: 4_501,
+        captureMaxAgeSec: 4_500,
       },
     });
     expect(mocks.loadDexGeneration).not.toHaveBeenCalled();
