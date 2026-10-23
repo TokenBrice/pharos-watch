@@ -28,7 +28,6 @@ import {
 import { SAFETY_SCORE_V9_CACHE_KEYS, loadSafetyScoreV9PublicationHealth } from "./publication-health";
 import { V9PublicationAttemptSchema, loadSafetyScoreV9FailedPublicationAttempt, type V9PublicationAttempt } from "./publication-attempts";
 import {
-  SAFETY_SCORE_V9_PUBLICATION_CHUNKED_WRITES,
   loadSafetyScoreV9PublicationStoredRow,
   safetyScoreV9PublicationChunkCleanupStatement,
   shardSafetyScoreV9PublicationStoredValue,
@@ -121,6 +120,8 @@ export interface PersistSafetyScoreV9PublicationInput {
    * batch, which every reader version tolerates.
    */
   deferPublicMaterialization?: boolean;
+  /** Store the payload in content-addressed chunk rows; only once every reader accepts sharded envelopes. */
+  chunkedPublicationWrites?: boolean;
 }
 
 export interface SafetyScoreV9PersistTiming {
@@ -257,6 +258,7 @@ export async function persistSafetyScoreV9Publication(
   let acceptedProjections: { baseline: string; lender: string } | null = null;
   let acceptedMaterialization: V9AcceptedPublicMaterializationSource | null = null;
   let stagedMaterialization: V9StagedPublicMaterialization | null = null;
+  let publicationPayloadSha256: string | null = null;
   if (health.status === "current") {
     if (input.publication === undefined) {
       throw new Error(
@@ -280,6 +282,7 @@ export async function persistSafetyScoreV9Publication(
     }
     publicationValue = stored;
     const payloadSha256: string = JSON.parse(stored).payloadSha256;
+    publicationPayloadSha256 = payloadSha256;
     if (input.deferPublicMaterialization) {
       acceptedMaterialization = { publication, health, payloadSha256 };
     } else {
@@ -392,11 +395,11 @@ export async function persistSafetyScoreV9Publication(
   const statements: D1PreparedStatement[] = [];
   if (publicationValue !== null) {
     let canonicalValue = publicationValue;
-    if (SAFETY_SCORE_V9_PUBLICATION_CHUNKED_WRITES) {
+    if (input.chunkedPublicationWrites) {
       const sharded = shardSafetyScoreV9PublicationStoredValue(publicationValue);
       canonicalValue = sharded.envelope;
       statements.push(...shardedSafetyScoreV9PublicationChunkStatements(
-        db, sharded, acceptedMaterialization!.payloadSha256, input.publicationClockSec,
+        db, sharded, publicationPayloadSha256!, input.publicationClockSec,
       ));
     } else {
       statements.push(safetyScoreV9PublicationChunkCleanupStatement(db));

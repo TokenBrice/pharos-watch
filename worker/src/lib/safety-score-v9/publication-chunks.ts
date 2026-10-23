@@ -12,9 +12,9 @@ import { SAFETY_SCORE_V9_CACHE_KEYS } from "./publication-health";
  * single-row-equivalent stored string, so codec parsing and every checksum are
  * unchanged, and no single D1 row approaches the 2 MB row limit.
  *
- * Readers accept both shapes. Writers shard only once every reader is live.
+ * Readers accept both shapes. Writers shard only once every reader is live
+ * (heavy `SAFETY_V9_CHUNKED_PUBLICATION_WRITES`).
  */
-export const SAFETY_SCORE_V9_PUBLICATION_CHUNKED_WRITES = false;
 export const SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_PREFIX = "report-cards:v9:payload-chunk:v1:";
 // Base64 text is ASCII, so characters equal stored bytes.
 export const SAFETY_SCORE_V9_PUBLICATION_CHUNK_MAX_BYTES = 512 * 1024;

@@ -109,6 +109,10 @@ export function evaluateWorkerWranglerConfig(
     if (deferredMaterialization !== '"on"' && deferredMaterialization !== '"off"') {
       issues.push('Heavy SAFETY_V9_DEFERRED_MATERIALIZATION must be "on" or "off".');
     }
+    const chunkedWrites = values.get(assignmentKey("vars", "SAFETY_V9_CHUNKED_PUBLICATION_WRITES"));
+    if (chunkedWrites !== '"on"' && chunkedWrites !== '"off"') {
+      issues.push('Heavy SAFETY_V9_CHUNKED_PUBLICATION_WRITES must be "on" or "off".');
+    }
   }
   if (role === "heavy") {
     expectValue("root", "workers_dev", "false");

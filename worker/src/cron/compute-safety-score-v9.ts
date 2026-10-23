@@ -169,7 +169,7 @@ export async function computeSafetyScoreV9(
   reportProgress?: CronProgressReporter,
   options: {
     captureArchiveBucket?: R2Bucket; captureArchiveContext?: ExecutionContext; workerMetadata?: V9WorkerProvenance;
-    executionWindow?: V9ExecutionWindow; deferPublicMaterialization?: boolean;
+    executionWindow?: V9ExecutionWindow; deferPublicMaterialization?: boolean; chunkedPublicationWrites?: boolean;
   } = {},
 ): Promise<CronResult> {
   throwIfAborted(signal);
@@ -422,6 +422,7 @@ export async function computeSafetyScoreV9(
     captureArchiveBucket: options.captureArchiveBucket,
     captureArchiveContext: options.captureArchiveContext,
     deferPublicMaterialization: options.deferPublicMaterialization,
+    chunkedPublicationWrites: options.chunkedPublicationWrites,
     publicationDeadlineMs: options.executionWindow?.deadlineMs,
     fixedInput: v9SeedInput,
     fixedInputCacheValue,

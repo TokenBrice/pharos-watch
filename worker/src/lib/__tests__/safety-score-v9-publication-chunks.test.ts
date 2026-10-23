@@ -6,7 +6,7 @@ import { makeReportCardsV9Card } from "@shared/test-utils/report-cards-v9";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import { currentInput, persistAndMaterialize } from "./safety-score-v9-publication-store.test-support";
-import { loadSafetyScoreV9Publication, loadSafetyScoreV9PublicationIdentityEnvelope } from "../safety-score-v9/publication-store";
+import { loadSafetyScoreV9Publication, loadSafetyScoreV9PublicationIdentityEnvelope, persistSafetyScoreV9Publication } from "../safety-score-v9/publication-store";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../safety-score-v9/publication-health";
 import { serializeSafetyScoreV9Publication } from "../safety-score-v9/publication-codec";
 import {
@@ -104,41 +104,33 @@ describe("Safety Score V9 publication payload chunks", () => {
 });
 
 describe("Safety Score V9 sharded publication writer", () => {
-  it("commits chunks with the envelope and replaces the previous payload's chunks", async () => {
-    vi.resetModules();
-    vi.doMock("../safety-score-v9/publication-chunks", async (importOriginal) => ({
-      ...await importOriginal<typeof import("../safety-score-v9/publication-chunks")>(),
-      SAFETY_SCORE_V9_PUBLICATION_CHUNKED_WRITES: true,
-    }));
-    try {
-      const support = await import("./safety-score-v9-publication-store.test-support");
-      const store = await import("../safety-score-v9/publication-store");
-      const api = await import("../../api/report-cards-v9");
-      const { sqlite, db } = database();
-      const first = largePublication("first", 120);
-      await support.persistAndMaterialize(db, support.currentInput(first));
-      const chunkKeys = () => sqlite.prepare("SELECT key FROM cache WHERE key LIKE ? ORDER BY key")
-        .all(`${SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_PREFIX}%`).map((row) => row.key as string);
-      const firstKeys = chunkKeys();
-      expect(firstKeys.length).toBeGreaterThan(1);
-      const envelope = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value as string;
-      expect(envelope.length).toBeLessThan(4_096);
-      expect(await store.loadSafetyScoreV9Publication(db)).toEqual(first);
-      expect((await api.handleReportCardsV9(db)).status).toBe(200);
+  it.each([false, true])("commits chunks with the envelope and replaces the previous payload's chunks (deferred=%s)", async (deferred) => {
+    const { sqlite, db } = database();
+    const write = async (publication: ReturnType<typeof largePublication>) => {
+      const input = { ...currentInput(publication), chunkedPublicationWrites: true };
+      if (deferred) await persistAndMaterialize(db, input);
+      else await persistSafetyScoreV9Publication(db, input);
+    };
+    const first = largePublication("first", 120);
+    await write(first);
+    const chunkKeys = () => sqlite.prepare("SELECT key FROM cache WHERE key LIKE ? ORDER BY key")
+      .all(`${SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_PREFIX}%`).map((row) => row.key as string);
+    const firstKeys = chunkKeys();
+    expect(firstKeys.length).toBeGreaterThan(1);
+    const envelope = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value as string;
+    expect(envelope.length).toBeLessThan(4_096);
+    expect(await loadSafetyScoreV9Publication(db)).toEqual(first);
+    expect((await handleReportCardsV9(db)).status).toBe(200);
 
-      const next = largePublication("next", 130);
-      await support.persistAndMaterialize(db, support.currentInput(next));
-      const nextKeys = chunkKeys();
-      expect(nextKeys.length).toBeGreaterThan(1);
-      expect(nextKeys.some((key) => firstKeys.includes(key))).toBe(false);
-      expect(await store.loadSafetyScoreV9Publication(db)).toEqual(next);
+    const next = largePublication("next", 130);
+    await write(next);
+    const nextKeys = chunkKeys();
+    expect(nextKeys.length).toBeGreaterThan(1);
+    expect(nextKeys.some((key) => firstKeys.includes(key))).toBe(false);
+    expect(await loadSafetyScoreV9Publication(db)).toEqual(next);
 
-      // A stale writer's batch rolls back its chunk writes with its envelope.
-      await expect(store.persistSafetyScoreV9Publication(db, support.currentInput(first))).rejects.toThrow();
-      expect(chunkKeys()).toEqual(nextKeys);
-    } finally {
-      vi.doUnmock("../safety-score-v9/publication-chunks");
-      vi.resetModules();
-    }
+    // A stale writer's batch rolls back its chunk writes with its envelope.
+    await expect(persistSafetyScoreV9Publication(db, { ...currentInput(first), chunkedPublicationWrites: true })).rejects.toThrow();
+    expect(chunkKeys()).toEqual(nextKeys);
   });
 });
