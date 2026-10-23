@@ -905,6 +905,10 @@ describe("status cause text", () => {
     expect(cause).toMatchObject({ severity: "info" });
     expect(cause?.message.endsWith(wording)).toBe(true);
     expect(result.causes.some((entry) => entry.code === "active_price_coverage_breadth_degraded")).toBe(breadth);
+    if (breadth) {
+      expect(result.causes.find((entry) => entry.code === "active_price_coverage_breadth_degraded")?.message)
+        .toContain(`${count} of 396 active assets (0 persistent, 0 under review, ${count} recent)`);
+    }
   });
 
   it("emits a durable warning without degrading for incomplete active-price coverage", () => {
