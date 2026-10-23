@@ -25,6 +25,7 @@ import {
 import { evaluateV9Backing } from "./archetypes";
 import { selectV9CdpLiquidationCapacity } from "./archetypes/cdp";
 import { evaluateV9EconomicControl } from "./control";
+import { v9BridgeMintControlKey } from "./control-component-keys";
 import { deriveV9MintPosture, resolveV9StatusCauses, type V9EconomicControlResult } from "./control-primitives";
 import { isUnboundedMintPosture } from "./mint-posture";
 import {
@@ -1080,7 +1081,7 @@ function controlPillar(
   // measurement. Include bounded postures even when no structural failure fires.
   pillar.deploymentAuthorities = result.components.flatMap((component) => {
     if (component.kind !== "mint" || component.score === null ||
-      component.componentKey.startsWith("mint:bridge:")) return [];
+      v9BridgeMintControlKey(component.componentKey) !== null) return [];
     return component.controlKeys.flatMap((key) => {
       const control = asset.controls.find((candidate) => candidate.controlKey === key);
       if (control === undefined || control.controlKind === "bridge" || control.controlKind === "oracle" ||

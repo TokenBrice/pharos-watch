@@ -274,7 +274,10 @@ function publicDisplayMetadata(
   }>;
 } {
   const labels: Record<string, string> = {
-    mint: "Mint authority",
+    mint: "Native mint authority",
+    "mint:binding": "Native mint authority",
+    "mint:upgrade": "Upgrade authority",
+    "mint:savings-rate": "Savings-rate authority",
     oracle: "Oracle design",
     "bridge:native": "Native deployment",
     "bridge:unverified": "Unverified bridge controls",
@@ -283,13 +286,6 @@ function publicDisplayMetadata(
   };
   for (const exposure of asset.reserveExposures) {
     labels[`reserve:${exposure.exposureKey}`] = exposure.name;
-  }
-  for (const control of asset.controls) {
-    const deployment = control.deploymentKey.split(":")[0]!
-      .replace(/[_-]+/g, " ")
-      .replace(/\b\w/g, (character) => character.toUpperCase());
-    labels[`bridge:${control.deploymentKey}:${control.controlKey}`] =
-      `${deployment || "Deployment"} bridge`;
   }
   const routeBaseLabel = (
     route: CompiledV9FactSetV3["assets"][number]["exitRoutes"][number],

@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { ScorePill } from "@/components/stablecoin-detail/score-pill";
+import { ControlRoleTag } from "@/components/stablecoin-detail/control-role-tag";
 import { SafetyScoreReasonList } from "@/components/stablecoin-detail/safety-score-reason-list";
 import { SAFETY_BREAKDOWN_ROW_TONE_TEXT_CLASSES } from "@shared/lib/classification";
 import { scoreToGrade } from "@shared/lib/report-card-core";
@@ -50,9 +51,17 @@ const TRACK_CLASS =
   "overflow-hidden rounded-[3px] border border-neutral-300 bg-neutral-200 dark:border-[#2a2a2d] dark:bg-[#1f1f21]";
 /** Unavailable: an empty dashed outline (as in the pillar strips), never an empty solid track that reads as zero. */
 const UNAVAILABLE_TRACK_CLASS = "rounded-[3px] border border-dashed border-muted-foreground/50";
+/**
+ * Diagnostic Control input (outside the eligible set): the dashed track and
+ * faded fill of the Control strip's diagnostic grammar, so a weak bar that does
+ * not set the score keeps its hue without competing with the limiting row.
+ */
+const DIAGNOSTIC_TRACK_CLASS =
+  "overflow-hidden rounded-[3px] border border-dashed border-muted-foreground/50 bg-muted/60";
 
 function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?: boolean }) {
   const [open, setOpen] = useState(false);
+  const childrenId = useId();
   const boundedScore = row.score === null ? null : Math.max(0, Math.min(100, row.score));
   const weightLabel = row.weight === null
     ? null
@@ -61,19 +70,27 @@ function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?
   const displayedScore = row.score === null ? "—" :
     row.score > 0 && row.score < 1 ? "<1" : row.score.toFixed(0);
 
+  const diagnostic = row.role === "diagnostic";
+  // A fold member has no role tag, so a bare row gives its status column back to the bar.
+  const compactStatus = nested && row.status === null && weightLabel === null;
   const bar = (
-    <div className="grid grid-cols-[minmax(5.25rem,6.75rem)_minmax(2.5rem,1fr)_1.75rem_5.25rem] items-center gap-1.5">
+    <div className={cn(
+      "grid items-center gap-1.5",
+      compactStatus
+        ? "grid-cols-[minmax(5.25rem,6.75rem)_minmax(2.5rem,1fr)_1.75rem]"
+        : "grid-cols-[minmax(5.25rem,6.75rem)_minmax(2.5rem,1fr)_1.75rem_5.25rem]",
+    )}>
       <span className="pharos-label break-words leading-[1.35]">
         {row.label}
       </span>
       <span
-        className={cn("h-2.5", boundedScore === null ? UNAVAILABLE_TRACK_CLASS : TRACK_CLASS)}
+        className={cn("h-2.5", boundedScore === null ? UNAVAILABLE_TRACK_CLASS : diagnostic ? DIAGNOSTIC_TRACK_CLASS : TRACK_CLASS)}
         role="img"
         aria-label={`${row.label}: ${row.score === null ? row.status ?? "Not scored" : `${displayedScore} out of 100`}${weightLabel === null ? "" : `, ${weightLabel} effective weight`}`}
       >
         {boundedScore === null ? null : (
           <span
-            className={cn("block h-full rounded-[2px]", ROW_TONE_FILL_CLASS[row.tone])}
+            className={cn("block h-full rounded-[2px]", ROW_TONE_FILL_CLASS[row.tone], diagnostic && "opacity-45")}
             style={{ width: `${boundedScore}%` }}
           />
         )}
@@ -81,15 +98,19 @@ function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?
       <span
         className={cn(
           "text-right font-mono text-2xs font-medium tabular-nums",
-          ROW_TONE_SCORE_CLASS[row.tone],
+          // A diagnostic's tone stays on its faded bar; its number must not
+          // out-shout the limiting input that sets the pillar.
+          diagnostic ? "text-muted-foreground" : ROW_TONE_SCORE_CLASS[row.tone],
         )}
       >
         {displayedScore}
       </span>
-      <span className="pharos-label text-right leading-tight">
+      {compactStatus ? null : <span className="pharos-label flex flex-col items-end text-right leading-tight">
+        {/* A fold holds one role, so its members leave the tag to the fold row. */}
+        {!nested && (row.role === "limiting" || row.role === "diagnostic") ? <ControlRoleTag role={row.role} size="compact" /> : null}
         {weightLabel !== null ? <span className="block text-3xs">· {weightLabel}</span> : null}
         {row.status !== null ? <span className="mt-0.5 block break-words text-3xs">{row.status}</span> : null}
-      </span>
+      </span>}
     </div>
   );
 
@@ -111,13 +132,16 @@ function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
+        aria-controls={childrenId}
         className="pharos-focus-ring mt-0.5 flex min-h-6 w-full items-center gap-1 rounded-sm text-left text-3xs leading-snug text-muted-foreground"
       >
+        {/* The visible summary names no subject; the hidden lead says what the toggle opens. */}
+        <span className="sr-only">{`${row.children.length} members of ${row.label}: `}</span>
         {row.detail}
         <ChevronDown className={cn("h-3 w-3 shrink-0 transition-transform motion-reduce:transition-none", open && "rotate-180")} aria-hidden="true" />
       </button>
       {open ? (
-        <div className="mt-2 space-y-2.5 border-l border-border/40 pl-1">
+        <div id={childrenId} className="mt-2 space-y-2.5 border-l border-border/40 pl-1">
           {row.children.map((child) => <ComponentScoreBar key={child.key} row={child} nested />)}
         </div>
       ) : null}
@@ -243,6 +267,11 @@ function PillarBreakdownDetails({
         ) : (
           <div className="mt-2 border-y border-border/30 py-2">{contextList}</div>
         )
+      ) : null}
+
+      {/* Read before the rows: it explains how the diagnostic rows below count. */}
+      {breakdown.note !== null ? (
+        <p className="mt-2 text-3xs leading-snug text-muted-foreground">{breakdown.note}</p>
       ) : null}
 
       <div className="mt-2.5 space-y-4">

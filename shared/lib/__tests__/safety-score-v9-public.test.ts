@@ -1132,6 +1132,71 @@ describe("Safety Score v9 public projection", () => {
       ["issuance", ["mint"]], ["upgrade", ["upgrade"]],
     ]);
   });
+  it("tells same-label control rows apart by execution path, then authority, then deployment", () => {
+    const input = fixture("alpha", { score: 70, grade: "B" });
+    const authority = { authorityKey: "ethereum:0xc71104001a3ccda1bef1177d765831bd1bfe8ee6", model: "eoa" as const, threshold: null };
+    const veto = makeDeploymentControl("mint-meta:alpha:gov:path:minority-veto", "governance", { deploymentKey: "asset:alpha", authority, executionPathId: "minority-veto" });
+    const burn = makeDeploymentControl("mint-meta:alpha:gov:path:token-burn", "governance", { deploymentKey: "asset:alpha", authority, executionPathId: "token-burn" });
+    const solanaA = makeDeploymentControl("mint-meta:alpha:sol-a", "mint", { deploymentKey: "asset:alpha", authority: { authorityKey: "solana:FeNxBnWpakMhvk1nL1h2sqvbH1tY8z8T2MpA6UhcFi9s", model: "eoa", threshold: null } });
+    const solanaB = makeDeploymentControl("mint-meta:alpha:sol-b", "mint", { deploymentKey: "asset:alpha", authority: { authorityKey: "solana:3WNoR4QJDbehTb6aA6fGz6qVk2b8XtqS1hZ5yFZXwDWc", model: "eoa", threshold: null } });
+    const component = input.control!.components[0]!;
+    input.control = {
+      ...input.control!,
+      components: [component, ...[veto, burn, solanaA, solanaB].map((fact) => ({
+        ...component, componentKey: `mint:deployment:${fact.controlKey}`, binding: false, controlKeys: [fact.controlKey],
+      }))],
+      controlFacts: [veto, burn, solanaA, solanaB],
+    };
+    const labels = resolveV9PublicWitnessTexts(SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input).card))
+      .breakdowns!.control.components.flatMap((row) => row.key.startsWith("mint:deployment:") ? [row.label] : []);
+    expect(labels).toEqual([
+      "Ethereum governance authority · minority veto",
+      "Ethereum governance authority · token burn",
+      "Solana mint authority · FeNxBn…Fi9s",
+      "Solana mint authority · 3WNoR4…wDWc",
+    ]);
+  });
+  it("names single-control mint and bridge rows after the chain and role of the fact that scored them", () => {
+    const input = fixture("alpha", { score: 70, grade: "B" });
+    const nativeUpgrade = makeDeploymentControl("mint-meta:alpha:upgrade", "upgrade", {
+      deploymentKey: "asset:alpha",
+      authority: { authorityKey: "xlayer:0x86a2b15f6ef67af32a6b7c43903cdecb1f540ec1", model: "eoa", threshold: null },
+    });
+    const issuerMint = makeDeploymentControl("mint-meta:alpha:issuer", "mint", {
+      deploymentKey: "asset:alpha",
+      authority: { authorityKey: "issuer-backend:alpha", model: "issuer-backend", threshold: null },
+    });
+    const bridged = makeDeploymentControl("bridge-meta:alpha:taiko", "bridge", {
+      deploymentKey: "taiko:0x07d83526730c7438048d55a4fc0b850e2aab6f0b",
+    });
+    const sentinel = makeDeploymentControl("bridge-meta:alpha:group", "bridge", { deploymentKey: "representation-group:alpha" });
+    const component = input.control!.components[0]!;
+    input.control = {
+      ...input.control!,
+      components: [
+        { ...component, componentKey: "mint", controlKeys: [nativeUpgrade.controlKey] },
+        { ...component, componentKey: "mint:deployment:issuer", binding: false, controlKeys: [issuerMint.controlKey] },
+        { ...component, componentKey: "mint:bridge:bridge-meta:alpha:taiko", binding: false, controlKeys: [bridged.controlKey] },
+        { ...component, kind: "bridge", posture: "external-lock-mint", componentKey: "bridge:taiko:0x07d83526730c7438048d55a4fc0b850e2aab6f0b:bridge-meta:alpha:taiko", binding: false, controlKeys: [bridged.controlKey] },
+        { ...component, componentKey: "mint:bridge:bridge-meta:alpha:group", binding: false, controlKeys: [sentinel.controlKey] },
+        { ...component, componentKey: "mint:upgrade", controlKeys: [] },
+      ],
+      controlFacts: [nativeUpgrade, issuerMint, bridged, sentinel],
+    };
+    const labels = Object.fromEntries(resolveV9PublicWitnessTexts(SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input).card))
+      .breakdowns!.control.components.map((row) => [row.key, row.label]));
+    expect(labels).toEqual({
+      // The scorer's pick among tied binding native paths names no tie-winner.
+      mint: "Native mint authority",
+      // Non-chain authority namespaces never read as chains.
+      "mint:deployment:issuer": "Mint authority",
+      "mint:bridge:bridge-meta:alpha:taiko": "Taiko bridged-token mint",
+      "bridge:taiko:0x07d83526730c7438048d55a4fc0b850e2aab6f0b:bridge-meta:alpha:taiko": "Taiko bridge",
+      "mint:bridge:bridge-meta:alpha:group": "Bridged-token mint",
+      // Fact-free rows keep the producer display label.
+      "mint:upgrade": input.display?.labels?.["mint:upgrade"] ?? "Mint authority",
+    });
+  });
   it("shares complete control details across semantic components and rejects invalid or unused references", () => {
     const input = fixture("alpha", { score: 70, grade: "B" });
     const fact = makeDeploymentControl("control:shared", "mint", { executionScope: reviewedScope() });
