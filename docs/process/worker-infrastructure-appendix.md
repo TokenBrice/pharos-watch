@@ -896,7 +896,7 @@ Synthetic chronology uses the original evidence clock, not sweep wall time. A st
 
 ### Price Cache
 
-`getPriceCache()`/`savePriceCache()` in `worker/src/lib/db-cache.ts` own `price_cache` access; [pricing](../pricing-pipeline.md) owns admission and clocks. Cache read success alone never establishes current-price provenance. `savePriceCache()` skips a rewrite whose price, source, confidence, observation clock (`observed_at`/`updated_at`), mode and source lists all equal the stored row while the stored `synced_at` is younger than `PRICE_CACHE_SYNCED_AT_REFRESH_SEC` (1 h). Every freshness consumer reads the observation clock, which such a skip never holds back; a row without an upstream clock uses the sync time as `updated_at` and therefore always rewrites. Only `synced_at` (replayed `priceSyncedAt` provenance) can lag, by less than the refresh interval.
+`getPriceCache()`/`savePriceCache()` in `worker/src/lib/db-cache.ts` own `price_cache` access; [pricing](../pricing-pipeline.md) owns admission and clocks. Cache read success alone never establishes current-price provenance.
 ## Health & Status Endpoints
 
 The [API reference](../api-reference.md#get-apihealth) owns response contracts; [status dashboard](../status-dashboard.md#cron-health-model) owns operator health interpretation. `shared/lib/status-thresholds.ts` owns cache age-ratio baselines/overrides and scheduler thresholds, not a copied table here.
