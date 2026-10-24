@@ -6,10 +6,12 @@ import { LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS } from "@shared/types/live
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
 import { sha256HexFromBytes, sha256HexFromUtf8Chunks } from "@shared/lib/sha256";
 import { stableJsonStringifyChunksV1 } from "@shared/lib/stable-json";
+import { base64ToBytes, bytesToBase64 } from "@shared/lib/base64";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { fetchEvmBlockHeader, fetchEvmBlockNumber, type EvmBlockHeader } from "../../lib/evm-rpc";
 import { throwIfAborted } from "../../lib/abort";
 import { gunzipBytesBounded } from "../../lib/canonical-json-gzip";
+import { getCache, setCache } from "../../lib/db-cache";
 import type { AdapterContext, AdapterResult } from "./types";
 import { verifiedFreshnessMetadata } from "./helpers";
 import { fetchBinaryWithRetry, fetchJsonWithRetry } from "./request";
@@ -21,12 +23,17 @@ const REGISTRY = "0x2d6e9f608807436de5d9603b00abe3fed1bc809d";
 const PROOF_ID = "0xf65e876f459439e78365c92eb3d47ff358d41b7bec69c9ffb9e624010fb47805";
 const TOKEN = "0xdd629e5241cbc5919847783e6c96b2de4754e438";
 const ORACLE = "0x056339c044055819e8db84e71f5f2e1f536b2e5b";
+// Filebase leads: Pinata's public gateway is the most rate-limited from Workers egress.
 const IPFS_GATEWAYS = [
-  "https://gateway.pinata.cloud/ipfs/",
   "https://ipfs.filebase.io/ipfs/",
+  "https://gateway.pinata.cloud/ipfs/",
   "https://ipfs.io/ipfs/",
 ] as const;
 const IPFS_GATEWAY_TIMEOUT_MS = 5_000;
+// One D1 row holding the last root-verified checkpoint file. A CID's bytes are
+// immutable, so a hit is re-verified against this run's registry root, never trusted.
+const CHECKPOINT_FILE_CACHE_KEY = "midas-mtbill:save-checkpoint-file";
+const CheckpointFileCacheSchema = z.object({ cid: z.string(), gzipBase64: z.string() }).strict();
 const HISTORICAL_URL = "https://api-prod.midas.app/api/transparency/by-timestamp";
 const COMPRESSED_CAP = 128 * 1024;
 const DECOMPRESSED_CAP = 1024 * 1024;
@@ -151,7 +158,43 @@ function singleLeafRoot(file: Uint8Array): string {
   return `0x${sha256HexFromBytes(node)}`;
 }
 
-async function readCheckpointFile(cid: string, hash: string, signal: AbortSignal, ctx?: AdapterContext): Promise<Uint8Array> {
+function isVerifiedCheckpointFile(file: Uint8Array, hash: string): boolean {
+  // Both digests are public IPFS/onchain commitments, not secrets.
+  return file.length <= COMPRESSED_CAP && singleLeafRoot(file) === hash;
+}
+
+async function readCachedCheckpointFile(cid: string, hash: string, signal: AbortSignal, ctx?: AdapterContext): Promise<Uint8Array | null> {
+  if (!ctx?.db) return null;
+  let file: Uint8Array;
+  try {
+    const row = await getCache(ctx.db, CHECKPOINT_FILE_CACHE_KEY, signal);
+    const cached = row ? CheckpointFileCacheSchema.safeParse(JSON.parse(row.value)) : null;
+    if (!cached?.success || cached.data.cid !== cid) return null;
+    file = base64ToBytes(cached.data.gzipBase64);
+  } catch {
+    // An unreadable or malformed cache row is a miss, never a failed attempt.
+    active(signal, ctx);
+    return null;
+  }
+  active(signal, ctx);
+  return isVerifiedCheckpointFile(file, hash) ? file : null;
+}
+
+async function cacheCheckpointFile(cid: string, file: Uint8Array, signal: AbortSignal, ctx?: AdapterContext): Promise<void> {
+  if (!ctx?.db) return;
+  try {
+    await setCache(ctx.db, CHECKPOINT_FILE_CACHE_KEY, JSON.stringify({ cid, gzipBase64: bytesToBase64(file) }), signal);
+  } catch {
+    // Best effort: an unwritten cache only costs the next run a gateway read.
+  }
+  active(signal, ctx);
+}
+
+async function readCheckpointFile(
+  cid: string, hash: string, signal: AbortSignal, ctx?: AdapterContext,
+): Promise<{ file: Uint8Array; source: string }> {
+  const cached = await readCachedCheckpointFile(cid, hash, signal, ctx);
+  if (cached) return { file: cached, source: "verified-d1-cache" };
   const failures: { gateway: string; detail: string }[] = [];
   // One bounded physical request per gateway; never spend the attempt on
   // same-host Retry-After/backoff. Each body settles before opening the next.
@@ -166,9 +209,9 @@ async function readCheckpointFile(cid: string, hash: string, signal: AbortSignal
       });
       active(signal, ctx);
       if (file.length > COMPRESSED_CAP) fail("save-compressed-size");
-      // eslint-disable-next-line security/detect-possible-timing-attacks -- both digests are public IPFS/onchain commitments, not secrets.
-      if (singleLeafRoot(file) !== hash) fail("save-cid-layout-or-content-mismatch");
-      return file;
+      if (!isVerifiedCheckpointFile(file, hash)) fail("save-cid-layout-or-content-mismatch");
+      await cacheCheckpointFile(cid, file, signal, ctx);
+      return { file, source: gateway };
     } catch (error) {
       // Cancellation/deadline is not gateway exhaustion and must not admit a fallback.
       active(signal, ctx);
@@ -221,7 +264,7 @@ async function readMidasMtbillCheckpoint(signal: AbortSignal, ctx?: AdapterConte
   if (decoded.publishedAt <= 0 || decoded.publishedAt > pin.timestamp) fail("save-publication-clock");
   active(signal, ctx);
   const cid = cidForDigest(decoded.hash);
-  const file = await readCheckpointFile(cid, decoded.hash, signal, ctx);
+  const { file, source: fileSource } = await readCheckpointFile(cid, decoded.hash, signal, ctx);
   active(signal, ctx);
   if (file[0] !== 0x1f || file[1] !== 0x8b || file[2] !== 8) fail("save-unsupported-compression");
   let payload: unknown;
@@ -238,7 +281,7 @@ async function readMidasMtbillCheckpoint(signal: AbortSignal, ctx?: AdapterConte
     active(signal, ctx);
     throw new Error(`midas-mtbill:save-decompression-or-document-invalid: ${error instanceof Error ? error.message : "invalid payload"}`);
   }
-  return { ...decoded, cid, pin, payload, jsonDigest, compressedBytes: file.length };
+  return { ...decoded, cid, pin, payload, jsonDigest, compressedBytes: file.length, fileSource };
 }
 
 interface RegistryCheckpoint {
@@ -253,6 +296,7 @@ interface RegistryCheckpoint {
   payload: unknown;
   jsonDigest: string;
   compressedBytes: number;
+  fileSource: string;
 }
 
 function decodeMidasMtbillCheckpoint(registry: RegistryCheckpoint, nowSec: number, maxAgeSec: number): AuthenticatedCheckpoint {
@@ -399,6 +443,7 @@ export async function fetchMidasMtbillReserves(
     pinNumber: registry.pin.number, pinHash: registry.pin.hash, pinTimestamp: registry.pin.timestamp,
     authorizedPublisher: registry.authorized, attestationHash: registry.hash, attestationCid: registry.cid,
     registryPublishedAt: registry.publishedAt, documentJsonSha256: registry.jsonDigest, compressedBytes: registry.compressedBytes,
+    attestationFileSource: registry.fileSource,
     historicalUrl: url, historicalResponseCanonicalSha256: canonicalDigest(historical),
     publisherAuthentication: "authorized-registry-publication", signatureValidation: "canonical-signed-content-digest",
   } } };
