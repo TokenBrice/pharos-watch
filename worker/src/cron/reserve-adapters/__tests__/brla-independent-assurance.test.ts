@@ -189,7 +189,7 @@ describe("BRLA Notion reviewed discovery", () => {
     await expect(verifyBrlaNotionDiscovery(discoveryArgs())).rejects.toThrow("attachment drifted");
   });
 
-  it("fails closed when a newer unreviewed report appears in the 2026 tree", async () => {
+  it("keeps the reviewed report and names a newer unreviewed report in the 2026 tree", async () => {
     const octoberBlockId = "4d77f28f-0ae4-80fb-bd17-f3ca9b5d3490";
     installFetch({
       yearRecord: {
@@ -210,7 +210,9 @@ describe("BRLA Notion reviewed discovery", () => {
         },
       },
     });
-    await expect(verifyBrlaNotionDiscovery(discoveryArgs())).rejects.toThrow("newer unreviewed report 20261031");
+    await expect(verifyBrlaNotionDiscovery(discoveryArgs())).resolves.toMatchObject({
+      newerUnreviewedReport: { reportDate: "2026-10-31" },
+    });
   });
 
   it("fails closed when the signed URL identity drifts", async () => {

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   adaptUsddLatestCollateral,
+  matchUsddCollateralHistoryTimestamp,
+  reconcileUsddItemizedCollateral,
 } from "../usdd-data-platform";
 import {
   expectValidAdapterOutput,
@@ -17,9 +19,17 @@ const ETHEREUM_LATEST = "https://app-api.usdd.io/data-platform/latest-collateral
 const TRON_GRID = "https://api.trongrid.io/wallet/triggerconstantcontract";
 
 const NOW_SEC = 1_774_281_600 + 3_600;
+const historyUrl = (chain: string) =>
+  `https://app-api.usdd.io/data-platform/collateral-history?chain=${chain}&startTime=${NOW_SEC * 1000 - 86_400_000}&endTime=${NOW_SEC * 1000}`;
+const TRON_HISTORY = historyUrl("tron");
+const ETHEREUM_HISTORY = historyUrl("ethereum");
+const EMPTY_HISTORY = { code: 0, data: { items: [] } };
+// Live-bucket statisticTime is the UTC+8 day start, in milliseconds.
+const BUCKET_START_SEC = 1_774_281_600 - 8 * 3_600;
 
 function collateralResponse(items: Array<{ vaultType: string; lockedValue: number }>) {
-  return { code: 0, data: { items } };
+  const totalCollateralValue = items.reduce((sum, item) => sum + item.lockedValue, 0);
+  return { code: 0, data: { items, totalCollateralValue, totalSupplyValue: 1_000 } };
 }
 
 const GEM_JOIN_WORD = "000000000000000000000000b50eb419ebeba06c80df5e9aaec494cef4297879";
@@ -59,6 +69,7 @@ function tronNetwork(options: {
     spec: {
       json: {
         [TRON_LATEST]: collateralResponse([{ vaultType: "PSM-USDT-A", lockedValue: 100 }]),
+        [TRON_HISTORY]: EMPTY_HISTORY,
         [TRON_GRID]: async (request: Request) => {
           if (options.fail) throw new Error("trongrid down");
           const body = await request.clone().json() as TronCallBody;
@@ -156,7 +167,7 @@ describe("adaptUsddLatestCollateral", () => {
 });
 
 describe("fetchUsddDataPlatformReserves", () => {
-  it("fetches only current collateral from the configured chain without collateral-history", async () => {
+  it("fetches current collateral and same-chain collateral-history, staying unverified without an exact match", async () => {
     const { result, network } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
       config: {
         inputs: {
@@ -166,6 +177,7 @@ describe("fetchUsddDataPlatformReserves", () => {
       network: {
         json: {
           [ETHEREUM_LATEST]: collateralResponse([{ vaultType: "USDT-A", lockedValue: 100 }]),
+          [ETHEREUM_HISTORY]: EMPTY_HISTORY,
         },
       },
       nowSec: NOW_SEC,
@@ -175,7 +187,8 @@ describe("fetchUsddDataPlatformReserves", () => {
       { sourceKey: "usdd-data-platform:direct-usdt", name: "USDT (direct vaults)", pct: 100, risk: "high", coinId: "usdt-tether", depType: "collateral" },
     ]);
     expect(result.metadata?.redemption).toBeUndefined();
-    expect(network.fetchSpy.getHistory().map(request => request.url)).toEqual([ETHEREUM_LATEST]);
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(network.fetchSpy.getHistory().map(request => request.url)).toEqual([ETHEREUM_LATEST, ETHEREUM_HISTORY]);
   });
 
   it("fails closed when the provider drops the response status field", async () => {
@@ -202,6 +215,110 @@ describe("fetchUsddDataPlatformReserves", () => {
   });
 });
 
+describe("USDD collateral-history freshness join", () => {
+  const latest = {
+    code: 0,
+    data: {
+      items: [
+        { vaultType: "PSM-USDT-A", lockedValue: 1_000_000_000 },
+        { vaultType: "TRX-A", lockedValue: 1_019_887_765.02 },
+      ],
+      totalCollateralValue: 2_019_887_765.02,
+      totalSupplyValue: 1_323_474_423.1566734,
+    },
+  };
+  const liveRow = {
+    collateralValue: 2_019_887_765.02,
+    totalSupplyValue: 1_323_474_423.1566734,
+    statisticTime: BUCKET_START_SEC * 1000,
+  };
+
+  it("dates the snapshot by the matching row's bucket start", () => {
+    expect(matchUsddCollateralHistoryTimestamp(latest, {
+      code: 0,
+      data: { items: [{ ...liveRow, collateralValue: 1, statisticTime: (BUCKET_START_SEC - 86_400) * 1000 }, liveRow] },
+    }, NOW_SEC)).toBe(BUCKET_START_SEC);
+  });
+
+  it.each([
+    ["collateral differs", { ...liveRow, collateralValue: 2_019_887_765.03 }],
+    ["supply differs", { ...liveRow, totalSupplyValue: 1_323_474_423 }],
+    ["statisticTime missing", { ...liveRow, statisticTime: undefined }],
+    ["statisticTime in the future", { ...liveRow, statisticTime: (NOW_SEC + 60) * 1000 }],
+  ])("returns null when %s", (_label, row) => {
+    expect(matchUsddCollateralHistoryTimestamp(latest, { code: 0, data: { items: [row] } }, NOW_SEC)).toBeNull();
+  });
+
+  it("returns null for a non-success history payload", () => {
+    expect(matchUsddCollateralHistoryTimestamp(latest, { code: 500, data: { items: [liveRow] } }, NOW_SEC)).toBeNull();
+  });
+
+  it("publishes verified freshness when the history join matches", async () => {
+    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+      config: { inputs: { primary: { kind: "http-json", url: ETHEREUM_LATEST } } },
+      network: { json: { [ETHEREUM_LATEST]: latest, [ETHEREUM_HISTORY]: { code: 0, data: { items: [liveRow] } } } },
+      nowSec: NOW_SEC,
+    });
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: BUCKET_START_SEC,
+      freshnessMode: "verified",
+      details: { freshnessSource: "collateral-history" },
+    });
+  });
+
+  it("withholds the history clock and degrades a truncated itemized book", async () => {
+    const truncated = { ...latest, data: { ...latest.data, items: [{ vaultType: "PSM-USDT-A", lockedValue: 100 }] } };
+    const { result, network } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+      config: { inputs: { primary: { kind: "http-json", url: ETHEREUM_LATEST } } },
+      network: { json: { [ETHEREUM_LATEST]: truncated, [ETHEREUM_HISTORY]: { code: 0, data: { items: [liveRow] } } } },
+      nowSec: NOW_SEC,
+    });
+    expect(result.metadata?.sourceTimestamp).toBeUndefined();
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.metadata).toMatchObject({ itemizedCollateralUsd: 100, itemizedCollateralReconciled: false });
+    expect(result.warnings).toEqual([expect.objectContaining({ code: "itemized-collateral-mismatch", effect: "degraded" })]);
+    expect(network.fetchSpy.getHistory().map(request => request.url)).toEqual([ETHEREUM_LATEST]);
+  });
+
+  it("reconciles the itemized book within one cent per row", () => {
+    expect(reconcileUsddItemizedCollateral(latest)?.reconciled).toBe(true);
+    expect(reconcileUsddItemizedCollateral({ ...latest, data: { ...latest.data, totalCollateralValue: 2_019_887_765.05 } })?.reconciled).toBe(false);
+    expect(reconcileUsddItemizedCollateral({ ...latest, data: { ...latest.data, totalCollateralValue: 0 } })).toBeNull();
+  });
+
+  it("falls back to unverified after one bounded hanging history attempt and still reads the PSM", async () => {
+    const { spec } = tronNetwork();
+    const reconciled = { ...latest, data: { ...latest.data } };
+    const startedAt = Date.now();
+    const { result, network } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+      network: { ...spec, json: {
+        ...spec.json,
+        [TRON_LATEST]: reconciled,
+        [TRON_HISTORY]: (request: Request) => new Promise((_resolve, reject) => {
+          request.signal.addEventListener("abort", () => reject(request.signal.reason), { once: true });
+        }),
+      } },
+      nowSec: NOW_SEC,
+    });
+    expect(Date.now() - startedAt).toBeLessThan(9_000);
+    expect(result.metadata?.sourceTimestamp).toBeUndefined();
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(network.fetchSpy.getHistory().filter(request => request.url === TRON_HISTORY)).toHaveLength(1);
+    expect(result.metadata?.redemption).toMatchObject({ capacityKind: "live-direct" });
+  }, 15_000);
+
+  it("keeps unverified freshness when collateral-history fails", async () => {
+    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+      config: { inputs: { primary: { kind: "http-json", url: ETHEREUM_LATEST } } },
+      network: { json: { [ETHEREUM_LATEST]: latest } },
+      nowSec: NOW_SEC,
+      allowUnmatched: true,
+    });
+    expect(result.metadata?.sourceTimestamp).toBeUndefined();
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+  });
+});
+
 describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
   it.each(["success", "fallback", "disabled", "pinned"] as const)(
     "keeps native PSM constant routing operation-scoped: %s", async mode => {
@@ -224,7 +341,7 @@ describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
         },
         nowSec: NOW_SEC,
       });
-      expect(network.fetchSpy.getHistory().some(request => request.url.includes("/collateral-history"))).toBe(false);
+      expect(network.fetchSpy.getHistory().filter(request => request.url.includes("/collateral-history"))).toHaveLength(1);
       const calls = network.fetchSpy.getHistory().filter(request => request.url.includes("triggerconstantcontract"));
       const nativeCalls = calls.filter(request => request.url.startsWith(base));
       const incumbentCalls = calls.filter(request => request.url === TRON_GRID);
@@ -249,6 +366,7 @@ describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
     });
     expect(network.fetchSpy.getHistory().map(request => request.url)).toEqual([
       TRON_LATEST,
+      TRON_HISTORY,
       ...Array(5).fill(TRON_GRID),
     ]);
     expect(result.metadata?.freshnessMode).toBe("unverified");

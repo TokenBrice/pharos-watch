@@ -17,7 +17,9 @@ const REQUEST_TIMEOUT_MS = 15_000;
 const AMOUNT_TOTAL_REL_TOLERANCE = 1e-6;
 /** Allocation-sum-vs-100% tolerance (percentage points). */
 const ALLOCATION_SUM_TOLERANCE_PCT = 0.01;
-/** Total-vs-AUM reconciliation tolerance (relative). */
+/** Total-vs-AUM tolerance (relative). The schedule Total is gross collateral
+ *  while AUM is the reinsurance segregated account's net NAV, so they are not an
+ *  identity: Total above AUM is informational, Total below AUM degrades. */
 const TOTAL_AUM_REL_TOLERANCE = 1e-4;
 
 interface OnReAssetRow {
@@ -355,18 +357,19 @@ export function adaptOnReSchedule(schedule: OnReSchedule): AdapterResult {
   const totalVsAumUsd = amountSum - declaredAum;
   const totalVsAumPct = (totalVsAumUsd / amountSum) * 100;
   if (Math.abs(totalVsAumUsd) / Math.max(1, amountSum) > TOTAL_AUM_REL_TOLERANCE) {
-    // Direction word follows the sign so a Total below the declared AUM is not
-    // reported as "exceeds ... by $-..."; magnitudes stay absolute in the
-    // message while metadata carries the signed drift.
-    const directionWord = totalVsAumUsd >= 0 ? "exceeds" : "falls short of";
+    // Magnitudes stay absolute in the message while metadata carries the
+    // signed drift.
+    const message = `OnRe schedule Total $${amountSum.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} `
+      + `${totalVsAumUsd >= 0 ? "exceeds" : "falls short of"} declared net AUM $${declaredAum.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} `
+      + `by $${Math.abs(totalVsAumUsd).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} `
+      + `(${Math.abs(totalVsAumPct).toFixed(4)}%)`;
     warnings.push(
-      reserveDegradedWarning(
-        "total-aum-mismatch",
-        `OnRe schedule Total $${amountSum.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} `
-        + `${directionWord} declared AUM $${declaredAum.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} `
-        + `by $${Math.abs(totalVsAumUsd).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} `
-        + `(${Math.abs(totalVsAumPct).toFixed(4)}%); the unreconciled drift is published, not absorbed.`,
-      ),
+      totalVsAumUsd >= 0
+        ? reserveInfoWarning("schedule-exceeds-nav", `${message}; gross collateral above net NAV is expected.`)
+        : reserveDegradedWarning(
+          "schedule-below-nav",
+          `${message}; the collateral shortfall versus NAV is published, not absorbed.`,
+        ),
     );
   }
 

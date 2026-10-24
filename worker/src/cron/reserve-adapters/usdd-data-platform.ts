@@ -9,8 +9,10 @@ import {
   fetchJsonPostWithRetry,
   fetchJsonWithRetry,
   requireJsonInputFromConfig,
+  reserveDegradedWarning,
   slicesFromValues,
 } from "./helpers";
+import { verifiedFreshnessMetadata } from "./freshness";
 import { rethrowIfAborted } from "../../lib/abort";
 import { tronBase58ToHex } from "../../lib/tron-address";
 
@@ -23,8 +25,28 @@ interface UsddLatestCollateralResponse {
   code?: number;
   data?: {
     items?: UsddCollateralItem[];
+    totalCollateralValue?: number;
+    totalSupplyValue?: number;
   };
 }
+
+interface UsddCollateralHistoryItem {
+  collateralValue?: number;
+  totalSupplyValue?: number;
+  statisticTime?: number;
+}
+
+interface UsddCollateralHistoryResponse {
+  code?: number;
+  data?: {
+    items?: UsddCollateralHistoryItem[];
+  };
+}
+
+const USDD_HISTORY_LOOKBACK_MS = 86_400_000;
+// The history join only upgrades freshness, so it gets one short attempt and
+// leaves the adapter deadline to the PSM reads that follow it.
+const USDD_HISTORY_TIMEOUT_MS = 5_000;
 
 const USDD_UNKNOWN_VAULT_SLICE_NAME = "Unknown / unmapped collateral vaults";
 
@@ -51,6 +73,37 @@ function createUnknownVaultWarning(
   return buildUnknownExposureWarning({ adapterKey: "usdd-data-platform", code: "unknown-vault-type",
   message: `USDD collateral feed includes unmapped vault types: ${Array.from(unknownVaultTypes).sort().join(", ")}`,
   unknownExposurePct, });
+}
+
+// Vault rows are published to the cent, so the itemized book may differ from
+// the headline total by at most one cent of rounding per row.
+const USDD_RECONCILIATION_TOLERANCE_USD_PER_ROW = 0.01;
+
+interface UsddCollateralReconciliation {
+  itemizedUsd: number;
+  headlineUsd: number;
+  reconciled: boolean;
+}
+
+/**
+ * Reconciles the itemized vault book against latest-collateral's headline
+ * `totalCollateralValue`. Returns null when the headline is absent or not a
+ * finite positive number (nothing to reconcile against). Only a reconciled
+ * book may borrow the collateral-history clock, which dates the headline.
+ */
+export function reconcileUsddItemizedCollateral(
+  latest: UsddLatestCollateralResponse,
+): UsddCollateralReconciliation | null {
+  const headlineUsd = latest.data?.totalCollateralValue;
+  if (typeof headlineUsd !== "number" || !Number.isFinite(headlineUsd) || headlineUsd <= 0) return null;
+  const items = latest.data?.items ?? [];
+  let itemizedUsd = 0;
+  for (const item of items) {
+    if (typeof item.lockedValue !== "number" || !Number.isFinite(item.lockedValue)) return null;
+    itemizedUsd += item.lockedValue;
+  }
+  const toleranceUsd = USDD_RECONCILIATION_TOLERANCE_USD_PER_ROW * Math.max(1, items.length);
+  return { itemizedUsd, headlineUsd, reconciled: Math.abs(itemizedUsd - headlineUsd) <= toleranceUsd };
 }
 
 export function adaptUsddLatestCollateral(
@@ -155,6 +208,13 @@ export function adaptUsddLatestCollateral(
   const warnings: LiveReserveWarning[] = unknownVaultTypes.size > 0
     ? [createUnknownVaultWarning(unknownVaultTypes, unknownExposurePct)]
     : [];
+  const reconciliation = reconcileUsddItemizedCollateral(latest);
+  if (reconciliation && !reconciliation.reconciled) {
+    warnings.push(reserveDegradedWarning(
+      "itemized-collateral-mismatch",
+      `USDD itemized vault collateral $${reconciliation.itemizedUsd.toFixed(2)} does not reconcile with the headline totalCollateralValue $${reconciliation.headlineUsd.toFixed(2)}`,
+    ));
+  }
   const stableRedeemableUsd = bucketValues.psmUsdtUsd + bucketValues.directUsdtUsd;
 
   return {
@@ -172,8 +232,81 @@ export function adaptUsddLatestCollateral(
         freshnessReason: "composition timestamp unavailable; collateral-history is not joined to this snapshot",
       },
       stableVaultUsd: stableRedeemableUsd,
+      ...(reconciliation
+        ? {
+          itemizedCollateralUsd: reconciliation.itemizedUsd,
+          headlineCollateralUsd: reconciliation.headlineUsd,
+          itemizedCollateralReconciled: reconciliation.reconciled,
+        }
+        : {}),
     },
   };
+}
+
+/**
+ * latest-collateral carries no timestamp, but collateral-history's open
+ * bucket reports the same live aggregates. When a history row's
+ * collateralValue and totalSupplyValue both equal latest-collateral's, the
+ * snapshot is dated by that row's statisticTime: the bucket's UTC+8 day
+ * start, which is conservative because the state was observed after it.
+ * Returns seconds, or null when no row matches exactly.
+ */
+export function matchUsddCollateralHistoryTimestamp(
+  latest: UsddLatestCollateralResponse,
+  history: UsddCollateralHistoryResponse,
+  nowSec: number,
+): number | null {
+  const collateralValue = latest.data?.totalCollateralValue;
+  const totalSupplyValue = latest.data?.totalSupplyValue;
+  if (typeof collateralValue !== "number" || typeof totalSupplyValue !== "number") return null;
+  if (history.code !== 0) return null;
+
+  let matchedSec: number | null = null;
+  for (const item of history.data?.items ?? []) {
+    if (item.collateralValue !== collateralValue || item.totalSupplyValue !== totalSupplyValue) continue;
+    const statisticTime = item.statisticTime;
+    if (typeof statisticTime !== "number" || !Number.isSafeInteger(statisticTime) || statisticTime <= 0) continue;
+    const statisticSec = Math.floor(statisticTime / 1000);
+    if (statisticSec > nowSec) continue;
+    if (matchedSec == null || statisticSec > matchedSec) matchedSec = statisticSec;
+  }
+  return matchedSec;
+}
+
+function buildUsddCollateralHistoryUrl(latestUrl: string, nowMs: number): string | null {
+  let url: URL;
+  try {
+    url = new URL(latestUrl);
+  } catch {
+    return null;
+  }
+  if (!url.pathname.endsWith("/latest-collateral")) return null;
+  url.pathname = url.pathname.replace(/\/latest-collateral$/, "/collateral-history");
+  url.searchParams.set("startTime", String(nowMs - USDD_HISTORY_LOOKBACK_MS));
+  url.searchParams.set("endTime", String(nowMs));
+  return url.toString();
+}
+
+async function fetchUsddCollateralHistoryTimestamp(
+  latestUrl: string,
+  latest: UsddLatestCollateralResponse,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<number | null> {
+  const nowSec = ctx?.nowSec ?? Math.floor(Date.now() / 1000);
+  const historyUrl = buildUsddCollateralHistoryUrl(latestUrl, nowSec * 1000);
+  if (historyUrl == null) return null;
+  try {
+    const history = await fetchJsonWithRetry<UsddCollateralHistoryResponse>(
+      historyUrl, signal, USDD_HISTORY_TIMEOUT_MS, ctx, { maxRetries: 0 },
+    );
+    return matchUsddCollateralHistoryTimestamp(latest, history, nowSec);
+  } catch (error) {
+    // Only the parent's cancellation propagates; a history timeout or failure
+    // falls back to the unverified composition.
+    if (signal.aborted) rethrowIfAborted(error, signal);
+    return null;
+  }
 }
 
 // Tron mainnet USDD v2 PSM-USDT. buyGem() burns USDD and settles the USDT leg
@@ -341,7 +474,27 @@ export async function fetchUsddDataPlatformReserves(
   const input = requireJsonInputFromConfig(config, "usdd-data-platform");
   const timeout = 12_000;
   const latest = await fetchJsonWithRetry<UsddLatestCollateralResponse>(input.url, signal, timeout, ctx);
-  const adapted = adaptUsddLatestCollateral(latest);
+  const composition = adaptUsddLatestCollateral(latest);
+  // Sequenced after the collateral fetch so the history join never widens
+  // this adapter's peak connection count.
+  // The history row dates the headline totals only, so an itemized book that
+  // does not reconcile with them never borrows that clock.
+  const historySourceTimestamp = reconcileUsddItemizedCollateral(latest)?.reconciled === true
+    ? await fetchUsddCollateralHistoryTimestamp(input.url, latest, signal, ctx)
+    : null;
+  const adapted: AdapterResult = historySourceTimestamp == null
+    ? composition
+    : {
+      ...composition,
+      metadata: {
+        ...composition.metadata,
+        ...verifiedFreshnessMetadata(historySourceTimestamp),
+        details: {
+          freshnessSource: "collateral-history",
+          freshnessReason: "latest-collateral totals equal a collateral-history row; dated by its UTC+8 bucket start (statisticTime)",
+        },
+      },
+    };
 
   // Sequenced after the collateral fetch so the PSM's reads never widen this
   // adapter's peak connection count beyond the cron trigger's shared pool.

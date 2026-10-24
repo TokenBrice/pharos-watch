@@ -7,9 +7,10 @@
     "display": { "url": "https://era.zksync.network/address/0xc406104c42211abd1a2cd411ddd071511515bddd", "label": "FIUSD onchain NAV oracle" },
     "inputs": { "primary": { "kind": "onchain-evm", "chain": "zksync", "rpcMode": "public-rpc" } },
     "params": {
-      "navScope": "portfolio",
+      "navScope": "native-fund-share",
       "oracleAddress": "0xc406104c42211abd1a2cd411ddd071511515bddd",
       "tokenAddress": "0x2ab105a3ead22731082b790ca9a00d9a3a7627f9",
+      "sourceKey": "chainlink-nav:token:0x2ab105a3ead22731082b790ca9a00d9a3a7627f9",
       "assetLabel": "Fidelity ILF USD Fund Class G Acc unit exposure",
       "assetRisk": "medium",
       "rpcUrl": "https://mainnet.era.zksync.io"

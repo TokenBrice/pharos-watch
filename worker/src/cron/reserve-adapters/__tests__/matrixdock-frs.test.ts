@@ -83,7 +83,18 @@ describe("adaptMatrixdockFrsState", () => {
       feedUpdatedAt: NOW - 60 * 86400 - 1,
     }, PARAMS);
     expect(result.metadata?.supplyTokens).toBeCloseTo(73_032.046081582, 6);
-    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "stale-reserve-feed" }));
+    expect(result.warnings).toEqual([expect.objectContaining({ code: "quiet-reserve-feed", effect: "info" })]);
+  });
+
+  it.each([
+    ["fresh round, supply moved", 0, 80_000_000_000n, []],
+    ["old round, within tolerance", 60 * 86400 + 1, 25_000_000_000n, [{ code: "quiet-reserve-feed", effect: "info" }]],
+    ["old round, supply moved", 60 * 86400 + 1, 80_000_000_000n, [{ code: "stale-reserve-feed", effect: "degraded" }]],
+  ] as const)("degrades an old reserve round only when it no longer reconciles (%s)", (_label, ageSec, extraEthRaw, expected) => {
+    const result = adaptMatrixdockFrsState({
+      ...STATE, feedUpdatedAt: NOW - ageSec, ethSupplyRaw: STATE.ethSupplyRaw + extraEthRaw,
+    }, PARAMS);
+    expect(result.warnings ?? []).toEqual(expected.map((warning) => expect.objectContaining(warning)));
   });
 
   it("degrades when the reserve unit diverges from ozPerToken × supply", () => {

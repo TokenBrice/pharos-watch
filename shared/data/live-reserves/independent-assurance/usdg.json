@@ -3,13 +3,13 @@
   "product": "USDG",
   "profile": "usdg-v1",
   "officialIndexUrl": "https://www.paxos.com/usdg-transparency",
-  "reportUrl": "https://framerusercontent.com/assets/Xn1UQwAte85FnsDveIMX0n1qtVM.pdf",
-  "reportSha256": "384778246b4b117dcf136733334532f60fbf9b1001d15b731348c9c22e96e37e",
-  "reportByteLength": 1728544,
-  "reportDate": "2026-08-31",
-  "reportAsOf": "2026-08-31T17:00:00-04:00",
+  "reportUrl": "https://framerusercontent.com/assets/SKxHUTNlo82s3Rrqw0ZL09z2vc.pdf",
+  "reportSha256": "19e2b7ea75da4d0f98702c609668600e3a5643692d0aa9bb876a19d5378d117e",
+  "reportByteLength": 485049,
+  "reportDate": "2026-09-30",
+  "reportAsOf": "2026-09-30T17:00:00-04:00",
   "reportTimeZone": "Eastern Daylight Time (UTC-4)",
-  "reportIssuedAt": "2026-09-25T23:59:00+08:00",
+  "reportIssuedAt": "2026-10-23T23:59:00+08:00",
   "attestor": "KPMG LLP",
   "engagement": "Independent reasonable assurance under Singapore Standard on Assurance Engagements 3000",
   "conclusion": "unmodified",
@@ -18,33 +18,33 @@
     {
       "code": "cash",
       "label": "Cash",
-      "amount": "86947920"
+      "amount": "78124993"
     },
     {
       "code": "government-mmf",
       "label": "Government money market funds, at net asset value",
-      "amount": "1719123533"
+      "amount": "1678019554"
     },
     {
       "code": "treasury-bills",
       "label": "Obligations of U.S. Treasury, at fair value",
-      "amount": "1544391014"
+      "amount": "1412278860"
     }
   ],
   "liabilities": [
     {
       "code": "all-native-chains",
-      "label": "USDG redeemable tokens: Ethereum, Solana, Ink, X Layer, Arbitrum One and Robinhood (Exhibit A total carried to Exhibit C)",
-      "amount": "3340650602"
+      "label": "USDG redeemable tokens: Ethereum, Solana, Ink, X Layer, Arbitrum One, Robinhood and Mantle (Exhibit A total carried to Exhibit C)",
+      "amount": "3164996248"
     }
   ],
-  "reportedAssetTotal": "3350462467",
-  "computedAssetTotal": "3350462467",
-  "reportedLiabilityTotal": "3340650602",
+  "reportedAssetTotal": "3168423407",
+  "computedAssetTotal": "3168423407",
+  "reportedLiabilityTotal": "3164996248",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
     "parserVersion": "26.08.0",
-    "normalizedTextSha256": "ca645604a5d32c1a8daf1810529c1e423ba22abaeaca5b63492d79eaeaea097e",
+    "normalizedTextSha256": "a8722388aa9c20a2bcbd83d76675f8f6338cecc68b7d415a5917693eb98599df",
     "pageCount": 14
   },
   "assuranceTier": "independent-assurance"

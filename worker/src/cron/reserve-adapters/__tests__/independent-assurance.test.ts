@@ -259,7 +259,7 @@ describe("independent-assurance manifest framework", () => {
   });
 
   it.each(assuranceFenceCases())(
-    "$adapter keeps the reviewed index, redirect hosts, and newer-report fence fail-closed",
+    "$adapter keeps the reviewed index and redirect hosts fail-closed and lets a newer report reach the PDF gates",
     async (testCase) => {
       const options = "options" in testCase ? testCase.options : undefined;
       await expect(
@@ -277,9 +277,10 @@ describe("independent-assurance manifest framework", () => {
           reportRedirect: "https://unreviewed.example/report.pdf",
         }),
       ).rejects.toThrow(/PDF response host .* is not in the reviewed allowlist/);
+      // A newer index entry no longer stops discovery; the pinned PDF gates still run.
       await expect(
         verifyAssuranceIndex(testCase.adapter, testCase.coinId, testCase.product, testCase.newerHtml, options),
-      ).rejects.toThrow("newer unreviewed report");
+      ).rejects.toThrow("PDF byte length");
     },
   );
   it.each(assuranceFenceCases())(
@@ -323,6 +324,16 @@ describe("independent-assurance manifest framework", () => {
         adapter,
         now: assurance.independentAssuranceSourceTimestamp(reviewed) + 60,
       }).valid).toBe(true);
+      expect(result.warnings?.some((warning) => warning.code === "newer-unreviewed-report")).not.toBe(true);
+
+      installAssuranceFetch(testCase.product, testCase.newerHtml, options);
+      const newer = await adapter.fetch(coin, coin.liveReservesConfig, new AbortController().signal);
+      expect(newer.slices).toEqual(result.slices);
+      expect(newer.metadata?.sourceTimestamp).toBe(result.metadata?.sourceTimestamp);
+      expect(newer.warnings).toContainEqual(expect.objectContaining({
+        code: "newer-unreviewed-report", severity: "warning", effect: "degraded",
+        message: expect.stringContaining(`publishing the reviewed ${reviewed.reportDate} report`),
+      }));
     },
   );
 
@@ -483,21 +494,33 @@ describe("independent-assurance manifest framework", () => {
       },
     ]);
     await expect(
-      verifyFixtureIndex("EUROP", EUROP_INDEPENDENT_ASSURANCE_PROFILE, "europ-independent-assurance.html", media),
-    ).rejects.toThrow("newer unreviewed report");
+      verifyFixtureIndex("EUROP", EUROP_INDEPENDENT_ASSURANCE_PROFILE, "europ-independent-assurance.html", media, true),
+    ).resolves.toMatchObject({ newerUnreviewedReport: { reportDate: "2026-09-30" } });
   });
 
-  it("ignores an unrelated StraitsX whitepaper but fails closed on a newer XSGD report", async () => {
+  it("treats a differently separated Salvus attestation letter as an EUROP report candidate", async () => {
+    const reviewed = getIndependentAssuranceManifest("EUROP");
+    const letter = "https://schuman.io/wp-content/uploads/2026/10/2026.09.30-Schuman-_-Salvus-Attestation_Letter-Signed-All.pdf";
+    const auditorReport = "https://schuman.io/wp-content/uploads/2026/10/2026.09.30-Salvus-Rapport_Commissiaires_Comptes.pdf";
+    expect(EUROP_INDEPENDENT_ASSURANCE_PROFILE.isReportCandidate(letter, "")).toBe(true);
+    expect(EUROP_INDEPENDENT_ASSURANCE_PROFILE.isReportCandidate(auditorReport, "")).toBe(false);
+    const media = JSON.stringify([{ source_url: reviewed.reportUrl }, { source_url: letter }, { source_url: auditorReport }]);
+    await expect(
+      verifyFixtureIndex("EUROP", EUROP_INDEPENDENT_ASSURANCE_PROFILE, "europ-independent-assurance.html", media, true),
+    ).resolves.toMatchObject({ newerUnreviewedReport: { reportDate: "2026-09-30", reportUrl: letter } });
+  });
+
+  it("ignores an unrelated StraitsX whitepaper and reports a newer XSGD report as unreviewed", async () => {
     const fixture = "straitsx-independent-assurance-xsgd.html";
     await expect(
       verifyFixtureIndex("XSGD", straitsxIndependentAssuranceProfile("XSGD"), fixture),
     ).rejects.toThrow("PDF byte length");
 
     const withNewReport = indexFixture(fixture) +
-      '<button data-gated-asset="XSGD Attestation Report September 2026" data-gated-url="https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/XSGD_SCS_Reserve_Account_Report_(30_September_2026).pdf"></button>';
+      '<button data-gated-asset="XSGD Attestation Report October 2026" data-gated-url="https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/XSGD_SCS_Reserve_Account_Report_(31_October_2026).pdf"></button>';
     await expect(
-      verifyFixtureIndex("XSGD", straitsxIndependentAssuranceProfile("XSGD"), fixture, withNewReport),
-    ).rejects.toThrow("newer unreviewed report");
+      verifyFixtureIndex("XSGD", straitsxIndependentAssuranceProfile("XSGD"), fixture, withNewReport, true),
+    ).resolves.toMatchObject({ newerUnreviewedReport: { reportDate: "2026-10-31" } });
   });
 
   it("still fails closed when the USDGO family has two reports for the reviewed latest date", async () => {
@@ -548,7 +571,8 @@ describe("independent-assurance manifest framework", () => {
           error: "configured index URL is not the reviewed official index",
         },
         { name: "missing reviewed URL", config, html: "<p>No reports</p>", pdf: PDF_BYTES, error: "reviewed report URL is missing or duplicated" },
-        { name: "newer unreviewed report", config, html: reviewedCandidate + newerCandidate, pdf: PDF_BYTES, error: "newer unreviewed report" },
+        // A newer report passes discovery and still meets the pinned PDF identity gate.
+        { name: "newer unreviewed report", config, html: reviewedCandidate + newerCandidate, pdf: PDF_BYTES, error: "PDF byte length" },
         { name: "duplicate latest date", config, html: reviewedCandidate + duplicateCandidate, pdf: PDF_BYTES, error: "reviewed report URL is missing or duplicated" },
       ];
 
@@ -715,8 +739,8 @@ describe("independent-assurance manifest framework", () => {
     await expect(verifyFixtureIndex("AUDM", AUDM_INDEPENDENT_ASSURANCE_PROFILE, "", html))
       .rejects.toThrow("PDF byte length");
     await expect(verifyFixtureIndex("AUDM", AUDM_INDEPENDENT_ASSURANCE_PROFILE, "",
-      `${html}<a href="https://docs.macropod.com/legal/reserve-verification-report-2026-10-31.pdf">Monthly report</a>`))
-      .rejects.toThrow("newer unreviewed report");
+      `${html}<a href="https://docs.macropod.com/legal/reserve-verification-report-2026-10-31.pdf">Monthly report</a>`, true))
+      .resolves.toMatchObject({ newerUnreviewedReport: { reportDate: "2026-10-31" } });
   });
 
   it.each([

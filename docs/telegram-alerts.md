@@ -371,9 +371,10 @@ Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs store
 
 - **Freshness watchdog** (`cron-sentinel` `status` mode, every 15 minutes): stale and recovered producers, per-coin detail cache write failures, DEX liquidity → DEWS still stale after its root recovered, and Safety Score publication held/released (with hold reason codes).
 - **Digest-publication watchdog** (`status` mode): missing daily/weekly edition rows and channel posts.
-- **Reserve watchdog** (`cron-sentinel` `reserve-post-sync` mode, after each live-reserve cohort): configured coins whose latest reserve sync is `degraded` or `error` (keyed by status plus failure category or warning codes, so a changed reason re-alerts), collateral drift coins, more than five coins on curated fallback, and the persistently-stale independent-source warning.
 
 Each watchdog alerts only on transitions (new, recovered, or a changed reason), groups them into one message, and shares a 30-minute cooldown. Cooldown, missing credentials or a failed send leave the transition pending for the next run; a failed send marks the run `operator-alert-delivery-failed`. Evidence that could not be read keeps its prior state rather than reporting a recovery.
+
+The reserve post-sync watchdog (`cron-sentinel` `reserve-post-sync` mode) sends no Telegram message: reserve sync, drift, curated-fallback and persistently-stale conditions are tracked on the [live-reserve sync health](./status-dashboard.md#live-reserve-sync-health) panel and in the sentinel's `firedRuleIds`.
 
 ## Operational Notes
 

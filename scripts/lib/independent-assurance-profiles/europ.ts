@@ -3,7 +3,11 @@ import { linePattern, type CompilerProfile } from "./shared";
 export const PROFILE: CompilerProfile = {
   product: "EUROP",
   profile: "europ-v1",
-  officialIndexUrl: "https://schuman.io/wp-json/wp/v2/media?search=SALVUS_Attestation&per_page=100",
+  // WordPress ANDs space-separated search terms with case-insensitive LIKE, so
+  // this also finds differently separated names such as the Dec 30 2025
+  // `2025.12.30-Schuman-_-Salvus-Attestation_Letter-Signed-All.pdf`, which
+  // `search=SALVUS_Attestation` missed. The adapter's filename filter stays strict.
+  officialIndexUrl: "https://schuman.io/wp-json/wp/v2/media?search=Salvus+Attestation&per_page=100",
   reportUrl: "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
   reportDate: "2026-06-30",
   reportAsOf: "2026-06-30T08:00:00Z",

@@ -623,7 +623,7 @@ Historical [supply refinements](../supply-snapshot.md#supply-pipeline) retain fa
 
 Under 9.92, `supply-review.unpartitioned-aggregate` keeps circulating USD known for Exit sizing. Failed chain joins, missing profiles, stale input and missing/rejected attribution still fail closed; Control alone owns `runtime-bridge-materiality-unavailable`. Method-withheld route ownership follows the causal-gap rule above.
 
-Named-firm composition uses 120-day as-of admission, not 38-day fallback; stale traces keep dated evidence. Absent publication may use signed/as-of date (`publishedAtBasis: "signed-date-standin"`, displayed “signed”), never renewing period or bypassing chronology/lockstep. Assurance retains independent age/strength gates; newer unreviewed reports block discovery ([metadata](../stablecoin-data.md#registry-editing-entry)).
+Named-firm composition uses 120-day as-of admission, not 38-day fallback; stale traces keep dated evidence. Absent publication may use signed/as-of date (`publishedAtBasis: "signed-date-standin"`, displayed “signed”), never renewing period or bypassing chronology/lockstep. Assurance retains independent age/strength gates; newer unreviewed reports are never admitted ([metadata](../stablecoin-data.md#registry-editing-entry)).
 
 Curated baskets share Backing's reserve-row admission, metadata, fixed input and clock. Admitted probable named-report audited fallback keeps tracked edges; expired/period-mismatched rows grant no composition/exposure. Live composition wins without duplicate curated weights.
 

@@ -9,7 +9,7 @@ import {
   MENTO_GET_EXCHANGE_IDS_SELECTOR,
   MENTO_POOL_EXCHANGE_ABI_PARAMETERS,
 } from "@shared/lib/mento-contracts";
-import { fetchMentoRedemptionMetadata } from "../mento-redemption";
+import { fetchMentoRedemptionMetadata, MentoFxMarketClosedError } from "../mento-redemption";
 import { fetchErc20TotalSupply, fetchOnchainMulticall3, fetchOnchainRateBps, fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
 import type { AdapterContext } from "../types";
 import { pinnedBlockPlan } from "../evm-observation-plan";
@@ -117,7 +117,7 @@ describe("USDm V3 output pools", () => {
         : row) ?? null;
     });
     await expect(fetchMentoRedemptionMetadata(config, new AbortController().signal, undefined))
-      .rejects.toThrow("fx-market-closed");
+      .rejects.toBeInstanceOf(MentoFxMarketClosedError);
     expect(fetchOnchainUint256).not.toHaveBeenCalled();
   });
 

@@ -23,6 +23,7 @@ import {
   notApplicableFreshnessMetadata,
   requireOnchainInput,
   reserveDegradedWarning,
+  reserveInfoWarning,
 } from "./helpers";
 
 const ADAPTER_KEY = "matrixdock-frs";
@@ -36,12 +37,18 @@ const UNIT_PIN_TOLERANCE_PCT = 0.5;
 const EXPECTED_DECIMALS = 9;
 // `setReserve()` is the only writer of the feed's `reserve`/`roundId`/
 // `updatedAt`, so a round advances only when the issuer changes the reserve:
-// the feed is reserve-change-triggered, not heartbeat-driven. The budget is
-// calibrated to the contract's own `ReserveSet` round history in
-// MATRIXDOCK_BULLION_RESERVE_FEED_MAX_AGE_SEC; a stale round still publishes
-// because the unit pin below reconciles the frozen answer against live
-// `ozPerToken()` x supply.
+// the feed is reserve-change-triggered, not heartbeat-driven. An old round is
+// therefore only evidence of staleness when the frozen answer no longer
+// reconciles: past MATRIXDOCK_BULLION_RESERVE_FEED_MAX_AGE_SEC the round
+// degrades (`stale-reserve-feed`) only when reserve/ozPerToken diverges from
+// measured supply by more than STALE_FEED_DIVERGENCE_TOLERANCE_PCT; a still-
+// reconciling old round publishes an info `quiet-reserve-feed` instead.
 const MAX_RESERVE_FEED_AGE_SEC = MATRIXDOCK_BULLION_RESERVE_FEED_MAX_AGE_SEC;
+// Supply moves at mint/burn granularity while the reserve only moves on
+// `setReserve()`, so any mint or burn since the last round opens a gap; 0.05%
+// (~37 oz on the 2026-10 ~73k-oz book) separates a reconciled quiet round from
+// supply that has moved past the frozen reserve.
+const STALE_FEED_DIVERGENCE_TOLERANCE_PCT = 0.05;
 
 const MAX_CROSS_CHAIN_SKEW_SEC = 6 * 60 * 60;
 const OZ_PER_TOKEN_SELECTOR = "0x73b16bc7"; // ozPerToken()
@@ -148,17 +155,8 @@ export function adaptMatrixdockFrsState(
     throw new Error(`${ADAPTER_KEY}: Ethereum/Sui observation skew exceeds ${MAX_CROSS_CHAIN_SKEW_SEC}s`);
   }
 
-  // ── Feed freshness sanity. The feed is deviation-triggered, so it remains
-  //    not-applicable freshness, but an unboundedly old round is degraded. ──
   if (state.feedUpdatedAt > state.nowSec + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC) {
     throw new Error(`${ADAPTER_KEY}: feed round timestamp is in the future (${state.feedUpdatedAt - state.nowSec}s)`);
-  }
-  const feedAgeSec = state.nowSec - state.feedUpdatedAt;
-  if (feedAgeSec > MAX_RESERVE_FEED_AGE_SEC) {
-    warnings.push(reserveDegradedWarning(
-      "stale-reserve-feed",
-      `${ADAPTER_KEY}: reserve feed round is ${feedAgeSec}s old (max ${MAX_RESERVE_FEED_AGE_SEC}s)`,
-    ));
   }
 
   if (
@@ -199,6 +197,18 @@ export function adaptMatrixdockFrsState(
       "reserve-unit-mismatch",
       `${ADAPTER_KEY}: reserve/ozPerToken implies ${derivedSupply} tokens but ${totalSupply} are minted (${unitDivergencePct.toFixed(2)}% divergence)`,
     ));
+  }
+
+  // ── Feed age. The feed is reserve-change-triggered, so it remains
+  //    not-applicable freshness; an old round degrades only once it no longer
+  //    reconciles with measured supply. ──
+  const feedAgeSec = state.nowSec - state.feedUpdatedAt;
+  if (feedAgeSec > MAX_RESERVE_FEED_AGE_SEC) {
+    const detail = `reserve feed round is ${feedAgeSec}s old (max ${MAX_RESERVE_FEED_AGE_SEC}s), `
+      + `unit divergence ${unitDivergencePct.toFixed(4)}% (max ${STALE_FEED_DIVERGENCE_TOLERANCE_PCT}%)`;
+    warnings.push(unitDivergencePct > STALE_FEED_DIVERGENCE_TOLERANCE_PCT
+      ? reserveDegradedWarning("stale-reserve-feed", `${ADAPTER_KEY}: ${detail}`)
+      : reserveInfoWarning("quiet-reserve-feed", `${ADAPTER_KEY}: ${detail}`));
   }
 
   // Silver coverage of the token's one-troy-oz claim (ozPerToken drifts slightly

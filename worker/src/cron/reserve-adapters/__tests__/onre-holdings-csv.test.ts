@@ -49,14 +49,14 @@ describe("parseOnReSchedule", () => {
 });
 
 describe("adaptOnReSchedule", () => {
-  it("replays the replacement USDv holding while retaining the issuer's AUM reconciliation failure", () => {
+  it("replays the replacement USDv holding while degrading the schedule shortfall below NAV", () => {
     const result = adaptOnReSchedule(parseOnReSchedule(capturedSchedule.csv));
     const usdv = result.slices.find((slice) => slice.sourceKey === "onre-holdings-csv:usdv-solomon-v2")!;
     expect(usdv).toMatchObject({ coinId: "usdv-solomon-v2", depType: "collateral" });
     expect(usdv.pct).toBeCloseTo(1000849.82 / 292040550.05 * 100, 10);
     expect(result.slices.some((slice) => slice.coinId === "usdv-solomon")).toBe(false);
     expect(result.slices.some((slice) => slice.sourceKey === "onre-holdings-csv:unmapped-schedule-rows")).toBe(false);
-    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "total-aum-mismatch", effect: "degraded" }));
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "schedule-below-nav", effect: "degraded" }));
     expect(result.metadata?.details).toMatchObject({ totalVsAumUsd: expect.closeTo(-1007314.51, 4) });
   });
 
@@ -72,7 +72,7 @@ describe("adaptOnReSchedule", () => {
     expect(result.slices.find((slice) => slice.coinId === "usdv-solomon-v2")?.pct).toBeGreaterThan(0);
   });
 
-  it("publishes 11 normalized slices with the known drift degraded, not hidden", () => {
+  it("publishes 11 normalized slices with the schedule surplus over NAV reported, not hidden", () => {
     const result = adaptOnReSchedule(parseOnReSchedule(CSV));
 
     expect(result.slices).toHaveLength(11);
@@ -99,7 +99,8 @@ describe("adaptOnReSchedule", () => {
       totalVsAumUsd: expect.closeTo(476_174.87, 4),
     });
 
-    expectWarnings(result, ["allocation-sum-drift", "total-aum-mismatch"]);
+    expectWarnings(result, ["allocation-sum-drift", "schedule-exceeds-nav"]);
+    expect(result.warnings?.find((warning) => warning.code === "schedule-exceeds-nav")).toMatchObject({ effect: "info" });
   });
 
   it("fails closed when asset amounts disagree with the declared Total", () => {

@@ -114,7 +114,7 @@
     "inputs": {
       "primary": {
         "kind": "http-json",
-        "url": "https://schuman.io/wp-json/wp/v2/media?search=SALVUS_Attestation&per_page=100"
+        "url": "https://schuman.io/wp-json/wp/v2/media?search=Salvus+Attestation&per_page=100"
       }
     },
     "params": {

@@ -82,4 +82,23 @@ describe("ReserveSyncHealthCard", () => {
     expect(screen.queryByText("Report-card inputs are conservative")).toBeNull();
     expect(container.textContent).toContain("73.7% fresh, 73.7% authoritative");
   });
+
+  it("shows the by-design degraded count and keeps pre-split rows unavailable", () => {
+    const { container } = render(
+      <ReserveSyncHealthCard
+        health={makeReserveHealth({
+          adapterReliability: [
+            { adapterKey: "chainlink-nav", attempts: 10, ok: 4, degraded: 6, degradedByDesign: 5, error: 0, skipped: 0, successRate: 0.9 },
+            { adapterKey: "legacy-row", attempts: 2, ok: 2, degraded: 0, error: 0, skipped: 0, successRate: 1 },
+          ],
+        })}
+        nowSeconds={1_712_600_120}
+      />,
+    );
+    const rows = Array.from(container.querySelectorAll("table[aria-label='30-day adapter reliability'] tbody tr"));
+    expect(screen.getByText("By design")).toBeTruthy();
+    expect(rows[0]?.textContent).toContain("90.0%");
+    expect(Array.from(rows[0]!.querySelectorAll("td")).map((cell) => cell.textContent)[4]).toBe("5");
+    expect(Array.from(rows[1]!.querySelectorAll("td")).map((cell) => cell.textContent)[4]).toBe("—");
+  });
 });

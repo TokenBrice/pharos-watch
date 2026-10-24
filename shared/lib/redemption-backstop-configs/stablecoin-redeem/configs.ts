@@ -33,7 +33,6 @@ import { DISCOVERY_STABLECOIN_REDEEM_CONFIGS } from "./discovery-wave";
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts";
 const REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT = "2026-07-19";
 const REVIEWED_ZCHF_BRIDGE_AT = "2026-05-25";
-const REVIEWED_FXSAVE_LIVE_REDEMPTION_AT = "2026-05-27";
 const REVIEWED_NOON_USN_TERMS_AT = "2026-09-22";
 
 const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
@@ -1385,34 +1384,6 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
     notes: [
       "At Plasma block 35592500, hash 0xb5e75a73effe72ae00dea4ceb6e6d84bb60dfdcdb73861e2b69de0141ae3cb56, the canonical proxy still used StakedYuzuUSDV3, asset() returned yzUSD, paused() was false and instant redemption was enabled. These truthful current state reads replace the incorrect no-fee-selectors assertion without granting measured unwind or treating idle backing as executable capacity; downstream yzUSD primary redemption remains eligibility-gated.",
-    ],
-  }),
-  "fxsave-f-x-protocol": defineStablecoinRedeemConfig({
-    capacityModel: { kind: "reserve-sync-metadata" },
-    executionModel: "rules-based-nav",
-    costModel: documentedVariableFee(
-      "fxSP instantRedeem charges instantRedeemFeeRatio on both fxUSD and USDC output legs. The implementation pinned at Ethereum block 26141525 (2026-10-07T15:52:35Z) enforces MAX_INSTANT_REDEEM_FEE = 5e16 (5%); this bounds the protocol fee, not gas or third-party USDC-to-fxUSD conversion fees and price impact.",
-      "formula",
-    ),
-    v9RouteCostTerms: { feeBpsMax: 500 },
-    reviewedAt: REVIEWED_FXSAVE_LIVE_REDEMPTION_AT,
-    docs: [
-      sourceRefFull("f(x) Stability Pool", "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool"),
-      sourceRef("Integrating fxSAVE", "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave", [
-        "route",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-      sourceRef(
-        "fxSP enforced instant-redemption fee cap (verified 2026-01-04; pinned review 2026-10-07)",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9",
-        ["route", "fees"],
-      ),
-    ],
-    notes: [
-      "Fresh ERC-4626 reserve telemetry reads the fxSAVE vault's idle fxSP balance as current direct redemption capacity; if the live snapshot is unavailable, the route is left unrated instead of falling back to the prior heuristic strategy-buffer estimate.",
-      "Ethereum fxSP proxy 0x65c9a641afceb9c0e6034e558a319488fa0fa3be used implementation 0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9 at block 26141525 via https://api-ethereum-mainnet-erigon.n.dwellir.com; re-review the bound when the implementation changes. The fxUSD-only router swaps the USDC leg separately.",
     ],
   }),
   "susn-noon": erc4626InstantConfig({

@@ -4,6 +4,7 @@
     "version": 1,
     "semantics": "attestation-mix",
     "breakerScope": "zarsc-supercoin",
+    "scoring": { "maxSourceAgeSec": 6048000 },
     "display": { "url": "https://www.supercoin.co.za/proof-of-reserves-reports", "label": "Supercoin reviewed reserve-report index" },
     "inputs": { "primary": { "kind": "http-html", "url": "https://www.supercoin.co.za/proof-of-reserves-reports" } },
     "params": {

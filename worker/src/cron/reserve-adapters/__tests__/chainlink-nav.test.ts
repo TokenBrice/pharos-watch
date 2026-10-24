@@ -10,6 +10,8 @@ import {
 import { installAdapterNetwork, runAdapter, type AdapterNetwork, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { buildReviewedReserveClassifications } from "../../../lib/safety-score-v9/extension-reserves";
 
 const ORACLE_ADDRESS = "0x74f2199AEb743f68f05943e5715A33EaF2b61f53";
 const WRAPPER_ADDRESS = "0x00000000000000000000000000000000000000aa";
@@ -163,6 +165,26 @@ describe("adaptChainlinkNavResponse", () => {
     assetRisk: "very-low",
     sourceKey: "chainlink-nav:test",
   };
+
+  it("projects FIUSD's native fund-share slice onto its reviewed singleton classification", () => {
+    const coin = ACTIVE_STABLECOINS.find((entry) => entry.id === "fiusd-sygnum")!;
+    const config = coin.liveReservesConfig!;
+    expect(config.adapter).toBe("chainlink-nav");
+    const result = adaptChainlinkNavResponse(
+      { navPerToken: 12_061_690_000n, navDecimals: 6, totalSupply: 1_517_660_000n, tokenDecimals: 6, roundId: 10n, updatedAt: 1792000000 },
+      config.params as ChainlinkNavParams,
+    );
+    expect(result.warnings).toBeUndefined();
+    expect(result.slices).toEqual([expect.objectContaining({ sourceKey: coin.reserves![0]!.sourceKey, pct: 100 })]);
+    const clock = Date.parse(`${coin.reserveReview!.reviewedAt}T12:00:00Z`) / 1000;
+    const classifications = buildReviewedReserveClassifications(result.slices, coin, clock);
+    expect(classifications).toHaveLength(1);
+    expect(classifications[0]).toMatchObject({
+      assetClass: "fund-share",
+      issuerOrObligorKey: coin.reserves![0]!.issuerOrObligor,
+    });
+    expect(classifications[0]?.classificationKey).toMatch(/^registry-reviewed:/);
+  });
 
   it("retains native fund-share exposure without a scoring degradation", () => {
     const result = adaptChainlinkNavResponse(

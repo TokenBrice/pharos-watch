@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "BNY Dreyfus Government Cash Management Institutional Shares (CUSIP 262006208)",
-      "pct": 51.14,
+      "pct": 52.72,
       "risk": "low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "BNY Dreyfus Government Cash Management",
@@ -17,7 +17,7 @@
     },
     {
       "name": "BNY Mellon U.S. Treasury Fund Advantage Shares (ISIN IE00B14RXK43)",
-      "pct": 0.08,
+      "pct": 0.12,
       "risk": "low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "BNY Mellon Liquidity Funds plc",
@@ -31,7 +31,7 @@
     },
     {
       "name": "BlackRock ICS U.S. Treasury Fund Banking Circle Dis USD (ISIN IE0004WWOG99)",
-      "pct": 0.09,
+      "pct": 0.12,
       "risk": "low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "Institutional Cash Series plc",
@@ -46,7 +46,7 @@
     {
       "sourceKey": "paxos-independent-assurance:usdg:treasury-bills",
       "name": "U.S. Treasury bills",
-      "pct": 46.09,
+      "pct": 44.57,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -56,12 +56,12 @@
         "custody"
       ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 31
+      "maturityDaysMax": 36
     },
     {
       "sourceKey": "paxos-independent-assurance:usdg:cash",
       "name": "Cash in demand deposit accounts",
-      "pct": 2.6,
+      "pct": 2.47,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Undisclosed commercial banks in Singapore and Luxembourg",
@@ -74,13 +74,13 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-10",
-    "reviewer": "Sol curation campaign 2026-10-11 (L16PAXG)",
+    "reviewedAt": "2026-10-24",
+    "reviewer": "Pharos reserve research 2026-10-24 (September KPMG examination refresh)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "KPMG USDG Redemption Assets Report - August 2026",
-        "url": "https://framerusercontent.com/assets/Xn1UQwAte85FnsDveIMX0n1qtVM.pdf"
+        "label": "KPMG USDG Redemption Assets Report - September 2026",
+        "url": "https://framerusercontent.com/assets/SKxHUTNlo82s3Rrqw0ZL09z2vc.pdf"
       },
       {
         "label": "Paxos USDG transparency",
@@ -99,9 +99,9 @@
         "url": "https://www.blackrock.com/cash/literature/kiid/ucits_kiid-blackrock-ics-us-treasury-fund-banking-circle-dis-usd-gb-ie0004wwog99-en.pdf"
       }
     ],
-    "rationale": "KPMG's unmodified reasonable-assurance report signed September 25, 2026 gives $1,713,363,362 of BNY Dreyfus Government Cash Management shares, $2,645,071 of BNY Mellon U.S. Treasury Fund shares, $3,115,100 of BlackRock ICS U.S. Treasury Fund shares, $1,544,391,014 of Treasury bills, and $86,947,920 of cash against $3,350,462,467 of total redemption assets at August 31, 2026, 17:00 EDT. The six native-chain redeemable liabilities in image-only Exhibit A sum to 3,340,650,602 and agree with Exhibit C; no timing adjustments or nonredeemable tokens are reported. The latest listed Treasury maturity is October 1, 2026, 31 days after the composition date. Percentages are rounded to two decimals from the reported amounts. The BlackRock Banking Circle Dis USD KIID, accurate as at September 25, 2026 and retrieved October 10, limits underlying investments to 397 days until full principal repayment, distinct from the 60-day weighted-average maturity and 120-day weighted-average life. These are underlying portfolio constraints, not a finite repayment maturity for the open-ended fund shares held by USDG. No money-market-fund slice receives a numeric maturityDaysMax from those constraints; the existing exact aggregate open-ended maturity-applicability review remains authoritative. Re-reading the August report and issuer index does not advance the August 31 composition date.",
-    "compositionBasis": "KPMG reasonable assurance of the USDG Redemption Assets Report as of August 31, 2026",
-    "compositionAsOf": "2026-08-31",
+    "rationale": "KPMG's unmodified reasonable-assurance report signed October 23, 2026 gives $1,670,239,383 of BNY Dreyfus Government Cash Management shares, $3,895,071 of BNY Mellon U.S. Treasury Fund shares, $3,885,100 of BlackRock ICS U.S. Treasury Fund shares, $1,412,278,860 of Treasury bills, $78,124,993 of cash and no repurchase agreements against $3,168,423,407 of total redemption assets at September 30, 2026, 17:00 EDT (the report's earlier September 17 column is not used). The seven native-chain redeemable liabilities in Exhibit A, now including Mantle, sum to 3,164,996,248 and agree with Exhibit C; no timing adjustments or nonredeemable tokens are reported. The latest listed Treasury maturity is November 5, 2026, 36 days after the composition date. Percentages are rounded to two decimals from the reported amounts. The BlackRock Banking Circle Dis USD KIID, accurate as at September 25, 2026 and retrieved October 10, limits underlying investments to 397 days until full principal repayment, distinct from the 60-day weighted-average maturity and 120-day weighted-average life. These are underlying portfolio constraints, not a finite repayment maturity for the open-ended fund shares held by USDG. No money-market-fund slice receives a numeric maturityDaysMax from those constraints; the existing exact aggregate open-ended maturity-applicability review remains authoritative.",
+    "compositionBasis": "KPMG reasonable assurance of the USDG Redemption Assets Report as of September 30, 2026",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
     "knownUnknownExposure": "No material asset-class exposure is unclassified; the report identifies fund CUSIPs and ISINs but anonymizes the commercial banks and Treasury counterparties.",
     "knownUnknownExposurePct": 0

@@ -1,18 +1,17 @@
 import type { IndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { ASSURANCE_RECONCILIATION_TOLERANCES } from "@shared/lib/independent-assurance-tolerances";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import type { AdapterFn, IndependentAssuranceProfile } from "./types";
+import type { AdapterFn, IndependentAssuranceProfile, NewerUnreviewedReport } from "./types";
 import { fetchIndependentAssuranceReserves } from "./independent-assurance";
 import { monthNumberFromLabel } from "./report-date";
 
-export async function verifyMyrcIndexJson(json: string, manifest: IndependentAssuranceManifest): Promise<void> {
+export async function verifyMyrcIndexJson(json: string, manifest: IndependentAssuranceManifest): Promise<NewerUnreviewedReport | null> {
   const payload: unknown = JSON.parse(json);
   if (!Array.isArray(payload) || payload.length === 0) {
     throw new Error("myrc-independent-assurance: missing attestation records");
   }
-  const periods = new Set<number>();
+  const periods = new Map<number, { fileUrl: string; reservedAmount: number }>();
   let newestPeriod = 0;
-  let newest: { fileUrl: string; reservedAmount: number } | undefined;
   for (const value of payload) {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       throw new Error("myrc-independent-assurance: malformed attestation record");
@@ -34,19 +33,18 @@ export async function verifyMyrcIndexJson(json: string, manifest: IndependentAss
     }
     const period = row.year * 12 + row.month;
     if (periods.has(period)) throw new Error("myrc-independent-assurance: duplicate attestation period");
-    periods.add(period);
-    if (period > newestPeriod) {
-      newestPeriod = period;
-      newest = { fileUrl: url.href, reservedAmount: row.reservedAmount };
-    }
+    periods.set(period, { fileUrl: url.href, reservedAmount: row.reservedAmount });
+    newestPeriod = Math.max(newestPeriod, period);
   }
   const [year, month] = manifest.reportDate.split("-").map(Number);
-  if (manifest.product !== "MYRC" || manifest.unit !== "MYR"
-    || newestPeriod !== year * 12 + month || !newest
-    || newest.fileUrl !== new URL(manifest.reportUrl).href
-    || newest.reservedAmount / 100 !== Number(manifest.computedAssetTotal)) {
-    throw new Error("myrc-independent-assurance: newest report is not the reviewed MYRC examination");
+  const reviewedPeriod = year * 12 + month;
+  const reviewed = periods.get(reviewedPeriod);
+  if (manifest.product !== "MYRC" || manifest.unit !== "MYR" || !reviewed
+    || reviewed.fileUrl !== new URL(manifest.reportUrl).href
+    || reviewed.reservedAmount / 100 !== Number(manifest.computedAssetTotal)) {
+    throw new Error("myrc-independent-assurance: reviewed MYRC examination is missing or changed on official index");
   }
+  return newestPeriod > reviewedPeriod ? { reportUrl: periods.get(newestPeriod)!.fileUrl } : null;
 }
 
 export const MYRC_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {

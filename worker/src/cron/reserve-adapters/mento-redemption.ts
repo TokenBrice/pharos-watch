@@ -498,6 +498,13 @@ async function fetchMentoLiquityV2CrRedemption(
 // Pool token identities and native units are checked live against config.
 // Conservatively keep the full inventory unrated if a trading limit binds;
 // we do not infer executable capacity from an oracle quote alone.
+/** The oracle's named `FXMarketClosed()` rejection: routine weekend/holiday closure. */
+export class MentoFxMarketClosedError extends Error {
+  constructor() {
+    super("mento fpmm-pools: fx-market-closed");
+  }
+}
+
 async function fetchMentoFpmmPoolsRedemption(
   params: Extract<MentoRedemptionParams, { kind: "fpmm-pools" }>,
   signal: AbortSignal,
@@ -539,7 +546,7 @@ async function fetchMentoFpmmPoolsRedemption(
         // Preserve that measured rejection instead of reusing inventory.
         const quoteFailure = rows?.find((row) => row.label === "unitQuote" && !row.success);
         if (quoteFailure?.returnData.toLowerCase() === "0xa407143a") {
-          throw new Error("mento fpmm-pools: fx-market-closed");
+          throw new MentoFxMarketClosedError();
         }
         return rows;
       },

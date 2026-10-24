@@ -90,6 +90,15 @@ function parseSliceConfig(config: LiveReservesConfig): SingleAssetSliceConfig {
   };
 }
 
+// Underlying units count as USD only for a tracked, non-NAV USD stablecoin.
+function isTrackedParUsdContract(chain: string, address: string): boolean {
+  for (const meta of WORKER_TRACKED_META_BY_ID.values()) {
+    if (meta.flags.pegCurrency !== "USD" || meta.flags.navToken) continue;
+    if (meta.contracts?.some((c) => c.chain === chain && c.address.toLowerCase() === address)) return true;
+  }
+  return false;
+}
+
 export async function fetchErc4626SingleAssetReserves(
   coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
@@ -137,9 +146,11 @@ export async function fetchErc4626SingleAssetReserves(
         { label: "total-assets", contract: contractAddress, data: ERC4626_TOTAL_ASSETS_SELECTOR },
         { label: "total-supply", contract: contractAddress, data: TOTAL_SUPPLY_SELECTOR },
         { label: "paused", contract: contractAddress, data: PAUSED_SELECTOR },
+        // Asset-targeted locks read the reviewed expected asset; the asset()
+        // identity check below rejects the snapshot if that address drifted.
         ...locks.map((lock, index) => ({
           label: `redemption-lock-${index}`,
-          contract: contractAddress,
+          contract: lock.target === "asset" ? sliceConfig.expectedAssetAddress! : contractAddress,
           data: lock.selector.startsWith("0x") ? lock.selector : toFunctionSelector(lock.selector),
         })),
         ...(probesYearnShutdown
@@ -332,6 +343,16 @@ export async function fetchErc4626SingleAssetReserves(
           "erc4626-capacity-non-usd-unvalued",
           `Underlying denomination ${underlyingPeg} has no same-path USD valuation; nominal asset units are not USD redemption capacity`,
         ));
+      } else if (
+        redemptionCapacity
+        && !sliceConfig.coinId
+        && !isTrackedParUsdContract(primaryInput.chain, assetAddress)
+      ) {
+        // An untracked underlying (e.g. fxSP pool shares) is not proven par:
+        // its units are not USD. Publish the unit-free share of backing and let
+        // the consumer value it against supply; without a ratio, withhold.
+        const { capacityUsd: _unvaluedUnits, ...ratioOnly } = redemptionCapacity;
+        redemptionCapacity = ratioOnly.capacityRatioOfSupply != null ? ratioOnly : null;
       }
     }
   }

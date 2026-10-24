@@ -1,5 +1,20 @@
 [
   {
+    "version": "10.34",
+    "title": "Reserve evidence admission calibration",
+    "date": "2026-10-24",
+    "effectiveAt": 1792886400,
+    "summary": "Live reserve evidence that Backing admits changes in three ways: a reviewed report stays admissible while a newer unreviewed report awaits review, dated-source age budgets follow each publisher's measured cadence, and several reserve adapters now distinguish structural or scheduled source states from real evidence failures.",
+    "impact": [
+      "Newer unreviewed reports: independent-assurance and issuer-report feeds no longer error when the official index lists a report newer than the reviewed pin. The pinned report keeps publishing with a degraded newer-unreviewed-report warning that is scoring-neutral (SCORING_NEUTRAL_DEGRADED_WARNING_CODES); stale-source-data is never excusable. Previously the error left the prior clean snapshot admissible only until the 48-hour fetch budget expired, so a pinned report now stays admissible until its own source-age cap instead.",
+      "Source-age budgets: a 150-day lagged-quarterly tier covers attestation-pdf-index and EUROP (Ripio quarterly reports land up to 54 days after quarter end; Schuman successors land at 99-114 days), with per-coin tightening to 70 days for USDU and ZARsc and 46.3 days for ZARP; CADD moves to the 70-day next-month tier; mRE7 14 days, mHYPER and mMEV 9 days from measured oracle round gaps.",
+      "Adapter semantics feeding Backing: Matrixdock XAGm degrades on feed age only when reserve/supply divergence exceeds 0.05%; Mento FX-market closure is informational; Bridge degrades on itemized-backing shortfall or components above published reserves rather than an unitemized surplus; OnRe degrades only when the holdings schedule falls below NAV; EVM branch coverage uses the shared 0.995 shortfall threshold; USD0 publishes self-referential claims as very-high-risk slices and withholds its ratio while they are material; sUSDai and USDD gain on-chain or history-joined corroboration paths. Curated changes (XAUm curated single gold slice, FIUSD native-fund-share scope, usdx-axis venue mapping, fxSAVE queue-redeem route) are curation, recorded here for attribution.",
+      "No fixed-clock replay is claimed. Planned activation is provisionally 2026-10-25 00:00 UTC (1792886400); re-date effectiveAt at release. Equivalence on accepted captures and the first accepted publication remain separate obligations; no deployment or production acceptance is claimed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.33",
     "title": "Reviewed finality margins for supply-attribution pins",
     "date": "2026-10-23",

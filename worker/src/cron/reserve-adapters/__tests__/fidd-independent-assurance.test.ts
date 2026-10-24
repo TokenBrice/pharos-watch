@@ -128,18 +128,32 @@ describe("fidd-independent-assurance (PwC FIDD examination)", () => {
     expect(fiddReportDate("https://fwc.widen.net/content/report---january2027.pdf", "")).toBe("2027-01-31");
   });
 
-  it("selects the newest matching dated viewer link", async () => {
-    installAdapterNetwork({
-      html: {
-        [SEPTEMBER_VIEWER_URL]: viewerFixture().replaceAll("August-2026", "September-2026"),
-      },
+  it("reads only the reviewed-period viewer and names a newer viewer from the index alone", async () => {
+    const reviewed = getIndependentAssuranceManifest("FIDD");
+    // The newer viewer is unreachable: discovery must not depend on it.
+    const network = installAdapterNetwork({
+      html: { [VIEWER_URL]: viewerFixture(), [SEPTEMBER_VIEWER_URL]: { status: 503, body: "unavailable" } },
     });
     const profile = fiddIndependentAssuranceProfile(fiddParams().viewerUrlPattern);
     const prepared = await profile.prepareIndexHtml!(
-      `${indexFixture()}<a href="${SEPTEMBER_VIEWER_URL}">September</a>`,
-      new AbortController().signal,
+      `${indexFixture()}<a href="${VIEWER_URL}">August again</a><a href="${SEPTEMBER_VIEWER_URL}">September</a>`,
+      new AbortController().signal, undefined, reviewed,
     );
-    expect(prepared).toContain("September-2026.pdf");
+    expect(prepared).toMatchObject({
+      html: expect.stringContaining("August-2026.pdf"),
+      newerUnreviewedReport: { reportDate: "2026-09-30", reportUrl: SEPTEMBER_VIEWER_URL },
+    });
+    expect(network.requests.map((request) => request.url)).toEqual([VIEWER_URL]);
+  });
+
+  it("rejects two distinct reviewed-period viewers", async () => {
+    const reviewed = getIndependentAssuranceManifest("FIDD");
+    installAdapterNetwork({ html: { [VIEWER_URL]: viewerFixture() } });
+    const profile = fiddIndependentAssuranceProfile(fiddParams().viewerUrlPattern);
+    await expect(profile.prepareIndexHtml!(
+      `${indexFixture()}<a href="${VIEWER_URL.replace("jgdsvvsknq", "otherviewer")}">August</a>`,
+      new AbortController().signal, undefined, reviewed,
+    )).rejects.toThrow("reviewed-period viewer link is missing or duplicated");
   });
 
 

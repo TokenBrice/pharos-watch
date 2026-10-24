@@ -33,13 +33,13 @@ import {
   DISCLOSURE_VALIDATION,
   LATE_MONTHLY_VERIFIED_VALIDATION,
   LAGGED_MONTHLY_EXAMINATION_VALIDATION,
+  LAGGED_QUARTERLY_ATTESTATION_VALIDATION,
   LATEST_STATE_VALIDATION,
   LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
   MATERIAL_UNKNOWN_EXPOSURE_PCT,
   MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
   MONTHLY_VERIFIED_VALIDATION,
   NEXT_MONTH_VERIFIED_VALIDATION,
-  QUARTERLY_ASSURANCE_MAX_AGE_SEC,
   TIMESTAMPED_FEED_VALIDATION,
   TIMESTAMPLESS_WITH_UNKNOWN_CAP_VALIDATION,
   UNVERIFIED_ONLY_WITH_UNKNOWN_CAP_VALIDATION,
@@ -1167,6 +1167,10 @@ const erc4626SingleAssetParamsSchema = z
     redemptionLock: z.array(z.object({
       selector: z.union([EvmSelectorSchema, z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*\(\)$/)]),
       kind: z.enum(["cooldown-seconds", "unstake-window-seconds", "paused-bool"]),
+      // `asset` reads the lock from the reviewed `slice.expectedAssetAddress`
+      // when the vault's redemption delay is enforced by its underlying (for
+      // example fxSAVE, whose claims settle through the fxSP cooldown).
+      target: z.enum(["vault", "asset"]).optional(),
     }).strict()).max(8).optional(),
     redemptionLiquidity: z
       .discriminatedUnion("source", [
@@ -1187,6 +1191,13 @@ const erc4626SingleAssetParamsSchema = z
         code: "custom",
         path: ["pooledClaim"],
         message: "Opaque pooled claims cannot carry token dependencies or a deployed-exposure allocation",
+      });
+    }
+    if (params.redemptionLock?.some((lock) => lock.target === "asset") && !params.slice.expectedAssetAddress) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["redemptionLock"],
+        message: "Asset-targeted redemption locks require a reviewed slice.expectedAssetAddress",
       });
     }
   });
@@ -2246,7 +2257,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sharedSourceMode: "none",
     configValidation: CONFIG_ATTESTATION_V1,
     redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
-    validation: MONTHLY_VERIFIED_VALIDATION,
+    // Quarterly publishers (Ripio wFIAT) inherit the lagged-quarterly cap;
+    // monthly publishers tighten it per coin via `scoring.maxSourceAgeSec`.
+    validation: LAGGED_QUARTERLY_ATTESTATION_VALIDATION,
   },
   "myrc-independent-assurance": declareAdapter(myrcAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V1, {
     primaryInputKinds: ["http-json"],
@@ -2277,7 +2290,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   // HTML (host/reachability gate); the pinned evidence is the Notion
   // loadPageChunk/getSignedFileUrls record maps plus the reviewed PDF bytes.
   "brla-independent-assurance": declareAdapter(brlaAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
-  "cadd-independent-assurance": declareAdapter(caddAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
+  "cadd-independent-assurance": declareAdapter(caddAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V3),
   // Live issuer balance-sheet feed (cash + Treasury vs on-chain liability) with
   // measured composition and a verified observation timestamp. The evidence
   // class mirrors the frax-balance-sheet / tether-transparency issuer
@@ -2509,11 +2522,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       // Retain the HTML kind for already-generated catalog artifacts during clean
       // cutover; source entries use JSON and the adapter validates that media index.
       primaryInputKinds: ["http-html", "http-json"],
-      validation: {
-        // Schuman's reviewed reports are quarterly; allow 100 days, not the legacy 116-day override.
-        maxSourceAgeSec: QUARTERLY_ASSURANCE_MAX_AGE_SEC,
-        allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
-      },
+      // Schuman's reviewed reports are quarterly and land up to 49 days after
+      // quarter end. See LAGGED_QUARTERLY_ATTESTATION_SOURCE_MAX_AGE_SEC.
+      validation: LAGGED_QUARTERLY_ATTESTATION_VALIDATION,
     },
   ),
   "xdai-bridge": declareAdapter(xdaiBridgeParamsSchema, ONCHAIN_DYNAMIC_MIX_NO_TELEMETRY_V1),

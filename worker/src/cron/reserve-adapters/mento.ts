@@ -23,7 +23,7 @@ import { fetchWithBrowserFallback } from "./request";
 import { requireJsonInput } from "./input-guards";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { extractEscapedJsonValueAfterKey } from "./html";
-import { fetchMentoRedemptionMetadata } from "./mento-redemption";
+import { fetchMentoRedemptionMetadata, MentoFxMarketClosedError } from "./mento-redemption";
 import { pinnedBlockPlan } from "./evm-observation-plan";
 import { decodeStrictAddressWord, decodeUint256Word } from "./abi-decode";
 
@@ -814,10 +814,17 @@ export async function fetchMentoReserves(
       metadata: { ...result.metadata, ...redemptionMetadata },
     };
   } catch (error) {
-    warnings.push(reserveDegradedWarning(
-      "mento-redemption-telemetry-failed",
-      `Mento redemption telemetry read failed: ${toErrorMessage(error)}`,
-    ));
+    // A closed FX market is a measured, scheduled route state: capacity stays
+    // unavailable, but the reserve composition read is not degraded by it.
+    warnings.push(error instanceof MentoFxMarketClosedError
+      ? reserveInfoWarning(
+        "mento-redemption-fx-market-closed",
+        `Mento redemption capacity unavailable while the FX market is closed: ${toErrorMessage(error)}`,
+      )
+      : reserveDegradedWarning(
+        "mento-redemption-telemetry-failed",
+        `Mento redemption telemetry read failed: ${toErrorMessage(error)}`,
+      ));
     return { ...result, warnings };
   }
 }

@@ -6,10 +6,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { getIndependentAssuranceManifest, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { installAdapterNetwork } from "./reserve-adapter.test-support";
 import {
-  normalizePaxosPageModule,
   PaxosDiscoveryError,
+  readPaxosReportSelection,
   verifyPaxosDiscovery,
 } from "../paxos-independent-assurance";
+import { PAXOS_REVIEWED_REPORT_ARCHIVE } from "../paxos-reviewed-report-archive";
 import type { PaxosDiscoveryFailureCode, PaxosProductBinding } from "../paxos-independent-assurance";
 
 const SITE = "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl";
@@ -20,8 +21,7 @@ const PAGE_URL = `${SITE}/${PAXG_ID}.${PAXG_CHUNK}.mjs`;
 const REPORT_URL = getIndependentAssuranceManifest("PAXG").reportUrl;
 const BINDING: PaxosProductBinding = {
   siteOrigin: SITE, routePath: "/paxg-transparency", pageModuleId: PAXG_ID,
-  pageNormalizedSha256: "7fb418d7c26b71b29131c8b0b2a876103900a2da7ecd8bd2d01a7b6d9e3e1deb",
-  pageNormalizedByteLength: 444412,
+  reviewedReportAssetIds: PAXOS_REVIEWED_REPORT_ARCHIVE.PAXG,
 };
 const fixture = (name: string) => readFileSync(new NodeURL(`./fixtures/paxos/${name}`, import.meta.url), "utf8")
   .replace(/^<!--[^]*?-->\s*/, "");
@@ -42,7 +42,11 @@ function network(main = MAIN, page = PAGE) {
   return installAdapterNetwork({ html: { [MAIN_URL]: main, [PAGE_URL]: page } });
 }
 
-async function expectFailure(promise: Promise<string>, code: PaxosDiscoveryFailureCode) {
+const admitted = (page: string, newerUrl?: string) => ({
+  page, newerUnreviewedReport: newerUrl ? { reportUrl: newerUrl } : null,
+});
+
+async function expectFailure(promise: Promise<unknown>, code: PaxosDiscoveryFailureCode) {
   const error = await promise.then(
     () => { throw new Error(`expected discovery to reject with ${code}`); },
     (failure: unknown) => failure,
@@ -51,12 +55,12 @@ async function expectFailure(promise: Promise<string>, code: PaxosDiscoveryFailu
   expect((error as PaxosDiscoveryError).code).toBe(code);
 }
 
-describe("Paxos discovered main module and pinned normalized page", () => {
+describe("Paxos discovered main module and report-selection list", () => {
   afterEach(() => { vi.unstubAllGlobals(); });
 
   it("accepts the current captured live index, main and reviewed product bytes", async () => {
     const installed = network();
-    await expect(discover()).resolves.toBe(PAGE);
+    await expect(discover()).resolves.toEqual(admitted(PAGE));
     expect(installed.fetchSpy).toHaveBeenCalledTimes(2);
   });
 
@@ -64,52 +68,79 @@ describe("Paxos discovered main module and pinned normalized page", () => {
     const renamed = `${SITE}/script_main.NewMainHash.mjs`;
     const html = INDEX.replace(MAIN_URL, renamed);
     installAdapterNetwork({ html: { [renamed]: MAIN, [PAGE_URL]: PAGE } });
-    await expect(discover(html)).resolves.toBe(PAGE);
+    await expect(discover(html)).resolves.toEqual(admitted(PAGE));
   });
 
-  it("normalizes the two real September 30 and October 13 captures to the same pinned bytes", () => {
+  it("reads the same reviewed report selection from the real September 30 and October 13 captures", () => {
     expect(septemberBytes.byteLength).toBe(septemberCapture.rawByteLength);
     expect(hash(SEPTEMBER_PAGE)).toBe(septemberCapture.rawSha256);
     expect(hash(SEPTEMBER_PAGE)).toBe("3abe90e5439ad20619f0a1f799e4c4279f7ab5cc378177ba8efd97367c6f7048");
     expect(hash(PAGE)).toBe("cc505dc4eafcf862c1a9adda08da12c9864cda8ba52ffb4b22a4f9468d37e53a");
-    const oldNormalized = normalizePaxosPageModule(SEPTEMBER_PAGE);
-    const newNormalized = normalizePaxosPageModule(PAGE);
-    expect(oldNormalized).toBe(newNormalized);
-    expect(hash(newNormalized)).toBe(BINDING.pageNormalizedSha256);
-    expect(Buffer.byteLength(newNormalized)).toBe(BINDING.pageNormalizedByteLength);
+    const selection = readPaxosReportSelection(PAGE);
+    expect(readPaxosReportSelection(SEPTEMBER_PAGE)).toEqual(selection);
+    expect(selection).toContain(REPORT_URL);
+    expect(selection.map((url) => url.replace(/^.*\/(\w+)\.pdf$/, "$1")).sort()).toEqual([...BINDING.reviewedReportAssetIds].sort());
   });
 
   it("accepts historical import/export-name churn with identical locals and body", async () => {
     const oldUrl = `${SITE}/${PAXG_ID}.-iP-KhFb.mjs`;
     const oldMain = MAIN.replace(`${PAXG_ID}.${PAXG_CHUNK}.mjs`, `${PAXG_ID}.-iP-KhFb.mjs`);
     installAdapterNetwork({ html: { [MAIN_URL]: oldMain, [oldUrl]: SEPTEMBER_PAGE } });
-    await expect(discover()).resolves.toBe(SEPTEMBER_PAGE);
+    await expect(discover()).resolves.toEqual(admitted(SEPTEMBER_PAGE));
   });
 
   // Import expressions below are unexecuted upstream-source attack fixtures,
   // not module loads in this test; static imports cannot represent that input.
-  it.each(["AugustReport"])("rejects the reviewer's dynamic import collision (%s)", (module) => {
-    expect(() => normalizePaxosPageModule(`const report=await import("./${module}.mjs");`))
-      .toThrow("dynamic import in product page module");
-  });
-
-  it.each([
-    ["added September report", PAGE.replace("\n//# sourceMappingURL=", "\nconst september={file:`https://framerusercontent.com/assets/SeptemberReport.pdf`};\n//# sourceMappingURL=")],
-    ["same-length report label change", PAGE.replace("buttonText:`Aug`", "buttonText:`Sep`")],
-    ["local binding rename", PAGE.replace("D as t", "D as renamedLocal")],
-    ["module swap from reviewer", PAGE.replace('from"./Pdfviewer.B-RMKdz-.mjs"', 'from"./SeptemberReportViewer.NewChunk.mjs"')],
-    ["dynamic page import", PAGE.replace("\n//# sourceMappingURL=", "\nconst report=await import('./SeptemberReport.mjs');\n//# sourceMappingURL=")],
-    ["dynamic import in template expression", PAGE.replace("\n//# sourceMappingURL=", "\nconst report=`${await import('./SeptemberReport.mjs')}`;\n//# sourceMappingURL=")],
-    ["nonleading static imports", `const beforeImports=1;${PAGE}`],
-    ["second source-map comment", `//# sourceMappingURL=other.Hash.mjs.map\n${PAGE}`],
-    ["nonfinal source-map comment", `${PAGE}\nconst afterMap=1;`],
-    ["other byte change", PAGE.replace("\n//# sourceMappingURL=", "\n// non-source-map comment\n//# sourceMappingURL=")],
-  ])("rejects changed product bytes despite the same module identity (%s)", async (_label, page) => {
+  const republished = async (page: string) => {
     expect(page).not.toBe(PAGE);
     const nextUrl = `${SITE}/${PAXG_ID}.NextChunk.mjs`;
     const main = MAIN.replace(`${PAXG_ID}.${PAXG_CHUNK}.mjs`, `${PAXG_ID}.NextChunk.mjs`);
     installAdapterNetwork({ html: { [MAIN_URL]: main, [nextUrl]: page } });
-    await expectFailure(discover(), "page-module-bytes-drifted");
+    return discover();
+  };
+  const beforeSourceMap = (code: string) => PAGE.replace("\n//# sourceMappingURL=", `\n${code}\n//# sourceMappingURL=`);
+  const NEWER = "https://framerusercontent.com/assets/SeptemberReport.pdf";
+
+  it.each([
+    ["same-length report label change", PAGE.replace("buttonText:`Aug`", "buttonText:`Sep`")],
+    ["local binding rename", PAGE.replace("D as t", "D as renamedLocal")],
+    ["module swap", PAGE.replace('from"./Pdfviewer.B-RMKdz-.mjs"', 'from"./PdfViewer.NewChunk.mjs"')],
+    ["nonleading static imports", `const beforeImports=1;${PAGE}`],
+    ["other byte change", beforeSourceMap("// non-source-map comment")],
+  ])("admits cosmetic page churn while the reviewed selection is unchanged (%s)", async (_label, page) => {
+    await expect(republished(page)).resolves.toEqual(admitted(page));
+  });
+
+  it.each([
+    ["added literal entry", beforeSourceMap(`const september={file:\`${NEWER}\`};`)],
+    ["added Framer variant override", beforeSourceMap(`const september={file:\`${REPORT_URL}\`,...q({Sep:{file:\`${NEWER}\`}},v,C)};`)],
+  ])("reports a newer unreviewed report without failing (%s)", async (_label, page) => {
+    await expect(republished(page)).resolves.toEqual(admitted(page, NEWER));
+  });
+
+  it.each([
+    ["dynamic page import", beforeSourceMap("const report=await import('./SeptemberReport.mjs');")],
+    ["dynamic import in template expression", beforeSourceMap("const report=`${await import('./SeptemberReport.mjs')}`;")],
+    ["non-literal file entry", beforeSourceMap("const september={file:reportUrl};")],
+    ["shorthand file entry", beforeSourceMap("const september={file};")],
+    ["computed file entry", beforeSourceMap(`const september={["file"]:\`${NEWER}\`};`)],
+    ["computed key overriding the reviewed entry", beforeSourceMap(
+      `const september={file:\`${REPORT_URL}\`,["fi"+"le"]:"https://framerusercontent.com/assets/"+"Sept"+".pdf"};`,
+    )],
+    ["concatenated file value", beforeSourceMap('const september={file:"https://framerusercontent.com/assets/"+"Sept.pdf"};')],
+    ["off-host file entry", beforeSourceMap("const september={file:`https://evil.example.com/report.pdf`};")],
+    ["entry inside an opaque template", beforeSourceMap(`const september=\`\${x({file:\`${NEWER}\`})}\`;`)],
+    ["asset URL inside a comment", beforeSourceMap(`// ${NEWER}`)],
+    ["member assignment", beforeSourceMap('selection.file="https://framerusercontent.com/assets/"+"New.pdf";')],
+    ["object spread after a reviewed file", beforeSourceMap(`const september={file:\`${REPORT_URL}\`,...reportOverride};`)],
+    ["quoted key", beforeSourceMap(`const september={"file":\`${NEWER}\`};`)],
+    ["escaped key", beforeSourceMap(`const september={"\\x66ile":\`${NEWER}\`};`)],
+    ["getter", beforeSourceMap('const september={get file(){return "https://framerusercontent.com/assets/"+"New.pdf";}};')],
+    ["computed accessor", beforeSourceMap('const september={get ["fi"+"le"](){return reportUrl;}};')],
+    ["report-named computed member", beforeSourceMap('selection["file"]=reportUrl;')],
+    ["concatenated computed member", beforeSourceMap('selection["fi"+"le"]=reportUrl;')],
+  ])("rejects an unrecognized report selection (%s)", async (_label, page) => {
+    await expectFailure(republished(page), "report-selection-unrecognized");
   });
 
   it.each(["\n", "\r", "\u2028", "\u2029"])("ignores comment decoys and recognizes executable computed paths after %j", async (terminator) => {
@@ -166,9 +197,9 @@ describe("Paxos discovered main module and pinned normalized page", () => {
   it("corroborates the product wrapper against the other route entries", async () => {
     const main = `const routes={product:${route("'/paxg-transparency'")},other:${route("'/other-route'")}};`;
     network(main);
-    await expect(discover()).resolves.toBe(PAGE);
+    await expect(discover()).resolves.toEqual(admitted(PAGE));
     network(`${main}const unrelated={};unrelated.page=()=>import('./OtherPage.Hash.mjs');`);
-    await expect(discover()).resolves.toBe(PAGE);
+    await expect(discover()).resolves.toEqual(admitted(PAGE));
     network(main.replace("product:{page:L(", "product:{page:UnreviewedHelper("));
     await expectFailure(discover(), "route-table-unrecognized");
   });
@@ -213,12 +244,14 @@ describe("Paxos discovered main module and pinned normalized page", () => {
     await expectFailure(discover(), "page-module-response-drifted");
   });
 
-  it("retains the redundant reviewed-report binding guard after byte admission", async () => {
+  it("fails closed when the reviewed report leaves the selection or the reviewed archive", async () => {
     const page = PAGE.replaceAll(`file:\`${REPORT_URL}\``, 'file:`https://framerusercontent.com/assets/OtherReport.pdf`');
-    const normalized = normalizePaxosPageModule(page);
     network(MAIN, page);
+    await expectFailure(discover(), "report-binding-missing");
+    network();
+    const reviewedId = REPORT_URL.replace(/^.*\/(\w+)\.pdf$/, "$1");
     await expectFailure(discover(INDEX, {
-      ...BINDING, pageNormalizedSha256: hash(normalized), pageNormalizedByteLength: Buffer.byteLength(normalized),
+      ...BINDING, reviewedReportAssetIds: BINDING.reviewedReportAssetIds.filter((id) => id !== reviewedId),
     }), "report-binding-missing");
   });
 

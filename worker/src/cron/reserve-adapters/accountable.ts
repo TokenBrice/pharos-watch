@@ -344,38 +344,62 @@ function validateBucketTotalAgainstReserves(
   },
 ): number | null {
   if (totalReserves == null) return null;
-  const totalValue = breakdown
-    .filter((entry) => !(options?.excludeBuckets?.has(entry.name)))
-    .reduce((sum, entry) => sum + entry.value, 0);
-  const tolerance = Math.max(TOTAL_RESERVES_ABSOLUTE_TOLERANCE, totalReserves * TOTAL_RESERVES_RELATIVE_TOLERANCE);
+  const totalValue = sumReconciledBuckets(breakdown, options?.excludeBuckets);
   const residual = totalValue - totalReserves;
-  if (Math.abs(residual) <= tolerance) return null;
+  if (isWithinTotalReservesTolerance(totalValue, totalReserves)) return null;
   if (residual > 0 && options?.hasSignedBuckets) return residual;
   throw new Error(`Accountable ${bucket} bucket total ${totalValue} does not match total_reserves ${totalReserves}`);
 }
 
-function findNearestExposureSplitReserveTotal(
+function sumReconciledBuckets(
+  breakdown: Array<{ name: string; value: number }>,
+  excludeBuckets?: ReadonlySet<string>,
+): number {
+  return breakdown
+    .filter((entry) => !(excludeBuckets?.has(entry.name)))
+    .reduce((sum, entry) => sum + entry.value, 0);
+}
+
+function isWithinTotalReservesTolerance(bucketTotal: number, totalReserves: number): boolean {
+  const tolerance = Math.max(TOTAL_RESERVES_ABSOLUTE_TOLERANCE, totalReserves * TOTAL_RESERVES_RELATIVE_TOLERANCE);
+  return Math.abs(bucketTotal - totalReserves) <= tolerance;
+}
+
+/** Reconciles a periodic exposure split against the dated timeline points that
+ *  bracket its exposure_split_ts (latest at/before, earliest at/after). The live
+ *  point stamped with the dashboard envelope `ts` moves on every fetch, so it is
+ *  never a reconciliation anchor. The split is accepted when it matches either
+ *  bracket within tolerance; otherwise the nearer bracket is returned so the
+ *  bucket-total guard reports the real gap. */
+function findExposureSplitBracketReserveTotal(
   reserves: NonNullable<NonNullable<AccountableDashboardResponse["data"]>["reserves"]>,
   sourceTimestamp: number,
+  liveTimestamp: number | null,
+  bucketTotal: number,
 ): { totalReserves: number; timestamp: number } {
   const timeline = Array.isArray(reserves.timeline) ? reserves.timeline : [];
   const candidates = timeline.flatMap((point) => {
     const timestamp = parseTimestampLikeToUnixSeconds(point?.ts);
     const totalReserves = extractAccountableBucketValue(point?.reserves);
-    return timestamp != null && totalReserves != null && totalReserves > 0
+    return timestamp != null && timestamp !== liveTimestamp && totalReserves != null && totalReserves > 0
       ? [{ totalReserves, timestamp }]
       : [];
   });
-  candidates.sort((left, right) =>
-    Math.abs(left.timestamp - sourceTimestamp) - Math.abs(right.timestamp - sourceTimestamp));
-  const nearest = candidates[0];
-  if (!nearest) {
+  if (candidates.length === 0) {
     throw new Error("Accountable exposure_split has no valid timeline reserve total for reconciliation");
   }
-  if (Math.abs(nearest.timestamp - sourceTimestamp) > EXPOSURE_SPLIT_TIMELINE_MAX_GAP_SECONDS) {
+  const before = candidates.filter((point) => point.timestamp <= sourceTimestamp)
+    .reduce<typeof candidates[number] | null>((best, point) => (!best || point.timestamp > best.timestamp ? point : best), null);
+  const after = candidates.filter((point) => point.timestamp >= sourceTimestamp)
+    .reduce<typeof candidates[number] | null>((best, point) => (!best || point.timestamp < best.timestamp ? point : best), null);
+  const brackets = [before, after]
+    .filter((point): point is typeof candidates[number] => point != null
+      && Math.abs(point.timestamp - sourceTimestamp) <= EXPOSURE_SPLIT_TIMELINE_MAX_GAP_SECONDS)
+    .sort((left, right) => Math.abs(left.timestamp - sourceTimestamp) - Math.abs(right.timestamp - sourceTimestamp));
+  if (brackets.length === 0) {
     throw new Error("Accountable exposure_split has no contemporaneous timeline reserve total for reconciliation");
   }
-  return nearest;
+  return brackets.find((point) => isWithinTotalReservesTolerance(bucketTotal, point.totalReserves)) ?? brackets[0]!;
 }
 
 /** Signed buckets are always omitted from slice weights and named in metadata; the degraded
@@ -508,7 +532,12 @@ export function adaptAccountableDashboard(
     throw new Error(`Accountable exposure_split_ts is invalid: ${String(payload.data.reserves.exposure_split_ts)}`);
   }
   const exposureSplitTimelineTotal = exposureSplitSourceTimestamp != null
-    ? findNearestExposureSplitReserveTotal(payload.data.reserves, exposureSplitSourceTimestamp)
+    ? findExposureSplitBracketReserveTotal(
+        payload.data.reserves,
+        exposureSplitSourceTimestamp,
+        parseTimestampLikeToUnixSeconds(payload.data.ts),
+        sumReconciledBuckets(breakdown, totalReservesExcludeBuckets),
+      )
     : null;
   const signedResidual = validateBucketTotalAgainstReserves(
     breakdown,

@@ -5,15 +5,15 @@ import { assessReserveSnapshotFreshness } from "../live-reserves/store-snapshot-
 const DAY = 86_400;
 const now = 1_800_000_000;
 
-// 2026-09-07 review: business-day NAVs and observed Midas oracle rounds,
+// 2026-09-07 review (mHYPER/mMEV re-measured 2026-10-24: max round gaps ~7.2d): business-day NAVs and observed Midas oracle rounds,
 // not the broader transport acceptance ceilings, set these scoring budgets.
 describe("reviewed NAV source freshness", () => {
   it.each([
     ["usyc-hashnote", 4],
     ["ousg-ondo-finance", 4],
     ["mf-one-midas", 4],
-    ["mhyper-midas", 7],
-    ["mmev-midas", 5],
+    ["mhyper-midas", 9],
+    ["mmev-midas", 9],
     ["mapollo-midas", 4],
     ["iauon-ondo", 4],
   ] as const)("bounds source age without extending fetch liveness for %s", (id, days) => {

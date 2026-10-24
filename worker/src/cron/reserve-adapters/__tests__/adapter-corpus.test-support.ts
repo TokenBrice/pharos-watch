@@ -425,6 +425,10 @@ CORPUS_CASES.btcfi = {
 // answers the same-run TronGrid PSM probe from the adapter test's pinned words.
 const USDD_LATEST_ENDPOINT = "https://app-api.usdd.io/data-platform/latest-collateral?chain=tron";
 const USDD_TRON_GRID_ENDPOINT = "https://api.trongrid.io/wallet/triggerconstantcontract";
+const USDD_NOW_SEC = 1_774_281_600 + 3_600;
+const USDD_HISTORY_ENDPOINT = "https://app-api.usdd.io/data-platform/collateral-history?chain=tron"
+  + `&startTime=${USDD_NOW_SEC * 1000 - 86_400_000}&endTime=${USDD_NOW_SEC * 1000}`;
+const USDD_TOTALS = { totalCollateralValue: 1_031_304_586.32, totalSupplyValue: 700_123_456.78 };
 const USDD_LATEST_ITEMS = [
   { vaultType: "TRX-A", lockedValue: 201_173_223.24 },
   { vaultType: "TRX-B", lockedValue: 100_178_816.93 },
@@ -454,10 +458,16 @@ const respondToUsddTronGrid = async (request: Request) => {
 
 CORPUS_CASES["usdd-data-platform"] = {
   coinId: "usdd-tron-dao-reserve",
-  nowSec: 1_774_281_600 + 3_600,
+  nowSec: USDD_NOW_SEC,
   network: {
     json: {
-      [USDD_LATEST_ENDPOINT]: { code: 0, data: { items: USDD_LATEST_ITEMS } },
+      [USDD_LATEST_ENDPOINT]: { code: 0, data: { items: USDD_LATEST_ITEMS, ...USDD_TOTALS } },
+      // The open bucket's statisticTime is its UTC+8 day start.
+      [USDD_HISTORY_ENDPOINT]: { code: 0, data: { items: [{
+        collateralValue: USDD_TOTALS.totalCollateralValue,
+        totalSupplyValue: USDD_TOTALS.totalSupplyValue,
+        statisticTime: (1_774_281_600 - 8 * 3_600) * 1000,
+      }] } },
       [USDD_TRON_GRID_ENDPOINT]: respondToUsddTronGrid,
     },
   },
