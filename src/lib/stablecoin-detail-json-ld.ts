@@ -5,6 +5,7 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildPharosOrganizationNode } from "@/lib/json-ld";
+import { getLatestDatedMilestoneDate } from "@/lib/page-metadata";
 
 const CONTRACT_IDENTIFIER_JSON_LD_LIMIT = 8;
 const STABLECOIN_IDENTIFIER_FIELD_KEYS = [
@@ -210,6 +211,7 @@ export function buildPreLaunchStablecoinJsonLd(coin: StablecoinMeta) {
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
   const description = `Pre-launch profile for ${coin.name} (${coin.symbol}). Planned ${pegLabel} stablecoin with ${governanceLabel} governance and ${backingLabel} backing. Live market, peg, liquidity, and safety data begin only after launch.`;
   const sameAs = buildStablecoinSameAs(coin);
+  const latestMilestoneDate = getLatestDatedMilestoneDate(coin);
 
   return [
     {
@@ -219,6 +221,7 @@ export function buildPreLaunchStablecoinJsonLd(coin: StablecoinMeta) {
       name: `${coin.name} (${coin.symbol}) Pre-launch Stablecoin Tracker`,
       description,
       url: detailUrl,
+      ...(latestMilestoneDate ? { dateModified: latestMilestoneDate } : {}),
       isPartOf: { "@id": `${SITE_URL}#website` },
       about: { "@id": `${detailUrl}#stablecoin` },
     },

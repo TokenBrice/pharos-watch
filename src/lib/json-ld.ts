@@ -1,6 +1,7 @@
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { MEDIA_APPEARANCES } from "@/lib/media-appearances";
+import { SITE_ALTERNATE_NAMES, SITE_NAME } from "@/lib/site-identity";
 
 /**
  * Escapes JSON-LD strings for safe embedding inside <script type="application/ld+json">.
@@ -37,8 +38,8 @@ export const PHAROS_PERSON_TOKENBRICE_NODE = {
 export const PHAROS_ORG_NODE = {
   "@type": "Organization",
   "@id": `${SITE_URL}#organization`,
-  name: "Pharos",
-  alternateName: ["Pharos Watch", "pharos.watch"],
+  name: SITE_NAME,
+  alternateName: SITE_ALTERNATE_NAMES,
   url: SITE_URL,
   logo: `${SITE_URL}/pharos-mark.png`,
   description: PHAROS_SITE_DESCRIPTION,

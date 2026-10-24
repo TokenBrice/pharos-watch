@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { getActiveChainIds } from "@shared/lib/chains";
 import { CHAIN_META, type ChainMeta } from "@shared/types/chain-identity";
 import { formatProseList } from "@shared/lib/format";
-import { buildApiOgImageUrl, buildPageMetadata, trimTextAtWordBoundary } from "@/lib/page-metadata";
+import { buildApiOgImageUrl, buildPageMetadata, composeDescription } from "@/lib/page-metadata";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { buildChainProfileJsonLd } from "@/lib/chain-json-ld";
 import { deploymentCountLabel, stablecoinCountLabel } from "@/lib/chain-labels";
@@ -71,10 +71,14 @@ function buildChainMetaDescription(chainName: string, deployments: readonly Chai
     ? `Track ${deploymentCountLabel(trackedDeploymentCount)} on ${chainName}, including ${topSymbols}.`
     : `Track stablecoin deployment coverage on ${chainName}.`;
 
-  return trimTextAtWordBoundary(
-    `${lead} Compare supply, market share, Chain Health, backing mix, concentration risk, and Pharos-tracked assets.`,
-    160,
-  );
+  return composeDescription([
+    lead,
+    [
+      "Compare supply, market share, Chain Health, backing mix, concentration risk, and Pharos-tracked assets.",
+      "Compare supply, market share, Chain Health, backing mix, and concentration risk.",
+      "Compare supply, market share, Chain Health, and backing mix.",
+    ],
+  ], 160);
 }
 
 function formatDeploymentList(deployments: readonly Pick<ChainTrackedDeployment, "name" | "symbol">[]): string {
