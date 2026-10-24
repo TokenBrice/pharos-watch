@@ -151,6 +151,8 @@ Peak market cap is never presented as a loss: the section copy states that it me
 
 Editorial briefs link issuer sources and keep visible short answers equal to FAQ answers. Sources-checked dates are source verification, not human review, independent audits or live reserve freshness. Enriched briefs lead without disturbing relative order within enriched/fallback groups.
 
+Pair titles read `{A} vs {B}: Safety Scores, Reserves & Risk`, shortened to `{A} vs {B}: Safety Scores & Risk` past the title budget. When both coins have a rated grade in the `scores-latest` release mirror (`getSnapshotSafetyAssessment`, the source profile static HTML cites), the description, the Short answer, the safety FAQ answer and a first "Safety Score (as of DATE)" table row cite both dated grades; a missing grade falls back to the structural copy, never "N/A". Grades are dated facts, not a categorical safer verdict: the caveat stays.
+
 Pair JSON-LD is WebPage/ItemList with coin Thing nodes and visible PropertyValue rows. Sitemap includes hub/pairs; pair lastModified is newest coin LAST_EDITED or substantive editorial updatedAt, never build/recheck time.
 
 ### Selection and URL contract
