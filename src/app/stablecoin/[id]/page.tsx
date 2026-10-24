@@ -327,9 +327,10 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
       {/* Outside the boundary, so the static profile and the FAQ (with its
           FAQPage JSON-LD, once) are plain HTML for every crawler and survive
           the dossier's reveal and hydration. The FAQ folds behind one counted
-          disclosure (answers stay in the HTML) so it costs one line. */}
+          disclosure (answers stay in the HTML) so it costs one line. The
+          dossier already renders the AI summary, so it is not repeated here. */}
       <div className="mt-6">
-        <StablecoinDetailSeoContent coin={coin} summary={summary} includeHeading={false} />
+        <StablecoinDetailSeoContent coin={coin} summary={null} includeHeading={false} />
         <FaqSection items={buildStablecoinFaqItems(coin)} title={`${coin.symbol} quick answers`} includeJsonLd collapsed />
       </div>
       <BreadcrumbJsonLd

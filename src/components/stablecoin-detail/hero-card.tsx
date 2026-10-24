@@ -165,7 +165,10 @@ export function HeroIdentityHeader({
                   className="pharos-page-title min-w-0 break-words text-xl leading-tight tracking-normal sm:text-2xl lg:truncate lg:leading-none"
                   {...(verdictId ? { "aria-describedby": verdictId } : {})}
                 >
-                  {heading ?? coin.name}
+                  {coin.name}
+                  {/* The symbol label sits beside the heading, so the
+                      "(SYMBOL)" part of the page heading stays screen-reader only. */}
+                  {heading && heading !== coin.name ? <span className="sr-only"> ({coin.symbol})</span> : null}
                 </h1>
               </div>
             </div>
