@@ -4,6 +4,7 @@ import { PEG_TAXONOMY_PAGES, PEG_TAXONOMY_PAGE_BY_SLUG } from "@/lib/peg-taxonom
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
 import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import { PegLandingClient } from "./client";
+import { PhysicalDeliveryTermsTable } from "@/components/physical-delivery-terms-table";
 
 const route = createStaticSlugRoute({
   paramKey: "peg",
@@ -37,6 +38,7 @@ const route = createStaticSlugRoute({
       }
     >
       <PegLandingClient pegCurrency={page.value} />
+      <PhysicalDeliveryTermsTable pegCurrency={page.value} coins={page.coins} />
     </StablecoinTaxonomyShell>
   ),
 });
