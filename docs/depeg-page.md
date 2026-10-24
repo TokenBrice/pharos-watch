@@ -28,6 +28,11 @@ softening rules for discovery surfaces do not apply here.
 - **After the client, as server content:** `DepegEventArchivePreview`, then `FaqSection`.
 - **Archive route:** `src/app/depeg/archive/page.tsx` renders the complete `DepegEventArchive`.
 - **Per-event pages:** `src/app/depeg/[event]/page.tsx`.
+  `buildDepegEventTitle` renders `{SYMBOL} Depeg, {Month D, YYYY}: {deviation} Below|Above Peg`
+  with no clause dash; it is also the H1 of every non-curated event, while curated
+  annotation labels keep their own H1. An unavailable deviation is omitted, never printed
+  as a placeholder. The description leads with `{name} ({SYMBOL}) fell|rose {deviation}
+  below|above its peg on {date}`.
   Metadata, `NewsArticle` description, synopsis and event summary use the canonical
   `classifyDepegClosure` result: only recovered and legacy-recovered records claim
   recovery. Coverage loss, superseded direction, removed tracking and unknown

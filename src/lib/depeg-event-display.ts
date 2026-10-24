@@ -53,15 +53,24 @@ export function depegDirectionLabel(direction: "above" | "below"): string {
   return direction === "below" ? "below peg" : "above peg";
 }
 
-export function buildDepegEventTitle(
-  event: DepegEventDisplayInput,
-  coinName: string | null,
-  includeTime: boolean,
-): string {
-  const base = coinName ?? event.symbol;
-  const title = `${base} depeg ${depegDirectionLabel(event.direction)} — ${formatEventTimestamp(event.startedAt, includeTime)}`;
+/** Peak deviation for copy, or null when it is unavailable (never a dash placeholder). */
+function formatEventDeviation(event: DepegEventDisplayInput): string | null {
+  return Number.isFinite(event.peakDeviationBps) && event.peakDeviationBps !== 0
+    ? formatDeviationBps(event.peakDeviationBps)
+    : null;
+}
+
+/**
+ * Symbol-first search title, e.g. "USDC Depeg, March 11, 2023: 12.1% Below Peg".
+ * Non-curated event pages reuse it as the visible H1.
+ */
+export function buildDepegEventTitle(event: DepegEventDisplayInput, includeTime: boolean): string {
+  const base = `${event.symbol} Depeg, ${formatEventTimestamp(event.startedAt, includeTime)}`;
+  const direction = event.direction === "below" ? "Below Peg" : "Above Peg";
+  const deviation = formatEventDeviation(event);
+  const title = deviation ? `${base}: ${deviation} ${direction}` : `${base}: ${direction}`;
   if (!includeTime || `${title} | Pharos`.length <= 70) return title;
-  return `${event.symbol} depeg ${depegDirectionLabel(event.direction)} — ${formatEventTimestamp(event.startedAt, true)}`;
+  return `${base}: ${direction}`;
 }
 
 const DEPEG_CLOSURE_LABELS = {
@@ -92,13 +101,22 @@ function buildDepegEventOutcome(event: DepegEventDisplayInput, includeEndTime: b
     : `${label} after ${duration}${endTime}.`;
 }
 
-export function buildDepegEventDescription(event: DepegEventDisplayInput, includeTime: boolean): string {
-  const deviation = formatDeviationBps(event.peakDeviationBps);
+export function buildDepegEventDescription(
+  event: DepegEventDisplayInput,
+  includeTime: boolean,
+  coinName: string | null = null,
+): string {
+  const subject = coinName && coinName.trim().toLowerCase() !== event.symbol.trim().toLowerCase()
+    ? `${coinName} (${event.symbol})`
+    : event.symbol;
+  const verb = event.direction === "below" ? "fell" : "rose";
+  const deviation = formatEventDeviation(event);
+  const move = `${subject} ${verb}${deviation ? ` ${deviation}` : ""} ${event.direction} its peg`;
   const outcome = buildDepegEventOutcome(event, false);
   if (!includeTime) {
-    return `${event.symbol} traded ${depegDirectionLabel(event.direction)} with a peak deviation of ${deviation} starting ${formatIsoDate(event.startedAt)}. ${outcome} Event timeline and Pharos methodology context.`;
+    return `${move} on ${formatEventLongDate(event.startedAt)}. ${outcome} Event timeline and Pharos methodology context.`;
   }
-  return `${event.symbol} moved ${depegDirectionLabel(event.direction)} at ${formatEventUtcTime(event.startedAt)} on ${formatEventLongDate(event.startedAt)}, reaching ${deviation}. ${outcome} Timeline and methodology.`;
+  return `${move} at ${formatEventUtcTime(event.startedAt)} on ${formatEventLongDate(event.startedAt)}. ${outcome} Timeline and methodology.`;
 }
 
 export function buildDepegEventSynopsis(event: DepegEventDisplayInput): string {
