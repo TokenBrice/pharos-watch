@@ -2,6 +2,7 @@
   "id": "usd1-world-liberty-financial",
   "name": "World Liberty Financial USD",
   "symbol": "USD1",
+  "brand": "World Liberty",
   "oneLiner": "USD1 is World Liberty Financial's Trump-affiliated dollar stablecoin, issued 1:1 via BitGo Trust against short-term Treasuries, MMFs, and cash deposits.",
   "flags": {
     "backing": "rwa-backed",

@@ -10,6 +10,7 @@
   "id": "frnt-wyoming",
   "name": "Frontier Stable Token",
   "symbol": "FRNT",
+  "brand": "Wyoming",
   "oneLiner": "FRNT is Wyoming's dollar token, backed by a holder-benefit reserve trust and redeemable through approved service providers without a state guarantee.",
   "flags": { "backing": "rwa-backed", "governance": "centralized", "rwa": true },
   "collateral": "U.S. Treasury bills, repurchase agreements and USD cash in holder-benefit trust accounts managed by Franklin Advisers and held by Fiduciary Trust International",

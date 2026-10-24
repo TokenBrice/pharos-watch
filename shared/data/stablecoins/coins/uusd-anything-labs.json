@@ -2,6 +2,7 @@
   "id": "uusd-anything-labs",
   "name": "Unity USD",
   "symbol": "UUSD",
+  "brand": "Anything Labs",
   "oneLiner": "UUSD is Anything Labs's issuer-controlled BSC dollar token; current public materials do not identify its backing assets or peg-maintenance mechanism.",
   "flags": {
     "backing": "crypto-backed",

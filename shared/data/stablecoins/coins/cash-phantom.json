@@ -2,6 +2,7 @@
   "id": "cash-phantom",
   "name": "CASH",
   "symbol": "CASH",
+  "brand": "Phantom",
   "oneLiner": "CASH is Phantom and Bridge Building's centralized USD stablecoin on Solana, redeemable 1:1 and backed by short-term U.S. Treasuries, repos, and MMFs.",
   "flags": {
     "backing": "rwa-backed",

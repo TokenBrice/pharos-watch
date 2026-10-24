@@ -2,6 +2,7 @@
   "id": "fidd-fidelity",
   "name": "Fidelity Digital Dollar",
   "symbol": "FIDD",
+  "brand": "Fidelity",
   "oneLiner": "FIDD is Fidelity Digital Assets' dollar stablecoin, issued under an OCC national trust charter and backed by cash and short-term U.S. Treasuries at BNY Mellon.",
   "flags": {
     "backing": "rwa-backed",

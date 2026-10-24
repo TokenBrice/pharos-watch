@@ -2,6 +2,7 @@
   "id": "okrw-hashed",
   "name": "OKRW",
   "symbol": "OKRW",
+  "brand": "Hashed",
   "oneLiner": "OKRW is the pre-launch native KRW stablecoin of Maroo, Hashed Open Finance's sovereign L1 testnet for regulated and open-path Korean Won issuance.",
   "flags": {
     "backing": "rwa-backed",

@@ -2,6 +2,7 @@
   "id": "fxusd-f-x-protocol",
   "name": "fxUSD",
   "symbol": "fxUSD",
+  "brand": "f(x) Protocol",
   "oneLiner": "fxUSD is f(x) Protocol's CDP-minted dollar overcollateralized by WBTC and wstETH, with a Stability Pool arbitraging Curve to defend the peg.",
   "flags": {
     "backing": "crypto-backed",

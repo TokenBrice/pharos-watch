@@ -2,6 +2,7 @@
   "id": "usdy-ondo-finance",
   "name": "Ondo US Dollar Yield",
   "symbol": "USDY",
+  "brand": "Ondo",
   "oneLiner": "USDY is Ondo's yield-bearing secured note, backed by Treasuries, bank deposits and tokenized Treasury ETF exposure; qualifying non-U.S. investors only.",
   "flags": {
     "backing": "rwa-backed",

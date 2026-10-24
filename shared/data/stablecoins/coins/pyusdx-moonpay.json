@@ -2,6 +2,7 @@
   "id": "pyusdx-moonpay",
   "name": "PYUSDx",
   "symbol": "PYUSDx",
+  "brand": "MoonPay",
   "oneLiner": "PYUSDx is MoonPay's PYUSD-backed dollar token, redeemable 1:1 in PYUSD by eligible counterparties, with local freeze and mint controls.",
   "flags": {
     "backing": "crypto-backed",

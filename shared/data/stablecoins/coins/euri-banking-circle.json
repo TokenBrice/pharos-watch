@@ -2,6 +2,7 @@
   "id": "euri-banking-circle",
   "name": "Eurite",
   "symbol": "EURI",
+  "brand": "Banking Circle",
   "oneLiner": "EURI is Banking Circle's MiCA-licensed euro stablecoin, issued by a Luxembourg credit institution with fee-free 1:1 redemption against segregated euro reserves.",
   "marketAvailability": "market-traded",
   "flags": {

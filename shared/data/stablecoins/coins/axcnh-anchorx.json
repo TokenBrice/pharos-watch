@@ -2,6 +2,7 @@
   "id": "axcnh-anchorx",
   "name": "AxCNH",
   "symbol": "AxCNH",
+  "brand": "AnchorX",
   "oneLiner": "AxCNH is AnchorX's centralized offshore-yuan stablecoin, redeemable 1:1 for CNH and backed by CNH cash reserves at regulated financial institutions.",
   "flags": {
     "backing": "rwa-backed",

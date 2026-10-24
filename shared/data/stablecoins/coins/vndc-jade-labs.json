@@ -2,6 +2,7 @@
   "id": "vndc-jade-labs",
   "name": "VNDC",
   "symbol": "VNDC",
+  "brand": "Jade Labs",
   "oneLiner": "VNDC is Jade Labs's VND-denominated token, now disclosed as VNDC 2.0 backed by USDT/USDC pools under issuer and investigation risk.",
   "flags": {
     "backing": "crypto-backed",

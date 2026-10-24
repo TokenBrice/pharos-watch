@@ -2,6 +2,7 @@
   "id": "cadd-cad-digital",
   "name": "CAD Digital",
   "symbol": "CADD",
+  "brand": "Tetra Trust",
   "oneLiner": "CADD is Tetra Trust's regulated Canadian dollar stablecoin, redeemable 1:1 against CAD held in trust under Alberta's Loan and Trust Corporations Act.",
   "status": "active",
   "launchDate": "2026-05-04",

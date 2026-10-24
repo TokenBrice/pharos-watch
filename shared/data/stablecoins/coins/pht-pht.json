@@ -2,6 +2,7 @@
   "id": "pht-pht",
   "name": "PHT Stablecoin",
   "symbol": "PHT",
+  "brand": "APACX",
   "oneLiner": "PHT is APACX's Philippine peso CDP stablecoin using approved stablecoin collateral such as USDC/USDT, with apcxUSDT live in beta transparency.",
   "flags": {
     "backing": "crypto-backed",

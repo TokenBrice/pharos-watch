@@ -2,6 +2,7 @@
   "id": "usdpt-western-union",
   "name": "US Dollar Payment Token",
   "symbol": "USDPT",
+  "brand": "Western Union",
   "oneLiner": "USDPT is Western Union's Solana dollar stablecoin issued by Anchorage Digital Bank and backed by cash deposits and money market funds.",
   "flags": {
     "backing": "rwa-backed",

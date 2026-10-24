@@ -2,6 +2,7 @@
   "id": "roughrider-bnd",
   "name": "Roughrider Coin",
   "symbol": "ROUGHRIDER",
+  "brand": "Bank of North Dakota",
   "oneLiner": "Roughrider is the pre-launch Bank of North Dakota / Fiserv bank-to-bank pilot stablecoin, planned 1:1 USD-backed by deposits and short U.S. Treasury notes.",
   "flags": {
     "backing": "rwa-backed",

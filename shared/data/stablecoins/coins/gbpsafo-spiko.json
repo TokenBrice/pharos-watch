@@ -2,6 +2,7 @@
   "id": "gbpsafo-spiko",
   "name": "Spiko Amundi Overnight Swap Fund (GBP)",
   "symbol": "GBPSAFO",
+  "brand": "Spiko",
   "oneLiner": "GBPSAFO is the GBP share class of Spiko's Amundi-managed UCITS overnight-swap fund, authorized by France's AMF.",
   "flags": {
     "backing": "rwa-backed",

@@ -2,6 +2,7 @@
   "id": "ustb-superstate",
   "name": "Invesco Short Duration US Government Securities Fund",
   "symbol": "USTB",
+  "brand": "Invesco",
   "oneLiner": "USTB is Invesco's tokenized short-duration Treasury fund, managed by Invesco Advisers on Superstate infrastructure for accredited investors.",
   "flags": {
     "backing": "rwa-backed",

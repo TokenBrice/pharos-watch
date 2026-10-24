@@ -2,6 +2,7 @@
   "id": "paxg-paxos",
   "name": "PAX Gold",
   "symbol": "PAXG",
+  "brand": "Paxos",
   "oneLiner": "PAXG is Paxos's centralized gold token backed by allocated London Good Delivery gold held with Brink's and ICBC Standard Bank under OCC trust supervision.",
   "flags": {
     "backing": "rwa-backed",

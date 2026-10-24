@@ -2,6 +2,7 @@
   "id": "mai-qidao",
   "name": "MAI",
   "symbol": "MAI",
+  "brand": "QiDao",
   "oneLiner": "QiDao's MAI is overcollateralized, minted against crypto vaults; Base and Polygon are only live chains after legacy wind-down, with persistent sub-$1 trading.",
   "flags": {
     "backing": "crypto-backed",

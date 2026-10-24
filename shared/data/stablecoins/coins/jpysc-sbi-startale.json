@@ -4,6 +4,7 @@
   "geckoId": "jpysc",
   "name": "JPYSC",
   "symbol": "JPYSC",
+  "brand": "SBI",
   "oneLiner": "JPYSC is Shinsei Trust & Banking's Ethereum-issued, closed-loop yen stablecoin for verified SBI VC Trade users; external-wallet withdrawals remain disabled.",
   "flags": {
     "backing": "rwa-backed",
