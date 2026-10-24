@@ -58,8 +58,8 @@ describe("buildPreLaunchStablecoinJsonLd", () => {
       "@type": "WebPage",
       primaryImageOfPage: { "@type": "ImageObject", contentUrl: "https://pharos.watch/logos/coin.png" },
     });
-    expect(webPage.url).toBeDefined();
-    expect(thing.image).toBe("https://pharos.watch/logos/coin.png");
+    expect(webPage).toHaveProperty("url");
+    expect(thing).toMatchObject({ "@type": "Thing", image: "https://pharos.watch/logos/coin.png" });
   });
 });
 
