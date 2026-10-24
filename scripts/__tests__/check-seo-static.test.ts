@@ -340,6 +340,15 @@ describe("check-seo-static", () => {
       ],
     },
     {
+      name: "fails retired-coin redirects into a peg hub the build does not export",
+      redirects: "/stablecoin/retired-coin /stablecoins/hkd/ 301\n/stablecoin/other-coin /stablecoins/usd/ 301\n",
+      extraPages: { "/stablecoins/usd/": { h1: "US Dollar stablecoins" } },
+      errors: [
+        "_redirects source /stablecoin/retired-coin targets /stablecoins/hkd/, which the build does not export; redirect it to /coverage/",
+      ],
+      absentErrors: ["_redirects source /stablecoin/other-coin targets"],
+    },
+    {
       name: "accepts static redirect rules ahead of dynamic rules",
       redirects: "/old/ /new/ 301\n/retired /new/ 301\n/old/* /new/:splat 301\n",
       absentErrors: ["follows a dynamic rule", "dynamic-counted rules"],

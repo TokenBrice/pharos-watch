@@ -520,6 +520,19 @@ function validateStaticRedirects(rules, errors) {
   }
 }
 
+// Retired coin IDs 301 to their peg hub only while that hub is built (hubs
+// exist only for currencies with an active coin); a hub that leaves the export
+// must not turn the redirect into a 404.
+function validateTaxonomyRedirectDestinations(rules, outDir, errors) {
+  for (const rule of rules) {
+    const destinationPath = redirectPathTemplate(rule.destination);
+    if (!destinationPath?.startsWith("/stablecoins/")) continue;
+    if (!fs.existsSync(path.join(outDir, destinationPath, "index.html"))) {
+      errors.push(`_redirects source ${rule.source} targets ${rule.destination}, which the build does not export; redirect it to /coverage/`);
+    }
+  }
+}
+
 function validateStaticHeaders(outDir, errors) {
   const headersPath = path.join(outDir, "_headers");
   if (!fs.existsSync(headersPath)) {
@@ -934,6 +947,7 @@ export function collectSeoStaticCheckResult({
   const redirectRules = redirectEntries.filter((entry) => entry.destination);
   validateStaticHeaders(outDir, errors);
   validateStaticRedirects(redirectRules, errors);
+  validateTaxonomyRedirectDestinations(redirectRules, outDir, errors);
 
   for (const record of pageRecords) {
     if (record.hasFatalCsrBailout) {
