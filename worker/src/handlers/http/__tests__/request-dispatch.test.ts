@@ -423,6 +423,34 @@ describe("handleHttpRequestImpl", () => {
     expect(mocks.route).not.toHaveBeenCalled();
   });
 
+  it.each(["GET", "HEAD"])("redirects a %s of the bare public API host to the API docs", async (method) => {
+    mocks.resolveRoute.mockReturnValue(null);
+
+    const response = await handleHttpRequestImpl(
+      new Request("https://api.pharos.watch/", { method }),
+      makeEnv(),
+      makeCtx(),
+    );
+
+    expect(response.status).toBe(301);
+    expect(response.headers.get("Location")).toBe("https://pharos.watch/api/");
+    expect(mocks.notFoundResponse).not.toHaveBeenCalled();
+    expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["https://api.pharos.watch/", "POST"],
+    ["https://site-api.pharos.watch/", "GET"],
+    ["https://api.pharos.watch/robots.txt", "GET"],
+  ])("keeps the 404 for %s %s", async (url, method) => {
+    mocks.resolveRoute.mockReturnValue(null);
+
+    const response = await handleHttpRequestImpl(new Request(url, { method }), makeEnv(), makeCtx());
+
+    expect(response.status).toBe(404);
+    expect(mocks.notFoundResponse).toHaveBeenCalledOnce();
+  });
+
   it("records attribution and writes edge cache on successful routing", async () => {
     const routedResponse = new Response(JSON.stringify({ ok: true }), {
       status: 200,

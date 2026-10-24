@@ -1,3 +1,4 @@
+import { API_HOSTNAME, SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { resolveRoute, route } from "../../router";
 import type { Env } from "../../lib/env";
 import {
@@ -21,6 +22,13 @@ import {
   notFoundResponse,
   warnWorkerEnvIssuesOnce,
 } from "./gates";
+
+/** People who open the bare public API host land on the API docs instead of a JSON 404. */
+function apiHostRootRedirect(request: Request, url: URL): Response | null {
+  if (url.hostname !== API_HOSTNAME || url.pathname !== "/") return null;
+  if (request.method !== "GET" && request.method !== "HEAD") return null;
+  return Response.redirect(`${SITE_ORIGIN}/api/`, 301);
+}
 
 export async function handleHttpRequestImpl(
   request: Request,
@@ -110,7 +118,7 @@ export async function handleHttpRequestImpl(
   const resolvedRoute = resolveRoute(url, routedRequest.method);
   if (resolvedRoute == null) {
     recordRequestSource();
-    return addCorsHeaders(notFoundResponse(), origin);
+    return addCorsHeaders(apiHostRootRedirect(routedRequest, url) ?? notFoundResponse(), origin);
   }
 
   const response = await route(
