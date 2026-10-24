@@ -97,7 +97,7 @@
     }
   },
   "yieldConfig": {
-    "yieldSource": "USDGO EFFR-linked reserve yield",
+    "yieldSource": "OSL-distributed EFFR-linked yield for professional investors",
     "yieldType": "governance-set"
   },
   "launchDate": "2026-02-10"
