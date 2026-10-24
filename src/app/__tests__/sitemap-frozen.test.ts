@@ -8,6 +8,9 @@ import sitemap from "../sitemap";
 import digests from "../../../data/digests.json";
 import { METHODOLOGY_HISTORY_ARCHIVES } from "@shared/lib/methodology-versions/archives";
 import { CHANGELOG_MONTH_ARCHIVES } from "@/lib/changelog-history";
+import { getActiveChainIds } from "@shared/lib/chains";
+import { PEG_HUB_PAGES } from "@/lib/peg-taxonomy";
+import sitemapDates from "@/generated/sitemap-dates.json";
 
 const entries = sitemap();
 const urls = new Set(entries.map((entry) => entry.url));
@@ -31,6 +34,22 @@ describe("sitemap", () => {
     for (const entry of entries) {
       expect(entry.lastModified, entry.url).toBeInstanceOf(Date);
       expect(Number.isFinite((entry.lastModified as Date).getTime()), entry.url).toBe(true);
+    }
+  });
+
+  it("dates chain pages by their route edit, not the daily data snapshot", () => {
+    const dates = sitemapDates as Record<string, string>;
+    for (const chainId of getActiveChainIds()) {
+      const path = `/chains/${chainId}/`;
+      expect(entriesByUrl.get(`${SITE_ORIGIN}${path}`)?.lastModified, path).toEqual(
+        new Date(dates[path] ?? dates["/chains/"]),
+      );
+    }
+  });
+
+  it("includes every peg hub, pre-launch-only hubs included", () => {
+    for (const page of PEG_HUB_PAGES) {
+      expect(urls.has(`${SITE_ORIGIN}${page.href}`), page.href).toBe(true);
     }
   });
 

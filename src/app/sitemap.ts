@@ -232,14 +232,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "daily",
       priority: 0.8,
     },
+    // Chain pages move with their route's edit date, not the daily data
+    // snapshot: the digest timestamp claimed 128 simultaneous changes a day.
     ...getActiveChainIds().map((chainId) => ({
       url: `${SITE_URL}/chains/${chainId}/`,
-      lastModified: new Date(
-        Math.max(
-          lastEdited(`/chains/${chainId}/`, "/chains/").getTime(),
-          latestDataSnapshotMs,
-        ),
-      ),
+      lastModified: lastEdited(`/chains/${chainId}/`, "/chains/"),
       changeFrequency: "daily" as const,
       priority: 0.5,
     })),

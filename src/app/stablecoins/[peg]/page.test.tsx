@@ -2,7 +2,12 @@
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { PEG_HUB_PAGES, PEG_TAXONOMY_PAGES, PEG_TAXONOMY_PAGE_BY_SLUG } from "@/lib/peg-taxonomy";
+import {
+  PEG_HUB_PAGES,
+  PEG_TAXONOMY_PAGES,
+  PEG_TAXONOMY_PAGE_BY_SLUG,
+  PRE_LAUNCH_PEG_TAXONOMY_PAGES,
+} from "@/lib/peg-taxonomy";
 import PegPage from "./page";
 
 vi.mock("./client", () => ({
@@ -78,20 +83,21 @@ describe("PegPage", () => {
     expect(html.indexOf("peg client EUR")).toBeLessThan(html.indexOf("peg-at-a-glance"));
   });
 
-  it("serves an all-pre-launch peg as a hub with launch copy and no live table", async () => {
-    const hkd = PEG_TAXONOMY_PAGE_BY_SLUG.get("hkd")!;
-    expect(hkd.preLaunchOnly).toBe(true);
-    expect(hkd.coins.length).toBeGreaterThanOrEqual(2);
-    expect(hkd.title).toContain("Hong Kong Dollar (HKD) Stablecoins:");
-    expect(hkd.title).not.toContain("Ranked by Risk");
-    expect(PEG_TAXONOMY_PAGES.some((page) => page.slug === "hkd")).toBe(false);
+  it("serves each all-pre-launch peg as a hub with launch copy and no live table", async () => {
+    for (const page of PRE_LAUNCH_PEG_TAXONOMY_PAGES) {
+      expect(page.preLaunchOnly).toBe(true);
+      expect(page.coins.length, page.slug).toBeGreaterThanOrEqual(2);
+      expect(page.title, page.slug).toContain(`${page.shortLabel} (${page.value}) Stablecoins:`);
+      expect(page.title, page.slug).not.toContain("Ranked by Risk");
+      expect(PEG_TAXONOMY_PAGES.some((active) => active.slug === page.slug)).toBe(false);
 
-    const html = renderToStaticMarkup(await PegPage({ params: Promise.resolve({ peg: "hkd" }) }));
-    expect(html).not.toContain("peg client");
-    expect(html).not.toContain("Compare leaders");
-    expect(html).not.toContain("live table above");
-    // next/link drops the trailing slash outside the app's trailingSlash config.
-    for (const coin of hkd.coins) expect(html).toContain(`href="/stablecoin/${coin.id}`);
+      const html = renderToStaticMarkup(await PegPage({ params: Promise.resolve({ peg: page.slug }) }));
+      expect(html).not.toContain("peg client");
+      expect(html).not.toContain("Compare leaders");
+      expect(html).not.toContain("live table above");
+      // next/link drops the trailing slash outside the app's trailingSlash config.
+      for (const coin of page.coins) expect(html).toContain(`href="/stablecoin/${coin.id}`);
+    }
   });
 
 });
