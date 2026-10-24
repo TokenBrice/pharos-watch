@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { PreLaunchAlertAction } from "@/components/pre-launch-alert-action";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ShareButton } from "@/components/share-button";
@@ -11,6 +10,8 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { UpcomingClient } from "@/components/upcoming-client";
+import { UpcomingStaticSections } from "@/components/upcoming-static-sections";
+import { buildLatestLaunchNews, buildUpcomingCurrencyGroups } from "@/lib/upcoming-static-content";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import aiSummaries from "@data/ai-summaries.json";
 
@@ -101,14 +102,11 @@ export default function UpcomingPage() {
         teasers={PRE_LAUNCH_TEASERS}
       />
 
-      {/* Server-rendered links for SEO crawlability */}
-      <nav aria-label="Upcoming stablecoins index" className="sr-only">
-        {PRE_LAUNCH_STABLECOINS.map((coin) => (
-          <Link key={coin.id} href={buildStablecoinUrl(coin.id)}>
-            {coin.name} ({coin.symbol}) — Pre-launch stablecoin
-          </Link>
-        ))}
-      </nav>
+      {/* Server-rendered news and currency groups; the groups link every pre-launch profile. */}
+      <UpcomingStaticSections
+        news={buildLatestLaunchNews(PRE_LAUNCH_STABLECOINS)}
+        groups={buildUpcomingCurrencyGroups(PRE_LAUNCH_STABLECOINS)}
+      />
     </FeaturePageShell>
   );
 }

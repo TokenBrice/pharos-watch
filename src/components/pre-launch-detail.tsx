@@ -34,6 +34,7 @@ import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosu
 import { StablecoinDetailIdentityProvider } from "@/components/stablecoin-detail/module-title";
 import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-detail/constants";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { getLogoSrc, logosById } from "@/lib/logos";
@@ -41,6 +42,9 @@ import { buildPegLandingUrl } from "@/lib/peg-landing";
 import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import { formatFuzzyDate } from "@/lib/pre-launch";
 import { buildLaunchVerdict, describeTargetHistory, sortMilestonesNewestFirst } from "@/lib/pre-launch-dossier";
+import { buildPreLaunchQuickAnswers } from "@/lib/pre-launch-quick-answers";
+import { buildFaqJsonLd } from "@/lib/faq";
+import { safeJsonLd } from "@/lib/json-ld";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { FeaturedContent, LaunchMilestone, StablecoinAiSummary, StablecoinMeta } from "@shared/types";
 
@@ -219,6 +223,25 @@ function LaunchPathModule({ coin }: { coin: StablecoinMeta }) {
         </EvidenceFooter>
       }
     />
+  );
+}
+
+/** Launch-intent answers from registry fields only; the FAQPage JSON-LD mirrors the visible text. */
+function LaunchQuickAnswers({ coin }: { coin: StablecoinMeta }) {
+  const items = buildPreLaunchQuickAnswers(coin);
+  return (
+    <section id="launch-quick-answers" aria-labelledby="launch-quick-answers-title" className="space-y-3">
+      <DetailSectionTitle id="launch-quick-answers-title">Launch status: quick answers</DetailSectionTitle>
+      <dl className="pharos-card-shell gap-0 divide-y divide-border/50 py-0">
+        {items.map((item) => (
+          <div key={item.question} className="px-4 py-3 sm:px-5">
+            <dt className="text-sm font-medium text-foreground">{item.question}</dt>
+            <dd className="mt-1 break-words text-sm leading-relaxed text-muted-foreground">{item.answer}</dd>
+          </div>
+        ))}
+      </dl>
+      <JsonLdScript json={safeJsonLd(buildFaqJsonLd(items))} />
+    </section>
   );
 }
 
@@ -487,6 +510,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary }: PreLaunchDetailProps
           />
           {summary ? <AiSummary {...summary} /> : null}
           <LaunchPathModule coin={coin} />
+          <LaunchQuickAnswers coin={coin} />
           <ActivityModule coin={coin} />
           {coin.featuredContent && coin.featuredContent.length > 0 ? (
             <FeaturedCoverage items={coin.featuredContent} />

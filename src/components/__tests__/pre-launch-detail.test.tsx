@@ -115,6 +115,18 @@ describe("PreLaunchDetail", () => {
     expect(document.getElementById("launch-path")?.textContent).toContain("earlier target retired, none set");
   });
 
+  it("server-renders launch quick answers with matching FAQPage JSON-LD", () => {
+    const document = staticDocument();
+    const section = document.getElementById("launch-quick-answers");
+    expect(section?.querySelector("h2")?.textContent).toBe("Launch status: quick answers");
+    const questions = [...(section?.querySelectorAll("dt") ?? [])].map((node) => node.textContent);
+    expect(questions).toEqual(["When will TEST launch?", "Is TEST live yet?"]);
+    expect(section?.querySelector("dd")?.textContent).toContain("The current launch target is Q4 2026");
+    const jsonLd = JSON.parse(section?.querySelector('script[type="application/ld+json"]')?.textContent ?? "{}");
+    expect(jsonLd["@type"]).toBe("FAQPage");
+    expect(jsonLd.mainEntity.map((entry: { name: string }) => entry.name)).toEqual(questions);
+  });
+
   it("ranks same-currency upcoming siblings first in the related rail", () => {
     const document = staticDocument({ ...coin, flags: { ...coin.flags, pegCurrency: "HKD" } });
     const related = document.querySelector('[aria-label="Related stablecoins"]');
