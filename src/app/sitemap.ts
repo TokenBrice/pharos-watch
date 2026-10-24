@@ -28,6 +28,7 @@ import {
   COLLIDING_DEPEG_EVENT_SLUGS,
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
   DEPEG_EVENT_ENTRIES,
+  INDEXABLE_DEPEG_EVENT_ENTRIES,
 } from "@/lib/depeg-event-page-data";
 import { API_ACCESS_PAGE_PATH, PUBLIC_PRIMARY_ROUTE_PATHS, PUBLIC_REFERENCE_ROUTE_PATHS } from "@/lib/public-route-inventory";
 
@@ -259,7 +260,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.5,
   }));
 
-  const depegEventPages: MetadataRoute.Sitemap = DEPEG_EVENT_ENTRIES.map((e) => ({
+  const depegEventPages: MetadataRoute.Sitemap = INDEXABLE_DEPEG_EVENT_ENTRIES.map((e) => ({
     url: `${SITE_URL}/depeg/${e.slug}/`,
     lastModified: new Date(
       Math.max(

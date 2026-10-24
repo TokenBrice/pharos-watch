@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildNoindexDepegEventSlugs,
   DEPEG_ARCHIVE_EPOCH_SECONDS,
   hasDedicatedDepegEventPage,
+  isLowConfidenceDepegEvent,
   selectIndexableDepegEvents,
   selectStaticDepegEventPages,
 } from "@/lib/depeg-event-config";
@@ -61,5 +63,56 @@ describe("depeg event indexing policy", () => {
       "big-2026-03-01",
       "usdc-2023-03-11",
     ]);
+  });
+});
+
+describe("depeg event noindex tier", () => {
+  const DAY = EPOCH + 30 * 86_400;
+  const event = (slug: string, overrides: Partial<{ stablecoinId: string; startedAt: number; peakDeviationBps: number; pendingReason: string | null }> = {}) => ({
+    slug,
+    stablecoinId: "coin-a",
+    startedAt: DAY,
+    peakDeviationBps: -600,
+    pendingReason: null,
+    ...overrides,
+  });
+
+  it("recognises low-confidence holds inside compound pending reasons", () => {
+    expect(isLowConfidenceDepegEvent({ pendingReason: "confirmation-window+low-confidence" })).toBe(true);
+    expect(isLowConfidenceDepegEvent({ pendingReason: "low-confidence" })).toBe(true);
+    expect(isLowConfidenceDepegEvent({ pendingReason: "extreme-move+native-origin" })).toBe(false);
+    expect(isLowConfidenceDepegEvent({ pendingReason: null })).toBe(false);
+  });
+
+  it("keeps the largest-peak event of a same-coin, same-day cluster and noindexes the rest", () => {
+    const noindex = buildNoindexDepegEventSlugs([
+      event("a-1", { startedAt: DAY + 60, peakDeviationBps: -700 }),
+      event("a-2", { startedAt: DAY + 3_600, peakDeviationBps: 1_200 }),
+      event("a-3", { startedAt: DAY + 7_200, peakDeviationBps: -800 }),
+      event("a-next-day", { startedAt: DAY + 86_400, peakDeviationBps: -550 }),
+      event("b-1", { stablecoinId: "coin-b", startedAt: DAY + 60, peakDeviationBps: -550 }),
+    ]);
+
+    expect([...noindex].sort()).toEqual(["a-1", "a-3"]);
+  });
+
+  it("noindexes low-confidence events and never picks one as the cluster lead", () => {
+    const noindex = buildNoindexDepegEventSlugs([
+      event("solo-low", { stablecoinId: "coin-c", pendingReason: "low-confidence" }),
+      event("big-low", { peakDeviationBps: -2_000, pendingReason: "confirmation-window+low-confidence" }),
+      event("small-trusted", { startedAt: DAY + 60, peakDeviationBps: -600 }),
+    ]);
+
+    expect([...noindex].sort()).toEqual(["big-low", "solo-low"]);
+  });
+
+  it("never noindexes a page with recent search impressions", () => {
+    const noindex = buildNoindexDepegEventSlugs([
+      event("kag-2026-06-14", { pendingReason: "low-confidence" }),
+      event("usdp-2026-05-06", { peakDeviationBps: -550 }),
+      event("bigger-sibling", { peakDeviationBps: -900 }),
+    ]);
+
+    expect([...noindex]).toEqual([]);
   });
 });

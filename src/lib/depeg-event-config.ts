@@ -83,15 +83,86 @@ export function selectIndexableDepegEvents<T extends DepegEventIndexCandidate>(
 }
 
 /**
- * Static pages and indexable pages are deliberately the same set: every
- * generated event page is linked from the archive, listed in the sitemap,
- * and served `index,follow`. Each qualifying record carries the measured
- * price path, resolution state, source, and methodology context needed for
- * the route's data-driven briefing, so there is no low-information noindex
- * tier within the current archive.
+ * Every static event page is permanent and linked from `/depeg/archive/`.
+ * Search indexing is a narrower set: see `buildNoindexDepegEventSlugs`.
  */
 export function selectStaticDepegEventPages<T extends DepegEventStaticPageCandidate>(
   events: readonly T[],
 ): readonly T[] {
   return selectIndexableDepegEvents(events.filter(hasDedicatedDepegEventPage));
+}
+
+/**
+ * Event pages that earned Google Search impressions in the three months to
+ * 2026-10-22 (Search Console Pages export, 2026-10-25 SEO plan). They stay
+ * `index,follow` whatever the thin-page rules below say. The export lists
+ * every page with a click and 0-click pages down to 117 impressions.
+ */
+const SEARCH_IMPRESSION_DEPEG_EVENT_SLUGS: ReadonlySet<string> = new Set([
+  "alusd-2026-05-01-down-89786",
+  "eurs-2026-06-19",
+  "eurs-2026-07-12",
+  "jpyc-2026-05-12",
+  "kag-2026-03-01-up-78521",
+  "kag-2026-06-14",
+  "mim-2026-06-08",
+  "msusd-2026-06-21",
+  "musd-2026-04-13-up-89598",
+  "satusd-2026-02-25-down-31917",
+  "usdc-2023-03-11",
+  "usdp-2026-05-06",
+  "usdxl-2026-05-29",
+]);
+
+interface DepegEventNoindexCandidate extends DepegEventPageCandidate {
+  slug: string;
+  stablecoinId: string;
+  startedAt: number;
+  pendingReason?: string | null;
+}
+
+export function isLowConfidenceDepegEvent(event: Pick<DepegEventNoindexCandidate, "pendingReason">): boolean {
+  return (event.pendingReason ?? "").split("+").includes("low-confidence");
+}
+
+/**
+ * Permanent event pages served `noindex, follow` and left out of the sitemap
+ * and public route inventory. They stay live and listed in the archive, so
+ * the published-URL continuity gate is satisfied without redirects.
+ *
+ * This reverses the earlier "every event page is indexable" policy (2026-10-25
+ * SEO plan, decision D5). Same-day fragments of one episode read as near
+ * duplicates (Google chose a sibling canonical for one GYD fragment), and
+ * only 13 of 261 event pages earned impressions. Pages are not merged:
+ * the producer owns the event vocabulary. Two thin-page rules apply:
+ * - the event's opening was held for verification on a low-confidence price input;
+ * - it is a secondary event in a same-coin, same-UTC-day cluster. The event
+ *   with the largest absolute peak (low-confidence events excluded) stays indexed.
+ * Pages with recent search impressions are never noindexed.
+ */
+export function buildNoindexDepegEventSlugs(
+  events: readonly DepegEventNoindexCandidate[],
+): ReadonlySet<string> {
+  const clusters = new Map<string, DepegEventNoindexCandidate[]>();
+  for (const event of events) {
+    const key = `${event.stablecoinId}:${new Date(event.startedAt * 1000).toISOString().slice(0, 10)}`;
+    const cluster = clusters.get(key);
+    if (cluster) cluster.push(event);
+    else clusters.set(key, [event]);
+  }
+
+  const noindex = new Set<string>();
+  for (const cluster of clusters.values()) {
+    const lead = cluster
+      .filter((event) => !isLowConfidenceDepegEvent(event))
+      .sort((a, b) =>
+        getPeakDeviationMagnitudeBps(b) - getPeakDeviationMagnitudeBps(a)
+        || a.startedAt - b.startedAt
+        || a.slug.localeCompare(b.slug))[0];
+    for (const event of cluster) {
+      if (SEARCH_IMPRESSION_DEPEG_EVENT_SLUGS.has(event.slug)) continue;
+      if (isLowConfidenceDepegEvent(event) || event !== lead) noindex.add(event.slug);
+    }
+  }
+  return noindex;
 }
