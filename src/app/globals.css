@@ -157,7 +157,7 @@
 /* Named stacking layers (`z-chrome`, `z-modal`, …), lowest first. Fixed and
    sticky chrome sits below the regime line, which sits below every dialog,
    sheet and floating menu; toasts and skip links stay on top. */
-@theme {
+@theme static {
   --z-index-chrome: 50;
   --z-index-chrome-dock: 55;
   --z-index-chrome-header: 56;

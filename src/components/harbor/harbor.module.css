@@ -82,6 +82,7 @@
 /* ------------------------------------------------------------------ layout */
 .hero {
   position: relative;
+  isolation: isolate;
 }
 .head {
   display: flex;
@@ -547,7 +548,7 @@
   left: 0;
   right: 0;
   bottom: var(--sheet-bottom);
-  z-index: 56;
+  z-index: var(--z-index-chrome-header);
   max-height: 52dvh;
   overflow-y: auto;
   overscroll-behavior: contain;
