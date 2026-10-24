@@ -23,7 +23,7 @@ import {
   STATIC_COMPARISON_PAGE_BY_SLUG,
   STATIC_COMPARISON_PAGES,
 } from "@/lib/compare-pages";
-import { buildLiveCompareUrl } from "@/lib/compare-links";
+import { buildComparePrefillUrl } from "@/lib/compare-links";
 import { safeJsonLd } from "@/lib/json-ld";
 import { PEG_SLUGS } from "@/lib/peg-landing";
 import { createStaticSlugRoute } from "@/lib/static-slug-page";
@@ -35,7 +35,7 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
   const faqItems = buildComparisonFaqItems(page);
   const researchLinks = buildComparisonResearchLinks(page);
   const snippetAnswer = buildComparisonSnippetAnswer(page);
-  const liveCompareHref = buildLiveCompareUrl([page.left.id, page.right.id]);
+  const liveCompareHref = buildComparePrefillUrl([page.left.id, page.right.id]);
   const detailHrefByCoinId = new Map(
     [page.left, page.right].map((coin) => [coin.id, buildStablecoinUrl(coin.id)]),
   );

@@ -3,7 +3,7 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
-import { STATIC_COMPARE_PAIRS, buildLiveCompareUrl, buildStaticComparisonSlug } from "@/lib/compare-links";
+import { STATIC_COMPARE_PAIRS, buildComparePrefillUrl, buildStaticComparisonSlug } from "@/lib/compare-links";
 import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-current";
 import { trimTextAtWordBoundary } from "@/lib/page-metadata";
 import { getSnapshotSafetyAssessment, type SnapshotSafetyAssessment } from "@/lib/safety-grade-snapshot";
@@ -340,7 +340,7 @@ export function buildComparisonResearchLinks(page: StaticComparisonPage) {
       label: `${page.right.name} (${page.right.symbol}) detail page`,
     },
     {
-      href: buildLiveCompareUrl([page.left.id, page.right.id]),
+      href: buildComparePrefillUrl([page.left.id, page.right.id]),
       label: `Open the live ${page.shortTitle} compare tool`,
     },
     {
