@@ -11,7 +11,9 @@ vi.mock("next/link", async () => {
   return createNextLinkMock();
 });
 
-import MethodologyPage from "@/app/methodology/page";
+import MethodologyPage, { metadata } from "@/app/methodology/page";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
+import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/registry";
 import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 import { PSI_COMPONENT_LIMITS, PSI_CONDITION_BANDS, getConditionBand } from "@shared/lib/psi-policy";
 import { GAUGE_BAND_RANGES, getGaugeBand } from "@shared/lib/mint-burn-gauge-bands";
@@ -36,6 +38,24 @@ function tableCells(root: HTMLElement, testId: string) {
 }
 
 describe("MethodologyPage", () => {
+  it("names the Safety Score version, weights and changelog dates in metadata and the header", () => {
+    const latest = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0];
+    expect(metadata.title).toBe(`Stablecoin Safety Score Methodology (${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL})`);
+    expect(metadata.description).toBe(
+      `How Pharos grades stablecoins A+ to F: Backing 40%, Exit 35%, Economic Control 25%, with peg, liquidity and dependency inputs. Safety Score ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}.`,
+    );
+    const root = methodologyDocument();
+    const article = [...root.querySelectorAll('script[type="application/ld+json"]')]
+      .map((script) => JSON.parse(script.textContent!))
+      .find((entry) => entry.headline === metadata.title);
+    expect(article).toMatchObject({
+      datePublished: `${SAFETY_SCORE_METHODOLOGY_CHANGELOG.at(-1)!.date}T00:00:00Z`,
+      dateModified: `${latest.date}T00:00:00Z`,
+    });
+    const versionLine = root.querySelector(`time[datetime="${latest.date}"]`)?.parentElement?.textContent;
+    expect(versionLine?.startsWith(`Safety Score methodology ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL} · updated `)).toBe(true);
+  });
+
   it("discloses provisional uncertainty, single-key repricing and the final R4 calibration rules", () => {
     const section = methodologyDocument().querySelector("#safety-scores-methodology")!;
     const text = section.textContent!;
