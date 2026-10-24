@@ -75,6 +75,13 @@ const PEG_COUNT_ORDER = [
   "AED",
 ] as const;
 
+/**
+ * A peg with no active coin still gets a `/stablecoins/<peg>/` hub once this
+ * many pre-launch coins share it (owner decision D3, 2026-10-25). `OTHER` is
+ * not a currency and never gets a hub.
+ */
+export const PRE_LAUNCH_HUB_MIN_COINS = 2;
+
 export interface StablecoinClientProjectionCoin {
   id: string;
   name: string;
@@ -92,7 +99,7 @@ export interface StablecoinClientProjectionSources {
   coreAggregateActive: readonly StablecoinClientProjectionCoin[];
   activeVariants: readonly unknown[];
   activeStableValueInvestments: readonly unknown[];
-  preLaunch: readonly unknown[];
+  preLaunch: readonly StablecoinClientProjectionCoin[];
   dead: readonly unknown[];
   pegOrder?: readonly string[];
   pegCountOrder?: readonly string[];
@@ -123,6 +130,17 @@ export function buildStablecoinClientProjections({
   }
 
   const activePegCurrencies = pegOrder.filter((peg) => activePegCurrencyCounts[peg] != null);
+  const preLaunchPegCurrencyCounts: Record<string, number> = {};
+  for (const coin of preLaunch) {
+    const peg = coin.flags.pegCurrency;
+    preLaunchPegCurrencyCounts[peg] = (preLaunchPegCurrencyCounts[peg] ?? 0) + 1;
+  }
+  const preLaunchHubPegCurrencies = pegOrder.filter(
+    (peg) =>
+      peg !== "OTHER"
+      && activePegCurrencyCounts[peg] == null
+      && (preLaunchPegCurrencyCounts[peg] ?? 0) >= PRE_LAUNCH_HUB_MIN_COINS,
+  );
   const commandPaletteStablecoins = tracked.map((coin) => {
     const row: string[] = [coin.id, coin.name, coin.symbol];
     if (coin.status != null && coin.status !== "active") {
@@ -145,6 +163,7 @@ export function buildStablecoinClientProjections({
     deadStablecoinCount: dead.length + tracked.filter((coin) => coin.status === "frozen").length,
     activePegCurrencyCounts,
     activePegCurrencies,
+    preLaunchHubPegCurrencies,
     activeStablecoinIds: active.map((coin) => coin.id),
     homepageTopCoreStablecoins: coreAggregateActive.slice(0, 20).map(({ id, name, symbol }) => ({
       id,
@@ -172,6 +191,9 @@ export const ACTIVE_PEG_CURRENCY_COUNTS = ${JSON.stringify(projection.activePegC
 export const ACTIVE_PEG_CURRENCIES = ${JSON.stringify(projection.activePegCurrencies)} as const;
 
 export const ACTIVE_PEG_CURRENCY_COUNT = ACTIVE_PEG_CURRENCIES.length;
+
+/** Pegs with no active coin but enough pre-launch coins for a hub page. */
+export const PRE_LAUNCH_HUB_PEG_CURRENCIES = ${JSON.stringify(projection.preLaunchHubPegCurrencies)} as const;
 
 export const ACTIVE_STABLECOIN_ID_SET: ReadonlySet<string> = new Set(${JSON.stringify(projection.activeStablecoinIds, null, 2)});
 

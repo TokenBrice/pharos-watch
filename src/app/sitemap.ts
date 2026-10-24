@@ -4,7 +4,7 @@ import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-regis
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import { CASE_STUDY_LIST } from "@/lib/case-studies";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
-import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
+import { PEG_HUB_PEGS, PEG_HUB_SLUGS } from "@/lib/peg-landing";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -245,9 +245,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
   ];
 
-  const pegPages: MetadataRoute.Sitemap = ACTIVE_PEGS.map((peg) => ({
-    url: `${SITE_URL}/stablecoins/${PEG_SLUGS[peg]}/`,
-    lastModified: lastEdited(`/stablecoins/${PEG_SLUGS[peg]}/`, "/stablecoins/"),
+  const pegPages: MetadataRoute.Sitemap = PEG_HUB_PEGS.map((peg) => ({
+    url: `${SITE_URL}/stablecoins/${PEG_HUB_SLUGS[peg]}/`,
+    lastModified: lastEdited(`/stablecoins/${PEG_HUB_SLUGS[peg]}/`, "/stablecoins/"),
     changeFrequency: "daily" as const,
     priority: 0.7,
   }));

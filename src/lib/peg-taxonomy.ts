@@ -1,18 +1,22 @@
 import {
   CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS,
+  CLIENT_TRACKED_STABLECOINS,
   type StablecoinClientMeta,
 } from "@shared/lib/stablecoins/client-registry";
+import { isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { pegCurrencyToFilterTag } from "@shared/lib/filter-tags";
 import { formatProseList } from "@shared/lib/format";
 import type { PegCurrency } from "@shared/types";
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
 import {
   ACTIVE_PEGS,
+  PEG_HUB_SLUGS,
   PEG_INTRO,
   PEG_LABELS,
   PEG_LABELS_SHORT,
   PEG_MARKET_CONTEXT,
   PEG_SLUGS,
+  PRE_LAUNCH_HUB_PEGS,
 } from "@/lib/peg-landing";
 
 export interface PegTaxonomyPage {
@@ -26,7 +30,21 @@ export interface PegTaxonomyPage {
   topCoins: StablecoinClientMeta[];
   riskSummary: string;
   filterTag: ReturnType<typeof pegCurrencyToFilterTag>;
+  /** Active coins; on a pre-launch-only hub, the pre-launch coins it lists. */
   coins: StablecoinClientMeta[];
+  /** Pre-launch coins sharing this peg, in canonical order (the static "Upcoming" list). */
+  upcomingCoins: StablecoinClientMeta[];
+  /** Every tracked coin on this peg is pre-launch: no live table, no risk ranking yet. */
+  preLaunchOnly: boolean;
+}
+
+/** Commodity and index pegs keep their plain label: "Gold (GOLD)" adds nothing. */
+const UNCODED_TITLE_PEGS: ReadonlySet<PegCurrency> = new Set<PegCurrency>(["GOLD", "SILVER", "VAR"]);
+/** Leaves room for the root " | Pharos" title template within the 70-character snippet budget. */
+const MAX_TITLE_CORE_LENGTH = 61;
+
+function firstWithinTitleBudget(candidates: readonly string[]): string {
+  return candidates.find((candidate) => candidate.length <= MAX_TITLE_CORE_LENGTH) ?? candidates[candidates.length - 1];
 }
 
 function formatCoinList(coins: readonly Pick<StablecoinClientMeta, "name" | "symbol">[]): string {
@@ -49,11 +67,37 @@ function getTopCountLabel(count: number): string {
   return `${count} tracked stablecoin${count === 1 ? "" : "s"}`;
 }
 
-function buildPegTaxonomyTitle(shortLabel: string, count: number): string {
-  const coinLabel = `${count} Coin${count === 1 ? "" : "s"}`;
-  return count === 1
-    ? `${shortLabel} Stablecoin: 1 Coin Tracked`
-    : `${shortLabel} Stablecoins: ${coinLabel} Ranked by Risk`;
+/**
+ * Currency hubs carry the ISO code ("Euro (EUR) Stablecoins: 19 Tracked,
+ * Ranked by Risk") so the title and h1 answer "{CUR} stablecoins" queries.
+ */
+function buildPegTaxonomyTitle(peg: PegCurrency, shortLabel: string, count: number): string {
+  if (UNCODED_TITLE_PEGS.has(peg)) {
+    return count === 1
+      ? `${shortLabel} Stablecoin: 1 Coin Tracked`
+      : `${shortLabel} Stablecoins: ${count} Coins Ranked by Risk`;
+  }
+  const name = `${shortLabel} (${peg})`;
+  if (count === 1) return `${name} Stablecoin: 1 Coin Tracked`;
+  return firstWithinTitleBudget([
+    `${name} Stablecoins: ${count} Tracked, Ranked by Risk`,
+    `${name} Stablecoins: ${count} Tracked`,
+  ]);
+}
+
+/** A pre-launch-only hub ranks nothing yet, so its title names the launches instead. */
+function buildPreLaunchPegTaxonomyTitle(peg: PegCurrency, shortLabel: string, count: number): string {
+  const name = `${shortLabel} (${peg})`;
+  return firstWithinTitleBudget([
+    `${name} Stablecoins: ${count} Upcoming Launches Tracked`,
+    `${name} Stablecoins: ${count} Upcoming Launches`,
+  ]);
+}
+
+function getUpcomingPegCoins(peg: PegCurrency): StablecoinClientMeta[] {
+  return CLIENT_TRACKED_STABLECOINS.filter(
+    (coin) => isPreLaunchStablecoinMeta(coin) && coin.flags.pegCurrency === peg,
+  );
 }
 
 function getLargestEntry<T extends string>(counts: Map<T, number>): [T, number] | null {
@@ -114,6 +158,7 @@ function buildPegIntro({
   return `${baseIntro} Pharos currently maps ${getTopCountLabel(coins.length)} in this currency bucket.${topCoinText}${marketContext ? ` ${marketContext}` : ""}`;
 }
 
+/** Hubs for pegs with at least one active coin (market, chain and search surfaces read these). */
 export const PEG_TAXONOMY_PAGES: readonly PegTaxonomyPage[] = ACTIVE_PEGS.map((peg) => {
   const slug = PEG_SLUGS[peg];
   const coins = ACTIVE_STABLECOINS.filter((coin) => coin.flags.pegCurrency === peg);
@@ -125,7 +170,7 @@ export const PEG_TAXONOMY_PAGES: readonly PegTaxonomyPage[] = ACTIVE_PEGS.map((p
     slug: slug!,
     value: peg,
     href: `/stablecoins/${slug}/`,
-    title: buildPegTaxonomyTitle(shortLabel, coins.length),
+    title: buildPegTaxonomyTitle(peg, shortLabel, coins.length),
     shortLabel,
     description: `${getTopCountLabel(coins.length)} pegged to ${PEG_LABELS[peg]}. Compare peg stability, liquidity, risk, and leading symbols like ${formatCoinSymbolList(topCoins.slice(0, 2))}.`,
     intro: buildPegIntro({ peg, coins, topCoins }),
@@ -133,9 +178,42 @@ export const PEG_TAXONOMY_PAGES: readonly PegTaxonomyPage[] = ACTIVE_PEGS.map((p
     riskSummary,
     filterTag: pegCurrencyToFilterTag(peg),
     coins,
+    upcomingCoins: getUpcomingPegCoins(peg),
+    preLaunchOnly: false,
   };
 });
 
+/**
+ * Hubs for pegs whose tracked coins are all pre-launch (owner decision D3).
+ * Copy names launches only: there is no live table, price or risk grade yet.
+ */
+export const PRE_LAUNCH_PEG_TAXONOMY_PAGES: readonly PegTaxonomyPage[] = PRE_LAUNCH_HUB_PEGS.map((peg) => {
+  const slug = PEG_HUB_SLUGS[peg];
+  const coins = getUpcomingPegCoins(peg);
+  const shortLabel = PEG_LABELS_SHORT[peg];
+  const topCoins = getTopPegCoins(coins);
+  const count = coins.length;
+
+  return {
+    slug: slug!,
+    value: peg,
+    href: `/stablecoins/${slug}/`,
+    title: buildPreLaunchPegTaxonomyTitle(peg, shortLabel, count),
+    shortLabel,
+    description: `${count} upcoming stablecoins pegged to ${PEG_LABELS[peg]}, tracked before launch. Follow launch phases, target dates and issuer milestones for ${formatCoinSymbolList(topCoins.slice(0, 2))}.`,
+    intro: `${PEG_INTRO[peg] ?? `Stablecoins announced against ${PEG_LABELS[peg]}.`} Pharos tracks ${count} announced ${shortLabel} stablecoins, none of them live yet, so there is no price, supply, liquidity or Safety Score to compare. Tracked names include ${formatCoinList(topCoins)}.`,
+    topCoins,
+    riskSummary: `Each profile records the issuer's launch phase, current target date and dated milestones from its sources. When one of these coins launches and Pharos starts tracking it live, this hub gains the live ${shortLabel} market table.`,
+    filterTag: pegCurrencyToFilterTag(peg),
+    coins,
+    upcomingCoins: coins,
+    preLaunchOnly: true,
+  };
+});
+
+/** Every `/stablecoins/<peg>/` hub the route prerenders, sitemap and route inventory included. */
+export const PEG_HUB_PAGES: readonly PegTaxonomyPage[] = [...PEG_TAXONOMY_PAGES, ...PRE_LAUNCH_PEG_TAXONOMY_PAGES];
+
 export const PEG_TAXONOMY_PAGE_BY_SLUG = new Map(
-  PEG_TAXONOMY_PAGES.map((page) => [page.slug, page]),
+  PEG_HUB_PAGES.map((page) => [page.slug, page]),
 );

@@ -1,6 +1,10 @@
 import type { PegCurrency } from "@shared/types";
 import { PEG_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
-import { ACTIVE_PEG_CURRENCIES, ACTIVE_PEG_CURRENCY_COUNTS } from "@/lib/stablecoin-static-data";
+import {
+  ACTIVE_PEG_CURRENCIES,
+  ACTIVE_PEG_CURRENCY_COUNTS,
+  PRE_LAUNCH_HUB_PEG_CURRENCIES,
+} from "@/lib/stablecoin-static-data";
 
 const ACTIVE_PEG_COUNTS: Partial<Record<PegCurrency, number>> = ACTIVE_PEG_CURRENCY_COUNTS;
 
@@ -58,6 +62,20 @@ export const PEG_SLUGS: Partial<Record<PegCurrency, string>> = Object.fromEntrie
   ACTIVE_PEGS.map((peg) => [peg, ALL_SLUGS[peg]]),
 );
 
+/**
+ * Pegs whose tracked coins are all pre-launch, with enough of them for a hub
+ * (e.g. HKD). The generator owns the admission threshold.
+ */
+export const PRE_LAUNCH_HUB_PEGS: PegCurrency[] = [...PRE_LAUNCH_HUB_PEG_CURRENCIES];
+
+/** Every peg with a `/stablecoins/<slug>/` hub: active pegs, then pre-launch-only hubs. */
+export const PEG_HUB_PEGS: PegCurrency[] = [...ACTIVE_PEGS, ...PRE_LAUNCH_HUB_PEGS];
+
+/** PegCurrency → URL slug for every peg hub. */
+export const PEG_HUB_SLUGS: Partial<Record<PegCurrency, string>> = Object.fromEntries(
+  PEG_HUB_PEGS.map((peg) => [peg, ALL_SLUGS[peg]]),
+);
+
 /** Number of tracked stablecoins per peg currency. */
 export function pegCoinCount(peg: PegCurrency): number {
   return ACTIVE_PEG_COUNTS[peg] ?? 0;
@@ -65,7 +83,7 @@ export function pegCoinCount(peg: PegCurrency): number {
 
 /** Peg landing-page URL, or null when the peg has no landing page yet. */
 export function buildPegLandingUrl(peg: PegCurrency): string | null {
-  const slug = PEG_SLUGS[peg];
+  const slug = PEG_HUB_SLUGS[peg];
   return slug ? `/stablecoins/${slug}/` : null;
 }
 

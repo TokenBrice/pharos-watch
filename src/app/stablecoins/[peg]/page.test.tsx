@@ -1,6 +1,8 @@
+// @vitest-environment jsdom
+
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { PEG_TAXONOMY_PAGE_BY_SLUG } from "@/lib/peg-taxonomy";
+import { PEG_HUB_PAGES, PEG_TAXONOMY_PAGES, PEG_TAXONOMY_PAGE_BY_SLUG } from "@/lib/peg-taxonomy";
 import PegPage from "./page";
 
 vi.mock("./client", () => ({
@@ -40,6 +42,56 @@ describe("PegPage", () => {
     expect(html.indexOf("peg client USD")).toBeLessThan(html.indexOf("Stablecoin directory"));
     // The authored market context appears once, not again in the directory blurb.
     expect(html.split("USD pegs are the deepest settlement layer").length - 1).toBe(1);
+  });
+
+  it("puts the ISO code in currency hub titles and leaves commodity and index hubs unchanged", () => {
+    const eur = PEG_TAXONOMY_PAGE_BY_SLUG.get("eur")!;
+    expect(eur.title).toBe(`Euro (EUR) Stablecoins: ${eur.coins.length} Tracked, Ranked by Risk`);
+    const gold = PEG_TAXONOMY_PAGE_BY_SLUG.get("gold")!;
+    expect(gold.title).toBe(`Gold Stablecoins: ${gold.coins.length} Coins Ranked by Risk`);
+    for (const page of PEG_HUB_PAGES) {
+      // Room for the root " | Pharos" template inside the 70-character snippet budget.
+      expect(page.title.length, page.slug).toBeLessThanOrEqual(61);
+      expect(page.description.length, page.slug).toBeGreaterThanOrEqual(110);
+      expect(page.description.length, page.slug).toBeLessThanOrEqual(180);
+    }
+  });
+
+  it("renders the registry-only at-a-glance table, upcoming and former lists on a currency hub", async () => {
+    const eur = PEG_TAXONOMY_PAGE_BY_SLUG.get("eur")!;
+    const html = renderToStaticMarkup(await PegPage({ params: Promise.resolve({ peg: "eur" }) }));
+    const document = new DOMParser().parseFromString(html, "text/html");
+
+    expect(document.querySelector("h1")?.textContent).toBe(eur.title);
+    const table = document.querySelector('table[aria-labelledby="peg-at-a-glance"]');
+    expect(table?.textContent).toContain("MiCA status");
+    expect(table?.querySelectorAll("tbody tr").length).toBe(Math.min(eur.coins.length, 24));
+    expect(table?.textContent).not.toMatch(/\$\d/);
+
+    const upcoming = document.getElementById("peg-upcoming")?.closest("section");
+    expect(eur.upcomingCoins.length).toBeGreaterThan(0);
+    for (const coin of eur.upcomingCoins) {
+      expect(upcoming?.querySelector(`a[href^="/stablecoin/${coin.id}"]`), coin.id).not.toBeNull();
+    }
+    const former = document.getElementById("peg-former")?.closest("section");
+    expect(former?.querySelectorAll("li").length).toBeGreaterThan(0);
+    expect(html.indexOf("peg client EUR")).toBeLessThan(html.indexOf("peg-at-a-glance"));
+  });
+
+  it("serves an all-pre-launch peg as a hub with launch copy and no live table", async () => {
+    const hkd = PEG_TAXONOMY_PAGE_BY_SLUG.get("hkd")!;
+    expect(hkd.preLaunchOnly).toBe(true);
+    expect(hkd.coins.length).toBeGreaterThanOrEqual(2);
+    expect(hkd.title).toContain("Hong Kong Dollar (HKD) Stablecoins:");
+    expect(hkd.title).not.toContain("Ranked by Risk");
+    expect(PEG_TAXONOMY_PAGES.some((page) => page.slug === "hkd")).toBe(false);
+
+    const html = renderToStaticMarkup(await PegPage({ params: Promise.resolve({ peg: "hkd" }) }));
+    expect(html).not.toContain("peg client");
+    expect(html).not.toContain("Compare leaders");
+    expect(html).not.toContain("live table above");
+    // next/link drops the trailing slash outside the app's trailingSlash config.
+    for (const coin of hkd.coins) expect(html).toContain(`href="/stablecoin/${coin.id}`);
   });
 
 });
