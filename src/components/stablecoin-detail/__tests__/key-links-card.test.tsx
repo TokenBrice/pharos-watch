@@ -33,7 +33,7 @@ describe("KeyLinksCard", () => {
   it("renders the curated links and the reserve attestation link", () => {
     render(<KeyLinksCard meta={meta} />);
 
-    expect(screen.getByRole("heading", { name: "Key Links" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Key links" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Website" }).getAttribute("href")).toBe("https://example.com");
     expect(screen.getByRole("link", { name: "Docs" }).getAttribute("href")).toBe("https://docs.example.com");
     expect(screen.getByRole("link", { name: /View reserves/ }).getAttribute("href")).toBe(

@@ -281,7 +281,7 @@ export function buildDetailStaleQueries(
     staleQueryFrom("yieldRankings", supplemental.yieldRankings, (data) => Boolean(data)),
     staleQueryFrom("stressSignals", supplemental.stressSignals, (data) => Boolean(data)),
     {
-      label: "Supply History",
+      label: "Supply history",
       staleTime: CRON_24H,
       dataUpdatedAt: queries.supplyHistory.dataUpdatedAt,
       error: queries.supplyHistory.error,
@@ -292,7 +292,7 @@ export function buildDetailStaleQueries(
   ];
   if (queries.annualPriceHistory?.enabled) {
     result.push({
-      label: "Annual Price History",
+      label: "Annual price history",
       staleTime: CRON_24H,
       dataUpdatedAt: queries.annualPriceHistory.dataUpdatedAt,
       error: queries.annualPriceHistory.error,

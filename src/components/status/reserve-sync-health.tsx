@@ -42,7 +42,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
     return (
       <Card>
         <CardHeader>
-          <CardTitle as="h3" className="text-base">Live Reserve Sync</CardTitle>
+          <CardTitle as="h3" className="text-base">Live reserve sync</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <div className="font-medium text-muted-foreground">Unavailable</div>
@@ -61,7 +61,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
     <Card>
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle as="h3" className="text-base">Live Reserve Sync</CardTitle>
+          <CardTitle as="h3" className="text-base">Live reserve sync</CardTitle>
           <span className={cn("rounded-full border px-2.5 py-1 text-xs font-medium", statusTone)}>
             {health.status}
           </span>

@@ -349,7 +349,7 @@ export async function ApiReferencePanel() {
         method: sub.method,
       })),
     })),
-    { id: "endpoint-directory", label: "Endpoint Directory", subsections: [] },
+    { id: "endpoint-directory", label: "Endpoint directory", subsections: [] },
   ];
 
   return (

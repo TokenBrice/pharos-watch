@@ -112,12 +112,12 @@ export function D1UsageCard({
             />
           ))}
           <StatTile
-            label="Rows Read (24h)"
+            label="Rows read (24h)"
             value={formatCount(summary.rowsRead24h)}
             subtext={`${formatCount(summary.readQueries24h)} read queries`}
           />
           <StatTile
-            label="Rows Written (24h)"
+            label="Rows written (24h)"
             value={formatCount(summary.rowsWritten24h)}
             subtext={`${formatCount(summary.writeQueries24h)} write queries`}
           />

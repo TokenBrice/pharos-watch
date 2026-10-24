@@ -29,10 +29,10 @@ const AXES: ReadonlyArray<{
   label: string;
   children: readonly TaxonomyLinkPage[];
 }> = [
-  { href: "/stablecoins/", label: "By Peg Currency", children: PEG_TAXONOMY_PAGES },
-  { href: "/stablecoins/backing/", label: "By Backing Type", children: BACKING_TAXONOMY_PAGES },
-  { href: "/stablecoins/governance/", label: "By Governance Model", children: GOVERNANCE_TAXONOMY_PAGES },
-  { href: "/stablecoins/infrastructure/", label: "By Shared Infrastructure", children: INFRASTRUCTURE_TAXONOMY_PAGES },
+  { href: "/stablecoins/", label: "By peg currency", children: PEG_TAXONOMY_PAGES },
+  { href: "/stablecoins/backing/", label: "By backing type", children: BACKING_TAXONOMY_PAGES },
+  { href: "/stablecoins/governance/", label: "By governance model", children: GOVERNANCE_TAXONOMY_PAGES },
+  { href: "/stablecoins/infrastructure/", label: "By shared infrastructure", children: INFRASTRUCTURE_TAXONOMY_PAGES },
 ] as const;
 
 const taxonomyItems = AXES.flatMap((axis) => axis.children);

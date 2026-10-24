@@ -42,7 +42,7 @@ export function BlacklistDetailChart({ data, isLoading }: BlacklistDetailChartPr
   if (chartData.length === 0) {
     return (
       <section className="border-t border-border/40 pt-4 animate-in fade-in duration-[220ms] motion-reduce:animate-none">
-        <CardTitle as="h3" className="pharos-label">Events per Quarter</CardTitle>
+        <CardTitle as="h3" className="pharos-label">Events per quarter</CardTitle>
         <p className="mt-1 text-xs text-muted-foreground">
           Insufficient data for the quarterly view on this asset yet.
         </p>
@@ -52,7 +52,7 @@ export function BlacklistDetailChart({ data, isLoading }: BlacklistDetailChartPr
 
   return (
     <section className="border-t border-border/40 pt-4 animate-in fade-in duration-[220ms] motion-reduce:animate-none">
-      <CardTitle as="h3" className="pharos-label">Events per Quarter</CardTitle>
+      <CardTitle as="h3" className="pharos-label">Events per quarter</CardTitle>
       <p className="mt-1 text-xs text-muted-foreground">
         Count of {EVENT_LABELS.blacklist}, {EVENT_LABELS.unblacklist}, and {EVENT_LABELS.destroy} events attributed to their execution quarter.
       </p>

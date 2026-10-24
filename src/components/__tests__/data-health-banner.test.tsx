@@ -57,9 +57,9 @@ describe("DataHealthBanner", () => {
   it("names only the publicly material datasets", () => {
     const markup = renderToStaticMarkup(<DataHealthBanner entries={[
       derive({ label: "Peg Data", meta: { status: "degraded", warning: '199 - "Quality drift"' } }),
-      derive({ label: "Supply History", dataUpdatedAt: nowMs - 13 * 3600_000 }),
+      derive({ label: "Supply history", dataUpdatedAt: nowMs - 13 * 3600_000 }),
     ]} />);
-    expect(markup).toContain("Supply History last refreshed");
+    expect(markup).toContain("Supply history last refreshed");
     expect(markup).not.toContain("Peg Data");
   });
 });

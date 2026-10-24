@@ -160,7 +160,7 @@ describe("StablecoinTable", () => {
 
 
     await waitFor(() => {
-      expect(screen.getByText("Market Cap")).toBeTruthy();
+      expect(screen.getByText("Market cap")).toBeTruthy();
       expect(screen.queryByText("Price")).toBeNull();
     });
   });
@@ -196,7 +196,7 @@ describe("StablecoinTable", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Market Cap")).toBeTruthy();
+      expect(screen.getByText("Market cap")).toBeTruthy();
       expect(screen.queryByText("Blacklist")).toBeNull();
       expect(screen.queryByText("Peg Score")).toBeNull();
       expect(screen.getByTitle(/mint control posture/i).textContent).toContain("Mint");
@@ -218,7 +218,7 @@ describe("StablecoinTable", () => {
 
     await waitFor(() => {
       expect(screen.getAllByText("Blacklist").length).toBeGreaterThan(0);
-      expect(screen.queryByText("Market Cap")).toBeNull();
+      expect(screen.queryByText("Market cap")).toBeNull();
     });
   });
 

@@ -194,7 +194,7 @@ function HeroMarketCapMetric({
   if (variant === "cell") {
     return (
       <CompactMetricCell
-        label="Market Cap"
+        label="Market cap"
         subline={
           <span className={`pharos-numeric ${prevDayTrendClass}`}>
             {formatTrendPercent(mcap, safePrevDay)} <span className="text-muted-foreground">24H</span>
@@ -212,7 +212,7 @@ function HeroMarketCapMetric({
 
   return (
     <div className="min-h-36 min-w-0 pharos-inset px-3 py-2.5">
-      <p className={HERO_METRIC_LABEL_CLASS}>Market Cap</p>
+      <p className={HERO_METRIC_LABEL_CLASS}>Market cap</p>
       <p className="font-bold pharos-numeric tracking-tight text-lg">{mcap != null ? formatCurrency(mcap) : "—"}</p>
       {coin.flags.pegCurrency !== "USD" && <p className="mt-0.5 text-2xs text-muted-foreground">USD-normalized</p>}
       <SupplyRestoredNotice coinData={coinData} className="mt-0.5 text-2xs text-state-warn" />

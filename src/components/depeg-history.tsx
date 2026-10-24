@@ -48,11 +48,11 @@ const DEPEG_HISTORY_DESCRIPTION =
 const DEPEG_HISTORY_COLUMNS: readonly DataTableColumn[] = [
   { id: "date", label: "Date" },
   { id: "direction", label: "Direction" },
-  { id: "peakDeviation", label: "Peak Deviation", className: "text-right" },
+  { id: "peakDeviation", label: "Peak deviation", className: "text-right" },
   { id: "duration", label: "Duration", className: "text-right" },
-  { id: "startPrice", label: "Start Price", className: "hidden lg:table-cell text-right" },
-  { id: "peakPrice", label: "Peak Price", className: "hidden lg:table-cell text-right" },
-  { id: "recoveryPrice", label: "Recovery Price", className: "hidden lg:table-cell text-right" },
+  { id: "startPrice", label: "Start price", className: "hidden lg:table-cell text-right" },
+  { id: "peakPrice", label: "Peak price", className: "hidden lg:table-cell text-right" },
+  { id: "recoveryPrice", label: "Recovery price", className: "hidden lg:table-cell text-right" },
 ] as const;
 
 function DepegHistoryShell({ children }: { children: ReactNode }) {

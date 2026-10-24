@@ -383,13 +383,13 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   }, [liq]);
 
   if (isLoading && !liquidityMap) {
-    return <DonutCardSkeleton title="Liquidity by Protocol" />;
+    return <DonutCardSkeleton title="Liquidity by protocol" />;
   }
 
   if (query.error && !liquidityMap) {
     return (
       <DistributionUnavailableCard
-        title="Liquidity by Protocol"
+        title="Liquidity by protocol"
         label="DEX distribution data"
         onRetry={() => void query.refetch()}
       />
@@ -401,7 +401,7 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   if (data.length === 0) {
     return (
       <DistributionUnavailableCard
-        title="Liquidity by Protocol"
+        title="Liquidity by protocol"
         label="DEX protocol breakdown"
         onRetry={() => void query.refetch()}
       />
@@ -410,7 +410,7 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 
   return (
     <DonutCard
-      title="Liquidity by Protocol"
+      title="Liquidity by protocol"
       headerEnd={
         <FreshnessIndicator
           compact

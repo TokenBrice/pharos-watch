@@ -27,7 +27,7 @@ const DESKTOP_PAGE_SIZE = 6;
 export function DepegFeed({
   events,
   logos,
-  title = "Recent Depeg Events",
+  title = "Recent depeg events",
   emptyMessage = "No confirmed depeg events in this view.",
 }: DepegFeedProps) {
   const prefetch = usePrefetchStablecoin();

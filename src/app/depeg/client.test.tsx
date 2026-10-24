@@ -110,7 +110,7 @@ vi.mock("@/components/depeg-control-board", () => ({
 }));
 
 vi.mock("@/components/depeg-feed", () => ({
-  DepegFeed: ({ title = "Recent Depeg Events", events }: { title?: string; events: unknown[] }) => (
+  DepegFeed: ({ title = "Recent depeg events", events }: { title?: string; events: unknown[] }) => (
     <div data-testid={`feed-${title}`}>{events.length}</div>
   ),
 }));
