@@ -5,6 +5,9 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildPharosOrganizationNode } from "@/lib/json-ld";
+import { buildPegLandingUrl } from "@/lib/peg-landing";
+
+type BreadcrumbItem = { name: string; url: string };
 
 const CONTRACT_IDENTIFIER_JSON_LD_LIMIT = 8;
 const STABLECOIN_IDENTIFIER_FIELD_KEYS = [
@@ -78,6 +81,40 @@ function absoluteSiteUrl(pathOrUrl: string | undefined): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Profile BreadcrumbList: Home, the coin's peg hub (or the Stablecoins index
+ * when no hub is built), then the coin. Google shows the middle crumb on the
+ * desktop result URL line. Pre-launch profiles sit under Upcoming.
+ */
+export function buildStablecoinBreadcrumbItems(coin: StablecoinMeta): BreadcrumbItem[] {
+  const pegHubUrl = buildPegLandingUrl(coin.flags.pegCurrency);
+  const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
+  const middle: BreadcrumbItem = coin.status === "pre-launch"
+    ? { name: "Upcoming", url: "/upcoming/" }
+    : pegHubUrl
+      ? { name: `${pegLabel} Stablecoins`, url: pegHubUrl }
+      : { name: "Stablecoins", url: "/stablecoins/" };
+  return [
+    { name: "Home", url: "/" },
+    middle,
+    { name: `${coin.name} (${coin.symbol})`, url: buildStablecoinUrl(coin.id) },
+  ];
+}
+
+/**
+ * The coin logo, at its original (largest) source, as the page's preferred
+ * image: a candidate for the mobile result thumbnail. The og:image stays the
+ * text share card.
+ */
+function buildProfileWebPageNode(detailUrl: string, image: string | undefined): Record<string, unknown> {
+  return {
+    "@type": "WebPage",
+    "@id": `${detailUrl}#webpage`,
+    url: detailUrl,
+    ...(image ? { primaryImageOfPage: { "@type": "ImageObject", contentUrl: image, url: image } } : {}),
+  };
 }
 
 export function buildStablecoinDatasetJsonLd(
@@ -161,7 +198,7 @@ export function buildStablecoinDatasetJsonLd(
     description: statusCopy.description,
     url: detailUrl,
     inLanguage: "en",
-    mainEntityOfPage: detailUrl,
+    mainEntityOfPage: image ? buildProfileWebPageNode(detailUrl, image) : detailUrl,
     // Google defines Dataset.sameAs as a reference page that unambiguously
     // identifies the dataset. For a per-coin dataset that is its canonical
     // Pharos page — not the third-party pages that describe the coin itself.
@@ -203,8 +240,9 @@ export function buildStablecoinDatasetJsonLd(
   };
 }
 
-export function buildPreLaunchStablecoinJsonLd(coin: StablecoinMeta) {
+export function buildPreLaunchStablecoinJsonLd(coin: StablecoinMeta, options: { logoPath?: string } = {}) {
   const detailUrl = `${SITE_URL}${buildStablecoinUrl(coin.id)}`;
+  const image = absoluteSiteUrl(options.logoPath);
   const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
@@ -214,11 +252,9 @@ export function buildPreLaunchStablecoinJsonLd(coin: StablecoinMeta) {
   return [
     {
       "@context": "https://schema.org",
-      "@type": "WebPage",
-      "@id": `${detailUrl}#webpage`,
+      ...buildProfileWebPageNode(detailUrl, image),
       name: `${coin.name} (${coin.symbol}) Pre-launch Stablecoin Tracker`,
       description,
-      url: detailUrl,
       isPartOf: { "@id": `${SITE_URL}#website` },
       about: { "@id": `${detailUrl}#stablecoin` },
     },
@@ -229,6 +265,7 @@ export function buildPreLaunchStablecoinJsonLd(coin: StablecoinMeta) {
       name: coin.name,
       alternateName: coin.symbol,
       description,
+      ...(image ? { image } : {}),
       ...(sameAs.length > 0 ? { sameAs } : {}),
     },
   ];
