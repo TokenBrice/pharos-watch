@@ -341,7 +341,7 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
 function FrozenBadge({ frozenAt }: { frozenAt?: string }) {
   return (
     <span
-      className="rounded-sm border border-zinc-500/30 px-1 text-3xs uppercase text-zinc-500"
+      className="rounded-sm border border-border px-1 text-3xs uppercase text-muted-foreground"
       title={frozenAt ? `Frozen on ${frozenAt}` : "Frozen"}
     >
       Frozen

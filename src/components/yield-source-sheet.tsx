@@ -305,7 +305,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
                           {source.rejectionHint && (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className="rounded-full border border-slate-500/20 bg-slate-500/10 px-1.5 py-0.5 text-3xs text-slate-700 dark:text-slate-300">
+                                <span className="rounded-full border border-border bg-muted/60 px-1.5 py-0.5 text-3xs text-muted-foreground">
                                   {source.rejectionHint.label}
                                 </span>
                               </TooltipTrigger>

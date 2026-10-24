@@ -437,7 +437,7 @@ export function YieldCompareDrawer({
             className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-full border border-border/70 bg-background px-4 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
           >
             {shareStatus === "shared" || shareStatus === "copied" ? (
-              <CheckIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+              <CheckIcon className="h-4 w-4 text-state-positive" aria-hidden="true" />
             ) : (
               <Share2Icon className="h-4 w-4" aria-hidden="true" />
             )}

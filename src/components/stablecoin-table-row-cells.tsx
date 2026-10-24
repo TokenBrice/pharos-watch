@@ -256,7 +256,7 @@ function RiskCells({ row, model }: RowCellsProps) {
             <>
             <Badge
               variant="outline"
-              className={`rounded-full px-2 py-0.5 pharos-numeric text-xs font-semibold transition-all duration-200 ${getSafetyGradeBadgeClassName(model.reportCard.grade)} ${model.reportCard.grade !== null && ["D", "F"].includes(model.reportCard.grade) ? "animate-risk-pulse border-red-500/60 bg-red-500/5" : ""}`}
+              className={`rounded-full px-2 py-0.5 pharos-numeric text-xs font-semibold transition-all duration-200 ${getSafetyGradeBadgeClassName(model.reportCard.grade)} ${model.reportCard.grade !== null && ["D", "F"].includes(model.reportCard.grade) ? "animate-risk-pulse border-state-danger-solid/60 bg-state-danger-solid/5" : ""}`}
               title={`${model.reportCard.grade === null ? "Pipeline gap" : `Pharos grade: ${model.reportCard.grade}`}${model.reportCard.score !== null ? ` (${model.reportCard.score}/100)` : ""}`}
             >
               {model.reportCard.grade ?? "Pipeline gap"}
@@ -272,13 +272,12 @@ function RiskCells({ row, model }: RowCellsProps) {
       ) : null}
       {row.isVisible("stability") ? <TableCell className="text-right pharos-numeric text-sm">{stabilityCell}</TableCell> : null}
       {row.isVisible("liquidity") ? <TableCell className="text-right pharos-numeric text-sm">{liquidityCell}</TableCell> : null}
-      {/* raw: blacklist "No" is a favourable status, no exact export */}
       {row.isVisible("blacklistable") ? (
         <TableCell className="text-center pharos-numeric text-sm">
           {model.blacklistStatus === true ? (
             <span className={QUALITY_TIER_3_CLASSES.bad.text}>Yes</span>
           ) : model.blacklistStatus === false ? (
-            <span className="text-green-700 dark:text-green-400">No</span>
+            <span className={QUALITY_TIER_3_CLASSES.good.text}>No</span>
           ) : model.blacklistStatus === "possible" ? (
             <span className={QUALITY_TIER_3_CLASSES.watch.text}>Possible</span>
           ) : model.blacklistStatus === "inherited" ? (

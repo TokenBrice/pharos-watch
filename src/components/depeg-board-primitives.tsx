@@ -47,8 +47,7 @@ export function EventLoadMeter({ count, symbol }: { count: number; symbol: strin
           key={index}
           className={cn(
             "h-1.5 flex-1 rounded-[2px] border border-border/50",
-            // raw: event-load pip, no exact export
-            index < filled ? "border-orange-500/40 bg-orange-500" : "bg-muted/35",
+            index < filled ? "border-state-warn-solid/40 bg-state-warn-solid" : "bg-muted/35",
           )}
         />
       ))}

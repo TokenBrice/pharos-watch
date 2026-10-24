@@ -307,7 +307,7 @@ function MintAuthorityIncidentSources({
           rel="noopener noreferrer"
           className={cn(
             "pharos-focus-ring inline-flex items-center gap-1 rounded-sm underline underline-offset-2 transition-colors",
-            tone === "alert" ? "hover:text-red-900 dark:hover:text-red-100" : "hover:text-foreground",
+            tone === "alert" ? "hover:text-state-danger-ink" : "hover:text-foreground",
           )}
         >
           {source.label}
@@ -663,7 +663,7 @@ export function MintAuthoritySection({
                     {activeIncidents.length > 1 ? incident.date : `Mint incident ${incident.date}`}
                     <span className="ml-2 text-xs font-semibold uppercase">Active</span>
                   </p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-red-700/85 dark:text-red-300/85">
+                  <p className="mt-0.5 text-xs leading-relaxed text-state-danger-bright">
                     {incident.summary}
                   </p>
                   <MintAuthorityIncidentSources sources={incident.sources} />

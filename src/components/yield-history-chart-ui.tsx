@@ -211,7 +211,7 @@ export function YieldHistoryTooltip({
         </div>
       ) : null}
       {spikeInfo && point.apy != null ? (
-        <div className="mt-2 rounded-md border border-orange-500/25 bg-orange-500/10 px-2.5 py-2 text-3xs text-orange-700 dark:text-orange-300">
+        <div className="mt-2 rounded-md border border-state-warn bg-state-warn-subtle px-2.5 py-2 text-3xs text-state-warn-bright">
           <span className="block font-medium">Yield spike</span>
           <span className="mt-1 block normal-case tracking-normal">
             {`Current ${formatChartNumber(point.apy)}% is ${formatChartNumber(spikeInfo.ratio, 1, 1)}× the trailing ${spikeInfo.windowDays}d average of ${formatChartNumber(spikeInfo.trailingAvg)}%.`}

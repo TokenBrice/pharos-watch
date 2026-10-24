@@ -161,7 +161,7 @@ export function RegimeBar() {
     : null;
   // 30-day band history strip (oldest → newest). Empty cells until history hydrates.
   const bandStripCells = buildBandStripCells(model.history, current.computedAt);
-  const separator = <span className={useDarkText ? "text-gray-900/60" : "text-white/70"} aria-hidden="true">·</span>;
+  const separator = <span className={useDarkText ? "text-black/60" : "text-white/70"} aria-hidden="true">·</span>;
 
   return (
     <div
@@ -185,7 +185,7 @@ export function RegimeBar() {
         <div className="min-h-0 overflow-hidden">
           <div className={cn(
             "flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 pt-1.5 pb-1 text-xs leading-snug",
-            useDarkText ? "text-gray-900/90" : "text-white/90",
+            useDarkText ? "text-black/90" : "text-white/90",
           )}>
             {!isCurrent && <span>As of {asOfLabel}</span>}
             <span className="inline-flex items-center gap-1.5">

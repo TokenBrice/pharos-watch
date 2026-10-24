@@ -133,8 +133,7 @@ export function PsiBeamDimmers({
                   <p className={cn(
                     "font-mono font-bold tabular-nums",
                     isCompact ? "text-base" : "text-lg",
-                    // raw: support-lane value, 300 dark shade has no export
-                    lane.role === "support" ? "text-emerald-700 dark:text-emerald-300" : "text-foreground",
+                    lane.role === "support" ? "text-state-positive-bright" : "text-foreground",
                   )}>
                     {valueLabel(lane)}
                   </p>

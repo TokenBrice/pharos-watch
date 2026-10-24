@@ -641,8 +641,8 @@ const eslintConfig = defineConfig([
   },
   {
     // UI-state colour guardrail (docs/design-tokens.md#ui-state-utilities).
-    // Editorial carve-outs keep their bespoke palettes; pre-existing call
-    // sites elsewhere are grandfathered in eslint-suppressions.json.
+    // Editorial carve-outs keep their bespoke palettes; nothing else is
+    // grandfathered.
     // Classification scales live in shared/lib/classification (not linted
     // here); src/lib class-string constants are covered too.
     files: ["src/components/**/*.{ts,tsx}", "src/app/**/*.{ts,tsx}", "src/lib/**/*.{ts,tsx}"],

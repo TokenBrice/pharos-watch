@@ -379,7 +379,7 @@ export function YieldSignalsIndicator({
         <TooltipTrigger asChild>
           <span className={warningSignalCount > 0
             ? "inline-flex cursor-help items-center gap-1 text-state-warn"
-            : "inline-flex cursor-help items-center gap-1 text-amber-700/80 dark:text-amber-400/80"}
+            : "inline-flex cursor-help items-center gap-1 text-state-warn"}
           >
             <AlertTriangle
               className={warningSignalCount >= 2

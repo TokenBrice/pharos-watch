@@ -23,13 +23,13 @@ function AccessGate({ accessModel, accessLabel }: { accessModel: RedemptionAcces
   const open = accessModel === "permissionless-onchain";
   const shortLabel = REDEMPTION_ACCESS_PASSPORT_LABELS[accessModel];
   const barClass = open
-    ? "border-l border-dashed border-emerald-600/70 dark:border-emerald-400/70"
+    ? "border-l border-dashed border-state-positive-solid/70"
     : "w-0.5 rounded-full bg-foreground/60";
   return (
     <span
       className={cn(
         "inline-flex w-fit items-center gap-1.5 rounded-md border px-2.5 py-1.5",
-        open ? "border-emerald-600/40 bg-state-positive-solid/5" : "border-border/60",
+        open ? "border-state-positive-solid/40 bg-state-positive-solid/5" : "border-border/60",
       )}
       title={accessLabel}
     >

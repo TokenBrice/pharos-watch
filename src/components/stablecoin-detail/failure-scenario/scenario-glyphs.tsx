@@ -97,7 +97,7 @@ export function MissingDefenseMark({ size = "md", className }: { size?: "sm" | "
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full border border-dashed border-amber-600/55 bg-card dark:border-amber-400/50",
+        "inline-flex shrink-0 items-center justify-center rounded-full border border-dashed border-state-warn-solid/60 bg-card",
         size === "sm" ? "h-4 w-4" : "h-5 w-5",
         className,
       )}

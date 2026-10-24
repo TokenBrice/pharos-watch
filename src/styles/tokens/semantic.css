@@ -95,6 +95,12 @@
   --state-info-solid: var(--color-sky-500);
   --state-info-subtle: color-mix(in oklab, var(--state-info-solid) 10%, transparent);
   --state-info-border: color-mix(in oklab, var(--state-info-solid) 30%, transparent);
+  /* Neutral meter: score bars that stay grey until the input is the problem, and their track. */
+  --meter-neutral-fill: light-dark(var(--p-neutral-500), #858585);
+  --meter-track-bg: light-dark(var(--p-neutral-200), #1f1f21);
+  --meter-track-border: light-dark(var(--p-neutral-300), #2a2a2d);
+  /* Brand accent as readable text: help glyphs and in-card links. */
+  --brand-accent-text: light-dark(var(--color-sky-700), var(--brand-accent));
 
   /* ── Severity hex values (for Recharts / canvas) ──────────────── */
   --severity-healthy-hex: #22c55e;
@@ -337,6 +343,10 @@
   --color-state-warn-solid: var(--state-warn-solid);
   --color-state-danger-solid: var(--state-danger-solid);
   --color-state-info-solid: var(--state-info-solid);
+  --color-meter-neutral: var(--meter-neutral-fill);
+  --color-meter-track: var(--meter-track-bg);
+  --color-meter-track-border: var(--meter-track-border);
+  --color-brand-accent-text: var(--brand-accent-text);
 }
 
 @utility text-state-positive {

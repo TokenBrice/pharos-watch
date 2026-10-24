@@ -290,7 +290,7 @@ export function FailureScenarioModule({ selection }: { selection: FailureScenari
       title={scenario.title}
       variant="module"
       headingLevel="h3"
-      className={isDraft ? "border-dashed border-state-warn-solid/60 dark:border-amber-400/50" : undefined}
+      className={isDraft ? "border-dashed border-state-warn-solid/60" : undefined}
       headerRight={
         <>
           <Badge variant="outline" className={NEUTRAL_CHIP_CLASS}>

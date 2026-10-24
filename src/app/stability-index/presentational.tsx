@@ -287,8 +287,7 @@ export function PsiEventTimelineCard({ rows }: { rows: PsiEventTimelineRow[] }) 
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      /* raw: link colour, no exact export */
-                      className="pharos-focus-ring text-sm text-blue-700 dark:text-blue-400 hover:underline inline-flex items-center gap-1 min-w-0 shrink rounded-sm"
+                      className="pharos-focus-ring text-sm text-brand-accent-text hover:underline inline-flex items-center gap-1 min-w-0 shrink rounded-sm"
                     >
                       <span className="truncate" title={link.title}>{link.title}</span>
                       <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
@@ -329,7 +328,7 @@ export function PsiMethodologyCard({
           )}
           <Link
             href={methodology.changelogPath}
-            className="pharos-focus-ring text-xs text-foreground underline underline-offset-4 hover:text-amber-700 dark:hover:text-amber-400 transition-colors rounded-sm"
+            className="pharos-focus-ring text-xs text-foreground underline underline-offset-4 hover:text-state-warn transition-colors rounded-sm"
           >
             Version history &rarr;
           </Link>
@@ -349,7 +348,7 @@ export function PsiMethodologyCard({
           Chronically depegged coins decay linearly from full impact at 30 days to a 25% floor at 150 days.{" "}
           <Link
             href="/methodology/#stability-index-methodology"
-            className="pharos-focus-ring text-foreground underline underline-offset-4 hover:text-amber-700 dark:hover:text-amber-400 transition-colors rounded-sm"
+            className="pharos-focus-ring text-foreground underline underline-offset-4 hover:text-state-warn transition-colors rounded-sm"
           >
             Full methodology &rarr;
           </Link>
@@ -445,8 +444,7 @@ export function PsiContributorsTableCard({
                     <TableCell className={CONTRIBUTOR_CELL_CLASS}>
                       <Link
                         href={buildStablecoinUrl(row.id)}
-                        /* raw: link hover colour, no exact export */
-                        className="pharos-focus-ring flex items-center gap-2 font-medium text-foreground hover:text-blue-700 dark:hover:text-blue-400 transition-colors rounded-sm"
+                        className="pharos-focus-ring flex items-center gap-2 font-medium text-foreground hover:text-brand-accent-text transition-colors rounded-sm"
                       >
                         <StablecoinLogo src={logos?.[row.id]} name={row.symbol} size={22} />
                         <span className={cn(index === 0 && "font-semibold")}>{row.symbol}</span>

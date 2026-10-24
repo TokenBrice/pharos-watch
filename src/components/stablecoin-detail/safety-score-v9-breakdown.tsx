@@ -33,9 +33,8 @@ export type PillarEvidenceAnchors = Record<
  * Restrained tinting: a bar leaves neutral only when the input is the problem,
  * so a long list stays calm and the eye lands on the weak rows.
  */
-// raw: neutral grey fill with a bespoke dark hex, no state token
 const ROW_TONE_FILL_CLASS: Record<BreakdownRow["tone"], string> = {
-  neutral: "bg-neutral-500 dark:bg-[#858585]",
+  neutral: "bg-meter-neutral",
   warn: "bg-[var(--severity-moderate)]",
   critical: "bg-[var(--severity-severe)]",
 };
@@ -46,9 +45,8 @@ const ROW_TONE_SCORE_CLASS: Record<BreakdownRow["tone"], string> = {
   critical: SAFETY_BREAKDOWN_ROW_TONE_TEXT_CLASSES.critical,
 };
 
-// raw: neutral track with bespoke dark hexes, no state token
 const TRACK_CLASS =
-  "overflow-hidden rounded-[3px] border border-neutral-300 bg-neutral-200 dark:border-[#2a2a2d] dark:bg-[#1f1f21]";
+  "overflow-hidden rounded-[3px] border border-meter-track-border bg-meter-track";
 /** Unavailable: an empty dashed outline (as in the pillar strips), never an empty solid track that reads as zero. */
 const UNAVAILABLE_TRACK_CLASS = "rounded-[3px] border border-dashed border-muted-foreground/50";
 /**
@@ -333,7 +331,7 @@ function PillarInputFallback({
         {pillar.components.map((component) => (
           <span
             key={component.key}
-            className="min-w-1 flex-1 rounded-[2px] bg-neutral-500 dark:bg-[#858585]"
+            className="min-w-1 flex-1 rounded-[2px] bg-meter-neutral"
           />
         ))}
       </div>

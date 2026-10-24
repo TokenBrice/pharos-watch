@@ -132,7 +132,7 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
       ) : (
         <>
           {showStaleRows ? (
-            <p className="rounded-lg border border-state-warn bg-state-warn-subtle px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+            <p className="rounded-lg border border-state-warn bg-state-warn-subtle px-3 py-2 text-xs text-state-warn-strong">
               Resolver live overlay is stale; frozen forecasts, including anchored duration estimates, remain unchanged.
             </p>
           ) : null}

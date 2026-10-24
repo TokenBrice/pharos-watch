@@ -32,8 +32,7 @@ function getDiffBadgeClass(diffPct: number): string {
   if (diffPct >= 10) {
     return SEVERITY_TONE_CLASS.watch.pill;
   }
-  // raw: orange has no state token and the border is /40
-  return "border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-400";
+  return SEVERITY_TONE_CLASS.info.pill;
 }
 
 export function CoinGeckoPriceDiffCard({

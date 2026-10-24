@@ -137,7 +137,7 @@ function LeaderboardHeading({
               className="pharos-focus-ring relative mt-2 inline-flex items-center rounded-sm px-1 py-0.5 text-2xs font-medium text-foreground underline underline-offset-2 hover:text-muted-foreground"
             >
               <span
-                className={`pharos-copy-icon ${copied ? "text-emerald-600 dark:text-emerald-400" : ""}`}
+                className={`pharos-copy-icon ${copied ? "text-state-positive" : ""}`}
                 aria-live="polite"
               >
                 {copied ? "Copied!" : "Copy URL"}

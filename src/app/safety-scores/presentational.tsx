@@ -43,9 +43,9 @@ function SafetyMapPreview() {
     >
       <div className="flex min-h-32 flex-1 items-center justify-center overflow-hidden bg-[#05070d]">
         {unavailable ? (
-          <div className="flex flex-col items-center gap-2 text-center text-slate-300">
+          <div className="flex flex-col items-center gap-2 text-center text-white/80">
             <MapIcon className="h-7 w-7" aria-hidden="true" />
-            <span className="pharos-label text-slate-400">Full market map</span>
+            <span className="pharos-label text-white/60">Full market map</span>
           </div>
         ) : (
           <img

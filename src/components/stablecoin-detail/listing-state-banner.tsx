@@ -19,7 +19,7 @@ export function ListingStateBanner({ coin }: { coin: ListingStateCoin }) {
       className={`rounded-lg border ${SEVERITY_TONE_CLASS.watch.banner} px-4 py-3 text-sm`}
     >
       <div className="flex items-start gap-3">
-        <Icon aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+        <Icon aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-state-warn" />
         <div className="min-w-0 space-y-1">
           <p className="font-semibold text-foreground">{title}</p>
           <p className="leading-relaxed text-muted-foreground">{coin.listingStatusReview.reason}</p>

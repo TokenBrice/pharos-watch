@@ -19,7 +19,7 @@ vi.mock("next/link", async () => {
 });
 
 const COIN = TRACKED_META_BY_ID.get("iusd-infinifi")!;
-const AMBER_VALUE_CLASS = "text-amber-600";
+const AMBER_VALUE_CLASS = "text-state-warn";
 // A coin whose curated `reserves` is empty: nothing reviewed to draw.
 const NO_REVIEW_COIN = { ...COIN, reserves: [] };
 

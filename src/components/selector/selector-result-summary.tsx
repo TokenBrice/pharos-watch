@@ -296,7 +296,7 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
         </div>
 
         {copyShareDisabled && copyShareDisabledReason ? (
-          <p id={disabledReasonId} role="alert" className="text-xs text-amber-700 dark:text-amber-200">
+          <p id={disabledReasonId} role="alert" className="text-xs text-state-warn-bright">
             {copyShareDisabledReason}
           </p>
         ) : null}
