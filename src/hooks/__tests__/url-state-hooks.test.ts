@@ -128,4 +128,28 @@ describe("useCompareSelection", () => {
 
     expect(window.location.search).toBe("?coins=usdc-circle,usdt-tether&range=90d");
   });
+
+  it("adopts a static-link #coins= prefill into the query and drops the fragment", async () => {
+    window.history.replaceState(null, "", "/compare/#coins=usdc-circle,1");
+
+    const { result } = renderHook(() => useCompareSelection());
+
+    await waitFor(() => {
+      expect(window.location.search).toBe("?coins=usdc-circle");
+    });
+    expect(window.location.hash).toBe("");
+    expect(result.current.selectedIds).toEqual(["usdc-circle"]);
+  });
+
+  it("keeps an explicit query selection over a prefill fragment", async () => {
+    window.history.replaceState(null, "", "/compare/?coins=usdt-tether#coins=usdc-circle");
+
+    const { result } = renderHook(() => useCompareSelection());
+
+    await waitFor(() => {
+      expect(window.location.hash).toBe("");
+    });
+    expect(window.location.search).toBe("?coins=usdt-tether");
+    expect(result.current.selectedIds).toEqual(["usdt-tether"]);
+  });
 });

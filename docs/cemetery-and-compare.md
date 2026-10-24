@@ -128,7 +128,7 @@ Methodology distinguishes curated versus tracked-then-frozen admission, excludes
 
 ### Autopsy register
 
-`buildCemeteryRegisterRows` projects data server-side; clients import types, never `CEMETERY_ENTRIES`. Missing peak/mechanism/epitaph is visibly/accessibly not recorded; duplicate tickers retain names/IDs.
+`buildCemeteryRegisterRows` projects data server-side; clients import types, never `CEMETERY_ENTRIES`. Missing peak/mechanism/epitaph is visibly/accessibly not recorded; duplicate tickers retain names/IDs. A tracked archive's name (full and folded rows) is a static link to its frozen profile, so the register links those profiles in the prerendered HTML; curated-only records stay plain text. The row's tap-to-expand handler ignores clicks on that link.
 
 `CEMETERY_REGISTER_PARAMS` owns filter keys, accepted values and canonical order. Invalid values drop; bounded trimmed search is case/accent-insensitive over name/ticker/id/epitaph, not obituary. URL writes replace history, preserve unrelated params and omit default sort/direction. Died uses canonical order; missing peaks sort last both directions with default order breaking ties. Result counts announce politely.
 
@@ -157,6 +157,10 @@ Pair titles read `{A} vs {B}: Safety Scores, Reserves & Risk`, shortened to `{A}
 
 Pair JSON-LD is WebPage/ItemList with coin Thing nodes and visible PropertyValue rows. Sitemap includes hub/pairs; pair lastModified is newest coin LAST_EDITED or substantive editorial updatedAt, never build/recheck time.
 
+Each pair page ends with a "Related comparisons" section: "More {A} comparisons" and "More {B} comparisons" link lists built from `getStaticComparisonPagesForCoin()` (editorial briefs first), excluding the current pair, anchored with each pair's `{A} vs {B}` short title. A coin with no other pair contributes no list; the section is omitted when neither does.
+
+`STATIC_COMPARE_PAIRS` (`src/lib/compare-links.ts`) admits only active, non-frozen coins with full static profiles on both sides; additions are demand-led (Search Console, or combined sibling-profile impressions where no pair query data exists). A pair without an editorial brief ships with the generated intro, summary and FAQ.
+
 ### Selection and URL contract
 
 - Maximum selection: `MAX_COMPARE_COINS = 5`.
@@ -165,6 +169,8 @@ Pair JSON-LD is WebPage/ItemList with coin Thing nodes and visible PropertyValue
 - Query param `range` stores the market-cap chart window. Accepted values are `7d`, `30d`, `90d`, `1y`, and `all`; `all` is the default and is cleared from the URL instead of persisted.
 - Static comparison landing pages are generated from `STATIC_COMPARISON_PAGES` in `src/lib/compare-pages.ts` and live at `/compare/<left-id>-vs-<right-id>/`.
 - Mobile selection renders selected-coin chips plus one add selector instead of all five selector slots up front. The underlying URL state and five-coin maximum are unchanged; desktop keeps the full slot grid.
+
+Static HTML never links a `/compare/?coins=` facet: `buildStaticCompareHref()` (`src/lib/compare-links.ts`) links the curated pair page when one exists (a coin's primary pair; for two coins, their pair) and otherwise `/compare/#coins=<ids>`, which crawlers read as `/compare/`. Once the query is readable, `useCompareSelection()` adopts that fragment into `?coins=` (an explicit `?coins=` selection wins) and drops the fragment. `buildLiveCompareUrl()` stays for client-side navigation and the pair pages' "Open live compare" tool links.
 
 Initial load normalizes the `coins` URL param to the accepted canonical ID list. If invalid tokens were present, `useCompareSelection()` rewrites the URL to the surviving canonical IDs or removes `coins` entirely.
 

@@ -51,6 +51,18 @@ export const STATIC_COMPARE_PAIRS = [
   ["eurc-circle", "eure-monerium"],
   ["eurc-circle", "eur0-usual"],
   ["brla-brla-digital", "brz-transfero"],
+  // 2026-10 expansion — sibling demand (combined profile impressions in
+  // Search Console) under the same gate: active, non-frozen, full profiles.
+  ["jpyc-jpyc", "jpysc-sbi-startale"],
+  ["usdy-ondo-finance", "usyc-hashnote"],
+  ["eurc-circle", "eurcv-societe-generale-forge"],
+  ["xaut-tether", "xaum-matrixdock"],
+  ["usd1-world-liberty-financial", "usdt-tether"],
+  ["brla-brla-digital", "brl1-brl1"],
+  // Base vs staked or vault wrapper, following the USDe/sUSDe precedent.
+  ["gho-aave", "sgho-aave"],
+  ["usdf-falcon", "susdf-falcon"],
+  ["apxusd-apyx", "apyusd-apyx"],
 ] as const;
 
 export function buildLiveCompareUrl(coinIds: readonly string[]): string {
@@ -59,6 +71,55 @@ export function buildLiveCompareUrl(coinIds: readonly string[]): string {
 
 export function buildStaticComparisonSlug(leftId: string, rightId: string): string {
   return `${leftId}-vs-${rightId}`;
+}
+
+/**
+ * Static HTML links the live picker as `/compare/#coins=<ids>`: crawlers see
+ * one `/compare/` URL instead of a facet per coin (IX3), and the picker adopts
+ * the fragment into its `?coins=` state on load, so the visitor still lands
+ * prefilled. Use `buildLiveCompareUrl` only for client-side navigation.
+ */
+const COMPARE_PREFILL_HASH_PREFIX = "#coins=";
+
+export function buildComparePrefillUrl(coinIds: readonly string[]): string {
+  return `/compare/${COMPARE_PREFILL_HASH_PREFIX}${coinIds.map((coinId) => encodeURIComponent(coinId)).join(",")}`;
+}
+
+/** Coin IDs from a `#coins=` prefill fragment, or null for any other hash. */
+export function parseComparePrefillHash(hash: string): string[] | null {
+  if (!hash.startsWith(COMPARE_PREFILL_HASH_PREFIX)) return null;
+  const ids = hash
+    .slice(COMPARE_PREFILL_HASH_PREFIX.length)
+    .split(",")
+    .map((value) => {
+      try {
+        return decodeURIComponent(value).trim();
+      } catch {
+        return "";
+      }
+    })
+    .filter(Boolean);
+  return ids.length > 0 ? ids : null;
+}
+
+function findStaticComparePair(leftId: string, rightId: string) {
+  return STATIC_COMPARE_PAIRS.find(
+    ([pairLeft, pairRight]) =>
+      (pairLeft === leftId && pairRight === rightId) || (pairLeft === rightId && pairRight === leftId),
+  );
+}
+
+/**
+ * The crawlable "Compare" target for static HTML: the curated pair page when
+ * one exists (a coin's primary pair; for two coins, their pair), otherwise the
+ * picker prefilled client-side. Never a `/compare/?coins=` facet URL.
+ */
+export function buildStaticCompareHref(coinIds: readonly string[]): string {
+  if (coinIds.length === 1) {
+    return getPrimaryStaticComparisonLinkForCoin(coinIds[0])?.href ?? buildComparePrefillUrl(coinIds);
+  }
+  const pair = coinIds.length === 2 ? findStaticComparePair(coinIds[0], coinIds[1]) : undefined;
+  return pair ? `/compare/${buildStaticComparisonSlug(pair[0], pair[1])}/` : buildComparePrefillUrl(coinIds);
 }
 
 export interface StaticComparisonLink {

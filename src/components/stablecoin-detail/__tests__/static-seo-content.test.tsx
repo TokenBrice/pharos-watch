@@ -157,7 +157,7 @@ describe("StablecoinDetailSeoContent", () => {
       screen.getByText(/As of Oct 19, 2026, Pharos had not published a Safety Score grade for TSTD/),
     ).toBeTruthy();
     expect(container.textContent).not.toContain("Static metadata says");
-    expect(screen.getByRole("link", { name: "Compare TSTD" }).getAttribute("href")).toBe("/compare/?coins=test-dollar");
+    expect(screen.getByRole("link", { name: "Compare TSTD" }).getAttribute("href")).toBe("/compare/#coins=test-dollar");
     expect(screen.getByRole("link", { name: "Telegram alerts" }).getAttribute("href")).toBe(
       "/pharoswatchbot/#getting-started",
     );

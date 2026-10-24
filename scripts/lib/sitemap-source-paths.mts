@@ -10,7 +10,8 @@ export const SITEMAP_COMMIT_DERIVED_SOURCE_PATHS: string[] = [
   "src/app/**",
   "src/lib/case-studies/**",
   "src/data/blog/**",
-  "src/components/stablecoin-detail/static-seo-content.tsx",
   "src/lib/page-metadata.ts",
-  "src/lib/stablecoin-detail-json-ld.ts",
+  // Profile-wide content changes move every profile through the explicit
+  // STABLECOIN_DETAIL_CONTENT_REVISED_AT constant, not commit dates.
+  "scripts/lib/sitemap-detail-dates.ts",
 ];

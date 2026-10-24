@@ -32,7 +32,14 @@ interface StablecoinTaxonomyShellProps {
   headerActions?: React.ReactNode;
   /** The live table; rendered directly under the header, ahead of the static directory. */
   children: React.ReactNode;
+  /** Static registry-only sections (peg hubs: at a glance, upcoming, former), rendered after the live table. */
+  staticSections?: React.ReactNode;
+  /** Replaces the directory's footnote where there is no live table to point at. */
+  directoryNote?: string;
 }
+
+const DEFAULT_DIRECTORY_NOTE =
+  "Membership comes from the Pharos stablecoin registry in this build. Counts are static directory context; the live table above carries current market, coverage, and risk data.";
 
 const DIRECTORY_PREVIEW_COUNT = 24;
 const LINKED_DIRECTORIES = [
@@ -72,6 +79,8 @@ export function StablecoinTaxonomyShell({
   relatedPages = [],
   headerActions,
   children,
+  staticSections,
+  directoryNote = DEFAULT_DIRECTORY_NOTE,
 }: StablecoinTaxonomyShellProps) {
   const visibleCoins = coins.slice(0, DIRECTORY_PREVIEW_COUNT);
   const overflowCoins = coins.slice(DIRECTORY_PREVIEW_COUNT);
@@ -114,6 +123,8 @@ export function StablecoinTaxonomyShell({
     >
       {children}
 
+      {staticSections}
+
       <section className="space-y-3">
         <div className="space-y-1.5">
           <h2 className="pharos-label">Stablecoin directory</h2>
@@ -148,10 +159,7 @@ export function StablecoinTaxonomyShell({
             </div>
           </details>
         )}
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          Membership comes from the Pharos stablecoin registry in this build. Counts are static directory context; the
-          live table above carries current market, coverage, and risk data.
-        </p>
+        <p className="text-xs leading-relaxed text-muted-foreground">{directoryNote}</p>
       </section>
 
       <section className="space-y-3">

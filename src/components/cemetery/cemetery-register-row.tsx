@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { memo, type MouseEvent } from "react";
 import { CAUSE_META } from "@shared/lib/cause-of-death";
 import { MECHANISM_ARCHETYPE_SHORT_LABELS } from "@shared/lib/classification";
 import { TableCell, TableRow } from "@/components/table";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { causeColorVars } from "@/lib/cemetery-cause-style";
 import type { CemeteryRegisterRow } from "@/lib/cemetery-register";
 import { formatCemeteryPeak } from "@/lib/cemetery-stats";
@@ -78,7 +80,17 @@ export const CemeteryRegisterRowPair = memo(function CemeteryRegisterRowPair({
             <div className="min-w-0">
               <div className="flex min-w-0 items-baseline gap-1.5">
                 <span className={styles.symbol}>{row.symbol}</span>
-                <span className="truncate text-muted-foreground">{row.name}</span>
+                {/* A tracked archive keeps its frozen profile online: link it statically for crawlers. */}
+                {row.tracked ? (
+                  <Link
+                    href={buildStablecoinUrl(row.id)}
+                    className="pharos-focus-ring truncate rounded-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                  >
+                    {row.name}
+                  </Link>
+                ) : (
+                  <span className="truncate text-muted-foreground">{row.name}</span>
+                )}
               </div>
               <div className={styles.mobileCause}>
                 <span aria-hidden="true" className={styles.dot} />
@@ -161,7 +173,17 @@ export function CemeteryRegisterFoldedRow({ row, columnCount }: { row: CemeteryR
         {/* Template strings keep each run one text node (no React `<!-- -->` separators in the HTML). */}
         <p>
           <span className={styles.symbol}>{row.symbol}</span>
-          {` ${row.name} · `}
+          {row.tracked ? (
+            <>
+              {" "}
+              <Link href={buildStablecoinUrl(row.id)} className="pharos-prose-link">
+                {row.name}
+              </Link>
+              {" · "}
+            </>
+          ) : (
+            ` ${row.name} · `
+          )}
           <span aria-hidden="true" className={styles.dot} />
           {`${CAUSE_META[row.cause].label} · ${formatRegisterDeathDate(row.deathDate)}`}
         </p>

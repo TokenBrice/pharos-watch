@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeftRight } from "lucide-react";
 import { AlertsHeaderLink } from "@/components/alerts-header-link";
 import { Button } from "@/components/ui/button";
-import { buildLiveCompareUrl } from "@/lib/compare-links";
+import { buildStaticCompareHref } from "@/lib/compare-links";
 
 interface TaxonomyHeaderActionsProps {
   shortLabel: string;
@@ -23,7 +23,7 @@ export function TaxonomyHeaderActions({ shortLabel, topCoinIds, bucketNoun }: Ta
           size="sm"
           className="min-h-11 rounded-full px-4 lg:min-h-9 lg:rounded-md"
         >
-          <Link href={buildLiveCompareUrl(topCoinIds)} aria-label={`Compare the leading ${shortLabel} stablecoins`}>
+          <Link href={buildStaticCompareHref(topCoinIds)} aria-label={`Compare the leading ${shortLabel} stablecoins`}>
             <ArrowLeftRight aria-hidden="true" />
             <span>Compare leaders</span>
           </Link>

@@ -32,7 +32,7 @@ import {
 import { buildAiDisclosureLine, formatAiSummaryDate } from "@/components/ai-disclosure";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { isBlacklistStablecoin } from "@shared/lib/blacklist";
-import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
+import { buildStaticCompareHref } from "@/lib/compare-links";
 import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
 import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-current";
 import type { FaqItem } from "@/lib/faq";
@@ -591,7 +591,7 @@ export function StablecoinDetailSeoContent({
       ? resolveAiSummaryClaims(summary.text, summary.claimTokens).text
       : AI_SUMMARY_UNAVAILABLE_NOTICE
     : null;
-  const compareHref = getPrimaryStaticComparisonLinkForCoin(coin.id)?.href ?? buildLiveCompareUrl([coin.id]);
+  const compareHref = buildStaticCompareHref([coin.id]);
   const alertCommand = buildAlertCommand(coin);
   const [identityAnswer, safetyAnswer] = buildStablecoinFaqItems(coin);
 

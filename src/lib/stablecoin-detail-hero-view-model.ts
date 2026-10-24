@@ -3,7 +3,7 @@ import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
 import { CASE_STUDY_OUTCOME_CHIPS, CASE_STUDY_OUTCOME_LABELS } from "@/lib/case-study-outcomes";
 import { CASE_STUDY_CLIENT_BY_COIN_ID } from "@/lib/case-study-client-index";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
-import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
+import { buildComparePrefillUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import type { SavedSafetyAssessment } from "@/lib/api";
@@ -392,7 +392,7 @@ export function buildStablecoinDetailHeroViewModel({
     infrastructures,
     header: {
       coinId: coin.id,
-      compareHref: primaryComparisonPage?.href ?? buildLiveCompareUrl([coin.id]),
+      compareHref: primaryComparisonPage?.href ?? buildComparePrefillUrl([coin.id]),
       benchmarkSymbol: primaryComparisonPage?.benchmarkSymbol ?? null,
     },
     price: {

@@ -10,7 +10,7 @@ import { CASE_STUDY_EVENT_WINDOWS } from "@/lib/case-study-client-index";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
 import { INDEXABLE_DIGEST_ENTRIES } from "@/lib/digest-registry";
-import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
+import { PEG_HUB_PEGS, PEG_HUB_SLUGS } from "@/lib/peg-landing";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { CHANGELOG_MONTH_ARCHIVES } from "@/lib/changelog-history";
@@ -65,7 +65,7 @@ const PUBLIC_ROUTE_CANDIDATES: readonly PublicRouteInventoryEntry[] = [
   ...entries("stablecoin", CLIENT_TRACKED_STABLECOINS.map((coin) => buildStablecoinUrl(coin.id))),
   ...entries("chain", getActiveChainIds().map((chainId) => `/chains/${chainId}/`)),
   ...entries("chain", ["/chains/"]),
-  ...entries("taxonomy", ACTIVE_PEGS.map((peg) => `/stablecoins/${PEG_SLUGS[peg]}/`)),
+  ...entries("taxonomy", PEG_HUB_PEGS.map((peg) => `/stablecoins/${PEG_HUB_SLUGS[peg]}/`)),
   ...entries("taxonomy", ALL_STABLECOIN_TAXONOMY_PAGES.map((page) => page.href)),
   ...entries("mechanism", [
     "/learn/mechanisms/",

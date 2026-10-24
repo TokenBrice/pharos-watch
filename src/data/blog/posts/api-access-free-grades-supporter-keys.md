@@ -28,7 +28,7 @@ It is a thank-you perk, and the terms match: revocable, no SLA, no refunds. This
 
 ## What the keyed API covers
 
-The full API is the data the site runs on, read-only: the stablecoin catalogue and per-coin detail, supply history and chain aggregates, peg summary and depeg incidents, stress signals and the stability index, DEX liquidity, reserves and redemption backstops, mint and burn flows, the blacklist tracker, Safety Score report cards and history, yield rankings, and the daily digest with dated snapshots. The [API reference](/about/api/) lists every endpoint.
+The full API is the data the site runs on, read-only: the stablecoin catalogue and per-coin detail, supply history and chain aggregates, peg summary and depeg incidents, stress signals and the stability index, DEX liquidity, reserves and redemption backstops, mint and burn flows, the blacklist tracker, Safety Score report cards and history, yield rankings, and the daily digest with dated snapshots. The [API reference](/api/reference/) lists every endpoint.
 
 Typical uses: a bot that polls active depeg events, a risk dashboard that joins liquidity, reserves, and the report card for a treasury's holdings, or a notebook that pulls a year of supply and score history.
 

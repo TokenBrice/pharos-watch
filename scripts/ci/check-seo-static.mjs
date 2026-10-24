@@ -699,6 +699,27 @@ function retiredInternalRouteMatch(normalizedHref) {
   );
 }
 
+/**
+ * Every internal `_redirects` redirect (not a 200 rewrite) marks a retired
+ * route, so internal anchors are checked against the file itself rather than
+ * only the hand-kept prefix list: a link to a source costs a redirect hop.
+ * Static sources match exactly (trailing slash normalized); `/*` splats match
+ * their prefix. Placeholder sources are not matched.
+ */
+function buildRedirectedRouteMatchers(redirectRules) {
+  return redirectRules
+    .filter((rule) => rule.source.startsWith("/") && rule.status !== "200" && !rule.source.includes(":"))
+    .map((rule) => {
+      const splat = rule.source.endsWith("/*");
+      const path = splat ? rule.source.slice(0, -1) : rule.source;
+      return { source: rule.source, destination: rule.destination, splat, base: path.endsWith("/") ? path : `${path}/` };
+    });
+}
+
+function redirectedInternalRouteMatch(normalizedHref, matchers) {
+  return matchers.find((matcher) => (matcher.splat ? normalizedHref.startsWith(matcher.base) : normalizedHref === matcher.base)) ?? null;
+}
+
 function isRetiredInternalRoute(route) {
   return retiredInternalRouteMatch(route) !== null;
 }
@@ -1114,6 +1135,7 @@ export function collectSeoStaticCheckResult({
   }
 
   const routeSet = new Set(pageRecords.map((p) => p.route));
+  const redirectedRouteMatchers = buildRedirectedRouteMatchers(redirectRules);
   const graph = new Map();
   const inbound = new Map();
   for (const route of routeSet) {
@@ -1138,6 +1160,13 @@ export function collectSeoStaticCheckResult({
         errors.push(
           `${record.route}: internal anchor href points to retired route prefix ${retiredRoute.prefix}: ${href} (use ${retiredRoute.replacement})`,
         );
+      } else {
+        const redirectedRoute = redirectedInternalRouteMatch(normalized, redirectedRouteMatchers);
+        if (redirectedRoute) {
+          errors.push(
+            `${record.route}: internal anchor href points to _redirects source ${redirectedRoute.source}: ${href} (use ${redirectedRoute.destination})`,
+          );
+        }
       }
 
       if (routeSet.has(normalized)) {

@@ -5,7 +5,11 @@ import { fileURLToPath } from "node:url";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { assertFullGitHistory } from "../lib/git-history.mts";
 import { loadPerCoinStablecoinEntries, STABLECOIN_DOMAIN_SOURCE_DIR } from "../lib/stablecoin-catalog-sources";
-import { collectStablecoinDetailDates, latestIso } from "../lib/sitemap-detail-dates";
+import {
+  collectStablecoinDetailDates,
+  latestIso,
+  STABLECOIN_DETAIL_CONTENT_REVISED_AT,
+} from "../lib/sitemap-detail-dates";
 import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
 import { BLOG_POSTS } from "../../src/data/blog";
 import {
@@ -23,12 +27,6 @@ const OUTPUT_TYPES = join(__dirname, "../../src/generated/sitemap-dates.json.d.t
 const CHECK_MODE = process.argv.includes("--check");
 
 assertFullGitHistory("sitemap-dates");
-const STABLECOIN_DETAIL_SHARED_SOURCES = [
-  join(__dirname, "../../src/app/stablecoin/[id]/page.tsx"),
-  join(__dirname, "../../src/components/stablecoin-detail/static-seo-content.tsx"),
-  join(__dirname, "../../src/lib/page-metadata.ts"),
-  join(__dirname, "../../src/lib/stablecoin-detail-json-ld.ts"),
-];
 const CASE_STUDY_DETAIL_SHARED_SOURCES = [
   join(__dirname, "../../src/app/learn/case-studies/[slug]/page.tsx"),
   join(__dirname, "../../src/app/learn/case-studies/case-study-body.tsx"),
@@ -69,9 +67,7 @@ const GIT_DATE_SCAN_PATHS = [
   "src/app",
   "src/lib/case-studies",
   "src/data/blog",
-  "src/components/stablecoin-detail/static-seo-content.tsx",
   "src/lib/page-metadata.ts",
-  "src/lib/stablecoin-detail-json-ld.ts",
   "shared/data/stablecoins/coins",
   STABLECOIN_DOMAIN_SOURCE_DIR,
   "shared/data/methodology-changelogs",
@@ -165,14 +161,12 @@ function walkPages(dir: string, prefix: string, dates: Record<string, string>): 
 }
 
 function addStablecoinDetailDates(dates: Record<string, string>): void {
-  const sharedLastModified = latestIso(...STABLECOIN_DETAIL_SHARED_SOURCES.map(getLastModified));
-
   Object.assign(
     dates,
     collectStablecoinDetailDates(
       loadPerCoinStablecoinEntries(REPO_ROOT),
       getLastModified,
-      sharedLastModified,
+      STABLECOIN_DETAIL_CONTENT_REVISED_AT,
       REPO_ROOT,
     ),
   );

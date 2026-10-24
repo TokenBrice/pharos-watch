@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { useUrlState } from "@/hooks/use-url-state";
 import { trackEvent } from "@/lib/analytics";
+import { parseComparePrefillHash } from "@/lib/compare-links";
 import {
   COMPARE_COIN_OPTIONS,
   MAX_COMPARE_COINS,
@@ -33,11 +34,26 @@ const COMPARE_URL_STATE_SCHEMA: UrlStateSchema<CompareUrlState> = {
 };
 
 export function useCompareSelection() {
-  const { state, replaceState } = useUrlState(COMPARE_URL_STATE_SCHEMA, {
+  const { state, replaceState, isReady } = useUrlState(COMPARE_URL_STATE_SCHEMA, {
     normalize: "coins",
   });
   const { coins: selectedIds, range } = state;
   const [flowHours, setFlowHours] = useState<24 | 168 | 720>(24);
+
+  // Static links prefill through `#coins=` (see buildComparePrefillUrl). Once
+  // the real query is readable, adopt the fragment into `?coins=` (the URL
+  // stays the source of truth) unless an explicit selection is already
+  // present, and drop the fragment so a reload or share keeps one form.
+  const prefillHandled = useRef(false);
+  useEffect(() => {
+    if (!isReady || prefillHandled.current) return;
+    prefillHandled.current = true;
+    const prefill = parseComparePrefillHash(window.location.hash);
+    if (!prefill) return;
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}${window.location.search}`);
+    if (selectedIds.length > 0) return;
+    replaceState({ coins: prefill.slice(0, MAX_COMPARE_COINS), range });
+  }, [isReady, range, replaceState, selectedIds]);
 
   const setRange = useCallback(
     (newRange: TimeRangeOption) => {

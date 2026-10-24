@@ -52,6 +52,7 @@ const route = createClientFeaturePage({
     methodology: {
       version: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
       changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+      docsPath: "/docs/depeg-detection/",
     },
     header: "instrument",
     headerActions: (

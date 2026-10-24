@@ -27,6 +27,7 @@ const route = createClientFeaturePage({
       version: LIQUIDITY_METHODOLOGY_VERSION_LABEL,
       changelogPath: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
       label: "Liquidity Score methodology",
+      docsPath: "/docs/dex-liquidity/",
     },
     header: "instrument",
     headerActions: <ShareButton ogPath={API_PATHS.ogPage("liquidity")} />,
