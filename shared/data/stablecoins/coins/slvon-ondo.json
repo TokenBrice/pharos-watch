@@ -13,6 +13,11 @@
   "pegMechanism": "NAV-style SLV ETF tracker rather than a $1 peg. Eligible onboarded investors redeem to USDon; conversion to USDC depends on stablecoin-swapper liquidity and whitelist access. The documented minimum is $1, while executable limits and quote spreads are account- and asset-specific.",
   "detailProvider": "coingecko",
   "geckoId": "ishares-silver-trust-ondo-tokenized-stock",
+  "identifiers": {
+    "isin": [
+      "VGG7001AAT12"
+    ]
+  },
   "proofOfReserves": {
     "type": "attestation",
     "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency",

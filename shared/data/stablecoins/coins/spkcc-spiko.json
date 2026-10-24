@@ -15,6 +15,11 @@
   "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "spiko-digital-assets-cash-carry-fund",
+  "identifiers": {
+    "isin": [
+      "FR0014010OM9"
+    ]
+  },
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://docs.spiko.io/documentation/product_overview/cash_and_carry/legal_documentation",

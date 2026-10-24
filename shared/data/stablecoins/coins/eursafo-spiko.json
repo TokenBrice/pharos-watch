@@ -40,6 +40,11 @@
   },
   "detailProvider": "coingecko",
   "geckoId": "spiko-amundi-overnight-swap-fund-eur",
+  "identifiers": {
+    "isin": [
+      "FR0014015LD3"
+    ]
+  },
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://geco.amf-france.org/back-office/document/download/429960",

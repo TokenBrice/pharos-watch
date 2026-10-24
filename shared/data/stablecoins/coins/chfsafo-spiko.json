@@ -52,6 +52,11 @@
   },
   "detailProvider": "coingecko",
   "geckoId": "spiko-amundi-overnight-swap-fund-chf",
+  "identifiers": {
+    "isin": [
+      "FR0014015LG6"
+    ]
+  },
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://geco.amf-france.org/back-office/document/download/429960",

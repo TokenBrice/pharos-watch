@@ -10,6 +10,11 @@
   },
   "detailProvider": "coingecko",
   "geckoId": "spdr-gold-shares-ondo-tokenized",
+  "identifiers": {
+    "isin": [
+      "VGG7001ABQ63"
+    ]
+  },
   "contracts": [
     {
       "chain": "ethereum",

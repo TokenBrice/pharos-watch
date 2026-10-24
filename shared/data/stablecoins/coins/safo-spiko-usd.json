@@ -15,6 +15,11 @@
   "pegMechanism": "USD-denominated NAV-accreting UCITS share class with KYC-gated subscriptions and redemptions at daily fund NAV through Spiko. Orders are centralized by 15:00 Paris time; ordinary redemption settles D+1, subject to the currency market being open. The management company may cap redemptions when net requests reach 25% of sub-fund net assets; the trigger is the same for all share classes, with at most 20 valuation days of capping over three months. Unexecuted orders carry over without priority; suspension and swing pricing can also limit or delay exit.",
   "detailProvider": "coingecko",
   "geckoId": "safo",
+  "identifiers": {
+    "isin": [
+      "FR0014015LE1"
+    ]
+  },
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://geco.amf-france.org/back-office/document/download/429960",

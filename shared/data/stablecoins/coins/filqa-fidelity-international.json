@@ -39,6 +39,11 @@
   },
   "detailProvider": "coingecko",
   "geckoId": "fidelity-usd-digital-liquidity-fund-acc",
+  "identifiers": {
+    "isin": [
+      "KYG3R61G1088"
+    ]
+  },
   "links": [
     {
       "label": "Fidelity September 14, 2026 fund prospectus",
