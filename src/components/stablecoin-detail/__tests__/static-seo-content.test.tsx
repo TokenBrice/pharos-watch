@@ -153,7 +153,7 @@ describe("StablecoinDetailSeoContent", () => {
     expect(
       screen.getByText(/Treat the live peg, liquidity, reserve, dependency, and Safety Score sections below/),
     ).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Compare TSTD" }).getAttribute("href")).toBe("/compare/?coins=test-dollar");
+    expect(screen.getByRole("link", { name: "Compare TSTD" }).getAttribute("href")).toBe("/compare/#coins=test-dollar");
     expect(screen.getByRole("link", { name: "Telegram alerts" }).getAttribute("href")).toBe(
       "/pharoswatchbot/#getting-started",
     );

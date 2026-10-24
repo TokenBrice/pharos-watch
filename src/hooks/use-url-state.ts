@@ -44,5 +44,5 @@ export function useUrlState<T>(schema: UrlStateSchema<T>, options?: UseUrlStateO
     });
   }, [enabled, isReady, normalizeKey, replaceParams, schema, searchParams, state]);
 
-  return { state, replaceState, patchState, searchParams };
+  return { state, replaceState, patchState, searchParams, isReady };
 }

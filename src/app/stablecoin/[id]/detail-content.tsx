@@ -36,7 +36,7 @@ import { RailSafetySummary } from "@/components/stablecoin-detail/rail-safety-su
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
 import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
-import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
+import { buildStaticCompareHref } from "@/lib/compare-links";
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import { alignAnchorAfterHydration, revealAnchorId, revealDeferredSectionsThroughAnchor } from "@/lib/anchor-reveal";
 import { resolveDetailGradeRead } from "@/lib/stablecoin-detail-query-view-model";
@@ -210,7 +210,7 @@ function DetailNavigation({
           </IntentLink>
           <span className="text-border">|</span>
           <IntentLink
-            href={getPrimaryStaticComparisonLinkForCoin(viewModel.coin.id)?.href ?? buildLiveCompareUrl([viewModel.coin.id])}
+            href={buildStaticCompareHref([viewModel.coin.id])}
             className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
           >
             Compare

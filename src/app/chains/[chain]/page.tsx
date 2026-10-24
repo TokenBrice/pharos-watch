@@ -8,7 +8,7 @@ import { buildApiOgImageUrl, buildPageMetadata, trimTextAtWordBoundary } from "@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { buildChainProfileJsonLd } from "@/lib/chain-json-ld";
 import { deploymentCountLabel, stablecoinCountLabel } from "@/lib/chain-labels";
-import { buildLiveCompareUrl } from "@/lib/compare-links";
+import { buildStaticCompareHref } from "@/lib/compare-links";
 import { safeJsonLd } from "@/lib/json-ld";
 import {
   CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
@@ -181,7 +181,7 @@ function ChainRouteCta({
         <div className="flex flex-wrap gap-2">
           {compareIds.length >= 2 ? (
             <Link
-              href={buildLiveCompareUrl(compareIds)}
+              href={buildStaticCompareHref(compareIds)}
               className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent sm:min-h-9"
             >
               Compare cohort

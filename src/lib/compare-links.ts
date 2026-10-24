@@ -73,6 +73,55 @@ export function buildStaticComparisonSlug(leftId: string, rightId: string): stri
   return `${leftId}-vs-${rightId}`;
 }
 
+/**
+ * Static HTML links the live picker as `/compare/#coins=<ids>`: crawlers see
+ * one `/compare/` URL instead of a facet per coin (IX3), and the picker adopts
+ * the fragment into its `?coins=` state on load, so the visitor still lands
+ * prefilled. Use `buildLiveCompareUrl` only for client-side navigation.
+ */
+const COMPARE_PREFILL_HASH_PREFIX = "#coins=";
+
+export function buildComparePrefillUrl(coinIds: readonly string[]): string {
+  return `/compare/${COMPARE_PREFILL_HASH_PREFIX}${coinIds.map((coinId) => encodeURIComponent(coinId)).join(",")}`;
+}
+
+/** Coin IDs from a `#coins=` prefill fragment, or null for any other hash. */
+export function parseComparePrefillHash(hash: string): string[] | null {
+  if (!hash.startsWith(COMPARE_PREFILL_HASH_PREFIX)) return null;
+  const ids = hash
+    .slice(COMPARE_PREFILL_HASH_PREFIX.length)
+    .split(",")
+    .map((value) => {
+      try {
+        return decodeURIComponent(value).trim();
+      } catch {
+        return "";
+      }
+    })
+    .filter(Boolean);
+  return ids.length > 0 ? ids : null;
+}
+
+function findStaticComparePair(leftId: string, rightId: string) {
+  return STATIC_COMPARE_PAIRS.find(
+    ([pairLeft, pairRight]) =>
+      (pairLeft === leftId && pairRight === rightId) || (pairLeft === rightId && pairRight === leftId),
+  );
+}
+
+/**
+ * The crawlable "Compare" target for static HTML: the curated pair page when
+ * one exists (a coin's primary pair; for two coins, their pair), otherwise the
+ * picker prefilled client-side. Never a `/compare/?coins=` facet URL.
+ */
+export function buildStaticCompareHref(coinIds: readonly string[]): string {
+  if (coinIds.length === 1) {
+    return getPrimaryStaticComparisonLinkForCoin(coinIds[0])?.href ?? buildComparePrefillUrl(coinIds);
+  }
+  const pair = coinIds.length === 2 ? findStaticComparePair(coinIds[0], coinIds[1]) : undefined;
+  return pair ? `/compare/${buildStaticComparisonSlug(pair[0], pair[1])}/` : buildComparePrefillUrl(coinIds);
+}
+
 export interface StaticComparisonLink {
   href: string;
   benchmarkSymbol: string | null;
