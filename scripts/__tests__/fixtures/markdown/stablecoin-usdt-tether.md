@@ -19,7 +19,7 @@ dateModified: "2026-10-19"
 
 ## Overview
 
-The current Safety Score and live assessment are available on the interactive page.
+USDT held Safety Score A (83/100) as of 2026-10-22 in Pharos's scores-latest release dataset. The current Safety Score and live assessment are available on the interactive page.
 
 ## Collateral
 
@@ -90,6 +90,24 @@ Direct redemption through Tether for verified customers at $1 less applicable fe
 | tempo | `0x20C00000000000000000000014f22CA97301EB73` | 6 |
 | rootstock | `0x779dED0C9e1022225F8e0630b35A9B54Be713736` | 6 |
 | hedera | `0x00000000000000000000000000000000009Ce723` | 6 |
+
+## Quick answers
+
+### What is Tether (USDT)?
+
+USDT (Tether) is the largest dollar stablecoin, mostly backed by short-term U.S. Treasuries with a centralized issuer and quarterly attestations. The static profile records its US Dollar peg mechanism as: Direct redemption through Tether for verified customers at $1 less applicable fees, subject to Tether's terms. Supply figures include USDT0 (omnichain variant via LayerZero lock-and-mint) deployed on 20+ additional chains
+
+### Is USDT safe?
+
+USDT held an A Safety Score grade (83/100) in Pharos's scores-latest release dataset as of 2026-10-22 — a safe-tier grade, so Pharos assessed it as overall safe at that date, though no stablecoin is entirely risk-free. Static metadata says Tether uses a Centralized (CeFi) governance model and Real-World Asset Backed backing, with Independent Attestation from BDO Italia; the main caveat is that issuer or admin freeze controls are recorded. Treat the live peg, liquidity, reserve, dependency, and Safety Score sections below as the current risk read.
+
+### What backs USDT?
+
+Pharos classifies USDT backing as Real-World Asset Backed. Collateral, per the static profile: Q2 2026 attestation: $187.75B total assets vs $183.64B liabilities; about $140.6B in U.S. Treasury bills and reverse repurchase agreements, $18.8B precious metals, $5.8B Bitcoin, $13.5B secured loans, and a $4.11B excess reserve buffer. Reserve evidence: Independent Attestation from BDO Italia.
+
+### Can USDT be frozen or blacklisted?
+
+Based on tracked contract metadata and blacklist coverage, issuer or admin freeze controls are recorded. Live freeze and blacklist events for USDT, when applicable, appear in the dossier below.
 
 ## Live Data
 

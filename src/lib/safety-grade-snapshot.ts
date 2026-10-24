@@ -86,3 +86,14 @@ const ASSESSMENT_BY_STABLECOIN_ID = buildAssessmentIndex();
 export function getSnapshotSafetyAssessment(stablecoinId: string): SnapshotSafetyAssessment | null {
   return ASSESSMENT_BY_STABLECOIN_ID.get(stablecoinId) ?? null;
 }
+
+/**
+ * "Safety Score A (83/100) as of 2026-10-22": the dated grade from the same
+ * scores-latest mirror and release date as the profile FAQ. Null when unrated.
+ */
+export function formatSnapshotSafetyScoreLabel(stablecoinId: string): string | null {
+  const assessment = getSnapshotSafetyAssessment(stablecoinId);
+  if (!assessment) return null;
+  const score = assessment.score !== null ? ` (${assessment.score}/100)` : "";
+  return `Safety Score ${assessment.grade}${score} as of ${PUBLIC_DATASET_CURRENT_DATE}`;
+}
