@@ -15,8 +15,9 @@ import {
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/constants";
 import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
+import { DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
 
-const depegDescription = `Track stablecoin depegs across ${ACTIVE_STABLECOIN_COUNT} coins with live peg deviations, DEWS early warnings, active incidents, recovery forecasts, severity, and history.`;
+const depegDescription = `Track stablecoin depegs across ${ACTIVE_STABLECOIN_COUNT} coins: live peg deviations, early warnings, active incidents, recovery forecasts and ${DEPEG_EVENT_ENTRIES.length} recorded depeg events.`;
 
 const FAQ_ITEMS = [
   {
@@ -39,7 +40,7 @@ const FAQ_ITEMS = [
 const route = createClientFeaturePage({
   path: "/depeg/",
   metadata: {
-    title: "Depeg Tracker: Live Peg Alerts, DDR & DEWS",
+    title: "Stablecoin Depeg Tracker: Live Alerts & History",
     description: depegDescription,
     ogImage: buildApiOgImageUrl(API_PATHS.ogDepeg()),
   },

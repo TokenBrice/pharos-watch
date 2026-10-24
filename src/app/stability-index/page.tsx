@@ -30,7 +30,7 @@ const FAQ_ITEMS = [
 const route = createClientFeaturePage({
   path: "/stability-index/",
   metadata: {
-    title: "Stability Index: Pharos Stablecoin Market Health",
+    title: "Stablecoin Stability Index: Live Market Stress Score",
     description,
     ogImage: buildApiOgImageUrl(API_PATHS.ogStabilityIndex()),
   },

@@ -68,7 +68,7 @@ const YIELD_PICKER_NOTE = (
 const route = createClientFeaturePage({
   path: "/yield/",
   metadata: {
-    title: "Stablecoin Yield Intelligence",
+    title: "Stablecoin Yields: Live APY Ranked by Risk",
     description: desc,
     ogImage: buildLiveRouteOgImageUrl("yield"),
   },

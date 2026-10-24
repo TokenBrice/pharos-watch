@@ -9,8 +9,8 @@ import type { FaqItem } from "@/lib/faq";
 import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
-const complianceDescription =
-  "Stablecoin compliance tracker for EU MiCA authorization and U.S. GENIUS Act implementation-watch signals, with sourced public references.";
+const COMPLIANCE_SUMMARY = buildComplianceSummary();
+const complianceDescription = `${COMPLIANCE_SUMMARY.micaAuthorized} of ${COMPLIANCE_SUMMARY.micaAssessed} EU-assessed stablecoins hold MiCA authorization. GENIUS Act status for ${COMPLIANCE_SUMMARY.geniusTracked} coins (effective ${GENIUS_REGIME_STATE.effectiveDate}), from public registers.`;
 
 const COMPLIANCE_FAQ_ITEMS = [
   {
@@ -35,7 +35,6 @@ const COMPLIANCE_FAQ_ITEMS = [
   },
 ] as const satisfies readonly FaqItem[];
 
-const COMPLIANCE_SUMMARY = buildComplianceSummary();
 const COMPLIANCE_STATUS_DISTRIBUTION = buildComplianceStatusDistribution();
 
 const COMPLIANCE_HERO = (
@@ -144,7 +143,7 @@ const COMPLIANCE_STATIC_SECTION = (
 const route = createClientFeaturePage({
   path: "/compliance/",
   metadata: {
-    title: "Stablecoin Compliance Tracker: MiCA and GENIUS Status",
+    title: `MiCA-Authorized Stablecoins (${COMPLIANCE_SUMMARY.micaAuthorized}) & GENIUS Act Tracker`,
     description: complianceDescription,
     ogImage: `${SITE_URL}/og-card.png`,
   },
