@@ -62,7 +62,7 @@ describe("BlacklistDetailChart", () => {
 
     render(createElement(BlacklistDetailChart, { data, isLoading: false }));
 
-    expect(screen.getByText("Events per Quarter")).toBeTruthy();
+    expect(screen.getByText("Events per quarter")).toBeTruthy();
     expect(screen.getByRole("img", { name: "Quarterly blacklist events chart showing 2 quarters" })).toBeTruthy();
 
     expect(screen.getByTestId("plotted-Q1 '26").textContent).toBe(

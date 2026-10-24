@@ -191,7 +191,7 @@ function SourceChip({
           </span>
         </span>
         <span
-          className={cn("h-2 w-2 shrink-0 rounded-[2px]", SOURCE_DOT_CLASSES[status])}
+          className={cn("h-2 w-2 shrink-0 rounded-xs", SOURCE_DOT_CLASSES[status])}
           role="img"
           aria-label={style.text}
         />
@@ -286,7 +286,7 @@ function SourcesModal({
                   </span>
                 </span>
                 <span
-                  className={cn("h-2 w-2 shrink-0 rounded-[2px]", SOURCE_DOT_CLASSES[source.status])}
+                  className={cn("h-2 w-2 shrink-0 rounded-xs", SOURCE_DOT_CLASSES[source.status])}
                   role="img"
                   aria-label={source.status === "no-data" ? "Unused" : SOURCE_CHIP_STYLES[source.status].text}
                 />
@@ -296,15 +296,15 @@ function SourcesModal({
         </div>
         <div className="flex items-center justify-center gap-3 border-t border-border/40 px-5 py-3">
           <span className="pharos-label flex items-center gap-1.5">
-            <span className={cn("h-2 w-2 rounded-[2px]", PRICE_SOURCE_STATUS_CLASSES.used.dot)} aria-hidden="true" />
+            <span className={cn("h-2 w-2 rounded-xs", PRICE_SOURCE_STATUS_CLASSES.used.dot)} aria-hidden="true" />
             Used
           </span>
           <span className="pharos-label flex items-center gap-1.5">
-            <span className={cn("h-2 w-2 rounded-[2px]", PRICE_SOURCE_STATUS_CLASSES.available.dot)} aria-hidden="true" />
+            <span className={cn("h-2 w-2 rounded-xs", PRICE_SOURCE_STATUS_CLASSES.available.dot)} aria-hidden="true" />
             Available
           </span>
           <span className="pharos-label flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-[2px] bg-muted-foreground/40" aria-hidden="true" />
+            <span className="h-2 w-2 rounded-xs bg-muted-foreground/40" aria-hidden="true" />
             Unused
           </span>
         </div>

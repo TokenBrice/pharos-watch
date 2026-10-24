@@ -123,7 +123,7 @@ export function MethodologyHint({
         <MethodologyTriggerButton
           topic={topic}
           className={cn(
-            "pharos-focus-ring relative inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-frost-blue/25 bg-frost-blue/10 text-sky-700 transition-colors after:absolute after:-inset-2.5 after:content-[''] hover:border-frost-blue/45 hover:bg-frost-blue/14 hover:text-foreground md:after:hidden dark:text-frost-blue",
+            "pharos-focus-ring relative inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-frost-blue/25 bg-frost-blue/10 text-brand-accent-text transition-colors after:absolute after:-inset-2.5 after:content-[''] hover:border-frost-blue/45 hover:bg-frost-blue/14 hover:text-foreground md:after:hidden",
             buttonClassName,
           )}
         >

@@ -97,7 +97,7 @@ export function MissingDefenseMark({ size = "md", className }: { size?: "sm" | "
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full border border-dashed border-amber-600/55 bg-card dark:border-amber-400/50",
+        "inline-flex shrink-0 items-center justify-center rounded-full border border-dashed border-state-warn-solid/60 bg-card",
         size === "sm" ? "h-4 w-4" : "h-5 w-5",
         className,
       )}
@@ -148,7 +148,7 @@ export function StepNumber({
     <span
       style={style}
       className={cn(
-        "pharos-numeric inline-flex h-5 min-w-5 shrink-0 items-center justify-center whitespace-nowrap rounded-[5px] border px-1 text-2xs font-semibold leading-none",
+        "pharos-numeric inline-flex h-5 min-w-5 shrink-0 items-center justify-center whitespace-nowrap rounded-md border px-1 text-2xs font-semibold leading-none",
         terminal
           ? "border-foreground bg-foreground text-background"
           : hypothetical

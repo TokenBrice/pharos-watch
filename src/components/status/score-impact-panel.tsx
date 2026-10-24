@@ -44,7 +44,7 @@ export function ScoreImpactPanel({ reserveComposition }: ScoreImpactPanelProps) 
 
       <div className="mt-4">
 
-        <div className="space-y-3 rounded-xl border border-border/60 bg-background/45 p-3 text-xs">
+        <div className="space-y-3 pharos-inset p-3 text-xs">
           <div>
             <div className="text-sm font-medium text-foreground">Operator read</div>
             <p className="mt-1 leading-relaxed text-muted-foreground">

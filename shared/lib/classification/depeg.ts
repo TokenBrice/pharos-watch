@@ -5,6 +5,12 @@ import type { DdrResolutionTier } from "../../types/depeg-resolver";
  * Pills share one spelling: `border-X-500/30 bg-X-500/10 text-X-700 dark:text-X-400`.
  */
 
+/** Historical depeg event-load meter: filled pips share the DEWS `watch` orange. */
+export const DEPEG_EVENT_LOAD_PIP_CLASS = "border-orange-500/40 bg-orange-500";
+
+/** Lowest flagged tier of the status-page price-divergence ladder (below the watch and alert pills). */
+export const PRICE_DIVERGENCE_ELEVATED_PILL_CLASS = "border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-400";
+
 export type DepegRowStatus = "active" | "pending" | "coverageLimited" | "watch" | "clear";
 
 /**

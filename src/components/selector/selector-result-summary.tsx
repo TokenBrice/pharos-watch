@@ -202,7 +202,7 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
         ) : null}
 
         {answerChips.length > 0 || priorityLabels.length > 0 ? (
-          <div className="grid gap-3 rounded-lg border border-border/50 bg-background/35 p-3 md:grid-cols-[1fr_auto]">
+          <div className="grid gap-3 pharos-inset p-3 md:grid-cols-[1fr_auto]">
             {answerChips.length > 0 ? (
               <div className="min-w-0 space-y-2">
                 <p className="pharos-label">Answers</p>
@@ -296,7 +296,7 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
         </div>
 
         {copyShareDisabled && copyShareDisabledReason ? (
-          <p id={disabledReasonId} role="alert" className="text-xs text-amber-700 dark:text-amber-200">
+          <p id={disabledReasonId} role="alert" className="text-xs text-state-warn-bright">
             {copyShareDisabledReason}
           </p>
         ) : null}

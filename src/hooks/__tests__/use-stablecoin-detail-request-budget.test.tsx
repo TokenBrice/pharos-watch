@@ -135,7 +135,7 @@ describe("stablecoin detail request budget", () => {
     expect(queryClient.getQueryState(["stablecoin-live-summary", coin.id])?.dataUpdatedAt).toBeGreaterThan(sourceUpdatedAtSec * 1000);
     if (result.current.status !== "ready") throw new Error("Expected a ready dossier");
     const priceQuery = result.current.staleQueries.find((query) => query.preset === "stablecoins")!;
-    const supplyQuery = result.current.staleQueries.find((query) => query.label === "Supply History")!;
+    const supplyQuery = result.current.staleQueries.find((query) => query.label === "Supply history")!;
     for (const query of [priceQuery, supplyQuery]) {
       const health = deriveDataHealth({
         ...(query.preset ? DATA_HEALTH_PRESETS[query.preset] : { label: query.label!, staleTime: query.staleTime! }),

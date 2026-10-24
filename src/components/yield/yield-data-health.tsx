@@ -51,7 +51,7 @@ export function YieldApiWarnings({ warnings }: { warnings: YieldRankingsSummaryR
         >
           <p className="font-medium">{warning.message}</p>
           {warning.reasons && warning.reasons.length > 0 ? (
-            <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-100/80">{warning.reasons.join(", ")}</p>
+            <p className="mt-1 text-xs text-state-warn-strong">{warning.reasons.join(", ")}</p>
           ) : null}
         </div>
       ))}

@@ -259,7 +259,7 @@ it("omits the protocol distribution for genuinely empty observed DEX aggregates"
   });
   const { container } = render(<DistributionSection stablecoinId="usdc-circle" />);
   expect(container.querySelector("[role=alert]")).toBeNull();
-  expect(screen.queryByText("Liquidity by Protocol")).toBeNull();
+  expect(screen.queryByText("Liquidity by protocol")).toBeNull();
 });
 
 function mockDistributions(meta: ApiMeta | null, receipt = Date.now(), error: Error | null = null) {

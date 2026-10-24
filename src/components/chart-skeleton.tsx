@@ -23,13 +23,13 @@ export function ChartSkeleton({
       {/* Fake y-axis labels */}
       <div className="absolute left-3 top-3 bottom-8 w-8 flex flex-col justify-between">
         {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-2.5 w-full rounded bg-muted/50" />
+          <div key={i} className="h-2.5 w-full rounded-sm bg-muted/50" />
         ))}
       </div>
       {/* Fake x-axis labels */}
       <div className="absolute bottom-2 left-12 right-3 flex justify-between">
         {[0, 1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="h-2 w-8 rounded bg-muted/50" />
+          <div key={i} className="h-2 w-8 rounded-sm bg-muted/50" />
         ))}
       </div>
       {/* Fake area shape */}

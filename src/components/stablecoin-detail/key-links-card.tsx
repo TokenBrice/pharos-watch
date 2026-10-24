@@ -31,7 +31,7 @@ export function KeyLinksCard({ meta, anchors = false }: { meta: StablecoinMeta; 
   if (links.length === 0 && !proofOfReserves) return null;
 
   return (
-    <RailCard title="Key Links" ariaLabel="Key links" {...(anchors ? {} : { anchorTwin: "attestation" })}>
+    <RailCard title="Key links" ariaLabel="Key links" {...(anchors ? {} : { anchorTwin: "attestation" })}>
       <div className="space-y-4 px-4 pb-4">
         {links.length > 0 ? (
           <div className="flex flex-wrap items-center gap-1.5">

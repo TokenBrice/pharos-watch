@@ -436,7 +436,7 @@ export function YieldHistoryChart({
             </span>
           ) : null}
           <span className="inline-flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-[2px]" style={{ backgroundColor: CHART_BLUE }} />
+            <span className="h-1.5 w-1.5 rounded-xs" style={{ backgroundColor: CHART_BLUE }} />
             source change
           </span>
           {spikeAnnotations.length > 0 ? (

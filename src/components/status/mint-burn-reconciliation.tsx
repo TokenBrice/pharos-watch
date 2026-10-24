@@ -89,7 +89,7 @@ export function MintBurnReconciliationCard({ summary, error }: {
           ))}
         </div>
 
-        <div className={cn("flex flex-wrap items-start justify-between gap-3 rounded-[1rem] px-4 py-3", STATUS_PANEL_SHELL_CLASS)}>
+        <div className={cn("flex flex-wrap items-start justify-between gap-3 rounded-2xl px-4 py-3", STATUS_PANEL_SHELL_CLASS)}>
           <div className="space-y-1 text-xs text-muted-foreground">
             <p>Compares all mint/burn events with on-chain total-supply changes over matched blocks in the latest audited scan ranges.</p>
             <p>Each contract has its own range. This is not a 24-hour audit. Critical means a verified conservation mismatch; missing, stale or unsupported audits remain unverified.</p>
@@ -109,7 +109,7 @@ export function MintBurnReconciliationCard({ summary, error }: {
             const status = integrityStatus(row, summary.conservationVersion);
             const records = summary.conservationVersion === 1 ? row.conservation : undefined;
             return (
-              <div key={row.stablecoinId} role="group" aria-label={`${row.symbol} mint/burn integrity`} className={cn("min-w-0 rounded-[1rem] border p-4", statusTileTone(status))}>
+              <div key={row.stablecoinId} role="group" aria-label={`${row.symbol} mint/burn integrity`} className={cn("min-w-0 rounded-2xl border p-4", statusTileTone(status))}>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-foreground">{row.symbol}</span>
                   <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", statusTone(status))}>{status}</span>

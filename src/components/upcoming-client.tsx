@@ -264,7 +264,7 @@ function SlippedSplit({ pushed, overdue }: { pushed: number; overdue: number }):
 }
 
 function ClockPending(): React.JSX.Element {
-  return <span aria-hidden="true" className="inline-block h-3.5 w-12 animate-pulse rounded bg-muted align-middle" />;
+  return <span aria-hidden="true" className="inline-block h-3.5 w-12 animate-pulse rounded-sm bg-muted align-middle" />;
 }
 
 // ---------------------------------------------------------------------------
@@ -626,7 +626,7 @@ function UpcomingRow({
               </Link>
               <span className="flex items-center gap-1.5 font-mono text-3xs text-muted-foreground">
                 {coin.launchPhase ? (
-                  <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-[2px] sm:hidden ${PHASE_DOT[coin.launchPhase]}`} />
+                  <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-xs sm:hidden ${PHASE_DOT[coin.launchPhase]}`} />
                 ) : null}
                 {coin.symbol}
               </span>

@@ -249,7 +249,7 @@ export function CoveragePricingSourcesCard({
           {pricingSources.map((source) => (
             <div
               key={source.name}
-              className="flex flex-col items-center gap-1.5 rounded-xl border border-border/60 bg-background/40 px-4 py-4"
+              className="flex flex-col items-center gap-1.5 pharos-inset px-4 py-4"
             >
               <span className="text-sm font-semibold text-foreground">{getPricingSourceLabel(source.name)}</span>
               <span className="pharos-numeric text-2xl font-semibold text-foreground">{source.count}</span>
@@ -460,7 +460,7 @@ export function CoverageMatrixCard(
                 </p>
                 <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   {group.items.map((item) => (
-                    <div key={item.term} className="rounded-xl border border-border/60 bg-background/45 px-3 py-3">
+                    <div key={item.term} className="pharos-inset px-3 py-3">
                       <dt className="text-sm font-semibold text-foreground">{item.term}</dt>
                       <dd className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.description}</dd>
                     </div>

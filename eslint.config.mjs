@@ -254,6 +254,50 @@ const pharosBoundaryPlugin = {
         };
       },
     },
+    "no-arbitrary-radius": {
+      meta: {
+        type: "suggestion",
+        schema: [],
+        messages: {
+          radius: "Arbitrary or bare radius {{value}}: use the radius scale (rounded-xs 2px, rounded-sm 4px, rounded-md, rounded-lg, rounded-xl, rounded-2xl, rounded-full) per the radius rule in docs/design-tokens.md.",
+        },
+      },
+      create(context) {
+        // `rounded-[3px]`, `rounded-t-[3px]` and the bare `rounded` / `rounded-t`
+        // (an unnamed 4px) inside any string or template chunk, with variants
+        // and important forms. Prose ("rounded display scores") has capitals or
+        // sentence punctuation that class lists never carry, so bare words there
+        // are not classes. String checks, not a regex, keep it linear.
+        const sides = new Set(["t", "r", "b", "l", "s", "e", "x", "y", "tl", "tr", "bl", "br", "ss", "se", "es", "ee"]);
+        const isSide = (part) => part === "" || (part.startsWith("-") && sides.has(part.slice(1)));
+        function classify(token) {
+          const core = token.slice(token.lastIndexOf(":") + 1).replace(/^!/, "").replace(/!$/, "");
+          if (!core.startsWith("rounded")) return null;
+          const rest = core.slice("rounded".length);
+          // `rounded-[3px]` and the v4 variable shorthand `rounded-(--r)`.
+          if (rest.endsWith("]") || rest.endsWith(")")) {
+            const bracket = rest.indexOf(rest.endsWith("]") ? "-[" : "-(");
+            return bracket >= 0 && isSide(rest.slice(0, bracket)) ? "arbitrary" : null;
+          }
+          return isSide(rest) ? "bare" : null;
+        }
+        function check(node, text) {
+          if (typeof text !== "string") return;
+          // Arbitrary values (`data-[state=Open]`, `bg-[#FFF]`) are not prose.
+          const prose = /[A-Z]|[.!?](?:\s|$)/.test(text.replace(/\[[^\]]*\]|\([^)]*\)/g, ""));
+          for (const token of text.split(/\s|["'`]/)) {
+            const kind = token && classify(token);
+            if (kind === "arbitrary" || (kind === "bare" && !prose)) {
+              context.report({ node, messageId: "radius", data: { value: token } });
+            }
+          }
+        }
+        return {
+          Literal: (node) => check(node, node.value),
+          TemplateElement: (node) => check(node, node.value.cooked),
+        };
+      },
+    },
     "no-arbitrary-z-index": {
       meta: {
         type: "suggestion",
@@ -598,11 +642,9 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    // Type-scale guardrail (docs/design-tokens.md#type-scale). Pre-existing
-    // call sites are grandfathered per file in eslint-suppressions.json (ESLint
-    // bulk suppressions, a count ratchet): new violations fail, and once a
-    // sweep removes some, `npx eslint --prune-suppressions` lowers the baseline.
-    files: ["src/components/**/*.{ts,tsx}", "src/app/**/*.{ts,tsx}"],
+    // Type-scale guardrail (docs/design-tokens.md#type-scale): no grandfathered
+    // call sites; src/lib class-string constants are covered too.
+    files: ["src/components/**/*.{ts,tsx}", "src/app/**/*.{ts,tsx}", "src/lib/**/*.{ts,tsx}"],
     // Editorial carve-outs keep their bespoke type registers (SWEEP.md §4).
     ignores: [
       "**/__tests__/**",
@@ -629,7 +671,14 @@ const eslintConfig = defineConfig([
     plugins: { pharos: pharosBoundaryPlugin },
     rules: {
       "pharos/no-arbitrary-text-px": "error",
+      // Radius guardrail (docs/design-tokens.md, radius rule): same scope.
+      "pharos/no-arbitrary-radius": "error",
     },
+  },
+  {
+    // shadcn primitives keep their upstream radii.
+    files: ["src/components/ui/**/*.{ts,tsx}"],
+    rules: { "pharos/no-arbitrary-radius": "off" },
   },
   {
     // Stacking guardrail (docs/design-tokens.md): page-level layers
@@ -643,8 +692,8 @@ const eslintConfig = defineConfig([
   },
   {
     // UI-state colour guardrail (docs/design-tokens.md#ui-state-utilities).
-    // Editorial carve-outs keep their bespoke palettes; pre-existing call
-    // sites elsewhere are grandfathered in eslint-suppressions.json.
+    // Editorial carve-outs keep their bespoke palettes; nothing else is
+    // grandfathered.
     // Classification scales live in shared/lib/classification (not linted
     // here); src/lib class-string constants are covered too.
     files: ["src/components/**/*.{ts,tsx}", "src/app/**/*.{ts,tsx}", "src/lib/**/*.{ts,tsx}"],

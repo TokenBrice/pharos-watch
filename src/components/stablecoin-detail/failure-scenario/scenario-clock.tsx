@@ -137,7 +137,7 @@ export function ScenarioClock({
             {clock.window && scenario.window ? (
               <div className="relative mt-1 h-4">
                 <span
-                  className="absolute top-0 h-2 rounded-b-[3px] border-x border-b border-foreground/35"
+                  className="absolute top-0 h-2 rounded-b-xs border-x border-b border-foreground/35"
                   style={{
                     left: `${toPercent(clock.window.start)}%`,
                     width: `${toPercent(clock.window.end - clock.window.start)}%`,

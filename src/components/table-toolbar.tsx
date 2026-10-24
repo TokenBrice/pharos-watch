@@ -67,7 +67,7 @@ function DensitySegmented({
       className={cn(
         "inline-flex items-center",
         variant === "figmaOverview"
-          ? "h-8 w-[84px] gap-0.5 rounded-[10px] border border-border/70 bg-muted/50 p-1 shadow-[inset_0_1px_0_rgb(255_255_255_/_0.7)] dark:border-white/10 dark:bg-neutral-900 dark:shadow-[inset_0_1px_0_rgb(255_255_255_/_0.05)]"
+          ? "h-8 w-[84px] gap-0.5 rounded-lg border border-border/70 bg-muted/50 p-1 shadow-[inset_0_1px_0_rgb(255_255_255_/_0.7)] dark:border-white/10 dark:bg-muted dark:shadow-[inset_0_1px_0_rgb(255_255_255_/_0.05)]"
           : "gap-0.5 rounded-lg border border-border/70 bg-background/40 p-0.5",
       )}
     >
@@ -85,13 +85,13 @@ function DensitySegmented({
             onClick={() => onChange(option.value)}
             className={cn(
               "pharos-focus-ring inline-flex items-center justify-center transition-colors",
-              variant === "figmaOverview" ? "h-6 w-9 rounded-[7px]" : "size-11 rounded-md sm:size-8",
+              variant === "figmaOverview" ? "h-6 w-9 rounded-md" : "size-11 rounded-md sm:size-8",
               isActive
                 ? variant === "figmaOverview"
-                  ? "bg-card text-foreground shadow-[inset_0_1px_0_rgb(255_255_255_/_0.9),0_1px_2px_rgb(0_0_0_/_0.12)] dark:bg-neutral-700 dark:text-neutral-50 dark:shadow-[inset_0_1px_0_rgb(255_255_255_/_0.08),0_1px_2px_rgb(0_0_0_/_0.35)]"
+                  ? "bg-card text-foreground shadow-[inset_0_1px_0_rgb(255_255_255_/_0.9),0_1px_2px_rgb(0_0_0_/_0.12)] dark:bg-[var(--control-pill-active-bg)] dark:shadow-[inset_0_1px_0_rgb(255_255_255_/_0.08),0_1px_2px_rgb(0_0_0_/_0.35)]"
                   : "bg-muted text-foreground shadow-sm"
                 : variant === "figmaOverview"
-                  ? "text-muted-foreground hover:text-foreground dark:text-neutral-500 dark:hover:text-neutral-200"
+                  ? "text-muted-foreground hover:text-foreground"
                   : "text-muted-foreground hover:text-foreground",
             )}
           >

@@ -162,7 +162,7 @@ function McapChartBody({
   const header = (
     <div className="flex flex-row flex-wrap items-center justify-between gap-3">
       <div className="flex min-w-0 flex-col gap-0.5">
-        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Market Cap</StablecoinModuleTitle>
+        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Market cap</StablecoinModuleTitle>
         {readout ? (
           <div className="flex items-baseline gap-2 font-mono text-xs tabular-nums">
             <span className="text-foreground/85">{formatCurrency(readout.mcap)}</span>
@@ -226,7 +226,7 @@ function McapChartBody({
             scale={useLog ? "log" : "auto"}
             allowDataOverflow={useLog}
           />
-          <DateTooltip formatter={(value) => [formatCurrency(Number(value)), "Market Cap"]} />
+          <DateTooltip formatter={(value) => [formatCurrency(Number(value)), "Market cap"]} />
           <Area
             type="monotone"
             dataKey="mcap"

@@ -337,7 +337,7 @@ describe("HeroCard", () => {
       nativeSupply: null,
     });
     expect(html).not.toContain("$0.00");
-    expect(html).toMatch(/Market Cap<\/p><p[^>]*>—<\/p>/);
+    expect(html).toMatch(/Market cap<\/p><p[^>]*>—<\/p>/);
     expect(html).toMatch(/Supply<\/p><p[^>]*>—/);
   });
 

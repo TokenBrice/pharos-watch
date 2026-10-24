@@ -331,7 +331,7 @@ export function PharosWatchBotMiniAppClient() {
         <section className="rounded-xl bg-[var(--mini-card)] px-4 py-4">
           <h1 className="text-base font-semibold text-foreground">Group alerts are managed in the group</h1>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Send <code className="pharos-numeric rounded bg-muted px-1 py-0.5 text-xs text-foreground">/settings@PharosWatchBot</code> in the group chat. Only group admins can change its alerts.
+            Send <code className="pharos-numeric rounded-sm bg-muted px-1 py-0.5 text-xs text-foreground">/settings@PharosWatchBot</code> in the group chat. Only group admins can change its alerts.
           </p>
         </section>
       );

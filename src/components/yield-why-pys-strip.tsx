@@ -55,7 +55,7 @@ export function YieldWhyPysStrip({
         <div
           key={cell.title}
           aria-label={`${cell.title}: ${cell.value}, ${cell.sublabel}`}
-          className="rounded-lg border border-border/60 bg-background/55 px-3 py-2"
+          className="pharos-inset px-3 py-2"
         >
           <p className="text-xs text-muted-foreground">{cell.title}</p>
           <p className="font-mono tabular-nums text-sm text-foreground">{cell.value}</p>

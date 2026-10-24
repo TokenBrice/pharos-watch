@@ -379,7 +379,7 @@ export function YieldSignalsIndicator({
         <TooltipTrigger asChild>
           <span className={warningSignalCount > 0
             ? "inline-flex cursor-help items-center gap-1 text-state-warn"
-            : "inline-flex cursor-help items-center gap-1 text-amber-700/80 dark:text-amber-400/80"}
+            : "inline-flex cursor-help items-center gap-1 text-state-warn"}
           >
             <AlertTriangle
               className={warningSignalCount >= 2
@@ -534,7 +534,7 @@ export function YieldExpandedDetails({
           />
         </div>
         <div className="flex min-w-0 flex-col gap-3">
-          <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-background/55 px-3 py-3">
+          <div className="flex flex-col gap-3 pharos-inset px-3 py-3">
             <div className="min-w-0">
               <p className="pharos-label">Source</p>
               <div className="mt-1 flex min-w-0 items-center gap-1.5">

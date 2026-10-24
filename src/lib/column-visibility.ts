@@ -27,7 +27,7 @@ export const ALL_COLUMNS: ColumnDef[] = [
   { id: "name", label: "Name", locked: true },
   { id: "price", label: "Price" },
   { id: "peg", label: "Peg", hiddenMobile: true },
-  { id: "mcap", label: "Market Cap" },
+  { id: "mcap", label: "Market cap" },
   { id: "change24h", label: "24h" },
   { id: "change7d", label: "7d", hiddenMobile: true },
   { id: "grade", label: "Grade", hiddenMobile: true },

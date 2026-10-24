@@ -30,8 +30,7 @@ const SUBHEADING_CLASS = "mb-1.5 text-xs font-semibold text-muted-foreground";
  * card, so light mode takes the darker sky ramp step (≥ 5.5:1) and dark mode
  * keeps the brand frost.
  */
-// raw: link tone, no exact state utility
-const LINK_TONE_CLASS = "text-sky-700 dark:text-frost-blue";
+const LINK_TONE_CLASS = "text-brand-accent-text";
 
 /** Closing marks that may follow a sentence's final stop, as in `(OKX).` or `etc.)`. */
 const TRAILING_CLOSERS = /["'”’)\]]+$/;
@@ -92,7 +91,7 @@ function MechanismHint({ noun, primer, href }: { noun: string; primer: string; h
         <button
           type="button"
           aria-label={`Explain the ${noun} mechanism`}
-          className="pharos-focus-ring inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-frost-blue/25 bg-frost-blue/10 text-sky-700 transition-colors hover:border-frost-blue/45 hover:bg-frost-blue/14 hover:text-foreground motion-reduce:transition-none md:h-6 md:w-6 dark:text-frost-blue"
+          className="pharos-focus-ring inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-frost-blue/25 bg-frost-blue/10 text-brand-accent-text transition-colors hover:border-frost-blue/45 hover:bg-frost-blue/14 hover:text-foreground motion-reduce:transition-none md:h-6 md:w-6"
         >
           <CircleHelp className="h-3.5 w-3.5" aria-hidden="true" />
         </button>

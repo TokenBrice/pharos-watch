@@ -38,7 +38,7 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
   },
   {
     key: "reserves",
-    label: "Reserve View",
+    label: "Reserve view",
     shortLabel: "Reserves",
     description:
       "Detail-page reserve views are separated from score-grade live reserve inputs. The headline counts assets whose current report-card snapshot used fresh independent live reserve data.",
@@ -88,7 +88,7 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
   },
   {
     key: "blacklist",
-    label: "Freezable Status",
+    label: "Freezable status",
     shortLabel: "Freezable",
     description:
       "Resolved freeze / blacklist status across every tracked stablecoin. Coins covered by the live FreezeWatch event tracker are called out separately.",

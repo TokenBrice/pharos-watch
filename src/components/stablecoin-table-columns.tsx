@@ -131,7 +131,7 @@ export const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     className: "w-[92px] text-right",
     title: "Sort by peg deviation — ascending shows tightest pegs first, descending shows worst depegs first",
   },
-  { id: "mcap", label: "Market Cap", sortKey: "mcap", className: "w-[144px] text-right" },
+  { id: "mcap", label: "Market cap", sortKey: "mcap", className: "w-[144px] text-right" },
   { id: "change24h", label: "24h", sortKey: "change24h", className: "w-[92px] text-right", title: "24-hour market cap change" },
   { id: "change7d", label: "7d", sortKey: "change7d", className: "w-[144px] text-right", title: "7-day market cap change" },
   {

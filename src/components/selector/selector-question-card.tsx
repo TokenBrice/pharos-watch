@@ -210,14 +210,14 @@ function SelectorQuestionCardInner<TValue extends string>(
               <button
                 type="button"
                 onClick={softConfirmation.onContinue}
-                className="pharos-focus-ring rounded-full border border-amber-700/35 bg-amber-100/55 px-3 py-1 text-xs font-medium text-state-warn-ink hover:bg-amber-100/85 dark:bg-state-warn-solid/15"
+                className="pharos-focus-ring rounded-full border border-state-warn bg-state-warn-solid/15 px-3 py-1 text-xs font-medium text-state-warn-ink hover:bg-state-warn-solid/25"
               >
                 Continue
               </button>
               <button
                 type="button"
                 onClick={softConfirmation.onChangeProfile}
-                className="pharos-focus-ring rounded-full border border-amber-700/25 px-3 py-1 text-xs font-medium text-state-warn-ink hover:bg-amber-100/35"
+                className="pharos-focus-ring rounded-full border border-state-warn px-3 py-1 text-xs font-medium text-state-warn-ink hover:bg-state-warn-subtle"
               >
                 Change profile
               </button>

@@ -62,9 +62,9 @@ function signalBarHex(value: number): string {
  * empty track, which would read as a bar that failed to render. */
 function ProgressBar({ value }: { value: number }) {
   return (
-    <div className="h-3 w-full rounded-[3px] border border-border/50 bg-muted/45">
+    <div className="h-3 w-full rounded-xs border border-border/50 bg-muted/45">
       <div
-        className="h-full rounded-[3px] transition-all"
+        className="h-full rounded-xs transition-all"
         style={{ width: `${Math.min(value, 100)}%`, minWidth: "3px", backgroundColor: signalBarHex(value) }}
       />
     </div>
@@ -146,7 +146,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
           </StablecoinModuleTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-32 bg-muted rounded" />
+          <div className="h-32 bg-muted rounded-sm" />
         </CardContent>
       </Card>
     );
@@ -225,7 +225,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                 aria-pressed={!showBreakdown}
                 onClick={() => setShowBreakdown(false)}
                 className={cn(
-                  "pharos-focus-ring min-h-11 rounded-[4px] px-3 py-2 text-2xs font-medium leading-none transition-colors md:min-h-0 md:px-2 md:py-1",
+                  "pharos-focus-ring min-h-11 rounded-sm px-3 py-2 text-2xs font-medium leading-none transition-colors md:min-h-0 md:px-2 md:py-1",
                   !showBreakdown ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
@@ -236,7 +236,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                 aria-pressed={showBreakdown}
                 onClick={() => setShowBreakdown(true)}
                 className={cn(
-                  "pharos-focus-ring min-h-11 rounded-[4px] px-3 py-2 text-2xs font-medium leading-none transition-colors md:min-h-0 md:px-2 md:py-1",
+                  "pharos-focus-ring min-h-11 rounded-sm px-3 py-2 text-2xs font-medium leading-none transition-colors md:min-h-0 md:px-2 md:py-1",
                   showBreakdown ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
@@ -379,7 +379,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                   )}
                 </AreaChart>
               ) : (
-                <div className="h-full w-full animate-pulse rounded bg-muted" />
+                <div className="h-full w-full animate-pulse rounded-sm bg-muted" />
               )}
             </div>
 

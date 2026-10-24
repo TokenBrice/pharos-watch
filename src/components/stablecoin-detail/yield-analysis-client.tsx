@@ -259,7 +259,7 @@ function StablecoinYieldDetailHeader({
         </div>
 
         {ranking && model ? (
-          <div className="rounded-xl border border-border/60 bg-background/45 px-4 py-3 sm:min-w-[280px]">
+          <div className="pharos-inset px-4 py-3 sm:min-w-[280px]">
             <p className="mb-2 pharos-label">
               Pharos Yield Score
             </p>
@@ -621,7 +621,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
                       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-state-warn-solid" />
                       <div className="text-sm text-state-warn-strong">
                         <span className="font-medium">{formatYieldWarningSignal(signal)}</span>
-                        <span className="block text-xs text-amber-700/80 dark:text-amber-300/75">
+                        <span className="block text-xs text-state-warn-bright">
                           {formatYieldWarningSignalDescription(signal)}
                         </span>
                       </div>
@@ -644,13 +644,13 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
                       {event.count > 1 ? (
                         <span className="pharos-numeric text-xs font-medium">×{event.count}</span>
                       ) : null}
-                      <span className="pharos-numeric text-xs text-amber-700/80 dark:text-amber-300/75">
+                      <span className="pharos-numeric text-xs text-state-warn-bright">
                         {event.count > 1
                           ? `${formatChartDate(event.earliestTimestamp, "with-time")} – ${formatChartDate(event.latestTimestamp, "with-time")}`
                           : formatChartDate(event.latestTimestamp, "with-time")}
                       </span>
                     </div>
-                    <p className="text-xs text-amber-700/80 dark:text-amber-300/75">
+                    <p className="text-xs text-state-warn-bright">
                       {event.sourceLabel ? `${event.sourceLabel} at ` : "APY "}
                       <span className="pharos-numeric">{formatPercent(event.apy)}</span>
                     </p>
@@ -706,7 +706,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
                     key={`${event.timestamp}-${event.toSourceKey ?? "switch"}`}
                     className="flex items-start gap-3 rounded-lg border border-state-info-solid/25 bg-state-info-solid/5 px-3 py-2"
                   >
-                    <ArrowLeftRight className="mt-0.5 h-4 w-4 shrink-0 text-sky-600 dark:text-sky-300" />
+                    <ArrowLeftRight className="mt-0.5 h-4 w-4 shrink-0 text-state-info-bright" />
                     <div className="min-w-0 flex-1 text-sm text-state-info-strong">
                       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                         <span className="font-medium">
@@ -714,11 +714,11 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
                             ? `${event.fromSourceLabel} → ${event.toSourceLabel ?? "—"}`
                             : `Switched to ${event.toSourceLabel ?? "—"}`}
                         </span>
-                        <span className="pharos-numeric text-xs text-sky-700/80 dark:text-sky-300/75">
+                        <span className="pharos-numeric text-xs text-state-info-bright">
                           {formatChartDate(event.timestamp, "with-time")}
                         </span>
                       </div>
-                      <p className="text-xs text-sky-700/80 dark:text-sky-300/75">
+                      <p className="text-xs text-state-info-bright">
                         APY at switch: <span className="pharos-numeric">{formatPercent(event.apy)}</span>
                       </p>
                     </div>

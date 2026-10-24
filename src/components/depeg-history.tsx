@@ -48,11 +48,11 @@ const DEPEG_HISTORY_DESCRIPTION =
 const DEPEG_HISTORY_COLUMNS: readonly DataTableColumn[] = [
   { id: "date", label: "Date" },
   { id: "direction", label: "Direction" },
-  { id: "peakDeviation", label: "Peak Deviation", className: "text-right" },
+  { id: "peakDeviation", label: "Peak deviation", className: "text-right" },
   { id: "duration", label: "Duration", className: "text-right" },
-  { id: "startPrice", label: "Start Price", className: "hidden lg:table-cell text-right" },
-  { id: "peakPrice", label: "Peak Price", className: "hidden lg:table-cell text-right" },
-  { id: "recoveryPrice", label: "Recovery Price", className: "hidden lg:table-cell text-right" },
+  { id: "startPrice", label: "Start price", className: "hidden lg:table-cell text-right" },
+  { id: "peakPrice", label: "Peak price", className: "hidden lg:table-cell text-right" },
+  { id: "recoveryPrice", label: "Recovery price", className: "hidden lg:table-cell text-right" },
 ] as const;
 
 function DepegHistoryShell({ children }: { children: ReactNode }) {
@@ -341,7 +341,7 @@ function DepegEventCard({ event, pegCurrency }: { event: DepegEvent; pegCurrency
   const devColor = deviationColorClass(absBps);
 
   return (
-    <li className="rounded-lg border border-border/60 bg-background/45 px-3 py-2">
+    <li className="pharos-inset px-3 py-2">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-mono text-xs text-muted-foreground">{formatEventDate(event.startedAt)}</p>

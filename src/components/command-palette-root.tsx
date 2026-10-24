@@ -415,7 +415,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                         alt=""
                         width={20}
                         height={20}
-                        className={`w-5 h-5 ${item.imageSquare ? "rounded" : "rounded-full"} shrink-0 ${item.imageDarkInvert ? "dark:invert" : ""}`}
+                        className={`w-5 h-5 ${item.imageSquare ? "rounded-sm" : "rounded-full"} shrink-0 ${item.imageDarkInvert ? "dark:invert" : ""}`}
                         unoptimized
                       />
                     ) : item.icon ? (
@@ -440,7 +440,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                       <span className="truncate block">
                         {item.label}
                         {item.frozen ? (
-                          <span className="ml-2 rounded-sm border border-zinc-500/30 px-1 text-3xs uppercase text-zinc-500">
+                          <span className="ml-2 rounded-sm border border-border px-1 text-3xs uppercase text-muted-foreground">
                             Frozen
                           </span>
                         ) : null}
@@ -473,7 +473,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                       </span>
                     ) : item.stablecoinHealth?.kind === "nav" ? (
                       <span
-                        className="ml-2 shrink-0 rounded-sm border border-sky-500/30 px-1 py-0.5 font-mono text-3xs leading-none text-sky-500"
+                        className="ml-2 shrink-0 rounded-sm border border-state-info px-1 py-0.5 font-mono text-3xs leading-none text-state-info"
                         title={getStablecoinHealthLabel(item.stablecoinHealth)}
                       >
                         NAV<span className="sr-only">-priced token</span>

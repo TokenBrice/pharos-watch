@@ -275,7 +275,7 @@ function SectionRenderer({ section }: { section: ApiReferenceSection }) {
             <article
               key={subsection.id}
               id={subsection.id}
-              className="rounded-xl border border-border/60 bg-background/45 px-4 py-4"
+              className="pharos-inset px-4 py-4"
             >
               <h3 className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
                 {subsection.method ? <MethodBadge method={subsection.method} /> : null}
@@ -349,7 +349,7 @@ export async function ApiReferencePanel() {
         method: sub.method,
       })),
     })),
-    { id: "endpoint-directory", label: "Endpoint Directory", subsections: [] },
+    { id: "endpoint-directory", label: "Endpoint directory", subsections: [] },
   ];
 
   return (
