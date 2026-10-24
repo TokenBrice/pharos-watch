@@ -92,7 +92,7 @@ The `--p-text-*` primitives are the single source for Tailwind's `text-*` sizes:
 | `text-sm` | 14px | 20px | Body and UI text |
 | `text-base` … `text-5xl` | 16–48px | Tailwind defaults | Titles and display (`.pharos-section-title`, `.pharos-page-title`) |
 
-- Arbitrary pixel sizes (`text-[11px]`, `sm:text-[10.5px]`) are banned in `src/components/` and `src/app/` by the ESLint rule `pharos/no-arbitrary-text-px`. Typography has no grandfathered suppressions; the root `eslint-suppressions.json` ledger contains only reviewed palette exceptions. A new violation fails `npm run lint`; never add suppression entries by hand or re-run `--suppress-rule` to absorb new violations.
+- Arbitrary pixel sizes (`text-[11px]`, `sm:text-[10.5px]`) are banned in `src/components/`, `src/app/` and `src/lib/` by the ESLint rule `pharos/no-arbitrary-text-px`. Typography has no grandfathered suppressions; the root `eslint-suppressions.json` ledger contains only reviewed palette exceptions. A new violation fails `npm run lint`; never add suppression entries by hand or re-run `--suppress-rule` to absorb new violations.
 - Map `text-[10px]` → `text-3xs`, `text-[11px]` → `text-2xs`, `text-[12px]` → `text-xs`, `text-[13px]` / `text-[15px]` → the nearest step (`text-xs`/`text-sm`, `text-sm`/`text-base`) unless a tight cell layout needs a reviewed exception. `text-[clamp(...)]` and rem display sizes on editorial/hero titles stay legal.
 - One positive tracking step exists: `tracking-eyebrow` (`--p-tracking-eyebrow`, 0.08em), for uppercase eyebrows only. Sentence-case labels use normal tracking; titles use `tracking-tight`.
 

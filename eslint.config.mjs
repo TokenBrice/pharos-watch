@@ -598,11 +598,9 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    // Type-scale guardrail (docs/design-tokens.md#type-scale). Pre-existing
-    // call sites are grandfathered per file in eslint-suppressions.json (ESLint
-    // bulk suppressions, a count ratchet): new violations fail, and once a
-    // sweep removes some, `npx eslint --prune-suppressions` lowers the baseline.
-    files: ["src/components/**/*.{ts,tsx}", "src/app/**/*.{ts,tsx}"],
+    // Type-scale guardrail (docs/design-tokens.md#type-scale): no grandfathered
+    // call sites; src/lib class-string constants are covered too.
+    files: ["src/components/**/*.{ts,tsx}", "src/app/**/*.{ts,tsx}", "src/lib/**/*.{ts,tsx}"],
     // Editorial carve-outs keep their bespoke type registers (SWEEP.md §4).
     ignores: [
       "**/__tests__/**",

@@ -139,6 +139,7 @@ describe("ESLint config ratchets", () => {
       ["trailing important", 'export const A = () => <p className="text-[11px]!">x</p>;'],
       ["arbitrary variant", "export const c = `[&_h2]:text-[10px] font-medium`;"],
       ["route file", 'export const c = "text-[12px]";', "src/app/__type-scale-fixture.tsx"],
+      ["lib class constant", 'export const c = "text-[11px]";', "src/lib/__type-scale-fixture.ts"],
     ] satisfies Array<[string, string, string?]>).map(([name, source, filePath]) => ({
       rule: "pharos/no-arbitrary-text-px", name, source, count: 1,
       filePath: filePath ?? "src/components/__type-scale-fixture.tsx",

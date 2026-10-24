@@ -16,22 +16,22 @@ export interface YieldSourceConfidenceStyle {
 
 export const YIELD_SOURCE_CONFIDENCE_STYLES: Record<YieldSourceConfidenceTier, YieldSourceConfidenceStyle> = {
   deterministic: {
-    pill: `inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${YIELD_SOURCE_CONFIDENCE_CLASSES.deterministic.pill}`,
+    pill: `inline-flex items-center rounded-full border px-2 py-0.5 text-2xs font-medium ${YIELD_SOURCE_CONFIDENCE_CLASSES.deterministic.pill}`,
     dot: `inline-block size-1.5 rounded-full ${YIELD_SOURCE_CONFIDENCE_CLASSES.deterministic.dot}`,
     text: YIELD_SOURCE_CONFIDENCE_CLASSES.deterministic.text,
   },
   curated: {
-    pill: `inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${YIELD_SOURCE_CONFIDENCE_CLASSES.curated.pill}`,
+    pill: `inline-flex items-center rounded-full border px-2 py-0.5 text-2xs font-medium ${YIELD_SOURCE_CONFIDENCE_CLASSES.curated.pill}`,
     dot: `inline-block size-1.5 rounded-full ${YIELD_SOURCE_CONFIDENCE_CLASSES.curated.dot}`,
     text: YIELD_SOURCE_CONFIDENCE_CLASSES.curated.text,
   },
   discovered: {
-    pill: `inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${YIELD_SOURCE_CONFIDENCE_CLASSES.discovered.pill}`,
+    pill: `inline-flex items-center rounded-full border px-2 py-0.5 text-2xs font-medium ${YIELD_SOURCE_CONFIDENCE_CLASSES.discovered.pill}`,
     dot: `inline-block size-1.5 rounded-full ${YIELD_SOURCE_CONFIDENCE_CLASSES.discovered.dot}`,
     text: YIELD_SOURCE_CONFIDENCE_CLASSES.discovered.text,
   },
   fallback: {
-    pill: `inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${YIELD_SOURCE_CONFIDENCE_CLASSES.fallback.pill}`,
+    pill: `inline-flex items-center rounded-full border px-2 py-0.5 text-2xs font-medium ${YIELD_SOURCE_CONFIDENCE_CLASSES.fallback.pill}`,
     dot: `inline-block size-1.5 rounded-full ${YIELD_SOURCE_CONFIDENCE_CLASSES.fallback.dot}`,
     text: YIELD_SOURCE_CONFIDENCE_CLASSES.fallback.text,
   },
