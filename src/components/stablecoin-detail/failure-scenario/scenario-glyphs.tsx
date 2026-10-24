@@ -148,7 +148,7 @@ export function StepNumber({
     <span
       style={style}
       className={cn(
-        "pharos-numeric inline-flex h-5 min-w-5 shrink-0 items-center justify-center whitespace-nowrap rounded-[5px] border px-1 text-2xs font-semibold leading-none",
+        "pharos-numeric inline-flex h-5 min-w-5 shrink-0 items-center justify-center whitespace-nowrap rounded-md border px-1 text-2xs font-semibold leading-none",
         terminal
           ? "border-foreground bg-foreground text-background"
           : hypothetical

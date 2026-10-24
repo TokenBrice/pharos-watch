@@ -25,7 +25,7 @@ const RECENT_RUN_TONE_COPY: Readonly<Record<RecentRunTone, { label: string; clas
   success: { label: "Succeeded", className: "rounded-full bg-state-positive-solid" },
   warning: { label: "Completed with warnings", className: "rounded-full bg-state-warn-solid" },
   skipped: { label: "Skipped", className: "rounded-full border-2 border-muted-foreground/60 bg-transparent" },
-  failed: { label: "Failed", className: "rounded-[1px] bg-state-danger-solid ring-1 ring-state-danger-solid ring-offset-1 ring-offset-background" },
+  failed: { label: "Failed", className: "rounded-xs bg-state-danger-solid ring-1 ring-state-danger-solid ring-offset-1 ring-offset-background" },
 };
 
 function getRecentRunTone(run: CronRunSummary): RecentRunTone {

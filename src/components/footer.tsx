@@ -2,11 +2,11 @@ import Link from "next/link";
 import { Rss, SquareArrowOutUpRight } from "lucide-react";
 
 const SOCIAL_LINK_CLASS =
-  "pharos-focus-ring grid h-6 w-6 place-items-center rounded-[5px] border border-border/60 bg-muted/35 text-muted-foreground transition-colors hover:border-border hover:bg-muted/55 hover:text-foreground";
+  "pharos-focus-ring grid h-6 w-6 place-items-center rounded-md border border-border/60 bg-muted/35 text-muted-foreground transition-colors hover:border-border hover:bg-muted/55 hover:text-foreground";
 
 // Compact footer chips matching the small square Figma controls.
 const PILL_CLASS =
-  "pharos-focus-ring inline-flex h-8 items-center gap-1 rounded-[5px] border border-border/65 bg-muted/55 px-2 text-2xs leading-none text-muted-foreground transition-colors hover:border-border hover:bg-muted/75 hover:text-foreground";
+  "pharos-focus-ring inline-flex h-8 items-center gap-1 rounded-md border border-border/65 bg-muted/55 px-2 text-2xs leading-none text-muted-foreground transition-colors hover:border-border hover:bg-muted/75 hover:text-foreground";
 
 // Lean footer per the Figma redesign: a disclaimer line, compact hub/reference
 // links, an about/legal row, and the monochrome social cluster. The 2026-06-27

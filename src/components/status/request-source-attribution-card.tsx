@@ -101,7 +101,7 @@ export function RequestSourceAttributionCard({
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-xl border border-border/60 bg-background/45 p-3">
+            <div className="pharos-inset p-3">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <div className="text-sm font-medium text-foreground">Site delivery</div>
                 <div className="text-xs text-muted-foreground">
@@ -117,14 +117,14 @@ export function RequestSourceAttributionCard({
               </div>
             </div>
 
-            <div className="rounded-xl border border-border/60 bg-background/45 p-3">
+            <div className="pharos-inset p-3">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <div className="text-sm font-medium text-foreground">Worker lanes</div>
                 <div className="text-xs text-muted-foreground">{lanes.some((lane) => lane.measurement.totalRequests.kind !== "observed") ? "Estimated worker load" : "Recorded worker load"}</div>
               </div>
               <div className="space-y-2">
                 {lanes.length > 0 ? lanes.map((lane) => (
-                  <div key={lane.lane} className="rounded-lg border border-border/50 bg-background/40 px-3 py-2">
+                  <div key={lane.lane} className="pharos-inset px-3 py-2">
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <div className="text-sm text-foreground">{formatLaneLabel(lane.lane)}</div>
@@ -144,14 +144,14 @@ export function RequestSourceAttributionCard({
           </div>
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-            <div className="rounded-xl border border-border/60 bg-background/45 p-3">
+            <div className="pharos-inset p-3">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <div className="text-sm font-medium text-foreground">Top route groups</div>
                 <div className="text-xs text-muted-foreground">Top {routes.length} observed route groups; full-window totals above</div>
               </div>
               <div className="space-y-2">
                 {routes.length > 0 ? routes.map((route) => (
-                  <div key={route.routeKey} className="rounded-lg border border-border/50 bg-background/40 px-3 py-2">
+                  <div key={route.routeKey} className="pharos-inset px-3 py-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="min-w-0">
                         <div className="truncate font-mono tabular-nums text-xs text-foreground">{route.routePath}</div>
@@ -170,7 +170,7 @@ export function RequestSourceAttributionCard({
               </div>
             </div>
 
-            <div className="rounded-xl border border-border/60 bg-background/45 p-3">
+            <div className="pharos-inset p-3">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <div className="text-sm font-medium text-foreground">Latest 8 observed buckets</div>
                 <div className="text-xs text-muted-foreground">{bucketSizeMinutes != null ? `${bucketSizeMinutes}m rollup` : "—"}</div>

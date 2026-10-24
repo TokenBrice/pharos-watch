@@ -385,19 +385,19 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-        <div className="rounded-xl border border-border/60 bg-background/45 px-3 py-2">
+        <div className="pharos-inset px-3 py-2">
           <p className="text-muted-foreground">Mechanism</p>
           <p className="mt-0.5 truncate font-medium text-foreground">
             {row.mechanism ? getMechanismArchetypeLabel(row.mechanism) : "—"}
           </p>
         </div>
-        <div className="rounded-xl border border-border/60 bg-background/45 px-3 py-2">
+        <div className="pharos-inset px-3 py-2">
           <p className="text-muted-foreground">Peg</p>
           <p className="mt-0.5 font-medium text-foreground">
             {PEG_METADATA[row.peg]?.filterLabel ?? row.peg}
           </p>
         </div>
-        <div className="rounded-xl border border-border/60 bg-background/45 px-3 py-2">
+        <div className="pharos-inset px-3 py-2">
           <p className="text-muted-foreground">Mint authority</p>
           <p className="mt-0.5 font-medium text-foreground">
             {row.mintAuthorityScoreLabel} / {MINT_AUTHORITY_STATUS_CONFIG[row.mintAuthority].spokenLabel}

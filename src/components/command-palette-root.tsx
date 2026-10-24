@@ -415,7 +415,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                         alt=""
                         width={20}
                         height={20}
-                        className={`w-5 h-5 ${item.imageSquare ? "rounded" : "rounded-full"} shrink-0 ${item.imageDarkInvert ? "dark:invert" : ""}`}
+                        className={`w-5 h-5 ${item.imageSquare ? "rounded-sm" : "rounded-full"} shrink-0 ${item.imageDarkInvert ? "dark:invert" : ""}`}
                         unoptimized
                       />
                     ) : item.icon ? (

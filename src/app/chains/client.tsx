@@ -91,7 +91,7 @@ export function ChainsLeaderboardClient() {
         <Skeleton className="aspect-[1/2.1] w-full rounded-lg min-[761px]:aspect-[2.6/1]" />
         <div className="pharos-table-shell">
           {Array.from({ length: 10 }).map((_, i) => (
-            <Skeleton key={i} className="mx-3 my-2.5 h-8 rounded" />
+            <Skeleton key={i} className="mx-3 my-2.5 h-8 rounded-sm" />
           ))}
         </div>
       </div>

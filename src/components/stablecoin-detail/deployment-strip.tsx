@@ -80,7 +80,7 @@ const MIN_INLINE_LABEL_SHARE = 0.12;
 const DENSE_CELL_COUNT = 16;
 
 const SPLIT_CAVEAT = "equal widths, supply split unavailable";
-const SWATCH_CLASS = "h-3 w-3 shrink-0 rounded-[2px]";
+const SWATCH_CLASS = "h-3 w-3 shrink-0 rounded-xs";
 /** The §6 limiting outline, shared by a limiting cell, the whole band and the legend key. */
 const LIMITING_OUTLINE_CLASS = "outline-2 outline-offset-1 outline-foreground";
 
@@ -285,7 +285,7 @@ export function DeploymentStrip({
                     )}
                   </span>
                 ) : null}
-                <span className="h-1.5 w-full rounded-t-[3px] border-x border-t border-foreground/45" />
+                <span className="h-1.5 w-full rounded-t-xs border-x border-t border-foreground/45" />
               </div>
             )),
           )}
@@ -301,7 +301,7 @@ export function DeploymentStrip({
                 title={`${cell.label} · ${cell.tierLabel}${cell.role ? ` · ${CONTROL_COMPONENT_ROLE_LABELS[cell.role]}` : ""}`}
                 style={{ gridColumn: index + 1, gridRow: cellRow }}
                 className={cn(
-                  "h-4 min-w-0 rounded-[3px]",
+                  "h-4 min-w-0 rounded-xs",
                   resolveCellClass(cell),
                   cell.role === "limiting" && cn("relative z-10", LIMITING_OUTLINE_CLASS),
                 )}
@@ -312,7 +312,7 @@ export function DeploymentStrip({
             <span
               data-band-outlined=""
               style={{ gridColumn: "1 / -1", gridRow: cellRow }}
-              className={cn("pointer-events-none relative z-10 h-4 rounded-[3px]", LIMITING_OUTLINE_CLASS)}
+              className={cn("pointer-events-none relative z-10 h-4 rounded-xs", LIMITING_OUTLINE_CLASS)}
             />
           ) : null}
           {nameSlots.map((slot) => {

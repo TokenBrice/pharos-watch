@@ -300,7 +300,7 @@ function YieldInstrumentRowBase({
                 if (event.key === "Enter" || event.key === " ") event.stopPropagation();
               }}
               aria-label={`Add ${row.symbol} to compare`}
-              className="pharos-focus-ring h-3.5 w-3.5 shrink-0 cursor-pointer rounded border border-border/70 bg-background/60 disabled:cursor-not-allowed disabled:opacity-50"
+              className="pharos-focus-ring h-3.5 w-3.5 shrink-0 cursor-pointer rounded-sm border border-border/70 bg-background/60 disabled:cursor-not-allowed disabled:opacity-50"
             />
             <StablecoinLogo src={logo} name={row.name} size={24} />
             <span className="font-medium">{row.symbol}</span>

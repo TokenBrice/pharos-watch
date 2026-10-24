@@ -89,7 +89,7 @@ export function DependencyExposureResults({ result, publication, roots, options,
             </>;
           })()}</TableCell>
           {scenarioSelection.scenario && <TableCell><DependencyScenarioChange selection={scenarioSelection} assetId={row.id} /></TableCell>}
-          <TableCell><button type="button" className="pharos-focus-ring min-h-11 rounded-md px-2 underline" onClick={() => onInspect(row.id)}>Inspect path</button><Link href={buildStablecoinUrl(row.id)} className="pharos-focus-ring inline-flex min-h-11 items-center rounded px-2 underline">Open coin</Link></TableCell>
+          <TableCell><button type="button" className="pharos-focus-ring min-h-11 rounded-md px-2 underline" onClick={() => onInspect(row.id)}>Inspect path</button><Link href={buildStablecoinUrl(row.id)} className="pharos-focus-ring inline-flex min-h-11 items-center rounded-sm px-2 underline">Open coin</Link></TableCell>
         </TableRow>)}</TableBody>
       </TableFrame>
     </>}

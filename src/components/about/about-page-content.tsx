@@ -196,7 +196,7 @@ function HostLogo({ appearance, size }: { appearance: MediaAppearance; size: num
       alt={`${appearance.host} logo`}
       width={size}
       height={size}
-      className="shrink-0 rounded-lg border border-border/60 bg-background/50"
+      className="shrink-0 pharos-inset"
     />
   );
 }
@@ -487,7 +487,7 @@ export function AboutPageContent() {
           <div className="flex flex-wrap items-start gap-4">
             {TEAM_MEMBERS.map((member) => (
               <figure key={member.name} className="flex flex-col items-center gap-1.5">
-                <div className="rounded-xl border border-border/60 bg-background/50 p-1">
+                <div className="pharos-inset p-1">
                   <Image
                     src={member.imageSrc}
                     alt={member.name}

@@ -206,7 +206,7 @@ function CronRow({
             <span className="truncate text-sm font-medium text-foreground">{row.display.label}</span>
             {row.impactClass === "public-critical" ? (
               <span
-                className="shrink-0 rounded border border-border/70 px-1 text-xs text-muted-foreground"
+                className="shrink-0 rounded-sm border border-border/70 px-1 text-xs text-muted-foreground"
                 title="Public critical: public data depends on this job."
               >
                 Public

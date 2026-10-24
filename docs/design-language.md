@@ -144,6 +144,7 @@ Prefer the established utilities in `src/app/globals.css`:
 | `.pharos-table-shell` / `.pharos-table-toolbar` | Shared framing and controls for tabular workspaces. |
 | `.pharos-chart-stage` | Inner chart surface distinct from its surrounding section. |
 | `.pharos-subtle-band` | Low-emphasis grouped information without introducing another card. |
+| `.pharos-inset` | Nested tile inside a card or panel (stat tiles, metric boxes, grouped facts): `rounded-lg`, hairline border, one background wash. Notes and empty states keep `bg-muted/*`; code blocks keep their own surface. |
 | `.pharos-label` / `.pharos-eyebrow` / `.pharos-numeric` | Sentence-case label, the single uppercase eyebrow, and mono tabular figures; see [Label and figure utilities](./design-tokens.md#label-and-figure-utilities). |
 | `.pharos-empty-note` | Bounded empty-state treatment inside a data surface. |
 | `.pharos-meta` | Compact secondary metadata. |

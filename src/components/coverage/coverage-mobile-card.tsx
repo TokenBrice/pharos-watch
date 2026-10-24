@@ -30,7 +30,7 @@ function CoverageFeatureStatusRow({
   status: CoverageRow["statuses"][CoverageFeatureKey];
 }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-background/45 px-3 py-2">
+    <div className="flex items-center justify-between gap-2 pharos-inset px-3 py-2">
       <dt className="min-w-0 text-2xs font-medium text-muted-foreground">{feature.shortLabel}</dt>
       <dd className="shrink-0">
         <CoverageBadge status={status} compact />

@@ -62,7 +62,7 @@ export function AdminMutationFeedback({
       </div>
       {execution.warning ? <p>{execution.warning}</p> : null}
       {execution.output ? (
-        <pre className={`max-h-40 overflow-auto rounded p-2 ${unknown ? "bg-state-warn-solid/5" : "bg-state-danger-solid/5"}`}>
+        <pre className={`max-h-40 overflow-auto rounded-sm p-2 ${unknown ? "bg-state-warn-solid/5" : "bg-state-danger-solid/5"}`}>
           {execution.output}
         </pre>
       ) : null}

@@ -121,7 +121,7 @@ export function MethodologyFacts({ facts }: { facts: Array<{ label: string; valu
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       {facts.map((fact) => (
-        <div key={fact.label} className="rounded-xl border border-border/60 bg-background/45 px-4 py-3">
+        <div key={fact.label} className="pharos-inset px-4 py-3">
           <p className="pharos-label">{fact.label}</p>
           <p className={cn("mt-2 text-sm text-foreground", /^\d/.test(fact.value) && "pharos-numeric")}>
             {fact.value}

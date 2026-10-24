@@ -259,7 +259,7 @@ function StablecoinYieldDetailHeader({
         </div>
 
         {ranking && model ? (
-          <div className="rounded-xl border border-border/60 bg-background/45 px-4 py-3 sm:min-w-[280px]">
+          <div className="pharos-inset px-4 py-3 sm:min-w-[280px]">
             <p className="mb-2 pharos-label">
               Pharos Yield Score
             </p>

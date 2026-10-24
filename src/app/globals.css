@@ -789,6 +789,11 @@
     box-shadow: none;
   }
 
+  /* Nested tile inside a card or panel: one radius step below its parent. */
+  .pharos-inset {
+    @apply rounded-lg border border-border/60 bg-background/45;
+  }
+
   .pharos-mobile-utility-safe {
     padding-bottom: calc(1.5rem + var(--mobile-utility-safe-offset, 0px));
   }
@@ -956,7 +961,7 @@
      raised fill with primary ink — per the design's tab bar; frost stays
      reserved for live data. */
   .pharos-pill-tabs-group {
-    @apply rounded-[8px] border;
+    @apply rounded-lg border;
     background: var(--control-pill-bg);
     border-color: var(--control-pill-border);
   }

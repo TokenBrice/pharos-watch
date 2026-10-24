@@ -18,10 +18,10 @@ export function CardExpandButton({
       prefetch={false}
       href={href}
       aria-label={expandLabel}
-      className={`pharos-focus-ring group flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] border border-border/75 bg-background/70 text-background shadow-[inset_0_1px_0_oklch(1_0_0_/0.5)] transition-colors hover:border-border hover:bg-muted/45 dark:border-white/10 dark:bg-black/20 dark:shadow-[inset_0_1px_0_oklch(1_0_0_/0.08)] dark:hover:bg-white/10 ${className ?? ""}`}
+      className={`pharos-focus-ring group flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border/75 bg-background/70 text-background shadow-[inset_0_1px_0_oklch(1_0_0_/0.5)] transition-colors hover:border-border hover:bg-muted/45 dark:border-white/10 dark:bg-black/20 dark:shadow-[inset_0_1px_0_oklch(1_0_0_/0.08)] dark:hover:bg-white/10 ${className ?? ""}`}
     >
       <span
-        className="flex h-[15px] w-[15px] items-center justify-center rounded-[5px] bg-muted-foreground/65 transition-colors group-hover:bg-muted-foreground/80 dark:bg-muted-foreground/70 dark:group-hover:bg-muted-foreground/85"
+        className="flex h-[15px] w-[15px] items-center justify-center rounded-sm bg-muted-foreground/65 transition-colors group-hover:bg-muted-foreground/80 dark:bg-muted-foreground/70 dark:group-hover:bg-muted-foreground/85"
         aria-hidden="true"
       >
         <ArrowRight className="h-3 w-3 stroke-[3]" aria-hidden="true" />

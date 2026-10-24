@@ -333,7 +333,7 @@ function BlacklistEventCard({ event: evt, rank }: { event: BlacklistEvent; rank:
         </div>
       </div>
 
-      <div className="mt-3 rounded-xl border border-border/60 bg-background/45 px-3 py-2">
+      <div className="mt-3 pharos-inset px-3 py-2">
         <p className="pharos-label">Address</p>
         <a
           href={evt.explorerAddressUrl}

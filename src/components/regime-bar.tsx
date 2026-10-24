@@ -214,7 +214,7 @@ export function RegimeBar() {
           </div>
           <div className="mx-auto mb-1.5 flex max-w-3xl items-center gap-2 px-4">
             <div
-              className="flex h-[4px] flex-1 gap-[1px] overflow-hidden rounded-[1px]"
+              className="flex h-[4px] flex-1 gap-[1px] overflow-hidden rounded-xs"
               role="img"
               aria-label="Last 30 days of PSI band classifications"
             >

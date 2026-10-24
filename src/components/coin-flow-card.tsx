@@ -47,7 +47,7 @@ export function CoinFlowCard({
     : 0;
 
   return (
-    <div className="rounded-xl border border-border/60 bg-background/35 p-3 space-y-2">
+    <div className="pharos-inset p-3 space-y-2">
       <div className="flex items-center gap-2">
         <span
           className="h-2.5 w-2.5 rounded-full shrink-0"

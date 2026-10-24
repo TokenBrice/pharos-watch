@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 
 function IncidentRow({ incident }: { incident: DdrTrackRecordIncidentRow }) {
   return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-border/50 bg-background/40 px-3 py-2.5">
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 pharos-inset px-3 py-2.5">
       <span className="font-mono text-2xs tabular-nums text-foreground">{incident.dateLabel}</span>
       <Badge variant="outline" className={cn("text-2xs", incident.outcomeToneClass)}>
         {incident.outcomeLabel}

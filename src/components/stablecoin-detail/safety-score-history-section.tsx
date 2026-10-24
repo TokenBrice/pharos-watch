@@ -78,7 +78,7 @@ function mergeGradeHistory(
 
 function StatBox({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-border/60 bg-background/45 px-3 py-1.5">
+    <div className="pharos-inset px-3 py-1.5">
       <p className="pharos-label">{label}</p>
       <div className="mt-0.5">{children}</div>
     </div>

@@ -32,7 +32,7 @@ export function UptimeBar({ cells, label }: { cells: readonly ComponentDayCell[]
       {cells.map((cell) => (
         <div
           key={cell.date}
-          className={cn("min-w-0 flex-1 rounded-[1px]", cellTone(cell.state).bar)}
+          className={cn("min-w-0 flex-1 rounded-xs", cellTone(cell.state).bar)}
           title={describeDayCell(cell)}
         />
       ))}

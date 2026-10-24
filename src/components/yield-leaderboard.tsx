@@ -606,7 +606,7 @@ export function YieldMobileCard({
         />
       </div>
 
-      <div className="mt-3 rounded-xl border border-border/60 bg-background/45 px-3 py-2 text-xs text-muted-foreground">
+      <div className="mt-3 pharos-inset px-3 py-2 text-xs text-muted-foreground">
         <div className="flex items-center justify-between gap-2">
           <p>{benchmarkReferenceText}</p>
           <YieldSourceRiskBar score={sourceRiskScore} compact tooltip />
@@ -641,7 +641,7 @@ export function YieldMobileCard({
         >
           <span
             aria-hidden="true"
-            className={`h-4 w-4 rounded border ${
+            className={`h-4 w-4 rounded-sm border ${
               isCompared
                 ? "border-foreground bg-foreground ring-2 ring-inset ring-background"
                 : "border-border/70 bg-background/60"
@@ -696,7 +696,7 @@ export function YieldMobileCard({
       </div>
 
       {expanded ? (
-        <div className="mt-4 rounded-xl border border-border/60 bg-background/55 px-3 py-3">
+        <div className="mt-4 pharos-inset px-3 py-3">
           {row.pharosYieldScore !== null ? (
             <YieldWhyPysStrip
               benchmarkSpread={benchmarkSpread}

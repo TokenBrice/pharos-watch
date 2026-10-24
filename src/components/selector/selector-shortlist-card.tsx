@@ -268,7 +268,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
       </div>
 
       {rec.profile === "yield" && rec.recommendedSource ? (
-        <div className="mt-3 rounded-lg border border-border/50 bg-background/35 px-3 py-2 text-xs text-muted-foreground">
+        <div className="mt-3 pharos-inset px-3 py-2 text-xs text-muted-foreground">
           <p className="flex flex-wrap items-baseline gap-1.5">
             <span className="font-semibold text-foreground">Yield rail:</span>
             <span className="break-words">
@@ -374,8 +374,8 @@ function CardTrendStrips({
   if (isLoading) {
     return (
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <div aria-hidden="true" className="h-4 w-full rounded bg-muted/15" />
-        {!isMobile ? <div aria-hidden="true" className="h-4 w-full rounded bg-muted/15" /> : null}
+        <div aria-hidden="true" className="h-4 w-full rounded-sm bg-muted/15" />
+        {!isMobile ? <div aria-hidden="true" className="h-4 w-full rounded-sm bg-muted/15" /> : null}
       </div>
     );
   }
@@ -424,7 +424,7 @@ function ScoreBreakdown({ components }: { components: readonly SelectorComponent
   if (components.length === 0) return null;
   const sorted = [...components].sort((a, b) => b.contribution - a.contribution);
   return (
-    <details className="mt-3 rounded-lg border border-border/50 bg-background/35 px-3 py-2 text-xs">
+    <details className="mt-3 pharos-inset px-3 py-2 text-xs">
       <summary className="cursor-pointer font-medium text-foreground">Score breakdown</summary>
       <p className="mt-2 leading-relaxed text-muted-foreground">
         Weights shown are effective per-coin weights after missing-data redistribution.

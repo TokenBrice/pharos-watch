@@ -246,7 +246,7 @@ function FlowEventCard({ event }: { event: MintBurnEvent }) {
   const badge = getEventBadge(event);
 
   return (
-    <li className="rounded-lg border border-border/60 bg-background/45 px-3 py-2">
+    <li className="pharos-inset px-3 py-2">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-mono text-xs text-muted-foreground" title={formatEventDate(event.timestamp)}>

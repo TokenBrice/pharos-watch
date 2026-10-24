@@ -254,6 +254,48 @@ const pharosBoundaryPlugin = {
         };
       },
     },
+    "no-arbitrary-radius": {
+      meta: {
+        type: "suggestion",
+        schema: [],
+        messages: {
+          radius: "Arbitrary or bare radius {{value}}: use the radius scale (rounded-xs 2px, rounded-sm 4px, rounded-md, rounded-lg, rounded-xl, rounded-2xl, rounded-full) per the radius rule in docs/design-tokens.md.",
+        },
+      },
+      create(context) {
+        // `rounded-[3px]`, `rounded-t-[3px]` and the bare `rounded` / `rounded-t`
+        // (an unnamed 4px) inside any string or template chunk, with variants
+        // and important forms. Prose ("rounded display scores") has capitals or
+        // sentence punctuation that class lists never carry, so bare words there
+        // are not classes. String checks, not a regex, keep it linear.
+        const sides = new Set(["t", "r", "b", "l", "s", "e", "x", "y", "tl", "tr", "bl", "br", "ss", "se", "es", "ee"]);
+        const isSide = (part) => part === "" || (part.startsWith("-") && sides.has(part.slice(1)));
+        function classify(token) {
+          const core = token.slice(token.lastIndexOf(":") + 1).replace(/^!/, "").replace(/!$/, "");
+          if (!core.startsWith("rounded")) return null;
+          const rest = core.slice("rounded".length);
+          if (rest.endsWith("]")) {
+            const bracket = rest.indexOf("-[");
+            return bracket >= 0 && isSide(rest.slice(0, bracket)) ? "arbitrary" : null;
+          }
+          return isSide(rest) ? "bare" : null;
+        }
+        function check(node, text) {
+          if (typeof text !== "string") return;
+          const prose = /[A-Z]|[.!?](?:\s|$)/.test(text);
+          for (const token of text.split(/\s|["'`]/)) {
+            const kind = token && classify(token);
+            if (kind === "arbitrary" || (kind === "bare" && !prose)) {
+              context.report({ node, messageId: "radius", data: { value: token } });
+            }
+          }
+        }
+        return {
+          Literal: (node) => check(node, node.value),
+          TemplateElement: (node) => check(node, node.value.cooked),
+        };
+      },
+    },
     "no-arbitrary-z-index": {
       meta: {
         type: "suggestion",
@@ -627,7 +669,14 @@ const eslintConfig = defineConfig([
     plugins: { pharos: pharosBoundaryPlugin },
     rules: {
       "pharos/no-arbitrary-text-px": "error",
+      // Radius guardrail (docs/design-tokens.md, radius rule): same scope.
+      "pharos/no-arbitrary-radius": "error",
     },
+  },
+  {
+    // shadcn primitives keep their upstream radii.
+    files: ["src/components/ui/**/*.{ts,tsx}"],
+    rules: { "pharos/no-arbitrary-radius": "off" },
   },
   {
     // Stacking guardrail (docs/design-tokens.md): page-level layers

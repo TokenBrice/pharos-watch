@@ -59,7 +59,7 @@ export function StablecoinDetailLoadingShell({
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {["Price", "Market cap", "Supply", "Liquidity"].map((label) => (
-            <div key={label} className="rounded-xl border border-border/60 bg-background/45 px-3.5 py-3">
+            <div key={label} className="pharos-inset px-3.5 py-3">
               <p className="pharos-label mb-1">{label}</p>
               <Skeleton className="h-7 w-24" />
               <Skeleton className="mt-2 h-4 w-28" />

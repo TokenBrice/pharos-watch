@@ -155,6 +155,19 @@ describe("ESLint config ratchets", () => {
       rule: "pharos/no-arbitrary-z-index", name, source, count: 1,
       filePath: filePath ?? "src/components/__z-index-fixture.tsx",
     })),
+    ...([
+      ["arbitrary", 'export const A = () => <p className="rounded-[3px]">x</p>;', 1],
+      ["side arbitrary", "export const c = `rounded-t-[3px] border`;", 1],
+      ["bare", 'export const A = () => <p className="rounded border">x</p>;', 1],
+      ["variant bare", 'export const c = "md:rounded px-2";', 1],
+      ["named steps pass", 'export const c = "rounded-sm rounded-t-xs rounded-full";', 0],
+      ["prose passes", 'export const c = "Scores are rounded to one decimal.";', 0],
+      ["lib class constant", 'export const c = "rounded-[2px]";', 1, "src/lib/__radius-fixture.ts"],
+      ["shadcn primitive passes", 'export const c = "rounded-[2px]";', 0, "src/components/ui/__radius-fixture.tsx"],
+    ] satisfies Array<[string, string, number, string?]>).map(([name, source, count, filePath]) => ({
+      rule: "pharos/no-arbitrary-radius", name, source, count,
+      filePath: filePath ?? "src/components/__radius-fixture.tsx",
+    })),
   ];
 
   it.each(styleProbes)("$rule rejects $name", async ({ rule, source, count, filePath }) => {

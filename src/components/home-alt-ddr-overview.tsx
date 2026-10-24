@@ -237,7 +237,7 @@ function VerdictDistribution({ items }: { items: ForecastItem[] }) {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {groups.map(({ tier, count }) => (
           <span key={tier} className="flex items-center gap-1.5">
-            <span aria-hidden="true" className={cn("h-2 w-2 rounded-[3px]", NOW_DOT_TONE[tier])} />
+            <span aria-hidden="true" className={cn("h-2 w-2 rounded-xs", NOW_DOT_TONE[tier])} />
             <span className={cn("font-mono text-sm font-bold tabular-nums", TIER_META[tier].accent)}>{count}</span>
             <span className={cn("text-2xs font-semibold", TIER_META[tier].accent)}>
               {TIER_SHORT[tier]}

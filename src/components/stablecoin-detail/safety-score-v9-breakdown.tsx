@@ -46,16 +46,16 @@ const ROW_TONE_SCORE_CLASS: Record<BreakdownRow["tone"], string> = {
 };
 
 const TRACK_CLASS =
-  "overflow-hidden rounded-[3px] border border-meter-track-border bg-meter-track";
+  "overflow-hidden rounded-xs border border-meter-track-border bg-meter-track";
 /** Unavailable: an empty dashed outline (as in the pillar strips), never an empty solid track that reads as zero. */
-const UNAVAILABLE_TRACK_CLASS = "rounded-[3px] border border-dashed border-muted-foreground/50";
+const UNAVAILABLE_TRACK_CLASS = "rounded-xs border border-dashed border-muted-foreground/50";
 /**
  * Diagnostic Control input (outside the eligible set): the dashed track and
  * faded fill of the Control strip's diagnostic grammar, so a weak bar that does
  * not set the score keeps its hue without competing with the limiting row.
  */
 const DIAGNOSTIC_TRACK_CLASS =
-  "overflow-hidden rounded-[3px] border border-dashed border-muted-foreground/50 bg-muted/60";
+  "overflow-hidden rounded-xs border border-dashed border-muted-foreground/50 bg-muted/60";
 
 function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?: boolean }) {
   const [open, setOpen] = useState(false);
@@ -88,7 +88,7 @@ function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?
       >
         {boundedScore === null ? null : (
           <span
-            className={cn("block h-full rounded-[2px]", ROW_TONE_FILL_CLASS[row.tone], diagnostic && "opacity-45")}
+            className={cn("block h-full rounded-xs", ROW_TONE_FILL_CLASS[row.tone], diagnostic && "opacity-45")}
             style={{ width: `${boundedScore}%` }}
           />
         )}
@@ -331,7 +331,7 @@ function PillarInputFallback({
         {pillar.components.map((component) => (
           <span
             key={component.key}
-            className="min-w-1 flex-1 rounded-[2px] bg-meter-neutral"
+            className="min-w-1 flex-1 rounded-xs bg-meter-neutral"
           />
         ))}
       </div>
@@ -342,7 +342,7 @@ function PillarInputFallback({
             className="flex min-w-0 items-center justify-between gap-2 border-b border-border/30 py-1.5 last:border-b-0"
           >
             <span className="flex min-w-0 items-center gap-2 text-foreground/85">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-[2px] bg-state-positive-solid" aria-hidden="true" />
+              <span className="h-1.5 w-1.5 shrink-0 rounded-xs bg-state-positive-solid" aria-hidden="true" />
               <span className="truncate">{component.label}</span>
             </span>
             <span className="pharos-label shrink-0">
@@ -454,7 +454,7 @@ export function SafetyScoreV9PillarRow({
       >
         {pillar.score === null ? null : (
           <span
-            className={cn("block h-full rounded-[2px]", gradeMetadata.barClassName)}
+            className={cn("block h-full rounded-xs", gradeMetadata.barClassName)}
             style={{ width: `${Math.max(0, Math.min(100, pillar.score))}%` }}
           />
         )}

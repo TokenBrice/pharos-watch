@@ -114,7 +114,7 @@ export function YieldDetailSectionAltSources({
             <li
               key={source.sourceKey}
               className={cn(
-                "rounded-lg border border-border/60 bg-background/55 px-3 py-2",
+                "pharos-inset px-3 py-2",
                 isSelected && "border-primary/40 bg-primary/5",
               )}
             >

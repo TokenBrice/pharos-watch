@@ -514,7 +514,7 @@ export function TopNav() {
         >
           <Search className="size-4 shrink-0" aria-hidden />
           <span className="hidden xl:inline">Coin or page</span>
-          <kbd className="ml-auto hidden rounded border border-border/70 bg-background px-1.5 font-mono text-3xs text-muted-foreground xl:inline">
+          <kbd className="ml-auto hidden rounded-sm border border-border/70 bg-background px-1.5 font-mono text-3xs text-muted-foreground xl:inline">
             ⌘K
           </kbd>
         </button>

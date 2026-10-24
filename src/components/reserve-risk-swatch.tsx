@@ -7,7 +7,7 @@ export function ReserveRiskSwatch({ risk }: { risk: ReserveRisk }) {
   return (
     <span
       aria-hidden="true"
-      className="size-2.5 shrink-0 rounded-[2px] border"
+      className="size-2.5 shrink-0 rounded-xs border"
       style={{ backgroundColor: RESERVE_RISK_PRESENTATION[risk].fillColor, borderColor: RESERVE_RISK_PRESENTATION[risk].accentColor }}
     />
   );

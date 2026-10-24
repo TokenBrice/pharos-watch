@@ -269,7 +269,7 @@ export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }
 
 function FundingMiniStat({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
-    <div className="rounded-lg border border-border/60 bg-background/40 px-3 py-2.5">
+    <div className="pharos-inset px-3 py-2.5">
       <p className="pharos-label text-muted-foreground">{label}</p>
       <p className="pharos-numeric text-lg font-semibold tracking-tight text-foreground">{value}</p>
       <p className="text-xs text-muted-foreground">{detail}</p>
@@ -492,7 +492,7 @@ export function SupportCtas() {
 
 function SupporterKeyNote() {
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-background/40 p-4 sm:flex-row sm:items-start sm:gap-3">
+    <div className="flex flex-col gap-2 pharos-inset p-4 sm:flex-row sm:items-start sm:gap-3">
       <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden="true" />
       <div className="space-y-1">
         <p className="text-sm font-semibold text-foreground">Supporter API key</p>
@@ -522,7 +522,7 @@ function SupporterKeyNote() {
 
 function PrimaryGivethTile() {
   return (
-    <div className="flex h-full flex-col gap-3 rounded-lg border border-border/60 bg-background/40 p-5 lg:col-span-2">
+    <div className="flex h-full flex-col gap-3 pharos-inset p-5 lg:col-span-2">
       <div className="flex items-center gap-2">
         <Heart className="h-4 w-4 text-foreground" />
         <p className="pharos-label text-muted-foreground">Recommended</p>
@@ -552,7 +552,7 @@ function PrimaryGivethTile() {
 
 function WalletTile() {
   return (
-    <div className="flex h-full flex-col gap-2 rounded-lg border border-border/60 bg-background/40 p-4 lg:col-span-1">
+    <div className="flex h-full flex-col gap-2 pharos-inset p-4 lg:col-span-1">
       <div className="flex items-center gap-2">
         <Wallet className="h-4 w-4 text-foreground" />
         <p className="text-sm font-medium text-foreground">Direct wallet</p>

@@ -90,13 +90,13 @@ function MobileRiskSummary({ model }: { model: StablecoinTableRowModel }) {
     >
       {model.reportCard ? (
         <span
-          className={`inline-flex h-5 min-w-5 items-center justify-center rounded border px-1 pharos-numeric text-3xs font-semibold leading-none ${getSafetyGradeBadgeClassName(model.reportCard.grade)}`}
+          className={`inline-flex h-5 min-w-5 items-center justify-center rounded-sm border px-1 pharos-numeric text-3xs font-semibold leading-none ${getSafetyGradeBadgeClassName(model.reportCard.grade)}`}
           title={`${model.reportCard.grade === null ? "Pipeline gap" : `Safety grade ${model.reportCard.grade}`}${partial ? ` · ${partial.summary}` : ""}`}
         >
           {model.reportCard.grade ?? "Pipeline gap"}
         </span>
       ) : (
-        <span className="inline-flex h-5 items-center rounded border border-border/60 px-1 text-3xs text-muted-foreground">
+        <span className="inline-flex h-5 items-center rounded-sm border border-border/60 px-1 text-3xs text-muted-foreground">
           —
         </span>
       )}
@@ -105,20 +105,20 @@ function MobileRiskSummary({ model }: { model: StablecoinTableRowModel }) {
           {partial.gaps.map(formatPartialEvidenceGap).join(" · ")}
         </span>
       ) : null}
-      <span className="inline-flex h-5 items-center rounded border border-border/60 bg-background/60 px-1.5 text-3xs text-muted-foreground">
+      <span className="inline-flex h-5 items-center rounded-sm border border-border/60 bg-background/60 px-1.5 text-3xs text-muted-foreground">
         Peg{" "}
         <span className={`ml-1 pharos-numeric ${model.pegScore !== null ? pegScoreColor(model.pegScore) : "text-muted-foreground"}`}>
           {model.pegScore !== null ? model.pegScore : "—"}
         </span>
       </span>
-      <span className="inline-flex h-5 items-center rounded border border-border/60 bg-background/60 px-1.5 text-3xs text-muted-foreground">
+      <span className="inline-flex h-5 items-center rounded-sm border border-border/60 bg-background/60 px-1.5 text-3xs text-muted-foreground">
         Liq{" "}
         <span className={`ml-1 pharos-numeric ${model.liquidityScore !== null ? getScoreColor(model.liquidityScore) : "text-muted-foreground"}`}>
           {model.liquidityScore !== null ? model.liquidityScore : "—"}
         </span>
       </span>
       <span
-        className="inline-flex h-5 items-center rounded border border-border/60 bg-background/60 px-1.5 text-3xs text-muted-foreground"
+        className="inline-flex h-5 items-center rounded-sm border border-border/60 bg-background/60 px-1.5 text-3xs text-muted-foreground"
         title={model.mintAuthorityScore.detail}
       >
         Mint{" "}

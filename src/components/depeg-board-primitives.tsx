@@ -46,7 +46,7 @@ export function EventLoadMeter({ count, symbol }: { count: number; symbol: strin
         <span
           key={index}
           className={cn(
-            "h-1.5 flex-1 rounded-[2px] border border-border/50",
+            "h-1.5 flex-1 rounded-xs border border-border/50",
             index < filled ? "border-state-warn-solid/40 bg-state-warn-solid" : "bg-muted/35",
           )}
         />

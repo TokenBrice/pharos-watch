@@ -152,7 +152,7 @@ function VariantRelationshipSummary({ coin }: { coin: StablecoinMeta }) {
   ).slice(0, 4);
 
   return (
-    <div className="rounded-lg border border-border/50 bg-background/50 px-3 py-3">
+    <div className="pharos-inset px-3 py-3">
       <p className="pharos-label">Variant relationship</p>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
         {coin.name} ({coin.symbol}) is modeled as a {variantLabel} of{" "}
@@ -484,7 +484,7 @@ export function StablecoinDetailSeoContent({
             <VariantRelationshipSummary coin={coin} />
 
             {summary ? (
-              <div className="rounded-lg border border-border/50 bg-background/50 px-3 py-2.5">
+              <div className="pharos-inset px-3 py-2.5">
                 <p className="pharos-label">
                   AI summary{summaryUpdatedAt ? ` / Updated ${summaryUpdatedAt}` : ""}
                 </p>
@@ -528,7 +528,7 @@ export function StablecoinDetailSeoContent({
         </div>
 
         <div className="mt-4 border-t border-border/50 pt-4">
-          <div className="rounded-lg border border-border/50 bg-background/50 px-3 py-3">
+          <div className="pharos-inset px-3 py-3">
             <p className="pharos-label">Next actions</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {isActiveStablecoinMeta(coin) ? (
@@ -555,7 +555,7 @@ export function StablecoinDetailSeoContent({
             {isActiveStablecoinMeta(coin) ? (
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
                 Exact bot target:{" "}
-                <code className="rounded bg-muted/60 px-1.5 py-0.5 font-mono text-2xs text-foreground">
+                <code className="rounded-sm bg-muted/60 px-1.5 py-0.5 font-mono text-2xs text-foreground">
                   {alertCommand}
                 </code>
               </p>

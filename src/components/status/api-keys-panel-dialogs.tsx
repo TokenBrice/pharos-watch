@@ -66,7 +66,7 @@ export function TokenRevealDialog({
         <div className="flex items-start gap-2">
           <pre
             aria-label={`${revealedToken.label} plaintext token`}
-            className="min-w-0 flex-1 overflow-auto rounded bg-muted p-3 text-xs"
+            className="min-w-0 flex-1 overflow-auto rounded-sm bg-muted p-3 text-xs"
           >
             {revealedToken.token}
           </pre>

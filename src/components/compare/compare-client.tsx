@@ -374,14 +374,14 @@ export function CompareClient() {
             </div>
             {selectionInsights ? (
               <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-                <div className="rounded-xl border border-border/60 bg-background/50 px-3.5 py-3">
+                <div className="pharos-inset px-3.5 py-3">
                   <p className="pharos-label">How to read this set</p>
                   <p className="mt-1 text-sm text-foreground">{selectionInsights.lens}</p>
                   <p className="mt-2 text-xs text-muted-foreground">
                     {selectionInsights.cohort} {selectionInsights.structure}
                   </p>
                 </div>
-                <div className="rounded-xl border border-border/60 bg-background/50 px-3.5 py-3">
+                <div className="pharos-inset px-3.5 py-3">
                   <p className="pharos-label">Jump to detail</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {selectionInsights.links.map((coin) => (
