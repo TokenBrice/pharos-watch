@@ -240,7 +240,27 @@ describe("StablecoinDetailClient", () => {
     }));
   });
 
-  it("reserves distant reference islands and preserves Explore aliases before and after mounting", () => {
+  it("prerenders Explore next without a viewport gate, in the ready and loading dossier alike", () => {
+    useNearViewportMock.mockImplementation(() => ({ ref: () => {}, near: false }));
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const content = () => (
+      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)}
+        heading="Sky Dollar (USDS)"
+        exploreNextContent={<section id="explore-next"><h2 id="explore-next-heading">Explore cards</h2></section>} />
+    );
+    const { container, rerender } = render(content());
+    expect(screen.getByText("Explore cards")).toBeTruthy();
+    expect(container.querySelectorAll("#explore-next")).toHaveLength(1);
+    useStablecoinDetailViewModelMock.mockReturnValue({ status: "loading", handleRetryAll: vi.fn() });
+    rerender(content());
+    expect(screen.getByText("Explore cards")).toBeTruthy();
+    // The loading dossier's visible title is the page's only h1.
+    const headings = container.querySelectorAll("h1");
+    expect(headings).toHaveLength(1);
+    expect(headings[0]?.textContent).toBe(`${coin.name} (${coin.symbol})`);
+  });
+
+  it("reserves distant reference islands and keeps one Explore alias set before and after mounting", () => {
     let near = false;
     useNearViewportMock.mockImplementation((rootMargin?: string) => ({
       ref: () => {},
@@ -255,7 +275,6 @@ describe("StablecoinDetailClient", () => {
     for (const id of ["liquidity", "chart", "distribution", "dex-liquidity", "history", "coin-timeline", "explore", "explore-next", "explore-next-heading"]) {
       expect(container.querySelectorAll(`#${id}`)).toHaveLength(1);
     }
-    expect(screen.queryByText("Explore cards")).toBeNull();
     // The hidden mobile reference cards do not repeat the rail's eager observers.
     expect(screen.getAllByTestId("price-transparency-card")).toHaveLength(1);
     near = true;

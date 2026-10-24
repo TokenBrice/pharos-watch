@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { isDetailSnapshotQuery } from "@/lib/api";
+import { isDetailSnapshotQuery, type SavedSafetyAssessment } from "@/lib/api";
 import { trackFreshDataReady } from "@/lib/analytics";
 import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
@@ -54,6 +54,8 @@ interface UseStablecoinDetailViewModelParams {
   logoSrc?: string;
   /** Frozen coins only: archived list row used when the live detail row is unavailable. */
   archivedLiveSummary?: StablecoinLiveSummary | null;
+  /** The build snapshot's dated scores-latest values, shown while live reads are pending. */
+  savedAssessment?: SavedSafetyAssessment | null;
   supplementalQueryControls?: StablecoinDetailSupplementalQueryControls;
 }
 
@@ -94,6 +96,7 @@ export function useStablecoinDetailViewModel({
   summary,
   logoSrc,
   archivedLiveSummary = null,
+  savedAssessment = null,
   supplementalQueryControls,
 }: UseStablecoinDetailViewModelParams): StablecoinDetailViewModel {
   const queryClient = useQueryClient();
@@ -285,7 +288,7 @@ export function useStablecoinDetailViewModel({
   const viewModel = useMemo(
     () =>
       buildStablecoinDetailViewModel({
-        core: { id, coin, summary, logoSrc, handleRetryAll },
+        core: { id, coin, summary, logoSrc, handleRetryAll, savedAssessment },
         queries,
         supplemental: { yieldRankings, stressSignals, flows, blacklist, reserves },
       }),
@@ -295,6 +298,7 @@ export function useStablecoinDetailViewModel({
       summary,
       logoSrc,
       handleRetryAll,
+      savedAssessment,
       queries,
       yieldRankings,
       stressSignals,

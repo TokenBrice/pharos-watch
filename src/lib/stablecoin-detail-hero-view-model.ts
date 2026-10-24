@@ -6,18 +6,26 @@ import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
+import type { SavedSafetyAssessment } from "@/lib/api";
 import {
   buildDewsAccent,
+  buildDewsBandAccent,
   buildDewsDisplay,
   buildExcessYieldDisplay,
   buildLimitedDepegCoverageNote,
   buildLiquidityAccent,
   buildLiquidityDisplay,
+  buildLiquidityScoreAccent,
   buildPegScoreAccent,
   buildPegScoreDisplay,
   buildPerformanceVsUsdDisplay,
+  buildSavedDewsDisplay,
+  buildSavedLiquidityDisplay,
   formatPoolCount,
+  formatSavedAssessmentAsOf,
   HERO_MUTED_CLASS,
+  HERO_PENDING_DEWS_DISPLAY,
+  HERO_PENDING_DISPLAY,
   HERO_NEGATIVE_TREND_CLASS,
   HERO_POSITIVE_TREND_CLASS,
   type HeroDewsDisplay,
@@ -60,8 +68,12 @@ export interface HeroSignalRailItemViewModel {
   label: string;
   primary: string;
   secondary: string | null;
+  /** The release date of a saved value ("as of 2026-10-22"). */
+  note?: string;
   href: string;
   colorClass: string;
+  /** The live read is still in its first fetch: a neutral placeholder. */
+  pending?: true;
 }
 
 export interface HeroCaseStudyCalloutViewModel {
@@ -76,6 +88,8 @@ export interface HeroCardViewModel {
   coinData: DetailQuote;
   logoSrc?: string;
   reportCard: V9ConsumerCard | null;
+  /** The release's dated grade while the live report card is pending; null otherwise. */
+  savedGrade: SavedSafetyAssessment | null;
   verdict: StablecoinVerdict;
   variantParent?: StablecoinClientMeta | null;
   variantKind?: VariantKind | null;
@@ -141,6 +155,18 @@ export interface BuildHeroCardViewModelParams {
   resolvedMechanismArchetype: MechanismArchetype | null;
   mintAuthority: MintAuthorityDetailViewModel;
   redemptionBackstop: RedemptionBackstopEntry | null;
+  /** The build snapshot's dated scores-latest values, shown while their live read is pending. */
+  savedAssessment?: SavedSafetyAssessment | null;
+  /** Live reads still in their first fetch (the prerender included): placeholders, never "unavailable". */
+  pendingReads?: HeroPendingReads;
+}
+
+export interface HeroPendingReads {
+  reportCard?: boolean;
+  stress?: boolean;
+  liquidity?: boolean;
+  peg?: boolean;
+  yield?: boolean;
 }
 
 const MOBILE_ONLY_TERTIARY_KEYS: ReadonlySet<HeroTertiaryMetricViewModel["key"]> = new Set([
@@ -210,32 +236,65 @@ function buildSignalRailItems(
   effectivePegScore: number | null,
   liquidityData: DexLiquidityData | undefined,
   dewsDisplay: HeroDewsDisplay,
+  {
+    savedGrade,
+    pegPending,
+    liquidityFallback,
+  }: {
+    /** The release's dated grade while the live report card is pending. */
+    savedGrade: SavedSafetyAssessment | null;
+    pegPending: boolean;
+    /** The saved release score or the pending placeholder, without live liquidity data. */
+    liquidityFallback: HeroDisplayValue | null;
+  },
 ): HeroSignalRailItemViewModel[] {
+  const liveLiquidity = liquidityData !== undefined || liquidityFallback === null;
   return [
-    {
-      key: "safety",
-      label: "Safety",
-      primary: reportCard?.grade ?? "—",
-      secondary: reportCard?.score != null ? `${reportCard.score}/100` : null,
-      href: "#report-card",
-      colorClass: reportCard?.grade ? REPORT_CARD_GRADE_COLORS[reportCard.grade] : HERO_MUTED_CLASS,
-    },
+    reportCard || !savedGrade?.grade
+      ? {
+          key: "safety",
+          label: "Safety",
+          primary: reportCard?.grade ?? "—",
+          secondary: reportCard?.score != null ? `${reportCard.score}/100` : null,
+          href: "#report-card",
+          colorClass: reportCard?.grade ? REPORT_CARD_GRADE_COLORS[reportCard.grade] : HERO_MUTED_CLASS,
+        }
+      : {
+          key: "safety",
+          label: "Safety",
+          primary: savedGrade.grade,
+          secondary: savedGrade.score != null ? `${savedGrade.score}/100` : null,
+          note: formatSavedAssessmentAsOf(savedGrade.asOfMs),
+          href: "#report-card",
+          colorClass: REPORT_CARD_GRADE_COLORS[savedGrade.grade],
+        },
     {
       key: "peg",
       label: "Peg",
-      primary: effectivePegScore != null ? String(effectivePegScore) : isNavToken ? "NAV" : "—",
+      primary: effectivePegScore != null ? String(effectivePegScore) : isNavToken ? "NAV" : pegPending ? "" : "—",
       secondary: null,
       href: "#report-card",
       colorClass: effectivePegScore != null ? pegScoreColor(effectivePegScore) : HERO_MUTED_CLASS,
+      ...(effectivePegScore == null && !isNavToken && pegPending ? { pending: true as const } : {}),
     },
-    {
-      key: "liquidity",
-      label: "Liquidity",
-      primary: liquidityData?.liquidityScore != null ? String(Math.round(liquidityData.liquidityScore)) : "—",
-      secondary: liquidityData?.poolCount != null ? formatPoolCount(liquidityData.poolCount) : null,
-      href: "#liquidity",
-      colorClass: liquidityData?.liquidityScore != null ? getScoreColor(liquidityData.liquidityScore) : HERO_MUTED_CLASS,
-    },
+    liveLiquidity
+      ? {
+          key: "liquidity",
+          label: "Liquidity",
+          primary: liquidityData?.liquidityScore != null ? String(Math.round(liquidityData.liquidityScore)) : "—",
+          secondary: liquidityData?.poolCount != null ? formatPoolCount(liquidityData.poolCount) : null,
+          href: "#liquidity",
+          colorClass: liquidityData?.liquidityScore != null ? getScoreColor(liquidityData.liquidityScore) : HERO_MUTED_CLASS,
+        }
+      : {
+          key: "liquidity",
+          label: "Liquidity",
+          primary: liquidityFallback.value,
+          secondary: liquidityFallback.sub ?? null,
+          href: "#liquidity",
+          colorClass: liquidityFallback.color,
+          ...(liquidityFallback.pending ? { pending: true as const } : {}),
+        },
     {
       key: "dews",
       label: "DEWS",
@@ -243,6 +302,7 @@ function buildSignalRailItems(
       secondary: dewsDisplay.sub ?? null,
       href: "#report-card",
       colorClass: dewsDisplay.color,
+      ...(dewsDisplay.pending ? { pending: true as const } : {}),
     },
   ];
 }
@@ -271,27 +331,43 @@ export function buildStablecoinDetailHeroViewModel({
   resolvedMechanismArchetype,
   mintAuthority,
   redemptionBackstop,
+  savedAssessment = null,
+  pendingReads = {},
 }: BuildHeroCardViewModelParams): HeroCardViewModel {
   const infrastructures: Infrastructure[] = coin.infrastructures ?? [];
   const blacklistStatus = getResolvedBlacklistStatus(coin.id);
   const primaryComparisonPage = getPrimaryStaticComparisonLinkForCoin(coin.id);
   const effectivePegScore = resolveEffectivePegScore(isNavToken, pegScoreResult);
-  const pegScoreDisplay = buildPegScoreDisplay(
+  // NAV tokens and frozen archives have no live peg/DEWS reading to wait for.
+  const awaitsSignals = !isNavToken && coin.status !== "frozen";
+  const pegPending = awaitsSignals && pegScoreResult === null && pendingReads.peg === true;
+  const pegScoreDisplay = pegPending ? HERO_PENDING_DISPLAY : buildPegScoreDisplay(
     isNavToken,
     pegScoreResult,
     null,
   );
-  const liquidityDisplay = buildLiquidityDisplay(liquidityData);
-  const dewsDisplay = buildDewsDisplay(stressSignal);
+  // Without live data, a pending read shows the dated release value or a placeholder.
+  const liquidityFallback = liquidityData === undefined && pendingReads.liquidity === true
+    ? buildSavedLiquidityDisplay(savedAssessment) ?? HERO_PENDING_DISPLAY
+    : null;
+  const liquidityDisplay = liquidityFallback ?? buildLiquidityDisplay(liquidityData);
+  const savedDews = stressSignal === null && awaitsSignals && pendingReads.stress === true
+    ? buildSavedDewsDisplay(savedAssessment) ?? HERO_PENDING_DEWS_DISPLAY
+    : null;
+  const dewsDisplay = savedDews ?? buildDewsDisplay(stressSignal);
+  const excessYieldDisplay = yieldRanking === null && pendingReads.yield === true
+    ? HERO_PENDING_DISPLAY
+    : buildExcessYieldDisplay(yieldRanking);
   const performanceVsUsdDisplay = buildPerformanceVsUsdDisplay(performanceVsUsd1y);
+  const savedGrade = pendingReads.reportCard === true && !reportCard && savedAssessment?.grade ? savedAssessment : null;
   const tertiaryMetrics = buildTertiaryMetrics(
     dewsDisplay,
-    buildDewsAccent(stressSignal),
+    savedDews ? buildDewsBandAccent(savedDews.band) : buildDewsAccent(stressSignal),
     pegScoreDisplay,
     buildPegScoreAccent(pegScoreResult),
     liquidityDisplay,
-    buildLiquidityAccent(liquidityData),
-    buildExcessYieldDisplay(yieldRanking),
+    liquidityFallback ? buildLiquidityScoreAccent(savedAssessment?.liquidityScore ?? null) : buildLiquidityAccent(liquidityData),
+    excessYieldDisplay,
     performanceVsUsdDisplay,
   );
   const subjectCaseStudy = CASE_STUDY_CLIENT_BY_COIN_ID[coin.id];
@@ -308,6 +384,7 @@ export function buildStablecoinDetailHeroViewModel({
     coinData,
     logoSrc,
     reportCard,
+    savedGrade,
     verdict,
     variantParent,
     variantKind,
@@ -335,7 +412,11 @@ export function buildStablecoinDetailHeroViewModel({
     peg: { activeDepeg: pegScoreResult?.activeDepeg === true },
     tertiaryMetrics,
     desktopTertiaryMetrics: tertiaryMetrics.filter((metric) => !MOBILE_ONLY_TERTIARY_KEYS.has(metric.key)),
-    signalRailItems: buildSignalRailItems(reportCard, isNavToken, effectivePegScore, liquidityData, dewsDisplay),
+    signalRailItems: buildSignalRailItems(reportCard, isNavToken, effectivePegScore, liquidityData, dewsDisplay, {
+      savedGrade,
+      pegPending,
+      liquidityFallback,
+    }),
     passportItems: buildHeroPassportItems({
       coin,
       chainCount: coinData.chains?.length ?? 0,

@@ -28,8 +28,13 @@ export { buildStablecoinDetailHeroViewModel };
 export type { HeroCardViewModel, HeroTertiaryMetricViewModel } from "@/lib/stablecoin-detail-hero-view-model";
 export type { BuildStablecoinDetailViewModelParams, StablecoinDetailSummary, StablecoinDetailViewModel } from "@/lib/stablecoin-detail-view-model-types";
 
+/** A first fetch in flight with no data yet (the prerender included), not a settled empty read. */
+function isFirstReadPending(resource: { data?: unknown; isLoading?: boolean; error: unknown | null }): boolean {
+  return resource.data === undefined && resource.error == null && resource.isLoading === true;
+}
+
 export function buildStablecoinDetailViewModel({
-  core: { id, coin, summary, logoSrc, handleRetryAll },
+  core: { id, coin, summary, logoSrc, handleRetryAll, savedAssessment = null },
   queries,
   supplemental,
 }: BuildStablecoinDetailViewModelParams): StablecoinDetailViewModel {
@@ -88,11 +93,13 @@ export function buildStablecoinDetailViewModel({
   const variantParent = getClientVariantParent(id);
   const childVariants = getClientVariants(id);
   const resolvedMechanismArchetype = resolveMechanismArchetype(coin, CLIENT_TRACKED_META_BY_ID);
+  const reportCardPending = isFirstReadPending(reportCards);
   const mintAuthority = buildMintAuthorityDetailViewModel(
     coin,
     reportCard
       ? { mint: readV9CardMintComponent(reportCard), caps: reportCard.caps, issuanceSummary: readV9CardIssuanceSummary(reportCard) }
       : reportCards.data ? { mint: null, caps: [] } : null,
+    { publicationPending: reportCardPending },
   );
   const stressBand = featureAvailability.stressSignal && isThreatBand(featureAvailability.stressSignal.band)
     ? featureAvailability.stressSignal.band
@@ -132,6 +139,14 @@ export function buildStablecoinDetailViewModel({
     resolvedMechanismArchetype,
     mintAuthority,
     redemptionBackstop: redemptionBackstop ?? null,
+    savedAssessment,
+    pendingReads: {
+      reportCard: reportCardPending,
+      stress: isFirstReadPending(supplemental.stressSignals),
+      liquidity: isFirstReadPending(dexLiquidity),
+      peg: isFirstReadPending(pegSummary),
+      yield: isFirstReadPending(supplemental.yieldRankings),
+    },
   });
 
   return {

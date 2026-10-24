@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore, type ReactNode } from "react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { StablecoinIdentityTransition } from "@/components/view-transitions";
 import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-detail/constants";
@@ -13,6 +14,23 @@ interface StablecoinDetailLoadingShellProps {
   logoSrc?: string;
   description: string;
   statusLabel: string;
+  /** The visible page title while this shell is the dossier (the in-client loading state). */
+  titleAs?: "h1" | "h2";
+  /** The page heading: `{name} ({SYMBOL})`, or the name alone when the two match. */
+  heading?: string;
+}
+
+const subscribeNever = () => () => {};
+
+/**
+ * The identity morph's dossier end, rendered only by a fresh client render
+ * (a row → dossier navigation). The prerendered HTML and its hydration pass
+ * carry no shared pair, so revealing the streamed dossier on a document load
+ * never starts a view transition.
+ */
+function ClientNavigationIdentityTransition({ id, children }: { id: string; children: ReactNode }) {
+  const clientRender = useSyncExternalStore(subscribeNever, () => true, () => false);
+  return clientRender ? <StablecoinIdentityTransition id={id}>{children}</StablecoinIdentityTransition> : children;
 }
 
 export function StablecoinDetailLoadingShell({
@@ -20,7 +38,10 @@ export function StablecoinDetailLoadingShell({
   logoSrc,
   description,
   statusLabel,
+  titleAs = "h2",
+  heading,
 }: StablecoinDetailLoadingShellProps) {
+  const Title = titleAs;
   return (
     <div>
       <BackToSource className="mb-2" />
@@ -31,14 +52,18 @@ export function StablecoinDetailLoadingShell({
               {/* The loading shell is what a row → dossier navigation commits
                   first, so it carries the identity morph's dossier end until
                   the hydrated header takes over. */}
-              <StablecoinIdentityTransition id={coin.id}>
+              <ClientNavigationIdentityTransition id={coin.id}>
                 <div className="flex shrink-0 items-center gap-3">
                   <StablecoinLogo src={logoSrc} name={coin.name} size={STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE} />
                 </div>
-              </StablecoinIdentityTransition>
+              </ClientNavigationIdentityTransition>
               <div className="min-w-0 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-2xl font-extrabold tracking-tighter text-foreground">{coin.name}</h2>
+                  <Title className="text-2xl font-extrabold tracking-tighter text-foreground">
+                    {coin.name}
+                    {/* The page title's "(SYMBOL)"; the ticker beside it already shows it. */}
+                    {titleAs === "h1" && heading && heading !== coin.name ? <span className="sr-only"> ({coin.symbol})</span> : null}
+                  </Title>
                   <span className="text-base font-mono tabular-nums text-muted-foreground">{coin.symbol}</span>
                 </div>
                 <p className="text-sm text-muted-foreground">

@@ -1,4 +1,4 @@
-import { Suspense, type ReactNode } from "react";
+import { Suspense } from "react";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Metadata } from "next";
@@ -10,7 +10,8 @@ import { FROZEN_SNAPSHOTS_BY_ID } from "@shared/lib/stablecoins/frozen-snapshots
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { getStaticComparisonPagesForCoin } from "@/lib/compare-pages";
-import { buildStablecoinDetailMetadata } from "@/lib/page-metadata";
+import { DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
+import { buildStablecoinDetailMetadata, hasRedundantName } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -43,6 +44,23 @@ import { selectFailureScenario } from "@shared/lib/failure-scenarios";
 
 const typedSummaries = aiSummaries as StablecoinAiSummariesById;
 const typedFailureScenarios = failureScenarios as FailureScenariosById;
+/** Explore next links at most this many of the coin's newest event pages. */
+const EXPLORE_DEPEG_EVENT_LIMIT = 5;
+
+/** The coin's newest permanent depeg event pages ("USDC depeg Mar 2023"). */
+function buildExploreDepegEvents(coinId: string, symbol: string): Array<{ href: string; label: string }> {
+  // DEPEG_EVENT_ENTRIES is the static, indexable event page set, newest first.
+  return DEPEG_EVENT_ENTRIES.filter((event) => event.stablecoinId === coinId)
+    .slice(0, EXPLORE_DEPEG_EVENT_LIMIT)
+    .map((event) => ({
+      href: `/depeg/${event.slug}/`,
+      label: `${symbol} depeg ${new Date(event.startedAt * 1000).toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      })}`,
+    }));
+}
 
 function readDetailSnapshot(id: string): StablecoinDetailSnapshot | null {
   try {
@@ -58,11 +76,9 @@ function readDetailSnapshot(id: string): StablecoinDetailSnapshot | null {
 function DetailPageShellFallback({
   coin,
   logoSrc,
-  staticProfileContent,
 }: {
   coin: StablecoinStaticMeta;
   logoSrc?: string;
-  staticProfileContent?: ReactNode;
 }) {
   return (
     <div className="space-y-6">
@@ -98,8 +114,6 @@ function DetailPageShellFallback({
           </div>
         </div>
       </div>
-
-      {staticProfileContent}
     </div>
   );
 }
@@ -261,38 +275,22 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
     now: new Date(),
   });
   const structuredDataDateModified = summary?.updatedAt ?? coin.frozenAt;
-  // Keep the FAQ and its FAQPage JSON-LD attached to the hydrated dossier
-  // without placing it ahead of the primary coin identity; it folds behind one
-  // counted disclosure (answers stay in the HTML) so it costs one line.
-  const faqContent = (
-    <FaqSection items={buildStablecoinFaqItems(coin)} title={`${coin.symbol} quick answers`} includeJsonLd collapsed />
-  );
+  // The visible identity title is the page's only h1.
+  const heading = hasRedundantName(coin) ? coin.name : `${coin.name} (${coin.symbol})`;
 
   return (
     <>
       {coin.status !== "frozen" ? (
         <script id="pharos-detail-data-bootstrap" dangerouslySetInnerHTML={{ __html: getStablecoinDetailDataBootstrapScript(id) }} />
       ) : null}
-      <h1 className="sr-only">{coin.name} ({coin.symbol}) stablecoin analytics</h1>
-      <Suspense
-        fallback={
-          <DetailPageShellFallback
-            coin={staticCoin}
-            logoSrc={getLogoSrc(logosById, coin.id)}
-            staticProfileContent={
-              <>
-                <StablecoinDetailSeoContent coin={coin} summary={summary} includeHeading={false} />
-                {faqContent}
-              </>
-            }
-          />
-        }
-      >
+      {/* The fallback holds no content or links: a reveal discards it. */}
+      <Suspense fallback={<DetailPageShellFallback coin={staticCoin} logoSrc={getLogoSrc(logosById, coin.id)} />}>
         <StablecoinDetailClient
           key={id}
           id={id}
           coin={clientCoin}
           summary={summary}
+          heading={heading}
           staticCoin={staticCoin}
           logoSrc={getLogoSrc(logosById, coin.id)}
           mechanismBacking={buildMechanismBackingView(id)}
@@ -318,14 +316,22 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
                   counterpartName: counterpart.name,
                 };
               })}
+              depegEvents={buildExploreDepegEvents(id, coin.symbol)}
               logos={logosById}
             />
           }
-          faqContent={faqContent}
           snapshot={detailSnapshot}
           archivedLiveSummary={archivedLiveSummary}
         />
       </Suspense>
+      {/* Outside the boundary, so the static profile and the FAQ (with its
+          FAQPage JSON-LD, once) are plain HTML for every crawler and survive
+          the dossier's reveal and hydration. The FAQ folds behind one counted
+          disclosure (answers stay in the HTML) so it costs one line. */}
+      <div className="mt-6">
+        <StablecoinDetailSeoContent coin={coin} summary={summary} includeHeading={false} />
+        <FaqSection items={buildStablecoinFaqItems(coin)} title={`${coin.symbol} quick answers`} includeJsonLd collapsed />
+      </div>
       <BreadcrumbJsonLd
         items={[
           { name: "Home", url: "/" },

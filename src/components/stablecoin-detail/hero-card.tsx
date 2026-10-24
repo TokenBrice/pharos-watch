@@ -41,6 +41,16 @@ function isDewsDisplay(display: HeroTertiaryMetricViewModel["display"]): display
 function renderMetricValue(metric: HeroTertiaryMetricViewModel): React.ReactNode {
   const display = metric.display;
 
+  // A first read in flight holds the value's line box without claiming "unavailable".
+  if (display.pending) {
+    return (
+      <span
+        aria-hidden="true"
+        className="inline-block h-[0.85em] w-[2.5em] animate-pulse rounded-md bg-muted align-middle motion-reduce:animate-none"
+      />
+    );
+  }
+
   if (isDewsDisplay(display) && display.band) {
     return (
       <Badge
@@ -116,11 +126,14 @@ function HeroUpdatedStamp({ updatedAtMs, className }: { updatedAtMs: number; cla
 }
 
 export function HeroIdentityHeader({
+  heading,
   model,
   onOpenFeedback,
   gradeRead = "settled",
   updatedAtMs = 0,
 }: {
+  /** The page's h1 text: `{name} ({SYMBOL})`, or the name alone when they match. */
+  heading?: string;
   model: HeroCardViewModel;
   onOpenFeedback: () => void;
   /** The report-card read behind the mobile grade: placeholder while pending, "Grade unavailable" on failure. */
@@ -148,18 +161,18 @@ export function HeroIdentityHeader({
                 <span className="pharos-label shrink-0">
                   {coin.symbol}
                 </span>
-                <h2
+                <h1
                   className="pharos-page-title min-w-0 break-words text-xl leading-tight tracking-normal sm:text-2xl lg:truncate lg:leading-none"
                   {...(verdictId ? { "aria-describedby": verdictId } : {})}
                 >
-                  {coin.name}
-                </h2>
+                  {heading ?? coin.name}
+                </h1>
               </div>
             </div>
           </StablecoinIdentityTransition>
           <HeroVariantChip variantParent={variantParent} variantChipClass={variantChipClass} />
           <div className="ml-auto shrink-0 self-stretch lg:hidden">
-            <SafetyGradeHero reportCard={reportCard} read={gradeRead} mobile />
+            <SafetyGradeHero reportCard={reportCard} savedGrade={model.savedGrade} read={gradeRead} mobile />
           </div>
         </div>
         {coin.oneLiner ? (

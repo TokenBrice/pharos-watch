@@ -52,8 +52,12 @@ export interface HeroSignalRailItem {
   label: string;
   primary: string;
   secondary: string | null;
+  /** The release date of a saved value ("as of 2026-10-22"). */
+  note?: string;
   href: string;
   colorClass: string;
+  /** The live read is still in its first fetch: a neutral placeholder. */
+  pending?: true;
 }
 export type HeroSupplyFields = Pick<HeroCardViewModel["market"], "supply" | "supplyTrend">;
 

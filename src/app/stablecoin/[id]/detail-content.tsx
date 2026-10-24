@@ -75,8 +75,9 @@ interface DetailContentProps {
   activeBannerId: string;
   activityGateRef: Ref<HTMLDivElement>;
   exploreNextContent: ReactNode;
-  faqContent: ReactNode;
   feedbackOpen: boolean;
+  /** The page heading; the visible identity title is the page's only h1. */
+  heading?: string;
   heroRef: RefObject<HTMLDivElement | null>;
   historyGateRef: Ref<HTMLDivElement>;
   mechanismBacking: MechanismBackingView | null;
@@ -106,11 +107,13 @@ function detailSnapshotGenerationMs(queries: ReadyDetailViewModel["staleQueries"
 }
 
 function DetailIdentity({
+  heading,
   heroModel,
   heroRef,
   onOpenFeedback,
   viewModel,
 }: {
+  heading?: string;
   heroModel: ReadyDetailViewModel["hero"];
   heroRef: RefObject<HTMLDivElement | null>;
   onOpenFeedback: () => void;
@@ -118,10 +121,7 @@ function DetailIdentity({
 }) {
   return (
     <>
-      {/* The page H1 is server-rendered permanently by StablecoinDetailSeoContent
-          (src/components/stablecoin-detail/static-seo-content.tsx) so it survives
-          with JavaScript disabled. Re-adding it here would produce two H1s after
-          hydration. */}
+      {/* The identity header's visible title is the page's only h1. */}
       <BackToSource className="mb-2" />
       <QueryFreshnessNotices
         error={viewModel.supplyError}
@@ -130,6 +130,7 @@ function DetailIdentity({
         queries={viewModel.staleQueries}
       />
       <HeroIdentityHeader
+        heading={heading}
         model={heroModel}
         onOpenFeedback={onOpenFeedback}
         gradeRead={resolveGradeRead(viewModel)}
@@ -382,8 +383,8 @@ export function DetailContent({
   activeBannerId,
   activityGateRef,
   exploreNextContent,
-  faqContent,
   feedbackOpen,
+  heading,
   heroRef,
   historyGateRef,
   mechanismBacking,
@@ -444,11 +445,14 @@ export function DetailContent({
   );
   // Registered AI-summary claim tokens resolve against the same live values the
   // hero and report card render; pillar grades use the breakdown's scoreToGrade.
+  // While the live card is pending (the prerender included), the grade reads the
+  // same dated release value the hero shows.
   const card = viewModel.reportCard;
+  const savedGrade = heroModel.savedGrade;
   const pegScore = viewModel.isNavToken ? null : viewModel.pegScoreResult?.pegScore ?? null;
   const claimValues: AiSummaryClaimValues = {
-    "report-card.grade": card?.grade ?? null,
-    "report-card.score": card?.score ?? null,
+    "report-card.grade": card?.grade ?? savedGrade?.grade ?? null,
+    "report-card.score": card?.score ?? savedGrade?.score ?? null,
     "report-card.pillars.backing.grade": card ? scoreToGrade(card.pillars.backing.score) : null,
     "report-card.pillars.backing.score": card?.pillars.backing.score ?? null,
     "report-card.pillars.exit.grade": card ? scoreToGrade(card.pillars.exit.score) : null,
@@ -463,6 +467,7 @@ export function DetailContent({
   return (
     <div ref={detailRootRef}>
       <DetailIdentity
+        heading={heading}
         heroModel={heroModel}
         heroRef={heroRef}
         onOpenFeedback={() => onFeedbackOpenChange(true)}
@@ -524,7 +529,6 @@ export function DetailContent({
             <DetailHistoryExploreSections
               activeBannerId={activeBannerId}
               exploreNextContent={exploreNextContent}
-              faqContent={faqContent}
               frozenNote={frozenNote}
               historyGateRef={historyGateRef}
               viewModel={viewModel}

@@ -78,7 +78,10 @@ describe("AiSummary", () => {
     expect(screen.getByRole("link", { name: "AI policy" }).getAttribute("href")).toBe("/about/#editorial-ai-policy");
   });
 
-  it("renders unresolved or malicious claim values as N/A and preserves source links", () => {
+  it.each([
+    { label: "an unresolved", claimValues: {} },
+    { label: "a malicious", claimValues: { "report-card.grade": "<script>alert(1)</script>" } },
+  ])("withholds the overview for $label claim value instead of rendering N/A", ({ claimValues }) => {
     render(<AiSummary
       title="Current assessment"
       text="The current grade is {{grade}}."
@@ -89,10 +92,13 @@ describe("AiSummary", () => {
         source: "report-card.grade",
         factsAsOf: "2026-09-01",
       }]}
-      claimValues={{ "report-card.grade": "<script>alert(1)</script>" }}
+      claimValues={claimValues}
     />);
 
-    expect(document.body.textContent).toContain("The current grade is N/A.");
+    const text = document.body.textContent ?? "";
+    expect(text).toContain("The current Safety Score and live assessment are available on the interactive page.");
+    expect(text).not.toContain("N/A");
+    expect(text).not.toContain("Claims as of");
     expect(document.querySelector("script")).toBeNull();
   });
 });
