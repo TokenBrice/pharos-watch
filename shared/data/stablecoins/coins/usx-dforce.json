@@ -4,7 +4,7 @@
   "detailProvider": "defillama",
   "name": "dForce USD",
   "symbol": "USX",
-  "oneLiner": "USX was dForce's CDP-style stablecoin, frozen in July 2026 after legacy dForce/Unitus debt left it near $0.39 with no credible par-redemption route.",
+  "oneLiner": "USX was dForce's CDP-style stablecoin, frozen in July 2026 after legacy dForce/Unitus debt left it trading far below $1 with no credible par-redemption route.",
   "status": "frozen",
   "frozenAt": "2026-07-18",
   "obituary": {
