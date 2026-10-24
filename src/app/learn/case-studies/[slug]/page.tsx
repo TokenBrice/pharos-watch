@@ -33,8 +33,9 @@ const route = createStaticSlugRoute({
   pageBySlug: CASE_STUDY_BY_SLUG,
   metadata: (study, slug) => buildPageMetadata({
     // Layout applies the "%s | Pharos" title template; keep the bare study title
-    // here to avoid double-branding and stay within SERP length.
-    title: study.title,
+    // here to avoid double-branding and stay within SERP length. A search-phrased
+    // metaTitle overrides the editorial headline in the <title> only.
+    title: study.metaTitle ?? study.title,
     description: study.metaDescription,
     canonical: `/learn/case-studies/${slug}/`,
     ogImage: "/og-editorial-learn.png",

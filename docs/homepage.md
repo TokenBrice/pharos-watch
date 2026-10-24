@@ -4,7 +4,7 @@ Contract for `/`. `src/app/page.tsx` owns server metadata/JSON-LD, `src/componen
 
 ## Top-Fold Contract
 
-Keep exactly one raw visible `h1` across breakpoints. Metadata is canonical `/` with the shared OG card; CollectionPage/ItemList JSON-LD uses core stablecoins/cash equivalents. The server hero fallback and market-cap KPI exclude variants and stable-value investments.
+Keep exactly one raw visible `h1` across breakpoints. Metadata is canonical `/` with the shared OG card; the title and description use the headline count authority `HEADLINE_STABLECOIN_COUNT`/`HEADLINE_STABLECOIN_LABEL` in `src/lib/universe-vocabulary.ts` ("{N} active stablecoins", the active universe), shared with the site description, `llms.txt` and the About headline; any larger total must name its universe; CollectionPage/ItemList JSON-LD uses core stablecoins/cash equivalents. The server hero fallback and market-cap KPI exclude variants and stable-value investments.
 
 `getHomepageHeroSnapshot()` in `src/lib/homepage-static-snapshot.ts` reads checked-in public market data and acquires a bounded dated history preview at build time as fallback only. Preserve that selection through hydration, then reconcile from the dedicated cache-sharing `useHomepageSnapshot()` query. Fallback must be dated and at most 72 hours old; older/undated data is unavailable without live data. A minute clock reevaluates each lane's producer age and fallback expiry. Build history acquisition failures leave the existing dated headline available; they never create an empty or fresh history claim.
 

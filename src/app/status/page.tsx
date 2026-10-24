@@ -4,7 +4,7 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import StatusClient from "./client";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Pharos System Status: API Health & Data Freshness",
+  title: "System Status: API Health & Data Freshness",
   description:
     "Public Pharos system status for dashboard health, API availability, cache freshness, endpoint probes, circuit breakers, and recent incidents.",
   canonical: "/status/",

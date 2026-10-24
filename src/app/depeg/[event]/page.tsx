@@ -88,8 +88,8 @@ export async function generateMetadata(
   }
   const coin = TRACKED_META_BY_ID.get(event.stablecoinId);
   const isCollision = COLLIDING_DEPEG_EVENT_SLUGS.has(event.slug);
-  const title = buildDepegEventTitle(event, coin?.name ?? null, isCollision);
-  const description = buildDepegEventDescription(event, isCollision);
+  const title = buildDepegEventTitle(event, isCollision);
+  const description = buildDepegEventDescription(event, isCollision, coin?.name ?? null);
   return buildPageMetadata({
     title,
     description,
@@ -215,11 +215,11 @@ export default async function DepegEventPage(
   const coin = TRACKED_META_BY_ID.get(event.stablecoinId);
   const curated = findCuratedAnnotation(event);
   const isCollision = COLLIDING_DEPEG_EVENT_SLUGS.has(event.slug);
-  const baseHeroTitle = buildDepegEventTitle(event, coin?.name ?? null, isCollision);
+  const baseHeroTitle = buildDepegEventTitle(event, isCollision);
   const heroTitle = curated?.label
     ? `${curated.label}${isCollision ? ` — ${formatEventUtcTime(event.startedAt)}` : ""}`
     : baseHeroTitle;
-  const heroDescription = buildDepegEventDescription(event, isCollision);
+  const heroDescription = buildDepegEventDescription(event, isCollision, coin?.name ?? null);
   const eventSynopsis = buildDepegEventSynopsis(event);
   const methodologyVersion = getMethodologyVersionAt("depeg-dews", event.startedAt);
   const versionLabel = toMethodologyVersionLabel(methodologyVersion);

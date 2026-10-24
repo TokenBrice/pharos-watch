@@ -10,6 +10,8 @@ Contract for `/learn/case-studies/`, `/learn/case-studies/[slug]/`, `/learn/mech
 
 `CASE_STUDY_LIST` in `src/lib/case-studies/index.ts` owns display, sitemap and static-param order. Authored JSON records use `CaseStudyContentSchema` in `shared/types/editorial-content.ts`; root and nested TypeScript shapes derive from that schema through type-only readonly views, not a separate frontend model. The evergreen Start Here set is excluded from the remaining archive rows so an article appears only once; the archive is editorial, not an ordinal ranking.
 
+The `<title>` is the optional search-phrased `metaTitle` (at most 52 characters, before the ` | Pharos` suffix), falling back to the editorial `title`; the H1 always stays the editorial `title`. A `metaTitle` makes no claim the article body does not support (the USDe study argues no peg break, so its title avoids "depeg"). The hub title and description count `CASE_STUDY_LIST` and its `CASE_STUDY_OUTCOME_COUNTS`, the same tally the hub hero renders.
+
 Visible article metadata credits Pharos, links to `/about/#editorial-ai-policy`, and displays authored `datePublished` in UTC alongside reading time. Article JSON-LD agrees with organization authorship. Git modification dates are not human review or substantive-update dates; no individual reviewer is implied. The hub emits ItemList JSON-LD; articles and hub entries share `/og-editorial-learn.png`.
 
 `CASE_STUDY_BY_DEPEG_SLUG` and `caseStudySlugForEvent(coinId, tsMs)` provide reverse lookups. An optional `depegEventSlug` is a lookup key, not proof that the corresponding event route exists. Client surfaces must use generated `src/lib/case-study-client-index.ts`, not import the full content registry. Its compact coin-id and cemetery-id maps have no server-registry counterpart. Articles, chart widgets and ordinary links remain the supported surfaces; there is no live chart-annotation hook.
@@ -32,7 +34,7 @@ Native-family explainers distinguish proportional UCITS/TRS fund shares, shared-
 
 `MECHANISM_EXPLAINER_TITLES` in `src/lib/mechanism-explainer-registry.ts` owns titles; `DESCRIPTION_BY_ARCHETYPE` in the archetype route owns descriptions. Canonicals use `getMechanismExplainerPath`. Methodology links target current `METHODOLOGY_SECTIONS` anchors, including `#pegscore-dews-methodology` for PegScore/DEWS. The registry test checks fragments.
 
-The shared shell emits Breadcrumb JSON-LD. The hub adds DefinedTermSet and distribution Dataset JSON-LD; archetype pages add Article JSON-LD through `buildArchetypeArticleJsonLd` in `src/lib/page-metadata.ts`. Metadata uses `/og-editorial-learn.png`; [OG images](./og-images.md#3-mechanism-explainer-cards-publicog-learn-png) owns the inert legacy-image policy. There is no quiz, simulator, archetype risk score, per-step SVG deep link, Worker OG handler or FAQ/Course schema.
+The shared shell emits Breadcrumb JSON-LD. The hub adds DefinedTermSet and distribution Dataset JSON-LD; archetype pages add Article JSON-LD through `buildArchetypeArticleJsonLd` in `src/lib/page-metadata.ts`, which delegates to `buildArticleJsonLd` so author and publisher reference the root `#organization` node rather than an inline Organization. Metadata uses `/og-editorial-learn.png`; [OG images](./og-images.md#3-mechanism-explainer-cards-publicog-learn-png) owns the inert legacy-image policy. There is no quiz, simulator, archetype risk score, per-step SVG deep link, Worker OG handler or FAQ/Course schema.
 
 ### How to Add a New Archetype
 

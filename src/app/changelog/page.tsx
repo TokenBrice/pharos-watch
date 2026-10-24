@@ -12,7 +12,7 @@ import { formatLongDate } from "@shared/lib/format";
 import { CHANGELOG_MONTH_ARCHIVES, RECENT_CHANGELOGS } from "@/lib/changelog-history";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Changelog: What's New on Pharos",
+  title: "Changelog: Weekly Release Notes",
   description:
     "Weekly release notes for Pharos: new stablecoin coverage, pipeline improvements, risk tooling updates, and more.",
   canonical: "/changelog/",

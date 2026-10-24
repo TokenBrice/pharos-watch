@@ -18,7 +18,7 @@ Use shared `src/lib/nav-config.ts`, not a copied menu roster. Peg Tracker links 
 
 ## Content Notes
 
-`DATA_SOURCE_GROUPS` is the current visible disclosure roster. Adding a major source or externally visible feature updates its runtime copy alongside the owning domain contract. Counts and current memberships derive from shared projections/registries, never a hand-counted doc list. Cemetery uses merged curated-plus-frozen count, matching public export, not curated JSON alone.
+`DATA_SOURCE_GROUPS` is the current visible disclosure roster. Adding a major source or externally visible feature updates its runtime copy alongside the owning domain contract. Counts and current memberships derive from shared projections/registries, never a hand-counted doc list. The hero headline is the active universe (`HEADLINE_STABLECOIN_COUNT`, "Active stablecoins"); its KPI strip decomposes it into Core, Variants and Stable-value, then adds Pre-launch, so the strip sums to the headline. Cemetery uses merged curated-plus-frozen count, matching public export, not curated JSON alone.
 
 Midas mTBILL source disclosure distinguishes its registry-committed issuer checkpoint and aggregate from the matching historical API composition rows. Keep issuer-reported provenance and original-date freshness explicit; SAVE origin verification grants no independent financial assurance, custody allocation or redemption capacity.
 

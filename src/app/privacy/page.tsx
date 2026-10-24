@@ -16,7 +16,7 @@ const RISK_ALERT_TTL_HOURS = PENDING_TTL_SEC / 3600;
 const ADMIN_ALERT_TTL_MINUTES = TELEGRAM_ALERT_TTL_SEC.adminBroadcast / 60;
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Pharos Privacy Policy: Analytics, API & Telegram Data",
+  title: "Privacy Policy: Analytics, API & Telegram Data",
   description:
     "Pharos privacy policy for analytics, feedback, API access requests, Telegram alert subscriptions, portfolio-local storage, and selector share links.",
   canonical: "/privacy/",

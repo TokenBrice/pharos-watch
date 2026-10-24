@@ -10,6 +10,8 @@ export interface PublicDoc {
   slug: string;
   /** Short human title for the index page. */
   title: string;
+  /** Optional search-phrased `<title>` (before the " | Pharos" suffix); defaults to "{title} Methodology". */
+  seoTitle?: string;
   /** One-sentence summary for index pages, llms.txt, metadata, and markdown front matter. */
   summary: string;
   /** Group for index-page grouping and llms.txt ordering. */
@@ -55,6 +57,7 @@ const PUBLIC_DOC_METADATA: readonly Omit<PublicDoc, "source">[] = [
   {
     slug: "dex-liquidity",
     title: "DEX Liquidity",
+    seoTitle: "DEX Liquidity Score Methodology for Stablecoins",
     summary:
       "DEX Liquidity Score methodology for stablecoins: pool discovery, depth scoring, durability, pair diversity, cross-validation, and risk bands.",
     group: "methodology",
@@ -62,6 +65,7 @@ const PUBLIC_DOC_METADATA: readonly Omit<PublicDoc, "source">[] = [
   {
     slug: "stability-index",
     title: "Pharos Stability Index",
+    seoTitle: "Stablecoin Stability Index (PSI) Methodology",
     summary:
       "Pharos Stability Index methodology explaining the PSI formula, active universe, stress bands, storage model, API surface, and replay rules.",
     group: "methodology",
@@ -97,6 +101,7 @@ const PUBLIC_DOC_METADATA: readonly Omit<PublicDoc, "source">[] = [
   {
     slug: "yield-intelligence",
     title: "Yield Intelligence",
+    seoTitle: "Stablecoin Yield Score: How APY Risk Is Rated",
     summary:
       "Yield Intelligence methodology for stablecoin APY resolution, Pharos Yield Score, source confidence, reward warnings, and risk-adjusted ranking.",
     group: "methodology",

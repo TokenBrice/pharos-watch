@@ -23,6 +23,7 @@ import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { DIGEST_DATES } from "@/lib/digest-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { OgPageSlug } from "@shared/lib/og-route-cards";
+import { buildArticleJsonLd } from "@/lib/json-ld";
 
 interface BuildPageMetadataInput {
   title: string;
@@ -506,28 +507,23 @@ const MECHANISM_EXPLAINER_DATE_MODIFIED =
  */
 export function buildArchetypeArticleJsonLd(archetype: MechanismArchetype): Record<string, unknown> {
   const url = `${SITE_ORIGIN}${getMechanismExplainerPath(archetype)}`;
-  return {
-    "@context": "https://schema.org",
-    "@type": "Article",
-    "@id": url,
+  // Author and publisher reference the root `#organization` node instead of an inline Organization.
+  return buildArticleJsonLd({
+    id: url,
     headline: `${getMechanismArchetypeLabel(archetype)} stablecoins, explained`,
     description: getMechanismArchetypeOneLiner(archetype),
     url,
     mainEntityOfPage: url,
-    author: { "@type": "Organization", name: "Pharos" },
-    publisher: {
-      "@type": "Organization",
-      name: "Pharos",
-      url: SITE_ORIGIN,
-    },
     inLanguage: "en",
-    isPartOf: `${SITE_ORIGIN}/learn/mechanisms/`,
-    about: {
-      "@type": "DefinedTerm",
-      name: getMechanismArchetypeLabel(archetype),
-      termCode: archetype,
-    },
     datePublished: MECHANISM_EXPLAINER_DATE_PUBLISHED,
     dateModified: MECHANISM_EXPLAINER_DATE_MODIFIED,
-  };
+    extra: {
+      isPartOf: `${SITE_ORIGIN}/learn/mechanisms/`,
+      about: {
+        "@type": "DefinedTerm",
+        name: getMechanismArchetypeLabel(archetype),
+        termCode: archetype,
+      },
+    },
+  });
 }

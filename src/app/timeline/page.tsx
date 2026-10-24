@@ -12,7 +12,7 @@ const TIMELINE_DESCRIPTION =
   "Browse confirmed stablecoin events in one timeline: depegs, freezes, score changes, methodology updates, severity filters, classes, and linked Pharos context.";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Timeline: Stablecoin Market Events",
+  title: "Stablecoin Events Timeline: Depegs, Freezes, Grades",
   description: TIMELINE_DESCRIPTION,
   canonical: "/timeline/",
   ogImage: buildLiveRouteOgImageUrl("timeline"),

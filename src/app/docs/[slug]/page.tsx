@@ -31,10 +31,12 @@ interface MarkdownAstNode {
   };
 }
 
-function buildDocMetadataTitle(doc: { slug: string; title: string; group: string }): string {
-  if (doc.slug === "api-reference") return "Stablecoin API Reference - Pharos Docs";
-  if (doc.group === "methodology") return `${doc.title} Methodology - Pharos Docs`;
-  return `${doc.title} Guide - Pharos Docs`;
+// The root "%s | Pharos" template already brands the title; never repeat "Pharos" here.
+function buildDocMetadataTitle(doc: { slug: string; title: string; seoTitle?: string; group: string }): string {
+  if (doc.seoTitle) return doc.seoTitle;
+  if (doc.slug === "api-reference") return "Stablecoin API Reference";
+  if (doc.group === "methodology") return `${doc.title} Methodology`;
+  return `${doc.title} Guide`;
 }
 
 function getMarkdownNodeText(node: MarkdownAstNode | undefined): string {

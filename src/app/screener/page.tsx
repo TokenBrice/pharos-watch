@@ -85,7 +85,7 @@ const SCREENER_SUPPORT_SECTION = (
 const route = createClientFeaturePage({
   path: "/screener/",
   metadata: {
-    title: "Pharos Screener: Filter Stablecoins by Score & Mechanism",
+    title: "Stablecoin Screener: Filter by Grade, Peg & Backing",
     description: screenerDescription,
     ogImage: `${SITE_URL}/og-default.png`,
   },

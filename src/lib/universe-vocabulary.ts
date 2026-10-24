@@ -73,3 +73,13 @@ export const UNIVERSES = {
 } as const satisfies Record<string, { label: string; definition: string; count: number | null }>;
 
 export type UniverseKey = keyof typeof UNIVERSES;
+
+/**
+ * The one public headline coin count: home title and description, the site
+ * WebSite/Organization description, `llms.txt`, the About KPI strip and docs all
+ * say "{N} active stablecoins" over the active universe (core + variants +
+ * stable-value investments). A larger figure must name its universe, e.g.
+ * "{tracked} tracked, including pre-launch and frozen coins".
+ */
+export const HEADLINE_STABLECOIN_COUNT = UNIVERSES.active.count;
+export const HEADLINE_STABLECOIN_LABEL = "active stablecoins";

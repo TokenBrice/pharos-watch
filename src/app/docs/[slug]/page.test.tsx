@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-import DocPage from "./page";
+import DocPage, { generateMetadata } from "./page";
+import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -37,4 +38,15 @@ describe("DocPage", () => {
     }
   });
 
+  it("uses search-phrased titles without repeating the Pharos brand", async () => {
+    const titleFor = async (slug: string) => (await generateMetadata({ params: Promise.resolve({ slug }) })).title;
+    expect(await titleFor("yield-intelligence")).toBe("Stablecoin Yield Score: How APY Risk Is Rated");
+    expect(await titleFor("dex-liquidity")).toBe("DEX Liquidity Score Methodology for Stablecoins");
+    expect(await titleFor("depeg-detection")).toBe("Depeg Detection Methodology");
+    for (const doc of PUBLIC_DOCS) {
+      const title = String(await titleFor(doc.slug));
+      expect(title).not.toMatch(/pharos/i);
+      expect(`${title} | Pharos`.length).toBeLessThanOrEqual(62);
+    }
+  });
 });

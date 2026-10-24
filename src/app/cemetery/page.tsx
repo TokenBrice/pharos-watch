@@ -21,15 +21,22 @@ import { buildCemeteryFaq, buildCemeteryStats } from "@/lib/cemetery-stats";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { sortCemeteryCoins } from "@shared/lib/cemetery";
+import { CAUSE_META } from "@shared/lib/cause-of-death";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 const PAGE_URL = `${SITE_URL}/cemetery/`;
 
-const cemeteryMetadataDescription = `${CEMETERY_ENTRIES.length} failed or discontinued stablecoins documented by Pharos: end dates, causes of death, obituaries, sources, and archived data, from TerraUSD to Binance USD.`;
+// Title and description counts come from the same stats the hero and cause strip render.
+const CEMETERY_STATS = buildCemeteryStats(CEMETERY_ENTRIES);
+const cemeteryCauseTally = CEMETERY_STATS.causes
+  .filter(({ count }) => count > 0)
+  .map(({ cause, count }) => `${CAUSE_META[cause].label} ${count}`)
+  .join(", ");
+const cemeteryMetadataDescription = `${CEMETERY_STATS.total} dead stablecoins since ${CEMETERY_STATS.firstYear} by cause: ${cemeteryCauseTally}, each with sources.`;
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Stablecoin Cemetery: Failed & Defunct Stablecoins",
+  title: `Stablecoin Cemetery: ${CEMETERY_STATS.total} Failed Coins Since ${CEMETERY_STATS.firstYear}`,
   description: cemeteryMetadataDescription,
   canonical: "/cemetery/",
   ogImage: `${SITE_URL}/og-cemetery.png`,
@@ -37,7 +44,7 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default function CemeteryPage() {
-  const stats = buildCemeteryStats(CEMETERY_ENTRIES);
+  const stats = CEMETERY_STATS;
   // One array for the hero and the register: React Flight serialises a shared reference once.
   const rows = buildCemeteryRegisterRows(CEMETERY_ENTRIES);
   const asOf = stats.asOf.date;
