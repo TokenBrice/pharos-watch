@@ -58,7 +58,7 @@ The generator owns schema, field descriptions and CSV order. Metadata includes p
 
 The `cemetery-dataset` artifact owns regeneration: run `npx --no-install tsx scripts/maintenance/generate-cemetery-dataset.ts` after source edits and commit outputs. Provenance pins curated JSON, frozen projection and consumed cause labels; label changes rotate checksum, unrelated active edits do not. Current Telegram snapshots use stable cemetery `id`; optional `llamaId` only aids legacy deduplication.
 
-`buildCemeteryDatasetJsonLd` uses the checked-in header for Dataset schema at `/cemetery/#dataset`, alongside CollectionPage/ItemList. Link public JSON/CSV distributions, producer `updatedAt`, field descriptions/checksum/count, never private site-data URLs or fabricated dead-coin profiles.
+`buildCemeteryDatasetJsonLd` uses the checked-in header for Dataset schema at `/cemetery/#dataset`, alongside CollectionPage/ItemList. Link public JSON/CSV distributions, producer `updatedAt`, field descriptions/checksum/count, the death-date `temporalCoverage` interval read from the export rows and the public data catalog (`includedInDataCatalog`), never private site-data URLs or fabricated dead-coin profiles.
 
 ### RSS feed
 

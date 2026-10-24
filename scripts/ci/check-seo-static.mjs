@@ -113,9 +113,10 @@ const DATASET_BASE_REQUIRED_PATHS = [
   "identifier.0.value",
 ];
 
-// FAQ structured data is retained as semantic markup for visible Q&A content.
-// Google retired broad FAQ rich-result visibility, so this matrix treats FAQ as
-// a consistency guardrail rather than a rich-result growth target.
+// FAQ structured data is retained as content-understanding markup that mirrors
+// visible Q&A. FAQ rich results ended (2026-05-07) and HowTo rich results are
+// retired, so the FAQPage rows below are a markup-to-copy consistency guard,
+// not rich-result coverage. Do not add FAQ or HowTo nodes to win SERP space.
 const STRUCTURED_DATA_ROUTE_MATRIX = [
   {
     label: "home page",
@@ -297,7 +298,6 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
     nodes: [
       { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
       { type: "SoftwareApplication", requiredPaths: ["name", "operatingSystem", "applicationCategory"] },
-      { type: "HowTo", requiredPaths: ["name", "step.0.name"] },
       { type: "FAQPage", requiredPaths: ["mainEntity.0.name", "mainEntity.0.acceptedAnswer.text"] },
     ],
   },
