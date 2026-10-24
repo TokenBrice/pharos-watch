@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
-import { getActiveChainIds } from "@shared/lib/chains";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import { CASE_STUDY_LIST } from "@/lib/case-studies";
+import { getIndexableChainIds } from "@/lib/chain-indexing";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
@@ -233,7 +233,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "daily",
       priority: 0.8,
     },
-    ...getActiveChainIds().map((chainId) => ({
+    ...getIndexableChainIds().map((chainId) => ({
       url: `${SITE_URL}/chains/${chainId}/`,
       lastModified: new Date(
         Math.max(

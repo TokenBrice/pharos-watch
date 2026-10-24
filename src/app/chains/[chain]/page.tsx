@@ -4,8 +4,9 @@ import { notFound } from "next/navigation";
 import { getActiveChainIds } from "@shared/lib/chains";
 import { CHAIN_META, type ChainMeta } from "@shared/types/chain-identity";
 import { formatProseList } from "@shared/lib/format";
-import { buildApiOgImageUrl, buildPageMetadata, trimTextAtWordBoundary } from "@/lib/page-metadata";
+import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { isChainProfileIndexable } from "@/lib/chain-indexing";
 import { buildChainProfileJsonLd } from "@/lib/chain-json-ld";
 import { deploymentCountLabel, stablecoinCountLabel } from "@/lib/chain-labels";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
@@ -46,11 +47,17 @@ export async function generateMetadata({ params }: { params: Promise<{ chain: st
     description: buildChainMetaDescription(meta.name, deployments),
     canonical: `/chains/${chain}/`,
     ogImage: buildApiOgImageUrl(API_PATHS.ogChain(chain)),
+    robots: isChainProfileIndexable(chain) ? undefined : { index: false, follow: true },
   });
 }
 
-function formatSymbolList(deployments: readonly Pick<ChainTrackedDeployment, "symbol">[]): string {
-  return formatProseList([...new Set(deployments.map((deployment) => deployment.symbol))].slice(0, 3));
+/** Base coins lead; NAV tokens and variants (sUSDe, spUSDT) only fill remaining slots. */
+function formatSymbolList(deployments: readonly Pick<ChainTrackedDeployment, "symbol" | "isNavOrVariant">[]): string {
+  const ranked = [
+    ...deployments.filter((deployment) => !deployment.isNavOrVariant),
+    ...deployments.filter((deployment) => deployment.isNavOrVariant),
+  ];
+  return formatProseList([...new Set(ranked.map((deployment) => deployment.symbol))].slice(0, 3));
 }
 
 function chainPageTitle(chainName: string, deployments: readonly ChainTrackedDeployment[] = []): string {
@@ -64,17 +71,27 @@ function chainPageTitle(chainName: string, deployments: readonly ChainTrackedDep
   return options.find((option) => option.length <= 61) ?? `${chainName} Stablecoins`;
 }
 
-function buildChainMetaDescription(chainName: string, deployments: readonly ChainTrackedDeployment[]): string {
-  const trackedDeploymentCount = deployments.reduce((sum, deployment) => sum + deployment.contractCount, 0);
-  const topSymbols = formatSymbolList(deployments);
-  const lead = topSymbols
-    ? `Track ${deploymentCountLabel(trackedDeploymentCount)} on ${chainName}, including ${topSymbols}.`
-    : `Track stablecoin deployment coverage on ${chainName}.`;
+const CHAIN_META_DESCRIPTION_MAX = 160;
+const CHAIN_META_DESCRIPTION_FOLLOW_UPS = [
+  "Compare supply, market share, Chain Health, backing mix, and concentration risk.",
+  "Compare supply, market share, Chain Health, and backing mix.",
+  "Compare supply and Chain Health.",
+] as const;
 
-  return trimTextAtWordBoundary(
-    `${lead} Compare supply, market share, Chain Health, backing mix, concentration risk, and Pharos-tracked assets.`,
-    160,
+/** Whole sentences only: the follow-up shrinks to fit rather than being cut mid-sentence. */
+function buildChainMetaDescription(chainName: string, deployments: readonly ChainTrackedDeployment[]): string {
+  const topSymbols = formatSymbolList(deployments);
+  const listsEverySymbol = new Set(deployments.map((deployment) => deployment.symbol)).size <= 3;
+  const tracked = `Pharos tracks ${stablecoinCountLabel(deployments.length)} on ${chainName}`;
+  const lead = !topSymbols
+    ? `Pharos monitors stablecoin supply on ${chainName}.`
+    : listsEverySymbol
+      ? `${tracked}: ${topSymbols}.`
+      : `${tracked}, including ${topSymbols}.`;
+  const followUp = CHAIN_META_DESCRIPTION_FOLLOW_UPS.find(
+    (sentence) => lead.length + 1 + sentence.length <= CHAIN_META_DESCRIPTION_MAX,
   );
+  return followUp ? `${lead} ${followUp}` : lead;
 }
 
 function formatDeploymentList(deployments: readonly Pick<ChainTrackedDeployment, "name" | "symbol">[]): string {

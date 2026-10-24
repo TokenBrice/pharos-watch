@@ -1,4 +1,3 @@
-import { getActiveChainIds } from "@shared/lib/chains";
 import { getMechanismExplainerPath } from "@shared/lib/classification";
 import { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "@shared/lib/methodology-versions/registry";
 import { METHODOLOGY_ARCHIVE_PATHS } from "@shared/lib/methodology-versions/archives";
@@ -7,6 +6,7 @@ import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-regis
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import { BLOG_POSTS } from "@/data/blog";
 import { CASE_STUDY_EVENT_WINDOWS } from "@/lib/case-study-client-index";
+import { getIndexableChainIds } from "@/lib/chain-indexing";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { INDEXABLE_DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
 import { INDEXABLE_DIGEST_ENTRIES } from "@/lib/digest-registry";
@@ -63,7 +63,7 @@ const PUBLIC_ROUTE_CANDIDATES: readonly PublicRouteInventoryEntry[] = [
   ...entries("methodology", METHODOLOGY_ARCHIVE_PATHS),
   ...entries("reference", CHANGELOG_MONTH_ARCHIVES.map((archive) => archive.path)),
   ...entries("stablecoin", CLIENT_TRACKED_STABLECOINS.map((coin) => buildStablecoinUrl(coin.id))),
-  ...entries("chain", getActiveChainIds().map((chainId) => `/chains/${chainId}/`)),
+  ...entries("chain", getIndexableChainIds().map((chainId) => `/chains/${chainId}/`)),
   ...entries("chain", ["/chains/"]),
   ...entries("taxonomy", ACTIVE_PEGS.map((peg) => `/stablecoins/${PEG_SLUGS[peg]}/`)),
   ...entries("taxonomy", ALL_STABLECOIN_TAXONOMY_PAGES.map((page) => page.href)),
