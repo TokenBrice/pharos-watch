@@ -195,6 +195,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
                   <TableHead scope="col" className="text-right">Attempts</TableHead>
                   <TableHead scope="col" className="text-right">OK</TableHead>
                   <TableHead scope="col" className="text-right">Degr.</TableHead>
+                  <TableHead scope="col" className="text-right" title="Degraded only by structural warnings (counted as success)">By design</TableHead>
                   <TableHead scope="col" className="text-right">Error</TableHead>
                   <TableHead scope="col" className="text-right">Skip</TableHead>
                   <TableHead scope="col" className="text-right">Success</TableHead>
@@ -207,6 +208,9 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
                     <TableCell className="text-right font-mono">{row.attempts}</TableCell>
                     <TableCell className="text-right font-mono"><CountValue value={row.ok} /></TableCell>
                     <TableCell className="text-right font-mono"><CountValue value={row.degraded} tone="text-state-warn" /></TableCell>
+                    <TableCell className="text-right font-mono">
+                      {row.degradedByDesign != null ? <CountValue value={row.degradedByDesign} /> : "—"}
+                    </TableCell>
                     <TableCell className="text-right font-mono"><CountValue value={row.error} tone="text-state-danger" /></TableCell>
                     <TableCell className="text-right font-mono"><CountValue value={row.skipped} /></TableCell>
                     <TableCell className="text-right font-mono">

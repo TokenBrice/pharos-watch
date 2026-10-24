@@ -4,6 +4,7 @@
     "version": 1,
     "semantics": "attestation-mix",
     "breakerScope": "usdu-universal",
+    "scoring": { "maxSourceAgeSec": 6048000 },
     "display": { "url": "https://www.universal.ae/transparency", "label": "Universal USDU examination index" },
     "inputs": { "primary": { "kind": "http-html", "url": "https://www.universal.ae/transparency" } },
     "params": {

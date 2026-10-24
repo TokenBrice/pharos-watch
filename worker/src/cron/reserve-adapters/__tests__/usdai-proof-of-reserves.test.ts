@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import {
+  evaluateAdapterSnapshotAdmission,
   expectWarningEffect,
   expectWarnings,
   installAdapterNetwork,
@@ -18,6 +19,14 @@ import {
 } from "../usdai-proof-of-reserves";
 
 const OCTOBER_RAW_PAYLOAD = readFileSync(new URL("./fixtures/usdai-oct7-2026.json", import.meta.url), "utf8");
+const CORROBORATED_RAW_PAYLOAD = readFileSync(new URL("./fixtures/usdai-oct24-2026.json", import.meta.url), "utf8");
+const LOAN_ROUTER_BALANCES = "0x66518b81";
+const VAULT_BALANCES = "0x7bb98a68";
+const DEPOSIT_TIMELOCK_BALANCE = "0x37d0a739";
+
+function twoWords(first: bigint, second = 0n): string {
+  return `0x${first.toString(16).padStart(64, "0")}${second.toString(16).padStart(64, "0")}`;
+}
 
 describe("USD.AI captured full-book boundary", () => {
   it("does not promote an undated share book or add its six auxiliary amount-only entries", async () => {
@@ -154,6 +163,11 @@ function proofNetwork(
       [`${anchor.vaultAddress}:decimals()`]: value("vault-decimals", 18n),
       [`${anchor.assetAddress}:decimals()`]: value("asset-decimals", 18n),
       [`${anchor.assetAddress}:balanceOf(address)`]: value("idle-asset", 944_000n * 10n ** 18n),
+      [`${anchor.vaultAddress}:${LOAN_ROUTER_BALANCES}`]: value(
+        "loan-router-balances", twoWords(56_000n * 10n ** 18n),
+      ),
+      [`${anchor.vaultAddress}:${VAULT_BALANCES}`]: value("vault-balances", twoWords(944_000n * 10n ** 18n)),
+      [`${anchor.vaultAddress}:${DEPOSIT_TIMELOCK_BALANCE}`]: value("deposit-timelock", 0n),
       [`${anchor.liquidReserves[0]!.tokenAddress}:balanceOf(address)`]: value("balance-0", 944_000n * 10n ** 6n),
       [`${anchor.liquidReserves[0]!.tokenAddress}:decimals()`]: value("decimals-0", 6n),
     },
@@ -515,5 +529,193 @@ describe("usdai-proof-of-reserves adapter", () => {
     });
     expect(result.metadata?.freshnessMode).toBe("unverified");
     expect(result.metadata?.sourceTimestamp).toBeUndefined();
+  });
+});
+
+describe("USD.AI on-chain composition corroboration", () => {
+  // Arbitrum block 517749549 (2026-10-24T05:30:28Z), read with the paired
+  // fixture: hub PYUSD balance and the sUSDai vault accounting words.
+  const BLOCK = 517_749_549;
+  const TIMESTAMP = 1_792_819_828;
+  const PENDING = 181_842_265_063_556_519_922_543_790n;
+  const ACCRUED = 1_113_533_414_041_791_958_124_029n;
+  const DEPOSITS = 242_375_499_853_794_364_517_058_684n;
+  const REDEMPTION_RESERVED = 69_320_514_364_861_966_653_782n;
+  const TIMELOCK = 128_895_244_100_000_000_000_000_000n;
+  const TOTAL_ASSETS = 555_599_346_880_440_560_033_679_865n;
+  const anchor = ANCHORED_CONFIG.params.anchor;
+  const liveEntries = parseUsdAiProofOfReserves(CORROBORATED_RAW_PAYLOAD);
+
+  async function runCorroboration(
+    values: Record<string, AdapterRpcValue> = {},
+    payload = CORROBORATED_RAW_PAYLOAD,
+  ) {
+    const value = (label: string, fallback: AdapterRpcValue): AdapterRpcValue =>
+      values[label] === undefined ? fallback : values[label]!;
+    return runAdapter("usdai-proof-of-reserves", "susdai-usd-ai", {
+      network: {
+        json: { "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161": payload },
+        rpc: {
+          [`${ARBSYS_ADDRESS}:0xa3b1b31d`]: BLOCK,
+          [`${MULTICALL3}:0x0f28c97d`]: TIMESTAMP,
+          [`${anchor.vaultAddress}:0x38d52e0f`]: anchor.assetAddress,
+          [`${anchor.vaultAddress}:0x01e1d114`]: value("assets", TOTAL_ASSETS),
+          [`${anchor.vaultAddress}:totalSupply()`]: 269_170_783_627_993_002_005_161_409n,
+          [`${anchor.vaultAddress}:decimals()`]: 18n,
+          [`${anchor.assetAddress}:decimals()`]: 18n,
+          [`${anchor.assetAddress}:balanceOf(address)`]: value("idle-asset", DEPOSITS),
+          [`${anchor.vaultAddress}:${VAULT_BALANCES}`]: value("vault-balances", twoWords(DEPOSITS, REDEMPTION_RESERVED)),
+          [`${anchor.vaultAddress}:${DEPOSIT_TIMELOCK_BALANCE}`]: value("deposit-timelock", TIMELOCK),
+          [`${anchor.vaultAddress}:${LOAN_ROUTER_BALANCES}`]: value(
+            "loan-router-balances", twoWords(PENDING, ACCRUED),
+          ),
+          [`${anchor.liquidReserves[0]!.tokenAddress}:balanceOf(address)`]: value("balance-0", 260_363_184_436_082n),
+          [`${anchor.liquidReserves[0]!.tokenAddress}:decimals()`]: 6n,
+        },
+      },
+      nowSec: TIMESTAMP,
+    });
+  }
+
+  it("publishes the vault-basis book but keeps the off-chain escrow receivable unverified", async () => {
+    // Live state: the whole timelock balance equals EscrowTimelock
+    // 0x1e710cc0…6438 totalDeposits, whose USDai sits with the escrow admin.
+    const run = await runCorroboration();
+    expect(run.result.slices).toEqual([
+      { sourceKey: "usdai-proof-of-reserves:vault-usdai", name: "USDai (idle in sUSDai vault)", pct: 43.8, risk: "low", coinId: "usdai-usd-ai", depType: "collateral" },
+      { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: 32.9, risk: "high" },
+      { sourceKey: "usdai-proof-of-reserves:escrow-receivable", name: "Escrowed USDai receivable (pending deals)", pct: 23.3, risk: "high" },
+    ]);
+    expect(run.result.warnings?.map(({ code }) => code)).toEqual(["missing-share-rows-ignored", "usdai-composition-unverified"]);
+    expectWarningEffect(run.result, "usdai-composition-unverified", "degraded");
+    expect(run.result.metadata).toMatchObject({
+      freshnessMode: "not-applicable",
+      observedBlock: { number: BLOCK, timestamp: TIMESTAMP },
+      details: {
+        freshnessSource: "usdai-onchain-composition-anchor",
+        anchor: {
+          block: BLOCK,
+          pendingLoanPrincipalRaw: PENDING.toString(),
+          dealRemainingAmountRaw: "181842265043791831159434867",
+          vaultDepositBalanceRaw: (DEPOSITS - REDEMPTION_RESERVED).toString(),
+          depositTimelockRaw: TIMELOCK.toString(),
+          accruedResidualRaw: (TOTAL_ASSETS - (DEPOSITS - REDEMPTION_RESERVED) - TIMELOCK - PENDING).toString(),
+          compositionCorroboration: { status: "unverified", reason: "escrow-receivable-unverified" },
+        },
+      },
+      compositionBasis: "vault-total-assets",
+      unknownExposurePct: 0,
+    });
+    const issuer = run.result.metadata?.issuerSharePcts as { liquid: number; deal: number };
+    expect(issuer.liquid).toBeCloseTo(58.88, 2);
+    expect(issuer.deal).toBeCloseTo(41.12, 2);
+    expect(evaluateAdapterSnapshotAdmission(run, TIMESTAMP)).toMatchObject({ eligible: false, reasons: ["degraded-snapshot"] });
+  });
+
+  it("certifies the vault-basis book once the escrow receivable is immaterial", async () => {
+    // Hypothetical drained escrow: the timelock USDai returned to the vault,
+    // in both its deposit accounting and its observed token holdings.
+    const run = await runCorroboration({
+      "idle-asset": DEPOSITS + TIMELOCK - 1n * 10n ** 18n,
+      "vault-balances": twoWords(DEPOSITS + TIMELOCK - 1n * 10n ** 18n, REDEMPTION_RESERVED),
+      "deposit-timelock": 1n * 10n ** 18n,
+    });
+    expect(run.result.warnings?.map(({ code }) => code)).toEqual(["missing-share-rows-ignored"]);
+    expect(run.result.metadata?.details).toMatchObject({
+      anchor: { compositionCorroboration: { status: "corroborated" } },
+    });
+    expect(evaluateAdapterSnapshotAdmission(run, TIMESTAMP)).toMatchObject({ eligible: true, reasons: [] });
+  });
+
+  it("keeps composition unverified when on-chain deal principal drifts beyond tolerance", async () => {
+    const { result } = await runCorroboration({
+      "loan-router-balances": twoWords(PENDING * 102n / 100n, ACCRUED),
+    });
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.metadata?.details).toMatchObject({
+      anchor: { compositionCorroboration: { status: "unverified", reason: "deal-principal-mismatch" } },
+    });
+    expectWarningEffect(result, "usdai-composition-unverified", "degraded");
+  });
+
+  it("rejects accounted deposits the vault's observed USDai does not hold", async () => {
+    const run = await runCorroboration({
+      "idle-asset": 0n,
+      "vault-balances": twoWords(DEPOSITS + TIMELOCK - 1n * 10n ** 18n, REDEMPTION_RESERVED),
+      "deposit-timelock": 1n * 10n ** 18n,
+    });
+    expect(run.result.slices.map(({ sourceKey }) => sourceKey)).toEqual([
+      "usdai-proof-of-reserves:pyusd", "usdai-proof-of-reserves:deal",
+    ]);
+    expect(run.result.metadata?.details).toMatchObject({
+      anchor: { compositionCorroboration: { status: "unverified", reason: "idle-custody-shortfall" } },
+    });
+    expectWarningEffect(run.result, "usdai-composition-unverified", "degraded");
+    expect(evaluateAdapterSnapshotAdmission(run, TIMESTAMP).eligible).toBe(false);
+  });
+
+  it("keeps the issuer book when vault legs do not reconcile to totalAssets", async () => {
+    const { result } = await runCorroboration({ assets: TOTAL_ASSETS * 102n / 100n });
+    expect(result.slices.map(({ sourceKey }) => sourceKey)).toEqual([
+      "usdai-proof-of-reserves:pyusd", "usdai-proof-of-reserves:deal",
+    ]);
+    expect(result.metadata?.details).toMatchObject({
+      anchor: { compositionCorroboration: { status: "unverified", reason: "vault-total-assets-unreconciled" } },
+    });
+    expectWarningEffect(result, "usdai-composition-unverified", "degraded");
+  });
+
+  it("never reads unreadable vault balances as an empty vault", async () => {
+    const { result } = await runCorroboration({ "deposit-timelock": null });
+    expect(result.metadata?.details).toMatchObject({
+      anchor: { compositionCorroboration: { status: "unverified", reason: "vault-balances-unreadable" } },
+    });
+    expectWarningEffect(result, "usdai-composition-unverified", "degraded");
+  });
+
+  it("keeps composition unverified when share weights disagree with corroborated amounts", async () => {
+    // Move five points of share from PYUSD to one deal: totals and amounts still
+    // reconcile, so only the weight cross-check can catch it.
+    const tampered = liveEntries.map((row, index) => {
+      const shift = 50_000_000_000_000_000n;
+      if (index === 0) return { ...row, share: String(BigInt(String(row.share)) - shift) };
+      if (index === 1) return { ...row, share: String(BigInt(String(row.share)) + shift) };
+      return row;
+    });
+    const { result } = await runCorroboration({}, JSON.stringify(tampered));
+    expect(result.metadata?.details).toMatchObject({
+      anchor: { compositionCorroboration: { status: "unverified", reason: "share-weights-mismatch" } },
+    });
+    expectWarningEffect(result, "usdai-composition-unverified", "degraded");
+  });
+
+  it("keeps composition unverified when a share-bearing deal drops its remaining principal", async () => {
+    const stripped = liveEntries.map((row, index) => {
+      if (index !== 1) return row;
+      const { remainingAmount: _remaining, ...rest } = row;
+      return rest;
+    });
+    const { result } = await runCorroboration({}, JSON.stringify(stripped));
+    expect(result.metadata?.details).toMatchObject({
+      anchor: { compositionCorroboration: { status: "unverified", reason: "deal-remaining-amount-missing" } },
+    });
+    expectWarningEffect(result, "usdai-composition-unverified", "degraded");
+  });
+
+  it("never treats an unreadable loan-principal read as zero outstanding loans", async () => {
+    for (const unreadable of [null, `0x${PENDING.toString(16).padStart(64, "0")}`]) {
+      const { result } = await runCorroboration({ "loan-router-balances": unreadable });
+      expect(result.metadata?.details).toMatchObject({
+        anchor: { compositionCorroboration: { status: "unverified", reason: "loan-principal-unreadable" } },
+      });
+      expect((result.metadata?.details as { anchor: Record<string, unknown> }).anchor.pendingLoanPrincipalRaw).toBeUndefined();
+      expectWarningEffect(result, "usdai-composition-unverified", "degraded");
+    }
+  });
+
+  it("still degrades on a liquid balance mismatch before considering the deal leg", async () => {
+    const { result } = await runCorroboration({ "balance-0": 250_000_000_000_000n });
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expectWarnings(result, ["missing-share-rows-ignored", "usdai-anchor-mismatch"]);
   });
 });

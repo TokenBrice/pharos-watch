@@ -148,6 +148,7 @@
         },
         {
           "name": "WETH",
+          "kind": "plain-token",
           "holder": "0xeb5a8c825582965f1d84606e078620a84ab16afe",
           "token": {
             "chain": "ethereum",

@@ -303,8 +303,15 @@ describe("adaptAttestationPdfIndex", () => {
     });
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).not.toHaveProperty("redemption");
-    const validation = expectValidAdapterOutput("attestation-pdf-index", result, {
+    // Quarterly Ripio reports inherit the lagged-quarterly cap: 100 days after
+    // the June 30 balance date is a healthy cycle, 151 days is not.
+    expect(config.scoring?.maxSourceAgeSec).toBeUndefined();
+    const inCycle = expectValidAdapterOutput("attestation-pdf-index", result, {
       now: Date.UTC(2026, 9, 8) / 1000,
+    });
+    expect(inCycle.warnings.some((warning) => warning.code === "stale-source-data")).toBe(false);
+    const validation = expectValidAdapterOutput("attestation-pdf-index", result, {
+      now: Date.UTC(2026, 10, 28) / 1000,
     });
     expect(validation.warnings).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
     expect(validation.warnings.some((warning) => warning.code === "stale-redemption-source-timestamp")).toBe(false);
@@ -320,7 +327,12 @@ describe("adaptAttestationPdfIndex", () => {
       reportBalanceDate: report.balanceDate, reportPdfUrl: report.url,
     });
     expect(result.metadata).not.toHaveProperty("redemption");
-    const validation = expectValidAdapterOutput("attestation-pdf-index", result, { now: Date.UTC(2026, 9, 8) / 1000 });
+    // USDU is monthly and tightens the adapter cap to 70 days per coin.
+    const maxSourceAgeSec = config.scoring?.maxSourceAgeSec;
+    expect(maxSourceAgeSec).toBe(70 * 86_400);
+    const inCycle = expectValidAdapterOutput("attestation-pdf-index", result, { now: Date.UTC(2026, 9, 8) / 1000, maxSourceAgeSec });
+    expect(inCycle.warnings.some((warning) => warning.code === "stale-source-data")).toBe(false);
+    const validation = expectValidAdapterOutput("attestation-pdf-index", result, { now: Date.UTC(2026, 10, 10) / 1000, maxSourceAgeSec });
     expect(validation.warnings).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
     expect(validation.warnings.some((warning) => warning.code === "stale-redemption-source-timestamp")).toBe(false);
   });

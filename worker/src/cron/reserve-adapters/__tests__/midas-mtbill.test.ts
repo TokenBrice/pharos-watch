@@ -28,6 +28,14 @@ interface HistoricalFixture {
 const coin = TRACKED_SOURCE_COINS.find((candidate) => candidate.id === "mtbill-midas")!;
 const config = source.liveReservesConfig as LiveReservesConfig;
 const ustb = "('USTB', 'CASH', 'wallet', 'ethereum', 'USTB')";
+const buidl = "('BUIDL', 'CASH', 'wallet', 'ethereum', 'BUIDL')";
+const usdc = "('USDC', 'CASH', 'wallet', 'ethereum', 'USDC')";
+function moveUstbToUsdc(p: HistoricalFixture, amount: number, delta = amount): void {
+  p.reports.main_positions.pv_usd[ustb] -= amount;
+  p.reports.main_positions.delta_usd[ustb] -= amount;
+  p.reports.main_positions.pv_usd[usdc] = amount;
+  p.reports.main_positions.delta_usd[usdc] = delta;
+}
 const registry = fixture.registry;
 const fresh = MIDAS_CAPTURE_NOW;
 const gatewayUrls = ["https://gateway.pinata.cloud/ipfs/", "https://ipfs.filebase.io/ipfs/", "https://ipfs.io/ipfs/"]
@@ -274,6 +282,12 @@ describe("mTBILL registry-checkpoint issuer portfolio v2", () => {
     ["unreviewed position", (p: HistoricalFixture) => { p.reports.main_positions.pv_usd.unknown = 1; }],
     ["missing delta", (p: HistoricalFixture) => { delete p.reports.main_positions.delta_usd[ustb]; }],
     ["leveraged delta", (p: HistoricalFixture) => { p.reports.main_positions.delta_usd[ustb] = 1; }],
+    ["missing required BUIDL", (p: HistoricalFixture) => {
+      delete p.reports.main_positions.pv_usd[buidl];
+      delete p.reports.main_positions.delta_usd[buidl];
+    }],
+    ["leveraged optional USDC", (p: HistoricalFixture) => { moveUstbToUsdc(p, 0.5, 0.4); }],
+    ["zero optional USDC", (p: HistoricalFixture) => { moveUstbToUsdc(p, 0); }],
     ["assets mismatch", (p: HistoricalFixture) => { p.reports.assets_by_protocol.assets.total += 1; }],
     ["unreviewed protocol", (p: HistoricalFixture) => { p.reports.assets_by_protocol.equity.aave = 1; }],
     ["unreviewed chain", (p: HistoricalFixture) => { p.reports.asset_values.pv_usd.arbitrum = 1; }],
@@ -286,6 +300,16 @@ describe("mTBILL registry-checkpoint issuer portfolio v2", () => {
     const historical: HistoricalFixture = JSON.parse(fixture.historicalBody);
     mutate(historical);
     await expect(fetchPacket(midasNetwork({ historical })).result).rejects.toThrow("midas-mtbill:save-");
+  });
+
+  it("admits the reviewed optional USDC wallet position as its own collateral slice", async () => {
+    const historical: HistoricalFixture = JSON.parse(fixture.historicalBody);
+    moveUstbToUsdc(historical, 0.5);
+    const output = await fetchPacket(midasNetwork({ historical })).result;
+    expect(output.slices.map((slice) => slice.coinId)).toEqual(["ustb-superstate", "buidl-blackrock", "usdc-circle", undefined]);
+    expect(output.slices[2]).toMatchObject({ sourceKey: "midas-mtbill:usdc", risk: "low", depType: "collateral" });
+    expect(output.metadata?.details).toMatchObject({ namedTotalUsd: expect.closeTo(78_603_000, 4) });
+    expectValidAdapterOutput("midas-mtbill", output, { now: fresh });
   });
 
   it("keeps matching display-pair tolerances and rejects October 19's $1,100.932 total drift", async () => {

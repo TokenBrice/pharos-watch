@@ -110,8 +110,11 @@ export const ReserveSyncAdapterReliabilitySchema = /* @__PURE__ */ (() => z.obje
   attempts: z.number().int().nonnegative(),
   ok: z.number().int().nonnegative(),
   degraded: z.number().int().nonnegative(),
+  /** Subset of `degraded` whose only degraded warnings are structural by design; absent on pre-split snapshots. */
+  degradedByDesign: z.number().int().nonnegative().optional(),
   error: z.number().int().nonnegative(),
   skipped: z.number().int().nonnegative(),
+  /** `(ok + degradedByDesign) / attempts`; pre-split snapshots carry `ok / attempts`. */
   successRate: z.number().finite().nonnegative().max(1).nullable(),
 }))();
 export type ReserveSyncAdapterReliability = z.infer<typeof ReserveSyncAdapterReliabilitySchema>;

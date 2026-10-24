@@ -46,14 +46,28 @@ const LAGGED_MONTHLY_EXAMINATION_SOURCE_MAX_AGE_SEC = 75 * DAY_SECONDS;
  *  Anchorage USAT/USDPT/USDGO 26-29 (12, 2026-01..07), StraitsX XSGD/XUSD 23-29
  *  (7 month-end reports, 2026-01..07; the XUSD index mirrors XSGD), Fidelity
  *  FIDD 12-25 (6, 2026-02..07), AUDX 14-28 (6, 2026-02..07), Agora AUSD 27-32
- *  (3, 2026-05..07; its 2026-07 report was signed 2026-09-01). The newest
+ *  (3, 2026-05..07; its 2026-07 report was signed 2026-09-01), CAD Digital
+ *  CADD 15-36 (6, 2026-03..08; oldest current report 67 days, 2026-09-05,
+ *  added 2026-10-24). The newest
  *  report is therefore up to 63 days old (31-day month + 32-day worst case) the
  *  day before its successor lands, so the late-monthly 46.3-day cap degraded
  *  9-17 days of every healthy cycle and the warning fired on schedule rather
  *  than on evidence. 70 days = 31 + 32 plus publication grace. Decision
  *  2026-09-24. */
 export const NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC = 70 * DAY_SECONDS;
-export const QUARTERLY_ASSURANCE_MAX_AGE_SEC = 100 * DAY_SECONDS;
+/** Quarter-end attestations whose report lands weeks after the quarter closes.
+ *  Measured quarter-end to publication lag from each publisher's own index:
+ *  Ripio wFIAT (wARS/wBRL/wCOP/wMXN) Dec 31 -> PDF Feb 23 (54 days), Mar 31 ->
+ *  Apr 22 (22), Jun 30 -> signed Jul 28 / uploaded Aug 5 (36); Schuman EUROP
+ *  lags 49, 22, 9, 22, 8 and 21 days, with the current report 113 and 114 days
+ *  old (2025) and 99 and 111 days old (2026) on the day its successor landed.
+ *  The newest report is therefore up to 146 days old (92-day quarter + 54-day
+ *  worst lag), so the 33-day monthly cap on `attestation-pdf-index` and the
+ *  100-day quarterly cap on EUROP degraded a healthy cycle for most of every
+ *  quarter. 150 days = 146 plus publication grace; monthly publishers on the
+ *  same adapter tighten back per coin via `scoring.maxSourceAgeSec`. Decision
+ *  2026-10-24. */
+export const LAGGED_QUARTERLY_ATTESTATION_SOURCE_MAX_AGE_SEC = 150 * DAY_SECONDS;
 export const BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC = 5 * DAY_SECONDS;
 /** Matrixdock's issuer-transmitted `FallbackReserveFeed` rounds (XAGm silver
  *  and the XAUm sibling feed). `setReserve()` is the only writer, so a round
@@ -153,6 +167,12 @@ export const LAGGED_MONTHLY_EXAMINATION_VALIDATION = {
 /** Month-end disclosure whose successor is published in the following month. */
 export const NEXT_MONTH_VERIFIED_VALIDATION = {
   maxSourceAgeSec: NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+  allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+} as const satisfies LiveReserveAdapterValidationPolicy;
+
+/** Quarter-end attestation whose report lands weeks after the quarter closes. */
+export const LAGGED_QUARTERLY_ATTESTATION_VALIDATION = {
+  maxSourceAgeSec: LAGGED_QUARTERLY_ATTESTATION_SOURCE_MAX_AGE_SEC,
   allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
 } as const satisfies LiveReserveAdapterValidationPolicy;
 

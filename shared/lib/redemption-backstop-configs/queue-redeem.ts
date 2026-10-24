@@ -590,6 +590,44 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "The guide discloses 35% management/performance fees separately from withdrawal fees and a non-exhaustive, mutable geographical exclusion list. No unrestricted access, committed full-supply capacity, or measured stress-notional unwind is inferred.",
     ],
   }),
+  "fxsave-f-x-protocol": erc4626ReserveTelemetryQueueConfig({
+    reviewedAt: "2026-10-24",
+    settlementModel: "same-day",
+    outputAssets: ["fxusd-f-x-protocol", "usdc-circle"],
+    outputAssetType: "stable-basket",
+    costModel: fixedFee(
+      0,
+      "The standard fxSAVE requestRedeem/claim path burns shares, requests fxSP redemption and, after the fxSP cooldown, pays the pro-rata fxUSD and USDC legs with no protocol fee; the optional instant path charges instantRedeemFeeRatio instead",
+    ),
+    docs: [
+      sourceRef("Integrating fxSAVE", "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave", [
+        "route",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("f(x) Stability Pool", "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool", ["route"]),
+      sourceRef(
+        "SavingFxUSD implementation (verified source, reviewed 2026-10-24)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xe4031e271809d20074e4bef1caeefec5f710e8a6",
+        ["route", "access", "capacity", "fees", "settlement"],
+      ),
+      sourceRef(
+        "fxSP FxUSDBasePool implementation (verified source, reviewed 2026-10-24)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9",
+        ["route", "capacity", "fees", "settlement"],
+      ),
+    ],
+    notes: [
+      "Standard exit: SavingFxUSD.requestRedeem burns fxSAVE, withdraws the matching fxSP from the Convex staking proxy and calls fxSP.requestRedeem through the holder's LockedFxSaveProxy; claim() then calls fxSP.redeem once unlockAt passes. Both steps are permissionless for the share owner, with no pause or allowlist in either verified implementation.",
+      "The vault holds no idle fxSP: deposits are staked via the Convex staking proxy and released on demand by requestRedeem/redeem, so idle balance is not the redeemable bound. fxSP pays every exit pro rata from its fxUSD and USDC holdings.",
+      "At Ethereum block 26260244 (2026-10-24T04:54:59Z), fxSAVE implementation 0xe4031e271809d20074e4bef1caeefec5f710e8a6 held 0 idle fxSP and 70,450,973 fxSP in gauge 0xed92dde3214c24ae04f5f96927e3be8f8dbc3289 via Convex vault 0x4bfc5292da18e32ed2354350e07e417ce4796f9c (equal to totalAssets); fxSP implementation 0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9 held 70,492,049 fxUSD and 2,715,984 USDC against identical totalYieldToken/totalStableToken accounting, with redeemCoolDownPeriod 3600 s.",
+      "The optional atomic exit (router instantRedeemFromFxSave, or redeem to fxSP then fxSP.instantRedeem) is not the modeled route: it charges instantRedeemFeeRatio on both legs, 1e16 (1%) at block 26260244, bounded on-chain by MAX_INSTANT_REDEEM_FEE 5e16 (5%), plus any converter swap cost.",
+      "redeemCoolDownPeriod is admin-settable up to 7 days and fixes unlockAt when a request is made; re-review the same-day settlement label if the live cooldown exceeds one day.",
+    ],
+    telemetrySubject: "the vault's full fxSP backing released on demand from its Convex staking position",
+    settlementConstraint: "the live fxSP redeemCoolDownPeriod() value published by reserve sync",
+  }),
   "susde-ethena": erc4626ReserveTelemetryQueueConfig({
     reviewedAt: REVIEWED_WRAPPER_QUEUE_AT,
     accessModel: "whitelisted-onchain",

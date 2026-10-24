@@ -3,7 +3,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { getIndependentAssuranceManifest, type IndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { fetchIndependentAssuranceReserves } from "./independent-assurance";
-import type { AdapterContext, IndependentAssuranceProfile } from "./types";
+import type { AdapterContext, IndependentAssuranceProfile, NewerUnreviewedReport } from "./types";
 
 // Reviewed 2026-10-07: Gemini's /dollar attestation list loads from the public
 // Contentful delivery collection below (space jg6lo9a2ukvr,
@@ -22,11 +22,11 @@ interface ContentfulEntry {
 /**
  * Verifies Gemini's Contentful attestation index against the reviewed
  * manifest: every item must be a gusdAttestation with a resolvable PDF asset
- * and a parseable report date, exactly one entry may carry the newest report
- * date, and that entry must be the reviewed entry (pinned date + exact
- * manifest report URL). Any newer entry fails closed.
+ * and a parseable report date, and the reviewed entry (pinned date + exact
+ * manifest report URL) must be the unique entry at its date. A newer entry is
+ * returned as unreviewed.
  */
-export function verifyGeminiContentfulIndex(json: string, manifest: IndependentAssuranceManifest): void {
+export function verifyGeminiContentfulIndex(json: string, manifest: IndependentAssuranceManifest): NewerUnreviewedReport | null {
   let payload: unknown;
   try {
     payload = JSON.parse(json);
@@ -75,19 +75,17 @@ export function verifyGeminiContentfulIndex(json: string, manifest: IndependentA
     entries[0].reportTimestamp,
   );
   const newest = entries.filter((entry) => entry.reportTimestamp === newestDate);
-  if (newest.length !== 1) {
-    throw new Error("gemini-independent-assurance: ambiguous newest report on official index");
-  }
   const reviewedTimestamp = Date.parse(GEMINI_REVIEWED_ENTRY_REPORT_DATE);
-  if (newestDate > reviewedTimestamp) {
-    throw new Error("gemini-independent-assurance: newer unreviewed report on official index");
-  }
   if (newestDate < reviewedTimestamp) {
     throw new Error("gemini-independent-assurance: reviewed report missing from official index");
   }
-  if (newest[0].url !== manifest.reportUrl) {
-    throw new Error("gemini-independent-assurance: newest report URL differs from the reviewed manifest");
+  const reviewed = entries.filter((entry) => entry.reportTimestamp === reviewedTimestamp);
+  if (reviewed.length !== 1 || reviewed[0].url !== manifest.reportUrl) {
+    throw new Error("gemini-independent-assurance: reviewed report entry is duplicated or differs from the reviewed manifest");
   }
+  return newestDate > reviewedTimestamp
+    ? { reportDate: new Date(newestDate).toISOString(), ...(newest.length === 1 ? { reportUrl: newest[0].url } : {}) }
+    : null;
 }
 
 const GEMINI_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {

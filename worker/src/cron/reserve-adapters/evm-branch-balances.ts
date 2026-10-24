@@ -1,5 +1,6 @@
 import { pinnedBlockPlan } from "./evm-observation-plan";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { MATERIAL_UNKNOWN_EXPOSURE_PCT } from "@shared/types/live-reserve-adapter-policy";
 import { createAdapterIoLimiter } from "./concurrency";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { ReserveAdapterCoin } from "@shared/types/core";
@@ -8,6 +9,7 @@ import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-ada
 import { encodeAddressCallData, encodeUint256 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildCoverageShortfallWarnings,
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
   fetchOnchainMulticall3,
@@ -791,14 +793,21 @@ export async function fetchEvmBranchBalancesReserves(
   }
   // Unknown or circular claims cannot become a full collateralization numerator.
   if (totalDebtUsd != null && totalDebtUsd > 0 && censusComplete && result.metadata?.valuationComplete === true) {
-    const details = result.metadata.details as { knownReserveValueUsd: number };
-    const ratio = details.knownReserveValueUsd / totalDebtUsd;
-    result.metadata.collateralizationRatio = ratio;
-    if (ratio < 1) {
-      commonWarnings.push(reserveDegradedWarning(
-        "undercollateralized",
-        `${ADAPTER_KEY} collateralization ratio ${ratio.toFixed(4)} below 1.0 (collateral ${details.knownReserveValueUsd.toFixed(2)} USD vs debt ${totalDebtUsd.toFixed(2)} USD)`,
-      ));
+    const details = result.metadata.details as { knownReserveValueUsd: number; selfReferentialValueUsd?: number };
+    const selfReferentialValueUsd = details.selfReferentialValueUsd ?? 0;
+    const measuredBookUsd = details.knownReserveValueUsd + selfReferentialValueUsd;
+    // Material circular claims make an external-only ratio a misleading
+    // solvency statistic; withhold it (self-referential-reserve already degrades).
+    if (measuredBookUsd > 0 && (selfReferentialValueUsd / measuredBookUsd) * 100 > MATERIAL_UNKNOWN_EXPOSURE_PCT) {
+      result.metadata.ratioWithheldReason = "self-referential-claims";
+    } else {
+      const ratio = details.knownReserveValueUsd / totalDebtUsd;
+      result.metadata.collateralizationRatio = ratio;
+      commonWarnings.push(...buildCoverageShortfallWarnings({
+        code: "undercollateralized",
+        message: (pct) => `${ADAPTER_KEY} collateralization ratio ${pct}% below the coverage threshold (collateral ${details.knownReserveValueUsd.toFixed(2)} USD vs debt ${totalDebtUsd.toFixed(2)} USD)`,
+        coverageRatio: ratio,
+      }));
     }
   }
   // Only independently complete custody composition can separate these

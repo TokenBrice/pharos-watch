@@ -201,6 +201,17 @@ const UNALLOWLISTABLE_DEGRADED_WARNING_CODES = new Set([
   "material-unknown-exposure",
 ]);
 
+export const NEWER_UNREVIEWED_REPORT_WARNING_CODE = "newer-unreviewed-report";
+
+/**
+ * Degraded warnings excused for scoring by default while still degrading the
+ * sync status. A newer unreviewed report leaves the pinned reviewed report's
+ * evidence unchanged; its own source-age cap (`stale-source-data`) still applies.
+ */
+export const SCORING_NEUTRAL_DEGRADED_WARNING_CODES: ReadonlySet<string> = new Set([
+  NEWER_UNREVIEWED_REPORT_WARNING_CODE,
+]);
+
 /** Fatal evidence is never excused by a coin's degraded-warning policy. */
 export function hasFatalReserveWarnings(warnings: readonly LiveReserveWarning[]): boolean {
   return warnings.some((warning) => warning.effect === "fatal");
@@ -219,6 +230,7 @@ export function selectScoringDegradedWarnings(
   const allowed = new Set(config?.scoring?.allowedDegradedWarningCodes ?? []);
   return warnings.filter((warning) => (
     warning.effect === "degraded"
+    && !SCORING_NEUTRAL_DEGRADED_WARNING_CODES.has(warning.code)
     && (UNALLOWLISTABLE_DEGRADED_WARNING_CODES.has(warning.code) || !allowed.has(warning.code))
   ));
 }

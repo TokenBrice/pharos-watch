@@ -678,16 +678,16 @@ describe("resolveInfiniFiFreshness", () => {
     expect(result).not.toHaveProperty("sourceTimestamp");
   });
 
-  it("stays unverified for drift beyond the tightened 6e-5 rounding envelope", () => {
-    // Δ = 7e-5 is past the 4-decimal rounding envelope but was admitted by the
-    // old 5e-4 tolerance (~2.45 days of yield drift); it must now fail closed.
+  it("stays unverified for drift beyond the 8e-5 rounding-plus-cadence envelope", () => {
+    // Δ = 9e-5 is past rounding plus one snapshot cadence of drift but was
+    // admitted by the old 5e-4 tolerance (~2.45 days of yield drift).
     const diverged = "InfiniFi siUSD rate-history freshness probe diverged from the live staked exchange rate";
-    expect(resolveInfiniFiFreshness(payloadWithRate(1.07277), {
+    expect(resolveInfiniFiFreshness(payloadWithRate(1.07279), {
       code: "OK",
       data: { dataPoints: [{ time: 1_781_114_400_000, value: 1.0727 }] },
     })).toMatchObject({ freshnessMode: "unverified", details: { freshnessReason: diverged } });
-    // Δ = 5e-5 (one rounding step) is still admitted.
-    expect(resolveInfiniFiFreshness(payloadWithRate(1.07275), {
+    // Δ = 7e-5 (rounding plus sub-cadence drift) is admitted.
+    expect(resolveInfiniFiFreshness(payloadWithRate(1.07277), {
       code: "OK",
       data: { dataPoints: [{ time: 1_781_114_400_000, value: 1.0727 }] },
     })).toEqual({

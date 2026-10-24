@@ -169,11 +169,13 @@ const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
 // snapshotter on a 2-hour cadence; its latest point timestamps that snapshot,
 // and matching its value against the live staked exchange rate ties the
 // timestamp to the reserve state we are reporting. History values are rounded
-// to 4 decimals, so ±5e-5 is the rounding envelope; 6e-5 admits rounding plus
-// a sliver of sub-cadence drift while rejecting the multi-day drift (2.45d at
-// the previous 5e-4) a monotone yield accumulator can accumulate unnoticed.
+// to 4 decimals, so ±5e-5 is the rounding envelope. The newest point can be up
+// to ~2.4h behind the live rate (~1.6e-5 of yield per 2h cadence), so 6e-5
+// degraded healthy runs; 8e-5 admits rounding plus one full snapshot cadence
+// of drift while rejecting the multi-day drift (2.45d at the previous 5e-4) a
+// monotone yield accumulator can accumulate unnoticed.
 const INFINIFI_RATE_HISTORY_PATH = "/api/protocol/rate-history/siUSD?daysAgo=7";
-const RATE_CROSS_CHECK_TOLERANCE = 6e-5;
+const RATE_CROSS_CHECK_TOLERANCE = 8e-5;
 const RATE_HISTORY_PROBE_TIMEOUT_MS = 6_000;
 
 export function resolveInfiniFiFreshness(

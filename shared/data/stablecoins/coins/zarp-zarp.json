@@ -94,6 +94,9 @@
     "version": 1,
     "semantics": "attestation-mix",
     "breakerScope": "zarp-zarp",
+    "scoring": {
+      "maxSourceAgeSec": 4000000
+    },
     "display": {
       "url": "https://www.zarpstablecoin.com/transparency/",
       "label": "ZARP transparency"

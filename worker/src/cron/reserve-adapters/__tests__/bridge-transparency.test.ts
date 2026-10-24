@@ -122,11 +122,11 @@ describe("adaptBridgeTransparency", () => {
   });
 
   it.each([
-    { drift: 1, degraded: false },
-    { drift: -1, degraded: false },
-    { drift: 1.01, degraded: true },
-    { drift: -1.01, degraded: true },
-  ])("preserves the exact $1 asset tolerance for drift $drift", ({ drift, degraded }) => {
+    { drift: 1, codes: [] },
+    { drift: -1, codes: [] },
+    { drift: 1.01, codes: ["bridge-component-excess"] },
+    { drift: -1.01, codes: ["bridge-unitemized-reserve-surplus"] },
+  ])("preserves the exact $1 asset tolerance for drift $drift", ({ drift, codes }) => {
     const result = adaptBridgeTransparency({
       ...USDSUI_PAYLOAD,
       total_reserve_amount: 100,
@@ -134,10 +134,61 @@ describe("adaptBridgeTransparency", () => {
       reserves: [{ type: "cash", amount: 100 + drift }],
     }, "usd_sui");
 
-    expectWarnings(result, degraded ? ["bridge-component-sum-drift"] : []);
+    // Components below published assets are an info surplus; components above
+    // $100 assets exceed the 0.01% rounding bound and degrade.
+    expectWarnings(result, codes);
+    if (codes.length > 0) {
+      expect(result.warnings?.[0]).toMatchObject({ effect: codes[0] === "bridge-component-excess" ? "degraded" : "info" });
+    }
   });
 
-  it("degrades-warns but still publishes when components drift beyond the $1 rounding tolerance", () => {
+  it("degrades an impossible itemized composition above published gross assets", () => {
+    // Review repro: $200 itemized against $100 assets/$100 liabilities.
+    const result = adaptBridgeTransparency({
+      ...USDSUI_PAYLOAD,
+      total_reserve_amount: 100,
+      total_onchain_amount: 100,
+      reserves: [{ type: "cash", amount: 10 }, { type: "treasury", amount: 190 }],
+    }, "usd_sui");
+
+    expectWarnings(result, ["bridge-component-excess"]);
+    expect(result.warnings?.[0]).toMatchObject({ severity: "warning", effect: "degraded" });
+    expect(result.metadata?.details?.driftVsReservesUsd).toBe(100);
+  });
+
+  it("reports pathUSD-scale component excess within the 0.01% rounding bound as info", () => {
+    const result = adaptBridgeTransparency({
+      ...USDSUI_PAYLOAD,
+      total_reserve_amount: "42160000",
+      total_onchain_amount: "42150000",
+      reserves: [{ type: "cash", amount: "4216002.93" }, { type: "treasury", amount: "37944026.39" }],
+    }, "usd_sui");
+
+    expectWarnings(result, ["bridge-unitemized-reserve-surplus"]);
+    expect(result.warnings?.[0]).toMatchObject({ effect: "info" });
+    expect(result.metadata?.details?.driftVsReservesUsd).toBeCloseTo(29.32, 6);
+  });
+
+  it.each([
+    { shortfall: 1, degraded: false },
+    { shortfall: 1.01, degraded: true },
+  ])("degrades only when itemized components fall short of liabilities by more than $1 ($shortfall)", ({ shortfall, degraded }) => {
+    // Published reserves cover the liability, but the itemized book does not.
+    const result = adaptBridgeTransparency({
+      ...USDSUI_PAYLOAD,
+      total_reserve_amount: 200,
+      total_onchain_amount: 100,
+      reserves: [{ type: "cash", amount: 100 - shortfall }],
+    }, "usd_sui");
+
+    expectWarnings(result, degraded ? ["bridge-itemized-backing-shortfall"] : ["bridge-unitemized-reserve-surplus"]);
+    expect(result.warnings?.[0]).toMatchObject(degraded
+      ? { severity: "warning", effect: "degraded" }
+      : { severity: "info", effect: "info" });
+    expect(result.metadata?.details?.driftVsLiabilitiesUsd).toBeCloseTo(-shortfall, 6);
+  });
+
+  it("degrades components above published assets and the reserve shortfall separately", () => {
     const drifted: BridgeTransparencyPayload = {
       ...USDSUI_PAYLOAD,
       total_reserve_amount: "73111161.57",
@@ -145,15 +196,12 @@ describe("adaptBridgeTransparency", () => {
 
     const result = adaptBridgeTransparency(drifted, "usd_sui");
 
-    // Reserves below the $1 tolerance both drift from the components and leave
-    // the liability undercollateralized by $1M.
+    // Itemized components match the liability but exceed the published reserve
+    // total by $1M, which also leaves the liability undercollateralized.
+    expectWarnings(result, ["bridge-component-excess", "reserve-undercollateralized"]);
     expect(result.warnings).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        code: "bridge-component-sum-drift",
-        severity: "warning",
-        effect: "degraded",
-      }),
-      expect.objectContaining({ code: "reserve-undercollateralized" }),
+      expect.objectContaining({ code: "bridge-component-excess", effect: "degraded" }),
+      expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }),
     ]));
     expect(result.slices).toHaveLength(2);
     expect(result.metadata?.totalReserveUsd).toBeCloseTo(73_111_161.57, 4);
@@ -173,8 +221,9 @@ describe("adaptBridgeTransparency", () => {
 
     const result = adaptBridgeTransparency(undercollateralized, "usd_sui");
 
-    expectWarnings(result, ["reserve-undercollateralized"]);
-    expect(result.warnings?.[0]).toMatchObject({ severity: "warning", effect: "degraded" });
+    // The itemized book shares the same shortfall against measured liabilities.
+    expectWarnings(result, ["bridge-itemized-backing-shortfall", "reserve-undercollateralized"]);
+    for (const warning of result.warnings ?? []) expect(warning).toMatchObject({ severity: "warning", effect: "degraded" });
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(72_111_161.57 / 74_111_161.57, 9);
   });
 
@@ -186,11 +235,11 @@ describe("adaptBridgeTransparency", () => {
 
     const result = adaptBridgeTransparency(withUnknown, "usd_sui");
 
-    // A material unmapped component is published as a high-risk slice and also
-    // drifts the component sum beyond the $1 tolerance.
+    // A material unmapped component is published as a high-risk slice; its
+    // excess over the published total also degrades.
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: "unknown-component", severity: "warning", effect: "degraded" }),
-      expect.objectContaining({ code: "bridge-component-sum-drift" }),
+      expect.objectContaining({ code: "bridge-component-excess", effect: "degraded" }),
     ]));
     expect(result.slices).toContainEqual(
       expect.objectContaining({ name: "repo (unmapped)", risk: "high" }),
@@ -290,7 +339,7 @@ describe("fetchBridgeTransparencyReserves", () => {
     expectWarnings(result, []);
   });
 
-  it("keeps Open USD's genuine undisclosed asset gap degraded despite reconciled liabilities", async () => {
+  it("reports Open USD's unitemized reserve surplus as info when components match liabilities", async () => {
     const { result, network } = await runAdapter("bridge-transparency", "ousd-open-standard", {
       network: { json: { [OUSD_ENDPOINT]: OUSD_PAYLOAD } },
       nowSec: CASH_NOW_SEC,
@@ -326,7 +375,9 @@ describe("fetchBridgeTransparencyReserves", () => {
         driftVsLiabilitiesUsd: expect.closeTo(0, 4),
       },
     });
-    expectWarnings(result, ["bridge-component-sum-drift"]);
+    expectWarnings(result, ["bridge-unitemized-reserve-surplus"]);
+    expect(result.warnings?.[0]).toMatchObject({ effect: "info" });
+    expect(result.warnings?.[0]?.message).toContain("signed $2000114.99 residual");
   });
 
   it("measures CASH's single combined Treasury/MMF bucket without inventing instrument weights", async () => {
@@ -402,8 +453,7 @@ describe("fetchBridgeTransparencyReserves", () => {
   });
 
   it.each([
-    { label: "asset gap", overrides: { total_reserve_amount: "127932977.54" }, warnings: ["bridge-component-sum-drift"] },
-    { label: "liability shortfall", overrides: { total_onchain_amount: "127932977.54" }, warnings: ["reserve-undercollateralized"] },
+    { label: "liability shortfall", overrides: { total_onchain_amount: "127932977.54" }, warnings: ["bridge-itemized-backing-shortfall", "reserve-undercollateralized"] },
     { label: "unmapped future type", overrides: { reserves: [
       { type: "cash", amount: "8974120.28" },
       { type: "future-treasury", amount: "118956857.26" },
@@ -422,6 +472,18 @@ describe("fetchBridgeTransparencyReserves", () => {
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({ effect: "degraded" }),
     ]));
+    expect(report.valid).toBe(true);
+  });
+
+  it("reports CASH's unitemized published-reserve surplus as info", async () => {
+    const { result, report } = await runAdapter("bridge-transparency", "cash-phantom", {
+      network: { json: { [CASH_ENDPOINT]: { ...CASH_PAYLOAD, total_reserve_amount: "128551084.54" } } },
+      nowSec: CASH_NOW_SEC,
+    });
+
+    expectWarnings(result, ["bridge-unitemized-reserve-surplus"]);
+    expect(result.warnings?.[0]).toMatchObject({ effect: "info" });
+    expect(result.metadata?.details?.driftVsReservesUsd).toBeCloseTo(-620_107, 4);
     expect(report.valid).toBe(true);
   });
 

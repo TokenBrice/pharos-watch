@@ -20,6 +20,7 @@ import {
   parseMentoReserveComposition,
 } from "../mento";
 import type { AdapterContext } from "../types";
+import { MentoFxMarketClosedError } from "../mento-redemption";
 import {
   expectWarningEffect,
   expectWarnings,
@@ -32,6 +33,18 @@ import {
 } from "./reserve-adapter.test-support";
 import { MENTO_RESERVE_COMPOSITION_PAYLOAD as RAW_SAMPLE_PAYLOAD } from "./reserve-adapter-payloads.test-support";
 import { brokerGuardFixture, brokerInventoryCalls, BROKER_FEED, BROKER_PRICING_MODULE, BROKER, BROKER_ORACLE, BROKER_BREAKER } from "./mento-broker.test-support";
+
+const redemptionOverride = vi.hoisted(() => ({ error: null as Error | null }));
+vi.mock("../mento-redemption", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../mento-redemption")>();
+  return {
+    ...actual,
+    fetchMentoRedemptionMetadata: (...args: Parameters<typeof actual.fetchMentoRedemptionMetadata>) =>
+      redemptionOverride.error
+        ? Promise.reject(redemptionOverride.error)
+        : actual.fetchMentoRedemptionMetadata(...args),
+  };
+});
 
 const SAMPLE_PAYLOAD = {
   ...RAW_SAMPLE_PAYLOAD,
@@ -192,6 +205,7 @@ function directCtx(network: AdapterNetwork, requestCache: Map<string, Promise<un
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  redemptionOverride.error = null;
 });
 
 describe("mento adapter", () => {
@@ -899,6 +913,27 @@ describe("mento redemption telemetry", () => {
     expectWarnings(result, ["mento-redemption-telemetry-failed"]);
     // The cap short-circuits before any per-pool reads.
     expect(network.rpcCalls).toHaveLength(1);
+  });
+
+  it("reports a closed FX market as informational, not a degraded reserve read", async () => {
+    redemptionOverride.error = new MentoFxMarketClosedError();
+    const network = installAdapterNetwork({
+      json: { [CATALOG_RESERVE_URL]: SAMPLE_PAYLOAD },
+      html: { [MENTO_DASHBOARD_URL]: MENTO_DASHBOARD_HTML_FIXTURE },
+    });
+    const config = brokerPoolConfig("cusd-celo", [{ selfTokenAddress: USDM_ADDRESS, counterAssetAddress: USDC_ADDRESS }]);
+
+    const result = await fetchMentoReserves(
+      { id: "cusd-celo" } as never,
+      config,
+      new AbortController().signal,
+      directCtx(network, new Map()),
+    );
+
+    expect(result.slices.length).toBeGreaterThan(0);
+    expect(result.metadata?.redemption).toBeUndefined();
+    expectWarnings(result, ["mento-redemption-fx-market-closed"]);
+    expectWarningEffect(result, "mento-redemption-fx-market-closed", "info");
   });
 
   it("does not retain a failed exchange-id promise as a successful cache entry", async () => {

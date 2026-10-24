@@ -109,7 +109,7 @@
     "semantics": "single-asset",
     "breakerScope": "mhyper-midas",
     "scoring": {
-      "maxSourceAgeSec": 604800
+      "maxSourceAgeSec": 777600
     },
     "display": {
       "url": "https://midas.app/mhyper",
@@ -129,7 +129,7 @@
       "sourceKey": "chainlink-nav:token:0x9b5528528656dbc094765e2abb79f293c21191b9",
       "assetLabel": "Hyperithm market-neutral stablecoin strategy NAV",
       "assetRisk": "high",
-      "maxOracleAgeSec": 604800
+      "maxOracleAgeSec": 777600
     }
   },
   "yieldConfig": {

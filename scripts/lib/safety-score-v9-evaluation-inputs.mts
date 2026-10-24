@@ -42,6 +42,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/live-reserve-adapter-descriptors.ts",
   "shared/lib/live-reserve-adapters.ts",
   "shared/lib/live-reserve-freshness.ts",
+  "shared/lib/live-reserve-reliability.ts",
   "shared/lib/math.ts",
   "shared/lib/measured-execution-deployment-policies.ts",
   "shared/lib/p4-exit-route-amm-simulation.ts",

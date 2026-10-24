@@ -78,7 +78,7 @@
     "semantics": "single-asset",
     "breakerScope": "mmev-midas",
     "scoring": {
-      "maxSourceAgeSec": 432000
+      "maxSourceAgeSec": 777600
     },
     "display": {
       "url": "https://midas.app/mmev",
@@ -98,7 +98,7 @@
       "sourceKey": "chainlink-nav:token:0x030b69280892c888670edcdcd8b69fd8026a0bf3",
       "assetLabel": "Midas mMEV strategy NAV (shared with mROX)",
       "assetRisk": "high",
-      "maxOracleAgeSec": 604800
+      "maxOracleAgeSec": 777600
     }
   },
   "yieldConfig": {

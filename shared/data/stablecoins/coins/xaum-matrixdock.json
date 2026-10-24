@@ -104,13 +104,13 @@
   "custodyModel": "unknown",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
-    "adapter": "chainlink-nav",
+    "adapter": "curated-validated",
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "xaum-matrixdock",
     "display": {
       "url": "https://www.matrixdock.com/xaum",
-      "label": "Matrixdock XAUm price-reference proxy"
+      "label": "Matrixdock XAUm"
     },
     "inputs": {
       "primary": {
@@ -118,16 +118,6 @@
         "chain": "bsc",
         "rpcMode": "public-rpc"
       }
-    },
-    "params": {
-      "navScope": "portfolio",
-      "oracleAddress": "0xfa54C1c5F62ea3a5653a0b1b7148E26008eA1501",
-      "tokenAddress": "0x23ae4fd8e7844cdbc97775496ebd0e8248656028",
-      "sourceKey": "chainlink-nav:token:0x23ae4fd8e7844cdbc97775496ebd0e8248656028",
-      "assetLabel": "XAUm gold exposure (price-derived proxy; reserve quantity unverified)",
-      "assetRisk": "medium",
-      "oracleMethod": "latestRoundData",
-      "maxOracleAgeSec": 345600
     }
   },
   "launchDate": "2024-09-16",

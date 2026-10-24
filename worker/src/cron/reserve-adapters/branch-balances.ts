@@ -325,6 +325,7 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
   const warnings: LiveReserveWarning[] = [];
   const unavailableBranches: Array<{ name: string; reason: string }> = [];
   const unclassifiedBranches: string[] = [];
+  const selfReferentialValues: Array<{ name: string; value: number }> = [];
   const observations: Array<Record<string, unknown>> = [];
   const values: Array<{
     sourceKey: string; value: number; name: string; risk: BranchConfig["risk"];
@@ -375,13 +376,22 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
     if (branch.unclassifiedSelfReferential === true) {
       observation.classification = "unclassified-self-referential";
       unclassifiedBranches.push(branch.name);
-      if (price == null || !Number.isFinite(price) || price <= 0) {
-        unavailableBranches.push({ name: branch.name, reason: "price-unavailable" });
-      }
-      continue;
     }
     if (price == null || !Number.isFinite(price) || price <= 0) {
       unavailableBranches.push({ name: branch.name, reason: "price-unavailable" });
+      continue;
+    }
+    // Own-liability claims are measured and published, never credited as
+    // independent backing in the collateralization numerator.
+    if (branch.unclassifiedSelfReferential === true) {
+      const value = valueUsdFromBigIntPrice(balanceRaw, balanceDecimals ?? branch.token.decimals, price);
+      selfReferentialValues.push({ name: branch.name, value });
+      values.push({
+        sourceKey: `${adapterKey}:${branch.chain ?? branch.token.chain}:${branch.token.address.toLowerCase()}`,
+        value,
+        name: `Self-referential claim (${branch.name})`,
+        risk: "very-high",
+      });
       continue;
     }
     if (isUsdPeggedBranch(branch) && branch.priceUsd == null) {
@@ -407,7 +417,8 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
     });
   }
   const totalValue = values.reduce((sum, value) => sum + value.value, 0);
-  const partial = unavailableBranches.length > 0 || unclassifiedBranches.length > 0;
+  const selfReferentialValueUsd = selfReferentialValues.reduce((sum, entry) => sum + entry.value, 0);
+  const partial = unavailableBranches.length > 0;
   const denominator = liabilityUsd != null && Number.isFinite(liabilityUsd) && liabilityUsd > 0
     ? liabilityUsd : null;
   // Liabilities are not a bound on unreadable collateral. A partial book
@@ -420,10 +431,18 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
   if (partial) {
     warnings.push(reserveDegradedWarning(
       "branch-reserve-book-partial",
-      `${adapterKey} unavailable or unclassified constituents: ${[
-        ...unavailableBranches.map(({ name, reason }) => `${name} (${reason})`),
-        ...unclassifiedBranches.map((name) => `${name} (self-referential)`),
-      ].join(", ")}`,
+      `${adapterKey} unavailable constituents: ${
+        unavailableBranches.map(({ name, reason }) => `${name} (${reason})`).join(", ")
+      }`,
+    ));
+  }
+  if (selfReferentialValues.length > 0) {
+    warnings.push(reserveDegradedWarning(
+      "self-referential-reserve",
+      `${adapterKey} reserve book holds self-referential claims excluded from collateralization: ${
+        selfReferentialValues.map(({ name, value }) =>
+          `${name} ($${value.toFixed(2)}, ${totalValue > 0 ? ((value / totalValue) * 100).toFixed(2) : "0.00"}% of measured book)`).join(", ")
+      }`,
     ));
   }
   // The normal one-decimal display precision would drop a real sub-0.05%
@@ -464,7 +483,8 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
         branchObservations: observations,
         unavailableBranches,
         unclassifiedSelfReferentialBranches: unclassifiedBranches,
-        knownReserveValueUsd: totalValue,
+        knownReserveValueUsd: totalValue - selfReferentialValueUsd,
+        selfReferentialValueUsd,
         residualUsd,
         contextualObservationsOnly: residualUnavailable,
       },

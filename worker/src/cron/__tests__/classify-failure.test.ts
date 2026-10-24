@@ -149,6 +149,20 @@ const CASES: Case[] = [
     expected: "network",
   },
 
+  // geo-restricted-egress
+  {
+    name: "200 redirect to a /restricted geo-gate page",
+    reason: "adapter-exception",
+    lastError: "primary:http-json: JSON parse failed for https://app.megausd.money/api/transparency/backing-and-supply/current (HTTP 200, text/html; charset=utf-8; final URL https://megausd-landing.vercel.app/restricted): Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON; body starts with: <!DOCTYPE html>",
+    expected: "geo-restricted-egress",
+  },
+  {
+    name: "restricted segment deeper in the path stays a parse failure",
+    reason: "adapter-exception",
+    lastError: "JSON parse failed for https://example.com/api (HTTP 200, text/html; final URL https://example.com/docs/restricted-assets): Unexpected token",
+    expected: "parse-failure",
+  },
+
   // unknown
   {
     name: "unrecognised error",

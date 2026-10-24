@@ -129,7 +129,12 @@ function boldFallbackNetwork(debts: Map<string, bigint | null>): AdapterNetworkS
       }),
       [AGGREGATE3_SELECTOR]: null,
     },
-    json: { [BOLD_LLAMA_URL]: BOLD_FULL_QUOTES },
+    json: {
+      [BOLD_LLAMA_URL]: BOLD_FULL_QUOTES,
+      // WETH is a plain-token branch, so it is priced without a receipt probe.
+      [llamaUrl(boldParams.branches.filter((branch) => branch.name === "WETH").map((branch) => branch.token))]:
+        boldCoinQuotes({ WETH: 1_800 }),
+    },
   };
 }
 

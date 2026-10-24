@@ -115,6 +115,7 @@ export function installErc4626Network({
         "0x18160ddd",
         "0x70a08231",
         "0xad468d11",
+        "0x7bfef9fa",
       ]
         .map((selector) => [selector, async (call: AdapterRpcCall) => {
           const response = await invokeExtra(call, call.url, rpcHandlerBody(call));

@@ -54,7 +54,7 @@ describe("rlusd-independent-assurance", () => {
   });
 
   it("dates every real archive row, including escaped apostrophes and two-digit years", async () => {
-    const prepared = await profile.prepareIndexHtml!(html, new AbortController().signal, undefined);
+    const prepared = await profile.prepareIndexHtml!(html, new AbortController().signal, undefined) as string;
     const urls = [...prepared.matchAll(/href="([^"]+)"/g)].map((match) => match[1]);
     expect(urls).toHaveLength(21);
     expect(urls.every((url) => profile.isReportCandidate(url, ""))).toBe(true);
@@ -72,8 +72,12 @@ describe("rlusd-independent-assurance", () => {
     });
   });
 
-  it("fails closed on a newer unreviewed report", async () => {
-    await expect(verify(html + '<a href="https://cdn.sanity.io/RLUSD_Attestation_Report_September_26.pdf">Sep</a>')).rejects.toThrow("newer unreviewed report");
+  it("keeps the reviewed report and names a newer unreviewed report", async () => {
+    const newer = "https://cdn.sanity.io/RLUSD_Attestation_Report_September_26.pdf";
+    await expect(verify(`${html}<a href="${newer}">Sep</a>`)).resolves.toMatchObject({
+      sourceTimestamp: Date.parse("2026-08-31T21:00:00Z") / 1000,
+      newerUnreviewedReport: { reportDate: "2026-09-30", reportUrl: newer },
+    });
   });
 
   it("fails closed on unknown report dating and duplicate latest reports", async () => {

@@ -3,6 +3,8 @@ import { toFunctionSelector } from "viem/utils";
 import { jsonResponse } from "@shared/test-utils/mock-fetch";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { installErc4626Network, runTrackedVault } from "./erc4626-single-asset.test-support";
+import { resolveRedemptionCapacity } from "../../../lib/redemption-backstop/capacity";
+import { liveSnapshot } from "../../../lib/__tests__/redemption-backstop-sources.test-support";
 
 const cooldownSelector = toFunctionSelector("cooldownDuration()");
 const windowSelector = toFunctionSelector("getUnstakeWindow()");
@@ -64,5 +66,59 @@ describe("ERC4626 redemption locks", () => {
   it.each([null, 2n ** 200n])("rejects unreadable or unsafe lock durations (%s)", async (cooldown) => {
     mockLocks(cooldown);
     await expect(runTrackedVault("syrupusdc-maple", withLocks)).rejects.toThrow(/redemption lock.*malformed or unreadable/);
+  });
+});
+
+describe("ERC4626 asset-targeted redemption locks", () => {
+  const fxSave = "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39";
+  const fxSp = "0x65c9a641afceb9c0e6034e558a319488fa0fa3be";
+  const coolDownSelector = toFunctionSelector("redeemCoolDownPeriod()");
+  function mockFxSave(cooldown: bigint | null) {
+    installErc4626Network({
+      vault: fxSave, asset: fxSp, decimals: 18, idleBalance: 0n,
+      totalAssets: 70n * 10n ** 24n, totalSupply: 63n * 10n ** 24n, convertedAssets: 70n * 10n ** 24n,
+      extraHandlers: [({ call }) => {
+        if (call?.data !== coolDownSelector) return undefined;
+        // Only the underlying fxSP pool exposes the cooldown getter.
+        if (call.to?.toLowerCase() !== fxSp || cooldown == null) return null;
+        return jsonResponse({ result: `0x${cooldown.toString(16).padStart(64, "0")}` });
+      }],
+    });
+  }
+
+  it("reads the fxSP cooldown from the reviewed asset and bounds full backing instead of zero idle", async () => {
+    mockFxSave(3600n);
+    const result = await runTrackedVault("fxsave-f-x-protocol");
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityKind: "documented-bound", capacityRatioOfSupply: 1, settlementDelaySec: 3600,
+    });
+  });
+  it("publishes non-par fxSP units as a ratio that the consumer values against USD supply", async () => {
+    mockFxSave(3600n);
+    const result = await runTrackedVault("fxsave-f-x-protocol");
+    // 70M fxSP units are not $70M; withholding the unit amount keeps the
+    // consumer from reading 70M / 72.8M (96.15%) instead of the measured 100%.
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
+    const now = Math.floor(Date.now() / 1_000);
+    const supplyUsd = 72_800_000;
+    const capacity = await resolveRedemptionCapacity(
+      {} as D1Database, "fxsave-f-x-protocol", { kind: "reserve-sync-metadata" }, supplyUsd, now,
+      { reserveSnapshotMetadata: liveSnapshot("fxsave-f-x-protocol", {
+        ...result.metadata, freshnessMode: "not-applicable",
+      }, { fetchedAt: now - 60, source: "erc4626-single-asset", sourceModel: "single-bucket" }) },
+    );
+    expect(capacity.immediateCapacityUsd).toBe(supplyUsd);
+    expect(capacity.immediateCapacityRatio).toBe(1);
+  });
+  it("fails closed when the asset cooldown is unreadable", async () => {
+    mockFxSave(null);
+    await expect(runTrackedVault("fxsave-f-x-protocol")).rejects.toThrow(/redemption lock.*malformed or unreadable/);
+  });
+  it("rejects an asset-targeted lock without a reviewed expected asset", async () => {
+    mockFxSave(3600n);
+    await expect(runTrackedVault("fxsave-f-x-protocol", (config) => ({
+      ...config,
+      params: { ...config.params, slice: { name: "fxSP stability-pool shares", risk: "medium" } },
+    }))).rejects.toThrow(/expectedAssetAddress/);
   });
 });

@@ -3,11 +3,11 @@
   "product": "XUSD",
   "profile": "straitsx-v1",
   "officialIndexUrl": "https://www.straitsx.com/xusd",
-  "reportUrl": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6abb483d1de79f8ca93f1c67_XUSD%20SCS%20Reserve%20Account%20Report%20(31%20August%202026).pdf",
-  "reportSha256": "7abdd8886032534092a7206abaa445f67ad6e2a406b358561fbf5ccf4dd9ffb8",
-  "reportByteLength": 704140,
-  "reportDate": "2026-08-31",
-  "reportAsOf": "2026-08-31T23:59:00+08:00",
+  "reportUrl": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6ad97333a5d664d8e3a09df9_XUSD%20SCS%20Reserve%20Account%20Report%20(30%20Sep%202026).pdf",
+  "reportSha256": "8b22ad61e63b25951649a8b8ff9b64f557cb7faa0414295a72cb47b7d303d35d",
+  "reportByteLength": 703817,
+  "reportDate": "2026-09-30",
+  "reportAsOf": "2026-09-30T23:59:00+08:00",
   "reportTimeZone": "Singapore Time (GMT+8)",
   "attestor": "KK Yap & Associates",
   "engagement": "Independent accountant's reasonable-assurance examination under SSAE 3000 (Revised)",
@@ -17,7 +17,7 @@
     {
       "code": "cash",
       "label": "Cash",
-      "amount": "46324677"
+      "amount": "41267463"
     },
     {
       "code": "fixed-deposits",
@@ -39,7 +39,7 @@
     {
       "code": "bep20",
       "label": "XUSD BEP20 circulation",
-      "amount": "38983843"
+      "amount": "33983843"
     },
     {
       "code": "pol",
@@ -52,13 +52,13 @@
       "amount": "50505"
     }
   ],
-  "reportedAssetTotal": "46324677",
-  "computedAssetTotal": "46324677",
-  "reportedLiabilityTotal": "46182310",
+  "reportedAssetTotal": "41267463",
+  "computedAssetTotal": "41267463",
+  "reportedLiabilityTotal": "41182310",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
     "parserVersion": "26.08.0",
-    "normalizedTextSha256": "e697f5b8bb29397da9e7c39f731ecaf5a2456cb822c94a9331beabdefece3138",
+    "normalizedTextSha256": "c0f90c6d9f25351da46e8c6d32fbda8e0301ff06ae1a752b4c68e1e6c4892e34",
     "pageCount": 6
   },
   "assuranceTier": "independent-assurance"

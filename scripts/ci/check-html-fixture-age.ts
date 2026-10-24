@@ -64,6 +64,8 @@ const NON_HTML_FIXTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
     "Immutable adverse-state replay captured 2026-10-07 from cache.accountable.capital/dashboard/yuzu and axis.accountable.capital:8443/dashboard; freezes signed-book residual and anonymous venue composition defects.",
   "usdai-oct7-2026.json":
     "Immutable adverse-state replay captured 2026-10-07 from api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161; raw unsafe integer literals, missing accounting clock and unresolved full-book denominator must not be refreshed away.",
+  "usdai-oct24-2026.json":
+    "Immutable corroboration replay captured 2026-10-24T04:45:09Z from api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161 and refetched byte-identical 2026-10-24T05:30:28Z, paired with Arbitrum block 517749549 PYUSD hub balance and sUSDai totalAssets/balances/depositTimelockBalance/loanRouterBalances; the pinned on-chain words live in the test, so refreshing the payload alone would break the pairing.",
   "makina-strategy-oct7-2026.json":
     "Immutable adverse-state replay captured 2026-10-07 from api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721; freezes issuer AUM disagreement and stale underlying accounting.",
   "makina-allocations-oct7-2026.json":

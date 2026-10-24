@@ -4,7 +4,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import babelFish from "@shared/data/stablecoins/coins/xusd-babelfish.json";
 import usual from "@shared/data/stablecoins/coins/usd0-usual.json";
 import { adaptBranchBalanceReserves, readBranchBalanceParams } from "../branch-balances";
-import { runAdapter, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
+import { expectWarnings, runAdapter, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
 import xusdWire from "./fixtures/xusd-balances-oct7-2026.json";
 import xusdDecimals from "./fixtures/xusd-decimals-oct7-2026.json";
 import usualWire from "./fixtures/usual-circular-oct7-2026.json";
@@ -82,7 +82,9 @@ describe("branch reserve census and unavailable residual", () => {
     expect(details.branchObservations.filter((entry) => entry.priceObservation.sourceKind === "configured-nominal")).toHaveLength(9);
     expect(details.branchObservations.find((entry) => entry.priceObservation.sourceKind === "market-api")?.priceObservation)
       .toMatchObject({ sourceLookup: "rootstock:0xe700691da7b9851f2f35f8b8182c69c53ccad9db", quoteTimestamp: null, quoteConfidence: null });
-    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "undercollateralized", effect: "degraded" }));
+    // 99.94% coverage sits above the shared 99.5% shortfall threshold; the
+    // measured ratio stays published.
+    expect(result.warnings?.some((warning) => warning.code === "undercollateralized") ?? false).toBe(false);
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "defillama-quote-quality", effect: "degraded" }));
   });
 
@@ -102,6 +104,8 @@ describe("branch reserve census and unavailable residual", () => {
       const call = read.params[0] as { to: string; data: string };
       rpc[`${call.to}:${call.data}`] = read.result;
     }
+    // Production-scale liability: an external-only ratio would read ~15%.
+    rpc["0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5:totalSupply()"] = 545_000_000n * 10n ** 18n;
     const { result } = await runAdapter("evm-branch-balances", "usd0-usual", {
       config: usd0Config, nowSec: Date.parse(usualWire.observedAt) / 1000,
       network: { rpc, block: {
@@ -109,11 +113,26 @@ describe("branch reserve census and unavailable residual", () => {
         timestamp: Date.parse(usualWire.block.timestamp) / 1000,
       } },
     });
-    expect(result.metadata).toMatchObject({ censusComplete: true, valuationComplete: false, unknownExposurePct: 100 });
+    expect(result.metadata).toMatchObject({ censusComplete: true, valuationComplete: true, unknownExposurePct: 0 });
+    // Circular claims are measured very-high-risk slices, not an unknown residual.
+    expect(result.slices).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "Self-referential claim (U0R)", pct: 81.64, risk: "very-high" }),
+      expect.objectContaining({ name: "Self-referential claim (EVK Vault eUSD0-4)", pct: 2.851, risk: "very-high" }),
+    ]));
+    expect(result.slices.filter((slice) => slice.name.startsWith("Self-referential")).every((slice) =>
+      slice.coinId == null && slice.depType == null)).toBe(true);
+    expectWarnings(result, ["self-referential-reserve"]);
+    expect(result.warnings?.[0]).toMatchObject({ effect: "degraded" });
+    const details = result.metadata?.details as { knownReserveValueUsd: number; selfReferentialValueUsd: number };
+    // Only external legs enter the collateralization numerator.
+    expect(details.selfReferentialValueUsd).toBeCloseTo(460_559_717.41, 1);
+    expect(details.knownReserveValueUsd).toBeCloseTo(84_536_896.26, 1);
+    // 84% circular claims: the external-only ratio is withheld with a reason.
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
-    expect(result.slices).toEqual([{ name: "Unclassified or unavailable reserve residual", pct: 100, risk: "high" }]);
+    expect(result.metadata?.ratioWithheldReason).toBe("self-referential-claims");
+    expect(result.warnings?.some((warning) => warning.code === "undercollateralized") ?? false).toBe(false);
     expect(result.metadata?.details).toMatchObject({
-      residualUsd: null, contextualObservationsOnly: true,
+      residualUsd: 0, contextualObservationsOnly: false,
       unclassifiedSelfReferentialBranches: ["EVK Vault eUSD0-4", "U0R"],
       branchObservations: expect.arrayContaining([
         expect.objectContaining({ name: "EVK Vault eUSD0-4", balanceRaw: "14867266666424154616700613", classification: "unclassified-self-referential" }),
@@ -208,9 +227,10 @@ describe("branch reserve census and unavailable residual", () => {
   it("keeps observed zero USDtb distinct from USD0-denominated circular claims", async () => {
     const { result } = await runUsual(usualNetwork());
     expect(result.metadata?.censusComplete).toBe(true);
-    expect(result.metadata?.unknownExposurePct).toBe(100);
-    expect(result.slices.some((slice) => slice.coinId === "ustbl-spiko")).toBe(false);
+    expect(result.metadata?.unknownExposurePct).toBe(0);
     expect(result.slices.some((slice) => slice.name === "U0R" || slice.name === "EVK Vault eUSD0-4")).toBe(false);
+    expect(result.slices.filter((slice) => slice.name.startsWith("Self-referential claim")).map((slice) => slice.name).sort())
+      .toEqual(["Self-referential claim (EVK Vault eUSD0-4)", "Self-referential claim (U0R)"]);
     const details = result.metadata?.details as {
       branchObservations: Array<{ name: string; balanceRaw: string | null }>;
       unavailableBranches: Array<{ name: string; reason: string }>;

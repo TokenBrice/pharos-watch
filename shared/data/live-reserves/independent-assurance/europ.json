@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "product": "EUROP",
   "profile": "europ-v1",
-  "officialIndexUrl": "https://schuman.io/wp-json/wp/v2/media?search=SALVUS_Attestation&per_page=100",
+  "officialIndexUrl": "https://schuman.io/wp-json/wp/v2/media?search=Salvus+Attestation&per_page=100",
   "reportUrl": "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
   "reportSha256": "f404b5a20d652108670316470e52ba61659ac9faef4f5cbcf1b8afa488d44042",
   "reportByteLength": 531611,

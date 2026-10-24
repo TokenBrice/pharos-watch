@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { IndependentAssuranceProduct } from "@shared/lib/independent-assurance";
@@ -42,17 +43,21 @@ export function installFetch(
     },
   });
 }
+/** `pinFixturePdf` binds the manifest to `PDF_BYTES` so discovery outcomes resolve past the PDF gates. */
 export function verifyFixtureIndex(
   product: IndependentAssuranceProduct,
   profile: IndependentAssuranceProfile,
   fixtureName: string,
   htmlOverride?: string,
+  pinFixturePdf = false,
 ) {
   const reviewed = getIndependentAssuranceManifest(product);
   const html = htmlOverride ?? indexFixture(fixtureName);
   installFetch(product, html);
   return verifyIndependentAssuranceReport({
-    manifest: reviewed,
+    manifest: pinFixturePdf
+      ? { ...reviewed, reportByteLength: PDF_BYTES.length, reportSha256: createHash("sha256").update(PDF_BYTES).digest("hex") }
+      : reviewed,
     indexUrl: reviewed.officialIndexUrl,
     indexHost: new URL(reviewed.officialIndexUrl).hostname,
     reportHosts: [new URL(reviewed.reportUrl).hostname],

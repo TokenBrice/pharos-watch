@@ -7,6 +7,7 @@ import {
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
+  reserveInfoWarning,
   slicesFromValues,
   strictAmountParser,
   verifiedFreshnessMetadata,
@@ -14,11 +15,17 @@ import {
 
 const ADAPTER_KEY = "bridge-transparency";
 
-/** Absolute USD tolerance for reconciliation of disclosed components to assets.
- *  Bridge rounds headline totals to cents: pathUSD's components can sum $0.32
- *  above its published reserves. Liability coverage is checked separately;
- *  genuine asset drift beyond $1 remains degraded. */
+/** Absolute USD tolerance for reconciliation of disclosed components.
+ *  Bridge rounds headline totals to cents. Itemized components short of the
+ *  measured on-chain liability beyond $1 degrade; components that cover the
+ *  liability but differ from the published reserve total (CASH and OUSD publish
+ *  constant unitemized surpluses) are reported as info with the signed residual. */
 const COMPONENT_SUM_TOLERANCE_USD = 1;
+/** Relative bound on itemized components exceeding the published reserve
+ *  total. Components cannot genuinely exceed gross assets; only rounding may
+ *  (pathUSD: +$29.32 on $42.16M, ~0.00007%). Beyond 0.01% the composition is
+ *  impossible and degrades. */
+const COMPONENT_EXCESS_REL_TOLERANCE = 1e-4;
 
 interface BridgeReserveComponent {
   type?: string;
@@ -162,12 +169,30 @@ export function adaptBridgeTransparency(payload: BridgeTransparencyPayload, slug
   const componentSumUsd = sliceInputs.reduce((sum, slice) => sum + slice.value, 0);
   const driftVsReservesUsd = componentSumUsd - reservesUsd;
   const driftVsLiabilitiesUsd = componentSumUsd - liabilitiesUsd;
-  if (Math.abs(driftVsReservesUsd) > COMPONENT_SUM_TOLERANCE_USD) {
+  if (-driftVsLiabilitiesUsd > COMPONENT_SUM_TOLERANCE_USD) {
     warnings.push(reserveDegradedWarning(
-      "bridge-component-sum-drift",
-      `Reserve components sum to $${componentSumUsd.toFixed(2)}, a $${driftVsReservesUsd.toFixed(2)} drift `
-      + `from published reserve assets ($${reservesUsd.toFixed(2)}), beyond `
+      "bridge-itemized-backing-shortfall",
+      `Itemized reserve components sum to $${componentSumUsd.toFixed(2)}, $${(-driftVsLiabilitiesUsd).toFixed(2)} `
+      + `short of the measured on-chain liability ($${liabilitiesUsd.toFixed(2)}), beyond `
       + `the $${COMPONENT_SUM_TOLERANCE_USD.toFixed(0)} rounding tolerance`,
+    ));
+  }
+  const excessToleranceUsd = Math.max(COMPONENT_SUM_TOLERANCE_USD, reservesUsd * COMPONENT_EXCESS_REL_TOLERANCE);
+  if (driftVsReservesUsd > excessToleranceUsd) {
+    warnings.push(reserveDegradedWarning(
+      "bridge-component-excess",
+      `Itemized reserve components sum to $${componentSumUsd.toFixed(2)}, $${driftVsReservesUsd.toFixed(2)} `
+      + `above published reserve assets ($${reservesUsd.toFixed(2)}), beyond the `
+      + `${(COMPONENT_EXCESS_REL_TOLERANCE * 100).toFixed(2)}% rounding bound`,
+    ));
+  } else if (-driftVsLiabilitiesUsd <= COMPONENT_SUM_TOLERANCE_USD
+    && Math.abs(driftVsReservesUsd) > COMPONENT_SUM_TOLERANCE_USD) {
+    const residualUsd = reservesUsd - componentSumUsd;
+    warnings.push(reserveInfoWarning(
+      "bridge-unitemized-reserve-surplus",
+      `Published reserve assets ($${reservesUsd.toFixed(2)}) differ from itemized components `
+      + `($${componentSumUsd.toFixed(2)}) by a signed $${residualUsd.toFixed(2)} residual; `
+      + `itemized components cover the on-chain liability`,
     ));
   }
 

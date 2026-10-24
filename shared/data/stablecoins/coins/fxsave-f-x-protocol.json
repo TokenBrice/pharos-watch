@@ -66,6 +66,12 @@
         "name": "fxSP stability-pool shares",
         "risk": "medium",
         "expectedAssetAddress": "0x65c9a641afceb9c0e6034e558a319488fa0fa3be"
+      },
+      "redemptionLock": [
+        { "selector": "redeemCoolDownPeriod()", "kind": "cooldown-seconds", "target": "asset" }
+      ],
+      "redemptionLiquidity": {
+        "source": "atomic-full-backing"
       }
     }
   },

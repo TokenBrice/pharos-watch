@@ -6,13 +6,14 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import { rethrowIfAborted } from "../../lib/abort";
 import { MULTICALL3_ADDRESS } from "../../lib/evm-rpc";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeBalanceOfCallData } from "../../lib/evm-selectors";
-import { decodeStrictAddressWord, decodeUint256Word } from "./abi-decode";
+import { decodeAbiWordAt, decodeStrictAddressWord, decodeUint256Word } from "./abi-decode";
 import { ERC4626_ASSET_SELECTOR, ERC4626_TOTAL_ASSETS_SELECTOR } from "./erc4626";
 import { multicallResultByLabel } from "./onchain-identity";
 import {
   buildUnknownExposureWarning,
   fetchTextWithRetry,
   fetchOnchainMulticall3,
+  notApplicableFreshnessMetadata,
   unverifiedFreshnessMetadata,
   requireJsonInput,
   reserveInfoWarning,
@@ -23,6 +24,11 @@ import {
 const SHARE_SCALE = 10n ** 18n;
 const PCT_MICRO_SCALE = 100_000_000n;
 const PERCENTAGE_TOLERANCE_PCT = 1.5;
+// sUSDai LoanRouterPositionManager.loanRouterBalances() -> (pending principal, accrued interest).
+const LOAN_ROUTER_BALANCES_SELECTOR = "0x66518b81";
+// sUSDai balances() -> (USDai deposit balance, USDai reserved for serviced redemptions).
+const VAULT_BALANCES_SELECTOR = "0x7bb98a68";
+const DEPOSIT_TIMELOCK_BALANCE_SELECTOR = "0x37d0a739";
 
 interface UsdAiProofOfReservesEntry {
   type?: string;
@@ -30,6 +36,7 @@ interface UsdAiProofOfReservesEntry {
   chain?: number;
   share?: string | number;
   amount?: string | number;
+  remainingAmount?: string | number;
   reserveLink?: string;
 }
 
@@ -45,7 +52,7 @@ const SHARE_TOTAL_SCALE = 1_000_000_000_000_000_000n;
 
 function quoteUnsafeIntegerWeightFields(raw: string): string {
   return raw.replace(
-    /("(?:share|amount)"\s*:\s*)(\d+)(?=\s*[,}])/g,
+    /("(?:share|amount|remainingAmount)"\s*:\s*)(\d+)(?=\s*[,}])/g,
     (_match, prefix: string, value: string) => `${prefix}"${value}"`,
   );
 }
@@ -336,7 +343,7 @@ async function anchorUsdAiComposition(
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,
-): Promise<{ metadata?: AdapterResult["metadata"]; warning?: LiveReserveWarning }> {
+): Promise<{ metadata?: AdapterResult["metadata"]; warning?: LiveReserveWarning; slices?: ReserveSlice[] }> {
   const params = parseLiveReserveAdapterParams("usdai-proof-of-reserves", config.params);
   const anchor = params.anchor;
   if (!anchor) throw new Error("on-chain anchor is not configured");
@@ -370,6 +377,9 @@ async function anchorUsdAiComposition(
       { label: "vault-decimals", contract: anchor.vaultAddress, data: DECIMALS_SELECTOR },
       { label: "asset-decimals", contract: anchor.assetAddress, data: DECIMALS_SELECTOR },
       { label: "idle-asset", contract: anchor.assetAddress, data: encodeBalanceOfCallData(anchor.vaultAddress) },
+      { label: "loan-router-balances", contract: anchor.vaultAddress, data: LOAN_ROUTER_BALANCES_SELECTOR },
+      { label: "vault-balances", contract: anchor.vaultAddress, data: VAULT_BALANCES_SELECTOR },
+      { label: "deposit-timelock", contract: anchor.vaultAddress, data: DEPOSIT_TIMELOCK_BALANCE_SELECTOR },
       ...anchor.liquidReserves.flatMap((reserve, index) => [
         { label: `balance-${index}`, contract: reserve.tokenAddress, data: encodeBalanceOfCallData(reserve.holderAddress) },
         { label: `decimals-${index}`, contract: reserve.tokenAddress, data: DECIMALS_SELECTOR },
@@ -398,25 +408,58 @@ async function anchorUsdAiComposition(
     (actual > expected ? actual - expected : expected - actual) * 10_000n <= expected * BigInt(anchor.toleranceBps);
   const totalShare = entries.reduce((sum, row) => sum + (parseIntegerLike(row.share) ?? 0n), 0n);
   if (!withinTolerance(totalShare, SHARE_SCALE)) return mismatch("composition shares are incomplete");
-  // No on-chain total matches the composition share basis: the payload's shares
-  // divide the hub PYUSD sleeve plus legacy deals at their remaining balances,
-  // while the vault's ERC-4626 totalAssets (idle asset plus loan positions, per
-  // docs.usd.ai "Share Pricing - Net Asset Value") reconciles with the idle asset
-  // plus the amount-only rows the composition ignores. Those scope-mixed sums are
-  // recorded as diagnostics instead of thresholded, so no false mismatch can be
-  // manufactured by comparing aggregates the issuer itself keeps inconsistent.
+  // The payload's shares divide the hub PYUSD sleeve plus the share-bearing
+  // deals at their sUSDai-held remaining principal. The PYUSD leg is an
+  // identity gate against the hub balance and the deal leg binds to sUSDai's
+  // on-chain pending loan principal (LoanRouterPositionManager.
+  // loanRouterBalances: originated tranche amounts net of repaid principal);
+  // the API omits loan terms hashes, so deals bind in aggregate, not per row.
+  // Published slices then use the vault basis: USDai deposit balance net of
+  // serviced redemptions, deposit-timelock USDai and pending principal, which
+  // must reconcile to ERC-4626 totalAssets. The residual is net accrued loan,
+  // escrow and base-yield interest, disclosed rather than sliced.
   const idleAsset = uint("idle-asset");
   let shareBasisDealAmount = 0n;
   let amountOnlyDealAmount = 0n;
+  let dealRemainingAmount = 0n;
+  let dealShare = 0n;
+  let corroborationGap: string | null = null;
   for (const row of entries) {
-    if (row.type?.trim().toUpperCase() !== "DEAL") continue;
+    const type = row.type?.trim().toUpperCase();
+    const share = parseIntegerLike(row.share);
+    if (type !== "DEAL") {
+      if (type !== "TBILL" && share != null && share > 0n) corroborationGap ??= "unmapped-share-rows";
+      continue;
+    }
     const amount = parseIntegerLike(row.amount);
-    if (amount == null) continue;
-    if (parseIntegerLike(row.share) == null) amountOnlyDealAmount += amount;
-    else shareBasisDealAmount += amount;
+    if (share == null) {
+      if (amount != null) amountOnlyDealAmount += amount;
+      continue;
+    }
+    if (amount != null) shareBasisDealAmount += amount;
+    dealShare += share;
+    const remaining = parseIntegerLike(row.remainingAmount);
+    if (remaining == null) corroborationGap ??= "deal-remaining-amount-missing";
+    else dealRemainingAmount += remaining;
   }
+  const twoWords = (label: string): [bigint, bigint] | null => {
+    const raw = multicallResultByLabel(results, label);
+    if (raw?.length !== 2 + 128) return null;
+    const first = decodeUint256Word(decodeAbiWordAt(raw, 0));
+    const second = decodeUint256Word(decodeAbiWordAt(raw, 1));
+    return first == null || second == null ? null : [first, second];
+  };
+  const pendingLoanPrincipal = twoWords("loan-router-balances")?.[0] ?? null;
+  if (pendingLoanPrincipal == null) corroborationGap ??= "loan-principal-unreadable";
+  const vaultBalances = twoWords("vault-balances");
+  const vaultDepositBalance = vaultBalances && vaultBalances[0] >= vaultBalances[1]
+    ? vaultBalances[0] - vaultBalances[1]
+    : null;
+  const depositTimelock = decodeUint256Word(multicallResultByLabel(results, "deposit-timelock"));
+  if (vaultDepositBalance == null || depositTimelock == null) corroborationGap ??= "vault-balances-unreadable";
   const checkedRows = [];
   let totalLiquidBalance = 0n;
+  const liquidBuckets: { balance: bigint; share: bigint }[] = [];
   for (const [index, reserve] of anchor.liquidReserves.entries()) {
     const row = matchedRows[index][0];
     const amount = parseIntegerLike(row.amount);
@@ -428,24 +471,103 @@ async function anchorUsdAiComposition(
     if (!withinTolerance(amount, balance)) {
       return mismatch(`${reserve.name} exceeds ${anchor.toleranceBps} bps tolerance at block ${block}: amount=${amount}, balance=${balance} (18-decimal accounting)`);
     }
+    liquidBuckets.push({ balance, share });
     checkedRows.push({ name: reserve.name, tokenAddress: reserve.tokenAddress, amountRaw: amount.toString(), balanceRaw: balance.toString() });
   }
   if (totalLiquidBalance <= 0n) return mismatch("no positive liquid exposure can anchor the composition");
+  if (corroborationGap == null && pendingLoanPrincipal != null) {
+    const denominator = totalLiquidBalance + pendingLoanPrincipal;
+    if (!withinTolerance(dealRemainingAmount, pendingLoanPrincipal)) corroborationGap = "deal-principal-mismatch";
+    else if (!withinTolerance(dealShare, pendingLoanPrincipal * SHARE_SCALE / denominator)
+      || liquidBuckets.some(({ balance, share }) => !withinTolerance(share, balance * SHARE_SCALE / denominator))) {
+      corroborationGap = "share-weights-mismatch";
+    }
+  }
+  const vaultBasis = vaultDepositBalance != null && depositTimelock != null && pendingLoanPrincipal != null
+    ? vaultDepositBalance + depositTimelock + pendingLoanPrincipal
+    : null;
+  // balances() is accounting; the deposit leg is only custody evidence when the
+  // vault's observed USDai covers the gross deposit balance, redemption-reserved
+  // USDai included.
+  if (corroborationGap == null && vaultBalances != null
+    && idleAsset * 10_000n < vaultBalances[0] * BigInt(10_000 - anchor.toleranceBps)) {
+    corroborationGap = "idle-custody-shortfall";
+  }
+  if (corroborationGap == null && vaultBasis != null && !withinTolerance(vaultBasis, totalAssets)) {
+    corroborationGap = "vault-total-assets-unreconciled";
+  }
+  const anchorDetails = {
+    block: Number(block), checkedRows, tolerance: anchor.toleranceBps / 10_000,
+    idleAssetRaw: idleAsset.toString(), shareBasisDealAmountRaw: shareBasisDealAmount.toString(),
+    amountOnlyDealAmountRaw: amountOnlyDealAmount.toString(),
+    dealRemainingAmountRaw: dealRemainingAmount.toString(),
+    ...(pendingLoanPrincipal != null ? { pendingLoanPrincipalRaw: pendingLoanPrincipal.toString() } : {}),
+    ...(vaultDepositBalance != null ? { vaultDepositBalanceRaw: vaultDepositBalance.toString() } : {}),
+    ...(depositTimelock != null ? { depositTimelockRaw: depositTimelock.toString() } : {}),
+    ...(vaultBasis != null ? { vaultBasisRaw: vaultBasis.toString(), accruedResidualRaw: (totalAssets - vaultBasis).toString() } : {}),
+    totalAssetsRaw: totalAssets.toString(), totalSupplyRaw: totalSupply.toString(),
+  };
+  const observedBlock = { number: Number(block), timestamp: Number(timestamp) };
+  if (corroborationGap == null && vaultBasis != null) {
+    // Every published weight is now an amount read at this block, so the
+    // composition is same-run on-chain state rather than an undated API book.
+    // depositTimelockBalance() is sUSDai's own accounting: EscrowTimelock
+    // deposits move the USDai to an escrow administrator (offchain escrow per
+    // the API), so the leg is a receivable whose token custody is unproven.
+    // Below the reconciliation tolerance it cannot move the published book.
+    const escrowMaterial = depositTimelock! * 10_000n > totalAssets * BigInt(anchor.toleranceBps);
+    const corroboration = escrowMaterial
+      ? { status: "unverified", reason: "escrow-receivable-unverified" }
+      : { status: "corroborated" };
+    const slices = slicesFromPercentages([
+      {
+        sourceKey: "usdai-proof-of-reserves:vault-usdai", name: "USDai (idle in sUSDai vault)",
+        pct: ratioToPct(vaultDepositBalance!, vaultBasis), risk: "low", coinId: "usdai-usd-ai", depType: "collateral",
+      },
+      {
+        sourceKey: "usdai-proof-of-reserves:escrow-receivable", name: "Escrowed USDai receivable (pending deals)",
+        pct: ratioToPct(depositTimelock!, vaultBasis), risk: "high",
+      },
+      {
+        sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)",
+        pct: ratioToPct(pendingLoanPrincipal!, vaultBasis), risk: "high",
+      },
+    ], { decimals: 1, context: "USD.AI sUSDai vault basis" });
+    return {
+      slices,
+      ...(escrowMaterial ? {
+        warning: reserveDegradedWarning(
+          "usdai-composition-unverified",
+          "USD.AI vault legs reconcile to totalAssets, but the escrowed USDai receivable has no on-chain custody evidence (escrow-receivable-unverified)",
+        ),
+      } : {}),
+      metadata: {
+        ...notApplicableFreshnessMetadata({
+          freshnessSource: "usdai-onchain-composition-anchor",
+          anchor: { ...anchorDetails, compositionCorroboration: corroboration },
+        }),
+        observedBlock,
+        compositionBasis: "vault-total-assets",
+        issuerSharePcts: {
+          liquid: liquidBuckets.reduce((sum, { share }) => sum + shareToPct(share), 0),
+          deal: shareToPct(dealShare),
+        },
+        liquidBucketCount: 1,
+        liquidReserveLabels: ["USDai (idle in sUSDai vault)"],
+        unknownExposurePct: 0,
+      },
+    };
+  }
   const freshness = unverifiedFreshnessMetadata("usdai-proof-of-reserves-api", "Liquid balance observations do not corroborate composition shares");
   return {
-    warning: reserveDegradedWarning("usdai-composition-unverified", "USD.AI liquid amounts match on-chain balances, but composition shares have no independently corroborated denominator"),
+    warning: reserveDegradedWarning("usdai-composition-unverified", `USD.AI liquid amounts match on-chain balances, but composition shares are not corroborated (${corroborationGap})`),
     metadata: {
       ...freshness,
       details: {
         ...freshness.details,
-        anchor: {
-          block: Number(block), checkedRows, tolerance: anchor.toleranceBps / 10_000,
-          idleAssetRaw: idleAsset.toString(), shareBasisDealAmountRaw: shareBasisDealAmount.toString(),
-          amountOnlyDealAmountRaw: amountOnlyDealAmount.toString(),
-          totalAssetsRaw: totalAssets.toString(), totalSupplyRaw: totalSupply.toString(),
-        },
+        anchor: { ...anchorDetails, compositionCorroboration: { status: "unverified", reason: corroborationGap } },
       },
-      observedBlock: { number: Number(block), timestamp: Number(timestamp) },
+      observedBlock,
     },
   };
 }
@@ -465,6 +587,7 @@ export async function fetchUsdAiProofOfReserves(
   const result = adaptUsdAiProofOfReserves(entries);
   try {
     const anchor = await anchorUsdAiComposition(entries, config, signal, ctx);
+    if (anchor.slices) result.slices = anchor.slices;
     if (anchor.metadata) result.metadata = { ...result.metadata, ...anchor.metadata };
     if (anchor.warning) result.warnings = [...(result.warnings ?? []), anchor.warning];
   } catch (error) {

@@ -177,8 +177,45 @@ describe("store-history-read", () => {
       const rollup = await loadReserveSyncReliabilityRollup(db, 3000, 1000);
 
       expect(rollup).toEqual([
-        { adapterKey: "adapter-a", attempts: 4, ok: 2, degraded: 1, error: 1, skipped: 0, successRate: 0.5 },
-        { adapterKey: "adapter-b", attempts: 2, ok: 0, degraded: 0, error: 0, skipped: 2, successRate: 0 },
+        { adapterKey: "adapter-a", attempts: 4, ok: 2, degraded: 1, degradedByDesign: 0, error: 1, skipped: 0, successRate: 0.5 },
+        { adapterKey: "adapter-b", attempts: 2, ok: 0, degraded: 0, degradedByDesign: 0, error: 0, skipped: 2, successRate: 0 },
+      ]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("counts degraded attempts whose only degraded warnings are structural as by design", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const structural = { code: "nav-portfolio-composition-unverified", message: "m", severity: "warning", effect: "degraded" };
+    const operational = { code: "source-stale", message: "m", severity: "warning", effect: "degraded" };
+    const info = { code: "primary-fallback-used", message: "m", severity: "info", effect: "info" };
+    try {
+      const rows: Array<[string, string | null]> = [
+        ["ok", null],
+        ["degraded", JSON.stringify([structural])],
+        ["degraded", JSON.stringify([structural, info])],
+        ["degraded", JSON.stringify([structural, operational])],
+        // Legacy rows without `effect` decode as degraded unless info severity.
+        ["degraded", JSON.stringify([structural, { code: "source-stale", message: "m", severity: "warning" }])],
+        ["degraded", JSON.stringify([structural, { code: "note", message: "m", severity: "info" }])],
+        ["degraded", JSON.stringify([structural, { code: "no-message", severity: "info", effect: "info" }])],
+        ["degraded", JSON.stringify([structural, { code: "blank", message: "\t\n", severity: "info", effect: "info" }])],
+        ["degraded", JSON.stringify([operational])],
+        ["degraded", JSON.stringify([{ ...structural, code: undefined }])],
+        ["degraded", JSON.stringify(["nav-portfolio-composition-unverified"])],
+        ["degraded", "not json"],
+        ["degraded", null],
+        ["error", JSON.stringify([structural])],
+      ];
+      rows.forEach(([status, warnings], index) => insertAttempt(sqlite, {
+        stablecoinId: `coin-${index}`, attemptedAt: 2000, adapterKey: "chainlink-nav", status, warnings,
+      }));
+
+      const rollup = await loadReserveSyncReliabilityRollup(db, 3000, 1000);
+
+      expect(rollup).toEqual([
+        { adapterKey: "chainlink-nav", attempts: 14, ok: 1, degraded: 12, degradedByDesign: 3, error: 1, skipped: 0, successRate: 4 / 14 },
       ]);
     } finally {
       sqlite.close();

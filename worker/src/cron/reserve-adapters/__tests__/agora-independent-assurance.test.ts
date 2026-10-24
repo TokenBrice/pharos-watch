@@ -6,7 +6,9 @@ import { indexFixture, verifyFixtureIndex } from "./independent-assurance.test-s
 
 const manifest = getIndependentAssuranceManifest("AUSD");
 const profile = AGORA_INDEPENDENT_ASSURANCE_PROFILE;
-const prepare = profile.prepareIndexHtml!;
+// Agora returns prepared HTML only; it reports no out-of-band newer entry.
+const prepare = async (...args: Parameters<NonNullable<typeof profile.prepareIndexHtml>>) =>
+  (await profile.prepareIndexHtml!(...args)) as string;
 const fixture = "agora-transparency-2026-09-30-august.html";
 const fern = `/_fern-files${new URL(manifest.reportUrl).pathname}`;
 const anchor = (href: string) => `<a href="${href}">2026 Aug - Agora Dollar Reserve Report</a>`;
@@ -67,8 +69,10 @@ describe("Agora reviewed August examination", () => {
     await expect(prepare(html, new AbortController().signal)).rejects.toThrow("reviewed report link missing or ambiguous");
   });
 
-  it("fails closed on a newer report and undated candidates", async () => {
-    await expect(verifyFixtureIndex("AUSD", profile, fixture, indexFixture(fixture) + anchor("https://files.buildwithfern.com/2026%20Sep%20Agora%20Dollar%20Reserve%20Report.pdf"))).rejects.toThrow("newer unreviewed report");
+  it("reports a newer report as unreviewed and fails closed on undated candidates", async () => {
+    const newer = "https://files.buildwithfern.com/2026%20Sep%20Agora%20Dollar%20Reserve%20Report.pdf";
+    await expect(verifyFixtureIndex("AUSD", profile, fixture, indexFixture(fixture) + anchor(newer), true))
+      .resolves.toMatchObject({ newerUnreviewedReport: { reportDate: "2026-09-30", reportUrl: newer } });
     await expect(verifyFixtureIndex("AUSD", profile, fixture, indexFixture(fixture) + '<a href="/Agora%20Dollar%20Reserve%20Report.pdf">Report</a>')).rejects.toThrow("ambiguous report date");
   });
 

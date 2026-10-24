@@ -113,9 +113,15 @@ describe("MYRC hash-pinned examination", () => {
     [{ ...index[0], product: "OTHER" }],
     [{ ...index[0], fileUrl: index[0].fileUrl.replace("August", "September") }],
     [{ ...index[0], fileUrl: index[0].fileUrl.replace("cdn.blox.my", "evil.example") }],
-    [...index, { ...index[0], month: 9, fileUrl: "https://cdn.blox.my/attestations/2026/Blox Attestation Report-2026-09-September.pdf" }],
-  ])("rejects changed, ambiguous, malformed or newer unreviewed discovery: %j", async (payload) => {
+  ])("rejects changed, ambiguous or malformed discovery: %j", async (payload) => {
     await expect(verifyMyrcIndexJson(JSON.stringify(payload), manifest)).rejects.toThrow();
+  });
+
+  it("keeps the reviewed examination and names a newer unreviewed report", async () => {
+    const september = "https://cdn.blox.my/attestations/2026/Blox Attestation Report-2026-09-September.pdf";
+    await expect(verifyMyrcIndexJson(JSON.stringify([...index, { ...index[0], month: 9, fileUrl: september }]), manifest))
+      .resolves.toEqual({ reportUrl: new URL(september).href });
+    await expect(verifyMyrcIndexJson(JSON.stringify(index), manifest)).resolves.toBeNull();
   });
 
   it("rejects altered PDF content even at the reviewed length", async () => {

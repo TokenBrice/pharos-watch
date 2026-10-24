@@ -53,6 +53,19 @@ describe("live-reserves-store", () => {
     expect(admission.reasons).toEqual(eligible ? [] : ["degraded-snapshot"]);
   });
 
+  it("excuses a newer unreviewed report for scoring by default but never a stale pinned report", () => {
+    const coin = WORKER_TRACKED_META_BY_ID.get("iusd-infinifi")!;
+    const config = { ...coin.liveReservesConfig!, scoring: { ...coin.liveReservesConfig!.scoring, allowedDegradedWarningCodes: [] } };
+    const newer = { code: "newer-unreviewed-report", message: "newer report", severity: "warning", effect: "degraded" } as const;
+    const stale = { code: "stale-source-data", message: "stale", severity: "warning", effect: "degraded" } as const;
+    const admit = (warnings: (typeof newer | typeof stale)[]) => evaluateLiveReserveAdmission(
+      reserveCompositionInput("retained", { metadata: { freshnessMode: "not-applicable" }, warningCount: warnings.length, warnings }),
+      reserveSyncStateInput("retained", { lastStatus: "degraded" }), { liveReservesConfig: config }, 1_200,
+    );
+    expect(admit([newer])).toMatchObject({ eligible: true, reasons: [] });
+    expect(admit([newer, stale]).reasons).toEqual(["degraded-snapshot"]);
+  });
+
   it.each(["fatal", "info"] as const)("serves retained %s warnings without promoting fatal evidence", async (effect) => {
     const warnings = JSON.stringify([{ code: "retained-warning", message: "Stored evidence warning", severity: "info", effect }]);
     const composition = reserveCompositionRow({

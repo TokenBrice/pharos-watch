@@ -97,7 +97,7 @@
       "label": "Midas mRe7YIELD NAV"
     },
     "scoring": {
-      "maxSourceAgeSec": 604800
+      "maxSourceAgeSec": 1209600
     },
     "inputs": {
       "primary": {

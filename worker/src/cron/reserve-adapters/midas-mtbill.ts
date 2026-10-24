@@ -56,9 +56,12 @@ const ReportSchema = z.object({
     }).strict() }),
   }),
 });
+// USTB and BUIDL are required; the operating USDC wallet row (first seen
+// 2026-10-23) is a reviewed optional position. Any other tuple fails closed.
 const HOLDINGS = [
-  { tuple: "('USTB', 'CASH', 'wallet', 'ethereum', 'USTB')", sourceKey: "midas-mtbill:ustb", name: "Superstate Short Duration US Government Securities Fund (USTB)", coinId: "ustb-superstate" },
-  { tuple: "('BUIDL', 'CASH', 'wallet', 'ethereum', 'BUIDL')", sourceKey: "midas-mtbill:buidl", name: "BlackRock USD Institutional Digital Liquidity Fund (BUIDL)", coinId: "buidl-blackrock" },
+  { tuple: "('USTB', 'CASH', 'wallet', 'ethereum', 'USTB')", sourceKey: "midas-mtbill:ustb", name: "Superstate Short Duration US Government Securities Fund (USTB)", coinId: "ustb-superstate", optional: false },
+  { tuple: "('BUIDL', 'CASH', 'wallet', 'ethereum', 'BUIDL')", sourceKey: "midas-mtbill:buidl", name: "BlackRock USD Institutional Digital Liquidity Fund (BUIDL)", coinId: "buidl-blackrock", optional: false },
+  { tuple: "('USDC', 'CASH', 'wallet', 'ethereum', 'USDC')", sourceKey: "midas-mtbill:usdc", name: "USDC (Circle)", coinId: "usdc-circle", optional: true },
 ] as const;
 const CLAIM_IDS = ["ops_claim", "oracle_price", "oracle_price_usd", "overcollateralization", "overcollateralization_ratio", "onetoken_report", "onetoken_total_nav"] as const;
 const hex32 = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
@@ -317,8 +320,10 @@ function adaptMidasMtbillPortfolio(payload: unknown, checkpoint: AuthenticatedCh
   if (!parsed.success) fail("save-historical-scope");
   const { reports } = parsed.data;
   const { pv_usd: positions, delta_usd: deltas } = reports.main_positions;
-  if (Object.keys(positions).length !== HOLDINGS.length || Object.keys(deltas).length !== HOLDINGS.length
-    || HOLDINGS.some(({ tuple }) => positions[tuple] == null || positions[tuple] <= 0 || positions[tuple] !== deltas[tuple])) fail("save-position-scope");
+  const held = HOLDINGS.filter(({ tuple }) => positions[tuple] != null);
+  if (Object.keys(positions).length !== held.length || Object.keys(deltas).length !== held.length
+    || HOLDINGS.some(({ tuple, optional }) => !optional && positions[tuple] == null)
+    || held.some(({ tuple }) => positions[tuple] <= 0 || positions[tuple] !== deltas[tuple])) fail("save-position-scope");
   const totalMillions = reports.assets_by_protocol.equity.total;
   const exactTotals = [
     reports.assets_by_protocol.assets.total, reports.assets_by_protocol.assets.wallet,
@@ -331,7 +336,7 @@ function adaptMidasMtbillPortfolio(payload: unknown, checkpoint: AuthenticatedCh
   const roundedPairs = [[eth, reports.asset_values.pv_usd.ethereum], [base, reports.asset_values.pv_usd.base], [reports.asset_values.pv_usd.total, totalMillions]];
   if (roundedPairs.some(([rounded, exact]) => Math.abs(rounded - exact) * MILLION > 1_000)) fail("save-rounded-totals-mismatch");
   const totalReserveUsd = totalMillions * MILLION;
-  const namedTotalUsd = HOLDINGS.reduce((sum, holding) => sum + positions[holding.tuple] * MILLION, 0);
+  const namedTotalUsd = held.reduce((sum, holding) => sum + positions[holding.tuple] * MILLION, 0);
   const residualUsd = totalReserveUsd - namedTotalUsd;
   const chainGapUsd = (totalMillions - eth - base) * MILLION;
   // Chain gaps and Base are contained ONCE in the full named-position remainder.
@@ -340,7 +345,7 @@ function adaptMidasMtbillPortfolio(payload: unknown, checkpoint: AuthenticatedCh
     || namedTotalUsd - eth * MILLION > 1_000 || base * MILLION > residualUsd) fail("save-residual-scope");
   return {
     slices: [
-      ...HOLDINGS.map((holding) => ({
+      ...held.map((holding) => ({
         sourceKey: holding.sourceKey, name: holding.name,
         pct: positions[holding.tuple] * MILLION / totalReserveUsd * 100,
         risk: "low" as const, coinId: holding.coinId, depType: "collateral" as const,

@@ -104,12 +104,14 @@ describe("LeverUp LVUSD reserve census", () => {
 
   it.each([
     ["exact par coverage", fixture.reserveRaw * 10n ** 12n, false],
-    ["just below par coverage", fixture.reserveRaw * 10n ** 12n + 10n ** 12n, true],
-  ])("retains strict undercoverage at %s", async (_label, supply, degraded) => {
+    ["just below par coverage", fixture.reserveRaw * 10n ** 12n + 10n ** 12n, false],
+    ["coverage below the shared 99.5% threshold", fixture.reserveRaw * 10n ** 12n * 101n / 100n, true],
+  ])("applies the shared coverage-shortfall threshold at %s", async (_label, supply, degraded) => {
     const result = await observe({ [`${fixture.lvusd}:totalSupply()`]: supply }, 1);
     expect(result.warnings?.some((warning) => warning.code === "undercollateralized") ?? false).toBe(degraded);
-    if (degraded) expect(result.metadata?.collateralizationRatio).toBeLessThan(1);
-    else expect(result.metadata?.collateralizationRatio).toBe(1);
+    // The measured ratio stays published unclamped either way.
+    if (supply === fixture.reserveRaw * 10n ** 12n) expect(result.metadata?.collateralizationRatio).toBe(1);
+    else expect(result.metadata?.collateralizationRatio).toBeLessThan(1);
   });
 
   it("preserves the measured coverage deficit instead of treating USDC composition as solvency", async () => {

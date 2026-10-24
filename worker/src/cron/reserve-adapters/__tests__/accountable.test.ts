@@ -13,6 +13,7 @@ import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
 import utyxsy from "@shared/data/stablecoins/coins/uty-xsy.json";
 import usn from "@shared/data/stablecoins/coins/usn-noon.json";
 import trusd from "@shared/data/stablecoins/coins/trusd-tori.json";
+import axis from "@shared/data/stablecoins/coins/usdx-axis.json";
 import toriPayload from "./fixtures/accountable-tori-2026-09-30.json";
 import octoberCapture from "./fixtures/accountable-oct7-2026.json";
 import {
@@ -162,7 +163,7 @@ describe("adaptAccountableDashboard", () => {
     }));
   });
 
-  it("replays Axis's anonymous venue book as unknown locations, not collateral assets", async () => {
+  it("replays Axis's reviewed anonymous venue book as high-risk locations, not collateral assets", async () => {
     const { result } = await runAdapter("accountable", "usdx-axis", {
       network: { json: { "https://axis.accountable.capital:8443/dashboard": octoberCapture.axis } },
       nowSec: Date.parse("2026-10-07T20:47:43Z") / 1000,
@@ -170,6 +171,26 @@ describe("adaptAccountableDashboard", () => {
     expect(result.metadata?.sourceTimestamp).toBe(Math.floor(Number(octoberCapture.axis.data.ts) / 1000));
     expect(result.slices.length).toBeGreaterThan(0);
     expect(result.slices.every((slice) => slice.risk === "high" && slice.coinId == null && slice.depType == null)).toBe(true);
+    for (const slice of result.slices) {
+      const hash = /^Undisclosed exchange venue ([0-9a-f]{8})$/.exec(slice.name)?.[1];
+      expect(hash).toBeDefined();
+      expect(slice.sourceKey).toBe(`accountable:axis:deployment:exchange-${hash}`);
+    }
+    expect(result.metadata?.unknownExposurePct).toBeUndefined();
+    expect(result.warnings?.some((warning) => warning.code === "unmapped-bucket") ?? false).toBe(false);
+  });
+
+  it("still degrades a material unseen Axis venue", () => {
+    const params = parseLiveReserveAdapterParams("accountable", axis.liveReservesConfig.params);
+    const result = adaptAccountableDashboard({ res: "ok", data: {
+      collateralization: 1,
+      ts: "1785150653410",
+      reserves: { reserves_split: [
+        { name: "Exchange 576c4011", value: 900 },
+        { name: "Exchange 00000000", value: 100 },
+      ] },
+    } }, params);
+    expect(result.metadata?.unknownExposurePct).toBe(10);
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "unmapped-bucket", effect: "degraded" }));
   });
 
@@ -939,6 +960,52 @@ describe("adaptAccountableDashboard", () => {
     }))).rejects.toThrow(
       /Accountable exposure_split bucket total 63527322\.23 does not match total_reserves 65000000/,
     );
+  });
+
+  it("accepts a Yuzu exposure split that matches either dated timeline bracket", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+    // 2026-10-24 production shape: the nearer prior point misses by 1.25%, the
+    // following dated point reconciles within 1%.
+    const result = await runAccountablePayload(config, makeTimestampedYuzuPayload({
+      total_reserves: 63_674_602.15,
+      total_supply: 63_674_602.15,
+      exposure_split: { Liquidity_Buffer: { "": 63_184_121.16 } },
+      timeline: [
+        { ts: String((1_787_556_676 - 5 * 3_600) * 1_000), reserves: 63_987_343.32 },
+        { ts: String((1_787_556_676 + 7 * 3_600) * 1_000), reserves: 63_618_809.65 },
+        { ts: "1787848065315", reserves: 63_674_602.15 },
+      ],
+    }));
+    expect(result.metadata).toMatchObject({
+      exposureSplitTimelineTimestamp: 1_787_556_676 + 7 * 3_600,
+      exposureSplitTimelineTotalReserves: 63_618_809.65,
+    });
+  });
+
+  it("never reconciles a Yuzu exposure split against the moving live timeline point", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+    const live = { ts: "1787848065315", reserves: 1_000 };
+    await expect(runAccountablePayload(config, makeTimestampedYuzuPayload({
+      timeline: [{ ts: "1787600794262", reserves: 1_100 }, live],
+    }))).rejects.toThrow(/bucket total 1000 does not match total_reserves 1100/);
+    await expect(runAccountablePayload(config, makeTimestampedYuzuPayload({
+      exposure_split_ts: "2026.08.27 16:27:45 UTC",
+      timeline: [live],
+    }))).rejects.toThrow(/no valid timeline reserve total/);
+  });
+
+  it("still fails a frozen Yuzu exposure split that misses both dated brackets", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+    // 2026-10-12..10-19 production gap: split frozen at $58.36M vs ~$66.26M.
+    await expect(runAccountablePayload(config, makeTimestampedYuzuPayload({
+      total_reserves: 66_260_883.04,
+      total_supply: 66_260_883.04,
+      exposure_split: { Liquidity_Buffer: { "": 58_358_752.76 } },
+      timeline: [
+        { ts: String((1_787_556_676 - 3_600) * 1_000), reserves: 66_229_989.22 },
+        { ts: String((1_787_556_676 + 3_600) * 1_000), reserves: 66_260_883.04 },
+      ],
+    }))).rejects.toThrow(/bucket total 58358752\.76 does not match total_reserves 66229989\.22/);
   });
 
   it("fails closed when a timestamped Yuzu exposure split has no valid timeline reserve total", async () => {

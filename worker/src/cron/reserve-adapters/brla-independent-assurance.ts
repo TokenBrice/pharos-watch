@@ -13,7 +13,7 @@ import {
   verifyAssurancePdf,
 } from "./independent-assurance";
 import { fetchJsonPostWithRetry, fetchTextResponseWithRetry } from "./request";
-import type { AdapterContext, AdapterResult, IndependentAssuranceProfile } from "./types";
+import type { AdapterContext, AdapterResult, IndependentAssuranceProfile, NewerUnreviewedReport } from "./types";
 import { reserveDegradedWarning } from "./warnings";
 
 const ADAPTER_KEY = "brla-independent-assurance";
@@ -127,7 +127,7 @@ export async function verifyBrlaNotionDiscovery(args: {
   reportHosts: readonly string[];
   signal: AbortSignal;
   ctx?: AdapterContext;
-}): Promise<{ signedUrl: string; sourceTimestamp: number }> {
+}): Promise<{ signedUrl: string; sourceTimestamp: number; newerUnreviewedReport: NewerUnreviewedReport | null }> {
   let index: URL;
   try {
     index = new URL(args.indexUrl);
@@ -173,24 +173,23 @@ export async function verifyBrlaNotionDiscovery(args: {
   }
 
   let latestReportDate: string | null = null;
-  let latestBlockId: string | null = null;
+  const reviewedReportDate = args.manifest.reportDate.replaceAll("-", "");
+  const reviewedDateBlockIds: string[] = [];
   for (const raw of Object.values(yearBlocks)) {
     const block = parseNotionBlock(raw);
     if (!block || block.type !== "file" || !block.title) continue;
     const match = block.title.match(BRLA_REPORT_FILE_PATTERN);
     if (!match) continue;
     const date = match[1];
-    if (latestReportDate == null || date > latestReportDate) {
-      latestReportDate = date;
-      latestBlockId = block.id;
-    }
+    if (date === reviewedReportDate) reviewedDateBlockIds.push(block.id);
+    if (latestReportDate == null || date > latestReportDate) latestReportDate = date;
   }
-  const reviewedReportDate = args.manifest.reportDate.replaceAll("-", "");
-  if (latestReportDate == null || latestReportDate > reviewedReportDate) {
-    throw new Error(`${ADAPTER_KEY}: ${latestReportDate == null ? "no dated reports" : `newer unreviewed report ${latestReportDate}`} on official index`);
+  if (latestReportDate == null) {
+    throw new Error(`${ADAPTER_KEY}: no dated reports on official index`);
   }
-  if (latestReportDate !== reviewedReportDate || latestBlockId !== BRLA_NOTION_PIN.reportBlockId) {
-    throw new Error(`${ADAPTER_KEY}: reviewed report is not the latest report on official index`);
+  if (latestReportDate < reviewedReportDate || reviewedDateBlockIds.length !== 1 ||
+    reviewedDateBlockIds[0] !== BRLA_NOTION_PIN.reportBlockId) {
+    throw new Error(`${ADAPTER_KEY}: reviewed report is missing or duplicated on official index`);
   }
   const reportBlock = parseNotionBlock(yearBlocks[BRLA_NOTION_PIN.reportBlockId]);
   if (!reportBlock || reportBlock.type !== "file" || reportBlock.title !== BRLA_NOTION_PIN.attachmentTitle) {
@@ -229,7 +228,13 @@ export async function verifyBrlaNotionDiscovery(args: {
     throw new Error(`${ADAPTER_KEY}: signed URL block identity drifted`);
   }
 
-  return { signedUrl, sourceTimestamp: independentAssuranceSourceTimestamp(args.manifest) };
+  return {
+    signedUrl,
+    sourceTimestamp: independentAssuranceSourceTimestamp(args.manifest),
+    newerUnreviewedReport: latestReportDate > reviewedReportDate
+      ? { reportDate: `${latestReportDate.slice(0, 4)}-${latestReportDate.slice(4, 6)}-${latestReportDate.slice(6, 8)}` }
+      : null,
+  };
 }
 
 export async function fetchAndVerifyBrlaPdf(args: {
@@ -405,6 +410,8 @@ export async function fetchBrlaIndependentAssuranceReserves(
     verifiedResponseUrl: artifact.responseUrl,
     verifiedByteLength: artifact.byteLength,
     sourceTimestamp: discovery.sourceTimestamp,
+    adapterKey: ADAPTER_KEY,
+    newerUnreviewedReport: discovery.newerUnreviewedReport,
   });
   if (warnings.length === 0) return result;
 

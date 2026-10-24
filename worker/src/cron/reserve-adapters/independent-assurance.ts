@@ -13,11 +13,12 @@ import {
   type LiveReserveAdapterParamsByKey,
 } from "@shared/lib/live-reserve-adapters";
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { collectPdfAnchors, normalizeSlices } from "./helpers";
 import { fetchBinaryResponseWithRetry, fetchTextResponseWithRetry } from "./request";
-import type { AdapterContext, AdapterFn, AdapterResult, IndependentAssuranceProfile } from "./types";
+import type { AdapterContext, AdapterFn, AdapterResult, IndependentAssuranceProfile, NewerUnreviewedReport } from "./types";
 import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
+import { NEWER_UNREVIEWED_REPORT_WARNING_CODE } from "../../lib/live-reserves/store-shared";
 import { formatValidIsoDate, lastDayOfMonth, monthNumberFromLabel } from "./report-date";
 import { AGORA_INDEPENDENT_ASSURANCE_PROFILE } from "./agora-independent-assurance-profile";
 import { ANCHORAGE_ASSURANCE_PROFILES } from "./anchorage-independent-assurance-profile";
@@ -69,7 +70,7 @@ function europReportDate(href: string): string | null {
   return formatDate(year, month, lastDayOfMonth(year, month)!);
 }
 
-function verifyEuropMediaIndex(json: string, manifest: IndependentAssuranceManifest): void {
+function verifyEuropMediaIndex(json: string, manifest: IndependentAssuranceManifest): NewerUnreviewedReport | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(json);
@@ -92,15 +93,14 @@ function verifyEuropMediaIndex(json: string, manifest: IndependentAssuranceManif
   );
   const reviewedUrl = normalizeUrl(manifest.reportUrl, manifest.officialIndexUrl);
   const exact = candidates.filter((candidate) => normalizeUrl(candidate.url, manifest.officialIndexUrl) === reviewedUrl);
-  const latest = candidates.filter((candidate) => candidate.date === latestDate);
-  const newer = latestDate != null && latestDate > manifest.reportDate;
-  const duplicateLatest = latestDate === manifest.reportDate &&
-    (latest.length !== 1 || normalizeUrl(latest[0]!.url, manifest.officialIndexUrl) !== reviewedUrl);
-  if (candidates.length === 0 || newer || duplicateLatest || exact.length !== 1) {
-    throw new Error(
-      `independent-assurance: ${newer ? "newer unreviewed report" : "reviewed report URL is missing or duplicated"} on official index`,
-    );
+  const reviewedDate = candidates.filter((candidate) => candidate.date === manifest.reportDate);
+  if (candidates.length === 0 || exact.length !== 1 || reviewedDate.length !== 1 ||
+    normalizeUrl(reviewedDate[0]!.url, manifest.officialIndexUrl) !== reviewedUrl) {
+    throw new Error("independent-assurance: reviewed report URL is missing or duplicated on official index");
   }
+  return latestDate != null && latestDate > manifest.reportDate
+    ? { reportDate: latestDate, reportUrl: candidates.find((candidate) => candidate.date === latestDate)!.url }
+    : null;
 }
 
 export const EUROP_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
@@ -251,6 +251,24 @@ interface VerifiedIndependentAssuranceArtifact {
   sourceTimestamp: number;
   responseUrl: string;
   byteLength: number;
+  newerUnreviewedReport?: NewerUnreviewedReport | null;
+}
+
+/**
+ * A newer report on the official index is not reviewed evidence. The pinned
+ * reviewed report still publishes, degraded, under its own report clock, so
+ * normal source-age caps decide when it stops being admissible.
+ */
+export function newerUnreviewedReportWarning(
+  adapterKey: string,
+  manifest: Pick<IndependentAssuranceManifest, "reportDate">,
+  newer: NewerUnreviewedReport,
+): LiveReserveWarning {
+  const identity = [newer.reportDate, newer.reportUrl].filter(Boolean).join(" ");
+  return reserveDegradedWarning(
+    NEWER_UNREVIEWED_REPORT_WARNING_CODE,
+    `${adapterKey}: newer unreviewed report${identity ? ` ${identity}` : ""} on official index; publishing the reviewed ${manifest.reportDate} report pending review`,
+  );
 }
 
 function requireHttpsUrl(value: string, label: string): URL {
@@ -376,12 +394,15 @@ export async function verifyIndependentAssuranceReport(args: {
   }
   assertAllowedHost(args.manifest.reportUrl, args.reportHosts, "reviewed PDF");
   const html = await fetchIndexHtml(args.indexUrl, args.indexHost, args.profile, args.signal, args.ctx);
+  let newerUnreviewedReport: NewerUnreviewedReport | null = null;
   if (args.profile.verifyIndexJson) {
-    await args.profile.verifyIndexJson(html, args.manifest, args.signal, args.ctx);
+    newerUnreviewedReport = await args.profile.verifyIndexJson(html, args.manifest, args.signal, args.ctx) ?? null;
   } else {
-    const discoveryHtml = args.profile.prepareIndexHtml
-      ? await args.profile.prepareIndexHtml(html, args.signal, args.ctx)
+    const prepared = args.profile.prepareIndexHtml
+      ? await args.profile.prepareIndexHtml(html, args.signal, args.ctx, args.manifest)
       : html;
+    const discoveryHtml = typeof prepared === "string" ? prepared : prepared.html;
+    if (typeof prepared !== "string") newerUnreviewedReport = prepared.newerUnreviewedReport;
     const candidates = collectReportCandidates(discoveryHtml, args.indexUrl, args.profile);
     const manifestUrl = normalizeUrl(args.manifest.reportUrl, args.indexUrl);
     const exact = candidates.filter((candidate) => candidate.url === manifestUrl);
@@ -394,18 +415,18 @@ export async function verifyIndependentAssuranceReport(args: {
       (latest, candidate) => (candidate.date != null && (latest == null || candidate.date > latest) ? candidate.date : latest),
       null,
     );
-    const latestCandidates = datedCandidates.filter((candidate) => candidate.date === latestDate);
-    const newer = latestDate != null && latestDate > args.manifest.reportDate;
-    const duplicateLatest = latestDate === args.manifest.reportDate &&
-      (latestCandidates.length !== 1 || latestCandidates[0]?.url !== manifestUrl);
-    if (ambiguousDate || newer || duplicateLatest || exact.length !== 1) {
+    const reviewedDateCandidates = datedCandidates.filter((candidate) => candidate.date === args.manifest.reportDate);
+    if (ambiguousDate || exact.length !== 1 || reviewedDateCandidates.length !== 1 || reviewedDateCandidates[0]?.url !== manifestUrl) {
       throw new Error(
-        `independent-assurance: ${ambiguousDate ? "ambiguous report date" : newer ? "newer unreviewed report" : "reviewed report URL is missing or duplicated"} on official index`,
+        `independent-assurance: ${ambiguousDate ? "ambiguous report date" : "reviewed report URL is missing or duplicated"} on official index`,
       );
+    }
+    if (!newerUnreviewedReport && latestDate != null && latestDate > args.manifest.reportDate) {
+      newerUnreviewedReport = { reportDate: latestDate, reportUrl: datedCandidates.find((candidate) => candidate.date === latestDate)!.url };
     }
   }
 
-  return verifyAssurancePdf({
+  const artifact = await verifyAssurancePdf({
     manifest: args.manifest,
     reportUrl: args.manifest.reportUrl,
     reportHosts: args.reportHosts,
@@ -413,6 +434,7 @@ export async function verifyIndependentAssuranceReport(args: {
     signal: args.signal,
     ctx: args.ctx,
   });
+  return { ...artifact, newerUnreviewedReport };
 }
 
 /**
@@ -428,6 +450,8 @@ export function buildIndependentAssuranceReserveResult(args: {
   verifiedResponseUrl: string;
   verifiedByteLength: number;
   sourceTimestamp: number;
+  adapterKey?: string;
+  newerUnreviewedReport?: NewerUnreviewedReport | null;
 }): AdapterResult {
   const { slices, manifest, reconciliation, verifiedResponseUrl, verifiedByteLength, sourceTimestamp } = args;
 
@@ -473,7 +497,10 @@ export function buildIndependentAssuranceReserveResult(args: {
       : null,
   ].filter((value): value is string => value !== null);
 
-  const warnings = [];
+  const warnings: LiveReserveWarning[] = [];
+  if (args.newerUnreviewedReport) {
+    warnings.push(newerUnreviewedReportWarning(args.adapterKey ?? "independent-assurance", manifest, args.newerUnreviewedReport));
+  }
   if (roundingDifferences.length > 0) {
     warnings.push(reserveInfoWarning(
       "report-rounding-difference",
@@ -593,6 +620,8 @@ export async function fetchIndependentAssuranceReserves(
     verifiedResponseUrl: artifact.responseUrl,
     verifiedByteLength: artifact.byteLength,
     sourceTimestamp: artifact.sourceTimestamp,
+    adapterKey: profile.adapterName,
+    newerUnreviewedReport: artifact.newerUnreviewedReport,
   });
 }
 

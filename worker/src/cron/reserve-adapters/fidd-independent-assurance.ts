@@ -70,17 +70,25 @@ export function fiddIndependentAssuranceProfile(
     isReportCandidate: (href) => /fidelity-digital-assets---fidd-reserve-attestation-report/i.test(href),
     reportDateFromCandidate: fiddReportDate,
     indexHeaders: { "User-Agent": FIDD_INDEX_USER_AGENT },
-    prepareIndexHtml: async (html, signal, ctx) => {
-      const viewerCandidates = Array.from(html.matchAll(/href\s*=\s*"([^"]+)"/gi))
+    prepareIndexHtml: async (html, signal, ctx, manifest) => {
+      if (!manifest) throw new Error("fidd-independent-assurance: viewer discovery requires the reviewed manifest");
+      const viewerCandidates = [...new Set(Array.from(html.matchAll(/href\s*=\s*"([^"]+)"/gi))
         .map((match) => match[1].replace(/&amp;/g, "&"))
-        .filter((href) => viewerPattern.test(href))
+        .filter((href) => viewerPattern.test(href)))]
         .map((url) => ({ url, date: fiddReportDate(url, "") }))
         .filter((candidate): candidate is { url: string; date: string } => candidate.date != null)
         .sort((a, b) => b.date.localeCompare(a.date));
-      const viewer = viewerCandidates[0];
-      if (!viewer) {
+      if (viewerCandidates.length === 0) {
         throw new Error("fidd-independent-assurance: no dated attestation viewer link found");
       }
+      // Newer reports are detected from dated index links alone; only the
+      // unique reviewed-period viewer is fetched and must resolve its download.
+      const reviewed = viewerCandidates.filter((candidate) => candidate.date === manifest.reportDate);
+      if (reviewed.length !== 1) {
+        throw new Error("fidd-independent-assurance: reviewed-period viewer link is missing or duplicated on the official index");
+      }
+      const viewer = reviewed[0]!;
+      const newest = viewerCandidates[0]!;
       assertWidenHost(viewer.url, "viewer");
       const response = await fetchTextResponseWithRetry(viewer.url, signal, 15_000, ctx, {
         headers: {
@@ -96,7 +104,10 @@ export function fiddIndependentAssuranceProfile(
       }
       const absolute = new URL(downloadAnchor[1].replace(/&amp;/g, "&"), viewer.url).href;
       assertWidenHost(absolute, "download");
-      return response.body.replace(downloadAnchor[0], downloadAnchor[0].replace(downloadAnchor[1], absolute));
+      return {
+        html: response.body.replace(downloadAnchor[0], downloadAnchor[0].replace(downloadAnchor[1], absolute)),
+        newerUnreviewedReport: newest.date > manifest.reportDate ? { reportDate: newest.date, reportUrl: newest.url } : null,
+      };
     },
   };
 }

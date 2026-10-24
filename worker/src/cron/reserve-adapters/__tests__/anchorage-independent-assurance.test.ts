@@ -46,7 +46,7 @@ describe("anchorage-independent-assurance (Deloitte Anchorage examinations)", ()
 
 
 
-  it("selects the reviewed USDPT report on the USDPT index and fails closed on a newer unreviewed report", async () => {
+  it("selects the reviewed USDPT report on the USDPT index and names a newer unreviewed report", async () => {
     const reviewed = getIndependentAssuranceManifest("USDPT");
     const html =
       '<div class="accordion-dates-grid">' +
@@ -63,8 +63,10 @@ describe("anchorage-independent-assurance (Deloitte Anchorage examinations)", ()
       '<a href="https://learn.anchorage.com/09.30.26_USDPT-Stablecoin-Attestation-Report.pdf">Sep</a></div>',
     );
     await expect(verifyFixtureIndex(
-      "USDPT", USDPT_INDEPENDENT_ASSURANCE_PROFILE, "anchorage-independent-assurance.html", newer,
-    )).rejects.toThrow("newer unreviewed report");
+      "USDPT", USDPT_INDEPENDENT_ASSURANCE_PROFILE, "anchorage-independent-assurance.html", newer, true,
+    )).resolves.toMatchObject({
+      newerUnreviewedReport: { reportDate: "2026-09-30", reportUrl: "https://learn.anchorage.com/09.30.26_USDPT-Stablecoin-Attestation-Report.pdf" },
+    });
   });
 
 });

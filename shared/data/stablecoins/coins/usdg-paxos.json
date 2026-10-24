@@ -22,17 +22,17 @@
     "attestorJurisdiction": "Singapore",
     "attestorLicense": "ACRA-registered Public Accounting Corporation",
     "latestReport": {
-      "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-25",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-23",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex official report review 2026-09-30",
+      "reviewer": "Pharos official report review 2026-10-24 (September KPMG examination)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "KPMG USDG Redemption Assets Report - August 2026",
-          "url": "https://framerusercontent.com/assets/Xn1UQwAte85FnsDveIMX0n1qtVM.pdf"
+          "label": "KPMG USDG Redemption Assets Report - September 2026",
+          "url": "https://framerusercontent.com/assets/SKxHUTNlo82s3Rrqw0ZL09z2vc.pdf"
         }
       ]
     }

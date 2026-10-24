@@ -47,7 +47,8 @@ export interface RedemptionCapacityTelemetry extends Pick<LiveReserveRedemptionT
   "sourceUrls" | "sourceTimestamp" | "capacityKind" | "holderEligibility" |
   "routeStatus" | "routeStatusReason" | "feeBps" | "outputAssetKeys"
 > {
-  capacityUsd: NonNullable<LiveReserveRedemptionTelemetryKnownFields["capacityUsd"]>;
+  /** Absent when underlying units have no admitted same-run USD valuation; the ratio then carries capacity. */
+  capacityUsd?: NonNullable<LiveReserveRedemptionTelemetryKnownFields["capacityUsd"]>;
   capacityRaw: string;
   capacitySource:
     | Erc4626CapacitySource

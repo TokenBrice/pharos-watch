@@ -57,31 +57,31 @@ const olderEntry = (date = "2026-07-31T05:00:00Z"): FixtureEntry => ({
 describe("Gemini Contentful attestation index verification", () => {
   const manifest = assurance.getIndependentAssuranceManifest("GUSD");
 
-  it("fails closed when the newest entry URL differs from the reviewed manifest", () => {
+  it("fails closed when the reviewed-date entry URL differs from the reviewed manifest", () => {
     const drift = reviewedEntry("https://assets.ctfassets.net/jg6lo9a2ukvr/7m6P0Or1IDsjF8Nj71yoOY/aff37499c0d462e444c5e614ed065e79/Resigned_Report.pdf");
     expect(() => verifyGeminiContentfulIndex(contentfulIndex([drift]), manifest))
-      .toThrow("newest report URL differs");
+      .toThrow("reviewed report entry is duplicated or differs");
   });
 
-  it("rejects an ambiguous newest entry set", () => {
+  it("rejects a duplicated reviewed-date entry", () => {
     const twin = { ...reviewedEntry(), assetId: "7m6P0Or1IDsjF8Nj71yoOY-twin", url: REVIEWED_URL };
     expect(() => verifyGeminiContentfulIndex(contentfulIndex([reviewedEntry(), twin]), manifest))
-      .toThrow("ambiguous newest report");
+      .toThrow("reviewed report entry is duplicated or differs");
   });
 
   it("orders offset-formatted reports by instant rather than lexical date", () => {
     const later = { ...olderEntry(), date: "2026-08-31T00:30:00-05:00" };
-    expect(() => verifyGeminiContentfulIndex(contentfulIndex([reviewedEntry(), later]), manifest))
-      .toThrow("newer unreviewed report");
+    expect(verifyGeminiContentfulIndex(contentfulIndex([reviewedEntry(), later]), manifest))
+      .toEqual({ reportDate: "2026-08-31T05:30:00.000Z", reportUrl: later.url });
     expect(() => verifyGeminiContentfulIndex(contentfulIndex([later]), manifest))
-      .toThrow("newer unreviewed report");
+      .toThrow("reviewed report entry is duplicated or differs");
   });
 
-  it("accepts an equivalent reviewed instant but rejects equivalent newest-entry ties", () => {
+  it("accepts an equivalent reviewed instant but rejects equivalent reviewed-entry ties", () => {
     const equivalent = { ...reviewedEntry(), date: "2026-08-31T01:00:00-04:00" };
-    expect(() => verifyGeminiContentfulIndex(contentfulIndex([equivalent]), manifest)).not.toThrow();
+    expect(verifyGeminiContentfulIndex(contentfulIndex([equivalent]), manifest)).toBeNull();
     expect(() => verifyGeminiContentfulIndex(contentfulIndex([reviewedEntry(), equivalent]), manifest))
-      .toThrow("ambiguous newest report");
+      .toThrow("reviewed report entry is duplicated or differs");
   });
 
   it("rejects an index with an unresolvable PDF asset or invalid content", () => {
@@ -159,17 +159,23 @@ describe("Gemini GUSD independent assurance", () => {
     })).toThrow(/liability total/);
   });
 
-  it("fails closed when the official index gains a newer unreviewed entry", async () => {
-    const manifest = assurance.getIndependentAssuranceManifest("GUSD");
+  it("publishes the reviewed report degraded when the official index gains a newer unreviewed entry", async () => {
+    const original = assurance.getIndependentAssuranceManifest("GUSD");
+    const pdf = "%PDF-1.7 scoped assurance fixture";
+    const manifest = { ...original, reportByteLength: pdf.length, reportSha256: createHash("sha256").update(pdf).digest("hex") };
+    vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue(manifest);
     installAdapterNetwork({
       json: {
-        [manifest.officialIndexUrl]: contentfulIndex([olderEntry(), reviewedEntry(), olderEntry("2026-09-30T05:00:00Z")]),
-        [manifest.reportUrl]: "%PDF-1.7 scoped assurance fixture",
+        [manifest.officialIndexUrl]: contentfulIndex([olderEntry(), reviewedEntry(manifest.reportUrl), olderEntry("2026-09-30T05:00:00Z")]),
+        [manifest.reportUrl]: { body: pdf, headers: { "content-type": "application/pdf", "content-length": String(pdf.length) } },
       },
     });
 
-    await expect(fetchGeminiIndependentAssuranceReserves(coin, coin.liveReservesConfig!, AbortSignal.timeout(5000)))
-      .rejects.toThrow("newer unreviewed report");
+    const result = await fetchGeminiIndependentAssuranceReserves(coin, coin.liveReservesConfig!, AbortSignal.timeout(5000));
+    expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-08-31T17:00:00-04:00") / 1000);
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "newer-unreviewed-report", effect: "degraded", message: expect.stringContaining("2026-09-30T05:00:00.000Z"),
+    }));
   });
 
   it.each([

@@ -31,6 +31,7 @@ import {
   type ReserveCompositionRecord,
   type ReserveCompositionRow,
   type ReserveSyncStateRecord,
+  SCORING_NEUTRAL_DEGRADED_WARNING_CODES,
   selectScoringDegradedWarnings,
 } from "../lib/live-reserves/store";
 import { parseReserveCompositionRow } from "../lib/live-reserves/store-row-decoding";
@@ -537,7 +538,9 @@ export async function syncReserveCoin(args: {
       previousLastSuccessAttemptId: prevSuccessAttemptId,
       attemptId,
       now: attemptStartedAt,
-      status: hasDegradingWarnings(degradedWarningsOutsideAllowlist) ? "degraded" : "ok",
+      status: hasDegradingWarnings(degradedWarningsOutsideAllowlist)
+        || warnings.some((warning) => warning.effect === "degraded" && SCORING_NEUTRAL_DEGRADED_WARNING_CODES.has(warning.code))
+        ? "degraded" : "ok",
       warnings,
       metadata: {
         warningEffects: {

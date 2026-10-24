@@ -138,6 +138,7 @@ export type ReserveFailureCategory =
   | "upstream-http"
   | "parser-drift"
   | "parse-failure"
+  | "geo-restricted-egress"
   | "validation"
   | "storage-write"
   | "corroboration-mismatch"
@@ -221,6 +222,8 @@ export function buildReserveSyncStateRecord(args: {
   };
 }
 
+const GEO_RESTRICTED_FINAL_URL_PATTERN = /final url https?:\/\/[^\s/)]+\/restricted(?=[\s)?#;:]|$)/;
+
 export function classifyFailure(reason: string, lastError: string | null): ReserveFailureCategory {
   if (reason === "unknown-adapter") return "adapter-config";
   if (reason === "circuit-open") return "circuit-open";
@@ -230,6 +233,9 @@ export function classifyFailure(reason: string, lastError: string | null): Reser
   if (reason === "validation-failed" || reason === "fatal-warning" || reason === "empty-slices") return "validation";
 
   const message = (lastError ?? "").toLowerCase();
+  // Upstream IP geo-gates (e.g. MegaUSD) answer HTTP 200 by redirecting to a
+  // `/restricted` page; that is a Worker egress block, not upstream payload drift.
+  if (GEO_RESTRICTED_FINAL_URL_PATTERN.test(message)) return "geo-restricted-egress";
   if (message.includes("d1_error")) return "storage-write";
   if (message.includes("run-budget-exhausted")) return "run-budget-exhausted";
   if (message.includes("disagree") || message.includes("corroboration") || message.includes("does not match")) return "corroboration-mismatch";
