@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { getPegDeviationLevel, PEG_DEVIATION_TONE_CLASSES, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
+import { DEPEG_EVENT_LOAD_PIP_CLASS, getPegDeviationLevel, PEG_DEVIATION_TONE_CLASSES, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
 import { clampScore } from "@shared/lib/math";
 import { getDeviationBarWidthPercent } from "@/components/depeg-board-model";
 
@@ -47,7 +47,7 @@ export function EventLoadMeter({ count, symbol }: { count: number; symbol: strin
           key={index}
           className={cn(
             "h-1.5 flex-1 rounded-xs border border-border/50",
-            index < filled ? "border-state-warn-solid/40 bg-state-warn-solid" : "bg-muted/35",
+            index < filled ? DEPEG_EVENT_LOAD_PIP_CLASS : "bg-muted/35",
           )}
         />
       ))}

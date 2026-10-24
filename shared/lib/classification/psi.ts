@@ -27,8 +27,8 @@ export const PSI_SWEEP_DURATION = projectDescriptors(PSI_BAND_DESCRIPTORS, (desc
 
 /** PSI beam-dimmer lane fills: support reads positive, stress lanes escalate by severity. */
 export const PSI_LANE_TONE_CLASSES = {
-  support: { bar: "bg-emerald-500" },
+  support: { bar: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-300" },
   stressBreadth: { bar: "bg-amber-500" },
   breadth: { bar: "bg-orange-500" },
   pressure: { bar: "bg-red-500" },
-} as const satisfies Record<"support" | "stressBreadth" | "breadth" | "pressure", { bar: string }>;
+} as const satisfies Record<"support" | "stressBreadth" | "breadth" | "pressure", { bar: string; text?: string }>;

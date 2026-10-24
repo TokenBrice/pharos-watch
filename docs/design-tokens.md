@@ -36,7 +36,7 @@ Choose semantic roles by meaning: surfaces/text/borders for hierarchy; [UI state
 - Dense controls use `--control-pill-*`. `.pharos-control-pill-active`, on-state toggle pills and `.pharos-pill-tab-active` share elevated-neutral active fill, primary text and a hairline ring; never solid ink or a local `.dark` hex override. Navigation's frost-lit rail is separate.
 - Secondary mode/view/window switches use `.pharos-segmented` with `.pharos-segmented-item`, selection exposed through `aria-pressed` / `aria-selected`; `ControlPillToggle` supports `variant="segmented"`.
 - Sticky table headers and anchor scroll padding use `--table-header-top`, the bottom edge of site chrome, rather than independent offsets.
-- Fixed/portalled surfaces choose named `@theme` layers in `globals.css`: chrome → chrome dock → chrome header → progress → regime → modal → toast/skip. Do not invent numeric `z-[…]`; menus, popovers and tooltips share the modal layer. Fixed or sticky rules in CSS modules use the same layers through `var(--z-index-*)` (the `@theme static` block always emits them); numeric `z-index` there stays local, inside a container that sets `isolation: isolate`.
+- Fixed/portalled surfaces choose named `@theme` layers in `globals.css`: chrome → chrome dock → chrome header → progress → regime → modal → toast/skip. Do not invent numeric `z-[…]`; menus, popovers and tooltips share the modal layer. Fixed or sticky rules in CSS modules use the same layers through `var(--z-index-*)` (the `@theme static` block always emits them); numeric `z-index` there stays local: `0`–`10`, or higher only inside a container that sets `isolation: isolate`.
 - Inner chart canvases use `--chart-stage-*`, distinct from the outer card shell.
 
 #### UI state utilities

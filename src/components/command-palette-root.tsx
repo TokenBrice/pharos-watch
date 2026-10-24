@@ -473,7 +473,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                       </span>
                     ) : item.stablecoinHealth?.kind === "nav" ? (
                       <span
-                        className="ml-2 shrink-0 rounded-sm border border-state-info px-1 py-0.5 font-mono text-3xs leading-none text-state-info-solid"
+                        className="ml-2 shrink-0 rounded-sm border border-state-info px-1 py-0.5 font-mono text-3xs leading-none text-state-info"
                         title={getStablecoinHealthLabel(item.stablecoinHealth)}
                       >
                         NAV<span className="sr-only">-priced token</span>

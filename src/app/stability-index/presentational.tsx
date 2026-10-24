@@ -328,7 +328,7 @@ export function PsiMethodologyCard({
           )}
           <Link
             href={methodology.changelogPath}
-            className="pharos-focus-ring text-xs text-foreground underline underline-offset-4 hover:text-state-warn transition-colors rounded-sm"
+            className="pharos-focus-ring text-xs text-foreground underline underline-offset-4 hover:text-brand-accent-text transition-colors rounded-sm"
           >
             Version history &rarr;
           </Link>
@@ -348,7 +348,7 @@ export function PsiMethodologyCard({
           Chronically depegged coins decay linearly from full impact at 30 days to a 25% floor at 150 days.{" "}
           <Link
             href="/methodology/#stability-index-methodology"
-            className="pharos-focus-ring text-foreground underline underline-offset-4 hover:text-state-warn transition-colors rounded-sm"
+            className="pharos-focus-ring text-foreground underline underline-offset-4 hover:text-brand-accent-text transition-colors rounded-sm"
           >
             Full methodology &rarr;
           </Link>

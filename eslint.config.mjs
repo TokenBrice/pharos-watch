@@ -274,15 +274,17 @@ const pharosBoundaryPlugin = {
           const core = token.slice(token.lastIndexOf(":") + 1).replace(/^!/, "").replace(/!$/, "");
           if (!core.startsWith("rounded")) return null;
           const rest = core.slice("rounded".length);
-          if (rest.endsWith("]")) {
-            const bracket = rest.indexOf("-[");
+          // `rounded-[3px]` and the v4 variable shorthand `rounded-(--r)`.
+          if (rest.endsWith("]") || rest.endsWith(")")) {
+            const bracket = rest.indexOf(rest.endsWith("]") ? "-[" : "-(");
             return bracket >= 0 && isSide(rest.slice(0, bracket)) ? "arbitrary" : null;
           }
           return isSide(rest) ? "bare" : null;
         }
         function check(node, text) {
           if (typeof text !== "string") return;
-          const prose = /[A-Z]|[.!?](?:\s|$)/.test(text);
+          // Arbitrary values (`data-[state=Open]`, `bg-[#FFF]`) are not prose.
+          const prose = /[A-Z]|[.!?](?:\s|$)/.test(text.replace(/\[[^\]]*\]|\([^)]*\)/g, ""));
           for (const token of text.split(/\s|["'`]/)) {
             const kind = token && classify(token);
             if (kind === "arbitrary" || (kind === "bare" && !prose)) {

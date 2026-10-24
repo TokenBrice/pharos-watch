@@ -1,5 +1,6 @@
 "use client";
 
+import { PRICE_DIVERGENCE_ELEVATED_PILL_CLASS } from "@shared/lib/classification";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type { CoinGeckoPriceDiff, StatusSectionError } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +33,7 @@ function getDiffBadgeClass(diffPct: number): string {
   if (diffPct >= 10) {
     return SEVERITY_TONE_CLASS.watch.pill;
   }
-  return SEVERITY_TONE_CLASS.info.pill;
+  return PRICE_DIVERGENCE_ELEVATED_PILL_CLASS;
 }
 
 export function CoinGeckoPriceDiffCard({
