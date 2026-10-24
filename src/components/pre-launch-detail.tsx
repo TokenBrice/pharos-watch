@@ -2,7 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
 import { ExternalLink, BookOpen, Play } from "lucide-react";
-import { CLIENT_ACTIVE_STABLECOINS, CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { CLIENT_TRACKED_META_BY_ID, CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { isActiveStablecoinMeta, isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";
 import {
   BACKING_LABELS,
   GOVERNANCE_LABELS,
@@ -407,8 +408,16 @@ function PlannedProfileCard({ coin }: { coin: StablecoinMeta }) {
   );
 }
 
+/**
+ * Active and pre-launch coins: the existing same-currency sort then ranks the
+ * coin's upcoming siblings (other HKD/JPY/KRW launches) ahead of USD majors.
+ */
+const RELATED_CANDIDATES = CLIENT_TRACKED_STABLECOINS.filter(
+  (candidate) => isActiveStablecoinMeta(candidate) || isPreLaunchStablecoinMeta(candidate),
+);
+
 function RelatedCard({ coin }: { coin: StablecoinMeta }) {
-  const related = getRelatedStablecoins(coin, { candidates: CLIENT_ACTIVE_STABLECOINS });
+  const related = getRelatedStablecoins(coin, { candidates: RELATED_CANDIDATES });
   return (
     <RailCard title="Related stablecoins" ariaLabel="Related stablecoins">
       <div className="space-y-3 px-4 pb-4">

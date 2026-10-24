@@ -115,6 +115,14 @@ describe("PreLaunchDetail", () => {
     expect(document.getElementById("launch-path")?.textContent).toContain("earlier target retired, none set");
   });
 
+  it("ranks same-currency upcoming siblings first in the related rail", () => {
+    const document = staticDocument({ ...coin, flags: { ...coin.flags, pegCurrency: "HKD" } });
+    const related = document.querySelector('[aria-label="Related stablecoins"]');
+    const hrefs = [...(related?.querySelectorAll("a[href]") ?? [])].map((link) => link.getAttribute("href") ?? "");
+    // HKD has no active coin: every HKD sibling is pre-launch, and they lead the rail.
+    expect(hrefs.slice(0, 3).every((href) => /\/stablecoin\/(hkdap-anchorpoint|hkd-hsbc|hkdr-rd-technologies)/.test(href))).toBe(true);
+  });
+
   it("server-renders no clock-derived text", () => {
     const text = staticDocument().body.textContent ?? "";
     expect(text).not.toMatch(/Window (opens|open|closed)|\d+ d ago|\bIn \d+ d\b/);
