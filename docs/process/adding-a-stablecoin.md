@@ -75,6 +75,19 @@ If the asset is pre-launch, also collect:
 
 Do not expect pre-launch assets to show up in live worker-driven coverage until the status flips to active.
 
+#### 72-hour pre-launch stub lane
+
+When an issuer, regulator or bank publishes a credible primary-source announcement of an in-scope stablecoin, add a pre-launch stub within 72 hours rather than waiting for a full research packet. Early entries capture launch-intent searches while they peak. The stub is still a normal pre-launch addition: it passes Phase 1 eligibility, gets a canonical-order position and a `listing-decisions.json` class, and clears every Phase 4 coupling group and Phase 7 check. Only the research depth is deferred.
+
+Minimum stub content:
+
+- Identity and classification: canonical `id`, `name`, `symbol`, `status: "pre-launch"`, `flags` (`backing`, `governance`, and `pegCurrency` when not USD) and a `oneLiner` that states only what the announcement supports.
+- One primary source: the announcement itself, in `links` and as the `sourceUrl` of the milestone below. Secondary reporting alone does not open this lane.
+- One milestone: the dated announcement (`type: "announcement"`, or `regulatory` for a licence or authorisation), plus `announcedDate`. Add `launchPhase`, `expectedLaunchDate` or `launchPhaseDetail` only when the source states them; never infer a phase or date from promotional language.
+- `blacklistabilityReview` in `domains/risk-review/<id>.json`: when no source describes holder-control powers yet, record the reviewed status with a `sourceFreeRationale` that says the verdict follows the issuer model in the announcement.
+
+Deeper research follows through the [`pre-launch-update`](../../.codex/skills/pre-launch-update/SKILL.md) review: collateral, peg mechanism, jurisdiction, featured content, further milestones and any refined blacklistability evidence. A stub never skips the [Phase 1a runtime gate](#1a-hard-runtime-data-gate-for-active-assets) at promotion.
+
 ### 0b. Plan the per-coin registry file
 
 - Identify exactly one JSON file under `shared/data/stablecoins/coins/`; its filename must be `<id>.json`, matching the canonical stablecoin ID in the object.

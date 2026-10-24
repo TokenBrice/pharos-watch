@@ -2,7 +2,7 @@
   "id": "dusd-alto",
   "name": "Alto DUSD",
   "symbol": "DUSD",
-  "oneLiner": "DUSD is Alto's overcollateralized USD stablecoin minted from isolated on-chain markets backed by ETH, BTC, and yield-bearing variants, with a 5M USDC PSM.",
+  "oneLiner": "DUSD is Alto's overcollateralized USD stablecoin minted from isolated on-chain markets backed by ETH, BTC, and yield-bearing variants, with a capped USDC PSM.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"

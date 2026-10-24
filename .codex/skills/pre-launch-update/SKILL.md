@@ -18,6 +18,12 @@ Read `docs/editorial-style.md`; its `pre-launch` and `coin-summary` registers go
 
 Optional discovery of untracked candidates is research-only: search recent issuer/regulatory announcements and near-zero external listings, de-duplicate against the registry, and ask before adding anything.
 
+Monthly, include GSC unmatched-query discovery: export three months of Search Console queries and take each query with 50+ impressions that matches no registry `id`, `name` or `symbol`. Research each under [Stablecoin Listing Policy](../../../docs/listing-policy.md): a qualifying pre-launch or active asset becomes an addition candidate; an alias of a tracked coin is recorded only once a primary source ties the name to it; anything else is reported with its reason. Never create a page, redirect or metadata for an untracked or out-of-scope coin to capture its searches.
+
+## 72-Hour Stub Lane
+
+For a credible primary-source announcement of an in-scope stablecoin, propose a pre-launch stub within 72 hours under the [72-hour pre-launch stub lane](../../../docs/process/adding-a-stablecoin.md#72-hour-pre-launch-stub-lane): identity, flags, a `oneLiner`, one dated milestone sourced to the announcement, and a `blacklistabilityReview` with `sourceFreeRationale` when no control evidence exists yet. Approval rules above still apply. Queue the coin for full research at the next review instead of blocking the stub on it.
+
 ## Apply Approved Changes
 
 Approval must cover each coin and action; an earlier explicit cohort instruction covering those coins remains valid. Ask again only for an uncovered addition, promotion, or other scope change. Preserve canonical identity, flags, and historical milestones. Add milestones oldest-first with a primary `sourceUrl`; add only notable featured content.
