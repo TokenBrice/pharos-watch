@@ -324,6 +324,23 @@ describe("check-seo-static", () => {
       ],
     },
     {
+      name: "fails internal anchor hrefs that point at any _redirects source, not only listed prefixes",
+      redirects: [
+        "/about/api/ /api/reference/ 301",
+        "/about/api /api/reference/ 301",
+        "/datasets/x/latest.csv /datasets/x/2026-10-22.csv 200",
+        "/old-tool/* /new-tool/ 301",
+        "",
+      ].join("\n"),
+      rootLinks: ["/about/api/", "/old-tool/deep/view/", "/datasets/x/latest.csv", "/blacklist/"],
+      errors: [
+        "/: internal anchor href points to _redirects source /about/api/: /about/api/ (use /api/reference/)",
+        "/: internal anchor href points to _redirects source /old-tool/*: /old-tool/deep/view/ (use /new-tool/)",
+        "/: internal anchor href points to retired route prefix /blacklist: /blacklist/ (use /freezewatch/)",
+      ],
+      absentErrors: ["/datasets/x/latest.csv", "_redirects source /blacklist"],
+    },
+    {
       name: "fails internal redirect chains and non-permanent internal redirects",
       redirects: "/legacy /middle/ 302\n/middle /final/ 301\n",
       errors: [
