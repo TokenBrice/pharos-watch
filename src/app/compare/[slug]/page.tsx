@@ -19,6 +19,7 @@ import {
   buildComparisonResearchLinks,
   buildComparisonSnippetAnswer,
   buildStaticComparisonJsonLd,
+  getStaticComparisonPagesForCoin,
   STATIC_COMPARISON_PAGE_BY_SLUG,
   STATIC_COMPARISON_PAGES,
 } from "@/lib/compare-pages";
@@ -39,6 +40,14 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
     [page.left, page.right].map((coin) => [coin.id, buildStablecoinUrl(coin.id)]),
   );
   const pegSlug = PEG_SLUGS[page.left.flags.pegCurrency];
+  // Compare pages had no links to each other; every other curated pair for
+  // either coin, editorial briefs first.
+  const relatedComparisons = [page.left, page.right]
+    .map((coin) => ({
+      coin,
+      pages: getStaticComparisonPagesForCoin(coin.id).filter((candidate) => candidate.slug !== page.slug),
+    }))
+    .filter((group) => group.pages.length > 0);
   const taxonomyLinks = [
     {
       href: buildGovernanceTaxonomyUrl(page.left.flags.governance),
@@ -271,6 +280,31 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
           </div>
         </div>
       </section>
+
+      {relatedComparisons.length > 0 && (
+        <section className="space-y-3" aria-labelledby="related-comparisons-title">
+          <h2 id="related-comparisons-title" className="pharos-label">Related comparisons</h2>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {relatedComparisons.map((group) => (
+              <div key={group.coin.id} className="pharos-card-shell space-y-3 px-4 py-4">
+                <h3 className="text-sm font-semibold text-foreground">More {group.coin.symbol} comparisons</h3>
+                <ul className="flex flex-wrap gap-2">
+                  {group.pages.map((related) => (
+                    <li key={related.slug}>
+                      <Link
+                        href={related.href}
+                        className="pharos-focus-ring inline-flex items-center rounded-full border border-border/60 bg-background px-2.5 py-1 text-xs font-medium transition-colors hover:bg-accent"
+                      >
+                        {related.shortTitle}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <FaqSection items={faqItems} title={`${page.shortTitle} FAQ`} includeJsonLd />
     </FeaturePageShell>

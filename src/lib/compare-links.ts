@@ -51,6 +51,18 @@ export const STATIC_COMPARE_PAIRS = [
   ["eurc-circle", "eure-monerium"],
   ["eurc-circle", "eur0-usual"],
   ["brla-brla-digital", "brz-transfero"],
+  // 2026-10 expansion — sibling demand (combined profile impressions in
+  // Search Console) under the same gate: active, non-frozen, full profiles.
+  ["jpyc-jpyc", "jpysc-sbi-startale"],
+  ["usdy-ondo-finance", "usyc-hashnote"],
+  ["eurc-circle", "eurcv-societe-generale-forge"],
+  ["xaut-tether", "xaum-matrixdock"],
+  ["usd1-world-liberty-financial", "usdt-tether"],
+  ["brla-brla-digital", "brl1-brl1"],
+  // Base vs staked or vault wrapper, following the USDe/sUSDe precedent.
+  ["gho-aave", "sgho-aave"],
+  ["usdf-falcon", "susdf-falcon"],
+  ["apxusd-apyx", "apyusd-apyx"],
 ] as const;
 
 export function buildLiveCompareUrl(coinIds: readonly string[]): string {

@@ -153,6 +153,10 @@ Editorial briefs link issuer sources and keep visible short answers equal to FAQ
 
 Pair JSON-LD is WebPage/ItemList with coin Thing nodes and visible PropertyValue rows. Sitemap includes hub/pairs; pair lastModified is newest coin LAST_EDITED or substantive editorial updatedAt, never build/recheck time.
 
+Each pair page ends with a "Related comparisons" section: "More {A} comparisons" and "More {B} comparisons" link lists built from `getStaticComparisonPagesForCoin()` (editorial briefs first), excluding the current pair, anchored with each pair's `{A} vs {B}` short title. A coin with no other pair contributes no list; the section is omitted when neither does.
+
+`STATIC_COMPARE_PAIRS` (`src/lib/compare-links.ts`) admits only active, non-frozen coins with full static profiles on both sides; additions are demand-led (Search Console, or combined sibling-profile impressions where no pair query data exists). A pair without an editorial brief ships with the generated intro, summary and FAQ.
+
 ### Selection and URL contract
 
 - Maximum selection: `MAX_COMPARE_COINS = 5`.
