@@ -115,6 +115,8 @@ export const CaseStudyContentSchema = z.object({
     /** Primary source: issuer post-mortem, regulator filing, rekt.news, etc. */
     href: text,
   }).strict()).min(1),
+  /** Optional search-phrased `<title>` (before the " | Pharos" suffix); the editorial `title` stays the H1. */
+  metaTitle: text.max(52).optional(),
   /** At most 160 characters for the meta description. */
   metaDescription: text.max(160),
   /** ISO datePublished anchor for Article JSON-LD. */
