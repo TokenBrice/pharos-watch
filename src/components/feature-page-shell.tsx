@@ -14,6 +14,8 @@ export interface FeaturePageShellProps {
     changelogPath: string;
     /** Names what the version governs when it is not the page's hero (e.g. "Chain Health methodology"). */
     label?: string;
+    /** Public explainer of how the page's figures are computed (a `/docs/` page or methodology section). */
+    docsPath?: string;
   };
   headerActions?: React.ReactNode;
   leadParagraphs?: readonly React.ReactNode[];
@@ -94,6 +96,7 @@ export function FeaturePageShell({
               >
                 Version history &rarr;
               </Link>
+              {methodology.docsPath ? <MethodologyDocsLink href={methodology.docsPath} /> : null}
             </p>
           )}
           {leadParagraphs.length > 0 ? (
@@ -110,6 +113,18 @@ export function FeaturePageShell({
       )}
       {children}
     </div>
+  );
+}
+
+function MethodologyDocsLink({ href }: { href: string }) {
+  return (
+    <>
+      {" "}
+      &middot;{" "}
+      <Link href={href} className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground">
+        How this is computed &rarr;
+      </Link>
+    </>
   );
 }
 
@@ -140,6 +155,7 @@ function InstrumentHeader({
               >
                 Version history &rarr;
               </Link>
+              {methodology.docsPath ? <MethodologyDocsLink href={methodology.docsPath} /> : null}
             </p>
           ) : (
             <span />

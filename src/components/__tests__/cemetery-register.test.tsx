@@ -147,6 +147,19 @@ describe("CemeteryRegister server render", () => {
     expect(host.querySelector("#register")?.hasAttribute("data-enhanced")).toBe(false);
   });
 
+  it("links tracked archive names to their profile in the static HTML, full and folded rows alike", () => {
+    const host = document.createElement("div");
+    host.innerHTML = renderToString(<Harness entries={CEMETERY_ENTRIES} rows={realRows} />);
+
+    const tracked = realRows.filter((row) => row.tracked);
+    expect(tracked.length).toBeGreaterThan(0);
+    for (const row of realRows) {
+      const link = host.querySelector(`tr[id="${row.id}"] a[href^="/stablecoin/${row.id}"]`);
+      expect(link !== null, row.id).toBe(row.tracked);
+      if (link) expect(link.textContent).toBe(row.name);
+    }
+  });
+
   it("hydrates the static HTML without a mismatch, then applies the URL filters", async () => {
     // The static export renders unfiltered; the browser URL only applies after hydration.
     window.history.replaceState(null, "", "/cemetery/?cause=regulatory");

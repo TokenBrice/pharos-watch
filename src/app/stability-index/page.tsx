@@ -48,6 +48,7 @@ const route = createClientFeaturePage({
     methodology: {
       version: PSI_METHODOLOGY_VERSION_LABEL,
       changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH,
+      docsPath: "/docs/stability-index/",
     },
     header: "instrument",
     headerActions: <ShareButton ogPath={API_PATHS.ogStabilityIndex()} />,

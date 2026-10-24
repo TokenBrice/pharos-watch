@@ -80,6 +80,7 @@ const route = createClientFeaturePage({
     methodology: {
       version: YIELD_METHODOLOGY_VERSION_LABEL,
       changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
+      docsPath: "/docs/yield-intelligence/",
     },
     header: "instrument",
     headerActions: <ShareButton ogPath={API_PATHS.ogPage("yield")} />,

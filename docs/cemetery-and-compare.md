@@ -126,7 +126,7 @@ Methodology distinguishes curated versus tracked-then-frozen admission, excludes
 
 ### Autopsy register
 
-`buildCemeteryRegisterRows` projects data server-side; clients import types, never `CEMETERY_ENTRIES`. Missing peak/mechanism/epitaph is visibly/accessibly not recorded; duplicate tickers retain names/IDs.
+`buildCemeteryRegisterRows` projects data server-side; clients import types, never `CEMETERY_ENTRIES`. Missing peak/mechanism/epitaph is visibly/accessibly not recorded; duplicate tickers retain names/IDs. A tracked archive's name (full and folded rows) is a static link to its frozen profile, so the register links those profiles in the prerendered HTML; curated-only records stay plain text. The row's tap-to-expand handler ignores clicks on that link.
 
 `CEMETERY_REGISTER_PARAMS` owns filter keys, accepted values and canonical order. Invalid values drop; bounded trimmed search is case/accent-insensitive over name/ticker/id/epitaph, not obituary. URL writes replace history, preserve unrelated params and omit default sort/direction. Died uses canonical order; missing peaks sort last both directions with default order breaking ties. Result counts announce politely.
 
