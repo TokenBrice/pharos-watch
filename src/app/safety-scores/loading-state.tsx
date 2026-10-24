@@ -1,6 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageLoadingSplitHero } from "@/components/page-loading-skeleton";
-import { createPageLoadingRoute } from "@/app/page-loading-route";
 
 // Analytics tier: split instrument hero, filter band, then ~12 graded rows.
 const SAFETY_SKELETON_ROW_COUNT = 12;
@@ -38,8 +37,3 @@ export function SafetyScoresContentLoadingState() {
     </>
   );
 }
-
-export default createPageLoadingRoute(SafetyScoresContentLoadingState, {
-  sectionWidth: "w-28",
-  titleWidth: "w-64 sm:w-80",
-});

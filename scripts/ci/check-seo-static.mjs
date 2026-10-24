@@ -5,6 +5,7 @@ import { isMainThread, parentPort, Worker, workerData } from "node:worker_thread
 
 import {
   collectStructuredDataNodes,
+  countVisibleMainTags,
   decodeHtml,
   extractJsonLdBlocks,
   extractVisibleText,
@@ -21,6 +22,10 @@ import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { findDuplicateSitemapLocs, parseSitemapLocs, walkOutFiles } from "../lib/seo-sitemap.mjs";
 
 const DEFAULT_OUT_DIR = path.resolve("out");
+// These families dropped their route-level loading.tsx (2026-10-25 SEO plan,
+// TR3): its Suspense fallback put a skeleton in the static <main> and streamed
+// the real h1, copy and JSON-LD into a hidden div after it.
+const VISIBLE_MAIN_H1_ROUTE_PATTERN = /^\/(?:depeg|compare|safety-scores|screener|yield|flows|liquidity|compliance)\//;
 const BAILOUT_PATTERN = /BAILOUT_TO_CLIENT_SIDE_RENDERING|next-dynamic-bailout-to-csr/;
 const EMPTY_BAILOUT_TEMPLATE_PATTERN = /<template\s+data-dgst=(["'])BAILOUT_TO_CLIENT_SIDE_RENDERING\1><\/template>/g;
 const PHAROS_ORIGIN = "https://pharos.watch";
@@ -903,6 +908,7 @@ export function buildSeoPageRecord(
     indexable,
     googleBotTags: getMetaContents(html, "name", "googlebot"),
     h1Count: (html.match(/<h1\b/gi) ?? []).length,
+    visibleMainH1Count: VISIBLE_MAIN_H1_ROUTE_PATTERN.test(route) ? countVisibleMainTags(html, "h1") : null,
     hasFatalCsrBailout: hasFatalCsrBailoutMarker(html),
     hrefs: getAnchorHrefs(html),
     structuredData,
@@ -1028,6 +1034,11 @@ export function collectSeoStaticCheckResult({
 
     if (indexable && record.h1Count !== 1) {
       errors.push(`${record.route}: expected exactly one <h1> on indexable page, got ${record.h1Count}`);
+    }
+    if (indexable && record.visibleMainH1Count != null && record.visibleMainH1Count !== 1) {
+      errors.push(
+        `${record.route}: expected exactly one visible <h1> inside <main>, got ${record.visibleMainH1Count} (a route-level loading boundary moves it into hidden streamed HTML)`,
+      );
     }
   }
 

@@ -3,7 +3,7 @@ import { FaqSection } from "@/components/faq-section";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { ShareButton } from "@/components/share-button";
 import { DepegEventArchivePreview } from "@/app/depeg/depeg-event-archive";
-import { DepegContentLoadingState } from "@/app/depeg/loading";
+import { DepegContentLoadingState } from "@/app/depeg/loading-state";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildApiOgImageUrl } from "@/lib/page-metadata";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
