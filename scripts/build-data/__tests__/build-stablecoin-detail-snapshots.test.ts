@@ -21,6 +21,15 @@ import {
   writeSnapshots,
 } from "../build-stablecoin-detail-snapshots";
 
+// Generation tests stay independent of the committed scores-latest mirror; the
+// release-assessment lane is exercised through the injected reader below.
+vi.mock("../../../src/lib/safety-grade-snapshot", () => ({ getScoresLatestSnapshotRow: () => null }));
+
+const SCORES_ROW = {
+  grade: "A-" as const, score: 81, dewsScore: 17, dewsBand: "WATCH" as const, liquidityScore: 67,
+  asOfMs: 1_700_000_050_000,
+};
+
 function liveSummary(overrides: Partial<StablecoinLiveSummary> = {}): StablecoinLiveSummary {
   return {
     price: 1,
@@ -244,6 +253,35 @@ describe("stablecoin detail snapshot generator", () => {
     expect(snapshot.lanes).toEqual({});
     expect(serializedSnapshotBytes(snapshot)).toBeLessThanOrEqual(8 * 1024);
   });
+  it("adds the dated release assessment lane only where it fits beside the live lanes", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const summary = liveSummary();
+    const readScoresLatestRow = (id: string) => (id === "usdt-tether" || id === "usdc-circle" ? SCORES_ROW : null);
+    const snapshots = buildStablecoinDetailSnapshots({
+      generatedAt: 1_700_000_100_000,
+      updatedAtById: new Map([["usdt-tether", { liveSummary: 1_700_000_000_000 }]]),
+      liveSummariesById: new Map([["usdt-tether", summary], ["usdc-circle", summary]]),
+      supplyHistoryById: new Map([["usdc-circle", Array.from({ length: 500 }, (_, index) => ({
+        date: 1_600_000_000 + index * 86_400, circulatingUsd: 100_000_000 + index, price: 1,
+      }))]]),
+      readScoresLatestRow,
+    });
+    const usdt = snapshots.find((candidate) => candidate.stablecoinId === "usdt-tether")!;
+    const { asOfMs: _asOfMs, ...lane } = SCORES_ROW;
+    expect(usdt.lanes).toEqual({ liveSummary: summary, safetyAssessment: lane });
+    // Dated by the dataset clock, never the artifact clock.
+    expect(usdt.updatedAt).toEqual({ liveSummary: 1_700_000_000_000, safetyAssessment: SCORES_ROW.asOfMs });
+    expect(validateStablecoinDetailSnapshot(usdt)).toBe(usdt);
+    // Oversized history still yields to the cap; the release lane joins what remains.
+    expect(snapshots.find((candidate) => candidate.stablecoinId === "usdc-circle")!.lanes)
+      .toEqual({ liveSummary: summary, safetyAssessment: lane });
+    const unrated = snapshots.find((candidate) => readScoresLatestRow(candidate.stablecoinId) === null)!;
+    expect(unrated.lanes).toEqual({});
+    expect(unrated.updatedAt).toEqual({});
+    expect(() => validateStablecoinDetailSnapshot({ ...usdt, updatedAt: { liveSummary: 1 } }))
+      .toThrow(/safety assessment lane is invalid or undated/);
+  });
+
   it("retains a small summary when oversized history is removed", () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const summary = liveSummary();

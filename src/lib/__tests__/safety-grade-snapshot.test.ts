@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getSnapshotSafetyAssessment, toSnapshotSafetyAssessment } from "@/lib/safety-grade-snapshot";
+import {
+  getScoresLatestSnapshotRow,
+  getSnapshotSafetyAssessment,
+  toScoresLatestSnapshotRow,
+  toSnapshotSafetyAssessment,
+} from "@/lib/safety-grade-snapshot";
 
 describe("toSnapshotSafetyAssessment", () => {
   it("maps rated grades to the shared risk buckets", () => {
@@ -26,6 +31,35 @@ describe("getSnapshotSafetyAssessment", () => {
     expect(usdt).not.toBeNull();
     expect(["safe", "neutral", "risky"]).toContain(usdt!.bucket);
     expect(getSnapshotSafetyAssessment("not-a-coin")).toBeNull();
+  });
+});
+
+describe("toScoresLatestSnapshotRow", () => {
+  const AS_OF = "2026-10-22T08:00:50.000Z";
+
+  it("projects a dated row, keeping unavailable values null rather than zero", () => {
+    expect(toScoresLatestSnapshotRow({
+      safetyGrade: "A-", safetyScore: 81, dewsScore: 17, dewsBand: "WATCH", liquidityScore: null,
+    }, AS_OF)).toEqual({
+      grade: "A-", score: 81, dewsScore: 17, dewsBand: "WATCH", liquidityScore: null, asOfMs: Date.parse(AS_OF),
+    });
+    // An unrated coin can still carry its DEWS and liquidity reads.
+    expect(toScoresLatestSnapshotRow({ safetyGrade: "NR", liquidityScore: 0 }, AS_OF)).toMatchObject({
+      grade: null, score: null, liquidityScore: 0,
+    });
+  });
+
+  it("refuses undated rows, malformed bands and rows with nothing to show", () => {
+    expect(toScoresLatestSnapshotRow({ safetyGrade: "A" }, undefined)).toBeNull();
+    expect(toScoresLatestSnapshotRow({ safetyGrade: "A" }, "not-a-date")).toBeNull();
+    expect(toScoresLatestSnapshotRow({ safetyGrade: "NR", dewsBand: "PANIC" }, AS_OF)).toBeNull();
+  });
+
+  it("indexes the committed mirror with its dataset clock", () => {
+    const usdt = getScoresLatestSnapshotRow("usdt-tether");
+    expect(usdt?.asOfMs).toBeGreaterThan(0);
+    expect(usdt?.grade).toBe(getSnapshotSafetyAssessment("usdt-tether")?.grade);
+    expect(getScoresLatestSnapshotRow("not-a-coin")).toBeNull();
   });
 });
 

@@ -11,6 +11,8 @@ import {
 } from "@pharos/contracts/api-meta";
 import type { StablecoinReservesResponse } from "@shared/types";
 import type { SupplyHistoryPoint } from "@shared/types/market";
+import type { SafetyGrade } from "@shared/types/report-card-grade";
+import type { ThreatBand } from "@shared/lib/classification";
 import type { QueryClient } from "@tanstack/react-query";
 import { buildRequestUrl } from "@/lib/api-url";
 import {
@@ -26,16 +28,39 @@ export { API_BASE, buildApiUrl, buildRequestUrl, resolveApiBase } from "@/lib/ap
 
 export type ApiMeta = ApiMetaEnvelope;
 
+/**
+ * The coin's row in the release's scores-latest dataset. Display-only: it is
+ * never seeded as a live query, and shows only while the live read is pending.
+ */
+export interface DetailSnapshotSafetyAssessment {
+  grade: SafetyGrade | null;
+  score: number | null;
+  dewsScore: number | null;
+  dewsBand: ThreatBand | null;
+  liquidityScore: number | null;
+}
+
 export interface StablecoinDetailSnapshot {
   version: 1;
   stablecoinId: string;
   generatedAt: number;
   /** Per-lane producer timestamps in milliseconds; generatedAt is artifact provenance only. */
-  updatedAt: { liveSummary?: number; supplyHistory?: number };
+  updatedAt: { liveSummary?: number; supplyHistory?: number; safetyAssessment?: number };
   lanes: {
     liveSummary?: StablecoinLiveSummary;
     supplyHistory?: SupplyHistoryPoint[];
+    safetyAssessment?: DetailSnapshotSafetyAssessment;
   };
+}
+
+/** A saved assessment and its dataset clock (ms); undated lanes are unavailable. */
+export type SavedSafetyAssessment = DetailSnapshotSafetyAssessment & { asOfMs: number };
+
+export function readSavedSafetyAssessment(snapshot: StablecoinDetailSnapshot | null | undefined): SavedSafetyAssessment | null {
+  const lane = snapshot?.lanes.safetyAssessment;
+  const asOfMs = snapshot?.updatedAt?.safetyAssessment;
+  if (!lane || asOfMs == null || !Number.isFinite(asOfMs) || asOfMs <= 0) return null;
+  return { ...lane, asOfMs };
 }
 const detailSnapshotReads = new WeakMap<object, { dataUpdateCount: number; errorUpdateCount: number }>();
 
