@@ -2,7 +2,7 @@
 import { RailSafetySummary } from "../rail-safety-summary";
 
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinAiSummary, StablecoinMeta } from "@shared/types";
 
 vi.mock("next/link", async () => {
@@ -18,6 +18,10 @@ vi.mock("@/lib/safety-grade-snapshot", () => ({
 }));
 vi.mock("@/lib/datasets/public-dataset-current", () => ({
   PUBLIC_DATASET_CURRENT_DATE: "2026-10-19",
+}));
+const mockRedemptionConfigs = vi.hoisted(() => ({}) as Record<string, unknown>);
+vi.mock("@shared/lib/redemption-backstop-configs", () => ({
+  REDEMPTION_BACKSTOP_CONFIGS: mockRedemptionConfigs,
 }));
 
 const { StablecoinDetailSeoContent, buildStablecoinFaqItems } = await import("../static-seo-content");
@@ -149,10 +153,10 @@ describe("StablecoinDetailSeoContent", () => {
       ),
     ).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Is TSTD safe?" })).toBeTruthy();
-    expect(screen.getByText(/Pharos does not mark TSTD as absolutely safe/)).toBeTruthy();
     expect(
-      screen.getByText(/Treat the live peg, liquidity, reserve, dependency, and Safety Score sections below/),
+      screen.getByText(/As of Oct 19, 2026, Pharos had not published a Safety Score grade for TSTD/),
     ).toBeTruthy();
+    expect(container.textContent).not.toContain("Static metadata says");
     expect(screen.getByRole("link", { name: "Compare TSTD" }).getAttribute("href")).toBe("/compare/?coins=test-dollar");
     expect(screen.getByRole("link", { name: "Telegram alerts" }).getAttribute("href")).toBe(
       "/pharoswatchbot/#getting-started",
@@ -184,9 +188,11 @@ describe("StablecoinDetailSeoContent", () => {
       "Can TSTD be frozen or blacklisted?",
     ]);
     expect(items[0].answer).toContain("Primary market mint and redeem arbitrage");
-    // Without a rated snapshot grade the safety answer must stay honest — no
-    // absolute-safety claims.
-    expect(items[1].answer).toContain("Pharos does not mark TSTD as absolutely safe");
+    // Without a rated snapshot grade the safety answer must stay honest: no
+    // grade, no safety call.
+    expect(items[1].answer).toContain("Pharos had not published a Safety Score grade for TSTD");
+    expect(items[1].answer).toContain("makes no overall safety call");
+    expect(items[1].answer).not.toMatch(/\bis safe\b|grades TSTD/);
     expect(items[2].answer).toContain("Real-World Asset Backed");
     expect(items[2].answer).toContain("Cash, Treasury bills, and overnight repos");
     expect(items[2].answer).toContain("Example Auditor");
@@ -210,24 +216,26 @@ describe("StablecoinDetailSeoContent", () => {
     try {
       mockGetSnapshotSafetyAssessment.mockReturnValue({ grade: "A-", score: 88, bucket: "safe" });
       let answer = buildStablecoinFaqItems(coin)[1].answer;
-      expect(answer).toContain("TSTD held an A- Safety Score grade (88/100)");
-      expect(answer).toContain("overall safe at that date, though no stablecoin is entirely risk-free");
-      expect(answer).toContain("CeFi-Dependent governance model");
-      expect(answer).toContain("Treat the live peg, liquidity, reserve, dependency, and Safety Score sections below");
+      expect(answer.startsWith("As of Oct 19, 2026, Pharos grades TSTD A- (88/100) on its Safety Score.")).toBe(true);
+      expect(answer).toContain("upper band, which does not rule out losses.");
+      // The second sentence is coin-specific: without freeze or redemption
+      // evidence it falls back to the backing classification.
+      expect(answer).toContain("Pharos classifies its backing as Real-World Asset Backed, with Independent Audit from Example Auditor.");
+      expect(answer).not.toMatch(/scores-latest|Static metadata/);
 
       mockGetSnapshotSafetyAssessment.mockReturnValue({ grade: "C+", score: 55, bucket: "neutral" });
       answer = buildStablecoinFaqItems(coin)[1].answer;
-      expect(answer).toContain("TSTD held a C+ Safety Score grade (55/100)");
-      expect(answer).toContain("did not consider it clearly safe at that date");
+      expect(answer).toContain("Pharos grades TSTD C+ (55/100)");
+      expect(answer).toContain("middle-band grade");
 
       mockGetSnapshotSafetyAssessment.mockReturnValue({ grade: "F", score: 12, bucket: "risky" });
       answer = buildStablecoinFaqItems(coin)[1].answer;
-      expect(answer).toContain("Pharos did not assess TSTD as safe");
-      expect(answer).toContain("an F Safety Score grade (12/100)");
+      expect(answer).toContain("Pharos grades TSTD F (12/100)");
+      expect(answer).toContain("flags significant structural risk");
 
       mockGetSnapshotSafetyAssessment.mockReturnValue({ grade: "B", score: null, bucket: "safe" });
       answer = buildStablecoinFaqItems(coin)[1].answer;
-      expect(answer).toContain("TSTD held a B Safety Score grade");
+      expect(answer).toContain("Pharos grades TSTD B on its Safety Score.");
 
       // Frozen archives never surface a snapshot grade.
       const frozenAnswer = buildStablecoinFaqItems({ ...coin, status: "frozen", frozenAt: "2026-05-01" })[1].answer;
@@ -258,14 +266,131 @@ describe("StablecoinDetailSeoContent", () => {
       const { container, rerender } = render(content("D"));
       rerender(content("C-"));
       expect(screen.getByRole("link", { name: "C-" })).toBeTruthy();
-      expect(screen.getByText(answer).textContent).toContain("2026-10-19");
-      expect(answer).toContain("scores-latest release dataset");
-      expect(answer).not.toMatch(/latest published rating/i);
+      expect(screen.getByText(answer).textContent).toContain("As of Oct 19, 2026");
+      expect(answer).not.toMatch(/latest published rating|scores-latest/i);
       const jsonLd = JSON.parse(container.querySelector('script[type="application/ld+json"]')!.textContent!);
       expect(jsonLd.mainEntity[1].acceptedAnswer.text).toBe(answer);
-      expect(jsonLd.mainEntity[1].acceptedAnswer.text).toContain("2026-10-19");
+      expect(jsonLd.mainEntity[1].acceptedAnswer.text).toContain("As of Oct 19, 2026");
     } finally {
       mockGetSnapshotSafetyAssessment.mockReturnValue(null);
     }
+  });
+
+  describe("redemption quick answer", () => {
+    const reviewedRoute = {
+      routeFamily: "offchain-issuer",
+      accessModel: "issuer-api",
+      settlementModel: "days",
+      executionModel: "offchain-request",
+      outputAssetType: "physical-commodity-delivery",
+      physicalCommodityDelivery: {
+        commodity: "XAU", deliverableOuncesPerToken: 1, minimumDeliveryTokens: 430,
+        deliveryTermsUnbounded: true, feeModel: { bps: 0, flatUsd: 0, deliveryUsd: 0 }, sameNotionalEligible: false,
+      },
+      capacityModel: { kind: "supply-full" },
+      costModel: { kind: "dynamic-or-unclear", feeBpsMin: 12.5, feeBpsMax: 55 },
+      holderEligibility: "verified-customer",
+      reviewedAt: "2026-09-21",
+    };
+
+    afterEach(() => {
+      delete mockRedemptionConfigs[coin.id];
+      vi.useRealTimers();
+    });
+
+    it("answers from a current reviewed route without implying that the reader qualifies", () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-10-25T00:00:00Z"));
+      mockRedemptionConfigs[coin.id] = reviewedRoute;
+      const items = buildStablecoinFaqItems(coin);
+      const redeem = items.find((item) => item.question === "How do you redeem TSTD?");
+
+      expect(redeem?.answer).toBe(
+        "Under the route Pharos reviewed on Sep 21, 2026, customers the issuer has verified can redeem TSTD for physical metal, starting at 430 TSTD. " +
+        "Settlement takes multiple days. The reviewed redemption fee ranges from 0.125% to 0.55%, before delivery and third-party costs. " +
+        "Whether a given holder qualifies is set by the route's own terms, not by this summary.",
+      );
+      expect(redeem?.answer).not.toMatch(/\byou can\b/i);
+      // The same reviewed eligibility becomes the safety answer's coin-specific fact.
+      expect(items[1].answer).toContain("direct redemption is limited to customers the issuer has verified");
+    });
+
+    it("omits the answer once the review is older than the reviewed-evidence budget", () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2028-01-01T00:00:00Z"));
+      mockRedemptionConfigs[coin.id] = reviewedRoute;
+      expect(buildStablecoinFaqItems(coin).map((item) => item.question)).not.toContain("How do you redeem TSTD?");
+    });
+
+    it("omits the answer for records outside active monitoring", () => {
+      mockRedemptionConfigs[coin.id] = { ...reviewedRoute, reviewedAt: new Date().toISOString().slice(0, 10) };
+      const frozen = buildStablecoinFaqItems({ ...coin, status: "frozen", frozenAt: "2026-05-01" });
+      expect(frozen.map((item) => item.question)).not.toContain("How do you redeem TSTD?");
+    });
+  });
+
+  it("leads the backing answer with the dated reserve mix and attestor period", () => {
+    const backed: StablecoinMeta = {
+      ...coin,
+      reserves: [
+        { name: "Overnight reverse repo", pct: 60.04, risk: "very-low" },
+        { name: "Treasury bills", pct: 30, risk: "very-low" },
+        { name: "Bank deposits", pct: 7, risk: "low" },
+        { name: "Money-market funds", pct: 2.96, risk: "low" },
+        { name: "Idle cash", pct: 0, risk: "low" },
+      ],
+      reserveReview: {
+        reviewedAt: "2026-09-30", reviewer: "test", confidence: "verified", sources: [{ label: "R", url: "https://example.com" }],
+        rationale: "r", compositionBasis: "b", compositionAsOf: "2026-08-31", scope: "issuer-wide",
+        knownUnknownExposure: "none", knownUnknownExposurePct: 0,
+      },
+      proofOfReserves: { ...coin.proofOfReserves!, latestReport: { periodEnd: "2026-08-31" } },
+    } as StablecoinMeta;
+
+    expect(buildStablecoinFaqItems(backed)[2].answer).toBe(
+      "Pharos records TSTD's reserves as of Aug 31, 2026 as 60% Overnight reverse repo, 30% Treasury bills, 7% Bank deposits, and 1 smaller holding. " +
+      "Reserve evidence: Independent Audit by Example Auditor, latest period ending Aug 31, 2026. " +
+      "Pharos classifies the backing as Real-World Asset Backed.",
+    );
+  });
+
+  it("renders the ISIN fact row only for coins with an authored ISIN", () => {
+    const { rerender } = render(<StablecoinDetailSeoContent coin={coin} />);
+    expect(screen.queryByText("ISIN")).toBeNull();
+    rerender(<StablecoinDetailSeoContent coin={{ ...coin, identifiers: { isin: ["FR0014015LD3"] } }} />);
+    expect(screen.getByText("ISIN").nextElementSibling?.textContent).toBe("FR0014015LD3");
+  });
+});
+
+describe("same-ticker disambiguation", () => {
+  it("lists other tracked records sharing the ticker, excluding the coin's own parent", async () => {
+    const { SameTickerStablecoins, getSameTickerStablecoins, firstOneLinerClause } = await import(
+      "../same-ticker-stablecoins"
+    );
+    const { TRACKED_STABLECOINS } = await import("@shared/lib/stablecoins/registry");
+    const group = TRACKED_STABLECOINS.filter((candidate) => candidate.symbol.toLowerCase() === "usdf");
+    expect(group.length).toBeGreaterThan(1);
+    const [first, ...rest] = group;
+
+    expect(getSameTickerStablecoins(first!).map((other) => other.id)).toEqual(rest.map((other) => other.id));
+    // A synthetic variant of the first record shares its ticker but already
+    // links that parent as a variant, so only the unrelated records remain.
+    const variant = { ...first!, id: "usdf-variant-fixture", variantOf: first!.id, variantKind: "pure-wrapper" } as StablecoinMeta;
+    expect(getSameTickerStablecoins(variant).map((other) => other.id)).toEqual(rest.map((other) => other.id));
+
+    render(<SameTickerStablecoins coin={first!} />);
+    expect(screen.getByRole("heading", { name: `Other coins using the ${first!.symbol} ticker` })).toBeTruthy();
+    for (const other of rest) {
+      expect(screen.getByRole("link", { name: `${other.name} (${other.symbol})` }).getAttribute("href")).toBe(
+        `/stablecoin/${other.id}/`,
+      );
+    }
+    expect(firstOneLinerClause("Alpha is a dollar token, backed by bills; redeemable daily.")).toBe("Alpha is a dollar token");
+  });
+
+  it("renders nothing for a unique ticker", async () => {
+    const { SameTickerStablecoins } = await import("../same-ticker-stablecoins");
+    const { container } = render(<SameTickerStablecoins coin={{ ...coin, symbol: "ZZUNIQUEZZ" }} />);
+    expect(container.innerHTML).toBe("");
   });
 });

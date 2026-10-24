@@ -67,7 +67,12 @@ function buildStablecoinThingJsonLd({
     url: detailUrl,
     ...(image ? { image } : {}),
     ...(sameAs.length > 0 ? { sameAs } : {}),
-    identifier: [buildPharosUrnJsonLdIdentifier("coin", coin.id), ...buildStablecoinIdentifierProperties(coin)],
+    identifier: [
+      buildPharosUrnJsonLdIdentifier("coin", coin.id),
+      ...buildStablecoinIdentifierProperties(coin),
+      // The ISIN names the token itself, so it stays on the coin entity, not the Dataset.
+      ...(coin.identifiers?.isin ?? []).map((value) => ({ "@type": "PropertyValue", propertyID: "ISIN", value })),
+    ],
   };
 }
 

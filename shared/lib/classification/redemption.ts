@@ -8,6 +8,7 @@ import type {
   RedemptionRouteFamily,
   RedemptionRouteStatus,
 } from "../../types";
+import type { PhysicalToUsdRoute } from "../redemption-backstop-configs/schema";
 
 const REDEMPTION_ROUTE_FAMILY_LABELS: Record<RedemptionRouteFamily, string> = {
   "stablecoin-redeem": "Stablecoin redeem",
@@ -53,6 +54,21 @@ export const REDEMPTION_OUTPUT_ASSET_LABELS: Record<RedemptionOutputAssetType, s
   "physical-commodity-delivery": "Physical commodity delivery",
   "mixed-collateral": "Mixed collateral",
   nav: "NAV-priced output",
+};
+
+export const PHYSICAL_BAR_CLASS_LABELS: Record<PhysicalToUsdRoute["barClass"], string> = {
+  "good-delivery": "London Good Delivery bar",
+  kilobar: "Kilobar",
+  "small-bar-or-coin": "Small bar or coin",
+};
+
+export const PHYSICAL_VAULT_LOCATION_LABELS: Record<PhysicalToUsdRoute["vaultLocations"][number], string> = {
+  london: "London",
+  zurich: "Zurich",
+  singapore: "Singapore",
+  "hong-kong": "Hong Kong",
+  eu: "European Union",
+  other: "Other",
 };
 
 type CoverageTone = "emerald" | "sky" | "amber" | "violet" | "rose" | "slate";

@@ -11,7 +11,7 @@ import {
   CoinNoticeSchema, ContractDeploymentSchema, CustodyProfileSchema, DateHistoryEntrySchema,
   DependencyReviewSchema, DependencyWeightSchema, FeaturedContentSchema, FuzzyDateSchema,
   LaunchMilestoneSchema, MechanismArchetypeReviewSchema, ParentBackingInheritanceSchema,
-  ProofOfReservesSchema, ReserveReviewSchema, StablecoinFlagsSchema, StablecoinLinkSchema,
+  ProofOfReservesSchema, ReserveReviewSchema, StablecoinFlagsSchema, StablecoinIdentifiersSchema, StablecoinLinkSchema,
   StablecoinMetaEnumSchemas, YieldConfigSchema,
 } from "./stablecoin-meta-primitives";
 
@@ -76,6 +76,7 @@ export const StablecoinMetaStructuralSchema = /* @__PURE__ */ (() => z.object({
   geckoId: z.string().optional(),
   cmcSlug: z.string().optional(),
   protocolSlug: z.string().optional(),
+  identifiers: StablecoinIdentifiersSchema.optional(),
   proofOfReserves: ProofOfReservesSchema.optional(),
   links: z.array(StablecoinLinkSchema).optional(),
   jurisdiction: JurisdictionSchema.optional(),

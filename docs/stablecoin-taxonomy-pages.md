@@ -24,6 +24,8 @@ Description serves metadata/hub blurb and the one-line instrument-header deck; i
 
 Cohort pages lead with data: header (title, deck, Compare leaders/Alerts actions, folded intro), then the live table, then the static directory, linked directories and related hubs. Keep the table in the first desktop viewport; crawlable context belongs below it or in the fold, not above it.
 
+The gold and silver peg pages add a static "Physical delivery terms" table directly under the live table (`src/components/physical-delivery-terms-table.tsx`). Rows come from cohort members whose reviewed `REDEMPTION_BACKSTOP_CONFIGS` route has metal-matched `physicalCommodityDelivery`: metal per token, minimum delivery, bar class, vaults, eligibility and review date, with `physicalToUsd` supplying the lot, bar and vault terms. A route past its `physicalToUsd.reviewExpiresAt`, or whose route review is older than the shared reviewed-evidence budget, is omitted; terms a route does not record read "Not recorded".
+
 ## Crawlability
 
 `src/lib/public-route-inventory.ts` projects hubs/cohorts into sitemap; exact-inventory tests are the gate. Shared shell emits member ItemList and DefinedTerm (cohort tag, or peg currency, with parent axis defined-term set); hubs emit cohort-link ItemLists.

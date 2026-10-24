@@ -16,6 +16,11 @@
   "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "spiko-uk-t-bills-money-market-fund",
+  "identifiers": {
+    "isin": [
+      "FR0014012MN7"
+    ]
+  },
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",

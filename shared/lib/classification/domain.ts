@@ -1,4 +1,4 @@
-import type { BackingType, GovernanceType, Infrastructure } from "../../types";
+import type { BackingType, GovernanceType, Infrastructure, StablecoinStatus } from "../../types";
 import { BACKING_DESCRIPTORS, GOVERNANCE_DESCRIPTORS, projectDescriptors } from "./descriptors";
 
 // Governance (Type) labels
@@ -64,3 +64,12 @@ export const INFRASTRUCTURE_LABELS = {
   "liquity-v2": "Liquity v2",
   m0: "M0",
 } as const satisfies Record<Infrastructure, string>;
+
+/** Lifecycle labels for cross-profile references (e.g. same-ticker lists). */
+export const STABLECOIN_STATUS_LABELS = {
+  active: "Active",
+  "pre-launch": "Pre-launch",
+  quarantined: "Quarantined",
+  delisted: "Delisted",
+  frozen: "Frozen",
+} as const satisfies Record<StablecoinStatus, string>;

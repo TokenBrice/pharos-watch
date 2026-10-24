@@ -18,5 +18,14 @@ describe("buildStablecoinDatasetJsonLd", () => {
     expect(withDate.dateModified).toBe("2026-05-13T00:00:00.000Z");
   });
 
+  it("emits each ISIN as a PropertyValue on the coin entity only", () => {
+    const coin = makeStablecoinMeta({ identifiers: { isin: ["FR0014015LD3"] } });
+    const jsonLd = buildStablecoinDatasetJsonLd(coin);
+    const isinIdentifier = { "@type": "PropertyValue", propertyID: "ISIN", value: "FR0014015LD3" };
+
+    expect(jsonLd.about.identifier).toContainEqual(isinIdentifier);
+    expect(jsonLd.identifier).not.toContainEqual(isinIdentifier);
+    expect(JSON.stringify(buildStablecoinDatasetJsonLd(makeStablecoinMeta()))).not.toContain('"ISIN"');
+  });
 });
 

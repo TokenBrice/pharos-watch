@@ -16,6 +16,11 @@
   "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "spiko-digital-assets-cash-carry-fund-euro-share-class",
+  "identifiers": {
+    "isin": [
+      "FR0014010ON7"
+    ]
+  },
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://docs.spiko.io/documentation/product_overview/cash_and_carry/legal_documentation",

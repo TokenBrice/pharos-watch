@@ -34,6 +34,7 @@ import { StablecoinDetailIdentityProvider } from "@/components/stablecoin-detail
 import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-detail/constants";
+import { SameTickerStablecoins } from "@/components/stablecoin-detail/same-ticker-stablecoins";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
@@ -482,6 +483,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary }: PreLaunchDetailProps
           {coin.featuredContent && coin.featuredContent.length > 0 ? (
             <FeaturedCoverage items={coin.featuredContent} />
           ) : null}
+          <SameTickerStablecoins coin={coin} />
         </div>
         <aside aria-label={`${coin.symbol} profile`} className="mt-4 grid gap-4 md:grid-cols-2 xl:mt-0 xl:grid-cols-1">
           <PlannedProfileCard coin={coin} />

@@ -111,6 +111,36 @@ export const StablecoinFlagsSchema = /* @__PURE__ */ (() => z
   })
   .strict())();
 
+/**
+ * ISO 6166 check digit: letters expand to their base-36 values (A = 10 … Z = 35),
+ * then the Luhn algorithm runs over the resulting digit string.
+ */
+export function isValidIsin(value: string): boolean {
+  if (!/^[A-Z]{2}[A-Z0-9]{9}[0-9]$/.test(value)) return false;
+  const digits = [...value.slice(0, -1)].map((char) => Number.parseInt(char, 36)).join("");
+  let sum = 0;
+  for (let index = 0; index < digits.length; index += 1) {
+    let digit = Number(digits[digits.length - 1 - index]);
+    if (index % 2 === 0) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+  }
+  return (10 - (sum % 10)) % 10 === Number(value[value.length - 1]);
+}
+
+/** Identifiers of the token itself, never of its reserve or underlying assets. */
+export const StablecoinIdentifiersSchema = /* @__PURE__ */ (() => z
+  .object({
+    isin: z
+      .array(z.string().refine(isValidIsin, "Expected an ISIN with a valid ISO 6166 check digit"))
+      .min(1)
+      .refine((values) => new Set(values).size === values.length, "Duplicate ISIN")
+      .optional(),
+  })
+  .strict())();
+
 export const StablecoinLinkSchema = /* @__PURE__ */ (() => z
   .object({
     /**

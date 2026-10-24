@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import type { z } from "zod";
 import type { StablecoinMeta, StablecoinObituary, StablecoinListingStatusReview } from "../../../types";
 import { StablecoinMetaStructuralSchema, StablecoinObituarySchema, StablecoinListingStatusReviewSchema } from "../../../types/stablecoin-meta-schemas";
-import { StablecoinFlagsSchema } from "../../../types/stablecoin-meta-primitives";
+import { isValidIsin, StablecoinFlagsSchema } from "../../../types/stablecoin-meta-primitives";
 import {
   parseStablecoinMetaAssets,
   StablecoinComplianceSidecarSchema,
@@ -40,6 +40,41 @@ describe("schema-derived catalog contracts", () => {
     expect(StablecoinMetaSourceAssetSchema.parse(source).flags).toEqual({
       ...source.flags, pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false,
     });
+  });
+});
+
+describe("token identifiers", () => {
+  const source = {
+    id: "fixture-fund", name: "Fixture Fund", symbol: "FFND",
+    flags: { backing: "rwa-backed", governance: "centralized" },
+  } as const;
+
+  it.each(["FR0014015LD3", "FR0014015LE1", "US0378331005", "KYG3R61G1088"])("admits ISIN %s", (isin) => {
+    expect(isValidIsin(isin)).toBe(true);
+    expect(StablecoinMetaSourceAssetSchema.parse({ ...source, identifiers: { isin: [isin] } }).identifiers)
+      .toEqual({ isin: [isin] });
+  });
+
+  it.each(["FR0014015LD4", "fr0014015ld3", "FR0014015LD", "0R0014015LD3"])("rejects malformed ISIN %s", (isin) => {
+    expect(isValidIsin(isin)).toBe(false);
+    expect(StablecoinMetaSourceAssetSchema.safeParse({ ...source, identifiers: { isin: [isin] } }).success).toBe(false);
+  });
+
+  it("rejects empty, duplicate and unknown identifier entries", () => {
+    for (const identifiers of [{ isin: [] }, { isin: ["FR0014015LD3", "FR0014015LD3"] }, { cusip: "037833100" }]) {
+      expect(StablecoinMetaSourceAssetSchema.safeParse({ ...source, identifiers }).success).toBe(false);
+    }
+  });
+
+  it("keeps every authored registry ISIN checksum-valid and unique to one token", () => {
+    const owners = new Map<string, string>();
+    for (const coin of TRACKED_SOURCE_COINS) {
+      for (const isin of coin.identifiers?.isin ?? []) {
+        expect(owners.get(isin), `${isin} on ${coin.id}`).toBeUndefined();
+        owners.set(isin, coin.id);
+      }
+    }
+    expect(owners.get("FR0014015LD3")).toBe("eursafo-spiko");
   });
 });
 

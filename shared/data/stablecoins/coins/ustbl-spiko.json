@@ -15,6 +15,11 @@
   "pegMechanism": "USD-denominated NAV-accreting share token (ISIN FR001400ODM9) of the Spiko SICAV short-term VNAV money market sub-fund authorised by the AMF, invested in short-dated U.S. Treasury bills and operational bank balances with a regulatory weighted-average maturity ceiling of 60 days; subscription and redemption are KYC-gated to allowlisted wallets through Spiko's transfer agent with a daily 11:30 Paris cutoff settling at the day's published NAV (next-business-day clearing for late orders) and a $1 prospectus minimum. The management company may gate redemptions at a 10% net-assets threshold for up to 20 NAVs over three months, with a maximum one-month duration; electronic-money-token redemptions may not settle the same day. Chainlink CCIP interoperability was announced, but no production adapter was identified in the reviewed sources. Prospectus: https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
   "detailProvider": "coingecko",
   "geckoId": "spiko-us-t-bills-money-market-fund",
+  "identifiers": {
+    "isin": [
+      "FR001400ODM9"
+    ]
+  },
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
