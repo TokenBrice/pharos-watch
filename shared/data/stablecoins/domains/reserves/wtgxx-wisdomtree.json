@@ -2,26 +2,14 @@
   "id": "wtgxx-wisdomtree",
   "reserves": [
     {
-      "name": "U.S. Treasury bills and Treasury floating-rate notes",
-      "pct": 79.57,
+      "sourceKey": "chainlink-nav:token:0x1fecf3d9d4fee7f2c02917a66028a48c6706c179",
+      "name": "U.S. government money market fund shares",
+      "pct": 100,
       "risk": "very-low",
-      "assetClass": "government-security",
-      "issuerOrObligor": "United States Treasury",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "WisdomTree Government Money Market Digital Fund",
       "riskFactors": [
         "duration",
-        "liquidity",
-        "custody",
-        "market"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Repurchase Agreements",
-      "pct": 20.43,
-      "risk": "very-low",
-      "assetClass": "repo",
-      "issuerOrObligor": "Deutsche Bank AG and Royal Bank of Canada NY repo counterparties",
-      "riskFactors": [
         "credit",
         "liquidity",
         "counterparty",
@@ -45,7 +33,7 @@
         "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
       }
     ],
-    "rationale": "WisdomTree's fact sheet lists WTGXX top holdings as 79.57% Treasury bills and Treasury floating-rate notes and 20.43% tri-party repurchase agreements as of December 31, 2025. Holdings are subject to change without notice, so the dated source is not a current balance assertion.",
+    "rationale": "WisdomTree's fact sheet lists WTGXX top holdings as 79.57% Treasury bills and Treasury floating-rate notes and 20.43% tri-party repurchase agreements as of December 31, 2025. Holdings are subject to change without notice, so the dated source is not a current balance assertion. Since 2026-10-24 the reviewed reserve is the single keyed fund-share row matching the chainlink-nav native-fund-share feed (one WTGXX share per token); the dated December 31, 2025 look-through mix is retained here, not as slices: U.S. Treasury bills and Treasury floating-rate notes 79.57% (United States Treasury), Repurchase Agreements 20.43% (Deutsche Bank AG and Royal Bank of Canada NY repo counterparties).",
     "compositionBasis": "WisdomTree WTGXX top-holdings disclosure",
     "compositionAsOf": "2025-12-31",
     "scope": "full-composition",
