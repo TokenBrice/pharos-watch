@@ -2,6 +2,7 @@
   "id": "klarnausd-klarna",
   "name": "KlarnaUSD",
   "symbol": "KLARNAUSD",
+  "brand": "Klarna",
   "oneLiner": "KlarnaUSD is Klarna's planned USD stablecoin on Tempo, issued via Bridge (Stripe) Open Issuance; mainnet contracts and reserves pending.",
   "flags": {
     "backing": "rwa-backed",

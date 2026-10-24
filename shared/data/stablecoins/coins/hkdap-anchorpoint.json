@@ -2,6 +2,7 @@
   "id": "hkdap-anchorpoint",
   "name": "HKDAP",
   "symbol": "HKDAP",
+  "brand": "Anchorpoint",
   "oneLiner": "HKDAP is Anchorpoint's HKMA-licensed HKD stablecoin, live on Ethereum in an institution-only beta through authorised distributors, with no public price path.",
   "flags": {
     "backing": "rwa-backed",

@@ -2,6 +2,7 @@
   "id": "uty-xsy",
   "name": "Unity",
   "symbol": "UTY",
+  "brand": "YieldPoint",
   "oneLiner": "UTY is YieldPoint's market-neutral synthetic dollar: USDC on Base mints UTY 1:1; Avalanche and Katana are spokes; redemption is Base-only after 7 days.",
   "flags": {
     "backing": "crypto-backed",

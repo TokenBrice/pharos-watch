@@ -73,6 +73,7 @@ async function writePage(
     robots = [],
     googleBotRobots = [],
     ogType = "website",
+    ogSiteName = "Pharos Watch",
     canonical = pageUrl(route),
     title = `${h1} | Pharos`,
     description = `${h1} description`,
@@ -85,6 +86,7 @@ async function writePage(
     robots?: string[];
     googleBotRobots?: string[];
     ogType?: string | null;
+    ogSiteName?: string | null;
     canonical?: string | null;
     title?: string;
     description?: string;
@@ -98,6 +100,7 @@ async function writePage(
   const googleBotTags = googleBotRobots.map((content) => `<meta name="googlebot" content="${content}"/>`).join("");
   const linkTags = links.map((href) => `<a href=${quote}${href}${quote}>${href}</a>`).join("");
   const ogTypeTag = ogType ? `<meta property="og:type" content="${ogType}"/>` : "";
+  const ogSiteNameTag = ogSiteName ? `<meta property="og:site_name" content="${ogSiteName}"/>` : "";
   const canonicalTag = canonical ? `<link rel="canonical" href="${canonical}"/>` : "";
   await writeFile(
     filePath,
@@ -111,6 +114,7 @@ async function writePage(
     ${canonicalTag}
     <meta property="og:title" content="${h1}"/>
     <meta property="og:description" content="${h1} description"/>
+    ${ogSiteNameTag}
     ${ogTypeTag}
     <meta name="twitter:card" content="summary_large_image"/>
     ${extraHead}
@@ -228,6 +232,11 @@ describe("check-seo-static", () => {
       name: "fails missing og:type on indexable pages",
       overrides: { "/": { ogType: null } },
       errors: ["/: missing og:type"],
+    },
+    {
+      name: "fails missing og:site_name on indexable pages",
+      overrides: { "/": { ogSiteName: null } },
+      errors: ["/: missing og:site_name"],
     },
     {
       name: "allows noindex pages to omit canonical",
@@ -435,6 +444,45 @@ describe("check-seo-static", () => {
         expect.stringContaining("/stability-index/: meta description is too long for search snippets"),
       ]),
     );
+  });
+
+  it("enforces title brand, dash and description ellipsis hygiene with warn-only families", async () => {
+    const root = await makeOutDir();
+    const description = "A complete meta description sentence that is long enough for the snippet envelope used by the check.";
+    const pages: Record<string, Parameters<typeof writePage>[2]> = {
+      "/": { h1: "Home", title: "Pharos: Stablecoin Analytics Dashboard Home | Pharos", description },
+      "/stablecoin/a/": { h1: "A", title: "AAA Stablecoin on Pharos: Safety Score & Risk | Pharos", description },
+      "/stablecoin/b/": { h1: "B", title: "BBB Stablecoin \u2014 Safety Score and Risk Profile | Pharos", description },
+      "/stablecoin/c/": { h1: "C", title: "CCC Stablecoin: Safety Score & Risk Profile | Pharos", description: `${description.slice(0, -1)}…` },
+      "/chains/pharos/": { h1: "Chain", title: "Pharos Network Stablecoins: Supply & Risk | Pharos", description },
+      "/blog/post/": { h1: "Post", title: "Pharos at Six Months: The Lighthouse Is Lit | Pharos Blog", description },
+      "/docs/dews/": { h1: "Docs", title: "DEWS Methodology - Pharos Docs | Pharos", description },
+      "/depeg/x/": { h1: "Depeg", title: "XYZ Depeg \u2014 March 2026: 2% Below Peg Event | Pharos", description },
+      "/compare/a-vs-b/": { h1: "Compare", title: "AAA vs BBB: Safety Scores, Reserves & Risk | Pharos", description: `${description.slice(0, -1)}…` },
+      "/stablecoin/long/": { h1: "Long", title: "LONGSYM Stablecoin (Some Issuer): Safety Score & Risk | Pharos", description },
+    };
+    for (const [route, options] of Object.entries(pages)) {
+      await writePage(root, route, { ...options, links: route === "/" ? Object.keys(pages).filter((r) => r !== "/") : [] });
+    }
+    await writeSitemap(root, Object.keys(pages));
+
+    const result = collectSeoStaticCheckResult({ outDir: root, enforceStructuredDataMatrix: false });
+    const hygiene = (messages: string[]) => messages.filter((message) =>
+      /repeats "Pharos"|dash \(U\+2012|ends in "…"|exceed 60 chars/.test(message));
+
+    expect(hygiene(result.errors)).toHaveLength(3);
+    expect(hygiene(result.errors)).toEqual(expect.arrayContaining([
+      expect.stringContaining('/stablecoin/a/: <title> repeats "Pharos" before the suffix'),
+      expect.stringContaining("/stablecoin/b/: <title> contains a figure, en or em dash"),
+      expect.stringContaining('/stablecoin/c/: meta description ends in "…"'),
+    ]));
+    expect(hygiene(result.warnings)).toHaveLength(4);
+    expect(hygiene(result.warnings)).toEqual(expect.arrayContaining([
+      expect.stringContaining('/docs/dews/: <title> repeats "Pharos" before the suffix'),
+      expect.stringContaining("/depeg/x/: <title> contains a figure, en or em dash"),
+      expect.stringContaining('/compare/a-vs-b/: meta description ends in "…"'),
+      expect.stringMatching(/^1 indexable <title>s exceed 60 chars .*\/stablecoin\/long\/$/),
+    ]));
   });
 
   it.each([

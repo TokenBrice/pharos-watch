@@ -2,6 +2,7 @@
   "id": "usdgo-osl",
   "name": "USDGO",
   "symbol": "USDGO",
+  "brand": "OSL",
   "oneLiner": "USDGO is OSL's enterprise dollar stablecoin issued by Anchorage Digital Bank, backed by cash and money market funds.",
   "flags": {
     "backing": "rwa-backed",

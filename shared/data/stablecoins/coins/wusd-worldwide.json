@@ -2,6 +2,7 @@
   "id": "wusd-worldwide",
   "name": "Worldwide USD",
   "symbol": "WUSD",
+  "brand": "WSPN",
   "oneLiner": "WUSD is WSPN's centralized dollar stablecoin backed under its cash and Treasury reserve policy; advertised corporate redemption is currently unverified.",
   "marketAvailability": "limited-trading",
   "flags": {

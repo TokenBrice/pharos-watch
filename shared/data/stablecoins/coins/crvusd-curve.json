@@ -2,6 +2,7 @@
   "id": "crvusd-curve",
   "name": "crvUSD",
   "symbol": "crvUSD",
+  "brand": "Curve",
   "oneLiner": "crvUSD is Curve's decentralized stablecoin minted against crypto collateral with LLAMMA soft-liquidation that arbitrages collateral instead of liquidating it.",
   "flags": {
     "backing": "crypto-backed",

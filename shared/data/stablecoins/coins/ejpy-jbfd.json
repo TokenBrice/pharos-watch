@@ -2,6 +2,7 @@
   "id": "ejpy-jbfd",
   "name": "EJPY",
   "symbol": "EJPY",
+  "brand": "JBFD",
   "oneLiner": "EJPY is Japan Blockchain Foundation's pre-launch trust-type yen stablecoin, planned for Japan Open Chain and Ethereum with 1:1 JPY trust backing.",
   "flags": {
     "backing": "rwa-backed",

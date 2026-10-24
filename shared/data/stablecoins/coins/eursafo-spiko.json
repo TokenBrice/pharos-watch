@@ -2,6 +2,7 @@
   "id": "eursafo-spiko",
   "name": "Spiko Amundi Overnight Swap Fund (EUR)",
   "symbol": "EURSAFO",
+  "brand": "Spiko",
   "oneLiner": "EURSAFO is Spiko's EUR share of the Spiko/Amundi Smart Cash fund, an AMF-authorized UCITS using fully collateralized overnight total-return swaps.",
   "flags": {
     "backing": "rwa-backed",

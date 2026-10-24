@@ -2,6 +2,7 @@
   "id": "wtgxx-wisdomtree",
   "name": "WisdomTree Treasury Money Market Digital Fund",
   "symbol": "WTGXX",
+  "brand": "WisdomTree",
   "oneLiner": "WTGXX is WisdomTree's SEC-registered '40 Act government money market fund tokenized at a stable $1 NAV, with reserves in Treasuries, repos, and cash.",
   "flags": {
     "backing": "rwa-backed",

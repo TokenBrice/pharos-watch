@@ -2,6 +2,7 @@
   "id": "usdc-circle",
   "name": "USD Coin",
   "symbol": "USDC",
+  "brand": "Circle",
   "oneLiner": "USDC is Circle's dollar stablecoin, redeemable 1:1 under issuer terms, backed by U.S. Treasuries, repos, and cash in a fund and segregated bank accounts.",
   "flags": {
     "backing": "rwa-backed",

@@ -2,6 +2,7 @@
   "id": "tgbp-tokenised",
   "name": "Tokenised GBP",
   "symbol": "tGBP",
+  "brand": "BCP Technologies",
   "oneLiner": "tGBP is BCP Technologies' pound stablecoin, redeemable 1:1 by eligible account holders and backed by GBP cash, money market funds and bonds.",
   "flags": {
     "backing": "rwa-backed",

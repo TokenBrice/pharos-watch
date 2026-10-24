@@ -2,6 +2,7 @@
   "id": "cadc-cad-coin",
   "name": "CAD Coin",
   "symbol": "CADC",
+  "brand": "Loon",
   "oneLiner": "CADC is Loon's centralized Canadian dollar stablecoin, redeemable 1:1 against CAD held in trust at a FINTRAC-regulated Canadian institution.",
   "flags": {
     "backing": "rwa-backed",

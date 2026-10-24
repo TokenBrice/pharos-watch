@@ -2,6 +2,7 @@
   "id": "susn-noon",
   "name": "Staked USN",
   "symbol": "sUSN",
+  "brand": "Noon",
   "oneLiner": "sUSN is Noon's staking wrapper of USN; share price accrues yield from a reserve led by private credit, plus funding-rate arbitrage, DeFi lending, and T-bills.",
   "flags": {
     "backing": "rwa-backed",

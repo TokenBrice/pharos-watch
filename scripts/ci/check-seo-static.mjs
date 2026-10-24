@@ -76,6 +76,50 @@ const INDEXABLE_SNIPPET_LENGTHS = {
   title: { min: 35, max: 70 },
   description: { min: 110, max: 180 },
 };
+// Title and description hygiene (SEO plan PF10, TR2). Only templated titles
+// ending in the root " | Pharos" suffix are checked for a second brand
+// mention; absolute titles (e.g. "| Pharos Blog") opt out by construction.
+const TITLE_BRAND_SUFFIX = " | Pharos";
+const TITLE_BRAND_PATTERN = /\bPharos\b/;
+// The homepage, and the Pharos Network chain whose own name is "Pharos".
+const TITLE_BRAND_ALLOWED_ROUTES = new Set(["/", "/chains/pharos/"]);
+const TITLE_DASH_PATTERN = /[\u2012-\u2015]/;
+const TITLE_WARN_LENGTH = 60;
+// Families whose titles or descriptions other SEO lanes are still rewriting:
+// these report as warnings until their fix lands. Delete a prefix to enforce it.
+const METADATA_RULE_WARN_ONLY_PREFIXES = {
+  titleBrand: [
+    "/about/", "/api/", "/changelog/", "/docs/", "/funding/", "/methodology/",
+    "/privacy/", "/screener/", "/stability-index/", "/status/",
+  ],
+  titleDash: ["/depeg/"],
+  descriptionEllipsis: ["/compare/"],
+};
+
+function isWarnOnlyMetadataRoute(rule, route) {
+  return METADATA_RULE_WARN_ONLY_PREFIXES[rule].some((prefix) => route.startsWith(prefix));
+}
+
+function checkTitleAndDescriptionHygiene(record, errors, warnings, longTitles) {
+  const report = (rule, message) =>
+    (isWarnOnlyMetadataRoute(rule, record.route) ? warnings : errors).push(`${record.route}: ${message}`);
+  const { title, description } = record;
+  if (
+    title.endsWith(TITLE_BRAND_SUFFIX)
+    && !TITLE_BRAND_ALLOWED_ROUTES.has(record.route)
+    && TITLE_BRAND_PATTERN.test(title.slice(0, -TITLE_BRAND_SUFFIX.length))
+  ) {
+    report("titleBrand", `<title> repeats "Pharos" before the suffix: ${title}`);
+  }
+  if (TITLE_DASH_PATTERN.test(title)) {
+    report("titleDash", `<title> contains a figure, en or em dash (U+2012-U+2015): ${title}`);
+  }
+  if (description.endsWith("…")) {
+    report("descriptionEllipsis", `meta description ends in "…"; compose whole sentences instead: ${description}`);
+  }
+  if (title.length > TITLE_WARN_LENGTH) longTitles.push(record.route);
+}
+
 const REQUIRED_GOOGLE_PREVIEW_DIRECTIVES = ["max-snippet:-1", "max-image-preview:large", "max-video-preview:-1"];
 const REQUIRED_STATIC_HEADER_RULES = [
   { route: "/*.txt", header: "X-Robots-Tag", directives: ["noindex", "nofollow"], label: "raw .txt payloads" },
@@ -882,6 +926,7 @@ export function buildSeoPageRecord(
     ogTitle: getMetaContents(html, "property", "og:title")[0] ?? "",
     ogDescription: getMetaContents(html, "property", "og:description")[0] ?? "",
     ogType: getMetaContents(html, "property", "og:type")[0] ?? "",
+    ogSiteName: getMetaContents(html, "property", "og:site_name")[0] ?? "",
     ogImage: getMetaContents(html, "property", "og:image")[0] ?? "",
     twitterCard: getMetaContents(html, "name", "twitter:card")[0] ?? "",
     twitterImage: getMetaContents(html, "name", "twitter:image")[0] ?? "",
@@ -934,6 +979,7 @@ export function collectSeoStaticCheckResult({
   const redirectRules = redirectEntries.filter((entry) => entry.destination);
   validateStaticHeaders(outDir, errors);
   validateStaticRedirects(redirectRules, errors);
+  const longTitleRoutes = [];
 
   for (const record of pageRecords) {
     if (record.hasFatalCsrBailout) {
@@ -964,6 +1010,7 @@ export function collectSeoStaticCheckResult({
           `${record.route}: meta description is too long for search snippets (${record.description.length} chars, maximum ${INDEXABLE_SNIPPET_LENGTHS.description.max})`,
         );
       }
+      checkTitleAndDescriptionHygiene(record, errors, warnings, longTitleRoutes);
     }
     if (indexable && !record.canonical) errors.push(`${record.route}: missing canonical`);
     if (indexable && record.canonical) {
@@ -977,6 +1024,7 @@ export function collectSeoStaticCheckResult({
     if (!record.ogTitle) errors.push(`${record.route}: missing og:title`);
     if (!record.ogDescription) errors.push(`${record.route}: missing og:description`);
     if (!record.twitterCard) errors.push(`${record.route}: missing twitter:card`);
+    if (indexable && !record.ogSiteName) errors.push(`${record.route}: missing og:site_name`);
 
     const robotsConflicts = getRobotsConflicts(record.robotsTags);
     for (const conflict of robotsConflicts) {
@@ -1211,6 +1259,12 @@ export function collectSeoStaticCheckResult({
         );
       }
     }
+  }
+
+  if (longTitleRoutes.length > 0) {
+    warnings.push(
+      `${longTitleRoutes.length} indexable <title>s exceed ${TITLE_WARN_LENGTH} chars (search truncation), e.g. ${longTitleRoutes.slice(0, 5).join(", ")}`,
+    );
   }
 
   // Informational warning only: avoids failing CI for transient route count changes.

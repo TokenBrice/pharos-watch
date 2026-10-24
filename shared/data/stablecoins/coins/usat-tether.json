@@ -2,6 +2,7 @@
   "id": "usat-tether",
   "name": "USA₮",
   "symbol": "USAT",
+  "brand": "Tether",
   "oneLiner": "USAT is Tether's GENIUS-era U.S. dollar stablecoin, issued 1:1 by Anchorage Digital Bank with reserves custodied at Cantor Fitzgerald.",
   "flags": {
     "backing": "rwa-backed",

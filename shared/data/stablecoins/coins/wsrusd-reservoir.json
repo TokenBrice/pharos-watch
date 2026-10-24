@@ -2,6 +2,7 @@
   "id": "wsrusd-reservoir",
   "name": "Wrapped Savings rUSD",
   "symbol": "wsrUSD",
+  "brand": "Reservoir",
   "oneLiner": "wsrUSD is Reservoir's non-rebasing ERC-4626 savings token over rUSD, with a governance-set rate and exposure to the upstream protocol balance sheet.",
   "flags": {
     "backing": "rwa-backed",

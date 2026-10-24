@@ -2,6 +2,7 @@
   "id": "bils-bitsofgold",
   "name": "BILS",
   "symbol": "BILS",
+  "brand": "Bits of Gold",
   "oneLiner": "BILS is Bits of Gold's regulator-approved Israeli shekel stablecoin on Solana, backed 1:1 by segregated shekel reserves and pending a gradual limited launch.",
   "flags": {
     "backing": "rwa-backed",

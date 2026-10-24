@@ -2,6 +2,7 @@
   "id": "gldt-gold-dao",
   "name": "Gold Token",
   "symbol": "GLDT",
+  "brand": "Gold DAO",
   "oneLiner": "GLDT is Gold DAO's fungible gold token: each token represents 0.01 grams of physical gold through locked GLD NFT backing.",
   "flags": {
     "backing": "rwa-backed",

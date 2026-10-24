@@ -9,7 +9,7 @@ import { splitDigestParagraphs, EDITORIAL_BODY_STYLE, formatDigestDateLabel, par
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
-import { buildPageMetadata, summarizeText, trimTextAtWordBoundary } from "@/lib/page-metadata";
+import { buildPageMetadata, composeDescription, summarizeText, trimTextAtWordBoundary } from "@/lib/page-metadata";
 import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import { formatIsoTimestamp } from "@shared/lib/format";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -51,14 +51,19 @@ function formatDate(dateStr: string): string {
 }
 
 function buildDigestMetadataDescription(digest: DigestContentEntry, formattedDate: string): string {
-  const summary = summarizeText(digest.text, 150);
-  if (summary.length >= 110) return summary;
+  const summary = summarizeText(digest.text, 180);
+  // summarizeText only ends in "…" when the first sentence is longer than the budget.
+  const firstSentence = summary.endsWith("…") ? null : summary;
+  if (firstSentence && firstSentence.length >= 110) return firstSentence;
 
   const edition = digest.digestType === "weekly" ? "weekly recap" : "daily brief";
-  return trimTextAtWordBoundary(
-    `${summary} Read the Pharos ${edition} for ${formattedDate}: PSI, depegs, flows, liquidity, and stablecoin risk signals.`,
-    160,
-  );
+  return composeDescription([
+    firstSentence,
+    [
+      `Read the Pharos ${edition} for ${formattedDate}: PSI, depegs, flows, liquidity, and stablecoin risk signals.`,
+      `Read the Pharos ${edition} for ${formattedDate}.`,
+    ],
+  ], 180);
 }
 
 function renderDigestDetail(digest: DigestContentEntry) {

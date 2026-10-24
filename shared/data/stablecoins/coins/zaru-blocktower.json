@@ -2,6 +2,7 @@
   "id": "zaru-blocktower",
   "name": "ZAR Universal",
   "symbol": "ZARU",
+  "brand": "BlockTower",
   "oneLiner": "ZARU is BlockTower's rand token, backed by cash and money-market funds with institutional redemption and retail partner access.",
   "flags": {
     "backing": "rwa-backed",

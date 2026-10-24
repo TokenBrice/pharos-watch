@@ -2,6 +2,7 @@
   "id": "audd-novatti",
   "name": "AUDD",
   "symbol": "AUDD",
+  "brand": "Novatti",
   "oneLiner": "AUDD is AUDC Pty Ltd's centralized Australian dollar stablecoin, redeemable 1:1 and backed by Australian-dollar reserves held on bare trust for holders.",
   "flags": {
     "backing": "rwa-backed",

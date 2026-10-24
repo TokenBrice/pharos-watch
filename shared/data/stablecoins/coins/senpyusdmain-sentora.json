@@ -2,6 +2,7 @@
   "id": "senpyusdmain-sentora",
   "name": "PayPal USD Main",
   "symbol": "senPYUSDmain",
+  "brand": "Sentora",
   "oneLiner": "senPYUSDmain is Sentora's PYUSD Morpho Vault V2 share; yield and losses change NAV, and cash redemption depends on idle PYUSD.",
   "flags": {
     "backing": "crypto-backed",

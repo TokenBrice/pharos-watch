@@ -27,6 +27,7 @@ vi.mock("@/lib/json-ld", () => ({
 }));
 vi.mock("@/lib/page-metadata", () => ({
   buildPageMetadata: () => ({}),
+  composeDescription: (parts: unknown[]) => parts.filter(Boolean).join(" "),
   summarizeText: (text: string) => text,
   trimTextAtWordBoundary: (text: string) => text,
 }));

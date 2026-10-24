@@ -2,6 +2,7 @@
   "id": "usdp-paxos",
   "name": "Pax Dollar",
   "symbol": "USDP",
+  "brand": "Paxos",
   "oneLiner": "USDP is Paxos's regulated dollar, redeemable 1:1 and backed by cash and U.S. Treasury-collateralized repos; some bank balances exceed FDIC limits.",
   "flags": {
     "backing": "rwa-backed",

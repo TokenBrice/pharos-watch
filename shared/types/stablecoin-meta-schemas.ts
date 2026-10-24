@@ -63,6 +63,8 @@ export const StablecoinMetaStructuralSchema = /* @__PURE__ */ (() => z.object({
   exitMechanism: StablecoinMetaEnumSchemas.exitMechanism.optional(),
   name: z.string(),
   symbol: z.string(),
+  /** Searched issuer short name for profile titles; set only where `name` omits it, repeats the symbol, or is too long. */
+  brand: z.string().trim().min(1).max(20).optional(),
   oneLiner: z.string().max(160).optional(),
   flags: StablecoinFlagsSchema,
   pegReferenceId: z.string().optional(),

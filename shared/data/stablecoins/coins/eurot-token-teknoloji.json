@@ -2,6 +2,7 @@
   "id": "eurot-token-teknoloji",
   "name": "Euro Token",
   "symbol": "EUROT",
+  "brand": "Token Teknoloji",
   "oneLiner": "EUROT is Token Teknoloji's centralized euro stablecoin issued from Turkey, backed by euro bank reserves at Ziraat Participation Bank and Akbank.",
   "mechanismArchetype": "fiat-cash",
   "flags": {

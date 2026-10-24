@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 import {
+  buildPreLaunchStablecoinJsonLd,
   buildStablecoinDatasetJsonLd,
 } from "@/lib/stablecoin-detail-json-ld";
 
@@ -29,3 +30,17 @@ describe("buildStablecoinDatasetJsonLd", () => {
   });
 });
 
+describe("buildPreLaunchStablecoinJsonLd", () => {
+  it("dates the WebPage by its newest day-precision milestone", () => {
+    const coin = makeStablecoinMeta({
+      status: "pre-launch",
+      milestones: [
+        { date: "2026-08-12", type: "milestone", title: "Beta" },
+        { date: "2026-10", type: "milestone", title: "Fuzzy month" },
+        { date: "2026-10-16", type: "announcement", title: "Update" },
+      ],
+    });
+    expect(buildPreLaunchStablecoinJsonLd(coin)[0].dateModified).toBe("2026-10-16");
+    expect(buildPreLaunchStablecoinJsonLd(makeStablecoinMeta({ status: "pre-launch" }))[0]).not.toHaveProperty("dateModified");
+  });
+});

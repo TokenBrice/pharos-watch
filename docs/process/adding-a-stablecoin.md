@@ -287,6 +287,9 @@ Three optional clusters on `StablecoinMeta` drive the hero verdict, mechanism sc
 - Active asset: present-tense, names issuer + backing + redemption shape. Example for USDC: "USDC is Circle's centralized dollar stablecoin, redeemable 1:1 and backed by short-term U.S. Treasuries, repos, and cash held in an SEC-regulated reserve fund."
 - Synthetic / hedged asset: name the hedge shape and where yield comes from. Example for USDe: "USDe is a synthetic dollar that stays near $1 by hedging crypto collateral with equal short positions on derivatives exchanges; yield comes from funding rates."
 - Frozen / paused asset: use past tense and name the event. Example: "USR was Resolv Labs's delta-neutral synthetic dollar that paused issuance in 2026..."
+- The `oneLiner` is also the profile meta description. Keep supply, AUM or other drifting amounts out of it ("~HK$527k circulating"); a `oneLiner` with such an amount is replaced in metadata by a generic fixed-structure sentence ([Metadata](../stablecoin-detail-page.md#metadata)).
+
+**`brand` (optional top-level string, ≤20 chars)** — the issuer short name people search for (Circle, Paxos, JBFD), used in profile titles. Set it only when `name` omits the issuer, repeats the symbol, or is too long for a title.
 
 **`mechanismArchetype` (top-level enum)** — coarse mechanism class that selects the mechanism flow drawn in the detail page's Mechanism module (`PegStabilityCard`), above the curated peg-mechanism prose.
 

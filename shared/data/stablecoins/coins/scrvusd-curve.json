@@ -2,6 +2,7 @@
   "id": "scrvusd-curve",
   "name": "Savings crvUSD",
   "symbol": "scrvUSD",
+  "brand": "Curve",
   "oneLiner": "scrvUSD is Curve's savings-rate wrapper of crvUSD; the share price compounds with a slice of crvUSD borrower interest, with crvUSD-tier CDP risk underneath.",
   "flags": {
     "backing": "crypto-backed",

@@ -2,6 +2,7 @@
   "id": "xo-exodus",
   "name": "XO Cash",
   "symbol": "XO",
+  "brand": "Exodus",
   "oneLiner": "XO is MoonPay's Solana dollar token, issued through M0 infrastructure and backed by segregated U.S. dollars and other high-quality liquid assets.",
   "flags": {
     "backing": "rwa-backed",

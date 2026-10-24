@@ -2,6 +2,7 @@
   "id": "mxne-real-mxn",
   "name": "Real MXN",
   "symbol": "MXNe",
+  "brand": "Brale",
   "oneLiner": "MXNe is Brale's Mexican peso stablecoin issued in partnership with Etherfuse, backed by Etherfuse Stablebonds (CETES exposure) on Base, Solana, and Stellar.",
   "flags": {
     "backing": "rwa-backed",

@@ -2,6 +2,7 @@
   "id": "mxnb-juno",
   "name": "MXNB",
   "symbol": "MXNB",
+  "brand": "Juno",
   "oneLiner": "MXNB is backed by segregated MXN cash, cash equivalents, and short-term Mexican government securities and issued under El Salvador's CNAD.",
   "flags": {
     "backing": "rwa-backed",

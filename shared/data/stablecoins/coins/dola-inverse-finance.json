@@ -2,6 +2,7 @@
   "id": "dola-inverse-finance",
   "name": "Dola",
   "symbol": "DOLA",
+  "brand": "Inverse Finance",
   "oneLiner": "DOLA is Inverse Finance's CDP-style dollar issued through FiRM lending and a USDS PSM rail, with permissioned mint authority outside collateralized borrowing.",
   "flags": {
     "backing": "crypto-backed",

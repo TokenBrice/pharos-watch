@@ -26,7 +26,7 @@ Frozen archived-row projection lives in `src/lib/frozen-snapshot-live-summary.ts
 
 `generateStaticParams()` prebuilds one page per tracked stablecoin ID from `TRACKED_STABLECOINS`. The server route also:
 
-- builds metadata through `buildStablecoinDetailMetadata(...)`
+- builds metadata through `buildStablecoinDetailMetadata(...)` (see [Metadata](#metadata))
 - injects static logo data from `data/logos.json`
 - injects static AI summaries from `data/ai-summaries.json`
 - renders one server-side `sr-only` `h1` for active pages before the client detail island mounts; the visible identity remains inside the client hero, while descriptions live in metadata and Dataset JSON-LD
@@ -44,6 +44,18 @@ When two or more tracked records share a ticker (case-insensitive), the static p
 Active stablecoin Dataset JSON-LD describes the build-time markdown profile, not live analytics: `variableMeasured` contains peg reference, backing, governance, and listing status. Its `dateModified`, when present, is the editorial summary update date, not a live observation clock. Dataset nodes inline the Pharos `Organization` for `creator` / `publisher`, expose the CC BY 4.0 license URL, carry the stable Pharos coin URN in `identifier`, and set `sameAs` to the canonical Pharos detail URL. Provider/profile URLs belong to the nested `about` Thing's `sameAs`. Frozen assets use archive-specific historical variables, quarantined and delisted records use inactive-listing variables without live claims, and pre-launch assets use conservative `WebPage` / `Thing` JSON-LD.
 
 Static HTML and Markdown overviews with supported live claim placeholders are withheld when their inputs are unavailable, using the shared `hasAvailableAiSummaryClaims` eligibility check rather than asserting an `N/A` grade or score. The static profile and summary provenance remain visible; the interactive summary retains live claim resolution. Markdown projects glossary markup to its readable labels, never internal `{{term:…}}` delimiters.
+
+### Metadata
+
+`buildStablecoinDetailMetadata()` (`src/lib/page-metadata.ts`) owns every profile `<title>` and meta description. Titles keep a 51-character core so the full title with the root ` | Pharos` suffix fits about 60 characters; frozen archives keep their earlier 61-character core. Descriptions are composed from whole sentences with `composeDescription()` at 180 characters or fewer and never end in "…".
+
+- **Brand.** The optional coin field `brand` (20 characters or fewer) is the searched issuer short name (Circle, Paxos, JBFD). It is set only where `name` omits the issuer, repeats the symbol, or is too long for a title. Titles use `brand`, else `name` unless it only repeats the symbol.
+- **Active titles (cohort).** Treatment: first fit of `{SYM} Stablecoin ({brand}): Safety Score & Risk`, `{SYM} ({brand}): Safety Score, Reserves & Risk`, `{SYM} Stablecoin: Safety Score & Risk`, `{SYM} Safety Score`. NAV tokens drop "Stablecoin" and use "Backing & Risk". Tickers shared by two or more tracked records keep the `{SYM} ({name})` form in every option. Control keeps the earlier "Risk Profile" chain under the same budget, with `brand` replacing a name that only repeats the symbol. No title carries the grade value.
+- **Cohort definition.** Treatment is every second id (1-based positions 2, 4, 6, …) of `shared/data/stablecoins/canonical-order.json` as of commit `a23e4ced8`, frozen in `src/lib/stablecoin-title-cohort.json` on 2026-10-25 so catalog edits cannot reshuffle the arms; later ids are control. Measure treatment and control id regexes in Search Console for six weeks after recrawl, then adopt or revert the whole cohort by setting `STABLECOIN_TITLE_COHORT_MODE` in `src/lib/stablecoin-title-cohort.ts` to `"treatment"` or `"control"`.
+- **Active descriptions.** `Safety Score {G} ({Mon D, YYYY}).` from the `scores-latest` release grade and `PUBLIC_DATASET_CURRENT_DATE` (the date the safety FAQ cites), then the curated `oneLiner`; the undated grade is the shorter fallback, and coins without a rated grade use the `oneLiner` alone. A differentiator sentence is appended only when it fits. Live price, peg deviation and supply never enter descriptions.
+- **Volatile oneLiners.** A `oneLiner` with a supply, AUM/TVL or magnitude amount ("~HK$527k", "$1.2B", "5M USDC", `hasVolatileAmount()`) is replaced by a fixed-structure sentence built from the classification flags, so snippets do not cache a stale figure. Curators should keep amounts out of `oneLiner`.
+- **Pre-launch.** Title: first fit of `{SYM} Stablecoin ({brand}): Launch Date & Status` (`Beta Access & Status` for `launchPhase: "beta"`), `{SYM} Stablecoin: …`, `{SYM} Launch Status`. Description: `oneLiner`, then `Latest milestone: {Mon D, YYYY}.` from the newest day-precision milestone, then `Target: {expectedLaunchDate}.`; fuzzy dates are never promoted to a day. The pre-launch `WebPage` JSON-LD carries that milestone date as `dateModified`.
+- **Quarantined and delisted.** Title `{SYM} ({name}): Profile & Listing Status`. Description: `oneLiner`, "Not currently scored by Pharos: {category}." and "See history and documents.", where the category is "price or supply data under review" (quarantined), "outside the listing scope", "issuer wind-down", or "removed from the active listing". The raw `listingStatusReview.reason` stays on the page only.
 
 If the ID is not tracked, the server shell returns a not-found-style fallback instead of mounting the full client.
 
