@@ -1,4 +1,5 @@
 import { describe, expect, it, afterEach, vi } from "vitest";
+import { DatabaseSync } from "node:sqlite";
 import { gzipSync } from "node:zlib";
 import { createHash } from "node:crypto";
 import { encodeAbiParameters, parseAbiParameters } from "viem/utils";
@@ -14,6 +15,7 @@ import type { AdapterContext } from "../types";
 import { fetchMidasMtbillReserves, MidasIpfsGatewayError } from "../midas-mtbill";
 import { installAdapterNetwork, expectValidAdapterOutput, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 import { midasNetwork, midasClaimData, MIDAS_CAPTURE_NOW, MIDAS_CHECKPOINT_SEC, type MidasTestDocument } from "./midas-mtbill.test-support";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
 import type { ReserveCompositionRecord } from "../../../lib/live-reserves/store-shared";
 
@@ -38,7 +40,7 @@ function moveUstbToUsdc(p: HistoricalFixture, amount: number, delta = amount): v
 }
 const registry = fixture.registry;
 const fresh = MIDAS_CAPTURE_NOW;
-const gatewayUrls = ["https://gateway.pinata.cloud/ipfs/", "https://ipfs.filebase.io/ipfs/", "https://ipfs.io/ipfs/"]
+const gatewayUrls = ["https://ipfs.filebase.io/ipfs/", "https://gateway.pinata.cloud/ipfs/", "https://ipfs.io/ipfs/"]
   .map((gateway) => `${gateway}${fixture.attestationCid}`);
 function fetchPacket(networkSpec: AdapterNetworkSpec = midasNetwork(), nowSec = fresh, ctx: Partial<AdapterContext> = {}, signal = AbortSignal.timeout(5_000)) {
   const network = installAdapterNetwork(networkSpec);
@@ -50,7 +52,18 @@ function book(document: MidasTestDocument): Record<string, unknown> {
 function checkpointMetadata(document: MidasTestDocument): Record<string, unknown> {
   return book(document)._metadata as Record<string, unknown>;
 }
-afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
+const sqliteConnections: DatabaseSync[] = [];
+function cacheDb(): { db: D1Database; sqlite: DatabaseSync } {
+  const sqlite = new DatabaseSync(":memory:");
+  sqliteConnections.push(sqlite);
+  sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
+  return { db: createSqliteD1(sqlite), sqlite };
+}
+function cachedRow(sqlite: DatabaseSync): { cid: string; gzipBase64: string } | null {
+  const row = sqlite.prepare("SELECT value FROM cache WHERE key = 'midas-mtbill:save-checkpoint-file'").get() as { value: string } | undefined;
+  return row ? JSON.parse(row.value) as { cid: string; gzipBase64: string } : null;
+}
+afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); sqliteConnections.splice(0).forEach((sqlite) => sqlite.close()); });
 
 describe("mTBILL registry-checkpoint issuer portfolio v2", () => {
   it("verifies the recorded UnixFS root rather than the raw gzip/JSON hashes, binds the exact book and retains its original clock", async () => {
@@ -62,7 +75,7 @@ describe("mTBILL registry-checkpoint issuer portfolio v2", () => {
     expect(output.slices.map((slice) => slice.pct)).toEqual([expect.closeTo(93.8616387326035, 10), expect.closeTo(6.130316017733062, 10), expect.closeTo(0.008045249663451173, 10)]);
     expect(output.slices[2]).toMatchObject({ risk: "high", unclassifiedResidual: true, residualReason: "insufficient-evidence" });
     expect(output.metadata?.details).toMatchObject({
-      attestationCid: fixture.attestationCid, attestationHash: "0x47c1850417f4d5ceb1ebe78f0d2b319af6b0bd0b9497f481922f356158c8028c",
+      attestationCid: fixture.attestationCid, attestationFileSource: "https://ipfs.filebase.io/ipfs/", attestationHash: "0x47c1850417f4d5ceb1ebe78f0d2b319af6b0bd0b9497f481922f356158c8028c",
       pinHash: fixture.block.hash, registryAddress: registry.toLowerCase(), proofId: fixture.proofId,
       documentJsonSha256: `0x${fixture.jsonSha256}`, compositionEvidence: "issuer-reported-portfolio-with-registry-checkpoint",
       signedCheckpoint: "2026-10-16T10:00", registryPublishedAt: 1792159739,
@@ -85,14 +98,14 @@ describe("mTBILL registry-checkpoint issuer portfolio v2", () => {
       expect(call.viaMulticall).toBe(true);
     }
     expect(network.requests.filter(({ method }) => method === "GET").map(({ url }) => url)).toEqual([
-      `https://gateway.pinata.cloud/ipfs/${fixture.attestationCid}`,
+      `https://ipfs.filebase.io/ipfs/${fixture.attestationCid}`,
       "https://api-prod.midas.app/api/transparency/by-timestamp?token=mTBILL&timestamp=2026-10-16T10%3A00",
     ]);
     expect(createHash("sha256").update(Buffer.from(fixture.gzipBase64, "base64")).digest("hex")).toBe(fixture.gzipSha256);
     expect(fixture.gzipSha256).not.toBe("47c1850417f4d5ceb1ebe78f0d2b319af6b0bd0b9497f481922f356158c8028c");
   });
 
-  it("falls back serially after Pinata 429 and a second gateway 503 without same-host retries or Retry-After waits", async () => {
+  it("falls back serially after a leading 429 and a second gateway 503 without same-host retries or Retry-After waits", async () => {
     const spec = midasNetwork();
     let cancelled = false;
     spec.json![gatewayUrls[0]] = () => new Response(new ReadableStream({
@@ -164,6 +177,53 @@ describe("mTBILL registry-checkpoint issuer portfolio v2", () => {
     expect(cancelled).toBe(true);
     expect(network.requests.filter(({ url }) => url.includes("/ipfs/")).map(({ url }) => url)).toEqual(gatewayUrls.slice(0, 1));
     expect(network.requests.some(({ url }) => url.includes("by-timestamp"))).toBe(false);
+  });
+
+  it("caches the root-verified file by CID and serves later runs from it while every gateway is rate limited", async () => {
+    const { db, sqlite } = cacheDb();
+    const first = fetchPacket(midasNetwork(), fresh, { db });
+    await expect(first.result).resolves.toBeDefined();
+    expect(cachedRow(sqlite)).toEqual({ cid: fixture.attestationCid, gzipBase64: fixture.gzipBase64 });
+    const spec = midasNetwork();
+    for (const url of gatewayUrls) spec.json![url] = () => new Response("rate limited", { status: 429 });
+    const { result, network } = fetchPacket(spec, fresh, { db });
+    const output = await result;
+    expect(output.metadata?.sourceTimestamp).toBe(MIDAS_CHECKPOINT_SEC);
+    expect(output.metadata?.details).toMatchObject({ attestationCid: fixture.attestationCid, attestationFileSource: "verified-d1-cache" });
+    expect(network.requests.some(({ url }) => url.includes("/ipfs/"))).toBe(false);
+  });
+
+  it.each([
+    ["tampered bytes for the same CID", () => ({ cid: fixture.attestationCid, gzipBase64: Buffer.from("tampered").toString("base64") })],
+    ["another CID's file", () => ({ cid: "QmOther", gzipBase64: fixture.gzipBase64 })],
+    ["malformed JSON", () => "{"],
+  ])("ignores a cached row with %s, re-reads a gateway and replaces the row", async (_label, value) => {
+    const { db, sqlite } = cacheDb();
+    const row = value();
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('midas-mtbill:save-checkpoint-file', ?, 1)")
+      .run(typeof row === "string" ? row : JSON.stringify(row));
+    const { result, network } = fetchPacket(midasNetwork(), fresh, { db });
+    const output = await result;
+    expect(output.metadata?.details).toMatchObject({ attestationFileSource: "https://ipfs.filebase.io/ipfs/" });
+    expect(network.requests.filter(({ url }) => url.includes("/ipfs/")).map(({ url }) => url)).toEqual(gatewayUrls.slice(0, 1));
+    expect(cachedRow(sqlite)).toEqual({ cid: fixture.attestationCid, gzipBase64: fixture.gzipBase64 });
+  });
+
+  it("treats cache read and write failures as a miss without failing the gateway read", async () => {
+    const db = { prepare: () => { throw new Error("D1 unavailable"); } } as unknown as D1Database;
+    const { result, network } = fetchPacket(midasNetwork(), fresh, { db });
+    const output = await result;
+    expect(output.metadata?.details).toMatchObject({ attestationFileSource: "https://ipfs.filebase.io/ipfs/" });
+    expect(network.requests.filter(({ url }) => url.includes("/ipfs/"))).toHaveLength(1);
+  });
+
+  it("does not cache unverified gateway bytes", async () => {
+    const { db, sqlite } = cacheDb();
+    const spec = midasNetwork();
+    spec.json![gatewayUrls[0]] = () => new Response(new Uint8Array([31, 139, 8]));
+    for (const url of gatewayUrls.slice(1)) spec.json![url] = () => new Response("rate limited", { status: 429 });
+    await expect(fetchPacket(spec, fresh, { db }).result).rejects.toBeInstanceOf(MidasIpfsGatewayError);
+    expect(cachedRow(sqlite)).toBeNull();
   });
 
   it.each([301, 302, 307, 308])("rejects HTTP %i from the exact historical endpoint using Workers-supported manual redirects", async (status) => {
@@ -271,7 +331,7 @@ describe("mTBILL registry-checkpoint issuer portfolio v2", () => {
     expect(expired.network.requests).toHaveLength(0);
     const signal = new AbortController();
     const network = midasNetwork();
-    network.json![`https://gateway.pinata.cloud/ipfs/${fixture.attestationCid}`] = () => { signal.abort(new Error("cancelled-object")); return new Response(Buffer.from(fixture.gzipBase64, "base64")); };
+    network.json![gatewayUrls[0]] = () => { signal.abort(new Error("cancelled-object")); return new Response(Buffer.from(fixture.gzipBase64, "base64")); };
     const pending = fetchPacket(network, fresh, {}, signal.signal);
     await expect(pending.result).rejects.toThrow("cancelled-object");
     expect(pending.network.requests.some(({ url }) => url.includes("by-timestamp"))).toBe(false);

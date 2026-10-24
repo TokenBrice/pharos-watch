@@ -10,7 +10,7 @@ import {
 import { installAdapterNetwork, runAdapter, type AdapterNetwork, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildReviewedReserveClassifications } from "../../../lib/safety-score-v9/extension-reserves";
 
 const ORACLE_ADDRESS = "0x74f2199AEb743f68f05943e5715A33EaF2b61f53";
@@ -166,8 +166,9 @@ describe("adaptChainlinkNavResponse", () => {
     sourceKey: "chainlink-nav:test",
   };
 
-  it("projects FIUSD's native fund-share slice onto its reviewed singleton classification", () => {
-    const coin = ACTIVE_STABLECOINS.find((entry) => entry.id === "fiusd-sygnum")!;
+  // WTGXX is quarantined today; its keyed row keeps a reactivated feed classified.
+  it.each(["fiusd-sygnum", "wtgxx-wisdomtree"])("projects %s's native fund-share slice onto its reviewed singleton classification", (id) => {
+    const coin = TRACKED_META_BY_ID.get(id)!;
     const config = coin.liveReservesConfig!;
     expect(config.adapter).toBe("chainlink-nav");
     const result = adaptChainlinkNavResponse(
