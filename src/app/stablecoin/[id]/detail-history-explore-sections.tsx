@@ -19,7 +19,6 @@ type ReadyDetailViewModel = Extract<StablecoinDetailViewModel, { status: "ready"
 interface DetailHistoryExploreSectionsProps {
   activeBannerId: string;
   exploreNextContent: ReactNode;
-  faqContent: ReactNode;
   frozenNote: ReactNode;
   historyGateRef: Ref<HTMLDivElement>;
   viewModel: ReadyDetailViewModel;
@@ -28,7 +27,6 @@ interface DetailHistoryExploreSectionsProps {
 export function DetailHistoryExploreSections({
   activeBannerId,
   exploreNextContent,
-  faqContent,
   frozenNote,
   historyGateRef,
   viewModel,
@@ -69,19 +67,14 @@ export function DetailHistoryExploreSections({
         ) : null}
       </div>
 
+      {/* Prerendered, not viewport-gated: its links are crawlable without JS
+          and need no live data. */}
       {exploreNextContent ? (
         <div className="space-y-6">
           <SectionBanner id="explore" label="Explore" icon={Sparkles} active={activeBannerId === "explore"} />
-          <LazySection minHeight={600} placeholder={(
-            <div id="explore-next" className="scroll-mt-32">
-              <span id="explore-next-heading" />
-            </div>
-          )}>
-            {exploreNextContent}
-          </LazySection>
+          {exploreNextContent}
         </div>
       ) : null}
-      {faqContent}
     </>
   );
 }

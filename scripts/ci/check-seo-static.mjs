@@ -952,6 +952,30 @@ export function buildSeoPageRecord(
   };
 }
 
+const STABLECOIN_PROFILE_ROUTE_PATTERN = /^\/stablecoin\/[^/]+\/$/;
+// An unresolved AI-summary claim rendered as "N/A" ("USDT carries a N/A overall grade").
+const UNRESOLVED_GRADE_CLAIM_PATTERN = /\bN\/A (?:overall grade|report card)\b/;
+const LOADING_DOSSIER_TEXT = "Loading research dossier";
+// The server-rendered static profile (StablecoinDetailSeoContent), outside the dossier's Suspense boundary.
+const STATIC_PROFILE_MARKER = 'id="stablecoin-static-profile-title"';
+
+/**
+ * Profiles are indexed in their prerendered state, hidden streamed segments
+ * included: no unresolved grade claim, and a loading dossier never stands
+ * alone without the static profile. The one-h1 rule covers profiles above.
+ */
+function validateStablecoinProfileRender(pageRecords, errors) {
+  for (const record of pageRecords) {
+    if (!STABLECOIN_PROFILE_ROUTE_PATTERN.test(record.route) || !record.filePath || !fs.existsSync(record.filePath)) continue;
+    const html = fs.readFileSync(record.filePath, "utf8");
+    const unresolved = html.match(UNRESOLVED_GRADE_CLAIM_PATTERN);
+    if (unresolved) errors.push(`${record.route}: profile HTML renders an unresolved claim ("${unresolved[0]}")`);
+    if (html.includes(LOADING_DOSSIER_TEXT) && !html.includes(STATIC_PROFILE_MARKER)) {
+      errors.push(`${record.route}: profile HTML is a "${LOADING_DOSSIER_TEXT}" shell without the static profile`);
+    }
+  }
+}
+
 export function collectSeoStaticCheckResult({
   outDir = DEFAULT_OUT_DIR,
   enforceGooglePreviewDirectives = true,
@@ -1266,6 +1290,7 @@ export function collectSeoStaticCheckResult({
       `${longTitleRoutes.length} indexable <title>s exceed ${TITLE_WARN_LENGTH} chars (search truncation), e.g. ${longTitleRoutes.slice(0, 5).join(", ")}`,
     );
   }
+  validateStablecoinProfileRender(pageRecords, errors);
 
   // Informational warning only: avoids failing CI for transient route count changes.
   warnings.push(`Checked ${pageRecords.length} HTML pages in out/`);

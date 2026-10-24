@@ -397,6 +397,27 @@ describe("check-seo-static", () => {
       sitemapRoutes: ["/", "/stability-index/", "/stablecoin/usdt-tether/"],
       errors: ["/stablecoin/usdt-tether/: stablecoin detail static HTML is dominated by loading shell text"],
     },
+    {
+      name: "fails profiles that render an unresolved grade claim or a bare loading dossier",
+      rootLinks: ["/stablecoin/usdt-tether/", "/stablecoin/jpyc-jpyc/", "/stablecoin/usdc-circle/"],
+      extraPages: {
+        "/stablecoin/usdt-tether/": {
+          h1: "Tether (USDT)",
+          mainText: `${"Useful stablecoin detail text ".repeat(20)}<span hidden>USDT carries a N/A overall grade.</span>`,
+        },
+        "/stablecoin/jpyc-jpyc/": { h1: "JPY Coin (JPYC)", mainText: `Loading research dossier… ${"detail ".repeat(70)}` },
+        "/stablecoin/usdc-circle/": {
+          h1: "USD Coin (USDC)",
+          mainText: `Loading research dossier… ${"detail ".repeat(70)}<h2 id="stablecoin-static-profile-title">Static</h2>`,
+        },
+      },
+      sitemapRoutes: ["/", "/stability-index/", "/stablecoin/usdt-tether/", "/stablecoin/jpyc-jpyc/", "/stablecoin/usdc-circle/"],
+      errors: [
+        '/stablecoin/usdt-tether/: profile HTML renders an unresolved claim ("N/A overall grade")',
+        '/stablecoin/jpyc-jpyc/: profile HTML is a "Loading research dossier" shell without the static profile',
+      ],
+      absentErrors: ["/stablecoin/usdc-circle/: profile HTML"],
+    },
   ] as SeoFixtureCase[])("$name", async (fixture) => {
     const root = await makeOutDir();
     if (fixture.headers !== undefined) await writeFile(path.join(root, "_headers"), fixture.headers);

@@ -406,7 +406,7 @@ export function MintAuthoritySection({
   const scoreTriggerLabel = score
     ? score.publicationAvailable
       ? `Mint Authority Score ${score.scoreLabel}, ${score.bandLabel}. Explain methodology.`
-      : "Mint score unavailable. Explain methodology."
+      : `${score.compactLabel}. Explain methodology.`
     : undefined;
   const mintRole = controlRoles?.components.find((component) => component.kind === "mint")?.role ?? null;
   const unresolvedQuestions = profile.unresolvedQuestions ?? [];

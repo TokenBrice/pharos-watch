@@ -238,7 +238,7 @@ function buildStablecoinTitle(
  * Coins like pmUSD carry the same string as both name and symbol; the
  * `${symbol} (${name})` template would render a redundant "pmUSD (pmUSD)".
  */
-function hasRedundantName(coin: StablecoinMeta): boolean {
+export function hasRedundantName(coin: StablecoinMeta): boolean {
   return coin.name.trim().toLowerCase() === coin.symbol.trim().toLowerCase();
 }
 

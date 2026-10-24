@@ -35,6 +35,22 @@ const coin = {
 } as unknown as StablecoinMeta;
 
 describe("ExploreNextSection", () => {
+  it("lists the coin's depeg event pages under Depeg history, and omits the block without events", () => {
+    const depegEvents = [
+      { href: "/depeg/tcdp-2026-03-11/", label: "TCDP depeg Mar 2026" },
+      { href: "/depeg/tcdp-2025-08-02/", label: "TCDP depeg Aug 2025" },
+    ];
+    const { rerender } = render(
+      <ExploreNextSection coin={coin} related={[]} staticComparisonPages={[]} depegEvents={depegEvents} logos={{}} />,
+    );
+    expect(screen.getByText("Depeg history")).toBeTruthy();
+    for (const event of depegEvents) {
+      expect(screen.getByRole("link", { name: event.label }).getAttribute("href")).toBe(event.href);
+    }
+    rerender(<ExploreNextSection coin={coin} related={[]} staticComparisonPages={[]} logos={{}} />);
+    expect(screen.queryByText("Depeg history")).toBeNull();
+  });
+
   it.each(["mouseEnter", "focus"] as const)("keeps all peer routes quiet until %s intent on one chip", (intent) => {
     const related = CLIENT_ACTIVE_STABLECOINS.slice(0, 6);
     render(<ExploreNextSection coin={coin} related={related} staticComparisonPages={[]} logos={{}} />);

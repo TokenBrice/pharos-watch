@@ -7,6 +7,8 @@ import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import type { Infrastructure } from "@shared/types";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
+import type { SavedSafetyAssessment } from "@/lib/api";
+import { formatSavedAssessmentAsOf } from "@/lib/stablecoin-detail-hero-metrics";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { logosById } from "@/lib/logos";
@@ -33,10 +35,13 @@ export function InfrastructureBadge({ value }: { value: Infrastructure }) {
  */
 export function SafetyGradeHero({
   reportCard,
+  savedGrade = null,
   read = "settled",
   mobile = false,
 }: {
   reportCard: V9ConsumerCard | null;
+  /** The release's dated grade, shown while the live read is pending. */
+  savedGrade?: SavedSafetyAssessment | null;
   /**
    * The report-card read behind the grade (see `RailSafetySummary`): a first
    * fetch in flight is a neutral placeholder and a failed read says so, so
@@ -51,6 +56,25 @@ export function SafetyGradeHero({
   const trackClass = mobile
     ? "flex min-h-10 w-32 shrink-0 flex-wrap items-baseline justify-end gap-x-1.5 gap-y-1"
     : "flex min-h-14 w-48 shrink-0 flex-wrap items-baseline justify-end gap-x-1.5 gap-y-1";
+
+  if (!reportCard && read === "pending" && savedGrade?.grade) {
+    // The release's grade, dated, until the live card arrives.
+    return (
+      <div className={trackClass} data-safety-grade-track data-safety-state="saved">
+        <ScoreBadgeWrapper topic="safetyScore" variant="tooltip-only">
+          <span className={`pharos-numeric font-extrabold leading-none tracking-tight ${letterClass} ${getSafetyGradeMetadata(savedGrade.grade).pulse.accentClassName}`}>
+            {savedGrade.grade}
+          </span>
+        </ScoreBadgeWrapper>
+        {savedGrade.score !== null && (
+          <span className={`whitespace-nowrap font-mono text-muted-foreground ${scoreClass}`}>
+            · {savedGrade.score}/100
+          </span>
+        )}
+        <span className="w-full text-right text-2xs text-muted-foreground">{formatSavedAssessmentAsOf(savedGrade.asOfMs)}</span>
+      </div>
+    );
+  }
 
   if (!reportCard && read === "pending") {
     return (

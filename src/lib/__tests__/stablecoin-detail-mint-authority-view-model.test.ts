@@ -59,6 +59,14 @@ describe("mint-authority detail view-model builder", () => {
       publicationAvailable: true, score: 35, compactLabel: "35 · Exposed", bandLabel: "Exposed",
     });
     expect(rated.verdict).toMatch(/^Exposed —/);
+    // A first read in flight (the prerender included) is pending, not unavailable.
+    const pending = buildMintAuthorityDetailViewModel(coin, null, { publicationPending: true });
+    expect(pending.score).toMatchObject({
+      publicationAvailable: false, score: null, compactLabel: "Mint score loading", bandLabel: "Loading",
+    });
+    expect(pending.score?.detail).not.toContain("unavailable");
+    expect(buildMintAuthorityDetailViewModel(coin, { mint: null, caps: [] }, { publicationPending: true }).score)
+      .toMatchObject({ publicationAvailable: true, compactLabel: "NR" });
   });
 
   it("uses only compact mint-authority summaries for client detail presentation", () => {

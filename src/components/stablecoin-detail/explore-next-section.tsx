@@ -47,11 +47,13 @@ interface ExploreNextSectionProps {
   coin: StablecoinMeta;
   related: StablecoinClientListMeta[];
   staticComparisonPages: StaticComparisonEntry[];
+  /** The coin's newest permanent depeg event pages, newest first. */
+  depegEvents?: Array<{ href: string; label: string }>;
   logos: Record<string, string>;
 }
 
 
-export function ExploreNextSection({ coin, related, staticComparisonPages, logos }: ExploreNextSectionProps) {
+export function ExploreNextSection({ coin, related, staticComparisonPages, depegEvents = [], logos }: ExploreNextSectionProps) {
   const firstInfrastructure = coin.infrastructures?.[0];
   const infrastructureLabel = firstInfrastructure ? getInfrastructureLabel(firstInfrastructure) : null;
   const pegSlug = PEG_SLUGS[coin.flags.pegCurrency];
@@ -220,6 +222,17 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
               ) : null}
             </div>
           ) : null}
+        </div>
+      ) : null}
+
+      {depegEvents.length > 0 ? (
+        <div className="space-y-2">
+          <p className="pharos-label">Depeg history</p>
+          <div className="-my-1 grid gap-x-8 sm:grid-cols-2 xl:grid-cols-3">
+            {depegEvents.map((event) => (
+              <ExploreNextLink key={event.href} href={event.href} label={event.label} />
+            ))}
+          </div>
         </div>
       ) : null}
 
