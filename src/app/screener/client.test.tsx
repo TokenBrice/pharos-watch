@@ -149,8 +149,19 @@ describe("ScreenerClient freshness notices", () => {
     setDefaultMocks();
   });
 
+  it("reserves the Picker slot until its viewport and stored preference can be read", () => {
+    mocks.useHydrated.mockReturnValue(false);
+    const view = render(<ScreenerClient />);
+    expect(view.queryByTestId("selector-callout")).toBeNull();
+
+    mocks.useHydrated.mockReturnValue(true);
+    view.rerender(<ScreenerClient />);
+    expect(view.getByTestId("selector-callout")).toBeTruthy();
+  });
+
   it("keeps counts and export controls at a fixed footprint across loading and ready states", () => {
     const view = render(<ScreenerClient />);
+    expect(view.getByRole("region", { name: "Data table" }).contains(view.getByTestId("freshness-notices"))).toBe(true);
     expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({ triggerClassName: "min-w-24" });
     const unavailableCount = view.getByText("Screener counts unavailable.");
     expect(unavailableCount.classList.contains("min-h-12")).toBe(true);
