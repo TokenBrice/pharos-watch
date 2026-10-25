@@ -94,7 +94,7 @@ describe("stablecoin markdown", () => {
       + "The current Safety Score and live assessment are available on the interactive page.",
     );
     expect(md).toContain("## Quick answers\n\n### What is Tether (USDT)?");
-    expect(md).toContain("### Is USDT safe?\n\nUSDT held an A Safety Score grade (83/100)");
+    expect(md).toContain("### Is USDT safe?\n\nAs of Oct 22, 2026, Pharos grades USDT A (83/100) on its Safety Score.");
     expect(md.indexOf("## Quick answers")).toBeLessThan(md.indexOf("## Live Data"));
   });
 
