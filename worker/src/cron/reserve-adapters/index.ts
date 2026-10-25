@@ -133,6 +133,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "frnt-ledgerlens": lazyAdapter(() => import("./frnt-ledgerlens").then((mod) => mod.fetchFrntLedgerlensReserves)),
   "coinbase-oned-por": lazyAdapter(() => import("./coinbase-oned-por").then((mod) => mod.fetchCoinbaseOnedPorReserves)),
   "blackrock-brsrv-holdings": lazyAdapter(() => import("./blackrock-brsrv-holdings").then((mod) => mod.fetchBlackrockBrsrvHoldingsReserves)),
+  "chinaamc-holdings-api": lazyAdapter(() => import("./chinaamc-holdings-api").then((mod) => mod.fetchChinaamcHoldingsReserves)),
 };
 
 // Cast (not satisfies) below: Object.fromEntries widens keys to string, so the
