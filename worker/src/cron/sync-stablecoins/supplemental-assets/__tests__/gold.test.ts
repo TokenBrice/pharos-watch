@@ -14,7 +14,7 @@ const PGOLD_SUPPLY_UNITS: Record<string, number> = {
 };
 const PGOLD_PRICE = 4_042.62;
 
-const selectCuratedAggregateContractsMock = vi.fn();
+const selectCuratedAggregateContractsMock = vi.hoisted(() => vi.fn().mockReturnValue(null));
 const probeTrackedTokenSupplyMock = vi.fn();
 
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({

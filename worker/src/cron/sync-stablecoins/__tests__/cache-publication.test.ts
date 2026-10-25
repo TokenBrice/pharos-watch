@@ -3,7 +3,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { encodeResponseReadyCacheValue, getResponseReadyCacheKey } from "../../../lib/api-cache-read";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../../lib/response-ready-cache-contracts";
 import { commitReplayPriceCache, validateAndWriteStablecoinsCache } from "../cache-publication";
-import { mergeSupplementalLastKnownGood, normalizeStablecoinsPayload } from "../shared";
+import { loadPreviousStablecoinsById, mergeSupplementalLastKnownGood, normalizeStablecoinsPayload } from "../shared";
 import { normalizeChainCirculating } from "../phase-helpers";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getCache, getPriceCache } from "../../../lib/db-cache";
@@ -16,6 +16,31 @@ const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 
 describe("validateAndWriteStablecoinsCache", () => {
+  it("preserves partition provenance through normalization, canonical cache and response-ready publication", async () => {
+    const db = fixtures.open().db;
+    const chainPartition = {
+      basis: "onchain-share", observedAt: 1_777_000_000, onchainUsd: 102, ratio: 1.02, admission: "carried",
+    } as const;
+    const asset = makePeggedAsset({
+      pegMechanism: "fiat-backed", price: 1, priceSource: "coingecko",
+      circulating: { peggedUSD: 100 }, circulatingPrevDay: { peggedUSD: 90 },
+      supplySource: "coingecko-fallback", supplyObservedAt: 1_777_000_050,
+      chainCirculating: { Ethereum: { chainId: "ethereum", current: 100 } }, chains: ["Ethereum"], chainPartition,
+    });
+    const result = await validateAndWriteStablecoinsCache({
+      assets: [asset], db, syncStartSec: 1_777_000_100, validationContext: "main",
+    }, () => ({ metadata: "blocked" }));
+    expect(result).toMatchObject({ written: true, quarantinedAssets: [] });
+    const canonical = JSON.parse((await getCache(db, "stablecoins"))!.value);
+    expect(StablecoinListResponseSchema.parse(canonical).peggedAssets[0]).toMatchObject({
+      chainPartition, circulating: asset.circulating, circulatingPrevDay: asset.circulatingPrevDay,
+      supplySource: asset.supplySource, supplyObservedAt: asset.supplyObservedAt,
+    });
+    const companion = JSON.parse((await getCache(db, getResponseReadyCacheKey("stablecoins")))!.value) as { body: string };
+    expect(JSON.parse(companion.body)).toEqual(canonical);
+    expect((await loadPreviousStablecoinsById(db)).previousAssetsById.get(asset.id)?.chainPartition).toEqual(chainPartition);
+  });
+
   it.each(["main", "fallback"] as const)("withholds sFRAX current supply and retained chain quantities at %s publication", async (validationContext) => {
     const db = fixtures.open().db;
     const assets = [makePeggedAsset({

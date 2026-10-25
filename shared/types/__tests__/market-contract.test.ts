@@ -10,10 +10,34 @@ import {
   DexLiquidityHistoryPointSchema,
   PegSummaryStatsSchema,
   StablecoinDataSchema,
+  StablecoinListResponseSchema,
 } from "../market";
 
 import { makeStablecoin } from "../../test-utils/stablecoin";
 import { isObservedPrice } from "../../lib/pricing-source-policy";
+
+describe("chain partition provenance contract", () => {
+  const provenance = {
+    basis: "onchain-share", observedAt: 1_700_000_000, onchainUsd: 1_020_000, ratio: 1.02, admission: "entered",
+  };
+
+  it.each(["entered", "retained", "carried"])("preserves %s provenance across list JSON round-trips", (admission) => {
+    const chainPartition = { ...provenance, admission };
+    const payload = StablecoinListResponseSchema.parse({ peggedAssets: [{ ...makeStablecoin(), chainPartition }] });
+    expect(payload.peggedAssets[0]!.chainPartition).toEqual(chainPartition);
+    expect(StablecoinListResponseSchema.parse(JSON.parse(JSON.stringify(payload)))).toEqual(payload);
+  });
+
+  it.each([
+    { basis: "provider-share" }, { observedAt: 0 }, { observedAt: 1.5 },
+    { onchainUsd: 0 }, { onchainUsd: Infinity }, { ratio: 0 }, { ratio: NaN }, { admission: "fresh" },
+  ])("rejects invalid partition evidence %j", (invalid) => {
+    expect(StablecoinDataSchema.safeParse({
+      ...makeStablecoin(), chainPartition: { ...provenance, ...invalid },
+    }).success).toBe(false);
+  });
+});
+
 const baseEvent = {
   id: 1,
   stablecoinId: "usdt-tether",
