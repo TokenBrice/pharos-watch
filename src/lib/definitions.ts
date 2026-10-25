@@ -320,7 +320,7 @@ export const DEFINITIONS = {
     short:
       "Depeg Duration Resolver: for each confirmed depeg, a sealed verdict on whether the peg will come back and, if so, a typical recovery window.",
     long:
-      "For each confirmed depeg incident, DDR publishes a Resolution Outlook (Recovery Likely, At Risk, Recovery Unlikely, or Insufficient Signal) from transparent mechanistic rules and, when recovery is plausible, an Expected Duration band drawn from Pharos's corpus of recovered depegs. Each incident gets one immutable prediction, sealed at forecast readiness or the 72-hour backstop. It is a structural read, not a probability or investment advice.",
+      "For each confirmed depeg incident, DDR publishes a Resolution Outlook (No break signals, Stress signals, Terminal evidence, or Insufficient Signal) from transparent mechanistic rules and, when recovery is plausible, recovery odds and an Expected Duration band from comparable past depegs, counting those that never recovered. Each incident gets one immutable prediction, sealed at forecast readiness or the 72-hour backstop. Predictions sealed before v5 keep their original Recovery Likely / At Risk / Recovery Unlikely labels. The verdict is a structural read, not a probability or investment advice.",
     listed: true,
     seeAlso: ["ddrr", "depeg"],
     ...DDR,
@@ -331,7 +331,7 @@ export const DEFINITIONS = {
     short:
       "Depeg Duration Resolver Reviewer: grades each sealed DDR prediction against the incident's actual outcome, reporting coverage separately from accuracy.",
     long:
-      "The audit companion to DDR. It compares each sealed, first-published DDR prediction with the incident's later canonical outcome, and reports coverage (how many incidents received a call) separately from accuracy (recovery-call accuracy, duration error, and horizon calibration). It never re-runs today's resolver over old events.",
+      "The audit companion to DDR. It compares each sealed, first-published DDR prediction with the incident's later canonical outcome, and reports coverage (how many incidents received a call) separately from accuracy (recovery-call accuracy against a constant \"will recover\" baseline, duration error, and horizon calibration and skill). Deaths already settled before the lock count as curation debt, not forecast misses. It never re-runs today's resolver over old events.",
     listed: true,
     seeAlso: ["ddr"],
     ...DDR,

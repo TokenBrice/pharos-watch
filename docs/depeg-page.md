@@ -148,6 +148,10 @@ behind an explicit toggle that mounts them only when opened.
   `src/components/depeg-resolver-book-summary.ts` owns the valid frozen prediction tier split,
   past-peak count and forecast total; `rowCount` separately counts incident browsing rows.
   The hero's recovery posture excludes pending, no-call and invalidated outcomes.
+- **Tier vocabulary:** rows predicted under DDR 5.0+ read as evidence classes (No break
+  signals / Stress signals / Terminal evidence); earlier locks keep Recovery likely / At risk /
+  Recovery unlikely. The tier split counts each vocabulary separately and never relabels an
+  earlier lock. Labels live in `shared/lib/classification/depeg.ts`.
 - **Availability:** the hero's recovery totals and the worklist's whole-book/visible-slice
   claims use the same availability gate as forecast cards. Non-staleness degraded responses
   withhold all three even if retained rows exist. Explicit `stale-cache` responses with rows
@@ -202,6 +206,12 @@ The reviewer query is enabled when the disclosure opens, including `#forecast-gr
 entry. Before its first read, the hero's track record stays unavailable rather than
 claiming an empty or safe ledger. Retained review evidence keeps its original clock
 and freshness notice. DDR/DDRR feature flags still gate the section and query.
+
+Reviewer v5 metrics (always-recover baseline, terminal-call precision, duration as a
+log-ratio multiplier with the within-2× share, open-past-band count, horizon Brier skill and
+per-major Wilson intervals) render only when the snapshot carries them; older snapshots show
+them unavailable, never zero. `terminal_at_lock` rows are labelled "Terminal at lock" and are
+curation debt, not scored calls.
 
 Recovery-call progress reads `summary.headline.pendingRecoveryLikelihoodCount`:
 published prediction reviews with a pending verdict, in exactly the headline
