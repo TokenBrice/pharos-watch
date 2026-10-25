@@ -142,6 +142,7 @@ describe("curated on-chain supply paths", () => {
     { id: "susn-noon", chains: ["ethereum", "zksync", "sophon", "starknet", "hyperevm", "base", "citrea", "berachain", "tac"], zero: [], canonical: "ethereum" },
     { id: "apyusd-apyx", chains: ["ethereum", "base", "bsc", "solana"], zero: [], canonical: "ethereum" },
     { id: "susdai-usd-ai", chains: ["arbitrum", "ethereum", "base", "plasma", "solana", "arc"], zero: [] },
+    { id: "reusd-re-protocol", chains: ["ethereum", "avalanche", "arbitrum", "base", "bsc", "ink", "plasma", "katana", "tempo", "solana", "berachain", "monad", "sei", "megaeth", "tempo"], zero: ["berachain", "megaeth"] },
   ])("requires the complete reviewed NAV roster and accounting policy for $id", ({ id, chains, zero, canonical }) => {
     const meta = TRACKED_META_BY_ID.get(id)!;
     const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
@@ -158,10 +159,52 @@ describe("curated on-chain supply paths", () => {
     }
   });
 
-  it.each(["jaaa-janus-henderson-anemoy", "reusd-re-protocol", "stac-securitize", "ylds-figure", "sfrxusd-frax"])(
+  it.each(["stac-securitize", "ylds-figure", "sfrxusd-frax"])(
     "keeps %s aggregate supply unavailable until its complete perimeter is reviewed",
     (id) => expect(selectCuratedAggregateOnchainSupplyProbeContracts(TRACKED_META_BY_ID.get(id)!)).toBeNull(),
   );
+
+  it("counts JAAA's native EVM registers once and conserves exact escrowed representations", () => {
+    const meta = TRACKED_META_BY_ID.get("jaaa-janus-henderson-anemoy")!;
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta)!;
+    expect(selected.map(({ contract }) => contract.chain))
+      .toEqual(["ethereum", "base", "bsc", "avalanche", "monad", "arbitrum", "pharos", "xlayer", "arc"]);
+    expect(selected.filter(({ config }) => config.allowZeroSupply).map(({ contract }) => contract.chain))
+      .toEqual(["pharos", "xlayer", "arc"]);
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[meta.id]).toBeUndefined();
+    const excluded = CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS[meta.id];
+    expect(excluded).toEqual([
+      { chain: "solana", address: "AAAJXeGjpKu7W3X4QTSU4pm1Wbj4G2LPcdg7A6xJLLyG", canonicalChain: "ethereum" },
+      { chain: "stellar", address: "CDV6U7OEVY6KUEJ4WNS63AYB6RFU3BAE7AZJOQ7LPH447C6NWUXEZZSO", canonicalChain: "ethereum" },
+    ]);
+    expect(selected.length + excluded.length).toBe(meta.contracts!.length);
+    for (const missing of meta.contracts!) {
+      expect(selectCuratedAggregateOnchainSupplyProbeContracts({
+        ...meta, contracts: meta.contracts!.filter((contract) => contract !== missing),
+      })).toBeNull();
+    }
+    expect(selectCuratedAggregateOnchainSupplyProbeContracts({
+      ...meta, contracts: meta.contracts!.map((contract) => contract.chain === "solana"
+        ? { ...contract, address: "So11111111111111111111111111111111111111112" } : contract),
+    })).toBeNull();
+  });
+
+  it("selects both reUSD Tempo stocks by identity and refuses a third unreviewed register", () => {
+    const meta = TRACKED_META_BY_ID.get("reusd-re-protocol")!;
+    expect(selectCuratedAggregateOnchainSupplyProbeContracts(meta)!
+      .filter(({ contract }) => contract.chain === "tempo").map(({ contract }) => contract.address))
+      .toEqual(["0x20c000000000000000000000e09a4cfec804f102", "0x20c000000000000000000000383a23bacb546ab9"]);
+    expect(selectCuratedAggregateOnchainSupplyProbeContracts({
+      ...meta, contracts: [...meta.contracts!, { chain: "tempo", address: "0x20c0000000000000000000000000000000000001", decimals: 6 }],
+    })).toBeNull();
+  });
+
+  it("refuses ambiguous same-chain registers without an exact reviewed address", () => {
+    const meta = TRACKED_META_BY_ID.get("strusd-tori")!;
+    expect(selectCuratedAggregateOnchainSupplyProbeContracts({
+      ...meta, contracts: [...meta.contracts!, { chain: "ethereum", address: "0x0000000000000000000000000000000000000001", decimals: 18 }],
+    })).toBeNull();
+  });
 
   it("keeps unprobed strUSD representations in a noncanonical CCIP escrow residual", () => {
     const residual = CURATED_AGGREGATE_ESCROW_RESIDUALS["strusd-tori"];

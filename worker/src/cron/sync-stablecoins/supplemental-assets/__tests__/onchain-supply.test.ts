@@ -29,7 +29,7 @@ vi.mock("../../../reserve-adapters/helpers", () => ({
   probeTrackedTokenSupply: (...args: unknown[]) => probeTrackedTokenSupplyMock(...args),
 }));
 
-import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap } from "../onchain-supply";
+import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, fetchOnChainSupplyPartition, prefersOnChainSupplyMcap } from "../onchain-supply";
 const BLOCK_HASH = `0x${"1".repeat(64)}` as const;
 beforeEach(() => {
   const nowMs = Date.now();
@@ -48,6 +48,12 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("supply deployment failure reasons", () => {
+  it("keeps STAC's Ethereum-only CoinGecko cap as an owner-decision candidate", async () => {
+    const meta = TRACKED_META_BY_ID.get("stac-securitize")!;
+    expect(prefersOnChainSupplyMcap(meta)).toBe(false);
+    await expect(fetchCuratedAggregateOnChainMcap(meta, 1037.161063, buildChainRpcs())).resolves.toBeNull();
+  });
+
   it.each([false, true])("withholds sFRAX when the joined stock generation is unavailable (native-only roster: %s)", async (nativeOnly) => {
     const tracked = TRACKED_META_BY_ID.get("sfrax-frax")!;
     const meta = nativeOnly ? { ...tracked, contracts: tracked.contracts!.filter(({ chain }) => chain === "ethereum") } : tracked;
@@ -690,6 +696,7 @@ describe("curation-expanded complete supply rosters", () => {
     { id: "susn-noon", canonical: "ethereum", supplies: { ethereum: 100, zksync: 5, sophon: 5, starknet: 5, hyperevm: 5, base: 5, citrea: 5, berachain: 5, tac: 5 } },
     { id: "apyusd-apyx", canonical: "ethereum", supplies: { ethereum: 100, base: 10, bsc: 10, solana: 10 } },
     { id: "susdai-usd-ai", supplies: { arbitrum: 100, ethereum: 10, base: 20, plasma: 30, solana: 40, arc: 50 } },
+    { id: "jaaa-janus-henderson-anemoy", supplies: { ethereum: 100, base: 10, bsc: 20, avalanche: 30, monad: 40, arbitrum: 50, pharos: 0, xlayer: 0, arc: 0 } },
   ];
 
   beforeEach(() => {
@@ -724,6 +731,43 @@ describe("curation-expanded complete supply rosters", () => {
       return rawSupply == null ? null : { rawSupply, decimals: 6, ledgerVersion: "7439737313" };
     });
   }
+
+  it.each([undefined, "0x20c000000000000000000000e09a4cfec804f102", "0x20c000000000000000000000383a23bacb546ab9"])(
+    "reads reUSD's two Tempo identities exactly once and fails closed for unreadable %s",
+    async (unreadable) => {
+      const meta = TRACKED_META_BY_ID.get("reusd-re-protocol")!;
+      const read = (contract: NonNullable<StablecoinMeta["contracts"]>[number]) => {
+        if (contract.address === unreadable) return null;
+        if (!isFixedDecimalDeployment(contract)) throw new Error("fixed-decimal fixture required");
+        const units = contract.chain !== "tempo" ? 10
+          : contract.address === "0x20c000000000000000000000e09a4cfec804f102" ? 2 : 3;
+        return BigInt(units) * 10n ** BigInt(contract.decimals);
+      };
+      // Match the production helper's first-contract-on-chain lookup.
+      probeTrackedTokenSupplyMock.mockImplementation(async (coin, input) => {
+        const chain = input.kind === "onchain-solana" ? "solana" : input.chain;
+        return read(coin.contracts.find((contract: { chain: string }) => contract.chain === chain));
+      });
+      fetchErc20TotalSupplyMock.mockImplementation(async (input, address) =>
+        read(meta.contracts!.find((contract) => contract.chain === input.chain && contract.address === address)!));
+      fetchSolanaTokenSupplyMock.mockImplementation(async () => read(meta.contracts!.find(({ chain }) => chain === "solana")!));
+      const observation = await fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs());
+      const result = await fetchOnChainSupplyPartition(meta, 168.75, 1.25, undefined, buildChainRpcs());
+      if (unreadable) {
+        expect(observation).toBeNull();
+        expect(result).toEqual({ reason: "legs-unreadable", ratio: null });
+      } else {
+        expect(observation?.mcap).toBe(168.75);
+        if (!("chainPartition" in result)) throw new Error("complete reUSD partition required");
+        expect(result.chainPartition).toMatchObject({ admission: "entered", ratio: 1, onchainUsd: 168.75 });
+        expect(Object.values(result.chainCirculating!).find(({ chainId }) => chainId === "tempo")?.current).toBe(6.25);
+        expect(Object.values(result.chainCirculating!).reduce((sum, row) => sum + Number(row.current), 0)).toBe(168.75);
+        expect(probeTrackedTokenSupplyMock.mock.calls.filter(([, input]) => input.chain === "tempo")
+          .map(([coin]) => coin.contracts[0].address))
+          .toEqual(["0x20c000000000000000000000e09a4cfec804f102", "0x20c000000000000000000000383a23bacb546ab9"]);
+      }
+    },
+  );
 
   it.each(cases)("publishes $id's complete partition without double-counting representations", async ({ id, canonical, supplies }) => {
     const meta = TRACKED_META_BY_ID.get(id)!;
