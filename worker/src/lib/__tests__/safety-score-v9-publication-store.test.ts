@@ -10,7 +10,8 @@ import {
   persistSafetyScoreV9Publication,
   persistSafetyScoreV9PublicationAttempt,
 } from "../safety-score-v9/publication-store";
-import { loadSafetyScoreV9PublicationHealth, SAFETY_SCORE_V9_CACHE_KEYS } from "../safety-score-v9/publication-health";
+import { loadSafetyScoreV9PublicationHealth } from "../safety-score-v9/publication-health";
+import { SAFETY_SCORE_V9_CACHE_KEYS } from "../safety-score-v9/publication-cache-keys";
 import { loadSafetyScoreV9PublicationAttempt, loadSafetyScoreV9FailedPublicationAttempt } from "../safety-score-v9/publication-attempts";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
