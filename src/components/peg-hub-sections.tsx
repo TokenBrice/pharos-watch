@@ -65,7 +65,12 @@ export function PegAtAGlanceSection({
         title={`${shortLabel} stablecoins at a glance`}
         description={`Registry facts for ${bound} tracked ${shortLabel} stablecoins, in registry order. These are design facts, not live data; the live table above carries market and risk figures.`}
       />
-      <ContentTable tableProps={{ "aria-labelledby": "peg-at-a-glance" }} columns={columns} rows={tableRows} />
+      <ContentTable
+        tableProps={{ "aria-labelledby": "peg-at-a-glance" }}
+        viewportProps={{ mobileScrollHint: "Swipe sideways for more columns" }}
+        columns={columns}
+        rows={tableRows}
+      />
     </section>
   );
 }

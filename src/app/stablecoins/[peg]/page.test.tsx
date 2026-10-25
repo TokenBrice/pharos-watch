@@ -81,6 +81,31 @@ describe("PegPage", () => {
     const former = document.getElementById("peg-former")?.closest("section");
     expect(former?.querySelectorAll("li").length).toBeGreaterThan(0);
     expect(html.indexOf("peg client EUR")).toBeLessThan(html.indexOf("peg-at-a-glance"));
+    // The table already links every member, so the chip directory is omitted rather than repeated.
+    expect(eur.coins.length).toBeLessThanOrEqual(24);
+    expect(html).not.toContain("Stablecoin directory");
+    expect(html).toContain("Swipe sideways for more columns");
+  });
+
+  it("limits the USD chip directory to members past the at-a-glance table", async () => {
+    const usd = PEG_TAXONOMY_PAGE_BY_SLUG.get("usd")!;
+    const html = renderToStaticMarkup(await PegPage({ params: Promise.resolve({ peg: "usd" }) }));
+    const document = new DOMParser().parseFromString(html, "text/html");
+    const directory = Array.from(document.querySelectorAll("h2")).find((h2) => h2.textContent === "Stablecoin directory")
+      ?.closest("section");
+
+    expect(usd.coins.length).toBeGreaterThan(24);
+    expect(directory?.textContent).toContain(`Browse the other ${usd.coins.length - 24} tracked ${usd.shortLabel} stablecoins`);
+    const linked = new Set(Array.from(directory?.querySelectorAll("a") ?? []).map((a) => a.getAttribute("href")));
+    expect(linked.size).toBe(usd.coins.length - 24);
+    expect(linked.has(`/stablecoin/${usd.coins[0]!.id}`)).toBe(false);
+    expect(linked.has(`/stablecoin/${usd.coins[24]!.id}`)).toBe(true);
+  });
+
+  it("names each related hub once, without repeating its count under the title", async () => {
+    const html = renderToStaticMarkup(await PegPage({ params: Promise.resolve({ peg: "usd" }) }));
+    expect(html).toContain("More stablecoin hubs");
+    expect(html).not.toContain("tracked coins</span>");
   });
 
   it("serves each all-pre-launch peg as a hub with launch copy and no live table", async () => {
@@ -95,6 +120,9 @@ describe("PegPage", () => {
       expect(html).not.toContain("peg client");
       expect(html).not.toContain("Compare leaders");
       expect(html).not.toContain("live table above");
+      // Upcoming cards link every member; the directory and live-risk usage guide would only repeat or mislead.
+      expect(html).not.toContain("Stablecoin directory");
+      expect(html).not.toContain("How to use this directory");
       // next/link drops the trailing slash outside the app's trailingSlash config.
       for (const coin of page.coins) expect(html).toContain(`href="/stablecoin/${coin.id}`);
     }

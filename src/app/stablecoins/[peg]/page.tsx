@@ -20,6 +20,9 @@ const route = createStaticSlugRoute({
       <UpcomingPegCoinsSection shortLabel={page.shortLabel} entries={buildUpcomingPegCoinEntries(page.upcomingCoins)} />
     );
     const former = <FormerPegCoinsSection shortLabel={page.shortLabel} entries={buildFormerPegCoinEntries(page.value)} />;
+    // The chip directory lists only members no other section links: the at-a-glance table covers the first rows, and
+    // a pre-launch-only hub's upcoming cards cover every member.
+    const directoryCoins = page.preLaunchOnly ? [] : page.coins.slice(atAGlance.rows.length);
 
     return (
       <StablecoinTaxonomyShell
@@ -34,16 +37,9 @@ const route = createStaticSlugRoute({
         aboutParagraphs={[page.intro, page.riskSummary]}
         shortLabel={page.shortLabel}
         coins={page.coins}
-        directoryDescription={
-          page.preLaunchOnly
-            ? `Browse all ${page.coins.length} upcoming ${page.shortLabel} stablecoins by profile.`
-            : `Browse all ${page.coins.length} tracked ${page.shortLabel} stablecoins by profile.`
-        }
-        directoryNote={
-          page.preLaunchOnly
-            ? "Membership comes from the Pharos stablecoin registry in this build. None of these coins has launched, so no market, coverage or risk data exists yet."
-            : undefined
-        }
+        directoryCoins={directoryCoins}
+        directoryDescription={`Browse the other ${directoryCoins.length} tracked ${page.shortLabel} stablecoins by profile.`}
+        showUsageGuide={!page.preLaunchOnly}
         definedTermCode={String(page.value)}
         definedTermSetHref="/stablecoins/"
         relatedPages={ALL_STABLECOIN_TAXONOMY_PAGES.slice(0, 6)}
