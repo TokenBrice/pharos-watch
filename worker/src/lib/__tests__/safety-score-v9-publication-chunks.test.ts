@@ -20,6 +20,7 @@ import { loadActiveSafetyScoreIndex } from "../safety-score-index";
 import { loadSafetyPublicationSize } from "../status/safety-publication-size";
 import { handleReportCardsV9 } from "../../api/report-cards-v9";
 import { handleReportCardsV9Detail } from "../../api/report-cards-v9-projections";
+import { materializeV9AcceptedPublication } from "../report-cards-v9-materialization";
 
 const databases: DatabaseSync[] = [];
 afterEach(() => { vi.useRealTimers(); for (const sqlite of databases.splice(0)) sqlite.close(); });
@@ -76,17 +77,29 @@ describe("Safety Score V9 publication payload chunks", () => {
     const publication = largePublication("current", 120);
     await persistAndMaterialize(db, currentInput(publication));
     const expectedFull = await (await handleReportCardsV9(db)).text();
+    const detailUrl = new URL("https://example.com/api/report-cards/v9-detail?stablecoin=usdc-circle");
+    const expectedDetail = await (await handleReportCardsV9Detail(db, detailUrl)).text();
     const expectedIndex = await loadActiveSafetyScoreIndex(db);
     const { inline, sharded } = shardInPlace(sqlite);
-    expect(await loadSafetyScoreV9Publication(db)).toEqual(publication);
+    const reassembled = await loadSafetyScoreV9Publication(db);
+    expect(reassembled).toEqual(publication);
     expect((await loadSafetyScoreV9PublicationIdentityEnvelope(db))?.publicationGenerationId).toBe(publication.publicationGenerationId);
     expect(await loadActiveSafetyScoreIndex(db)).toEqual(expectedIndex);
     expect(await loadSafetyPublicationSize(db)).toMatchObject({ kind: "observed", storedBytes: new TextEncoder().encode(inline).byteLength });
     expect(await (await handleReportCardsV9(db)).text()).toBe(expectedFull);
-    // Cold repair decodes the reassembled payload.
+    expect(await (await handleReportCardsV9Detail(db, detailUrl)).text()).toBe(expectedDetail);
+    // Cold reads wait for heavy materialization; they never decode or write.
     sqlite.exec("DELETE FROM safety_score_site_manifests");
-    const detail = await handleReportCardsV9Detail(db, new URL("https://example.com/api/report-cards/v9-detail?stablecoin=usdc-circle"));
-    expect(detail.status).toBe(200);
+    const detail = await handleReportCardsV9Detail(db, detailUrl);
+    expect(detail.status).toBe(503);
+    expect(detail.headers.get("Cache-Control")).toBe("no-store");
+    expect(await detail.json()).toMatchObject({ reason: "v9-public-materialization-pending" });
+    expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_site_manifests").get()!.n).toBe(0);
+    await materializeV9AcceptedPublication(db, { publication: reassembled!,
+      health: currentInput(publication).publicationHealth, payloadSha256: JSON.parse(inline).payloadSha256 });
+    const restoredDetail = await handleReportCardsV9Detail(db, detailUrl);
+    expect(restoredDetail.status).toBe(200);
+    expect(await restoredDetail.text()).toBe(expectedDetail);
     // A missing chunk fails closed instead of returning a partial payload.
     sqlite.prepare("DELETE FROM cache WHERE key = ?").run(sharded.chunks[sharded.chunks.length - 1]!.key);
     await expect(loadSafetyScoreV9Publication(db)).rejects.toThrow(/payload chunks/);

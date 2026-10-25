@@ -556,9 +556,12 @@ describe("Safety Score V9 publication store", () => {
       });
       expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?")
         .get(SAFETY_SCORE_V9_CACHE_KEYS.publication)?.value).toBe(legacyPublication);
+      // The compressed schema-6 body still rejects; HTTP no longer decodes it to repair artifacts.
+      await expect(loadSafetyScoreV9Publication(db)).rejects.toMatchObject({ code: "publication-schema-cutover-pending" });
       const heldResponse = await handleReportCardsV9(db);
       expect(heldResponse.status).toBe(503);
-      expect(await heldResponse.json()).toMatchObject({ reason: "publication-schema-cutover-pending" });
+      expect(heldResponse.headers.get("Cache-Control")).toBe("no-store");
+      expect(await heldResponse.json()).toMatchObject({ reason: "v9-public-materialization-pending" });
 
       const replacement = makeWorkerSafetyScoreV9Publication({
         publishedAtSec: 130, publicationGenerationId: "report-cards:v9:first-current",
