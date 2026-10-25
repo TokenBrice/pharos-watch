@@ -118,6 +118,7 @@ export function createV9PublicationAssetCompactor(): (asset: V9AssetFactsV3) => 
 export function createV9PublicationResearchHashRebinder(previousHash: string, finalHash: string): (asset: V9AssetFactsV3) => V9AssetFactsV3 {
   Sha256Schema.parse(previousHash);
   Sha256Schema.parse(finalHash);
+  const pendingHash = "0".repeat(64);
   let cachedAsset: V9AssetFactsV3 | null = null;
   let cachedEvidence: V9AssetFactsV3["evidence"] | null = null;
   function evidence(asset: V9AssetFactsV3): V9AssetFactsV3["evidence"] {
@@ -128,9 +129,13 @@ export function createV9PublicationResearchHashRebinder(previousHash: string, fi
         const quarantine = reference.sourceId === "safety-score-v9-compiler" &&
           reference.disposition === "rejected" && reference.causeBinding?.assetId === asset.assetId &&
           reference.causeBinding.scope.componentKey === "asset-compilation";
-        if (!research && !quarantine) return reference;
-        if (reference.contentSha256 !== previousHash) throw new Error("V9 research evidence hash does not match its pending cohort");
-        return { ...reference, contentSha256: finalHash };
+        let rebound = reference;
+        if (research || quarantine) {
+          if (reference.contentSha256 !== previousHash) throw new Error("V9 research evidence hash does not match its pending cohort");
+          rebound = { ...reference, contentSha256: finalHash };
+        }
+        if (rebound.contentSha256 === pendingHash) throw new Error("V9 publication evidence cannot retain a pending research hash");
+        return rebound;
       });
       deepFreeze(cachedEvidence);
       cachedAsset = asset;

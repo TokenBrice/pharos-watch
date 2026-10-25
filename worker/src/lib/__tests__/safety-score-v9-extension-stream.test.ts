@@ -32,9 +32,9 @@ describe("per-asset extension compilation", () => {
     const finalizedHash = streamed.factSet.sourceFingerprints.researchOverlays!.payloadSha256;
     for (const asset of streamed.factSet.assets) {
       for (const reference of asset.evidence) {
+        expect(reference.contentSha256).not.toBe("0".repeat(64));
         if (reference.sourceId === "safety-score-v9-research-overlay" || reference.sourceId === "safety-score-v9-compiler") {
           expect(reference.contentSha256).toBe(finalizedHash);
-          expect(reference.contentSha256).not.toBe("0".repeat(64));
         }
       }
     }
@@ -112,6 +112,30 @@ describe("per-asset extension compilation", () => {
     expect(stableJsonStringifyV1(admitted)).toBe(before);
     expect(() => rebind(input)).toThrow(/admitted immutable asset/);
     expect(() => createV9PublicationResearchHashRebinder(previousHash, "invalid")).toThrow();
+    expect(() => createV9PublicationResearchHashRebinder(previousHash, "0".repeat(64))(admitted).evidence).toThrow(/cannot retain a pending research hash/);
     expect(() => createV9PublicationResearchHashRebinder(finalHash, previousHash)(admitted).evidence).toThrow(/pending cohort/);
+  });
+
+  it.each([
+    { sourceId: "another-source", evidenceId: "alpha:unrelated-source" },
+    { sourceId: "safety-score-v9-research-overlay", evidenceId: "alpha:unrelated-research-evidence" },
+  ])("rejects a pending hash on unmatched evidence $evidenceId without poisoning the cache", (unmatched) => {
+    const { fixedInput, source } = fixture();
+    const extension = materializeSafetyScoreV9FactSetExtension(fixedInput, { ...source.extension, assets: [...source.assets()] });
+    const { factSet } = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(fixedInput, extension);
+    const previousHash = factSet.sourceFingerprints.researchOverlays!.payloadSha256;
+    const input = JSON.parse(stableJsonStringifyV1(factSet.assets[0])) as V9AssetFactsV3;
+    const research = input.evidence.find((reference) => reference.sourceId === "safety-score-v9-research-overlay")!;
+    input.evidence.push({ ...research, ...unmatched, contentSha256: "0".repeat(64) });
+    const parsed = safeParseV9AssetFactsV3(input);
+    if (!parsed.success) throw parsed.error;
+    const compact = createV9PublicationAssetCompactor();
+    const rebind = createV9PublicationResearchHashRebinder(previousHash, "f".repeat(64));
+    const healthy = rebind(compact(factSet.assets[0]!));
+    const healthyEvidence = healthy.evidence;
+    const rejected = rebind(compact(parsed.data));
+    expect(() => rejected.evidence).toThrow(/cannot retain a pending research hash/);
+    expect(healthy.evidence).toBe(healthyEvidence);
+    expect(() => rejected.evidence).toThrow(/cannot retain a pending research hash/);
   });
 });
