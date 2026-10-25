@@ -1,0 +1,146 @@
+{
+  "dateRange": {
+    "from": "2026-10-19",
+    "to": "2026-10-25"
+  },
+  "headline": "DDR v5 condemns a coin only on terminal evidence, and Safety Score ships twelve releases to 10.34.",
+  "fieldNotes": "The week went into making verdicts and warnings mean what they say. Every DDR v4 miss was a coin condemned on a break that later recovered; v5 waits for terminal evidence. Safety Score folded parallel scorers into one authority ladder. Public warnings and Telegram alerts now fire only on problems that persist or matter. Underneath, a lost cron slot on the main lanes now gets one catch-up run instead of a missing publication.",
+  "summary": [
+    {
+      "label": "Safety Score 10.34",
+      "tag": "feature",
+      "description": "Twelve releases, 10.23 to 10.34. 10.29 replaces parallel authority scorers with one economic-authority ladder and five cap families, 10.30 grades active depegs by severity, and scores now publish hourly.",
+      "href": "/methodology/scoring-changelog/"
+    },
+    {
+      "label": "DDR v5 verdicts",
+      "tag": "feature",
+      "description": "Verdicts condemn a coin only on terminal evidence, so static exit thinness no longer does. Duration reads as recovery odds that keep non-recovery visible, and reviews grade calls against naive baselines.",
+      "href": "/methodology/depeg-resolver-changelog/"
+    },
+    {
+      "label": "Telegram bot v2",
+      "tag": "feature",
+      "description": "Safety alerts need a two-notch downgrade or a fall to D/F held six hours; freeze alerts need a destruction or $1M. Other changes arrive in one daily message, and the Mini App drops its tabs.",
+      "href": "/pharoswatchbot/"
+    },
+    {
+      "label": "Quieter public warnings",
+      "tag": "feature",
+      "description": "Readers see warnings only for data past the 12x stale band, missing, or quarantined; lesser findings go to operators. /status ignores small bounded omissions and needs two evaluations to change state.",
+      "href": "/status/"
+    },
+    {
+      "label": "Search-ready profiles",
+      "tag": "feature",
+      "description": "Coin profiles lead with a dated Safety grade, a redemption answer and checksum-validated ISINs for fund tokens. Titles use searchers' words, and thin chain, depeg-event and digest pages leave the index."
+    },
+    {
+      "label": "Design-system completion",
+      "tag": "design",
+      "description": "The raw-palette ledger is drained and deleted, every corner radius snaps to the scale, and CSS modules sit on named layers. Lint now rejects new raw hues and arbitrary radii; titles are sentence case."
+    },
+    {
+      "label": "Venue and price coverage",
+      "tag": "coverage",
+      "description": "Aero, the merged Aerodrome and Velodrome, is read directly (Liquidity 6.98, Pricing 6.56). Hive HBD gains depth-gated cross-rates, USDY prices again, and DefiLlama-delisted USYC, reUSD and USP route via CoinGecko.",
+      "href": "/methodology/pricing-pipeline-changelog/"
+    },
+    {
+      "label": "FreezeWatch and evidence",
+      "tag": "coverage",
+      "description": "FreezeWatch adopts a written exposure procedure, re-reviews every active status, and measures Upstream exposure on external backing only (4.4, 4.5). VCRED is delisted, USDKG frozen, AI summaries refreshed.",
+      "href": "/methodology/blacklist-tracker-changelog/"
+    },
+    {
+      "label": "Cron and integrity sweep",
+      "tag": "infra",
+      "description": "Missed or abandoned cron slots get one catch-up run and non-price lanes slow to owner-approved cadences. A correctness sweep ships across nine methodologies, and sponsor Dwellir now serves native reads first."
+    }
+  ],
+  "stats": {
+    "totalCommits": 443
+  },
+  "commits": [
+    {
+      "hash": "91bfc95a",
+      "message": "ci(ops): open curation follow-ups for catastrophic DDR breaks"
+    },
+    {
+      "hash": "8c978b12",
+      "message": "docs(ddr): document DDRv5 methodology, replay evidence and reviewer v5"
+    },
+    {
+      "hash": "3b21ba2b",
+      "message": "feat(depeg): render DDRv5 evidence classes, incidence odds and reviewer v5 metrics"
+    },
+    {
+      "hash": "f0c44c18",
+      "message": "feat(ddr): DDRv5 evidence-class rubric, competing-risk duration and reviewer v5"
+    },
+    {
+      "hash": "e7fb3ad1",
+      "message": "yield: reclassify USDGO as non-yield-bearing (Yield 8.52)"
+    },
+    {
+      "hash": "a6be85a5",
+      "message": "fix(redirects): send removed coins with a cemetery record to its anchor"
+    },
+    {
+      "hash": "bc0d7fb2",
+      "message": "chore(logos): prune logo keys no surface can look up"
+    },
+    {
+      "hash": "84ccc869",
+      "message": "feat(registry): add issuer-published ISINs for Midas and Backed certificates"
+    },
+    {
+      "hash": "d204ab75",
+      "message": "fix(coverage): place Removed from coverage ahead of the FAQ"
+    },
+    {
+      "hash": "0f84d674",
+      "message": "fix(cemetery): give tracked register names the prose link treatment"
+    },
+    {
+      "hash": "e0b3a015",
+      "message": "fix(upcoming): set per-currency group headings in the label register"
+    },
+    {
+      "hash": "3fecbf70",
+      "message": "fix(peg-hubs): drop repeated directory chips and pre-launch usage guide"
+    },
+    {
+      "hash": "c9d08eb8",
+      "message": "seo(profile): name the profile zone tabs in searchers' words"
+    },
+    {
+      "hash": "fa172c6d",
+      "message": "fix(profile): slim snapshot supply history so the scores lane always fits"
+    },
+    {
+      "hash": "70018682",
+      "message": "seo(flows): drop the page-level Suspense so the shell prerenders in main"
+    },
+    {
+      "hash": "2f5fddf9",
+      "message": "fix(nav): stack the desktop top nav above page-level sticky bars"
+    },
+    {
+      "hash": "b34411d2",
+      "message": "fix(profile): visual-review polish for the post-dossier profile and compare copy"
+    },
+    {
+      "hash": "6046dd56",
+      "message": "fix(ci): env-contract doc wording and the USDT Markdown export fixture"
+    },
+    {
+      "hash": "69e6dfac",
+      "message": "fix(seo): integrated-build fixes for doc titles and the structured-data matrix"
+    },
+    {
+      "hash": "5acd42bb",
+      "message": "seo(compare): link the live picker through the #coins= prefill on static pages"
+    }
+  ]
+}
