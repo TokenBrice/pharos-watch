@@ -69,11 +69,19 @@ const DEFAULT_BUDGETS = {
   // first production-profile measurement rather than assuming lab transfer bytes.
   homeHtmlBytes: 400_000,
   homeEagerJsGzipBytes: 1_000_000,
+  // Per-route first-load ceilings retain 5% headroom over the measured export.
+  depegEagerJsGzipBytes: 787_000,
+  safetyScoresEagerJsGzipBytes: 781_000,
+  stablecoinsEagerJsGzipBytes: 368_000,
+  statusEagerJsGzipBytes: 661_000,
+  screenerEagerJsGzipBytes: 648_000,
+  portfolioEagerJsGzipBytes: 613_000,
   // Cemetery server-renders the plot-map hero and Autopsy Register, with shared
-  // register rows in its RSC flight. Keep about 5% headroom for these payloads.
+  // register rows in its RSC flight, plus inlined critical CSS in the HTML.
+  // Keep about 5% headroom for these payloads.
   // The flight is `index.txt`, byte-identical to the decoded inline `__next_f`.
-  cemeteryHtmlBytes: 1_370_000,
-  cemeteryHtmlGzipBytes: 240_000,
+  cemeteryHtmlBytes: 1_515_000,
+  cemeteryHtmlGzipBytes: 272_000,
   cemeteryFlightBytes: 350_000,
 };
 
@@ -91,6 +99,12 @@ const BUDGET_ENV = {
   representativeDetailEagerJsGzipBytes: "PHAROS_SIZE_BUDGET_DETAIL_EAGER_JS_GZIP_BYTES",
   homeHtmlBytes: "PHAROS_SIZE_BUDGET_HOME_HTML_BYTES",
   homeEagerJsGzipBytes: "PHAROS_SIZE_BUDGET_HOME_EAGER_JS_GZIP_BYTES",
+  depegEagerJsGzipBytes: "PHAROS_SIZE_BUDGET_DEPEG_EAGER_JS_GZIP_BYTES",
+  safetyScoresEagerJsGzipBytes: "PHAROS_SIZE_BUDGET_SAFETY_SCORES_EAGER_JS_GZIP_BYTES",
+  stablecoinsEagerJsGzipBytes: "PHAROS_SIZE_BUDGET_STABLECOINS_EAGER_JS_GZIP_BYTES",
+  statusEagerJsGzipBytes: "PHAROS_SIZE_BUDGET_STATUS_EAGER_JS_GZIP_BYTES",
+  screenerEagerJsGzipBytes: "PHAROS_SIZE_BUDGET_SCREENER_EAGER_JS_GZIP_BYTES",
+  portfolioEagerJsGzipBytes: "PHAROS_SIZE_BUDGET_PORTFOLIO_EAGER_JS_GZIP_BYTES",
   cemeteryHtmlBytes: "PHAROS_SIZE_BUDGET_CEMETERY_HTML_BYTES",
   cemeteryHtmlGzipBytes: "PHAROS_SIZE_BUDGET_CEMETERY_HTML_GZIP_BYTES",
   cemeteryFlightBytes: "PHAROS_SIZE_BUDGET_CEMETERY_FLIGHT_BYTES",
@@ -105,6 +119,14 @@ const REPRESENTATIVE_DETAIL_ROUTES = [
 ];
 
 const CEMETERY_ROUTE = "cemetery";
+const ROUTE_EAGER_JS_BUDGETS = {
+  depeg: "depegEagerJsGzipBytes",
+  "safety-scores": "safetyScoresEagerJsGzipBytes",
+  stablecoins: "stablecoinsEagerJsGzipBytes",
+  status: "statusEagerJsGzipBytes",
+  screener: "screenerEagerJsGzipBytes",
+  portfolio: "portfolioEagerJsGzipBytes",
+};
 // Load in the source checkout: the inventory's TS aliases resolve relative to
 // its tsconfig, not to a separately supplied artifact working directory.
 const PUBLIC_ROUTE_PATHS = JSON.parse(execFileSync(process.execPath, [
@@ -112,7 +134,7 @@ const PUBLIC_ROUTE_PATHS = JSON.parse(execFileSync(process.execPath, [
   'import { PUBLIC_ROUTE_PATHS } from "./src/lib/public-route-inventory.ts"; process.stdout.write(JSON.stringify(PUBLIC_ROUTE_PATHS));',
 ], { cwd: fileURLToPath(new URL("../../", import.meta.url)), encoding: "utf8", timeout: 30_000 }));
 const PROSE_ROUTES = PUBLIC_ROUTE_PATHS
-  .filter((href) => /^\/(?:privacy|about|methodology|stablecoins)\/$|^\/api\/(?:reference\/)?$|^\/docs\//.test(href))
+  .filter((href) => /^\/(?:privacy|about|methodology|stablecoins|status)\/$|^\/api\/(?:reference\/)?$|^\/docs\//.test(href))
   .map((href) => href.slice(1, -1));
 
 function resolveBudget(key) {
@@ -371,7 +393,7 @@ function eagerJsForRoutes(routes) {
     let eagerGzipBytes = 0;
     let scriptCount = 0;
     for (const src of scriptSrcs) {
-      const chunkPath = path.join(outDir, src.replace(/^\//, ""));
+      const chunkPath = path.join(outDir, decodeURIComponent(src).replace(/^\//, ""));
       if (!existsSync(chunkPath)) continue;
       eagerGzipBytes += gzipSizeOf(chunkPath);
       scriptCount += 1;
@@ -381,6 +403,7 @@ function eagerJsForRoutes(routes) {
 }
 const representativeDetailEagerJs = eagerJsForRoutes(REPRESENTATIVE_DETAIL_ROUTES);
 const homeEagerJs = eagerJsForRoutes([""]);
+const routeEagerJs = eagerJsForRoutes(Object.keys(ROUTE_EAGER_JS_BUDGETS));
 const homeHtmlPath = path.join(outDir, "index.html");
 const homePayloads = [
   ...(existsSync(homeHtmlPath)
@@ -394,10 +417,12 @@ const proseScriptLeaks = PROSE_ROUTES.flatMap((route) => {
   const html = readFileSync(htmlPath, "utf8");
   return [...html.matchAll(/<script[^>]+src="([^"]+)"/g)]
     .map((match) => match[1])
-    .filter((src) => /\/app\/page-[^/]+\.js(?:\?|$)|\/recharts-vendor-[^/]+\.js(?:\?|$)/.test(src))
+    .filter((src) => /\/recharts-vendor-[^/]+\.js(?:\?|$)/.test(src)
+      || (route !== "status" && /\/app\/page-[^/]+\.js(?:\?|$)/.test(src)))
     .map((src) => `/${route}/ must not reference homepage/chart script: ${src}`);
 });
 printTop("Homepage payloads", homePayloads, 10);
+printTop("Route eager JS (gzip sum of referenced scripts)", routeEagerJs, 10);
 for (const leak of proseScriptLeaks) console.log(`FAIL route invariant: ${leak}`);
 
 printTop("Representative detail eager JS (gzip sum of referenced scripts)", representativeDetailEagerJs, 10);
@@ -422,6 +447,11 @@ if (check) {
   const failures = [];
   failures.push(...proseScriptLeaks);
   if (!existsSync(homeHtmlPath)) failures.push("homepage HTML is missing: out/index.html");
+  for (const route of Object.keys(ROUTE_EAGER_JS_BUDGETS)) {
+    if (!existsSync(path.join(outDir, route, "index.html"))) {
+      failures.push(`/${route}/ expected budgeted HTML is missing: out/${route}/index.html`);
+    }
+  }
   console.log("\nDeploy gate (blocking)");
   checkCountBudget("total out files", allOutFiles.length, budgets.totalOutFiles, failures);
   const cssBundle = cssFiles.map((file) => readFileSync(file.path, "utf8")).join("\n");
@@ -487,6 +517,11 @@ if (check) {
     ),
     ...homePayloads.map((payload) =>
       referenceDelta(`home ${payload.label}`, payload.size, budgets[payload.budgetKey], { responsible: payload.rel }),
+    ),
+    ...routeEagerJs.map((payload) =>
+      referenceDelta(`${payload.route} eager JS gzip`, payload.size, budgets[ROUTE_EAGER_JS_BUDGETS[payload.route]], {
+        responsible: payload.rel,
+      }),
     ),
     ...cemeteryPayloads.map((payload) =>
       referenceDelta(`${CEMETERY_ROUTE} ${payload.label}`, payload.size, budgets[payload.budgetKey], {

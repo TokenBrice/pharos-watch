@@ -115,9 +115,9 @@ function HeroUpdatedStamp({ updatedAtMs, className }: { updatedAtMs: number; cla
     const timer = window.setInterval(() => setNowMs(Date.now()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
-  // Relative age depends on the reader's clock, so it renders only after hydration.
-  if (!hydrated || updatedAtMs <= 0) return null;
-  const age = formatRelativeAgeSeconds((nowMs - updatedAtMs) / 1000, { nowLabel: "just now" });
+  if (updatedAtMs <= 0) return null;
+  // Keep the stamp's row while the relative age awaits the reader's clock.
+  const age = hydrated ? formatRelativeAgeSeconds((nowMs - updatedAtMs) / 1000, { nowLabel: "just now" }) : "—";
   return (
     <p className={cn("text-xs text-muted-foreground", className)} title={formatDataHealthTimestamp(updatedAtMs)}>
       Updated {age}
@@ -186,55 +186,58 @@ export function HeroIdentityHeader({
       </div>
       {/* At lg+ the stamp sits bottom-right, level with the one-liner, so it adds no row. */}
       <div className="contents lg:flex lg:shrink-0 lg:flex-col lg:items-end lg:justify-between lg:gap-2 lg:self-stretch">
-        <div className="flex flex-wrap items-center gap-1.5 lg:flex-nowrap lg:pt-1">
-          <BluechipHeaderBadge stablecoinId={coin.id} />
-          {/* Hidden when the Bluechip badge renders nothing and it leads the row. */}
-          <span aria-hidden="true" className="mx-1 h-4 w-px bg-border/60 first:hidden" />
-          {links.map((link) => {
-            const Icon = linkIconFor(link.label);
-            return (
-              <a
-                key={link.url}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                // Below sm the in-flow Key Links card carries these, so the
-                // action row stays on one line.
-                className={cn(actionClass, "hidden sm:inline-flex")}
-                aria-label={link.label}
-                title={link.label}
-              >
-                <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-              </a>
-            );
-          })}
-          {links.length > 0 ? <span aria-hidden="true" className="mx-1 hidden h-4 w-px bg-border/60 sm:block" /> : null}
-          <IntentLink
-            href={header.compareHref}
-            className={actionClass}
-            aria-label={header.benchmarkSymbol ? `Compare vs ${header.benchmarkSymbol}` : "Compare"}
-            title={header.benchmarkSymbol ? `Compare vs ${header.benchmarkSymbol}` : "Compare"}
-          >
-            <ArrowLeftRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </IntentLink>
-          <button
-            type="button"
-            onClick={onOpenFeedback}
-            className={actionClass}
-            aria-label="Report issue"
-            title="Report issue"
-          >
-            <Flag className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
-          {/* Labelled with a full-size target below lg; the compact icon at lg+. */}
-          <span className="lg:hidden">
-            <ShareButton ogPath={`/api/og/stablecoin/${header.coinId}`} label="Share" />
-          </span>
-          <span className="hidden lg:flex">
-            <ShareButton ogPath={`/api/og/stablecoin/${header.coinId}`} label="Share" iconOnly />
-          </span>
-          {/* Below lg the stamp closes the wrapped action row instead of adding a line. */}
-          <HeroUpdatedStamp updatedAtMs={updatedAtMs} className="ml-auto pl-2 lg:hidden" />
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5 lg:grid-cols-[8rem_auto] lg:pt-1">
+          {/* The live badge has its own cell so it cannot move the actions. */}
+          <div className="flex min-h-11 min-w-0 items-center gap-1.5 lg:min-h-8">
+            <BluechipHeaderBadge stablecoinId={coin.id} />
+            <span aria-hidden="true" className="mx-1 hidden h-4 w-px shrink-0 bg-border/60 sm:block sm:first:hidden" />
+          </div>
+          <div className="flex items-center gap-1.5">
+            {links.map((link) => {
+              const Icon = linkIconFor(link.label);
+              return (
+                <a
+                  key={link.url}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  // Below sm the in-flow Key Links card carries these, so the
+                  // action row stays on one line.
+                  className={cn(actionClass, "hidden sm:inline-flex")}
+                  aria-label={link.label}
+                  title={link.label}
+                >
+                  <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                </a>
+              );
+            })}
+            {links.length > 0 ? <span aria-hidden="true" className="mx-1 hidden h-4 w-px bg-border/60 sm:block" /> : null}
+            <IntentLink
+              href={header.compareHref}
+              className={actionClass}
+              aria-label={header.benchmarkSymbol ? `Compare vs ${header.benchmarkSymbol}` : "Compare"}
+              title={header.benchmarkSymbol ? `Compare vs ${header.benchmarkSymbol}` : "Compare"}
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </IntentLink>
+            <button
+              type="button"
+              onClick={onOpenFeedback}
+              className={actionClass}
+              aria-label="Report issue"
+              title="Report issue"
+            >
+              <Flag className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+            {/* Labelled with a full-size target below lg; the compact icon at lg+. */}
+            <span className="lg:hidden">
+              <ShareButton ogPath={`/api/og/stablecoin/${header.coinId}`} label="Share" />
+            </span>
+            <span className="hidden lg:flex">
+              <ShareButton ogPath={`/api/og/stablecoin/${header.coinId}`} label="Share" iconOnly />
+            </span>
+          </div>
+          <HeroUpdatedStamp updatedAtMs={updatedAtMs} className="col-span-2 text-right lg:hidden" />
         </div>
         <HeroUpdatedStamp updatedAtMs={updatedAtMs} className="hidden lg:block" />
       </div>

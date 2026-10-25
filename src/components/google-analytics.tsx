@@ -31,7 +31,7 @@ export function GoogleAnalytics({ measurementId }: GoogleAnalyticsProps) {
       // The lightweight gtag stub + dataLayer queue is installed synchronously so
       // `window.gtag(...)` calls (consent, config, page_view) are buffered from the
       // first render. Only the ~160KB gtag.js download + execution is deferred to
-      // an idle window, keeping its two long tasks off the LCP/TBT critical path;
+      // an idle window after load so it cannot compete with load-blocking work;
       // the queued commands replay once the script processes the dataLayer.
       window.dataLayer = window.dataLayer ?? [];
       window.gtag = function gtag() {
@@ -49,14 +49,23 @@ export function GoogleAnalytics({ measurementId }: GoogleAnalyticsProps) {
       window.gtag("config", measurementId, { send_page_view: false });
     }
 
-    return scheduleIdle(() => {
-      if (document.getElementById("pharos-google-analytics")) return;
-      const script = document.createElement("script");
-      script.id = "pharos-google-analytics";
-      script.async = true;
-      script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
-      document.head.appendChild(script);
-    }, { timeoutMs: 2_000, fallbackDelayMs: 2_000 });
+    let cancelIdle: (() => void) | undefined;
+    const scheduleAnalytics = () => {
+      cancelIdle = scheduleIdle(() => {
+        if (document.getElementById("pharos-google-analytics")) return;
+        const script = document.createElement("script");
+        script.id = "pharos-google-analytics";
+        script.async = true;
+        script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
+        document.head.appendChild(script);
+      }, { timeoutMs: 5_000, fallbackDelayMs: 5_000 });
+    };
+    if (document.readyState === "complete") scheduleAnalytics();
+    else window.addEventListener("load", scheduleAnalytics, { once: true });
+    return () => {
+      window.removeEventListener("load", scheduleAnalytics);
+      cancelIdle?.();
+    };
   }, [analyticsAllowed, measurementId]);
 
   useEffect(() => {

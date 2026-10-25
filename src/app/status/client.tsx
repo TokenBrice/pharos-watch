@@ -88,8 +88,10 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
   if (healthLoading && !healthData) {
     content = (
       <div className="space-y-6" aria-busy="true" aria-label="Loading status">
-        <div className="h-[72px] animate-pulse rounded-xl bg-muted/30" />
-        <div className="h-[420px] animate-pulse rounded-xl bg-muted/30" />
+        <div className="h-[114px] animate-pulse rounded-xl bg-muted/30 sm:h-[84px]" />
+        <div className="h-[1290px] animate-pulse rounded-xl bg-muted/30 sm:h-[1100px]" />
+        <div className="h-[240px] animate-pulse rounded-xl bg-muted/30 sm:h-[180px]" />
+        <div className="h-[100px] animate-pulse rounded-xl bg-muted/30 sm:h-[84px]" />
       </div>
     );
   } else if (!healthData || !projection) {

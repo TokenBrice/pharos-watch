@@ -362,14 +362,9 @@ export function ScreenerClient() {
 
   return (
     <div className="space-y-6">
-      <QueryFreshnessNotices
-        error={freshnessGroup.globalError}
-        hasData={hasStablecoinRows}
-        onRetry={freshnessGroup.refetchAll}
-        queries={freshnessGroup.queries}
-      />
-
-      <SelectorCallout />
+      {hasHydrated ? <SelectorCallout /> : (
+        <div className="h-[50px] animate-pulse rounded-md bg-muted/30 sm:h-[136px] lg:h-[113px] xl:h-[89px]" aria-hidden="true" />
+      )}
 
       <ScreenerToolbar
         filters={filters}
@@ -398,7 +393,13 @@ export function ScreenerClient() {
         }
       />
 
-      <section id="data" aria-label="Data table" tabIndex={-1}>
+      <section id="data" aria-label="Data table" tabIndex={-1} className="space-y-6">
+        <QueryFreshnessNotices
+          error={freshnessGroup.globalError}
+          hasData={hasStablecoinRows}
+          onRetry={freshnessGroup.refetchAll}
+          queries={freshnessGroup.queries}
+        />
         <ScreenerTable
           rows={sortedRows}
           logos={logos}

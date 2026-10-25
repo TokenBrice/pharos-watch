@@ -28,6 +28,17 @@ function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummary
 }
 
 describe("stablecoin detail view-model builder", () => {
+  it.each([true, false])("preserves the unsettled-seed flag on both seeded lanes (%s)", (awaitingLiveRead) => {
+    const params = makeBuildStablecoinDetailViewModelParams({ queries: {
+      liveSummary: { awaitingLiveRead }, supplyHistory: { awaitingLiveRead },
+    } });
+    const queries = buildDetailStaleQueries(params.queries, params.supplemental, params.core.id);
+    expect(queries.find((query) => query.label === "Detail snapshot")).toHaveProperty("awaitingLiveRead", awaitingLiveRead);
+    expect(queries.find((query) => query.label === "Supply history")).toHaveProperty("awaitingLiveRead", awaitingLiveRead);
+    expect(queries.filter((query) => !["Detail snapshot", "Supply history"].includes(query.label ?? ""))
+      .every((query) => query.awaitingLiveRead === undefined)).toBe(true);
+  });
+
   it("keeps a cold summary read loading rather than classifying the tracked ID as absent", () => {
     const params = makeBuildStablecoinDetailViewModelParams({ queries: { liveSummary: { isLoading: true } } });
     expect(buildStablecoinDetailViewModel(params).status).toBe("loading");

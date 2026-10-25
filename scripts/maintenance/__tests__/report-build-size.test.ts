@@ -15,10 +15,12 @@ const SEARCH_WIDTH_UTILITY = ".xl\\:w-\\[15rem\\]{width:15rem}";
 const SHELL_HTML = '<!doctype html><html><body><script src="/_next/static/chunks/framework-zod.js"></script></body></html>';
 const DETAIL_HTML = '<!doctype html><html><body><script src="/_next/static/chunks/page-abc.js"></script></body></html>';
 const PROSE_ROUTES = PUBLIC_ROUTE_PATHS
-  .filter((href) => /^\/(?:privacy|about|methodology|stablecoins)\/$|^\/api\/(?:reference\/)?$|^\/docs\//.test(href))
+  .filter((href) => /^\/(?:privacy|about|methodology|stablecoins|status)\/$|^\/api\/(?:reference\/)?$|^\/docs\//.test(href))
   .map((href) => href.slice(1, -1));
-const HTML_FILES = 2 + PROSE_ROUTES.length;
-const OUT_FILES = 8 + PROSE_ROUTES.length;
+const BUDGET_ROUTES = ["depeg", "safety-scores", "stablecoins", "status", "screener", "portfolio"];
+const REQUIRED_ROUTES = [...new Set([...PROSE_ROUTES, ...BUDGET_ROUTES])];
+const HTML_FILES = 2 + REQUIRED_ROUTES.length;
+const OUT_FILES = 8 + REQUIRED_ROUTES.length;
 
 // Fixed payload sizes so the reported byte totals are derived, not guessed.
 const ZOD_CHUNK_BYTES = 500;
@@ -59,7 +61,7 @@ function syntheticBuild({
     [ZOD_CHUNK]: "globalThis._zod={};/* _zod.traits */".padEnd(ZOD_CHUNK_BYTES, "x"),
     [`${DETAIL_ROUTE}/index.html`]: DETAIL_HTML,
     [`${DETAIL_ROUTE}/usdc-circle.__PAGE__.txt`]: "detail-payload".padEnd(DETAIL_TXT_BYTES, "0"),
-    ...Object.fromEntries(PROSE_ROUTES.map((route) => [`out/${route}/index.html`, ""])),
+    ...Object.fromEntries(REQUIRED_ROUTES.map((route) => [`out/${route}/index.html`, ""])),
     ...extraFiles,
   };
 
@@ -172,7 +174,10 @@ describe("report-build-size", () => {
   it.each(PROSE_ROUTES)(
     "blocks homepage and chart scripts leaking into /%s/",
     (route) => {
-      for (const src of ["/_next/static/chunks/app/page-abcd.js", "/_next/static/chunks/recharts-vendor-abcd.js"]) {
+      const forbiddenScripts = route === "status"
+        ? ["/_next/static/chunks/recharts-vendor-abcd.js"]
+        : ["/_next/static/chunks/app/page-abcd.js", "/_next/static/chunks/recharts-vendor-abcd.js"];
+      for (const src of forbiddenScripts) {
         const build = syntheticBuild({ extraFiles: { [`out/${route}/index.html`]: `<script src="${src}"></script>` } });
         const result = runReport(build);
         expect(result.status).toBe(1);
@@ -223,6 +228,37 @@ describe("report-build-size", () => {
     const result = runReport(build);
     expect(result.stdout).toContain("(1 scripts, gzip)");
     expect(result.status).toBe(0);
+  });
+
+  it("counts URL-encoded dynamic-route chunk paths", () => {
+    const build = syntheticBuild({ extraFiles: {
+      [`${DETAIL_ROUTE}/index.html`]: '<script src="/_next/static/chunks/app/stablecoin/%5Bid%5D/page-abc.js"></script>',
+      "out/_next/static/chunks/app/stablecoin/[id]/page-abc.js": 'console.log("detail");',
+    } });
+    const result = runReport(build, { budgets: { PHAROS_SIZE_BUDGET_DETAIL_EAGER_JS_GZIP_BYTES: "1" } });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("stablecoin/usdc-circle eager JS gzip exceeds its byte ceiling");
+    expect(result.stderr).toContain("stablecoin/usdc-circle (1 scripts, gzip)");
+  });
+
+  it.each(BUDGET_ROUTES)("enforces the /%s/ eager-script gzip budget", (route) => {
+    const build = syntheticBuild({ extraFiles: { [`out/${route}/index.html`]: SHELL_HTML + SHELL_HTML } });
+    const result = runReport(build, {
+      budgets: { [`PHAROS_SIZE_BUDGET_${route.toUpperCase().replaceAll("-", "_")}_EAGER_JS_GZIP_BYTES`]: "1" },
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(`${route} eager JS gzip exceeds its byte ceiling`);
+    expect(result.stderr).toContain(`${route} (1 scripts, gzip)`);
+    expect(result.stepSummary).toContain(`| ${route} eager JS gzip |`);
+    expect(runReport(build).status).toBe(0);
+  });
+
+  it.each(BUDGET_ROUTES)("fails closed when budgeted /%s/ HTML is missing", (route) => {
+    const build = syntheticBuild();
+    rmSync(join(build, "out", route, "index.html"));
+    const result = runReport(build);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(`/${route}/ expected budgeted HTML is missing`);
   });
 
   it("blocks a --check run with no build and stays advisory without it", () => {

@@ -3,10 +3,8 @@
 import { useId, useMemo, type ComponentProps } from "react";
 import { CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { logTicks, niceTicks, niceTicksForValues, type NiceTicksOptions, type TickKind } from "@/lib/chart-ticks";
-import { CHART_AXIS_TICK, CHART_GRID_DASH, CHART_GRID_STROKE, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-theme";
+import { CHART_AXIS_TICK, CHART_GRID_DASH, CHART_GRID_STROKE, MONO_Y_AXIS_WIDTH, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-theme";
 import { formatChartDate } from "@shared/lib/format";
-
-export const MONO_Y_AXIS_WIDTH = 68;
 
 /**
  * Returns a stable, SVG-safe id built from React's `useId()` with the given
