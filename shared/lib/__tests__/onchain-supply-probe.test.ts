@@ -5,6 +5,7 @@ import { resolveChainId } from "../../types/chain-identity";
 import {
   CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS,
   CURATED_AGGREGATE_ESCROW_RESIDUALS,
+  CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS,
   getOnchainSupplyHoldReason,
   hasRuntimeOnchainSupplyPath,
   isZephyrScannerSupplyId,
@@ -566,8 +567,9 @@ it("keeps every tracked curated roster either complete or explicitly excused acr
       (contract) => !selected.some((entry) => entry.contract === contract),
     ).length ?? 0;
     expect(
-      unselectedCount === 0 || CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id] != null,
-      `${meta.id} publishes a curated roster with ${unselectedCount} unselected registered deployments and no residual policy`,
+      unselectedCount === 0 || CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id] != null
+        || unselectedCount === CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS[meta.id]?.length,
+      `${meta.id} publishes a curated roster with ${unselectedCount} unselected registered deployments and no reviewed accounting exclusion`,
     ).toBe(true);
   }
 });
