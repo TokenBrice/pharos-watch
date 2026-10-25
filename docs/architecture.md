@@ -51,8 +51,8 @@ Stable providers outlive navigation; optional chrome never gates content. [Shell
 
 - `src/lib/public-route-inventory.ts` and `src/app/sitemap.ts` share indexable paths, including registry-derived families. `npm run seo:check` checks coverage, orphans and depth.
 - History and API documents retain citations/fragments through [methodology archives](./methodology-page.md), [changelog archives](./process/blog-publishing.md#changelog) and [separate API documents](./api-page.md).
-- No route ships `loading.tsx` or a page-level Suspense around its whole client tree; skeletons live in `loading-state.tsx`.
-- `public/_redirects` owns non-sitemap aliases. Static rules precede dynamic rules: Cloudflare silently drops rules beyond its 100 post-dynamic-rule cap. `functions/stablecoin/[[path]].ts` redirects legacy numeric IDs. Retired IDs 301 to their cemetery record when one exists, else their peg hub.
+- Routes ship no `loading.tsx` or page-wide Suspense.
+- `public/_redirects` owns non-sitemap aliases. Static rules precede dynamic rules: Cloudflare silently drops rules beyond its 100 post-dynamic-rule cap. `functions/stablecoin/[[path]].ts` redirects legacy numeric IDs. Retired IDs 301 to cemetery or peg hub.
 - `functions/_middleware.ts` negotiates Markdown; `scripts/maintenance/generate-markdown-exports.ts` emits `index.md`. Require `Vary: Accept` **and CDN no-store**: Cloudflare does not cache-key arbitrary `Vary`. `/llms.txt` replaces neither robots nor sitemap.
 - `public/_routes.json` uses one broad `/*` include and static-asset excludes; overlapping include splats are invalid. `public/_headers` owns static cache policy; route exceptions detach the broad cache rule with `! Cache-Control` to avoid comma-joining. Nonce injection and CSP ownership: [CSP posture](./security-governance.md#csp-posture).
 - [Static invocation exclusions](./process/worker-infrastructure-appendix.md#static-asset-invocation) keep public assets direct and privileged/function-backed routes gated.

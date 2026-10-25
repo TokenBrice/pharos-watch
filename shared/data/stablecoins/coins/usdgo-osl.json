@@ -6,8 +6,7 @@
   "oneLiner": "USDGO is OSL's enterprise dollar stablecoin issued by Anchorage Digital Bank, backed by cash and money market funds.",
   "flags": {
     "backing": "rwa-backed",
-    "governance": "centralized",
-    "yieldBearing": true
+    "governance": "centralized"
   },
   "collateral": "Cash, BUIDL fund shares, Goldman Sachs STBXX, and JPMorgan JLTXX held in segregated fiduciary trust accounts supporting USDGO.",
   "pegMechanism": "1:1 USD redemption by onboarded Anchorage Digital Bank clients, net of fees and subject to the bank's redemption terms",
@@ -96,10 +95,6 @@
       "reportHosts": ["learn.anchorage.com"],
       "issuerCrossCheckUrl": "https://www.usdgo.com/api/lark-bitable"
     }
-  },
-  "yieldConfig": {
-    "yieldSource": "OSL-distributed EFFR-linked yield for professional investors",
-    "yieldType": "governance-set"
   },
   "launchDate": "2026-02-10"
 }
