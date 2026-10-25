@@ -583,11 +583,13 @@ describe("HeroIdentityHeader", () => {
     const render = (updatedAtMs: number) =>
       renderToStaticMarkup(<HeroIdentityHeader model={model} onOpenFeedback={() => {}} updatedAtMs={updatedAtMs} />);
     try {
-      expect(render(now - 12 * 60_000)).not.toContain("Updated");
+      const prerender = render(now - 12 * 60_000);
+      expect(prerender.match(/Updated —/g)).toHaveLength(2);
       hydration.hydrated = true;
       const markup = render(now - 12 * 60_000);
       // One stamp per breakpoint: closing the action row below lg, bottom-right at lg+.
       expect(markup.match(/Updated 12m ago/g)).toHaveLength(2);
+      expect(prerender.replaceAll("Updated —", "Updated 12m ago")).toBe(markup);
       expect(markup).not.toMatch(/amber|text-warning/);
       expect(render(0)).not.toContain("Updated");
     } finally {
