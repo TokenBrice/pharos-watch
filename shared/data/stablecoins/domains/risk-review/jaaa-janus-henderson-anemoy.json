@@ -381,5 +381,44 @@
         ]
       }
     ]
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "JAAA is an Anemoy fund share on Centrifuge. Centrifuge documents issuer-set primary NAV at the Hub, manager-published share prices, and separate batch execution prices for subscriptions/redemptions. Chronicle verification is an additional layer; its presence does not establish independent authority over the fund valuation or execution price. This review classifies the documented fund-level pricing authority, not current updater keys, relay topology, or signer independence.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV-parity B1-b primary-source pricing review",
+      "rationale": "JAAA represents a managed fund share whose subscription/redemption conversion uses fund valuation. This top-level NAV authority remains applicable without borrower collateral or liquidation branches. Downstream lending integrations are not the fund share pricing mechanism.",
+      "sources": [
+        {
+          "label": "Anemoy JAAA: fund identity, NAV reporting and stablecoin redemption; accessed 2026-10-25",
+          "url": "https://www.anemoy.io/funds/jaaa"
+        },
+        {
+          "label": "Centrifuge pricing: manager-published share prices and vault conversion; accessed 2026-10-25",
+          "url": "https://docs.centrifuge.io/user/concepts/pricing/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-25",
+    "reviewer": "Pharos NAV-parity B1-b primary-source pricing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Anemoy JAAA: fund identity, NAV reporting and stablecoin redemption; accessed 2026-10-25",
+        "url": "https://www.anemoy.io/funds/jaaa"
+      },
+      {
+        "label": "Centrifuge primary NAV: issuer-set Hub share price and separate batch execution pricing; accessed 2026-10-25",
+        "url": "https://docs.centrifuge.io/developer/protocol/guides/publish-nav-and-oracles/"
+      },
+      {
+        "label": "Centrifuge pricing: manager-published share prices and vault conversion; accessed 2026-10-25",
+        "url": "https://docs.centrifuge.io/user/concepts/pricing/"
+      }
+    ]
   }
 }
