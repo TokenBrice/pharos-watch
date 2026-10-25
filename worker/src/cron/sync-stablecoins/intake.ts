@@ -7,6 +7,7 @@ import { CIRCUIT_SOURCE, DEFILLAMA_BASE, MIN_VALID_ASSET_COUNT } from "../../lib
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";
+import type { OnchainPartitionSummary } from "@shared/types/status/cron";
 import { logWorkerEvent } from "../../lib/structured-log";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { PriceValidationReferences } from "../../lib/price-validation";
@@ -218,6 +219,7 @@ export async function loadStablecoinsIntake(
     signal?: AbortSignal;
     syncStartSec: number;
     reportProgress?: CronProgressReporter;
+    reportPartitionSummary?: (summary: OnchainPartitionSummary) => void;
     coingeckoApiKey?: string | null;
     chainRpcs?: Map<string, ChainRpcConfig>;
     dwellirNative?: DwellirNativeCapability;
@@ -256,6 +258,7 @@ export async function loadStablecoinsIntake(
     input.db,
     previousAssetsById,
     input.dwellirNative,
+    input.reportPartitionSummary,
   );
 
   const [dlFetchResult, supplementalTokens] = await Promise.all([

@@ -120,6 +120,24 @@ describe("summarizeCronStatus", () => {
   it("serves no facts for jobs outside the registry", () => {
     expect(summarizeCronStatus("sync-blacklist", detail)).not.toHaveProperty("latestRunFacts");
   });
+
+  it("serves validated partition facts from only the selected run without changing its verdict", () => {
+    const onchainPartition = { candidates: 8, entered: 1, retained: 1, carried: 1, divergent: 2,
+      unreadable: 2, deadlineSkipped: 2, carryExpired: 1, divergences: [{ id: "coin-a", ratio: 1.2 }, { id: "coin-b", ratio: 0.8 }],
+      divergencesTruncated: 0 };
+    const run = { ...detail.runs[0], metadata: { onchainPartition } };
+    const summary = summarizeCronStatus("sync-stablecoins", { ...detail, runs: [run] });
+    expect(summary.latestRunFacts).toEqual({ onchainPartition });
+    expect(summary.healthy).toBe(detail.healthy);
+    expect(summary.confirmedOutputAt).toBe(detail.confirmedOutputAt);
+    expect(summary.runs[0].status).toBe("ok");
+    for (const value of [null, undefined, {}, { ...onchainPartition, entered: -1 }, { ...onchainPartition, divergent: "2" },
+      { ...onchainPartition, divergencesTruncated: 1 }, { ...onchainPartition, divergences: [{ id: "coin-a", ratio: NaN }] }]) {
+      const latest = { ...run, metadata: { onchainPartition: value } };
+      expect(summarizeCronStatus("sync-stablecoins", { ...detail, runs: [latest, run] }).latestRunFacts)
+        .toEqual({ onchainPartition: null });
+    }
+  });
 });
 
 describe("public health snapshot independence", () => {

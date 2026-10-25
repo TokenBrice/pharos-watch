@@ -1,5 +1,25 @@
 import { z } from "zod";
 
+export const ONCHAIN_PARTITION_DIVERGENCE_DETAIL_LIMIT = 10;
+const PartitionCountSchema = z.number().int().nonnegative();
+/** Same-run attribution diagnostics only; never a publication/freshness verdict. */
+export const OnchainPartitionSummarySchema = z.object({
+  candidates: PartitionCountSchema,
+  entered: PartitionCountSchema,
+  retained: PartitionCountSchema,
+  carried: PartitionCountSchema,
+  divergent: PartitionCountSchema,
+  unreadable: PartitionCountSchema,
+  deadlineSkipped: PartitionCountSchema,
+  carryExpired: PartitionCountSchema,
+  divergences: z.array(z.object({ id: z.string().min(1), ratio: z.number().finite().nonnegative() }))
+    .max(ONCHAIN_PARTITION_DIVERGENCE_DETAIL_LIMIT),
+  divergencesTruncated: PartitionCountSchema,
+}).refine((value) => value.divergent === value.divergences.length + value.divergencesTruncated, {
+  message: "Divergence count must include listed and truncated details",
+});
+export type OnchainPartitionSummary = z.output<typeof OnchainPartitionSummarySchema>;
+
 const CRON_RUN_STATUS_VALUES = [
   "ok",
   "degraded",
