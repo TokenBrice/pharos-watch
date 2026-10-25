@@ -77,10 +77,11 @@ const DEFAULT_BUDGETS = {
   screenerEagerJsGzipBytes: 648_000,
   portfolioEagerJsGzipBytes: 613_000,
   // Cemetery server-renders the plot-map hero and Autopsy Register, with shared
-  // register rows in its RSC flight. Keep about 5% headroom for these payloads.
+  // register rows in its RSC flight, plus inlined critical CSS in the HTML.
+  // Keep about 5% headroom for these payloads.
   // The flight is `index.txt`, byte-identical to the decoded inline `__next_f`.
-  cemeteryHtmlBytes: 1_370_000,
-  cemeteryHtmlGzipBytes: 240_000,
+  cemeteryHtmlBytes: 1_515_000,
+  cemeteryHtmlGzipBytes: 272_000,
   cemeteryFlightBytes: 350_000,
 };
 
