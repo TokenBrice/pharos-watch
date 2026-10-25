@@ -17,6 +17,7 @@ import {
   getListingGovernanceIssues,
   getTerminalLiveReserveConfigIssue,
   getExpiredReserveSupplyAdmissionBootstrapIssue,
+  getOverdueLaunchedPhaseReviewIssue,
 } from "../ci/check-stablecoin-data";
 
 describe("per-coin deployment identity gate", () => {
@@ -30,6 +31,20 @@ describe("per-coin deployment identity gate", () => {
       contracts: [{ chain: "solana", address: "A".repeat(32), decimals: 6 }],
       tradedContracts: [{ chain: "solana", address: "a".repeat(32), decimals: 6 }],
     } as StablecoinMeta)).toEqual([]);
+  });
+});
+
+describe("launched pre-launch dwell warning", () => {
+  const launched = {
+    status: "pre-launch" as const,
+    launchPhase: "launched" as const,
+    listingStatusReview: { changedAt: "2026-10-01", reason: "No admitted price lane yet.", reviewBy: "2026-11-30" },
+  };
+  it("warns from UTC start of reviewBy, only for launched pre-launch rows", () => {
+    expect(getOverdueLaunchedPhaseReviewIssue(launched, Date.parse("2026-11-29T23:59:59Z"))).toBeNull();
+    expect(getOverdueLaunchedPhaseReviewIssue(launched, Date.parse("2026-11-30T00:00:00Z"))).toContain("2026-11-30");
+    expect(getOverdueLaunchedPhaseReviewIssue({ ...launched, launchPhase: "beta" }, Date.parse("2027-01-01T00:00:00Z"))).toBeNull();
+    expect(getOverdueLaunchedPhaseReviewIssue({ ...launched, status: "quarantined" }, Date.parse("2027-01-01T00:00:00Z"))).toBeNull();
   });
 });
 

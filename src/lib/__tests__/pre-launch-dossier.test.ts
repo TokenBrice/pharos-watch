@@ -89,6 +89,10 @@ describe("verdict and history", () => {
       "No published phase, earlier target retired, none set; no activity logged yet.",
     );
     expect(buildLaunchVerdict({})).toBe("No published phase, no target date; no activity logged yet.");
+    // A launched row reads its launch, never a stale target.
+    expect(buildLaunchVerdict({ launchPhase: "launched", launchDate: "2026-10-15", expectedLaunchDate: "2026-Q3" })).toBe(
+      "Launched Oct 15, 2026, awaiting admissible data; no activity logged yet.",
+    );
     expect(formatPhaseLabel({})).toBe("Unphased");
   });
 

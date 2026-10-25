@@ -26,7 +26,7 @@ import type { OgPageSlug } from "@shared/lib/og-route-cards";
 import { buildArticleJsonLd } from "@/lib/json-ld";
 import { formatUtcDayLabel } from "@shared/lib/format";
 import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-current";
-import { formatFuzzyDate } from "@/lib/pre-launch";
+import { formatFuzzyDate, isLaunchedAwaitingData } from "@/lib/pre-launch";
 import { getSnapshotSafetyAssessment } from "@/lib/safety-grade-snapshot";
 import { SITE_OPEN_GRAPH_IDENTITY, SITE_TWITTER_IDENTITY } from "@/lib/site-identity";
 import { isStablecoinTitleTreatment } from "@/lib/stablecoin-title-cohort";
@@ -330,11 +330,12 @@ function buildStablecoinStatusTitle(coin: StablecoinMeta): string {
 
   if (coin.status === "pre-launch") {
     const brand = getTitleBrand(coin);
-    const intent = coin.launchPhase === "beta" ? "Beta Access & Status" : "Launch Date & Status";
+    const launched = isLaunchedAwaitingData(coin);
+    const intent = launched ? "Status & Tracking" : coin.launchPhase === "beta" ? "Beta Access & Status" : "Launch Date & Status";
     return buildStablecoinTitle([
       brand ? `${coin.symbol} Stablecoin (${brand}): ${intent}` : null,
       `${coin.symbol} Stablecoin: ${intent}`,
-      `${coin.symbol} Launch Status`,
+      launched ? `${coin.symbol} Status & Tracking` : `${coin.symbol} Launch Status`,
     ]);
   }
 
@@ -388,7 +389,7 @@ function buildStructureSentence(coin: StablecoinMeta): string {
       : `${governancePhrase} stablecoin ${backingPhrase}, pegged to ${pegLabel}`;
   const subject = hasRedundantName(coin) ? coin.symbol : `${coin.name} (${coin.symbol})`;
   const determiner = coin.brand ? `${coin.brand}'s` : "a";
-  const lifecycle = coin.status === "pre-launch" ? "pre-launch " : "";
+  const lifecycle = coin.status === "pre-launch" && !isLaunchedAwaitingData(coin) ? "pre-launch " : "";
   return `${subject} is ${determiner} ${lifecycle}${structure}.`;
 }
 
@@ -431,7 +432,9 @@ function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
     return composeDescription([
       body,
       latestMilestone ? `Latest milestone: ${formatDayLabel(latestMilestone)}.` : null,
-      coin.expectedLaunchDate ? `Target: ${formatFuzzyDate(coin.expectedLaunchDate)}.` : null,
+      isLaunchedAwaitingData(coin)
+        ? (coin.launchDate ? `Launched ${formatFuzzyDate(coin.launchDate)}; not yet tracked.` : "Launched; not yet tracked.")
+        : coin.expectedLaunchDate ? `Target: ${formatFuzzyDate(coin.expectedLaunchDate)}.` : null,
     ], PROFILE_DESCRIPTION_MAX_LENGTH);
   }
 

@@ -6,6 +6,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildPharosOrganizationNode } from "@/lib/json-ld";
 import { getLatestDatedMilestoneDate } from "@/lib/page-metadata";
+import { formatFuzzyDate, isLaunchedAwaitingData } from "@/lib/pre-launch";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 
 type BreadcrumbItem = { name: string; url: string };
@@ -252,7 +253,10 @@ export function buildPreLaunchStablecoinJsonLd(coin: StablecoinMeta, options: { 
   const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
-  const description = `Pre-launch profile for ${coin.name} (${coin.symbol}). Planned ${pegLabel} stablecoin with ${governanceLabel} governance and ${backingLabel} backing. Live market, peg, liquidity, and safety data begin only after launch.`;
+  const launched = isLaunchedAwaitingData(coin);
+  const description = launched
+    ? `Status profile for ${coin.name} (${coin.symbol}). ${pegLabel} stablecoin with ${governanceLabel} governance and ${backingLabel} backing, launched${coin.launchDate ? ` ${formatFuzzyDate(coin.launchDate)}` : ""}. Pharos has not yet admitted a price and supply source, so market, peg, liquidity, and safety data are unavailable, not zero.`
+    : `Pre-launch profile for ${coin.name} (${coin.symbol}). Planned ${pegLabel} stablecoin with ${governanceLabel} governance and ${backingLabel} backing. Live market, peg, liquidity, and safety data begin only after launch.`;
   const sameAs = buildStablecoinSameAs(coin);
   const latestMilestoneDate = getLatestDatedMilestoneDate(coin);
 
@@ -260,7 +264,9 @@ export function buildPreLaunchStablecoinJsonLd(coin: StablecoinMeta, options: { 
     {
       "@context": "https://schema.org",
       ...buildProfileWebPageNode(detailUrl, image),
-      name: `${coin.name} (${coin.symbol}) Pre-launch Stablecoin Tracker`,
+      name: launched
+        ? `${coin.name} (${coin.symbol}) Stablecoin Status & Tracking`
+        : `${coin.name} (${coin.symbol}) Pre-launch Stablecoin Tracker`,
       description,
       ...(latestMilestoneDate ? { dateModified: latestMilestoneDate } : {}),
       isPartOf: { "@id": `${SITE_URL}#website` },

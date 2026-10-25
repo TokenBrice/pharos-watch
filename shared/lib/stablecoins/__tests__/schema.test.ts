@@ -1032,6 +1032,62 @@ describe("StablecoinMeta schema — listing lifecycle status", () => {
   });
 });
 
+describe("StablecoinMeta schema — launched pre-launch phase", () => {
+  const launched = (overrides: Record<string, unknown> = {}) => makeCoin({
+    status: "pre-launch",
+    launchPhase: "launched",
+    launchDate: "2026-10-15",
+    milestones: [{ date: "2026-10-15", type: "milestone", title: "Mainnet issuance", sourceUrl: "https://example.com/launch" }],
+    listingStatusReview: {
+      changedAt: "2026-10-20",
+      reason: "Launched on Ethereum; no admitted price lane yet.",
+      reviewBy: "2026-12-19",
+    },
+    ...overrides,
+  });
+
+  it("accepts a dated, sourced launch with a review inside the 60-day dwell", () => {
+    expect(() => parseStablecoinMetaAssets([launched()], "fixture")).not.toThrow();
+  });
+
+  it("rejects launched outside pre-launch", () => {
+    expect(() => parseStablecoinMetaAssets([launched({ status: "active" })], "fixture")).toThrow(/only allowed on pre-launch rows/);
+  });
+
+  it("requires launchDate", () => {
+    expect(() => parseStablecoinMetaAssets([launched({ launchDate: undefined })], "fixture")).toThrow(/requires launchDate/);
+  });
+
+  it("requires a sourced milestone dated from the launch onward", () => {
+    expect(() => parseStablecoinMetaAssets([launched({
+      milestones: [{ date: "2026-10-15", type: "milestone", title: "Unsourced launch" }],
+    })], "fixture")).toThrow(/sourced milestone/);
+    expect(() => parseStablecoinMetaAssets([launched({
+      milestones: [{ date: "2026-09-01", type: "announcement", title: "Pre-launch announcement", sourceUrl: "https://example.com/a" }],
+    })], "fixture")).toThrow(/sourced milestone/);
+  });
+
+  it("requires a review naming the missing lane with reviewBy", () => {
+    expect(() => parseStablecoinMetaAssets([launched({ listingStatusReview: undefined })], "fixture")).toThrow(/reviewBy/);
+  });
+
+  it("caps reviewBy at 60 days after entering the phase", () => {
+    expect(() => parseStablecoinMetaAssets([launched({
+      listingStatusReview: { changedAt: "2026-10-20", reason: "No admitted price lane yet.", reviewBy: "2026-12-20" },
+    })], "fixture")).toThrow(/within 60 days/);
+  });
+
+  it("rejects a phase entry that predates the launch", () => {
+    expect(() => parseStablecoinMetaAssets([launched({
+      listingStatusReview: { changedAt: "2026-10-01", reason: "No admitted price lane yet.", reviewBy: "2026-11-01" },
+    })], "fixture")).toThrow(/cannot predate launchDate/);
+  });
+
+  it("keeps listingStatusReview off upcoming pre-launch rows", () => {
+    expect(() => parseStablecoinMetaAssets([launched({ launchPhase: "beta" })], "fixture")).toThrow(/only allowed/);
+  });
+});
+
 describe("StablecoinMeta schema — blacklistability review", () => {
   it("rejects the retired canBeBlacklisted field", () => {
     const json = [
