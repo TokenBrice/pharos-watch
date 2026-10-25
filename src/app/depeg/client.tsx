@@ -78,34 +78,6 @@ export function DepegClient() {
     const timer = setInterval(() => setNowSeconds(Math.floor(Date.now() / 1000)), 60_000);
     return () => clearInterval(timer);
   }, []);
-  // The grading ledger is audit evidence: it follows the board, folded, so its
-  // ~1,300px never stands between the forecasts and the table a reader acts
-  // on. A `#forecast-grading` link (the hero's track-record figure) opens it,
-  // so that link still lands on rendered content.
-  const [gradingOpen, setGradingOpen] = useState(false);
-  const gradingScrollPending = useRef(false);
-  useEffect(() => {
-    const openOnHash = () => {
-      if (window.location.hash !== "#forecast-grading") return;
-      setGradingOpen(true);
-      gradingScrollPending.current = true;
-    };
-    // Re-clicking the link while the hash is already set fires no hashchange,
-    // so a collapsed ledger would stay shut; open on the click itself too.
-    const openOnLinkClick = (event: MouseEvent) => {
-      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
-      if (!link || !link.getAttribute("href")?.endsWith("#forecast-grading")) return;
-      setGradingOpen(true);
-      gradingScrollPending.current = true;
-    };
-    openOnHash();
-    window.addEventListener("hashchange", openOnHash);
-    document.addEventListener("click", openOnLinkClick);
-    return () => {
-      window.removeEventListener("hashchange", openOnHash);
-      document.removeEventListener("click", openOnLinkClick);
-    };
-  }, []);
   const {
     data: pegData,
     isLoading: isPegLoading,
@@ -130,7 +102,7 @@ export function DepegClient() {
     meta: eventsMeta,
     refetch: refetchEvents,
   } = useInfiniteDepegEvents({ includePending: true });
-  const { resolverEnabled, resolverReviewerEnabled, resolver, resolverReview } = useDepegResolverSurfaces({ reviewEnabled: gradingOpen });
+  const { resolverEnabled, resolverReviewerEnabled, resolver, resolverReview } = useDepegResolverSurfaces();
   const resolverSlice = useQuerySlice(resolver);
   const resolverReviewSlice = useQuerySlice(resolverReview);
   const resolverData = resolverSlice.data;
@@ -247,14 +219,14 @@ export function DepegClient() {
     dewsError ??
     eventsError ??
     (resolverEnabled ? resolverSlice.error : null) ??
-    (resolverReviewerEnabled && gradingOpen ? resolverReviewSlice.error : null);
+    (resolverReviewerEnabled ? resolverReviewSlice.error : null);
   const handleRetry = useCallback(() => {
     return refetchQueryGroup([
       refetchPeg,
       refetchDews,
       refetchEvents,
       ...(resolverEnabled ? [resolver.refetch] : []),
-      ...(resolverReviewerEnabled && gradingOpen ? [resolverReview.refetch] : []),
+      ...(resolverReviewerEnabled ? [resolverReview.refetch] : []),
     ]);
   }, [
     refetchDews,
@@ -264,7 +236,6 @@ export function DepegClient() {
     resolverReview.refetch,
     resolverEnabled,
     resolverReviewerEnabled,
-    gradingOpen,
   ]);
   const freshnessQueries: StaleQuery[] = [
     { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegData?.coins?.length, meta: pegMeta },
@@ -280,7 +251,7 @@ export function DepegClient() {
       meta: resolverSlice.meta,
     });
   }
-  if (resolverReviewerEnabled && (gradingOpen || resolverReviewData != null)) {
+  if (resolverReviewerEnabled) {
     freshnessQueries.push({
       preset: "depegResolverReview",
       dataUpdatedAt: resolverReviewSlice.dataUpdatedAt,
@@ -290,13 +261,15 @@ export function DepegClient() {
     });
   }
 
-  // A hash-opened ledger mounts after the browser's own anchor jump (and, on a
-  // cold load, after the loading state), so align once it is in the DOM.
+  // The ledger mounts after the browser's own anchor jump on a cold load (behind
+  // the loading state), so align a `#forecast-grading` entry once it is in the DOM.
+  const gradingScrollPending = useRef(true);
   useEffect(() => {
-    if (!gradingScrollPending.current || !gradingOpen || isPegLoading) return;
+    if (!gradingScrollPending.current || isPegLoading) return;
     gradingScrollPending.current = false;
+    if (window.location.hash !== "#forecast-grading") return;
     document.getElementById("forecast-grading")?.scrollIntoView?.();
-  }, [gradingOpen, isPegLoading]);
+  }, [isPegLoading]);
 
   // Loading state
   if (isPegLoading) {
@@ -360,27 +333,16 @@ export function DepegClient() {
         />
       </SectionErrorBoundary>
 
-      {/* Model accountability: audit evidence, after the board it used to push
-          ~1,300px down. The ledger is heavy DOM, so it mounts on demand; the
-          hero's track-record figure links here and opens it. */}
+      {/* Model accountability: audit evidence, after the board the reader acts on;
+          the hero's track-record figure links here. */}
       {resolverReviewerEnabled ? (
         <SectionErrorBoundary name="depeg-resolver-reviewer">
-          <section id="forecast-grading" aria-label="Forecast grading" className="scroll-mt-24 space-y-3">
-            <button
-              type="button"
-              onClick={() => setGradingOpen((open) => !open)}
-              aria-expanded={gradingOpen}
-              className="pharos-focus-ring pharos-control-pill"
-            >
-              {gradingOpen ? "Hide forecast grading · DDRR" : "Show forecast grading · DDRR"}
-            </button>
-            {gradingOpen ? (
-              <DepegResolverReviewerModule
-                data={resolverReviewData}
-                error={resolverReview.error}
-                logos={logos}
-              />
-            ) : null}
+          <section id="forecast-grading" aria-label="Forecast grading" className="scroll-mt-24">
+            <DepegResolverReviewerModule
+              data={resolverReviewData}
+              error={resolverReview.error}
+              logos={logos}
+            />
           </section>
         </SectionErrorBoundary>
       ) : null}
