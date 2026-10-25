@@ -117,5 +117,6 @@
       "description": "On-chain supply at the Coinbase Custom Stablecoins mint grew about 10.6 percent in two weeks, from 2,875,650 USDF on September 13 to 3,181,003 on September 27. Jupiter lists no pair for the mint, CoinGecko has no entry, and no trading launch or platform news accompanied the growth.",
       "sourceUrl": "https://solscan.io/token/5AMAA9JV9H97YYVxx8F6FsCMmTwXSuTTQneiup4RYAUQ"
     }
-  ]
+  ],
+  "launchDate": "2026-05-20"
 }

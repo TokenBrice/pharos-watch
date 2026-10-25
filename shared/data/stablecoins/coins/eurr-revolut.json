@@ -12,6 +12,18 @@
   "pegMechanism": "MiCA electronic-money token pegged 1:1 to the euro, issued on Ethereum by Bridge Building S.A. under a Luxembourg EMI licence and MiCA authorisation, and distributed to retail customers by Revolut Digital Assets Europe Ltd under its CySEC MiCA licence. Revolut applies no spread or fee on euro-to-EURR conversion; independent redemption terms outside the Revolut app are unpublished.",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x8e9c32a536ab623a2e0e9961bce6f5fe7504e084",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0x11b20f798b70df2201d8f550addcc3378b33dd4a",
+      "decimals": 6
+    }
+  ],
   "links": [
     {
       "label": "Website",
@@ -113,5 +125,6 @@
       "description": "Bridge's live EURR reserve disclosure shows 1,674,916 EURR outstanding against EUR 1,674,916 of reserves, 100% in cash deposits at credit institutions and 0% in highly liquid financial instruments, with redemption routed through redeem.bridge.xyz. Supply has been effectively flat since September 6 2026 (1,671,782 to 1,674,913 EURR). No fetchable price path exists yet.",
       "sourceUrl": "https://reserves.bridge.xyz/eurr"
     }
-  ]
+  ],
+  "launchDate": "2026-08-26"
 }

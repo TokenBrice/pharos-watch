@@ -13,6 +13,13 @@
   "pegMechanism": "Pre-launch HKD fiat-referenced stablecoin licensed by the HKMA; expected to maintain 1:1 HKD backing with segregated high-quality liquid reserve assets and regulated mint/redemption channels once Anchorpoint launches the business",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x87622385f960fccb3121d6d0a9513bd1d9bed6ca",
+      "decimals": 6
+    }
+  ],
   "links": [
     {
       "label": "Standard Chartered source",
