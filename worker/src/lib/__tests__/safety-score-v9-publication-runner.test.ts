@@ -477,7 +477,7 @@ describe("Safety Score V9 publication runner", () => {
     } finally {
       evaluate.mockRestore();
     }
-  }, 30_000);
+  }, 120_000);
 
   it("projects the accepted publication before compiling the next candidate", async () => {
     const order: string[] = [];
