@@ -194,7 +194,13 @@ describe("Centrifuge reviewed deployment observer", () => {
     const reviewed = metaById.get(ASSET_ID)!;
     metaById.set(ASSET_ID, {
       ...reviewed,
-      bridgeRouteRisk: currentJtrsyRisk.bridgeRouteRisk,
+      bridgeRouteRisk: {
+        ...currentJtrsyRisk.bridgeRouteRisk,
+        // Apply today's Solana disposition within the fixture's pinned deployment perimeter.
+        routes: currentJtrsyRisk.bridgeRouteRisk.routes.filter((route) => reviewed.contracts!.some(
+          (contract) => contract.chain === route.destinationChain && contract.address === route.contractAddress,
+        )),
+      },
     } as unknown as StablecoinMeta);
     try {
       const deps = dependencies();

@@ -192,6 +192,89 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("zksync"),
     { chain: "arbitrum", allowZeroSupply: true },
   ],
+  // Reviewed 2026-10-25: USYC Teller issuance and BSC burn/mint stock sum;
+  // Ethereum does not escrow the BSC supply. Arc is a verified live zero leg.
+  // https://usyc.docs.hashnote.com/overview/smart-contracts
+  "usyc-hashnote": [
+    { chain: "ethereum" },
+    { chain: "bsc" },
+    { chain: "solana" },
+    { chain: "arc", allowZeroSupply: true },
+  ],
+  // Reviewed 2026-10-25: Centrifuge V3 Spoke burn/reissue shares sum, including
+  // Pharos; the issuer issuance API reconciles the EVM stock. Solana is zero.
+  // https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/
+  "jtrsy-anemoy": [
+    { chain: "ethereum" },
+    { chain: "base" },
+    { chain: "arbitrum" },
+    { chain: "avalanche" },
+    supplyProbeChain("plume"),
+    { chain: "bsc" },
+    supplyProbeChain("monad"),
+    { chain: "solana", allowZeroSupply: true },
+    supplyProbeChain("pharos"),
+  ],
+  // Reviewed 2026-10-25: Nest local BoringVault shares and source-debited OFTs
+  // sum across the complete issuer roster. Plasma is a verified live zero leg.
+  // https://docs.nest.credit/developers/integration-guides/nopal/
+  "nopal-nest": [
+    { chain: "ethereum" },
+    supplyProbeChain("plume"),
+    { chain: "bsc" },
+    { chain: "solana" },
+    supplyProbeChain("plasma", { allowZeroSupply: true }),
+    supplyProbeChain("worldchain"),
+    { chain: "avalanche" },
+    { chain: "arc" },
+    supplyProbeChain("monad"),
+    supplyProbeChain("robinhood"),
+  ],
+  // Reviewed 2026-10-25: ACRED's native Aptos/Solana shares and Securitize EVM
+  // burn/issue legs sum. All five EVM bridge adapters hold zero ACRED stock.
+  // https://public-feed.securitize.io/asset-info?symbol=ACRED
+  "acred-apollo-securitize": [
+    supplyProbeChain("aptos"),
+    { chain: "avalanche" },
+    { chain: "ethereum" },
+    supplyProbeChain("ink"),
+    { chain: "polygon" },
+    supplyProbeChain("sei"),
+    { chain: "solana" },
+  ],
+  // Reviewed 2026-10-25: BRSRV issuer-native common-register shares sum;
+  // Tempo and Solana are verified live zero-supply deployments.
+  // https://public-feed.securitize.io/asset-info?symbol=BRSRV
+  "brsrv-blackrock": [
+    { chain: "ethereum" },
+    supplyProbeChain("tempo", { allowZeroSupply: true }),
+    { chain: "solana", allowZeroSupply: true },
+  ],
+  // Reviewed 2026-10-25: Ethereum syrupUSDG includes CCIP LockRelease custody;
+  // remote BurnMint stocks reallocate it. Ink and Solana currently read zero.
+  // https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain.md
+  "syrupusdg-maple": [
+    { chain: "ethereum" },
+    supplyProbeChain("robinhood"),
+    { chain: "arbitrum" },
+    supplyProbeChain("ink", { allowZeroSupply: true }),
+    { chain: "solana", allowZeroSupply: true },
+  ],
+  // Reviewed 2026-10-25: strUSD and sUSDat remote CCIP shares are locked in
+  // Ethereum, not independent vault liabilities. Reallocate canonical stock.
+  // https://docs.tori.finance/resources/contracts.md
+  "strusd-tori": [
+    { chain: "ethereum" },
+    supplyProbeChain("monad"),
+    supplyProbeChain("pharos"),
+  ],
+  // Reviewed 2026-10-25: Ethereum LockRelease / BSC+Monad BurnMint pools.
+  // https://docs.chain.link/ccip/directory/mainnet/token/sUSDat
+  "susdat-saturn": [
+    { chain: "ethereum" },
+    { chain: "bsc" },
+    supplyProbeChain("monad"),
+  ],
   // CoinGecko only exposes an Ethereum market-cap row for ftUSD and currently
   // leaves it stale; aggregate the verified native Ethereum + Sonic supplies.
   "ftusd-flying-tulip": [{ chain: "ethereum" }, { chain: "sonic" }],
@@ -902,6 +985,9 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
 // the listed lock/mint representations. Reallocate that supply across chains
 // instead of adding representation supplies to the canonical total.
 export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, string>> = {
+  "syrupusdg-maple": "ethereum",
+  "strusd-tori": "ethereum",
+  "susdat-saturn": "ethereum",
   "dusd-dialectic": "ethereum",
   "gldt-gold-dao": "icp",
   "susds-sky": "ethereum",
@@ -942,6 +1028,12 @@ export interface CuratedAggregateEscrowResidualConfig {
 export const CURATED_AGGREGATE_ESCROW_RESIDUALS: Readonly<
   Record<string, CuratedAggregateEscrowResidualConfig>
 > = {
+  // Reviewed 2026-10-25: Tori's Ethereum CCIP lockbox also conserves the new
+  // Arbitrum representation (verified zero), outside the catalog probe roster.
+  "strusd-tori": {
+    escrowAddress: "0xb12e0794fb2191672ba7a1811edc9713c8c2c38b",
+    unattributedChainLabel: "strUSD unattributed CCIP escrow",
+  },
   // Avalanche CCIP LockRelease custody includes the Base, Arbitrum and Movement
   // representations absent from the probe roster. Keep their residual separate
   // from Avalanche free float; pool getToken() reverified 2026-09-22.

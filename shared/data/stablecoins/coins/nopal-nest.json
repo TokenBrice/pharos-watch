@@ -74,6 +74,16 @@
       "chain": "arc",
       "address": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
       "decimals": 6
+    },
+    {
+      "chain": "monad",
+      "address": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+      "decimals": 6
+    },
+    {
+      "chain": "robinhood",
+      "address": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+      "decimals": 6
     }
   ],
   "collateralQuality": "exotic",
