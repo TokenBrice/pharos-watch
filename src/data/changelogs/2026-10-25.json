@@ -1,0 +1,145 @@
+{
+  "dateRange": {
+    "from": "2026-10-19",
+    "to": "2026-10-25"
+  },
+  "headline": "DDR v5 condemns a coin only on terminal evidence, and Safety Score ships twelve releases to 10.34.",
+  "fieldNotes": "The week went into making verdicts and warnings mean what they say. Every DDR v4 miss was a coin condemned on a break that later recovered; v5 waits for terminal evidence. Safety Score folded parallel scorers into one authority ladder. Public warnings and Telegram alerts now fire only on problems that persist or matter. Underneath, a lost cron slot on the main lanes now gets one catch-up run instead of a missing publication.",
+  "summary": [
+    {
+      "label": "Safety Score 10.34",
+      "tag": "feature",
+      "description": "Twelve releases, 10.23 to 10.34. 10.29 replaces parallel authority scorers with one economic-authority ladder and five cap families, 10.30 grades active depegs by severity, and scores now publish hourly.",
+      "href": "/methodology/scoring-changelog/"
+    },
+    {
+      "label": "DDR v5 verdicts",
+      "tag": "feature",
+      "description": "Verdicts condemn a coin only on terminal evidence, so static exit thinness no longer does. Duration reads as recovery odds that keep non-recovery visible, and reviews grade calls against naive baselines.",
+      "href": "/methodology/depeg-resolver-changelog/"
+    },
+    {
+      "label": "Telegram bot v2",
+      "tag": "feature",
+      "description": "Safety alerts need a two-notch downgrade or a fall to D/F held six hours; freeze alerts need a destruction or $1M. Other changes arrive in one daily message, and the Mini App drops its tabs.",
+      "href": "/pharoswatchbot/"
+    },
+    {
+      "label": "Quieter public warnings",
+      "tag": "feature",
+      "description": "Readers see warnings only for data past the 12x stale band, missing, or quarantined; lesser findings go to operators. /status ignores small bounded omissions and needs two evaluations to change state.",
+      "href": "/status/"
+    },
+    {
+      "label": "Search-ready profiles",
+      "tag": "feature",
+      "description": "Coin profiles lead with a dated Safety grade, a redemption answer and checksum-validated ISINs for fund tokens. Titles use searchers' words, and thin chain, depeg-event and digest pages leave the index."
+    },
+    {
+      "label": "Design-system completion",
+      "tag": "design",
+      "description": "The raw-palette ledger is drained and deleted, every corner radius snaps to the scale, and CSS modules sit on named layers. Lint now rejects new raw hues and arbitrary radii; titles are sentence case."
+    },
+    {
+      "label": "Venue and evidence coverage",
+      "tag": "coverage",
+      "description": "Aero, the merged Aerodrome and Velodrome, is read directly (Liquidity 6.98, Pricing 6.56), Hive HBD gains cross-rates and USDY prices again. FreezeWatch adopts a written exposure procedure (4.4, 4.5)."
+    },
+    {
+      "label": "Launched, awaiting data",
+      "tag": "coverage",
+      "description": "A new pre-launch phase marks coins issued on-chain that lack admissible market data: six live coins and newly added swanUSD. /upcoming/ lists them apart from upcoming launches; USDB and VCRED are delisted.",
+      "href": "/upcoming/"
+    },
+    {
+      "label": "Cron and integrity sweep",
+      "tag": "infra",
+      "description": "Missed or abandoned cron slots get one catch-up run and non-price lanes slow to owner-approved cadences. A correctness sweep ships across nine methodologies, and sponsor Dwellir now serves native reads first."
+    }
+  ],
+  "stats": {
+    "totalCommits": 456
+  },
+  "commits": [
+    {
+      "hash": "fb4a2d7f",
+      "message": "fix(v9): raise Safety Score catalog admission cap to 520"
+    },
+    {
+      "hash": "46131cab",
+      "message": "test(upcoming): count the launched section toward profile coverage"
+    },
+    {
+      "hash": "fbca5c6f",
+      "message": "data(prelaunch): retire stale target dates on launched coins"
+    },
+    {
+      "hash": "42678265",
+      "message": "data(prelaunch): add swanUSD as a launched pre-launch entry"
+    },
+    {
+      "hash": "94d40b4a",
+      "message": "data(prelaunch): move six live coins to the launched phase"
+    },
+    {
+      "hash": "a0394203",
+      "message": "data(prelaunch): delist Bridge USDB as out of scope"
+    },
+    {
+      "hash": "8b18d639",
+      "message": "data(prelaunch): finish RAI Dollar seven-branch correction"
+    },
+    {
+      "hash": "5c29242c",
+      "message": "data(prelaunch): record launch dates and verified contracts for live coins"
+    },
+    {
+      "hash": "b6f69b32",
+      "message": "data(prelaunch): weekly refresh of milestones and record corrections"
+    },
+    {
+      "hash": "10833516",
+      "message": "data(prelaunch): record USTX and HSBC RedCoin launches"
+    },
+    {
+      "hash": "d0ff51cb",
+      "message": "data(funding): record 2026-10-23 Arbitrum USDC donation"
+    },
+    {
+      "hash": "e91e4fbc",
+      "message": "feat(upcoming): render launched rows as live coins awaiting data"
+    },
+    {
+      "hash": "9a70eee8",
+      "message": "feat(registry): add the \"launched\" pre-launch phase with a dwell review"
+    },
+    {
+      "hash": "91bfc95a",
+      "message": "ci(ops): open curation follow-ups for catastrophic DDR breaks"
+    },
+    {
+      "hash": "8c978b12",
+      "message": "docs(ddr): document DDRv5 methodology, replay evidence and reviewer v5"
+    },
+    {
+      "hash": "3b21ba2b",
+      "message": "feat(depeg): render DDRv5 evidence classes, incidence odds and reviewer v5 metrics"
+    },
+    {
+      "hash": "f0c44c18",
+      "message": "feat(ddr): DDRv5 evidence-class rubric, competing-risk duration and reviewer v5"
+    },
+    {
+      "hash": "e7fb3ad1",
+      "message": "yield: reclassify USDGO as non-yield-bearing (Yield 8.52)"
+    },
+    {
+      "hash": "a6be85a5",
+      "message": "fix(redirects): send removed coins with a cemetery record to its anchor"
+    },
+    {
+      "hash": "bc0d7fb2",
+      "message": "chore(logos): prune logo keys no surface can look up"
+    }
+  ]
+}

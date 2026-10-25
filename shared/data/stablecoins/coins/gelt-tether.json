@@ -35,7 +35,7 @@
   "status": "pre-launch",
   "announcedDate": "2026-05",
   "launchPhase": "announced",
-  "launchPhaseDetail": "Announced May 25 2026 as a joint Tether / Government of Georgia initiative to place the Georgian Lari on digital-asset rails; not a CBDC (distinct from the NBG's separate digital-lari pilot). Grounded in NBG Order No. 52/04 (March 6 2026), which lets licensed VASPs issue Lari-pegged stablecoins under 100% reserve backing, prior NBG consent, full redemption rights, and GEL 500,000 minimum issuer capital; framework built for compatibility with the US GENIUS Act. Endorsed by PM Irakli Kobakhidze and NBG President Natia Turnava. Tether signed an MOU with Georgia in June 2023 and has invested in CityPay.io (active at 2,000+ Georgian merchant locations); GEL₮ is stated to be issued on multiple blockchains. Chains, contract addresses, reserve disclosures, banking partners, and launch timing to be announced at a later stage.",
+  "launchPhaseDetail": "Announced May 25 2026 as a joint Tether / Government of Georgia initiative to place the Georgian Lari on digital-asset rails; not a CBDC (distinct from the NBG's separate digital-lari pilot). Grounded in NBG Order No. 52/04 (March 6 2026), which lets licensed VASPs issue Lari-pegged stablecoins under 100% reserve backing, prior NBG consent, full redemption rights, and GEL 500,000 minimum issuer capital; framework built for compatibility with the US GENIUS Act. Endorsed by PM Irakli Kobakhidze and NBG Governor Natia Turnava. Tether signed an MOU with Georgia in June 2023 and has invested in CityPay.io (active at 2,000+ Georgian merchant locations); GEL₮ is stated to be issued on multiple blockchains. Chains, contract addresses, reserve disclosures, banking partners, and launch timing to be announced at a later stage.",
   "featuredContent": [
     {
       "type": "blog",
@@ -53,10 +53,17 @@
   ],
   "milestones": [
     {
+      "date": "2026-03-06",
+      "type": "regulatory",
+      "title": "National Bank of Georgia adopts stablecoin offering rule",
+      "description": "NBG Order No. 52/04 approved the rule for a virtual asset service provider's initial offering of a stablecoin, effective on publication. It requires prior written NBG consent for any stablecoin offering in Georgia.",
+      "sourceUrl": "https://nbg.gov.ge/fm/%E1%83%A1%E1%83%90%E1%83%92%E1%83%90%E1%83%93%E1%83%90%E1%83%AE%E1%83%93%E1%83%9D/vasps/initial-coin-offering-stablecoin-final-eng.pdf"
+    },
+    {
       "date": "2026-05-25",
       "type": "announcement",
       "title": "Tether and the Government of Georgia announce GEL₮",
-      "description": "Joint initiative to issue a Georgian Lari-pegged stablecoin under the NBG's stablecoin framework; structure, rollout, and regulatory implementation to follow. Endorsed by PM Irakli Kobakhidze and NBG President Natia Turnava.",
+      "description": "Joint initiative to issue a Georgian Lari-pegged stablecoin under the NBG's stablecoin framework; structure, rollout, and regulatory implementation to follow. Endorsed by PM Irakli Kobakhidze and NBG Governor Natia Turnava.",
       "sourceUrl": "https://tether.io/news/tether-and-the-government-of-georgia-to-launch-gelt-the-official-stablecoin-of-georgia/"
     }
   ]

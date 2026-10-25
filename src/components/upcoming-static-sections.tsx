@@ -1,7 +1,55 @@
 import Link from "next/link";
-import type { LaunchNewsItem, UpcomingCurrencyGroup } from "@/lib/upcoming-static-content";
+import { LaunchPhaseBadge } from "@/components/pre-launch-badge";
+import type { LaunchedUntrackedRow, LaunchNewsItem, UpcomingCurrencyGroup } from "@/lib/upcoming-static-content";
 
 const LINK_CLASS = "pharos-focus-ring rounded-sm font-medium text-foreground underline-offset-2 hover:underline";
+
+/**
+ * "Launched – not yet tracked": live coins with no admitted price or supply
+ * lane. Server-rendered and clock-free; a separate count, never "upcoming".
+ */
+export function UpcomingLaunchedSection({ rows }: { rows: readonly LaunchedUntrackedRow[] }) {
+  if (rows.length === 0) return null;
+  return (
+    <section aria-labelledby="launched-not-tracked" className="space-y-3">
+      <div className="space-y-1.5">
+        <h2 id="launched-not-tracked" className="pharos-label">
+          Launched – not yet tracked (<span className="pharos-numeric">{rows.length}</span>)
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Publicly issued on-chain, but Pharos has not yet admitted a price and supply source. Their figures are
+          unavailable, not zero, until it does.
+        </p>
+      </div>
+      <ul className="pharos-card-shell gap-0 divide-y divide-border/50 py-0">
+        {rows.map((row) => (
+          <li key={row.id} className="space-y-1 px-4 py-3 text-sm sm:px-5">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <Link href={row.href} className={LINK_CLASS}>
+                {row.name} ({row.symbol})
+              </Link>
+              <LaunchPhaseBadge phase="launched" />
+              {row.launchDate && row.launchLabel ? (
+                <span className="text-xs text-muted-foreground">
+                  Live since{" "}
+                  <time dateTime={row.launchDate} className="pharos-numeric">
+                    {row.launchLabel}
+                  </time>
+                </span>
+              ) : null}
+            </div>
+            {row.reason ? <p className="break-words text-xs leading-relaxed text-muted-foreground">{row.reason}</p> : null}
+            {row.reviewByLabel ? (
+              <p className="text-2xs text-muted-foreground">
+                Tracking review due <span className="pharos-numeric">{row.reviewByLabel}</span>
+              </p>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 /** Server-rendered `/upcoming/` body sections: crawlable, dated, and identical before and after hydration. */
 export function UpcomingStaticSections({

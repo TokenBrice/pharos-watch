@@ -612,13 +612,19 @@
   },
   "ustx-tx": {
     "title": "Brale-issued dollar for tx settlement",
-    "text": "tx announced USTX on September 23, 2026 as a native settlement asset for tokenized stocks, ETFs and other real-world assets. Brale is the announced issuer, with full 1:1 backing and an October 2026 launch window. Exact deployments, reserve allocation and holder redemption terms have not been established. Brale supports administrative token restrictions generally, but the controls enabled for USTX remain unverified. The record stays pre-launch until the native asset and an identity-bound price and circulating-supply path can be verified.",
-    "updatedAt": "2026-10-02"
+    "text": "tx launched USTX on October 20, 2026 as a native settlement asset for tokenized stocks, ETFs and other real-world assets, with Brale as issuer. Users mint it on the tx chain against USDC deposited from Ethereum, Solana, Base or Polygon, and Brale states 1:1 backing in US dollar reserves. Brale's program-level policy describes segregated reserves, daily reconciliation and monthly independent attestations, held in short Treasury bills, government money market funds and bank deposits, but none of that is yet tied to USTX-specific allocations or a retrieved reserve report. No native asset address, decimals or supply figure has been published. Brale supports administrative token restrictions generally, but the controls enabled for USTX remain unverified. USTX is live, yet Pharos keeps it pre-launch until the native asset and an identity-bound price and circulating-supply path can be verified.",
+    "updatedAt": "2026-10-25",
+    "authoredBy": "ai",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-10-25"
   },
   "weur-aplauz": {
     "title": "Aplauz euro token awaiting verified circulation",
-    "text": "Aplauz NL B.V. publishes WEUR as a euro e-money token with reserve assets safeguarded through a separate Dutch foundation. The whitepaper grants every holder par redemption after compliance checks and says EUR dispatch should generally occur within five business days of token receipt. ESMA lists the exact issuer and token, but notification does not approve the whitepaper or prove circulation. Public onboarding marketing conflicts with the amended whitepaper's statement that WEUR has not launched. Pharos retains a pre-launch record because production identity and circulation remain unverified.",
-    "updatedAt": "2026-10-02"
+    "text": "Aplauz NL B.V., which trades as WSPN and belongs to the Worldwide Stablecoin Payment Network group through WSPN Fintech Dutch Holding B.V., publishes WEUR as a euro e-money token with reserve assets safeguarded through a separate Dutch foundation. The whitepaper names Ethereum and BNB Smart Chain as its initial networks. The whitepaper grants every holder par redemption after compliance checks and says EUR dispatch should generally occur within five business days of token receipt. ESMA lists the exact issuer and token, but notification does not approve the whitepaper or prove circulation. Public onboarding marketing conflicts with the amended whitepaper's statement that WEUR has not launched. Pharos retains a pre-launch record because production identity and circulation remain unverified.",
+    "updatedAt": "2026-10-25",
+    "authoredBy": "ai",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-10-25"
   },
   "xgld-unitas": {
     "title": "XAUt-backed borrowing strategy",
@@ -4540,11 +4546,11 @@
   },
   "usdb-bridge": {
     "title": "Stripe's Closed-Loop Dollar",
-    "text": "Bridge's USDB was Stripe's first stablecoin rail: launched in May 2025, it powered Stripe's Stablecoin Financial Accounts in 101 countries, backed 1:1 by cash and BlackRock {{term:money-market-fund}}money-market funds{{/term}}. Its role narrowed on September 30, 2026, when Bridge launched Open USD as its open-loop token and Stripe began listing only OUSD and USDC for stablecoin balances. Bridge's documentation now keeps USDB in its API for closed-loop use and names no sunset date. The regulatory picture is narrower than the charter news suggests: the current issuer, Bridge Building Inc., operates under money-transmitter permissions, and the conditional OCC approval from February 2026 covers a proposed national trust bank rather than today's USDB. Bridge's Open Issuance platform separately mints branded dollars such as MoneyGram's MGUSD and Deel's DLUSD. DefiLlama began tracking a Tempo deployment as USDBridge in September 2026, including a one-day supply jump on September 19 that came with no Bridge statement. Pharos holds USDB at pre-launch because no verified runtime price path exists, and because a closed-loop token's on-chain float may not be its whole supply.",
-    "updatedAt": "2026-10-19",
+    "text": "Bridge's USDB was Stripe's first stablecoin rail: launched in May 2025, it powered Stripe's Stablecoin Financial Accounts in 101 countries, backed 1:1 by cash and BlackRock {{term:money-market-fund}}money-market funds{{/term}}. Its role narrowed on September 30, 2026, when Bridge launched Open USD as its open-loop token and Stripe began listing only OUSD and USDC for stablecoin balances. Bridge's documentation now keeps USDB in its API for closed-loop use and names no sunset date. The regulatory picture is narrower than the charter news suggests: the current issuer, Bridge Building Inc., operates under money-transmitter permissions, and the conditional OCC approval from February 2026 covers a proposed national trust bank rather than today's USDB. Bridge's Open Issuance platform separately mints branded dollars such as MoneyGram's MGUSD and Deel's DLUSD. DefiLlama began tracking a Tempo deployment as USDBridge in September 2026, including a one-day supply jump on September 19 that came with no Bridge statement. Pharos delisted USDB on October 25 2026 as out of scope: Bridge's documentation says the token is not traded on the public market or transferable to third parties, and is usable only within Bridge wallets and payment rails.",
+    "updatedAt": "2026-10-25",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "factsAsOf": "2026-10-25"
   },
   "hkdap-anchorpoint": {
     "title": "Anchorpoint's HKMA-Licensed HKD Stablecoin",
@@ -4556,11 +4562,11 @@
   },
   "hkd-hsbc": {
     "title": "HSBC's PayMe-Bound HKD Stablecoin",
-    "text": "HSBC's Hong Kong dollar stablecoin is still pre-launch. The Hongkong and Shanghai Banking Corporation received HKMA stablecoin issuer licence FRS02 on April 10 2026, alongside Anchorpoint's FRS01, and on September 30 named the product HSBC RedCoin while restating a second-half 2026 launch plan; the ticker is not yet confirmed. Distribution is the distinctive feature. HSBC has said the token will be offered at launch only through PayMe, which it puts at 3.3 million users, and the HSBC HK Mobile App, for peer-to-peer payments and tokenized investment subscriptions, inside its own channels rather than on open markets. The planned design follows the Stablecoins Ordinance: 1:1 backing in HKD-denominated high-quality liquid assets held in segregated accounts, with {{term:redemption}}redemption{{/term}} through regulated channels. None of that is observable yet. HSBC's own product page says no stablecoins have been issued, and Pharos has found no reserve report, operative redemption policy or {{term:attestation}}attestation{{/term}} series to review. The durable constraint until launch is that every claim about this coin is a licence condition or a plan rather than an on-chain record.",
-    "updatedAt": "2026-10-19",
+    "text": "HSBC RedCoin is live but not yet observable. The Hongkong and Shanghai Banking Corporation received HKMA stablecoin issuer licence FRS02 on April 10 2026, alongside Anchorpoint's FRS01, named the product on September 30 and launched it on October 23 under the ticker RCHKD. Distribution is the distinctive feature. The token is offered through PayMe, which HSBC puts at 3.3 million users, for peer-to-peer and merchant payments, with wallet functionality in the HSBC HK Mobile Banking App and tokenized investment subscriptions planned for later in 2026. It sits inside HSBC's own channels rather than on open markets, and HSBC Digital Assets Custody provides safekeeping. The stated design follows the Stablecoins Ordinance: 1:1 backing in HKD-denominated high-quality liquid assets held in segregated accounts, with {{term:redemption}}redemption{{/term}} through regulated channels. The launch release names no blockchain and publishes no contract, circulation or reserve figures, and Pharos has found no reserve report or {{term:attestation}}attestation{{/term}} series to review. The durable constraint is that a live product still leaves every reserve and supply claim as an issuer statement rather than an on-chain record.",
+    "updatedAt": "2026-10-25",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "factsAsOf": "2026-10-25"
   },
   "okrw-hashed": {
     "title": "The Native Won of Hashed's Maroo L1",
@@ -6314,19 +6320,19 @@
   },
   "rd-rai-dollar": {
     "title": "Reflexer's Controller-Steered $1 CDP",
-    "text": "RAI Dollar, from the Reflexer team behind RAI, keeps RAI's on-chain controller but pins the target at $1. RD is a pre-launch immutable CDP stablecoin on Ethereum where a PI controller reads a 24-hour TWAP of the market price and moves one system-wide borrow rate, bounded to 0.25-50% APY around a 2% bias, while Liquity-style redemption at par less a fee sets the floor. A second lever adjusts the internal redemption price within a $0.75-$1.30 band, at no more than a tenth of a cent an hour, and only under sustained extreme deviation. Collateral sits in eight isolated branches: WETH, wstETH, rETH, weETH, WBTC, tBTC, sUSDS, and PAXG. Four are issuer-controlled tokens that can freeze addresses or be upgraded, and the documented response is to shut the affected branch down rather than freeze RD holders. Borrowers can pay a surcharge for Redemption Shield, which keeps their trove out of redemptions outside shutdown and gives unshielded troves on that branch a rate discount. Bad debt left after a shutdown is repaid from half of MOAI stakers' interest share, plus healthy branches' redemption fees and a 0.5% redemption surcharge, so MOAI stakers act as risk capital. None of it is deployed yet: the address registry reads TBD, the core repository is private, and the audits, part-funded by an August 2026 Ethereum Foundation subsidy, are still in progress. With no governance, admin keys or upgrade path, whatever configuration launches is permanent, so the pending audits carry the review burden.",
-    "updatedAt": "2026-10-19",
+    "text": "RAI Dollar, from the Reflexer team behind RAI, keeps RAI's on-chain controller but pins the target at $1. RD is a pre-launch immutable CDP stablecoin on Ethereum where a PI controller reads a 24-hour TWAP of the market price and moves one system-wide borrow rate, bounded to 0.25-50% APY around a 2% bias, while Liquity-style redemption at par less a fee sets the floor. A second lever adjusts the internal redemption price within a $0.75-$1.30 band, at no more than a tenth of a cent an hour, and only under sustained extreme deviation. Collateral sits in seven isolated branches: WETH, wstETH, rETH, weETH, WBTC, tBTC, and PAXG. Three are issuer-controlled tokens that can freeze addresses or be upgraded, and the documented response is to shut the affected branch down rather than freeze RD holders. Borrowers can pay a surcharge for Redemption Shield, which keeps their trove out of redemptions outside shutdown and gives unshielded troves on that branch a rate discount. Bad debt left after a shutdown is repaid from half of MOAI stakers' interest share, plus healthy branches' redemption fees and a 0.5% redemption surcharge, so MOAI stakers act as risk capital. None of it is deployed yet: the address registry reads TBD, the core repository is private, and the audits, part-funded by an August 2026 Ethereum Foundation subsidy, are still in progress. With no governance, admin keys or upgrade path, whatever configuration launches is permanent, so the pending audits carry the review burden.",
+    "updatedAt": "2026-10-25",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "factsAsOf": "2026-10-25"
   },
   "eurr-revolut": {
     "title": "The Neobank That Rented Its Own Coin",
-    "text": "EURR is live, and Pharos tracks it pre-launch anyway. Revolut launched it on August 26 2026 as the first product of its stablecoin programme, in euro rather than the dollar or sterling tokens it had been expected to ship first, phased into Denmark, Poland and Portugal with wider EEA availability targeted later in 2026. The issuer is Bridge Building S.A., the Luxembourg arm of Stripe-owned Bridge, which holds the EMI licence and MiCA authorisation from the CSSF; Revolut Digital Assets Europe distributes the token under its CySEC MiCA licence. Revolut built the distribution and outsourced the balance sheet. Supply passed 1.67 million EURR in early September and moved by less than 2,000 tokens through late September; the Polygon deployment holds three. Bridge's reserve page reports reserves equal to supply, held entirely as cash deposits at credit institutions, and the white paper commits to par {{term:redemption}}redemption{{/term}} to an EEA IBAN within two business days. Custodian names and an independent {{term:attestation}}attestation{{/term}} remain unpublished. No accepted price source resolves the token, and that missing price path is what keeps EURR outside the tracked set.",
-    "updatedAt": "2026-10-19",
+    "text": "EURR is live, and Pharos tracks it pre-launch anyway. Revolut launched it on August 26 2026 as the first product of its stablecoin programme, in euro rather than the dollar or sterling tokens it had been expected to ship first, phased into Denmark, Poland and Portugal with wider EEA availability targeted later in 2026. The issuer is Bridge Building S.A., the Luxembourg arm of Stripe-owned Bridge, which holds the EMI licence and MiCA authorisation from the CSSF; Revolut Digital Assets Europe distributes the token under its CySEC MiCA licence. Revolut built the distribution and outsourced the balance sheet. Supply passed 1.67 million EURR in early September and stood near 1.69 million on October 25; the Polygon deployment holds three. Bridge's reserve page reports reserves equal to supply, held entirely as cash deposits at credit institutions, and the white paper commits to par {{term:redemption}}redemption{{/term}} to an EEA IBAN within two business days. Ernst & Young issued a reasonable-assurance {{term:attestation}}attestation{{/term}} on the reserves as of August 31 2026, though custodian names remain unpublished. No accepted price source resolves the token, and that missing price path is what keeps EURR outside the tracked set.",
+    "updatedAt": "2026-10-25",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "factsAsOf": "2026-10-25"
   },
   "usdv-solomon-v2": {
     "title": "Solomon’s Separate Reserve Dollar",

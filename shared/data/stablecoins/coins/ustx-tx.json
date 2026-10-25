@@ -2,7 +2,7 @@
   "id": "ustx-tx",
   "name": "USTX",
   "symbol": "USTX",
-  "oneLiner": "USTX is a planned Brale-issued dollar stablecoin for native settlement of tokenized stocks, ETFs and other assets on tx.",
+  "oneLiner": "USTX is a Brale-issued dollar stablecoin for settling tokenized stocks, ETFs and other assets on tx, live in the tx wallet since October 2026.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized"
@@ -26,9 +26,8 @@
   ],
   "status": "pre-launch",
   "announcedDate": "2026-09-23",
-  "expectedLaunchDate": "2026-10",
-  "launchPhase": "announced",
-  "launchPhaseDetail": "tx announced USTX on September 23, 2026 as a fully backed 1:1 stablecoin issued by Brale, native to tx, with an October 2026 launch window. No exact launch day, native asset address, decimals or token-specific control and redemption terms are established. tx is a planned ecosystem, not an authored supported deployment.",
+  "launchPhase": "launching-soon",
+  "launchPhaseDetail": "tx launched USTX on October 20 2026, issued by Brale and backed 1:1 by US dollar reserves; users mint it on the tx chain by depositing USDC from Ethereum, Solana, Base or Polygon. USTX is live, but Pharos tracks it pre-launch because no native asset address, decimals, supply figure, token-specific control and redemption terms, or price listing has been published, so it cannot enter runtime data. tx is not an authored supported deployment chain.",
   "milestones": [
     {
       "date": "2026-09-23",
@@ -36,6 +35,28 @@
       "title": "tx announces native USTX issued by Brale",
       "sourceUrl": "https://www.linkedin.com/feed/update/urn:li:ugcPost:7508604753505964033/",
       "description": "The issuer partnership promises full 1:1 backing and an October launch for settlement of tokenized stocks, ETFs and other real-world assets."
+    },
+    {
+      "date": "2026-10-20",
+      "type": "milestone",
+      "title": "tx launches Brale-issued USTX",
+      "description": "Brale announced that tx launched USTX on October 20 2026 as a native stablecoin for its tokenized asset marketplace, issued by Brale and backed 1:1 by US dollar reserves. Users mint USTX on the tx chain by depositing USDC from Ethereum, Solana, Base or Polygon. No contract address, decimals or supply figure was published.",
+      "sourceUrl": "https://brale.xyz/blog/ustx-launches-for-rwa-marketplace"
+    }
+  ],
+  "dateHistory": [
+    {
+      "date": "2026-10",
+      "setOn": "2026-10-25"
+    }
+  ],
+  "featuredContent": [
+    {
+      "type": "blog",
+      "url": "https://brale.xyz/blog/ustx-launches-for-rwa-marketplace",
+      "title": "Brale-issued USTX launches to power tokenized RWA marketplace",
+      "description": "Brale's announcement that tx launched USTX on October 20 2026, minted on the tx chain against USDC deposits.",
+      "source": "Brale"
     }
   ]
 }

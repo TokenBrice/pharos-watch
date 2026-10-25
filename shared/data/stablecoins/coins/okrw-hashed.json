@@ -9,7 +9,7 @@
     "pegCurrency": "KRW",
     "governance": "centralized"
   },
-  "collateral": "1:1 Korean Won fiat reserves; dual-track regulated and open issuance paths on the Maroo L1 blockchain",
+  "collateral": "Planned Korean Won peg; the issuer and reserve arrangements are not yet decided. Dual-track regulated and open issuance paths on the Maroo L1 blockchain",
   "pegMechanism": "KRW-native Maroo model: OKRW is designed as a Korean Won stablecoin pegged 1:1 to KRW and used as the network's native fee token; Maroo's dual-track transaction model routes regulated activity through pre-approval and compliance checks while open-path activity remains permissionless",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
@@ -32,7 +32,7 @@
   "announcedDate": "2026-05",
   "expectedLaunchDate": "2026",
   "launchPhase": "testnet",
-  "launchPhaseDetail": "First sovereign L1 blockchain (Maroo) purpose-built for KRW stablecoins; testnet live May 2026; dual-track regulated and open paths; mainnet targeted before end of 2026; 1:1 Korean Won fiat-backed",
+  "launchPhaseDetail": "First sovereign L1 blockchain (Maroo) purpose-built for KRW stablecoins; testnet live May 2026; dual-track regulated and open paths; mainnet targeted before end of 2026; OKRW is planned as a won-pegged stablecoin, but no issuer has been named and Tiger Research reported on September 17 2026 that issuer eligibility was still under discussion",
   "featuredContent": [
     {
       "type": "article",
@@ -43,6 +43,13 @@
     }
   ],
   "milestones": [
+    {
+      "date": "2026-01-21",
+      "type": "announcement",
+      "title": "Hashed Open Finance publishes Maroo litepaper with OKRW as the network's stablecoin",
+      "description": "Hashed Open Finance released a litepaper for Maroo, a Korean won focused Layer 1 whose network fees are paid in a won stablecoin, with separate open and regulated paths.",
+      "sourceUrl": "https://www.theblock.co/news/markets/2026-01-21-hashed-layer-1-south-korean-stablecoin-386622"
+    },
     {
       "date": "2026-05-06",
       "type": "testnet",

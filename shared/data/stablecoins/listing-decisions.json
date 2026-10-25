@@ -438,7 +438,7 @@
     "wmxn-ripio": "core-stablecoin",
     "xofm-mento": "core-stablecoin",
     "euro3-3a-dao": "core-stablecoin",
-    "usdb-bridge": "core-stablecoin",
+    "usdb-bridge": "excluded",
     "hkdap-anchorpoint": "core-stablecoin",
     "hkd-hsbc": "core-stablecoin",
     "okrw-hashed": "core-stablecoin",
@@ -490,6 +490,7 @@
     "usdvb-versabank": "core-stablecoin",
     "btd-alpen": "core-stablecoin",
     "jpy-megabank-consortium": "core-stablecoin",
-    "jpydf-deltaforesight": "core-stablecoin"
+    "jpydf-deltaforesight": "core-stablecoin",
+    "swanusd-swan": "core-stablecoin"
   }
 }

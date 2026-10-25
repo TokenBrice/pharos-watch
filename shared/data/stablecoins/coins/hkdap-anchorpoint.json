@@ -13,6 +13,13 @@
   "pegMechanism": "Pre-launch HKD fiat-referenced stablecoin licensed by the HKMA; expected to maintain 1:1 HKD backing with segregated high-quality liquid reserve assets and regulated mint/redemption channels once Anchorpoint launches the business",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x87622385f960fccb3121d6d0a9513bd1d9bed6ca",
+      "decimals": 6
+    }
+  ],
   "links": [
     {
       "label": "Standard Chartered source",
@@ -176,6 +183,13 @@
       "title": "Finloop and QFPay HK complete an HKDAP payment transaction with Anchorpoint",
       "description": "Finloop Finance, an HKDAP distributor, and payment provider QFPay HK announced a collaboration with Anchorpoint and a completed payment transaction using HKDAP. No amount was disclosed.",
       "sourceUrl": "https://www.manilatimes.net/2026/10/16/tmt-newswire/pr-newswire/finloop-collaborates-with-anchorpoint-and-qfpay-hk-on-hong-kong-payment-applications-for-the-regulated-hkd-stablecoin-hkdap/2447426"
+    },
+    {
+      "date": "2026-10-23",
+      "type": "milestone",
+      "title": "HKDAP supply rises to about 16.1 million",
+      "description": "DefiLlama shows HKDAP circulating supply stepping from about 1.0 million to about 6.1 million on October 3 2026 and to about 16.1 million on October 23 2026. DefiLlama still carries no price for HKDAP.",
+      "sourceUrl": "https://stablecoins.llama.fi/stablecoin/437"
     }
   ],
   "dateHistory": [

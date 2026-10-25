@@ -13,6 +13,7 @@ import {
   buildSafetyScoreV9CaptureControl, SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY,
 } from "../../lib/safety-score-v9/capture-control";
 import type { SafetyScoreV9CaptureControl } from "@shared/types/safety-score-v9-capture-control";
+import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
 import { createReportCardsFixedInput, buildReportCardsFixedInputCacheEntry } from "../../test-helpers/report-cards-fixed-input";
 import type * as NativeInputModule from "../../lib/safety-score-v9/native-input";
 
@@ -837,7 +838,7 @@ describe("computeSafetyScoreV9", () => {
     const result = await computeSafetyScoreV9({} as D1Database);
     expect(result.status).toBe(count === 397 ? "ok" : "degraded");
     const metadata = JSON.parse(result.metadata!);
-    expect(metadata.resourcePressure).toMatchObject({ inputCapBytes: 8_000_000, catalogMaxAssets: 488, catalogAssets: 488 });
+    expect(metadata.resourcePressure).toMatchObject({ inputCapBytes: 8_000_000, catalogMaxAssets: 520, catalogAssets: TRACKED_SOURCE_COINS.length });
     if (count === 398) {
       expect(metadata.reason).toBe("resource-budget-exceeded");
       expect(mocks.runPublication).not.toHaveBeenCalled();

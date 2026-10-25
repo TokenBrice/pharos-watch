@@ -5,6 +5,7 @@ import {
   dateScore,
   formatFuzzyDate,
   getDriftStatus,
+  isLaunchedAwaitingData,
   parseFuzzyDate,
   parseFuzzyDeadline,
   resolveDriftDisplay,
@@ -89,8 +90,17 @@ export function resolveTargetlessDrift(
  * phase, current target and its moves, then the activity count.
  */
 export function buildLaunchVerdict(
-  coin: Pick<StablecoinMeta, "launchPhase" | "expectedLaunchDate" | "dateHistory" | "milestones" | "announcedDate">,
+  coin: Pick<StablecoinMeta, "launchPhase" | "expectedLaunchDate" | "dateHistory" | "milestones" | "announcedDate" | "launchDate">,
 ): string {
+  const count = coin.milestones?.length ?? 0;
+  const activity =
+    count === 0
+      ? "no activity logged yet"
+      : `${pluralize(count, "milestone")} logged${coin.announcedDate ? ` since ${formatFuzzyDate(coin.announcedDate)}` : ""}`;
+  // Live coins have no target left to read against.
+  if (isLaunchedAwaitingData(coin)) {
+    return `Launched${coin.launchDate ? ` ${formatFuzzyDate(coin.launchDate)}` : ""}, awaiting admissible data; ${activity}.`;
+  }
   const phase = coin.launchPhase ? `${LAUNCH_PHASE_LABELS[coin.launchPhase]} phase` : "No published phase";
   const moves = coin.dateHistory?.length ?? 0;
   const target = coin.expectedLaunchDate
@@ -98,11 +108,6 @@ export function buildLaunchVerdict(
     : resolveTargetlessDrift(coin) === "no-current-target"
       ? "earlier target retired, none set"
       : "no target date";
-  const count = coin.milestones?.length ?? 0;
-  const activity =
-    count === 0
-      ? "no activity logged yet"
-      : `${pluralize(count, "milestone")} logged${coin.announcedDate ? ` since ${formatFuzzyDate(coin.announcedDate)}` : ""}`;
   return `${phase}, ${target}; ${activity}.`;
 }
 

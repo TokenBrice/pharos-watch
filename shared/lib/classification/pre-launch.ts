@@ -28,6 +28,11 @@ export const PRE_LAUNCH_PHASE_CLASSES = {
     badge: "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400",
     orbit: "border-sky-500/45 bg-sky-500/[0.07] dark:border-sky-400/45 dark:bg-sky-400/[0.09]",
   },
+  launched: {
+    dot: "bg-teal-500",
+    badge: "border-teal-500/30 bg-teal-500/10 text-teal-600 dark:text-teal-400",
+    orbit: "border-teal-500/35 bg-teal-500/[0.05] dark:border-teal-400/35 dark:bg-teal-400/[0.07]",
+  },
 } as const satisfies Record<LaunchPhase, { dot: string; badge: string; orbit: string }>;
 
 /** Pre-launch detail page: pre-launch card and progress fill. */
@@ -65,6 +70,7 @@ export const LAUNCH_PHASE_LABELS = {
   auditing: "Auditing",
   beta: "Beta",
   "launching-soon": "Launching soon",
+  launched: "Launched – awaiting data",
 } as const satisfies Record<LaunchPhase, string>;
 
 export const MILESTONE_TYPE_LABELS = {

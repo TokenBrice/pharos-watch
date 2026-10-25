@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { buildLatestLaunchNews, buildUpcomingCurrencyGroups, LATEST_LAUNCH_NEWS_LIMIT } from "@/lib/upcoming-static-content";
+import {
+  buildLatestLaunchNews,
+  buildLaunchedUntrackedRows,
+  buildUpcomingCurrencyGroups,
+  LATEST_LAUNCH_NEWS_LIMIT,
+} from "@/lib/upcoming-static-content";
 
 const flags = { governance: "centralized", backing: "rwa-backed", yieldBearing: false, rwa: true, navToken: false } as const;
 
@@ -52,5 +57,29 @@ describe("buildUpcomingCurrencyGroups", () => {
     const ranked = groups.filter((group) => group.peg !== "OTHER").map((group) => group.coins.length);
     expect(ranked).toEqual([...ranked].sort((a, b) => b - a));
     if (groups.some((group) => group.peg === "OTHER")) expect(groups.at(-1)?.peg).toBe("OTHER");
+  });
+});
+
+describe("buildLaunchedUntrackedRows", () => {
+  it("lists launched rows newest launch first with the review's missing lane, undated last", () => {
+    const rows = buildLaunchedUntrackedRows([
+      { id: "old-coin", name: "Old", symbol: "OLD", launchDate: "2026-05-20" },
+      { id: "undated-coin", name: "Undated", symbol: "UND" },
+      {
+        id: "new-coin",
+        name: "New",
+        symbol: "NEW",
+        launchDate: "2026-10-15",
+        listingStatusReview: { changedAt: "2026-10-20", reason: "No admitted price lane yet.", reviewBy: "2026-12-19" },
+      },
+    ]);
+    expect(rows.map((row) => row.id)).toEqual(["new-coin", "old-coin", "undated-coin"]);
+    expect(rows[0]).toMatchObject({
+      href: "/stablecoin/new-coin/",
+      launchLabel: "Oct 15, 2026",
+      reason: "No admitted price lane yet.",
+      reviewByLabel: "Dec 19, 2026",
+    });
+    expect(rows[2]).toMatchObject({ launchDate: null, launchLabel: null, reason: null, reviewByLabel: null });
   });
 });

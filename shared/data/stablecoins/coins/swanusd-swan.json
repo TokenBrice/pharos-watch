@@ -1,0 +1,62 @@
+{
+  "id": "swanusd-swan",
+  "name": "swanUSD",
+  "symbol": "swanUSD",
+  "brand": "Swan",
+  "oneLiner": "swanUSD is a SwanDAO-governed dollar stablecoin minted against wstETH on Inverse Finance's Monolith CDP factory, live on Ethereum since October 2026.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "decentralized"
+  },
+  "collateral": "wstETH deposited in swanUSD's Monolith Lender (0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15), which held 44.10 wstETH at Ethereum block 26268775 on October 25 2026 against 213,731.85 swanUSD supply. The issuer site also describes 1:1 swaps with sUSDS; that module and the gap between supply and Lender debt are not yet reconciled.",
+  "pegMechanism": "Monolith CDP instance: borrowers mint swanUSD against wstETH at 0% or a variable rate under Monolith's dual free and paid debt system, the issuer site says swanUSD is redeemable for wstETH, and stakers deposit it in the sSwanUSD ERC-4626 vault to earn borrower interest.",
+  "mechanismArchetype": "cdp",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e",
+      "decimals": 18
+    }
+  ],
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://swanusd.com"
+    },
+    {
+      "label": "App",
+      "url": "https://app.monolith.market/1/coin/2"
+    },
+    {
+      "label": "Monolith docs",
+      "url": "https://docs.monolith.market"
+    },
+    {
+      "label": "Launch announcement",
+      "url": "https://x.com/MonolithMarket/status/2113318282921144781"
+    },
+    {
+      "label": "Token contract",
+      "url": "https://etherscan.io/address/0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e"
+    }
+  ],
+  "status": "pre-launch",
+  "announcedDate": "2026-10-22",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "Monolith announced on October 22 2026 that swanUSD is live on Ethereum as a DAO-governed stablecoin backed by wstETH, built on Inverse Finance's Monolith factory (V2 deployment index 2). The token 0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e (18 decimals, Ethereum only) is a non-proxy Coin contract whose only minter is its Lender; supply was 213,731.85 at block 26268775 on October 25 2026. Pharos tracks it pre-launch because no price source admits it: there is no CoinGecko or DefiLlama stablecoin listing, and DefiLlama's contract quote was about two hours old on October 25, outside the 15-minute freshness budget.",
+  "milestones": [
+    {
+      "date": "2026-10-22",
+      "type": "milestone",
+      "title": "swanUSD launches on Monolith",
+      "description": "Monolith announced that swanUSD is live on Ethereum as a DAO-governed stablecoin backed by wstETH and built on Inverse Finance's Monolith factory. Holders can stake it as sSwanUSD to earn protocol revenue. A 100,000 SWAN launch airdrop opened the same day.",
+      "sourceUrl": "https://x.com/MonolithMarket/status/2113318282921144781"
+    }
+  ],
+  "launchDate": "2026-10-22",
+  "listingStatusReview": {
+    "changedAt": "2026-10-25",
+    "reason": "Missing lane: price. No CoinGecko or DefiLlama stablecoin listing exists, and DefiLlama's contract quote was about two hours old on October 25 2026, outside the 15-minute freshness budget. Supply is readable on-chain.",
+    "reviewBy": "2026-12-24"
+  }
+}

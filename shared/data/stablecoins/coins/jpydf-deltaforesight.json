@@ -33,7 +33,7 @@
   "jurisdiction": { "country": "Japan" },
   "status": "pre-launch",
   "announcedDate": "2026-09-25",
-  "launchPhase": "launching-soon",
+  "launchPhase": "launched",
   "launchPhaseDetail": "JPY DeFi launched on Ethereum mainnet on October 15 2026, so JPYdf is live. Pharos tracks it pre-launch only because no runtime price source admits it: on launch day DefiLlama and CoinGecko listed neither the token nor the protocol, and the DefiLlama contract-price endpoint returned no quote. The token is 0xb122f4a154f84708407213d6a715181180012f45 (18 decimals, Ethereum only, no registered bridge minter). At block 26196851 (08:54 UTC on October 15), supply was 91,738,933 JPYdf, about $581,000 at that day's yen rate, with 69.4 million borrowed against USDC and 22.3 million against wstETH. Trading was confined to one Uniswap v4 JPYdf/USDC pool created that morning with about $552,000 of liquidity. The token and the Liquity v2 core are non-upgradeable and the token owner is renounced. The dToken vault and strategy layer is upgradeable and pausable, and governance can recognize collateral losses, replace oracle sources after a 12-hour timelock and resume paused branches without delay. The governance, operator and guardian Safes are each 2-of-3 with the same three signers, although the documentation describes a higher quorum for loss recognition. The deployed JPY/USD staleness threshold is 30 hours, while the documentation describes 72 hours. Chain Defenders and Guardian reviewed the JPYdf-specific code; the bug bounty and confidential disclosure channel were not active at launch. JPYdf Foundation DAO LLC operates the app, which excludes Japanese residents, and does not disclose its domicile.",
   "featuredContent": [
     {
@@ -93,6 +93,19 @@
       "title": "JPY DeFi launches on Ethereum mainnet",
       "description": "Public launch with wstETH and USDC branches. Supply reached 91.7 million JPYdf by 08:54 UTC, with no DefiLlama or CoinGecko listing.",
       "sourceUrl": "https://deltaforesight.com/en/news/jpy-defi-mainnet-20261015/"
+    },
+    {
+      "date": "2026-10-22",
+      "type": "milestone",
+      "title": "DefiLlama begins tracking JPYdf supply without a price",
+      "description": "DefiLlama added JPYdf as stablecoin 448 on October 22 2026, reporting about 93.3 million JPYdf on Ethereum, matching on-chain total supply. DefiLlama carries no price for it and CoinGecko has no listing.",
+      "sourceUrl": "https://stablecoins.llama.fi/stablecoin/448"
     }
-  ]
+  ],
+  "launchDate": "2026-10-15",
+  "listingStatusReview": {
+    "changedAt": "2026-10-25",
+    "reason": "Missing lane: price. No admissible source quotes JPYdf: there is no CoinGecko listing, DefiLlama 448 has a null price, and coins.llama.fi has no contract quote. Supply is observable.",
+    "reviewBy": "2026-12-24"
+  }
 }

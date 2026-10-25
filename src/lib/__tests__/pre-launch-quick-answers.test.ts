@@ -59,6 +59,32 @@ describe("buildPreLaunchQuickAnswers", () => {
   });
 });
 
+describe("buildPreLaunchQuickAnswers for a launched row", () => {
+  const launched = {
+    ...base,
+    launchPhase: "launched" as const,
+    launchDate: "2026-10-15",
+    listingStatusReview: { changedAt: "2026-10-20", reason: "No admitted price lane yet", reviewBy: "2026-12-19" },
+    contracts: [{ chain: "ethereum", address: "0x0000000000000000000000000000000000000001", decimals: 18 }],
+  };
+
+  it("says live since the launch date, names the missing lane, and calls figures unavailable rather than zero", () => {
+    const items = buildPreLaunchQuickAnswers(launched);
+    expect(items.map((item) => item.question)).toEqual([
+      "When did QEUR launch?",
+      "Who issues QEUR?",
+      "Is QEUR live yet?",
+      "Which chains does QEUR use?",
+    ]);
+    expect(items[0].answer).toBe("QEUR launched publicly on-chain on Oct 15, 2026, per its sourced launch milestone.");
+    expect(items[2].answer).toBe(
+      "Yes, QEUR has been live since Oct 15, 2026. Pharos does not track it yet. No admitted price lane yet. Its price, supply, liquidity and Safety Score are unavailable on Pharos, not zero, until both a price and a supply source can be verified.",
+    );
+    const text = items.map((item) => item.answer).join(" ");
+    expect(text).not.toMatch(/pre-launch \(|target|will use/i);
+  });
+});
+
 describe("firstOneLinerClause", () => {
   it("keeps the opening clause as one sentence", () => {
     expect(firstOneLinerClause("HKDAP is Anchorpoint's HKMA-licensed HKD stablecoin, backed 1:1.")).toBe(

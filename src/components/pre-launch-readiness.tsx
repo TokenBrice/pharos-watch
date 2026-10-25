@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { PHASE_DOT, formatFuzzyDate, type DriftDisplayStatus } from "@/lib/pre-launch";
+import { PHASE_DOT, formatFuzzyDate, isLaunchedAwaitingData, type DriftDisplayStatus } from "@/lib/pre-launch";
 import { DRIFT_STATUS_LABEL } from "@shared/lib/classification/pre-launch";
 import {
   computeLaunchClock,
@@ -89,17 +89,71 @@ function ReadinessCell({ label, children, sub }: { label: string; children: Reac
   );
 }
 
+type ReadinessCoin = Pick<
+  StablecoinMeta,
+  "launchPhase" | "announcedDate" | "expectedLaunchDate" | "dateHistory" | "launchDate" | "listingStatusReview"
+>;
+
+function PhaseCell({ coin }: { coin: ReadinessCoin }) {
+  return (
+    <ReadinessCell
+      label="Phase"
+      sub={coin.launchPhase ? "Current launch phase" : "No phase published"}
+    >
+      <span className={cn(WORD_CLASS, "inline-flex items-center gap-2", !coin.launchPhase && "text-muted-foreground")}>
+        {coin.launchPhase ? (
+          <span aria-hidden="true" className={cn("h-2.5 w-2.5 shrink-0 rounded-full", PHASE_DOT[coin.launchPhase])} />
+        ) : null}
+        {formatPhaseLabel(coin)}
+      </span>
+    </ReadinessCell>
+  );
+}
+
+/**
+ * A launched row is live, so there is no target to count down to and nothing
+ * to drift from: the cells name the launch, Pharos's review date and the days
+ * live. A stale `expectedLaunchDate` never turns into an "overdue" badge.
+ */
+function LaunchedReadiness({ coin, nowMs }: { coin: ReadinessCoin; nowMs: number | null }) {
+  const launch = coin.launchDate ? parseFuzzyRange(coin.launchDate) : null;
+  const reviewBy = coin.listingStatusReview?.reviewBy;
+  const daysLive = launch && nowMs != null ? Math.max(0, Math.floor((nowMs - launch.start.getTime()) / DAY_MS)) : null;
+  return (
+    <div role="group" aria-label="Launch readiness" className="grid grid-cols-2 lg:grid-cols-4">
+      <PhaseCell coin={coin} />
+      <ReadinessCell label="Launched" sub="Public on-chain issuance">
+        {coin.launchDate ? <span className={FIGURE_CLASS}>{formatFuzzyDate(coin.launchDate)}</span> : PLACEHOLDER}
+      </ReadinessCell>
+      <ReadinessCell label="Tracking review" sub="Pharos decision due">
+        {reviewBy ? <span className={FIGURE_CLASS}>{formatFuzzyDate(reviewBy)}</span> : PLACEHOLDER}
+      </ReadinessCell>
+      <ReadinessCell
+        label="Since launch"
+        sub={coin.announcedDate ? `Announced ${formatFuzzyDate(coin.announcedDate)}` : "Announcement date not recorded"}
+      >
+        {daysLive != null ? (
+          <span className={FIGURE_CLASS}>
+            {launch?.precision !== "day" ? "~" : ""}
+            {daysLive.toLocaleString("en-US")}
+            <span className="ml-1 text-base text-muted-foreground">d</span>
+          </span>
+        ) : (
+          PLACEHOLDER
+        )}
+      </ReadinessCell>
+    </div>
+  );
+}
+
 /**
  * The launch-readiness answer: phase, target, drift and age. Registry facts
  * render on the server; the window countdown, overdue check and day count
  * wait for the browser clock.
  */
-export function PreLaunchReadiness({
-  coin,
-}: {
-  coin: Pick<StablecoinMeta, "launchPhase" | "announcedDate" | "expectedLaunchDate" | "dateHistory">;
-}) {
+export function PreLaunchReadiness({ coin }: { coin: ReadinessCoin }) {
   const nowMs = usePreLaunchNowMs();
+  if (isLaunchedAwaitingData(coin)) return <LaunchedReadiness coin={coin} nowMs={nowMs} />;
   const clock = nowMs == null ? null : computeLaunchClock(coin, nowMs);
   const target = coin.expectedLaunchDate ? parseFuzzyRange(coin.expectedLaunchDate) : null;
   const moves = coin.dateHistory?.length ?? 0;
@@ -111,17 +165,7 @@ export function PreLaunchReadiness({
 
   return (
     <div role="group" aria-label="Launch readiness" className="grid grid-cols-2 lg:grid-cols-4">
-      <ReadinessCell
-        label="Phase"
-        sub={coin.launchPhase ? "Current launch phase" : "No phase published"}
-      >
-        <span className={cn(WORD_CLASS, "inline-flex items-center gap-2", !coin.launchPhase && "text-muted-foreground")}>
-          {coin.launchPhase ? (
-            <span aria-hidden="true" className={cn("h-2.5 w-2.5 shrink-0 rounded-full", PHASE_DOT[coin.launchPhase])} />
-          ) : null}
-          {formatPhaseLabel(coin)}
-        </span>
-      </ReadinessCell>
+      <PhaseCell coin={coin} />
       <ReadinessCell
         label="Target launch"
         sub={

@@ -34,7 +34,7 @@
   },
   "announcedDate": "2026-07-08",
   "launchPhase": "announced",
-  "launchPhaseDetail": "The current whitepaper, amended 24 August 2026, states in Part G that WEUR has not yet launched or entered circulation. The homepage offers account creation, issuance and redemption and claims public on-chain verification, creating a lifecycle ambiguity without independently verified production contracts or circulation. Whitepaper publication and offer-start on 8 July are not confirmed issuance dates. ESMA records whitepaper notification on 25 June 2026, separately from its 26 May last-update field. No confirmed launch date is published.",
+  "launchPhaseDetail": "The current whitepaper, amended 24 August 2026, states in Part G that WEUR has not yet launched or entered circulation. The homepage offers account creation, issuance and redemption and claims public on-chain verification, creating a lifecycle ambiguity without independently verified production contracts or circulation. Whitepaper publication and offer-start on 8 July are not confirmed issuance dates. ESMA records whitepaper notification on 25 June 2026, separately from its 26 May last-update field. No confirmed launch date is published. The whitepaper gives WSPN as Aplauz NL B.V.'s trading name and WSPN Fintech Dutch Holding B.V., a holding entity in the Worldwide Stablecoin Payment Network group, as its direct parent, which acquired the company during 2024 and 2025 with DNB approval. It names Ethereum (ERC-20) and BNB Smart Chain as the initial launch networks.",
   "milestones": [
     {
       "date": "2026-06-25",

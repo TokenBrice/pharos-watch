@@ -1,0 +1,23 @@
+{
+  "id": "swanusd-swan",
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "swanUSD Coin verified source (Sourcify exact match)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x9BF2B2F57A2968A0E81546Ed50cBbbb7C9d6e05E?fields=abi"
+      },
+      {
+        "label": "Monolith contract addresses",
+        "url": "https://docs.monolith.market/developers/contract-addresses.md"
+      },
+      {
+        "label": "swanUSD website",
+        "url": "https://swanusd.com"
+      }
+    ],
+    "evidence": "The verified Coin contract at 0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e exposes only ERC-20, permit, and mint and burn functions restricted to its minter, which returned the swanUSD Lender 0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15 at block 26268775 (October 25 2026). It has no owner, blacklist, freeze, seizure or pause function, and the EIP-1967 implementation slot is empty, so it is not an upgradeable proxy. The Lender's collateral is wstETH, which has no issuer freeze. The issuer site's sUSDS swap path has not been reviewed.",
+    "reviewer": "Claude pre-launch update 2026-10-25",
+    "reviewedAt": "2026-10-25"
+  }
+}

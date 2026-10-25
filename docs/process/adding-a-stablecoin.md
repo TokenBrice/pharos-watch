@@ -75,6 +75,15 @@ If the asset is pre-launch, also collect:
 
 Do not expect pre-launch assets to show up in live worker-driven coverage until the status flips to active.
 
+#### Launched, awaiting data
+
+When a pre-launch asset is publicly issued on-chain but fails the [Phase 1a runtime gate](#1a-hard-runtime-data-gate-for-active-assets), keep `status: "pre-launch"` and set `launchPhase: "launched"` ("Launched – awaiting data"). Pilots, closed-loop platforms and private betas do not qualify; they stay in an earlier phase. The schema in `shared/lib/stablecoins/schema.ts` then requires:
+
+- `launchDate`, plus at least one milestone with a primary `sourceUrl` dated on or after the start of `launchDate`.
+- `listingStatusReview` with `changedAt` (the day the row entered the phase, not before `launchDate`), a `reason` naming the missing lane (no admitted price lane, no admitted supply lane, both, or a scope question), and `reviewBy` no more than `LAUNCHED_PHASE_MAX_DWELL_DAYS` (60) days after `changedAt`. `source` is optional.
+
+The row stays out of aggregates and scoring. Its profile titles move to "Status & Tracking", the detail page drops the target countdown and drift badge, quick answers say the coin is live with price and supply unavailable (not zero), and `/upcoming/` lists it under "Launched – not yet tracked" instead of the upcoming count. Past `reviewBy`, `check:stablecoin-data` warns; resolve it per [Lifecycle Policy](../listing-policy.md#lifecycle-policy). Promotion to active still runs every Phase 1a, Phase 4 and Phase 7 step, and drops `launchPhase: "launched"` and its `listingStatusReview`.
+
 #### 72-hour pre-launch stub lane
 
 When an issuer, regulator or bank publishes a credible primary-source announcement of an in-scope stablecoin, add a pre-launch stub within 72 hours rather than waiting for a full research packet. Early entries capture launch-intent searches while they peak. The stub is still a normal pre-launch addition: it passes Phase 1 eligibility, gets a canonical-order position and a `listing-decisions.json` class, and clears every Phase 4 coupling group and Phase 7 check. Only the research depth is deferred.

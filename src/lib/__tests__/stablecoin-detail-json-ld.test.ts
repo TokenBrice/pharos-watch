@@ -71,6 +71,18 @@ describe("buildPreLaunchStablecoinJsonLd", () => {
     expect(buildPreLaunchStablecoinJsonLd(makeStablecoinMeta({ status: "pre-launch" }))[0]).not.toHaveProperty("dateModified");
   });
 
+  it("drops planned and begin-after-launch copy for a launched row", () => {
+    const [webPage] = buildPreLaunchStablecoinJsonLd(makeStablecoinMeta({
+      status: "pre-launch",
+      launchPhase: "launched",
+      launchDate: "2026-10-15",
+    }));
+    expect(webPage.name).toMatch(/Stablecoin Status & Tracking$/);
+    expect(webPage.description).toContain("launched Oct 15, 2026");
+    expect(webPage.description).toContain("unavailable, not zero");
+    expect(webPage.description).not.toMatch(/Planned|begin only after launch|Pre-launch/);
+  });
+
   it("declares the logo on the WebPage and the stablecoin Thing", () => {
     const [webPage, thing] = buildPreLaunchStablecoinJsonLd(
       makeStablecoinMeta({ status: "pre-launch" }),

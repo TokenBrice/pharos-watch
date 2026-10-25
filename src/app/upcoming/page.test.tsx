@@ -9,7 +9,7 @@ vi.mock("@/components/upcoming-client", () => ({ UpcomingClient: () => <div data
 vi.mock("@/components/share-button", () => ({ ShareButton: () => null }));
 
 describe("UpcomingPage", () => {
-  it("server-renders the launch news list and currency groups linking every pre-launch profile", () => {
+  it("server-renders the launch news list, launched section and currency groups linking every pre-launch profile", () => {
     const html = renderToStaticMarkup(<UpcomingPage />);
     const document = new DOMParser().parseFromString(html, "text/html");
 
@@ -18,7 +18,9 @@ describe("UpcomingPage", () => {
     expect(headings).toContain("Upcoming Hong Kong Dollar (HKD) stablecoins");
 
     const groups = document.querySelector('[aria-label="Upcoming stablecoins by currency"]');
-    const hrefs = [...(groups?.querySelectorAll("a[href]") ?? [])].map((link) => link.getAttribute("href") ?? "");
+    const launched = document.querySelector('[aria-labelledby="launched-not-tracked"]');
+    const hrefs = [groups, launched].flatMap((section) =>
+      [...(section?.querySelectorAll("a[href]") ?? [])].map((link) => link.getAttribute("href") ?? ""));
     for (const coin of PRE_LAUNCH_STABLECOINS) {
       expect(hrefs.some((href) => href.startsWith(`/stablecoin/${coin.id}`)), coin.id).toBe(true);
     }

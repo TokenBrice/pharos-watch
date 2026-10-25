@@ -395,19 +395,24 @@ export function EvidenceModule({
   );
 }
 
-/** `pending-launch`: a live surface a pre-launch dossier will carry once tracking starts. */
-export type EvidenceState = "not-reviewed" | "not-applicable" | "pending-launch";
+/**
+ * `pending-launch`: a live surface a pre-launch dossier will carry once tracking starts.
+ * `awaiting-data`: the coin is live, but Pharos has no admitted price or supply lane yet.
+ */
+export type EvidenceState = "not-reviewed" | "not-applicable" | "pending-launch" | "awaiting-data";
 
 const EVIDENCE_STATE_LABEL: Record<EvidenceState, string> = {
   "not-reviewed": "Not reviewed",
   "not-applicable": "Not applicable",
   "pending-launch": "Activates at launch",
+  "awaiting-data": "Awaiting admissible data",
 };
 
 const EVIDENCE_STATE_GLYPH: Record<EvidenceState, typeof CircleDashed> = {
   "not-reviewed": CircleDashed,
   "not-applicable": CircleSlash,
   "pending-launch": Hourglass,
+  "awaiting-data": Hourglass,
 };
 
 /**

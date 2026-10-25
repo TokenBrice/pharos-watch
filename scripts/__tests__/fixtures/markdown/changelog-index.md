@@ -6,6 +6,23 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+<a id="week-2026-10-25"></a>
+<a id="2026-10-25"></a>
+
+## 2026-10-19 to 2026-10-25
+
+DDR v5 condemns a coin only on terminal evidence, and Safety Score ships twelve releases to 10.34.
+
+- **Safety Score 10.34**: Twelve releases, 10.23 to 10.34. 10.29 replaces parallel authority scorers with one economic-authority ladder and five cap families, 10.30 grades active depegs by severity, and scores now publish hourly.
+- **DDR v5 verdicts**: Verdicts condemn a coin only on terminal evidence, so static exit thinness no longer does. Duration reads as recovery odds that keep non-recovery visible, and reviews grade calls against naive baselines.
+- **Telegram bot v2**: Safety alerts need a two-notch downgrade or a fall to D/F held six hours; freeze alerts need a destruction or $1M. Other changes arrive in one daily message, and the Mini App drops its tabs.
+- **Quieter public warnings**: Readers see warnings only for data past the 12x stale band, missing, or quarantined; lesser findings go to operators. /status ignores small bounded omissions and needs two evaluations to change state.
+- **Search-ready profiles**: Coin profiles lead with a dated Safety grade, a redemption answer and checksum-validated ISINs for fund tokens. Titles use searchers' words, and thin chain, depeg-event and digest pages leave the index.
+- **Design-system completion**: The raw-palette ledger is drained and deleted, every corner radius snaps to the scale, and CSS modules sit on named layers. Lint now rejects new raw hues and arbitrary radii; titles are sentence case.
+- **Venue and evidence coverage**: Aero, the merged Aerodrome and Velodrome, is read directly (Liquidity 6.98, Pricing 6.56), Hive HBD gains cross-rates and USDY prices again. FreezeWatch adopts a written exposure procedure (4.4, 4.5).
+- **Launched, awaiting data**: A new pre-launch phase marks coins issued on-chain that lack admissible market data: six live coins and newly added swanUSD. /upcoming/ lists them apart from upcoming launches; USDB and VCRED are delisted.
+- **Cron and integrity sweep**: Missed or abandoned cron slots get one catch-up run and non-price lanes slow to owner-approved cadences. A correctness sweep ships across nine methodologies, and sponsor Dwellir now serves native reads first.
+
 <a id="week-2026-10-18"></a>
 <a id="2026-10-18"></a>
 
@@ -22,25 +39,10 @@ Safety Score reaches 10.22 with Morpho lender books as Backing, and the site ado
 - **RPC and feed repairs**: Dwellir becomes primary for Ethereum state, Arbitrum logs, Polygon, Tempo and Plasma, Uniswap v4 discovery is restored, and USDai, Frankencoin, SBC and BRLV feeds are repaired.
 - **Worker memory and tests**: The V9 publication Workflow retires, publication admits once under the Worker heap, and memory kills are observed. About 4,500 low-value test cases and the pre-push receipt mandate are removed.
 
-<a id="week-2026-10-11"></a>
-<a id="2026-10-11"></a>
-
-## 2026-10-05 to 2026-10-11
-
-Safety Score advances from 10.04 to 10.16 and GENIUS Act coverage reaches all 396 active coins.
-
-- **Safety Score 10.16**: Releases 10.05 to 10.16 ship. 10.08 reads authenticated CCIP, LayerZero OFT and rollup-bridge pending messages; 10.13 was reverted; 10.16 ages track records through one shared resolver.
-- **Evidence research waves**: Wave 3 worked open facts in 44 research lanes, waves 4 and 5 verified control, custody, bridge and exit evidence, and an October 9 campaign curated 239 blind-spot assets from primary sources.
-- **Compliance coverage**: GENIUS Act rows now cover all 396 active coins, up from 225, with no unknown left. Every MiCA row was re-verified; non-compliant calls fall from 28 to 17 where no exact-token source exists.
-- **Failure scenarios**: Coin pages gain eight approved failure scenarios for USDS, crvUSD, USDC, GHO, USDe, USDT, USD1 and LUSD, fork-replayed where mechanics decide the outcome and re-verified monthly.
-- **Pillar-based dossier**: Coin pages follow the Safety Score pillars: backing, exit and control evidence sit in always-open modules, reserves render once as a risk-tier treemap, and raw pipeline errors leave the page.
-- **Unavailable is not zero**: Ten methodology domains release sweep corrections. Unavailable supply no longer reads as $0, and a chain-dropout guard blocks DefiLlama collapses like October 9's $9.6B of phantom redemptions.
-- **Source additions and retirements**: Spark V1, Forest Road and Kava CDP reserve readers arrive. The STBT reserve adapter, vaults.fyi, BIMA and CETES yield collectors and direct CEX depth telemetry retire with other unfunded diagnostics.
-- **Scheduling and release gates**: V9 publication moves to a separate heavy scheduled Worker (ADR-38), DEX collection gains :20/:50 slots (ADR-39), and local check:pr now matches the PR gate with commit-bound receipts.
-
 ## Monthly archives
 
 - [October 2026](https://pharos.watch/changelog/archive/2026-10/)
+  - [2026-10-25: DDR v5 condemns a coin only on terminal evidence, and Safety Score ships twelve releases to 10.34.](https://pharos.watch/changelog/archive/2026-10/#week-2026-10-25)
   - [2026-10-18: Safety Score reaches 10.22 with Morpho lender books as Backing, and the site adopts one product grammar.](https://pharos.watch/changelog/archive/2026-10/#week-2026-10-18)
   - [2026-10-11: Safety Score advances from 10.04 to 10.16 and GENIUS Act coverage reaches all 396 active coins.](https://pharos.watch/changelog/archive/2026-10/#week-2026-10-11)
   - [2026-10-04: Safety Score V10 ships through five versions in three days while the registry grows from 409 to 488 coins.](https://pharos.watch/changelog/archive/2026-10/#week-2026-10-04)

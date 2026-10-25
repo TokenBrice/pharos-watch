@@ -23,6 +23,8 @@ const TRACKED_STABLECOINS_MOCK = [
     symbol: "EURX",
     name: "Example Euro",
     status: "pre-launch",
+    // Entering the launched phase keeps the row pre-launch: no launch announcement yet.
+    launchPhase: "launched",
     flags: { yieldBearing: false },
   },
 ];
@@ -364,6 +366,25 @@ describe("prepareTelegramDigestAppendices", () => {
     expect(prepared.successActions).toEqual([
       { key: "frozen_ids_snapshot", value: JSON.stringify(["dusd-fluid"]) },
     ]);
+  });
+
+  it("stays silent while a pre-launch row sits in the launched phase; only promotion to active announces", async () => {
+    mockCachedValues({
+      "telegram:cemetery-snapshot": JSON.stringify([
+        "pusd-palm-usd-2026-01",
+        "eura-angle-eura-2026-03",
+        "usda-angle-usda-2026-03",
+      ]),
+      "telegram:tracked-stablecoins-snapshot": JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
+      "frozen_ids_snapshot": JSON.stringify(["dusd-fluid"]),
+      "telegram:prelaunch-stablecoins-snapshot": JSON.stringify(["eurx-example"]),
+    });
+
+    const prepared = await prepareTelegramDigestAppendices({} as D1Database);
+
+    expect(prepared.metadata).toMatchObject({ hasAppendix: false, launchedDetected: 0 });
+    expect(prepared.appendixHtml).toBeNull();
+    expect(prepared.successActions).toEqual([]);
   });
 
   it("announces a pre-launch to active promotion once, as a launch rather than a tracked addition", async () => {

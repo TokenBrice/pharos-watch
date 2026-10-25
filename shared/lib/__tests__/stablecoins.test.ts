@@ -23,7 +23,7 @@ import {
 } from "../stablecoins/schema";
 
 const EURR_PRE_LAUNCH_ID = "eurr-revolut";
-const EXPECTED_TRACKED_STABLECOIN_COUNT = 488;
+const EXPECTED_TRACKED_STABLECOIN_COUNT = 489;
 
 function makeStablecoinAsset(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -107,7 +107,6 @@ describe("tracked stablecoin metadata", () => {
       "rgbp-revolut",
       "regbp-restabilise",
       "gbp-vvtx",
-      "usdb-bridge",
       "hkdap-anchorpoint",
       "hkd-hsbc",
       "okrw-hashed",
@@ -141,6 +140,7 @@ describe("tracked stablecoin metadata", () => {
       "btd-alpen",
       "jpy-megabank-consortium",
       "jpydf-deltaforesight",
+      "swanusd-swan",
     ]);
   });
 
