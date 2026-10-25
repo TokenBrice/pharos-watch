@@ -3,7 +3,11 @@
 import { renderHook as renderHookWithProvider } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { seedStablecoinDetailQueryCache } from "@/lib/api";
+import { isDetailSnapshotQuery, seedStablecoinDetailQueryCache, type ApiMeta } from "@/lib/api";
+import { FRONTEND_API_QUERY_DESCRIPTORS, STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS } from "@/lib/api-query-descriptors";
+import { buildDetailStaleQueries } from "@/lib/stablecoin-detail-query-view-model";
+import { StaleDataBanner } from "@/components/stale-data-banner";
+import { renderToStaticMarkup } from "react-dom/server";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -39,6 +43,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/analytics", () => ({ trackFreshDataReady: mocks.trackFreshDataReady }));
+vi.mock("@/hooks/use-freshness-boundary", () => ({ useFreshnessBoundary: () => Date.now() }));
 
 let queryClient: QueryClient;
 function renderHook<T>(callback: () => T) {
@@ -137,6 +142,87 @@ describe("useStablecoinDetailViewModel", () => {
     installQueryMocks();
   });
   afterEach(() => queryClient.clear());
+
+  it.each(["fetching", "failed", "stale", "paused", "idle", "fresh", "non-seeded"] as const)(
+    "evaluates a five-hour seed only after its first live read settles (%s)",
+    async (outcome) => {
+      const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+      const old = Date.now() - 5 * 3600_000;
+      const summaryKey = FRONTEND_API_QUERY_DESCRIPTORS.stablecoinLiveSummary(coin.id).queryKey;
+      const supplyKey = FRONTEND_API_QUERY_DESCRIPTORS.supplyHistory(coin.id, STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS).queryKey;
+      const data = { price: 1, circulating: { peggedUSD: 100 } } as StablecoinLiveSummary;
+      seedStablecoinDetailQueryCache(queryClient, {
+        version: 1, stablecoinId: coin.id, generatedAt: Date.now(),
+        updatedAt: { liveSummary: old, supplyHistory: Date.now() - 13 * 86400_000 },
+        lanes: { liveSummary: data, supplyHistory: [{ date: old / 1000, circulatingUsd: 100, price: 1 }] },
+      });
+      const read = (queryKey: readonly unknown[]) => {
+        const state = queryClient.getQueryState<{ data: unknown; meta: ApiMeta }>(queryKey)!;
+        return { ...queryResult(), ...state.data, dataUpdatedAt: state.dataUpdatedAt, error: state.error,
+          isError: state.status === "error", isFetching: state.fetchStatus === "fetching", fetchStatus: state.fetchStatus };
+      };
+      mocks.useRegisteredApiQuery.mockImplementation(() => read(summaryKey));
+      mocks.useSupplyHistory.mockImplementation((_id: string, days: number) =>
+        days === STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS ? read(supplyKey) : queryResult());
+      if (outcome === "non-seeded") {
+        for (const key of [summaryKey, supplyKey]) queryClient.setQueryData(key, queryClient.getQueryData(key));
+      }
+      const response = Promise.withResolvers<{ data: StablecoinLiveSummary; meta: ApiMeta }>();
+      const pending = queryClient.fetchQuery({ queryKey: summaryKey, queryFn: () => response.promise, retry: false });
+      const supplyResponse = Promise.withResolvers<{ data: unknown; meta: ApiMeta }>();
+      const supplyPending = queryClient.fetchQuery({ queryKey: supplyKey, queryFn: () => supplyResponse.promise, retry: false });
+      const settled = Promise.allSettled([pending, supplyPending]);
+      const { rerender } = renderHook(() => useStablecoinDetailViewModel({
+        id: coin.id, coin, summary: null, supplementalQueryControls: DISABLED_DETAIL_QUERY_CONTROLS,
+      }));
+      const entries = () => {
+        const params = mocks.buildStablecoinDetailViewModel.mock.calls.at(-1)![0];
+        return buildDetailStaleQueries(params.queries, params.supplemental, coin.id)
+          .filter((query) => ["Detail snapshot", "Supply history"].includes(query.label ?? ""));
+      };
+      const banner = () => renderToStaticMarkup(<StaleDataBanner queries={entries()} onRetry={() => {}} />);
+      expect(banner()).toEqual(outcome === "non-seeded" ? expect.stringContaining("Showing an older snapshot") : "");
+      expect(mocks.trackFreshDataReady).not.toHaveBeenCalled();
+      if (["fetching", "non-seeded"].includes(outcome)) return;
+      if (outcome === "paused" || outcome === "idle") {
+        for (const key of [summaryKey, supplyKey]) queryClient.getQueryCache().find({ queryKey: key })!
+          .setState({ fetchStatus: outcome });
+        rerender();
+        expect(banner()).toContain("Showing an older snapshot");
+        expect(entries().every((query) => !query.awaitingLiveRead)).toBe(true);
+        return;
+      }
+      if (outcome === "failed") {
+        const failure = new Error("refresh failed");
+        response.reject(failure);
+        supplyResponse.reject(failure);
+        await settled;
+        expect(queryClient.getQueryState(summaryKey)?.errorUpdateCount).toBe(1);
+      } else {
+        const updatedAt = outcome === "fresh" ? Date.now() : old;
+        response.resolve({ data, meta: { updatedAt: updatedAt / 1000, status: "fresh" } });
+        supplyResponse.resolve({ ...queryClient.getQueryData<{ data: unknown; meta: ApiMeta }>(supplyKey)!,
+          meta: { updatedAt: Date.now() / 1000, status: "fresh" } });
+        await Promise.all([pending, supplyPending]);
+      }
+      rerender();
+      expect(isDetailSnapshotQuery(queryClient, summaryKey)).toBe(false);
+      expect(isDetailSnapshotQuery(queryClient, supplyKey)).toBe(false);
+      expect(entries().every((query) => !query.awaitingLiveRead)).toBe(true);
+      if (outcome === "fresh") {
+        expect(banner()).toBe("");
+        rerender();
+        expect(mocks.trackFreshDataReady).toHaveBeenCalledExactlyOnceWith("detail-summary");
+      } else {
+        expect(banner()).toContain("Showing an older snapshot");
+        expect(mocks.trackFreshDataReady).not.toHaveBeenCalled();
+        if (outcome === "failed") {
+          expect(banner()).toContain("Retry");
+          expect(entries().every((query) => query.error instanceof Error)).toBe(true);
+        }
+      }
+    },
+  );
 
   it("retains the ready projection across parent renders until query data changes", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;

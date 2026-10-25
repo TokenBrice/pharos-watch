@@ -133,9 +133,11 @@ export function useStablecoinDetailViewModel({
         reason: "producer-timestamp-unavailable",
       },
       enabled: !usingArchive,
+      awaitingLiveRead: summaryIsSnapshot && liveSummaryQuery.fetchStatus === "fetching",
     };
   }, [archivedLiveSummary, displayedSummary.data, displayedSummary.meta, displayedSummary.isRetained,
-    liveSummaryQuery.dataUpdatedAt, liveSummaryQuery.error, liveSummaryQuery.isLoading]);
+    liveSummaryQuery.dataUpdatedAt, liveSummaryQuery.error, liveSummaryQuery.isLoading,
+    summaryIsSnapshot, liveSummaryQuery.fetchStatus]);
   useEffect(() => {
     // Early prefetch may finish before this observer mounts; explicit admitted
     // live provenance, not isFetchedAfterMount, distinguishes it from a seed.
@@ -170,7 +172,14 @@ export function useStablecoinDetailViewModel({
   const yieldRankings = useGatedQuerySlice(yieldRankingsQuery, yieldEnabled);
   const stressSignals = useGatedQuerySlice(stressSignalsQuery, stressEnabled);
 
-  const supplyHistory = useQuerySlice(supplyQuery);
+  const supplySlice = useQuerySlice(supplyQuery);
+  const supplyAwaitingLiveRead = isDetailSnapshotQuery(queryClient,
+    FRONTEND_API_QUERY_DESCRIPTORS.supplyHistory(id, STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS).queryKey)
+    && supplyQuery.isFetching;
+  const supplyHistory = useMemo(
+    () => ({ ...supplySlice, awaitingLiveRead: supplyAwaitingLiveRead }),
+    [supplySlice, supplyAwaitingLiveRead],
+  );
   const annualPriceHistory = useGatedQuerySlice(annualPriceQuery, annualPriceEnabled);
   const pegSummary = useQuerySlice(pegQuery);
   const queries = useMemo(

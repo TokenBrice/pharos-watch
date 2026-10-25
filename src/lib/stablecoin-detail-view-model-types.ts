@@ -31,6 +31,7 @@ import type { ReportCardsV9DetailResponse } from "@shared/types/report-cards-v9-
 export interface DetailQueryResource<TData> {
   data?: TData;
   isLoading?: boolean;
+  awaitingLiveRead?: boolean;
   dataUpdatedAt: number;
   error: unknown | null;
   meta: ApiMeta | null;
@@ -113,6 +114,7 @@ export interface StablecoinDetailStaleQuery {
   enabled?: boolean;
   /** First fetch in flight: the freshness banner waits instead of reporting "not populated". */
   isLoading?: boolean;
+  awaitingLiveRead?: boolean;
 }
 
 export type StablecoinDetailFeatureStatus = GatedQueryViewState;

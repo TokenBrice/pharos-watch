@@ -364,6 +364,7 @@ Domain applications: [R8 redemption admission](process/architecture-appendix.md#
 
 - **ADR-42 — Readers see material data problems only; operators get the rest.** A public surface warns only when data is past its stale band (`FRESHNESS_RATIOS.DEGRADED`, 12× the producer interval, or the producer's `degradedBudgetSec`), is missing with nothing retained, or is curated as quarantined/delisted. `degraded` findings (source/quality advisories, non-fresh dependencies, failed refreshes over retained data, catch-up and mild lateness) are not reader notices: they reach the operator Telegram through the sentinel watchdogs and stay inspectable on /status. `isPublicWarning` is the single visibility authority; components do not invent their own thresholds.
 - R2 still binds at the value: an unreadable observation stays unavailable where it is displayed, and suppressing a page-level notice never turns a failed read into a healthy claim. R3/R4 budgets, generations and machine reasons remain in API payloads and /status; only their reader display is removed. Owners: [detail page](./stablecoin-detail-page.md), [Telegram operator alerts](./telegram-alerts.md).
+- A detail build seed is excluded from banner evaluation only while its first live read is in flight; this never suppresses a settled verdict, and paused/offline reads remain evaluated.
 
 #### ADR-5
 

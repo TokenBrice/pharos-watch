@@ -375,6 +375,8 @@ During static export, the server page reads only the current coin's file and pas
 
 Hydration seeds `{ data, meta }` envelopes rather than plain lane values. Each lane's metadata clock comes only from its independent `snapshot.updatedAt` field; a missing/invalid clock yields explicit unavailable-clock metadata and an immediately refetchable query. Seed precedence compares the existing envelope's producer clock, so a recent request receipt cannot hide an older generation or let an older artifact overwrite a newer one.
 
+For both seeded lanes, a seed awaiting its first live read is not evaluated by the shared stale banner while that read is fetching. Success or error permanently settles seed provenance; the served producer clock and any error then determine health as usual. Paused/offline reads and seeds with no fetch remain evaluated, and neither the producer clock nor the hero's neutral update stamp changes.
+
 The first live refresh reads the site-only `GET /api/stablecoin-live-summary/:id` transport (browser `/_site-data/stablecoin-live-summary/:id`), not the history-rich public dossier or `/api/stablecoin-summary/:id`. The Worker runs the same detail provider/cache and canonical enrichment path, then applies `projectStablecoinLiveSummary` server-side. Its compact body retains the exact USD/native checkpoints, separate price/supply clocks, restoration/quarantine state and unavailable values; `_meta.updatedAt` is the original combined producer clock, never request receipt time. History and provider research passthrough fields do not cross this summary boundary. The full `/api/stablecoin/:id` remains available for public integrations and per-coin build acquisition.
 
 The raw parser request remains early, but explicit query-cache adoption runs in the client boundary's mount effect, not during render. An already-resolved transport must not replace seed provenance before the saved dossier's first hydration render; only the mounted tree transitions from the saved-refresh slot to settled live/stale health.
@@ -420,6 +422,8 @@ Static FAQ answers and their JSON-LD keep whole sentences within the prose budge
 ### Shared stale banner
 
 Shared health projection lives in `src/lib/data-health.ts`; `DATA_HEALTH_PRESETS` in `src/lib/data-health-config.ts` projects `API_FRESHNESS_MAX_AGE_SEC`. Backend `_meta.status`, `X-Data-Age` and stale `Warning` evidence override browser-fetch freshness: receipt of HTTP 200 cannot renew an old producer. `FRONTEND_API_QUERY_DESCRIPTORS` owns polling (normally producer interval stale time and twice-interval refetch), separately from endpoint/banner freshness budgets. Each route owns its monitored `StaleQuery` set; homepage PSI/mint-burn/DEWS and Compare supply-history/per-coin flows are not automatically page-banner queries.
+
+Like an empty first fetch in flight, a seed awaiting its first live read is not evaluated while fetching: the detail summary and seeded supply-history entries opt in through `awaitingLiveRead`. The exclusion ends on settlement or pause, never hides an error, and leaves ordinary retained-data refetches and all freshness thresholds unchanged.
 
 The page-level stale banner starts with the five page-defining shared presets:
 
