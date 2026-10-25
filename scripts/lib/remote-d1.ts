@@ -95,7 +95,9 @@ function executeSqlFile(
     writeFileSync(sqlFile, statements.join("\n"), { mode: 0o600 });
     const receipt = executeWrangler(["d1", "execute", databaseName, `--${options.target}`, "--file", sqlFile, "--json"], options);
     succeeded = true;
-    return receipt;
+    // Wrangler 4.x prints `--file` import progress ("├ Checking…") to stdout ahead of the JSON body.
+    const jsonStart = receipt.search(/^[[{]/m);
+    return jsonStart > 0 ? receipt.slice(jsonStart) : receipt;
   } catch (cause) {
     if (!options.failedSqlDirectory) throw cause;
     const diagnostics: string[] = [];
