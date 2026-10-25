@@ -890,52 +890,27 @@ describe("resolveOutlook — factor-code emission (guards against silent code re
     );
   });
 
-  it("uses measured V9 exit reasons and collapsed capacity for K5", () => {
+  it("caps static V9 exit evidence at elevated and re-scales capacity to the dislocation", () => {
+    const thinRoute = (executableUsd: number) => v9Exit({
+      primaryRoute: {
+        key: "redemption:measured",
+        score: 80,
+        capacity: { executableUsd, requestedNotionalUsd: 1_000_000, completionRatio: executableUsd / 1_000_000 },
+      },
+    });
     const fixtures: Array<{
       name: string;
       exit: DdrV9ExitContext;
-      severity: "severe" | "elevated";
+      circulatingUsd?: number;
+      severity: "elevated" | null;
     }> = [
-      {
-        name: "no viable exit",
-        exit: v9Exit({ reasonCodes: ["no-viable-exit-path"], primaryRoute: null }),
-        severity: "severe",
-      },
-      {
-        name: "correlated routes",
-        exit: v9Exit({ reasonCodes: ["correlated-exit-routes"] }),
-        severity: "elevated",
-      },
-      {
-        name: "exhausted measured capacity",
-        exit: v9Exit({
-          primaryRoute: {
-            key: "redemption:measured",
-            score: 80,
-            capacity: {
-              executableUsd: 5_000,
-              requestedNotionalUsd: 1_000_000,
-              completionRatio: 0.005,
-            },
-          },
-        }),
-        severity: "severe",
-      },
-      {
-        name: "thin measured capacity",
-        exit: v9Exit({
-          primaryRoute: {
-            key: "redemption:measured",
-            score: 80,
-            capacity: {
-              executableUsd: 40_000,
-              requestedNotionalUsd: 1_000_000,
-              completionRatio: 0.04,
-            },
-          },
-        }),
-        severity: "elevated",
-      },
+      { name: "no viable exit", exit: v9Exit({ reasonCodes: ["no-viable-exit-path"], primaryRoute: null }), severity: "elevated" },
+      { name: "correlated routes", exit: v9Exit({ reasonCodes: ["correlated-exit-routes"] }), severity: "elevated" },
+      // $200k executable is 20% of the $1M stress request (thin for V9), but
+      // deeper than the $138k value gap of a 300 bps break on $4.6M supply.
+      { name: "small float, enough depth for the dislocation", exit: thinRoute(200_000), circulatingUsd: 4_600_000, severity: null },
+      { name: "depth smaller than the dislocation", exit: thinRoute(25_700), circulatingUsd: 4_600_000, severity: "elevated" },
+      { name: "unknown supply cannot size the dislocation", exit: thinRoute(5_000), severity: null },
     ];
 
     for (const fixture of fixtures) {
@@ -946,12 +921,52 @@ describe("resolveOutlook — factor-code emission (guards against silent code re
         baseLive({
           safetyContext: { status: "v9-identified", reason: null, identity: null },
           v9Exit: fixture.exit,
+          circulatingUsd: fixture.circulatingUsd,
         }),
       );
-      expect(r.factors).toContainEqual(
-        expect.objectContaining({ code: "K5_exit_collapse", severity: fixture.severity }),
-      );
+      const k5 = r.factors.find((factor) => factor.code === "K5_exit_collapse");
+      expect(k5?.severity ?? null, fixture.name).toBe(fixture.severity);
     }
+  });
+
+  it("rates K5 severe only for an exit collapse measured from the onset baseline", () => {
+    const outlook = (live: Partial<DdrLiveContext>) => resolveOutlook(
+      event(),
+      coin({ authorityPosture: "none-resolved" }),
+      baseSupply(),
+      baseLive(live),
+    ).factors.find((factor) => factor.code === "K5_exit_collapse");
+
+    expect(outlook({ liquidityScore: 15, tvlChangeSinceOnsetPct: -55 })).toMatchObject({ severity: "severe" });
+    // A trailing seven-day drop or a thin market alone is not an in-incident collapse.
+    expect(outlook({ liquidityScore: 15, tvlChange7d: -55 })).toMatchObject({ severity: "elevated" });
+    expect(outlook({ liquidityScore: 15, tvlChangeSinceOnsetPct: -20 })).toMatchObject({ severity: "elevated" });
+    expect(outlook({ liquidityScore: 45, tvlChangeSinceOnsetPct: -55 })).toBeUndefined();
+    expect(outlook({ redemptionCapacityRatio: 0.001 })).toMatchObject({ severity: "elevated" });
+  });
+
+  it("maps evidence classes: shallow stress never condemns, deep compounded stress does", () => {
+    const exotic = coin({ authorityPosture: "reviewed-non-risky", collateralQuality: "exotic" });
+    const thin = baseLive({ liquidityScore: 15 });
+    const tier = (peakDeviationBps: number, structural: DdrCoinStructural, live = baseLive()) => resolveOutlook(
+      event({ peakDeviationBps, currentDeviationBps: peakDeviationBps }),
+      structural,
+      baseSupply(),
+      live,
+    ).tier;
+
+    expect(tier(-300, coin({ authorityPosture: "none-resolved" }))).toBe("recovery_likely");
+    expect(tier(-300, exotic)).toBe("at_risk");
+    expect(tier(-300, exotic, thin)).toBe("at_risk");
+    expect(tier(-1_200, exotic, thin)).toBe("recovery_unlikely");
+    expect(tier(-1_200, coin({ authorityPosture: "none-resolved" }))).toBe("at_risk");
+    // The worse of the stored peak and the live deviation sets the break depth.
+    expect(resolveOutlook(
+      event({ peakDeviationBps: -300, currentDeviationBps: -1_500 }),
+      exotic,
+      baseSupply(),
+      thin,
+    ).tier).toBe("recovery_unlikely");
   });
 
   it("keeps V9 exit evidence null-degraded when the V9 publication is unavailable", () => {
@@ -1093,7 +1108,10 @@ describe("incident grouping + quarantine", () => {
         { offsetSec: 46900, peakDeviationBps: -700 },
       ],
     })]);
-    expect(buildDurationTrainingCorpus(live, new Set())).toEqual([]);
+    // DDRv5 keeps unrecovered incidents as censored observations: a closed
+    // non-recovery at its end, an open one only against an evaluation clock.
+    expect(buildDurationTrainingCorpus(live, new Set())).toHaveLength(closeReason == null ? 0 : 1);
+    expect(buildDurationTrainingCorpus(live, new Set(), 100_000)).toHaveLength(1);
   });
 
   it("keeps live grouping at 6h while duration labels use 24h stickiness", () => {
@@ -1285,23 +1303,54 @@ describe("computeDuration", () => {
     expect(d.medianSec).toBe(18 * 3600);
   });
 
-  it("publishes the p15/p85 typical range", () => {
+  it("publishes the p15/p85 typical range from the recovery incidence curve", () => {
     const incidents = Array.from({ length: 20 }, (_, i) => incident(`quantile-${i}`, i * 3 * 86400, (i + 1) * 3600));
 
     const d = computeDuration(key, 0, incidents, new Set());
 
-    expect(d.iqrSec).toEqual([3.85 * 3600, 17.15 * 3600]);
+    // One coin per incident: incidence steps 5pp an hour, so 15% is reached at 3h and 85% at 17h.
+    expect(d.iqrSec).toEqual([3 * 3600, 17 * 3600]);
+    expect(d).toMatchObject({ estimand: "cumulative_incidence", unresolvedShare30d: 0 });
   });
 
-  it("coin-deduplicates the published median and typical range", () => {
+  it("leaves unreached quantiles empty and publishes the unresolved share when incidents do not recover", () => {
+    const recovered = Array.from({ length: 6 }, (_, i) => incident(`rec-${i}`, i * 3 * 86400, (i + 1) * 3600));
+    const terminal = Array.from({ length: 4 }, (_, i) =>
+      incident(`dead-${i}`, i * 3 * 86400, null, { recovered: false, terminalAt: i * 3 * 86400 + 40 * 86400 }));
+
+    const d = computeDuration(key, 0, [...recovered, ...terminal], new Set(), 400 * 86400);
+
+    expect(d.medianSec).toBe(5 * 3600);
+    expect(d.iqrSec).toBeNull();
+    expect(d.unresolvedShare30d).toBeCloseTo(0.4, 9);
+    expect(d.horizons.find((h) => h.horizon === "30d")?.intervalNonClosures).toBe(4);
+  });
+
+  it("right-censors still-open incidents instead of dropping them", () => {
+    const recovered = Array.from({ length: 10 }, (_, i) => incident(`rec-${i}`, i * 86400, 2 * 3600));
+    const open = Array.from({ length: 10 }, (_, i) => incident(`open-${i}`, 1_000_000 + i, null, { recovered: false }));
+    const nowSec = 1_000_000 + 3 * 3600;
+
+    const withOpen = computeDuration(key, 0, [...recovered, ...open], new Set(), nowSec);
+    const h24 = withOpen.horizons.find((h) => h.horizon === "24h")!;
+
+    // Open incidents are observed for ~3h: they stay at risk past the 2h
+    // recoveries, then leave as censored without diluting later horizons.
+    expect(h24).toMatchObject({ rawAtRisk: 20, intervalClosures: 10, intervalNonClosures: 0 });
+    expect(withOpen.medianSec).toBe(2 * 3600);
+  });
+
+  it("coin-weights the incident-level median and typical range", () => {
     const flapper = Array.from({ length: 20 }, (_, i) => incident("flapper", i * 48 * 3600, 3600));
     const otherCoins = [20, 30, 40, 50].map((hours, i) => incident(`other-${i}`, (i + 20) * 48 * 3600, hours * 3600));
 
     const d = computeDuration(key, 0, [...flapper, ...otherCoins], new Set());
 
+    // The flapper's twenty 1h incidents share one coin unit: incidence reaches
+    // 20% at 1h, then 20pp per other coin at 20/30/40/50h.
     expect(d.suppressed).toBe(false);
     expect(d.medianSec).toBe(30 * 3600);
-    expect(d.iqrSec).toEqual([12.4 * 3600, 44 * 3600]);
+    expect(d.iqrSec).toEqual([3600, 50 * 3600]);
   });
 
   it("does not borrow minor-depth clocks for a severe active event", () => {
@@ -1457,7 +1506,7 @@ describe("resolveDepeg orchestration", () => {
     expect(row.resolution.tier).toBe(tier);
     expect(row.duration).toEqual({
       suppressed: true, suppressedReason: reason, stratum: null, medianSec: null,
-      iqrSec: null, ageStatus: null, horizons: [],
+      iqrSec: null, ageStatus: null, horizons: [], estimand: "cumulative_incidence", unresolvedShare30d: null,
     });
     expect(row.ageSec).toBe(3600);
   });

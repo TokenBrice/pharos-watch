@@ -1,0 +1,19 @@
+[
+  {
+    "version": "5.0",
+    "title": "Evidence-class verdicts, competing-risk duration odds and reviewer v5",
+    "date": "2026-10-25",
+    "effectiveAt": 1792886400,
+    "summary": "DDR v5 condemns a coin only on terminal evidence, publishes duration as unconditional recovery odds that keep non-recovery visible, and grades its calls against naive baselines.",
+    "impact": [
+      "Verdicts read as evidence classes: No break signals, Stress signals and Terminal evidence. Wire tier codes are unchanged; rows locked before v5 keep their original Recovery Likely / At Risk / Recovery Unlikely labels.",
+      "Static exit thinness no longer condemns a coin. V9 exit capacity is re-scaled from the Safety Score stress request (a $1M floor) to the dislocation's value gap, and it, no-viable-route and thin redemption capacity cap at elevated. K5 is severe only when DEX TVL collapses at least 40% from the event's onset baseline on a thin market.",
+      "Two or more elevated kill signals without a strong structural anchor are terminal evidence only on a severe below-peg break (deeper than 1,000 bps, using the worse of the stored peak and live deviation). A deep break with no kill signal reads as Stress signals.",
+      "Duration odds estimate the share of comparable incidents that recover, with terminal incidents as a competing outcome and still-open or non-recovery closures censored at their last observation (coin-weighted Aalen–Johansen). Quantiles the curve never reaches stay empty and the share not recovered within 30 days is published.",
+      "Typical-range and median readouts come from the incident-level curve instead of percentiles of per-coin medians. Horizon odds that fail the replay skill gate are published as not informative.",
+      "New predictions persist a raw decision-input snapshot so later methodology changes can be replayed over sealed history. Frozen v2–v4 predictions keep their contents, hashes and methodology; they are not regraded."
+    ],
+    "commits": [],
+    "reconstructed": false
+  }
+]

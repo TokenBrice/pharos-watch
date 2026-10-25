@@ -16,7 +16,7 @@ export const DEPEG_DEWS_METHODOLOGY_VERSION = "6.38";
 export const DEPEG_DEWS_METHODOLOGY_VERSION_LABEL = methodologyLabel(DEPEG_DEWS_METHODOLOGY_VERSION);
 export const DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH = "/methodology/depeg-changelog/";
 
-export const DDR_METHODOLOGY_VERSION = "4.9";
+export const DDR_METHODOLOGY_VERSION = "5.0";
 export const DDR_METHODOLOGY_VERSION_LABEL = methodologyLabel(DDR_METHODOLOGY_VERSION);
 export const DDR_METHODOLOGY_CHANGELOG_PATH = "/methodology/depeg-resolver-changelog/";
 

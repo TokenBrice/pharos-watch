@@ -158,18 +158,137 @@ const SAFETY_CONTEXT_STATUS_BY_RECORD: Readonly<Record<string, DdrSafetyContextS
 // delta remains a failure.
 const EXPECTED_DELTAS: ExpectedDelta[] = [
   {
-    taskId: "REM-D",
-    rowId: "ddrr-67",
-    from: "recovery_likely",
-    to: "at_risk",
-    reason: "cEUR's registry has neither native collateral nor qualifying reserves for the fabricated strong R2 anchor.",
+    taskId: "DDRv5",
+    rowId: "ddrr-73",
+    from: "at_risk",
+    to: "recovery_likely",
+    reason: "DDRv5 evidence classes: a shallow break with no fired kill signal reads as no break signals; anchors no longer gate the tier.",
   },
   {
-    taskId: "T2.4",
+    taskId: "DDRv5",
+    rowId: "ddrr-72",
+    from: "at_risk",
+    to: "recovery_likely",
+    reason: "DDRv5 evidence classes: a shallow break with no fired kill signal reads as no break signals; anchors no longer gate the tier.",
+  },
+  {
+    taskId: "DDRv5",
+    rowId: "ddrr-68",
+    from: "at_risk",
+    to: "recovery_likely",
+    reason: "DDRv5 evidence classes: a shallow break with no fired kill signal reads as no break signals; anchors no longer gate the tier.",
+  },
+  {
+    taskId: "DDRv5",
+    rowId: "ddrr-66",
+    from: "recovery_unlikely",
+    to: "at_risk",
+    reason: "DDRv5: PHT's two elevated static kills sit on a shallow (-152 bps) break, so they are stress signals rather than terminal evidence.",
+  },
+  {
+    taskId: "DDRv5",
+    rowId: "ddrr-65",
+    from: "at_risk",
+    to: "recovery_likely",
+    reason: "DDRv5 evidence classes: a shallow break with no fired kill signal reads as no break signals; anchors no longer gate the tier.",
+  },
+  {
+    taskId: "DDRv5",
+    rowId: "ddrr-64",
+    from: "at_risk",
+    to: "recovery_likely",
+    reason: "DDRv5 evidence classes: a shallow break with no fired kill signal reads as no break signals; anchors no longer gate the tier.",
+  },
+  {
+    taskId: "DDRv5",
+    rowId: "ddrr-62",
+    from: "at_risk",
+    to: "recovery_likely",
+    reason: "DDRv5 evidence classes: a shallow break with no fired kill signal reads as no break signals; anchors no longer gate the tier.",
+  },
+  {
+    taskId: "DDRv5",
+    rowId: "ddrr-55",
+    from: "at_risk",
+    to: "recovery_likely",
+    reason: "DDRv5 evidence classes: a shallow break with no fired kill signal reads as no break signals; anchors no longer gate the tier.",
+  },
+  {
+    taskId: "DDRv5",
+    rowId: "ddrr-52",
+    from: "at_risk",
+    to: "recovery_likely",
+    reason: "DDRv5 evidence classes: a shallow break with no fired kill signal reads as no break signals; anchors no longer gate the tier.",
+  },
+  {
+    taskId: "DDRv5",
+    rowId: "ddrr-51",
+    from: "at_risk",
+    to: "recovery_likely",
+    reason: "DDRv5 evidence classes: a shallow break with no fired kill signal reads as no break signals; anchors no longer gate the tier.",
+  },
+  {
+    taskId: "DDRv5",
+    rowId: "ddrr-49",
+    from: "at_risk",
+    to: "recovery_likely",
+    reason: "DDRv5 evidence classes: a shallow break with no fired kill signal reads as no break signals; anchors no longer gate the tier.",
+  },
+  {
+    taskId: "DDRv5",
     rowId: "ddrr-48",
     from: "recovery_unlikely",
     to: "at_risk",
-    reason: "PHT's CDP mechanism makes static exotic collateral insufficient for K2.",
+    reason: "DDRv5: PHT's two elevated static kills sit on a shallow (-153 bps) break, so they are stress signals rather than terminal evidence.",
+  },
+  {
+    taskId: "DDRv5",
+    rowId: "ddrr-47",
+    from: "at_risk",
+    to: "recovery_likely",
+    reason: "DDRv5 evidence classes: a shallow break with no fired kill signal reads as no break signals; anchors no longer gate the tier.",
+  },
+  {
+    taskId: "DDRv5",
+    rowId: "ddrr-44",
+    from: "at_risk",
+    to: "recovery_likely",
+    reason: "DDRv5 evidence classes: a shallow break with no fired kill signal reads as no break signals; anchors no longer gate the tier.",
+  },
+  {
+    taskId: "DDRv5",
+    rowId: "ddrr-42",
+    from: "at_risk",
+    to: "recovery_likely",
+    reason: "DDRv5 evidence classes: a shallow break with no fired kill signal reads as no break signals; anchors no longer gate the tier.",
+  },
+  {
+    taskId: "DDRv5",
+    rowId: "ddrr-41",
+    from: "at_risk",
+    to: "recovery_likely",
+    reason: "DDRv5 evidence classes: a shallow break with no fired kill signal reads as no break signals; anchors no longer gate the tier.",
+  },
+  {
+    taskId: "DDRv5",
+    rowId: "ddrr-40",
+    from: "at_risk",
+    to: "recovery_likely",
+    reason: "DDRv5 evidence classes: a shallow break with no fired kill signal reads as no break signals; anchors no longer gate the tier.",
+  },
+  {
+    taskId: "DDRv5",
+    rowId: "ddrr-39",
+    from: "at_risk",
+    to: "recovery_likely",
+    reason: "DDRv5 evidence classes: a shallow break with no fired kill signal reads as no break signals; anchors no longer gate the tier.",
+  },
+  {
+    taskId: "DDRv5",
+    rowId: "ddrr-34",
+    from: "at_risk",
+    to: "recovery_likely",
+    reason: "DDRv5 evidence classes: a shallow break with no fired kill signal reads as no break signals; anchors no longer gate the tier.",
   },
   {
     taskId: "T2.1",
@@ -186,18 +305,32 @@ const EXPECTED_DELTAS: ExpectedDelta[] = [
     reason: "GYEN's issuer-announced wind-down predates the prediction lock.",
   },
   {
-    taskId: "T2.4",
-    rowId: "ddrr-24",
-    from: "recovery_unlikely",
-    to: "at_risk",
-    reason: "USDXL's CDP mechanism makes static reserve concentration insufficient for severe K2.",
+    taskId: "DDRv5",
+    rowId: "ddrr-26",
+    from: "at_risk",
+    to: "recovery_likely",
+    reason: "DDRv5 evidence classes: a shallow break with no fired kill signal reads as no break signals; anchors no longer gate the tier.",
   },
   {
-    taskId: "T2.4",
+    taskId: "DDRv5",
+    rowId: "ddrr-24",
+    from: "recovery_unlikely",
+    to: "recovery_likely",
+    reason: "USDXL's CDP mechanism exempts static reserve concentration from K2; with no kill signal on a shallow break DDRv5 reads no break signals.",
+  },
+  {
+    taskId: "DDRv5",
+    rowId: "ddrr-20",
+    from: "at_risk",
+    to: "recovery_likely",
+    reason: "DDRv5 evidence classes: a shallow break with no fired kill signal reads as no break signals; anchors no longer gate the tier.",
+  },
+  {
+    taskId: "DDRv5",
     rowId: "ddrr-17",
     from: "recovery_unlikely",
-    to: "at_risk",
-    reason: "USDXL's CDP mechanism makes static reserve concentration insufficient for K2.",
+    to: "recovery_likely",
+    reason: "USDXL's CDP mechanism exempts static reserve concentration from K2; with no kill signal on a shallow break DDRv5 reads no break signals.",
   },
   {
     taskId: "T2.1",
@@ -211,15 +344,7 @@ const EXPECTED_DELTAS: ExpectedDelta[] = [
     rowId: "ddrr-3",
     from: "recovery_unlikely",
     to: "at_risk",
-    reason:
-      "Mechanism-gated K2 accepts downgrading one reflexive-collateral CDP terminal to an at_risk hedge.",
-  },
-  {
-    taskId: "REM-D",
-    rowId: "ddrr-2",
-    from: "at_risk",
-    to: "recovery_unlikely",
-    reason: "WEUSD's fiat-cash/exotic registry profile adds elevated K2 alongside elevated K5.",
+    reason: "Mechanism-gated K2 removes the reflexive-collateral CDP kill; the catastrophic below-peg break itself keeps DDRv5 at stress signals.",
   },
 ];
 
@@ -398,6 +523,9 @@ function reconstructResolutionInput(row: LockedVerdictRow): DdrResolveInput {
 
   if (k5?.severity === "severe") {
     live.tvlChange7d = -50;
+  } else if (k5?.severity === "elevated" && !(evidence.liquidityScore != null && evidence.liquidityScore < 30)) {
+    // The recorded elevated attribution came from a non-liquidity leg (bank-run outflow).
+    live.bankRun = true;
   }
 
   if (r4?.severity === "strong") {

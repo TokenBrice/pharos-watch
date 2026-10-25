@@ -177,7 +177,7 @@ describe("DDRR row contract", () => {
   it("bumps the public reviewer version and emits discriminated prediction rows", () => {
     const row = reviewDepegResolverAssessment(assessment(), actualEvent(), REVIEWED_AT);
 
-    expect(DDRR_REVIEWER_VERSION).toBe("ddr-reviewer-v4");
+    expect(DDRR_REVIEWER_VERSION).toBe("ddr-reviewer-v5");
     expect(row.kind).toBe("prediction_review");
     expect(row.predictionState).toBe("frozen");
     expect(row.lockedAt).toBe(LOCKED_AT);
@@ -345,6 +345,114 @@ describe("DDRR scoring", () => {
     expect(row.actual.kind).toBe("terminal");
     expect(row.verdictReview).toBe("correct_terminal");
     expect(row.durationReview).toBe("duration_unscored");
+  });
+
+  it("classifies terminal evidence settled before the lock as curation debt, not a forecast outcome", () => {
+    const settled = reviewDepegResolverAssessment(
+      assessment({ resolutionTier: "at_risk" }),
+      actualEvent({
+        endedAt: null,
+        recoveryPrice: null,
+        terminalObserved: true,
+        terminalEvidenceAt: LOCKED_AT - 2 * 86_400,
+        terminalEvidenceInterval: { start: LOCKED_AT - 2 * 86_400, end: LOCKED_AT - 86_400 },
+        terminalEvidencePrecision: "day",
+      }),
+      REVIEWED_AT,
+    );
+    // Evidence whose interval straddles the lock was not yet settled: still a forecast outcome.
+    const straddling = reviewDepegResolverAssessment(
+      assessment({ resolutionTier: "at_risk" }),
+      actualEvent({
+        endedAt: null,
+        recoveryPrice: null,
+        terminalObserved: true,
+        terminalEvidenceAt: LOCKED_AT - 3_600,
+        terminalEvidenceInterval: { start: LOCKED_AT - 3_600, end: LOCKED_AT + 82_800 },
+        terminalEvidencePrecision: "day",
+      }),
+      REVIEWED_AT,
+    );
+
+    expect(settled.actual.kind).toBe("terminal");
+    expect(settled.verdictReview).toBe("terminal_at_lock");
+    expect(straddling.verdictReview).toBe("risk_noted_terminal");
+    const metrics = summarizeDdrrRows([settled, straddling]).byPredictionPolicy.find((segment) => segment.segmentKind === "all")!.metrics;
+    expect(metrics).toMatchObject({ terminalAtLockCount: 1, recoveryLikelihoodScoredCount: 1, terminalOutcomeCount: 1 });
+  });
+
+  it("grades a still-open incident past its upper band as slower than band", () => {
+    const overdue = reviewDepegResolverAssessment(
+      assessment({ iqrRemainingSec: [1_800, 7_200] }),
+      actualEvent({ endedAt: null, recoveryPrice: null }),
+      LOCKED_AT + 7_201,
+    );
+    const notYet = reviewDepegResolverAssessment(
+      assessment({ iqrRemainingSec: [1_800, 7_200] }),
+      actualEvent({ endedAt: null, recoveryPrice: null }),
+      LOCKED_AT + 7_200,
+    );
+
+    expect(overdue).toMatchObject({ durationReview: "slower_than_band", withinIqr: false, signedDurationErrorSec: null });
+    expect(notYet).toMatchObject({ durationReview: "duration_unscored", withinIqr: null });
+    const metrics = summarizeDdrrRows([overdue]).byPredictionPolicy.find((segment) => segment.segmentKind === "all")!.metrics;
+    expect(metrics).toMatchObject({ overdueOpenCount: 1, iqrScoredCount: 1, withinIqrCount: 0, durationScoredCount: 0 });
+  });
+
+  it("reports skill against the always-recover baseline, tier outcomes and log-ratio duration error", () => {
+    const rows = [
+      // Recovered in 2h against a 1h median: 2x slower, inside 2x.
+      reviewDepegResolverAssessment(assessment({ eventId: 1, incidentKey: "ddr2:a" }), actualEvent({ endedAt: LOCKED_AT + 7_200 }), REVIEWED_AT),
+      // Recovered in 4h against a 1h median: outside 2x.
+      reviewDepegResolverAssessment(
+        assessment({ eventId: 2, incidentKey: "ddr2:b", resolutionTier: "at_risk" }),
+        actualEvent({ eventId: 2, currentEventId: 2, endedAt: LOCKED_AT + 14_400 }),
+        REVIEWED_AT,
+      ),
+      // False terminal call.
+      reviewDepegResolverAssessment(
+        assessment({ eventId: 3, incidentKey: "ddr2:c", resolutionTier: "recovery_unlikely", durationSuppressed: true, predictedRemainingSec: null, iqrRemainingSec: null }),
+        actualEvent({ eventId: 3, currentEventId: 3, endedAt: LOCKED_AT + 3_600 }),
+        REVIEWED_AT,
+      ),
+    ];
+    const metrics = summarizeDdrrRows(rows).byPredictionPolicy.find((segment) => segment.segmentKind === "all")!.metrics;
+
+    expect(metrics).toMatchObject({
+      recoveryLikelihoodCorrectCount: 2,
+      recoveryLikelihoodScoredCount: 3,
+      baselineRecoverableCorrectCount: 3,
+      terminalCallCount: 1,
+      terminalCallCorrectCount: 0,
+      terminalOutcomeCount: 0,
+      tierOutcomes: [
+        { tier: "recovery_likely", recovered: 1, terminal: 0 },
+        { tier: "at_risk", recovered: 1, terminal: 0 },
+        { tier: "recovery_unlikely", recovered: 1, terminal: 0 },
+      ],
+      within2xCount: 1,
+    });
+    expect(metrics.medianLog2DurationRatio).toBeCloseTo(1.5, 9);
+  });
+
+  it("scores horizon Brier skill on every matured horizon against a leave-one-out base rate", () => {
+    const rows = [0, 1, 2, 3].map((i) => reviewDepegResolverAssessment(
+      assessment({
+        eventId: i + 1,
+        incidentKey: `ddr2:h${i}`,
+        horizonCells: [horizonCell("6h", { probability: i < 2 ? 0.9 : 0.1 })],
+      }),
+      actualEvent({ eventId: i + 1, currentEventId: i + 1, endedAt: i < 2 ? LOCKED_AT + 3_600 : null, recoveryPrice: i < 2 ? 1 : null }),
+      LOCKED_AT + 30 * 86_400,
+    ));
+    const skill = summarizeDdrrRows(rows).byPredictionPolicy
+      .find((segment) => segment.segmentKind === "all")!.metrics.horizonSkill!.find((cell) => cell.horizon === "6h")!;
+
+    // Sharp, correct odds: Brier 0.01 against a leave-one-out base rate Brier of 4/9.
+    expect(skill.scored).toBe(4);
+    expect(skill.brier).toBeCloseTo(0.01, 9);
+    expect(skill.baseRateBrier).toBeCloseTo(4 / 9, 9);
+    expect(skill.brierSkill).toBeCloseTo(1 - 0.01 / (4 / 9), 9);
   });
 
   it("lets terminal evidence at or before recovery time take outcome precedence", () => {

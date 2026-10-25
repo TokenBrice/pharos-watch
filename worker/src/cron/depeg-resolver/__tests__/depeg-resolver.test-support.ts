@@ -99,6 +99,7 @@ export function loadedContext(overrides: Partial<DdrLoadedContext> = {}): DdrLoa
     liqTvlChange7dByCoin: new Map(),
     liqTvlChange30dByCoin: new Map(),
     liqVolumeChange30dByCoin: new Map(),
+    liqTvlChangeSinceOnsetByEventId: new Map(),
     redemptionByCoin: new Map(),
     safetyByCoin: new Map(),
     v9ExitByCoin: new Map(),

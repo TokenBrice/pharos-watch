@@ -659,7 +659,9 @@ describe("buildDepegResolverReviewSnapshot", () => {
       sourceEventState: "active",
       actual: { kind: "still_open" },
       verdictReview: "pending",
-      durationReview: "duration_unscored",
+      // Reviewer v5: still open three hours after lock, already past the sealed upper band.
+      durationReview: "slower_than_band",
+      withinIqr: false,
     });
     expect(snapshot.summary.headline.recoveryLikelihoodScoredCount).toBe(0);
   });
