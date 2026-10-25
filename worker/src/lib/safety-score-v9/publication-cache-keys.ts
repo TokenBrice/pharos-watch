@@ -7,5 +7,6 @@ export const SAFETY_SCORE_V9_CACHE_KEYS = {
   publicationHealth: "report-cards:v9:publication-health",
   publicationAttempt: "report-cards:v9:last-attempt",
   failedPublicationAttempt: "report-cards:v9:last-failed-attempt",
+  publicMaterializationFailure: "report-cards:v9:public-materialization-failure",
 } as const;
 

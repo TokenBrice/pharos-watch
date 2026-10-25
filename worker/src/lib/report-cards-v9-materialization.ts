@@ -502,7 +502,7 @@ export async function loadV9PublicMaterializedResponse(db: D1Database, represent
     const publicationHealth: V9PublicationHealth = lagging === null || withinLagBudget ? effectiveHealth : {
       ...effectiveHealth,
       status: "held",
-      heldSinceSec: effectiveHealth.heldSinceSec ?? Math.max(health.attemptedAtSec, served.publishedAtSec),
+      heldSinceSec: effectiveHealth.heldSinceSec,
       reasons: [{ code: "v9-public-materialization-pending" }],
     };
     let position = -1;

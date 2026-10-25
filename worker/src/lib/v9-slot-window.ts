@@ -13,6 +13,7 @@ import {
 } from "./d1-overload-retry";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "./safety-score-v9/publication-cache-keys";
 import type { CronResult } from "./cron-logger";
+import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY, V9_PUBLIC_REPRESENTATION_VERSION } from "@shared/types/report-cards-v9-materialization";
 
 interface CoreSlotRow {
   state: string;
@@ -301,8 +302,22 @@ export async function runV9AfterCoreWithinWindow(
   let recoverAcceptedPublication = false;
   if (options.v9PublicationSecondChance) {
     let acceptedAtSec: number | null;
+    let pendingRecovery = false;
     try {
       acceptedAtSec = await loadV9PublicationHourAcceptedAtSec(options.db, options.slotStartedAt, options.signal);
+      if (options.onV9PublicationAlreadyAccepted) {
+        const recovery = await options.db.prepare(`SELECT
+          CASE WHEN json_extract(m.value, '$.publicationGenerationId') = json_extract(p.value, '$.identity.publicationGenerationId')
+            AND json_extract(m.value, '$.payloadSha256') = json_extract(p.value, '$.payloadSha256')
+            AND json_extract(m.value, '$.projectionVersion') = ? THEN 0 ELSE 1 END AS pending,
+          CASE WHEN json_extract(f.value, '$.publicationGenerationId') = json_extract(p.value, '$.identity.publicationGenerationId')
+            THEN 1 ELSE 0 END AS failed
+          FROM cache p LEFT JOIN cache m ON m.key = ? LEFT JOIN cache f ON f.key = ? WHERE p.key = ?`)
+          .bind(V9_PUBLIC_REPRESENTATION_VERSION, V9_PUBLIC_MATERIALIZATION_CACHE_KEY,
+            SAFETY_SCORE_V9_CACHE_KEYS.publicMaterializationFailure, SAFETY_SCORE_V9_CACHE_KEYS.publication)
+          .first<{ pending: number; failed: number }>();
+        pendingRecovery = recovery?.pending === 1 && (acceptedAtSec !== null || recovery.failed === 0);
+      }
     } catch (error) {
       if (options.signal?.aborted) throw error;
       return degradedAdmission("v9-publication-second-chance-unknown", {
@@ -311,14 +326,14 @@ export async function runV9AfterCoreWithinWindow(
         code: error instanceof Error ? error.name : "Error",
       });
     }
-    if (acceptedAtSec != null && !options.onV9PublicationAlreadyAccepted) {
+    if (acceptedAtSec != null && !pendingRecovery) {
       return neutralSkip("v9-publication-hourly-already-accepted", {
         lane: options.lane,
         coreSlotStartedAt,
         acceptedAtSec,
       });
     }
-    recoverAcceptedPublication = acceptedAtSec != null;
+    recoverAcceptedPublication = pendingRecovery;
   }
 
   if (options.yieldToV9Publication) {
