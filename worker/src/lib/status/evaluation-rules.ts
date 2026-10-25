@@ -23,7 +23,7 @@ import { maxStatus, SEVERITY } from "../status-reliability-shared";
 import type { OnchainDataQualityAssessment } from "./onchain-data-quality";
 import { SCHEDULED_DELIVERY_LAG_SIGNAL, type CronFindingJobs, type ScheduledDeliveryLagSummary } from "./cron-health";
 import { getSourceFailureMessage } from "./section-errors";
-import { SAFETY_PUBLICATION_SIZE_HEADROOM_WARN_RATIO, type SafetyPublicationSizeObservation } from "./safety-publication-size";
+import { SAFETY_PUBLICATION_SIZE_HEADROOM_WARN_RATIO, SAFETY_PUBLICATION_SIZE_RAW_HEADROOM_WARN_BYTES, type SafetyPublicationSizeObservation } from "./safety-publication-size";
 
 
 // Dataset-level publication budget for the DEX liquidity cache (one missed
@@ -347,7 +347,7 @@ export function mergeD1QuotaCauses(
 /**
  * Safety Score publication size headroom is ops-only, like D1 quota: it warns
  * before a write cap rejects the next publication and never changes a status.
- * The tighter of the stored-row and compressed-write ratios names the metric.
+ * Transport ratios and absolute raw headroom warn independently.
  */
 export function evaluateSafetyPublicationSizeCauses(
   observation: SafetyPublicationSizeObservation | null | undefined,
@@ -362,9 +362,9 @@ export function evaluateSafetyPublicationSizeCauses(
   const stored = observation.storedBytes / observation.storedCapBytes;
   const compressed = observation.compressedBytes / observation.compressedCapBytes;
   const ratio = Math.max(stored, compressed);
-  if (ratio <= SAFETY_PUBLICATION_SIZE_HEADROOM_WARN_RATIO) return [];
+  const causes: StatusCause[] = [];
   const storedTighter = stored >= compressed;
-  return [makeCause(
+  if (ratio > SAFETY_PUBLICATION_SIZE_HEADROOM_WARN_RATIO) causes.push(makeCause(
     "availability", "safety_score_publication_size_headroom_low", "warning",
     `Accepted Safety Score publication uses ${formatPercentFromRatio(stored, 1)} of the ${observation.storedCapBytes}-byte stored cap `
       + `(${observation.storedBytes} bytes) and ${formatPercentFromRatio(compressed, 1)} of the ${observation.compressedCapBytes}-byte `
@@ -377,7 +377,21 @@ export function evaluateSafetyPublicationSizeCauses(
         * SAFETY_PUBLICATION_SIZE_HEADROOM_WARN_RATIO),
       subjects: ["compute-safety-score-v9"],
     },
-  )];
+  ));
+  const rawRemaining = observation.uncompressedCapBytes - observation.uncompressedBytes;
+  if (rawRemaining < SAFETY_PUBLICATION_SIZE_RAW_HEADROOM_WARN_BYTES) causes.push(makeCause(
+    "availability", "safety_score_publication_size_headroom_low", "warning",
+    `Accepted Safety Score publication has ${rawRemaining} bytes remaining below the ${observation.uncompressedCapBytes}-byte raw cap `
+      + `(${observation.uncompressedBytes} bytes); warning below ${SAFETY_PUBLICATION_SIZE_RAW_HEADROOM_WARN_BYTES} bytes remaining. `
+      + "Ops-only capacity signal; public health is unaffected.",
+    {
+      metric: "safetyScorePublicationUncompressedBytes",
+      value: observation.uncompressedBytes,
+      threshold: observation.uncompressedCapBytes - SAFETY_PUBLICATION_SIZE_RAW_HEADROOM_WARN_BYTES,
+      subjects: ["compute-safety-score-v9"],
+    },
+  ));
+  return causes;
 }
 
 function evaluateD1Status(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
