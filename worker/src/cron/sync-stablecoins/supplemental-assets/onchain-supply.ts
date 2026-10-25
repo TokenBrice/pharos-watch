@@ -1,4 +1,8 @@
 import { fetchEearnSuiSupply } from "./sui-vault-supply";
+import { fetchUsdySuiSupply } from "./usdy-sui-supply";
+import { fetchUsdyAptosSupply } from "./usdy-aptos-supply";
+import { fetchStellarSupply } from "./stellar-supply";
+import { fetchNobleSupply } from "./noble-supply";
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
@@ -13,6 +17,7 @@ import {
   CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS,
   CURATED_AGGREGATE_ESCROW_RESIDUALS,
   SFRAX_STOCK_PERIMETER,
+  USDY_SUI_COIN_TYPE,
   onchainSupplyProbeFamily,
   getOnchainSupplyHoldReason,
   selectCuratedAggregateOnchainSupplyProbeContracts,
@@ -200,8 +205,14 @@ async function readContractSupplyRaw(input: {
     : undefined;
 
   if (input.family === "sui") {
+    if (supplyContract.address === USDY_SUI_COIN_TYPE) {
+      return fetchUsdySuiSupply(supplyContract.address, supplyContract.decimals, input.signal);
+    }
     return fetchEearnSuiSupply(supplyContract.address, supplyContract.decimals, input.signal);
   }
+
+  if (input.family === "stellar") return fetchStellarSupply(supplyContract.address, supplyContract.decimals, input.signal);
+  if (input.family === "noble") return fetchNobleSupply(supplyContract.address, supplyContract.decimals, input.signal);
 
   if (input.family === "starknet") {
     return fetchStarknetTotalSupply({
@@ -223,6 +234,9 @@ async function readContractSupplyRaw(input: {
   }
 
   if (input.family === "aptos") {
+    if (input.meta.id === "usdy-ondo-finance") {
+      return fetchUsdyAptosSupply(supplyContract.address, supplyContract.decimals, input.signal);
+    }
     if (!input.rpcUrl) throw new Error("Aptos supply probe REST endpoint is unavailable");
     const observation = await fetchMoveFungibleAssetSupply(
       supplyContract.address,

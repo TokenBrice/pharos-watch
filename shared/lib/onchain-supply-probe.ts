@@ -51,8 +51,9 @@ const ICP_CANISTER_ID_RE = /^[a-z2-7]{5}(-[a-z2-7]{5}){3}-[a-z2-7]{3}$/;
  * fail-closed curated aggregates instead of poisoning them.
  */
 export const EEARN_SUI_COIN_TYPE = "0x34469c8accdd673df02600265cbbad3688577f0e716866e257f88d448d463492::eearn::EEARN";
+export const USDY_SUI_COIN_TYPE = "0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb::usdy::USDY";
 
-export type OnchainSupplyProbeFamily = "evm" | "solana" | "movement" | "aptos" | "starknet" | "icp" | "sui";
+export type OnchainSupplyProbeFamily = "evm" | "solana" | "movement" | "aptos" | "starknet" | "icp" | "sui" | "stellar" | "noble";
 
 const NON_EVM_PROBE_FAMILY_BY_CHAIN: Readonly<Record<string, OnchainSupplyProbeFamily>> = {
   solana: "solana",
@@ -60,6 +61,8 @@ const NON_EVM_PROBE_FAMILY_BY_CHAIN: Readonly<Record<string, OnchainSupplyProbeF
   aptos: "aptos",
   starknet: "starknet",
   icp: "icp",
+  stellar: "stellar",
+  noble: "noble",
 };
 
 /** Owner-reviewed current-token-stock perimeter; pending/retired claims are separate diagnostics. */
@@ -113,6 +116,12 @@ const REVIEWED_ONCHAIN_SUPPLY_HOLDS: Readonly<Record<string, SupplyUnavailableRe
   [SFRAX_STOCK_PERIMETER.assetId]: "economic-float-unreconciled",
 };
 
+// Reviewed 2026-10-25 /share-classes/: issuer-listed ArbitrumUk is absent
+// from CHAIN_META/catalog. Refuse only the roster; retain CoinGecko supply.
+const INCOMPLETE_ISSUER_AGGREGATE_IDS: ReadonlySet<string> = new Set([
+  "eursafo-spiko", "safo-spiko-usd", "gbpsafo-spiko", "chfsafo-spiko",
+]);
+
 export function getOnchainSupplyHoldReason(assetId: string): SupplyUnavailableReason | null {
   return Object.prototype.hasOwnProperty.call(REVIEWED_ONCHAIN_SUPPLY_HOLDS, assetId)
     ? REVIEWED_ONCHAIN_SUPPLY_HOLDS[assetId] : null;
@@ -122,6 +131,74 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   string,
   readonly CuratedOnchainSupplyContractConfig[]
 > = {
+  // Reviewed 2026-10-25: Spiko's independent native share registers sum, with
+  // Soroban total_supply (not a classic Horizon issuer) on Stellar.
+  "eursafo-spiko": [
+    { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
+    { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
+  ],
+  "eutbl-spiko": [
+    { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
+    // Required issuer register; selection stays closed until the catalog includes it.
+    { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
+  ],
+  "safo-spiko-usd": [
+    { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
+    { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
+  ],
+  "ustbl-spiko": [
+    { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
+    { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
+  ],
+  "gbpsafo-spiko": [
+    { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
+    { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
+  ],
+  "eurspkcc-spiko": [
+    { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
+    { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
+  ],
+  "uktbl-spiko": [
+    { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
+    { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
+  ],
+  "chfsafo-spiko": [
+    { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
+    { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
+  ],
+  "spkcc-spiko": [
+    { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
+    { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
+  ],
+  // Reviewed 2026-10-25: issuer-native/burn-mint USDY stock sums across these
+  // twelve registers. Noble bank supply includes its IBC escrow; the exact
+  // three remote denoms below are representations, never additional supply.
+  "usdy-ondo-finance": [
+    { chain: "ethereum", allowZeroSupply: true }, { chain: "arbitrum", allowZeroSupply: true },
+    supplyProbeChain("mantle", { allowZeroSupply: true }), supplyProbeChain("plume", { allowZeroSupply: true }),
+    supplyProbeChain("sei", { allowZeroSupply: true }), { chain: "sui", allowZeroSupply: true },
+    { chain: "solana", allowZeroSupply: true }, supplyProbeChain("aptos", { allowZeroSupply: true }),
+    { chain: "stellar", allowZeroSupply: true }, { chain: "noble", allowZeroSupply: true },
+    { chain: "bsc", allowZeroSupply: true }, supplyProbeChain("tempo", { allowZeroSupply: true }),
+  ],
   // Movement USDCx is a Circle xReserve representation. Its fungible-asset
   // supply is admitted only after the Worker reconciles it to the matching
   // Ethereum xReserve domain balance within one basis point.
@@ -1007,6 +1084,17 @@ export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, 
   "syzusd-yuzu": "plasma",
 };
 
+/** Reviewed IBC stock already included in its selected native bank register. */
+export const CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS: Readonly<Record<string, readonly {
+  chain: string; address: string; canonicalChain: string;
+}[]>> = {
+  "usdy-ondo-finance": [
+    { chain: "osmosis", address: "ibc/23104D411A6EB6031FA92FB75F227422B84989969E91DCAD56A535DD7FF0A373", canonicalChain: "noble" },
+    { chain: "mantra", address: "ibc/6749D16BC09F419C090C330FC751FFF1C96143DB7A4D2FCAEC2F348A3E17618A", canonicalChain: "noble" },
+    { chain: "injective", address: "ibc/93EAE5F9D6C14BFAC8DD1AFDBE95501055A7B22C5D8FA8C986C31D6EFADCA8A9", canonicalChain: "noble" },
+  ],
+};
+
 export interface CuratedAggregateEscrowResidualConfig {
   /** Canonical-chain lockbox that escrows every representation's supply. */
   escrowAddress: string;
@@ -1062,7 +1150,7 @@ export function isZephyrScannerSupplyId(id: string): boolean {
  * reader exists for that chain family or the address shape is wrong.
  */
 export function onchainSupplyProbeFamily(contract: OnchainSupplyContract): OnchainSupplyProbeFamily | null {
-  if (contract.chain === "sui") return contract.address === EEARN_SUI_COIN_TYPE ? "sui" : null;
+  if (contract.chain === "sui") return [EEARN_SUI_COIN_TYPE, USDY_SUI_COIN_TYPE].includes(contract.address) ? "sui" : null;
   switch (NON_EVM_PROBE_FAMILY_BY_CHAIN[contract.chain]) {
     case "solana":
       return contract.address.length > 0 ? "solana" : null;
@@ -1074,6 +1162,12 @@ export function onchainSupplyProbeFamily(contract: OnchainSupplyContract): Oncha
       return HEX32_ADDRESS_RE.test(contract.address) ? "starknet" : null;
     case "icp":
       return ICP_CANISTER_ID_RE.test(contract.address) ? "icp" : null;
+    case "stellar":
+      // eslint-disable-next-line security/detect-unsafe-regex -- bounded optional code plus fixed-width StrKey; linear.
+      return /^(?:[a-zA-Z0-9]{1,12}-)?C[A-Z2-7]{55}$/.test(contract.address)
+        || /^[a-zA-Z0-9]{1,12}-G[A-Z2-7]{55}$/.test(contract.address) ? "stellar" : null;
+    case "noble":
+      return contract.address === "ausdy" ? "noble" : null;
     default:
       break;
   }
@@ -1102,7 +1196,7 @@ export function selectSupplementalOnchainSupplyProbeContract(meta: StablecoinMet
 export function selectCuratedAggregateOnchainSupplyProbeContracts(
   meta: StablecoinMeta,
 ): readonly CuratedAggregateOnchainSupplyContract[] | null {
-  if (getOnchainSupplyHoldReason(meta.id)) return null;
+  if (getOnchainSupplyHoldReason(meta.id) || INCOMPLETE_ISSUER_AGGREGATE_IDS.has(meta.id)) return null;
   const curatedContracts = CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS[meta.id];
   if (!curatedContracts || curatedContracts.length === 0) return null;
 
@@ -1113,15 +1207,21 @@ export function selectCuratedAggregateOnchainSupplyProbeContracts(
     selected.push({ config, contract });
   }
 
+  const representations = CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS[meta.id] ?? [];
+  if (representations.some((review) =>
+    !selected.some(({ contract }) => contract.chain === review.canonicalChain)
+    || !meta.contracts?.some((contract) => contract.chain === review.chain && contract.address === review.address)
+    || selected.some(({ contract }) => contract.chain === review.chain))) return null;
+
   // A roster speaks for the whole asset only when every registered deployment
   // participates. A summed roster that skips one under-counts; a canonical
   // lock/mint roster conserves remote supply but attributes the unprobed
-  // remainder to the canonical chain, so it must carry an explicit per-asset
-  // unattributed-residual policy instead of deriving permission from
-  // membership.
+  // remainder to the canonical chain. Only explicit residual policies or exact
+  // reviewed bank-escrow representations excuse an unselected deployment.
   if (
     CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id] == null
-    && meta.contracts?.some((contract) => !selected.some((entry) => entry.contract === contract))
+    && meta.contracts?.some((contract) => !selected.some((entry) => entry.contract === contract)
+      && !representations.some((review) => review.chain === contract.chain && review.address === contract.address))
   ) {
     return null;
   }
