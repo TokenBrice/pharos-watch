@@ -1412,12 +1412,16 @@
       "id": "scripts-tooling",
       "label": "Script implementation and local tooling",
       "risk": "medium",
-      "sources": ["scripts/**"],
+      "sources": ["scripts/**", "public/critical-css-loader.js"],
       "docs": [
         { "path": "docs/scripts.md", "anchor": "operator-cli-contract" },
         { "path": "docs/testing.md", "anchor": "smallest-adequate-check-per-area" }
       ],
       "reading": [
+        {
+          "sources": ["public/critical-css-loader.js", "scripts/maintenance/inline-homepage-critical-css.ts", "scripts/__tests__/inline-homepage-critical-css.test.ts"],
+          "local": [{ "path": "docs/scripts.md", "anchor": "build-and-generated-artifacts" }]
+        },
         {
           "sources": [
             "scripts/maintenance/probe-page-performance.mjs",
@@ -1447,6 +1451,10 @@
         "npx vitest run scripts/maintenance/__tests__/probe-page-performance.test.ts scripts/maintenance/__tests__/report-build-size.test.ts scripts/maintenance/__tests__/analyze-web-vitals.test.ts"
       ],
       "testOwnership": [
+        {
+          "sources": ["public/critical-css-loader.js", "scripts/maintenance/inline-homepage-critical-css.ts"],
+          "tests": ["scripts/__tests__/inline-homepage-critical-css.test.ts"]
+        },
         {
           "sources": ["scripts/maintenance/probe-page-performance.mjs"],
           "tests": ["scripts/maintenance/__tests__/probe-page-performance.test.ts"]

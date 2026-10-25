@@ -26,20 +26,21 @@ export interface StaleQuery {
    * treated as in flight.
    */
   isLoading?: boolean;
+  /** A build seed whose first live read is in flight; settled or paused reads must clear this. */
+  awaitingLiveRead?: boolean;
   /** Producer catch-up detail, so an aged coverage clock with current totals is not read as a stall. */
   catchUp?: DataHealthCatchUp | null;
 }
 
 /**
- * A first fetch still in flight is not a health finding: the section it feeds
- * shows its own loading state, and "has not populated yet" would read as a
- * failure. Only once the read settles (data, error, or an empty successful
- * read) does the entry join the banner, so a failed or genuinely unpopulated
- * source is still named. Callers that pass `isLoading: false` keep an
- * unsettled empty query in the banner.
+ * A first fetch or seed awaiting its first live read is not a settled health
+ * finding. Errors always join the banner; callers clear awaitingLiveRead on
+ * success or pause. Explicit isLoading: false keeps an empty query evaluated.
  */
-function isFirstFetchInFlight(query: StaleQuery): boolean {
-  if (query.error || (query.hasData ?? query.dataUpdatedAt > 0)) return false;
+function isExcludedWhileUnsettled(query: StaleQuery): boolean {
+  if (query.error) return false;
+  if (query.awaitingLiveRead) return true;
+  if (query.hasData ?? query.dataUpdatedAt > 0) return false;
   return query.isLoading ?? query.dataUpdatedAt === 0;
 }
 
@@ -50,7 +51,7 @@ export function StaleDataBanner({
   queries: readonly StaleQuery[];
   onRetry?: () => void;
 }) {
-  const inputs = queries.filter((q) => !isFirstFetchInFlight(q)).map((q) => {
+  const inputs = queries.filter((q) => !isExcludedWhileUnsettled(q)).map((q) => {
     const preset = q.preset ? DATA_HEALTH_PRESETS[q.preset] : null;
     return {
       query: q,

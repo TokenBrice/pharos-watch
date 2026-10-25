@@ -1,12 +1,12 @@
 "use client";
 
-import { MONO_Y_AXIS_WIDTH } from "@/components/chart-primitives/axes";
 import {
   CHART_GRID_DASH,
   CHART_GRID_STROKE,
   CHART_TICK_FILL,
   CHART_TICK_FONT_FAMILY,
   CHART_TICK_FONT_SIZE,
+  MONO_Y_AXIS_WIDTH,
 } from "@/lib/chart-theme";
 import { cn } from "@/lib/utils";
 import { formatChartDate } from "@shared/lib/format";

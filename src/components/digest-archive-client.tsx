@@ -337,8 +337,8 @@ export function DigestArchiveClient() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="border-t border-b border-border py-6 space-y-3">
+      <div className="flex min-h-screen flex-col gap-6">
+        <div className="flex flex-col gap-3 border-t border-b border-border py-6">
           <Skeleton className="h-3 w-48 mx-auto" />
           <Skeleton className="h-3 w-36 mx-auto" />
           <Skeleton className="h-6 w-72 mt-4" />
@@ -379,7 +379,7 @@ export function DigestArchiveClient() {
       />
 
       {/* Lead story: today's digest (nameplate above carries the edition + date) */}
-      <section aria-label="Today's lead digest" className="space-y-4">
+      <section aria-label="Today's lead digest" className="min-h-[58rem] space-y-4 sm:min-h-[34rem]">
         <WireSectionRule label="Today's Lead" />
         <DailyDigest
           detailHref={latestDailySlug ? `/digest/${latestDailySlug}/` : undefined}

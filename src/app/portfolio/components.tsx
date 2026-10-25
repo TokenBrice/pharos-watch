@@ -48,13 +48,9 @@ export function PortfolioHeroStrip({ holdingCount, totalUsd }: { holdingCount: n
 export function PortfolioLoadingState() {
   return (
     <div className="space-y-6" role="status" aria-label="Loading portfolio data">
-      <Card>
-        <CardContent className="pt-4 pb-4 space-y-3">
-          {Array.from({ length: 3 }, (_, i) => (
-            <Skeleton key={i} className="h-10 w-full" />
-          ))}
-        </CardContent>
-      </Card>
+      <Skeleton className="h-[194px] w-full rounded-xl sm:h-[140px]" />
+      <Skeleton className="h-[250px] w-full rounded-xl sm:h-[170px]" />
+      <Skeleton className="h-[1250px] w-full rounded-xl sm:h-[510px]" />
     </div>
   );
 }

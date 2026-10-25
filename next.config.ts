@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
 
 const rechartsVendorPattern =
-  /[\\/]node_modules[\\/](?:recharts|victory-vendor|d3-(?:array|color|ease|format|interpolate|path|scale|shape|time|time-format)|@reduxjs[\\/]toolkit|decimal\.js-light|eventemitter3|es-toolkit|immer|react-is|react-redux|redux|redux-thunk|reselect|tiny-invariant|use-sync-external-store)[\\/]/;
+  /[\\/]node_modules[\\/](?:recharts|victory-vendor|d3-(?:array|color|ease|format|interpolate|path|scale|shape|time|time-format))[\\/]/;
 
 const baseConfig: NextConfig = {
   output: "export",
@@ -24,7 +24,7 @@ const baseConfig: NextConfig = {
       if (splitChunks && typeof splitChunks === "object") {
         splitChunks.cacheGroups = {
           ...(splitChunks.cacheGroups ?? {}),
-          // x-perf-front:1: cache Recharts and its chart-stack deps across route-family chunks.
+          // Keep generic store/React helpers out so non-chart consumers do not load Recharts.
           rechartsVendor: {
             test: rechartsVendorPattern,
             name: "recharts-vendor",

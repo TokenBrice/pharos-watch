@@ -26,10 +26,15 @@ describe("SafetyGradeHero read states", () => {
     expect(container.textContent).toBe("—");
     expect(container.querySelector('[role="status"]')).toBeNull();
   });
-  it("uses the identical grade track for pending, failed, unscored, scored and pipeline-gap states", () => {
+  it("uses the identical grade track for pending, saved, failed, unscored, scored and pipeline-gap states", () => {
     const { container, rerender } = render(<SafetyGradeHero reportCard={null} read="pending" mobile />);
     const track = container.querySelector("[data-safety-grade-track]")!;
     const trackClass = track.className;
+    rerender(<SafetyGradeHero reportCard={null} read="pending" mobile savedGrade={{
+      grade: "B+", score: 80, dewsScore: null, dewsBand: null, liquidityScore: null, asOfMs: Date.UTC(2026, 9, 24),
+    }} />);
+    expect(track.textContent).toContain("as of 2026-10-24");
+    expect(track.className).toBe(trackClass);
     for (const read of ["failed", "settled"] as const) {
       rerender(<SafetyGradeHero reportCard={null} read={read} mobile />);
       expect(container.querySelector("[data-safety-grade-track]")).toBe(track);

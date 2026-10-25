@@ -8,6 +8,8 @@
 
 The holdings editor waits only for URL/local-storage initialization, not report cards. Report cards are enabled only when initialized holdings exist. Pending enrichment has an explicit loading state beside the still-editable holdings; it never implies a zero-risk portfolio.
 
+The initialization placeholder reserves separate hero, editor and first-visit empty-state areas so the footer does not enter the viewport before the workspace appears.
+
 Coin options derive from `CLIENT_ACTIVE_STABLECOINS`, excluding every other lifecycle state, not by subtracting cemetery rows. Static logos and local holdings introduce no new server data source.
 
 ## Persistence And Sharing

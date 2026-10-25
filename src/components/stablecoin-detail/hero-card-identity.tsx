@@ -52,9 +52,9 @@ export function SafetyGradeHero({
 }) {
   const letterClass = mobile ? "text-3xl" : "text-5xl";
   const scoreClass = mobile ? "text-xs" : "text-base";
-  // One track for every read state: late scores cannot squeeze the coin name.
+  // Keep the saved grade's date row after the live read settles.
   const trackClass = mobile
-    ? "flex min-h-10 w-32 shrink-0 flex-wrap items-baseline justify-end gap-x-1.5 gap-y-1"
+    ? "flex min-h-16 w-32 shrink-0 flex-wrap items-baseline justify-end gap-x-1.5 gap-y-1"
     : "flex min-h-14 w-48 shrink-0 flex-wrap items-baseline justify-end gap-x-1.5 gap-y-1";
 
   if (!reportCard && read === "pending" && savedGrade?.grade) {

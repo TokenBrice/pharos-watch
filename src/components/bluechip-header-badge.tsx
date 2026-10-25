@@ -57,7 +57,7 @@ export function BluechipHeaderBadge({ stablecoinId, versionTopic, versionVariant
       rel="noopener noreferrer"
       aria-label={`Bluechip rating: ${rating.grade}${observationLabel ? ` · ${observationLabel}` : ""} (via bluechip.org)`}
       title="View the external Bluechip methodology"
-      className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-md px-1 py-1 text-sm transition-colors hover:text-foreground lg:min-h-0"
+      className="pharos-focus-ring inline-flex min-h-11 max-w-full flex-wrap items-center gap-x-1.5 rounded-md px-1 py-1 text-sm transition-colors hover:text-foreground lg:min-h-0"
     >
       <span className="text-muted-foreground font-medium">Bluechip:</span>
       <span className={`font-mono font-semibold ${gradeColor}`}>{rating.grade}</span>

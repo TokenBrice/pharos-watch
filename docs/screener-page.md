@@ -6,6 +6,8 @@
 
 `src/app/screener/page.tsx` owns the static shell and metadata; `client.tsx` joins live data. `createClientFeaturePage()` preserves the shell shape while loading. `src/lib/screener-filters.ts` owns row/filter semantics and `src/lib/url-state.ts` the codec. Picker orchestration lives in `src/app/screener/picker/`, wizard state in `src/lib/selector-state.ts`, and runtime-neutral engine/adapter logic in `shared/lib/selector/`.
 
+The Picker callout reserves a responsive placeholder until hydration, then mounts directly in the viewport-appropriate layout with its stored dismissal preference.
+
 ## Universe And Data Sources
 
 Screener starts from `CLIENT_TRACKED_STABLECOINS`: active, pre-launch and frozen assets, excluding quarantined/delisted records regardless of URL state. Policy-withheld records remain accessible through static detail pages. Canonical IDs join stablecoin supply, peg summary, report cards, stress signals and the compact DEX table projection (`useDexLiquidityTable`, score only); curated client metadata owns classification, custody and identity. There is no Screener-specific API.
@@ -24,7 +26,7 @@ Palette `screen` commands encode only admitted schema fields, and the preview co
 
 Rows wait for the stablecoin list. Toolbar and pagination counts require available primary data, including retained data after refresh failure; pending and unavailable reads show explicit state copy instead of zero counts, and disable export. Successful empty filtered results still disclose zero. `buildQueryFreshnessGroup()` combines all five live sources for shared notices/retry; retained data may remain visible with stale/error metadata. The route invents no local freshness windows.
 
-Freshness notices follow [ADR-42](./architecture.md#adr-42): the shared notice renders only for stale lanes or reads missing with nothing retained. Toolbar count lines and the export trigger reserve their loading-to-ready geometry; actions occupy a separate row below desktop widths so longer ready-state count copy cannot displace them.
+Freshness notices follow [ADR-42](./architecture.md#adr-42): the shared notice renders only for stale lanes or reads missing with nothing retained. Notices appear with the data table below the toolbar so settling reads do not displace filters. Toolbar count lines and the export trigger reserve their loading-to-ready geometry; actions occupy a separate row below desktop widths so longer ready-state count copy cannot displace them.
 
 Active predicates require their own source publication: DEWS ranges use stress signals; safety/pillar/evidence and mint score/band filters use admitted report cards; PegScore and liquidity floors use their respective feeds. Pending required reads without retained data keep counts loading and export disabled; failed or inadmissible required publications make evaluation unavailable, not zero matches or issuer NR. A valid empty publication is available, and retained publications remain usable with shared error/freshness notices. Individual null/unrated row predicates are unchanged. Unrelated optional failures and curated-only filters do not gate results; exact `coins=` inspection bypasses broad predicates and their source gates.
 
