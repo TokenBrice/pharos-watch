@@ -189,13 +189,12 @@ function takePublicationFixedInput(input: RunSafetyScoreV9PublicationInput): Rea
     : normalizeSafetyScoreV9CompilerInput(input.fixedInput);
 }
 
-function reloadPublicationFixedInput(bytes: Uint8Array): Readonly<SafetyScoreV9CompilerInput> {
-  return normalizeSafetyScoreV9CompilerInput(JSON.parse(strFromU8(inflateSync(bytes))));
-}
-
-function publicationInputReloader(fixedInput: Readonly<SafetyScoreV9CompilerInput>) {
+function publicationInputReloader(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  normalize: (value: SafetyScoreV9CompilerInput) => SafetyScoreV9CompilerInput,
+) {
   const bytes = deflateSync(strToU8(JSON.stringify(fixedInput)), { level: 1 });
-  return () => reloadPublicationFixedInput(bytes);
+  return () => normalize(JSON.parse(strFromU8(inflateSync(bytes))));
 }
 
 function publicationReplayInputReloader(fixedInput: Readonly<SafetyScoreV9CompilerInput>) {
@@ -215,18 +214,19 @@ async function preparePublicationInput(
 ) {
   let fixedInput = owner.value!;
   owner.value = null;
+  const normalizePreparedInput = input.prepareFixedInput && input.preparedFixedInputAlreadyNormalized
+    ? withNormalizedV9JournalProjections
+    : normalizeSafetyScoreV9CompilerInput;
   if (input.prepareFixedInput) {
     const prepared = await input.prepareFixedInput(fixedInput, signal);
-    const preparedFixedInput = input.preparedFixedInputAlreadyNormalized
-      ? withNormalizedV9JournalProjections(prepared as SafetyScoreV9CompilerInput)
-      : normalizeSafetyScoreV9CompilerInput(prepared);
+    const preparedFixedInput = normalizePreparedInput(prepared as SafetyScoreV9CompilerInput);
     if (!sameBaseInput(preparedFixedInput, fixedInput)) {
       throw new Error("Safety Score v9 preparation changed the authoritative fixed input");
     }
     fixedInput = preparedFixedInput;
   }
   return {
-    owner: { value: fixedInput as Readonly<SafetyScoreV9CompilerInput> | null, reload: publicationInputReloader(fixedInput) },
+    owner: { value: fixedInput as Readonly<SafetyScoreV9CompilerInput> | null, reload: publicationInputReloader(fixedInput, normalizePreparedInput) },
     replay: input.fixedInputCacheValue === undefined ? null : publicationReplayInputReloader(fixedInput),
     expiredRoutes: projectExpiredMeasuredExitRoutes(fixedInput),
     summary: {

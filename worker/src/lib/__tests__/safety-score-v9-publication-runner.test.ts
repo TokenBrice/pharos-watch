@@ -16,6 +16,7 @@ import type * as AcceptedProjectionReaders from "../safety-score-v9/accepted-pro
 import { buildSafetyScoreV9AcceptedBaselineProjection } from "../safety-score-v9/accepted-projections";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import { runSafetyScoreV9Publication, getSafetyScoreV9PublicationBudgetMs } from "../safety-score-v9/publication-runner";
+import * as evaluateSet from "@shared/lib/safety-score-v9/evaluate-set";
 
 const mocks = vi.hoisted(() => ({
   assess: vi.fn(),
@@ -314,6 +315,71 @@ describe("Safety Score V9 publication runner", () => {
     expect(owner.value).toBeNull();
     expect(() => mocks.build.mock.calls[0]![0].fixedInputOwner.reload()).toThrow("compilation already completed");
   });
+
+  it.each(["pegProvenanceById", "safetyScoreV9SupplyAttributionById", "dexDeploymentSupplyCoverageById"])(
+    "preserves prepared %s admission and record order when reloading",
+    async (field) => {
+      const pipeline = mocks.build.getMockImplementation()!();
+      mocks.build.mockImplementationOnce(({ fixedInputOwner }) => {
+        const prepared = fixedInputOwner.value;
+        fixedInputOwner.value = null;
+        const reloaded = fixedInputOwner.reload();
+        expect(reloaded).toStrictEqual(prepared);
+        expect(JSON.stringify(reloaded)).toBe(JSON.stringify(prepared));
+        return pipeline;
+      });
+      const result = await runSafetyScoreV9Publication({
+        db: {} as D1Database, fixedInput, nowSec: fixedInput.clockSec,
+        preparedFixedInputAlreadyNormalized: true,
+        prepareFixedInput: async (input) => ({
+          ...input,
+          [field]: { "usdc-circle": { malformed: true } },
+          evidenceJournalById: { "usdt-tether": [], "usdc-circle": [] },
+        }),
+      });
+      expect(result.status).toBe("published");
+    },
+  );
+
+  it("keeps malformed enrichment asset-local when an evaluation failure forces a retry", async () => {
+    const candidate = await vi.importActual<typeof import("../safety-score-v9/candidate")>("../safety-score-v9/candidate");
+    mocks.build.mockImplementation(candidate.buildSafetyScoreV9PublicationFromOwnedInput);
+    const evaluate = vi.spyOn(evaluateSet, "evaluateValidatedV9FactSetForPublication")
+      .mockImplementationOnce((owner) => {
+        expect(owner.factSet?.assets.find((asset) => asset.assetId === "audd-novatti")?.evidence)
+          .toEqual(expect.arrayContaining([expect.objectContaining({
+            sourceId: "safety-score-v9-compiler", disposition: "rejected",
+          })]));
+        throw new evaluateSet.V9AssetEvaluationError("brz-transfero", { issues: [{ path: ["structuralSignals"] }] });
+      });
+    const input = createSafetyScoreV9FullRegistryInput();
+    try {
+      const result = await runSafetyScoreV9Publication({
+        db: {} as D1Database, fixedInput: input, nowSec: input.clockSec,
+        preparedFixedInputAlreadyNormalized: true,
+        prepareFixedInput: async (base) => ({
+          ...base,
+          safetyScoreV9SupplyAttributionById: {
+            "audd-novatti": { model: "reviewed-economic-deployment-partition-v1" },
+          },
+        }),
+      });
+      expect(result.status).toBe("published");
+      expect(evaluate).toHaveBeenCalledTimes(2);
+      const pipeline = mocks.build.mock.results[0]!.value;
+      expect(pipeline.quarantines).toEqual(expect.arrayContaining([
+        expect.objectContaining({ assetId: "audd-novatti" }),
+        expect.objectContaining({ assetId: "brz-transfero", code: "evaluation-failed" }),
+      ]));
+      for (const id of ["audd-novatti", "brz-transfero"]) {
+        expect(pipeline.candidate.cards.find((card: { id: string }) => card.id === id))
+          .toMatchObject({ ratingStatus: "pipeline-gap", score: null, grade: null });
+      }
+      expect(mocks.persist).toHaveBeenCalledTimes(1);
+    } finally {
+      evaluate.mockRestore();
+    }
+  }, 30_000);
 
   it("projects the accepted publication before compiling the next candidate", async () => {
     const order: string[] = [];
