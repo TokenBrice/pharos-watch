@@ -3233,6 +3233,18 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: BUSINESS_DAY_VERIFIED_VALIDATION,
   },
+  "chinaamc-holdings-api": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "dynamic-mix",
+    evidenceClass: "weak-live-probe",
+    sourceOriginClass: "issuer-attested",
+    preferredFreshnessMode: "verified",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
+    validation: BUSINESS_DAY_VERIFIED_VALIDATION,
+  },
 
 } as const satisfies Record<string, LiveReserveAdapterDescriptor>;
 
