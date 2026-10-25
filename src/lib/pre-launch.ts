@@ -19,6 +19,7 @@ export const PHASE_DOT: Record<LaunchPhase, string> = {
   auditing: PRE_LAUNCH_PHASE_CLASSES.auditing.dot,
   beta: PRE_LAUNCH_PHASE_CLASSES.beta.dot,
   "launching-soon": PRE_LAUNCH_PHASE_CLASSES["launching-soon"].dot,
+  launched: PRE_LAUNCH_PHASE_CLASSES.launched.dot,
 };
 
 /** Phase → full badge class string (static for Tailwind scanner). */
@@ -28,7 +29,17 @@ export const PHASE_BADGE: Record<LaunchPhase, string> = {
   auditing: PRE_LAUNCH_PHASE_CLASSES.auditing.badge,
   beta: PRE_LAUNCH_PHASE_CLASSES.beta.badge,
   "launching-soon": PRE_LAUNCH_PHASE_CLASSES["launching-soon"].badge,
+  launched: PRE_LAUNCH_PHASE_CLASSES.launched.badge,
 };
+
+/**
+ * A pre-launch row that is already publicly issued on-chain but has no
+ * admitted price or supply lane yet. It is live, not upcoming: no target
+ * clock, no drift, and its missing figures are unavailable, never zero.
+ */
+export function isLaunchedAwaitingData(coin: { launchPhase?: LaunchPhase }): boolean {
+  return coin.launchPhase === "launched";
+}
 
 // ---------------------------------------------------------------------------
 // Milestone display constants

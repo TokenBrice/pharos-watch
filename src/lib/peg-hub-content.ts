@@ -93,11 +93,14 @@ export interface UpcomingPegCoinEntry {
 }
 
 export function buildUpcomingPegCoinEntries(
-  coins: readonly Pick<StablecoinClientMeta, "id" | "name" | "symbol" | "launchPhase" | "expectedLaunchDate">[],
+  coins: readonly Pick<StablecoinClientMeta, "id" | "name" | "symbol" | "launchPhase" | "expectedLaunchDate" | "launchDate">[],
 ): UpcomingPegCoinEntry[] {
   return coins.map((coin) => {
     const phase = coin.launchPhase ? LAUNCH_PHASE_LABELS[coin.launchPhase] : "Unphased";
-    const target = coin.expectedLaunchDate ? `target ${formatFuzzyDate(coin.expectedLaunchDate)}` : "no target date set";
+    // A launched coin is live: its launch date, never a stale target.
+    const target = coin.launchPhase === "launched"
+      ? coin.launchDate ? `since ${formatFuzzyDate(coin.launchDate)}` : "launch date not recorded"
+      : coin.expectedLaunchDate ? `target ${formatFuzzyDate(coin.expectedLaunchDate)}` : "no target date set";
     return {
       id: coin.id,
       href: buildStablecoinUrl(coin.id),

@@ -142,7 +142,11 @@ export function renderStablecoinDetail(
     );
   }
 
-  if (coin.status === "pre-launch") {
+  if (coin.status === "pre-launch" && coin.launchPhase === "launched") {
+    parts.push(
+      `## Live Data\n\nThis stablecoin has launched, but Pharos has not yet admitted a price and supply source.${coin.listingStatusReview ? ` ${coin.listingStatusReview.reason}` : ""} Live API data is unavailable, not zero, until both can be verified.`,
+    );
+  } else if (coin.status === "pre-launch") {
     parts.push("## Live Data\n\nThis is a pre-launch stablecoin profile. Live API data is not available until launch.");
   } else if (coin.status === "quarantined" || coin.status === "delisted") {
     parts.push(

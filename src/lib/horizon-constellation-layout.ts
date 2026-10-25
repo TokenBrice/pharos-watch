@@ -1,13 +1,14 @@
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { PRE_LAUNCH_PHASE_CLASSES } from "@shared/lib/classification/pre-launch";
-import type { LaunchPhase } from "@shared/types";
+import type { UpcomingLaunchPhase } from "@shared/types";
 import type { StablecoinClientMeta } from "@shared/types/stablecoin-client-meta";
 import { dateScore } from "@/lib/pre-launch";
 
-export type HorizonPreLaunchCoin = StablecoinClientMeta & { launchPhase: LaunchPhase };
+export type HorizonPreLaunchCoin = StablecoinClientMeta & { launchPhase: UpcomingLaunchPhase };
 
-export const HORIZON_PHASE_ORDER: readonly LaunchPhase[] = [
+/** Upcoming phases only: `launched` coins are live, so the horizon never draws them. */
+export const HORIZON_PHASE_ORDER: readonly UpcomingLaunchPhase[] = [
   "announced",
   "testnet",
   "auditing",
@@ -15,7 +16,7 @@ export const HORIZON_PHASE_ORDER: readonly LaunchPhase[] = [
   "launching-soon",
 ];
 
-export const HORIZON_PHASE_FIELD_CLASSES: Record<LaunchPhase, string> = {
+export const HORIZON_PHASE_FIELD_CLASSES: Record<UpcomingLaunchPhase, string> = {
   announced: PRE_LAUNCH_PHASE_CLASSES.announced.orbit,
   testnet: PRE_LAUNCH_PHASE_CLASSES.testnet.orbit,
   auditing: PRE_LAUNCH_PHASE_CLASSES.auditing.orbit,
@@ -53,7 +54,8 @@ export const HORIZON_CONSTELLATION_LAYOUT = {
 } as const;
 
 export const HORIZON_PRE_LAUNCH_STABLECOINS = CLIENT_TRACKED_STABLECOINS.filter(
-  (coin): coin is HorizonPreLaunchCoin => isPreLaunchStablecoinMeta(coin) && Boolean(coin.launchPhase),
+  (coin): coin is HorizonPreLaunchCoin =>
+    isPreLaunchStablecoinMeta(coin) && Boolean(coin.launchPhase) && coin.launchPhase !== "launched",
 );
 
 /** Pre-launch coins with no authored phase; `/upcoming/` shows them as their own cell so cells sum to the tracker count. */

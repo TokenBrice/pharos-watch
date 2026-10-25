@@ -142,6 +142,33 @@ describe("PreLaunchDetail", () => {
     expect(text).not.toMatch(/~?\d[\d,]* ?d\b/);
   });
 
+  it("renders a launched row as live: no countdown, no overdue drift, the missing lane named", () => {
+    const launched: StablecoinMeta = {
+      ...coin,
+      launchPhase: "launched",
+      launchDate: "2026-10-15",
+      listingStatusReview: { changedAt: "2026-10-20", reason: "Live on Ethereum; no admitted price lane yet.", reviewBy: "2026-12-19" },
+    };
+    const document = staticDocument(launched);
+    expect(document.querySelector("h1")?.textContent).toBe("Test Launch (TEST) stablecoin status and tracking");
+    const strip = document.querySelector('[data-evidence-state="awaiting-data"]');
+    expect(strip?.textContent).toContain("Awaiting admissible data");
+    expect(strip?.textContent).toContain("no admitted price lane yet");
+    expect(document.querySelector('[data-evidence-state="pending-launch"]')).toBeNull();
+
+    // Past the stale Q4 target, a live coin still shows no countdown or drift.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2027-01-03T12:00:00Z"));
+    render(<PreLaunchDetail coin={launched} logoSrc={undefined} summary={null} />);
+    const readiness = screen.getByRole("group", { name: "Launch readiness" });
+    expect(within(readiness).getByText("Launched – awaiting data")).toBeTruthy();
+    expect(within(readiness).getByText("Oct 15, 2026")).toBeTruthy();
+    expect(within(readiness).getByText("Dec 19, 2026")).toBeTruthy();
+    expect(readiness.textContent).toContain("80d");
+    expect(readiness.textContent).not.toMatch(/Overdue|Window|Target drift|Pushed once/);
+    expect(screen.queryByText("Which chains will TEST use?")).toBeNull();
+  });
+
   it("reads the readiness clock from the browser, not the build", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-09-25T12:00:00Z"));

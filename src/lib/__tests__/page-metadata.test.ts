@@ -166,6 +166,23 @@ describe("pre-launch metadata", () => {
     );
     expect(descriptionOf(testCoin({ status: "pre-launch", oneLiner: "TSTX is planned." }))).toBe("TSTX is planned.");
   });
+
+  it("titles a launched row for status, not launch intent, and drops the target", () => {
+    const launched = testCoin({
+      status: "pre-launch",
+      launchPhase: "launched",
+      launchDate: "2026-10-05",
+      expectedLaunchDate: "2026-Q3",
+      oneLiner: "TSTX is Acme's dollar stablecoin.",
+      milestones,
+    });
+    expect(titleOf(launched)).toBe("TSTX Stablecoin (Test Dollar): Status & Tracking");
+    expect(descriptionOf(launched)).toBe(
+      "TSTX is Acme's dollar stablecoin. Latest milestone: Oct 5, 2026. Launched Oct 5, 2026; not yet tracked.",
+    );
+    expect(descriptionOf(testCoin({ status: "pre-launch", launchPhase: "launched", launchDate: "2026-10-05" })))
+      .not.toContain("pre-launch");
+  });
 });
 
 describe("inactive profile metadata", () => {

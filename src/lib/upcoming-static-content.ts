@@ -88,3 +88,42 @@ export function buildUpcomingCurrencyGroups(coins: readonly UpcomingStaticCoin[]
       Number(left.peg === "OTHER") - Number(right.peg === "OTHER") || right.coins.length - left.coins.length,
   );
 }
+
+export interface LaunchedUntrackedRow {
+  id: string;
+  name: string;
+  symbol: string;
+  href: string;
+  /** Registry `launchDate` verbatim, for `<time dateTime>`; null when unrecorded. */
+  launchDate: string | null;
+  launchLabel: string | null;
+  /** The review's named missing lane (price, supply or scope). */
+  reason: string | null;
+  reviewByLabel: string | null;
+}
+
+type LaunchedStaticCoin = Pick<StablecoinMeta, "id" | "name" | "symbol" | "launchDate" | "listingStatusReview">;
+
+/** Newest launch first; an unrecorded launch date sorts last. */
+function compareLaunchDesc(left: LaunchedStaticCoin, right: LaunchedStaticCoin): number {
+  const a = dateScore(left.launchDate);
+  const b = dateScore(right.launchDate);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return Number(!Number.isFinite(a)) - Number(!Number.isFinite(b));
+  return b - a;
+}
+
+/** `launched` pre-launch rows: live, awaiting admissible data, never counted as upcoming. */
+export function buildLaunchedUntrackedRows(coins: readonly LaunchedStaticCoin[]): LaunchedUntrackedRow[] {
+  return [...coins]
+    .sort((left, right) => compareLaunchDesc(left, right) || left.name.localeCompare(right.name))
+    .map((coin) => ({
+      id: coin.id,
+      name: coin.name,
+      symbol: coin.symbol,
+      href: buildStablecoinUrl(coin.id),
+      launchDate: coin.launchDate ?? null,
+      launchLabel: coin.launchDate ? formatFuzzyDate(coin.launchDate) : null,
+      reason: coin.listingStatusReview?.reason ?? null,
+      reviewByLabel: coin.listingStatusReview?.reviewBy ? formatFuzzyDate(coin.listingStatusReview.reviewBy) : null,
+    }));
+}

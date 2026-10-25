@@ -66,6 +66,17 @@ describe("stablecoin markdown", () => {
     }
   });
 
+  it("states a launched pre-launch row as live with unavailable data, not awaiting launch", () => {
+    const fixture = coin({ id: "launched-fixture", status: "pre-launch" });
+    fixture.launchPhase = "launched";
+    fixture.listingStatusReview = { reason: "No admitted price lane yet.", changedAt: "2026-10-20", reviewBy: "2026-12-19" };
+    vi.spyOn(TRACKED_META_BY_ID, "get").mockReturnValue(fixture);
+    const md = renderStablecoinDetail(fixture.id, {});
+    expect(md).toContain("has launched, but Pharos has not yet admitted a price and supply source. No admitted price lane yet.");
+    expect(md).toContain("unavailable, not zero");
+    expect(md).not.toContain("not available until launch");
+  });
+
   it("withholds registered live claims instead of asserting unavailable grades", () => {
     const md = renderStablecoinDetail("xsgd-straitsx", {
       "xsgd-straitsx": {

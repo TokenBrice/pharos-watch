@@ -41,7 +41,7 @@ import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
-import { formatFuzzyDate } from "@/lib/pre-launch";
+import { formatFuzzyDate, isLaunchedAwaitingData } from "@/lib/pre-launch";
 import { buildLaunchVerdict, describeTargetHistory, sortMilestonesNewestFirst } from "@/lib/pre-launch-dossier";
 import { buildPreLaunchQuickAnswers } from "@/lib/pre-launch-quick-answers";
 import { buildFaqJsonLd } from "@/lib/faq";
@@ -102,7 +102,10 @@ function PreLaunchIdentityHeader({ coin, logoSrc }: { coin: StablecoinMeta; logo
             {nameIsSymbol ? null : <span className="pharos-label shrink-0">{coin.symbol}</span>}
             <h1 className="pharos-page-title min-w-0 break-words text-xl leading-tight tracking-normal sm:text-2xl lg:leading-none">
               {coin.name}
-              <span className="sr-only">{nameIsSymbol ? "" : ` (${coin.symbol})`} pre-launch stablecoin tracker</span>
+              <span className="sr-only">
+                {nameIsSymbol ? "" : ` (${coin.symbol})`}
+                {isLaunchedAwaitingData(coin) ? " stablecoin status and tracking" : " pre-launch stablecoin tracker"}
+              </span>
             </h1>
           </div>
         </div>
@@ -154,7 +157,7 @@ function PreLaunchChipRail({ coin }: { coin: StablecoinMeta }) {
           PRE_LAUNCH_ACCENT_CLASSES.preLaunchCard.text,
         )}
       >
-        Pre-launch · no market data yet
+        {isLaunchedAwaitingData(coin) ? "Launched · no market data yet" : "Pre-launch · no market data yet"}
       </span>
       {pegLandingUrl ? (
         <IntentLink href={pegLandingUrl} className={HERO_CHIP_CLASS}>
@@ -399,6 +402,7 @@ function FeaturedCoverage({ items }: { items: FeaturedContent[] }) {
 // ---------------------------------------------------------------------------
 
 function PlannedProfileCard({ coin }: { coin: StablecoinMeta }) {
+  const launched = isLaunchedAwaitingData(coin);
   const chains = [...new Set(coin.contracts?.map((c) => c.chain) ?? [])].map(chainName);
   const jurisdiction = coin.jurisdiction?.regulator
     ? `${coin.jurisdiction.country} (${coin.jurisdiction.regulator})`
@@ -409,16 +413,17 @@ function PlannedProfileCard({ coin }: { coin: StablecoinMeta }) {
     { key: "governance", label: "Governance", value: GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance, valueStyle: "text" },
     { key: "jurisdiction", label: "Jurisdiction", value: jurisdiction ?? "Not recorded", valueStyle: "text" },
     ...(coin.flags.yieldBearing ? [{ key: "yield", label: "Yield", value: "Yield-bearing", valueStyle: "text" as const }] : []),
-    ...(chains.length > 0 ? [{ key: "chains", label: "Target chains", value: chains.join(", "), valueStyle: "text" as const }] : []),
+    ...(chains.length > 0 ? [{ key: "chains", label: launched ? "Chains" : "Target chains", value: chains.join(", "), valueStyle: "text" as const }] : []),
   ];
+  const title = launched ? "Profile" : "Planned profile";
 
   return (
-    <RailCard title="Planned profile" ariaLabel="Planned profile">
+    <RailCard title={title} ariaLabel={title}>
       <div className="space-y-4 px-4 pb-4">
-        <FactGrid items={facts} aria-label="Planned profile" />
+        <FactGrid items={facts} aria-label={title} />
         {coin.reserves && coin.reserves.length > 0 ? (
           <div className="space-y-2 border-t border-border/50 pt-3">
-            <p className="pharos-label">Planned collateral</p>
+            <p className="pharos-label">{launched ? "Stated collateral" : "Planned collateral"}</p>
             <ul className="space-y-1.5">
               {coin.reserves.map((slice) => (
                 <li key={slice.name} className="flex items-baseline justify-between gap-3 text-xs">
@@ -488,6 +493,7 @@ interface PreLaunchDetailProps {
  * explicit "Activates at launch" strip, never drawn as empty cards.
  */
 export function PreLaunchDetail({ coin, logoSrc, summary }: PreLaunchDetailProps) {
+  const launched = isLaunchedAwaitingData(coin);
   return (
     <StablecoinDetailIdentityProvider symbol={coin.symbol} logoSrc={logoSrc}>
       <Link
@@ -506,8 +512,9 @@ export function PreLaunchDetail({ coin, logoSrc, summary }: PreLaunchDetailProps
           <EvidenceStateStrip
             id="live-surfaces"
             title="Live surfaces"
-            state="pending-launch"
-            reason={LIVE_SURFACES}
+            // Launched: the coin is live and the review names the missing lane.
+            state={launched ? "awaiting-data" : "pending-launch"}
+            reason={launched ? (coin.listingStatusReview?.reason ?? LIVE_SURFACES) : LIVE_SURFACES}
             density="main"
             headingLevel="h2"
           />

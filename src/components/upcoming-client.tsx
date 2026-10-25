@@ -36,16 +36,18 @@ import {
   type PreLaunchClockView,
 } from "@/lib/pre-launch";
 import { stripTermMarkup } from "@/lib/term-markup";
-import type { LaunchPhase, StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta, UpcomingLaunchPhase } from "@shared/types";
 import { type UrlStateSchema } from "@/lib/url-state";
 import { useUrlState } from "@/hooks/use-url-state";
 import { getLogoSrc } from "@/lib/logos";
 import { cn } from "@/lib/utils";
 
+/** Upcoming rows only: `launched` rows render in their own `/upcoming/` section. */
 export type UpcomingCoin = Pick<
   StablecoinMeta,
-  "id" | "name" | "symbol" | "launchPhase" | "expectedLaunchDate" | "announcedDate" | "dateHistory" | "milestones"
+  "id" | "name" | "symbol" | "expectedLaunchDate" | "announcedDate" | "dateHistory" | "milestones"
 > & {
+  launchPhase?: UpcomingLaunchPhase;
   flags: Pick<StablecoinMeta["flags"], "pegCurrency" | "backing" | "governance">;
 };
 
@@ -69,10 +71,10 @@ const NATURAL_DIRECTION: Record<SortKey, SortDirection> = {
   milestones: "desc",
 };
 
-const ALL_PHASES: LaunchPhase[] = ["announced", "testnet", "auditing", "beta", "launching-soon"];
+const ALL_PHASES: UpcomingLaunchPhase[] = ["announced", "testnet", "auditing", "beta", "launching-soon"];
 
 /** Phase filter values: the authored phases plus coins Pharos has not phased yet. */
-export type PhaseFilterValue = LaunchPhase | "unphased";
+export type PhaseFilterValue = UpcomingLaunchPhase | "unphased";
 const PHASE_FILTER_VALUES: readonly PhaseFilterValue[] = [...ALL_PHASES, "unphased"];
 
 export interface UpcomingUrlState {
@@ -517,7 +519,10 @@ export function UpcomingClient({
         <UpcomingHorizonHero driftById={clock?.driftById} />
       </FeatureHeroSplit>
 
-      <section id="data" aria-label="Pre-launch stablecoins" tabIndex={-1} className="space-y-4 outline-none">
+      <section id="data" aria-labelledby="upcoming-list-title" tabIndex={-1} className="space-y-4 outline-none">
+        <h2 id="upcoming-list-title" className="pharos-label">
+          Upcoming (<span className="pharos-numeric">{coins.length}</span>)
+        </h2>
         <DataTableShell
           tableId="upcoming-table"
           testId="upcoming-table"
