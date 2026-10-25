@@ -289395,6 +289395,237 @@
       ],
       "nextReviewTrigger": "Issuer owns disclosure; re-review when exact-class same-notional funded capacity, final-payment settlement bound and all-in cost evidence becomes available, or on 2026-11-25. Any runtime adapter requires a separately verified investor/bank scope and fresh producer readback.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:usyc-hashnote",
+      "taskIds": [
+        "V9G-3e3a7835c22f8fb8"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-a primary-source review",
+      "evidence": [
+        "shared/data/stablecoins/domains/risk-review/usyc-hashnote.json",
+        "Accepted publication report-cards:v9:v1:12c38303a47bcfdb5d4bc64295abe74f17992eb9cfa547ed8ae83f3ae3482137; base report-cards-input:v1:4710b630910150ed8c14e1eab792cec031a6e55b21b05a8ab5674d03e3ce8285; clock 1792959459; typed missing-data registry."
+      ],
+      "rationale": "The remaining USYC deployment-control scope is materialSupplyShare on its BSC representation, not an absent controller name. Batch-2 attribution is the prerequisite; no invented share or curation around runtime-bridge-materiality-unavailable.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        "usyc-hashnote:gap:control:bridge-meta:usyc-hashnote:8835cca405b40a529d67:materialSupplyShare"
+      ],
+      "nextReviewTrigger": "A2/A3 and B1 lead: regenerate this complete claim group after the first accepted post-batch-2 attribution generation; separately research any remaining incident-state scopes before batch 3.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:usyc-hashnote",
+      "taskIds": [
+        "V9G-a13af7a1ef41ec85",
+        "V9G-a846feb36644e08f"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-a primary-source review",
+      "evidence": [
+        "https://usyc.docs.hashnote.com/overview/token-price",
+        "https://developers.circle.com/tokenized/usyc/overview"
+      ],
+      "rationale": "Primary documents establish issuer-administered SDYF share-price reporting and primary conversion. Added privileged-internal-pricing/top-level-only review; no oracle implementation, deployment controls or executable-capacity renewal. Local candidate replay is prospective; production closure remains pending.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/usyc-hashnote.json"
+      ],
+      "sentinels": [
+        "usyc-hashnote:gap:economic-control:oracle",
+        "usyc-hashnote:gap:economic-control:oracle::tier"
+      ],
+      "nextReviewTrigger": "B1 lead: re-review before batch 3 and on the first accepted post-deploy replay, or when the issuer changes its primary valuation authority.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:usyc-hashnote",
+      "taskIds": [
+        "V9G-f95c8e59a57d042f"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-a primary-source review",
+      "evidence": [
+        "https://developers.circle.com/tokenized/usyc/subscribe-and-redeem",
+        "https://usyc.docs.hashnote.com/overview/subscription-and-redemption"
+      ],
+      "rationale": "Ordinary Teller access and atomic USDC terms establish no actual-holder same-notional funded capacity. Conditional Private Liquidity Teller service is not the ordinary modeled route. No static capacity override or synthetic runtime observation authored.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        "usyc-hashnote:gap:route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:usyc-hashnote:offchain-issuer:capacity"
+      ],
+      "nextReviewTrigger": "Redemption producer owner: re-review at batch-3 integration or on receipt of a current exact-holder execution certificate/issuer-funded capacity and complete settlement terms, whichever occurs first.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:usdy-ondo-finance",
+      "taskIds": [
+        "V9G-47ed14e251f9024f",
+        "V9G-16097670a56cec5c",
+        "V9G-21853121f3529fa8",
+        "V9G-cb84f1133e609304",
+        "V9G-c45aaf9f290badea",
+        "V9G-f67bb65d1b061cc5",
+        "V9G-7d9827aaf89e244c",
+        "V9G-f505265a1c185c36",
+        "V9G-14e272683616f3f5",
+        "V9G-331b2fb97ebb5124",
+        "V9G-f53100cf5255c87e",
+        "V9G-ba4f81a69f811643",
+        "V9G-0dff91abd6444b1c",
+        "V9G-66ecd98dbcb6f6a6",
+        "V9G-3a85b0287a5969f4",
+        "V9G-f13f17902a168f33"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-a primary-source review",
+      "evidence": [
+        "shared/data/stablecoins/domains/risk-review/usdy-ondo-finance.json",
+        "Accepted publication report-cards:v9:v1:12c38303a47bcfdb5d4bc64295abe74f17992eb9cfa547ed8ae83f3ae3482137; base report-cards-input:v1:4710b630910150ed8c14e1eab792cec031a6e55b21b05a8ab5674d03e3ce8285; clock 1792959459; typed missing-data registry."
+      ],
+      "rationale": "Retain the full deployment-control claim group. Unknown materialSupplyShare depends on the batch-2 attribution prerequisites; no invented shares or curation around runtime-bridge-materiality-unavailable. USDY additionally retains unresolved BSC/Solana/Tempo incident-state scopes; existing named authorities do not prove those scopes known.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:083d3dbb17c4bba23702:materialSupplyShare",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:0f2bb8c181665cd2967e:materialSupplyShare",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:257932ba96b963acdcb6:materialSupplyShare",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:2d5e495be7777d2b5840:incidentState",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:2d5e495be7777d2b5840:materialSupplyShare",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:51b7c30ed72f1e13fa7f:materialSupplyShare",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:5f1bac4187fd8590bcba:incidentState",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:5f1bac4187fd8590bcba:materialSupplyShare",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:718ac48284f6e065b905:incidentState",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:718ac48284f6e065b905:materialSupplyShare",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:844336bd64220f3349a2:materialSupplyShare",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:8d01a9198ffdc5e17d2f:materialSupplyShare",
+        "usdy-ondo-finance:gap:deployment-control:bridge-meta:usdy-ondo-finance:2d5e495be7777d2b5840",
+        "usdy-ondo-finance:gap:deployment-control:bridge-meta:usdy-ondo-finance:5f1bac4187fd8590bcba",
+        "usdy-ondo-finance:gap:deployment-control:bridge-meta:usdy-ondo-finance:718ac48284f6e065b905",
+        "usdy-ondo-finance:gap:deployment-controls"
+      ],
+      "nextReviewTrigger": "A2/A3 and B1 lead: regenerate this complete claim group after the first accepted post-batch-2 attribution generation; separately research any remaining incident-state scopes before batch 3.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:usdy-ondo-finance",
+      "taskIds": [
+        "V9G-980e43508174eb5c",
+        "V9G-5d6c7f675dd0b2c3"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-a primary-source review",
+      "evidence": [
+        "https://docs.ondo.finance/developer-guides/usdy-instant-manager-integration",
+        "https://ondo.finance/blog/introducing-ondo-usd-yield-usdy",
+        "https://github.com/ondoprotocol/rwa-contracts/blob/4409cdac96f26bdce584c1078aa7a968dd937dc9/contracts/xManager/OndoOracle/AbstractRWAOracleWrapper.sol"
+      ],
+      "rationale": "Issuer-administered yield, primary conversion and owner-replaceable oracle wrapper support privileged-internal-pricing/top-level-only. No claim that a particular legacy oracle implementation remains live. Local candidate replay is prospective; production closure remains pending.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/usdy-ondo-finance.json"
+      ],
+      "sentinels": [
+        "usdy-ondo-finance:gap:economic-control:oracle",
+        "usdy-ondo-finance:gap:economic-control:oracle::tier"
+      ],
+      "nextReviewTrigger": "B1 lead: re-review before batch 3 and on the first accepted post-deploy replay, or when the issuer changes its primary valuation authority.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:usdy-ondo-finance",
+      "taskIds": [
+        "V9G-8bbc12ed59bc81e7",
+        "V9G-ead5a344a0e9a770"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-a primary-source review",
+      "evidence": [
+        "https://docs.ondo.finance/developer-guides/usdy-instant-manager-integration",
+        "docs/process/redemption-route-evidence.md#existing-route-bound-review-2026-10-14"
+      ],
+      "rationale": "Registered-holder permissions, effective user/global limits, funded payout sources and fee overrides require an exact current producer observation. Minimum size, supply-ratio heuristics and atomic mechanics are not executable capacity.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        "usdy-ondo-finance:gap:exit-route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:usdy-ondo-finance:offchain-issuer:cost",
+        "usdy-ondo-finance:gap:route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:usdy-ondo-finance:offchain-issuer:capacity"
+      ],
+      "nextReviewTrigger": "Redemption producer owner: re-review at batch-3 integration or on receipt of a current exact-holder execution certificate/issuer-funded capacity and complete settlement terms, whichever occurs first.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:ylds-figure",
+      "taskIds": [
+        "V9G-1aa4e1ff80d2d142",
+        "V9G-86f4c5b08895e173"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-a primary-source review",
+      "evidence": [
+        "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf, pages 11-14; SHA-256 7f0d17109a0d4e9fe938f20e94d6a5766aeb204f12551001402e04d3f2682140"
+      ],
+      "rationale": "Fixed $0.01 face certificates accrue formula-based SOFR interest and reinvest into additional certificates; they are expressly distinct from NAV fund shares. Recordkeeping alone proves neither discretionary pricing nor implementation-specific feed authority. Retain oracle gaps pending reconciliation of current NAV/fund classification and actual SOFR ingestion.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        "ylds-figure:gap:economic-control:oracle",
+        "ylds-figure:gap:economic-control:oracle::tier"
+      ],
+      "nextReviewTrigger": "B1 lead: reconcile the NAV/fund classification with the fixed-face claim and obtain exact implementation evidence for SOFR ingestion before batch-3 integration or any oracle-profile promotion.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:ylds-figure",
+      "taskIds": [
+        "V9G-d762a59e885352c8",
+        "V9G-0a51cf1e2bf1624f"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-a primary-source review",
+      "evidence": [
+        "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf, August 6, 2026 surrender supplement"
+      ],
+      "rationale": "Surrender entitlement and zero FCC charge establish no executable same-notional capacity or unconditional request-to-final-payout maximum; the August supplement retains technology exceptions and conditional wire/ACH/stablecoin stages.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        "ylds-figure:gap:exit-route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:ylds-figure:offchain-issuer:settlement",
+        "ylds-figure:gap:route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:ylds-figure:offchain-issuer:capacity"
+      ],
+      "nextReviewTrigger": "Redemption producer owner: re-review at batch-3 integration or on receipt of a current exact-holder execution certificate/issuer-funded capacity and complete settlement terms, whichever occurs first.",
+      "factsClosed": 0
     }
   ]
 }

@@ -1,5 +1,40 @@
 {
   "id": "usyc-hashnote",
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "USYC subscription and redemption use the fund's administered share price. The issuer reports prime-brokerage NAV divided by outstanding USYC after business-day reconciliation; publishing that value through a Chainlink-style oracle does not establish independent price-setting authority.",
+    "reviewedAt": "2026-10-25",
+    "reviewer": "Pharos NAV parity B1-a primary-source review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USYC token-price calculation and reporting, reviewed 2026-10-25",
+        "url": "https://usyc.docs.hashnote.com/overview/token-price"
+      },
+      {
+        "label": "Circle USYC fund claim and oracle publication, reviewed 2026-10-25",
+        "url": "https://developers.circle.com/tokenized/usyc/overview"
+      }
+    ],
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-a primary-source review",
+      "rationale": "USYC represents the SDYF fund interest, whose reported share price determines subscriptions and redemptions. This is a top-level fund valuation authority, not a borrower collateral or liquidation engine. The documentary review does not bind a current oracle implementation, renew deployment-control observations, or establish executable redemption capacity.",
+      "sources": [
+        {
+          "label": "USYC share-price subscription and redemption rules",
+          "url": "https://usyc.docs.hashnote.com/overview/token-price"
+        },
+        {
+          "label": "Circle USYC SDYF fund-interest identity",
+          "url": "https://developers.circle.com/tokenized/usyc/overview"
+        }
+      ]
+    }
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [
