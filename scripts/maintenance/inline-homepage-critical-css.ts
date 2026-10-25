@@ -71,7 +71,8 @@ export async function optimizeCriticalCssBatch(
     inlineFonts: false,
     fonts: false,
     // The saved theme is applied in the browser, after build-time extraction.
-    allowRules: [".dark"],
+    // Beasties strips leading selector functions, losing Tailwind spacing/dividers.
+    allowRules: [".dark", /^:(?:where|is)\(/],
     logLevel,
     logger,
   });

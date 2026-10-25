@@ -112,4 +112,28 @@ describe("critical CSS worker pool", () => {
     expect(readFileSync(path.join(outDir, "admin/index.html"), "utf8")).not.toContain("<style>");
     expect(readFileSync(path.join(outDir, "_next/static/css/app.css"), "utf8")).toBe(stylesheet);
   }, 20_000);
+
+  it("preserves functional-selector spacing, responsive rules, properties and cascade order", async () => {
+    const outDir = fixture();
+    const css = [
+      "@layer theme,base,utilities;",
+      "@layer theme{:root{--spacing:.25rem}}",
+      "@layer base{:where(p){margin:0}}",
+      "@layer utilities{",
+      ":where(.space-y-2>:not(:last-child)){--tw-space-y-reverse:0;margin-block-end:calc(var(--spacing) * 2)}",
+      "@media(min-width:40rem){:where(.sm\\:space-y-4>:not(:last-child)){margin-block-end:calc(var(--spacing) * 4)}}",
+      ":is(.coin,.home)>p{line-height:1.5}",
+      ".unused{padding:2rem}}",
+      '@property --tw-space-y-reverse{syntax:"*";inherits:false;initial-value:0}',
+    ].join("");
+    writeFileSync(path.join(outDir, "_next/static/css/app.css"), css);
+    const file = path.join(outDir, "depeg/index.html");
+    writeFileSync(file, '<html><head><link rel="stylesheet" href="/_next/static/css/app.css"></head><body><main class="coin space-y-2 sm:space-y-4"><p>First</p><p>Second</p></main></body></html>');
+
+    await optimizeCriticalCssPages(outDir, [file], 1);
+
+    const after = readFileSync(file, "utf8");
+    expect(after).toContain(`<style>${css.replace(".unused{padding:2rem}", "")}</style>`);
+    expect(readFileSync(path.join(outDir, "_next/static/css/app.css"), "utf8")).toBe(css);
+  });
 });
