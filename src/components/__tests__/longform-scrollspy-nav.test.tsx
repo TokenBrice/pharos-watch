@@ -237,4 +237,13 @@ describe("LongformScrollspyNav", () => {
     expect(windowScrollToMock).toHaveBeenCalledWith({ top: 330, behavior: "instant" });
   });
 
+  it("pins below the desktop top nav on the chrome layer, beneath the nav's own layer", () => {
+    const { container } = render(<Harness />);
+
+    const stickyNav = container.querySelector(".sticky");
+    expect(stickyNav?.className).toContain("z-chrome");
+    expect(stickyNav?.className).not.toContain("z-chrome-header");
+    expect(stickyNav?.className).toContain("lg:top-[calc(env(safe-area-inset-top)+3px+3.5rem)]");
+  });
+
 });

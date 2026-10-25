@@ -180,15 +180,28 @@ describe("StablecoinDetailClient", () => {
   });
 
   it.each([
-    { hasYieldSection: false, hasBlacklist: false, visible: false },
-    { hasYieldSection: true, hasBlacklist: false, visible: true },
-    { hasYieldSection: false, hasBlacklist: true, visible: true },
-  ])("publishes the Activity destination only with content: $visible", ({ hasYieldSection, hasBlacklist, visible }) => {
+    { hasYieldSection: false, hasBlacklist: false, visible: false, label: null },
+    { hasYieldSection: true, hasBlacklist: false, visible: true, label: "Yield" },
+    { hasYieldSection: false, hasBlacklist: true, visible: true, label: "Blacklist" },
+    { hasYieldSection: true, hasBlacklist: true, visible: true, label: "Yield & Blacklist" },
+  ])("publishes the Activity destination only with content: $visible ($label)", ({ hasYieldSection, hasBlacklist, visible, label }) => {
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
       hasFlows: true, hasYieldSection, hasBlacklist, blacklistSymbol: hasBlacklist ? "USDT" : null,
     }));
     const { container } = renderDetail();
     expect(container.querySelector("#activity") !== null).toBe(visible);
+    // The pill and the banner name only the modules the zone holds.
+    const sections: Array<{ id: string; label: string }> = longformScrollspyNavMock.mock.calls.at(-1)?.[0]?.sections ?? [];
+    expect(sections.find((section) => section.id === "activity")?.label ?? null).toBe(label);
+    if (label) expect(container.querySelector("#activity")?.textContent).toContain(label);
+  });
+
+  it("labels the stable #liquidity zone in searchers' words", () => {
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({ hasFlows: true }));
+    const { container } = renderDetail();
+    const sections: Array<{ id: string; label: string }> = longformScrollspyNavMock.mock.calls.at(-1)?.[0]?.sections ?? [];
+    expect(sections.find((section) => section.id === "liquidity")?.label).toBe("Supply & Liquidity");
+    expect(container.querySelector("#liquidity")?.textContent).toContain("Supply & Liquidity");
   });
 
   it.each([

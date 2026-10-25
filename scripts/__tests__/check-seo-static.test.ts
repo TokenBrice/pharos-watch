@@ -464,21 +464,24 @@ describe("check-seo-static", () => {
 
   it("requires one visible <h1> inside <main> on former loading-boundary route families", async () => {
     const root = await makeOutDir();
-    await writeBaselinePages(root, ["/depeg/", "/compare/"]);
+    await writeBaselinePages(root, ["/depeg/", "/compare/", "/flows/"]);
     await writePage(root, "/compare/", { h1: "Compare stablecoins" });
-    await mkdir(path.join(root, "depeg"), { recursive: true });
-    await writeFile(
-      pagePath(root, "/depeg/"),
-      `<!doctype html><html><head><title>Depeg tracker | Pharos</title>
-<meta name="description" content="Depeg tracker description"/>
-<link rel="canonical" href="https://pharos.watch/depeg/"/></head>
-<body><main><div class="skeleton">Loading</div></main><div hidden id="S:0"><h1>Depeg tracker</h1></div></body></html>`,
-    );
-    await writeSitemap(root, ["/", "/stability-index/", "/depeg/", "/compare/"]);
+    for (const [route, title] of [["/depeg/", "Depeg tracker"], ["/flows/", "Mint/Burn Flows"]] as const) {
+      await mkdir(path.join(root, route.slice(1, -1)), { recursive: true });
+      await writeFile(
+        pagePath(root, route),
+        `<!doctype html><html><head><title>${title} | Pharos</title>
+<meta name="description" content="${title} description"/>
+<link rel="canonical" href="https://pharos.watch${route}"/></head>
+<body><main><div class="skeleton">Loading</div></main><div hidden id="S:0"><h1>${title}</h1></div></body></html>`,
+      );
+    }
+    await writeSitemap(root, ["/", "/stability-index/", "/depeg/", "/compare/", "/flows/"]);
 
     const result = collectFixtureSeoResult(root);
 
     expect(result.errors).toContainEqual(expect.stringContaining("/depeg/: expected exactly one visible <h1> inside <main>, got 0"));
+    expect(result.errors).toContainEqual(expect.stringContaining("/flows/: expected exactly one visible <h1> inside <main>, got 0"));
     expect(result.errors.filter((error) => error.startsWith("/compare/: expected exactly one visible"))).toEqual([]);
     expect(result.errors.filter((error) => error.startsWith("/stability-index/: expected exactly one visible"))).toEqual([]);
   });

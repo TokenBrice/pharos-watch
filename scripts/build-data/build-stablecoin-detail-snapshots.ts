@@ -41,6 +41,26 @@ const MAX_PARALLEL_BULK_REQUESTS = 6;
 export const DETAIL_SNAPSHOT_UI_STALE_AFTER_MS =
   API_FRESHNESS_MAX_AGE_SEC.stablecoins * FRESHNESS_RATIOS.DEGRADED * 1000;
 export const DETAIL_SNAPSHOT_STALE_REFRESH_LIMIT = 24;
+/**
+ * Supply-history numbers keep 10 significant digits: far finer than any chart,
+ * delta or depeg reading, and 1-1.5 KB lighter on a 90-day history, so the
+ * small dated scores-latest lane still fits beside both live lanes.
+ */
+export const DETAIL_SNAPSHOT_HISTORY_SIGNIFICANT_DIGITS = 10;
+
+/** Significant digits, not decimals: a tiny observed value never rounds to zero. */
+function roundSignificant(value: number): number {
+  return Number(value.toPrecision(DETAIL_SNAPSHOT_HISTORY_SIGNIFICANT_DIGITS));
+}
+
+/** Same points and dates; an unavailable price stays null. */
+function compactSupplyHistory(points: readonly SupplyHistoryPoint[]): SupplyHistoryPoint[] {
+  return points.map((point) => ({
+    ...point,
+    circulatingUsd: roundSignificant(point.circulatingUsd),
+    price: point.price === null ? null : roundSignificant(point.price),
+  }));
+}
 
 export function selectStaleDetailSnapshotRefreshIds(
   entries: readonly DetailSnapshotInputEntry[],
@@ -110,7 +130,7 @@ export function buildStablecoinDetailSnapshots(inputs: SnapshotInputs): Stableco
       updatedAt: inputs.updatedAtById.get(coin.id) ?? {},
       lanes: {
         ...(liveSummary ? { liveSummary } : {}),
-        ...(supplyHistory ? { supplyHistory } : {}),
+        ...(supplyHistory ? { supplyHistory: compactSupplyHistory(supplyHistory) } : {}),
       },
     };
     let cappedSnapshot = snapshot;

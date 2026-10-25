@@ -1,9 +1,7 @@
-import { Suspense } from "react";
 import type { Metadata } from "next";
 import type { FaqItem } from "@/lib/faq";
 import { buildLiveRouteOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import FlowsClient from "./client";
-import { FlowsLoadingState } from "./loading-state";
 import { DEFINITIONS } from "@/lib/definitions";
 
 const FLOWS_DESCRIPTION =
@@ -34,10 +32,10 @@ const FLOW_FAQ_ITEMS = [
   },
 ] as const satisfies readonly FaqItem[];
 
+// No page-level Suspense: a boundary here made the prerender outline the whole
+// client tree (h1, lead copy, JSON-LD) into a hidden streamed segment behind a
+// skeleton. Nothing below needs one (no useSearchParams, lazy or suspense
+// query); data loading is handled by each section's own skeleton.
 export default function FlowsPage() {
-  return (
-    <Suspense fallback={<FlowsLoadingState />}>
-      <FlowsClient faqItems={FLOW_FAQ_ITEMS} />
-    </Suspense>
-  );
+  return <FlowsClient faqItems={FLOW_FAQ_ITEMS} />;
 }

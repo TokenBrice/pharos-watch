@@ -95,12 +95,13 @@ export function StablecoinDetailLoadingShell({
 
       {/* Mirrors the ready page's scrollspy pill bar (labels from
           `DETAIL_SECTIONS` in detail-content.tsx; the conditional "How it
-          breaks" pill is omitted) so a slow load neither shifts nor renames. */}
+          breaks" pill is omitted, and Activity shows its two-module label
+          before its contents are known) so a slow load does not shift. */}
       <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2 lg:justify-center">
         <div className="flex min-w-0 items-center gap-3">
           <span className="pharos-label hidden shrink-0 sm:inline">Jump to</span>
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {["Risk", "Context", "Market", "Activity", "History", "Explore"].map((label) => (
+            {["Risk", "Dependencies", "Supply & Liquidity", "Yield & Blacklist", "History", "Explore"].map((label) => (
               <div
                 key={label}
                 className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-border/60 bg-background px-4 py-2 text-sm text-muted-foreground"

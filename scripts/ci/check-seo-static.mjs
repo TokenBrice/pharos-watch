@@ -24,10 +24,9 @@ import { findDuplicateSitemapLocs, parseSitemapLocs, walkOutFiles } from "../lib
 const DEFAULT_OUT_DIR = path.resolve("out");
 // These families dropped their route-level loading.tsx (2026-10-25 SEO plan,
 // TR3): its Suspense fallback put a skeleton in the static <main> and streamed
-// the real h1, copy and JSON-LD into a hidden div after it.
-// /flows/ is excluded until its page-level Suspense stops suspending at
-// prerender (tracked in the SEO batch 1 follow-ups issue, #1653).
-const VISIBLE_MAIN_H1_ROUTE_PATTERN = /^\/(?:depeg|compare|safety-scores|screener|yield|liquidity|compliance)\//;
+// the real h1, copy and JSON-LD into a hidden div after it. /flows/ also
+// dropped its page-level Suspense boundary for the same reason (#1653).
+const VISIBLE_MAIN_H1_ROUTE_PATTERN = /^\/(?:depeg|compare|safety-scores|screener|yield|flows|liquidity|compliance)\//;
 const BAILOUT_PATTERN = /BAILOUT_TO_CLIENT_SIDE_RENDERING|next-dynamic-bailout-to-csr/;
 const EMPTY_BAILOUT_TEMPLATE_PATTERN = /<template\s+data-dgst=(["'])BAILOUT_TO_CLIENT_SIDE_RENDERING\1><\/template>/g;
 const PHAROS_ORIGIN = "https://pharos.watch";

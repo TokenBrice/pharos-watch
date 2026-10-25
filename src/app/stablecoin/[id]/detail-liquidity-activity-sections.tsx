@@ -39,6 +39,16 @@ function ExpandableMcapChart({
   );
 }
 
+/**
+ * The Activity zone (`#activity`) is named for what it holds, so the pill and
+ * banner never promise a module the coin lacks. Callers mount the zone only
+ * when at least one of the two is present.
+ */
+export function activityZoneLabel(viewModel: Pick<ReadyDetailViewModel, "hasYieldSection" | "hasBlacklist">): string {
+  if (viewModel.hasYieldSection && viewModel.hasBlacklist) return "Yield & Blacklist";
+  return viewModel.hasYieldSection ? "Yield" : "Blacklist";
+}
+
 interface DetailLiquidityActivitySectionsProps {
   activeBannerId: string;
   activityGateRef: Ref<HTMLDivElement>;
@@ -62,10 +72,9 @@ export function DetailLiquidityActivitySections({
   return (
     <>
       <div className="space-y-6">
-        {/* Zone id stays `liquidity` (stable anchor); the label reads "Market"
-            because supply history and holder distribution moved here from the
-            Context zone, where a market chart went unfound. */}
-        <SectionBanner id="liquidity" label="Market" icon={Droplet} active={activeBannerId === "liquidity"} />
+        {/* Zone id stays `liquidity` (stable anchor); the label names the
+            supply chart, holder distribution and DEX liquidity it holds. */}
+        <SectionBanner id="liquidity" label="Supply & Liquidity" icon={Droplet} active={activeBannerId === "liquidity"} />
         {showPegChart ? (
           <section id="chart" aria-label="Market data charts">
             <LazySection className="min-h-[780px] lg:min-h-[520px]">
@@ -121,7 +130,7 @@ export function DetailLiquidityActivitySections({
 
       <div ref={activityGateRef} className="space-y-6">
         {viewModel.hasYieldSection || viewModel.hasBlacklist ? (
-          <SectionBanner id="activity" label="Activity" icon={HeartPulse} active={activeBannerId === "activity"} />
+          <SectionBanner id="activity" label={activityZoneLabel(viewModel)} icon={HeartPulse} active={activeBannerId === "activity"} />
         ) : null}
         {viewModel.hasYieldSection ? (
           <section id="yield">

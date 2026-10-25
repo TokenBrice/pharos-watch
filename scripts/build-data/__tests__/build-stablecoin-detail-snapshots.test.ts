@@ -11,6 +11,7 @@ import {
   buildStablecoinDetailSnapshots,
   checkSnapshots,
   DETAIL_SNAPSHOT_STALE_REFRESH_LIMIT,
+  DETAIL_SNAPSHOT_TARGET_BYTES,
   DETAIL_SNAPSHOT_UI_STALE_AFTER_MS,
   fetchOptionalDetailSnapshotLane,
   generateSnapshots,
@@ -280,6 +281,52 @@ describe("stablecoin detail snapshot generator", () => {
     expect(unrated.updatedAt).toEqual({});
     expect(() => validateStablecoinDetailSnapshot({ ...usdt, updatedAt: { liveSummary: 1 } }))
       .toThrow(/safety assessment lane is invalid or undated/);
+  });
+
+  it("compacts full-precision history so the dated assessment lane fits beside both live lanes", () => {
+    const summary = liveSummary({ price: 0.007707534702047374, circulating: { peggedKES: 67_799.09458142496 } });
+    const history = Array.from({ length: 90 }, (_, index) => ({
+      date: 1_785_196_800 + index * 86_400,
+      circulatingUsd: 163_174.16968380168 + index / 7,
+      price: index === 0 ? null : 0.007662620215566711 + index / 3e9,
+    }));
+    history[1] = { ...history[1], circulatingUsd: 1e-9 };
+    const updatedAt = { liveSummary: 1_700_000_000_000, supplyHistory: 1_700_000_000_000 };
+    const { asOfMs, ...assessment } = SCORES_ROW;
+    // Precondition: at the API's full precision the assessment lane would not fit.
+    expect(serializedSnapshotBytes({
+      version: 1, stablecoinId: "usdt-tether", generatedAt: 1_700_000_100_000,
+      updatedAt: { ...updatedAt, safetyAssessment: asOfMs },
+      lanes: { liveSummary: summary, supplyHistory: history, safetyAssessment: assessment },
+    })).toBeGreaterThan(DETAIL_SNAPSHOT_TARGET_BYTES);
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const snapshot = buildStablecoinDetailSnapshots({
+      generatedAt: 1_700_000_100_000,
+      updatedAtById: new Map([["usdt-tether", updatedAt]]),
+      liveSummariesById: new Map([["usdt-tether", summary]]),
+      supplyHistoryById: new Map([["usdt-tether", history]]),
+      readScoresLatestRow: (id) => (id === "usdt-tether" ? SCORES_ROW : null),
+    }).find((candidate) => candidate.stablecoinId === "usdt-tether")!;
+
+    expect(warning).not.toHaveBeenCalled();
+    expect(Object.keys(snapshot.lanes).sort()).toEqual(["liveSummary", "safetyAssessment", "supplyHistory"]);
+    expect(serializedSnapshotBytes(snapshot)).toBeLessThanOrEqual(DETAIL_SNAPSHOT_TARGET_BYTES);
+    const compacted = snapshot.lanes.supplyHistory!;
+    expect(compacted).toHaveLength(90);
+    // Unavailable stays unavailable, a tiny observed value never becomes zero,
+    // and every value stays within 10 significant digits of the source.
+    expect(compacted[0].price).toBeNull();
+    expect(compacted[1].circulatingUsd).toBe(1e-9);
+    expect(compacted[2].circulatingUsd).toBe(Number(history[2].circulatingUsd.toPrecision(10)));
+    for (const [index, point] of compacted.entries()) {
+      expect(point.date).toBe(history[index].date);
+      expect(Math.abs(point.circulatingUsd - history[index].circulatingUsd))
+        .toBeLessThanOrEqual(Math.abs(history[index].circulatingUsd) * 1e-9);
+      if (point.price !== null) {
+        expect(Math.abs(point.price - history[index].price!)).toBeLessThanOrEqual(history[index].price! * 1e-9);
+      }
+    }
   });
 
   it("retains a small summary when oversized history is removed", () => {
