@@ -99,8 +99,7 @@ describe("derived source admission", () => {
     vi.useFakeTimers().setSystemTime(now * 1000);
     const result = await resolve(buildHardcodedUsdBenchmark("missing-cache"));
     const rateDerived = result.resolved.filter((entry) => entry.yield?.dataSource === "rate-derived");
-    expect(rateDerived.map((entry) => entry.id)).toEqual(["usdgo-osl"]);
-    expect(rateDerived[0].yield?.currentApy).toBeCloseTo(3.6 - 0.38);
+    expect(rateDerived.map((entry) => entry.id)).toEqual([]);
   });
 
   it.each([null, undefined, "invalid", Number.NaN])("never substitutes cache time for structured product timestamps %s", async (timestamp) => {
@@ -167,7 +166,7 @@ describe("derived source admission", () => {
         ]), startSec: now, sevenDaysAgoSec: now - 7 * DAY_SECONDS,
         dlPools: [], onChainRates: new Map(), safetyScores: new Map(), riskFreeRates,
       });
-      for (const id of ["usdgo-osl", "ustbl-spiko", "eutbl-spiko"]) {
+      for (const id of ["ustbl-spiko", "eutbl-spiko"]) {
         const entry = result.resolved.find((row) => row.id === id && row.yield?.dataSource === "rate-derived")!;
         const input = baseEvaluationInput({
           startSec: now, resolved: [entry], riskFreeRates,
@@ -179,7 +178,7 @@ describe("derived source admission", () => {
           }))]]),
         });
         const row = (await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() })).evaluatedSources[0];
-        const productKey = id === "usdgo-osl" ? "USD_EFFR" : id === "ustbl-spiko" ? "USD" : "EUR";
+        const productKey = id === "ustbl-spiko" ? "USD" : "EUR";
         const hurdleKey = id === "eutbl-spiko" ? "EUR" : "USD_EFFR";
         const reason = expired === productKey ? "source-stale"
           : expired === hurdleKey || (id === "eutbl-spiko" && expired === "USD") ? "benchmark-stale" : null;

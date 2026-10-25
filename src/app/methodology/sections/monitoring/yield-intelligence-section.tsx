@@ -205,7 +205,7 @@ export function YieldIntelligenceMethodologySection() {
                       for Swiss-franc pegs, the CBR key rate for RUB pegs, and BIST TLREF for TRY pegs. Product-input
                       freshness is checked independently of the PYS comparison hurdle: fresh EFFR cannot refresh a stale
                       T-bill product input, and a hardcoded fallback cannot produce a product APY candidate.
-                      USDGO requires EFFR only; non-USD products independently require the USD normalization reference.
+                      Non-USD products independently require the USD normalization reference.
                       These dependencies are assessed consistently at publication and on API reads
                     </li>
                   </ul>

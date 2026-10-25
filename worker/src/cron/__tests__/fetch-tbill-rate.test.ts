@@ -1431,10 +1431,10 @@ describe("resolveBenchmarkForStablecoin", () => {
     expect(result.selectionMode).toBe("native");
   });
 
-  it("uses USD EFFR for USDGO when the rate-derived config requests it", () => {
+  it("uses USD EFFR when a rate-derived config requests it explicitly", () => {
     const benchmarks = buildRegistry({ USD_EFFR: true });
     const result = resolveBenchmarkForStablecoin({
-      stablecoinId: "usdgo-osl",
+      stablecoinId: "effr-linked-product",
       benchmarks,
       benchmarkCurrency: "USD_EFFR",
     });
@@ -1454,10 +1454,10 @@ describe("resolveBenchmarkForStablecoin", () => {
     expect(result.selectionMode).toBe("native");
   });
 
-  it("falls back to USD for USDGO when the optional EFFR benchmark is unavailable", () => {
+  it("falls back to USD when an explicitly requested EFFR benchmark is unavailable", () => {
     const benchmarks = buildRegistry();
     const result = resolveBenchmarkForStablecoin({
-      stablecoinId: "usdgo-osl",
+      stablecoinId: "effr-linked-product",
       benchmarks,
       benchmarkCurrency: "USD_EFFR",
     });
