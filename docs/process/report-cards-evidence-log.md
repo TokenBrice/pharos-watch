@@ -6,6 +6,14 @@ These records preserve review dates, scope limits and operator observations form
 
 The existing wrapper allocation/local-review schemas carry scoped rationale and observations, not a free-standing historical-ruling field. Per-asset measurement summaries are capture manifests, not review-note sidecars. These records therefore stay here rather than adding fields or unrelated history to score-bearing JSON.
 
+## NAV Fund Pricing Reviews — 2026-10-25
+
+JAAA and JTRSY now carry probable, source-backed `privileged-internal-pricing` reviews. Anemoy identifies the fund shares and redemption rails; Centrifuge documents [issuer-set primary NAV and separate batch execution pricing](https://docs.centrifuge.io/developer/protocol/guides/publish-nav-and-oracles/). Chronicle verification does not establish independent control over the fund valuation. The reviews classify fund-level pricing, without claiming current updater keys, relay wiring or signer independence.
+
+ONyc carries the same tier at probable confidence: [issuer documentation](https://docs.onre.finance/technical-resources/token-configuration-and-reference.md) identifies contract-parameter NAV rather than external-feed authority. The issuer-linked [source at `c0490831`](https://github.com/onre-finance/onre-sol/blob/c0490831f438074562ebf51e437ca5f8e027596b/programs/onreapp/src/instructions/offer/add_offer_vector.rs) requires the State boss signer to change base-price/APR vectors. This source review does not establish deployed-binary correspondence, current boss membership or parameter values.
+
+All three retain their same-notional Exit gaps: daily fund liquidity, a legal redemption entitlement, and ONyc's management liquidity target are not executable capacity. Existing bridge-materiality, custody, incident and reserve gaps are not closed or renewed. This is evidence curation under the existing methodology; local replay projections do not establish production acceptance.
+
 ## Vault Oracle And Backing Reviews — 2026-10-22
 
 The primary-source vault review records privileged internal share-pricing paths for spUSDT, syrupUSDT, apyUSD, DUSD and hbUSDT, replacing local oracle U60 with measured45 when admitted. sUSDai, autoUSD, USD3 and USDN retain researched unresolved oracle profiles. New whole-direct-reserve reviews cover sUSDat, sYUSD, Umbrella stkGHO, Yearn v3 USDC and USDN; only Yearn's accounted idle USDC slice receives immediate native-asset liquidity. Independently dated sYUSD/stkGHO maturity facts describe open-ended staking claims, not cooldown length or immediate liquidity.
