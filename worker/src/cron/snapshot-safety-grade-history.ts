@@ -13,7 +13,7 @@ import {
   safetyScoreHistoryIdentitiesAreComparable,
   safetyScoreHistoryIdentityFromV2Row,
 } from "../lib/safety-score-history-v2";
-import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
+import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
 import { loadSafetyScoreV9PublicationAttempt } from "../lib/safety-score-v9/publication-attempts";
 import { isSafetyScoreV9SnapshotFresh } from "../lib/safety-score-v9/consumer-freshness";
 import { deleteCache, getCache, setCache } from "../lib/db-cache";
@@ -61,7 +61,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
     | null;
   try {
     const [active, attempt, affectedCache] = await Promise.all([
-      loadActiveSafetyScoreSource(db, signal),
+      loadActiveSafetyScoreIndex(db, signal),
       loadSafetyScoreV9PublicationAttempt(db, signal),
       getCache(db, OPERATIONALLY_AFFECTED_HISTORY_CACHE_KEY),
     ]);
@@ -120,7 +120,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
     );
   } catch (err) {
     recordCronFailure("snapshot-safety-grade-history", err, {
-      metadata: { stage: "loadActiveSafetyScoreSource" },
+      metadata: { stage: "loadActiveSafetyScoreIndex" },
     });
     return createCronResult({
       status: "error" as const,

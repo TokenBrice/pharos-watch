@@ -92,7 +92,8 @@ export type SafetyScoreJournalResult = {
 interface JournalInput {
   db: D1Database;
   publication: SafetyScoreV9CurrentResponse;
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>;
+  fixedInput: Readonly<Pick<SafetyScoreV9CompilerInput,
+    "sourceGeneration" | "dexGenerationId" | "redemptionGenerationId" | "inputFreshness" | "registryFingerprint">>;
   attemptId: string;
   attemptedAtSec: number;
   outcome: "accepted" | "held";

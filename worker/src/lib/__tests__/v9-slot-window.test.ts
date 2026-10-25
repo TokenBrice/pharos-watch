@@ -1,5 +1,13 @@
+import { ZodError } from "zod";
+import * as publicMaterialization from "../report-cards-v9-materialization";
+import { recoverSafetyScoreV9PublicMaterialization } from "../safety-score-v9/publication-runner";
+import { persistSafetyScoreV9Publication } from "../safety-score-v9/publication-store";
+import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
+import { currentInput } from "./safety-score-v9-publication-store.test-support";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY, V9_PUBLIC_REPRESENTATION_VERSION } from "@shared/types/report-cards-v9-materialization";
 
 const leaseMocks = vi.hoisted(() => ({
   runCronWithLease: vi.fn(),
@@ -22,6 +30,7 @@ import {
   V9_PUBLICATION_HEALTH_CACHE_KEY,
   getV9ExecutionDeadlineMs,
   waitForV9MemoryLaneRelease,
+  loadV9PublicationHourAcceptedAtSec,
   type V9ExecutionWindow,
 } from "../v9-slot-window";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../safety-score-v9/publication-health";
@@ -345,6 +354,90 @@ describe("runV9AfterCoreWithinWindow", () => {
       expect(result.status).toBe("ok");
       expect(run).toHaveBeenCalledOnce();
       expect(fixture.bind).toHaveBeenCalledWith(Date.parse("2026-10-23T16:45:00Z") / 1_000);
+    });
+
+    it("counts acceptance independently of public selection", async () => {
+      const { sqlite, db } = createLatestSchemaSqlite();
+      const acceptedAtSec = Date.parse("2026-10-23T16:16:40Z") / 1_000;
+      const insert = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+      try {
+        insert.run(SAFETY_SCORE_V9_CACHE_KEYS.publication, JSON.stringify({ identity: { publicationGenerationId: "accepted" }, payloadSha256: "sha" }), acceptedAtSec);
+        insert.run(V9_PUBLICATION_HEALTH_CACHE_KEY, JSON.stringify({ acceptedAtSec, acceptedPublicationGenerationId: "accepted" }), acceptedAtSec);
+        expect(await loadV9PublicationHourAcceptedAtSec(db, secondChanceMs / 1000)).toBe(acceptedAtSec);
+        for (const marker of [
+          { publicationGenerationId: "older", projectionVersion: V9_PUBLIC_REPRESENTATION_VERSION, payloadSha256: "sha" },
+          { publicationGenerationId: "accepted", projectionVersion: V9_PUBLIC_REPRESENTATION_VERSION - 1, payloadSha256: "sha" },
+          { publicationGenerationId: "accepted", projectionVersion: V9_PUBLIC_REPRESENTATION_VERSION, payloadSha256: "other" },
+        ]) {
+          insert.run(V9_PUBLIC_MATERIALIZATION_CACHE_KEY, JSON.stringify(marker), acceptedAtSec);
+          expect(await loadV9PublicationHourAcceptedAtSec(db, secondChanceMs / 1000)).toBe(acceptedAtSec);
+        }
+        insert.run(V9_PUBLIC_MATERIALIZATION_CACHE_KEY, JSON.stringify({
+          publicationGenerationId: "accepted", projectionVersion: V9_PUBLIC_REPRESENTATION_VERSION, payloadSha256: "sha",
+        }), acceptedAtSec);
+        expect(await loadV9PublicationHourAcceptedAtSec(db, secondChanceMs / 1000)).toBe(acceptedAtSec);
+      } finally { sqlite.close(); }
+    });
+
+    it.each(["ok", "degraded"] as const)("runs only recovery under the memory lease when accepted (result=%s)", async status => {
+      vi.useFakeTimers();
+      vi.setSystemTime(secondChanceMs + 1_000);
+      const fixture = dbWithHealth({ accepted_at: secondChanceMs / 1000 - 30 * 60 });
+      fixture.bind().first.mockReset().mockResolvedValueOnce({ accepted_at: secondChanceMs / 1000 - 30 * 60 })
+        .mockResolvedValueOnce({ pending: 1, failed: 1 }).mockResolvedValue(null);
+      const run = vi.fn();
+      const recover = vi.fn(async () => ({ status, itemCount: status === "ok" ? 1 : 0 }));
+      const result = await runV9AfterCoreWithinWindow({ ...secondChanceOptions(fixture.db),
+        onV9PublicationAlreadyAccepted: recover }, run);
+      expect(result.status).toBe(status);
+      expect(leaseMocks.runCronWithLease).toHaveBeenCalledOnce();
+      expect(recover).toHaveBeenCalledWith(expect.any(AbortSignal), expect.objectContaining({
+        deadlineMs: secondChanceMs + 180_000, slotStartedAtSec: secondChanceMs / 1000,
+      }));
+      expect(run).not.toHaveBeenCalled();
+    });
+
+    it.each(["staging", "decode"])("recovers held older G once, then computes after deterministic %s failure", async failureStage => {
+      const { sqlite, db } = createLatestSchemaSqlite();
+      const publication = makeWorkerSafetyScoreV9Publication({ publishedAtSec: secondChanceMs / 1000 - 7200 });
+      vi.useFakeTimers({ toFake: ["Date"] });
+      const error = new ZodError([{ code: "custom", path: ["cards", 0], message: "Invalid public projection" }]);
+      try {
+        await persistSafetyScoreV9Publication(db, { ...currentInput(publication), deferPublicMaterialization: true });
+        if (failureStage === "decode") sqlite.prepare("UPDATE cache SET value = json_set(value, '$.payloadSha256', ?) WHERE key = ?")
+          .run("0".repeat(64), SAFETY_SCORE_V9_CACHE_KEYS.publication);
+        const materialize = vi.spyOn(publicMaterialization, "materializeV9AcceptedPublication").mockRejectedValue(error);
+        const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 0 }));
+        const recover = vi.fn((signal: AbortSignal, window: V9ExecutionWindow) =>
+          recoverSafetyScoreV9PublicMaterialization(db, signal, window.deadlineMs));
+        for (let hour = 0; hour < 3; hour++) {
+          const scheduledTimeMs = secondChanceMs + hour * 3600_000;
+          const core = Math.floor(scheduledTimeMs / 900_000) * 900;
+          sqlite.prepare(`INSERT INTO cron_slot_executions
+            (slot_key, slot_started_at, state, result_status, execution_owner, started_at, updated_at, worker_version)
+            VALUES ('quarterHourly', ?, 'finished', 'ok', 'owner', ?, ?, 'worker-v2')`).run(core, core, core);
+          vi.setSystemTime(scheduledTimeMs + 1000);
+          const result = await runV9AfterCoreWithinWindow({ ...secondChanceOptions(db), scheduledTimeMs,
+            slotStartedAt: scheduledTimeMs / 1000, onV9PublicationAlreadyAccepted: recover }, run);
+          expect(result.status).toBe(hour === 0 ? "degraded" : "ok");
+        }
+        expect(recover).toHaveBeenCalledOnce();
+        expect(materialize).toHaveBeenCalledTimes(failureStage === "staging" ? 1 : 0);
+        expect(run).toHaveBeenCalledTimes(2);
+        const failed = sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+          .get(SAFETY_SCORE_V9_CACHE_KEYS.publicMaterializationFailure);
+        expect(JSON.parse(failed!.value as string)).toMatchObject({ publicationGenerationId: publication.publicationGenerationId,
+          reason: "v9-public-materialization-retry-failed" });
+        // Failure evidence belongs to G, so a later unmaterialized generation gets its own chance.
+        sqlite.prepare("UPDATE cache SET value = json_set(value, '$.identity.publicationGenerationId', ?) WHERE key = ?")
+          .run("report-cards:v9:next", SAFETY_SCORE_V9_CACHE_KEYS.publication);
+        const nextHourMs = secondChanceMs + 3 * 3600_000;
+        vi.setSystemTime(nextHourMs + 1000);
+        await runV9AfterCoreWithinWindow({ ...secondChanceOptions(db), scheduledTimeMs: nextHourMs,
+          slotStartedAt: nextHourMs / 1000, onV9PublicationAlreadyAccepted: recover }, run);
+        expect(recover).toHaveBeenCalledTimes(2);
+        expect(run).toHaveBeenCalledTimes(2);
+      } finally { vi.restoreAllMocks(); vi.useRealTimers(); sqlite.close(); }
     });
 
     it("degrades without publishing when acceptance evidence is unreadable", async () => {

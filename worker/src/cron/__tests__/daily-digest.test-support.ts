@@ -2,7 +2,7 @@ import { vi } from "vitest";
 import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { mockCircuitBreaker, mockRegistry } from "../../test-helpers/cron";
-import type { ActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
+import type { ActiveSafetyScoreCohort } from "../../lib/safety-score-active-source";
 import type { StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
 import type { PreparedTelegramDigestAppendices } from "../../telegram/digest/digest-appendices";
 import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../../lib/digest-style-gate";
@@ -79,7 +79,7 @@ export function mockDailyDigestStablecoinsCacheModule() {
 }
 
 export function mockDailyDigestSafetySourceModule() {
-  return { loadActiveSafetyScoreSource: vi.fn() };
+  return { loadActiveSafetyScoreCohort: vi.fn() };
 }
 
 export function mockDailyDigestFlightToQualityModule() {
@@ -160,7 +160,7 @@ export function mockDigestSafetyMapModule(
 
 export function canonicalSafetySource(
   cards: unknown[],
-): Extract<ActiveSafetyScoreSource, { kind: "v9" }> {
+): Extract<ActiveSafetyScoreCohort, { kind: "v9" }> {
   const snapshot = makeWorkerReportCardsV9Response({
     cards: cards
       .map((value) => value as {
@@ -177,7 +177,7 @@ export function canonicalSafetySource(
         }),
       ),
   });
-  return { kind: "v9", snapshot };
+  return { kind: "v9", snapshot, projectionFallbackCount: 0 };
 }
 
 interface TestDewsRow {
@@ -355,7 +355,7 @@ interface DailyDigestDeliveryMocks {
 export interface DailyDigestScenario {
   db: MockD1Database;
   sourcePayload: StablecoinsCacheLoadResult;
-  safetySource: ActiveSafetyScoreSource;
+  safetySource: ActiveSafetyScoreCohort;
   modelResponse: string;
   deliveryMocks: DailyDigestDeliveryMocks;
 }

@@ -206,6 +206,7 @@ export async function computeDepegResolver(
   const activeRows = loadedActiveRows.filter((row) => !quarantinedEventIds.has(row.id));
   await alertNewQuarantinedEvents(db, quarantinedEvents);
 
+  let safetyProjectionFallbackCount = 0;
   let rows: DdrRow[] = [];
   let lineage: DdrLineage = emptyDdrLineage(nowSec);
   let activeEventById = new Map(activeRows.map((row) => [row.id, row]));
@@ -250,6 +251,7 @@ export async function computeDepegResolver(
       itemCount: 0,
       metadata: JSON.stringify({
         ddrRunId: options.ddrRunId,
+        safetyProjectionFallbackCount,
         activeEvents: activeRows.length,
         repairRequiredEvents: quarantinedEvents,
         repairRequiredEventCount: quarantinedEvents.length,
@@ -281,6 +283,7 @@ export async function computeDepegResolver(
   if (activeRows.length > 0) {
     throwIfAborted(options.signal);
     const contextResult = await loadDdrContext(db, activeRows, nowSec);
+    safetyProjectionFallbackCount = contextResult.safetyProjectionFallbackCount;
     if (contextResult.kind === "degraded") {
       return degradedResult(contextResult.reason);
     }
@@ -367,6 +370,7 @@ export async function computeDepegResolver(
     itemCount: rows.length,
     metadata: JSON.stringify({
       ddrRunId: options.ddrRunId,
+      safetyProjectionFallbackCount,
       activeEvents: rows.length,
       repairRequiredEvents: quarantinedEvents,
       repairRequiredEventCount: quarantinedEvents.length,

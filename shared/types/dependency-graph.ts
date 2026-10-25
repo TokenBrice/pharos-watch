@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { SafetyScoreCohortCard } from "./safety-score-cohort";
 import { V9DependencyEconomicRoleSchema } from "./dependency-types";
 import {
   ReportCardsV9DependencyGraphSchema,
@@ -87,11 +88,15 @@ export const DependencyGraphResponseSchema = ReportCardsV9DependencyGraphSchema.
 });
 export type DependencyGraphResponse = z.infer<typeof DependencyGraphResponseSchema>;
 
+type DependencyGraphSourceCard = Pick<SafetyScoreCohortCard,
+  "id" | "grade" | "score" | "ratingStatus" | "partialEvidence" | "pillars" | "scoreTrace" |
+  "supply" | "sharedBookId" | "dependencies" | "dependencyCoverage" | "caps">;
+
 export function resolveCommonModeEffects(snapshot: Pick<ReportCardsV9CurrentResponse, "commonModeGroups"> & {
-  cards: readonly Pick<ReportCardsV9CurrentResponse["cards"][number], "id" | "caps" | "scoreTrace">[];
+  cards: readonly Pick<DependencyGraphSourceCard, "id" | "caps" | "scoreTrace">[];
 }): z.infer<typeof DependencyGraphCommonModeGroupsSchema> | undefined {
   if (snapshot.commonModeGroups === undefined) return undefined;
-  let cardsById: Map<string, Pick<ReportCardsV9CurrentResponse["cards"][number], "id" | "caps" | "scoreTrace">> | undefined;
+  let cardsById: Map<string, Pick<DependencyGraphSourceCard, "id" | "caps" | "scoreTrace">> | undefined;
   return snapshot.commonModeGroups.map(({ pricedEffects, ...group }) => {
     if (pricedEffects === undefined) return group;
     cardsById ??= new Map(snapshot.cards.map((card) => [card.id, card]));
@@ -128,7 +133,11 @@ export function resolveCommonModeEffects(snapshot: Pick<ReportCardsV9CurrentResp
 }
 
 /** Project only the accepted publication; no live supply or recomputed edges. */
-export function projectDependencyGraph(snapshot: ReportCardsV9CurrentResponse): DependencyGraphResponse {
+export function projectDependencyGraph(snapshot: Pick<ReportCardsV9CurrentResponse,
+  "safetyScoreIdentity" | "asOfSec" | "updatedAt" | "publicationHealth" | "dependencyGraph" | "commonModeGroups"> & {
+    methodology: Pick<ReportCardsV9CurrentResponse["methodology"], "version">;
+    cards: readonly DependencyGraphSourceCard[];
+  }): DependencyGraphResponse {
   const commonModeGroups = resolveCommonModeEffects(snapshot);
   return {
     model: "v9",

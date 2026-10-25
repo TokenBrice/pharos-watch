@@ -35,13 +35,13 @@ import { Sha256Schema } from "@shared/types/safety-schema-primitives";
 import { z } from "zod";
 import {
   compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension,
+  compileSafetyScoreV9FactSetFromExtensionSource,
   materializeSafetyScoreV9FactSetExtension,
   type SafetyScoreV9FactSetExtensionV2,
-  type SafetyScoreV9FactCompilationResult,
   type V9AssetQuarantine,
   type SafetyScoreV9LiveWithheldCompilation,
 } from "./fact-set";
-import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "./extension";
+import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput, createSafetyScoreV9BaselineExtensionSource } from "./extension";
 import type { BuildSafetyScoreV9BaselineExtensionOptions } from "./extension";
 import type { SafetyScoreV9TransferMaterialityGeneration } from "./transfer-materiality";
 import {
@@ -180,6 +180,15 @@ export interface BuildSafetyScoreV9CandidateFromNormalizedInput extends Omit<
 > {
   fixedInput: Readonly<SafetyScoreV9CompilerInput>;
 }
+
+export interface SafetyScoreV9FixedInputOwner {
+  value: Readonly<SafetyScoreV9CompilerInput> | null;
+  reload: () => Readonly<SafetyScoreV9CompilerInput>;
+}
+
+type BuildSafetyScoreV9CandidateFromOwnedInput = Omit<BuildSafetyScoreV9CandidateFromNormalizedInput, "fixedInput"> & {
+  fixedInputOwner: SafetyScoreV9FixedInputOwner;
+};
 
 export interface SafetyScoreV9CandidatePipelineResult {
   fixedInput: Readonly<SafetyScoreV9CompilerInput>;
@@ -485,13 +494,12 @@ function v9PolicyVersion(policy: V9ValidatedPolicyEnvelope): string {
  * never enters a score, a cap, or a candidate/publication identity digest.
  */
 function exitPillarFreshnessFromDexInput(
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
-  assetId: string,
+  clockSec: number,
+  updatedAt: number | undefined,
   dexMaxAgeSec: number,
 ): SafetyScoreV9EvidenceFreshness {
-  const updatedAt = fixedInput.dexLiqMap[assetId]?.updatedAt;
-  if (updatedAt === undefined || updatedAt > fixedInput.clockSec) return "unknown";
-  return fixedInput.clockSec - updatedAt <= dexMaxAgeSec ? "current" : "stale";
+  if (updatedAt === undefined || updatedAt > clockSec) return "unknown";
+  return clockSec - updatedAt <= dexMaxAgeSec ? "current" : "stale";
 }
 
 const SHARED_BOOK_ID_BY_SCOPE: Readonly<Record<string, string>> = {
@@ -638,7 +646,10 @@ function projectCandidatePublicationFacts(
 function buildSafetyScoreV9CandidateFromNormalizedInput(
   input: BuildSafetyScoreV9CandidateFromNormalizedInput,
 ): Readonly<SafetyScoreV9CandidatePipelineResult> {
-  return deepFreeze(buildSafetyScoreV9CandidatePipeline(input, true));
+  return deepFreeze(buildSafetyScoreV9CandidatePipeline({
+    ...input,
+    fixedInputOwner: { value: input.fixedInput, reload: () => input.fixedInput },
+  }, true));
 }
 
 /**
@@ -648,26 +659,36 @@ function buildSafetyScoreV9CandidateFromNormalizedInput(
 export function buildSafetyScoreV9PublicationFromNormalizedInput(
   input: BuildSafetyScoreV9CandidateFromNormalizedInput,
 ): Readonly<SafetyScoreV9PublicationResult> {
+  return buildSafetyScoreV9PublicationFromOwnedInput({
+    ...input,
+    fixedInputOwner: { value: input.fixedInput, reload: () => input.fixedInput },
+  });
+}
+
+export function buildSafetyScoreV9PublicationFromOwnedInput(
+  input: BuildSafetyScoreV9CandidateFromOwnedInput,
+): Readonly<SafetyScoreV9PublicationResult> {
   return deepFreeze(buildSafetyScoreV9CandidatePipeline(input, false));
 }
 
 function buildSafetyScoreV9CandidatePipeline(
-  input: BuildSafetyScoreV9CandidateFromNormalizedInput,
+  input: BuildSafetyScoreV9CandidateFromOwnedInput,
   retainIntermediates: true,
 ): SafetyScoreV9CandidatePipelineResult;
 function buildSafetyScoreV9CandidatePipeline(
-  input: BuildSafetyScoreV9CandidateFromNormalizedInput,
+  input: BuildSafetyScoreV9CandidateFromOwnedInput,
   retainIntermediates: false,
 ): SafetyScoreV9PublicationResult;
 function buildSafetyScoreV9CandidatePipeline(
-  input: BuildSafetyScoreV9CandidateFromNormalizedInput,
+  input: BuildSafetyScoreV9CandidateFromOwnedInput,
   retainIntermediates: boolean,
 ): SafetyScoreV9CandidatePipelineResult | SafetyScoreV9PublicationResult {
   if (!Number.isInteger(input.publishedAtSec) || input.publishedAtSec < 0) {
     throw new Error("Safety Score v9 publication time must be a non-negative integer");
   }
 
-  const fixedInput = input.fixedInput;
+  let fixedInput = input.fixedInputOwner.value;
+  if (fixedInput === null) throw new Error("Safety Score v9 compiler input was already released");
   if (
     fixedInput.captureKind !== "native-v9-inputs" &&
     fixedInput.captureKind !== "exact-publication-inputs"
@@ -681,12 +702,21 @@ function buildSafetyScoreV9CandidatePipeline(
   const policy = input.policy ?? loadV9CandidateMethodologyPolicy(fixedInput.clockSec);
   assertV9ValidatedPolicyEnvelope(policy);
   const policyVersion = v9PolicyVersion(policy);
-  let extension: SafetyScoreV9FactSetExtensionV2 | null = materializeCandidateExtension(input);
+  const clockSec = fixedInput.clockSec;
+  const dexObservedAtSec = new Map(Object.entries(fixedInput.dexLiqMap).map(([id, row]) => [id, row.updatedAt]));
+  const extensionOptions = {
+    ...input.registry,
+    ...(input.allowRegistryMismatch === true ? { allowRegistryMismatch: true } : {}),
+    transferMaterialityGeneration: input.transferMaterialityGeneration ?? null,
+  };
+  const streamExtension = !retainIntermediates && input.extension === undefined && input.liveWithheldCompilation === undefined;
+  let extensionSource = streamExtension ? createSafetyScoreV9BaselineExtensionSource(fixedInput, extensionOptions) : null;
+  let extension: SafetyScoreV9FactSetExtensionV2 | null = extensionSource?.extension ?? materializeCandidateExtension({ ...input, fixedInput });
   // Read the DEX lane bound off the materialized extension so the card can
   // never drift from the bound the exit evidence itself was judged against;
   // the extension graph is released below.
   const dexExitRouteMaxAgeSec = extension.routeFreshness.dexMaxAgeSec;
-  const bridgeJoinDiagnostics = extension.assets
+  const retainedBridgeJoinDiagnostics = extension.assets
     .flatMap((asset) => {
       const diagnostics = asset.economicControlReview?.bridge.diagnostics;
       return diagnostics === undefined
@@ -694,14 +724,20 @@ function buildSafetyScoreV9CandidatePipeline(
         : [{ assetId: asset.assetId, ...diagnostics }];
     })
     .sort((left, right) => compareText(left.assetId, right.assetId));
-  const compileFacts = (extension: SafetyScoreV9FactSetExtensionV2, failures?: ReadonlyMap<string, string>) =>
-    input.liveWithheldCompilation === undefined
-      ? compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(fixedInput, extension, failures, !retainIntermediates)
+  const compileFacts = (extension: SafetyScoreV9FactSetExtensionV2, failures?: ReadonlyMap<string, string>):
+    ReturnType<typeof compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension> |
+    ReturnType<typeof compileSafetyScoreV9FactSetFromExtensionSource> =>
+    extensionSource !== null
+      ? compileSafetyScoreV9FactSetFromExtensionSource(fixedInput!, extensionSource, failures)
+      : input.liveWithheldCompilation === undefined
+      ? compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(fixedInput!, extension, failures, !retainIntermediates)
       : input.liveWithheldCompilation.source.compile(
-        fixedInput, extension, input.liveWithheldCompilation.assetId, failures, !retainIntermediates,
+        fixedInput!, extension, input.liveWithheldCompilation.assetId, failures, !retainIntermediates,
       );
-  let compilation: SafetyScoreV9FactCompilationResult | null =
+  let compilation: ReturnType<typeof compileFacts> | null =
     compileFacts(extension);
+  const bridgeJoinDiagnostics = "bridgeJoinDiagnostics" in compilation
+    ? compilation.bridgeJoinDiagnostics : retainedBridgeJoinDiagnostics;
   let compiledFacts: CompiledV9FactSetV3 | null = compilation.factSet;
   const compilerIdentity = compilerFactSchemaIdentity(fixedInput, extension, compiledFacts);
   const compilerFactSchemaDigest = computeSafetyScoreV9CompilerFactSchemaDigest(compilerIdentity);
@@ -710,8 +746,13 @@ function buildSafetyScoreV9CandidatePipeline(
   if (!retainIntermediates) extension = null;
   const evaluationFailures = new Map<string, string>();
   let quarantines = compilation.quarantines;
-  let publicationFacts = projectCandidatePublicationFacts(compiledFacts, quarantines, input);
+  let publicationFacts = projectCandidatePublicationFacts(compiledFacts, quarantines, { ...input, fixedInput });
   compilation = null;
+  if (!retainIntermediates) {
+    extensionSource = null;
+    fixedInput = null;
+    input.fixedInputOwner.value = null;
+  }
   let evaluatedSet: Readonly<V9EvaluatedSet> | null = null;
   let publication: {
     candidate: SafetyScoreV9CurrentResponse;
@@ -749,13 +790,21 @@ function buildSafetyScoreV9CandidatePipeline(
         evaluationFailures.has(assetId) || quarantines.some((quarantine) => quarantine.assetId === assetId),
       )) throw error;
       for (const [assetId, message] of failed) evaluationFailures.set(assetId, message);
-      const retryExtension = extension ?? materializeCandidateExtension(input);
+      fixedInput = input.fixedInputOwner.value ?? input.fixedInputOwner.reload();
+      input.fixedInputOwner.value = fixedInput;
+      extensionSource = streamExtension ? createSafetyScoreV9BaselineExtensionSource(fixedInput, extensionOptions) : null;
+      const retryExtension = extension ?? extensionSource?.extension ?? materializeCandidateExtension({ ...input, fixedInput });
       compilation =
         compileFacts(retryExtension, evaluationFailures);
       compiledFacts = compilation.factSet;
       quarantines = compilation.quarantines;
-      publicationFacts = projectCandidatePublicationFacts(compiledFacts, quarantines, input);
+      publicationFacts = projectCandidatePublicationFacts(compiledFacts, quarantines, { ...input, fixedInput });
       compilation = null;
+      if (!retainIntermediates) {
+        extensionSource = null;
+        fixedInput = null;
+        input.fixedInputOwner.value = null;
+      }
     }
   }
   const { candidate, candidateIdentity, retained } = publication;
@@ -777,8 +826,8 @@ function buildSafetyScoreV9CandidatePipeline(
       exit: asset.exit,
       control: asset.control,
       display: publicationFacts.displayByAssetId.get(asset.assetId),
-      freshness: { exit: exitPillarFreshnessFromDexInput(fixedInput, asset.assetId, dexExitRouteMaxAgeSec) },
-      dexObservedAtSec: fixedInput.dexLiqMap[asset.assetId]?.updatedAt ?? null,
+      freshness: { exit: exitPillarFreshnessFromDexInput(clockSec, dexObservedAtSec.get(asset.assetId), dexExitRouteMaxAgeSec) },
+      dexObservedAtSec: dexObservedAtSec.get(asset.assetId) ?? null,
     };
   }
 
@@ -850,7 +899,7 @@ function buildSafetyScoreV9CandidatePipeline(
   }
 
   return {
-    fixedInput,
+    fixedInput: fixedInput!,
     extension: retained.extension,
     compiledFacts: retained.compiledFacts,
     evaluatedSet: retained.evaluatedSet,

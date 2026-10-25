@@ -155,12 +155,19 @@ export function finalizeV9PublicCauseGaps(drafts: readonly V9InternedPublicCardD
   const foreignCauseGaps = [...ids].sort();
   const refs = new Map<string, number>();
   for (let ref = 0; ref < foreignCauseGaps.length; ref++) refs.set(foreignCauseGaps[ref]!, ref);
-  const cards = drafts.map(({ foreignCauseGaps: foreign, ...card }) => ({
+  const cards = drafts.map((draft) => finalizeV9PublicCauseGapCard(draft, refs));
+  return { cards, foreignCauseGaps };
+}
+
+export function finalizeV9PublicCauseGapCard(
+  { foreignCauseGaps: foreign, ...card }: V9InternedPublicCardDraft,
+  refs: ReadonlyMap<string, number>,
+): SafetyScoreV9CurrentCard {
+  return {
     ...card, foreignCauseGapRefs: foreign.map((id) => {
       const ref = refs.get(id);
       if (ref === undefined) throw new Error("Foreign cause gap was not interned at publication scope");
       return ref;
     }),
-  }));
-  return { cards, foreignCauseGaps };
+  };
 }

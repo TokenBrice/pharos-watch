@@ -1,4 +1,5 @@
-import { compileV9FactSetV3, createV9PublicationAssetCompactor, safeParseV9AssetFactsV3 } from "@shared/lib/safety-score-v9/compile";
+import { createHash } from "node:crypto";
+import { compileV9FactSetV3, createV9PublicationAssetCompactor, createV9PublicationResearchHashRebinder, safeParseV9AssetFactsV3 } from "@shared/lib/safety-score-v9/compile";
 import { sha256HexFromUtf8Chunks } from "../hash";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
@@ -12,6 +13,7 @@ import {
   V9EffectiveDependenciesV3Schema,
   type CompiledV9FactSetV3,
   type V9AssetFactsV3,
+  type V9BridgeJoinDiagnosticsV1,
   type V9EffectiveDependenciesV3,
   type V9EvidenceReferenceV2,
   type V9FactGapV3,
@@ -30,6 +32,8 @@ import { safetyScoreV9ChainSupplySourcePayload } from "./supply-attribution";
 import { logWorkerEvent } from "../structured-log";
 import {
   admitSafetyScoreV9FactSetExtension,
+  admitSafetyScoreV9FactSetExtensionHeader,
+  admitSafetyScoreV9ExtensionAsset,
   type AssetExtension,
   type SafetyScoreV9FactSetExtensionV2,
 } from "./fact-set-schema";
@@ -67,6 +71,7 @@ import {
 } from "./fact-set-peg-supply";
 import { buildWrapperLocalFacts, resolveWrapperForm } from "./fact-set-wrapper";
 import { buildLenderBookFact } from "./fact-set-lender-book";
+import type { SafetyScoreV9BaselineExtensionSource } from "./extension";
 
 export {
   SafetyScoreV9FactSetExtensionV2Schema,
@@ -558,12 +563,70 @@ export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
   return compileSafetyScoreV9FactSetWithIsolation(fixedInput, extension, evaluationFailures, consumeExtensionAssets);
 }
 
+interface StreamedExtensionCompilation {
+  assets(): IterableIterator<AssetExtension>;
+  finalize(): {
+    researchPayloadSha256: string;
+    shockCoveragePayloadSha256: string;
+    shockCoverageObservedAtSec: number;
+    shockCoverageCount: number;
+  };
+}
+const PENDING_RESEARCH_PAYLOAD_SHA256 = "0".repeat(64);
+
+export function compileSafetyScoreV9FactSetFromExtensionSource(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  source: SafetyScoreV9BaselineExtensionSource,
+  evaluationFailures: ReadonlyMap<string, string> = new Map(),
+) {
+  const { assets: _assets, ...header } = source.extension;
+  const extension = { ...admitSafetyScoreV9FactSetExtensionHeader(header), assets: [] };
+  materializedExtensions.add(extension);
+  const bridgeJoinDiagnostics: Array<V9BridgeJoinDiagnosticsV1 & { assetId: string }> = [];
+  const researchHash = createHash("sha256").update('{"domain":"safety-score-v9.research-overlay.v1","payload":[');
+  const shockHash = createHash("sha256").update('{"domain":"safety-score-v9.cdp-shock-coverage-source.v1","payload":[');
+  let shockCoverageCount = 0;
+  let shockCoverageObservedAtSec = 0;
+  let complete = false;
+  function* assets(): IterableIterator<AssetExtension> {
+    const ids: { assetId: string }[] = [];
+    for (const asset of source.assets()) {
+      const admitted = admitSafetyScoreV9ExtensionAsset(asset, extension.compiledAtSec, undefined,
+        (value) => hydrateSafetyScoreV9ShockCoverageAsset(value, fixedInput.clockSec));
+      if (ids.length > 0) researchHash.update(",");
+      researchHash.update(stableJsonStringifyV1(projectResearchOverlayPayload(admitted)));
+      ids.push({ assetId: admitted.assetId });
+      const diagnostics = admitted.economicControlReview?.bridge.diagnostics;
+      if (diagnostics !== undefined) bridgeJoinDiagnostics.push({ assetId: asset.assetId, ...diagnostics });
+      if (admitted.cdpStressCoverage !== undefined) {
+        if (shockCoverageCount++ > 0) shockHash.update(",");
+        shockHash.update(stableJsonStringifyV1({ assetId: admitted.assetId, cdpStressCoverage: admitted.cdpStressCoverage }));
+        shockCoverageObservedAtSec = Math.max(shockCoverageObservedAtSec, admitted.cdpStressCoverage.source?.block.timestampUnix ?? 0);
+      }
+      yield admitted;
+    }
+    if (ids.length === 0) throw new Error("Safety Score v9 extension requires at least one asset");
+    assertSafetyScoreV9ExactExtensionAssets(fixedInput, { assets: ids });
+    complete = true;
+  }
+  const compilation = compileSafetyScoreV9FactSetWithIsolation(fixedInput, extension, evaluationFailures, true, undefined, {
+    assets,
+    finalize() {
+      if (!complete) throw new Error("Safety Score v9 extension stream is incomplete");
+      return { researchPayloadSha256: researchHash.update("]}").digest("hex"),
+        shockCoveragePayloadSha256: shockHash.update("]}").digest("hex"), shockCoverageObservedAtSec, shockCoverageCount };
+    },
+  });
+  return { ...compilation, bridgeJoinDiagnostics: bridgeJoinDiagnostics.sort((left, right) => compareText(left.assetId, right.assetId)) };
+}
+
 function compileSafetyScoreV9FactSetWithIsolation(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   extension: SafetyScoreV9FactSetExtensionV2,
   evaluationFailures: ReadonlyMap<string, string>,
   consumeExtensionAssets: boolean,
   reuseAsset?: (asset: AssetExtension, researchPayloadSha256: string) => V9AssetFactsV3 | undefined,
+  streamed?: StreamedExtensionCompilation,
 ): Readonly<SafetyScoreV9FactCompilationResult> {
   if (!materializedExtensions.has(extension)) {
     throw new Error("Trusted Safety Score v9 compilation requires an in-process materialized extension");
@@ -579,12 +642,12 @@ function compileSafetyScoreV9FactSetWithIsolation(
       `Safety Score v9 extension registry fingerprint ${extension.registryFingerprint} does not match fixed input ${fixedInput.registryFingerprint}`,
     );
   }
-  assertSafetyScoreV9ExactExtensionAssets(fixedInput, extension);
+  if (streamed === undefined) assertSafetyScoreV9ExactExtensionAssets(fixedInput, extension);
   // Keep the digest-only projection out of this frame while facts accumulate.
-  const researchPayloadSha256 = (() => sha256HexFromUtf8Chunks(stableJsonStringifyChunksV1({
+  let researchPayloadSha256 = streamed === undefined ? (() => sha256HexFromUtf8Chunks(stableJsonStringifyChunksV1({
     domain: "safety-score-v9.research-overlay.v1",
     payload: projectResearchOverlayPayload(extension.assets),
-  })))();
+  })))() : PENDING_RESEARCH_PAYLOAD_SHA256;
   const redemptionObservedAtSec =
     fixedInput.inputFreshness.redemptionBackstops.updatedAt ?? extension.sources.unavailableRedemptionObservedAtSec;
   const shockCoveragePayload = extension.assets.flatMap((asset) =>
@@ -592,17 +655,12 @@ function compileSafetyScoreV9FactSetWithIsolation(
       ? []
       : [{ assetId: asset.assetId, cdpStressCoverage: asset.cdpStressCoverage }],
   );
-  const shockCoveragePayloadSha256 = domainDigest("safety-score-v9.cdp-shock-coverage-source.v1", shockCoveragePayload);
-  const shockCoverageObservedAtSec = shockCoveragePayload.reduce(
-    (latest, entry) => Math.max(latest, entry.cdpStressCoverage.source?.block.timestampUnix ?? 0),
-    0,
-  );
   // This is the only cross-asset extension read needed by asset compilation.
   if (consumeExtensionAssets) materializedExtensions.delete(extension);
-  const outcomes = new Array<{ facts: V9AssetFactsV3; quarantine: V9AssetQuarantine | null }>(extension.assets.length);
+  const outcomes = new Array<{ facts: V9AssetFactsV3; quarantine: V9AssetQuarantine | null }>(fixedInput.activeAssetIds.length);
   const compactAsset = consumeExtensionAssets ? createV9PublicationAssetCompactor() : null;
-  for (let index = 0; index < extension.assets.length; index++) {
-    const asset = extension.assets[index]!;
+  let index = 0;
+  for (const asset of streamed?.assets() ?? extension.assets) {
     const evaluationFailure = evaluationFailures.get(asset.assetId);
     const reused = evaluationFailure === undefined ? reuseAsset?.(asset, researchPayloadSha256) : undefined;
     outcomes[index] = reused !== undefined ? { facts: reused, quarantine: null }
@@ -613,8 +671,20 @@ function compileSafetyScoreV9FactSetWithIsolation(
     // The materializer owns this array; assets themselves remain immutable.
     // Leave indices stable until the loop ends, without copying the remaining cohort.
     if (consumeExtensionAssets) delete extension.assets[index];
+    index++;
   }
   if (consumeExtensionAssets) extension.assets.length = 0;
+  const finalized = streamed?.finalize();
+  if (finalized !== undefined) {
+    // No pending hash reaches cohort admission, digesting or evaluation.
+    researchPayloadSha256 = finalized.researchPayloadSha256;
+    const rebind = createV9PublicationResearchHashRebinder(PENDING_RESEARCH_PAYLOAD_SHA256, researchPayloadSha256);
+    for (const outcome of outcomes) outcome.facts = rebind(outcome.facts);
+  }
+  const shockCoveragePayloadSha256 = finalized?.shockCoveragePayloadSha256 ?? domainDigest("safety-score-v9.cdp-shock-coverage-source.v1", shockCoveragePayload);
+  const shockCoverageObservedAtSec = finalized?.shockCoverageObservedAtSec ?? shockCoveragePayload.reduce(
+    (latest, entry) => Math.max(latest, entry.cdpStressCoverage.source?.block.timestampUnix ?? 0), 0,
+  );
   const factSet = compileV9FactSetV3({
     schemaVersion: 4,
     baseInputGenerationId: fixedInput.baseInputGenerationId,
@@ -667,7 +737,7 @@ function compileSafetyScoreV9FactSetWithIsolation(
         payloadSha256: researchPayloadSha256,
         observedAtSec: extension.sources.researchOverlays.observedAtSec,
       },
-      ...(shockCoveragePayload.length === 0
+      ...((finalized?.shockCoverageCount ?? shockCoveragePayload.length) === 0
         ? {}
         : {
             shockCoverage: {

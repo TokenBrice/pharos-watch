@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
 
   runV9AfterCoreWithinWindow: vi.fn(),
   computeSafetyScoreV9: vi.fn(),
+  recoverSafetyScoreV9PublicMaterialization: vi.fn(),
   logWorkerEvent: vi.fn(),
 }));
 
@@ -23,6 +24,9 @@ vi.mock("../../../lib/v9-slot-window", async (importOriginal) => ({
 }));
 vi.mock("../../../cron/compute-safety-score-v9", () => ({
   computeSafetyScoreV9: mocks.computeSafetyScoreV9,
+}));
+vi.mock("../../../lib/safety-score-v9/publication-runner", () => ({
+  recoverSafetyScoreV9PublicMaterialization: mocks.recoverSafetyScoreV9PublicMaterialization,
 }));
 vi.mock("../../../lib/structured-log", () => ({
   logWorkerEvent: mocks.logWorkerEvent,
@@ -140,6 +144,17 @@ describe("V9 publication scheduling", () => {
       );
     },
   );
+
+  it("uses the accepted-hour branch only for materialization recovery", async () => {
+    const scheduledRuntime = runtime();
+    scheduledRuntime.cron = "52 * * * *";
+    mocks.runV9AfterCoreWithinWindow.mockImplementation(async (options) =>
+      options.onV9PublicationAlreadyAccepted(new AbortController().signal, { deadlineMs: 1_980_000 }));
+    mocks.recoverSafetyScoreV9PublicMaterialization.mockResolvedValue({ status: "ok", itemCount: 1 });
+    await runV9PublicationSlot(scheduledRuntime);
+    expect(mocks.recoverSafetyScoreV9PublicMaterialization).toHaveBeenCalledWith(scheduledRuntime.db, expect.any(AbortSignal), 1_980_000);
+    expect(mocks.computeSafetyScoreV9).not.toHaveBeenCalled();
+  });
 
   it.each([["on", true], ["off", false], ["ON", false]] as const)("defers public materialization only for literal %s", async (mode, expected) => {
     const { scheduledRuntime } = compilingRuntime();

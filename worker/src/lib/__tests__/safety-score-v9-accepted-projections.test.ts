@@ -1,3 +1,4 @@
+import { SAFETY_SCORE_COHORT_MAX_BYTES } from "@shared/types/safety-score-cohort";
 import { describe, expect, it, vi } from "vitest";
 import * as structuredLog from "../structured-log";
 import { sha256Hex } from "@shared/lib/sha256";
@@ -133,6 +134,7 @@ describe("Safety Score V9 accepted projection writers", () => {
       const publication = makeWorkerSafetyScoreV9Publication({ cards });
       const projections = buildSafetyScoreV9AcceptedProjections(publication);
       const encoder = new TextEncoder();
+      const cohortBytes = encoder.encode(projections.cohort).byteLength;
       const baselineBytes = encoder.encode(projections.baseline).byteLength;
       const lenderBytes = encoder.encode(projections.lender).byteLength;
       expect(baselineBytes).toBeGreaterThan(SAFETY_SCORE_V9_ACCEPTED_BASELINE_PROJECTION_MAX_BYTES / 2);
@@ -144,6 +146,7 @@ describe("Safety Score V9 accepted projection writers", () => {
         scope: "lib", level: "warn", event: "safety_score_v9_accepted_projection_size_warning",
         message: "Accepted Safety Score v9 projection exceeds half its byte cap",
         metadata: {
+          cohortBytes, cohortMaxBytes: SAFETY_SCORE_COHORT_MAX_BYTES,
           baselineBytes, baselineMaxBytes: SAFETY_SCORE_V9_ACCEPTED_BASELINE_PROJECTION_MAX_BYTES,
           lenderBytes, lenderMaxBytes: SAFETY_SCORE_V9_LENDER_COLLATERAL_PROJECTION_MAX_BYTES,
         },

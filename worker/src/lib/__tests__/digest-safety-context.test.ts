@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ActiveSafetyScoreSource } from "../safety-score-active-source";
+import type { ActiveSafetyScoreIndex } from "../safety-score-index";
 import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 
-const mockLoadActiveSafetyScoreSource = vi.fn();
+const mockLoadActiveSafetyScoreIndex = vi.fn();
 
-vi.mock("../safety-score-active-source", () => ({
-  loadActiveSafetyScoreSource: mockLoadActiveSafetyScoreSource,
+vi.mock("../safety-score-index", () => ({
+  loadActiveSafetyScoreIndex: mockLoadActiveSafetyScoreIndex,
 }));
 
 const {
@@ -34,7 +34,7 @@ const authored = {
 
 function activeV9(
   overrides: Partial<typeof identity> = {},
-): Extract<ActiveSafetyScoreSource, { kind: "v9" }> {
+): Extract<ActiveSafetyScoreIndex, { kind: "v9" }> {
   const activeIdentity = { ...identity, ...overrides };
   return {
     kind: "v9",
@@ -47,7 +47,7 @@ function activeV9(
 
 describe("digest Safety Score delivery context", () => {
   beforeEach(() => {
-    mockLoadActiveSafetyScoreSource.mockReset().mockResolvedValue(activeV9());
+    mockLoadActiveSafetyScoreIndex.mockReset().mockResolvedValue(activeV9());
   });
 
   it("allows only the exact authored publication generation", async () => {
@@ -55,7 +55,7 @@ describe("digest Safety Score delivery context", () => {
       checkDigestSafetyContextForDelivery({} as D1Database, authored),
     ).resolves.toEqual({ kind: "ok" });
 
-    mockLoadActiveSafetyScoreSource.mockResolvedValueOnce(
+    mockLoadActiveSafetyScoreIndex.mockResolvedValueOnce(
       activeV9({ publicationGenerationId: "report-cards:v9:2" }),
     );
     await expect(
@@ -64,12 +64,12 @@ describe("digest Safety Score delivery context", () => {
   });
 
   it("defers delivery while the activated V9 identity is unavailable", async () => {
-    mockLoadActiveSafetyScoreSource.mockResolvedValueOnce({
+    mockLoadActiveSafetyScoreIndex.mockResolvedValueOnce({
       kind: "error",
       reason: "v9-snapshot-unavailable",
       detail: "marker and snapshot disagree",
       snapshot: null,
-    } satisfies ActiveSafetyScoreSource);
+    } satisfies ActiveSafetyScoreIndex);
 
     await expect(
       checkDigestSafetyContextForDelivery({} as D1Database, authored),
@@ -95,7 +95,7 @@ describe("digest Safety Score delivery context", () => {
         reason: "legacy-unbound",
       }),
     ).resolves.toEqual({ kind: "stale", reason: "legacy-unbound" });
-    expect(mockLoadActiveSafetyScoreSource).not.toHaveBeenCalled();
+    expect(mockLoadActiveSafetyScoreIndex).not.toHaveBeenCalled();
   });
 
   it("detects report-card claims only when copy has no identified publication", () => {

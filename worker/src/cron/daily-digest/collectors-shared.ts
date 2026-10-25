@@ -50,6 +50,7 @@ export interface CollectorResult<T> {
 }
 
 export interface SafetyScoresResult {
+  safetyProjectionFallbackCount: number;
   safetyScores: DigestInputData["safetyScores"];
   safetyGrades: CanonicalSafetyGradeRow[] | undefined;
   safetyIdentity: SafetyScoreV9PublicationIdentity | undefined;

@@ -56,10 +56,14 @@ export class SafetyScoreV9ReplayCaptureIdentityError extends Error {
   }
 }
 
+export type SafetyScoreV9ReplayCaptureInput = Pick<SafetyScoreV9CompilerInput,
+  "baseInputGenerationId" | "clockSec" | "safetyScoreV9SupplyAttributionById" | "evidenceJournalById" |
+  "supplyAttributionJournalById" | "pegProvenanceById" | "pipelineGapByAssetId">;
+
 /** Serialize only existing enrichment projections, never a second full capture. */
 export async function buildSafetyScoreV9PublicationReplayCapture(
   publication: Readonly<SafetyScoreV9CurrentResponse>,
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  fixedInput: Readonly<SafetyScoreV9ReplayCaptureInput>,
   transferMaterialityGeneration: SafetyScoreV9TransferMaterialityGeneration | null,
 ) {
   if (publication.baseInputGenerationId !== fixedInput.baseInputGenerationId || publication.publishedAtSec !== fixedInput.clockSec) {

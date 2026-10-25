@@ -5,8 +5,10 @@ import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fix
 import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import * as fixedInputCodec from "../report-cards-fixed-input-cache-codec";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
+import * as publicMaterialization from "../report-cards-v9-materialization";
 import { materializeV9AcceptedPublication } from "../report-cards-v9-materialization";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../safety-score-v9/publication-codec";
 import type * as PublicationStore from "../safety-score-v9/publication-store";
@@ -15,7 +17,10 @@ import * as publicationAttempts from "../safety-score-v9/publication-attempts";
 import type * as AcceptedProjectionReaders from "../safety-score-v9/accepted-projection-readers";
 import { buildSafetyScoreV9AcceptedBaselineProjection } from "../safety-score-v9/accepted-projections";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
-import { runSafetyScoreV9Publication, getSafetyScoreV9PublicationBudgetMs } from "../safety-score-v9/publication-runner";
+import { runSafetyScoreV9Publication, getSafetyScoreV9PublicationBudgetMs, retryPendingSafetyScoreV9PublicMaterialization, recoverSafetyScoreV9PublicMaterialization } from "../safety-score-v9/publication-runner";
+import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY } from "@shared/types/report-cards-v9-materialization";
+import * as publicationCodec from "../safety-score-v9/publication-codec";
+import * as evaluateSet from "@shared/lib/safety-score-v9/evaluate-set";
 
 const mocks = vi.hoisted(() => ({
   assess: vi.fn(),
@@ -34,7 +39,7 @@ vi.mock("../alert-safety-source-cache", async (importOriginal) => ({
 }));
 
 vi.mock("../safety-score-v9/candidate", () => ({
-  buildSafetyScoreV9PublicationFromNormalizedInput: mocks.build,
+  buildSafetyScoreV9PublicationFromOwnedInput: mocks.build,
 }));
 vi.mock("../safety-score-v9/publication-assessment", async (importOriginal) => ({
   ...await importOriginal<
@@ -76,6 +81,100 @@ function acceptedBaseline(publication: SafetyScoreV9CurrentResponse, held = fals
 }
 
 describe("Safety Score V9 publication runner", () => {
+  it.each([false, true])("retries an unselected acceptance without changing canonical bytes (chunked=%s)", async chunkedPublicationWrites => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const publication = makeWorkerSafetyScoreV9Publication();
+    try {
+      await store.persistSafetyScoreV9Publication(db, { ...currentInput(publication), deferPublicMaterialization: true, chunkedPublicationWrites });
+      const acceptedRows = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
+      vi.useFakeTimers({ toFake: ["Date"] });
+      const retry = await retryPendingSafetyScoreV9PublicMaterialization(db, undefined, Date.now() + 180_000);
+      expect(retry).toMatchObject({ status: "materialized", publicationGenerationId: publication.publicationGenerationId, budgetMs: 175_000 });
+      expect(Object.values(retry!).every(value => value === null || typeof value === "string" || typeof value === "number")).toBe(true);
+      for (const row of acceptedRows) expect(sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(row.key)).toEqual(row);
+      const decode = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
+      const materialize = vi.spyOn(publicMaterialization, "materializeV9AcceptedPublication");
+      try {
+        expect(await retryPendingSafetyScoreV9PublicMaterialization(db, undefined, Date.now() + 180_000)).toBeNull();
+        expect(decode).not.toHaveBeenCalled();
+        expect(materialize).not.toHaveBeenCalled();
+      } finally { decode.mockRestore(); materialize.mockRestore(); }
+    } finally { vi.useRealTimers(); sqlite.close(); }
+  });
+
+  it.each(["aborted", "ambiguous", "deadline"])("confirms committed selection after a late %s outcome", async mode => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const publication = makeWorkerSafetyScoreV9Publication();
+    const controller = new AbortController();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const deadlineMs = Date.now() + 180_000;
+    try {
+      await store.persistSafetyScoreV9Publication(db, { ...currentInput(publication), deferPublicMaterialization: true });
+      const batch = db.batch.bind(db);
+      const spy = vi.spyOn(db, "batch").mockImplementation(async statements => {
+        const results = await batch(statements);
+        if (sqlite.prepare("SELECT key FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY)) {
+          if (mode === "deadline") vi.setSystemTime(deadlineMs + 1);
+          else controller.abort(new DOMException("Late abort", "AbortError"));
+          if (mode === "ambiguous") throw new Error("Acknowledgement lost after commit");
+        }
+        return results;
+      });
+      const result = await recoverSafetyScoreV9PublicMaterialization(db, controller.signal, deadlineMs);
+      expect(result.status).toBe("ok");
+      expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "v9-public-materialization-retry-materialized" });
+      spy.mockRestore();
+    } finally { vi.useRealTimers(); sqlite.close(); }
+  });
+
+  it.each(["failed", "timeout"])("records %s recovery without a candidate computation", async mode => {
+    const error = mode === "timeout" ? new DOMException("Timeout", "TimeoutError") : new Error("D1 unavailable");
+    const db = makeNoopD1({ prepare: () => { throw error; } });
+    const result = await recoverSafetyScoreV9PublicMaterialization(db, new AbortController().signal, Date.now() + 180_000);
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata!)).toMatchObject({ reason: `v9-public-materialization-retry-${mode}` });
+    expect(mocks.build).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { remainingMs: 180_000, budgetMs: 175_000 },
+    { remainingMs: 140_000, budgetMs: 135_000 },
+    { remainingMs: 5_000, budgetMs: 0 },
+  ])("caps retry at $budgetMs ms with $remainingMs ms remaining", async ({ remainingMs, budgetMs }) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    const prepare = vi.spyOn(db, "prepare");
+    try {
+      const result = await retryPendingSafetyScoreV9PublicMaterialization(db, undefined, Date.now() + remainingMs);
+      if (budgetMs === 0) {
+        expect(result).toMatchObject({ status: "skipped", budgetMs: 0, reason: "v9-public-materialization-retry-insufficient-budget" });
+        expect(prepare).not.toHaveBeenCalled();
+        expect(timeout).not.toHaveBeenCalled();
+      } else {
+        expect(result).toMatchObject({ status: "skipped", reason: "v9-public-materialization-retry-source-unavailable" });
+        expect(timeout).toHaveBeenCalledWith(budgetMs);
+        expect(remainingMs - budgetMs).toBe(5_000);
+      }
+    } finally { timeout.mockRestore(); prepare.mockRestore(); vi.useRealTimers(); sqlite.close(); }
+  });
+
+  it("stops before decode when metadata IO consumes the retry budget before its timer fires", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const now = Date.now();
+    const decode = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
+    const db = makeNoopD1({ prepare: () => ({ bind: () => ({ first: async () => {
+      vi.setSystemTime(now + 175_001);
+      return null;
+    } }) }) });
+    try {
+      await expect(retryPendingSafetyScoreV9PublicMaterialization(db, undefined, now + 180_000)).rejects.toMatchObject({ name: "TimeoutError" });
+      expect(decode).not.toHaveBeenCalled();
+    } finally { decode.mockRestore(); vi.useRealTimers(); }
+  });
+
   it("does not roll back accepted cards when the journal D1 read throws", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
@@ -289,6 +388,96 @@ describe("Safety Score V9 publication runner", () => {
       expect.anything(),
     );
   });
+
+  it("transfers input ownership and reloads complete retry facts without mutating the caller", async () => {
+    const { normalizeSafetyScoreV9CompilerInput } = await import("../safety-score-v9/native-input");
+    const original = normalizeSafetyScoreV9CompilerInput(fixedInput);
+    const expected = structuredClone(original);
+    const owner = { value: original as typeof original | null };
+    const pipeline = mocks.build.getMockImplementation()!();
+    mocks.build.mockImplementationOnce(({ fixedInputOwner }) => {
+      expect(owner.value).toBeNull();
+      expect(fixedInputOwner.value).toBe(original);
+      fixedInputOwner.value = null;
+      const reloaded = fixedInputOwner.reload();
+      expect(reloaded).not.toBe(original);
+      expect(reloaded).toEqual(expected);
+      return pipeline;
+    });
+    const result = await runSafetyScoreV9Publication({
+      db: {} as D1Database, fixedInput: null, fixedInputOwner: owner,
+      nowSec: original.clockSec,
+    });
+    expect(result.status).toBe("published");
+    expect(original).toEqual(expected);
+    expect(owner.value).toBeNull();
+    expect(() => mocks.build.mock.calls[0]![0].fixedInputOwner.reload()).toThrow("compilation already completed");
+  });
+
+  it.each(["pegProvenanceById", "safetyScoreV9SupplyAttributionById", "dexDeploymentSupplyCoverageById"])(
+    "preserves prepared %s admission and record order when reloading",
+    async (field) => {
+      const pipeline = mocks.build.getMockImplementation()!();
+      mocks.build.mockImplementationOnce(({ fixedInputOwner }) => {
+        const prepared = fixedInputOwner.value;
+        fixedInputOwner.value = null;
+        const reloaded = fixedInputOwner.reload();
+        expect(reloaded).toStrictEqual(prepared);
+        expect(JSON.stringify(reloaded)).toBe(JSON.stringify(prepared));
+        return pipeline;
+      });
+      const result = await runSafetyScoreV9Publication({
+        db: {} as D1Database, fixedInput, nowSec: fixedInput.clockSec,
+        preparedFixedInputAlreadyNormalized: true,
+        prepareFixedInput: async (input) => ({
+          ...input,
+          [field]: { "usdc-circle": { malformed: true } },
+          evidenceJournalById: { "usdt-tether": [], "usdc-circle": [] },
+        }),
+      });
+      expect(result.status).toBe("published");
+    },
+  );
+
+  it("keeps malformed enrichment asset-local when an evaluation failure forces a retry", async () => {
+    const candidate = await vi.importActual<typeof import("../safety-score-v9/candidate")>("../safety-score-v9/candidate");
+    mocks.build.mockImplementation(candidate.buildSafetyScoreV9PublicationFromOwnedInput);
+    const evaluate = vi.spyOn(evaluateSet, "evaluateValidatedV9FactSetForPublication")
+      .mockImplementationOnce((owner) => {
+        expect(owner.factSet?.assets.find((asset) => asset.assetId === "audd-novatti")?.evidence)
+          .toEqual(expect.arrayContaining([expect.objectContaining({
+            sourceId: "safety-score-v9-compiler", disposition: "rejected",
+          })]));
+        throw new evaluateSet.V9AssetEvaluationError("brz-transfero", { issues: [{ path: ["structuralSignals"] }] });
+      });
+    const input = createSafetyScoreV9FullRegistryInput();
+    try {
+      const result = await runSafetyScoreV9Publication({
+        db: {} as D1Database, fixedInput: input, nowSec: input.clockSec,
+        preparedFixedInputAlreadyNormalized: true,
+        prepareFixedInput: async (base) => ({
+          ...base,
+          safetyScoreV9SupplyAttributionById: {
+            "audd-novatti": { model: "reviewed-economic-deployment-partition-v1" },
+          },
+        }),
+      });
+      expect(result.status).toBe("published");
+      expect(evaluate).toHaveBeenCalledTimes(2);
+      const pipeline = mocks.build.mock.results[0]!.value;
+      expect(pipeline.quarantines).toEqual(expect.arrayContaining([
+        expect.objectContaining({ assetId: "audd-novatti" }),
+        expect.objectContaining({ assetId: "brz-transfero", code: "evaluation-failed" }),
+      ]));
+      for (const id of ["audd-novatti", "brz-transfero"]) {
+        expect(pipeline.candidate.cards.find((card: { id: string }) => card.id === id))
+          .toMatchObject({ ratingStatus: "pipeline-gap", score: null, grade: null });
+      }
+      expect(mocks.persist).toHaveBeenCalledTimes(1);
+    } finally {
+      evaluate.mockRestore();
+    }
+  }, 120_000);
 
   it("projects the accepted publication before compiling the next candidate", async () => {
     const order: string[] = [];

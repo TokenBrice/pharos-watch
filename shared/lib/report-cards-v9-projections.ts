@@ -45,12 +45,20 @@ export function projectV9Table(snapshot: ReportCardsV9ProjectionSource): ReportC
   });
 }
 
+export function projectV9DetailNeighborhoodCard(card: SafetyScoreV9CurrentCard): ReportCardsV9DetailResponse["neighborhood"][number] {
+  return {
+    id: card.id, grade: card.grade, partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence), sharedBookId: card.sharedBookId,
+    ratingStatus: card.ratingStatus, pillars: projectV9EvidencePillars(card.pillars, card.scoreTrace.aggregation?.pricedUnknownPillars),
+  };
+}
+
 /** Complete incident-edge closure plus every member of the selected coin's common-mode groups.
  * Other members' evaluator internals are deliberately not repeated. The selected
  * full card retains all evidence and the original global gap-index context. */
 export function projectV9Detail(
   snapshot: ReportCardsV9ProjectionSource, coinId: string,
   graph: ReportCardsV9DependencyGraph = resolvedDependencyGraph(snapshot),
+  neighborhoodCards?: readonly ReportCardsV9DetailResponse["neighborhood"][number][],
 ): ReportCardsV9DetailResponse {
   const selected = snapshot.cards.find(card => card.id === coinId);
   if (!selected) throw new Error("v9-detail-card-unavailable");
@@ -65,10 +73,9 @@ export function projectV9Detail(
   const members = new Set([coinId]);
   for (const edge of edges) { members.add(edge.from); members.add(edge.to); }
   for (const group of groups ?? []) for (const id of group.memberAssetIds) members.add(id);
-  const neighborhood = snapshot.cards.filter(card => members.has(card.id)).map(card => ({
-    id: card.id, grade: card.grade, partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence), sharedBookId: card.sharedBookId,
-    ratingStatus: card.ratingStatus, pillars: projectV9EvidencePillars(card.pillars, card.scoreTrace.aggregation?.pricedUnknownPillars),
-  }));
+  const neighborhood = neighborhoodCards === undefined
+    ? snapshot.cards.filter(card => members.has(card.id)).map(projectV9DetailNeighborhoodCard)
+    : neighborhoodCards.filter(card => members.has(card.id));
   return ReportCardsV9DetailResponseSchema.parse({
     ...envelope(snapshot), projection: "detail", coinId,
     cards: [resolveV9PublicWitnessTexts(selected)], neighborhood,

@@ -33,7 +33,7 @@ import {
   RedemptionBackstopSnapshotUnavailableError,
 } from "../../lib/redemption-backstops-store";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
-import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
+import { loadActiveSafetyScoreCohort } from "../../lib/safety-score-active-source";
 import { loadPublishedStressSignalGeneration } from "../../lib/stress-signals-current-rows";
 import {
   CURRENT_PRICE_MAX_AGE_SEC,
@@ -88,9 +88,10 @@ export interface DdrLoadedContext {
   lineage: DdrLineage;
 }
 
-export type DdrContextLoadResult =
+export type DdrContextLoadResult = (
   | { kind: "ok"; context: DdrLoadedContext }
-  | { kind: "degraded"; reason: string; dataAsOf: number | null };
+  | { kind: "degraded"; reason: string; dataAsOf: number | null }
+) & { safetyProjectionFallbackCount: number };
 
 // Measured 24h volume after the DEC-19 availability read: null when the
 // stored record marks the window partial/missing/stale/unreadable.
@@ -382,10 +383,12 @@ export async function loadDdrContext(
   activeRows: DdrEventDbRow[],
   nowSec: number,
 ): Promise<DdrContextLoadResult> {
+  let safetyProjectionFallbackCount = 0;
   const currentDeviation = await buildCurrentDeviationMap(db, nowSec);
   if (!currentDeviation.healthy) {
     return {
       kind: "degraded",
+      safetyProjectionFallbackCount,
       reason: currentDeviation.degradedReason ?? "stablecoins-cache-unusable",
       dataAsOf: currentDeviation.dataAsOf,
     };
@@ -621,7 +624,8 @@ export async function loadDdrContext(
     identity: null,
   };
   try {
-    const activeSafetySource = await loadActiveSafetyScoreSource(db);
+    const activeSafetySource = await loadActiveSafetyScoreCohort(db);
+    safetyProjectionFallbackCount = activeSafetySource.projectionFallbackCount;
     if (activeSafetySource.kind === "held") {
       safetyContext = {
         status: "cache-unavailable",
@@ -699,11 +703,12 @@ export async function loadDdrContext(
     redemptionResult.error,
   ].filter((reason): reason is string => reason != null);
   if (resolverHealthFailures.length > 0) {
-    return { kind: "degraded", reason: resolverHealthFailures.join(","), dataAsOf: currentDeviation.dataAsOf };
+    return { kind: "degraded", reason: resolverHealthFailures.join(","), dataAsOf: currentDeviation.dataAsOf, safetyProjectionFallbackCount };
   }
 
   return {
     kind: "ok",
+    safetyProjectionFallbackCount,
     context: {
       active,
       activeCoinIds,
