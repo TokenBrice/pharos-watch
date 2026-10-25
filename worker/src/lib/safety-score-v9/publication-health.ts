@@ -4,17 +4,9 @@ import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9
 import { getCache } from "../db-cache";
 import { parseJson } from "../json-parse";
 import { SafetyScoreV9SchemaCutoverPendingError } from "./publication-codec";
+import { SAFETY_SCORE_V9_CACHE_KEYS } from "./publication-cache-keys";
 
-/** Shared cache identities and health admission without publication materialization. */
-export const SAFETY_SCORE_V9_CACHE_KEYS = {
-  publication: "report-cards:v9",
-  scoreIndex: "report-cards:v9:score-index",
-  acceptedBaseline: "report-cards:v9:accepted-baseline:v1",
-  lenderCollateral: "report-cards:v9:lender-collateral:v1",
-  publicationHealth: "report-cards:v9:publication-health",
-  publicationAttempt: "report-cards:v9:last-attempt",
-  failedPublicationAttempt: "report-cards:v9:last-failed-attempt",
-} as const;
+export { SAFETY_SCORE_V9_CACHE_KEYS } from "./publication-cache-keys";
 
 export async function loadSafetyScoreV9PublicationHealth(
   db: D1Database,

@@ -28,7 +28,7 @@ import {
   persistSafetyScoreV9PublicationAttempt,
   loadSafetyScoreV9PublicationIdentityEnvelope,
 } from "./publication-store";
-import { loadSafetyScoreV9PublicationHealth } from "./publication-health";
+import { loadSafetyScoreV9PublicationHealth, resolveSafetyScoreV9EffectivePublicationHealth, SAFETY_SCORE_V9_CACHE_KEYS } from "./publication-health";
 import type { V9PublicationPhaseElapsedMs, V9PublicationAbortCause, V9PublicationAttempt } from "./publication-attempts";
 import type { V9AssetQuarantine } from "./fact-set";
 import { persistAlertSafetyV9SourceEnvelope } from "../alert-safety-source-cache";
@@ -43,8 +43,12 @@ import { journalSafetyScorePublication, type SafetyScoreJournalResult } from "./
 import { archiveSafetyScoreCapture, type SafetyScoreCaptureArchiveResult } from "./capture-archive";
 import { buildSafetyScoreV9AcceptedProjections } from "./accepted-projections";
 import { materializeV9AcceptedPublication, type V9AcceptedPublicMaterializationSource, type V9PublicMaterializationResult } from "../report-cards-v9-materialization";
+import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY, V9_PUBLIC_REPRESENTATION_VERSION } from "@shared/types/report-cards-v9-materialization";
+import { throwIfAborted } from "../abort";
+import { loadSafetyScoreV9PublicationStoredRow } from "./publication-chunks";
+import { parseSafetyScoreV9Publication } from "./publication-codec";
 
-// Only non-scheduled callers use this bounded fallback.
+// Non-scheduled fallback, also the compute window preserved by materialization recovery.
 const SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS = 2 * 60_000;
 // Initial headroom for up to two 5s independent operations (commit check and
 // failed-attempt write) plus 5s cron settlement, not a measured persistence p99.
@@ -463,8 +467,7 @@ function logPublicationGenerationDeltas(
 /**
  * Best-effort post-acceptance materialization. Acceptance is already durable;
  * a failure leaves readers on the previously selected generation and is retried
- * once in-run, then by the next accepted publication or a reader repair after
- * the lag budget.
+ * once in-run, then at the next heavy slot before loading candidate inputs.
  */
 async function materializeAcceptedPublication(
   db: D1Database,
@@ -490,6 +493,57 @@ async function materializeAcceptedPublication(
       };
     }
   }
+}
+
+/** Recover accepted bytes before candidate input loading can fail or hold. */
+export async function retryPendingSafetyScoreV9PublicMaterialization(
+  db: D1Database, signal?: AbortSignal, deadlineMs?: number,
+): Promise<{
+  status: SafetyScoreV9PublicMaterializationRunResult["status"]; publishedAtSec: number | null;
+  publicationGenerationId: string | null; reason: string; budgetMs: number;
+} | null> {
+  // Spend only slack above the ordinary 120s compute budget and 15s settlement reserve.
+  const budgetMs = Math.max(0, Math.min(10_000, deadlineMs === undefined ? 10_000
+    : deadlineMs - Date.now() - SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS - SAFETY_SCORE_V9_PUBLICATION_SETTLEMENT_RESERVE_MS));
+  if (budgetMs === 0) return { status: "skipped", publishedAtSec: null, publicationGenerationId: null,
+    reason: "v9-public-materialization-retry-insufficient-budget", budgetMs };
+  const retryDeadlineMs = Date.now() + budgetMs;
+  const retrySignal = AbortSignal.any([AbortSignal.timeout(budgetMs), ...(signal ? [signal] : [])]);
+  const checkBudget = () => {
+    if (Date.now() >= retryDeadlineMs) throw new DOMException("Materialization retry budget exhausted", "TimeoutError");
+    throwIfAborted(retrySignal);
+  };
+  checkBudget();
+  const row = await db.prepare(`SELECT p.updated_at AS published_at,
+    json_extract(p.value, '$.identity.publicationGenerationId') AS generation_id,
+    json_extract(p.value, '$.payloadSha256') AS payload_sha256,
+    CASE WHEN json_extract(m.value, '$.publicationGenerationId') = json_extract(p.value, '$.identity.publicationGenerationId')
+      AND json_extract(m.value, '$.payloadSha256') = json_extract(p.value, '$.payloadSha256')
+      AND json_extract(m.value, '$.projectionVersion') = ? THEN 1 ELSE 0 END AS materialized
+    FROM cache p LEFT JOIN cache m ON m.key = ? WHERE p.key = ?`)
+    .bind(V9_PUBLIC_REPRESENTATION_VERSION, V9_PUBLIC_MATERIALIZATION_CACHE_KEY, SAFETY_SCORE_V9_CACHE_KEYS.publication)
+    .first<{ published_at: number; generation_id: string; payload_sha256: string; materialized: number }>();
+  checkBudget();
+  if (!row || row.materialized === 1) return null;
+  const source = await loadSafetyScoreV9PublicationStoredRow(db, retrySignal);
+  checkBudget();
+  if (!source || source.updatedAt !== row.published_at || JSON.parse(source.value).payloadSha256 !== row.payload_sha256) {
+    throw new Error("v9-public-materialization-retry-source-changed");
+  }
+  const publication = await parseSafetyScoreV9Publication(source.value, retrySignal);
+  checkBudget();
+  const health = await loadSafetyScoreV9PublicationHealth(db, retrySignal);
+  checkBudget();
+  if (!health || publication.publicationGenerationId !== row.generation_id || publication.publishedAtSec !== row.published_at) {
+    throw new Error("v9-public-materialization-retry-source-unavailable");
+  }
+  const result = await materializeAcceptedPublication(db, {
+    publication, health: resolveSafetyScoreV9EffectivePublicationHealth(publication, health), payloadSha256: row.payload_sha256,
+  }, retrySignal, { persistPrepare: null, persistCommit: null, materializeStage: null, materializeSelect: null });
+  checkBudget();
+  // Only primitives escape this completed frame; no accepted cohort/source survives into input loading.
+  return { status: result.status, publishedAtSec: row.published_at, publicationGenerationId: row.generation_id, budgetMs,
+    reason: `v9-public-materialization-retry-${result.status}` };
 }
 
 export async function runSafetyScoreV9Publication(
@@ -821,8 +875,7 @@ export async function runSafetyScoreV9Publication(
     });
     finishPhase();
     pendingPublished.captureArchive = captureArchive;
-    // An interrupted run leaves materialization to the next accepted run or a
-    // reader repair; the previously selected generation stays served meanwhile.
+    // An interrupted run leaves materialization to the next heavy slot.
     if (persisted.acceptedMaterialization !== null && !publicationSignal.aborted) {
       pendingPublished.publicMaterialization = await materializeAcceptedPublication(
         input.db, persisted.acceptedMaterialization, publicationSignal, subphaseElapsedMs,

@@ -11,7 +11,9 @@ import {
 import {
   runWithOverloadRetry,
 } from "./d1-overload-retry";
+import { SAFETY_SCORE_V9_CACHE_KEYS } from "./safety-score-v9/publication-cache-keys";
 import type { CronResult } from "./cron-logger";
+import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY, V9_PUBLIC_REPRESENTATION_VERSION } from "@shared/types/report-cards-v9-materialization";
 
 interface CoreSlotRow {
   state: string;
@@ -169,11 +171,10 @@ export async function loadMatchingCoreStablecoinsPublishedAt(
   return row?.published_at ?? null;
 }
 
-// Mirrors SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth without loading the publication codec graph.
-export const V9_PUBLICATION_HEALTH_CACHE_KEY = "report-cards:v9:publication-health";
+export const V9_PUBLICATION_HEALTH_CACHE_KEY = SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth;
 
 /**
- * Accepted clock of a publication accepted since the top of this second-chance
+ * Accepted clock of a selected publication accepted since the top of this second-chance
  * slot's hour, or null. Accepted clocks are scoring clocks, never later than
  * the run that published them, so every earlier hour's publication (including
  * the previous :52) falls before the boundary. A :22 run that could only admit
@@ -189,11 +190,16 @@ export async function loadV9PublicationHourAcceptedAtSec(
   const row = await runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT json_extract(value, '$.acceptedAtSec') AS accepted_at
-           FROM cache
-          WHERE key = ?`,
+        `SELECT CASE WHEN json_extract(m.value, '$.publicationGenerationId') = json_extract(p.value, '$.identity.publicationGenerationId')
+          AND json_extract(m.value, '$.payloadSha256') = json_extract(p.value, '$.payloadSha256')
+          AND json_extract(m.value, '$.projectionVersion') = ?
+          AND json_extract(h.value, '$.acceptedPublicationGenerationId') = json_extract(p.value, '$.identity.publicationGenerationId')
+          AND json_extract(h.value, '$.acceptedAtSec') = p.updated_at
+          THEN json_extract(h.value, '$.acceptedAtSec') ELSE NULL END AS accepted_at
+           FROM cache h LEFT JOIN cache p ON p.key = ? LEFT JOIN cache m ON m.key = ?
+          WHERE h.key = ?`,
       )
-      .bind(V9_PUBLICATION_HEALTH_CACHE_KEY)
+      .bind(V9_PUBLIC_REPRESENTATION_VERSION, SAFETY_SCORE_V9_CACHE_KEYS.publication, V9_PUBLIC_MATERIALIZATION_CACHE_KEY, V9_PUBLICATION_HEALTH_CACHE_KEY)
       .first<{ accepted_at: number | null }>(),
     3, signal);
   const acceptedAtSec = row?.accepted_at;

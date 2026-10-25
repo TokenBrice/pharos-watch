@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY, V9_PUBLIC_REPRESENTATION_VERSION } from "@shared/types/report-cards-v9-materialization";
 
 const leaseMocks = vi.hoisted(() => ({
   runCronWithLease: vi.fn(),
@@ -22,6 +24,7 @@ import {
   V9_PUBLICATION_HEALTH_CACHE_KEY,
   getV9ExecutionDeadlineMs,
   waitForV9MemoryLaneRelease,
+  loadV9PublicationHourAcceptedAtSec,
   type V9ExecutionWindow,
 } from "../v9-slot-window";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../safety-score-v9/publication-health";
@@ -324,7 +327,8 @@ describe("runV9AfterCoreWithinWindow", () => {
         productivity: { productive: false, reason: "v9-publication-hourly-already-accepted" },
       });
       expect(JSON.parse(result.metadata!)).toMatchObject({ acceptedAtSec });
-      expect(fixture.bind).toHaveBeenCalledWith(V9_PUBLICATION_HEALTH_CACHE_KEY);
+      expect(fixture.bind).toHaveBeenCalledWith(V9_PUBLIC_REPRESENTATION_VERSION, SAFETY_SCORE_V9_CACHE_KEYS.publication,
+        V9_PUBLIC_MATERIALIZATION_CACHE_KEY, V9_PUBLICATION_HEALTH_CACHE_KEY);
       expect(leaseMocks.runCronWithLease).not.toHaveBeenCalled();
       expect(run).not.toHaveBeenCalled();
     });
@@ -345,6 +349,29 @@ describe("runV9AfterCoreWithinWindow", () => {
       expect(result.status).toBe("ok");
       expect(run).toHaveBeenCalledOnce();
       expect(fixture.bind).toHaveBeenCalledWith(Date.parse("2026-10-23T16:45:00Z") / 1_000);
+    });
+
+    it("keeps :52 eligible until the accepted generation's current representation is selected", async () => {
+      const { sqlite, db } = createLatestSchemaSqlite();
+      const acceptedAtSec = Date.parse("2026-10-23T16:16:40Z") / 1_000;
+      const insert = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+      try {
+        insert.run(SAFETY_SCORE_V9_CACHE_KEYS.publication, JSON.stringify({ identity: { publicationGenerationId: "accepted" }, payloadSha256: "sha" }), acceptedAtSec);
+        insert.run(V9_PUBLICATION_HEALTH_CACHE_KEY, JSON.stringify({ acceptedAtSec, acceptedPublicationGenerationId: "accepted" }), acceptedAtSec);
+        expect(await loadV9PublicationHourAcceptedAtSec(db, secondChanceMs / 1000)).toBeNull();
+        for (const marker of [
+          { publicationGenerationId: "older", projectionVersion: V9_PUBLIC_REPRESENTATION_VERSION, payloadSha256: "sha" },
+          { publicationGenerationId: "accepted", projectionVersion: V9_PUBLIC_REPRESENTATION_VERSION - 1, payloadSha256: "sha" },
+          { publicationGenerationId: "accepted", projectionVersion: V9_PUBLIC_REPRESENTATION_VERSION, payloadSha256: "other" },
+        ]) {
+          insert.run(V9_PUBLIC_MATERIALIZATION_CACHE_KEY, JSON.stringify(marker), acceptedAtSec);
+          expect(await loadV9PublicationHourAcceptedAtSec(db, secondChanceMs / 1000)).toBeNull();
+        }
+        insert.run(V9_PUBLIC_MATERIALIZATION_CACHE_KEY, JSON.stringify({
+          publicationGenerationId: "accepted", projectionVersion: V9_PUBLIC_REPRESENTATION_VERSION, payloadSha256: "sha",
+        }), acceptedAtSec);
+        expect(await loadV9PublicationHourAcceptedAtSec(db, secondChanceMs / 1000)).toBe(acceptedAtSec);
+      } finally { sqlite.close(); }
     });
 
     it("degrades without publishing when acceptance evidence is unreadable", async () => {

@@ -5,6 +5,8 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeReportCardsV9Card, makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { projectV9Table, projectV9Detail } from "@shared/lib/report-cards-v9-projections";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ReportCardsV9TableResponseSchema, ReportCardsV9DetailResponseSchema } from "@shared/types/report-cards-v9-projections";
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
@@ -115,18 +117,28 @@ describe("generation-bound compact Safety Scores", () => {
     }
   });
 
-  it("backfills only the requested representation at the accepted clock", async () => {
+  it("leaves a newly added coin pending until heavy selects its generation", async () => {
     const { db, sqlite, publication } = await seed();
-    sqlite.exec("DELETE FROM safety_score_site_fragments; DELETE FROM safety_score_site_manifests; DELETE FROM safety_score_public_manifests");
-    const response = await handleReportCardsV9Detail(db, detailUrl());
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ updatedAt: publication.publishedAtSec });
-    expect(sqlite.prepare("SELECT representation_key FROM safety_score_site_manifests").all())
-      .toEqual([{ representation_key: "coin:usdc-circle" }]);
-    expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_public_manifests").get()!.n).toBe(0);
+    const next = makeWorkerSafetyScoreV9Publication({
+      cards: [publication.cards[0]!, makeReportCardsV9Card({ id: "lusd-liquity" }), ...publication.cards.slice(1)],
+      publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next",
+    });
+    const persisted = await persistSafetyScoreV9Publication(db, { ...currentInput(next), deferPublicMaterialization: true });
+    const before = sqlite.prepare("SELECT * FROM safety_score_site_manifests").all();
+    const decode = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
+    const pending = await handleReportCardsV9Detail(db, detailUrl("lusd-liquity"));
+    expect(pending.status).toBe(503);
+    expect(pending.headers.get("Cache-Control")).toBe("no-store");
+    expect(await pending.json()).toMatchObject({ reason: "v9-public-materialization-pending" });
+    expect(decode).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT * FROM safety_score_site_manifests").all()).toEqual(before);
+    await materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!);
+    expect(await (await handleReportCardsV9Detail(db, detailUrl("lusd-liquity"))).json()).toMatchObject({
+      coinId: "lusd-liquity", updatedAt: next.publishedAtSec, publicationHealth: { status: "current" },
+    });
   });
 
-  it.each(["usr-resolv", "buck-buck-assets", "usds-sky"])("returns an explicit nonmember reason for %s without repair", async id => {
+  it.each(["usr-resolv", "buck-buck-assets", "usds-sky"])("returns an explicit nonmember reason for %s without decoding", async id => {
     const { db, sqlite } = await seed();
     // Corrupt payload proves a supported frozen/nonmember read never decodes it.
     const row = JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value as string);
@@ -145,7 +157,7 @@ describe("generation-bound compact Safety Scores", () => {
     expect(sqlite.prepare("SELECT count(*) AS n FROM cron_leases").get()!.n).toBe(0);
   });
 
-  it("fails closed on a missing membership census without attempting repair", async () => {
+  it("fails closed on a missing membership census without decoding", async () => {
     const { db, sqlite } = await seed();
     sqlite.exec("DELETE FROM safety_score_site_manifests");
     sqlite.prepare("DELETE FROM cache WHERE key = ?").run(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex);
@@ -154,7 +166,7 @@ describe("generation-bound compact Safety Scores", () => {
     expect(parse).not.toHaveBeenCalled();
   });
 
-  it("does not treat another accepted generation's census as absence or repair permission", async () => {
+  it("does not treat another accepted generation's census as absence", async () => {
     const { db, sqlite } = await seed();
     const row = JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex)!.value as string);
     row.safetyScoreIdentity.publicationGenerationId = "report-cards:v9:another";
@@ -188,10 +200,20 @@ describe("generation-bound compact Safety Scores", () => {
     const persisted = await persistSafetyScoreV9Publication(db, { ...currentInput(next), deferPublicMaterialization: true });
     expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex)!.updated_at).toBe(130);
     await expect(materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!)).rejects.toThrow();
-    const lagHealth = { ...currentInput(next).publicationHealth,
-      acceptedPublicationGenerationId: publication.publicationGenerationId, acceptedAtSec: publication.publishedAtSec };
-    expect(await (await handleReportCardsV9Table(db)).json()).toEqual({ ...table, publicationHealth: lagHealth });
-    expect(await (await handleReportCardsV9Detail(db, detailUrl())).json()).toEqual({ ...detail, publicationHealth: lagHealth });
+    const lagHealth = { ...currentInput(next).publicationHealth, status: "held", heldSinceSec: next.publishedAtSec,
+      acceptedPublicationGenerationId: publication.publicationGenerationId, acceptedAtSec: publication.publishedAtSec,
+      reasons: [{ code: "v9-public-materialization-pending" }] };
+    for (const age of [60, CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec + 1]) {
+      vi.setSystemTime((next.publishedAtSec + age) * 1000);
+      const responses = [await handleReportCardsV9Table(db), await handleReportCardsV9Detail(db, detailUrl())];
+      for (const [index, response] of responses.entries()) {
+        expect(response.headers.get("X-Safety-Score-Status")).toBe("held");
+        expect(response.headers.get("X-Safety-Score-Generation")).toBe(publication.publicationGenerationId);
+        expect(response.headers.get("X-Safety-Score-Freshness-Budget")).toBe(String(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC));
+        expect(response.headers.get("Cache-Control")).toBe("no-store");
+        expect(await response.json()).toEqual({ ...(index === 0 ? table : detail), publicationHealth: lagHealth });
+      }
+    }
   });
 
   it.each([1, 397])("coalesces %i cards within staging caps while preserving accepted reads", async cardCount => {
@@ -276,7 +298,8 @@ describe("generation-bound compact Safety Scores", () => {
               await handleReportCardsV9Detail(db, detailUrl()),
             ]) {
               expect(response.status).toBe(200);
-              expect(await response.json()).toMatchObject({ updatedAt: publication.publishedAtSec, publicationHealth: { status: "current" } });
+              expect(await response.json()).toMatchObject({ updatedAt: publication.publishedAtSec,
+                publicationHealth: { status: "held", reasons: [{ code: "v9-public-materialization-pending" }] } });
             }
           } else {
             expect(sqlite.prepare("SELECT generation_id FROM safety_score_public_manifests WHERE retired_at IS NULL").all())
