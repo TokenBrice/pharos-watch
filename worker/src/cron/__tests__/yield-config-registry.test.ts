@@ -533,22 +533,13 @@ describe("yield config registry", () => {
 
   });
 
-  it("wires USDGO to an EFFR-linked rate-derived source", () => {
+  it("keeps USDGO out of yield wiring because the token pays holders nothing", () => {
     const coin = trackedCoinsById.get("usdgo-osl");
-    const config = RATE_DERIVED_CONFIGS.find((entry) => entry.stablecoinId === "usdgo-osl");
 
-    expect(coin?.yieldConfig).toMatchObject({
-      yieldSource: "OSL-distributed EFFR-linked yield for professional investors",
-      yieldType: "governance-set",
-    });
-    expect(config).toMatchObject({
-      stablecoinId: "usdgo-osl",
-      spreadBps: 38,
-      benchmarkCurrency: "USD_EFFR",
-      benchmarkOverrideKey: "USD_EFFR",
-    });
+    expect(coin?.flags.yieldBearing).toBe(false);
+    expect(coin?.yieldConfig).toBeUndefined();
+    expect(RATE_DERIVED_CONFIGS.some((entry) => entry.stablecoinId === "usdgo-osl")).toBe(false);
     expect(intentionalGapIds.has("usdgo-osl")).toBe(false);
-    expect(INTENTIONAL_GAP_REASONS["usdgo-osl"]).toBeUndefined();
   });
 
   it("distinguishes EFFR APY sources from EFFR PYS benchmark overrides", () => {
@@ -557,7 +548,6 @@ describe("yield config registry", () => {
       (entry) => entry.benchmarkOverrideKey === "USD_EFFR" && !entry.label.toUpperCase().includes("EFFR"),
     );
 
-    expect(effrApyConfigs.length).toBeGreaterThan(0);
     for (const config of effrApyConfigs) {
       expect(config.benchmarkCurrency, config.stablecoinId).toBe("USD_EFFR");
       expect(config.benchmarkOverrideKey, config.stablecoinId).toBe("USD_EFFR");
@@ -591,7 +581,6 @@ describe("yield config registry", () => {
       "wtgxx-wisdomtree",
       "ustbl-spiko",
       "fusd-finchain",
-      "usdgo-osl",
     ]) {
       expect(configsById.get(stablecoinId), stablecoinId).toMatchObject({
         benchmarkOverrideKey: "USD_EFFR",

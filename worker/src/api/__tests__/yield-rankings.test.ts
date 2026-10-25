@@ -269,7 +269,7 @@ describe("handleYieldRankings", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-13T16:00:00Z"));
     loadActiveSafetyScoreIndexMock.mockReset();
-    loadActiveSafetyScoreIndexMock.mockImplementation(async () => (makeIndexSource(new Map(["rated-coin", "usdgo-osl", "ustbl-spiko", "eutbl-spiko"].map((id) => [id, { score: 66, grade: "B-" }])), currentSafetyIdentity, Math.floor(Date.now() / 1000))));
+    loadActiveSafetyScoreIndexMock.mockImplementation(async () => (makeIndexSource(new Map(["rated-coin", "ustbl-spiko", "eutbl-spiko"].map((id) => [id, { score: 66, grade: "B-" }])), currentSafetyIdentity, Math.floor(Date.now() / 1000))));
   });
 
   afterEach(() => {
@@ -1712,7 +1712,7 @@ describe("handleYieldRankings", () => {
   it.each(["live", "publish-time"] as const)("keeps configured dependencies separate with %s safety", async (branch) => {
     const publishedAt = Math.floor(Date.now() / 1000);
     if (branch === "publish-time") loadActiveSafetyScoreIndexMock.mockRejectedValue(new Error("D1 unavailable"));
-    for (const id of ["usdgo-osl", "ustbl-spiko", "eutbl-spiko"]) {
+    for (const id of ["ustbl-spiko", "eutbl-spiko"]) {
       for (const expired of [null, "USD", "USD_EFFR", "EUR"] as const) {
         const benchmarks = {
           USD: { ...v748RankingsPayload.benchmarks.USD, fetchedAt: publishedAt },
@@ -1734,7 +1734,7 @@ describe("handleYieldRankings", () => {
           })],
         };
         const row = (await readJsonResponse(await handleYieldRankings(makeCacheDb(payload, publishedAt)), 200) as YieldRankingsResponse).rankings[0];
-        const productKey = id === "usdgo-osl" ? "USD_EFFR" : id === "ustbl-spiko" ? "USD" : "EUR";
+        const productKey = id === "ustbl-spiko" ? "USD" : "EUR";
         const reason = expired === productKey ? "source-stale"
           : expired === benchmarkKey || (id === "eutbl-spiko" && expired === "USD") ? "benchmark-stale" : null;
         expect(row.pysNullReason, `${id}/${expired}`).toBe(reason);

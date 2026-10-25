@@ -1,5 +1,20 @@
 [
   {
+    "version": "8.52",
+    "title": "USDGO Reclassified as Non-Yield-Bearing",
+    "date": "2026-10-25",
+    "effectiveAt": 1792972800,
+    "summary": "USDGO leaves the yield-bearing cohort. The token pays holders nothing; OSL's EFFR-linked yield is an off-token distribution to professional investors, so USDGO is classified like USDC and USDT.",
+    "impact": [
+      "`usdgo-osl` drops `yieldBearing` and its `yieldConfig`, reversing the v8.25 promotion. Anchorage Digital Bank's covered-stablecoin terms say the token is not designed to generate investment returns; holding USDGO earns nothing on-token.",
+      "The `max(0, USD_EFFR - 38 bps)` rate-derived proxy is removed, so USDGO publishes no native yield row, rank or PYS. It is not an intentional gap either: like other non-yield-bearing stablecoins it can appear only through external lending opportunities.",
+      "The `USD_EFFR` benchmark, its New York Fed and FRED DFF sources, and its role as the PYS comparison override for USD T-bill/MMF proxies are unchanged. PYS weights, benchmarks, freshness budgets and arbitration are unchanged for every other asset.",
+      "Existing USDGO rate-derived history is not rewritten or deleted by this release. Planned activation is provisionally 2026-10-26 00:00 UTC (1792972800), following the next-UTC-midnight convention; re-date effectiveAt at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "8.51",
     "title": "Two-hour core publication",
     "date": "2026-10-23",

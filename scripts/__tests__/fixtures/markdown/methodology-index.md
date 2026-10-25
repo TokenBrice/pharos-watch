@@ -399,6 +399,8 @@ Yield v8.49 admits XGLD's reviewed BNB Chain exchange-rate provider to the exist
 
 Yield v8.51 publishes core rankings every two hours. Freshness rules stated in producer intervals keep their multiples: core sources turn data-stale after three intervals (six hours) and aging at the midpoint (four hours), and the API yield bands follow the same two-hour interval. PYS weights, benchmarks and supplemental, price-derived and rate-derived budgets are unchanged.
 
+Yield v8.52 reclassifies USDGO as non-yield-bearing, like USDC and USDT: the token pays holders nothing, and OSL's EFFR-linked yield is a separate distribution to professional investors. Its EFFR-net-of-fee proxy is removed; the USD_EFFR benchmark and every other asset's scoring are unchanged.
+
 
 ## PegScore and Depeg Early Warning Score (DEWS)
 
