@@ -610,7 +610,7 @@ export function DetailRiskContextSections({
           nothing renders, matching the scrollspy, which drops the pill. */}
       <div className={cn("space-y-6", contextHasContent ? undefined : "xl:hidden")}>
         {contextHasContent ? (
-          <SectionBanner id="context" label="Context" icon={ChartPie} active={activeBannerId === "context"} />
+          <SectionBanner id="context" label="Dependencies" icon={ChartPie} active={activeBannerId === "context"} />
         ) : null}
         <ContagionSnapshot
           stablecoinId={viewModel.id}
