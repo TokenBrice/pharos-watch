@@ -58,9 +58,17 @@
     }
   ],
   "stats": {
-    "totalCommits": 454
+    "totalCommits": 456
   },
   "commits": [
+    {
+      "hash": "fb4a2d7f",
+      "message": "fix(v9): raise Safety Score catalog admission cap to 520"
+    },
+    {
+      "hash": "46131cab",
+      "message": "test(upcoming): count the launched section toward profile coverage"
+    },
     {
       "hash": "fbca5c6f",
       "message": "data(prelaunch): retire stale target dates on launched coins"
@@ -132,14 +140,6 @@
     {
       "hash": "bc0d7fb2",
       "message": "chore(logos): prune logo keys no surface can look up"
-    },
-    {
-      "hash": "84ccc869",
-      "message": "feat(registry): add issuer-published ISINs for Midas and Backed certificates"
-    },
-    {
-      "hash": "d204ab75",
-      "message": "fix(coverage): place Removed from coverage ahead of the FAQ"
     }
   ]
 }
