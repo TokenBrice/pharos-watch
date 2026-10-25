@@ -80,6 +80,16 @@
       "chain": "starknet",
       "address": "0x06e8a99926ff6d56f4cb93c37b63286d736cd1f81740d53f88b4875b4cbe7f49",
       "decimals": 5
+    },
+    {
+      "chain": "solana",
+      "address": "7fnYygJyxQ2RsFJymjnRRa4wptPhUkfo6RT2j4BU4qhP",
+      "decimals": 5
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x541b1c34fb941cdee6d400d06e27240d9c4e10d8",
+      "decimals": 5
     }
   ],
   "collateralQuality": "rwa",

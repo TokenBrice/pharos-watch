@@ -231,6 +231,19 @@
             "url": "https://solana-rpc.publicnode.com"
           }
         ]
+      },
+      {
+        "id": "arbitrum:0x6a47a9091f2ca880a9ae291e2232d9302da11745",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x6a47a9091f2ca880a9ae291e2232d9302da11745",
+        "protocol": "unknown",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Inventoried 2026-10-25 from https://public-api.spiko.io/share-classes/SAFO. Exact issuer-listed ArbitrumUk register identity, five decimals, zero supply and issuer authority were verified on-chain. Transfer-route and complete mint-control research remain unresolved; existing sibling reviews do not cover this deployment."
       }
     ]
   },

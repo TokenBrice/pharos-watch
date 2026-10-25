@@ -228,6 +228,19 @@
             "url": "https://stellar.expert/explorer/public/contract/CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR"
           }
         ]
+      },
+      {
+        "id": "solana:DEtiguzuMC72hRkMHETcsXeKrJ6Djb6tMebQqjZoBSgt",
+        "destinationChain": "solana",
+        "contractAddress": "DEtiguzuMC72hRkMHETcsXeKrJ6Djb6tMebQqjZoBSgt",
+        "protocol": "unknown",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Inventoried 2026-10-25 from https://public-api.spiko.io/share-classes/UKTBL. Exact issuer-listed Solana register identity, five decimals, zero supply and issuer authority were verified on-chain. Transfer-route and complete mint-control research remain unresolved; existing sibling reviews do not cover this deployment."
       }
     ],
     "controls": [

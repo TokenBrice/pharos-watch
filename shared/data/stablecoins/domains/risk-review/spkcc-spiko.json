@@ -327,6 +327,19 @@
             "url": "https://stellar.expert/explorer/public/contract/CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT"
           }
         ]
+      },
+      {
+        "id": "solana:14Rg7TaptSo1Ndkz1ngBw2rE4EuFhQd2PzCrkyjGdsL1",
+        "destinationChain": "solana",
+        "contractAddress": "14Rg7TaptSo1Ndkz1ngBw2rE4EuFhQd2PzCrkyjGdsL1",
+        "protocol": "unknown",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Inventoried 2026-10-25 from https://public-api.spiko.io/share-classes/SPKCC. Exact issuer-listed Solana register identity, five decimals, zero supply and issuer authority were verified on-chain. Transfer-route and complete mint-control research remain unresolved; existing sibling reviews do not cover this deployment."
       }
     ]
   }
