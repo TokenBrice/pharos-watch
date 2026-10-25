@@ -124,7 +124,7 @@ export type ActiveSafetyScoreCohort = (
   | { kind: "error"; reason: string; detail: string; snapshot: null }
 ) & { projectionFallbackCount: number };
 
-/** Bind the accepted read model, envelope and health in one read, as for the score index. */
+/** Bind metadata and chunks in one atomic read batch without repeating metadata per chunk. */
 export async function loadActiveSafetyScoreCohort(db: D1Database, signal?: AbortSignal): Promise<ActiveSafetyScoreCohort> {
   let projectionFallbackCount = 0;
   const unavailable = (reason: string): ActiveSafetyScoreCohort => ({
@@ -136,34 +136,34 @@ export async function loadActiveSafetyScoreCohort(db: D1Database, signal?: Abort
       : { kind: "v9", snapshot, projectionFallbackCount };
   try {
     throwIfAborted(signal);
-    const result = await db.prepare(`SELECT
-      c.value AS cohort, c.updated_at AS cohort_updated_at,
-      k.key AS chunk_key, k.value AS chunk,
-      i.value AS score_index, i.updated_at AS index_updated_at,
-      h.value AS health, h.updated_at AS health_updated_at,
-      json_extract(p.value, '$.identity') AS publication_identity,
-      json_extract(p.value, '$.identity.resultDigest') AS result_digest,
-      p.updated_at AS publication_updated_at
-      FROM cache p
-      LEFT JOIN cache c ON c.key = ?
-      LEFT JOIN cache h ON h.key = ?
-      LEFT JOIN cache i ON i.key = ?
-      LEFT JOIN cache k ON json_valid(c.value)
-        AND k.key >= ? || json_extract(c.value, '$.payloadSha256') || ':'
-        AND k.key < ? || json_extract(c.value, '$.payloadSha256') || ';'
-      WHERE p.key = ? ORDER BY k.key LIMIT 10`).bind(
-      SAFETY_SCORE_V9_CACHE_KEYS.cohort, SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth, SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex,
-      SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX, SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX, SAFETY_SCORE_V9_CACHE_KEYS.publication,
-    ).all<{
+    const [metadata, chunks] = await db.batch([
+      db.prepare(`SELECT c.value AS cohort, c.updated_at AS cohort_updated_at,
+        i.value AS score_index, i.updated_at AS index_updated_at,
+        h.value AS health, h.updated_at AS health_updated_at,
+        json_extract(p.value, '$.identity') AS publication_identity,
+        json_extract(p.value, '$.identity.resultDigest') AS result_digest,
+        p.updated_at AS publication_updated_at
+        FROM cache p
+        LEFT JOIN cache c ON c.key = ?
+        LEFT JOIN cache h ON h.key = ?
+        LEFT JOIN cache i ON i.key = ?
+        WHERE p.key = ?`).bind(SAFETY_SCORE_V9_CACHE_KEYS.cohort, SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
+        SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex, SAFETY_SCORE_V9_CACHE_KEYS.publication),
+      db.prepare(`SELECT k.key AS chunk_key, k.value AS chunk FROM cache c
+        JOIN cache k ON json_valid(c.value)
+          AND k.key >= ? || json_extract(c.value, '$.payloadSha256') || ':'
+          AND k.key < ? || json_extract(c.value, '$.payloadSha256') || ';'
+        WHERE c.key = ? ORDER BY k.key LIMIT 10`).bind(SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX,
+        SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX, SAFETY_SCORE_V9_CACHE_KEYS.cohort),
+    ]);
+    throwIfAborted(signal);
+    const row = metadata!.results[0] as {
       cohort: string | null; cohort_updated_at: number | null;
-      chunk_key: string | null; chunk: string | null;
       score_index: string | null; index_updated_at: number | null;
       health: string | null; health_updated_at: number | null;
       publication_identity: string | null; result_digest: string | null; publication_updated_at: number;
-    }>();
-    throwIfAborted(signal);
-    const rows = result.results ?? [];
-    const row = rows[0];
+    } | undefined;
+    const rows = chunks!.results as { chunk_key: string; chunk: string }[];
     if (!row) return unavailable("v9-snapshot-unavailable");
     const identity = row.publication_identity === null ? null
       : publicationIdentityFromStorageEnvelope(JSON.parse(row.publication_identity));
@@ -179,7 +179,9 @@ export async function loadActiveSafetyScoreCohort(db: D1Database, signal?: Abort
     if (row.score_index === null) return unavailable("safety-cohort-index-missing");
     let index;
     try {
-      index = SafetyScoreIndexSchema.parse(JSON.parse(row.score_index));
+      const storedIndex: unknown = JSON.parse(row.score_index);
+      if (storedIndex && typeof storedIndex === "object" && "schemaVersion" in storedIndex && storedIndex.schemaVersion === 1) return unavailable("publication-schema-cutover-pending");
+      index = SafetyScoreIndexSchema.parse(storedIndex);
       if (stableJsonStringifyV1(index) !== row.score_index) return unavailable("safety-cohort-index-invalid");
     } catch {
       return unavailable("safety-cohort-index-invalid");
@@ -191,7 +193,7 @@ export async function loadActiveSafetyScoreCohort(db: D1Database, signal?: Abort
     if (row.cohort !== null) {
       try {
         const stored = reassembleSafetyScoreV9CohortStoredValue(row.cohort,
-          rows.filter((part) => part.chunk_key !== null).map((part) => ({ key: part.chunk_key!, value: part.chunk ?? "" })));
+          rows.map((part) => ({ key: part.chunk_key, value: part.chunk })));
         cohort = SafetyScoreCohortSchema.parse(JSON.parse(stored));
         if (stableJsonStringifyV1(cohort) !== stored || row.cohort_updated_at !== cohort.publishedAtSec) return unavailable("safety-cohort-invalid");
       } catch {

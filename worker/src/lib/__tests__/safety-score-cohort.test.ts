@@ -7,6 +7,7 @@ import { currentInput } from "./safety-score-v9-publication-store.test-support";
 import { persistSafetyScoreV9Publication } from "../safety-score-v9/publication-store";
 import { SAFETY_SCORE_V9_CACHE_KEYS as keys } from "../safety-score-v9/publication-health";
 import { buildSafetyScoreV9AcceptedProjections, buildSafetyScoreV9CohortProjection, serializeSafetyScoreV9CohortProjection } from "../safety-score-v9/accepted-projections";
+import { loadActiveSafetyScoreIndex } from "../safety-score-index";
 import { loadActiveSafetyScoreCohort } from "../safety-score-active-source";
 import * as publicCache from "../report-cards-v9-cache";
 import * as structuredLog from "../structured-log";
@@ -55,8 +56,16 @@ describe("accepted Safety Score cohort", () => {
     const result = await loadActiveSafetyScoreCohort(db);
     expect(result).toMatchObject({ kind: status === "current" ? "v9" : "held", projectionFallbackCount: 0,
       snapshot: { updatedAt: publication.publishedAtSec, completeness: publication.completeness } });
-    expect(prepare).toHaveBeenCalledTimes(1);
+    expect(prepare).toHaveBeenCalledTimes(2);
     expect(prepare.mock.calls[0]![0]).not.toMatch(/p\.value\s+AS/);
+  });
+
+  it("shares the index schema-cutover reason without falling back", async () => {
+    const { db, read, write } = await fixture();
+    write(keys.scoreIndex, { ...read(keys.scoreIndex), schemaVersion: 1 });
+    expect(await loadActiveSafetyScoreIndex(db)).toMatchObject({ kind: "error", reason: "publication-schema-cutover-pending" });
+    expect(await loadActiveSafetyScoreCohort(db)).toMatchObject({ kind: "error", reason: "publication-schema-cutover-pending",
+      projectionFallbackCount: 0, snapshot: null });
   });
 
   it.each(["missing", "other-generation"])("counts and logs only the %s transitional fallback", async scenario => {
@@ -121,7 +130,7 @@ describe("accepted Safety Score cohort", () => {
       const result = await loadActiveSafetyScoreCohort(db);
       expect(result).toMatchObject({ kind: "error", snapshot: null, projectionFallbackCount: 0 });
       expect(result.kind === "error" && result.reason).toMatch(/^safety-cohort-/);
-      expect(prepare).toHaveBeenCalledTimes(1);
+      expect(prepare).toHaveBeenCalledTimes(2);
     },
   );
 
@@ -134,8 +143,16 @@ describe("accepted Safety Score cohort", () => {
       .all(SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX, `${SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX.slice(0, -1)};`);
     expect(chunks.length).toBeGreaterThan(4);
     expect(chunks.every((chunk) => Buffer.byteLength(String(chunk.value)) <= 512 * 1024)).toBe(true);
+    const batch = vi.spyOn(db, "batch");
     expect(await loadActiveSafetyScoreCohort(db)).toMatchObject({ kind: "v9", projectionFallbackCount: 0,
       snapshot: { cards: [{ sharedBookId: publication.cards[0]!.sharedBookId }] } });
+    expect(batch).toHaveBeenCalledTimes(1);
+    expect(batch.mock.calls[0]![0]).toHaveLength(2);
+    const [metadata, chunkRows] = await batch.mock.results[0]!.value;
+    expect(metadata.results).toHaveLength(1);
+    expect(metadata.results[0]).toHaveProperty("score_index");
+    expect(chunkRows.results).toHaveLength(chunks.length);
+    for (const row of chunkRows.results) expect(Object.keys(row).sort()).toEqual(["chunk", "chunk_key"]);
   });
 
   it("preserves the index health-clock hold semantics and empty database unavailability", async () => {
