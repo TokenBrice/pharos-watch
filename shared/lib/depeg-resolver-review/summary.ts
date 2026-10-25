@@ -1,4 +1,5 @@
 import { mean, median, ratio } from "../stats";
+import type { DdrrHorizonSkill, DdrrTierOutcome } from "../../types/depeg-resolver-review";
 import { DDR_HORIZON_VALUES } from "../../types/depeg-resolver";
 import { DDR_PREDICTION_POLICY_VERSION } from "../methodology-versions/depeg-resolver";
 import {
@@ -92,6 +93,49 @@ function summarizeHorizonCalibration(rows: readonly DdrrResponseRow[]): DdrrHori
   });
 }
 
+/** Floor for log-ratio duration error so sub-10-minute values cannot dominate. */
+const LOG_RATIO_FLOOR_SEC = 600;
+
+function summarizeHorizonSkill(rows: readonly DdrrResponseRow[]): DdrrHorizonSkill[] {
+  const predictionRows = rows.filter((row): row is DdrrV2PredictionReviewRow => row.kind === "prediction_review");
+  return DDR_HORIZON_VALUES.map((horizon) => {
+    // Every matured horizon observation counts, including terminal and
+    // still-open incidents that did not resolve in time.
+    const observations = predictionRows.flatMap((row) => {
+      const review = row.horizonReviews.find((candidate) => candidate.horizon === horizon);
+      if (review?.probability == null || (review.result !== "hit" && review.result !== "miss")) return [];
+      return [{ probability: review.probability, observed: review.result === "hit" ? 1 : 0 }];
+    });
+    const scored = observations.length;
+    if (scored < 2) return { horizon, scored, brier: null, baseRateBrier: null, brierSkill: null };
+    const totalObserved = observations.reduce((sum, observation) => sum + observation.observed, 0);
+    const brier = observations.reduce((sum, o) => sum + (o.probability - o.observed) ** 2, 0) / scored;
+    // Leave-one-out base rate keeps the reference forecast out of sample.
+    const baseRateBrier = observations.reduce((sum, o) => {
+      const baseRate = (totalObserved - o.observed) / (scored - 1);
+      return sum + (baseRate - o.observed) ** 2;
+    }, 0) / scored;
+    return {
+      horizon,
+      scored,
+      brier,
+      baseRateBrier,
+      brierSkill: baseRateBrier > 0 ? 1 - brier / baseRateBrier : null,
+    };
+  });
+}
+
+function summarizeTierOutcomes(rows: readonly DdrrV2PredictionReviewRow[]): DdrrTierOutcome[] {
+  return (["recovery_likely", "at_risk", "recovery_unlikely"] as const).map((tier) => {
+    const scored = rows.filter((row) => row.frozen.resolutionTier === tier && DDRR_SCORED_VERDICTS.has(row.verdictReview));
+    return {
+      tier,
+      recovered: scored.filter((row) => row.actual.kind === "recovered").length,
+      terminal: scored.filter((row) => row.actual.kind === "terminal").length,
+    };
+  });
+}
+
 function countPredictionVerdicts(rows: readonly DdrrV2PredictionReviewRow[]): Record<DdrrVerdictReview, number> {
   return rows.reduce<Record<DdrrVerdictReview, number>>(
     (counts, row) => {
@@ -107,6 +151,7 @@ function countPredictionVerdicts(rows: readonly DdrrV2PredictionReviewRow[]): Re
       unscored_insufficient_signal: 0,
       pending: 0,
       data_issue: 0,
+      terminal_at_lock: 0,
     },
   );
 }
@@ -202,6 +247,11 @@ export function summarizeDdrrMetrics(rows: readonly DdrrResponseRow[]): DdrrV2Su
 
   const durationRows = predictionRows.filter(isDurationScoredPredictionRow);
   const signedErrors = durationRows.map((row) => row.signedDurationErrorSec);
+  const log2Ratios = durationRows.flatMap((row) =>
+    row.actualRemainingSec != null && row.predictedRemainingSec != null
+      ? [Math.log2(Math.max(row.actualRemainingSec, LOG_RATIO_FLOOR_SEC) / Math.max(row.predictedRemainingSec, LOG_RATIO_FLOOR_SEC))]
+      : []);
+  const scoredPredictionRows = predictionRows.filter((row) => DDRR_SCORED_VERDICTS.has(row.verdictReview));
   const absoluteErrors = durationRows.map((row) => row.absoluteDurationErrorSec);
 
   const pendingLockCount = coverageStateCounts.pending_lock;
@@ -310,6 +360,17 @@ export function summarizeDdrrMetrics(rows: readonly DdrrResponseRow[]): DdrrV2Su
     accuracyDenominatorLabel: "first-published frozen prediction outcomes with observed recovery or terminal evidence",
     horizonHitRates: summarizeHorizons(rows),
     horizonCalibration: summarizeHorizonCalibration(rows),
+    terminalAtLockCount: verdicts.terminal_at_lock,
+    baselineRecoverableCorrectCount: scoredPredictionRows.filter((row) => row.actual.kind === "recovered").length,
+    terminalCallCount: verdicts.correct_terminal + verdicts.false_terminal,
+    terminalCallCorrectCount: verdicts.correct_terminal,
+    terminalOutcomeCount: scoredPredictionRows.filter((row) => row.actual.kind === "terminal").length,
+    tierOutcomes: summarizeTierOutcomes(predictionRows),
+    medianLog2DurationRatio: median(log2Ratios),
+    within2xCount: log2Ratios.filter((value) => Math.abs(value) <= 1).length,
+    overdueOpenCount: predictionRows.filter((row) =>
+      row.actual.kind === "still_open" && row.durationReview === "slower_than_band").length,
+    horizonSkill: summarizeHorizonSkill(rows),
   };
 }
 
@@ -347,6 +408,16 @@ export function summarizeDdrrRows(rows: readonly DdrrResponseRow[]): DdrrSummary
     accuracyDenominatorLabel: accuracyMetrics.accuracyDenominatorLabel,
     horizonHitRates: accuracyMetrics.horizonHitRates,
     horizonCalibration: accuracyMetrics.horizonCalibration,
+    terminalAtLockCount: accuracyMetrics.terminalAtLockCount,
+    baselineRecoverableCorrectCount: accuracyMetrics.baselineRecoverableCorrectCount,
+    terminalCallCount: accuracyMetrics.terminalCallCount,
+    terminalCallCorrectCount: accuracyMetrics.terminalCallCorrectCount,
+    terminalOutcomeCount: accuracyMetrics.terminalOutcomeCount,
+    tierOutcomes: accuracyMetrics.tierOutcomes,
+    medianLog2DurationRatio: accuracyMetrics.medianLog2DurationRatio,
+    within2xCount: accuracyMetrics.within2xCount,
+    overdueOpenCount: accuracyMetrics.overdueOpenCount,
+    horizonSkill: accuracyMetrics.horizonSkill,
   };
   const headlineLabel =
     headlineScope === "current_policy"

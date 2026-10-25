@@ -145,6 +145,19 @@ function dewsSignalAtLeast(
     : null;
 }
 
+/** Latest admitted supply snapshot no older than the dislocation-sizing budget; otherwise unavailable. */
+const DDR_DISLOCATION_SUPPLY_MAX_AGE_SEC = 3 * 86400;
+
+function latestCirculatingUsd(snapshots: readonly { date: number; usd: number }[], nowSec: number): number | null {
+  let latest: { date: number; usd: number } | null = null;
+  for (const snapshot of snapshots) {
+    if (snapshot.date > nowSec) continue;
+    if (latest == null || snapshot.date > latest.date) latest = snapshot;
+  }
+  if (latest == null || nowSec - latest.date > DDR_DISLOCATION_SUPPLY_MAX_AGE_SEC) return null;
+  return Number.isFinite(latest.usd) && latest.usd > 0 ? latest.usd : null;
+}
+
 export function resolveDdrIncidents(context: DdrLoadedContext, nowSec: number): DdrRow[] {
   return context.active.map((ev) => {
     const meta = TRACKED_META_BY_ID.get(ev.stablecoinId);
@@ -174,6 +187,8 @@ export function resolveDdrIncidents(context: DdrLoadedContext, nowSec: number): 
       blacklistSurge: dewsSignalAtLeast(dewsSignals, "black", DDR_BLACKLIST_SURGE_SIGNAL_THRESHOLD),
       liquidityScore: liqFresh ? liq.liquidity_score : null,
       tvlChange7d: liqFresh ? context.liqTvlChange7dByCoin.get(ev.stablecoinId) ?? null : null,
+      tvlChangeSinceOnsetPct: liqFresh ? context.liqTvlChangeSinceOnsetByEventId.get(ev.id) ?? null : null,
+      circulatingUsd: latestCirculatingUsd(context.supplyByCoin.get(ev.stablecoinId) ?? [], nowSec),
       tvlChange30d: liqFresh ? context.liqTvlChange30dByCoin.get(ev.stablecoinId) ?? null : null,
       volumeChange30d: liqFresh ? context.liqVolumeChange30dByCoin.get(ev.stablecoinId) ?? null : null,
       totalVolume24hUsd: liqFresh ? liq.total_volume_24h_usd : null,

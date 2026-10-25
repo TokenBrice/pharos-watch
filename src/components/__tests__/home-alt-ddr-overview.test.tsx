@@ -164,6 +164,28 @@ describe("HomeAltDdrOverview", () => {
     expect(screen.queryByText(/No published active forecasts/)).toBeNull();
   });
 
+  it("labels each forecast in the vocabulary it was locked under and splits a mixed book", () => {
+    const lockedUnder = (id: string, version: string | null, tier: string) => ({
+      ...forecast, stablecoinId: id, symbol: id.toUpperCase(),
+      prediction: { state: "frozen", predictionMethodologyVersion: version },
+      frozen: { ...forecast.frozen, resolution: { tier, factors: [] } },
+    });
+    setSources({ rows: [
+      lockedUnder("v5a", "5.0", "at_risk"),
+      lockedUnder("v5b", "5.0", "recovery_unlikely"),
+      lockedUnder("old", "4.3", "at_risk"),
+    ] });
+    render(<HomeAltDdrOverview />);
+
+    expect(screen.getByText("V5A").closest("a")?.textContent).toContain("Stress");
+    expect(screen.getByText("V5B").closest("a")?.textContent).toContain("Terminal");
+    expect(screen.getByText("V5B").closest("a")?.textContent).toContain("may not recover");
+    expect(screen.getByText("OLD").closest("a")?.textContent).toContain("At risk");
+    expect(screen.getByText("OLD").closest("a")?.textContent).not.toContain("Stress");
+    // The distribution legend never relabels the pre-v5 lock.
+    expect(screen.getByText("3 forecasts").parentElement?.textContent).toBe("1Stress1At risk1Terminal3 forecasts");
+  });
+
   it("switches the same frozen duration to overdue after the authoritative live overlay deadline", () => {
     const payload = { rows: [forecast] } as unknown as DdrResponse;
     setSources({ rows: applyDurationStaleness(payload, COMPUTED_AT + 86_399).rows as unknown as typeof forecast[] });

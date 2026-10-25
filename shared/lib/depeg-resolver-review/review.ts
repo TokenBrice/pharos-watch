@@ -46,6 +46,16 @@ function medianReviewForSignedError(signedErrorSec: number): DdrrMedianReview {
   return "median_exact";
 }
 
+/**
+ * Terminal evidence whose whole interval closes at or before the lock was
+ * already true when DDR published; the miss is registry curation, not foresight.
+ */
+function terminalSettledBeforeLock(assessment: DdrrAssessmentInput, outcome: DdrrDerivedOutcome): boolean {
+  const lockedAt = getAssessmentReviewAnchorSec(assessment);
+  const settledAt = outcome.terminalEvidenceInterval?.end ?? outcome.terminalEvidenceAt;
+  return settledAt != null && settledAt <= lockedAt;
+}
+
 function reviewVerdict(assessment: DdrrAssessmentInput, outcome: DdrrDerivedOutcome): DdrrVerdictReview {
   if (isDataIssueOutcome(outcome.actualOutcome)) return "data_issue";
   if (assessment.resolutionTier === "insufficient_signal") return "unscored_insufficient_signal";
@@ -57,6 +67,7 @@ function reviewVerdict(assessment: DdrrAssessmentInput, outcome: DdrrDerivedOutc
   }
 
   if (outcome.actualOutcome === "terminal") {
+    if (terminalSettledBeforeLock(assessment, outcome)) return "terminal_at_lock";
     if (assessment.resolutionTier === "recovery_unlikely") return "correct_terminal";
     if (assessment.resolutionTier === "at_risk") return "risk_noted_terminal";
     return "false_recoverable";
@@ -67,7 +78,11 @@ function reviewVerdict(assessment: DdrrAssessmentInput, outcome: DdrrDerivedOutc
   return "data_issue";
 }
 
-function reviewDuration(assessment: DdrrAssessmentInput, outcome: DdrrDerivedOutcome): DdrrDurationReviewResult {
+function reviewDuration(
+  assessment: DdrrAssessmentInput,
+  outcome: DdrrDerivedOutcome,
+  nowSec: number,
+): DdrrDurationReviewResult {
   if (isDataIssueOutcome(outcome.actualOutcome)) {
     return {
       durationReview: "data_issue",
@@ -75,6 +90,25 @@ function reviewDuration(assessment: DdrrAssessmentInput, outcome: DdrrDerivedOut
       signedErrorSec: null,
       absoluteErrorSec: null,
       withinIqr: null,
+    };
+  }
+  // Reviewer v5: an incident still open past the published upper band is
+  // already a slower-than-band outcome, whenever it eventually closes.
+  const upperBandSec = assessment.iqrRemainingSec?.[1];
+  if (
+    !assessment.durationSuppressed &&
+    outcome.actualOutcome === "still_open" &&
+    upperBandSec != null &&
+    Number.isFinite(upperBandSec) &&
+    Number.isFinite(nowSec) &&
+    nowSec - getAssessmentReviewAnchorSec(assessment) > upperBandSec
+  ) {
+    return {
+      durationReview: "slower_than_band",
+      medianReview: null,
+      signedErrorSec: null,
+      absoluteErrorSec: null,
+      withinIqr: false,
     };
   }
   if (
@@ -255,7 +289,7 @@ export function reviewDepegResolverAssessment(
 ): DdrrV2PredictionReviewRow {
   const outcome = deriveActualOutcome(assessment, actualEvent);
   const verdictReview = reviewVerdict(assessment, outcome);
-  const duration = reviewDuration(assessment, outcome);
+  const duration = reviewDuration(assessment, outcome, nowSec);
   const horizonReviews = reviewHorizons(assessment, outcome, nowSec);
   const lockedAt = getAssessmentReviewAnchorSec(assessment);
 

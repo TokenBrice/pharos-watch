@@ -85,6 +85,8 @@ export const DDR_CELL_STATE_VALUES = [
   "chronic_tail",
   "unsupported",
   "data_issue",
+  /** DDRv5: supported, but the horizon failed the replay skill gate against base rates. */
+  "not_informative",
 ] as const;
 export type DdrCellState = (typeof DDR_CELL_STATE_VALUES)[number];
 
@@ -112,6 +114,14 @@ export const DDR_DURATION_BAND_META = {
   upperPercentile: 85,
 } as const;
 
+/**
+ * DDRv5 duration estimand. Rows without the field predate v5 and were
+ * conditional on recovery (`conditional_recovery`).
+ */
+export const DDR_DURATION_ESTIMAND_VALUES = ["conditional_recovery", "cumulative_incidence"] as const;
+export type DdrDurationEstimand = (typeof DDR_DURATION_ESTIMAND_VALUES)[number];
+export const DDR_DURATION_ESTIMAND: DdrDurationEstimand = "cumulative_incidence";
+
 export const DdrDurationBandMetaSchema = z.object({
   label: z.literal(DDR_DURATION_BAND_META.label),
   lowerPercentile: z.literal(DDR_DURATION_BAND_META.lowerPercentile),
@@ -130,6 +140,10 @@ export const DdrDurationSchema = z.object({
   iqrSec: z.tuple([z.number().nonnegative(), z.number().nonnegative()]).nullable().optional().default(null),
   ageStatus: z.enum(DDR_AGE_STATUS_VALUES).nullable().optional().default(null),
   horizons: z.array(DdrHorizonCellSchema),
+  /** DDRv5+: what the odds and quantiles estimate. Absent on earlier rows (conditional on recovery). */
+  estimand: z.enum(DDR_DURATION_ESTIMAND_VALUES).optional(),
+  /** DDRv5+: estimated share of comparable incidents not recovered within 30 days (terminal or still open). */
+  unresolvedShare30d: z.number().min(0).max(1).nullable().optional(),
 });
 export type DdrDuration = z.infer<typeof DdrDurationSchema>;
 
@@ -165,6 +179,52 @@ const DdrSealedRelatedContextSchema = DdrRelatedContextSchema.extend({
   }).optional(),
 });
 
+/**
+ * DDRv5 decision-input snapshot: the raw inputs the rubric read this run, so a
+ * later methodology can be replayed over sealed history. Null means the input
+ * was unavailable, never zero.
+ */
+export const DdrInputsSnapshotSchema = z.object({
+  version: z.literal("ddr-inputs-v1"),
+  breakDepthBps: z.number(),
+  circulatingUsd: z.number().nullable(),
+  supply: z.object({
+    covered: z.boolean(),
+    change7dPct: z.number().nullable(),
+    change30dPct: z.number().nullable(),
+    mintSurge: z.boolean().nullable(),
+    mintSurgeCoverage: z.enum(["mint-burn-hourly", "supply-history-proxy", "unavailable"]).nullable(),
+  }),
+  exit: z.object({
+    liquidityScore: z.number().nullable(),
+    tvlChange7dPct: z.number().nullable(),
+    tvlChangeSinceOnsetPct: z.number().nullable(),
+    redemptionCapacityRatio: z.number().nullable(),
+    redemptionRouteFamily: z.string().nullable(),
+    bankRun: z.boolean().nullable(),
+    v9ReasonCodes: z.array(z.string()).nullable(),
+    v9StressRequestUsd: z.number().nullable(),
+    v9ExecutableUsd: z.number().nullable(),
+    v9CompletionRatio: z.number().nullable(),
+  }),
+  blacklistSurge: z.boolean().nullable(),
+  structural: z.object({
+    status: z.string().nullable(),
+    mechanismArchetype: z.string().nullable(),
+    authorityPosture: z.string().nullable(),
+    mintPath: z.string().nullable(),
+    mintAuthorityScoreBand: z.string().nullable(),
+    collateralQuality: z.string().nullable(),
+    custodyModel: z.string().nullable(),
+    canBeBlacklisted: z.union([z.boolean(), z.enum(["possible", "inherited"])]).nullable(),
+    dependencyImpaired: z.boolean().nullable(),
+    veryHighReservePct: z.number().nullable(),
+    highOrWorseReservePct: z.number().nullable(),
+    windDownAnnouncedAt: z.string().nullable(),
+  }),
+});
+export type DdrInputsSnapshot = z.infer<typeof DdrInputsSnapshotSchema>;
+
 export const DdrRowSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
@@ -182,6 +242,8 @@ export const DdrRowSchema = z.object({
   resolution: DdrResolutionSchema,
   duration: DdrDurationSchema,
   relatedContext: DdrRelatedContextSchema,
+  /** DDRv5+: raw decision inputs; absent on earlier rows. */
+  inputs: DdrInputsSnapshotSchema.optional(),
 });
 export type DdrRow = z.infer<typeof DdrRowSchema>;
 

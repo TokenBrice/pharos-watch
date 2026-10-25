@@ -2,6 +2,7 @@ import DEPEG_RESOLVER_V1 from "../../data/methodology-changelogs/depeg-resolver/
 import DEPEG_RESOLVER_V2 from "../../data/methodology-changelogs/depeg-resolver/v2.json";
 import DEPEG_RESOLVER_V3 from "../../data/methodology-changelogs/depeg-resolver/v3.json";
 import DEPEG_RESOLVER_V4 from "../../data/methodology-changelogs/depeg-resolver/v4.json";
+import DEPEG_RESOLVER_V5 from "../../data/methodology-changelogs/depeg-resolver/v5.json";
 import type { MethodologyChangelogEntry } from "../../types/editorial-content";
 import { createMethodologyVersion } from "./base";
 import {
@@ -13,7 +14,7 @@ import {
 const ddr = createMethodologyVersion({
   currentVersion: DDR_METHODOLOGY_VERSION,
   changelogPath: DDR_METHODOLOGY_CHANGELOG_PATH,
-  changelog: [...DEPEG_RESOLVER_V4, ...DEPEG_RESOLVER_V3, ...DEPEG_RESOLVER_V2, ...DEPEG_RESOLVER_V1] as MethodologyChangelogEntry[],
+  changelog: [...DEPEG_RESOLVER_V5, ...DEPEG_RESOLVER_V4, ...DEPEG_RESOLVER_V3, ...DEPEG_RESOLVER_V2, ...DEPEG_RESOLVER_V1] as MethodologyChangelogEntry[],
 });
 const ddrV2ChangelogEntry = ddr.changelog.find((entry) => entry.version === "2.0");
 
@@ -29,10 +30,10 @@ export const DDR_METHODOLOGY_CHANGELOG = ddr.changelog;
 export const getDepegResolverMethodologyVersionAt = ddr.getVersionAt;
 
 /** Sub-component versions surfaced in the API _meta for reproducibility. */
-export const DDR_RESOLUTION_RUBRIC_VERSION = "resolution-rubric-v3";
-export const DDR_DURATION_MODEL_VERSION = "duration-landmark-v2";
+export const DDR_RESOLUTION_RUBRIC_VERSION = "resolution-rubric-v4";
+export const DDR_DURATION_MODEL_VERSION = "duration-landmark-v3";
 export const DDR_INCIDENT_GROUPING_VERSION = "incident-group-v3";
-export const DDR_SUPPORT_RULES_VERSION = "support-rules-v2";
+export const DDR_SUPPORT_RULES_VERSION = "support-rules-v3";
 
 /** DDRv2 public prediction policy version. */
 export const DDR_PREDICTION_POLICY_VERSION = "sticky-24h-v1";
@@ -80,4 +81,4 @@ export const DDR_LOCK_ON_TIME_GRACE_SEC = 20 * 60;
 /** DDRv4 cache/manifest generation values. */
 export const DDR_SNAPSHOT_CACHE_GENERATION = 3;
 export const DDRR_SNAPSHOT_CACHE_GENERATION = 4;
-export const DDRR_REVIEWER_VERSION = "ddr-reviewer-v4";
+export const DDRR_REVIEWER_VERSION = "ddr-reviewer-v5";

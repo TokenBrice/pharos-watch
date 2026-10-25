@@ -20,7 +20,13 @@ import {
   DDR_COVERAGE_LABELS,
   DDR_OUTCOME_LABELS,
   DDR_VERDICT_LABELS,
+  DDR_VERDICT_TITLES,
+  DDR_VERDICT_TONES,
+  MUTED_TONE,
+  formatBrierSkill,
+  formatDurationRatioHeadline,
   formatMetricPercent,
+  formatWilsonInterval,
   formatReviewerPercent,
   formatDdrSignedDuration,
   getActualOutcome,
@@ -36,6 +42,7 @@ import {
   isTrackRecordRow,
   nodeKind,
   summarizeAccuracyByMajor,
+  wilsonInterval90,
 } from "../depeg-resolver-review-presentation";
 
 const publicationRow = {
@@ -102,6 +109,23 @@ describe("DDR review presentation vocabulary", () => {
     expect(DDR_OUTCOME_LABELS.still_open).toBe("still open");
     expect(isDdrScoredVerdict("risk_noted_terminal")).toBe(true);
     expect(isDdrScoredVerdict("pending")).toBe(false);
+  });
+
+  it("presents terminal-at-lock as unscored curation debt, not a forecast outcome", () => {
+    expect(DDR_VERDICT_LABELS.terminal_at_lock).toBe("Terminal at lock");
+    expect(DDR_VERDICT_TONES.terminal_at_lock).toBe(MUTED_TONE);
+    expect(DDR_VERDICT_TITLES.terminal_at_lock).toMatch(/registry curation lag, not scored/);
+    expect(isDdrScoredVerdict("terminal_at_lock")).toBe(false);
+    expect(nodeKind("terminal_at_lock")).toBe("muted");
+  });
+
+  it("formats reviewer v5 duration ratio and horizon skill headlines", () => {
+    expect(formatDurationRatioHeadline(Math.log2(1.4))).toBe("1.4× slower");
+    expect(formatDurationRatioHeadline(-1)).toBe("2.0× faster");
+    expect(formatDurationRatioHeadline(0.01)).toBe("on pace");
+    expect(formatBrierSkill(0.123)).toBe("+0.12");
+    expect(formatBrierSkill(-0.05)).toBe("−0.05");
+    expect(formatBrierSkill(null)).toBe("—");
   });
 
   it("reads native outcomes and formats duration display", () => {
@@ -210,6 +234,7 @@ describe("DDR review derivations", () => {
         scored: 6,
         correct: 5,
         accuracy: 5 / 6,
+        interval: wilsonInterval90(5, 6),
         durationScored: 5,
         meanSignedDurationErrorSec: 3600,
         meanAbsoluteDurationErrorSec: 5400,
@@ -219,20 +244,31 @@ describe("DDR review derivations", () => {
         scored: 34,
         correct: 31,
         accuracy: 31 / 34,
+        interval: wilsonInterval90(31, 34),
         durationScored: 30,
         meanSignedDurationErrorSec: 0,
         meanAbsoluteDurationErrorSec: 8400,
       },
       {
-        major: "v4",
+        major: "v5",
         scored: 0,
         correct: 0,
         accuracy: null,
+        interval: null,
         durationScored: 0,
         meanSignedDurationErrorSec: null,
         meanAbsoluteDurationErrorSec: null,
       },
     ]);
+  });
+
+  it("bounds per-major accuracy with a 90% Wilson interval however thin the sample", () => {
+    const interval = wilsonInterval90(5, 6)!;
+    expect(interval.lower).toBeCloseTo(0.4976, 3);
+    expect(interval.upper).toBeCloseTo(0.9619, 3);
+    expect(formatWilsonInterval(interval)).toBe("50–96%");
+    expect(wilsonInterval90(1, 1)!.upper).toBeCloseTo(1, 9);
+    expect(wilsonInterval90(0, 0)).toBeNull();
   });
 
   it("selects coverage metrics using their distinct denominators", () => {

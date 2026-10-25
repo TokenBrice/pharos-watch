@@ -13,7 +13,6 @@ import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { cn } from "@/lib/utils";
 import { formatPercentFromRatio } from "@shared/lib/format";
 import {
-  DDR_RESOLUTION_TIER_VALUES,
   type DdrResolutionTier,
   type DdrPublicPredictionState,
   type DdrV2ResponseRow,
@@ -24,23 +23,17 @@ import {
   getLiveCurrentDeviationBps,
   getPeakDeviationBps,
   getResolution,
+  getTierMeta,
+  getTierVocabulary,
   isCurrentForecast,
   NOW_DOT_TONE,
-  TIER_META,
 } from "@/components/depeg-resolver-row-card-model";
-import { DDR_VERDICT_CLASSES } from "@shared/lib/classification";
+import { groupTiersByVocabulary } from "@/components/depeg-resolver-book-summary";
+import { DDR_VERDICT_CLASSES, type DdrTierVocabulary } from "@shared/lib/classification";
 
 // Above this many open depegs the board splits into two balanced columns so all
 // forecasts stay visible without an over-tall single list.
 const TWO_COLUMN_THRESHOLD = 6;
-
-// Short tier labels for the distribution legend + per-row terminality.
-const TIER_SHORT: Record<DdrResolutionTier, string> = {
-  recovery_likely: "Likely",
-  at_risk: "At risk",
-  recovery_unlikely: "Unlikely",
-  insufficient_signal: "No signal",
-};
 
 // Tier-colored ring around each coin logo — keeps terminality readable at the
 // identity slot.
@@ -57,6 +50,8 @@ interface ForecastItem {
   name: string;
   state: DdrPublicPredictionState;
   tier: DdrResolutionTier | null;
+  /** Label vocabulary the forecast was locked under (DDRv5 evidence classes or legacy). */
+  vocabulary: DdrTierVocabulary;
   nowBps: number | null;
   /** Benchmarked median time-to-repeg, seconds; null when no duration band. */
   medianSec: number | null;
@@ -85,6 +80,7 @@ function toForecastItem(row: DdrV2ResponseRow): ForecastItem {
     name: row.name,
     state: row.prediction.state,
     tier: currentForecast ? getResolution(row).tier : null,
+    vocabulary: getTierVocabulary(row),
     nowBps,
     medianSec: benchmarked ? duration.medianSec : null,
     remainingAsOf: benchmarked ? duration.remainingAsOf : null,
@@ -105,7 +101,11 @@ function DurationCell({ item }: { item: ForecastItem }) {
     return <span className="font-mono text-2xs text-muted-foreground">—</span>;
   }
   if (item.tier === "recovery_unlikely") {
-    return <span className="font-mono text-2xs font-semibold text-state-danger">no return</span>;
+    return (
+      <span className="font-mono text-2xs font-semibold text-state-danger">
+        {item.vocabulary === "evidence_class" ? "may not recover" : "no return"}
+      </span>
+    );
   }
   if (item.medianSec != null) {
     return (
@@ -170,8 +170,8 @@ function ForecastRow({ item, logoSrc }: { item: ForecastItem; logoSrc: string | 
         <span className="shrink-0 font-mono text-2xs tabular-nums text-muted-foreground">{signedBps(item.nowBps)}</span>
       </span>
       <span className="flex shrink-0 items-center justify-end gap-2.5">
-        <span className={cn("w-auto text-right sm:w-24 text-2xs font-semibold", item.tier == null ? "text-muted-foreground" : TIER_META[item.tier].accent)}>
-          {item.tier == null ? item.state.replaceAll("_", " ") : TIER_SHORT[item.tier]}
+        <span className={cn("w-auto text-right sm:w-24 text-2xs font-semibold", item.tier == null ? "text-muted-foreground" : getTierMeta(item.tier, item.vocabulary).accent)}>
+          {item.tier == null ? item.state.replaceAll("_", " ") : getTierMeta(item.tier, item.vocabulary).short}
         </span>
         <span className="w-auto text-right sm:w-28">
           <DurationCell item={item} />
@@ -212,18 +212,17 @@ function SectionHeader({ stat }: { stat: { value: number | null; label: string }
 // --- forecast board (left) -----------------------------------------------
 
 function VerdictDistribution({ items }: { items: ForecastItem[] }) {
-  const total = items.filter((item) => item.tier != null).length;
-  const groups = DDR_RESOLUTION_TIER_VALUES.map((tier) => ({
-    tier,
-    count: items.filter((i) => i.tier === tier).length,
-  })).filter((g) => g.count > 0);
+  const tiered = items.flatMap((item) => (item.tier == null ? [] : [{ tier: item.tier, vocabulary: item.vocabulary }]));
+  const total = tiered.length;
+  // Pre-v5 locks keep their own labels, so a mixed book shows each vocabulary's count separately.
+  const groups = groupTiersByVocabulary(tiered);
 
   return (
     <div className="space-y-1.5">
       <div className="flex h-10 w-full gap-0.5 overflow-hidden rounded-md bg-background/70">
-        {groups.map(({ tier, count }, index) => (
+        {groups.map(({ tier, vocabulary, count }, index) => (
           <span
-            key={tier}
+            key={`${tier}:${vocabulary}`}
             className={cn(
               NOW_DOT_TONE[tier],
               index === 0 && "rounded-l-md",
@@ -235,15 +234,16 @@ function VerdictDistribution({ items }: { items: ForecastItem[] }) {
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        {groups.map(({ tier, count }) => (
-          <span key={tier} className="flex items-center gap-1.5">
-            <span aria-hidden="true" className={cn("h-2 w-2 rounded-xs", NOW_DOT_TONE[tier])} />
-            <span className={cn("font-mono text-sm font-bold tabular-nums", TIER_META[tier].accent)}>{count}</span>
-            <span className={cn("text-2xs font-semibold", TIER_META[tier].accent)}>
-              {TIER_SHORT[tier]}
+        {groups.map(({ tier, vocabulary, count }) => {
+          const meta = getTierMeta(tier, vocabulary);
+          return (
+            <span key={`${tier}:${vocabulary}`} className="flex items-center gap-1.5">
+              <span aria-hidden="true" className={cn("h-2 w-2 rounded-xs", NOW_DOT_TONE[tier])} />
+              <span className={cn("font-mono text-sm font-bold tabular-nums", meta.accent)}>{count}</span>
+              <span className={cn("text-2xs font-semibold", meta.accent)}>{meta.short}</span>
             </span>
-          </span>
-        ))}
+          );
+        })}
         <span className="pharos-meta pharos-numeric ml-auto">{total} forecasts</span>
       </div>
     </div>

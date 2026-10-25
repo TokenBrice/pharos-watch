@@ -72,8 +72,8 @@ function resolutionSignalComponent(input: DdrForecastReadinessInput): DdrForecas
         0.9 + factorLift,
         0.25,
         input.resolution.tier === "recovery_likely"
-          ? "Resolution outlook has a recoverable read with supporting anchors."
-          : "Resolution outlook has a terminal-leaning read with fired kill signals.",
+          ? "Resolution outlook shows no break signals."
+          : "Resolution outlook has terminal evidence.",
       );
     case "at_risk":
       return component(
@@ -81,7 +81,7 @@ function resolutionSignalComponent(input: DdrForecastReadinessInput): DdrForecas
         "Resolution signal",
         0.62 + Math.min(0.08, factors.length * 0.02),
         0.25,
-        "Resolution outlook is mixed enough to keep the read provisional.",
+        "Resolution outlook shows stress signals, so the read stays provisional.",
       );
     case "insufficient_signal":
       return component(
@@ -101,6 +101,7 @@ const CELL_STATE_SCORE: Record<DdrCellState, number> = {
   chronic_tail: 0.55,
   unsupported: 0.15,
   data_issue: 0.05,
+  not_informative: 0.65,
 };
 
 function durationSupportComponent(input: DdrForecastReadinessInput): DdrForecastReadinessComponent {

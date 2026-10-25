@@ -4,14 +4,13 @@ import type { ReactNode } from "react";
 import { DEWSRadarPanel } from "@/components/dews-summary";
 import { HERO_KPI_VALUE_CLASS } from "@/components/feature-hero-split";
 import { MethodologyLabel } from "@/components/methodology-hint";
-import { TIER_META } from "@/components/depeg-resolver-row-card-model";
+import { getTierMeta } from "@/components/depeg-resolver-row-card-model";
 import { UniverseChip } from "@/components/universe-chip";
 import { RailHeroFigureTransition } from "@/components/view-transitions";
 import type { ResolverBookSummary } from "@/components/depeg-resolver-book-summary";
 import { cn } from "@/lib/utils";
 import { deviationBorderClass, deviationColorClass } from "@/lib/severity-colors";
 import { formatPercent } from "@shared/lib/format";
-import { DDR_RESOLUTION_TIER_VALUES } from "@shared/types/depeg-resolver";
 import type { DdrrSummary } from "@shared/types/depeg-resolver-review";
 import type { PegSummaryStats } from "@shared/types";
 
@@ -86,9 +85,7 @@ export function DepegOutlookHero({
 }: DepegOutlookHeroProps) {
   const activeCount = stats?.activeDepegCount ?? 0;
   const worst = stats?.worstCurrent;
-  const tiers = book
-    ? DDR_RESOLUTION_TIER_VALUES.filter((tier) => book.tierCounts[tier] > 0)
-    : [];
+  const tierGroups = book?.tierGroups ?? [];
   const headline = review?.headline;
   const accuracyPct = headline?.recoveryLikelihoodAccuracyPct ?? null;
 
@@ -163,14 +160,15 @@ export function DepegOutlookHero({
           {book && book.total > 0 ? (
             <RailGroup label="Recovery outlook · DDR">
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                {tiers.map((tier) => (
-                  <span key={tier} className="inline-flex items-baseline gap-1 text-xs">
-                    <span className={cn("pharos-numeric text-sm font-semibold", TIER_META[tier].accent)}>
-                      {book.tierCounts[tier]}
+                {tierGroups.map(({ tier, vocabulary, count }) => {
+                  const meta = getTierMeta(tier, vocabulary);
+                  return (
+                    <span key={`${tier}:${vocabulary}`} className="inline-flex items-baseline gap-1 text-xs">
+                      <span className={cn("pharos-numeric text-sm font-semibold", meta.accent)}>{count}</span>
+                      <span className={meta.accent}>{meta.label.toLowerCase()}</span>
                     </span>
-                    <span className={TIER_META[tier].accent}>{TIER_META[tier].label.toLowerCase()}</span>
-                  </span>
-                ))}
+                  );
+                })}
               </div>
               <p className="pharos-meta mt-1">
                 {book.pastPeakCount > 0 ? (

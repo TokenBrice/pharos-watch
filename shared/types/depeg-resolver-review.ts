@@ -61,6 +61,11 @@ export const DDRR_VERDICT_REVIEW_VALUES = [
   "unscored_insufficient_signal",
   "pending",
   "data_issue",
+  /**
+   * Reviewer v5: terminal evidence settled before the lock (registry curation
+   * lag). Not a forecast outcome; it is counted as curation debt, never scored.
+   */
+  "terminal_at_lock",
 ] as const;
 export type DdrrVerdictReview = (typeof DDRR_VERDICT_REVIEW_VALUES)[number];
 
@@ -373,6 +378,23 @@ export const DdrrHorizonCalibrationSchema = z.object({
 });
 export type DdrrHorizonCalibration = z.infer<typeof DdrrHorizonCalibrationSchema>;
 
+export const DdrrTierOutcomeSchema = z.object({
+  tier: z.enum(["recovery_likely", "at_risk", "recovery_unlikely"]),
+  recovered: z.number().int().nonnegative(),
+  terminal: z.number().int().nonnegative(),
+});
+export type DdrrTierOutcome = z.infer<typeof DdrrTierOutcomeSchema>;
+
+/** Brier score of matured horizon odds against a leave-one-out base rate. */
+export const DdrrHorizonSkillSchema = z.object({
+  horizon: z.enum(DDR_HORIZON_VALUES),
+  scored: z.number().int().nonnegative(),
+  brier: z.number().min(0).max(1).nullable(),
+  baseRateBrier: z.number().min(0).max(1).nullable(),
+  brierSkill: z.number().finite().nullable(),
+});
+export type DdrrHorizonSkill = z.infer<typeof DdrrHorizonSkillSchema>;
+
 export const DdrrV2SummaryMetricsSchema = z.object({
   activeEligibleIncidentCount: z.number().int().nonnegative(),
   policyUniverseIncidentCount: z.number().int().nonnegative(),
@@ -425,6 +447,20 @@ export const DdrrV2SummaryMetricsSchema = z.object({
   accuracyDenominatorLabel: z.string(),
   horizonHitRates: z.array(DdrrHorizonHitRateSchema),
   horizonCalibration: z.array(DdrrHorizonCalibrationSchema).default([]),
+  // Reviewer v5 additions. Absent on older cached snapshots; consumers show unavailable.
+  terminalAtLockCount: z.number().int().nonnegative().optional(),
+  /** Correct calls a constant "will recover" forecaster would make on the same scored rows. */
+  baselineRecoverableCorrectCount: z.number().int().nonnegative().optional(),
+  terminalCallCount: z.number().int().nonnegative().optional(),
+  terminalCallCorrectCount: z.number().int().nonnegative().optional(),
+  terminalOutcomeCount: z.number().int().nonnegative().optional(),
+  tierOutcomes: z.array(DdrrTierOutcomeSchema).optional(),
+  /** Median log2(actual / predicted remaining time) over duration-scored rows; positive means slower. */
+  medianLog2DurationRatio: z.number().finite().nullable().optional(),
+  within2xCount: z.number().int().nonnegative().optional(),
+  /** Still-open incidents already past their published upper band, graded slower than band. */
+  overdueOpenCount: z.number().int().nonnegative().optional(),
+  horizonSkill: z.array(DdrrHorizonSkillSchema).optional(),
 });
 export type DdrrV2SummaryMetrics = z.infer<typeof DdrrV2SummaryMetricsSchema>;
 

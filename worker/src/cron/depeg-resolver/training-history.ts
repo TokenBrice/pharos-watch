@@ -10,7 +10,8 @@ export interface DdrTrainingHistoryRow {
   direction: string;
   peak_deviation_bps: number;
   started_at: number;
-  ended_at: number;
+  /** Null only for open events from `readDdrOpenTrainingHistory`. */
+  ended_at: number | null;
   recovery_price: number | null;
   close_reason: string | null;
   first_seen_bps: number | null;
@@ -88,4 +89,42 @@ export async function readDdrTrainingHistory(
   const live = await runWithOverloadRetry(() => db.prepare(historySql(directions.length, false))
     .bind(...binds).all<DdrTrainingHistoryRow>());
   return live.results ?? [];
+}
+
+/** Open events are few (one per open source event); bound the read regardless. */
+export const OPEN_TRAINING_ROW_CAP = 500;
+
+/**
+ * DDRv5 censoring: still-open, audit-eligible events enter the duration
+ * estimate as right-censored observations. They have no rollup row (the rollup
+ * requires an end), so their timed observations use the live aggregate.
+ */
+export async function readDdrOpenTrainingHistory(
+  db: D1Database,
+  directions: readonly string[],
+  windowStart: number,
+): Promise<DdrTrainingHistoryRow[]> {
+  if (directions.length === 0) return [];
+  const auditEligible = auditVerdictNotInSql("provenance_audit_verdict", DDR_INELIGIBLE_AUDIT_VERDICTS);
+  const sql = "/* pharos:ddr-training-history-open */ WITH history AS (" +
+    "SELECT id, stablecoin_id, peg_type, direction, source, peak_deviation_bps, started_at, ended_at, recovery_price, close_reason " +
+    "FROM depeg_events_with_provenance WHERE ended_at IS NULL AND started_at >= ? " +
+    `AND ${auditEligible.sql} AND direction IN (${placeholders(directions.length)}) ` +
+    `ORDER BY started_at DESC, id DESC LIMIT ${OPEN_TRAINING_ROW_CAP}) ` +
+    "SELECT h.*, p.first_seen_bps, p.last_seen_bps, p.last_seen_at, " +
+    "(SELECT json_group_array(json_object('observedAt', a.assessed_at, 'deviationBps', " +
+    "CASE WHEN json_valid(a.row_json) THEN json_extract(a.row_json, '$.currentDeviationBps') END)) " +
+    "FROM depeg_resolver_assessments a WHERE a.event_id = h.id AND a.stablecoin_id = h.stablecoin_id " +
+    "AND a.direction = h.direction AND a.started_at = h.started_at AND a.assessed_at >= h.started_at) " +
+    "AS severity_observations_json FROM history h " +
+    "LEFT JOIN depeg_pending_outcomes p ON h.source = 'live' AND p.outcome = 'promoted' " +
+    "AND p.stablecoin_id = h.stablecoin_id AND p.peg_type = h.peg_type AND p.direction = h.direction " +
+    "AND p.first_seen_at = h.started_at " +
+    "AND NOT EXISTS (SELECT 1 FROM depeg_pending_outcomes duplicate WHERE duplicate.outcome = 'promoted' " +
+    "AND duplicate.stablecoin_id = p.stablecoin_id AND duplicate.peg_type = p.peg_type " +
+    "AND duplicate.direction = p.direction AND duplicate.first_seen_at = p.first_seen_at AND duplicate.id != p.id) " +
+    "ORDER BY h.started_at ASC, h.id ASC";
+  const result = await runWithOverloadRetry(() => db.prepare(sql)
+    .bind(windowStart, ...auditEligible.binds, ...directions).all<DdrTrainingHistoryRow>());
+  return result.results ?? [];
 }

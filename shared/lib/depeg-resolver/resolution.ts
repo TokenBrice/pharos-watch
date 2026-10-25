@@ -49,10 +49,15 @@ const K6_WIND_DOWN_EXIT_TREND_PCT = -40;
 const K6_CALM_CATASTROPHIC_DEPTH_BPS = 1_000;
 const K6_CALM_CATASTROPHIC_SUPPLY_CHANGE_30D_ABS_PCT = 5;
 const K6_CALM_CATASTROPHIC_VOLUME_24H_USD = 100;
-const V9_EXIT_SEVERE_COMPLETION_RATIO = 0.01;
-const V9_EXIT_ELEVATED_COMPLETION_RATIO = 0.05;
 const V9_EXIT_R2_STRONG_COMPLETION_RATIO = 0.1;
 const V9_EXIT_MIN_EXECUTABLE_USD = 100_000;
+// DDRv5 K5: only an in-incident collapse measured against the onset baseline is
+// severe. Static exit thinness (V9 capacity, no viable route, thin redemption
+// capacity) describes the coin in calm periods too, so it caps at elevated.
+const K5_DYNAMIC_SEVERE_MAX_LIQUIDITY_SCORE = 20;
+const K5_DYNAMIC_SEVERE_TVL_CHANGE_SINCE_ONSET_PCT = -40;
+const K5_THIN_LIQUIDITY_SCORE = 30;
+const K5_THIN_REDEMPTION_CAPACITY_RATIO = 0.02;
 
 export interface DdrWindDownFingerprintContext {
   tvlChange30d?: number | null;
@@ -82,7 +87,7 @@ const DDR_INSUFFICIENT_MINT_AUTHORITY_REASON = "No reviewed mint authority";
 const DDR_INSUFFICIENT_SUPPLY_HISTORY_REASON = "No usable supply history for this coin";
 export const DDR_INSUFFICIENT_LIVE_PRICE_REASON = "No live price deviation for this event";
 
-function sumReserveRisk(coin: DdrCoinStructural, risks: string[]): number {
+export function sumReserveRisk(coin: DdrCoinStructural, risks: string[]): number {
   if (!coin.reserves?.length) return 0;
   return coin.reserves.filter((r) => risks.includes(r.risk)).reduce((s, r) => s + (r.pct ?? 0), 0);
 }
@@ -107,6 +112,18 @@ function parseRegistryDateSec(date: string): number | null {
     return null;
   }
   return Math.floor(millis / 1000);
+}
+
+/** Break depth uses the worse of the stored peak and the live deviation. */
+export function breakDepthBps(active: Pick<DdrActiveEventInput, "peakDeviationBps" | "currentDeviationBps">): number {
+  const current = active.currentDeviationBps;
+  const peak = Math.abs(active.peakDeviationBps);
+  return current != null && Number.isFinite(current) ? Math.max(peak, Math.abs(current)) : peak;
+}
+
+function isDeepBreak(depthBps: number): boolean {
+  const bucket = depthBucket(depthBps);
+  return bucket === "severe" || bucket === "catastrophic";
 }
 
 function hasRecentMintIncident(active: DdrActiveEventInput, coin: DdrCoinStructural, asOfSec: number): boolean {
@@ -158,7 +175,7 @@ function windDownFingerprintEvidence(
       }
     }
 
-    const depthBps = Math.abs(active.peakDeviationBps);
+    const depthBps = breakDepthBps(active);
     const volume24hUsd = live.totalVolume24hUsd;
     if (
       depthBps >= K6_CALM_CATASTROPHIC_DEPTH_BPS &&
@@ -196,19 +213,22 @@ function measuredV9ExitCapacity(live: DdrLiveContext): NonNullable<DdrV9ExitCont
   return capacity;
 }
 
-function measuredV9ExitCapacitySeverity(live: DdrLiveContext): "severe" | "elevated" | null {
+/**
+ * V9 sizes its exit stress request for the Safety Score (a $1M materiality
+ * floor), which is far larger than the arbitrage a small-float coin needs to
+ * repeg. DDR re-scales the measured route to the dislocation's value gap
+ * (supply × break depth): the route is thin only when its executable depth
+ * within the V9 cost bound cannot absorb that gap. Thinness is static evidence
+ * and never exceeds elevated.
+ */
+function dislocationScaledV9ExitThin(live: DdrLiveContext, breakDepthBps: number): boolean {
   const capacity = measuredV9ExitCapacity(live);
-  if (capacity == null) return null;
-  if (capacity.completionRatio <= V9_EXIT_SEVERE_COMPLETION_RATIO) {
-    return "severe";
-  }
-  if (
-    capacity.completionRatio < V9_EXIT_ELEVATED_COMPLETION_RATIO ||
-    (capacity.executableUsd < V9_EXIT_MIN_EXECUTABLE_USD && capacity.completionRatio < 0.25)
-  ) {
-    return "elevated";
-  }
-  return null;
+  const supplyUsd = live.circulatingUsd;
+  if (capacity == null || supplyUsd == null || !Number.isFinite(supplyUsd) || supplyUsd <= 0) return false;
+  if (capacity.completionRatio >= 1) return false;
+  const dislocationNotionalUsd = supplyUsd * (Math.abs(breakDepthBps) / 10_000);
+  if (!(dislocationNotionalUsd > 0)) return false;
+  return capacity.executableUsd < dislocationNotionalUsd;
 }
 
 function hasMeasuredV9ExitRoute(live: DdrLiveContext): boolean {
@@ -235,8 +255,8 @@ function killSignals(
 ): RawFactor[] {
   const out: RawFactor[] = [];
   const below = active.direction === "below";
-  const depth = depthBucket(active.peakDeviationBps);
-  const deep = depth === "severe" || depth === "catastrophic";
+  const depthBps = breakDepthBps(active);
+  const deep = isDeepBreak(depthBps);
   const riskyMinter =
     isFragileMintPosture(coin.authorityPosture) ||
     (coin.mintPath != null && RISKY_MINT_PATHS.has(coin.mintPath)) ||
@@ -345,34 +365,39 @@ function killSignals(
   const v9Exit = identifiedV9Exit(live);
   const noViableV9Exit = v9Exit?.reasonCodes.includes("no-viable-exit-path") === true;
   const correlatedV9ExitRoutes = v9Exit?.reasonCodes.includes("correlated-exit-routes") === true;
-  const v9CapacitySeverity = measuredV9ExitCapacitySeverity(live);
-  const legacySevereK5 =
-    (liq != null && liq < 20 && live.tvlChange7d != null && live.tvlChange7d < -40) ||
-    (rcr != null && rcr < 0.005);
-  const legacyElevatedK5 = (liq != null && liq < 30) || live.bankRun === true || (rcr != null && rcr < 0.02);
-  if (legacySevereK5 || noViableV9Exit || v9CapacitySeverity === "severe") {
+  const v9ExitThin = dislocationScaledV9ExitThin(live, depthBps);
+  const tvlChangeSinceOnset = live.tvlChangeSinceOnsetPct;
+  const dynamicSevereK5 =
+    liq != null &&
+    liq < K5_DYNAMIC_SEVERE_MAX_LIQUIDITY_SCORE &&
+    tvlChangeSinceOnset != null &&
+    Number.isFinite(tvlChangeSinceOnset) &&
+    tvlChangeSinceOnset <= K5_DYNAMIC_SEVERE_TVL_CHANGE_SINCE_ONSET_PCT;
+  const thinLiquidity = liq != null && liq < K5_THIN_LIQUIDITY_SCORE;
+  const thinRedemption = rcr != null && rcr < K5_THIN_REDEMPTION_CAPACITY_RATIO;
+  if (dynamicSevereK5) {
     out.push({
       code: "K5_exit_collapse",
       kind: "kill",
       severity: "severe",
-      label: noViableV9Exit
-        ? "V9 identifies no viable exit path"
-        : v9CapacitySeverity === "severe"
-          ? "Measured V9 exit capacity is effectively exhausted"
-          : "Exit liquidity collapsing with no redemption path",
+      label: `Exit liquidity collapsed ${Math.round(Math.abs(tvlChangeSinceOnset))}% since the break began`,
     });
-  } else if (legacyElevatedK5 || correlatedV9ExitRoutes || v9CapacitySeverity === "elevated") {
+  } else if (live.bankRun === true || noViableV9Exit || correlatedV9ExitRoutes || v9ExitThin || thinLiquidity || thinRedemption) {
     out.push({
       code: "K5_exit_collapse",
       kind: "kill",
       severity: "elevated",
-      label: correlatedV9ExitRoutes
-        ? "V9 exit routes share correlated failure modes"
-        : v9CapacitySeverity === "elevated"
-          ? "Measured V9 exit capacity is thin for the stress request"
-          : live.bankRun === true
-            ? "Sustained one-sided outflow (bank-run signal)"
-            : "Thin exit liquidity",
+      label: live.bankRun === true
+        ? "Sustained one-sided outflow (bank-run signal)"
+        : noViableV9Exit
+          ? "V9 identifies no viable exit path"
+          : correlatedV9ExitRoutes
+            ? "V9 exit routes share correlated failure modes"
+            : v9ExitThin
+              ? "Measured exit depth is smaller than the dislocation"
+              : thinRedemption
+                ? "Thin redemption capacity"
+                : "Thin exit liquidity",
     });
   }
 
@@ -545,30 +570,35 @@ export function resolveOutlook(
     return { tier: "insufficient_signal", factors, insufficientReasons };
   }
 
+  // DDRv5 evidence classes (wire codes unchanged): recovery_unlikely =
+  // "Terminal evidence", at_risk = "Stress signals", recovery_likely = "No
+  // break signals". Anchors are published context; they no longer gate a tier.
   let tier: DdrResolutionTier;
+  const deepBelowPegBreak = active.direction === "below" && isDeepBreak(breakDepthBps(active));
 
   if (frozenTerminal || kills.some((kill) => kill.code === "K6_wind_down" && kill.severity === "severe")) {
-    // A terminal issuer or announced token wind-down is recovery_unlikely
+    // A terminal issuer or announced token wind-down is terminal evidence
     // irrespective of break direction.
     tier = "recovery_unlikely";
   } else if (active.direction === "above") {
-    // Overpeg: recovery is quasi-certain; only a sticky-premium signal lifts to at_risk.
+    // Overpeg: recovery is quasi-certain; only exit stress marks a sticky premium.
     const sticky = kills.some((k) => k.code === "K5_exit_collapse");
     tier = sticky ? "at_risk" : "recovery_likely";
   } else {
     const severeKills = kills.filter((k) => k.severity === "severe").length;
-    const elevatedOrWorse = kills.length;
-    const strongAnchors = anchors.filter((a) => a.severity === "strong");
-    const hasStrongStructuralAnchor = strongAnchors.some(
-      (a) => a.code === "R1_noninflatable_supply" || a.code === "R2_hard_collateral_redemption",
+    const hasStrongStructuralAnchor = anchors.some(
+      (a) => a.severity === "strong" && (a.code === "R1_noninflatable_supply" || a.code === "R2_hard_collateral_redemption"),
     );
+    // Static weaknesses condemn only alongside a severe below-peg fingerprint
+    // (the v3.03 pattern); on a shallow break they are stress, not terminal.
+    const compoundedDeepStress = kills.length >= 2 && !hasStrongStructuralAnchor && deepBelowPegBreak;
 
-    if (severeKills >= 1 || (elevatedOrWorse >= 2 && !hasStrongStructuralAnchor)) {
+    if (severeKills >= 1 || compoundedDeepStress) {
       tier = "recovery_unlikely";
-    } else if (elevatedOrWorse === 0 && strongAnchors.length >= 2 && hasStrongStructuralAnchor) {
-      tier = "recovery_likely";
-    } else {
+    } else if (kills.length > 0 || deepBelowPegBreak) {
       tier = "at_risk";
+    } else {
+      tier = "recovery_likely";
     }
   }
 

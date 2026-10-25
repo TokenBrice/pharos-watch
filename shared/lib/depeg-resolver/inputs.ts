@@ -92,6 +92,10 @@ export interface DdrLiveContext {
   blacklistSurge?: boolean | null;
   liquidityScore?: number | null;
   tvlChange7d?: number | null;
+  /** DEX TVL change from the last admitted snapshot at or before event onset to now, percent. */
+  tvlChangeSinceOnsetPct?: number | null;
+  /** Latest admitted circulating supply in USD; sizes the dislocation for exit-depth checks. */
+  circulatingUsd?: number | null;
   concentrationHhi?: number | null;
   safetyGrade?: string | null;
   safetyScore?: number | null;

@@ -1,15 +1,19 @@
 /**
- * Stage 2 — Expected Duration (conditional on recovery).
+ * Stage 2 — Expected Duration (DDRv5: unconditional cumulative incidence).
  *
- * Empirical landmark estimate over recovered, grouped, non-quarantined incidents,
+ * Landmark Aalen–Johansen estimate over grouped, non-quarantined incidents,
  * stratified by direction × depth × structural class × peg currency with
- * most-dependable-first fallback. For an active event of age t we look at
- * comparable incidents that reached age t and ask: by each horizon, what share
- * had resolved, and what is the typical total duration. Honest about support.
+ * most-dependable-first fallback. For an active event of age t we take the
+ * comparable incidents still unresolved at age t and estimate, for each
+ * horizon, the share that recovered — with terminal incidents as a competing
+ * outcome (they never recover) and still-open or non-recovery closures
+ * right-censored at their last trusted observation. Each coin carries at most
+ * one unit of weight across its incidents in the risk set. Quantiles that the
+ * cumulative-incidence curve never reaches stay null ("may not resolve").
  */
 
 import type { DdrDuration, DdrHorizon, DdrHorizonCell } from "../../types/depeg-resolver";
-import { DDR_HORIZON_VALUES } from "../../types/depeg-resolver";
+import { DDR_DURATION_BAND_META, DDR_DURATION_ESTIMAND, DDR_HORIZON_VALUES } from "../../types/depeg-resolver";
 import { groupDurationLabelIncidents, type DdrIncident } from "./incident-groups";
 import { candidateStrata, depthBucket, stratumLabel, stratumMatches, type DdrStratumCandidate, type DdrStratumKey } from "./strata";
 import { percentileLinear } from "../stats";
@@ -34,6 +38,13 @@ const BENCHMARKED_MIN_WEIGHTED_NON_CLOSURES = 5;
 const THIN_SUPPORT_MIN_EFFECTIVE_N = 5;
 const THIN_SUPPORT_MIN_WEIGHTED_CLOSURES = 1;
 
+/**
+ * Horizons whose landmark odds failed the DDRv5 replay skill gate (Brier skill
+ * against out-of-sample base rates < 0). Methodology-owned; see
+ * docs/depeg-resolver.md "Stage 2 — Expected Duration".
+ */
+export const DDR_NOT_INFORMATIVE_HORIZONS: ReadonlySet<DdrHorizon> = new Set<DdrHorizon>([]);
+
 function wilson(k: number, n: number): { lower: number; upper: number } {
   if (n === 0) return { lower: 0, upper: 1 };
   const p = k / n;
@@ -50,12 +61,6 @@ function displayInterval(lower: number, upper: number): string {
   return `${lo}-${hi}%`;
 }
 
-interface WeightedClosureStats {
-  probability: number;
-  effectiveN: number;
-  weightedClosures: number;
-  weightedNonClosures: number;
-}
 
 function incidentDepthAtAge(incident: DdrIncident, ageSec: number): DdrIncident["depth"] | null {
   let worst: number | null = null;
@@ -79,21 +84,44 @@ function incidentMatchesAtAge(candidate: DdrStratumCandidate, incident: DdrIncid
   });
 }
 
-function isTrainableIncident(incident: DdrIncident): boolean {
-  if (!incident.recovered || incident.durationSec == null) return false;
-  return incident.durationSec >= MIN_TRAINING_DURATION_SEC || Math.abs(incident.peakDeviationBps) >= MIN_TRAINING_PEAK_BPS;
+/** A comparable incident's observed outcome, measured from its own onset. */
+type DdrIncidentOutcome =
+  | { kind: "recovery"; timeSec: number }
+  | { kind: "terminal"; timeSec: number }
+  | { kind: "censored"; timeSec: number };
+
+/** Non-recovery closures shortly before a lifecycle freeze count toward that terminal outcome. */
+const TERMINAL_CLOSURE_ATTRIBUTION_SEC = 30 * 86400;
+
+function incidentOutcome(incident: DdrIncident, nowSec: number | undefined): DdrIncidentOutcome | null {
+  if (incident.recovered && incident.durationSec != null) {
+    return { kind: "recovery", timeSec: incident.durationSec };
+  }
+  const terminalAt = incident.terminalAt;
+  if (
+    terminalAt != null &&
+    (incident.endedAt == null || incident.endedAt >= terminalAt - TERMINAL_CLOSURE_ATTRIBUTION_SEC)
+  ) {
+    return { kind: "terminal", timeSec: Math.max(0, terminalAt - incident.startedAt) };
+  }
+  if (incident.durationSec != null) return { kind: "censored", timeSec: incident.durationSec };
+  // An open incident is observed until the evaluation clock; without one its
+  // exposure is unknown and it cannot enter the estimate.
+  if (nowSec == null) return null;
+  return { kind: "censored", timeSec: Math.max(0, nowSec - incident.startedAt) };
 }
 
-function coinMedianRemainingDurations(comparable: DdrIncident[], ageSec: number): number[] {
-  const byCoin = new Map<string, number[]>();
-  for (const incident of comparable) {
-    const durations = byCoin.get(incident.stablecoinId) ?? [];
-    durations.push((incident.durationSec as number) - ageSec);
-    byCoin.set(incident.stablecoinId, durations);
-  }
-  return [...byCoin.values()]
-    .map((durations) => percentileLinear(durations, 50) ?? 0)
-    .sort((a, b) => a - b);
+function isTrainableIncident(incident: DdrIncident, nowSec: number | undefined): boolean {
+  const outcome = incidentOutcome(incident, nowSec);
+  if (outcome == null) return false;
+  return outcome.timeSec >= MIN_TRAINING_DURATION_SEC || Math.abs(incident.peakDeviationBps) >= MIN_TRAINING_PEAK_BPS;
+}
+
+/** Comparable at landmark age t: unresolved and still under observation at t. */
+function atRiskAtAge(incident: DdrIncident, ageSec: number, nowSec: number | undefined): boolean {
+  const outcome = incidentOutcome(incident, nowSec);
+  if (outcome == null) return false;
+  return outcome.kind === "censored" ? outcome.timeSec > ageSec : outcome.timeSec >= ageSec;
 }
 
 // Test seam (keep exported): the DDR duration suite pins the trainable-corpus
@@ -101,36 +129,97 @@ function coinMedianRemainingDurations(comparable: DdrIncident[], ageSec: number)
 export function buildDurationTrainingCorpus(
   incidents: DdrIncident[],
   quarantined: Set<string>,
+  nowSec?: number,
 ): DdrIncident[] {
   return groupDurationLabelIncidents(incidents).filter(
-    (incident) => isTrainableIncident(incident) && !quarantined.has(incident.stablecoinId),
+    (incident) => isTrainableIncident(incident, nowSec) && !quarantined.has(incident.stablecoinId),
   );
 }
 
-/** Coin-capped weighted closure probability (each coin contributes ≤ 1.0). */
-function weightedClosureStats(comparable: DdrIncident[], horizonEndSec: number, ageSec: number): WeightedClosureStats {
-  const byCoin = new Map<string, { closed: number; total: number }>();
-  for (const inc of comparable) {
-    const e = byCoin.get(inc.stablecoinId) ?? { closed: 0, total: 0 };
-    e.total += 1;
-    if (inc.durationSec != null && inc.durationSec <= ageSec + horizonEndSec) e.closed += 1;
-    byCoin.set(inc.stablecoinId, e);
+interface CumulativeIncidenceCurve {
+  /** Recovery cumulative incidence after each distinct event time (remaining seconds). */
+  points: { remainingSec: number; cif: number }[];
+  effectiveN: number;
+}
+
+/**
+ * Coin-weighted Aalen–Johansen estimate of recovery with terminal as a
+ * competing risk. Weights are fixed at the landmark: each coin's comparable
+ * incidents share one unit.
+ */
+function recoveryCumulativeIncidence(comparable: DdrIncident[], ageSec: number, nowSec: number | undefined): CumulativeIncidenceCurve {
+  const perCoin = new Map<string, number>();
+  for (const incident of comparable) perCoin.set(incident.stablecoinId, (perCoin.get(incident.stablecoinId) ?? 0) + 1);
+  const items = comparable.map((incident) => {
+    const outcome = incidentOutcome(incident, nowSec)!;
+    return {
+      remainingSec: Math.max(0, outcome.timeSec - ageSec),
+      kind: outcome.kind,
+      weight: 1 / (perCoin.get(incident.stablecoinId) ?? 1),
+    };
+  }).sort((a, b) => a.remainingSec - b.remainingSec);
+
+  let atRisk = roundWeight(items.reduce((sum, item) => sum + item.weight, 0));
+  let survival = 1;
+  let cif = 0;
+  const points: CumulativeIncidenceCurve["points"] = [];
+  let i = 0;
+  while (i < items.length) {
+    const time = items[i].remainingSec;
+    let recovered = 0;
+    let terminal = 0;
+    let leaving = 0;
+    while (i < items.length && items[i].remainingSec === time) {
+      if (items[i].kind === "recovery") recovered += items[i].weight;
+      else if (items[i].kind === "terminal") terminal += items[i].weight;
+      leaving += items[i].weight;
+      i += 1;
+    }
+    if (atRisk > 0 && recovered + terminal > 0) {
+      cif = roundWeight(cif + survival * (recovered / atRisk));
+      survival = roundWeight(survival * (1 - (recovered + terminal) / atRisk));
+      points.push({ remainingSec: time, cif: Math.min(1, cif) });
+    }
+    atRisk = roundWeight(atRisk - leaving);
   }
-  let weightedClosures = 0;
-  for (const { closed, total } of byCoin.values()) weightedClosures += closed / total;
-  const probability = byCoin.size === 0 ? 0 : weightedClosures / byCoin.size;
-  return {
-    probability,
-    effectiveN: byCoin.size,
-    weightedClosures,
-    weightedNonClosures: Math.max(0, byCoin.size - weightedClosures),
-  };
+  return { points, effectiveN: perCoin.size };
+}
+
+/** Coin weights are reciprocals; round away float drift so exact support floors stay exact. */
+function roundWeight(value: number): number {
+  return Math.round(value * 1e9) / 1e9;
+}
+
+function cifAt(curve: CumulativeIncidenceCurve, remainingSec: number): number {
+  let value = 0;
+  for (const point of curve.points) {
+    if (point.remainingSec > remainingSec) break;
+    value = point.cif;
+  }
+  return value;
+}
+
+/** Smallest remaining time at which recovery incidence reaches q; null when it never does. */
+function cifQuantile(curve: CumulativeIncidenceCurve, q: number): number | null {
+  for (const point of curve.points) {
+    if (point.cif >= q - 1e-12) return point.remainingSec;
+  }
+  return null;
+}
+
+/** Incidents whose horizon outcome is known: an event before t+h, or follow-up past t+h. */
+function observableAtHorizon(comparable: DdrIncident[], ageSec: number, horizonSec: number, nowSec: number | undefined): DdrIncident[] {
+  return comparable.filter((incident) => {
+    const outcome = incidentOutcome(incident, nowSec)!;
+    return outcome.kind !== "censored" || outcome.timeSec >= ageSec + horizonSec;
+  });
 }
 
 function selectStratum(
   activeKey: DdrStratumKey,
   trainable: DdrIncident[],
   ageSec: number,
+  nowSec: number | undefined,
 ): { matched: DdrIncident[]; key: DdrStratumCandidate; label: string } {
   const candidates = candidateStrata(activeKey);
   let fallbackKey: DdrStratumCandidate | null = null;
@@ -138,7 +227,7 @@ function selectStratum(
   let fallbackComparableCount = -1;
   for (const cand of candidates) {
     const matched = trainable.filter((inc) => incidentMatchesAtAge(cand, inc, ageSec));
-    const comparable = matched.filter((inc) => (inc.durationSec as number) >= ageSec);
+    const comparable = matched.filter((inc) => atRiskAtAge(inc, ageSec, nowSec));
     const uniqueCoins = new Set(comparable.map((m) => m.stablecoinId)).size;
     if (comparable.length > fallbackComparableCount) {
       fallbackKey = cand;
@@ -158,17 +247,24 @@ export function computeDuration(
   ageSec: number,
   incidents: DdrIncident[],
   quarantined: Set<string>,
+  nowSec?: number,
+  activeStablecoinId?: string,
 ): DdrDuration {
-  const trainable = buildDurationTrainingCorpus(incidents, quarantined);
-  const { matched, label } = selectStratum(activeKey, trainable, ageSec);
+  // The active incident's own open history is the thing being forecast, not a
+  // comparable censored observation.
+  const trainable = buildDurationTrainingCorpus(incidents, quarantined, nowSec).filter((incident) =>
+    !(incident.endedAt == null && incident.stablecoinId === activeStablecoinId && incident.direction === activeKey.direction));
+  const { matched, label } = selectStratum(activeKey, trainable, ageSec, nowSec);
 
-  const durationsAll = matched.map((m) => m.durationSec as number).sort((a, b) => a - b);
-  const comparable = matched.filter((m) => (m.durationSec as number) >= ageSec);
-  const coinMedianRemainingDur = coinMedianRemainingDurations(comparable, ageSec);
+  // Age status compares the open event with completed recoveries in the matched stratum.
+  const durationsAll = matched
+    .filter((m) => m.recovered && m.durationSec != null)
+    .map((m) => m.durationSec as number)
+    .sort((a, b) => a - b);
+  const comparable = matched.filter((m) => atRiskAtAge(m, ageSec, nowSec));
   const uniqueCoinsComparable = new Set(comparable.map((m) => m.stablecoinId)).size;
+  const curve = recoveryCumulativeIncidence(comparable, ageSec, nowSec);
 
-  // Age status uses the full matched-stratum duration distribution, not only
-  // incidents still comparable at the current landmark age.
   const p90 = percentileLinear(durationsAll, 90) ?? 0;
   const p99 = percentileLinear(durationsAll, 99) ?? 0;
   let ageStatus: DdrDuration["ageStatus"] = durationsAll.length === 0 ? "data_issue" : "ordinary";
@@ -179,35 +275,46 @@ export function computeDuration(
 
   const horizons: DdrHorizonCell[] = DDR_HORIZON_VALUES.map((h) => {
     const hSec = HORIZON_SECONDS[h];
-    const closures = comparable.filter((m) => (m.durationSec as number) <= ageSec + hSec).length;
-    const nonClosures = comparable.length - closures;
-    const n = comparable.length;
-    const weighted = weightedClosureStats(comparable, hSec, ageSec);
-    const effectiveClosures = weighted.weightedClosures;
-    const effectiveNonClosures = weighted.weightedNonClosures;
+    const observable = observableAtHorizon(comparable, ageSec, hSec, nowSec);
+    const n = observable.length;
+    const closures = observable.filter((m) => {
+      const outcome = incidentOutcome(m, nowSec)!;
+      return outcome.kind === "recovery" && outcome.timeSec <= ageSec + hSec;
+    }).length;
+    const nonClosures = n - closures;
+    const probabilityRaw = cifAt(curve, hSec);
+    const observableCoins = new Set(observable.map((m) => m.stablecoinId)).size;
+    const effectiveClosures = roundWeight(probabilityRaw * observableCoins);
+    const effectiveNonClosures = roundWeight(Math.max(0, observableCoins - effectiveClosures));
 
     let state: DdrHorizonCell["state"];
-    if (n === 0) state = "unsupported";
+    if (comparable.length === 0) state = "unsupported";
     else if (ageStatus === "chronic_tail") state = "chronic_tail";
     else if (
       n >= BENCHMARKED_MIN_COMPARABLE_INCIDENTS &&
-      uniqueCoinsComparable >= BENCHMARKED_MIN_UNIQUE_COINS &&
-      weighted.effectiveN >= BENCHMARKED_MIN_EFFECTIVE_N &&
+      observableCoins >= BENCHMARKED_MIN_UNIQUE_COINS &&
+      observableCoins >= BENCHMARKED_MIN_EFFECTIVE_N &&
       effectiveClosures >= BENCHMARKED_MIN_WEIGHTED_CLOSURES &&
       effectiveNonClosures >= BENCHMARKED_MIN_WEIGHTED_NON_CLOSURES
     ) state = "benchmarked";
     else if (
       n >= STRATUM_MIN_COMPARABLE_INCIDENTS &&
-      uniqueCoinsComparable >= STRATUM_MIN_UNIQUE_COINS &&
-      weighted.effectiveN >= THIN_SUPPORT_MIN_EFFECTIVE_N &&
+      observableCoins >= STRATUM_MIN_UNIQUE_COINS &&
+      observableCoins >= THIN_SUPPORT_MIN_EFFECTIVE_N &&
       effectiveClosures >= THIN_SUPPORT_MIN_WEIGHTED_CLOSURES
     ) state = "thin_support";
     else if (closures === 0) state = "no_comparable_closures";
     else state = "unsupported";
 
+    // Replay-gated skill: a supported cell that does not beat the base rate at
+    // this horizon is published as not informative rather than as a percentage.
+    if ((state === "benchmarked" || state === "thin_support") && DDR_NOT_INFORMATIVE_HORIZONS.has(h)) {
+      state = "not_informative";
+    }
+
     const displayable = state === "benchmarked" || state === "thin_support";
-    const interval = displayable ? wilson(effectiveClosures, weighted.effectiveN) : null;
-    const probability = displayable ? weighted.probability : null;
+    const interval = displayable ? wilson(effectiveClosures, observableCoins) : null;
+    const probability = displayable ? probabilityRaw : null;
 
     return {
       horizon: h,
@@ -215,10 +322,10 @@ export function computeDuration(
       probability,
       probabilityDisplay: interval ? displayInterval(interval.lower, interval.upper) : null,
       probabilityInterval: interval,
-      rawAtRisk: n,
+      rawAtRisk: comparable.length,
       uniqueCoins: uniqueCoinsComparable,
-      // Raw interval counts preserve historical row volume; support gates above
-      // use coin-capped weighted counts to avoid one flappy coin dominating.
+      // Raw counts cover incidents whose horizon outcome is observed; support
+      // gates use coin-weighted incidence to avoid one flappy coin dominating.
       intervalClosures: closures,
       intervalNonClosures: nonClosures,
     };
@@ -227,16 +334,18 @@ export function computeDuration(
   const hasSupport =
     comparable.length >= STRATUM_MIN_COMPARABLE_INCIDENTS &&
     uniqueCoinsComparable >= STRATUM_MIN_UNIQUE_COINS;
+  const lower = hasSupport ? cifQuantile(curve, DDR_DURATION_BAND_META.lowerPercentile / 100) : null;
+  const upper = hasSupport ? cifQuantile(curve, DDR_DURATION_BAND_META.upperPercentile / 100) : null;
 
   return {
     suppressed: !hasSupport,
     suppressedReason: hasSupport ? null : "insufficient_support",
     stratum: label,
-    medianSec: hasSupport ? percentileLinear(coinMedianRemainingDur, 50) ?? 0 : null,
-    iqrSec: hasSupport
-      ? [percentileLinear(coinMedianRemainingDur, 15) ?? 0, percentileLinear(coinMedianRemainingDur, 85) ?? 0]
-      : null,
+    medianSec: hasSupport ? cifQuantile(curve, 0.5) : null,
+    iqrSec: lower != null && upper != null ? [lower, upper] : null,
     ageStatus,
     horizons,
+    estimand: DDR_DURATION_ESTIMAND,
+    unresolvedShare30d: hasSupport ? Math.max(0, 1 - cifAt(curve, HORIZON_SECONDS["30d"])) : null,
   };
 }

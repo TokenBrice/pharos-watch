@@ -9,7 +9,12 @@ import type {
   DdrV2ResponseRow,
 } from "@shared/types/depeg-resolver";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
-import { DDR_VERDICT_CLASSES } from "@shared/lib/classification";
+import {
+  DDR_TIER_LABELS,
+  DDR_VERDICT_CLASSES,
+  getDdrTierVocabulary,
+  type DdrTierVocabulary,
+} from "@shared/lib/classification";
 
 type DdrRelatedContext = DdrV2PredictionRow["frozen"]["relatedContext"];
 
@@ -40,32 +45,64 @@ const EMPTY_CONTEXT: DdrRelatedContext = {
   mintSurge: null,
 };
 
-export const TIER_META: Record<DdrResolutionTier, { label: string; blurb: string; band: string; accent: string }> = {
+const TIER_TONES: Record<DdrResolutionTier, { band: string; accent: string }> = {
   recovery_likely: {
-    label: "Recovery likely",
-    blurb: "Structure and live signals favor a return to peg.",
     band: DDR_VERDICT_CLASSES.recovery_likely.band,
     accent: DDR_VERDICT_CLASSES.recovery_likely.accent,
   },
   at_risk: {
-    label: "At risk",
-    blurb: "Recovery is plausible but not assured — the kill signals are live.",
     band: DDR_VERDICT_CLASSES.at_risk.band,
     accent: DDR_VERDICT_CLASSES.at_risk.accent,
   },
   recovery_unlikely: {
-    label: "Recovery unlikely",
-    blurb: "Comparable structural failures did not return to peg.",
     band: DDR_VERDICT_CLASSES.recovery_unlikely.band,
     accent: DDR_VERDICT_CLASSES.recovery_unlikely.accent,
   },
   insufficient_signal: {
-    label: "Insufficient signal",
-    blurb: "Not enough live signal for a verdict yet.",
     band: "border-border/70 bg-muted/50 text-foreground",
     accent: "text-foreground",
   },
 };
+
+export interface DdrTierMeta {
+  label: string;
+  short: string;
+  blurb: string;
+  band: string;
+  accent: string;
+}
+
+/** Tier copy in the vocabulary the forecast was locked under; colors do not change with the label. */
+export function getTierMeta(tier: DdrResolutionTier, vocabulary: DdrTierVocabulary): DdrTierMeta {
+  return { ...DDR_TIER_LABELS[vocabulary][tier], ...TIER_TONES[tier] };
+}
+
+/** Rows locked before DDRv5 keep the labels they were published with. */
+export function getTierVocabulary(row: Pick<DdrV2ResponseRow, "prediction">): DdrTierVocabulary {
+  return getDdrTierVocabulary(row.prediction.predictionMethodologyVersion);
+}
+
+/** DDRv5 durations are unconditional cumulative incidence; absent means legacy conditional-on-recovery. */
+export function isCumulativeIncidence(duration: Pick<DdrDuration, "estimand">): boolean {
+  return duration.estimand === "cumulative_incidence";
+}
+
+const COARSE_HOURS_LIMIT_SEC = 2 * 86_400;
+
+/** Coarse secondary readout for DDRv5 quantiles: whole hours under two days, else whole days. */
+export function formatCoarseDurationSec(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return "—";
+  if (seconds < COARSE_HOURS_LIMIT_SEC) return `${Math.max(1, Math.round(seconds / 3600))}h`;
+  return `${Math.round(seconds / 86_400)}d`;
+}
+
+/** Share of comparable incidents unresolved within 30 days, rounded to 5 percentage points. */
+export function formatUnresolvedShare(share: number): string {
+  const rounded = Math.round(share * 20) * 5;
+  return rounded === 0 && share > 0 ? "<5%" : `~${rounded}%`;
+}
+
+export const NOT_INFORMATIVE_CELL_LABEL = "Not informative at this age";
 
 /** Reader copy for live-overlay and lock-deferral reason codes; unknown codes are de-kebabed. */
 const DDR_REASON_LABELS: Record<string, string> = {

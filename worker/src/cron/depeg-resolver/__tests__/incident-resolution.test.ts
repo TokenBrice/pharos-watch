@@ -827,6 +827,7 @@ describe("resolveDdrIncidents", () => {
       liqTvlChange7dByCoin: new Map([[active.stablecoinId, -60]]),
       liqTvlChange30dByCoin: new Map([[active.stablecoinId, -80]]),
       liqVolumeChange30dByCoin: new Map([[active.stablecoinId, -80]]),
+      liqTvlChangeSinceOnsetByEventId: new Map([[active.id, -60]]),
       safetyByCoin: new Map([
         [active.stablecoinId, { stablecoin_id: active.stablecoinId, grade: "A", score: 90, recorded_at: NOW_SEC - DAY }],
       ]),
@@ -834,6 +835,12 @@ describe("resolveDdrIncidents", () => {
     });
 
     const [row] = resolveDdrIncidents(context, NOW_SEC);
+    // DDRv5 reads the onset-referenced collapse, never the trailing 7-day trend alone.
+    const [trailingOnly] = resolveDdrIncidents({ ...context, liqTvlChangeSinceOnsetByEventId: new Map() }, NOW_SEC);
+    expect(trailingOnly.resolution.factors).toContainEqual(
+      expect.objectContaining({ code: "K5_exit_collapse", severity: "elevated" }),
+    );
+    expect(row.inputs?.exit).toMatchObject({ liquidityScore: 15, tvlChange7dPct: -60, tvlChangeSinceOnsetPct: -60 });
 
     expect(row.resolution.factors).toEqual(
       expect.arrayContaining([

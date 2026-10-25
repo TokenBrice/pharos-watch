@@ -51,6 +51,8 @@ export interface DdrIncident {
   recovered: boolean;
   /** Timed onset/severity observations relative to incident start; empty means legacy depth is unsupported. */
   fragments?: DdrIncidentFragment[];
+  /** DDRv5: when the coin entered a terminal lifecycle state (epoch sec), set by the caller for unrecovered incidents. */
+  terminalAt?: number | null;
 }
 
 function timedSeverityFragments(event: DdrHistoricalEvent, incidentStartedAt: number): DdrIncidentFragment[] {

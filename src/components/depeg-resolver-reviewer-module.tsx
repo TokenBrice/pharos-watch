@@ -19,12 +19,16 @@ import {
   DDR_DURATION_LABELS,
   DDR_OUTCOME_LABELS,
   DDR_VERDICT_LABELS,
+  DDR_VERDICT_TITLES,
   DDR_VERDICT_TONES,
   buildDdrReviewerRows,
   buildDdrTimelineModel,
+  formatBrierSkill,
+  formatDurationRatioHeadline,
   formatMetricPercent,
   formatReviewerPercent,
   formatDdrSignedDuration,
+  formatWilsonInterval,
   getActualOutcome,
   getCoverageMetric,
   getCoverageState,
@@ -38,7 +42,7 @@ import {
   summarizeAccuracyByMajor,
   type NodeKind,
 } from "@/lib/depeg-resolver-review-presentation";
-import { DDR_OUTCOME_CLASSES, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
+import { DDR_OUTCOME_CLASSES, DDR_TIER_LABELS, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
 
 interface DepegResolverReviewerModuleProps {
   data: DdrrResponse | undefined;
@@ -158,7 +162,8 @@ function BreakdownStat({
 
 function VersionAccuracyStrip({ summary }: { summary: DdrrSummary }) {
   const segments = summarizeAccuracyByMajor(summary);
-  if (segments.filter((segment) => segment.scored > 0).length < 2) {
+  // Every major stays listed however thin its sample; the interval carries the uncertainty.
+  if (segments.length < 2 || segments.every((segment) => segment.scored === 0)) {
     return null;
   }
   return (
@@ -180,7 +185,9 @@ function VersionAccuracyStrip({ summary }: { summary: DdrrSummary }) {
               role="img"
               aria-label={
                 segment.accuracy != null
-                  ? `${segment.major}: ${segment.correct} of ${segment.scored} recovery calls correct`
+                  ? `${segment.major}: ${segment.correct} of ${segment.scored} recovery calls correct${
+                      segment.interval ? `, 90% interval ${formatWilsonInterval(segment.interval)}` : ""
+                    }`
                   : `${segment.major}: no scored recovery calls yet`
               }
             >
@@ -191,10 +198,12 @@ function VersionAccuracyStrip({ summary }: { summary: DdrrSummary }) {
                 />
               ) : null}
             </div>
-            <span className="pharos-meta pharos-numeric w-36 shrink-0 whitespace-nowrap text-right">
+            <span className="pharos-meta pharos-numeric w-48 shrink-0 whitespace-nowrap text-right">
               {segment.accuracy != null
-                ? `${formatReviewerPercent(segment.accuracy)} · ${segment.scored} scored`
-                : "maturing · 0 scored"}
+                ? `${formatReviewerPercent(segment.accuracy)}${
+                    segment.interval ? ` · 90% CI ${formatWilsonInterval(segment.interval)}` : ""
+                  } · n ${segment.scored}`
+                : "maturing · n 0"}
             </span>
             <span
               className="pharos-meta pharos-numeric hidden w-24 shrink-0 text-right sm:inline"
@@ -217,6 +226,49 @@ function VersionAccuracyStrip({ summary }: { summary: DdrrSummary }) {
   );
 }
 
+/** Matured horizon odds against a leave-one-out base rate; positive skill beats the base rate. */
+function HorizonSkillStrip({ skill }: { skill: NonNullable<DdrrSummary["headline"]["horizonSkill"]> }) {
+  if (skill.length === 0) return null;
+  return (
+    <div className="mt-4 border-t border-border/50 pt-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <Kicker>Horizon odds skill</Kicker>
+        <span className="pharos-meta">Brier skill vs base rate · above 0 beats it</span>
+      </div>
+      <dl className="mt-2 flex flex-wrap gap-x-5 gap-y-1.5">
+        {skill.map((cell) => (
+          <div
+            key={cell.horizon}
+            className="flex items-baseline gap-1.5"
+            title={
+              cell.brier != null && cell.baseRateBrier != null
+                ? `${cell.horizon}: Brier ${cell.brier.toFixed(3)} vs base rate ${cell.baseRateBrier.toFixed(3)} · n ${cell.scored}`
+                : `${cell.horizon}: n ${cell.scored}`
+            }
+          >
+            <dt className="pharos-meta font-medium">{cell.horizon}</dt>
+            <dd
+              className={cn(
+                "pharos-numeric text-sm font-semibold",
+                cell.brierSkill == null
+                  ? "text-muted-foreground"
+                  : cell.brierSkill > 0
+                    ? DDR_OUTCOME_CLASSES.correct.text
+                    : cell.brierSkill < 0
+                      ? DDR_OUTCOME_CLASSES.miss.text
+                      : "text-foreground",
+              )}
+            >
+              {cell.scored > 0 ? formatBrierSkill(cell.brierSkill) : "—"}
+            </dd>
+            <dd className="pharos-meta pharos-numeric">n {cell.scored}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
 function CalibrationLedger({ summary }: { summary: DdrrSummary }) {
   const metrics = summary.headline;
   const correct = metrics.recoveryLikelihoodCorrectCount;
@@ -224,6 +276,19 @@ function CalibrationLedger({ summary }: { summary: DdrrSummary }) {
   const pct = metrics.recoveryLikelihoodAccuracyPct;
   const durationScored = metrics.durationScoredCount;
   const pending = metrics.pendingRecoveryLikelihoodCount;
+  // Reviewer v5 metrics are optional: older cached snapshots render them unavailable, never zero.
+  const baseline = metrics.baselineRecoverableCorrectCount;
+  const terminalCalls = metrics.terminalCallCount;
+  const terminalCallsCorrect = metrics.terminalCallCorrectCount;
+  const medianLog2Ratio = metrics.medianLog2DurationRatio;
+  const within2x = metrics.within2xCount;
+  const horizonSkill = metrics.horizonSkill;
+  const terminalCallsText =
+    terminalCalls == null || terminalCallsCorrect == null
+      ? "unavailable"
+      : terminalCalls === 0
+        ? "none made"
+        : `${terminalCallsCorrect} / ${terminalCalls} correct`;
 
   const recoveryValue = scored > 0 ? `${correct} / ${scored}` : "—";
   const recoveryCaption =
@@ -244,17 +309,31 @@ function CalibrationLedger({ summary }: { summary: DdrrSummary }) {
             </span>
             <span className="text-xs text-muted-foreground">{recoveryCaption}</span>
           </div>
+          {scored > 0 ? (
+            <p className="pharos-meta pharos-numeric">
+              Always-recover baseline {baseline != null ? `${baseline} / ${scored}` : "unavailable"}
+            </p>
+          ) : null}
           {pending != null ? (
             <CalibrationBar scored={scored} maturing={pending} />
           ) : (
             <p className="pharos-meta pharos-numeric">{scored} scored · maturing unavailable</p>
           )}
+          <p className="pharos-meta pharos-numeric">Terminal calls: {terminalCallsText}</p>
         </div>
 
         <div className="space-y-2.5 sm:border-l sm:border-border/50 sm:pl-6">
           <Kicker>Duration calls</Kicker>
           <div className="flex items-baseline gap-2">
-            {durationScored > 0 ? (
+            {durationScored > 0 && medianLog2Ratio != null ? (
+              <>
+                <span className="text-xs text-muted-foreground">typically</span>
+                <span className="pharos-numeric text-2xl font-semibold text-foreground">
+                  {formatDurationRatioHeadline(medianLog2Ratio)}
+                </span>
+                <span className="text-xs text-muted-foreground">than forecast</span>
+              </>
+            ) : durationScored > 0 ? (
               <>
                 <span className="pharos-numeric text-2xl font-semibold text-foreground">
                   {formatDdrSignedDuration(metrics.meanSignedDurationErrorSec)}
@@ -273,9 +352,25 @@ function CalibrationLedger({ summary }: { summary: DdrrSummary }) {
               </>
             )}
           </div>
+          {durationScored > 0 && medianLog2Ratio != null ? (
+            <p className="pharos-meta pharos-numeric">
+              {[
+                within2x != null ? `${within2x} / ${durationScored} within 2×` : null,
+                metrics.meanSignedDurationErrorSec != null
+                  ? `mean miss ${formatDdrSignedDuration(metrics.meanSignedDurationErrorSec)} ±${formatElapsedSeconds(
+                      metrics.meanAbsoluteDurationErrorSec ?? 0,
+                    )}`
+                  : null,
+              ]
+                .filter((part) => part != null)
+                .join(" · ")}
+            </p>
+          ) : null}
           <p className="pharos-meta pharos-numeric">{durationScored} duration outcomes scored</p>
         </div>
       </div>
+
+      {horizonSkill ? <HorizonSkillStrip skill={horizonSkill} /> : null}
 
       <VersionAccuracyStrip summary={summary} />
 
@@ -294,6 +389,11 @@ function CalibrationLedger({ summary }: { summary: DdrrSummary }) {
           label="inside typical range"
           value={metrics.withinIqrCount != null && metrics.iqrScoredCount != null
             ? `${metrics.withinIqrCount}/${metrics.iqrScoredCount}` : "—"}
+        />
+        <BreakdownStat
+          label="open past band"
+          value={metrics.overdueOpenCount ?? "—"}
+          tone={(metrics.overdueOpenCount ?? 0) > 0 ? "red" : "muted"}
         />
       </div>
     </div>
@@ -387,6 +487,7 @@ function ReviewRow({ row, logos }: { row: DdrrResponseRow; logos?: Record<string
           "justify-self-end text-xs sm:col-start-3 sm:row-start-1 sm:justify-self-start sm:whitespace-nowrap",
           verdictStyle,
         )}
+        title={coverageState ? undefined : DDR_VERDICT_TITLES[verdictReview]}
       >
         {verdictLabel}
       </Badge>
@@ -400,20 +501,29 @@ function ReviewRow({ row, logos }: { row: DdrrResponseRow; logos?: Record<string
   );
 }
 
+/** DDRv5 relabels the unchanged Stage 1 tiers; pre-v5 locks keep their published labels. */
+const EVIDENCE_CLASS_LEGEND = `v5 relabels tiers as evidence classes: ${[
+  DDR_TIER_LABELS.evidence_class.recovery_likely.label,
+  DDR_TIER_LABELS.evidence_class.at_risk.label,
+  DDR_TIER_LABELS.evidence_class.recovery_unlikely.label,
+].join(" · ")}`;
+
 function ReviewLegend() {
   const items: Array<{ tone: string; label: string }> = [
     { tone: DDR_OUTCOME_CLASSES.correct.legendDot, label: "correct" },
     { tone: DDR_OUTCOME_CLASSES.miss.legendDot, label: "miss" },
     { tone: DDR_OUTCOME_CLASSES.pending.legendDot, label: "pending" },
+    { tone: NODE_TONE.muted.dot, label: "unscored" },
   ];
   return (
-    <div className="pharos-meta hidden items-center gap-3 sm:flex">
+    <div className="pharos-meta flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
       {items.map((item) => (
-        <span key={item.label} className="inline-flex items-center gap-1">
+        <span key={item.label} className="hidden items-center gap-1 sm:inline-flex">
           <span className={cn("h-1.5 w-1.5 rounded-full", item.tone)} aria-hidden="true" />
           {item.label}
         </span>
       ))}
+      <span>{EVIDENCE_CLASS_LEGEND}</span>
     </div>
   );
 }

@@ -59,6 +59,71 @@ export const DDR_VERDICT_CLASSES = {
   },
 } as const satisfies Record<DdrVerdictTier, { band: string; accent: string; dot: string; ring: string }>;
 
+/**
+ * Stage 1 reader vocabulary. DDRv5 relabels the unchanged wire tiers as
+ * evidence classes; forecasts locked under an earlier methodology keep the
+ * labels they were published with.
+ */
+export type DdrTierVocabulary = "legacy" | "evidence_class";
+
+/** First methodology major whose forecasts read their tier as an evidence class. */
+export const DDR_EVIDENCE_CLASS_MIN_MAJOR = 5;
+
+export function getDdrTierVocabulary(methodologyVersion: string | null | undefined): DdrTierVocabulary {
+  const major = Number(/^v?(\d+)/.exec(methodologyVersion ?? "")?.[1]);
+  return Number.isFinite(major) && major >= DDR_EVIDENCE_CLASS_MIN_MAJOR ? "evidence_class" : "legacy";
+}
+
+export const DDR_TIER_LABELS = {
+  legacy: {
+    recovery_likely: {
+      label: "Recovery likely",
+      short: "Likely",
+      blurb: "Structure and live signals favor a return to peg.",
+    },
+    at_risk: {
+      label: "At risk",
+      short: "At risk",
+      blurb: "Recovery is plausible but not assured — the kill signals are live.",
+    },
+    recovery_unlikely: {
+      label: "Recovery unlikely",
+      short: "Unlikely",
+      blurb: "Comparable structural failures did not return to peg.",
+    },
+    insufficient_signal: {
+      label: "Insufficient signal",
+      short: "No signal",
+      blurb: "Not enough live signal for a verdict yet.",
+    },
+  },
+  evidence_class: {
+    recovery_likely: {
+      label: "No break signals",
+      short: "No break",
+      blurb: "No kill signal fired and the break is shallow; most comparable breaks recovered.",
+    },
+    at_risk: {
+      label: "Stress signals",
+      short: "Stress",
+      blurb: "Kill signals fired or the break is deep; most comparable breaks still recovered.",
+    },
+    recovery_unlikely: {
+      label: "Terminal evidence",
+      short: "Terminal",
+      blurb: "Hard evidence that this break may not recover (wind-down, severe impairment, or compounded stress on a deep break).",
+    },
+    insufficient_signal: {
+      label: "Insufficient signal",
+      short: "No signal",
+      blurb: "Not enough live signal for a verdict yet.",
+    },
+  },
+} as const satisfies Record<
+  DdrTierVocabulary,
+  Record<DdrResolutionTier, { label: string; short: string; blurb: string }>
+>;
+
 export type DdrReviewTone = "positive" | "watch" | "negative" | "pending" | "retry";
 
 /** DDR reviewer verdict/coverage pills; `retry` is the publication-retry state. */
