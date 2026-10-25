@@ -108,7 +108,7 @@ describe("Pages artifact input profile", () => {
     }
   });
 
-  it.each(["0", "1"])("audits both routes and makes Lighthouse failure advisory unless enforcement is enabled (%s)", async (enforce) => {
+  it.each(["0", "1"])("audits all five routes and makes Lighthouse failure advisory unless enforcement is enabled (%s)", async (enforce) => {
     const root = mkdtempSync(join(tmpdir(), "pharos-pages-lighthouse-"));
     try {
       dataFixture(root);
@@ -122,9 +122,9 @@ describe("Pages artifact input profile", () => {
       if (enforce === "1") await expect(result).rejects.toThrow("lighthouse");
       else await expect(result).resolves.toMatchObject({ dataStatus: "degraded-data" });
       const probes = spawn.mock.calls.filter((call) => call[1].includes("lighthouse:static"));
-      expect(probes).toHaveLength(2);
-      expect(probes[0][1]).toContain("/");
-      expect(probes[1][1]).toContain("/stablecoin/usdc-circle/");
+      expect(probes.map((call) => call[1][call[1].indexOf("--route") + 1])).toEqual([
+        "/", "/stablecoin/usdc-circle/", "/depeg/", "/safety-scores/", "/stablecoins/",
+      ]);
       expect(probes[0][1]).toContain("75");
     } finally {
       vi.unstubAllEnvs();
