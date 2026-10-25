@@ -54,7 +54,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/supply-attribution-reviews-v1.json",
-      "sha256": "2da45189d38efb1e92e208e47fc173c7ad6f83afdc0ca15e09ebc70d97ff47b7"
+      "sha256": "d9f9bb971a973860c923f6bd60238edd0edb1f1c4c9c87b72408cdb8b19ef4d8"
     },
     {
       "path": "shared/data/safety-score-v9/transfer-review-overlays-v1.json",
@@ -1311,7 +1311,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-25-block-26268499-shock-coverage.json.gz"
     }
   ],
-  "digest": "734309475621ee9f0635b440ded88feccff08a9481d614b0f0ce924b9ed65c3e"
+  "digest": "b3a24677335b2411372d5cec28c8bf87a08eb0fa6c790f4e9a9b0c3f3c7a2fd7"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
