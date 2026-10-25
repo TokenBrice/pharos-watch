@@ -107,7 +107,6 @@ describe("tracked stablecoin metadata", () => {
       "rgbp-revolut",
       "regbp-restabilise",
       "gbp-vvtx",
-      "usdb-bridge",
       "hkdap-anchorpoint",
       "hkd-hsbc",
       "okrw-hashed",

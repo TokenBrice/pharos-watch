@@ -4546,11 +4546,11 @@
   },
   "usdb-bridge": {
     "title": "Stripe's Closed-Loop Dollar",
-    "text": "Bridge's USDB was Stripe's first stablecoin rail: launched in May 2025, it powered Stripe's Stablecoin Financial Accounts in 101 countries, backed 1:1 by cash and BlackRock {{term:money-market-fund}}money-market funds{{/term}}. Its role narrowed on September 30, 2026, when Bridge launched Open USD as its open-loop token and Stripe began listing only OUSD and USDC for stablecoin balances. Bridge's documentation now keeps USDB in its API for closed-loop use and names no sunset date. The regulatory picture is narrower than the charter news suggests: the current issuer, Bridge Building Inc., operates under money-transmitter permissions, and the conditional OCC approval from February 2026 covers a proposed national trust bank rather than today's USDB. Bridge's Open Issuance platform separately mints branded dollars such as MoneyGram's MGUSD and Deel's DLUSD. DefiLlama began tracking a Tempo deployment as USDBridge in September 2026, including a one-day supply jump on September 19 that came with no Bridge statement. Pharos holds USDB at pre-launch because no verified runtime price path exists, and because a closed-loop token's on-chain float may not be its whole supply.",
-    "updatedAt": "2026-10-19",
+    "text": "Bridge's USDB was Stripe's first stablecoin rail: launched in May 2025, it powered Stripe's Stablecoin Financial Accounts in 101 countries, backed 1:1 by cash and BlackRock {{term:money-market-fund}}money-market funds{{/term}}. Its role narrowed on September 30, 2026, when Bridge launched Open USD as its open-loop token and Stripe began listing only OUSD and USDC for stablecoin balances. Bridge's documentation now keeps USDB in its API for closed-loop use and names no sunset date. The regulatory picture is narrower than the charter news suggests: the current issuer, Bridge Building Inc., operates under money-transmitter permissions, and the conditional OCC approval from February 2026 covers a proposed national trust bank rather than today's USDB. Bridge's Open Issuance platform separately mints branded dollars such as MoneyGram's MGUSD and Deel's DLUSD. DefiLlama began tracking a Tempo deployment as USDBridge in September 2026, including a one-day supply jump on September 19 that came with no Bridge statement. Pharos delisted USDB on October 25 2026 as out of scope: Bridge's documentation says the token is not traded on the public market or transferable to third parties, and is usable only within Bridge wallets and payment rails.",
+    "updatedAt": "2026-10-25",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "factsAsOf": "2026-10-25"
   },
   "hkdap-anchorpoint": {
     "title": "Anchorpoint's HKMA-Licensed HKD Stablecoin",
