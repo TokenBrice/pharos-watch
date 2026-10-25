@@ -32,6 +32,11 @@
   },
   "detailProvider": "coingecko",
   "geckoId": "backed-govies-0-6-months-euro",
+  "identifiers": {
+    "isin": [
+      "CH1173294286"
+    ]
+  },
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://defi.backed.fi/proof-of-reserves",

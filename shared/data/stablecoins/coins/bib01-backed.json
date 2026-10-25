@@ -31,6 +31,11 @@
   },
   "detailProvider": "coingecko",
   "geckoId": "backed-ib01-treasury-bond-0-1yr",
+  "identifiers": {
+    "isin": [
+      "CH1173294260"
+    ]
+  },
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://defi.backed.fi/proof-of-reserves",

@@ -14,6 +14,11 @@
   "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "midas-mapollo",
+  "identifiers": {
+    "isin": [
+      "CH1475894601"
+    ]
+  },
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://midas.app/transparency",
