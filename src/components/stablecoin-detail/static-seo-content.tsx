@@ -57,6 +57,8 @@ import {
 interface StablecoinDetailSeoContentProps {
   coin: StablecoinMeta;
   includeHeading?: boolean;
+  /** Rendered after the dossier: skip the blocks the dossier and the FAQ below already carry. */
+  afterDossier?: boolean;
   summary?: StablecoinAiSummary | null;
 }
 
@@ -524,7 +526,7 @@ export function buildStablecoinFaqItems(coin: StablecoinMeta): FaqItem[] {
       ? `${coin.symbol} is a frozen Pharos archive; the recorded history below is read-only.`
       : isActiveStablecoinMeta(coin)
         ? isBlacklistStablecoin(coin.symbol.toUpperCase())
-          ? `Live freeze and blacklist events for ${coin.symbol}, when applicable, appear in the dossier below.`
+          ? `Live freeze and blacklist events for ${coin.symbol}, when applicable, appear in the live dossier on this page.`
           : null
         : `${coin.symbol} is outside active monitoring; this static record preserves the reviewed control context.`,
   ]
@@ -537,7 +539,7 @@ export function buildStablecoinFaqItems(coin: StablecoinMeta): FaqItem[] {
       : `What is ${coin.name} (${coin.symbol})?`;
 
   return [
-    { question: identityQuestion, answer: identityAnswer },
+    { question: identityQuestion, answer: /[.!?]$/.test(identityAnswer) ? identityAnswer : `${identityAnswer}.` },
     { question: `Is ${coin.symbol} safe?`, answer: buildSafetyAnswer(coin) },
     { question: `What backs ${coin.symbol}?`, answer: buildBackingAnswer(coin) },
     { question: `Can ${coin.symbol} be frozen or blacklisted?`, answer: freezeAnswer },
@@ -575,6 +577,7 @@ function ProofOfReservesValue({ coin }: { coin: StablecoinMeta }) {
 export function StablecoinDetailSeoContent({
   coin,
   includeHeading = true,
+  afterDossier = false,
   summary = null,
 }: StablecoinDetailSeoContentProps) {
   const pegHref = buildPegLandingUrl(coin.flags.pegCurrency);
@@ -611,6 +614,7 @@ export function StablecoinDetailSeoContent({
 
       <ListingStateBanner coin={coin} />
 
+      {afterDossier ? null : (
       <section aria-labelledby="stablecoin-identity-answer-title" className="pharos-card-shell px-4 py-4 sm:px-5">
         <p className="pharos-label mb-2">Answer first</p>
         <h2 id="stablecoin-identity-answer-title" className="text-lg font-semibold tracking-tight text-foreground">
@@ -636,6 +640,7 @@ export function StablecoinDetailSeoContent({
           </div>
         ) : null}
       </section>
+      )}
 
       <section
         aria-labelledby="stablecoin-static-profile-title"
@@ -644,9 +649,9 @@ export function StablecoinDetailSeoContent({
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
           <div className="space-y-3">
             <div>
-              <p className="pharos-label mb-2">Static profile</p>
+              <p className="pharos-label mb-2">Profile</p>
               <h2 id="stablecoin-static-profile-title" className="text-lg font-semibold tracking-tight">
-                Static stablecoin profile
+                {coin.symbol} profile facts
               </h2>
             </div>
 
@@ -740,6 +745,7 @@ export function StablecoinDetailSeoContent({
           </dl>
         </div>
 
+        {afterDossier ? null : (
         <div className="mt-4 border-t border-border/50 pt-4">
           <div className="pharos-inset px-3 py-3">
             <p className="pharos-label">Next actions</p>
@@ -767,7 +773,7 @@ export function StablecoinDetailSeoContent({
             </div>
             {isActiveStablecoinMeta(coin) ? (
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                Exact bot target:{" "}
+                Alert command:{" "}
                 <code className="rounded-sm bg-muted/60 px-1.5 py-0.5 font-mono text-2xs text-foreground">
                   {alertCommand}
                 </code>
@@ -779,11 +785,12 @@ export function StablecoinDetailSeoContent({
             )}
           </div>
         </div>
+        )}
 
         <p className="mt-4 border-t border-border/50 pt-3 text-xs leading-relaxed text-muted-foreground">
-          Source: checked-in StablecoinMeta profile fields.
+          Source: Pharos registry profile fields.
           {isActiveStablecoinMeta(coin)
-            ? " Live price, supply, reserve, liquidity, event, and safety data load in the interactive dossier below"
+            ? " Live price, supply, reserve, liquidity, event, and safety data load in the interactive dossier on this page"
             : " This inactive record does not participate in current live monitoring"}
           {summaryUpdatedAt ? `; the summary above was last updated ${summaryUpdatedAt}` : ""}.
         </p>

@@ -60,7 +60,7 @@ describe("static comparison brief", () => {
   it("cites both dated grades in the short answer and keeps the caveat", () => {
     const answer = buildComparisonSnippetAnswer(getPage("usdt-tether-vs-usdc-circle"));
     expect(answer.answer).toMatch(
-      /^In Pharos's scores-latest release as of 2026-10-19, USDT held an A- Safety Score grade \(81\/100\) and USDC held an A\+ Safety Score grade \(88\/100\)\. There is no honest static answer/,
+      /^In the Pharos Safety Score release of 2026-10-19, USDT held an A- Safety Score grade \(81\/100\) and USDC held an A\+ Safety Score grade \(88\/100\)\. There is no honest static answer/,
     );
     expect(answer.caveat).toContain("can change after this static brief is generated");
   });
@@ -88,7 +88,7 @@ describe("static comparison brief", () => {
   it("mirrors the grades in the safety FAQ answer", () => {
     const safetyFaq = buildComparisonFaqItems(getPage("usdt-tether-vs-usdc-circle"))[1];
     expect(safetyFaq.question).toBe("Which is safer: USDT or USDC?");
-    expect(safetyFaq.answer).toMatch(/^In Pharos's scores-latest release as of 2026-10-19, USDT held an A- /);
+    expect(safetyFaq.answer).toMatch(/^In the Pharos Safety Score release of 2026-10-19, USDT held an A- /);
     expect(safetyFaq.answer).toContain("Safety is not decided by ticker alone.");
     const fallbackFaq = buildComparisonFaqItems(getPage("usdt-tether-vs-usde-ethena"))[1];
     expect(fallbackFaq.answer).toMatch(/^Safety is not decided by ticker alone\./);

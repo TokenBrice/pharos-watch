@@ -186,7 +186,7 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
 
       <section className="space-y-3">
         <div className="space-y-1.5">
-          <h2 className="pharos-label">At A glance</h2>
+          <h2 className="pharos-label">At a glance</h2>
           <p className="text-sm text-muted-foreground">
             Static structural differences between the two stablecoins before you switch to the live comparison tool.
           </p>

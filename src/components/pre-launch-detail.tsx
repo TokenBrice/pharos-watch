@@ -91,16 +91,18 @@ function chainName(chain: string): string {
 /** The dossier identity header (`HeroIdentityHeader` grammar); the visible `h1` lives here. */
 function PreLaunchIdentityHeader({ coin, logoSrc }: { coin: StablecoinMeta; logoSrc: string | undefined }) {
   const links = (coin.links ?? []).slice(0, 3);
+  // "HKDAP" named "HKDAP": show the ticker once.
+  const nameIsSymbol = coin.name.trim().toLowerCase() === coin.symbol.trim().toLowerCase();
   return (
     <header className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-5">
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-3">
           <StablecoinLogo src={logoSrc} name={coin.name} size={STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE} />
           <div className="flex min-w-0 flex-col gap-1 lg:flex-row lg:items-center lg:gap-3">
-            <span className="pharos-label shrink-0">{coin.symbol}</span>
+            {nameIsSymbol ? null : <span className="pharos-label shrink-0">{coin.symbol}</span>}
             <h1 className="pharos-page-title min-w-0 break-words text-xl leading-tight tracking-normal sm:text-2xl lg:leading-none">
               {coin.name}
-              <span className="sr-only"> ({coin.symbol}) pre-launch stablecoin tracker</span>
+              <span className="sr-only">{nameIsSymbol ? "" : ` (${coin.symbol})`} pre-launch stablecoin tracker</span>
             </h1>
           </div>
         </div>

@@ -109,7 +109,7 @@ describe("StablecoinDetailSeoContent", () => {
     expect(headings[0]?.className).toContain("sr-only");
     expect(headings[0]?.textContent).toContain("Test Dollar (TSTD) stablecoin analytics");
 
-    expect(screen.getByRole("heading", { name: "Static stablecoin profile" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "TSTD profile facts" })).toBeTruthy();
     expect(
       screen.getByText(/governance model CeFi-Dependent; backing model Real-World Asset Backed; peg US Dollar/),
     ).toBeTruthy();
@@ -164,7 +164,7 @@ describe("StablecoinDetailSeoContent", () => {
     expect(screen.getByRole("link", { name: "Digest RSS" }).getAttribute("href")).toBe("/feed/digest.xml");
     expect(screen.getByRole("link", { name: "API access" }).getAttribute("href")).toBe("/api/");
     expect(screen.getByText("/subscribe dews,depeg,safety test-dollar")).toBeTruthy();
-    expect(container.textContent).toContain("Source: checked-in StablecoinMeta profile fields.");
+    expect(container.textContent).toContain("Source: Pharos registry profile fields.");
     expect(container.textContent).toContain("the summary above was last updated May 2, 2026");
   });
 

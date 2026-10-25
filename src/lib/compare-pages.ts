@@ -136,6 +136,12 @@ function getStablecoinOrThrow(id: string): StablecoinMeta {
   return coin;
 }
 
+
+/** Lowercase a backing label for prose, but keep acronyms such as "RWA" intact. */
+function formatCohortLabel(label: string): string {
+  return label.split(" ").map((word) => (word === word.toUpperCase() ? word : word.toLowerCase())).join(" ");
+}
+
 export function assertStaticComparePairs() {
   const slugs = new Set<string>();
   const unorderedKeys = new Set<string>();
@@ -216,7 +222,7 @@ function describeCoinWithGrade(coin: StablecoinMeta, assessment: SnapshotSafetyA
 }
 
 function buildComparisonGradeSentence(left: StablecoinMeta, right: StablecoinMeta, grades: ComparisonGrades): string {
-  return `In Pharos's scores-latest release as of ${grades.asOf}, ${left.symbol} held ${formatGradeClause(grades.left)} and ${right.symbol} held ${formatGradeClause(grades.right)}.`;
+  return `In the Pharos Safety Score release of ${grades.asOf}, ${left.symbol} held ${formatGradeClause(grades.left)} and ${right.symbol} held ${formatGradeClause(grades.right)}.`;
 }
 
 function buildComparisonIntro(left: StablecoinMeta, right: StablecoinMeta): string {
@@ -252,7 +258,7 @@ function buildComparisonSummary(left: StablecoinMeta, right: StablecoinMeta): st
       : `${left.symbol} has ${leftChains} tracked deployments, while ${right.symbol} has ${rightChains}.`;
   const reserveSentence =
     left.flags.backing === right.flags.backing
-      ? `Both sit in the ${BACKING_LABELS_SHORT[left.flags.backing].toLowerCase()} cohort.`
+      ? `Both sit in the ${formatCohortLabel(BACKING_LABELS_SHORT[left.flags.backing])} cohort.`
       : `${left.symbol} is ${BACKING_LABELS_SHORT[left.flags.backing].toLowerCase()}, while ${right.symbol} is ${BACKING_LABELS_SHORT[right.flags.backing].toLowerCase()}.`;
 
   return `${chainSentence} ${reserveSentence} Use the rows below to separate headline market share from the mechanics that matter during stress: redemption path, reserve signal, blacklistability, and venue depth.`;

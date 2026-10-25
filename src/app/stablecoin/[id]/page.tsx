@@ -325,9 +325,10 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
           FAQPage JSON-LD, once) are plain HTML for every crawler and survive
           the dossier's reveal and hydration. The FAQ folds behind one counted
           disclosure (answers stay in the HTML) so it costs one line. The
-          dossier already renders the AI summary, so it is not repeated here. */}
+          dossier already renders the AI summary and next actions, and the FAQ
+          below repeats the answer-first questions, so neither repeats here. */}
       <div className="mt-6">
-        <StablecoinDetailSeoContent coin={coin} summary={null} includeHeading={false} />
+        <StablecoinDetailSeoContent coin={coin} summary={null} includeHeading={false} afterDossier />
         <FaqSection items={buildStablecoinFaqItems(coin)} title={`${coin.symbol} quick answers`} includeJsonLd collapsed />
       </div>
       <BreadcrumbJsonLd items={buildStablecoinBreadcrumbItems(coin)} />

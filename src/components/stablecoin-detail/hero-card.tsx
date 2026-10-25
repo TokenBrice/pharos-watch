@@ -158,9 +158,11 @@ export function HeroIdentityHeader({
             <div className="flex min-w-0 items-center gap-3">
               <StablecoinLogo src={logoSrc} name={coin.name} size={STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE} />
               <div className="flex min-w-0 flex-col gap-1 lg:flex-row lg:items-center lg:gap-3">
-                <span className="pharos-label shrink-0">
-                  {coin.symbol}
-                </span>
+                {coin.name.trim().toLowerCase() === coin.symbol.trim().toLowerCase() ? null : (
+                  <span className="pharos-label shrink-0">
+                    {coin.symbol}
+                  </span>
+                )}
                 <h1
                   className="pharos-page-title min-w-0 break-words text-xl leading-tight tracking-normal sm:text-2xl lg:truncate lg:leading-none"
                   {...(verdictId ? { "aria-describedby": verdictId } : {})}
