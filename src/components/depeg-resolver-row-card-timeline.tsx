@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { formatBps, formatElapsedSeconds } from "@shared/lib/format";
 import type { DdrDuration, DdrV2ResponseRow } from "@shared/types/depeg-resolver";
 import {
+  formatCoarseDurationSec,
   formatDurationSec,
   FORWARD_STOPS,
   getAgeSec,
@@ -13,8 +14,11 @@ import {
   getPeakDeviationBps,
   getPredictionState,
   getResolution,
+  getTierMeta,
+  getTierVocabulary,
+  isCumulativeIncidence,
+  NOT_INFORMATIVE_CELL_LABEL,
   NOW_DOT_TONE,
-  TIER_META,
   timeToForwardX,
 } from "@/components/depeg-resolver-row-card-model";
 import { DDR_TIMELINE_CLASSES } from "@shared/lib/classification";
@@ -68,6 +72,8 @@ function PastDeviationSpark({ row }: { row: DdrV2ResponseRow }) {
 }
 
 function ForwardProjection({ duration }: { duration: DdrDuration }) {
+  // DDRv5: the horizon odds lead; the median is a quieter, coarse secondary mark.
+  const cumulative = isCumulativeIncidence(duration);
   const medianX = duration.medianSec != null ? timeToForwardX(duration.medianSec) : null;
   const iqrLeft = duration.iqrSec ? timeToForwardX(duration.iqrSec[0]) : null;
   const iqrRight = duration.iqrSec ? timeToForwardX(duration.iqrSec[1]) : null;
@@ -92,12 +98,14 @@ function ForwardProjection({ duration }: { duration: DdrDuration }) {
 
       {displayHorizons.map((cell) => {
         const stop = FORWARD_STOPS.find((s) => s.horizon === cell.horizon)!;
-        const hasProb = cell.probability != null;
+        const notInformative = cell.state === "not_informative";
+        const hasProb = cell.probability != null && !notInformative;
         return (
           <div
             key={cell.horizon}
             className="absolute bottom-0 flex -translate-x-1/2 flex-col items-center gap-0.5"
             style={{ left: `${stop.x}%` }}
+            title={notInformative ? `${cell.horizon}: ${NOT_INFORMATIVE_CELL_LABEL}` : undefined}
           >
             <span className="pharos-meta font-medium">{cell.horizon}</span>
             {hasProb ? (
@@ -125,9 +133,15 @@ function ForwardProjection({ duration }: { duration: DdrDuration }) {
 
       {medianX != null && duration.medianSec != null ? (
         <div className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ left: `${medianX}%` }}>
-          <span className="absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 whitespace-nowrap font-mono text-xs font-semibold leading-none text-foreground">
-            ~{formatDurationSec(duration.medianSec)}
-          </span>
+          {cumulative ? (
+            <span className="absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 whitespace-nowrap font-mono text-2xs leading-none text-muted-foreground">
+              ~{formatCoarseDurationSec(duration.medianSec)}
+            </span>
+          ) : (
+            <span className="absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 whitespace-nowrap font-mono text-xs font-semibold leading-none text-foreground">
+              ~{formatDurationSec(duration.medianSec)}
+            </span>
+          )}
           <span className={cn("block h-2.5 w-2.5 rotate-45", DDR_TIMELINE_CLASSES.pendingMarker)} aria-hidden="true" />
         </div>
       ) : null}
@@ -158,9 +172,14 @@ export function ForecastTimeline({ row }: { row: DdrV2ResponseRow }) {
   const insufficient = tier === "insufficient_signal";
   const hasBand =
     !terminal && !insufficient && !duration.suppressed && (duration.medianSec != null || duration.horizons.length > 0);
+  const vocabulary = getTierVocabulary(row);
+  const tierLabel = getTierMeta(tier, vocabulary).label;
+  const cumulative = isCumulativeIncidence(duration);
 
   const forwardLabel = terminal
-    ? "no recovery expected"
+    ? vocabulary === "evidence_class"
+      ? "may not recover"
+      : "no recovery expected"
     : insufficient
       ? "awaiting signal"
       : "duration not benchmarked";
@@ -170,17 +189,29 @@ export function ForecastTimeline({ row }: { row: DdrV2ResponseRow }) {
   const currentDeviationBps = getCurrentDeviationBps(row);
   const ageLabel = ageSec == null ? "unavailable" : formatElapsedSeconds(ageSec);
   const peakLabel = peakDeviationBps == null ? "unavailable" : formatBps(peakDeviationBps);
+  const durationPhrase = (afterLock: boolean): string => {
+    const suffix = afterLock ? " after lock" : "";
+    if (!cumulative) {
+      return hasBand && duration.medianSec != null
+        ? `; expected to resolve in about ${formatDurationSec(duration.medianSec)}${suffix}`
+        : `; ${forwardLabel}`;
+    }
+    if (!hasBand) return `; ${forwardLabel}`;
+    const notInformative = duration.horizons
+      .filter((cell) => cell.state === "not_informative")
+      .map((cell) => cell.horizon);
+    const notInformativePhrase = notInformative.length
+      ? `; ${notInformative.join(", ")} odds ${NOT_INFORMATIVE_CELL_LABEL.toLowerCase()}`
+      : "";
+    return duration.medianSec != null
+      ? `; half of comparable incidents recovered within about ${formatCoarseDurationSec(duration.medianSec)}${suffix}${notInformativePhrase}`
+      : notInformativePhrase;
+  };
   const ariaLabel = lockAnchored
-    ? `Forecast timeline frozen at public lock: depeg age at lock ${ageLabel}, peak ${peakLabel}${currentDeviationBps != null ? `, lock deviation ${formatBps(currentDeviationBps)}` : ""}; verdict ${
-        TIER_META[tier].label
-      }${hasBand && duration.medianSec != null ? `; expected to resolve in about ${formatDurationSec(duration.medianSec)} after lock` : `; ${forwardLabel}`}.`
+    ? `Forecast timeline frozen at public lock: depeg age at lock ${ageLabel}, peak ${peakLabel}${currentDeviationBps != null ? `, lock deviation ${formatBps(currentDeviationBps)}` : ""}; verdict ${tierLabel}${durationPhrase(true)}.`
     : `Forecast timeline: observed depeg age ${ageLabel}, peak ${peakLabel}${
         currentDeviationBps != null ? `, now ${formatBps(currentDeviationBps)}` : ""
-      }; verdict ${TIER_META[tier].label}${
-        hasBand && duration.medianSec != null
-          ? `; expected to resolve in about ${formatDurationSec(duration.medianSec)}`
-          : `; ${forwardLabel}`
-      }.`;
+      }; verdict ${tierLabel}${durationPhrase(false)}.`;
 
   return (
     <div

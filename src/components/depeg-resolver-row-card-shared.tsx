@@ -9,11 +9,13 @@ import type { DdrV2ResponseRow } from "@shared/types/depeg-resolver";
 import {
   compactLockTiming,
   DDR_EVENT_STATE_LABELS,
+  formatCoarseDurationSec,
   formatDdrReason,
   formatDurationSec,
   formatUtcTimestamp,
   getDuration,
   getLockMetadata,
+  isCumulativeIncidence,
 } from "@/components/depeg-resolver-row-card-model";
 
 export function StageLabel({ children }: { children: ReactNode }) {
@@ -126,10 +128,12 @@ export function LockMetadataStrip({
     metadata.backstopAt != null
       ? `${formatDurationSec(metadata.backstopDelaySec ?? 72 * 3600)} · ${formatUtcTimestamp(metadata.backstopAt)}`
       : null;
+  // DDRv5 quantiles are secondary to the horizon odds, so they stay coarse here too.
+  const formatAnchored = isCumulativeIncidence(duration) ? formatCoarseDurationSec : formatDurationSec;
   const anchoredDuration =
     showAnchoredDuration && duration.medianSec != null && !duration.suppressed
-      ? `~${formatDurationSec(duration.medianSec)}${
-          duration.iqrSec ? ` (${formatDurationSec(duration.iqrSec[0])}-${formatDurationSec(duration.iqrSec[1])})` : ""
+      ? `~${formatAnchored(duration.medianSec)}${
+          duration.iqrSec ? ` (${formatAnchored(duration.iqrSec[0])}-${formatAnchored(duration.iqrSec[1])})` : ""
         }`
       : null;
 

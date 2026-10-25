@@ -87,6 +87,8 @@ describe("DepegOutlookHero current forecast posture", () => {
     const props = { stats: observedZero, pendingCount: 0, dewsAlertCount: 0, activeDepegIds: new Set<string>() };
     const mixed = renderToStaticMarkup(<DepegOutlookHero {...props} book={summarizeResolverBook([valid, invalidated, pending, noCall])} />);
     expect(mixed).toContain("1 open forecast");
+    expect(mixed).toContain("no break signals");
+    expect(mixed).not.toContain("recovery likely");
     expect(mixed).not.toContain("4 open forecasts");
     const auditOnly = renderToStaticMarkup(<DepegOutlookHero {...props} book={summarizeResolverBook([invalidated, pending, noCall])} />);
     expect(auditOnly).not.toContain("Recovery outlook");

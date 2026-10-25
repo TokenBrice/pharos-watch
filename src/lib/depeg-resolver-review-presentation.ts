@@ -30,6 +30,12 @@ export const DDR_VERDICT_LABELS: Readonly<Record<DdrrVerdictReview, string>> = {
   unscored_insufficient_signal: "Unscored",
   pending: "Pending",
   data_issue: "Data issue",
+  terminal_at_lock: "Terminal at lock",
+};
+
+/** Hover explanations for verdicts whose label alone could read as a forecast outcome. */
+export const DDR_VERDICT_TITLES: Readonly<Partial<Record<DdrrVerdictReview, string>>> = {
+  terminal_at_lock: "Terminal before DDR locked — registry curation lag, not scored",
 };
 
 export const DDR_VERDICT_TONES: Readonly<Record<DdrrVerdictReview, string>> = {
@@ -41,6 +47,7 @@ export const DDR_VERDICT_TONES: Readonly<Record<DdrrVerdictReview, string>> = {
   unscored_insufficient_signal: MUTED_TONE,
   pending: SKY_TONE,
   data_issue: MUTED_TONE,
+  terminal_at_lock: MUTED_TONE,
 };
 
 export const DDR_COVERAGE_LABELS: Readonly<Record<DdrrCoverageState, string>> = {
@@ -213,11 +220,49 @@ export function buildDdrTimelineModel(rows: readonly DdrrResponseRow[], limit: n
   };
 }
 
+const WILSON_Z_90 = 1.6448536269514722;
+
+/** Two-sided 90% Wilson score interval for k successes in n trials. */
+export function wilsonInterval90(k: number, n: number): { lower: number; upper: number } | null {
+  if (n <= 0) return null;
+  const p = k / n;
+  const z2 = WILSON_Z_90 * WILSON_Z_90;
+  const denominator = 1 + z2 / n;
+  const center = (p + z2 / (2 * n)) / denominator;
+  const margin = (WILSON_Z_90 * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n))) / denominator;
+  return { lower: Math.max(0, center - margin), upper: Math.min(1, center + margin) };
+}
+
+export function formatWilsonInterval(interval: { lower: number; upper: number }): string {
+  return `${Math.round(interval.lower * 100)}–${Math.round(interval.upper * 100)}%`;
+}
+
+/**
+ * Median log2(actual / predicted) as a reader multiplier: positive is slower
+ * than predicted. A ratio that rounds to 1.0× reads as on pace.
+ */
+export function formatDurationRatioHeadline(medianLog2Ratio: number): string {
+  const multiplier = 2 ** Math.abs(medianLog2Ratio);
+  const rounded = Math.round(multiplier * 10) / 10;
+  if (rounded <= 1) return "on pace";
+  return `${rounded.toFixed(1)}× ${medianLog2Ratio > 0 ? "slower" : "faster"}`;
+}
+
+/** Brier skill vs base rate: positive beats the base rate, negative is worse. */
+export function formatBrierSkill(skill: number | null): string {
+  if (skill == null || !Number.isFinite(skill)) return "—";
+  const rounded = Math.round(skill * 100) / 100;
+  if (rounded === 0) return "0.00";
+  return `${rounded > 0 ? "+" : "−"}${Math.abs(rounded).toFixed(2)}`;
+}
+
 export interface VersionAccuracySegment {
   major: string;
   scored: number;
   correct: number;
   accuracy: number | null;
+  /** 90% Wilson score interval on `accuracy`; null with nothing scored. */
+  interval: { lower: number; upper: number } | null;
   durationScored: number;
   meanSignedDurationErrorSec: number | null;
   meanAbsoluteDurationErrorSec: number | null;
@@ -262,6 +307,7 @@ export function summarizeAccuracyByMajor(summary: DdrrSummary): VersionAccuracyS
       scored,
       correct,
       accuracy: scored > 0 ? correct / scored : null,
+      interval: wilsonInterval90(correct, scored),
       durationScored,
       meanSignedDurationErrorSec: durationScored > 0 ? signedSum / durationScored : null,
       meanAbsoluteDurationErrorSec: durationScored > 0 ? absoluteSum / durationScored : null,

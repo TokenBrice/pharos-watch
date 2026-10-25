@@ -7,6 +7,7 @@ import {
 } from "@/components/depeg-resolver-reviewer-module";
 import {
   coverageRow,
+  makePredictionPolicySegment,
   predictionRow as row,
 } from "@/components/depeg-resolver-review-test-support";
 import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
@@ -287,6 +288,79 @@ describe("DepegResolverReviewerModule", () => {
     const ledger = screen.getByText("Coverage accountability").closest(".pharos-card-shell")!;
     expect(ledger.textContent).toContain(count === 20 ? "90.9%" : "90.5%");
     expect(ledger.textContent).toContain(count === 20 ? "83.3%" : "82.6%");
+  });
+
+  it("shows reviewer v5 skill, terminal precision, duration ratio, and horizon skill when present", () => {
+    const v5Summary = makeSummary({
+      recoveryLikelihoodCorrectCount: 71,
+      recoveryLikelihoodScoredCount: 74,
+      recoveryLikelihoodAccuracyPct: RatioSchema.parse(71 / 74),
+      baselineRecoverableCorrectCount: 70,
+      terminalCallCount: 3,
+      terminalCallCorrectCount: 2,
+      durationScoredCount: 10,
+      meanSignedDurationErrorSec: 3600,
+      meanAbsoluteDurationErrorSec: 5400,
+      medianLog2DurationRatio: Math.log2(1.4),
+      within2xCount: 7,
+      overdueOpenCount: 2,
+      horizonSkill: [
+        { horizon: "24h", scored: 12, brier: 0.15, baseRateBrier: 0.2, brierSkill: 0.25 },
+        { horizon: "7d", scored: 0, brier: null, baseRateBrier: null, brierSkill: null },
+      ],
+    });
+    render(<DepegResolverReviewerModule data={response({ summary: v5Summary })} />);
+
+    expect(screen.getByText("71 / 74")).toBeTruthy();
+    expect(screen.getByText("Always-recover baseline 70 / 74")).toBeTruthy();
+    expect(screen.getByText("Terminal calls: 2 / 3 correct")).toBeTruthy();
+    expect(screen.getByText("1.4× slower").parentElement?.textContent).toBe("typically1.4× slowerthan forecast");
+    expect(screen.getByText(/7 \/ 10 within 2×/).textContent).toBe("7 / 10 within 2× · mean miss +1h ±1h 30m");
+    expect(screen.getByText("open past band").parentElement?.textContent).toBe("2open past band");
+    expect(screen.getByText("Horizon odds skill")).toBeTruthy();
+    expect(screen.getByText("+0.25")).toBeTruthy();
+  });
+
+  it("renders absent reviewer v5 metrics as unavailable rather than zero", () => {
+    const retained: DdrrSummary = { ...summary, headline: { ...summary.headline } };
+    for (const key of ["baselineRecoverableCorrectCount", "terminalCallCount", "terminalCallCorrectCount",
+      "medianLog2DurationRatio", "within2xCount", "overdueOpenCount", "horizonSkill"] as const) {
+      delete retained.headline[key];
+    }
+    render(<DepegResolverReviewerModule data={response({ summary: retained })} />);
+
+    expect(screen.getByText("Always-recover baseline unavailable")).toBeTruthy();
+    expect(screen.getByText("Terminal calls: unavailable")).toBeTruthy();
+    expect(screen.getByText("open past band").parentElement?.textContent).toBe("—open past band");
+    expect(screen.queryByText("Horizon odds skill")).toBeNull();
+    expect(screen.queryByText(/within 2×/)).toBeNull();
+    expect(screen.getAllByText("+1h").length).toBeGreaterThan(0);
+  });
+
+  it("labels terminal-at-lock rows as unscored curation debt", () => {
+    const atLock: DdrrResponseRow = { ...row, verdictReview: "terminal_at_lock", durationReview: "duration_unscored" };
+    render(<DepegResolverReviewerModule data={response({ rows: [atLock] })} />);
+
+    const badge = screen.getByText("Terminal at lock");
+    expect(badge.getAttribute("title")).toMatch(/registry curation lag, not scored/);
+    expect(screen.getByText(/v5 relabels tiers as evidence classes: No break signals · Stress signals · Terminal evidence/))
+      .toBeTruthy();
+  });
+
+  it("lists every methodology major with n and a 90% interval, keeping thin samples visible", () => {
+    const template = makeSummary().byPredictionPolicy.find((segment) => segment.segmentKind === "all")!.metrics;
+    const versioned = {
+      ...summary,
+      byPredictionPolicy: [
+        ...summary.byPredictionPolicy,
+        makePredictionPolicySegment(template, "4.3", 6, 5),
+      ],
+    };
+    render(<DepegResolverReviewerModule data={response({ summary: versioned })} />);
+
+    expect(screen.getByText("Accuracy by version")).toBeTruthy();
+    expect(screen.getByText("83.3% · 90% CI 50–96% · n 6")).toBeTruthy();
+    expect(screen.getByText("maturing · n 0")).toBeTruthy();
   });
 
   it("keeps loading and empty states distinct", () => {

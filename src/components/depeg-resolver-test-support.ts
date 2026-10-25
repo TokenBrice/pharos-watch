@@ -117,7 +117,13 @@ export function makeFrozenDdrV2Row(source = makeDdrSourceRow(), overrides: Recor
     },
     frozen: {
       resolution: source.resolution,
-      duration: { ...source.duration, remainingAsOf: 86401, medianResolveAt: null, iqrResolveAt: null },
+      duration: {
+        ...source.duration,
+        remainingAsOf: 86401,
+        medianResolveAt: null,
+        iqrResolveAt: null,
+        horizons: source.duration.horizons.map((cell) => ({ ...cell, horizonEndAt: 86401, anchoredLabel: cell.horizon })),
+      },
       relatedContext: source.relatedContext,
       sourceRow: source,
     },

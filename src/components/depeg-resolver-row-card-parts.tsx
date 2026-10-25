@@ -3,20 +3,26 @@
 import Link from "next/link";
 import { LockKeyhole } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { DdrFactor, DdrV2ResponseRow } from "@shared/types/depeg-resolver";
+import type { ReactNode } from "react";
+import type { DdrDuration, DdrFactor, DdrV2ResponseRow } from "@shared/types/depeg-resolver";
 import {
+  formatCoarseDurationSec,
   formatDdrDirection,
   formatDurationSec,
+  formatUnresolvedShare,
   getDuration,
   getLiveCurrentDeviationBps,
   getPredictionState,
   getRelatedContext,
   getResolution,
+  getTierMeta,
+  getTierVocabulary,
+  isCumulativeIncidence,
+  NOT_INFORMATIVE_CELL_LABEL,
   NOW_DOT_TONE,
   SEVERITY_LABEL,
   SEVERITY_WEIGHT,
   SUPPRESSED_REASON_LABELS,
-  TIER_META,
 } from "@/components/depeg-resolver-row-card-model";
 import { CoinLockup, LiveFacts, LockMetadataStrip, StageLabel } from "@/components/depeg-resolver-row-card-shared";
 import { MethodologyHint } from "@/components/methodology-hint";
@@ -111,7 +117,8 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
   const resolution = getResolution(row);
   const duration = getDuration(row);
   const tier = resolution.tier;
-  const meta = TIER_META[tier];
+  const vocabulary = getTierVocabulary(row);
+  const meta = getTierMeta(tier, vocabulary);
   const factors = resolution.factors;
   const kills = factors.filter((f) => f.kind === "kill");
   const anchors = factors.filter((f) => f.kind === "anchor");
@@ -128,7 +135,20 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
       ? `${((1 + currentDeviationBps / 10_000) * 100).toFixed(2)}% of peg`
       : null;
 
-  const showBand = !duration.suppressed && !terminal && !insufficient && (Boolean(duration.iqrSec) || Boolean(duration.stratum));
+  const cumulative = isCumulativeIncidence(duration);
+  const unresolvedShare = cumulative ? (duration.unresolvedShare30d ?? null) : null;
+  const showBand =
+    !duration.suppressed &&
+    !terminal &&
+    !insufficient &&
+    (Boolean(duration.iqrSec) ||
+      Boolean(duration.stratum) ||
+      (cumulative &&
+        (duration.medianSec != null ||
+          unresolvedShare != null ||
+          duration.horizons.some((cell) => cell.state === "not_informative"))));
+  // Evidence classes lead with the base rate; terminal and no-verdict cards carry their own copy below.
+  const showClassBlurb = vocabulary === "evidence_class" && !terminal && !insufficient;
 
   return (
     <div className="pharos-card-shell @container/ddr gap-0 overflow-hidden p-4 sm:p-5">
@@ -164,11 +184,15 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
           </span>
         </div>
 
+        {showClassBlurb ? <p className="text-xs leading-snug text-muted-foreground">{meta.blurb}</p> : null}
+
         {/* Hero: the drawn forecast */}
         <ForecastTimeline row={row} />
 
         {/* Prediction facts (band + comparison stratum) — quiet caption under the hero */}
-        {showBand ? (
+        {showBand && cumulative ? (
+          <CumulativeDurationFacts duration={duration} unresolvedShare={unresolvedShare} />
+        ) : showBand ? (
           <p className="pharos-meta flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             {duration.iqrSec ? (
               <span>
@@ -196,10 +220,21 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
         {/* Suppressed-duration reasons (terminal / insufficient / no-support) */}
         {terminal ? (
           <div className="rounded-lg border border-state-danger-solid/25 bg-state-danger-solid/[0.06] px-3 py-2.5">
-            <p className="text-sm font-medium text-foreground">DDR does not expect this depeg to recover.</p>
-            <p className="mt-1 text-xs leading-snug text-muted-foreground">
-              Comparable structural failures did not return to peg, so no duration estimate is shown.
-            </p>
+            {vocabulary === "evidence_class" ? (
+              <>
+                <p className="text-sm font-medium text-foreground">Terminal evidence fired for this break.</p>
+                <p className="mt-1 text-xs leading-snug text-muted-foreground">
+                  {meta.blurb} No duration estimate is shown.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-foreground">DDR does not expect this depeg to recover.</p>
+                <p className="mt-1 text-xs leading-snug text-muted-foreground">
+                  Comparable structural failures did not return to peg, so no duration estimate is shown.
+                </p>
+              </>
+            )}
             <Link
               href="/cemetery"
               className="pharos-focus-ring mt-1.5 inline-block rounded-sm text-xs font-medium text-state-danger hover:underline"
@@ -267,6 +302,77 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * DDRv5 duration caption: the horizon odds above lead, so the quantiles here are
+ * secondary and coarse. A quantile the recovery curve never reached stays absent.
+ */
+function CumulativeDurationFacts({
+  duration,
+  unresolvedShare,
+}: {
+  duration: DdrDuration;
+  unresolvedShare: number | null;
+}) {
+  const parts: ReactNode[] = [];
+  const notInformative = duration.horizons
+    .filter((cell) => cell.state === "not_informative")
+    .map((cell) => cell.horizon);
+  if (notInformative.length) {
+    parts.push(
+      <span key="not-informative">
+        {notInformative.join(" · ")} odds: {NOT_INFORMATIVE_CELL_LABEL}
+      </span>,
+    );
+  }
+  if (duration.medianSec != null) {
+    parts.push(
+      <span key="median">
+        Half of comparable incidents recovered within{" "}
+        <span className="pharos-numeric text-foreground/80">~{formatCoarseDurationSec(duration.medianSec)}</span>
+      </span>,
+    );
+  }
+  if (duration.iqrSec) {
+    parts.push(
+      <span key="range">
+        typical range{" "}
+        <span className="pharos-numeric text-foreground/80">
+          {formatCoarseDurationSec(duration.iqrSec[0])}–{formatCoarseDurationSec(duration.iqrSec[1])}
+        </span>
+      </span>,
+    );
+  }
+  if (unresolvedShare != null) {
+    parts.push(
+      <span key="unresolved">
+        <span className="pharos-numeric text-foreground/80">{formatUnresolvedShare(unresolvedShare)}</span> may not
+        resolve within 30 days
+      </span>,
+    );
+  }
+  if (duration.stratum) {
+    parts.push(
+      <span key="stratum" className="text-muted-foreground/80">
+        {duration.stratum}
+      </span>,
+    );
+  }
+  return (
+    <p className="pharos-meta flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+      {parts.flatMap((part, index) =>
+        index === 0
+          ? [part]
+          : [
+              <span key={`sep-${index}`} className="text-muted-foreground/40" aria-hidden="true">
+                ·
+              </span>,
+              part,
+            ],
+      )}
+    </p>
   );
 }
 
