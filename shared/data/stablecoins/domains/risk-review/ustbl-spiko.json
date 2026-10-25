@@ -36,6 +36,61 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "CACEIS Fund Administration originates the daily fund NAV used for USTBL subscriptions and redemptions. Spiko identifies the exact USTBL Ethereum NAV proxy 0x477e363c51Ab0C4D13B22CD6B57D56d4a3Cb7Abe; Chainlink's NAVLink directory identifies CACEIS as the fund-administrator source and a 97200-second heartbeat. At finalized Ethereum block 26271962 (2026-10-25T20:04:11.000Z; hash 0x49f502645f75fab5c476eca58a1665fb324be72e5132c713680fe7821c8e6b2c), description() returned USTBL NAV, decimals() returned 6 and aggregator() returned 0xc1c24f0f2103f5899b7ab415a1930e519b7d3423. This establishes external publication of administrator NAV, not independent asset valuation, a second pricing authority, automatic failover or publisher signer closure.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "rationale": "USTBL is the exact FR001400ODM9 fund share, with subscriptions and redemptions priced at fund NAV. Its own issuance mechanism has a top-level NAV authority, not borrower-specific liquidation branches. External lending integrations do not establish liquidation branches for this fund.",
+      "sources": [
+        {
+          "label": "Spiko SICAV prospectus, published 1 September 2026: CACEIS administration and exact fund NAV terms",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        {
+          "label": "Exact USTBL share class FR001400ODM9, retrieved 25 October 2026",
+          "url": "https://public-api.spiko.io/share-classes/USTBL"
+        },
+        {
+          "label": "Spiko NAV provider table, retrieved 25 October 2026",
+          "url": "https://docs.spiko.io/documentation/tokenization/nav"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-25",
+    "reviewer": "NAV parity B1 Spiko primary-source review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spiko SICAV prospectus, published 1 September 2026: CACEIS administration and exact fund NAV terms",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Exact USTBL share class FR001400ODM9, retrieved 25 October 2026",
+        "url": "https://public-api.spiko.io/share-classes/USTBL"
+      },
+      {
+        "label": "Spiko NAV provider table, retrieved 25 October 2026",
+        "url": "https://docs.spiko.io/documentation/tokenization/nav"
+      },
+      {
+        "label": "Chainlink Ethereum feed directory: exact USTBL NAVLink identity and CACEIS source, retrieved 25 October 2026",
+        "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
+      },
+      {
+        "label": "Finalized Ethereum block 26271962, 2026-10-25T20:04:11.000Z, read 2026-10-25T21:26:02.587Z",
+        "url": "https://eth-mainnet.g.alchemy.com"
+      },
+      {
+        "label": "USTBL NAV proxy observed at Ethereum block 26271962",
+        "url": "https://etherscan.io/address/0x477e363c51Ab0C4D13B22CD6B57D56d4a3Cb7Abe"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USTBL's September 2026 prospectus lists eight token deployments, including Solana in addition to the seven recorded EVM, Stellar and Starknet routes. The Solana mint, issuer minter-program configuration PDA and admin-vault identities are identified; protective governance, mutable limits, program-upgrade authority and production bridge-route controls remain unresolved. Spiko announced Chainlink CCIP for compliance-aware cross-chain movement; no production CCIP adapter or token pool, lane, peer, rate limit, or bridge controller was identified in the reviewed primary sources. The provisional external-validated-network tier is unchanged, and issuer mint controls remain in Mint Authority rather than being treated as bridge controls.",

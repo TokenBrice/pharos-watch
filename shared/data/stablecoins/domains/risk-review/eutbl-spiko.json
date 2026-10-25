@@ -36,6 +36,61 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "CACEIS Fund Administration originates the daily fund NAV used for EUTBL subscriptions and redemptions. Spiko identifies the exact EUTBL Ethereum NAV proxy 0xfD628af590c4150A9651C1f4ddD0b4f532B703ae; Chainlink's NAVLink directory identifies CACEIS as the fund-administrator source and a 97200-second heartbeat. At finalized Ethereum block 26271962 (2026-10-25T20:04:11.000Z; hash 0x49f502645f75fab5c476eca58a1665fb324be72e5132c713680fe7821c8e6b2c), description() returned EUTBL NAV, decimals() returned 6 and aggregator() returned 0xdaa1c6511aa051e9e83dd7ac2d65d5e41d1f6b98. This establishes external publication of administrator NAV, not independent asset valuation, a second pricing authority, automatic failover or publisher signer closure.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "rationale": "EUTBL is the exact FR001400ODL1 fund share, with subscriptions and redemptions priced at fund NAV. Its own issuance mechanism has a top-level NAV authority, not borrower-specific liquidation branches. External lending integrations do not establish liquidation branches for this fund.",
+      "sources": [
+        {
+          "label": "Spiko SICAV prospectus, published 1 September 2026: CACEIS administration and exact fund NAV terms",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        {
+          "label": "Exact EUTBL share class FR001400ODL1, retrieved 25 October 2026",
+          "url": "https://public-api.spiko.io/share-classes/EUTBL"
+        },
+        {
+          "label": "Spiko NAV provider table, retrieved 25 October 2026",
+          "url": "https://docs.spiko.io/documentation/tokenization/nav"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-25",
+    "reviewer": "NAV parity B1 Spiko primary-source review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spiko SICAV prospectus, published 1 September 2026: CACEIS administration and exact fund NAV terms",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Exact EUTBL share class FR001400ODL1, retrieved 25 October 2026",
+        "url": "https://public-api.spiko.io/share-classes/EUTBL"
+      },
+      {
+        "label": "Spiko NAV provider table, retrieved 25 October 2026",
+        "url": "https://docs.spiko.io/documentation/tokenization/nav"
+      },
+      {
+        "label": "Chainlink Ethereum feed directory: exact EUTBL NAVLink identity and CACEIS source, retrieved 25 October 2026",
+        "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
+      },
+      {
+        "label": "Finalized Ethereum block 26271962, 2026-10-25T20:04:11.000Z, read 2026-10-25T21:26:02.784Z",
+        "url": "https://eth-mainnet.g.alchemy.com"
+      },
+      {
+        "label": "EUTBL NAV proxy observed at Ethereum block 26271962",
+        "url": "https://etherscan.io/address/0xfD628af590c4150A9651C1f4ddD0b4f532B703ae"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "Spiko announced adoption of Chainlink CCIP for EUTBL and USTBL on 1 July 2025. The reviewed deployment routes identify issuer-native tokens; this announcement does not resolve per-route deployed CCIP routers, validation configuration, or rate limits. Route-level issuer control observations remain distinct from any future CCIP bridge classification.",
