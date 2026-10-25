@@ -267,6 +267,10 @@ describe("live reserve admission", () => {
       if (id === "usdt-tether") {
         delete meta.liveReservesConfig;
         delete runtimeMeta.liveReservesConfig;
+      } else {
+        const suspended = { reason: "test suspended feed", since: "2026-10-25" };
+        meta.liveReservesConfig = { ...original!, suspended };
+        runtimeMeta.liveReservesConfig = { ...originalRuntimeConfig!, suspended };
       }
       const retained = await resolveReserveResult(fixture(id), id, 1_200);
       expect(retained?.provenance?.scoringEligible).toBe(false);

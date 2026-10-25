@@ -2353,6 +2353,18 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     },
     validation: BUSINESS_DAY_VERIFIED_VALIDATION,
   },
+  "ondo-usdy": {
+    primaryInputKinds: ["http-html"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sourceOriginClass: "issuer-attested",
+    preferredFreshnessMode: "verified",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
+    validation: BUSINESS_DAY_VERIFIED_VALIDATION,
+  },
   "ondo-ousg": {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: chainlinkNavParamsSchema,
