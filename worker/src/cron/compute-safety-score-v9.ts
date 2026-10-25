@@ -15,6 +15,7 @@ import {
   NATIVE_V9_INPUT_CACHE_KEY,
   parseNativeV9InputCacheArtifact,
   type NativeV9InputCacheArtifact,
+  type SafetyScoreV9CompilerInput,
 } from "../lib/safety-score-v9/native-input";
 import {
   parseSafetyScoreV9PegProvenanceSeed,
@@ -212,7 +213,7 @@ export async function computeSafetyScoreV9(
     stage: "compile-admission", resourcePressure: byteAdmission.resourcePressure,
   });
 
-  let baseArtifact: NativeV9InputCacheArtifact;
+  let baseArtifact: NativeV9InputCacheArtifact | null;
   const fixedInputCacheValue = caches.get(NATIVE_V9_INPUT_CACHE_KEY)!.value;
   let v9Seed: SafetyScoreV9PegProvenanceSeed;
   try {
@@ -235,7 +236,7 @@ export async function computeSafetyScoreV9(
     });
   }
 
-  const fixedInput = baseArtifact.input;
+  let fixedInput: Readonly<SafetyScoreV9CompilerInput> | null = baseArtifact.input;
   const resourceAdmission = assessSafetyScoreV9ResourceBudget({
     catalogAssets: TRACKED_SOURCE_COINS.length, activeAssets: fixedInput.activeAssetIds.length, inputBytes,
   });
@@ -295,7 +296,7 @@ export async function computeSafetyScoreV9(
       latestDexGenerationId,
     });
   }
-  const v9SeedInput = {
+  let v9SeedInput: Readonly<SafetyScoreV9CompilerInput> | null = {
     ...fixedInput,
     pegProvenanceById: v9Seed.pegProvenanceById,
   };
@@ -418,6 +419,17 @@ export async function computeSafetyScoreV9(
 
   let supplyAttributionGenerationState:
     Record<string, unknown> = { status: "not-due" };
+  const inputSummary = {
+    activeAssets: fixedInput.activeAssetIds.length,
+    sourceGeneration: fixedInput.sourceGeneration,
+    baseInputGenerationId: fixedInput.baseInputGenerationId,
+    clockSec: fixedInput.clockSec,
+    pegProvenanceAssets: Object.keys(v9SeedInput.pegProvenanceById).length,
+  };
+  const fixedInputOwner = { value: v9SeedInput as Readonly<SafetyScoreV9CompilerInput> | null };
+  baseArtifact = null;
+  fixedInput = null;
+  v9SeedInput = null;
   const publication = await runSafetyScoreV9Publication({
     db,
     captureArchiveBucket: options.captureArchiveBucket,
@@ -425,7 +437,8 @@ export async function computeSafetyScoreV9(
     deferPublicMaterialization: options.deferPublicMaterialization,
     chunkedPublicationWrites: options.chunkedPublicationWrites,
     publicationDeadlineMs: options.executionWindow?.deadlineMs,
-    fixedInput: v9SeedInput,
+    fixedInput: null,
+    fixedInputOwner,
     fixedInputCacheValue,
     fixedInputAlreadyNormalized: true,
     // `prepareFixedInput` below spreads this normalized input and adds the two
@@ -597,20 +610,18 @@ export async function computeSafetyScoreV9(
     status: degradationReasons.length === 0 ? "ok" : "degraded",
     itemCount:
       publication.status === "published"
-        ? fixedInput.activeAssetIds.length
+        ? inputSummary.activeAssets
         : 0,
     metadata: JSON.stringify({
       ...(degradationReasons.length > 0
         ? { reason: degradationReasons[0], degradationReasons }
         : {}),
-      sourceGenerationId: fixedInput.sourceGeneration,
-      baseInputGenerationId: fixedInput.baseInputGenerationId,
+      sourceGenerationId: inputSummary.sourceGeneration,
+      baseInputGenerationId: inputSummary.baseInputGenerationId,
       stablecoinsCapture,
       pegProvenance: {
         status: "applied",
-        assetCount: Object.keys(
-          v9SeedInput.pegProvenanceById,
-        ).length,
+        assetCount: inputSummary.pegProvenanceAssets,
       },
       supplyAttributionGeneration: supplyAttributionGenerationState,
       resourcePressure: resourceAdmission.resourcePressure,
@@ -643,10 +654,10 @@ export async function computeSafetyScoreV9(
                 surface: "safety-score-v9" as const,
                 generationId:
                   publication.publicationGenerationId,
-                publishedAt: fixedInput.clockSec,
-                candidateRows: fixedInput.activeAssetIds.length,
-                publishedRows: fixedInput.activeAssetIds.length,
-                expectedRows: fixedInput.activeAssetIds.length,
+                publishedAt: inputSummary.clockSec,
+                candidateRows: inputSummary.activeAssets,
+                publishedRows: inputSummary.activeAssets,
+                expectedRows: inputSummary.activeAssets,
                 artifactCacheKey: "report-cards:v9",
                 validationSummary: {
                   outcome: publication.outcome,

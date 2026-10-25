@@ -38,7 +38,7 @@ vi.mock("../alert-safety-source-cache", async (importOriginal) => ({
 }));
 
 vi.mock("../safety-score-v9/candidate", () => ({
-  buildSafetyScoreV9PublicationFromNormalizedInput: mocks.build,
+  buildSafetyScoreV9PublicationFromOwnedInput: mocks.build,
 }));
 vi.mock("../safety-score-v9/publication-assessment", async (importOriginal) => ({
   ...await importOriginal<
@@ -386,6 +386,31 @@ describe("Safety Score V9 publication runner", () => {
       }),
       expect.anything(),
     );
+  });
+
+  it("transfers input ownership and reloads complete retry facts without mutating the caller", async () => {
+    const { normalizeSafetyScoreV9CompilerInput } = await import("../safety-score-v9/native-input");
+    const original = normalizeSafetyScoreV9CompilerInput(fixedInput);
+    const expected = structuredClone(original);
+    const owner = { value: original as typeof original | null };
+    const pipeline = mocks.build.getMockImplementation()!();
+    mocks.build.mockImplementationOnce(({ fixedInputOwner }) => {
+      expect(owner.value).toBeNull();
+      expect(fixedInputOwner.value).toBe(original);
+      fixedInputOwner.value = null;
+      const reloaded = fixedInputOwner.reload();
+      expect(reloaded).not.toBe(original);
+      expect(reloaded).toEqual(expected);
+      return pipeline;
+    });
+    const result = await runSafetyScoreV9Publication({
+      db: {} as D1Database, fixedInput: null, fixedInputOwner: owner,
+      nowSec: original.clockSec,
+    });
+    expect(result.status).toBe("published");
+    expect(original).toEqual(expected);
+    expect(owner.value).toBeNull();
+    expect(() => mocks.build.mock.calls[0]![0].fixedInputOwner.reload()).toThrow("compilation already completed");
   });
 
   it("projects the accepted publication before compiling the next candidate", async () => {

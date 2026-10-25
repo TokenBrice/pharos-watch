@@ -5,6 +5,8 @@ import {
   assessV9Publication,
   buildSafetyScoreV9AcceptedPublicationBaseline,
   expiredMeasuredExitAssetIds,
+  expiredMeasuredExitAssetIdsFromRoutes,
+  projectExpiredMeasuredExitRoutes,
   V9PublicationInputHealthSchema,
   type V9PublicationInputHealth,
 } from "../safety-score-v9/publication-assessment";
@@ -144,6 +146,15 @@ describe("Safety Score V9 publication assessment", () => {
     card.breakdowns!.exit.diversification = { routeKey, routeLabel: "Backup", bonus: 2 };
     expect(expiredMeasuredExitAssetIds(fixedInput, publication)).toEqual(["alpha"]);
     card.breakdowns!.exit.diversification.bonus = 0;
+    expect(expiredMeasuredExitAssetIds(fixedInput, publication)).toEqual([]);
+  });
+
+  it("retains expired-route admission after the captured curves have been released", () => {
+    const { fixedInput, publication } = measuredHistoryFixture();
+    fixedInput.clockSec += 10_801;
+    const routes = projectExpiredMeasuredExitRoutes(fixedInput);
+    fixedInput.dexLiqMap = {};
+    expect(expiredMeasuredExitAssetIdsFromRoutes(routes, publication)).toEqual(["alpha"]);
     expect(expiredMeasuredExitAssetIds(fixedInput, publication)).toEqual([]);
   });
 

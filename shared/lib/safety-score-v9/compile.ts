@@ -17,6 +17,7 @@ import { V9_UNRESEARCHED_CAUSE_PROOF } from "../../types/safety-score-v9-causes"
 import { findV9ReserveBoundFactorStatusIssues } from "./reserve-bound-facts";
 import { V9_CANDIDATE_RESERVE_BOUND_POLICY } from "./reserve-bound-policy";
 import { createV9FactShardViewFactory } from "./fact-shard";
+import { Sha256Schema } from "../../types/safety-schema-primitives";
 
 const COMMON_REQUIRED_APPLICABILITY = new Map([
   "v9.control.review",
@@ -108,6 +109,42 @@ export function createV9PublicationAssetCompactor(): (asset: V9AssetFactsV3) => 
       throw new Error("V9 publication compaction requires an admitted immutable asset");
     }
     const view = compact(asset);
+    validatedAssetFacts.add(view);
+    return view;
+  };
+}
+
+/** Finalize only the cohort research hash on already admitted immutable facts. */
+export function createV9PublicationResearchHashRebinder(previousHash: string, finalHash: string): (asset: V9AssetFactsV3) => V9AssetFactsV3 {
+  Sha256Schema.parse(previousHash);
+  Sha256Schema.parse(finalHash);
+  let cachedAsset: V9AssetFactsV3 | null = null;
+  let cachedEvidence: V9AssetFactsV3["evidence"] | null = null;
+  function evidence(asset: V9AssetFactsV3): V9AssetFactsV3["evidence"] {
+    if (cachedAsset !== asset) {
+      cachedEvidence = asset.evidence.map(reference => {
+        const research = reference.sourceId === "safety-score-v9-research-overlay" &&
+          reference.evidenceId === `${asset.assetId}:research-overlay`;
+        const quarantine = reference.sourceId === "safety-score-v9-compiler" &&
+          reference.disposition === "rejected" && reference.causeBinding?.assetId === asset.assetId &&
+          reference.causeBinding.scope.componentKey === "asset-compilation";
+        if (!research && !quarantine) return reference;
+        if (reference.contentSha256 !== previousHash) throw new Error("V9 research evidence hash does not match its pending cohort");
+        return { ...reference, contentSha256: finalHash };
+      });
+      deepFreeze(cachedEvidence);
+      cachedAsset = asset;
+    }
+    return cachedEvidence!;
+  }
+  return (asset) => {
+    if (!validatedAssetFacts.has(asset) || !Object.isFrozen(asset)) {
+      throw new Error("V9 research hash rebinding requires an admitted immutable asset");
+    }
+    // Copy getters, never their decoded graphs; the shared evidence cache holds one asset.
+    const descriptors = Object.getOwnPropertyDescriptors(asset);
+    descriptors.evidence = { enumerable: true, get: () => evidence(asset) };
+    const view = Object.freeze(Object.defineProperties({}, descriptors)) as V9AssetFactsV3;
     validatedAssetFacts.add(view);
     return view;
   };

@@ -2,6 +2,7 @@ import { setCache } from "../db-cache";
 import { createCronResult } from "../cron-result";
 import type { CronResult } from "../cron-logger";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { deflateSync, inflateSync, strFromU8, strToU8 } from "fflate";
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import { V9AssetEvaluationError } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_MINIMUM_RATEABLE_ASSETS } from "@shared/types/safety-score-v9-coverage";
@@ -17,12 +18,13 @@ import {
   type SafetyScoreV9CompilerInput,
 } from "./native-input";
 import {
-  buildSafetyScoreV9PublicationFromNormalizedInput,
+  buildSafetyScoreV9PublicationFromOwnedInput,
   type SafetyScoreV9BridgeJoinDiagnostic,
 } from "./candidate";
 import {
   assessV9Publication,
-  expiredMeasuredExitAssetIds,
+  expiredMeasuredExitAssetIdsFromRoutes,
+  projectExpiredMeasuredExitRoutes,
   type SafetyScoreV9AcceptedPublicationBaseline,
   type V9PublicationCoverageFloor,
 } from "./publication-assessment";
@@ -40,7 +42,7 @@ import { applySafetyScoreV9GradeHysteresis } from "@shared/lib/safety-score-v9/g
 import { buildSafetyScoreV9PublicationIdentity } from "../report-cards-v9-cache";
 import { logWorkerEvent } from "../structured-log";
 import type { SafetyScoreV9TransferMaterialityGeneration } from "./transfer-materiality";
-import { buildSafetyScoreV9PublicationReplayCapture, SafetyScoreV9ReplayCaptureIdentityError } from "./publication-replay-capture";
+import { buildSafetyScoreV9PublicationReplayCapture, SafetyScoreV9ReplayCaptureIdentityError, type SafetyScoreV9ReplayCaptureInput } from "./publication-replay-capture";
 import type { AcceptedProjectionUnavailableReason } from "./accepted-projections";
 import { journalSafetyScorePublication, type SafetyScoreJournalResult } from "./publication-journal";
 import { archiveSafetyScoreCapture, type SafetyScoreCaptureArchiveResult } from "./capture-archive";
@@ -96,6 +98,8 @@ export interface RunSafetyScoreV9PublicationInput {
   chunkedPublicationWrites?: boolean;
   publicationDeadlineMs?: number;
   fixedInput: unknown;
+  /** The production caller transfers ownership instead of pinning the decoded input across publication. */
+  fixedInputOwner?: { value: Readonly<SafetyScoreV9CompilerInput> | null };
   /** Original compressed prepare-time envelope; retained without re-serialization. */
   fixedInputCacheValue?: string;
   /** The cache parser already normalized this value; avoid cloning it again on the production hot path. */
@@ -178,6 +182,76 @@ function sameBaseInput(
     left.baseInputGenerationId === right.baseInputGenerationId &&
     left.sourceGeneration === right.sourceGeneration
   );
+}
+
+function takePublicationFixedInput(input: RunSafetyScoreV9PublicationInput): Readonly<SafetyScoreV9CompilerInput> {
+  if (input.fixedInputOwner !== undefined) {
+    const fixedInput = input.fixedInputOwner.value;
+    input.fixedInputOwner.value = null;
+    if (fixedInput === null) throw new Error("Safety Score v9 input ownership was already transferred");
+    return fixedInput;
+  }
+  return input.fixedInputAlreadyNormalized
+    ? input.fixedInput as SafetyScoreV9CompilerInput
+    : normalizeSafetyScoreV9CompilerInput(input.fixedInput);
+}
+
+function reloadPublicationFixedInput(bytes: Uint8Array): Readonly<SafetyScoreV9CompilerInput> {
+  return normalizeSafetyScoreV9CompilerInput(JSON.parse(strFromU8(inflateSync(bytes))));
+}
+
+function publicationInputReloader(fixedInput: Readonly<SafetyScoreV9CompilerInput>) {
+  const bytes = deflateSync(strToU8(JSON.stringify(fixedInput)), { level: 1 });
+  return () => reloadPublicationFixedInput(bytes);
+}
+
+function publicationReplayInputReloader(fixedInput: Readonly<SafetyScoreV9CompilerInput>) {
+  const { baseInputGenerationId, clockSec, safetyScoreV9SupplyAttributionById, evidenceJournalById,
+    supplyAttributionJournalById, pegProvenanceById, pipelineGapByAssetId } = fixedInput;
+  const bytes = deflateSync(strToU8(JSON.stringify({
+    baseInputGenerationId, clockSec, safetyScoreV9SupplyAttributionById, evidenceJournalById,
+    supplyAttributionJournalById, pegProvenanceById, pipelineGapByAssetId,
+  } satisfies SafetyScoreV9ReplayCaptureInput)), { level: 1 });
+  return (): SafetyScoreV9ReplayCaptureInput => JSON.parse(strFromU8(inflateSync(bytes)));
+}
+
+async function preparePublicationInput(
+  input: RunSafetyScoreV9PublicationInput,
+  owner: { value: Readonly<SafetyScoreV9CompilerInput> | null },
+  signal: AbortSignal,
+) {
+  let fixedInput = owner.value!;
+  owner.value = null;
+  if (input.prepareFixedInput) {
+    const prepared = await input.prepareFixedInput(fixedInput, signal);
+    const preparedFixedInput = input.preparedFixedInputAlreadyNormalized
+      ? withNormalizedV9JournalProjections(prepared as SafetyScoreV9CompilerInput)
+      : normalizeSafetyScoreV9CompilerInput(prepared);
+    if (!sameBaseInput(preparedFixedInput, fixedInput)) {
+      throw new Error("Safety Score v9 preparation changed the authoritative fixed input");
+    }
+    fixedInput = preparedFixedInput;
+  }
+  return {
+    owner: { value: fixedInput as Readonly<SafetyScoreV9CompilerInput> | null, reload: publicationInputReloader(fixedInput) },
+    replay: input.fixedInputCacheValue === undefined ? null : publicationReplayInputReloader(fixedInput),
+    expiredRoutes: projectExpiredMeasuredExitRoutes(fixedInput),
+    summary: {
+      clockSec: fixedInput.clockSec,
+      activeAssetIds: fixedInput.activeAssetIds,
+      baseInputGenerationId: fixedInput.baseInputGenerationId,
+      sourceGeneration: fixedInput.sourceGeneration,
+      dexGenerationId: fixedInput.dexGenerationId,
+      redemptionGenerationId: fixedInput.redemptionGenerationId,
+      inputFreshness: fixedInput.inputFreshness,
+      registryFingerprint: fixedInput.registryFingerprint,
+      v9PublicationInputHealth: fixedInput.v9PublicationInputHealth,
+    },
+  };
+}
+
+function releasedPublicationInput(): never {
+  throw new Error("Safety Score v9 compilation already completed");
 }
 
 function fallbackNowSec(): number {
@@ -659,27 +733,13 @@ export async function runSafetyScoreV9Publication(
         "Safety Score v9 publication clock must be epoch seconds",
       );
     }
-    let fixedInput = input.fixedInputAlreadyNormalized
-      ? input.fixedInput as SafetyScoreV9CompilerInput
-      : normalizeSafetyScoreV9CompilerInput(input.fixedInput);
-    attemptedAtSec = nowSecAtLeast(fixedInput.clockSec, input.nowSec);
+    const fixedInputOwner = { value: takePublicationFixedInput(input) as Readonly<SafetyScoreV9CompilerInput> | null };
+    attemptedAtSec = nowSecAtLeast(fixedInputOwner.value!.clockSec, input.nowSec);
     attemptId = `${SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX}:${attemptedAtSec}`;
 
     beginPhase("v9-enrichment", "enrichment");
-    if (input.prepareFixedInput) {
-      const prepared = await input.prepareFixedInput(fixedInput, publicationSignal);
-      const preparedFixedInput = input.preparedFixedInputAlreadyNormalized
-        ? withNormalizedV9JournalProjections(
-            prepared as SafetyScoreV9CompilerInput,
-          )
-        : normalizeSafetyScoreV9CompilerInput(prepared);
-      if (!sameBaseInput(preparedFixedInput, fixedInput)) {
-        throw new Error(
-          "Safety Score v9 preparation changed the authoritative fixed input",
-        );
-      }
-      fixedInput = preparedFixedInput;
-    }
+    const preparedInput = await preparePublicationInput(input, fixedInputOwner, publicationSignal);
+    const fixedInput = preparedInput.summary;
 
     beginPhase("publication-gate", "baselineLoad");
     const acceptedState = await loadSafetyScoreV9AcceptedBaselineState(input.db, publicationSignal);
@@ -690,11 +750,12 @@ export async function runSafetyScoreV9Publication(
     const previousHealth = acceptedState.health;
 
     beginPhase("compile", "compile");
-    const pipeline = buildSafetyScoreV9PublicationFromNormalizedInput({
-      fixedInput,
+    const pipeline = buildSafetyScoreV9PublicationFromOwnedInput({
+      fixedInputOwner: preparedInput.owner,
       publishedAtSec: fixedInput.clockSec,
       transferMaterialityGeneration: input.transferMaterialityGeneration ?? null,
     });
+    preparedInput.owner.reload = releasedPublicationInput;
     // Grade hysteresis (10.26) is applied before assessment and journaling so
     // every consumer sees the grade that will actually be published.
     const publication = applySafetyScoreV9GradeHysteresis(pipeline.candidate, acceptedPublication);
@@ -710,7 +771,7 @@ export async function runSafetyScoreV9Publication(
       logPublicationGenerationDeltas(publication, acceptedPublication);
       assessment = assessV9Publication({
         inputHealth: fixedInput.v9PublicationInputHealth,
-        expiredMeasuredExitAssetIds: expiredMeasuredExitAssetIds(fixedInput, publication, acceptedPublication),
+        expiredMeasuredExitAssetIds: expiredMeasuredExitAssetIdsFromRoutes(preparedInput.expiredRoutes, publication, acceptedPublication),
         candidate: publication,
         acceptedPublication,
         coverageFloors,
@@ -816,7 +877,7 @@ export async function runSafetyScoreV9Publication(
     if (input.fixedInputCacheValue !== undefined) {
       try {
         replayCaptureValue = (await buildSafetyScoreV9PublicationReplayCapture(
-          publication, fixedInput, input.transferMaterialityGeneration ?? null,
+          publication, preparedInput.replay!(), input.transferMaterialityGeneration ?? null,
         )).value;
       } catch (error) {
         if (error instanceof SafetyScoreV9ReplayCaptureIdentityError) throw error;
@@ -830,6 +891,7 @@ export async function runSafetyScoreV9Publication(
         });
       }
     }
+    preparedInput.replay = null;
     beginPhase("publication-write", "persist");
     pendingIdentity = buildSafetyScoreV9PublicationIdentity(publication);
     pendingClockSec = fixedInput.clockSec;

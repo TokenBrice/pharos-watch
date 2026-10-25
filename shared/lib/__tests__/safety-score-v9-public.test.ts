@@ -39,6 +39,8 @@ import { applyV9MeasuredCollateralization, evaluateV9ArchetypeBacking } from "..
 import { computeV9CompactResultDigest, projectCompactV9ScoreTrace } from "../safety-score-v9/trace";
 import { asset as backingAsset, exposure, knownStatus } from "./safety-score-v9-backing.test-support";
 import { V9_PUBLIC_REPRESENTATION_VERSION } from "../../types/report-cards-v9-materialization";
+import { createV9PublicCardShardViewFactory } from "../safety-score-v9/public-card-shard";
+import { stableJsonStringifyV1 } from "../stable-json";
 
 const DIGESTS = {
   policy: "a".repeat(64),
@@ -326,6 +328,28 @@ function cap(args: Pick<V9CapTrace, "kind" | "limit" | "source" | "reason" | "bi
 }
 
 describe("Safety Score v9 public projection", () => {
+  it("keeps card shards byte-identical, immutable and independent across cache eviction", () => {
+    const compact = createV9PublicCardShardViewFactory();
+    const original = projectSafetyScoreV9Card(fixture("usdc-circle", { score: 90, grade: "A+" })).card;
+    original.name = "Unicode \u20ac \ud83d\ude80";
+    const expected = stableJsonStringifyV1(original);
+    const view = compact(original);
+    const other = compact({ ...original, id: "usdt-tether" });
+    expect(Object.keys(view)).toEqual(Object.keys(original));
+    expect(stableJsonStringifyV1(view)).toBe(expected);
+    original.pillars.backing.reasons.push({ code: "missing-reserve-composition", message: "Caller mutation" });
+    expect(Object.isFrozen(original)).toBe(false);
+    expect(Object.isFrozen(view)).toBe(true);
+    expect(Object.isFrozen(view.pillars.backing.reasons)).toBe(true);
+    expect(() => view.pillars.backing.reasons.push({ code: "missing-reserve-composition", message: "Mutation" })).toThrow();
+    const memoized = view.pillars;
+    expect(other.pillars).toEqual(view.pillars);
+    expect(view.pillars).toBe(memoized);
+    for (let i = 0; i < 32; i++) expect(compact({ ...original, id: `cache-${i}` }).pillars).toBeDefined();
+    expect(view.pillars).not.toBe(memoized);
+    expect(stableJsonStringifyV1(view)).toBe(expected);
+  });
+
   it("emits bounded exposure from structured priced authorities, with full-set totals and no score mutation", () => {
     const input = fixture("exposure", { score: 80, grade: "A-", pillars: { backing: 92, exit: 90, control: 90 } });
     const authorities = [0.4, 0.3, 0.2, 0.09, 0].map((share, i) => ({

@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { internV9PublicCauseGaps, finalizeV9PublicCauseGaps, type V9InternedPublicCardDraft, type V9UninternedPublic, type V9UninternedPublicCard } from "./public-cause-interning";
+import { strFromU8, strToU8 } from "fflate";
+import { internV9PublicCauseGaps, finalizeV9PublicCauseGaps, finalizeV9PublicCauseGapCard, type V9InternedPublicCardDraft, type V9UninternedPublic, type V9UninternedPublicCard } from "./public-cause-interning";
+import { createV9PublicCardShardViewFactory } from "./public-card-shard";
 import { resolveV9PublicWitnessText, resolveV9PublicWitnessTexts } from "../../types/safety-score-v9-public-witness-texts";
 import {
   SafetyScoreV9CurrentCardSchema,
@@ -1394,10 +1396,10 @@ export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjecto
   let identity: V9PublicResultIdentity | null = null;
   let sourceGenerations = "";
   const seen = new Set<string>();
-  // Keep admitted cards as independent JSON shards while evaluator facts and
-  // upstream results are live. Rehydrate only after evaluation has released
-  // those graphs; retaining every expanded draft defeats incremental evaluation.
-  const drafts = new Map<string, string>();
+  // Finalize one card at a time; later reads retain a bounded decoded-card cache.
+  const drafts = new Map<string, Uint8Array>();
+  const foreignGapIds = new Set<string>();
+  const compactCard = createV9PublicCardShardViewFactory();
   const failures = new Map<string, z.core.$ZodIssue[]>();
   const commonModeResults: V9CommonModeProjectionResult[] = [];
   const dexObservedAtSec = new Map<string, number | null>();
@@ -1438,7 +1440,8 @@ export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjecto
       try {
         const { card, foreignCauseGaps } = projectSafetyScoreV9Card(input);
         const { foreignCauseGapRefs: _localRefs, ...draft } = card;
-        drafts.set(trace.assetId, JSON.stringify({ ...draft, foreignCauseGaps }));
+        for (const id of foreignCauseGaps) foreignGapIds.add(id);
+        drafts.set(trace.assetId, strToU8(JSON.stringify({ ...draft, foreignCauseGaps })));
       } catch (error) {
         if (!(error instanceof z.ZodError)) throw error;
         failures.set(trace.assetId, error.issues);
@@ -1457,12 +1460,15 @@ export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjecto
         }));
       }
       const resultDigest = typeof args.resultDigest === "function" ? args.resultDigest() : args.resultDigest;
-      const { cards, foreignCauseGaps } = finalizeV9PublicCauseGaps(ids.map((id) => {
-        const draft: V9InternedPublicCardDraft = JSON.parse(drafts.get(id)!);
+      const foreignCauseGaps = [...foreignGapIds].sort();
+      const refs = new Map(foreignCauseGaps.map((id, index) => [id, index]));
+      const cards = ids.map((id) => {
+        const draft: V9InternedPublicCardDraft = JSON.parse(strFromU8(drafts.get(id)!));
         drafts.delete(id);
-        return draft;
-      }));
+        return compactCard(finalizeV9PublicCauseGapCard(draft, refs));
+      });
       drafts.clear();
+      foreignGapIds.clear();
       seen.clear();
       const notRatedIds = cards.filter((card) => card.ratingStatus === "not-rated").map((card) => card.id);
       const pipelineGapIds = cards.filter((card) => card.ratingStatus === "pipeline-gap").map((card) => card.id);

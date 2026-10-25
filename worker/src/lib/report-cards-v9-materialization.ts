@@ -18,7 +18,7 @@ import { SAFETY_SCORE_V9_CACHE_KEYS, parseSafetyScoreV9PublicationHealthCache, r
 import { D1_MAX_BOUND_PARAMETERS, executeAtomicBatch, prepareMultiRowInsertStatements } from "./db";
 import { D1_BATCH_SIZE } from "./constants";
 import { sha256HexFromUtf8Chunks } from "./hash";
-import { projectV9Table, projectV9Detail } from "@shared/lib/report-cards-v9-projections";
+import { projectV9Table, projectV9Detail, projectV9DetailNeighborhoodCard } from "@shared/lib/report-cards-v9-projections";
 import type { ReportCardsV9ProjectionSource, ReportCardsV9TableResponse, ReportCardsV9DetailResponse } from "@shared/types/report-cards-v9-projections";
 import { loadActiveSafetyScoreIndex } from "./safety-score-index";
 import { throwIfAborted } from "./abort";
@@ -61,8 +61,10 @@ function* buildV9PublicMaterializations(
     return artifact;
   };
   yield boundedSite(buildMaterialization(table, publication, payloadSha256));
+  // Common-mode neighborhoods can span the cohort; project their small rows once.
+  const neighborhoodCards = snapshot.cards.map(projectV9DetailNeighborhoodCard);
   for (const card of snapshot.cards) {
-    yield boundedSite(buildMaterialization(projectV9Detail(snapshot, card.id, table.dependencyGraph), publication, payloadSha256));
+    yield boundedSite(buildMaterialization(projectV9Detail(snapshot, card.id, table.dependencyGraph, neighborhoodCards), publication, payloadSha256));
   }
 }
 
