@@ -36,6 +36,7 @@ const V9PublicationSimpleHoldReasonSchema = z
       "redemption-unavailable",
       "live-reserves-unavailable",
       "live-reserves-coverage-below-floor",
+      "v9-public-materialization-pending",
     ]),
   })
   .strict();

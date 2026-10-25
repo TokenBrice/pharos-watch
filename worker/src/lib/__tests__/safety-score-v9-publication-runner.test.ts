@@ -5,8 +5,10 @@ import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fix
 import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import * as fixedInputCodec from "../report-cards-fixed-input-cache-codec";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
+import * as publicMaterialization from "../report-cards-v9-materialization";
 import { materializeV9AcceptedPublication } from "../report-cards-v9-materialization";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../safety-score-v9/publication-codec";
 import type * as PublicationStore from "../safety-score-v9/publication-store";
@@ -15,7 +17,8 @@ import * as publicationAttempts from "../safety-score-v9/publication-attempts";
 import type * as AcceptedProjectionReaders from "../safety-score-v9/accepted-projection-readers";
 import { buildSafetyScoreV9AcceptedBaselineProjection } from "../safety-score-v9/accepted-projections";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
-import { runSafetyScoreV9Publication, getSafetyScoreV9PublicationBudgetMs } from "../safety-score-v9/publication-runner";
+import { runSafetyScoreV9Publication, getSafetyScoreV9PublicationBudgetMs, retryPendingSafetyScoreV9PublicMaterialization } from "../safety-score-v9/publication-runner";
+import * as publicationCodec from "../safety-score-v9/publication-codec";
 
 const mocks = vi.hoisted(() => ({
   assess: vi.fn(),
@@ -76,6 +79,64 @@ function acceptedBaseline(publication: SafetyScoreV9CurrentResponse, held = fals
 }
 
 describe("Safety Score V9 publication runner", () => {
+  it.each([false, true])("retries an unselected acceptance without changing canonical bytes (chunked=%s)", async chunkedPublicationWrites => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const publication = makeWorkerSafetyScoreV9Publication();
+    try {
+      await store.persistSafetyScoreV9Publication(db, { ...currentInput(publication), deferPublicMaterialization: true, chunkedPublicationWrites });
+      const acceptedRows = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
+      const retry = await retryPendingSafetyScoreV9PublicMaterialization(db);
+      expect(retry).toMatchObject({ status: "materialized", publicationGenerationId: publication.publicationGenerationId, budgetMs: 10_000 });
+      expect(Object.values(retry!).every(value => value === null || typeof value === "string" || typeof value === "number")).toBe(true);
+      for (const row of acceptedRows) expect(sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(row.key)).toEqual(row);
+      const decode = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
+      const materialize = vi.spyOn(publicMaterialization, "materializeV9AcceptedPublication");
+      try {
+        expect(await retryPendingSafetyScoreV9PublicMaterialization(db)).toBeNull();
+        expect(decode).not.toHaveBeenCalled();
+        expect(materialize).not.toHaveBeenCalled();
+      } finally { decode.mockRestore(); materialize.mockRestore(); }
+    } finally { sqlite.close(); }
+  });
+
+  it.each([
+    { remainingMs: 180_000, budgetMs: 10_000 },
+    { remainingMs: 140_000, budgetMs: 5_000 },
+    { remainingMs: 135_000, budgetMs: 0 },
+  ])("caps retry at $budgetMs ms with $remainingMs ms remaining", async ({ remainingMs, budgetMs }) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    const prepare = vi.spyOn(db, "prepare");
+    try {
+      const result = await retryPendingSafetyScoreV9PublicMaterialization(db, undefined, Date.now() + remainingMs);
+      if (budgetMs === 0) {
+        expect(result).toMatchObject({ status: "skipped", budgetMs: 0, reason: "v9-public-materialization-retry-insufficient-budget" });
+        expect(prepare).not.toHaveBeenCalled();
+        expect(timeout).not.toHaveBeenCalled();
+      } else {
+        expect(result).toBeNull();
+        expect(timeout).toHaveBeenCalledWith(budgetMs);
+        expect(remainingMs - budgetMs).toBeGreaterThanOrEqual(135_000);
+      }
+    } finally { timeout.mockRestore(); prepare.mockRestore(); vi.useRealTimers(); sqlite.close(); }
+  });
+
+  it("stops before decode when metadata IO consumes the retry budget before its timer fires", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const now = Date.now();
+    const decode = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
+    const db = makeNoopD1({ prepare: () => ({ bind: () => ({ first: async () => {
+      vi.setSystemTime(now + 10_001);
+      return null;
+    } }) }) });
+    try {
+      await expect(retryPendingSafetyScoreV9PublicMaterialization(db, undefined, now + 180_000)).rejects.toMatchObject({ name: "TimeoutError" });
+      expect(decode).not.toHaveBeenCalled();
+    } finally { decode.mockRestore(); vi.useRealTimers(); }
+  });
+
   it("does not roll back accepted cards when the journal D1 read throws", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");

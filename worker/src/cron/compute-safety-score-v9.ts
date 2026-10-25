@@ -21,7 +21,8 @@ import {
   SAFETY_SCORE_V9_PEG_PROVENANCE_SEED_CACHE_KEY,
   type SafetyScoreV9PegProvenanceSeed,
 } from "../lib/safety-score-v9/peg-provenance";
-import { runSafetyScoreV9Publication } from "../lib/safety-score-v9/publication-runner";
+import { runSafetyScoreV9Publication, retryPendingSafetyScoreV9PublicMaterialization } from "../lib/safety-score-v9/publication-runner";
+import { logWorkerEvent } from "../lib/structured-log";
 import {
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS,
 } from "../lib/safety-score-v9/supply-attribution";
@@ -55,7 +56,7 @@ import type { V9ExecutionWindow } from "../lib/v9-slot-window";
 import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
 import { assessSafetyScoreV9ResourceBudget } from "../lib/safety-score-v9/resource-budget";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
-import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { CRON_INTERVALS, V9_PUBLICATION_SECOND_CHANCE } from "@shared/lib/cron-jobs";
 
 /**
  * Prepare (hourly, on the `halfHourlyChartsOffset` :16 tick) and this publisher
@@ -145,7 +146,7 @@ function summarizeBridgeJoinDiagnostics(
   };
 }
 
-function unavailable(
+function sourceUnavailable(
   reason: string,
   metadata: CronMetadataRecord = {},
 ): CronResult {
@@ -174,6 +175,39 @@ export async function computeSafetyScoreV9(
   } = {},
 ): Promise<CronResult> {
   throwIfAborted(signal);
+  let publicMaterializationRetryReason: string | null = null;
+  try {
+    const retry = await retryPendingSafetyScoreV9PublicMaterialization(db, signal, options.executionWindow?.deadlineMs);
+    throwIfAborted(signal);
+    publicMaterializationRetryReason = retry?.reason ?? null;
+    if (retry?.status === "failed") logWorkerEvent({
+      scope: "lib", level: "warn", event: "safety_score_v9_public_materialization_retry_failed",
+      job: "compute-safety-score-v9", message: "Accepted publication retained; continuing ordinary compute after retry failure",
+      metadata: { reason: retry.reason },
+    });
+    if (retry !== null) await reportProgress?.({ stage: "public-materialization-retry", metadata: { publicMaterialization: retry } });
+    const slot = options.executionWindow?.slotStartedAtSec;
+    // A same-hour :52 recovery must not compile another rating/hysteresis step.
+    if (retry?.status === "materialized" && retry.publishedAtSec !== null && slot !== undefined && slot % 3600 === V9_PUBLICATION_SECOND_CHANCE.offsetSec &&
+        retry.publishedAtSec >= Math.floor(slot / 3600) * 3600) {
+      return createCronResult({
+        status: "ok", itemCount: 1,
+        metadata: { reason: retry.reason, publicMaterialization: retry },
+        productivity: { productive: true, reason: retry.reason },
+      });
+    }
+  } catch (error) {
+    throwIfAborted(signal);
+    logWorkerEvent({
+      scope: "lib", level: "warn", event: "safety_score_v9_public_materialization_retry_failed",
+      job: "compute-safety-score-v9", message: "Accepted publication retained; materialization retry did not complete",
+      error,
+    });
+    publicMaterializationRetryReason = (error instanceof Error || error instanceof DOMException) && error.name === "TimeoutError"
+      ? "v9-public-materialization-retry-timeout" : "v9-public-materialization-retry-failed";
+  }
+  const retryMetadata: CronMetadataRecord = publicMaterializationRetryReason === null ? {} : { publicMaterializationRetryReason };
+  const unavailable = (reason: string, metadata: CronMetadataRecord = {}) => sourceUnavailable(reason, { ...retryMetadata, ...metadata });
   const catalogAdmission = assessSafetyScoreV9ResourceBudget({
     catalogAssets: TRACKED_SOURCE_COINS.length, activeAssets: 0, inputBytes: null,
   });
@@ -360,7 +394,7 @@ export async function computeSafetyScoreV9(
       const reason = disposition === "advanced" ? "v9-capture-advanced" : "v9-evaluator-changed-recapture-pending";
       return createCronResult({
         status: "skipped_neutral", itemCount: 0,
-        metadata: { stage: "input-identity", reason, identityMismatch },
+        metadata: { ...retryMetadata, stage: "input-identity", reason, identityMismatch },
         productivity: { productive: false, reason },
       });
     }
@@ -407,6 +441,7 @@ export async function computeSafetyScoreV9(
       return createCronResult({
         status: "skipped_neutral", itemCount: 0,
         metadata: {
+          ...retryMetadata,
           stage: "publication-admission", reason: "v9-slot-window-too-short",
           remainingMs: Math.max(0, remainingMs),
           minimumRemainingMs: options.executionWindow.minimumRemainingMs,
@@ -600,6 +635,7 @@ export async function computeSafetyScoreV9(
         ? fixedInput.activeAssetIds.length
         : 0,
     metadata: JSON.stringify({
+      ...retryMetadata,
       ...(degradationReasons.length > 0
         ? { reason: degradationReasons[0], degradationReasons }
         : {}),

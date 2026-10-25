@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { URL as NodeURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { setTimeout as delay } from "node:timers/promises";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -94,7 +96,7 @@ async function assertServedEquivalent(db: D1Database) {
 }
 
 describe("materialized V9 response", () => {
-  it.each(["legacy", "dictionary"] as const)("serves identical warm and repaired public bytes from %s storage", async encoding => {
+  it.each(["legacy", "dictionary"] as const)("serves identical warm bytes from %s storage and leaves cold reads pending", async encoding => {
     const { sqlite, db, publication } = await seed();
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(publication.publishedAtSec * 1000);
@@ -110,11 +112,12 @@ describe("materialized V9 response", () => {
     expect(warm.headers.get("ETag")).toBe(etag);
     expect(decode).not.toHaveBeenCalled();
     sqlite.exec("DELETE FROM safety_score_public_manifests; DELETE FROM safety_score_public_fragments;");
-    const repaired = await handleReportCardsV9(db);
-    expect(repaired.status).toBe(200);
-    expect(await repaired.text()).toBe(body);
-    expect(repaired.headers.get("ETag")).toBe(etag);
-    expect(decode).toHaveBeenCalled();
+    const pending = await handleReportCardsV9(db);
+    expect(pending.status).toBe(503);
+    expect(pending.headers.get("Cache-Control")).toBe("no-store");
+    expect(await pending.json()).toMatchObject({ reason: "v9-public-materialization-pending" });
+    expect(decode).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_public_manifests").get()!.n).toBe(0);
   });
 
   it("negotiates compact freshness without changing cards, accepted storage or the old strict wire", async () => {
@@ -335,8 +338,8 @@ describe("materialized V9 response", () => {
     } });
   });
 
-  it("preserves source clocks across hits, expiry and repair; computes freshness at the request instant", async () => {
-    const { db, sqlite, publication } = await seed();
+  it("preserves source clocks across hits and expiry; computes freshness at the request instant", async () => {
+    const { db, publication } = await seed();
     const budget = SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC;
     for (const age of [0, budget - 0.5, budget, budget + 1, budget * 10, -API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC - 1]) {
       vi.useFakeTimers();
@@ -350,9 +353,7 @@ describe("materialized V9 response", () => {
       expect(response.headers.get("X-Safety-Score-Freshness-Budget")).toBe(String(budget));
       expect(response.headers.get("X-Safety-Score-Generation")).toBe(publication.publicationGenerationId);
     }
-    sqlite.exec("DELETE FROM safety_score_public_fragments; DELETE FROM safety_score_public_manifests");
-    expect(await (await handleReportCardsV9(db)).json()).toMatchObject({ updatedAt: publication.publishedAtSec, asOfSec: publication.asOfSec });
-    expect(readManifest(sqlite).publishedAtSec).toBe(publication.publishedAtSec);
+
   });
 
   it("uses the admitted representation without decoding a mutated canonical payload on hits", async () => {
@@ -422,27 +423,28 @@ describe("materialized V9 response", () => {
     expect(sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY)).toEqual(marker);
     expect(sqlite.prepare("SELECT * FROM safety_score_public_manifests").all()).toEqual(manifests);
     vi.useFakeTimers({ toFake: ["Date"] });
-    // Within the lag budget the previous generation is still the newest public snapshot.
-    vi.setSystemTime((next.publishedAtSec + 60) * 1000);
-    const lagging = await handleReportCardsV9(db);
-    expect(lagging.status).toBe(200);
-    expect(lagging.headers.get("X-Safety-Score-Generation")).toBe(publication.publicationGenerationId);
-    expect(await lagging.json()).toEqual({ ...expected, publicationHealth: {
-      ...currentInput(next).publicationHealth,
-      acceptedPublicationGenerationId: publication.publicationGenerationId, acceptedAtSec: publication.publishedAtSec,
-    } });
-    // Past it, a failed request repair serves the lagging generation as held, never as current.
-    vi.setSystemTime((next.publishedAtSec + CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec + 1) * 1000);
-    expect(await (await handleReportCardsV9(db)).json()).toMatchObject({
-      updatedAt: publication.publishedAtSec,
-      safetyScoreIdentity: { publicationGenerationId: publication.publicationGenerationId },
-      publicationHealth: { status: "held", acceptedPublicationGenerationId: publication.publicationGenerationId },
-    });
+    const decode = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
+    // Pending is held immediately, both within and beyond one materialization cadence.
+    for (const age of [60, CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec + 1, SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC + 1]) {
+      vi.setSystemTime((next.publishedAtSec + age) * 1000);
+      const lagging = await handleReportCardsV9(db);
+      expect(lagging.status).toBe(200);
+      expect(lagging.headers.get("X-Safety-Score-Status")).toBe("held");
+      expect(lagging.headers.get("X-Safety-Score-Generation")).toBe(publication.publicationGenerationId);
+      expect(lagging.headers.get("X-Safety-Score-Freshness-Budget")).toBe(String(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC));
+      expect(lagging.headers.get("X-Data-Updated-At")).toBe(String(publication.publishedAtSec));
+      expect(lagging.headers.get("Cache-Control")).toBe("no-store");
+      expect(lagging.headers.get("ETag")).toBeNull();
+      expect(await lagging.json()).toEqual({ ...expected, publicationHealth: {
+        ...currentInput(next).publicationHealth, status: "held", heldSinceSec: next.publishedAtSec,
+        acceptedPublicationGenerationId: publication.publicationGenerationId, acceptedAtSec: publication.publishedAtSec,
+        reasons: [{ code: "v9-public-materialization-pending" }],
+      } });
+    }
     sqlite.exec("DROP TRIGGER refuse_fragment");
-    // Once writes recover, request repair reaches the accepted generation without the publisher.
-    expect(await (await handleReportCardsV9(db)).json()).toMatchObject({
-      updatedAt: next.publishedAtSec, publicationHealth: currentInput(next).publicationHealth,
-    });
+    expect((await handleReportCardsV9(db)).headers.get("X-Safety-Score-Status")).toBe("held");
+    expect(decode).not.toHaveBeenCalled();
+    // Only the heavy materializer advances selection after writes recover.
     await materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!);
     expect(JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY)!.value as string))
       .toMatchObject({ publicationGenerationId: next.publicationGenerationId, publishedAtSec: next.publishedAtSec });
@@ -541,96 +543,27 @@ describe("materialized V9 response", () => {
     expect(expected.updatedAt).toBe(publication.publishedAtSec);
   });
 
-  it("admits only one cold builder across isolates and representation keys", async () => {
+  it("never imports the full parser or writes during concurrent cold reads", async () => {
+    const source = readFileSync(new NodeURL("../../lib/report-cards-v9-materialization.ts", import.meta.url), "utf8");
+    expect(source).not.toMatch(/\bparseSafetyScoreV9Publication\b/);
     const { db, sqlite } = await seed();
     sqlite.exec("DELETE FROM safety_score_public_manifests; DELETE FROM safety_score_site_manifests");
-    let enter!: () => void;
-    let release!: () => void;
-    const entered = new Promise<void>(resolve => { enter = resolve; });
-    const gate = new Promise<void>(resolve => { release = resolve; });
-    const originalParse = publicationCodec.parseSafetyScoreV9Publication;
-    const parse = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication").mockImplementation(async (...args) => {
-      enter();
-      await gate;
-      return originalParse(...args);
-    });
-    const claimant = handleReportCardsV9(db);
-    await entered;
-    try {
-      // Separate binding objects share D1, not isolate-local promise state.
-      const otherIsolate = createSqliteD1(sqlite);
-      const contenders = await Promise.all([
-        handleReportCardsV9(otherIsolate),
-        handleReportCardsV9Table(otherIsolate),
-        handleReportCardsV9Detail(otherIsolate, new URL("https://example.com/api/report-cards/v9-detail?stablecoin=usdc-circle")),
-      ]);
-      for (const response of contenders) {
-        expect(response.status).toBe(503);
-        expect(response.headers.get("Cache-Control")).toBe("no-store");
-        expect(await response.json()).toMatchObject({ reason: "v9-public-materialization-repair-in-progress" });
-      }
-      expect(parse).toHaveBeenCalledTimes(1);
-    } finally { release(); }
-    expect((await claimant).status).toBe(200);
+    const decode = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
+    const rows = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
+    const otherIsolate = createSqliteD1(sqlite);
+    for (const response of await Promise.all([
+      handleReportCardsV9(db), handleReportCardsV9(otherIsolate), handleReportCardsV9Table(otherIsolate),
+      handleReportCardsV9Detail(otherIsolate, new URL("https://example.com/api/report-cards/v9-detail?stablecoin=usdc-circle")),
+    ])) {
+      expect(response.status).toBe(503);
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+      expect(await response.json()).toMatchObject({ reason: "v9-public-materialization-pending" });
+    }
+    expect(decode).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(rows);
+    expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_public_manifests").get()!.n).toBe(0);
     expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_site_manifests").get()!.n).toBe(0);
     expect(sqlite.prepare("SELECT count(*) AS n FROM cron_leases").get()!.n).toBe(0);
-  });
-
-  it("allows an expired repair claim to be taken over without changing producer clocks", async () => {
-    const { db, sqlite, publication } = await seed();
-    const manifest = readManifest(sqlite);
-    sqlite.exec("DELETE FROM safety_score_public_manifests");
-    vi.useFakeTimers();
-    vi.setSystemTime(1_000_000);
-    const leaseKey = `v9-materialization:${publication.publicationGenerationId}:${manifest.version}:${manifest.payloadSha256}`;
-    sqlite.prepare("INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at) VALUES (?, ?, ?, ?, ?)")
-      .run(leaseKey, "abandoned-request", 1060, 1000, 1000);
-    const parse = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
-    expect(await (await handleReportCardsV9(db)).json()).toMatchObject({ reason: "v9-public-materialization-repair-in-progress" });
-    expect(parse).not.toHaveBeenCalled();
-    vi.setSystemTime(1_061_000);
-    const response = await handleReportCardsV9(db);
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ updatedAt: publication.publishedAtSec, asOfSec: publication.asOfSec });
-    expect(parse).toHaveBeenCalledTimes(1);
-    expect(sqlite.prepare("SELECT count(*) AS n FROM cron_leases").get()!.n).toBe(0);
-  });
-
-  it.each(["expired", "replaced"])("rejects a repair with an %s lease before the atomic write", async mode => {
-    const { db, sqlite } = await seed();
-    sqlite.exec("DELETE FROM safety_score_public_manifests");
-    vi.useFakeTimers();
-    vi.setSystemTime(1_000_000);
-    const originalParse = publicationCodec.parseSafetyScoreV9Publication;
-    vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication").mockImplementation(async (...args) => {
-      const publication = await originalParse(...args);
-      vi.setSystemTime(1_061_000);
-      if (mode === "replaced") sqlite.exec("UPDATE cron_leases SET lease_owner = 'replacement', lease_until = 1120");
-      return publication;
-    });
-    expect((await handleReportCardsV9(db)).status).toBe(503);
-    expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_public_manifests").get()!.n).toBe(0);
-    expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_public_fragments").get()!.n).toBe(0);
-    if (mode === "replaced") expect(sqlite.prepare("SELECT lease_owner FROM cron_leases").get()!.lease_owner).toBe("replacement");
-    else expect(sqlite.prepare("SELECT count(*) AS n FROM cron_leases").get()!.n).toBe(0);
-  });
-
-  it("rolls back a first-read backfill that loses its canonical CAS without leaving orphan fragments", async () => {
-    const { db, sqlite, publication } = await seed();
-    const oldRows = sqlite.prepare("SELECT key, value, updated_at FROM cache").all();
-    const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
-    await persistAndMaterialize(db, currentInput(next));
-    const nextRows = sqlite.prepare("SELECT key, value, updated_at FROM cache").all();
-    sqlite.prepare("DELETE FROM safety_score_public_manifests WHERE generation_id = ?").run(publication.publicationGenerationId);
-    for (const row of oldRows) sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?").run(row.value, row.updated_at, row.key);
-    const racingDb = { ...db, batch: async <T = unknown>(statements: D1PreparedStatement[]) => {
-      for (const row of nextRows) sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?").run(row.value, row.updated_at, row.key);
-      return db.batch<T>(statements);
-    } } as D1Database;
-    expect((await handleReportCardsV9(racingDb)).status).toBe(503);
-    expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_public_manifests WHERE generation_id = ?").get(publication.publicationGenerationId)!.n).toBe(0);
-    expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_public_fragments WHERE generation_id = ?").get(publication.publicationGenerationId)!.n).toBe(0);
-    expect(await (await handleReportCardsV9(db)).json()).toMatchObject({ updatedAt: next.publishedAtSec });
   });
 
   it("does not treat an independently recorded failed attempt as a hold", async () => {

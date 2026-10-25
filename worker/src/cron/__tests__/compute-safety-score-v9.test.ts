@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => ({
   loadEvidenceJournalById: vi.fn(),
   loadSupplyAttributionJournalById: vi.fn(),
   runPublication: vi.fn(),
+  retryMaterialization: vi.fn(),
 }));
 
 vi.mock("../../lib/db-cache", async (importOriginal) => ({
@@ -93,6 +94,7 @@ vi.mock("../../lib/safety-score-v9/supply-attribution-journal-store", () => ({
 
 vi.mock("../../lib/safety-score-v9/publication-runner", () => ({
   runSafetyScoreV9Publication: mocks.runPublication,
+  retryPendingSafetyScoreV9PublicMaterialization: mocks.retryMaterialization,
 }));
 
 const { computeSafetyScoreV9, SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC } = await import("../compute-safety-score-v9");
@@ -202,6 +204,57 @@ describe("computeSafetyScoreV9", () => {
       .mockReset()
       .mockResolvedValue({});
     mocks.runPublication.mockReset();
+    mocks.retryMaterialization.mockReset().mockResolvedValue(null);
+  });
+
+  it("retries materialization before a missing prepare input can stop the next slot", async () => {
+    mocks.getCaches.mockResolvedValue(new Map());
+    const db = {} as D1Database;
+    const result = await computeSafetyScoreV9(db);
+    expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "fixed-input-missing" });
+    expect(mocks.retryMaterialization).toHaveBeenCalledWith(db, undefined, undefined);
+    expect(mocks.retryMaterialization.mock.invocationCallOrder[0]).toBeLessThan(mocks.getCaches.mock.invocationCallOrder[0]);
+    expect(mocks.runPublication).not.toHaveBeenCalled();
+  });
+
+  it("settles a successful same-hour :52 retry without another rating step", async () => {
+    const slotStartedAtSec = Date.parse("2026-10-25T12:52:00Z") / 1000;
+    mocks.retryMaterialization.mockResolvedValue({ status: "materialized", publishedAtSec: slotStartedAtSec - 30 * 60,
+      reason: "v9-public-materialization-retry-materialized" });
+    const result = await computeSafetyScoreV9({} as D1Database, undefined, undefined, {
+      executionWindow: { slotStartedAtSec, deadlineMs: slotStartedAtSec * 1000 + 180_000, minimumRemainingMs: 25_000 },
+    });
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "v9-public-materialization-retry-materialized" });
+    expect(mocks.getCaches).not.toHaveBeenCalled();
+    expect(mocks.runPublication).not.toHaveBeenCalled();
+  });
+
+  it.each(["failed", "timeout", "returned-failure"])("continues normal compute after a %s retry and records its reason", async mode => {
+    if (mode === "returned-failure") mocks.retryMaterialization.mockResolvedValue({ status: "failed", publishedAtSec: Date.parse("2026-10-25T12:22:00Z") / 1000,
+      reason: "v9-public-materialization-retry-failed" });
+    else mocks.retryMaterialization.mockRejectedValue(mode === "timeout"
+      ? new DOMException("Retry budget exhausted", "TimeoutError") : new Error("D1 unavailable"));
+    mockPublishedPreparation();
+    const slotStartedAtSec = Date.parse("2026-10-25T12:52:00Z") / 1000;
+    const deadlineMs = slotStartedAtSec * 1000 + 180_000;
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(slotStartedAtSec * 1000);
+    const result = await computeSafetyScoreV9({} as D1Database, undefined, undefined, {
+      executionWindow: { slotStartedAtSec, deadlineMs, minimumRemainingMs: 25_000 },
+    });
+    expect(mocks.runPublication).toHaveBeenCalledOnce();
+    expect(mocks.runPublication.mock.calls[0]![0]).toMatchObject({ publicationDeadlineMs: deadlineMs });
+    expect(JSON.parse(result.metadata!)).toMatchObject({ publication: { status: "published" },
+      publicMaterializationRetryReason: `v9-public-materialization-retry-${mode === "timeout" ? "timeout" : "failed"}` });
+  });
+
+  it("retains retry failure metadata when the ordinary input gate also stops compute", async () => {
+    mocks.retryMaterialization.mockRejectedValue(new Error("D1 unavailable"));
+    mocks.getCaches.mockResolvedValue(new Map());
+    const result = await computeSafetyScoreV9({} as D1Database);
+    expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "fixed-input-missing",
+      publicMaterializationRetryReason: "v9-public-materialization-retry-failed" });
   });
 
   it("passes the last admitted supply packets to application and records carried assets (10.26)", async () => {
