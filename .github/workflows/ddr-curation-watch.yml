@@ -1,0 +1,60 @@
+name: DDR Curation Watch
+
+# Opens one `ops:followup` issue per active catastrophic below-peg DDR incident
+# so issuer wind-down (`windDownAnnouncedAt`) and lifecycle status are curated
+# before DDR locks. Read-only against the public API; no product data changes.
+# Methodology: docs/depeg-resolver.md (Stage 1 — K6 issuer wind-down).
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Open curation follow-ups for catastrophic breaks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PHAROS_API_KEY: ${{ secrets.PHAROS_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Breaks from the last 14 days, strictly deeper than 2,500 bps (DDR's catastrophic depth
+          # bucket), using the worse of peak and live deviation. One issue per incident, ever.
+          curl -fsS --max-time 30 -H "X-API-Key: ${PHAROS_API_KEY}" \
+            'https://api.pharos.watch/api/depeg-resolver' -o "$RUNNER_TEMP/ddr.json"
+          jq -r '
+            .rows[]
+            | select(.direction == "below" and .live.eventState == "active")
+            | select(.startedAt >= (now - 14 * 86400))
+            | ([(.live.peakDeviationBps // 0), (.live.currentDeviationBps // 0)] | map(if . < 0 then -. else . end) | max) as $depth
+            | select($depth > 2500)
+            | [.incidentKey, .stablecoinId, .symbol, ($depth | floor | tostring), (.startedAt | todate[0:10])]
+            | @tsv' "$RUNNER_TEMP/ddr.json" \
+            | while IFS=$'\t' read -r incident coin symbol depth started; do
+                marker="<!-- ddr-curation:${incident} -->"
+                existing=$(gh issue list --label ops:followup --state all --limit 20 \
+                  --search "\"ddr-curation:${incident}\" in:body" --json number --jq 'length')
+                if [ "$existing" -gt 0 ]; then
+                  continue
+                fi
+                gh issue create --label ops:followup \
+                  --title "DDR curation: ${symbol} catastrophic below-peg break" \
+                  --body "${marker}
+          Due: $(date -u -d '+3 days' +%F)
+          Origin: .github/workflows/ddr-curation-watch.yml (DDRv5)
+          Check: has the issuer of \`${coin}\` announced a wind-down or termination, or is the asset frozen/dead? Break started ${started}, depth ~${depth} bps below peg (https://pharos.watch/depeg/).
+          Done when: \`windDownAnnouncedAt\` / lifecycle status is curated in the registry with a source, or the issuer is confirmed operating (comment with the evidence).
+          Evidence: public DDR row for incident \`${incident}\`"
+                echo "Opened curation follow-up for ${symbol} (${incident})"
+              done
