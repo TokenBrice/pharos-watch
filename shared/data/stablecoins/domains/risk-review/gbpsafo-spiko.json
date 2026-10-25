@@ -218,6 +218,32 @@
             "url": "https://starkscan.co/contract/0x06e8a99926ff6d56f4cb93c37b63286d736cd1f81740d53f88b4875b4cbe7f49"
           }
         ]
+      },
+      {
+        "id": "solana:7fnYygJyxQ2RsFJymjnRRa4wptPhUkfo6RT2j4BU4qhP",
+        "destinationChain": "solana",
+        "contractAddress": "7fnYygJyxQ2RsFJymjnRRa4wptPhUkfo6RT2j4BU4qhP",
+        "protocol": "unknown",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Inventoried 2026-10-25 from https://public-api.spiko.io/share-classes/gbpSAFO. Exact issuer-listed Solana register identity, five decimals, zero supply and issuer authority were verified on-chain. Transfer-route and complete mint-control research remain unresolved; existing sibling reviews do not cover this deployment."
+      },
+      {
+        "id": "arbitrum:0x541b1c34fb941cdee6d400d06e27240d9c4e10d8",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x541b1c34fb941cdee6d400d06e27240d9c4e10d8",
+        "protocol": "unknown",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Inventoried 2026-10-25 from https://public-api.spiko.io/share-classes/gbpSAFO. Exact issuer-listed ArbitrumUk register identity, five decimals, zero supply and issuer authority were verified on-chain. Transfer-route and complete mint-control research remain unresolved; existing sibling reviews do not cover this deployment."
       }
     ]
   },

@@ -1,15 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "../stablecoins/registry";
-import { CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS, getOnchainSupplyHoldReason, onchainSupplyProbeFamily, selectCuratedAggregateOnchainSupplyProbeContracts } from "../onchain-supply-probe";
+import { CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS, onchainSupplyProbeFamily, selectCuratedAggregateOnchainSupplyProbeContracts } from "../onchain-supply-probe";
 
 describe("NAV native supply rosters", () => {
   for (const meta of TRACKED_META_BY_ID.values()) {
     if (!meta.id.endsWith("-spiko") && meta.id !== "safo-spiko-usd" && meta.id !== "usdy-ondo-finance") continue;
     it(`requires every reviewed ${meta.symbol} leg or exact IBC representation accounting`, () => {
-      if (!["ustbl-spiko", "eurspkcc-spiko", "usdy-ondo-finance"].includes(meta.id)) {
-        expect(selectCuratedAggregateOnchainSupplyProbeContracts(meta)).toBeNull();
-        return;
-      }
       const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta)!;
       const excluded = CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS[meta.id] ?? [];
       expect(selected).not.toBeNull();
@@ -24,9 +20,18 @@ describe("NAV native supply rosters", () => {
       })).toBeNull();
     });
   }
-  it.each(["eursafo-spiko", "safo-spiko-usd", "gbpsafo-spiko", "chfsafo-spiko"])("withholds %s until its issuer-listed ArbitrumUk perimeter is reconciled", (id) => {
-    expect(selectCuratedAggregateOnchainSupplyProbeContracts(TRACKED_META_BY_ID.get(id)!)).toBeNull();
-    expect(getOnchainSupplyHoldReason(id)).toBeNull();
+  it.each(["eursafo-spiko", "safo-spiko-usd", "gbpsafo-spiko", "chfsafo-spiko"])("reads both exact Arbitrum registers for %s regardless of catalog order", (id) => {
+    const meta = TRACKED_META_BY_ID.get(id)!;
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta)!;
+    const arbitrum = selected.filter(({ contract }) => contract.chain === "arbitrum");
+    expect(arbitrum).toHaveLength(2);
+    expect(new Set(arbitrum.map(({ contract }) => contract.address)).size).toBe(2);
+    expect(arbitrum.every(({ config }) => config.allowZeroSupply)).toBe(true);
+    expect(selectCuratedAggregateOnchainSupplyProbeContracts({ ...meta, contracts: [...meta.contracts!].reverse() }))
+      .toEqual(selected);
+    expect(selectCuratedAggregateOnchainSupplyProbeContracts({ ...meta,
+      contracts: [...meta.contracts!, { ...arbitrum[0].contract, address: "0x0000000000000000000000000000000000000001" }],
+    })).toBeNull();
   });
   it("does not excuse mutated IBC denominations or omit their canonical backing leg", () => {
     const meta = TRACKED_META_BY_ID.get("usdy-ondo-finance")!;

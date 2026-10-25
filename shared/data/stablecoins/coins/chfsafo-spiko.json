@@ -162,6 +162,11 @@
       "chain": "solana",
       "address": "6Gst8o3L5uNtkUvhEg23HpDLpYRdNQTgdn1Bc7jnCM5c",
       "decimals": 5
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x2f44bfa164df2f8cda61c4f1e7355b77cd0f81f8",
+      "decimals": 5
     }
   ],
   "collateralQuality": "rwa",

@@ -8,6 +8,8 @@ export type OnchainSupplyContract = NonNullable<StablecoinMeta["contracts"]>[num
 
 export interface CuratedOnchainSupplyContractConfig {
   chain: string;
+  /** Exact deployment when a chain hosts multiple independently issued registers. */
+  address?: string;
   rpcUrl?: string;
   fallbackRpcUrl?: string;
   /**
@@ -116,12 +118,6 @@ const REVIEWED_ONCHAIN_SUPPLY_HOLDS: Readonly<Record<string, SupplyUnavailableRe
   [SFRAX_STOCK_PERIMETER.assetId]: "economic-float-unreconciled",
 };
 
-// Reviewed 2026-10-25 /share-classes/: issuer-listed ArbitrumUk is absent
-// from CHAIN_META/catalog. Refuse only the roster; retain CoinGecko supply.
-const INCOMPLETE_ISSUER_AGGREGATE_IDS: ReadonlySet<string> = new Set([
-  "eursafo-spiko", "safo-spiko-usd", "gbpsafo-spiko", "chfsafo-spiko",
-]);
-
 export function getOnchainSupplyHoldReason(assetId: string): SupplyUnavailableReason | null {
   return Object.prototype.hasOwnProperty.call(REVIEWED_ONCHAIN_SUPPLY_HOLDS, assetId)
     ? REVIEWED_ONCHAIN_SUPPLY_HOLDS[assetId] : null;
@@ -132,9 +128,13 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   readonly CuratedOnchainSupplyContractConfig[]
 > = {
   // Reviewed 2026-10-25: Spiko's independent native share registers sum, with
-  // Soroban total_supply (not a classic Horizon issuer) on Stellar.
+  // Soroban total_supply on Stellar. ArbitrumUk is a second Arbitrum One
+  // register, not another chain; exact addresses keep both reads distinct.
+  // The added ArbitrumUk/Solana registers have verified zero stock, not omissions.
   "eursafo-spiko": [
-    { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
+    { chain: "arbitrum", address: "0x1412632f2b89e87bfa20c1318a43ced25f1d7b76", allowZeroSupply: true },
+    { chain: "arbitrum", address: "0x59dbe110efbc17e8e9b18d23de2abb2aba1f6665", allowZeroSupply: true },
+    { chain: "ethereum", allowZeroSupply: true },
     { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
     supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
     { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
@@ -143,11 +143,12 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
     { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
     supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
-    // Required issuer register; selection stays closed until the catalog includes it.
     { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
   ],
   "safo-spiko-usd": [
-    { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
+    { chain: "arbitrum", address: "0x0c709396739b9cfb72bcea6ac691ce0ddf66479c", allowZeroSupply: true },
+    { chain: "arbitrum", address: "0x6a47a9091f2ca880a9ae291e2232d9302da11745", allowZeroSupply: true },
+    { chain: "ethereum", allowZeroSupply: true },
     { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
     supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
     { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
@@ -159,11 +160,15 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
   ],
   "gbpsafo-spiko": [
-    { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
+    { chain: "arbitrum", address: "0xbe023308ac2ef7e1c3799f4e6a3003ee6d342635", allowZeroSupply: true },
+    { chain: "arbitrum", address: "0x541b1c34fb941cdee6d400d06e27240d9c4e10d8", allowZeroSupply: true },
+    { chain: "ethereum", allowZeroSupply: true },
     { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
     supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
     { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
   ],
+  // Reviewed 2026-10-25: complete stock agrees with issuer totals; CoinGecko's
+  // overstated share count gives ratio 0.713155, so partition admission stays closed.
   "eurspkcc-spiko": [
     { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
     { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
@@ -177,7 +182,9 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
   ],
   "chfsafo-spiko": [
-    { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
+    { chain: "arbitrum", address: "0x97e7962bcd091e7ecfb583fc96289b1e1553ac6e", allowZeroSupply: true },
+    { chain: "arbitrum", address: "0x2f44bfa164df2f8cda61c4f1e7355b77cd0f81f8", allowZeroSupply: true },
+    { chain: "ethereum", allowZeroSupply: true },
     { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
     supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
     { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
@@ -1219,13 +1226,14 @@ export function selectSupplementalOnchainSupplyProbeContract(meta: StablecoinMet
 export function selectCuratedAggregateOnchainSupplyProbeContracts(
   meta: StablecoinMeta,
 ): readonly CuratedAggregateOnchainSupplyContract[] | null {
-  if (getOnchainSupplyHoldReason(meta.id) || INCOMPLETE_ISSUER_AGGREGATE_IDS.has(meta.id)) return null;
+  if (getOnchainSupplyHoldReason(meta.id)) return null;
   const curatedContracts = CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS[meta.id];
   if (!curatedContracts || curatedContracts.length === 0) return null;
 
   const selected: CuratedAggregateOnchainSupplyContract[] = [];
   for (const config of curatedContracts) {
-    const contract = meta.contracts?.find((entry) => entry.chain === config.chain);
+    const contract = meta.contracts?.find((entry) => entry.chain === config.chain
+      && (config.address == null || entry.address === config.address));
     if (!contract || !supportsOnchainSupplyProbe(contract)) return null;
     selected.push({ config, contract });
   }

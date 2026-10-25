@@ -387,6 +387,19 @@
             "url": "https://public-api.spiko.io/share-classes/chfSAFO"
           }
         ]
+      },
+      {
+        "id": "arbitrum:0x2f44bfa164df2f8cda61c4f1e7355b77cd0f81f8",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x2f44bfa164df2f8cda61c4f1e7355b77cd0f81f8",
+        "protocol": "unknown",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Inventoried 2026-10-25 from https://public-api.spiko.io/share-classes/chfSAFO. Exact issuer-listed ArbitrumUk register identity, five decimals, zero supply and issuer authority were verified on-chain. Transfer-route and complete mint-control research remain unresolved; existing sibling reviews do not cover this deployment."
       }
     ]
   }

@@ -87,6 +87,11 @@
       "chain": "stellar",
       "address": "CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR",
       "decimals": 5
+    },
+    {
+      "chain": "solana",
+      "address": "DEtiguzuMC72hRkMHETcsXeKrJ6Djb6tMebQqjZoBSgt",
+      "decimals": 5
     }
   ],
   "collateralQuality": "rwa",
