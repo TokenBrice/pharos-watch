@@ -18,7 +18,7 @@ import { D1_MAX_BOUND_PARAMETERS, executeAtomicBatch, prepareMultiRowInsertState
 import { D1_BATCH_SIZE } from "./constants";
 import { sha256HexFromUtf8Chunks } from "./hash";
 import { loadSafetyScoreV9PublicationStoredRow } from "./safety-score-v9/publication-chunks";
-import { projectV9Table, projectV9Detail } from "@shared/lib/report-cards-v9-projections";
+import { projectV9Table, projectV9Detail, projectV9DetailNeighborhoodCard } from "@shared/lib/report-cards-v9-projections";
 import type { ReportCardsV9ProjectionSource, ReportCardsV9TableResponse, ReportCardsV9DetailResponse } from "@shared/types/report-cards-v9-projections";
 import { acquireCronLease, releaseCronLease } from "./cron-lease-primitives";
 import { loadActiveSafetyScoreIndex } from "./safety-score-index";
@@ -72,8 +72,10 @@ function* buildV9PublicMaterializations(
     return artifact;
   };
   yield boundedSite(buildMaterialization(table, publication, payloadSha256));
+  // Common-mode neighborhoods can span the cohort; project their small rows once.
+  const neighborhoodCards = snapshot.cards.map(projectV9DetailNeighborhoodCard);
   for (const card of snapshot.cards) {
-    yield boundedSite(buildMaterialization(projectV9Detail(snapshot, card.id, table.dependencyGraph), publication, payloadSha256));
+    yield boundedSite(buildMaterialization(projectV9Detail(snapshot, card.id, table.dependencyGraph, neighborhoodCards), publication, payloadSha256));
   }
 }
 

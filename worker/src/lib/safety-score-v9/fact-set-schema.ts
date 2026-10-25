@@ -604,6 +604,12 @@ const ExtensionEnvelopeSchema = z
   })
   .strict();
 
+const ExtensionHeaderSchema = z.object(ExtensionEnvelopeShape).strict();
+
+export function admitSafetyScoreV9FactSetExtensionHeader(value: unknown): Omit<SafetyScoreV9FactSetExtensionV2, "assets"> {
+  return ExtensionHeaderSchema.parse(value);
+}
+
 function salvage<T>(schema: z.ZodType<T>, value: unknown, fallback: T): T {
   const parsed = schema.safeParse(value);
   return parsed.success ? parsed.data : fallback;

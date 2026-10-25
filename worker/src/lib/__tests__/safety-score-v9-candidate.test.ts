@@ -23,6 +23,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildSafetyScoreV9Candidate,
   buildSafetyScoreV9PublicationFromNormalizedInput,
+  buildSafetyScoreV9PublicationFromOwnedInput,
+  type SafetyScoreV9FixedInputOwner,
   computeSafetyScoreV9CandidateId,
   computeSafetyScoreV9ProducerCapabilityDigest,
   publicDependencyMetadata,
@@ -40,6 +42,7 @@ import {
   v9TestClockSec,
 } from "../../test-helpers/v9-fixed-input";
 import { localControl } from "./safety-score-v9-fact-set.test-support";
+import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 
 // One day past the newest reviewed registry date the usdc-circle capture below
 // reads, so the extension's "review is later than the scoring clock" guard stays
@@ -488,6 +491,33 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       expect.objectContaining({ id: "alpha", ratingStatus: "pipeline-gap", grade: null, score: null }),
     ]);
     evaluate.mockRestore();
+  });
+
+  it.each(["evaluation", "projection"])("reloads released input for an isolated %s retry", (failure) => {
+    const fixedInput = exactFixedInput("alpha");
+    const before = stableJsonStringifyV1(fixedInput);
+    const reload = vi.fn(() => normalizeSafetyScoreV9CompilerInput(JSON.parse(before)));
+    const owner: SafetyScoreV9FixedInputOwner = { value: normalizeSafetyScoreV9CompilerInput(fixedInput), reload };
+    const evaluate = vi.spyOn(evaluateSetModule, "evaluateValidatedV9FactSetForPublication")
+      .mockImplementationOnce(() => {
+        expect(owner.value).toBeNull();
+        if (failure === "evaluation") throw new V9AssetEvaluationError("alpha", { issues: [{ path: ["structuralSignals"] }] });
+        throw new publicModule.V9PublicCardProjectionError([{ assetId: "alpha", issues: [{
+          code: "custom", message: "Invalid projected field", path: ["cards", 0, "scoreTrace"],
+        }] }]);
+      });
+    try {
+      const result = buildSafetyScoreV9PublicationFromOwnedInput({
+        fixedInputOwner: owner, extension: reviewedExtension(fixedInput), publishedAtSec: PUBLISHED_AT_SEC,
+      });
+      expect(reload).toHaveBeenCalledTimes(1);
+      expect(owner.value).toBeNull();
+      expect(stableJsonStringifyV1(fixedInput)).toBe(before);
+      expect(result.quarantines).toEqual([expect.objectContaining({ assetId: "alpha", code: "evaluation-failed" })]);
+      expect(result.candidate.cards[0]).toMatchObject({ id: "alpha", ratingStatus: "pipeline-gap", score: null, grade: null });
+    } finally {
+      evaluate.mockRestore();
+    }
   });
 
   it("quarantines an asset whose public card violates its contract instead of failing the publication", () => {

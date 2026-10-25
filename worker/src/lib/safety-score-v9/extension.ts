@@ -2267,8 +2267,21 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   options: BuildSafetyScoreV9BaselineExtensionOptions = {},
 ): SafetyScoreV9FactSetExtensionV2 {
+  const source = createSafetyScoreV9BaselineExtensionSource(fixedInput, options);
+  return { ...source.extension, assets: [...source.assets()] };
+}
+
+export interface SafetyScoreV9BaselineExtensionSource {
+  extension: SafetyScoreV9FactSetExtensionV2;
+  assets(): IterableIterator<ExtensionAsset>;
+}
+
+/** Rebuild asset-local overlays per traversal; retain only the shared dependency graph. */
+export function createSafetyScoreV9BaselineExtensionSource(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  options: BuildSafetyScoreV9BaselineExtensionOptions = {},
+): SafetyScoreV9BaselineExtensionSource {
   const metaById = options.metaById ?? ACTIVE_META_BY_ID;
-  const reuseScopeRoot = createV9ControlExecutionScopeRootReuse();
   const reviewedTransferFacts = options.reviewedTransferFacts && createReviewedAssetRegistry({
     rows: [...options.reviewedTransferFacts.values()],
     schema: SafetyScoreV9ReviewedTransferFactSchema,
@@ -2384,7 +2397,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     },
   } satisfies SafetyScoreV9FactSetExtensionV2["sources"];
 
-  return {
+  const extension: SafetyScoreV9FactSetExtensionV2 = {
     schemaVersion: 3,
     registryFingerprint,
     compiledAtSec: clockSec,
@@ -2394,9 +2407,14 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       redemptionMaxAgeSec: V9_EVIDENCE_PRODUCER_INTERVAL_SEC["sync-redemption-backstops"] * 2,
       documentedTermsMaxAgeSec: SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY.documentedTermsMaxAgeSec,
     },
-    assets: (options.assetIds === undefined
+    assets: [],
+  };
+  const assetIds = options.assetIds === undefined
       ? fixedInput.activeAssetIds
-      : fixedInput.activeAssetIds.filter((assetId) => options.assetIds!.has(assetId))).map((assetId) => {
+      : fixedInput.activeAssetIds.filter((assetId) => options.assetIds!.has(assetId));
+  return { extension, *assets() {
+    for (const assetId of assetIds) {
+      const reuseScopeRoot = createV9ControlExecutionScopeRootReuse();
       // Asset-local admission boundary (R8): a curation, adapter, or
       // point-in-time failure below — including the future-review guards — is
       // recorded on a conservative stub naming the failing field and reason.
@@ -2686,7 +2704,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         const routeReviews = buildSafetyScoreV9RouteReviews(fixedInput, assetId);
         admissionPath = "retainedRoutes";
         const retainedRoutes = buildSafetyScoreV9RetainedRoutes(fixedInput, assetId);
-        return admitSafetyScoreV9ExtensionAsset({
+        yield admitSafetyScoreV9ExtensionAsset({
           assetId,
           assetIssuerKey,
           archetype,
@@ -2758,12 +2776,12 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           ...reviewedEvidence,
         }, clockSec, reuseScopeRoot, (asset) => hydrateSafetyScoreV9ShockCoverageAsset(asset, clockSec));
       } catch (error) {
-        return quarantinedSafetyScoreV9ExtensionAsset(admitted, assetId, {
+        yield quarantinedSafetyScoreV9ExtensionAsset(admitted, assetId, {
           code: "fact-build-failed",
           path: error instanceof ReviewedRegistryEntryError ? error.path : admissionPath,
           message: toErrorMessage(error),
         });
       }
-    }),
-  };
+    }
+  } };
 }
