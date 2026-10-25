@@ -24,7 +24,7 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 import { PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { formatDateTimeLocale, timeAgo } from "@shared/lib/format";
 import { LiquidityStatusChip } from "./status-chip";
-import { LiquidityContentLoadingState } from "./loading";
+import { LiquidityContentLoadingState } from "./loading-state";
 import {
   PEG_FILTERS,
   buildLiquidityViewModel,

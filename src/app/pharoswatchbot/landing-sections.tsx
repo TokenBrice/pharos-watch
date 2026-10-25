@@ -71,7 +71,7 @@ const SETUP_STEPS = [
   },
 ] as const;
 
-/** Keeps the #getting-started anchor the HowTo JSON-LD and other routes point at. */
+/** Keeps the #getting-started anchor other routes point at. */
 export function GettingStarted() {
   return (
     <BotSection

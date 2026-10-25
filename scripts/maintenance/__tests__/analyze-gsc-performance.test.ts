@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { analyzeGscPerformanceInputs, renderGscPerformanceReport, runCli } from "../analyze-gsc-performance.mjs";
+import { analyzeGscPerformanceInputs, expectedCtr, renderGscPerformanceReport, runCli } from "../analyze-gsc-performance.mjs";
 
 const directories: string[] = [];
 afterEach(() => directories.splice(0).forEach((directory) => rmSync(directory, { recursive: true, force: true })));
@@ -23,7 +23,7 @@ function capture(files: Record<string, string>) {
 function expectMetrics(report: Awaited<ReturnType<typeof analyzeGscPerformanceInputs>>, clicks: number, impressions: number) {
   expect(report.site).toMatchObject({ clicks, impressions });
   expect(report.pages[0]).toMatchObject({ path: "/stablecoin/usdt-tether/", clicks, impressions });
-  expect(report.families[0]).toMatchObject({ family: "stablecoin-detail", pageCount: 1, clicks, impressions });
+  expect(report.families[0]).toMatchObject({ family: "stablecoin-detail:active", pageCount: 1, clicks, impressions });
 }
 
 describe("GSC performance metric authority", () => {
@@ -98,5 +98,90 @@ describe("GSC performance metric authority", () => {
   it("rejects duplicate page totals instead of double-counting an unproven second observation", async () => {
     await expect(analyzeGscPerformanceInputs([capture({ "Pages.csv": pageCsv, "Pages-copy.csv": pageCsv })]))
       .rejects.toThrow("Ambiguous duplicate page totals");
+  });
+});
+
+describe("GSC performance expectations and sitelinks", () => {
+  it("uses the capped site position curve by default and a flat override on request", async () => {
+    expect(expectedCtr(1)).toBeCloseTo(0.132, 6);
+    expect(expectedCtr(4)).toBeCloseTo(0.132 * 4 ** -1.64, 6);
+    expect(expectedCtr(0.5)).toBeCloseTo(0.132 * 0.5 ** -1.64, 6);
+    expect(expectedCtr(0.1)).toBe(0.6);
+    expect(expectedCtr(null)).toBeNull();
+
+    const curve = await analyzeGscPerformanceInputs([capture({ "Pages.csv": pageCsv })]);
+    const expectedClicks = 1000 * 0.132 * 4 ** -1.64;
+    expect(curve.site.expectedCtr).toBeCloseTo(expectedClicks / 1000, 6);
+    expect(curve.site.actualToExpected).toBeCloseTo(100 / expectedClicks, 6);
+    expect(curve.site.clickGap).toBe(Math.round(expectedClicks - 100));
+    expect(renderGscPerformanceReport(curve)).toContain("Expected CTR: site position curve");
+
+    const flat = await analyzeGscPerformanceInputs([capture({ "Pages.csv": pageCsv })], { targetCtr: 0.2 });
+    expect(flat.site).toMatchObject({ expectedCtr: 0.2, clickGap: 100, actualToExpected: 0.5 });
+    expect(flat.priorityPages[0]).toMatchObject({ path: "/stablecoin/usdt-tether/", clickGap: 100 });
+    expect(renderGscPerformanceReport(flat)).toContain("actual/expected=0.50x | clickGap=100");
+  });
+
+  it("reports an unavailable expectation, not zero, for rows without a position", async () => {
+    const report = await analyzeGscPerformanceInputs([capture({ "Pages.csv": "Page,Clicks,Impressions\n/about,1,500\n" })]);
+    expect(report.site).toMatchObject({ expectedCtr: null, actualToExpected: null, clickGap: null });
+    expect(report.priorityPages).toEqual([]);
+    expect(renderGscPerformanceReport(report)).toContain("expectedCtr=n/a | actual/expected=n/a | clickGap=n/a");
+  });
+
+  it("folds #fragment rows into a sitelink note instead of failing as duplicate page totals", async () => {
+    const report = await analyzeGscPerformanceInputs([capture({ "Pages.csv": `${pageCsv}`
+      + "https://pharos.watch/stablecoin/usdt-tether/#context,0,300,5\n"
+      + "https://pharos.watch/stablecoin/usdt-tether/#liquidity,1,40,6\n"
+      + "https://pharos.watch/stablecoin/usdc-circle/#context,0,20,7\n" })], { targetCtr: 0.2 });
+    expectMetrics(report, 100, 1000);
+    expect(report.pages).toHaveLength(1);
+    expect(report.pages[0]).toMatchObject({
+      sitelinkImpressions: 340,
+      sitelinkClicks: 1,
+      sitelinkFragments: ["#context", "#liquidity"],
+    });
+    expect(report.notes).toContain("Folded 3 #fragment sitelink rows into per-page notes; they are not summed into page totals.");
+    expect(report.notes).toContain("Sitelink fragment rows without a page total: /stablecoin/usdc-circle/ (#context)");
+    expect(renderGscPerformanceReport(report)).toContain("sitelinks=#context,#liquidity (340 impr, 1 clicks)");
+  });
+
+  it("keeps brand queries out of query opportunities and reports the brand split", async () => {
+    const queries = "Query,Clicks,Impressions,Position\npharos,0,900,9\nPharos Watch,1,200,2\nusdt freeze tracker,4,58,3.3\n";
+    const report = await analyzeGscPerformanceInputs([capture({ "Queries.csv": queries })], { minImpressions: 10 });
+    expect(report.querySplit.brand).toMatchObject({ clicks: 1, impressions: 1100 });
+    expect(report.querySplit.nonBrand).toMatchObject({ clicks: 4, impressions: 58 });
+    expect(report.queryOpportunities.map((query) => query.query)).not.toContain("pharos");
+    expect(report.queries.find((query) => query.query === "Pharos Watch")?.brand).toBe(true);
+
+    const custom = await analyzeGscPerformanceInputs([capture({ "Queries.csv": queries })], { brandPattern: "freeze" });
+    expect(custom.querySplit.brand).toMatchObject({ clicks: 4, impressions: 58 });
+    await expect(analyzeGscPerformanceInputs([capture({ "Queries.csv": queries })], { brandPattern: "(" }))
+      .rejects.toThrow("Invalid --brand-pattern");
+  });
+
+  it("splits stablecoin detail pages by registry status", async () => {
+    const csv = "Page,Clicks,Impressions,Position\n/stablecoin/usdt-tether/,1,100,4\n/stablecoin/soon-coin/,1,100,4\n"
+      + "/stablecoin/old-coin/yield/,0,100,4\n/stablecoin/gone-coin/,0,100,4\n/stablecoin/never-coin/,0,100,4\n";
+    const stablecoinStatusById = new Map([
+      ["usdt-tether", "active"], ["soon-coin", "pre-launch"], ["old-coin", "frozen"], ["gone-coin", "delisted"],
+    ]);
+    const report = await analyzeGscPerformanceInputs([capture({ "Pages.csv": csv })], { stablecoinStatusById });
+    expect(Object.fromEntries(report.pages.map((page) => [page.path, page.family]))).toEqual({
+      "/stablecoin/gone-coin/": "stablecoin-detail:inactive",
+      "/stablecoin/never-coin/": "stablecoin-detail:unlisted",
+      "/stablecoin/old-coin/yield/": "stablecoin-detail:frozen",
+      "/stablecoin/soon-coin/": "stablecoin-detail:pre-launch",
+      "/stablecoin/usdt-tether/": "stablecoin-detail:active",
+    });
+  });
+
+  it("accepts --brand-pattern on the CLI", async () => {
+    let stdout = "";
+    const directory = capture({ "Queries.csv": "Query,Clicks,Impressions,Position\nacme,0,500,3\n" });
+    expect(await runCli(["--brand-pattern", "acme", directory], { write: (text: string) => { stdout += text; } },
+      { write: () => undefined })).toBe(0);
+    expect(stdout).toContain("Brand query pattern: /acme/i");
+    expect(stdout).toContain("- brand | impressions=500");
   });
 });

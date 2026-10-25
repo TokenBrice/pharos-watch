@@ -3,12 +3,11 @@ import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { PUBLIC_ROUTE_PATHS } from "@/lib/public-route-inventory";
-import { DAILY_DIGEST_INDEX_WINDOW_SEC } from "@/lib/digest-registry";
 import sitemap from "../sitemap";
 import digests from "../../../data/digests.json";
 import { METHODOLOGY_HISTORY_ARCHIVES } from "@shared/lib/methodology-versions/archives";
 import { CHANGELOG_MONTH_ARCHIVES } from "@/lib/changelog-history";
-import { getActiveChainIds } from "@shared/lib/chains";
+import { getIndexableChainIds } from "@/lib/chain-indexing";
 import { PEG_HUB_PAGES } from "@/lib/peg-taxonomy";
 import sitemapDates from "@/generated/sitemap-dates.json";
 
@@ -39,7 +38,7 @@ describe("sitemap", () => {
 
   it("dates chain pages by their route edit, not the daily data snapshot", () => {
     const dates = sitemapDates as Record<string, string>;
-    for (const chainId of getActiveChainIds()) {
+    for (const chainId of getIndexableChainIds()) {
       const path = `/chains/${chainId}/`;
       expect(entriesByUrl.get(`${SITE_ORIGIN}${path}`)?.lastModified, path).toEqual(
         new Date(dates[path] ?? dates["/chains/"]),
@@ -59,14 +58,10 @@ describe("sitemap", () => {
     }
   });
 
-  it("lists weekly recaps and recent daily digests, leaving older dailies out", () => {
-    const newestGeneratedAt = Math.max(...digests.map((digest) => digest.generatedAt));
+  it("lists weekly recaps and leaves every daily digest out", () => {
     for (const digest of digests) {
       const entry = entriesByUrl.get(`${SITE_ORIGIN}/digest/${digest.date}/`);
-      const indexable = digest.digestType === "weekly"
-        || newestGeneratedAt - digest.generatedAt <= DAILY_DIGEST_INDEX_WINDOW_SEC;
-
-      if (!indexable) {
+      if (digest.digestType !== "weekly") {
         expect(entry, digest.date).toBeUndefined();
         continue;
       }

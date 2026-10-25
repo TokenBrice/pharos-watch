@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { FaqSection } from "@/components/faq-section";
-import { CompareContentLoadingState } from "@/app/compare/loading";
+import { CompareContentLoadingState } from "@/app/compare/loading-state";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildComparePrefillUrl } from "@/lib/compare-links";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";

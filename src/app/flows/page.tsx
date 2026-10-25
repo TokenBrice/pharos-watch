@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import type { FaqItem } from "@/lib/faq";
 import { buildLiveRouteOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import FlowsClient from "./client";
-import { FlowsLoadingState } from "./loading";
+import { FlowsLoadingState } from "./loading-state";
 import { DEFINITIONS } from "@/lib/definitions";
 
 const FLOWS_DESCRIPTION =

@@ -24,6 +24,9 @@ import {
   resolveAiSummaryClaims,
 } from "@shared/lib/ai-summary-claims";
 import { stripTermMarkup } from "../../src/lib/term-markup";
+import { formatSnapshotSafetyScoreLabel } from "../../src/lib/safety-grade-snapshot";
+import { buildStablecoinFaqItems } from "../../src/components/stablecoin-detail/static-seo-content";
+import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import type {
   DigestContentEntry,
   StablecoinAiSummariesById,
@@ -86,11 +89,15 @@ export function renderStablecoinDetail(
     ].join("\n\n"),
   ];
 
-  if (summary?.text) {
-    // Markdown never hydrates, so do not publish claims without live inputs.
-    const overview = hasAvailableAiSummaryClaims(summary.text, summary.claimTokens)
-      ? stripTermMarkup(resolveAiSummaryClaims(summary.text, summary.claimTokens).text)
-      : AI_SUMMARY_UNAVAILABLE_NOTICE;
+  // Lead with the dated release grade (the same source as the profile FAQ).
+  // Markdown never hydrates, so do not publish summary claims without live inputs.
+  const scoreLabel = isActiveStablecoinMeta(coin) ? formatSnapshotSafetyScoreLabel(id) : null;
+  const gradeSentence = scoreLabel ? `${coin.symbol} held ${scoreLabel} in Pharos's scores-latest release dataset.` : null;
+  const resolvedSummary = summary?.text && hasAvailableAiSummaryClaims(summary.text, summary.claimTokens)
+    ? stripTermMarkup(resolveAiSummaryClaims(summary.text, summary.claimTokens).text)
+    : null;
+  if (gradeSentence || summary?.text) {
+    const overview = [gradeSentence, resolvedSummary ?? AI_SUMMARY_UNAVAILABLE_NOTICE].filter(Boolean).join(" ");
     parts.push(`## Overview\n\n${overview}`);
   }
 
@@ -123,6 +130,15 @@ export function renderStablecoinDetail(
           `| ${contract.chain} | \`${contract.address}\` | ${contract.amountEncoding?.kind === "xrpl-issued-currency" ? "XRPL issued-currency decimal string" : contract.decimals} |`
         ),
       ].join("\n"),
+    );
+  }
+
+  if (coin.status !== "pre-launch") {
+    parts.push(
+      [
+        "## Quick answers",
+        ...buildStablecoinFaqItems(coin).map((item) => `### ${item.question}\n\n${item.answer}`),
+      ].join("\n\n"),
     );
   }
 

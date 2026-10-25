@@ -5,6 +5,7 @@ import { isMainThread, parentPort, Worker, workerData } from "node:worker_thread
 
 import {
   collectStructuredDataNodes,
+  countVisibleMainTags,
   decodeHtml,
   extractJsonLdBlocks,
   extractVisibleText,
@@ -21,6 +22,10 @@ import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { findDuplicateSitemapLocs, parseSitemapLocs, walkOutFiles } from "../lib/seo-sitemap.mjs";
 
 const DEFAULT_OUT_DIR = path.resolve("out");
+// These families dropped their route-level loading.tsx (2026-10-25 SEO plan,
+// TR3): its Suspense fallback put a skeleton in the static <main> and streamed
+// the real h1, copy and JSON-LD into a hidden div after it.
+const VISIBLE_MAIN_H1_ROUTE_PATTERN = /^\/(?:depeg|compare|safety-scores|screener|yield|flows|liquidity|compliance)\//;
 const BAILOUT_PATTERN = /BAILOUT_TO_CLIENT_SIDE_RENDERING|next-dynamic-bailout-to-csr/;
 const EMPTY_BAILOUT_TEMPLATE_PATTERN = /<template\s+data-dgst=(["'])BAILOUT_TO_CLIENT_SIDE_RENDERING\1><\/template>/g;
 const PHAROS_ORIGIN = "https://pharos.watch";
@@ -152,9 +157,10 @@ const DATASET_BASE_REQUIRED_PATHS = [
   "identifier.0.value",
 ];
 
-// FAQ structured data is retained as semantic markup for visible Q&A content.
-// Google retired broad FAQ rich-result visibility, so this matrix treats FAQ as
-// a consistency guardrail rather than a rich-result growth target.
+// FAQ structured data is retained as content-understanding markup that mirrors
+// visible Q&A. FAQ rich results ended (2026-05-07) and HowTo rich results are
+// retired, so the FAQPage rows below are a markup-to-copy consistency guard,
+// not rich-result coverage. Do not add FAQ or HowTo nodes to win SERP space.
 const STRUCTURED_DATA_ROUTE_MATRIX = [
   {
     label: "home page",
@@ -336,7 +342,6 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
     nodes: [
       { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
       { type: "SoftwareApplication", requiredPaths: ["name", "operatingSystem", "applicationCategory"] },
-      { type: "HowTo", requiredPaths: ["name", "step.0.name"] },
       { type: "FAQPage", requiredPaths: ["mainEntity.0.name", "mainEntity.0.acceptedAnswer.text"] },
     ],
   },
@@ -560,6 +565,19 @@ function validateStaticRedirects(rules, errors) {
       errors.push(
         `_redirects source ${rule.source} targets another redirect source ${nextRule.source} via ${rule.destination}; collapse to one hop`,
       );
+    }
+  }
+}
+
+// Retired coin IDs 301 to their peg hub only while that hub is built (hubs
+// exist only for currencies with an active coin); a hub that leaves the export
+// must not turn the redirect into a 404.
+function validateTaxonomyRedirectDestinations(rules, outDir, errors) {
+  for (const rule of rules) {
+    const destinationPath = redirectPathTemplate(rule.destination);
+    if (!destinationPath?.startsWith("/stablecoins/")) continue;
+    if (!fs.existsSync(path.join(outDir, destinationPath, "index.html"))) {
+      errors.push(`_redirects source ${rule.source} targets ${rule.destination}, which the build does not export; redirect it to /coverage/`);
     }
   }
 }
@@ -956,6 +974,7 @@ export function buildSeoPageRecord(
     indexable,
     googleBotTags: getMetaContents(html, "name", "googlebot"),
     h1Count: (html.match(/<h1\b/gi) ?? []).length,
+    visibleMainH1Count: VISIBLE_MAIN_H1_ROUTE_PATTERN.test(route) ? countVisibleMainTags(html, "h1") : null,
     hasFatalCsrBailout: hasFatalCsrBailoutMarker(html),
     hrefs: getAnchorHrefs(html),
     structuredData,
@@ -1025,6 +1044,7 @@ export function collectSeoStaticCheckResult({
   validateStaticHeaders(outDir, errors);
   validateStaticRedirects(redirectRules, errors);
   const longTitleRoutes = [];
+  validateTaxonomyRedirectDestinations(redirectRules, outDir, errors);
 
   for (const record of pageRecords) {
     if (record.hasFatalCsrBailout) {
@@ -1107,6 +1127,11 @@ export function collectSeoStaticCheckResult({
 
     if (indexable && record.h1Count !== 1) {
       errors.push(`${record.route}: expected exactly one <h1> on indexable page, got ${record.h1Count}`);
+    }
+    if (indexable && record.visibleMainH1Count != null && record.visibleMainH1Count !== 1) {
+      errors.push(
+        `${record.route}: expected exactly one visible <h1> inside <main>, got ${record.visibleMainH1Count} (a route-level loading boundary moves it into hidden streamed HTML)`,
+      );
     }
   }
 

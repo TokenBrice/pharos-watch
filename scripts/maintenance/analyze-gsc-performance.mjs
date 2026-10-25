@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
+import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   appendGscReportPreamble,
   appendGscReportSection,
@@ -19,10 +21,18 @@ import {
   writeGscUsage,
 } from "../lib/gsc-report.mts";
 
-const DEFAULT_TARGET_CTR = 0.045;
+// Site position curve fitted to Pharos's own Search Console data (Poisson grid
+// fit, 2026-10-25 SEO plan OS1): expected CTR = min(0.6, A * position^-B).
+// A flat target is 6-12x too high at positions 6-9, and industry curves sit
+// 5-10x above what this SERP mix allows. `--target-ctr` overrides it flat.
+const CTR_CURVE_A = 0.132;
+const CTR_CURVE_B = 1.64;
+const CTR_CURVE_CAP = 0.6;
+const DEFAULT_BRAND_PATTERN = "pharos";
 const DEFAULT_MIN_IMPRESSIONS = 100;
 const DEFAULT_TOP_COUNT = 20;
 const SITE_ORIGIN = "https://pharos.watch";
+const STABLECOIN_COINS_DIR = fileURLToPath(new URL("../../shared/data/stablecoins/coins/", import.meta.url));
 
 const CLICK_HEADERS = ["Clicks"];
 const IMPRESSION_HEADERS = ["Impressions"];
@@ -46,6 +56,38 @@ const DASHBOARD_PATHS = new Set([
   "/compliance/",
   "/screener/",
 ]);
+
+/** Expected CTR at an average position on the site curve; null without a usable position. */
+export function expectedCtr(position) {
+  if (position === null || !Number.isFinite(position) || position <= 0) return null;
+  return Math.min(CTR_CURVE_CAP, CTR_CURVE_A * position ** -CTR_CURVE_B);
+}
+
+/** Registry status by stablecoin id, read from the checked-in coin records. */
+function loadStablecoinStatusById() {
+  const statuses = new Map();
+  for (const name of fs.readdirSync(STABLECOIN_COINS_DIR)) {
+    if (!name.endsWith(".json")) continue;
+    const coin = JSON.parse(fs.readFileSync(path.join(STABLECOIN_COINS_DIR, name), "utf8"));
+    if (typeof coin.id === "string") statuses.set(coin.id, coin.status ?? "active");
+  }
+  return statuses;
+}
+
+function stablecoinStatusBucket(status) {
+  if (status === undefined) return "unlisted";
+  if (status === "active" || status === "pre-launch" || status === "frozen") return status;
+  return "inactive";
+}
+
+function parseBrandPattern(value) {
+  try {
+    // eslint-disable-next-line security/detect-non-literal-regexp -- operator-supplied pattern for a local read-only report
+    return new RegExp(String(value), "i");
+  } catch {
+    throw new Error(`Invalid --brand-pattern regular expression: ${value}`);
+  }
+}
 
 function findPerformanceTable(text) {
   const rows = parseCsv(text);
@@ -110,15 +152,20 @@ function normalizePageUrl(value) {
       url: parsed.origin === SITE_ORIGIN ? pathname : parsed.toString(),
       origin: parsed.origin,
       queryKeys,
+      // Search Console lists in-page sitelinks (#context) as their own URL rows.
+      fragment: parsed.hash.length > 1 ? parsed.hash : null,
     };
   } catch {
     return null;
   }
 }
 
-function pageFamilyForPath(pathname) {
+function pageFamilyForPath(pathname, stablecoinStatusById) {
   if (pathname === "/") return "home";
-  if (pathname.startsWith("/stablecoin/")) return "stablecoin-detail";
+  if (pathname.startsWith("/stablecoin/")) {
+    const id = pathname.split("/")[2] ?? "";
+    return `stablecoin-detail:${stablecoinStatusBucket(stablecoinStatusById.get(id))}`;
+  }
   if (pathname === "/stablecoins/") return "stablecoins-hub";
   if (/^\/stablecoins\/(backing|governance|infrastructure)\/[^/]+\/?$/.test(pathname)) {
     return "stablecoin-taxonomy-detail";
@@ -156,10 +203,14 @@ function emptyAggregate() {
     positionWeighted: 0,
     positionImpressions: 0,
     rowCount: 0,
+    // Expectation covers only rows with a usable position (or a flat override).
+    expectedClicks: 0,
+    expectationClicks: 0,
+    expectationImpressions: 0,
   };
 }
 
-function addMetrics(target, row) {
+function addMetrics(target, row, targetCtr) {
   target.clicks += row.clicks;
   target.impressions += row.impressions;
   target.rowCount += 1;
@@ -167,19 +218,41 @@ function addMetrics(target, row) {
     target.positionWeighted += row.position * row.impressions;
     target.positionImpressions += row.impressions;
   }
+  const expected = targetCtr ?? expectedCtr(row.position);
+  if (expected !== null) {
+    target.expectedClicks += expected * row.impressions;
+    target.expectationClicks += row.clicks;
+    target.expectationImpressions += row.impressions;
+  }
 }
 
-function finishAggregate(aggregate, targetCtr) {
+function sumAggregates(aggregates) {
+  const total = emptyAggregate();
+  for (const aggregate of aggregates) {
+    for (const key of Object.keys(total)) total[key] += aggregate[key];
+  }
+  return total;
+}
+
+function finishAggregate(aggregate) {
   const ctr = aggregate.impressions > 0 ? aggregate.clicks / aggregate.impressions : 0;
-  const targetClickGap = Math.max(0, Math.ceil(targetCtr * aggregate.impressions - aggregate.clicks));
   const averagePosition =
     aggregate.positionImpressions > 0 ? aggregate.positionWeighted / aggregate.positionImpressions : null;
+  const hasExpectation = aggregate.expectationImpressions > 0;
   return {
     ...aggregate,
     ctr,
     averagePosition,
-    targetClickGap,
+    expectedCtr: hasExpectation ? aggregate.expectedClicks / aggregate.expectationImpressions : null,
+    actualToExpected:
+      hasExpectation && aggregate.expectedClicks > 0 ? aggregate.expectationClicks / aggregate.expectedClicks : null,
+    // Signed: positive means clicks below the curve, negative means above it.
+    clickGap: hasExpectation ? Math.round(aggregate.expectedClicks - aggregate.expectationClicks) : null,
   };
+}
+
+function compareClickGap(left, right) {
+  return (right.clickGap ?? Number.NEGATIVE_INFINITY) - (left.clickGap ?? Number.NEGATIVE_INFINITY);
 }
 
 function normalizeSourceLabel(value) {
@@ -225,7 +298,7 @@ function parsePerformanceRows(entry, table) {
   return { rows, skippedMetricRows };
 }
 
-function aggregatePerformanceRows(rows, targetCtr, minImpressions, topCount) {
+function aggregatePerformanceRows(rows, { targetCtr, minImpressions, topCount, brandPattern, stablecoinStatusById }) {
   const siteAggregate = emptyAggregate();
   const pages = new Map();
   const queries = new Map();
@@ -234,8 +307,18 @@ function aggregatePerformanceRows(rows, targetCtr, minImpressions, topCount) {
   if (captures.size > 1) {
     throw new Error(`Ambiguous GSC performance captures: ${[...captures].join(", ")}. Analyze each export separately; date-window overlap is not proven.`);
   }
+  // Sitelink rows (#fragment URLs) are folded into a per-page note, never summed into page totals.
+  const sitelinks = new Map();
+  for (const row of rows.filter((row) => row.page?.fragment)) {
+    if (!sitelinks.has(row.page.path)) sitelinks.set(row.page.path, { impressions: 0, clicks: 0, fragments: new Set() });
+    const note = sitelinks.get(row.page.path);
+    note.impressions += row.impressions;
+    note.clicks += row.clicks;
+    note.fragments.add(row.page.fragment);
+  }
+  const pathRows = rows.filter((row) => !row.page?.fragment);
   const pageTotals = new Set();
-  for (const row of rows.filter((row) => row.grain === "page" && row.page)) {
+  for (const row of pathRows.filter((row) => row.grain === "page" && row.page)) {
     if (pageTotals.has(row.page.path)) {
       throw new Error(`Ambiguous duplicate page totals for ${row.page.path}; retain one coherent export.`);
     }
@@ -243,13 +326,13 @@ function aggregatePerformanceRows(rows, targetCtr, minImpressions, topCount) {
   }
 
   // Separate query totals are authoritative for overlapping combined rows.
-  const queryTotals = new Set(rows.filter((row) => !row.page && row.query).map((row) => row.query));
-  for (const row of rows) {
+  const queryTotals = new Set(pathRows.filter((row) => !row.page && row.query).map((row) => row.query));
+  for (const row of pathRows) {
     if (row.page) {
       const authoritative = row.grain === "page" || !pageTotals.has(row.page.path);
-      if (authoritative) addMetrics(siteAggregate, row);
+      if (authoritative) addMetrics(siteAggregate, row, targetCtr);
 
-      const family = pageFamilyForPath(row.page.path);
+      const family = pageFamilyForPath(row.page.path, stablecoinStatusById);
       if (!families.has(family)) {
         families.set(family, {
           family,
@@ -261,7 +344,7 @@ function aggregatePerformanceRows(rows, targetCtr, minImpressions, topCount) {
       const familyAggregate = families.get(family);
       familyAggregate.pages.add(row.page.path);
       familyAggregate.sources.add(row.sourceLabel);
-      if (authoritative) addMetrics(familyAggregate, row);
+      if (authoritative) addMetrics(familyAggregate, row, targetCtr);
 
       if (!pages.has(row.page.path)) {
         pages.set(row.page.path, {
@@ -278,7 +361,7 @@ function aggregatePerformanceRows(rows, targetCtr, minImpressions, topCount) {
       if (row.query) pageAggregate.queries.add(row.query);
       for (const queryKey of row.page.queryKeys) pageAggregate.queryKeys.add(queryKey);
       pageAggregate.sources.add(row.sourceLabel);
-      if (authoritative) addMetrics(pageAggregate, row);
+      if (authoritative) addMetrics(pageAggregate, row, targetCtr);
     }
     if (row.query && (!row.page || !queryTotals.has(row.query))) {
       if (!queries.has(row.query)) {
@@ -290,28 +373,44 @@ function aggregatePerformanceRows(rows, targetCtr, minImpressions, topCount) {
       }
       const queryAggregate = queries.get(row.query);
       queryAggregate.sources.add(row.sourceLabel);
-      addMetrics(queryAggregate, row);
+      addMetrics(queryAggregate, row, targetCtr);
     }
   }
 
-  const pageRows = [...pages.values()].map((page) => ({
-    ...finishAggregate(page, targetCtr),
-    queryCount: page.queries.size,
-    queryKeys: [...page.queryKeys].sort(compareText),
-    sources: [...page.sources].sort(compareText),
-  }));
+  const fragmentNotes = [...sitelinks.keys()]
+    .filter((pagePath) => !pages.has(pagePath))
+    .sort(compareText)
+    .map((pagePath) => `Sitelink fragment rows without a page total: ${pagePath} (${[...sitelinks.get(pagePath).fragments].sort(compareText).join(", ")})`);
+  const pageRows = [...pages.values()].map((page) => {
+    const sitelink = sitelinks.get(page.path);
+    return {
+      ...finishAggregate(page),
+      queryCount: page.queries.size,
+      queryKeys: [...page.queryKeys].sort(compareText),
+      sources: [...page.sources].sort(compareText),
+      sitelinkImpressions: sitelink?.impressions ?? 0,
+      sitelinkClicks: sitelink?.clicks ?? 0,
+      sitelinkFragments: sitelink ? [...sitelink.fragments].sort(compareText) : [],
+    };
+  });
   const queryRows = [...queries.values()].map((query) => ({
-    ...finishAggregate(query, targetCtr),
+    ...finishAggregate(query),
+    brand: brandPattern.test(query.query),
     sources: [...query.sources].sort(compareText),
   }));
+  const queryAggregates = [...queries.values()];
+  const querySplit = {
+    brand: finishAggregate(sumAggregates(queryAggregates.filter((query) => brandPattern.test(query.query)))),
+    nonBrand: finishAggregate(sumAggregates(queryAggregates.filter((query) => !brandPattern.test(query.query)))),
+  };
   const familyRows = [...families.values()]
     .map((family) => ({
-      ...finishAggregate(family, targetCtr),
+      ...finishAggregate(family),
       pageCount: family.pages.size,
       sources: [...family.sources].sort(compareText),
     }))
     .sort((left, right) => {
-      const byGap = right.targetClickGap - left.targetClickGap;
+      const byGap = compareClickGap(left, right);
       if (byGap !== 0) return byGap;
       const byImpressions = right.impressions - left.impressions;
       if (byImpressions !== 0) return byImpressions;
@@ -319,9 +418,9 @@ function aggregatePerformanceRows(rows, targetCtr, minImpressions, topCount) {
     });
 
   const priorityPages = pageRows
-    .filter((page) => page.impressions >= minImpressions && page.targetClickGap > 0)
+    .filter((page) => page.impressions >= minImpressions && page.clickGap > 0)
     .sort((left, right) => {
-      const byGap = right.targetClickGap - left.targetClickGap;
+      const byGap = compareClickGap(left, right);
       if (byGap !== 0) return byGap;
       const byImpressions = right.impressions - left.impressions;
       if (byImpressions !== 0) return byImpressions;
@@ -330,20 +429,20 @@ function aggregatePerformanceRows(rows, targetCtr, minImpressions, topCount) {
     .slice(0, topCount);
 
   const lowSamplePages = pageRows
-    .filter((page) => page.impressions > 0 && page.impressions < minImpressions && page.targetClickGap > 0)
+    .filter((page) => page.impressions > 0 && page.impressions < minImpressions && page.clickGap > 0)
     .sort((left, right) => {
       const byImpressions = right.impressions - left.impressions;
       if (byImpressions !== 0) return byImpressions;
-      const byGap = right.targetClickGap - left.targetClickGap;
+      const byGap = compareClickGap(left, right);
       if (byGap !== 0) return byGap;
       return compareText(left.path, right.path);
     })
     .slice(0, Math.min(topCount, 10));
 
   const queryOpportunities = queryRows
-    .filter((query) => query.impressions >= minImpressions && query.targetClickGap > 0)
+    .filter((query) => !query.brand && query.impressions >= minImpressions && query.clickGap > 0)
     .sort((left, right) => {
-      const byGap = right.targetClickGap - left.targetClickGap;
+      const byGap = compareClickGap(left, right);
       if (byGap !== 0) return byGap;
       const byImpressions = right.impressions - left.impressions;
       if (byImpressions !== 0) return byImpressions;
@@ -352,7 +451,10 @@ function aggregatePerformanceRows(rows, targetCtr, minImpressions, topCount) {
     .slice(0, topCount);
 
   return {
-    site: finishAggregate(siteAggregate, targetCtr),
+    site: finishAggregate(siteAggregate),
+    querySplit,
+    fragmentRowCount: rows.length - pathRows.length,
+    fragmentNotes,
     families: familyRows,
     pages: pageRows.sort((left, right) => compareText(left.path, right.path)),
     queries: queryRows.sort((left, right) => compareText(left.query, right.query)),
@@ -363,7 +465,10 @@ function aggregatePerformanceRows(rows, targetCtr, minImpressions, topCount) {
 }
 
 export async function analyzeGscPerformanceInputs(inputPaths, options = {}) {
-  const targetCtr = options.targetCtr ?? DEFAULT_TARGET_CTR;
+  const targetCtr = options.targetCtr ?? null;
+  const brandPatternSource = options.brandPattern ?? DEFAULT_BRAND_PATTERN;
+  const brandPattern = parseBrandPattern(brandPatternSource);
+  const stablecoinStatusById = options.stablecoinStatusById ?? loadStablecoinStatusById();
   const minImpressions = options.minImpressions ?? DEFAULT_MIN_IMPRESSIONS;
   const topCount = options.topCount ?? DEFAULT_TOP_COUNT;
   const collected = collectInputEntries(inputPaths);
@@ -385,6 +490,11 @@ export async function analyzeGscPerformanceInputs(inputPaths, options = {}) {
     queryOnlyRows += parsed.rows.filter((row) => !row.page && row.query).length;
   }
 
+  const aggregates = aggregatePerformanceRows(rows, { targetCtr, minImpressions, topCount, brandPattern, stablecoinStatusById });
+  if (aggregates.fragmentRowCount > 0) {
+    notes.push(`Folded ${aggregates.fragmentRowCount} #fragment sitelink rows into per-page notes; they are not summed into page totals.`);
+  }
+  notes.push(...aggregates.fragmentNotes);
   notes.sort(compareText);
 
   return {
@@ -392,6 +502,7 @@ export async function analyzeGscPerformanceInputs(inputPaths, options = {}) {
     notes,
     options: {
       targetCtr,
+      brandPattern: brandPatternSource,
       minImpressions,
       topCount,
     },
@@ -403,7 +514,7 @@ export async function analyzeGscPerformanceInputs(inputPaths, options = {}) {
       skippedMetricRows,
     },
     rows,
-    ...aggregatePerformanceRows(rows, targetCtr, minImpressions, topCount),
+    ...aggregates,
   };
 }
 
@@ -412,7 +523,15 @@ function formatInteger(value) {
 }
 
 function formatCtr(value) {
-  return `${(value * 100).toFixed(2)}%`;
+  return value === null ? "n/a" : `${(value * 100).toFixed(2)}%`;
+}
+
+function formatRatio(value) {
+  return value === null ? "n/a" : `${value.toFixed(2)}x`;
+}
+
+function formatGap(value) {
+  return value === null ? "n/a" : formatInteger(value);
 }
 
 function formatPosition(value) {
@@ -430,8 +549,15 @@ function formatAggregateMetrics(aggregate) {
     `clicks=${formatInteger(aggregate.clicks)}`,
     `ctr=${formatCtr(aggregate.ctr)}`,
     `avgPosition=${formatPosition(aggregate.averagePosition)}`,
-    `targetClickGap=${formatInteger(aggregate.targetClickGap)}`,
+    `expectedCtr=${formatCtr(aggregate.expectedCtr)}`,
+    `actual/expected=${formatRatio(aggregate.actualToExpected)}`,
+    `clickGap=${formatGap(aggregate.clickGap)}`,
   ].join(" | ");
+}
+
+function formatSitelinks(page) {
+  if (page.sitelinkFragments.length === 0) return "";
+  return ` | sitelinks=${page.sitelinkFragments.join(",")} (${formatInteger(page.sitelinkImpressions)} impr, ${formatInteger(page.sitelinkClicks)} clicks)`;
 }
 
 function positionBucket(value) {
@@ -448,7 +574,7 @@ function labelsForPage(page, minImpressions) {
   if (page.impressions < minImpressions) labels.push("low-sample");
   if (page.queryKeys.length > 0) labels.push("noncanonical-query");
   if (page.family === "non-indexable-or-retired") labels.push("possible-noindex/retired");
-  if (page.impressions >= minImpressions && page.targetClickGap > 0) {
+  if (page.impressions >= minImpressions && page.clickGap > 0) {
     labels.push(page.averagePosition !== null && page.averagePosition > 10 ? "ranking-first" : "quick-win");
   }
   return labels.length > 0 ? labels.join(",") : "none";
@@ -459,8 +585,12 @@ export function renderGscPerformanceReport(report) {
   appendGscReportPreamble(lines, {
     title: "GSC Performance CTR Inventory",
     detailLines: [
-      `Target CTR: ${formatCtr(report.options.targetCtr)}`,
+      report.options.targetCtr === null
+        ? `Expected CTR: site position curve min(${formatCtr(CTR_CURVE_CAP)}, ${CTR_CURVE_A} x position^-${CTR_CURVE_B})`
+        : `Expected CTR: flat --target-ctr override ${formatCtr(report.options.targetCtr)}`,
+      `Brand query pattern: /${report.options.brandPattern}/i (excluded from query opportunities)`,
       `Minimum impressions for priority rows: ${formatInteger(report.options.minImpressions)}`,
+      "Analyze 28-day exports: three-month windows carry decayed news-spike impressions.",
     ],
     inputs: report.inputs,
     notes: report.notes,
@@ -479,12 +609,17 @@ export function renderGscPerformanceReport(report) {
   lines.push(`- ${formatAggregateMetrics(report.site)}`);
   lines.push("");
 
+  lines.push("Query CTR by brand match:");
+  lines.push(`- brand | ${formatAggregateMetrics(report.querySplit.brand)}`);
+  lines.push(`- non-brand | ${formatAggregateMetrics(report.querySplit.nonBrand)}`);
+  lines.push("");
+
   appendGscReportSection(lines, "Family CTR gaps:", report.families, (family) =>
     `${family.family} | pages=${formatInteger(family.pageCount)} | ${formatAggregateMetrics(family)}${formatSources(family.sources)}`,
   );
 
   appendGscReportSection(lines, "Priority pages below target:", report.priorityPages, (page) =>
-    `${page.displayUrl} | family=${page.family} | ${formatAggregateMetrics(page)} | positionBucket=${positionBucket(page.averagePosition)} | queries=${formatInteger(page.queryCount)} | queryKeys=${page.queryKeys.join(",") || "none"} | labels=${labelsForPage(page, report.options.minImpressions)}${formatSources(page.sources)}`,
+    `${page.displayUrl} | family=${page.family} | ${formatAggregateMetrics(page)} | positionBucket=${positionBucket(page.averagePosition)} | queries=${formatInteger(page.queryCount)} | queryKeys=${page.queryKeys.join(",") || "none"} | labels=${labelsForPage(page, report.options.minImpressions)}${formatSitelinks(page)}${formatSources(page.sources)}`,
   );
 
   appendGscReportSection(lines, "Low-sample pages below target:", report.lowSamplePages, (page) =>
@@ -496,7 +631,7 @@ export function renderGscPerformanceReport(report) {
   );
 
   lines.push("Recommended triage order:");
-  lines.push("- Start with the largest family targetClickGap, then inspect its priority pages.");
+  lines.push("- Start with the largest family clickGap (clicks below the site curve), then inspect its priority pages.");
   lines.push(
     "- Compare high-impression query opportunities against the current title and meta description for matching pages.",
   );
@@ -513,7 +648,8 @@ function usage() {
     "XLSX/XLS files are reported as unsupported unless the data is exported as CSV; this script does not add dependencies.",
     "",
     "Options:",
-    `  --target-ctr <value>      Target CTR as a fraction or percent, default ${formatCtr(DEFAULT_TARGET_CTR)}`,
+    `  --target-ctr <value>      Flat target CTR (fraction or percent) instead of the site position curve`,
+    `  --brand-pattern <regex>  Case-insensitive brand query pattern, default ${DEFAULT_BRAND_PATTERN}`,
     `  --min-impressions <n>    Minimum impressions for priority rows, default ${DEFAULT_MIN_IMPRESSIONS}`,
     `  --top <n>                Number of page/query opportunities to print, default ${DEFAULT_TOP_COUNT}`,
   ]);
@@ -527,7 +663,8 @@ function usage() {
 export async function runCli(argv = process.argv.slice(2), stdout = process.stdout, stderr = process.stderr) {
   const args = [];
   const options = {
-    targetCtr: DEFAULT_TARGET_CTR,
+    targetCtr: null,
+    brandPattern: DEFAULT_BRAND_PATTERN,
     minImpressions: DEFAULT_MIN_IMPRESSIONS,
     topCount: DEFAULT_TOP_COUNT,
   };
@@ -543,6 +680,11 @@ export async function runCli(argv = process.argv.slice(2), stdout = process.stdo
       index += 1;
     } else if (arg.startsWith("--target-ctr=")) {
       options.targetCtr = parseTargetCtr(arg.slice("--target-ctr=".length));
+    } else if (arg === "--brand-pattern") {
+      options.brandPattern = parseBrandPattern(argv[index + 1]).source;
+      index += 1;
+    } else if (arg.startsWith("--brand-pattern=")) {
+      options.brandPattern = parseBrandPattern(arg.slice("--brand-pattern=".length)).source;
     } else if (arg === "--min-impressions") {
       options.minImpressions = parsePositiveNumber(argv[index + 1], "--min-impressions", { integer: true });
       index += 1;

@@ -19,20 +19,15 @@ export const DIGEST_BY_DATE: ReadonlyMap<string, DigestContentEntry> = new Map(
 
 export const DIGEST_DATES: ReadonlySet<string> = new Set(DIGEST_BY_DATE.keys());
 
-/** Daily editions stay indexable for this long; weekly recaps stay indexable forever. */
-export const DAILY_DIGEST_INDEX_WINDOW_SEC = 30 * 86_400;
-
 /**
- * Age is measured from the newest checked-in edition, not the wall clock, so
- * the sitemap and robots metadata stay deterministic for one digest snapshot.
- * Digests are refreshed into the build daily, so this tracks build time.
+ * Weekly recaps are the indexable digest unit. Daily editions stay live (and in
+ * the archive) but serve `noindex, follow` from publication and never enter the
+ * sitemap: Search Console left most of them crawled but not indexed, and a
+ * rolling index window made every edition flip from index to noindex
+ * (2026-10-25 SEO plan, NQ6).
  */
-const DIGEST_INDEX_REFERENCE_SEC = DIGEST_ENTRIES[0]?.generatedAt ?? 0;
-
-/** Older daily pages stay live (and in the archive) but leave the index and sitemap. */
 export function isDigestIndexable(entry: DigestContentEntry): boolean {
-  if (entry.digestType === "weekly") return true;
-  return DIGEST_INDEX_REFERENCE_SEC - entry.generatedAt <= DAILY_DIGEST_INDEX_WINDOW_SEC;
+  return entry.digestType === "weekly";
 }
 
 export const INDEXABLE_DIGEST_ENTRIES: readonly DigestContentEntry[] = Object.freeze(

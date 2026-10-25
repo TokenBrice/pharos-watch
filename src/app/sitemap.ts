@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
-import { getActiveChainIds } from "@shared/lib/chains";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import { CASE_STUDY_LIST } from "@/lib/case-studies";
+import { getIndexableChainIds } from "@/lib/chain-indexing";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { PEG_HUB_PEGS, PEG_HUB_SLUGS } from "@/lib/peg-landing";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
@@ -28,6 +28,7 @@ import {
   COLLIDING_DEPEG_EVENT_SLUGS,
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
   DEPEG_EVENT_ENTRIES,
+  INDEXABLE_DEPEG_EVENT_ENTRIES,
 } from "@/lib/depeg-event-page-data";
 import { API_ACCESS_PAGE_PATH, PUBLIC_PRIMARY_ROUTE_PATHS, PUBLIC_REFERENCE_ROUTE_PATHS } from "@/lib/public-route-inventory";
 
@@ -234,7 +235,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     // Chain pages move with their route's edit date, not the daily data
     // snapshot: the digest timestamp claimed 128 simultaneous changes a day.
-    ...getActiveChainIds().map((chainId) => ({
+    ...getIndexableChainIds().map((chainId) => ({
       url: `${SITE_URL}/chains/${chainId}/`,
       lastModified: lastEdited(`/chains/${chainId}/`, "/chains/"),
       changeFrequency: "daily" as const,
@@ -256,7 +257,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.5,
   }));
 
-  const depegEventPages: MetadataRoute.Sitemap = DEPEG_EVENT_ENTRIES.map((e) => ({
+  const depegEventPages: MetadataRoute.Sitemap = INDEXABLE_DEPEG_EVENT_ENTRIES.map((e) => ({
     url: `${SITE_URL}/depeg/${e.slug}/`,
     lastModified: new Date(
       Math.max(

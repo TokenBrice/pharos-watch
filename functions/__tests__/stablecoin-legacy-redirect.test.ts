@@ -22,8 +22,9 @@ describe("stablecoin legacy redirects", () => {
   it.each([
     ["cg-syrupusdc", "/stablecoin/syrupusdc-maple/"],
     ["185", "/cemetery/"],
-    ...["usp-pareto-credit"]
-      .map((alias) => [alias, "/coverage/"]),
+    ["usp-pareto-credit", "/stablecoins/usd/"],
+    ["mmxn-moneta-digital", "/stablecoins/mxn/"],
+    ["341", "/stablecoins/usd/"],
   ])("resolves reviewed legacy alias %s without depending on asset redirects", async (alias, destination) => {
     const ctx = makeContext(new Request(`https://pharos.watch/stablecoin/${alias}/?utm_source=google`, { method: "HEAD" }));
     ctx.assetsFetch.mockImplementation(async () => new Response("missing", { status: 404 }));

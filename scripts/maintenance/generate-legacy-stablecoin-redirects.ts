@@ -8,6 +8,7 @@ import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const OUTPUT_JSON_REL = "shared/data/stablecoins/legacy-llama-redirects.generated.json";
+const PEG_HUB_DESTINATION = /^\/stablecoins\/[a-z]+\/$/;
 
 interface StablecoinRedirectSource {
   llamaId?: unknown;
@@ -24,8 +25,10 @@ export function buildLegacyStablecoinRedirects(
   const redirects = new Map<string, string>();
   function add(alias: string, destination: string) {
     const targetId = destination.match(/^\/stablecoin\/([^/]+)\/$/)?.[1];
+    // Peg-hub existence is enforced against the export by check-seo-static.
+    const isPegHub = PEG_HUB_DESTINATION.test(destination);
     if (!isCanonicalStablecoinId(alias) || knownIds.has(alias)
-      || !(targetId ? knownIds.has(targetId) : ["/coverage/", "/cemetery/"].includes(destination))) {
+      || !(targetId ? knownIds.has(targetId) : isPegHub || ["/coverage/", "/cemetery/"].includes(destination))) {
       throw new Error(`Invalid legacy stablecoin redirect: ${alias} -> ${destination}`);
     }
     const existing = redirects.get(alias);

@@ -14,7 +14,6 @@ import { DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
 import { buildStablecoinDetailMetadata, hasRedundantName } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
-import { buildStablecoinUrl } from "@shared/lib/urls";
 import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
 import { Skeleton } from "@/components/ui/skeleton";
 import StablecoinDetailClient from "./client";
@@ -23,7 +22,11 @@ import { PreLaunchDetail } from "@/components/pre-launch-detail";
 import aiSummaries from "@data/ai-summaries.json";
 import failureScenarios from "@data/failure-scenarios.json";
 import { getLogoSrc, logosById } from "@/lib/logos";
-import { buildPreLaunchStablecoinJsonLd, buildStablecoinDatasetJsonLd } from "@/lib/stablecoin-detail-json-ld";
+import {
+  buildPreLaunchStablecoinJsonLd,
+  buildStablecoinBreadcrumbItems,
+  buildStablecoinDatasetJsonLd,
+} from "@/lib/stablecoin-detail-json-ld";
 import { buildStablecoinStaticMeta, type StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { buildStablecoinFaqItems, StablecoinDetailSeoContent } from "@/components/stablecoin-detail/static-seo-content";
 import { FaqSection } from "@/components/faq-section";
@@ -204,14 +207,8 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
     return (
       <>
         <PreLaunchDetail coin={coin} logoSrc={getLogoSrc(logosById, coin.id)} summary={summary} />
-        <BreadcrumbJsonLd
-          items={[
-            { name: "Home", url: "/" },
-            { name: "Upcoming", url: "/upcoming/" },
-            { name: `${coin.name} (${coin.symbol})`, url: buildStablecoinUrl(id) },
-          ]}
-        />
-        <JsonLdScript json={safeJsonLd(buildPreLaunchStablecoinJsonLd(coin))} />
+        <BreadcrumbJsonLd items={buildStablecoinBreadcrumbItems(coin)} />
+        <JsonLdScript json={safeJsonLd(buildPreLaunchStablecoinJsonLd(coin, { logoPath: getLogoSrc(logosById, coin.id) }))} />
       </>
     );
   }
@@ -233,13 +230,13 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
             }))}
           />
         </div>
-        <BreadcrumbJsonLd
-          items={[
-            { name: "Home", url: "/" },
-            { name: `${coin.name} (${coin.symbol})`, url: buildStablecoinUrl(id) },
-          ]}
+        <BreadcrumbJsonLd items={buildStablecoinBreadcrumbItems(coin)} />
+        <JsonLdScript
+          json={safeJsonLd(buildStablecoinDatasetJsonLd(coin, {
+            dateModified: summary?.updatedAt,
+            logoPath: getLogoSrc(logosById, coin.id),
+          }))}
         />
-        <JsonLdScript json={safeJsonLd(buildStablecoinDatasetJsonLd(coin, { dateModified: summary?.updatedAt }))} />
       </>
     );
   }
@@ -333,13 +330,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
         <StablecoinDetailSeoContent coin={coin} summary={null} includeHeading={false} />
         <FaqSection items={buildStablecoinFaqItems(coin)} title={`${coin.symbol} quick answers`} includeJsonLd collapsed />
       </div>
-      <BreadcrumbJsonLd
-        items={[
-          { name: "Home", url: "/" },
-          { name: "Stablecoins", url: "/stablecoins/" },
-          { name: `${coin.name} (${coin.symbol})`, url: buildStablecoinUrl(id) },
-        ]}
-      />
+      <BreadcrumbJsonLd items={buildStablecoinBreadcrumbItems(coin)} />
       <JsonLdScript
         json={safeJsonLd(
             buildStablecoinDatasetJsonLd(coin, {

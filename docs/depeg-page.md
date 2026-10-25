@@ -243,6 +243,18 @@ submitted incident when DDR consolidates fragments. Reviewed artifact removals u
 the shrink override plus one-hop redirects in `public/_redirects`; follow
 [artifact removal](./runbooks/depeg-artifact-removal.md#removal-sequence).
 
+Permanent is not the same as indexed. `buildNoindexDepegEventSlugs()` in
+`src/lib/depeg-event-config.ts` serves two thin-page tiers `noindex, follow` and drops them
+from the sitemap and `public-route-inventory.ts`: events whose opening was held on a
+low-confidence price input (`pendingReason` includes `low-confidence`), and secondary
+events in a same-coin, same-UTC-day cluster, where the event with the largest absolute
+peak (low-confidence events excluded) stays indexed. Pages that earned Search Console impressions in the
+prior three months sit in a checked-in allowlist and are never noindexed. Noindexed pages
+stay live, keep their URL and stay listed in the archive, so the continuity gate needs no
+redirect. This replaced the former "no low-information noindex tier" rule under the
+2026-10-25 SEO plan (decision D5); events are never merged, because the producer owns the
+event vocabulary.
+
 Published slugs and slug-keyed editorial entries are reserved by event ID before naming
 new rows. Adding or reordering same-day events, including cross-coin duplicate symbols,
 cannot rename existing URLs. An identity-rewriting repair must explicitly review the

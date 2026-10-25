@@ -1,4 +1,5 @@
 import cemeteryDatasetExport from "../../public/datasets/stablecoin-cemetery.json";
+import { buildPharosDataCatalogReference } from "@/lib/analytics-dataset-json-ld";
 import { buildPharosOrganizationNode } from "@/lib/json-ld";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 
@@ -23,6 +24,7 @@ type CemeteryDatasetExport = {
   updatedAt?: string | null;
   limitations: string[];
   fields: Record<string, string>;
+  rows: { deathDate?: string | null }[];
 };
 
 const cemeteryDataset = cemeteryDatasetExport as CemeteryDatasetExport;
@@ -34,6 +36,15 @@ const cemeterySourceData = cemeteryDataset.sourceData ?? [
     role: "Dataset source metadata.",
   },
 ];
+
+// Death dates are `YYYY-MM` or `YYYY-MM-DD`, so ISO string order is date order.
+const cemeteryDeathDates = cemeteryDataset.rows
+  .map((row) => row.deathDate)
+  .filter((date): date is string => typeof date === "string" && /^\d{4}-\d{2}/.test(date))
+  .sort();
+const cemeteryTemporalCoverage = cemeteryDeathDates.length > 0
+  ? `${cemeteryDeathDates[0]}/${cemeteryDeathDates[cemeteryDeathDates.length - 1]}`
+  : undefined;
 
 export function buildCemeteryDatasetJsonLd() {
   const organization = buildPharosOrganizationNode();
@@ -49,8 +60,10 @@ export function buildCemeteryDatasetJsonLd() {
     publisher: organization,
     license: PHAROS_DATA_LICENSE_URL,
     isAccessibleForFree: true,
+    includedInDataCatalog: buildPharosDataCatalogReference(),
     sameAs: cemeteryDataset.jsonUrl,
     ...(cemeteryDataset.updatedAt ? { dateModified: cemeteryDataset.updatedAt } : {}),
+    ...(cemeteryTemporalCoverage ? { temporalCoverage: cemeteryTemporalCoverage } : {}),
     keywords: [
       "stablecoin cemetery",
       "defunct stablecoins",

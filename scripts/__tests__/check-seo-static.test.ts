@@ -366,6 +366,15 @@ describe("check-seo-static", () => {
       ],
     },
     {
+      name: "fails retired-coin redirects into a peg hub the build does not export",
+      redirects: "/stablecoin/retired-coin /stablecoins/hkd/ 301\n/stablecoin/other-coin /stablecoins/usd/ 301\n",
+      extraPages: { "/stablecoins/usd/": { h1: "US Dollar stablecoins" } },
+      errors: [
+        "_redirects source /stablecoin/retired-coin targets /stablecoins/hkd/, which the build does not export; redirect it to /coverage/",
+      ],
+      absentErrors: ["_redirects source /stablecoin/other-coin targets"],
+    },
+    {
       name: "accepts static redirect rules ahead of dynamic rules",
       redirects: "/old/ /new/ 301\n/retired /new/ 301\n/old/* /new/:splat 301\n",
       absentErrors: ["follows a dynamic rule", "dynamic-counted rules"],
@@ -451,6 +460,27 @@ describe("check-seo-static", () => {
     for (const fragment of fixture.absentErrors ?? []) {
       expect(result.errors.filter((error) => error.includes(fragment))).toEqual([]);
     }
+  });
+
+  it("requires one visible <h1> inside <main> on former loading-boundary route families", async () => {
+    const root = await makeOutDir();
+    await writeBaselinePages(root, ["/depeg/", "/compare/"]);
+    await writePage(root, "/compare/", { h1: "Compare stablecoins" });
+    await mkdir(path.join(root, "depeg"), { recursive: true });
+    await writeFile(
+      pagePath(root, "/depeg/"),
+      `<!doctype html><html><head><title>Depeg tracker | Pharos</title>
+<meta name="description" content="Depeg tracker description"/>
+<link rel="canonical" href="https://pharos.watch/depeg/"/></head>
+<body><main><div class="skeleton">Loading</div></main><div hidden id="S:0"><h1>Depeg tracker</h1></div></body></html>`,
+    );
+    await writeSitemap(root, ["/", "/stability-index/", "/depeg/", "/compare/"]);
+
+    const result = collectFixtureSeoResult(root);
+
+    expect(result.errors).toContainEqual(expect.stringContaining("/depeg/: expected exactly one visible <h1> inside <main>, got 0"));
+    expect(result.errors.filter((error) => error.startsWith("/compare/: expected exactly one visible"))).toEqual([]);
+    expect(result.errors.filter((error) => error.startsWith("/stability-index/: expected exactly one visible"))).toEqual([]);
   });
 
   it("fails indexable pages with titles or descriptions outside the search-snippet envelope", async () => {

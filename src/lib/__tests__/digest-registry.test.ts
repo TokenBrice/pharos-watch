@@ -34,22 +34,17 @@ afterEach(() => {
 });
 
 describe("digest registry", () => {
-  it("indexes weekly recaps and dailies within 30 days of the newest edition", async () => {
+  it("indexes weekly recaps only; daily editions are noindex from publication", async () => {
     const day = 86_400;
     const newest = 1_800_000_000;
     const registry = await loadRegistryWith([
       storedEntry("2026-10-10", newest, "daily", 3),
       storedEntry("2026-09-10", newest - 30 * day, "daily", 2),
-      storedEntry("2026-09-09", newest - 31 * day, "daily", 1),
       storedEntry("2026-08-01", newest - 70 * day, "weekly", 1),
     ]);
 
-    expect(registry.INDEXABLE_DIGEST_ENTRIES.map((entry) => entry.date)).toEqual([
-      "2026-10-10",
-      "2026-09-10",
-      "2026-08-01",
-    ]);
-    expect(registry.isDigestIndexable(registry.DIGEST_BY_DATE.get("2026-09-09")!)).toBe(false);
+    expect(registry.INDEXABLE_DIGEST_ENTRIES.map((entry) => entry.date)).toEqual(["2026-08-01"]);
+    expect(registry.isDigestIndexable(registry.DIGEST_BY_DATE.get("2026-10-10")!)).toBe(false);
   });
 
   it("normalizes legacy snapshots that predate edition metadata", () => {

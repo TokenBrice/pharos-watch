@@ -1,5 +1,4 @@
 import { PageLoadingRowList, PageLoadingSplitHero } from "@/components/page-loading-skeleton";
-import { createPageLoadingRoute } from "@/app/page-loading-route";
 
 // Analytics tier: split outlook hero (command rail + DEWS radar), then recent depeg rows.
 const DEPEG_SKELETON_ROW_COUNT = 8;
@@ -19,8 +18,3 @@ export function DepegContentLoadingState() {
     </>
   );
 }
-
-export default createPageLoadingRoute(DepegContentLoadingState, {
-  sectionWidth: "w-28",
-  titleWidth: "w-64 sm:w-80",
-});

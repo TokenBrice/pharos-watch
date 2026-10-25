@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FaqSection } from "@/components/faq-section";
 import { CardExpandButton } from "@/components/home-alt-mini-cards/pulse-card-header";
-import { ComplianceContentLoadingState } from "@/app/compliance/loading";
+import { ComplianceContentLoadingState } from "@/app/compliance/loading-state";
 import { buildComplianceStatusDistribution, buildComplianceSummary } from "@/lib/compliance-model";
 import { ComplianceStatusDistributionBars } from "@/app/compliance/status-distribution-bar";
 import { createClientFeaturePage } from "@/lib/client-feature-page";

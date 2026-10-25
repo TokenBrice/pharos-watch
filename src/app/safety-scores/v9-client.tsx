@@ -11,7 +11,7 @@ import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
 import type { V9TableConsumerCard as V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
-import { SafetyScoresContentLoadingState } from "./loading";
+import { SafetyScoresContentLoadingState } from "./loading-state";
 import {
   SafetyEmptyState,
   SafetyResultsSummary,

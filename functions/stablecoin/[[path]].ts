@@ -15,7 +15,7 @@ function isRedirectDestination(value: string): boolean {
   const targetId = value.match(/^\/stablecoin\/([^/]+)\/$/)?.[1];
   return targetId != null
     ? KNOWN_STABLECOIN_IDS.has(targetId)
-    : value === "/coverage/" || value === "/cemetery/";
+    : value === "/coverage/" || value === "/cemetery/" || /^\/stablecoins\/[a-z]+\/$/.test(value);
 }
 
 export function resolveLegacyStablecoinRedirect(

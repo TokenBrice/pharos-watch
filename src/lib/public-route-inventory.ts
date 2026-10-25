@@ -1,4 +1,3 @@
-import { getActiveChainIds } from "@shared/lib/chains";
 import { getMechanismExplainerPath } from "@shared/lib/classification";
 import { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "@shared/lib/methodology-versions/registry";
 import { METHODOLOGY_ARCHIVE_PATHS } from "@shared/lib/methodology-versions/archives";
@@ -7,8 +6,9 @@ import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-regis
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import { BLOG_POSTS } from "@/data/blog";
 import { CASE_STUDY_EVENT_WINDOWS } from "@/lib/case-study-client-index";
+import { getIndexableChainIds } from "@/lib/chain-indexing";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
-import { DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
+import { INDEXABLE_DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
 import { INDEXABLE_DIGEST_ENTRIES } from "@/lib/digest-registry";
 import { PEG_HUB_PEGS, PEG_HUB_SLUGS } from "@/lib/peg-landing";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
@@ -63,7 +63,7 @@ const PUBLIC_ROUTE_CANDIDATES: readonly PublicRouteInventoryEntry[] = [
   ...entries("methodology", METHODOLOGY_ARCHIVE_PATHS),
   ...entries("reference", CHANGELOG_MONTH_ARCHIVES.map((archive) => archive.path)),
   ...entries("stablecoin", CLIENT_TRACKED_STABLECOINS.map((coin) => buildStablecoinUrl(coin.id))),
-  ...entries("chain", getActiveChainIds().map((chainId) => `/chains/${chainId}/`)),
+  ...entries("chain", getIndexableChainIds().map((chainId) => `/chains/${chainId}/`)),
   ...entries("chain", ["/chains/"]),
   ...entries("taxonomy", PEG_HUB_PEGS.map((peg) => `/stablecoins/${PEG_HUB_SLUGS[peg]}/`)),
   ...entries("taxonomy", ALL_STABLECOIN_TAXONOMY_PAGES.map((page) => page.href)),
@@ -78,7 +78,7 @@ const PUBLIC_ROUTE_CANDIDATES: readonly PublicRouteInventoryEntry[] = [
   ...entries("blog", BLOG_POSTS.map((post) => `/blog/${post.slug}/`)),
   ...entries("comparison", STATIC_COMPARISON_PAGES.map((page) => page.href)),
   ...entries("digest", INDEXABLE_DIGEST_ENTRIES.map((digest) => `/digest/${digest.date}/`)),
-  ...entries("depeg-event", DEPEG_EVENT_ENTRIES.map((event) => `/depeg/${event.slug}/`)),
+  ...entries("depeg-event", INDEXABLE_DEPEG_EVENT_ENTRIES.map((event) => `/depeg/${event.slug}/`)),
   ...entries("docs", PUBLIC_DOCS.map((doc) => `/docs/${doc.slug}/`)),
 ];
 

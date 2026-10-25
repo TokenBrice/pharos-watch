@@ -1,4 +1,4 @@
-import { LiquidityContentLoadingState } from "@/app/liquidity/loading";
+import { LiquidityContentLoadingState } from "@/app/liquidity/loading-state";
 import { ShareButton } from "@/components/share-button";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildLiveRouteOgImageUrl } from "@/lib/page-metadata";

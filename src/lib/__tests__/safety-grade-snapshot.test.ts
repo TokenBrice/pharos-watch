@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-current";
 import {
+  formatSnapshotSafetyScoreLabel,
   getScoresLatestSnapshotRow,
   getSnapshotSafetyAssessment,
   toScoresLatestSnapshotRow,
@@ -60,6 +62,16 @@ describe("toScoresLatestSnapshotRow", () => {
     expect(usdt?.asOfMs).toBeGreaterThan(0);
     expect(usdt?.grade).toBe(getSnapshotSafetyAssessment("usdt-tether")?.grade);
     expect(getScoresLatestSnapshotRow("not-a-coin")).toBeNull();
+  });
+});
+
+describe("formatSnapshotSafetyScoreLabel", () => {
+  it("dates the release grade and score, and returns null for unrated ids", () => {
+    const usdt = getSnapshotSafetyAssessment("usdt-tether")!;
+    const score = usdt.score !== null ? ` (${usdt.score}/100)` : "";
+    expect(formatSnapshotSafetyScoreLabel("usdt-tether"))
+      .toBe(`Safety Score ${usdt.grade}${score} as of ${PUBLIC_DATASET_CURRENT_DATE}`);
+    expect(formatSnapshotSafetyScoreLabel("not-a-coin")).toBeNull();
   });
 });
 

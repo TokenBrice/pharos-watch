@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FaqSection } from "@/components/faq-section";
 import { ShareButton } from "@/components/share-button";
-import { YieldContentLoadingState } from "@/app/yield/loading";
+import { YieldContentLoadingState } from "@/app/yield/loading-state";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildLiveRouteOgImageUrl } from "@/lib/page-metadata";
 import {

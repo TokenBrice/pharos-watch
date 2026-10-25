@@ -43,7 +43,3 @@ export function FlowsLoadingState() {
     </PageLoadingShell>
   );
 }
-
-export default function Loading() {
-  return <FlowsLoadingState />;
-}

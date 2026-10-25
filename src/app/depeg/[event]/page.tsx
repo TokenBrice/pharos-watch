@@ -27,6 +27,7 @@ import {
   DEPEG_EVENT_ENTRIES,
   eventBySlug,
   formatIncidentNumber,
+  NOINDEX_DEPEG_EVENT_SLUGS,
   type DepegEventEntry,
 } from "@/lib/depeg-event-page-data";
 import {
@@ -95,6 +96,7 @@ export async function generateMetadata(
     description,
     canonical: `/depeg/${event.slug}/`,
     ogImage: `${SITE_URL}/og-editorial-depeg.png`,
+    robots: NOINDEX_DEPEG_EVENT_SLUGS.has(event.slug) ? { index: false, follow: true } : undefined,
   });
 }
 
