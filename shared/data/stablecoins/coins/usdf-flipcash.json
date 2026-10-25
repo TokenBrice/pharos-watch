@@ -35,7 +35,6 @@
   "governanceQuality": "regulated-entity",
   "status": "pre-launch",
   "announcedDate": "2026-01",
-  "expectedLaunchDate": "2026",
   "dateHistory": [
     {
       "date": "2026",
@@ -44,6 +43,10 @@
     {
       "date": "2026-05",
       "setOn": "2026-07-19"
+    },
+    {
+      "date": "2026",
+      "setOn": "2026-10-25"
     }
   ],
   "launchPhase": "launched",
