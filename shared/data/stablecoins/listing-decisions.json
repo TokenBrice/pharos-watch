@@ -490,6 +490,7 @@
     "usdvb-versabank": "core-stablecoin",
     "btd-alpen": "core-stablecoin",
     "jpy-megabank-consortium": "core-stablecoin",
-    "jpydf-deltaforesight": "core-stablecoin"
+    "jpydf-deltaforesight": "core-stablecoin",
+    "swanusd-swan": "core-stablecoin"
   }
 }
