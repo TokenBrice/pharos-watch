@@ -3,7 +3,7 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "HKD-HSBC is the catalog entry for HSBC RedCoin, the forthcoming HKD fiat-referenced payment stablecoin of The Hongkong and Shanghai Banking Corporation Limited, licensed by HKMA and designed for 1:1 HKD redemption. It is separate from HSBC tokenized deposits."
+      "summary": "RCHKD is the catalog entry for HSBC RedCoin, the forthcoming HKD fiat-referenced payment stablecoin of The Hongkong and Shanghai Banking Corporation Limited, licensed by HKMA and designed for 1:1 HKD redemption. It is separate from HSBC tokenized deposits."
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
