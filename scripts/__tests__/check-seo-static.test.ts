@@ -73,6 +73,7 @@ async function writePage(
     robots = [],
     googleBotRobots = [],
     ogType = "website",
+    ogSiteName = "Pharos Watch",
     canonical = pageUrl(route),
     title = `${h1} | Pharos`,
     description = `${h1} description`,
@@ -85,6 +86,7 @@ async function writePage(
     robots?: string[];
     googleBotRobots?: string[];
     ogType?: string | null;
+    ogSiteName?: string | null;
     canonical?: string | null;
     title?: string;
     description?: string;
@@ -98,6 +100,7 @@ async function writePage(
   const googleBotTags = googleBotRobots.map((content) => `<meta name="googlebot" content="${content}"/>`).join("");
   const linkTags = links.map((href) => `<a href=${quote}${href}${quote}>${href}</a>`).join("");
   const ogTypeTag = ogType ? `<meta property="og:type" content="${ogType}"/>` : "";
+  const ogSiteNameTag = ogSiteName ? `<meta property="og:site_name" content="${ogSiteName}"/>` : "";
   const canonicalTag = canonical ? `<link rel="canonical" href="${canonical}"/>` : "";
   await writeFile(
     filePath,
@@ -111,6 +114,7 @@ async function writePage(
     ${canonicalTag}
     <meta property="og:title" content="${h1}"/>
     <meta property="og:description" content="${h1} description"/>
+    ${ogSiteNameTag}
     ${ogTypeTag}
     <meta name="twitter:card" content="summary_large_image"/>
     ${extraHead}
@@ -230,6 +234,11 @@ describe("check-seo-static", () => {
       errors: ["/: missing og:type"],
     },
     {
+      name: "fails missing og:site_name on indexable pages",
+      overrides: { "/": { ogSiteName: null } },
+      errors: ["/: missing og:site_name"],
+    },
+    {
       name: "allows noindex pages to omit canonical",
       extraPages: { "/404/": { h1: "Not Found", robots: ["noindex, follow"], canonical: null } },
       absentErrors: ["/404/: missing canonical"],
@@ -324,6 +333,23 @@ describe("check-seo-static", () => {
       ],
     },
     {
+      name: "fails internal anchor hrefs that point at any _redirects source, not only listed prefixes",
+      redirects: [
+        "/about/api/ /api/reference/ 301",
+        "/about/api /api/reference/ 301",
+        "/datasets/x/latest.csv /datasets/x/2026-10-22.csv 200",
+        "/old-tool/* /new-tool/ 301",
+        "",
+      ].join("\n"),
+      rootLinks: ["/about/api/", "/old-tool/deep/view/", "/datasets/x/latest.csv", "/blacklist/"],
+      errors: [
+        "/: internal anchor href points to _redirects source /about/api/: /about/api/ (use /api/reference/)",
+        "/: internal anchor href points to _redirects source /old-tool/*: /old-tool/deep/view/ (use /new-tool/)",
+        "/: internal anchor href points to retired route prefix /blacklist: /blacklist/ (use /freezewatch/)",
+      ],
+      absentErrors: ["/datasets/x/latest.csv", "_redirects source /blacklist"],
+    },
+    {
       name: "fails internal redirect chains and non-permanent internal redirects",
       redirects: "/legacy /middle/ 302\n/middle /final/ 301\n",
       errors: [
@@ -338,6 +364,15 @@ describe("check-seo-static", () => {
         "_redirects static rule /old/ follows a dynamic rule; move it above every splat/placeholder rule",
         "_redirects static rule /retired follows a dynamic rule; move it above every splat/placeholder rule",
       ],
+    },
+    {
+      name: "fails retired-coin redirects into a peg hub the build does not export",
+      redirects: "/stablecoin/retired-coin /stablecoins/hkd/ 301\n/stablecoin/other-coin /stablecoins/usd/ 301\n",
+      extraPages: { "/stablecoins/usd/": { h1: "US Dollar stablecoins" } },
+      errors: [
+        "_redirects source /stablecoin/retired-coin targets /stablecoins/hkd/, which the build does not export; redirect it to /coverage/",
+      ],
+      absentErrors: ["_redirects source /stablecoin/other-coin targets"],
     },
     {
       name: "accepts static redirect rules ahead of dynamic rules",
@@ -388,6 +423,27 @@ describe("check-seo-static", () => {
       sitemapRoutes: ["/", "/stability-index/", "/stablecoin/usdt-tether/"],
       errors: ["/stablecoin/usdt-tether/: stablecoin detail static HTML is dominated by loading shell text"],
     },
+    {
+      name: "fails profiles that render an unresolved grade claim or a bare loading dossier",
+      rootLinks: ["/stablecoin/usdt-tether/", "/stablecoin/jpyc-jpyc/", "/stablecoin/usdc-circle/"],
+      extraPages: {
+        "/stablecoin/usdt-tether/": {
+          h1: "Tether (USDT)",
+          mainText: `${"Useful stablecoin detail text ".repeat(20)}<span hidden>USDT carries a N/A overall grade.</span>`,
+        },
+        "/stablecoin/jpyc-jpyc/": { h1: "JPY Coin (JPYC)", mainText: `Loading research dossier… ${"detail ".repeat(70)}` },
+        "/stablecoin/usdc-circle/": {
+          h1: "USD Coin (USDC)",
+          mainText: `Loading research dossier… ${"detail ".repeat(70)}<h2 id="stablecoin-static-profile-title">Static</h2>`,
+        },
+      },
+      sitemapRoutes: ["/", "/stability-index/", "/stablecoin/usdt-tether/", "/stablecoin/jpyc-jpyc/", "/stablecoin/usdc-circle/"],
+      errors: [
+        '/stablecoin/usdt-tether/: profile HTML renders an unresolved claim ("N/A overall grade")',
+        '/stablecoin/jpyc-jpyc/: profile HTML is a "Loading research dossier" shell without the static profile',
+      ],
+      absentErrors: ["/stablecoin/usdc-circle/: profile HTML"],
+    },
   ] as SeoFixtureCase[])("$name", async (fixture) => {
     const root = await makeOutDir();
     if (fixture.headers !== undefined) await writeFile(path.join(root, "_headers"), fixture.headers);
@@ -404,6 +460,27 @@ describe("check-seo-static", () => {
     for (const fragment of fixture.absentErrors ?? []) {
       expect(result.errors.filter((error) => error.includes(fragment))).toEqual([]);
     }
+  });
+
+  it("requires one visible <h1> inside <main> on former loading-boundary route families", async () => {
+    const root = await makeOutDir();
+    await writeBaselinePages(root, ["/depeg/", "/compare/"]);
+    await writePage(root, "/compare/", { h1: "Compare stablecoins" });
+    await mkdir(path.join(root, "depeg"), { recursive: true });
+    await writeFile(
+      pagePath(root, "/depeg/"),
+      `<!doctype html><html><head><title>Depeg tracker | Pharos</title>
+<meta name="description" content="Depeg tracker description"/>
+<link rel="canonical" href="https://pharos.watch/depeg/"/></head>
+<body><main><div class="skeleton">Loading</div></main><div hidden id="S:0"><h1>Depeg tracker</h1></div></body></html>`,
+    );
+    await writeSitemap(root, ["/", "/stability-index/", "/depeg/", "/compare/"]);
+
+    const result = collectFixtureSeoResult(root);
+
+    expect(result.errors).toContainEqual(expect.stringContaining("/depeg/: expected exactly one visible <h1> inside <main>, got 0"));
+    expect(result.errors.filter((error) => error.startsWith("/compare/: expected exactly one visible"))).toEqual([]);
+    expect(result.errors.filter((error) => error.startsWith("/stability-index/: expected exactly one visible"))).toEqual([]);
   });
 
   it("fails indexable pages with titles or descriptions outside the search-snippet envelope", async () => {
@@ -435,6 +512,45 @@ describe("check-seo-static", () => {
         expect.stringContaining("/stability-index/: meta description is too long for search snippets"),
       ]),
     );
+  });
+
+  it("enforces title brand, dash and description ellipsis hygiene with warn-only families", async () => {
+    const root = await makeOutDir();
+    const description = "A complete meta description sentence that is long enough for the snippet envelope used by the check.";
+    const pages: Record<string, Parameters<typeof writePage>[2]> = {
+      "/": { h1: "Home", title: "Pharos: Stablecoin Analytics Dashboard Home | Pharos", description },
+      "/stablecoin/a/": { h1: "A", title: "AAA Stablecoin on Pharos: Safety Score & Risk | Pharos", description },
+      "/stablecoin/b/": { h1: "B", title: "BBB Stablecoin \u2014 Safety Score and Risk Profile | Pharos", description },
+      "/stablecoin/c/": { h1: "C", title: "CCC Stablecoin: Safety Score & Risk Profile | Pharos", description: `${description.slice(0, -1)}…` },
+      "/chains/pharos/": { h1: "Chain", title: "Pharos Network Stablecoins: Supply & Risk | Pharos", description },
+      "/blog/post/": { h1: "Post", title: "Pharos at Six Months: The Lighthouse Is Lit | Pharos Blog", description },
+      "/docs/dews/": { h1: "Docs", title: "DEWS Methodology - Pharos Docs | Pharos", description },
+      "/depeg/x/": { h1: "Depeg", title: "XYZ Depeg \u2014 March 2026: 2% Below Peg Event | Pharos", description },
+      "/compare/a-vs-b/": { h1: "Compare", title: "AAA vs BBB: Safety Scores, Reserves & Risk | Pharos", description: `${description.slice(0, -1)}…` },
+      "/stablecoin/long/": { h1: "Long", title: "LONGSYM Stablecoin (Some Issuer): Safety Score & Risk | Pharos", description },
+    };
+    for (const [route, options] of Object.entries(pages)) {
+      await writePage(root, route, { ...options, links: route === "/" ? Object.keys(pages).filter((r) => r !== "/") : [] });
+    }
+    await writeSitemap(root, Object.keys(pages));
+
+    const result = collectSeoStaticCheckResult({ outDir: root, enforceStructuredDataMatrix: false });
+    const hygiene = (messages: string[]) => messages.filter((message) =>
+      /repeats "Pharos"|dash \(U\+2012|ends in "…"|exceed 60 chars/.test(message));
+
+    expect(hygiene(result.errors)).toHaveLength(3);
+    expect(hygiene(result.errors)).toEqual(expect.arrayContaining([
+      expect.stringContaining('/stablecoin/a/: <title> repeats "Pharos" before the suffix'),
+      expect.stringContaining("/stablecoin/b/: <title> contains a figure, en or em dash"),
+      expect.stringContaining('/stablecoin/c/: meta description ends in "…"'),
+    ]));
+    expect(hygiene(result.warnings)).toHaveLength(4);
+    expect(hygiene(result.warnings)).toEqual(expect.arrayContaining([
+      expect.stringContaining('/docs/dews/: <title> repeats "Pharos" before the suffix'),
+      expect.stringContaining("/depeg/x/: <title> contains a figure, en or em dash"),
+      expect.stringContaining('/compare/a-vs-b/: meta description ends in "…"'),
+      expect.stringMatching(/^1 indexable <title>s exceed 60 chars .*\/stablecoin\/long\/$/),
+    ]));
   });
 
   it.each([

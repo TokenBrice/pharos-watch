@@ -202,6 +202,29 @@ export function isHiddenElement(attrs) {
   );
 }
 
+/** Opening `<tagName>` elements inside `<main>` with no hidden or invisible ancestor (0 without a `<main>`). */
+export function countVisibleMainTags(html, tagName) {
+  if (!/<main\b/i.test(html)) return 0;
+  const scope = getMainHtml(html);
+  const target = tagName.toLowerCase();
+  const tokenPattern = /<!--[\s\S]*?-->|<![^>]*>|<\/?[A-Za-z][^>]*>/g;
+  let hiddenDepth = 0;
+  let count = 0;
+  for (const [token] of scope.matchAll(tokenPattern)) {
+    if (token.startsWith("<!")) continue;
+    if (/^<\//.test(token)) {
+      if (hiddenDepth > 0) hiddenDepth -= 1;
+      continue;
+    }
+    const tagName = token.match(/^<\s*([A-Za-z][\w:-]*)/)[1].toLowerCase();
+    const isSelfClosing = /\/\s*>$/.test(token) || VOID_TAGS.has(tagName);
+    const isInvisible = INVISIBLE_CONTENT_TAGS.has(tagName) || isHiddenElement(parseAttributes(token));
+    if (tagName === target && hiddenDepth === 0 && !isInvisible) count += 1;
+    if (!isSelfClosing && (hiddenDepth > 0 || isInvisible)) hiddenDepth += 1;
+  }
+  return count;
+}
+
 export function extractVisibleText(html) {
   const scope = getMainHtml(html);
   const chunks = [];

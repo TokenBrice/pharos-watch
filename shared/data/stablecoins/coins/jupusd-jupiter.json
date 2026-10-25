@@ -2,6 +2,7 @@
   "id": "jupusd-jupiter",
   "name": "JupUSD",
   "symbol": "JUPUSD",
+  "brand": "Jupiter",
   "oneLiner": "JupUSD is Jupiter's Solana dollar stablecoin, targeting 90% USDtb and 10% USDC reserves; direct minting and redemption require KYC/KYB onboarding.",
   "flags": {
     "backing": "rwa-backed",

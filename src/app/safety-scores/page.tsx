@@ -7,7 +7,7 @@ import { FaqSection } from "@/components/faq-section";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { ShareButton } from "@/components/share-button";
 import { buildApiOgImageUrl } from "@/lib/page-metadata";
-import { SafetyScoresContentLoadingState } from "@/app/safety-scores/loading";
+import { SafetyScoresContentLoadingState } from "@/app/safety-scores/loading-state";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { safeJsonLd } from "@/lib/json-ld";

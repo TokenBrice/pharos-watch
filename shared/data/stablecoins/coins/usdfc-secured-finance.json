@@ -30,6 +30,7 @@
   "id": "usdfc-secured-finance",
   "name": "USDFC",
   "symbol": "USDFC",
+  "brand": "Secured Finance",
   "oneLiner": "USDFC is Secured Finance’s FIL-backed dollar on Filecoin, minted through collateralized Troves and redeemable on-chain for oracle-valued FIL.",
   "flags": {
     "backing": "crypto-backed",

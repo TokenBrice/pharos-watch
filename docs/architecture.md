@@ -51,7 +51,8 @@ Stable providers outlive navigation; optional chrome never gates content. [Shell
 
 - `src/lib/public-route-inventory.ts` and `src/app/sitemap.ts` share indexable paths, including registry-derived families. `npm run seo:check` checks coverage, orphans and depth.
 - History and API documents retain citations/fragments through [methodology archives](./methodology-page.md), [changelog archives](./process/blog-publishing.md#changelog) and [separate API documents](./api-page.md).
-- `public/_redirects` owns non-sitemap aliases. Static rules precede dynamic rules: Cloudflare silently drops rules beyond its 100 post-dynamic-rule cap. `functions/stablecoin/[[path]].ts` redirects legacy numeric IDs.
+- No route ships `loading.tsx`; skeletons live in `loading-state.tsx`.
+- `public/_redirects` owns non-sitemap aliases. Static rules precede dynamic rules: Cloudflare silently drops rules beyond its 100 post-dynamic-rule cap. `functions/stablecoin/[[path]].ts` redirects legacy numeric IDs. Retired IDs 301 to their peg hub.
 - `functions/_middleware.ts` negotiates Markdown; `scripts/maintenance/generate-markdown-exports.ts` emits `index.md`. Require `Vary: Accept` **and CDN no-store**: Cloudflare does not cache-key arbitrary `Vary`. `/llms.txt` replaces neither robots nor sitemap.
 - `public/_routes.json` uses one broad `/*` include and static-asset excludes; overlapping include splats are invalid. `public/_headers` owns static cache policy; route exceptions detach the broad cache rule with `! Cache-Control` to avoid comma-joining. Nonce injection and CSP ownership: [CSP posture](./security-governance.md#csp-posture).
 - [Static invocation exclusions](./process/worker-infrastructure-appendix.md#static-asset-invocation) keep public assets direct and privileged/function-backed routes gated.
@@ -71,9 +72,10 @@ Stable providers outlive navigation; optional chrome never gates content. [Shell
 ### Metadata and crawl ownership
 
 - `src/lib/page-metadata.ts` owns canonical/social/robots metadata; lifecycle overrides win. Route docs own experiments.
+- `src/lib/site-identity.ts` owns `og:site_name`.
 - `src/app/layout.tsx` owns sitewide metadata, RSS alternates and root JSON-LD identities. Do not emit `SearchAction` without a real query handler or preload analytics independently of its runtime gate.
 - Dataset JSON-LD requires explicit Pharos `Organization` creator/publisher, URL license, Pharos URN and canonical `sameAs`; included `DataCatalog` needs `@id`, `name`, `url`. `url`/`sameAs` identify HTML; `distribution.contentUrl` is a crawlable public download, never `/_site-data/*`. Profile Markdown is build-time catalog data, not live metrics.
-- `src/app/sitemap.ts` / `src/app/robots.ts` own crawl/membership policy. Git route dates are editorial, not metric clocks; summary/sidecar changes affect only their profile's floor. Funding also uses checked-in data dates. History metadata generators reject shallow checkouts, never use filesystem dates; refresh via [Scripts](./scripts.md).
+- `src/app/sitemap.ts` / `src/app/robots.ts` own crawl/membership policy. Git route dates are editorial, not metric clocks; summary/sidecar changes affect only their profile's floor. Profiles floor at a content-revision constant. Funding also uses checked-in data dates. History metadata generators reject shallow checkouts, never use filesystem dates; refresh via [Scripts](./scripts.md).
 - Operator/Mini App routes use `noindex,nofollow`; Mini App is not host-gated. Robots-blocked crawlers cannot observe noindex to deindex existing operator URLs. Public noindex routes (portfolio, yield subpages, datasets) stay crawlable; [Screener](./screener-page.md#snapshot-sharing) owns picker sharing.
 
 ### Standalone PharosVille

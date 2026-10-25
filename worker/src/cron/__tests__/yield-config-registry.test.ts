@@ -538,7 +538,7 @@ describe("yield config registry", () => {
     const config = RATE_DERIVED_CONFIGS.find((entry) => entry.stablecoinId === "usdgo-osl");
 
     expect(coin?.yieldConfig).toMatchObject({
-      yieldSource: "USDGO EFFR-linked reserve yield",
+      yieldSource: "OSL-distributed EFFR-linked yield for professional investors",
       yieldType: "governance-set",
     });
     expect(config).toMatchObject({

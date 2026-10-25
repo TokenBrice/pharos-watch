@@ -16,6 +16,7 @@ import { CoreTopRail } from "@/components/core-top-rail";
 import { TopNav } from "@/components/top-nav";
 import { GlobalFooterChrome, MainContent, RegimeBarChrome, RouteChrome } from "@/components/route-chrome";
 import { PHAROS_ORG_NODE, PHAROS_PERSON_TOKENBRICE_NODE, safeJsonLd } from "@/lib/json-ld";
+import { SITE_ALTERNATE_NAMES, SITE_NAME, SITE_OPEN_GRAPH_IDENTITY, SITE_TWITTER_IDENTITY } from "@/lib/site-identity";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import { geistMono, geistSans } from "@/lib/fonts/geist";
@@ -26,7 +27,7 @@ import {
   DEAD_STABLECOIN_COUNT,
 } from "@/lib/stablecoin-static-data";
 
-const siteDescription = `Track ${ACTIVE_STABLECOIN_COUNT} stablecoins across ${ACTIVE_PEG_CURRENCY_COUNT} peg currencies (USD, EUR, GBP, gold, silver & more). Market caps, peg deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of ${DEAD_STABLECOIN_COUNT} dead stablecoins, with core market data updated every 15 minutes.`;
+const siteDescription = `Track ${ACTIVE_STABLECOIN_COUNT} active stablecoins across ${ACTIVE_PEG_CURRENCY_COUNT} peg currencies (USD, EUR, GBP, gold, silver & more). Market caps, peg deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of ${DEAD_STABLECOIN_COUNT} dead stablecoins, with core market data updated every 15 minutes.`;
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -46,8 +47,7 @@ export const metadata: Metadata = {
   description: siteDescription,
   openGraph: {
     type: "website",
-    siteName: "Pharos",
-    locale: "en_US",
+    ...SITE_OPEN_GRAPH_IDENTITY,
     url: `${SITE_URL}/`,
     title: "Stablecoin Analytics Dashboard | Pharos",
     description: siteDescription,
@@ -55,8 +55,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@PharosWatch",
-    creator: "@TokenBrice",
+    ...SITE_TWITTER_IDENTITY,
     images: [{ url: `${SITE_URL}/og-card.png`, width: 1200, height: 628 }],
   },
   // `?v=2` busts the 7-day immutable cache on the 2026-07-31 brand-mark swap. These three
@@ -159,8 +158,8 @@ export default function RootLayout({
                 "@context": "https://schema.org",
                 "@type": "WebSite",
                 "@id": `${SITE_URL}#website`,
-                name: "Pharos",
-                alternateName: ["Pharos Watch", "pharos.watch"],
+                name: SITE_NAME,
+                alternateName: SITE_ALTERNATE_NAMES,
                 url: SITE_URL,
                 description: siteDescription,
                 inLanguage: "en",

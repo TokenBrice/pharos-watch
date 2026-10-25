@@ -2,6 +2,7 @@
   "id": "steakusdc-steakhouse",
   "name": "Steakhouse Prime USDC",
   "symbol": "steakUSDC",
+  "brand": "Steakhouse",
   "oneLiner": "steakUSDC is Steakhouse's Morpho Vault V2 over USDC; withdrawals use idle USDC and a configured liquidity adapter, while strategy losses can reduce share price.",
   "flags": {
     "backing": "crypto-backed",

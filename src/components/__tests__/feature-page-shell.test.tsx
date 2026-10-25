@@ -33,5 +33,24 @@ describe("FeaturePageShell instrument header", () => {
     const details = container.querySelector("details");
     expect(details?.querySelector("summary")?.textContent).toBe("How to read it");
     expect(details?.textContent).toContain("The longer how-to-read paragraph.");
+    expect(screen.queryByRole("link", { name: /How this is computed/ })).toBeNull();
+  });
+
+  it.each(["instrument", "standard"] as const)("links the methodology docs page in the %s header meta row", (header) => {
+    render(
+      <FeaturePageShell
+        breadcrumbName="Example"
+        path="/example/"
+        title="Example"
+        header={header}
+        methodology={{ version: "v1.2", changelogPath: "/changelog/example/", docsPath: "/docs/example/" }}
+      >
+        <div>body</div>
+      </FeaturePageShell>,
+    );
+
+    const link = screen.getByRole("link", { name: /How this is computed/ });
+    expect(link.getAttribute("href")).toBe("/docs/example/");
+    expect(link.closest("p")?.textContent).toContain("Version history");
   });
 });

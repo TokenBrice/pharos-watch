@@ -2,6 +2,7 @@
   "id": "sdai-gnosis",
   "name": "Savings xDAI",
   "symbol": "sDAI",
+  "brand": "Gnosis",
   "oneLiner": "sDAI is Gnosis's savings vault over wrapped xDAI, redeemable on-chain for WXDAI at its accrued exchange rate.",
   "flags": {
     "backing": "crypto-backed",

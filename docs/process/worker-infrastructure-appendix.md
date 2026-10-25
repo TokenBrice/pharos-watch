@@ -105,6 +105,7 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 - Read endpoints and admin debug routes use their registered methods. Mutating admin routes reject `GET` with `405` except registered dry-run previews and the read-only `GET /api/backfill-dews` backtest.
 - Known endpoint families with disallowed methods return `405 { error: "Method not allowed" }`; `Allow` lists the endpoint's actual methods, including when rejecting `PUT`, `DELETE` or `PATCH`.
 - Unregistered public `/api/*` paths can return auth errors first, then `404` after lane auth succeeds because no route dependencies can be hydrated.
+- `GET`/`HEAD` of the bare public API host root (`https://api.pharos.watch/`) is the one unrouted path that does not 404: it 301s to the website's API docs (`https://pharos.watch/api/`) for people who open the host directly. Other hosts, methods and paths keep the `404`.
 
 ### Public API Auth and Rate Limiting
 

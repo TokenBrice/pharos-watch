@@ -5,7 +5,11 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { TermText } from "@/components/term-text";
 import type { AiSummaryClaimValues, StablecoinAiSummary } from "@shared/types";
-import { resolveAiSummaryClaims } from "@shared/lib/ai-summary-claims";
+import {
+  AI_SUMMARY_UNAVAILABLE_NOTICE,
+  hasAvailableAiSummaryClaims,
+  resolveAiSummaryClaims,
+} from "@shared/lib/ai-summary-claims";
 
 export type AiSummaryProps = StablecoinAiSummary & {
   claimValues?: AiSummaryClaimValues;
@@ -29,7 +33,10 @@ export function AiSummary({
     { authoredBy, model, reviewedBy, reviewedAt, factsAsOf },
     { dateFormat: "iso" },
   );
-  const resolved = resolveAiSummaryClaims(text, claimTokens, claimValues);
+  // A claim without its input is withheld, never rendered as "N/A".
+  const resolved = hasAvailableAiSummaryClaims(text, claimTokens, claimValues)
+    ? resolveAiSummaryClaims(text, claimTokens, claimValues)
+    : { text: AI_SUMMARY_UNAVAILABLE_NOTICE, factsAsOf: [] };
   const claimsDateline = resolved.factsAsOf.map(formatAiSummaryIsoDate).join(", ");
 
   return (

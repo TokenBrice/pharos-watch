@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: ArchivePageProps) {
   const archive = CHANGELOG_MONTH_ARCHIVES.find((entry) => entry.month === month);
   if (!archive) return { title: "Archive Not Found" };
   return buildPageMetadata({
-    title: `Pharos Changelog: ${archive.label}`,
+    title: `Changelog: ${archive.label} Release Notes`,
     description: `Complete weekly Pharos release notes for ${archive.label}: stablecoin coverage additions, data pipeline improvements and product changes.`,
     canonical: archive.path,
     ogImage: "/og-changelog.png",

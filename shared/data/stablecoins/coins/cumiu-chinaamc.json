@@ -30,6 +30,11 @@
     ]
   },
   "detailProvider": "coingecko",
+  "identifiers": {
+    "isin": [
+      "HK0001153516"
+    ]
+  },
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-25AFS_DigitalOFC_Cover.pdf",

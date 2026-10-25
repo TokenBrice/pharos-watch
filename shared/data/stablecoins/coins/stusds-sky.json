@@ -2,6 +2,7 @@
   "id": "stusds-sky",
   "name": "Staked USDS",
   "symbol": "stUSDS",
+  "brand": "Sky",
   "oneLiner": "stUSDS is Sky's risk-capital staking module over USDS funding SKY-backed borrowing; holders earn the stUSDS Rate and absorb shortfall and governance slashing.",
   "flags": {
     "backing": "crypto-backed",

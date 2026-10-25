@@ -2,6 +2,7 @@
   "id": "rwausdi-multipli",
   "name": "rwaUSDi",
   "symbol": "rwaUSDi",
+  "brand": "Multipli",
   "oneLiner": "rwaUSDi is Multipli's KYB-gated credit class backed by private credit, structured finance, project finance, asset-backed loans, and market-neutral funds.",
   "flags": {
     "backing": "rwa-backed",

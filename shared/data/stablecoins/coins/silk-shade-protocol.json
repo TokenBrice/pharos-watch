@@ -2,6 +2,7 @@
   "id": "silk-shade-protocol",
   "name": "SILK",
   "symbol": "SILK",
+  "brand": "Shade Protocol",
   "status": "quarantined",
   "listingStatusReview": {
     "changedAt": "2026-08-18",

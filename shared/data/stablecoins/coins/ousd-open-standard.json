@@ -2,6 +2,7 @@
   "id": "ousd-open-standard",
   "name": "Open USD",
   "symbol": "OUSD",
+  "brand": "Bridge",
   "oneLiner": "OUSD is Bridge's dollar for Open Standard, backed by cash and short Treasuries, with 1:1 business minting and redemption and no issuer fee.",
   "flags": {
     "backing": "rwa-backed",

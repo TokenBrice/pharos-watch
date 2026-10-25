@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { buildLiveRouteOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
+import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import FreezeWatchClient from "./client";
 
-const FREEZEWATCH_DESCRIPTION =
-  "Track stablecoin blacklist and freeze events across supported contracts: issuer freezes, unfreezes, blocks, pauses, denylist changes, token wipes, and chain context.";
+const FREEZEWATCH_DESCRIPTION = `Live log of issuer freezes, unfreezes and token wipes across ${BLACKLIST_STABLECOINS.length} stablecoins, including USDT, USDC and PAXG, with frozen value, addresses and transactions.`;
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "FreezeWatch: Stablecoin Blacklist & Freeze Events",
+  title: "USDT & USDC Freeze Tracker: Live Blacklist Events",
   description: FREEZEWATCH_DESCRIPTION,
   canonical: "/freezewatch/",
   ogImage: buildLiveRouteOgImageUrl("freezewatch"),

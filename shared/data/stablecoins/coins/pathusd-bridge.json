@@ -2,6 +2,7 @@
   "id": "pathusd-bridge",
   "name": "PathUSD",
   "symbol": "pathUSD",
+  "brand": "Tempo",
   "oneLiner": "pathUSD is Tempo's quote stablecoin; mint via USDC deposit and redeem through Bridge into a reserve of cash, short Treasuries, repo, and MMF exposure.",
   "llamaId": "385",
   "detailProvider": "defillama",

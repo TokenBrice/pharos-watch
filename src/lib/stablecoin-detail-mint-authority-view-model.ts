@@ -366,20 +366,26 @@ function buildMintAuthorityScoreViewModel(
   display: MintAuthorityScoreDisplay,
   caps: readonly PublishedMintCap[],
   publicationAvailable: boolean,
+  publicationPending = false,
 ): MintAuthorityDetailScoreViewModel {
+  const missingLabel = publicationPending ? "Loading" : "Unavailable";
   return {
     publicationAvailable,
     score: display.score,
-    scoreLabel: publicationAvailable ? display.scoreLabel : "Unavailable",
-    compactLabel: publicationAvailable ? display.compactLabel : "Mint score unavailable",
+    scoreLabel: publicationAvailable ? display.scoreLabel : missingLabel,
+    compactLabel: publicationAvailable
+      ? display.compactLabel
+      : publicationPending ? "Mint score loading" : "Mint score unavailable",
     bandKey: display.bandKey,
-    bandLabel: publicationAvailable ? display.bandLabel : "Unavailable",
+    bandLabel: publicationAvailable ? display.bandLabel : missingLabel,
     postureLabel: labelFromMap(display.posture, AUTHORITY_POSTURE_LABELS),
     badgeClassName: display.badgeClassName,
     textClassName: display.textClassName,
     detail: publicationAvailable
       ? display.detail
-      : "The current Safety Score publication is unavailable; reviewed mint authority evidence remains available.",
+      : publicationPending
+        ? "The current Safety Score publication is loading; reviewed mint authority evidence is shown below."
+        : "The current Safety Score publication is unavailable; reviewed mint authority evidence remains available.",
     caps: caps
       .filter((cap) => Object.hasOwn(MINT_CAP_KIND_LABELS, cap.kind))
       .map((cap) => ({
@@ -485,6 +491,8 @@ function projectProcessMetrics(summary: SafetyScoreV9IssuanceSummary | null | un
 export function buildMintAuthorityDetailViewModel(
   coin: StablecoinDetailCoinMeta,
   published?: PublishedMintProjection | null,
+  /** The publication's first read is in flight (the prerender included): pending, not unavailable. */
+  { publicationPending = false }: { publicationPending?: boolean } = {},
 ): MintAuthorityDetailViewModel {
   const candidate = coin.mintAuthoritySummary;
   const summary = published?.issuanceSummary;
@@ -516,7 +524,12 @@ export function buildMintAuthorityDetailViewModel(
     };
   });
   const scoreDisplay = resolveMintAuthorityScoreDisplay(published?.mint);
-  const score = buildMintAuthorityScoreViewModel(scoreDisplay, published?.caps ?? [], published != null);
+  const score = buildMintAuthorityScoreViewModel(
+    scoreDisplay,
+    published?.caps ?? [],
+    published != null,
+    publicationPending && published == null,
+  );
   const parentId = candidate.inheritedFrom ?? null;
   const inheritedFrom = parentId
     ? {

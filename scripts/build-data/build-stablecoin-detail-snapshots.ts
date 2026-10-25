@@ -22,6 +22,7 @@ import type { StablecoinDetailSnapshot } from "../../src/lib/api";
 import { normalizeStablecoinLiveSummary, projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import { StablecoinLiveSummarySchema, type StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import { STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS } from "../../src/lib/api-query-descriptors";
+import { getScoresLatestSnapshotRow, type ScoresLatestSnapshotRow } from "../../src/lib/safety-grade-snapshot";
 import {
   fetchWithRetry,
   generatorFetchHeaders,
@@ -93,9 +94,12 @@ export interface SnapshotInputs {
   liveSummariesById: ReadonlyMap<string, StablecoinLiveSummary | null>;
   supplyHistoryById: ReadonlyMap<string, SupplyHistoryPoint[] | null>;
   updatedAtById: ReadonlyMap<string, StablecoinDetailSnapshot["updatedAt"]>;
+  /** The release's committed scores-latest rows; defaults to the current mirror. */
+  readScoresLatestRow?: (id: string) => ScoresLatestSnapshotRow | null;
 }
 
 export function buildStablecoinDetailSnapshots(inputs: SnapshotInputs): StablecoinDetailSnapshot[] {
+  const readScoresLatestRow = inputs.readScoresLatestRow ?? getScoresLatestSnapshotRow;
   return TRACKED_STABLECOINS.map((coin) => {
     const liveSummary = inputs.liveSummariesById.get(coin.id);
     const supplyHistory = inputs.supplyHistoryById.get(coin.id);
@@ -135,6 +139,24 @@ export function buildStablecoinDetailSnapshots(inputs: SnapshotInputs): Stableco
         "cannot satisfy the 8 KiB hard cap",
       );
     }
+    // Display-only release values, dated by the dataset clock; never a query
+    // seed. They never displace a live lane (the dossier needs both to leave
+    // its loading state), so they join only the capped envelope.
+    const scoresRow = readScoresLatestRow(coin.id);
+    if (scoresRow) {
+      const { asOfMs, ...safetyAssessment } = scoresRow;
+      const withAssessment: StablecoinDetailSnapshot = {
+        ...cappedSnapshot,
+        updatedAt: { ...cappedSnapshot.updatedAt, safetyAssessment: asOfMs },
+        lanes: { ...cappedSnapshot.lanes, safetyAssessment },
+      };
+      const withAssessmentBytes = serializedSnapshotBytes(withAssessment);
+      if (withAssessmentBytes <= DETAIL_SNAPSHOT_TARGET_BYTES) return withAssessment;
+      console.warn(
+        `[stablecoin-detail-snapshots] Omitting saved safety assessment for ${coin.id}: ` +
+        `${withAssessmentBytes} byte envelope exceeds the 8 KiB target`,
+      );
+    }
     return cappedSnapshot;
   });
 }
@@ -155,6 +177,17 @@ export function validateStablecoinDetailSnapshot(snapshot: unknown): StablecoinD
   }
   if (candidate.lanes.liveSummary) StablecoinLiveSummarySchema.parse(candidate.lanes.liveSummary);
   if (candidate.lanes.supplyHistory) SupplyHistoryResponseSchema.parse(candidate.lanes.supplyHistory);
+  if (candidate.lanes.safetyAssessment) {
+    const assessment = candidate.lanes.safetyAssessment;
+    const nullableNumber = (value: unknown) => value === null || (typeof value === "number" && Number.isFinite(value));
+    if (!nullableNumber(assessment.score) || !nullableNumber(assessment.dewsScore)
+      || !nullableNumber(assessment.liquidityScore)
+      || (assessment.grade !== null && typeof assessment.grade !== "string")
+      || (assessment.dewsBand !== null && typeof assessment.dewsBand !== "string")
+      || !(candidate.updatedAt?.safetyAssessment != null && candidate.updatedAt.safetyAssessment > 0)) {
+      throw new Error("Detail snapshot safety assessment lane is invalid or undated");
+    }
+  }
   for (const updatedAt of Object.values(candidate.updatedAt ?? {})) {
     if (typeof updatedAt !== "number" || !Number.isFinite(updatedAt) || updatedAt < 0) {
       throw new Error("Detail snapshot source clock is invalid");
@@ -431,6 +464,7 @@ export async function runCli(check = process.env.PHAROS_DETAIL_SNAPSHOT_CHECK ==
   const laneCounts = {
     liveSummary: snapshots.filter((snapshot) => snapshot.lanes.liveSummary != null).length,
     supplyHistory: snapshots.filter((snapshot) => snapshot.lanes.supplyHistory != null).length,
+    safetyAssessment: snapshots.filter((snapshot) => snapshot.lanes.safetyAssessment != null).length,
     empty: snapshots.filter((snapshot) => Object.keys(snapshot.lanes).length === 0).length,
   };
   console.log(JSON.stringify({

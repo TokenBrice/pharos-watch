@@ -2,6 +2,7 @@
   "id": "brz-transfero",
   "name": "Brazilian Digital",
   "symbol": "BRZ",
+  "brand": "Transfero",
   "oneLiner": "BRZ is Transfero's centralized Brazilian real stablecoin, redeemable 1:1 by KYC'd users against BRL cash held at a regulated Brazilian institution.",
   "flags": {
     "backing": "rwa-backed",

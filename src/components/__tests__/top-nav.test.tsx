@@ -67,6 +67,36 @@ describe("TopNav", () => {
   });
 
 
+  it("mounts every closed panel hidden and inert so its links are crawlable but not focusable", () => {
+    installMatchMediaMock(true);
+
+    render(<TopNav />);
+
+    for (const menu of NAV_GROUPS) {
+      const trigger = screen.getByRole("button", { name: menu.label });
+      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      const panel = document.getElementById(trigger.getAttribute("aria-controls")!);
+      expect(panel).not.toBeNull();
+      expect(panel!.hidden).toBe(true);
+      expect(panel!.hasAttribute("inert")).toBe(true);
+      const hrefs = [...panel!.querySelectorAll<HTMLAnchorElement>("a[href]")].map((link) => link.getAttribute("href"));
+      // next/link drops the trailing slash outside the app's trailingSlash config.
+      const stripSlash = (href: string | null) => href?.replace(/(.)\/$/, "$1");
+      expect(hrefs.map(stripSlash)).toEqual(menu.items.map((item) => stripSlash(item.href)));
+    }
+    // Closed panels are outside the accessibility tree and carry no health copy.
+    const firstItem = NAV_GROUPS[0].items[0];
+    expect(screen.queryByRole("link", { name: firstItem.label })).toBeNull();
+    expect(screen.queryByText("Operational", { selector: "span" })).toBeNull();
+    expect(useHealthMock).toHaveBeenLastCalledWith({ enabled: false });
+
+    const trigger = screen.getByRole("button", { name: NAV_GROUPS[0].label });
+    fireEvent.click(trigger);
+    const panel = document.getElementById(trigger.getAttribute("aria-controls")!)!;
+    expect(panel.hidden).toBe(false);
+    expect(panel.hasAttribute("inert")).toBe(false);
+  });
+
   it("opens Resources only after hover intent and renders its configured columns", () => {
     vi.useFakeTimers();
     const matchMedia = installMatchMediaMock(true);

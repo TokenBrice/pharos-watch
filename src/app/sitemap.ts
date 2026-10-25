@@ -1,10 +1,10 @@
 import type { MetadataRoute } from "next";
-import { getActiveChainIds } from "@shared/lib/chains";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import { CASE_STUDY_LIST } from "@/lib/case-studies";
+import { getIndexableChainIds } from "@/lib/chain-indexing";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
-import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
+import { PEG_HUB_PEGS, PEG_HUB_SLUGS } from "@/lib/peg-landing";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -28,6 +28,7 @@ import {
   COLLIDING_DEPEG_EVENT_SLUGS,
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
   DEPEG_EVENT_ENTRIES,
+  INDEXABLE_DEPEG_EVENT_ENTRIES,
 } from "@/lib/depeg-event-page-data";
 import { API_ACCESS_PAGE_PATH, PUBLIC_PRIMARY_ROUTE_PATHS, PUBLIC_REFERENCE_ROUTE_PATHS } from "@/lib/public-route-inventory";
 
@@ -232,22 +233,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "daily",
       priority: 0.8,
     },
-    ...getActiveChainIds().map((chainId) => ({
+    // Chain pages move with their route's edit date, not the daily data
+    // snapshot: the digest timestamp claimed 128 simultaneous changes a day.
+    ...getIndexableChainIds().map((chainId) => ({
       url: `${SITE_URL}/chains/${chainId}/`,
-      lastModified: new Date(
-        Math.max(
-          lastEdited(`/chains/${chainId}/`, "/chains/").getTime(),
-          latestDataSnapshotMs,
-        ),
-      ),
+      lastModified: lastEdited(`/chains/${chainId}/`, "/chains/"),
       changeFrequency: "daily" as const,
       priority: 0.5,
     })),
   ];
 
-  const pegPages: MetadataRoute.Sitemap = ACTIVE_PEGS.map((peg) => ({
-    url: `${SITE_URL}/stablecoins/${PEG_SLUGS[peg]}/`,
-    lastModified: lastEdited(`/stablecoins/${PEG_SLUGS[peg]}/`, "/stablecoins/"),
+  const pegPages: MetadataRoute.Sitemap = PEG_HUB_PEGS.map((peg) => ({
+    url: `${SITE_URL}/stablecoins/${PEG_HUB_SLUGS[peg]}/`,
+    lastModified: lastEdited(`/stablecoins/${PEG_HUB_SLUGS[peg]}/`, "/stablecoins/"),
     changeFrequency: "daily" as const,
     priority: 0.7,
   }));
@@ -259,7 +257,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.5,
   }));
 
-  const depegEventPages: MetadataRoute.Sitemap = DEPEG_EVENT_ENTRIES.map((e) => ({
+  const depegEventPages: MetadataRoute.Sitemap = INDEXABLE_DEPEG_EVENT_ENTRIES.map((e) => ({
     url: `${SITE_URL}/depeg/${e.slug}/`,
     lastModified: new Date(
       Math.max(

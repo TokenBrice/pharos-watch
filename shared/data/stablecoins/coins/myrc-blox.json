@@ -2,6 +2,7 @@
   "id": "myrc-blox",
   "name": "MYRC",
   "symbol": "MYRC",
+  "brand": "Blox",
   "oneLiner": "MYRC is Blox's ringgit stablecoin backed 1:1 by MYR-denominated reserves at Malaysian financial institutions and gated to verified Malaysian residents.",
   "flags": {
     "backing": "rwa-backed",

@@ -30,6 +30,8 @@ export interface ChainTrackedDeployment {
   backingLabel: string;
   governanceLabel: string;
   contractCount: number;
+  /** NAV token or variant of another tracked coin (e.g. sUSDe, spUSDT): ranked after base coins in titles. */
+  isNavOrVariant: boolean;
 }
 
 export interface ChainTaxonomyLink {
@@ -89,6 +91,7 @@ export function getTrackedDeploymentsForChain(chainId: string): ChainTrackedDepl
       backingLabel: BACKING_LABELS_SHORT[stablecoin.flags.backing] ?? stablecoin.flags.backing,
       governanceLabel: GOVERNANCE_LABELS_SHORT[stablecoin.flags.governance] ?? stablecoin.flags.governance,
       contractCount,
+      isNavOrVariant: stablecoin.flags.navToken || stablecoin.variantOf != null,
     };
   });
 }

@@ -7,6 +7,45 @@ import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { buildDetailHero } from "./stablecoin-detail-view-model.test-support";
 
 describe("stablecoin detail hero view-model builder", () => {
+  const SAVED = {
+    grade: "A-" as const, score: 81, dewsScore: 17, dewsBand: "WATCH" as const, liquidityScore: 67,
+    asOfMs: Date.UTC(2026, 9, 22, 8),
+  };
+  const ALL_PENDING = { reportCard: true, stress: true, liquidity: true, peg: true, yield: true };
+
+  it("shows dated release values or neutral placeholders while live reads are pending, never unavailable", () => {
+    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    const pending = buildDetailHero({ coin, pendingReads: ALL_PENDING, savedAssessment: null });
+    const tile = (hero: typeof pending, key: string) => hero.tertiaryMetrics.find((metric) => metric.key === key)!.display;
+    for (const key of ["dews", "peg-score", "liquidity", "excess-yield"]) {
+      expect(tile(pending, key)).toMatchObject({ value: "", pending: true });
+    }
+    expect(pending.savedGrade).toBeNull();
+    expect(pending.signalRailItems.find((item) => item.key === "liquidity")).toMatchObject({ pending: true });
+
+    const saved = buildDetailHero({ coin, pendingReads: ALL_PENDING, savedAssessment: SAVED });
+    expect(tile(saved, "dews")).toMatchObject({ value: "Watch", band: "WATCH", sub: "17/100 · as of 2026-10-22" });
+    expect(tile(saved, "liquidity")).toMatchObject({ value: "67", sub: "as of 2026-10-22" });
+    expect(tile(saved, "peg-score")).toMatchObject({ pending: true });
+    expect(saved.savedGrade).toBe(SAVED);
+    expect(saved.signalRailItems[0]).toMatchObject({ key: "safety", primary: "A-", secondary: "81/100", note: "as of 2026-10-22" });
+
+    // Settled reads keep their own verdicts; a saved value never stands in for them.
+    const settled = buildDetailHero({ coin, savedAssessment: SAVED });
+    expect(tile(settled, "dews")).toMatchObject({ value: "—" });
+    expect(tile(settled, "liquidity")).toMatchObject({ value: "—" });
+    expect(settled.savedGrade).toBeNull();
+    expect(settled.signalRailItems[0]).toMatchObject({ primary: "—" });
+    expect(settled.signalRailItems[0]?.note).toBeUndefined();
+  });
+
+  it("keeps NAV tokens and frozen archives out of the pending peg and DEWS reads", () => {
+    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    const nav = buildDetailHero({ coin, isNavToken: true, pendingReads: ALL_PENDING, savedAssessment: SAVED });
+    expect(nav.tertiaryMetrics.find((metric) => metric.key === "dews")!.display).toMatchObject({ value: "—" });
+    expect(nav.tertiaryMetrics.find((metric) => metric.key === "peg-score")!.display).toMatchObject({ value: "NAV" });
+  });
+
   it.each([900, null])("keeps native current paired with its checkpoints rather than mixing displayed supply %s", (supply) => {
     const hero = buildDetailHero({
       coin: TRACKED_META_BY_ID.get("usdc-circle")!,

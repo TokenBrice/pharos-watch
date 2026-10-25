@@ -31,11 +31,18 @@ interface MarkdownAstNode {
   };
 }
 
-function buildDocMetadataTitle(doc: { slug: string; title: string; group: string }): string {
-  if (doc.slug === "api-reference") return "Stablecoin API Reference - Pharos Docs";
-  if (doc.group === "methodology") return `${doc.title} Methodology - Pharos Docs`;
-  return `${doc.title} Guide - Pharos Docs`;
+// The root "%s | Pharos" template already brands the title; never repeat "Pharos" here.
+function buildDocMetadataTitle(doc: { slug: string; title: string; seoTitle?: string; group: string }): string {
+  if (doc.seoTitle) return doc.seoTitle;
+  if (doc.slug === "api-reference") return "Stablecoin API Reference";
+  const base = doc.group === "methodology" ? `${doc.title} Methodology` : `${doc.title} Guide`;
+  // Short doc names ("DEWS Methodology") fall under the snippet minimum once
+  // the duplicate " - Pharos Docs" suffix is gone; qualify them by topic.
+  return base.length < DOC_TITLE_MIN_CORE_LENGTH ? `${base} for Stablecoins` : base;
 }
+
+/** 35-character snippet minimum minus the 9-character " | Pharos" suffix. */
+const DOC_TITLE_MIN_CORE_LENGTH = 26;
 
 function getMarkdownNodeText(node: MarkdownAstNode | undefined): string {
   if (!node) return "";

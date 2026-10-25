@@ -1,6 +1,6 @@
 # Upcoming Page
 
-Public `/upcoming/` is the pre-launch tracker, separate from active monitoring. `src/app/upcoming/page.tsx` owns metadata/static shell and projects the server registry into `src/components/upcoming-client.tsx`; `src/lib/pre-launch.ts` owns phase, fuzzy-date, drift and sorting semantics.
+Public `/upcoming/` is the pre-launch tracker, separate from active monitoring. `src/app/upcoming/page.tsx` owns metadata/static shell (title `Upcoming Stablecoin Launches ({Mon YYYY}): {N} Tracked` with the UTC build month and `PRE_LAUNCH_STABLECOINS.length`; description from the per-phase tally with `LAUNCH_PHASE_LABELS`) and projects the server registry into `src/components/upcoming-client.tsx`; `src/lib/pre-launch.ts` owns phase, fuzzy-date, drift and sorting semantics.
 
 ## Data Contract
 
@@ -10,7 +10,7 @@ Keep full server metadata available for JSON-LD and crawlable profile links, but
 
 ## Page Shape
 
-Instrument header (one-line deck, folded usage note, Alerts then Share), then one stacked `FeatureHeroSplit`: the tracked count as the beam with the `preLaunch` universe chip, three facts (soonest open target, Slipped with its pushed/overdue split, no target date), and the Horizon constellation beneath. The `/upcoming/` constellation adds an Unphased cell for coins without `launchPhase`, so its cells sum to the beam; the homepage teaser keeps the five phase cells. Below the hero, one `DataTableShell` carries a hairline filter toolbar and the listing; "How targets and drift are read" folds after it.
+Instrument header (one-line deck, folded usage note, Alerts then Share), then one stacked `FeatureHeroSplit`: the tracked count as the beam with the `preLaunch` universe chip, three facts (soonest open target, Slipped with its pushed/overdue split, no target date), and the Horizon constellation beneath. The `/upcoming/` constellation adds an Unphased cell for coins without `launchPhase`, so its cells sum to the beam; the homepage teaser keeps the five phase cells. Below the hero, one `DataTableShell` carries a hairline filter toolbar and the listing; "How targets and drift are read" folds after it. Two server-rendered sections follow (`src/lib/upcoming-static-content.ts`, `src/components/upcoming-static-sections.tsx`): "Latest launch news", the 10 newest registry milestones across pre-launch coins ("{date} · {SYM}: {title}", each linking the profile, dated at the milestone's recorded precision), and per-currency h2 groups ("Upcoming Hong Kong Dollar (HKD) stablecoins", largest group first, other pegs last) linking every profile plus the peg hub where one exists. Neither reads a clock.
 
 ## Filter And Sort Model
 
@@ -30,7 +30,7 @@ Share is timeless by decision ([OG images](./og-images.md)): the header `ShareBu
 
 ## SEO And Crawlability
 
-Keep public indexability, canonical `/upcoming/`, route OG and sitemap membership. The static shell emits CollectionPage/ItemList JSON-LD and a crawlable nav to every pre-launch `/stablecoin/[id]/` profile, even when visible rows need hydration. Each row links through `buildStablecoinUrl`, never a separate invented upcoming profile URL.
+Keep public indexability, canonical `/upcoming/`, route OG and sitemap membership. The static shell emits CollectionPage/ItemList JSON-LD, and the visible per-currency groups link every pre-launch `/stablecoin/[id]/` profile, even when table rows need hydration. Pre-launch profile `lastmod` is the coin file's commit date (milestones are committed there), so a new milestone moves it; a future-dated milestone never becomes a future `lastmod`. Each row links through `buildStablecoinUrl`, never a separate invented upcoming profile URL.
 
 ## Update Rules
 

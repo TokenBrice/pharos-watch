@@ -2,6 +2,7 @@
   "id": "xdai-gnosis",
   "name": "xDAI",
   "symbol": "xDAI",
+  "brand": "Gnosis",
   "oneLiner": "xDAI is the native gas token of Gnosis Chain, backed 1:1 by USDS bridged through Gnosis bridge infrastructure and inheriting Sky's collateral mix.",
   "flags": {
     "backing": "crypto-backed",

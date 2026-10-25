@@ -103,6 +103,10 @@ export function RailSafetySummary({
           {frozen ? <span className="text-sm text-muted-foreground">· not scored</span> : null}
         </p>
       )}
+      {graded && hero.note ? (
+        // A saved release grade names its date until the live card arrives.
+        <p className="mt-1 text-2xs text-muted-foreground" data-safety-state="saved">{hero.note}</p>
+      ) : null}
       <div className="mt-3 divide-y divide-border/40 border-t border-border/40">
         {rest.map((item) => {
           const display = resolveRowDisplay(item, { navToken, frozen });
@@ -116,9 +120,13 @@ export function RailSafetySummary({
                 {item.label}
               </span>
               <span className="flex items-baseline gap-1.5">
-                <span className={cn("pharos-numeric text-sm font-semibold", display.colorClass)}>
-                  {display.primary}
-                </span>
+                {item.pending ? (
+                  <span aria-hidden="true" className="block h-4 w-10 animate-pulse rounded-md bg-muted motion-reduce:animate-none" />
+                ) : (
+                  <span className={cn("pharos-numeric text-sm font-semibold", display.colorClass)}>
+                    {display.primary}
+                  </span>
+                )}
                 {display.secondary ? (
                   <span className="text-xs text-muted-foreground">· <FigureLeadText text={display.secondary} /></span>
                 ) : null}

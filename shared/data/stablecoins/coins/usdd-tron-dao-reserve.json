@@ -2,6 +2,7 @@
   "id": "usdd-tron-dao-reserve",
   "name": "USDD",
   "symbol": "USDD",
+  "brand": "TRON DAO",
   "oneLiner": "USDD is the Tron DAO Reserve's CDP-and-PSM stablecoin, designed as overcollateralized but historically traded below peg through multiple stress episodes.",
   "flags": {
     "backing": "crypto-backed",

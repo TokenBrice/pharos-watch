@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { ComplianceContentLoadingState } from "./loading";
+import { ComplianceContentLoadingState } from "./loading-state";
 
 const ComplianceWorkbench = dynamic(
   () => import("@/components/compliance/compliance-client").then((mod) => mod.ComplianceClient),

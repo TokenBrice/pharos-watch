@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { FaqSection } from "@/components/faq-section";
-import { CompareContentLoadingState } from "@/app/compare/loading";
+import { CompareContentLoadingState } from "@/app/compare/loading-state";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
-import { buildLiveCompareUrl } from "@/lib/compare-links";
+import { buildComparePrefillUrl } from "@/lib/compare-links";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
@@ -87,7 +87,7 @@ function ComparePairDirectory() {
           </p>
         </div>
         <Link
-          href={buildLiveCompareUrl(["usdt-tether", "usdc-circle"])}
+          href={buildComparePrefillUrl(["usdt-tether", "usdc-circle"])}
           className="pharos-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-border/60 bg-background/70 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent sm:min-h-10"
         >
           Open live USDT vs USDC
@@ -139,7 +139,7 @@ function ComparePairDirectory() {
               {page.shortTitle}
             </Link>
             <Link
-              href={buildLiveCompareUrl([page.left.id, page.right.id])}
+              href={buildComparePrefillUrl([page.left.id, page.right.id])}
               className="pharos-focus-ring shrink-0 rounded-sm text-xs text-muted-foreground hover:text-foreground"
             >
               Live tool

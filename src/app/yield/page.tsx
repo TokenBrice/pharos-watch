@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FaqSection } from "@/components/faq-section";
 import { ShareButton } from "@/components/share-button";
-import { YieldContentLoadingState } from "@/app/yield/loading";
+import { YieldContentLoadingState } from "@/app/yield/loading-state";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildLiveRouteOgImageUrl } from "@/lib/page-metadata";
 import {
@@ -68,7 +68,7 @@ const YIELD_PICKER_NOTE = (
 const route = createClientFeaturePage({
   path: "/yield/",
   metadata: {
-    title: "Stablecoin Yield Intelligence",
+    title: "Stablecoin Yields: Live APY Ranked by Risk",
     description: desc,
     ogImage: buildLiveRouteOgImageUrl("yield"),
   },
@@ -80,6 +80,7 @@ const route = createClientFeaturePage({
     methodology: {
       version: YIELD_METHODOLOGY_VERSION_LABEL,
       changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
+      docsPath: "/docs/yield-intelligence/",
     },
     header: "instrument",
     headerActions: <ShareButton ogPath={API_PATHS.ogPage("yield")} />,

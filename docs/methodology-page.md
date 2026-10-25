@@ -2,6 +2,8 @@
 
 `/methodology/` is the public long-form explanation of scoring and dependency exposure. `src/app/methodology/page.tsx` owns metadata, breadcrumb/Article/visible FAQ JSON-LD and reader guide; section bodies live under `src/app/methodology/sections/`.
 
+The title names the current Safety Score version (`SAFETY_SCORE_METHODOLOGY_VERSION_LABEL`); the description reads the grade range and pillar weights from `V9_CANDIDATE_POLICY_V1`. TechArticle `datePublished`/`dateModified` are the oldest and newest `SAFETY_SCORE_METHODOLOGY_CHANGELOG` entry dates, the same source the scoring changelog page uses, and the header shows that version and newest date as "Safety Score methodology v{X} · updated {date}".
+
 ## Methodology editing entry
 
 [ADR-3](./architecture.md#adr-3) is the single methodology-change checklist and version authority. Use the [source map](#section--source-mapping) to find the domain owner, [Definitions](#definitions) for shared terms and [context anchors](#methodology-context-anchors) for app links. This guide owns editing/navigation, not copied formulas or release history.

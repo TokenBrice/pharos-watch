@@ -2,6 +2,7 @@
   "id": "bfusd-binance",
   "name": "BFUSD",
   "symbol": "BFUSD",
+  "brand": "Binance",
   "oneLiner": "BFUSD is a Binance account product redeemable inside Binance against USD stablecoins, backed by an opaque collateral pool and hedging portfolio.",
   "flags": {
     "backing": "crypto-backed",

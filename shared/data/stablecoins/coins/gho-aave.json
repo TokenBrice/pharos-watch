@@ -2,6 +2,7 @@
   "id": "gho-aave",
   "name": "GHO",
   "symbol": "GHO",
+  "brand": "Aave",
   "oneLiner": "GHO is Aave's decentralized dollar stablecoin, minted by borrowing against any Aave V3 collateral, with peg defended by stablecoin-backed stability modules.",
   "flags": {
     "backing": "crypto-backed",

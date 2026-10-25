@@ -2,6 +2,7 @@
   "id": "jtrsy-anemoy",
   "name": "Janus Henderson Anemoy Treasury Fund",
   "symbol": "JTRSY",
+  "brand": "Janus Henderson",
   "oneLiner": "JTRSY is Anemoy's short-duration U.S. Treasury fund sub-advised by Janus Henderson; approved non-U.S. investors subscribe and redeem with T+0 or T+1 settlement.",
   "flags": {
     "backing": "rwa-backed",

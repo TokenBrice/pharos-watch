@@ -2,6 +2,7 @@
   "id": "usdgo-osl",
   "name": "USDGO",
   "symbol": "USDGO",
+  "brand": "OSL",
   "oneLiner": "USDGO is OSL's enterprise dollar stablecoin issued by Anchorage Digital Bank, backed by cash and money market funds.",
   "flags": {
     "backing": "rwa-backed",
@@ -97,7 +98,7 @@
     }
   },
   "yieldConfig": {
-    "yieldSource": "USDGO EFFR-linked reserve yield",
+    "yieldSource": "OSL-distributed EFFR-linked yield for professional investors",
     "yieldType": "governance-set"
   },
   "launchDate": "2026-02-10"

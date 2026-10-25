@@ -2,6 +2,7 @@
   "id": "apxusd-apyx",
   "name": "apxUSD",
   "symbol": "apxUSD",
+  "brand": "Apyx",
   "oneLiner": "apxUSD is Apyx's DAT preferred-equity-backed dollar with a cash/T-Bill buffer; whitelist-only primary mint/redeem settles in USDC.",
   "flags": {
     "backing": "rwa-backed",

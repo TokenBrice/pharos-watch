@@ -21,7 +21,8 @@ import {
 } from "./landing-sections";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "PharosWatchBot: Stablecoin Telegram Alerts",
+  title: "Free Stablecoin Depeg Alerts on Telegram | PharosWatchBot",
+  titleAbsolute: true,
   description: TELEGRAM_PAGE_DESCRIPTION,
   canonical: "/pharoswatchbot/",
   ogImage: `${SITE_URL}/og-pharoswatchbot.png`,

@@ -2,6 +2,7 @@
   "id": "weusd-picwe",
   "name": "WEUSD",
   "symbol": "WEUSD",
+  "brand": "PicWe",
   "oneLiner": "WEUSD is PicWe's omni-chain wrapper with disputed USDC-vs-USDT/MOVE backing and a recent off-peg market price.",
   "flags": {
     "backing": "crypto-backed",

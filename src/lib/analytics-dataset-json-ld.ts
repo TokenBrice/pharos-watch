@@ -21,6 +21,8 @@ export interface PublicDatasetDescriptor {
   description: string;
   keywords: string[];
   export: PublicDatasetExport;
+  /** Row field holding each record's start time, for exports that span a history window. */
+  temporalStartField?: string;
 }
 
 export const PUBLIC_DATASET_JSON_LD_DESCRIPTORS: readonly PublicDatasetDescriptor[] = [
@@ -47,6 +49,7 @@ export const PUBLIC_DATASET_JSON_LD_DESCRIPTORS: readonly PublicDatasetDescripto
       "Public history of tracked depeg events with stablecoin IDs, direction, peak deviation, timing, duration, prices, peg reference, and source.",
     keywords: ["stablecoin depeg history", "depeg events", "peg monitoring", "stablecoin incident data"],
     export: PUBLIC_DATASET_CURRENT_EXPORTS["depeg-history"] as PublicDatasetExport,
+    temporalStartField: "startedAtISO",
   },
   {
     slug: "peg-mechanism-distribution",
@@ -126,6 +129,21 @@ function datasetDate(dataset: PublicDatasetExport): string | undefined {
   return dataset._meta.asOfISO?.slice(0, 10);
 }
 
+/**
+ * ISO 8601 coverage read from the export itself: the snapshot date, or for a
+ * history window the earliest row start through the snapshot date.
+ */
+function datasetTemporalCoverage(descriptor: PublicDatasetDescriptor): string | undefined {
+  const date = datasetDate(descriptor.export);
+  if (!date || !descriptor.temporalStartField) return date;
+  const field = descriptor.temporalStartField;
+  const earliest = descriptor.export.rows
+    .map((row) => row[field])
+    .filter((value): value is string => typeof value === "string" && value.length >= 10)
+    .sort()[0];
+  return earliest ? `${earliest.slice(0, 10)}/${date}` : date;
+}
+
 function buildDatasetDistributions(descriptor: PublicDatasetDescriptor) {
   const formats = [
     ["JSON", "application/json", "json"],
@@ -160,6 +178,7 @@ export function buildPublicDatasetMirrorJsonLd(topic: PublicDatasetTopic) {
   const organization = buildPharosOrganizationNode();
   const rowFields = Object.keys(descriptor.export.rows[0] ?? {});
   const date = datasetDate(descriptor.export);
+  const temporalCoverage = datasetTemporalCoverage(descriptor);
   const additionalProperty = [
     { "@type": "PropertyValue", name: "endpoint", value: descriptor.export._meta.endpoint },
     { "@type": "PropertyValue", name: "rowCount", value: descriptor.export._meta.rowCount },
@@ -181,6 +200,7 @@ export function buildPublicDatasetMirrorJsonLd(topic: PublicDatasetTopic) {
     identifier: [buildPharosUrnJsonLdIdentifier("dataset", descriptor.slug)],
     sameAs: `${API_REFERENCE_URL}#dataset-${descriptor.slug}`,
     ...(date ? { dateModified: date } : {}),
+    ...(temporalCoverage ? { temporalCoverage } : {}),
     keywords: descriptor.keywords,
     variableMeasured: rowFields.map((name) => ({
       "@type": "PropertyValue",

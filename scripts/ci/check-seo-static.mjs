@@ -5,6 +5,7 @@ import { isMainThread, parentPort, Worker, workerData } from "node:worker_thread
 
 import {
   collectStructuredDataNodes,
+  countVisibleMainTags,
   decodeHtml,
   extractJsonLdBlocks,
   extractVisibleText,
@@ -21,6 +22,12 @@ import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { findDuplicateSitemapLocs, parseSitemapLocs, walkOutFiles } from "../lib/seo-sitemap.mjs";
 
 const DEFAULT_OUT_DIR = path.resolve("out");
+// These families dropped their route-level loading.tsx (2026-10-25 SEO plan,
+// TR3): its Suspense fallback put a skeleton in the static <main> and streamed
+// the real h1, copy and JSON-LD into a hidden div after it.
+// /flows/ is excluded until its page-level Suspense stops suspending at
+// prerender (tracked in the SEO batch 1 follow-ups issue, #1653).
+const VISIBLE_MAIN_H1_ROUTE_PATTERN = /^\/(?:depeg|compare|safety-scores|screener|yield|liquidity|compliance)\//;
 const BAILOUT_PATTERN = /BAILOUT_TO_CLIENT_SIDE_RENDERING|next-dynamic-bailout-to-csr/;
 const EMPTY_BAILOUT_TEMPLATE_PATTERN = /<template\s+data-dgst=(["'])BAILOUT_TO_CLIENT_SIDE_RENDERING\1><\/template>/g;
 const PHAROS_ORIGIN = "https://pharos.watch";
@@ -76,6 +83,50 @@ const INDEXABLE_SNIPPET_LENGTHS = {
   title: { min: 35, max: 70 },
   description: { min: 110, max: 180 },
 };
+// Title and description hygiene (SEO plan PF10, TR2). Only templated titles
+// ending in the root " | Pharos" suffix are checked for a second brand
+// mention; absolute titles (e.g. "| Pharos Blog") opt out by construction.
+const TITLE_BRAND_SUFFIX = " | Pharos";
+const TITLE_BRAND_PATTERN = /\bPharos\b/;
+// The homepage, and the Pharos Network chain whose own name is "Pharos".
+const TITLE_BRAND_ALLOWED_ROUTES = new Set(["/", "/chains/pharos/"]);
+const TITLE_DASH_PATTERN = /[\u2012-\u2015]/;
+const TITLE_WARN_LENGTH = 60;
+// Families whose titles or descriptions other SEO lanes are still rewriting:
+// these report as warnings until their fix lands. Delete a prefix to enforce it.
+const METADATA_RULE_WARN_ONLY_PREFIXES = {
+  titleBrand: [
+    "/about/", "/api/", "/changelog/", "/docs/", "/funding/", "/methodology/",
+    "/privacy/", "/screener/", "/stability-index/", "/status/",
+  ],
+  titleDash: ["/depeg/"],
+  descriptionEllipsis: ["/compare/"],
+};
+
+function isWarnOnlyMetadataRoute(rule, route) {
+  return METADATA_RULE_WARN_ONLY_PREFIXES[rule].some((prefix) => route.startsWith(prefix));
+}
+
+function checkTitleAndDescriptionHygiene(record, errors, warnings, longTitles) {
+  const report = (rule, message) =>
+    (isWarnOnlyMetadataRoute(rule, record.route) ? warnings : errors).push(`${record.route}: ${message}`);
+  const { title, description } = record;
+  if (
+    title.endsWith(TITLE_BRAND_SUFFIX)
+    && !TITLE_BRAND_ALLOWED_ROUTES.has(record.route)
+    && TITLE_BRAND_PATTERN.test(title.slice(0, -TITLE_BRAND_SUFFIX.length))
+  ) {
+    report("titleBrand", `<title> repeats "Pharos" before the suffix: ${title}`);
+  }
+  if (TITLE_DASH_PATTERN.test(title)) {
+    report("titleDash", `<title> contains a figure, en or em dash (U+2012-U+2015): ${title}`);
+  }
+  if (description.endsWith("…")) {
+    report("descriptionEllipsis", `meta description ends in "…"; compose whole sentences instead: ${description}`);
+  }
+  if (title.length > TITLE_WARN_LENGTH) longTitles.push(record.route);
+}
+
 const REQUIRED_GOOGLE_PREVIEW_DIRECTIVES = ["max-snippet:-1", "max-image-preview:large", "max-video-preview:-1"];
 const REQUIRED_STATIC_HEADER_RULES = [
   { route: "/*.txt", header: "X-Robots-Tag", directives: ["noindex", "nofollow"], label: "raw .txt payloads" },
@@ -108,9 +159,10 @@ const DATASET_BASE_REQUIRED_PATHS = [
   "identifier.0.value",
 ];
 
-// FAQ structured data is retained as semantic markup for visible Q&A content.
-// Google retired broad FAQ rich-result visibility, so this matrix treats FAQ as
-// a consistency guardrail rather than a rich-result growth target.
+// FAQ structured data is retained as content-understanding markup that mirrors
+// visible Q&A. FAQ rich results ended (2026-05-07) and HowTo rich results are
+// retired, so the FAQPage rows below are a markup-to-copy consistency guard,
+// not rich-result coverage. Do not add FAQ or HowTo nodes to win SERP space.
 const STRUCTURED_DATA_ROUTE_MATRIX = [
   {
     label: "home page",
@@ -140,6 +192,9 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
     label: "pre-launch stablecoin detail",
     pattern: /^\/stablecoin\/[^/]+\/$/,
     selectTypes: ["WebPage", "Thing"],
+    // Active profiles also nest a WebPage (mainEntityOfPage) and a Thing
+    // (Dataset.about); only pre-launch profiles lack the Dataset node.
+    excludeTypes: ["Dataset"],
     nodes: [
       { type: "WebPage", requiredPaths: ["name", "description", "url", "about"] },
       { type: "Thing", requiredPaths: ["name", "description"] },
@@ -292,7 +347,6 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
     nodes: [
       { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
       { type: "SoftwareApplication", requiredPaths: ["name", "operatingSystem", "applicationCategory"] },
-      { type: "HowTo", requiredPaths: ["name", "step.0.name"] },
       { type: "FAQPage", requiredPaths: ["mainEntity.0.name", "mainEntity.0.acceptedAnswer.text"] },
     ],
   },
@@ -520,6 +574,19 @@ function validateStaticRedirects(rules, errors) {
   }
 }
 
+// Retired coin IDs 301 to their peg hub only while that hub is built (hubs
+// exist only for currencies with an active coin); a hub that leaves the export
+// must not turn the redirect into a 404.
+function validateTaxonomyRedirectDestinations(rules, outDir, errors) {
+  for (const rule of rules) {
+    const destinationPath = redirectPathTemplate(rule.destination);
+    if (!destinationPath?.startsWith("/stablecoins/")) continue;
+    if (!fs.existsSync(path.join(outDir, destinationPath, "index.html"))) {
+      errors.push(`_redirects source ${rule.source} targets ${rule.destination}, which the build does not export; redirect it to /coverage/`);
+    }
+  }
+}
+
 function validateStaticHeaders(outDir, errors) {
   const headersPath = path.join(outDir, "_headers");
   if (!fs.existsSync(headersPath)) {
@@ -655,6 +722,27 @@ function retiredInternalRouteMatch(normalizedHref) {
   );
 }
 
+/**
+ * Every internal `_redirects` redirect (not a 200 rewrite) marks a retired
+ * route, so internal anchors are checked against the file itself rather than
+ * only the hand-kept prefix list: a link to a source costs a redirect hop.
+ * Static sources match exactly (trailing slash normalized); `/*` splats match
+ * their prefix. Placeholder sources are not matched.
+ */
+function buildRedirectedRouteMatchers(redirectRules) {
+  return redirectRules
+    .filter((rule) => rule.source.startsWith("/") && rule.status !== "200" && !rule.source.includes(":"))
+    .map((rule) => {
+      const splat = rule.source.endsWith("/*");
+      const path = splat ? rule.source.slice(0, -1) : rule.source;
+      return { source: rule.source, destination: rule.destination, splat, base: path.endsWith("/") ? path : `${path}/` };
+    });
+}
+
+function redirectedInternalRouteMatch(normalizedHref, matchers) {
+  return matchers.find((matcher) => (matcher.splat ? normalizedHref.startsWith(matcher.base) : normalizedHref === matcher.base)) ?? null;
+}
+
 function isRetiredInternalRoute(route) {
   return retiredInternalRouteMatch(route) !== null;
 }
@@ -728,7 +816,9 @@ function selectStructuredDataRouteRecord(pageRecords, expectation) {
     return candidates[0] ?? null;
   }
 
-  return candidates.find((record) => expectation.selectTypes.every((type) => pageHasSchemaType(record, type))) ?? null;
+  return candidates.find((record) =>
+    expectation.selectTypes.every((type) => pageHasSchemaType(record, type))
+    && !(expectation.excludeTypes ?? []).some((type) => pageHasSchemaType(record, type))) ?? null;
 }
 
 function validateStructuredDataRouteMatrix(pageRecords, errors, matrix) {
@@ -882,6 +972,7 @@ export function buildSeoPageRecord(
     ogTitle: getMetaContents(html, "property", "og:title")[0] ?? "",
     ogDescription: getMetaContents(html, "property", "og:description")[0] ?? "",
     ogType: getMetaContents(html, "property", "og:type")[0] ?? "",
+    ogSiteName: getMetaContents(html, "property", "og:site_name")[0] ?? "",
     ogImage: getMetaContents(html, "property", "og:image")[0] ?? "",
     twitterCard: getMetaContents(html, "name", "twitter:card")[0] ?? "",
     twitterImage: getMetaContents(html, "name", "twitter:image")[0] ?? "",
@@ -890,6 +981,7 @@ export function buildSeoPageRecord(
     indexable,
     googleBotTags: getMetaContents(html, "name", "googlebot"),
     h1Count: (html.match(/<h1\b/gi) ?? []).length,
+    visibleMainH1Count: VISIBLE_MAIN_H1_ROUTE_PATTERN.test(route) ? countVisibleMainTags(html, "h1") : null,
     hasFatalCsrBailout: hasFatalCsrBailoutMarker(html),
     hrefs: getAnchorHrefs(html),
     structuredData,
@@ -905,6 +997,30 @@ export function buildSeoPageRecord(
         }
       : null,
   };
+}
+
+const STABLECOIN_PROFILE_ROUTE_PATTERN = /^\/stablecoin\/[^/]+\/$/;
+// An unresolved AI-summary claim rendered as "N/A" ("USDT carries a N/A overall grade").
+const UNRESOLVED_GRADE_CLAIM_PATTERN = /\bN\/A (?:overall grade|report card)\b/;
+const LOADING_DOSSIER_TEXT = "Loading research dossier";
+// The server-rendered static profile (StablecoinDetailSeoContent), outside the dossier's Suspense boundary.
+const STATIC_PROFILE_MARKER = 'id="stablecoin-static-profile-title"';
+
+/**
+ * Profiles are indexed in their prerendered state, hidden streamed segments
+ * included: no unresolved grade claim, and a loading dossier never stands
+ * alone without the static profile. The one-h1 rule covers profiles above.
+ */
+function validateStablecoinProfileRender(pageRecords, errors) {
+  for (const record of pageRecords) {
+    if (!STABLECOIN_PROFILE_ROUTE_PATTERN.test(record.route) || !record.filePath || !fs.existsSync(record.filePath)) continue;
+    const html = fs.readFileSync(record.filePath, "utf8");
+    const unresolved = html.match(UNRESOLVED_GRADE_CLAIM_PATTERN);
+    if (unresolved) errors.push(`${record.route}: profile HTML renders an unresolved claim ("${unresolved[0]}")`);
+    if (html.includes(LOADING_DOSSIER_TEXT) && !html.includes(STATIC_PROFILE_MARKER)) {
+      errors.push(`${record.route}: profile HTML is a "${LOADING_DOSSIER_TEXT}" shell without the static profile`);
+    }
+  }
 }
 
 export function collectSeoStaticCheckResult({
@@ -934,6 +1050,8 @@ export function collectSeoStaticCheckResult({
   const redirectRules = redirectEntries.filter((entry) => entry.destination);
   validateStaticHeaders(outDir, errors);
   validateStaticRedirects(redirectRules, errors);
+  const longTitleRoutes = [];
+  validateTaxonomyRedirectDestinations(redirectRules, outDir, errors);
 
   for (const record of pageRecords) {
     if (record.hasFatalCsrBailout) {
@@ -964,6 +1082,7 @@ export function collectSeoStaticCheckResult({
           `${record.route}: meta description is too long for search snippets (${record.description.length} chars, maximum ${INDEXABLE_SNIPPET_LENGTHS.description.max})`,
         );
       }
+      checkTitleAndDescriptionHygiene(record, errors, warnings, longTitleRoutes);
     }
     if (indexable && !record.canonical) errors.push(`${record.route}: missing canonical`);
     if (indexable && record.canonical) {
@@ -977,6 +1096,7 @@ export function collectSeoStaticCheckResult({
     if (!record.ogTitle) errors.push(`${record.route}: missing og:title`);
     if (!record.ogDescription) errors.push(`${record.route}: missing og:description`);
     if (!record.twitterCard) errors.push(`${record.route}: missing twitter:card`);
+    if (indexable && !record.ogSiteName) errors.push(`${record.route}: missing og:site_name`);
 
     const robotsConflicts = getRobotsConflicts(record.robotsTags);
     for (const conflict of robotsConflicts) {
@@ -1015,6 +1135,11 @@ export function collectSeoStaticCheckResult({
     if (indexable && record.h1Count !== 1) {
       errors.push(`${record.route}: expected exactly one <h1> on indexable page, got ${record.h1Count}`);
     }
+    if (indexable && record.visibleMainH1Count != null && record.visibleMainH1Count !== 1) {
+      errors.push(
+        `${record.route}: expected exactly one visible <h1> inside <main>, got ${record.visibleMainH1Count} (a route-level loading boundary moves it into hidden streamed HTML)`,
+      );
+    }
   }
 
   const missingOgImagePaths = new Set();
@@ -1042,6 +1167,7 @@ export function collectSeoStaticCheckResult({
   }
 
   const routeSet = new Set(pageRecords.map((p) => p.route));
+  const redirectedRouteMatchers = buildRedirectedRouteMatchers(redirectRules);
   const graph = new Map();
   const inbound = new Map();
   for (const route of routeSet) {
@@ -1066,6 +1192,13 @@ export function collectSeoStaticCheckResult({
         errors.push(
           `${record.route}: internal anchor href points to retired route prefix ${retiredRoute.prefix}: ${href} (use ${retiredRoute.replacement})`,
         );
+      } else {
+        const redirectedRoute = redirectedInternalRouteMatch(normalized, redirectedRouteMatchers);
+        if (redirectedRoute) {
+          errors.push(
+            `${record.route}: internal anchor href points to _redirects source ${redirectedRoute.source}: ${href} (use ${redirectedRoute.destination})`,
+          );
+        }
       }
 
       if (routeSet.has(normalized)) {
@@ -1212,6 +1345,13 @@ export function collectSeoStaticCheckResult({
       }
     }
   }
+
+  if (longTitleRoutes.length > 0) {
+    warnings.push(
+      `${longTitleRoutes.length} indexable <title>s exceed ${TITLE_WARN_LENGTH} chars (search truncation), e.g. ${longTitleRoutes.slice(0, 5).join(", ")}`,
+    );
+  }
+  validateStablecoinProfileRender(pageRecords, errors);
 
   // Informational warning only: avoids failing CI for transient route count changes.
   warnings.push(`Checked ${pageRecords.length} HTML pages in out/`);

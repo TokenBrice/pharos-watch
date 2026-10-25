@@ -56,6 +56,10 @@ Search/filter/sort/page use URL state; defaults are omitted and lens changes res
 
 Shared freshness notices cover every contributing live family without discarding structural coverage when optional queries fail. Retained liquidity distinguishes producer-refresh failure from source/quality warnings; older snapshot notices take precedence. Advisory detail may explain reasons without dumping machine flags into banner text. Stablecoins-source unavailability shows the error card and withholds the matrix rather than inventing cap weights.
 
+## Removed From Coverage
+
+After the client matrix, a static `Removed from coverage` section (`src/app/coverage/removed-stablecoins-section.tsx`) lists every coin removed from the registry: name, symbol, peg, removal date and a reason category, one row per coin anchored by its retired ID. `src/lib/removed-stablecoins.ts` is the list's single source. Each retired `/stablecoin/<id>` URL and subpath 301s to its peg hub when the build exports that hub, otherwise to `/coverage/` (decision D8 of the 2026-10-25 SEO plan). `src/lib/__tests__/removed-stablecoins.test.ts` keeps the list and `public/_redirects` in step, and `check-seo-static` fails a redirect into an unexported `/stablecoins/` page. Removing a coin adds its row and both redirect rules; numeric and provider aliases in `shared/data/stablecoins/legacy-route-redirects.json` follow the same destination.
+
 ## Structured Data Contract
 
 The static indexable shell uses `createClientFeaturePage()`. Dataset JSON-LD is conservative/methodological: organization creator/publisher, license, `urn:pharos:dataset:coverage`, public page/API links and coverage fields. No live metrics, DataDownload, dateModified or private `/_site-data/*` URLs. Client `FaqSection includeJsonLd` owns FAQ schema.

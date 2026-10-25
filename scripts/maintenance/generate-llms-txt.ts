@@ -20,6 +20,7 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
 import { DEFINITIONS_PATH, getListedDefinitions } from "../../src/lib/definitions";
 import { ARCHETYPE_CONTENT } from "../../src/lib/mechanism-explainers";
+import { formatSnapshotSafetyScoreLabel } from "../../src/lib/safety-grade-snapshot";
 import type { StablecoinMeta } from "@shared/types";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 
@@ -42,7 +43,8 @@ function stablecoinDescription(coin: StablecoinMeta): string {
   const backing = BACKING_PROSE_LABELS[coin.flags.backing] ?? coin.flags.backing;
   const peg = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
 
-  return `${governance} stablecoin ${backing} pegged to ${peg}.`;
+  const scoreLabel = formatSnapshotSafetyScoreLabel(coin.id);
+  return `${governance} stablecoin ${backing} pegged to ${peg}.${scoreLabel ? ` ${scoreLabel}.` : ""}`;
 }
 
 function loadDigests(): DigestContentEntry[] {

@@ -67,6 +67,11 @@ describe("PharosWatchBotPage", () => {
     expect(copy).toContain(`${String(TELEGRAM_ALERT_POLICY.rollup.localHour).padStart(2, "0")}:00`);
   });
 
+  it("emits SoftwareApplication markup and no retired HowTo node", () => {
+    const types = buildTelegramPageJsonLd("https://pharos.watch").map((node) => node["@type"]);
+    expect(types).toEqual(["SoftwareApplication"]);
+  });
+
   it("builds the recommended setup deep link from a registry-valid start payload", () => {
     const url = new URL(RECOMMENDED_SETUP_DEEP_LINK);
     const startPayload = url.searchParams.get("start");

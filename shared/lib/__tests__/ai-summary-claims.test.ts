@@ -51,6 +51,16 @@ describe("AI summary claim tokens", () => {
     }).text).toBe(`Grade ${grade}.`);
   });
 
+  it.each([
+    ["A-", "USDT carries an A- overall grade."],
+    ["F", "USDT carries an F overall grade."],
+    ["B+", "USDT carries a B+ overall grade."],
+  ])("uses the right article before a resolved %s grade", (grade, expected) => {
+    expect(resolveAiSummaryClaims("USDT carries a {{grade}} overall grade.", [gradeToken], {
+      "report-card.grade": grade,
+    }).text).toBe(expected);
+  });
+
   it.each([null, undefined, "D+", "D-"])("renders unavailable or invalid grade %s as N/A", (grade) => {
     expect(resolveAiSummaryClaims("Grade {{grade}}.", [gradeToken], {
       "report-card.grade": grade,

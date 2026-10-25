@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { FaqSection } from "@/components/faq-section";
-import { ScreenerContentLoadingState } from "@/app/screener/loading";
+import { ScreenerContentLoadingState } from "@/app/screener/loading-state";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import type { FaqItem } from "@/lib/faq";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -85,7 +85,7 @@ const SCREENER_SUPPORT_SECTION = (
 const route = createClientFeaturePage({
   path: "/screener/",
   metadata: {
-    title: "Pharos Screener: Filter Stablecoins by Score & Mechanism",
+    title: "Stablecoin Screener: Filter by Grade, Peg & Backing",
     description: screenerDescription,
     ogImage: `${SITE_URL}/og-default.png`,
   },

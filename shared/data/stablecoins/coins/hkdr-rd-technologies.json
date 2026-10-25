@@ -2,6 +2,7 @@
   "id": "hkdr-rd-technologies",
   "name": "RD Technologies HKDR",
   "symbol": "HKDR",
+  "brand": "RD InnoTech",
   "oneLiner": "HKDR is RD InnoTech's pre-launch HKD stablecoin, in HKMA sandbox since 2024 but not in the first April 2026 licence batch; no launch date supported by sources.",
   "flags": {
     "backing": "rwa-backed",

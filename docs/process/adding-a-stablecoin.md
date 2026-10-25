@@ -75,6 +75,19 @@ If the asset is pre-launch, also collect:
 
 Do not expect pre-launch assets to show up in live worker-driven coverage until the status flips to active.
 
+#### 72-hour pre-launch stub lane
+
+When an issuer, regulator or bank publishes a credible primary-source announcement of an in-scope stablecoin, add a pre-launch stub within 72 hours rather than waiting for a full research packet. Early entries capture launch-intent searches while they peak. The stub is still a normal pre-launch addition: it passes Phase 1 eligibility, gets a canonical-order position and a `listing-decisions.json` class, and clears every Phase 4 coupling group and Phase 7 check. Only the research depth is deferred.
+
+Minimum stub content:
+
+- Identity and classification: canonical `id`, `name`, `symbol`, `status: "pre-launch"`, `flags` (`backing`, `governance`, and `pegCurrency` when not USD) and a `oneLiner` that states only what the announcement supports.
+- One primary source: the announcement itself, in `links` and as the `sourceUrl` of the milestone below. Secondary reporting alone does not open this lane.
+- One milestone: the dated announcement (`type: "announcement"`, or `regulatory` for a licence or authorisation), plus `announcedDate`. Add `launchPhase`, `expectedLaunchDate` or `launchPhaseDetail` only when the source states them; never infer a phase or date from promotional language.
+- `blacklistabilityReview` in `domains/risk-review/<id>.json`: when no source describes holder-control powers yet, record the reviewed status with a `sourceFreeRationale` that says the verdict follows the issuer model in the announcement.
+
+Deeper research follows through the [`pre-launch-update`](../../.codex/skills/pre-launch-update/SKILL.md) review: collateral, peg mechanism, jurisdiction, featured content, further milestones and any refined blacklistability evidence. A stub never skips the [Phase 1a runtime gate](#1a-hard-runtime-data-gate-for-active-assets) at promotion.
+
 ### 0b. Plan the per-coin registry file
 
 - Identify exactly one JSON file under `shared/data/stablecoins/coins/`; its filename must be `<id>.json`, matching the canonical stablecoin ID in the object.
@@ -274,6 +287,9 @@ Three optional clusters on `StablecoinMeta` drive the hero verdict, mechanism sc
 - Active asset: present-tense, names issuer + backing + redemption shape. Example for USDC: "USDC is Circle's centralized dollar stablecoin, redeemable 1:1 and backed by short-term U.S. Treasuries, repos, and cash held in an SEC-regulated reserve fund."
 - Synthetic / hedged asset: name the hedge shape and where yield comes from. Example for USDe: "USDe is a synthetic dollar that stays near $1 by hedging crypto collateral with equal short positions on derivatives exchanges; yield comes from funding rates."
 - Frozen / paused asset: use past tense and name the event. Example: "USR was Resolv Labs's delta-neutral synthetic dollar that paused issuance in 2026..."
+- The `oneLiner` is also the profile meta description. Keep supply, AUM or other drifting amounts out of it ("~HK$527k circulating"); a `oneLiner` with such an amount is replaced in metadata by a generic fixed-structure sentence ([Metadata](../stablecoin-detail-page.md#metadata)).
+
+**`brand` (optional top-level string, ≤20 chars)** — the issuer short name people search for (Circle, Paxos, JBFD), used in profile titles. Set it only when `name` omits the issuer, repeats the symbol, or is too long for a title.
 
 **`mechanismArchetype` (top-level enum)** — coarse mechanism class that selects the mechanism flow drawn in the detail page's Mechanism module (`PegStabilityCard`), above the curated peg-mechanism prose.
 

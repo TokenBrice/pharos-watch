@@ -19,7 +19,7 @@ dateModified: "2026-10-19"
 
 ## Overview
 
-The current Safety Score and live assessment are available on the interactive page.
+USDT held Safety Score A (83/100) as of 2026-10-22 in Pharos's scores-latest release dataset. The current Safety Score and live assessment are available on the interactive page.
 
 ## Collateral
 
@@ -90,6 +90,28 @@ Direct redemption through Tether for verified customers at $1 less applicable fe
 | tempo | `0x20C00000000000000000000014f22CA97301EB73` | 6 |
 | rootstock | `0x779dED0C9e1022225F8e0630b35A9B54Be713736` | 6 |
 | hedera | `0x00000000000000000000000000000000009Ce723` | 6 |
+
+## Quick answers
+
+### What is Tether (USDT)?
+
+USDT (Tether) is the largest dollar stablecoin, mostly backed by short-term U.S. Treasuries with a centralized issuer and quarterly attestations. The static profile records its US Dollar peg mechanism as: Direct redemption through Tether for verified customers at $1 less applicable fees, subject to Tether's terms. Supply figures include USDT0 (omnichain variant via LayerZero lock-and-mint) deployed on 20+ additional chains.
+
+### Is USDT safe?
+
+As of Oct 22, 2026, Pharos grades USDT A (83/100) on its Safety Score. Pharos's reviews record that the issuer or an admin can freeze individual holders' balances, and direct redemption is limited to customers the issuer has verified. That grade is in the Score's upper band, which does not rule out losses. The grade moves as reserve, redemption, peg and control evidence changes; the live Safety Score on this page shows the current reading.
+
+### What backs USDT?
+
+Pharos records USDT's reserves as of Jun 30, 2026 as 61.2% U.S. Treasury bills, 10% Precious metals, 9.9% Overnight reverse repurchase agreements, and 8 smaller holdings. Reserve evidence: Independent Attestation by BDO Italia, latest period ending Jun 30, 2026. Pharos classifies the backing as Real-World Asset Backed.
+
+### Can USDT be frozen or blacklisted?
+
+Based on tracked contract metadata and blacklist coverage, issuer or admin freeze controls are recorded. Live freeze and blacklist events for USDT, when applicable, appear in the live dossier on this page.
+
+### How do you redeem USDT?
+
+Under the route Pharos reviewed on Apr 16, 2026, customers the issuer has verified can redeem USDT for a single stable asset, such as cash or a stablecoin, with a $100,000 minimum. Settlement takes multiple days. The reviewed redemption fee is at most 0.1%. Whether a given holder qualifies is set by the route's own terms, not by this summary.
 
 ## Live Data
 

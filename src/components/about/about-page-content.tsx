@@ -34,8 +34,8 @@ import {
   CORE_AGGREGATE_STABLECOIN_COUNT,
   DEAD_STABLECOIN_COUNT,
   PRE_LAUNCH_STABLECOIN_COUNT,
-  TRACKED_STABLECOIN_COUNT,
 } from "@/lib/stablecoin-static-data";
+import { HEADLINE_STABLECOIN_COUNT } from "@/lib/universe-vocabulary";
 
 // Intentionally extends pharos-prose-link with inline-flex/gap-1 for icon-paired links (ExternalLink icon)
 // and frost-blue hover for visual differentiation. Cannot collapse to pharos-prose-link which has no flex layout.
@@ -47,7 +47,7 @@ const TELEGRAM_CTA_BUTTON_CLASS = cn(
   CTA_BUTTON_CLASS,
   "border-transparent bg-foreground text-background hover:bg-foreground/90 hover:text-background dark:bg-foreground dark:text-background dark:hover:bg-foreground/90 dark:hover:text-background",
 );
-export const ABOUT_METADATA_TITLE = "About Pharos: Independent Stablecoin Risk Monitoring";
+export const ABOUT_METADATA_TITLE = "About Pharos: Independent Stablecoin Risk Analytics";
 export const ABOUT_METADATA_DESCRIPTION =
   "About Pharos: open stablecoin analytics for peg tracking, safety scores, liquidity, freeze monitoring, methodology, data sources, and failed-coin archives.";
 const ABOUT_PAGE_JSON_LD = {
@@ -327,6 +327,7 @@ export function AboutPageContent() {
   const heroStats: readonly { label: string; value: string | number }[] = [
     { label: "Core", value: CORE_AGGREGATE_STABLECOIN_COUNT },
     { label: "Variants", value: ACTIVE_VARIANT_STABLECOIN_COUNT },
+    { label: "Stable-value", value: ACTIVE_STABLE_VALUE_INVESTMENT_COUNT },
     { label: "Pre-launch", value: PRE_LAUNCH_STABLECOIN_COUNT },
     { label: "Sources", value: "50+" },
   ];
@@ -359,9 +360,9 @@ export function AboutPageContent() {
         <section aria-labelledby="about-lede" className="space-y-6 pb-2">
           <div className="space-y-4">
             <div className="space-y-1">
-              <p className="pharos-label">Stablecoins tracked</p>
+              <p className="pharos-label">Active stablecoins</p>
               <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem]">
-                {TRACKED_STABLECOIN_COUNT}
+                {HEADLINE_STABLECOIN_COUNT}
               </p>
             </div>
             <div className="space-y-3">

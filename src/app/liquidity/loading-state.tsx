@@ -1,6 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageLoadingRowList } from "@/components/page-loading-skeleton";
-import { createPageLoadingRoute } from "@/app/page-loading-route";
 
 // Stacked One Beam hero (beam row, exit route map, ledger) + leaderboard.
 const LIQUIDITY_SKELETON_ROW_COUNT = 10;
@@ -40,8 +39,3 @@ export function LiquidityContentLoadingState() {
     </>
   );
 }
-
-export default createPageLoadingRoute(LiquidityContentLoadingState, {
-  sectionWidth: "w-24",
-  titleWidth: "w-64 sm:w-80",
-});

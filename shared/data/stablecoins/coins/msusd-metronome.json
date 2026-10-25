@@ -2,6 +2,7 @@
   "id": "msusd-metronome",
   "name": "Metronome Synth USD",
   "symbol": "msUSD",
+  "brand": "Metronome",
   "oneLiner": "msUSD is Metronome's crypto-backed synth; its July 2026 shortfall was reported resolved in September, while the synth swap remains closed.",
   "flags": {
     "backing": "crypto-backed",

@@ -15,7 +15,7 @@ import donationsData from "@shared/data/funding/donations.json";
 import { CostsFileSchema, DonationsFileSchema } from "@shared/lib/funding/schema";
 
 export const metadata = buildPageMetadata({
-  title: "Pharos Funding: Costs, Donations & Public Ledger",
+  title: "Funding: Costs, Donations & Public Ledger",
   description:
     "See Pharos running costs, on-chain donations, monthly funding progress, donor ledger, and the path to keeping stablecoin risk analytics freely accessible.",
   canonical: "/funding/",

@@ -3,8 +3,10 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
-import { STATIC_COMPARE_PAIRS, buildLiveCompareUrl, buildStaticComparisonSlug } from "@/lib/compare-links";
+import { STATIC_COMPARE_PAIRS, buildComparePrefillUrl, buildStaticComparisonSlug } from "@/lib/compare-links";
+import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-current";
 import { trimTextAtWordBoundary } from "@/lib/page-metadata";
+import { getSnapshotSafetyAssessment, type SnapshotSafetyAssessment } from "@/lib/safety-grade-snapshot";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 
@@ -134,6 +136,12 @@ function getStablecoinOrThrow(id: string): StablecoinMeta {
   return coin;
 }
 
+
+/** Lowercase a backing label for prose, but keep acronyms such as "RWA" intact. */
+function formatCohortLabel(label: string): string {
+  return label.split(" ").map((word) => (word === word.toUpperCase() ? word : word.toLowerCase())).join(" ");
+}
+
 export function assertStaticComparePairs() {
   const slugs = new Set<string>();
   const unorderedKeys = new Set<string>();
@@ -180,6 +188,43 @@ function describeStaticSafetyLens(coin: StablecoinMeta): string {
   return `${coin.symbol}: ${GOVERNANCE_LABELS[coin.flags.governance]} governance, ${BACKING_LABELS_SHORT[coin.flags.backing]} backing, ${describeBlacklistability(coin)}, ${describeReserveSignal(coin)}.`;
 }
 
+// Dated grades come from the same scores-latest release mirror the profile
+// static HTML cites, so a compare page and its two profiles always agree.
+interface ComparisonGrades {
+  asOf: string;
+  left: SnapshotSafetyAssessment;
+  right: SnapshotSafetyAssessment;
+}
+
+function getComparisonGrades(left: StablecoinMeta, right: StablecoinMeta): ComparisonGrades | null {
+  const leftAssessment = getSnapshotSafetyAssessment(left.id);
+  const rightAssessment = getSnapshotSafetyAssessment(right.id);
+  if (!leftAssessment || !rightAssessment) return null;
+  return { asOf: PUBLIC_DATASET_CURRENT_DATE, left: leftAssessment, right: rightAssessment };
+}
+
+function formatGradeScore(assessment: SnapshotSafetyAssessment): string {
+  return assessment.score !== null ? `${assessment.grade} ${assessment.score}/100` : assessment.grade;
+}
+
+function formatGradeClause(assessment: SnapshotSafetyAssessment): string {
+  const article = assessment.grade.startsWith("A") || assessment.grade === "F" ? "an" : "a";
+  return assessment.score !== null
+    ? `${article} ${assessment.grade} Safety Score grade (${assessment.score}/100)`
+    : `${article} ${assessment.grade} Safety Score grade`;
+}
+
+function describeCoinWithGrade(coin: StablecoinMeta, assessment: SnapshotSafetyAssessment): string {
+  const sameNameAndSymbol = coin.name.trim().toLowerCase() === coin.symbol.trim().toLowerCase();
+  return sameNameAndSymbol
+    ? `${coin.symbol} (${formatGradeScore(assessment)})`
+    : `${coin.name} (${coin.symbol}, ${formatGradeScore(assessment)})`;
+}
+
+function buildComparisonGradeSentence(left: StablecoinMeta, right: StablecoinMeta, grades: ComparisonGrades): string {
+  return `In the Pharos Safety Score release of ${grades.asOf}, ${left.symbol} held ${formatGradeClause(grades.left)} and ${right.symbol} held ${formatGradeClause(grades.right)}.`;
+}
+
 function buildComparisonIntro(left: StablecoinMeta, right: StablecoinMeta): string {
   const pegSentence =
     left.flags.pegCurrency === right.flags.pegCurrency
@@ -213,17 +258,32 @@ function buildComparisonSummary(left: StablecoinMeta, right: StablecoinMeta): st
       : `${left.symbol} has ${leftChains} tracked deployments, while ${right.symbol} has ${rightChains}.`;
   const reserveSentence =
     left.flags.backing === right.flags.backing
-      ? `Both sit in the ${BACKING_LABELS_SHORT[left.flags.backing].toLowerCase()} cohort.`
+      ? `Both sit in the ${formatCohortLabel(BACKING_LABELS_SHORT[left.flags.backing])} cohort.`
       : `${left.symbol} is ${BACKING_LABELS_SHORT[left.flags.backing].toLowerCase()}, while ${right.symbol} is ${BACKING_LABELS_SHORT[right.flags.backing].toLowerCase()}.`;
 
   return `${chainSentence} ${reserveSentence} Use the rows below to separate headline market share from the mechanics that matter during stress: redemption path, reserve signal, blacklistability, and venue depth.`;
 }
 
 function buildComparisonDescription(left: StablecoinMeta, right: StablecoinMeta): string {
+  const grades = getComparisonGrades(left, right);
+  if (grades) {
+    return trimTextAtWordBoundary(
+      `${describeCoinWithGrade(left, grades.left)} vs ${describeCoinWithGrade(right, grades.right)}, Safety Scores as of ${grades.asOf}: reserves, redemption, freeze controls and chain reach.`,
+      160,
+    );
+  }
   return trimTextAtWordBoundary(
     `${left.symbol} vs ${right.symbol} comparison: peg stability, liquidity, reserves, blacklist controls, chain reach, and live Pharos risk signals for ${left.name} and ${right.name}.`,
     160,
   );
+}
+
+// Fits about 60 characters once the root " | Pharos" suffix is added.
+const COMPARISON_TITLE_MAX_LENGTH = 51;
+
+export function buildComparisonTitle(shortTitle: string): string {
+  const title = `${shortTitle}: Safety Scores, Reserves & Risk`;
+  return title.length <= COMPARISON_TITLE_MAX_LENGTH ? title : `${shortTitle}: Safety Scores & Risk`;
 }
 
 function buildStaticComparisonPages(): StaticComparisonPage[] {
@@ -236,7 +296,7 @@ function buildStaticComparisonPages(): StaticComparisonPage[] {
     return {
       slug,
       href: `/compare/${slug}/`,
-      title: `${shortTitle}: Risk, Reserves & Liquidity Compared`,
+      title: buildComparisonTitle(shortTitle),
       shortTitle,
       description: buildComparisonDescription(left, right),
       intro: editorial?.intro ?? buildComparisonIntro(left, right),
@@ -286,7 +346,7 @@ export function buildComparisonResearchLinks(page: StaticComparisonPage) {
       label: `${page.right.name} (${page.right.symbol}) detail page`,
     },
     {
-      href: buildLiveCompareUrl([page.left.id, page.right.id]),
+      href: buildComparePrefillUrl([page.left.id, page.right.id]),
       label: `Open the live ${page.shortTitle} compare tool`,
     },
     {
@@ -314,28 +374,40 @@ export function buildComparisonResearchLinks(page: StaticComparisonPage) {
 
 export function buildComparisonSnippetAnswer(page: StaticComparisonPage): ComparisonSnippetAnswer {
   const { left, right } = page;
+  const grades = getComparisonGrades(left, right);
+  const gradeSentence = grades ? buildComparisonGradeSentence(left, right, grades) : null;
   if (page.editorial) {
     return {
       question: `What is the main difference between ${left.symbol} and ${right.symbol}?`,
-      answer: page.editorial.answer,
+      answer: gradeSentence ? `${page.editorial.answer} ${gradeSentence}` : page.editorial.answer,
       caveat: `Sources checked ${page.editorial.sourcesCheckedAt}; see the linked issuer documentation below. Open the live ${page.shortTitle} compare tool for current market data. This brief does not rank either token as categorically safer.`,
     };
   }
   const sameBroadLabels =
     left.flags.governance === right.flags.governance && left.flags.backing === right.flags.backing;
 
+  const structuralAnswer = sameBroadLabels
+    ? `There is no honest static answer that makes ${left.symbol} or ${right.symbol} categorically safer. They share the same broad Pharos governance and backing labels, so the useful read is in live peg behavior, liquidity depth, reserve freshness, issuer controls, and dependency exposure.`
+    : `The safer choice is context-dependent, not a ticker-level fact. Static metadata frames the tradeoff this way: ${describeStaticSafetyLens(left)} ${describeStaticSafetyLens(right)}`;
+
   return {
     question: `Which is safer, ${left.symbol} or ${right.symbol}?`,
-    answer: sameBroadLabels
-      ? `There is no honest static answer that makes ${left.symbol} or ${right.symbol} categorically safer. They share the same broad Pharos governance and backing labels, so the useful read is in live peg behavior, liquidity depth, reserve freshness, issuer controls, and dependency exposure.`
-      : `The safer choice is context-dependent, not a ticker-level fact. Static metadata frames the tradeoff this way: ${describeStaticSafetyLens(left)} ${describeStaticSafetyLens(right)}`,
+    answer: gradeSentence ? `${gradeSentence} ${structuralAnswer}` : structuralAnswer,
     caveat: `Open the live ${page.shortTitle} compare tool before acting; peg, liquidity, reserve, flow, and Safety Score data can change after this static brief is generated.`,
   };
 }
 
 export function buildComparisonAtAGlanceRows(page: StaticComparisonPage) {
   const { left, right } = page;
+  const grades = getComparisonGrades(left, right);
   return [
+    ...(grades
+      ? [{
+          label: `Safety Score (as of ${grades.asOf})`,
+          left: formatGradeScore(grades.left),
+          right: formatGradeScore(grades.right),
+        }]
+      : []),
     {
       label: "Governance",
       left: GOVERNANCE_LABELS[left.flags.governance],
@@ -435,18 +507,21 @@ export function buildComparisonFaqItems(page: StaticComparisonPage): ComparisonF
   const { left, right } = page;
   const leftDescriptor = `${left.name} (${left.symbol})`;
   const rightDescriptor = `${right.name} (${right.symbol})`;
+  const grades = getComparisonGrades(left, right);
+  const safetyAnswer = `Safety is not decided by ticker alone. Use this static page for the structural comparison, then open the live ${page.shortTitle} compare tool and Safety Scores page for current V10 Backing, Exit, and Economic Control pillars plus peg behavior, dependency exposure, evidence quality, and structural caps.`;
 
   return [
     {
       question: `What is the main difference between ${left.symbol} and ${right.symbol}?`,
-      answer: page.editorial?.answer ?? (
+      // Curated pairs keep the FAQ answer equal to the visible short answer.
+      answer: page.editorial ? buildComparisonSnippetAnswer(page).answer : (
         left.flags.backing === right.flags.backing && left.flags.governance === right.flags.governance
           ? `${leftDescriptor} and ${rightDescriptor} share the same broad governance and backing labels in Pharos, so the useful comparison is in the live details: peg history, liquidity depth, reserve signal, issuer controls, chain deployments, and dependency exposure.`
           : `${leftDescriptor} and ${rightDescriptor} differ structurally: ${left.symbol} is ${GOVERNANCE_LABELS[left.flags.governance].toLowerCase()} and ${BACKING_LABELS_SHORT[left.flags.backing].toLowerCase()}, while ${right.symbol} is ${GOVERNANCE_LABELS[right.flags.governance].toLowerCase()} and ${BACKING_LABELS_SHORT[right.flags.backing].toLowerCase()}.`),
     },
     {
       question: `Which is safer: ${left.symbol} or ${right.symbol}?`,
-      answer: `Safety is not decided by ticker alone. Use this static page for the structural comparison, then open the live ${page.shortTitle} compare tool and Safety Scores page for current V10 Backing, Exit, and Economic Control pillars plus peg behavior, dependency exposure, evidence quality, and structural caps.`,
+      answer: grades ? `${buildComparisonGradeSentence(left, right, grades)} ${safetyAnswer}` : safetyAnswer,
     },
     {
       question: `Where can I compare current ${left.symbol} and ${right.symbol} data?`,

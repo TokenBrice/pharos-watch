@@ -16,6 +16,17 @@ import { METHODOLOGY_HISTORY_ARCHIVES } from "@shared/lib/methodology-versions/a
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
 
+// Pin the release grade and date so the byte fixture does not move with each data refresh.
+vi.mock("../../src/lib/datasets/public-dataset-current", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/lib/datasets/public-dataset-current")>()),
+  PUBLIC_DATASET_CURRENT_DATE: "2026-10-22",
+}));
+vi.mock("../../src/lib/safety-grade-snapshot", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/lib/safety-grade-snapshot")>()),
+  getSnapshotSafetyAssessment: (id: string) => (id === "usdt-tether" ? { grade: "A", score: 83, bucket: "safe" } : null),
+  formatSnapshotSafetyScoreLabel: (id: string) => (id === "usdt-tether" ? "Safety Score A (83/100) as of 2026-10-22" : null),
+}));
+
 afterEach(() => { vi.restoreAllMocks(); });
 
 
@@ -67,6 +78,32 @@ describe("stablecoin markdown", () => {
     expect(md).toContain("The current Safety Score and live assessment are available on the interactive page.");
     expect(md).not.toContain("Holds a N/A grade.");
     expect(md).not.toContain("{{grade}}");
+  });
+
+  it("leads the overview with the dated release grade and appends the profile quick answers", () => {
+    const md = renderStablecoinDetail("usdt-tether", {
+      "usdt-tether": {
+        title: "Summary",
+        text: "Holds a {{grade}} grade.",
+        updatedAt: "2026-09-01",
+        claimTokens: [{ token: "grade", placeholder: "{{grade}}", source: "report-card.grade", factsAsOf: "2026-09-01" }],
+      },
+    });
+    expect(md).toContain(
+      "## Overview\n\nUSDT held Safety Score A (83/100) as of 2026-10-22 in Pharos's scores-latest release dataset. "
+      + "The current Safety Score and live assessment are available on the interactive page.",
+    );
+    expect(md).toContain("## Quick answers\n\n### What is Tether (USDT)?");
+    expect(md).toContain("### Is USDT safe?\n\nAs of Oct 22, 2026, Pharos grades USDT A (83/100) on its Safety Score.");
+    expect(md.indexOf("## Quick answers")).toBeLessThan(md.indexOf("## Live Data"));
+  });
+
+  it("omits the grade for unrated coins and quick answers for pre-launch profiles", () => {
+    const fixture = coin({ id: "pre-launch-fixture", status: "pre-launch" });
+    vi.spyOn(TRACKED_META_BY_ID, "get").mockReturnValue(fixture);
+    const md = renderStablecoinDetail(fixture.id, {});
+    expect(md).not.toContain("## Overview");
+    expect(md).not.toContain("## Quick answers");
   });
 
   it("retains glossary labels without exporting internal markup", () => {

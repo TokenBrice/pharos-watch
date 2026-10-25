@@ -10,6 +10,8 @@ This document covers two frontend-only feature surfaces that are not backed by d
 
 ## Stablecoin Cemetery (`/cemetery`)
 
+The route title and description count from `buildCemeteryStats(CEMETERY_ENTRIES)` (total, first death year and per-cause tally with `CAUSE_META` labels), the same stats the hero and cause strip render.
+
 `src/app/cemetery/page.tsx` owns the static shell. `shared/lib/cemetery-merged.ts` supplies data; `src/lib/cemetery-stats.ts`, `cemetery-register.ts` and `cemetery-selection.ts` own projections/navigation. `src/components/cemetery/` owns rendering and interaction.
 
 ### Data model
@@ -58,7 +60,7 @@ The generator owns schema, field descriptions and CSV order. Metadata includes p
 
 The `cemetery-dataset` artifact owns regeneration: run `npx --no-install tsx scripts/maintenance/generate-cemetery-dataset.ts` after source edits and commit outputs. Provenance pins curated JSON, frozen projection and consumed cause labels; label changes rotate checksum, unrelated active edits do not. Current Telegram snapshots use stable cemetery `id`; optional `llamaId` only aids legacy deduplication.
 
-`buildCemeteryDatasetJsonLd` uses the checked-in header for Dataset schema at `/cemetery/#dataset`, alongside CollectionPage/ItemList. Link public JSON/CSV distributions, producer `updatedAt`, field descriptions/checksum/count, never private site-data URLs or fabricated dead-coin profiles.
+`buildCemeteryDatasetJsonLd` uses the checked-in header for Dataset schema at `/cemetery/#dataset`, alongside CollectionPage/ItemList. Link public JSON/CSV distributions, producer `updatedAt`, field descriptions/checksum/count, the death-date `temporalCoverage` interval read from the export rows and the public data catalog (`includedInDataCatalog`), never private site-data URLs or fabricated dead-coin profiles.
 
 ### RSS feed
 
@@ -126,7 +128,7 @@ Methodology distinguishes curated versus tracked-then-frozen admission, excludes
 
 ### Autopsy register
 
-`buildCemeteryRegisterRows` projects data server-side; clients import types, never `CEMETERY_ENTRIES`. Missing peak/mechanism/epitaph is visibly/accessibly not recorded; duplicate tickers retain names/IDs.
+`buildCemeteryRegisterRows` projects data server-side; clients import types, never `CEMETERY_ENTRIES`. Missing peak/mechanism/epitaph is visibly/accessibly not recorded; duplicate tickers retain names/IDs. A tracked archive's name (full and folded rows) is a static link to its frozen profile, so the register links those profiles in the prerendered HTML; curated-only records stay plain text. The row's tap-to-expand handler ignores clicks on that link.
 
 `CEMETERY_REGISTER_PARAMS` owns filter keys, accepted values and canonical order. Invalid values drop; bounded trimmed search is case/accent-insensitive over name/ticker/id/epitaph, not obituary. URL writes replace history, preserve unrelated params and omit default sort/direction. Died uses canonical order; missing peaks sort last both directions with default order breaking ties. Result counts announce politely.
 
@@ -151,7 +153,13 @@ Peak market cap is never presented as a loss: the section copy states that it me
 
 Editorial briefs link issuer sources and keep visible short answers equal to FAQ answers. Sources-checked dates are source verification, not human review, independent audits or live reserve freshness. Enriched briefs lead without disturbing relative order within enriched/fallback groups.
 
+Pair titles read `{A} vs {B}: Safety Scores, Reserves & Risk`, shortened to `{A} vs {B}: Safety Scores & Risk` past the title budget. When both coins have a rated grade in the `scores-latest` release mirror (`getSnapshotSafetyAssessment`, the source profile static HTML cites), the description, the Short answer, the safety FAQ answer and a first "Safety Score (as of DATE)" table row cite both dated grades; a missing grade falls back to the structural copy, never "N/A". Grades are dated facts, not a categorical safer verdict: the caveat stays.
+
 Pair JSON-LD is WebPage/ItemList with coin Thing nodes and visible PropertyValue rows. Sitemap includes hub/pairs; pair lastModified is newest coin LAST_EDITED or substantive editorial updatedAt, never build/recheck time.
+
+Each pair page ends with a "Related comparisons" section: "More {A} comparisons" and "More {B} comparisons" link lists built from `getStaticComparisonPagesForCoin()` (editorial briefs first), excluding the current pair, anchored with each pair's `{A} vs {B}` short title. A coin with no other pair contributes no list; the section is omitted when neither does.
+
+`STATIC_COMPARE_PAIRS` (`src/lib/compare-links.ts`) admits only active, non-frozen coins with full static profiles on both sides; additions are demand-led (Search Console, or combined sibling-profile impressions where no pair query data exists). A pair without an editorial brief ships with the generated intro, summary and FAQ.
 
 ### Selection and URL contract
 
@@ -161,6 +169,8 @@ Pair JSON-LD is WebPage/ItemList with coin Thing nodes and visible PropertyValue
 - Query param `range` stores the market-cap chart window. Accepted values are `7d`, `30d`, `90d`, `1y`, and `all`; `all` is the default and is cleared from the URL instead of persisted.
 - Static comparison landing pages are generated from `STATIC_COMPARISON_PAGES` in `src/lib/compare-pages.ts` and live at `/compare/<left-id>-vs-<right-id>/`.
 - Mobile selection renders selected-coin chips plus one add selector instead of all five selector slots up front. The underlying URL state and five-coin maximum are unchanged; desktop keeps the full slot grid.
+
+Static HTML never links a `/compare/?coins=` facet: `buildStaticCompareHref()` (`src/lib/compare-links.ts`) links the curated pair page when one exists (a coin's primary pair; for two coins, their pair) and otherwise `/compare/#coins=<ids>`, which crawlers read as `/compare/`. Once the query is readable, `useCompareSelection()` adopts that fragment into `?coins=` (an explicit `?coins=` selection wins) and drops the fragment. `buildLiveCompareUrl()` stays for client-side navigation and the pair pages' "Open live compare" tool links.
 
 Initial load normalizes the `coins` URL param to the accepted canonical ID list. If invalid tokens were present, `useCompareSelection()` rewrites the URL to the surviving canonical IDs or removes `coins` entirely.
 

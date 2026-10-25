@@ -2,7 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
 import { ExternalLink, BookOpen, Play } from "lucide-react";
-import { CLIENT_ACTIVE_STABLECOINS, CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { CLIENT_TRACKED_META_BY_ID, CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { isActiveStablecoinMeta, isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";
 import {
   BACKING_LABELS,
   GOVERNANCE_LABELS,
@@ -33,13 +34,18 @@ import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosu
 import { StablecoinDetailIdentityProvider } from "@/components/stablecoin-detail/module-title";
 import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-detail/constants";
+import { SameTickerStablecoins } from "@/components/stablecoin-detail/same-ticker-stablecoins";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import { formatFuzzyDate } from "@/lib/pre-launch";
 import { buildLaunchVerdict, describeTargetHistory, sortMilestonesNewestFirst } from "@/lib/pre-launch-dossier";
+import { buildPreLaunchQuickAnswers } from "@/lib/pre-launch-quick-answers";
+import { buildFaqJsonLd } from "@/lib/faq";
+import { safeJsonLd } from "@/lib/json-ld";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { FeaturedContent, LaunchMilestone, StablecoinAiSummary, StablecoinMeta } from "@shared/types";
 
@@ -85,16 +91,18 @@ function chainName(chain: string): string {
 /** The dossier identity header (`HeroIdentityHeader` grammar); the visible `h1` lives here. */
 function PreLaunchIdentityHeader({ coin, logoSrc }: { coin: StablecoinMeta; logoSrc: string | undefined }) {
   const links = (coin.links ?? []).slice(0, 3);
+  // "HKDAP" named "HKDAP": show the ticker once.
+  const nameIsSymbol = coin.name.trim().toLowerCase() === coin.symbol.trim().toLowerCase();
   return (
     <header className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-5">
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-3">
           <StablecoinLogo src={logoSrc} name={coin.name} size={STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE} />
           <div className="flex min-w-0 flex-col gap-1 lg:flex-row lg:items-center lg:gap-3">
-            <span className="pharos-label shrink-0">{coin.symbol}</span>
+            {nameIsSymbol ? null : <span className="pharos-label shrink-0">{coin.symbol}</span>}
             <h1 className="pharos-page-title min-w-0 break-words text-xl leading-tight tracking-normal sm:text-2xl lg:leading-none">
               {coin.name}
-              <span className="sr-only"> ({coin.symbol}) pre-launch stablecoin tracker</span>
+              <span className="sr-only">{nameIsSymbol ? "" : ` (${coin.symbol})`} pre-launch stablecoin tracker</span>
             </h1>
           </div>
         </div>
@@ -218,6 +226,25 @@ function LaunchPathModule({ coin }: { coin: StablecoinMeta }) {
         </EvidenceFooter>
       }
     />
+  );
+}
+
+/** Launch-intent answers from registry fields only; the FAQPage JSON-LD mirrors the visible text. */
+function LaunchQuickAnswers({ coin }: { coin: StablecoinMeta }) {
+  const items = buildPreLaunchQuickAnswers(coin);
+  return (
+    <section id="launch-quick-answers" aria-labelledby="launch-quick-answers-title" className="space-y-3">
+      <DetailSectionTitle id="launch-quick-answers-title">Launch status: quick answers</DetailSectionTitle>
+      <dl className="pharos-card-shell gap-0 divide-y divide-border/50 py-0">
+        {items.map((item) => (
+          <div key={item.question} className="px-4 py-3 sm:px-5">
+            <dt className="text-sm font-medium text-foreground">{item.question}</dt>
+            <dd className="mt-1 break-words text-sm leading-relaxed text-muted-foreground">{item.answer}</dd>
+          </div>
+        ))}
+      </dl>
+      <JsonLdScript json={safeJsonLd(buildFaqJsonLd(items))} />
+    </section>
   );
 }
 
@@ -407,8 +434,16 @@ function PlannedProfileCard({ coin }: { coin: StablecoinMeta }) {
   );
 }
 
+/**
+ * Active and pre-launch coins: the existing same-currency sort then ranks the
+ * coin's upcoming siblings (other HKD/JPY/KRW launches) ahead of USD majors.
+ */
+const RELATED_CANDIDATES = CLIENT_TRACKED_STABLECOINS.filter(
+  (candidate) => isActiveStablecoinMeta(candidate) || isPreLaunchStablecoinMeta(candidate),
+);
+
 function RelatedCard({ coin }: { coin: StablecoinMeta }) {
-  const related = getRelatedStablecoins(coin, { candidates: CLIENT_ACTIVE_STABLECOINS });
+  const related = getRelatedStablecoins(coin, { candidates: RELATED_CANDIDATES });
   return (
     <RailCard title="Related stablecoins" ariaLabel="Related stablecoins">
       <div className="space-y-3 px-4 pb-4">
@@ -478,10 +513,12 @@ export function PreLaunchDetail({ coin, logoSrc, summary }: PreLaunchDetailProps
           />
           {summary ? <AiSummary {...summary} /> : null}
           <LaunchPathModule coin={coin} />
+          <LaunchQuickAnswers coin={coin} />
           <ActivityModule coin={coin} />
           {coin.featuredContent && coin.featuredContent.length > 0 ? (
             <FeaturedCoverage items={coin.featuredContent} />
           ) : null}
+          <SameTickerStablecoins coin={coin} />
         </div>
         <aside aria-label={`${coin.symbol} profile`} className="mt-4 grid gap-4 md:grid-cols-2 xl:mt-0 xl:grid-cols-1">
           <PlannedProfileCard coin={coin} />

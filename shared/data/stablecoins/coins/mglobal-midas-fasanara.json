@@ -2,6 +2,7 @@
   "id": "mglobal-midas-fasanara",
   "name": "Midas Fasanara Global",
   "symbol": "mGLOBAL",
+  "brand": "Midas",
   "oneLiner": "mGLOBAL is a Midas tokenized certificate wrapping Fasanara's global private-credit and strategy portfolio; NAV-accreting, EEA-restricted rails.",
   "flags": {
     "backing": "rwa-backed",

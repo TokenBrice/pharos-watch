@@ -128,8 +128,8 @@ export function TopNav() {
   const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hoverOpenRef = useRef(false);
-  // Set when ArrowDown opens a closed trigger: the panel's rows only exist
-  // after the open state commits, so the first-row focus lands in an effect.
+  // Set when ArrowDown opens a closed trigger: the panel's rows are inert
+  // until the open state commits, so the first-row focus lands in an effect.
   const pendingKeyboardOpen = useRef<string | null>(null);
   // Health stays gated to the open panel: a persistent masthead dot would add
   // /api/health polling to every desktop page view.
@@ -171,7 +171,7 @@ export function TopNav() {
     return () => document.removeEventListener("pointerdown", closeOnOutsidePointerDown);
   }, [openMenu, sectionMenuOpen]);
 
-  // ArrowDown can open a panel whose rows do not exist yet; land focus on the
+  // ArrowDown can open a panel whose rows are still inert; land focus on the
   // first row once that menu's open state has actually committed.
   useEffect(() => {
     const key = pendingKeyboardOpen.current;
@@ -355,10 +355,11 @@ export function TopNav() {
                   const links = [
                     ...event.currentTarget.querySelectorAll<HTMLAnchorElement>(`#${panelId} a[href]`),
                   ];
-                  if (links.length === 0) {
-                    // The panel is closed and renders no rows yet: ArrowDown
-                    // opens it pinned; the pending-focus effect lands on the
-                    // first row once it exists.
+                  if (!isOpen) {
+                    // The panel is closed (hidden + inert, so its rows cannot
+                    // take focus yet): ArrowDown opens it pinned; the
+                    // pending-focus effect lands on the first row once the
+                    // open state commits.
                     if (event.key !== "ArrowDown") return;
                     event.preventDefault();
                     pendingKeyboardOpen.current = menu.key;
@@ -403,8 +404,10 @@ export function TopNav() {
                   {menu.label}
                   <ChevronDown className="size-3 opacity-50" aria-hidden />
                 </button>
-                {isOpen ? (
-                  <div id={panelId} className="absolute right-0 top-full z-modal pt-2">
+                {/* Panels stay mounted so every destination is in the static
+                    HTML (crawl links); closed panels are hidden + inert, so
+                    they are neither visible nor focusable. */}
+                <div id={panelId} hidden={!isOpen} inert={!isOpen} className="absolute right-0 top-full z-modal pt-2">
                     <div
                       className={cn(
                         "bg-popover text-popover-foreground animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 min-w-[8rem] origin-top-right overflow-x-hidden overflow-y-auto rounded-md border shadow-md",
@@ -425,7 +428,7 @@ export function TopNav() {
                                     isActive={isNavItemActive(pathname, item)}
                                     onNavigate={closeMenu}
                                     trailing={
-                                      item.href === STATUS_HREF ? (
+                                      item.href === STATUS_HREF && isOpen ? (
                                         <span className="ml-auto flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
                                           <span>{healthMenu.state}</span>
                                           <span
@@ -456,8 +459,7 @@ export function TopNav() {
                         </ul>
                       )}
                     </div>
-                  </div>
-                ) : null}
+                </div>
               </div>
             );
           })}

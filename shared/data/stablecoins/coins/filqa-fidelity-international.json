@@ -2,6 +2,7 @@
   "id": "filqa-fidelity-international",
   "name": "Fidelity USD Digital Liquidity Fund-Acc",
   "symbol": "FILQ-A",
+  "brand": "Fidelity",
   "oneLiner": "FILQ-A is Fidelity International's accumulating dollar money-market fund share, with credit and derivative permissions and redemption-only exit.",
   "flags": {
     "backing": "rwa-backed",
@@ -39,6 +40,11 @@
   },
   "detailProvider": "coingecko",
   "geckoId": "fidelity-usd-digital-liquidity-fund-acc",
+  "identifiers": {
+    "isin": [
+      "KYG3R61G1088"
+    ]
+  },
   "links": [
     {
       "label": "Fidelity September 14, 2026 fund prospectus",

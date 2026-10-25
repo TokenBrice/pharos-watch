@@ -30,6 +30,17 @@ function dewsRow(): HTMLElement {
 }
 
 describe("RailSafetySummary", () => {
+  it("dates a saved release grade and holds pending rows with a placeholder, not a dash", () => {
+    const items = signals({ grade: "A-", dews: "" });
+    items[0] = { ...items[0]!, note: "as of 2026-10-22" };
+    items[3] = { ...items[3]!, pending: true };
+    const { container } = render(<RailSafetySummary items={items} gradeRead="pending" />);
+
+    expect(screen.getByText("A-")).toBeTruthy();
+    expect(container.querySelector('[data-safety-state="saved"]')?.textContent).toBe("as of 2026-10-22");
+    expect(dewsRow().textContent).not.toContain("—");
+    expect(dewsRow().querySelector(".animate-pulse")).not.toBeNull();
+  });
 
   it("states why a NAV token has no DEWS reading instead of a bare dash", () => {
     render(<RailSafetySummary items={signals({ grade: "B+", dews: "—" })} navToken />);

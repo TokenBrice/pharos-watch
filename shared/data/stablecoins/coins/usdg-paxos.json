@@ -2,6 +2,7 @@
   "id": "usdg-paxos",
   "name": "Global Dollar",
   "symbol": "USDG",
+  "brand": "Paxos",
   "oneLiner": "USDG is Paxos's MAS-regulated Global Dollar stablecoin, redeemable 1:1 in USD through Paxos Singapore with reserves at DBS and Standard Chartered.",
   "flags": {
     "backing": "rwa-backed",

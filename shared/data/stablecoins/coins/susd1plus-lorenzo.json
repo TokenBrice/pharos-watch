@@ -2,6 +2,7 @@
   "id": "susd1plus-lorenzo",
   "name": "staked USD1+",
   "symbol": "sUSD1+",
+  "brand": "Lorenzo",
   "oneLiner": "sUSD1+ is Lorenzo's NAV-accruing fund share combining RWA yield, CeFi basis trading, and DeFi strategies, with redemptions settled in USD1 on BNB Chain.",
   "flags": {
     "backing": "rwa-backed",

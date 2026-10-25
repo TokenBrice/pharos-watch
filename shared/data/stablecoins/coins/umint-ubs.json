@@ -43,6 +43,11 @@
   },
   "detailProvider": "coingecko",
   "geckoId": "ubs_umint_eth",
+  "identifiers": {
+    "isin": [
+      "SGXZ89386486"
+    ]
+  },
   "links": [
     {
       "label": "DigiFT native uMINT disclosure within STEP2 application (March 20, 2025)",

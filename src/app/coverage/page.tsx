@@ -4,6 +4,7 @@ import { SeeAlsoFooter } from "@/components/see-also-footer";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { SEE_ALSO_GRAPH } from "@/lib/see-also-graph";
+import { RemovedStablecoinsSection } from "./removed-stablecoins-section";
 import { buildCoverageDatasetJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -93,7 +94,12 @@ const route = createClientFeaturePage({
     ),
   },
   beforeClient: COVERAGE_STATIC_SECTION,
-  afterClient: <SeeAlsoFooter links={SEE_ALSO_GRAPH["/coverage/"]} />,
+  afterClient: (
+    <>
+      <RemovedStablecoinsSection />
+      <SeeAlsoFooter links={SEE_ALSO_GRAPH["/coverage/"]} />
+    </>
+  ),
 });
 
 export const metadata = route.metadata;

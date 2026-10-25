@@ -5,7 +5,7 @@ import type {
   YieldRanking,
 } from "@shared/types";
 import { DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
-import { formatCurrency, formatSignedPercent } from "@shared/lib/format";
+import { formatCurrency, formatIsoDate, formatSignedPercent } from "@shared/lib/format";
 import {
   DIRECTION_TONE_CLASSES,
   QUALITY_TIER_3_CLASSES,
@@ -16,6 +16,7 @@ import {
   type ThreatBand,
 } from "@shared/lib/classification";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
+import type { SavedSafetyAssessment } from "@/lib/api";
 import { getYieldBenchmarkGapReferenceText, getYieldBenchmarkGapUnavailableText } from "@/lib/yield-benchmark";
 
 export const HERO_POSITIVE_TREND_CLASS = DIRECTION_TONE_CLASSES.up;
@@ -26,6 +27,8 @@ export interface HeroDisplayValue {
   value: string;
   sub?: string;
   color: string;
+  /** The live read is still in its first fetch (prerender included): a neutral placeholder, not "unavailable". */
+  pending?: true;
 }
 
 export interface HeroDewsDisplay {
@@ -33,6 +36,38 @@ export interface HeroDewsDisplay {
   band: ThreatBand | null;
   sub?: string;
   color: string;
+  pending?: true;
+}
+
+export const HERO_PENDING_DISPLAY: HeroDisplayValue = { value: "", color: HERO_MUTED_CLASS, pending: true };
+export const HERO_PENDING_DEWS_DISPLAY: HeroDewsDisplay = { ...HERO_PENDING_DISPLAY, band: null };
+
+/** "as of 2026-10-22": the release date a saved value was published. */
+export function formatSavedAssessmentAsOf(asOfMs: number): string {
+  return `as of ${formatIsoDate(asOfMs / 1000)}`;
+}
+
+/** A saved release DEWS band, dated; null when the release has none. */
+export function buildSavedDewsDisplay(saved: SavedSafetyAssessment | null): HeroDewsDisplay | null {
+  if (!saved?.dewsBand) return null;
+  return {
+    value: THREAT_BAND_LABELS[saved.dewsBand],
+    band: saved.dewsBand,
+    sub: saved.dewsScore != null
+      ? `${Math.round(saved.dewsScore)}/100 · ${formatSavedAssessmentAsOf(saved.asOfMs)}`
+      : formatSavedAssessmentAsOf(saved.asOfMs),
+    color: THREAT_BAND_STYLES[saved.dewsBand].textCls,
+  };
+}
+
+/** A saved release liquidity score, dated; null when the release has none. */
+export function buildSavedLiquidityDisplay(saved: SavedSafetyAssessment | null): HeroDisplayValue | null {
+  if (saved?.liquidityScore == null) return null;
+  return {
+    value: String(Math.round(saved.liquidityScore)),
+    sub: formatSavedAssessmentAsOf(saved.asOfMs),
+    color: getScoreColor(saved.liquidityScore),
+  };
 }
 
 function buildPegScoreEventLine(
@@ -149,7 +184,10 @@ export function buildPegScoreAccent(pegScoreResult: PegSummaryCoin | null): stri
 }
 
 export function buildLiquidityAccent(liquidityData: DexLiquidityData | undefined): string | undefined {
-  const score = liquidityData?.liquidityScore;
+  return buildLiquidityScoreAccent(liquidityData?.liquidityScore ?? null);
+}
+
+export function buildLiquidityScoreAccent(score: number | null): string | undefined {
   if (score == null) return undefined;
   if (score < 30) return QUALITY_TIER_3_CLASSES.bad.borderL;
   if (score < 50) return QUALITY_TIER_3_CLASSES.watch.borderL;
@@ -157,9 +195,13 @@ export function buildLiquidityAccent(liquidityData: DexLiquidityData | undefined
 }
 
 export function buildDewsAccent(stressSignal: StressSignalEntry | null): string | undefined {
-  if (!stressSignal || !isThreatBand(stressSignal.band)) return undefined;
-  if (stressSignal.band === "DANGER" || stressSignal.band === "WARNING") {
-    return THREAT_BAND_ACCENT_CLASSES[stressSignal.band].borderL;
+  return buildDewsBandAccent(stressSignal?.band ?? null);
+}
+
+export function buildDewsBandAccent(band: string | null): string | undefined {
+  if (!band || !isThreatBand(band)) return undefined;
+  if (band === "DANGER" || band === "WARNING") {
+    return THREAT_BAND_ACCENT_CLASSES[band].borderL;
   }
   return undefined;
 }

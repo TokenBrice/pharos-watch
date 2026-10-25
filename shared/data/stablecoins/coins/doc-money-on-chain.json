@@ -2,6 +2,7 @@
   "id": "doc-money-on-chain",
   "name": "Dollar on Chain",
   "symbol": "DOC",
+  "brand": "Money On Chain",
   "oneLiner": "DOC is Money On Chain's overcollateralized USD stablecoin on Rootstock, minted against rBTC vaults with permissionless DOC-for-rBTC redemption.",
   "flags": {
     "backing": "crypto-backed",

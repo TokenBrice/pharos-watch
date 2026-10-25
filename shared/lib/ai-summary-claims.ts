@@ -128,10 +128,14 @@ export function resolveAiSummaryClaims(
 
   for (const claim of tokens ?? []) {
     if (invalidTokens.has(claim.token)) continue;
-    resolvedText = resolvedText.replace(
-      claim.placeholder,
-      formatClaimValue(claim.token, values[claim.source]),
-    );
+    const value = formatClaimValue(claim.token, values[claim.source]);
+    // Prose such as "carries a {{grade}} overall grade" needs "an" before a
+    // vowel-sound value ("an A-", "an F", "an 81").
+    const articleIndex = resolvedText.indexOf(` a ${claim.placeholder}`);
+    if (articleIndex !== -1 && (/^[AEFIO]/.test(value) || /^(?:8|1[18](?!\d))/.test(value))) {
+      resolvedText = `${resolvedText.slice(0, articleIndex)} an ${resolvedText.slice(articleIndex + 3)}`;
+    }
+    resolvedText = resolvedText.replace(claim.placeholder, value);
     factsAsOf.add(claim.factsAsOf);
   }
   // Fail closed: an unregistered or malformed token must never render the

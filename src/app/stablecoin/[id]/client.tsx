@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -26,6 +26,7 @@ import type { FailureScenarioSelection } from "@/components/stablecoin-detail/fa
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import {
+  readSavedSafetyAssessment,
   seedStablecoinDetailQueryCache,
   type StablecoinDetailSnapshot,
 } from "@/lib/api";
@@ -37,9 +38,13 @@ import { DetailContent } from "./detail-content";
 function DetailLoadingShell({
   coin,
   logoSrc,
+  heading,
+  exploreNextContent,
 }: {
   coin: StablecoinStaticMeta;
   logoSrc?: string;
+  heading?: string;
+  exploreNextContent: ReactNode;
 }) {
   return (
     <div className="space-y-6">
@@ -48,6 +53,8 @@ function DetailLoadingShell({
         logoSrc={logoSrc}
         description="Loading research dossier…"
         statusLabel="Loading…"
+        titleAs="h1"
+        heading={heading}
       />
       <div className="mt-10 rounded-xl border border-border/60 p-4">
         <Skeleton className="mb-4 h-6 w-32" />
@@ -67,6 +74,8 @@ function DetailLoadingShell({
         <Skeleton className="h-[200px] rounded-xl" />
       </div>
       <Skeleton className="mt-12 h-[420px] rounded-xl" />
+      {/* Explore's links need no live data, so the loading state keeps them. */}
+      {exploreNextContent}
     </div>
   );
 }
@@ -75,6 +84,8 @@ interface StablecoinDetailClientProps {
   id: string;
   coin: StablecoinDetailCoinMeta;
   summary: StablecoinDetailSummary | null;
+  /** The page heading (the visible identity title is the page's h1). */
+  heading?: string;
   staticCoin: StablecoinStaticMeta;
   logoSrc?: string;
   mechanismBacking?: MechanismBackingView | null;
@@ -88,7 +99,6 @@ interface StablecoinDetailClientProps {
   /** The coin's publishable failure scenario (a marked draft in development), or null. */
   failureScenario?: FailureScenarioSelection | null;
   exploreNextContent?: ReactNode;
-  faqContent?: ReactNode;
   snapshot?: StablecoinDetailSnapshot | null;
   /** Frozen coins only: archived list row used when the live detail row is unavailable. */
   archivedLiveSummary?: StablecoinLiveSummary | null;
@@ -144,7 +154,8 @@ function StablecoinDetailClientContent({
   transferReview = null,
   failureScenario = null,
   exploreNextContent = null,
-  faqContent = null,
+  heading,
+  snapshot = null,
   archivedLiveSummary = null,
 }: StablecoinDetailClientProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -157,12 +168,14 @@ function StablecoinDetailClientContent({
   const activityActive = activityNear;
   const historyActive = historyNear;
   const activityOrHistoryActive = activityActive || historyActive;
+  const savedAssessment = useMemo(() => readSavedSafetyAssessment(snapshot), [snapshot]);
   const viewModel = useStablecoinDetailViewModel({
     id,
     coin,
     summary,
     logoSrc,
     archivedLiveSummary,
+    savedAssessment,
     supplementalQueryControls: {
       // Hero liquidity/yield observers now read only this coin's scoped projections.
       liquidity: true,
@@ -178,7 +191,9 @@ function StablecoinDetailClientContent({
   });
 
   if (viewModel.status === "loading") {
-    return <DetailLoadingShell coin={staticCoin} logoSrc={logoSrc} />;
+    return (
+      <DetailLoadingShell coin={staticCoin} logoSrc={logoSrc} heading={heading} exploreNextContent={exploreNextContent} />
+    );
   }
   if (viewModel.status === "list-error") {
     return (
@@ -197,8 +212,8 @@ function StablecoinDetailClientContent({
         activeBannerId={activeBannerId}
         activityGateRef={activityGateRef}
         exploreNextContent={exploreNextContent}
-        faqContent={faqContent}
         feedbackOpen={feedbackOpen}
+        heading={heading}
         heroRef={heroRef}
         historyGateRef={historyGateRef}
         onActiveBannerChange={setActiveBannerId}

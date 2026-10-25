@@ -2,6 +2,7 @@
   "id": "pmusd-precious-metals",
   "name": "pmUSD",
   "symbol": "pmUSD",
+  "brand": "RAAC",
   "oneLiner": "pmUSD is RAAC's f(x)-fork dollar fToken minted against TokenBlender/ION.au gold collateral; xPM absorbs volatility and sUSDS-based PSM defends the peg.",
   "flags": {
     "backing": "rwa-backed",

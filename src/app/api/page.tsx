@@ -17,7 +17,7 @@ import { ApiTabs } from "./api-tabs";
 import { SupporterClaimSteps } from "./supporter-claim-steps";
 
 export const metadata = buildPageMetadata({
-  title: "Pharos Stablecoin API: Access Keys and Reference",
+  title: "Stablecoin API: Free Safety Grades, Peg & Supply",
   description:
     `Free Safety Score grades with no key, a supporter key for $${DONOR_API_KEY_MIN_USD}+ donors, partner keys, and the full API reference: auth, endpoints, response contracts and datasets.`,
   canonical: "/api/",

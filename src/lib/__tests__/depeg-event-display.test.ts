@@ -12,6 +12,7 @@ import DepegEventPage, { generateMetadata } from "@/app/depeg/[event]/page";
 import type { DepegEventDisplayInput } from "@/lib/depeg-event-display";
 import { DepegEventSchema } from "@shared/types/market";
 import { classifyDepegClosure, type DepegClosureInput } from "@shared/lib/depeg-closure";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 vi.mock("@/lib/fonts/digest", () => ({ digestDisplay: { className: "" } }));
 
@@ -22,7 +23,7 @@ describe("depeg event collision display", () => {
     expect(GYD_MARCH_19).toHaveLength(13);
     expect(GYD_MARCH_19.every((event) => COLLIDING_DEPEG_EVENT_SLUGS.has(event.slug))).toBe(true);
 
-    const titles = GYD_MARCH_19.map((event) => buildDepegEventTitle(event, null, true));
+    const titles = GYD_MARCH_19.map((event) => buildDepegEventTitle(event, true));
     const descriptions = GYD_MARCH_19.map((event) => buildDepegEventDescription(event, true));
     const synopses = GYD_MARCH_19.map((event) => buildDepegEventSynopsis(event));
 
@@ -37,12 +38,46 @@ describe("depeg event collision display", () => {
     const event = GYD_MARCH_19.find((candidate) => candidate.slug.endsWith("87904"));
     expect(event).toBeDefined();
 
-    expect(buildDepegEventTitle(event!, null, true)).toContain("March 19, 2026 at 14:30 UTC");
+    expect(buildDepegEventTitle(event!, true)).toContain("March 19, 2026 at 14:30 UTC");
     expect(buildDepegEventDescription(event!, true)).toContain("at 14:30 UTC");
     expect(buildDepegEventSynopsis(event!)).toMatch(/Recovered after 45 min.*15:15 UTC/);
     expect(formatEventNavigationLabel(event!, true)).toBe("GYD 2026-03-19 14:30 UTC");
   });
 
+});
+
+describe("depeg event search title and description", () => {
+  const usdc: DepegEventDisplayInput = {
+    stablecoinId: "usdc-circle", symbol: "USDC", slug: "title-fixture",
+    direction: "below", peakDeviationBps: -1210, startedAt: Date.parse("2023-03-11T03:00:00Z") / 1000,
+    endedAt: Date.parse("2023-03-13T03:00:00Z") / 1000, peakPrice: 0.879, recoveryPrice: 1, closeReason: "recovered-primary",
+  };
+
+  it("leads with the symbol, date and deviation, without a clause dash", () => {
+    expect(buildDepegEventTitle(usdc, false)).toBe("USDC Depeg, March 11, 2023: 12.1% Below Peg");
+    expect(buildDepegEventTitle({ ...usdc, direction: "above", peakDeviationBps: 2100 }, false)).toBe(
+      "USDC Depeg, March 11, 2023: 21.0% Above Peg",
+    );
+    expect(buildDepegEventTitle(usdc, false)).not.toMatch(/[‒-―]/);
+  });
+
+  it("omits an unavailable deviation instead of printing a placeholder", () => {
+    const title = buildDepegEventTitle({ ...usdc, peakDeviationBps: 0 }, false);
+    expect(title).toBe("USDC Depeg, March 11, 2023: Below Peg");
+    expect(buildDepegEventDescription({ ...usdc, peakDeviationBps: 0 }, false, "USD Coin")).toMatch(
+      /^USD Coin \(USDC\) fell below its peg on March 11, 2023\./,
+    );
+  });
+
+  it("opens the description with the coin name, symbol, deviation and date", () => {
+    expect(buildDepegEventDescription(usdc, false, "USD Coin")).toMatch(
+      /^USD Coin \(USDC\) fell 12\.1% below its peg on March 11, 2023\. Recovered after /,
+    );
+    expect(buildDepegEventDescription({ ...usdc, direction: "above", peakDeviationBps: 300 }, false, "USDC")).toMatch(
+      /^USDC rose 3\.00% above its peg on March 11, 2023\./,
+    );
+    expect(buildDepegEventDescription(usdc, true, null)).toMatch(/^USDC fell 12\.1% below its peg at 03:00 UTC on March 11, 2023\./);
+  });
 });
 
 describe("depeg closure presentation", () => {
@@ -98,7 +133,8 @@ describe("depeg closure presentation", () => {
     const event = DEPEG_EVENT_ENTRIES.find((entry) => entry.slug === slug)!;
     const params = Promise.resolve({ event: slug });
     const metadata = await generateMetadata({ params });
-    const description = buildDepegEventDescription(event, COLLIDING_DEPEG_EVENT_SLUGS.has(slug));
+    const coinName = TRACKED_META_BY_ID.get(event.stablecoinId)?.name ?? null;
+    const description = buildDepegEventDescription(event, COLLIDING_DEPEG_EVENT_SLUGS.has(slug), coinName);
     expect(metadata.description).toBe(description);
     expect(metadata.openGraph).toMatchObject({ description });
     expect(description).toMatch(/coverage lost/i);

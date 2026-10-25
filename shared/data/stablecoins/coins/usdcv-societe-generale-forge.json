@@ -2,6 +2,7 @@
   "id": "usdcv-societe-generale-forge",
   "name": "USD CoinVertible",
   "symbol": "USDCV",
+  "brand": "SG-FORGE",
   "oneLiner": "USDCV is Societe Generale-FORGE's MiCA-regulated dollar stablecoin, backed by cash at BNY and Societe Generale; EEA holders have a direct 1:1 redemption right.",
   "flags": {
     "backing": "rwa-backed",

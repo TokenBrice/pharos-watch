@@ -13,13 +13,25 @@ import { FaqSection } from "@/components/faq-section";
 import type { FaqItem } from "@/lib/faq";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { formatUtcDayLabel } from "@shared/lib/format";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
+import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/registry";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { METHODOLOGY_READING_STEPS, METHODOLOGY_SECTIONS, READER_GUIDE_COPY } from "./methodology-shared";
 import { DEFINITIONS } from "@/lib/definitions";
 
+const { gradeThresholds, pillarWeights } = V9_CANDIDATE_POLICY_V1.policy.semantic.formula;
+const formatWeight = (weight: number) => `${Math.round(weight * 100)}%`;
+const METHODOLOGY_TITLE = `Stablecoin Safety Score Methodology (${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL})`;
+const METHODOLOGY_DESCRIPTION = `How Pharos grades stablecoins ${gradeThresholds[0].grade} to ${gradeThresholds.at(-1)!.grade}: Backing ${formatWeight(pillarWeights.backing)}, Exit ${formatWeight(pillarWeights.exit)}, Economic Control ${formatWeight(pillarWeights.control)}, with peg, liquidity and dependency inputs. Safety Score ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}.`;
+// Freshness comes from the Safety Score changelog (newest entry first), the
+// same source the scoring-changelog page uses for its TechArticle dates.
+const SAFETY_SCORE_FIRST_ENTRY_DATE = SAFETY_SCORE_METHODOLOGY_CHANGELOG.at(-1)!.date;
+const SAFETY_SCORE_LATEST_ENTRY_DATE = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0].date;
+
 export const metadata: Metadata = buildPageMetadata({
-  title: "Methodology: How Pharos Grades Stablecoins",
-  description:
-    "Full methodology behind Pharos V10 safety grades and mint-control evidence, peg scores, liquidity scores, and dependency analysis.",
+  title: METHODOLOGY_TITLE,
+  description: METHODOLOGY_DESCRIPTION,
   canonical: "/methodology/",
   ogImage: `${SITE_URL}/og-editorial-methodology.png`,
 });
@@ -75,9 +87,10 @@ export default function MethodologyPage() {
         json={safeJsonLd(
             buildArticleJsonLd({
               additionalType: "https://schema.org/TechArticle",
-              headline: "Methodology: How Pharos Grades Stablecoins",
-              description:
-                "Full methodology behind Pharos V10 safety grades and mint-control evidence, peg scores, liquidity scores, and dependency analysis.",
+              headline: METHODOLOGY_TITLE,
+              description: METHODOLOGY_DESCRIPTION,
+              datePublished: `${SAFETY_SCORE_FIRST_ENTRY_DATE}T00:00:00Z`,
+              dateModified: `${SAFETY_SCORE_LATEST_ENTRY_DATE}T00:00:00Z`,
               author: "person",
               image: `${SITE_URL}/og-editorial-methodology.png`,
               mainEntityOfPage: `${SITE_URL}/methodology/`,
@@ -103,6 +116,12 @@ export default function MethodologyPage() {
               <p className="pharos-page-lead max-w-3xl">
                 How Pharos grades stablecoins: transparent scoring across safety, peg stability, V10 mint control,
                 liquidity, yield, and dependency risk.
+              </p>
+              <p className="pharos-numeric text-xs text-muted-foreground">
+                Safety Score methodology {SAFETY_SCORE_METHODOLOGY_VERSION_LABEL} · updated{" "}
+                <time dateTime={SAFETY_SCORE_LATEST_ENTRY_DATE}>
+                  {formatUtcDayLabel(new Date(`${SAFETY_SCORE_LATEST_ENTRY_DATE}T00:00:00Z`))}
+                </time>
               </p>
               <p className="pharos-lead max-w-3xl">
                 Treat this page like a reference manual, not a marketing explainer. All scoring methodologies operate
