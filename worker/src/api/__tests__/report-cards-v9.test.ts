@@ -424,21 +424,24 @@ describe("materialized V9 response", () => {
     expect(sqlite.prepare("SELECT * FROM safety_score_public_manifests").all()).toEqual(manifests);
     vi.useFakeTimers({ toFake: ["Date"] });
     const decode = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
-    // Pending is held immediately, both within and beyond one materialization cadence.
-    for (const age of [60, CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec + 1, SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC + 1]) {
+    for (const age of [60, CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec, CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec + 1, SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC + 1]) {
       vi.setSystemTime((next.publishedAtSec + age) * 1000);
+      const withinLagBudget = age <= CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec;
       const lagging = await handleReportCardsV9(db);
       expect(lagging.status).toBe(200);
-      expect(lagging.headers.get("X-Safety-Score-Status")).toBe("held");
+      expect(lagging.headers.get("X-Safety-Score-Status")).toBe(withinLagBudget ? "current" : "held");
       expect(lagging.headers.get("X-Safety-Score-Generation")).toBe(publication.publicationGenerationId);
       expect(lagging.headers.get("X-Safety-Score-Freshness-Budget")).toBe(String(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC));
       expect(lagging.headers.get("X-Data-Updated-At")).toBe(String(publication.publishedAtSec));
-      expect(lagging.headers.get("Cache-Control")).toBe("no-store");
-      expect(lagging.headers.get("ETag")).toBeNull();
+      if (!withinLagBudget) {
+        expect(lagging.headers.get("Cache-Control")).toBe("no-store");
+        expect(lagging.headers.get("ETag")).toBeNull();
+      }
       expect(await lagging.json()).toEqual({ ...expected, publicationHealth: {
-        ...currentInput(next).publicationHealth, status: "held", heldSinceSec: next.publishedAtSec,
+        ...currentInput(next).publicationHealth,
         acceptedPublicationGenerationId: publication.publicationGenerationId, acceptedAtSec: publication.publishedAtSec,
-        reasons: [{ code: "v9-public-materialization-pending" }],
+        ...(!withinLagBudget ? { status: "held", heldSinceSec: next.publishedAtSec,
+          reasons: [{ code: "v9-public-materialization-pending" }] } : {}),
       } });
     }
     sqlite.exec("DROP TRIGGER refuse_fragment");

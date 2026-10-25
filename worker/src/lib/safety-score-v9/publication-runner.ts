@@ -1,3 +1,5 @@
+import { createCronResult } from "../cron-result";
+import type { CronResult } from "../cron-logger";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import { V9AssetEvaluationError } from "@shared/lib/safety-score-v9/evaluate-set";
@@ -48,7 +50,7 @@ import { throwIfAborted } from "../abort";
 import { loadSafetyScoreV9PublicationStoredRow } from "./publication-chunks";
 import { parseSafetyScoreV9Publication } from "./publication-codec";
 
-// Non-scheduled fallback, also the compute window preserved by materialization recovery.
+// Non-scheduled publication fallback.
 const SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS = 2 * 60_000;
 // Initial headroom for up to two 5s independent operations (commit check and
 // failed-attempt write) plus 5s cron settlement, not a measured persistence p99.
@@ -467,7 +469,7 @@ function logPublicationGenerationDeltas(
 /**
  * Best-effort post-acceptance materialization. Acceptance is already durable;
  * a failure leaves readers on the previously selected generation and is retried
- * once in-run, then at the next heavy slot before loading candidate inputs.
+ * once in-run, then in the :52 second-chance slot without another compute.
  */
 async function materializeAcceptedPublication(
   db: D1Database,
@@ -495,16 +497,15 @@ async function materializeAcceptedPublication(
   }
 }
 
-/** Recover accepted bytes before candidate input loading can fail or hold. */
+/** The already-accepted :52 path owns this invocation; candidate inputs are never loaded. */
 export async function retryPendingSafetyScoreV9PublicMaterialization(
-  db: D1Database, signal?: AbortSignal, deadlineMs?: number,
+  db: D1Database, signal: AbortSignal | undefined, deadlineMs: number,
 ): Promise<{
   status: SafetyScoreV9PublicMaterializationRunResult["status"]; publishedAtSec: number | null;
   publicationGenerationId: string | null; reason: string; budgetMs: number;
 } | null> {
-  // Spend only slack above the ordinary 120s compute budget and 15s settlement reserve.
-  const budgetMs = Math.max(0, Math.min(10_000, deadlineMs === undefined ? 10_000
-    : deadlineMs - Date.now() - SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS - SAFETY_SCORE_V9_PUBLICATION_SETTLEMENT_RESERVE_MS));
+  // Use the remaining slot, retaining 5s for commit confirmation and cron settlement.
+  const budgetMs = Math.max(0, deadlineMs - Date.now() - SAFETY_SCORE_V9_PUBLICATION_DIAGNOSTIC_BUDGET_MS);
   if (budgetMs === 0) return { status: "skipped", publishedAtSec: null, publicationGenerationId: null,
     reason: "v9-public-materialization-retry-insufficient-budget", budgetMs };
   const retryDeadlineMs = Date.now() + budgetMs;
@@ -524,7 +525,9 @@ export async function retryPendingSafetyScoreV9PublicMaterialization(
     .bind(V9_PUBLIC_REPRESENTATION_VERSION, V9_PUBLIC_MATERIALIZATION_CACHE_KEY, SAFETY_SCORE_V9_CACHE_KEYS.publication)
     .first<{ published_at: number; generation_id: string; payload_sha256: string; materialized: number }>();
   checkBudget();
-  if (!row || row.materialized === 1) return null;
+  if (!row) return { status: "skipped", publishedAtSec: null, publicationGenerationId: null,
+    reason: "v9-public-materialization-retry-source-unavailable", budgetMs };
+  if (row.materialized === 1) return null;
   const source = await loadSafetyScoreV9PublicationStoredRow(db, retrySignal);
   checkBudget();
   if (!source || source.updatedAt !== row.published_at || JSON.parse(source.value).payloadSha256 !== row.payload_sha256) {
@@ -540,10 +543,42 @@ export async function retryPendingSafetyScoreV9PublicMaterialization(
   const result = await materializeAcceptedPublication(db, {
     publication, health: resolveSafetyScoreV9EffectivePublicationHealth(publication, health), payloadSha256: row.payload_sha256,
   }, retrySignal, { persistPrepare: null, persistCommit: null, materializeStage: null, materializeSelect: null });
-  checkBudget();
-  // Only primitives escape this completed frame; no accepted cohort/source survives into input loading.
+  // The materializer confirms its committed marker even if the retry signal expired.
   return { status: result.status, publishedAtSec: row.published_at, publicationGenerationId: row.generation_id, budgetMs,
-    reason: `v9-public-materialization-retry-${result.status}` };
+    reason: result.status === "failed" && retrySignal.aborted
+      ? `v9-public-materialization-retry-${signal?.aborted ? "aborted" : "timeout"}`
+      : `v9-public-materialization-retry-${result.status}` };
+}
+
+export async function recoverSafetyScoreV9PublicMaterialization(
+  db: D1Database, signal: AbortSignal, deadlineMs: number,
+): Promise<CronResult> {
+  try {
+    const retry = await retryPendingSafetyScoreV9PublicMaterialization(db, signal, deadlineMs);
+    const reason = retry?.reason ?? "v9-public-materialization-already-selected";
+    if (retry?.status === "failed") logWorkerEvent({
+      scope: "lib", level: "warn", event: "safety_score_v9_public_materialization_retry_failed",
+      job: "compute-safety-score-v9", message: "Accepted publication retained; second-chance materialization failed",
+      metadata: { reason },
+    });
+    return createCronResult({
+      status: retry === null || retry.status === "superseded" ? "skipped_neutral" : retry.status === "materialized" ? "ok" : "degraded",
+      itemCount: retry?.status === "materialized" ? 1 : 0,
+      metadata: { reason, publicMaterialization: retry },
+      productivity: { productive: retry?.status === "materialized", reason },
+    });
+  } catch (error) {
+    const reason = (error instanceof Error || error instanceof DOMException) && error.name === "TimeoutError"
+      ? "v9-public-materialization-retry-timeout" : signal.aborted
+        ? "v9-public-materialization-retry-aborted" : "v9-public-materialization-retry-failed";
+    logWorkerEvent({
+      scope: "lib", level: "warn", event: "safety_score_v9_public_materialization_retry_failed",
+      job: "compute-safety-score-v9", message: "Accepted publication retained; second-chance materialization did not complete", error,
+      metadata: { reason },
+    });
+    return createCronResult({ status: "degraded", itemCount: 0, metadata: { reason },
+      productivity: { productive: false, reason } });
+  }
 }
 
 export async function runSafetyScoreV9Publication(

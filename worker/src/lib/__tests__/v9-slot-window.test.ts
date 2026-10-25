@@ -327,8 +327,7 @@ describe("runV9AfterCoreWithinWindow", () => {
         productivity: { productive: false, reason: "v9-publication-hourly-already-accepted" },
       });
       expect(JSON.parse(result.metadata!)).toMatchObject({ acceptedAtSec });
-      expect(fixture.bind).toHaveBeenCalledWith(V9_PUBLIC_REPRESENTATION_VERSION, SAFETY_SCORE_V9_CACHE_KEYS.publication,
-        V9_PUBLIC_MATERIALIZATION_CACHE_KEY, V9_PUBLICATION_HEALTH_CACHE_KEY);
+      expect(fixture.bind).toHaveBeenCalledWith(V9_PUBLICATION_HEALTH_CACHE_KEY);
       expect(leaseMocks.runCronWithLease).not.toHaveBeenCalled();
       expect(run).not.toHaveBeenCalled();
     });
@@ -351,27 +350,44 @@ describe("runV9AfterCoreWithinWindow", () => {
       expect(fixture.bind).toHaveBeenCalledWith(Date.parse("2026-10-23T16:45:00Z") / 1_000);
     });
 
-    it("keeps :52 eligible until the accepted generation's current representation is selected", async () => {
+    it("counts acceptance independently of public selection", async () => {
       const { sqlite, db } = createLatestSchemaSqlite();
       const acceptedAtSec = Date.parse("2026-10-23T16:16:40Z") / 1_000;
       const insert = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
       try {
         insert.run(SAFETY_SCORE_V9_CACHE_KEYS.publication, JSON.stringify({ identity: { publicationGenerationId: "accepted" }, payloadSha256: "sha" }), acceptedAtSec);
         insert.run(V9_PUBLICATION_HEALTH_CACHE_KEY, JSON.stringify({ acceptedAtSec, acceptedPublicationGenerationId: "accepted" }), acceptedAtSec);
-        expect(await loadV9PublicationHourAcceptedAtSec(db, secondChanceMs / 1000)).toBeNull();
+        expect(await loadV9PublicationHourAcceptedAtSec(db, secondChanceMs / 1000)).toBe(acceptedAtSec);
         for (const marker of [
           { publicationGenerationId: "older", projectionVersion: V9_PUBLIC_REPRESENTATION_VERSION, payloadSha256: "sha" },
           { publicationGenerationId: "accepted", projectionVersion: V9_PUBLIC_REPRESENTATION_VERSION - 1, payloadSha256: "sha" },
           { publicationGenerationId: "accepted", projectionVersion: V9_PUBLIC_REPRESENTATION_VERSION, payloadSha256: "other" },
         ]) {
           insert.run(V9_PUBLIC_MATERIALIZATION_CACHE_KEY, JSON.stringify(marker), acceptedAtSec);
-          expect(await loadV9PublicationHourAcceptedAtSec(db, secondChanceMs / 1000)).toBeNull();
+          expect(await loadV9PublicationHourAcceptedAtSec(db, secondChanceMs / 1000)).toBe(acceptedAtSec);
         }
         insert.run(V9_PUBLIC_MATERIALIZATION_CACHE_KEY, JSON.stringify({
           publicationGenerationId: "accepted", projectionVersion: V9_PUBLIC_REPRESENTATION_VERSION, payloadSha256: "sha",
         }), acceptedAtSec);
         expect(await loadV9PublicationHourAcceptedAtSec(db, secondChanceMs / 1000)).toBe(acceptedAtSec);
       } finally { sqlite.close(); }
+    });
+
+    it.each(["ok", "degraded"] as const)("runs only recovery under the memory lease when accepted (result=%s)", async status => {
+      vi.useFakeTimers();
+      vi.setSystemTime(secondChanceMs + 1_000);
+      const fixture = dbWithHealth({ accepted_at: secondChanceMs / 1000 - 30 * 60 });
+      fixture.bind().first.mockReset().mockResolvedValueOnce({ accepted_at: secondChanceMs / 1000 - 30 * 60 }).mockResolvedValue(null);
+      const run = vi.fn();
+      const recover = vi.fn(async () => ({ status, itemCount: status === "ok" ? 1 : 0 }));
+      const result = await runV9AfterCoreWithinWindow({ ...secondChanceOptions(fixture.db),
+        onV9PublicationAlreadyAccepted: recover }, run);
+      expect(result.status).toBe(status);
+      expect(leaseMocks.runCronWithLease).toHaveBeenCalledOnce();
+      expect(recover).toHaveBeenCalledWith(expect.any(AbortSignal), expect.objectContaining({
+        deadlineMs: secondChanceMs + 180_000, slotStartedAtSec: secondChanceMs / 1000,
+      }));
+      expect(run).not.toHaveBeenCalled();
     });
 
     it("degrades without publishing when acceptance evidence is unreadable", async () => {
