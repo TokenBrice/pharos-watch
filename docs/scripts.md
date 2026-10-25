@@ -208,7 +208,7 @@ The cemetery CSV keeps its own column order, contract-list serialization, whites
 
 `PHAROS_DETAIL_SNAPSHOT_SOURCE` defaults to `per-coin` (the Pages release sets `bulk`); `verify:detail-snapshot-sources` reports byte/field diffs and pass timings; `--keep-dir` retains evidence: [bulk source](./stablecoin-detail-page.md#build-snapshot-hydration).
 
-`postbuild` generates Markdown exports, then runs `inline-homepage-critical-css.ts` in a Beasties worker pool; `PHAROS_CRITICAL_CSS_WORKERS` overrides concurrency: [Pages release](./deployment-process.md#ci-deploy-sequence).
+`postbuild` generates Markdown exports, then runs `inline-homepage-critical-css.ts` for every exported public HTML page, excluding `out/admin/**`, in a Beasties worker pool. Extraction retains `.dark` theme tokens for browser-selected themes and skips already-inlined pages; `PHAROS_CRITICAL_CSS_WORKERS` overrides concurrency: [Pages release](./deployment-process.md#ci-deploy-sequence).
 
 ### PR And Release Gates
 

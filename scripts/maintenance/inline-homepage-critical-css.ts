@@ -8,20 +8,12 @@ import { Worker } from "node:worker_threads";
 import Beasties, { type Logger, type Options } from "beasties";
 import { runDirectCli } from "../lib/cli-args.mjs";
 
-// Coin detail and yield pages share a template, but each page needs its own
-// critical styles. Keep the existing exported page selection.
 export function collectCriticalCssPages(outDir: string): string[] {
-  const stablecoinDir = path.join(outDir, "stablecoin");
-  const detailPagePaths = existsSync(stablecoinDir)
-    ? readdirSync(stablecoinDir, { withFileTypes: true })
-        .filter((entry) => entry.isDirectory())
-        .flatMap((entry) => [
-          path.join(stablecoinDir, entry.name, "index.html"),
-          path.join(stablecoinDir, entry.name, "yield", "index.html"),
-        ])
-        .filter((file) => existsSync(file))
-    : [];
-  return [path.join(outDir, "index.html"), ...detailPagePaths].sort();
+  return readdirSync(outDir, { withFileTypes: true, recursive: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".html"))
+    .map((entry) => path.join(entry.parentPath, entry.name))
+    .filter((file) => !path.relative(outDir, file).startsWith(`admin${path.sep}`))
+    .sort();
 }
 
 export function criticalCssWorkerCount(pageCount: number): number {
@@ -78,6 +70,8 @@ export async function optimizeCriticalCssBatch(
     reduceInlineStyles: false,
     inlineFonts: false,
     fonts: false,
+    // The saved theme is applied in the browser, after build-time extraction.
+    allowRules: [".dark"],
     logLevel,
     logger,
   });
@@ -203,19 +197,13 @@ async function main(): Promise<void> {
     for (const result of results) {
       for (const log of result.logs) console[log.level](log.message);
     }
-    const homepage = results.find((result) => result.label === "out/index.html")!;
+    const beforeBytes = results.reduce((bytes, result) => bytes + result.beforeBytes, 0);
+    const afterBytes = results.reduce((bytes, result) => bytes + result.afterBytes, 0);
+    const skipped = results.filter((result) => result.skipped).length;
     console.log(
-      `[critical-css] Optimized out/index.html (${homepage.beforeBytes} -> ${homepage.afterBytes} bytes).`,
+      `[critical-css] Optimized ${results.length - skipped} public HTML pages, skipped ${skipped} already-inlined pages ` +
+      `(${beforeBytes} -> ${afterBytes} bytes, ${Date.now() - startedAt}ms total).`,
     );
-    const detailResults = results.filter((result) => result !== homepage);
-    if (detailResults.length > 0) {
-      const detailBefore = detailResults.reduce((bytes, result) => bytes + result.beforeBytes, 0);
-      const detailAfter = detailResults.reduce((bytes, result) => bytes + result.afterBytes, 0);
-      console.log(
-        `[critical-css] Optimized ${detailResults.length} coin detail + yield pages ` +
-        `(${detailBefore} -> ${detailAfter} bytes, ${Date.now() - startedAt}ms total).`,
-      );
-    }
   } catch (error) {
     console.error(`[critical-css] ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
