@@ -97,6 +97,15 @@ describe("TopNav", () => {
     expect(panel.hasAttribute("inert")).toBe(false);
   });
 
+  it("stacks above page-level sticky bars so an open panel is never covered", () => {
+    installMatchMediaMock(true);
+
+    render(<TopNav />);
+
+    const header = screen.getByRole("banner", { name: "Primary" });
+    expect(header.className).toContain("z-chrome-header");
+  });
+
   it("opens Resources only after hover intent and renders its configured columns", () => {
     vi.useFakeTimers();
     const matchMedia = installMatchMediaMock(true);

@@ -260,11 +260,14 @@ export function TopNav() {
     return () => document.removeEventListener("keydown", onKey);
   }, [openMenu]);
 
+  // z-chrome-header, like the mobile Header: page-level sticky bars (the
+  // profile section tabs, the methodology scrollspy) sit on z-chrome and
+  // scroll beneath the nav, so an open nav panel is never covered.
   return (
     <header
       aria-label="Primary"
       className={cn(
-        "sticky z-chrome hidden h-14 w-full items-center gap-2 border-b border-border/70 bg-background/85 px-4 backdrop-blur-md lg:flex xl:px-6",
+        "sticky z-chrome-header hidden h-14 w-full items-center gap-2 border-b border-border/70 bg-background/85 px-4 backdrop-blur-md lg:flex xl:px-6",
         topOffsetClass,
       )}
     >
