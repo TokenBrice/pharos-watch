@@ -36,7 +36,10 @@ describe("supplemental source coordinator", () => {
     providers.gold.mockImplementation(async () => { order.push("gold-start"); await Promise.resolve(); order.push("gold-end"); return gold; });
     providers.silver.mockImplementation(async () => { order.push("silver-start"); await Promise.resolve(); order.push("silver-end"); return silver; });
     providers.fiat.mockImplementation(async () => { order.push("fiat-start"); return fiat; });
-    expect(await fetchSupplementalTrackedTokens({})).toEqual({ goldTokens: gold, silverTokens: silver, fiatCgTokens: fiat });
+    const reportPartitionSummary = vi.fn();
+    expect(await fetchSupplementalTrackedTokens({}, undefined, undefined, undefined, undefined, undefined,
+      undefined, undefined, reportPartitionSummary)).toEqual({ goldTokens: gold, silverTokens: silver, fiatCgTokens: fiat });
+    expect(providers.fiat).toHaveBeenCalledWith({}, undefined, undefined, undefined, undefined, undefined, undefined, reportPartitionSummary);
     expect(order).toEqual(["gold-start", "gold-end", "silver-start", "silver-end", "fiat-start"]);
   });
 

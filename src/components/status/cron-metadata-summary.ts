@@ -1,5 +1,5 @@
 import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
-import { ResourcePressureSchema } from "@shared/types/status/cron";
+import { OnchainPartitionSummarySchema, ResourcePressureSchema } from "@shared/types/status/cron";
 import {
   readMetadataArray as readArray,
   readMetadataBoolean as readBoolean,
@@ -63,6 +63,19 @@ function formatTierBreakdown(value: unknown): string | null {
     .filter((item): item is string => item != null);
 
   return parts.length > 0 ? `eligible tiers ${parts.join(", ")}` : null;
+}
+
+function summarizeStablecoins(metadata: Record<string, unknown>): string[] {
+  const parsed = OnchainPartitionSummarySchema.safeParse(metadata.onchainPartition);
+  if (!parsed.success) return ["partition evidence unavailable"];
+  const value = parsed.data;
+  return [
+    `partition candidates ${value.candidates}: entered ${value.entered}, retained ${value.retained}, carried ${value.carried}`,
+    `partition outcomes: divergent ${value.divergent}, unreadable ${value.unreadable}, deadline-skipped ${value.deadlineSkipped}, carry-expired ${value.carryExpired}`,
+    ...(value.divergent > 0 ? [
+      `divergent partitions: ${value.divergences.map(({ id, ratio }) => `${id} ${ratio}x`).join(", ")}${value.divergencesTruncated > 0 ? ` (+${value.divergencesTruncated} omitted)` : ""}`,
+    ] : []),
+  ];
 }
 
 function summarizeStatusSelfCheck(metadata: Record<string, unknown>): string[] {
@@ -425,6 +438,7 @@ function summarizeCronSentinel(metadata: Record<string, unknown>): string[] {
 }
 
 const SUMMARIZER_BY_JOB: Record<string, (metadata: Record<string, unknown>) => string[]> = {
+  "sync-stablecoins": summarizeStablecoins,
   "status-self-check": summarizeStatusSelfCheck,
   "sync-dex-discovery": summarizeDexDiscovery,
   "sync-dex-liquidity": summarizeDexLiquidity,

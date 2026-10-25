@@ -10,6 +10,7 @@ import { TOTAL_SUPPLY_SELECTOR } from "../../../../lib/evm-selectors";
 import { fetchEvmBlockHeader } from "../../../../lib/evm-rpc";
 import { SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
+import { ONCHAIN_PARTITION_DIVERGENCE_DETAIL_LIMIT, OnchainPartitionSummarySchema, type OnchainPartitionSummary } from "@shared/types/status/cron";
 import ftusd from "@shared/data/stablecoins/coins/ftusd-flying-tulip.json";
 import aa from "@shared/data/stablecoins/coins/aa-falconx-mev-capital.json";
 import susde from "@shared/data/stablecoins/coins/susde-ethena.json";
@@ -74,9 +75,9 @@ function cgData(total: number, price: number | null = 1, meta = ftMeta): CoinGec
   return { [meta.geckoId!]: { usd: price ?? undefined, usd_market_cap: total, last_updated_at: Math.floor(Date.now() / 1_000) - 60 } };
 }
 
-async function readFt(total = 100, previous?: PeggedAsset): Promise<PeggedAsset> {
+async function readFt(total = 100, previous?: PeggedAsset, report?: (summary: OnchainPartitionSummary) => void): Promise<PeggedAsset> {
   return (await fetchFiatCoinGeckoTokens(cgData(total), undefined, undefined, undefined, undefined,
-    previous ? new Map([[previous.id, previous]]) : undefined))[0];
+    previous ? new Map([[previous.id, previous]]) : undefined, undefined, report))[0];
 }
 
 function sumRows(asset: PeggedAsset): number {
@@ -117,6 +118,53 @@ describe("CoinGecko on-chain share partitions", () => {
     FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ...fixtureMetas);
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it("reports measured admissions, divergence, unreadable carry and expiry without changing supply", async () => {
+    const report = vi.fn<(summary: OnchainPartitionSummary) => void>();
+    const previous = await readFt(100, undefined, report);
+    const base = { candidates: 1, entered: 0, retained: 0, carried: 0, divergent: 0, unreadable: 0,
+      deadlineSkipped: 0, carryExpired: 0, divergences: [], divergencesTruncated: 0 };
+    expect(report).toHaveBeenLastCalledWith({ ...base, entered: 1 });
+    mocks.read.mockImplementation(async (chain) => BigInt(chain === "ethereum" ? 84 : 30) * 10n ** 6n);
+    await readFt(100, previous, report);
+    expect(report).toHaveBeenLastCalledWith({ ...base, retained: 1 });
+    const divergent = await readFt(100, undefined, report);
+    expect(report).toHaveBeenLastCalledWith({ ...base, divergent: 1, divergences: [{ id: ftMeta.id, ratio: 1.14 }] });
+    expect(supplyPacket(divergent)).toBe(supplyPacket(previous));
+    mocks.read.mockResolvedValue(null);
+    await readFt(100, previous, report);
+    expect(report).toHaveBeenLastCalledWith({ ...base, unreadable: 1, carried: 1 });
+    previous.chainPartition!.observedAt = NOW_SEC - SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1;
+    await readFt(100, previous, report);
+    expect(report).toHaveBeenLastCalledWith({ ...base, unreadable: 1, carryExpired: 1 });
+    await fetchFiatCoinGeckoTokens({}, undefined, undefined, undefined, undefined, undefined, undefined, report);
+    expect(report).toHaveBeenLastCalledWith({ ...base, candidates: 0 });
+    for (const [summary] of report.mock.calls) expect(OnchainPartitionSummarySchema.safeParse(summary).success).toBe(true);
+  });
+
+  it("caps divergence details while retaining the complete count and ratios", async () => {
+    const metas = Array.from({ length: ONCHAIN_PARTITION_DIVERGENCE_DETAIL_LIMIT + 2 }, (_, i) => ({
+      ...aaMeta, id: `partition-fixture-${i}`, geckoId: `partition-fixture-${i}`,
+    }));
+    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ...metas);
+    mocks.read.mockResolvedValue(200n * 10n ** 18n);
+    const report = vi.fn<(summary: OnchainPartitionSummary) => void>();
+    await fetchFiatCoinGeckoTokens(Object.assign({}, ...metas.map((meta) => cgData(100, 1, meta))),
+      undefined, undefined, undefined, undefined, undefined, undefined, report);
+    const summary = report.mock.calls[0][0];
+    expect(summary).toMatchObject({ candidates: metas.length, divergent: metas.length, divergencesTruncated: 2 });
+    expect(summary.divergences).toHaveLength(ONCHAIN_PARTITION_DIVERGENCE_DETAIL_LIMIT);
+    expect(summary.divergences.every(({ ratio }) => ratio === 2)).toBe(true);
+  });
+
+  it("does not report observed zeroes after an interrupted collection", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("cancelled"));
+    const report = vi.fn();
+    await expect(fetchFiatCoinGeckoTokens(cgData(100), controller.signal, undefined, undefined,
+      undefined, undefined, undefined, report)).rejects.toThrow("cancelled");
+    expect(report).not.toHaveBeenCalled();
   });
 
   it("attaches reconciled shares while keeping the CG total, source, clock and history byte-identical", async () => {
@@ -415,7 +463,9 @@ describe("CoinGecko on-chain share partitions", () => {
     mocks.read.mockImplementation((_chain, _meta, signal: AbortSignal) => new Promise((_resolve, reject) => {
       signal.addEventListener("abort", () => reject(signal.reason), { once: true });
     }));
-    const pending = fetchFiatCoinGeckoTokens({ ...cgData(100), ...cgData(100, 1, aaMeta), ...cgData(100, 1, susdeMeta) });
+    const report = vi.fn();
+    const pending = fetchFiatCoinGeckoTokens({ ...cgData(100), ...cgData(100, 1, aaMeta), ...cgData(100, 1, susdeMeta) },
+      undefined, undefined, undefined, undefined, undefined, undefined, report);
     await vi.advanceTimersByTimeAsync(0);
     expect(mocks.read).toHaveBeenCalledTimes(2);
     const offset = Math.floor(NOW_SEC / CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec) % fixtureMetas.length;
@@ -424,6 +474,7 @@ describe("CoinGecko on-chain share partitions", () => {
     ]);
     await vi.advanceTimersByTimeAsync(ONCHAIN_PARTITION_STAGE_BUDGET_MS);
     const assets = await pending;
+    expect(report).toHaveBeenCalledWith(expect.objectContaining({ candidates: 3, deadlineSkipped: 3, unreadable: 0 }));
     expect(assets).toHaveLength(3);
     expect(mocks.read).toHaveBeenCalledTimes(2);
     for (const asset of assets) {
