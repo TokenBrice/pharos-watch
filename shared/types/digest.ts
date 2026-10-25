@@ -442,6 +442,8 @@ export interface DigestInputData {
       symbol: string;
       intensity: number;
       net24hUsd: number;
+      /** Share of the published scored weight; absent on archived captures. */
+      gaugeWeightShare?: number | null;
     }[];
     topChains?: {
       chainId: string;

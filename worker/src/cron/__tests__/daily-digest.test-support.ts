@@ -229,8 +229,8 @@ export function publishedGaugePayload(overrides: Record<string, unknown> = {}): 
   return {
     gauge: { score: PUBLISHED_GAUGE_SCORE, band: "HEALTHY", flightToQuality: false, flightIntensity: 0, classificationSource: "safety-score-v9-publication", partialValuationInputs: 0 },
     coins: [
-      { stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: 100, netFlow24hUsd: 200_000_000, valuation: COMPLETE_FLOW_VALUATION },
-      { stablecoinId: "usdc-circle", symbol: "USDC", pressureShiftScore: -83.33, netFlow24hUsd: -50_000_000, valuation: COMPLETE_FLOW_VALUATION },
+      { stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: 100, netFlow24hUsd: 200_000_000, gaugeWeightUsd: 100e9, valuation: COMPLETE_FLOW_VALUATION },
+      { stablecoinId: "usdc-circle", symbol: "USDC", pressureShiftScore: -83.33, netFlow24hUsd: -50_000_000, gaugeWeightUsd: 50e9, valuation: COMPLETE_FLOW_VALUATION },
       { stablecoinId: "paxg-paxos", symbol: "PAXG", pressureShiftScore: null, netFlow24hUsd: -3_000_000, valuation: COMPLETE_FLOW_VALUATION },
     ],
     chains: [

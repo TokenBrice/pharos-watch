@@ -9,6 +9,7 @@ import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { classifyDepegLifecycle, type DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { compareFiniteDesc } from "@shared/lib/sort";
+import { getMintBurnPressureRejection, type DigestFlowSupplySnapshot } from "@shared/lib/digest-mint-burn-admission";
 import { ACTIVE_DEPEG_PROMPT_LIMIT, getDepegMarketImpactScore, isCriticalDepegRisk } from "@shared/lib/digest-risk";
 import {
   admitLiquidityShift,
@@ -501,7 +502,7 @@ export async function collectMintBurnFlows(
     // Pressure and nets need a complete 24h window; a partial baseline also
     // skews the pressure. Unknown (pre-completeness) baselines are tolerated
     // until legacy hourly buckets age out of the 30-day window.
-    const topPressure = gauge.coins
+    const pressureCoins = gauge.coins
       .filter(
         (coin): coin is PublishedGaugeCoin & { intensity: number; net24hUsd: number } =>
           coin.intensity !== null
@@ -509,10 +510,52 @@ export async function collectMintBurnFlows(
           && coin.net24hUsd !== null
           && coin.valuation24h.completeness === "complete"
           && coin.baselineValuation !== "partial",
-      )
+      );
+    const supplyById = new Map<string, Map<number, DigestFlowSupplySnapshot>>();
+    const supplyWindow = gauge.window && gauge.window.end <= ctx.nowSec ? gauge.window : null;
+    const supplyEnd = supplyWindow ? Math.floor(supplyWindow.end / DAY_SECONDS) * DAY_SECONDS : null;
+    const confirmationCoins = pressureCoins.filter((coin) => getMintBurnPressureRejection({
+      net24hUsd: coin.net24hUsd, gaugeWeightUsd: coin.gaugeWeightUsd, window: null,
+    }) === "supply-unavailable");
+    if (confirmationCoins.length > 0 && supplyEnd != null) {
+      try {
+        const ids = buildInClause(confirmationCoins.map((coin) => coin.id));
+        const rows = await ctx.db.prepare(
+          `SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history WHERE stablecoin_id IN (${ids.sql}) AND snapshot_date IN (?, ?)`,
+        ).bind(...ids.binds, supplyEnd - DAY_SECONDS, supplyEnd)
+          .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number | null }>();
+        for (const row of rows.results ?? []) {
+          const byDate = supplyById.get(row.stablecoin_id) ?? new Map<number, DigestFlowSupplySnapshot>();
+          byDate.set(row.snapshot_date, { snapshotDate: row.snapshot_date, circulatingUsd: row.circulating_usd });
+          supplyById.set(row.stablecoin_id, byDate);
+        }
+      } catch (error) {
+        logWorkerEventArgs("handler", "error", "[daily-digest] Failed to confirm mint-burn pressure supply:", error);
+        degradedReasons.push("mint-burn-pressure-supply-query");
+      }
+    }
+    const topPressure = pressureCoins
+      .filter((coin) => {
+        const snapshots = supplyById.get(coin.id);
+        const rejection = getMintBurnPressureRejection({
+          net24hUsd: coin.net24hUsd,
+          gaugeWeightUsd: coin.gaugeWeightUsd,
+          window: supplyWindow,
+          previous: supplyEnd == null ? undefined : snapshots?.get(supplyEnd - DAY_SECONDS),
+          current: supplyEnd == null ? undefined : snapshots?.get(supplyEnd),
+        });
+        if (!rejection) return true;
+        qualityReasons.push(`mint-burn-pressure-${rejection}`);
+        return false;
+      })
       .sort((a, b) => Math.abs(b.intensity) - Math.abs(a.intensity))
       .slice(0, 3)
-      .map((coin) => ({ symbol: coin.symbol, intensity: coin.intensity, net24hUsd: coin.net24hUsd }));
+      .map((coin) => ({
+        symbol: coin.symbol, intensity: coin.intensity, net24hUsd: coin.net24hUsd,
+        gaugeWeightShare: coin.gaugeWeightUsd != null && gauge.scoredMcapUsd != null
+          && gauge.scoredMcapUsd > 0 && coin.gaugeWeightUsd <= gauge.scoredMcapUsd
+          ? coin.gaugeWeightUsd / gauge.scoredMcapUsd : null,
+      }));
 
     // Published chains arrive sorted by absolute 24h net flow; only complete nets are restated.
     const topChains = gauge.chains

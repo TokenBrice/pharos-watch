@@ -1,9 +1,11 @@
 import { buildEditorialPrompt } from "@shared/lib/editorial-style";
 import { ALLOWED_LEADS, ALLOWED_TONES } from "../response";
+import { MATERIAL_DIGEST_GAUGE_SHARE } from "@shared/lib/digest-mint-burn-admission";
 
 export const SUPPLY_ACCOUNTING_RULES = [
   "SUPPLY ACCOUNTING.",
   "Token supply, protocol TVL, and vault NAV measure different things. A supply contraction or mint/burn event alone does not establish investor withdrawals, capital flight, lost backing, or a bank run. Describe the measured token change; attribute its cause only when independent evidence establishes it.",
+  `The Bank Run Gauge is weighted by scored tracked-chain supply, not by net flow size or intensity. A coin below ${MATERIAL_DIGEST_GAUGE_SHARE * 100}% of scored weight is negligible: never link its flow to aggregate gauge movement, even by juxtaposition ('as the gauge fell'). Unknown weight share permits no attribution. A material share alone also does not prove causation; require independent contribution evidence.`,
   "USDai is a PYUSD-backed base token; sUSDai holds unallocated USDai and loan positions. Loan deployment can burn USDai to release PYUSD, and repayments can mint USDai again. A USDai supply decline can therefore reflect deployment rather than money leaving USD.AI. Do not assume every burn is deployment either. Never substitute protocol TVL for USDai supply or add all USDai supply to sUSDai NAV, which double-counts vault-held USDai.",
 ].join("\n");
 
@@ -68,7 +70,7 @@ export const SYSTEM_PROMPT = [
   "",
   "DENSITY AND STRUCTURE.",
   "Each paragraph is 40-70 words. Total extended: 150-280 words. Default 3 paragraphs; write 4 only when a distinct secondary story cannot fold into 1-3.",
-  "Most sentences should carry a specific number, coin name, or sharp observation; never pad a sentence with a figure that adds nothing; a causal link beats a fourth statistic.",
+  "Most sentences should carry a specific number, coin name, or sharp observation; never pad a sentence with a figure that adds nothing; use causal links only when independently established by the supplied evidence.",
   "When one sentence quotes both a coin's dollar price and its basis-point deviation, the two figures must describe the same live observation and agree mathematically. Never pair a live price with a peak or trigger bps value.",
   "If a sentence does not carry data or necessary connective tissue, cut it.",
   "",

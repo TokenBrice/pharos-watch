@@ -57,6 +57,8 @@ export interface PublishedGaugeCoin {
   intensity: number | null;
   /** Known-valuation 24h net; `null` when the publication gated it. */
   net24hUsd: number | null;
+  /** Observed tracked-chain supply; absent legacy weights remain unavailable. */
+  gaugeWeightUsd: number | null;
   /** 24h window valuation; `unknown` on publications that predate completeness. */
   valuation24h: MintBurnValuation;
   /** Pressure baseline valuation; `unknown` on publications that predate completeness. */
@@ -144,11 +146,14 @@ function parseCoins(value: unknown): PublishedGaugeCoin[] | null {
     }
     const coverage = MintBurnCoinFlowSchema.shape.coverage.safeParse(entry.coverage);
     if (!coverage.success) return null;
+    const gaugeWeight = MintBurnCoinFlowSchema.shape.gaugeWeightUsd.safeParse(entry.gaugeWeightUsd);
+    if (!gaugeWeight.success) return null;
     coins.push({
       id: stablecoinId,
       symbol,
       intensity,
       net24hUsd: net24hUsd.value,
+      gaugeWeightUsd: gaugeWeight.data ?? null,
       valuation24h: resolveMintBurnValuation(valuation24h),
       baselineValuation: resolveMintBurnValuationCompleteness(baselineValuation),
       scanCoverage: coverage.data?.windows ?? null,

@@ -99,7 +99,9 @@ export function MintBurnFlowMethodologySection() {
                 plus USDT Issue/Redeem). These raw events are aggregated into hourly buckets and exposed as two separate
                 signals: raw net flow for current direction, and a baseline-relative pressure score for context. Counted
                 flow excludes bridge transfers, review-required burns, atomic roundtrips, and individually reviewed
-                protocol-internal movements such as an issuer deploying reserves into its own loan book.
+                protocol-internal movements such as an issuer deploying reserves into its own loan book. Mints to
+                and burns from addresses curated as non-circulating on the same chain are also protocol-internal;
+                all other internal-flow exclusions require per-event review. These rows remain in the event ledger.
               </p>
               <p>
                 Reviewed issuance coverage includes Ethereum BRSRV, CHFSAFO and GLDon. Exact start blocks and

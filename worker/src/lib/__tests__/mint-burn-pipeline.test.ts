@@ -53,6 +53,8 @@ import { classifyBridgeAwareBurnRows } from "../mint-burn-bridge-classifier";
 import { batchExecute } from "../db";
 import { classifyBridgeBurnRows } from "../mint-burn-pipeline/classification";
 import { parseMintBurnLogs } from "../mint-burn-pipeline/parse";
+import { applySupplyExcludedProtocolInternalFlows } from "../mint-burn-pipeline/reviewed-protocol-flows";
+import { CURATED_ONCHAIN_SUPPLY_EXCLUSIONS } from "../onchain-supply-exclusions";
 import {
   collectAffectedHours,
   insertMintBurnRows,
@@ -523,6 +525,51 @@ describe("mint-burn shared pipeline modules", () => {
     await persistMintBurnRows(db, [mismatched]);
     expect(sqlite.prepare("SELECT flow_type FROM mint_burn_events WHERE id = ?").get(reviewedId))
       .toEqual({ flow_type: "standard" });
+  });
+
+  it("tags only the same coin and chain's supply-excluded counterparties, case-insensitively", () => {
+    const exclusion = CURATED_ONCHAIN_SUPPLY_EXCLUSIONS["usg-tangent"];
+    const base = { stablecoin_id: "usg-tangent", chain_id: exclusion.chain };
+    const mint = makeRow({ ...base, counterparty: exclusion.holderAddresses[0].toUpperCase() });
+    const burn = makeRow({ ...base, direction: "burn", burn_type: "effective_burn", counterparty: exclusion.holderAddresses[1] });
+    const holder = makeRow({ ...base, counterparty: "0xholder" });
+    const wrongChain = makeRow({ ...base, chain_id: "arbitrum", counterparty: mint.counterparty });
+    const wrongCoin = makeRow({ counterparty: mint.counterparty });
+    const missingCounterparty = makeRow({ ...base });
+
+    applySupplyExcludedProtocolInternalFlows([mint, burn, holder, wrongChain, wrongCoin, missingCounterparty]);
+
+    expect([mint, burn].map((row) => row.flow_type)).toEqual(["protocol_internal", "protocol_internal"]);
+    expect(burn.burn_type).toBe("effective_burn");
+    expect([holder, wrongChain, wrongCoin, missingCounterparty].map((row) => row.flow_type))
+      .toEqual(["standard", "standard", "standard", "standard"]);
+  });
+
+  it("replays stored PegKeeper mints and burns out of hourly aggregates without removing ledger rows", async () => {
+    const { db, sqlite } = fixtures.open();
+    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
+    const exclusion = CURATED_ONCHAIN_SUPPLY_EXCLUSIONS["usg-tangent"];
+    const base = { stablecoin_id: "usg-tangent", chain_id: exclusion.chain, timestamp: 3_610 };
+    const mint = makeRow({ ...base, id: "pegkeeper-mint", counterparty: exclusion.holderAddresses[0], amount: 20_000_000, amount_usd: 20_000_000 });
+    const burn = makeRow({ ...base, id: "pegkeeper-burn", direction: "burn", burn_type: "effective_burn", counterparty: exclusion.holderAddresses[1], amount: 18_500_000, amount_usd: 18_500_000 });
+    const holderMint = makeRow({ ...base, id: "holder-mint" });
+    const rows = [mint, burn, holderMint];
+    await insertMintBurnRows(db, rows);
+    await recalcAffectedHours(db, collectAffectedHours(rows));
+    expect(sqlite.prepare("SELECT mint_count, burn_count, net_flow_usd FROM mint_burn_hourly").get())
+      .toEqual({ mint_count: 2, burn_count: 1, net_flow_usd: 1_500_100 });
+
+    const affectedHours = collectAffectedHours([]);
+    const result = await persistMintBurnRows(db, rows.map((row) => ({ ...row })), affectedHours);
+    await recalcAffectedHours(db, affectedHours);
+    expect(result).toMatchObject({ inserted: 0, ignored: 3, flowTypeChanges: 2, reviewedProtocolInternal: 0 });
+    expect(sqlite.prepare("SELECT id, flow_type, burn_type FROM mint_burn_events ORDER BY id").all()).toEqual([
+      { id: "holder-mint", flow_type: "standard", burn_type: null },
+      { id: "pegkeeper-burn", flow_type: "protocol_internal", burn_type: "effective_burn" },
+      { id: "pegkeeper-mint", flow_type: "protocol_internal", burn_type: null },
+    ]);
+    expect(sqlite.prepare("SELECT mint_count, burn_count, net_flow_usd FROM mint_burn_hourly").get())
+      .toEqual({ mint_count: 1, burn_count: 0, net_flow_usd: 100 });
   });
 
   it("updates classification rows for burns and non-standard mints", async () => {

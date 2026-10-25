@@ -51,7 +51,7 @@ With the default-on DDR/DDRR feature flags enabled, the order is deliberate:
 2. **`DepegOutlookHero`** (`src/components/depeg-outlook-hero.tsx`) — the signature hero
 3. `DepegResolverModule` — bounded recovery-forecast worklist
 4. `DepegControlBoard` — the universe workbench
-5. Forecast-grading disclosure (`#forecast-grading`) wrapping `DepegResolverReviewerModule`
+5. Forecast-grading section (`#forecast-grading`) wrapping `DepegResolverReviewerModule`
 6. `DepegFeed` + Timeline link — recent resolved events
 7. `DepegEventArchivePreview` (server) — latest month of permanent event pages
 8. `FaqSection` (server)
@@ -60,10 +60,9 @@ The route reads answer → table to act on → evidence/audit. The board deliber
 forecast worklist rather than preceding it: a visitor arriving during an incident needs the verdict
 on the live incidents before scanning every tracked asset.
 
-Grading is audit evidence, so it follows the board, folded: open, its ~1,300px ledger pushed the
-board ~4,000px down the page. It still precedes the history handoff, and the hero's track-record
-figure links to `#forecast-grading`, which opens the ledger and lands on rendered content rather
-than a closed control. See [Forecast Grading](#forecast-grading) for the collapse behavior.
+Grading is audit evidence, so it follows the board rather than standing between the forecasts and
+the table a reader acts on. It is always rendered, still precedes the history handoff, and the
+hero's track-record figure links to `#forecast-grading`. See [Forecast Grading](#forecast-grading).
 
 ---
 
@@ -198,12 +197,11 @@ Unrelated query parameters are preserved by the shared hook.
 ## Forecast Grading
 
 `DepegResolverReviewerModule` sits in `#forecast-grading` directly after the control
-board, **collapsed by default** and unmounted while collapsed. A `#forecast-grading`
-URL (on load or `hashchange`, including the hero's track-record link) opens it and
-re-aligns the anchor once the ledger mounts.
+board and is **always displayed** (there is no show/hide toggle). A cold
+`#forecast-grading` URL re-aligns the anchor once the ledger mounts after the
+loading state.
 
-The reviewer query is enabled when the disclosure opens, including `#forecast-grading`
-entry. Before its first read, the hero's track record stays unavailable rather than
+The reviewer query runs with the page whenever the DDRR flag is on. Before its first read, the hero's track record stays unavailable rather than
 claiming an empty or safe ledger. Retained review evidence keeps its original clock
 and freshness notice. DDR/DDRR feature flags still gate the section and query.
 

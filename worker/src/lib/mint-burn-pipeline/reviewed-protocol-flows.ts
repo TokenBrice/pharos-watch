@@ -1,7 +1,20 @@
 import { REVIEWED_PROTOCOL_INTERNAL_FLOW_BY_EVENT_ID } from "@shared/lib/reviewed-protocol-internal-flows";
+import { getOnChainSupplyExclusionConfig } from "../onchain-supply-exclusions";
 import type { MintBurnRow } from "./types";
 
 const AMOUNT_TOLERANCE = 1e-6;
+
+/** Mints/burns of curated non-circulating inventory cannot change circulating supply. */
+export function applySupplyExcludedProtocolInternalFlows(rows: MintBurnRow[]): void {
+  for (const row of rows) {
+    const exclusion = getOnChainSupplyExclusionConfig(row.stablecoin_id);
+    const counterparty = row.counterparty?.toLowerCase();
+    if (exclusion?.chain === row.chain_id && counterparty != null
+      && exclusion.holderAddresses.some((address) => address.toLowerCase() === counterparty)) {
+      row.flow_type = "protocol_internal";
+    }
+  }
+}
 
 /**
  * Tags reviewed protocol-internal rows in place; returns how many were tagged.

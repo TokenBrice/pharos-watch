@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.30",
+    "title": "Exclude curated non-circulating inventory from economic flow",
+    "date": "2026-10-25",
+    "effectiveAt": 1792972800,
+    "summary": "Classify mints to and burns from supply-excluded holder addresses as protocol-internal using the circulating-supply exclusion registry.",
+    "impact": [
+      "The single address authority is CURATED_ONCHAIN_SUPPLY_EXCLUSIONS. The event counterparty must match a curated non-circulating holder for the same stablecoin and chain, case-insensitively; all other protocol-internal exclusions still require exact per-event review.",
+      "Cron and one-shot replay apply the rule after atomic-roundtrip detection. Both mints and burns retain their ledger rows and burn classification while leaving counted hourly totals, nets, pressure, baselines, Bank Run Gauge, DEWS flow and digest inputs.",
+      "Existing classification UPDATEs rewrite stored duplicate event IDs, including non-standard mints, and replay recalculates affected hourly buckets. Historical correction requires replay; this change alone does not repair previously stored rows or published digests.",
+      "The reviewedProtocolInternal diagnostic remains the exact reviewed-event count; address matches enter the existing non-standard classification counter. Frontend supply rankings already consume circulating supply with these balances excluded and require no additional suppression."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.29",
     "title": "Bounded historical transition and common scan watermark",
     "date": "2026-10-20",

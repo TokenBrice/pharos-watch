@@ -1,7 +1,7 @@
 import { batchExecute, executeAtomicBatch } from "../db";
 import { throwIfAborted } from "../abort";
 import { detectAtomicRoundtrips } from "./roundtrip-detection";
-import { applyReviewedProtocolInternalFlows } from "./reviewed-protocol-flows";
+import { applyReviewedProtocolInternalFlows, applySupplyExcludedProtocolInternalFlows } from "./reviewed-protocol-flows";
 import type { MintBurnAffectedHour, MintBurnRow } from "./types";
 import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../mint-burn-hourly-valuation";
 
@@ -219,7 +219,8 @@ export async function persistMintBurnRows(
   reviewedProtocolInternal: number;
 }> {
   const roundtripsDetected = detectAtomicRoundtrips(rows);
-  // Reviewed issuer-internal events win over heuristic tagging.
+  // Curated non-circulating inventory and reviewed internal events win over heuristic tagging.
+  applySupplyExcludedProtocolInternalFlows(rows);
   const reviewedProtocolInternal = applyReviewedProtocolInternalFlows(rows);
   if (rows.length === 0) {
     return {

@@ -76,7 +76,7 @@ After acceptance, remove each flag, getter, alternate branch and matching Pages 
 
 - [x] Runtime-neutral DDRR review logic and schemas validate stored DDR assessments against later `depeg_events`.
 - [x] `/api/depeg-resolver-review` is cache-backed, freshness-aware, and returns degraded empty rows before the first snapshot.
-- [x] `/depeg/` renders DDRR below DDR, inside the collapsible "forecast grading · DDRR" section, with Recovery-calls and Duration-calls headline tiles. The DEWS alert feed is embedded in the `DepegOutlookHero` above both.
+- [x] `/depeg/` renders DDRR below DDR, inside the always-displayed `#forecast-grading` section, with Recovery-calls and Duration-calls headline tiles. The DEWS alert feed is embedded in the `DepegOutlookHero` above both.
 - [ ] Production snapshot has at least one stored DDR assessment after launch; until then the module shows the empty review state.
 
 ## Production Rollout

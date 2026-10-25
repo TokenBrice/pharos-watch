@@ -3,6 +3,7 @@ import { DigestSafetyMapCaptureSchema, type DigestSafetyMapCapture } from "@shar
 import { formatCurrency } from "@shared/lib/format";
 import { computeLeadStreak } from "@shared/lib/digest-lead-policy";
 import { UNCORROBORATED_TVL_DROP_RATIO } from "@shared/lib/digest-liquidity-admission";
+import { digestGaugeWeightFact } from "@shared/lib/digest-mint-burn-admission";
 import { round1 } from "@shared/lib/math";
 import { activeDepegEditorialCandidateId } from "./editorial-candidates";
 import { classifyRegime } from "./prompt/regime";
@@ -232,7 +233,7 @@ export function buildUserPrompt(
       lines.push("  Top pressure shifts vs 30d baseline:");
       for (const pressure of topPressure) {
         lines.push(
-          `    ${pressure.symbol}: ${Math.round(pressure.intensity)} (net ${formatCurrency(pressure.net24hUsd)} yesterday)`,
+          `    ${pressure.symbol}: ${Math.round(pressure.intensity)} (net ${formatCurrency(pressure.net24hUsd)} over 24h); ${digestGaugeWeightFact(pressure.gaugeWeightShare)}`,
         );
       }
     }
