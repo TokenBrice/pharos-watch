@@ -81,5 +81,12 @@
       }
     }
   },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Limited market-price coverage",
+      "message": "Reviewed 2026-10-25: CoinGecko did not index this contract. DefiLlama returned a contract quote, but its timestamp exceeded Pharos's 15-minute freshness limit. The existing redemption-price fallback requires a trusted BOLD price and vault conversion rate; a current yBOLD price can remain unavailable when those inputs cannot be admitted."
+    }
+  ],
   "launchDate": "2025-06-02"
 }

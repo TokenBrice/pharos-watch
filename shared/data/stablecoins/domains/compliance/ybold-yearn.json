@@ -1,0 +1,47 @@
+{
+  "id": "ybold-yearn",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "yBOLD tokenizes BOLD deposited across Liquity V2 Stability Pools. Yearn documents redemption at one BOLD per yBOLD, with yield accruing only in the separate ysyBOLD auto-compounder. The documented redemption delivers BOLD, a digital asset, rather than national currency or a bank deposit. This does not establish the issuer obligation to redeem for monetary value required by GENIUS section 2(22)(A)(ii)(I), read with section 2(17). The assessment covers the yBOLD strategy wrapper, not BOLD or ysyBOLD.",
+      "references": [
+        {
+          "label": "Yearn yBOLD: one BOLD per token and separate ysyBOLD yield accrual",
+          "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-25"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27: monetary value and payment stablecoin definitions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-25"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "redemptionPolicyPresent": true,
+    "notes": "Reviewed 2026-10-25. Yearn describes yBOLD as a tokenized Stability Pool position with unrestricted transfers and redemption into underlying BOLD. Bare yBOLD does not compound yield; holders must stake it for ysyBOLD. The exclusion rests on the documented digital-asset redemption right, not an assumption that all DeFi tokens or transferable vault shares are excluded. The reviewed product documentation does not identify a legal entity obligated to redeem yBOLD into national currency or bank deposits. No legal issuerEntity, domicile, payment-stablecoin approval, enforcement finding, reserve-report finding or monthly-attestation finding is asserted.",
+    "references": [
+      {
+        "label": "Yearn yBOLD: tokenized Stability Pool position and redemption terms",
+        "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27: sections 2(17) and 2(22)",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-25"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-25"
+  }
+}
