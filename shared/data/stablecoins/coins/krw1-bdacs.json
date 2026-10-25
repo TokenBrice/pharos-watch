@@ -60,6 +60,12 @@
   "featuredContent": [
     {
       "type": "article",
+      "url": "https://www.theblock.co/news/markets/2026-10-20-injective-partners-bdacs-418883",
+      "title": "Injective partners with BDACS to bring Korean won stablecoin to RWA ecosystem",
+      "source": "The Block"
+    },
+    {
+      "type": "article",
       "url": "https://financefeeds.com/bdacs-launches-krw1-stablecoin-following-successful-proof-of-concept-with-woori-bank/",
       "title": "BDACS launches KRW1 stablecoin following successful proof of concept with Woori Bank",
       "description": "Pilot details: each KRW1 fully collateralized via won held in Woori Bank escrow; KISA cites Avalanche for public-sector reliability.",
@@ -239,6 +245,13 @@
       "title": "BDACS demonstrates a testnet KRW1 to USDC swap through Circle StableFX",
       "description": "At the Korea Blockchain Week side event Bridging Finance Onchain, co-hosted with Circle, Kyobo Life and SBI Holdings, BDACS demonstrated an onchain exchange and settlement of KRW1 against USDC using Circle's StableFX institutional FX program in a testnet environment.",
       "sourceUrl": "https://www.digitaltoday.co.kr/en/view/110174/bdacs-kim-tak-jong-krw-stablecoin-should-target-new-payment-areas"
+    },
+    {
+      "date": "2026-10-20",
+      "type": "partnership",
+      "title": "Injective and BDACS sign MoU on KRW1 as won settlement asset",
+      "description": "Injective and BDACS signed a memorandum of understanding aiming to make KRW1 the exclusive won-denominated settlement asset for real-world assets on Injective. Minting and redemption are limited to approved institutional partners and remain subject to regulatory approval. No launch date was given.",
+      "sourceUrl": "https://www.theblock.co/news/markets/2026-10-20-injective-partners-bdacs-418883"
     }
   ]
 }

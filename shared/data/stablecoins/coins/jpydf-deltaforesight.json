@@ -93,6 +93,13 @@
       "title": "JPY DeFi launches on Ethereum mainnet",
       "description": "Public launch with wstETH and USDC branches. Supply reached 91.7 million JPYdf by 08:54 UTC, with no DefiLlama or CoinGecko listing.",
       "sourceUrl": "https://deltaforesight.com/en/news/jpy-defi-mainnet-20261015/"
+    },
+    {
+      "date": "2026-10-22",
+      "type": "milestone",
+      "title": "DefiLlama begins tracking JPYdf supply without a price",
+      "description": "DefiLlama added JPYdf as stablecoin 448 on October 22 2026, reporting about 93.3 million JPYdf on Ethereum, matching on-chain total supply. DefiLlama carries no price for it and CoinGecko has no listing.",
+      "sourceUrl": "https://stablecoins.llama.fi/stablecoin/448"
     }
   ]
 }

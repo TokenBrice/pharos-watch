@@ -620,8 +620,11 @@
   },
   "weur-aplauz": {
     "title": "Aplauz euro token awaiting verified circulation",
-    "text": "Aplauz NL B.V. publishes WEUR as a euro e-money token with reserve assets safeguarded through a separate Dutch foundation. The whitepaper grants every holder par redemption after compliance checks and says EUR dispatch should generally occur within five business days of token receipt. ESMA lists the exact issuer and token, but notification does not approve the whitepaper or prove circulation. Public onboarding marketing conflicts with the amended whitepaper's statement that WEUR has not launched. Pharos retains a pre-launch record because production identity and circulation remain unverified.",
-    "updatedAt": "2026-10-02"
+    "text": "Aplauz NL B.V., which trades as WSPN and belongs to the Worldwide Stablecoin Payment Network group through WSPN Fintech Dutch Holding B.V., publishes WEUR as a euro e-money token with reserve assets safeguarded through a separate Dutch foundation. The whitepaper names Ethereum and BNB Smart Chain as its initial networks. The whitepaper grants every holder par redemption after compliance checks and says EUR dispatch should generally occur within five business days of token receipt. ESMA lists the exact issuer and token, but notification does not approve the whitepaper or prove circulation. Public onboarding marketing conflicts with the amended whitepaper's statement that WEUR has not launched. Pharos retains a pre-launch record because production identity and circulation remain unverified.",
+    "updatedAt": "2026-10-25",
+    "authoredBy": "ai",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-10-25"
   },
   "xgld-unitas": {
     "title": "XAUt-backed borrowing strategy",
@@ -6317,19 +6320,19 @@
   },
   "rd-rai-dollar": {
     "title": "Reflexer's Controller-Steered $1 CDP",
-    "text": "RAI Dollar, from the Reflexer team behind RAI, keeps RAI's on-chain controller but pins the target at $1. RD is a pre-launch immutable CDP stablecoin on Ethereum where a PI controller reads a 24-hour TWAP of the market price and moves one system-wide borrow rate, bounded to 0.25-50% APY around a 2% bias, while Liquity-style redemption at par less a fee sets the floor. A second lever adjusts the internal redemption price within a $0.75-$1.30 band, at no more than a tenth of a cent an hour, and only under sustained extreme deviation. Collateral sits in eight isolated branches: WETH, wstETH, rETH, weETH, WBTC, tBTC, sUSDS, and PAXG. Four are issuer-controlled tokens that can freeze addresses or be upgraded, and the documented response is to shut the affected branch down rather than freeze RD holders. Borrowers can pay a surcharge for Redemption Shield, which keeps their trove out of redemptions outside shutdown and gives unshielded troves on that branch a rate discount. Bad debt left after a shutdown is repaid from half of MOAI stakers' interest share, plus healthy branches' redemption fees and a 0.5% redemption surcharge, so MOAI stakers act as risk capital. None of it is deployed yet: the address registry reads TBD, the core repository is private, and the audits, part-funded by an August 2026 Ethereum Foundation subsidy, are still in progress. With no governance, admin keys or upgrade path, whatever configuration launches is permanent, so the pending audits carry the review burden.",
-    "updatedAt": "2026-10-19",
+    "text": "RAI Dollar, from the Reflexer team behind RAI, keeps RAI's on-chain controller but pins the target at $1. RD is a pre-launch immutable CDP stablecoin on Ethereum where a PI controller reads a 24-hour TWAP of the market price and moves one system-wide borrow rate, bounded to 0.25-50% APY around a 2% bias, while Liquity-style redemption at par less a fee sets the floor. A second lever adjusts the internal redemption price within a $0.75-$1.30 band, at no more than a tenth of a cent an hour, and only under sustained extreme deviation. Collateral sits in seven isolated branches: WETH, wstETH, rETH, weETH, WBTC, tBTC, and PAXG. Three are issuer-controlled tokens that can freeze addresses or be upgraded, and the documented response is to shut the affected branch down rather than freeze RD holders. Borrowers can pay a surcharge for Redemption Shield, which keeps their trove out of redemptions outside shutdown and gives unshielded troves on that branch a rate discount. Bad debt left after a shutdown is repaid from half of MOAI stakers' interest share, plus healthy branches' redemption fees and a 0.5% redemption surcharge, so MOAI stakers act as risk capital. None of it is deployed yet: the address registry reads TBD, the core repository is private, and the audits, part-funded by an August 2026 Ethereum Foundation subsidy, are still in progress. With no governance, admin keys or upgrade path, whatever configuration launches is permanent, so the pending audits carry the review burden.",
+    "updatedAt": "2026-10-25",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "factsAsOf": "2026-10-25"
   },
   "eurr-revolut": {
     "title": "The Neobank That Rented Its Own Coin",
-    "text": "EURR is live, and Pharos tracks it pre-launch anyway. Revolut launched it on August 26 2026 as the first product of its stablecoin programme, in euro rather than the dollar or sterling tokens it had been expected to ship first, phased into Denmark, Poland and Portugal with wider EEA availability targeted later in 2026. The issuer is Bridge Building S.A., the Luxembourg arm of Stripe-owned Bridge, which holds the EMI licence and MiCA authorisation from the CSSF; Revolut Digital Assets Europe distributes the token under its CySEC MiCA licence. Revolut built the distribution and outsourced the balance sheet. Supply passed 1.67 million EURR in early September and moved by less than 2,000 tokens through late September; the Polygon deployment holds three. Bridge's reserve page reports reserves equal to supply, held entirely as cash deposits at credit institutions, and the white paper commits to par {{term:redemption}}redemption{{/term}} to an EEA IBAN within two business days. Custodian names and an independent {{term:attestation}}attestation{{/term}} remain unpublished. No accepted price source resolves the token, and that missing price path is what keeps EURR outside the tracked set.",
-    "updatedAt": "2026-10-19",
+    "text": "EURR is live, and Pharos tracks it pre-launch anyway. Revolut launched it on August 26 2026 as the first product of its stablecoin programme, in euro rather than the dollar or sterling tokens it had been expected to ship first, phased into Denmark, Poland and Portugal with wider EEA availability targeted later in 2026. The issuer is Bridge Building S.A., the Luxembourg arm of Stripe-owned Bridge, which holds the EMI licence and MiCA authorisation from the CSSF; Revolut Digital Assets Europe distributes the token under its CySEC MiCA licence. Revolut built the distribution and outsourced the balance sheet. Supply passed 1.67 million EURR in early September and stood near 1.69 million on October 25; the Polygon deployment holds three. Bridge's reserve page reports reserves equal to supply, held entirely as cash deposits at credit institutions, and the white paper commits to par {{term:redemption}}redemption{{/term}} to an EEA IBAN within two business days. Ernst & Young issued a reasonable-assurance {{term:attestation}}attestation{{/term}} on the reserves as of August 31 2026, though custodian names remain unpublished. No accepted price source resolves the token, and that missing price path is what keeps EURR outside the tracked set.",
+    "updatedAt": "2026-10-25",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "factsAsOf": "2026-10-25"
   },
   "usdv-solomon-v2": {
     "title": "Solomon’s Separate Reserve Dollar",
