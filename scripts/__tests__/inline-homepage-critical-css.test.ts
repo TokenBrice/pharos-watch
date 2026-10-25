@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { availableParallelism, tmpdir } from "node:os";
 import path from "node:path";
+import { runInNewContext } from "node:vm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   collectCriticalCssPages,
@@ -44,7 +45,7 @@ function fixture(): string {
   }
   // A previously processed page must be skipped without adding another loader.
   writeFileSync(path.join(outDir, "stablecoin/beta/yield/index.html"),
-    '<html><head><style>.yield{color:green}</style><link data-pharos-critical-css="async" rel="stylesheet" media="print" href="/_next/static/css/app.css"><script src="/critical-css-loader.js" defer></script></head><body class="yield">Processed</body></html>');
+    '<html><head><style>.yield{color:green}</style><link data-pharos-critical-css="async" rel="stylesheet" media="print" href="/_next/static/css/app.css"><script src="/critical-css-loader.js?v=2" defer></script></head><body class="yield">Processed</body></html>');
   return outDir;
 }
 
@@ -91,7 +92,7 @@ describe("critical CSS worker pool", () => {
     expect(readFileSync(file, "utf8")).toBe(before);
   }, 20_000);
 
-  it("inlines non-profile pages with CSP-safe deferred CSS and leaves a rerun unchanged", async () => {
+  it("inlines non-profile pages with CSP-safe async CSS and leaves a rerun unchanged", async () => {
     const outDir = fixture();
     const pages = collectCriticalCssPages(outDir);
     await optimizeCriticalCssPages(outDir, pages, 3);
@@ -102,7 +103,7 @@ describe("critical CSS worker pool", () => {
     expect(after).toContain(".dark{color-scheme:dark;--background:black}");
     expect(after).not.toContain(".unused");
     expect(after).toMatch(/<link\b[^>]*media="print"[^>]*data-pharos-critical-css="async"/);
-    expect(after).toContain('<script src="/critical-css-loader.js" defer></script>');
+    expect(after).toMatch(/data-pharos-critical-css="async"><script src="\/critical-css-loader.js\?v=2" async><\/script>/);
     const withoutNoscript = after.replace(/<noscript\b[\s\S]*?<\/noscript>/gi, "");
     expect(withoutNoscript).not.toMatch(/\son[a-z]+\s*=/i);
     expect(withoutNoscript).not.toMatch(/<link\b(?=[^>]*rel="stylesheet")(?![^>]*media="print")[^>]*>/);
@@ -135,5 +136,65 @@ describe("critical CSS worker pool", () => {
     const after = readFileSync(file, "utf8");
     expect(after).toContain(`<style>${css.replace(".unused{padding:2rem}", "")}</style>`);
     expect(readFileSync(path.join(outDir, "_next/static/css/app.css"), "utf8")).toBe(css);
+  });
+
+  it.each(['<html lang="en">', '<html lang="en" class="font-sans">'])('retains only page-matched dark variants and restores %s', async (htmlTag) => {
+    const outDir = fixture();
+    const file = path.join(outDir, "depeg/index.html");
+    writeFileSync(file, `${htmlTag}<head><link rel="stylesheet" href="/_next/static/css/app.css"></head><body class="coin dark:bg-muted"><main>Page</main></body></html>`);
+    writeFileSync(path.join(outDir, "_next/static/css/app.css"), `${stylesheet}.dark\\:bg-muted:is(.dark *){background:black}.dark\\:bg-unused:is(.dark *){background:purple}`);
+
+    await optimizeCriticalCssPages(outDir, [file], 1);
+
+    const after = readFileSync(file, "utf8");
+    expect(after).toContain(htmlTag);
+    expect(after).toContain(".dark\\:bg-muted:is(.dark *){background:black}");
+    expect(after).not.toContain("bg-unused");
+  });
+
+  it("rejects an existing deferred loader without writing the invalid output", async () => {
+    const outDir = fixture();
+    const file = path.join(outDir, "depeg/index.html");
+    const before = readFileSync(file, "utf8").replace("</head>", '<script src="/critical-css-loader.js?v=2" defer></script></head>');
+    writeFileSync(file, before);
+    await expect(optimizeCriticalCssPages(outDir, [file], 1))
+      .rejects.toThrow("without the CSP-safe async loader script");
+    expect(readFileSync(file, "utf8")).toBe(before);
+  });
+
+  it("keeps the client-mounted navigation sheet usable before the full stylesheet loads", async () => {
+    const outDir = fixture();
+    const file = path.join(outDir, "depeg/index.html");
+    const chrome = ".inset-y-0{inset-block:0}.z-modal{z-index:50}.overflow-y-auto{overflow-y:auto}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.data-\\[state\\=open\\]\\:slide-in-from-left[data-state=open]{--tw-enter-translate-x:-100%}.motion-reduce\\:data-\\[state\\=open\\]\\:animate-none[data-state=open]{animation:none}";
+    writeFileSync(path.join(outDir, "_next/static/css/app.css"), stylesheet + chrome);
+
+    await optimizeCriticalCssPages(outDir, [file], 1);
+
+    const after = readFileSync(file, "utf8");
+    expect(after).toContain(chrome);
+    expect(after).not.toContain(".unused");
+  });
+});
+
+describe("critical CSS browser loader", () => {
+  it.each(["loading", "complete"])("activates loaded sheets immediately and retains the DOMContentLoaded fallback (%s)", (readyState) => {
+    const cached = Object.assign(new EventTarget(), { sheet: {}, media: "print", dataset: { pharosCriticalCss: "async" } });
+    const pending = Object.assign(new EventTarget(), { sheet: null, media: "print", dataset: { pharosCriticalCss: "async" } });
+    const fallback = Object.assign(new EventTarget(), { sheet: null, media: "print", dataset: { pharosCriticalCss: "async" } });
+    const document = Object.assign(new EventTarget(), {
+      readyState,
+      querySelectorAll: () => [cached, pending, fallback].filter((link) => link.dataset.pharosCriticalCss === "async"),
+    });
+    runInNewContext(readFileSync(new URL("../../public/critical-css-loader.js", import.meta.url), "utf8"), { document });
+
+    expect(cached.media).toBe("all");
+    expect(pending.media).toBe(readyState === "loading" ? "print" : "all");
+    pending.dispatchEvent(new Event("load"));
+    expect(pending.media).toBe("all");
+    expect(pending.dataset.pharosCriticalCss).toBe("loaded");
+    expect(fallback.media).toBe(readyState === "loading" ? "print" : "all");
+    document.dispatchEvent(new Event("DOMContentLoaded"));
+    expect(fallback.media).toBe("all");
+    expect(fallback.dataset.pharosCriticalCss).toBe("loaded");
   });
 });

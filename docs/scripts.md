@@ -208,7 +208,7 @@ The cemetery CSV keeps its own column order, contract-list serialization, whites
 
 `PHAROS_DETAIL_SNAPSHOT_SOURCE` defaults to `per-coin` (the Pages release sets `bulk`); `verify:detail-snapshot-sources` reports byte/field diffs and pass timings; `--keep-dir` retains evidence: [bulk source](./stablecoin-detail-page.md#build-snapshot-hydration).
 
-`postbuild` generates Markdown exports, then runs `inline-homepage-critical-css.ts` for every exported public HTML page, excluding `out/admin/**`, in a Beasties worker pool. Extraction retains `.dark` theme tokens and leading `:where()`/`:is()` rules (including Tailwind spacing/dividers) in source order, preventing layout shifts when the full sheet arrives. Already-inlined pages are skipped; `PHAROS_CRITICAL_CSS_WORKERS` overrides concurrency: [Pages release](./deployment-process.md#ci-deploy-sequence).
+`postbuild` generates Markdown exports, then runs `inline-homepage-critical-css.ts` for every exported public HTML page except `out/admin/**`. Beasties temporarily matches a dark HTML root, then restores its original attributes, retaining page-used dark variants, theme tokens and leading `:where()`/`:is()` spacing/divider rules in source order. A bounded shared Header/Sheet allowlist keeps the client-mounted drawer positioned, scrollable and animated before full CSS arrives. The CSP-safe async `critical-css-loader.js` follows the stylesheet links and activates each full sheet on load (or immediately when cached), with a DOMContentLoaded fallback; its URL version bypasses the previous loader's cache. Already-inlined pages are skipped; `PHAROS_CRITICAL_CSS_WORKERS` overrides pool concurrency: [Pages release](./deployment-process.md#ci-deploy-sequence).
 
 ### PR And Release Gates
 

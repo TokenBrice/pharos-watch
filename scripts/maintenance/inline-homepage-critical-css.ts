@@ -25,7 +25,8 @@ export function criticalCssWorkerCount(pageCount: number): number {
   return Math.max(1, Math.min(requested, pageCount));
 }
 
-const asyncCssLoaderPath = "/critical-css-loader.js";
+// Bust the previous loader's one-week public cache when changing activation timing.
+const asyncCssLoaderPath = "/critical-css-loader.js?v=2";
 const asyncStylesheetPattern =
   /<link\b(?=[^>]*\brel=["']stylesheet["'])(?=[^>]*\/_next\/static\/(?:chunks|css)\/[^"']+\.css)(?=[^>]*\bmedia=["']print["'])(?=[^>]*\bonload=["']this\.media\s*=\s*["']all["']["'])[^>]*>/gi;
 
@@ -70,9 +71,20 @@ export async function optimizeCriticalCssBatch(
     reduceInlineStyles: false,
     inlineFonts: false,
     fonts: false,
-    // The saved theme is applied in the browser, after build-time extraction.
+    // Keep theme tokens even on pages without dark utility classes.
     // Beasties strips leading selector functions, losing Tailwind spacing/dividers.
-    allowRules: [".dark", /^:(?:where|is)\(/],
+    allowRules: [
+      ".dark", /^:(?:where|is)\(/,
+      // Header's portalled Sheet is absent from SSR; keep its viewport, rail and motion rules.
+      ".fixed", ".inset-0", ".inset-y-0", ".left-0", ".z-modal", ".h-full", ".w-full", ".sm\\:max-w-full",
+      ".overflow-y-auto", ".min-h-16", ".min-w-14", ".grid-cols-2", ".gap-4", ".mt-2",
+      ".border-r", ".border-border\\/45", ".border-transparent", ".bg-black\\/50", ".bg-card", ".bg-muted", ".bg-muted\\/60",
+      ".p-0", ".py-4", ".pt-3", ".pl-\\[14px\\]", ".pb-\\[calc\\(env\\(safe-area-inset-bottom\\)\\+0\\.5rem\\)\\]",
+      ".leading-tight", ".tabular-nums", ".shadow-lg", ".transition", ".transition-\\[background-color\\,border-color\\,color\\,box-shadow\\]",
+      ".\\[animation-fill-mode\\:backwards\\]", ".fade-in", ".slide-in-from-left-2", ".slide-in-from-right-2",
+      /^\.(?:motion-reduce\\:)?data-\\\[state\\=(?:open|closed)\\\]\\:(?:animate-|duration-|fade-|slide-)/,
+      ".motion-reduce\\:animate-none",
+    ],
     logLevel,
     logger,
   });
@@ -140,7 +152,14 @@ async function optimizePage(optimizer: Beasties, filePath: string, label: string
     return { beforeBytes: bytes, afterBytes: bytes, skipped: true };
   }
 
-  let after = await optimizer.process(before);
+  const htmlTag = before.match(/<html\b[^>]*>/i)?.[0];
+  if (!htmlTag) throw new Error(`${label}: missing HTML root for theme extraction.`);
+  // Match runtime dark variants without shipping a forced theme to the browser.
+  const darkHtmlTag = /\sclass\s*=/i.test(htmlTag)
+    ? htmlTag.replace(/(\sclass\s*=\s*)(["'])(.*?)\2/i, "$1$2$3 dark$2")
+    : htmlTag.replace(/>$/, ' class="dark">');
+  let after = (await optimizer.process(before.replace(htmlTag, darkHtmlTag)))
+    .replace(/<html\b[^>]*>/i, htmlTag);
 
   let hasAsyncStylesheet = false;
   after = after.replace(asyncStylesheetPattern, (tag) => {
@@ -155,7 +174,9 @@ async function optimizePage(optimizer: Beasties, filePath: string, label: string
   });
 
   if (hasAsyncStylesheet && !after.includes(`src="${asyncCssLoaderPath}"`)) {
-    after = after.replace("</head>", `<script src="${asyncCssLoaderPath}" defer></script></head>`);
+    const lastLink = [...after.matchAll(/<link\b[^>]*data-pharos-critical-css="async"[^>]*>/g)].at(-1)!;
+    const insertAt = lastLink.index + lastLink[0].length;
+    after = `${after.slice(0, insertAt)}<script src="${asyncCssLoaderPath}" async></script>${after.slice(insertAt)}`;
   }
 
   const withoutNoscript = after.replace(/<noscript\b[\s\S]*?<\/noscript>/gi, "");
@@ -172,8 +193,8 @@ async function optimizePage(optimizer: Beasties, filePath: string, label: string
     throw new Error(`${label}: contains an inline event handler outside <noscript>.`);
   }
 
-  if (hasAsyncStylesheet && !after.includes(`src="${asyncCssLoaderPath}"`)) {
-    throw new Error(`${label}: has async critical CSS without the CSP-safe loader script.`);
+  if (hasAsyncStylesheet && !after.includes(`<script src="${asyncCssLoaderPath}" async></script>`)) {
+    throw new Error(`${label}: has async critical CSS without the CSP-safe async loader script.`);
   }
 
   if (after !== before) {

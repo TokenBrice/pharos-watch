@@ -20,7 +20,7 @@ import { analyzeShellCommand } from "../lib/shell-command-analysis.ts";
 import type * as RoutingRegistry from "../lib/doc-ownership-registry.mts";
 import { buildFocusedCheckPlan } from "../maintenance/run-focused-checks.ts";
 // Match the router's lazy module boundary when extending the routing fixture.
-const { PATH_FAMILIES } = createRequire(import.meta.url)("../lib/doc-ownership-registry.mts") as typeof RoutingRegistry;
+const { PATH_FAMILIES, DECLARED_TEST_OWNERSHIP } = createRequire(import.meta.url)("../lib/doc-ownership-registry.mts") as typeof RoutingRegistry;
 
 function requireBlockingReason(output: unknown): string {
   if (typeof output !== "object" || output === null || !("reason" in output) || typeof output.reason !== "string") {
@@ -440,6 +440,15 @@ describe("reading selectors and context modes", () => {
     expectIntegrityObligations(contract, false);
     const commands = buildFocusedCheckPlan([file]).checks.map((check) => check.command);
     expect(commands.join("\n")).toContain("shared/lib/__tests__/ai-summary-claims.test.ts");
+  });
+
+  it("routes the browser CSS loader to its build contract and runtime tests", () => {
+    const file = "public/critical-css-loader.js";
+    const contract = classifyChangedFiles([file]);
+    expect(contract.unmappedPaths).toEqual([]);
+    expect(docKeys(contract)).toContain("docs/scripts.md#build-and-generated-artifacts");
+    expect(DECLARED_TEST_OWNERSHIP.find((entry) => entry.sources.includes(file))?.tests)
+      .toContain("scripts/__tests__/inline-homepage-critical-css.test.ts");
   });
 
   it.each([
