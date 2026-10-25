@@ -14,6 +14,7 @@ vi.mock("next/navigation", () => ({
 
 beforeEach(() => {
   vi.useFakeTimers();
+  vi.spyOn(document, "readyState", "get").mockReturnValue("complete");
   vi.stubGlobal("requestIdleCallback", undefined);
   vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) =>
     window.setTimeout(() => callback(0), 16));
@@ -88,15 +89,47 @@ describe("GoogleAnalytics", () => {
       "page_view",
       expect.objectContaining({ page_path: "/" }),
     ]);
-    // GA retains a two-second delay after the post-paint fallback, rather
-    // than inheriting the visible hero chart's short activation budget.
+    // Browsers without idle callbacks wait five seconds after the paint fallback.
     expect(document.getElementById("pharos-google-analytics")).toBeNull();
-    act(() => vi.advanceTimersByTime(2_031));
+    act(() => vi.advanceTimersByTime(5_031));
     expect(document.getElementById("pharos-google-analytics")).toBeNull();
     act(() => vi.advanceTimersByTime(1));
     expect(document.getElementById("pharos-google-analytics")).toHaveProperty(
       "src", "https://www.googletagmanager.com/gtag/js?id=G-TEST",
     );
+  });
+
+  it.each(["loading", "interactive"] as const)("queues events while %s and schedules idle only after load", (readyState) => {
+    vi.spyOn(document, "readyState", "get").mockReturnValue(readyState);
+    const idle = vi.fn(() => 1);
+    vi.stubGlobal("requestIdleCallback", idle);
+    pathnameMock.mockReturnValue("/");
+    render(<GoogleAnalytics measurementId="G-TEST" />);
+
+    window.gtag?.("event", "fresh_data_ready", { page: "home" });
+    expect(Array.from(window.dataLayer?.at(-1) ?? [])).toEqual([
+      "event", "fresh_data_ready", { page: "home" },
+    ]);
+    act(() => vi.advanceTimersByTime(10_000));
+    expect(idle).not.toHaveBeenCalled();
+    expect(document.getElementById("pharos-google-analytics")).toBeNull();
+
+    act(() => window.dispatchEvent(new Event("load")));
+    expect(idle).toHaveBeenCalledExactlyOnceWith(expect.any(Function), { timeout: 5_000 });
+    act(() => window.dispatchEvent(new Event("load")));
+    expect(idle).toHaveBeenCalledTimes(1);
+  });
+
+  it("schedules immediately after load and cancels the idle callback on unmount", () => {
+    const idle = vi.fn(() => 7);
+    const cancelIdle = vi.fn();
+    vi.stubGlobal("requestIdleCallback", idle);
+    vi.stubGlobal("cancelIdleCallback", cancelIdle);
+    pathnameMock.mockReturnValue("/");
+    const view = render(<GoogleAnalytics measurementId="G-TEST" />);
+    expect(idle).toHaveBeenCalledExactlyOnceWith(expect.any(Function), { timeout: 5_000 });
+    view.unmount();
+    expect(cancelIdle).toHaveBeenCalledWith(7);
   });
 
   it("scrubs query-string verification tokens before page_view tracking", async () => {
@@ -118,7 +151,11 @@ describe("GoogleAnalytics", () => {
     ]);
   });
 
-  it.each(["unmount", "private-route"])("cancels pending script injection on %s", (transition) => {
+  it.each([
+    ["complete", "unmount"], ["complete", "private-route"],
+    ["loading", "unmount"], ["loading", "private-route"],
+  ] as const)("cancels pending script injection from %s on %s", (readyState, transition) => {
+    vi.spyOn(document, "readyState", "get").mockReturnValue(readyState);
     pathnameMock.mockReturnValue("/");
     const view = render(<GoogleAnalytics measurementId="G-TEST" />);
     expect(document.getElementById("pharos-google-analytics")).toBeNull();
@@ -127,7 +164,10 @@ describe("GoogleAnalytics", () => {
       pathnameMock.mockReturnValue("/admin/");
       view.rerender(<GoogleAnalytics measurementId="G-TEST" />);
     }
-    act(() => vi.runAllTimers());
+    act(() => {
+      window.dispatchEvent(new Event("load"));
+      vi.runAllTimers();
+    });
     expect(document.getElementById("pharos-google-analytics")).toBeNull();
   });
 

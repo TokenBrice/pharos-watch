@@ -9,6 +9,7 @@
 export const CHART_TICK_FONT_SIZE = 11;
 export const CHART_TICK_FONT_FAMILY = "var(--font-mono, monospace)";
 export const CHART_TICK_FILL = "var(--color-muted-foreground)";
+export const MONO_Y_AXIS_WIDTH = 68;
 
 /** Spread into a Recharts axis `tick` prop or onto a hand-rolled SVG tick `<text>`. */
 export const CHART_AXIS_TICK = {

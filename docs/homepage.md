@@ -71,7 +71,7 @@ Pinning moves rows without renumbering their rank in the current filtered sort. 
 
 ## Loading Strategy
 
-The eager summary preserves first-paint content. Idle/viewport gates defer the live SVG history chart; heavier sections use shape-matched progressive fallbacks. Each lazy section retains measured responsive height until offscreen; update reserves when layout height changes so mounting does not shift the footer.
+The eager summary preserves first-paint content. Idle/viewport gates defer the live SVG history chart; heavier sections use shape-matched progressive fallbacks. Each lazy section retains measured responsive height until offscreen; update reserves when layout height changes so mounting does not shift the footer. Static skeletons read shared axis geometry from `chart-theme.ts`, never the Recharts axes module, so placeholders do not eagerly pull in charts.
 
 The server-rendered history preview contains at most the last 90 provider-series points, with all gaps retained, and explicitly says Fallback history with its source date. It is a preview rather than a shorter live-history default. Only the aggregate lane's own clock admits that drawing under the same 72-hour fallback limit; it is never relabeled live or installed in a full-history/global query cache.
 
@@ -81,7 +81,7 @@ The canonical query attempt atomically adopts each raw `{status, headers, bodyTe
 
 Unclaimed transports are released on the first pathname transition, popstate, pagehide (including bfcache departure), request-fingerprint mismatch, or the bounded twenty-second document handoff expiry. Later polls and SPA visits use ordinary transport; the document registry cannot restart on A→B→A. Startup/adoption clocks never replace producer timestamps, freshness budgets, warnings or unavailable reasons, and static/first-client markup remains unchanged.
 
-The visible, hydrated hero chart uses a 2.5-second idle deadline where `requestIdleCallback` exists. Without it, two animation frames plus a separate 150 ms fallback delay activate the gate after paint rather than imposing that deadline as a fixed wait. Analytics keeps its own longer fallback deferral.
+The visible, hydrated hero chart uses a 2.5-second idle deadline where `requestIdleCallback` exists. Without it, two animation frames plus a separate 150 ms fallback delay activate the gate after paint rather than imposing that deadline as a fixed wait. Analytics waits for window `load`, then idle with its own five-second deadline/fallback.
 
 An initial URL anchor force-mounts only its owning deferred section; unrelated panels keep their viewport gates and responsive height reserves. Section headings inside unloaded chunks are resolved and scrolled to once their DOM arrives. `/#home-alt-rankings` and its heading target mount rankings, not the pulse cards or lower overview modules. Unknown/top-fold hashes do not bypass any gates. The Horizon constellation and its registry/logo dependencies are dynamically imported only when its below-fold gate mounts, including a matching anchor entry.
 
