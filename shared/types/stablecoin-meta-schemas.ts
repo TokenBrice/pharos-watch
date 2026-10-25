@@ -44,11 +44,11 @@ export const StablecoinObituarySchema = /* @__PURE__ */ (() => z.object({
 }))();
 
 export const StablecoinListingStatusReviewSchema = /* @__PURE__ */ (() => z.object({
-  /** Date on which the lifecycle decision took effect. */
+  /** Date on which the lifecycle decision took effect (for a launched pre-launch row: entry into the phase). */
   changedAt: StrictIsoDateSchema,
-  /** Concise public explanation for the quarantine or delisting. */
+  /** Concise public explanation for the quarantine or delisting, or the missing lane of a launched pre-launch row. */
   reason: z.string().trim().min(1).max(280),
-  /** Required follow-up date for reversible quarantines. */
+  /** Required follow-up date for reversible quarantines and launched pre-launch rows. */
   reviewBy: StrictIsoDateSchema.optional(),
   /** Primary evidence for an out-of-scope decision or runtime hold. */
   source: StablecoinLinkSchema.optional(),
@@ -114,7 +114,7 @@ export const StablecoinMetaStructuralSchema = /* @__PURE__ */ (() => z.object({
   notices: z.array(CoinNoticeSchema).optional(),
   yieldConfig: YieldConfigSchema.optional(),
   status: StablecoinMetaEnumSchemas.status.optional(),
-  /** Required for quarantined and delisted assets; preserved on detail pages. */
+  /** Required for quarantined, delisted and launched pre-launch assets; preserved on detail pages. */
   listingStatusReview: StablecoinListingStatusReviewSchema.optional(),
   /** Issuer's public wind-down or termination announcement date for this token. */
   windDownAnnouncedAt: StrictIsoDateSchema.optional(),

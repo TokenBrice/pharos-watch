@@ -330,6 +330,19 @@ export function getExpiredReserveSupplyAdmissionBootstrapIssue(
     : null;
 }
 
+/** Advisory: a launched pre-launch row past its decision date (promote, quarantine or scope). */
+export function getOverdueLaunchedPhaseReviewIssue(
+  coin: Pick<StablecoinMeta, "status" | "launchPhase" | "listingStatusReview">,
+  nowMs = Date.now(),
+): string | null {
+  if (coin.status !== "pre-launch" || coin.launchPhase !== "launched") return null;
+  const reviewBy = coin.listingStatusReview?.reviewBy;
+  return reviewBy != null && isValidIsoDateOnly(reviewBy)
+    && Date.parse(`${reviewBy}T00:00:00Z`) <= nowMs
+    ? `launched pre-launch row passed listingStatusReview.reviewBy ${reviewBy}; promote it, record a listing decision, or renew the dated review`
+    : null;
+}
+
 export function getLiveReserveDependencyTypeLinkIssues(
   params: unknown,
   path = "liveReservesConfig.params",
@@ -807,6 +820,9 @@ function runStablecoinDataCheck(): void {
       if (terminalConfigIssue) reportError(`${entry.file} (${entry.coin.id}): ${terminalConfigIssue}`);
       const expiredBootstrapIssue = getExpiredReserveSupplyAdmissionBootstrapIssue(entry.coin);
       if (expiredBootstrapIssue) reportError(`${entry.file} (${entry.coin.id}): ${expiredBootstrapIssue}`);
+
+      const overdueLaunchedReviewIssue = getOverdueLaunchedPhaseReviewIssue(entry.coin);
+      if (overdueLaunchedReviewIssue) reportWarning(`${entry.file} (${entry.coin.id}): ${overdueLaunchedReviewIssue}`);
 
       const algorithmicBackingIssue = getTrackedAlgorithmicBackingIssue(entry.coin);
       if (algorithmicBackingIssue) {

@@ -14,7 +14,7 @@ Read `docs/editorial-style.md`; its `pre-launch` and `coin-summary` registers go
 
 1. Read every `shared/data/stablecoins/coins/*.json` entry with `status: "pre-launch"`, its current milestone/date/phase/content state, and `data/ai-summaries.json`. Rank by newest milestone or last file edit; entries with no milestone or no update for eight weeks receive deeper review.
 2. Use web search, primary-source fetches, link-status checks, and browser inspection only where fetches are blocked or stronger inspection is needed. See `docs/process/agent-artifacts.md#harness-configuration`. Check official issuer posts/docs first, then regulator material and reputable reporting. Check DefiLlama and CoinGecko structured data for activation evidence.
-3. Report sourced phase/date/milestone/content changes, dead links, conflicts, no-change coins, and promotion candidates. Do not infer a launch date or phase from promotional language.
+3. Report sourced phase/date/milestone/content changes, dead links, conflicts, no-change coins, `launched` candidates (publicly issued but gate-failing), and promotion candidates. Do not infer a launch date or phase from promotional language.
 
 Optional discovery of untracked candidates is research-only: search recent issuer/regulatory announcements and near-zero external listings, de-duplicate against the registry, and ask before adding anything.
 
@@ -29,6 +29,8 @@ For a credible primary-source announcement of an in-scope stablecoin, propose a 
 Approval must cover each coin and action; an earlier explicit cohort instruction covering those coins remains valid. Ask again only for an uncovered addition, promotion, or other scope change. Preserve canonical identity, flags, and historical milestones. Add milestones oldest-first with a primary `sourceUrl`; add only notable featured content.
 
 When changing an existing `expectedLaunchDate`, first append its old value to `dateHistory` as `{ "date": "<old>", "setOn": "<today>" }`. An initial date has no prior value to append; never reconstruct guessed history.
+
+Set `launchPhase: "launched"` only on primary evidence of public on-chain issuance (explorer, issuer mainnet post) for a coin that fails the promotion gate; a pilot or closed platform stays in its earlier phase. Follow [Launched, awaiting data](../../../docs/process/adding-a-stablecoin.md#launched-awaiting-data): add `launchDate`, a sourced launch milestone, and a `listingStatusReview` naming the missing lane with `reviewBy` at most 60 days out. Each review, report launched rows near or past `reviewBy` with a proposed decision: promotion, listing decision, or a renewed dated review backed by new evidence.
 
 Refresh an AI summary only for a material change: phase advance, launch-date shift of at least a quarter, named regulator/custodian/major partner, completed reputable audit, approval/charter/license decision, or confirmed mainnet date. Use `write-ai-summaries` for the editorial contract.
 

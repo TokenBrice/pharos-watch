@@ -28,6 +28,9 @@ import {
 } from "../../types/stablecoin-meta-compliance-schemas";
 const REVIEW_QUANTITATIVE_TOLERANCE = 1e-6;
 const UNRESOLVED_RESERVE_DISPOSITIONS = new Set(["basket-needs-split", "insufficient-evidence"]);
+const DAY_MS = 86_400_000;
+/** A `launched` pre-launch row must reach a decision (promotion, listing decision or renewed review) within this dwell. */
+export const LAUNCHED_PHASE_MAX_DWELL_DAYS = 60;
 
 function canonicalDeploymentPart(value: string): string {
   const trimmed = value.trim();
@@ -486,16 +489,49 @@ export const StablecoinMetaAssetSchema = StablecoinMetaAssetRawSchema.superRefin
   })
   .superRefine((meta, ctx) => {
     const listingStatus = meta.status === "quarantined" || meta.status === "delisted";
+    const launchedPreLaunch = meta.status === "pre-launch" && meta.launchPhase === "launched";
     if (listingStatus && !meta.listingStatusReview) {
       issue(ctx, ["listingStatusReview"], `${meta.status} coins require listingStatusReview`);
-    } else if (!listingStatus && meta.listingStatusReview) {
-      issue(ctx, ["listingStatusReview"], "listingStatusReview is only allowed when status is quarantined or delisted");
+    } else if (!listingStatus && !launchedPreLaunch && meta.listingStatusReview) {
+      issue(ctx, ["listingStatusReview"], "listingStatusReview is only allowed when status is quarantined or delisted, or on a launched pre-launch row");
     }
     if (meta.status === "quarantined" && !meta.listingStatusReview?.reviewBy) {
       issue(ctx, ["listingStatusReview", "reviewBy"], "quarantined coins require listingStatusReview.reviewBy");
     }
     if (meta.status === "delisted" && !meta.listingStatusReview?.source) {
       issue(ctx, ["listingStatusReview", "source"], "delisted coins require listingStatusReview.source");
+    }
+  })
+  .superRefine((meta, ctx) => {
+    if (meta.launchPhase !== "launched") return;
+    if (meta.status !== "pre-launch") {
+      issue(ctx, ["launchPhase"], 'launchPhase "launched" is only allowed on pre-launch rows');
+      return;
+    }
+    const launchRange = meta.launchDate ? fuzzyDateRange(meta.launchDate) : null;
+    if (!launchRange) {
+      issue(ctx, ["launchDate"], 'launchPhase "launched" requires launchDate');
+    } else if (!(meta.milestones ?? []).some((milestone) => {
+      const range = fuzzyDateRange(milestone.date);
+      return milestone.sourceUrl != null && range != null && range.end >= launchRange.start;
+    })) {
+      issue(ctx, ["milestones"], 'launchPhase "launched" requires a sourced milestone dated on or after the start of launchDate');
+    }
+    const review = meta.listingStatusReview;
+    if (!review?.reviewBy) {
+      issue(ctx, ["listingStatusReview", "reviewBy"], 'launchPhase "launched" requires listingStatusReview naming the missing lane, with reviewBy');
+      return;
+    }
+    if (launchRange && review.changedAt < launchRange.start) {
+      issue(ctx, ["listingStatusReview", "changedAt"], "listingStatusReview.changedAt cannot predate launchDate");
+    }
+    const dwellDays = (Date.parse(`${review.reviewBy}T00:00:00Z`) - Date.parse(`${review.changedAt}T00:00:00Z`)) / DAY_MS;
+    if (dwellDays <= 0 || dwellDays > LAUNCHED_PHASE_MAX_DWELL_DAYS) {
+      issue(
+        ctx,
+        ["listingStatusReview", "reviewBy"],
+        `launched rows need reviewBy within ${LAUNCHED_PHASE_MAX_DWELL_DAYS} days after listingStatusReview.changedAt`,
+      );
     }
   })
   .superRefine((meta, ctx) => {
