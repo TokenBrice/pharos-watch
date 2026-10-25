@@ -11,6 +11,9 @@ import { PSI_CONDITION_BAND_VALUES } from "@shared/types/stability-constants";
 vi.mock("@shared/lib/stablecoins/registry", async () => (await import("./daily-digest.test-support")).mockDailyDigestRegistryModule());
 vi.mock("../../lib/stablecoins-cache", async () => (await import("./daily-digest.test-support")).mockDailyDigestStablecoinsCacheModule());
 vi.mock("../../lib/safety-score-active-source", async () => (await import("./daily-digest.test-support")).mockDailyDigestSafetySourceModule());
+vi.mock("../../lib/safety-score-index", async () => ({
+  loadActiveSafetyScoreIndex: (await import("../../lib/safety-score-active-source")).loadActiveSafetyScoreCohort,
+}));
 vi.mock("../../lib/flight-to-quality-classification", async () => (await import("./daily-digest.test-support")).mockDailyDigestFlightToQualityModule());
 vi.mock("../../lib/fetch-retry", async () => (await import("./daily-digest.test-support")).mockDailyDigestFetchRetryModule());
 vi.mock("../../lib/twitter", async () => (await import("./daily-digest.test-support")).mockDailyDigestTwitterModule());
@@ -41,7 +44,7 @@ import { buildForwardLookOutcomes, buildNextTriggers } from "../daily-digest/dig
 import { buildEditorialPrompt, scanEditorialText } from "@shared/lib/editorial-style";
 import { getPsiBandStreak } from "@shared/lib/psi-view-model";
 import type { DigestInputData } from "@shared/types/digest";
-import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
+import { loadActiveSafetyScoreCohort } from "../../lib/safety-score-active-source";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { BASE_DIGEST_INPUT, BASE_SAFETY_CONTEXT, canonicalSafetySource, makeCollectorCtx, makeDailyDigestScenario, makeDigestRow, makePublishedDewsTables, missingPublishedGaugeTable, PUBLISHED_GAUGE_SCORE, publishedGaugePayload, publishedGaugeTable, VALID_CAPTURE_MAP_SUMMARY } from "./daily-digest.test-support";
 
@@ -56,7 +59,7 @@ const nativeQuoteFixtures = createLatestSchemaFixtureTracker();
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
-  vi.mocked(loadActiveSafetyScoreSource).mockReset().mockResolvedValue(canonicalSafetySource([]));
+  vi.mocked(loadActiveSafetyScoreCohort).mockReset().mockResolvedValue(canonicalSafetySource([]));
 });
 afterEach(() => { nativeQuoteFixtures.closeAll(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
@@ -355,7 +358,7 @@ describe("market and risk collectors", () => {
         { id: "usdt-tether", overallGrade: "A", overallScore: 88 },
         { id: "dai-makerdao", overallGrade: "B", overallScore: 70 },
       ]);
-      vi.mocked(loadActiveSafetyScoreSource).mockResolvedValueOnce(snapshot);
+      vi.mocked(loadActiveSafetyScoreCohort).mockResolvedValueOnce(snapshot);
       const scores = await collectSafetyScores(ctxFor([]), new Set(["USDT"]));
       expect(scores.value.safetyContext).toMatchObject({ status: "available", expectedModel: "v9" });
       expect(scores.value.safetyScores).toMatchObject({

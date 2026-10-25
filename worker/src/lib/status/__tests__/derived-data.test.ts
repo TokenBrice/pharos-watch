@@ -4,7 +4,7 @@ import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
 import { MintBurnConservationRecordSchema, MintBurnReconciliationSummarySchema } from "@shared/types/status";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { getDatasetCadenceSec } from "@shared/lib/status-dataset-freshness";
-import * as safetySourceModule from "../../safety-score-active-source";
+import * as safetySourceModule from "../../safety-score-index";
 import { makeWorkerReportCardsV9Response } from "../../../test-helpers/report-cards-v9";
 import { DatasetFreshnessSchema } from "@shared/types/status/core";
 import { mockD1 } from "@shared/test-utils/mock-d1";
@@ -224,7 +224,7 @@ describe("getDatasetFreshness", () => {
   it("keeps other dataset freshness available when the canonical publication read fails", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
-    vi.spyOn(safetySourceModule, "loadActiveSafetyScoreSource").mockRejectedValue(new Error("publication unavailable"));
+    vi.spyOn(safetySourceModule, "loadActiveSafetyScoreIndex").mockRejectedValue(new Error("publication unavailable"));
     const freshness = await getDatasetFreshness(mockD1([
       { match: "SELECT MAX(updated_at) as latest FROM cache", rows: [], first: { latest: NOW - 60 } },
     ]));
@@ -237,7 +237,7 @@ describe("getDatasetFreshness", () => {
     vi.setSystemTime(new Date(NOW * 1000));
     const updatedAt = NOW - 2 * 86400;
     const snapshot = makeWorkerReportCardsV9Response({ updatedAt });
-    vi.spyOn(safetySourceModule, "loadActiveSafetyScoreSource").mockResolvedValue(
+    vi.spyOn(safetySourceModule, "loadActiveSafetyScoreIndex").mockResolvedValue(
       kind === "v9" ? { kind, snapshot }
         : { kind, snapshot, reason: "v9-publication-held", detail: "Held publication" },
     );
@@ -257,7 +257,7 @@ describe("getDatasetFreshness", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
     if (clock != null) {
-      vi.spyOn(safetySourceModule, "loadActiveSafetyScoreSource").mockResolvedValue({
+      vi.spyOn(safetySourceModule, "loadActiveSafetyScoreIndex").mockResolvedValue({
         kind: "v9", snapshot: { ...makeWorkerReportCardsV9Response(), updatedAt: clock },
       });
     }

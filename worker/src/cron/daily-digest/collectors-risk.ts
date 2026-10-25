@@ -9,7 +9,7 @@ import {
   safetyScoreHistoryIdentityFromV2Row,
   type SafetyScoreHistoryV2Row,
 } from "../../lib/safety-score-history-v2";
-import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
+import { loadActiveSafetyScoreCohort } from "../../lib/safety-score-active-source";
 import { digestSafetyContextFromSource } from "../../lib/digest-safety-context";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
@@ -63,14 +63,17 @@ export async function collectSafetyScores(
   ctx: CollectorContext,
   mentionedSymbols: Set<string>,
 ): Promise<CollectorResult<SafetyScoresResult>> {
+  let safetyProjectionFallbackCount = 0;
   try {
-    const source = await loadActiveSafetyScoreSource(ctx.db);
+    const source = await loadActiveSafetyScoreCohort(ctx.db);
+    safetyProjectionFallbackCount = source.projectionFallbackCount;
     const safetyContext = digestSafetyContextFromSource(source);
     if (source.kind !== "v9") {
       logWorkerEventArgs("handler", "error",
         `[daily-digest] Canonical Safety Score V9 unavailable (${source.reason}): ${source.detail}`,
       );
       return collectorDegraded({
+        safetyProjectionFallbackCount,
         safetyScores: undefined,
         safetyGrades: undefined,
         safetyIdentity: undefined,
@@ -133,6 +136,7 @@ export async function collectSafetyScores(
       gradeDistribution[grade.grade] = (gradeDistribution[grade.grade] ?? 0) + 1;
     }
     return collectorOk({
+      safetyProjectionFallbackCount,
       safetyScores: {
         model: "v9",
         mentionedCoins: reportCoins.map((grade) => ({
@@ -159,6 +163,7 @@ export async function collectSafetyScores(
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to load canonical safety scores:", error);
     return collectorDegraded({
+      safetyProjectionFallbackCount,
       safetyScores: undefined,
       safetyGrades: undefined,
       safetyIdentity: undefined,

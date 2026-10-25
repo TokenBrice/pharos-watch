@@ -5,9 +5,9 @@ import {
 } from "@shared/types/digest";
 import { SafetyScorePublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import {
-  loadActiveSafetyScoreSource,
-  type ActiveSafetyScoreSource,
-} from "./safety-score-active-source";
+  loadActiveSafetyScoreIndex,
+  type ActiveSafetyScoreIndex,
+} from "./safety-score-index";
 
 export const LEGACY_UNBOUND_DIGEST_SAFETY_REASON = "legacy-unbound";
 
@@ -53,7 +53,7 @@ export function findUnboundDigestSafetyClaimMarkers(
 }
 
 export function digestSafetyContextFromSource(
-  source: ActiveSafetyScoreSource,
+  source: ActiveSafetyScoreIndex,
 ): DigestSafetyContext {
   if (source.kind !== "v9") {
     return {
@@ -77,7 +77,7 @@ export async function loadDigestSafetyContext(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<DigestSafetyContext> {
-  return digestSafetyContextFromSource(await loadActiveSafetyScoreSource(db, signal));
+  return digestSafetyContextFromSource(await loadActiveSafetyScoreIndex(db, signal));
 }
 
 export function parseDigestSafetyContext(raw: unknown): DigestSafetyContext | null {
@@ -136,7 +136,7 @@ export async function checkDigestSafetyContextForDelivery(
       ? { kind: "stale", reason: "legacy-unbound" }
       : { kind: "ok" };
   }
-  const current = await loadActiveSafetyScoreSource(db, signal);
+  const current = await loadActiveSafetyScoreIndex(db, signal);
   if (current.kind !== "v9") {
     return { kind: "unavailable", reason: current.reason };
   }

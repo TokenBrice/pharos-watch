@@ -11,7 +11,7 @@ import { emptyReserveCompositionOverview } from "@shared/types/live-reserves";
 import { logWorkerEvent } from "../structured-log";
 import { readMintBurnScanCoverage, type MintBurnScanSegment } from "../mint-burn-pipeline/scan-coverage";
 import { readDewsPublishedGenerationResult } from "../dews-publication-pointer";
-import { loadActiveSafetyScoreSource } from "../safety-score-active-source";
+import { loadActiveSafetyScoreIndex } from "../safety-score-index";
 import { CONFIRMED_CRON_OUTPUT_AT_SQL } from "../cron-output";
 import { STATUS_DATASET_FRESHNESS } from "@shared/lib/status-dataset-freshness";
 import type { DatasetFreshnessKey } from "@shared/types/status/core";
@@ -164,14 +164,14 @@ async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget, now
   if (target.type === "report-card-publication") {
     let active;
     try {
-      active = await loadActiveSafetyScoreSource(db);
+      active = await loadActiveSafetyScoreIndex(db);
     } catch (err) {
       logWorkerEvent({
         scope: "status",
         level: "error",
         event: "report_card_publication_freshness_read_failed",
         route: "status",
-        source: "safety_score_active_source",
+        source: "safety_score_index",
         message: "Failed to resolve the expected active Safety Score source for dataset freshness",
         error: err,
       });
@@ -183,7 +183,7 @@ async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget, now
       level: "warn",
       event: "report_card_publication_freshness_unavailable",
       route: "status",
-      source: "safety_score_active_source",
+      source: "safety_score_index",
       message: "Failed to validate the canonical V9 publication for dataset freshness",
       metadata: {
         reason: active.reason,

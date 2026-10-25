@@ -415,7 +415,7 @@ describe("loadDdrContext", () => {
 
     const result = await loadDdrContext(db, [activeRow()], NOW_SEC);
 
-    expect(result).toEqual({ kind: "degraded", reason: "stablecoins-cache-stale", dataAsOf: staleAt });
+    expect(result).toEqual({ kind: "degraded", reason: "stablecoins-cache-stale", dataAsOf: staleAt, safetyProjectionFallbackCount: 0 });
   });
 
   it("hydrates live DDR inputs from DEWS signals, DEX TVL history, and Safety Score history", async () => {
@@ -465,10 +465,11 @@ describe("loadDdrContext", () => {
         },
       ],
     });
-    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreCohort")
       .mockResolvedValue({
         kind: "v9",
         snapshot,
+        projectionFallbackCount: 0,
       });
     const signalsJson = JSON.stringify({
       signals: {
@@ -711,12 +712,13 @@ describe("loadDdrContext", () => {
         reasons: [{ code: "dex-stale" }],
       },
     });
-    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreCohort")
       .mockResolvedValue({
         kind: "held",
         reason: "v9-publication-held",
         detail: "Canonical Safety Score V9 ratings are held at the last verified snapshot",
         snapshot,
+        projectionFallbackCount: 0,
       });
     const db = mockResolverD1([
       ...publishedDewsConfigs(),

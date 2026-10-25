@@ -10,7 +10,8 @@ import {
   persistSafetyScoreV9Publication,
   persistSafetyScoreV9PublicationAttempt,
 } from "../safety-score-v9/publication-store";
-import { loadSafetyScoreV9PublicationHealth, SAFETY_SCORE_V9_CACHE_KEYS } from "../safety-score-v9/publication-health";
+import { loadSafetyScoreV9PublicationHealth } from "../safety-score-v9/publication-health";
+import { SAFETY_SCORE_V9_CACHE_KEYS } from "../safety-score-v9/publication-cache-keys";
 import { loadSafetyScoreV9PublicationAttempt, loadSafetyScoreV9FailedPublicationAttempt } from "../safety-score-v9/publication-attempts";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
@@ -26,6 +27,7 @@ import {
   parseSafetyScoreV9LenderCollateralProjection,
 } from "../safety-score-v9/accepted-projections";
 import { loadSafetyScoreV9AcceptedBaselineState, loadSafetyScoreV9LenderCollateralState } from "../safety-score-v9/accepted-projection-readers";
+import { SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX } from "../safety-score-v9/publication-chunks";
 
 const databases: DatabaseSync[] = [];
 
@@ -271,7 +273,7 @@ describe("Safety Score V9 publication store", () => {
     expect(Object.isFrozen(publication.cards[0])).toBe(false);
   });
 
-  it.each(["acceptedBaseline", "lenderCollateral", "publicationAttempt"] as const)(
+  it.each(["acceptedBaseline", "lenderCollateral", "cohort", "publicationAttempt"] as const)(
     "rolls back every accepted row and replay transport when %s fails its constraint", async field => {
       const { sqlite, db } = database();
       const prior = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 110 });
@@ -289,7 +291,7 @@ describe("Safety Score V9 publication store", () => {
     },
   );
 
-  it.each(["baseline", "lender"] as const)("fences equal-clock conflicting %s projection bytes but allows identical acceptance", async field => {
+  it.each(["baseline", "lender", "cohort"] as const)("fences equal-clock conflicting %s projection bytes but allows identical acceptance", async field => {
     const { sqlite, db } = database();
     const publication = makeWorkerSafetyScoreV9Publication();
     const input = { ...currentInput(publication), publicationReplayBaseValue: "base", publicationReplayCaptureValue: "delta" };
@@ -302,6 +304,22 @@ describe("Safety Score V9 publication store", () => {
       return { ...projections, [field]: projections[field] + " " };
     } })).rejects.toThrow();
     expect(sqlite.prepare("SELECT key, value, updated_at FROM cache ORDER BY key").all()).toEqual(before);
+  });
+
+  it("rejects a superseded prior envelope and rolls back all cohort acceptance rows", async () => {
+    const { sqlite, db } = database();
+    await persistSafetyScoreV9Publication(db, { ...currentInput(makeWorkerSafetyScoreV9Publication({ publishedAtSec: 110 })), deferPublicMaterialization: true });
+    const originalBatch = db.batch.bind(db);
+    let concurrentRows: unknown;
+    vi.spyOn(db, "batch").mockImplementationOnce(async statements => {
+      const concurrent = makeWorkerSafetyScoreV9Publication({ publicationGenerationId: "report-cards:v9:concurrent", publishedAtSec: 115 });
+      await persistSafetyScoreV9Publication(db, { ...currentInput(concurrent), deferPublicMaterialization: true });
+      concurrentRows = sqlite.prepare("SELECT key, value, updated_at FROM cache ORDER BY key").all();
+      return originalBatch(statements);
+    });
+    const next = makeWorkerSafetyScoreV9Publication({ publicationGenerationId: "report-cards:v9:next", publishedAtSec: 120 });
+    await expect(persistSafetyScoreV9Publication(db, { ...currentInput(next), deferPublicMaterialization: true })).rejects.toThrow();
+    expect(sqlite.prepare("SELECT key, value, updated_at FROM cache ORDER BY key").all()).toEqual(concurrentRows);
   });
 
   it("rejects projection construction failure before committing any accepted row", async () => {
@@ -556,9 +574,12 @@ describe("Safety Score V9 publication store", () => {
       });
       expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?")
         .get(SAFETY_SCORE_V9_CACHE_KEYS.publication)?.value).toBe(legacyPublication);
+      // The compressed schema-6 body still rejects; HTTP no longer decodes it to repair artifacts.
+      await expect(loadSafetyScoreV9Publication(db)).rejects.toMatchObject({ code: "publication-schema-cutover-pending" });
       const heldResponse = await handleReportCardsV9(db);
       expect(heldResponse.status).toBe(503);
-      expect(await heldResponse.json()).toMatchObject({ reason: "publication-schema-cutover-pending" });
+      expect(heldResponse.headers.get("Cache-Control")).toBe("no-store");
+      expect(await heldResponse.json()).toMatchObject({ reason: "v9-public-materialization-pending" });
 
       const replacement = makeWorkerSafetyScoreV9Publication({
         publishedAtSec: 130, publicationGenerationId: "report-cards:v9:first-current",
@@ -676,18 +697,20 @@ describe("Safety Score V9 publication store", () => {
       },
     );
     expect(
-      sqlite.prepare("SELECT key FROM cache ORDER BY key").all().map((row) => row.key),
+      sqlite.prepare("SELECT key FROM cache ORDER BY key").all().map((row) => String(row.key))
+        .filter((key) => !key.startsWith(SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX)),
     ).toEqual([
       SAFETY_SCORE_V9_CACHE_KEYS.publication,
       SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline,
+      SAFETY_SCORE_V9_CACHE_KEYS.cohort,
       SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral,
       SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt,
       SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
       SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex,
       V9_PUBLIC_MATERIALIZATION_CACHE_KEY,
     ].sort());
-    const projectionRows = sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key IN (?, ?) ORDER BY key")
-      .all(SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral);
+    const projectionRows = sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key IN (?, ?, ?) ORDER BY key")
+      .all(SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral, SAFETY_SCORE_V9_CACHE_KEYS.cohort);
 
     await persistSafetyScoreV9Publication(db, {
       publicationHealth: {
@@ -707,8 +730,8 @@ describe("Safety Score V9 publication store", () => {
       },
       publicationClockSec: 120,
     });
-    expect(sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key IN (?, ?) ORDER BY key")
-      .all(SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral)).toEqual(projectionRows);
+    expect(sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key IN (?, ?, ?) ORDER BY key")
+      .all(SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral, SAFETY_SCORE_V9_CACHE_KEYS.cohort)).toEqual(projectionRows);
 
     await expect(loadSafetyScoreV9Publication(db)).resolves.toEqual(
       publication,
@@ -760,8 +783,8 @@ describe("Safety Score V9 publication store", () => {
         affectedAssetIds: ["usdc-circle"],
       },
     });
-    const projectionRows = sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key IN (?, ?) ORDER BY key")
-      .all(SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral);
+    const projectionRows = sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key IN (?, ?, ?) ORDER BY key")
+      .all(SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral, SAFETY_SCORE_V9_CACHE_KEYS.cohort);
 
     await persistSafetyScoreV9PublicationAttempt(db, {
       publicationAttempt: {
@@ -779,8 +802,8 @@ describe("Safety Score V9 publication store", () => {
       },
       publicationClockSec: 130,
     });
-    expect(sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key IN (?, ?) ORDER BY key")
-      .all(SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral)).toEqual(projectionRows);
+    expect(sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key IN (?, ?, ?) ORDER BY key")
+      .all(SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral, SAFETY_SCORE_V9_CACHE_KEYS.cohort)).toEqual(projectionRows);
 
     await expect(loadSafetyScoreV9Publication(db)).resolves.toEqual(
       publication,

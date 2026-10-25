@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeWorkerReportCardsV9Response } from "../../../test-helpers/report-cards-v9";
 
 const mocks = vi.hoisted(() => ({
-  loadActiveSafetyScoreSource: vi.fn(),
+  loadActiveSafetyScoreIndex: vi.fn(),
   buildFlightToQualityClassificationFromV9Snapshot: vi.fn(),
 }));
 
-vi.mock("../../../lib/safety-score-active-source", () => ({
-  loadActiveSafetyScoreSource: mocks.loadActiveSafetyScoreSource,
+vi.mock("../../../lib/safety-score-index", () => ({
+  loadActiveSafetyScoreIndex: mocks.loadActiveSafetyScoreIndex,
 }));
 vi.mock("../../../lib/flight-to-quality-classification", () => ({
   buildFlightToQualityClassificationFromV9Snapshot:
@@ -25,13 +25,13 @@ const intensities = [
 
 describe("digest mint/burn flight-to-quality flows", () => {
   beforeEach(() => {
-    mocks.loadActiveSafetyScoreSource.mockReset();
+    mocks.loadActiveSafetyScoreIndex.mockReset();
     mocks.buildFlightToQualityClassificationFromV9Snapshot.mockReset();
   });
 
   function classify(safe: string[], risky: string[]) {
     const snapshot = makeWorkerReportCardsV9Response();
-    mocks.loadActiveSafetyScoreSource.mockResolvedValue({
+    mocks.loadActiveSafetyScoreIndex.mockResolvedValue({
       kind: "v9",
       snapshot,
     });
@@ -94,7 +94,7 @@ describe("digest mint/burn flight-to-quality flows", () => {
   });
 
   it("fails closed with zeroed flows when the canonical source is unavailable", async () => {
-    mocks.loadActiveSafetyScoreSource.mockResolvedValue({
+    mocks.loadActiveSafetyScoreIndex.mockResolvedValue({
       kind: "error",
       reason: "v9-snapshot-unavailable",
       detail: "missing",
@@ -118,7 +118,7 @@ describe("digest mint/burn flight-to-quality flows", () => {
 
   it("fails closed while the canonical publication is held", async () => {
     const snapshot = makeWorkerReportCardsV9Response();
-    mocks.loadActiveSafetyScoreSource.mockResolvedValue({
+    mocks.loadActiveSafetyScoreIndex.mockResolvedValue({
       kind: "held",
       reason: "v9-publication-held",
       detail:
@@ -143,7 +143,7 @@ describe("digest mint/burn flight-to-quality flows", () => {
   });
 
   it("fails closed when the canonical source read throws", async () => {
-    mocks.loadActiveSafetyScoreSource.mockRejectedValue(new Error("boom"));
+    mocks.loadActiveSafetyScoreIndex.mockRejectedValue(new Error("boom"));
 
     await expect(
       computeDigestMintBurnFtqFlows(db, intensities),

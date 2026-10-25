@@ -40,6 +40,31 @@ export function expiredMeasuredExitAssetIds(
   candidate: SafetyScoreV9CurrentResponse,
   acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null = null,
 ): string[] {
+  return expiredMeasuredExitAssetIdsFromRoutes(projectExpiredMeasuredExitRoutes(fixedInput), candidate, acceptedPublication);
+}
+
+/** Keep route identities, not captured curves, after compilation releases its input. */
+export function projectExpiredMeasuredExitRoutes(fixedInput: MeasuredExitPublicationInput) {
+  return {
+    dexGenerationId: fixedInput.dexGenerationId,
+    byAssetId: new Map(Object.entries(fixedInput.dexLiqMap).map(([assetId, row]) => [assetId,
+      (row.exitRouteObservations ?? []).filter((observation) => {
+        const history = observation.observationHistory;
+        return observation.evidenceKind === "measured-executable-depth" &&
+          observation.confidence === "high" &&
+          isDexMeasuredExecutionObservationHistoryMature(history) &&
+          history != null && fixedInput.clockSec - history.observationWindowEndedAt >
+            getDexMeasuredExecutionFreshnessMaxSec(observation.adapterProfileId ?? "");
+      }).map((observation) => observation.routeId),
+    ])),
+  };
+}
+
+export function expiredMeasuredExitAssetIdsFromRoutes(
+  routes: ReturnType<typeof projectExpiredMeasuredExitRoutes>,
+  candidate: SafetyScoreV9CurrentResponse,
+  acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null = null,
+): string[] {
   const acceptedById = new Map(acceptedPublication?.cards.map((card) => [card.id, card]));
   return candidate.cards.flatMap((card) => {
     const exit = card.breakdowns?.exit;
@@ -55,19 +80,12 @@ export function expiredMeasuredExitAssetIds(
     const previousRoutes = accepted && cardDeteriorated(card, accepted)
       ? [accepted.primaryRouteKey, accepted.diversificationRouteKey]
       : [];
-    const expired = fixedInput.dexLiqMap[card.id]?.exitRouteObservations?.some((observation) => {
-      const history = observation.observationHistory;
-      return observation.evidenceKind === "measured-executable-depth" &&
-        observation.confidence === "high" &&
-        isDexMeasuredExecutionObservationHistoryMature(history) &&
-        history != null &&
-        fixedInput.clockSec - history.observationWindowEndedAt >
-          getDexMeasuredExecutionFreshnessMaxSec(observation.adapterProfileId ?? "") &&
-        (contributingRoutes.has(canonicalV9RouteKey("dex", fixedInput.dexGenerationId, observation.routeId)) ||
+    const expired = routes.byAssetId.get(card.id)?.some((routeId) =>
+        contributingRoutes.has(canonicalV9RouteKey("dex", routes.dexGenerationId, routeId)) ||
           (acceptedPublication?.dexGenerationId != null && previousRoutes.includes(
-            canonicalV9RouteKey("dex", acceptedPublication.dexGenerationId, observation.routeId),
-          )));
-    });
+            canonicalV9RouteKey("dex", acceptedPublication.dexGenerationId, routeId),
+          )),
+    );
     return expired ? [card.id] : [];
   }).sort(compareText);
 }

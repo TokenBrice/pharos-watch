@@ -135,6 +135,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/safety-score-v9/mint-posture.ts",
   "shared/lib/safety-score-v9/policy.ts",
   "shared/lib/safety-score-v9/primitives.ts",
+  "shared/lib/safety-score-v9/public-card-shard.ts",
   "shared/lib/safety-score-v9/public-cause-interning.ts",
   "shared/lib/safety-score-v9/public-evidence-path-interning.ts",
   "shared/lib/safety-score-v9/public-witness-texts.ts",

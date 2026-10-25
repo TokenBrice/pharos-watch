@@ -22,6 +22,9 @@ export function buildV9PublicationSlotGroups(
             lane: "compute-safety-score-v9",
             currentSlotKey: runtime.scheduleKey,
             v9PublicationSecondChance: isV9PublicationSecondChanceTrigger(runtime.cron),
+            onV9PublicationAlreadyAccepted: (windowSignal, executionWindow) =>
+              import("../../lib/safety-score-v9/publication-runner").then(({ recoverSafetyScoreV9PublicMaterialization }) =>
+                recoverSafetyScoreV9PublicMaterialization(runtime.db, windowSignal, executionWindow.deadlineMs)),
           },
           (windowSignal, executionWindow) =>
             import("../../cron/compute-safety-score-v9").then(
