@@ -688,6 +688,13 @@ describe("curation-expanded complete supply rosters", () => {
       canonical: undefined,
       supplies: { ethereum: 100, arbitrum: 10, base: 20, optimism: 30, unichain: 40 },
     },
+    { id: "usyc-hashnote", supplies: { ethereum: 100, bsc: 10, solana: 20, arc: 0 } },
+    { id: "jtrsy-anemoy", supplies: { ethereum: 100, base: 10, arbitrum: 20, avalanche: 30, plume: 40, bsc: 50, monad: 60, solana: 0, pharos: 70 } },
+    { id: "nopal-nest", supplies: { ethereum: 100, plume: 10, bsc: 20, solana: 30, plasma: 0, worldchain: 40, avalanche: 50, arc: 60, monad: 70, robinhood: 80 } },
+    { id: "acred-apollo-securitize", supplies: { aptos: 10, avalanche: 20, ethereum: 100, ink: 30, polygon: 40, sei: 50, solana: 60 } },
+    { id: "brsrv-blackrock", supplies: { ethereum: 100, tempo: 0, solana: 0 } },
+    { id: "syrupusdg-maple", canonical: "ethereum", supplies: { ethereum: 100, robinhood: 10, arbitrum: 20, ink: 0, solana: 0 } },
+    { id: "susdat-saturn", canonical: "ethereum", supplies: { ethereum: 100, bsc: 10, monad: 20 } },
   ];
 
   beforeEach(() => {
@@ -768,6 +775,45 @@ describe("curation-expanded complete supply rosters", () => {
       expect(Object.values(result?.chainCirculating ?? {}).find((row) => row.chainId === chain)?.current).toBe(0);
     },
   );
+
+  it("conserves strUSD canonical stock while separating unprobed CCIP escrow from Ethereum float", async () => {
+    const meta = TRACKED_META_BY_ID.get("strusd-tori")!;
+    installSupplyReads(meta, { ethereum: 100, monad: 10, pharos: 5 });
+    fetchOnchainUint256Mock.mockResolvedValue(20n * 10n ** 18n);
+    const result = await fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs());
+    expect(result).toMatchObject({
+      mcap: 125,
+      chainCirculating: {
+        Ethereum: { current: 100, chainId: "ethereum" },
+        Monad: { current: 12.5, chainId: "monad" },
+        "Pharos Network": { current: 6.25, chainId: "pharos" },
+        "strUSD unattributed CCIP escrow": { current: 6.25 },
+      },
+    });
+    expect(result?.chainCirculating?.["strUSD unattributed CCIP escrow"]?.chainId).toBeUndefined();
+    expect(Object.values(result!.chainCirculating!).reduce((sum, row) => sum + row.current, 0)).toBe(125);
+    expect(fetchOnchainUint256Mock.mock.calls[0]?.[0]).toMatchObject({
+      chain: "ethereum", contract: meta.contracts!.find(({ chain }) => chain === "ethereum")!.address,
+      data: "0x70a08231000000000000000000000000b12e0794fb2191672ba7a1811edc9713c8c2c38b",
+    });
+  });
+
+  it.each([null, 14n * 10n ** 18n, 100n * 10n ** 18n])(
+    "withholds strUSD when CCIP escrow is unreadable or inconsistent (%s)",
+    async (escrow) => {
+      const meta = TRACKED_META_BY_ID.get("strusd-tori")!;
+      installSupplyReads(meta, { ethereum: 100, monad: 10, pharos: 5 });
+      fetchOnchainUint256Mock.mockResolvedValue(escrow);
+      await expect(fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs())).resolves.toBeNull();
+    },
+  );
+
+  it.each(["ethereum", "monad", "pharos"])("withholds strUSD when %s cannot be read", async (unreadable) => {
+    const meta = TRACKED_META_BY_ID.get("strusd-tori")!;
+    installSupplyReads(meta, { ethereum: 100, monad: 10, pharos: 5 }, unreadable);
+    fetchOnchainUint256Mock.mockResolvedValue(20n * 10n ** 18n);
+    await expect(fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs())).resolves.toBeNull();
+  });
 
   it.each([70, 110])("cannot substitute legacy gross-stock helper output (%s) for the joined sFRAX certificate", async (remote) => {
     const meta = TRACKED_META_BY_ID.get("sfrax-frax")!;

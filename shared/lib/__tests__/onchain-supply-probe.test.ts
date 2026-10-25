@@ -126,6 +126,42 @@ describe("selectSingleOnchainSupplyProbeContract", () => {
 });
 
 describe("curated on-chain supply paths", () => {
+  it.each([
+    { id: "usyc-hashnote", chains: ["ethereum", "bsc", "solana", "arc"], zero: ["arc"] },
+    { id: "jtrsy-anemoy", chains: ["ethereum", "base", "arbitrum", "avalanche", "plume", "bsc", "monad", "solana", "pharos"], zero: ["solana"] },
+    { id: "nopal-nest", chains: ["ethereum", "plume", "bsc", "solana", "plasma", "worldchain", "avalanche", "arc", "monad", "robinhood"], zero: ["plasma"] },
+    { id: "acred-apollo-securitize", chains: ["aptos", "avalanche", "ethereum", "ink", "polygon", "sei", "solana"], zero: [] },
+    { id: "brsrv-blackrock", chains: ["ethereum", "tempo", "solana"], zero: ["tempo", "solana"] },
+    { id: "syrupusdg-maple", chains: ["ethereum", "robinhood", "arbitrum", "ink", "solana"], zero: ["ink", "solana"], canonical: "ethereum" },
+    { id: "strusd-tori", chains: ["ethereum", "monad", "pharos"], zero: [], canonical: "ethereum" },
+    { id: "susdat-saturn", chains: ["ethereum", "bsc", "monad"], zero: [], canonical: "ethereum" },
+  ])("requires the complete reviewed NAV roster and accounting policy for $id", ({ id, chains, zero, canonical }) => {
+    const meta = TRACKED_META_BY_ID.get(id)!;
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
+    expect(selected?.map(({ config }) => config.chain)).toEqual(chains);
+    expect(selected?.map(({ contract }) => contract).sort((a, b) => a.chain.localeCompare(b.chain)))
+      .toEqual([...meta.contracts!].sort((a, b) => a.chain.localeCompare(b.chain)));
+    expect(selected?.filter(({ config }) => config.allowZeroSupply).map(({ config }) => config.chain)).toEqual(zero);
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[id]).toBe(canonical);
+    expect(hasRuntimeOnchainSupplyPath(meta)).toBe(true);
+    for (const missing of meta.contracts!) {
+      expect(selectCuratedAggregateOnchainSupplyProbeContracts({
+        ...meta, contracts: meta.contracts!.filter((contract) => contract !== missing),
+      })).toBeNull();
+    }
+  });
+
+  it.each(["jaaa-janus-henderson-anemoy", "reusd-re-protocol", "stac-securitize", "ylds-figure", "sfrxusd-frax"])(
+    "keeps %s aggregate supply unavailable until its complete perimeter is reviewed",
+    (id) => expect(selectCuratedAggregateOnchainSupplyProbeContracts(TRACKED_META_BY_ID.get(id)!)).toBeNull(),
+  );
+
+  it("keeps unprobed strUSD representations in a noncanonical CCIP escrow residual", () => {
+    const residual = CURATED_AGGREGATE_ESCROW_RESIDUALS["strusd-tori"];
+    expect(residual?.escrowAddress).toBe("0xb12e0794fb2191672ba7a1811edc9713c8c2c38b");
+    expect(resolveChainId(residual!.unattributedChainLabel)).toBeNull();
+  });
+
   it("requires all four Open USD deployments for its zero-list-supply repair", () => {
     const meta = TRACKED_META_BY_ID.get("ousd-open-standard")!;
     const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);

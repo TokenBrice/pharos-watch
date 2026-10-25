@@ -350,6 +350,66 @@
             "url": "https://explorer.arc.io/api/v2/smart-contracts/0x28206c5694f6dc228ef040990aab10e30bdf8758"
           }
         ]
+      },
+      {
+        "id": "monad:0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "destinationChain": "monad",
+        "contractAddress": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "protocol": "Nest deployment; route review pending",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Deployment verified 2026-10-25 against the exact issuer registry. At monad block 116569132, the token returned Nest BlackOpal LiquidStone II Vault/nOPAL/6 decimals and 5.830799 shares. Registered local NestVault share()/asset() and RolesAuthority.canCall(vault,share,enter) bind a local deposit path; token()=self, approvalRequired()=false and the issuer all-chain supply partition support additive share accounting. Native mint-controller completeness, upgrade reach, LayerZero peers/DVNs, caps and incident state remain unreviewed; no route-risk certification is implied.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-25",
+        "observedBlock": 116569132,
+        "sources": [
+          {
+            "label": "Nest exact nOPAL deployment and local deposit registry",
+            "url": "https://api.nest.credit/v1/vaults/nest-opal-vault"
+          },
+          {
+            "label": "Nest nOPAL direct mint and redemption integration",
+            "url": "https://docs.nest.credit/developers/integration-guides/nopal/"
+          },
+          {
+            "label": "monad pinned deployment and local mint-binding reads",
+            "url": "https://rpc.monad.xyz"
+          }
+        ]
+      },
+      {
+        "id": "robinhood:0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "destinationChain": "robinhood",
+        "contractAddress": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "protocol": "Nest deployment; route review pending",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Deployment verified 2026-10-25 against the exact issuer registry. At robinhood block 97875493, the token returned Nest BlackOpal LiquidStone II Vault/nOPAL/6 decimals and 2.719498 shares. Registered local NestVault share()/asset() and RolesAuthority.canCall(vault,share,enter) bind a local deposit path; token()=self, approvalRequired()=false and the issuer all-chain supply partition support additive share accounting. Native mint-controller completeness, upgrade reach, LayerZero peers/DVNs, caps and incident state remain unreviewed; no route-risk certification is implied.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-25",
+        "observedBlock": 97875493,
+        "sources": [
+          {
+            "label": "Nest exact nOPAL deployment and local deposit registry",
+            "url": "https://api.nest.credit/v1/vaults/nest-opal-vault"
+          },
+          {
+            "label": "Nest nOPAL direct mint and redemption integration",
+            "url": "https://docs.nest.credit/developers/integration-guides/nopal/"
+          },
+          {
+            "label": "robinhood pinned deployment and local mint-binding reads",
+            "url": "https://rpc.mainnet.chain.robinhood.com"
+          }
+        ]
       }
     ],
     "controls": [
