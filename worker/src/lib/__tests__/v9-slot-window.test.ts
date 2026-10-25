@@ -1,3 +1,9 @@
+import { ZodError } from "zod";
+import * as publicMaterialization from "../report-cards-v9-materialization";
+import { recoverSafetyScoreV9PublicMaterialization } from "../safety-score-v9/publication-runner";
+import { persistSafetyScoreV9Publication } from "../safety-score-v9/publication-store";
+import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
+import { currentInput } from "./safety-score-v9-publication-store.test-support";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
@@ -377,7 +383,8 @@ describe("runV9AfterCoreWithinWindow", () => {
       vi.useFakeTimers();
       vi.setSystemTime(secondChanceMs + 1_000);
       const fixture = dbWithHealth({ accepted_at: secondChanceMs / 1000 - 30 * 60 });
-      fixture.bind().first.mockReset().mockResolvedValueOnce({ accepted_at: secondChanceMs / 1000 - 30 * 60 }).mockResolvedValue(null);
+      fixture.bind().first.mockReset().mockResolvedValueOnce({ accepted_at: secondChanceMs / 1000 - 30 * 60 })
+        .mockResolvedValueOnce({ pending: 1, failed: 1 }).mockResolvedValue(null);
       const run = vi.fn();
       const recover = vi.fn(async () => ({ status, itemCount: status === "ok" ? 1 : 0 }));
       const result = await runV9AfterCoreWithinWindow({ ...secondChanceOptions(fixture.db),
@@ -388,6 +395,49 @@ describe("runV9AfterCoreWithinWindow", () => {
         deadlineMs: secondChanceMs + 180_000, slotStartedAtSec: secondChanceMs / 1000,
       }));
       expect(run).not.toHaveBeenCalled();
+    });
+
+    it.each(["staging", "decode"])("recovers held older G once, then computes after deterministic %s failure", async failureStage => {
+      const { sqlite, db } = createLatestSchemaSqlite();
+      const publication = makeWorkerSafetyScoreV9Publication({ publishedAtSec: secondChanceMs / 1000 - 7200 });
+      vi.useFakeTimers({ toFake: ["Date"] });
+      const error = new ZodError([{ code: "custom", path: ["cards", 0], message: "Invalid public projection" }]);
+      try {
+        await persistSafetyScoreV9Publication(db, { ...currentInput(publication), deferPublicMaterialization: true });
+        if (failureStage === "decode") sqlite.prepare("UPDATE cache SET value = json_set(value, '$.payloadSha256', ?) WHERE key = ?")
+          .run("0".repeat(64), SAFETY_SCORE_V9_CACHE_KEYS.publication);
+        const materialize = vi.spyOn(publicMaterialization, "materializeV9AcceptedPublication").mockRejectedValue(error);
+        const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 0 }));
+        const recover = vi.fn((signal: AbortSignal, window: V9ExecutionWindow) =>
+          recoverSafetyScoreV9PublicMaterialization(db, signal, window.deadlineMs));
+        for (let hour = 0; hour < 3; hour++) {
+          const scheduledTimeMs = secondChanceMs + hour * 3600_000;
+          const core = Math.floor(scheduledTimeMs / 900_000) * 900;
+          sqlite.prepare(`INSERT INTO cron_slot_executions
+            (slot_key, slot_started_at, state, result_status, execution_owner, started_at, updated_at, worker_version)
+            VALUES ('quarterHourly', ?, 'finished', 'ok', 'owner', ?, ?, 'worker-v2')`).run(core, core, core);
+          vi.setSystemTime(scheduledTimeMs + 1000);
+          const result = await runV9AfterCoreWithinWindow({ ...secondChanceOptions(db), scheduledTimeMs,
+            slotStartedAt: scheduledTimeMs / 1000, onV9PublicationAlreadyAccepted: recover }, run);
+          expect(result.status).toBe(hour === 0 ? "degraded" : "ok");
+        }
+        expect(recover).toHaveBeenCalledOnce();
+        expect(materialize).toHaveBeenCalledTimes(failureStage === "staging" ? 1 : 0);
+        expect(run).toHaveBeenCalledTimes(2);
+        const failed = sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+          .get(SAFETY_SCORE_V9_CACHE_KEYS.publicMaterializationFailure);
+        expect(JSON.parse(failed!.value as string)).toMatchObject({ publicationGenerationId: publication.publicationGenerationId,
+          reason: "v9-public-materialization-retry-failed" });
+        // Failure evidence belongs to G, so a later unmaterialized generation gets its own chance.
+        sqlite.prepare("UPDATE cache SET value = json_set(value, '$.identity.publicationGenerationId', ?) WHERE key = ?")
+          .run("report-cards:v9:next", SAFETY_SCORE_V9_CACHE_KEYS.publication);
+        const nextHourMs = secondChanceMs + 3 * 3600_000;
+        vi.setSystemTime(nextHourMs + 1000);
+        await runV9AfterCoreWithinWindow({ ...secondChanceOptions(db), scheduledTimeMs: nextHourMs,
+          slotStartedAt: nextHourMs / 1000, onV9PublicationAlreadyAccepted: recover }, run);
+        expect(recover).toHaveBeenCalledTimes(2);
+        expect(run).toHaveBeenCalledTimes(2);
+      } finally { vi.restoreAllMocks(); vi.useRealTimers(); sqlite.close(); }
     });
 
     it("degrades without publishing when acceptance evidence is unreadable", async () => {

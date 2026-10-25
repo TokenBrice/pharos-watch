@@ -1,3 +1,4 @@
+import { setCache } from "../db-cache";
 import { createCronResult } from "../cron-result";
 import type { CronResult } from "../cron-logger";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -497,7 +498,7 @@ async function materializeAcceptedPublication(
   }
 }
 
-/** The already-accepted :52 path owns this invocation; candidate inputs are never loaded. */
+/** The :52 recovery path owns this invocation; candidate inputs are never loaded. */
 export async function retryPendingSafetyScoreV9PublicMaterialization(
   db: D1Database, signal: AbortSignal | undefined, deadlineMs: number,
 ): Promise<{
@@ -524,30 +525,46 @@ export async function retryPendingSafetyScoreV9PublicMaterialization(
     FROM cache p LEFT JOIN cache m ON m.key = ? WHERE p.key = ?`)
     .bind(V9_PUBLIC_REPRESENTATION_VERSION, V9_PUBLIC_MATERIALIZATION_CACHE_KEY, SAFETY_SCORE_V9_CACHE_KEYS.publication)
     .first<{ published_at: number; generation_id: string; payload_sha256: string; materialized: number }>();
-  checkBudget();
-  if (!row) return { status: "skipped", publishedAtSec: null, publicationGenerationId: null,
-    reason: "v9-public-materialization-retry-source-unavailable", budgetMs };
+  if (!row) {
+    checkBudget();
+    return { status: "skipped", publishedAtSec: null, publicationGenerationId: null,
+      reason: "v9-public-materialization-retry-source-unavailable", budgetMs };
+  }
   if (row.materialized === 1) return null;
-  const source = await loadSafetyScoreV9PublicationStoredRow(db, retrySignal);
-  checkBudget();
-  if (!source || source.updatedAt !== row.published_at || JSON.parse(source.value).payloadSha256 !== row.payload_sha256) {
-    throw new Error("v9-public-materialization-retry-source-changed");
+  try {
+    checkBudget();
+    const source = await loadSafetyScoreV9PublicationStoredRow(db, retrySignal);
+    checkBudget();
+    if (!source || source.updatedAt !== row.published_at || JSON.parse(source.value).payloadSha256 !== row.payload_sha256) {
+      throw new Error("v9-public-materialization-retry-source-changed");
+    }
+    const publication = await parseSafetyScoreV9Publication(source.value, retrySignal);
+    checkBudget();
+    const health = await loadSafetyScoreV9PublicationHealth(db, retrySignal);
+    checkBudget();
+    if (!health || publication.publicationGenerationId !== row.generation_id || publication.publishedAtSec !== row.published_at) {
+      throw new Error("v9-public-materialization-retry-source-unavailable");
+    }
+    const result = await materializeV9AcceptedPublication(db, {
+      publication, health: resolveSafetyScoreV9EffectivePublicationHealth(publication, health), payloadSha256: row.payload_sha256,
+    }, retrySignal);
+    // The materializer confirms its committed marker even if the retry signal expired.
+    return { status: result.status, publishedAtSec: row.published_at, publicationGenerationId: row.generation_id, budgetMs,
+      reason: `v9-public-materialization-retry-${result.status}` };
+  } catch (error) {
+    const reason = (error instanceof Error || error instanceof DOMException) && error.name === "TimeoutError"
+      ? "v9-public-materialization-retry-timeout" : retrySignal.aborted
+        ? `v9-public-materialization-retry-${signal?.aborted ? "aborted" : "timeout"}` : "v9-public-materialization-retry-failed";
+    // Persist independently of the expired retry signal so later holding hours can compute.
+    await setCache(db, SAFETY_SCORE_V9_CACHE_KEYS.publicMaterializationFailure,
+      JSON.stringify({ publicationGenerationId: row.generation_id, reason }));
+    logWorkerEvent({
+      scope: "lib", level: "warn", event: "safety_score_v9_public_materialization_retry_failed",
+      job: "compute-safety-score-v9", message: "Accepted publication retained; second-chance materialization failed", error,
+      metadata: { reason, publicationGenerationId: row.generation_id },
+    });
+    return { status: "failed", publishedAtSec: row.published_at, publicationGenerationId: row.generation_id, reason, budgetMs };
   }
-  const publication = await parseSafetyScoreV9Publication(source.value, retrySignal);
-  checkBudget();
-  const health = await loadSafetyScoreV9PublicationHealth(db, retrySignal);
-  checkBudget();
-  if (!health || publication.publicationGenerationId !== row.generation_id || publication.publishedAtSec !== row.published_at) {
-    throw new Error("v9-public-materialization-retry-source-unavailable");
-  }
-  const result = await materializeAcceptedPublication(db, {
-    publication, health: resolveSafetyScoreV9EffectivePublicationHealth(publication, health), payloadSha256: row.payload_sha256,
-  }, retrySignal, { persistPrepare: null, persistCommit: null, materializeStage: null, materializeSelect: null });
-  // The materializer confirms its committed marker even if the retry signal expired.
-  return { status: result.status, publishedAtSec: row.published_at, publicationGenerationId: row.generation_id, budgetMs,
-    reason: result.status === "failed" && retrySignal.aborted
-      ? `v9-public-materialization-retry-${signal?.aborted ? "aborted" : "timeout"}`
-      : `v9-public-materialization-retry-${result.status}` };
 }
 
 export async function recoverSafetyScoreV9PublicMaterialization(
@@ -556,11 +573,6 @@ export async function recoverSafetyScoreV9PublicMaterialization(
   try {
     const retry = await retryPendingSafetyScoreV9PublicMaterialization(db, signal, deadlineMs);
     const reason = retry?.reason ?? "v9-public-materialization-already-selected";
-    if (retry?.status === "failed") logWorkerEvent({
-      scope: "lib", level: "warn", event: "safety_score_v9_public_materialization_retry_failed",
-      job: "compute-safety-score-v9", message: "Accepted publication retained; second-chance materialization failed",
-      metadata: { reason },
-    });
     return createCronResult({
       status: retry === null || retry.status === "superseded" ? "skipped_neutral" : retry.status === "materialized" ? "ok" : "degraded",
       itemCount: retry?.status === "materialized" ? 1 : 0,
