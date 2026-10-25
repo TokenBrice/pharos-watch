@@ -134,6 +134,13 @@ describe("remote-d1 helpers", () => {
     expect(existsSync(dirname(path))).toBe(false);
   });
 
+  it("drops Wrangler import progress printed ahead of the JSON receipt", () => {
+    const imported = JSON.stringify([{ success: true, results: [], meta: { duration: 1, changes: 0 } }]);
+    execFileSyncMock.mockReturnValue(`├ Checking if file needs uploading\n│\n├ 🌀 Uploading\n${imported}`);
+    const client = createD1Client("stablecoin-db");
+    expect(client.executeStatementsRaw!(["DELETE FROM cache;"], "progress-test")).toBe(imported);
+  });
+
   it("decodes every Wrangler query result envelope and propagates malformed JSON", () => {
     const client = createD1Client("stablecoin-db", { target: "local" });
     const envelopes = [
