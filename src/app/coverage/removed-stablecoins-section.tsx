@@ -4,7 +4,7 @@ import { formatLongDate } from "@shared/lib/format";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import { REMOVED_STABLECOINS, STABLECOIN_REMOVAL_REASON_LABELS } from "@/lib/removed-stablecoins";
 
-/** Static list of coins Pharos stopped tracking; old profile links land on their peg hub or here. */
+/** Static list of coins Pharos stopped tracking; old profile links land on their cemetery record, peg hub or here. */
 export function RemovedStablecoinsSection() {
   return (
     <section id="removed-from-coverage" className="pharos-card-shell px-4 py-4" aria-labelledby="removed-from-coverage-heading">
@@ -12,8 +12,8 @@ export function RemovedStablecoinsSection() {
         Removed from coverage
       </h2>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-        Stablecoins Pharos once tracked and later removed from its registry. Old profile links lead to the matching
-        currency page where one exists, otherwise here.
+        Stablecoins Pharos once tracked and later removed from its registry. Old profile links lead to the coin&apos;s
+        cemetery record or matching currency page where one exists, otherwise here.
       </p>
       <ul className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
         {REMOVED_STABLECOINS.map((coin) => {

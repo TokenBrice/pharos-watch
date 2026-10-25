@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import { REMOVED_STABLECOINS } from "@/lib/removed-stablecoins";
@@ -19,19 +20,28 @@ describe("removed stablecoins", () => {
     expect(new Set(REMOVED_STABLECOINS.map((coin) => coin.id)).size).toBe(REMOVED_STABLECOINS.length);
   });
 
-  it("redirects every retired profile and subpath to its built peg hub, or /coverage/ without one", () => {
+  it("names only cemetery records that exist", () => {
+    const cemeteryIds = new Set(DEAD_STABLECOINS.map((entry) => entry.id));
+    const withRecord = REMOVED_STABLECOINS.filter((coin) => coin.cemeteryId != null);
+    expect(withRecord.length).toBeGreaterThan(0);
+    for (const coin of withRecord) expect(cemeteryIds.has(coin.cemeteryId!), coin.id).toBe(true);
+  });
+
+  it("redirects every retired profile and subpath to its cemetery record, built peg hub, or /coverage/", () => {
     for (const coin of REMOVED_STABLECOINS) {
-      const destination = buildPegLandingUrl(coin.pegCurrency) ?? "/coverage/";
+      const destination = coin.cemeteryId
+        ? `/cemetery/#${coin.cemeteryId}`
+        : buildPegLandingUrl(coin.pegCurrency) ?? "/coverage/";
       for (const source of [`/stablecoin/${coin.id}`, `/stablecoin/${coin.id}/*`]) {
         expect(rules.find((rule) => rule.source === source), source).toEqual({ source, destination, status: "301" });
       }
     }
   });
 
-  it("covers every retired coin ID that redirects to /coverage/ or a peg hub", () => {
+  it("covers every retired coin ID that redirects to /coverage/, a cemetery record or a peg hub", () => {
     const listed = new Set(REMOVED_STABLECOINS.map((coin) => coin.id));
     const retiredIds = rules
-      .filter((rule) => /^\/stablecoins\/[a-z]+\/$|^\/coverage\/$/.test(rule.destination))
+      .filter((rule) => /^\/stablecoins\/[a-z]+\/$|^\/coverage\/$|^\/cemetery\/#/.test(rule.destination))
       .map((rule) => /^\/stablecoin\/([a-z][^/*]*)\/?$/.exec(rule.source)?.[1])
       .filter((id): id is string => id != null);
     expect(retiredIds.filter((id) => !listed.has(id))).toEqual([]);

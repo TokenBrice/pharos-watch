@@ -152,9 +152,10 @@
 /about/bluechip/ /about/#bluechip 301
 /about/bluechip /about/#bluechip 301
 
-# Coins removed from the tracked catalog (bed599cc4). Retired single-peg coin
-# IDs land on their peg hub while that hub is built (check-seo-static fails a
-# hub destination the export lacks); otherwise /coverage/, which lists every
+# Coins removed from the tracked catalog (bed599cc4). A retired coin ID with a
+# cemetery record lands on its /cemetery/#<id> anchor; other single-peg coin IDs
+# land on their peg hub while that hub is built (check-seo-static fails a hub
+# destination the export lacks); otherwise /coverage/, which lists every
 # removed coin (src/lib/removed-stablecoins.ts). Old detail URLs still earn
 # search impressions.
 /stablecoin/341/ /stablecoins/usd/ 301
@@ -186,9 +187,9 @@
 
 # Retired stablecoin IDs and route-tree aliases (SEO cleanup, 2026-08-23).
 # Removed coin records have no exact current registry successor, so they land
-# on their peg hub (same rule as above). Retired surfaces use their current
+# on their cemetery record or peg hub (same rule as above). Retired surfaces use their current
 # equivalents where one exists; the hashed V9 preview follows the same route.
-/stablecoin/eura-angle /stablecoins/eur/ 301
+/stablecoin/eura-angle /cemetery/#eura-angle-eura-2026-03 301
 /stablecoin/krwo-gimswap /stablecoins/krw/ 301
 /stablecoin/mmxn-moneta-digital /stablecoins/mxn/ 301
 /stablecoin/mnee-mnee /stablecoins/usd/ 301
@@ -200,7 +201,7 @@
 /stablecoin/usp-pareto-credit /stablecoins/usd/ 301
 /stablecoin/veur-vnx /stablecoins/eur/ 301
 /stablecoin/wstbt-matrixdock /stablecoins/usd/ 301
-/stablecoin/xai-silo-finance /stablecoins/usd/ 301
+/stablecoin/xai-silo-finance /cemetery/#xai-silo-finance 301
 /stablecoin/usd-dinari /stablecoins/usd/ 301
 /treasuries /coverage/ 301
 /mint /flows/ 301
@@ -274,7 +275,7 @@
 /stablecoin/phpc-coins-ph/* /stablecoins/php/ 301
 
 # Retired stablecoin IDs and route-tree aliases (SEO cleanup, 2026-08-23). (dynamic rules)
-/stablecoin/eura-angle/* /stablecoins/eur/ 301
+/stablecoin/eura-angle/* /cemetery/#eura-angle-eura-2026-03 301
 /stablecoin/krwo-gimswap/* /stablecoins/krw/ 301
 /stablecoin/mmxn-moneta-digital/* /stablecoins/mxn/ 301
 /stablecoin/mnee-mnee/* /stablecoins/usd/ 301
@@ -286,7 +287,7 @@
 /stablecoin/usp-pareto-credit/* /stablecoins/usd/ 301
 /stablecoin/veur-vnx/* /stablecoins/eur/ 301
 /stablecoin/wstbt-matrixdock/* /stablecoins/usd/ 301
-/stablecoin/xai-silo-finance/* /stablecoins/usd/ 301
+/stablecoin/xai-silo-finance/* /cemetery/#xai-silo-finance 301
 /stablecoin/usd-dinari/* /stablecoins/usd/ 301
 /treasuries/* /coverage/ 301
 /mint/* /flows/ 301

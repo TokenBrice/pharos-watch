@@ -10,12 +10,16 @@ interface StablecoinRouteEnv {
 }
 
 const KNOWN_STABLECOIN_IDS = new Set<string>(canonicalOrder);
+const CEMETERY_RECORD_DESTINATION = /^\/cemetery\/#[a-z0-9][a-z0-9-]*$/;
 
 function isRedirectDestination(value: string): boolean {
   const targetId = value.match(/^\/stablecoin\/([^/]+)\/$/)?.[1];
   return targetId != null
     ? KNOWN_STABLECOIN_IDS.has(targetId)
-    : value === "/coverage/" || value === "/cemetery/" || /^\/stablecoins\/[a-z]+\/$/.test(value);
+    : value === "/coverage/"
+      || value === "/cemetery/"
+      || CEMETERY_RECORD_DESTINATION.test(value)
+      || /^\/stablecoins\/[a-z]+\/$/.test(value);
 }
 
 export function resolveLegacyStablecoinRedirect(

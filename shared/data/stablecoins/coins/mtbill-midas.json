@@ -15,6 +15,11 @@
   "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "midas-mtbill",
+  "identifiers": {
+    "isin": [
+      "CH1371002986"
+    ]
+  },
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://midas.app/transparency?token=mtbill",

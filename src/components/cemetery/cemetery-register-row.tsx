@@ -84,7 +84,7 @@ export const CemeteryRegisterRowPair = memo(function CemeteryRegisterRowPair({
                 {row.tracked ? (
                   <Link
                     href={buildStablecoinUrl(row.id)}
-                    className="pharos-focus-ring truncate rounded-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                    className="pharos-prose-link truncate text-muted-foreground"
                   >
                     {row.name}
                   </Link>
