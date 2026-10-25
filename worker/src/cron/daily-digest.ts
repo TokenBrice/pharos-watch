@@ -173,7 +173,7 @@ export async function generateDailyDigest(
     itemsTotal: 1,
   });
   const digestInput = await buildDailyDigestInput(db);
-  const { inputData, degradedReasons, recentMeta, previousInputData, recentLeadSignalIds, lifecycleFlags, recentTitles, llmSignals, stablecoinsCacheReason } = digestInput;
+  const { inputData, degradedReasons, recentMeta, previousInputData, recentLeadSignalIds, lifecycleFlags, recentTitles, llmSignals, stablecoinsCacheReason, safetyProjectionFallbackCount } = digestInput;
   if (stablecoinsCacheReason) {
     await reportCronProgress(reportProgress, {
       stage: "input-unavailable",
@@ -220,6 +220,7 @@ export async function generateDailyDigest(
         degradedReasons: degradedReasons.length,
       },
       leadRequirementCount: leadRequirements?.length ?? 0,
+      safetyProjectionFallbackCount,
     },
   });
   logDailyDigestLlmCall({
@@ -377,6 +378,7 @@ export async function generateDailyDigest(
     },
     summaryBeforeQuality: `${digestCopy.digestText.length} chars, tweet: ${tweetStatus}, telegram: ${telegramStatus}${degradedReasons.length > 0 ? `, degraded: ${degradedReasons.join("|")}` : ""}`,
     summaryAfterQuality: lifecycleMetadata,
+    metadataAfterSummary: { safetyProjectionFallbackCount },
     publication: delivery,
     credentialDiagnostics,
     degradedReasons,

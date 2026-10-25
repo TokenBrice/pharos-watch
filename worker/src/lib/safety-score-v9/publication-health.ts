@@ -8,6 +8,7 @@ import { SafetyScoreV9SchemaCutoverPendingError } from "./publication-codec";
 /** Shared cache identities and health admission without publication materialization. */
 export const SAFETY_SCORE_V9_CACHE_KEYS = {
   publication: "report-cards:v9",
+  cohort: "report-cards:v9:cohort:v1",
   scoreIndex: "report-cards:v9:score-index",
   acceptedBaseline: "report-cards:v9:accepted-baseline:v1",
   lenderCollateral: "report-cards:v9:lender-collateral:v1",

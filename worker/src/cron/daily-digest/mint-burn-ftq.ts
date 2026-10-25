@@ -1,6 +1,6 @@
 import { buildFlightToQualityClassificationFromV9Snapshot } from "../../lib/flight-to-quality-classification";
 import { detectFlightToQualityFromValuedNets, type ValuedNetFlow24h } from "../../lib/mint-burn-scoring";
-import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
+import { loadActiveSafetyScoreIndex } from "../../lib/safety-score-index";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 
 export interface DigestMintBurnCoinNet extends ValuedNetFlow24h {
@@ -38,9 +38,9 @@ export async function computeDigestMintBurnFtqFlows(
     reason,
     safetyScoreIdentity,
   });
-  let source: Awaited<ReturnType<typeof loadActiveSafetyScoreSource>>;
+  let source: Awaited<ReturnType<typeof loadActiveSafetyScoreIndex>>;
   try {
-    source = await loadActiveSafetyScoreSource(db);
+    source = await loadActiveSafetyScoreIndex(db);
   } catch {
     return unavailable("cache-read-failed", null);
   }

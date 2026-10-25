@@ -4,10 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@shared/lib/stablecoins/registry", async () => (await import("./daily-digest.test-support")).mockDailyDigestRegistryModule());
 vi.mock("../../lib/stablecoins-cache", async () => (await import("./daily-digest.test-support")).mockDailyDigestStablecoinsCacheModule());
 vi.mock("../../lib/safety-score-active-source", async () => (await import("./daily-digest.test-support")).mockDailyDigestSafetySourceModule());
+vi.mock("../../lib/safety-score-index", async () => ({
+  loadActiveSafetyScoreIndex: (await import("../../lib/safety-score-active-source")).loadActiveSafetyScoreCohort,
+}));
 vi.mock("../../lib/flight-to-quality-classification", async () => (await import("./daily-digest.test-support")).mockDailyDigestFlightToQualityModule());
 
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
-import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
+import { loadActiveSafetyScoreCohort } from "../../lib/safety-score-active-source";
 import { buildDailyDigestInput } from "../daily-digest/input";
 import { buildUserPrompt } from "../daily-digest/prompt";
 import { classifyRegime } from "../daily-digest/prompt/regime";
@@ -33,7 +36,7 @@ describe("daily digest PSI source admission", () => {
       { match: "SELECT AVG(score)", rows: [], first: { avg: null } },
     ] } });
     vi.mocked(loadStablecoinsCache).mockResolvedValue(scenario.sourcePayload);
-    vi.mocked(loadActiveSafetyScoreSource).mockResolvedValue(scenario.safetySource);
+    vi.mocked(loadActiveSafetyScoreCohort).mockResolvedValue(scenario.safetySource);
     const built = await buildDailyDigestInput(scenario.db);
     expect(built.inputData.stabilityIndex).toBeNull();
     expect(built.degradedReasons).toContain("psi-unavailable");
@@ -53,7 +56,7 @@ describe("daily digest PSI source admission", () => {
       { match: "SELECT AVG(score)", rows: [], first: { avg: null } },
     ] } });
     vi.mocked(loadStablecoinsCache).mockResolvedValue(scenario.sourcePayload);
-    vi.mocked(loadActiveSafetyScoreSource).mockResolvedValue(scenario.safetySource);
+    vi.mocked(loadActiveSafetyScoreCohort).mockResolvedValue(scenario.safetySource);
     const built = await buildDailyDigestInput(scenario.db);
     expect(built.inputData.stabilityIndex).toMatchObject({ score: 96, band: "BEDROCK" });
     expect(built.degradedReasons).not.toContain("psi-unavailable");

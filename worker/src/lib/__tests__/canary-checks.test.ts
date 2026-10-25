@@ -52,16 +52,18 @@ function activeV9(options: { held?: boolean; updatedAt?: number } = {}) {
       reason: "v9-publication-held" as const,
       detail: "Canonical Safety Score V9 ratings are held at the last verified snapshot",
       snapshot,
+      projectionFallbackCount: 0,
     };
   }
   return {
     kind: "v9" as const,
     snapshot,
+    projectionFallbackCount: 0,
   };
 }
 
 beforeEach(() => {
-  vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+  vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreCohort")
     .mockResolvedValue(activeV9());
 });
 
@@ -349,7 +351,7 @@ describe("worker data invariant canaries", () => {
   it("degrades while the canonical V9 publication is held", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
-    vi.mocked(activeSafetyScoreSource.loadActiveSafetyScoreSource)
+    vi.mocked(activeSafetyScoreSource.loadActiveSafetyScoreCohort)
       .mockResolvedValueOnce(activeV9({ held: true }));
     const summary = await runCanaryChecks(healthyD1(), {
       observedAt: NOW,
@@ -368,12 +370,13 @@ describe("worker data invariant canaries", () => {
   it("fails closed when the canonical V9 publication is unavailable", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
-    vi.mocked(activeSafetyScoreSource.loadActiveSafetyScoreSource)
+    vi.mocked(activeSafetyScoreSource.loadActiveSafetyScoreCohort)
       .mockResolvedValueOnce({
         kind: "error",
         reason: "v9-snapshot-unavailable",
         snapshot: null,
         detail: "missing",
+        projectionFallbackCount: 0,
       });
     const summary = await runCanaryChecks(healthyD1(), {
       observedAt: NOW,

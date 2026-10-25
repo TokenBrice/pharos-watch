@@ -178,7 +178,7 @@ describe("loadPublicationHealth", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM surface_publication_generations"))).toBe(true);
   });
 
-  it("derives canonical V9 publication health from its current source", async () => {
+  it.each([0, 1])("derives canonical V9 publication health with %i cohort fallbacks", async (projectionFallbackCount) => {
     const reportCardsAt = NOW - 180;
     const snapshot = makeWorkerReportCardsV9Response({
       asOfSec: reportCardsAt - 60,
@@ -188,10 +188,11 @@ describe("loadPublicationHealth", () => {
         makeWorkerV9Card({ id: "usdt-tether", score: 90, grade: "A" }),
       ],
     });
-    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreCohort")
       .mockResolvedValueOnce({
         kind: "v9",
         snapshot,
+        projectionFallbackCount,
       });
     const db = mockPublicationD1();
 
@@ -203,6 +204,7 @@ describe("loadPublicationHealth", () => {
         generationId: snapshot.safetyScoreIdentity.publicationGenerationId,
         state: "published",
         publishedRows: 2,
+        metadata: { projectionFallbackCount },
       },
       dependencyWatermarks: {
         reportCardCache: reportCardsAt,

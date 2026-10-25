@@ -1,3 +1,4 @@
+import { SafetyScoreCohortStorageEnvelopeSchema, SAFETY_SCORE_COHORT_MAX_BYTES } from "@shared/types/safety-score-cohort";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { throwIfAborted } from "../abort";
 import { sha256HexFromUtf8Chunks } from "../hash";
@@ -16,18 +17,19 @@ import { SAFETY_SCORE_V9_CACHE_KEYS } from "./publication-health";
  * (heavy `SAFETY_V9_CHUNKED_PUBLICATION_WRITES`).
  */
 export const SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_PREFIX = "report-cards:v9:payload-chunk:v1:";
-// Base64 text is ASCII, so characters equal stored bytes.
+export const SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX = "report-cards:v9:cohort-chunk:v1:";
+// Canonical base64 is ASCII; cohort chunks count UTF-8 bytes.
 export const SAFETY_SCORE_V9_PUBLICATION_CHUNK_MAX_BYTES = 512 * 1024;
 // ':' < ';', so [prefix:sha:, prefix:sha;) bounds one payload's chunk keys on the primary-key index.
 const CHUNK_KEY_RANGE_END = ";";
 
-function chunkKeyPrefix(payloadSha256: string): string {
-  return `${SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_PREFIX}${payloadSha256}:`;
+function chunkKeyPrefix(payloadSha256: string, namespace = SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_PREFIX): string {
+  return `${namespace}${payloadSha256}:`;
 }
 
-function chunkKey(payloadSha256: string, index: number): string {
+function chunkKey(payloadSha256: string, index: number, namespace = SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_PREFIX): string {
   // Zero-padded so lexicographic key order is chunk order.
-  return `${chunkKeyPrefix(payloadSha256)}${String(index).padStart(3, "0")}`;
+  return `${chunkKeyPrefix(payloadSha256, namespace)}${String(index).padStart(3, "0")}`;
 }
 
 export interface ShardedSafetyScoreV9Publication {
@@ -78,23 +80,88 @@ export function reassembleSafetyScoreV9PublicationStoredValue(
   if ("payload" in metadata || typeof metadata.payloadSha256 !== "string") {
     throw new Error("Safety Score v9 sharded publication envelope is malformed");
   }
-  if (chunks.length !== manifest.count) {
-    throw new Error(`Safety Score v9 publication has ${chunks.length} of ${manifest.count} payload chunks`);
-  }
-  chunks.forEach((chunk, index) => {
-    if (chunk.key !== chunkKey(metadata.payloadSha256 as string, index)) {
-      throw new Error("Safety Score v9 publication payload chunks are out of order");
-    }
-  });
-  const payload = chunks.map((chunk) => chunk.value).join("");
-  if (payload.length !== manifest.payloadBytes || sha256HexFromUtf8Chunks([payload]) !== manifest.payloadSha256) {
-    throw new Error("Safety Score v9 publication payload chunk digest mismatch");
-  }
+  const payload = reassembleChunkPayload(manifest, chunks, metadata.payloadSha256);
   const stored = stableJsonStringifyV1({ ...metadata, payload });
   if (new TextEncoder().encode(stored).byteLength !== manifest.storedBytes) {
     throw new Error("Safety Score v9 publication reassembled byte length mismatch");
   }
   return stored;
+}
+
+function reassembleChunkPayload(
+  manifest: ReturnType<typeof SafetyScoreV9PublicationPayloadChunksSchema.parse>,
+  chunks: readonly { key: string; value: string }[],
+  payloadSha256: string,
+  namespace = SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_PREFIX,
+  utf8 = false,
+): string {
+  if (chunks.length !== manifest.count) {
+    throw new Error(`Safety Score v9 publication has ${chunks.length} of ${manifest.count} payload chunks`);
+  }
+  let bytes = 0;
+  chunks.forEach((chunk, index) => {
+    if (chunk.key !== chunkKey(payloadSha256, index, namespace)) {
+      throw new Error("Safety Score v9 publication payload chunks are out of order");
+    }
+    const chunkBytes = utf8 ? new TextEncoder().encode(chunk.value).byteLength : chunk.value.length;
+    bytes += chunkBytes;
+    if (chunkBytes === 0 || chunkBytes > SAFETY_SCORE_V9_PUBLICATION_CHUNK_MAX_BYTES || bytes > manifest.payloadBytes) {
+      throw new Error("Safety Score v9 publication payload chunk byte length mismatch");
+    }
+  });
+  const payload = chunks.map((chunk) => chunk.value).join("");
+  if (bytes !== manifest.payloadBytes || sha256HexFromUtf8Chunks([payload]) !== manifest.payloadSha256) {
+    throw new Error("Safety Score v9 publication payload chunk digest mismatch");
+  }
+  return payload;
+}
+
+/** Raw canonical JSON uses the same content-addressed transport, with UTF-8-safe chunk boundaries. */
+export function shardSafetyScoreV9CohortStoredValue(value: string): ShardedSafetyScoreV9Publication {
+  const bytes = new TextEncoder().encode(value);
+  if (bytes.byteLength === 0 || bytes.byteLength > SAFETY_SCORE_COHORT_MAX_BYTES) {
+    throw new Error(`Safety Score cohort exceeds ${SAFETY_SCORE_COHORT_MAX_BYTES} bytes`);
+  }
+  const payloadSha256 = sha256HexFromUtf8Chunks([value]);
+  const chunks: ShardedSafetyScoreV9Publication["chunks"] = [];
+  const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+  for (let start = 0; start < bytes.length;) {
+    let end = Math.min(start + SAFETY_SCORE_V9_PUBLICATION_CHUNK_MAX_BYTES, bytes.length);
+    while (end < bytes.length && (bytes[end]! & 0xc0) === 0x80) end--;
+    chunks.push({ key: chunkKey(payloadSha256, chunks.length, SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX),
+      value: decoder.decode(bytes.subarray(start, end)) });
+    start = end;
+  }
+  return {
+    envelope: stableJsonStringifyV1(SafetyScoreCohortStorageEnvelopeSchema.parse({
+      payloadSha256, payloadChunks: { count: chunks.length, payloadBytes: bytes.byteLength,
+        payloadSha256, storedBytes: bytes.byteLength },
+    })),
+    chunks,
+  };
+}
+
+export function reassembleSafetyScoreV9CohortStoredValue(
+  envelopeValue: string,
+  chunks: readonly { key: string; value: string }[],
+): string {
+  const envelope = SafetyScoreCohortStorageEnvelopeSchema.parse(JSON.parse(envelopeValue));
+  if (stableJsonStringifyV1(envelope) !== envelopeValue ||
+      envelope.payloadSha256 !== envelope.payloadChunks.payloadSha256 ||
+      envelope.payloadChunks.storedBytes !== envelope.payloadChunks.payloadBytes) {
+    throw new Error("Safety Score cohort chunk envelope is not canonical or coherent");
+  }
+  return reassembleChunkPayload(envelope.payloadChunks, chunks, envelope.payloadSha256,
+    SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX, true);
+}
+
+export function shardedSafetyScoreV9CohortChunkStatements(
+  db: D1Database,
+  sharded: ShardedSafetyScoreV9Publication,
+  updatedAt: number,
+): D1PreparedStatement[] {
+  const envelope = SafetyScoreCohortStorageEnvelopeSchema.parse(JSON.parse(sharded.envelope));
+  return chunkStatements(db, sharded, envelope.payloadSha256, updatedAt, SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX);
 }
 
 /** Half-open key range covering every payload chunk row, for snapshot reads outside the Worker. */
@@ -122,12 +189,22 @@ export function shardedSafetyScoreV9PublicationChunkStatements(
   payloadSha256: string,
   updatedAt: number,
 ): D1PreparedStatement[] {
-  const prefix = chunkKeyPrefix(payloadSha256);
+  return chunkStatements(db, sharded, payloadSha256, updatedAt, SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_PREFIX);
+}
+
+function chunkStatements(
+  db: D1Database,
+  sharded: ShardedSafetyScoreV9Publication,
+  payloadSha256: string,
+  updatedAt: number,
+  namespace: string,
+): D1PreparedStatement[] {
+  const prefix = chunkKeyPrefix(payloadSha256, namespace);
   return [
     // Readers fetch envelope and chunks in one statement, so superseded chunks
     // need no in-flight grace once the envelope moves in the same batch.
     db.prepare(`DELETE FROM cache WHERE key >= ? AND key < ? AND NOT (key >= ? AND key < ?)`)
-      .bind(...SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_RANGE, prefix, `${prefix.slice(0, -1)}${CHUNK_KEY_RANGE_END}`),
+      .bind(namespace, `${namespace.slice(0, -1)}${CHUNK_KEY_RANGE_END}`, prefix, `${prefix.slice(0, -1)}${CHUNK_KEY_RANGE_END}`),
     ...sharded.chunks.map((chunk) => db
       .prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at")
       .bind(chunk.key, chunk.value, updatedAt)),

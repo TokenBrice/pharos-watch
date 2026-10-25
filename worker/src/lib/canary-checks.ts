@@ -14,7 +14,7 @@ import { parseRiskFreeRatesCache } from "../cron/yield-sync/cache";
 import { YIELD_BENCHMARK_RECORD_MAX_AGE_SEC } from "@shared/lib/yield-benchmark-freshness";
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "../cron/yield-sync/benchmarks";
 import { loadPublishedStressSignalGeneration } from "./stress-signals-current-rows";
-import { loadActiveSafetyScoreSource } from "./safety-score-active-source";
+import { loadActiveSafetyScoreCohort } from "./safety-score-active-source";
 import { classifyFreshness } from "./status/freshness-oracle";
 import type { WorkerCanaryMode } from "./worker-canary-mode";
 
@@ -531,10 +531,11 @@ async function checkDewsLatestSignal(db: D1Database, observedAt: number) {
 }
 
 export async function checkSafetyScoreV9Publication(db: D1Database) {
-  const active = await loadActiveSafetyScoreSource(db);
+  const active = await loadActiveSafetyScoreCohort(db);
   if (active.kind === "error") {
     return failedResult(`active Safety Score source ${active.reason}`, {
       reason: active.reason,
+      projectionFallbackCount: active.projectionFallbackCount,
       maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
     });
   }
@@ -552,6 +553,7 @@ export async function checkSafetyScoreV9Publication(db: D1Database) {
     methodologyVersion: active.snapshot.methodology.version,
     safetyScoreIdentity: active.snapshot.safetyScoreIdentity,
     publicationHealth: active.snapshot.publicationHealth,
+    projectionFallbackCount: active.projectionFallbackCount,
     maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
   };
   if (active.kind === "held") {

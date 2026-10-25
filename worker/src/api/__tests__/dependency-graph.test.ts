@@ -5,9 +5,9 @@ import { DependencyGraphResponseSchema, projectDependencyGraph } from "@shared/t
 import { makeReportCardsV9Response, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 
-const mockLoadActiveSafetyScoreSource = vi.fn();
+const mockLoadActiveSafetyScoreCohort = vi.fn();
 vi.mock("../../lib/safety-score-active-source", () => ({
-  loadActiveSafetyScoreSource: mockLoadActiveSafetyScoreSource,
+  loadActiveSafetyScoreCohort: mockLoadActiveSafetyScoreCohort,
 }));
 // Load after the accepted-source mock has been installed.
 const { handleDependencyGraph } = await import("../dependency-graph");
@@ -29,7 +29,7 @@ function fixturePublication() {
 }
 
 describe("dependency graph projection", () => {
-  beforeEach(() => mockLoadActiveSafetyScoreSource.mockReset());
+  beforeEach(() => mockLoadActiveSafetyScoreCohort.mockReset());
 
   it("projects graph v2 with distinct technical null and rated partial nodes", async () => {
     const snapshot = makeReportCardsV9Response({ cards: [
@@ -37,7 +37,7 @@ describe("dependency graph projection", () => {
       makeWorkerV9Card({ id: "nr", score: null }),
       makeReportCardsV9PartialCard("exit", "B", { id: "partial" }),
     ] });
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot });
+    mockLoadActiveSafetyScoreCohort.mockResolvedValue({ kind: "v9", snapshot });
     const body = DependencyGraphResponseSchema.parse(await (await handleDependencyGraph(mockD1([]))).json());
     expect(body.schemaVersion).toBe(2);
     expect(body.nodes.find((node) => node.id === "gap")).toMatchObject({ grade: null, score: null, ratingStatus: "pipeline-gap" });
@@ -49,7 +49,7 @@ describe("dependency graph projection", () => {
 
   it("preserves accepted edges and publication-bound zero, null, role and coverage facts", async () => {
     const snapshot = fixturePublication();
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot });
+    mockLoadActiveSafetyScoreCohort.mockResolvedValue({ kind: "v9", snapshot });
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(snapshot.updatedAt * 1000);
     const response = await handleDependencyGraph(mockD1([]));
@@ -128,7 +128,7 @@ describe("dependency graph projection", () => {
   it("serves the held accepted generation without caching and retains hold reasons", async () => {
     const current = fixturePublication();
     const snapshot = { ...current, publicationHealth: { ...current.publicationHealth, status: "held" as const, attemptedAtSec: current.updatedAt + 1800, heldSinceSec: current.updatedAt + 1800, reasons: [{ code: "dex-stale" as const }] } };
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot });
+    mockLoadActiveSafetyScoreCohort.mockResolvedValue({ kind: "v9", snapshot });
     const response = await handleDependencyGraph(mockD1([]));
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
@@ -141,7 +141,7 @@ describe("dependency graph projection", () => {
   });
 
   it("fails closed without an accepted publication", async () => {
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "error", detail: "Canonical Safety Score V9 publication is unavailable" });
+    mockLoadActiveSafetyScoreCohort.mockResolvedValue({ kind: "error", detail: "Canonical Safety Score V9 publication is unavailable" });
     const response = await handleDependencyGraph(mockD1([]));
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({ error: "Canonical Safety Score V9 publication is unavailable" });

@@ -13,7 +13,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 
-const mockLoadActiveSafetyScoreSource = vi.fn();
+const mockLoadActiveSafetyScoreIndex = vi.fn();
 const mockLoadSafetyScoreV9PublicationAttempt = vi.fn();
 const mockFetchLatestSafetyScoreHistoryV2Rows = vi.fn();
 const mockGetCache = vi.fn();
@@ -21,7 +21,10 @@ const mockSetCache = vi.fn();
 const mockDeleteCache = vi.fn();
 
 vi.mock("../../lib/safety-score-active-source", () => ({
-  loadActiveSafetyScoreSource: mockLoadActiveSafetyScoreSource,
+  loadActiveSafetyScoreCohort: mockLoadActiveSafetyScoreIndex,
+}));
+vi.mock("../../lib/safety-score-index", () => ({
+  loadActiveSafetyScoreIndex: mockLoadActiveSafetyScoreIndex,
 }));
 vi.mock("../../lib/safety-score-v9/publication-attempts", () => ({
   loadSafetyScoreV9PublicationAttempt:
@@ -46,7 +49,7 @@ const { snapshotSafetyGradeHistory } = await import(
 
 describe("snapshotSafetyGradeHistory", () => {
   beforeEach(() => {
-    mockLoadActiveSafetyScoreSource.mockReset();
+    mockLoadActiveSafetyScoreIndex.mockReset();
     mockLoadSafetyScoreV9PublicationAttempt
       .mockReset()
       .mockResolvedValue(null);
@@ -64,13 +67,13 @@ describe("snapshotSafetyGradeHistory", () => {
       cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "A", score: 90 })],
     });
     const { db, sqlite } = fixtures.open();
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot: current });
+    mockLoadActiveSafetyScoreIndex.mockResolvedValue({ kind: "v9", snapshot: current });
     await snapshotSafetyGradeHistory(db);
     const previousRows = sqlite.prepare("SELECT * FROM safety_score_history_v2").all();
     mockFetchLatestSafetyScoreHistoryV2Rows.mockResolvedValue(previousRows);
     const gap = makeReportCardsV9PipelineGapCard("control", "A", { id: "usdc-circle" });
     const unseededGap = makeReportCardsV9PipelineGapCard(null, "A", { id: "usdt-tether" });
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({
+    mockLoadActiveSafetyScoreIndex.mockResolvedValue({
       kind: "v9", snapshot: makeReportCardsV9Response({ updatedAt: current.updatedAt, cards: [gap, unseededGap] }),
     });
     expect(await snapshotSafetyGradeHistory(db)).toMatchObject({ itemCount: 0 });
@@ -79,7 +82,7 @@ describe("snapshotSafetyGradeHistory", () => {
 
   it("skips history writes while the canonical V9 publication is held", async () => {
     const current = makeReportCardsV9Response();
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({
+    mockLoadActiveSafetyScoreIndex.mockResolvedValue({
       kind: "held",
       reason: "v9-publication-held",
       detail: "Canonical Safety Score V9 ratings are held at the last verified snapshot",
@@ -101,7 +104,7 @@ describe("snapshotSafetyGradeHistory", () => {
   });
 
   it("skips history writes while the current V9 publication is stale", async () => {
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({
+    mockLoadActiveSafetyScoreIndex.mockResolvedValue({
       kind: "v9",
       snapshot: makeReportCardsV9Response({ updatedAt: 1 }),
     });
@@ -119,7 +122,7 @@ describe("snapshotSafetyGradeHistory", () => {
   });
 
   it("fails closed when V9 is unavailable", async () => {
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({
+    mockLoadActiveSafetyScoreIndex.mockResolvedValue({
       kind: "error",
       reason: "v9-snapshot-unavailable",
       snapshot: null,
@@ -142,7 +145,7 @@ describe("snapshotSafetyGradeHistory", () => {
       ],
     });
     const card = current.cards[0]!;
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({
+    mockLoadActiveSafetyScoreIndex.mockResolvedValue({
       kind: "v9",
       snapshot: current,
     });
@@ -200,7 +203,7 @@ describe("snapshotSafetyGradeHistory", () => {
     });
     const card = current.cards[0]!;
     const identity = current.safetyScoreIdentity;
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({
+    mockLoadActiveSafetyScoreIndex.mockResolvedValue({
       kind: "v9",
       snapshot: current,
     });
@@ -277,7 +280,7 @@ describe("snapshotSafetyGradeHistory", () => {
       ],
     });
     const identity = current.safetyScoreIdentity;
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({
+    mockLoadActiveSafetyScoreIndex.mockResolvedValue({
       kind: "v9",
       snapshot: current,
     });
@@ -332,7 +335,7 @@ describe("snapshotSafetyGradeHistory", () => {
       cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "A", score: 85 })],
     });
     const identity = current.safetyScoreIdentity;
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({
+    mockLoadActiveSafetyScoreIndex.mockResolvedValue({
       kind: "v9",
       snapshot: current,
     });
@@ -379,7 +382,7 @@ describe("snapshotSafetyGradeHistory", () => {
       updatedAt: Math.floor(Date.now() / 1000),
       cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "A", score: 85 })],
     });
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot: current });
+    mockLoadActiveSafetyScoreIndex.mockResolvedValue({ kind: "v9", snapshot: current });
     const { db, sqlite } = fixtures.open();
     await snapshotSafetyGradeHistory(db);
     expect(sqlite.prepare("SELECT stablecoin_id, grade, score, prev_grade, prev_score, transition_kind FROM safety_score_history_v2").all()).toEqual([{
@@ -396,7 +399,7 @@ describe("snapshotSafetyGradeHistory", () => {
         makeWorkerV9Card({ id: "usdt-tether", grade: "B", score: 74 }),
       ],
     });
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot: current });
+    mockLoadActiveSafetyScoreIndex.mockResolvedValue({ kind: "v9", snapshot: current });
     const identity = current.safetyScoreIdentity;
     mockFetchLatestSafetyScoreHistoryV2Rows.mockResolvedValue(current.cards.map((card) => ({
       history_id: `previous:${card.id}`, stablecoin_id: card.id,
@@ -418,7 +421,7 @@ describe("snapshotSafetyGradeHistory", () => {
 
   it.each(["generation-mismatch", "malformed-marker"])("fails closed for %s", async (fault) => {
     const current = makeReportCardsV9Response({ updatedAt: Math.floor(Date.now() / 1000) });
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot: current });
+    mockLoadActiveSafetyScoreIndex.mockResolvedValue({ kind: "v9", snapshot: current });
     if (fault === "generation-mismatch") {
       mockLoadSafetyScoreV9PublicationAttempt.mockResolvedValue({
         outcome: "published-clean", publicationGenerationId: "another-generation",
@@ -438,7 +441,7 @@ describe("snapshotSafetyGradeHistory", () => {
       updatedAt: Math.floor(Date.now() / 1000),
       cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "A", score: 85 })],
     });
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot: current });
+    mockLoadActiveSafetyScoreIndex.mockResolvedValue({ kind: "v9", snapshot: current });
     mockGetCache.mockResolvedValue({ value: JSON.stringify(["usdt-tether"]), updatedAt: current.updatedAt });
     const { db, sqlite } = fixtures.open();
     sqlite.exec("CREATE TRIGGER fail_history BEFORE INSERT ON safety_score_history_v2 BEGIN SELECT RAISE(ABORT, 'history unavailable'); END");
@@ -460,7 +463,7 @@ describe("digest grade availability", () => {
         makeReportCardsV9PartialCard("exit", "B", { id: "partial" }),
       ],
     });
-    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot });
+    mockLoadActiveSafetyScoreIndex.mockResolvedValue({ kind: "v9", snapshot });
     const assets = [makeAsset({ id: "gap", symbol: "GAP", circulating: { peggedUSD: 20_000_000 } }),
       makeAsset({ id: "partial", symbol: "PARTIAL", circulating: { peggedUSD: 20_000_000 } })];
     const identity = snapshot.safetyScoreIdentity;

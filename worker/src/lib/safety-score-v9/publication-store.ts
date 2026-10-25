@@ -32,6 +32,8 @@ import {
   safetyScoreV9PublicationChunkCleanupStatement,
   shardSafetyScoreV9PublicationStoredValue,
   shardedSafetyScoreV9PublicationChunkStatements,
+  shardSafetyScoreV9CohortStoredValue,
+  shardedSafetyScoreV9CohortChunkStatements,
 } from "./publication-chunks";
 
 class SafetyScoreV9PublicationConflictError extends Error {
@@ -105,7 +107,7 @@ async function loadStoredSafetyScoreV9PublicationReference(
 
 export interface PersistSafetyScoreV9PublicationInput {
   publication?: SafetyScoreV9CurrentResponse;
-  buildAcceptedProjections?: (publication: Readonly<SafetyScoreV9CurrentResponse>) => { baseline: string; lender: string };
+  buildAcceptedProjections?: (publication: Readonly<SafetyScoreV9CurrentResponse>) => { baseline: string; lender: string; cohort: string };
   publicationReplayCaptureValue?: string;
   publicationReplayBaseValue?: string;
   publicationHealth: V9PublicationHealth;
@@ -255,7 +257,7 @@ export async function persistSafetyScoreV9Publication(
 
   let publicationValue: string | null = null;
   let scoreIndexValue: string | null = null;
-  let acceptedProjections: { baseline: string; lender: string } | null = null;
+  let acceptedProjections: { baseline: string; lender: string; cohort: string } | null = null;
   let acceptedMaterialization: V9AcceptedPublicMaterializationSource | null = null;
   let stagedMaterialization: V9StagedPublicMaterialization | null = null;
   let publicationPayloadSha256: string | null = null;
@@ -283,15 +285,15 @@ export async function persistSafetyScoreV9Publication(
     publicationValue = stored;
     const payloadSha256: string = JSON.parse(stored).payloadSha256;
     publicationPayloadSha256 = payloadSha256;
+    if (!input.buildAcceptedProjections) {
+      throw new Error("Accepted Safety Score v9 publication requires projection builders");
+    }
+    acceptedProjections = input.buildAcceptedProjections(publication);
     if (input.deferPublicMaterialization) {
       acceptedMaterialization = { publication, health, payloadSha256 };
     } else {
       stagedMaterialization = await stageV9PublicMaterialization(db, publication, health, payloadSha256, input.signal);
     }
-    if (!input.buildAcceptedProjections) {
-      throw new Error("Accepted Safety Score v9 publication requires projection builders");
-    }
-    acceptedProjections = input.buildAcceptedProjections(publication);
     scoreIndexValue = stableJsonStringifyV1(SafetyScoreIndexSchema.parse({
       schemaVersion: 2,
       safetyScoreIdentity: {
@@ -344,10 +346,11 @@ export async function persistSafetyScoreV9Publication(
       "Stale or conflicting Safety Score v9 publication health update",
     );
   }
+  let priorPublication: Awaited<ReturnType<typeof loadStoredSafetyScoreV9PublicationReference>> = null;
   if (health.status === "current") {
     // Compare the raw row clock so a newer valid publication can replace an
     // older retained payload that the current reader can no longer parse.
-    const existingPublicationRow = await loadStoredSafetyScoreV9PublicationReference(
+    const existingPublicationRow = priorPublication = await loadStoredSafetyScoreV9PublicationReference(
       db,
     );
     if (
@@ -405,15 +408,36 @@ export async function persistSafetyScoreV9Publication(
       statements.push(safetyScoreV9PublicationChunkCleanupStatement(db));
     }
     statements.push(
-      cacheStatement.bind(
+      db.prepare(`INSERT INTO cache (key, value, updated_at)
+        VALUES (?, CASE WHEN
+          (? IS NULL AND NOT EXISTS (SELECT 1 FROM cache WHERE key = ?))
+          OR EXISTS (SELECT 1 FROM cache WHERE key = ? AND updated_at = ?
+            AND COALESCE(json_extract(value, '$.identity.publicationGenerationId'),
+              json_extract(value, '$.publicationGenerationId')) IS ?)
+          THEN ? ELSE NULL END, ?)
+        ON CONFLICT(key) DO UPDATE SET
+          value = CASE WHEN cache.updated_at < excluded.updated_at
+            OR (cache.updated_at = excluded.updated_at AND cache.value = excluded.value)
+            THEN excluded.value ELSE NULL END,
+          updated_at = CASE WHEN cache.updated_at < excluded.updated_at
+            OR (cache.updated_at = excluded.updated_at AND cache.value = excluded.value)
+            THEN excluded.updated_at ELSE -1 END`).bind(
         SAFETY_SCORE_V9_CACHE_KEYS.publication,
-        canonicalValue,
-        input.publicationClockSec,
+        priorPublication?.publishedAtSec ?? null, SAFETY_SCORE_V9_CACHE_KEYS.publication,
+        SAFETY_SCORE_V9_CACHE_KEYS.publication, priorPublication?.publishedAtSec ?? null,
+        priorPublication?.publicationGenerationId ?? null, canonicalValue, input.publicationClockSec,
       ),
     );
     statements.push(cacheStatement.bind(
       SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex,
       scoreIndexValue,
+      input.publicationClockSec,
+    ));
+    const cohort = shardSafetyScoreV9CohortStoredValue(acceptedProjections!.cohort);
+    statements.push(...shardedSafetyScoreV9CohortChunkStatements(db, cohort, input.publicationClockSec));
+    statements.push(cacheStatement.bind(
+      SAFETY_SCORE_V9_CACHE_KEYS.cohort,
+      cohort.envelope,
       input.publicationClockSec,
     ));
     statements.push(cacheStatement.bind(
@@ -528,6 +552,7 @@ export async function persistSafetyScoreV9Publication(
       message: "Accepted Safety Score v9 projections committed",
       metadata: {
         publicationClockSec: input.publicationClockSec,
+        cohortBytes: new TextEncoder().encode(acceptedProjections.cohort).byteLength,
         baselineBytes: new TextEncoder().encode(acceptedProjections.baseline).byteLength,
         lenderBytes: new TextEncoder().encode(acceptedProjections.lender).byteLength,
       },

@@ -9,7 +9,7 @@ import type {
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { isMissingTableError } from "./db";
 import { parseObjectMetadata } from "./json-metadata";
-import { loadActiveSafetyScoreSource } from "./safety-score-active-source";
+import { loadActiveSafetyScoreCohort } from "./safety-score-active-source";
 
 interface PublicationGenerationRow {
   generation_id: string;
@@ -371,7 +371,7 @@ async function loadSafetyScoreV9PublicationSurface(
   db: D1Database,
   now: number,
 ): Promise<PublicationSurfaceHealth> {
-  const active = await loadActiveSafetyScoreSource(db);
+  const active = await loadActiveSafetyScoreCohort(db);
   if (active.kind !== "error") {
     const snapshot = active.snapshot;
     const publishedRow = publishedFallbackRow(
@@ -386,6 +386,7 @@ async function loadSafetyScoreV9PublicationSurface(
         safetyScoreIdentity: snapshot.safetyScoreIdentity,
         completeness: snapshot.completeness,
         publicationHealth: snapshot.publicationHealth,
+        projectionFallbackCount: active.projectionFallbackCount,
       },
     );
     return buildSurfaceHealth(SAFETY_SCORE_V9_SURFACE, now, publishedRow, publishedRow, null);
@@ -395,7 +396,7 @@ async function loadSafetyScoreV9PublicationSurface(
     `safety-score-v9:${attemptedAt}:${active.reason}`,
     active.reason,
     attemptedAt,
-    {},
+    { projectionFallbackCount: active.projectionFallbackCount },
   );
   return buildSurfaceHealth(SAFETY_SCORE_V9_SURFACE, now, failedRow, null, failedRow);
 }

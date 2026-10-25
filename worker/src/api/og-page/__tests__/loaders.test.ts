@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
   handleMintBurnFlows: vi.fn(),
   handleDexLiquidity: vi.fn(),
   handleYieldRankings: vi.fn(),
-  loadActiveSafetyScoreSource: vi.fn(),
+  loadActiveSafetyScoreCohort: vi.fn(),
   projectDependencyGraph: vi.fn(),
 }));
 
@@ -24,7 +24,7 @@ vi.mock("../../chains", () => ({ handleChains: mocks.handleChains }));
 vi.mock("../../mint-burn-flows", () => ({ handleMintBurnFlows: mocks.handleMintBurnFlows }));
 vi.mock("../../dex-liquidity", () => ({ handleDexLiquidity: mocks.handleDexLiquidity }));
 vi.mock("../../yield-rankings-cache", () => ({ handleYieldRankings: mocks.handleYieldRankings }));
-vi.mock("../../../lib/safety-score-active-source", () => ({ loadActiveSafetyScoreSource: mocks.loadActiveSafetyScoreSource }));
+vi.mock("../../../lib/safety-score-active-source", () => ({ loadActiveSafetyScoreCohort: mocks.loadActiveSafetyScoreCohort }));
 vi.mock("@shared/types/dependency-graph", () => ({ projectDependencyGraph: mocks.projectDependencyGraph }));
 // Owner bodies are validated against their published schemas in production; these
 // tests exercise the loaders' own decisions, so they read the fixture body as served.
@@ -358,14 +358,14 @@ describe("yield route card", () => {
 
 describe("dependency-map route card", () => {
   it("serves the timeless card for a held publication", async () => {
-    mocks.loadActiveSafetyScoreSource.mockResolvedValue({ kind: "held", snapshot: {} });
+    mocks.loadActiveSafetyScoreCohort.mockResolvedValue({ kind: "held", snapshot: {} });
     mocks.loadStablecoinsCache.mockResolvedValue(stablecoinsCache([]));
     mocks.projectDependencyGraph.mockReturnValue({ publicationStatus: "held", nodes: [], edges: [], updatedAt: NOW - 60 });
     await expect(OG_PAGE_LOADERS["dependency-map"](db, NOW)).resolves.toEqual({ kind: "unavailable", reason: "held-publication" });
   });
 
   it("publishes mapped exposure with the older read's stamp", async () => {
-    mocks.loadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot: {} });
+    mocks.loadActiveSafetyScoreCohort.mockResolvedValue({ kind: "v9", snapshot: {} });
     mocks.projectDependencyGraph.mockReturnValue({
       publicationStatus: "current",
       publicationGenerationId: "gen-1",
