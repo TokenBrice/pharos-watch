@@ -235,14 +235,15 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "base" },
     { chain: "solana" },
   ],
-  // AllUnity lists CHFAU as issuer-native on Ethereum, Polygon, Base, and Tempo.
-  // DefiLlama does not list it and CoinGecko exposes no usable market cap, so
-  // aggregate the reviewed deployments and allow live zero-supply legs.
+  // Reviewed 2026-10-25: AllUnity lists six issuer-native CHFAU deployments;
+  // include Solana and Arc, all at 6 decimals, with observed live zero legs.
   "chfau-allunity": [
     { chain: "ethereum", allowZeroSupply: true },
     { chain: "polygon", allowZeroSupply: true },
     { chain: "base", allowZeroSupply: true },
     { chain: "tempo", allowZeroSupply: true },
+    { chain: "solana", allowZeroSupply: true },
+    { chain: "arc", allowZeroSupply: true },
   ],
   // Reviewed native deployments (AD3a/AD5a, RPC reverified 2026-10-02).
   // USCC public shares sum across Ethereum, Plume and Solana; book-entry shares
@@ -355,10 +356,10 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // CoinGecko only exposes an Ethereum market-cap row for ftUSD and currently
   // leaves it stale; aggregate the verified native Ethereum + Sonic supplies.
   "ftusd-flying-tulip": [{ chain: "ethereum" }, { chain: "sonic" }],
-  // apyUSD is issued through a CCIP burn/mint pair on Ethereum and Base.
-  // CoinGecko supplies the aggregate NAV market cap but no per-chain split, so
-  // read both reviewed deployments and conserve their combined live supply.
-  "apyusd-apyx": [{ chain: "ethereum" }, { chain: "base" }],
+  // Reviewed 2026-10-25: Ethereum CCIP LockRelease escrows apyUSD for Base,
+  // BNB and Solana BurnMint representations; conserve canonical shares.
+  // Unregistered Monad and unmatched pool custody remain an explicit residual.
+  "apyusd-apyx": [{ chain: "ethereum" }, { chain: "base" }, { chain: "bsc" }, { chain: "solana" }],
   // DUSD is a Makina Machine share issued canonically on Ethereum and mirrored
   // to Ink through Wormhole NTT locking. Ethereum totalSupply already includes
   // the tokens escrowed for Ink, so the aggregate path must reallocate rather
@@ -408,19 +409,19 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "starknet" },
     supplyProbeChain("tac"),
   ],
-  // sUSN is Ethereum-native with Noon-operated Hyperlane warp representations on
-  // zkSync, Sophon and Starknet. Verified 2026-07-29: a 200-holder sweep that
-  // accounts for the entire Ethereum supply finds no warp-collateral escrow
-  // holding the 2,027,155 remote total, so the legs sum rather than reallocate.
-  // Ethereum 23,976,706.12 + Starknet 1,904,518.96 + zkSync 120,966.89 + Sophon
-  // 1,669.17. Same known gap as mRe7YIELD: an untracked TAC deployment
-  // (0x5ced7f73b76a555ccb372cc0f0137bec5665f81e, 161,475.02 sUSN) is 0.62% of
-  // the true total and stays outside this aggregate.
+  // Reviewed 2026-10-25: sUSN locks shares in its Ethereum token contract;
+  // conserve canonical totalSupply and isolate self-escrow beyond read satellites.
+  // Retain deprecated Sophon/TAC stock until burned; they are not additive claims.
   "susn-noon": [
     { chain: "ethereum" },
     supplyProbeChain("zksync"),
     supplyProbeChain("sophon"),
     { chain: "starknet" },
+    supplyProbeChain("hyperevm"),
+    { chain: "base" },
+    { chain: "citrea", rpcUrl: "https://rpc.mainnet.citrea.xyz" },
+    supplyProbeChain("berachain"),
+    supplyProbeChain("tac"),
   ],
   "jpym-mento": [{ chain: "celo" }],
   "zarm-mento": [{ chain: "celo" }],
@@ -511,6 +512,12 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     // override: retain this asset's reviewed primary-only supply profile.
     supplyProbeChain("pharos", { fallbackRpcUrl: undefined }),
     { chain: "solana" },
+    // Reviewed 2026-10-25: complete the four issuer-listed OFT legs; their
+    // stock is already escrowed on Ethereum. MegaETH is observed zero.
+    supplyProbeChain("plasma"),
+    supplyProbeChain("megaeth", { allowZeroSupply: true }),
+    supplyProbeChain("tempo"),
+    { chain: "xdc", rpcUrl: "https://rpc.xdcrpc.com" },
   ],
   // yUSD is native on Ethereum with LayerZero OFT burn/mint representations on
   // nine chains, so no leg escrows another and the reviewed deployments sum.
@@ -561,16 +568,16 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     // Kaia cUSDO wraps its local USDO, like the other independent vaults.
     supplyProbeChain("klaytn"),
   ],
-  // sUSDai is an Arbitrum-native ERC-4626 vault carried to Ethereum, Base and
-  // Plasma as LayerZero OFT satellites. Verified 2026-07-29: the OAdapter
-  // 0xffb20098fd7b8e84762eea4609f299d101427f24 holds zero sUSDai on every chain
-  // (it burns rather than escrows), and the Arbitrum vault's totalAssets() only
-  // reconciles to the quoted NAV against GLOBAL shares, so the four legs sum.
+  // Reviewed 2026-10-25: sUSDai uses direct burn/mint across all six deployments;
+  // include Solana (6 decimals) and Arc as additive stock. Complete stock
+  // remains outside the CoinGecko partition admission band.
   "susdai-usd-ai": [
     { chain: "arbitrum" },
     { chain: "ethereum" },
     { chain: "base" },
     supplyProbeChain("plasma"),
+    { chain: "solana" },
+    { chain: "arc" },
   ],
   // sYUSD stakes each chain's own YUSD in a local ERC-4626 vault. Verified
   // 2026-07-29: the BSC vault's asset() is BSC YUSD and its totalAssets()
@@ -964,7 +971,13 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // = 373,483,828.332830, bit-for-bit CoinGecko's total supply
   // 373,483,828.3328299. The Ethereum leg is 0.0000066% of the total and can be
   // burned to nothing, so allow it to read zero.
-  "brlv-crown": [{ chain: "base" }, { chain: "ethereum", allowZeroSupply: true }],
+  // Reviewed 2026-10-25: issuer-listed Tempo TIP-20 is 6 decimals; include its
+  // burn/mint stock, with zero allowed after complete redemption.
+  "brlv-crown": [
+    { chain: "base" },
+    { chain: "ethereum", allowZeroSupply: true },
+    supplyProbeChain("tempo", { allowZeroSupply: true }),
+  ],
   // syzUSD is natively issued on Plasma and carried to Ethereum and Monad by
   // Chainlink CCIP BurnMintTokenPool 1.6.1 spokes whose Plasma counterparty is
   // LockReleaseTokenPool 0x31672de4726227feb22f2dfbcfa985c71bea86b2. Verified
@@ -1062,6 +1075,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
 // the listed lock/mint representations. Reallocate that supply across chains
 // instead of adding representation supplies to the canonical total.
 export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, string>> = {
+  "apyusd-apyx": "ethereum",
+  "susn-noon": "ethereum",
   "syrupusdg-maple": "ethereum",
   "strusd-tori": "ethereum",
   "susdat-saturn": "ethereum",
@@ -1116,6 +1131,14 @@ export interface CuratedAggregateEscrowResidualConfig {
 export const CURATED_AGGREGATE_ESCROW_RESIDUALS: Readonly<
   Record<string, CuratedAggregateEscrowResidualConfig>
 > = {
+  "apyusd-apyx": {
+    escrowAddress: "0x0f1bac2ea0311130da778c1ca287204338739f73",
+    unattributedChainLabel: "apyUSD unattributed CCIP escrow",
+  },
+  "susn-noon": {
+    escrowAddress: "0xe24a3dc889621612422a64e6388927901608b91d",
+    unattributedChainLabel: "sUSN unattributed bridge escrow",
+  },
   // Reviewed 2026-10-25: Tori's Ethereum CCIP lockbox also conserves the new
   // Arbitrum representation (verified zero), outside the catalog probe roster.
   "strusd-tori": {
