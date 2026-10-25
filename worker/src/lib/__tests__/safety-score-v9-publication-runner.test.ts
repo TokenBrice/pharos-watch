@@ -17,7 +17,8 @@ import * as publicationAttempts from "../safety-score-v9/publication-attempts";
 import type * as AcceptedProjectionReaders from "../safety-score-v9/accepted-projection-readers";
 import { buildSafetyScoreV9AcceptedBaselineProjection } from "../safety-score-v9/accepted-projections";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
-import { runSafetyScoreV9Publication, getSafetyScoreV9PublicationBudgetMs, retryPendingSafetyScoreV9PublicMaterialization } from "../safety-score-v9/publication-runner";
+import { runSafetyScoreV9Publication, getSafetyScoreV9PublicationBudgetMs, retryPendingSafetyScoreV9PublicMaterialization, recoverSafetyScoreV9PublicMaterialization } from "../safety-score-v9/publication-runner";
+import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY } from "@shared/types/report-cards-v9-materialization";
 import * as publicationCodec from "../safety-score-v9/publication-codec";
 
 const mocks = vi.hoisted(() => ({
@@ -86,24 +87,60 @@ describe("Safety Score V9 publication runner", () => {
     try {
       await store.persistSafetyScoreV9Publication(db, { ...currentInput(publication), deferPublicMaterialization: true, chunkedPublicationWrites });
       const acceptedRows = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
-      const retry = await retryPendingSafetyScoreV9PublicMaterialization(db);
-      expect(retry).toMatchObject({ status: "materialized", publicationGenerationId: publication.publicationGenerationId, budgetMs: 10_000 });
+      vi.useFakeTimers({ toFake: ["Date"] });
+      const retry = await retryPendingSafetyScoreV9PublicMaterialization(db, undefined, Date.now() + 180_000);
+      expect(retry).toMatchObject({ status: "materialized", publicationGenerationId: publication.publicationGenerationId, budgetMs: 175_000 });
       expect(Object.values(retry!).every(value => value === null || typeof value === "string" || typeof value === "number")).toBe(true);
       for (const row of acceptedRows) expect(sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(row.key)).toEqual(row);
       const decode = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
       const materialize = vi.spyOn(publicMaterialization, "materializeV9AcceptedPublication");
       try {
-        expect(await retryPendingSafetyScoreV9PublicMaterialization(db)).toBeNull();
+        expect(await retryPendingSafetyScoreV9PublicMaterialization(db, undefined, Date.now() + 180_000)).toBeNull();
         expect(decode).not.toHaveBeenCalled();
         expect(materialize).not.toHaveBeenCalled();
       } finally { decode.mockRestore(); materialize.mockRestore(); }
-    } finally { sqlite.close(); }
+    } finally { vi.useRealTimers(); sqlite.close(); }
+  });
+
+  it.each(["aborted", "ambiguous", "deadline"])("confirms committed selection after a late %s outcome", async mode => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const publication = makeWorkerSafetyScoreV9Publication();
+    const controller = new AbortController();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const deadlineMs = Date.now() + 180_000;
+    try {
+      await store.persistSafetyScoreV9Publication(db, { ...currentInput(publication), deferPublicMaterialization: true });
+      const batch = db.batch.bind(db);
+      const spy = vi.spyOn(db, "batch").mockImplementation(async statements => {
+        const results = await batch(statements);
+        if (sqlite.prepare("SELECT key FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY)) {
+          if (mode === "deadline") vi.setSystemTime(deadlineMs + 1);
+          else controller.abort(new DOMException("Late abort", "AbortError"));
+          if (mode === "ambiguous") throw new Error("Acknowledgement lost after commit");
+        }
+        return results;
+      });
+      const result = await recoverSafetyScoreV9PublicMaterialization(db, controller.signal, deadlineMs);
+      expect(result.status).toBe("ok");
+      expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "v9-public-materialization-retry-materialized" });
+      spy.mockRestore();
+    } finally { vi.useRealTimers(); sqlite.close(); }
+  });
+
+  it.each(["failed", "timeout"])("records %s recovery without a candidate computation", async mode => {
+    const error = mode === "timeout" ? new DOMException("Timeout", "TimeoutError") : new Error("D1 unavailable");
+    const db = makeNoopD1({ prepare: () => { throw error; } });
+    const result = await recoverSafetyScoreV9PublicMaterialization(db, new AbortController().signal, Date.now() + 180_000);
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata!)).toMatchObject({ reason: `v9-public-materialization-retry-${mode}` });
+    expect(mocks.build).not.toHaveBeenCalled();
   });
 
   it.each([
-    { remainingMs: 180_000, budgetMs: 10_000 },
-    { remainingMs: 140_000, budgetMs: 5_000 },
-    { remainingMs: 135_000, budgetMs: 0 },
+    { remainingMs: 180_000, budgetMs: 175_000 },
+    { remainingMs: 140_000, budgetMs: 135_000 },
+    { remainingMs: 5_000, budgetMs: 0 },
   ])("caps retry at $budgetMs ms with $remainingMs ms remaining", async ({ remainingMs, budgetMs }) => {
     const { sqlite, db } = createLatestSchemaSqlite();
     vi.useFakeTimers({ toFake: ["Date"] });
@@ -116,9 +153,9 @@ describe("Safety Score V9 publication runner", () => {
         expect(prepare).not.toHaveBeenCalled();
         expect(timeout).not.toHaveBeenCalled();
       } else {
-        expect(result).toBeNull();
+        expect(result).toMatchObject({ status: "skipped", reason: "v9-public-materialization-retry-source-unavailable" });
         expect(timeout).toHaveBeenCalledWith(budgetMs);
-        expect(remainingMs - budgetMs).toBeGreaterThanOrEqual(135_000);
+        expect(remainingMs - budgetMs).toBe(5_000);
       }
     } finally { timeout.mockRestore(); prepare.mockRestore(); vi.useRealTimers(); sqlite.close(); }
   });
@@ -128,7 +165,7 @@ describe("Safety Score V9 publication runner", () => {
     const now = Date.now();
     const decode = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
     const db = makeNoopD1({ prepare: () => ({ bind: () => ({ first: async () => {
-      vi.setSystemTime(now + 10_001);
+      vi.setSystemTime(now + 175_001);
       return null;
     } }) }) });
     try {

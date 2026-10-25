@@ -22,6 +22,7 @@ import { projectV9Table, projectV9Detail } from "@shared/lib/report-cards-v9-pro
 import type { ReportCardsV9ProjectionSource, ReportCardsV9TableResponse, ReportCardsV9DetailResponse } from "@shared/types/report-cards-v9-projections";
 import { loadActiveSafetyScoreIndex } from "./safety-score-index";
 import { throwIfAborted } from "./abort";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 export { V9_PUBLIC_MATERIALIZATION_CACHE_KEY } from "@shared/types/report-cards-v9-materialization";
 
 export interface V9PublicMaterialization {
@@ -40,6 +41,7 @@ export class V9PublicMaterializationUnavailableError extends Error {
   }
 }
 const unavailable = (reason: string): never => { throw new V9PublicMaterializationUnavailableError(reason); };
+const V9_PUBLIC_MATERIALIZATION_LAG_BUDGET_SEC = CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec;
 // Read budget only: staging retains its independent four-fragment write envelope.
 const V9_PUBLIC_FRAGMENT_READ_MAX_BYTES = 4 * 1024 * 1024;
 
@@ -236,19 +238,28 @@ export async function materializeV9AcceptedPublication(
     if (timing) timing.materializeStage = Date.now() - startedAtMs;
   }
   startedAtMs = Date.now();
+  let selectionError: unknown;
   try {
     await executeAtomicBatch(db, v9StagedPublicMaterializationStatements(db, staged), { signal });
   } catch (error) {
-    throwIfAborted(signal);
-    const canonical = await db.prepare(`SELECT json_extract(value, '$.identity.publicationGenerationId') AS generation_id
-      FROM cache WHERE key = ?`).bind(SAFETY_SCORE_V9_CACHE_KEYS.publication).first<{ generation_id: string | null }>();
-    if (canonical !== null && canonical.generation_id !== generationId) return { status: "superseded", publicationGenerationId: generationId };
-    throw error;
+    selectionError = error;
   } finally {
     if (timing) timing.materializeSelect = Date.now() - startedAtMs;
   }
+  // A committed selection wins over a late abort or an ambiguous batch response.
+  const selected = await db.prepare(`SELECT json_extract(value, '$.publicationGenerationId') AS generation_id,
+    json_extract(value, '$.payloadSha256') AS payload_sha256, json_extract(value, '$.projectionVersion') AS projection_version
+    FROM cache WHERE key = ?`).bind(V9_PUBLIC_MATERIALIZATION_CACHE_KEY)
+    .first<{ generation_id: string; payload_sha256: string; projection_version: number }>();
+  if (selected?.generation_id === generationId && selected.payload_sha256 === source.payloadSha256 &&
+      selected.projection_version === V9_PUBLIC_REPRESENTATION_VERSION) {
+    return { status: "materialized", publicationGenerationId: generationId, siteRepresentationCount: staged.siteCount };
+  }
+  const canonical = await db.prepare(`SELECT json_extract(value, '$.identity.publicationGenerationId') AS generation_id
+    FROM cache WHERE key = ?`).bind(SAFETY_SCORE_V9_CACHE_KEYS.publication).first<{ generation_id: string | null }>();
+  if (canonical !== null && canonical.generation_id !== generationId) return { status: "superseded", publicationGenerationId: generationId };
   throwIfAborted(signal);
-  return { status: "materialized", publicationGenerationId: generationId, siteRepresentationCount: staged.siteCount };
+  throw selectionError ?? new Error("v9-public-materialization-selection-unconfirmed");
 }
 
 function buildMaterialization(
@@ -408,8 +419,10 @@ export async function loadV9PublicMaterializedResponse(db: D1Database, represent
     const row = await selectRepresentation(db, representationKey);
     if (!row) return unavailable("v9-snapshot-unavailable");
     let lagging: { manifest: string; fragment_count: number } | null = null;
+    let withinLagBudget = false;
     if (row.manifest == null) {
       const canonical = admitSelection(row);
+      withinLagBudget = Math.floor(Date.now() / 1000) - row.publication_updated_at <= V9_PUBLIC_MATERIALIZATION_LAG_BUDGET_SEC;
       // Only selected whole generations are readable; heavy owns materialization.
       lagging = await selectLaggingRepresentation(db, canonical.identity.publicationGenerationId, row.publication_updated_at, representationKey);
       if (lagging === null) {
@@ -480,8 +493,13 @@ export async function loadV9PublicMaterializedResponse(db: D1Database, represent
     }
     if (bytes !== manifest.bytes || hash.digest("hex") !== manifest.sha256) return unavailable("v9-public-body-integrity-invalid");
     const served = { publicationGenerationId: servedGenerationId, publishedAtSec: manifest.publishedAtSec };
-    const effectiveHealth = resolveSafetyScoreV9EffectivePublicationHealth(served, health);
-    const publicationHealth: V9PublicationHealth = lagging === null ? effectiveHealth : {
+    // Within one cadence the previous selected generation carries accepted health re-anchored to itself.
+    const effectiveHealth = lagging !== null && withinLagBudget &&
+        health.acceptedPublicationGenerationId === identity.publicationGenerationId &&
+        health.acceptedAtSec === row.publication_updated_at
+      ? { ...health, acceptedPublicationGenerationId: served.publicationGenerationId, acceptedAtSec: served.publishedAtSec }
+      : resolveSafetyScoreV9EffectivePublicationHealth(served, health);
+    const publicationHealth: V9PublicationHealth = lagging === null || withinLagBudget ? effectiveHealth : {
       ...effectiveHealth,
       status: "held",
       heldSinceSec: effectiveHealth.heldSinceSec ?? Math.max(health.attemptedAtSec, served.publishedAtSec),

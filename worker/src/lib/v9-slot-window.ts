@@ -13,7 +13,6 @@ import {
 } from "./d1-overload-retry";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "./safety-score-v9/publication-cache-keys";
 import type { CronResult } from "./cron-logger";
-import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY, V9_PUBLIC_REPRESENTATION_VERSION } from "@shared/types/report-cards-v9-materialization";
 
 interface CoreSlotRow {
   state: string;
@@ -46,6 +45,8 @@ export interface V9SlotWindowOptions {
   yieldToV9Publication?: boolean;
   /** The :52 second chance: skip neutrally once this hour has an accepted publication. */
   v9PublicationSecondChance?: boolean;
+  /** Recover accepted bytes under the same lease/window instead of compiling again. */
+  onV9PublicationAlreadyAccepted?: (signal: AbortSignal, window: V9ExecutionWindow) => Promise<CronResult>;
 }
 
 export interface V9ExecutionWindow {
@@ -174,7 +175,7 @@ export async function loadMatchingCoreStablecoinsPublishedAt(
 export const V9_PUBLICATION_HEALTH_CACHE_KEY = SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth;
 
 /**
- * Accepted clock of a selected publication accepted since the top of this second-chance
+ * Accepted clock of a publication accepted since the top of this second-chance
  * slot's hour, or null. Accepted clocks are scoring clocks, never later than
  * the run that published them, so every earlier hour's publication (including
  * the previous :52) falls before the boundary. A :22 run that could only admit
@@ -190,16 +191,11 @@ export async function loadV9PublicationHourAcceptedAtSec(
   const row = await runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT CASE WHEN json_extract(m.value, '$.publicationGenerationId') = json_extract(p.value, '$.identity.publicationGenerationId')
-          AND json_extract(m.value, '$.payloadSha256') = json_extract(p.value, '$.payloadSha256')
-          AND json_extract(m.value, '$.projectionVersion') = ?
-          AND json_extract(h.value, '$.acceptedPublicationGenerationId') = json_extract(p.value, '$.identity.publicationGenerationId')
-          AND json_extract(h.value, '$.acceptedAtSec') = p.updated_at
-          THEN json_extract(h.value, '$.acceptedAtSec') ELSE NULL END AS accepted_at
-           FROM cache h LEFT JOIN cache p ON p.key = ? LEFT JOIN cache m ON m.key = ?
-          WHERE h.key = ?`,
+        `SELECT json_extract(value, '$.acceptedAtSec') AS accepted_at
+           FROM cache
+          WHERE key = ?`,
       )
-      .bind(V9_PUBLIC_REPRESENTATION_VERSION, SAFETY_SCORE_V9_CACHE_KEYS.publication, V9_PUBLIC_MATERIALIZATION_CACHE_KEY, V9_PUBLICATION_HEALTH_CACHE_KEY)
+      .bind(V9_PUBLICATION_HEALTH_CACHE_KEY)
       .first<{ accepted_at: number | null }>(),
     3, signal);
   const acceptedAtSec = row?.accepted_at;
@@ -302,6 +298,7 @@ export async function runV9AfterCoreWithinWindow(
   }
   const workerVersion = options.workerVersion;
 
+  let recoverAcceptedPublication = false;
   if (options.v9PublicationSecondChance) {
     let acceptedAtSec: number | null;
     try {
@@ -314,13 +311,14 @@ export async function runV9AfterCoreWithinWindow(
         code: error instanceof Error ? error.name : "Error",
       });
     }
-    if (acceptedAtSec != null) {
+    if (acceptedAtSec != null && !options.onV9PublicationAlreadyAccepted) {
       return neutralSkip("v9-publication-hourly-already-accepted", {
         lane: options.lane,
         coreSlotStartedAt,
         acceptedAtSec,
       });
     }
+    recoverAcceptedPublication = acceptedAtSec != null;
   }
 
   if (options.yieldToV9Publication) {
@@ -358,7 +356,7 @@ export async function runV9AfterCoreWithinWindow(
       options.db,
       V9_MEMORY_LANE_LEASE_KEY,
       async ({ signal }) => {
-        const coreSlot = await options.db
+        const coreSlot = recoverAcceptedPublication ? null : await options.db
           .prepare(
             `SELECT state, result_status, worker_version
                FROM cron_slot_executions
@@ -371,7 +369,7 @@ export async function runV9AfterCoreWithinWindow(
         let coreStablecoinsPublicationMatched = false;
         try {
           coreStablecoinsPublicationMatched =
-            (await loadMatchingCoreStablecoinsPublishedAt(
+            !recoverAcceptedPublication && (await loadMatchingCoreStablecoinsPublishedAt(
               options.db,
               coreSlotStartedAt,
               signal,
@@ -397,7 +395,7 @@ export async function runV9AfterCoreWithinWindow(
           coreSlot.worker_version === workerVersion;
 
         if (
-          !coreSlotReady &&
+          !recoverAcceptedPublication && !coreSlotReady &&
           !coreStablecoinsPublicationMatched
         ) {
           return neutralSkip("v9-core-slot-not-ready", {
@@ -454,7 +452,8 @@ export async function runV9AfterCoreWithinWindow(
           });
         }
 
-        return run(signal, {
+        const execute = recoverAcceptedPublication ? options.onV9PublicationAlreadyAccepted! : run;
+        return execute(signal, {
           slotStartedAtSec: options.slotStartedAt,
           deadlineMs,
           minimumRemainingMs: options.minimumRemainingMs,

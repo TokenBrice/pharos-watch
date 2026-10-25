@@ -200,17 +200,20 @@ describe("generation-bound compact Safety Scores", () => {
     const persisted = await persistSafetyScoreV9Publication(db, { ...currentInput(next), deferPublicMaterialization: true });
     expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex)!.updated_at).toBe(130);
     await expect(materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!)).rejects.toThrow();
-    const lagHealth = { ...currentInput(next).publicationHealth, status: "held", heldSinceSec: next.publishedAtSec,
-      acceptedPublicationGenerationId: publication.publicationGenerationId, acceptedAtSec: publication.publishedAtSec,
-      reasons: [{ code: "v9-public-materialization-pending" }] };
-    for (const age of [60, CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec + 1]) {
+    for (const age of [60, CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec, CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec + 1]) {
       vi.setSystemTime((next.publishedAtSec + age) * 1000);
+      const withinLagBudget = age <= CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec;
+      const lagHealth = { ...currentInput(next).publicationHealth,
+        acceptedPublicationGenerationId: publication.publicationGenerationId, acceptedAtSec: publication.publishedAtSec,
+        ...(!withinLagBudget ? { status: "held", heldSinceSec: next.publishedAtSec,
+          reasons: [{ code: "v9-public-materialization-pending" }] } : {}),
+      };
       const responses = [await handleReportCardsV9Table(db), await handleReportCardsV9Detail(db, detailUrl())];
       for (const [index, response] of responses.entries()) {
-        expect(response.headers.get("X-Safety-Score-Status")).toBe("held");
+        expect(response.headers.get("X-Safety-Score-Status")).toBe(withinLagBudget ? "current" : "held");
         expect(response.headers.get("X-Safety-Score-Generation")).toBe(publication.publicationGenerationId);
         expect(response.headers.get("X-Safety-Score-Freshness-Budget")).toBe(String(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC));
-        expect(response.headers.get("Cache-Control")).toBe("no-store");
+        if (!withinLagBudget) expect(response.headers.get("Cache-Control")).toBe("no-store");
         expect(await response.json()).toEqual({ ...(index === 0 ? table : detail), publicationHealth: lagHealth });
       }
     }
@@ -299,7 +302,8 @@ describe("generation-bound compact Safety Scores", () => {
             ]) {
               expect(response.status).toBe(200);
               expect(await response.json()).toMatchObject({ updatedAt: publication.publishedAtSec,
-                publicationHealth: { status: "held", reasons: [{ code: "v9-public-materialization-pending" }] } });
+                publicationHealth: { status: "current", reasons: [],
+                  acceptedPublicationGenerationId: publication.publicationGenerationId, acceptedAtSec: publication.publishedAtSec } });
             }
           } else {
             expect(sqlite.prepare("SELECT generation_id FROM safety_score_public_manifests WHERE retired_at IS NULL").all())

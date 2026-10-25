@@ -207,54 +207,18 @@ describe("computeSafetyScoreV9", () => {
     mocks.retryMaterialization.mockReset().mockResolvedValue(null);
   });
 
-  it("retries materialization before a missing prepare input can stop the next slot", async () => {
-    mocks.getCaches.mockResolvedValue(new Map());
-    const db = {} as D1Database;
-    const result = await computeSafetyScoreV9(db);
-    expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "fixed-input-missing" });
-    expect(mocks.retryMaterialization).toHaveBeenCalledWith(db, undefined, undefined);
-    expect(mocks.retryMaterialization.mock.invocationCallOrder[0]).toBeLessThan(mocks.getCaches.mock.invocationCallOrder[0]);
-    expect(mocks.runPublication).not.toHaveBeenCalled();
-  });
-
-  it("settles a successful same-hour :52 retry without another rating step", async () => {
-    const slotStartedAtSec = Date.parse("2026-10-25T12:52:00Z") / 1000;
-    mocks.retryMaterialization.mockResolvedValue({ status: "materialized", publishedAtSec: slotStartedAtSec - 30 * 60,
-      reason: "v9-public-materialization-retry-materialized" });
-    const result = await computeSafetyScoreV9({} as D1Database, undefined, undefined, {
-      executionWindow: { slotStartedAtSec, deadlineMs: slotStartedAtSec * 1000 + 180_000, minimumRemainingMs: 25_000 },
-    });
-    expect(result.status).toBe("ok");
-    expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "v9-public-materialization-retry-materialized" });
-    expect(mocks.getCaches).not.toHaveBeenCalled();
-    expect(mocks.runPublication).not.toHaveBeenCalled();
-  });
-
-  it.each(["failed", "timeout", "returned-failure"])("continues normal compute after a %s retry and records its reason", async mode => {
-    if (mode === "returned-failure") mocks.retryMaterialization.mockResolvedValue({ status: "failed", publishedAtSec: Date.parse("2026-10-25T12:22:00Z") / 1000,
-      reason: "v9-public-materialization-retry-failed" });
-    else mocks.retryMaterialization.mockRejectedValue(mode === "timeout"
-      ? new DOMException("Retry budget exhausted", "TimeoutError") : new Error("D1 unavailable"));
+  it.each([22, 52])("never retries materialization before ordinary :%s compute", async minute => {
     mockPublishedPreparation();
-    const slotStartedAtSec = Date.parse("2026-10-25T12:52:00Z") / 1000;
+    const slotStartedAtSec = Date.parse(`2026-10-25T12:${minute}:00Z`) / 1000;
     const deadlineMs = slotStartedAtSec * 1000 + 180_000;
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(slotStartedAtSec * 1000);
-    const result = await computeSafetyScoreV9({} as D1Database, undefined, undefined, {
+    await computeSafetyScoreV9({} as D1Database, undefined, undefined, {
       executionWindow: { slotStartedAtSec, deadlineMs, minimumRemainingMs: 25_000 },
     });
+    expect(mocks.retryMaterialization).not.toHaveBeenCalled();
     expect(mocks.runPublication).toHaveBeenCalledOnce();
     expect(mocks.runPublication.mock.calls[0]![0]).toMatchObject({ publicationDeadlineMs: deadlineMs });
-    expect(JSON.parse(result.metadata!)).toMatchObject({ publication: { status: "published" },
-      publicMaterializationRetryReason: `v9-public-materialization-retry-${mode === "timeout" ? "timeout" : "failed"}` });
-  });
-
-  it("retains retry failure metadata when the ordinary input gate also stops compute", async () => {
-    mocks.retryMaterialization.mockRejectedValue(new Error("D1 unavailable"));
-    mocks.getCaches.mockResolvedValue(new Map());
-    const result = await computeSafetyScoreV9({} as D1Database);
-    expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "fixed-input-missing",
-      publicMaterializationRetryReason: "v9-public-materialization-retry-failed" });
   });
 
   it("passes the last admitted supply packets to application and records carried assets (10.26)", async () => {
