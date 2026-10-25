@@ -9,9 +9,10 @@
  * move is not headlined as holder-driven supply change.
  *
  * Entries are keyed by exact event id (chain, tx hash, log index) and pinned to
- * the reviewed token amount. There is deliberately no address-level rule: the
- * reviewed USD.AI burn used the same `withdraw()` path an ordinary redemption
- * uses, so only per-event evidence can separate the two.
+ * the reviewed token amount. The only address-level exception is inventory
+ * curated as non-circulating in CURATED_ONCHAIN_SUPPLY_EXCLUSIONS on the same
+ * chain. Everything else needs per-event review: USD.AI's burn used the same
+ * `withdraw()` path as ordinary redemptions.
  */
 interface ReviewedProtocolInternalFlow {
   eventId: string;

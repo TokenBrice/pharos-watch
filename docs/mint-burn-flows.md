@@ -29,7 +29,7 @@ Mint and burn events measure token creation and destruction, not investor intent
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-mint-burn-flow -->`v6.29`<!-- GENERATED-END: methodology-version-mint-burn-flow -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-mint-burn-flow -->`v6.30`<!-- GENERATED-END: methodology-version-mint-burn-flow -->
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/mint-burn-flow/`
 
@@ -119,9 +119,11 @@ The public flows table describes configured issuance chains, and the per-coin AP
 
 ### Reviewed protocol-internal events
 
-`shared/lib/reviewed-protocol-internal-flows.ts` holds individually reviewed events that moved tokens inside an issuer's own balance sheet, each with its block timestamp. `persistMintBurnRows()` applies it through `applyReviewedProtocolInternalFlows()` (`worker/src/lib/mint-burn-pipeline/reviewed-protocol-flows.ts`) after atomic-roundtrip detection, in both the cron and `npx tsx worker/scripts/one-shot-backfill.ts backfill-mint-burn --execute --allow-atomic-import` paths, so a replay over the event's block rewrites the stored row and recalculates its hourly bucket. Matching requires the exact event id (chain, transaction hash, log index), stablecoin, chain, direction, and the reviewed token amount; a row whose amount drifts keeps its normal classification. There is no address-level rule. The homepage Biggest Supply Moves card reads the same registry and leaves a coin out of its week-over-week ranking while a reviewed event sits inside the comparison (see [Homepage](https://pharos.watch/)).
+`shared/lib/reviewed-protocol-internal-flows.ts` holds individually reviewed events that moved tokens inside an issuer's own balance sheet, each with its block timestamp. `persistMintBurnRows()` applies it through `applyReviewedProtocolInternalFlows()` (`worker/src/lib/mint-burn-pipeline/reviewed-protocol-flows.ts`) after atomic-roundtrip detection, in both the cron and `npx tsx worker/scripts/one-shot-backfill.ts backfill-mint-burn --execute --allow-atomic-import` paths, so a replay over the event's block rewrites the stored row and recalculates its hourly bucket. Matching requires the exact event id (chain, transaction hash, log index), stablecoin, chain, direction, and the reviewed token amount; a row whose amount drifts keeps its normal classification unless it independently matches the supply-exclusion rule below. The homepage Biggest Supply Moves card reads the same registry and leaves a coin out of its week-over-week ranking while a reviewed event sits inside the comparison (see [Homepage](https://pharos.watch/)).
 
-The reviewed registry owns exact event identity, evidence and original timestamps. The USDai example is a vault-to-loan deployment burn rather than a holder cash-out; identical contract paths can also redeem, so exclusion remains per event, never per address. `reviewedProtocolInternal` counts tagged rows.
+The narrow address-level exception is inventory already curated as non-circulating in `CURATED_ONCHAIN_SUPPLY_EXCLUSIONS` (`worker/src/lib/onchain-supply-exclusions.ts`). At the same persistence stage, `applySupplyExcludedProtocolInternalFlows()` tags mints to and burns from those holder addresses as `protocol_internal`, matching the coin and chain exactly and the counterparty address case-insensitively. These inventory movements cannot change circulating supply. Burn classification is preserved; the rows remain visible in the event ledger but leave all counted hourly totals, nets, pressure, baselines, Bank Run Gauge, DEWS flow and digest inputs. The existing classification UPDATE rewrites duplicate stored IDs after INSERT OR IGNORE, including non-standard mints, and replay rebuilds their affected hours. Historical rows require replay; changing the rule alone does not repair stored aggregates.
+
+Everything else still requires per-event review: the USDai vault-to-loan deployment used a contract path that can also redeem. The reviewed registry owns exact event identity, evidence and original timestamps. `reviewedProtocolInternal` counts only exact reviewed-event matches; address-tagged rows contribute to the existing non-standard `flowTypeChanges` count. Frontend supply surfaces already use circulating balances with these inventory exclusions, so they need no additional event-based suppression for address-tagged rows.
 
 ### Event Detection
 
