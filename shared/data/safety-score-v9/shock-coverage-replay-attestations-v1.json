@@ -6,7 +6,7 @@
     "version": "1",
     "mode": "offline-byte-identical"
   },
-  "attestedAt": "2026-10-23",
+  "attestedAt": "2026-10-25",
   "attestations": [
     {
       "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bd-basedollar/2026-08-21-block-50259336-shock-coverage.json",
@@ -236,6 +236,14 @@
       "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bd-basedollar/2026-10-23-block-52977396-shock-coverage.json",
       "journalSha256": "3cc83e9dcec10f56de38f2ee978d30168caf10488069ff479503937de6b5fe93",
       "attestedAt": "2026-10-23",
+      "exactReplayPassed": true,
+      "callsConsumed": 233,
+      "codePinsConsumed": 92
+    },
+    {
+      "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bd-basedollar/2026-10-25-block-53063592-shock-coverage.json",
+      "journalSha256": "85e899161ca24a50489f2965f980edb4ae108cb99cfa645b6e23e0d65bc87c57",
+      "attestedAt": "2026-10-25",
       "exactReplayPassed": true,
       "callsConsumed": 233,
       "codePinsConsumed": 92
@@ -614,6 +622,14 @@
       "attestedAt": "2026-10-23",
       "exactReplayPassed": true,
       "callsConsumed": 731,
+      "codePinsConsumed": 56
+    },
+    {
+      "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bold-liquity/2026-10-25-block-26268499-shock-coverage.json",
+      "journalSha256": "a4c2643995a625d9cdeedd644982dacd3e052a3735475469aa6cd53d07bccc6c",
+      "attestedAt": "2026-10-25",
+      "exactReplayPassed": true,
+      "callsConsumed": 734,
       "codePinsConsumed": 56
     },
     {
@@ -1012,6 +1028,14 @@
       "journalPath": "shared/data/safety-score-v9/mechanism-measurements/lusd-liquity/2026-10-23-block-26254166-shock-coverage.json",
       "journalSha256": "dce33f91465e9620f4ce6c3d894d09b5f509a98b755ce0544d6ba178ab80bea5",
       "attestedAt": "2026-10-23",
+      "exactReplayPassed": true,
+      "callsConsumed": 229,
+      "codePinsConsumed": 14
+    },
+    {
+      "journalPath": "shared/data/safety-score-v9/mechanism-measurements/lusd-liquity/2026-10-25-block-26268499-shock-coverage.json",
+      "journalSha256": "ad0851ee61a7745cf6f86bc8c011d7747b2633ca6228f9d728ed44c5d4dd9948",
+      "attestedAt": "2026-10-25",
       "exactReplayPassed": true,
       "callsConsumed": 229,
       "codePinsConsumed": 14
