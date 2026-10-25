@@ -1,6 +1,5 @@
 "use client";
 
-import { FaqSection } from "@/components/faq-section";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import {
   CoverageFeatureSnapshotCard,
@@ -10,7 +9,6 @@ import {
   CoverageSafetyScoreDataCard,
 } from "@/components/coverage/coverage-page-sections";
 import { useCoveragePageModel } from "@/hooks/use-coverage-page-model";
-import { COVERAGE_FAQ_ITEMS } from "./coverage-faq";
 
 export default function CoveragePageClient() {
   const model = useCoveragePageModel();
@@ -31,8 +29,6 @@ export default function CoveragePageClient() {
           <CoverageMatrixCard {...model} />
         </>
       )}
-
-      <FaqSection items={COVERAGE_FAQ_ITEMS} title="Coverage FAQ" includeJsonLd />
     </div>
   );
 }

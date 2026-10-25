@@ -91,7 +91,12 @@ export function PhysicalDeliveryTermsTable({
           customers the issuer has verified, and delivery, storage, tax and bank charges can apply on top.
         </p>
       </div>
-      <ContentTable tableAriaLabel="Physical delivery terms" columns={COLUMNS} rows={rows} />
+      <ContentTable
+        tableAriaLabel="Physical delivery terms"
+        viewportProps={{ mobileScrollHint: "Swipe sideways for more columns" }}
+        columns={COLUMNS}
+        rows={rows}
+      />
       <p className="text-xs leading-relaxed text-muted-foreground">
         Source: Pharos-reviewed redemption terms in this build. Rows whose physical-delivery review has expired are left
         out.

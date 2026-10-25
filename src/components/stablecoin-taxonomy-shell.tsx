@@ -20,6 +20,8 @@ interface StablecoinTaxonomyShellProps {
   aboutParagraphs: readonly string[];
   shortLabel: string;
   coins: TaxonomyShellCoin[];
+  /** Coins the chip directory lists; defaults to `coins`. Empty omits the directory where another section already links every member. */
+  directoryCoins?: readonly TaxonomyShellCoin[];
   directoryDescription: string;
   definedTermCode?: string;
   definedTermSetHref?: string;
@@ -27,18 +29,17 @@ interface StablecoinTaxonomyShellProps {
   relatedPages?: ReadonlyArray<{
     href: string;
     title: string;
-    coins: readonly TaxonomyShellCoin[];
   }>;
   headerActions?: React.ReactNode;
   /** The live table; rendered directly under the header, ahead of the static directory. */
   children: React.ReactNode;
   /** Static registry-only sections (peg hubs: at a glance, upcoming, former), rendered after the live table. */
   staticSections?: React.ReactNode;
-  /** Replaces the directory's footnote where there is no live table to point at. */
-  directoryNote?: string;
+  /** "How to use this directory" points at live risk surfaces; off where no member has launched. */
+  showUsageGuide?: boolean;
 }
 
-const DEFAULT_DIRECTORY_NOTE =
+const DIRECTORY_NOTE =
   "Membership comes from the Pharos stablecoin registry in this build. Counts are static directory context; the live table above carries current market, coverage, and risk data.";
 
 const DIRECTORY_PREVIEW_COUNT = 24;
@@ -72,6 +73,7 @@ export function StablecoinTaxonomyShell({
   aboutParagraphs,
   shortLabel,
   coins,
+  directoryCoins = coins,
   directoryDescription,
   definedTermCode,
   definedTermSetHref,
@@ -80,10 +82,10 @@ export function StablecoinTaxonomyShell({
   headerActions,
   children,
   staticSections,
-  directoryNote = DEFAULT_DIRECTORY_NOTE,
+  showUsageGuide = true,
 }: StablecoinTaxonomyShellProps) {
-  const visibleCoins = coins.slice(0, DIRECTORY_PREVIEW_COUNT);
-  const overflowCoins = coins.slice(DIRECTORY_PREVIEW_COUNT);
+  const visibleCoins = directoryCoins.slice(0, DIRECTORY_PREVIEW_COUNT);
+  const overflowCoins = directoryCoins.slice(DIRECTORY_PREVIEW_COUNT);
 
   return (
     <FeaturePageShell
@@ -125,66 +127,70 @@ export function StablecoinTaxonomyShell({
 
       {staticSections}
 
-      <section className="space-y-3">
-        <div className="space-y-1.5">
-          <h2 className="pharos-label">Stablecoin directory</h2>
-          <p className="text-sm text-muted-foreground">{directoryDescription}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {visibleCoins.map((coin) => (
-            <Link
-              key={coin.id}
-              href={buildStablecoinUrl(coin.id)}
-              className="pharos-focus-ring inline-flex items-center rounded-full border border-border/60 bg-background px-2.5 py-1 text-xs font-medium transition-colors hover:bg-accent"
-            >
-              {coin.name} ({coin.symbol})
-            </Link>
-          ))}
-        </div>
-        {overflowCoins.length > 0 && (
-          <details className="rounded-lg border border-border/60 bg-muted/20">
-            <summary className="pharos-focus-ring cursor-pointer px-4 py-3 text-sm font-medium">
-              Show the remaining {overflowCoins.length} {shortLabel} stablecoins
-            </summary>
-            <div className="flex flex-wrap gap-2 px-4 pb-4">
-              {overflowCoins.map((coin) => (
-                <Link
-                  key={coin.id}
-                  href={buildStablecoinUrl(coin.id)}
-                  className="pharos-focus-ring inline-flex items-center rounded-full border border-border/60 bg-background px-2.5 py-1 text-xs font-medium transition-colors hover:bg-accent"
-                >
-                  {coin.name} ({coin.symbol})
-                </Link>
-              ))}
-            </div>
-          </details>
-        )}
-        <p className="text-xs leading-relaxed text-muted-foreground">{directoryNote}</p>
-      </section>
+      {directoryCoins.length > 0 && (
+        <section className="space-y-3">
+          <div className="space-y-1.5">
+            <h2 className="pharos-label">Stablecoin directory</h2>
+            <p className="text-sm text-muted-foreground">{directoryDescription}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {visibleCoins.map((coin) => (
+              <Link
+                key={coin.id}
+                href={buildStablecoinUrl(coin.id)}
+                className="pharos-focus-ring inline-flex items-center rounded-full border border-border/60 bg-background px-2.5 py-1 text-xs font-medium transition-colors hover:bg-accent"
+              >
+                {coin.name} ({coin.symbol})
+              </Link>
+            ))}
+          </div>
+          {overflowCoins.length > 0 && (
+            <details className="rounded-lg border border-border/60 bg-muted/20">
+              <summary className="pharos-focus-ring cursor-pointer px-4 py-3 text-sm font-medium">
+                Show the remaining {overflowCoins.length} {shortLabel} stablecoins
+              </summary>
+              <div className="flex flex-wrap gap-2 px-4 pb-4">
+                {overflowCoins.map((coin) => (
+                  <Link
+                    key={coin.id}
+                    href={buildStablecoinUrl(coin.id)}
+                    className="pharos-focus-ring inline-flex items-center rounded-full border border-border/60 bg-background px-2.5 py-1 text-xs font-medium transition-colors hover:bg-accent"
+                  >
+                    {coin.name} ({coin.symbol})
+                  </Link>
+                ))}
+              </div>
+            </details>
+          )}
+          <p className="text-xs leading-relaxed text-muted-foreground">{DIRECTORY_NOTE}</p>
+        </section>
+      )}
 
-      <section className="space-y-3">
-        <div className="space-y-1.5">
-          <h2 className="pharos-label">
-            How to use this directory
-          </h2>
-          <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            Treat the {shortLabel} cohort as a starting filter, then verify the live risk surfaces that move fastest:
-            coverage, peg history, liquidity, reserves, and dependency exposure.
-          </p>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          {LINKED_DIRECTORIES.map((directory) => (
-            <Link
-              key={directory.href}
-              href={directory.href}
-              className="pharos-focus-ring rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
-            >
-              <span className="block font-medium text-foreground">{directory.title}</span>
-              <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{directory.description}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
+      {showUsageGuide && (
+        <section className="space-y-3">
+          <div className="space-y-1.5">
+            <h2 className="pharos-label">
+              How to use this directory
+            </h2>
+            <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+              Treat the {shortLabel} cohort as a starting filter, then verify the live risk surfaces that move fastest:
+              coverage, peg history, liquidity, reserves, and dependency exposure.
+            </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {LINKED_DIRECTORIES.map((directory) => (
+              <Link
+                key={directory.href}
+                href={directory.href}
+                className="pharos-focus-ring rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
+              >
+                <span className="block font-medium text-foreground">{directory.title}</span>
+                <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{directory.description}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {relatedPages.length > 0 && (
         <section className="space-y-3">
@@ -204,9 +210,6 @@ export function StablecoinTaxonomyShell({
                 className="pharos-focus-ring rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
               >
                 <span className="block font-medium text-foreground">{relatedPage.title}</span>
-                <span className="mt-1 block text-xs text-muted-foreground">
-                  <span className="pharos-numeric">{relatedPage.coins.length}</span> tracked coins
-                </span>
               </Link>
             ))}
           </div>

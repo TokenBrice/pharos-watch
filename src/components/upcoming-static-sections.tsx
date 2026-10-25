@@ -40,7 +40,7 @@ export function UpcomingStaticSections({
       <section aria-label="Upcoming stablecoins by currency" className="space-y-4">
         {groups.map((group) => (
           <div key={group.peg} className="space-y-2">
-            <h2 className="text-base font-semibold text-foreground">{group.heading}</h2>
+            <h2 className="pharos-label">{group.heading}</h2>
             <ul className="flex flex-wrap gap-2">
               {group.coins.map((coin) => (
                 <li key={coin.id}>

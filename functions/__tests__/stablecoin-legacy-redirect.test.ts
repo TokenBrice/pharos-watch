@@ -25,12 +25,16 @@ describe("stablecoin legacy redirects", () => {
     ["usp-pareto-credit", "/stablecoins/usd/"],
     ["mmxn-moneta-digital", "/stablecoins/mxn/"],
     ["341", "/stablecoins/usd/"],
+    ["xai-silo-finance", "/cemetery/#xai-silo-finance"],
   ])("resolves reviewed legacy alias %s without depending on asset redirects", async (alias, destination) => {
     const ctx = makeContext(new Request(`https://pharos.watch/stablecoin/${alias}/?utm_source=google`, { method: "HEAD" }));
     ctx.assetsFetch.mockImplementation(async () => new Response("missing", { status: 404 }));
     const response = await onRequest(ctx);
     expect(response.status).toBe(301);
-    expect(response.headers.get("Location")).toBe(`https://pharos.watch${destination}?utm_source=google`);
+    const [path, hash] = destination.split("#");
+    expect(response.headers.get("Location")).toBe(
+      `https://pharos.watch${path}?utm_source=google${hash ? `#${hash}` : ""}`,
+    );
     expect(ctx.assetsFetch).not.toHaveBeenCalled();
   });
 

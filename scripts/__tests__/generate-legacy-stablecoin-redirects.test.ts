@@ -6,11 +6,12 @@ describe("legacy stablecoin redirect generation", () => {
     expect(buildLegacyStablecoinRedirects(
       [{ id: "usdc-circle" }, { id: "usdt-tether", llamaId: "1" }],
       { "2": "/stablecoin/usdc-circle/", "cg-usdc": "/stablecoin/usdc-circle/" },
-      "/stablecoin/retired-coin/* /coverage/ 301\n/stablecoin/retired-coin /coverage/ 301\n/stablecoin/retired-usd /stablecoins/usd/ 301\n",
+      "/stablecoin/retired-coin/* /coverage/ 301\n/stablecoin/retired-coin /coverage/ 301\n/stablecoin/retired-usd /stablecoins/usd/ 301\n/stablecoin/dead-coin /cemetery/#dead-coin-usd-2024-01 301\n",
     )).toEqual({
       "1": "/stablecoin/usdt-tether/",
       "2": "/stablecoin/usdc-circle/",
       "cg-usdc": "/stablecoin/usdc-circle/",
+      "dead-coin": "/cemetery/#dead-coin-usd-2024-01",
       "retired-coin": "/coverage/",
       "retired-usd": "/stablecoins/usd/",
     });
@@ -24,6 +25,7 @@ describe("legacy stablecoin redirect generation", () => {
       { "9": "/stablecoin/not-tracked/" },
       { "9": "https://evil.example/" },
       { "9": "/stablecoins/../admin/" },
+      { "9": "/cemetery/#<script>" },
       { "../admin": "/coverage/" },
       { "usdc-circle": "/coverage/" },
     ];
