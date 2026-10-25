@@ -49,7 +49,7 @@ export function PricingPipelineMethodologySection({
       title={PRICING_PIPELINE_SECTION_CONTENT.title}
       versionBadge={{ label: PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL }}
       changelogPath={PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH}
-      versionNote="Version increments when price sources, consensus algorithm, enrichment passes, or validation rules change."
+      versionNote="Version increments when price sources, consensus, supply attribution, enrichment, or validation rules change."
       changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.pricing.changelogHover}
     >
         {PRICING_PIPELINE_SECTION_CONTENT.markdownParagraphs.slice(0, 4).map((paragraph) => (

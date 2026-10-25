@@ -269,6 +269,8 @@ Common admission fields:
 - verified `contracts` for chain-level coverage and explorer links
 - `status: "pre-launch"` for assets that should not enter active public surfaces yet
 
+For admitted CoinGecko-detail caps, reviewed aggregate or eligible single-deployment probes may attach a banded share partition while CoinGecko retains supply precedence, clock and historical aggregate buckets. [Supply Pipeline](./supply-snapshot.md#supply-pipeline) owns hysteresis, canonical/escrow conservation and bounded carry after unreadable or deadline-skipped reads; adding contract metadata alone never admits a partial partition.
+
 Admission does not promise a numerical Safety Score. Review a variant's actual strategy and native-versus-representation deployment scope independently; neither inherited backing nor summing bridge representations establishes canonical share supply, financial assurance or legal recovery. Preserve unresolved terms and control inventories as explicit research gaps.
 
 The active runtime gate and research-packet format are documented in [Adding a Stablecoin](./process/adding-a-stablecoin.md#1a-hard-runtime-data-gate-for-active-assets). Listing class, quarantine, and delisting decisions follow [Stablecoin Listing Policy](./listing-policy.md).

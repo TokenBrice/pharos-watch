@@ -153,6 +153,16 @@ export const SupplyGapFillProvenanceSchema = z.object({
 });
 export type SupplyGapFillProvenance = z.infer<typeof SupplyGapFillProvenanceSchema>;
 
+/** On-chain shares apportioned onto a source-owned aggregate; carried shares keep their original read clock. */
+export const ChainPartitionProvenanceSchema = z.object({
+  basis: z.literal("onchain-share"),
+  observedAt: z.number().int().positive(),
+  onchainUsd: z.number().finite().positive(),
+  ratio: z.number().finite().positive(),
+  admission: z.enum(["entered", "retained", "carried"]),
+});
+export type ChainPartitionProvenance = z.infer<typeof ChainPartitionProvenanceSchema>;
+
 /** Current-chain dropout evidence; historical aggregate buckets are never rewritten by this lane. */
 export const SupplyChainGuardProvenanceSchema = z.object({
   reason: z.literal("supply-chain-dropout"),
@@ -211,6 +221,7 @@ const StablecoinDataRawSchema = z.object({
   supplyPerimeter: SfraxStockPerimeterObservationSchema.optional(),
   supplyGapFill: SupplyGapFillProvenanceSchema.optional(),
   supplyChainGuard: SupplyChainGuardProvenanceSchema.optional(),
+  chainPartition: ChainPartitionProvenanceSchema.optional(),
   circulating: SupplyBucketsSchema,
   circulatingPrevDay: SupplyBucketsSchema.nullish(),
   circulatingPrevWeek: SupplyBucketsSchema.nullish(),
@@ -266,6 +277,7 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
   ...(asset.supplyPerimeter != null ? { supplyPerimeter: asset.supplyPerimeter } : {}),
   ...(asset.supplyGapFill != null ? { supplyGapFill: asset.supplyGapFill } : {}),
   ...(asset.supplyChainGuard != null ? { supplyChainGuard: asset.supplyChainGuard } : {}),
+  ...(asset.chainPartition != null ? { chainPartition: asset.chainPartition } : {}),
   circulating: asset.circulating,
   circulatingPrevDay: asset.circulatingPrevDay ?? {},
   circulatingPrevWeek: asset.circulatingPrevWeek ?? {},

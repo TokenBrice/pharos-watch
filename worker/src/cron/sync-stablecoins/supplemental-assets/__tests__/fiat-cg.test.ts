@@ -215,7 +215,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
     }
   });
 
-  it("prefers fresh CoinGecko market cap over curated aggregate on-chain supply", async () => {
+  it("keeps fresh CoinGecko market cap when its on-chain partition cannot be read", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     fetchWithRetryMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ coins: {} }), {
@@ -241,6 +241,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
       chainCirculating: {},
     });
     expect(probeTrackedTokenSupplyMock).not.toHaveBeenCalled();
+    expect(fetchErc20TotalSupplyMock).toHaveBeenCalledTimes(1);
   });
 
   it("uses curated aggregate on-chain supply when CoinGecko market cap is stale", async () => {

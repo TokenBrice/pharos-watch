@@ -46,6 +46,7 @@ import {
 } from "../../reserve-adapters/helpers";
 import { mapWithConcurrency } from "../../../lib/concurrency";
 import type { PeggedAsset } from "../enrich-prices";
+import { isSupplyObservationWithinRestoreCeiling, rescaleChainPartition } from "../shared";
 
 export { computeExcludedBalanceAdjustedSupplyRaw };
 
@@ -64,6 +65,14 @@ const MOVEMENT_XRESERVE = "0x8888888199b2Df864bf678259607d6D5EBb4e3Ce";
 const MOVEMENT_XRESERVE_CALL = "0xc47cf5ef000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb480000000000000000000000000000000000000000000000000000000000002715";
 const MOVEMENT_XRESERVE_TOLERANCE_BPS = 1n;
 const JOINED_SUPPLY_OBSERVATION_MAX_AGE_SEC = 5 * 60;
+// Calibrated 2026-10-25: 45 candidates in band across three passes ($8.74B); frozen for this rollout.
+export const ONCHAIN_PARTITION_POLICY = {
+  entry: { minRatio: 0.90, maxRatio: 1.10 },
+  retain: { minRatio: 0.85, maxRatio: 1.15 },
+} as const;
+
+type PartitionReadFailure = "legs-unreadable" | "partition-invalid";
+class OnchainSupplyValidationError extends Error {}
 
 function joinedSupplyRpcOptions(input: {
   chainRpcs?: Map<string, ChainRpcConfig>; signal?: AbortSignal;
@@ -78,8 +87,9 @@ function joinedSupplyRpcOptions(input: {
 
 async function confirmJoinedSupplyBlock(chain: string, block: EvmBlockHeader, options: EvmRpcOptions): Promise<void> {
   const closing = await fetchEvmBlockHeader(chain, block.number, options);
-  if (!closing || closing.hash !== block.hash || closing.timestamp !== block.timestamp || closing.number !== block.number) {
-    throw new Error("joined supply canonical header changed");
+  if (!closing) throw new Error("joined supply canonical header unavailable");
+  if (closing.hash !== block.hash || closing.timestamp !== block.timestamp || closing.number !== block.number) {
+    throw new OnchainSupplyValidationError("joined supply canonical header changed");
   }
 }
 
@@ -177,6 +187,7 @@ async function readContractSupplyRaw(input: {
   supplyContract: NonNullable<StablecoinMeta["contracts"]>[number] & { decimals: number };
   family: OnchainSupplyProbeFamily;
   allowZeroSupply: boolean;
+  preserveObservedZero?: boolean;
   signal: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
   dwellirNative?: DwellirNativeCapability;
@@ -223,7 +234,7 @@ async function readContractSupplyRaw(input: {
     );
     if (!observation) throw new Error("Aptos supply probe returned no pinned-ledger observation");
     if (observation.decimals !== supplyContract.decimals) {
-      throw new Error("Aptos fungible-asset decimals do not match tracked metadata");
+      throw new OnchainSupplyValidationError("Aptos fungible-asset decimals do not match tracked metadata");
     }
     return observation.rawSupply;
   }
@@ -242,12 +253,12 @@ async function readContractSupplyRaw(input: {
     );
     if (!observation) throw new Error("Movement supply probe returned no pinned-ledger observation");
     if (observation.decimals !== supplyContract.decimals) {
-      throw new Error("Movement coin-resource decimals do not match tracked metadata");
+      throw new OnchainSupplyValidationError("Movement coin-resource decimals do not match tracked metadata");
     }
     return observation.rawSupply;
   }
 
-  if (input.allowZeroSupply) {
+  if (input.allowZeroSupply || input.preserveObservedZero) {
     return input.family === "solana"
       ? fetchSolanaTokenSupply(
         supplyContract.address,
@@ -296,7 +307,7 @@ async function adjustOnChainSupplyForExcludedBalances(input: {
     onchainSupplyProbeFamily(input.supplyContract) !== "evm" ||
     input.supplyContract.chain !== exclusionConfig.chain
   ) {
-    throw new Error(
+    throw new OnchainSupplyValidationError(
       `configured supply exclusions require ${exclusionConfig.chain}, selected ${input.supplyContract.chain}`,
     );
   }
@@ -319,7 +330,7 @@ async function adjustOnChainSupplyForExcludedBalances(input: {
 
   const adjustedRaw = computeExcludedBalanceAdjustedSupplyRaw(input.totalSupplyRaw, balances as bigint[]);
   if (adjustedRaw == null) {
-    throw new Error("configured excluded balances are greater than or equal to total supply");
+    throw new OnchainSupplyValidationError("configured excluded balances are greater than or equal to total supply");
   }
 
   return {
@@ -346,9 +357,11 @@ async function fetchOnChainSupplyForContract(input: {
   signal?: AbortSignal;
   curated?: { rpcUrl?: string; fallbackRpcUrl?: string; allowZeroSupply?: boolean };
   observedBlocks?: Map<string, EvmBlockHeader>;
+  onFailure?: (reason: PartitionReadFailure) => void;
 }): Promise<ContractOnChainMcapResult | null> {
   const supplyContract = input.supplyContract;
-  const reject = (reason: string, error?: unknown): null => {
+  const reject = (reason: string, error?: unknown, failure: PartitionReadFailure = "partition-invalid"): null => {
+    input.onFailure?.(failure);
     logWorkerEvent({
       scope: "handler", level: "warn", job: "sync-stablecoins",
       event: "onchain-supply-contract-withheld",
@@ -384,9 +397,9 @@ async function fetchOnChainSupplyForContract(input: {
       const number = await fetchEvmBlockNumber(supplyContract.chain, rpcOptions);
       observedBlock = number == null ? undefined : await fetchEvmBlockHeader(supplyContract.chain, number, rpcOptions) ?? undefined;
       const nowSec = Math.floor(Date.now() / 1000);
-      if (!observedBlock || observedBlock.timestamp > nowSec || nowSec - observedBlock.timestamp > JOINED_SUPPLY_OBSERVATION_MAX_AGE_SEC) {
-        throw new Error("joined supply observation block unavailable or stale");
-      }
+      if (!observedBlock) throw new Error("joined supply observation block unavailable");
+      if (observedBlock.timestamp > nowSec || nowSec - observedBlock.timestamp > JOINED_SUPPLY_OBSERVATION_MAX_AGE_SEC)
+        throw new OnchainSupplyValidationError("joined supply observation block stale or future");
       input.observedBlocks?.set(supplyContract.chain, observedBlock);
     }
     if (observedBlock) observedAt = observedBlock.timestamp;
@@ -398,6 +411,8 @@ async function fetchOnChainSupplyForContract(input: {
       supplyContract,
       family,
       allowZeroSupply,
+      // The positive-only probe collapses observed zero into a read failure, which must never trigger share carry.
+      preserveObservedZero: input.onFailure != null,
       signal: supplySignal,
       // A reviewed supply pin retains its original route; the full map would
       // otherwise prepend registry endpoints ahead of that pin.
@@ -407,7 +422,7 @@ async function fetchOnChainSupplyForContract(input: {
       fallbackRpcUrl,
     });
     throwIfAborted(supplySignal);
-    if (raw == null) return reject("total-supply-read-unavailable");
+    if (raw == null) return reject("total-supply-read-unavailable", undefined, "legs-unreadable");
     if (raw < 0n || (raw === 0n && !allowZeroSupply)) return reject("total-supply-nonpositive");
 
     if (family === "movement") {
@@ -423,9 +438,9 @@ async function fetchOnChainSupplyForContract(input: {
         chain: "ethereum",
       });
       if (backingRaw == null) throw new Error("Movement xReserve backing read is unavailable");
-      if (backingRaw < raw) throw new Error("Movement supply exceeds xReserve backing");
+      if (backingRaw < raw) throw new OnchainSupplyValidationError("Movement supply exceeds xReserve backing");
       if ((backingRaw - raw) * 10_000n > raw * MOVEMENT_XRESERVE_TOLERANCE_BPS) {
-        throw new Error("Movement supply does not reconcile to xReserve within one basis point");
+        throw new OnchainSupplyValidationError("Movement supply does not reconcile to xReserve within one basis point");
       }
     }
 
@@ -455,7 +470,7 @@ async function fetchOnChainSupplyForContract(input: {
     }
   } catch (err) {
     throwIfAborted(supplySignal);
-    return reject("supply-probe-failed", err);
+    return reject("supply-probe-failed", err, err instanceof OnchainSupplyValidationError ? "partition-invalid" : "legs-unreadable");
   }
 
   return reject("supply-valuation-invalid");
@@ -475,6 +490,7 @@ async function fetchEscrowHeldMcap(input: {
   signal?: AbortSignal;
   curated?: { rpcUrl?: string; fallbackRpcUrl?: string };
   observedBlock: EvmBlockHeader;
+  onFailure?: (reason: PartitionReadFailure) => void;
 }): Promise<number | null> {
   if (!isFixedDecimalDeployment(input.supplyContract)) {
     logWorkerEventArgs("handler", "warn",
@@ -490,11 +506,16 @@ async function fetchEscrowHeldMcap(input: {
       encodeBalanceOfCallData(input.escrowAddress), input.observedBlock.number,
       { ...rpcOptions, stateBlockHash: input.observedBlock.hash });
     await confirmJoinedSupplyBlock(input.supplyContract.chain, input.observedBlock, rpcOptions);
-    if (balance == null || balance <= 0n) return null;
+    if (balance == null || balance <= 0n) {
+      input.onFailure?.(balance == null ? "legs-unreadable" : "partition-invalid");
+      return null;
+    }
 
     const mcap = (Number(balance) / 10 ** decimals) * input.priceUsd;
     return Number.isFinite(mcap) && mcap > 0 ? mcap : null;
   } catch (err) {
+    throwIfAborted(input.signal);
+    input.onFailure?.(err instanceof OnchainSupplyValidationError ? "partition-invalid" : "legs-unreadable");
     logWorkerEvent({
       scope: "lib",
       level: "warn",
@@ -516,6 +537,7 @@ export async function fetchOnChainMcap(
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
   dwellirNative?: DwellirNativeCapability,
+  onFailure?: (reason: PartitionReadFailure) => void,
 ): Promise<SingleContractOnChainMcapResult | null> {
   const supplyContract = selectSupplementalOnchainSupplyProbeContract(meta);
   if (!supplyContract) {
@@ -541,6 +563,7 @@ export async function fetchOnChainMcap(
     chainRpcs,
     signal,
     dwellirNative,
+    onFailure,
   });
   return result
     ? {
@@ -560,6 +583,7 @@ export async function fetchCuratedAggregateOnChainMcap(
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
   dwellirNative?: DwellirNativeCapability,
+  onFailure?: (reason: PartitionReadFailure) => void,
 ): Promise<OnChainMcapResult | null> {
   throwIfAborted(signal);
   if (meta.id === SFRAX_STOCK_PERIMETER.assetId) return fetchSfraxStockSupply(meta, priceUsd, chainRpcs, signal);
@@ -596,6 +620,7 @@ export async function fetchCuratedAggregateOnChainMcap(
       dwellirNative,
       curated,
       observedBlocks,
+      onFailure,
     });
     if (!result || result.supplySource !== "onchain-total-supply") {
       return null;
@@ -620,13 +645,19 @@ export async function fetchCuratedAggregateOnChainMcap(
   }
 
   if (canonicalSupplyChain) {
-    if (!canonicalResult || representationMcap >= canonicalResult.mcap) return null;
+    if (!canonicalResult || representationMcap >= canonicalResult.mcap) {
+      onFailure?.("partition-invalid");
+      return null;
+    }
     totalMcap = canonicalResult.mcap;
 
     const residual = CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id];
     if (residual) {
       const canonicalLeg = selectedContracts.find(({ config }) => config.chain === canonicalSupplyChain);
-      if (!canonicalLeg || !canonicalResult.observedBlock) return null;
+      if (!canonicalLeg || !canonicalResult.observedBlock) {
+        onFailure?.("partition-invalid");
+        return null;
+      }
 
       const escrowMcap = await fetchEscrowHeldMcap({
         meta,
@@ -637,11 +668,14 @@ export async function fetchCuratedAggregateOnChainMcap(
         signal,
         curated: canonicalLeg.config,
         observedBlock: canonicalResult.observedBlock,
+        onFailure,
       });
+      throwIfAborted(signal);
       // Fail closed: the escrow read is the whole point of the refinement, so an
       // unreadable or nonsensical balance must not quietly republish the
       // unattributed remainder as canonical-chain float.
       if (escrowMcap == null || escrowMcap < representationMcap || escrowMcap >= canonicalResult.mcap) {
+        if (escrowMcap != null) onFailure?.("partition-invalid");
         return null;
       }
 
@@ -661,11 +695,49 @@ export async function fetchCuratedAggregateOnChainMcap(
     }
   }
 
-  if (!Number.isFinite(totalMcap) || totalMcap <= 0) return null;
+  if (!Number.isFinite(totalMcap) || totalMcap <= 0) {
+    onFailure?.("partition-invalid");
+    return null;
+  }
   return {
     mcap: totalMcap,
     supplySource: "onchain-total-supply",
     observedAt,
     chainCirculating,
+  };
+}
+
+/** The existing readers value token units at one admitted price; only their shares attach to CG. */
+export async function fetchOnChainSupplyPartition(
+  meta: StablecoinMeta,
+  total: number,
+  priceUsd: number,
+  previous: PeggedAsset | undefined,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  signal?: AbortSignal,
+): Promise<Pick<PeggedAsset, "chainCirculating" | "chainPartition"> | { reason: PartitionReadFailure | "ratio-out-of-band"; ratio: number | null }> {
+  let failure: PartitionReadFailure = "partition-invalid";
+  const onFailure = (reason: PartitionReadFailure) => { failure = reason; };
+  const observation = selectCuratedAggregateOnchainSupplyProbeContracts(meta)
+    ? await fetchCuratedAggregateOnChainMcap(meta, priceUsd, chainRpcs, signal, undefined, onFailure)
+    : await fetchOnChainMcap(meta, priceUsd, chainRpcs, signal, undefined, onFailure);
+  throwIfAborted(signal);
+  if (!observation) return { reason: failure, ratio: null };
+  const ratio = observation.mcap / total;
+  const nowSec = Math.floor(Date.now() / 1000);
+  const retained = previous?.chainPartition?.basis === "onchain-share"
+    && (previous.chainPartition.admission === "entered" || previous.chainPartition.admission === "retained")
+    && isSupplyObservationWithinRestoreCeiling(previous.chainPartition.observedAt, nowSec);
+  const band = retained ? ONCHAIN_PARTITION_POLICY.retain : ONCHAIN_PARTITION_POLICY.entry;
+  if (!Number.isFinite(ratio)) return { reason: "partition-invalid", ratio: null };
+  if (ratio < band.minRatio || ratio > band.maxRatio) return { reason: "ratio-out-of-band", ratio };
+  const chainCirculating = rescaleChainPartition(toPublicChainCirculating(observation.chainCirculating), observation.mcap, total);
+  if (!chainCirculating || observation.observedAt == null) return { reason: "partition-invalid", ratio };
+  return {
+    chainCirculating,
+    chainPartition: {
+      basis: "onchain-share", observedAt: observation.observedAt, onchainUsd: observation.mcap, ratio,
+      admission: retained ? "retained" : "entered",
+    },
   };
 }

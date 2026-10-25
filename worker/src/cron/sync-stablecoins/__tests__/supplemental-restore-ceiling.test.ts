@@ -7,7 +7,9 @@ import {
   loadPreviousStablecoinsById,
   mergeSupplementalLastKnownGood,
   normalizeStablecoinsPayload,
+  restoreCuratedAggregateChainPartition,
   restoreMissingTrackedAssets,
+  reviewedOnchainSupplyHoldFields,
 } from "../shared";
 
 const NOW_SEC = 1_780_000_000;
@@ -49,6 +51,39 @@ function syrupChainCirculating(
 }
 
 describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
+  it("clears admitted chain partition provenance when the reviewed supply hold withholds the row", () => {
+    const current = asset({
+      id: "sfrax-frax", symbol: "sFRAX", supplySource: "coingecko-fallback", circulating: { peggedUSD: 100 },
+      chainPartition: { basis: "onchain-share", observedAt: NOW_SEC - 60, onchainUsd: 100, ratio: 1, admission: "entered" },
+    });
+    const hold = reviewedOnchainSupplyHoldFields(current, NOW_SEC);
+    expect(hold).toHaveProperty("chainPartition", undefined);
+    const [normalized] = normalizeStablecoinsPayload({ peggedAssets: [current] }, NOW_SEC).peggedAssets;
+    expect(normalized.supplySource).toBe("onchain-supply-withheld");
+    expect(normalized.circulating).toEqual({});
+    expect(normalized.chainPartition).toBeUndefined();
+    expect(current.chainPartition).toBeDefined();
+  });
+  it("keeps restorable CG supply when its independently aged chain partition expires", () => {
+    const previous = asset({
+      id: "syrupusdt-maple", symbol: "syrupUSDT", supplySource: "coingecko-fallback",
+      circulating: { peggedUSD: 100_000_000 }, supplyObservedAt: NOW_SEC - 60,
+      chainCirculating: syrupChainCirculating(),
+      chainPartition: { basis: "onchain-share", observedAt: NOW_SEC - SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1,
+        onchainUsd: 100_000_000, ratio: 1, admission: "carried" },
+    });
+    const previousById = new Map([[previous.id, previous]]);
+    const supplemental = mergeSupplementalLastKnownGood(
+      [asset({ id: previous.id, symbol: previous.symbol })], previousById, new Set(), NOW_SEC,
+    ).assets[0];
+    const missing = restoreMissingTrackedAssets([], previousById, NOW_SEC).assets[0];
+    for (const restored of [supplemental, missing]) {
+      expect(restored.circulating).toEqual(previous.circulating);
+      expect(restored.supplyObservedAt).toBe(NOW_SEC - 60);
+      expect(restored.chainCirculating).toEqual({});
+      expect(restored.chainPartition).toBeUndefined();
+    }
+  });
   it.each([
     ["audx-aussie-dollar-token", "coingecko", 30_551, false],
     ["mxne-real-mxn", "coingecko", 135_461, false],
@@ -118,7 +153,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     },
   );
 
-  it("restores only the curated chain partition onto a reconciling fresh CoinGecko aggregate", () => {
+  it("does not implicitly restore a CG-detail partition without a current unreadable read", () => {
     const current = asset({
       id: "syrupusdt-maple",
       symbol: "syrupUSDT",
@@ -149,20 +184,15 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
       NOW_SEC,
     );
 
-    expect(result.restoredCount).toBe(1);
+    expect(result.restoredCount).toBe(0);
     expect(result.expiredRestoreIds).toEqual([]);
-    expect(result.assets[0]).toMatchObject({
-      circulating: { peggedUSD: 100_000_000.05 },
-      circulatingPrevDay: { peggedUSD: 104_000_000 },
-      chainCirculating: previous.chainCirculating,
-      supplySource: "coingecko-fallback",
-      price: 1.12,
-      priceSource: "defillama",
-      priceUpdatedAt: NOW_SEC,
-    });
+    expect(result.assets[0]).toBe(current);
     expect(result.assets[0].supplyRestored).toBeUndefined();
     expect(result.assets[0].supplyObservedAt).toBeUndefined();
     expect(result.assets[0].chainCirculating).not.toBe(previous.chainCirculating);
+    // Other supplemental lanes retain their existing exact-total restoration contract.
+    expect(restoreCuratedAggregateChainPartition(current, previous, NOW_SEC)?.asset.chainCirculating)
+      .toEqual(previous.chainCirculating);
     expect(
       StablecoinListResponseSchema.safeParse(normalizeStablecoinsPayload({ peggedAssets: result.assets })).success,
     ).toBe(true);
@@ -213,7 +243,9 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
       [current], new Map([[previous.id, previous]]), new Set(), NOW_SEC,
     );
     expect(result.restoredCount).toBe(0);
-    expect(result.expiredRestoreIds).toEqual(expiredIds);
+    expect(result.expiredRestoreIds).toEqual([]);
+    expect(restoreCuratedAggregateChainPartition(current, previous, NOW_SEC)?.expired ? [current.id] : [])
+      .toEqual(expiredIds);
     expect(result.assets).toEqual([current]);
     expect(result.assets[0]).toBe(current);
   });
