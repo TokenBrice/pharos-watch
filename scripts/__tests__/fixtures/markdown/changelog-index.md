@@ -19,8 +19,8 @@ DDR v5 condemns a coin only on terminal evidence, and Safety Score ships twelve 
 - **Quieter public warnings**: Readers see warnings only for data past the 12x stale band, missing, or quarantined; lesser findings go to operators. /status ignores small bounded omissions and needs two evaluations to change state.
 - **Search-ready profiles**: Coin profiles lead with a dated Safety grade, a redemption answer and checksum-validated ISINs for fund tokens. Titles use searchers' words, and thin chain, depeg-event and digest pages leave the index.
 - **Design-system completion**: The raw-palette ledger is drained and deleted, every corner radius snaps to the scale, and CSS modules sit on named layers. Lint now rejects new raw hues and arbitrary radii; titles are sentence case.
-- **Venue and price coverage**: Aero, the merged Aerodrome and Velodrome, is read directly (Liquidity 6.98, Pricing 6.56). Hive HBD gains depth-gated cross-rates, USDY prices again, and DefiLlama-delisted USYC, reUSD and USP route via CoinGecko.
-- **FreezeWatch and evidence**: FreezeWatch adopts a written exposure procedure, re-reviews every active status, and measures Upstream exposure on external backing only (4.4, 4.5). VCRED is delisted, USDKG frozen, AI summaries refreshed.
+- **Venue and evidence coverage**: Aero, the merged Aerodrome and Velodrome, is read directly (Liquidity 6.98, Pricing 6.56), Hive HBD gains cross-rates and USDY prices again. FreezeWatch adopts a written exposure procedure (4.4, 4.5).
+- **Launched, awaiting data**: A new pre-launch phase marks coins issued on-chain that lack admissible market data: six live coins and newly added swanUSD. /upcoming/ lists them apart from upcoming launches; USDB and VCRED are delisted.
 - **Cron and integrity sweep**: Missed or abandoned cron slots get one catch-up run and non-price lanes slow to owner-approved cadences. A correctness sweep ships across nine methodologies, and sponsor Dwellir now serves native reads first.
 
 <a id="week-2026-10-18"></a>

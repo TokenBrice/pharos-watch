@@ -41,16 +41,15 @@
       "description": "The raw-palette ledger is drained and deleted, every corner radius snaps to the scale, and CSS modules sit on named layers. Lint now rejects new raw hues and arbitrary radii; titles are sentence case."
     },
     {
-      "label": "Venue and price coverage",
+      "label": "Venue and evidence coverage",
       "tag": "coverage",
-      "description": "Aero, the merged Aerodrome and Velodrome, is read directly (Liquidity 6.98, Pricing 6.56). Hive HBD gains depth-gated cross-rates, USDY prices again, and DefiLlama-delisted USYC, reUSD and USP route via CoinGecko.",
-      "href": "/methodology/pricing-pipeline-changelog/"
+      "description": "Aero, the merged Aerodrome and Velodrome, is read directly (Liquidity 6.98, Pricing 6.56), Hive HBD gains cross-rates and USDY prices again. FreezeWatch adopts a written exposure procedure (4.4, 4.5)."
     },
     {
-      "label": "FreezeWatch and evidence",
+      "label": "Launched, awaiting data",
       "tag": "coverage",
-      "description": "FreezeWatch adopts a written exposure procedure, re-reviews every active status, and measures Upstream exposure on external backing only (4.4, 4.5). VCRED is delisted, USDKG frozen, AI summaries refreshed.",
-      "href": "/methodology/blacklist-tracker-changelog/"
+      "description": "A new pre-launch phase marks coins issued on-chain that lack admissible market data: six live coins and newly added swanUSD. /upcoming/ lists them apart from upcoming launches; USDB and VCRED are delisted.",
+      "href": "/upcoming/"
     },
     {
       "label": "Cron and integrity sweep",
@@ -59,9 +58,53 @@
     }
   ],
   "stats": {
-    "totalCommits": 443
+    "totalCommits": 454
   },
   "commits": [
+    {
+      "hash": "fbca5c6f",
+      "message": "data(prelaunch): retire stale target dates on launched coins"
+    },
+    {
+      "hash": "42678265",
+      "message": "data(prelaunch): add swanUSD as a launched pre-launch entry"
+    },
+    {
+      "hash": "94d40b4a",
+      "message": "data(prelaunch): move six live coins to the launched phase"
+    },
+    {
+      "hash": "a0394203",
+      "message": "data(prelaunch): delist Bridge USDB as out of scope"
+    },
+    {
+      "hash": "8b18d639",
+      "message": "data(prelaunch): finish RAI Dollar seven-branch correction"
+    },
+    {
+      "hash": "5c29242c",
+      "message": "data(prelaunch): record launch dates and verified contracts for live coins"
+    },
+    {
+      "hash": "b6f69b32",
+      "message": "data(prelaunch): weekly refresh of milestones and record corrections"
+    },
+    {
+      "hash": "10833516",
+      "message": "data(prelaunch): record USTX and HSBC RedCoin launches"
+    },
+    {
+      "hash": "d0ff51cb",
+      "message": "data(funding): record 2026-10-23 Arbitrum USDC donation"
+    },
+    {
+      "hash": "e91e4fbc",
+      "message": "feat(upcoming): render launched rows as live coins awaiting data"
+    },
+    {
+      "hash": "9a70eee8",
+      "message": "feat(registry): add the \"launched\" pre-launch phase with a dwell review"
+    },
     {
       "hash": "91bfc95a",
       "message": "ci(ops): open curation follow-ups for catastrophic DDR breaks"
@@ -97,50 +140,6 @@
     {
       "hash": "d204ab75",
       "message": "fix(coverage): place Removed from coverage ahead of the FAQ"
-    },
-    {
-      "hash": "0f84d674",
-      "message": "fix(cemetery): give tracked register names the prose link treatment"
-    },
-    {
-      "hash": "e0b3a015",
-      "message": "fix(upcoming): set per-currency group headings in the label register"
-    },
-    {
-      "hash": "3fecbf70",
-      "message": "fix(peg-hubs): drop repeated directory chips and pre-launch usage guide"
-    },
-    {
-      "hash": "c9d08eb8",
-      "message": "seo(profile): name the profile zone tabs in searchers' words"
-    },
-    {
-      "hash": "fa172c6d",
-      "message": "fix(profile): slim snapshot supply history so the scores lane always fits"
-    },
-    {
-      "hash": "70018682",
-      "message": "seo(flows): drop the page-level Suspense so the shell prerenders in main"
-    },
-    {
-      "hash": "2f5fddf9",
-      "message": "fix(nav): stack the desktop top nav above page-level sticky bars"
-    },
-    {
-      "hash": "b34411d2",
-      "message": "fix(profile): visual-review polish for the post-dossier profile and compare copy"
-    },
-    {
-      "hash": "6046dd56",
-      "message": "fix(ci): env-contract doc wording and the USDT Markdown export fixture"
-    },
-    {
-      "hash": "69e6dfac",
-      "message": "fix(seo): integrated-build fixes for doc titles and the structured-data matrix"
-    },
-    {
-      "hash": "5acd42bb",
-      "message": "seo(compare): link the live picker through the #coins= prefill on static pages"
     }
   ]
 }
