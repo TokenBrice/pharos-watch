@@ -240,7 +240,7 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
       window: { start: proofEnd - 86400, end: proofEnd, semantics: "closed-utc-hours" },
       updatedAt: proofEnd, publishedAt: proofEnd, stale: false,
       coins: [...new Set(proofRows.map((row) => row.stablecoin_id))].map((id) => ({
-        id, symbol: id, intensity: null, net24hUsd: null, baselineValuation: "unknown",
+        id, symbol: id, intensity: null, net24hUsd: null, gaugeWeightUsd: null, baselineValuation: "unknown",
         valuation24h: { completeness: "unknown", mintCompleteness: "unknown", burnCompleteness: "unknown",
           unpricedMintEventCount: 0, unpricedBurnEventCount: 0 },
         scanCoverage: { window24h: complete, window7d: complete, window30d: complete, window90d: complete },

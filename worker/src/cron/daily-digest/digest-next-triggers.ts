@@ -5,6 +5,7 @@ import type {
   DigestNextTrigger,
 } from "@shared/types/digest";
 import { formatCurrency } from "@shared/lib/format";
+import { isMaterialDigestGaugeShare } from "@shared/lib/digest-mint-burn-admission";
 import { selectMomentumCandidates } from "./editorial-candidates";
 import {
   DEWS_BAND_RANK,
@@ -168,6 +169,10 @@ function triggerForCandidate(
     return weeklySupplyTrigger(data.biggestSupplyChange, candidate.id);
   }
   if (candidate.kind === "mint-burn" && data.mintBurnFlows) {
+    if (candidate.id !== "mint-burn:flight-to-quality") {
+      const pressure = data.mintBurnFlows.topPressure.find((entry) => entry.symbol.toUpperCase() === symbol);
+      if (!isMaterialDigestGaugeShare(pressure?.gaugeWeightShare)) return null;
+    }
     return gaugeTrigger(data.mintBurnFlows.gaugeScore, candidate.id);
   }
   if (candidate.kind === "dews" && symbol) {

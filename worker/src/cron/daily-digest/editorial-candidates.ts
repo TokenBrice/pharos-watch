@@ -16,6 +16,7 @@ import {
   isCriticalDepegRisk,
 } from "@shared/lib/digest-risk";
 import { UNCORROBORATED_TVL_DROP_RATIO } from "@shared/lib/digest-liquidity-admission";
+import { digestGaugeWeightFact, isMaterialDigestGaugeShare } from "@shared/lib/digest-mint-burn-admission";
 
 const BAND_RANK: Record<string, number> = THREAT_BAND_ORDER;
 
@@ -245,7 +246,9 @@ function addMintBurnCandidates(candidates: DigestEditorialCandidate[], data: Dig
       headlineFacts: [
         `intensity ${Math.round(pressure.intensity)}`,
         `net ${formatCurrency(pressure.net24hUsd)} over 24h`,
-        `Bank Run Gauge ${round1(flows.gaugeScore)} [${flows.gaugeBand}]`,
+        digestGaugeWeightFact(pressure.gaugeWeightShare),
+        ...(isMaterialDigestGaugeShare(pressure.gaugeWeightShare)
+          ? [`Bank Run Gauge ${round1(flows.gaugeScore)} [${flows.gaugeBand}]`] : []),
       ],
       whyItMatters: "A large pressure shift against the 30-day baseline can flag changing holder behavior.",
     });

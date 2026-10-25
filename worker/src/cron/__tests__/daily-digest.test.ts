@@ -431,6 +431,82 @@ describe("market and risk collectors", () => {
     expect(result.value).toMatchObject({ gaugeScore: PUBLISHED_GAUGE_SCORE, gaugeBand: "HEALTHY", classificationSource: "safety-score-v9-publication", topChains: [{ chainId: "ethereum", netUsd: 150e6 }, { chainId: "arbitrum", netUsd: -3e6 }] });
     expect(result.value?.topPressure.map(({ symbol }) => symbol)).toEqual(["USDT", "USDC"]); expect(buildUserPrompt({ ...BASE_DIGEST_INPUT, mintBurnFlows: result.value! })).toContain("Top chains by net flow"); expect(db.getHistory().some(({ sql }) => sql.includes("mint_burn_hourly"))).toBe(false);
   });
+  it.each([
+    ["USG idle inventory burn", 3_860_000, 3_860_000, false],
+    ["confirmed redemption", 40_710_000, 3_860_000, true],
+    ["missing supply evidence", undefined, undefined, false],
+    ["opposite supply move", 3_860_000, 40_710_000, false],
+  ] as const)("admits pressure against independent history: %s", async (_label, before, after, admitted) => {
+    const ctx = ctxFor([]);
+    const end = ctx.todayTs + 8 * 3600;
+    const baseCoins = publishedGaugePayload().coins as Record<string, unknown>[];
+    const usg = { ...baseCoins[0], stablecoinId: "usg-tangent", symbol: "USG",
+      pressureShiftScore: -100, netFlow24hUsd: -36_850_000, gaugeWeightUsd: 3_860_000 };
+    const small = { ...usg, stablecoinId: "small", symbol: "SMALL", pressureShiftScore: 50, netFlow24hUsd: -10_000 };
+    const db = mockD1([
+      publishedGaugeTable({ value: JSON.stringify(publishedGaugePayload({
+        gauge: { score: -15.5, partialValuationInputs: 0, scoredMcapUsd: 67.7e9 },
+        window: { start: end - 86400, end, semantics: "closed-utc-hours" },
+        coins: [usg, ...baseCoins, small],
+      })) }),
+      { match: "FROM supply_history WHERE stablecoin_id IN", matchBinds: ["usg-tangent", ctx.todayTs - 86400, ctx.todayTs],
+        rows: before == null ? [] : [
+          { stablecoin_id: "usg-tangent", snapshot_date: ctx.todayTs - 86400, circulating_usd: before },
+          { stablecoin_id: "usg-tangent", snapshot_date: ctx.todayTs, circulating_usd: after },
+        ] },
+    ]);
+    const result = await collectMintBurnFlows({ ...ctx, db });
+    const symbols = result.value!.topPressure.map((coin) => coin.symbol);
+    expect(symbols.includes("USG")).toBe(admitted);
+    expect(symbols).toHaveLength(3);
+    expect(symbols.includes("SMALL")).toBe(!admitted);
+    expect(result.degradedReasons).toEqual([]);
+    if (admitted) {
+      expect(result.value!.topPressure.find((coin) => coin.symbol === "USG")?.gaugeWeightShare).toBeCloseTo(3.86e6 / 67.7e9);
+    } else {
+      expect(result.qualityReasons).toContain(before == null
+        ? "mint-burn-pressure-supply-unavailable" : "mint-burn-pressure-supply-unconfirmed");
+      const input = { ...BASE_DIGEST_INPUT, mintBurnFlows: result.value };
+      expect(buildUserPrompt(input)).not.toContain("USG");
+      expect(buildEditorialCandidates(input).some((candidate) => candidate.symbols.includes("USG"))).toBe(false);
+    }
+  });
+
+  it("isolates a failed supply confirmation query from small pressure and the gauge", async () => {
+    const ctx = ctxFor([]);
+    const baseCoins = publishedGaugePayload().coins as Record<string, unknown>[];
+    const result = await collectMintBurnFlows({ ...ctx, db: mockD1([
+      publishedGaugeTable({ value: JSON.stringify(publishedGaugePayload({
+        window: { start: ctx.todayTs - 86400, end: ctx.todayTs, semantics: "closed-utc-hours" },
+        coins: [...baseCoins, { ...baseCoins[0], stablecoinId: "usg-tangent", symbol: "USG",
+          pressureShiftScore: -100, netFlow24hUsd: -36_850_000, gaugeWeightUsd: 3_860_000 }],
+      })) }),
+      { match: "FROM supply_history WHERE stablecoin_id IN", rows: [], throwError: new Error("D1 unavailable") },
+    ]) });
+    expect(result.value?.gaugeScore).toBe(PUBLISHED_GAUGE_SCORE);
+    expect(result.value?.topPressure.map((coin) => coin.symbol)).toEqual(["USDT", "USDC"]);
+    expect(result.degradedReasons).toContain("mint-burn-pressure-supply-query");
+    expect(result.qualityReasons).toContain("mint-burn-pressure-supply-unavailable");
+  });
+
+  it.each([[3.86e6 / 67.7e9, false], [0.009999, false], [0.01, true], [undefined, false], [null, false]] as const)(
+    "gates per-coin gauge facts and next triggers at scored weight share %s", (gaugeWeightShare, material) => {
+      const input: DigestInputData = { ...BASE_DIGEST_INPUT, topDepegs: [], stabilityIndex: null,
+        mintBurnFlows: { gaugeScore: -15.5, gaugeBand: "CAUTIOUS",
+          flightToQuality: { active: false, safeNetUsd: 0, riskyNetUsd: 0 },
+          topPressure: [{ symbol: "USG", intensity: -100, net24hUsd: -100_000, gaugeWeightShare }],
+        } };
+      const candidates = buildEditorialCandidates(input).filter((candidate) => candidate.kind === "mint-burn");
+      expect(candidates).toHaveLength(1);
+      expect(candidates[0].headlineFacts.some((fact) => fact.includes("Bank Run Gauge"))).toBe(material);
+      if (gaugeWeightShare != null && !material) expect(candidates[0].headlineFacts.join(" ")).toContain("negligible");
+      if (gaugeWeightShare == null) expect(candidates[0].headlineFacts.join(" ")).toContain("unavailable");
+      expect(buildUserPrompt(input)).toContain(candidates[0].headlineFacts.find((fact) => fact.includes("weight share"))!);
+      expect(buildNextTriggers({ ...input, editorialCandidates: candidates })
+        .some((trigger) => trigger.metric === "bank-run-gauge")).toBe(material);
+      expect(SYSTEM_PROMPT).toContain("never link its flow to aggregate gauge movement");
+    },
+  );
   it.each(["2026-03-06T11:59:59Z", "2026-03-06T12:00:01Z"])(
     "persists the retained producer window rather than the collection hour at %s", async (collectedAt) => {
       vi.setSystemTime(new Date(collectedAt));

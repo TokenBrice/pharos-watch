@@ -56,11 +56,13 @@ describe("parsePublishedMintBurnGauge", () => {
       coins: [
         {
           id: "usdt-tether", symbol: "USDT", intensity: -20, net24hUsd: -5_000_000,
+          gaugeWeightUsd: null,
           valuation24h: UNKNOWN_VALUATION, baselineValuation: "unknown",
           scanCoverage: null,
         },
         {
           id: "usdc-circle", symbol: "USDC", intensity: null, net24hUsd: 1_000_000,
+          gaugeWeightUsd: null,
           valuation24h: UNKNOWN_VALUATION, baselineValuation: "unknown",
           scanCoverage: null,
         },
@@ -92,6 +94,21 @@ describe("parsePublishedMintBurnGauge", () => {
       coins: [{ id: "usdt-tether", net24hUsd: null, valuation24h: PARTIAL_MINT_VALUATION, baselineValuation: "complete" }],
       chains: [{ chainId: "ethereum", net24hUsd: null, valuation: "partial" }],
     });
+  });
+
+  it.each([undefined, null, 0, 3_860_000])("preserves optional observed gauge weight %s", (gaugeWeightUsd) => {
+    const gauge = parsePublishedMintBurnGauge(payload({ coins: [{
+      stablecoinId: "usg-tangent", symbol: "USG", pressureShiftScore: -100,
+      netFlow24hUsd: -36_850_000, gaugeWeightUsd,
+    }] }), NOW_SEC, false);
+    expect(gauge?.coins[0].gaugeWeightUsd).toBe(gaugeWeightUsd ?? null);
+  });
+
+  it.each([-1, "3860000", Infinity, NaN])("rejects invalid observed gauge weight %s", (gaugeWeightUsd) => {
+    expect(parsePublishedMintBurnGauge(payload({ coins: [{
+      stablecoinId: "usg-tangent", symbol: "USG", pressureShiftScore: -100,
+      netFlow24hUsd: -36_850_000, gaugeWeightUsd,
+    }] }), NOW_SEC, false)).toBeNull();
   });
 
   it.each([undefined, null, {}, { start: 0, end: 86400, semantics: "rolling" },

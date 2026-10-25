@@ -1,6 +1,6 @@
 # Digest Pipeline
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · Generation · Data collection · DEX liquidity admission gate · LLM call (model/budget/retries) · Editorial style gate (operator policy links) · Failure handling · Storage · API Endpoints · Distribution · Telegram (immutable outbox/appendices) · Distribution status logging · Weekly Recap · Frontend · Static Generation Pipeline · Internal sentinel rows · Environment Variables.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · Generation · Data collection · DEX liquidity admission gate · Mint/burn pressure admission gate · LLM call (model/budget/retries) · Editorial style gate (operator policy links) · Failure handling · Storage · API Endpoints · Distribution · Telegram (immutable outbox/appendices) · Distribution status logging · Weekly Recap · Frontend · Static Generation Pipeline · Internal sentinel rows · Environment Variables.
 
 Daily AI-generated stablecoin market recap, distributed to the web, Twitter/X, and Telegram.
 
@@ -125,7 +125,7 @@ The digest's Flight-to-Quality collector uses `buildFlightToQualityClassificatio
 
 Flow captures retain original closed-hour windows and independent publication/body clocks; unavailable legacy provenance stays null. [Flow provenance details](#flow-provenance-details) never infer generation identity from a timestamp.
 
-DEX claims pass collector comparability, independent editorial corroboration and publication suppression gates; producer visibility alone is insufficient. The [DEX liquidity admission gate](#dex-liquidity-admission-gate) in the implementation appendix retains exact thresholds and failure policy.
+DEX claims pass collector comparability, independent editorial corroboration and publication suppression gates; producer visibility alone is insufficient. Appendix gates hold exact rules: [DEX liquidity](#dex-liquidity-admission-gate); [mint/burn pressure](#mintburn-pressure-admission-gate).
 
 ### LLM call
 
@@ -549,6 +549,14 @@ Liquidity impact, DEWS band moves and ALERT+ breadth use a per-$1B market-cap ba
 **Retraction propagation.** New-edition admission cannot retroactively validate archived evidence. `shared/lib/digest-signal-quarantine.ts` owns confirmed contaminated signals keyed by stablecoin, family and inclusive ingestion window; weekly collection and validation apply that registry without rewriting published daily history. Scope is the contaminated ingestion, not an entire date or coincidentally matching number.
 
 Coverage does not rescore liquidity. Composite score movement need not be proportional to TVL; prompt `tvl-implies` carries the expected contribution rather than implying a mismatch proves misconduct. Do not hold per-coin primary publication or impose a magnitude cap that rejects independently corroborated crises: these gates prevent an unverified editorial claim, never observation of a real crisis.
+
+### Mint/burn pressure admission gate
+
+Before top-three pressure selection, a coin needs an observed published `gaugeWeightUsd` (tracked-chain circulating supply). A 24h absolute net at or above 25% of that weight requires independent `supply_history` confirmation: adjacent UTC-day rows ending on the flow window's end date, each no more than 12 hours behind its corresponding closed-hour boundary, with circulating USD supply moving in the same direction by at least 50% of the net. The quarter-supply trigger catches implausible inventory-sized flows; the half-net confirmation allows daily timing and chain-coverage differences. This is approximate daily-resolution evidence, not exact event-time reconciliation. Missing/invalid supply, absent/future windows, mismatched dates or contradictory changes fail closed: no pressure candidate or raw per-coin prompt signal. Withheld signals record `mint-burn-pressure-supply-{weight-unavailable,unavailable,window-mismatch,unconfirmed}` quality reasons. A failed confirmation query records degradation `mint-burn-pressure-supply-query` while preserving the published gauge and unaffected small flows.
+
+Per-coin captures retain `gaugeWeightShare` against the publication's full `scoredMcapUsd`, never a top-pressure subtotal. Only shares of at least 1% may carry the gauge score as a headline fact or arm a gauge next-trigger; smaller shares are explicitly negligible, and unavailable shares permit no attribution. The 1% floor excludes coins incapable of materially explaining aggregate moves. Prompt rules forbid even implied causation from negligible coins and require independent contribution evidence for any causal claim. These admission rules do not recompute the gauge or rewrite archived editions.
+
+Edition #242 (2026-10-24) is the motivating case: USG's PegKeeper inventory burn (about $36.85M against roughly $3.86M circulating, supply flat) led the edition and was framed against a gauge move it carried 0.006% of the weight for.
 
 ### Flow provenance details
 
