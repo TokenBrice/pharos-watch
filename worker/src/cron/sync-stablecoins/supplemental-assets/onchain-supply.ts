@@ -292,7 +292,7 @@ async function readContractSupplyRaw(input: {
   }
 
   return probeTrackedTokenSupply(
-    input.meta,
+    { id: input.meta.id, name: input.meta.name, symbol: input.meta.symbol, flags: input.meta.flags, contracts: [supplyContract] },
     buildProbeInput(supplyContract.chain),
     input.signal,
     "fiat-cg",

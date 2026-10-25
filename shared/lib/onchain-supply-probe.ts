@@ -8,6 +8,8 @@ export type OnchainSupplyContract = NonNullable<StablecoinMeta["contracts"]>[num
 
 export interface CuratedOnchainSupplyContractConfig {
   chain: string;
+  /** Exact deployment when a chain has more than one native stock register. */
+  address?: string;
   rpcUrl?: string;
   fallbackRpcUrl?: string;
   /**
@@ -131,6 +133,26 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   string,
   readonly CuratedOnchainSupplyContractConfig[]
 > = {
+  // Reviewed 2026-10-25: all nine EVM issuer registers sum; Solana/Stellar
+  // are Ethereum-escrowed representations listed explicitly below, not new stock.
+  "jaaa-janus-henderson-anemoy": [
+    { chain: "ethereum" }, { chain: "base" }, { chain: "bsc" }, { chain: "avalanche" },
+    supplyProbeChain("monad"), { chain: "arbitrum" },
+    supplyProbeChain("pharos", { allowZeroSupply: true }),
+    supplyProbeChain("xlayer", { allowZeroSupply: true }),
+    { chain: "arc", allowZeroSupply: true },
+  ],
+  // Reviewed 2026-10-25: native ICL deposits and CCIP burn/mint stocks sum.
+  // Both Tempo tokens have separate collateral-funded mints; neither replaces
+  // the other. Address-bound legs prevent counting the first token twice.
+  "reusd-re-protocol": [
+    { chain: "ethereum" }, { chain: "avalanche" }, { chain: "arbitrum" }, { chain: "base" },
+    { chain: "bsc" }, supplyProbeChain("ink"), supplyProbeChain("plasma"), supplyProbeChain("katana"),
+    supplyProbeChain("tempo", { address: "0x20c000000000000000000000e09a4cfec804f102" }),
+    { chain: "solana" }, supplyProbeChain("berachain", { allowZeroSupply: true }),
+    supplyProbeChain("monad"), supplyProbeChain("sei"), supplyProbeChain("megaeth", { allowZeroSupply: true }),
+    supplyProbeChain("tempo", { address: "0x20c000000000000000000000383a23bacb546ab9" }),
+  ],
   // Reviewed 2026-10-25: Spiko's independent native share registers sum, with
   // Soroban total_supply (not a classic Horizon issuer) on Stellar.
   "eursafo-spiko": [
@@ -1084,10 +1106,17 @@ export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, 
   "syzusd-yuzu": "plasma",
 };
 
-/** Reviewed IBC stock already included in its selected native bank register. */
+/** Reviewed representation stock already included in its selected native register. */
 export const CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS: Readonly<Record<string, readonly {
   chain: string; address: string; canonicalChain: string;
 }[]>> = {
+  // Reviewed 2026-10-25: Stellar's issuer metadata names its Ethereum escrow;
+  // Solana burn/Ethereum release pairs identify separate conserved custody.
+  // shortcut: remote custody stays on Ethereum, split when mixed native/escrow accounting is supported.
+  "jaaa-janus-henderson-anemoy": [
+    { chain: "solana", address: "AAAJXeGjpKu7W3X4QTSU4pm1Wbj4G2LPcdg7A6xJLLyG", canonicalChain: "ethereum" },
+    { chain: "stellar", address: "CDV6U7OEVY6KUEJ4WNS63AYB6RFU3BAE7AZJOQ7LPH447C6NWUXEZZSO", canonicalChain: "ethereum" },
+  ],
   "usdy-ondo-finance": [
     { chain: "osmosis", address: "ibc/23104D411A6EB6031FA92FB75F227422B84989969E91DCAD56A535DD7FF0A373", canonicalChain: "noble" },
     { chain: "mantra", address: "ibc/6749D16BC09F419C090C330FC751FFF1C96143DB7A4D2FCAEC2F348A3E17618A", canonicalChain: "noble" },
@@ -1202,7 +1231,9 @@ export function selectCuratedAggregateOnchainSupplyProbeContracts(
 
   const selected: CuratedAggregateOnchainSupplyContract[] = [];
   for (const config of curatedContracts) {
-    const contract = meta.contracts?.find((entry) => entry.chain === config.chain);
+    const matches = meta.contracts?.filter((entry) => entry.chain === config.chain
+      && (config.address == null || entry.address === config.address));
+    const contract = matches?.length === 1 ? matches[0] : undefined;
     if (!contract || !supportsOnchainSupplyProbe(contract)) return null;
     selected.push({ config, contract });
   }
@@ -1217,7 +1248,7 @@ export function selectCuratedAggregateOnchainSupplyProbeContracts(
   // participates. A summed roster that skips one under-counts; a canonical
   // lock/mint roster conserves remote supply but attributes the unprobed
   // remainder to the canonical chain. Only explicit residual policies or exact
-  // reviewed bank-escrow representations excuse an unselected deployment.
+  // reviewed escrow representations excuse an unselected deployment.
   if (
     CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id] == null
     && meta.contracts?.some((contract) => !selected.some((entry) => entry.contract === contract)
