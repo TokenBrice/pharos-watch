@@ -46,8 +46,8 @@
       "setOn": "2026-07-19"
     }
   ],
-  "launchPhase": "launching-soon",
-  "launchPhaseDetail": "Debut token on Coinbase's Custom Stablecoin platform; went live 2026-05-20 on Solana, 1:1 backed by USDC, with Coinbase Onramp fiat access; serves as the settlement asset for Flipcash's user-created currencies; the on-chain reserve contract (github.com/code-payments/flipcash-program) was audited by Sec3. The Solana mint is 5AMAA9JV9H97YYVxx8F6FsCMmTwXSuTTQneiup4RYAUQ (6 decimals, pinned in the issuer's flipcash-program repository, created January 8 2026); it carried 2,875,649.80 USDF across 529 holders on September 13 2026, grew to 3,181,003.29 USDF by September 27, and fell to 2,686,924.32 USDF across 556 holders on October 25 2026. Jupiter lists one pool for the mint, created April 22 2026, with about $376 of liquidity and no price. USDF is not listed on DefiLlama's stablecoin list or on CoinGecko. As of July 2026 the token remains in Coinbase-exchange operational-only backend testing (no trading, deposits, or withdrawals) and the May 2026 public-launch window has lapsed without a confirmed go-live.",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "Debut token on Coinbase's Custom Stablecoin platform; went live 2026-05-20 on Solana, 1:1 backed by USDC, with Coinbase Onramp fiat access; serves as the settlement asset for Flipcash's user-created currencies; the on-chain reserve contract (github.com/code-payments/flipcash-program) was audited by Sec3. The Solana mint is 5AMAA9JV9H97YYVxx8F6FsCMmTwXSuTTQneiup4RYAUQ (6 decimals, pinned in the issuer's flipcash-program repository, created January 8 2026); it carried 2,875,649.80 USDF across 529 holders on September 13 2026, grew to 3,181,003.29 USDF by September 27, and fell to 2,686,924.32 USDF across 556 holders on October 25 2026. Jupiter lists one pool for the mint, created April 22 2026, with about $376 of liquidity and no price. USDF is not listed on DefiLlama's stablecoin list or on CoinGecko. In July 2026 Coinbase's exchange still listed USDF as operational-only backend testing (no trading, deposits, or withdrawals), while the token itself circulates on Solana.",
   "dependencies": [
     {
       "id": "usdc-circle",
@@ -118,5 +118,10 @@
       "sourceUrl": "https://solscan.io/token/5AMAA9JV9H97YYVxx8F6FsCMmTwXSuTTQneiup4RYAUQ"
     }
   ],
-  "launchDate": "2026-05-20"
+  "launchDate": "2026-05-20",
+  "listingStatusReview": {
+    "changedAt": "2026-10-25",
+    "reason": "Missing lane: price. A DefiLlama contract price for the Solana mint exists, but its source pool is under review (see #1663) before admission; supply is readable from the mint.",
+    "reviewBy": "2026-12-24"
+  }
 }
