@@ -18,15 +18,18 @@ export interface RemovedStablecoin {
   /** UTC date of the commit that removed the registry record. */
   removedAt: string;
   reason: StablecoinRemovalReason;
+  /** Cemetery record (`shared/data/dead-stablecoins.json` id) for the same coin; its anchor replaces the peg hub as the redirect target. */
+  cemeteryId?: string;
 }
 
 /**
  * Coins once tracked and later removed from the registry, from the removal
- * commits' own rationale. Old profile URLs 301 to the coin's peg hub when that
- * hub is built, otherwise to `/coverage/`, where this list is rendered.
+ * commits' own rationale. Old profile URLs 301 to the coin's `/cemetery/#<id>`
+ * record when it has one, else to its peg hub when that hub is built, otherwise
+ * to `/coverage/`, where this list is rendered.
  */
 export const REMOVED_STABLECOINS: readonly RemovedStablecoin[] = [
-  { id: "xai-silo-finance", name: "XAI Silo Finance", symbol: "XAI", pegCurrency: "USD", removedAt: "2026-07-28", reason: "wound-down" },
+  { id: "xai-silo-finance", name: "XAI Silo Finance", symbol: "XAI", pegCurrency: "USD", removedAt: "2026-07-28", reason: "wound-down", cemeteryId: "xai-silo-finance" },
   { id: "krwo-gimswap", name: "KRWO", symbol: "KRWO", pegCurrency: "KRW", removedAt: "2026-07-19", reason: "no-live-data" },
   { id: "mmxn-moneta-digital", name: "Moneta Digital", symbol: "MMXN", pegCurrency: "MXN", removedAt: "2026-07-19", reason: "no-issued-token" },
   { id: "mnee-mnee", name: "MNEE USD", symbol: "MNEE", pegCurrency: "USD", removedAt: "2026-07-19", reason: "no-live-data" },
@@ -34,7 +37,7 @@ export const REMOVED_STABLECOINS: readonly RemovedStablecoin[] = [
   { id: "usd-nubank", name: "Nubank USD Stablecoin", symbol: "USD-NU", pegCurrency: "USD", removedAt: "2026-07-19", reason: "no-issued-token" },
   { id: "usp-pareto-credit", name: "Pareto USP", symbol: "USP", pegCurrency: "USD", removedAt: "2026-07-19", reason: "no-live-data" },
   { id: "veur-vnx", name: "VNX EURO", symbol: "VEUR", pegCurrency: "EUR", removedAt: "2026-07-19", reason: "no-live-data" },
-  { id: "eura-angle", name: "EURA", symbol: "EURA", pegCurrency: "EUR", removedAt: "2026-05-12", reason: "wound-down" },
+  { id: "eura-angle", name: "EURA", symbol: "EURA", pegCurrency: "EUR", removedAt: "2026-05-12", reason: "wound-down", cemeteryId: "eura-angle-eura-2026-03" },
   { id: "phpc-coins-ph", name: "PHPC Stablecoin", symbol: "PHPC", pegCurrency: "PHP", removedAt: "2026-05-12", reason: "no-live-data" },
   { id: "pusd-pleasing", name: "Pleasing USD", symbol: "PUSD", pegCurrency: "USD", removedAt: "2026-05-12", reason: "no-live-data" },
   { id: "usdw-wisdomtree", name: "WisdomTree Dollar Token", symbol: "USDW", pegCurrency: "USD", removedAt: "2026-05-12", reason: "no-live-data" },
