@@ -6,6 +6,12 @@ These records preserve review dates, scope limits and operator observations form
 
 The existing wrapper allocation/local-review schemas carry scoped rationale and observations, not a free-standing historical-ruling field. Per-asset measurement summaries are capture manifests, not review-note sidecars. These records therefore stay here rather than adding fields or unrelated history to score-bearing JSON.
 
+## NAV Pricing Review — 2026-10-25
+
+USYC's [reported fund share price](https://usyc.docs.hashnote.com/overview/token-price) and USDY's [issuer-administered primary conversion](https://docs.ondo.finance/developer-guides/usdy-instant-manager-integration) support privileged internal pricing with top-level applicability. Oracle publication does not establish independent valuation authority. These documentary reviews do not renew deployment controls, supply attribution, reserves or executable redemption evidence; same-notional capacity remains open.
+
+YLDS remains unresolved. The [FCC prospectus](https://cdn.figure.com/docs/markets/fcc-prospectus.pdf), pages 11–14, defines fixed-face certificates, formula-based interest and reinvestment into additional certificates, expressly distinguishing them from fund shares redeemed at NAV. This does not establish discretionary share pricing or an implementation-specific SOFR feed. Reconcile its current NAV/fund classification with the fixed-face claim before authoring an oracle profile; issuer accrual accounting alone proves neither internal-pricing nor oracleless applicability.
+
 ## Vault Oracle And Backing Reviews — 2026-10-22
 
 The primary-source vault review records privileged internal share-pricing paths for spUSDT, syrupUSDT, apyUSD, DUSD and hbUSDT, replacing local oracle U60 with measured45 when admitted. sUSDai, autoUSD, USD3 and USDN retain researched unresolved oracle profiles. New whole-direct-reserve reviews cover sUSDat, sYUSD, Umbrella stkGHO, Yearn v3 USDC and USDN; only Yearn's accounted idle USDC slice receives immediate native-asset liquidity. Independently dated sYUSD/stkGHO maturity facts describe open-ended staking claims, not cooldown length or immediate liquidity.
