@@ -51,20 +51,23 @@ import {
   type EvidenceIndexRow,
 } from "./detail-shared-modules";
 import { DetailHistoryExploreSections } from "./detail-history-explore-sections";
-import { DetailLiquidityActivitySections } from "./detail-liquidity-activity-sections";
+import { activityZoneLabel, DetailLiquidityActivitySections } from "./detail-liquidity-activity-sections";
 import { FeedbackModal } from "./detail-lazy-sections";
 import { DetailRiskContextSections } from "./detail-risk-context-sections";
 
 type ReadyDetailViewModel = Extract<StablecoinDetailViewModel, { status: "ready" }>;
 
+// Labels use searchers' words (Google lists these tabs as in-page links); the
+// zone ids stay fixed so existing deep links keep working. The Activity pill
+// takes its per-coin label from `activityZoneLabel`.
 const DETAIL_SECTIONS = [
   // "How it breaks" is interleaved inside the Risk zone, directly under the
   // score, so Risk resumes at the marker below that module.
   { id: "overview", label: "Risk", icon: Scale, resumeAnchorIds: ["risk-evidence-resume"] },
   { id: "how-it-breaks", label: "How it breaks", icon: Unlink },
-  { id: "context", label: "Context", icon: ChartPie },
-  { id: "liquidity", label: "Market", icon: Droplet },
-  { id: "activity", label: "Activity", icon: HeartPulse },
+  { id: "context", label: "Dependencies", icon: ChartPie },
+  { id: "liquidity", label: "Supply & Liquidity", icon: Droplet },
+  { id: "activity", label: "Yield & Blacklist", icon: HeartPulse },
   { id: "history", label: "History", icon: Hourglass },
   { id: "explore", label: "Explore", icon: Sparkles },
 ] as const;
@@ -189,7 +192,7 @@ function DetailNavigation({
         if (section.id === "context") return contextHasContent;
         if (section.id === "how-it-breaks") return hasFailureScenario;
         return true;
-      })}
+      }).map((section) => (section.id === "activity" ? { ...section, label: activityZoneLabel(viewModel) } : section))}
       navAriaLabel="Stablecoin detail section navigation"
       emphasis="pill-tabs"
       onActiveChange={onActiveChange}
