@@ -289800,6 +289800,378 @@
       ],
       "nextReviewTrigger": "Redemption producer owner: re-review at batch-3 integration or on receipt of exact-holder same-notional request/output/fee/settlement execution evidence and funded capacity; otherwise on 2026-11-25.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:eursafo-spiko",
+      "taskIds": [
+        "V9G-8a5318d573f692c0",
+        "V9G-822686de6128d7f7"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "arbitrum:0x59dbe110efbc17e8e9b18d23de2abb2aba1f6665: https://public-api.spiko.io/share-classes/eurSAFO/",
+        "Arbitrum finalized block 518283891 / 0x9f7cf4d908d586cea841e4370f5439e564418a48929929c54c1fd59d92375947 / 2026-10-26T00:08:44Z; https://arb-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Exact issuer identities, per-address native mint/authority state and issuer contract source establish native-issuance/native-mint semantics for the added registers. Older sibling reviews and mint-authority credit are unchanged. Evidence is ready; fresh accepted replay closure remains unverified. Historical 2026-10-25 capture predates these observations, and fresh D1 export failed expired OAuth / invalid_grant.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/eursafo-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "eursafo-spiko:gap:economic-control:bridge",
+        "eursafo-spiko:gap:economic-control:bridge::tier"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_MATERIALITY:eursafo-spiko",
+      "taskIds": [
+        "V9S-38b082aef82c1299"
+      ],
+      "workType": "BRIDGE_MATERIALITY",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "arbitrum:0x59dbe110efbc17e8e9b18d23de2abb2aba1f6665: https://public-api.spiko.io/share-classes/eurSAFO/",
+        "Arbitrum finalized block 518283891 / 0x9f7cf4d908d586cea841e4370f5439e564418a48929929c54c1fd59d92375947 / 2026-10-26T00:08:44Z; https://arb-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Route curation is complete, but independently current runtime supply/materiality and production consumption are not established by zero stock or native-route classification. Owner: NAV-parity integration lead. Fresh accepted capture/export is blocked by expired Wrangler OAuth / invalid_grant; retain the runtime gap until an admitted capture demonstrates closure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/eursafo-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "{\"reasonCode\":\"runtime-bridge-materiality-unavailable\",\"path\":\"control:bridge:cause:4\"}"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:eutbl-spiko",
+      "taskIds": [
+        "V9G-6b7edc5582f9f3e4",
+        "V9G-5277ef51812ae6ca"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "solana:6rS8E5CQHLHmLenNNevUdJ9APzKNairr1kfWAM3EhDX3: https://public-api.spiko.io/share-classes/EUTBL/",
+        "Solana finalized slot 461460200 / HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6 / 2026-10-26T00:26:30Z; https://solana-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Exact issuer identities, per-address native mint/authority state and issuer contract source establish native-issuance/native-mint semantics for the added registers. Older sibling reviews and mint-authority credit are unchanged. Evidence is ready; fresh accepted replay closure remains unverified. Historical 2026-10-25 capture predates these observations, and fresh D1 export failed expired OAuth / invalid_grant.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/eutbl-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "eutbl-spiko:gap:economic-control:bridge",
+        "eutbl-spiko:gap:economic-control:bridge::tier"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_MATERIALITY:eutbl-spiko",
+      "taskIds": [
+        "V9S-d5fe0c534e0177e0"
+      ],
+      "workType": "BRIDGE_MATERIALITY",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "solana:6rS8E5CQHLHmLenNNevUdJ9APzKNairr1kfWAM3EhDX3: https://public-api.spiko.io/share-classes/EUTBL/",
+        "Solana finalized slot 461460200 / HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6 / 2026-10-26T00:26:30Z; https://solana-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Route curation is complete, but independently current runtime supply/materiality and production consumption are not established by zero stock or native-route classification. Owner: NAV-parity integration lead. Fresh accepted capture/export is blocked by expired Wrangler OAuth / invalid_grant; retain the runtime gap until an admitted capture demonstrates closure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/eutbl-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "{\"reasonCode\":\"runtime-bridge-materiality-unavailable\",\"path\":\"control:bridge:cause:4\"}"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:safo-spiko-usd",
+      "taskIds": [
+        "V9G-b25c90f17c1f7541",
+        "V9G-9c028a71bd6188c9"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "arbitrum:0x6a47a9091f2ca880a9ae291e2232d9302da11745: https://public-api.spiko.io/share-classes/SAFO/",
+        "Arbitrum finalized block 518283891 / 0x9f7cf4d908d586cea841e4370f5439e564418a48929929c54c1fd59d92375947 / 2026-10-26T00:08:44Z; https://arb-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Exact issuer identities, per-address native mint/authority state and issuer contract source establish native-issuance/native-mint semantics for the added registers. Older sibling reviews and mint-authority credit are unchanged. Evidence is ready; fresh accepted replay closure remains unverified. Historical 2026-10-25 capture predates these observations, and fresh D1 export failed expired OAuth / invalid_grant.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/safo-spiko-usd.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "safo-spiko-usd:gap:economic-control:bridge",
+        "safo-spiko-usd:gap:economic-control:bridge::tier"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_MATERIALITY:safo-spiko-usd",
+      "taskIds": [
+        "V9S-11c925975665d262"
+      ],
+      "workType": "BRIDGE_MATERIALITY",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "arbitrum:0x6a47a9091f2ca880a9ae291e2232d9302da11745: https://public-api.spiko.io/share-classes/SAFO/",
+        "Arbitrum finalized block 518283891 / 0x9f7cf4d908d586cea841e4370f5439e564418a48929929c54c1fd59d92375947 / 2026-10-26T00:08:44Z; https://arb-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Route curation is complete, but independently current runtime supply/materiality and production consumption are not established by zero stock or native-route classification. Owner: NAV-parity integration lead. Fresh accepted capture/export is blocked by expired Wrangler OAuth / invalid_grant; retain the runtime gap until an admitted capture demonstrates closure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/safo-spiko-usd.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "{\"reasonCode\":\"runtime-bridge-materiality-unavailable\",\"path\":\"control:bridge:cause:4\"}"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:gbpsafo-spiko",
+      "taskIds": [
+        "V9G-0e0c3d0d6bb7e49e",
+        "V9G-85faf7ea2862b736"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "solana:7fnYygJyxQ2RsFJymjnRRa4wptPhUkfo6RT2j4BU4qhP: https://public-api.spiko.io/share-classes/gbpSAFO/",
+        "arbitrum:0x541b1c34fb941cdee6d400d06e27240d9c4e10d8: https://public-api.spiko.io/share-classes/gbpSAFO/",
+        "Arbitrum finalized block 518283891 / 0x9f7cf4d908d586cea841e4370f5439e564418a48929929c54c1fd59d92375947 / 2026-10-26T00:08:44Z; https://arb-mainnet.g.alchemy.com/v2/",
+        "Solana finalized slot 461460200 / HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6 / 2026-10-26T00:26:30Z; https://solana-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Exact issuer identities, per-address native mint/authority state and issuer contract source establish native-issuance/native-mint semantics for the added registers. Older sibling reviews and mint-authority credit are unchanged. Evidence is ready; fresh accepted replay closure remains unverified. Historical 2026-10-25 capture predates these observations, and fresh D1 export failed expired OAuth / invalid_grant.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/gbpsafo-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "gbpsafo-spiko:gap:economic-control:bridge",
+        "gbpsafo-spiko:gap:economic-control:bridge::tier"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_MATERIALITY:gbpsafo-spiko",
+      "taskIds": [
+        "V9S-ad09fa46b0e2ee9d",
+        "V9S-0f9982f5fbcac1e8"
+      ],
+      "workType": "BRIDGE_MATERIALITY",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "solana:7fnYygJyxQ2RsFJymjnRRa4wptPhUkfo6RT2j4BU4qhP: https://public-api.spiko.io/share-classes/gbpSAFO/",
+        "arbitrum:0x541b1c34fb941cdee6d400d06e27240d9c4e10d8: https://public-api.spiko.io/share-classes/gbpSAFO/",
+        "Arbitrum finalized block 518283891 / 0x9f7cf4d908d586cea841e4370f5439e564418a48929929c54c1fd59d92375947 / 2026-10-26T00:08:44Z; https://arb-mainnet.g.alchemy.com/v2/",
+        "Solana finalized slot 461460200 / HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6 / 2026-10-26T00:26:30Z; https://solana-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Route curation is complete, but independently current runtime supply/materiality and production consumption are not established by zero stock or native-route classification. Owner: NAV-parity integration lead. Fresh accepted capture/export is blocked by expired Wrangler OAuth / invalid_grant; retain the runtime gap until an admitted capture demonstrates closure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/gbpsafo-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "{\"reasonCode\":\"runtime-bridge-materiality-unavailable\",\"path\":\"control:bridge:cause:4\"}",
+        "{\"reasonCode\":\"runtime-bridge-materiality-unavailable\",\"path\":\"control:bridge:cause:9\"}"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:uktbl-spiko",
+      "taskIds": [
+        "V9G-4303555959eea78e",
+        "V9G-89b74db8e8d6b26a"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "solana:DEtiguzuMC72hRkMHETcsXeKrJ6Djb6tMebQqjZoBSgt: https://public-api.spiko.io/share-classes/UKTBL/",
+        "Solana finalized slot 461460200 / HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6 / 2026-10-26T00:26:30Z; https://solana-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Exact issuer identities, per-address native mint/authority state and issuer contract source establish native-issuance/native-mint semantics for the added registers. Older sibling reviews and mint-authority credit are unchanged. Evidence is ready; fresh accepted replay closure remains unverified. Historical 2026-10-25 capture predates these observations, and fresh D1 export failed expired OAuth / invalid_grant.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/uktbl-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "uktbl-spiko:gap:economic-control:bridge",
+        "uktbl-spiko:gap:economic-control:bridge::tier"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_MATERIALITY:uktbl-spiko",
+      "taskIds": [
+        "V9S-35b68e59ab6bcb81"
+      ],
+      "workType": "BRIDGE_MATERIALITY",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "solana:DEtiguzuMC72hRkMHETcsXeKrJ6Djb6tMebQqjZoBSgt: https://public-api.spiko.io/share-classes/UKTBL/",
+        "Solana finalized slot 461460200 / HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6 / 2026-10-26T00:26:30Z; https://solana-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Route curation is complete, but independently current runtime supply/materiality and production consumption are not established by zero stock or native-route classification. Owner: NAV-parity integration lead. Fresh accepted capture/export is blocked by expired Wrangler OAuth / invalid_grant; retain the runtime gap until an admitted capture demonstrates closure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/uktbl-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "{\"reasonCode\":\"runtime-bridge-materiality-unavailable\",\"path\":\"control:bridge:cause:4\"}"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:chfsafo-spiko",
+      "taskIds": [
+        "V9G-1d33f8dac41db6ef",
+        "V9G-574641817b1c04cf"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "arbitrum:0x2f44bfa164df2f8cda61c4f1e7355b77cd0f81f8: https://public-api.spiko.io/share-classes/chfSAFO/",
+        "Arbitrum finalized block 518283891 / 0x9f7cf4d908d586cea841e4370f5439e564418a48929929c54c1fd59d92375947 / 2026-10-26T00:08:44Z; https://arb-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Exact issuer identities, per-address native mint/authority state and issuer contract source establish native-issuance/native-mint semantics for the added registers. Older sibling reviews and mint-authority credit are unchanged. All nine CHFSAFO routes now satisfy reviewed independent-liability semantics; re-enrolment is guarded against catalog drift. Evidence is ready; fresh accepted replay closure remains unverified. Historical 2026-10-25 capture predates these observations, and fresh D1 export failed expired OAuth / invalid_grant.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/chfsafo-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26",
+        "shared/data/safety-score-v9/supply-attribution-reviews-v1.json"
+      ],
+      "sentinels": [
+        "chfsafo-spiko:gap:economic-control:bridge",
+        "chfsafo-spiko:gap:economic-control:bridge::tier"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_MATERIALITY:chfsafo-spiko",
+      "taskIds": [
+        "V9S-d1cb419cee9c7890"
+      ],
+      "workType": "BRIDGE_MATERIALITY",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "arbitrum:0x2f44bfa164df2f8cda61c4f1e7355b77cd0f81f8: https://public-api.spiko.io/share-classes/chfSAFO/",
+        "Arbitrum finalized block 518283891 / 0x9f7cf4d908d586cea841e4370f5439e564418a48929929c54c1fd59d92375947 / 2026-10-26T00:08:44Z; https://arb-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Route curation is complete, but independently current runtime supply/materiality and production consumption are not established by zero stock or native-route classification. Owner: NAV-parity integration lead. Fresh accepted capture/export is blocked by expired Wrangler OAuth / invalid_grant; retain the runtime gap until an admitted capture demonstrates closure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/chfsafo-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26",
+        "shared/data/safety-score-v9/supply-attribution-reviews-v1.json"
+      ],
+      "sentinels": [
+        "{\"reasonCode\":\"runtime-bridge-materiality-unavailable\",\"path\":\"control:bridge:cause:5\"}"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:spkcc-spiko",
+      "taskIds": [
+        "V9G-e33915ec77c07127",
+        "V9G-e4360229048c86f2"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "solana:14Rg7TaptSo1Ndkz1ngBw2rE4EuFhQd2PzCrkyjGdsL1: https://public-api.spiko.io/share-classes/SPKCC/",
+        "Solana finalized slot 461460200 / HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6 / 2026-10-26T00:26:30Z; https://solana-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Exact issuer identities, per-address native mint/authority state and issuer contract source establish native-issuance/native-mint semantics for the added registers. Older sibling reviews and mint-authority credit are unchanged. Evidence is ready; fresh accepted replay closure remains unverified. Historical 2026-10-25 capture predates these observations, and fresh D1 export failed expired OAuth / invalid_grant.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/spkcc-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "spkcc-spiko:gap:economic-control:bridge",
+        "spkcc-spiko:gap:economic-control:bridge::tier"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_MATERIALITY:spkcc-spiko",
+      "taskIds": [
+        "V9S-67763d367882a9c4"
+      ],
+      "workType": "BRIDGE_MATERIALITY",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "solana:14Rg7TaptSo1Ndkz1ngBw2rE4EuFhQd2PzCrkyjGdsL1: https://public-api.spiko.io/share-classes/SPKCC/",
+        "Solana finalized slot 461460200 / HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6 / 2026-10-26T00:26:30Z; https://solana-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Route curation is complete, but independently current runtime supply/materiality and production consumption are not established by zero stock or native-route classification. Owner: NAV-parity integration lead. Fresh accepted capture/export is blocked by expired Wrangler OAuth / invalid_grant; retain the runtime gap until an admitted capture demonstrates closure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/spkcc-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "{\"reasonCode\":\"runtime-bridge-materiality-unavailable\",\"path\":\"control:bridge:cause:4\"}"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
     }
   ]
 }

@@ -223,27 +223,85 @@
         "id": "solana:7fnYygJyxQ2RsFJymjnRRa4wptPhUkfo6RT2j4BU4qhP",
         "destinationChain": "solana",
         "contractAddress": "7fnYygJyxQ2RsFJymjnRRa4wptPhUkfo6RT2j4BU4qhP",
-        "protocol": "unknown",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Inventoried 2026-10-25 from https://public-api.spiko.io/share-classes/gbpSAFO. Exact issuer-listed Solana register identity, five decimals, zero supply and issuer authority were verified on-chain. Transfer-route and complete mint-control research remain unresolved; existing sibling reviews do not cover this deployment."
+        "protocol": "Spiko native fund-share register",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Reviewed 2026-10-26: the exact gbpSAFO issuer API and its individual production deployment identify 7fnYygJyxQ2RsFJymjnRRa4wptPhUkfo6RT2j4BU4qhP as a native fund-share register. Exact-slot Account Archive reads at finalized slot 461460200 (2026-10-26T00:26:30Z; hash HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6) independently bind this Token-2022 mint, five decimals, matching metadata and totalSupply=0 to mint authority BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ. Its issuer minter configuration names admin 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9 and initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd; this mint's daily-limit PDA permits 500000000000 raw units. Issuer initiate/approve-mint source uses that configuration, not a bridge proof or escrow. This mint independently has DefaultAccountState=Frozen, paused=false under 3wVzYmWt79gBpPtWBK8GHvRfii1SARpP8SKqEKuzJsDY, permanent delegate EeJqADE9Xqkqoyjid6H1GmbwDZ4Bz1qyC7ySpmFq849m and permissioned-burn authority equal to the initiator. Its exact freeze/ACL configuration 3DorGhqdL8S7vXVqRv1rDzBnr6SLpheMiDzznAGW6nft and thaw-meta PDA bind the issuer allow/block lists; restrictions use freeze/thaw, not a TransferHook extension. Native issuer liability semantics are reviewed; complete signer affiliations, deployed-binary reproduction and cross-register conservation remain unresolved, and the minter program remains upgradeable. No mint-authority review is extended.",
+        "canonicalChain": "solana",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-26",
+        "failureDomainKeys": [
+          "issuer-backend:spiko:fund-register"
+        ],
+        "observedBlock": 461460200,
+        "controllerChain": "solana",
+        "controllerAddress": "BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ",
+        "sources": [
+          {
+            "label": "Exact gbpSAFO issuer register/ISIN list, read 2026-10-26",
+            "url": "https://public-api.spiko.io/share-classes/gbpSAFO/"
+          },
+          {
+            "label": "Exact gbpSAFO immutable production deployment",
+            "url": "https://github.com/spiko-tech/solana-contracts/blob/afdab14fb1a59bf3abe2f263870023349a560e2e/deployments/gbpSAFO-mainnet-beta.json"
+          },
+          {
+            "label": "Issuer minter configuration and direct issuance source",
+            "url": "https://github.com/spiko-tech/solana-contracts/blob/afdab14fb1a59bf3abe2f263870023349a560e2e/programs/minter/src/instructions/initiate_mint.rs"
+          },
+          {
+            "label": "Issuer administrator-approved direct mint source",
+            "url": "https://github.com/spiko-tech/solana-contracts/blob/afdab14fb1a59bf3abe2f263870023349a560e2e/programs/minter/src/instructions/approve_mint.rs"
+          },
+          {
+            "label": "Exact mint, minter configuration, ACL and list accounts at slot 461460200, hash HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x541b1c34fb941cdee6d400d06e27240d9c4e10d8",
         "destinationChain": "arbitrum",
         "contractAddress": "0x541b1c34fb941cdee6d400d06e27240d9c4e10d8",
-        "protocol": "unknown",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Inventoried 2026-10-25 from https://public-api.spiko.io/share-classes/gbpSAFO. Exact issuer-listed ArbitrumUk register identity, five decimals, zero supply and issuer authority were verified on-chain. Transfer-route and complete mint-control research remain unresolved; existing sibling reviews do not cover this deployment."
+        "protocol": "Spiko native fund-share register",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Reviewed 2026-10-26: the exact gbpSAFO issuer API lists 0x541b1c34fb941cdee6d400d06e27240d9c4e10d8 as ArbitrumUk, a second Arbitrum One fund-share register. At finalized block 518283891 (2026-10-26T00:08:44Z; hash 0x9f7cf4d908d586cea841e4370f5439e564418a48929929c54c1fd59d92375947), this address independently returns five decimals, matching symbol, totalSupply=0, paused=false, owner=0 and authority 0x0c4210e2b65d766f570fe8703c4485b8a07c5cd3. Its ERC-1967 implementation 0xe808624581dcd7523b235413c686b9b7d4be463b is explorer-verified Token code, matching the issuer repository issuance/transfer logic: restricted mint/burn, pause and UUPS upgrade; sender/receiver allowlisting, without a bridge-proof or escrow input. Exact per-token requirements are mint=5 (groups 0/2), burn=17 (0/4), pause/unpause=3 (0/1), transfer=65 (0/6), upgrade=1 (0). Pinned authority membership identifies administrator 0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e, mint-role holder 0x53784130a01268f4068ba306582965d5b5ac8165 and whitelist administrator 0x7d4a1d46ef6efabb41fb3520be41d65c0aabd256. This establishes native issuer issuance, not a bridged receipt. Complete minter execution, signer independence and cross-register transfer conservation remain unresolved; no mint-authority review is extended.",
+        "canonicalChain": "arbitrum",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-26",
+        "failureDomainKeys": [
+          "issuer-backend:spiko:fund-register"
+        ],
+        "observedBlock": 518283891,
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x0c4210e2b65d766f570fe8703c4485b8a07c5cd3",
+        "sources": [
+          {
+            "label": "Exact gbpSAFO issuer register/ISIN list, read 2026-10-26",
+            "url": "https://public-api.spiko.io/share-classes/gbpSAFO/"
+          },
+          {
+            "label": "Pinned issuer Token source; PermissionManaged and PermissionManager in the same commit",
+            "url": "https://github.com/spiko-tech/contracts/blob/d8e10e88284e8cb990f0ed10bb56b9c3f3734a21/contracts/token/Token.sol"
+          },
+          {
+            "label": "Exact implementation verified source",
+            "url": "https://arbiscan.io/address/0xe808624581dcd7523b235413c686b9b7d4be463b#code"
+          },
+          {
+            "label": "Exact authority and per-token selector requirements at block 518283891, hash 0x9f7cf4d908d586cea841e4370f5439e564418a48929929c54c1fd59d92375947",
+            "url": "https://arb-mainnet.g.alchemy.com/v2/"
+          }
+        ]
       }
     ]
   },

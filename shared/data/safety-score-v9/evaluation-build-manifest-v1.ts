@@ -54,7 +54,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/supply-attribution-reviews-v1.json",
-      "sha256": "d9f9bb971a973860c923f6bd60238edd0edb1f1c4c9c87b72408cdb8b19ef4d8"
+      "sha256": "c77e5bc48209647d7b7ca1de55c788db7b52db3bab80fff9dc3930e24f59a95a"
     },
     {
       "path": "shared/data/safety-score-v9/transfer-review-overlays-v1.json",
@@ -70,11 +70,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "7e000e38c17c0140dfc3cb04449bb7399f02fef1e4b15a12a7f82c3191e15022"
+      "sha256": "5df3b9a080f4e741bfbf16253afa44dd471d383e21bd4fb5db3b70da67f0aaaa"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "6713aa09ee2d8c4f6b93dd7ef474ada1cf30ee355f8be4032e154eac2cb385bf"
+      "sha256": "33fd05625386a98bc811486e6437d91d2f85ef7de25e91edcbc3b22e802b43d6"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
@@ -1311,7 +1311,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-25-block-26268499-shock-coverage.json.gz"
     }
   ],
-  "digest": "a2b64dc7e808d36a62092a41e6a76af3b2b7fd0d063161f240c82d46b9dd9097"
+  "digest": "e132594956b9e57c36da48e80b8aa810b8909c3fb6880d83d233d30dcaef20e9"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

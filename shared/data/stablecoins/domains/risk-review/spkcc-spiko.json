@@ -332,14 +332,45 @@
         "id": "solana:14Rg7TaptSo1Ndkz1ngBw2rE4EuFhQd2PzCrkyjGdsL1",
         "destinationChain": "solana",
         "contractAddress": "14Rg7TaptSo1Ndkz1ngBw2rE4EuFhQd2PzCrkyjGdsL1",
-        "protocol": "unknown",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Inventoried 2026-10-25 from https://public-api.spiko.io/share-classes/SPKCC. Exact issuer-listed Solana register identity, five decimals, zero supply and issuer authority were verified on-chain. Transfer-route and complete mint-control research remain unresolved; existing sibling reviews do not cover this deployment."
+        "protocol": "Spiko native fund-share register",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Reviewed 2026-10-26: the exact SPKCC issuer API and its individual production deployment identify 14Rg7TaptSo1Ndkz1ngBw2rE4EuFhQd2PzCrkyjGdsL1 as a native fund-share register. Exact-slot Account Archive reads at finalized slot 461460200 (2026-10-26T00:26:30Z; hash HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6) independently bind this Token-2022 mint, five decimals, matching metadata and totalSupply=0 to mint authority BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ. Its issuer minter configuration names admin 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9 and initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd; this mint's daily-limit PDA permits 500000000000 raw units. Issuer initiate/approve-mint source uses that configuration, not a bridge proof or escrow. This mint independently has DefaultAccountState=Frozen, paused=false under 3wVzYmWt79gBpPtWBK8GHvRfii1SARpP8SKqEKuzJsDY, permanent delegate EeJqADE9Xqkqoyjid6H1GmbwDZ4Bz1qyC7ySpmFq849m and permissioned-burn authority equal to the initiator. Its exact freeze/ACL configuration 7jCcxvpZWFD1jJJW3uDXjRtQDoD3L9tbmwUfMDY1ij8Q and thaw-meta PDA bind the issuer allow/block lists; restrictions use freeze/thaw, not a TransferHook extension. Native issuer liability semantics are reviewed; complete signer affiliations, deployed-binary reproduction and cross-register conservation remain unresolved, and the minter program remains upgradeable. No mint-authority review is extended.",
+        "canonicalChain": "solana",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-26",
+        "failureDomainKeys": [
+          "issuer-backend:spiko:fund-register"
+        ],
+        "observedBlock": 461460200,
+        "controllerChain": "solana",
+        "controllerAddress": "BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ",
+        "sources": [
+          {
+            "label": "Exact SPKCC issuer register/ISIN list, read 2026-10-26",
+            "url": "https://public-api.spiko.io/share-classes/SPKCC/"
+          },
+          {
+            "label": "Exact SPKCC immutable production deployment",
+            "url": "https://github.com/spiko-tech/solana-contracts/blob/afdab14fb1a59bf3abe2f263870023349a560e2e/deployments/SPKCC-mainnet-beta.json"
+          },
+          {
+            "label": "Issuer minter configuration and direct issuance source",
+            "url": "https://github.com/spiko-tech/solana-contracts/blob/afdab14fb1a59bf3abe2f263870023349a560e2e/programs/minter/src/instructions/initiate_mint.rs"
+          },
+          {
+            "label": "Issuer administrator-approved direct mint source",
+            "url": "https://github.com/spiko-tech/solana-contracts/blob/afdab14fb1a59bf3abe2f263870023349a560e2e/programs/minter/src/instructions/approve_mint.rs"
+          },
+          {
+            "label": "Exact mint, minter configuration, ACL and list accounts at slot 461460200, hash HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
+          }
+        ]
       }
     ]
   }
