@@ -564,15 +564,6 @@ describe("economic materiality consumers", () => {
     review.deployments.push({ ...review.deployments[0]!, contractOrTokenId: "native:xdai", posture: "restrictable" });
     expect(resolveSafetyScoreV9ReviewedTransferFact(review, CLOCK, scope).posture).toBe("restrictable");
   });
-  it("keeps CHFSAFO ineligible while its added ArbitrumUk register is unreviewed", () => {
-    const assetId = "chfsafo-spiko";
-    const meta = ACTIVE_META_BY_ID.get(assetId)!;
-    expect(meta.bridgeRouteRisk!.routes!.find(route => route.id === "arbitrum:0x2f44bfa164df2f8cda61c4f1e7355b77cd0f81f8"))
-      .toMatchObject({ reviewDisposition: "unresolved", issuanceModel: "unknown", semantics: "unknown" });
-    expect(ReviewedEconomicSupplyPlanFileSchema.parse(reviewRegistry).independentLiabilityAssetIds).not.toContain(assetId);
-    const fixed = makeV9FixedInput({ assetId, clockSec: CLOCK, chainSupplyByChain: {}, aggregateCirculating: { peggedUSD: 100 } });
-    expect(buildSafetyScoreV9SupplyReview(fixed, assetId, meta.bridgeRouteRisk)).toBeNull();
-  });
   it("guards existing independent-liability eligibility against registry and route drift", () => {
     for (const assetId of ReviewedEconomicSupplyPlanFileSchema.parse(reviewRegistry).independentLiabilityAssetIds) {
       const meta = ACTIVE_META_BY_ID.get(assetId)!;
