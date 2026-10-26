@@ -88,10 +88,9 @@ export interface DdrLoadedContext {
   lineage: DdrLineage;
 }
 
-export type DdrContextLoadResult = (
+export type DdrContextLoadResult =
   | { kind: "ok"; context: DdrLoadedContext }
-  | { kind: "degraded"; reason: string; dataAsOf: number | null }
-) & { safetyProjectionFallbackCount: number };
+  | { kind: "degraded"; reason: string; dataAsOf: number | null };
 
 // Measured 24h volume after the DEC-19 availability read: null when the
 // stored record marks the window partial/missing/stale/unreadable.
@@ -383,12 +382,10 @@ export async function loadDdrContext(
   activeRows: DdrEventDbRow[],
   nowSec: number,
 ): Promise<DdrContextLoadResult> {
-  let safetyProjectionFallbackCount = 0;
   const currentDeviation = await buildCurrentDeviationMap(db, nowSec);
   if (!currentDeviation.healthy) {
     return {
       kind: "degraded",
-      safetyProjectionFallbackCount,
       reason: currentDeviation.degradedReason ?? "stablecoins-cache-unusable",
       dataAsOf: currentDeviation.dataAsOf,
     };
@@ -625,7 +622,6 @@ export async function loadDdrContext(
   };
   try {
     const activeSafetySource = await loadActiveSafetyScoreCohort(db);
-    safetyProjectionFallbackCount = activeSafetySource.projectionFallbackCount;
     if (activeSafetySource.kind === "held") {
       safetyContext = {
         status: "cache-unavailable",
@@ -703,12 +699,11 @@ export async function loadDdrContext(
     redemptionResult.error,
   ].filter((reason): reason is string => reason != null);
   if (resolverHealthFailures.length > 0) {
-    return { kind: "degraded", reason: resolverHealthFailures.join(","), dataAsOf: currentDeviation.dataAsOf, safetyProjectionFallbackCount };
+    return { kind: "degraded", reason: resolverHealthFailures.join(","), dataAsOf: currentDeviation.dataAsOf };
   }
 
   return {
     kind: "ok",
-    safetyProjectionFallbackCount,
     context: {
       active,
       activeCoinIds,

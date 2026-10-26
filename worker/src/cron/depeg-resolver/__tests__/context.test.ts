@@ -30,16 +30,15 @@ describe("DDR historical context", () => {
       ...component, posture: "bounded-admin",
     }));
     const snapshot = makeWorkerReportCardsV9Response({ updatedAt: NOW_SEC, cards: [card] });
-    const source = vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreCohort").mockResolvedValue({ kind: "v9", snapshot, projectionFallbackCount: 1 });
+    const source = vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreCohort").mockResolvedValue({ kind: "v9", snapshot });
     const meta = WORKER_TRACKED_META_BY_ID.get("usdc-circle");
     if (!meta) throw new Error("Missing USDC fixture metadata");
     expect(structuralClass(toStructural(meta, null))).toBe("fragile");
     const loaded = await loadDdrContext(db, [activeRow()], NOW_SEC);
     if (loaded.kind !== "ok") throw new Error(loaded.reason);
-    expect(loaded.safetyProjectionFallbackCount).toBe(1);
     expect(loaded.context.incidents[0].structural).toBe("robust");
     expect(structuralClass(toStructural(meta, loaded.context.structuralContext))).toBe("robust");
-    source.mockResolvedValue({ kind: "error", reason: "v9-snapshot-unavailable", detail: "fixture", snapshot: null, projectionFallbackCount: 0 });
+    source.mockResolvedValue({ kind: "error", reason: "v9-snapshot-unavailable", detail: "fixture", snapshot: null });
     const unavailable = await loadDdrContext(db, [activeRow()], NOW_SEC);
     if (unavailable.kind !== "ok") throw new Error(unavailable.reason);
     expect(unavailable.context.structuralContext).toBeNull();

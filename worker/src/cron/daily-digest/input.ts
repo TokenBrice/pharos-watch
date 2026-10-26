@@ -67,7 +67,6 @@ function aggregateCollectorReasons(
 }
 
 export interface DailyDigestInputBuildResult {
-  safetyProjectionFallbackCount: number;
   inputData: DigestInputData;
   degradedReasons: string[];
   recentMeta: RecentDigestMetaEntry[];
@@ -187,7 +186,6 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       lifecycleFlags: [],
       recentTitles,
       stablecoinsCacheReason: stablecoinsCacheResult.reason,
-      safetyProjectionFallbackCount: 0,
       llmSignals: {
         activeDepegCount: null,
         topDepegs: [],
@@ -517,7 +515,6 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     lifecycleFlags,
     recentTitles,
     stablecoinsCacheReason: null,
-    safetyProjectionFallbackCount: safetyScoresResult.value.safetyProjectionFallbackCount,
     llmSignals: {
       activeDepegCount,
       topDepegs,

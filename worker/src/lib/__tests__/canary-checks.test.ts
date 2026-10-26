@@ -52,13 +52,11 @@ function activeV9(options: { held?: boolean; updatedAt?: number } = {}) {
       reason: "v9-publication-held" as const,
       detail: "Canonical Safety Score V9 ratings are held at the last verified snapshot",
       snapshot,
-      projectionFallbackCount: 0,
     };
   }
   return {
     kind: "v9" as const,
     snapshot,
-    projectionFallbackCount: 0,
   };
 }
 
@@ -376,7 +374,6 @@ describe("worker data invariant canaries", () => {
         reason: "v9-snapshot-unavailable",
         snapshot: null,
         detail: "missing",
-        projectionFallbackCount: 0,
       });
     const summary = await runCanaryChecks(healthyD1(), {
       observedAt: NOW,

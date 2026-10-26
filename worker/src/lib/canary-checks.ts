@@ -535,7 +535,6 @@ export async function checkSafetyScoreV9Publication(db: D1Database) {
   if (active.kind === "error") {
     return failedResult(`active Safety Score source ${active.reason}`, {
       reason: active.reason,
-      projectionFallbackCount: active.projectionFallbackCount,
       maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
     });
   }
@@ -553,7 +552,6 @@ export async function checkSafetyScoreV9Publication(db: D1Database) {
     methodologyVersion: active.snapshot.methodology.version,
     safetyScoreIdentity: active.snapshot.safetyScoreIdentity,
     publicationHealth: active.snapshot.publicationHealth,
-    projectionFallbackCount: active.projectionFallbackCount,
     maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
   };
   if (active.kind === "held") {

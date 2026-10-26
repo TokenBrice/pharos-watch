@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => ({
   loadEvidenceJournalById: vi.fn(),
   loadSupplyAttributionJournalById: vi.fn(),
   runPublication: vi.fn(),
+  loadPublicationHealth: vi.fn(),
   retryMaterialization: vi.fn(),
 }));
 
@@ -95,6 +96,11 @@ vi.mock("../../lib/safety-score-v9/supply-attribution-journal-store", () => ({
 vi.mock("../../lib/safety-score-v9/publication-runner", () => ({
   runSafetyScoreV9Publication: mocks.runPublication,
   retryPendingSafetyScoreV9PublicMaterialization: mocks.retryMaterialization,
+}));
+
+vi.mock("../../lib/safety-score-v9/publication-health", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../lib/safety-score-v9/publication-health")>(),
+  loadSafetyScoreV9PublicationHealth: mocks.loadPublicationHealth,
 }));
 
 const { computeSafetyScoreV9, SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC } = await import("../compute-safety-score-v9");
@@ -204,7 +210,72 @@ describe("computeSafetyScoreV9", () => {
       .mockReset()
       .mockResolvedValue({});
     mocks.runPublication.mockReset();
+    mocks.loadPublicationHealth.mockReset().mockResolvedValue(null);
     mocks.retryMaterialization.mockReset().mockResolvedValue(null);
+  });
+
+  it.each([0, 1])("skips a capture no newer than accepted health (offset %s) before compiling", async offset => {
+    const acceptedClockSec = fixedInput.clockSec + offset;
+    mocks.loadPublicationHealth.mockResolvedValue({
+      schemaVersion: 2, status: "current", acceptedPublicationGenerationId: fixedInput.sourceGeneration,
+      acceptedAtSec: acceptedClockSec, attemptedAtSec: acceptedClockSec, heldSinceSec: null, reasons: [],
+    });
+
+    const result = await computeSafetyScoreV9({} as D1Database);
+
+    expect(result).toMatchObject({
+      status: "skipped_neutral", itemCount: 0,
+      productivity: { productive: false, reason: "v9-capture-already-accepted" },
+    });
+    expect(JSON.parse(result.metadata!)).toEqual({
+      stage: "input-load", reason: "v9-capture-already-accepted",
+      captureClockSec: fixedInput.clockSec, acceptedClockSec,
+    });
+    expect(mocks.runPublication).not.toHaveBeenCalled();
+    expect(mocks.getCacheUpdatedAt).not.toHaveBeenCalled();
+    expect(mocks.applySupplyGeneration).not.toHaveBeenCalled();
+    expect(mocks.loadEvidenceJournalById).not.toHaveBeenCalled();
+  });
+
+  it("publishes a capture newer than accepted health", async () => {
+    mocks.loadPublicationHealth.mockResolvedValue({
+      schemaVersion: 2, status: "current", acceptedPublicationGenerationId: "prior-generation",
+      acceptedAtSec: fixedInput.clockSec - 1, attemptedAtSec: fixedInput.clockSec - 1,
+      heldSinceSec: null, reasons: [],
+    });
+    mockPublishedPreparation();
+
+    const result = await computeSafetyScoreV9({} as D1Database);
+
+    expect(result.status).toBe("ok");
+    expect(mocks.runPublication).toHaveBeenCalledOnce();
+  });
+
+  it("continues the existing publication path when health cannot be read", async () => {
+    mocks.loadPublicationHealth.mockRejectedValue(new Error("health read failed"));
+    mocks.runPublication.mockResolvedValue({
+      status: "failed", attemptId: "attempt", stage: "compile", code: "fixture", message: "fixture",
+    });
+
+    const result = await computeSafetyScoreV9({} as D1Database);
+
+    expect(mocks.runPublication).toHaveBeenCalledOnce();
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "v9-publication-failed:fixture" });
+  });
+
+  it("does not treat a held attempt clock as capture acceptance", async () => {
+    mocks.loadPublicationHealth.mockResolvedValue({
+      schemaVersion: 2, status: "held", acceptedPublicationGenerationId: "prior-generation",
+      acceptedAtSec: fixedInput.clockSec - 3_600, attemptedAtSec: fixedInput.clockSec + 1,
+      heldSinceSec: fixedInput.clockSec + 1, reasons: [{ code: "dex-stale" }],
+    });
+    mockPublishedPreparation();
+
+    const result = await computeSafetyScoreV9({} as D1Database);
+
+    expect(result.status).toBe("ok");
+    expect(mocks.runPublication).toHaveBeenCalledOnce();
   });
 
   it.each([22, 52])("never retries materialization before ordinary :%s compute", async minute => {

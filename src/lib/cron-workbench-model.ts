@@ -190,6 +190,7 @@ const RUN_STATUS_LABELS: Readonly<Record<CronRunStatus, string>> = {
 };
 
 const NEUTRAL_SKIP_REASON_LABELS: Readonly<Record<string, string>> = {
+  "v9-capture-already-accepted": "Skipped: V10 capture already accepted",
   "v9-slot-window-too-short": "Skipped: V10 window too short",
   "v9-core-slot-not-ready": "Skipped: core slot not ready",
   "v9-competing-slot-active": "Skipped: competing slot active",

@@ -177,7 +177,7 @@ export function canonicalSafetySource(
         }),
       ),
   });
-  return { kind: "v9", snapshot, projectionFallbackCount: 0 };
+  return { kind: "v9", snapshot };
 }
 
 interface TestDewsRow {
