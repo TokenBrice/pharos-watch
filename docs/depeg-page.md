@@ -211,6 +211,8 @@ per-major Wilson intervals) render only when the snapshot carries them; older sn
 them unavailable, never zero. `terminal_at_lock` rows are labelled "Terminal at lock" and are
 curation debt, not scored calls.
 
+Once at least five recovery calls are scored, the ledger leads with the aggregate accuracy percentage (the homepage DDR card's track-record figure) over the `correct / scored` fraction; a thinner sample shows only the fraction.
+
 Recovery-call progress reads `summary.headline.pendingRecoveryLikelihoodCount`:
 published prediction reviews with a pending verdict, in exactly the headline
 accuracy policy scope. Pending locks remain coverage debt, not maturing forecasts.

@@ -4,7 +4,6 @@ import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-regist
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { projectDependencyGraph } from "@shared/types/dependency-graph";
 import { loadActiveSafetyScoreCohort } from "../../lib/safety-score-active-source";
-import { logWorkerEvent } from "../../lib/structured-log";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { freshnessReason, unavailable, type OgPageLoader, OG_SOURCE_BUDGET_SEC } from "./types";
 
@@ -18,11 +17,6 @@ export const loadDependencyMapOgPage: OgPageLoader = async (db, nowSec) => {
     loadActiveSafetyScoreCohort(db),
     loadStablecoinsCache(db, { mode: "strict", contract: "published" }),
   ]);
-  if (active.projectionFallbackCount > 0) logWorkerEvent({
-    scope: "api", level: "warn", event: "safety-cohort-reader-fallback", route: "/api/og/page/dependency-map",
-    message: "Dependency map OG read used the transitional cohort fallback",
-    metadata: { safetyProjectionFallbackCount: active.projectionFallbackCount },
-  });
   if (active.kind === "error") return unavailable("owner-error");
   if (stablecoins.kind !== "ok") return unavailable("cache-missing");
   const graph = projectDependencyGraph(active.snapshot);

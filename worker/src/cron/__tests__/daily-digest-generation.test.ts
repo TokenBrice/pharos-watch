@@ -67,14 +67,11 @@ afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe("generateDailyDigest publication contract", () => {
   it("generates, stores, and delivers one mapped edition end to end", async () => {
-    vi.mocked(loadActiveSafetyScoreCohort).mockResolvedValue({ ...scenario.safetySource, projectionFallbackCount: 1 });
     vi.mocked(resolveDigestSafetyMap).mockResolvedValueOnce(validMap());
     const result = await invoke();
     const db = scenario.db as MockD1Database; const input = bindJson(db, 3); const meta = bindJson(db, 5); const body = firstRequestBody();
     expect(result).toMatchObject({ itemCount: 1 }); expect(result.metadata).toContain("tweet: ok"); expect(result.metadata).toContain("telegram: ok");
     expect(input).toMatchObject({ aggregateUniverse: "core-stablecoins-v1", totalMcapUsd: 160_000_000, activeDepegCount: 1, safetyMap: { manifest: { date: "2026-03-06" } } });
-    expect(JSON.parse(result.metadata!)).toMatchObject({ safetyProjectionFallbackCount: 1 });
-    expect(input.safetyProjectionFallbackCount).toBeUndefined();
     expect(input.resolvedDepegCount).toBe(0);
     expect(input.depegSignalKeys).toEqual({ active: [`usdt-tether:${Math.floor(Date.now() / 1000) - 3600}:active`], resolved: [] });
     expect(input.editorialAudit).toMatchObject({ leadCandidateId: "depeg:usdt-tether:active", usedCandidateIds: ["depeg:usdt-tether:active"] });
@@ -303,7 +300,7 @@ describe("generateDailyDigest publication contract", () => {
   });
 
   it("blocks unbound safety copy, then repairs it when the second response is clean", async () => {
-    vi.mocked(loadActiveSafetyScoreCohort).mockResolvedValue({ kind: "error", reason: "v9-snapshot-unavailable", detail: "identity mismatch", snapshot: null, projectionFallbackCount: 0 });
+    vi.mocked(loadActiveSafetyScoreCohort).mockResolvedValue({ kind: "error", reason: "v9-snapshot-unavailable", detail: "identity mismatch", snapshot: null });
     const blocked = await invoke(); expect(blocked.status).toBe("degraded"); expect(bindJson(scenario.db as MockD1Database, 3).safetyScores).toBeUndefined(); expect(bindJson(scenario.db as MockD1Database, 5)).toMatchObject({ qualityGate: "blocked" }); expect(fetchWithRetry).toHaveBeenCalledTimes(2); expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
     const clean = JSON.parse(ANTHROPIC_OK_TEXT) as { extended: string }; clean.extended = VALID_DAILY_EXTENDED.replace("Safety scores stayed A for USDT and USDC, ", "The fixture's primary risk inputs were unchanged, ");
     vi.clearAllMocks();
@@ -348,7 +345,7 @@ describe("generateDailyDigest publication contract", () => {
   });
 
   it("keeps a valid map attachment while omitting unbound safety prose", async () => {
-    vi.mocked(loadActiveSafetyScoreCohort).mockResolvedValue({ kind: "error", reason: "v9-snapshot-unavailable", detail: "identity mismatch", snapshot: null, projectionFallbackCount: 0 });
+    vi.mocked(loadActiveSafetyScoreCohort).mockResolvedValue({ kind: "error", reason: "v9-snapshot-unavailable", detail: "identity mismatch", snapshot: null });
     vi.mocked(fetchWithRetry).mockImplementation(async () => makeStreamResponse(SAFETY_FREE_TEXT)); vi.mocked(resolveDigestSafetyMap).mockResolvedValueOnce(validMap());
     const result = await invoke(scenario.db, false, CREDS, TG); expect(result.status).toBe("degraded"); expect(result.metadata).not.toContain("unbound-safety-copy"); expect(postDigestTweet).toHaveBeenCalledWith(expect.any(String), expect.any(String), expect.any(Object), expect.any(Number), expect.stringContaining("date=2026-03-06"), null, expect.any(Object)); expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(scenario.db, expect.objectContaining({ mapImageUrl: expect.stringContaining("date=2026-03-06"), safetyContext: expect.objectContaining({ status: "unavailable" }) }), undefined);
   });

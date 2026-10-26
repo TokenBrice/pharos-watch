@@ -117,7 +117,7 @@ The digest intelligence pass runs after editorial candidates are built and befor
 - `calmNarrativeFrame`: a fallback editorial frame for calm regimes so quiet days can explain what changed, what did not happen, and what would make the next day less calm.
 - `editorialAudit`: added after the LLM response is parsed; stores top/usable/suppressed/momentum candidate ids, required lead ids, declared `leadSignalId`, used candidate ids, and quality issue codes.
 
-Digest pillar reads use the accepted cohort; identity/FTQ use the score index. Both bind publication and health. Only absent/different-generation cohorts may temporarily full-decode (`safety-cohort-projection-fallback`, run `safetyProjectionFallbackCount`). Held/unavailable states stay explicit; public bytes stay unchanged.
+Digest pillar reads use the accepted cohort; identity/FTQ use the score index. Both bind publication and health. Missing or mismatched cohorts are unavailable with a machine-readable reason. Held/unavailable states stay explicit; public bytes stay unchanged.
 
 The digest's Flight-to-Quality collector uses `buildFlightToQualityClassificationFromV9Snapshot()` from `worker/src/lib/flight-to-quality-classification.ts` via `worker/src/cron/daily-digest/mint-burn-ftq.ts`, aligned with the public `/api/mint-burn-flows` classification path.
 

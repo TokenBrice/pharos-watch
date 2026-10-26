@@ -51,6 +51,8 @@ describe("computeApyAxis", () => {
       domainMax: 11,
       clipThreshold: 11,
       clippedCount: 1,
+      floorThreshold: null,
+      floorClippedCount: 0,
     });
   });
 
@@ -60,7 +62,25 @@ describe("computeApyAxis", () => {
       domainMax: 15,
       clipThreshold: null,
       clippedCount: 0,
+      floorThreshold: null,
+      floorClippedCount: 0,
     });
+  });
+
+  it("pins a rare extreme losing tail to a disclosed floor rail", () => {
+    const apys = [-48.2, -0.4, 0.8, 1.6, 2.5, 3.1, 3.8, 4.4, 5.1, 5.7, 6.2, 6.8, 7.3, 8.1];
+    const axis = computeApyAxis(apys, 4.2);
+    expect(axis.floorThreshold).toBe(-3);
+    expect(axis.floorClippedCount).toBe(1);
+    expect(axis.domainMin).toBe(-3);
+    for (const apy of apys.slice(1)) expect(apy).toBeGreaterThanOrEqual(axis.domainMin);
+  });
+
+  it("keeps a broadly occupied losing tail linear", () => {
+    const axis = computeApyAxis([-9, -8.5, -7, -6, -4.2, 1, 2, 3, 4, 5, 6, 7], 4.2);
+    expect(axis.floorThreshold).toBeNull();
+    expect(axis.floorClippedCount).toBe(0);
+    expect(axis.domainMin).toBe(-10);
   });
 
   it.each([
@@ -73,6 +93,7 @@ describe("computeApyAxis", () => {
     expect(axis.domainMin).toBe(min);
     expect(axis.domainMax).toBeGreaterThanOrEqual(8);
     expect(axis.clippedCount).toBe(0);
+    expect(axis.floorClippedCount).toBe(0);
     for (const apy of apys) {
       expect(apy).toBeGreaterThanOrEqual(axis.domainMin);
       expect(apy).toBeLessThanOrEqual(axis.domainMax);

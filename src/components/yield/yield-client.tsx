@@ -609,7 +609,7 @@ export function YieldClient() {
             {visibleRows.length > 0 ? (
               <div>
                 <div className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-2 text-2xs text-muted-foreground">
-                  <span>X: Row / opportunity safety · Y: APY · upper outliers are capped</span>
+                  <span>X: Row / opportunity safety · Y: APY · outliers are capped</span>
                   <a
                     href="#data"
                     className="pharos-focus-ring shrink-0 rounded-sm font-medium text-foreground underline underline-offset-2"

@@ -170,7 +170,7 @@ See the [public API reference](https://pharos.watch/api/) for the wire contract.
 
 Canonical V9 serves Safety Scores, home, detail, comparison, portfolio/dependency map, yield, digest/flight-to-quality, Telegram, OG, datasets, status and grade history.
 
-Graph, DDR, digest-detail and ops read the accepted cohort; grade/identity readers use the index; daily datasets decode full cards. Projections bind accepted identity/health. Only absent/different-generation cohorts permit logged, counted rollout full decode; invalid rows fail closed.
+Graph, DDR, digest-detail and ops read the accepted cohort; grade/identity readers use the index; daily datasets decode full cards. Projections bind accepted identity/health. Missing, invalid or mismatched cohorts fail closed with a machine-readable reason, without decoding full cards.
 
 Rated cards' read-only top-driver `reason` uses the binding cap, else weakest-pillar reason, preferring a recognized score-matching binding mint posture for Control; otherwise state pillar/score. Nonbinding/differently scored postures cannot supply it. Badges/reason codes may be empty. Scores, evidence, schema and withheld behavior stay unchanged; this explains current constraints, not historical changes or misconduct.
 

@@ -18,7 +18,6 @@ const NOW = 1_775_900_000;
 function activeV9(): Extract<ActiveSafetyScoreCohort, { kind: "v9" }> {
   return {
     kind: "v9",
-    projectionFallbackCount: 0,
     snapshot: makeReportCardsV9Response({ updatedAt: NOW - 60 }),
   };
 }
@@ -33,8 +32,7 @@ describe("canonical V9 Safety Score consumers", () => {
 
   afterEach(() => vi.useRealTimers());
 
-  it.each([0, 1])("validates V9 identity and freshness with %i cohort fallbacks", async (projectionFallbackCount) => {
-    mockLoadActiveSafetyScoreCohort.mockResolvedValue({ ...activeV9(), projectionFallbackCount });
+  it("validates V9 identity and freshness", async () => {
     await expect(
       checkSafetyScoreV9Publication(mockD1()),
     ).resolves.toMatchObject({
@@ -42,7 +40,6 @@ describe("canonical V9 Safety Score consumers", () => {
       severity: "info",
       metadata: {
         updatedAt: NOW - 60,
-        projectionFallbackCount,
       },
     });
   });
