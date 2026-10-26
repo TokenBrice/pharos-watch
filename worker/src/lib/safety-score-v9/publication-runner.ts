@@ -607,12 +607,14 @@ export async function retryPendingSafetyScoreV9PublicMaterialization(
   if (row.materialized === 1) return null;
   try {
     checkBudget();
-    const source = await loadSafetyScoreV9PublicationStoredRow(db, retrySignal);
+    let source = await loadSafetyScoreV9PublicationStoredRow(db, retrySignal);
     checkBudget();
     if (!source || source.updatedAt !== row.published_at || JSON.parse(source.value).payloadSha256 !== row.payload_sha256) {
       throw new Error("v9-public-materialization-retry-source-changed");
     }
     const publication = await parseSafetyScoreV9Publication(source.value, retrySignal);
+    // Recovery owns this row; release its stored text before staging wire fragments.
+    source = null;
     checkBudget();
     const health = await loadSafetyScoreV9PublicationHealth(db, retrySignal);
     checkBudget();

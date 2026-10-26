@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { stableJsonStringifyChunksV1 } from "./stable-json";
-import { SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES } from "./safety-score-v9-publication-limits";
+import { SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES } from "./safety-score-v9-publication-limits";
 
 // Calibrated card-unit regression bound: measured maximum 85,123 B plus
 // ceil(25%) = 21,281 B of detail-growth headroom, not a heap/value-size limit.
@@ -16,7 +16,7 @@ export const PublicationByteMetricsSchema = z.object({
   unitLimitBytes: z.literal(RESOURCE_PUBLICATION_CARD_UNIT_MAX_BYTES),
   streamedTotalBytes: z.number().int().positive().max(RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES),
   streamedTotalRegressionLimitBytes: z.literal(RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES),
-  streamedTotalLimitBytes: z.literal(SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES),
+  streamedTotalLimitBytes: z.literal(SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES),
 }).refine((value) => value.largestUnitBytes <= value.streamedTotalBytes, "card unit exceeds streamed total");
 
 export function measurePublicationByteBudget(publication: { cards: readonly { id: string }[] }, streamedTotalBytes: number) {
@@ -40,5 +40,5 @@ export function measurePublicationByteBudget(publication: { cards: readonly { id
   return PublicationByteMetricsSchema.parse({ unit: "card", units: publication.cards.length, largestUnitBytes,
     unitLimitBytes: RESOURCE_PUBLICATION_CARD_UNIT_MAX_BYTES, streamedTotalBytes,
     streamedTotalRegressionLimitBytes: RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES,
-    streamedTotalLimitBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES });
+    streamedTotalLimitBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES });
 }

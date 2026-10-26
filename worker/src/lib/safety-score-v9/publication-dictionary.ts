@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { stableJsonStringifyChunksV1, stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES as RAW_LIMIT } from "@shared/lib/safety-score-v9-publication-limits";
+import { SAFETY_SCORE_V9_PUBLICATION_MAX_READ_UNCOMPRESSED_BYTES as READ_RAW_LIMIT, SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES as WRITE_RAW_LIMIT } from "@shared/lib/safety-score-v9-publication-limits";
 import { throwIfAborted } from "../abort";
 
 // A canonical JSON string-table line, newline, then canonical JSON tokens with
@@ -10,8 +10,9 @@ export const PUBLICATION_DICTIONARY_MAX_ENTRIES = 4_096;
 export const PUBLICATION_DICTIONARY_MAX_ENTRY_BYTES = 65_536;
 export const PUBLICATION_DICTIONARY_MAX_TABLE_BYTES = 1_048_576;
 // Packed framing has its own finite inflate allowance; decoded canonical bytes
-// always retain the independent 9.2 MB raw ceiling.
-export const PUBLICATION_DICTIONARY_MAX_PACKED_BYTES = RAW_LIMIT + PUBLICATION_DICTIONARY_MAX_TABLE_BYTES + 1;
+// retain separate canonical read and write ceilings during rollout.
+export const PUBLICATION_DICTIONARY_MAX_READ_PACKED_BYTES = READ_RAW_LIMIT + PUBLICATION_DICTIONARY_MAX_TABLE_BYTES + 1;
+export const PUBLICATION_DICTIONARY_MAX_WRITE_PACKED_BYTES = WRITE_RAW_LIMIT + PUBLICATION_DICTIONARY_MAX_TABLE_BYTES + 1;
 const encoder = new TextEncoder();
 
 /** Split canonical JSON without reparsing its graph or retaining its token list. */
@@ -40,7 +41,7 @@ function* tokens(chunks: Iterable<string>): Generator<{ text: string; string: bo
     }
     if (inString) pending += chunk.slice(start);
     else if (start < chunk.length) yield { text: chunk.slice(start), string: false };
-    if (pending.length > RAW_LIMIT) throw new Error("Publication dictionary token exceeds raw limit");
+    if (pending.length > WRITE_RAW_LIMIT) throw new Error("Publication dictionary token exceeds raw limit");
   }
   if (inString) throw new Error("Malformed publication dictionary string token");
 }
@@ -69,10 +70,10 @@ export function encodePublicationDictionary(value: unknown, signal?: AbortSignal
   function* measured(): Generator<string> {
     for (const chunk of stableJsonStringifyChunksV1(value)) {
       throwIfAborted(signal);
-      if (chunk.length > RAW_LIMIT - uncompressedBytes) throw new Error(`Safety Score v9 publication exceeds the uncompressed byte limit; maximum is ${RAW_LIMIT}`);
+      if (chunk.length > WRITE_RAW_LIMIT - uncompressedBytes) throw new Error(`Safety Score v9 publication exceeds the uncompressed byte limit; maximum is ${WRITE_RAW_LIMIT}`);
       const bytes = encoder.encode(chunk);
       uncompressedBytes += bytes.byteLength;
-      if (uncompressedBytes > RAW_LIMIT) throw new Error(`Safety Score v9 publication exceeds the uncompressed byte limit; maximum is ${RAW_LIMIT}`);
+      if (uncompressedBytes > WRITE_RAW_LIMIT) throw new Error(`Safety Score v9 publication exceeds the uncompressed byte limit; maximum is ${WRITE_RAW_LIMIT}`);
       hash.update(bytes);
       yield chunk;
     }
@@ -110,8 +111,8 @@ export function encodePublicationDictionary(value: unknown, signal?: AbortSignal
 /** Restore into the declared raw buffer; no reference may expand past it. */
 export function decodePublicationDictionary(packed: Uint8Array, expectedBytes: number, signal?: AbortSignal): Uint8Array {
   throwIfAborted(signal);
-  if (!Number.isSafeInteger(expectedBytes) || expectedBytes < 1 || expectedBytes > RAW_LIMIT) throw new Error("Invalid publication dictionary raw length");
-  if (packed.byteLength > PUBLICATION_DICTIONARY_MAX_PACKED_BYTES) throw new Error("Publication dictionary exceeds packed byte limit");
+  if (!Number.isSafeInteger(expectedBytes) || expectedBytes < 1 || expectedBytes > READ_RAW_LIMIT) throw new Error("Invalid publication dictionary raw length");
+  if (packed.byteLength > PUBLICATION_DICTIONARY_MAX_READ_PACKED_BYTES) throw new Error("Publication dictionary exceeds packed byte limit");
   const newline = packed.indexOf(10);
   if (newline < 0 || newline > PUBLICATION_DICTIONARY_MAX_TABLE_BYTES) throw new Error("Malformed publication dictionary table");
   const tableText = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(packed.subarray(0, newline));
