@@ -48,7 +48,7 @@ Request/verify/admin-decision routes are unregistered; unknown-path auth behavio
 
 ## Supporter Key Claim Contract
 
-One key per eligible externally-owned sender wallet; direct donations count only after reconciliation into the committed ledger. Values are receipt-date USD, not claim-time prices; EURC uses receipt-date FX, not parity. Pool/Giveth/exchange withdrawals and unsupported smart-contract signatures do not qualify. Founder qualifying rows may count. [Funding](./funding-page.md#data-model) owns ledger approval/pricing; [API reference](./api-reference.md) owns request/auth and error details.
+One key per eligible externally-owned sender wallet; direct donations count only after reconciliation into the committed ledger. Values are receipt-date USD, not claim-time prices; non-USD fiat coins use receipt-date ECB FX, not parity. Pool/Giveth/exchange withdrawals and unsupported smart-contract signatures do not qualify. Founder qualifying rows may count. [Funding](./funding-page.md#data-model) owns ledger approval/pricing; [API reference](./api-reference.md) owns request/auth and error details.
 
 Use `DONOR_API_KEY_MIN_USD` (inclusive threshold), donor rate and reviewed deployments from shared constants. Current non-held accepted Safety Score A/B-band grades determine claim-time eligibility; missing/NR/out-of-band do not count, and missing/unavailable/held publication pauses with 503. Later grade changes do not revoke issued keys. Donor keys have no expiry and re-signing never rotates them. Lost/leaked token or removal needs operator wallet verification/private rotation or deletion. Public copy states every-Sunday ledger updates and the reconciliation date, not instant claims.
 
