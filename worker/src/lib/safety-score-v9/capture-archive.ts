@@ -6,13 +6,15 @@ import { throwIfAborted } from "../abort";
 import { executeAtomicBatch } from "../db";
 import { sha256Hex } from "../hash";
 import { logWorkerEvent } from "../structured-log";
-import { SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES } from "./publication-codec";
+import { SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES } from "@shared/lib/safety-score-v9-publication-limits";
 
 // Correct the ambient Workers Buffer declaration without encoding payloads
 // solely to count bytes; nodejs_compat supplies the native Node constructor.
 const Buffer = NodeBuffer as BufferConstructor;
 
 export const SAFETY_SCORE_CAPTURE_ARCHIVE_MAX_OBJECT_BYTES = 8_000_000;
+// Replay transports keep their archive budget when canonical card caps grow.
+export const SAFETY_SCORE_CAPTURE_ARCHIVE_MAX_REPLAY_STORED_BYTES = 1_900_000;
 export const SAFETY_SCORE_CAPTURE_ARCHIVE_WAIT_MS = 15_000;
 const SAFETY_SCORE_CAPTURE_ARCHIVE_FINALIZATION_MARGIN_MS = 2_000;
 export const SAFETY_SCORE_CAPTURE_ARCHIVE_CONTINUATION_MS = 30_000;
@@ -138,7 +140,9 @@ export async function archiveSafetyScoreCapture(input: {
     throwIfAborted(input.signal);
     for (const row of [input.cacheRows.base, input.cacheRows.delta, input.cacheRows.cards]) {
       const valueBytes = Buffer.byteLength(row.value, "utf8");
-      if (valueBytes > SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES) {
+      const limit = row === input.cacheRows.cards ? SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES
+        : SAFETY_SCORE_CAPTURE_ARCHIVE_MAX_REPLAY_STORED_BYTES;
+      if (valueBytes > limit) {
         return { status: "skipped", reason: "capture-too-large", bytes: valueBytes };
       }
     }
