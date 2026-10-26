@@ -1266,7 +1266,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-contract.ts",
-      "sha256": "bd3eb189e013f383ff72f6323d506b7158dc1d85f4092b00763c15546c49ad86"
+      "sha256": "89deb5841036320f5b8f62920d682f11b4c2b2042696e78a297365ff2b4273c6"
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-diagnostics.ts",
@@ -1311,7 +1311,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-25-block-26268499-shock-coverage.json.gz"
     }
   ],
-  "digest": "b3a24677335b2411372d5cec28c8bf87a08eb0fa6c790f4e9a9b0c3f3c7a2fd7"
+  "digest": "d87563399ec9821ad95c84388b4f0e98c8ff47d5517a3f79b29b31d82d44c6d6"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
