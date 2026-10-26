@@ -7,7 +7,7 @@ const STELLAR_RPC = "https://soroban-rpc.mainnet.stellar.gateway.fm";
 const BOUNDED_READ = { maxRetries: 0, maxResponseBytes: 64 * 1024 };
 const HorizonSchema = z.object({ history_latest_ledger_closed_at: z.string().datetime() });
 const LedgerSchema = z.object({ jsonrpc: z.literal("2.0"), id: z.literal(1), result: z.object({
-  sequence: z.number().int().positive(), closeTime: z.string().regex(/^[1-9]\d{0,15}$/),
+  status: z.literal("healthy"), latestLedger: z.number().int().positive(), latestLedgerCloseTime: z.string().regex(/^[1-9]\d{0,15}$/),
 }), error: z.never().optional() });
 const AmountSchema = z.string().regex(/^\d{1,19}\.\d{7}$/);
 const AssetResponseSchema = z.object({ _embedded: z.object({ records: z.array(z.object({
@@ -87,16 +87,17 @@ export async function fetchStellarSupply(address: string, decimals: number, sign
   }
   const contract = address.slice(address.lastIndexOf("-") + 1);
   const contractBytes = strKeyBytes(contract, 16);
+  // getLatestLedger includes unbounded ledger metadata; getHealth proves the same node's head clock.
   const ledger = LedgerSchema.parse(await fetchJsonPostWithRetry<unknown>(
-    STELLAR_RPC, { jsonrpc: "2.0", id: 1, method: "getLatestLedger" }, signal, 10_000, undefined, BOUNDED_READ,
+    STELLAR_RPC, { jsonrpc: "2.0", id: 1, method: "getHealth" }, signal, 10_000, undefined, BOUNDED_READ,
   )).result;
-  requireFreshLedger(Number(ledger.closeTime));
+  requireFreshLedger(Number(ledger.latestLedgerCloseTime));
   const simulate = async (method: "total_supply" | "decimals") => SimulationSchema.parse(await fetchJsonPostWithRetry<unknown>(
     STELLAR_RPC, { jsonrpc: "2.0", id: 1, method: "simulateTransaction", params: { transaction: readEnvelope(contractBytes, method) } },
     signal, 10_000, undefined, BOUNDED_READ,
   )).result;
   const scale = await simulate("decimals");
-  if (scale.latestLedger < ledger.sequence) throw new Error("stellar-ledger-regressed");
+  if (scale.latestLedger < ledger.latestLedger) throw new Error("stellar-ledger-regressed");
   if (readScVal(scale.results[0].xdr, 3) !== BigInt(decimals)) throw new Error("stellar-contract-decimals-mismatch");
   const supply = await simulate("total_supply");
   if (supply.latestLedger < scale.latestLedger) throw new Error("stellar-ledger-regressed");
