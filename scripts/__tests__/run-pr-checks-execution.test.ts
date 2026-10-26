@@ -117,7 +117,7 @@ describe("isolated V9 resource execution", () => {
 
   it("rejects stale faithful reports and violations even when child statuses pass", () => {
     const correctness = { publicationBytes: { unit: "card", units: 396, largestUnitBytes: 85_123,
-      unitLimitBytes: 106_404, streamedTotalBytes: 8_158_138, streamedTotalRegressionLimitBytes: 8_250_000, streamedTotalLimitBytes: 9_200_000 } };
+      unitLimitBytes: 106_404, streamedTotalBytes: 8_158_138, streamedTotalRegressionLimitBytes: 8_250_000, streamedTotalLimitBytes: 14_000_000 } };
     const faithful = { schemaVersion: 1, invocationId: "previous-run", complete: true, diagnosticOnly: false,
       harnessRevision: RESOURCE_HARNESS_REVISION,
       profile: "compute", phaseManifest: "post-p2", violations: [], policy: "qualified", declaredPhases: [...RESOURCE_PHASES],
@@ -152,7 +152,7 @@ describe("isolated V9 resource execution", () => {
   it("reports separate card-unit and streamed-total metrics without replacing natural memory status", async () => {
     const directory = mkdtempSync(`${tmpdir()}/pharos-resource-summary-`);
     const publicationBytes = { unit: "card", units: 396, largestUnitBytes: 85_123,
-      unitLimitBytes: 106_404, streamedTotalBytes: 8_158_138, streamedTotalRegressionLimitBytes: 8_250_000, streamedTotalLimitBytes: 9_200_000 };
+      unitLimitBytes: 106_404, streamedTotalBytes: 8_158_138, streamedTotalRegressionLimitBytes: 8_250_000, streamedTotalLimitBytes: 14_000_000 };
     try {
       expect(await runV9ResourceLane({ argv: [], outputDirectory: directory, resourceDirectory: directory,
         runCommand: async (command) => {
@@ -171,8 +171,8 @@ describe("isolated V9 resource execution", () => {
           return 0;
         } })).toBe(0);
       const summary = readFileSync(resolve(directory, "summary.md"), "utf8");
-      expect(summary).toContain("| live | 396 | 85123 | 106404 | 8158138 | 8250000 | 9200000 |");
-      expect(summary).toContain("| hard-cap | 396 | 85123 | 106404 | 8158138 | 8250000 | 9200000 |");
+      expect(summary).toContain("| live | 396 | 85123 | 106404 | 8158138 | 8250000 | 14000000 |");
+      expect(summary).toContain("| hard-cap | 396 | 85123 | 106404 | 8158138 | 8250000 | 14000000 |");
       expect(summary).toContain("Natural 128 MiB exit status: 0");
       expect(summary).toContain('policy: **"unqualified"**');
     } finally { rmSync(directory, { recursive: true, force: true }); }

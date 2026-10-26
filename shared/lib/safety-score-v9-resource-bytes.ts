@@ -7,7 +7,7 @@ import { SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES } from "./safe
 export const RESOURCE_PUBLICATION_CARD_UNIT_MAX_BYTES = 106_404;
 // Preserve 958a14c's aggregate relative headroom (7,100,000 / 7,029,184):
 // ceil10KB(8,158,138 * 7,100,000 / 7,029,184) = 8,250,000 B.
-// This early regression ceiling stays below the independent 9.2 MB hard cap.
+// This early regression ceiling stays below the independent 14 MB hard cap.
 export const RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES = 8_250_000;
 
 export const PublicationByteMetricsSchema = z.object({
