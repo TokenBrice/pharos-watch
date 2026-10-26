@@ -35,6 +35,8 @@ Once a coin has a sidecar for a domain, all fields owned by that domain must sta
 
 For `bridgeRouteRisk` and `mintAuthority` deployment references, route/control fields, mutable upgrade paths and ownership validation, use the [native issuance / Bridge Risk authoring contract](../stablecoin-data.md#mint-authority-and-bridge-risk-ownership). Mint incidents retain explicit active/resolved state, with `resolvedAt` only for resolved incidents. An intentionally unscoreable mint review uses `review.disposition: "unresolved"` and retains its questions, not an accidental missing-profile gap. Shared addresses/failure-domain keys join controller identity without merging capabilities.
 
+Fund NAV oracle reviews bind the exact share class and distinguish administrator valuation from its publication relay. An external NAV feed does not prove independent valuation, redundant pricing or publisher signer closure; issuer-operated relays retain privileged internal pricing. Ordinary fund settlement, gross cash and account-scoped instant withdrawal limits do not establish same-notional executable redemption capacity.
+
 Cross-domain incidents stay outside this split; [Mint Authority Review](../stablecoin-data.md#mint-authority-review) owns the incident-registry routing contract. Keep domain-native incident fields when they express the event, and never duplicate one incident across both sources.
 
 ### Deciding which sidecar owns a control

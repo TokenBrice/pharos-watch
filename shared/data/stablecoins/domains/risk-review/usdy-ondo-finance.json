@@ -1,5 +1,44 @@
 {
   "id": "usdy-ondo-finance",
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "USDY's primary mint and redemption valuation follows Ondo's administered yield rate and on-chain price oracle. The issuer's integration guide describes oracle-based USDC conversion, and its oracle-wrapper source permits the owner to replace the underlying oracle. On-chain publication does not establish independent price-setting authority.",
+    "reviewedAt": "2026-10-25",
+    "reviewer": "Pharos NAV parity B1-a primary-source review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDY InstantManager integration and oracle-based pricing, reviewed 2026-10-25",
+        "url": "https://docs.ondo.finance/developer-guides/usdy-instant-manager-integration"
+      },
+      {
+        "label": "Ondo USDY issuer-set monthly yield policy, published 2023-08-03",
+        "url": "https://ondo.finance/blog/introducing-ondo-usd-yield-usdy"
+      },
+      {
+        "label": "Ondo oracle-wrapper owner-controlled replacement, source revision 4409cdac96f26bdce584c1078aa7a968dd937dc9",
+        "url": "https://github.com/ondoprotocol/rwa-contracts/blob/4409cdac96f26bdce584c1078aa7a968dd937dc9/contracts/xManager/OndoOracle/AbstractRWAOracleWrapper.sol"
+      }
+    ],
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-a primary-source review",
+      "rationale": "USDY is an issuer-valued secured note whose accumulated yield changes its primary mint and redemption price. This top-level conversion authority is distinct from borrower collateral pricing and liquidation branches. This documentary scope does not assert the current oracle implementation, deployment-specific controller closure, holder eligibility, funded capacity or an executable same-notional quote.",
+      "sources": [
+        {
+          "label": "USDY primary conversion and registered-holder prerequisites",
+          "url": "https://docs.ondo.finance/developer-guides/usdy-instant-manager-integration"
+        },
+        {
+          "label": "Ondo USDY secured-note identity and yield policy",
+          "url": "https://ondo.finance/blog/introducing-ondo-usd-yield-usdy"
+        }
+      ]
+    }
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

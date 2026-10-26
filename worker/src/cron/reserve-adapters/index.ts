@@ -99,6 +99,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   reservoir: lazyAdapter(() => import("./reservoir").then((mod) => mod.fetchReservoirReserves)),
   "rlusd-independent-assurance": lazyAdapter(() => import("./independent-assurance").then((mod) => mod.fetchIndependentAssuranceAdapter)),
   "ondo-ousg": lazyAdapter(() => import("./ondo-ousg").then((mod) => mod.fetchOndoOusgReserves)),
+  "ondo-usdy": lazyAdapter(() => import("./ondo-usdy").then((mod) => mod.fetchOndoUsdyReserves)),
   "midas-mtbill": lazyAdapter(() => import("./midas-mtbill").then((mod) => mod.fetchMidasMtbillReserves)),
   "river-protocol-info": lazyAdapter(() => import("./river-protocol-info").then((mod) => mod.fetchRiverProtocolInfoReserves)),
   "sgforge-coinvertible": lazyAdapter(() => import("./sgforge-coinvertible").then((mod) => mod.fetchSgForgeCoinvertibleReserves)),
@@ -132,6 +133,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "frnt-ledgerlens": lazyAdapter(() => import("./frnt-ledgerlens").then((mod) => mod.fetchFrntLedgerlensReserves)),
   "coinbase-oned-por": lazyAdapter(() => import("./coinbase-oned-por").then((mod) => mod.fetchCoinbaseOnedPorReserves)),
   "blackrock-brsrv-holdings": lazyAdapter(() => import("./blackrock-brsrv-holdings").then((mod) => mod.fetchBlackrockBrsrvHoldingsReserves)),
+  "chinaamc-holdings-api": lazyAdapter(() => import("./chinaamc-holdings-api").then((mod) => mod.fetchChinaamcHoldingsReserves)),
 };
 
 // Cast (not satisfies) below: Object.fromEntries widens keys to string, so the

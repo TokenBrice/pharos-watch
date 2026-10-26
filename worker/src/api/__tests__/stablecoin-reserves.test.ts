@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { URL } from "node:url";
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
@@ -13,6 +15,7 @@ import { getReserves } from "@shared/lib/reserve-templates";
 import { getLiveReserveAdapterDefinition, computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 
 import { RESERVE_FEED_REVIEWS } from "../../lib/reserve-feed-reviews";
+import { adaptOndoUsdyPortfolio } from "../../cron/reserve-adapters/ondo-usdy";
 
 const acknowledgedReview = RESERVE_FEED_REVIEWS.find((review) => review.stablecoinId === "mtbill-midas")!;
 
@@ -121,11 +124,39 @@ describe("handleStablecoinReserves", () => {
     } finally { meta.status = priorStatus; }
   });
 
-  it.each(["kusd-kerne", "tgbp-tokenised", "inalpha-nest", "usdy-ondo-finance", "usdxl-last"])(
+  it.each(["kusd-kerne", "tgbp-tokenised", "inalpha-nest", "usdxl-last"])(
     "retains pre-launch and suspended 404 contract for %s", async (id) => {
       expect((await handleStablecoinReserves(mockD1(), id)).status).toBe(404);
     },
   );
+
+  it("serves the dated USDY portfolio as non-independent with a sub-4 KB response", async () => {
+    const now = Date.parse("2026-10-25T12:00:00Z") / 1000;
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(now * 1000);
+    try {
+      const coin = TRACKED_STABLECOINS.find((entry) => entry.id === "usdy-ondo-finance")!;
+      const config = coin.liveReservesConfig!;
+      const html = readFileSync(new URL("../../cron/reserve-adapters/__tests__/fixtures/ondo-usdy-portfolio.html", import.meta.url), "utf8");
+      const result = adaptOndoUsdyPortfolio(html, coin, now);
+      const identity = { stablecoin_id: coin.id, config_fingerprint: computeLiveReserveConfigFingerprint(config) };
+      const db = mockD1([
+        { match: "FROM reserve_composition", rows: [], first: {
+          ...reserveCompositionRow(now, { slices: JSON.stringify(result.slices), metadata: JSON.stringify(result.metadata) }),
+          ...identity, source: config.adapter, adapter_evidence_class: "weak-live-probe",
+        } },
+        { match: "FROM reserve_sync_state", rows: [], first: {
+          ...reserveSyncRow(now), ...identity, adapter_key: config.adapter,
+        } },
+      ]);
+      const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(await handleStablecoinReserves(db, coin.id), 200));
+      expect(body.mode).toBe("live");
+      expect(body.provenance).toMatchObject({ scoringEligible: false, scoringRejectionReasons: ["non-independent"] });
+      expect(body.reserves).toHaveLength(4);
+      expect(body.sync?.freshness?.sourceAgeBudgetSec).toBe(604800);
+      expect(Buffer.byteLength(JSON.stringify(body))).toBeLessThan(4096);
+    } finally { vi.useRealTimers(); }
+  });
 
   it("publishes matched acknowledgement without admitting missing evidence", async () => {
     const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "mtbill-midas")!;

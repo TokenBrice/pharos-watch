@@ -69,12 +69,13 @@ describe("adapter registry completeness", () => {
       }).success).toBe(false);
     }
     const coins = new Map(TRACKED_SOURCE_COINS.map((coin) => [coin.id, coin]));
-    for (const id of ["usdv-solomon", "usdh-native-markets", "mim-abracadabra", "stusd-stoneyield", "usdo-openeden", "usdy-ondo-finance"]) {
+    for (const id of ["usdv-solomon", "usdh-native-markets", "mim-abracadabra", "stusd-stoneyield", "usdo-openeden"]) {
       expect(coins.get(id)).toBeDefined();
       expect(coins.get(id)?.liveReservesConfig).toBeUndefined();
     }
     expect(coins.get("usdv-solomon-v2")?.liveReservesConfig?.adapter).toBe("solomon-chancery");
     expect(coins.get("cusdo-openeden")?.liveReservesConfig?.adapter).toBe("erc4626-single-asset");
+    expect(coins.get("usdy-ondo-finance")?.liveReservesConfig?.adapter).toBe("ondo-usdy");
     expect(coins.get("tbill-openeden")?.liveReservesConfig?.adapter).toBe("chainlink-nav");
     expect(coins.get("usdh-native-markets")?.status).toBe("frozen");
     expect(coins.get("mim-abracadabra")?.status).toBe("frozen");

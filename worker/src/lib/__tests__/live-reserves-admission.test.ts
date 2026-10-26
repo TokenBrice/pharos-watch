@@ -27,7 +27,7 @@ describe("live reserve admission", () => {
   it.each([
     "qcad-stablecorp", "usx-solstice", "satusd-river", "usdv-solomon-v2",
     "dgld-gold-token-sa", "xagm-matrixdock", "onyc-onre", "avusd-avant",
-    "ftusd-flying-tulip", "frnt-wyoming",
+    "ftusd-flying-tulip", "frnt-wyoming", "usdy-ondo-finance",
   ])("keeps a healthy current %s observation non-independent", (id) => {
     const coin = TRACKED_META_BY_ID.get(id)!;
     const config = coin.liveReservesConfig!;
@@ -267,6 +267,10 @@ describe("live reserve admission", () => {
       if (id === "usdt-tether") {
         delete meta.liveReservesConfig;
         delete runtimeMeta.liveReservesConfig;
+      } else {
+        const suspended = { reason: "test suspended feed", since: "2026-10-25" };
+        meta.liveReservesConfig = { ...original!, suspended };
+        runtimeMeta.liveReservesConfig = { ...originalRuntimeConfig!, suspended };
       }
       const retained = await resolveReserveResult(fixture(id), id, 1_200);
       expect(retained?.provenance?.scoringEligible).toBe(false);

@@ -288859,6 +288859,1319 @@
       ],
       "nextReviewTrigger": "First production run of m0-solana-wrapper for xo-exodus and a fresh replay showing the exact local indexed-M row or the inherited m-m0 backing component; confirm the pre-cap crosses 40. Re-review 2026-11-20 if the producer still has not produced a scoring-eligible row.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:eursafo-spiko",
+      "taskIds": [
+        "V9G-b88bf4f925ed3f95",
+        "V9G-d5c645d05b53a835"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "evidence": [
+        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
+        "https://docs.spiko.io/developers/distributor_api/reference/withdrawal-orders-get-instant-withdrawal-eligibility",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://cdn.spiko.finance/legal_docs/EN/Terms_of_Use_EN.pdf"
+      ],
+      "rationale": "Reviewed issuer withdrawal rules and existing exact-class redemption reviews establish eventual NAV redemption, not a stressed same-notional executable capacity bound or unconditional elapsed maximum to final bank receipt. EUR instant withdrawals are investor/bank/day scoped and cannot be aggregated into asset-wide capacity. Zero fund exit commission does not establish an external-holder all-in transfer-cost ceiling. Retain existing settlement, cost and capacity gaps; no producer observations or clocks changed.",
+      "changeRefs": [],
+      "sentinels": [
+        "eursafo-spiko:gap:exit-route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:eursafo-spiko:offchain-issuer:settlement",
+        "eursafo-spiko:gap:route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:eursafo-spiko:offchain-issuer:capacity"
+      ],
+      "nextReviewTrigger": "Issuer owns disclosure; re-review when exact-class same-notional funded capacity, final-payment settlement bound and all-in cost evidence becomes available, or on 2026-11-25. Any runtime adapter requires a separately verified investor/bank scope and fresh producer readback.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:eursafo-spiko",
+      "taskIds": [
+        "V9G-e5de04e109d03545",
+        "V9G-22a4e34ab4e527aa",
+        "V9G-f94ed164c3e5cf4a",
+        "V9G-f23f4ddf2c71fd28",
+        "V9G-bcd02936b4506242",
+        "V9G-f8d0842eedb19b80"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "evidence": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://github.com/spiko-tech/contracts",
+        "https://github.com/spiko-tech/stellar-contracts",
+        "shared/data/stablecoins/domains/mint-authority/eursafo-spiko.json"
+      ],
+      "rationale": "The current typed registry still requires exact executionScope, key-custody human independence/approval policy, or reviewer-scoped control semantics. The common issuer NAV and withdrawal documents do not close these deployment-specific obligations. Existing technical controller facts and adverse evidence are retained; no same-brand alias, signer independence or whole-book custody conclusion is inferred. Supply-materiality work belongs to the supply lanes and is not curated around here.",
+      "changeRefs": [],
+      "sentinels": [
+        "eursafo-spiko:gap:control:mint-meta:eursafo-spiko:23f59e32ff8cac44ebdd:executionScope",
+        "eursafo-spiko:gap:control:mint-meta:eursafo-spiko:5619f8f8080628d3f984:executionScope",
+        "eursafo-spiko:gap:control:mint-meta:eursafo-spiko:6ad5c92562358f0198cd:executionScope",
+        "eursafo-spiko:gap:control:mint-meta:eursafo-spiko:c43a57a163bb1e96cf57:executionScope",
+        "eursafo-spiko:gap:deployment-control:mint-meta:eursafo-spiko:154e8e3823fb57a68590",
+        "eursafo-spiko:gap:deployment-controls"
+      ],
+      "nextReviewTrigger": "Spiko owns key-residency and human-approval disclosure; a controls reviewer must bind it to each exact controller and execution path. Re-review on that disclosure or a fresh pinned deployment-control packet after supply-lane integration, no later than 2026-11-25.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:eutbl-spiko",
+      "taskIds": [
+        "V9G-cae05bbab97ee4b8",
+        "V9G-d5bd611a8a111f90"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "evidence": [
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://docs.spiko.io/documentation/tokenization/nav",
+        "https://reference-data-directory.vercel.app/feeds-mainnet.json",
+        "https://public-api.spiko.io/share-classes/EUTBL"
+      ],
+      "rationale": "Exact fund/share-class NAV authority verified against the September SICAV prospectus, issuer share-class register and NAV-provider table. EUTBL/USTBL external NAVLink publication is pinned at finalized Ethereum block 26271962 (hash 0x49f502645f75fab5c476eca58a1665fb324be72e5132c713680fe7821c8e6b2c); UKTBL retains privileged internal pricing. No independent valuation, redundant pricing or publisher signer proof is inferred. Pending fresh production replay; factsClosed remains zero.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/eutbl-spiko.json"
+      ],
+      "sentinels": [
+        "eutbl-spiko:gap:economic-control:oracle",
+        "eutbl-spiko:gap:economic-control:oracle::tier"
+      ],
+      "nextReviewTrigger": "After batch-2 byte measurement and integration, verify the first fresh accepted production capture removes missing-oracle-profile; re-review on exact feed/provider or share-class changes.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:eutbl-spiko",
+      "taskIds": [
+        "V9G-e69ab3f227da66b6",
+        "V9G-cfe496018a465b9a"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "evidence": [
+        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
+        "https://docs.spiko.io/developers/distributor_api/reference/withdrawal-orders-get-instant-withdrawal-eligibility",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://cdn.spiko.finance/legal_docs/EN/Terms_of_Use_EN.pdf"
+      ],
+      "rationale": "Reviewed issuer withdrawal rules and existing exact-class redemption reviews establish eventual NAV redemption, not a stressed same-notional executable capacity bound or unconditional elapsed maximum to final bank receipt. EUR instant withdrawals are investor/bank/day scoped and cannot be aggregated into asset-wide capacity. Zero fund exit commission does not establish an external-holder all-in transfer-cost ceiling. Retain existing settlement, cost and capacity gaps; no producer observations or clocks changed.",
+      "changeRefs": [],
+      "sentinels": [
+        "eutbl-spiko:gap:exit-route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:eutbl-spiko:offchain-issuer:settlement",
+        "eutbl-spiko:gap:route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:eutbl-spiko:offchain-issuer:capacity"
+      ],
+      "nextReviewTrigger": "Issuer owns disclosure; re-review when exact-class same-notional funded capacity, final-payment settlement bound and all-in cost evidence becomes available, or on 2026-11-25. Any runtime adapter requires a separately verified investor/bank scope and fresh producer readback.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:safo-spiko-usd",
+      "taskIds": [
+        "V9G-82db4436f4bf3000",
+        "V9G-b27f2adff7292046"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "evidence": [
+        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
+        "https://docs.spiko.io/developers/distributor_api/reference/withdrawal-orders-get-instant-withdrawal-eligibility",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://cdn.spiko.finance/legal_docs/EN/Terms_of_Use_EN.pdf"
+      ],
+      "rationale": "Reviewed issuer withdrawal rules and existing exact-class redemption reviews establish eventual NAV redemption, not a stressed same-notional executable capacity bound or unconditional elapsed maximum to final bank receipt. EUR instant withdrawals are investor/bank/day scoped and cannot be aggregated into asset-wide capacity. Zero fund exit commission does not establish an external-holder all-in transfer-cost ceiling. Retain existing settlement, cost and capacity gaps; no producer observations or clocks changed.",
+      "changeRefs": [],
+      "sentinels": [
+        "safo-spiko-usd:gap:exit-route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:safo-spiko-usd:offchain-issuer:settlement",
+        "safo-spiko-usd:gap:route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:safo-spiko-usd:offchain-issuer:capacity"
+      ],
+      "nextReviewTrigger": "Issuer owns disclosure; re-review when exact-class same-notional funded capacity, final-payment settlement bound and all-in cost evidence becomes available, or on 2026-11-25. Any runtime adapter requires a separately verified investor/bank scope and fresh producer readback.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:safo-spiko-usd",
+      "taskIds": [
+        "V9G-c8646eb2aac33cd3",
+        "V9G-e775f38bfa1332a4",
+        "V9G-6b7516583390e6c6",
+        "V9G-d35f5134c334401e",
+        "V9G-ca62306e53e1bf53",
+        "V9G-854076b7cfc9ed2d",
+        "V9G-114634ea9583b0e9",
+        "V9G-f67550632df4b4c8",
+        "V9G-41783da4a8c41da3",
+        "V9G-902ff7062bb3a0e2",
+        "V9G-19bfb15af275ac83",
+        "V9G-68903e4f9b586abf",
+        "V9G-7ccf344b6d13c51c",
+        "V9G-db2eed7fe42c3c4b",
+        "V9G-1764442b5ca51e29",
+        "V9G-08cce0accd015b83",
+        "V9G-378ce5beba586b5c",
+        "V9G-f2c7b92f0f2112e7",
+        "V9G-5d811cf5b747c42a",
+        "V9G-6d3744aee6cfa9e2",
+        "V9G-1c7452ffe590f23e"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "evidence": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://github.com/spiko-tech/contracts",
+        "https://github.com/spiko-tech/stellar-contracts",
+        "shared/data/stablecoins/domains/mint-authority/safo-spiko-usd.json"
+      ],
+      "rationale": "The current typed registry still requires exact executionScope, key-custody human independence/approval policy, or reviewer-scoped control semantics. The common issuer NAV and withdrawal documents do not close these deployment-specific obligations. Existing technical controller facts and adverse evidence are retained; no same-brand alias, signer independence or whole-book custody conclusion is inferred. Supply-materiality work belongs to the supply lanes and is not curated around here.",
+      "changeRefs": [],
+      "sentinels": [
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:06707d554bbe1269a390:executionScope",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:283e00e51084f0ba674b:path:burn-holders:keyCustody",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:283e00e51084f0ba674b:path:initiate:keyCustody",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:2bf10f99ec9b0aea684a:path:approve-pending:keyCustody",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:2bf10f99ec9b0aea684a:path:cancel-pending:keyCustody",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:5f5aa4706e1ca4febbae:executionScope",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:5f5aa4706e1ca4febbae:keyCustody",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:6610676d92c783830171:executionScope",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:6de5504080d47935e511:executionScope",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:6de5504080d47935e511:keyCustody",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:77264fc6a2ac11c6d8d5:path:initiate:keyCustody",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:7aac08d93fae5935a86b:path:approve-pending:keyCustody",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:7aac08d93fae5935a86b:path:cancel-pending:keyCustody",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:937f5001660fea59c40d:path:approve-pending:keyCustody",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:937f5001660fea59c40d:path:cancel-pending:keyCustody",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:a9a897c52af2d64dfb2f:path:approve-pending:keyCustody",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:a9a897c52af2d64dfb2f:path:cancel-pending:keyCustody",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:b3112085fb3b09bed3d3:path:approve-pending:keyCustody",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:b3112085fb3b09bed3d3:path:cancel-pending:keyCustody",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:d2b666b7ca2876340ad5:path:approve-pending:keyCustody",
+        "safo-spiko-usd:gap:control:mint-meta:safo-spiko-usd:d2b666b7ca2876340ad5:path:cancel-pending:keyCustody"
+      ],
+      "nextReviewTrigger": "Spiko owns key-residency and human-approval disclosure; a controls reviewer must bind it to each exact controller and execution path. Re-review on that disclosure or a fresh pinned deployment-control packet after supply-lane integration, no later than 2026-11-25.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:ustbl-spiko",
+      "taskIds": [
+        "V9G-e934920f38d56ea0",
+        "V9G-cdc18b6e2f164212"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "evidence": [
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://docs.spiko.io/documentation/tokenization/nav",
+        "https://reference-data-directory.vercel.app/feeds-mainnet.json",
+        "https://public-api.spiko.io/share-classes/USTBL"
+      ],
+      "rationale": "Exact fund/share-class NAV authority verified against the September SICAV prospectus, issuer share-class register and NAV-provider table. EUTBL/USTBL external NAVLink publication is pinned at finalized Ethereum block 26271962 (hash 0x49f502645f75fab5c476eca58a1665fb324be72e5132c713680fe7821c8e6b2c); UKTBL retains privileged internal pricing. No independent valuation, redundant pricing or publisher signer proof is inferred. Pending fresh production replay; factsClosed remains zero.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/ustbl-spiko.json"
+      ],
+      "sentinels": [
+        "ustbl-spiko:gap:economic-control:oracle",
+        "ustbl-spiko:gap:economic-control:oracle::tier"
+      ],
+      "nextReviewTrigger": "After batch-2 byte measurement and integration, verify the first fresh accepted production capture removes missing-oracle-profile; re-review on exact feed/provider or share-class changes.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:ustbl-spiko",
+      "taskIds": [
+        "V9G-30866b5f39ba31be",
+        "V9G-10097eb4ba7cae4c"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "evidence": [
+        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
+        "https://docs.spiko.io/developers/distributor_api/reference/withdrawal-orders-get-instant-withdrawal-eligibility",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://cdn.spiko.finance/legal_docs/EN/Terms_of_Use_EN.pdf"
+      ],
+      "rationale": "Reviewed issuer withdrawal rules and existing exact-class redemption reviews establish eventual NAV redemption, not a stressed same-notional executable capacity bound or unconditional elapsed maximum to final bank receipt. EUR instant withdrawals are investor/bank/day scoped and cannot be aggregated into asset-wide capacity. Zero fund exit commission does not establish an external-holder all-in transfer-cost ceiling. Retain existing settlement, cost and capacity gaps; no producer observations or clocks changed.",
+      "changeRefs": [],
+      "sentinels": [
+        "ustbl-spiko:gap:exit-route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:ustbl-spiko:offchain-issuer:settlement",
+        "ustbl-spiko:gap:route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:ustbl-spiko:offchain-issuer:capacity"
+      ],
+      "nextReviewTrigger": "Issuer owns disclosure; re-review when exact-class same-notional funded capacity, final-payment settlement bound and all-in cost evidence becomes available, or on 2026-11-25. Any runtime adapter requires a separately verified investor/bank scope and fresh producer readback.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:ustbl-spiko",
+      "taskIds": [
+        "V9G-6dc5393471d571ae"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "evidence": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://github.com/spiko-tech/contracts",
+        "https://github.com/spiko-tech/stellar-contracts",
+        "shared/data/stablecoins/domains/mint-authority/ustbl-spiko.json"
+      ],
+      "rationale": "The current typed registry still requires exact executionScope, key-custody human independence/approval policy, or reviewer-scoped control semantics. The common issuer NAV and withdrawal documents do not close these deployment-specific obligations. Existing technical controller facts and adverse evidence are retained; no same-brand alias, signer independence or whole-book custody conclusion is inferred. Supply-materiality work belongs to the supply lanes and is not curated around here.",
+      "changeRefs": [],
+      "sentinels": [
+        "ustbl-spiko:gap:control:mint-meta:ustbl-spiko:c04d34d7ecd1b9ffeb48:keyCustody"
+      ],
+      "nextReviewTrigger": "Spiko owns key-residency and human-approval disclosure; a controls reviewer must bind it to each exact controller and execution path. Re-review on that disclosure or a fresh pinned deployment-control packet after supply-lane integration, no later than 2026-11-25.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:gbpsafo-spiko",
+      "taskIds": [
+        "V9G-2358278b749a8a5e",
+        "V9G-f2ddf6e5dcd706b9",
+        "V9G-56c4ff00f4c5d98d"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "evidence": [
+        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
+        "https://docs.spiko.io/developers/distributor_api/reference/withdrawal-orders-get-instant-withdrawal-eligibility",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://cdn.spiko.finance/legal_docs/EN/Terms_of_Use_EN.pdf"
+      ],
+      "rationale": "Reviewed issuer withdrawal rules and existing exact-class redemption reviews establish eventual NAV redemption, not a stressed same-notional executable capacity bound or unconditional elapsed maximum to final bank receipt. EUR instant withdrawals are investor/bank/day scoped and cannot be aggregated into asset-wide capacity. Zero fund exit commission does not establish an external-holder all-in transfer-cost ceiling. Retain existing settlement, cost and capacity gaps; no producer observations or clocks changed.",
+      "changeRefs": [],
+      "sentinels": [
+        "gbpsafo-spiko:gap:exit-route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:gbpsafo-spiko:offchain-issuer:cost",
+        "gbpsafo-spiko:gap:exit-route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:gbpsafo-spiko:offchain-issuer:settlement",
+        "gbpsafo-spiko:gap:route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:gbpsafo-spiko:offchain-issuer:capacity"
+      ],
+      "nextReviewTrigger": "Issuer owns disclosure; re-review when exact-class same-notional funded capacity, final-payment settlement bound and all-in cost evidence becomes available, or on 2026-11-25. Any runtime adapter requires a separately verified investor/bank scope and fresh producer readback.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:eurspkcc-spiko",
+      "taskIds": [
+        "V9G-dc90c449ec5683e0",
+        "V9G-dd2e872cb0819a9d"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "evidence": [
+        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
+        "https://docs.spiko.io/developers/distributor_api/reference/withdrawal-orders-get-instant-withdrawal-eligibility",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://cdn.spiko.finance/legal_docs/EN/Terms_of_Use_EN.pdf",
+        "https://www.spiko.io/blog/spiko-cash-carry-everything-you-need-to-know-about-our-new-product"
+      ],
+      "rationale": "Reviewed issuer withdrawal rules and existing exact-class redemption reviews establish eventual NAV redemption, not a stressed same-notional executable capacity bound or unconditional elapsed maximum to final bank receipt. EUR instant withdrawals are investor/bank/day scoped and cannot be aggregated into asset-wide capacity. Zero fund exit commission does not establish an external-holder all-in transfer-cost ceiling. Retain existing settlement, cost and capacity gaps; no producer observations or clocks changed.",
+      "changeRefs": [],
+      "sentinels": [
+        "eurspkcc-spiko:gap:exit-route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:eurspkcc-spiko:offchain-issuer:settlement",
+        "eurspkcc-spiko:gap:route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:eurspkcc-spiko:offchain-issuer:capacity"
+      ],
+      "nextReviewTrigger": "Issuer owns disclosure; re-review when exact-class same-notional funded capacity, final-payment settlement bound and all-in cost evidence becomes available, or on 2026-11-25. Any runtime adapter requires a separately verified investor/bank scope and fresh producer readback.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:eurspkcc-spiko",
+      "taskIds": [
+        "V9G-3e37c569c7644fc5",
+        "V9G-5e9d616027ced591"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "evidence": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://github.com/spiko-tech/contracts",
+        "https://github.com/spiko-tech/stellar-contracts",
+        "shared/data/stablecoins/domains/mint-authority/eurspkcc-spiko.json"
+      ],
+      "rationale": "The current typed registry still requires exact executionScope, key-custody human independence/approval policy, or reviewer-scoped control semantics. The common issuer NAV and withdrawal documents do not close these deployment-specific obligations. Existing technical controller facts and adverse evidence are retained; no same-brand alias, signer independence or whole-book custody conclusion is inferred. Supply-materiality work belongs to the supply lanes and is not curated around here.",
+      "changeRefs": [],
+      "sentinels": [
+        "eurspkcc-spiko:gap:deployment-control:mint-meta:eurspkcc-spiko:c5e7dcb15f857e34e378",
+        "eurspkcc-spiko:gap:deployment-controls"
+      ],
+      "nextReviewTrigger": "Spiko owns key-residency and human-approval disclosure; a controls reviewer must bind it to each exact controller and execution path. Re-review on that disclosure or a fresh pinned deployment-control packet after supply-lane integration, no later than 2026-11-25.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:uktbl-spiko",
+      "taskIds": [
+        "V9G-f7df41d9b0e412f1",
+        "V9G-0bcadfe7b0955952"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "evidence": [
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://docs.spiko.io/documentation/tokenization/nav",
+        "https://reference-data-directory.vercel.app/feeds-mainnet.json",
+        "https://public-api.spiko.io/share-classes/UKTBL"
+      ],
+      "rationale": "Exact fund/share-class NAV authority verified against the September SICAV prospectus, issuer share-class register and NAV-provider table. EUTBL/USTBL external NAVLink publication is pinned at finalized Ethereum block 26271962 (hash 0x49f502645f75fab5c476eca58a1665fb324be72e5132c713680fe7821c8e6b2c); UKTBL retains privileged internal pricing. No independent valuation, redundant pricing or publisher signer proof is inferred. Pending fresh production replay; factsClosed remains zero.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/uktbl-spiko.json"
+      ],
+      "sentinels": [
+        "uktbl-spiko:gap:economic-control:oracle",
+        "uktbl-spiko:gap:economic-control:oracle::tier"
+      ],
+      "nextReviewTrigger": "After batch-2 byte measurement and integration, verify the first fresh accepted production capture removes missing-oracle-profile; re-review on exact feed/provider or share-class changes.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:uktbl-spiko",
+      "taskIds": [
+        "V9G-4dbd10d98791375d",
+        "V9G-cd32e8902f29a27d"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "evidence": [
+        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
+        "https://docs.spiko.io/developers/distributor_api/reference/withdrawal-orders-get-instant-withdrawal-eligibility",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://cdn.spiko.finance/legal_docs/EN/Terms_of_Use_EN.pdf"
+      ],
+      "rationale": "Reviewed issuer withdrawal rules and existing exact-class redemption reviews establish eventual NAV redemption, not a stressed same-notional executable capacity bound or unconditional elapsed maximum to final bank receipt. EUR instant withdrawals are investor/bank/day scoped and cannot be aggregated into asset-wide capacity. Zero fund exit commission does not establish an external-holder all-in transfer-cost ceiling. Retain existing settlement, cost and capacity gaps; no producer observations or clocks changed.",
+      "changeRefs": [],
+      "sentinels": [
+        "uktbl-spiko:gap:exit-route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:uktbl-spiko:offchain-issuer:settlement",
+        "uktbl-spiko:gap:route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:uktbl-spiko:offchain-issuer:capacity"
+      ],
+      "nextReviewTrigger": "Issuer owns disclosure; re-review when exact-class same-notional funded capacity, final-payment settlement bound and all-in cost evidence becomes available, or on 2026-11-25. Any runtime adapter requires a separately verified investor/bank scope and fresh producer readback.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:uktbl-spiko",
+      "taskIds": [
+        "V9G-147230f28cd2190e",
+        "V9G-f61220dbde336f1d"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "evidence": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://github.com/spiko-tech/contracts",
+        "https://github.com/spiko-tech/stellar-contracts",
+        "shared/data/stablecoins/domains/mint-authority/uktbl-spiko.json"
+      ],
+      "rationale": "The current typed registry still requires exact executionScope, key-custody human independence/approval policy, or reviewer-scoped control semantics. The common issuer NAV and withdrawal documents do not close these deployment-specific obligations. Existing technical controller facts and adverse evidence are retained; no same-brand alias, signer independence or whole-book custody conclusion is inferred. Supply-materiality work belongs to the supply lanes and is not curated around here.",
+      "changeRefs": [],
+      "sentinels": [
+        "uktbl-spiko:gap:control:mint-meta:uktbl-spiko:6d47c9067377db997ea5:keyCustody",
+        "uktbl-spiko:gap:control:mint-meta:uktbl-spiko:c457ab656a7f4acbaa31:keyCustody"
+      ],
+      "nextReviewTrigger": "Spiko owns key-residency and human-approval disclosure; a controls reviewer must bind it to each exact controller and execution path. Re-review on that disclosure or a fresh pinned deployment-control packet after supply-lane integration, no later than 2026-11-25.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:chfsafo-spiko",
+      "taskIds": [
+        "V9G-a8c9b0f4a47c8a05",
+        "V9G-9e3f406db9e0a2f2",
+        "V9G-5aa6064681f26e7b"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "evidence": [
+        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
+        "https://docs.spiko.io/developers/distributor_api/reference/withdrawal-orders-get-instant-withdrawal-eligibility",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://cdn.spiko.finance/legal_docs/EN/Terms_of_Use_EN.pdf"
+      ],
+      "rationale": "Reviewed issuer withdrawal rules and existing exact-class redemption reviews establish eventual NAV redemption, not a stressed same-notional executable capacity bound or unconditional elapsed maximum to final bank receipt. EUR instant withdrawals are investor/bank/day scoped and cannot be aggregated into asset-wide capacity. Zero fund exit commission does not establish an external-holder all-in transfer-cost ceiling. Retain existing settlement, cost and capacity gaps; no producer observations or clocks changed.",
+      "changeRefs": [],
+      "sentinels": [
+        "chfsafo-spiko:gap:exit-route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:chfsafo-spiko:offchain-issuer:cost",
+        "chfsafo-spiko:gap:exit-route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:chfsafo-spiko:offchain-issuer:settlement",
+        "chfsafo-spiko:gap:route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:chfsafo-spiko:offchain-issuer:capacity"
+      ],
+      "nextReviewTrigger": "Issuer owns disclosure; re-review when exact-class same-notional funded capacity, final-payment settlement bound and all-in cost evidence becomes available, or on 2026-11-25. Any runtime adapter requires a separately verified investor/bank scope and fresh producer readback.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:chfsafo-spiko",
+      "taskIds": [
+        "V9G-5992228743014a97",
+        "V9G-0a9efb16c9020f3b",
+        "V9G-18c85a1490ec8e80",
+        "V9G-3a1be644cc2a5747",
+        "V9G-6127745869041eaf",
+        "V9G-b9b1c5aa3449f5e1",
+        "V9G-cfdb2373040425f7",
+        "V9G-d2266051d87c72f6"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "evidence": [
+        "https://tech.spiko.io/posts/spiko-smart-contracts/",
+        "https://github.com/spiko-tech/contracts",
+        "https://github.com/spiko-tech/stellar-contracts",
+        "shared/data/stablecoins/domains/mint-authority/chfsafo-spiko.json"
+      ],
+      "rationale": "The current typed registry still requires exact executionScope, key-custody human independence/approval policy, or reviewer-scoped control semantics. The common issuer NAV and withdrawal documents do not close these deployment-specific obligations. Existing technical controller facts and adverse evidence are retained; no same-brand alias, signer independence or whole-book custody conclusion is inferred. Supply-materiality work belongs to the supply lanes and is not curated around here.",
+      "changeRefs": [],
+      "sentinels": [
+        "chfsafo-spiko:gap:control:mint-meta:chfsafo-spiko:638ff2559d7d189253b4:keyCustody",
+        "chfsafo-spiko:gap:control:mint-meta:chfsafo-spiko:88611217558137a4e2e2:keyCustody",
+        "chfsafo-spiko:gap:control:mint-meta:chfsafo-spiko:a747402b94770f893a2e:keyCustody",
+        "chfsafo-spiko:gap:control:mint-meta:chfsafo-spiko:d07f8e29640ee2c8cfee:keyCustody",
+        "chfsafo-spiko:gap:control:mint-meta:chfsafo-spiko:ecc844187a18d2c3efb2:keyCustody",
+        "chfsafo-spiko:gap:deployment-control:mint-meta:chfsafo-spiko:0004e5b163a4ef632cbe",
+        "chfsafo-spiko:gap:deployment-control:mint-meta:chfsafo-spiko:b988c97795ec00aeeec9",
+        "chfsafo-spiko:gap:deployment-controls"
+      ],
+      "nextReviewTrigger": "Spiko owns key-residency and human-approval disclosure; a controls reviewer must bind it to each exact controller and execution path. Re-review on that disclosure or a fresh pinned deployment-control packet after supply-lane integration, no later than 2026-11-25.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:spkcc-spiko",
+      "taskIds": [
+        "V9G-33f9233e46b5f0fa",
+        "V9G-f12f6b7c3844e148"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "evidence": [
+        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
+        "https://docs.spiko.io/developers/distributor_api/reference/withdrawal-orders-get-instant-withdrawal-eligibility",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "https://cdn.spiko.finance/legal_docs/EN/Terms_of_Use_EN.pdf",
+        "https://www.spiko.io/blog/spiko-cash-carry-everything-you-need-to-know-about-our-new-product"
+      ],
+      "rationale": "Reviewed issuer withdrawal rules and existing exact-class redemption reviews establish eventual NAV redemption, not a stressed same-notional executable capacity bound or unconditional elapsed maximum to final bank receipt. EUR instant withdrawals are investor/bank/day scoped and cannot be aggregated into asset-wide capacity. Zero fund exit commission does not establish an external-holder all-in transfer-cost ceiling. Retain existing settlement, cost and capacity gaps; no producer observations or clocks changed.",
+      "changeRefs": [],
+      "sentinels": [
+        "spkcc-spiko:gap:exit-route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:spkcc-spiko:offchain-issuer:settlement",
+        "spkcc-spiko:gap:route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:spkcc-spiko:offchain-issuer:capacity"
+      ],
+      "nextReviewTrigger": "Issuer owns disclosure; re-review when exact-class same-notional funded capacity, final-payment settlement bound and all-in cost evidence becomes available, or on 2026-11-25. Any runtime adapter requires a separately verified investor/bank scope and fresh producer readback.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:usyc-hashnote",
+      "taskIds": [
+        "V9G-3e3a7835c22f8fb8"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-a primary-source review",
+      "evidence": [
+        "shared/data/stablecoins/domains/risk-review/usyc-hashnote.json",
+        "Accepted publication report-cards:v9:v1:12c38303a47bcfdb5d4bc64295abe74f17992eb9cfa547ed8ae83f3ae3482137; base report-cards-input:v1:4710b630910150ed8c14e1eab792cec031a6e55b21b05a8ab5674d03e3ce8285; clock 1792959459; typed missing-data registry."
+      ],
+      "rationale": "The remaining USYC deployment-control scope is materialSupplyShare on its BSC representation, not an absent controller name. Batch-2 attribution is the prerequisite; no invented share or curation around runtime-bridge-materiality-unavailable.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        "usyc-hashnote:gap:control:bridge-meta:usyc-hashnote:8835cca405b40a529d67:materialSupplyShare"
+      ],
+      "nextReviewTrigger": "A2/A3 and B1 lead: regenerate this complete claim group after the first accepted post-batch-2 attribution generation; separately research any remaining incident-state scopes before batch 3.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:usyc-hashnote",
+      "taskIds": [
+        "V9G-a13af7a1ef41ec85",
+        "V9G-a846feb36644e08f"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-a primary-source review",
+      "evidence": [
+        "https://usyc.docs.hashnote.com/overview/token-price",
+        "https://developers.circle.com/tokenized/usyc/overview"
+      ],
+      "rationale": "Primary documents establish issuer-administered SDYF share-price reporting and primary conversion. Added privileged-internal-pricing/top-level-only review; no oracle implementation, deployment controls or executable-capacity renewal. Local candidate replay is prospective; production closure remains pending.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/usyc-hashnote.json"
+      ],
+      "sentinels": [
+        "usyc-hashnote:gap:economic-control:oracle",
+        "usyc-hashnote:gap:economic-control:oracle::tier"
+      ],
+      "nextReviewTrigger": "B1 lead: re-review before batch 3 and on the first accepted post-deploy replay, or when the issuer changes its primary valuation authority.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:usyc-hashnote",
+      "taskIds": [
+        "V9G-f95c8e59a57d042f"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-a primary-source review",
+      "evidence": [
+        "https://developers.circle.com/tokenized/usyc/subscribe-and-redeem",
+        "https://usyc.docs.hashnote.com/overview/subscription-and-redemption"
+      ],
+      "rationale": "Ordinary Teller access and atomic USDC terms establish no actual-holder same-notional funded capacity. Conditional Private Liquidity Teller service is not the ordinary modeled route. No static capacity override or synthetic runtime observation authored.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        "usyc-hashnote:gap:route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:usyc-hashnote:offchain-issuer:capacity"
+      ],
+      "nextReviewTrigger": "Redemption producer owner: re-review at batch-3 integration or on receipt of a current exact-holder execution certificate/issuer-funded capacity and complete settlement terms, whichever occurs first.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:usdy-ondo-finance",
+      "taskIds": [
+        "V9G-47ed14e251f9024f",
+        "V9G-16097670a56cec5c",
+        "V9G-21853121f3529fa8",
+        "V9G-cb84f1133e609304",
+        "V9G-c45aaf9f290badea",
+        "V9G-f67bb65d1b061cc5",
+        "V9G-7d9827aaf89e244c",
+        "V9G-f505265a1c185c36",
+        "V9G-14e272683616f3f5",
+        "V9G-331b2fb97ebb5124",
+        "V9G-f53100cf5255c87e",
+        "V9G-ba4f81a69f811643",
+        "V9G-0dff91abd6444b1c",
+        "V9G-66ecd98dbcb6f6a6",
+        "V9G-3a85b0287a5969f4",
+        "V9G-f13f17902a168f33"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-a primary-source review",
+      "evidence": [
+        "shared/data/stablecoins/domains/risk-review/usdy-ondo-finance.json",
+        "Accepted publication report-cards:v9:v1:12c38303a47bcfdb5d4bc64295abe74f17992eb9cfa547ed8ae83f3ae3482137; base report-cards-input:v1:4710b630910150ed8c14e1eab792cec031a6e55b21b05a8ab5674d03e3ce8285; clock 1792959459; typed missing-data registry."
+      ],
+      "rationale": "Retain the full deployment-control claim group. Unknown materialSupplyShare depends on the batch-2 attribution prerequisites; no invented shares or curation around runtime-bridge-materiality-unavailable. USDY additionally retains unresolved BSC/Solana/Tempo incident-state scopes; existing named authorities do not prove those scopes known.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:083d3dbb17c4bba23702:materialSupplyShare",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:0f2bb8c181665cd2967e:materialSupplyShare",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:257932ba96b963acdcb6:materialSupplyShare",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:2d5e495be7777d2b5840:incidentState",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:2d5e495be7777d2b5840:materialSupplyShare",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:51b7c30ed72f1e13fa7f:materialSupplyShare",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:5f1bac4187fd8590bcba:incidentState",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:5f1bac4187fd8590bcba:materialSupplyShare",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:718ac48284f6e065b905:incidentState",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:718ac48284f6e065b905:materialSupplyShare",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:844336bd64220f3349a2:materialSupplyShare",
+        "usdy-ondo-finance:gap:control:bridge-meta:usdy-ondo-finance:8d01a9198ffdc5e17d2f:materialSupplyShare",
+        "usdy-ondo-finance:gap:deployment-control:bridge-meta:usdy-ondo-finance:2d5e495be7777d2b5840",
+        "usdy-ondo-finance:gap:deployment-control:bridge-meta:usdy-ondo-finance:5f1bac4187fd8590bcba",
+        "usdy-ondo-finance:gap:deployment-control:bridge-meta:usdy-ondo-finance:718ac48284f6e065b905",
+        "usdy-ondo-finance:gap:deployment-controls"
+      ],
+      "nextReviewTrigger": "A2/A3 and B1 lead: regenerate this complete claim group after the first accepted post-batch-2 attribution generation; separately research any remaining incident-state scopes before batch 3.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:usdy-ondo-finance",
+      "taskIds": [
+        "V9G-980e43508174eb5c",
+        "V9G-5d6c7f675dd0b2c3"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-a primary-source review",
+      "evidence": [
+        "https://docs.ondo.finance/developer-guides/usdy-instant-manager-integration",
+        "https://ondo.finance/blog/introducing-ondo-usd-yield-usdy",
+        "https://github.com/ondoprotocol/rwa-contracts/blob/4409cdac96f26bdce584c1078aa7a968dd937dc9/contracts/xManager/OndoOracle/AbstractRWAOracleWrapper.sol"
+      ],
+      "rationale": "Issuer-administered yield, primary conversion and owner-replaceable oracle wrapper support privileged-internal-pricing/top-level-only. No claim that a particular legacy oracle implementation remains live. Local candidate replay is prospective; production closure remains pending.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/usdy-ondo-finance.json"
+      ],
+      "sentinels": [
+        "usdy-ondo-finance:gap:economic-control:oracle",
+        "usdy-ondo-finance:gap:economic-control:oracle::tier"
+      ],
+      "nextReviewTrigger": "B1 lead: re-review before batch 3 and on the first accepted post-deploy replay, or when the issuer changes its primary valuation authority.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:usdy-ondo-finance",
+      "taskIds": [
+        "V9G-8bbc12ed59bc81e7",
+        "V9G-ead5a344a0e9a770"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-a primary-source review",
+      "evidence": [
+        "https://docs.ondo.finance/developer-guides/usdy-instant-manager-integration",
+        "docs/process/redemption-route-evidence.md#existing-route-bound-review-2026-10-14"
+      ],
+      "rationale": "Registered-holder permissions, effective user/global limits, funded payout sources and fee overrides require an exact current producer observation. Minimum size, supply-ratio heuristics and atomic mechanics are not executable capacity.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        "usdy-ondo-finance:gap:exit-route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:usdy-ondo-finance:offchain-issuer:cost",
+        "usdy-ondo-finance:gap:route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:usdy-ondo-finance:offchain-issuer:capacity"
+      ],
+      "nextReviewTrigger": "Redemption producer owner: re-review at batch-3 integration or on receipt of a current exact-holder execution certificate/issuer-funded capacity and complete settlement terms, whichever occurs first.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:ylds-figure",
+      "taskIds": [
+        "V9G-1aa4e1ff80d2d142",
+        "V9G-86f4c5b08895e173"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-a primary-source review",
+      "evidence": [
+        "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf, pages 11-14; SHA-256 7f0d17109a0d4e9fe938f20e94d6a5766aeb204f12551001402e04d3f2682140"
+      ],
+      "rationale": "Fixed $0.01 face certificates accrue formula-based SOFR interest and reinvest into additional certificates; they are expressly distinct from NAV fund shares. Recordkeeping alone proves neither discretionary pricing nor implementation-specific feed authority. Retain oracle gaps pending reconciliation of current NAV/fund classification and actual SOFR ingestion.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        "ylds-figure:gap:economic-control:oracle",
+        "ylds-figure:gap:economic-control:oracle::tier"
+      ],
+      "nextReviewTrigger": "B1 lead: reconcile the NAV/fund classification with the fixed-face claim and obtain exact implementation evidence for SOFR ingestion before batch-3 integration or any oracle-profile promotion.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:ylds-figure",
+      "taskIds": [
+        "V9G-d762a59e885352c8",
+        "V9G-0a51cf1e2bf1624f"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-a primary-source review",
+      "evidence": [
+        "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf, August 6, 2026 surrender supplement"
+      ],
+      "rationale": "Surrender entitlement and zero FCC charge establish no executable same-notional capacity or unconditional request-to-final-payout maximum; the August supplement retains technology exceptions and conditional wire/ACH/stablecoin stages.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        "ylds-figure:gap:exit-route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:ylds-figure:offchain-issuer:settlement",
+        "ylds-figure:gap:route:redemption:redemption:c34bfeb9-3e2a-4d2d-bda0-0975514466f9:redemption:ylds-figure:offchain-issuer:capacity"
+      ],
+      "nextReviewTrigger": "Redemption producer owner: re-review at batch-3 integration or on receipt of a current exact-holder execution certificate/issuer-funded capacity and complete settlement terms, whichever occurs first.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:jaaa-janus-henderson-anemoy",
+      "taskIds": [
+        "V9G-6517013e460163cd",
+        "V9G-a9c03dddc1a4f1cb"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-b primary-source review",
+      "evidence": [
+        "https://www.anemoy.io/funds/jaaa",
+        "https://docs.centrifuge.io/developer/protocol/guides/publish-nav-and-oracles/",
+        "https://docs.centrifuge.io/user/concepts/pricing/"
+      ],
+      "rationale": "Anemoy fund identity and Centrifuge issuer-set primary NAV with separate batch execution pricing support probable privileged-internal-pricing/top-level-only. Chronicle verification does not establish independent valuation authority, current updater keys or signer closure. Local candidate replay is prospective; production closure remains pending.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/jaaa-janus-henderson-anemoy.json"
+      ],
+      "sentinels": [
+        "jaaa-janus-henderson-anemoy:gap:economic-control:oracle",
+        "jaaa-janus-henderson-anemoy:gap:economic-control:oracle::tier"
+      ],
+      "nextReviewTrigger": "B1 lead: re-review before batch 3 and on the first accepted post-deploy replay, or when the issuer changes its primary valuation authority.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:jaaa-janus-henderson-anemoy",
+      "taskIds": [
+        "V9G-d74b74affd8a3919",
+        "V9G-0145361e1194c634",
+        "V9G-51b05df3fb6434b1"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-b primary-source review",
+      "evidence": [
+        "https://www.anemoy.io/funds/jaaa",
+        "Batch-2 replay report-cards:v9:v1:dba45edde0bda4be8836441c40351fbd4d90c09b7a88ba0084f9e35166daf1cc; base report-cards-input:v1:dd818fe4f8fb5a68891070b401d304a22dbdb1f80c329871be85d4502ff3f86a; clock 1792972156; generated curation worklist and typed missing-data registry."
+      ],
+      "rationale": "Daily fund liquidity and stablecoin redemption terms do not establish exact-holder same-notional funded capacity, all-in execution cost or final-payment settlement bounds. No synthetic runtime observation or static capacity override authored.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        "jaaa-janus-henderson-anemoy:gap:exit-route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:jaaa-janus-henderson-anemoy:offchain-issuer:cost",
+        "jaaa-janus-henderson-anemoy:gap:exit-route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:jaaa-janus-henderson-anemoy:offchain-issuer:settlement",
+        "jaaa-janus-henderson-anemoy:gap:route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:jaaa-janus-henderson-anemoy:offchain-issuer:capacity"
+      ],
+      "nextReviewTrigger": "Redemption producer owner: re-review at batch-3 integration or on receipt of exact-holder same-notional request/output/fee/settlement execution evidence and funded capacity; otherwise on 2026-11-25.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:jtrsy-anemoy",
+      "taskIds": [
+        "V9G-8df9489fed350440",
+        "V9G-bb54df4263217995"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-b primary-source review",
+      "evidence": [
+        "https://www.anemoy.io/funds/jtrsy",
+        "https://docs.centrifuge.io/developer/protocol/guides/publish-nav-and-oracles/",
+        "https://docs.centrifuge.io/user/concepts/pricing/"
+      ],
+      "rationale": "Anemoy fund identity and Centrifuge issuer-set primary NAV with separate batch execution pricing support probable privileged-internal-pricing/top-level-only. Chronicle verification does not establish independent valuation authority, current updater keys or signer closure. Local candidate replay is prospective; production closure remains pending.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/jtrsy-anemoy.json"
+      ],
+      "sentinels": [
+        "jtrsy-anemoy:gap:economic-control:oracle",
+        "jtrsy-anemoy:gap:economic-control:oracle::tier"
+      ],
+      "nextReviewTrigger": "B1 lead: re-review before batch 3 and on the first accepted post-deploy replay, or when the issuer changes its primary valuation authority.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:jtrsy-anemoy",
+      "taskIds": [
+        "V9G-aafba9e909ee59ea"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-b primary-source review",
+      "evidence": [
+        "https://www.anemoy.io/funds/jtrsy",
+        "Batch-2 replay report-cards:v9:v1:dba45edde0bda4be8836441c40351fbd4d90c09b7a88ba0084f9e35166daf1cc; base report-cards-input:v1:dd818fe4f8fb5a68891070b401d304a22dbdb1f80c329871be85d4502ff3f86a; clock 1792972156; generated curation worklist and typed missing-data registry."
+      ],
+      "rationale": "Daily fund liquidity and legal redemption entitlement do not establish a current exact-holder same-notional funded-capacity observation. Existing documented terms are retained without a static capacity override or invented runtime evidence.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        "jtrsy-anemoy:gap:route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:jtrsy-anemoy:offchain-issuer:capacity"
+      ],
+      "nextReviewTrigger": "Redemption producer owner: re-review at batch-3 integration or on receipt of exact-holder same-notional request/output/fee/settlement execution evidence and funded capacity; otherwise on 2026-11-25.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:onyc-onre",
+      "taskIds": [
+        "V9G-445f0ae4180886f5",
+        "V9G-673714efea617f71"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-b primary-source review",
+      "evidence": [
+        "https://docs.onre.finance/technical-resources/token-configuration-and-reference.md",
+        "https://docs.onre.finance/technical-resources/onre-smart-contract-integration.md",
+        "https://github.com/onre-finance/onre-sol/blob/c0490831f438074562ebf51e437ca5f8e027596b/programs/onreapp/src/instructions/offer/add_offer_vector.rs"
+      ],
+      "rationale": "Issuer documentation identifies contract-parameter NAV, and issuer-linked source c0490831 restricts base-price/APR vector updates to the State boss signer. This supports probable privileged-internal-pricing/top-level-only, without deployed-binary correspondence, current boss membership or parameter values. Local candidate replay is prospective; production closure remains pending.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/onyc-onre.json"
+      ],
+      "sentinels": [
+        "onyc-onre:gap:economic-control:oracle",
+        "onyc-onre:gap:economic-control:oracle::tier"
+      ],
+      "nextReviewTrigger": "B1 lead: re-review before batch 3 and on the first accepted post-deploy replay, or when the issuer changes its primary valuation authority.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:onyc-onre",
+      "taskIds": [
+        "V9G-2bcac1d50ec5df67",
+        "V9G-1f5fcb5b07f61bc8",
+        "V9G-8ed61cd1fa857071",
+        "V9G-7971656da194e422",
+        "V9G-386a4927b1a20a28",
+        "V9G-3aa93213fc68f4b9",
+        "V9G-e76a188deff7c9ee",
+        "V9G-de351516bcf1c57a",
+        "V9G-6e9d7fb23abce047"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-b primary-source review",
+      "evidence": [
+        "https://docs.onre.finance/technical-resources/onre-smart-contract-integration.md",
+        "https://docs.onre.finance/technical-resources/redemptions-and-onchain-liquidity.md",
+        "Batch-2 replay report-cards:v9:v1:dba45edde0bda4be8836441c40351fbd4d90c09b7a88ba0084f9e35166daf1cc; base report-cards-input:v1:dd818fe4f8fb5a68891070b401d304a22dbdb1f80c329871be85d4502ff3f86a; clock 1792972156; generated curation worklist and typed missing-data registry."
+      ],
+      "rationale": "The management liquidity target and documented quote_swap_sell interface do not establish an admitted exact-holder same-notional execution observation. Current eligibility, output, fee, settlement and funded capacity remain unverified; no synthetic runtime observation authored.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        "onyc-onre:gap:exit-route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:onyc-onre:stablecoin-redeem:access",
+        "onyc-onre:gap:exit-route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:onyc-onre:stablecoin-redeem:capacityEvidenceTier",
+        "onyc-onre:gap:exit-route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:onyc-onre:stablecoin-redeem:executionConfidence",
+        "onyc-onre:gap:exit-route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:onyc-onre:stablecoin-redeem:holderEligibility",
+        "onyc-onre:gap:exit-route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:onyc-onre:stablecoin-redeem:observationConfidence",
+        "onyc-onre:gap:exit-route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:onyc-onre:stablecoin-redeem:output",
+        "onyc-onre:gap:exit-route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:onyc-onre:stablecoin-redeem:settlement",
+        "onyc-onre:gap:route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:onyc-onre:stablecoin-redeem:capacity",
+        "onyc-onre:gap:route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:onyc-onre:stablecoin-redeem:cost"
+      ],
+      "nextReviewTrigger": "Redemption producer owner: re-review at batch-3 integration or on receipt of exact-holder same-notional request/output/fee/settlement execution evidence and funded capacity; otherwise on 2026-11-25.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:eursafo-spiko",
+      "taskIds": [
+        "V9G-8a5318d573f692c0",
+        "V9G-822686de6128d7f7"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "arbitrum:0x59dbe110efbc17e8e9b18d23de2abb2aba1f6665: https://public-api.spiko.io/share-classes/eurSAFO/",
+        "Arbitrum finalized block 518283891 / 0x9f7cf4d908d586cea841e4370f5439e564418a48929929c54c1fd59d92375947 / 2026-10-26T00:08:44Z; https://arb-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Exact issuer identities, per-address native mint/authority state and issuer contract source establish native-issuance/native-mint semantics for the added registers. Older sibling reviews and mint-authority credit are unchanged. Evidence is ready; fresh accepted replay closure remains unverified. Historical 2026-10-25 capture predates these observations, and fresh D1 export failed expired OAuth / invalid_grant.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/eursafo-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "eursafo-spiko:gap:economic-control:bridge",
+        "eursafo-spiko:gap:economic-control:bridge::tier"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_MATERIALITY:eursafo-spiko",
+      "taskIds": [
+        "V9S-38b082aef82c1299"
+      ],
+      "workType": "BRIDGE_MATERIALITY",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "arbitrum:0x59dbe110efbc17e8e9b18d23de2abb2aba1f6665: https://public-api.spiko.io/share-classes/eurSAFO/",
+        "Arbitrum finalized block 518283891 / 0x9f7cf4d908d586cea841e4370f5439e564418a48929929c54c1fd59d92375947 / 2026-10-26T00:08:44Z; https://arb-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Route curation is complete, but independently current runtime supply/materiality and production consumption are not established by zero stock or native-route classification. Owner: NAV-parity integration lead. Fresh accepted capture/export is blocked by expired Wrangler OAuth / invalid_grant; retain the runtime gap until an admitted capture demonstrates closure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/eursafo-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "{\"reasonCode\":\"runtime-bridge-materiality-unavailable\",\"path\":\"control:bridge:cause:4\"}"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:eutbl-spiko",
+      "taskIds": [
+        "V9G-6b7edc5582f9f3e4",
+        "V9G-5277ef51812ae6ca"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "solana:6rS8E5CQHLHmLenNNevUdJ9APzKNairr1kfWAM3EhDX3: https://public-api.spiko.io/share-classes/EUTBL/",
+        "Solana finalized slot 461460200 / HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6 / 2026-10-26T00:26:30Z; https://solana-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Exact issuer identities, per-address native mint/authority state and issuer contract source establish native-issuance/native-mint semantics for the added registers. Older sibling reviews and mint-authority credit are unchanged. Evidence is ready; fresh accepted replay closure remains unverified. Historical 2026-10-25 capture predates these observations, and fresh D1 export failed expired OAuth / invalid_grant.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/eutbl-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "eutbl-spiko:gap:economic-control:bridge",
+        "eutbl-spiko:gap:economic-control:bridge::tier"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_MATERIALITY:eutbl-spiko",
+      "taskIds": [
+        "V9S-d5fe0c534e0177e0"
+      ],
+      "workType": "BRIDGE_MATERIALITY",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "solana:6rS8E5CQHLHmLenNNevUdJ9APzKNairr1kfWAM3EhDX3: https://public-api.spiko.io/share-classes/EUTBL/",
+        "Solana finalized slot 461460200 / HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6 / 2026-10-26T00:26:30Z; https://solana-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Route curation is complete, but independently current runtime supply/materiality and production consumption are not established by zero stock or native-route classification. Owner: NAV-parity integration lead. Fresh accepted capture/export is blocked by expired Wrangler OAuth / invalid_grant; retain the runtime gap until an admitted capture demonstrates closure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/eutbl-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "{\"reasonCode\":\"runtime-bridge-materiality-unavailable\",\"path\":\"control:bridge:cause:4\"}"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:safo-spiko-usd",
+      "taskIds": [
+        "V9G-b25c90f17c1f7541",
+        "V9G-9c028a71bd6188c9"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "arbitrum:0x6a47a9091f2ca880a9ae291e2232d9302da11745: https://public-api.spiko.io/share-classes/SAFO/",
+        "Arbitrum finalized block 518283891 / 0x9f7cf4d908d586cea841e4370f5439e564418a48929929c54c1fd59d92375947 / 2026-10-26T00:08:44Z; https://arb-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Exact issuer identities, per-address native mint/authority state and issuer contract source establish native-issuance/native-mint semantics for the added registers. Older sibling reviews and mint-authority credit are unchanged. Evidence is ready; fresh accepted replay closure remains unverified. Historical 2026-10-25 capture predates these observations, and fresh D1 export failed expired OAuth / invalid_grant.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/safo-spiko-usd.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "safo-spiko-usd:gap:economic-control:bridge",
+        "safo-spiko-usd:gap:economic-control:bridge::tier"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_MATERIALITY:safo-spiko-usd",
+      "taskIds": [
+        "V9S-11c925975665d262"
+      ],
+      "workType": "BRIDGE_MATERIALITY",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "arbitrum:0x6a47a9091f2ca880a9ae291e2232d9302da11745: https://public-api.spiko.io/share-classes/SAFO/",
+        "Arbitrum finalized block 518283891 / 0x9f7cf4d908d586cea841e4370f5439e564418a48929929c54c1fd59d92375947 / 2026-10-26T00:08:44Z; https://arb-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Route curation is complete, but independently current runtime supply/materiality and production consumption are not established by zero stock or native-route classification. Owner: NAV-parity integration lead. Fresh accepted capture/export is blocked by expired Wrangler OAuth / invalid_grant; retain the runtime gap until an admitted capture demonstrates closure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/safo-spiko-usd.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "{\"reasonCode\":\"runtime-bridge-materiality-unavailable\",\"path\":\"control:bridge:cause:4\"}"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:gbpsafo-spiko",
+      "taskIds": [
+        "V9G-0e0c3d0d6bb7e49e",
+        "V9G-85faf7ea2862b736"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "solana:7fnYygJyxQ2RsFJymjnRRa4wptPhUkfo6RT2j4BU4qhP: https://public-api.spiko.io/share-classes/gbpSAFO/",
+        "arbitrum:0x541b1c34fb941cdee6d400d06e27240d9c4e10d8: https://public-api.spiko.io/share-classes/gbpSAFO/",
+        "Arbitrum finalized block 518283891 / 0x9f7cf4d908d586cea841e4370f5439e564418a48929929c54c1fd59d92375947 / 2026-10-26T00:08:44Z; https://arb-mainnet.g.alchemy.com/v2/",
+        "Solana finalized slot 461460200 / HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6 / 2026-10-26T00:26:30Z; https://solana-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Exact issuer identities, per-address native mint/authority state and issuer contract source establish native-issuance/native-mint semantics for the added registers. Older sibling reviews and mint-authority credit are unchanged. Evidence is ready; fresh accepted replay closure remains unverified. Historical 2026-10-25 capture predates these observations, and fresh D1 export failed expired OAuth / invalid_grant.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/gbpsafo-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "gbpsafo-spiko:gap:economic-control:bridge",
+        "gbpsafo-spiko:gap:economic-control:bridge::tier"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_MATERIALITY:gbpsafo-spiko",
+      "taskIds": [
+        "V9S-ad09fa46b0e2ee9d",
+        "V9S-0f9982f5fbcac1e8"
+      ],
+      "workType": "BRIDGE_MATERIALITY",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "solana:7fnYygJyxQ2RsFJymjnRRa4wptPhUkfo6RT2j4BU4qhP: https://public-api.spiko.io/share-classes/gbpSAFO/",
+        "arbitrum:0x541b1c34fb941cdee6d400d06e27240d9c4e10d8: https://public-api.spiko.io/share-classes/gbpSAFO/",
+        "Arbitrum finalized block 518283891 / 0x9f7cf4d908d586cea841e4370f5439e564418a48929929c54c1fd59d92375947 / 2026-10-26T00:08:44Z; https://arb-mainnet.g.alchemy.com/v2/",
+        "Solana finalized slot 461460200 / HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6 / 2026-10-26T00:26:30Z; https://solana-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Route curation is complete, but independently current runtime supply/materiality and production consumption are not established by zero stock or native-route classification. Owner: NAV-parity integration lead. Fresh accepted capture/export is blocked by expired Wrangler OAuth / invalid_grant; retain the runtime gap until an admitted capture demonstrates closure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/gbpsafo-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "{\"reasonCode\":\"runtime-bridge-materiality-unavailable\",\"path\":\"control:bridge:cause:4\"}",
+        "{\"reasonCode\":\"runtime-bridge-materiality-unavailable\",\"path\":\"control:bridge:cause:9\"}"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:uktbl-spiko",
+      "taskIds": [
+        "V9G-4303555959eea78e",
+        "V9G-89b74db8e8d6b26a"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "solana:DEtiguzuMC72hRkMHETcsXeKrJ6Djb6tMebQqjZoBSgt: https://public-api.spiko.io/share-classes/UKTBL/",
+        "Solana finalized slot 461460200 / HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6 / 2026-10-26T00:26:30Z; https://solana-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Exact issuer identities, per-address native mint/authority state and issuer contract source establish native-issuance/native-mint semantics for the added registers. Older sibling reviews and mint-authority credit are unchanged. Evidence is ready; fresh accepted replay closure remains unverified. Historical 2026-10-25 capture predates these observations, and fresh D1 export failed expired OAuth / invalid_grant.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/uktbl-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "uktbl-spiko:gap:economic-control:bridge",
+        "uktbl-spiko:gap:economic-control:bridge::tier"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_MATERIALITY:uktbl-spiko",
+      "taskIds": [
+        "V9S-35b68e59ab6bcb81"
+      ],
+      "workType": "BRIDGE_MATERIALITY",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "solana:DEtiguzuMC72hRkMHETcsXeKrJ6Djb6tMebQqjZoBSgt: https://public-api.spiko.io/share-classes/UKTBL/",
+        "Solana finalized slot 461460200 / HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6 / 2026-10-26T00:26:30Z; https://solana-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Route curation is complete, but independently current runtime supply/materiality and production consumption are not established by zero stock or native-route classification. Owner: NAV-parity integration lead. Fresh accepted capture/export is blocked by expired Wrangler OAuth / invalid_grant; retain the runtime gap until an admitted capture demonstrates closure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/uktbl-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "{\"reasonCode\":\"runtime-bridge-materiality-unavailable\",\"path\":\"control:bridge:cause:4\"}"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:chfsafo-spiko",
+      "taskIds": [
+        "V9G-1d33f8dac41db6ef",
+        "V9G-574641817b1c04cf"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "arbitrum:0x2f44bfa164df2f8cda61c4f1e7355b77cd0f81f8: https://public-api.spiko.io/share-classes/chfSAFO/",
+        "Arbitrum finalized block 518283891 / 0x9f7cf4d908d586cea841e4370f5439e564418a48929929c54c1fd59d92375947 / 2026-10-26T00:08:44Z; https://arb-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Exact issuer identities, per-address native mint/authority state and issuer contract source establish native-issuance/native-mint semantics for the added registers. Older sibling reviews and mint-authority credit are unchanged. All nine CHFSAFO routes now satisfy reviewed independent-liability semantics; re-enrolment is guarded against catalog drift. Evidence is ready; fresh accepted replay closure remains unverified. Historical 2026-10-25 capture predates these observations, and fresh D1 export failed expired OAuth / invalid_grant.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/chfsafo-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26",
+        "shared/data/safety-score-v9/supply-attribution-reviews-v1.json"
+      ],
+      "sentinels": [
+        "chfsafo-spiko:gap:economic-control:bridge",
+        "chfsafo-spiko:gap:economic-control:bridge::tier"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_MATERIALITY:chfsafo-spiko",
+      "taskIds": [
+        "V9S-d1cb419cee9c7890"
+      ],
+      "workType": "BRIDGE_MATERIALITY",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "arbitrum:0x2f44bfa164df2f8cda61c4f1e7355b77cd0f81f8: https://public-api.spiko.io/share-classes/chfSAFO/",
+        "Arbitrum finalized block 518283891 / 0x9f7cf4d908d586cea841e4370f5439e564418a48929929c54c1fd59d92375947 / 2026-10-26T00:08:44Z; https://arb-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Route curation is complete, but independently current runtime supply/materiality and production consumption are not established by zero stock or native-route classification. Owner: NAV-parity integration lead. Fresh accepted capture/export is blocked by expired Wrangler OAuth / invalid_grant; retain the runtime gap until an admitted capture demonstrates closure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/chfsafo-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26",
+        "shared/data/safety-score-v9/supply-attribution-reviews-v1.json"
+      ],
+      "sentinels": [
+        "{\"reasonCode\":\"runtime-bridge-materiality-unavailable\",\"path\":\"control:bridge:cause:5\"}"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:spkcc-spiko",
+      "taskIds": [
+        "V9G-e33915ec77c07127",
+        "V9G-e4360229048c86f2"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "solana:14Rg7TaptSo1Ndkz1ngBw2rE4EuFhQd2PzCrkyjGdsL1: https://public-api.spiko.io/share-classes/SPKCC/",
+        "Solana finalized slot 461460200 / HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6 / 2026-10-26T00:26:30Z; https://solana-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Exact issuer identities, per-address native mint/authority state and issuer contract source establish native-issuance/native-mint semantics for the added registers. Older sibling reviews and mint-authority credit are unchanged. Evidence is ready; fresh accepted replay closure remains unverified. Historical 2026-10-25 capture predates these observations, and fresh D1 export failed expired OAuth / invalid_grant.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/spkcc-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "spkcc-spiko:gap:economic-control:bridge",
+        "spkcc-spiko:gap:economic-control:bridge::tier"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "BRIDGE_MATERIALITY:spkcc-spiko",
+      "taskIds": [
+        "V9S-67763d367882a9c4"
+      ],
+      "workType": "BRIDGE_MATERIALITY",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-26",
+      "reviewer": "NAV-parity SPIKOROUTES pinned per-address review",
+      "evidence": [
+        "solana:14Rg7TaptSo1Ndkz1ngBw2rE4EuFhQd2PzCrkyjGdsL1: https://public-api.spiko.io/share-classes/SPKCC/",
+        "Solana finalized slot 461460200 / HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6 / 2026-10-26T00:26:30Z; https://solana-mainnet.g.alchemy.com/v2/"
+      ],
+      "rationale": "Route curation is complete, but independently current runtime supply/materiality and production consumption are not established by zero stock or native-route classification. Owner: NAV-parity integration lead. Fresh accepted capture/export is blocked by expired Wrangler OAuth / invalid_grant; retain the runtime gap until an admitted capture demonstrates closure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/spkcc-spiko.json",
+        "docs/process/report-cards-evidence-log.md#spiko-added-native-registers--2026-10-26"
+      ],
+      "sentinels": [
+        "{\"reasonCode\":\"runtime-bridge-materiality-unavailable\",\"path\":\"control:bridge:cause:4\"}"
+      ],
+      "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
+      "factsClosed": 0
     }
   ]
 }

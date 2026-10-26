@@ -145,6 +145,25 @@
   ],
   "custodyModel": "institutional-regulated",
   "governanceQuality": "multisig",
+  "liveReservesConfig": {
+    "adapter": "ondo-usdy",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usdy-ondo",
+    "scoring": {
+      "maxSourceAgeSec": 604800
+    },
+    "display": {
+      "url": "https://ondo.finance/usdy",
+      "label": "Ondo USDY portfolio"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-html",
+        "url": "https://ondo.finance/usdy"
+      }
+    }
+  },
   "yieldConfig": {
     "yieldSource": "Ondo T-bill fund",
     "yieldType": "nav-appreciation"

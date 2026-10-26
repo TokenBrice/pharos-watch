@@ -26,6 +26,7 @@ import { MAKINA_ALLOCATIONS_FIXTURE, makinaNetworkSpec } from "./makina-strategy
 import { JPMORGAN_JLTXX_PUBLISHER_URL } from "../jpmorgan-nav";
 import { FRNT_LEDGERLENS_URL } from "../frnt-ledgerlens";
 import COINBASE_ONED_CAPTURE from "./fixtures/coinbase-oned-por.json";
+import CHINAAMC_HOLDINGS_CAPTURE from "./fixtures/chinaamc-holdings-api.json";
 const BLACKROCK_BRSRV_URL = "https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund";
 const BLACKROCK_BRSRV_CAPTURE = readFileSync(new URL("./fixtures/blackrock-brsrv-holdings.txt", import.meta.url), "utf8")
   .replace(/<!--[^]*?-->\r?\n/g, "");
@@ -635,6 +636,19 @@ CORPUS_CASES["midas-mtbill"] = {
   },
 };
 
+const USDY_PORTFOLIO_ENDPOINT = "https://ondo.finance/usdy";
+const USDY_PORTFOLIO_CAPTURE = readFileSync(new URL("./fixtures/ondo-usdy-portfolio.html", import.meta.url), "utf8");
+CORPUS_CASES["ondo-usdy"] = {
+  coinId: "usdy-ondo-finance",
+  nowSec: Date.parse("2026-10-25T21:45:00Z") / 1000,
+  network: { html: { [USDY_PORTFOLIO_ENDPOINT]: USDY_PORTFOLIO_CAPTURE } },
+  drift: {
+    label: "a portfolio category is no longer reviewed",
+    network: { html: { [USDY_PORTFOLIO_ENDPOINT]: USDY_PORTFOLIO_CAPTURE.replace("8a072b79-7c71-472b-8093-0a9c3347fb8f", "unknown") } },
+    outcome: "error",
+  },
+};
+
 const OUSG_PORTFOLIO_ENDPOINT = "https://ondo.finance/ousg";
 const OUSG_PORTFOLIO_CAPTURE = readFileSync(new URL("./fixtures/ondo-ousg-portfolio.html", import.meta.url), "utf8");
 const OUSG_CORPUS_NOW = Date.parse("2026-09-14T12:00:00Z") / 1000;
@@ -783,6 +797,17 @@ CORPUS_CASES["blackrock-brsrv-holdings"] = {
           .replace("Market Value", "Changed Value"),
       },
     },
+  },
+};
+
+CORPUS_CASES["chinaamc-holdings-api"] = {
+  coinId: "cumiu-chinaamc",
+  nowSec: Date.parse("2026-10-25T21:45:00Z") / 1000,
+  network: { json: { [CHINAAMC_HOLDINGS_CAPTURE._capture.source]: CHINAAMC_HOLDINGS_CAPTURE } },
+  drift: {
+    label: "the holdings result array is absent",
+    network: { json: { [CHINAAMC_HOLDINGS_CAPTURE._capture.source]: { ...CHINAAMC_HOLDINGS_CAPTURE, result: undefined } } },
+    outcome: "error",
   },
 };
 

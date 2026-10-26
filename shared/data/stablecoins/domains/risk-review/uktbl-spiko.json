@@ -40,6 +40,57 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "CACEIS Fund Administration originates the daily GBP fund NAV used for UKTBL subscriptions and redemptions. The exact UKTBL register binds GBP share class FR0014012MN7, and Spiko publishes its NAV through its public API. The issuer NAV provider table lists Spiko-operated UKTBL oracles on Polygon, Arbitrum, Base and Etherlink, with no UKTBL Ethereum Chainlink/RedStone entry; the Chainlink Ethereum feed directory searched on 25 October 2026 contains no UKTBL entry. This establishes privileged internal pricing, not an oracleless mechanism. No independent external UKTBL feed, redundancy, failover or publisher signer closure is credited.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "NAV parity B1 Spiko primary-source review",
+      "rationale": "UKTBL is the exact FR0014012MN7 fund share, with subscriptions and redemptions priced at fund NAV. Its own issuance mechanism has a top-level NAV authority, not borrower-specific liquidation branches. External lending integrations do not establish liquidation branches for this fund.",
+      "sources": [
+        {
+          "label": "Spiko SICAV prospectus, published 1 September 2026: CACEIS administration and exact fund NAV terms",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        {
+          "label": "Exact UKTBL share class FR0014012MN7, retrieved 25 October 2026",
+          "url": "https://public-api.spiko.io/share-classes/UKTBL"
+        },
+        {
+          "label": "Spiko NAV provider table, retrieved 25 October 2026",
+          "url": "https://docs.spiko.io/documentation/tokenization/nav"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-25",
+    "reviewer": "NAV parity B1 Spiko primary-source review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spiko SICAV prospectus, published 1 September 2026: CACEIS administration and exact fund NAV terms",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Exact UKTBL share class FR0014012MN7, retrieved 25 October 2026",
+        "url": "https://public-api.spiko.io/share-classes/UKTBL"
+      },
+      {
+        "label": "Spiko NAV provider table, retrieved 25 October 2026",
+        "url": "https://docs.spiko.io/documentation/tokenization/nav"
+      },
+      {
+        "label": "Exact GBP UKTBL NAV totals, retrieved 25 October 2026",
+        "url": "https://public-api.spiko.io/share-classes/UKTBL/totals"
+      },
+      {
+        "label": "Chainlink Ethereum feed directory searched 25 October 2026: no UKTBL entry",
+        "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "UKTBL is natively issued by Spiko on all seven reviewed deployments. Chainlink CCIP BurnWithFromMintTokenPool 1.6.1 contracts on Ethereum, Polygon, Base, and Arbitrum provide the transfer rail's burn/mint return paths; their common EOA owner controls peer and rate-limit configuration. Etherlink has no current UKTBL CCIP pool. This supports the external-validated-network tier, while exact lane-by-lane remote-pool, OffRamp/RMN, rate-limit, pause, and upgrade observations remain pending.",
@@ -233,14 +284,45 @@
         "id": "solana:DEtiguzuMC72hRkMHETcsXeKrJ6Djb6tMebQqjZoBSgt",
         "destinationChain": "solana",
         "contractAddress": "DEtiguzuMC72hRkMHETcsXeKrJ6Djb6tMebQqjZoBSgt",
-        "protocol": "unknown",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Inventoried 2026-10-25 from https://public-api.spiko.io/share-classes/UKTBL. Exact issuer-listed Solana register identity, five decimals, zero supply and issuer authority were verified on-chain. Transfer-route and complete mint-control research remain unresolved; existing sibling reviews do not cover this deployment."
+        "protocol": "Spiko native fund-share register",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Reviewed 2026-10-26: the exact UKTBL issuer API and its individual production deployment identify DEtiguzuMC72hRkMHETcsXeKrJ6Djb6tMebQqjZoBSgt as a native fund-share register. Exact-slot Account Archive reads at finalized slot 461460200 (2026-10-26T00:26:30Z; hash HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6) independently bind this Token-2022 mint, five decimals, matching metadata and totalSupply=0 to mint authority BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ. Its issuer minter configuration names admin 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9 and initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd; this mint's daily-limit PDA permits 500000000000 raw units. Issuer initiate/approve-mint source uses that configuration, not a bridge proof or escrow. This mint independently has DefaultAccountState=Frozen, paused=false under 3wVzYmWt79gBpPtWBK8GHvRfii1SARpP8SKqEKuzJsDY, permanent delegate EeJqADE9Xqkqoyjid6H1GmbwDZ4Bz1qyC7ySpmFq849m and permissioned-burn authority equal to the initiator. Its exact freeze/ACL configuration CppS4oED6A9B75Z4cJHMGxAM2sV5uaPx1CYrg5sfdbQi and thaw-meta PDA bind the issuer allow/block lists; restrictions use freeze/thaw, not a TransferHook extension. Native issuer liability semantics are reviewed; complete signer affiliations, deployed-binary reproduction and cross-register conservation remain unresolved, and the minter program remains upgradeable. No mint-authority review is extended.",
+        "canonicalChain": "solana",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-26",
+        "failureDomainKeys": [
+          "issuer-backend:spiko:fund-register"
+        ],
+        "observedBlock": 461460200,
+        "controllerChain": "solana",
+        "controllerAddress": "BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ",
+        "sources": [
+          {
+            "label": "Exact UKTBL issuer register/ISIN list, read 2026-10-26",
+            "url": "https://public-api.spiko.io/share-classes/UKTBL/"
+          },
+          {
+            "label": "Exact UKTBL immutable production deployment",
+            "url": "https://github.com/spiko-tech/solana-contracts/blob/afdab14fb1a59bf3abe2f263870023349a560e2e/deployments/UKTBL-mainnet-beta.json"
+          },
+          {
+            "label": "Issuer minter configuration and direct issuance source",
+            "url": "https://github.com/spiko-tech/solana-contracts/blob/afdab14fb1a59bf3abe2f263870023349a560e2e/programs/minter/src/instructions/initiate_mint.rs"
+          },
+          {
+            "label": "Issuer administrator-approved direct mint source",
+            "url": "https://github.com/spiko-tech/solana-contracts/blob/afdab14fb1a59bf3abe2f263870023349a560e2e/programs/minter/src/instructions/approve_mint.rs"
+          },
+          {
+            "label": "Exact mint, minter configuration, ACL and list accounts at slot 461460200, hash HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
+          }
+        ]
       }
     ],
     "controls": [

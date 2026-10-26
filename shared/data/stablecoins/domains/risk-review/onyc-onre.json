@@ -32,5 +32,44 @@
         "url": "https://app.onre.finance/earn/transparency"
       }
     ]
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "OnRe identifies ONyc mint 5Y8NV33Vv7WbnLfq3zBcKSdYPrk7g2KoiQoe7M2tcxp5 and program onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe. Canonical mint/redemption NAV derives from contract base-price, rate and time parameters; Pyth/Chainlink feeds serve downstream integrations rather than issuance/redemption. The issuer-linked source at c0490831 restricts pricing-vector updates to the State boss signer. Deterministic accrual therefore does not establish independent valuation authority. Current boss identity, signing threshold, parameter values and deployed-binary correspondence remain unverified.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV-parity B1-b primary-source pricing review",
+      "rationale": "The ONyc program applies internal price vectors to minting and redemption. This is an applicable top-level quote/NAV authority, even though it does not consume an external feed. ONyc itself has no borrower collateral/liquidation branches established by these sources; downstream uses do not establish token-level oracle redundancy.",
+      "sources": [
+        {
+          "label": "OnRe canonical mint/redemption NAV: contract parameters, external feeds outside the issuance path; accessed 2026-10-25",
+          "url": "https://docs.onre.finance/technical-resources/token-configuration-and-reference.md"
+        },
+        {
+          "label": "OnRe integration: exact ONyc mint/program, active pricing vectors and separate redemption surfaces; accessed 2026-10-25",
+          "url": "https://docs.onre.finance/technical-resources/onre-smart-contract-integration.md"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-25",
+    "reviewer": "Pharos NAV-parity B1-b primary-source pricing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "OnRe canonical mint/redemption NAV: contract parameters, external feeds outside the issuance path; accessed 2026-10-25",
+        "url": "https://docs.onre.finance/technical-resources/token-configuration-and-reference.md"
+      },
+      {
+        "label": "OnRe integration: exact ONyc mint/program, active pricing vectors and separate redemption surfaces; accessed 2026-10-25",
+        "url": "https://docs.onre.finance/technical-resources/onre-smart-contract-integration.md"
+      },
+      {
+        "label": "OnRe source at c0490831: boss-authorized base-price/APR vector updates; not a deployed-binary match",
+        "url": "https://github.com/onre-finance/onre-sol/blob/c0490831f438074562ebf51e437ca5f8e027596b/programs/onreapp/src/instructions/offer/add_offer_vector.rs"
+      }
+    ]
   }
 }

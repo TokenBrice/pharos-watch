@@ -24,22 +24,6 @@ export interface LiveReserveSourceQualityNote {
  * including static-validated bindings.
  */
 export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourceQualityNote> = {
-  "usdy-ondo-finance": {
-    sourceUrl: "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/ABoF-avpNclglsNxAeWZO_k/2026/09%20September?rlkey=4icqn1z9bez725wywr30fx52a&dl=0",
-    sourceQuality: "static-validated",
-    expectedAdapterFamily: "runtime discovery retired 2026-10-08; manual reviewed holdings refresh retained",
-    freshnessEvidence: "Reviewed 2026-10-07: Dropbox returns a proprietary JavaScript listing; newest complete daily inventory discovery is unverified. The suspended runtime config and executable were retired on October 8.",
-    scoreGradePlausible: false,
-    note: "A future source requires reliable complete daily archive discovery and the full tracked liability perimeter, including BVI rather than only LLC scope. Neither HTTP 200 nor a manual static generation establishes independent eligible composition.",
-  },
-  "cumiu-chinaamc": {
-    sourceUrl: "https://www.chinaamc.com.hk/jeecg-boot/mainFund/fundQuery/getHoldingsDetail?fundID=USDDMMF&curLang=EN",
-    sourceQuality: "weak-proof",
-    expectedAdapterFamily: "ChinaAMC dated workbook or JSON holdings reader after denominator and instrument reconciliation",
-    freshnessEvidence: "Reviewed 2026-10-15: current daily XLSX has C2=2026/10/15, 67 positions, weights totaling 100.0541% and blank Total NAV. The publication index still lists August 31 as its newest English category factsheet.",
-    scoreGradePlausible: false,
-    note: "The unnamed Credit Agricole row is now 0.8036%, still without ISIN/instrument class and with zero quantity/price; several deposit maturities truncate. The reported NAV weights do not reconcile to a complete gross-asset denominator. Require reconciled current data; do not borrow August categories, invent tolerance or normalize the discrepancy away.",
-  },
   "a7a5-old-vector": {
     sourceUrl: "https://docs-en.a7a5.tech/legal/transparency.md",
     sourceQuality: "not-plausible",

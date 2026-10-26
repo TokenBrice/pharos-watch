@@ -1,5 +1,21 @@
 {
   "id": "cumiu-chinaamc",
+  "liveReservesConfig": {
+    "adapter": "chinaamc-holdings-api",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "cumiu-chinaamc",
+    "display": {
+      "url": "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-%28Tokenized-Unlisted-Class%29&lan=EN",
+      "label": "ChinaAMC disclosed fund holdings"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/mainFund/fundQuery/getHoldingsByFundId?fundId=USDDMMF&groupBy=none"
+      }
+    }
+  },
   "name": "ChinaAMC USD Digital Money Market Fund Class I USD",
   "symbol": "CUMIU",
   "oneLiner": "CUMIU is ChinaAMC's accumulating USD money-market fund share, redeemable at daily NAV through eligible distributors.",

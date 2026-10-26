@@ -6,6 +6,22 @@ These records preserve review dates, scope limits and operator observations form
 
 The existing wrapper allocation/local-review schemas carry scoped rationale and observations, not a free-standing historical-ruling field. Per-asset measurement summaries are capture manifests, not review-note sidecars. These records therefore stay here rather than adding fields or unrelated history to score-bearing JSON.
 
+## NAV Pricing Review — 2026-10-25
+
+USYC's [reported fund share price](https://usyc.docs.hashnote.com/overview/token-price) and USDY's [issuer-administered primary conversion](https://docs.ondo.finance/developer-guides/usdy-instant-manager-integration) support privileged internal pricing with top-level applicability. Oracle publication does not establish independent valuation authority. These documentary reviews do not renew deployment controls, supply attribution, reserves or executable redemption evidence; same-notional capacity remains open.
+
+YLDS remains unresolved. The [FCC prospectus](https://cdn.figure.com/docs/markets/fcc-prospectus.pdf), pages 11–14, defines fixed-face certificates, formula-based interest and reinvestment into additional certificates, expressly distinguishing them from fund shares redeemed at NAV. This does not establish discretionary share pricing or an implementation-specific SOFR feed. Reconcile its current NAV/fund classification with the fixed-face claim before authoring an oracle profile; issuer accrual accounting alone proves neither internal-pricing nor oracleless applicability.
+
+## NAV Fund Pricing Reviews — 2026-10-25
+
+JAAA and JTRSY now carry probable, source-backed `privileged-internal-pricing` reviews. Anemoy identifies the fund shares and redemption rails; Centrifuge documents [issuer-set primary NAV and separate batch execution pricing](https://docs.centrifuge.io/developer/protocol/guides/publish-nav-and-oracles/). Chronicle verification does not establish independent control over the fund valuation. The reviews classify fund-level pricing, without claiming current updater keys, relay wiring or signer independence.
+
+ONyc carries the same tier at probable confidence: [issuer documentation](https://docs.onre.finance/technical-resources/token-configuration-and-reference.md) identifies contract-parameter NAV rather than external-feed authority. The issuer-linked [source at `c0490831`](https://github.com/onre-finance/onre-sol/blob/c0490831f438074562ebf51e437ca5f8e027596b/programs/onreapp/src/instructions/offer/add_offer_vector.rs) requires the State boss signer to change base-price/APR vectors. This source review does not establish deployed-binary correspondence, current boss membership or parameter values.
+
+All three retain their same-notional Exit gaps: daily fund liquidity, a legal redemption entitlement, and ONyc's management liquidity target are not executable capacity. Existing bridge-materiality, custody, incident and reserve gaps are not closed or renewed. This is evidence curation under the existing methodology; local replay projections do not establish production acceptance.
+
+EUTBL and USTBL now carry verified `standard-external` reviews for CACEIS administrator NAV published through their exact Chainlink NAVLink feeds; UKTBL carries verified `privileged-internal-pricing` for its [Spiko-operated NAV publication](https://docs.spiko.io/documentation/tokenization/nav). The exact share-class records and Ethereum block 26271962 pins establish feed identity, without proving independent valuation, redundant pricing, failover or signer closure. Ordinary fund settlement and account-scoped instant withdrawal limits leave same-notional Exit gaps open. Other Spiko controls, reserves and incident reviews are not renewed; production closure remains pending.
+
 ## Vault Oracle And Backing Reviews — 2026-10-22
 
 The primary-source vault review records privileged internal share-pricing paths for spUSDT, syrupUSDT, apyUSD, DUSD and hbUSDT, replacing local oracle U60 with measured45 when admitted. sUSDai, autoUSD, USD3 and USDN retain researched unresolved oracle profiles. New whole-direct-reserve reviews cover sUSDat, sYUSD, Umbrella stkGHO, Yearn v3 USDC and USDN; only Yearn's accounted idle USDC slice receives immediate native-asset liquidity. Independently dated sYUSD/stkGHO maturity facts describe open-ended staking claims, not cooldown length or immediate liquidity.
@@ -55,6 +71,10 @@ The retained record names CGO's physical-exit reader boundary and unavailable re
 ## Supply Identity Review
 
 Current owner: [Supply Attribution And In-Flight Accounting](report-cards-appendix.md#supply-attribution-and-in-flight-accounting).
+
+### Spiko added native registers — 2026-10-26
+
+Reviewed each added ArbitrumUk register (EURSAFO, SAFO, GBPSAFO, CHFSAFO) independently at finalized Arbitrum One block **518283891**, hash `0x9f7cf4d908d586cea841e4370f5439e564418a48929929c54c1fd59d92375947`, `2026-10-26T00:08:44Z`: exact issuer listings, per-address ERC-1967 implementations with verified Token source, authority `0x0c4210e2b65d766f570fe8703c4485b8a07c5cd3`, selector requirements and pinned role membership establish issuer-native issuance plus privileged mint/burn, pause and holder allowlisting ([issuer source](https://github.com/spiko-tech/contracts/tree/d8e10e88284e8cb990f0ed10bb56b9c3f3734a21)). The four new Solana mints (EUTBL, GBPSAFO, UKTBL, SPKCC) independently match [issuer deployments](https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e/deployments) and exact-slot archived mint, minter-config, daily-limit, ACL and allow/block-list bytes at finalized slot **461460200**, hash `HibtTQsMqGdBiGJhkHtqaBUGeJFBRpirrk2gYLbDTDn6`, `2026-10-26T00:26:30Z`. Each is a five-decimal zero-stock native issuer register, with frozen-default holder accounts, privileged pause/delegate/burn and issuer minter control; none is classified from its sibling or from zero supply alone. Source URLs and exact identities are retained in each route. CHFSAFO rejoins independent-liability eligibility only with all nine catalogued routes reviewed and the registry/route guard retained. Complete minter execution/binary reproduction, signer independence, cross-register conservation and current runtime materiality remain open; no other review date, mint-authority credit, methodology or supply total changes. Fresh accepted replay/calibration remains a release prerequisite; historical diagnostics do not establish production closure.
 
 ### HyperEVM provider-origin identity pin
 
