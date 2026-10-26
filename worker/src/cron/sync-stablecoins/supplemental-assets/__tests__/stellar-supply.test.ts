@@ -11,7 +11,7 @@ const fixture = () => ({ _embedded: { records: [{
 const signal = () => new AbortController().signal;
 const classicRead = () => fetchStellarSupply(`USDY-${issuer}`, 7, signal());
 const horizon = (age = 0) => ({ history_latest_ledger_closed_at: new Date(Date.now() - age * 1000).toISOString() });
-const ledger = (age = 0) => ({ jsonrpc: "2.0", id: 1, result: { sequence: 123, closeTime: String(Math.floor(Date.now() / 1000) - age) } });
+const ledger = (age = 0) => ({ jsonrpc: "2.0", id: 1, result: { status: "healthy", latestLedger: 123, latestLedgerCloseTime: String(Math.floor(Date.now() / 1000) - age) } });
 const classicFetcher = (body: unknown) => vi.fn().mockResolvedValueOnce(Response.json(horizon())).mockResolvedValueOnce(Response.json(body));
 const freshnessCases = ["classic", "soroban"] as const;
 function scval(type: 3 | 10, n: bigint): string {
@@ -55,7 +55,7 @@ describe("Stellar supply", () => {
       .mockResolvedValueOnce(Response.json(simulation(10, 33_000_000_000_000_000n)));
     vi.stubGlobal("fetch", fetcher);
     expect(await fetchStellarSupply(address, 5, signal())).toBe(33_000_000_000_000_000n);
-    expect(fetcher.mock.calls.map(([, init]) => JSON.parse(init.body).method)).toEqual(["getLatestLedger", "simulateTransaction", "simulateTransaction"]);
+    expect(fetcher.mock.calls.map(([, init]) => JSON.parse(init.body).method)).toEqual(["getHealth", "simulateTransaction", "simulateTransaction"]);
     // Envelope/operation discriminants and exact contract bytes, independent of our encoder.
     const envelope = atob(JSON.parse(fetcher.mock.calls[2][1].body).params.transaction);
     expect(Buffer.from(envelope, "binary").toString("hex")).toBe(
@@ -88,11 +88,15 @@ describe("Stellar supply", () => {
   });
   it.each(freshnessCases)("rejects missing, malformed or failed %s ledger evidence", async kind => {
     const malformed = kind === "classic" ? { history_latest_ledger_closed_at: "invalid" }
-      : { ...ledger(), result: { ...ledger().result, closeTime: "invalid" } };
+      : { ...ledger(), result: { ...ledger().result, latestLedgerCloseTime: "invalid" } };
     for (const response of [Response.json(null), Response.json({}), Response.json(malformed), new Response("unavailable", { status: 503 })]) {
       vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(response));
       await expect(kind === "classic" ? classicRead() : fetchStellarSupply(contract, 5, signal())).rejects.toThrow();
     }
+  });
+  it("rejects unhealthy Soroban nodes even with a fresh head", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(Response.json({ ...ledger(), result: { ...ledger().result, status: "unhealthy" } })));
+    await expect(fetchStellarSupply(contract, 5, signal())).rejects.toThrow();
   });
   it.each([[122, 123], [123, 122]])("rejects simulation ledgers %s/%s older than the fresh head or each other", async (scaleLedger, supplyLedger) => {
     const scale = simulation(3, 5n), supply = simulation(10, 1n);

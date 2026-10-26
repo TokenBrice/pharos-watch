@@ -473,7 +473,10 @@ describe("CoinGecko on-chain share partitions", () => {
     expect(mocks.partitionRead.mock.calls.map(([id]) => id)).toEqual([
       fixtureMetas[offset].id, fixtureMetas[(offset + 1) % fixtureMetas.length].id,
     ]);
-    await vi.advanceTimersByTimeAsync(ONCHAIN_PARTITION_STAGE_BUDGET_MS);
+    await vi.advanceTimersByTimeAsync(29_999);
+    expect(report).not.toHaveBeenCalled();
+    expect(mocks.read).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1);
     const assets = await pending;
     expect(report).toHaveBeenCalledWith(expect.objectContaining({ candidates: 3, deadlineSkipped: 3, unreadable: 0 }));
     expect(assets).toHaveLength(3);

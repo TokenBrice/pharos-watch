@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchNobleSupply } from "../noble-supply";
 
 const read = () => fetchNobleSupply("ausdy", 18, new AbortController().signal);
-const block = (age = 0) => ({ block: { header: { time: new Date(Date.now() - age * 1000).toISOString() } } });
+const block = (age = 0) => ({ height: "123", timestamp: new Date(Date.now() - age * 1000).toISOString() });
 const supplyFetcher = (body: unknown) => vi.fn().mockResolvedValueOnce(Response.json(block())).mockResolvedValueOnce(Response.json(body));
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 describe("Noble bank supply", () => {
@@ -11,7 +11,7 @@ describe("Noble bank supply", () => {
     vi.stubGlobal("fetch", fetcher);
     expect(await read()).toBe(BigInt(amount));
     expect(fetcher.mock.calls.map(call => call[0])).toEqual([
-      "https://noble-api.polkachu.com/cosmos/base/tendermint/v1beta1/blocks/latest",
+      "https://noble-api.polkachu.com/cosmos/base/node/v1beta1/status",
       "https://noble-api.polkachu.com/cosmos/bank/v1beta1/supply/by_denom?denom=ausdy",
     ]);
   });
@@ -27,7 +27,7 @@ describe("Noble bank supply", () => {
     await expect(read()).rejects.toThrow("noble-block-stale-or-future");
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
-  it.each([null, {}, { block: { header: {} } }, { block: { header: { time: "invalid" } } }])("rejects missing or malformed block clocks", async body => {
+  it.each([null, {}, { height: "123" }, { ...block(), height: "0" }, { ...block(), timestamp: "invalid" }])("rejects missing or malformed block clocks", async body => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(Response.json(body)));
     await expect(read()).rejects.toThrow();
   });
