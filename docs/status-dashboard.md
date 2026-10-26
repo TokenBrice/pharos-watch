@@ -269,6 +269,8 @@ so a failed source is not presented as a clean no-breach observation.
 
 Daily and weekly digest generation share `degraded` / `anthropic-circuit-open` terminals when Anthropic's circuit blocks generation. Missing Anthropic credentials are an intentional `skipped_neutral` / `missing-api-key` outcome, not a delivery-channel failure; required channel credentials still use degraded delivery accounting. Other deliberate no-work outcomes carry named neutral reasons. None of these no-generation attempts advances the confirmed output clock; the logger persists `outputPublishedAt: null` and projects the terminal reason into `degraded_reason`.
 
+V9's `v9-capture-already-accepted` is a neutral pre-compile skip with `captureClockSec` and `acceptedClockSec`, proven by a successful `current` publication-health read. It inherits ordinary prior-run availability and never renews the confirmed output clock or proves the current period's output exists; it is not a `PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS` entry. The workbench labels it `Skipped: V10 capture already accepted`. See [canonical publication](process/report-cards-appendix.md#canonical-publication) for admission and failed-read behavior.
+
 The [persistence appendix](#cron-metadata-persistence-budget) owns write-time byte budgets and diagnostic compaction. Consumer fields/counters retain their shape and unavailable values; persistence limits never drop evidence or prevent terminal accounting.
 
 

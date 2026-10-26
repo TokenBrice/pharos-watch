@@ -27,6 +27,10 @@ describe("cron job schedule metadata", () => {
     expect(isProvenSatisfiedNeutralSkipReason("supplemental-catch-up-marker-not-due")).toBe(false);
   });
 
+  it("does not treat an already accepted V9 capture as proof of the current period's output", () => {
+    expect(isProvenSatisfiedNeutralSkipReason("v9-capture-already-accepted")).toBe(false);
+  });
+
   it("excludes the retired Workflow observer from the registered cohort", () => {
     expect(CRON_JOB_DEFINITIONS.some((definition) => definition.job === "compute-safety-score-v9-workflow")).toBe(false);
     expect(CRON_INTERVALS).not.toHaveProperty("compute-safety-score-v9-workflow");
