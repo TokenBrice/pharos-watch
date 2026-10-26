@@ -219,6 +219,39 @@ describe("generation-bound compact Safety Scores", () => {
     }
   });
 
+  it("keeps the selected generation when source cards change between fragment passes", async () => {
+    const { db, sqlite, publication } = await seed();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(140_000);
+    const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next",
+      cards: [makeReportCardsV9Card({ id: "dai-makerdao", evidence: { level: "adequate", freshness: "current", reasons: [{
+        code: "unresolved-control-identity", message: "x".repeat(2_400_000), path: "control:incidentState",
+      }] } }), makeReportCardsV9Card({ id: "usdc-circle" })] });
+    const persisted = await persistSafetyScoreV9Publication(db, { ...currentInput(next), deferPublicMaterialization: true });
+    const source = structuredClone(persisted.acceptedMaterialization!);
+    const canonical = sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication);
+    const selected = sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY);
+    const batch = db.batch.bind(db);
+    let mutated = false;
+    const spy = vi.spyOn(db, "batch").mockImplementation(async statements => {
+      const result = await batch(statements);
+      if (!mutated) {
+        // A large first card forces a flush before the second pass reaches this card.
+        source.publication.cards[1]!.evidence.reasons.push({
+          code: "unresolved-control-identity", message: "Changed after manifest measurement", path: "control:incidentState",
+        });
+        mutated = true;
+      }
+      return result;
+    });
+    await expect(materializeV9AcceptedPublication(db, source)).rejects.toThrow("v9-public-materialization-source-changed");
+    spy.mockRestore();
+    expect(mutated).toBe(true);
+    expect(sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)).toEqual(canonical);
+    expect(sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY)).toEqual(selected);
+    expect(await (await handleReportCardsV9(db)).json()).toMatchObject({ updatedAt: publication.publishedAtSec });
+  });
+
   it.each([1, 397])("coalesces %i cards within staging caps while preserving accepted reads", async cardCount => {
     const { db, sqlite, publication } = await seed();
     vi.useFakeTimers({ toFake: ["Date"] });
