@@ -1,9 +1,14 @@
 import { z } from "zod";
+import { NAV_SUPPLY_LEDGER_FRESHNESS } from "@shared/lib/onchain-supply-probe";
 import { STELLAR_HORIZON_API } from "../../../lib/constants";
 import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "../../reserve-adapters/request";
 
 const STELLAR_RPC = "https://soroban-rpc.mainnet.stellar.gateway.fm";
 const BOUNDED_READ = { maxRetries: 0, maxResponseBytes: 64 * 1024 };
+const HorizonSchema = z.object({ history_latest_ledger_closed_at: z.string().datetime() });
+const LedgerSchema = z.object({ jsonrpc: z.literal("2.0"), id: z.literal(1), result: z.object({
+  sequence: z.number().int().positive(), closeTime: z.string().regex(/^[1-9]\d{0,15}$/),
+}), error: z.never().optional() });
 const AmountSchema = z.string().regex(/^\d{1,19}\.\d{7}$/);
 const AssetResponseSchema = z.object({ _embedded: z.object({ records: z.array(z.object({
   asset_code: z.string(), asset_issuer: z.string(),
@@ -14,6 +19,11 @@ const SimulationSchema = z.object({ jsonrpc: z.literal("2.0"), id: z.literal(1),
   latestLedger: z.number().int().positive(), results: z.array(z.object({ xdr: z.string(), auth: z.array(z.unknown()).length(0) })).length(1),
   error: z.never().optional(), restorePreamble: z.never().optional(),
 }), error: z.never().optional() });
+
+function requireFreshLedger(timestampSec: number): void {
+  const age = Date.now() / 1000 - timestampSec;
+  if (!Number.isFinite(age) || age > NAV_SUPPLY_LEDGER_FRESHNESS.maxAgeSec || age < -NAV_SUPPLY_LEDGER_FRESHNESS.maxFutureSkewSec) throw new Error("stellar-ledger-stale-or-future");
+}
 
 function strKeyBytes(address: string, version: number): Uint8Array {
   if (!/^[GC][A-Z2-7]{55}$/.test(address)) throw new Error("stellar-invalid-strkey");
@@ -65,6 +75,8 @@ export async function fetchStellarSupply(address: string, decimals: number, sign
     const [, code, issuer] = classic;
     strKeyBytes(issuer, 48);
     if (decimals !== 7) throw new Error("stellar-classic-decimals-mismatch");
+    const ledger = HorizonSchema.parse(await fetchJsonWithRetry<unknown>(STELLAR_HORIZON_API, signal, 10_000, undefined, BOUNDED_READ));
+    requireFreshLedger(Date.parse(ledger.history_latest_ledger_closed_at) / 1000);
     const query = new URLSearchParams({ asset_code: code, asset_issuer: issuer, limit: "2" });
     const response = await fetchJsonWithRetry<unknown>(`${STELLAR_HORIZON_API}/assets?${query}`, signal, 10_000, undefined, BOUNDED_READ);
     const [asset] = AssetResponseSchema.parse(response)._embedded.records;
@@ -75,11 +87,16 @@ export async function fetchStellarSupply(address: string, decimals: number, sign
   }
   const contract = address.slice(address.lastIndexOf("-") + 1);
   const contractBytes = strKeyBytes(contract, 16);
+  const ledger = LedgerSchema.parse(await fetchJsonPostWithRetry<unknown>(
+    STELLAR_RPC, { jsonrpc: "2.0", id: 1, method: "getLatestLedger" }, signal, 10_000, undefined, BOUNDED_READ,
+  )).result;
+  requireFreshLedger(Number(ledger.closeTime));
   const simulate = async (method: "total_supply" | "decimals") => SimulationSchema.parse(await fetchJsonPostWithRetry<unknown>(
     STELLAR_RPC, { jsonrpc: "2.0", id: 1, method: "simulateTransaction", params: { transaction: readEnvelope(contractBytes, method) } },
     signal, 10_000, undefined, BOUNDED_READ,
   )).result;
   const scale = await simulate("decimals");
+  if (scale.latestLedger < ledger.sequence) throw new Error("stellar-ledger-regressed");
   if (readScVal(scale.results[0].xdr, 3) !== BigInt(decimals)) throw new Error("stellar-contract-decimals-mismatch");
   const supply = await simulate("total_supply");
   if (supply.latestLedger < scale.latestLedger) throw new Error("stellar-ledger-regressed");

@@ -605,6 +605,7 @@ it("keeps every tracked curated roster either complete or explicitly excused acr
   for (const meta of TRACKED_META_BY_ID.values()) {
     const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
     if (selected == null) continue;
+    expect(new Set(selected.map(({ contract }) => `${contract.chain}:${contract.address}`)).size).toBe(selected.length);
     const unselectedCount = meta.contracts?.filter(
       (contract) => !selected.some((entry) => entry.contract === contract),
     ).length ?? 0;

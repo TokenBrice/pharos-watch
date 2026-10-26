@@ -5,6 +5,7 @@ import { SUPPLY_RPC_DEFAULTS } from "./chain-rpc-registry";
 import { isFixedDecimalDeployment } from "./deployment-amounts";
 
 export type OnchainSupplyContract = NonNullable<StablecoinMeta["contracts"]>[number];
+export const NAV_SUPPLY_LEDGER_FRESHNESS = { maxAgeSec: 600, maxFutureSkewSec: 60 } as const;
 
 export interface CuratedOnchainSupplyContractConfig {
   chain: string;

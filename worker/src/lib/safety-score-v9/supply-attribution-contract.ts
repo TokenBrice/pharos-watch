@@ -226,7 +226,7 @@ const SOLANA_TOKEN_2022_PROGRAM =
 const SOLANA_SYSTEM_PROGRAM = "11111111111111111111111111111111";
 
 const CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES: Readonly<
-  Record<string, Readonly<Record<string, CentrifugeDeploymentIdentity>>>
+  Record<string, Readonly<Record<string, CentrifugeDeploymentIdentity | null>>>
 > = {
   "jtrsy-anemoy": {
     "ethereum:0x8c213ee79581ff4984583c6a801e5263418c4b86": {
@@ -287,6 +287,8 @@ const CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES: Readonly<
       safeBlockLag: 10,
       extraRpcUrls: SUPPLY_ATTRIBUTION_RPC_URLS.monad,
     },
+    // Withheld until Pharos runtime, Spoke and safe-block/RPC evidence is reviewed.
+    "pharos:0xc18e6f730896971a79d748e8dea61067a9bc6040": null,
     "solana:JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj": {
       runtime: "solana",
       liabilityModel: "protocol-burn-mint",
@@ -490,7 +492,7 @@ function expectedReviewedDeploymentIdentity(
 ): WmDeploymentIdentity | CentrifugeDeploymentIdentity | undefined {
   return assetId === "wm-m0"
     ? WM_DEPLOYMENT_IDENTITIES[routeId]
-    : CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES[assetId]?.[routeId];
+    : CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES[assetId]?.[routeId] ?? undefined;
 }
 
 function reviewedDeploymentInventoryValidationError(
@@ -505,7 +507,9 @@ function reviewedDeploymentInventoryValidationError(
   if (!identities || routes.length !== inventory.routes.length) {
     return `unsupported reviewed deployment attribution asset ${assetId}`;
   }
-  const identityRouteIds = Object.keys(identities).sort(compareText);
+  const withheld = inventory.routes.find(route => identities[route.routeId] === null);
+  if (withheld) return `reviewed deployment identity unavailable for ${assetId}:${withheld.routeId}`;
+  const identityRouteIds = Object.keys(identities).filter(routeId => identities[routeId] !== null).sort(compareText);
   if (
     identityRouteIds.length !== inventory.routes.length ||
     identityRouteIds.some(
@@ -880,7 +884,7 @@ export function expectedCentrifugeDeploymentIdentity(
   assetId: string,
   routeId: string,
 ): CentrifugeDeploymentIdentity | undefined {
-  return CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES[assetId]?.[routeId];
+  return CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES[assetId]?.[routeId] ?? undefined;
 }
 
 export function loadReviewedEconomicSupplyPlans(value: unknown) {
