@@ -28,8 +28,8 @@ import {
 
 export const FIAT_CG_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.detailProvider === "coingecko");
 const FIAT_CG_TOKEN_CONCURRENCY = 2;
-// Below the existing 25s refresh passes; bounds added work to the campaign's 20s wall-time allowance.
-export const ONCHAIN_PARTITION_STAGE_BUDGET_MS = 20_000;
+// Measured full-roster reads need more than 20s; retain rotation under the 30s ceiling.
+export const ONCHAIN_PARTITION_STAGE_BUDGET_MS = 30_000;
 export const ONCHAIN_PARTITION_ROTATION_RUNS = 4;
 
 export async function fetchFiatCoinGeckoTokens(
