@@ -1,5 +1,5 @@
-import { logWorkerEventArgs } from "../../lib/structured-log";
-import { StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema } from "@shared/types/market";
+import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
+import { ChainPartitionProvenanceSchema, StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema } from "@shared/types/market";
 import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META } from "@shared/types/chain-identity";
@@ -104,10 +104,10 @@ function normalizeOptionalTimestamp(value: unknown): number | null {
 
 /** Same refusal applies to fresh, provider and restored rows at final publication. */
 export function reviewedOnchainSupplyHoldFields(asset: Pick<PeggedAsset,
-  "id" | "supplySource" | "supplyObservedAt" | "supplyRestored" | "supplyUnavailableReason" | "supplyPerimeter" | "circulating" | "chainCirculating"
+  "id" | "supplySource" | "supplyObservedAt" | "supplyRestored" | "supplyUnavailableReason" | "supplyPerimeter" | "circulating" | "chainCirculating" | "chainPartition"
 >, runStartedAt?: number): Pick<PeggedAsset,
   "supplySource" | "supplyUnavailableReason" | "supplyObservedAt" | "supplyRestored" | "supplyGapFill" | "supplyChainGuard"
-  | "circulating" | "circulatingPrevDay" | "circulatingPrevWeek" | "circulatingPrevMonth" | "chainCirculating" | "chains" | "supplyPerimeter"
+  | "circulating" | "circulatingPrevDay" | "circulatingPrevWeek" | "circulatingPrevMonth" | "chainCirculating" | "chains" | "supplyPerimeter" | "chainPartition"
 > | null {
   const assetId = String(asset.id);
   const reason = getOnchainSupplyHoldReason(assetId);
@@ -137,6 +137,7 @@ export function reviewedOnchainSupplyHoldFields(asset: Pick<PeggedAsset,
     supplyGapFill: undefined,
     supplyChainGuard: undefined,
     supplyPerimeter: undefined,
+    chainPartition: undefined,
     circulating: {},
     circulatingPrevDay: null,
     circulatingPrevWeek: null,
@@ -344,6 +345,12 @@ function markRestoredSupply(asset: PeggedAsset, nowSec: number): PeggedAsset {
   const restored = cloneCachedAsset(asset);
   restored.supplyRestored = true;
   restored.supplyObservedAt = normalizeOptionalTimestamp(asset.supplyObservedAt);
+  if (asset.chainPartition) {
+    const partition = restoreCuratedAggregateChainPartition({ ...restored, chainCirculating: {} }, asset, nowSec, true);
+    restored.chainCirculating = partition && !partition.expired ? partition.asset.chainCirculating : {};
+    if (partition && !partition.expired) restored.chainPartition = partition.asset.chainPartition;
+    else delete restored.chainPartition;
+  }
   if (!validateCompositePricingSourceFreshness({
     source: restored.priceSource ?? "",
     observedAt: restored.priceObservedAt ?? restored.priceUpdatedAt,
@@ -454,7 +461,7 @@ function hasReconciledCuratedAggregateSupplyPacket(
   expectedCirculatingBucket: string,
   freshAggregateSupply?: number | null,
 ): boolean {
-  if (asset.supplySource !== "onchain-total-supply") return false;
+  if (asset.supplySource !== "onchain-total-supply" && !(asset.supplySource === "coingecko-fallback" && asset.chainPartition)) return false;
   const aggregateSupply = getCirculatingRawOrNull(asset);
   const chainCirculating = asset.chainCirculating;
   const observedChainLabels = Object.keys(chainCirculating ?? {}).sort();
@@ -493,28 +500,63 @@ function hasReconciledCuratedAggregateSupplyPacket(
     chainSupply += current;
   }
   if (!Number.isFinite(chainSupply) || chainSupply <= 0) return false;
-  if (Math.abs(chainSupply - aggregateSupply) > Math.max(0.01, aggregateSupply * 1e-9)) return false;
+  if (!chainSupplyReconciles(chainSupply, aggregateSupply)) return false;
   // A partition carried onto a fresh aggregate must still add up to that
   // aggregate, otherwise the published breakdown contradicts the published total.
   return (
     freshAggregateSupply === undefined ||
-    (freshAggregateSupply !== null && Math.abs(chainSupply - freshAggregateSupply) <= Math.max(0.01, freshAggregateSupply * 1e-9))
+    (freshAggregateSupply !== null && chainSupplyReconciles(chainSupply, freshAggregateSupply))
   );
 }
 
-/**
- * A fresh CoinGecko aggregate carries no chain partition of its own. Restore
- * only the previous curated packet's partition onto it, and only when that
- * partition still reconciles with today's fresh aggregate. The aggregate, its
- * source and its observation time stay fresh, so the row is not a restored
- * supply and does not claim stale provenance.
- */
-function restoreCuratedAggregateChainPartition(
+function chainSupplyReconciles(chainSupply: number, total: number): boolean {
+  return Math.abs(chainSupply - total) <= Math.max(0.01, total * 1e-9);
+}
+
+/** Scale complete shares only; preserve unattributed residuals and omit unobserved chain history. */
+export function rescaleChainPartition(
+  rows: PeggedAsset["chainCirculating"],
+  observedTotal: number,
+  currentTotal: number,
+): PeggedAsset["chainCirculating"] | null {
+  const entries = Object.entries(rows ?? {});
+  if (!Number.isFinite(observedTotal) || observedTotal <= 0 || !Number.isFinite(currentTotal) || currentTotal <= 0 || entries.length === 0) return null;
+  let sum = 0;
+  for (const [, row] of entries) {
+    if (typeof row.current !== "number" || !Number.isFinite(row.current) || row.current < 0) return null;
+    sum += row.current;
+  }
+  if (!Number.isFinite(sum) || !chainSupplyReconciles(sum, observedTotal)) return null;
+  const scaled: NonNullable<PeggedAsset["chainCirculating"]> = {};
+  let largestLabel = entries[0][0];
+  let scaledSum = 0;
+  for (const [label, row] of entries) {
+    const current = (row.current as number) / sum * currentTotal;
+    if (!Number.isFinite(current)) return null;
+    scaled[label] = { ...(row.chainId ? { chainId: row.chainId } : {}), current };
+    scaledSum += current;
+    if (current > (scaled[largestLabel].current as number)) largestLabel = label;
+  }
+  if (!Number.isFinite(scaledSum)) return null;
+  // Put floating-point dust on the largest row so a tiny residual cannot turn negative.
+  scaled[largestLabel].current = (scaled[largestLabel].current as number) + (currentTotal - scaledSum);
+  return scaled;
+}
+
+/** Restore complete current-roster packets; explicit share carry preserves its original evidence clock. */
+export function restoreCuratedAggregateChainPartition(
   current: PeggedAsset,
   previous: PeggedAsset | undefined,
   nowSec: number,
+  rescaleShares = false,
 ): { asset: PeggedAsset; expired: boolean } | null {
-  const expectedChainLabels = CURATED_AGGREGATE_SUPPLY_CHAIN_LABELS_BY_ID.get(String(current.id));
+  let expectedChainLabels = CURATED_AGGREGATE_SUPPLY_CHAIN_LABELS_BY_ID.get(String(current.id));
+  if (rescaleShares && !expectedChainLabels) {
+    const meta = ACTIVE_META_BY_ID.get(String(current.id));
+    const single = meta && selectSupplementalOnchainSupplyProbeContract(meta);
+    if (single) expectedChainLabels = [CHAIN_META[single.chain]?.name ?? single.chain];
+  }
+  const provenance = ChainPartitionProvenanceSchema.safeParse(previous?.chainPartition);
   const expectedCirculatingBucket = getSinglePositiveCirculatingBucket(current);
   if (
     !expectedChainLabels ||
@@ -522,17 +564,35 @@ function restoreCuratedAggregateChainPartition(
     current.supplySource !== "coingecko-fallback" ||
     Object.keys(current.chainCirculating ?? {}).length > 0 ||
     !previous ||
-    normalizeOptionalTimestamp(previous.supplyObservedAt) === null ||
+    (rescaleShares ? !provenance.success || previous.supplySource !== "coingecko-fallback" :
+      previous.supplySource !== "onchain-total-supply" || normalizeOptionalTimestamp(previous.supplyObservedAt) === null) ||
     !hasReconciledCuratedAggregateSupplyPacket(
       previous,
       expectedChainLabels,
       expectedCirculatingBucket,
-      getCirculatingRawOrNull(current),
+      rescaleShares ? undefined : getCirculatingRawOrNull(current),
     )
   ) {
     return null;
   }
-  if (!isWithinRestoreCeiling(previous, nowSec)) return { asset: current, expired: true };
+  if (!isWithinRestoreCeiling(previous, nowSec) || (rescaleShares && provenance.success
+    && !isSupplyObservationWithinRestoreCeiling(provenance.data.observedAt, nowSec))) {
+    if (rescaleShares && provenance.success) logWorkerEvent({
+      scope: "handler", level: "warn", job: "sync-stablecoins", event: "onchain-partition-divergence",
+      message: "[fiat-cg] On-chain partition carry expired",
+      metadata: { stablecoinId: String(current.id), reason: "carry-expired", ratio: provenance.data.ratio },
+    });
+    return { asset: current, expired: true };
+  }
+
+  if (rescaleShares && provenance.success) {
+    const chainCirculating = rescaleChainPartition(previous.chainCirculating, getCirculatingRawOrNull(previous)!, getCirculatingRawOrNull(current)!);
+    if (!chainCirculating) return null;
+    return {
+      asset: { ...current, chainCirculating, chainPartition: { ...provenance.data, admission: "carried" } },
+      expired: false,
+    };
+  }
 
   return {
     asset: {
@@ -570,7 +630,9 @@ export function mergeSupplementalLastKnownGood(
     }
 
     const previous = previousAssetsById.get(id);
-    const curatedPartitionRestore = restoreCuratedAggregateChainPartition(asset, previous, nowSec);
+    // CG-detail partitions now restore only after this run attempted an unreadable leg.
+    const curatedPartitionRestore = ACTIVE_META_BY_ID.get(id)?.detailProvider === "coingecko" ? null
+      : restoreCuratedAggregateChainPartition(asset, previous, nowSec);
     if (curatedPartitionRestore) {
       if (curatedPartitionRestore.expired) expiredRestoreIds.push(id);
       else restoredCount++;

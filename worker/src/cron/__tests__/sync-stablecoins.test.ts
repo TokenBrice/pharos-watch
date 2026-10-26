@@ -143,6 +143,8 @@ describe("syncStablecoins", () => {
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(result).toMatchObject({ itemCount: 60, productivity: { productive: true, reason: "stablecoins-cache-published" } });
     expect(metadata).toMatchObject({ cacheWriteMode: "published", casSkipped: false, downstreamSafe: true, upstreamFetchOk: true });
+    expect(metadata.onchainPartition).toEqual({ candidates: 0, entered: 0, retained: 0, carried: 0,
+      divergent: 0, unreadable: 0, deadlineSkipped: 0, carryExpired: 0, divergences: [], divergencesTruncated: 0 });
     expect(assertCost(result).bindingCalls).toBeGreaterThan(0);
     expect(prepare.mock.calls.filter(([sql]) => String(sql).includes("INSERT INTO cache")).length).toBeGreaterThan(0);
     const primaryCall = vi.mocked(fetchPrimaryPrices).mock.calls[0];
@@ -170,7 +172,9 @@ describe("syncStablecoins", () => {
   it("returns an aborted result before creating any upstream work", async () => {
     const controller = new AbortController();
     controller.abort("already cancelled");
-    await expect(syncStablecoins(makeSyncDb(), controller.signal)).resolves.toMatchObject({ aborted: true });
+    const result = await syncStablecoins(makeSyncDb(), controller.signal);
+    expect(result).toMatchObject({ aborted: true });
+    expect(JSON.parse(result.metadata!).onchainPartition).toBeNull();
     expect(fetchWithRetryMock).not.toHaveBeenCalled();
   });
 

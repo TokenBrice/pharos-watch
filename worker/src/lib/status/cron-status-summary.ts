@@ -1,5 +1,6 @@
 import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
 import {
+  OnchainPartitionSummarySchema,
   CRON_RUN_SUMMARY_ERROR_MAX_CHARS,
   type CronRunSummary,
   type CronRunDetail,
@@ -11,10 +12,11 @@ import {
  * The only metadata keys the default `/api/status` summary carries, as
  * `latestRunFacts` of the latest attempt. Each list is what a default operator
  * view reads without opening job detail: the comms workbench (dispatch), the
- * reserve recovery forecast and the triage slowest-probe hint. Everything else
+ * reserve recovery forecast, partition soak diagnostics and triage probe hint. Everything else
  * is served only by `/api/status-cron-detail`.
  */
 export const CRON_STATUS_LATEST_FACT_KEYS: Readonly<Record<string, readonly string[]>> = {
+  "sync-stablecoins": ["onchainPartition"],
   "dispatch-telegram-alerts": [
     "pendingDroppedPermanentFailure", "pendingDroppedMaxAttemptsFallback",
     "pendingRetryQueued", "pendingRateLimited", "pendingRetryAfterSec",
@@ -66,7 +68,10 @@ function pickLatestRunFacts(job: string, metadata: Record<string, unknown> | und
   if (!keys || !metadata) return null;
   const facts: Record<string, unknown> = {};
   for (const key of keys) {
-    if (Object.prototype.hasOwnProperty.call(metadata, key)) facts[key] = metadata[key];
+    if (key === "onchainPartition") {
+      const parsed = OnchainPartitionSummarySchema.safeParse(metadata[key]);
+      facts[key] = parsed.success ? parsed.data : null;
+    } else if (Object.prototype.hasOwnProperty.call(metadata, key)) facts[key] = metadata[key];
   }
   return facts;
 }

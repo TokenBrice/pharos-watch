@@ -87,5 +87,12 @@
       }
     }
   },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Limited market-price coverage",
+      "message": "Reviewed 2026-10-25: CoinGecko's sbold-by-k3-capital listing matched this contract but returned no current price or market cap. DefiLlama returned neither a contract quote nor a CoinGecko-mirror quote. The existing redemption-price fallback requires a trusted BOLD price and vault conversion rate; a current sBOLD price can remain unavailable when those inputs cannot be admitted."
+    }
+  ],
   "launchDate": "2025-06-09"
 }

@@ -8,6 +8,7 @@ import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import type { PeggedAsset } from "./enrich-prices";
+import type { OnchainPartitionSummary } from "@shared/types/status/cron";
 import { FIAT_CG_METAS, fetchFiatCoinGeckoTokens } from "./supplemental-assets/fiat-cg";
 import { fetchGoldTokens } from "./supplemental-assets/gold";
 import { fetchSilverTokens } from "./supplemental-assets/silver";
@@ -83,6 +84,7 @@ export async function fetchSupplementalTrackedTokens(
   db?: D1Database,
   previousAssetsById?: ReadonlyMap<string, PeggedAsset>,
   dwellirNative?: DwellirNativeCapability,
+  reportPartitionSummary?: (summary: OnchainPartitionSummary) => void,
 ): Promise<{
   goldTokens: PeggedAsset[];
   silverTokens: PeggedAsset[];
@@ -94,7 +96,7 @@ export async function fetchSupplementalTrackedTokens(
   // pair, and fiat-cg's on-chain fallbacks must not stack in one trigger.
   const goldTokens = await fetchGoldTokens(cgData, signal, db, chainRpcs, dwellirNative);
   const silverTokens = await fetchSilverTokens(cgData, signal, coingeckoApiKey, db, chainRpcs, dwellirNative);
-  const fiatCgTokens = await fetchFiatCoinGeckoTokens(cgData, signal, chainRpcs, fxFallbackRates, db, previousAssetsById, dwellirNative);
+  const fiatCgTokens = await fetchFiatCoinGeckoTokens(cgData, signal, chainRpcs, fxFallbackRates, db, previousAssetsById, dwellirNative, reportPartitionSummary);
 
   return { goldTokens, silverTokens, fiatCgTokens };
 }

@@ -102,7 +102,7 @@ describe("cache-passthrough: handleStablecoins", () => {
     expect(await readJsonResponse(res, 503)).toEqual({ error: "Cached stablecoins payload is malformed" });
   });
 
-  it.each(["canonical", "companion", "legacy-companion"])("preserves unavailable and observed-zero chain values via %s", async (path) => {
+  it.each(["canonical", "companion", "legacy-companion"])("preserves partition provenance and unavailable/observed-zero chain values via %s", async (path) => {
     const nowSec = Math.floor(Date.now() / 1000);
     const row = {
       id: "usdt-tether", name: "Tether", symbol: "USDT", pegType: "peggedUSD", pegMechanism: "fiat-backed",
@@ -113,6 +113,9 @@ describe("cache-passthrough: handleStablecoins", () => {
         Base: { current: 0 },
       },
       chains: ["Ethereum", "Tron"],
+      chainPartition: {
+        basis: "onchain-share", observedAt: nowSec - 100, onchainUsd: 153, ratio: 1.02, admission: "carried",
+      },
     };
     const payload = { peggedAssets: [row] };
     const legacyPayload = { peggedAssets: [{ ...row, chainCirculating: { Tron: { current: 0 } } }] };
@@ -132,7 +135,8 @@ describe("cache-passthrough: handleStablecoins", () => {
     }]);
     const res = await handleStablecoins(db);
 
-    const body = (await readJsonResponse(res, 200)) as { peggedAssets: Array<{ chainCirculating: unknown }> };
+    const body = (await readJsonResponse(res, 200)) as { peggedAssets: Array<{ chainCirculating: unknown; chainPartition: unknown }> };
+    expect(body.peggedAssets[0]?.chainPartition).toEqual(row.chainPartition);
     expect(body.peggedAssets[0]?.chainCirculating).toEqual({
       Ethereum: { current: 150, circulatingPrevDay: null, circulatingPrevWeek: 140, circulatingPrevMonth: null },
       Tron: { current: null, circulatingPrevDay: 0 },

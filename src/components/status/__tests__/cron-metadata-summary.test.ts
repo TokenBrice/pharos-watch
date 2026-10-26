@@ -2,6 +2,28 @@ import { describe, expect, it } from "vitest";
 import { summarizeCronMetadata } from "../cron-metadata-summary";
 
 describe("summarizeCronMetadata", () => {
+  it("renders partition stage counts, raw ratios and omitted details from the shared schema", () => {
+    const onchainPartition = { candidates: 8, entered: 1, retained: 1, carried: 1, divergent: 2,
+      unreadable: 2, deadlineSkipped: 2, carryExpired: 1, divergences: [{ id: "coin-a", ratio: 1.23456789 }],
+      divergencesTruncated: 1 };
+    expect(summarizeCronMetadata("sync-stablecoins", { onchainPartition })).toEqual([
+      "partition candidates 8: entered 1, retained 1, carried 1",
+      "partition outcomes: divergent 2, unreadable 2, deadline-skipped 2, carry-expired 1",
+      "divergent partitions: coin-a 1.23456789x (+1 omitted)",
+    ]);
+    for (const value of [null, undefined, {}, { ...onchainPartition, unreadable: null }]) {
+      expect(summarizeCronMetadata("sync-stablecoins", { onchainPartition: value }))
+        .toEqual(["partition evidence unavailable"]);
+    }
+    expect(summarizeCronMetadata("sync-stablecoins", { onchainPartition: {
+      candidates: 0, entered: 0, retained: 0, carried: 0, divergent: 0, unreadable: 0,
+      deadlineSkipped: 0, carryExpired: 0, divergences: [], divergencesTruncated: 0,
+    } })).toEqual([
+      "partition candidates 0: entered 0, retained 0, carried 0",
+      "partition outcomes: divergent 0, unreadable 0, deadline-skipped 0, carry-expired 0",
+    ]);
+  });
+
   it("does not invent numeric streaks when self-check counters are unavailable", () => {
     const summary = summarizeCronMetadata("status-self-check", {
       discrepancyStreak: null, probeFailureStreak: null, reason: "status-self-check-persistence-failed",

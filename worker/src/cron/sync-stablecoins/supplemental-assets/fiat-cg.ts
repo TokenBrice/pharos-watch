@@ -1,6 +1,9 @@
 import { logWorkerEvent, logWorkerEventArgs } from "../../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { getOnchainSupplyHoldReason } from "@shared/lib/onchain-supply-probe";
+import { getOnchainSupplyHoldReason, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
+import { ONCHAIN_PARTITION_DIVERGENCE_DETAIL_LIMIT, type OnchainPartitionSummary } from "@shared/types/status/cron";
 import { throwIfAborted } from "../../../lib/abort";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import type { DwellirNativeCapability } from "../../../lib/dwellir-native";
@@ -9,8 +12,8 @@ import type { PeggedAsset } from "../enrich-prices";
 import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats, isZephyrScannerAssetId } from "../zephyr-zsd";
 import { resolveVaultNavSupplyPrice } from "../../../lib/authoritative-price-sources";
 import { loadReserveNavSupplyPrice, reserveNavSupplyScopeReason } from "../../../lib/reserve-nav-price";
-import { reviewedOnchainSupplyHoldFields } from "../shared";
-import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, fetchPinnedNativeShares, prefersOnChainSupplyMcap, toPublicChainCirculating } from "./onchain-supply";
+import { restoreCuratedAggregateChainPartition, reviewedOnchainSupplyHoldFields } from "../shared";
+import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, fetchOnChainSupplyPartition, fetchPinnedNativeShares, prefersOnChainSupplyMcap, toPublicChainCirculating } from "./onchain-supply";
 import {
   fetchSupplementalPriceData,
   buildSupplementalAsset,
@@ -25,6 +28,8 @@ import {
 
 export const FIAT_CG_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.detailProvider === "coingecko");
 const FIAT_CG_TOKEN_CONCURRENCY = 2;
+// Below the existing 25s refresh passes; bounds added work to the campaign's 20s wall-time allowance.
+export const ONCHAIN_PARTITION_STAGE_BUDGET_MS = 20_000;
 
 export async function fetchFiatCoinGeckoTokens(
   cgData: CoinGeckoMcapData,
@@ -34,9 +39,26 @@ export async function fetchFiatCoinGeckoTokens(
   db?: D1Database,
   previousAssetsById?: ReadonlyMap<string, PeggedAsset>,
   dwellirNative?: DwellirNativeCapability,
+  reportPartitionSummary?: (summary: OnchainPartitionSummary) => void,
 ): Promise<PeggedAsset[]> {
-  if (FIAT_CG_METAS.length === 0) return [];
   throwIfAborted(signal);
+  const summary: OnchainPartitionSummary = {
+    candidates: 0, entered: 0, retained: 0, carried: 0, divergent: 0, unreadable: 0,
+    deadlineSkipped: 0, carryExpired: 0, divergences: [], divergencesTruncated: 0,
+  };
+  if (FIAT_CG_METAS.length === 0) {
+    reportPartitionSummary?.(summary);
+    return [];
+  }
+  const runNowSec = Math.floor(Date.now() / 1000);
+  let partitionStage: { timeout: ReturnType<typeof createTimeoutSignal>; deadlineAtMs: number } | undefined;
+  let partitionCandidateCount = 0;
+  let partitionStartOffset = 0;
+  let deadlineSkippedCount = 0;
+  // Added attribution must not spend the capped Dwellir budget; replacement reads keep their existing routes.
+  const partitionChainRpcs = chainRpcs && new Map([...chainRpcs].map(([id, config]) => [id, {
+    ...config, endpoints: config.endpoints.filter((endpoint) => endpoint.operator !== "dwellir"),
+  }]));
 
   try {
     const hasZephyrScannerAsset = FIAT_CG_METAS.some((meta) => isZephyrScannerAssetId(meta.id));
@@ -51,8 +73,21 @@ export async function fetchFiatCoinGeckoTokens(
       if (mcap != null) mcapMap[token.id] = mcap;
     }
 
+    const partitionCandidates = FIAT_CG_METAS.filter((meta) => mcapMap[meta.id] != null
+      && !prefersOnChainSupplyMcap(meta) && meta.liveReservesConfig?.adapter !== "jpmorgan-nav"
+      && (selectCuratedAggregateOnchainSupplyProbeContracts(meta) || selectSupplementalOnchainSupplyProbeContract(meta)));
+    partitionCandidateCount = partitionCandidates.length;
+    summary.candidates = partitionCandidateCount;
+    partitionStartOffset = partitionCandidateCount === 0 ? 0
+      : Math.floor(runNowSec / CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec) % partitionCandidateCount;
+    const partitionCandidateIds = new Set(partitionCandidates.map((meta) => meta.id));
+    let nextPartitionIndex = partitionStartOffset;
+    // Rotate only candidate slots; other supply paths keep their order and published rows retain catalog order.
+    const processingMetas = FIAT_CG_METAS.map((meta) => partitionCandidateIds.has(meta.id)
+      ? partitionCandidates[nextPartitionIndex++ % partitionCandidateCount] : meta);
+
     const results = await mapWithConcurrency(
-      FIAT_CG_METAS,
+      processingMetas,
       FIAT_CG_TOKEN_CONCURRENCY,
       async (meta) => {
         const nowSec = Math.floor(Date.now() / 1000);
@@ -113,6 +148,7 @@ export async function fetchFiatCoinGeckoTokens(
         const preferOnChainMcap = prefersOnChainSupplyMcap(meta);
         let mcap = preferOnChainMcap ? undefined : mcapMap[meta.id];
         const needsClassScope = requiresClassScope;
+        const attachPartition = !needsClassScope && !preferOnChainMcap && !!mcap;
         let supplySource: string = "coingecko-fallback";
         let supplyObservedAt = mcap && meta.geckoId ? cgData[meta.geckoId]?.last_updated_at ?? null : null;
         let chainCirculating: PeggedAsset["chainCirculating"] = {};
@@ -200,7 +236,7 @@ export async function fetchFiatCoinGeckoTokens(
             ? "fallback"
             : "single-source"
           : null;
-        return buildSupplementalAsset({
+        const asset = buildSupplementalAsset({
           meta,
           priceResolution,
           priceConfidence,
@@ -214,14 +250,92 @@ export async function fetchFiatCoinGeckoTokens(
           circulatingPrevMonth: null,
           chainCirculating,
         });
+        if (!attachPartition || !partitionCandidateIds.has(meta.id)) return asset;
+        const diagnose = (reason: string, ratio: number | null = null) => {
+          if (reason === "ratio-out-of-band") {
+            summary.divergent++;
+            if (ratio != null && summary.divergences.length < ONCHAIN_PARTITION_DIVERGENCE_DETAIL_LIMIT) {
+              summary.divergences.push({ id: meta.id, ratio });
+            }
+          } else if (reason === "deadline-exhausted") summary.deadlineSkipped++;
+          else summary.unreadable++;
+          logWorkerEvent({
+            scope: "handler", level: "warn", job: "sync-stablecoins", event: "onchain-partition-divergence",
+            message: `[fiat-cg] ${meta.symbol} on-chain partition unavailable`,
+            metadata: { stablecoinId: meta.id, reason, ratio },
+          });
+        };
+        const carryPartition = () => {
+          const restored = restoreCuratedAggregateChainPartition(
+            asset, previousAssetsById?.get(meta.id), Math.floor(Date.now() / 1000), true,
+          );
+          if (restored?.expired) summary.carryExpired++;
+          else if (restored?.asset.chainPartition?.admission === "carried") summary.carried++;
+          return restored?.asset ?? asset;
+        };
+        if (priceForSupply == null) {
+          diagnose(navLikeAsset ? "nav-price-unavailable" : "supply-price-unavailable");
+          return asset;
+        }
+        if (!partitionStage) {
+          partitionStage = {
+            timeout: createTimeoutSignal({ timeoutMs: ONCHAIN_PARTITION_STAGE_BUDGET_MS,
+              timeoutReason: new DOMException("On-chain partition stage deadline", "TimeoutError"), parentSignal: signal }),
+            deadlineAtMs: Date.now() + ONCHAIN_PARTITION_STAGE_BUDGET_MS,
+          };
+        }
+        if (Date.now() >= partitionStage.deadlineAtMs || partitionStage.timeout.signal.aborted) {
+          throwIfAborted(signal);
+          deadlineSkippedCount++;
+          diagnose("deadline-exhausted");
+          return carryPartition();
+        }
+        try {
+          const partition = await fetchOnChainSupplyPartition(meta, mcap, priceForSupply, previousAssetsById?.get(meta.id), partitionChainRpcs, partitionStage.timeout.signal);
+          throwIfAborted(signal);
+          if ("reason" in partition && partition.reason !== "legs-unreadable") {
+            diagnose(partition.reason, partition.ratio);
+            return asset;
+          }
+          if (Date.now() >= partitionStage.deadlineAtMs || partitionStage.timeout.signal.aborted) {
+            diagnose("deadline-exhausted");
+            return carryPartition();
+          }
+          if (!("reason" in partition)) {
+            if (partition.chainPartition?.admission === "entered") summary.entered++;
+            else if (partition.chainPartition?.admission === "retained") summary.retained++;
+            return { ...asset, ...partition };
+          }
+          diagnose(partition.reason, partition.ratio);
+          return carryPartition();
+        } catch (error) {
+          throwIfAborted(signal);
+          diagnose(partitionStage.timeout.signal.aborted ? "deadline-exhausted" : "partition-invalid");
+          if (!partitionStage.timeout.signal.aborted) logWorkerEventArgs("handler", "warn", "[fiat-cg] Partition read failed:", error);
+          return partitionStage.timeout.signal.aborted ? carryPartition() : asset;
+        }
       },
       { signal },
     );
 
-    return results.filter((token): token is PeggedAsset => token !== null);
+    const assetsById = new Map(results.filter((token): token is PeggedAsset => token !== null)
+      .map((token) => [String(token.id), token]));
+    summary.divergencesTruncated = summary.divergent - summary.divergences.length;
+    reportPartitionSummary?.(summary);
+    return FIAT_CG_METAS.flatMap((meta) => {
+      const asset = assetsById.get(meta.id);
+      return asset ? [asset] : [];
+    });
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     logWorkerEventArgs("handler", "error", "[fiat-cg] fetchFiatCoinGeckoTokens failed:", err);
     return [];
+  } finally {
+    if (deadlineSkippedCount > 0 || partitionStage?.timeout.isTimedOut()) logWorkerEvent({
+      scope: "handler", level: "warn", job: "sync-stablecoins", event: "onchain-partition-divergence",
+      message: "[fiat-cg] On-chain partition stage deadline exhausted",
+      metadata: { reason: "deadline-exhausted", deadlineSkippedCount, partitionCandidateCount, partitionStartOffset },
+    });
+    partitionStage?.timeout.dispose();
   }
 }

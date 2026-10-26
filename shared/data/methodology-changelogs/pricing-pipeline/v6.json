@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.57",
+    "title": "On-chain share partitions for CoinGecko supply",
+    "date": "2026-10-26",
+    "effectiveAt": 1793038600,
+    "summary": "Reviewed on-chain shares can attribute CoinGecko-detail supply to chains while CoinGecko retains the published total, source, observation clock and historical aggregate buckets.",
+    "impact": [
+      "Complete reviewed aggregate or eligible single-deployment reads use the same admitted supply price to compare on-chain USD with the CoinGecko cap. ONCHAIN_PARTITION_POLICY owns the confirmed entry band [0.90, 1.10] and retain band [0.85, 1.15]. Calibration on 2026-10-25 found 45 candidates in band across three passes, totaling $8.74B; divergent outliers remain excluded. Canonical and escrow accounting is reused before scaling rows to the unchanged cap, with custody residuals remaining unattributed.",
+      "Unreadable legs and deadline-skipped reads may rescale a prior admitted partition within the existing restore ceiling, retaining the original partition observation clock and valuation evidence. Whole-row supply restoration also marks its valid partition carried. Only previous entered/retained admission grants retain hysteresis; a fresh read following carried evidence must pass the entry band. Out-of-band ratios, invalid evidence and unavailable supply valuation cannot carry, and no failed or skipped read publishes partial fresh attribution.",
+      "The additive chainPartition API provenance names onchain-share basis, observedAt, onchainUsd, ratio and entered/retained/carried admission. Chain totals and dominance can change, and Safety bridge-materiality evidence may resolve or expose route gaps. No Safety formula or publication cap changes.",
+      "The 20-second partition stage keeps token concurrency two and declared connection pressure unchanged. Candidate start rotates by the canonical sync cadence slot modulo candidate count; structured operator diagnostics report deadline-skipped candidates. Preferred on-chain replacement, missing-cap fallback and class-scoped NAV paths keep their existing rules. Divergences remain operator diagnostics rather than reader notices."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.56",
     "title": "Aero DEX source and BD's Aero pool",
     "date": "2026-10-23",

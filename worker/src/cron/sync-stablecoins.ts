@@ -1,4 +1,5 @@
 import type { CronResult } from "./sync-stablecoins/shared";
+import type { OnchainPartitionSummary } from "@shared/types/status/cron";
 import {
   loadStablecoinsPublicationContinuity,
   runStablecoinsPostIntakePublication,
@@ -34,11 +35,13 @@ export async function syncStablecoins(
 ): Promise<CronResult> {
   const d1Cost = createD1CostTracker(db, ["outer-cron-lifecycle-excluded"]);
   db = d1Cost.db;
+  let onchainPartition: OnchainPartitionSummary | null = null;
   const withD1Cost = (result: CronResult): CronResult => ({
     ...result,
     metadata: JSON.stringify({
       ...JSON.parse(result.metadata ?? "{}"),
       d1Cost: d1Cost.snapshot(),
+      onchainPartition,
     }),
   });
   const {
@@ -61,6 +64,7 @@ export async function syncStablecoins(
   // so they never suppress a later caller's own attempt.
   const nativePegSession = createNativePegQuoteSession();
   const intake = await loadStablecoinsIntake({
+    reportPartitionSummary: (summary) => { onchainPartition = summary; },
     db,
     syncStartSec,
     signal,

@@ -148,6 +148,8 @@ describe("compactCronMetadataForPersistence", () => {
       sourceCoverage: { comparisonAnchorFreshness: { staleAnchorExamples: [{ stablecoinId: "coin-a" }] } },
       persistence: { skipped: false, generationId: "generation-a" }, coverageOutcomeCounts: { quiet: 2 },
       activePriceCoverage: { missingActiveIds: ["coin-a"], missingActiveState: [["coin-a", 5, 123]] },
+      onchainPartition: { candidates: 12, entered: 1, retained: 1, carried: 1, divergent: 2,
+        unreadable: 3, deadlineSkipped: 4, carryExpired: 1, divergences: [{ id: "coin-a", ratio: 1.2 }], divergencesTruncated: 1 },
       activePublicationCoverage: { missingActiveIds: ["coin-a"], complete: false },
       publicationStats: { pysInputsPersistedCount: 3, pysInputsNullCount: 1 },
       apiErrorConfigs: [{ configKey: "ethereum-test" }],

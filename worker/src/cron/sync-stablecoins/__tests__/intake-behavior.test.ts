@@ -74,7 +74,7 @@ describe("stablecoin intake admission", () => {
     expect(fx).toHaveBeenCalledOnce();
     expect(events).toEqual(["fx", "Loading DefiLlama stablecoin intake", "Loaded DefiLlama stablecoin intake"]);
     expect(supplemental.fetchSupplementalTrackedTokens).toHaveBeenCalledWith(
-      cgData, undefined, undefined, undefined, fxFallbackRates, db, expect.any(Map), undefined,
+      cgData, undefined, undefined, undefined, fxFallbackRates, db, expect.any(Map), undefined, undefined,
     );
     expect(result.fxFallbackRates).toBe(fxFallbackRates);
     expect(result.validationReferences).toBe(validationReferences);
