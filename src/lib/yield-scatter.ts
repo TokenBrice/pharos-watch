@@ -29,12 +29,15 @@ const APY_AXIS_MIN = 8;
 const APY_OUTLIER_MIN_ROWS = 12;
 const APY_OUTLIER_SHARE = 0.08;
 const APY_OUTLIER_RATIO = 1.35;
+const APY_FLOOR_MIN_DEPTH = 3;
 
 interface ApyAxisConfig {
   domainMin: number;
   domainMax: number;
   clipThreshold: number | null;
   clippedCount: number;
+  floorThreshold: number | null;
+  floorClippedCount: number;
 }
 
 function roundDown(value: number, step: number) {
@@ -162,29 +165,46 @@ export function computeApyAxis(apys: number[], riskFreeRate: number): ApyAxisCon
       domainMax: Math.max(APY_AXIS_MIN, roundUp(riskFreeRate + 4, APY_AXIS_STEP)),
       clipThreshold: null,
       clippedCount: 0,
+      floorThreshold: null,
+      floorClippedCount: 0,
     };
   }
 
   const sorted = [...apys].sort((a, b) => a - b);
-  // Keep the entire losing tail on the same linear scale; only the upper tail
-  // has a disclosed display rail.
-  const domainMin = Math.min(0, roundDown(sorted[0] * 1.08, APY_AXIS_STEP));
+  const maxOutliers = Math.max(1, Math.floor(sorted.length * APY_OUTLIER_SHARE));
+  const canRail = sorted.length >= APY_OUTLIER_MIN_ROWS;
+
+  // The losing tail stays on the same linear scale unless a rare, extreme loss
+  // would compress every other row; that tail pins to a disclosed floor rail.
+  const naturalMin = sorted[0];
+  const q10 = percentileLinear(sorted, 10) ?? 0;
+  const q25 = percentileLinear(sorted, 25) ?? 0;
+  const candidateFloor = roundDown(Math.min(-APY_FLOOR_MIN_DEPTH, q25 - 3, q10 * 1.25), APY_AXIS_STEP);
+  const floorClippedCount = sorted.filter((value) => value < candidateFloor).length;
+  const shouldFloor =
+    canRail &&
+    floorClippedCount > 0 &&
+    floorClippedCount <= maxOutliers &&
+    naturalMin <= candidateFloor * APY_OUTLIER_RATIO;
+  const floor = shouldFloor
+    ? { domainMin: candidateFloor, floorThreshold: candidateFloor, floorClippedCount }
+    : { domainMin: Math.min(0, roundDown(naturalMin * 1.08, APY_AXIS_STEP)), floorThreshold: null, floorClippedCount: 0 };
+
   const naturalMax = sorted[sorted.length - 1];
   const paddedMax = roundUp(Math.max(riskFreeRate + 4, naturalMax * 1.08), APY_AXIS_STEP);
   const q75 = percentileLinear(sorted, 75) ?? 0;
   const q90 = percentileLinear(sorted, 90) ?? 0;
   const candidateThreshold = roundUp(Math.max(riskFreeRate + 6, q75 + 3, q90 * 1.25), APY_AXIS_STEP);
   const clippedCount = sorted.filter((value) => value > candidateThreshold).length;
-  const maxOutliers = Math.max(1, Math.floor(sorted.length * APY_OUTLIER_SHARE));
   const shouldClip =
-    sorted.length >= APY_OUTLIER_MIN_ROWS &&
+    canRail &&
     clippedCount > 0 &&
     clippedCount <= maxOutliers &&
     naturalMax >= candidateThreshold * APY_OUTLIER_RATIO;
 
   if (!shouldClip) {
     return {
-      domainMin,
+      ...floor,
       domainMax: Math.max(APY_AXIS_MIN, paddedMax),
       clipThreshold: null,
       clippedCount: 0,
@@ -192,7 +212,7 @@ export function computeApyAxis(apys: number[], riskFreeRate: number): ApyAxisCon
   }
 
   return {
-    domainMin,
+    ...floor,
     domainMax: Math.max(APY_AXIS_MIN, candidateThreshold),
     clipThreshold: candidateThreshold,
     clippedCount,
