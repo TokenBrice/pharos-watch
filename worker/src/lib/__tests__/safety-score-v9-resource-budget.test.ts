@@ -18,7 +18,7 @@ import { buildResourcePressure } from "../cron-resource-pressure";
 import { REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES } from "../report-cards-fixed-input-cache-codec";
 import { createResourceProbeEnv } from "./safety-score-v9-resource-env.test-support";
 import { measurePublicationByteBudget, PublicationByteMetricsSchema, RESOURCE_PUBLICATION_CARD_UNIT_MAX_BYTES, RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES } from "@shared/lib/safety-score-v9-resource-bytes";
-import { SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES } from "@shared/lib/safety-score-v9-publication-limits";
+import { SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES } from "@shared/lib/safety-score-v9-publication-limits";
 
 describe("Safety Score V9 incremental publication byte budgets", () => {
   it("counts canonical UTF-8 card units and allows streamed cohorts above the former aggregate guard", () => {
@@ -27,7 +27,7 @@ describe("Safety Score V9 incremental publication byte budgets", () => {
     expect(metrics).toEqual({ unit: "card", units: 2, largestUnitBytes: Buffer.byteLength(JSON.stringify(cards[0])),
       unitLimitBytes: RESOURCE_PUBLICATION_CARD_UNIT_MAX_BYTES, streamedTotalBytes: 8_158_138,
       streamedTotalRegressionLimitBytes: RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES,
-      streamedTotalLimitBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES });
+      streamedTotalLimitBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES });
   });
 
   it("enforces calibrated per-unit and aggregate regression bounds below the hard cap", () => {
@@ -39,15 +39,15 @@ describe("Safety Score V9 incremental publication byte budgets", () => {
     expect(() => measurePublicationByteBudget({ cards: [oversizedCard] },
       RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES)).toThrow("synthetic-publication-card-unit-byte-budget:unit");
     expect(() => measurePublicationByteBudget({ cards: [{ id: "unit" }] },
-      SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES + 1)).toThrow();
+      SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES + 1)).toThrow();
     expect(() => measurePublicationByteBudget({ cards: [{ id: "unit" }] },
       RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES + 1)).toThrow();
     expect(RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES).toBe(8_250_000);
     expect(RESOURCE_PUBLICATION_CARD_UNIT_MAX_BYTES).toBe(106_404);
-    expect(RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES).toBeLessThan(SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES);
+    expect(RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES).toBeLessThan(SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES);
     for (const change of [{ largestUnitBytes: RESOURCE_PUBLICATION_CARD_UNIT_MAX_BYTES + 1 },
       { unitLimitBytes: RESOURCE_PUBLICATION_CARD_UNIT_MAX_BYTES + 1 },
-      { streamedTotalLimitBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES + 1 },
+      { streamedTotalLimitBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES + 1 },
       { streamedTotalRegressionLimitBytes: RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES + 1 },
       { streamedTotalBytes: 0 }, { units: 0 }]) {
       expect(() => PublicationByteMetricsSchema.parse({ ...metrics, ...change })).toThrow();

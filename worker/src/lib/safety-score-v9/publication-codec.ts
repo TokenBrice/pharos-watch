@@ -14,11 +14,14 @@ import { throwIfAborted } from "../abort";
 import { gunzipBytesBounded, gzipCanonicalJson } from "../canonical-json-gzip";
 import { sha256Hex, sha256HexFromUtf8Chunks } from "../hash";
 import { parseJson } from "../json-parse";
-import { decodePublicationDictionary, encodePublicationDictionary, PUBLICATION_DICTIONARY_MAX_PACKED_BYTES } from "./publication-dictionary";
+import { decodePublicationDictionary, encodePublicationDictionary, PUBLICATION_DICTIONARY_MAX_READ_PACKED_BYTES, PUBLICATION_DICTIONARY_MAX_WRITE_PACKED_BYTES } from "./publication-dictionary";
 import {
   SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES,
   SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES,
-  SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
+  SAFETY_SCORE_V9_PUBLICATION_MAX_READ_UNCOMPRESSED_BYTES,
+  SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES,
+  SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES,
+  SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_STORED_BYTES,
 } from "@shared/lib/safety-score-v9-publication-limits";
 
 const PUBLICATION_STORAGE_KIND = "safety-score-v9-publication";
@@ -28,8 +31,6 @@ const STORAGE_SCHEMA_VERSION = 1;
 // advance with the canonical publication batch (or neither does).
 export const SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY = "report-cards:v9:accepted-replay:v1";
 export const SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY = "report-cards:v9:accepted-replay-base:v1";
-
-export const SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES = 1_900_000;
 
 export class SafetyScoreV9SchemaCutoverPendingError extends Error {
   readonly code = "publication-schema-cutover-pending";
@@ -68,7 +69,7 @@ const LegacyStorageEnvelopeSchema = z.object({
 const DictionaryStorageEnvelopeSchema = LegacyStorageEnvelopeSchema.extend({
   storageSchemaVersion: z.literal(2),
   encoding: z.literal("gzip-json-dictionary-base64-v1"),
-  packedBytes: z.number().int().positive().max(PUBLICATION_DICTIONARY_MAX_PACKED_BYTES),
+  packedBytes: z.number().int().positive().max(PUBLICATION_DICTIONARY_MAX_READ_PACKED_BYTES),
 });
 const StorageEnvelopeSchema = z.discriminatedUnion("storageSchemaVersion", [
   LegacyStorageEnvelopeSchema, DictionaryStorageEnvelopeSchema,
@@ -76,12 +77,12 @@ const StorageEnvelopeSchema = z.discriminatedUnion("storageSchemaVersion", [
 /** Sharded-envelope payload descriptor; see `publication-chunks.ts`. */
 export const SafetyScoreV9PublicationPayloadChunksSchema = z.object({
   count: z.number().int().positive().max(64),
-  payloadBytes: z.number().int().positive(),
+  payloadBytes: z.number().int().positive().max(4 * Math.ceil(SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES / 3)),
   payloadSha256: Sha256Schema,
-  storedBytes: z.number().int().positive(),
+  storedBytes: z.number().int().positive().max(SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES),
 }).strict();
 const metadataLimits = {
-  uncompressedBytes: z.number().int().positive().max(SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES),
+  uncompressedBytes: z.number().int().positive().max(SAFETY_SCORE_V9_PUBLICATION_MAX_READ_UNCOMPRESSED_BYTES),
   compressedBytes: z.number().int().positive().max(SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES),
   payloadChunks: SafetyScoreV9PublicationPayloadChunksSchema.optional(),
 };
@@ -258,7 +259,7 @@ export async function admitAndSerializeSafetyScoreV9Publication(
     label: "Safety Score v9 publication",
     maximumCompressedBytes:
       SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES,
-    maximumUncompressedBytes: dictionary ? PUBLICATION_DICTIONARY_MAX_PACKED_BYTES : SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
+    maximumUncompressedBytes: dictionary ? PUBLICATION_DICTIONARY_MAX_WRITE_PACKED_BYTES : SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES,
     signal,
   });
   const stored = stableJsonStringifyV1(
@@ -275,9 +276,9 @@ export async function admitAndSerializeSafetyScoreV9Publication(
     }),
   );
   const storedBytes = utf8ByteLength(stored);
-  if (storedBytes > SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES) {
+  if (storedBytes > SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_STORED_BYTES) {
     throw new Error(
-      `Safety Score v9 publication is ${storedBytes} stored bytes; maximum is ${SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES}`,
+      `Safety Score v9 publication is ${storedBytes} stored bytes; maximum is ${SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_STORED_BYTES}`,
     );
   }
   throwIfAborted(signal);
@@ -307,10 +308,10 @@ export async function parseSafetyScoreV9Publication(
   throwIfAborted(signal);
   if (
     utf8ByteLength(storedValue) >
-    SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES
+    SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES
   ) {
     throw new Error(
-      `Safety Score v9 publication exceeds ${SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES} stored bytes`,
+      `Safety Score v9 publication exceeds ${SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES} stored bytes`,
     );
   }
   const raw = parseJson(storedValue);
@@ -334,10 +335,10 @@ export async function parseSafetyScoreV9Publication(
   }
   if (
     storage.uncompressedBytes >
-    SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES
+    SAFETY_SCORE_V9_PUBLICATION_MAX_READ_UNCOMPRESSED_BYTES
   ) {
     throw new Error(
-      `Safety Score v9 publication exceeds ${SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES} uncompressed bytes`,
+      `Safety Score v9 publication exceeds ${SAFETY_SCORE_V9_PUBLICATION_MAX_READ_UNCOMPRESSED_BYTES} uncompressed bytes`,
     );
   }
   if (
@@ -362,7 +363,7 @@ export async function parseSafetyScoreV9Publication(
     {
       label: "Safety Score v9 publication",
       maximumCompressedBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES,
-      maximumUncompressedBytes: storage.storageSchemaVersion === 2 ? PUBLICATION_DICTIONARY_MAX_PACKED_BYTES : SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
+      maximumUncompressedBytes: storage.storageSchemaVersion === 2 ? PUBLICATION_DICTIONARY_MAX_READ_PACKED_BYTES : SAFETY_SCORE_V9_PUBLICATION_MAX_READ_UNCOMPRESSED_BYTES,
       expectedUncompressedBytes: storage.storageSchemaVersion === 2 ? storage.packedBytes : storage.uncompressedBytes,
       signal,
     },

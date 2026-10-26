@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES, SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES } from "@shared/lib/safety-score-v9-publication-limits";
+import { SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES, SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES,
+  SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_STORED_BYTES, SAFETY_SCORE_V9_PUBLICATION_MAX_READ_UNCOMPRESSED_BYTES,
+  SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES, SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES } from "@shared/lib/safety-score-v9-publication-limits";
 import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
-import { SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES } from "../safety-score-v9/publication-codec";
 import { evaluateSafetyPublicationSizeCauses } from "../status/evaluation-rules";
 import { loadSafetyPublicationSize, SAFETY_PUBLICATION_SIZE_RAW_HEADROOM_WARN_BYTES, type SafetyPublicationSizeObservation } from "../status/safety-publication-size";
 
@@ -13,11 +14,11 @@ function observed(storedBytes: number, compressedBytes: number, uncompressedByte
   return {
     kind: "observed",
     storedBytes,
-    storedCapBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES,
+    storedCapBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_STORED_BYTES,
     compressedBytes,
     compressedCapBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES,
     uncompressedBytes,
-    uncompressedCapBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
+    uncompressedCapBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES,
   };
 }
 
@@ -35,6 +36,21 @@ describe("Safety Score publication size headroom", () => {
     const value = JSON.stringify({ compressedBytes: 1_250_000, uncompressedBytes: 9_100_000, payloadChunks: { storedBytes: 1_670_000 } });
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("report-cards:v9", value, 1);
     expect(await loadSafetyPublicationSize(db)).toEqual(observed(1_670_000, 1_250_000, 9_100_000));
+  });
+
+  it("observes reader-sized publications while warning against writer admission", async () => {
+    const { sqlite, db } = fixtures.open();
+    const value = JSON.stringify({ compressedBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES,
+      uncompressedBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_READ_UNCOMPRESSED_BYTES,
+      payloadChunks: { storedBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES } });
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("report-cards:v9", value, 1);
+    const size = await loadSafetyPublicationSize(db);
+    expect(size).toEqual(observed(SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES,
+      SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES, SAFETY_SCORE_V9_PUBLICATION_MAX_READ_UNCOMPRESSED_BYTES));
+    expect(evaluateSafetyPublicationSizeCauses(size)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ metric: "safetyScorePublicationUncompressedBytes",
+        threshold: SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES - SAFETY_PUBLICATION_SIZE_RAW_HEADROOM_WARN_BYTES }),
+    ]));
   });
 
   it.each([undefined, null, 0, -1, 1.5, "9100000", 1e30, true, false, [], {}])("rejects missing or malformed raw size %s", async (uncompressedBytes) => {
@@ -59,7 +75,7 @@ describe("Safety Score publication size headroom", () => {
   });
 
   it("warns strictly above 85% of the tighter cap and stays admin-only", () => {
-    const storedAt85 = SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES * 0.85;
+    const storedAt85 = SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_STORED_BYTES * 0.85;
     const compressedAt85 = SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES * 0.85;
     expect(evaluateSafetyPublicationSizeCauses(observed(storedAt85, compressedAt85))).toEqual([]);
     expect(evaluateSafetyPublicationSizeCauses({ kind: "absent" })).toEqual([]);
@@ -81,15 +97,15 @@ describe("Safety Score publication size headroom", () => {
   });
 
   it("warns strictly below 150,000 raw bytes remaining, independently of transport ratios", () => {
-    const threshold = SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES - SAFETY_PUBLICATION_SIZE_RAW_HEADROOM_WARN_BYTES;
+    const threshold = SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES - SAFETY_PUBLICATION_SIZE_RAW_HEADROOM_WARN_BYTES;
     expect(evaluateSafetyPublicationSizeCauses(observed(100, 100, threshold))).toEqual([]);
-    for (const uncompressedBytes of [threshold + 1, SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES, SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES + 1]) {
+    for (const uncompressedBytes of [threshold + 1, SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES, SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES + 1]) {
       const [cause] = evaluateSafetyPublicationSizeCauses(observed(100, 100, uncompressedBytes));
       expect(cause).toMatchObject({
         code: "safety_score_publication_size_headroom_low", severity: "warning",
         metric: "safetyScorePublicationUncompressedBytes", value: uncompressedBytes, threshold,
       });
-      expect(cause!.message).toContain(`${SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES - uncompressedBytes} bytes remaining`);
+      expect(cause!.message).toContain(`${SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES - uncompressedBytes} bytes remaining`);
       expect(transitionHasPublicImpact([cause!])).toBe(false);
     }
     expect(evaluateSafetyPublicationSizeCauses(observed(1_786_463, 1_340_000, threshold + 1)))
