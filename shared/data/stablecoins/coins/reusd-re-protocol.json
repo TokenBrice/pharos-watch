@@ -120,6 +120,21 @@
       "chain": "monad",
       "address": "0xd25f563e12ff616262f8c947fec108db934f8059",
       "decimals": 18
+    },
+    {
+      "chain": "sei",
+      "address": "0x0a790e1f85594e27d8eb26907fe280f0e0f166de",
+      "decimals": 18
+    },
+    {
+      "chain": "megaeth",
+      "address": "0xd25f563e12ff616262f8c947fec108db934f8059",
+      "decimals": 18
+    },
+    {
+      "chain": "tempo",
+      "address": "0x20c000000000000000000000383a23bacb546ab9",
+      "decimals": 6
     }
   ],
   "collateralQuality": "exotic",

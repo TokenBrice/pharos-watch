@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
+import { CURATED_AGGREGATE_ESCROW_RESIDUALS } from "@shared/lib/onchain-supply-probe";
 import { buildChainRpcs, type ChainRpcConfig } from "../../../../lib/chain-registry";
 import { createDwellirNativeCapability } from "../../../../lib/dwellir-native";
 import * as evmRpc from "../../../../lib/evm-rpc";
@@ -28,7 +29,7 @@ vi.mock("../../../reserve-adapters/helpers", () => ({
   probeTrackedTokenSupply: (...args: unknown[]) => probeTrackedTokenSupplyMock(...args),
 }));
 
-import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap } from "../onchain-supply";
+import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, fetchOnChainSupplyPartition, prefersOnChainSupplyMcap } from "../onchain-supply";
 const BLOCK_HASH = `0x${"1".repeat(64)}` as const;
 beforeEach(() => {
   const nowMs = Date.now();
@@ -47,6 +48,12 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("supply deployment failure reasons", () => {
+  it("keeps STAC's Ethereum-only CoinGecko cap as an owner-decision candidate", async () => {
+    const meta = TRACKED_META_BY_ID.get("stac-securitize")!;
+    expect(prefersOnChainSupplyMcap(meta)).toBe(false);
+    await expect(fetchCuratedAggregateOnChainMcap(meta, 1037.161063, buildChainRpcs())).resolves.toBeNull();
+  });
+
   it.each([false, true])("withholds sFRAX when the joined stock generation is unavailable (native-only roster: %s)", async (nativeOnly) => {
     const tracked = TRACKED_META_BY_ID.get("sfrax-frax")!;
     const meta = nativeOnly ? { ...tracked, contracts: tracked.contracts!.filter(({ chain }) => chain === "ethereum") } : tracked;
@@ -206,23 +213,7 @@ function makeSkyMeta(): StablecoinMeta {
 }
 
 function makeChfauMeta(): StablecoinMeta {
-  return makeMeta({
-    id: "chfau-allunity",
-    name: "AllUnity CHF",
-    symbol: "CHFAU",
-    contracts: [
-      { chain: "ethereum", address: "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78", decimals: 6 },
-      { chain: "polygon", address: "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78", decimals: 6 },
-      { chain: "base", address: "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78", decimals: 6 },
-      { chain: "tempo", address: "0x20c00000000000000000000042109aef2f8b28e1", decimals: 6 },
-    ],
-    flags: {
-      pegCurrency: "CHF",
-      governance: "centralized",
-      yieldBearing: false,
-      navToken: false,
-    },
-  });
+  return TRACKED_META_BY_ID.get("chfau-allunity")!;
 }
 
 const SUSDE_OFT = "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2";
@@ -474,8 +465,10 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
       if (input?.chain === "polygon") return 0n;
       if (input?.chain === "base") return 0n;
       if (input?.chain === "tempo") return 0n;
+      if (input?.chain === "arc") return 0n;
       return null;
     });
+    fetchSolanaTokenSupplyMock.mockResolvedValue(0n);
 
     const result = await fetchCuratedAggregateOnChainMcap(makeChfauMeta(), 1.12);
 
@@ -485,7 +478,9 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     expect(result?.chainCirculating?.Polygon?.current).toBe(0);
     expect(result?.chainCirculating?.Base?.current).toBe(0);
     expect(result?.chainCirculating?.Tempo?.current).toBe(0);
-    expect(fetchErc20TotalSupplyMock).toHaveBeenCalledTimes(4);
+    expect(result?.chainCirculating?.Solana?.current).toBe(0);
+    expect(result?.chainCirculating?.Arc?.current).toBe(0);
+    expect(fetchErc20TotalSupplyMock).toHaveBeenCalledTimes(5);
   });
 
   it("fails CHFAU aggregate supply closed when a reviewed native deployment cannot be read", async () => {
@@ -688,6 +683,20 @@ describe("curation-expanded complete supply rosters", () => {
       canonical: undefined,
       supplies: { ethereum: 100, arbitrum: 10, base: 20, optimism: 30, unichain: 40 },
     },
+    { id: "usyc-hashnote", supplies: { ethereum: 100, bsc: 10, solana: 20, arc: 0 } },
+    { id: "jtrsy-anemoy", supplies: { ethereum: 100, base: 10, arbitrum: 20, avalanche: 30, plume: 40, bsc: 50, monad: 60, solana: 0, pharos: 70 } },
+    { id: "nopal-nest", supplies: { ethereum: 100, plume: 10, bsc: 20, solana: 30, plasma: 0, worldchain: 40, avalanche: 50, arc: 60, monad: 70, robinhood: 80 } },
+    { id: "acred-apollo-securitize", supplies: { aptos: 10, avalanche: 20, ethereum: 100, ink: 30, polygon: 40, sei: 50, solana: 60 } },
+    { id: "brsrv-blackrock", supplies: { ethereum: 100, tempo: 0, solana: 0 } },
+    { id: "syrupusdg-maple", canonical: "ethereum", supplies: { ethereum: 100, robinhood: 10, arbitrum: 20, ink: 0, solana: 0 } },
+    { id: "susdat-saturn", canonical: "ethereum", supplies: { ethereum: 100, bsc: 10, monad: 20 } },
+    { id: "wsrusd-reservoir", canonical: "ethereum", supplies: { ethereum: 100, base: 1, berachain: 1, sonic: 1, arbitrum: 1, bsc: 1, avalanche: 1, unichain: 1, plume: 1, sei: 1, worldchain: 1, katana: 1, hyperevm: 1, linea: 1, monad: 1, pharos: 1, solana: 1, plasma: 1, megaeth: 0, tempo: 1, xdc: 1 } },
+    { id: "brlv-crown", supplies: { base: 100, ethereum: 10, tempo: 20 } },
+    { id: "chfau-allunity", supplies: { ethereum: 100, polygon: 0, base: 10, tempo: 0, solana: 20, arc: 0 } },
+    { id: "susn-noon", canonical: "ethereum", supplies: { ethereum: 100, zksync: 5, sophon: 5, starknet: 5, hyperevm: 5, base: 5, citrea: 5, berachain: 5, tac: 5 } },
+    { id: "apyusd-apyx", canonical: "ethereum", supplies: { ethereum: 100, base: 10, bsc: 10, solana: 10 } },
+    { id: "susdai-usd-ai", supplies: { arbitrum: 100, ethereum: 10, base: 20, plasma: 30, solana: 40, arc: 50 } },
+    { id: "jaaa-janus-henderson-anemoy", supplies: { ethereum: 100, base: 10, bsc: 20, avalanche: 30, monad: 40, arbitrum: 50, pharos: 0, xlayer: 0, arc: 0 } },
   ];
 
   beforeEach(() => {
@@ -696,6 +705,7 @@ describe("curation-expanded complete supply rosters", () => {
     fetchSolanaTokenSupplyMock.mockReset();
     fetchMoveFungibleAssetSupplyMock.mockReset();
     fetchOnchainUint256Mock.mockReset();
+    fetchStarknetTotalSupplyMock.mockReset();
   });
 
   function installSupplyReads(meta: StablecoinMeta, supplies: Record<string, number>, unreadable?: string) {
@@ -712,11 +722,52 @@ describe("curation-expanded complete supply rosters", () => {
     );
     fetchErc20TotalSupplyMock.mockImplementation(async (input) => raw(input.chain));
     fetchSolanaTokenSupplyMock.mockImplementation(async () => raw("solana"));
+    fetchStarknetTotalSupplyMock.mockImplementation(async () => raw("starknet"));
+    if (CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id]) {
+      fetchOnchainUint256Mock.mockResolvedValue(60n * 10n ** 18n);
+    }
     fetchMoveFungibleAssetSupplyMock.mockImplementation(async () => {
       const rawSupply = raw("aptos");
       return rawSupply == null ? null : { rawSupply, decimals: 6, ledgerVersion: "7439737313" };
     });
   }
+
+  it.each([undefined, "0x20c000000000000000000000e09a4cfec804f102", "0x20c000000000000000000000383a23bacb546ab9"])(
+    "reads reUSD's two Tempo identities exactly once and fails closed for unreadable %s",
+    async (unreadable) => {
+      const meta = TRACKED_META_BY_ID.get("reusd-re-protocol")!;
+      const read = (contract: NonNullable<StablecoinMeta["contracts"]>[number]) => {
+        if (contract.address === unreadable) return null;
+        if (!isFixedDecimalDeployment(contract)) throw new Error("fixed-decimal fixture required");
+        const units = contract.chain !== "tempo" ? 10
+          : contract.address === "0x20c000000000000000000000e09a4cfec804f102" ? 2 : 3;
+        return BigInt(units) * 10n ** BigInt(contract.decimals);
+      };
+      // Match the production helper's first-contract-on-chain lookup.
+      probeTrackedTokenSupplyMock.mockImplementation(async (coin, input) => {
+        const chain = input.kind === "onchain-solana" ? "solana" : input.chain;
+        return read(coin.contracts.find((contract: { chain: string }) => contract.chain === chain));
+      });
+      fetchErc20TotalSupplyMock.mockImplementation(async (input, address) =>
+        read(meta.contracts!.find((contract) => contract.chain === input.chain && contract.address === address)!));
+      fetchSolanaTokenSupplyMock.mockImplementation(async () => read(meta.contracts!.find(({ chain }) => chain === "solana")!));
+      const observation = await fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs());
+      const result = await fetchOnChainSupplyPartition(meta, 168.75, 1.25, undefined, buildChainRpcs());
+      if (unreadable) {
+        expect(observation).toBeNull();
+        expect(result).toEqual({ reason: "legs-unreadable", ratio: null });
+      } else {
+        expect(observation?.mcap).toBe(168.75);
+        if (!("chainPartition" in result)) throw new Error("complete reUSD partition required");
+        expect(result.chainPartition).toMatchObject({ admission: "entered", ratio: 1, onchainUsd: 168.75 });
+        expect(Object.values(result.chainCirculating!).find(({ chainId }) => chainId === "tempo")?.current).toBe(6.25);
+        expect(Object.values(result.chainCirculating!).reduce((sum, row) => sum + Number(row.current), 0)).toBe(168.75);
+        expect(probeTrackedTokenSupplyMock.mock.calls.filter(([, input]) => input.chain === "tempo")
+          .map(([coin]) => coin.contracts[0].address))
+          .toEqual(["0x20c000000000000000000000e09a4cfec804f102", "0x20c000000000000000000000383a23bacb546ab9"]);
+      }
+    },
+  );
 
   it.each(cases)("publishes $id's complete partition without double-counting representations", async ({ id, canonical, supplies }) => {
     const meta = TRACKED_META_BY_ID.get(id)!;
@@ -725,15 +776,24 @@ describe("curation-expanded complete supply rosters", () => {
     const result = await fetchCuratedAggregateOnChainMcap(meta, price, buildChainRpcs());
     const total = canonical ? supplies[canonical] : Object.values(supplies).reduce((sum, value) => sum + value, 0);
     const representations = Object.entries(supplies).reduce((sum, [chain, units]) => chain === canonical ? sum : sum + units, 0);
+    const residual = CURATED_AGGREGATE_ESCROW_RESIDUALS[id];
     expect(result?.mcap).toBe(total * price);
     expect(Object.fromEntries(Object.values(result!.chainCirculating!).map((row) => [row.chainId, row.current]))).toEqual(
-      Object.fromEntries(Object.entries(supplies).map(([chain, units]) => [
-        chain, (chain === canonical ? total - representations : units) * price,
-      ])),
+      Object.fromEntries([
+        ...Object.entries(supplies).map(([chain, units]) => [
+          chain, (chain === canonical ? total - (residual ? 60 : representations) : units) * price,
+        ]),
+        ...(residual ? [[undefined, (60 - representations) * price]] : []),
+      ]),
     );
     expect(Object.values(result!.chainCirculating!).reduce((sum, row) => sum + row.current, 0)).toBe(total * price);
     // Aptos must not be sent through Movement's asset-restricted xReserve gate.
-    expect(fetchOnchainUint256Mock).not.toHaveBeenCalled();
+    if (residual) {
+      expect(result?.chainCirculating?.[residual.unattributedChainLabel]?.chainId).toBeUndefined();
+      expect(fetchOnchainUint256Mock.mock.calls[0]?.[0]).toMatchObject({
+        chain: canonical, data: `0x70a08231${residual.escrowAddress.slice(2).padStart(64, "0")}`,
+      });
+    } else expect(fetchOnchainUint256Mock).not.toHaveBeenCalled();
   });
 
   it.each(cases.flatMap(({ id, supplies }) => Object.keys(supplies).map((unreadable) => ({ id, supplies, unreadable }))))(
@@ -757,6 +817,16 @@ describe("curation-expanded complete supply rosters", () => {
     },
   );
 
+  it.each(["apyusd-apyx", "susn-noon"].flatMap((id) => [null, 20n, 100n].map((escrow) => ({ id, escrow }))))(
+    "withholds $id when canonical escrow is unavailable, below represented stock or at the total supply ($escrow)",
+    async ({ id, escrow }) => {
+      const meta = TRACKED_META_BY_ID.get(id)!;
+      installSupplyReads(meta, cases.find((entry) => entry.id === id)!.supplies);
+      fetchOnchainUint256Mock.mockResolvedValue(escrow == null ? null : escrow * 10n ** 18n);
+      await expect(fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs())).resolves.toBeNull();
+    },
+  );
+
   it.each(["ethereum", "arbitrum", "base", "optimism", "unichain"])(
     "retains an observed zero for Legacy sUSDC on %s",
     async (chain) => {
@@ -768,6 +838,45 @@ describe("curation-expanded complete supply rosters", () => {
       expect(Object.values(result?.chainCirculating ?? {}).find((row) => row.chainId === chain)?.current).toBe(0);
     },
   );
+
+  it("conserves strUSD canonical stock while separating unprobed CCIP escrow from Ethereum float", async () => {
+    const meta = TRACKED_META_BY_ID.get("strusd-tori")!;
+    installSupplyReads(meta, { ethereum: 100, monad: 10, pharos: 5 });
+    fetchOnchainUint256Mock.mockResolvedValue(20n * 10n ** 18n);
+    const result = await fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs());
+    expect(result).toMatchObject({
+      mcap: 125,
+      chainCirculating: {
+        Ethereum: { current: 100, chainId: "ethereum" },
+        Monad: { current: 12.5, chainId: "monad" },
+        "Pharos Network": { current: 6.25, chainId: "pharos" },
+        "strUSD unattributed CCIP escrow": { current: 6.25 },
+      },
+    });
+    expect(result?.chainCirculating?.["strUSD unattributed CCIP escrow"]?.chainId).toBeUndefined();
+    expect(Object.values(result!.chainCirculating!).reduce((sum, row) => sum + row.current, 0)).toBe(125);
+    expect(fetchOnchainUint256Mock.mock.calls[0]?.[0]).toMatchObject({
+      chain: "ethereum", contract: meta.contracts!.find(({ chain }) => chain === "ethereum")!.address,
+      data: "0x70a08231000000000000000000000000b12e0794fb2191672ba7a1811edc9713c8c2c38b",
+    });
+  });
+
+  it.each([null, 14n * 10n ** 18n, 100n * 10n ** 18n])(
+    "withholds strUSD when CCIP escrow is unreadable or inconsistent (%s)",
+    async (escrow) => {
+      const meta = TRACKED_META_BY_ID.get("strusd-tori")!;
+      installSupplyReads(meta, { ethereum: 100, monad: 10, pharos: 5 });
+      fetchOnchainUint256Mock.mockResolvedValue(escrow);
+      await expect(fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs())).resolves.toBeNull();
+    },
+  );
+
+  it.each(["ethereum", "monad", "pharos"])("withholds strUSD when %s cannot be read", async (unreadable) => {
+    const meta = TRACKED_META_BY_ID.get("strusd-tori")!;
+    installSupplyReads(meta, { ethereum: 100, monad: 10, pharos: 5 }, unreadable);
+    fetchOnchainUint256Mock.mockResolvedValue(20n * 10n ** 18n);
+    await expect(fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs())).resolves.toBeNull();
+  });
 
   it.each([70, 110])("cannot substitute legacy gross-stock helper output (%s) for the joined sFRAX certificate", async (remote) => {
     const meta = TRACKED_META_BY_ID.get("sfrax-frax")!;

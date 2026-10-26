@@ -76,6 +76,31 @@
       "chain": "solana",
       "address": "AAAJXeGjpKu7W3X4QTSU4pm1Wbj4G2LPcdg7A6xJLLyG",
       "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x58f93d6b1ef2f44ec379cb975657c132cbed3b6b",
+      "decimals": 6
+    },
+    {
+      "chain": "pharos",
+      "address": "0xad48f183e586e92a591a610397ebf534609df797",
+      "decimals": 6
+    },
+    {
+      "chain": "xlayer",
+      "address": "0xad48f183e586e92a591a610397ebf534609df797",
+      "decimals": 6
+    },
+    {
+      "chain": "arc",
+      "address": "0xad48f183e586e92a591a610397ebf534609df797",
+      "decimals": 6
+    },
+    {
+      "chain": "stellar",
+      "address": "CDV6U7OEVY6KUEJ4WNS63AYB6RFU3BAE7AZJOQ7LPH447C6NWUXEZZSO",
+      "decimals": 18
     }
   ],
   "collateralQuality": "rwa",

@@ -4,6 +4,7 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { ReviewedDeploymentSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import currentJtrsyRisk from "@shared/data/stablecoins/domains/risk-review/jtrsy-anemoy.json";
+import currentJtrsyCoin from "@shared/data/stablecoins/coins/jtrsy-anemoy.json";
 import type { ChainRpcConfig } from "../chain-registry";
 import { makeChainRpcs } from "../../test-helpers/chain-rpc-fixtures.test-support";
 import type {
@@ -13,6 +14,7 @@ import type {
 import {
   buildReviewedDeploymentRouteInventory,
   expectedCentrifugeDeploymentIdentity,
+  reviewedDeploymentAttributionValidationError,
 } from "../safety-score-v9/supply-attribution-contract";
 import {
   fetchSolanaCentrifugeDeploymentObservation,
@@ -189,18 +191,50 @@ async function observe(
 }
 
 describe("Centrifuge reviewed deployment observer", () => {
-  it.each(["0", "1", null])("keeps unresolved Solana attribution only for observed zero (rawSupply=%s)", async (rawSupply) => {
+  it.each(["0", "1", null])("admits an unreviewed Solana route only at observed zero within the historical pinned inventory (%s)", async (rawSupply) => {
+    const metaById = ACTIVE_META_BY_ID as Map<string, StablecoinMeta>;
+    const reviewed = metaById.get(ASSET_ID)!;
+    metaById.set(ASSET_ID, { ...reviewed, bridgeRouteRisk: { ...reviewed.bridgeRouteRisk!,
+      routes: reviewed.bridgeRouteRisk!.routes!.map(route => route.destinationChain === "solana"
+        ? { ...route, reviewDisposition: "unresolved", issuanceModel: "unknown", semantics: "unknown" } : route),
+    } });
+    try {
+      const deps = dependencies();
+      deps.fetchSolanaObservation.mockResolvedValue(rawSupply === null ? null : { ...solanaObservation(), rawSupply });
+      const attempt = await observeCentrifugeReviewedDeploymentUnitPartitionAttempt({
+        assetId: ASSET_ID, aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
+        registryFingerprint: REGISTRY_FINGERPRINT, scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(),
+      }, deps);
+      if (rawSupply === "0") expect(attempt.status).toBe("accepted");
+      else expect(attempt).toEqual({ status: "rejected",
+        rejectionCode: rawSupply === null ? "deployment-state-unavailable" : "packet-reconciliation-failed",
+        failedRouteId: rawSupply === null ? routeForChain("solana").routeId : null,
+      });
+    } finally {
+      metaById.set(ASSET_ID, reviewed);
+    }
+  });
+  it("withholds the complete current JTRSY inventory pending Pharos identity review", async () => {
+    const historical = await observe();
+    expect(historical).not.toBeNull();
     const metaById = ACTIVE_META_BY_ID as Map<string, StablecoinMeta>;
     const reviewed = metaById.get(ASSET_ID)!;
     metaById.set(ASSET_ID, {
       ...reviewed,
+      contracts: currentJtrsyCoin.contracts,
       bridgeRouteRisk: currentJtrsyRisk.bridgeRouteRisk,
     } as unknown as StablecoinMeta);
     try {
+      const inventory = buildReviewedDeploymentRouteInventory(ASSET_ID)!;
+      const pharos = "pharos:0xc18e6f730896971a79d748e8dea61067a9bc6040";
+      expect(inventory.routes).toHaveLength(currentJtrsyCoin.contracts.length);
+      expect(inventory.routes.map(route => route.routeId)).toContain(pharos);
+      expect(expectedCentrifugeDeploymentIdentity(ASSET_ID, pharos)).toBeUndefined();
+      expect(reviewedDeploymentAttributionValidationError({ assetId: ASSET_ID,
+        attribution: { ...historical!, routeInventoryDigest: inventory.digest },
+        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT, clockSec: CLOCK_SEC,
+      })).toBe(`reviewed deployment identity unavailable for ${ASSET_ID}:${pharos}`);
       const deps = dependencies();
-      deps.fetchSolanaObservation.mockResolvedValue(
-        rawSupply === null ? null : { ...solanaObservation(), rawSupply },
-      );
       const attempt = await observeCentrifugeReviewedDeploymentUnitPartitionAttempt({
         assetId: ASSET_ID,
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
@@ -208,20 +242,11 @@ describe("Centrifuge reviewed deployment observer", () => {
         scoringClockSec: CLOCK_SEC,
         chainRpcs: chainRpcs(),
       }, deps);
-      if (rawSupply === "0") {
-        expect(attempt.status).toBe("accepted");
-        if (attempt.status !== "accepted") throw new Error("Expected admitted zero observation");
-        expect(attempt.attribution.deployments.find((row) => row.chainId === "solana"))
-          .toMatchObject({ rawSupply: "0", currentSupplyUsd: 0 });
-        expect(attempt.attribution.deployments.reduce((sum, row) => sum + row.currentSupplyUsd, 0))
-          .toBe(AGGREGATE_SUPPLY_USD);
-      } else {
-        expect(attempt).toEqual({
-          status: "rejected",
-          rejectionCode: rawSupply === null ? "deployment-state-unavailable" : "packet-reconciliation-failed",
-          failedRouteId: rawSupply === null ? routeForChain("solana").routeId : null,
-        });
-      }
+      expect(attempt).toEqual({
+        status: "rejected",
+        rejectionCode: "deployment-identity-unavailable",
+        failedRouteId: pharos,
+      });
     } finally {
       metaById.set(ASSET_ID, reviewed);
     }

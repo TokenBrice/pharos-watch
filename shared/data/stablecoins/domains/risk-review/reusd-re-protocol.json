@@ -574,6 +574,108 @@
             "url": "https://docs.re.xyz/products/smart-contracts.md"
           }
         ]
+      },
+      {
+        "id": "sei:0x0a790e1f85594e27d8eb26907fe280f0e0f166de",
+        "destinationChain": "sei",
+        "contractAddress": "0x0a790e1f85594e27d8eb26907fe280f0e0f166de",
+        "protocol": "Re Protocol Sei deployment; route review pending",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-25",
+        "reviewNote": "Deployment verified 2026-10-25 against the issuer smart-contract inventory. At Sei block 239680247 (2026-10-25T22:05:57Z), this token returned Re Protocol reUSD/reUSD, 18 decimals and 1,089,965.996017705122696460 shares. The explorer identifies ShareToken implementation 0xe08853433fdbc504240455e295b644e0f44c3b29; deployment identity and positive omitted stock are established. Complete native-versus-transfer issuer paths, controller closure, peer mappings, caps and incident state remain unresolved; this addition grants no control assurance.",
+        "observedBlock": 239680247,
+        "sources": [
+          {
+            "label": "Re Protocol exact reUSD deployment inventory",
+            "url": "https://docs.re.xyz/products/smart-contracts.md"
+          },
+          {
+            "label": "sei pinned identity and stock reads (2026-10-25)",
+            "url": "https://evm-rpc.sei-apis.com"
+          },
+          {
+            "label": "Exact sei reUSD deployment",
+            "url": "https://seiscan.io/address/0x0a790e1f85594e27d8eb26907fe280f0e0f166de#code"
+          }
+        ]
+      },
+      {
+        "id": "megaeth:0xd25f563e12ff616262f8c947fec108db934f8059",
+        "destinationChain": "megaeth",
+        "contractAddress": "0xd25f563e12ff616262f8c947fec108db934f8059",
+        "protocol": "Re Protocol MegaETH deployment; route review pending",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-25",
+        "reviewNote": "Deployment verified 2026-10-25 against the issuer smart-contract inventory. At MegaETH block 30168945 (2026-10-25T22:05:56Z), this exact token returned Re Protocol reUSD/reUSD, 18 decimals and observed zero totalSupply. The prior Ethereum CCIP peer mapping names a different MegaETH token; that conflict is not resolved or overwritten by this identity addition. Native issuance, current transfer peers, controller closure, caps and incident state remain unresolved; observed zero is a stock observation, not a claim of no deployment or no authority.",
+        "observedBlock": 30168945,
+        "sources": [
+          {
+            "label": "Re Protocol exact reUSD deployment inventory",
+            "url": "https://docs.re.xyz/products/smart-contracts.md"
+          },
+          {
+            "label": "megaeth pinned identity and stock reads (2026-10-25)",
+            "url": "https://mainnet.megaeth.com/rpc"
+          },
+          {
+            "label": "Exact megaeth reUSD deployment",
+            "url": "https://mega.etherscan.io/address/0xd25f563e12ff616262f8c947fec108db934f8059"
+          }
+        ]
+      },
+      {
+        "id": "tempo:0x20c000000000000000000000383a23bacb546ab9",
+        "destinationChain": "tempo",
+        "contractAddress": "0x20c000000000000000000000383a23bacb546ab9",
+        "protocol": "Re Protocol issuer-listed Tempo deployment; route review pending",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-25",
+        "reviewNote": "Deployment and outstanding-stock accounting reviewed 2026-10-25; control assurance remains unresolved. This issuer-listed TIP-20 token is distinct from catalog token 0x20c000000000000000000000e09a4cfec804f102, which remains registered. At Tempo block 45882726 (2026-10-25T22:07:08Z), this token had six decimals, currency USD, 233.737470 shares and paused=true; both tokens shared Re Safe DEFAULT_ADMIN_ROLE and their full positive balances were held by EOA 0x25c4813ddba07db3aedd742b78dcaababdb5040f. Pinned receipts show independent local collateral deposits: block 12663353/tx 0x3b5793dbd4ab73e229991760ab83a07a4dc4c9046ffc0f407b45e42bfb3c5612 transfers 250 units of collateral token 0x20c000000000000000000000b9537d11c60e8b50 through DepositProcessor 0xdde19a4c562069cb4136ccb0debcfbbd67aaf23f into DepositVault 0x7cbeb68f3c257d310418fef27d0d3e67c55f1043 and mints this token; block 12909869/tx 0xf97159b6e36fd0086cfd0726d397ff1fb110e920296dbcba0be56945e92e7ac9 independently deposits another 250 units through processor 0x2ba8aa49603958b78eb23968039417cd1552ab86 into the same vault and mints the other token. Both processors shareToken() bind their respective tokens at block 45882726. Verified DepositProcessor source mints shares after transferring local collateral; its redeployment script corrects the TIP-20 shareToken without cancelling the older balance. Thus both outstanding registers are additive native stock, not one token escrowed for the other; paused status does not erase either liability. This limited accounting proof does not resolve upstream authorization, bridge peers, claim impairment, upgrade reach, caps or incident history.",
+        "observedBlock": 45882726,
+        "sources": [
+          {
+            "label": "Re Protocol exact reUSD deployment inventory",
+            "url": "https://docs.re.xyz/products/smart-contracts.md"
+          },
+          {
+            "label": "tempo pinned identity and stock reads (2026-10-25)",
+            "url": "https://rpc.tempo.xyz"
+          },
+          {
+            "label": "Exact tempo reUSD deployment",
+            "url": "https://explore.tempo.xyz/address/0x20c000000000000000000000383a23bacb546ab9"
+          },
+          {
+            "label": "Independent original Tempo deposit and mint (block 12663353)",
+            "url": "https://explore.tempo.xyz/tx/0x3b5793dbd4ab73e229991760ab83a07a4dc4c9046ffc0f407b45e42bfb3c5612"
+          },
+          {
+            "label": "Independent corrected Tempo deposit and mint (block 12909869)",
+            "url": "https://explore.tempo.xyz/tx/0xf97159b6e36fd0086cfd0726d397ff1fb110e920296dbcba0be56945e92e7ac9"
+          },
+          {
+            "label": "Verified Tempo DepositProcessor and targeted TIP-20 redeployment source",
+            "url": "https://explore.tempo.xyz/api/code?address=0x2ba8aa49603958b78eb23968039417cd1552ab86&chainId=4217"
+          }
+        ]
       }
     ],
     "controls": [

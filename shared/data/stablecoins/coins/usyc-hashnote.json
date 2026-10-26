@@ -50,6 +50,11 @@
       "chain": "solana",
       "address": "7LWanZteUKtvFjv4MHYgKXXdAuCQYFPJysL9pxxdRQGn",
       "decimals": 6
+    },
+    {
+      "chain": "arc",
+      "address": "0x8a5d989bbb96929f689b0200f435f53da42bf490",
+      "decimals": 6
     }
   ],
   "custodyModel": "institutional-regulated",

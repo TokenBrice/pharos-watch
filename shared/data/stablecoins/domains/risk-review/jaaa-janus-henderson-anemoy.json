@@ -159,13 +159,190 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native JAAA issuance on solana: the Token-2022 mint's authority is the issuer keypair BUo4FKP1hSAZ1zcNGzJHTS1V9zcQM8fzUFpYj1NboRK4 (a plain funded signer account, not a bridge program) (verified on-chain 2026-07-20).",
+        "reviewNote": "Native JAAA issuance on solana: the Token-2022 mint's authority is the issuer keypair BUo4FKP1hSAZ1zcNGzJHTS1V9zcQM8fzUFpYj1NboRK4 (a plain funded signer account, not a bridge program) (verified on-chain 2026-07-20). Supply-only follow-up 2026-10-25: the earlier native-mint control observation does not establish additive global liabilities. Exact-slot Solana mint supply is 78,659,094.622326 shares at slot 461421214; Ethereum JAAA balanceOf(0x5d2c428e04f3a10b963f5c8f216071ddcdbdd03b) at block 26272579 is 78,659,095.622323. Pinned September 23 Solana burns of 1 and 76,155,919.76 shares at slots 449769055/449769120 precede Ethereum BalanceSheet transfer of exactly their sum, 76,155,920.76, from that address at block 26041623, transaction 0x1c562480ea0e9af33908683dcd5b95bef8922464d30efcc6315086a3adde0597. This supports source-register liability conservation and treating Solana stock as an Ethereum-backed representation for supply accounting; the remaining 0.999997-share custody excess stays in source-register stock; no loss conclusion is drawn. This observation does not certify controller independence, an automated bridge, whole-history conservation or legal redemption.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
           {
             "label": "JAAA mint on Solana explorer (mint authority probed 2026-07-20)",
             "url": "https://solscan.io/token/AAAJXeGjpKu7W3X4QTSU4pm1Wbj4G2LPcdg7A6xJLLyG"
+          },
+          {
+            "label": "Pinned JAAA Ethereum source-custody release after Solana burns",
+            "url": "https://etherscan.io/tx/0x1c562480ea0e9af33908683dcd5b95bef8922464d30efcc6315086a3adde0597"
+          },
+          {
+            "label": "Pinned JAAA Solana large burn paired with Ethereum source-custody release",
+            "url": "https://solscan.io/tx/2i6HRTbx5i2CpKzcZd5b6RoX3hp7BiNKfcMfK23HzeSCFRExRNgjs7jJRkGMuPTyods9yrjkRh9h7M5oo6qLWCVk"
+          },
+          {
+            "label": "Pinned JAAA Solana one-share burn paired with Ethereum source-custody release",
+            "url": "https://solscan.io/tx/5yCjPWeGFdTVYEk5GMFenkvLSpPpQbCx83wmVdBqo2DGREYM6FRbYZ9FwJ4ojsXaVemkmHzv9r7SbKtcTVaVFzsg"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x58f93d6b1ef2f44ec379cb975657c132cbed3b6b",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x58f93d6b1ef2f44ec379cb975657c132cbed3b6b",
+        "protocol": "Centrifuge V3 deployment; route review pending",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Deployment verified 2026-10-25 against the official Centrifuge registry. At arbitrum block 518259378 the exact token returned JAAA/6 decimals and 3553 shares. All nine EVM source registers sum to 548,473,703.864156 shares, exactly the issuer total-issuance API; Centrifuge documents native EVM burn/mint transfers. Zero is only the observed stock at this pin. Controller closure, adapter quorum, caps, incident state and route risk remain unreviewed; no Safety certification is implied.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-25",
+        "sources": [
+          {
+            "label": "Centrifuge exact JAAA deployment registry",
+            "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
+          },
+          {
+            "label": "Centrifuge native EVM share-transfer guide",
+            "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/"
+          },
+          {
+            "label": "Centrifuge JAAA total issuance",
+            "url": "https://api.centrifuge.io/tokens/0x5a0f93d040de44e78f251b03c43be9cf317dcf64/total-issuance"
+          },
+          {
+            "label": "Pinned arbitrum supply endpoint",
+            "url": "https://arb1.arbitrum.io/rpc"
+          }
+        ],
+        "observedBlock": 518259378
+      },
+      {
+        "id": "pharos:0xad48f183e586e92a591a610397ebf534609df797",
+        "destinationChain": "pharos",
+        "contractAddress": "0xad48f183e586e92a591a610397ebf534609df797",
+        "protocol": "Centrifuge V3 deployment; route review pending",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Deployment verified 2026-10-25 against the official Centrifuge registry. At pharos block 21254518 the exact token returned JAAA/6 decimals and 0 shares. All nine EVM source registers sum to 548,473,703.864156 shares, exactly the issuer total-issuance API; Centrifuge documents native EVM burn/mint transfers. Zero is only the observed stock at this pin. Controller closure, adapter quorum, caps, incident state and route risk remain unreviewed; no Safety certification is implied.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-25",
+        "sources": [
+          {
+            "label": "Centrifuge exact JAAA deployment registry",
+            "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
+          },
+          {
+            "label": "Centrifuge native EVM share-transfer guide",
+            "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/"
+          },
+          {
+            "label": "Centrifuge JAAA total issuance",
+            "url": "https://api.centrifuge.io/tokens/0x5a0f93d040de44e78f251b03c43be9cf317dcf64/total-issuance"
+          },
+          {
+            "label": "Pinned pharos supply endpoint",
+            "url": "https://api.zan.top/public/pharos-mainnet"
+          }
+        ],
+        "observedBlock": 21254518
+      },
+      {
+        "id": "xlayer:0xad48f183e586e92a591a610397ebf534609df797",
+        "destinationChain": "xlayer",
+        "contractAddress": "0xad48f183e586e92a591a610397ebf534609df797",
+        "protocol": "Centrifuge V3 deployment; route review pending",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Deployment verified 2026-10-25 against the official Centrifuge registry. At xlayer block 74197064 the exact token returned JAAA/6 decimals and 0 shares. All nine EVM source registers sum to 548,473,703.864156 shares, exactly the issuer total-issuance API; Centrifuge documents native EVM burn/mint transfers. Zero is only the observed stock at this pin. Controller closure, adapter quorum, caps, incident state and route risk remain unreviewed; no Safety certification is implied.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-25",
+        "sources": [
+          {
+            "label": "Centrifuge exact JAAA deployment registry",
+            "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
+          },
+          {
+            "label": "Centrifuge native EVM share-transfer guide",
+            "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/"
+          },
+          {
+            "label": "Centrifuge JAAA total issuance",
+            "url": "https://api.centrifuge.io/tokens/0x5a0f93d040de44e78f251b03c43be9cf317dcf64/total-issuance"
+          },
+          {
+            "label": "Pinned xlayer supply endpoint",
+            "url": "https://rpc.xlayer.tech"
+          }
+        ],
+        "observedBlock": 74197064
+      },
+      {
+        "id": "arc:0xad48f183e586e92a591a610397ebf534609df797",
+        "destinationChain": "arc",
+        "contractAddress": "0xad48f183e586e92a591a610397ebf534609df797",
+        "protocol": "Centrifuge V3 deployment; route review pending",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Deployment verified 2026-10-25 against the official Centrifuge registry. At arc block 27863106 the exact token returned JAAA/6 decimals and 0 shares. All nine EVM source registers sum to 548,473,703.864156 shares, exactly the issuer total-issuance API; Centrifuge documents native EVM burn/mint transfers. Zero is only the observed stock at this pin. Controller closure, adapter quorum, caps, incident state and route risk remain unreviewed; no Safety certification is implied.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-25",
+        "sources": [
+          {
+            "label": "Centrifuge exact JAAA deployment registry",
+            "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
+          },
+          {
+            "label": "Centrifuge native EVM share-transfer guide",
+            "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/"
+          },
+          {
+            "label": "Centrifuge JAAA total issuance",
+            "url": "https://api.centrifuge.io/tokens/0x5a0f93d040de44e78f251b03c43be9cf317dcf64/total-issuance"
+          },
+          {
+            "label": "Pinned arc supply endpoint",
+            "url": "https://rpc.mainnet.arc.io"
+          }
+        ],
+        "observedBlock": 27863106
+      },
+      {
+        "id": "stellar:CDV6U7OEVY6KUEJ4WNS63AYB6RFU3BAE7AZJOQ7LPH447C6NWUXEZZSO",
+        "destinationChain": "stellar",
+        "contractAddress": "CDV6U7OEVY6KUEJ4WNS63AYB6RFU3BAE7AZJOQ7LPH447C6NWUXEZZSO",
+        "protocol": "Centrifuge Stellar escrow-backed JAAA deployment; route review pending",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Deployment verified 2026-10-25 against the official Centrifuge registry. Soroban simulateTransaction returned name JanusHendersonAnemoyAAACLOFund, symbol JAAA, decimals 18 and total_supply 4860312028809000000000000 at ledger 65136067. Ethereum JAAA balanceOf(0xf26efa5b4a207f63fdd8bb881ca789ded2ab4836) at block 26272579 reads exactly 4,860,312.028809 shares. Official issuer pool metadata ipfs://bafkreihnac3pa5qpp2f2xfdpd5qp2xxmdimajkvkduokn6ue7bmacufq5m labels that exact Ethereum address Stellar Escrow JAAA. Supply accounting therefore excludes this representation from additive source-register stock and retains its custody in Ethereum. This is a current simulation and asynchronous custody comparison, not an archive-pinned Stellar observation, current controller review, legal backing certification or complete geographical partition.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-25",
+        "sources": [
+          {
+            "label": "Centrifuge exact JAAA deployment registry",
+            "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
+          },
+          {
+            "label": "Issuer JAAA metadata identifying Stellar source custody",
+            "url": "https://ipfs.centrifuge.io/ipfs/bafkreihnac3pa5qpp2f2xfdpd5qp2xxmdimajkvkduokn6ue7bmacufq5m"
+          },
+          {
+            "label": "JAAA Stellar contract",
+            "url": "https://stellar.expert/explorer/public/contract/CDV6U7OEVY6KUEJ4WNS63AYB6RFU3BAE7AZJOQ7LPH447C6NWUXEZZSO"
           }
         ]
       }

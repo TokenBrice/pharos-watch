@@ -5,9 +5,12 @@ import { SUPPLY_RPC_DEFAULTS } from "./chain-rpc-registry";
 import { isFixedDecimalDeployment } from "./deployment-amounts";
 
 export type OnchainSupplyContract = NonNullable<StablecoinMeta["contracts"]>[number];
+export const NAV_SUPPLY_LEDGER_FRESHNESS = { maxAgeSec: 600, maxFutureSkewSec: 60 } as const;
 
 export interface CuratedOnchainSupplyContractConfig {
   chain: string;
+  /** Exact deployment when a chain hosts multiple independently issued registers. */
+  address?: string;
   rpcUrl?: string;
   fallbackRpcUrl?: string;
   /**
@@ -51,8 +54,9 @@ const ICP_CANISTER_ID_RE = /^[a-z2-7]{5}(-[a-z2-7]{5}){3}-[a-z2-7]{3}$/;
  * fail-closed curated aggregates instead of poisoning them.
  */
 export const EEARN_SUI_COIN_TYPE = "0x34469c8accdd673df02600265cbbad3688577f0e716866e257f88d448d463492::eearn::EEARN";
+export const USDY_SUI_COIN_TYPE = "0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb::usdy::USDY";
 
-export type OnchainSupplyProbeFamily = "evm" | "solana" | "movement" | "aptos" | "starknet" | "icp" | "sui";
+export type OnchainSupplyProbeFamily = "evm" | "solana" | "movement" | "aptos" | "starknet" | "icp" | "sui" | "stellar" | "noble";
 
 const NON_EVM_PROBE_FAMILY_BY_CHAIN: Readonly<Record<string, OnchainSupplyProbeFamily>> = {
   solana: "solana",
@@ -60,6 +64,8 @@ const NON_EVM_PROBE_FAMILY_BY_CHAIN: Readonly<Record<string, OnchainSupplyProbeF
   aptos: "aptos",
   starknet: "starknet",
   icp: "icp",
+  stellar: "stellar",
+  noble: "noble",
 };
 
 /** Owner-reviewed current-token-stock perimeter; pending/retired claims are separate diagnostics. */
@@ -122,6 +128,105 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   string,
   readonly CuratedOnchainSupplyContractConfig[]
 > = {
+  // Reviewed 2026-10-25: all nine EVM issuer registers sum; Solana/Stellar
+  // are Ethereum-escrowed representations listed explicitly below, not new stock.
+  "jaaa-janus-henderson-anemoy": [
+    { chain: "ethereum" }, { chain: "base" }, { chain: "bsc" }, { chain: "avalanche" },
+    supplyProbeChain("monad"), { chain: "arbitrum" },
+    supplyProbeChain("pharos", { allowZeroSupply: true }),
+    supplyProbeChain("xlayer", { allowZeroSupply: true }),
+    { chain: "arc", allowZeroSupply: true },
+  ],
+  // Reviewed 2026-10-25: native ICL deposits and CCIP burn/mint stocks sum.
+  // Both Tempo tokens have separate collateral-funded mints; neither replaces
+  // the other. Address-bound legs prevent counting the first token twice.
+  "reusd-re-protocol": [
+    { chain: "ethereum" }, { chain: "avalanche" }, { chain: "arbitrum" }, { chain: "base" },
+    { chain: "bsc" }, supplyProbeChain("ink"), supplyProbeChain("plasma"), supplyProbeChain("katana"),
+    supplyProbeChain("tempo", { address: "0x20c000000000000000000000e09a4cfec804f102" }),
+    { chain: "solana" }, supplyProbeChain("berachain", { allowZeroSupply: true }),
+    supplyProbeChain("monad"), supplyProbeChain("sei"), supplyProbeChain("megaeth", { allowZeroSupply: true }),
+    supplyProbeChain("tempo", { address: "0x20c000000000000000000000383a23bacb546ab9" }),
+  ],
+  // Reviewed 2026-10-25: Spiko's independent native share registers sum, with
+  // Soroban total_supply on Stellar. ArbitrumUk is a second Arbitrum One
+  // register, not another chain; exact addresses keep both reads distinct.
+  // The added ArbitrumUk/Solana registers have verified zero stock, not omissions.
+  "eursafo-spiko": [
+    { chain: "arbitrum", address: "0x1412632f2b89e87bfa20c1318a43ced25f1d7b76", allowZeroSupply: true },
+    { chain: "arbitrum", address: "0x59dbe110efbc17e8e9b18d23de2abb2aba1f6665", allowZeroSupply: true },
+    { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
+    { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
+  ],
+  "eutbl-spiko": [
+    { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
+    { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
+  ],
+  "safo-spiko-usd": [
+    { chain: "arbitrum", address: "0x0c709396739b9cfb72bcea6ac691ce0ddf66479c", allowZeroSupply: true },
+    { chain: "arbitrum", address: "0x6a47a9091f2ca880a9ae291e2232d9302da11745", allowZeroSupply: true },
+    { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
+    { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
+  ],
+  "ustbl-spiko": [
+    { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
+    { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
+  ],
+  "gbpsafo-spiko": [
+    { chain: "arbitrum", address: "0xbe023308ac2ef7e1c3799f4e6a3003ee6d342635", allowZeroSupply: true },
+    { chain: "arbitrum", address: "0x541b1c34fb941cdee6d400d06e27240d9c4e10d8", allowZeroSupply: true },
+    { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
+    { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
+  ],
+  // Reviewed 2026-10-25: complete stock agrees with issuer totals; CoinGecko's
+  // overstated share count gives ratio 0.713155, so partition admission stays closed.
+  "eurspkcc-spiko": [
+    { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
+    { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
+  ],
+  "uktbl-spiko": [
+    { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
+    { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
+  ],
+  "chfsafo-spiko": [
+    { chain: "arbitrum", address: "0x97e7962bcd091e7ecfb583fc96289b1e1553ac6e", allowZeroSupply: true },
+    { chain: "arbitrum", address: "0x2f44bfa164df2f8cda61c4f1e7355b77cd0f81f8", allowZeroSupply: true },
+    { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
+    { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
+  ],
+  "spkcc-spiko": [
+    { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
+    { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
+  ],
+  // Reviewed 2026-10-25: issuer-native/burn-mint USDY stock sums across these
+  // twelve registers. Noble bank supply includes its IBC escrow; the exact
+  // three remote denoms below are representations, never additional supply.
+  "usdy-ondo-finance": [
+    { chain: "ethereum", allowZeroSupply: true }, { chain: "arbitrum", allowZeroSupply: true },
+    supplyProbeChain("mantle", { allowZeroSupply: true }), supplyProbeChain("plume", { allowZeroSupply: true }),
+    supplyProbeChain("sei", { allowZeroSupply: true }), { chain: "sui", allowZeroSupply: true },
+    { chain: "solana", allowZeroSupply: true }, supplyProbeChain("aptos", { allowZeroSupply: true }),
+    { chain: "stellar", allowZeroSupply: true }, { chain: "noble", allowZeroSupply: true },
+    { chain: "bsc", allowZeroSupply: true }, supplyProbeChain("tempo", { allowZeroSupply: true }),
+  ],
   // Movement USDCx is a Circle xReserve representation. Its fungible-asset
   // supply is admitted only after the Worker reconciles it to the matching
   // Ethereum xReserve domain balance within one basis point.
@@ -158,14 +263,15 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "base" },
     { chain: "solana" },
   ],
-  // AllUnity lists CHFAU as issuer-native on Ethereum, Polygon, Base, and Tempo.
-  // DefiLlama does not list it and CoinGecko exposes no usable market cap, so
-  // aggregate the reviewed deployments and allow live zero-supply legs.
+  // Reviewed 2026-10-25: AllUnity lists six issuer-native CHFAU deployments;
+  // include Solana and Arc, all at 6 decimals, with observed live zero legs.
   "chfau-allunity": [
     { chain: "ethereum", allowZeroSupply: true },
     { chain: "polygon", allowZeroSupply: true },
     { chain: "base", allowZeroSupply: true },
     { chain: "tempo", allowZeroSupply: true },
+    { chain: "solana", allowZeroSupply: true },
+    { chain: "arc", allowZeroSupply: true },
   ],
   // Reviewed native deployments (AD3a/AD5a, RPC reverified 2026-10-02).
   // USCC public shares sum across Ethereum, Plume and Solana; book-entry shares
@@ -192,13 +298,96 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("zksync"),
     { chain: "arbitrum", allowZeroSupply: true },
   ],
+  // Reviewed 2026-10-25: USYC Teller issuance and BSC burn/mint stock sum;
+  // Ethereum does not escrow the BSC supply. Arc is a verified live zero leg.
+  // https://usyc.docs.hashnote.com/overview/smart-contracts
+  "usyc-hashnote": [
+    { chain: "ethereum" },
+    { chain: "bsc" },
+    { chain: "solana" },
+    { chain: "arc", allowZeroSupply: true },
+  ],
+  // Reviewed 2026-10-25: Centrifuge V3 Spoke burn/reissue shares sum, including
+  // Pharos; the issuer issuance API reconciles the EVM stock. Solana is zero.
+  // https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/
+  "jtrsy-anemoy": [
+    { chain: "ethereum" },
+    { chain: "base" },
+    { chain: "arbitrum" },
+    { chain: "avalanche" },
+    supplyProbeChain("plume"),
+    { chain: "bsc" },
+    supplyProbeChain("monad"),
+    { chain: "solana", allowZeroSupply: true },
+    supplyProbeChain("pharos"),
+  ],
+  // Reviewed 2026-10-25: Nest local BoringVault shares and source-debited OFTs
+  // sum across the complete issuer roster. Plasma is a verified live zero leg.
+  // https://docs.nest.credit/developers/integration-guides/nopal/
+  "nopal-nest": [
+    { chain: "ethereum" },
+    supplyProbeChain("plume"),
+    { chain: "bsc" },
+    { chain: "solana" },
+    supplyProbeChain("plasma", { allowZeroSupply: true }),
+    supplyProbeChain("worldchain"),
+    { chain: "avalanche" },
+    { chain: "arc" },
+    supplyProbeChain("monad"),
+    supplyProbeChain("robinhood"),
+  ],
+  // Reviewed 2026-10-25: ACRED's native Aptos/Solana shares and Securitize EVM
+  // burn/issue legs sum. All five EVM bridge adapters hold zero ACRED stock.
+  // https://public-feed.securitize.io/asset-info?symbol=ACRED
+  "acred-apollo-securitize": [
+    supplyProbeChain("aptos"),
+    { chain: "avalanche" },
+    { chain: "ethereum" },
+    supplyProbeChain("ink"),
+    { chain: "polygon" },
+    supplyProbeChain("sei"),
+    { chain: "solana" },
+  ],
+  // Reviewed 2026-10-25: BRSRV issuer-native common-register shares sum;
+  // Tempo and Solana are verified live zero-supply deployments.
+  // https://public-feed.securitize.io/asset-info?symbol=BRSRV
+  "brsrv-blackrock": [
+    { chain: "ethereum" },
+    supplyProbeChain("tempo", { allowZeroSupply: true }),
+    { chain: "solana", allowZeroSupply: true },
+  ],
+  // Reviewed 2026-10-25: Ethereum syrupUSDG includes CCIP LockRelease custody;
+  // remote BurnMint stocks reallocate it. Ink and Solana currently read zero.
+  // https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain.md
+  "syrupusdg-maple": [
+    { chain: "ethereum" },
+    supplyProbeChain("robinhood"),
+    { chain: "arbitrum" },
+    supplyProbeChain("ink", { allowZeroSupply: true }),
+    { chain: "solana", allowZeroSupply: true },
+  ],
+  // Reviewed 2026-10-25: strUSD and sUSDat remote CCIP shares are locked in
+  // Ethereum, not independent vault liabilities. Reallocate canonical stock.
+  // https://docs.tori.finance/resources/contracts.md
+  "strusd-tori": [
+    { chain: "ethereum" },
+    supplyProbeChain("monad"),
+    supplyProbeChain("pharos"),
+  ],
+  // Reviewed 2026-10-25: Ethereum LockRelease / BSC+Monad BurnMint pools.
+  // https://docs.chain.link/ccip/directory/mainnet/token/sUSDat
+  "susdat-saturn": [
+    { chain: "ethereum" },
+    { chain: "bsc" },
+    supplyProbeChain("monad"),
+  ],
   // CoinGecko only exposes an Ethereum market-cap row for ftUSD and currently
   // leaves it stale; aggregate the verified native Ethereum + Sonic supplies.
   "ftusd-flying-tulip": [{ chain: "ethereum" }, { chain: "sonic" }],
-  // apyUSD is issued through a CCIP burn/mint pair on Ethereum and Base.
-  // CoinGecko supplies the aggregate NAV market cap but no per-chain split, so
-  // read both reviewed deployments and conserve their combined live supply.
-  "apyusd-apyx": [{ chain: "ethereum" }, { chain: "base" }],
+  // Reviewed 2026-10-25: Ethereum CCIP LockRelease escrows apyUSD for Base,
+  // BNB and Solana BurnMint representations; conserve canonical shares.
+  // Unregistered Monad and unmatched pool custody remain an explicit residual.
+  "apyusd-apyx": [{ chain: "ethereum" }, { chain: "base" }, { chain: "bsc" }, { chain: "solana" }],
   // DUSD is a Makina Machine share issued canonically on Ethereum and mirrored
   // to Ink through Wormhole NTT locking. Ethereum totalSupply already includes
   // the tokens escrowed for Ink, so the aggregate path must reallocate rather
@@ -248,19 +437,19 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "starknet" },
     supplyProbeChain("tac"),
   ],
-  // sUSN is Ethereum-native with Noon-operated Hyperlane warp representations on
-  // zkSync, Sophon and Starknet. Verified 2026-07-29: a 200-holder sweep that
-  // accounts for the entire Ethereum supply finds no warp-collateral escrow
-  // holding the 2,027,155 remote total, so the legs sum rather than reallocate.
-  // Ethereum 23,976,706.12 + Starknet 1,904,518.96 + zkSync 120,966.89 + Sophon
-  // 1,669.17. Same known gap as mRe7YIELD: an untracked TAC deployment
-  // (0x5ced7f73b76a555ccb372cc0f0137bec5665f81e, 161,475.02 sUSN) is 0.62% of
-  // the true total and stays outside this aggregate.
+  // Reviewed 2026-10-25: sUSN locks shares in its Ethereum token contract;
+  // conserve canonical totalSupply and isolate self-escrow beyond read satellites.
+  // Retain deprecated Sophon/TAC stock until burned; they are not additive claims.
   "susn-noon": [
     { chain: "ethereum" },
     supplyProbeChain("zksync"),
     supplyProbeChain("sophon"),
     { chain: "starknet" },
+    supplyProbeChain("hyperevm"),
+    { chain: "base" },
+    { chain: "citrea", rpcUrl: "https://rpc.mainnet.citrea.xyz" },
+    supplyProbeChain("berachain"),
+    supplyProbeChain("tac"),
   ],
   "jpym-mento": [{ chain: "celo" }],
   "zarm-mento": [{ chain: "celo" }],
@@ -351,6 +540,12 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     // override: retain this asset's reviewed primary-only supply profile.
     supplyProbeChain("pharos", { fallbackRpcUrl: undefined }),
     { chain: "solana" },
+    // Reviewed 2026-10-25: complete the four issuer-listed OFT legs; their
+    // stock is already escrowed on Ethereum. MegaETH is observed zero.
+    supplyProbeChain("plasma"),
+    supplyProbeChain("megaeth", { allowZeroSupply: true }),
+    supplyProbeChain("tempo"),
+    { chain: "xdc", rpcUrl: "https://rpc.xdcrpc.com" },
   ],
   // yUSD is native on Ethereum with LayerZero OFT burn/mint representations on
   // nine chains, so no leg escrows another and the reviewed deployments sum.
@@ -401,16 +596,16 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     // Kaia cUSDO wraps its local USDO, like the other independent vaults.
     supplyProbeChain("klaytn"),
   ],
-  // sUSDai is an Arbitrum-native ERC-4626 vault carried to Ethereum, Base and
-  // Plasma as LayerZero OFT satellites. Verified 2026-07-29: the OAdapter
-  // 0xffb20098fd7b8e84762eea4609f299d101427f24 holds zero sUSDai on every chain
-  // (it burns rather than escrows), and the Arbitrum vault's totalAssets() only
-  // reconciles to the quoted NAV against GLOBAL shares, so the four legs sum.
+  // Reviewed 2026-10-25: sUSDai uses direct burn/mint across all six deployments;
+  // include Solana (6 decimals) and Arc as additive stock. Complete stock
+  // remains outside the CoinGecko partition admission band.
   "susdai-usd-ai": [
     { chain: "arbitrum" },
     { chain: "ethereum" },
     { chain: "base" },
     supplyProbeChain("plasma"),
+    { chain: "solana" },
+    { chain: "arc" },
   ],
   // sYUSD stakes each chain's own YUSD in a local ERC-4626 vault. Verified
   // 2026-07-29: the BSC vault's asset() is BSC YUSD and its totalAssets()
@@ -804,7 +999,13 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // = 373,483,828.332830, bit-for-bit CoinGecko's total supply
   // 373,483,828.3328299. The Ethereum leg is 0.0000066% of the total and can be
   // burned to nothing, so allow it to read zero.
-  "brlv-crown": [{ chain: "base" }, { chain: "ethereum", allowZeroSupply: true }],
+  // Reviewed 2026-10-25: issuer-listed Tempo TIP-20 is 6 decimals; include its
+  // burn/mint stock, with zero allowed after complete redemption.
+  "brlv-crown": [
+    { chain: "base" },
+    { chain: "ethereum", allowZeroSupply: true },
+    supplyProbeChain("tempo", { allowZeroSupply: true }),
+  ],
   // syzUSD is natively issued on Plasma and carried to Ethereum and Monad by
   // Chainlink CCIP BurnMintTokenPool 1.6.1 spokes whose Plasma counterparty is
   // LockReleaseTokenPool 0x31672de4726227feb22f2dfbcfa985c71bea86b2. Verified
@@ -902,6 +1103,11 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
 // the listed lock/mint representations. Reallocate that supply across chains
 // instead of adding representation supplies to the canonical total.
 export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, string>> = {
+  "apyusd-apyx": "ethereum",
+  "susn-noon": "ethereum",
+  "syrupusdg-maple": "ethereum",
+  "strusd-tori": "ethereum",
+  "susdat-saturn": "ethereum",
   "dusd-dialectic": "ethereum",
   "gldt-gold-dao": "icp",
   "susds-sky": "ethereum",
@@ -919,6 +1125,24 @@ export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, 
   "usd3-reserve-protocol": "ethereum",
   "pgold-pleasing": "arbitrum",
   "syzusd-yuzu": "plasma",
+};
+
+/** Reviewed representation stock already included in its selected native register. */
+export const CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS: Readonly<Record<string, readonly {
+  chain: string; address: string; canonicalChain: string;
+}[]>> = {
+  // Reviewed 2026-10-25: Stellar's issuer metadata names its Ethereum escrow;
+  // Solana burn/Ethereum release pairs identify separate conserved custody.
+  // shortcut: remote custody stays on Ethereum, split when mixed native/escrow accounting is supported.
+  "jaaa-janus-henderson-anemoy": [
+    { chain: "solana", address: "AAAJXeGjpKu7W3X4QTSU4pm1Wbj4G2LPcdg7A6xJLLyG", canonicalChain: "ethereum" },
+    { chain: "stellar", address: "CDV6U7OEVY6KUEJ4WNS63AYB6RFU3BAE7AZJOQ7LPH447C6NWUXEZZSO", canonicalChain: "ethereum" },
+  ],
+  "usdy-ondo-finance": [
+    { chain: "osmosis", address: "ibc/23104D411A6EB6031FA92FB75F227422B84989969E91DCAD56A535DD7FF0A373", canonicalChain: "noble" },
+    { chain: "mantra", address: "ibc/6749D16BC09F419C090C330FC751FFF1C96143DB7A4D2FCAEC2F348A3E17618A", canonicalChain: "noble" },
+    { chain: "injective", address: "ibc/93EAE5F9D6C14BFAC8DD1AFDBE95501055A7B22C5D8FA8C986C31D6EFADCA8A9", canonicalChain: "noble" },
+  ],
 };
 
 export interface CuratedAggregateEscrowResidualConfig {
@@ -942,6 +1166,20 @@ export interface CuratedAggregateEscrowResidualConfig {
 export const CURATED_AGGREGATE_ESCROW_RESIDUALS: Readonly<
   Record<string, CuratedAggregateEscrowResidualConfig>
 > = {
+  "apyusd-apyx": {
+    escrowAddress: "0x0f1bac2ea0311130da778c1ca287204338739f73",
+    unattributedChainLabel: "apyUSD unattributed CCIP escrow",
+  },
+  "susn-noon": {
+    escrowAddress: "0xe24a3dc889621612422a64e6388927901608b91d",
+    unattributedChainLabel: "sUSN unattributed bridge escrow",
+  },
+  // Reviewed 2026-10-25: Tori's Ethereum CCIP lockbox also conserves the new
+  // Arbitrum representation (verified zero), outside the catalog probe roster.
+  "strusd-tori": {
+    escrowAddress: "0xb12e0794fb2191672ba7a1811edc9713c8c2c38b",
+    unattributedChainLabel: "strUSD unattributed CCIP escrow",
+  },
   // Avalanche CCIP LockRelease custody includes the Base, Arbitrum and Movement
   // representations absent from the probe roster. Keep their residual separate
   // from Avalanche free float; pool getToken() reverified 2026-09-22.
@@ -970,7 +1208,7 @@ export function isZephyrScannerSupplyId(id: string): boolean {
  * reader exists for that chain family or the address shape is wrong.
  */
 export function onchainSupplyProbeFamily(contract: OnchainSupplyContract): OnchainSupplyProbeFamily | null {
-  if (contract.chain === "sui") return contract.address === EEARN_SUI_COIN_TYPE ? "sui" : null;
+  if (contract.chain === "sui") return [EEARN_SUI_COIN_TYPE, USDY_SUI_COIN_TYPE].includes(contract.address) ? "sui" : null;
   switch (NON_EVM_PROBE_FAMILY_BY_CHAIN[contract.chain]) {
     case "solana":
       return contract.address.length > 0 ? "solana" : null;
@@ -982,6 +1220,12 @@ export function onchainSupplyProbeFamily(contract: OnchainSupplyContract): Oncha
       return HEX32_ADDRESS_RE.test(contract.address) ? "starknet" : null;
     case "icp":
       return ICP_CANISTER_ID_RE.test(contract.address) ? "icp" : null;
+    case "stellar":
+      // eslint-disable-next-line security/detect-unsafe-regex -- bounded optional code plus fixed-width StrKey; linear.
+      return /^(?:[a-zA-Z0-9]{1,12}-)?C[A-Z2-7]{55}$/.test(contract.address)
+        || /^[a-zA-Z0-9]{1,12}-G[A-Z2-7]{55}$/.test(contract.address) ? "stellar" : null;
+    case "noble":
+      return contract.address === "ausdy" ? "noble" : null;
     default:
       break;
   }
@@ -1016,20 +1260,28 @@ export function selectCuratedAggregateOnchainSupplyProbeContracts(
 
   const selected: CuratedAggregateOnchainSupplyContract[] = [];
   for (const config of curatedContracts) {
-    const contract = meta.contracts?.find((entry) => entry.chain === config.chain);
+    const matches = meta.contracts?.filter((entry) => entry.chain === config.chain
+      && (config.address == null || entry.address === config.address));
+    const contract = matches?.length === 1 ? matches[0] : undefined;
     if (!contract || !supportsOnchainSupplyProbe(contract)) return null;
     selected.push({ config, contract });
   }
 
+  const representations = CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS[meta.id] ?? [];
+  if (representations.some((review) =>
+    !selected.some(({ contract }) => contract.chain === review.canonicalChain)
+    || !meta.contracts?.some((contract) => contract.chain === review.chain && contract.address === review.address)
+    || selected.some(({ contract }) => contract.chain === review.chain))) return null;
+
   // A roster speaks for the whole asset only when every registered deployment
   // participates. A summed roster that skips one under-counts; a canonical
   // lock/mint roster conserves remote supply but attributes the unprobed
-  // remainder to the canonical chain, so it must carry an explicit per-asset
-  // unattributed-residual policy instead of deriving permission from
-  // membership.
+  // remainder to the canonical chain. Only explicit residual policies or exact
+  // reviewed escrow representations excuse an unselected deployment.
   if (
     CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id] == null
-    && meta.contracts?.some((contract) => !selected.some((entry) => entry.contract === contract))
+    && meta.contracts?.some((contract) => !selected.some((entry) => entry.contract === contract)
+      && !representations.some((review) => review.chain === contract.chain && review.address === contract.address))
   ) {
     return null;
   }

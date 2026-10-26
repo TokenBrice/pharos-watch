@@ -249,6 +249,19 @@
             "url": "https://rpc.starknet.lava.build"
           }
         ]
+      },
+      {
+        "id": "solana:6rS8E5CQHLHmLenNNevUdJ9APzKNairr1kfWAM3EhDX3",
+        "destinationChain": "solana",
+        "contractAddress": "6rS8E5CQHLHmLenNNevUdJ9APzKNairr1kfWAM3EhDX3",
+        "protocol": "unknown",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Inventoried 2026-10-25 from https://public-api.spiko.io/share-classes/EUTBL. Exact issuer-listed Solana register identity, five decimals, zero supply and issuer authority were verified on-chain. Transfer-route and complete mint-control research remain unresolved; existing sibling reviews do not cover this deployment."
       }
     ]
   }

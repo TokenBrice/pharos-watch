@@ -28,8 +28,9 @@ import {
 
 export const FIAT_CG_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.detailProvider === "coingecko");
 const FIAT_CG_TOKEN_CONCURRENCY = 2;
-// Below the existing 25s refresh passes; bounds added work to the campaign's 20s wall-time allowance.
-export const ONCHAIN_PARTITION_STAGE_BUDGET_MS = 20_000;
+// Measured full-roster reads need more than 20s; retain rotation under the 30s ceiling.
+export const ONCHAIN_PARTITION_STAGE_BUDGET_MS = 30_000;
+export const ONCHAIN_PARTITION_ROTATION_RUNS = 4;
 
 export async function fetchFiatCoinGeckoTokens(
   cgData: CoinGeckoMcapData,
@@ -78,13 +79,26 @@ export async function fetchFiatCoinGeckoTokens(
       && (selectCuratedAggregateOnchainSupplyProbeContracts(meta) || selectSupplementalOnchainSupplyProbeContract(meta)));
     partitionCandidateCount = partitionCandidates.length;
     summary.candidates = partitionCandidateCount;
+    const partitionStride = Math.ceil(partitionCandidateCount / ONCHAIN_PARTITION_ROTATION_RUNS);
     partitionStartOffset = partitionCandidateCount === 0 ? 0
-      : Math.floor(runNowSec / CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec) % partitionCandidateCount;
+      : (Math.floor(runNowSec / CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec) * partitionStride) % partitionCandidateCount;
+    const carriableIds = new Set(partitionCandidates.filter((meta) => {
+      const previous = previousAssetsById?.get(meta.id);
+      if (!previous) return false;
+      const restored = restoreCuratedAggregateChainPartition({
+        ...previous, circulating: { [pegTypeKey(meta)]: mcapMap[meta.id] }, chainCirculating: {},
+      }, previous, runNowSec, true);
+      return restored != null && !restored.expired;
+    }).map((meta) => meta.id));
+    const rotatedCandidates = partitionCandidates.slice(partitionStartOffset).concat(partitionCandidates.slice(0, partitionStartOffset));
+    // Keep the leading window intact: global uncarried-first sorting could starve carried candidates.
+    const orderedCandidates = [rotatedCandidates.slice(0, partitionStride), rotatedCandidates.slice(partitionStride)]
+      .flatMap((window) => window.sort((a, b) => Number(carriableIds.has(a.id)) - Number(carriableIds.has(b.id))));
     const partitionCandidateIds = new Set(partitionCandidates.map((meta) => meta.id));
-    let nextPartitionIndex = partitionStartOffset;
+    let nextPartitionIndex = 0;
     // Rotate only candidate slots; other supply paths keep their order and published rows retain catalog order.
     const processingMetas = FIAT_CG_METAS.map((meta) => partitionCandidateIds.has(meta.id)
-      ? partitionCandidates[nextPartitionIndex++ % partitionCandidateCount] : meta);
+      ? orderedCandidates[nextPartitionIndex++] : meta);
 
     const results = await mapWithConcurrency(
       processingMetas,

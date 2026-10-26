@@ -14,7 +14,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Centrifuge V3 supports native burn-and-mint share bridging between EVM networks through Spoke. The catalog records eight JTRSY deployments; the current official registry additionally lists Pharos. The bridge guide explicitly excludes Solana and Stellar as target networks, so the Solana mint's transfer architecture remains unresolved despite verified mint and freeze authorities.",
+    "summary": "Centrifuge V3 supports native burn-and-mint share bridging between EVM networks through Spoke. The catalog includes the verified Pharos share identity; its complete route and controller review remains unresolved. The bridge guide explicitly excludes Solana and Stellar as target networks, so the Solana mint's transfer architecture remains unresolved despite verified mint and freeze authorities.",
     "reviewedAt": "2026-07-24",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao); Codex V9 runtime supply audit",
     "confidence": "verified",
@@ -294,6 +294,40 @@
         "failureDomainKeys": [
           "protocol:centrifuge-v3",
           "authority:solana:3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb"
+        ]
+      },
+      {
+        "id": "pharos:0xc18e6f730896971a79d748e8dea61067a9bc6040",
+        "destinationChain": "pharos",
+        "contractAddress": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
+        "protocol": "Centrifuge V3 deployment; route review pending",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Deployment verified 2026-10-25 against the official registry. At Pharos block 21249058 the exact token returned Janus Henderson Treasury Fund/JTRSY/6 decimals and 1,576,475.069278 shares. The observed EVM sum including Pharos matches the issuer total-issuance API at 301,787,102.869779 shares, supporting additive supply accounting. Controller closure, adapter quorum, caps, incident state and route risk remain unreviewed; no Safety certification is implied.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-25",
+        "observedBlock": 21249058,
+        "sources": [
+          {
+            "label": "Centrifuge exact JTRSY deployment registry",
+            "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
+          },
+          {
+            "label": "Centrifuge native mint-and-burn share transfers",
+            "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/"
+          },
+          {
+            "label": "Centrifuge JTRSY total issuance",
+            "url": "https://api.centrifuge.io/tokens/0x8c213ee79581ff4984583c6a801e5263418c4b86/total-issuance"
+          },
+          {
+            "label": "Pharos mainnet pinned share and ward reads",
+            "url": "https://api.zan.top/public/pharos-mainnet"
+          }
         ]
       }
     ]

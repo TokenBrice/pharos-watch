@@ -62,7 +62,7 @@ vi.mock("../onchain-supply", async (importOriginal) => {
   };
 });
 
-import { fetchFiatCoinGeckoTokens, FIAT_CG_METAS, ONCHAIN_PARTITION_STAGE_BUDGET_MS } from "../fiat-cg";
+import { fetchFiatCoinGeckoTokens, FIAT_CG_METAS, ONCHAIN_PARTITION_STAGE_BUDGET_MS, ONCHAIN_PARTITION_ROTATION_RUNS } from "../fiat-cg";
 import { mergeSupplementalLastKnownGood, restoreMissingTrackedAssets } from "../../shared";
 
 const NOW_SEC = 1_790_000_000;
@@ -468,11 +468,15 @@ describe("CoinGecko on-chain share partitions", () => {
       undefined, undefined, undefined, undefined, undefined, undefined, report);
     await vi.advanceTimersByTimeAsync(0);
     expect(mocks.read).toHaveBeenCalledTimes(2);
-    const offset = Math.floor(NOW_SEC / CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec) % fixtureMetas.length;
+    const offset = (Math.floor(NOW_SEC / CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec)
+      * Math.ceil(fixtureMetas.length / ONCHAIN_PARTITION_ROTATION_RUNS)) % fixtureMetas.length;
     expect(mocks.partitionRead.mock.calls.map(([id]) => id)).toEqual([
       fixtureMetas[offset].id, fixtureMetas[(offset + 1) % fixtureMetas.length].id,
     ]);
-    await vi.advanceTimersByTimeAsync(ONCHAIN_PARTITION_STAGE_BUDGET_MS);
+    await vi.advanceTimersByTimeAsync(29_999);
+    expect(report).not.toHaveBeenCalled();
+    expect(mocks.read).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1);
     const assets = await pending;
     expect(report).toHaveBeenCalledWith(expect.objectContaining({ candidates: 3, deadlineSkipped: 3, unreadable: 0 }));
     expect(assets).toHaveLength(3);
@@ -500,9 +504,11 @@ describe("CoinGecko on-chain share partitions", () => {
     mockSusdeSupply();
     const [previousSusde] = await fetchFiatCoinGeckoTokens(cgData(1_000, 1, susdeMeta));
     const previousById = new Map([previousFt, previousAa, previousSusde].map((asset) => [asset.id, asset]));
-    const offset = Math.floor(NOW_SEC / CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec) % fixtureMetas.length;
+    const offset = (Math.floor(NOW_SEC / CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec)
+      * Math.ceil(fixtureMetas.length / ONCHAIN_PARTITION_ROTATION_RUNS)) % fixtureMetas.length;
     const skippedId = fixtureMetas[(offset + 2) % fixtureMetas.length].id;
-    if (expired) previousById.get(skippedId)!.chainPartition!.observedAt = NOW_SEC - SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1;
+    // Expire during the read stage so the skipped row is initially carriable when ordering is chosen.
+    if (expired) previousById.get(skippedId)!.chainPartition!.observedAt = NOW_SEC - SUPPLEMENTAL_RESTORE_MAX_AGE_SEC + 1;
     FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ...fixtureMetas);
     mocks.partitionRead.mockClear();
     mocks.read.mockReset().mockImplementation((_chain, _meta, signal: AbortSignal) => new Promise((_resolve, reject) => {
@@ -530,24 +536,71 @@ describe("CoinGecko on-chain share partitions", () => {
       }));
   });
 
-  it("rotates every candidate into the first read position over consecutive slots while preserving output order", async () => {
-    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ...fixtureMetas);
+  it.each([0, 1, 2, 3, 4, 5, 8, 53, 70, 85, 88])("covers %i candidates in four leading windows and repeats deterministically per slot", async (count) => {
+    const metas = Array.from({ length: count }, (_unused, index) => ({
+      ...aaMeta, id: `rotation-${index}`, geckoId: `rotation-${index}`,
+    }));
+    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ...metas);
     mocks.read.mockResolvedValue(null);
-    const firstIds: string[] = [];
+    const stride = Math.ceil(count / ONCHAIN_PARTITION_ROTATION_RUNS);
+    const seen = new Set<string>();
     const orders: string[][] = [];
-    for (let slot = 0; slot <= fixtureMetas.length; slot++) {
-      const runSec = NOW_SEC + (slot % fixtureMetas.length) * CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec;
+    // Start off-cycle to cover wraparound as well as catalog sizes not divisible by four.
+    for (let slot = 0; slot <= ONCHAIN_PARTITION_ROTATION_RUNS; slot++) {
+      const runSec = NOW_SEC + (slot % ONCHAIN_PARTITION_ROTATION_RUNS) * CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec;
       vi.setSystemTime(runSec * 1_000);
       mocks.partitionRead.mockClear();
-      const assets = await fetchFiatCoinGeckoTokens({ ...cgData(100), ...cgData(100, 1, aaMeta), ...cgData(100, 1, susdeMeta) });
+      const assets = await fetchFiatCoinGeckoTokens(Object.assign({}, ...metas.map((meta) => cgData(100, 1, meta))));
       const order = mocks.partitionRead.mock.calls.map(([id]) => String(id));
-      const offset = Math.floor(runSec / CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec) % fixtureMetas.length;
-      expect(order).toEqual(fixtureMetas.map((_meta, index) => fixtureMetas[(offset + index) % fixtureMetas.length].id));
-      expect(assets.map(({ id }) => id)).toEqual(fixtureMetas.map(({ id }) => id));
-      firstIds.push(order[0]);
+      const offset = count === 0 ? 0 : (Math.floor(runSec / CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec) * stride) % count;
+      expect(order).toEqual(metas.map((_meta, index) => metas[(offset + index) % count].id));
+      expect(assets.map(({ id }) => id)).toEqual(metas.map(({ id }) => id));
+      if (slot < ONCHAIN_PARTITION_ROTATION_RUNS) for (const id of order.slice(0, stride)) seen.add(id);
       orders.push(order);
     }
-    expect(new Set(firstIds.slice(0, fixtureMetas.length)).size).toBe(fixtureMetas.length);
-    expect(orders[fixtureMetas.length]).toEqual(orders[0]);
+    expect(seen.size).toBe(count);
+    expect(orders[ONCHAIN_PARTITION_ROTATION_RUNS]).toEqual(orders[0]);
+  });
+
+  it.each(["missing", "expired", "invalid-roster"])("prioritizes %s carry evidence within the backlog without displacing the leading window", async (reason) => {
+    const previousFt = await readFt();
+    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, aaMeta);
+    mocks.read.mockResolvedValue(100n * 10n ** 18n);
+    const [previousAa] = await fetchFiatCoinGeckoTokens(cgData(100, 1, aaMeta));
+    mockSusdeSupply();
+    const [previousSusde] = await fetchFiatCoinGeckoTokens(cgData(1_000, 1, susdeMeta));
+    const previousById = new Map([previousFt, previousAa, previousSusde].map((asset) => [asset.id, asset]));
+    const offset = (Math.floor(NOW_SEC / CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec)
+      * Math.ceil(fixtureMetas.length / ONCHAIN_PARTITION_ROTATION_RUNS)) % fixtureMetas.length;
+    const uncarriedId = fixtureMetas[(offset + 2) % fixtureMetas.length].id;
+    if (reason === "missing") previousById.delete(uncarriedId);
+    else if (reason === "expired") previousById.get(uncarriedId)!.chainPartition!.observedAt = NOW_SEC - SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1;
+    else previousById.get(uncarriedId)!.chainCirculating = {};
+    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ...fixtureMetas);
+    mocks.partitionRead.mockClear();
+    mocks.read.mockResolvedValue(null);
+    const assets = await fetchFiatCoinGeckoTokens({ ...cgData(100), ...cgData(100, 1, aaMeta), ...cgData(1_000, 1, susdeMeta) },
+      undefined, undefined, undefined, undefined, previousById);
+    expect(mocks.partitionRead.mock.calls.map(([id]) => id)).toEqual([
+      fixtureMetas[offset].id, uncarriedId, fixtureMetas[(offset + 1) % fixtureMetas.length].id,
+    ]);
+    expect(assets.map(({ id }) => id)).toEqual(fixtureMetas.map(({ id }) => id));
+  });
+
+  it("puts an uncarried candidate ahead of valid carry inside the leading window", async () => {
+    const previous = await readFt();
+    const metas: typeof FIAT_CG_METAS = Array.from({ length: 8 }, (_unused, index) => ({
+      ...aaMeta, id: `rotation-${index}`, geckoId: `rotation-${index}`,
+    }));
+    const stride = Math.ceil(metas.length / ONCHAIN_PARTITION_ROTATION_RUNS);
+    const offset = (Math.floor(NOW_SEC / CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec) * stride) % metas.length;
+    metas[offset] = ftMeta;
+    metas[(offset + 1) % metas.length] = aaMeta;
+    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ...metas);
+    mocks.partitionRead.mockClear();
+    mocks.read.mockResolvedValue(null);
+    await fetchFiatCoinGeckoTokens(Object.assign({}, ...metas.map((meta) => cgData(100, 1, meta))),
+      undefined, undefined, undefined, undefined, new Map([[previous.id, previous]]));
+    expect(mocks.partitionRead.mock.calls.slice(0, stride).map(([id]) => id)).toEqual([aaMeta.id, ftMeta.id]);
   });
 });

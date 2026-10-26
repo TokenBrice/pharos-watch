@@ -80,6 +80,11 @@
       "decimals": 6
     },
     {
+      "chain": "pharos",
+      "address": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
+      "decimals": 6
+    },
+    {
       "chain": "solana",
       "address": "JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj",
       "decimals": 6
@@ -123,7 +128,7 @@
     {
       "type": "info",
       "title": "Centrifuge V3 multi-chain availability",
-      "message": "The catalog records eight JTRSY deployments. Centrifuge's current share-bridge guide limits burn-and-mint bridging to EVM networks and excludes Solana targets; the Solana deployment's issuance and transfer architecture remains unresolved."
+      "message": "Centrifuge's current share-bridge guide limits burn-and-mint bridging to EVM networks and excludes Solana targets; the Solana deployment's issuance and transfer architecture remains unresolved."
     }
   ],
   "launchDate": "2024-08-05"
