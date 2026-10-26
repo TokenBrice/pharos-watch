@@ -1,6 +1,6 @@
 # Stablecoin Research Sidecars
 
-Sidecars separate research from scalar identity and routing without changing `StablecoinMeta` or generated projections.
+Research-heavy metadata can move independently from a coin's scalar identity and routing metadata. Sidecars reduce conflict pressure without changing the merged `StablecoinMeta` contract or any generated projection.
 
 ## Domain Ownership
 
@@ -15,7 +15,7 @@ The table mirrors `STABLECOIN_SOURCE_DOMAIN_FIELDS` in `shared/lib/stablecoins/s
 
 Sidecars are selective. Fields such as identity, flags, contracts, links, jurisdiction, classification overrides, notices, launch metadata, and other scalar catalog metadata remain in `coins/<id>.json`.
 
-Migration is complete: domain-owned fields live only in sidecars. An absent sidecar means absent research. Author new research directly in its owning sidecar.
+The layout migration is complete: no base coin file carries a domain-owned field. Every coin whose research a domain covers has that domain's sidecar, so a base file's absence of a domain directory entry now means the coin has no such research, not that the field is still awaiting migration. Author new research directly in the sidecar.
 
 `reserveReview` records the human review of a reserve composition: review date and reviewer, confidence, sources, composition basis and optional as-of date, reviewed scope, known-unknown exposure, and fingerprinted dispositions for selected unlinked slices. A disposition stores the current reserve index, exact name, and percentage, so changing, resizing, or reordering a reviewed slice makes validation fail until the review is revisited. Candidate IDs are research leads only; they do not create dependency edges. The reserves sidecar may contain any of `reserves`, `reserveReview`, and `custodyProfile`, but a merged coin may only carry a review when it also has reserve composition.
 
@@ -29,7 +29,7 @@ Reserve slices may carry a namespace-qualified stable `sourceKey` plus review-us
 
 `dependencyReview` remains base metadata. It is required for manual-only `dependencies`, including a reserve-linked relationship with a reviewed non-default V9 economic role. When present, it must exactly cover those edges plus the implicit `variantOf` wrapper edge, with explicit types and matching weights; a wrapper-only review is valid. Ordinary reserve-derived edges use reserve composition and `reserveReview` provenance, not duplicated per-edge evidence. `shared/lib/stablecoins/schema.ts` owns the distinction.
 
-Keep domain evidence and coupled decisions in their owning sidecar. `blacklistabilityReview.reviewedStatus` is the sole authored freeze/blacklist verdict.
+Once a coin has a sidecar for a domain, all fields owned by that domain must stay out of its base file. This keeps the evidence and its coupled decision fields together. `blacklistabilityReview.reviewedStatus` is the sole authored freeze/blacklist verdict.
 
 [Source Files](../stablecoin-data.md#source-files) owns generated projection boundaries; sidecars remain complete research inputs even when a consumer omits their evidence envelopes.
 
@@ -51,7 +51,7 @@ Route by capability, not controller location or reuse of a Safe. Follow the [nat
 4. Preserve existing evidence and values unless the task includes reviewed research. A layout migration must not invent or refresh facts.
 5. Run focused schema/loader tests before regenerating artifacts.
 
-Strict schemas reject unknown keys, filename/base ID mismatches, orphans, unsupported domains and base/sidecar domain splits.
+Sidecars use strict schemas. Unknown keys, a sidecar ID that differs from its filename/base ID, orphan sidecars, unsupported domain directories, and any base/sidecar domain split are errors.
 
 ## Migration Workflow
 

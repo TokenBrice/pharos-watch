@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { ReserveAdapterCoin, ReserveSlice } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
 import { RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT } from "@shared/types/reserves";
 import { fetchJsonWithRetry, normalizeSlices, requireJsonInput, verifiedFreshnessMetadata } from "./helpers";
 import { reserveInfoWarning } from "./warnings";
@@ -26,21 +27,30 @@ const BUCKETS = {
   "unclassified-instruments": { name: "Other disclosed instruments (unclassified)", risk: "high", assetClass: "other" },
 } as const satisfies Record<string, Pick<ReserveSlice, "name" | "risk" | "assetClass">>;
 
-export function parseChinaamcHoldings(payload: unknown, nowSec: number): AdapterResult {
+export function parseChinaamcHoldings(payload: unknown, nowSec: number, scoringMaxSourceAgeSec?: number): AdapterResult {
   const parsed = PayloadSchema.safeParse(payload);
   if (!parsed.success) throw new Error("chinaamc-holdings-api: invalid-holdings-payload");
   const rows = parsed.data.result;
   const date = rows[0].date;
   const isoDate = `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`;
-  const sourceTimestamp = Date.parse(`${isoDate}T00:00:00Z`) / 1000;
-  if (!Number.isFinite(sourceTimestamp) || new Date(sourceTimestamp * 1000).toISOString().slice(0, 10) !== isoDate ||
-    sourceTimestamp > nowSec || nowSec - sourceTimestamp > BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC ||
+  const utcDate = Date.parse(`${isoDate}T00:00:00Z`) / 1000;
+  // Holdings dates use Hong Kong's calendar; age from the start of that local day.
+  const sourceTimestamp = Date.parse(`${isoDate}T00:00:00+08:00`) / 1000;
+  const freshness = resolveLiveReserveSourceAgeBudget(
+    scoringMaxSourceAgeSec, BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC, BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
+  );
+  if (!Number.isFinite(sourceTimestamp) || new Date(utcDate * 1000).toISOString().slice(0, 10) !== isoDate ||
+    sourceTimestamp > nowSec + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC || nowSec - sourceTimestamp > freshness.sourceAgeBudgetSec ||
     rows.some((row) => row.date !== date)) {
     throw new Error("chinaamc-holdings-api: stale-or-invalid-holdings-date");
   }
 
   const buckets = new Map<keyof typeof BUCKETS, number>();
+  const seen = new Set<string>();
   for (const row of rows) {
+    const identity = JSON.stringify(row);
+    if (seen.has(identity)) throw new Error("chinaamc-holdings-api: duplicate-holding-row");
+    seen.add(identity);
     const key = row.securityNameEN.startsWith("Term Deposit ~ ") ? "term-deposits"
       : /^(?:Cash in Bank |Cash A\/C )/.test(row.securityNameEN) ? "bank-cash" : "unclassified-instruments";
     buckets.set(key, (buckets.get(key) ?? 0) + row.weighting);
@@ -62,7 +72,8 @@ export function parseChinaamcHoldings(payload: unknown, nowSec: number): Adapter
       details: {
         sourceUrl: SOURCE_URL,
         sourceGeneration: `USDDMMF:${date}`,
-        maxSourceAgeSec: BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
+        sourceClockPolicy: "date-only-hkt-start",
+        ...freshness,
         disclosedHoldingCount: rows.length,
         reportedWeightTotalPct,
         scope: "Disclosed pooled USD sub-fund holdings across share classes; name-based cash/deposit buckets, other instruments unclassified. Not a reconciled whole-fund NAV or token-liability denominator.",
@@ -79,5 +90,5 @@ export async function fetchChinaamcHoldingsReserves(
     throw new Error("chinaamc-holdings-api: coin-or-endpoint-mismatch");
   }
   const payload = await fetchJsonWithRetry<unknown>(input.url, signal, 10_000, ctx, { maxResponseBytes: 256 * 1024 });
-  return parseChinaamcHoldings(payload, ctx?.nowSec ?? Math.floor(Date.now() / 1000));
+  return parseChinaamcHoldings(payload, ctx?.nowSec ?? Math.floor(Date.now() / 1000), config.scoring?.maxSourceAgeSec);
 }

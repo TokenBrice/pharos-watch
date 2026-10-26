@@ -70,15 +70,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "a745c254d87b273888213ba92f24678196602ea65e8ee7f6881ff2981ac2684d"
+      "sha256": "7e000e38c17c0140dfc3cb04449bb7399f02fef1e4b15a12a7f82c3191e15022"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "a5f51a770335cb8a31f8bf1ca492bf761459ed63d8e69a59aea32d3a6486b3c8"
+      "sha256": "6713aa09ee2d8c4f6b93dd7ef474ada1cf30ee355f8be4032e154eac2cb385bf"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
-      "sha256": "a93cf53867012257a6cc5e5b2694cb3712cd71217c7f512e3285d22ef22096df"
+      "sha256": "225a3910acb6b85ff7271ccdafeaa0423f699db95ec898e1d4ef628a78aa04d4"
     },
     {
       "path": "shared/lib/api-endpoints/paths.ts",
@@ -782,7 +782,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/live-reserve-adapter-declarations.ts",
-      "sha256": "c01e86a02f198e9024ca852288087bc4caf3403da3aa0a264dde5c1e60a3806c"
+      "sha256": "7bd6451ee7b729fe425b4d4b99526c55eb59fad49fc86b8595e22bb60873ac96"
     },
     {
       "path": "shared/types/live-reserve-adapter-policy.ts",
@@ -1170,7 +1170,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-reserves.ts",
-      "sha256": "dc1a4a116bc7b8c07f672e141cc75cc23cddd7048a0aa5a4b3799c9af197af73"
+      "sha256": "4ab69b22d1cca6f9cd7bf7ef1c161265574e02b68e756e809ae6197152acd23b"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-routes.ts",
@@ -1311,7 +1311,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-25-block-26268499-shock-coverage.json.gz"
     }
   ],
-  "digest": "3402899c0208f8a2a986ea20e145941bd3432b988e046ed7e1cc11a02a7b84f1"
+  "digest": "a2b64dc7e808d36a62092a41e6a76af3b2b7fd0d063161f240c82d46b9dd9097"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

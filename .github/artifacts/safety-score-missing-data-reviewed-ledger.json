@@ -289626,6 +289626,180 @@
       ],
       "nextReviewTrigger": "Redemption producer owner: re-review at batch-3 integration or on receipt of a current exact-holder execution certificate/issuer-funded capacity and complete settlement terms, whichever occurs first.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:jaaa-janus-henderson-anemoy",
+      "taskIds": [
+        "V9G-6517013e460163cd",
+        "V9G-a9c03dddc1a4f1cb"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-b primary-source review",
+      "evidence": [
+        "https://www.anemoy.io/funds/jaaa",
+        "https://docs.centrifuge.io/developer/protocol/guides/publish-nav-and-oracles/",
+        "https://docs.centrifuge.io/user/concepts/pricing/"
+      ],
+      "rationale": "Anemoy fund identity and Centrifuge issuer-set primary NAV with separate batch execution pricing support probable privileged-internal-pricing/top-level-only. Chronicle verification does not establish independent valuation authority, current updater keys or signer closure. Local candidate replay is prospective; production closure remains pending.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/jaaa-janus-henderson-anemoy.json"
+      ],
+      "sentinels": [
+        "jaaa-janus-henderson-anemoy:gap:economic-control:oracle",
+        "jaaa-janus-henderson-anemoy:gap:economic-control:oracle::tier"
+      ],
+      "nextReviewTrigger": "B1 lead: re-review before batch 3 and on the first accepted post-deploy replay, or when the issuer changes its primary valuation authority.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:jaaa-janus-henderson-anemoy",
+      "taskIds": [
+        "V9G-d74b74affd8a3919",
+        "V9G-0145361e1194c634",
+        "V9G-51b05df3fb6434b1"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-b primary-source review",
+      "evidence": [
+        "https://www.anemoy.io/funds/jaaa",
+        "Batch-2 replay report-cards:v9:v1:dba45edde0bda4be8836441c40351fbd4d90c09b7a88ba0084f9e35166daf1cc; base report-cards-input:v1:dd818fe4f8fb5a68891070b401d304a22dbdb1f80c329871be85d4502ff3f86a; clock 1792972156; generated curation worklist and typed missing-data registry."
+      ],
+      "rationale": "Daily fund liquidity and stablecoin redemption terms do not establish exact-holder same-notional funded capacity, all-in execution cost or final-payment settlement bounds. No synthetic runtime observation or static capacity override authored.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        "jaaa-janus-henderson-anemoy:gap:exit-route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:jaaa-janus-henderson-anemoy:offchain-issuer:cost",
+        "jaaa-janus-henderson-anemoy:gap:exit-route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:jaaa-janus-henderson-anemoy:offchain-issuer:settlement",
+        "jaaa-janus-henderson-anemoy:gap:route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:jaaa-janus-henderson-anemoy:offchain-issuer:capacity"
+      ],
+      "nextReviewTrigger": "Redemption producer owner: re-review at batch-3 integration or on receipt of exact-holder same-notional request/output/fee/settlement execution evidence and funded capacity; otherwise on 2026-11-25.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:jtrsy-anemoy",
+      "taskIds": [
+        "V9G-8df9489fed350440",
+        "V9G-bb54df4263217995"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-b primary-source review",
+      "evidence": [
+        "https://www.anemoy.io/funds/jtrsy",
+        "https://docs.centrifuge.io/developer/protocol/guides/publish-nav-and-oracles/",
+        "https://docs.centrifuge.io/user/concepts/pricing/"
+      ],
+      "rationale": "Anemoy fund identity and Centrifuge issuer-set primary NAV with separate batch execution pricing support probable privileged-internal-pricing/top-level-only. Chronicle verification does not establish independent valuation authority, current updater keys or signer closure. Local candidate replay is prospective; production closure remains pending.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/jtrsy-anemoy.json"
+      ],
+      "sentinels": [
+        "jtrsy-anemoy:gap:economic-control:oracle",
+        "jtrsy-anemoy:gap:economic-control:oracle::tier"
+      ],
+      "nextReviewTrigger": "B1 lead: re-review before batch 3 and on the first accepted post-deploy replay, or when the issuer changes its primary valuation authority.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:jtrsy-anemoy",
+      "taskIds": [
+        "V9G-aafba9e909ee59ea"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-b primary-source review",
+      "evidence": [
+        "https://www.anemoy.io/funds/jtrsy",
+        "Batch-2 replay report-cards:v9:v1:dba45edde0bda4be8836441c40351fbd4d90c09b7a88ba0084f9e35166daf1cc; base report-cards-input:v1:dd818fe4f8fb5a68891070b401d304a22dbdb1f80c329871be85d4502ff3f86a; clock 1792972156; generated curation worklist and typed missing-data registry."
+      ],
+      "rationale": "Daily fund liquidity and legal redemption entitlement do not establish a current exact-holder same-notional funded-capacity observation. Existing documented terms are retained without a static capacity override or invented runtime evidence.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        "jtrsy-anemoy:gap:route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:jtrsy-anemoy:offchain-issuer:capacity"
+      ],
+      "nextReviewTrigger": "Redemption producer owner: re-review at batch-3 integration or on receipt of exact-holder same-notional request/output/fee/settlement execution evidence and funded capacity; otherwise on 2026-11-25.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:onyc-onre",
+      "taskIds": [
+        "V9G-445f0ae4180886f5",
+        "V9G-673714efea617f71"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-b primary-source review",
+      "evidence": [
+        "https://docs.onre.finance/technical-resources/token-configuration-and-reference.md",
+        "https://docs.onre.finance/technical-resources/onre-smart-contract-integration.md",
+        "https://github.com/onre-finance/onre-sol/blob/c0490831f438074562ebf51e437ca5f8e027596b/programs/onreapp/src/instructions/offer/add_offer_vector.rs"
+      ],
+      "rationale": "Issuer documentation identifies contract-parameter NAV, and issuer-linked source c0490831 restricts base-price/APR vector updates to the State boss signer. This supports probable privileged-internal-pricing/top-level-only, without deployed-binary correspondence, current boss membership or parameter values. Local candidate replay is prospective; production closure remains pending.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/onyc-onre.json"
+      ],
+      "sentinels": [
+        "onyc-onre:gap:economic-control:oracle",
+        "onyc-onre:gap:economic-control:oracle::tier"
+      ],
+      "nextReviewTrigger": "B1 lead: re-review before batch 3 and on the first accepted post-deploy replay, or when the issuer changes its primary valuation authority.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:onyc-onre",
+      "taskIds": [
+        "V9G-2bcac1d50ec5df67",
+        "V9G-1f5fcb5b07f61bc8",
+        "V9G-8ed61cd1fa857071",
+        "V9G-7971656da194e422",
+        "V9G-386a4927b1a20a28",
+        "V9G-3aa93213fc68f4b9",
+        "V9G-e76a188deff7c9ee",
+        "V9G-de351516bcf1c57a",
+        "V9G-6e9d7fb23abce047"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-10-25",
+      "reviewer": "Pharos NAV parity B1-b primary-source review",
+      "evidence": [
+        "https://docs.onre.finance/technical-resources/onre-smart-contract-integration.md",
+        "https://docs.onre.finance/technical-resources/redemptions-and-onchain-liquidity.md",
+        "Batch-2 replay report-cards:v9:v1:dba45edde0bda4be8836441c40351fbd4d90c09b7a88ba0084f9e35166daf1cc; base report-cards-input:v1:dd818fe4f8fb5a68891070b401d304a22dbdb1f80c329871be85d4502ff3f86a; clock 1792972156; generated curation worklist and typed missing-data registry."
+      ],
+      "rationale": "The management liquidity target and documented quote_swap_sell interface do not establish an admitted exact-holder same-notional execution observation. Current eligibility, output, fee, settlement and funded capacity remain unverified; no synthetic runtime observation authored.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        "onyc-onre:gap:exit-route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:onyc-onre:stablecoin-redeem:access",
+        "onyc-onre:gap:exit-route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:onyc-onre:stablecoin-redeem:capacityEvidenceTier",
+        "onyc-onre:gap:exit-route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:onyc-onre:stablecoin-redeem:executionConfidence",
+        "onyc-onre:gap:exit-route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:onyc-onre:stablecoin-redeem:holderEligibility",
+        "onyc-onre:gap:exit-route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:onyc-onre:stablecoin-redeem:observationConfidence",
+        "onyc-onre:gap:exit-route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:onyc-onre:stablecoin-redeem:output",
+        "onyc-onre:gap:exit-route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:onyc-onre:stablecoin-redeem:settlement",
+        "onyc-onre:gap:route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:onyc-onre:stablecoin-redeem:capacity",
+        "onyc-onre:gap:route:redemption:redemption:d7177c91-3d72-441a-bc63-e29affe492e0:redemption:onyc-onre:stablecoin-redeem:cost"
+      ],
+      "nextReviewTrigger": "Redemption producer owner: re-review at batch-3 integration or on receipt of exact-holder same-notional request/output/fee/settlement execution evidence and funded capacity; otherwise on 2026-11-25.",
+      "factsClosed": 0
     }
   ]
 }

@@ -150,6 +150,9 @@
     "version": 1,
     "semantics": "collateral-mix",
     "breakerScope": "usdy-ondo",
+    "scoring": {
+      "maxSourceAgeSec": 604800
+    },
     "display": {
       "url": "https://ondo.finance/usdy",
       "label": "Ondo USDY portfolio"
