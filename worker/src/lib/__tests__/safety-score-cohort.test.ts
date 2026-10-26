@@ -54,7 +54,7 @@ describe("accepted Safety Score cohort", () => {
     }
     const prepare = vi.spyOn(db, "prepare");
     const result = await loadActiveSafetyScoreCohort(db);
-    expect(result).toMatchObject({ kind: status === "current" ? "v9" : "held", projectionFallbackCount: 0,
+    expect(result).toMatchObject({ kind: status === "current" ? "v9" : "held",
       snapshot: { updatedAt: publication.publishedAtSec, completeness: publication.completeness } });
     expect(prepare).toHaveBeenCalledTimes(2);
     expect(prepare.mock.calls[0]![0]).not.toMatch(/p\.value\s+AS/);
@@ -65,10 +65,10 @@ describe("accepted Safety Score cohort", () => {
     write(keys.scoreIndex, { ...read(keys.scoreIndex), schemaVersion: 1 });
     expect(await loadActiveSafetyScoreIndex(db)).toMatchObject({ kind: "error", reason: "publication-schema-cutover-pending" });
     expect(await loadActiveSafetyScoreCohort(db)).toMatchObject({ kind: "error", reason: "publication-schema-cutover-pending",
-      projectionFallbackCount: 0, snapshot: null });
+      snapshot: null });
   });
 
-  it.each(["missing", "other-generation"])("counts and logs only the %s transitional fallback", async scenario => {
+  it.each(["missing", "other-generation"])("rejects a %s cohort without decoding the publication", async scenario => {
     const { db, sqlite, read, write } = await fixture();
     if (scenario === "missing") sqlite.prepare("DELETE FROM cache WHERE key = ?").run(keys.cohort);
     else {
@@ -76,20 +76,10 @@ describe("accepted Safety Score cohort", () => {
       cohort.safetyScoreIdentity.publicationGenerationId = "report-cards:v9:prior";
       write(keys.cohort, cohort);
     }
-    const logger = vi.spyOn(structuredLog, "logWorkerEvent");
-    expect(await loadActiveSafetyScoreCohort(db)).toMatchObject({ kind: "v9", projectionFallbackCount: 1 });
-    expect(logger).toHaveBeenCalledWith(expect.objectContaining({ event: "safety-cohort-projection-fallback",
-      metadata: expect.objectContaining({ projectionFallbackCount: 1 }) }));
-  });
-
-  it("rejects a generation change during the transitional full read", async () => {
-    const { db, sqlite, publication } = await fixture();
-    sqlite.prepare("DELETE FROM cache WHERE key = ?").run(keys.cohort);
-    const full = publicCache.projectSafetyScoreV9PublicationToPublicSnapshot(publication, currentInput(publication).publicationHealth);
-    full.safetyScoreIdentity.publicationGenerationId = "report-cards:v9:raced";
-    vi.spyOn(publicCache, "loadPublishedReportCardsV9Snapshot").mockResolvedValue(full);
+    const fullRead = vi.spyOn(publicCache, "loadPublishedReportCardsV9Snapshot");
     expect(await loadActiveSafetyScoreCohort(db)).toMatchObject({ kind: "error", snapshot: null,
-      reason: "safety-cohort-fallback-publication-mismatch", projectionFallbackCount: 1 });
+      reason: scenario === "missing" ? "safety-cohort-missing" : "safety-cohort-publication-mismatch" });
+    expect(fullRead).not.toHaveBeenCalled();
   });
 
   it("warns when only the cohort crosses its half-cap and rejects overflow before any persistence", async () => {
@@ -128,7 +118,7 @@ describe("accepted Safety Score cohort", () => {
         .run(SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX, `${SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX.slice(0, -1)};`);
       const prepare = vi.spyOn(db, "prepare");
       const result = await loadActiveSafetyScoreCohort(db);
-      expect(result).toMatchObject({ kind: "error", snapshot: null, projectionFallbackCount: 0 });
+      expect(result).toMatchObject({ kind: "error", snapshot: null });
       expect(result.kind === "error" && result.reason).toMatch(/^safety-cohort-/);
       expect(prepare).toHaveBeenCalledTimes(2);
     },
@@ -144,7 +134,7 @@ describe("accepted Safety Score cohort", () => {
     expect(chunks.length).toBeGreaterThan(4);
     expect(chunks.every((chunk) => Buffer.byteLength(String(chunk.value)) <= 512 * 1024)).toBe(true);
     const batch = vi.spyOn(db, "batch");
-    expect(await loadActiveSafetyScoreCohort(db)).toMatchObject({ kind: "v9", projectionFallbackCount: 0,
+    expect(await loadActiveSafetyScoreCohort(db)).toMatchObject({ kind: "v9",
       snapshot: { cards: [{ sharedBookId: publication.cards[0]!.sharedBookId }] } });
     expect(batch).toHaveBeenCalledTimes(1);
     expect(batch.mock.calls[0]![0]).toHaveLength(2);
@@ -161,7 +151,7 @@ describe("accepted Safety Score cohort", () => {
     const health = read(keys.publicationHealth);
     health.acceptedAtSec--;
     write(keys.publicationHealth, health);
-    expect(await loadActiveSafetyScoreCohort(db)).toMatchObject({ kind: "held", projectionFallbackCount: 0 });
+    expect(await loadActiveSafetyScoreCohort(db)).toMatchObject({ kind: "held" });
   });
 
   it("rejects oversize writes, rather than truncating the accepted projection", () => {

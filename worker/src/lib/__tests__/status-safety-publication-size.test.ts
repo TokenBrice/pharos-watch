@@ -80,16 +80,19 @@ describe("Safety Score publication size headroom", () => {
     expect(evaluateSafetyPublicationSizeCauses(observed(storedAt85, compressedAt85))).toEqual([]);
     expect(evaluateSafetyPublicationSizeCauses({ kind: "absent" })).toEqual([]);
 
-    // 2026-10-23 production row: 1,786,463 stored bytes (94%) and ~1.34 MB compressed (~96%).
-    const [cause] = evaluateSafetyPublicationSizeCauses(observed(1_786_463, 1_340_000));
+    // The previous production row has room under the lifted writer ceilings.
+    expect(evaluateSafetyPublicationSizeCauses(observed(1_786_463, 1_340_000))).toEqual([]);
+    const nearStoredCap = Math.floor(SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_STORED_BYTES * 0.94);
+    const nearCompressedCap = Math.floor(SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES * 0.96);
+    const [cause] = evaluateSafetyPublicationSizeCauses(observed(nearStoredCap, nearCompressedCap));
     expect(cause).toMatchObject({
       code: "safety_score_publication_size_headroom_low",
       severity: "warning",
       metric: "safetyScorePublicationCompressedBytes",
-      value: 1_340_000,
+      value: nearCompressedCap,
       threshold: Math.floor(compressedAt85),
     });
-    expect(cause!.message).toContain("94.0% of the 1900000-byte stored cap");
+    expect(cause!.message).toContain(`94.0% of the ${SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_STORED_BYTES}-byte stored cap`);
     expect(transitionHasPublicImpact([cause!])).toBe(false);
 
     expect(evaluateSafetyPublicationSizeCauses(observed(storedAt85 + 1, 100))[0])
@@ -108,7 +111,9 @@ describe("Safety Score publication size headroom", () => {
       expect(cause!.message).toContain(`${SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES - uncompressedBytes} bytes remaining`);
       expect(transitionHasPublicImpact([cause!])).toBe(false);
     }
-    expect(evaluateSafetyPublicationSizeCauses(observed(1_786_463, 1_340_000, threshold + 1)))
+    expect(evaluateSafetyPublicationSizeCauses(observed(
+      Math.floor(SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_STORED_BYTES * 0.94),
+      Math.floor(SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES * 0.96), threshold + 1)))
       .toEqual([expect.objectContaining({ metric: "safetyScorePublicationCompressedBytes" }),
         expect.objectContaining({ metric: "safetyScorePublicationUncompressedBytes" })]);
   });

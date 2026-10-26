@@ -63,17 +63,14 @@ export async function collectSafetyScores(
   ctx: CollectorContext,
   mentionedSymbols: Set<string>,
 ): Promise<CollectorResult<SafetyScoresResult>> {
-  let safetyProjectionFallbackCount = 0;
   try {
     const source = await loadActiveSafetyScoreCohort(ctx.db);
-    safetyProjectionFallbackCount = source.projectionFallbackCount;
     const safetyContext = digestSafetyContextFromSource(source);
     if (source.kind !== "v9") {
       logWorkerEventArgs("handler", "error",
         `[daily-digest] Canonical Safety Score V9 unavailable (${source.reason}): ${source.detail}`,
       );
       return collectorDegraded({
-        safetyProjectionFallbackCount,
         safetyScores: undefined,
         safetyGrades: undefined,
         safetyIdentity: undefined,
@@ -136,7 +133,6 @@ export async function collectSafetyScores(
       gradeDistribution[grade.grade] = (gradeDistribution[grade.grade] ?? 0) + 1;
     }
     return collectorOk({
-      safetyProjectionFallbackCount,
       safetyScores: {
         model: "v9",
         mentionedCoins: reportCoins.map((grade) => ({
@@ -163,7 +159,6 @@ export async function collectSafetyScores(
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to load canonical safety scores:", error);
     return collectorDegraded({
-      safetyProjectionFallbackCount,
       safetyScores: undefined,
       safetyGrades: undefined,
       safetyIdentity: undefined,

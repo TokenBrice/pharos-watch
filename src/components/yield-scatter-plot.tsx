@@ -62,6 +62,8 @@ interface ScatterDataPoint {
   tvl: number | null;
   logoSrc?: string;
   isClipped: boolean;
+  /** True when the row is pinned to the lower (losing-tail) rail. */
+  clippedBelow: boolean;
   clipThreshold: number | null;
   /** "dot" when a larger market's logo already occupies this spot. */
   marker: ScatterMarkerKind;
@@ -212,7 +214,12 @@ function LogoScatterPoint({
       <g transform={`translate(${cx}, ${cy})`}>
         <circle r={3.5} fill={ringStroke} stroke="var(--color-card)" strokeWidth={1} />
         {payload.isClipped ? (
-          <path d="M 0 -9.5 L 3 -5.5 L -3 -5.5 Z" fill={CHART_ORANGE} opacity={0.95} />
+          <path
+            d="M 0 -9.5 L 3 -5.5 L -3 -5.5 Z"
+            fill={CHART_ORANGE}
+            opacity={0.95}
+            transform={payload.clippedBelow ? "scale(1,-1)" : undefined}
+          />
         ) : null}
       </g>
     );
@@ -258,6 +265,7 @@ function LogoScatterPoint({
           d={`M 0 ${-haloRadius - 5} L 3.5 ${-haloRadius - 1} L -3.5 ${-haloRadius - 1} Z`}
           fill={CHART_ORANGE}
           opacity={0.95}
+          transform={payload.clippedBelow ? "scale(1,-1)" : undefined}
         />
       ) : null}
       {emphasized ? (
@@ -302,7 +310,10 @@ function CustomTooltip({
       </p>
       {d.isClipped && d.clipThreshold !== null ? (
         <p className="text-muted-foreground">
-          Chart rail: <span className="pharos-numeric">&gt; {d.clipThreshold.toFixed(0)}%</span>
+          Chart rail:{" "}
+          <span className="pharos-numeric">
+            {d.clippedBelow ? "<" : ">"} {d.clipThreshold.toFixed(0)}%
+          </span>
           {usesDefaultBenchmarkFrame ? " (USD frame)" : ""}
         </p>
       ) : null}
@@ -394,13 +405,15 @@ export function YieldScatterPlot({
 
   const data = useMemo((): ScatterDataPoint[] => {
     const clipped = rawData.map((point) => {
-      const isClipped = apyAxis.clipThreshold !== null && point.y > apyAxis.clipThreshold;
+      const clippedAbove = apyAxis.clipThreshold !== null && point.y > apyAxis.clipThreshold;
+      const clippedBelow = apyAxis.floorThreshold !== null && point.y < apyAxis.floorThreshold;
       return {
         ...point,
         plotX: point.x,
-        plotY: isClipped ? apyAxis.domainMax : point.y,
-        isClipped,
-        clipThreshold: apyAxis.clipThreshold,
+        plotY: clippedAbove ? apyAxis.domainMax : clippedBelow ? apyAxis.domainMin : point.y,
+        isClipped: clippedAbove || clippedBelow,
+        clippedBelow,
+        clipThreshold: clippedBelow ? apyAxis.floorThreshold : apyAxis.clipThreshold,
       };
     });
     // Approximate plot area: the container less the y-axis column and x-axis row.
@@ -409,25 +422,34 @@ export function YieldScatterPlot({
     return declutterScatterMarkers(clipped, safetyDomain, plotYDomain, plotWidth, plotHeight, compactMarker);
   }, [apyAxis, rawData, safetyDomain, plotYDomain, width, height, isMobile, compactMarker]);
 
-  // Ticks stay inside the data domain; the clipping rail gets its own
-  // ">N" label rather than a bare domain-end tick.
+  // Ticks stay inside the data domain; each clipping rail gets its own
+  // ">N" / "<N" label rather than a bare domain-end tick.
   const safetyTicks = useMemo(
     () => niceTicks(safetyDomain[0], safetyDomain[1], { kind: "score", count: isMobile ? 5 : 6, extend: false }).ticks,
     [safetyDomain, isMobile],
   );
   const apyTicks = useMemo(() => {
     // Whole-percent steps ("count" rules): a 2.5 step labels "12.5", which the narrow axis clips.
-    const ticks = niceTicks(apyAxis.domainMin, apyAxis.domainMax, { kind: "count", count: isMobile ? 5 : 7, extend: false }).ticks;
+    let ticks = niceTicks(apyAxis.domainMin, apyAxis.domainMax, { kind: "count", count: isMobile ? 5 : 7, extend: false }).ticks;
+    // Drop a nice tick that would crowd a rail label.
+    const minGap = (ticks.length > 1 ? ticks[ticks.length - 1] - ticks[ticks.length - 2] : apyAxis.domainMax - apyAxis.domainMin) * 0.5;
     // Even a small losing tail next to a large positive range needs a negative label.
     if (apyAxis.domainMin < 0 && !ticks.some((tick) => tick < 0)) ticks.unshift(apyAxis.domainMin);
-    if (apyAxis.clipThreshold === null) return ticks;
-    // Drop a nice tick that would crowd the rail label.
-    const minGap = (ticks.length > 1 ? ticks[ticks.length - 1] - ticks[ticks.length - 2] : apyAxis.domainMax - apyAxis.domainMin) * 0.5;
-    return [...ticks.filter((tick) => apyAxis.domainMax - tick >= minGap), apyAxis.domainMax];
+    if (apyAxis.floorThreshold !== null) {
+      ticks = [apyAxis.domainMin, ...ticks.filter((tick) => tick - apyAxis.domainMin >= minGap)];
+    }
+    if (apyAxis.clipThreshold !== null) {
+      ticks = [...ticks.filter((tick) => apyAxis.domainMax - tick >= minGap), apyAxis.domainMax];
+    }
+    return ticks;
   }, [apyAxis, isMobile]);
   const formatApyTick = useCallback(
     (value: number) =>
-      apyAxis.clipThreshold !== null && value === apyAxis.domainMax ? `>${apyAxis.clipThreshold}` : String(value),
+      apyAxis.clipThreshold !== null && value === apyAxis.domainMax
+        ? `>${apyAxis.clipThreshold}`
+        : apyAxis.floorThreshold !== null && value === apyAxis.domainMin
+          ? `<${apyAxis.floorThreshold}`
+          : String(value),
     [apyAxis],
   );
 
@@ -458,6 +480,19 @@ export function YieldScatterPlot({
   // triangles at the rail, so they get the count too (previously legend-only).
   // E13: in mixed-currency views the rail is the chart-wide USD frame, so the
   // pin note says so instead of reading as a per-row benchmark fact.
+  const floorNote =
+    apyAxis.floorClippedCount > 0 && apyAxis.floorThreshold !== null ? (
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5",
+          SEVERITY_TONE_CLASS.watch.banner,
+        )}
+      >
+        <span className={cn("h-2.5 w-2.5 rounded-full", YIELD_ZONE_OUTLIER_DOT_CLASS)} />
+        {apyAxis.floorClippedCount} outlier{apyAxis.floorClippedCount === 1 ? "" : "s"} pinned below{" "}
+        {apyAxis.floorThreshold.toFixed(0)}%
+      </span>
+    ) : null;
   const outlierNote =
     apyAxis.clippedCount > 0 && apyAxis.clipThreshold !== null ? (
       <span
@@ -504,7 +539,7 @@ export function YieldScatterPlot({
               : "pharos-chart-stage h-[600px] overflow-hidden p-2 sm:h-[850px] sm:p-4"
         }
         role="figure"
-        aria-label={`Yield vs row safety scatter plot with ${data.length} yield-source rows plotted, including ${apyAxis.clippedCount} on the upper rail.${droppedUnscoredCount > 0 ? ` ${droppedUnscoredCount} row${droppedUnscoredCount === 1 ? "" : "s"} without a safety score not shown.` : ""}${usesDefaultBenchmarkFrame ? " The background benchmark frame uses the default USD benchmark for mixed views." : ""}${compact ? " Compressed mini-map." : ""} Use the leaderboard for accessible row actions.`}
+        aria-label={`Yield vs row safety scatter plot with ${data.length} yield-source rows plotted, including ${apyAxis.clippedCount} on the upper rail and ${apyAxis.floorClippedCount} on the lower rail.${droppedUnscoredCount > 0 ? ` ${droppedUnscoredCount} row${droppedUnscoredCount === 1 ? "" : "s"} without a safety score not shown.` : ""}${usesDefaultBenchmarkFrame ? " The background benchmark frame uses the default USD benchmark for mixed views." : ""}${compact ? " Compressed mini-map." : ""} Use the leaderboard for accessible row actions.`}
       >
         <div ref={chartContainerRef} className="h-full w-full">
           {isChartReady ? (
@@ -637,9 +672,10 @@ export function YieldScatterPlot({
           )}
         </div>
       </div>
-      {outlierNote || unscoredNote ? (
+      {outlierNote || floorNote || unscoredNote ? (
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           {outlierNote}
+          {floorNote}
           {unscoredNote}
         </div>
       ) : null}

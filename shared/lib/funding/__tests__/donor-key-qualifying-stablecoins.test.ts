@@ -31,6 +31,12 @@ const REVIEWED_EXCLUSIONS: Readonly<Record<string, Partial<Record<FundingChain, 
       reason: "PYUSD0 LayerZero representation; not on Paxos's PYUSD mainnet list.",
     },
   },
+  "doc-money-on-chain": {
+    ethereum: {
+      address: "0x69f6d4d4813f8e2e618dae7572e04b6d5329e207",
+      reason: "eDOC bridge token; Money on Chain lists only Rootstock and Arbitrum deployments.",
+    },
+  },
   "lusd-liquity": {
     polygon: {
       address: "0x23001f892c0c82b79303edc9b9033cd190bb21c7",

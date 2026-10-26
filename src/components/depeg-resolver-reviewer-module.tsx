@@ -290,25 +290,34 @@ function CalibrationLedger({ summary }: { summary: DdrrSummary }) {
         ? "none made"
         : `${terminalCallsCorrect} / ${terminalCalls} correct`;
 
+  // Calibrated: the aggregate track record leads, matching the homepage DDR card.
+  const calibrated = scored >= CALIBRATION_THRESHOLD && pct != null;
   const recoveryValue = scored > 0 ? `${correct} / ${scored}` : "—";
-  const recoveryCaption =
-    scored === 0
-      ? "none scored yet"
-      : scored >= CALIBRATION_THRESHOLD && pct != null
-        ? `correct · ${formatReviewerPercent(pct)}`
-        : "correct so far";
+  const recoveryCaption = scored === 0 ? "none scored yet" : "correct so far";
 
   return (
     <div className="pharos-card-shell p-4 sm:p-5">
       <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
         <div className="space-y-2.5">
           <Kicker>Recovery calls</Kicker>
-          <div className="flex items-baseline gap-2">
-            <span className="pharos-numeric text-2xl font-semibold text-foreground">
-              {recoveryValue}
-            </span>
-            <span className="text-xs text-muted-foreground">{recoveryCaption}</span>
-          </div>
+          {calibrated ? (
+            <div>
+              <span className="pharos-numeric text-4xl font-bold leading-none tracking-tight text-foreground">
+                {formatReviewerPercent(pct)}
+              </span>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                recovery-call accuracy ·{" "}
+                <span className="font-mono tabular-nums text-foreground">{recoveryValue}</span> correct
+              </p>
+            </div>
+          ) : (
+            <div className="flex items-baseline gap-2">
+              <span className="pharos-numeric text-2xl font-semibold text-foreground">
+                {recoveryValue}
+              </span>
+              <span className="text-xs text-muted-foreground">{recoveryCaption}</span>
+            </div>
+          )}
           {scored > 0 ? (
             <p className="pharos-meta pharos-numeric">
               Always-recover baseline {baseline != null ? `${baseline} / ${scored}` : "unavailable"}

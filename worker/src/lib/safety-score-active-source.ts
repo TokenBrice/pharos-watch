@@ -4,7 +4,6 @@ import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { throwIfAborted } from "./abort";
-import { logWorkerEvent } from "./structured-log";
 import { publicationIdentityFromStorageEnvelope, SafetyScoreV9SchemaCutoverPendingError } from "./safety-score-v9/publication-codec";
 import { SAFETY_SCORE_V9_CACHE_KEYS, parseSafetyScoreV9PublicationHealthCache, resolveSafetyScoreV9EffectivePublicationHealth } from "./safety-score-v9/publication-health";
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
@@ -118,22 +117,20 @@ export type SafetyScoreCohortSnapshot = Pick<SafetyScoreCohort,
   publicationHealth: V9PublicationHealth;
 };
 
-export type ActiveSafetyScoreCohort = (
+export type ActiveSafetyScoreCohort =
   | { kind: "v9"; snapshot: SafetyScoreCohortSnapshot }
   | { kind: "held"; reason: "v9-publication-held"; detail: string; snapshot: SafetyScoreCohortSnapshot }
-  | { kind: "error"; reason: string; detail: string; snapshot: null }
-) & { projectionFallbackCount: number };
+  | { kind: "error"; reason: string; detail: string; snapshot: null };
 
 /** Bind metadata and chunks in one atomic read batch without repeating metadata per chunk. */
 export async function loadActiveSafetyScoreCohort(db: D1Database, signal?: AbortSignal): Promise<ActiveSafetyScoreCohort> {
-  let projectionFallbackCount = 0;
   const unavailable = (reason: string): ActiveSafetyScoreCohort => ({
-    kind: "error", reason, detail: `Canonical Safety Score cohort unavailable: ${reason}`, snapshot: null, projectionFallbackCount,
+    kind: "error", reason, detail: `Canonical Safety Score cohort unavailable: ${reason}`, snapshot: null,
   });
   const available = (snapshot: SafetyScoreCohortSnapshot): ActiveSafetyScoreCohort =>
     snapshot.publicationHealth.status === "held"
-      ? { kind: "held", reason: "v9-publication-held", detail: "Canonical Safety Score V9 ratings are held at the last verified snapshot", snapshot, projectionFallbackCount }
-      : { kind: "v9", snapshot, projectionFallbackCount };
+      ? { kind: "held", reason: "v9-publication-held", detail: "Canonical Safety Score V9 ratings are held at the last verified snapshot", snapshot }
+      : { kind: "v9", snapshot };
   try {
     throwIfAborted(signal);
     const [metadata, chunks] = await db.batch([
@@ -200,24 +197,7 @@ export async function loadActiveSafetyScoreCohort(db: D1Database, signal?: Abort
         return unavailable("safety-cohort-invalid");
       }
     }
-    if (cohort === null || cohort.safetyScoreIdentity.publicationGenerationId !== identity.publicationGenerationId) {
-      // shortcut: rollout-only full decode; remove after 24 hours with zero fallback events.
-      projectionFallbackCount = 1;
-      logWorkerEvent({
-        scope: "lib", level: "warn", event: "safety-cohort-projection-fallback",
-        message: "Accepted Safety Score cohort projection requires transitional full decode",
-        metadata: { projectionFallbackCount, reason: cohort === null ? "safety-cohort-missing" : "safety-cohort-publication-mismatch",
-          publicationGenerationId: identity.publicationGenerationId },
-      });
-      const full = await loadActiveSafetyScoreSource(db, signal);
-      if (full.kind === "error") return { ...full, projectionFallbackCount };
-      if (!safetyScorePublicationIdentitiesMatch(full.snapshot.safetyScoreIdentity, identity) ||
-          full.snapshot.source.resultDigest !== row.result_digest || full.snapshot.updatedAt !== row.publication_updated_at ||
-          stableJsonStringifyV1(full.snapshot.publicationHealth) !== stableJsonStringifyV1(resolveSafetyScoreV9EffectivePublicationHealth({
-            publicationGenerationId: identity.publicationGenerationId, publishedAtSec: row.publication_updated_at,
-          }, health))) return unavailable("safety-cohort-fallback-publication-mismatch");
-      return available({ ...full.snapshot, lifecycle: "active" });
-    }
+    if (cohort === null) return unavailable("safety-cohort-missing");
     if (!safetyScorePublicationIdentitiesMatch(identity, cohort.safetyScoreIdentity) ||
         row.result_digest !== cohort.publicationResultDigest || row.publication_updated_at !== cohort.publishedAtSec ||
         index.asOfSec !== cohort.asOfSec) {

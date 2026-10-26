@@ -183,6 +183,159 @@ export const DONOR_KEY_QUALIFYING_STABLECOINS: readonly DonorKeyQualifyingStable
     },
   },
   {
+    // https://docs.paxos.com/guides/stablecoin/usdg/mainnet
+    symbol: "USDG",
+    label: "USDG",
+    stablecoinId: "usdg-paxos",
+    contracts: {
+      ethereum: "0xe343167631d89b6ffc58b88d6b7fb0228795491d",
+      arbitrum: "0x004b506865409877c9fa29bfb1eba929984b9bbc",
+    },
+  },
+  {
+    // https://docs.agora.finance/developer/contract-deployments
+    symbol: "AUSD",
+    label: "AUSD",
+    stablecoinId: "ausd-agora",
+    contracts: {
+      ethereum: "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+      base: "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+      arbitrum: "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+      polygon: "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+    },
+  },
+  {
+    // https://www.gemini.com/dollar (contract link)
+    symbol: "GUSD",
+    label: "GUSD",
+    stablecoinId: "gusd-gemini",
+    contracts: {
+      ethereum: "0x056fd409e1d7a124bd7017459dfea2f387b6d5cd",
+    },
+  },
+  {
+    // https://www.fidelitydigitalassets.com/stablecoin-developer-resources
+    symbol: "FIDD",
+    label: "FIDD",
+    stablecoinId: "fidd-fidelity",
+    contracts: {
+      ethereum: "0x7c135549504245b5eae64fc0e99fa5ebabb8e35d",
+    },
+  },
+  {
+    // SG-FORGE USDCV white paper v2.0: https://www.sgforge.com/wp-content/uploads/2025/08/SG-Forge-USDCV-White-Paper_V2.0_Ethereum_Solana_11082025.pdf
+    symbol: "USDCV",
+    label: "USDCV",
+    stablecoinId: "usdcv-societe-generale-forge",
+    contracts: {
+      ethereum: "0x5422374b27757da72d5265cc745ea906e0446634",
+    },
+  },
+  {
+    // https://www.universal.ae/
+    symbol: "USDU",
+    label: "USDU",
+    stablecoinId: "usdu-universal",
+    contracts: {
+      ethereum: "0xe4ca6596d2c28014c6f89964f57838e0be9f369b",
+    },
+  },
+  {
+    // https://www.straitsx.com/xusd
+    symbol: "XUSD",
+    label: "XUSD",
+    stablecoinId: "xusd-straitsx",
+    contracts: {
+      ethereum: "0xc08e7e23c235073c6807c2efe7021304cb7c2815",
+    },
+  },
+  {
+    // https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses (core and OFT sections)
+    symbol: "RUSD",
+    label: "rUSD",
+    stablecoinId: "rusd-reservoir",
+    contracts: {
+      ethereum: "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+      base: "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+      arbitrum: "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+    },
+  },
+  {
+    // https://docs.usd.ai/technical-overview/contract-addresses (Arbitrum hub; issuer OFTs)
+    symbol: "USDAI",
+    label: "USDai",
+    stablecoinId: "usdai-usd-ai",
+    contracts: {
+      ethereum: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+      base: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+      arbitrum: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+    },
+  },
+  {
+    // https://fxprotocol.gitbook.io/fx-docs/more/resources/contracts; Base OFT: https://github.com/aladdindao/deployments/blob/main/deployments.mainnet.md
+    symbol: "FXUSD",
+    label: "fxUSD",
+    stablecoinId: "fxusd-f-x-protocol",
+    contracts: {
+      ethereum: "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
+      base: "0x55380fe7a1910dff29a47b622057ab4139da42c5",
+    },
+  },
+  {
+    // https://docs.asymmetry.finance/developers/contracts (current token, not the legacy one)
+    symbol: "USDAF",
+    label: "USDaf",
+    stablecoinId: "usdaf-asymmetry",
+    contracts: {
+      ethereum: "0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8",
+    },
+  },
+  {
+    // https://github.com/Tangent-labs/tangent-contracts/blob/main/addresses-prod.json (tokens.USG)
+    symbol: "USG",
+    label: "USG",
+    stablecoinId: "usg-tangent",
+    contracts: {
+      ethereum: "0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1",
+    },
+  },
+  {
+    // https://docs.originprotocol.com/registry/contracts/ousd-registry; rebasing, so one unit stays one dollar
+    symbol: "OUSD",
+    label: "OUSD",
+    stablecoinId: "ousd-origin-protocol",
+    contracts: {
+      ethereum: "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+    },
+  },
+  {
+    // https://docs.polymarket.com/resources/contracts (pUSD CollateralToken)
+    symbol: "PUSD",
+    label: "pUSD",
+    stablecoinId: "pusd-polymarket",
+    contracts: {
+      polygon: "0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb",
+    },
+  },
+  {
+    // Issuer-listed Arbitrum deployment, not the Ethereum eDOC bridge token: https://moneyonchain.com/doc-stablecoin/
+    symbol: "DOC",
+    label: "DOC",
+    stablecoinId: "doc-money-on-chain",
+    contracts: {
+      arbitrum: "0x2ad62eb9744c720364f6ac856360a43e8a2229b5",
+    },
+  },
+  {
+    // Wrapped xDAI only; native xDAI transfers carry no token contract and never count: https://docs.gnosischain.com/developers/Usefulcontracts
+    symbol: "WXDAI",
+    label: "WXDAI",
+    stablecoinId: "xdai-gnosis",
+    contracts: {
+      gnosis: "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d",
+    },
+  },
+  {
     // https://developers.circle.com/stablecoins/eurc-contract-addresses; valued at the receipt-date ECB EUR/USD rate.
     symbol: "EURC",
     label: "EURC",
@@ -190,6 +343,82 @@ export const DONOR_KEY_QUALIFYING_STABLECOINS: readonly DonorKeyQualifyingStable
     contracts: {
       ethereum: "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
       base: "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+    },
+  },
+  {
+    // https://frankencoin.com/token/; valued at the receipt-date ECB CHF rate.
+    symbol: "ZCHF",
+    label: "ZCHF",
+    stablecoinId: "zchf-frankencoin",
+    contracts: {
+      ethereum: "0xb58e61c3098d85632df34eecfb899a1ed80921cb",
+      base: "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+      optimism: "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+      arbitrum: "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+      polygon: "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+      gnosis: "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+    },
+  },
+  {
+    // https://www.sgforge.com/stablecoin-elevation/; valued at the receipt-date ECB EUR/USD rate.
+    symbol: "EURCV",
+    label: "EURCV",
+    stablecoinId: "eurcv-societe-generale-forge",
+    contracts: {
+      ethereum: "0x5f7827fdeb7c20b443265fc2f40845b715385ff2",
+    },
+  },
+  {
+    // https://schuman.io/smart-contracts; valued at the receipt-date ECB EUR/USD rate.
+    symbol: "EUROP",
+    label: "EUROP",
+    stablecoinId: "europ-schuman",
+    contracts: {
+      ethereum: "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51",
+      polygon: "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51",
+    },
+  },
+  {
+    // https://www.straitsx.com/xsgd; valued at the receipt-date ECB SGD rate.
+    symbol: "XSGD",
+    label: "XSGD",
+    stablecoinId: "xsgd-straitsx",
+    contracts: {
+      ethereum: "0x70e8de73ce538da2beed35d14187f6959a8eca96",
+      base: "0x0a4c9cb2778ab3302996a34befcf9a8bc288c33b",
+      arbitrum: "0xe333e7754a2dc1e020a162ecab019254b9dab653",
+      polygon: "0xdc3326e71d45186f113a2f448984ca0e8d201995",
+    },
+  },
+  {
+    // https://tetradg.com/supported-blockchains/; valued at the receipt-date ECB CAD rate.
+    symbol: "CADD",
+    label: "CADD",
+    stablecoinId: "cadd-cad-digital",
+    contracts: {
+      ethereum: "0x16f93ebc5320c89efc8701577efe49d14a276a06",
+      base: "0x16f93ebc5320c89efc8701577efe49d14a276a06",
+    },
+  },
+  {
+    // https://www.macropod.com/transparency/; valued at the receipt-date ECB AUD rate.
+    symbol: "AUDM",
+    label: "AUDM",
+    stablecoinId: "audm-macropod",
+    contracts: {
+      ethereum: "0x081599e4936d12c46bd48913b2329115cd26cbdd",
+      base: "0xeded6ae915b129b67a4ad49901518f2736427063",
+    },
+  },
+  {
+    // https://www.blox.my/myrc; valued at the receipt-date ECB MYR rate.
+    symbol: "MYRC",
+    label: "MYRC",
+    stablecoinId: "myrc-blox",
+    contracts: {
+      ethereum: "0xbed7d999f1d71ac70c263f64c7c7e009d691be2e",
+      base: "0x3ed03e95dd894235090b3d4a49e0c3239edce59e",
+      arbitrum: "0x3ed03e95dd894235090b3d4a49e0c3239edce59e",
     },
   },
   {
