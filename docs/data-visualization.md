@@ -123,7 +123,7 @@ Every numeric axis, Recharts or hand-rolled SVG, takes its ticks from `src/lib/c
 - **Recharts:** spread `useNiceValueAxis(values)` from `src/components/chart-primitives/axes.tsx` into `MonoYAxis` (stack totals for stacked data). A fixed numeric domain gets explicit in-domain ticks; select `tickKind` and `scale="log"` when applicable. Do not rely on unresolved auto-domain `snap125`, which can overextend. Raw axes pass helper `ticks` and `interval={0}`.
 - **Plot edges:** preserve the mono measurement rule in `globals.css` so Recharts does not clip edge labels. Stacked areas start at zero; time-bucket bars pad by half a bucket so end bars remain whole.
 - **Domain-specific exceptions:** the peg deviation chart keeps its par-centred symmetric axis (`computePegYAxis` in `src/lib/peg-chart-math.ts`), and categorical/quarter axes keep their own label thinning.
-- **Display rails:** a capped axis labels the rail as `>N` (the yield scatter's outlier rail), never as a bare domain-end tick, and the outlier count stays visible beside the chart.
+- **Display rails:** a capped axis labels the rail as `>N` or `<N` (the yield scatter's upper and lower outlier rails), never as a bare domain-end tick, and each rail's outlier count stays visible beside the chart.
 
 `src/lib/chart-theme.ts` owns axis typography, grid/reference strokes, series widths, band opacity and tooltip surfaces; import its constants rather than restating them. Value grids are horizontal only, never vertical on time series. For example, spread `CHART_AXIS_TICK` onto SVG tick text and `CHART_AXIS_LABEL` onto axis titles; keep figures mono and titles sans.
 

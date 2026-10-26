@@ -23,6 +23,7 @@ import {
   type SafetyScoreV9PegProvenanceSeed,
 } from "../lib/safety-score-v9/peg-provenance";
 import { runSafetyScoreV9Publication } from "../lib/safety-score-v9/publication-runner";
+import { loadSafetyScoreV9PublicationHealth } from "../lib/safety-score-v9/publication-health";
 import {
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS,
 } from "../lib/safety-score-v9/supply-attribution";
@@ -237,6 +238,21 @@ export async function computeSafetyScoreV9(
   }
 
   let fixedInput: Readonly<SafetyScoreV9CompilerInput> | null = baseArtifact.input;
+  const publicationHealth = await loadSafetyScoreV9PublicationHealth(db, signal).catch(() => null);
+  throwIfAborted(signal);
+  // Held health can carry a failed-attempt clock without accepting this capture.
+  if (publicationHealth?.status === "current" && fixedInput.clockSec <= publicationHealth.attemptedAtSec) {
+    const reason = "v9-capture-already-accepted";
+    return createCronResult({
+      status: "skipped_neutral", itemCount: 0,
+      metadata: {
+        stage: "input-load", reason,
+        captureClockSec: fixedInput.clockSec,
+        acceptedClockSec: publicationHealth.attemptedAtSec,
+      },
+      productivity: { productive: false, reason },
+    });
+  }
   const resourceAdmission = assessSafetyScoreV9ResourceBudget({
     catalogAssets: TRACKED_SOURCE_COINS.length, activeAssets: fixedInput.activeAssetIds.length, inputBytes,
   });

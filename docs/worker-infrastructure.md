@@ -202,6 +202,8 @@ Due Aave-only refreshes follow safe stablecoins publication before snapshots. Th
 
 Charts-offset preparation derives the due stablecoins slot from logical time. Its [bounded D1 readiness fence](process/report-cards-appendix.md#canonical-publication) changes no trigger or fetch peak. First-run acceptance: expected-slot publication clock equals captured source, compiler accepts, and mint/burn FTQ stays fresh; a missing/failed source defers without replacing input.
 
+V9 compute returns neutral `v9-capture-already-accepted` before compilation when the capture clock is no newer than `current` publication health's attempt clock, retaining both clocks in metadata. Failed health reads continue through the existing compute path. The [canonical publication contract](process/report-cards-appendix.md#canonical-publication) owns this guard; recovery-only `:52` materialization still runs before compute admission.
+
 ### Event-entry lifecycle and admission
 
 `runScheduledSlotWithFence()` arms the inherited absolute deadline before the first D1 await, not after claim or child-protocol stamping. Same-key presweeps no longer precede admission; same-slot stale takeover remains CAS-fenced. Mandatory await boundaries recheck expiry before admitting the next stage. Replay keeps the executing event's deadline and its separate producer/source identity.

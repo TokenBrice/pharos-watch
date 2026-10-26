@@ -124,6 +124,11 @@ describe("cron workbench model", () => {
     expect(formatCronRunStatus("ok", { qualityReasons: ["producer-output-stale"] })).toBe("Succeeded with findings");
   });
 
+  it("labels an already accepted V9 capture as a neutral skip", () => {
+    expect(formatCronRunStatus("skipped_neutral", { reason: "v9-capture-already-accepted" }))
+      .toBe("Skipped: V10 capture already accepted");
+  });
+
   it("inherits findings behind neutral skips only while the required observation is fresh", () => {
     const run = { startedAt: 1_700_000_000, durationMs: 500, status: "ok" as const, qualityReasons: ["producer-output-stale"] };
     const skip = { startedAt: 1_700_000_100, durationMs: 0, status: "skipped_neutral" as const };
