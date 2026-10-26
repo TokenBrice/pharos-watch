@@ -84,8 +84,9 @@ export type DonationsFile = z.infer<typeof DonationsFileSchema>;
  * list, so one unreviewed contract never fails the whole ledger.
  *
  * `usd_at_receipt` is computed once at insertion time — no historical-price
- * pipeline at runtime. USD stablecoin donations are priced at $1; EURC at the
- * receipt-date ECB EUR/USD reference rate. ETH and other native / whitelisted
+ * pipeline at runtime. USD stablecoin donations are priced at $1; non-USD fiat
+ * stablecoins (EURC, ZCHF, XSGD, ...) at the receipt-date ECB reference rate
+ * for their peg currency. ETH and other native / whitelisted
  * assets are priced via the CoinGecko `/coins/{id}/history` endpoint for the
  * transfer's UTC block date, with the skill recording the source in `price_note`.
  */
