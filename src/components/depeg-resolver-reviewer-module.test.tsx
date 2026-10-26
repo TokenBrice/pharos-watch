@@ -311,7 +311,9 @@ describe("DepegResolverReviewerModule", () => {
     });
     render(<DepegResolverReviewerModule data={response({ summary: v5Summary })} />);
 
-    expect(screen.getByText("71 / 74")).toBeTruthy();
+    // A calibrated sample leads with the aggregate track record, as on the homepage.
+    expect(screen.getByText("95.9%")).toBeTruthy();
+    expect(screen.getByText("71 / 74").parentElement?.textContent).toBe("recovery-call accuracy · 71 / 74 correct");
     expect(screen.getByText("Always-recover baseline 70 / 74")).toBeTruthy();
     expect(screen.getByText("Terminal calls: 2 / 3 correct")).toBeTruthy();
     expect(screen.getByText("1.4× slower").parentElement?.textContent).toBe("typically1.4× slowerthan forecast");
