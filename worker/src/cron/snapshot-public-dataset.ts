@@ -50,8 +50,7 @@ import {
   PublicSnapshotEnvelopeV2Schema,
   type PublicSnapshotEnvelopeV2,
 } from "@shared/types/public-snapshot";
-import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
-import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
+import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import { isSafetyScoreV9SnapshotFresh } from "../lib/safety-score-v9/consumer-freshness";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../lib/safety-score-v9/publication-health";
 import { buildStablecoinsCacheFreshnessGateResult } from "../lib/supply-snapshot-completion";
@@ -167,7 +166,7 @@ type SnapshotSafetySource =
   | {
       kind: "ok";
       model: "v9";
-      identity: SafetyScorePublicationIdentity;
+      identity: SafetyScoreV9PublicationIdentity;
       reportCards: ReportCardsV9CurrentResponse;
       updatedAt: number;
     }
@@ -206,18 +205,6 @@ async function loadSnapshotSafetySource(
     reportCards: active.snapshot,
     updatedAt: active.snapshot.updatedAt,
   };
-}
-
-function safetySourcesMatch(
-  first: Extract<SnapshotSafetySource, { kind: "ok" }>,
-  second: SnapshotSafetySource,
-): boolean {
-  return (
-    second.kind === "ok"
-    && first.model === second.model
-    && first.updatedAt === second.updatedAt
-    && safetyScorePublicationIdentitiesMatch(first.identity, second.identity)
-  );
 }
 
 /** Write-once precheck read for the day's row. Idempotent SELECT: a transient
@@ -329,7 +316,7 @@ export async function snapshotPublicDataset(
   }
 
   // --- 2. Active Safety Score publication (required and identity-bound) ---
-  const safetySource = await loadSnapshotSafetySource(db, signal);
+  let safetySource: SnapshotSafetySource | null = await loadSnapshotSafetySource(db, signal);
   if (safetySource.kind === "error") {
     logWorkerEventArgs("handler", "warn", `[snapshot-public-dataset] Active Safety Score unavailable: ${safetySource.reason}`);
     return createCronResult({
@@ -342,7 +329,9 @@ export async function snapshotPublicDataset(
       },
     });
   }
-  const { reportCards, identity: safetyScoreIdentity } = safetySource;
+  const { identity: safetyScoreIdentity, updatedAt: safetyUpdatedAt, model: safetyScoreModel } = safetySource;
+  const safetyPublicationSource = safetySource.reportCards.source;
+  const safetyPublicationHealth = safetySource.reportCards.publicationHealth;
 
   // --- 3. Latest PSI row (required to be the completed prior UTC day) ---
   let psiRow: StabilityIndexRow | null = null;
@@ -426,7 +415,7 @@ export async function snapshotPublicDataset(
     safetyScoreIdentity,
   };
 
-  const envelope = {
+  let envelope: PublicSnapshotEnvelopeV2 | null = {
     version: PUBLIC_SNAPSHOT_ENVELOPE_VERSION,
     snapshotDate,
     generatedAt: nowSec,
@@ -434,7 +423,7 @@ export async function snapshotPublicDataset(
     safetyScoreIdentity,
     stablecoins: stablecoinsCache.payload.peggedAssets,
     fxFallbackRates: stablecoinsCache.payload.fxFallbackRates ?? null,
-    reportCards,
+    reportCards: safetySource.reportCards,
     psi: {
       computedAt: psiRow.computed_at,
       score: psiRow.score,
@@ -485,8 +474,10 @@ export async function snapshotPublicDataset(
   } satisfies PublicSnapshotEnvelopeV2;
   PublicSnapshotEnvelopeV2Schema.parse(envelope);
 
-  const jsonText = JSON.stringify(envelope);
-  const jsonBytes = new TextEncoder().encode(jsonText);
+  const jsonBytes = new TextEncoder().encode(JSON.stringify(envelope));
+  // The atomic identity fence below needs no decoded cards while hashing/compressing.
+  envelope = null;
+  safetySource = null;
   const byteSize = jsonBytes.byteLength;
 
   let contentHash: string;
@@ -507,21 +498,11 @@ export async function snapshotPublicDataset(
 
   try {
     throwIfAborted(signal);
-    const recheckedSafetySource = await loadSnapshotSafetySource(db, signal);
-    if (!safetySourcesMatch(safetySource, recheckedSafetySource)) {
+    if (!isSafetyScoreV9SnapshotFresh({ updatedAt: safetyUpdatedAt, publicationHealth: safetyPublicationHealth })) {
       return createCronResult({
-        status: "degraded",
-        itemCount: 0,
-        metadata: {
-          reason: "active_safety_score_changed_before_insert",
-          expectedPublicationGenerationId: safetyScoreIdentity.publicationGenerationId,
-          observedPublicationGenerationId: recheckedSafetySource.kind === "ok"
-            ? recheckedSafetySource.identity.publicationGenerationId
-            : null,
-          sourceReason: recheckedSafetySource.kind === "error"
-            ? recheckedSafetySource.reason
-            : "identity-mismatch",
-        },
+        status: "degraded", itemCount: 0,
+        metadata: { reason: "active_safety_score_changed_before_insert", sourceReason: "stale-cache",
+          expectedPublicationGenerationId: safetyScoreIdentity.publicationGenerationId },
       });
     }
 
@@ -529,19 +510,40 @@ export async function snapshotPublicDataset(
            SELECT 1
            FROM cache
            WHERE key = ?
+             AND updated_at = ?
              AND json_extract(value, '$.identity.publicationGenerationId') = ?
+             AND json_extract(value, '$.identity.policyVersion') = ?
+             AND json_extract(value, '$.identity.policyId') = ?
+             AND json_extract(value, '$.identity.policyDigest') = ?
+             AND json_extract(value, '$.identity.evaluationBuildDigest') = ?
+             AND json_extract(value, '$.identity.baseInputGenerationId') = ?
+             AND json_extract(value, '$.identity.candidateId') = ?
+             AND json_extract(value, '$.identity.factSetDigest') = ?
+             AND json_extract(value, '$.identity.resultDigest') = ?
          )
          AND EXISTS (
            SELECT 1
            FROM cache
            WHERE key = ?
              AND json_extract(value, '$.acceptedPublicationGenerationId') = ?
+             AND json_extract(value, '$.acceptedAtSec') = ?
+             AND json_extract(value, '$.status') = 'current'
          )`;
     const publicationFenceBinds = [
       SAFETY_SCORE_V9_CACHE_KEYS.publication,
+      safetyUpdatedAt,
       safetyScoreIdentity.publicationGenerationId,
+      safetyScoreIdentity.methodologyVersion,
+      safetyScoreIdentity.policyId,
+      safetyScoreIdentity.policyDigest,
+      safetyScoreIdentity.evaluationBuildDigest,
+      safetyScoreIdentity.baseInputGenerationId,
+      safetyPublicationSource.candidateId,
+      safetyPublicationSource.factSetDigest,
+      safetyPublicationSource.resultDigest,
       SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
       safetyScoreIdentity.publicationGenerationId,
+      safetyUpdatedAt,
     ];
 
     const result = await db
@@ -603,7 +605,7 @@ export async function snapshotPublicDataset(
       byteSize,
       compressedSize: payloadGz.byteLength,
       stablecoinCount: stablecoinsCache.payload.peggedAssets.length,
-      safetyScoreModel: safetySource.model,
+      safetyScoreModel,
       safetyScorePublicationGenerationId: safetyScoreIdentity.publicationGenerationId,
       ...(stablecoinsCacheRetryAttempts > 0
         ? {

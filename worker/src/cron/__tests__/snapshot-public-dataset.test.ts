@@ -1,3 +1,4 @@
+import { DatabaseSync } from "node:sqlite";
 import { makeReportCardsV9PipelineGapCard, makeReportCardsV9PartialCard } from "@shared/test-utils/report-cards-v9";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { findD1HistoryEntry } from "@shared/test-utils/mock-d1";
@@ -141,7 +142,7 @@ function publishedDewsPointer(rows = STRESS_ROWS) {
   };
 }
 
-function buildDb(dexRows: readonly Record<string, unknown>[] = DEX_ROWS): MockD1Database {
+function buildDb(dexRows: readonly Record<string, unknown>[] = DEX_ROWS, insertChanges = 1): MockD1Database {
   return mockD1([
     publishedDewsPointer(),
     snapshotCacheRows([
@@ -151,7 +152,7 @@ function buildDb(dexRows: readonly Record<string, unknown>[] = DEX_ROWS): MockD1
     { match: "FROM stability_index", rows: [], first: PSI_ROW },
     { match: "FROM stress_signal_publication_rows", rows: STRESS_ROWS },
     { match: "FROM dex_liquidity", rows: [...dexRows] },
-    { match: "INSERT OR IGNORE INTO public_snapshots", rows: [] },
+    { match: "INSERT OR IGNORE INTO public_snapshots", rows: [], runMeta: { changes: insertChanges } },
   ]);
 }
 
@@ -331,12 +332,13 @@ describe("snapshotPublicDataset", () => {
     expect(insert?.sql).toContain(
       "json_extract(value, '$.identity.publicationGenerationId')",
     );
-    expect(insert?.binds.slice(-4)).toEqual([
-      "report-cards:v9",
-      source.snapshot.safetyScoreIdentity.publicationGenerationId,
-      "report-cards:v9:publication-health",
-      source.snapshot.safetyScoreIdentity.publicationGenerationId,
+    expect(insert?.binds.slice(6, 9)).toEqual([
+      "report-cards:v9", source.snapshot.updatedAt, source.snapshot.safetyScoreIdentity.publicationGenerationId,
     ]);
+    expect(insert?.binds.slice(-3)).toEqual([
+      "report-cards:v9:publication-health", source.snapshot.safetyScoreIdentity.publicationGenerationId, source.snapshot.updatedAt,
+    ]);
+    expect(activeSafetyScoreSource.loadActiveSafetyScoreSource).toHaveBeenCalledTimes(1);
   });
 
   it("labels liquidity provenance from the persisted rows, not the deployed methodology", async () => {
@@ -473,12 +475,13 @@ describe("snapshotPublicDataset", () => {
 
     const insert = findD1HistoryEntry(db, "INSERT OR IGNORE INTO public_snapshots");
     expect(insert?.sql).toContain("json_extract(value, '$.identity.publicationGenerationId')");
-    expect(insert?.binds.slice(-4)).toEqual([
-      "report-cards:v9",
-      source.snapshot.safetyScoreIdentity.publicationGenerationId,
-      "report-cards:v9:publication-health",
-      source.snapshot.safetyScoreIdentity.publicationGenerationId,
+    expect(insert?.binds.slice(6, 9)).toEqual([
+      "report-cards:v9", source.snapshot.updatedAt, source.snapshot.safetyScoreIdentity.publicationGenerationId,
     ]);
+    expect(insert?.binds.slice(-3)).toEqual([
+      "report-cards:v9:publication-health", source.snapshot.safetyScoreIdentity.publicationGenerationId, source.snapshot.updatedAt,
+    ]);
+    expect(activeSafetyScoreSource.loadActiveSafetyScoreSource).toHaveBeenCalledTimes(1);
   });
 
   it("does not seal a stale active V9 publication", async () => {
@@ -496,24 +499,76 @@ describe("snapshotPublicDataset", () => {
     expect(getInsertBinds(db)).toBeUndefined();
   });
 
-  it("does not seal a V9 envelope when publication availability changes before insert", async () => {
-    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
-      .mockResolvedValueOnce(activeV9())
-      .mockResolvedValueOnce({
-        kind: "error",
-        reason: "v9-snapshot-unavailable",
-        snapshot: null,
-        detail: "publication disappeared",
-      });
+  it("does not seal a publication that expires while the dataset is assembled", async () => {
+    vi.spyOn(Date, "now")
+      .mockReturnValueOnce(NOW_MS)
+      .mockReturnValueOnce(NOW_MS)
+      .mockReturnValue(NOW_MS + (SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC + 1) * 1000);
     const db = buildDb();
-
     const result = await snapshotPublicDataset(db);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "active_safety_score_changed_before_insert", sourceReason: "stale-cache",
+    });
+    expect(getInsertBinds(db)).toBeUndefined();
+  });
 
+  it("reports an unavailable generation when the atomic insert fence rejects it", async () => {
+    const result = await snapshotPublicDataset(buildDb(DEX_ROWS, 0));
     expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
       reason: "active_safety_score_changed_before_insert",
     });
-    expect(getInsertBinds(db)).toBeUndefined();
+    expect(activeSafetyScoreSource.loadActiveSafetyScoreSource).toHaveBeenCalledTimes(1);
+  });
+
+  it("atomically fences every admitted identity field, timestamp and current health without a second decode", async () => {
+    const source = activeV9().snapshot;
+    const db = buildDb();
+    await snapshotPublicDataset(db);
+    const insert = findD1HistoryEntry(db, "INSERT OR IGNORE INTO public_snapshots")!;
+    const identity = {
+      publicationGenerationId: source.safetyScoreIdentity.publicationGenerationId,
+      policyVersion: source.safetyScoreIdentity.methodologyVersion,
+      policyId: source.safetyScoreIdentity.policyId,
+      policyDigest: source.safetyScoreIdentity.policyDigest,
+      evaluationBuildDigest: source.safetyScoreIdentity.evaluationBuildDigest,
+      baseInputGenerationId: source.safetyScoreIdentity.baseInputGenerationId,
+      candidateId: source.source.candidateId, factSetDigest: source.source.factSetDigest, resultDigest: source.source.resultDigest,
+    };
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(`CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT, updated_at INTEGER);
+        CREATE TABLE public_snapshots (snapshot_date TEXT PRIMARY KEY, payload_gz BLOB, methodology_versions TEXT,
+          content_hash TEXT, byte_size INTEGER, created_at INTEGER);`);
+      const write = sqlite.prepare("INSERT OR REPLACE INTO cache VALUES (?, ?, ?)");
+      const reset = () => {
+        sqlite.exec("DELETE FROM public_snapshots; DELETE FROM cache");
+        write.run("report-cards:v9", JSON.stringify({ identity }), source.updatedAt);
+        write.run("report-cards:v9:publication-health", JSON.stringify(source.publicationHealth), source.updatedAt);
+      };
+      const run = () => Number(sqlite.prepare(insert.sql).run(...insert.binds as never[]).changes);
+      reset();
+      expect(run()).toBe(1);
+      for (const field of Object.keys(identity)) {
+        reset();
+        write.run("report-cards:v9", JSON.stringify({ identity: { ...identity, [field]: "changed" } }), source.updatedAt);
+        expect(run(), field).toBe(0);
+      }
+      reset();
+      sqlite.prepare("UPDATE cache SET updated_at = updated_at + 1 WHERE key = ?").run("report-cards:v9");
+      expect(run()).toBe(0);
+      for (const changed of [{ status: "held" }, { acceptedAtSec: source.updatedAt + 1 }, { acceptedPublicationGenerationId: "other" }]) {
+        reset();
+        write.run("report-cards:v9:publication-health", JSON.stringify({ ...source.publicationHealth, ...changed }), source.updatedAt);
+        expect(run()).toBe(0);
+      }
+      for (const key of ["report-cards:v9", "report-cards:v9:publication-health"]) {
+        reset();
+        sqlite.prepare("DELETE FROM cache WHERE key = ?").run(key);
+        expect(run()).toBe(0);
+      }
+    } finally { sqlite.close(); }
+    expect(activeSafetyScoreSource.loadActiveSafetyScoreSource).toHaveBeenCalledTimes(1);
   });
 
   it("degrades instead of writing when the PSI daily snapshot is missing", async () => {

@@ -6,8 +6,8 @@ import { SafetyScoreCaptureArchiveObjectSchema } from "@shared/types/safety-scor
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
 import { persistSafetyScoreV9Publication } from "../safety-score-v9/publication-store";
-import { SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES } from "../safety-score-v9/publication-codec";
-import { archiveSafetyScoreCapture, SAFETY_SCORE_CAPTURE_ARCHIVE_MAX_OBJECT_BYTES } from "../safety-score-v9/capture-archive";
+import { SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES } from "@shared/lib/safety-score-v9-publication-limits";
+import { archiveSafetyScoreCapture, SAFETY_SCORE_CAPTURE_ARCHIVE_MAX_OBJECT_BYTES, SAFETY_SCORE_CAPTURE_ARCHIVE_MAX_REPLAY_STORED_BYTES } from "../safety-score-v9/capture-archive";
 import { SAFETY_SCORE_CAPTURE_ARCHIVE_WAIT_MS, SAFETY_SCORE_CAPTURE_ARCHIVE_CONTINUATION_MS } from "../safety-score-v9/capture-archive";
 import * as structuredLog from "../structured-log";
 
@@ -109,9 +109,10 @@ describe("accepted Safety capture archive", () => {
     const { sqlite, db } = fixtures.open();
     const { bucket, put } = bucketFixture();
     const cacheRows = rows();
-    cacheRows[field].value = "é".repeat(Math.floor(SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES / 2) + 1);
+    const limit = field === "cards" ? SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES : SAFETY_SCORE_CAPTURE_ARCHIVE_MAX_REPLAY_STORED_BYTES;
+    cacheRows[field].value = "é".repeat(Math.floor(limit / 2) + 1);
     await expect(archiveSafetyScoreCapture({ db, bucket, publication: makeWorkerSafetyScoreV9Publication(), cacheRows }))
-      .resolves.toMatchObject({ status: "skipped", reason: "capture-too-large", bytes: SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES + 2 });
+      .resolves.toMatchObject({ status: "skipped", reason: "capture-too-large", bytes: Buffer.byteLength(cacheRows[field].value) });
     expect(put).not.toHaveBeenCalled();
     expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_capture_archive").get()?.n).toBe(0);
   });
@@ -127,11 +128,11 @@ describe("accepted Safety capture archive", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  it("accepts a value at the exact stored-byte boundary", async () => {
+  it.each(["base", "delta", "cards"] as const)("accepts %s at its exact stored-byte boundary", async field => {
     const { db } = fixtures.open();
     const { bucket, put } = bucketFixture();
     const cacheRows = rows();
-    cacheRows.base.value = "a".repeat(SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES);
+    cacheRows[field].value = "a".repeat(field === "cards" ? SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES : SAFETY_SCORE_CAPTURE_ARCHIVE_MAX_REPLAY_STORED_BYTES);
     await expect(archiveSafetyScoreCapture({ db, bucket, publication: makeWorkerSafetyScoreV9Publication(), cacheRows }))
       .resolves.toMatchObject({ status: "written" });
     expect(put).toHaveBeenCalledOnce();

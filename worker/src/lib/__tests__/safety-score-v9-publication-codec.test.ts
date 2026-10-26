@@ -3,7 +3,9 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES,
   SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES,
-  SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
+  SAFETY_SCORE_V9_PUBLICATION_MAX_READ_UNCOMPRESSED_BYTES,
+  SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES,
+  SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES,
 } from "@shared/lib/safety-score-v9-publication-limits";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import { createHash } from "node:crypto";
@@ -17,16 +19,17 @@ import {
   admitAndSerializeSafetyScoreV9Publication,
   parseSafetyScoreV9Publication,
   publicationIdentityFromStorageEnvelope,
-  SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES,
   SafetyScoreV9StorageMetadataSchema,
   serializeSafetyScoreV9Publication,
   serializeSafetyScoreV9PublicationWithEncoding,
 } from "../safety-score-v9/publication-codec";
 import {
   decodePublicationDictionary, encodePublicationDictionary,
-  PUBLICATION_DICTIONARY_MAX_ENTRIES, PUBLICATION_DICTIONARY_MAX_ENTRY_BYTES, PUBLICATION_DICTIONARY_MAX_PACKED_BYTES,
+  PUBLICATION_DICTIONARY_MAX_ENTRIES, PUBLICATION_DICTIONARY_MAX_ENTRY_BYTES, PUBLICATION_DICTIONARY_MAX_READ_PACKED_BYTES,
   PUBLICATION_DICTIONARY_MAX_TABLE_BYTES,
 } from "../safety-score-v9/publication-dictionary";
+import { shardSafetyScoreV9PublicationStoredValue, reassembleSafetyScoreV9PublicationStoredValue,
+  SAFETY_SCORE_V9_PUBLICATION_CHUNK_MAX_BYTES } from "../safety-score-v9/publication-chunks";
 
 async function authenticatedPayload(
   publication: SafetyScoreV9CurrentResponse,
@@ -94,7 +97,7 @@ describe("Safety Score V9 publication codec", () => {
     expect(SafetyScoreV9StorageMetadataSchema.safeParse(metadata).success).toBe(true);
     expect(SafetyScoreV9StorageMetadataSchema.safeParse({ ...metadata, storageSchemaVersion: 1 }).success).toBe(false);
     expect(SafetyScoreV9StorageMetadataSchema.safeParse({ ...metadata, packedBytes: undefined }).success).toBe(false);
-    expect(SafetyScoreV9StorageMetadataSchema.safeParse({ ...metadata, packedBytes: PUBLICATION_DICTIONARY_MAX_PACKED_BYTES + 1 }).success).toBe(false);
+    expect(SafetyScoreV9StorageMetadataSchema.safeParse({ ...metadata, packedBytes: PUBLICATION_DICTIONARY_MAX_READ_PACKED_BYTES + 1 }).success).toBe(false);
     const decoded = await parseSafetyScoreV9Publication(dictionary);
     expect(Buffer.from(stableJsonStringifyV1(decoded))).toEqual(canonical);
     expect(decoded.cards[0]).not.toBe(decoded.cards[1]);
@@ -154,7 +157,7 @@ describe("Safety Score V9 publication codec", () => {
     ['[]\n{}', 1],
     ['[]\n{}', 3],
     ['[]\n"unterminated', 20],
-    ['[]\n{}', 9_200_001],
+    ['[]\n{}', SAFETY_SCORE_V9_PUBLICATION_MAX_READ_UNCOMPRESSED_BYTES + 1],
   ])("rejects hostile dictionary %s", (packed, length) => {
     expect(() => decodePublicationDictionary(Buffer.from(String(packed)), Number(length))).toThrow();
   });
@@ -245,16 +248,16 @@ describe("Safety Score V9 publication codec", () => {
     const envelope = JSON.parse(await serializeSafetyScoreV9PublicationWithEncoding(makeWorkerSafetyScoreV9Publication(), "legacy"));
     for (const [field, limit, mismatch, exceeded] of [
       ["compressedBytes", SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES, /compressed byte length mismatch/, `exceeds ${SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES} compressed bytes`],
-      ["uncompressedBytes", SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES, /payload length mismatch/, `exceeds ${SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES} uncompressed bytes`],
+      ["uncompressedBytes", SAFETY_SCORE_V9_PUBLICATION_MAX_READ_UNCOMPRESSED_BYTES, /payload length mismatch/, `exceeds ${SAFETY_SCORE_V9_PUBLICATION_MAX_READ_UNCOMPRESSED_BYTES} uncompressed bytes`],
     ] as const) {
       await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({ ...envelope, [field]: limit }))).rejects.toThrow(mismatch);
       await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({ ...envelope, [field]: limit + 1 }))).rejects.toThrow(exceeded);
     }
-    await expect(parseSafetyScoreV9Publication(" ".repeat(1_900_000))).rejects.toThrow(/Malformed.*JSON/);
-    await expect(parseSafetyScoreV9Publication(" ".repeat(1_900_001))).rejects.toThrow(/exceeds 1900000 stored bytes/);
+    await expect(parseSafetyScoreV9Publication(" ".repeat(SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES))).rejects.toThrow(/Malformed.*JSON/);
+    await expect(parseSafetyScoreV9Publication(" ".repeat(SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES + 1))).rejects.toThrow(`exceeds ${SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES} stored bytes`);
   });
 
-  it("fits a maximum compressed payload and real codec envelope within stored and D1 limits", async () => {
+  it("fits a maximum read payload within stored admission and bounded chunk rows", async () => {
     const envelope = JSON.parse(await serializeSafetyScoreV9Publication(makeWorkerSafetyScoreV9Publication()));
     // Base64 expansion depends only on byte length, not gzip contents. Keep the
     // real codec's identity/fields and maximize both declared size digit counts.
@@ -262,7 +265,7 @@ describe("Safety Score V9 publication codec", () => {
     const maximumEnvelope = {
       ...envelope,
       compressedBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES,
-      uncompressedBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
+      uncompressedBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_READ_UNCOMPRESSED_BYTES,
       payload,
     };
     const { payload: _payload, ...metadata } = maximumEnvelope;
@@ -275,16 +278,25 @@ describe("Safety Score V9 publication codec", () => {
     const storedBytes = Buffer.byteLength(stableJsonStringifyV1(maximumEnvelope), "utf8");
     const envelopeOverheadBytes = storedBytes - base64Bytes;
     expect(envelopeOverheadBytes).toBeGreaterThan(0);
-    expect(storedBytes).toBeLessThanOrEqual(SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES);
-    expect(storedBytes).toBeLessThanOrEqual(2_000_000);
+    expect(storedBytes).toBeLessThanOrEqual(SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES);
+    const stored = stableJsonStringifyV1(maximumEnvelope);
+    const sharded = shardSafetyScoreV9PublicationStoredValue(stored);
+    expect(Buffer.byteLength(sharded.envelope)).toBeLessThanOrEqual(SAFETY_SCORE_V9_PUBLICATION_CHUNK_MAX_BYTES);
+    expect(sharded.chunks.every(chunk => Buffer.byteLength(chunk.value) <= SAFETY_SCORE_V9_PUBLICATION_CHUNK_MAX_BYTES)).toBe(true);
+    expect(reassembleSafetyScoreV9PublicationStoredValue(sharded.envelope, sharded.chunks)).toBe(stored);
+    expect(() => reassembleSafetyScoreV9PublicationStoredValue(stableJsonStringifyV1({
+      ...JSON.parse(sharded.envelope), payloadChunks: { ...JSON.parse(sharded.envelope).payloadChunks,
+        storedBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES + 1 },
+    }), sharded.chunks)).toThrow();
   });
 
-  it("reads a real compressed publication between 1.36 MB and the expanded read ceiling", async () => {
+  it("reads real gzip near the independent reader ceiling", async () => {
     const envelope = JSON.parse(await serializeSafetyScoreV9Publication(makeWorkerSafetyScoreV9Publication()));
-    const publication = compressionBudgetPublication(1_360_000);
+    const entropyBytes = Math.floor(SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES * 0.97);
+    const publication = compressionBudgetPublication(entropyBytes);
     const stored = authenticatedBytes(envelope, Buffer.from(stableJsonStringifyV1(publication)));
     const { compressedBytes } = JSON.parse(stored);
-    expect(compressedBytes).toBeGreaterThanOrEqual(1_360_000);
+    expect(compressedBytes).toBeGreaterThanOrEqual(entropyBytes);
     expect(compressedBytes).toBeLessThanOrEqual(SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES);
     await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(publication);
   });
@@ -302,12 +314,38 @@ describe("Safety Score V9 publication codec", () => {
     const publication = makeWorkerSafetyScoreV9Publication();
     publication.sourceGenerations.byteBudgetFixture = "";
     const initialBytes = Buffer.byteLength(stableJsonStringifyV1(publication), "utf8");
-    publication.sourceGenerations.byteBudgetFixture = "x".repeat(9_200_000 - initialBytes);
+    publication.sourceGenerations.byteBudgetFixture = "x".repeat(SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES - initialBytes);
     const stored = await serializeSafetyScoreV9PublicationWithEncoding(publication, encoding);
-    expect(JSON.parse(stored).uncompressedBytes).toBe(9_200_000);
+    expect(JSON.parse(stored).uncompressedBytes).toBe(SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES);
     await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(publication);
     publication.sourceGenerations.byteBudgetFixture += "x";
-    await expect(serializeSafetyScoreV9PublicationWithEncoding(publication, encoding)).rejects.toThrow(/uncompressed byte limit; maximum is 9200000/);
+    await expect(serializeSafetyScoreV9PublicationWithEncoding(publication, encoding)).rejects.toThrow(`uncompressed byte limit; maximum is ${SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES}`);
+  });
+
+  it.each([
+    ["legacy", 0], ["legacy", 1], ["dictionary", 0], ["dictionary", 1],
+  ] as const)("checks authenticated bytes at the raw reader ceiling (%s, +%i byte)", async (encoding, extraBytes) => {
+    const publication = makeWorkerSafetyScoreV9Publication();
+    const envelope = JSON.parse(await serializeSafetyScoreV9Publication(publication));
+    publication.sourceGenerations.byteBudgetFixture = "";
+    publication.sourceGenerations.byteBudgetFixture = "x".repeat(
+      SAFETY_SCORE_V9_PUBLICATION_MAX_READ_UNCOMPRESSED_BYTES + extraBytes - Buffer.byteLength(stableJsonStringifyV1(publication)));
+    const raw = Buffer.from(stableJsonStringifyV1(publication));
+    expect(raw.byteLength).toBe(SAFETY_SCORE_V9_PUBLICATION_MAX_READ_UNCOMPRESSED_BYTES + extraBytes);
+    let stored = authenticatedBytes(envelope, raw);
+    if (encoding === "dictionary") {
+      const packed = Buffer.concat([Buffer.from("[]\n"), raw]);
+      const compressed = gzipSync(packed);
+      stored = stableJsonStringifyV1({ ...JSON.parse(stored), storageSchemaVersion: 2,
+        encoding: "gzip-json-dictionary-base64-v1", packedBytes: packed.byteLength,
+        compressedBytes: compressed.byteLength, payload: bytesToBase64(compressed) });
+    }
+    const { payload: _payload, ...metadata } = JSON.parse(stored);
+    expect(SafetyScoreV9StorageMetadataSchema.safeParse(metadata).success).toBe(extraBytes === 0);
+    if (extraBytes === 0) await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(publication);
+    else await expect(parseSafetyScoreV9Publication(stored)).rejects.toThrow(
+      `exceeds ${SAFETY_SCORE_V9_PUBLICATION_MAX_READ_UNCOMPRESSED_BYTES} uncompressed bytes`,
+    );
   });
 
   it("rejects invalid UTF-8 with authenticated transport metadata", async () => {

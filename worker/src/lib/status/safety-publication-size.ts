@@ -1,5 +1,5 @@
-import { SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES, SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES } from "@shared/lib/safety-score-v9-publication-limits";
-import { SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES } from "../safety-score-v9/publication-codec";
+import { SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES, SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES,
+  SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_STORED_BYTES } from "@shared/lib/safety-score-v9-publication-limits";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../safety-score-v9/publication-health";
 
 /** Ops-only early warning before the accepted publication hits a write cap. */
@@ -40,10 +40,10 @@ export async function loadSafetyPublicationSize(db: D1Database): Promise<SafetyP
   return {
     kind: "observed",
     storedBytes: storedBytes as number,
-    storedCapBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES,
+    storedCapBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_STORED_BYTES,
     compressedBytes: compressedBytes as number,
     compressedCapBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES,
     uncompressedBytes: uncompressedBytes as number,
-    uncompressedCapBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
+    uncompressedCapBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES,
   };
 }
