@@ -111,14 +111,13 @@ async function assertReaderParity(stored: string, label: string) {
   expect(projectedSource.kind).toBe("v9");
   expect(indexedSource.kind).toBe("v9");
   if (projectedSource.kind !== "v9" || indexedSource.kind !== "v9") throw new Error("Parity source unavailable");
-  expect(projectedSource.projectionFallbackCount).toBe(0);
   const cohortLoader = vi.spyOn(activeSource, "loadActiveSafetyScoreCohort");
   const indexLoader = vi.spyOn(scoreIndex, "loadActiveSafetyScoreIndex");
   const now = publication.publishedAtSec + 60;
   vi.spyOn(Date, "now").mockReturnValue(now * 1_000);
 
   async function outputs(useFull: boolean) {
-    cohortLoader.mockResolvedValue(useFull ? { kind: "v9", snapshot: full, projectionFallbackCount: 0 } : projectedSource);
+    cohortLoader.mockResolvedValue(useFull ? { kind: "v9", snapshot: full } : projectedSource);
     indexLoader.mockResolvedValue(useFull ? { kind: "v9", snapshot: full } : indexedSource);
     const { db, sqlite } = fixtures.open();
     const assets = full.cards.map(card => makeAsset({ id: card.id, symbol: card.id, circulating: { peggedUSD: 20_000_000 } }));
