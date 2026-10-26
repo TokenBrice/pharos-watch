@@ -25,7 +25,7 @@ describe("ChinaAMC disclosed pooled fund holdings", () => {
     ]);
     expect(result.slices[0]).toMatchObject({ assetClass: "other", risk: "high" });
     expect(result.metadata).toMatchObject({
-      freshnessMode: "verified", sourceTimestamp: Date.parse("2026-10-23T00:00:00Z") / 1000,
+      freshnessMode: "verified", sourceTimestamp: Date.parse("2026-10-23T00:00:00+08:00") / 1000,
       unknownExposurePct: expect.closeTo(58.9744, 6),
       details: { disclosedHoldingCount: 66, reportedWeightTotalPct: expect.closeTo(100.0581, 6) },
     });
@@ -81,11 +81,22 @@ describe("ChinaAMC disclosed pooled fund holdings", () => {
     expect(() => parseChinaamcHoldings(payload, now)).toThrow(/chinaamc-holdings-api:/);
   });
 
+  it("rejects a duplicate holding row before checking the weight total", () => {
+    const payload = structuredClone(fixture);
+    payload.result.push({ ...payload.result[0] });
+    expect(() => parseChinaamcHoldings(payload, now)).toThrow("duplicate-holding-row");
+  });
+
   it("uses the original holdings date and rejects stale or future observations", () => {
-    const date = Date.parse("2026-10-23T00:00:00Z") / 1000;
+    const date = Date.parse("2026-10-23T00:00:00+08:00") / 1000;
     expect(() => parseChinaamcHoldings(fixture, date + 5 * 86400)).not.toThrow();
     expect(() => parseChinaamcHoldings(fixture, date + 5 * 86400 + 1)).toThrow(/stale/);
-    expect(() => parseChinaamcHoldings(fixture, date - 1)).toThrow(/invalid/);
+    expect(() => parseChinaamcHoldings(fixture, date - 600)).not.toThrow();
+    expect(() => parseChinaamcHoldings(fixture, date - 601)).toThrow(/invalid/);
+    expect(() => parseChinaamcHoldings(fixture, Date.parse("2026-10-22T18:00:00Z") / 1000)).not.toThrow();
+    expect(() => parseChinaamcHoldings(fixture, date + 86400, 86400)).not.toThrow();
+    expect(() => parseChinaamcHoldings(fixture, date + 86401, 86400)).toThrow(/stale/);
+    expect(() => parseChinaamcHoldings(fixture, date + 5 * 86400 + 1, 999999)).toThrow(/stale/);
   });
 
   it("fetches a bounded JSON body and retains the source clock", async () => {

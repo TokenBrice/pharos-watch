@@ -51,8 +51,6 @@ Liquity V2 branches may declare reviewed `kind: plain-token` to value the config
 
 ### Snapshot admission gates
 
-ChinaAMC's `chinaamc-holdings-api` reads the issuer's ungrouped USDDMMF holdings JSON and publishes only three aggregate buckets: explicitly named term deposits, explicitly named bank cash, and other unclassified instruments. The publisher's sector field labels bonds as cash and is not classification evidence. Reported percentages remain unnormalized within `RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT`; missing/invalid rows, mixed dates, nonconserving totals, stale observations and oversized bodies fail closed. Source freshness uses the holdings date with the shared business-day budget, never the response timestamp. A 256 KiB body cap and one sequential JSON request use the existing reserve limiter; no concurrency is added. Missing NAV and share-class liability reconciliation keep this issuer disclosure at `weak-live-probe`, outside independent Safety scoring. Historical curated factsheet composition stays separate; no per-holding rows or inferred dollar totals enter the API.
-
 The shared result is `{ eligible, reasons: LiveReserveAdmissionRejectionCode[], freshness }`, where `freshness` is the `assessReserveSnapshotFreshness()` result that decided the `stale` gate (`null` without a snapshot or coin). All gates must pass for independent reserve scoring:
 
 | Gate | Rejection code | Rule |

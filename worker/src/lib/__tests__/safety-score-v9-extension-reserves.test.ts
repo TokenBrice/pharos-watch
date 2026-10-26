@@ -24,6 +24,9 @@ import {
 import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9/extension-mechanism";
 import { confidenceForResearch } from "../safety-score-v9/extension-shared";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { evaluateLiveReserveAdmission } from "../live-reserves/store-snapshot-state";
+import { reserveCompositionInput } from "./live-reserves-store.test-support";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
@@ -156,6 +159,32 @@ const ISSUER_PREFIXED_NAMED_REPORT: V9ExtensionRegistryMeta = {
 describe("v10.01 named reserve reports", () => {
   const asOfSec = Date.parse("2026-06-30T00:00:00Z") / 1000;
   const usdt = { ...usdtCoin, ...usdtReserveEnvelope } as unknown as V9ExtensionRegistryMeta;
+
+  it.each(["fresh", "stale", "absent"])("keeps USDY's reviewed Safety inputs identical with a %s display probe", (state) => {
+    const meta = TRACKED_META_BY_ID.get("usdy-ondo-finance")!;
+    const clockSec = Date.parse("2026-10-25T12:00:00Z") / 1000;
+    const record = state === "absent" ? null : reserveCompositionInput("usdy-display", {
+      stablecoinId: meta.id, source: "ondo-usdy", adapterEvidenceClass: "weak-live-probe",
+      fetchedAt: clockSec - (state === "stale" ? 3 * 86400 : 60),
+      slices: [{ name: "Display-only changed portfolio", pct: 100, risk: "very-high" }],
+      metadata: { freshnessMode: "verified", sourceTimestamp: clockSec - 60 },
+    });
+    const live = evaluateLiveReserveAdmission(record, record && {
+      lastSuccessAt: record.fetchedAt, lastSuccessAttemptId: record.attemptId,
+    }, meta, clockSec);
+    expect(live.eligible).toBe(false);
+    if (state === "fresh") expect(live.reasons).toEqual(["non-independent"]);
+    if (state === "stale") expect(live.reasons).toContain("stale");
+    const admission = resolveReviewedReserveAdmission({ meta, clockSec, liveReserveRows: live.eligible ? record!.slices : [] });
+    const baseline = resolveReviewedReserveAdmission({ meta: { ...meta, liveReservesConfig: undefined }, clockSec, liveReserveRows: [] });
+    expect(admission.projected).toMatchObject({ provenance: "curated", evidenceClass: "static-validated" });
+    expect(admission).toEqual(baseline);
+    const evidence = new ReviewEvidenceBuilder(meta.id, clockSec);
+    const baselineEvidence = new ReviewEvidenceBuilder(meta.id, clockSec);
+    addReviewedStaticReserveEvidence(admission, evidence);
+    addReviewedStaticReserveEvidence(baseline, baselineEvidence);
+    expect(evidence.finish()).toEqual(baselineEvidence.finish());
+  });
 
   it.each([120 * 86400, 120 * 86400 + 1])(
     "uses the same as-of admission and evidence expiry at age %s seconds", (ageSec) => {

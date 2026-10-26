@@ -3,6 +3,7 @@ import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitive
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { hasIndependentLiveCompositionDates, hasIndependentReserveObservationDates } from "@shared/lib/report-card-policy";
+import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapter-descriptors";
 import { admitV10ReserveReportScope, admitV10ReserveObservation, shouldApplyV10ReserveReportScope, resolveV10ReserveObservationDeploymentRefs } from "@shared/lib/safety-score-v9/reserve-scope";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import type { ReserveObservationEnvelope, ReserveScopedAdmission } from "@shared/types/safety-score-v9-reserve-scope";
@@ -667,7 +668,10 @@ export function buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
   namedAdmission?: IndependentlyAttestedCompositionAdmission | null,
 ): ReviewedStaticReserveRows | null {
   if (meta.liveReservesConfig == null) return null;
-  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, "curated-fallback", fixedInput, namedAdmission);
+  // A display-only probe cannot turn a separately reviewed observation into fallback evidence.
+  const provenance = LIVE_RESERVE_ADAPTER_DEFINITIONS[meta.liveReservesConfig.adapter].evidenceClass === "weak-live-probe" &&
+    hasIndependentReserveObservationDates(meta) ? "curated" : "curated-fallback";
+  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, provenance, fixedInput, namedAdmission);
 }
 
 /**

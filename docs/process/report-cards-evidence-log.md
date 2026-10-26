@@ -20,6 +20,8 @@ ONyc carries the same tier at probable confidence: [issuer documentation](https:
 
 All three retain their same-notional Exit gaps: daily fund liquidity, a legal redemption entitlement, and ONyc's management liquidity target are not executable capacity. Existing bridge-materiality, custody, incident and reserve gaps are not closed or renewed. This is evidence curation under the existing methodology; local replay projections do not establish production acceptance.
 
+EUTBL and USTBL now carry verified `standard-external` reviews for CACEIS administrator NAV published through their exact Chainlink NAVLink feeds; UKTBL carries verified `privileged-internal-pricing` for its [Spiko-operated NAV publication](https://docs.spiko.io/documentation/tokenization/nav). The exact share-class records and Ethereum block 26271962 pins establish feed identity, without proving independent valuation, redundant pricing, failover or signer closure. Ordinary fund settlement and account-scoped instant withdrawal limits leave same-notional Exit gaps open. Other Spiko controls, reserves and incident reviews are not renewed; production closure remains pending.
+
 ## Vault Oracle And Backing Reviews — 2026-10-22
 
 The primary-source vault review records privileged internal share-pricing paths for spUSDT, syrupUSDT, apyUSD, DUSD and hbUSDT, replacing local oracle U60 with measured45 when admitted. sUSDai, autoUSD, USD3 and USDN retain researched unresolved oracle profiles. New whole-direct-reserve reviews cover sUSDat, sYUSD, Umbrella stkGHO, Yearn v3 USDC and USDN; only Yearn's accounted idle USDC slice receives immediate native-asset liquidity. Independently dated sYUSD/stkGHO maturity facts describe open-ended staking claims, not cooldown length or immediate liquidity.

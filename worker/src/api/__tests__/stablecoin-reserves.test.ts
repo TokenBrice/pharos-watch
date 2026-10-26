@@ -130,7 +130,7 @@ describe("handleStablecoinReserves", () => {
     },
   );
 
-  it("serves the dated USDY portfolio with scoring provenance and a sub-4 KB response", async () => {
+  it("serves the dated USDY portfolio as non-independent with a sub-4 KB response", async () => {
     const now = Date.parse("2026-10-25T12:00:00Z") / 1000;
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(now * 1000);
@@ -143,7 +143,7 @@ describe("handleStablecoinReserves", () => {
       const db = mockD1([
         { match: "FROM reserve_composition", rows: [], first: {
           ...reserveCompositionRow(now, { slices: JSON.stringify(result.slices), metadata: JSON.stringify(result.metadata) }),
-          ...identity, source: config.adapter,
+          ...identity, source: config.adapter, adapter_evidence_class: "weak-live-probe",
         } },
         { match: "FROM reserve_sync_state", rows: [], first: {
           ...reserveSyncRow(now), ...identity, adapter_key: config.adapter,
@@ -151,9 +151,9 @@ describe("handleStablecoinReserves", () => {
       ]);
       const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(await handleStablecoinReserves(db, coin.id), 200));
       expect(body.mode).toBe("live");
-      expect(body.provenance?.scoringEligible).toBe(true);
+      expect(body.provenance).toMatchObject({ scoringEligible: false, scoringRejectionReasons: ["non-independent"] });
       expect(body.reserves).toHaveLength(4);
-      expect(body.sync?.freshness?.sourceAgeBudgetSec).toBe(432000);
+      expect(body.sync?.freshness?.sourceAgeBudgetSec).toBe(604800);
       expect(Buffer.byteLength(JSON.stringify(body))).toBeLessThan(4096);
     } finally { vi.useRealTimers(); }
   });

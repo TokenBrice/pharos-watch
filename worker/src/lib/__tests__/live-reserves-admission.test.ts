@@ -27,7 +27,7 @@ describe("live reserve admission", () => {
   it.each([
     "qcad-stablecorp", "usx-solstice", "satusd-river", "usdv-solomon-v2",
     "dgld-gold-token-sa", "xagm-matrixdock", "onyc-onre", "avusd-avant",
-    "ftusd-flying-tulip", "frnt-wyoming",
+    "ftusd-flying-tulip", "frnt-wyoming", "usdy-ondo-finance",
   ])("keeps a healthy current %s observation non-independent", (id) => {
     const coin = TRACKED_META_BY_ID.get(id)!;
     const config = coin.liveReservesConfig!;

@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { StrictIsoDateSchema } from "@shared/types/safety-schema-primitives";
-import { BUSINESS_DAY_VERIFIED_VALIDATION } from "@shared/types/live-reserve-adapter-policy";
+import { DISCLOSURE_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
 import type { AdapterContext, AdapterResult } from "./types";
 import { fetchTextWithRetry, verifiedFreshnessMetadata } from "./helpers";
@@ -44,8 +44,8 @@ export function adaptOndoUsdyPortfolio(
   const sourceTimestamp = Date.parse(`${portfolio.asOfDate}T00:00:00Z`) / 1000;
   const freshness = resolveLiveReserveSourceAgeBudget(
     scoringMaxSourceAgeSec,
-    BUSINESS_DAY_VERIFIED_VALIDATION.maxSourceAgeSec,
-    BUSINESS_DAY_VERIFIED_VALIDATION.maxSourceAgeSec,
+    DISCLOSURE_SOURCE_MAX_AGE_SEC,
+    DISCLOSURE_SOURCE_MAX_AGE_SEC,
   );
   if (sourceTimestamp > nowSec + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC || nowSec - sourceTimestamp > freshness.sourceAgeBudgetSec) {
     throw new Error("ondo-usdy: stale-or-future-source");

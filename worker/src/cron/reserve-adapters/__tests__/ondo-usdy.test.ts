@@ -7,6 +7,8 @@ import reserves from "@shared/data/stablecoins/domains/reserves/usdy-ondo-financ
 import { adaptOndoUsdyPortfolio, fetchOndoUsdyReserves } from "../ondo-usdy";
 import { fetchTextWithRetry } from "../helpers";
 import { extractEscapedJsonValueAfterKey } from "../html";
+import { getReserveAdapter } from "../index";
+import { validateAdapterOutput } from "../validate";
 
 vi.mock("../helpers", async (importOriginal) => ({
   ...await importOriginal<typeof import("../helpers")>(),
@@ -32,13 +34,14 @@ describe("Ondo USDY dated portfolio categories", () => {
       sourceTimestamp: Date.parse("2026-10-22T00:00:00Z") / 1000,
       totalReserveUsd: 2404341312.6700006,
       unknownExposurePct: values[3] / 2404341312.6700006 * 100,
-      details: { sourceClockPolicy: "date-only-utc-start", sourceAgeBudgetSec: 432000, sourceAgeBudgetCap: "adapter" },
+      details: { sourceClockPolicy: "date-only-utc-start", sourceAgeBudgetSec: 604800, sourceAgeBudgetCap: "adapter" },
     });
     expect(result.metadata).not.toHaveProperty("collateralizationRatio");
     expect(result.metadata).not.toHaveProperty("reportedCollateralizationRatio");
     expect(result.metadata).not.toHaveProperty("redemption");
     expect(result.slices.every((slice) => slice.maturityDaysMax === undefined)).toBe(true);
     expect(Buffer.byteLength(JSON.stringify(result))).toBeLessThan(4096);
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter(config.adapter)!, now: NOW }).valid).toBe(true);
   });
 
   it.each([
@@ -54,7 +57,7 @@ describe("Ondo USDY dated portfolio categories", () => {
     ["nonfinite amount", html.replace('2094366235.88', '1e999')],
     ["zero total", html.replace('2404341312.6700006', '0')],
     ["unreconciled total", html.replace('2404341312.6700006', '2404341313.67')],
-    ["stale date", html.replace('2026-10-22', '2026-10-19')],
+    ["stale date", html.replace('2026-10-22', '2026-10-17')],
     ["future date", html.replace('2026-10-22', '2026-10-26')],
     ["invalid calendar date", html.replace('2026-10-22', '2026-02-30')],
     ["missing date", html.replace('2026-10-22', '')],
@@ -72,6 +75,12 @@ describe("Ondo USDY dated portfolio categories", () => {
     expect(() => adaptOndoUsdyPortfolio(html, { ...coin, reserves: [...coin.reserves!, coin.reserves![0]] }, NOW)).toThrow("unreviewed-category");
   });
 
+  it("rejects a fifth portfolio category even when its value is zero", () => {
+    const portfolio = JSON.parse(extractEscapedJsonValueAfterKey(html, '\\"portfolio\\":', "test"));
+    portfolio.positions.push({ ...portfolio.positions[0], _id: "unknown", name: "Unknown category", value: 0 });
+    expect(() => adapt(JSON.stringify({ portfolio }).replaceAll('"', '\\"'))).toThrow();
+  });
+
   it("keeps observed zero categories from becoming positive exposure", () => {
     const result = adapt(html.replace('2094366235.88', '0').replace('2404341312.6700006', '309975076.79'));
     expect(result.slices).toHaveLength(3);
@@ -82,14 +91,16 @@ describe("Ondo USDY dated portfolio categories", () => {
   it("uses the tighter age budget, admits the exact boundary and never widens the adapter cap", () => {
     expect(() => adaptOndoUsdyPortfolio(html, coin, NOW, 86400)).toThrow("stale-or-future-source");
     const timestamp = Date.parse("2026-10-22T00:00:00Z") / 1000;
-    expect(adaptOndoUsdyPortfolio(html, coin, timestamp + 432000, 999999).slices).toHaveLength(4);
-    expect(() => adaptOndoUsdyPortfolio(html, coin, timestamp + 432001, 999999)).toThrow("stale-or-future-source");
+    expect(adaptOndoUsdyPortfolio(html, coin, timestamp + 604800, 999999).slices).toHaveLength(4);
+    expect(() => adaptOndoUsdyPortfolio(html, coin, timestamp + 604801, 999999)).toThrow("stale-or-future-source");
   });
 
   it("fetches one bounded source with the caller signal and no RPC or liability reads", async () => {
     vi.mocked(fetchTextWithRetry).mockResolvedValue(html);
     const signal = new AbortController().signal;
-    expect(await fetchOndoUsdyReserves(coin, config, signal, { nowSec: NOW })).toEqual(adapt());
+    expect(await fetchOndoUsdyReserves(coin, config, signal, { nowSec: NOW })).toEqual({
+      ...adapt(), metadata: { ...adapt().metadata, details: { ...adapt().metadata!.details, sourceAgeBudgetCap: "scoring" } },
+    });
     expect(fetchTextWithRetry).toHaveBeenLastCalledWith("https://ondo.finance/usdy", signal, 12_000, { nowSec: NOW }, { maxResponseBytes: 2_000_000 });
   });
 
