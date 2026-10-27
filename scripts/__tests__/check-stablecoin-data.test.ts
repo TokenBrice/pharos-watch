@@ -17,7 +17,7 @@ import {
   getListingGovernanceIssues,
   getTerminalLiveReserveConfigIssue,
   getExpiredReserveSupplyAdmissionBootstrapIssue,
-  getOverdueLaunchedPhaseReviewIssue,
+  getOverdueListingStatusReviewIssue,
 } from "../ci/check-stablecoin-data";
 
 describe("per-coin deployment identity gate", () => {
@@ -34,17 +34,39 @@ describe("per-coin deployment identity gate", () => {
   });
 });
 
-describe("launched pre-launch dwell warning", () => {
+describe("overdue listing status review warning", () => {
   const launched = {
     status: "pre-launch" as const,
     launchPhase: "launched" as const,
     listingStatusReview: { changedAt: "2026-10-01", reason: "No admitted price lane yet.", reviewBy: "2026-11-30" },
   };
-  it("warns from UTC start of reviewBy, only for launched pre-launch rows", () => {
-    expect(getOverdueLaunchedPhaseReviewIssue(launched, Date.parse("2026-11-29T23:59:59Z"))).toBeNull();
-    expect(getOverdueLaunchedPhaseReviewIssue(launched, Date.parse("2026-11-30T00:00:00Z"))).toContain("2026-11-30");
-    expect(getOverdueLaunchedPhaseReviewIssue({ ...launched, launchPhase: "beta" }, Date.parse("2027-01-01T00:00:00Z"))).toBeNull();
-    expect(getOverdueLaunchedPhaseReviewIssue({ ...launched, status: "quarantined" }, Date.parse("2027-01-01T00:00:00Z"))).toBeNull();
+  const quarantined = { ...launched, status: "quarantined" as const, launchPhase: undefined };
+  it("warns from UTC start of reviewBy for launched pre-launch rows", () => {
+    expect(getOverdueListingStatusReviewIssue(launched, Date.parse("2026-11-29T23:59:59Z"))).toBeNull();
+    expect(getOverdueListingStatusReviewIssue(launched, Date.parse("2026-11-30T00:00:00Z"))).toContain("promote it");
+    expect(getOverdueListingStatusReviewIssue({ ...launched, launchPhase: "beta" }, Date.parse("2027-01-01T00:00:00Z"))).toBeNull();
+  });
+  it("names overdue quarantine reviews independent of adapter configuration", () => {
+    expect(getOverdueListingStatusReviewIssue(quarantined, Date.parse("2026-11-29T23:59:59Z"))).toBeNull();
+    const issue = getOverdueListingStatusReviewIssue(quarantined, Date.parse("2026-11-30T00:00:00Z"));
+    expect(issue).toContain("listingStatusReview.reviewBy 2026-11-30");
+    expect(issue).toContain("fresh evidence");
+    expect(getOverdueListingStatusReviewIssue(quarantined, Date.parse("2026-12-15T00:00:00Z"))).toContain("2026-11-30");
+  });
+  it("ignores missing, invalid and future dates and other lifecycle states", () => {
+    const now = Date.parse("2027-06-01T00:00:00Z");
+    for (const review of [undefined, { ...quarantined.listingStatusReview, reviewBy: undefined }, { ...quarantined.listingStatusReview, reviewBy: "not-a-date" }, { ...quarantined.listingStatusReview, reviewBy: "2027-12-31" }]) {
+      expect(getOverdueListingStatusReviewIssue({ ...quarantined, listingStatusReview: review } as never, now)).toBeNull();
+    }
+    for (const status of ["active", "frozen", "delisted"] as const) {
+      expect(getOverdueListingStatusReviewIssue({ ...launched, status } as never, now)).toBeNull();
+    }
+    expect(getOverdueListingStatusReviewIssue({ ...launched, launchPhase: "pilot" } as never, now)).toBeNull();
+  });
+  it("does not mutate its input", () => {
+    const input = structuredClone(quarantined);
+    getOverdueListingStatusReviewIssue(input, Date.parse("2027-06-01T00:00:00Z"));
+    expect(input).toEqual(quarantined);
   });
 });
 
