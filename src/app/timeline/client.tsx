@@ -259,6 +259,7 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
         logos={logos}
         nowMs={nowMs}
         rawEvents={rawEvents}
+        hasData={feed.events.pages?.[0] != null}
         visibleEvents={feed.visibleEvents}
         openIncidents={feed.openIncidents}
         activeStatus={feed.activeStatus}

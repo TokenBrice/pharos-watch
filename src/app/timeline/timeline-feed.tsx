@@ -24,6 +24,8 @@ interface TimelineFeedProps {
   logos: Record<string, string>;
   nowMs: number;
   rawEvents: readonly TapeEvent[];
+  /** An admitted response page, even an empty one, is observed data. */
+  hasData: boolean;
   visibleEvents: readonly TapeEvent[];
   openIncidents: readonly DepegEvent[] | null;
   activeStatus: TimelineActiveStatus;
@@ -56,6 +58,7 @@ export function TimelineFeed({
   logos,
   nowMs,
   rawEvents,
+  hasData,
   visibleEvents,
   openIncidents,
   activeStatus,
@@ -87,14 +90,14 @@ export function TimelineFeed({
     <>
       <QueryFreshnessNotices
         error={error}
-        hasData={rawEvents.length > 0}
+        hasData={hasData}
         onRetry={() => void refetch()}
         queries={[
           {
             label: "Timeline",
             dataUpdatedAt,
             error,
-            hasData: rawEvents.length > 0,
+            hasData,
             meta,
           },
         ]}

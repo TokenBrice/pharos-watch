@@ -183,7 +183,7 @@ describe("TimelineClient", () => {
 
   it("renders an error notice and recovers after retry", async () => {
     const refetch = vi.fn(async () => { mockEvents([]); });
-    mockEvents([], { error: new Error("fetch failed"), refetch });
+    mockEvents([], { error: new Error("fetch failed"), refetch, pages: undefined, dataUpdatedAt: 0 });
     const { rerender } = render(<TimelineClient />);
     const notice = screen.getByText("fetch failed").closest('[role="status"]')!;
     expect(notice).not.toBeNull();
@@ -193,6 +193,46 @@ describe("TimelineClient", () => {
     expect(screen.queryByText("fetch failed")).toBeNull();
     expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
     expect(screen.getByText(/no events match these filters/i)).toBeTruthy();
+  });
+
+  it("admits a fresh empty page as data without a waiting warning", () => {
+    mockEvents([]);
+    render(<TimelineClient />);
+    expect(screen.getByText(/no events match these filters/i)).toBeTruthy();
+    expect(screen.queryByText("Waiting for initial data")).toBeNull();
+  });
+
+  it("keeps a failed read with no response page unavailable", () => {
+    mockEvents([], { error: new Error("fetch failed"), pages: undefined, dataUpdatedAt: 0 });
+    render(<TimelineClient />);
+    expect(screen.getByText("fetch failed")).toBeTruthy();
+    expect(screen.queryByText("▌")).toBeNull();
+  });
+
+  it("keeps a retained empty page quiet through a failed refetch below the public budget", () => {
+    mockEvents([], { error: new Error("refresh failed") });
+    render(<TimelineClient />);
+    expect(screen.getByText(/no events match these filters/i)).toBeTruthy();
+    expect(screen.queryByText("refresh failed")).toBeNull();
+    expect(screen.queryByText(/Waiting for initial data|Refresh failed|Showing an older snapshot/)).toBeNull();
+  });
+
+  it("warns on a genuinely stale empty generation alongside the empty filter UI", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_700_000_000_000);
+    mockEvents([], {
+      meta: { updatedAt: 1_700_000_000 - 86_400, ageSeconds: 86_400, status: "stale", freshBudgetSec: 600, degradedBudgetSec: 1200 },
+    });
+    render(<TimelineClient />);
+    expect(screen.getByText("Showing an older snapshot")).toBeTruthy();
+    expect(screen.getByText(/no events match these filters/i)).toBeTruthy();
+  });
+
+  it("does not let an explicit null producer clock make an empty page fresh", () => {
+    mockEvents([], { meta: { updatedAt: null, ageSeconds: null, status: "unknown", reason: "snapshot-producer-timestamp-unavailable" } });
+    render(<TimelineClient />);
+    expect(screen.queryByText("▌")).toBeNull();
+    expect(screen.getByText("Waiting for initial data")).toBeTruthy();
   });
 
   it("renders events with titles and source links", () => {
