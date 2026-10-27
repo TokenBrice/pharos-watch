@@ -645,8 +645,9 @@ export function mergeSupplementalLastKnownGood(
       continue;
     }
 
+    // An admitted zero is a current observation (ADR-28); only unavailable supply restores.
     const supply = getCirculatingRawOrNull(asset);
-    if (supply !== null && supply > 0) {
+    if (supply !== null) {
       resolved.set(id, asset);
       continue;
     }
