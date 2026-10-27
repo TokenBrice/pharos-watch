@@ -90,6 +90,8 @@ export function shouldApplyV10ReserveReportScope(
     exclusion.source.accessedAtSec <= coverage.reviewedAtSec,
   ) === true;
 }
+const LVUSD_MONAD_HOLDER_REF = "monad:0xfd44b35139ae53fff7d8f2a9869c503d987f00d1";
+const LVUSD_MONAD_USDC_RESERVE_REF = "monad:0x754704bc059f8c67012fed69bc8a327a5aafb603";
 /**
  * Observation identities include reviewed reserve/escrow-side adapter contracts,
  * not just holder token deployments. This does not expand financial liabilities.
@@ -99,6 +101,12 @@ export function resolveV10ReserveObservationDeploymentRefs(meta: {
   liveReservesConfig?: { adapter: string; params?: Record<string, unknown> };
 }): string[] {
   const refs = (meta.contracts ?? []).map(row => normalizeDeploymentId(`${row.chain}:${row.address}`));
+  if (meta.liveReservesConfig?.adapter === "leverup-lvusd") {
+    // Reviewed reserve-side read target: the Monad USDC balance read by the adapter, admitted only for the
+    // exact reviewed LVUSD holder deployment. Technical observation only; never a holder or supply identity.
+    if (refs.includes(LVUSD_MONAD_HOLDER_REF)) refs.push(LVUSD_MONAD_USDC_RESERVE_REF);
+    return refs;
+  }
   if (meta.liveReservesConfig?.adapter !== "xdai-bridge") return refs;
   const chainByParam: Record<string, string> = {
     foreignBridgeAddress: "ethereum", homeBridgeAddress: "gnosis",

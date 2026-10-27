@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { admitV10ReserveObservation, admitV10ReserveReportScope, resolveV10ReserveScopeWeights } from "../safety-score-v9/reserve-scope";
+import { admitV10ReserveObservation, admitV10ReserveReportScope, resolveV10ReserveObservationDeploymentRefs, resolveV10ReserveScopeWeights } from "../safety-score-v9/reserve-scope";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { ReserveObservationEnvelopeSchema } from "../../types/safety-score-v9-reserve-scope";
 import { LiveReserveSnapshotProvenanceSchema } from "../safety-score-v9/reserve-provenance";
@@ -114,4 +115,47 @@ it("retains malformed observation failure without letting it become admitted evi
     reserveObservation: { kind: "onchain-accounting", scopeId: "broken" } });
   expect(value.reserveObservation).toBeUndefined();
   expect(value.reserveObservationFailure).toMatchObject({ code: "producer-failed", reason: "malformed-reserve-observation" });
+});
+
+describe("LVUSD reserve target identity", () => {
+  const lvusd = JSON.parse(readFileSync(new URL("../../data/stablecoins/coins/lvusd-leverup.json", import.meta.url), "utf8"));
+  const sidecar = JSON.parse(readFileSync(new URL("../../data/stablecoins/domains/reserves/lvusd-leverup.json", import.meta.url), "utf8"));
+  const holderRef = "monad:0xfd44b35139ae53fff7d8f2a9869c503d987f00d1";
+  const usdcRef = "monad:0x754704bc059f8c67012fed69bc8a327a5aafb603";
+  const observation = ReserveObservationEnvelopeSchema.parse(sidecar.reserveReview.observations[0]);
+  if (observation.kind !== "onchain-observation") throw new Error("Expected the LVUSD on-chain observation");
+  const resolve = (meta: Parameters<typeof resolveV10ReserveObservationDeploymentRefs>[0]) => resolveV10ReserveObservationDeploymentRefs(meta);
+
+  it("binds the USDC balance to the USDC read target with exact calldata, decimals and raw amount", () => {
+    const usdc = observation.quantities.find(quantity => quantity.key.startsWith("usdc:"))!;
+    expect(usdc).toMatchObject({
+      deploymentRef: usdcRef,
+      selector: "0x70a08231000000000000000000000000c69d584b3118e94b3443cc6c67076281242fa704",
+      decimals: 6, rawAmount: "906831469062",
+    });
+    expect(observation.quantities.find(quantity => quantity.key.endsWith(":totalSupply"))?.deploymentRef).toBe(holderRef);
+    expect(observation.deploymentRefs).toEqual([holderRef, usdcRef]);
+  });
+
+  it("admits the reviewed USDC target only for the reviewed LVUSD adapter and holder deployment", () => {
+    expect(resolve(lvusd)).toEqual([holderRef, usdcRef]);
+    expect(resolve({ ...lvusd, liveReservesConfig: { ...lvusd.liveReservesConfig, adapter: "other-adapter" } })).toEqual([holderRef]);
+    expect(resolve({ ...lvusd, contracts: [{ chain: "monad", address: "0x1111111111111111111111111111111111111111" }] }))
+      .not.toContain(usdcRef);
+  });
+
+  it("stays partial technical-only evidence at its original clock and expired today", () => {
+    const deploymentRefs = resolve(lvusd);
+    expect(admitV10ReserveObservation({ observation, deploymentRefs, clockSec: observation.reviewedAtSec, policy }))
+      .toMatchObject({ admitted: true, wholeAssetComposition: false, currentLiabilityShare: null });
+    expect(admitV10ReserveObservation({ observation, deploymentRefs, clockSec: Date.parse("2026-10-26T00:00:00Z") / 1000, policy }))
+      .toMatchObject({ admitted: false, rejectionCodes: ["expired"] });
+  });
+
+  it("rejects an unreviewed reserve target and keeps reserve targets out of holder scopes", () => {
+    const unreviewed = { ...observation, deploymentRefs: [...observation.deploymentRefs, "monad:0x2222222222222222222222222222222222222222"] };
+    expect(admitV10ReserveObservation({ observation: unreviewed, deploymentRefs: resolve(lvusd), clockSec: observation.reviewedAtSec, policy }).rejectionCodes)
+      .toContain("identity-mismatch");
+    expect(lvusd.contracts.map((row: { chain: string; address: string }) => `${row.chain}:${row.address}`)).toEqual([holderRef]);
+  });
 });
