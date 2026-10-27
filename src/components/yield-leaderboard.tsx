@@ -46,6 +46,7 @@ import type { YieldBenchmarkRegistry } from "@shared/types";
 import { downloadCsvWithPreamble, type CsvColumn } from "@/lib/exports/csv";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { YIELD_LEADERBOARD_CSV_COLUMNS } from "@/lib/yield-presentation";
+import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 
 const SORT_KEY_LABELS: Record<YieldTableSortKey, string> = {
   pys: "PYS",
@@ -264,7 +265,7 @@ export function YieldLeaderboard({
         trackEvent("yield_row_action", {
           action: "history_opened",
           coin_id: stablecoinId,
-          warning_count: row?.warningSignals.length ?? 0,
+          warning_count: selectInvestmentWarningSignals(row?.warningSignals).length,
         });
       }
       setExpandedId((current) => (current === stablecoinId ? null : stablecoinId));
@@ -277,7 +278,7 @@ export function YieldLeaderboard({
       trackEvent("yield_row_action", {
         action: "source_opened",
         coin_id: stablecoinId,
-        warning_count: row?.warningSignals.length ?? 0,
+        warning_count: selectInvestmentWarningSignals(row?.warningSignals).length,
       });
       setSheetRankingId(stablecoinId);
     },
@@ -623,7 +624,7 @@ export function YieldMobileCard({
 
       {warningCount > 0 ? (
         <ul className="mt-3 space-y-1 text-xs text-state-warn-bright">
-          {row.warningSignals.slice(0, 2).map((signal) => (
+          {selectInvestmentWarningSignals(row.warningSignals).slice(0, 2).map((signal) => (
             <li key={signal}>{formatYieldWarningSignal(signal)}</li>
           ))}
         </ul>

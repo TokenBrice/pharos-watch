@@ -55,6 +55,7 @@ import {
 } from "@shared/lib/yield-workbench-fallback";
 import type { YieldBenchmarkRegistry } from "@shared/types";
 import { isOpportunityDerivedSafety, YIELD_OPPORTUNITY_SAFETY_DESCRIPTION } from "@shared/lib/yield-opportunity-provenance";
+import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 
 interface HeroHighlightRowProps {
   label: string;
@@ -171,7 +172,7 @@ function formatHeroRiskContext(
   const safety = row.safetyGrade && row.safetyGrade !== "NR" ? `${row.safetyGrade} ${safetyLabel}` : opportunitySafety ? "Opportunity safety NR" : "Safety NR";
   const pys = row.pharosYieldScore !== null ? `PYS ${row.pharosYieldScore.toFixed(1)}` : "PYS NR";
   const posture = row.sourcePosture ? row.sourcePosture.replaceAll("-", " ") : "posture unknown";
-  const warningCount = row.warningSignals.length;
+  const warningCount = selectInvestmentWarningSignals(row.warningSignals).length;
   const parts = [safety, pys, posture, `${warningCount} warning${warningCount === 1 ? "" : "s"}`];
   if (zone !== null) parts.unshift(YIELD_ZONE_LABELS[zone]);
   return (

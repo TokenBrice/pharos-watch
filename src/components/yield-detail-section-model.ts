@@ -17,6 +17,7 @@ import { formatPercentFromRatio } from "@shared/lib/format";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { YIELD_BENCHMARK_KEY_CURRENCY } from "@shared/types/yield";
 import type { StablecoinStatus, YieldRanking, YieldRankingsResponse } from "@shared/types";
+import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 
 /** The dossier previews the top three alternate pools; the rest sit behind "Show N more". */
 export const ALT_SOURCE_INITIAL_COUNT = 3;
@@ -98,6 +99,7 @@ export function buildYieldDetailModel(
     }
     return { status: "unavailable", shouldHaveYieldData: registryStatus.shouldHaveYieldData };
   }
+  const investmentWarnings = selectInvestmentWarningSignals(ranking.warningSignals);
 
   const pysBreakdown = {
     ...computePysBreakdown(
@@ -141,8 +143,8 @@ export function buildYieldDetailModel(
     externalSourceKeys: validatedSourceKeys.length > 0 ? validatedSourceKeys : undefined,
     historySources: sourceExplorer.historySources,
     dataSourceMeta: getYieldDataSourceMeta(ranking.dataSource),
-    warningSignals: ranking.warningSignals,
-    singleWarning: ranking.warningSignals.length === 1 ? ranking.warningSignals[0] : null,
+    warningSignals: investmentWarnings,
+    singleWarning: investmentWarnings.length === 1 ? investmentWarnings[0] : null,
     stabilityValue: ranking.yieldStability !== null ? formatPercentFromRatio(ranking.yieldStability, 0) : "—",
     pysBreakdown,
     pysColor: getPysColor(ranking.pharosYieldScore),

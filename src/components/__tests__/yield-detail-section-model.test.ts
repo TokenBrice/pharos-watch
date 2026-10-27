@@ -118,6 +118,19 @@ describe("buildYieldDetailModel", () => {
   });
 
   it.each([
+    { signals: ["aging", "data-stale"], warnings: [], single: null },
+    { signals: ["aging", "yield-spike"], warnings: ["yield-spike"], single: "yield-spike" },
+    { signals: ["yield-spike", "future-key"], warnings: ["yield-spike", "future-key"], single: null },
+  ])("lists only investment warnings for $signals", ({ signals, warnings, single }) => {
+    const ranking = makeRanking({ warningSignals: signals });
+    const model = buildYieldDetailModel(makeResponse([ranking]), registryStatus("active", "full-page", true), []);
+    if (model.status !== "ready") throw new Error("expected ready");
+    expect(model.warningSignals).toEqual(warnings);
+    expect(model.singleWarning).toBe(single);
+    expect(model.ranking.warningSignals).toEqual(signals);
+  });
+
+  it.each([
     { requested: [], expected: [] },
     { requested: ["alt-source"], expected: ["alt-source"] },
     { requested: ["stale-source", "primary-source"], expected: ["primary-source"] },
