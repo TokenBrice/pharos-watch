@@ -70,6 +70,9 @@ export function BlacklistTrackerMethodologySection() {
                 direct projection, while Safety Score V10 consumes the review as evidence rather than a fallback verdict.
               </p>
               <p>
+                A freeze-exposed subtotal is published only when at least one exposed asset reports supply; with none observed it is unavailable, never $0, while an explicit observed zero and partly observed subsets keep their qualified totals.
+              </p>
+              <p>
                 Reviews measure each deployment against the Safety Score material-supply threshold (currently 10%),
                 never adding sub-threshold deployments together. Missing shares are measured before an unresolved
                 deployment is treated as material. Yes requires a current holder-targeted power: blacklist, freeze,

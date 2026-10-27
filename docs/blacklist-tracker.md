@@ -6,7 +6,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the
 
 ## Methodology And Ownership
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.6`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.61`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
 - **Version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog:** `/methodology/blacklist-tracker-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/blacklist-tracker/`
@@ -134,7 +134,7 @@ schema-valid empty list) publishes no supply total or share (`—`) while regist
 observed totals and the "Observed supply only · N assets without supply data excluded" label appear in
 secondary text, so a partial list can never read as a full-market 0% or 100%. Headline shares are
 published only for `complete` coverage. A bucket whose every member lacks supply shows `—` for its value
-and share; an explicit observed zero remains a real `$0`. The FreezeWatch data-quality notice also lists
+and share; the combined freeze-exposed value and share are likewise `—` when a nonempty exposed population has no observed supply, even if non-freezable assets are observed; an explicit observed zero remains a real `$0`. The FreezeWatch data-quality notice also lists
 `dataQuality.ambiguousOrderCount` events (with the plain-language `ambiguousOrderReason`, currently Tron
 transfers in separate transactions whose order cannot be confirmed) when the count is positive.
 

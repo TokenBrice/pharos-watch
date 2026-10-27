@@ -13,7 +13,7 @@ export const loadFreezewatchOgPage: OgPageLoader = async (db, nowSec) => {
   if (stale) return unavailable(stale);
 
   const summary = computeFreezableSummary(buildBlacklistStatusBuckets(stablecoins.payload.peggedAssets));
-  if (summary.coverage === "unavailable" || summary.freezableShare == null) return unavailable("figure-null");
+  if (summary.coverage === "unavailable" || summary.freezableMarketCap === null || summary.freezableShare == null) return unavailable("figure-null");
   // A partial share covers observed supply only; the page labels it, a share card cannot.
   if (summary.coverage === "partial") return unavailable("incomplete-coverage");
   return {

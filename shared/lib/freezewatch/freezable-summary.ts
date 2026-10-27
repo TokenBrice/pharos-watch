@@ -30,7 +30,8 @@ export interface FreezableSummary {
   ordered: BlacklistStatusBucket[];
   /** Observed supply across every bucket — the known-supply denominator. */
   totalMarketCap: number;
-  freezableMarketCap: number;
+  /** Observed supply of the freezable buckets; `null` when none of its members reported supply. */
+  freezableMarketCap: number | null;
   /** Registry count of freezable assets; independent of supply availability. */
   freezableCount: number;
   /** Every active coin with a freeze-control bucket: the hero's "N coins classified" denominator. */
@@ -54,14 +55,22 @@ export function computeFreezableSummary(buckets: BlacklistStatusBucket[] | null 
   ).filter((bucket): bucket is BlacklistStatusBucket => Boolean(bucket));
   const totalMarketCap = ordered.reduce((sum, bucket) => sum + bucket.marketCap, 0);
   const freezableBuckets = ordered.filter((bucket) => FREEZABLE_BLACKLIST_STATUS_BUCKETS.has(bucket.key));
-  const freezableMarketCap = freezableBuckets.reduce((sum, bucket) => sum + bucket.marketCap, 0);
   const freezableCount = freezableBuckets.reduce((sum, bucket) => sum + bucket.count, 0);
+  const freezableObservedCount = freezableBuckets.reduce(
+    (sum, bucket) => sum + Math.max(0, bucket.count - bucket.supplyUnavailableCount),
+    0,
+  );
+  // A nonempty freezable population with no observed member is unavailable, not a $0 subtotal.
+  const freezableMarketCap =
+    freezableCount > 0 && freezableObservedCount === 0
+      ? null
+      : freezableBuckets.reduce((sum, bucket) => sum + bucket.marketCap, 0);
   const registryCount = ordered.reduce((sum, bucket) => sum + bucket.count, 0);
   const supplyUnavailableCount = ordered.reduce((sum, bucket) => sum + bucket.supplyUnavailableCount, 0);
   const coverage: FreezableSupplyCoverage =
     registryCount - supplyUnavailableCount <= 0 ? "unavailable" : supplyUnavailableCount > 0 ? "partial" : "complete";
   const freezableShare =
-    coverage !== "unavailable" && totalMarketCap > 0 ? (freezableMarketCap / totalMarketCap) * 100 : null;
+    coverage !== "unavailable" && freezableMarketCap !== null && totalMarketCap > 0 ? (freezableMarketCap / totalMarketCap) * 100 : null;
   return { ordered, totalMarketCap, freezableMarketCap, freezableCount, registryCount, freezableShare, supplyUnavailableCount, coverage };
 }
 

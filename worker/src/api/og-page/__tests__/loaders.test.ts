@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { PSI_HEX_COLORS } from "@shared/lib/classification";
-import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { CLIENT_ACTIVE_STABLECOINS, CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-client-registry";
 import { makeAsset } from "../../../test-helpers/__shared/fixtures";
 
@@ -312,6 +312,15 @@ describe("freezewatch route card", () => {
     expect(load).toMatchObject({ kind: "ok" });
     if (load.kind !== "ok") throw new Error("expected a live card");
     expect(load.hero).toMatch(/%$/);
+  });
+
+  it("falls back to figure-null when no freeze-exposed member reports supply", async () => {
+    const assets = CLIENT_ACTIVE_STABLECOINS
+      .filter((meta) => CLIENT_TRACKED_META_BY_ID.get(meta.id)?.blacklistStatus === false)
+      .map((meta) => makeAsset({ id: meta.id, circulating: { peggedUSD: 1_000_000 } }));
+    expect(assets.length).toBeGreaterThan(0);
+    mocks.loadStablecoinsCache.mockResolvedValue(stablecoinsCache(assets));
+    await expect(OG_PAGE_LOADERS.freezewatch(db, NOW)).resolves.toEqual({ kind: "unavailable", reason: "figure-null" });
   });
 
   it("fails closed when supply coverage is partial", async () => {
