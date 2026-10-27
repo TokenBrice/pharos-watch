@@ -4,7 +4,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "name": "Smokehouse USDC idle underlying",
-      "pct": 3.3386e-8,
+      "pct": 3.651e-8,
       "risk": "high",
       "coinId": "usdc-circle",
       "depType": "wrapper",
@@ -17,7 +17,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xbeefff209270748ddd194831b3fa287a5386f5bc:deployed",
       "name": "Smokehouse USDC deployed strategy positions",
-      "pct": 99.999999966614,
+      "pct": 99.99999996349,
       "risk": "high",
       "coinId": "usdc-circle",
       "depType": "wrapper",
@@ -29,8 +29,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice6)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal D01-L3 2026-10-27",
     "confidence": "verified",
     "sources": [
       {
@@ -42,9 +42,9 @@
         "url": "https://docs.morpho.org/developers/contracts/morpho-vaults/"
       }
     ],
-    "rationale": "Morpho identifies USDC as the Smokehouse vault asset and the vault as a Steakhouse-curated lending product. The current live rows separate idle USDC from deployed Morpho positions; both retain the USDC wrapper dependency, while the deployed row carries borrower-credit, collateral, liquidity, and smart-contract risks.",
-    "compositionBasis": "Current ERC-4626 live rows and Morpho Smokehouse USDC vault identity",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "Morpho identifies USDC as the Smokehouse vault asset and the vault as a Steakhouse-curated lending product. On 2026-10-27 a finalized-block Ethereum read (block 26282851, hash 0x2ce46d7e90bdb5c5e490e60debcad33e3dafdddd38d4a54fabd1ea16dec4eb22, timestamp 2026-10-27T08:29:11Z, matching before/after headers) returned vault asset() equal to native USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalAssets 12601857387693 raw (12,601,857.39 USDC) and an idle USDC balance of 4601 raw at the vault, so 99.99999996% of assets remain deployed in Morpho positions. The current live rows separate idle USDC from deployed Morpho positions; both retain the USDC wrapper dependency, while the deployed row carries borrower-credit, collateral, liquidity, and smart-contract risks.",
+    "compositionBasis": "Current ERC-4626 live rows and Morpho Smokehouse USDC vault identity, re-read at Ethereum block 26282851 (2026-10-27T08:29:11Z)",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "Both current adapter categories are classified; borrower-market allocations inside the deployed category remain dynamic.",
     "knownUnknownExposurePct": 0
