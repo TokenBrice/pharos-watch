@@ -5,7 +5,7 @@ import {
 } from "../../lib/constants";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { pricesAgreeWithinBps } from "../../lib/price-divergence";
-import { JupiterPriceResponseSchema, SolanaSlotResponseSchema } from "../../lib/schemas";
+import { JupiterPriceEntrySchema, JupiterPriceResponseSchema, SolanaSlotResponseSchema } from "../../lib/schemas";
 import { throwIfAborted } from "../../lib/abort";
 import { getRpcAuthHeaders, registryRpcUrls, type ChainRpcConfig } from "../../lib/chain-registry";
 import {
@@ -30,6 +30,7 @@ import {
   collectMissingPriceCandidates,
   type EnrichPassResult,
   isUsableFallbackPrice,
+  quarantineInvalidFallbackRows,
   SOLANA_MINT_BY_ID,
 } from "./enrich-prices-pass-common";
 
@@ -298,13 +299,25 @@ async function fetchJupiterPrices(
       diagnostic.rejectionReasonCounts = { "invalid-shape": 1 };
       return { data: null, diagnostic };
     }
-    const data = parsed.data as Record<string, JupiterPriceEntry>;
-    diagnostic.responseRowCount = Object.keys(data).length;
-    const missingQuoteRows = Object.values(data).filter((entry) => (
+    const rows = Object.entries(parsed.data);
+    const { valid, invalidKeys } = quarantineInvalidFallbackRows("jupiter", rows, JupiterPriceEntrySchema);
+    diagnostic.responseRowCount = rows.length;
+    if (invalidKeys.length > 0 && valid.length === 0) {
+      diagnostic.errorClass = "invalid-shape";
+      diagnostic.errorMessage = "Expected Jupiter V3 price payload with usdPrice, decimals, and blockId";
+      diagnostic.rejectionReasonCounts = { "invalid-shape": invalidKeys.length };
+      return { data: null, diagnostic };
+    }
+    // Malformed mints are quarantined individually; healthy siblings remain usable.
+    const data: Record<string, JupiterPriceEntry> = Object.fromEntries(valid);
+    const missingQuoteRows = valid.filter(([, entry]) => (
       entry.usdPrice == null || entry.blockId == null
     )).length;
-    if (missingQuoteRows > 0) {
-      diagnostic.rejectionReasonCounts = { "missing-quote": missingQuoteRows };
+    const rejectionReasonCounts: NonNullable<PricingProviderAttemptDiagnostic["rejectionReasonCounts"]> = {};
+    if (missingQuoteRows > 0) rejectionReasonCounts["missing-quote"] = missingQuoteRows;
+    if (invalidKeys.length > 0) rejectionReasonCounts["invalid-shape"] = invalidKeys.length;
+    if (Object.keys(rejectionReasonCounts).length > 0) {
+      diagnostic.rejectionReasonCounts = rejectionReasonCounts;
     }
     diagnostic.success = true;
     return { data, diagnostic };

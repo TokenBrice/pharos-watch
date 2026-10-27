@@ -7,7 +7,7 @@ import {
 } from "./authoritative-price-sources.test-support";
 
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { resolveVaultNavSupplyPrice } from "../authoritative-price-sources/erc4626-nav";
+import { getFreshSingleSourceNavParentId, resolveVaultNavSupplyPrice } from "../authoritative-price-sources/erc4626-nav";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { CIRCUIT_SOURCE } from "../constants";
@@ -99,6 +99,46 @@ describe("resolveVaultNavSupplyPrice", () => {
       metadata: { cachedVaultRate: { rate: 1.0392, rateObservedAt: nowSec - 3600 } },
     });
     expect(override?.price).toBeCloseTo(1.0392 * 0.9999, 6);
+  });
+
+  it("exposes only configured fresh single-source NAV parents", () => {
+    expect(getFreshSingleSourceNavParentId("syzusd-yuzu")).toBe("yzusd-yuzu");
+    expect(getFreshSingleSourceNavParentId("senpathusd-sentora")).toBe("pathusd-bridge");
+    expect(getFreshSingleSourceNavParentId("eearn-ember")).toBeNull();
+    expect(getFreshSingleSourceNavParentId("sgho-aave")).toBeNull();
+    expect(getFreshSingleSourceNavParentId("not-a-vault-token")).toBeNull();
+  });
+
+  // The same-run parent shape fiat-cg builds from a direct CoinGecko quote (K-033).
+  function sameRunParent(nowSec: number, ageSec: number, overrides: Partial<PeggedAsset> = {}): ReadonlyMap<string, PeggedAsset> {
+    return new Map([["yzusd-yuzu", {
+      id: "yzusd-yuzu", name: "Yuzu USD", symbol: "YZUSD", price: 1, priceSource: "coingecko",
+      priceConfidence: "single-source", priceObservedAt: nowSec - ageSec, priceObservedAtMode: "upstream",
+      priceSyncedAt: nowSec, ...overrides,
+    }]]);
+  }
+
+  it.each([60, 900])("values syzUSD supply from a %ss-old same-run CoinGecko parent", async (ageSec) => {
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${(1_050_000n * 10n ** 12n).toString(16).padStart(64, "0")}`);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const override = await resolveVaultNavSupplyPrice("syzusd-yuzu", sameRunParent(nowSec, ageSec));
+    expect(override).toMatchObject({
+      source: "coingecko", confidence: "single-source", observedAt: nowSec - ageSec,
+      metadata: { inheritedFrom: "yzusd-yuzu", parentSource: "coingecko", parentReplaySafe: true },
+    });
+    expect(override?.price).toBeCloseTo(1.05, 6);
+  });
+
+  it.each([
+    ["901-second-old", { priceObservedAt: Math.floor(Date.now() / 1000) - 901 }],
+    ["future", { priceObservedAt: Math.floor(Date.now() / 1000) + 3600 }],
+    ["clockless", { priceObservedAt: undefined, priceUpdatedAt: undefined }],
+    ["non-positive", { price: 0 }],
+    ["low-volume", { priceSource: "coingecko-low-volume", priceConfidence: "fallback" as const }],
+  ])("keeps syzUSD supply NAV unavailable for a %s parent", async (_label, overrides) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    expect(await resolveVaultNavSupplyPrice("syzusd-yuzu", sameRunParent(nowSec, 60, overrides))).toBeNull();
+    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
   });
 
   it("fails closed without a parent row, a trusted parent, or a vault config", async () => {

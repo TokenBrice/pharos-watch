@@ -562,6 +562,8 @@ describe("authoritative-price-sources", () => {
         cachedVaultRate: { rate: 1.0221, rateObservedAt: nowSec - 3600 },
       },
     });
+    // A cached rate is not a successful method read.
+    expect(override?.metadata).not.toHaveProperty("navMethod");
     expect(override?.price).toBeCloseTo(1.0221 * 0.9999, 6);
     expect(override?.observedAt).toBe(nowSec - 3600);
     expect(stats.cachedRateFallbacks).toBe(1);
@@ -724,7 +726,10 @@ describe("authoritative-price-sources", () => {
     expect(overrides.get("senpathusd-sentora")).toMatchObject({
       price: expect.closeTo(1.999606 * 1.0056651906974041, 8),
       source: "coingecko", confidence: "single-source", observedAt,
-      metadata: { inheritedFrom: "pathusd-bridge", parentSource: "coingecko", parentConfidence: "single-source", parentReplaySafe: true },
+      metadata: {
+        inheritedFrom: "pathusd-bridge", parentSource: "coingecko", parentConfidence: "single-source", parentReplaySafe: true,
+        navMethod: "convertToAssets",
+      },
     });
   });
 
@@ -818,7 +823,7 @@ describe("authoritative-price-sources", () => {
       price: 0.9997,
       source: "protocol-redeem",
       confidence: "high",
-      metadata: { inheritedFrom: "gho-aave" },
+      metadata: { inheritedFrom: "gho-aave", navMethod: "previewRedeem" },
     });
   });
 

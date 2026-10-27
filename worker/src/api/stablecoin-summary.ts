@@ -49,6 +49,7 @@ export const handleStablecoinSummary = async (
     priceConfidence: isObservedPrice(coin) ? coin.priceConfidence ?? null : null,
     ...(!isObservedPrice(coin) && coin.priceObservedAtMode != null ? { priceObservedAtMode: coin.priceObservedAtMode } : {}),
     ...(coin.nominalPriceReference ? { nominalPriceReference: coin.nominalPriceReference } : {}),
+    ...(isObservedPrice(coin) && coin.priceDerivation ? { priceDerivation: coin.priceDerivation } : {}),
     supplySource: coin.supplySource ?? null,
     supplyObservedAt: coin.supplyObservedAt ?? null,
     supplyRestored: coin.supplyRestored === true,

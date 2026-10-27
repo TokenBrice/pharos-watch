@@ -145,22 +145,6 @@ export const STABLECOIN_PUBLICATION_WAIVERS: readonly StablecoinPublicationWaive
  * (and reported) so their gaps alert again until renewed or resolved. */
 export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] = [
   {
-    stablecoinId: "hbd-hive",
-    owner: "ops",
-    reason:
-      "Reviewed 2026-10-21 14:13 UTC: CoinGecko's fresh HBD quote is $1.87 (2026-10-21 14:12:04 UTC), above the unchanged exclusive USD upper bound of $1.19; Upbit Indonesia and Upbit HBD/BTC tickers imply $1.92 and $1.83. DefiLlama repeats the out-of-range venue price ($1.9768). The native Hive HBD/HIVE book with separately observed HIVE/USD instead implies $0.99759-$0.99760, but remains an unadmitted cross-rate: no reviewed runtime HIVE/USD dependency or native order-book depth policy exists. The max-500-level read contains 215,190.014/16,267.135 HBD posted asks/bids, not executable USD depth or pool TVL. This is unresolved venue divergence, not a harmless premium or stale-only feed. Ops must resolve the rejected upstream quote and review an identity-safe source, depth policy and USD dependency by 2026-10-24 14:13 UTC; this short source-review acknowledgement preserves the missing gap, price bounds and conversion-peg exclusion.",
-    sources: [
-      "https://www.coingecko.com/en/coins/hive_dollar",
-      "https://api.coingecko.com/api/v3/coins/hive_dollar/tickers",
-      "https://api.coingecko.com/api/v3/simple/price?ids=hive,hive_dollar&vs_currencies=usd&include_last_updated_at=true",
-      "https://coins.llama.fi/prices/current/coingecko:hive_dollar",
-      "https://api.hive.blog",
-      "https://developers.hive.io/apidefinitions/#condenser_api.get_order_book",
-    ],
-    reviewedAt: Date.UTC(2026, 9, 21, 14, 13) / 1000,
-    expiresAt: Date.UTC(2026, 9, 24, 14, 13) / 1000,
-  },
-  {
     stablecoinId: "usdn-noble",
     owner: "ops",
     reason:
@@ -250,20 +234,6 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     expiresAt: Date.UTC(2026, 9, 25, 23, 45) / 1000,
   },
   {
-    stablecoinId: "usda-avalon",
-    owner: "ops",
-    reason:
-      "DefiLlama publishes USDA supply but no list price (detail 220 price null), CoinGecko has been stale since 2026-08-14, and every venue sits below the admissibility floors: the only fresh-looking lane is DefiLlama's per-deployment quote (nibiru 0xf4e0…2003, ~$0.9998), which DefiLlama re-stamps only intermittently (last observation 2026-09-24 05:07 UTC) so it is stale beyond the lane's 15-minute budget in most runs; the PancakeSwap BSC USDA/USDT pair trades ~$5.59/day against the $50K address-provider floor; and Ethereum onchain marks have zero 24h volume while diverging ~9% from the contract quote. Issuer 1:1 USDT convertibility is not yet a machine-read route; re-source a reviewed redemption or venue lane by the expiry.",
-    sources: [
-      "https://stablecoins.llama.fi/stablecoin/220",
-      "https://www.coingecko.com/en/coins/usda-2",
-      "https://dexscreener.com/bsc/0x9a4d3d78aa3a0372335ee43e08575c65a027f653",
-      "https://docs.avalonfinance.xyz",
-    ],
-    reviewedAt: Date.UTC(2026, 8, 24) / 1000,
-    expiresAt: Date.UTC(2026, 9, 24) / 1000,
-  },
-  {
     stablecoinId: "bnusd-balanced",
     owner: "ops",
     reason:
@@ -282,19 +252,6 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     ],
     reviewedAt: Date.UTC(2026, 9, 21, 14, 13) / 1000,
     expiresAt: Date.UTC(2026, 9, 28, 14, 13) / 1000,
-  },
-  {
-    stablecoinId: "usdn-smardex",
-    owner: "ops",
-    reason:
-      "The only admissible lane is CMC's targeted quote, which CMC refreshes intermittently for this thin asset (missing in 83 of 99 publications over 2026-09-22). CoinGecko has been stale since 2026-08-26 (~$13/day volume), and the only exact DEX pair is a Curve USDN/fxUSD pool with ~$285 liquidity, far below the $50K floor. Priced whenever a fresh CMC quote is admitted; re-source via a guarded protocol-NAV adapter or review listing disposition by the expiry.",
-    sources: [
-      "https://coinmarketcap.com/currencies/smardex-usdn/",
-      "https://www.coingecko.com/en/coins/smardex-usdn",
-      "https://dexscreener.com/ethereum/0xde17a000ba631c5d7c2bd9fb692efea52d90dee2",
-    ],
-    reviewedAt: Date.UTC(2026, 8, 23, 5) / 1000,
-    expiresAt: Date.UTC(2026, 9, 23) / 1000,
   },
   {
     stablecoinId: "cadm-mento",
@@ -424,8 +381,9 @@ function isHttpsSource(value: unknown): value is string {
   return typeof value === "string" && /^https:\/\/\S+$/.test(value.trim());
 }
 
-/** Reviews fail closed on invalid identity, provenance, or dates. Expiry is
- * evaluated against the current clock, never persisted acknowledgement state. */
+/** Reviews fail closed on invalid identity, provenance, or dates; a review
+ * dated after the evaluation clock is invalid evidence. Expiry is evaluated
+ * against the current clock, never persisted acknowledgement state. */
 function validReviewSeconds(value: number): boolean {
   return Number.isFinite(value)
     && value > 0
@@ -453,6 +411,7 @@ export function resolveStablecoinPriceGapReviews(
       || !validReviewSeconds(review.reviewedAt)
       || !validReviewSeconds(review.expiresAt)
       || review.expiresAt <= review.reviewedAt
+      || review.reviewedAt > nowSec
       || (review.weeklyUtcWindow != null && (!Number.isInteger(review.weeklyUtcWindow.start)
         || !Number.isInteger(review.weeklyUtcWindow.end)
         || review.weeklyUtcWindow.start < 0 || review.weeklyUtcWindow.start >= 7 * 86_400

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { StablecoinListResponseSchema } from "@shared/types/market";
-import { SUPPLEMENTAL_RESTORE_MAX_AGE_SEC, SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC } from "@shared/lib/supply";
+import {
+  getCirculatingRawOrNull,
+  SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
+  SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC,
+} from "@shared/lib/supply";
 import type { PeggedAsset } from "../enrich-prices-shared";
 import {
   loadPreviousStablecoinsById,
@@ -359,6 +363,74 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     expect(result.restoredCount).toBe(0);
     expect(result.expiredRestoreIds).toEqual(["xaut-tether"]);
     expect(result.assets[0]).toBe(current);
+  });
+
+  it.each([
+    ["prior positive", { peggedUSD: 100 }],
+    ["prior zero", { peggedUSD: 0 }],
+  ])("keeps an admitted current zero packet over a %s", (_label, previousCirculating) => {
+    const current = asset({
+      id: "xaut-tether", symbol: "XAUT", price: 1, priceSource: "coingecko",
+      circulating: { peggedUSD: 0 }, circulatingPrevDay: { peggedUSD: 50 },
+      chainCirculating: { Ethereum: chainRow(0) }, chains: ["Ethereum"],
+      supplySource: "onchain-total-supply", supplyObservedAt: NOW_SEC - 30,
+    });
+    const previous = asset({
+      id: "xaut-tether", symbol: "XAUT", circulating: previousCirculating,
+      chainCirculating: { Ethereum: chainRow(100), Tron: chainRow(0) }, chains: ["Ethereum", "Tron"],
+      supplySource: "coingecko-fallback", supplyObservedAt: NOW_SEC - 86_400,
+    });
+
+    const result = mergeSupplementalLastKnownGood([current], new Map([[previous.id, previous]]), new Set(), NOW_SEC);
+
+    expect(result.restoredCount).toBe(0);
+    expect(result.expiredRestoreIds).toEqual([]);
+    expect(result.assets[0]).toBe(current);
+    expect(getCirculatingRawOrNull(result.assets[0])).toBe(0);
+    expect(result.assets[0].supplyObservedAt).toBe(NOW_SEC - 30);
+    expect(result.assets[0].supplySource).toBe("onchain-total-supply");
+    expect(result.assets[0].supplyRestored).toBeUndefined();
+    const [normalized] = normalizeStablecoinsPayload({ peggedAssets: result.assets }, NOW_SEC).peggedAssets;
+    expect(getCirculatingRawOrNull(normalized)).toBe(0);
+    expect(normalized.supplyRestored).toBeUndefined();
+    expect(StablecoinListResponseSchema.safeParse(normalizeStablecoinsPayload({ peggedAssets: result.assets })).success)
+      .toBe(true);
+  });
+
+  it.each([
+    ["absent", {}],
+    ["null", null],
+    ["nonfinite", { peggedUSD: Number.NaN }],
+    ["partially invalid", { peggedUSD: 0, peggedEUR: -1 }],
+  ])("still restores a prior positive over an %s current bucket set", (_label, circulating) => {
+    const current = asset({ id: "xaut-tether", symbol: "XAUT", circulating: circulating as PeggedAsset["circulating"] });
+    const previous = asset({
+      id: "xaut-tether", symbol: "XAUT", circulating: { peggedUSD: 100 }, supplyObservedAt: NOW_SEC - 60,
+    });
+    const result = mergeSupplementalLastKnownGood([current], new Map([[previous.id, previous]]), new Set(), NOW_SEC);
+    expect(result.restoredCount).toBe(1);
+    expect(result.assets[0]).toMatchObject({ circulating: { peggedUSD: 100 }, supplyRestored: true });
+  });
+
+  it("keeps hold, primary-duplicate and expired-predecessor precedence around a current zero", () => {
+    const zero = (id: string) => asset({ id, symbol: id, circulating: { peggedUSD: 0 }, supplyObservedAt: NOW_SEC - 30 });
+    const expiredPrevious = asset({
+      id: "xaut-tether", symbol: "XAUT", circulating: { peggedUSD: 100 },
+      supplyObservedAt: NOW_SEC - SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1,
+    });
+    const result = mergeSupplementalLastKnownGood(
+      [zero("sfrax-frax"), zero("usdc-circle"), zero("xaut-tether")],
+      new Map([[expiredPrevious.id, expiredPrevious]]),
+      new Set(["usdc-circle"]),
+      NOW_SEC,
+    );
+    expect(result.skippedDuplicates).toBe(1);
+    expect(result.restoredCount).toBe(0);
+    expect(result.expiredRestoreIds).toEqual([]);
+    const byId = new Map(result.assets.map((row) => [row.id, row]));
+    expect(byId.has("usdc-circle")).toBe(false);
+    expect(byId.get("sfrax-frax")?.supplySource).toBe("onchain-supply-withheld");
+    expect(getCirculatingRawOrNull(byId.get("xaut-tether"))).toBe(0);
   });
 
   it("restores rows without provenance exactly as before", () => {

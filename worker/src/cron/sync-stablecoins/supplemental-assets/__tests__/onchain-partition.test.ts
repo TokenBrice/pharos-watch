@@ -27,6 +27,7 @@ vi.mock("../../../../lib/fetch-retry", async (importOriginal) => ({
   fetchTextWithRetry: async () => ({ response: Response.json({ coins: {} }), body: '{"coins":{}}' }),
 }));
 vi.mock("../../../../lib/authoritative-price-sources", () => ({
+  getFreshSingleSourceNavParentId: () => null,
   resolveVaultNavSupplyPrice: vi.fn().mockResolvedValue(null),
 }));
 vi.mock("../../../reserve-adapters/helpers", () => ({

@@ -70,6 +70,7 @@ const FALLBACK_PRICE_PASSES: readonly EnrichmentPassDefinition[] = [
           pass1b: result.pass1b,
         },
         failures: result.failures,
+        diagnostics: result.diagnostics,
       };
     },
   },

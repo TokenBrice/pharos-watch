@@ -58,19 +58,30 @@ export interface DsFetchPoolsResult {
   contentType?: string;
   error?: string;
   hardRefusal?: boolean;
+  /** Raw rows rejected by the shared schema/identity check before chain filtering. */
+  rejectedPairCount?: number;
 }
 
+function isNonBlankString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+/**
+ * Required identities must be nonblank so a malformed row counts as a schema
+ * rejection instead of silently dropping out downstream. Values are not
+ * rewritten: native (case-sensitive) identities pass through unchanged.
+ */
 function isDsPair(value: unknown): value is DsPair {
   if (!value || typeof value !== "object") return false;
   const pair = value as Partial<DsPair>;
-  return typeof pair.chainId === "string"
-    && typeof pair.dexId === "string"
-    && typeof pair.pairAddress === "string"
+  return isNonBlankString(pair.chainId)
+    && isNonBlankString(pair.dexId)
+    && isNonBlankString(pair.pairAddress)
     && !!pair.baseToken
-    && typeof pair.baseToken.address === "string"
+    && isNonBlankString(pair.baseToken.address)
     && typeof pair.baseToken.symbol === "string"
     && !!pair.quoteToken
-    && typeof pair.quoteToken.address === "string"
+    && isNonBlankString(pair.quoteToken.address)
     && typeof pair.quoteToken.symbol === "string";
 }
 
@@ -248,17 +259,24 @@ async function fetchDsPoolsWithStatus(
         status,
         contentType,
         error: "DexScreener payload contained no valid pair rows",
+        rejectedPairCount: rawCount,
       };
     }
+    // A partially rejected census is incomplete even when valid rows survive:
+    // the rejected rows may be the requested chain's real pools.
+    const rejectedPairCount = rawCount - parsedPairs.length;
     const pairs = parsedPairs.filter((pair) => pair.chainId === dsChain);
-    if (pairs.length !== parsedPairs.length) {
+    if (rejectedPairCount > 0 || pairs.length !== parsedPairs.length) {
       return {
         ok: pairs.length > 0,
         degraded: true,
         pairs,
         status,
         contentType,
-        error: `DexScreener payload contained pair rows outside requested chain ${dsChain}`,
+        error: rejectedPairCount > 0
+          ? "dexscreener-schema-degraded"
+          : `DexScreener payload contained pair rows outside requested chain ${dsChain}`,
+        ...(rejectedPairCount > 0 ? { rejectedPairCount } : {}),
       };
     }
     return { ok: true, pairs: parsedPairs };

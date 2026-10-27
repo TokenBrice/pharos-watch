@@ -186,6 +186,24 @@ describe("runDexScreenerPass", () => {
     expect(asset.priceConfidence).toBe("fallback");
   });
 
+  it("keeps valid exact pricing beside rejected rows and leaves absent/zero volume as valid rows", async () => {
+    const actual = await vi.importActual<typeof import("../../../lib/dexscreener")>("../../../lib/dexscreener");
+    const { volume: _volume, ...absentVolume } = exactPool("0xabc", "0xpair1", "0.99");
+    const zeroVolume = { ...exactPool("0xabc", "0xpair2", "1.01"), volume: { h24: 0, h6: 0, h1: 0, m5: 0 } };
+    const rejected = { ...exactPool("0xabc", "", "5", 1_000_000) };
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify([absentVolume, zeroVolume, rejected]))));
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockImplementationOnce(actual.fetchDsTokenPoolsWithStatus);
+
+    const asset = makeMissingAsset({ id: "exact-usd", symbol: "EXACT", address: "0xabc", chains: ["Base"] });
+    const result = await runDexScreenerPass([asset], undefined, undefined);
+
+    await expect(vi.mocked(fetchDsTokenPoolsWithStatus).mock.results[0]?.value).resolves.toMatchObject({
+      ok: true, degraded: true, rejectedPairCount: 1, pairs: [absentVolume, zeroVolume],
+    });
+    expect(result).toMatchObject({ resolved: 1, failures: [] });
+    expect(asset).toMatchObject({ price: 1.0, priceSource: "dexscreener-exact", priceConfidence: "fallback" });
+  });
+
   it.each([
     { label: "both observed sub-floor Polygon pools", liquidity: 46_409.29, symbol: "PHT", price: "0.01587", resolves: false },
     { label: "threshold pool with PHP reference despite sparse turnover", liquidity: DEXSCREENER_MIN_LIQUIDITY_USD, symbol: "PHT", price: "0.01587", resolves: true },

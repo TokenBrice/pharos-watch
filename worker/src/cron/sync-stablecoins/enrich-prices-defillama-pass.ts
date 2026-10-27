@@ -6,7 +6,8 @@ import { CIRCUIT_SOURCE, DEFILLAMA_COINS } from "../../lib/constants";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { throwIfAborted } from "../../lib/abort";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { DLPriceResponseSchema } from "../../lib/schemas";
+import { DLPriceEntrySchema, DLPriceResponseSchema } from "../../lib/schemas";
+import { endpointLabel, type PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import {
   applyResolvedPrice,
   hasMissingPrice,
@@ -17,6 +18,7 @@ import {
   type FallbackPriceQuote,
   isFreshFallbackObservedAt,
   isUsableFallbackPrice,
+  quarantineInvalidFallbackRows,
 } from "./enrich-prices-pass-common";
 import { TRACKED_ASSET_ADDRESS_OVERRIDES } from "./tracked-asset-overrides";
 
@@ -62,10 +64,16 @@ interface DefiLlamaContractLookup {
   coinId: string;
 }
 
-function parseDefiLlamaPriceMap(json: unknown): Map<string, DefiLlamaContractQuote> {
+function parseDefiLlamaPriceMap(json: unknown): {
+  prices: Map<string, DefiLlamaContractQuote>;
+  rowCount: number;
+  invalidCount: number;
+} {
   const prices = new Map<string, DefiLlamaContractQuote>();
   const { coins } = DLPriceResponseSchema.parse(json);
-  for (const [id, info] of Object.entries(coins)) {
+  const rows = Object.entries(coins);
+  const { valid, invalidKeys } = quarantineInvalidFallbackRows("defillama-contract", rows, DLPriceEntrySchema);
+  for (const [id, info] of valid) {
     if (
       info.price > 0 &&
       typeof info.timestamp === "number" &&
@@ -84,7 +92,7 @@ function parseDefiLlamaPriceMap(json: unknown): Map<string, DefiLlamaContractQuo
       });
     }
   }
-  return prices;
+  return { prices, rowCount: rows.length, invalidCount: invalidKeys.length };
 }
 
 async function fetchPriceMapByIds(
@@ -93,12 +101,17 @@ async function fetchPriceMapByIds(
   budget: { remaining: number },
   signal?: AbortSignal,
   db?: D1Database,
-): Promise<{ prices: Map<string, DefiLlamaContractQuote>; failed: boolean }> {
+): Promise<{
+  prices: Map<string, DefiLlamaContractQuote>;
+  failed: boolean;
+  diagnostics: PricingProviderAttemptDiagnostic[];
+}> {
   const prices = new Map<string, DefiLlamaContractQuote>();
-  if (ids.length === 0) return { prices, failed: false };
+  const diagnostics: PricingProviderAttemptDiagnostic[] = [];
+  if (ids.length === 0) return { prices, failed: false, diagnostics };
 
   if (db && !(await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_COINS))) {
-    return { prices, failed: false };
+    return { prices, failed: false, diagnostics };
   }
 
   // DefiLlama IDs are one URL path segment. Preserve the documented chain:id
@@ -147,18 +160,41 @@ async function fetchPriceMapByIds(
       failed = true;
       break;
     }
+    let parsed: ReturnType<typeof parseDefiLlamaPriceMap>;
     try {
-      for (const [id, quote] of parseDefiLlamaPriceMap(result.body)) prices.set(id, quote);
-      providerOutcome = true;
+      parsed = parseDefiLlamaPriceMap(result.body);
     } catch {
       logWorkerEventArgs("handler", "error", `[enrich-prices] Failed to parse JSON from ${source}: ${result.response.status}`);
       providerOutcome = false;
       failed = true;
       break;
     }
+    for (const [id, quote] of parsed.prices) prices.set(id, quote);
+    // Malformed rows are quarantined individually; only a nonempty batch with
+    // no valid row counts as a provider failure, and later batches still run.
+    const allInvalid = parsed.invalidCount > 0 && parsed.invalidCount === parsed.rowCount;
+    if (parsed.invalidCount > 0) {
+      diagnostics.push({
+        source: "defillama-contract",
+        stage: "fallback",
+        endpoint: endpointLabel(prefix),
+        status: result.response.status,
+        ok: true,
+        success: !allInvalid,
+        responseRowCount: parsed.rowCount,
+        rejectionReasonCounts: { "invalid-shape": parsed.invalidCount },
+        ...(allInvalid ? { errorClass: "invalid-shape" } : {}),
+      });
+    }
+    if (allInvalid) {
+      failed = true;
+      providerOutcome ??= false;
+    } else {
+      providerOutcome = true;
+    }
   }
   if (db && providerOutcome != null) await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, providerOutcome);
-  return { prices, failed };
+  return { prices, failed, diagnostics };
 }
 
 function isDefiLlamaContractQuoteUsable(
@@ -286,6 +322,7 @@ export async function runDlContractPasses(
   let pass1Count = 0;
   let pass1bCount = 0;
   const failures: string[] = [];
+  const diagnostics: PricingProviderAttemptDiagnostic[] = [];
   const budget = { remaining: DL_CONTRACT_MAX_BATCHES };
 
   try {
@@ -308,6 +345,7 @@ export async function runDlContractPasses(
         db,
       );
       pass1Count += applyDefiLlamaContractPrices(assets, withAddress, pass1Prices.prices, fxRates);
+      diagnostics.push(...pass1Prices.diagnostics);
       if (pass1Prices.failed) {
         failures.push("dl-contracts");
       }
@@ -335,6 +373,7 @@ export async function runDlContractPasses(
           db,
         );
         pass1bCount += applyDefiLlamaContractPrices(assets, altLookups, pass1bPrices.prices, fxRates);
+        diagnostics.push(...pass1bPrices.diagnostics);
         if (pass1bPrices.failed && !failures.includes("dl-contracts")) {
           failures.push("dl-contracts");
         }
@@ -351,5 +390,6 @@ export async function runDlContractPasses(
     failures,
     pass1: pass1Count,
     pass1b: pass1bCount,
+    ...(diagnostics.length > 0 ? { diagnostics } : {}),
   };
 }

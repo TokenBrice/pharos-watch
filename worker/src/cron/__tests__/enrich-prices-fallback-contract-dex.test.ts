@@ -663,6 +663,60 @@ describe("bounded DefiLlama contract batches", () => {
     expect(assets[assets.length - 1].price).toBeNull();
   });
 
+  it("quarantines a malformed quote without losing siblings or later batches", async () => {
+    const assets = cohort(500);
+    let calls = 0;
+    installFetch((url) => {
+      calls += 1;
+      if (calls > 1) return quoteResponse(url);
+      const ids = url.split("/prices/current/")[1].split(",").map(decodeURIComponent);
+      return Response.json({ coins: Object.fromEntries(ids.map((id, index) => [id,
+        index === 0 ? { price: null, symbol: "USD" } : dlQuote(1, "USD")])) });
+    });
+    const result = await runDlContractPasses(assets, undefined);
+    expect(calls).toBeGreaterThan(1);
+    expect(result.failures).toEqual([]);
+    expect(result.resolved).toBe(assets.length - 1);
+    expect(assets[0].price).toBeNull();
+    expect(assets[1].price).toBe(1);
+    expect(assets[assets.length - 1].price).toBe(1);
+    expect(result.diagnostics).toEqual([expect.objectContaining({
+      source: "defillama-contract", success: true, rejectionReasonCounts: { "invalid-shape": 1 },
+    })]);
+  });
+
+  it("fails an all-invalid batch but still merges a later healthy batch", async () => {
+    const allowed = vi.spyOn(circuitBreaker, "shouldAttemptFetch").mockResolvedValue(true);
+    const outcome = vi.spyOn(circuitBreaker, "recordOutcome").mockResolvedValue({} as circuitBreaker.CircuitOutcomeRecord);
+    try {
+      const assets = cohort(500);
+      let calls = 0;
+      installFetch((url) => {
+        calls += 1;
+        if (calls > 1) return quoteResponse(url);
+        const ids = url.split("/prices/current/")[1].split(",").map(decodeURIComponent);
+        return Response.json({ coins: Object.fromEntries(ids.map((id) => [id, { price: "1" }])) });
+      });
+      const result = await runDlContractPasses(assets, undefined, undefined, makeEnrichPricesDb([]));
+      expect(result.failures).toEqual(["dl-contracts"]);
+      expect(assets[0].price).toBeNull();
+      expect(assets[assets.length - 1].price).toBe(1);
+      expect(result.diagnostics?.[0]).toMatchObject({ success: false, errorClass: "invalid-shape" });
+      expect(outcome).toHaveBeenCalledTimes(1);
+      expect(outcome.mock.calls[0][2]).toBe(true);
+    } finally {
+      allowed.mockRestore();
+      outcome.mockRestore();
+    }
+  });
+
+  it("keeps a valid empty batch healthy and without diagnostics", async () => {
+    installFetch(() => Response.json({ coins: {} }));
+    const result = await runDlContractPasses(cohort(1), undefined);
+    expect(result).toMatchObject({ resolved: 0, failures: [] });
+    expect(result.diagnostics).toBeUndefined();
+  });
+
   it("does not count local budget exhaustion as a provider failure", async () => {
     const allowed = vi.spyOn(circuitBreaker, "shouldAttemptFetch").mockResolvedValue(true);
     const outcome = vi.spyOn(circuitBreaker, "recordOutcome");

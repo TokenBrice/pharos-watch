@@ -245,6 +245,46 @@ describe("enrichMissingPrices", () => {
     });
   });
 
+  it("records breaker success when a malformed DL /coins row has a healthy sibling", async () => {
+    const db = makeEnrichPricesDb([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.DL_COINS}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+    const assets: PeggedAsset[] = [
+      makePeggedAsset({ price: 0, address: "0xdac17f958d2ee523a2206206994597c13d831ec7" }),
+    ];
+
+    mockFetch([
+      {
+        match: "coins.llama.fi/prices",
+        body: {
+          coins: {
+            "ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7": dlQuote(1, "USDT"),
+            "ethereum:0xbad": { price: "1.0" },
+          },
+        },
+      },
+    ]);
+
+    const result = await runDlContractPasses(assets, undefined, undefined, db);
+
+    expect(result.resolved).toBe(1);
+    expect(result.failures).toEqual([]);
+    expect(result.diagnostics?.[0]?.rejectionReasonCounts).toEqual({ "invalid-shape": 1 });
+    const circuitWrite = db
+      .getHistory()
+      .find(
+        (entry) =>
+          entry.sql.includes("INSERT INTO cache") &&
+          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DL_COINS}`,
+      );
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({ consecutiveFailures: 0 });
+  });
+
   it("skips DL /coins fetch when the defillama-coins breaker is open", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeEnrichPricesDb([

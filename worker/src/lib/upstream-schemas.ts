@@ -7,9 +7,10 @@ import { z } from "zod";
  *
  * NOTE: The DefiLlama contract-pass in
  * `worker/src/cron/sync-stablecoins/enrich-prices-defillama-pass.ts` uses a
- * stricter variant (`DLPriceResponseSchema` in `worker/src/lib/schemas.ts`)
- * that requires `price` and adds `symbol`/`confidence` fields. That schema is
- * deliberately divergent and remains its own export.
+ * stricter per-entry variant (`DLPriceEntrySchema` in `worker/src/lib/schemas.ts`,
+ * validated row by row under the `DLPriceResponseSchema` envelope) that
+ * requires `price` and adds `symbol`/`confidence` fields. Those schemas are
+ * deliberately divergent and remain their own exports.
  */
 
 /** CoinGecko `/simple/price?ids=...&vs_currencies=usd&include_last_updated_at=true` response. */

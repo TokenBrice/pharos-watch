@@ -35,6 +35,7 @@ import {
   type PriceSourceProvider,
   getRegistryLivePriceDiagnosticTarget,
   isValidatedLivePriceNoQuote,
+  projectPriceDerivation,
 } from "./helpers";
 import { idleCdoTrancheProvider } from "./idle-cdo-tranche";
 import { inheritedTrackedPriceProvider } from "./inherited-tracked";
@@ -50,7 +51,8 @@ export type {
   HistoricalPriceResolution,
   HistoricalSupplySnapshot,
 } from "./helpers";
-export { resolveVaultNavSupplyPrice } from "./erc4626-nav";
+export { getFreshSingleSourceNavParentId, resolveVaultNavSupplyPrice } from "./erc4626-nav";
+export { projectPriceDerivation } from "./helpers";
 
 const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   capCusdProvider,
@@ -270,6 +272,9 @@ function applyOverrideToLiveContext(context: LivePriceContext, assetId: string, 
   asset.priceSyncedAt = nowSec;
   asset.agreeSources = [override.source];
   asset.consensusSources = [override.source];
+  const priceDerivation = projectPriceDerivation(override.metadata);
+  if (priceDerivation) asset.priceDerivation = priceDerivation;
+  else delete asset.priceDerivation;
 }
 
 function readLastUntrustedParent(context: LivePriceContext): { parentId: string; reason: string } | null {
