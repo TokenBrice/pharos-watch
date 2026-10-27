@@ -388,7 +388,7 @@ Counts and gross volumes are observed subtotals (`totalsSemantics: "observed-sub
 
 ## Chain Supply Availability
 
-`GET /api/chains` readers must accept `null` for `globalTotalUsd`, `chainAttributedTotalUsd`, `unattributedTotalUsd`, `attributionDiscrepancyUsd`, `dominanceGeometryTotalUsd` and each chain's `dominanceShare`. Null means unavailable, not observed zero; derived ratios and conservation claims require their observed totals. Published chain rows and optional `chainDetail` retain numeric observed totals. The shared PharosVille chains contract uses the same schema: external consumers must deploy null guards before a producer introduces null values.
+`GET /api/chains` readers must accept `null` for `globalTotalUsd`, `chainAttributedTotalUsd`, `unattributedTotalUsd`, `attributionDiscrepancyUsd`, `dominanceGeometryTotalUsd` and each chain's `dominanceShare`. Null means unavailable, not observed zero: global supply is null only when neither aggregate nor chain supply was observed, attribution is null without an observed chain current, residual/discrepancy/geometry are null unless both totals exist, and shares are null unless global supply is positive. Derived ratios and conservation claims require their observed totals. Published chain rows and optional `chainDetail` retain numeric observed totals. The shared PharosVille chains contract uses the same schema: external consumers must deploy null guards before a producer introduces null values.
 
 ## Supply Provenance
 

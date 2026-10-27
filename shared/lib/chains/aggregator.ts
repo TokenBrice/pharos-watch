@@ -221,7 +221,10 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
     hasChain30dHistory ||= a.has30dHistory;
   }
   const useAggregateSupply = hasAggregateSupply;
-  const globalTotalUsd = useAggregateSupply ? aggregateTotalUsd : rawChainAttributedTotalUsd;
+  // Accumulators exist only for admitted chain currents (observed zero included), so presence is tracked before
+  // the positive-row filter below. Neither source family observed means the global total is unavailable (ADR-28).
+  const hasChainSupply = accumulators.size > 0;
+  const globalTotalUsd = useAggregateSupply ? aggregateTotalUsd : hasChainSupply ? rawChainAttributedTotalUsd : null;
   const globalPrevDayUsd = useAggregateSupply ? aggregatePrevDayUsd : chainPrevDayUsd;
   const globalPrevWeekUsd = useAggregateSupply ? aggregatePrevWeekUsd : chainPrevWeekUsd;
   const globalPrevMonthUsd = useAggregateSupply ? aggregatePrevMonthUsd : chainPrevMonthUsd;
@@ -317,7 +320,7 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
       topStablecoins,
       // Global-denominator share, never rescaled: over-attributed chain rows surface in
       // `attributionDiscrepancyUsd` instead of silently shrinking every chain's share.
-      dominanceShare: globalTotalUsd > 0 ? acc.totalUsd / globalTotalUsd : 0,
+      dominanceShare: globalTotalUsd != null && globalTotalUsd > 0 ? acc.totalUsd / globalTotalUsd : null,
       healthScore,
       healthBand,
       healthFactors,
@@ -331,8 +334,11 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
 
   // Raw attribution over exactly the published row universe; the canonical global total stays its own
   // authority, and the signed discrepancy discloses over-attribution instead of capping it away.
-  const chainAttributedTotalUsd = chains.reduce((sum, chain) => sum + chain.totalUsd, 0);
-  const attributionDiscrepancyUsd = chainAttributedTotalUsd - globalTotalUsd;
+  // Accounting fields exist only when both totals were observed; a missing side is never a numeric zero.
+  const chainAttributedTotalUsd = hasChainSupply ? chains.reduce((sum, chain) => sum + chain.totalUsd, 0) : null;
+  const attributionDiscrepancyUsd = chainAttributedTotalUsd != null && globalTotalUsd != null
+    ? chainAttributedTotalUsd - globalTotalUsd
+    : null;
   let chainUnavailableObservationCount = 0;
   for (const count of unavailableObservationsByChain.values()) chainUnavailableObservationCount += count;
 
@@ -367,10 +373,12 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
     chains,
     globalTotalUsd,
     chainAttributedTotalUsd,
-    unattributedTotalUsd: Math.max(0, -attributionDiscrepancyUsd),
+    unattributedTotalUsd: attributionDiscrepancyUsd == null ? null : Math.max(0, -attributionDiscrepancyUsd),
     attributionDiscrepancyUsd,
     // Bar geometry only: every segment (chains + positive residual) fits this denominator unclamped.
-    dominanceGeometryTotalUsd: Math.max(globalTotalUsd, chainAttributedTotalUsd),
+    dominanceGeometryTotalUsd: globalTotalUsd != null && chainAttributedTotalUsd != null
+      ? Math.max(globalTotalUsd, chainAttributedTotalUsd)
+      : null,
     supplyCoverage: {
       aggregateUnavailableAssetCount,
       chainUnavailableObservationCount,
