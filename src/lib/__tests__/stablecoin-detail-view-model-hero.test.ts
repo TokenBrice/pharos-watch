@@ -539,6 +539,13 @@ describe("hero trend direction follows the printed percentage", () => {
     expect(trend(100.2, 100)).toBe(quiet ? "text-muted-foreground" : DIRECTION_TONE_CLASSES.up);
   });
 
+  it("withholds the 24h change when current supply is partial", () => {
+    const base = buildDetailHero({ coin }).coinData;
+    const hero = buildDetailHero({ coin, mcap: 99, prevDay: 100, coinData: { ...base, supplyExcludedChains: ["HyperEVM"] } });
+    expect(hero.market.safePrevDay).toBeNull();
+    expect(hero.market.prevDayTrendClass).toBe("text-muted-foreground");
+  });
+
   it("stays muted without a previous value", () => {
     expect(buildDetailHero({ coin, mcap: 100, prevDay: null }).market.prevDayTrendClass).toBe("text-muted-foreground");
   });
