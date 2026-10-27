@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { projectV9Table, projectV9Detail } from "@shared/lib/report-cards-v9-projections";
-import { ReportCardsV9DetailResponseSchema, ReportCardsV9TableResponseSchema } from "@shared/types/report-cards-v9-projections";
+import { projectV9Table, projectV9TableCard, projectV9Detail } from "@shared/lib/report-cards-v9-projections";
+import { ReportCardsV9DetailResponseSchema, ReportCardsV9TableReaderResponseSchema, ReportCardsV9TableResponseSchema } from "@shared/types/report-cards-v9-projections";
 import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9";
-import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import { makeReportCardsV9PartialCard, makeReportCardsV9Pillars, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import { resolveSchemaLike } from "@shared/lib/schema-like";
 import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import { buildV9SafetyTableRows, buildV9PortfolioProjection } from "../safety-score-v9-consumers";
 import { buildV9RadarDataset } from "@/components/radar-chart-v9";
@@ -79,6 +80,60 @@ describe("compact score consumer equivalence", () => {
     detail.neighborhood[0]!.pillars = table.cards[0]!.pillars;
     expect(ReportCardsV9DetailResponseSchema.parse(detail).neighborhood[0]!.pillars![key]).toEqual(expected);
     expect(projectDependencyGraph(full).nodes[0]!.pillars![key]).toEqual(expected);
+  });
+  // #1674 release A: browsers admit the scorer's priced unknown on an A/B-excluded
+  // pillar before release B lets the producer emit it.
+  function pricedExcludedCard(cause: "A" | "B") {
+    const pillars = makeReportCardsV9Pillars({ backing: 50, exit: null, control: 50 });
+    Object.assign(pillars.exit, { aggregationDisposition: "excluded-a-b", supportedComponentKeys: [], causeGapRefs: [0], limitedEvidenceCauses: [] });
+    const card = makeReportCardsV9PartialCard("exit", cause, { id: "c-partial", pillars, score: 50, qualityScore: 50, pegAdjustedScore: 50 });
+    card.scoreTrace.aggregation!.effectiveScoringWeights = { backing: 0.4, exit: 0.35, control: 0.25 };
+    card.scoreTrace.aggregation!.pricedUnknownPillars = [{ pillar: "exit", cause: "U", score: 50, causeGapRefs: [] }];
+    card.breakdowns!.backing.aggregationWeight = 0.4;
+    card.breakdowns!.control.aggregationWeight = 0.25;
+    return card;
+  }
+  function tablesFor(cause: "A" | "B") {
+    const old = projectV9Table(cohort());
+    const full = cohort();
+    full.cards[2] = pricedExcludedCard(cause);
+    expect(ReportCardsV9CurrentResponseSchema.safeParse(full).success).toBe(true);
+    return { old, full, next: { ...old, cards: full.cards.map(projectV9TableCard) } };
+  }
+  it.each(["A", "B"] as const)("browser readers admit old and cause-%s priced excluded tables while the producer still rejects them", async (cause) => {
+    const { old, full, next } = tablesFor(cause);
+    expect(next.cards[2]!.pillars.exit).toEqual({ score: null, aggregationDisposition: "excluded-a-b", pricedUnknown: { cause: "U", score: 50 } });
+    expect(() => projectV9Table(full)).toThrow();
+    expect(ReportCardsV9TableResponseSchema.safeParse(next).success).toBe(false);
+    const descriptorSchema = await resolveSchemaLike(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Table.schema);
+    const identity = full.safetyScoreIdentity;
+    for (const table of [old, next]) {
+      expect(descriptorSchema!.safeParse(table).success).toBe(true);
+      expect(buildV9SafetyTableRows(table, identity).status).toBe("available");
+      expect(buildV9PortfolioProjection(table, identity, [{ coinId: "c-partial", amount: 1 }]).status).toBe("available");
+    }
+    const rows = buildV9SafetyTableRows(next, identity);
+    expect(rows.status === "available" && rows.value.find(row => row.id === "c-partial")!.pillars.exit.pricedUnknown).toEqual({ cause: "U", score: 50 });
+  });
+  it("browser readers still reject priced unknowns on scored, included, defaulted or unrated pillars", async () => {
+    const { next } = tablesFor("B");
+    const descriptorSchema = await resolveSchemaLike(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Table.schema);
+    const pricedUnknown = { cause: "U" as const, score: 50 };
+    const variants = [
+      { index: 0, pillar: { score: 90, aggregationDisposition: "included" as const, pricedUnknown } },
+      { index: 0, pillar: { score: null, aggregationDisposition: "included" as const, pricedUnknown } },
+      { index: 0, pillar: { score: null, pricedUnknown } },
+      { index: 2, pillar: { score: 50, aggregationDisposition: "excluded-a-b" as const, pricedUnknown } },
+      { index: 1, pillar: { score: null, aggregationDisposition: "excluded-a-b" as const, pricedUnknown } },
+      { index: 3, pillar: { score: null, aggregationDisposition: "excluded-a-b" as const, pricedUnknown } },
+    ];
+    for (const { index, pillar } of variants) {
+      const table = { ...next, cards: next.cards.map((card, i) => i === index ? { ...card, pillars: { ...card.pillars, exit: pillar } } : card) };
+      expect(ReportCardsV9TableReaderResponseSchema.safeParse(table).error?.issues.map(issue => issue.path))
+        .toContainEqual(["cards", index, "pillars", "exit", "pricedUnknown"]);
+      expect(descriptorSchema!.safeParse(table).success).toBe(false);
+      expect(buildV9SafetyTableRows(table, next.safetyScoreIdentity)).toEqual({ status: "unavailable", reason: "invalid-v9-response" });
+    }
   });
   it("preserves table cells, NR/partial/gap states, radars, aggregates, sorting and full-set counts", () => {
     const full = cohort();
