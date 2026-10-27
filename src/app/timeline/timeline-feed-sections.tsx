@@ -8,6 +8,7 @@ import type { DepegEvent } from "@shared/types";
 import { AlertTriangle, Radar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DataHealthBanner } from "@/components/data-health-banner";
 import { SEVERITY_GLYPH } from "@/components/tape/event-card";
 import { ClassDigestRow } from "@/components/tape/class-digest-row";
 import { timeAgo } from "@shared/lib/format";
@@ -24,7 +25,9 @@ import {
   formatDayLabel,
   openIncidentPrefix,
   quietDayEventTokens,
+  retainedIncidentPrefix,
 } from "./timeline-feed-helpers";
+import type { TimelineActiveStatus } from "./use-timeline-feed-data";
 
 export function EventSkeleton() {
   return (
@@ -173,7 +176,7 @@ export function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, s
 
 interface OpenIncidentsSectionProps {
   incidents: readonly DepegEvent[] | null;
-  status: "available" | "loading" | "incomplete" | "unavailable";
+  status: TimelineActiveStatus;
   health: DataHealthInfo;
   onRetry: () => void;
   logos: Record<string, string>;
@@ -181,6 +184,9 @@ interface OpenIncidentsSectionProps {
 }
 
 export function OpenIncidentsSection({ incidents, status, health, onRetry, logos, nowMs }: OpenIncidentsSectionProps) {
+  const retained = status === "retained";
+  // A retained empty census never asserts current zero; only a material age warns.
+  if (retained && incidents?.length === 0) return <DataHealthBanner entries={[health]} />;
   if (status === "available" && incidents?.length === 0) return null;
   // An unfinished census is not a reader notice; only a failed read is.
   if (status === "incomplete" && !incidents?.length) return null;
@@ -195,8 +201,10 @@ export function OpenIncidentsSection({ incidents, status, health, onRetry, logos
         className="flex min-w-0 flex-wrap items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-amber-700 dark:text-amber-400"
       >
         <AlertTriangle className="h-3 w-3" aria-hidden="true" />
-        {incidents ? `Currently open · ${incidents.length} ${incidents.length === 1 ? "incident" : "incidents"}` : "Active incident status"}
+        {retained ? "Open at last observation"
+          : incidents ? `Currently open · ${incidents.length} ${incidents.length === 1 ? "incident" : "incidents"}` : "Active incident status"}
       </h2>
+      {retained ? <DataHealthBanner entries={[health]} /> : null}
       {!incidents ? (
         <div role="status" className="border-y border-amber-500/30 px-3 py-2 font-mono text-xs text-muted-foreground">
           {status === "loading" ? "Loading current activity…"
@@ -211,7 +219,7 @@ export function OpenIncidentsSection({ incidents, status, health, onRetry, logos
       ) : (
         <div className="border-y border-amber-500/30">
           <p className="px-3 py-1 font-mono text-[11px] text-muted-foreground">
-            All active incidents · independent of feed filters
+            {retained ? "All incidents open at last observation" : "All active incidents"} · independent of feed filters
             {health.dataUpdatedAt > 0 ? ` · Updated ${timeAgo(Math.floor(health.dataUpdatedAt / 1000), nowMs / 1000)}` : ""}
           </p>
           {incidents.map((event) => (
@@ -219,12 +227,16 @@ export function OpenIncidentsSection({ incidents, status, health, onRetry, logos
               key={event.id}
               href={`${buildStablecoinUrl(event.stablecoinId)}#peg-history`}
               data-depeg-event-id={event.id}
-              aria-label={`${event.symbol} active depeg incident ${event.id}`}
+              aria-label={retained
+                ? `${event.symbol} depeg incident ${event.id}, open at last observation`
+                : `${event.symbol} active depeg incident ${event.id}`}
               className="pharos-focus-ring flex flex-wrap items-center gap-2 border-b border-border/60 px-3 py-2 font-mono text-xs hover:bg-muted/30"
             >
               <StablecoinLogo src={getLogoSrc(logos, event.stablecoinId)} name={event.symbol} size={22} />
               <span className="font-semibold">{event.symbol}</span>
-              <span className="text-amber-700 dark:text-amber-400">{openIncidentPrefix(event, nowMs)}</span>
+              <span className="text-amber-700 dark:text-amber-400">
+                {retained ? retainedIncidentPrefix(event, health.dataUpdatedAt) : openIncidentPrefix(event, nowMs)}
+              </span>
               <time dateTime={new Date(event.startedAt * 1000).toISOString()} className="text-muted-foreground">
                 Started {new Date(event.startedAt * 1000).toISOString().replace("T", " ").slice(0, 16)} UTC
               </time>

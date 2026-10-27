@@ -233,7 +233,7 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
       <SummaryBand
         loadedCount={feed.visibleEvents.length}
         totalCount={total}
-        openCount={feed.openIncidents?.length ?? null}
+        openCount={feed.activeStatus === "available" ? feed.openIncidents?.length ?? null : null}
         windowLabel={feedController.windowLabel}
         severityLabel={feedController.severityLabel}
         dataUpdatedAt={dataUpdatedAt}

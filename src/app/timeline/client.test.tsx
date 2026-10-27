@@ -38,6 +38,8 @@ interface ActiveEventsResult {
   error: Error | null;
   isFullyLoaded: boolean;
   isAutoLoadCapped: boolean;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
   meta: ApiMeta | null;
   dataUpdatedAt: number;
   refetch: () => Promise<unknown>;
@@ -361,8 +363,9 @@ describe("TimelineClient", () => {
   });
 
   it.each([
-    { label: "failed refresh", error: new Error("active read failed"), isFullyLoaded: true, isLoading: false, isAutoLoadCapped: false },
-    { label: "incomplete traversal", error: null, isFullyLoaded: false, isLoading: false, isAutoLoadCapped: false },
+    { label: "failed first read", error: new Error("active read failed"), isFullyLoaded: false, isLoading: false, isAutoLoadCapped: false, data: undefined },
+    { label: "failed partial refresh", error: new Error("active read failed"), isFullyLoaded: false, isLoading: false, isAutoLoadCapped: false, hasNextPage: true },
+    { label: "incomplete traversal", error: null, isFullyLoaded: false, isLoading: false, isAutoLoadCapped: false, isFetchingNextPage: true },
     { label: "capped traversal", error: null, isFullyLoaded: false, isLoading: false, isAutoLoadCapped: true },
     { label: "loading", error: null, isFullyLoaded: false, isLoading: true, isAutoLoadCapped: false },
   ])("withholds OPEN claims for $label even with retained source records", ({ label, ...overrides }) => {
@@ -370,6 +373,7 @@ describe("TimelineClient", () => {
     mockActiveEvents([activeEvent()], overrides);
     render(<TimelineClient />);
     expect(screen.queryByRole("region", { name: /Currently open/ })).toBeNull();
+    expect(screen.queryByRole("region", { name: /Open at last observation/ })).toBeNull();
     expect(screen.queryByText(/1 open incident/)).toBeNull();
     // An unfinished census is withheld quietly; only loading and failed reads explain themselves.
     if (label.includes("traversal")) {
@@ -391,7 +395,87 @@ describe("TimelineClient", () => {
     expect(screen.getByRole("region", { name: /Currently open/ })).toBeTruthy();
     act(() => { vi.advanceTimersByTime(60_000); });
     expect(screen.queryByRole("region", { name: /Currently open/ })).toBeNull();
+    expect(screen.getByRole("region", { name: "Open at last observation" })).toBeTruthy();
+  });
+
+  it.each([
+    { label: "degraded", meta: { updatedAt: 0, ageSeconds: 0, status: "degraded" } as ApiMeta, error: null, isFullyLoaded: true },
+    { label: "error", meta: null, error: new Error("active refresh failed"), isFullyLoaded: false },
+    { label: "stale", meta: { updatedAt: 0, ageSeconds: 0, status: "stale" } as ApiMeta, error: null, isFullyLoaded: true },
+  ])("retains a complete $label cohort as a dated observation", ({ label, meta, ...overrides }) => {
+    vi.useFakeTimers();
+    const observedAt = Date.UTC(2026, 9, 26);
+    vi.setSystemTime(observedAt);
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })]);
+    const startedAt = observedAt / 1000 - 3600;
+    mockActiveEvents([activeEvent({ id: 123, symbol: "USDC", startedAt })], {
+      ...overrides,
+      dataUpdatedAt: observedAt,
+      meta: meta ? { ...meta, updatedAt: observedAt / 1000 } : null,
+    });
+    render(<TimelineClient />);
+    const region = screen.getByRole("region", { name: "Open at last observation" });
+    expect(region.textContent).toContain("All incidents open at last observation · independent of feed filters");
+    expect(region.textContent).toContain("Observed open for 1h as of 2026-10-26 00:00 UTC");
+    expect(region.textContent).not.toMatch(/OPEN|Currently open|active/);
+    expect(within(region).getByRole("link", { name: "USDC depeg incident 123, open at last observation" })).toBeTruthy();
+    expect(region.querySelector("time")?.dateTime).toBe(new Date(startedAt * 1000).toISOString());
+    expect(screen.queryByText(/open incident/)).toBeNull();
+    // Only a material age is a public warning; degraded and failed refreshes stay quiet.
+    expect(screen.queryByText("Showing an older snapshot") != null).toBe(label === "stale");
+  });
+
+  it("freezes a retained duration at the producer observation while source age advances", () => {
+    vi.useFakeTimers();
+    const observedAt = Date.UTC(2026, 9, 26);
+    vi.setSystemTime(observedAt);
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })]);
+    mockActiveEvents([activeEvent({ startedAt: observedAt / 1000 - 3600 })], {
+      error: new Error("active refresh failed"), isFullyLoaded: false, dataUpdatedAt: observedAt,
+    });
+    render(<TimelineClient />);
+    const region = () => screen.getByRole("region", { name: "Open at last observation" });
+    expect(region().textContent).toContain("Updated just now");
+    act(() => { vi.advanceTimersByTime(86_400_000); });
+    expect(region().textContent).toContain("Observed open for 1h as of 2026-10-26 00:00 UTC");
+    expect(region().textContent).toContain("Updated 1d ago");
+    expect(within(region()).getByText("Showing an older snapshot")).toBeTruthy();
+  });
+
+  it("keeps a retained empty cohort quiet without asserting current zero", () => {
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })]);
+    mockActiveEvents([], { error: new Error("active refresh failed"), isFullyLoaded: false });
+    render(<TimelineClient />);
+    expect(screen.queryByRole("region", { name: /Currently open|Open at last observation|Active incident status/ })).toBeNull();
+    expect(screen.queryByText(/open incident/)).toBeNull();
+    expect(screen.queryByText("Showing an older snapshot")).toBeNull();
+  });
+
+  it.each([
+    { label: "missing census", data: undefined, error: new Error("active read failed"), isFullyLoaded: false },
+    { label: "unknown clock", meta: { updatedAt: null, ageSeconds: null, status: "unknown" } as ApiMeta, error: new Error("active refresh failed"), isFullyLoaded: false },
+    { label: "unadmitted receipt", dataUpdatedAt: 0, error: new Error("active refresh failed"), isFullyLoaded: false },
+    {
+      label: "partial census", error: new Error("active refresh failed"), isFullyLoaded: false,
+      data: { events: [activeEvent()], total: 2, totalExact: true, nextCursor: null, pending: [] as [] },
+    },
+  ])("fails closed for a $label instead of retaining it", ({ label: _label, ...overrides }) => {
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })]);
+    mockActiveEvents([activeEvent()], overrides);
+    render(<TimelineClient />);
+    expect(screen.queryByRole("region", { name: /Currently open|Open at last observation/ })).toBeNull();
     expect(screen.getByRole("region", { name: "Active incident status" }).textContent).toMatch(/unavailable/);
+  });
+
+  it("recovers a retained cohort to current activity on a fresh complete read", () => {
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })]);
+    mockActiveEvents([activeEvent()], { error: new Error("active refresh failed"), isFullyLoaded: false });
+    const { rerender } = render(<TimelineClient />);
+    expect(screen.getByRole("region", { name: "Open at last observation" })).toBeTruthy();
+    mockActiveEvents([activeEvent()]);
+    rerender(<TimelineClient />);
+    expect(screen.getByRole("region", { name: /Currently open · 1 incident/ }).textContent).toContain("OPEN");
+    expect(screen.getByText("1 open incident")).toBeTruthy();
   });
 
   it("renders the summary band with event count and window", () => {

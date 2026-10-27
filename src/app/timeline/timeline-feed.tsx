@@ -16,6 +16,7 @@ import type { ActiveFilterChip, TimelineFeedController } from "./timeline-contro
 import { eventDomId } from "./timeline-feed-helpers";
 import { DayDigestSection, EmptyState, EventSkeleton, OpenIncidentsSection } from "./timeline-feed-sections";
 import { getLogoSrc } from "@/lib/logos";
+import type { TimelineActiveStatus } from "./use-timeline-feed-data";
 
 interface TimelineFeedProps {
   filters: TapeFilterState;
@@ -25,7 +26,7 @@ interface TimelineFeedProps {
   rawEvents: readonly TapeEvent[];
   visibleEvents: readonly TapeEvent[];
   openIncidents: readonly DepegEvent[] | null;
-  activeStatus: "available" | "loading" | "incomplete" | "unavailable";
+  activeStatus: TimelineActiveStatus;
   activeHealth: DataHealthInfo;
   refetchActive: () => void;
   digestedDays: readonly DigestedDay[];
