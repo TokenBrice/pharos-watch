@@ -58,6 +58,7 @@ export function FlowWeekReceipt({ coins, weeklyHourly, scopeLabel, isLoading }: 
   }
   const model = buildFlowPressureReceiptModel({ coins, weeklyHourly, scopeLabel });
   const { topMint, topBurn } = model;
+  const absentLeader = model.leadersUnavailable ? "Unavailable" : "None";
 
   return (
     <div className="space-y-4">
@@ -79,13 +80,13 @@ export function FlowWeekReceipt({ coins, weeklyHourly, scopeLabel, isLoading }: 
         <div>
           <dt className="text-xs text-muted-foreground">Top net minter, 7d</dt>
           <dd className={cn("pharos-numeric font-semibold", topMint ? FLOW_RECEIPT_TONE_CLASSES.mint : "text-muted-foreground")}>
-            {topMint ? `${topMint.symbol} ${formatSignedCurrency(topMint.valueUsd)}` : "None"}
+            {topMint ? `${topMint.symbol} ${formatSignedCurrency(topMint.valueUsd)}` : absentLeader}
           </dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">Top net burner, 7d</dt>
           <dd className={cn("pharos-numeric font-semibold", topBurn ? FLOW_RECEIPT_TONE_CLASSES.burn : "text-muted-foreground")}>
-            {topBurn ? `${topBurn.symbol} ${formatSignedCurrency(topBurn.valueUsd)}` : "None"}
+            {topBurn ? `${topBurn.symbol} ${formatSignedCurrency(topBurn.valueUsd)}` : absentLeader}
           </dd>
         </div>
         <div>

@@ -159,6 +159,7 @@ describe("buildFlowPressureReceiptModel", () => {
     expect(model.rows.find((row) => row.id === "net-7d")?.valueUsd).toBeNull();
     expect(model.topMint).toBeNull();
     expect(model.topBurn).toBeNull();
+    expect(model.leadersUnavailable).toBe(true);
     expect(model.rows.find((row) => row.id === "net-7d")?.bound).toBeNull();
   });
   it.each([0, 100])("keeps scan completeness independent for fully valued gross subtotals (%i)", (volume) => {

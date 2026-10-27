@@ -71,7 +71,7 @@ const _compareFlowRows = createTableComparator<FlowTableSortKey, MintBurnCoinFlo
   net7d: (r) => resolveCoinNetFlow(r, "7d").valueUsd,
   net30d: (r) => resolveCoinNetFlow(r, "30d").valueUsd,
   net90d: (r) => resolveCoinNetFlow(r, "90d").valueUsd,
-  largest: (r) => r.largestEvent24h?.amountUsd ?? 0,
+  largest: (r) => r.largestEvent24h?.amountUsd ?? null,
   pressure: (r) => getPressureScore(r),
 });
 
