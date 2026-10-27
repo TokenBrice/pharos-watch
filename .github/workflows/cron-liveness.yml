@@ -2,7 +2,7 @@ name: Cron Liveness Monitor
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "43 * * * *"
   workflow_dispatch:
 
 permissions:

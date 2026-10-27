@@ -52,6 +52,16 @@ describe("dependency scenario evaluator source resolver", () => {
     expect(resolveIn(cwd, ahead.digest).commitSha).toBe(tip);
   });
 
+  it("resolves an older v1 manifest across a v2 canonical-JSON domain change", () => {
+    const { cwd, commit } = repo();
+    const v1 = manifestText("a".repeat(64));
+    const acceptedV1 = commit("v1 evaluator", { [DEPENDENCY_SCENARIO_EVALUATOR_MANIFEST_PATH]: v1.text });
+    const v2 = manifestText("b".repeat(64), "safety-score-v9.evaluation-build.v2");
+    const tip = commit("v2 domain", { [DEPENDENCY_SCENARIO_EVALUATOR_MANIFEST_PATH]: v2.text });
+    expect(resolveIn(cwd, v1.digest)).toMatchObject({ commitSha: acceptedV1, manifestDomain: "safety-score-v9.evaluation-build.v1" });
+    expect(resolveIn(cwd, v2.digest)).toMatchObject({ commitSha: tip, manifestDomain: "safety-score-v9.evaluation-build.v2" });
+  });
+
   it("ignores manifests reachable only through a merged side parent", () => {
     const { cwd, git, commit } = repo();
     commit("root", { [DEPENDENCY_SCENARIO_EVALUATOR_MANIFEST_PATH]: manifestText("a".repeat(64)).text });

@@ -27,7 +27,8 @@ it("rejects bootstrap/cache repairs of a stale committed manifest, including sta
     git("config", "user.name", "Fixture");
     git("config", "core.hooksPath", "/dev/null");
     write(".gitignore", "src/generated/\n");
-    for (const source of V9_EVALUATION_BUILD_SOURCE_PATHS) write(source, `${source}\n`);
+    // JSON data members hash their canonical parse, so fixtures must be valid JSON.
+    for (const source of V9_EVALUATION_BUILD_SOURCE_PATHS) write(source, source.endsWith(".json") ? `${JSON.stringify({ source })}\n` : `${source}\n`);
     write(output, generate());
     git("add", ".");
     git("commit", "-qm", "Fresh outputs");

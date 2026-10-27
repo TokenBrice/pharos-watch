@@ -142,8 +142,13 @@ async function main(): Promise<void> {
     if (capture.publicationGenerationId !== source.safetyScoreIdentity.publicationGenerationId) {
       throw new Error(`accepted-publication-replay-capture-generation-mismatch: publicationGenerationId accepted=${source.safetyScoreIdentity.publicationGenerationId} capture=${capture.publicationGenerationId}`);
     }
+    // Historical replay needs the retained prior baseline; a v1/v2 capture never infers one.
+    if (!("sourceAdmissionBaseline" in capture)) throw new Error("accepted-publication-replay-baseline-unavailable");
     writeFileSync(sourcePath, JSON.stringify(source));
     writeFileSync(resolve(directory, "capture.json"), JSON.stringify(capture));
+    // The exact retained rows, for the historical evaluator's own capture readers.
+    writeFileSync(resolve(directory, "accepted.raw.json"), JSON.stringify([{ success: true,
+      results: rows.filter(row => row.key === SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY || row.key === SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY) }]));
     console.log(JSON.stringify({ sourcePublicationGenerationId: source.safetyScoreIdentity.publicationGenerationId }));
     return;
   }
