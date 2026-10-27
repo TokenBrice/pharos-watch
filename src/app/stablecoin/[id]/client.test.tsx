@@ -331,25 +331,34 @@ describe("StablecoinDetailClient", () => {
 
 
 
-  it("keeps the collateralization and access rail footprints through unavailable and populated evidence", () => {
+  it("keeps the collateralization and access rail footprints through pending and populated evidence", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({ reportCard: null, reserves: null }));
+    const pending = { redemption: { status: "empty", dataUpdatedAt: 0, error: null }, reserves: { status: "loading", dataUpdatedAt: 0, error: null } };
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({ reportCard: null, reserves: null, featureStates: pending }));
     const { container, rerender } = renderDetail(coin);
     const collateralization = container.querySelector('[data-rail-slot="collateralization"]')!;
     const access = container.querySelector('[data-rail-slot="access"]')!;
+    expect(collateralization.textContent).toContain("Waiting for reserve evidence.");
     expect(collateralization.className).toBe("min-h-64");
     expect(access.className).toBe("min-h-48");
-    for (const overrides of [
-      { reportCard: makeV9Card({ id: coin.id }), reserves: LIVE_COLLATERALIZED_RESERVES },
-      { reportCard: null, reserves: null },
-    ]) {
-      useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel(overrides));
-      rerender(<StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
-      expect(container.querySelector('[data-rail-slot="collateralization"]')).toBe(collateralization);
-      expect(container.querySelector('[data-rail-slot="access"]')).toBe(access);
-      expect(collateralization.className).toBe("min-h-64");
-      expect(access.className).toBe("min-h-48");
-    }
+    useStablecoinDetailViewModelMock.mockReturnValue(
+      makeReadyViewModel({ reportCard: makeV9Card({ id: coin.id }), reserves: LIVE_COLLATERALIZED_RESERVES }),
+    );
+    rerender(<StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
+    expect(container.querySelector('[data-rail-slot="collateralization"]')).toBe(collateralization);
+    expect(container.querySelector('[data-rail-slot="access"]')).toBe(access);
+    expect(collateralization.className).toBe("min-h-64");
+    expect(access.className).toBe("min-h-48");
+  });
+
+  it.each(["empty", "unavailable"])("hides the collateralization rail card once a %s reserve read settles without a KPI", (status) => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const settled = { redemption: { status: "empty", dataUpdatedAt: 0, error: null }, reserves: { status, dataUpdatedAt: 0, error: null } };
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({ reportCard: null, reserves: null, featureStates: settled }));
+    const { container } = renderDetail(coin);
+    expect(container.querySelector('[data-rail-slot="collateralization"]')).toBeNull();
+    expect(container.textContent).not.toContain("Collateralization evidence is unavailable.");
+    expect(container.querySelector('[data-rail-slot="access"]')).not.toBeNull();
   });
 
   it("mounts the reserves module in the score row when report-card data is unavailable", async () => {

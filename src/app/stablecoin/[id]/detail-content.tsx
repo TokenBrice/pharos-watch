@@ -313,6 +313,9 @@ function DetailSummaryRail({
   viewModel: ReadyDetailViewModel;
 }) {
   const hasPriceTransparency = viewModel.coinData.price != null || Boolean(viewModel.coinData.nominalPriceReference) || Boolean(viewModel.dexPriceCheck);
+  // Hold the Backing KPI footprint only while live reserve evidence is still
+  // pending; a settled read without a KPI hides the card, never "unavailable".
+  const reservesPending = viewModel.featureStates.reserves.status === "loading" || viewModel.featureStates.reserves.status === "deferred";
   // A compact companion that reads in normal flow from the top: pillar metrics
   // first (Safety → Backing KPI → Access posture), then the reference cards,
   // then the Evidence index. The rail is bottom-anchored sticky (it sits at
@@ -331,15 +334,11 @@ function DetailSummaryRail({
           frozen={viewModel.coin.status === "frozen"}
           gradeRead={resolveGradeRead(viewModel)}
         />
-        {sharedModules.backingMetrics || viewModel.coin.liveReservesConfig ? (
+        {sharedModules.backingMetrics || (viewModel.coin.liveReservesConfig && reservesPending) ? (
           <div className="min-h-64" data-rail-slot="collateralization">
             {sharedModules.backingMetrics ? <BackingMetricsCard view={sharedModules.backingMetrics} anchorTwin /> : (
               <RailCard title="Collateralization" ariaLabel="Collateralization">
-                <p className="px-4 pb-4 text-xs text-muted-foreground">
-                  {viewModel.featureStates.reserves.status === "loading" || viewModel.featureStates.reserves.status === "deferred"
-                    ? "Waiting for reserve evidence."
-                    : "Collateralization evidence is unavailable."}
-                </p>
+                <p className="px-4 pb-4 text-xs text-muted-foreground">Waiting for reserve evidence.</p>
               </RailCard>
             )}
           </div>

@@ -253,7 +253,7 @@ Mechanism is the first Risk module; the review is provenance inside its source f
 
 ### Backing KPI
 
-`buildBackingMetricsView` is shared by rail/in-flow copies and selects one named headline basis: live ratio → reviewed ratio → archetype-leading reviewed metric → live/reviewed liquidation backstop → first protocol fact, or explicit Unavailable when live/native metadata proves unavailable coverage. Not-applicable ratios never headline; gaps-only reviews return no card. Secondary ratios retain their own denominators in details, not two unreconciled headlines.
+`buildBackingMetricsView` is shared by rail/in-flow copies and selects one named headline basis: live ratio → reviewed ratio → archetype-leading reviewed metric → live/reviewed liquidation backstop → first protocol fact, or explicit Unavailable when live/native metadata proves unavailable coverage. Not-applicable ratios never headline; gaps-only reviews return no card. The `xl` rail holds the card's footprint only while live reserve evidence is pending; a settled read without a headline hides it rather than showing an unavailable card. Secondary ratios retain their own denominators in details, not two unreconciled headlines.
 
 Pure/savings pass-through wrappers without an archetype override may use the server-projected parent backing view. Label parent-derived metrics “via <parent>”, retain a differing parent-review figure as such, and cite the parent review. Strategy vaults, overrides and mismatched parent archetypes retain the wrapper's own figures.
 
