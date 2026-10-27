@@ -145,6 +145,18 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     expect(parseMetadata(result.metadata)).toMatchObject({ runBudgetTruncated: true, failed: 1 });
   });
 
+  it.each([
+    ["one failure of two", { synced: 1, failed: 1, skipped: 0, deferredSkipped: 0, circuitSkipped: 0, deferredCoins: 0, attemptedCoins: 2 }, false, "degraded"],
+    ["two failures of twenty", { synced: 18, failed: 2, skipped: 0, deferredSkipped: 0, circuitSkipped: 0, deferredCoins: 0, attemptedCoins: 20 }, false, "degraded"],
+    ["one circuit-held member of a hundred", { synced: 99, failed: 0, skipped: 1, deferredSkipped: 0, circuitSkipped: 1, deferredCoins: 0, attemptedCoins: 99 }, false, "degraded"],
+    ["every member failed", { synced: 0, failed: 20, skipped: 0, deferredSkipped: 0, circuitSkipped: 0, deferredCoins: 0, attemptedCoins: 20 }, false, "error"],
+    ["a clean run", { synced: 20, failed: 0, skipped: 0, deferredSkipped: 0, circuitSkipped: 0, deferredCoins: 0, attemptedCoins: 20 }, false, "ok"],
+    ["a clean checkpoint-owned continuation", { synced: 10, failed: 0, skipped: 0, deferredSkipped: 10, circuitSkipped: 0, deferredCoins: 10, attemptedCoins: 10 }, true, "ok"],
+  ] as const)("reports %s without a percentage tolerance", async (_name, counts, checkpointOwned, status) => {
+    const { resolveReserveSyncRunStatus } = await import("../sync-live-reserves-finalize");
+    expect(resolveReserveSyncRunStatus({ counts, total: 20, checkpointOwned })).toBe(status);
+  });
+
   it("classifies any productive deferred tail as degraded even below the ratio threshold", async () => {
     const { resolveReserveSyncRunStatus } = await import("../sync-live-reserves-finalize");
 
