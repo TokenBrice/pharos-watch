@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-const COLOPHON_LINKS: ReadonlyArray<{ href: string; label: string }> = [
-  { href: "/feed/digest.xml", label: "RSS" },
+const COLOPHON_LINKS: ReadonlyArray<{ href: string; label: string; native?: boolean }> = [
+  { href: "/feed/digest.xml", label: "RSS", native: true },
   { href: "/methodology/", label: "Methodology" },
   { href: "/privacy/", label: "Privacy" },
 ];
+
+const LINK_CLASS = "pharos-focus-ring rounded-sm transition-colors hover:text-foreground";
 
 /**
  * One-line newspaper colophon that closes the digest section in place of the
@@ -23,12 +25,15 @@ export function DigestColophon({ className }: { className?: string }) {
         <Separator />
         {COLOPHON_LINKS.map((link) => (
           <span key={link.href} className="inline-flex items-center gap-3">
-            <Link
-              href={link.href}
-              className="pharos-focus-ring rounded-sm transition-colors hover:text-foreground"
-            >
-              {link.label}
-            </Link>
+            {link.native ? (
+              <a href={link.href} className={LINK_CLASS}>
+                {link.label}
+              </a>
+            ) : (
+              <Link href={link.href} className={LINK_CLASS}>
+                {link.label}
+              </Link>
+            )}
             <Separator />
           </span>
         ))}

@@ -101,13 +101,13 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
               <Bell aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
               Telegram alerts
             </Link>
-            <Link
+            <a
               href="/feed/digest.xml"
               className="pharos-focus-ring inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
             >
               <Rss aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
               Digest RSS
-            </Link>
+            </a>
             <Link
               href="/api/"
               className="pharos-focus-ring inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
