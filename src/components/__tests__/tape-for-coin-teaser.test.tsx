@@ -87,7 +87,7 @@ describe("TapeForCoinTeaser", () => {
 
     expect(screen.getByText("DEWS CALM/WATCH changes")).toBeTruthy();
     expect(screen.getByText("In the latest 6 events: CALM → WATCH 3 · WATCH → CALM 2")).toBeTruthy();
-    expect(screen.getByText("Most recent: CALM → WATCH · 2026-10-26 12:00 UTC")).toBeTruthy();
+    expect(screen.getByText("Most recent: CALM → WATCH")).toBeTruthy();
     const groupTime = links[0]!.querySelector("time")!;
     expect(groupTime.getAttribute("dateTime")).toBe("2026-10-26T12:00:00.000Z");
     expect(groupTime.getAttribute("title")).toBe("Between 2026-10-25 12:00 and 2026-10-26 12:00 UTC");

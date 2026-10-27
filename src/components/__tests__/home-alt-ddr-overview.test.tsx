@@ -153,7 +153,7 @@ describe("HomeAltDdrOverview", () => {
     setSources();
     render(<HomeAltDdrOverview />);
     expect(screen.getByText("80.0%")).toBeTruthy();
-    expect(screen.getByText("Recovery calls correct: 8/10 (80.0%)")).toBeTruthy();
+    expect(screen.getByText("Recovery calls correct: 8/10")).toBeTruthy();
     expect(screen.queryByText(/Always-recover baseline/)).toBeNull();
     expect(screen.queryByText(/Graded calls/)).toBeNull();
     expect(screen.queryByText(/recovery-call accuracy/)).toBeNull();

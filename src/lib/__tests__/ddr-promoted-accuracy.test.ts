@@ -39,7 +39,7 @@ describe("promoted DDRR accuracy", () => {
       makePredictionPolicySegment(template, "5.0", 0, 0),
     ] });
     expect(lines(s)).toEqual({
-      calls: "Recovery calls correct: 61/74 (82.4%)",
+      calls: "Recovery calls correct: 61/74",
       baseline: "Always-recover baseline: 70/74 (94.6%)",
       scope: "Graded calls from v2/v3/v4 · 0 from current v5",
     });

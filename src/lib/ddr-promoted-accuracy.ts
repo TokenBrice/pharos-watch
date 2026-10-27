@@ -78,7 +78,7 @@ export function formatPromotedAccuracyLines(accuracy: PromotedAccuracy): {
     `${count}/${accuracy.scored}${pct == null ? "" : ` (${formatPercentFromRatio(pct, 1)})`}`;
   const { scope } = accuracy;
   return {
-    calls: `Recovery calls correct: ${fraction(accuracy.correct, accuracy.accuracyPct)}`,
+    calls: `Recovery calls correct: ${accuracy.correct}/${accuracy.scored}`,
     baseline: accuracy.baselineCorrect == null
       ? "Always-recover baseline: —"
       : `Always-recover baseline: ${fraction(accuracy.baselineCorrect, accuracy.baselinePct)}`,

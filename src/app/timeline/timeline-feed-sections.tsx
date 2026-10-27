@@ -146,7 +146,7 @@ export function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, s
   }
   return (
     <div className="space-y-1" data-timeline-slot="summary">
-      <p className="flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] uppercase tabular-nums tracking-wider text-muted-foreground">
+      <p className="flex min-h-11 lg:min-h-0 flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] uppercase tabular-nums tracking-wider text-muted-foreground">
         {parts.map((part, i) => (
           <span key={i} className="contents">
             {i > 0 ? <span aria-hidden="true">·</span> : null}
@@ -184,9 +184,9 @@ export function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, s
 export function SummaryBandSkeleton() {
   return (
     <div className="space-y-1" data-timeline-slot="summary" aria-hidden="true">
-      <p className="flex min-h-11 items-center font-mono text-[11px]">
+      <div className="flex min-h-11 lg:min-h-0 items-center font-mono text-[11px]">
         <Skeleton className="h-3 w-64 max-w-full" />
-      </p>
+      </div>
       <p className="font-mono text-[11px]" data-timeline-slot="last-event">{"\u00a0"}</p>
     </div>
   );

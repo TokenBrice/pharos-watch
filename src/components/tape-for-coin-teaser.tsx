@@ -115,8 +115,8 @@ function NewsEntry({ entry, nowMs }: { entry: CoinNewsEntry; nowMs: number }) {
     // to keep a group inside an ordinary entry's footprint.
     const recent = lowBandDirection(event) === "calm-to-watch" ? "CALM → WATCH" : "WATCH → CALM";
     title = "DEWS CALM/WATCH changes";
-    body = `In the latest ${lowBand.loadedEventCount} events: CALM → WATCH ${lowBand.calmToWatch} · WATCH → CALM ${lowBand.watchToCalm}`;
-    delta = `Most recent: ${recent} · ${utcMinute(event.ts)} UTC`;
+    body = `In the latest ${lowBand.loadedEventCount} events: CALM\u00a0→\u00a0WATCH\u00a0${lowBand.calmToWatch} · WATCH\u00a0→\u00a0CALM\u00a0${lowBand.watchToCalm}`;
+    delta = `Most recent: ${recent}`;
     deltaClass = SEVERITY_TONE_CLASS.neutral.text;
     range = `Between ${utcMinute(lowBand.oldestTs)} and ${utcMinute(event.ts)} UTC`;
   } else {

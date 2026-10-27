@@ -172,7 +172,7 @@ describe("DepegOutlookHero forecast track record", () => {
       <DepegOutlookHero stats={observedZero} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set()}
         review={review(70, [["2.0", 6], ["3.04", 49], ["4.6", 19]])} />,
     );
-    expect(markup).toContain("Recovery calls correct: 61/74 (82.4%)");
+    expect(markup).toContain("Recovery calls correct: 61/74");
     expect(markup).not.toContain("Always-recover baseline");
     expect(markup).not.toContain("Graded calls");
     expect(markup).toContain("see the grading");
