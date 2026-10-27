@@ -143,11 +143,13 @@ describe("BlacklistStats", () => {
       />,
     );
 
-    // A partial denominator never produces a headline share; the observed-only share is labelled.
-    expect(screen.getByText("Partial")).toBeTruthy();
-    expect(screen.queryByText("12.5%")).toBeNull();
+    // A partial denominator qualifies the headline share; it never replaces it.
+    const partialMarker = screen.getByText("partial");
+    expect(partialMarker.closest("p")?.textContent).toBe("12.5%partial");
+    expect(partialMarker.getAttribute("title")).toBe("Observed supply only · 1 asset without supply data excluded");
+    expect(screen.queryByText("Partial")).toBeNull();
     expect(
-      screen.getByText("2 stablecoins · 12.5% of observed supply ($30.00B of $240.00B) · 1 without supply data excluded"),
+      screen.getByText("2 stablecoins · $30.00B of $240.00B observed · 1 without supply data excluded"),
     ).toBeTruthy();
     unmount();
 
