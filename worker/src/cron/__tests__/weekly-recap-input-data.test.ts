@@ -785,3 +785,81 @@ describe("weekly recap safety identity", () => {
     expect(prompt).not.toContain("Top grade transitions by mcap");
   });
 });
+
+describe("weekly recap retracted USG edition quarantine", () => {
+  // Live JSON-LD datePublished for /digest/2026-10-24/: 2026-10-24T08:05:25.000Z.
+  const EDITION_AT = 1_792_829_125;
+  const flows = (symbols: string[]) => ({
+    gaugeScore: 40,
+    gaugeBand: "WATCH",
+    flightToQuality: { active: false, safeNetUsd: 0, riskyNetUsd: 0 },
+    topPressure: symbols.map((symbol) => ({ symbol, intensity: symbol === "USG" ? -100 : 20, net24hUsd: symbol === "USG" ? -36_850_000 : 5_000_000 })),
+  });
+  const contaminated = (index: number, generatedAt: number, pressureSymbols: string[] = ["USG", "USDT"]) => ({
+    ...row(index, {
+      mintBurnFlows: flows(pressureSymbols),
+      editorialCandidates: [
+        candidate("mint-burn:usg:pressure", "mint-burn", 100, "USG"),
+        candidate("mint-burn:usdt:pressure", "mint-burn", 50, "USDT"),
+        candidate("depeg:usg", "depeg", 40, "USG"),
+      ],
+      changeSummary: {
+        newSignals: [{ id: "mint-burn:usg:pressure", label: "USG", kind: "mint-burn", symbols: ["USG"], detail: "-$36.85M" }],
+        worsenedSignals: [{ id: "mint-burn:usdt:pressure", label: "USDT", kind: "mint-burn", symbols: ["USDT"], detail: "ok" }],
+        improvedSignals: [], resolvedSignals: [], repeatedSignals: [],
+      },
+      nextTriggers: [
+        { id: "t-usg", label: "USG", metric: "supply-1d-usd", comparator: "abs-gte", thresholdLabel: "x", symbol: "USG", candidateId: "mint-burn:usg:pressure", rationale: "r", detail: "d" },
+        { id: "t-usdt", label: "USDT", metric: "supply-1d-usd", comparator: "abs-gte", thresholdLabel: "x", symbol: "USDT", candidateId: "mint-burn:usdt:pressure", rationale: "r", detail: "d" },
+      ],
+      editorialAudit: {
+        topCandidateIds: ["mint-burn:usg:pressure", "mint-burn:usdt:pressure"], usableCandidateIds: ["mint-burn:usg:pressure"],
+        suppressedCandidateIds: [], momentumCandidateIds: [], leadCandidateId: "mint-burn:usg:pressure", leadCandidateTitle: "USG mint/burn pressure shifted",
+      },
+    }),
+    generated_at: generatedAt,
+    digest_title: "USG Burns",
+    digest_text: "USG saw $36.85M of net burns.",
+  });
+
+  it.each([
+    ["with a pressure row", ["USG", "USDT"]],
+    ["candidate-only, no surviving pressure row", ["USDT"]],
+  ])("removes the retracted edition's USG pressure %s but keeps unrelated evidence", (_name, pressureSymbols) => {
+    const rows = [0, 1, 2, 3, 4, 5, 6].map((index) => row(index));
+    rows[3] = contaminated(3, EDITION_AT, pressureSymbols);
+    const stored = rows[3].input_data;
+    const weekly = buildWeeklyInputData(rows)!;
+    const day = weekly.dailyDigests.find((digest) => digest.inputData.mintBurnFlows)!;
+
+    expect(weekly.degradedSources).toContain("mint-burn-pressure-quarantined-signal:usg-tangent:2026-10-24");
+    expect(day).toMatchObject({ title: "", text: "" });
+    expect(day.inputData.mintBurnFlows?.topPressure.map((entry) => entry.symbol)).not.toContain("USG");
+    expect(day.inputData.mintBurnFlows?.gaugeScore).toBe(40);
+    expect(day.inputData.editorialCandidates?.map((entry) => entry.id)).toEqual(["mint-burn:usdt:pressure", "depeg:usg"]);
+    expect(day.inputData.changeSummary?.newSignals).toEqual([]);
+    expect(day.inputData.changeSummary?.worsenedSignals.map((signal) => signal.id)).toEqual(["mint-burn:usdt:pressure"]);
+    expect(day.inputData.nextTriggers?.map((trigger) => trigger.id)).toEqual(["t-usdt"]);
+    expect(day.inputData.editorialAudit).toMatchObject({
+      topCandidateIds: ["mint-burn:usdt:pressure"], usableCandidateIds: [], leadCandidateId: null,
+    });
+    expect(weekly.weeklySignals.topPressureSignals.some((signal) => signal.symbol === "USG")).toBe(false);
+    expect(rows[3].input_data).toBe(stored);
+  });
+
+  it.each([EDITION_AT - 1, EDITION_AT + 1])("does not quarantine an adjacent edition second (%s)", (generatedAt) => {
+    const rows = [0, 1, 2, 3, 4, 5, 6].map((index) => row(index));
+    rows[3] = contaminated(3, generatedAt);
+    const weekly = buildWeeklyInputData(rows)!;
+    expect(weekly.degradedSources ?? []).not.toContain("mint-burn-pressure-quarantined-signal:usg-tangent:2026-10-24");
+    expect(weekly.weeklySignals.topPressureSignals.some((signal) => signal.symbol === "USG")).toBe(true);
+  });
+
+  it("quarantines the same edition when it falls in the prior period", () => {
+    const current = [0, 1, 2, 3, 4, 5, 6].map((index) => row(index));
+    const prior = [0, 1, 2, 3, 4, 5, 6].map((index) => row(index));
+    prior[2] = contaminated(2, EDITION_AT);
+    const weekly = buildWeeklyInputData(current, prior)!;
+    expect(weekly.degradedSources).toContain("mint-burn-pressure-quarantined-signal:usg-tangent:2026-10-24");
+  });
+});

@@ -1,6 +1,10 @@
 import { formatCurrency, formatIsoDate } from "@shared/lib/format";
 import { getDepegEditorialImpactScore, getDepegMarketImpactScore, isCriticalDepegRisk } from "@shared/lib/digest-risk";
-import { findDigestSignalQuarantineBySymbol } from "@shared/lib/digest-signal-quarantine";
+import {
+  findDigestSignalQuarantineBySymbol,
+  findDigestSignalQuarantines,
+  type DigestSignalClocks,
+} from "@shared/lib/digest-signal-quarantine";
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import {
   DigestSafetyContextSchema,
@@ -212,44 +216,49 @@ function removeCandidateIds(ids: string[] | undefined, quarantinedIds: ReadonlyS
   return ids?.filter((id) => !quarantinedIds.has(id));
 }
 
-function quarantineRetractedLiquidity(
-  inputData: DigestInputData,
-  timestamp: number,
-): { inputData: DigestInputData; quarantinedStablecoinIds: string[] } {
-  const quarantinedBySymbol = new Map<string, string>();
-  for (const shift of inputData.liquidityShifts ?? []) {
-    const quarantine = findDigestSignalQuarantineBySymbol(shift.symbol, "liquidity", timestamp);
-    if (quarantine) quarantinedBySymbol.set(shift.symbol.toUpperCase(), quarantine.stablecoinId);
-  }
-  if (quarantinedBySymbol.size === 0) return { inputData, quarantinedStablecoinIds: [] };
+interface QuarantineSelection {
+  stablecoinIds: Set<string>;
+  symbols: Set<string>;
+  /** Signal kinds the retracted claim can surface through. */
+  candidateKind: DigestEditorialCandidate["kind"];
+  signalKind: "liquidity" | "mint-burn";
+}
 
-  const quarantinedSymbols = new Set(quarantinedBySymbol.keys());
+function removeQuarantinedSignals(
+  inputData: DigestInputData,
+  selections: readonly QuarantineSelection[],
+): DigestInputData {
+  const hits = (kind: string, symbols: readonly string[]): boolean =>
+    selections.some((selection) =>
+      selection.signalKind === kind && symbols.some((symbol) => selection.symbols.has(symbol.toUpperCase())));
   const candidateIsQuarantined = (candidate: DigestEditorialCandidate): boolean =>
-    candidate.kind === "liquidity" &&
-    candidate.symbols.some((symbol) => quarantinedSymbols.has(symbol.toUpperCase()));
+    selections.some((selection) =>
+      candidate.kind === selection.candidateKind &&
+      candidate.symbols.some((symbol) => selection.symbols.has(symbol.toUpperCase())));
   const quarantinedCandidateIds = new Set(
     (inputData.editorialCandidates ?? []).filter(candidateIsQuarantined).map((candidate) => candidate.id),
   );
-  for (const symbol of quarantinedSymbols) quarantinedCandidateIds.add(`liquidity:${symbol.toLowerCase()}`);
+  for (const selection of selections) {
+    for (const symbol of selection.symbols) {
+      quarantinedCandidateIds.add(selection.signalKind === "liquidity"
+        ? `liquidity:${symbol.toLowerCase()}`
+        : `mint-burn:${symbol.toLowerCase()}:pressure`);
+    }
+  }
+  const keepSignal = (signal: { kind: string; symbols: string[] }): boolean => !hits(signal.kind, signal.symbols);
+  const keepTrigger = (trigger: NonNullable<DigestInputData["nextTriggers"]>[number]): boolean => {
+    if (trigger.candidateId && quarantinedCandidateIds.has(trigger.candidateId)) return false;
+    return !(trigger.metric === "liquidity-score" && trigger.symbol != null && hits("liquidity", [trigger.symbol]));
+  };
 
   const changeSummary = inputData.changeSummary
     ? {
         ...inputData.changeSummary,
-        newSignals: inputData.changeSummary.newSignals.filter((signal) =>
-          signal.kind !== "liquidity" || !signal.symbols.some((symbol) => quarantinedSymbols.has(symbol.toUpperCase())),
-        ),
-        worsenedSignals: inputData.changeSummary.worsenedSignals.filter((signal) =>
-          signal.kind !== "liquidity" || !signal.symbols.some((symbol) => quarantinedSymbols.has(symbol.toUpperCase())),
-        ),
-        improvedSignals: inputData.changeSummary.improvedSignals.filter((signal) =>
-          signal.kind !== "liquidity" || !signal.symbols.some((symbol) => quarantinedSymbols.has(symbol.toUpperCase())),
-        ),
-        resolvedSignals: inputData.changeSummary.resolvedSignals.filter((signal) =>
-          signal.kind !== "liquidity" || !signal.symbols.some((symbol) => quarantinedSymbols.has(symbol.toUpperCase())),
-        ),
-        repeatedSignals: inputData.changeSummary.repeatedSignals.filter((signal) =>
-          signal.kind !== "liquidity" || !signal.symbols.some((symbol) => quarantinedSymbols.has(symbol.toUpperCase())),
-        ),
+        newSignals: inputData.changeSummary.newSignals.filter(keepSignal),
+        worsenedSignals: inputData.changeSummary.worsenedSignals.filter(keepSignal),
+        improvedSignals: inputData.changeSummary.improvedSignals.filter(keepSignal),
+        resolvedSignals: inputData.changeSummary.resolvedSignals.filter(keepSignal),
+        repeatedSignals: inputData.changeSummary.repeatedSignals.filter(keepSignal),
       }
     : undefined;
   const editorialAudit = inputData.editorialAudit
@@ -267,23 +276,61 @@ function quarantineRetractedLiquidity(
           : {}),
       }
     : undefined;
+  const flowSymbols = selections.find((selection) => selection.signalKind === "mint-burn")?.symbols;
 
   return {
-    inputData: {
-      ...inputData,
-      liquidityShifts: (inputData.liquidityShifts ?? []).filter(
-        (shift) => !quarantinedSymbols.has(shift.symbol.toUpperCase()),
-      ),
-      editorialCandidates: inputData.editorialCandidates?.filter((candidate) => !candidateIsQuarantined(candidate)),
-      ...(changeSummary ? { changeSummary } : {}),
-      nextTriggers: inputData.nextTriggers?.filter((trigger) =>
-        trigger.metric !== "liquidity-score" ||
-        trigger.symbol == null ||
-        !quarantinedSymbols.has(trigger.symbol.toUpperCase()),
-      ),
-      ...(editorialAudit ? { editorialAudit } : {}),
-    },
-    quarantinedStablecoinIds: [...new Set(quarantinedBySymbol.values())],
+    ...inputData,
+    ...(inputData.liquidityShifts
+      ? { liquidityShifts: inputData.liquidityShifts.filter((shift) => !hits("liquidity", [shift.symbol])) }
+      : {}),
+    ...(flowSymbols && inputData.mintBurnFlows
+      ? {
+          mintBurnFlows: {
+            ...inputData.mintBurnFlows,
+            topPressure: inputData.mintBurnFlows.topPressure.filter(
+              (pressure) => !flowSymbols.has(pressure.symbol.toUpperCase()),
+            ),
+          },
+        }
+      : {}),
+    editorialCandidates: inputData.editorialCandidates?.filter((candidate) => !candidateIsQuarantined(candidate)),
+    ...(changeSummary ? { changeSummary } : {}),
+    nextTriggers: inputData.nextTriggers?.filter(keepTrigger),
+    ...(editorialAudit ? { editorialAudit } : {}),
+  };
+}
+
+function quarantineRetractedSignals(
+  inputData: DigestInputData,
+  clocks: DigestSignalClocks,
+): { inputData: DigestInputData; quarantines: { family: "liquidity" | "flow"; stablecoinId: string }[] } {
+  const liquidity: QuarantineSelection = {
+    stablecoinIds: new Set(), symbols: new Set(), candidateKind: "liquidity", signalKind: "liquidity",
+  };
+  for (const shift of inputData.liquidityShifts ?? []) {
+    const quarantine = findDigestSignalQuarantineBySymbol(shift.symbol, "liquidity", clocks.ingestion);
+    if (quarantine) {
+      liquidity.symbols.add(shift.symbol.toUpperCase());
+      liquidity.stablecoinIds.add(quarantine.stablecoinId);
+    }
+  }
+  // Matched on the edition clock before any pressure lookup, so candidate-only
+  // and copy-only rows are quarantined even when no topPressure row survives.
+  const flow: QuarantineSelection = {
+    stablecoinIds: new Set(), symbols: new Set(), candidateKind: "mint-burn", signalKind: "mint-burn",
+  };
+  for (const quarantine of findDigestSignalQuarantines("flow", clocks)) {
+    flow.stablecoinIds.add(quarantine.stablecoinId);
+    for (const symbol of quarantine.symbols) flow.symbols.add(symbol.toUpperCase());
+  }
+  const selections = [liquidity, flow].filter((selection) => selection.symbols.size > 0);
+  if (selections.length === 0) return { inputData, quarantines: [] };
+  return {
+    inputData: removeQuarantinedSignals(inputData, selections),
+    quarantines: [
+      ...[...liquidity.stablecoinIds].map((stablecoinId) => ({ family: "liquidity" as const, stablecoinId })),
+      ...[...flow.stablecoinIds].map((stablecoinId) => ({ family: "flow" as const, stablecoinId })),
+    ],
   };
 }
 
@@ -295,16 +342,20 @@ function parseDailyRows(
   for (const row of dailyRows) {
     try {
       const rawInputData = JSON.parse(row.input_data) as DigestInputData;
-      const timestamp = rawInputData.dataQuality?.generatedAt ?? row.generated_at;
-      const quarantined = quarantineRetractedLiquidity(rawInputData, timestamp);
+      const quarantined = quarantineRetractedSignals(rawInputData, {
+        ingestion: rawInputData.dataQuality?.generatedAt ?? row.generated_at,
+        edition: row.generated_at,
+      });
       const date = formatIsoDate(row.generated_at);
-      for (const stablecoinId of quarantined.quarantinedStablecoinIds) {
-        degradedSources.add(`liquidity-shift-quarantined-signal:${stablecoinId}:${date}`);
+      for (const { family, stablecoinId } of quarantined.quarantines) {
+        degradedSources.add(family === "liquidity"
+          ? `liquidity-shift-quarantined-signal:${stablecoinId}:${date}`
+          : `mint-burn-pressure-quarantined-signal:${stablecoinId}:${date}`);
       }
       parsed.push({
         date,
-        title: quarantined.quarantinedStablecoinIds.length > 0 ? "" : row.digest_title ?? "Untitled",
-        text: quarantined.quarantinedStablecoinIds.length > 0 ? "" : row.digest_text,
+        title: quarantined.quarantines.length > 0 ? "" : row.digest_title ?? "Untitled",
+        text: quarantined.quarantines.length > 0 ? "" : row.digest_text,
         inputData: quarantined.inputData,
       });
     } catch (error) {
