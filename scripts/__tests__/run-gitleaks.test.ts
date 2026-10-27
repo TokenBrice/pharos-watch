@@ -552,4 +552,32 @@ describe("run-gitleaks", () => {
       await expect(runGitleaks({ argv })).rejects.toThrow();
     }
   });
+
+  it("dispositions exactly the two reviewed historical public identifiers", () => {
+    const entries = readFileSync(".gitleaksignore", "utf8").split("\n");
+    const reviewed = [
+      "aa117604c0ad6f7f352ac0e65fd6395374ae6a36:docs/runbooks/blacklist-sync.md:generic-api-key:53",
+      "e9ffbf3f450f9f461080c069472f7144b29a843e:worker/src/lib/__tests__/scheduler-liveness.test.ts:generic-api-key:68",
+    ];
+    for (const entry of reviewed) {
+      expect(entries.filter((line) => line === entry)).toHaveLength(1);
+      const [commit, path, rule, line] = entry.split(":");
+      for (const variant of [
+        `${commit.replace(/.$/, commit.endsWith("0") ? "1" : "0")}:${path}:${rule}:${line}`,
+        `${commit}:${path}.bak:${rule}:${line}`,
+        `${commit}:${path}:aws-access-token:${line}`,
+        `${commit}:${path}:${rule}:${Number(line) + 1}`,
+      ]) {
+        expect(entries).not.toContain(variant);
+      }
+    }
+    // Exact fingerprints only: every entry naming these paths is commit-pinned with a rule and line.
+    for (const path of ["docs/runbooks/blacklist-sync.md", "worker/src/lib/__tests__/scheduler-liveness.test.ts"]) {
+      for (const line of entries.filter((entry) => entry.includes(path))) {
+        const [commit, entryPath, rule, lineNo] = line.split(":");
+        expect(commit).toMatch(/^[0-9a-f]{40}$/);
+        expect([entryPath, rule.length > 0, /^\d+$/.test(lineNo)]).toEqual([path, true, true]);
+      }
+    }
+  });
 });
