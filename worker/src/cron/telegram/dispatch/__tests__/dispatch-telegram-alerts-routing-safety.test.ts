@@ -613,7 +613,7 @@ describe("dispatchTelegramAlerts", () => {
   });
 
   it("treats first-seen ids in a partial legacy safety snapshot as seed-only without alerting", async () => {
-    const now = 1_778_150_000;
+    const now = Math.floor(Date.now() / 1000);
     const updatedAt = now - 3_600;
     const harness = createDispatchHarness();
     seedDispatchSnapshots(harness, {
@@ -649,7 +649,7 @@ describe("dispatchTelegramAlerts", () => {
   });
 
   it("does not alert on historical rows missing from a partial legacy safety snapshot", async () => {
-    const now = 1_778_150_000;
+    const now = Math.floor(Date.now() / 1000);
     const updatedAt = now - 3_600;
     const harness = createDispatchHarness();
     seedDispatchSnapshots(harness, {
