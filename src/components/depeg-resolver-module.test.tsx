@@ -301,6 +301,25 @@ describe("DepegResolverModule", () => {
     });
   });
 
+  describe("calibration lineage caption", () => {
+    const lineage = (incidentCount: number, coinCount: number) => ({
+      trainingWindow: { start: 1, end: 2 }, eventCount: 99_999, incidentCount, coinCount, quarantinedCoins: 0,
+    });
+
+    it.each([[8_466, 41, "8,466"], [0, 0, "0"]] as const)("states %s producer historical incidents", (incidents, coins, shown) => {
+      // One visible row: the count comes from lineage, never from visible forecasts.
+      render(<DepegResolverModule data={response({ _meta: { ...meta, lineage: lineage(incidents, coins) }, rows: [row] })} />);
+      const caption = screen.getByText(/^Calibrated on/);
+      expect(caption.textContent).toBe(`Calibrated on ${shown} historical incidents · ${coins} coins`);
+      expect(screen.queryByText(/recovered\s+incidents/)).toBeNull();
+    });
+
+    it("omits the caption without lineage", () => {
+      render(<DepegResolverModule data={response({ rows: [row] })} />);
+      expect(screen.queryByText(/^Calibrated on/)).toBeNull();
+    });
+  });
+
   it("does not claim there are no active depegs before data loads", () => {
     render(<DepegResolverModule data={undefined} />);
 

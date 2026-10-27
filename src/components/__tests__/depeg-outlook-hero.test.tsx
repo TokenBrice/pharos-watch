@@ -125,6 +125,26 @@ describe("DepegOutlookHero recovery outlook caption", () => {
     expect(markup).not.toContain("past their worst");
   });
 
+  it.each([[8_466, "calibrated on 8,466 historical incidents"], [0, "calibrated on 0 historical incidents"]] as const)(
+    "passes the producer lineage count %s through as historical incidents",
+    (incidentCount, caption) => {
+      const markup = renderToStaticMarkup(
+        <DepegOutlookHero stats={observedZero} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set()} book={book(0)}
+          lineage={{ incidentCount, coinCount: 41 }} />,
+      );
+      expect(markup).toContain(caption);
+      expect(markup).not.toContain("recovered incidents");
+    },
+  );
+
+  it("falls back to the open forecast count without lineage", () => {
+    const markup = renderToStaticMarkup(
+      <DepegOutlookHero stats={observedZero} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set()} book={book(0)} lineage={null} />,
+    );
+    expect(markup).toContain("3 open forecasts");
+    expect(markup).not.toContain("calibrated on");
+  });
+
   it("omits the new-worst clause at zero", () => {
     const markup = renderToStaticMarkup(
       <DepegOutlookHero stats={observedZero} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set()} book={book(0)} />,

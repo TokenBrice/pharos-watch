@@ -162,6 +162,9 @@ behind an explicit toggle that mounts them only when opened.
 - **Header scope:** the verdict split belongs to the hero. This header shows
   forecast and incident-row counts, the visible slice, new-worst count, and
   calibration lineage/coin count. A four-card slice is not the whole book.
+  Lineage reads `_meta.lineage.incidentCount` as "historical incidents": the full
+  calibration corpus (recovered, terminal and censored open incidents), not the recovered
+  subset or a forecast's matched duration support.
   The retired standalone "Outlook Posture" surface must not return.
 - **Review totals:** forecast grading uses the published reviewer summary, not a
   verdict or IQR breakdown recalculated from bounded browsing rows.

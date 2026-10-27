@@ -178,7 +178,7 @@ export function DepegOutlookHero({
                   </span>
                 ) : null}
                 {lineage
-                  ? `calibrated on ${lineage.incidentCount.toLocaleString()} recovered incidents`
+                  ? `calibrated on ${lineage.incidentCount.toLocaleString()} historical incidents`
                   : `${book.total} open ${book.total === 1 ? "forecast" : "forecasts"}`}
               </p>
             </RailGroup>
