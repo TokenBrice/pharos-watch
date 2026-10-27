@@ -19,7 +19,7 @@
     "@cf-wasm/resvg": "^0.4.0",
     "@pharos/contracts": "*",
     "react": "^19.3.1",
-    "satori": "0.32.0",
+    "satori": "0.33.5",
     "viem": "2.57.7",
     "zod": "^4.6.7"
   }
