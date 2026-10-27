@@ -118,7 +118,7 @@ const QUARANTINE_SYMBOL_PATTERNS: ReadonlyMap<DigestSignalQuarantine, readonly R
 );
 
 const FLOW_CLAUSE_SPLIT = /[.!?;\n]+(?=\s|$)|\s+(?:while|whereas|but)\s+/i;
-const FLOW_BURN_PATTERN = /\b(?:burn(?:ed|s|ing|t)?|redeem(?:ed|s)?|redemptions?|outflows?|net[- ]negative|negative(?: mint\/burn)? pressure|pressure)\b|[-−–]\s*\$?\d/i;
+const FLOW_BURN_PATTERN = /\b(?:burn(?:ed|s|ing|t)?|redeem(?:ed|s)?|redemptions?|outflows?|net[- ]negative|negative(?: mint\/burn)? pressure|pressure)\b|[-\u2212\u2013]\s*\$?\d/i;
 const FLOW_CORRECTION_PATTERN = /\b(?:inventory[- ]burns?|retract(?:ed|ion)?|corrections?|corrected|erroneous|no (?:net )?(?:burn|redemption|pressure)|not (?:a |an )?(?:real |genuine )?(?:burn|redemption|pressure))\b/i;
 
 const FLOW_AMOUNT_PATTERNS: ReadonlyMap<DigestSignalQuarantine, RegExp> = new Map(
