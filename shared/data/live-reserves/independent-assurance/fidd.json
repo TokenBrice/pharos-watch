@@ -3,13 +3,13 @@
   "product": "FIDD",
   "profile": "fidd-v1",
   "officialIndexUrl": "https://www.fidelitydigitalassets.com/stablecoin",
-  "reportUrl": "https://fwc.widen.net/content/z6rtnzs3v9/original/Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---August-2026.pdf?u=5lvvtn&download=true",
-  "reportSha256": "eab375d6f312e7a144059aeb0a4299887374768775ace7523d8b6155e5650a1e",
-  "reportByteLength": 443666,
-  "reportDate": "2026-08-31",
-  "reportAsOf": "2026-08-31T17:00:00-04:00",
+  "reportUrl": "https://fwc.widen.net/content/azzc1igqzr/original/Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---September-2026.pdf?u=5lvvtn&download=true",
+  "reportSha256": "aa15b4e8f32f939f66a7f9fc064ef842c4a8ac17a592f7af4c578fc0a4cd6cb0",
+  "reportByteLength": 443079,
+  "reportDate": "2026-09-30",
+  "reportAsOf": "2026-09-30T17:00:00-04:00",
   "reportTimeZone": "Eastern Daylight Time (UTC-4)",
-  "reportIssuedAt": "2026-09-25T23:59:00-04:00",
+  "reportIssuedAt": "2026-10-26T23:59:00-04:00",
   "attestor": "PricewaterhouseCoopers LLP",
   "engagement": "Independent accountants' examination under AICPA attestation standards (AICPA 2025 Criteria for the Presentation and Disclosure of Redeemable Tokens Outstanding and the Availability of Assets for Redemption: Specific to Asset-Backed Fiat-Pegged Tokens)",
   "conclusion": "unmodified",
@@ -17,29 +17,29 @@
   "assets": [
     {
       "code": "cash-deposits",
-      "label": "Cash deposits held in bank deposit accounts at The Bank of New York Mellon (August 31 column)",
-      "amount": "20717851.25"
+      "label": "Cash deposits held in bank deposit accounts at The Bank of New York Mellon (September 30 column)",
+      "amount": "20789144.46"
     },
     {
       "code": "us-treasury-bills",
-      "label": "U.S. Treasury bills (August 31 column)",
-      "amount": "31173738.08"
+      "label": "U.S. Treasury bills (September 30 column)",
+      "amount": "31252677.97"
     }
   ],
   "liabilities": [
     {
       "code": "ethereum",
       "label": "FIDD redeemable Ethereum Mainnet tokens outstanding",
-      "amount": "49290319"
+      "amount": "49440407"
     }
   ],
-  "reportedAssetTotal": "51891589.33",
-  "computedAssetTotal": "51891589.33",
-  "reportedLiabilityTotal": "49290319",
+  "reportedAssetTotal": "52041822.43",
+  "computedAssetTotal": "52041822.43",
+  "reportedLiabilityTotal": "49440407",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
     "parserVersion": "26.08.0",
-    "normalizedTextSha256": "de8a2751ec9fbe3769f29194baddf7c344db00736cf55d0ccf9837264d70a61c",
+    "normalizedTextSha256": "c891cd95ee65ff495e0f1ce70cef978bfe7d7933b9fe411be3c17a23a694593c",
     "pageCount": 9
   },
   "assuranceTier": "independent-assurance"

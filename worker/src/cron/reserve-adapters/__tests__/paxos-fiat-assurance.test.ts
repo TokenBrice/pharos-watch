@@ -9,14 +9,14 @@ import { runAdapter, installAdapterNetwork } from "./reserve-adapter.test-suppor
 const SITE = "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl";
 const MAIN_URL = `${SITE}/script_main.DWSgnPFN.mjs`;
 const CASES = [
-  { product: "PYUSD", id: "pyusd-paypal", module: "gaXXeRLPJVU8xNh11dsVtC1bnIYsH9HFFZN3Q7yy4xM.BCm9jGCp.mjs", capture: "2026-10-14", now: "2026-09-25T00:00:00Z", assets: 2893935877, liabilities: 2886948845, asOf: "2026-08-31T17:00:00-04:00", classes: ["bank-deposit", "repo", "treasury-bill"] },
+  { product: "PYUSD", id: "pyusd-paypal", module: "gaXXeRLPJVU8xNh11dsVtC1bnIYsH9HFFZN3Q7yy4xM.eF7UdfG3.mjs", capture: "2026-10-27", now: "2026-10-27T00:00:00Z", assets: 2754709360, liabilities: 2747625868, asOf: "2026-09-30T17:00:00-04:00", classes: ["bank-deposit", "repo", "treasury-bill"] },
   { product: "USDG", id: "usdg-paxos", module: "Dpx7vvLtZ0_GXJdsd7UXSGLBYctWInqJeDbtf1NUTGo.1zoiA1Sy.mjs", capture: "2026-10-24", now: "2026-10-24T00:00:00Z", assets: 3168423407, liabilities: 3164996248, asOf: "2026-09-30T17:00:00-04:00", classes: ["bank-deposit", "money-market-fund", "treasury-bill"] },
-  { product: "USDP", id: "usdp-paxos", module: "T6xLeGdnaKeagfQVSfjAmjg0_UAsdgPLW9gmBy9jinM.BLSMgw0g.mjs", capture: "2026-10-14", now: "2026-09-25T00:00:00Z", assets: 29189905, liabilities: 29168261, asOf: "2026-08-31T17:00:00-04:00", classes: ["bank-deposit", "repo"] },
+  { product: "USDP", id: "usdp-paxos", module: "T6xLeGdnaKeagfQVSfjAmjg0_UAsdgPLW9gmBy9jinM.xspL-Gtt.mjs", capture: "2026-10-27", now: "2026-10-27T00:00:00Z", assets: 26113649, liabilities: 26084307, asOf: "2026-09-30T17:00:00-04:00", classes: ["bank-deposit", "repo"] },
 ] as const;
 const routeTableMain = (row: (typeof CASES)[number]) =>
   `const routes={R1:{elements:{a:\`${row.product.toLowerCase()}-attestations\`},page:L(()=>import(\`./${row.module}\`)),path:\`/${row.product.toLowerCase()}-transparency\`},`
   + `R2:{page:L(()=>import(\`./decoyPage.D1coyChunk.mjs\`)),path:\`/blog\`}};`;
-function fixture(product: string, captured = "2026-10-14"): string {
+function fixture(product: string, captured = "2026-10-27"): string {
   const capture: { gzipBase64: string; rawSha256: string; rawByteLength: number } = JSON.parse(
     readFileSync(new NodeURL(`./fixtures/paxos/${product.toLowerCase()}-${captured}.module.json`, import.meta.url), "utf8"),
   );
@@ -89,7 +89,7 @@ describe("Paxos fiat product assurance", () => {
       },
     });
     await expect(runAdapter("paxos-independent-assurance", row.id, {
-      network, nowSec: Math.floor(Date.parse("2026-09-25T00:00:00Z") / 1000), validate: false,
+      network, nowSec: Math.floor(Date.parse("2026-10-27T00:00:00Z") / 1000), validate: false,
     })).rejects.toThrow(gate === "length" ? "PDF byte length" : "PDF SHA-256");
   });
 });

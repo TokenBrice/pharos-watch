@@ -11126,14 +11126,14 @@
     },
     {
       "assetId": "xgz-goldzip",
-      "reviewedAt": "2026-10-15",
-      "reviewer": "Rev_XgzGoldzip",
+      "reviewedAt": "2026-10-27",
+      "reviewer": "D03 evidence renewal 2026-10-27 (d03-l7)",
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-15",
-        "expiresAt": "2026-11-15",
-        "reviewer": "Rev_XgzGoldzip current issuer and CoinGecko canonical deployment review",
+        "reviewedAt": "2026-10-27",
+        "expiresAt": "2026-11-27",
+        "reviewer": "D03 evidence renewal 2026-10-27 (d03-l7): issuer Product Facts, CoinGecko platforms and pinned Ethereum block 26286557 re-read",
         "deploymentKey": "ethereum:0x69af64f409c08e9076bf7f3ed9db3a7409717161",
         "exhaustiveLiability": true,
         "sources": [
@@ -11157,7 +11157,7 @@
           "contractOrTokenId": "0x69af64f409c08e9076bf7f3ed9db3a7409717161",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "Ethereum block 26197360 (2026-10-15T10:37:11Z), hash 0x958a36b84608b2d4560cf4a4647af29e6c881c698d492cd4141addec17f4bb4a, binds the proxy implementation to verified HKGXToken 0x29ed41cb1013a4df63d87b82346b384847db7511. _update rejects frozen sender/recipient and blocks all token updates when paused. FREEZE_ROLE freezes accounts, BURN_ROLE force-burns frozen balances, and the owner can pause/upgrade. owner=0xd173e69192b9ff22069aa913ef6e6e94b19f0778; all five owner roles are true and paused=false. Official Product Facts and CoinGecko detail identify only the canonical Ethereum ERC-20; pinned totalSupply=39,000 tokens at 8 decimals. Native circulation is not a reserve attestation.",
+          "evidence": "Ethereum block 26286557 (2026-10-27T20:51:35Z), hash 0x548d4694af8ba834b86fe9075f83ab773d4f74d72c2030647358ba0278ceef33, re-read on 2026-10-27: the EIP-1967 implementation slot still binds the proxy to verified HKGXToken 0x29ed41cb1013a4df63d87b82346b384847db7511, owner()=0xd173e69192b9ff22069aa913ef6e6e94b19f0778, paused()=false and totalSupply=39,000 tokens at 8 decimals, all unchanged from the 2026-10-15 review at block 26197360. The unchanged implementation's _update rejects frozen sender/recipient and blocks all token updates when paused; FREEZE_ROLE freezes accounts, BURN_ROLE force-burns frozen balances, and the owner can pause/upgrade. Role membership was not re-enumerated on 2026-10-27; the restrictable posture rests on that code. Official Product Facts (fetched 2026-10-27) and CoinGecko goldzip-gold platforms identify only the canonical Ethereum ERC-20. Native circulation is not a reserve attestation.",
           "sources": [
             {
               "label": "Exact HKGXToken full verified implementation",
@@ -11168,7 +11168,7 @@
               "url": "https://goldzip.info/"
             },
             {
-              "label": "Pinned Ethereum block 26197360 (2026-10-15T10:37:11Z), current implementation, owner and paused state",
+              "label": "Pinned Ethereum block 26286557 (2026-10-27T20:51:35Z), current implementation, owner, paused state and totalSupply",
               "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ]
@@ -11177,18 +11177,18 @@
     },
     {
       "assetId": "zarsc-supercoin",
-      "reviewedAt": "2026-10-15",
-      "reviewer": "Rev_ZarscSupercoin primary-source and pinned RPC review",
+      "reviewedAt": "2026-10-27",
+      "reviewer": "D03 evidence renewal 2026-10-27 (d03-l7)",
       "deployments": [
         {
           "chainId": "solana",
           "contractOrTokenId": "5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "Exact-slot Alchemy Account Archive at finalized Solana slot 457200000 (2026-10-15T10:13:19Z; hash CkfH8u58XAk7qq4cQAuGFuJn8VkdXYGhN39wSRHQKN8Y): freeze, pausable, metadata-pointer and transfer-hook authority 78gLf8nzh9KpfgHJ3dXN61frauTzdAw5yeBXQbFsVnZi; permanent delegate 3DkHJVMsC7zLLdBa7SamKpr4r6jC9C8AWQdzzvcYjVdc; fee configuration, withdraw-withheld and interest-rate authority 96h1KDUmgqkn6EsSiYFsNiezhEJeB4jEioKmJRZ6Y849. Mint, mint-close and metadata-update authority remains UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk. Each authority is a nonexecutable zero-data System Program account. Pause=false, default state Initialized, transfer-hook program unset but mutable, both fee schedules zero and both interest rates zero. Retained powers establish direct holder restrictions regardless of present use; no incident or exercise-history absence is inferred. Current issuer terms section 5.3 and reserve archive identify this sole native Solana mint; additional networks remain prospective.",
+          "evidence": "Exact-slot Alchemy getAccountInfo at finalized Solana slot 462217280 (2026-10-27T21:09:08Z; hash CrW56oZQZhhHnNGMuDPQqsNh2Bw7bxVf2sowsZySthrZ), re-read on 2026-10-27: freeze, pausable, metadata-pointer and transfer-hook authority 78gLf8nzh9KpfgHJ3dXN61frauTzdAw5yeBXQbFsVnZi; permanent delegate 3DkHJVMsC7zLLdBa7SamKpr4r6jC9C8AWQdzzvcYjVdc; fee configuration, withdraw-withheld and interest-rate authority 96h1KDUmgqkn6EsSiYFsNiezhEJeB4jEioKmJRZ6Y849. Mint, mint-close and metadata-update authority remains UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk. All authorities are unchanged from the 2026-10-15 review at slot 457200000; the authority accounts themselves were not re-read on 2026-10-27. Pause=false, default state Initialized, transfer-hook program unset but mutable, both fee schedules zero and both interest rates zero. Retained powers establish direct holder restrictions regardless of present use; no incident or exercise-history absence is inferred. Current issuer terms section 5.3, the issuer contract-address disclosure and CoinGecko zar-supercoin platforms (all fetched 2026-10-27) identify this sole native Solana mint; additional networks remain prospective.",
           "sources": [
             {
-              "label": "Exact-slot mint and all four authority accounts, Solana slot 457200000, 2026-10-15T10:13:19Z",
+              "label": "Exact-slot Token-2022 mint account, Solana slot 462217280, 2026-10-27T21:09:08Z",
               "url": "https://solana-mainnet.g.alchemy.com/v2/"
             },
             {
@@ -11201,9 +11201,9 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-15",
-        "expiresAt": "2026-11-14",
-        "reviewer": "Rev_ZarscSupercoin primary-source and pinned RPC review",
+        "reviewedAt": "2026-10-27",
+        "expiresAt": "2026-11-26",
+        "reviewer": "D03 evidence renewal 2026-10-27 (d03-l7): issuer contract disclosure, ToS 5.3, CoinGecko platforms and exact-slot mint re-read",
         "deploymentKey": "solana:5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ",
         "exhaustiveLiability": true,
         "sources": [

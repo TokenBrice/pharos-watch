@@ -3,11 +3,11 @@
   "product": "AUDX",
   "profile": "audx-v1",
   "officialIndexUrl": "https://www.audxtoken.com/transparency",
-  "reportUrl": "https://www.audxtoken.com/_files/ugd/539754_e06dd9a1842d4b4a97777c64ed096bbe.pdf",
-  "reportSha256": "e8cd051253563ab475fb4125232a2100494516c71aa3fb4e083fcccfee56429a",
-  "reportByteLength": 476466,
-  "reportDate": "2026-08-31",
-  "reportAsOf": "2026-08-31T23:59:00+11:00",
+  "reportUrl": "https://www.audxtoken.com/_files/ugd/539754_db5ac3cd8ef94f5f923513d5708af3b3.pdf",
+  "reportSha256": "6d9154afae53bafb9bfbd4a5086915019fab9206247c3b546e567868e7a3ee30",
+  "reportByteLength": 476994,
+  "reportDate": "2026-09-30",
+  "reportAsOf": "2026-09-30T23:59:00+11:00",
   "reportTimeZone": "AEDT (as printed in the report; normalized conservatively to UTC)",
   "attestor": "Aura Partners",
   "engagement": "Independent limited assurance engagement under ASAE 3000 and ASAE 3100",
@@ -17,7 +17,7 @@
     {
       "code": "designated-bank-accounts",
       "label": "Australian Dollar reserves held in designated TAU accounts",
-      "amount": "3521466.68"
+      "amount": "3621107.41"
     }
   ],
   "liabilities": [
@@ -29,12 +29,12 @@
     {
       "code": "ethereum",
       "label": "Ethereum AUDX supply",
-      "amount": "1635050.00"
+      "amount": "1735050.00"
     },
     {
       "code": "conflux",
       "label": "Conflux AUDX supply",
-      "amount": "52000.00"
+      "amount": "2000.00"
     },
     {
       "code": "redbelly",
@@ -55,15 +55,20 @@
       "code": "solana",
       "label": "Solana AUDX supply",
       "amount": "1.00"
+    },
+    {
+      "code": "base",
+      "label": "Base AUDX supply",
+      "amount": "50000.00"
     }
   ],
-  "reportedAssetTotal": "3521466.68",
-  "computedAssetTotal": "3521466.68",
-  "reportedLiabilityTotal": "3498067.00",
+  "reportedAssetTotal": "3621107.41",
+  "computedAssetTotal": "3621107.41",
+  "reportedLiabilityTotal": "3598067.00",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
     "parserVersion": "26.08.0",
-    "normalizedTextSha256": "490e1220e110b773ef41bdd826d53358bb36a1aca816b9f9e65101f625e3bc4f",
+    "normalizedTextSha256": "918a58aee4271a7429f041b679b7d1e3e064f42cfd58162f7019eb3aa3fa1b21",
     "pageCount": 4
   },
   "assuranceTier": "independent-assurance"
