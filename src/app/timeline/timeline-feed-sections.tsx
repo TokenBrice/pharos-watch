@@ -18,7 +18,7 @@ import type { TapeEventSeverity } from "@shared/types/tape-event";
 import type { ActiveFilterChip } from "./timeline-controller";
 import { getLogoSrc } from "@/lib/logos";
 import type { ApiMeta } from "@/lib/api";
-import { deriveDataHealth, type DataHealthInfo } from "@/lib/data-health";
+import { deriveDataHealth, formatDataHealthTimestamp, isPublicWarning, type DataHealthInfo } from "@/lib/data-health";
 import { CRON_TAPE } from "@/lib/cron-intervals";
 import {
   eventDomId,
@@ -28,6 +28,11 @@ import {
   retainedIncidentPrefix,
 } from "./timeline-feed-helpers";
 import type { TimelineActiveStatus } from "./use-timeline-feed-data";
+
+/** Below public staleness a timestamp tooltip names only the source date (ADR-42). */
+function healthTooltip(health: DataHealthInfo): string {
+  return isPublicWarning(health) ? health.message : formatDataHealthTimestamp(health.dataUpdatedAt, "en-US", "UTC");
+}
 
 export function EventSkeleton() {
   return (
@@ -125,7 +130,7 @@ export function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, s
   const health = deriveDataHealth({ label: "Timeline", staleTime: CRON_TAPE, dataUpdatedAt, meta, error, hasData: dataUpdatedAt > 0 }, nowMs);
   if (health.dataUpdatedAt > 0) {
     parts.push(
-      <span key="updated" title={health.message} className="inline-flex items-center gap-1.5">
+      <span key="updated" title={healthTooltip(health)} className="inline-flex items-center gap-1.5">
         {health.state === "fresh" ? (
           <span
             aria-hidden="true"
@@ -210,7 +215,7 @@ export function OpenIncidentsSection({ incidents, status, health, onRetry, logos
           {status === "loading" ? "Loading current activity…"
             : "Current activity unavailable; active incidents cannot be confirmed."}
           {health.dataUpdatedAt > 0 ? (
-            <span title={health.message}> Last source update {timeAgo(Math.floor(health.dataUpdatedAt / 1000), nowMs / 1000)}.</span>
+            <span title={healthTooltip(health)}> Last source update {timeAgo(Math.floor(health.dataUpdatedAt / 1000), nowMs / 1000)}.</span>
           ) : null}
           {status !== "loading" ? (
             <Button variant="ghost" size="sm" onClick={onRetry}>Retry active incidents</Button>

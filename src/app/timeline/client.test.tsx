@@ -609,6 +609,38 @@ describe("TimelineClient", () => {
     expect(screen.queryByText("▌")).toBeNull();
   });
 
+  it.each<[string, Partial<UseEventsResult>]>([
+    ["fresh", {}],
+    ["source-degraded", { meta: { updatedAt: 1_700_000_000, ageSeconds: 0, status: "degraded", warning: "199 - \"source delayed\"" } }],
+    ["retained-error", { error: new Error("refresh failed") }],
+  ])("keeps the %s Updated tooltip to the source timestamp", (label, overrides) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_700_000_000_000);
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })], overrides);
+    const { rerender } = render(<TimelineClient />);
+    const updated = () => screen.getByText(/^Updated /).parentElement!;
+    expect(updated().title).toBe("Nov 14, 10:13 PM UTC");
+    if (label === "retained-error") expect(screen.queryByText("▌")).toBeNull();
+    // A newer receipt of the same generation cannot renew the source date.
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })], {
+      ...overrides,
+      dataUpdatedAt: 1_700_000_100_000,
+      meta: { status: "fresh", ...overrides.meta, updatedAt: 1_700_000_000, ageSeconds: 0 },
+    });
+    rerender(<TimelineClient />);
+    expect(updated().title).toBe("Nov 14, 10:13 PM UTC");
+  });
+
+  it("lets a stale Updated tooltip explain the public warning", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_700_000_000_000);
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })], {
+      meta: { updatedAt: 1_700_000_000 - 86_400, ageSeconds: 86_400, status: "stale" },
+    });
+    render(<TimelineClient />);
+    expect(screen.getByText(/^Updated /).parentElement!.title).toBe("Data is stale.");
+  });
+
   it("removes the fresh indicator on a failed refresh while retaining events", () => {
     const event = makeTapeEvent({ type: "depeg.peak_worsened" });
     mockEvents([event]);
