@@ -4,7 +4,7 @@
 
 ## Data Contract
 
-`useReportCardsV9Table()` supplies accepted grades/pillars/dependencies from the site-only compact representation, never the full report. `buildV9PortfolioProjection()` is the V9-named consumer of current Safety Score outputs, not another asset score. It computes amount-weighted informational aggregate and modeled route count. Held publication, missing cards or NR positive holdings make the aggregate unavailable. Pipeline gaps/unavailable pillars leave known-only subtotals with separate USD coverage denominators, never zero scores.
+`useReportCardsV9Table()` supplies accepted grades/pillars/dependencies from the site-only compact representation, never the full report. `buildV9PortfolioProjection()` is the V9-named consumer of current Safety Score outputs, not another asset score. It computes amount-weighted informational aggregate and modeled route count. Held publication, missing cards or NR positive holdings make the aggregate unavailable. Pipeline gaps/unavailable pillars leave known-only subtotals with separate USD coverage denominators, never zero scores. Portfolio dependency exposure is unavailable, not $0, when a basket link's share is unknown. Observed zero shares stay $0, and unknown-share links still count as routes.
 
 The holdings editor waits only for URL/local-storage initialization, not report cards. Report cards are enabled only when initialized holdings exist. Pending enrichment has an explicit loading state beside the still-editable holdings; it never implies a zero-risk portfolio.
 

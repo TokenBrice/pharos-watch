@@ -238,7 +238,8 @@ export interface V9PortfolioProjection {
     dependentAssetId: string;
     kind: "serial" | "basket";
     materiality: V9ConsumerResponse["dependencyGraph"]["edges"][number]["materiality"];
-    exposureUsd: number;
+    /** Null when a basket share is unknown: unmeasured exposure is unavailable, never $0. */
+    exposureUsd: number | null;
   }>;
 }
 
@@ -290,7 +291,7 @@ export function buildV9PortfolioProjection(
       dependentAssetId: edge.to,
       kind: edge.kind,
       materiality: edge.materiality,
-      exposureUsd: edge.kind === "basket" ? dependentAmount * (edge.weight ?? 0) : dependentAmount,
+      exposureUsd: edge.kind !== "basket" ? dependentAmount : edge.weight === null ? null : dependentAmount * edge.weight,
     }];
   });
 
