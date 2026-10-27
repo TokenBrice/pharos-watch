@@ -47,7 +47,7 @@ const body = {
 };
 
 describe("ChainsLeaderboardClient over the real fetch path", () => {
-  it("reads freshness from the hook's meta: true NR reason, current supply stamp, hero chip and no body banner", async () => {
+  it("reads freshness from the hook's meta: true NR reason, current supply stamp and no dependency advisory", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => Response.json(body)));
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
@@ -68,9 +68,8 @@ describe("ChainsLeaderboardClient over the real fetch path", () => {
     // only Chain Health inputs lag: the supply stamp stays current (each signal names its own generation)
     expect(screen.queryByText(/^Retained/)).toBeNull();
     expect(screen.getByText(/^as of \d{2}:\d{2} UTC$/)).toBeTruthy();
-    const chip = screen.getByRole("button", { name: /Chain Health inputs stale/ });
-    expect(chip.getAttribute("data-reason-codes")).toBe("api-degraded report-cards-stale stale-cache");
-    // degraded/stale is the hero chip, never an amber body callout
+    // a held dependency over fresh supply is operator signal (ADR-42): NR explains it, no hero chip or body callout
+    expect(screen.queryByRole("button", { name: /Stale data|Chain Health inputs/ })).toBeNull();
     expect(screen.queryByText(/Data quality warning/)).toBeNull();
     expect(screen.queryByRole("status")).toBeNull();
   });

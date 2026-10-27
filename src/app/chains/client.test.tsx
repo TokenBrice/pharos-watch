@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { ChainsLeaderboardClient } from "./client";
 import { makeChain } from "@/hooks/__tests__/chain-profile-fixtures";
 import { formatCompactUsd } from "@shared/lib/format";
@@ -111,6 +111,33 @@ describe("ChainsLeaderboardClient", () => {
     mockChains({ chains: [makeChain()], globalTotalUsd: 456_000_000 }, { meta: { status: "stale", updatedAt: 1_760_000_000, ageSeconds: 9_000 } });
     render(<ChainsLeaderboardClient />);
     expect(screen.getByText(/^Retained · as of \w+ \d+, \d{4} at \d{2}:\d{2}/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Stale data/ }).getAttribute("data-reason-codes")).toBe("api-stale");
+    expect(screen.getByRole("button", { name: /Stale data/ }).getAttribute("data-reason-codes")).toBe("api-stale health-stale");
+  });
+
+  it("ages the served supply generation into the hero chip without a refetch, never naming held Chain Health inputs", async () => {
+    // let a hydration pass that earlier renders scheduled on real frames land before faking timers
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    vi.useFakeTimers();
+    try {
+      const generation = 1_760_000_000;
+      vi.setSystemTime(generation * 1000);
+      mockChains({ chains: [makeChain({ healthScore: null, healthBand: null })], globalTotalUsd: 456_000_000, updatedAt: generation }, {
+        dataUpdatedAt: generation * 1000,
+        meta: {
+          updatedAt: generation, ageSeconds: 0, status: "degraded", freshBudgetSec: 1_800, degradedBudgetSec: 3_600,
+          dependencies: { reportCards: { status: "degraded", reason: "publication-held", ageSeconds: 0 } },
+        },
+      });
+      render(<ChainsLeaderboardClient />);
+      await act(async () => { vi.advanceTimersByTime(0); });
+      expect(screen.queryByRole("button", { name: /Stale data|Chain Health inputs/ })).toBeNull();
+      expect(screen.getAllByText("NR").length).toBeGreaterThan(0);
+
+      await act(async () => { vi.advanceTimersByTime(3_600_001); });
+      expect(screen.getByRole("button", { name: /Stale data/ })).toBeTruthy();
+      expect(useChainsMock.mock.results.at(-1)?.value.refetch).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

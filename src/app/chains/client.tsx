@@ -122,11 +122,11 @@ export function ChainsLeaderboardClient() {
               void refetch();
             }}
             queries={[{ preset: "chains", dataUpdatedAt, error, hasData: !!data?.chains?.length, meta }]}
-            // Degraded or stale data is the hero's status chip; the body only reports a hard error.
+            // Materially stale data is the hero's status chip; the body only reports a hard error.
             showFreshnessBanner={false}
           />
 
-          <ChainsHero data={data} meta={meta} retained={retained} />
+          <ChainsHero data={data} meta={meta} dataUpdatedAt={dataUpdatedAt} retained={retained} />
 
           <HarborHero data={harborInput} retainedAfterError={isError} />
 
@@ -154,7 +154,7 @@ function utcStamp(seconds: number): string {
  * chain), the snapshot stamp, and the neutral dominance bar as the single visual. Partial inputs are named on the
  * beam label and carried, with both excluded counts, by the status chip.
  */
-function ChainsHero({ data, meta, retained }: { data: ChainsResponse; meta: ApiMeta | null | undefined; retained: boolean }) {
+function ChainsHero({ data, meta, dataUpdatedAt, retained }: { data: ChainsResponse; meta: ApiMeta | null | undefined; dataUpdatedAt: number; retained: boolean }) {
   const byShare = data.chains.every((chain) => chain.dominanceShare != null)
     ? [...data.chains].sort((a, b) => b.dominanceShare! - a.dominanceShare!)
     : [];
@@ -197,7 +197,7 @@ function ChainsHero({ data, meta, retained }: { data: ChainsResponse; meta: ApiM
       <p className="text-muted-foreground">Shares divide by observed global supply. Snapshot {stamp}.</p>
     </OpsStatusChip>
   ) : null;
-  const freshnessChip = <ChainsFreshnessChip meta={meta} />;
+  const freshnessChip = <ChainsFreshnessChip meta={meta} dataUpdatedAt={dataUpdatedAt} />;
   const status = coverageChip || freshnessChip ? (
     <>
       {coverageChip}
