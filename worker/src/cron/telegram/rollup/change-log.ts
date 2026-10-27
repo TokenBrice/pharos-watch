@@ -155,14 +155,18 @@ export async function loadCoinChanges(
   return (rows.results ?? []).flatMap((row) => parseChangeLogRow(row) ?? []);
 }
 
-/** Freeze changes after a change-log id, for the hourly batch cursor. */
-export async function loadFreezeChangesAfter(db: D1Database, afterId: number): Promise<StoredTelegramChange[]> {
+/** Freeze changes after a change-log id (through `throughId` when given), for the hourly batch cursor. */
+export async function loadFreezeChangesAfter(
+  db: D1Database,
+  afterId: number,
+  throughId?: number,
+): Promise<StoredTelegramChange[]> {
   const rows = await db.prepare(
     `SELECT id, kind, stablecoin_id, chat_id, source_key, payload_json, observed_at
        FROM telegram_change_log
-      WHERE id > ? AND kind = 'freeze'
+      WHERE id > ? AND (? IS NULL OR id <= ?) AND kind = 'freeze'
       ORDER BY id ASC`,
-  ).bind(afterId).all<ChangeLogRow>();
+  ).bind(afterId, throughId ?? null, throughId ?? null).all<ChangeLogRow>();
   return (rows.results ?? []).flatMap((row) => parseChangeLogRow(row) ?? []);
 }
 

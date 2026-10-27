@@ -171,9 +171,11 @@ export async function dispatchTelegramAlerts(
   // Hourly freeze batch and the 09:00-local roll-up enqueue direct-delivery
   // jobs; a failure here must never block live alerts.
   let rollup: TelegramRollupStepResult | null = null;
+  let rollupStepFailed = false;
   try {
     rollup = await runTelegramRollupStep(db, nowSec);
   } catch (error) {
+    rollupStepFailed = true;
     logTelegramEvent({
       level: "warn",
       message: "telegram roll-up step failed",
@@ -247,8 +249,18 @@ export async function dispatchTelegramAlerts(
     handoffEnqueuedCount: fanout.deliveriesPlanned,
     handoffPageCount: fanout.pages,
   };
+  // R4: every incomplete stage names itself, in stage order. A thrown roll-up
+  // hook names only itself, never fabricated sub-step outcomes.
+  const reasons: string[] = [];
+  if (planningErrors.length > 0) reasons.push("telegram-planning-failed");
+  if (fanout.jobsFailedClosed > 0) reasons.push("fanout-page-failed");
+  if (rollupStepFailed) reasons.push("telegram-rollup-step-failed");
+  if (rollup?.rollup.state === "failed") reasons.push("telegram-rollup-failed");
+  if (rollup?.rollup.state === "preset-resolution-failed") reasons.push("telegram-rollup-preset-resolution-failed");
+  if (rollup?.freezeBatch.state === "failed") reasons.push("telegram-freeze-batch-failed");
   const metadata = {
     ...result,
+    ...(reasons.length > 0 ? { reason: reasons[0], reasons } : {}),
     deliveryV2: {
       alertJobId,
       alertJobCreated,
@@ -280,7 +292,7 @@ export async function dispatchTelegramAlerts(
       jobsDone: sweep.jobsDone,
       planningErrors,
     },
-    noWorkRun: !mustSeedSnapshots && attempted === 0 && fanout.deliveriesPlanned === 0 && sweep.expired === 0
+    noWorkRun: reasons.length === 0 && !mustSeedSnapshots && attempted === 0 && fanout.deliveriesPlanned === 0 && sweep.expired === 0
       && !alertJobCreated && freeze.observed === 0,
   };
   await reportCronProgress(reportProgress, {
@@ -293,8 +305,11 @@ export async function dispatchTelegramAlerts(
   return {
     itemCount: sent,
     metadata: JSON.stringify(metadata),
-    ...(planningErrors.length > 0
-      ? { status: "degraded" as const, error: `Telegram dispatch planning failed: ${planningErrors.join(", ")}` }
+    ...(reasons.length > 0
+      ? {
+        status: "degraded" as const,
+        error: `Telegram dispatch incomplete: ${[...reasons, ...planningErrors].join(", ")}`,
+      }
       : {}),
   };
 }
