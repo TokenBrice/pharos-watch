@@ -254,6 +254,109 @@ describe("enrichMissingPrices", () => {
     expect(assets[0].price).toBe(1.0001);
   });
 
+  it("quarantines a malformed category row while healthy exact-slug siblings resolve", async () => {
+    const assets = [makePeggedAsset({ id: "usdc-circle", symbol: "USDC", price: 0, cmcSlug: "usd-coin" })];
+    const fetchSpy = mockFetch([{ match: "/v1/cryptocurrency/category", body: cmcCategory([
+      { slug: "usd-coin", symbol: "USDC", quote: { USD: cmcUsdQuote(1.0001) } },
+      { slug: "broken-dollar", symbol: "BRKN", quote: null },
+    ]) }]);
+    const result = await runCmcPass(assets, "test-key", undefined, undefined);
+    expect(result.resolved).toBe(1);
+    expect(assets[0].price).toBe(1.0001);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(result.diagnostics?.[0]).toMatchObject({
+      success: true, responseRowCount: 2, rejectionReasonCounts: { "invalid-shape": 1 },
+    });
+    expect(result.diagnostics?.[0].errorClass).toBeUndefined();
+  });
+
+  it.each([false, true])("lets a malformed same-symbol row keep slugless identity ambiguous; reverse=%s", async (reverse) => {
+    const rows = [
+      { slug: "usd-coin", symbol: "USDC", quote: { USD: cmcUsdQuote(1.0001) } },
+      { slug: "foreign-dollar", symbol: "usdc", quote: null },
+    ];
+    const assets = [makePeggedAsset({ id: "usdc-circle", symbol: "USDC", price: 0 })];
+    mockFetch([{ match: "/v1/cryptocurrency/category", body: cmcCategory(reverse ? rows.reverse() : rows) }]);
+    expect((await runCmcPass(assets, "test-key", undefined, undefined)).resolved).toBe(0);
+    expect(assets[0].price).toBe(0);
+  });
+
+  it("disables slugless fallback when any category row lacks a symbol, keeping exact slugs", async () => {
+    const assets = [
+      makePeggedAsset({ id: "usdc-circle", symbol: "USDC", price: 0 }),
+      makePeggedAsset({ id: "usdt-tether", symbol: "USDT", price: 0, cmcSlug: "tether" }),
+    ];
+    mockFetch([{ match: "/v1/cryptocurrency/category", body: cmcCategory([
+      { slug: "usd-coin", symbol: "USDC", quote: { USD: cmcUsdQuote(1.0001) } },
+      { slug: "tether", symbol: "USDT", quote: { USD: cmcUsdQuote(0.9999) } },
+      { slug: "nameless", quote: { USD: cmcUsdQuote(1) } },
+    ]) }]);
+    const result = await runCmcPass(assets, "test-key", undefined, undefined);
+    expect(assets[0].price).toBe(0);
+    expect(assets[1].price).toBe(0.9999);
+    expect(result.diagnostics?.[0]).toMatchObject({ responseRowCount: 3, resolvedCount: 1 });
+  });
+
+  it("counts quarantined rows toward the raw category truncation census", async () => {
+    const assets = [makePeggedAsset({ id: "usdc-circle", symbol: "USDC", price: 0, cmcSlug: "usd-coin" })];
+    const fetchSpy = mockFetch([
+      { match: "/v1/cryptocurrency/category", body: cmcCategory([
+        { slug: "usd-coin", symbol: "USDC", quote: { USD: cmcUsdQuote(1.0001) } },
+        { slug: "broken-dollar", symbol: "BRKN", quote: null },
+      ], 2) },
+    ]);
+    expect((await runCmcPass(assets, "test-key", undefined, undefined)).resolved).toBe(1);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["all-invalid category", [{ slug: "usd-coin", symbol: "USDC", quote: null }], false],
+    ["valid empty category", [], true],
+  ] as const)("distinguishes %s from mixed quarantine", async (_label, rows, success) => {
+    const assets = [makePeggedAsset({ id: "usdc-circle", symbol: "USDC", price: 0 })];
+    mockFetch([{ match: "/v1/cryptocurrency/category", body: cmcCategory([...rows]) }]);
+    const result = await runCmcPass(assets, "test-key", undefined, undefined);
+    expect(result.resolved).toBe(0);
+    expect(result.diagnostics?.[0]).toMatchObject({ success });
+    if (!success) expect(result.diagnostics?.[0].errorClass).toBe("invalid-shape");
+  });
+
+  it("quarantines a malformed targeted row while its healthy sibling resolves", async () => {
+    const assets = [
+      makePeggedAsset({ id: "usdc-circle", symbol: "USDC", price: 0, cmcSlug: "usd-coin" }),
+      makePeggedAsset({ id: "broken-dollar", symbol: "BRKN", price: 0, cmcSlug: "broken-dollar" }),
+    ];
+    mockFetch([
+      { match: "/v1/cryptocurrency/category", body: cmcCategory([], 301) },
+      { match: "/v3/cryptocurrency/quotes/latest", body: { data: [
+        { id: 3408, slug: "usd-coin", symbol: "USDC", is_active: 1,
+          quote: { USD: { ...cmcUsdQuote(0.9998), volume_24h: 50_000 } } },
+        { id: 2, slug: "broken-dollar", symbol: "BRKN", quote: null },
+      ] } },
+    ]);
+    const result = await runCmcPass(assets, "test-key", undefined, undefined);
+    expect(result.resolved).toBe(1);
+    expect(assets[0].price).toBe(0.9998);
+    expect(assets[1].price).toBe(0);
+    const targeted = result.diagnostics?.find((entry) => entry.endpoint.endsWith("/quotes/latest"));
+    expect(targeted).toMatchObject({ success: true, rejectionReasonCounts: { "invalid-shape": 1 } });
+    expect(targeted?.assetAttempts).toEqual(expect.arrayContaining([
+      expect.objectContaining({ assetId: "broken-dollar", result: "rejected", rejectionClass: "invalid-shape" }),
+    ]));
+  });
+
+  it("fails a nonempty all-invalid targeted payload", async () => {
+    const assets = [makePeggedAsset({ id: "usdc-circle", symbol: "USDC", price: 0, cmcSlug: "usd-coin" })];
+    mockFetch([
+      { match: "/v1/cryptocurrency/category", body: cmcCategory([], 301) },
+      { match: "/v3/cryptocurrency/quotes/latest", body: { data: [{ id: 3408, slug: "usd-coin", symbol: "USDC" }] } },
+    ]);
+    const result = await runCmcPass(assets, "test-key", undefined, undefined);
+    expect(result.resolved).toBe(0);
+    const targeted = result.diagnostics?.find((entry) => entry.endpoint.endsWith("/quotes/latest"));
+    expect(targeted).toMatchObject({ success: false, errorClass: "invalid-shape" });
+  });
+
   it("closes a stale CMC circuit when no fallback candidates remain", async () => {
     const openedAt = Math.floor(Date.now() / 1000) - 3600;
     const db = makeEnrichPricesDb([

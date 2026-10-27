@@ -52,6 +52,18 @@ describe("missing-price pass runner", () => {
     expect(progress[progress.length - 1]).toMatchObject({ missingAfterPass: 0, counts: { passJupiter: 1 } });
   });
 
+  it("forwards DefiLlama quarantine diagnostics and still runs later providers", async () => {
+    const diagnostic = {
+      source: "defillama-contract", stage: "fallback", endpoint: "coins.llama.fi/prices/current/",
+      status: 200, ok: true, success: true, rejectionReasonCounts: { "invalid-shape": 1 },
+    };
+    passes.dl.mockResolvedValue({ pass1: 1, pass1b: 0, failures: [], diagnostics: [diagnostic] });
+    const result = await runEnrichmentPasses({ assets: [makePeggedAsset({ price: null })] });
+    expect(result.providerDiagnostics).toEqual([diagnostic]);
+    expect(passes.cmc).toHaveBeenCalled();
+    expect(passes.cg).toHaveBeenCalled();
+  });
+
   it("propagates cancellation instead of reporting provider failure and running later passes", async () => {
     const controller = new AbortController();
     const failure = new Error("cancelled during provider read");

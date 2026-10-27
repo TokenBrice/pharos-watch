@@ -1,41 +1,42 @@
 import { z } from "zod";
 import { DexLiquidityBaselineReadFailureSchema, LiquidityHealthSchema } from "@shared/types/status/yield-liquidity";
 
-/** DefiLlama /coins/{tokens} price response */
-export const DLPriceResponseSchema = z.object({
-  coins: z
-    .record(
-      z.string(),
-      z.object({
-        price: z.number(),
-        symbol: z.string().optional(),
-        timestamp: z.number().optional(),
-        confidence: z.number().optional(),
-      }),
-    )
-    .optional()
-    .default({}),
+/** One DefiLlama /coins/{tokens} quote; callers validate each entry separately. */
+export const DLPriceEntrySchema = z.object({
+  price: z.number(),
+  symbol: z.string().optional(),
+  timestamp: z.number().optional(),
+  confidence: z.number().optional(),
 });
 
+/**
+ * DefiLlama /coins/{tokens} price envelope. Entries stay unknown so one
+ * malformed quote is quarantined per key instead of rejecting its siblings.
+ */
+export const DLPriceResponseSchema = z.object({
+  coins: z.record(z.string(), z.unknown()).optional().default({}),
+});
+
+export const CmcCategoryCoinSchema = z.object({
+  slug: z.string().optional(),
+  symbol: z.string(),
+  last_updated: z.string().optional(),
+  quote: z.object({
+    USD: z.object({
+      // CMC returns null price for tokens without recent quotes; the
+      // downstream loop already skips null/non-positive prices, so accept
+      // them here instead of rejecting the whole response.
+      price: z.number().nullable().optional(),
+      last_updated: z.string().nullable().optional(),
+    }),
+  }),
+});
+
+/** Category envelope; `coins` rows are validated individually by the caller. */
 export const CmcCategoryResponseSchema = z.object({
   data: z.object({
     num_tokens: z.number().int().nonnegative(),
-    coins: z.array(
-      z.object({
-        slug: z.string().optional(),
-        symbol: z.string(),
-        last_updated: z.string().optional(),
-        quote: z.object({
-          USD: z.object({
-            // CMC returns null price for tokens without recent quotes; the
-            // downstream loop already skips null/non-positive prices, so accept
-            // them here instead of rejecting the whole response.
-            price: z.number().nullable().optional(),
-            last_updated: z.string().nullable().optional(),
-          }),
-        }),
-      }),
-    ),
+    coins: z.array(z.unknown()),
   }),
   status: z
     .object({
@@ -46,7 +47,7 @@ export const CmcCategoryResponseSchema = z.object({
     .optional(),
 });
 
-const CmcLatestQuoteEntrySchema = z.object({
+export const CmcLatestQuoteEntrySchema = z.object({
   id: z.number().int().positive(),
   slug: z.string(),
   symbol: z.string(),
@@ -75,8 +76,9 @@ const CmcLatestQuoteEntrySchema = z.object({
   ]),
 });
 
+/** Latest-quotes envelope; `data` rows are validated individually by the caller. */
 export const CmcLatestQuotesResponseSchema = z.object({
-  data: z.array(CmcLatestQuoteEntrySchema),
+  data: z.array(z.unknown()),
 });
 
 const JupiterQuotedPriceEntrySchema = z.object({
@@ -99,10 +101,10 @@ const JupiterSparsePriceEntrySchema = z.object({
   liquidity: z.number().nullable().optional(),
 });
 
-export const JupiterPriceResponseSchema = z.record(
-  z.string(),
-  z.union([JupiterQuotedPriceEntrySchema, JupiterSparsePriceEntrySchema]),
-);
+export const JupiterPriceEntrySchema = z.union([JupiterQuotedPriceEntrySchema, JupiterSparsePriceEntrySchema]);
+
+/** Jupiter price envelope; each mint entry is validated individually by the caller. */
+export const JupiterPriceResponseSchema = z.record(z.string(), z.unknown());
 
 export const SolanaSlotResponseSchema = z.object({
   result: z.number().int().positive(),
