@@ -165,14 +165,14 @@ export function HeroPriceMetric({
   }
 
   return (
-    <div className="min-h-36 min-w-0 pharos-inset px-3 py-2.5">
+    <div className="min-w-0 pharos-inset px-3 py-2.5">
       <p className={HERO_METRIC_LABEL_CLASS}>
         Price{coin.flags.pegCurrency !== "USD" ? ` (${coin.flags.pegCurrency})` : ""}
       </p>
       <p className={`break-words font-extrabold pharos-numeric tracking-tight ${confidenceClass(observed ? coinData.priceConfidence : null)} text-xl`}>
         {price}
       </p>
-      <p className={`mt-1 min-h-12 text-xs ${referenceClass}`}>{referenceLine}</p>
+      <p className={`mt-1 text-xs ${referenceClass}`}>{referenceLine}</p>
       {limitedDepegCoverageNote ? (
         <p className="mt-1 text-2xs text-state-warn">{limitedDepegCoverageNote}</p>
       ) : null}
@@ -217,7 +217,7 @@ function HeroMarketCapMetric({
   }
 
   return (
-    <div className="min-h-36 min-w-0 pharos-inset px-3 py-2.5">
+    <div className="min-w-0 pharos-inset px-3 py-2.5">
       <p className={HERO_METRIC_LABEL_CLASS}>Market cap</p>
       <p className="font-bold pharos-numeric tracking-tight text-lg">{mcap != null ? formatCurrency(mcap) : "—"}</p>
       {coin.flags.pegCurrency !== "USD" && <p className="mt-0.5 text-2xs text-muted-foreground">USD-normalized</p>}

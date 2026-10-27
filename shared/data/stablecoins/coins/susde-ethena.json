@@ -2,7 +2,7 @@
   "id": "susde-ethena",
   "name": "Ethena Staked USDe",
   "symbol": "sUSDe",
-  "oneLiner": "sUSDe is the yield-bearing wrapper of USDe; its value versus USDe rises as basis-trade yield accrues, with USDe-tier delta-neutral risk.",
+  "oneLiner": "sUSDe is USDe's yield-bearing wrapper; it gains versus USDe as yield accrues from USDe's mostly Liquid Cash backing and hedged crypto sleeve.",
   "mechanismArchetype": "synthetic-delta-neutral",
   "flags": {
     "backing": "crypto-backed",
