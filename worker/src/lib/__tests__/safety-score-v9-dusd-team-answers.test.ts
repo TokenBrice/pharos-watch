@@ -140,7 +140,7 @@ describe("Safety Score v9 DUSD Makina team-answer evidence", () => {
       mappedLiveReserveWeight: 0,
       fallbackReason: null,
       edges: [{ upstreamAssetId: PARENT_ID, dependencyType: "wrapper", economicRole: "serial-claim", weight: 1 }],
-      rejectionReasons: Array.from({ length: 5 }, (_, sliceIndex) => ({ sliceIndex, reason: "no-match" })),
+      rejectionReasons: Array.from({ length: 4 }, (_, sliceIndex) => ({ sliceIndex, reason: "no-match" })),
     });
     expect(evaluatedAsset.dependencyInputs.serial).toMatchObject([{ upstreamAssetId: PARENT_ID }]);
   });

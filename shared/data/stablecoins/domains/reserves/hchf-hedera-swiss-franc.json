@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurM07yvUSDC1.HchfReview)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l1)",
     "confidence": "verified",
     "sources": [
       {
@@ -43,7 +43,7 @@
         "url": "https://github.com/SwisscoastAG/HLiquity/tree/c20211d0ba512c4f51eb70666854234933a64182/packages/contracts/contracts"
       },
       {
-        "label": "Hedera mainnet Hashio RPC - block 100,587,413 (read 2026-10-01)",
+        "label": "Hedera mainnet Hashio RPC - block 101,631,008 (hash 0xb7bcdcb1...8aaf9a, 2026-10-27 16:15:59 UTC)",
         "url": "https://mainnet.hashio.io/api"
       },
       {
@@ -67,9 +67,9 @@
         "url": "https://omniscia.io/reports/swisscoast-hliquity-implementation-6617b5f16434ec0018fdb844/"
       }
     ],
-    "rationale": "At Hedera mainnet EVM block 100587413 (hash 0xec92fa0f98bb5c22bef164aee2d36ed1202d776698facee3d7ba430a40ba77d3; 2026-10-01 07:20:31 UTC), getETH() returned 2,379,004.38950113 HBAR for ActivePool 0.0.6070027 and 0 for DefaultPool 0.0.6070041. These are the two pools included by the pinned LiquityBase.getEntireSystemColl(), so the outstanding-HCHF reserve scope is system Trove collateral alone. The separately observed 230,312.76723166 HBAR in StabilityPool 0.0.6070108 belongs to Stability Pool depositors after liquidation burns their HCHF deposits; it is diagnostic only and is excluded from outstanding-token backing. Same-block getHCHFDebt() reads succeeded for ActivePool and DefaultPool, and getTotalHCHFDeposits() succeeded for StabilityPool. Current token metadata and HCHFToken immutable getter reads confirm the unchanged deployment identity. Official documentation and the protocol audit identify HBAR as the sole collateral asset; the 100% slice remains system Trove HBAR, without asserting any fiat reserve or collateral coverage ratio.",
+    "rationale": "At Hedera mainnet EVM block 101631008 (hash 0xb7bcdcb156af659e630e1436bbabce2569a449f1f2279b7586c04a09458aaf9a; 2026-10-27 16:15:59 UTC), getETH() returned 2,279,844.8976892 HBAR for ActivePool 0.0.6070027 and 0 for DefaultPool 0.0.6070041. These are the two pools included by the pinned LiquityBase.getEntireSystemColl(), so the outstanding-HCHF reserve scope is system Trove collateral alone. The separately observed 227,951.00892119 HBAR in StabilityPool 0.0.6070108 belongs to Stability Pool depositors after liquidation burns their HCHF deposits; it is diagnostic only and is excluded from outstanding-token backing. The previous pinned read (block 100587413, 2026-10-01) showed 2,379,004.38950113 HBAR in ActivePool. Same-block getHCHFDebt() reads succeeded for ActivePool and DefaultPool, and getTotalHCHFDeposits() succeeded for StabilityPool. Current token metadata and HCHFToken immutable getter reads confirm the unchanged deployment identity. Official documentation and the protocol audit identify HBAR as the sole collateral asset; the 100% slice remains system Trove HBAR, without asserting any fiat reserve or collateral coverage ratio.",
     "compositionBasis": "HLiquity single-collateral HBAR CDP design, pinned LiquityBase accounting, and same-block Hedera mainnet ActivePool/DefaultPool state; StabilityPool HBAR is excluded depositor property",
-    "compositionAsOf": "2026-10-01",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "No reserve asset class is unclassified; system Trove backing is HBAR in ActivePool and DefaultPool against outstanding HCHF debt. StabilityPool HBAR is depositor-owned liquidation proceeds, not reserve assets for surviving HCHF holders. Per-Trove collateral ratios vary by user and aggregate coverage floats with the HBAR price.",
     "knownUnknownExposurePct": 0,

@@ -4,7 +4,7 @@
     {
       "sourceKey": "frax-balance-sheet:wtgxx",
       "name": "WTGXX (WisdomTree Government Money Market)",
-      "pct": 64.24744229,
+      "pct": 66.08758517,
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "WisdomTree Treasury Money Market Digital Fund",
@@ -20,7 +20,7 @@
     {
       "sourceKey": "frax-balance-sheet:ustb",
       "name": "USTB (Superstate tokenized T-bills)",
-      "pct": 18.22536246,
+      "pct": 16.31128896,
       "risk": "low",
       "coinId": "ustb-superstate",
       "depType": "collateral",
@@ -38,7 +38,7 @@
     {
       "sourceKey": "frax-balance-sheet:buidl",
       "name": "BUIDL (BlackRock tokenized T-bills)",
-      "pct": 15.11478378,
+      "pct": 15.54100992,
       "risk": "low",
       "coinId": "buidl-blackrock",
       "depType": "collateral",
@@ -54,24 +54,9 @@
       "liquidityHorizon": "one-day"
     },
     {
-      "sourceKey": "frax-balance-sheet:usdb",
-      "name": "USDB (Bridge)",
-      "pct": 0.00000353,
-      "risk": "low",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Bridge Building Inc.",
-      "riskFactors": [
-        "counterparty",
-        "liquidity",
-        "custody",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
       "sourceKey": "frax-balance-sheet:erebor_usd",
       "name": "EREBOR_USD (Erebor Bank frxUSD reserve account)",
-      "pct": 1.91186565,
+      "pct": 1.96230966,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Erebor Bank (FBO frxUSD Stablecoin Reserve Account)",
@@ -85,7 +70,7 @@
     {
       "sourceKey": "frax-balance-sheet:ausd",
       "name": "AUSD (Agora Dollar)",
-      "pct": 0.03429894,
+      "pct": 0.09684554,
       "risk": "low",
       "coinId": "ausd-agora",
       "depType": "collateral",
@@ -102,7 +87,7 @@
     {
       "sourceKey": "frax-balance-sheet:usdc",
       "name": "USDC (Circle)",
-      "pct": 0.46624335,
+      "pct": 0.00096075,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -118,12 +103,16 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (RuleC15)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l1)",
     "confidence": "verified",
     "sources": [
       {
         "label": "Frax frxUSD balance-sheet API",
+        "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+      },
+      {
+        "label": "Frax frxUSD balance-sheet API read 2026-10-27T16:03:47Z (asOfTimestamp; Ethereum block 26285121)",
         "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
       },
       {
@@ -147,9 +136,9 @@
         "url": "https://www.bridge.xyz/news/usdb"
       }
     ],
-    "rationale": "Independently recomputed under owner ruling D01 from the complete first-party 2026-10-01T11:03:47.000Z balance sheet: every asset amount is disclosed in USD and divided by totalAssets USD 104732146.4444. WTGXX's two disclosed holdings are aggregated; seven resulting weights are rounded independently to eight decimal places with no invented residual. The disclosed row sum USD 104732146.444379011496 differs from the source total by USD 0.000020988504. Existing asset-class and liquidity mappings are preserved; AUSD and USDC identities match the exact Ethereum tokens disclosed by the source.",
+    "rationale": "Independently recomputed under owner ruling D01 from the complete first-party 2026-10-27T16:03:47.000Z balance sheet (Ethereum block 26285121): every asset amount is disclosed in USD and divided by totalAssets USD 102118411.3803. WTGXX's two disclosed holdings (USD 14597867.90 redemption contract + USD 52889724.20 BitGo Trust Account) are aggregated; six resulting weights are rounded independently to eight decimal places and sum to 100 with no invented residual. USDB (Bridge) is no longer listed by the source and its prior 0.00000353% slice is removed, not zero-filled. Existing asset-class and liquidity mappings are preserved; AUSD and USDC identities match the exact Ethereum tokens disclosed by the source.",
     "compositionBasis": "Official Frax frxUSD balance-sheet asset values normalized by the live frax-balance-sheet adapter",
-    "compositionAsOf": "2026-10-01",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "Every disclosed balance-sheet asset is represented, including AUSD and USDC. The arithmetic refresh does not establish portfolio-wide legal custody safeguards or stressed cash-out bounds; existing mappings are not upgraded.",
     "knownUnknownExposurePct": 0,
@@ -157,7 +146,7 @@
       {
         "reserveIndex": 0,
         "reserveName": "WTGXX (WisdomTree Government Money Market)",
-        "pct": 64.24744229,
+        "pct": 66.08758517,
         "disposition": "untracked-exogenous-asset",
         "rationale": "wtgxx-wisdomtree is a quarantined no-supply record (permitted runtime sources report no positive circulating supply or market cap) that can never carry a live score, so this slice is scored on its own fund-share asset class rather than linked as a dependency edge.",
         "candidateCoinIds": [
@@ -166,15 +155,8 @@
       },
       {
         "reserveIndex": 3,
-        "reserveName": "USDB (Bridge)",
-        "pct": 0.00000353,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "USDB is identified by the official balance sheet but remains outside the active scoring set, so it is not promoted into the active dependency graph."
-      },
-      {
-        "reserveIndex": 4,
         "reserveName": "EREBOR_USD (Erebor Bank frxUSD reserve account)",
-        "pct": 1.91186565,
+        "pct": 1.96230966,
         "disposition": "untracked-exogenous-asset",
         "rationale": "EREBOR_USD is an issuer-identified FBO bank-deposit account holding frxUSD reserve cash, not a holding of the tracked frxUSD token and therefore not a dependency edge."
       }

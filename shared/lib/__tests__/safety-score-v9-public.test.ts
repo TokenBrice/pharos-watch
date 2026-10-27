@@ -1133,7 +1133,7 @@ describe("Safety Score v9 public projection", () => {
     expect(card.scoreTrace.providerRowExclusions![0]!.review).toMatchObject({
       belongsToAssetId: "frxusd-frax", providerChainLabel: "Fraxtal",
       contractAddress: "0xfc00000000000000000000000000000000000001",
-      provenance: { blockNumber: 42061479 },
+      provenance: { blockNumber: 43153493 },
     });
   });
   it("publishes effective weighted signatures without turning unknown key bypasses into quorum credit", () => {

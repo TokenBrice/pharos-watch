@@ -85,8 +85,10 @@ describe("V9 common-mode publication", () => {
     const changed = structuredClone(report);
     changed.dependencyGraph.edges[0].to = "wrong-dependent";
     expect(ReportCardsV9CurrentResponseSchema.safeParse(changed).success).toBe(false);
+    // Basket edges depend on current reserve curation admitted at the capture
+    // clock, so the edge count varies; a repeated edge always breaks ordering.
     const unsorted = structuredClone(report);
-    unsorted.dependencyGraph.edges.reverse();
+    unsorted.dependencyGraph.edges.push(structuredClone(unsorted.dependencyGraph.edges[0]));
     expect(ReportCardsV9CurrentResponseSchema.safeParse(unsorted).success).toBe(false);
   });
 
