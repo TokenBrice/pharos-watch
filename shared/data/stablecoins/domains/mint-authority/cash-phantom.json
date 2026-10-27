@@ -129,10 +129,10 @@
         "address": "76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q",
         "executionScope": {
           "controllerDeployment": "solana:76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-10-31",
-          "reviewer": "DataMisc02",
+          "reviewedAt": "2026-10-27",
+          "observedAt": "2026-10-27",
+          "expiresAt": "2026-11-26",
+          "reviewer": "D01 evidence renewal 2026-10-27",
           "confidence": "partial",
           "sources": [
             {
@@ -141,13 +141,13 @@
             }
           ],
           "pin": {
-            "position": "452348179",
+            "position": "462007756",
             "hash": null,
             "runtimeIdentity": "11111111111111111111111111111111:system-account:space=0:executable=false",
             "signerIdentity": "76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q"
           },
           "observedState": {
-            "position": "452348179",
+            "position": "462007756",
             "hash": null,
             "runtimeIdentity": "11111111111111111111111111111111:system-account:space=0:executable=false",
             "signerIdentity": "76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q"
@@ -207,8 +207,8 @@
         "canRaiseCap": true,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-01",
-        "observedBlock": 452345314,
+        "observedAt": "2026-10-27",
+        "observedBlock": 462007756,
         "failureDomainKeys": [
           "solana:76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q"
         ],
@@ -222,7 +222,7 @@
             "url": "https://explorer.solana.com/tx/23biLsrUSuYhnDDvRhQUu7u7bnHNVB5nhE5nVDEJHLFvzztHKb5h4DXBmA5gWosN9v1FcmLqTMaJQCkihwWnpSHa"
           }
         ],
-        "evidence": "At finalized Solana context slot 452345314 on 2026-10-01, getMultipleAccounts(jsonParsed) confirmed CASH mintAuthority HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7. The reviewed Bridge ProgramData H79WsaPgtctdpmhykRQZ91r8HNr5uqxUWEBe6DZXuhMu is owned by the upgradeable loader and its parsed authority remains 76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q. In the same response, that authority account is System Program-owned, non-executable and zero-data. No on-chain multisig or execution delay protects this loader authority; off-chain key custody is not established by the account type. Historical confirmation retained: finalized getTransaction(23biLsr...) previously returned successful slot 401157588 with loader log New authority Some(76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q), confirming the transfer from transaction signer BozdeWNZHmpVWcKSYZo9W8rYbvtK8U8jMnYMQggsGkQH."
+        "evidence": "At finalized Solana context slot 462007756 on 2026-10-27, getMultipleAccounts(jsonParsed) confirmed CASH mintAuthority HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7. The reviewed Bridge ProgramData H79WsaPgtctdpmhykRQZ91r8HNr5uqxUWEBe6DZXuhMu is owned by the upgradeable loader and its parsed authority remains 76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q. In the same response, that authority account is System Program-owned, non-executable and zero-data. No on-chain multisig or execution delay protects this loader authority; off-chain key custody is not established by the account type. Historical confirmation retained: finalized getTransaction(23biLsr...) previously returned successful slot 401157588 with loader log New authority Some(76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q), confirming the transfer from transaction signer BozdeWNZHmpVWcKSYZo9W8rYbvtK8U8jMnYMQggsGkQH."
       },
       {
         "chain": "solana",
