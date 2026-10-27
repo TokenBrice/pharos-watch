@@ -25,7 +25,7 @@ describe("HomeMarketStateLine compact lanes", () => {
     render(<HomeMarketStateLine nowMs={now} />);
     expect(screen.getByRole("link", { name: /PSI/ }).textContent).toContain("Bedrock91.9");
     expect(screen.getByRole("link", { name: /PSI/ }).getAttribute("href")).toMatch(/^\/stability-index\/?$/);
-    expect(screen.getByRole("link", { name: /open confirmed incident/ }).textContent).toContain("1coin with an open confirmed incident");
+    expect(screen.getByRole("link", { name: /active depeg/ }).textContent).toContain("1active depeg");
   });
 
   it("ages retained evidence without treating response receipt as its generation", () => {
@@ -46,7 +46,7 @@ describe("HomeMarketStateLine compact lanes", () => {
     }, dataUpdatedAt: now, error: null, isLoading: false });
     render(<HomeMarketStateLine nowMs={now} />);
     expect(screen.getByRole("link", { name: /PSI/ }).textContent).toContain("—");
-    expect(screen.getByRole("link", { name: /open confirmed incidents/ }).textContent).toContain("0coins with open confirmed incidents");
+    expect(screen.getByRole("link", { name: /active depegs/ }).textContent).toContain("0active depegs");
   });
 
   it("never turns a failed read into calm or zero", () => {
