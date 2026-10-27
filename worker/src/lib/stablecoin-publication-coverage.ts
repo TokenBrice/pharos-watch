@@ -234,20 +234,6 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     expiresAt: Date.UTC(2026, 9, 25, 23, 45) / 1000,
   },
   {
-    stablecoinId: "usda-avalon",
-    owner: "ops",
-    reason:
-      "DefiLlama publishes USDA supply but no list price (detail 220 price null), CoinGecko has been stale since 2026-08-14, and every venue sits below the admissibility floors: the only fresh-looking lane is DefiLlama's per-deployment quote (nibiru 0xf4e0…2003, ~$0.9998), which DefiLlama re-stamps only intermittently (last observation 2026-09-24 05:07 UTC) so it is stale beyond the lane's 15-minute budget in most runs; the PancakeSwap BSC USDA/USDT pair trades ~$5.59/day against the $50K address-provider floor; and Ethereum onchain marks have zero 24h volume while diverging ~9% from the contract quote. Issuer 1:1 USDT convertibility is not yet a machine-read route; re-source a reviewed redemption or venue lane by the expiry.",
-    sources: [
-      "https://stablecoins.llama.fi/stablecoin/220",
-      "https://www.coingecko.com/en/coins/usda-2",
-      "https://dexscreener.com/bsc/0x9a4d3d78aa3a0372335ee43e08575c65a027f653",
-      "https://docs.avalonfinance.xyz",
-    ],
-    reviewedAt: Date.UTC(2026, 8, 24) / 1000,
-    expiresAt: Date.UTC(2026, 9, 24) / 1000,
-  },
-  {
     stablecoinId: "bnusd-balanced",
     owner: "ops",
     reason:
@@ -266,19 +252,6 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     ],
     reviewedAt: Date.UTC(2026, 9, 21, 14, 13) / 1000,
     expiresAt: Date.UTC(2026, 9, 28, 14, 13) / 1000,
-  },
-  {
-    stablecoinId: "usdn-smardex",
-    owner: "ops",
-    reason:
-      "The only admissible lane is CMC's targeted quote, which CMC refreshes intermittently for this thin asset (missing in 83 of 99 publications over 2026-09-22). CoinGecko has been stale since 2026-08-26 (~$13/day volume), and the only exact DEX pair is a Curve USDN/fxUSD pool with ~$285 liquidity, far below the $50K floor. Priced whenever a fresh CMC quote is admitted; re-source via a guarded protocol-NAV adapter or review listing disposition by the expiry.",
-    sources: [
-      "https://coinmarketcap.com/currencies/smardex-usdn/",
-      "https://www.coingecko.com/en/coins/smardex-usdn",
-      "https://dexscreener.com/ethereum/0xde17a000ba631c5d7c2bd9fb692efea52d90dee2",
-    ],
-    reviewedAt: Date.UTC(2026, 8, 23, 5) / 1000,
-    expiresAt: Date.UTC(2026, 9, 23) / 1000,
   },
   {
     stablecoinId: "cadm-mento",

@@ -736,6 +736,22 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     });
   });
 
+  it.each([
+    ["usda-avalon", 0.9998, "defillama-contract"],
+    ["usdn-smardex", 0.991, "coinmarketcap"],
+  ] as const)("retires the recovered %s review: the next gap is unacknowledged and an observed price stays priced", (id, price, priceSource) => {
+    expect(STABLECOIN_PRICE_GAP_REVIEWS.some((review) => review.stablecoinId === id)).toBe(false);
+    const nowSec = Date.UTC(2026, 9, 27, 12) / 1000;
+    const priced = evaluateStablecoinActivePriceCoverage([{ id, price, priceSource, priceObservedAt: nowSec - 60 }], [id], { nowSec });
+    expect(priced).toMatchObject({ complete: true, pricedActiveIds: [id], missingPriceCount: 0 });
+    const firstGap = evaluateStablecoinActivePriceCoverage([{ id, price: null }], [id], { nowSec: nowSec + 900, previousCoverage: priced });
+    const secondGap = evaluateStablecoinActivePriceCoverage([{ id, price: null }], [id], { nowSec: nowSec + 1800, previousCoverage: firstGap });
+    expect(secondGap).toMatchObject({
+      missingActiveIds: [id], acknowledgedGapIds: [], alertEligibleIds: [id],
+    });
+    expect([...secondGap.expiredGapReviewIds, ...secondGap.invalidGapReviewIds]).not.toContain(id);
+  });
+
   it("drops accepted observation timestamps outside the JavaScript Date range", () => {
     const previousAcceptedAssetsById = new Map([[
       "missing",
