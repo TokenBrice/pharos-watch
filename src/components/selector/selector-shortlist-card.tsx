@@ -37,14 +37,6 @@ interface SelectorShortlistCardProps {
   yieldInspectionHref?: string | null;
 }
 
-/** Discrete staleness label used on mobile (R2 Mobile concern #4). */
-function discreteStalenessLabel(seconds: number): string {
-  if (seconds <= 60) return "Fresh";
-  if (seconds <= 120) return "1m";
-  if (seconds <= 360) return "5m";
-  return "Stale";
-}
-
 function preciseStaleness(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
   const mins = Math.floor(seconds / 60);
@@ -53,14 +45,19 @@ function preciseStaleness(seconds: number): string {
   return `${hours}h`;
 }
 
+function spokenAge(seconds: number): string {
+  const [amount, unit] =
+    seconds < 60 ? [seconds, "second"] : seconds < 3600 ? [Math.floor(seconds / 60), "minute"] : [Math.floor(seconds / 3600), "hour"];
+  return `${amount} ${unit}${amount === 1 ? "" : "s"}`;
+}
+
 interface TextChip {
   label: string;
   value: string;
   ariaLabel?: string;
-  tone?: "default" | "watch";
 }
 
-function buildEvidenceChips(rec: SelectorRecommendation, isMobile: boolean): TextChip[] {
+function buildEvidenceChips(rec: SelectorRecommendation): TextChip[] {
   const chips: TextChip[] = [];
 
   switch (rec.profile) {
@@ -114,8 +111,8 @@ function buildEvidenceChips(rec: SelectorRecommendation, isMobile: boolean): Tex
       const liquidity = rec.components.find((c) => c.key === "liquidity");
       const dews = rec.components.find((c) => c.key === "dewsInverted");
 
-      // Trading: per-input staleness chip replaces one evidence chip when triggered.
-      // We surface PegScore + Liquidity + Staleness as the 3-chip set.
+      // Trading: the oldest input age is neutral provenance at evaluation time,
+      // not a freshness verdict. It replaces the DEWS chip when ages exist.
       if (peg?.rawValue != null) {
         chips.push({
           label: "Peg",
@@ -130,15 +127,13 @@ function buildEvidenceChips(rec: SelectorRecommendation, isMobile: boolean): Tex
           ariaLabel: `Liquidity score ${Math.round(liquidity.rawValue)} of 100`,
         });
       }
-      // Pick the worst staleness across the per-input map.
       const ages = Object.values(rec.perInputStaleness ?? {});
       if (ages.length > 0) {
         const worst = Math.max(...ages);
         chips.push({
-          label: "Freshness",
-          value: isMobile ? discreteStalenessLabel(worst) : `${preciseStaleness(worst)} old`,
-          ariaLabel: `Data freshness watch: ${discreteStalenessLabel(worst).toLowerCase()}`,
-          tone: "watch",
+          label: "Oldest input",
+          value: preciseStaleness(worst),
+          ariaLabel: `Oldest input ${spokenAge(worst)} old when results were computed`,
         });
       } else if (dews?.rawValue != null) {
         chips.push({
@@ -165,7 +160,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
     yieldSourceUrl,
     yieldInspectionHref,
   } = props;
-  const chips = buildEvidenceChips(rec, isMobile);
+  const chips = buildEvidenceChips(rec);
   const resolvedWhyText = rec.whyText;
   const resolvedWatchText = rec.watchText;
 
@@ -218,12 +213,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
           {chips.map((chip) => (
             <li key={`${chip.label}:${chip.value}`}>
               <span
-                className={cn(
-                  "inline-flex items-baseline gap-1 rounded-full border px-2 py-0.5 text-2xs",
-                  chip.tone === "watch"
-                    ? "border-state-warn-solid/40 bg-state-warn-solid/[0.07] text-state-warn-strong"
-                    : "border-border/60 bg-background/55 text-foreground",
-                )}
+                className="inline-flex items-baseline gap-1 rounded-full border border-border/60 bg-background/55 px-2 py-0.5 text-2xs text-foreground"
               >
                 <span aria-hidden={chip.ariaLabel ? "true" : undefined} className="text-muted-foreground">
                   {chip.label}
