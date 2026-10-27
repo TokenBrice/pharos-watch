@@ -2,12 +2,12 @@
   {
     "version": "4.61",
     "title": "Unobserved freeze-exposed value stays unavailable",
-    "date": "2026-10-30",
-    "effectiveAt": 1793318400,
+    "date": "2026-10-27",
+    "effectiveAt": 1793059200,
     "summary": "The combined freeze-exposed value and share are unavailable when a nonempty exposed population has no observed supply, instead of reading $0 or 0%.",
     "impact": [
       "FreezeWatch and its share card publish a freeze-exposed subtotal only when at least one exposed asset reports supply. Observed non-freezable supply no longer turns a wholly unobserved exposed population into $0 or 0%.",
-      "Explicit observed zero, partly observed exposed subsets (qualified as partial), genuinely empty exposed subsets and globally unavailable input keep their existing semantics. No classification, scoring or evidence date changes; planned release date is 2026-10-30."
+      "Explicit observed zero, partly observed exposed subsets (qualified as partial), genuinely empty exposed subsets and globally unavailable input keep their existing semantics. No classification, scoring or evidence date changes."
     ],
     "commits": [],
     "reconstructed": false
