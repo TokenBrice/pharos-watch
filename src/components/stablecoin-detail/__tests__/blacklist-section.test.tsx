@@ -56,12 +56,18 @@ const ONE_EVENT_PAGE = {
   data: { events: [FREEZE_EVENT], total: 1 },
   isLoading: false,
   isError: false,
+  error: null,
+  meta: null,
+  dataUpdatedAt: Date.now(),
 } as unknown as EventsPageResult;
 
 const EMPTY_EVENT_PAGE = {
   data: { events: [], total: 0 },
   isLoading: false,
   isError: false,
+  error: null,
+  meta: null,
+  dataUpdatedAt: Date.now(),
 } as unknown as EventsPageResult;
 
 function summaryStub(
