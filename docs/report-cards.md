@@ -176,7 +176,7 @@ Rated cards' read-only top-driver `reason` uses the binding cap, else weakest-pi
 
 Stability-index OG without PSI is unavailable, never `0`/`MELTDOWN`. Coverage labels `expectedCount` assets assessed, reconciles rated/NR/pipeline-gap separately, and uses scored-population wording only for `ratedCount`; a hold replaces the headline.
 
-Current-only consumers reject held ratings or accepted age above 7200 s. Displays may show held data with notice; yield requires accepted identity within its stale-coherent window. No V8 cache/scoring fallback remains.
+Current-only consumers reject held or over-7200 s ratings. Displays may show held data with notice; yield requires accepted identity within its stale-coherent window. No V8 cache/scoring fallback remains.
 
 Score-map/yield retain null denominators/ratios, empty score map, reason and null identity/time on unavailable input, never `0%`/`100%` ([yield wire](./yield-intelligence.md#public-wire-contract)). Selector creation recomputes live V9 (`functions/lib/selector-canonical-snapshot.ts`); `503` means source/schema failure, not policy hold. Signed snapshots retain historical readability.
 
