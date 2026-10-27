@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ALERT_SAFETY_V9_SOURCE_GENERATION } from "../../../../lib/alert-safety-source-cache";
+import {
+  ALERT_SAFETY_V9_SOURCE_GENERATION,
+  assessAlertSafetyEnvelope,
+  buildAlertSafetyV9SourceEnvelopeFromParts,
+} from "../../../../lib/alert-safety-source-cache";
+import { makeWorkerReportCardsV9Response } from "../../../../test-helpers/report-cards-v9";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../../../lib/safety-score-v9/consumer-freshness";
@@ -354,6 +359,22 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
 
     expect(meta.safetySource.triggered).toBe(true);
     expect(meta.safetySource.detail).toContain("state=missing");
+  });
+
+  it("opens a safety-source episode for a future-dated accepted clock instead of reading it as ok", async () => {
+    installCacheStore();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const response = makeWorkerReportCardsV9Response({ updatedAt: nowSec + 600 });
+    const envelope = buildAlertSafetyV9SourceEnvelopeFromParts({
+      cards: response.cards, safetyScoreIdentity: response.safetyScoreIdentity, publishedAt: response.updatedAt,
+    });
+    const result = await runTelegramDegradationWatchdog(makeDb({ pendingCount: 0 }), undefined, {
+      safetySourceAssessment: assessAlertSafetyEnvelope(envelope, nowSec),
+    });
+    expect(JSON.parse(result.metadata ?? "{}").safetySource).toMatchObject({
+      state: "corrupt", failureReason: "v9-snapshot-future", ageSeconds: null,
+      triggered: false, detail: "state=corrupt (newly tripped)",
+    });
   });
 
   it("does not trigger until sustained window elapses", async () => {

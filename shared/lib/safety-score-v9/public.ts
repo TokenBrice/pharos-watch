@@ -38,6 +38,7 @@ import { compareText, uniqueSorted } from "./primitives";
 import { effectiveAuthoritySignatureRequirement } from "./control-scope";
 import { v9BridgeMintControlKey, v9ControlChainLabel } from "./control-component-keys";
 import { readableV9PublicText, readableV9PublicWitnesses } from "./public-witness-texts";
+import { assertV9PublicCardProjections } from "../report-cards-v9-projections";
 
 type V9PublicAccessProjectionInput = V9AccessPostureResult & {
   reasons?: readonly V9PillarReason[];
@@ -1439,6 +1440,7 @@ export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjecto
       } });
       try {
         const { card, foreignCauseGaps } = projectSafetyScoreV9Card(input);
+        assertV9PublicCardProjections(card);
         const { foreignCauseGapRefs: _localRefs, ...draft } = card;
         for (const id of foreignCauseGaps) foreignGapIds.add(id);
         drafts.set(trace.assetId, strToU8(JSON.stringify({ ...draft, foreignCauseGaps })));

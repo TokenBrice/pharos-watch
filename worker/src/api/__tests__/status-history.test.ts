@@ -4,6 +4,8 @@ import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { StatusHistoryResponseSchema } from "@shared/types/status";
+import { getStatusSectionMessage } from "../../lib/status/section-errors";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); vi.restoreAllMocks(); });
@@ -115,6 +117,7 @@ describe("handleStatusHistoryRoute", () => {
       runBudgetTruncated: false,
       inProgressCoins: 0,
     });
+    expect((body as { sectionErrors?: Record<string, unknown> }).sectionErrors?.reserveComposition).toBeUndefined();
   });
 
   it("keeps reserve history unavailable when checkpoint evidence cannot be read", async () => {
@@ -127,8 +130,23 @@ describe("handleStatusHistoryRoute", () => {
     ]);
     const request = makeApiRequest("/api/status-history", { adminKey: "secret-key" });
     const res = await handleStatusHistoryRoute({ db, trustedAdmin: true, request });
-    const body = await readJsonResponse(res, 200) as { reserveComposition: unknown };
+    expect(res.headers.get("Cache-Control")).toContain("no-store");
+    const body = await readJsonResponse(res, 200) as {
+      reserveComposition: unknown;
+      transitions: unknown[];
+      hasMore: boolean | null;
+      probe: unknown;
+      sectionErrors: Record<string, { code: string; message: string }>;
+    };
     expect(body.reserveComposition).toBeNull();
+    expect(body.sectionErrors.reserveComposition).toEqual({
+      code: "reserve_composition_query_failed",
+      message: getStatusSectionMessage("reserveComposition"),
+    });
+    expect(body.transitions).toEqual([]);
+    expect(body.hasMore).toBe(false);
+    expect(body.probe).toBeDefined();
+    expect(StatusHistoryResponseSchema.safeParse(body).success).toBe(true);
   });
 
   it("exposes unknown streak and an issue when discrepancy evidence cannot be read", async () => {

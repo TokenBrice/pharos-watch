@@ -1,3 +1,5 @@
+import { assessSafetyScoreAcceptedEvidence } from "./safety-score-publication";
+
 /**
  * Original-clock budget shared by yield production, live safety hydration and
  * publish-time fallback. Current and held safety both retain their accepted
@@ -13,8 +15,8 @@ export function isYieldSafetyFallbackWithinWindow(
   safetyPublishedAt: number | null | undefined,
   now: number,
 ): boolean {
-  return Number.isFinite(yieldPublishedAt) && yieldPublishedAt <= now &&
-    typeof safetyPublishedAt === "number" && Number.isFinite(safetyPublishedAt) && safetyPublishedAt <= now &&
-    now - safetyPublishedAt <= YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC &&
-    now - yieldPublishedAt <= YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC;
+  const withinWindow = (acceptedAtSec: number | null | undefined) => assessSafetyScoreAcceptedEvidence({
+    acceptedAtSec, nowSec: now, maxAgeSec: YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC,
+  }).withinBudget;
+  return withinWindow(yieldPublishedAt) && withinWindow(safetyPublishedAt);
 }

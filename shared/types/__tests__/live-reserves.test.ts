@@ -95,6 +95,23 @@ describe("reserve overview progress evidence", () => {
     expect(ReserveCompositionOverviewSchema.parse(legacy).inProgressCoins).toBeUndefined();
   });
 
+  it("round-trips adapter reliability availability without defaulting legacy payloads", () => {
+    const overview = emptyReserveCompositionOverview();
+    expect(overview.adapterReliabilityAvailability).toBeUndefined();
+    expect(ReserveCompositionOverviewSchema.parse(overview).adapterReliabilityAvailability).toBeUndefined();
+    for (const availability of [
+      { status: "available" },
+      { status: "unavailable", reason: "reserve_adapter_reliability_query_failed" },
+    ] as const) {
+      expect(ReserveCompositionOverviewSchema.parse({ ...overview, adapterReliabilityAvailability: availability })
+        .adapterReliabilityAvailability).toEqual(availability);
+    }
+    for (const invalid of [{ status: "unavailable" }, { status: "unavailable", reason: "other" }, { status: "unknown" }, null]) {
+      expect(ReserveCompositionOverviewSchema.safeParse({ ...overview, adapterReliabilityAvailability: invalid }).success)
+        .toBe(false);
+    }
+  });
+
   it.each([-1, 0.5, Number.NaN, Infinity, null])("rejects invalid in-progress counts: %s", (inProgressCoins) => {
     expect(ReserveCompositionOverviewSchema.safeParse({
       ...emptyReserveCompositionOverview(), inProgressCoins,

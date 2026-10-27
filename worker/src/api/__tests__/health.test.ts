@@ -383,7 +383,11 @@ describe("handleHealth", () => {
   });
   describe("read-time freshness sentinel re-read", () => {
     const yieldInterval = 7_200;
-    async function delayedYieldSnapshot(now: number, statusExcludingCacheFreshness?: HealthResponse["status"]) {
+    async function delayedYieldSnapshot(
+      now: number,
+      statusExcludingCacheFreshness?: HealthResponse["status"],
+      options: { statusExcludingCacheEvidence?: HealthResponse["status"]; degradedReason?: string } = {},
+    ) {
       const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
       publicHealth.timestamp = now - 60;
       publicHealth.assessedAt = now - 60;
@@ -392,21 +396,29 @@ describe("handleHealth", () => {
       publicHealth.caches["yield-data"] = {
         ...publicHealth.caches["yield-data"], ageSeconds: 3 * yieldInterval + 600,
         publishedAt: now - 60 - 3 * yieldInterval - 600, healthy: false,
+        ...(options.degradedReason ? { degraded: true, degradedReason: options.degradedReason, streakDegradedRuns: 2 } : {}),
       };
+      if (options.degradedReason) {
+        publicHealth.warnings = [...publicHealth.warnings, `cache-quality-degraded: yield-data:${options.degradedReason}`];
+      }
       return {
         key: STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY,
         updated_at: now - 60,
         value: JSON.stringify({
           version: 1, producedAt: now - 60, publicHealth: { ...publicHealth, ...projectPublicStatus(publicHealth) },
           ...(statusExcludingCacheFreshness ? { statusExcludingCacheFreshness } : {}),
+          ...(options.statusExcludingCacheEvidence ? { statusExcludingCacheEvidence: options.statusExcludingCacheEvidence } : {}),
         }),
       };
     }
-    function sentinelDb(now: number, row: Record<string, unknown>, sentinel: MockTableConfig) {
+    function sentinelDb(now: number, row: Record<string, unknown>, sentinel: MockTableConfig, degradedRuns = 0) {
       return buildStatusD1Scenario({ sections: [], overrides: [
         { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY], rows: [], first: row },
         sentinel,
-        { match: "GROUP BY job", rows: [{ job: "sync-yield-data", started_at: now - 30, generation_id: "recovered-generation", degraded_runs_since_ok: 0 }], allowUnused: true },
+        { match: "GROUP BY job", rows: [{
+          job: "sync-yield-data", started_at: now - 30, generation_id: "recovered-generation",
+          degraded_runs_since_ok: degradedRuns, latest_reason: degradedRuns > 0 ? "new-quality" : null,
+        }], allowUnused: true },
       ] });
     }
     const recoveredSentinel = (now: number): MockTableConfig => ({
@@ -427,6 +439,40 @@ describe("handleHealth", () => {
       expect(body.status).toBe("healthy");
       expect(body.components!.find((item) => item.id === "yield")).toMatchObject({ state: "operational", reasons: [] });
       expect(body.components!.find((item) => item.id === "website-api")!.state).toBe("operational");
+    });
+
+    it("adopts a recovered clean generation's quality, clearing the obsolete degradation and warning", async () => {
+      vi.spyOn(Date, "now").mockReturnValue(Date.now());
+      const now = Math.floor(Date.now() / 1000);
+      const row = await delayedYieldSnapshot(now, "degraded", { statusExcludingCacheEvidence: "healthy", degradedReason: "old-quality" });
+      const body = await (await handleHealth(sentinelDb(now, row, recoveredSentinel(now)))).json() as HealthResponse;
+      expect(body.caches["yield-data"]).toMatchObject({
+        generationId: "recovered-generation", healthy: true, degraded: false, degradedReason: null, streakDegradedRuns: 0,
+      });
+      expect(body.status).toBe("healthy");
+      expect(body.warnings.filter((warning) => warning.startsWith("cache-quality-"))).toEqual([]);
+      expect(body.assessedAt).toBe(now - 60);
+    });
+
+    it("adopts a recovered degraded generation's quality instead of the stored clean verdict", async () => {
+      vi.spyOn(Date, "now").mockReturnValue(Date.now());
+      const now = Math.floor(Date.now() / 1000);
+      const row = await delayedYieldSnapshot(now, "healthy", { statusExcludingCacheEvidence: "healthy" });
+      const body = await (await handleHealth(sentinelDb(now, row, recoveredSentinel(now), 2))).json() as HealthResponse;
+      expect(body.caches["yield-data"]).toMatchObject({
+        generationId: "recovered-generation", healthy: false, degraded: true, degradedReason: "new-quality", streakDegradedRuns: 2,
+      });
+      expect(body.status).toBe("degraded");
+      expect(body.warnings).toContain("cache-quality-degraded: yield-data:new-quality");
+    });
+
+    it("keeps the legacy floor's stored degradation when the snapshot lacks the cache-evidence floor", async () => {
+      vi.spyOn(Date, "now").mockReturnValue(Date.now());
+      const now = Math.floor(Date.now() / 1000);
+      const row = await delayedYieldSnapshot(now, "degraded", { degradedReason: "old-quality" });
+      const body = await (await handleHealth(sentinelDb(now, row, recoveredSentinel(now)))).json() as HealthResponse;
+      expect(body.caches["yield-data"]).toMatchObject({ generationId: "recovered-generation", degraded: false });
+      expect(body.status).toBe("degraded");
     });
 
     it("keeps a genuinely late producer Delayed and never re-reads healthy lanes", async () => {
@@ -455,6 +501,165 @@ describe("handleHealth", () => {
       expect(body.status).toBe("degraded");
       expect(body.caches["yield-data"].ageSeconds).toBe(3 * yieldInterval + 660);
       expect(body.components!.find((item) => item.id === "yield")!.state).toBe("delayed");
+    });
+  });
+
+  describe("request-time Safety Score and mint/burn recovery", () => {
+    const LATE_SEC = 100_000;
+    const SNAPSHOT_KEY_MATCH = "SELECT value, updated_at FROM cache WHERE key = ?";
+    const assessmentsRun = (db: ReturnType<typeof makeHealthyHealthDb>) =>
+      db.getHistory().filter((entry) => entry.sql.trim() === "SELECT 1").length;
+    const safetyHealthRow = (health: { attemptedAtSec: number }): MockTableConfig => ({
+      match: SNAPSHOT_KEY_MATCH, matchBinds: ["report-cards:v9:publication-health"], rows: [],
+      first: { value: stableJsonStringifyV1(health), updated_at: health.attemptedAtSec },
+    });
+    const safetyHealth = (acceptedAtSec: number, attemptedAtSec = acceptedAtSec, held = false) => ({
+      schemaVersion: 2, status: held ? "held" : "current", acceptedPublicationGenerationId: "fixture-safety-generation",
+      acceptedAtSec, attemptedAtSec, heldSinceSec: held ? attemptedAtSec : null,
+      reasons: held ? [{ code: "dex-stale" }] : [],
+    });
+    async function retainedSnapshot(now: number, mutate: (health: HealthResponse) => void) {
+      const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+      expect(publicHealth.status).toBe("healthy");
+      publicHealth.timestamp = now - 60;
+      publicHealth.assessedAt = now - 60;
+      mutate(publicHealth);
+      return { publicHealth, entry: { match: SNAPSHOT_KEY_MATCH, matchBinds: [STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY], rows: [],
+        first: makePublicHealthSnapshotRow(now, publicHealth) } as MockTableConfig };
+    }
+    const lateSafety = (now: number) => (health: HealthResponse) => {
+      health.status = "stale";
+      health.safetyScorePublication = { ...health.safetyScorePublication!, acceptedAtSec: now - LATE_SEC, attemptedAtSec: now - LATE_SEC };
+      health.warnings = [...health.warnings, "safety-score-publication-stale"];
+    };
+
+    it("clears a late Safety Score publication from a newer accepted clock with one assessment", async () => {
+      vi.spyOn(Date, "now").mockReturnValue(Date.now());
+      const now = Math.floor(Date.now() / 1000);
+      const { entry } = await retainedSnapshot(now, lateSafety(now));
+      const db = makeHealthyHealthDb(now, { extras: [entry] });
+      const body = await (await handleHealth(db)).json() as HealthResponse;
+      expect(body.safetyScorePublication).toMatchObject({ acceptedAtSec: now - 60, status: "current" });
+      expect(body).toMatchObject({ status: "healthy", assessedAt: now, timestamp: now });
+      expect(body.warnings).not.toContain("safety-score-publication-stale");
+      expect(body.components!.find((item) => item.id === "safety-scores")!.state).toBe("operational");
+      expect(assessmentsRun(db)).toBe(1);
+      // GET stays read-only for public status state, history and the snapshot.
+      expect(db.getHistory().filter((item) => /status_state|status_transitions|status-history/.test(item.sql)
+        || (/^\s*(INSERT|UPDATE)/i.test(item.sql) && item.binds.includes(STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY)))).toEqual([]);
+    });
+
+    it("clears late mint/burn sync and its run warning from confirmed newer output", async () => {
+      vi.spyOn(Date, "now").mockReturnValue(Date.now());
+      const now = Math.floor(Date.now() / 1000);
+      const live = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+      expect(live.mintBurn.sync.lastSuccessfulSyncAt).not.toBeNull();
+      const { entry } = await retainedSnapshot(now, (health) => {
+        health.status = "stale";
+        health.mintBurn = { ...health.mintBurn, sync: {
+          ...health.mintBurn.sync, lastSuccessfulSyncAt: now - LATE_SEC,
+          warning: "Critical mint/burn lane last run errored; cached or partial data may be served.",
+        } };
+      });
+      const db = makeHealthyHealthDb(now, { extras: [entry] });
+      const body = await (await handleHealth(db)).json() as HealthResponse;
+      expect(body.mintBurn.sync).toMatchObject({ lastSuccessfulSyncAt: live.mintBurn.sync.lastSuccessfulSyncAt, warning: null });
+      expect(body).toMatchObject({ status: "healthy", assessedAt: now });
+      expect(assessmentsRun(db)).toBe(1);
+    });
+
+    it("refreshes a retained Safety Score hold warning once the publication is current", async () => {
+      vi.spyOn(Date, "now").mockReturnValue(Date.now());
+      const now = Math.floor(Date.now() / 1000);
+      const { entry } = await retainedSnapshot(now, (health) => {
+        health.safetyScorePublication = { ...health.safetyScorePublication!, status: "held", heldSinceSec: now - 120,
+          reasons: [{ code: "dex-stale" }] };
+        health.warnings = [...health.warnings, "safety-score-publication-held"];
+      });
+      const db = makeHealthyHealthDb(now, { extras: [entry] });
+      const body = await (await handleHealth(db)).json() as HealthResponse;
+      expect(body.safetyScorePublication!.status).toBe("current");
+      expect(assessmentsRun(db)).toBe(1);
+      expect(body.warnings).not.toContain("safety-score-publication-held");
+      expect(body.assessedAt).toBe(now);
+    });
+
+    it("does not advance accepted age from a newer held attempt alone", async () => {
+      vi.spyOn(Date, "now").mockReturnValue(Date.now());
+      const now = Math.floor(Date.now() / 1000);
+      const { entry } = await retainedSnapshot(now, lateSafety(now));
+      const db = makeHealthyHealthDb(now, { extras: [entry, safetyHealthRow(safetyHealth(now - LATE_SEC, now - 60, true))] });
+      const body = await (await handleHealth(db)).json() as HealthResponse;
+      expect(body.safetyScorePublication).toMatchObject({ acceptedAtSec: now - LATE_SEC, attemptedAtSec: now - 60, status: "held" });
+      expect(body.status).not.toBe("healthy");
+      expect(body.components!.find((item) => item.id === "safety-scores")!.state).not.toBe("operational");
+    });
+
+    it.each([
+      ["older accepted clock", (now: number) => safetyHealth(now - 2 * LATE_SEC)],
+      ["excessively future accepted clock", (now: number) => safetyHealth(now + LATE_SEC)],
+      ["missing publication health", null],
+    ] as const)("retains the snapshot when replacement evidence is invalid: %s", async (_label, replacement) => {
+      vi.spyOn(Date, "now").mockReturnValue(Date.now());
+      const now = Math.floor(Date.now() / 1000);
+      const { entry, publicHealth } = await retainedSnapshot(now, lateSafety(now));
+      const safetyRow: MockTableConfig = replacement
+        ? safetyHealthRow(replacement(now))
+        : { match: SNAPSHOT_KEY_MATCH, matchBinds: ["report-cards:v9:publication-health"], rows: [], first: null };
+      const db = makeHealthyHealthDb(now, { extras: [entry, safetyRow] });
+      const body = await (await handleHealth(db)).json() as HealthResponse;
+      expect(body.safetyScorePublication!.acceptedAtSec).toBe(now - LATE_SEC);
+      expect(body).toMatchObject({ status: "stale", assessedAt: now - 60, timestamp: now });
+      expect(body.warnings).not.toContain("health-recovery-read-failed");
+      expect(body.components!.find((item) => item.id === "safety-scores")!.state)
+        .toBe(projectPublicStatus(publicHealth).components.find((item) => item.id === "safety-scores")!.state);
+      expect(assessmentsRun(db)).toBe(1);
+    });
+
+    it.each(["unreadable publication health", "malformed publication health"] as const)(
+      "names a failed recovery read and keeps the retained clock: %s",
+      async (kind) => {
+        vi.spyOn(Date, "now").mockReturnValue(Date.now());
+        const now = Math.floor(Date.now() / 1000);
+        const { entry } = await retainedSnapshot(now, lateSafety(now));
+        const safetyRow: MockTableConfig = {
+          match: SNAPSHOT_KEY_MATCH, matchBinds: ["report-cards:v9:publication-health"], rows: [],
+          ...(kind === "unreadable publication health"
+            ? { throwError: new Error("publication health read failed") }
+            : { first: { value: "{not json", updated_at: now - 60 } }),
+        };
+        const db = makeHealthyHealthDb(now, { extras: [entry, safetyRow] });
+        const body = await (await handleHealth(db)).json() as HealthResponse;
+        expect(body.safetyScorePublication!.acceptedAtSec).toBe(now - LATE_SEC);
+        expect(body).toMatchObject({ status: "stale", assessedAt: now - 60 });
+        expect(body.warnings).toContain("health-recovery-read-failed");
+        expect(assessmentsRun(db)).toBe(1);
+      },
+    );
+
+    it("keeps independent circuit floors when the Safety Score recovers", async () => {
+      vi.spyOn(Date, "now").mockReturnValue(Date.now());
+      const now = Math.floor(Date.now() / 1000);
+      const { entry } = await retainedSnapshot(now, lateSafety(now));
+      const open = (openedAt: number) => JSON.stringify({ state: "open", consecutiveFailures: 3, lastFailureAt: openedAt - 30, lastSuccessAt: null, openedAt });
+      const db = makeHealthyHealthDb(now, { extras: [entry, { match: "key LIKE 'circuit:%'", rows: [
+        { key: "circuit:defillama-stablecoins", value: open(now - 600) },
+        { key: "circuit:coingecko-prices", value: open(now - 540) },
+        { key: "circuit:dexscreener-prices", value: open(now - 480) },
+      ] }] });
+      const body = await (await handleHealth(db)).json() as HealthResponse;
+      expect(body.safetyScorePublication!.acceptedAtSec).toBe(now - 60);
+      expect(body.status).toBe("degraded");
+    });
+
+    it("runs no assessment for a snapshot whose Safety and mint/burn evidence is healthy", async () => {
+      vi.spyOn(Date, "now").mockReturnValue(Date.now());
+      const now = Math.floor(Date.now() / 1000);
+      const { entry } = await retainedSnapshot(now, () => {});
+      const db = makeHealthyHealthDb(now, { extras: [entry] });
+      const body = await (await handleHealth(db)).json() as HealthResponse;
+      expect(body.assessedAt).toBe(now - 60);
+      expect(assessmentsRun(db)).toBe(0);
     });
   });
 

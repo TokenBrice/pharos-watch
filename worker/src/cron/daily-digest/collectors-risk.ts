@@ -65,10 +65,10 @@ export async function collectSafetyScores(
 ): Promise<CollectorResult<SafetyScoresResult>> {
   try {
     const source = await loadActiveSafetyScoreCohort(ctx.db);
-    const safetyContext = digestSafetyContextFromSource(source);
-    if (source.kind !== "v9") {
+    const safetyContext = digestSafetyContextFromSource(source, ctx.nowSec);
+    if (source.kind !== "v9" || safetyContext.status !== "available") {
       logWorkerEventArgs("handler", "error",
-        `[daily-digest] Canonical Safety Score V9 unavailable (${source.reason}): ${source.detail}`,
+        `[daily-digest] Canonical Safety Score V9 unavailable (${safetyContext.reason}): ${source.kind !== "v9" ? source.detail : "accepted publication exceeds the consumer budget"}`,
       );
       return collectorDegraded({
         safetyScores: undefined,

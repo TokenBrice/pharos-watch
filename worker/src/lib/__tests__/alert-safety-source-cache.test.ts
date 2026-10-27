@@ -396,6 +396,22 @@ describe("persisted V9 alert source envelope", () => {
     expect(assessAlertSafetyEnvelope(envelope, boundary + 1)).toMatchObject({ state: "stale", failureReason: "v9-snapshot-stale" });
   });
 
+  it("fails closed on a future-dated accepted clock instead of clamping it to age zero", async () => {
+    const response = makeWorkerReportCardsV9Response({ updatedAt: 1_700_000_000 });
+    const envelope = buildAlertSafetyV9SourceEnvelopeFromParts({ cards: response.cards, safetyScoreIdentity: response.safetyScoreIdentity, publishedAt: response.updatedAt })!;
+    expect(assessAlertSafetyEnvelope(envelope, envelope.publishedAt)).toMatchObject({ state: "ok", ageSeconds: 0 });
+    expect(assessAlertSafetyEnvelope(envelope, envelope.publishedAt - 1)).toMatchObject({
+      state: "corrupt", failureReason: "v9-snapshot-future", ageSeconds: null, envelope: null,
+      sourcePublicationGenerationId: envelope.publicationGenerationId,
+    });
+    expect(assessAlertSafetyEnvelope({ ...envelope, publishedAt: Number.NaN }, envelope.publishedAt)).toMatchObject({
+      state: "corrupt", failureReason: "v9-snapshot-invalid", ageSeconds: null,
+    });
+    expect(await loadActiveAlertSafetySourceAssessment(persistedDb(response), 1_699_999_000)).toMatchObject({
+      state: "corrupt", failureReason: "v9-snapshot-future", ageSeconds: null,
+    });
+  });
+
   it("assesses a persisted envelope with the same staleness rules as the live source", async () => {
     const response = makeWorkerReportCardsV9Response({ updatedAt: 1_700_000_000 });
     const envelope = buildAlertSafetyV9SourceEnvelopeFromParts({ cards: response.cards, safetyScoreIdentity: response.safetyScoreIdentity, publishedAt: response.updatedAt })!;

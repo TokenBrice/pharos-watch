@@ -101,4 +101,17 @@ describe("ReserveSyncHealthCard", () => {
     expect(Array.from(rows[0]!.querySelectorAll("td")).map((cell) => cell.textContent)[4]).toBe("5");
     expect(Array.from(rows[1]!.querySelectorAll("td")).map((cell) => cell.textContent)[4]).toBe("—");
   });
+  it.each([
+    [{ adapterReliabilityAvailability: { status: "unavailable", reason: "reserve_adapter_reliability_query_failed" } }, "reserve_adapter_reliability_query_failed"],
+    [{ adapterReliabilityAvailability: { status: "available" } }, "No adapter attempts recorded in the last 30 days."],
+    [{ configuredCoins: 0, freshCoins: 0, adapterReliabilityAvailability: { status: "available" } }, "No live reserve adapters are configured."],
+    [{}, "Unknown: this payload does not report whether reliability history was read."],
+  ] as const)("names the adapter reliability state before reading empty rows (%#)", (overrides, expected) => {
+    const { container } = render(
+      <ReserveSyncHealthCard health={makeReserveHealth({ adapterReliability: [], ...overrides })} nowSeconds={1_712_600_120} />,
+    );
+    expect(screen.getByText("30-day Adapter Reliability")).toBeTruthy();
+    expect(screen.getByText(expected)).toBeTruthy();
+    expect(container.querySelector("table[aria-label='30-day adapter reliability']")).toBeNull();
+  });
 });

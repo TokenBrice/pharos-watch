@@ -1,4 +1,7 @@
-import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
+import {
+  assessSafetyScoreAcceptedEvidence,
+  safetyScorePublicationIdentitiesMatch,
+} from "@shared/lib/safety-score-publication";
 import {
   DigestSafetyContextSchema,
   type DigestSafetyContext,
@@ -8,8 +11,23 @@ import {
   loadActiveSafetyScoreIndex,
   type ActiveSafetyScoreIndex,
 } from "./safety-score-index";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9/consumer-freshness";
 
 export const LEGACY_UNBOUND_DIGEST_SAFETY_REASON = "legacy-unbound";
+const STALE_DIGEST_SAFETY_REASON = "v9-snapshot-stale";
+
+/** Digests are current-only consumers: an accepted generation past budget is unavailable. */
+function acceptedSnapshotWithinBudget(
+  snapshot: { updatedAt: number; safetyScoreIdentity: { publicationGenerationId: string } },
+  nowSec: number,
+): boolean {
+  return assessSafetyScoreAcceptedEvidence({
+    acceptedGenerationId: snapshot.safetyScoreIdentity.publicationGenerationId,
+    acceptedAtSec: snapshot.updatedAt,
+    nowSec,
+    maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+  }).withinBudget;
+}
 
 export interface DigestCopyFields {
   title?: string | null;
@@ -54,14 +72,15 @@ export function findUnboundDigestSafetyClaimMarkers(
 
 export function digestSafetyContextFromSource(
   source: ActiveSafetyScoreIndex,
+  nowSec = Math.floor(Date.now() / 1000),
 ): DigestSafetyContext {
-  if (source.kind !== "v9") {
+  if (source.kind !== "v9" || !acceptedSnapshotWithinBudget(source.snapshot, nowSec)) {
     return {
       status: "unavailable",
       expectedModel: "v9",
       identity: null,
       publishedAt: null,
-      reason: source.reason,
+      reason: source.kind !== "v9" ? source.reason : STALE_DIGEST_SAFETY_REASON,
     };
   }
   return {
@@ -124,12 +143,14 @@ export type DigestSafetyDeliveryCheck =
 
 /**
  * Safety-free digests remain deliverable. Once copy was authored with a
- * concrete Safety Score publication, delivery requires that exact identity.
+ * concrete Safety Score publication, delivery requires that exact identity
+ * still inside the consumer budget; an expired match is retried, not sent.
  */
 export async function checkDigestSafetyContextForDelivery(
   db: D1Database,
   authored: DigestSafetyContext,
   signal?: AbortSignal,
+  nowSec = Math.floor(Date.now() / 1000),
 ): Promise<DigestSafetyDeliveryCheck> {
   if (authored.status === "unavailable") {
     return authored.reason === LEGACY_UNBOUND_DIGEST_SAFETY_REASON
@@ -140,7 +161,10 @@ export async function checkDigestSafetyContextForDelivery(
   if (current.kind !== "v9") {
     return { kind: "unavailable", reason: current.reason };
   }
-  return safetyScorePublicationIdentitiesMatch(authored.identity, current.snapshot.safetyScoreIdentity)
+  if (!safetyScorePublicationIdentitiesMatch(authored.identity, current.snapshot.safetyScoreIdentity)) {
+    return { kind: "stale", reason: "identity-mismatch" };
+  }
+  return acceptedSnapshotWithinBudget(current.snapshot, nowSec)
     ? { kind: "ok" }
-    : { kind: "stale", reason: "identity-mismatch" };
+    : { kind: "unavailable", reason: STALE_DIGEST_SAFETY_REASON };
 }

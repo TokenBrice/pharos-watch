@@ -16,7 +16,9 @@ import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/po
 import type { ContagionShock } from "@shared/types/contagion";
 import { buildSafetyScoreV9ReplayArtifact, parseSafetyScoreV9ReplayFixedInput } from "./replay-safety-score-v9";
 import { assertCliUsage, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
-import { parseSafetyScoreV9PublicationReplayCacheRows, parseSafetyScoreV9PublicationReplayCapture } from "../src/lib/safety-score-v9/publication-replay-capture";
+import { parseSafetyScoreV9PublicationReplayCacheRows, parseSafetyScoreV9PublicationReplayCapture, parseSafetyScoreV9SourceAdmissionBaseline, type SafetyScoreV9SourceAdmissionBaseline } from "../src/lib/safety-score-v9/publication-replay-capture";
+import { applySafetyScoreV9GradeHysteresis } from "@shared/lib/safety-score-v9/grade-hysteresis";
+import { resolveDependencyScenarioEvaluatorSource } from "./lib/dependency-scenario-source";
 import { parseSafetyScoreV9Publication, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../src/lib/safety-score-v9/publication-codec";
 import { parseSafetyScoreV9PublicationHealthCache, SAFETY_SCORE_V9_CACHE_KEYS } from "../src/lib/safety-score-v9/publication-health";
 import { reassembleSafetyScoreV9PublicationFromCacheRows, SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_RANGE } from "../src/lib/safety-score-v9/publication-chunks";
@@ -40,8 +42,35 @@ function verificationStamp(source: ReportCardsV9CurrentResponse, artifactBytes: 
   })).digest("hex");
 }
 
-const USAGE = `Usage: node --expose-gc --import tsx worker/scripts/compute-dependency-scenarios.ts --mode <plan|compute|publish> --out-dir <path> [--input <capture.json>] [--publication <publication.json>]
-Plan exports the production capture and accepted publication. Compute without --publication is a local replay only and cannot be published. Publish verifies immutable payload bytes before advancing the commit marker.`;
+type ReplayCard = ReturnType<typeof buildSafetyScoreV9ReplayArtifact>["pipeline"]["candidate"]["cards"][number];
+
+/**
+ * Raw replay score, rating status and partial evidence stay strict. Only the
+ * publication-time grade hysteresis is reproduced, on a separate projection
+ * from the retained prior baseline; served grades are never copied. A legacy
+ * capture (no baseline field) cannot prove a held grade.
+ */
+export function verifyAcceptedPublicationCards(
+  rawCards: readonly ReplayCard[],
+  sourceCards: ReportCardsV9CurrentResponse["cards"],
+  admission: SafetyScoreV9SourceAdmissionBaseline | null | undefined,
+): Map<string, ReplayCard> {
+  if (admission === undefined && sourceCards.some(card => card.gradeHold !== undefined)) {
+    throw new Error("accepted-publication-replay-baseline-unavailable");
+  }
+  const projected = new Map(applySafetyScoreV9GradeHysteresis({ cards: rawCards }, admission?.baseline ?? null).cards.map(card => [card.id, card]));
+  const raw = new Map(rawCards.map(card => [card.id, card]));
+  for (const card of sourceCards) {
+    const replayed = raw.get(card.id), published = projected.get(card.id);
+    if (!replayed || !published || replayed.score !== card.score || published.grade !== card.grade ||
+      stableJsonStringifyV1(published.gradeHold ?? null) !== stableJsonStringifyV1(card.gradeHold ?? null) ||
+      replayed.ratingStatus !== card.ratingStatus || stableJsonStringifyV1(replayed.partialEvidence) !== stableJsonStringifyV1(card.partialEvidence)) throw new Error(`Published baseline mismatch: ${card.id}`);
+  }
+  return projected;
+}
+
+const USAGE = `Usage: node --expose-gc --import tsx worker/scripts/compute-dependency-scenarios.ts --mode <plan|resolve-source|compute|publish> --out-dir <path> [--input <capture.json>] [--publication <publication.json>] [--trusted-ref <ref>]
+Plan exports the production capture and accepted publication. Resolve-source selects the newest trusted first-parent commit whose committed evaluator manifest matches the accepted publication, without executing it. Compute without --publication is a local replay only and cannot be published. Publish verifies immutable payload bytes before advancing the commit marker.`;
 function remote(...args: string[]): string {
   const run = spawnSync("npx", ["--no-install", "wrangler", "d1", "execute", "stablecoin-db", "--remote", "--json", ...args], { cwd: resolve("worker"), encoding: "utf8", maxBuffer: 50_000_000, timeout: DEPENDENCY_SCENARIO_PUBLICATION_DEADLINE_MS });
   if (run.status !== 0) throw new Error(`D1 command failed: ${run.stderr || run.stdout}`);
@@ -82,10 +111,10 @@ async function requireChunkReader(expectedVersion?: string): Promise<string> {
   }
 }
 async function main(): Promise<void> {
-  const { values } = parseStrictCliArgs(process.argv.slice(2), { options: { mode: { type: "string" }, "out-dir": { type: "string" }, input: { type: "string" }, publication: { type: "string" } } });
+  const { values } = parseStrictCliArgs(process.argv.slice(2), { options: { mode: { type: "string" }, "out-dir": { type: "string" }, input: { type: "string" }, publication: { type: "string" }, "trusted-ref": { type: "string" } } });
   if (writeCliHelpIfRequested(values, USAGE)) return;
   assertCliUsage(typeof values["out-dir"] === "string", "--out-dir is required");
-  assertCliUsage(["plan", "compute", "publish"].includes(values.mode as string), "--mode must be plan, compute or publish");
+  assertCliUsage(["plan", "resolve-source", "compute", "publish"].includes(values.mode as string), "--mode must be plan, resolve-source, compute or publish");
   const directory = resolve(values["out-dir"] as string);
   mkdirSync(directory, { recursive: true });
   const artifactPath = resolve(directory, "artifact.json");
@@ -116,6 +145,18 @@ async function main(): Promise<void> {
     writeFileSync(sourcePath, JSON.stringify(source));
     writeFileSync(resolve(directory, "capture.json"), JSON.stringify(capture));
     console.log(JSON.stringify({ sourcePublicationGenerationId: source.safetyScoreIdentity.publicationGenerationId }));
+    return;
+  }
+  if (values.mode === "resolve-source") {
+    assertCliUsage(typeof values["trusted-ref"] === "string", "--trusted-ref is required for resolve-source");
+    const source = ReportCardsV9CurrentResponseSchema.parse(JSON.parse(readFileSync(sourcePath, "utf8")));
+    const capture = JSON.parse(readFileSync(resolve(directory, "capture.json"), "utf8"));
+    const captureRegistryFingerprint = capture?.fixedInput?.registryFingerprint;
+    if (typeof captureRegistryFingerprint !== "string") throw new Error("dependency-scenario-source-capture-registry-unavailable");
+    const resolved = resolveDependencyScenarioEvaluatorSource({ cwd: process.cwd(), trustedRef: values["trusted-ref"] as string,
+      evaluationBuildDigest: source.safetyScoreIdentity.evaluationBuildDigest, captureRegistryFingerprint });
+    writeFileSync(resolve(directory, "source.json"), JSON.stringify(resolved));
+    console.log(JSON.stringify(resolved));
     return;
   }
   if (values.mode === "publish") {
@@ -203,9 +244,11 @@ async function main(): Promise<void> {
   const capture = JSON.parse(readFileSync(resolve(values.input as string), "utf8"));
   const fixedInput = await parseSafetyScoreV9ReplayFixedInput(capture.fixedInput ?? capture, capture.registrySnapshot);
   const source = values.publication ? ReportCardsV9CurrentResponseSchema.parse(JSON.parse(readFileSync(resolve(values.publication as string), "utf8"))) : null;
+  const admission = "sourceAdmissionBaseline" in capture ? parseSafetyScoreV9SourceAdmissionBaseline(capture.sourceAdmissionBaseline, fixedInput.clockSec) : undefined;
   const transferMaterialityGeneration = capture.transferMaterialityGeneration == null ? null : parseSafetyScoreV9TransferMaterialityGeneration(capture.transferMaterialityGeneration);
   let replay = buildSafetyScoreV9ReplayArtifact({ fixedInput, transferMaterialityGeneration, ...(capture.registrySnapshot ? { registrySnapshot: capture.registrySnapshot } : {}), publishedAtSec: source?.updatedAt ?? fixedInput.clockSec });
   const candidate = replay.pipeline.candidate;
+  let publishedById: Map<string, ReplayCard> | null = null;
   if (source) {
     const identity = source.safetyScoreIdentity;
     const expected = {
@@ -221,11 +264,7 @@ async function main(): Promise<void> {
       .filter(key => candidate[key] !== expected[key])
       .map(key => `${key} accepted=${expected[key]} replay=${candidate[key]}`);
     if (mismatches.length > 0) throw new Error(`Capture replay does not match accepted publication identity: ${mismatches.join("; ")}`);
-    for (const card of source.cards) {
-      const baseline = candidate.cards.find(row => row.id === card.id);
-      if (!baseline || baseline.score !== card.score || baseline.grade !== card.grade ||
-        baseline.ratingStatus !== card.ratingStatus || stableJsonStringifyV1(baseline.partialEvidence) !== stableJsonStringifyV1(card.partialEvidence)) throw new Error(`Published baseline mismatch: ${card.id}`);
-    }
+    publishedById = verifyAcceptedPublicationCards(candidate.cards, source.cards, admission);
     writeFileSync(sourcePath, JSON.stringify(source));
   }
   const cards = candidate.cards;
@@ -252,7 +291,7 @@ async function main(): Promise<void> {
       const result = evaluateScenario({ id, shocks: [shock] });
       const assumptions = shock.kind === "score-limit" ? ["Root downstream-consumed final projection is limited to 40; its published headline score is not overwritten."] : shock.kind === "depeg" ? ["Active depeg of 1,000 bps for one day; captured historical peg performance and exit facts are held fixed."] : ["Root mint authority is compromised; missing mint control is modeled as global unbounded EOA minting with zero delay."];
       scenarios.push({ id, rootId, shock, assumptions, results: result.rows.filter(row => row.failure === null && (row.coinId === rootId || row.changedDimensions.length > 0)).map(row => ({
-        assetId: row.coinId, publishedScore: row.baselineScore, publishedGrade: row.baselineGrade,
+        assetId: row.coinId, publishedScore: row.baselineScore, publishedGrade: publishedById?.has(row.coinId) ? publishedById.get(row.coinId)!.grade : row.baselineGrade,
         publishedRatingStatus: row.baselineRatingStatus, publishedPartialEvidence: row.baselinePartialEvidence,
         publishedPillars: row.baselinePillars,
         modeledScore: row.scenarioScore, modeledGrade: row.scenarioGrade,

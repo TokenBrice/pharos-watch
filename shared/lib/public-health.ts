@@ -2,6 +2,7 @@ import { getCacheImpactStatus } from "./cache-health";
 import { getCircuitScope } from "./circuit-sources";
 import { CRON_INTERVALS } from "./cron-jobs";
 import { DATA_SURFACE_DESCRIPTORS } from "./data-surface-descriptors";
+import { assessSafetyScoreAcceptedEvidence } from "./safety-score-publication";
 import { STATUS_PUBLIC_PRODUCER_GRACE_RATIOS } from "./status-thresholds";
 import type { CacheStatus, CircuitRecord, HealthResponse, PublicComponentBudget, StatusHealthValue } from "../types/status";
 
@@ -84,13 +85,25 @@ export function getPublicMintBurnStatus(sync: HealthResponse["mintBurn"]["sync"]
 /**
  * The accepted publication clock, not a newer held attempt, owns freshness. A
  * hold is an operational notice while the accepted scores stay inside budget.
+ * A missing, non-finite or future (past the caller's skew) clock is degraded.
  */
 export function getPublicSafetyScoreStatus(
   publication: HealthResponse["safetyScorePublication"],
   now: number,
+  allowedFutureSkewSec = 0,
 ): PublicStatusTone {
-  if (!publication || publication.acceptedAtSec == null) return "degraded";
-  return getProducerAgeStatus(Math.max(0, now - publication.acceptedAtSec), PUBLIC_PRODUCER_INTERVAL_SEC.safetyScores);
+  if (!publication) return "degraded";
+  const budget = getPublicProducerGraceBudget(PUBLIC_PRODUCER_INTERVAL_SEC.safetyScores);
+  const evidence = assessSafetyScoreAcceptedEvidence({
+    acceptedGenerationId: publication.acceptedPublicationGenerationId,
+    acceptedAtSec: publication.acceptedAtSec,
+    nowSec: now,
+    maxAgeSec: budget.degradedAfterSec,
+    allowedFutureSkewSec,
+  });
+  if (evidence.ageSec == null) return "degraded";
+  if (!evidence.withinBudget) return "stale";
+  return evidence.ageSec > budget.delayedAfterSec ? "degraded" : "healthy";
 }
 
 export function getOverallCacheImpactStatus(caches: Record<string, CacheStatus>): PublicStatusTone {
@@ -104,6 +117,34 @@ export function getOverallCacheImpactStatus(caches: Record<string, CacheStatus>)
   }
 
   return worstStatus;
+}
+
+/** Prefixes of the cache-quality warnings `getCacheQualityImpact` owns. */
+export const CACHE_QUALITY_WARNING_PREFIXES = ["cache-quality-degraded: ", "cache-quality-unknown: "] as const;
+
+/**
+ * Input-quality verdict over the caches, independent of age (rule R3). Only
+ * explicitly degraded inputs floor status; unreadable quality (`degraded:
+ * null`) is named as unknown, never clean (R2), but is an evidence-plane
+ * fault rather than a service impact. One authority for the assessment and
+ * read-time snapshot advancement (R5).
+ */
+export function getCacheQualityImpact(caches: Record<string, CacheStatus>): {
+  status: PublicStatusTone;
+  warnings: string[];
+} {
+  const named = (value: boolean | null) => Object.entries(caches)
+    .filter(([, cache]) => cache.degraded === value)
+    .map(([key, cache]) => `${key}:${cache.degradedReason ?? "unknown"}`);
+  const degraded = named(true);
+  const unknown = named(null);
+  return {
+    status: degraded.length > 0 ? "degraded" : "healthy",
+    warnings: [
+      ...(degraded.length > 0 ? [`${CACHE_QUALITY_WARNING_PREFIXES[0]}${degraded.join(", ")}`] : []),
+      ...(unknown.length > 0 ? [`${CACHE_QUALITY_WARNING_PREFIXES[1]}${unknown.join(", ")}`] : []),
+    ],
+  };
 }
 
 export function getCircuitImpactStatus(openCircuitCount: number | null): PublicStatusTone {

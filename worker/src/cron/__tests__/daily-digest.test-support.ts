@@ -160,8 +160,10 @@ export function mockDigestSafetyMapModule(
 
 export function canonicalSafetySource(
   cards: unknown[],
+  updatedAt = Math.floor(Date.now() / 1000),
 ): Extract<ActiveSafetyScoreCohort, { kind: "v9" }> {
   const snapshot = makeWorkerReportCardsV9Response({
+    updatedAt,
     cards: cards
       .map((value) => value as {
         id: string;

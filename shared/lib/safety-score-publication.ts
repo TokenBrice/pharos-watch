@@ -75,3 +75,59 @@ export function safetyScorePublicationIdentitiesShareScoringContract(
     { ...right, evaluationBuildDigest: left.evaluationBuildDigest },
   );
 }
+
+export type SafetyScoreAcceptedEvidenceReason =
+  | "accepted-evidence-missing"
+  | "accepted-evidence-invalid"
+  | "accepted-evidence-future"
+  | "accepted-evidence-stale";
+
+export interface SafetyScoreAcceptedEvidenceAssessment {
+  acceptedGenerationId: string | null;
+  acceptedAtSec: number | null;
+  assessedAtSec: number;
+  /** Unclamped `now - acceptedAt`; null when the clock is unusable. */
+  ageSec: number | null;
+  maxAgeSec: number;
+  withinBudget: boolean;
+  reason: SafetyScoreAcceptedEvidenceReason | null;
+  /** Hold diagnostics never change the accepted-clock verdict; each consumer owns its hold policy. */
+  held: boolean;
+  heldSinceSec: number | null;
+}
+
+/**
+ * One reading of the admitted generation's accepted publication clock (R3).
+ * Callers pass the accepted clock, never an attempt clock, plus their own
+ * budget; schema, checksum and identity admission stay in the loaders.
+ * Missing, non-finite or future evidence fails closed unless the caller names
+ * an explicit future-skew allowance.
+ */
+export function assessSafetyScoreAcceptedEvidence(input: {
+  acceptedGenerationId?: string | null;
+  acceptedAtSec: number | null | undefined;
+  health?: { status: string; heldSinceSec?: number | null } | null;
+  nowSec: number;
+  maxAgeSec: number;
+  allowedFutureSkewSec?: number;
+}): SafetyScoreAcceptedEvidenceAssessment {
+  const held = input.health?.status === "held";
+  const base = {
+    acceptedGenerationId: input.acceptedGenerationId ?? null,
+    acceptedAtSec: input.acceptedAtSec ?? null,
+    assessedAtSec: input.nowSec,
+    maxAgeSec: input.maxAgeSec,
+    held,
+    heldSinceSec: held ? input.health?.heldSinceSec ?? null : null,
+  };
+  const reject = (reason: SafetyScoreAcceptedEvidenceReason, ageSec: number | null = null) =>
+    ({ ...base, ageSec, withinBudget: false, reason });
+  if (input.acceptedAtSec == null) return reject("accepted-evidence-missing");
+  if (!Number.isFinite(input.acceptedAtSec) || !Number.isFinite(input.nowSec)) {
+    return reject("accepted-evidence-invalid");
+  }
+  const ageSec = input.nowSec - input.acceptedAtSec;
+  if (-ageSec > (input.allowedFutureSkewSec ?? 0)) return reject("accepted-evidence-future");
+  if (ageSec > input.maxAgeSec) return reject("accepted-evidence-stale", ageSec);
+  return { ...base, ageSec, withinBudget: true, reason: null };
+}

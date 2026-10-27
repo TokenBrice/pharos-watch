@@ -12,7 +12,7 @@ Source entrypoints: `src/app/dependency-map/` owns route composition and authore
 
 The page combines:
 
-1. `useDependencyGraph()` (`GET /api/dependency-graph/v1`) for accepted nodes, canonical dependency edges, and common-mode groups. Its registered `dependencyGraph` descriptor uses 30-minute `staleTime` and 60-minute `refetchInterval`.
+1. `useDependencyGraph()` (`GET /api/dependency-graph/v1`) for accepted nodes, canonical dependency edges, and common-mode groups. Its registered `dependencyGraph` descriptor uses 60-minute `staleTime` and 120-minute `refetchInterval`.
 2. `useStablecoins()` (`GET /api/stablecoins`) for nullable circulating USD context through `getCirculatingRawOrNull()`.
 3. Static `logosById` for token logos.
 

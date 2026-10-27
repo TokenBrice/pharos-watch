@@ -433,6 +433,14 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "b892d6f4ace0b1af623d5b5fc5518493272e57141d404c87a7c786e6264b7923"
     },
     {
+      "path": "shared/lib/report-cards-v9-projections.ts",
+      "sha256": "ebe6e06d21d456873456f8337a01c0f19117dcb05f6f243cb16c1ce1934a16cf"
+    },
+    {
+      "path": "shared/lib/safety-score-publication.ts",
+      "sha256": "12ae0de503276aa6d89a74473e94af5899632ce0cf2eb2fe910df7c90936d42a"
+    },
+    {
       "path": "shared/lib/safety-score-v9-supply-attribution-journal.ts",
       "sha256": "c6a5ac576497fe46a8a6b34148f6dd6f70049baaa2c106107f36620af09ea4f9"
     },
@@ -606,7 +614,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/public.ts",
-      "sha256": "84544ffc1e0a80675926c2feeaeee8ee57c4dca8588a04adf76e2785488e3265"
+      "sha256": "27c9134a2d68d07a1436b2dbb6c12f5fdff57bc1afe20792b5817e88da031f51"
     },
     {
       "path": "shared/lib/safety-score-v9/reasons.ts",
@@ -706,7 +714,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/status-thresholds.ts",
-      "sha256": "b55cfa9723336659dd4f533544c8708e61906db87c23d3e7ca87613e24020cba"
+      "sha256": "a647c7ca1bd66d45fe24b619c5468a0aa56cf92765dda90da5d7e4a6cce7d418"
     },
     {
       "path": "shared/lib/strongly-connected-components.ts",
@@ -757,6 +765,10 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "b9f67e197ea007461825dc9bada21d2bb710455ae6d841fbba2005c8cc9f098f"
     },
     {
+      "path": "shared/types/dependency-graph.ts",
+      "sha256": "254cb9b30f144a0f45e2ac7aac57303dbeb6a8e94d5557cd108d4ce901c2ee48"
+    },
+    {
       "path": "shared/types/dependency-types.ts",
       "sha256": "e5171c0a646e07f497979d7ac214de8ab5ec51965a827db9a0e0dddf108ef060"
     },
@@ -794,7 +806,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/live-reserves.ts",
-      "sha256": "c149e09e044fa132f137ef8fc5ce2a675aa9c1c14c97c5b55944c71400e426b9"
+      "sha256": "214f576ff4424104119df1617b0be40e7e6d9e7f6f3465bf208d18be61ada50c"
     },
     {
       "path": "shared/types/measured-execution.ts",
@@ -827,6 +839,14 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     {
       "path": "shared/types/report-cards-base-input.ts",
       "sha256": "d7a98d7b88dc0b7865d90ef921bbfbe3c281e956b1dab8bcb6635db353d27fa6"
+    },
+    {
+      "path": "shared/types/report-cards-v9-projections.ts",
+      "sha256": "46fdc3dff3b244471aeaa72729b8b7be061d84fbe49ad557f0605eaed39f3ea6"
+    },
+    {
+      "path": "shared/types/report-cards-v9.ts",
+      "sha256": "2de7cfcbd8e1d86667b724b780f5e2a8d306a85e5b0dcd329d19101f288c545b"
     },
     {
       "path": "shared/types/reserve-bounded-facts.ts",
@@ -1078,7 +1098,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/live-reserves/store-overview.ts",
-      "sha256": "1373cbaac1b89f4c2cb9890f873c13310508e721b20354bcaccc811f7552392d"
+      "sha256": "2efb2685c2e9520c8c4a5a154039d9da1d77eb4965c08b1e1bbb676fe3f1297a"
     },
     {
       "path": "worker/src/lib/live-reserves/store-read.ts",
@@ -1138,7 +1158,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/consumer-freshness.ts",
-      "sha256": "80b9ec7582a365a1b22afbe3fd3f2aed172ac91cc4a5b9f080a4446cdc99745c"
+      "sha256": "46920ec247dcea072b4f469370c705e74ddb1ea22709fa891783b1a253852707"
     },
     {
       "path": "worker/src/lib/safety-score-v9/curated-single-route-supply.ts",
@@ -1311,7 +1331,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-27-block-26283011-shock-coverage.json.gz"
     }
   ],
-  "digest": "1fd160fd635e78a40e47a2edfe4f9778b1fa47f60f21bebc163e30b36e146260"
+  "digest": "7146357b3bee926f0155764dbc3626c5eb60225435ecd4ee668c902614f16e6b"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

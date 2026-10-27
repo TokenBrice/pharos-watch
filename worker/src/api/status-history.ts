@@ -16,6 +16,7 @@ import { emptyReserveComposition } from "../lib/status/derived-data";
 import { evaluateReserveCompositionStatus } from "../lib/status/evaluation-rules";
 import { logWorkerEvent } from "../lib/structured-log";
 import { resolveScheduledSlotPolicy } from "../lib/scheduled-slot-policy";
+import { getStatusSectionMessage } from "../lib/status/section-errors";
 
 export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
   "status-history",
@@ -95,6 +96,9 @@ export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
         // R2: a failed transitions read is not an empty history.
         ...(transitionQueryFailed
           ? { transitions: { code: "status_transition_list_failed", message: "Status transitions could not be read; this does not mean none were recorded." } }
+          : {}),
+        ...(!reserveOverviewResult.ok
+          ? { reserveComposition: { code: "reserve_composition_query_failed", message: getStatusSectionMessage("reserveComposition") } }
           : {}),
       },
     };

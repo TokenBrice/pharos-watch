@@ -241,10 +241,10 @@ describe("runStatusSelfCheck", () => {
   });
 
   it.each([
-    ["healthy", STATUS_PROBE_THRESHOLDS.healthyP95MaxMs],
-    ["degraded", STATUS_PROBE_THRESHOLDS.healthyP95MaxMs + 1],
-    ["degraded", STATUS_PROBE_THRESHOLDS.degradedP95MaxMs],
-    ["stale", STATUS_PROBE_THRESHOLDS.degradedP95MaxMs + 1],
+    ["healthy", STATUS_PROBE_THRESHOLDS.healthyLatencyMaxMs],
+    ["degraded", STATUS_PROBE_THRESHOLDS.healthyLatencyMaxMs + 1],
+    ["degraded", STATUS_PROBE_THRESHOLDS.degradedLatencyMaxMs],
+    ["stale", STATUS_PROBE_THRESHOLDS.degradedLatencyMaxMs + 1],
   ] as const)("classifies the second-slowest of twenty samples as %s at %sms", async (status, p95Ms) => {
     adminProbePaths.splice(0);
     publicProbePaths.splice(0, publicProbePaths.length, "/api/health", ...Array.from({ length: 48 }, (_, i) => `/api/fixture-${i}`));
@@ -253,7 +253,7 @@ describe("runStatusSelfCheck", () => {
     const { runStatusSelfCheck: run } = await import("../status-self-check");
     vi.useFakeTimers();
     vi.setSystemTime(1_777_000_000_000);
-    const durations = [...Array<number>(18).fill(10), p95Ms, STATUS_PROBE_THRESHOLDS.degradedP95MaxMs + 100];
+    const durations = [...Array<number>(18).fill(10), p95Ms, STATUS_PROBE_THRESHOLDS.degradedLatencyMaxMs + 100];
     fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => {
       vi.setSystemTime(Date.now() + durations.shift()!);
       return buildProbeResponse(input, "healthy", init);
@@ -276,7 +276,7 @@ describe("runStatusSelfCheck", () => {
     const { runStatusSelfCheck: run } = await import("../status-self-check");
     vi.useFakeTimers();
     vi.setSystemTime(1_777_000_000_000);
-    const durations = [...Array<number>(18).fill(10), STATUS_PROBE_THRESHOLDS.degradedP95MaxMs + 100];
+    const durations = [...Array<number>(18).fill(10), STATUS_PROBE_THRESHOLDS.degradedLatencyMaxMs + 100];
     fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => {
       vi.setSystemTime(Date.now() + durations.shift()!);
       return buildProbeResponse(input, "healthy", init);
@@ -285,7 +285,9 @@ describe("runStatusSelfCheck", () => {
     const metadata = JSON.parse(result.metadata!);
     expect(durations).toHaveLength(0);
     expect(metadata).toMatchObject({ sampleCount: 19, failCount: 0, transportStatus: "healthy" });
-    expect(metadata.latencySummary.maxMs).toBe(STATUS_PROBE_THRESHOLDS.degradedP95MaxMs + 100);
+    expect(metadata.latencySummary.maxMs).toBe(STATUS_PROBE_THRESHOLDS.degradedLatencyMaxMs + 100);
+    // The reported p95 stays the true percentile even though the bands judge the second-slowest sample.
+    expect(metadata.p95LatencyMs).toBe(8_100);
     expect(result.status).toBe("ok");
     expect(metadata.reason).toBeUndefined();
   });
@@ -294,14 +296,14 @@ describe("runStatusSelfCheck", () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_777_000_000_000);
     fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => {
-      vi.setSystemTime(Date.now() + STATUS_PROBE_THRESHOLDS.healthyP95MaxMs + 1);
+      vi.setSystemTime(Date.now() + STATUS_PROBE_THRESHOLDS.healthyLatencyMaxMs + 1);
       return buildProbeResponse(input, "healthy", init, { status: 503 });
     });
     const result = await runStatusSelfCheck({} as D1Database);
     const metadata = JSON.parse(result.metadata!);
     expect(result.status).toBe("degraded");
     expect(metadata.failCount).toBeGreaterThan(0);
-    expect(metadata.p95LatencyMs).toBeGreaterThan(STATUS_PROBE_THRESHOLDS.healthyP95MaxMs);
+    expect(metadata.p95LatencyMs).toBeGreaterThan(STATUS_PROBE_THRESHOLDS.healthyLatencyMaxMs);
     expect(metadata.transportStatus).not.toBe("healthy");
     expect(metadata.reason).toBe("probe-execution-failed");
   });
@@ -342,7 +344,7 @@ describe("runStatusSelfCheck", () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_777_000_000_000);
     fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => {
-      vi.setSystemTime(Date.now() + STATUS_PROBE_THRESHOLDS.healthyP95MaxMs + 1);
+      vi.setSystemTime(Date.now() + STATUS_PROBE_THRESHOLDS.healthyLatencyMaxMs + 1);
       return buildProbeResponse(input, "healthy", init);
     });
     if (persistenceFailed) writeStatusProbeRunMock.mockResolvedValueOnce(false);
@@ -359,7 +361,7 @@ describe("runStatusSelfCheck", () => {
       outputPublishedAt: persistenceFailed ? null : 1_777_000_000,
     });
     expect(metadata.passCount).toBeGreaterThan(0);
-    expect(metadata.p95LatencyMs).toBeGreaterThan(STATUS_PROBE_THRESHOLDS.healthyP95MaxMs);
+    expect(metadata.p95LatencyMs).toBeGreaterThan(STATUS_PROBE_THRESHOLDS.healthyLatencyMaxMs);
   });
 
   it("persists each probe boundary before entering the route", async () => {
@@ -435,10 +437,22 @@ describe("runStatusSelfCheck", () => {
     expect(computeRawStatusMock).toHaveBeenCalledWith(expect.anything(), expect.any(Number));
     expect(writeStatusPublicHealthSnapshotMock).toHaveBeenCalledExactlyOnceWith(
       expect.anything(), expect.any(Number), expect.objectContaining({ status: expect.any(String) }), expect.any(String),
+      expect.any(String),
     );
     expect(firstSnapshotWrite[3]).not.toHaveProperty("publicHealth");
     expect(firstSnapshotWrite[3]?.supplements).toBeDefined();
     expect(metadata.rawSnapshotPersistenceSucceeded).toBe(true);
+  });
+
+  it("publishes both private floors so read-time advancement can adopt cache quality", async () => {
+    assessPublicHealthMock.mockResolvedValueOnce(makePublicHealth("degraded", {
+      statusExcludingCacheFreshness: "degraded", statusExcludingCacheEvidence: "healthy",
+      cacheQualityImpactStatus: "degraded",
+    }));
+    await runStatusSelfCheck({} as D1Database, { selfUrl: "secret" });
+    expect(writeStatusPublicHealthSnapshotMock).toHaveBeenCalledExactlyOnceWith(
+      expect.anything(), expect.any(Number), expect.objectContaining({ status: "degraded" }), "degraded", "healthy",
+    );
   });
 
   it("keeps health every run and rotates deeper probe buckets", () => {
@@ -869,19 +883,26 @@ describe("classifyProbeStatus reflects STATUS_PROBE_THRESHOLDS", () => {
     expect(classifyProbeStatus(0, 0, 0)).toBe("stale");
   });
 
-  it("returns healthy when fails <= healthyMaxFailCount and p95 <= healthyP95MaxMs", () => {
-    const { healthyMaxFailCount, healthyP95MaxMs } = STATUS_PROBE_THRESHOLDS;
-    expect(classifyProbeStatus(10, healthyMaxFailCount, healthyP95MaxMs)).toBe("healthy");
-    expect(classifyProbeStatus(10, 0, healthyP95MaxMs)).toBe("healthy");
+  it("keeps the judged-latency bands at 5000/8000 ms, including a lone sample", () => {
+    expect(STATUS_PROBE_THRESHOLDS).toMatchObject({ healthyLatencyMaxMs: 5_000, degradedLatencyMaxMs: 8_000 });
+    expect(classifyProbeStatus(1, 0, 5_000)).toBe("healthy");
+    expect(classifyProbeStatus(1, 0, 8_000)).toBe("degraded");
+    expect(classifyProbeStatus(1, 0, 8_100)).toBe("stale");
+  });
+
+  it("returns healthy when fails <= healthyMaxFailCount and p95 <= healthyLatencyMaxMs", () => {
+    const { healthyMaxFailCount, healthyLatencyMaxMs } = STATUS_PROBE_THRESHOLDS;
+    expect(classifyProbeStatus(10, healthyMaxFailCount, healthyLatencyMaxMs)).toBe("healthy");
+    expect(classifyProbeStatus(10, 0, healthyLatencyMaxMs)).toBe("healthy");
   });
 
   it("uses degradedMaxFailRatio to cap degraded classification", () => {
-    const { degradedMaxFailRatio, healthyP95MaxMs, degradedP95MaxMs } = STATUS_PROBE_THRESHOLDS;
+    const { degradedMaxFailRatio, healthyLatencyMaxMs, degradedLatencyMaxMs } = STATUS_PROBE_THRESHOLDS;
     const sampleCount = 20;
     const degradedFailCap = Math.floor(sampleCount * degradedMaxFailRatio);
     // At the cap with p95 in degraded band -> degraded
-    expect(classifyProbeStatus(sampleCount, degradedFailCap, degradedP95MaxMs)).toBe("degraded");
+    expect(classifyProbeStatus(sampleCount, degradedFailCap, degradedLatencyMaxMs)).toBe("degraded");
     // One over the cap -> stale
-    expect(classifyProbeStatus(sampleCount, degradedFailCap + 1, healthyP95MaxMs)).toBe("stale");
+    expect(classifyProbeStatus(sampleCount, degradedFailCap + 1, healthyLatencyMaxMs)).toBe("stale");
   });
 });

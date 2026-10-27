@@ -20,6 +20,11 @@ import { deriveXautRepresentationGroupSupplyAttribution } from "../../src/lib/sa
 import { buildReportCardsFixedInputCacheEntry } from "../../src/test-helpers/report-cards-fixed-input";
 import { DEPENDENCY_SCENARIO_CHUNK_BYTES, DEPENDENCY_SCENARIO_CHUNK_STORAGE_FORMAT, DEPENDENCY_SCENARIO_READER_CAPABILITY_HEADER, DEPENDENCY_SCENARIO_READER_VERSION_HEADER } from "@shared/types/dependency-scenario-storage";
 import { reassembleDependencyScenarioPayload } from "@shared/lib/dependency-scenario-storage";
+import { applySafetyScoreV9GradeHysteresis } from "@shared/lib/safety-score-v9/grade-hysteresis";
+import { scoreToGrade } from "@shared/types/safety-score-v9-grade";
+import { sha256Hex } from "@shared/lib/sha256";
+import { buildSafetyScoreV9AcceptedPublicationBaseline, type SafetyScoreV9AcceptedPublicationBaseline } from "../../src/lib/safety-score-v9/publication-assessment";
+import { verifyAcceptedPublicationCards } from "../compute-dependency-scenarios";
 
 const temporaryDirectories: string[] = [];
 afterEach(() => temporaryDirectories.splice(0).forEach(directory => rmSync(directory, { recursive: true, force: true })));
@@ -254,6 +259,81 @@ describe("dependency scenario accepted-publication verification stamp", () => {
       const key = db.prepare("SELECT value FROM cache WHERE key = ?").get(markerKey)?.value;
       expect(db.prepare("SELECT value FROM cache WHERE key = ?").get(key as string)?.value).toBe(publishedBytes);
     } finally { db.close(); }
+  }, 30_000);
+});
+
+const admissionOf = (baseline: SafetyScoreV9AcceptedPublicationBaseline) => ({ sha256: sha256Hex(stableJsonStringifyV1(baseline)), baseline });
+
+describe("dependency scenario accepted-publication grade-hold overlay", () => {
+  const card = (score: number, grade: string) => ({ id: "test-asset", score, grade, ratingStatus: "rated", partialEvidence: null });
+  const prior = { publicationGenerationId: "accepted-old", publishedAtSec: 1, policyVersion: "9", policyId: "p", policyDigest: "a".repeat(64),
+    evaluationBuildDigest: "b".repeat(64), dexGenerationId: null,
+    cards: [{ id: "test-asset", score: 80, grade: "A-", primaryRouteKey: null, diversificationRouteKey: null, primaryRouteCapacityUsd: null, pillarScores: null }] } as SafetyScoreV9AcceptedPublicationBaseline;
+  const held = { ...card(70, "A-"), gradeHold: { rawGrade: "B", heldFromGenerationId: "accepted-old" } };
+  const verify = (served: object, admission: unknown) => verifyAcceptedPublicationCards([card(70, "B")] as never, [served] as never, admission as never);
+
+  it("reproduces raw70/B published as held A- from prior80/A- without copying the served grade", () => {
+    expect(scoreToGrade(70)).toBe("B");
+    expect(verify(held, admissionOf(prior)).get("test-asset")).toMatchObject({ score: 70, grade: "A-", gradeHold: held.gradeHold });
+  });
+  it.each([
+    ["a legacy capture without baseline context", held, undefined, "accepted-publication-replay-baseline-unavailable"],
+    ["a genuine bootstrap that cannot explain a hold", held, null, "Published baseline mismatch"],
+    ["a hold naming another baseline", { ...held, gradeHold: { rawGrade: "B", heldFromGenerationId: "accepted-forged" } }, admissionOf(prior), "Published baseline mismatch"],
+    ["a substituted prior grade", held, admissionOf({ ...prior, cards: [{ ...prior.cards[0]!, score: 72, grade: "B" }] }), "Published baseline mismatch"],
+    ["an unheld served grade the baseline would hold", card(70, "B"), admissionOf(prior), "Published baseline mismatch"],
+    ["a raw score change", { ...held, score: 71 }, admissionOf(prior), "Published baseline mismatch"],
+  ] as const)("rejects %s", (_label, served, admission, reason) => {
+    expect(() => verify(served, admission)).toThrow(reason);
+  });
+  it("confirms the next-band change once the baseline already computed it", () => {
+    const confirmed: SafetyScoreV9AcceptedPublicationBaseline = { ...prior, cards: [{ ...prior.cards[0]!, score: 71, grade: "A-" }] };
+    expect(verify(card(70, "B"), admissionOf(confirmed)).get("test-asset")?.grade).toBe("B");
+  });
+  it("keeps strict raw verification for legacy captures without holds", () => {
+    expect(verify(card(70, "B"), undefined).get("test-asset")?.grade).toBe("B");
+  });
+
+  function heldComputeFixture() {
+    const fixture = setup();
+    const input = createReplayFixedInput(1_800_000_000);
+    const candidate = buildSafetyScoreV9ReplayArtifact({ fixedInput: input, publishedAtSec: input.clockSec }).pipeline.candidate;
+    const target = candidate.cards.find(row => row.ratingStatus === "rated" && row.score !== null)!;
+    const priorScore = [target.score! + 10, target.score! - 10].find(score => score >= 0 && score <= 100 && scoreToGrade(score) !== scoreToGrade(target.score))!;
+    const baseline = buildSafetyScoreV9AcceptedPublicationBaseline(candidate);
+    const priorBaseline = { ...baseline, publicationGenerationId: "accepted-prior", publishedAtSec: input.clockSec - 1800,
+      cards: baseline.cards.map(row => row.id === target.id ? { ...row, score: priorScore, grade: scoreToGrade(priorScore) } : row) };
+    const served = applySafetyScoreV9GradeHysteresis(candidate, priorBaseline);
+    expect(served.cards.find(row => row.id === target.id)?.gradeHold?.heldFromGenerationId).toBe("accepted-prior");
+    const source = projectSafetyScoreV9PublicationToPublicSnapshot(served, { schemaVersion: 2, status: "current", acceptedPublicationGenerationId: candidate.publicationGenerationId, acceptedAtSec: candidate.publishedAtSec, attemptedAtSec: candidate.publishedAtSec, heldSinceSec: null, reasons: [] });
+    writeFileSync(resolve(fixture.directory, "publication.json"), JSON.stringify(source));
+    const writeCapture = (extra: Record<string, unknown>) => writeFileSync(resolve(fixture.directory, "capture.json"), JSON.stringify({
+      kind: "safety-score-v9-accepted-publication-capture", publicationGenerationId: candidate.publicationGenerationId,
+      fixedInput: input, transferMaterialityGeneration: null, ...extra }));
+    const compute = () => spawnSync(process.execPath, ["--import", "tsx", "worker/scripts/compute-dependency-scenarios.ts", "--mode", "compute", "--input", resolve(fixture.directory, "capture.json"), "--publication", resolve(fixture.directory, "publication.json"), "--out-dir", fixture.directory], { encoding: "utf8", timeout: 30_000 });
+    return { fixture, target, priorBaseline, writeCapture, compute };
+  }
+  it("verifies a held accepted publication from its retained baseline and stamps it", () => {
+    const { fixture, target, priorBaseline, writeCapture, compute } = heldComputeFixture();
+    writeCapture({ sourceAdmissionBaseline: admissionOf(priorBaseline) });
+    const run = compute();
+    expect(run.status, run.stderr).toBe(0);
+    expect(JSON.parse(run.stdout).acceptedPublicationVerified).toBe(true);
+    expect(existsSync(resolve(fixture.directory, "artifact.verified.sha256"))).toBe(true);
+    const rows = JSON.parse(readFileSync(resolve(fixture.directory, "artifact.json"), "utf8")).scenarios.flatMap((scenario: { results: Array<{ assetId: string; publishedGrade: string }> }) => scenario.results);
+    for (const row of rows.filter((row: { assetId: string }) => row.assetId === target.id)) expect(row.publishedGrade).toBe(scoreToGrade(priorBaseline.cards.find(card => card.id === target.id)!.score));
+  }, 30_000);
+  it.each([
+    ["legacy capture without baseline", () => ({}), "accepted-publication-replay-baseline-unavailable"],
+    ["tampered baseline checksum", (baseline: SafetyScoreV9AcceptedPublicationBaseline) => ({ sourceAdmissionBaseline: { ...admissionOf(baseline), baseline: { ...baseline, publicationGenerationId: "accepted-forged" } } }), "accepted-publication-replay-baseline-checksum-mismatch"],
+    ["re-checksummed substituted baseline", (baseline: SafetyScoreV9AcceptedPublicationBaseline) => ({ sourceAdmissionBaseline: admissionOf({ ...baseline, publicationGenerationId: "accepted-forged" }) }), "Published baseline mismatch"],
+  ] as const)("rejects a %s without a stamp", (_label, extra, reason) => {
+    const { fixture, priorBaseline, writeCapture, compute } = heldComputeFixture();
+    writeCapture(extra(priorBaseline));
+    const run = compute();
+    expect(run.status).not.toBe(0);
+    expect(run.stderr).toContain(reason);
+    expect(existsSync(resolve(fixture.directory, "artifact.verified.sha256"))).toBe(false);
   }, 30_000);
 });
 

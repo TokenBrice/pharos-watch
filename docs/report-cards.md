@@ -156,9 +156,9 @@ Coalesce generation-bound reads; verify integrity/live health before `200`. Miss
 
 [Materialization admission and rollout](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/worker-infrastructure-appendix.md#v9-public-response-materialization) owns wire resolution, live-health re-admission, atomic storage, repair, retirement and qualification.
 
-Site-only [compact list/detail representations](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/report-cards-appendix.md#compact-website-representations) preserve the full report and free-grades contracts.
+Site-only [compact list/detail representations](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/report-cards-appendix.md#compact-website-representations) preserve full-report/free-grades contracts and admit card rows before publication.
 
-Endpoint freshness uses 2x `compute-safety-score-v9` (7200 s), tolerating one missed publication, matching consumer fail-close. `worker/src/lib/safety-score-v9/consumer-freshness.ts` rejects non-finite or future `updatedAt` (and non-finite `now`); no clock-skew allowance or alternate consumer budget is introduced.
+Endpoint freshness uses 2x `compute-safety-score-v9` (7200 s), matching consumer fail-close. `worker/src/lib/safety-score-v9/consumer-freshness.ts` rejects non-finite or future `updatedAt` (and non-finite `now`); no clock-skew allowance or alternate consumer budget is introduced.
 
 The response carries V9 identity/source digests, methodology/policy identity, active-set completeness, current/held health, native three-pillar cards with nullable excluded diagnostics and status-aware breakdowns, per-card `backingFromLiveReserves`, the serial/basket dependency graph and accepted `updatedAt`.
 
@@ -176,7 +176,7 @@ Rated cards' read-only top-driver `reason` uses the binding cap, else weakest-pi
 
 Stability-index OG without PSI is unavailable, never `0`/`MELTDOWN`. Coverage labels `expectedCount` assets assessed, reconciles rated/NR/pipeline-gap separately, and uses scored-population wording only for `ratedCount`; a hold replaces the headline.
 
-Current-only consumers reject held ratings. Displays may show held data with notice; yield requires accepted identity within its stale-coherent window. No V8 cache/scoring fallback remains.
+Current-only consumers reject held or over-7200 s ratings. Displays may show held data with notice; yield requires accepted identity within its stale-coherent window. No V8 cache/scoring fallback remains.
 
 Score-map/yield retain null denominators/ratios, empty score map, reason and null identity/time on unavailable input, never `0%`/`100%` ([yield wire](./yield-intelligence.md#public-wire-contract)). Selector creation recomputes live V9 (`functions/lib/selector-canonical-snapshot.ts`); `503` means source/schema failure, not policy hold. Signed snapshots retain historical readability.
 

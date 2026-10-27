@@ -3,7 +3,7 @@ import { Buffer } from "node:buffer";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import { makeReportCardsV9Card, makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import { makeReportCardsV9Card, makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard, makeReportCardsV9PricedExcludedCard } from "@shared/test-utils/report-cards-v9";
 import { projectV9Table, projectV9Detail } from "@shared/lib/report-cards-v9-projections";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
@@ -115,6 +115,30 @@ describe("generation-bound compact Safety Scores", () => {
       expect(response.status).toBe(503);
       expect(await response.json()).toMatchObject({ reason: "v9-public-health-unavailable" });
     }
+  });
+
+  it.each(["A", "B"] as const)("selects one coherent full/table/detail generation for a priced cause-%s excluded card (#1674)", async cause => {
+    const { db, publication } = await seed();
+    const next = makeWorkerSafetyScoreV9Publication({
+      cards: publication.cards.map(card => card.id === "usdc-circle" ? makeReportCardsV9PricedExcludedCard(cause, { id: "usdc-circle" }) : card),
+      publishedAtSec: 130, publicationGenerationId: "report-cards:v9:priced-excluded",
+    });
+    const persisted = await persistSafetyScoreV9Publication(db, { ...currentInput(next), deferPublicMaterialization: true });
+    await materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!);
+    const responses = [await handleReportCardsV9(db), await handleReportCardsV9Table(db), await handleReportCardsV9Detail(db, detailUrl())];
+    const bodies = await Promise.all(responses.map(response => response.json() as Promise<{ completeness: unknown }>));
+    for (const [index, response] of responses.entries()) {
+      expect(response.status).toBe(200);
+      expect(response.headers.get("X-Safety-Score-Generation")).toBe(next.publicationGenerationId);
+      expect(bodies[index]).toMatchObject({
+        safetyScoreIdentity: { publicationGenerationId: next.publicationGenerationId },
+        completeness: bodies[0].completeness, updatedAt: next.publishedAtSec,
+      });
+    }
+    const table = ReportCardsV9TableResponseSchema.parse(bodies[1]);
+    expect(table.cards.find(card => card.id === "usdc-circle")!.pillars.exit)
+      .toEqual({ score: null, aggregationDisposition: "excluded-a-b", pricedUnknown: { cause: "U", score: 50 } });
+    expect(ReportCardsV9DetailResponseSchema.parse(bodies[2]).cards[0]!.pillars.exit.aggregationDisposition).toBe("excluded-a-b");
   });
 
   it("leaves a newly added coin pending until heavy selects its generation", async () => {

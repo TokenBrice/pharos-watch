@@ -138,6 +138,20 @@ describe("status evaluation policy", () => {
     }
   });
 
+  it("fails closed on missing, nonfinite and future accepted clocks and keeps a held fresh one healthy", () => {
+    const now = 1_800_000_000;
+    const base = makePublicHealth().safetyScorePublication!;
+    expect(getPublicSafetyScoreStatus({ ...base, acceptedAtSec: null }, now)).toBe("degraded");
+    expect(getPublicSafetyScoreStatus({ ...base, acceptedAtSec: Number.NaN }, now)).toBe("degraded");
+    expect(getPublicSafetyScoreStatus({ ...base, acceptedAtSec: now + 1 }, now)).toBe("degraded");
+    expect(getPublicSafetyScoreStatus({ ...base, acceptedAtSec: now + 60 }, now, 60)).toBe("healthy");
+    expect(getPublicSafetyScoreStatus({ ...base, acceptedAtSec: now + 61 }, now, 60)).toBe("degraded");
+    expect(getPublicSafetyScoreStatus({
+      ...base, status: "held", acceptedAtSec: now - 60, heldSinceSec: now - 30, reasons: [{ code: "dex-stale" }],
+    }, now)).toBe("healthy");
+    expect(getPublicSafetyScoreStatus({ ...base, acceptedAtSec: now - safetyBudget.outageAfterSec - 1 }, now)).toBe("stale");
+  });
+
   it.each<[string, Partial<NonNullable<PublicHealthAssessment["safetyScorePublication"]>> | null, string | null]>([
     ["safety_score_publication_unavailable", null, "safety-score-publication-read-failed"],
     ["safety_score_publication_missing", {

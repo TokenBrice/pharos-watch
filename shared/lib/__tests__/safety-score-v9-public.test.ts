@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
+import { assertV9PublicCardProjections, projectV9DetailNeighborhoodCard, projectV9TableCard } from "../report-cards-v9-projections";
+import { ReportCardsV9TableCardSchema } from "../../types/report-cards-v9-projections";
 import { attributedScoredParent } from "../../types/safety-score-v9-public-internal";
 import { countV9EvidenceObligations, iterateEvidenceResponsibilityFacts } from "../../types/safety-score-v9-public-evidence-facts";
 import { resolveCauseGapId } from "../../types/safety-score-v9-public-cause-gaps";
@@ -532,6 +535,48 @@ describe("Safety Score v9 public projection", () => {
       pricedUnknownPillars: [{ pillar: "exit", cause, score: 50 }],
     });
     expect(SafetyScoreV9CurrentCardSchema.safeParse(card).success).toBe(true);
+  });
+
+  it.each(["A", "B"] as const)("publishes the scorer's priced cause-%s A/B-excluded pillar through every card projection (#1674)", (cause) => {
+    const scoreInput = makeV9ProductionScoreInput({
+      assetId: "priced-excluded",
+      pillars: {
+        backing: makeV9Pillar(50), control: makeV9Pillar(50),
+        exit: makeV9Pillar(null, {
+          aggregationDisposition: "excluded-a-b", supportedComponentKeys: [], causeGapIds: ["gap:exit"],
+          excludedCauses: [cause], excludedCauseGapIds: ["gap:exit"], excludedComponentKeys: ["exit:route"],
+        }),
+      },
+    });
+    const trace = scoreV9EvaluatedAsset(scoreInput, V9_CANDIDATE_POLICY_V1);
+    expect(trace.ratingStatus).toBe("rated");
+    expect(trace.aggregation!.pricedUnknownPillars).toMatchObject([{ pillar: "exit", cause: "U", score: 50 }]);
+    const projection = fixture("priced-excluded", {
+      score: trace.finalScore, grade: trace.finalGrade, pillars: { backing: 50, exit: null, control: 50 },
+      qualityScore: trace.weightedQuality, pegAdjustedScore: trace.preCapScore,
+    });
+    projection.trace = trace;
+    projection.scoreInput = scoreInput;
+    const [card] = publish([projection]).cards;
+    const priced = { score: null, aggregationDisposition: "excluded-a-b", pricedUnknown: { cause: "U", score: 50 } };
+    expect(ReportCardsV9TableCardSchema.parse(projectV9TableCard(card!)).pillars.exit).toEqual(priced);
+    expect(projectV9DetailNeighborhoodCard(card!).pillars!.exit).toEqual(priced);
+  });
+
+  it("names the representation of a card only one public projection rejects", () => {
+    const { card } = projectSafetyScoreV9Card(fixture("alpha", { score: 91.8, grade: "A+" }));
+    expect(() => assertV9PublicCardProjections(card)).not.toThrow();
+    const malformed = structuredClone(card);
+    malformed.pillars.backing.aggregationDisposition = "excluded-a-b";
+    malformed.scoreTrace.aggregation!.pricedUnknownPillars = [{ pillar: "backing", cause: "U", score: 50, causeGapRefs: [] }];
+    let issues: z.core.$ZodIssue[] = [];
+    try {
+      assertV9PublicCardProjections(malformed);
+    } catch (error) {
+      if (!(error instanceof z.ZodError)) throw error;
+      issues = error.issues;
+    }
+    expect(issues.map((issue) => issue.path)).toContainEqual(["table", "pillars", "backing", "pricedUnknown"]);
   });
 
   it("rehydrates admitted card shards without losing public evidence or optional fields", () => {

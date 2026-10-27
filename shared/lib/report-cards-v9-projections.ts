@@ -1,7 +1,9 @@
-import type { SafetyScoreV9CurrentCard } from "../types/safety-score-v9-public";
+import { z } from "zod";
+import { SafetyScoreV9ResolvedCurrentCardSchema, type SafetyScoreV9CurrentCard } from "../types/safety-score-v9-public";
 import { resolveV9PublicWitnessTexts } from "../types/safety-score-v9-public-witness-texts";
 import {
   ReportCardsV9TableResponseSchema, ReportCardsV9DetailResponseSchema,
+  ReportCardsV9TableCardSchema, ReportCardsV9NeighborhoodCardSchema,
   V9_SITE_PROJECTION_VERSION, type ReportCardsV9TableCard, type ReportCardsV9ProjectionSource,
   type ReportCardsV9TableResponse, type ReportCardsV9DetailResponse,
 } from "../types/report-cards-v9-projections";
@@ -50,6 +52,22 @@ export function projectV9DetailNeighborhoodCard(card: SafetyScoreV9CurrentCard):
     id: card.id, grade: card.grade, partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence), sharedBookId: card.sharedBookId,
     ratingStatus: card.ratingStatus, pillars: projectV9EvidencePillars(card.pillars, card.scoreTrace.aggregation?.pricedUnknownPillars),
   };
+}
+
+/** Admits every per-card public representation (resolved full, table and
+ * detail-neighborhood rows) before publication stores the card, so a card one
+ * representation rejects is quarantined alone instead of blocking deferred
+ * materialization (#1674, R8). Issue paths are prefixed by representation;
+ * the validated intermediates are discarded. */
+export function assertV9PublicCardProjections(card: SafetyScoreV9CurrentCard): void {
+  const issues: z.core.$ZodIssue[] = [];
+  const admit = (representation: string, result: { error?: z.ZodError }) => {
+    for (const issue of result.error?.issues ?? []) issues.push({ ...issue, path: [representation, ...issue.path] });
+  };
+  admit("full", SafetyScoreV9ResolvedCurrentCardSchema.safeParse(resolveV9PublicWitnessTexts(card)));
+  admit("table", ReportCardsV9TableCardSchema.safeParse(projectV9TableCard(card)));
+  admit("neighborhood", ReportCardsV9NeighborhoodCardSchema.safeParse(projectV9DetailNeighborhoodCard(card)));
+  if (issues.length > 0) throw new z.ZodError(issues);
 }
 
 /** Complete incident-edge closure plus every member of the selected coin's common-mode groups.
