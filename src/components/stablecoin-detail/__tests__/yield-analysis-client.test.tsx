@@ -362,12 +362,14 @@ describe("YieldAnalysisClient", () => {
     expect(rows[0]!.textContent).toContain("APY at switch: 0.06%");
   });
 
-  it("renders the history error notice in both timeline cards instead of a false all-clear", () => {
+  it("renders the history error notice with retry in both timeline cards instead of a false all-clear", () => {
+    const refetch = vi.fn();
     setRankingsQuery({ data: makeResponse([makeRanking()]) });
     setHistoryQuery([], {
       data: undefined,
       meta: null,
       error: new Error("yield history failed"),
+      refetch,
     });
 
     render(
@@ -380,6 +382,45 @@ describe("YieldAnalysisClient", () => {
     expect(document.getElementById("warning-signals")!.querySelectorAll('[role="status"]')).toHaveLength(1);
     expect(document.getElementById("source-switches")!.querySelectorAll('[role="status"]')).toHaveLength(1);
     expect(screen.getAllByText("yield history failed")).toHaveLength(2);
+    expect(screen.queryByText(/No warning signals recorded/)).toBeNull();
+    expect(screen.queryByText(/No source switches recorded/)).toBeNull();
+    for (const card of timelineCards()) fireEvent.click(within(card).getByRole("button", { name: /Retry/ }));
+    expect(refetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("retains both timelines when a background refresh fails over saved history", () => {
+    setRankingsQuery({ data: makeResponse([makeRanking()]) });
+    const history = [
+      makeHistoryPoint({ date: "2026-08-01T10:00:00Z", apy: 0.05, yieldSource: "Primary Source" }),
+      makeHistoryPoint({ date: "2026-08-02T10:00:00Z", apy: 0, yieldSource: "Alt Source", sourceKey: "alt-source", sourceSwitch: true, warningSignals: ["yield-spike"] }),
+    ];
+    setHistoryQuery(history);
+    const { rerender } = renderWorkbench();
+    setHistoryQuery(history, { error: new Error("history refresh failed") });
+    rerender(<YieldAnalysisClient id="usdn-smardex" staticCoin={staticCoin("usdn-smardex", "SMARDEX USDN", "USDN", true)} />);
+
+    const [warnings, switches] = timelineCards();
+    expect(warnings.querySelector("li")!.textContent).toContain("Alt Source at 0.00%");
+    expect(switches.querySelector("li")!.textContent).toContain("Primary Source → Alt Source");
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByText("history refresh failed")).toBeNull();
+  });
+
+  it("keeps the bounded empty-history copy when a refresh fails over a saved empty history", () => {
+    setRankingsQuery({ data: makeResponse([makeRanking()]) });
+    setHistoryQuery([], { error: new Error("history refresh failed") });
+    renderWorkbench();
+
+    expect(screen.getByText(/No warning signals recorded/)).toBeTruthy();
+    expect(screen.getByText(/No source switches recorded/)).toBeTruthy();
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("shows skeletons only while the initial history read has no data", () => {
+    setRankingsQuery({ data: makeResponse([makeRanking()]) });
+    setHistoryQuery([], { data: undefined, isLoading: true });
+    renderWorkbench();
+    for (const card of timelineCards()) expect(card.querySelector("li, [role='status']")).toBeNull();
     expect(screen.queryByText(/No warning signals recorded/)).toBeNull();
     expect(screen.queryByText(/No source switches recorded/)).toBeNull();
   });

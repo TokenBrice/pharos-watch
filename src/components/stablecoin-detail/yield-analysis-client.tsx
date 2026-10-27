@@ -453,17 +453,18 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
     [historyQuery.data],
   );
   // Transport advisories and degraded clocks over retained history are operator signal (ADR-42).
+  const hasHistoryData = historyQuery.data !== undefined;
   const historyHealthInput = {
     label: "Yield history",
     dataUpdatedAt: historyQuery.dataUpdatedAt,
     staleTime: DATA_SURFACE_DESCRIPTORS.yieldHistory.producerIntervalSec * 1000,
-    hasData: historyQuery.data !== undefined,
+    hasData: hasHistoryData,
     error: historyQuery.error,
     meta: historyQuery.meta,
   };
   const historyNowMs = useFreshnessBoundary([historyHealthInput]);
   const historyHealth = deriveDataHealth(historyHealthInput, historyNowMs ?? historyQuery.dataUpdatedAt);
-  const historyBanner = historyQuery.data !== undefined && isPublicWarning(historyHealth)
+  const historyBanner = hasHistoryData && isPublicWarning(historyHealth)
     ? <DataHealthBanner entries={[historyHealth]} onRetry={() => { void historyQuery.refetch(); }} />
     : null;
 
@@ -605,12 +606,13 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         </CardHeader>
         <CardContent>
           {historyBanner ? <div className="mb-3">{historyBanner}</div> : null}
-          {historyQuery.isLoading ? (
+          {historyQuery.isLoading && !hasHistoryData ? (
             <Skeleton className="h-[160px] w-full rounded-xl" />
-          ) : historyQuery.error ? (
+          ) : historyQuery.error && !hasHistoryData ? (
             <QueryErrorNotice
               error={historyQuery.error instanceof Error ? historyQuery.error : null}
               hasData={false}
+              onRetry={() => { void historyQuery.refetch(); }}
             />
           ) : warningEvents.length === 0 ? (
             currentWarningSignals.length === 0 ? (
@@ -680,12 +682,13 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         </CardHeader>
         <CardContent className="space-y-3">
           {historyBanner}
-          {historyQuery.isLoading ? (
+          {historyQuery.isLoading && !hasHistoryData ? (
             <Skeleton className="h-[120px] w-full rounded-xl" />
-          ) : historyQuery.error ? (
+          ) : historyQuery.error && !hasHistoryData ? (
             <QueryErrorNotice
               error={historyQuery.error instanceof Error ? historyQuery.error : null}
               hasData={false}
+              onRetry={() => { void historyQuery.refetch(); }}
             />
           ) : sourceSwitchEvents.length === 0 ? (
             <div className="space-y-2 text-sm text-muted-foreground">
