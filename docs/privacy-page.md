@@ -12,7 +12,7 @@ The gtag stub queues page views and `fresh_data_ready` immediately after hydrati
 
 Explicitly configured localhost/127.0.0.1/[::1] is a test-only exception; use a test measurement ID. No other suffix/preview is allowed. Visible policy describes cookies, retention, hosting and actual typed event catalog, never hypothetical telemetry.
 
-Search events originate from manual input, not initial URL/history. They send page label/query length, never raw search text; clearing/navigation cancels pending events. Navigation sends bounded chrome/group/internal href without query string; palette selection sends query length and result kind/section/rank, zero-result events length only. Raw palette text is never sent. This does not strip query strings from ordinary page-view URLs.
+Search events originate from manual input, not initial URL/history. They send page label/query length, never raw search text; clearing/navigation cancels pending events. Navigation sends bounded chrome/group/internal href without query string; palette selection sends query length and result kind/section/rank, zero-result events length only. Raw palette text is never sent. Page-view `page_path`/`page_location`/`page_referrer` and the global `set` defaults carry origin+path only: no query string or fragment (shared portfolio `?p=` holdings included); referrers are sanitized the same way and non-HTTP(S) or invalid ones are empty. GA4 Enhanced Measurement history pageviews and Site search are disabled in the account so only manual route events fire.
 
 Web Vitals retain document-lifetime meaning and current allowed path attribution; client navigation is not a new document measurement. Callback/debounce implementation belongs to the source, not this policy.
 

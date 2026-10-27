@@ -50,7 +50,7 @@ export default function PrivacyPage() {
           <p>
             When Google Analytics 4 (GA4) is enabled, public pages on pharos.watch
             collect anonymized usage analytics such as page views, session duration, approximate
-            geographic region, device or browser type, and a small set of product-interaction events. The embedded
+            geographic region, device or browser type, and a small set of product-interaction events. Page URLs and referrers sent to Google Analytics include only the origin and path, such as https://pharos.watch/portfolio/. Query parameters and URL fragments, including shared portfolio holdings, are not sent. The embedded
             PharosWatchBot Mini App, operator pages, and preview deployments are excluded from GA4 and Web Vitals collection. If you choose to share a Telegram
             or X handle in the feedback form, that handle is included in the GitHub issue created for the submission.
             Telegram alert subscriptions store chat ID, optional username, followed coins, alert settings, quiet hours,

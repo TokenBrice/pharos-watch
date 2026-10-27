@@ -16,7 +16,7 @@ Coin options derive from `CLIENT_ACTIVE_STABLECOINS`, excluding every other life
 
 Priority: URL `?p=<encoded-holdings>` → localStorage `pharos:portfolio` → empty. Validate canonical IDs, discard unknown/noncanonical IDs and merge duplicates. Normalize/write back only after a successful storage-backed read. URL holdings normalize in the URL but never overwrite localStorage.
 
-The temporary query-free hydration snapshot cannot erase an incoming link. Bootstrap uses actual browser URL until shared URL readiness; rendered holdings and all persistence/writeback wait for initialization. Preserve this barrier when refactoring state ownership.
+The temporary query-free hydration snapshot cannot erase an incoming link. Bootstrap uses actual browser URL until shared URL readiness; rendered holdings and all persistence/writeback wait for initialization. Preserve this barrier when refactoring state ownership. Shared `?p=` holdings stay in the browser URL but are never sent to analytics: GA page-view URLs and referrers are origin+path only ([Privacy](./privacy-page.md#website-analytics)).
 
 ## Update Rules
 
